@@ -38,6 +38,7 @@ fn task_ja(kind: &str) -> &str {
 }
 
 pub fn request_threads(ctx: &mut Context, cfg: &Value, state: &mut Value) -> Result<Vec<Value>> {
+    let board_id = crate::board::registered_id(ctx)?;
     let _span = crate::tick_runtime::Span::new("request thread discovery");
     let requests = state["requests"].clone();
     let mut threads = BTreeMap::new();
@@ -54,6 +55,9 @@ pub fn request_threads(ctx: &mut Context, cfg: &Value, state: &mut Value) -> Res
         match ctx.call("GET", &path, None) {
             Ok(page) => {
                 for thread in list(&page["threads"]) {
+                    if !board_id.is_empty() && s(&thread["id"]) == board_id {
+                        continue;
+                    }
                     let task_thread = !task.is_empty() && s(&thread["parent_id"]) == task;
                     if task_thread && bot.is_none() {
                         match ctx.call("GET", "/users/@me", None) {
@@ -94,6 +98,9 @@ pub fn request_threads(ctx: &mut Context, cfg: &Value, state: &mut Value) -> Res
         }
         let mut fetched = 0;
         for (tid, entry) in tracked {
+            if !board_id.is_empty() && tid == &board_id {
+                continue;
+            }
             if !threads.contains_key(tid)
                 && [
                     "job",

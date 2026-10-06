@@ -229,3 +229,45 @@ fn translations_and_failed_fallbacks_are_cached_once() {
         "fix deployment failure"
     );
 }
+#[test]
+fn changed_server_binding_stops_before_calls_or_state_rebinding() {
+    let mut h = setup();
+    update(&mut h.ctx).unwrap();
+    let before = std::fs::read(h.ctx.here.join("board.json")).unwrap();
+    let calls = h.fake.borrow().http_calls.len();
+    h.ctx.cfg["guild_id"] = json!("OTHER");
+    assert!(update(&mut h.ctx).is_err());
+    assert_eq!(h.fake.borrow().http_calls.len(), calls);
+    assert_eq!(
+        std::fs::read(h.ctx.here.join("board.json")).unwrap(),
+        before
+    );
+}
+#[test]
+fn existing_board_wrong_server_or_private_type_is_not_edited() {
+    for (field, value) in [("guild_id", json!("OTHER")), ("type", json!(12))] {
+        let mut h = setup();
+        update(&mut h.ctx).unwrap();
+        let posts = h.fake.borrow().posts.len();
+        let edits = h.fake.borrow().patches.len();
+        h.fake.borrow_mut().threads.get_mut("300").unwrap()[field] = value;
+        atomic_json(&h.ctx.todo, &json!({"items":[]}), 1).unwrap();
+        assert!(update(&mut h.ctx).is_err());
+        assert_eq!(h.fake.borrow().posts.len(), posts);
+        assert_eq!(h.fake.borrow().patches.len(), edits);
+    }
+}
+#[test]
+fn display_strips_discord_ids_and_internal_words_next_to_japanese() {
+    let text = prose(
+        "依頼1556306984981102642: worktree確認・新shep-42の作業 ToDo123 作業20261006-155437-req-board",
+        &Names::parse(""),
+        48,
+    );
+    assert!(!text.contains("1556306984981102642"));
+    assert!(!text.contains("20261006"));
+    assert!(!text.contains("worktree"));
+    assert!(!text.contains("shep"));
+    assert!(!text.contains("ToDo"));
+    assert!(text.contains("確認"));
+}

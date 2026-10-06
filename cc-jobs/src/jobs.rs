@@ -139,7 +139,11 @@ impl Context {
     pub fn refresh(&self, job: Value, auto_observe: bool) -> Result<Value> {
         if LIVE.contains(&s(&job, "status")) && !self.supervisor_alive(&job) {
             let fresh = {
-                let _state = self.job_lock(s(&job, "id"), "state.lock")?;
+                let _state = match self.job_lock(s(&job, "id"), "state.lock") {
+                    Ok(lock) => lock,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(job),
+                    Err(e) => return Err(e.into()),
+                };
                 self.refresh_locked(job, false)?
             };
             // Rating saves acquire state.lock independently.

@@ -608,6 +608,7 @@ impl Context {
             .unwrap()
             .extend(job.as_object_mut().unwrap().clone());
         stored["prompt"] = json!(dst.to_string_lossy());
+        stored["queue_sequence"] = json!(self.next_queue_sequence()?);
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
         let state = self.job_lock(&jid, "state.lock")?;

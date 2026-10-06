@@ -99,7 +99,9 @@ impl Boundary {
             self.active.clear();
             self.completed = None;
         }
-        if matches!(t, "turn.failed" | "error" | "turn.completed") {
+        if matches!(t, "turn.failed" | "turn.completed")
+            || (t == "error" && !s(ev, "message").starts_with("Reconnecting..."))
+        {
             self.terminal = true;
             self.completed = None;
         }
@@ -217,12 +219,12 @@ impl Context {
         let Ok(file) = fs::File::open(dir.join("events.jsonl")) else {
             return Ok(None);
         };
-        if boundary.schema != 2
+        if boundary.schema != 3
             || boundary.attempt != attempt
             || file.metadata()?.len() < boundary.offset
         {
             boundary = Boundary {
-                schema: 2,
+                schema: 3,
                 attempt,
                 offset: job["attempt_events_offset"].as_u64().unwrap_or(0),
                 ..Boundary::default()
@@ -557,6 +559,18 @@ impl Context {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reconnecting_notice_keeps_a_completed_tool_boundary_but_failure_is_terminal() {
+        let mut b = Boundary::default();
+        b.event(&ev("item.started", "cmd", "command_execution"));
+        b.event(&ev("item.completed", "cmd", "command_execution"));
+        b.event(&json!({"type":"error","message":"Reconnecting... 2/5 (stream disconnected before completion: Responses websocket connection limit reached (60 minutes). Create a new websocket connection to continue.)"}));
+        assert!(!b.terminal);
+        assert_eq!(b.completed.as_deref(), Some("cmd"));
+        b.event(&json!({"type":"turn.failed","error":{"message":"retries exhausted"}}));
+        assert!(b.terminal);
+        assert!(b.completed.is_none());
+    }
     fn ev(t: &str, id: &str, kind: &str) -> Value {
         json!({"type":t,"item":{"id":id,"type":kind}})
     }

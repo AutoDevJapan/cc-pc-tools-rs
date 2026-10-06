@@ -2,3 +2,4 @@
 *.log
 *.exe
 cc-ask/tests/*.json
+**/*.py

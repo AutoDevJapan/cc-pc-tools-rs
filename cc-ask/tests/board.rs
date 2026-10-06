@@ -271,3 +271,71 @@ fn display_strips_discord_ids_and_internal_words_next_to_japanese() {
     assert!(!text.contains("ToDo"));
     assert!(text.contains("確認"));
 }
+#[test]
+fn progress_bars_only_use_recorded_integers_in_the_valid_range() {
+    assert_eq!(progress_bar(&json!({"progress":60})), "▰▰▰▰▰▰▱▱▱▱ 60%");
+    assert_eq!(progress_bar(&json!({"progress":0})), "▱▱▱▱▱▱▱▱▱▱ 0%");
+    assert_eq!(progress_bar(&json!({"progress":100})), "▰▰▰▰▰▰▰▰▰▰ 100%");
+    for item in [
+        json!({}),
+        json!({"progress":null}),
+        json!({"progress":-1}),
+        json!({"progress":101}),
+        json!({"progress":"60"}),
+        json!({"progress":60.5}),
+    ] {
+        assert_eq!(progress_bar(&item), "進み具合：未記録");
+    }
+}
+#[test]
+fn title_bar_pairs_have_blank_lines_and_block_reason_is_beside_bar() {
+    let db = json!({"items":[
+        {"id":1,"project":"製品","title":"保存画面を直す","status":"doing","progress":60,"updated":"2026-10-06 16:30"},
+        {"id":2,"project":"製品","title":"認証を確認する","status":"block","progress":30,"note":"本人の承認を待っています。長い説明は載せない","updated":"2026-10-06 16:30"},
+        {"id":3,"project":"製品","title":"復旧を検査する","status":"doing","updated":"2026-10-06 16:30"}]});
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(text.contains("## 製品\n- 保存画面を直す\n▰▰▰▰▰▰▱▱▱▱ 60%"));
+    assert!(text.contains(
+        "\n\n- 認証を確認する\n▰▰▰▱▱▱▱▱▱▱ 30%｜止まっている（本人の承認を待っています）"
+    ));
+    assert!(text.contains("\n\n- 復旧を検査する\n進み具合：未記録"));
+    assert!(!text.contains("長い説明"));
+}
+#[test]
+fn title_and_bar_are_kept_together_when_splitting_messages() {
+    let first = format!("{}\n\n", "あ".repeat(1970));
+    let pair = "- 保存画面を直す\n▰▰▰▰▰▰▱▱▱▱ 60%｜作業中\n\n";
+    let text = format!("{first}{pair}");
+    let parts = split(&text);
+    assert_eq!(parts.concat(), text);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[1], pair);
+}
+#[test]
+fn task_title_has_no_internal_numbers_or_english_jargon() {
+    let text = prose(
+        "PR86のhelperをfixtureでreviewする（親25・ToDo324） Issue3155のruntimeを直す",
+        &Names::parse(""),
+        48,
+    );
+    assert_eq!(text, "補助処理を検証用データでレビューする 実行処理を直す");
+    assert_eq!(
+        prose("保存を確認する（・324", &Names::parse(""), 48),
+        "保存を確認する"
+    );
+}
+#[test]
+fn blocked_owner_wait_also_shows_its_reason_beside_progress() {
+    let db = json!({"items":[{"id":1,"project":"製品","title":"公開を進める","status":"block","progress":60,"note":"オーナー判断待ち。詳細","updated":"2026-10-06 16:30"}]});
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(text.contains("▰▰▰▰▰▰▱▱▱▱ 60%｜返事待ち（オーナー判断待ち）"));
+}
+#[test]
+fn empty_or_identifier_only_block_notes_do_not_invent_a_reason() {
+    for note in ["   ", "todo:123", "worktree"] {
+        let db = json!({"items":[{"id":1,"project":"製品","title":"保存を直す","status":"block","note":note}]});
+        let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+        assert!(text.contains("止まっている（理由未記録）"));
+        assert!(!text.contains("止まっている（作業内容を確認する）"));
+    }
+}

@@ -1,0 +1,2211 @@
+//! Offline scheduler checks; no real job launch, cancellation, Discord or credentials.
+use cc_scheduler::{backend::*, common::*, engine::*, policy::*};
+use serde_json::{json, Value};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
+const T: f64 = 100000.;
+
+#[test]
+fn shared_worker_result_does_not_finish_parent_or_copy_child_question() {
+    for result in [
+        "状態: 完了\n子の作業だけ完了しました。",
+        "状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止",
+    ] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let mut parent = item(2, "civ6", "doing", &[]);
+        parent["jobs"] = json!(["j1"]);
+        parent["scheduler"] = json!({"job":"j1","phase":"running"});
+        f.put(parent);
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!(result);
+        f.e.backend.records[0]["todo_id"] = json!(1);
+        f.e.backend.ps.clear();
+        f.reconcile();
+        assert_eq!(
+            f.get(1)["status"],
+            if result.starts_with("状態: 完了") {
+                "done"
+            } else {
+                "block"
+            }
+        );
+        assert_eq!(f.get(2)["status"], "todo");
+    }
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let mut second = item(2, "civ6", "doing", &[]);
+    second["jobs"] = json!(["j1"]);
+    second["scheduler"] = json!({"job":"j1","phase":"running"});
+    f.put(second);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(2)["status"], "todo");
+}
+
+#[test]
+fn explicit_resume_supersedes_cancelled_and_old_owner_result() {
+    for old_status in ["cancelled", "succeeded"] {
+        for result in ["状態: 継続中\n続けます。", "状態: 完了\n完了しました。"]
+        {
+            let mut f = Fixture::new();
+            f.managed(1, 1, "civ6", 0);
+            f.e.backend.records[0]["status"] = json!(old_status);
+            f.e.backend.records[0]["last_message"] =
+                json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+            f.e.edit(&json!(1), |row| {
+                row["status"] = json!("block");
+                row["scheduler"]["pending_cancel"] = json!("hung");
+                row["scheduler"]["answer"] = json!("owner-answer");
+            })
+            .unwrap();
+            let before = f.get(1);
+            let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+            let mut db = f.e.todo().unwrap();
+            cc_todo::execute(
+                &mut db,
+                &cc_todo::Command::Start {
+                    id: 1,
+                    job: "new-worker".into(),
+                },
+                &paths,
+            )
+            .unwrap();
+            // Repeating the same handoff is idempotent.
+            cc_todo::execute(
+                &mut db,
+                &cc_todo::Command::Start {
+                    id: 1,
+                    job: "new-worker".into(),
+                },
+                &paths,
+            )
+            .unwrap();
+            write_json(&f.e.todo_path, &db, 1).unwrap();
+            f.e.backend.records.push(job("new-worker", 2, "running"));
+            f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
+            f.reconcile();
+            assert_eq!(f.get(1)["status"], "doing");
+            assert_eq!(f.get(1)["scheduler"]["job"], "new-worker");
+            assert_eq!(f.get(1)["jobs"], json!(["j1", "new-worker"]));
+            for field in ["spec", "needs"] {
+                assert_eq!(f.get(1)[field], before[field]);
+            }
+            for field in ["worktree", "branch", "answer"] {
+                assert_eq!(f.get(1)["scheduler"][field], before["scheduler"][field]);
+            }
+            assert!(f.get(1)["scheduler"].get("pending_cancel").is_none());
+            f.dispatch();
+            assert!(f.e.backend.launched.is_empty());
+            assert!(f.e.backend.cancelled.is_empty());
+            f.e.backend.records[1]["status"] = json!("succeeded");
+            f.e.backend.records[1]["last_message"] = json!(result);
+            f.e.backend.ps.clear();
+            f.reconcile();
+            assert_eq!(
+                f.get(1)["status"],
+                if result.starts_with("状態: 完了") {
+                    "done"
+                } else {
+                    "todo"
+                }
+            );
+        }
+    }
+}
+
+#[test]
+fn explicit_resume_invalidates_old_reconcile_and_cancel_snapshot() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let old = f.get(1);
+    let mut db = f.e.todo().unwrap();
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    cc_todo::execute(
+        &mut db,
+        &cc_todo::Command::Start {
+            id: 1,
+            job: "new-worker".into(),
+        },
+        &paths,
+    )
+    .unwrap();
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    let mut records = vec![job("j1", 1, "cancelled")];
+    f.e.reconcile_item(&old, &mut records, &Processes::new(), &f.cfg)
+        .unwrap();
+    let mut old_job = job("j1", 1, "running");
+    f.e.cancel_for(&old, &mut old_job, "hung", &f.cfg).unwrap();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.get(1)["scheduler"]["job"], "new-worker");
+    assert!(f.e.backend.cancelled.is_empty());
+}
+
+#[test]
+fn explicit_resume_without_job_preserves_scheduler_and_manual_block_is_untouched() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let before = f.get(1);
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    let mut db = f.e.todo().unwrap();
+    cc_todo::execute(
+        &mut db,
+        &cc_todo::Command::Start {
+            id: 1,
+            job: String::new(),
+        },
+        &paths,
+    )
+    .unwrap();
+    assert_eq!(db["items"][0]["scheduler"], before["scheduler"]);
+    assert_eq!(db["items"][0]["jobs"], before["jobs"]);
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("block");
+        row["note"] = json!("オーナーの回答に従い、停止したままにします。");
+        row["scheduler"]["phase"] = json!("blocked");
+    })
+    .unwrap();
+    f.e.backend.records[0]["status"] = json!("cancelled");
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    assert_eq!(
+        f.get(1)["note"],
+        "オーナーの回答に従い、停止したままにします。"
+    );
+}
+
+#[test]
+fn old_retry_limit_hold_migrates_but_owner_stop_and_client_hold_do_not() {
+    let mut f = Fixture::new();
+    for (id, project, note) in [
+        (
+            1,
+            "civ6",
+            "ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。",
+        ),
+        (2, "civ6", "オーナーの回答に従い、停止したままにします。"),
+        (
+            3,
+            "client-project",
+            "ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。",
+        ),
+    ] {
+        let mut row = item(id, project, "block", &[]);
+        row["note"] = json!(note);
+        row["scheduler"] = json!({"phase":"blocked","retry_count":1});
+        f.put(row);
+    }
+    fs::write(f.temp.path().join("client-projects.txt"), "client-project").unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(n(&f.get(1)["scheduler"]["not_before"]), T + 60.);
+    assert_eq!(f.get(2)["status"], "block");
+    assert_eq!(f.get(3)["status"], "block");
+    assert!(f.e.backend.notices.is_empty());
+}
+fn proc(pid: u32, ppid: u32, name: &str) -> Value {
+    json!({"pid":pid,"ppid":ppid,"name":name,"created":FILETIME_EPOCH+((T-1200.)*1e7) as u64,"rss":GIB as u64,"cpu":10,"metrics_ok":true})
+}
+fn ps(rows: Vec<Value>) -> Processes {
+    rows.into_iter().map(|p| (n(&p["pid"]) as u32, p)).collect()
+}
+fn job(id: &str, root: u32, status: &str) -> Value {
+    json!({"id":id,"pid":root,"pid_created":proc(root,0,"codex.exe")["created"],"codex_pid":null,"codex_pid_created":null,"status":status,"created_at":T-1200.,"started_at":T-1200.})
+}
+fn measurement() -> Value {
+    json!({"available_gb":30,"ram_total_gb":93.5,"cpu_percent":70,"commit_percent":60,"commit_gb":120,"commit_limit_gb":218,"physical_cores":16,"logical_cores":32,"boot_s":1,"disk_free_gb":{"C:":300,"D:":200}})
+}
+fn item(id: u64, project: &str, status: &str, needs: &[&str]) -> Value {
+    json!({"id":id,"project":project,"status":status,"title":format!("Work {id}"),"spec":"spec.md","dispatchable":true,"needs":needs,"jobs":[],"note":"","created_s":id})
+}
+fn result(m: Value, jobs: Vec<Value>, ps: Processes, mut state: Value, cfg: Value) -> Value {
+    let mut c = defaults();
+    merge(&mut c, cfg);
+    capacity(&m, &c, &mut state, &jobs, &ps, T)
+}
+#[test]
+fn test_admission_ram_and_core_cap() {
+    let jobs = (1..10)
+        .map(|i| job(&format!("j{i}"), i, "running"))
+        .collect();
+    let ps = ps((1..10).map(|i| proc(i, 0, "codex.exe")).collect());
+    let r = result(measurement(), jobs, ps, json!({}), json!({}));
+    assert_eq!(
+        (
+            n(&r["running_jobs"]),
+            n(&r["hard_cap"]),
+            n(&r["resource_slots"]),
+            n(&r["allowance_now"])
+        ),
+        (9., 38., 3., 1.)
+    );
+}
+#[test]
+fn test_expected_footprint_sums_entire_tree() {
+    let rows: Vec<_> = (1..=4)
+        .map(|i| {
+            let mut p = proc(i, i - 1, "node.exe");
+            p["rss"] = json!(GIB * i as f64);
+            p["created"] = json!(p["created"].as_u64().unwrap() + i as u64 * 10000000);
+            p
+        })
+        .collect();
+    let mut j = job("j1", 1, "running");
+    j["pid_created"] = rows[0]["created"].clone();
+    let r = result(measurement(), vec![j], ps(rows), json!({}), json!({}));
+    assert_eq!(n(&r["job_footprints_gb"]["j1"]), 10.);
+    assert_eq!(n(&r["expected_job_gb"]), 12.5);
+    assert_eq!(n(&r["resource_slots"]), 1.);
+}
+#[test]
+fn test_p90_nearest_rank_and_expired_samples() {
+    let mut points: Vec<_> = (1..=10).map(|i| json!({"at":T-10.,"gb":i})).collect();
+    points.push(json!({"at":T-4000.,"gb":900}));
+    let r = result(
+        measurement(),
+        vec![],
+        Processes::new(),
+        json!({"footprints":points}),
+        json!({}),
+    );
+    assert_eq!(n(&r["job_p90_gb"]), 9.);
+    assert_eq!(n(&r["expected_job_gb"]), 11.25);
+}
+#[test]
+fn test_exact_ram_reserve_is_not_admitted() {
+    for (ram, admit) in [(18., 0.), (18.01, 1.)] {
+        let mut m = measurement();
+        m["available_gb"] = json!(ram);
+        assert_eq!(
+            n(&result(m, vec![], Processes::new(), json!({}), json!({}))["allowance_now"]),
+            admit
+        );
+    }
+}
+#[test]
+fn test_commit_cpu_disk_thresholds() {
+    for (field, reason) in [
+        ("commit_percent", "commit limit"),
+        ("cpu_percent", "CPU rolling limit"),
+    ] {
+        let mut m = measurement();
+        m[field] = json!(if field == "commit_percent" { 85 } else { 80 });
+        let r = result(m, vec![], Processes::new(), json!({}), json!({}));
+        assert_eq!(n(&r["allowance_now"]), 0.);
+        assert!(arr(&r["reasons"]).contains(&json!(reason)));
+    }
+    let mut m = measurement();
+    m["disk_free_gb"]["D:"] = json!(30);
+    assert_eq!(
+        n(&result(m, vec![], Processes::new(), json!({}), json!({}))["allowance_now"]),
+        0.
+    );
+}
+#[test]
+fn test_cpu_rolls_over_recent_minutes() {
+    let mut m = measurement();
+    m["cpu_percent"] = json!(60);
+    assert_eq!(
+        n(&result(
+            m,
+            vec![],
+            Processes::new(),
+            json!({"cpu":[{"at":T-50.,"value":100},{"at":T-500.,"value":100}]}),
+            json!({})
+        )["cpu_rolling_percent"]),
+        80.
+    );
+}
+#[test]
+fn test_global_launch_spacing_includes_non_scheduler_jobs() {
+    for (age, admit) in [(9., 0.), (10., 1.)] {
+        let mut j = job("j1", 1, "running");
+        j["created_at"] = json!(T - age);
+        assert_eq!(
+            n(&result(
+                measurement(),
+                vec![j],
+                Processes::new(),
+                json!({}),
+                json!({})
+            )["allowance_now"]),
+            admit
+        );
+    }
+}
+#[test]
+fn test_memory_pressure_stops_launching() {
+    let mut m = measurement();
+    m["available_gb"] = json!(7);
+    assert_eq!(
+        n(&result(m, vec![], Processes::new(), json!({}), json!({}))["allowance_now"]),
+        0.
+    );
+}
+#[test]
+fn instantaneous_cpu_spike_stops_admission_even_with_a_low_rolling_average() {
+    let mut m = measurement();
+    m["cpu_percent"] = json!(95);
+    let r = result(
+        m,
+        vec![],
+        Processes::new(),
+        json!({"cpu":[{"at":T-20.,"value":10}]}),
+        json!({}),
+    );
+    assert_eq!(n(&r["allowance_now"]), 0.);
+    assert!(arr(&r["reasons"]).contains(&json!("CPU rolling limit")));
+}
+#[test]
+fn resource_limit_can_exceed_twelve_without_spending_the_memory_reserve() {
+    let mut m = measurement();
+    m["available_gb"] = json!(50);
+    m["cpu_percent"] = json!(25);
+    let jobs: Vec<_> = (1..=15)
+        .map(|i| job(&format!("j{i}"), i, "running"))
+        .collect();
+    let processes = ps((1..=15).map(|i| proc(i, 0, "codex.exe")).collect());
+    let r = result(m, jobs, processes, json!({}), json!({}));
+    assert_eq!(n(&r["running_jobs"]), 15.);
+    assert_eq!(n(&r["hard_cap"]), 38.);
+    assert_eq!(n(&r["memory_slots"]), 16.);
+    assert_eq!(n(&r["resource_slots"]), 16.);
+    assert_eq!(n(&r["allowance_now"]), 1.);
+}
+#[test]
+fn continuation_reuses_only_unfinished_successful_conversations_in_the_same_folder() {
+    let mut j = job("source", 1, "succeeded");
+    j["cwd"] = json!("D:/repo-wt/task");
+    j["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+    j["last_message"] = json!("状態: 継続中\n検査を続けます。");
+    assert_eq!(
+        continuation_session(&j, "D:\\repo-wt\\task", &[]),
+        Some("12345678-1234-4321-9234-123456789abc")
+    );
+    assert!(continuation_session(&j, "D:/another", &[]).is_none());
+    let running = json!({"status":"running","resume_session":j["thread_id"]});
+    assert!(continuation_session(&j, "D:/repo-wt/task", &[running]).is_none());
+    for result in [
+        "状態: 完了\n完了しました。",
+        "状態: 要判断\n公開を決めてください。\na. 公開\nb. 非公開",
+    ] {
+        j["last_message"] = json!(result);
+        assert!(continuation_session(&j, "D:/repo-wt/task", &[]).is_none());
+    }
+}
+#[test]
+fn test_configurable_cap_and_pid_reuse() {
+    let mut p = proc(1, 0, "node.exe");
+    p["created"] = json!(p["created"].as_u64().unwrap() + 100);
+    let r = result(
+        measurement(),
+        vec![job("j1", 1, "running")],
+        ps(vec![p]),
+        json!({}),
+        json!({"hard_cap":2}),
+    );
+    assert_eq!(n(&r["running_jobs"]), 0.);
+    assert_eq!(n(&r["hard_cap"]), 2.);
+}
+#[test]
+fn test_access_denied_pid_is_counted_conservatively() {
+    assert_eq!(
+        n(&result(
+            measurement(),
+            vec![job("j1", 1, "running")],
+            ps(vec![json!({"pid":1,"created":null})]),
+            json!({}),
+            json!({})
+        )["running_jobs"]),
+        1.
+    );
+}
+#[test]
+fn test_priority_fifo_and_spec_required() {
+    let mut rows = vec![
+        item(1, "other", "todo", &[]),
+        item(4, "civ6", "todo", &[]),
+        item(3, "GoDD-AO", "todo", &[]),
+        item(2, "civ6", "todo", &[]),
+    ];
+    let mut no_spec = item(0, "civ6", "todo", &[]);
+    remove(&mut no_spec, "spec");
+    rows.push(no_spec);
+    let mut no_dispatch = item(5, "civ6", "todo", &[]);
+    no_dispatch["dispatchable"] = json!(false);
+    rows.push(no_dispatch);
+    assert_eq!(
+        priority_queue(&rows, &json!({"civ6":1,"GoDD-AO":2}), T)
+            .iter()
+            .map(|i| n(&i["id"]) as u64)
+            .collect::<Vec<_>>(),
+        [2, 4, 3, 1]
+    );
+}
+#[test]
+fn test_civ6_and_cargo_exclusivity_includes_manual_links() {
+    let mut i = item(1, "civ6", "todo", &["civ6", "cargo"]);
+    i["jobs"] = json!(["j1"]);
+    for (status, count) in [("running", 2), ("succeeded", 0)] {
+        assert_eq!(
+            resources_busy(
+                &[i.clone()],
+                &[job("j1", 1, status)],
+                &ps(vec![proc(1, 0, "node.exe")]),
+                T
+            )
+            .len(),
+            count
+        );
+    }
+}
+#[test]
+fn test_live_game_blocks_live_test_admission() {
+    assert_eq!(
+        resources_busy(&[], &[], &ps(vec![proc(10, 0, "CivilizationVI.exe")]), T)
+            .into_iter()
+            .collect::<Vec<_>>(),
+        ["civ6"]
+    );
+}
+#[test]
+fn test_external_cargo_build_reserves_cargo() {
+    assert_eq!(
+        resources_busy(&[], &[], &ps(vec![proc(10, 0, "rustc.exe")]), T)
+            .into_iter()
+            .collect::<Vec<_>>(),
+        ["cargo"]
+    );
+}
+#[test]
+fn test_memory_victim_lowest_priority_then_latest() {
+    let mut rows = vec![];
+    let mut jobs = vec![];
+    let mut processes = Processes::new();
+    for (id, project, start) in [
+        (1, "civ6", 3),
+        (2, "other", 1),
+        (3, "other", 2),
+        (4, "other", 20),
+    ] {
+        let mut i = item(id, "civ6", "doing", &[]);
+        i["project"] = json!(project);
+        if id != 4 {
+            i["scheduler"] = json!({"job":format!("j{id}"),"started_s":start});
+        }
+        rows.push(i);
+        jobs.push(job(&format!("j{id}"), id as u32, "running"));
+        processes.insert(id as u32, proc(id as u32, 0, "node.exe"));
+    }
+    assert_eq!(
+        pressure_victim(&rows, &jobs, &processes, &json!({"civ6":1}), T).unwrap()["id"],
+        3
+    );
+}
+#[test]
+fn test_hang_requires_full_observation_period() {
+    let (r, hung) = hang_progress(&Value::Null, 5., Some(10.), "tree", T, 1800.);
+    assert!(!hung);
+    assert!(!hang_progress(&r, 5., Some(10.), "tree", T + 1799., 1800.).1);
+    assert!(hang_progress(&r, 5., Some(10.), "tree", T + 1800., 1800.).1);
+}
+#[test]
+fn test_cpu_event_tree_change_each_reset_hang_timer() {
+    let (r, _) = hang_progress(&Value::Null, 5., Some(10.), "tree", T, 1800.);
+    for (event, cpu, tree) in [
+        (6., Some(10.), "tree"),
+        (5., Some(11.), "tree"),
+        (5., Some(10.), "new-tree"),
+        (5., None, "tree"),
+    ] {
+        let (new, hung) = hang_progress(&r, event, cpu, tree, T + 1900., 1800.);
+        assert!(!hung);
+        assert_eq!(n(&new["since"]), T + 1900.);
+    }
+}
+#[test]
+fn test_orphan_selector_excludes_interactive_and_protected_trees() {
+    let jobs = vec![job("j1", 1, "succeeded"), job("live", 20, "running")];
+    let ps = ps(vec![
+        proc(1, 0, "python.exe"),
+        proc(2, 1, "node.exe"),
+        proc(3, 0, "node.exe"),
+        proc(4, 1, "Docker.exe"),
+        proc(5, 4, "node.exe"),
+        proc(6, 1, "bun.exe"),
+        proc(7, 6, "node.exe"),
+        proc(8, 1, "CivilizationVI.exe"),
+        proc(9, 8, "node.exe"),
+        proc(20, 0, "codex.exe"),
+        proc(21, 20, "node.exe"),
+        proc(22, 1, "mcp-server.exe"),
+        proc(23, 1, "python.exe"),
+    ]);
+    let ledger = ownership(&jobs, &ps, &json!({}));
+    assert_eq!(
+        orphan_candidates(&jobs, &ps, &ledger, T, 600.)
+            .iter()
+            .map(|p| n(&p["pid"]) as u32)
+            .collect::<Vec<_>>(),
+        [2, 22]
+    );
+}
+#[test]
+fn test_saved_lineage_survives_dead_parent_but_not_pid_reuse() {
+    let jobs = vec![job("j1", 1, "running")];
+    let processes = ps(vec![proc(1, 0, "codex.exe"), proc(2, 1, "node.exe")]);
+    let ledger = ownership(&jobs, &processes, &json!({}));
+    let mut gone = ps(vec![processes[&2].clone()]);
+    assert_eq!(
+        orphan_candidates(&jobs, &gone, &ownership(&jobs, &gone, &ledger), T, 600.).len(),
+        1
+    );
+    gone.get_mut(&2).unwrap()["created"] = json!(processes[&2]["created"].as_u64().unwrap() + 1);
+    assert!(orphan_candidates(&jobs, &gone, &ownership(&jobs, &gone, &ledger), T, 600.).is_empty());
+}
+#[test]
+fn test_unknown_dead_numeric_parent_does_not_prove_ownership() {
+    let jobs = vec![job("j1", 1, "succeeded")];
+    let ps = ps(vec![proc(2, 1, "node.exe")]);
+    assert!(orphan_candidates(&jobs, &ps, &ownership(&jobs, &ps, &json!({})), T, 600.).is_empty());
+}
+#[test]
+fn test_orphan_minimum_age_and_missing_job() {
+    let jobs = vec![job("j1", 1, "succeeded")];
+    let mut young = proc(2, 1, "node.exe");
+    young["created"] = json!(FILETIME_EPOCH + ((T - 599.) * 1e7) as u64);
+    let ps = ps(vec![proc(1, 0, "codex.exe"), young]);
+    let ledger = ownership(&jobs, &ps, &json!({}));
+    assert_eq!(
+        orphan_candidates(&jobs, &ps, &ledger, T, 600.)
+            .iter()
+            .map(|p| n(&p["pid"]) as u32)
+            .collect::<Vec<_>>(),
+        [1]
+    );
+    assert!(orphan_candidates(&[], &ps, &ledger, T, 600.).is_empty());
+}
+
+struct Fake {
+    records: Vec<Value>,
+    launched: Vec<Value>,
+    cancelled: Vec<Value>,
+    killed: Vec<Value>,
+    notices: Vec<Value>,
+    event: f64,
+    cancel_ok: bool,
+    pick_count: usize,
+    crash_after_launch: bool,
+    owner_reply: Option<Value>,
+    closed: Vec<Value>,
+    clock: f64,
+    m: Value,
+    ps: Processes,
+    fresh: Option<Processes>,
+    prepare_pressure: bool,
+    fail_lost: bool,
+    close_fails: bool,
+    reply_count: usize,
+}
+impl Default for Fake {
+    fn default() -> Self {
+        Self {
+            records: vec![],
+            launched: vec![],
+            cancelled: vec![],
+            killed: vec![],
+            notices: vec![],
+            event: 1.,
+            cancel_ok: true,
+            pick_count: 0,
+            crash_after_launch: false,
+            owner_reply: None,
+            closed: vec![],
+            clock: T,
+            m: measurement(),
+            ps: ps(vec![proc(1, 0, "codex.exe")]),
+            fresh: None,
+            prepare_pressure: false,
+            fail_lost: false,
+            close_fails: false,
+            reply_count: 0,
+        }
+    }
+}
+impl Backend for Fake {
+    fn clock(&self) -> f64 {
+        self.clock
+    }
+    fn measure(&mut self, _: &mut Value) -> Result<(Value, Processes)> {
+        Ok((self.m.clone(), self.ps.clone()))
+    }
+    fn snapshot(&mut self) -> Result<Processes> {
+        Ok(self.fresh.clone().unwrap_or(self.ps.clone()))
+    }
+    fn jobs(&mut self) -> Result<Vec<Value>> {
+        Ok(self.records.clone())
+    }
+    fn event_mtime(&mut self, _: &Value) -> Result<f64> {
+        Ok(self.event)
+    }
+    fn mark_lost(&mut self, j: &mut Value) -> Result<bool> {
+        if self.fail_lost {
+            return Err(Error("RuntimeError"));
+        }
+        j["status"] = json!("lost");
+        if let Some(row) = self.records.iter_mut().find(|r| r["id"] == j["id"]) {
+            *row = j.clone();
+        }
+        Ok(true)
+    }
+    fn launch(&mut self, i: &Value, p: &Path, _: &Value) -> Result<String> {
+        if let Some(j) = self
+            .records
+            .iter()
+            .find(|j| j["launch_key"] == i["scheduler"]["key"])
+        {
+            return Ok(s(&j["id"]).into());
+        }
+        let jid = format!("launched{}", self.launched.len() + 1);
+        self.launched
+            .push(json!({"id":jid,"item":i,"text":fs::read_to_string(p)?}));
+        let mut j = job(&jid, 99, "running");
+        j["created_at"] = json!(T);
+        j["launch_key"] = i["scheduler"]["key"].clone();
+        self.records.push(j);
+        if self.crash_after_launch {
+            self.crash_after_launch = false;
+            return Err(Error("KeyboardInterrupt"));
+        }
+        Ok(jid)
+    }
+    fn cancel(&mut self, j: &mut Value) -> Result<bool> {
+        self.cancelled.push(j["id"].clone());
+        if self.cancel_ok {
+            j["status"] = json!("cancelled");
+            if let Some(r) = self.records.iter_mut().find(|r| r["id"] == j["id"]) {
+                *r = j.clone();
+            }
+        }
+        Ok(self.cancel_ok)
+    }
+    fn kill_orphan(&mut self, c: &Value) -> Result<bool> {
+        self.killed.push(c["pid"].clone());
+        Ok(true)
+    }
+    fn pick(&mut self, _: &str) -> Result<Value> {
+        self.pick_count += 1;
+        Ok(json!({"model":"mock-model","effort":"high","task_type":"implementation"}))
+    }
+    fn model_exists(&mut self, m: &str) -> bool {
+        m != "gpt-6.1-luna"
+    }
+    fn notify(&mut self, i: &Value) -> Result<Value> {
+        self.notices.push(i["id"].clone());
+        Ok(json!({"thread_id":"mock-thread"}))
+    }
+    fn reply(&mut self, _: &Value) -> Result<Option<Value>> {
+        self.reply_count += 1;
+        Ok(self.owner_reply.clone())
+    }
+    fn close_question(&mut self, r: &Value) -> Result<()> {
+        if self.close_fails {
+            return Err(Error("RuntimeError"));
+        }
+        self.closed.push(r["thread_id"].clone());
+        Ok(())
+    }
+    fn outcome(&mut self, j: &Value) -> Result<String> {
+        Ok(j["last_message"]
+            .as_str()
+            .map(cc_scheduler::backend::result_outcome)
+            .unwrap_or("done")
+            .into())
+    }
+    fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if self.prepare_pressure {
+            self.m["available_gb"] = json!(3);
+        }
+        fs::create_dir_all(s(&i["scheduler"]["worktree"]))?;
+        Ok(())
+    }
+}
+struct Fixture {
+    temp: tempfile::TempDir,
+    e: Scheduler<Fake>,
+    cfg: Value,
+    pri: Value,
+    repo: PathBuf,
+}
+impl Fixture {
+    fn new() -> Self {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::write(root.join("client-projects.txt"), "").unwrap();
+        let repo = root.join("repo");
+        fs::create_dir(&repo).unwrap();
+        let e = Scheduler::new(
+            root.join("scheduler"),
+            root.join("todo.json"),
+            Fake::default(),
+        )
+        .unwrap();
+        write_json(&e.todo_path,&json!({"projects":{"civ6":repo,"GoDD-AO":repo,"other":repo},"items":[],"next_id":1,"stalls":{}}),1).unwrap();
+        let mut cfg = defaults();
+        cfg["kill_enabled"] = json!(true);
+        Self {
+            temp,
+            e,
+            cfg,
+            pri: json!({"civ6":1,"GoDD-AO":2}),
+            repo,
+        }
+    }
+    fn put(&mut self, mut i: Value) {
+        let spec = self.temp.path().join(format!("spec-{}.md", i["id"]));
+        fs::write(&spec, "指定された機能を実装してください。").unwrap();
+        i["spec"] = json!(spec);
+        let mut db = self.e.todo().unwrap();
+        push(&mut db["items"], i);
+        write_json(&self.e.todo_path, &db, 1).unwrap();
+    }
+    fn get(&self, id: u64) -> Value {
+        arr(&self.e.todo().unwrap()["items"])
+            .into_iter()
+            .find(|i| i["id"] == id)
+            .unwrap()
+    }
+    fn managed(&mut self, id: u64, root: u32, project: &str, retry: u64) {
+        let mut i = item(id, project, "doing", &[]);
+        let jid = format!("j{id}");
+        i["scheduler"] = json!({"job":jid,"key":id.to_string().repeat(32),"retry_count":retry,"started_s":T-1000.+id as f64,"worktree":self.temp.path().join(format!("repo-wt/todo-{id}-work-{id}")),"branch":format!("scheduler/todo-{id}-work-{id}"),"phase":"running"});
+        i["jobs"] = json!([jid]);
+        self.put(i);
+        self.e.backend.records.push(job(&jid, root, "running"));
+        self.e.backend.ps.insert(root, proc(root, 0, "codex.exe"));
+    }
+    fn reconcile(&mut self) {
+        let mut records = self.e.backend.records.clone();
+        let ps = self.e.backend.ps.clone();
+        self.e.reconcile(&mut records, &ps, &self.cfg).unwrap();
+        self.e.backend.records = records;
+    }
+    fn dispatch(&mut self) {
+        self.e.dispatch(&self.cfg, &self.pri).unwrap();
+    }
+    fn question(&mut self) {
+        self.managed(1, 1, "civ6", 1);
+        self.e.backend.records[0]["status"] = json!("lost");
+        self.e.backend.ps.clear();
+        // A genuine owner decision, rather than an automatic retry limit.
+        self.e
+            .edit(&json!(1), |row| {
+                row["status"] = json!("block");
+                row["note"] = json!("公開範囲の回答を待っています。");
+                row["scheduler"]["notice_pending"] = json!(true);
+            })
+            .unwrap();
+        self.e.notifications().unwrap();
+    }
+}
+#[test]
+fn test_dispatch_uses_priority_and_marks_doing() {
+    let mut f = Fixture::new();
+    for (id, project) in [(1, "other"), (2, "GoDD-AO"), (3, "civ6")] {
+        f.put(item(id, project, "todo", &[]));
+    }
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
+    assert_eq!(f.get(3)["status"], "doing");
+    assert_eq!(f.get(3)["jobs"], json!(["launched1"]));
+    assert_eq!(n(&f.e.report["allowance_now"]), 0.);
+    assert_eq!(f.e.backend.pick_count, 1);
+}
+#[test]
+fn repeated_priority_work_rotates_between_products() {
+    let mut f = Fixture::new();
+    for (id, project) in [(1, "civ6"), (2, "civ6"), (3, "GoDD-AO"), (4, "other")] {
+        f.put(item(id, project, "todo", &[]));
+    }
+    for _ in 0..3 {
+        f.dispatch();
+        f.e.backend.clock += 11.;
+    }
+    let ids: Vec<_> =
+        f.e.backend
+            .launched
+            .iter()
+            .map(|j| j["item"]["id"].as_u64().unwrap())
+            .collect();
+    assert_eq!(ids, vec![1, 3, 4]);
+}
+#[test]
+fn preparation_retains_previous_result_session_and_redesigns_repeated_continuations() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n回帰検査だけ残っています。");
+    f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+    f.e.backend.records[0]["cwd"] = json!(cwd);
+    f.e.edit(&json!(1), |i| {
+        i["scheduler"]["continuation_count"] = json!(2)
+    })
+    .unwrap();
+    f.e.backend.ps.clear();
+    f.reconcile();
+    f.e.backend.clock += 61.;
+    let current = f.get(1);
+    let prepared =
+        f.e.prepare(&current, &f.repo.to_string_lossy())
+            .unwrap()
+            .unwrap();
+    assert_eq!(
+        prepared["scheduler"]["resume_session"],
+        "12345678-1234-4321-9234-123456789abc"
+    );
+    let prompt = fs::read_to_string(s(&prepared["scheduler"]["prompt"])).unwrap();
+    assert!(prompt.contains("回帰検査だけ残っています。"));
+    assert!(prompt.contains("進め方を設計から見直し"));
+    let command = RealBackend::new(f.temp.path().to_path_buf()).launch_command(
+        &prepared,
+        Path::new("prompt.md"),
+        &json!({"model":"gpt-6.1-sol","effort":"high"}),
+    );
+    assert!(command
+        .args
+        .windows(2)
+        .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+}
+#[test]
+fn legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("failed");
+    f.e.backend.ps.clear();
+    f.e.edit(&json!(1), |row| {
+        row["note"] = json!("ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。");
+        row["scheduler"]["phase"] = json!("blocked");
+        row["scheduler"]["question"] = json!({"thread_id":"old-retry-question"});
+    })
+    .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["scheduler"]["question_close_pending"], true);
+    f.e.answers().unwrap();
+    assert_eq!(f.e.backend.closed, vec![json!("old-retry-question")]);
+    assert!(f.get(1)["scheduler"]["question"].is_null());
+    assert!(f.e.backend.notices.is_empty());
+}
+
+#[test]
+fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
+    let f = Fixture::new();
+    let backend = RealBackend::new(f.temp.path().to_path_buf());
+    for (task, sandbox, expected) in [
+        ("implementation", "", "danger-full-access"),
+        ("code_review", "", "danger-full-access"),
+        ("research", "read-only", "read-only"),
+    ] {
+        let command = backend.launch_command(
+            &json!({"id":1,"title":"作業","project":"demo",
+            "scheduler":{"worktree":"D:/work","key":"key"}}),
+            Path::new("prompt.md"),
+            &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
+        );
+        assert!(command
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--sandbox", expected]));
+    }
+}
+#[test]
+fn retiring_legacy_question_preserves_live_worker_and_consumes_its_completion() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.edit(&json!(1), |row| {
+        row["note"] = json!("ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。");
+        row["scheduler"]["phase"] = json!("blocked");
+        row["scheduler"]["question"] = json!({"thread_id":"old-retry-question"});
+    })
+    .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.get(1)["scheduler"]["job"], "j1");
+    f.e.answers().unwrap();
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.records[0]["last_message"] = json!("状態: 完了\n元の依頼は完了しました。");
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "done");
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn unread_owner_stop_is_saved_before_retiring_legacy_question_and_stops_its_worker() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("block");
+        row["note"] = json!("ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。");
+        row["scheduler"]["phase"] = json!("blocked");
+        row["scheduler"]["question"] = json!({"thread_id":"old-retry-question"});
+    })
+    .unwrap();
+    f.e.backend.owner_reply =
+        Some(json!({"id":"owner-stop","text":"停止したままにしてください","stop":true}));
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    assert_eq!(f.get(1)["scheduler"]["answer"], "owner-stop");
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+    f.e.answers().unwrap();
+    assert!(f.get(1)["scheduler"]["question"].is_null());
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn owner_stop_does_not_cancel_a_worker_claimed_only_by_another_items_scheduler() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let mut other = item(2, "civ6", "doing", &[]);
+    other["scheduler"] = json!({"job":"j1","phase":"running"});
+    f.put(other);
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("block");
+        row["note"] = json!("ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。");
+        row["scheduler"]["phase"] = json!("blocked");
+        row["scheduler"]["question"] = json!({"thread_id":"old"});
+    })
+    .unwrap();
+    f.e.backend.owner_reply = Some(json!({"id":"stop","text":"停止したまま","stop":true}));
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    assert_eq!(f.get(2)["status"], "doing");
+    assert!(f.e.backend.cancelled.is_empty());
+}
+
+#[test]
+fn revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path();
+    let mut old = job("holder", 10, "running");
+    old["needs"] = json!(["civ6", "cargo"]);
+    let processes = ps(vec![
+        proc(10, 0, "codex.exe"),
+        proc(11, 0, "CivilizationVI.exe"),
+    ]);
+    write_json(&home.join("civ6.lock"), &json!({"job":"holder"}), 0).unwrap();
+    assert!(
+        resources_busy_with_lock(&[], &[old.clone()], &processes, T, home)
+            .unwrap()
+            .contains("civ6")
+    );
+    write_json(
+        &home.join("civ6-revoked.json"),
+        &json!({"owner":{"job":"holder"},"revoked_at":T}),
+        0,
+    )
+    .unwrap();
+    fs::remove_file(home.join("civ6.lock")).unwrap();
+    let busy = resources_busy_with_lock(&[], &[old.clone()], &processes, T, home).unwrap();
+    assert!(!busy.contains("civ6"));
+    assert!(busy.contains("cargo"));
+    write_json(&home.join("civ6.lock"), &json!({"job":"new-holder"}), 0).unwrap();
+    assert!(resources_busy_with_lock(&[], &[old], &processes, T, home)
+        .unwrap()
+        .contains("civ6"));
+}
+
+#[test]
+fn dispatch_starts_ready_civ6_item_after_revocation_and_reserves_next_job() {
+    let mut f = Fixture::new();
+    fs::create_dir_all(f.e.civ6_home()).unwrap();
+    write_json(
+        &f.e.civ6_home().join("civ6-revoked.json"),
+        &json!({"owner":{"job":"holder"},"revoked_at":T}),
+        0,
+    )
+    .unwrap();
+    f.e.backend.ps = ps(vec![
+        proc(10, 0, "codex.exe"),
+        proc(11, 0, "CivilizationVI.exe"),
+    ]);
+    f.e.backend.records = vec![job("holder", 10, "running")];
+    f.e.backend.records.push(job("historical", 20, "running"));
+    f.e.backend.ps.insert(20, proc(20, 0, "codex.exe"));
+    let mut previous = item(86, "civ6", "doing", &["civ6"]);
+    previous["scheduler"] = json!({"job":"holder"});
+    previous["jobs"] = json!(["holder"]);
+    let ready = item(437, "civ6", "todo", &["civ6"]);
+    f.put(previous);
+    let mut finished = item(116, "civ6", "block", &["civ6", "cargo"]);
+    finished["scheduler"] = json!({"job":"old-job","phase":"finished"});
+    finished["jobs"] = json!(["old-job", "historical"]);
+    f.put(finished);
+    f.put(ready);
+    f.e.dispatch(&f.cfg, &f.pri).unwrap();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert!(arr(&f.e.report["busy_resources"]).contains(&json!("cargo")));
+    let db = f.e.todo().unwrap();
+    let row = arr(&db["items"])
+        .into_iter()
+        .find(|i| i["id"] == 437)
+        .unwrap();
+    assert_eq!(row["status"], "doing");
+}
+
+#[test]
+fn unrelated_current_civ6_reservation_survives_another_owners_revocation() {
+    let root = tempfile::tempdir().unwrap();
+    write_json(
+        &root.path().join("civ6-revoked.json"),
+        &json!({"owner":{"job":"revoked"},"revoked_at":T}),
+        0,
+    )
+    .unwrap();
+    for (status, phase) in [
+        ("block", "question"),
+        ("todo", "queued"),
+        ("block", "finished"),
+    ] {
+        let mut current = item(116, "civ6", status, &["civ6"]);
+        current["scheduler"] = json!({"job":"current","phase":phase});
+        current["jobs"] = json!(["current"]);
+        let busy = resources_busy_with_lock(
+            &[current],
+            &[job("current", 20, "running")],
+            &ps(vec![proc(20, 0, "codex.exe")]),
+            T,
+            root.path(),
+        )
+        .unwrap();
+        assert!(
+            busy.contains("civ6"),
+            "{status}/{phase} must retain its live reservation"
+        );
+    }
+}
+
+#[test]
+fn revoked_current_allocation_is_not_kept_by_its_historical_job_list() {
+    let root = tempfile::tempdir().unwrap();
+    write_json(
+        &root.path().join("civ6-revoked.json"),
+        &json!({"owner":{"job":"revoked"},"revoked_at":T}),
+        0,
+    )
+    .unwrap();
+    let mut current = item(86, "civ6", "doing", &["civ6", "cargo"]);
+    current["scheduler"] = json!({"job":"revoked","phase":"running"});
+    current["jobs"] = json!(["revoked", "historical"]);
+    let busy = resources_busy_with_lock(
+        &[current],
+        &[
+            job("revoked", 10, "running"),
+            job("historical", 20, "running"),
+        ],
+        &ps(vec![proc(10, 0, "codex.exe"), proc(20, 0, "codex.exe")]),
+        T,
+        root.path(),
+    )
+    .unwrap();
+    assert!(!busy.contains("civ6"));
+    assert!(busy.contains("cargo"));
+}
+#[test]
+fn test_civ6_busy_skips_to_independent_project() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.edit(&json!(1), |r| r["needs"] = json!(["civ6"]))
+        .unwrap();
+    f.put(item(2, "civ6", "todo", &["civ6"]));
+    f.put(item(3, "GoDD-AO", "todo", &[]));
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
+}
+#[test]
+fn test_hang_twice_retries_slowly_without_owner_notification() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.reconcile();
+    f.e.backend.clock += 1800.;
+    f.reconcile();
+    assert_eq!(
+        f.e.backend.cancelled,
+        json!(["j1"]).as_array().unwrap().clone()
+    );
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(n(&f.get(1)["scheduler"]["retry_count"]), 1.);
+    assert_eq!(f.get(1)["scheduler"]["resume"], true);
+    f.e.edit(&json!(1), |r| {
+        r["status"] = json!("doing");
+        r["scheduler"]["job"] = json!("j1");
+    })
+    .unwrap();
+    f.e.backend.records[0]["status"] = json!("running");
+    f.reconcile();
+    f.e.backend.clock += 1800.;
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(
+        n(&f.get(1)["scheduler"]["not_before"]),
+        f.e.backend.clock + 3600.
+    );
+    f.e.notifications().unwrap();
+    f.e.notifications().unwrap();
+    assert!(f.e.backend.notices.is_empty());
+}
+#[test]
+fn test_lost_after_reboot_requeues_and_resumes_same_worktree() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let original = f.get(1)["scheduler"]["worktree"].clone();
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.e.backend.records[0]["status"], "lost");
+    assert_eq!(f.get(1)["status"], "todo");
+    f.e.backend.clock += 60.;
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched[0]["item"]["scheduler"]["worktree"],
+        original
+    );
+    let text = s(&f.e.backend.launched[0]["text"]);
+    assert!(text.contains(RESUME_INSTRUCTION));
+    assert!(text.contains("コミット"));
+}
+#[test]
+fn test_second_lost_uses_same_retry_budget_as_hang() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 1);
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(n(&f.get(1)["scheduler"]["not_before"]), T + 3600.);
+    f.e.notifications().unwrap();
+    assert!(f.e.backend.notices.is_empty());
+}
+#[test]
+fn test_incomplete_cancel_never_requeues_or_duplicates() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.cancel_ok = false;
+    let mut j = f.e.backend.records[0].clone();
+    f.e.cancel_for(&f.get(1), &mut j, "hung", &f.cfg).unwrap();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.get(1)["scheduler"]["pending_cancel"], "hung");
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn test_cancel_disabled_is_only_a_report() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.cfg["kill_enabled"] = json!(false);
+    let mut j = f.e.backend.records[0].clone();
+    f.e.cancel_for(&f.get(1), &mut j, "memory", &f.cfg).unwrap();
+    assert!(f.e.backend.cancelled.is_empty());
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.report["cancel_dry_run"][0]["job"], "j1");
+}
+#[test]
+fn test_memory_pressure_cancel_low_priority_latest_and_no_hang_budget() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.managed(2, 2, "other", 0);
+    f.managed(3, 3, "other", 0);
+    let mut m = measurement();
+    m["available_gb"] = json!(3);
+    let mut jobs = f.e.backend.records.clone();
+    f.e.memory_pressure(&m, &mut jobs, &f.e.backend.ps.clone(), &f.pri, &f.cfg)
+        .unwrap();
+    assert_eq!(f.e.backend.cancelled, vec![json!("j3")]);
+    assert_eq!(f.get(3)["status"], "todo");
+    assert_eq!(n(&f.get(3)["scheduler"]["retry_count"]), 0.);
+    assert_eq!(n(&f.get(3)["scheduler"]["not_before"]), T + 180.);
+}
+#[test]
+fn test_crash_after_launch_is_adopted_without_second_launch() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    f.e.backend.crash_after_launch = true;
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri),
+        Err(Error("KeyboardInterrupt"))
+    );
+    let key = f.get(1)["scheduler"]["key"].clone();
+    assert_eq!(f.e.backend.records[0]["launch_key"], key);
+    f.reconcile();
+    assert_eq!(f.get(1)["scheduler"]["job"], "launched1");
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+}
+#[test]
+fn test_crash_before_launch_reuses_saved_key_and_selection() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let prepared =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched[0]["item"]["scheduler"]["key"],
+        prepared["scheduler"]["key"]
+    );
+    assert_eq!(f.e.backend.pick_count, 1);
+}
+#[test]
+fn test_cpu_increases_during_prepare_blocks_launch() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    f.e.backend.prepare_pressure = true;
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.get(1)["status"], "todo");
+}
+#[test]
+fn test_completion_and_manual_done_are_not_overwritten() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "done");
+    f.e.backend.records[0]["status"] = json!("lost");
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "done");
+}
+
+#[test]
+fn unfinished_results_requeue_but_real_owner_questions_block() {
+    for (result, expected) in [
+        ("状態: 完了\n作業を終えました。", "done"),
+        ("状態: 継続中\ncargoの空き待ちです。", "todo"),
+        ("状態: 要判断\ncargoの空き待ちです。", "todo"),
+        (
+            "状態: 要判断\n月額1000円で公開してよいですか。\na. 公開\nb. 停止",
+            "block",
+        ),
+    ] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!(result);
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], expected);
+        if expected == "todo" {
+            assert_eq!(f.get(1)["scheduler"]["job"], Value::Null);
+            assert_eq!(f.get(1)["scheduler"]["resume"], true);
+            f.e.backend.ps.clear();
+            f.dispatch();
+            assert!(f.e.backend.launched.is_empty());
+            f.e.backend.clock += 61.;
+            f.dispatch();
+            assert_eq!(f.get(1)["status"], "doing");
+            assert_eq!(f.e.backend.launched.len(), 1);
+            assert!(s(&f.e.backend.launched[0]["text"]).contains("前回のジョブが止まった"));
+            assert!(f.e.backend.notices.is_empty());
+        }
+    }
+}
+#[test]
+fn test_orphan_dry_run_does_not_kill_and_reports_counts() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.ps.insert(2, proc(2, 1, "node.exe"));
+    f.e.backend.ps.insert(3, proc(3, 0, "node.exe"));
+    let report =
+        f.e.orphans(
+            &f.e.backend.records.clone(),
+            &f.e.backend.ps.clone(),
+            &f.cfg,
+            false,
+        )
+        .unwrap();
+    assert_eq!(report["node_before"], 2);
+    assert_eq!(report["node_after"], 2);
+    assert_eq!(
+        arr(&report["candidates"])
+            .iter()
+            .map(|p| n(&p["pid"]) as u32)
+            .collect::<Vec<_>>(),
+        [1, 2]
+    );
+    assert!(f.e.backend.killed.is_empty());
+}
+#[test]
+fn test_detached_worker_delays_relaunch_even_with_dead_roots() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.ps.insert(2, proc(2, 1, "codex.exe"));
+    f.e.state["observed"] = ownership(&f.e.backend.records, &f.e.backend.ps, &json!({}));
+    f.e.backend.ps.remove(&1);
+    f.reconcile();
+    assert_eq!(f.e.backend.records[0]["status"], "lost");
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.report["recovery_waiting_for_worker"], json!(["j1"]));
+}
+#[test]
+fn test_failed_recovery_step_logs_and_prevents_admission() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.put(item(2, "other", "todo", &[]));
+    f.e.backend.ps.clear();
+    f.e.backend.fail_lost = true;
+    let report = f.e.run("step", false).unwrap();
+    assert_eq!(report["step_failures"], json!(["lost j1"]));
+    assert!(f.e.backend.launched.is_empty());
+    let log = fs::read_to_string(f.e.root.join("scheduler.log")).unwrap();
+    assert!(log.contains("RuntimeError"));
+    assert!(!log.contains("secret-shaped"));
+}
+#[test]
+fn test_unmanaged_missing_job_is_marked_lost_without_dispatch() {
+    let mut f = Fixture::new();
+    f.e.backend.records.push(job("j1", 1, "running"));
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.e.backend.records[0]["status"], "lost");
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn test_bad_config_does_not_default_to_killing_or_dispatching() {
+    let f = Fixture::new();
+    write_json(
+        &f.e.root.join("config.json"),
+        &json!({"kill_enabled":"false"}),
+        2,
+    )
+    .unwrap();
+    assert_eq!(f.e.settings(), Err(Error("ValueError")));
+    assert!(f.e.backend.cancelled.is_empty());
+}
+#[test]
+fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
+    let f = Fixture::new();
+    let original = f.temp.path().join("owner-prompt.md");
+    fs::write(&original, "元の指示").unwrap();
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    let mut db = f.e.todo().unwrap();
+    let args = cc_todo::Command::Add {
+        project: "civ6".into(),
+        title: "指示つきの作業".into(),
+        note: "".into(),
+        spec: Some(original.clone()),
+        model: Some("mock-model".into()),
+        effort: Some("high".into()),
+        needs: vec!["civ6".into(), "cargo".into()],
+    };
+    cc_todo::add_item(&mut db, &args, &paths).unwrap();
+    fs::write(&original, "あとで変更").unwrap();
+    let copied = &db["items"][0];
+    assert_eq!(fs::read_to_string(s(&copied["spec"])).unwrap(), "元の指示");
+    assert_eq!(copied["needs"], json!(["civ6", "cargo"]));
+    let args = cc_todo::Command::Add {
+        project: "civ6".into(),
+        title: "指示なし".into(),
+        note: "".into(),
+        spec: None,
+        model: None,
+        effort: None,
+        needs: vec![],
+    };
+    cc_todo::add_item(&mut db, &args, &paths).unwrap();
+    assert!(db["items"][1].get("dispatchable").is_none());
+}
+#[test]
+fn test_explicit_model_effort_skip_picker() {
+    let mut f = Fixture::new();
+    let mut i = item(1, "civ6", "todo", &[]);
+    i["model"] = json!("mock-model");
+    i["effort"] = json!("high");
+    f.put(i);
+    f.dispatch();
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.e.backend.launched.len(), 1);
+}
+struct GitFake {
+    calls: Vec<Invocation>,
+    existing: Option<(PathBuf, String, PathBuf)>,
+}
+impl Runner for GitFake {
+    fn run(&mut self, c: &Invocation) -> Result<Output> {
+        self.calls.push(c.clone());
+        let output = if let Some((target, branch, git)) = &self.existing {
+            match c.args.last().map(String::as_str) {
+                Some("--show-toplevel") => target.to_string_lossy().into_owned(),
+                Some("--show-current") => branch.clone(),
+                _ => git.to_string_lossy().into_owned(),
+            }
+        } else if c.args.last().map(String::as_str) == Some("--is-inside-work-tree") {
+            "true".into()
+        } else {
+            "".into()
+        };
+        Ok(Output {
+            code: 0,
+            stdout: output,
+            stderr: String::new(),
+        })
+    }
+}
+#[test]
+fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let row =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    fs::remove_dir(&target).unwrap();
+    let mut git = GitFake {
+        calls: vec![],
+        existing: None,
+    };
+    ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
+    assert_eq!(git.calls.len(), 4);
+    assert_eq!(
+        &git.calls[1].args[2..],
+        ["fetch", "--quiet", "origin", "main"]
+    );
+    assert_eq!(
+        &git.calls[2].args[2..],
+        ["rev-parse", "--verify", "refs/remotes/origin/main"]
+    );
+    assert_eq!(git.calls[3].args[2], "worktree");
+    assert_eq!(git.calls[3].args[3], "add");
+    assert_eq!(git.calls[3].args[5], row["scheduler"]["branch"]);
+    assert_eq!(git.calls[3].args.last().unwrap(), "origin/main");
+    fs::create_dir(&target).unwrap();
+    git.existing = Some((
+        target,
+        s(&row["scheduler"]["branch"]).into(),
+        f.repo.join(".git"),
+    ));
+    git.calls.clear();
+    ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
+    assert_eq!(git.calls.len(), 4);
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree")));
+}
+#[test]
+fn test_step_entrypoint_never_raises() {
+    assert_eq!(
+        step::<Fake>(Err(Error("RuntimeError"))),
+        json!({"error":"RuntimeError"})
+    );
+}
+#[test]
+fn test_recover_mode_requeues_dead_job_without_launch_or_cancel() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.ps.clear();
+    write_json(
+        &f.e.root.join("config.json"),
+        &json!({"kill_enabled":true}),
+        2,
+    )
+    .unwrap();
+    f.e.run("recover", false).unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert!(f.e.backend.launched.is_empty());
+    assert!(f.e.backend.cancelled.is_empty());
+    assert!(f.e.backend.notices.is_empty());
+    assert!(f.e.backend.killed.is_empty());
+}
+#[test]
+fn test_durable_memory_cancel_intent_survives_before_requeue() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("cancelled");
+    f.e.backend.ps.clear();
+    f.e.edit(&json!(1), |r| {
+        r["scheduler"]["pending_cancel"] = json!("memory")
+    })
+    .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(n(&f.get(1)["scheduler"]["retry_count"]), 0.);
+    assert_eq!(f.get(1)["scheduler"]["last_stop"], "memory");
+}
+#[test]
+fn test_operator_cancel_is_not_automatically_undone() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("cancelled");
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn test_manual_lost_item_without_spec_requeues_for_its_agent() {
+    let mut f = Fixture::new();
+    let mut i = item(1, "civ6", "doing", &[]);
+    i["jobs"] = json!(["j1"]);
+    f.put(i);
+    f.e.edit(&json!(1), |r| {
+        remove(r, "spec");
+        remove(r, "dispatchable");
+    })
+    .unwrap();
+    f.e.backend.records.push(job("j1", 1, "running"));
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn test_orphan_apply_rechecks_pid_reuse_and_never_kills_replacement() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.ps.insert(2, proc(2, 1, "node.exe"));
+    let mut replacement = f.e.backend.ps[&2].clone();
+    replacement["created"] = json!(replacement["created"].as_u64().unwrap() + 100);
+    replacement["ppid"] = json!(0);
+    f.e.backend.fresh = Some(ps(vec![f.e.backend.ps[&1].clone(), replacement]));
+    let report =
+        f.e.orphans(
+            &f.e.backend.records.clone(),
+            &f.e.backend.ps.clone(),
+            &f.cfg,
+            true,
+        )
+        .unwrap();
+    assert_eq!(f.e.backend.killed, vec![json!(1)]);
+    assert_eq!(report["killed"], json!([1]));
+}
+#[test]
+fn test_todo_live_lock_is_not_stolen_by_old_timestamp() {
+    let f = Fixture::new();
+    let lockpath = f.e.todo_path.with_file_name("todo.lock");
+    let lock = ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .unwrap();
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_none());
+    drop(lock);
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_some());
+    assert!(lockpath.exists());
+}
+#[test]
+fn test_owner_reply_requeues_through_capacity_and_preserves_resource_claim() {
+    let mut f = Fixture::new();
+    f.question();
+    f.e.edit(&json!(1), |r| r["needs"] = json!(["civ6"]))
+        .unwrap();
+    f.e.backend.owner_reply = Some(json!({"id":"200","text":"a","stop":false}));
+    f.e.answers().unwrap();
+    f.e.answers().unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(n(&f.get(1)["scheduler"]["retry_count"]), 0.);
+    assert_eq!(f.e.backend.closed, vec![json!("mock-thread")]);
+    f.e.backend.ps.insert(10, proc(10, 0, "CivilizationVI.exe"));
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+    f.e.backend.ps.clear();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let text = s(&f.e.backend.launched[0]["text"]);
+    assert!(text.contains("原因を調べて"));
+    assert!(text.contains(RESUME_INSTRUCTION));
+}
+#[test]
+fn test_owner_stop_reply_keeps_item_blocked() {
+    let mut f = Fixture::new();
+    f.question();
+    f.e.backend.owner_reply = Some(json!({"id":"200","text":"b","stop":true}));
+    f.e.answers().unwrap();
+    f.dispatch();
+    assert_eq!(f.get(1)["status"], "block");
+    assert_eq!(f.e.backend.closed, vec![json!("mock-thread")]);
+    assert!(f.e.backend.launched.is_empty());
+}
+#[test]
+fn test_question_close_failure_retries_close_without_reprocessing_reply() {
+    let mut f = Fixture::new();
+    f.question();
+    f.e.backend.owner_reply = Some(json!({"id":"200","text":"a","stop":false}));
+    f.e.backend.close_fails = true;
+    f.e.answers().unwrap();
+    assert_eq!(f.get(1)["scheduler"]["answer"], "200");
+    assert_eq!(f.get(1)["scheduler"]["question_close_pending"], true);
+    f.put(item(2, "GoDD-AO", "todo", &[]));
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    f.e.backend.close_fails = false;
+    let count = f.e.backend.reply_count;
+    f.e.answers().unwrap();
+    assert_eq!(f.e.backend.reply_count, count);
+    assert!(f.get(1)["scheduler"]
+        .get("question_close_pending")
+        .is_none());
+}
+#[test]
+fn test_new_hang_does_not_create_another_owner_question() {
+    let mut f = Fixture::new();
+    f.question();
+    f.e.backend.owner_reply = Some(json!({"id":"200","text":"a","stop":false}));
+    f.e.answers().unwrap();
+    f.e.edit(&json!(1), |r| {
+        r["status"] = json!("doing");
+        merge(&mut r["scheduler"], json!({"job":"j2","retry_count":1}));
+    })
+    .unwrap();
+    f.e.requeue(&json!(1), &json!("j2"), "hung").unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    f.e.notifications().unwrap();
+    assert_eq!(f.e.backend.notices, vec![json!(1)]);
+    assert_eq!(f.get(1)["scheduler"]["answer"], "200");
+}
+#[derive(Clone, Default)]
+struct AskFake {
+    calls: std::sync::Arc<std::sync::Mutex<Vec<Value>>>,
+}
+impl cc_ask::core::Effects for AskFake {
+    fn http(
+        &mut self,
+        m: &str,
+        url: &str,
+        body: Option<&Value>,
+        _: bool,
+    ) -> cc_ask::core::Result<Value> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(json!({"method":m,"url":url,"body":body}));
+        if url.ends_with("/channels/FORUM") {
+            return Ok(json!({"type":15}));
+        }
+        if m == "POST" {
+            return Ok(json!({"id":"THREAD","last_message_id":"MESSAGE"}));
+        }
+        Err("RuntimeError: secret-shaped mock error".into())
+    }
+    fn run(&mut self, argv: &[String], _: u64) -> cc_ask::core::Result<cc_ask::core::Output> {
+        self.calls.lock().unwrap().push(json!({"argv":argv}));
+        Ok(cc_ask::core::Output {
+            code: 0,
+            stdout: "".into(),
+            stderr: "".into(),
+        })
+    }
+    fn now(&self) -> f64 {
+        T
+    }
+}
+fn ask_context(root: &Path, fake: AskFake) -> cc_ask::core::Context {
+    fs::write(root.join("client-projects.txt"), "").unwrap();
+    cc_ask::core::Context {
+        client_projects: root.join("client-projects.txt"),
+        civ6_home: root.join("civ6-live"),
+        here: root.to_owned(),
+        jobs: root.join("jobs"),
+        discord_tasks: root.join("discord-tasks"),
+        todo: root.join("todo.json"),
+        cfg: json!({"owner_user_id":"OWNER","task_channel_id":"FORUM","guild_id":"GUILD"}),
+        effects: Box::new(fake),
+        codex_command: root.join("codex_jobs.exe"),
+        scheduler_command: root.join("scheduler.exe"),
+        shepherd_command: root.join("shepherd.exe"),
+        todo_command: root.join("todo.exe"),
+    }
+}
+#[test]
+fn test_owner_question_records_original_worktree_for_continuation() {
+    let temp = tempfile::tempdir().unwrap();
+    let fake = AskFake::default();
+    let calls = fake.calls.clone();
+    let mut ctx = ask_context(temp.path(), fake);
+    let body = temp.path().join("question.md");
+    fs::write(&body, "停止した作業の再開方法を決めてください。").unwrap();
+    let original = temp
+        .path()
+        .join("repo-wt/todo-1-work")
+        .to_string_lossy()
+        .into_owned();
+    let args = cc_ask::commands::AskArgs {
+        attach: vec![],
+        title: "作業が停止しました".into(),
+        body_file: body,
+        agent: "Scheduler".into(),
+        cwd: Some(original.clone()),
+        source: Some("scheduler".into()),
+        scheduler_item: Some(1),
+        scheduler_job: Some("stopped-job".into()),
+        dry_run: false,
+    };
+    cc_ask::commands::cmd_ask(&mut ctx, &args).unwrap();
+    let state = ctx.load().unwrap();
+    let q = &state["questions"][0];
+    assert_eq!(q["cwd"], original);
+    assert_eq!(q["agent"], "Scheduler");
+    assert_eq!(q["source"], "scheduler");
+    assert_eq!(q["scheduler_item"], 1);
+    assert_eq!(q["scheduler_job"], "stopped-job");
+    assert_eq!(
+        calls
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|call| call["method"] == "POST")
+            .unwrap()["body"]["message"]["allowed_mentions"],
+        json!({"parse":[],"users":["OWNER"]})
+    );
+}
+#[test]
+fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
+    let temp = tempfile::tempdir().unwrap();
+    let fake = AskFake::default();
+    let calls = fake.calls.clone();
+    let mut ctx = ask_context(temp.path(), fake);
+    ctx.save(&json!({"questions":[{"source":"scheduler","open":true}]}))
+        .unwrap();
+    cc_ask::resume::cmd_resume(&mut ctx, &mut false).unwrap();
+    // Answer receipts now inspect scheduler questions too; the generic path still must never launch.
+    assert!(!calls
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|call| call["argv"].is_array()));
+}
+#[test]
+fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
+    let temp = tempfile::tempdir().unwrap();
+    let fake = AskFake::default();
+    let calls = fake.calls.clone();
+    let mut ctx = ask_context(temp.path(), fake);
+    cc_ask::commands::cmd_tick(&mut ctx).unwrap();
+    let calls = calls.lock().unwrap();
+    let api = calls.iter().position(|v| truth(&v["url"])).unwrap();
+    let scheduler = calls
+        .iter()
+        .position(|v| {
+            arr(&v["argv"])
+                .iter()
+                .any(|v| s(v).contains("scheduler.exe"))
+                && arr(&v["argv"]).last().is_some_and(|v| s(v) == "step")
+        })
+        .unwrap();
+    assert!(scheduler > api);
+    let launched: Vec<_> = calls
+        .iter()
+        .filter(|v| truth(&v["argv"]))
+        .map(|v| {
+            arr(&v["argv"])
+                .iter()
+                .map(|v| s(v).to_owned())
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert_eq!(launched.len(), 6);
+    assert!(launched[0].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[0].last().unwrap(), "recover");
+    assert!(launched[1].iter().any(|v| v.ends_with("todo.exe")));
+    assert!(launched[2].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[2].last().unwrap(), "step");
+    assert!(launched[3].iter().any(|v| v.ends_with("shepherd.exe")));
+    assert_eq!(launched[4][0], "tasklist");
+    assert_eq!(launched[5][0], "tasklist");
+}
+#[test]
+fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
+    let text = fs::read_to_string("D:/CC/Tools/discord-ask/discord-ask-tick-hidden.vbs").unwrap();
+    let lines: Vec<_> = text
+        .lines()
+        .filter(|l| l.starts_with("objShell.Run"))
+        .collect();
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("discord_ask.exe"));
+    assert!(lines[0].contains("tick"));
+    // Recovery is now inside the measured Rust tick (covered by cc-ask/tick_bounds).
+    assert!(!text.contains("scheduler.py"));
+    assert!(lines.iter().all(|l| l.ends_with(", 0, True")));
+}
+struct Capture {
+    calls: std::sync::Arc<std::sync::Mutex<Vec<Invocation>>>,
+}
+impl Runner for Capture {
+    fn run(&mut self, c: &Invocation) -> Result<Output> {
+        self.calls.lock().unwrap().push(c.clone());
+        Ok(Output {
+            code: 0,
+            stdout: "fixture-job\n".into(),
+            stderr: String::new(),
+        })
+    }
+}
+#[test]
+fn test_worker_launch_uses_windowless_existing_launcher() {
+    let f = Fixture::new();
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+    let mut b = RealBackend::new(f.temp.path().join("scheduler"));
+    b.runner = Box::new(Capture {
+        calls: calls.clone(),
+    });
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["scheduler"] = json!({"key":"a".repeat(32),"worktree":"D:/fixture-wt/todo-1"});
+    assert_eq!(
+        b.launch(
+            &row,
+            Path::new("D:/fixture-prompt.md"),
+            &json!({"model":"mock-model","effort":"high","task_type":"implementation"})
+        )
+        .unwrap(),
+        "fixture-job"
+    );
+    let calls = calls.lock().unwrap();
+    assert!(calls[0].args.iter().any(|v| v.ends_with("codex_jobs.py")));
+    let args = &calls[0].args;
+    assert_eq!(
+        args[args.iter().position(|v| v == "--task-title").unwrap() + 1],
+        row["title"]
+    );
+    assert_eq!(
+        args[args.iter().position(|v| v == "--project").unwrap() + 1],
+        "civ6"
+    );
+    assert_eq!(
+        args[args.iter().position(|v| v == "--todo-id").unwrap() + 1],
+        "1"
+    );
+    assert_eq!(
+        args[args.iter().position(|v| v == "--cwd").unwrap() + 1],
+        row["scheduler"]["worktree"]
+    );
+    assert_eq!(
+        args[args.iter().position(|v| v == "--launch-key").unwrap() + 1],
+        "a".repeat(32)
+    );
+    assert_eq!(NO_WINDOW, 0x08000000);
+}
+#[test]
+fn test_unknown_model_is_not_launched() {
+    let mut f = Fixture::new();
+    assert!(!f.e.backend.model_exists("gpt-6.1-luna"));
+    assert!(f.e.backend.model_exists("gpt-6-luna"));
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6.1-luna");
+    row["effort"] = json!("high");
+    f.put(row);
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(
+        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
+        "mock-model"
+    );
+}
+
+struct HttpFake {
+    responses: Vec<Result<Value>>,
+    calls: usize,
+}
+impl Http for HttpFake {
+    fn request(&mut self, _: &str, _: &str, _: Option<&Value>, _: bool, _: u64) -> Result<Value> {
+        self.calls += 1;
+        self.responses.remove(0)
+    }
+}
+#[test]
+fn models_cache_bare_provider_auto_expiry_and_unavailable() {
+    let mut http = HttpFake {
+        responses: vec![
+            Ok(json!({"data":[{"id":"provider/gpt-6-luna"},{"id":"gpt-6.1-sol"}]})),
+            Err(Error("OSError")),
+        ],
+        calls: 0,
+    };
+    let mut cache = ModelsCache::default();
+    assert!(cache.exists(&mut http, "gpt-6-luna", T));
+    assert!(cache.exists(&mut http, "provider/gpt-6-luna", T));
+    assert!(cache.exists(&mut http, "auto", T));
+    assert!(!cache.exists(&mut http, "gpt-6.1-luna", T + 599.));
+    assert_eq!(http.calls, 1);
+    assert!(cache.exists(&mut http, "anything", T + 601.));
+    assert_eq!(http.calls, 2);
+}
+#[test]
+fn corrupted_state_is_never_replaced() {
+    let mut f = Fixture::new();
+    fs::write(f.e.root.join("state.json"), "{broken").unwrap();
+    assert_eq!(f.e.run("recover", false), Err(Error("JSONDecodeError")));
+    assert_eq!(
+        fs::read_to_string(f.e.root.join("state.json")).unwrap(),
+        "{broken"
+    );
+}
+#[test]
+fn todo_edits_preserve_unknown_fields() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let mut db = f.e.todo().unwrap();
+    db["future_field"] = json!({"original":[1,"値",null]});
+    db["items"][0]["future_item_field"] = json!([true, false]);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.e.edit(&json!(1), |r| r["note"] = json!("更新")).unwrap();
+    let updated = f.e.todo().unwrap();
+    assert_eq!(updated["future_field"], db["future_field"]);
+    assert_eq!(
+        updated["items"][0]["future_item_field"],
+        db["items"][0]["future_item_field"]
+    );
+}
+#[test]
+fn real_child_process_has_no_console_window() {
+    let code="Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win { [DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow(); }'; [Win]::GetConsoleWindow().ToInt64()";
+    let out = SystemRunner
+        .run(&invocation(
+            &[
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                code,
+            ],
+            Some(30),
+        ))
+        .unwrap();
+    assert_eq!(out.code, 0);
+    assert_eq!(out.stdout.trim(), "0");
+}
+#[test]
+fn executable_preferred_and_python_fallback() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("tool.py");
+    let first = tool_command(&path, &["step"], Some(45));
+    assert!(first.program.ends_with("python.exe"));
+    assert_eq!(first.args.last().unwrap(), "step");
+    fs::write(path.with_extension("exe"), b"fixture").unwrap();
+    let second = tool_command(&path, &["recover"], None);
+    assert_eq!(second.program, path.with_extension("exe").to_str().unwrap());
+    assert_eq!(second.args, ["recover"]);
+}
+#[test]
+fn numeric_owner_id_accepts_latest_owner_reply_without_acknowledging() {
+    let f = Fixture::new();
+    let root = f.temp.path().join("discord-ask");
+    fs::create_dir(&root).unwrap();
+    write_json(&root.join("state.json"), &json!({"questions":[{"thread_id":"thread","after":"100","open":true,"source":"scheduler"}]}), 2).unwrap();
+    let mut backend = RealBackend::new(f.temp.path().join("scheduler"));
+    backend.config_path = f.temp.path().join("discord-config.json");
+    write_json(&backend.config_path, &json!({"owner_user_id":123}), 2).unwrap();
+    backend.http = Box::new(HttpFake {
+        responses: vec![Ok(json!([
+            {"id":"99","author":{"id":"123"},"content":"old"},
+            {"id":"200","author":{"id":"123"},"content":"a"},
+            {"id":"202","author":{"id":"other"},"content":"ignored"},
+            {"id":"201","author":{"id":"123"},"content":"1 b. 停止したまま"}
+        ]))],
+        calls: 0,
+    });
+    assert_eq!(
+        backend.reply(&json!({"thread_id":"thread"})).unwrap(),
+        Some(json!({"id":"201","text":"1 b. 停止したまま","stop":true}))
+    );
+    assert_eq!(
+        read_json(&root.join("state.json"), Value::Null).unwrap()["questions"][0]["after"],
+        "100"
+    );
+}
+
+#[test]
+fn scheduler_postponement_is_saved_and_not_treated_as_a_restart_answer() {
+    let f = Fixture::new();
+    let root = f.temp.path().join("discord-ask");
+    fs::create_dir(&root).unwrap();
+    let original = json!({"questions":[{"thread_id":"thread","after":"100","open":true,"source":"scheduler","future":"keep"}],"other":"keep"});
+    write_json(&root.join("state.json"), &original, 2).unwrap();
+    let mut backend = RealBackend::new(f.temp.path().join("scheduler"));
+    backend.config_path = f.temp.path().join("discord-config.json");
+    write_json(&backend.config_path, &json!({"owner_user_id":123}), 2).unwrap();
+    let sent = now();
+    let id = (((sent * 1000.) as u64 - 1420070400000) << 22).to_string();
+    let page = json!([
+        {"id":"200","author":{"id":"123"},"content":"a"},
+        {"id":id,"author":{"id":"123"},"content":"再通知は2時間後にして"}
+    ]);
+    backend.http = Box::new(HttpFake {
+        responses: vec![Ok(page.clone()), Ok(page)],
+        calls: 0,
+    });
+    assert_eq!(backend.reply(&json!({"thread_id":"thread"})).unwrap(), None);
+    let saved = read_json(&root.join("state.json"), Value::Null).unwrap();
+    assert_eq!(saved["questions"][0]["remind_reply"], id);
+    assert!(saved["questions"][0]["remind_not_before"].as_f64().unwrap() > sent + 7199.);
+    assert_eq!(saved["questions"][0]["open"], true);
+    assert_eq!(saved["questions"][0]["after"], "100");
+    assert_eq!(saved["questions"][0]["future"], "keep");
+    assert_eq!(saved["other"], "keep");
+    assert_eq!(backend.reply(&json!({"thread_id":"thread"})).unwrap(), None);
+    assert_eq!(
+        read_json(&root.join("state.json"), Value::Null).unwrap(),
+        saved
+    );
+}
+#[test]
+fn junction_repo_resolves_to_original_worktree_container() {
+    let mut f = Fixture::new();
+    let alias = f.temp.path().join("repo-alias");
+    let out = SystemRunner
+        .run(&invocation(
+            &[
+                "cmd.exe",
+                "/d",
+                "/c",
+                "mklink",
+                "/J",
+                alias.to_str().unwrap(),
+                f.repo.to_str().unwrap(),
+            ],
+            Some(15),
+        ))
+        .unwrap();
+    assert_eq!(out.code, 0);
+    f.put(item(1, "civ6", "todo", &[]));
+    let row =
+        f.e.prepare(&f.get(1), alias.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    assert_eq!(
+        norm(target.parent().unwrap().to_str().unwrap()),
+        norm(&format!("{}-wt", f.repo.display()))
+    );
+    let mut git = GitFake {
+        calls: vec![],
+        existing: Some((
+            target,
+            s(&row["scheduler"]["branch"]).into(),
+            f.repo.join(".git"),
+        )),
+    };
+    fs::create_dir(f.repo.join(".git")).unwrap();
+    ensure_worktree(&mut git, alias.to_str().unwrap(), &row).unwrap();
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch")));
+}
+#[test]
+fn attempts_and_retries_remain_json_integers() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let row =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(row["scheduler"]["attempt"].as_u64(), Some(1));
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("doing");
+        row["scheduler"]["job"] = json!("j1");
+        row["scheduler"]["retry_count"] = json!(0);
+    })
+    .unwrap();
+    f.e.requeue(&json!(1), &json!("j1"), "lost").unwrap();
+    assert_eq!(f.get(1)["scheduler"]["retry_count"].as_u64(), Some(1));
+    let row =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(row["scheduler"]["attempt"].as_u64(), Some(2));
+    assert_eq!(add_count(&json!(0.5), 1), json!(1.5));
+}
+#[test]
+fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
+    for args in [
+        &["--help"][..],
+        &["status", "--help"],
+        &["step", "-h"],
+        &["recover", "-h"],
+        &["orphans", "-h"],
+    ] {
+        let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
+        c.args = args.iter().map(|a| a.to_string()).collect();
+        let out = SystemRunner.run(&c).unwrap();
+        assert_eq!(out.code, 0);
+        assert!(out.stdout.starts_with("usage:"));
+        assert!(out.stdout.contains("--help"));
+    }
+    let out = SystemRunner
+        .run(&invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10)))
+        .unwrap();
+    assert_eq!(out.code, 2);
+    assert!(out.stdout.is_empty());
+    assert!(!out.stderr.is_empty());
+}
+#[test]
+fn scheduler_lock_child() {
+    let Some(path) = std::env::var_os("CC_SCHED_LOCK_PROBE") else {
+        return;
+    };
+    let _guard = ByteLock::acquire(Path::new(&path), Duration::ZERO)
+        .unwrap()
+        .unwrap();
+    fs::write(std::env::var_os("CC_SCHED_LOCK_READY").unwrap(), "ready").unwrap();
+    let mut line = String::new();
+    std::io::stdin().read_line(&mut line).unwrap();
+}
+#[test]
+fn rust_byte_lock_interoperates_with_other_process_and_releases() {
+    use std::{
+        io::Write,
+        os::windows::process::CommandExt,
+        process::{Command, Stdio},
+    };
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("shared.lock");
+    let ready = temp.path().join("ready");
+    let mut child = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "scheduler_lock_child", "--nocapture"])
+        .env("CC_SCHED_LOCK_PROBE", &path)
+        .env("CC_SCHED_LOCK_READY", &ready)
+        .creation_flags(NO_WINDOW)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !ready.exists() {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(ByteLock::acquire(&path, Duration::ZERO).unwrap().is_none());
+    child.stdin.take().unwrap().write_all(b"done\n").unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(ByteLock::acquire(&path, Duration::ZERO).unwrap().is_some());
+}
+#[test]
+fn router_failure_preserves_review_fallback_model() {
+    let mut http = HttpFake {
+        responses: vec![Err(Error("OSError"))],
+        calls: 0,
+    };
+    let picked = pick_model(&mut http, "レビューしてください").unwrap();
+    assert_eq!(picked["model"], "gpt-6-luna");
+    assert_eq!(picked["task_type"], "review");
+    assert_eq!(picked["effort"], "max");
+    assert_eq!(http.calls, 1);
+}
+#[test]
+fn invalid_settings_shape_returns_error_and_never_rewrites_state() {
+    let mut f = Fixture::new();
+    write_json(&f.e.root.join("config.json"), &json!([]), 2).unwrap();
+    assert_eq!(f.e.run("recover", false), Err(Error("TypeError")));
+    assert!(!f.e.root.join("state.json").exists());
+}

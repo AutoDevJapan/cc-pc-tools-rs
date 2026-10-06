@@ -1,0 +1,263 @@
+[
+ {
+  "args": [
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py [-h]\n                     {run,status,tail,wait,watch,cancel,rate,backfill} ...\n\nBackground codex exec jobs with progress tracking\n\npositional arguments:\n  {run,status,tail,wait,watch,cancel,rate,backfill}\n    run                 start a job in the background and print its id\n    status              job table (running + last 24h)\n    tail                progress lines of a job\n    wait                block until a job finishes (exit 0 = succeeded, 1 =\n                        not, 2 = timeout)\n    watch               print one line per job state change (for Monitor)\n    cancel              kill a job's process tree (also the leftovers of a\n                        lost job)\n    rate                send a model_fit_observation to GTO\n    backfill            automatically rate past unrated terminal jobs\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py [-h]\n                     {run,status,tail,wait,watch,cancel,rate,backfill} ...\n\nBackground codex exec jobs with progress tracking\n\npositional arguments:\n  {run,status,tail,wait,watch,cancel,rate,backfill}\n    run                 start a job in the background and print its id\n    status              job table (running + last 24h)\n    tail                progress lines of a job\n    wait                block until a job finishes (exit 0 = succeeded, 1 =\n                        not, 2 = timeout)\n    watch               print one line per job state change (for Monitor)\n    cancel              kill a job's process tree (also the leftovers of a\n                        lost job)\n    rate                send a model_fit_observation to GTO\n    backfill            automatically rate past unrated terminal jobs\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "run",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT\n                         [--sandbox {read-only,workspace-write,danger-full-access}]\n                         [--cwd CWD] [--add-dir ADD_DIR] [--network]\n                         [--mcp-profile {minimal,browser,full}] --prompt-file\n                         PROMPT_FILE [--task-type TASK_TYPE]\n                         [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]\n                         [--resume-session RESUME_SESSION]\n\noptions:\n  -h, --help            show this help message and exit\n  --name NAME\n  --model MODEL\n  --effort EFFORT\n  --sandbox {read-only,workspace-write,danger-full-access}\n  --cwd CWD\n  --add-dir ADD_DIR\n  --network             allow network (workspace-write only)\n  --mcp-profile {minimal,browser,full}\n                        minimal disables four stdio MCP servers; browser keeps\n                        node_repl; full keeps all\n  --prompt-file PROMPT_FILE\n  --task-type TASK_TYPE\n  --notes-hint NOTES_HINT\n  --launch-key LAUNCH_KEY\n                        idempotent launch identifier (32 lowercase hex\n                        characters)\n  --resume-session RESUME_SESSION\n                        continue a recorded Codex session UUID instead of\n                        starting a new one\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "run",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT\n                         [--sandbox {read-only,workspace-write,danger-full-access}]\n                         [--cwd CWD] [--add-dir ADD_DIR] [--network]\n                         [--mcp-profile {minimal,browser,full}] --prompt-file\n                         PROMPT_FILE [--task-type TASK_TYPE]\n                         [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]\n                         [--resume-session RESUME_SESSION]\n\noptions:\n  -h, --help            show this help message and exit\n  --name NAME\n  --model MODEL\n  --effort EFFORT\n  --sandbox {read-only,workspace-write,danger-full-access}\n  --cwd CWD\n  --add-dir ADD_DIR\n  --network             allow network (workspace-write only)\n  --mcp-profile {minimal,browser,full}\n                        minimal disables four stdio MCP servers; browser keeps\n                        node_repl; full keeps all\n  --prompt-file PROMPT_FILE\n  --task-type TASK_TYPE\n  --notes-hint NOTES_HINT\n  --launch-key LAUNCH_KEY\n                        idempotent launch identifier (32 lowercase hex\n                        characters)\n  --resume-session RESUME_SESSION\n                        continue a recorded Codex session UUID instead of\n                        starting a new one\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "status",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "status",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "tail",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py tail [-h] [-n N] [--follow] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help    show this help message and exit\n  -n N\n  --follow, -f\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "tail",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py tail [-h] [-n N] [--follow] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help    show this help message and exit\n  -n N\n  --follow, -f\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "wait",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py wait [-h] [--timeout TIMEOUT] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help         show this help message and exit\n  --timeout TIMEOUT\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "wait",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py wait [-h] [--timeout TIMEOUT] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help         show this help message and exit\n  --timeout TIMEOUT\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "watch",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py watch [-h] [--interval INTERVAL]\n\noptions:\n  -h, --help           show this help message and exit\n  --interval INTERVAL\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "watch",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py watch [-h] [--interval INTERVAL]\n\noptions:\n  -h, --help           show this help message and exit\n  --interval INTERVAL\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "cancel",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py cancel [-h] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "cancel",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py cancel [-h] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "rate",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py rate [-h] --quality {1,2,3,4,5} [--task-type TASK_TYPE]\n                          [--notes NOTES] [--force]\n                          id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help            show this help message and exit\n  --quality {1,2,3,4,5}\n  --task-type TASK_TYPE\n  --notes NOTES\n  --force               send even if cancelled/lost or already sent\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "rate",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py rate [-h] --quality {1,2,3,4,5} [--task-type TASK_TYPE]\n                          [--notes NOTES] [--force]\n                          id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help            show this help message and exit\n  --quality {1,2,3,4,5}\n  --task-type TASK_TYPE\n  --notes NOTES\n  --force               send even if cancelled/lost or already sent\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "backfill",
+   "-h"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py backfill [-h] [--days DAYS]\n\noptions:\n  -h, --help   show this help message and exit\n  --days DAYS\n",
+  "stderr": ""
+ },
+ {
+  "args": [
+   "backfill",
+   "--help"
+  ],
+  "code": 0,
+  "stdout": "usage: codex_jobs.py backfill [-h] [--days DAYS]\n\noptions:\n  -h, --help   show this help message and exit\n  --days DAYS\n",
+  "stderr": ""
+ },
+ {
+  "args": [],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py [-h]\n                     {run,status,tail,wait,watch,cancel,rate,backfill} ...\ncodex_jobs.py: error: the following arguments are required: cmd\n"
+ },
+ {
+  "args": [
+   "bogus"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py [-h]\n                     {run,status,tail,wait,watch,cancel,rate,backfill} ...\ncodex_jobs.py: error: argument cmd: invalid choice: 'bogus' (choose from run, status, tail, wait, watch, cancel, rate, backfill)\n"
+ },
+ {
+  "args": [
+   "tail"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py tail [-h] [-n N] [--follow] id\ncodex_jobs.py tail: error: the following arguments are required: id\n"
+ },
+ {
+  "args": [
+   "run"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT\n                         [--sandbox {read-only,workspace-write,danger-full-access}]\n                         [--cwd CWD] [--add-dir ADD_DIR] [--network]\n                         [--mcp-profile {minimal,browser,full}] --prompt-file\n                         PROMPT_FILE [--task-type TASK_TYPE]\n                         [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]\n                         [--resume-session RESUME_SESSION]\ncodex_jobs.py run: error: the following arguments are required: --name, --model, --effort, --prompt-file\n"
+ },
+ {
+  "args": [
+   "status",
+   "--wat"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py [-h]\n                     {run,status,tail,wait,watch,cancel,rate,backfill} ...\ncodex_jobs.py: error: unrecognized arguments: --wat\n"
+ },
+ {
+  "args": [
+   "backfill",
+   "--days",
+   "0"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py backfill [-h] [--days DAYS]\ncodex_jobs.py backfill: error: argument --days: --days must be positive\n"
+ },
+ {
+  "args": [
+   "rate",
+   "id",
+   "--quality",
+   "6"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py rate [-h] --quality {1,2,3,4,5} [--task-type TASK_TYPE]\n                          [--notes NOTES] [--force]\n                          id\ncodex_jobs.py rate: error: argument --quality: invalid choice: '6' (choose from 1, 2, 3, 4, 5)\n"
+ },
+ {
+  "args": [
+   "wait",
+   "id",
+   "--timeout",
+   "invalid"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py wait [-h] [--timeout TIMEOUT] id\ncodex_jobs.py wait: error: argument --timeout: invalid float value: 'invalid'\n"
+ },
+ {
+  "args": [
+   "tail",
+   "id",
+   "-n",
+   "invalid"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py tail [-h] [-n N] [--follow] id\ncodex_jobs.py tail: error: argument -n: invalid int value: 'invalid'\n"
+ },
+ {
+  "args": [
+   "rate",
+   "id"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py rate [-h] --quality {1,2,3,4,5} [--task-type TASK_TYPE]\n                          [--notes NOTES] [--force]\n                          id\ncodex_jobs.py rate: error: the following arguments are required: --quality\n"
+ },
+ {
+  "args": [
+   "run",
+   "--name",
+   "x"
+  ],
+  "code": 2,
+  "stdout": "",
+  "stderr": "usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT\n                         [--sandbox {read-only,workspace-write,danger-full-access}]\n                         [--cwd CWD] [--add-dir ADD_DIR] [--network]\n                         [--mcp-profile {minimal,browser,full}] --prompt-file\n                         PROMPT_FILE [--task-type TASK_TYPE]\n                         [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]\n                         [--resume-session RESUME_SESSION]\ncodex_jobs.py run: error: the following arguments are required: --model, --effort, --prompt-file\n"
+ }
+]

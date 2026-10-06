@@ -1,0 +1,6 @@
+usage: codex_jobs.py status [-h] [--all] [--json]
+
+options:
+  -h, --help  show this help message and exit
+  --all
+  --json

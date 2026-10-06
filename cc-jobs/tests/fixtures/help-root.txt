@@ -1,0 +1,20 @@
+usage: codex_jobs.py [-h]
+                     {run,status,tail,wait,watch,cancel,rate,backfill} ...
+
+Background codex exec jobs with progress tracking
+
+positional arguments:
+  {run,status,tail,wait,watch,cancel,rate,backfill}
+    run                 start a job in the background and print its id
+    status              job table (running + last 24h)
+    tail                progress lines of a job
+    wait                block until a job finishes (exit 0 = succeeded, 1 =
+                        not, 2 = timeout)
+    watch               print one line per job state change (for Monitor)
+    cancel              kill a job's process tree (also the leftovers of a
+                        lost job)
+    rate                send a model_fit_observation to GTO
+    backfill            automatically rate past unrated terminal jobs
+
+options:
+  -h, --help            show this help message and exit

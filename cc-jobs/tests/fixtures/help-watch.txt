@@ -1,0 +1,5 @@
+usage: codex_jobs.py watch [-h] [--interval INTERVAL]
+
+options:
+  -h, --help           show this help message and exit
+  --interval INTERVAL

@@ -23,6 +23,9 @@ impl Drop for NetworkScope {
 pub fn network_budget() -> Duration {
     Duration::from_secs(BOARD_NETWORK.with(|flag| if flag.get() { 8 } else { 3 }))
 }
+pub fn active() -> bool {
+    BOARD_NETWORK.with(std::cell::Cell::get)
+}
 /// A saved board is an explicit inbox surface, never an automatic request surface.
 pub fn registration(ctx: &Context) -> Result<Option<Value>> {
     let p = ctx.here.join("board.json");
@@ -62,7 +65,7 @@ pub fn matches_saved(ctx: &Context, thread: &Value, state: &Value) -> bool {
 }
 static STRIP: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
-    r"(?i)【[^】]*】|(?:[a-z]:[/\\][^\s、。]+)|(?-u:\b)(?:shep|orch|worktree|todo|job)[-_#]?[a-z0-9_-]*(?-u:\b)|(?-u:\b)[0-9]{8}-[0-9]{6}-[a-z0-9_-]+(?-u:\b)|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f-]{23,}\b|(?:ジョブ|ToDo|親)\s*#?\d+|[0-9]{17,20}|https?://\S+|<[^>]+>"
+    r"(?i)【[^】]*】|[（(](?:監査|SSOT|親|ToDo|Issue)[^）)]*(?:[）)]|$)|[（(][・\s]*[0-9][^）)]*(?:[）)]|$)|(?-u:\b)(?:PR|Issue|Q)\s*#?[0-9]+(?:の)?|(?:ジョブ|ToDo|親)\s*[:：#]?\s*[0-9]+|(?:[a-z]:[/\\][^\s、。]+)|(?-u:\b)(?:shep|orch|worktree|todo|job)[-_#]?[a-z0-9_-]*(?-u:\b)|(?-u:\b)[0-9]{8}-[0-9]{6}-[a-z0-9_-]+(?-u:\b)|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f-]{23,}\b|[0-9]{17,20}|https?://\S+|<[^>]+>"
 ).unwrap()
 });
 static INTERNAL: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -73,6 +76,11 @@ static INTERNAL: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 static PR: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+").unwrap()
+});
+static JARGON: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+    r"(?i)(?-u:\b)(agents\.prompt|fixture|helper|runtime|review|merge|main|target|bind|ingress|parity)(?-u:\b)"
+).unwrap()
 });
 
 fn load(ctx: &Context) -> Result<Value> {
@@ -142,10 +150,29 @@ fn time(at: f64) -> String {
 }
 /// Remove identifiers, paths, markup and client names before both model input and Discord output.
 pub fn prose(text: &str, names: &Names, limit: usize) -> String {
+    prose_or(text, names, limit, "作業内容を確認する")
+}
+fn prose_or(text: &str, names: &Names, limit: usize, fallback: &str) -> String {
     let text = names.redact(text);
     let text = STRIP
         .replace_all(&text, "")
         .replace(['*', '`', '[', ']', '#', '@', '<', '>'], "");
+    let text = JARGON.replace_all(&text, |caps: &regex::Captures<'_>| {
+        match caps[1].to_ascii_lowercase().as_str() {
+            "agents.prompt" => "作業の指示",
+            "fixture" => "検証用データ",
+            "helper" => "補助処理",
+            "runtime" => "実行処理",
+            "review" => "レビュー",
+            "merge" => "統合",
+            "main" => "本体",
+            "target" => "対象",
+            "bind" => "対応付け",
+            "ingress" => "受付",
+            "parity" => "動作の照合",
+            _ => "",
+        }
+    });
     let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
     let text = text.trim_matches(['「', '」', '（', '）', ':', '：', '-', ' ']);
     let mut result: String = text.chars().take(limit).collect();
@@ -153,7 +180,7 @@ pub fn prose(text: &str, names: &Names, limit: usize) -> String {
         result.push('…');
     }
     if result.is_empty() {
-        "作業内容を確認する".into()
+        fallback.into()
     } else {
         result
     }
@@ -340,6 +367,17 @@ fn prs(text: &str, names: &Names) -> Vec<String> {
         .filter(|url| names.redact(url) == *url)
         .collect()
 }
+pub fn progress_bar(item: &Value) -> String {
+    let Some(percent) = item["progress"].as_u64().filter(|p| *p <= 100) else {
+        return "進み具合：未記録".into();
+    };
+    let filled = (percent / 10) as usize;
+    format!(
+        "{}{} {percent}%",
+        "▰".repeat(filled),
+        "▱".repeat(10 - filled)
+    )
+}
 /// The body excludes the update stamp: the passage of five minutes alone is not a change.
 pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now: f64) -> String {
     let items: Vec<_> = db["items"]
@@ -367,18 +405,24 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
     let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for item in items {
         let last = epoch(s(&item["updated"])).or_else(|| epoch(s(&item["created"])));
-        let status = if waiting(item, questions) {
-            "返事待ち".into()
-        } else if s(&item["status"]) == "block" {
+        let is_waiting = waiting(item, questions);
+        let status = if s(&item["status"]) == "block" {
             let reason = s(&item["note"]).split(['。', '\n']).next().unwrap_or("");
             format!(
-                "止まっている（{}）",
+                "{}（{}）",
+                if is_waiting {
+                    "返事待ち"
+                } else {
+                    "止まっている"
+                },
                 if reason.is_empty() {
                     "理由未記録".into()
                 } else {
-                    prose(reason, names, 26)
+                    prose_or(reason, names, 26, "理由未記録")
                 }
             )
+        } else if is_waiting {
+            "返事待ち".into()
         } else if last.is_some_and(|last| now - last >= 3600.) {
             "作業中・1時間以上動きなし".into()
         } else {
@@ -397,8 +441,9 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
             .entry(project(item, db, names))
             .or_default()
             .push(format!(
-                "• {}｜{}｜最後に進んだ時刻 {}{}",
+                "- {}\n{}｜{}｜最後に進んだ時刻 {}{}",
                 label(&key(item), s(&item["title"]), state, names),
+                progress_bar(item),
                 status,
                 last.map(time).unwrap_or_else(|| "時刻不明".into()),
                 links
@@ -408,7 +453,7 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
         out.push_str("\n作業中・止まっている作業はありません。\n");
     }
     for (group, lines) in groups {
-        out.push_str(&format!("\n## {group}\n{}\n", lines.join("\n")));
+        out.push_str(&format!("\n## {group}\n{}\n", lines.join("\n\n")));
     }
     out.push_str("\n時刻は日本時間です。進捗の時刻は共有ToDoの最終更新を使っています。");
     names.redact(&out)
@@ -417,7 +462,8 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
 pub fn split(text: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
-    for line in text.split_inclusive('\n') {
+    // A short title/bar pair is one block and must not straddle message boundaries.
+    for line in text.split_inclusive("\n\n") {
         if current.encode_utf16().count() + line.encode_utf16().count() > MAX_CONTENT
             && !current.is_empty()
         {
@@ -696,5 +742,37 @@ mod tests {
             );
         }
         assert_eq!(network_budget(), Duration::from_secs(3));
+    }
+    #[test]
+    fn only_board_can_wait_for_rate_limits_inside_periodic_deadline() {
+        let _deadline = crate::tick_runtime::Deadline::new(Duration::from_secs(1));
+        assert!(!crate::core::discord_retry_allowed(
+            0,
+            Duration::from_millis(10),
+            Duration::from_secs(1)
+        ));
+        {
+            let _board = NetworkScope::new();
+            assert!(crate::core::discord_retry_allowed(
+                0,
+                Duration::from_millis(10),
+                Duration::from_secs(1)
+            ));
+            assert!(!crate::core::discord_retry_allowed(
+                2,
+                Duration::ZERO,
+                Duration::from_secs(1)
+            ));
+            assert!(!crate::core::discord_retry_allowed(
+                0,
+                Duration::from_secs(1),
+                Duration::from_secs(1)
+            ));
+        }
+        assert!(!crate::core::discord_retry_allowed(
+            0,
+            Duration::ZERO,
+            Duration::from_secs(1)
+        ));
     }
 }

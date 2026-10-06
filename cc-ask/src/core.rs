@@ -381,6 +381,13 @@ pub fn discord_retry_delay(detail: &Value) -> Result<std::time::Duration> {
     }
     Ok(std::time::Duration::from_secs_f64(delay))
 }
+pub fn discord_retry_allowed(
+    attempt: u32,
+    delay: std::time::Duration,
+    remaining: std::time::Duration,
+) -> bool {
+    attempt < 2 && delay < remaining && (!crate::tick_runtime::active() || crate::board::active())
+}
 impl Effects for RealEffects {
     fn start_board(&mut self, home: &std::path::Path) -> Result<()> {
         use std::process::{Command, Stdio};
@@ -541,11 +548,11 @@ impl Effects for RealEffects {
                     let detail: Value = r.into_json().unwrap_or(json!({}));
                     if code == 429 && discord {
                         let delay = discord_retry_delay(&detail)?;
-                        if attempt == 2
-                            || crate::tick_runtime::active()
-                            || delay
-                                >= deadline.saturating_duration_since(std::time::Instant::now())
-                        {
+                        if !discord_retry_allowed(
+                            attempt,
+                            delay,
+                            deadline.saturating_duration_since(std::time::Instant::now()),
+                        ) {
                             return Err("Discord API rate limited".into());
                         }
                         std::thread::sleep(delay);

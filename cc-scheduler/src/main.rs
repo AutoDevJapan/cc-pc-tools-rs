@@ -1,0 +1,57 @@
+#![windows_subsystem = "windows"]
+use cc_scheduler::{
+    backend::RealBackend,
+    common::*,
+    engine::{step, Scheduler},
+};
+use std::path::PathBuf;
+fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let command = args.first().map(String::as_str);
+    if (matches!(command, Some("status" | "step" | "recover" | "orphans"))
+        || matches!(command, Some("-h" | "--help")))
+        && args.iter().any(|x| matches!(x.as_str(), "-h" | "--help"))
+    {
+        match command {
+            Some("orphans") => println!("usage: scheduler orphans [-h] [--dry-run | --apply]\n\noptions:\n  -h, --help  show this help message and exit\n  --dry-run\n  --apply     also requires config.json kill_enabled=true"),
+            Some(c @ ("status" | "step" | "recover")) => println!("usage: scheduler {c} [-h]\n\noptions:\n  -h, --help  show this help message and exit"),
+            _ => println!("usage: scheduler [-h] {{status,step,recover,orphans}} ...\n\nWindows capacity-aware ToDo dispatcher.\n\nstatus and orphans --dry-run only measure; step is also called by the hidden Discord tick.\nProcess termination is disabled until config.json kill_enabled is explicitly enabled.\nNo command lines, environments, event contents, credentials or model API keys are inspected.\n\npositional arguments:\n  {{status,step,recover,orphans}}\n    recover  reconcile dead jobs before Discord intake; never launch or kill\n\noptions:\n  -h, --help  show this help message and exit"),
+        }
+        return;
+    }
+    let valid = match args.first().map(String::as_str) {
+        Some("status" | "step" | "recover") => args.len() == 1,
+        Some("orphans") => {
+            args.len() == 1
+                || args.len() == 2 && matches!(args[1].as_str(), "--dry-run" | "--apply")
+        }
+        _ => false,
+    };
+    if !valid {
+        eprintln!("usage: scheduler [-h] {{status,step,recover,orphans}} ...");
+        std::process::exit(if args == ["-h"] || args == ["--help"] {
+            0
+        } else {
+            2
+        });
+    }
+    let root = PathBuf::from("D:/CC/Tools/scheduler");
+    let engine = Scheduler::new(
+        root.clone(),
+        PathBuf::from("D:/CC/Tools/todo/todo.json"),
+        RealBackend::new(root),
+    );
+    let report = if args[0] == "step" {
+        step(engine)
+    } else {
+        match engine.and_then(|mut e| e.run(&args[0], args.iter().any(|a| a == "--apply"))) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("measurement failed {}", e.0);
+                std::process::exit(1);
+            }
+        }
+    };
+    println!("{}", encode(&report, 2));
+    std::process::exit(i32::from(report.get("error").is_some()));
+}

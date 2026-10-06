@@ -1,0 +1,1004 @@
+use crate::{
+    backend::{safe_text, valid_effort, valid_model, Backend},
+    common::*,
+    policy::*,
+};
+use serde_json::{json, Value};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
+#[path = "instructions.rs"]
+mod instructions;
+pub use instructions::*;
+pub struct Scheduler<B: Backend> {
+    pub root: PathBuf,
+    pub todo_path: PathBuf,
+    pub backend: B,
+    pub state: Value,
+    pub report: Value,
+    pub failures: Vec<String>,
+}
+impl<B: Backend> Scheduler<B> {
+    pub fn civ6_home(&self) -> PathBuf {
+        self.root.parent().unwrap_or(&self.root).join("civ6-live")
+    }
+    pub fn new(root: PathBuf, todo_path: PathBuf, backend: B) -> Result<Self> {
+        fs::create_dir_all(&root)?;
+        backup(&root.join("scheduler.log"))?;
+        Ok(Self {
+            root,
+            todo_path,
+            backend,
+            state: json!({}),
+            report: json!({}),
+            failures: vec![],
+        })
+    }
+    pub fn log(&self, level: &str, message: &str) -> Result<()> {
+        use std::io::Write;
+        let p = self.root.join("scheduler.log");
+        if p.metadata()
+            .map(|m| m.len() >= 2 * 1024 * 1024)
+            .unwrap_or(false)
+        {
+            for i in (1..5).rev() {
+                let src = PathBuf::from(format!("{}.{}", p.display(), i));
+                if src.exists() {
+                    let dst = PathBuf::from(format!("{}.{}", p.display(), i + 1));
+                    if dst.exists() {
+                        fs::remove_file(&dst)?;
+                    }
+                    fs::rename(src, dst)?;
+                }
+            }
+            let first = PathBuf::from(format!("{}.1", p.display()));
+            if first.exists() {
+                fs::remove_file(&first)?;
+            }
+            fs::rename(&p, first)?;
+        }
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(p)?;
+        writeln!(
+            f,
+            "{} {} {}",
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S,%3f"),
+            level,
+            message
+        )?;
+        Ok(())
+    }
+    pub fn guard<T>(
+        &mut self,
+        name: &str,
+        action: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Option<T> {
+        match action(self) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                self.failures.push(name.into());
+                let _ = self.log("ERROR", &format!("{name} failed ({})", e.0));
+                None
+            }
+        }
+    }
+    pub fn settings(&self) -> Result<(Value, Value)> {
+        let mut cfg = defaults();
+        let configured = read_json(&self.root.join("config.json"), json!({}))?;
+        if !configured.is_object() {
+            return Err(Error("TypeError"));
+        }
+        merge(&mut cfg, configured);
+        for (key, _) in defaults().as_object().unwrap() {
+            let v = &cfg[key];
+            let valid = match key.as_str() {
+                "dispatch_enabled" | "kill_enabled" => v.is_boolean(),
+                "hard_cap" => v.is_null() || v.as_u64().is_some_and(|v| v >= 1),
+                _ => v.is_number() && n(v).is_finite() && n(v) > 0.,
+            };
+            if !valid {
+                return Err(Error("ValueError"));
+            }
+        }
+        if n(&cfg["launch_interval_s"]) < 10.
+            || n(&cfg["orphan_age_s"]) < 600.
+            || n(&cfg["commit_limit_percent"]) > 85.
+            || n(&cfg["cpu_limit_percent"]) > 80.
+            || n(&cfg["reserve_gb"]) < 16.
+            || n(&cfg["disk_min_gb"]) < 30.
+        {
+            return Err(Error("ValueError"));
+        }
+        let mut pri = json!({"civ6":1,"GoDD-AO":2});
+        let configured = read_json(&self.root.join("priorities.json"), json!({}))?;
+        if !configured.is_object() {
+            return Err(Error("TypeError"));
+        }
+        merge(&mut pri, configured);
+        if pri
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|v| v.as_u64().is_none_or(|x| x < 1))
+        {
+            return Err(Error("ValueError"));
+        }
+        Ok((cfg, pri))
+    }
+    pub fn todo(&self) -> Result<Value> {
+        read_json(
+            &self.todo_path,
+            json!({"projects":{},"items":[],"next_id":1,"stalls":{}}),
+        )
+    }
+    pub fn edit(&mut self, id: &Value, action: impl FnOnce(&mut Value)) -> Result<Value> {
+        let _lock = ByteLock::acquire(
+            &self.todo_path.with_file_name("todo.lock"),
+            Duration::from_secs(2),
+        )?
+        .ok_or(Error("TimeoutError"))?;
+        let mut db = self.todo()?;
+        let row = db["items"]
+            .as_array_mut()
+            .ok_or(Error("ValueError"))?
+            .iter_mut()
+            .find(|row| row["id"] == *id)
+            .ok_or(Error("ValueError"))?;
+        action(row);
+        row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
+        let out = row.clone();
+        write_json(&self.todo_path, &db, 1)?;
+        Ok(out)
+    }
+    pub fn sample(&mut self, cfg: &Value) -> Result<(Value, Processes, Vec<Value>)> {
+        let (m, ps) = self.backend.measure(&mut self.state)?;
+        if truth(&self.state["boot_s"]) && (n(&m["boot_s"]) - n(&self.state["boot_s"])).abs() > 5. {
+            for k in ["cpu", "footprints", "progress", "observed"] {
+                remove(&mut self.state, k);
+            }
+        }
+        self.state["boot_s"] = m["boot_s"].clone();
+        let jobs = self.backend.jobs()?;
+        let now = self.backend.clock();
+        self.state["observed"] = ownership(&jobs, &ps, &self.state["observed"]);
+        merge(
+            &mut self.report,
+            capacity(&m, cfg, &mut self.state, &jobs, &ps, now),
+        );
+        let db = self.todo()?;
+        let busy =
+            resources_busy_with_lock(&arr(&db["items"]), &jobs, &ps, now, &self.civ6_home())?;
+        merge(
+            &mut self.report,
+            json!({"queue_length":arr(&db["items"]).iter().filter(|i|s(&i["status"])=="todo"&&truth(&i["dispatchable"])&&truth(&i["spec"])).count(),"busy_resources":busy}),
+        );
+        Ok((m, ps, jobs))
+    }
+    pub fn persist(&mut self) -> Result<()> {
+        write_json(&self.root.join("state.json"), &self.state, 2)?;
+        self.report["step_failures"] = json!(self.failures);
+        write_json(&self.root.join("status.json"), &self.report, 2)
+    }
+    pub fn link(&mut self, id: &Value, j: &Value, key: &Value) -> Result<()> {
+        let start = epoch(if truth(&j["started_at"]) {
+            &j["started_at"]
+        } else {
+            &j["created_at"]
+        });
+        let start = if start != 0. {
+            start
+        } else {
+            self.backend.clock()
+        };
+        self.edit(id, |i| {
+            if !matches!(s(&i["status"]), "todo" | "doing")
+                || i["scheduler"]["key"] != *key
+                || truth(&i["scheduler"]["job"])
+            {
+                return;
+            }
+            i["status"] = json!("doing");
+            if !arr(&i["jobs"]).contains(&j["id"]) {
+                push(&mut i["jobs"], j["id"].clone());
+            }
+            merge(
+                &mut i["scheduler"],
+                json!({"job":j["id"],"phase":"running","started_s":start}),
+            );
+        })?;
+        Ok(())
+    }
+    pub fn requeue(&mut self, id: &Value, jid: &Value, reason: &str) -> Result<()> {
+        let now = self.backend.clock();
+        self.edit(id, |i| {
+            if s(&i["status"]) != "doing" || i["scheduler"]["job"] != *jid {
+                return;
+            }
+            let budget = i["scheduler"]["retry_count"].clone();
+            let delay = if reason == "memory" { 180. } else if n(&budget) >= 1. {
+                crate::recovery_failure::SLOW_RETRY_S
+            } else { crate::recovery_failure::FAST_RETRY_S };
+            i["status"] = json!("todo");
+            let message = match reason {
+                "hung" => "30分間進捗がなかったため停止しました",
+                "lost" => "担当ジョブのプロセスが消失しました",
+                "memory" => "空きメモリ不足で停止しました",
+                "failed" => "担当ジョブが失敗しました",
+                _ => "担当ジョブが停止しました",
+            };
+            i["note"] = json!(format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。"));
+            let m = &mut i["scheduler"];
+            merge(m, json!({"last_job":jid,"last_stop":reason,"job":null,"key":null,"phase":"retry","resume":true,"not_before":now+delay}));
+            remove(m, "pending_cancel");
+            remove(m, "notice_pending");
+            if reason != "memory" {
+                m["retry_count"] = add_count(&budget, 1);
+            }
+        })?;
+        remove(&mut self.state["progress"], s(jid));
+        self.log("INFO", &format!("item {id} recovery {reason}"))?;
+        Ok(())
+    }
+    pub fn cancel_for(
+        &mut self,
+        i: &Value,
+        j: &mut Value,
+        reason: &str,
+        cfg: &Value,
+    ) -> Result<()> {
+        if !truth(&cfg["kill_enabled"]) {
+            push(
+                &mut self.report["cancel_dry_run"],
+                json!({"item":i["id"],"job":j["id"],"reason":reason}),
+            );
+            self.log(
+                "INFO",
+                &format!(
+                    "would cancel item {} reason={reason} (killing disabled)",
+                    i["id"]
+                ),
+            )?;
+            return Ok(());
+        }
+        let fresh = self.edit(&i["id"], |row| {
+            if s(&row["status"]) == "doing" && row["scheduler"]["job"] == j["id"] {
+                row["scheduler"]["pending_cancel"] = json!(reason);
+            }
+        })?;
+        if fresh["scheduler"]["job"] != j["id"]
+            || s(&fresh["scheduler"]["pending_cancel"]) != reason
+        {
+            return Ok(());
+        }
+        if self.backend.cancel(j)? {
+            self.requeue(&i["id"], &j["id"], reason)?;
+        } else {
+            self.log(
+                "WARNING",
+                &format!(
+                    "cancel incomplete item {}; retained resource reservation",
+                    i["id"]
+                ),
+            )?;
+        }
+        Ok(())
+    }
+    pub fn reconcile(&mut self, jobs: &mut [Value], ps: &Processes, cfg: &Value) -> Result<()> {
+        let now = self.backend.clock();
+        // Recover only the exact holds produced by this scheduler's old retry limit.
+        let db = self.todo()?;
+        let excluded = fs::read_to_string(
+            self.root
+                .parent()
+                .unwrap_or(&self.root)
+                .join("client-projects.txt"),
+        )?;
+        for i in arr(&db["items"]) {
+            if s(&i["project"]) == "owner"
+                || excluded
+                    .trim_start_matches('\u{feff}')
+                    .lines()
+                    .map(str::trim)
+                    .filter(|name| !name.is_empty() && !name.starts_with('#'))
+                    .any(|name| {
+                        s(&i["project"])
+                            .to_lowercase()
+                            .contains(&name.to_lowercase())
+                            || s(&db["projects"][s(&i["project"])])
+                                .to_lowercase()
+                                .contains(&name.to_lowercase())
+                    })
+            {
+                continue;
+            }
+            let suffix = "。2回止まったため、オーナーに再開方法を確認します。";
+            if matches!(s(&i["status"]), "block" | "doing" | "todo")
+                && s(&i["scheduler"]["phase"]) == "blocked"
+                && [
+                    "ジョブが失敗",
+                    "ジョブのプロセスが消失",
+                    "30分間進捗がなかったため停止",
+                    "ジョブが停止",
+                ]
+                .iter()
+                .any(|prefix| s(&i["note"]) == format!("{prefix}{suffix}"))
+            {
+                let active_owner = jobs
+                    .iter()
+                    .filter(|j| {
+                        live(j)
+                            && alive(j, ps, now)
+                            && (i["scheduler"]["job"] == j["id"]
+                                || arr(&i["jobs"]).contains(&j["id"]))
+                    })
+                    .max_by(|a, b| epoch(&a["created_at"]).total_cmp(&epoch(&b["created_at"])))
+                    .cloned();
+                let response = if truth(&i["scheduler"]["question"])
+                    && !truth(&i["scheduler"]["answer"])
+                {
+                    let Some(reply) = self.guard(&format!("answer item {} legacy", i["id"]), |e| {
+                        e.backend.reply(&i["scheduler"]["question"])
+                    }) else {
+                        continue;
+                    };
+                    reply
+                } else {
+                    None
+                };
+                let stopped = response.as_ref().is_some_and(|reply| truth(&reply["stop"]));
+                self.edit(&i["id"], |row| {
+                    if row["status"] != i["status"] || row["note"] != i["note"] || row["scheduler"] != i["scheduler"] { return; }
+                    row["note"] = json!("失敗回数だけによる保留を解除しました。原因を引き継いで自動で再開します。");
+                    if let Some(reply)=&response {
+                        row["scheduler"]["answer"]=reply["id"].clone();
+                        row["scheduler"]["owner_instruction"]=json!(s(&reply["text"]));
+                        row["note"]=json!(format!("オーナーの回答: {}",s(&reply["text"])));
+                    }
+                    if stopped {
+                        row["status"]=json!("block");
+                        row["note"]=json!("オーナーの回答に従い、停止したままにします。");
+                        if let Some(owner)=&active_owner {
+                            row["scheduler"]["owner_stop_job"]=owner["id"].clone();
+                        }
+                    } else if let Some(owner) = &active_owner {
+                        row["status"] = json!("doing");
+                        merge(&mut row["scheduler"],json!({"job":owner["id"],"phase":"running"}));
+                    } else {
+                        row["status"] = json!("todo");
+                        merge(&mut row["scheduler"], json!({"job":null,"key":null,"phase":"retry","resume":true,"not_before":now+60.}));
+                    }
+                    remove(&mut row["scheduler"], "notice_pending");
+                    remove(&mut row["scheduler"], "pending_cancel");
+                    if truth(&row["scheduler"]["question"]) {
+                        row["scheduler"]["question_close_pending"] = json!(true);
+                        row["scheduler"]["retire_retry_question"] = json!(true);
+                    }
+                })?;
+            }
+        }
+        // Explicit owner stop is distinct from automatic resource-pressure termination.
+        // Save its intent first and retry a failed cancellation on the next pass.
+        for row in arr(&self.todo()?["items"]) {
+            if s(&row["status"]) != "block" || !truth(&row["scheduler"]["owner_stop_job"]) {
+                continue;
+            }
+            let jid = &row["scheduler"]["owner_stop_job"];
+            if let Some(job) = jobs.iter_mut().find(|j| j["id"] == *jid && live(j)) {
+                let owners = arr(&self.todo()?["items"])
+                    .iter()
+                    .filter(|i| {
+                        i["id"] != row["id"]
+                            && s(&i["status"]) != "done"
+                            && i["scheduler"]["owner_stop_job"] != *jid
+                            && (arr(&i["jobs"]).contains(jid) || i["scheduler"]["job"] == *jid)
+                    })
+                    .count();
+                if owners == 0 {
+                    self.guard(&format!("answer item {} stop", row["id"]), |e| {
+                        e.backend.cancel(job)
+                    });
+                }
+            } else {
+                self.edit(&row["id"], |i| {
+                    remove(&mut i["scheduler"], "owner_stop_job")
+                })?;
+            }
+        }
+        for j in jobs.iter_mut() {
+            if live(j) && !alive(j, ps, now) {
+                let name = format!("lost {}", s(&j["id"]));
+                self.guard(&name, |e| e.backend.mark_lost(j));
+            }
+        }
+        for i in arr(&self.todo()?["items"]) {
+            let m = &i["scheduler"];
+            if matches!(s(&i["status"]), "todo" | "doing") && truth(&m["key"]) && !truth(&m["job"])
+            {
+                if let Some(j) = jobs.iter().find(|j| j["launch_key"] == m["key"]) {
+                    self.guard(&format!("adopt item {}", i["id"]), |e| {
+                        e.link(&i["id"], j, &m["key"])
+                    });
+                }
+            }
+        }
+        for i in arr(&self.todo()?["items"]) {
+            if i["stall_recovery"]["pending"].is_object() {
+                continue;
+            }
+            if s(&i["status"]) == "doing" && truth(&i["scheduler"]["job"]) {
+                self.guard(&format!("reconcile item {}", i["id"]), |e| {
+                    e.reconcile_item(&i, jobs, ps, cfg)
+                });
+            } else if s(&i["status"]) == "doing" && truth(&i["jobs"]) {
+                let jid = arr(&i["jobs"]).last().cloned().unwrap();
+                if jobs
+                    .iter()
+                    .any(|j| j["id"] == jid && s(&j["status"]) == "lost")
+                    && !truth(&i["spec"])
+                {
+                    self.guard(&format!("manual recovery {}",i["id"]),|e|e.edit(&i["id"],|row|{if s(&row["status"])=="doing"&&row["jobs"]==i["jobs"]{merge(row,json!({"status":"todo","note":"担当ジョブのプロセスが消失しました。指示ファイルがないため、担当者が再開してください。"}));}}));
+                }
+            }
+        }
+        Ok(())
+    }
+    pub fn reconcile_item(
+        &mut self,
+        i: &Value,
+        jobs: &mut [Value],
+        ps: &Processes,
+        cfg: &Value,
+    ) -> Result<()> {
+        // A concurrent explicit handoff invalidates this reconciliation snapshot.
+        let current = arr(&self.todo()?["items"])
+            .into_iter()
+            .find(|row| row["id"] == i["id"]);
+        if current
+            .as_ref()
+            .is_none_or(|row| row["status"] != i["status"] || row["scheduler"] != i["scheduler"])
+        {
+            return Ok(());
+        }
+        let m = &i["scheduler"];
+        let job = jobs.iter_mut().find(|j| j["id"] == m["job"]);
+        if job.as_ref().is_none_or(|j| !live(j))
+            && ps.values().any(|p| {
+                matches!(s(&p["name"]).to_lowercase().as_str(), "codex" | "codex.exe")
+                    && identity(p).is_some_and(|key| self.state["observed"][key]["job"] == m["job"])
+            })
+        {
+            push(
+                &mut self.report["recovery_waiting_for_worker"],
+                m["job"].clone(),
+            );
+            return Ok(());
+        }
+        let Some(j) = job else {
+            return self.requeue(&i["id"], &m["job"], "lost");
+        };
+        if live(j) {
+            if truth(&m["pending_cancel"]) {
+                return self.cancel_for(i, j, s(&m["pending_cancel"]), cfg);
+            }
+            let tree = process_tree(j, ps);
+            let cpu = if !tree.is_empty()
+                && tree
+                    .iter()
+                    .all(|pid| !ps[pid]["cpu"].is_null() && truth(&ps[pid]["metrics_ok"]))
+            {
+                Some(tree.iter().map(|pid| n(&ps[pid]["cpu"])).sum())
+            } else {
+                None
+            };
+            let mut sig: Vec<String> = tree.iter().filter_map(|pid| identity(&ps[pid])).collect();
+            sig.sort();
+            let event = self.backend.event_mtime(j)?;
+            let (record, hung) = hang_progress(
+                &self.state["progress"][s(&j["id"])],
+                event,
+                cpu,
+                &sig.join(","),
+                self.backend.clock(),
+                n(&cfg["hang_s"]),
+            );
+            if !self.state["progress"].is_object() {
+                self.state["progress"] = json!({});
+            }
+            self.state["progress"][s(&j["id"])] = record;
+            if hung {
+                self.cancel_for(i, j, "hung", cfg)?;
+            }
+        } else if matches!(s(&j["status"]), "lost" | "cancelled" | "failed") {
+            if s(&j["status"]) == "cancelled" && !truth(&m["pending_cancel"]) {
+                self.edit(&i["id"],|row|{if s(&row["status"])=="doing"&&row["scheduler"]["job"]==j["id"]{merge(row,json!({"status":"block","note":"担当ジョブが取り消されました。再開する場合は担当者が確認してください。"}));row["scheduler"]["phase"]=json!("cancelled");}})?;
+                return Ok(());
+            }
+            self.requeue(
+                &i["id"],
+                &j["id"],
+                if truth(&m["pending_cancel"]) {
+                    s(&m["pending_cancel"])
+                } else {
+                    s(&j["status"])
+                },
+            )?;
+        } else if s(&j["status"]) == "succeeded" {
+            let mut outcome = self.backend.outcome(j)?;
+            // A shared worker can finish one child while its parent still has work.
+            // An explicit per-item completion remains authoritative (the edit below
+            // only touches doing items). A job bound to this item may report its result.
+            let linked_items = arr(&self.todo()?["items"])
+                .into_iter()
+                .filter(|row| {
+                    row["scheduler"]["job"] == j["id"] || arr(&row["jobs"]).contains(&j["id"])
+                })
+                .count();
+            if linked_items > 1 && j["todo_id"] != i["id"] {
+                outcome = "todo".into();
+            }
+            let next_at = self.backend.clock() + 60.;
+            self.edit(&i["id"], |row| {
+                if s(&row["status"]) == "doing" && row["scheduler"]["job"] == j["id"] {
+                    row["status"] = json!(outcome);
+                    row["note"] = json!(if outcome == "todo" {
+                        "作業が残っています。資源の空きを確認して自動で続けます。"
+                    } else if outcome == "done" {
+                        "割り当てたジョブが完了しました。"
+                    } else {
+                        "ジョブの結果に判断が必要です。"
+                    });
+                    row["scheduler"]["phase"] = json!("finished");
+                    if outcome == "todo" {
+                        row["scheduler"]["last_job"] = j["id"].clone();
+                        row["scheduler"]["job"] = Value::Null;
+                        row["scheduler"]["key"] = Value::Null;
+                        row["scheduler"]["phase"] = json!("queued");
+                        row["scheduler"]["resume"] = json!(true);
+                        row["scheduler"]["not_before"] = json!(next_at);
+                        row["scheduler"]["continuation_count"] =
+                            add_count(&row["scheduler"]["continuation_count"], 1);
+                    }
+                }
+            })?;
+            remove(&mut self.state["progress"], s(&j["id"]));
+        }
+        Ok(())
+    }
+    pub fn memory_pressure(
+        &mut self,
+        m: &Value,
+        jobs: &mut [Value],
+        ps: &Processes,
+        pri: &Value,
+        cfg: &Value,
+    ) -> Result<()> {
+        if n(&m["available_gb"]) >= 4. {
+            return Ok(());
+        }
+        if let Some(i) = pressure_victim(
+            &arr(&self.todo()?["items"]),
+            jobs,
+            ps,
+            pri,
+            self.backend.clock(),
+        ) {
+            if let Some(j) = jobs.iter_mut().find(|j| j["id"] == i["scheduler"]["job"]) {
+                self.cancel_for(&i, j, "memory", cfg)?;
+            }
+        }
+        Ok(())
+    }
+    pub fn orphans(
+        &mut self,
+        jobs: &[Value],
+        ps: &Processes,
+        cfg: &Value,
+        apply: bool,
+    ) -> Result<Value> {
+        let now = self.backend.clock();
+        let ledger = ownership(jobs, ps, &self.state["observed"]);
+        self.state["observed"] = ledger.clone();
+        let candidates = orphan_candidates(jobs, ps, &ledger, now, n(&cfg["orphan_age_s"]));
+        let before = node_count(ps);
+        let mut killed = vec![];
+        let after = if apply && truth(&cfg["kill_enabled"]) {
+            for c in &candidates {
+                let fresh = self.backend.snapshot()?;
+                let fresh_jobs = self.backend.jobs()?;
+                let verified = orphan_candidates(
+                    &fresh_jobs,
+                    &fresh,
+                    &ownership(&fresh_jobs, &fresh, &ledger),
+                    self.backend.clock(),
+                    n(&cfg["orphan_age_s"]),
+                );
+                if verified
+                    .iter()
+                    .any(|p| p["pid"] == c["pid"] && p["created"] == c["created"])
+                    && self.guard(&format!("orphan kill {}", c["pid"]), |e| {
+                        e.backend.kill_orphan(c)
+                    }) == Some(true)
+                {
+                    killed.push(c["pid"].clone());
+                }
+            }
+            node_count(&self.backend.snapshot()?)
+        } else {
+            before
+        };
+        let report = json!({"measured_at":iso(now),"dry_run":!(apply&&truth(&cfg["kill_enabled"])),"node_before":before,"node_after":after,"candidates":candidates,"killed":killed,"unattributed_nodes":ps.values().filter(|p|matches!(s(&p["name"]).to_lowercase().as_str(),"node"|"node.exe")&&identity(p).is_none_or(|key|ledger.get(key).is_none())).count()});
+        self.report["orphans"] = report.clone();
+        write_json(&self.root.join("orphans.json"), &report, 2)?;
+        self.log(
+            "INFO",
+            &format!(
+                "orphans dry_run={} node={before}->{after} candidates={} killed={}",
+                report["dry_run"],
+                candidates.len(),
+                killed.len()
+            ),
+        )?;
+        Ok(report)
+    }
+    pub fn notifications(&mut self) -> Result<()> {
+        for i in arr(&self.todo()?["items"]) {
+            if s(&i["status"]) == "block" && truth(&i["scheduler"]["notice_pending"]) {
+                self.guard(&format!("notify item {}", i["id"]), |e| {
+                    let receipt = e.backend.notify(&i)?;
+                    e.edit(&i["id"], |row| {
+                        remove(&mut row["scheduler"], "notice_pending");
+                        row["scheduler"]["question"] = receipt;
+                    })?;
+                    Ok(())
+                });
+            }
+        }
+        Ok(())
+    }
+    pub fn answers(&mut self) -> Result<()> {
+        for i in arr(&self.todo()?["items"]) {
+            let r = i["scheduler"]["question"].clone();
+            if !truth(&r) {
+                continue;
+            }
+            self.guard(&format!("answer item {}",i["id"]),|e|{let mut current=i.clone();if s(&i["status"])=="block"&&!truth(&i["scheduler"]["answer"]){let Some(response)=e.backend.reply(&r)?else{return Ok(());};current=e.edit(&i["id"],|row|{if s(&row["status"])!="block"||row["scheduler"]["question"]!=r||truth(&row["scheduler"]["answer"]){return;}merge(&mut row["scheduler"],json!({"answer":response["id"],"question_close_pending":true}));if truth(&response["stop"]){row["note"]=json!("オーナーの回答に従い、停止したままにします。");}else{merge(row,json!({"status":"todo","note":"オーナーの回答を受け、同じ worktree から再開します。"}));merge(&mut row["scheduler"],json!({"job":null,"key":null,"phase":"retry","resume":true,"retry_count":0,"not_before":0,"owner_instruction":format!("原因を調べてから元の依頼を再開してください。\nオーナーの回答: {}",s(&response["text"]))}));remove(&mut row["scheduler"],"selection");}})?;}
+if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_question(&r)?;e.edit(&i["id"],|row|{
+    if row["scheduler"]["question"] != r { return; }
+    remove(&mut row["scheduler"],"question_close_pending");
+    if truth(&row["scheduler"]["retire_retry_question"]) {
+        remove(&mut row["scheduler"],"question");
+        remove(&mut row["scheduler"],"retire_retry_question");
+    }
+})?;}Ok(())});
+        }
+        Ok(())
+    }
+    pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
+        let base = resolve(Path::new(repo))?;
+        let item=self.edit(&i["id"],|row|{if s(&row["status"])!="todo"||!truth(&row["dispatchable"]){return;}
+if !row["scheduler"].is_object(){row["scheduler"]=json!({});}
+if !truth(&row["scheduler"]["worktree"]){let slug=regex::Regex::new("[^a-z0-9]+").unwrap().replace_all(&s(&row["title"]).to_lowercase(),"-").trim_matches('-').chars().take(32).collect::<String>();let name=format!("todo-{}-{}",row["id"],if slug.is_empty(){"work"}else{&slug});merge(&mut row["scheduler"],json!({"worktree":PathBuf::from(format!("{}-wt",base.display())).join(&name),"branch":format!("scheduler/{name}")}));}
+if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["attempt"],1);merge(&mut row["scheduler"],json!({"key":uuid::Uuid::new_v4().simple().to_string(),"attempt":attempt}));}row["scheduler"]["phase"]=json!("preparing");})?;
+        if s(&item["status"]) != "todo" || !truth(&item["scheduler"]["key"]) {
+            return Ok(None);
+        }
+        self.backend.worktree(repo, &item)?;
+        let spec = Path::new(s(&item["spec"]));
+        if spec.metadata()?.len() > 1024 * 1024 {
+            return Err(Error("ValueError"));
+        }
+        let text = fs::read_to_string(spec)?;
+        if text.trim().is_empty() {
+            return Err(Error("ValueError"));
+        }
+        let resources = arr(&item["needs"])
+            .iter()
+            .map(|v| s(v).to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let mut prompt = format!(
+            "{COMMON_INSTRUCTIONS}\n割り当てた資源: {}\n",
+            if resources.is_empty() {
+                "なし"
+            } else {
+                &resources
+            }
+        );
+        if truth(&item["scheduler"]["resume"]) {
+            prompt += &format!("{RESUME_INSTRUCTION}\n");
+        }
+        let jobs = self.backend.jobs()?;
+        let source = jobs
+            .iter()
+            .find(|j| j["id"] == item["scheduler"]["last_job"]);
+        let resume_session =
+            source.and_then(|j| continuation_session(j, s(&item["scheduler"]["worktree"]), &jobs));
+        if let Some(source) = source {
+            let result = safe_text(s(&source["last_message"]));
+            if !result.is_empty() {
+                prompt += &format!(
+                    "\n前回の作業結果:\n{}\n",
+                    result.chars().take(8000).collect::<String>()
+                );
+            }
+        }
+        if n(&item["scheduler"]["continuation_count"]) >= 3. {
+            prompt += "\n3回以上続けても元の依頼が未完了です。まず進め方を設計から見直し、必要な既存の子作業の結果を統合してください。同じ不足説明や新しい引き継ぎ用ToDoの追加で終了せず、このToDoの完了条件を満たすまで続けてください。資源待ちは同じ担当が待って検証を完了してください。\n";
+        }
+        if truth(&item["scheduler"]["owner_instruction"]) {
+            prompt += &format!(
+                "\nオーナーの回答に従って再開してください:\n{}\n",
+                s(&item["scheduler"]["owner_instruction"])
+            );
+        }
+        prompt += &format!("\n依頼:\n{text}");
+        let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
+        let mut selection = item["scheduler"]["selection"].clone();
+        if !truth(&selection) {
+            selection = if truth(&item["model"]) && truth(&item["effort"]) {
+                json!({"model":item["model"],"effort":item["effort"],"task_type":"implementation"})
+            } else {
+                self.backend.pick(&task)?
+            };
+            for k in ["model", "effort"] {
+                if truth(&item[k]) {
+                    selection[k] = item[k].clone();
+                }
+            }
+        }
+        if !valid_model(s(&selection["model"])) {
+            return Err(Error("ValueError"));
+        }
+        if !self.backend.model_exists(s(&selection["model"])) {
+            // An agent asked for a model OpenCodex does not serve (2026-10-01: "gpt-6.1-luna" failed 4 times and
+            // reached the owner as a question). Let Jev pick an existing model instead of failing again.
+            self.log(
+                "WARNING",
+                &format!(
+                    "model {} is not served by OpenCodex; asking Jev instead",
+                    s(&selection["model"])
+                ),
+            )?;
+            let picked = self.backend.pick(&task)?;
+            selection["model"] = picked["model"].clone();
+            if !self.backend.model_exists(s(&selection["model"])) {
+                selection["model"] = json!("gpt-6.1-sol");
+            }
+        }
+        if !valid_effort(s(&selection["effort"])) {
+            return Err(Error("ValueError"));
+        }
+        let folder = self.root.join("prompts");
+        fs::create_dir_all(&folder)?;
+        let target = folder.join(format!(
+            "{}-{}.md",
+            item["id"],
+            s(&item["scheduler"]["key"])
+        ));
+        backup(&target)?;
+        fs::write(&target, prompt)?;
+        Ok(Some(self.edit(&item["id"], |row| {
+            if s(&row["status"]) == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"] {
+                merge(
+                    &mut row["scheduler"],
+                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session}),
+                );
+            }
+        })?))
+    }
+    pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
+        self.dispatch_for(cfg, pri, None)
+    }
+    /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
+    pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
+        if !truth(&cfg["dispatch_enabled"]) {
+            return Ok(());
+        }
+        let (_, ps, jobs) = self.sample(cfg)?;
+        let db = self.todo()?;
+        let busy = resources_busy_with_lock(
+            &arr(&db["items"]),
+            &jobs,
+            &ps,
+            self.backend.clock(),
+            &self.civ6_home(),
+        )?;
+        let eligible: Vec<Value> = arr(&db["items"])
+            .into_iter()
+            .filter(|i| {
+                let project = s(&i["project"]);
+                let path = s(&db["projects"][project]);
+                let excluded = std::fs::read_to_string(
+                    self.root.parent().unwrap().join("client-projects.txt"),
+                )
+                .map(|names| {
+                    names
+                        .trim_start_matches('\u{feff}')
+                        .lines()
+                        .map(str::trim)
+                        .filter(|n| !n.is_empty() && !n.starts_with('#'))
+                        .any(|n| {
+                            project.to_lowercase().contains(&n.to_lowercase())
+                                || path.to_lowercase().contains(&n.to_lowercase())
+                        })
+                })
+                .unwrap_or(true);
+                project != "owner"
+                    && !excluded
+                    && target.is_none_or(|id| i["id"].as_i64() == Some(id))
+                    && (target.is_some() || !i["stall_recovery"]["pending"].is_object())
+                    && !jobs.iter().any(|j| {
+                        live(j)
+                            && (arr(&i["jobs"]).contains(&j["id"])
+                                || i["scheduler"]["job"] == j["id"])
+                    })
+            })
+            .collect();
+        let mut queue = priority_queue(&eligible, pri, self.backend.clock());
+        // Rotate projects after a successful launch; recurring high-priority work
+        // must not indefinitely starve every other product.
+        queue.sort_by(|a, b| {
+            n(&self.state["project_last_launch"][s(&a["project"])])
+                .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
+        });
+        merge(
+            &mut self.report,
+            json!({"queue_length":queue.len(),"busy_resources":busy}),
+        );
+        if !truth(&self.report["allowance_now"]) {
+            return Ok(());
+        }
+        let Some(i) = queue
+            .iter()
+            .find(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
+        else {
+            return Ok(());
+        };
+        let result: Result<()> = (|| {
+            let Some(prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))? else {
+                return Ok(());
+            };
+            if s(&prepared["status"]) != "todo" {
+                return Ok(());
+            }
+            let (_, ps, jobs) = self.sample(cfg)?;
+            let db = self.todo()?;
+            let busy = resources_busy_with_lock(
+                &arr(&db["items"]),
+                &jobs,
+                &ps,
+                self.backend.clock(),
+                &self.civ6_home(),
+            )?;
+            if !truth(&self.report["allowance_now"])
+                || arr(&prepared["needs"]).iter().any(|v| busy.contains(s(v)))
+            {
+                return Ok(());
+            }
+            let current = arr(&db["items"])
+                .into_iter()
+                .find(|r| r["id"] == prepared["id"])
+                .ok_or(Error("ValueError"))?;
+            if s(&current["status"]) != "todo"
+                || current["scheduler"]["key"] != prepared["scheduler"]["key"]
+            {
+                return Ok(());
+            }
+            self.state["last_launch"] = json!(self.backend.clock());
+            if !self.state["project_last_launch"].is_object() {
+                self.state["project_last_launch"] = json!({});
+            }
+            self.state["project_last_launch"][s(&prepared["project"])] =
+                json!(self.backend.clock());
+            self.persist()?;
+            let jid = self.backend.launch(
+                &prepared,
+                Path::new(s(&prepared["scheduler"]["prompt"])),
+                &prepared["scheduler"]["selection"],
+            )?;
+            let j = self
+                .backend
+                .jobs()?
+                .into_iter()
+                .find(|r| s(&r["id"]) == jid)
+                .unwrap_or(json!({"id":jid,"created_at":self.backend.clock()}));
+            self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
+            merge(
+                &mut self.report,
+                json!({"launched":{"item":i["id"],"job":jid},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
+            );
+            self.log(
+                "INFO",
+                &format!(
+                    "launched item {} job {} priority {}",
+                    i["id"],
+                    jid,
+                    priority(i, pri)
+                ),
+            )?;
+            Ok(())
+        })();
+        if let Err(e) = &result {
+            if e.0 != "KeyboardInterrupt" {
+                let until = self.backend.clock() + 300.;
+                self.guard(&format!("defer item {}", i["id"]), |eng| {
+                    eng.edit(&i["id"], |row| {
+                        if s(&row["status"]) == "todo" {
+                            if !row["scheduler"].is_object() {
+                                row["scheduler"] = json!({});
+                            }
+                            row["scheduler"]["not_before"] = json!(until);
+                            row["note"] = json!(format!(
+                                "起動の準備でエラーが発生しました（{}）。5分後に再確認します。",
+                                e.0
+                            ));
+                        }
+                    })
+                });
+            }
+        }
+        result
+    }
+    pub fn run(&mut self, mode: &str, apply: bool) -> Result<Value> {
+        let Some(_lock) = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::ZERO)?
+        else {
+            return Ok(json!({"busy":true}));
+        };
+        self.failures.clear();
+        self.report = json!({});
+        self.state = read_json(&self.root.join("state.json"), json!({}))?;
+        if !self.state.is_object() {
+            return Err(Error("AttributeError"));
+        }
+        let (cfg, pri) = self.settings()?;
+        let (m, ps, mut jobs) = self.sample(&cfg)?;
+        match mode {
+            "recover" => {
+                let mut safe = cfg.clone();
+                safe["kill_enabled"] = json!(false);
+                self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &safe));
+            }
+            "step" => {
+                self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &cfg));
+                self.guard("memory pressure", |e| {
+                    e.memory_pressure(&m, &mut jobs, &ps, &pri, &cfg)
+                });
+                self.guard("orphans", |e| e.orphans(&jobs, &ps, &cfg, true));
+                self.guard("notifications", |e| e.notifications());
+                self.guard("answers", |e| e.answers());
+                if !self.failures.iter().any(|name| {
+                    !["notify item ", "answer item ", "notifications", "answers"]
+                        .iter()
+                        .any(|prefix| name.starts_with(prefix))
+                }) {
+                    self.guard("dispatch", |e| e.dispatch(&cfg, &pri));
+                }
+            }
+            "orphans" => {
+                self.orphans(&jobs, &ps, &cfg, apply)?;
+            }
+            _ => {}
+        }
+        self.persist()?;
+        Ok(self.report.clone())
+    }
+}
+pub fn step<B: Backend>(engine: Result<Scheduler<B>>) -> Value {
+    match engine {
+        Ok(mut e) => match e.run("step", false) {
+            Ok(v) => v,
+            Err(err) => {
+                let _ = e.log("ERROR", &format!("tick failed ({})", err.0));
+                json!({"error":err.0})
+            }
+        },
+        Err(err) => {
+            eprintln!("scheduler tick failed {}", err.0);
+            json!({"error":err.0})
+        }
+    }
+}

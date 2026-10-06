@@ -67,6 +67,353 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
+    fn long_parent(t: &Test, id: &str) -> Value {
+        let mut j = waiting(t, id, "orch-long");
+        j["status"] = json!("running");
+        j["started_at"] = json!("2026-10-01T10:00:00+09:00");
+        j["thread_id"] = json!(SESSION_ID);
+        j["todo_id"] = json!(1956);
+        t.ctx.save(&j).unwrap();
+        j
+    }
+    #[test]
+    fn long_turn_yields_then_supervisor_resumes_same_session_after_another_job() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        let mut j = waiting(&t, "long", "orch-long");
+        j["todo_id"] = json!(1956);
+        t.ctx.save(&j).unwrap();
+        fs::write(t.ctx.job_dir("long").join("prompt.md"), "original task").unwrap();
+        let ctx = t.ctx.clone();
+        let rt = t.rt.clone();
+        let seq = AtomicUsize::new(0);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            if seq.fetch_add(1, Ordering::Relaxed) == 0 {
+                rt.tick(7201.);
+                fs::create_dir_all(ctx.job_dir("other")).unwrap();
+                ctx.save(&job(json!({"id":"other","name":"orch-other","pid":std::process::id(),"pid_created":123,"queued_at":"2026-10-01T11:59:59+09:00"}))).unwrap();
+                let _gate = ctx.queue_lock().unwrap();
+                ctx.track_queued_job("other").unwrap();
+            }
+            let text = format!(
+                "{{\"type\":\"thread.started\",\"thread_id\":\"{SESSION_ID}\"}}\n{{\"type\":\"item.completed\",\"item\":{{\"type\":\"agent_message\",\"text\":\"状態: 継続\"}}}}\n{{\"type\":\"turn.completed\"}}\n"
+            );
+            Box::new(FakeChild {
+                alive: Arc::new(AtomicBool::new(false)),
+                out: Some(Box::new(Cursor::new(text.into_bytes()))),
+            })
+        }));
+        let ctx = t.ctx.clone();
+        let seen = Arc::new(AtomicBool::new(false));
+        let observed = seen.clone();
+        *t.rt.sleep_hook.lock().unwrap() = Some(Box::new(move |seconds| {
+            if seconds == 3. && !observed.swap(true, Ordering::Relaxed) {
+                let yielded = ctx.load("long").unwrap();
+                assert_eq!(yielded["status"], "queued");
+                assert_eq!(yielded["resume_session"], SESSION_ID);
+                assert_eq!(yielded["todo_id"], 1956);
+                assert_eq!(yielded["yield_last_message"], "状態: 継続");
+                assert!(ctx.admit("other").unwrap().is_some());
+                let mut other = ctx.load("other").unwrap();
+                other["status"] = json!("succeeded");
+                ctx.save(&other).unwrap();
+            }
+        }));
+        t.ctx.supervise("long").unwrap();
+        assert!(seen.load(Ordering::Relaxed));
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 2);
+        assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        let saved = t.ctx.load("long").unwrap();
+        assert_eq!(saved["status"], "succeeded");
+        assert_eq!(saved["yield_count"], 1);
+        assert_eq!(saved["todo_id"], 1956);
+        assert_eq!(
+            fs::read_to_string(t.ctx.job_dir("long").join("prompt.md")).unwrap(),
+            "original task"
+        );
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn legacy_supervisor_is_not_stopped_and_finished_turn_is_requeued_once() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = long_parent(&t, "long");
+        waiting(&t, "other", "orch-other");
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "running");
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        let owner = t.ctx.job_lock("long", "supervisor.lock").unwrap();
+        let mut blocker = waiting(&t, "blocker", "orch-blocker");
+        blocker["status"] = json!("running");
+        t.ctx.save(&blocker).unwrap();
+        finish(&mut parent, Some(0), 7200000, &t.rt.now());
+        parent["turn_completed"] = json!(true);
+        parent["status"] = json!("succeeded");
+        parent["last_message"] = json!("状態: 継続中");
+        t.ctx.save(&parent).unwrap();
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        drop(owner);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        let yielded = t.ctx.load("long").unwrap();
+        assert_eq!(yielded["status"], "queued");
+        assert_eq!(yielded["resume_session"], SESSION_ID);
+        assert_eq!(yielded["todo_id"], 1956);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn parent_waiting_for_children_or_grandchildren_never_yields() {
+        for state in ["queued", "running"] {
+            for grandchild in [false, true] {
+                let t = Test::new();
+                config(&t, json!({"max_running":1}));
+                long_parent(&t, "long");
+                waiting(&t, "other", "req-other");
+                child(&t, "child", "long");
+                let id = if grandchild {
+                    let mut ended = t.ctx.load("child").unwrap();
+                    ended["status"] = json!("succeeded");
+                    t.ctx.save(&ended).unwrap();
+                    child(&t, "grandchild", "child");
+                    "grandchild"
+                } else {
+                    "child"
+                };
+                let mut pending = t.ctx.load(id).unwrap();
+                pending["status"] = json!(state);
+                t.ctx.save(&pending).unwrap();
+                assert!(t.ctx.admit("other").unwrap().is_none());
+                assert!(!t.ctx.jobs.join(".queue-yields.json").exists());
+                assert!(t.rt.kills.lock().unwrap().is_empty());
+                pending["status"] = json!("succeeded");
+                t.ctx.save(&pending).unwrap();
+                assert!(t.ctx.admit("other").unwrap().is_none());
+                assert!(t.ctx.jobs.join(".queue-yields.json").exists());
+            }
+        }
+    }
+    #[test]
+    fn yield_reservation_is_withdrawn_when_a_child_starts_or_waiters_disappear() {
+        for child_starts in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            let mut parent = long_parent(&t, "long");
+            waiting(&t, "other", "orch-other");
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            if child_starts {
+                child(&t, "child", "long");
+            } else {
+                let mut other = t.ctx.load("other").unwrap();
+                other["cancel_requested"] = json!(true);
+                t.ctx.save(&other).unwrap();
+            }
+            parent["status"] = json!("succeeded");
+            parent["turn_completed"] = json!(true);
+            t.ctx.save(&parent).unwrap();
+            t.ctx.admit("other").unwrap();
+            assert_eq!(t.ctx.load("long").unwrap()["status"], "succeeded");
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        }
+    }
+    #[test]
+    fn yield_requires_two_hours_a_waiter_a_session_and_unfinished_success() {
+        for case in [
+            "young",
+            "no-waiter",
+            "no-session",
+            "complete",
+            "failed",
+            "cancelled",
+            "cooldown",
+            "child",
+        ] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            let mut parent = long_parent(&t, "long");
+            if case == "young" {
+                parent["started_at"] = json!("2026-10-01T10:00:01+09:00");
+            }
+            if case == "child" {
+                parent["parent_job_id"] = json!("ancestor");
+            }
+            t.ctx.save(&parent).unwrap();
+            if case != "no-waiter" {
+                let mut other = waiting(&t, "other", "orch-other");
+                if case == "cooldown" {
+                    other["retry_not_before"] = json!(t.rt.epoch() + 60.);
+                    t.ctx.save(&other).unwrap();
+                }
+                t.ctx.admit("other").unwrap();
+            }
+            parent["status"] = json!("succeeded");
+            parent["turn_completed"] = json!(true);
+            match case {
+                "no-session" => parent["thread_id"] = Value::Null,
+                "complete" => parent["last_message"] = json!("状態: 完了\n依頼を完了しました。"),
+                "failed" => parent["status"] = json!("failed"),
+                "cancelled" => parent["cancel_requested"] = json!(true),
+                _ => (),
+            }
+            t.ctx.save(&parent).unwrap();
+            if case != "no-waiter" {
+                t.ctx.admit("other").unwrap();
+            }
+            assert_ne!(t.ctx.load("long").unwrap()["status"], "queued", "{case}");
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{case}");
+        }
+    }
+    #[test]
+    fn owner_then_shepherd_then_other_jobs_use_fifo_within_each_class() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        for (id, name, time) in [
+            ("other", "orch-other", "08:00:00"),
+            ("shep-new", "shep-new", "11:00:00"),
+            ("req-new", "req-new", "11:30:00"),
+            ("shep-old", "shep-old", "09:00:00"),
+            ("req-old", "req-old", "10:00:00"),
+        ] {
+            let mut j = waiting(&t, id, name);
+            j["queued_at"] = json!(format!("2026-10-01T{time}+09:00"));
+            t.ctx.save(&j).unwrap();
+        }
+        for id in ["req-old", "req-new", "shep-old", "shep-new", "other"] {
+            assert!(t.ctx.admit(id).unwrap().is_some(), "{id}");
+            let mut j = t.ctx.load(id).unwrap();
+            j["status"] = json!("succeeded");
+            t.ctx.save(&j).unwrap();
+        }
+    }
+    #[test]
+    fn stale_reservations_never_revive_finished_or_superseded_work() {
+        for case in ["future-waiter", "modern", "successor", "decision"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            let mut parent = long_parent(&t, "long");
+            waiting(&t, "old-waiter", "orch-old");
+            assert!(t.ctx.admit("old-waiter").unwrap().is_none());
+            parent["status"] = json!("succeeded");
+            parent["turn_completed"] = json!(true);
+            parent["finished_at"] = json!(t.rt.now());
+            parent["gto"] = json!({"quality":4});
+            if case == "modern" {
+                parent["queue_fairness_version"] = json!(1);
+            }
+            if case == "decision" {
+                parent["last_message"] = json!("状態: 要判断\nオーナーの回答を待ちます。");
+            }
+            t.ctx.save(&parent).unwrap();
+            if case == "successor" {
+                let mut next = waiting(&t, "next", "req-reply");
+                next["resume_session"] = json!(SESSION_ID);
+                t.ctx.save(&next).unwrap();
+            }
+            if case == "future-waiter" {
+                let mut old = t.ctx.load("old-waiter").unwrap();
+                old["status"] = json!("cancelled");
+                t.ctx.save(&old).unwrap();
+                let mut future = waiting(&t, "future", "req-future");
+                future["queued_at"] = json!("2026-10-01T14:00:00+09:00");
+                t.ctx.save(&future).unwrap();
+                t.ctx.admit("future").unwrap();
+            } else {
+                t.ctx.admit("old-waiter").unwrap();
+            }
+            assert_eq!(t.ctx.load("long").unwrap(), parent, "{case}");
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{case}");
+        }
+    }
+    #[test]
+    fn fairness_io_failures_preserve_completed_turn_results() {
+        for broken in [".queue.lock", ".queue-index.json", "yield-resume.md"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            t.rt.advance_epoch.store(true, Ordering::Relaxed);
+            waiting(&t, "long", "orch-long");
+            fs::write(t.ctx.job_dir("long").join("prompt.md"), "work").unwrap();
+            let ctx = t.ctx.clone();
+            let rt = t.rt.clone();
+            *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+                rt.tick(7201.);
+                fs::create_dir_all(ctx.job_dir("other")).unwrap();
+                ctx.save(&job(json!({"id":"other","name":"orch-other","pid":std::process::id(),"pid_created":123}))).unwrap();
+                {
+                    let _gate = ctx.queue_lock().unwrap();
+                    ctx.track_queued_job("other").unwrap();
+                }
+                if broken == "yield-resume.md" {
+                    fs::create_dir(ctx.job_dir("long").join(broken)).unwrap();
+                } else {
+                    fs::rename(
+                        ctx.jobs.join(broken),
+                        ctx.jobs.join(format!("{broken}.saved")),
+                    )
+                    .unwrap();
+                    fs::create_dir(ctx.jobs.join(broken)).unwrap();
+                }
+                Box::new(FakeChild {
+                    alive: Arc::new(AtomicBool::new(false)),
+                    out: Some(Box::new(Cursor::new(OK.as_bytes()))),
+                })
+            }));
+            t.ctx.supervise("long").unwrap();
+            let saved = t.ctx.load("long").unwrap();
+            assert_eq!(saved["status"], "succeeded", "{broken}");
+            assert_eq!(saved["last_message"], "DONE", "{broken}");
+            assert_eq!(saved["exit_code"], 0, "{broken}");
+            assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1, "{broken}");
+            assert!(
+                t.rt.diagnostics
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|line| line.contains("枠を譲る処理を延期")),
+                "{broken}"
+            );
+        }
+    }
+    #[test]
+    fn one_broken_yield_reservation_never_stops_unrelated_admission() {
+        for broken in ["missing", "unreadable", "spawn", "ledger"] {
+            let t = Test::new();
+            let mut parent = long_parent(&t, "long");
+            let mut blocker = waiting(&t, "blocker", "orch-blocker");
+            blocker["status"] = json!("running");
+            t.ctx.save(&blocker).unwrap();
+            config(&t, json!({"max_running":1}));
+            waiting(&t, "other", "req-other");
+            t.ctx.admit("other").unwrap();
+            match broken {
+                "missing" => {
+                    fs::rename(t.ctx.job_dir("long"), t.ctx.root.join("moved-long")).unwrap();
+                }
+                "unreadable" => {
+                    fs::write(t.ctx.job_dir("long").join("job.json"), "{").unwrap();
+                }
+                "spawn" => {
+                    parent["status"] = json!("succeeded");
+                    parent["turn_completed"] = json!(true);
+                    parent["finished_at"] = json!(t.rt.now());
+                    t.ctx.save(&parent).unwrap();
+                    t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+                }
+                "ledger" => {
+                    fs::write(t.ctx.jobs.join(".queue-yields.json"), "{").unwrap();
+                }
+                _ => unreachable!(),
+            }
+            config(&t, json!({"max_running":6}));
+            assert!(t.ctx.admit("other").unwrap().is_some(), "{broken}");
+            if broken == "spawn" {
+                assert_eq!(t.ctx.load("long").unwrap(), parent);
+            }
+        }
+    }
     #[test]
     fn queued_supervisor_refreshes_activity_even_during_cooldown() {
         let t = Test::new();
@@ -878,6 +1225,7 @@ struct Fake {
     advance_epoch: AtomicBool,
     sleep_hook: Mutex<Option<SleepHook>>,
     supervisor_pid: AtomicU32,
+    supervisor_fail: AtomicBool,
 }
 impl Fake {
     fn new() -> Self {
@@ -912,6 +1260,7 @@ impl Fake {
             advance_epoch: AtomicBool::new(false),
             sleep_hook: Mutex::new(None),
             supervisor_pid: AtomicU32::new(0),
+            supervisor_fail: AtomicBool::new(false),
         }
     }
     fn tick(&self, n: f64) {
@@ -1047,6 +1396,9 @@ impl Runtime for Fake {
         _jid: &str,
     ) -> io::Result<bool> {
         self.supervisors.fetch_add(1, Ordering::Relaxed);
+        if self.supervisor_fail.load(Ordering::Relaxed) {
+            return Err(io::Error::other("fixture supervisor spawn failure"));
+        }
         Ok(true)
     }
     fn spawn_supervisor_identified(

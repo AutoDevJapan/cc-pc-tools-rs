@@ -703,6 +703,7 @@ impl Context {
             }
             let me = self.rt.pid();
             job["status"] = json!("running");
+            job["queue_fairness_version"] = json!(1);
             job["pid"] = json!(me);
             job["pid_created"] = json!(self.rt.proc_created(me));
             job["started_at"] = json!(self.rt.now());
@@ -733,7 +734,11 @@ impl Context {
             }
             proc = Some(self.rt.spawn(&Spawn {
                 argv: codex_args(&job, &dir),
-                prompt: dir.join("prompt.md"),
+                prompt: dir.join(if job["yield_resume"] == true {
+                    "yield-resume.md"
+                } else {
+                    "prompt.md"
+                }),
                 cwd: PathBuf::from(s(&job, "cwd")),
                 env: environment,
                 flags: NO_WINDOW,
@@ -861,18 +866,45 @@ impl Context {
             job["activity"] = json!("child process could not be stopped");
         }
         // Cancellation may have been recorded while the child was draining.
+        let gate = match self.queue_lock() {
+            Ok(gate) => Some(gate),
+            Err(error) => {
+                self.yield_diagnostic(&error);
+                None
+            }
+        };
         let state = self.job_lock(jid, "state.lock")?;
         let fresh = self.load(jid)?;
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
         }
         let retry = !cleanup_failed && !setup_failed && self.retry_429(&mut job, cfg);
+        let mut yielded = false;
+        if gate.is_some() && !cleanup_failed && !setup_failed && !retry {
+            let mut candidate = job.clone();
+            let attempt = (|| -> Result<bool> {
+                if !self.yield_completed_turn(&mut candidate, &self.admission_jobs()?)? {
+                    return Ok(false);
+                }
+                self.track_queued_job(jid)?;
+                Ok(true)
+            })();
+            match attempt {
+                Ok(true) => {
+                    job = candidate;
+                    yielded = true;
+                }
+                Ok(false) => (),
+                Err(error) => self.yield_diagnostic(&error),
+            }
+        }
         self.save(&job)?;
         drop(state);
+        drop(gate);
         #[cfg(windows)]
         drop(chrome_proxy);
         self.close_chrome_tabs(jid);
-        if retry {
+        if retry || yielded {
             if let Some(n) = &mut notifier {
                 n.close();
             }

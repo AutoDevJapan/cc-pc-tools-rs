@@ -1,3 +1,4 @@
+#![cfg_attr(windows, windows_subsystem = "windows")]
 // Disposable isolated listener for the watchdog's process-termination acceptance check.
 use std::io::{Read, Write};
 use std::net::{Ipv4Addr, TcpListener};

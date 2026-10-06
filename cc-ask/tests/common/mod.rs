@@ -28,6 +28,7 @@ pub struct Fake {
     pub picks: Vec<Value>,
     pub pick_replies: VecDeque<Value>,
     pub runs: Vec<(Vec<String>, u64)>,
+    pub codex_labels: String,
     pub launches: Vec<Value>,
     pub git_calls: Vec<(String, Vec<String>)>,
     pub git_roots: BTreeMap<String, String>,
@@ -84,6 +85,7 @@ impl Harness {
             picks: vec![],
             pick_replies: VecDeque::new(),
             runs: vec![],
+            codex_labels: String::new(),
             launches: vec![],
             git_calls: vec![],
             git_roots: BTreeMap::new(),
@@ -292,13 +294,21 @@ impl Fake {
             );
             return Ok(thread);
         }
+        if method == "POST" && path == "/channels/GENERAL/threads" {
+            let b = body.unwrap();
+            let thread = json!({"id":"300","type":11,"name":b["name"],"parent_id":"GENERAL","owner_id":"BOT","thread_metadata":{"archived":false}});
+            self.threads.insert("300".into(), thread.clone());
+            self.messages.insert("300".into(), vec![]);
+            self.posts.push(("GENERAL".into(), b.clone()));
+            return Ok(thread);
+        }
         if path.ends_with("/threads/active") {
             return Ok(
                 json!({"threads":self.threads.values().filter(|t|!truth(&t["thread_metadata"]["archived"])).cloned().collect::<Vec<_>>()}),
             );
         }
         if path.contains("/threads/archived/public?limit=25")
-           
+            || path.contains("/threads/archived/public?limit=100")
         {
             let parent = path.split('/').nth(2).unwrap_or("");
             return Ok(
@@ -388,6 +398,12 @@ impl Fake {
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
+        if argv.first().is_some_and(|s| s.ends_with("codex.exe")) {
+            return Ok(Output {
+                stdout: self.codex_labels.clone(),
+                ..Output::default()
+            });
+        }
         if argv.last().is_some_and(|a| a == "recover") && self.recover_fail {
             return Ok(Output {
                 code: 1,

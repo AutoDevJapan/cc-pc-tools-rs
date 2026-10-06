@@ -791,6 +791,13 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         eprintln!("cmd_helper_reaper failed: {}", error_detail(&error));
     }
     let mut budget = false;
+    if let Err(error) =
+        crate::tick_runtime::stage("work-status-board", Duration::from_secs(2), || {
+            crate::board::launch_due(ctx)
+        })
+    {
+        eprintln!("board launch failed: {}", error_detail(&error));
+    }
     // Recovery is required for direct CLI ticks as well as the scheduled VBS caller.
     // A failed inventory recovery permits receipts but blocks new children this pass.
     if !crate::tick_runtime::stage("startup-recovery", Duration::from_secs(5), || {

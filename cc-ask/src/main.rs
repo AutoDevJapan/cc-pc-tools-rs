@@ -48,6 +48,8 @@ enum Commands {
         job: String,
     },
     Tick,
+    /// Update the silent work-status thread in the server's general text channel.
+    Board,
     /// Inspect stale Codex helpers without terminating them when --dry-run is set.
     ReapHelpers {
         #[arg(long)]
@@ -157,7 +159,13 @@ fn run(command: Commands) -> Result<()> {
     } else {
         None
     };
-    let _hard_limit = if matches!(&command, Commands::Tick) {
+    let _hard_limit = if matches!(&command, Commands::Board) {
+        Some(cc_ask::tick_runtime::HardLimit::for_command(
+            env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask").join("board.log"),
+            cc_ask::board::LIMIT + std::time::Duration::from_secs(5),
+            "board",
+        )?)
+    } else if matches!(&command, Commands::Tick) {
         Some(cc_ask::tick_runtime::HardLimit::new(
             env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask").join("tick.log"),
             cc_ask::tick_runtime::TICK_LIMIT + std::time::Duration::from_secs(5),
@@ -219,6 +227,7 @@ fn run(command: Commands) -> Result<()> {
             println!("{{\"ok\":true}}");
         }
         Commands::Tick => cmd_tick(&mut ctx)?,
+        Commands::Board => println!("{}", cc_ask::board::update(&mut ctx)?),
         Commands::ReapHelpers { .. } => unreachable!(),
         Commands::Intake => intake::cmd_intake(&mut ctx, &mut false)?,
         Commands::Resume => resume::cmd_resume(&mut ctx, &mut false)?,

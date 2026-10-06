@@ -17,6 +17,9 @@ pub struct Output {
 }
 /// All HTTP, router selection and subprocess effects are injectable; tests never contact Discord.
 pub trait Effects {
+    fn start_board(&mut self, _home: &std::path::Path) -> Result<()> {
+        Ok(())
+    }
     /// Injectable delivery boundary for consuming reply reads.
     fn reply_output(&mut self, text: &str) -> Result<()> {
         use std::io::Write;
@@ -379,6 +382,26 @@ pub fn discord_retry_delay(detail: &Value) -> Result<std::time::Duration> {
     Ok(std::time::Duration::from_secs_f64(delay))
 }
 impl Effects for RealEffects {
+    fn start_board(&mut self, home: &std::path::Path) -> Result<()> {
+        use std::process::{Command, Stdio};
+        let log = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(home.join("board.log"))
+            .map_err(|e| e.to_string())?;
+        let mut cmd = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
+        cmd.arg("board")
+            .stdin(Stdio::null())
+            .stdout(log.try_clone().map_err(|e| e.to_string())?)
+            .stderr(log);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        cmd.spawn().map_err(|e| e.to_string())?;
+        Ok(())
+    }
     fn multipart(&mut self, url: &str, content_type: &str, body: &[u8]) -> Result<Value> {
         let _span = crate::tick_runtime::Span::new(format!(
             "upload {}",
@@ -596,6 +619,14 @@ pub fn run_hidden_with_env(
         .stdin(Stdio::null())
         .stdout(stdout.try_clone().map_err(|e| e.to_string())?)
         .stderr(stderr.try_clone().map_err(|e| e.to_string())?);
+    if std::path::Path::new(&argv[0])
+        .file_name()
+        .is_some_and(|name| name.eq_ignore_ascii_case("codex.exe"))
+    {
+        for key in ["OPENAI_API_KEY", "CODEX_API_KEY", "AZURE_OPENAI_API_KEY"] {
+            cmd.env_remove(key);
+        }
+    }
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

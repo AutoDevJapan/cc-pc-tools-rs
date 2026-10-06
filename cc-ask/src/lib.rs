@@ -16,6 +16,7 @@
 
 pub mod attachments;
 pub mod automation;
+pub mod board;
 pub mod civ6_idle;
 pub mod commands;
 pub mod core;

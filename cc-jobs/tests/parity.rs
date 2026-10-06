@@ -3299,6 +3299,11 @@ mod additional_compatibility {
         )
         .unwrap();
         let mut env = t.ctx.job_environment();
+        // This fixture must not contend with the production shared-cache gate.
+        env.insert(
+            "CARGO_TARGET_DIR".into(),
+            t.ctx.root.join("target").to_string_lossy().into(),
+        );
         env.insert(
             "CODEX_JOBS_REAL_CARGO".into(),
             env!("CARGO_BIN_EXE_cc_jobs_fixture").into(),

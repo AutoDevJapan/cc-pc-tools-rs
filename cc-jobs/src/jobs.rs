@@ -612,6 +612,7 @@ impl Context {
             }
             job["pid"] = json!(self.rt.pid());
             job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
+            job["last_event_at"] = json!(self.rt.now());
             job["activity"] = json!(if truth(&job["retry_count"]) {
                 s(&job, "activity")
             } else {
@@ -620,7 +621,20 @@ impl Context {
             self.save(&job)?;
         }
         let mut next_diagnostic = 0.;
+        let mut next_heartbeat = self.rt.mono() + 60.;
         loop {
+            if self.rt.mono() >= next_heartbeat {
+                let _state = self.job_lock(jid, "state.lock")?;
+                let mut waiting = self.load(jid)?;
+                if s(&waiting, "status") != "queued" || waiting["cancel_requested"] == true {
+                    return Ok(());
+                }
+                // The existing ToDo watchdog treats old last_event_at as a hung
+                // job even while queued. Record that this supervisor is alive.
+                waiting["last_event_at"] = json!(self.rt.now());
+                self.save(&waiting)?;
+                next_heartbeat = self.rt.mono() + 60.;
+            }
             let job = self.load(jid)?;
             if s(&job, "status") != "queued" || job["cancel_requested"] == true {
                 return Ok(());

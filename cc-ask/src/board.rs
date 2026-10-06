@@ -23,6 +23,9 @@ impl Drop for NetworkScope {
 pub fn network_budget() -> Duration {
     Duration::from_secs(BOARD_NETWORK.with(|flag| if flag.get() { 8 } else { 3 }))
 }
+pub fn active() -> bool {
+    BOARD_NETWORK.with(std::cell::Cell::get)
+}
 /// A saved board is an explicit inbox surface, never an automatic request surface.
 pub fn registration(ctx: &Context) -> Result<Option<Value>> {
     let p = ctx.here.join("board.json");
@@ -739,5 +742,37 @@ mod tests {
             );
         }
         assert_eq!(network_budget(), Duration::from_secs(3));
+    }
+    #[test]
+    fn only_board_can_wait_for_rate_limits_inside_periodic_deadline() {
+        let _deadline = crate::tick_runtime::Deadline::new(Duration::from_secs(1));
+        assert!(!crate::core::discord_retry_allowed(
+            0,
+            Duration::from_millis(10),
+            Duration::from_secs(1)
+        ));
+        {
+            let _board = NetworkScope::new();
+            assert!(crate::core::discord_retry_allowed(
+                0,
+                Duration::from_millis(10),
+                Duration::from_secs(1)
+            ));
+            assert!(!crate::core::discord_retry_allowed(
+                2,
+                Duration::ZERO,
+                Duration::from_secs(1)
+            ));
+            assert!(!crate::core::discord_retry_allowed(
+                0,
+                Duration::from_secs(1),
+                Duration::from_secs(1)
+            ));
+        }
+        assert!(!crate::core::discord_retry_allowed(
+            0,
+            Duration::ZERO,
+            Duration::from_secs(1)
+        ));
     }
 }

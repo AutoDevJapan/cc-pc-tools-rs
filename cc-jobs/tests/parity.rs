@@ -35,6 +35,7 @@ fn cargo_cmd_preserves_a_failing_child_exit_code() {
         .args(["/d", "/c", "cargo", "--exit-seven"])
         .env("CODEX_JOBS_REAL_CARGO", &fixture)
         .env("CODEX_JOBS_CARGO_LOCK_DIR", &temp.0)
+        .env("CARGO_TARGET_DIR", &temp.0)
         .env("CODEX_JOBS_CARGO_SLOTS", "1")
         .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
         .output()
@@ -949,6 +950,125 @@ mod queue_regressions {
     }
     fn config(t: &Test, value: Value) {
         fs::write(t.ctx.root.join("queue-config.json"), value.to_string()).unwrap();
+    }
+    fn loop_job(t: &Test, id: &str, todo: u64) -> Value {
+        let mut j = waiting(t, id, "req-loop");
+        j["todo_id"] = json!(todo);
+        t.ctx.save(&j).unwrap();
+        j
+    }
+    #[test]
+    fn loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown() {
+        for todo in [18, 23] {
+            let t = Test::new();
+            loop_job(&t, "loop", todo);
+            let mut other = waiting(&t, "ordinary", "ordinary");
+            other["retry_not_before"] = json!(t.rt.epoch() + 3600.);
+            t.ctx.save(&other).unwrap();
+            assert!(t.ctx.admit("loop").unwrap().is_none());
+            other["retry_not_before"] = json!(0);
+            t.ctx.save(&other).unwrap();
+            assert!(t.ctx.admit("loop").unwrap().is_none());
+            assert!(t.ctx.admit("ordinary").unwrap().is_some());
+            assert!(t.ctx.admit("loop").unwrap().is_some());
+        }
+    }
+    #[test]
+    fn lowest_tier_remains_fifo_and_ignores_dead_or_cancelled_waiters() {
+        let t = Test::new();
+        loop_job(&t, "a", 18);
+        loop_job(&t, "b", 23);
+        let mut dead = waiting(&t, "dead", "ordinary");
+        dead["pid"] = json!(999999);
+        t.ctx.save(&dead).unwrap();
+        let mut cancelled = waiting(&t, "cancelled", "req-owner");
+        cancelled["cancel_requested"] = json!(true);
+        t.ctx.save(&cancelled).unwrap();
+        config(&t, json!({"max_running":1}));
+        assert!(t.ctx.admit("b").unwrap().is_none());
+        assert!(t.ctx.admit("a").unwrap().is_some());
+        assert!(t.ctx.admit("b").unwrap().is_none());
+    }
+    #[test]
+    fn text_matching_and_config_changes_apply_to_existing_waiters() {
+        for word in ["くり返す", "回し続ける", "agents.prompt", "繰り返す"] {
+            for field in ["task_title", "prompt"] {
+                let t = Test::new();
+                let mut j = loop_job(&t, "loop", 9000);
+                if field == "prompt" {
+                    fs::write(t.ctx.job_dir("loop").join("prompt.md"), word).unwrap();
+                } else {
+                    j[field] = json!(word);
+                    t.ctx.save(&j).unwrap();
+                }
+                waiting(&t, "ordinary", "ordinary");
+                assert!(t.ctx.admit("loop").unwrap().is_none(), "{word}/{field}");
+                config(&t, json!({"normal_priority_todo_ids":[9000]}));
+                assert!(t.ctx.admit("loop").unwrap().is_some());
+            }
+        }
+        let t = Test::new();
+        loop_job(&t, "loop", 9000);
+        waiting(&t, "ordinary", "ordinary");
+        config(&t, json!({"lowest_priority_todo_ids":[9000]}));
+        assert!(t.ctx.admit("loop").unwrap().is_none());
+        config(&t, json!({"lowest_priority_todo_ids":[]}));
+        assert!(t.ctx.admit("loop").unwrap().is_some());
+    }
+    #[test]
+    fn blocked_normal_children_block_loops_but_running_loop_dependencies_can_finish() {
+        let t = Test::new();
+        loop_job(&t, "loop", 18);
+        assert!(t.ctx.admit("loop").unwrap().is_some());
+        child(&t, "dependency", "loop");
+        waiting(&t, "ordinary", "ordinary");
+        assert!(t.ctx.admit("dependency").unwrap().is_some());
+        child(&t, "second", "loop");
+        assert!(t.ctx.admit("second").unwrap().is_some());
+        child(&t, "third", "loop");
+        let mut other = t.ctx.load("ordinary").unwrap();
+        other["status"] = json!("succeeded");
+        t.ctx.save(&other).unwrap();
+        loop_job(&t, "another-loop", 23);
+        assert!(t.ctx.admit("another-loop").unwrap().is_none());
+    }
+    #[test]
+    fn shared_todo_title_sets_lowest_priority_without_a_copied_job_title() {
+        let mut t = Test::new();
+        let tools = t.ctx.root.clone();
+        t.ctx.root = tools.join("codex-jobs");
+        t.ctx.jobs = t.ctx.root.join("jobs");
+        fs::create_dir_all(tools.join("todo")).unwrap();
+        fs::write(
+            tools.join("todo/todo.json"),
+            json!({"items":[{"id":9000,"title":"agents.promptを回し続ける"}]}).to_string(),
+        )
+        .unwrap();
+        loop_job(&t, "loop", 9000);
+        waiting(&t, "ordinary", "ordinary");
+        assert!(t.ctx.admit("loop").unwrap().is_none());
+    }
+    #[test]
+    fn fairness_uses_the_new_tier_in_both_directions() {
+        for low_parent in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            let mut parent = live_tool_parent(&t);
+            if low_parent {
+                parent["todo_id"] = json!(18);
+                t.ctx.save(&parent).unwrap();
+            } else {
+                let mut other = t.ctx.load("other").unwrap();
+                other["todo_id"] = json!(18);
+                t.ctx.save(&other).unwrap();
+            }
+            tool_events(&t, &[("item.started", "work"), ("item.completed", "work")]);
+            assert_eq!(t.ctx.admit("other").unwrap().is_some(), low_parent);
+            assert_eq!(
+                t.ctx.load("long").unwrap()["status"] == "queued",
+                low_parent
+            );
+        }
     }
     #[test]
     fn forty_concurrent_admissions_never_exceed_six() {
@@ -3247,6 +3367,7 @@ mod cargo_gate_tests {
                 )
                 .env("CODEX_JOBS_CARGO_SLOTS", slots.to_string())
                 .env("CODEX_JOBS_CARGO_LOCK_DIR", &tmp.0)
+                .env("CARGO_TARGET_DIR", &tmp.0)
                 .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
                 .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
                 .env("CC_JOBS_FIXTURE_MODE", "cargo")
@@ -4749,6 +4870,7 @@ mod additional_compatibility {
                 env!("CARGO_BIN_EXE_cc_jobs_fixture"),
             )
             .env("CODEX_JOBS_CARGO_LOCK_DIR", &tmp.0)
+            .env("CARGO_TARGET_DIR", &tmp.0)
             .env("CODEX_JOBS_CARGO_LOCK_HELD", "1");
         let out = c.output().unwrap();
         assert!(out.status.success());

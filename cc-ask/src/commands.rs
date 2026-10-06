@@ -364,7 +364,15 @@ pub fn cmd_replies_read_only(ctx: &mut Context, thread: &str) -> Result<Value> {
     {
         return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
     }
-    if known.is_none() && s(&channel["parent_id"]) != REQUEST_CHANNEL_ID {
+    if thread == crate::board::registered_id(ctx)?
+        && !crate::board::matches_registration(ctx, &channel)?
+    {
+        return Err("一覧スレッドの登録先が一致しません".into());
+    }
+    if known.is_none()
+        && s(&channel["parent_id"]) != REQUEST_CHANNEL_ID
+        && !crate::board::matches_registration(ctx, &channel)?
+    {
         if s(&channel["parent_id"]).is_empty() || channel["parent_id"] != ctx.cfg["task_channel_id"]
         {
             return Err("registered question, request, or bot task thread required".into());
@@ -646,6 +654,7 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
         ((ctx.now() * 1000. - 1420070400000. - 3600000.) as u64) << 22
     };
     let mut places = BTreeMap::new();
+    let mut inbox_only = std::collections::BTreeSet::new();
     for (id, thread) in crate::routing::allowed_places(ctx, last)? {
         let latest = if truth(&thread["last_message_id"]) {
             &thread["last_message_id"]
@@ -653,16 +662,30 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
             &thread["id"]
         };
         if n(latest) > last {
+            if truth(&thread["inbox_only"]) {
+                inbox_only.insert(id.clone());
+            }
             places.insert(id, s(&thread["routing_label"]).to_owned());
         }
     }
     let mut found = Vec::new();
     for (cid, label) in places {
-        if let Ok(messages) = ctx.call(
-            "GET",
-            &format!("/channels/{cid}/messages?after={last}&limit=100"),
-            None,
-        ) {
+        let result = if inbox_only.contains(&cid) {
+            crate::board::inbox_history(ctx, &cid, last)
+        } else {
+            ctx.call(
+                "GET",
+                &format!("/channels/{cid}/messages?after={last}&limit=100"),
+                None,
+            )
+        };
+        // The shared cursor must never skip an unread board post after another thread advances it.
+        if inbox_only.contains(&cid) {
+            if let Err(error) = &result {
+                return Err(error.clone());
+            }
+        }
+        if let Ok(messages) = result {
             for m in messages
                 .as_array()
                 .into_iter()

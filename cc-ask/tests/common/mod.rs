@@ -296,7 +296,7 @@ impl Fake {
         }
         if method == "POST" && path == "/channels/GENERAL/threads" {
             let b = body.unwrap();
-            let thread = json!({"id":"300","type":11,"name":b["name"],"parent_id":"GENERAL","owner_id":"BOT","thread_metadata":{"archived":false}});
+            let thread = json!({"id":"300","guild_id":"G","type":11,"name":b["name"],"parent_id":"GENERAL","owner_id":"BOT","thread_metadata":{"archived":false}});
             self.threads.insert("300".into(), thread.clone());
             self.messages.insert("300".into(), vec![]);
             self.posts.push(("GENERAL".into(), b.clone()));

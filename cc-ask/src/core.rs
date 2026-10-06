@@ -481,7 +481,7 @@ impl Effects for RealEffects {
         discord: bool,
     ) -> Result<Value> {
         let timeout = crate::tick_runtime::timeout(if crate::tick_runtime::active() {
-            std::time::Duration::from_secs(3)
+            crate::board::network_budget()
         } else {
             crate::tick_runtime::EXTERNAL_LIMIT
         })?;

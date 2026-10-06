@@ -1,4 +1,4 @@
-//! Durable inbox restricted to request, question and bot task threads.
+//! Durable inbox for request/question/bot task threads and the registered status board.
 use crate::{automation::*, core::*, resume::*};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -7,6 +7,11 @@ use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 /// Old automatic routing records are not genuine registered questions.
 /// Revalidate their Discord origin before any legacy answer handler uses them.
 pub fn question_allowed(ctx: &mut Context, question: &Value) -> Result<bool> {
+    if !s(&question["thread_id"]).is_empty()
+        && s(&question["thread_id"]) == crate::board::registered_id(ctx)?
+    {
+        return Ok(false);
+    }
     if s(&question["source"]) != "routing" {
         return Ok(true);
     }
@@ -32,6 +37,8 @@ pub fn question_allowed(ctx: &mut Context, question: &Value) -> Result<bool> {
 /// Discover trusted surfaces afresh. Cached cursor labels and old routing-created
 /// questions must never authorize reading a personal channel after cutover.
 pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, Value>> {
+    let board = crate::board::registration(ctx)?;
+    let board_id = crate::board::registered_id(ctx)?;
     let state = ctx.load()?;
     let questions = state["questions"]
         .as_array()
@@ -110,6 +117,13 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
             }
         }
     }
+    // Fetch only the saved board when archived; never scan the general channel or its other threads.
+    if let Some(board) = &board {
+        let id = s(&board["thread_id"]);
+        if !threads.iter().any(|t| s(&t["id"]) == id) {
+            threads.push(ctx.call("GET", &format!("/channels/{id}"), None)?);
+        }
+    }
     let needs_bot = !task_channel.is_empty()
         && threads
             .iter()
@@ -129,20 +143,32 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
         if id.is_empty() || ![10, 11, 12].contains(&n(&t["type"])) {
             continue;
         }
-        if s(&t["parent_id"]) != REQUEST_CHANNEL_ID
+        let inbox_only = board
+            .as_ref()
+            .is_some_and(|board| crate::board::matches_saved(ctx, &t, board));
+        if !board_id.is_empty() && id == board_id && !inbox_only {
+            continue;
+        }
+        if !inbox_only
+            && s(&t["parent_id"]) != REQUEST_CHANNEL_ID
             && !known.contains(&id)
             && !(s(&t["parent_id"]) == task_channel && !bot.is_empty() && s(&t["owner_id"]) == bot)
         {
             continue;
         }
-        t["routing_label"] = json!(format!(
-            "{} > {}",
-            names
-                .get(s(&t["parent_id"]))
-                .map(String::as_str)
-                .unwrap_or("?"),
-            s(&t["name"])
-        ));
+        t["inbox_only"] = json!(inbox_only);
+        t["routing_label"] = if inbox_only {
+            json!(crate::board::TITLE)
+        } else {
+            json!(format!(
+                "{} > {}",
+                names
+                    .get(s(&t["parent_id"]))
+                    .map(String::as_str)
+                    .unwrap_or("?"),
+                s(&t["name"])
+            ))
+        };
         places.insert(id, t);
     }
     Ok(places)
@@ -496,7 +522,8 @@ pub fn run(ctx: &mut Context, budget: &mut bool) -> Result<Value> {
     if !ledger["messages"].is_object() {
         return Err("invalid routing ledger".into());
     }
-    let places = allowed_places(ctx, n(&ledger["cursor"]["since"]))?;
+    let mut places = allowed_places(ctx, n(&ledger["cursor"]["since"]))?;
+    places.retain(|_, thread| !truth(&thread["inbox_only"]));
     let received = collect_places(ctx, &mut ledger, &places)?;
     atomic_json(&path, &ledger, 2)?;
     let jobs = jobs(ctx)?;

@@ -8,13 +8,68 @@ use std::{collections::BTreeMap, sync::LazyLock, time::Duration};
 pub const TITLE: &str = "作業状況の一覧";
 pub const INTERVAL: f64 = 300.;
 pub const LIMIT: Duration = Duration::from_secs(80);
+thread_local! { static BOARD_NETWORK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
+struct NetworkScope(bool);
+impl NetworkScope {
+    fn new() -> Self {
+        Self(BOARD_NETWORK.with(|flag| flag.replace(true)))
+    }
+}
+impl Drop for NetworkScope {
+    fn drop(&mut self) {
+        BOARD_NETWORK.with(|flag| flag.set(self.0));
+    }
+}
+pub fn network_budget() -> Duration {
+    Duration::from_secs(BOARD_NETWORK.with(|flag| if flag.get() { 8 } else { 3 }))
+}
+/// A saved board is an explicit inbox surface, never an automatic request surface.
+pub fn registration(ctx: &Context) -> Result<Option<Value>> {
+    let p = ctx.here.join("board.json");
+    if !p.exists() {
+        return Ok(None);
+    }
+    let state = read_json(&p)?;
+    if state["guild_id"] != ctx.cfg["guild_id"]
+        || n(&state["thread_id"]) == 0
+        || n(&state["channel_id"]) == 0
+    {
+        return Ok(None);
+    }
+    Ok(Some(state))
+}
+pub fn registered_id(ctx: &Context) -> Result<String> {
+    // Exclusion is independent of the current guild binding; an old board must not become a job target.
+    let p = ctx.here.join("board.json");
+    if !p.exists() {
+        return Ok(String::new());
+    }
+    let state = read_json(&p)?;
+    Ok(if n(&state["thread_id"]) > 0 {
+        s(&state["thread_id"]).to_owned()
+    } else {
+        String::new()
+    })
+}
+pub fn matches_registration(ctx: &Context, thread: &Value) -> Result<bool> {
+    Ok(registration(ctx)?.is_some_and(|state| matches_saved(ctx, thread, &state)))
+}
+pub fn matches_saved(ctx: &Context, thread: &Value, state: &Value) -> bool {
+    thread["id"] == state["thread_id"]
+        && thread["parent_id"] == state["channel_id"]
+        && thread["guild_id"] == ctx.cfg["guild_id"]
+        && n(&thread["type"]) == 11
+}
 static STRIP: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
-    r"(?i)【[^】]*】|(?:[a-z]:[/\\][^\s、。]+)|\b(?:shep|orch|worktree|todo|job)[-_#]?[a-z0-9_-]*\b|\b\d{8}-\d{6}-[a-z0-9_-]+\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f-]{23,}\b|(?:ジョブ|ToDo|親)\s*#?\d+|https?://\S+|<[^>]+>"
+    r"(?i)【[^】]*】|(?:[a-z]:[/\\][^\s、。]+)|(?-u:\b)(?:shep|orch|worktree|todo|job)[-_#]?[a-z0-9_-]*(?-u:\b)|(?-u:\b)[0-9]{8}-[0-9]{6}-[a-z0-9_-]+(?-u:\b)|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f-]{23,}\b|(?:ジョブ|ToDo|親)\s*#?\d+|[0-9]{17,20}|https?://\S+|<[^>]+>"
 ).unwrap()
 });
 static INTERNAL: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?i)\b(?:shep|orch|worktree|todo|job)[-_#]?|\b\d{8}-\d{6}-").unwrap()
+    regex::Regex::new(
+        r"(?i)(?-u:\b)(?:shep|orch|worktree|todo|job)[-_#]?|(?-u:\b)[0-9]{8}-[0-9]{6}-",
+    )
+    .unwrap()
 });
 static PR: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+").unwrap()
@@ -30,6 +85,37 @@ fn load(ctx: &Context) -> Result<Value> {
 }
 fn save(ctx: &Context, state: &Value) -> Result<()> {
     atomic_json(&ctx.here.join("board.json"), state, 2)
+}
+/// Include owner posts behind full pages of non-owner messages, stopping at the caller's cursor.
+pub fn inbox_history(ctx: &mut Context, thread: &str, floor: u64) -> Result<Value> {
+    let mut before = u64::MAX;
+    let mut found = Vec::new();
+    loop {
+        let suffix = if before == u64::MAX {
+            String::new()
+        } else {
+            format!("&before={before}")
+        };
+        let page = ctx.call(
+            "GET",
+            &format!("/channels/{thread}/messages?limit=100{suffix}"),
+            None,
+        )?;
+        let page = page.as_array().ok_or("invalid board message page")?;
+        if page.is_empty() {
+            break;
+        }
+        let oldest = page.iter().map(|m| n(&m["id"])).min().unwrap();
+        if oldest == 0 || oldest >= before {
+            return Err("board message pagination did not advance".into());
+        }
+        found.extend(page.iter().filter(|m| n(&m["id"]) > floor).cloned());
+        if page.len() < 100 || oldest <= floor {
+            break;
+        }
+        before = oldest;
+    }
+    Ok(json!(found))
 }
 fn jp() -> FixedOffset {
     FixedOffset::east_opt(9 * 3600).unwrap()
@@ -429,8 +515,8 @@ fn ensure_thread(ctx: &mut Context, state: &mut Value) -> Result<String> {
     }
     let tid = s(&state["thread_id"]).to_owned();
     let thread = ctx.call("GET", &format!("/channels/{tid}"), None)?;
-    if s(&thread["parent_id"]) != parent {
-        return Err("一覧スレッドの親チャンネルが一致しません".into());
+    if !matches_saved(ctx, &thread, state) {
+        return Err("一覧スレッドのサーバー・親チャンネル・種類が登録と一致しません".into());
     }
     if truth(&thread["thread_metadata"]["archived"]) {
         ctx.call(
@@ -443,6 +529,7 @@ fn ensure_thread(ctx: &mut Context, state: &mut Value) -> Result<String> {
 }
 pub fn update(ctx: &mut Context) -> Result<Value> {
     let _deadline = crate::tick_runtime::Deadline::new(LIMIT);
+    let _network = NetworkScope::new();
     let _guard = ByteLock::acquire(&ctx.here.join("board.lock"), Duration::ZERO)?;
     let names = Names::load(&ctx.client_projects)
         .map_err(|e| format!("client exclusion list unavailable: {e}"))?;
@@ -456,6 +543,9 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         .cloned()
         .collect();
     let mut state = load(ctx)?;
+    if !state["guild_id"].is_null() && state["guild_id"] != ctx.cfg["guild_id"] {
+        return Err("一覧の保存先サーバーと現在の設定が違います".into());
+    }
     state["guild_id"] = ctx.cfg["guild_id"].clone();
     // Recover a successful POST whose response/checkpoint was lost, even if the board shrank
     // since that attempt. The slot then participates in normal edits (including （空き）).
@@ -585,4 +675,26 @@ pub fn launch_due(ctx: &mut Context) -> Result<()> {
     }
     ctx.effects.start_board(&ctx.here)?;
     atomic_json(&path, &json!({"attempted_at":ctx.now()}), 1)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn board_network_wait_is_scoped_and_still_obeys_outer_deadline() {
+        assert_eq!(network_budget(), Duration::from_secs(3));
+        {
+            let _network = NetworkScope::new();
+            assert_eq!(network_budget(), Duration::from_secs(8));
+            assert_eq!(
+                std::thread::spawn(network_budget).join().unwrap(),
+                Duration::from_secs(3)
+            );
+            let _deadline = crate::tick_runtime::Deadline::new(Duration::from_millis(100));
+            assert!(
+                crate::tick_runtime::timeout(network_budget()).unwrap()
+                    <= Duration::from_millis(100)
+            );
+        }
+        assert_eq!(network_budget(), Duration::from_secs(3));
+    }
 }

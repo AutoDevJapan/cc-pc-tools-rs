@@ -66,7 +66,10 @@ impl Context {
             } else {
                 continue;
             };
-            if id == parent || !self.running_job(&self.load(&parent)?) {
+            if id == parent
+                || !valid_job_id(&parent)
+                || !self.try_load(&parent).is_some_and(|j| self.running_job(&j))
+            {
                 continue;
             }
             if cancelled
@@ -94,13 +97,16 @@ impl Context {
                         || self.is_ours(&fresh, "codex_pid")
                         || !self.job_dir(id).join("prompt.md").is_file()
                         || !Path::new(s(&fresh, "cwd")).is_dir()
-                        || !self.running_job(&self.load(&parent)?)
+                        || !self.try_load(&parent).is_some_and(|j| self.running_job(&j))
                     {
+                        report.push(json!({"id":id,"action":"skip","reason":"状態が変わったか、元のプロセス・作業フォルダを確認できない"}));
                         continue;
                     }
                     let Ok(owner) =
                         FileLock::try_acquire(&self.job_dir(id).join("supervisor.lock"))
                     else {
+                        report
+                            .push(json!({"id":id,"action":"skip","reason":"終了処理が続いている"}));
                         continue;
                     };
                     fresh["recovered_child_at"] = json!(self.rt.now());
@@ -118,6 +124,9 @@ impl Context {
                         "duration_ms",
                         "last_error",
                         "gto",
+                        "gto_auto_pending",
+                        "gto_auto_attempt_at",
+                        "gto_auto_error",
                         "retry_not_before",
                     ] {
                         fresh[field] = Value::Null;
@@ -145,11 +154,17 @@ impl Context {
                         }
                     }
                 } else {
-                    if s(&fresh, "status") != "queued" || fresh["cancel_requested"] == true {
+                    if s(&fresh, "status") != "queued"
+                        || fresh["cancel_requested"] == true
+                        || self.is_ours(&fresh, "codex_pid")
+                    {
+                        report.push(json!({"id":id,"action":"skip","reason":"状態が変わったか、Codexが実行中"}));
                         continue;
                     }
-                    fresh["parent_job_id"] = json!(parent);
-                    self.save(&fresh)?;
+                    if s(&fresh, "parent_job_id") != parent {
+                        fresh["parent_job_id"] = json!(parent);
+                        self.restart_queued_supervisor(&mut fresh)?;
+                    }
                 }
                 jobs[index] = fresh;
             }

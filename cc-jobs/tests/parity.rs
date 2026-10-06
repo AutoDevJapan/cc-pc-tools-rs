@@ -183,7 +183,7 @@ mod queue_regressions {
         }
         assert!(t.ctx.admit("b").unwrap().is_none());
         fs::write(t.ctx.job_dir("a").join("job.json"), "{").unwrap();
-        assert!(t.ctx.admit("b").is_err());
+        assert!(t.ctx.admit("b").unwrap().is_none());
         assert_eq!(t.ctx.load("b").unwrap()["status"], "queued");
         let j = job(json!({"id":"a","status":"succeeded"}));
         t.ctx.save(&j).unwrap();
@@ -455,7 +455,16 @@ mod queue_regressions {
         let mut parent = t.ctx.load("parent").unwrap();
         parent["status"] = json!("succeeded");
         t.ctx.save(&parent).unwrap();
-        assert!(t.run(&[], b"review").is_err());
+        assert!(t.run(&["--parent-job-id", "parent"], b"review").is_err());
+        assert_eq!(t.run(&[], b"background job").unwrap(), 0);
+        assert_eq!(
+            t.ctx
+                .list_jobs(&HashSet::new())
+                .iter()
+                .filter(|j| s(j, "id") != "parent" && j["parent_job_id"].is_null())
+                .count(),
+            1
+        );
     }
     #[test]
     fn recovery_requires_launch_evidence_and_is_idempotent() {
@@ -469,7 +478,11 @@ mod queue_regressions {
         cancelled["started_at"] = Value::Null;
         t.ctx.save(&cancelled).unwrap();
         fs::write(t.ctx.job_dir("cancelled-child").join("prompt.md"), "review").unwrap();
-        waiting(&t, "queued-child", "review-other");
+        let mut queued = waiting(&t, "queued-child", "review-other");
+        queued["pid"] = json!(444);
+        queued["pid_created"] = json!(55);
+        t.ctx.save(&queued).unwrap();
+        t.rt.procs.lock().unwrap().insert(444, 55);
         let event = json!({"type":"item.completed","item":{"type":"command_execution","command":"codex_jobs.exe run --name review","exit_code":0,"aggregated_output":"cancelled-child\nqueued-child\n"}});
         fs::write(
             t.ctx.job_dir("parent").join("events.jsonl"),
@@ -499,9 +512,34 @@ mod queue_regressions {
             t.ctx.load("cancelled-child").unwrap()["cancel_requested"],
             false
         );
-        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
         t.ctx.recover_children(since, true).unwrap();
-        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+    }
+    #[test]
+    fn broken_parent_records_and_cycles_do_not_block_unrelated_families() {
+        for damage in ["missing", "corrupt", "cycle"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":2}));
+            waiting(&t, "parent", "parent");
+            assert!(t.ctx.admit("parent").unwrap().is_some());
+            child(&t, "child", "parent");
+            assert!(t.ctx.admit("child").unwrap().is_some());
+            if damage == "missing" {
+                fs::remove_file(t.ctx.job_dir("parent").join("job.json")).unwrap();
+            } else if damage == "corrupt" {
+                fs::write(t.ctx.job_dir("parent").join("job.json"), "broken").unwrap();
+            } else {
+                let mut parent = t.ctx.load("parent").unwrap();
+                parent["parent_job_id"] = json!("child");
+                t.ctx.save(&parent).unwrap();
+            }
+            waiting(&t, "other", "req-owner");
+            assert!(t.ctx.admit("other").unwrap().is_some(), "{damage}");
+            waiting(&t, "third", "req-third");
+            assert!(t.ctx.admit("third").unwrap().is_none(), "{damage}");
+        }
     }
     #[test]
     fn owner_requests_precede_fifo_and_cooldown_does_not_block_ready_jobs() {
@@ -3342,6 +3380,50 @@ mod end_to_end {
             }
             std::thread::sleep(Duration::from_millis(100));
         }
+    }
+    #[test]
+    fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
+        let e = E2e::new();
+        fs::write(
+            e.tmp.0.join("tool/queue-config.json"),
+            r#"{"max_running":1}"#,
+        )
+        .unwrap();
+        let (parent, _) = e.slow();
+        let other = e.start("", &e.tmp.0, b"other root");
+        assert_eq!(e.job(&other)["status"], "queued");
+        let prompt = e.tmp.0.join("child-prompt.md");
+        fs::write(&prompt, "dependency").unwrap();
+        let result = e.cli(
+            &[
+                "run",
+                "--name",
+                "dependency",
+                "--model",
+                "gpt-6-luna",
+                "--effort",
+                "max",
+                "--cwd",
+                e.tmp.0.to_str().unwrap(),
+                "--prompt-file",
+                prompt.to_str().unwrap(),
+                "--parent-job-id",
+                &parent,
+            ],
+            "",
+        );
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let child = String::from_utf8(result.stdout).unwrap().trim().to_string();
+        e.until(|| e.job(&child)["status"] == "succeeded");
+        assert_eq!(e.job(&child)["parent_job_id"], parent);
+        assert_eq!(e.job(&parent)["status"], "running");
+        assert_eq!(e.job(&other)["status"], "queued");
+        assert!(e.cli(&["cancel", &parent], "").status.success());
+        e.until(|| e.job(&other)["status"] == "succeeded");
     }
     #[test]
     fn test_run_survives_its_caller_and_passes_prompt_and_cwd_verbatim() {

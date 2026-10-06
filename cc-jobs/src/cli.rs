@@ -449,15 +449,26 @@ impl Context {
         // launch keys targeting the same ToDo.
         let _queue = self.queue_lock()?;
         let env = self.rt.env();
-        let parent = a
-            .value("parent-job-id")
-            .or_else(|| env.get("CC_JOB_ID").map(String::as_str))
-            .filter(|id| !id.is_empty());
-        if let Some(id) = parent
-            && (!valid_job_id(id) || !self.running_job(&self.load(id)?))
-        {
-            return Err(Error::new("parent job must be a running job in this queue"));
-        }
+        let parent = if let Some(id) = a.value("parent-job-id") {
+            if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
+                return Err(Error::new("parent job must be a running job in this queue"));
+            }
+            Some(id)
+        } else {
+            env.get("CC_JOB_ID")
+                .map(String::as_str)
+                .filter(|id| !id.is_empty())
+                .filter(|id| {
+                    let running = valid_job_id(id)
+                        && self.try_load(id).is_some_and(|job| self.running_job(&job));
+                    if !running {
+                        self.rt.diagnostic(
+                            "inherited parent has exited or is unavailable; queueing as a root job",
+                        );
+                    }
+                    running
+                })
+        };
         if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok())
             && let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|j| {
                 j["todo_id"].as_u64() == Some(todo)

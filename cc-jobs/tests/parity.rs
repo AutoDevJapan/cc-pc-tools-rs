@@ -101,6 +101,70 @@ mod queue_regressions {
             .collect();
         fs::write(t.ctx.job_dir("long").join("events.jsonl"), text).unwrap();
     }
+    fn collab(t: &Test, id: &str, tool: &str, child: &str, status: &str) {
+        use std::io::Write;
+        let path = t.ctx.job_dir("long").join("events.jsonl");
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
+        writeln!(file,"{}",json!({"_ts":t.rt.now(),"type":"item.started","item":{"id":id,"type":"collab_tool_call","tool":tool}})).unwrap();
+        writeln!(file,"{}",json!({"_ts":t.rt.now(),"type":"item.completed","item":{"id":id,"type":"collab_tool_call","tool":tool,"receiver_thread_ids":[child],"status":"completed","agents_states":{child:{"status":status}}}})).unwrap();
+    }
+    #[test]
+    fn native_subagents_block_yield_until_wait_or_close_reports_terminal_state() {
+        for close in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            live_tool_parent(&t);
+            let child = "01a111c8-1034-7ac1-9999-aaaaaaaaaaaa";
+            collab(&t, "spawn", "spawn_agent", child, "running");
+            collab(&t, "timeout", "wait", child, "running");
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            collab(
+                &t,
+                "done",
+                if close { "close_agent" } else { "wait" },
+                child,
+                "completed",
+            );
+            assert!(t.ctx.admit("other").unwrap().is_some());
+            assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
+        }
+    }
+    #[test]
+    fn subagent_rollout_requires_its_own_completed_turn_and_never_reuses_an_old_output_after_send_input()
+     {
+        for send_input in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            live_tool_parent(&t);
+            let child = "01a111c8-1034-7ac1-9999-aaaaaaaaaaaa";
+            collab(&t, "spawn", "spawn_agent", child, "running");
+            let dir = t.ctx.codex_home.join("sessions/2026/10/01");
+            fs::create_dir_all(&dir).unwrap();
+            let path = dir.join(format!("rollout-test-{child}.jsonl"));
+            let events = [
+                json!({"type":"session_meta","payload":{"id":child,"timestamp":t.rt.now()}}),
+                json!({"timestamp":"2026-10-01T11:59:00+09:00","type":"event_msg","payload":{"type":"task_complete","turn_id":"old-parent"}}),
+                json!({"timestamp":t.rt.now(),"type":"event_msg","payload":{"type":"task_started","turn_id":"child-turn"}}),
+            ];
+            let prefix = events.iter().map(|v| format!("{v}\n")).collect::<String>();
+            fs::write(&path, &prefix).unwrap();
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            fs::write(&path, format!("{prefix}{{")).unwrap();
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            fs::write(&path,format!("{prefix}{}\n",json!({"timestamp":t.rt.now(),"type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}))).unwrap();
+            if send_input {
+                collab(&t, "more", "send_input", child, "running");
+                assert!(t.ctx.admit("other").unwrap().is_none());
+                collab(&t, "joined", "wait", child, "completed");
+            }
+            assert!(t.ctx.admit("other").unwrap().is_some());
+        }
+    }
     #[test]
     fn legacy_running_turn_stops_only_at_tool_completion_and_gives_waiter_the_slot() {
         let t = Test::new();
@@ -120,7 +184,7 @@ mod queue_regressions {
         assert_eq!(j["todo_id"], 1956);
         assert_eq!(j["yield_boundary_item"], "cargo");
         assert_eq!(j["yield_count"], 1);
-        assert_eq!(*t.rt.kills.lock().unwrap(), vec![444, 445]);
+        assert_eq!(*t.rt.kills.lock().unwrap(), vec![445, 444]);
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert!(j["turn_completed"].is_null());
     }
@@ -165,6 +229,26 @@ mod queue_regressions {
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
         assert_eq!(t.ctx.load("long").unwrap()["resume_session"], SESSION_ID);
         assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
+    }
+    #[test]
+    fn legacy_stop_failure_retains_the_family_until_all_recorded_controllers_are_dead() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let original = live_tool_parent(&t);
+        tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
+        t.rt.paused_stop_failure_pid.store(444, Ordering::Relaxed);
+        t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.ctx.refresh(original, false).unwrap()["status"], "running");
+        assert_eq!(*t.rt.kills.lock().unwrap(), vec![445]);
+        t.rt.pause_allowed.store(false, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        t.rt.pause_allowed.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        let queued = t.ctx.load("long").unwrap();
+        assert_eq!(queued["status"], "queued");
+        assert_eq!(queued["yield_count"], 1);
+        assert_eq!(*t.rt.kills.lock().unwrap(), vec![445, 444]);
     }
     #[test]
     fn new_supervisor_stops_a_live_turn_and_resumes_after_another_job() {
@@ -1377,6 +1461,7 @@ struct Fake {
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
     paused_stop_failure: Arc<AtomicBool>,
+    paused_stop_failure_pid: Arc<AtomicU32>,
     fail_queued_save: AtomicBool,
     pause_hook: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
     spawns: AtomicUsize,
@@ -1417,6 +1502,7 @@ impl Fake {
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
             paused_stop_failure: Arc::new(AtomicBool::new(false)),
+            paused_stop_failure_pid: Arc::new(AtomicU32::new(0)),
             fail_queued_save: AtomicBool::new(false),
             pause_hook: Mutex::new(None),
             spawns: AtomicUsize::new(0),
@@ -1510,8 +1596,10 @@ impl Runtime for Fake {
             kills: Arc<Mutex<Vec<u32>>>,
             alive: Arc<AtomicBool>,
             fail: Arc<AtomicBool>,
+            fail_pid: Arc<AtomicU32>,
         }
         impl Paused for Guard {
+            fn keep_paused(&mut self) {}
             fn arm_process(&mut self, _: u32, _: u64) -> io::Result<()> {
                 Ok(())
             }
@@ -1519,7 +1607,10 @@ impl Runtime for Fake {
                 vec![(self.pid, self.procs.lock().unwrap()[&self.pid])]
             }
             fn stop(&mut self) -> io::Result<()> {
-                if self.fail.swap(false, Ordering::Relaxed) {
+                if (self.fail_pid.load(Ordering::Relaxed) == 0
+                    || self.fail_pid.load(Ordering::Relaxed) == self.pid)
+                    && self.fail.swap(false, Ordering::Relaxed)
+                {
                     return Err(io::Error::other("fixture stop failed"));
                 }
                 self.kills.lock().unwrap().push(self.pid);
@@ -1536,6 +1627,7 @@ impl Runtime for Fake {
             kills: self.kills.clone(),
             alive: self.child_alive.clone(),
             fail: self.paused_stop_failure.clone(),
+            fail_pid: self.paused_stop_failure_pid.clone(),
         }))
     }
     fn diagnostic(&self, message: &str) {

@@ -2,7 +2,7 @@
 use crate::queue::prepare_resume;
 use crate::*;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     io::{BufRead, Seek, SeekFrom},
 };
@@ -10,6 +10,7 @@ use std::{
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 struct Boundary {
+    schema: u32,
     attempt: String,
     offset: u64,
     active: HashSet<String>,
@@ -17,6 +18,73 @@ struct Boundary {
     terminal: bool,
     invalid: bool,
     first_item_at: Option<u64>,
+    agents: HashMap<String, AgentRollout>,
+}
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+struct AgentRollout {
+    fresh_spawn: bool,
+    path: Option<std::path::PathBuf>,
+    offset: u64,
+    born: Option<f64>,
+    turn: Option<String>,
+    complete: bool,
+}
+impl AgentRollout {
+    fn completed(&mut self, id: &str, ctx: &Context, job: &Value) -> Result<bool> {
+        if !self.fresh_spawn {
+            return Ok(false);
+        }
+        if self.path.is_none() {
+            let mut child = job.clone();
+            child["thread_id"] = json!(id);
+            child["resume_session"] = json!(id);
+            child["started_at"] = json!(ctx.rt.now());
+            self.path = ctx.session_file(&child);
+        }
+        let Some(path) = &self.path else {
+            return Ok(false);
+        };
+        let file = fs::File::open(path)?;
+        if file.metadata()?.len() < self.offset {
+            return Err(Error::new("subagent rollout truncated"));
+        }
+        let mut reader = std::io::BufReader::new(file);
+        reader.seek(SeekFrom::Start(self.offset))?;
+        loop {
+            let mut raw = Vec::new();
+            if reader.read_until(b'\n', &mut raw)? == 0 {
+                break;
+            }
+            if !raw.ends_with(b"\n") {
+                return Ok(false);
+            }
+            let ev: Value = serde_json::from_slice(&raw)?;
+            self.offset += raw.len() as u64;
+            let payload = &ev["payload"];
+            if s(&ev, "type") == "session_meta" && s(payload, "id") == id {
+                self.born = parse_iso(s(payload, "timestamp"));
+            }
+            if s(&ev, "type") != "event_msg"
+                || parse_iso(s(&ev, "timestamp"))
+                    .zip(self.born)
+                    .is_none_or(|(at, born)| at < born)
+            {
+                continue;
+            }
+            match s(payload, "type") {
+                "task_started" if !s(payload, "turn_id").is_empty() => {
+                    self.turn = Some(s(payload, "turn_id").into());
+                    self.complete = false;
+                }
+                "task_complete" if self.turn.as_deref() == Some(s(payload, "turn_id")) => {
+                    self.complete = true
+                }
+                _ => (),
+            }
+        }
+        Ok(self.complete)
+    }
 }
 impl Boundary {
     fn event(&mut self, ev: &Value) {
@@ -32,6 +100,45 @@ impl Boundary {
             self.completed = None;
         }
         let item = &ev["item"];
+        if t == "item.completed" && s(item, "type") == "collab_tool_call" {
+            let ids = item["receiver_thread_ids"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            match s(item, "tool") {
+                "spawn_agent" | "resume_agent" | "send_input" => {
+                    for id in &ids {
+                        if let Some(id) = id.as_str() {
+                            if normalize_uuid(id).is_none() {
+                                self.invalid = true;
+                                continue;
+                            }
+                            let entry = self.agents.entry(id.into()).or_default();
+                            entry.fresh_spawn = s(item, "tool") == "spawn_agent";
+                        }
+                    }
+                }
+                "close_agent" if s(item, "status") == "completed" => {
+                    for id in &ids {
+                        if let Some(id) = id.as_str() {
+                            self.agents.remove(id);
+                        }
+                    }
+                }
+                _ => (),
+            }
+            if let Some(states) = item["agents_states"].as_object() {
+                for (id, state) in states {
+                    if ["completed", "errored", "shutdown"].contains(&s(state, "status")) {
+                        self.agents.remove(id);
+                    } else if normalize_uuid(id).is_some() {
+                        self.agents.entry(id.clone()).or_default();
+                    } else {
+                        self.invalid = true;
+                    }
+                }
+            }
+        }
         if t == "item.started" {
             if self.first_item_at.is_none() {
                 self.first_item_at = ev["_filetime"].as_u64().or_else(|| {
@@ -67,6 +174,24 @@ impl Boundary {
     }
 }
 impl Context {
+    fn own_supervisor(&self, job: &Value) -> bool {
+        job["pid"].as_u64() == Some(self.rt.pid() as u64)
+            && job["pid_created"].as_u64() == self.rt.proc_created(self.rt.pid())
+            && job["pid_created"].is_u64()
+    }
+    fn rollout_ready(&self, job: &Value) -> Result<bool> {
+        let Some(path) = self.session_file(job) else {
+            return Ok(true);
+        };
+        let mut file = fs::File::open(path)?;
+        if file.metadata()?.len() == 0 {
+            return Ok(false);
+        }
+        file.seek(SeekFrom::End(-1))?;
+        let mut last = [0];
+        std::io::Read::read_exact(&mut file, &mut last)?;
+        Ok(last[0] == b'\n')
+    }
     pub(crate) fn tool_handoff_pending(&self, job: &Value) -> bool {
         self.read_json(&self.job_dir(s(job, "id")).join("yield-transition.json"))
             .is_ok_and(|v| v["complete"] == false && s(&v["source"], "id") == s(job, "id"))
@@ -83,8 +208,12 @@ impl Context {
         let Ok(file) = fs::File::open(dir.join("events.jsonl")) else {
             return Ok(None);
         };
-        if boundary.attempt != attempt || file.metadata()?.len() < boundary.offset {
+        if boundary.schema != 1
+            || boundary.attempt != attempt
+            || file.metadata()?.len() < boundary.offset
+        {
             boundary = Boundary {
+                schema: 1,
                 attempt,
                 offset: job["attempt_events_offset"].as_u64().unwrap_or(0),
                 ..Boundary::default()
@@ -117,8 +246,24 @@ impl Context {
             }
         }
         self.write_json(&cache, &serde_json::to_value(&boundary)?)?;
+        if !boundary.agents.is_empty() {
+            let mut complete = Vec::new();
+            for (id, state) in &mut boundary.agents {
+                if state.completed(id, self, job)? {
+                    complete.push(id.clone());
+                }
+            }
+            for id in complete {
+                boundary.agents.remove(&id);
+            }
+            self.write_json(&cache, &serde_json::to_value(&boundary)?)?;
+        }
         Ok(
-            if boundary.terminal || boundary.invalid || !boundary.active.is_empty() {
+            if boundary.terminal
+                || boundary.invalid
+                || !boundary.active.is_empty()
+                || !boundary.agents.is_empty()
+            {
                 None
             } else {
                 boundary.completed.map(|id| (id, boundary.first_item_at))
@@ -158,6 +303,10 @@ impl Context {
         let Some((_, baseline)) = self.tool_boundary(snapshot)? else {
             return Ok(false);
         };
+        self.rt.sleep(0.1);
+        if !self.rollout_ready(snapshot)? {
+            return Ok(false);
+        }
         let Some(mut agent) = self.rt.pause_idle_agent(
             number(snapshot, "codex_pid") as u32,
             snapshot["codex_pid_created"]
@@ -186,7 +335,7 @@ impl Context {
             return Ok(false);
         }
         let _state = self.job_lock(s(snapshot, "id"), "state.lock")?;
-        let external = snapshot["pid"].as_u64() != Some(self.rt.pid() as u64);
+        let external = !self.own_supervisor(snapshot);
         let mut owner = if external && self.is_ours(snapshot, "pid") {
             agent.arm_process(
                 number(snapshot, "pid") as u32,
@@ -210,6 +359,7 @@ impl Context {
             || job["codex_pid_created"] != snapshot["codex_pid_created"]
             || !self.should_yield(&job, &self.admission_jobs()?)
             || self.owns_civ6_lease(&job)?
+            || !self.rollout_ready(&job)?
         {
             return Ok(false);
         }
@@ -224,12 +374,17 @@ impl Context {
         let mut journal =
             json!({"source":job,"queued":candidate,"processes":agent.processes(),"complete":false});
         self.write_json(&journal_path, &journal)?;
-        agent.stop()?;
-        journal["stopped"] = json!(true);
-        self.write_json(&journal_path, &journal)?;
         if let Some(owner) = owner.as_mut() {
             owner.stop()?;
         }
+        if let Err(error) = agent.stop() {
+            if external {
+                agent.keep_paused();
+            }
+            return Err(error.into());
+        }
+        journal["stopped"] = json!(true);
+        self.write_json(&journal_path, &journal)?;
         self.commit_tool_yield(&journal)?;
         if external {
             self.close_chrome_tabs(s(&job, "id"));
@@ -241,7 +396,10 @@ impl Context {
             .ok_or_else(|| Error::new("missing yield session"))?;
         fs::write(
             self.job_dir(s(job, "id")).join("yield-resume.md"),
-            "実行枠を他の作業に譲った後の再開です。同じセッションと作業フォルダで、ここまでの成果・最新の指示を引き継いで未完了の作業を続けてください。停止前のコマンドとツールは完了しています。成果と共有ToDoを確認し、完了済みの作業や送信を繰り返さず、続きを進めてください。\n",
+            format!(
+                "実行枠を他の作業に譲った後の再開です。同じセッションと作業フォルダで、ここまでの成果・最新の指示を引き継いで未完了の作業を続けてください。停止前のコマンドとツールは完了しています。直前の項目は {item} です。完了した操作と結果は {} に保存済みです。再実行せず、先にこの項目の結果と共有ToDoを確認し、完了済みの作業や送信を繰り返さず、続きを進めてください。\n",
+                self.job_dir(s(job, "id")).join("events.jsonl").display()
+            ),
         )?;
         job["yield_last_message"] = job["last_message"].clone();
         job["yield_count"] = json!(number(job, "yield_count") + 1);
@@ -259,8 +417,7 @@ impl Context {
         let mut job = journal["queued"].clone();
         let id = s(&source, "id");
         if self.is_ours(&source, "codex_pid")
-            || (source["pid"].as_u64() != Some(self.rt.pid() as u64)
-                && self.is_ours(&source, "pid"))
+            || (!self.own_supervisor(&source) && self.is_ours(&source, "pid"))
         {
             return Err(Error::new("yield processes still alive"));
         }
@@ -273,7 +430,7 @@ impl Context {
         }
         self.track_queued_job(id)?;
         self.save(&job)?;
-        if source["pid"].as_u64() != Some(self.rt.pid() as u64) {
+        if !self.own_supervisor(&source) {
             job["pid"] = Value::Null;
             job["pid_created"] = Value::Null;
             self.restart_queued_supervisor(&mut job)?;
@@ -319,7 +476,7 @@ impl Context {
             self.write_json(&path, &json!({"complete":true}))?;
             return Ok(true);
         }
-        if self.is_ours(&source, "pid") && source["pid"].as_u64() != Some(self.rt.pid() as u64) {
+        if self.is_ours(&source, "pid") && !self.own_supervisor(&source) {
             return Ok(false);
         }
         for (pid, created) in self.journal_processes(&journal)? {

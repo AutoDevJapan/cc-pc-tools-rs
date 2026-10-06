@@ -45,6 +45,7 @@ mod native {
         handles: Vec<Handle>,
         marker: Option<std::path::PathBuf>,
         armed: Vec<(u32, u64)>,
+        resume_on_drop: bool,
     }
     fn record(path: &Path, value: &serde_json::Value) -> io::Result<()> {
         let tmp = path.with_extension(format!("{}.tmp", std::process::id()));
@@ -64,6 +65,9 @@ mod native {
     }
     impl Drop for Frozen {
         fn drop(&mut self) {
+            if !self.resume_on_drop {
+                return;
+            }
             for h in self.handles.iter().rev() {
                 unsafe {
                     NtResumeProcess(h.0);
@@ -75,6 +79,9 @@ mod native {
         }
     }
     impl Paused for Frozen {
+        fn keep_paused(&mut self) {
+            self.resume_on_drop = false;
+        }
         fn arm_process(&mut self, pid: u32, created: u64) -> io::Result<()> {
             self.armed.push((pid, created));
             self.record()
@@ -242,6 +249,7 @@ mod native {
             handles: Vec::new(),
             marker: marker.map(Path::to_path_buf),
             armed: before.iter().map(|p| (p.pid, p.created)).collect(),
+            resume_on_drop: true,
         };
         frozen.record()?;
         freeze(pid, created, &mut frozen)?;
@@ -269,6 +277,7 @@ mod native {
             handles: Vec::new(),
             marker: None,
             armed: Vec::new(),
+            resume_on_drop: true,
         };
         freeze(pid, created, &mut frozen)?;
         Ok(Box::new(frozen))

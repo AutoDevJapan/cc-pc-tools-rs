@@ -259,6 +259,7 @@ pub trait Paused: Send {
     fn stop(&mut self) -> io::Result<()>;
     fn processes(&self) -> Vec<(u32, u64)>;
     fn arm_process(&mut self, pid: u32, created: u64) -> io::Result<()>;
+    fn keep_paused(&mut self);
 }
 pub struct System {
     start: Instant,

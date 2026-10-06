@@ -78,6 +78,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "backfill",
         "_supervise",
         "recover-429",
+        "reload-queue",
     ]
     .contains(&cmd.as_str())
     {
@@ -373,6 +374,10 @@ impl Context {
                     "{}",
                     pretty(&self.recover_429(since, &todo, a.flag("apply"))?)
                 )?;
+                Ok(0)
+            }
+            "reload-queue" => {
+                writeln!(out, "{}", pretty(&self.reload_queue()?))?;
                 Ok(0)
             }
             "_supervise" => {

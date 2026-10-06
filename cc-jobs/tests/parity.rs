@@ -68,6 +68,84 @@ mod queue_regressions {
     use cc_jobs::queue::*;
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
     #[test]
+    fn queued_supervisor_refreshes_activity_even_during_cooldown() {
+        let t = Test::new();
+        let mut j = waiting(&t, "heartbeat", "wait");
+        j["retry_not_before"] = json!(t.rt.epoch() + 900.);
+        t.ctx.save(&j).unwrap();
+        let path = t.ctx.job_dir("heartbeat").join("job.json");
+        let now = t.rt.now();
+        let count = AtomicUsize::new(0);
+        *t.rt.sleep_hook.lock().unwrap() = Some(Box::new(move |seconds| {
+            if seconds != 3. {
+                return;
+            }
+            let n = count.fetch_add(1, Ordering::Relaxed);
+            let mut j: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            if n == 0 {
+                j["last_event_at"] = json!("2000-01-01T00:00:00+09:00");
+                fs::write(&path, pretty(&j)).unwrap();
+            }
+            if n == 20 {
+                assert_eq!(j["last_event_at"], now);
+                j["status"] = json!("cancelled");
+                fs::write(&path, pretty(&j)).unwrap();
+            }
+        }));
+        t.ctx.supervise("heartbeat").unwrap();
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn reload_queue_only_restarts_waiters_and_preserves_session() {
+        let t = Test::new();
+        let mut j = waiting(&t, "waiting", "wait");
+        j["pid"] = json!(444);
+        j["pid_created"] = json!(55);
+        j["resume_session"] = json!(SESSION_ID);
+        t.ctx.save(&j).unwrap();
+        t.rt.procs.lock().unwrap().insert(444, 55);
+        t.put(job(
+            json!({"id":"running","status":"running","pid":666,"pid_created":77}),
+        ));
+        let report = t.ctx.reload_queue().unwrap();
+        assert_eq!(report, json!(["waiting"]));
+        assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.ctx.load("waiting").unwrap()["resume_session"], SESSION_ID);
+        assert_eq!(t.ctx.load("running").unwrap()["status"], "running");
+    }
+    #[test]
+    fn recovery_requeues_watchdog_cancelled_recovery_but_never_owner_cancelled() {
+        for explicit in [false, true] {
+            let t = Test::new();
+            let mut j = failed(&t, "recover", 1, "2026-10-01T12:00:00+09:00");
+            j["status"] = json!("cancelled");
+            j["recovered_429_at"] = json!(t.rt.now());
+            j["cancel_requested"] = json!(explicit);
+            t.ctx.save(&j).unwrap();
+            let todo = t.ctx.root.join("todo.json");
+            fs::write(
+                &todo,
+                json!({"items":[{"id":1,"status":"doing","jobs":["recover"]}]}).to_string(),
+            )
+            .unwrap();
+            let report = t
+                .ctx
+                .recover_429("2026-10-01T12:00:00+09:00", &todo, true)
+                .unwrap();
+            if explicit {
+                assert_eq!(report, json!([]));
+                assert_eq!(t.ctx.load("recover").unwrap()["status"], "cancelled");
+            } else {
+                assert_eq!(report[0]["action"], "queued");
+            }
+            assert_eq!(
+                t.rt.supervisors.load(Ordering::Relaxed),
+                usize::from(!explicit)
+            );
+        }
+    }
+    #[test]
     fn recovered_supervisor_identity_survives_recovery_command_exit() {
         let t = Test::new();
         failed(&t, "revive", 1, "2026-10-01T11:00:00+09:00");
@@ -3221,6 +3299,11 @@ mod additional_compatibility {
         )
         .unwrap();
         let mut env = t.ctx.job_environment();
+        // This fixture must not contend with the production shared-cache gate.
+        env.insert(
+            "CARGO_TARGET_DIR".into(),
+            t.ctx.root.join("target").to_string_lossy().into(),
+        );
         env.insert(
             "CODEX_JOBS_REAL_CARGO".into(),
             env!("CARGO_BIN_EXE_cc_jobs_fixture").into(),

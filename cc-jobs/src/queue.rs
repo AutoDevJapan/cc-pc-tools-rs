@@ -22,6 +22,60 @@ impl Default for QueueConfig {
     }
 }
 impl Context {
+    /// Upgrade waiting supervisors without stopping children or changing sessions.
+    pub fn reload_queue(&self) -> Result<Value> {
+        let _gate = self.queue_lock()?;
+        let mut restarted = Vec::new();
+        for snapshot in self.list_jobs(&HashSet::new()) {
+            if s(&snapshot, "status") != "queued" {
+                continue;
+            }
+            let jid = s(&snapshot, "id");
+            let _state = self.job_lock(jid, "state.lock")?;
+            let mut job = self.load(jid)?;
+            if s(&job, "status") != "queued"
+                || job["cancel_requested"] == true
+                || self.is_ours(&job, "codex_pid")
+            {
+                continue;
+            }
+            if self.is_ours(&job, "pid") {
+                self.rt.kill_tree(job["pid"].as_u64().unwrap() as u32)?;
+                for _ in 0..50 {
+                    if !self.is_ours(&job, "pid") {
+                        break;
+                    }
+                    self.rt.sleep(0.1);
+                }
+                if self.is_ours(&job, "pid") {
+                    return Err(Error::new(format!(
+                        "queued supervisor {jid} could not be stopped"
+                    )));
+                }
+            }
+            job["pid"] = Value::Null;
+            // Wait until the exited owner's OS lock is released before spawning.
+            let owner = FileLock::acquire(&self.job_dir(jid).join("supervisor.lock"))?;
+            job["pid_created"] = Value::Null;
+            job["last_event_at"] = json!(self.rt.now());
+            self.save(&job)?;
+            self.track_queued_job(jid)?;
+            drop(owner);
+            let (_, pid) = self.rt.spawn_supervisor_identified(
+                &self.executable,
+                &self.root,
+                &self.job_dir(jid),
+                jid,
+            )?;
+            if let Some(pid) = pid {
+                job["pid"] = json!(pid);
+                job["pid_created"] = json!(self.rt.proc_created(pid));
+                self.save(&job)?;
+            }
+            restarted.push(json!(jid));
+        }
+        Ok(json!(restarted))
+    }
     /// Called under the global gate. Active records are reread every poll;
     /// history is reconciled at most once per 30 seconds across all waiters.
     fn admission_jobs(&self) -> Result<Vec<Value>> {
@@ -103,7 +157,11 @@ impl Context {
         // Latest failures first: selecting one prevents earlier attempts competing.
         for index in (0..jobs.len()).rev() {
             let mut job = jobs[index].clone();
-            if s(&job, "status") != "failed" {
+            if s(&job, "status") != "failed"
+                && !(s(&job, "status") == "cancelled"
+                    && truth(&job["recovered_429_at"])
+                    && job["cancel_requested"] != true)
+            {
                 continue;
             }
             let event = last_event(&self.job_dir(s(&job, "id")).join("events.jsonl"))?;
@@ -171,7 +229,10 @@ impl Context {
             if apply {
                 let _state = self.job_lock(&jid, "state.lock")?;
                 let fresh = self.load(&jid)?;
-                if s(&fresh, "status") != "failed" || fresh["cancel_requested"] == true {
+                if (s(&fresh, "status") != "failed"
+                    && !(s(&fresh, "status") == "cancelled" && truth(&fresh["recovered_429_at"])))
+                    || fresh["cancel_requested"] == true
+                {
                     continue;
                 }
                 // Ensure a previously ending supervisor no longer owns the record.
@@ -369,6 +430,7 @@ pub fn prepare_resume(job: &mut Value, session: &str, now: &str) {
     // among attempts that are ready within the same priority class.
     job["queued_at"] = json!(now);
     job["activity"] = json!("順番待ち");
+    job["last_event_at"] = json!(now);
     for field in [
         "codex_pid",
         "codex_pid_created",

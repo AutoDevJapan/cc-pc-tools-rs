@@ -1,0 +1,11 @@
+[package]
+name = "cc-task-title"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+serde_json = "1"
+regex = "1"
+ureq = { version = "2", features = ["json"] }
+sha2 = "0.10"
+[dev-dependencies]
+tempfile = "3"

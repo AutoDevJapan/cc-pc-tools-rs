@@ -1,0 +1,23 @@
+[package]
+name = "cc-chrome"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "sync", "macros"] }
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_Security"] }
+
+[[bin]]
+name = "owner_chrome"
+path = "src/main.rs"
+
+[[bin]]
+name = "chrome_cleanup"
+path = "src/cleanup_main.rs"

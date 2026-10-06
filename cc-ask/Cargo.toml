@@ -1,0 +1,29 @@
+[package]
+name = "cc-ask"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "discord_ask"
+path = "src/main.rs"
+
+[dependencies]
+cc-job-policy = { path = "../cc-job-policy" }
+cc-chrome = { path = "../cc-chrome" }
+cc-task-title = { path = "../cc-task-title" }
+cc-live = { path = "../cc-live" }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+serde = { version = "1", features = ["derive"] }
+regex = "1"
+ureq = { version = "2", features = ["json"] }
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+sha2 = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_Security", "Win32_Networking_WinSock", "Win32_System_IO", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Diagnostics_Debug", "Win32_System_ProcessStatus"] }
+wmi = { version = "0.18", default-features = false }

@@ -313,7 +313,10 @@ mod queue_regressions {
     }
 
     fn waiting(t: &Test, id: &str, name: &str) -> Value {
-        t.put(job(json!({"id":id,"name":name,"pid":std::process::id(),"pid_created":123,"codex":"codex.CMD","cwd":t.ctx.root})))
+        let j = t.put(job(json!({"id":id,"name":name,"pid":std::process::id(),"pid_created":123,"codex":"codex.CMD","cwd":t.ctx.root})));
+        let _gate = t.ctx.queue_lock().unwrap();
+        t.ctx.track_queued_job(id).unwrap();
+        j
     }
     fn config(t: &Test, value: Value) {
         fs::write(t.ctx.root.join("queue-config.json"), value.to_string()).unwrap();
@@ -349,6 +352,156 @@ mod queue_regressions {
         t.ctx.save(&ended).unwrap();
         assert!(t.ctx.admit("job-06").unwrap().is_some());
         assert!(t.ctx.admit("job-07").unwrap().is_none());
+    }
+    fn child(t: &Test, id: &str, parent: &str) -> Value {
+        let mut j = waiting(t, id, id);
+        j["parent_job_id"] = json!(parent);
+        t.ctx.save(&j).unwrap();
+        j
+    }
+    #[test]
+    fn six_waiting_parents_can_all_start_dependencies_and_finish() {
+        let t = Test::new();
+        for i in 0..6 {
+            let id = format!("parent-{i}");
+            waiting(&t, &id, &id);
+            assert!(t.ctx.admit(&id).unwrap().is_some());
+        }
+        waiting(&t, "root-extra", "req-owner");
+        for i in 0..6 {
+            child(&t, &format!("child-{i}"), &format!("parent-{i}"));
+        }
+        assert!(t.ctx.admit("root-extra").unwrap().is_none());
+        for i in 0..6 {
+            let id = format!("child-{i}");
+            assert!(t.ctx.admit(&id).unwrap().is_some());
+            let mut ended = t.ctx.load(&id).unwrap();
+            ended["status"] = json!("succeeded");
+            t.ctx.save(&ended).unwrap();
+            let mut parent = t.ctx.load(&format!("parent-{i}")).unwrap();
+            parent["status"] = json!("succeeded");
+            t.ctx.save(&parent).unwrap();
+        }
+        assert!(t.ctx.admit("root-extra").unwrap().is_some());
+    }
+    #[test]
+    fn children_win_priority_and_concurrent_siblings_are_limited_to_two() {
+        let t = Test::new();
+        waiting(&t, "parent", "parent");
+        assert!(t.ctx.admit("parent").unwrap().is_some());
+        waiting(&t, "root-extra", "req-owner");
+        for i in 0..12 {
+            child(&t, &format!("child-{i:02}"), "parent");
+        }
+        assert!(t.ctx.admit("root-extra").unwrap().is_none());
+        let handles: Vec<_> = (0..12)
+            .map(|i| {
+                let ctx = t.ctx.clone();
+                std::thread::spawn(move || ctx.admit(&format!("child-{i:02}")).unwrap().is_some())
+            })
+            .collect();
+        assert_eq!(
+            handles
+                .into_iter()
+                .map(|h| usize::from(h.join().unwrap()))
+                .sum::<usize>(),
+            2
+        );
+        assert!(t.ctx.admit("root-extra").unwrap().is_some());
+        let mut ended = t.ctx.load("child-00").unwrap();
+        ended["status"] = json!("succeeded");
+        t.ctx.save(&ended).unwrap();
+        assert!(t.ctx.admit("child-02").unwrap().is_some());
+    }
+    #[test]
+    fn descendants_keep_one_root_slot_after_ancestors_exit() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        waiting(&t, "parent", "parent");
+        assert!(t.ctx.admit("parent").unwrap().is_some());
+        child(&t, "child", "parent");
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        child(&t, "grandchild", "child");
+        assert!(t.ctx.admit("grandchild").unwrap().is_some());
+        for id in ["parent", "child"] {
+            let mut j = t.ctx.load(id).unwrap();
+            j["status"] = json!("succeeded");
+            t.ctx.save(&j).unwrap();
+        }
+        waiting(&t, "other", "req-owner");
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        let mut j = t.ctx.load("grandchild").unwrap();
+        j["status"] = json!("succeeded");
+        t.ctx.save(&j).unwrap();
+        assert!(t.ctx.admit("other").unwrap().is_some());
+    }
+    #[test]
+    fn inherited_parent_is_saved_and_invalid_or_dead_parents_are_rejected() {
+        let t = Test::new();
+        t.put(patch(t.running(), json!({"id":"parent"})));
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_JOB_ID".into(), "parent".into());
+        assert_eq!(t.run(&[], b"review").unwrap(), 0);
+        let children = t.ctx.list_jobs(&HashSet::new());
+        assert_eq!(
+            children.iter().find(|j| s(j, "id") != "parent").unwrap()["parent_job_id"],
+            "parent"
+        );
+        for parent in ["../parent", "missing"] {
+            assert!(t.run(&["--parent-job-id", parent], b"review").is_err());
+        }
+        let mut parent = t.ctx.load("parent").unwrap();
+        parent["status"] = json!("succeeded");
+        t.ctx.save(&parent).unwrap();
+        assert!(t.run(&[], b"review").is_err());
+    }
+    #[test]
+    fn recovery_requires_launch_evidence_and_is_idempotent() {
+        let t = Test::new();
+        t.put(patch(t.running(), json!({"id":"parent"})));
+        let mut cancelled = waiting(&t, "cancelled-child", "review");
+        cancelled["status"] = json!("cancelled");
+        cancelled["pid"] = Value::Null;
+        cancelled["cancel_requested"] = json!(true);
+        cancelled["cancel_requested_at"] = json!(t.rt.now());
+        cancelled["started_at"] = Value::Null;
+        t.ctx.save(&cancelled).unwrap();
+        fs::write(t.ctx.job_dir("cancelled-child").join("prompt.md"), "review").unwrap();
+        waiting(&t, "queued-child", "review-other");
+        let event = json!({"type":"item.completed","item":{"type":"command_execution","command":"codex_jobs.exe run --name review","exit_code":0,"aggregated_output":"cancelled-child\nqueued-child\n"}});
+        fs::write(
+            t.ctx.job_dir("parent").join("events.jsonl"),
+            event.to_string(),
+        )
+        .unwrap();
+        let since = "2026-10-01T00:00:00+09:00";
+        assert_eq!(
+            t.ctx
+                .recover_children(since, false)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            t.ctx.load("cancelled-child").unwrap()["status"],
+            "cancelled"
+        );
+        t.ctx.recover_children(since, true).unwrap();
+        assert_eq!(
+            t.ctx.load("cancelled-child").unwrap()["parent_job_id"],
+            "parent"
+        );
+        assert_eq!(
+            t.ctx.load("cancelled-child").unwrap()["cancel_requested"],
+            false
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        t.ctx.recover_children(since, true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
     }
     #[test]
     fn owner_requests_precede_fifo_and_cooldown_does_not_block_ready_jobs() {
@@ -389,6 +542,7 @@ mod queue_regressions {
         assert!(t.ctx.admit("b").unwrap().is_some());
         for value in [
             json!({"max_running":0}),
+            json!({"max_children_per_parent":0}),
             json!({"retry_delay_seconds":0}),
             json!({"retry_delay_seconds":1000}),
             json!({"max_running":"six"}),
@@ -463,7 +617,7 @@ mod queue_regressions {
         let args = t.rt.spawn_args.lock().unwrap();
         assert!(!args[0].iter().any(|a| a == "resume"));
         assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
-        assert!(t.rt.sleeps.lock().unwrap().iter().any(|s| *s == 3.));
+        assert!(t.rt.sleeps.lock().unwrap().contains(&3.));
     }
     fn failed(t: &Test, id: &str, todo: u64, created: &str) -> Value {
         let j=t.put(job(json!({"id":id,"name":id,"todo_id":todo,"created_at":created,"status":"failed","finished_at":"2026-10-01T12:01:00+09:00","thread_id":SESSION_ID,"cwd":t.ctx.root,"codex":"codex.CMD"})));
@@ -623,6 +777,7 @@ impl Drop for Temp {
 type CallFn = Box<dyn Fn(&Call) -> io::Result<Reply> + Send + Sync>;
 type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;
 type SpawnHook = Box<dyn Fn() -> Box<dyn Running> + Send + Sync>;
+type SleepHook = Box<dyn Fn(f64) + Send + Sync>;
 
 #[test]
 fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win() {
@@ -683,7 +838,7 @@ struct Fake {
     spawn_hook: Mutex<Option<SpawnHook>>,
     spawn_args: Mutex<Vec<Vec<String>>>,
     advance_epoch: AtomicBool,
-    sleep_hook: Mutex<Option<Box<dyn Fn(f64) + Send + Sync>>>,
+    sleep_hook: Mutex<Option<SleepHook>>,
     supervisor_pid: AtomicU32,
 }
 impl Fake {
@@ -3098,6 +3253,7 @@ mod end_to_end {
                 .env("GODD_AO_BIN", self.tmp.0.join("missing-ao.exe"))
                 .env("CODEX_JOBS_GTO_BIN", self.tmp.0.join("missing-gto.exe"))
                 .env_remove("GODD_DISCORD_BOT_TOKEN")
+                .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
             c.output().unwrap()
         }

@@ -1,12 +1,16 @@
 use crate::*;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
-use std::{collections::HashSet, fs};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 #[derive(serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
     pub max_running: usize,
+    pub max_children_per_parent: usize,
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
     pub max_retry_delay_seconds: u64,
@@ -15,6 +19,7 @@ impl Default for QueueConfig {
     fn default() -> Self {
         Self {
             max_running: 6,
+            max_children_per_parent: 2,
             max_429_retries: 5,
             retry_delay_seconds: 60,
             max_retry_delay_seconds: 900,
@@ -290,11 +295,12 @@ impl Context {
             Err(e) => return Err(e.into()),
         };
         if cfg.max_running == 0
+            || cfg.max_children_per_parent == 0
             || cfg.retry_delay_seconds == 0
             || cfg.max_retry_delay_seconds < cfg.retry_delay_seconds
         {
             return Err(Error::new(
-                "queue-config.json: max_running and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
+                "queue-config.json: max_running, max_children_per_parent and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
             ));
         }
         Ok(cfg)
@@ -320,13 +326,23 @@ impl Context {
             return Ok(None);
         }
         let jobs = self.admission_jobs()?;
-        let running = jobs
+        let active: Vec<_> = jobs
             .iter()
             .filter(|j| {
                 self.is_ours(j, "codex_pid")
                     || (s(j, "status") == "running" && self.supervisor_alive(j))
             })
-            .count();
+            .collect();
+        // Count occupied families even when the root/intermediate supervisor has
+        // exited. A surviving descendant must not silently free a root slot.
+        let mut families = HashSet::new();
+        let mut children = HashMap::<String, usize>::new();
+        for j in &active {
+            families.insert(self.queue_root(j)?);
+            if !s(j, "parent_job_id").is_empty() {
+                *children.entry(s(j, "parent_job_id").into()).or_default() += 1;
+            }
+        }
         let mut waiting: Vec<_> = jobs
             .iter()
             .filter(|j| {
@@ -336,9 +352,43 @@ impl Context {
                     && j["retry_not_before"].as_f64().unwrap_or(0.) <= self.rt.epoch()
             })
             .collect();
-        waiting.sort_by_key(|j| (!s(j, "name").starts_with("req-"), queue_time(j), s(j, "id")));
-        let position = waiting.iter().position(|j| s(j, "id") == jid);
-        if position.is_none_or(|p| p >= cfg.max_running.saturating_sub(running)) {
+        waiting.sort_by_key(|j| {
+            (
+                s(j, "parent_job_id").is_empty(),
+                !s(j, "name").starts_with("req-"),
+                queue_time(j),
+                s(j, "id"),
+            )
+        });
+        let mut selected = false;
+        let mut child_first = false;
+        for candidate in waiting {
+            let parent = s(candidate, "parent_job_id");
+            if parent.is_empty() && child_first {
+                continue;
+            }
+            if !parent.is_empty()
+                && children.get(parent).copied().unwrap_or(0) >= cfg.max_children_per_parent
+            {
+                continue;
+            }
+            let root = self.queue_root(candidate)?;
+            if !families.contains(&root) && families.len() >= cfg.max_running {
+                continue;
+            }
+            // Children have first claim; wait for the earlier eligible job to
+            // reserve its slot durably instead of allowing roots to overtake it.
+            if s(candidate, "id") == jid {
+                selected = true;
+                break;
+            }
+            families.insert(root);
+            if !parent.is_empty() {
+                child_first = true;
+                *children.entry(parent.into()).or_default() += 1;
+            }
+        }
+        if !selected {
             return Ok(None);
         }
         job["status"] = json!("running");
@@ -347,6 +397,27 @@ impl Context {
         job["activity"] = json!("starting");
         self.save(&job)?;
         Ok(Some(state))
+    }
+
+    fn queue_root(&self, job: &Value) -> Result<String> {
+        let mut current = job.clone();
+        let mut seen = HashSet::new();
+        loop {
+            let id = s(&current, "id").to_string();
+            if !seen.insert(id.clone()) {
+                return Err(Error::new("cycle in parent_job_id"));
+            }
+            let parent = s(&current, "parent_job_id");
+            if parent.is_empty() {
+                return Ok(id);
+            }
+            current = self.load(parent)?;
+        }
+    }
+
+    pub fn running_job(&self, job: &Value) -> bool {
+        self.is_ours(job, "codex_pid")
+            || (s(job, "status") == "running" && self.supervisor_alive(job))
     }
 
     /// Called only after the child has exited and its final events have drained.
@@ -380,7 +451,7 @@ impl Context {
         true
     }
 }
-fn same_task(a: &Value, b: &Value) -> bool {
+pub(crate) fn same_task(a: &Value, b: &Value) -> bool {
     (a["todo_id"].as_u64().is_some() && a["todo_id"] == b["todo_id"])
         || (!s(a, "name").is_empty() && s(a, "name") == s(b, "name"))
         || ["thread_id", "resume_session"].iter().any(|ka| {
@@ -390,6 +461,12 @@ fn same_task(a: &Value, b: &Value) -> bool {
                     .any(|kb| normalize_uuid(s(b, kb)).as_ref() == Some(&id))
             })
         })
+}
+pub fn valid_job_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 fn last_event(path: &Path) -> Result<Value> {
     let mut file = match fs::File::open(path) {

@@ -10,6 +10,7 @@ pub mod jobs;
 pub mod notify;
 pub mod platform;
 pub mod queue;
+pub mod recovery;
 pub use events::*;
 pub use jobs::*;
 pub use platform::*;

@@ -5,6 +5,7 @@ usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT
                          PROMPT_FILE [--task-type TASK_TYPE]
                          [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]
                          [--resume-session RESUME_SESSION]
+                         [--parent-job-id PARENT_JOB_ID]
 
 options:
   -h, --help            show this help message and exit
@@ -27,3 +28,5 @@ options:
   --resume-session RESUME_SESSION
                         continue a recorded Codex session UUID instead of
                         starting a new one
+  --parent-job-id PARENT_JOB_ID
+                        running parent job (otherwise inherited from CC_JOB_ID)

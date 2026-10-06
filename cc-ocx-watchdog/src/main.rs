@@ -140,7 +140,7 @@ mod runtime {
     }
     fn watch(config: &Config, once: bool) -> Result<(), String> {
         fs::create_dir_all(&config.log_dir).map_err(|e| e.to_string())?;
-        let _guard = MutexGuard::acquire(config.port)?;
+        let _guard = MutexGuard::acquire()?;
         log(
             config,
             json!({"kind":"started","watchdog_pid":std::process::id(),"port":config.port}),
@@ -207,15 +207,14 @@ mod runtime {
                             pid: event.pid,
                             born: event.born,
                         })
+                        && event.recovered_pid.is_none()
                     {
-                        if event.recovered_pid.is_none() {
-                            event.recovered_pid = identity.map(|i| i.pid);
-                            changed = true;
-                            log(
-                                config,
-                                json!({"kind":"restart_confirmed","old_pid":event.pid,"new_identity":identity}),
-                            )?;
-                        }
+                        event.recovered_pid = identity.map(|i| i.pid);
+                        changed = true;
+                        log(
+                            config,
+                            json!({"kind":"restart_confirmed","old_pid":event.pid,"new_identity":identity}),
+                        )?;
                     }
                 }
                 if changed {

@@ -27,8 +27,8 @@ fn filetime(t: FILETIME) -> u64 {
 
 pub struct MutexGuard(HANDLE);
 impl MutexGuard {
-    pub fn acquire(port: u16) -> Result<Self, String> {
-        let name = wide(format!("Global\\CC-OcxHealthWatchdog-{port}"));
+    pub fn acquire() -> Result<Self, String> {
+        let name = wide("Global\\CC-OcxHealthWatchdog");
         let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
         if handle.is_null() {
             return Err("create_mutex".into());
@@ -252,15 +252,15 @@ mod tests {
     #[test]
     fn refuses_wrong_executable_and_releases_mutex() {
         assert!(Process::open(std::process::id(), Path::new("C:\\not-the-current.exe")).is_err());
-        let guard = MutexGuard::acquire(64321).unwrap();
+        let guard = MutexGuard::acquire().unwrap();
         // Mutex is recursive on the same thread; exercise contention on another thread.
         assert!(
-            std::thread::spawn(|| MutexGuard::acquire(64321).is_err())
+            std::thread::spawn(|| MutexGuard::acquire().is_err())
                 .join()
                 .unwrap()
         );
         drop(guard);
-        assert!(MutexGuard::acquire(64321).is_ok());
+        assert!(MutexGuard::acquire().is_ok());
     }
     #[test]
     fn tcp_table_finds_real_listener() {

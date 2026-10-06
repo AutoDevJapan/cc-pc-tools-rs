@@ -291,7 +291,7 @@ mod tests {
         let server = std::thread::spawn(move || {
             let (mut socket, _) = listener.accept().unwrap();
             let mut req = [0; 1024];
-            socket.read(&mut req).unwrap();
+            assert!(socket.read(&mut req).unwrap() > 0);
             let body = "{\"service\":\"opencodex\",\"status\":\"ok\",\"pid\":7}";
             write!(
                 socket,
@@ -341,7 +341,7 @@ mod tests {
             let server = std::thread::spawn(move || {
                 let (mut socket, _) = listener.accept().unwrap();
                 let mut req = [0; 1024];
-                socket.read(&mut req).unwrap();
+                assert!(socket.read(&mut req).unwrap() > 0);
                 let bytes = if oversize {
                     vec![b'x'; 20 * 1024]
                 } else {

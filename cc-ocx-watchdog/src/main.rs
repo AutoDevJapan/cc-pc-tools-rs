@@ -328,7 +328,7 @@ mod runtime {
             xml_escape(&config.log_dir.to_string_lossy())
         );
         let path = config.log_dir.join("task.xml");
-        fs::write(&path, xml).map_err(|e| e.to_string())?;
+        fs::write(&path, cc_ocx_watchdog::task_xml_bytes(&xml)).map_err(|e| e.to_string())?;
         let mut command = hidden_command(system_exe("schtasks.exe"));
         command
             .args(["/Create", "/TN", WATCH_TASK, "/XML"])

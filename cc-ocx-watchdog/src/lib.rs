@@ -184,6 +184,18 @@ pub fn unresponsive(outcome: &Result<(), String>) -> bool {
     )
 }
 
+// schtasks parses the XML file as UTF-16 on this Windows host. Publish a BOM and matching declaration.
+pub fn task_xml_bytes(xml: &str) -> Vec<u8> {
+    let mut bytes = vec![0xff, 0xfe];
+    for unit in xml
+        .replace("encoding=\"UTF-8\"", "encoding=\"UTF-16\"")
+        .encode_utf16()
+    {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+    bytes
+}
+
 pub fn hidden_command(program: impl AsRef<std::ffi::OsStr>) -> Command {
     let mut command = Command::new(program);
     command
@@ -230,6 +242,19 @@ mod tests {
     use std::net::TcpListener;
     fn identity(pid: u32, born: u64) -> Identity {
         Identity { pid, born }
+    }
+    #[test]
+    fn scheduler_xml_has_matching_encoding_and_bom() {
+        let bytes = task_xml_bytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Task>監視</Task>");
+        assert_eq!(&bytes[..2], &[0xff, 0xfe]);
+        let units: Vec<_> = bytes[2..]
+            .chunks_exact(2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .collect();
+        assert_eq!(
+            String::from_utf16(&units).unwrap(),
+            "<?xml version=\"1.0\" encoding=\"UTF-16\"?><Task>監視</Task>"
+        );
     }
     #[test]
     fn three_failures_only() {

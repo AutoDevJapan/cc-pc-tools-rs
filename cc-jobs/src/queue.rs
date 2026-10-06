@@ -39,63 +39,114 @@ impl Context {
         let before = ledger.clone();
         // Snapshot before taking any per-job lock (global gate always comes first).
         for job in jobs {
-            if self.should_yield(job, jobs) {
-                ledger.entry(s(job, "id").into()).or_insert_with(
+            if job["queue_fairness_version"] != 1 && self.should_yield(job, jobs) {
+                let reservation = ledger.entry(s(job, "id").into()).or_insert_with(
                     || json!({"started_at":job["started_at"],"thread_id":job["thread_id"],"requested_at":self.rt.now()}),
+                );
+                reservation["waiters"] = json!(
+                    jobs.iter()
+                        .filter(|other| {
+                            s(other, "status") == "queued" && s(other, "parent_job_id").is_empty()
+                        })
+                        .map(|other| json!({"id":other["id"],"queued_at":queue_time(other)}))
+                        .collect::<Vec<_>>()
                 );
             }
         }
         for id in ledger.keys().cloned().collect::<Vec<_>>() {
             if !valid_job_id(&id) {
-                return Err(Error::new("invalid yield ledger job id"));
+                self.rt
+                    .diagnostic("invalid yield ledger job id; discarding reservation");
+                ledger.remove(&id);
+                continue;
             }
-            let _state = self.job_lock(&id, "state.lock")?;
-            let mut job = self.load(&id)?;
-            if s(&job, "status") == "running" {
-                // A withdrawn request must not affect a later turn/attempt.
-                if job["started_at"] != ledger[&id]["started_at"]
-                    || job["thread_id"] != ledger[&id]["thread_id"]
-                    || !self.should_yield(&job, jobs)
-                {
+            if !self.job_dir(&id).is_dir() {
+                ledger.remove(&id);
+                continue;
+            }
+            match self.resume_legacy_yield(&id, &ledger[&id], jobs) {
+                Ok(true) => {
                     ledger.remove(&id);
                 }
-                continue;
+                Ok(false) => (),
+                Err(error) => self.yield_diagnostic(&error),
             }
-            if s(&job, "status") != "succeeded" || job["cancel_requested"] == true {
-                ledger.remove(&id);
-                continue;
-            }
-            if job["started_at"] != ledger[&id]["started_at"]
-                || job["thread_id"] != ledger[&id]["thread_id"]
-                || !self.yield_completed_turn(&mut job, jobs)?
-            {
-                ledger.remove(&id);
-                continue;
-            }
-            if self.is_ours(&job, "codex_pid") {
-                continue;
-            }
-            let Ok(owner) = FileLock::try_acquire(&self.job_dir(&id).join("supervisor.lock"))
-            else {
-                continue;
-            };
-            // The legacy supervisor finished; take ownership without stopping it.
-            let original = self.load(&id)?;
-            job["pid"] = Value::Null;
-            job["pid_created"] = Value::Null;
-            self.save(&job)?;
-            self.track_queued_job(&id)?;
-            drop(owner);
-            if let Err(error) = self.restart_queued_supervisor(&mut job) {
-                self.save(&original)?;
-                return Err(error);
-            }
-            ledger.remove(&id);
         }
         if ledger != before {
             self.write_json(&path, &json!(ledger))?;
         }
         Ok(())
+    }
+
+    fn resume_legacy_yield(&self, id: &str, reservation: &Value, jobs: &[Value]) -> Result<bool> {
+        let _state = self.job_lock(id, "state.lock")?;
+        let mut job = self.load(id)?;
+        if job["queue_fairness_version"] == 1
+            || job["started_at"] != reservation["started_at"]
+            || job["thread_id"] != reservation["thread_id"]
+        {
+            return Ok(true);
+        }
+        if s(&job, "status") == "running" {
+            return Ok(!self.should_yield(&job, jobs));
+        }
+        if s(&job, "status") != "succeeded" || job["cancel_requested"] == true {
+            return Ok(true);
+        }
+        // End time (not today's time) governs eligibility. A future waiter
+        // cannot resurrect an already completed and notified legacy job.
+        if parse_iso(s(&job, "finished_at")).is_none()
+            || self.list_jobs(&HashSet::new()).iter().any(|other| {
+                s(other, "id") != id
+                    && same_task(&job, other)
+                    && (LIVE.contains(&s(other, "status"))
+                        || (s(other, "created_at"), s(other, "id")) > (s(&job, "created_at"), id))
+            })
+        {
+            return Ok(true);
+        }
+        if self.is_ours(&job, "codex_pid") {
+            return Ok(false);
+        }
+        let Ok(owner) = FileLock::try_acquire(&self.job_dir(id).join("supervisor.lock")) else {
+            return Ok(false);
+        };
+        let original = job.clone();
+        let boundary_jobs: Vec<_> = jobs
+            .iter()
+            .filter(|other| {
+                s(other, "status") != "queued"
+                    || !s(other, "parent_job_id").is_empty()
+                    || reservation["waiters"].as_array().is_some_and(|waiters| {
+                        waiters.iter().any(|waiter| {
+                            s(waiter, "id") == s(other, "id")
+                                && s(waiter, "queued_at") == queue_time(other)
+                        })
+                    })
+            })
+            .cloned()
+            .collect();
+        if !self.yield_completed_turn(&mut job, &boundary_jobs)? {
+            return Ok(true);
+        }
+        // The legacy supervisor finished; take ownership without stopping it.
+        job["pid"] = Value::Null;
+        job["pid_created"] = Value::Null;
+        self.track_queued_job(id)?;
+        self.save(&job)?;
+        drop(owner);
+        if let Err(error) = self.restart_queued_supervisor(&mut job) {
+            self.save(&original)?;
+            return Err(error);
+        }
+        Ok(true)
+    }
+
+    pub(crate) fn yield_diagnostic(&self, error: &Error) {
+        self.rt.diagnostic(&format!(
+            "枠を譲る処理を延期: {}",
+            redact_local_log_secrets(&error.message, &self.rt.env())
+        ));
     }
 
     fn has_pending_descendants(&self, job: &Value, jobs: &[Value]) -> bool {
@@ -108,19 +159,31 @@ impl Context {
     }
 
     fn should_yield(&self, job: &Value, jobs: &[Value]) -> bool {
+        let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
             && s(job, "status") == "running"
             && job["cancel_requested"] != true
             && normalize_uuid(s(job, "thread_id")).is_some()
-            && parse_iso(s(job, "started_at")).is_some_and(|start| self.rt.epoch() - start >= 7200.)
+            && parse_iso(s(job, "started_at")).is_some_and(|start| {
+                job["duration_ms"]
+                    .as_f64()
+                    .map(|ms| ms / 1000.)
+                    .unwrap_or(at - start)
+                    >= 7200.
+            })
             && !self.has_pending_descendants(job, jobs)
+            && !jobs
+                .iter()
+                .any(|other| s(other, "id") != s(job, "id") && same_task(job, other))
             && jobs.iter().any(|other| {
                 s(other, "id") != s(job, "id")
                     && s(other, "parent_job_id").is_empty()
                     && s(other, "status") == "queued"
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
-                    && other["retry_not_before"].as_f64().unwrap_or(0.) <= self.rt.epoch()
+                    && other["retry_not_before"].as_f64().unwrap_or(0.) <= at
+                    && (s(job, "finished_at").is_empty()
+                        || parse_iso(queue_time(other)).is_some_and(|queued| queued <= at))
             })
     }
 
@@ -133,7 +196,7 @@ impl Context {
             || s(job, "last_message")
                 .lines()
                 .next()
-                .is_some_and(|line| line.trim() == "状態: 完了")
+                .is_some_and(|line| ["状態: 完了", "状態: 要判断"].contains(&line.trim()))
         {
             return Ok(false);
         }
@@ -471,7 +534,9 @@ impl Context {
     pub fn admit_configured(&self, jid: &str, cfg: &QueueConfig) -> Result<Option<FileLock>> {
         let _gate = self.queue_lock()?;
         let jobs = self.admission_jobs()?;
-        self.maintain_yields(&jobs)?;
+        if let Err(error) = self.maintain_yields(&jobs) {
+            self.yield_diagnostic(&error);
+        }
         let state = self.job_lock(jid, "state.lock")?;
         let mut job = self.load(jid)?;
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {

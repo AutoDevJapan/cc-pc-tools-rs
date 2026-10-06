@@ -14,6 +14,9 @@ pub struct QueueConfig {
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
     pub max_retry_delay_seconds: u64,
+    pub lowest_priority_todo_ids: Vec<u64>,
+    /// Explicit exceptions to both the ID list and text matching.
+    pub normal_priority_todo_ids: Vec<u64>,
 }
 impl Default for QueueConfig {
     fn default() -> Self {
@@ -23,6 +26,8 @@ impl Default for QueueConfig {
             max_429_retries: 5,
             retry_delay_seconds: 60,
             max_retry_delay_seconds: 900,
+            lowest_priority_todo_ids: vec![18, 23],
+            normal_priority_todo_ids: Vec::new(),
         }
     }
 }
@@ -197,6 +202,11 @@ impl Context {
     }
 
     pub(crate) fn should_yield(&self, job: &Value, jobs: &[Value]) -> bool {
+        let Ok(cfg) = self.queue_config() else {
+            return false;
+        };
+        let priorities = self.queue_priorities(jobs, &cfg);
+        let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
             && s(job, "status") == "running"
@@ -217,7 +227,7 @@ impl Context {
                 s(other, "id") != s(job, "id")
                     && s(other, "parent_job_id").is_empty()
                     && s(other, "status") == "queued"
-                    && queue_priority(other) <= queue_priority(job)
+                    && priority(other) <= priority(job)
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
                     && other["retry_not_before"].as_f64().unwrap_or(0.) <= at
@@ -587,6 +597,21 @@ impl Context {
             return Ok(None);
         }
         let jobs = self.admission_jobs()?;
+        let priorities = self.queue_priorities(&jobs, cfg);
+        // A normal waiter blocks opportunistic roots even during cooldown or
+        // when its child/family limit is full. Never reserve phantom spare slots
+        // for low-priority work while another owner is actually waiting.
+        let normal_waiting = jobs.iter().any(|j| {
+            s(j, "id") != jid
+                && s(j, "status") == "queued"
+                && j["cancel_requested"] != true
+                && self.supervisor_alive(j)
+                && priorities.get(s(j, "id")).copied().unwrap_or(2) < 3
+        });
+        if s(&job, "parent_job_id").is_empty() && priorities.get(jid) == Some(&3) && normal_waiting
+        {
+            return Ok(None);
+        }
         let active: Vec<_> = jobs
             .iter()
             .filter(|j| j["queue_unreadable"] == true || self.running_job(j))
@@ -613,7 +638,7 @@ impl Context {
         waiting.sort_by_key(|j| {
             (
                 s(j, "parent_job_id").is_empty(),
-                queue_priority(j),
+                priorities.get(s(j, "id")).copied().unwrap_or(2),
                 queue_time(j),
                 j["queue_sequence"].as_u64().unwrap_or(0),
                 s(j, "id"),
@@ -656,6 +681,45 @@ impl Context {
         job["activity"] = json!("starting");
         self.save(&job)?;
         Ok(Some(state))
+    }
+
+    fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u8> {
+        let todo = self
+            .root
+            .parent()
+            .and_then(|tools| {
+                fs::read(tools.join("todo/todo.json"))
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            })
+            .unwrap_or(Value::Null);
+        jobs.iter()
+            .map(|j| {
+                let id = j["todo_id"].as_u64();
+                let excepted = id.is_some_and(|id| cfg.normal_priority_todo_ids.contains(&id));
+                let listed = id.is_some_and(|id| cfg.lowest_priority_todo_ids.contains(&id));
+                let title_matches = todo["items"].as_array().is_some_and(|items| {
+                    items.iter().any(|item| {
+                        id.is_some()
+                            && item["id"].as_u64() == id
+                            && repeating_request(s(item, "title"))
+                    })
+                });
+                // Dependents of already running parents keep their existing child
+                // admission rules so a parent can finish and release its slot.
+                let low = s(j, "parent_job_id").is_empty()
+                    && !excepted
+                    && (listed
+                        || title_matches
+                        || repeating_request(s(j, "task_title"))
+                        || fs::read_to_string(self.job_dir(s(j, "id")).join("prompt.md"))
+                            .is_ok_and(|prompt| repeating_request(&prompt)));
+                (
+                    s(j, "id").to_owned(),
+                    if low { 3 } else { queue_priority(j) },
+                )
+            })
+            .collect()
     }
 
     fn queue_root(&self, job: &Value) -> String {
@@ -774,6 +838,18 @@ fn queue_priority(job: &Value) -> u8 {
     } else {
         2
     }
+}
+fn repeating_request(text: &str) -> bool {
+    [
+        "くり返す",
+        "くり返し",
+        "繰り返す",
+        "繰り返し",
+        "回し続ける",
+        "agents.prompt",
+    ]
+    .iter()
+    .any(|word| text.to_ascii_lowercase().contains(word))
 }
 pub fn is_429(message: &str) -> bool {
     message

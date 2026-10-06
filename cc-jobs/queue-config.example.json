@@ -3,5 +3,7 @@
   "max_children_per_parent": 2,
   "max_429_retries": 5,
   "retry_delay_seconds": 60,
-  "max_retry_delay_seconds": 900
+  "max_retry_delay_seconds": 900,
+  "lowest_priority_todo_ids": [18, 23],
+  "normal_priority_todo_ids": []
 }

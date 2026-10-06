@@ -624,15 +624,21 @@ impl Context {
         let mut next_heartbeat = self.rt.mono() + 60.;
         loop {
             if self.rt.mono() >= next_heartbeat {
-                let _state = self.job_lock(jid, "state.lock")?;
-                let mut waiting = self.load(jid)?;
-                if s(&waiting, "status") != "queued" || waiting["cancel_requested"] == true {
-                    return Ok(());
+                let heartbeat = (|| -> Result<()> {
+                    let _state = self.job_lock(jid, "state.lock")?;
+                    let mut waiting = self.load(jid)?;
+                    if s(&waiting, "status") == "queued" && waiting["cancel_requested"] != true {
+                        waiting["last_event_at"] = json!(self.rt.now());
+                        self.save(&waiting)?;
+                    }
+                    Ok(())
+                })();
+                if let Err(e) = heartbeat {
+                    self.rt.diagnostic(&format!(
+                        "順番待ちの生存記録を再試行: {}",
+                        redact_local_log_secrets(&e.message, &self.rt.env())
+                    ));
                 }
-                // The existing ToDo watchdog treats old last_event_at as a hung
-                // job even while queued. Record that this supervisor is alive.
-                waiting["last_event_at"] = json!(self.rt.now());
-                self.save(&waiting)?;
                 next_heartbeat = self.rt.mono() + 60.;
             }
             let job = self.load(jid)?;

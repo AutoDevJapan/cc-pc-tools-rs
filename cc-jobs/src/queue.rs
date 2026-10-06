@@ -54,10 +54,13 @@ impl Context {
                 }
             }
             job["pid"] = Value::Null;
+            // Wait until the exited owner's OS lock is released before spawning.
+            let owner = FileLock::acquire(&self.job_dir(jid).join("supervisor.lock"))?;
             job["pid_created"] = Value::Null;
             job["last_event_at"] = json!(self.rt.now());
             self.save(&job)?;
             self.track_queued_job(jid)?;
+            drop(owner);
             let (_, pid) = self.rt.spawn_supervisor_identified(
                 &self.executable,
                 &self.root,

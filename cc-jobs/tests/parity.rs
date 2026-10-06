@@ -242,7 +242,16 @@ mod queue_regressions {
         assert_eq!(t.ctx.refresh(original, false).unwrap()["status"], "running");
         assert_eq!(*t.rt.kills.lock().unwrap(), vec![445]);
         t.rt.pause_allowed.store(false, Ordering::Relaxed);
+        t.rt.pause_recoveries.lock().unwrap().clear();
         assert!(t.ctx.admit("other").unwrap().is_none());
+        assert!(
+            !t.rt
+                .pause_recoveries
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|id| id == "long")
+        );
         t.rt.pause_allowed.store(true, Ordering::Relaxed);
         assert!(t.ctx.admit("other").unwrap().is_some());
         let queued = t.ctx.load("long").unwrap();
@@ -1462,6 +1471,7 @@ struct Fake {
     pause_calls: AtomicUsize,
     paused_stop_failure: Arc<AtomicBool>,
     paused_stop_failure_pid: Arc<AtomicU32>,
+    pause_recoveries: Mutex<Vec<String>>,
     fail_queued_save: AtomicBool,
     pause_hook: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
     spawns: AtomicUsize,
@@ -1503,6 +1513,7 @@ impl Fake {
             pause_calls: AtomicUsize::new(0),
             paused_stop_failure: Arc::new(AtomicBool::new(false)),
             paused_stop_failure_pid: Arc::new(AtomicU32::new(0)),
+            pause_recoveries: Mutex::new(Vec::new()),
             fail_queued_save: AtomicBool::new(false),
             pause_hook: Mutex::new(None),
             spawns: AtomicUsize::new(0),
@@ -1573,6 +1584,17 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn recover_paused(&self, path: &Path) -> io::Result<()> {
+        self.pause_recoveries.lock().unwrap().push(
+            path.parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into(),
+        );
+        System::default().recover_paused(path)
+    }
     fn pause_idle_agent(
         &self,
         pid: u32,

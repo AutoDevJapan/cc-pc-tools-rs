@@ -47,9 +47,10 @@ impl Context {
     /// supervisors deployed before tool-boundary fairness existed.
     fn maintain_yields(&self, jobs: &[Value]) -> Result<()> {
         for job in jobs {
-            if let Err(error) = self
-                .rt
-                .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))
+            if !self.tool_handoff_pending(job)
+                && let Err(error) = self
+                    .rt
+                    .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))
             {
                 self.yield_diagnostic(&error.into());
                 continue;

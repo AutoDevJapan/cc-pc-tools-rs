@@ -1,3 +1,4 @@
 **/target/
 *.log
 *.exe
+cc-ask/tests/*.json

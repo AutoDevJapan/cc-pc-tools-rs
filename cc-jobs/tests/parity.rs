@@ -246,6 +246,7 @@ mod queue_regressions {
         t.rt.paused_stop_failure_pid.store(444, Ordering::Relaxed);
         t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
         assert!(t.ctx.admit("other").unwrap().is_none());
+        t.rt.pause_allowed.store(false, Ordering::Relaxed);
         assert_eq!(t.ctx.refresh(original, false).unwrap()["status"], "running");
         assert_eq!(*t.rt.kills.lock().unwrap(), vec![445]);
         t.rt.pause_allowed.store(false, Ordering::Relaxed);

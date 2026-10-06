@@ -138,6 +138,10 @@ impl Context {
     /// Mark a live job whose supervisor is gone as 'lost' (persisted, so it can never come back).
     pub fn refresh(&self, job: Value, auto_observe: bool) -> Result<Value> {
         let pause = self.job_dir(s(&job, "id")).join("yield-paused.json");
+        if self.tool_handoff_pending(&job) {
+            let _gate = self.queue_lock()?;
+            self.recover_tool_yield(&job)?;
+        }
         if !self.tool_handoff_pending(&job)
             && self.read_json(&pause).is_ok_and(|v| v["complete"] == false)
         {

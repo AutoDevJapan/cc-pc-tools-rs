@@ -389,9 +389,7 @@ impl Context {
             owner.stop()?;
         }
         if let Err(error) = agent.stop() {
-            if external {
-                agent.keep_paused();
-            }
+            agent.keep_paused();
             return Err(error.into());
         }
         journal["stopped"] = json!(true);

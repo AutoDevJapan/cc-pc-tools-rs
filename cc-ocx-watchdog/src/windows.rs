@@ -21,6 +21,64 @@ use windows_sys::Win32::System::Threading::{
 pub fn wide(value: impl AsRef<OsStr>) -> Vec<u16> {
     value.as_ref().encode_wide().chain(Some(0)).collect()
 }
+
+pub fn current_user_sid() -> Result<String, String> {
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
+    use windows_sys::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenUser};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    let mut token = std::ptr::null_mut();
+    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
+        return Err("process_token".into());
+    }
+    let result = (|| {
+        let mut required = 0;
+        unsafe {
+            GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut required);
+        }
+        if required < size_of::<TOKEN_USER>() as u32 || required > 64 * 1024 {
+            return Err("token_user_size".into());
+        }
+        // TOKEN_USER contains a pointer: use pointer-aligned storage, not Vec<u8> alignment.
+        let mut data = vec![0usize; (required as usize).div_ceil(size_of::<usize>())];
+        if unsafe {
+            GetTokenInformation(
+                token,
+                TokenUser,
+                data.as_mut_ptr().cast(),
+                required,
+                &mut required,
+            )
+        } == 0
+        {
+            return Err("token_user".into());
+        }
+        let user = unsafe { &*data.as_ptr().cast::<TOKEN_USER>() };
+        let mut sid = std::ptr::null_mut();
+        if unsafe { ConvertSidToStringSidW(user.User.Sid, &mut sid) } == 0 {
+            return Err("sid_string".into());
+        }
+        let mut len = 0;
+        while len < 512 && unsafe { *sid.add(len) } != 0 {
+            len += 1;
+        }
+        let result = if len == 512 {
+            Err("sid_string_size".into())
+        } else {
+            Ok(String::from_utf16_lossy(unsafe {
+                std::slice::from_raw_parts(sid, len)
+            }))
+        };
+        unsafe {
+            LocalFree(sid.cast());
+        }
+        result
+    })();
+    unsafe {
+        CloseHandle(token);
+    }
+    result
+}
 fn filetime(t: FILETIME) -> u64 {
     ((t.dwHighDateTime as u64) << 32) | t.dwLowDateTime as u64
 }
@@ -28,7 +86,10 @@ fn filetime(t: FILETIME) -> u64 {
 pub struct MutexGuard(HANDLE);
 impl MutexGuard {
     pub fn acquire() -> Result<Self, String> {
-        let name = wide("Global\\CC-OcxHealthWatchdog");
+        Self::acquire_named("Global\\CC-OcxHealthWatchdog")
+    }
+    fn acquire_named(name: &str) -> Result<Self, String> {
+        let name = wide(name);
         let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
         if handle.is_null() {
             return Err("create_mutex".into());
@@ -252,15 +313,17 @@ mod tests {
     #[test]
     fn refuses_wrong_executable_and_releases_mutex() {
         assert!(Process::open(std::process::id(), Path::new("C:\\not-the-current.exe")).is_err());
-        let guard = MutexGuard::acquire().unwrap();
+        let name = format!("Global\\CC-OcxWatchdog-Test-{}", std::process::id());
+        let guard = MutexGuard::acquire_named(&name).unwrap();
+        let other_name = name.clone();
         // Mutex is recursive on the same thread; exercise contention on another thread.
         assert!(
-            std::thread::spawn(|| MutexGuard::acquire().is_err())
+            std::thread::spawn(move || MutexGuard::acquire_named(&other_name).is_err())
                 .join()
                 .unwrap()
         );
         drop(guard);
-        assert!(MutexGuard::acquire().is_ok());
+        assert!(MutexGuard::acquire_named(&name).is_ok());
     }
     #[test]
     fn tcp_table_finds_real_listener() {
@@ -276,5 +339,14 @@ mod tests {
         assert!(p.identity.born > 0);
         assert!(p.age_ms() < 60_000);
         assert!(p.metrics().unwrap().private_bytes > 0);
+    }
+    #[test]
+    fn user_sid_is_from_process_token() {
+        let sid = current_user_sid().unwrap();
+        assert!(sid.starts_with("S-1-"));
+        assert!(
+            sid.chars()
+                .all(|c| c.is_ascii_digit() || c == 'S' || c == '-')
+        );
     }
 }

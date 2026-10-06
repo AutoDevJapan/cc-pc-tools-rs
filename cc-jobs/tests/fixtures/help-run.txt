@@ -1,0 +1,29 @@
+usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT
+                         [--sandbox {read-only,workspace-write,danger-full-access}]
+                         [--cwd CWD] [--add-dir ADD_DIR] [--network]
+                         [--mcp-profile {minimal,browser,full}] --prompt-file
+                         PROMPT_FILE [--task-type TASK_TYPE]
+                         [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]
+                         [--resume-session RESUME_SESSION]
+
+options:
+  -h, --help            show this help message and exit
+  --name NAME
+  --model MODEL
+  --effort EFFORT
+  --sandbox {read-only,workspace-write,danger-full-access}
+  --cwd CWD
+  --add-dir ADD_DIR
+  --network             allow network (workspace-write only)
+  --mcp-profile {minimal,browser,full}
+                        minimal disables four stdio MCP servers; browser keeps
+                        node_repl; full keeps all
+  --prompt-file PROMPT_FILE
+  --task-type TASK_TYPE
+  --notes-hint NOTES_HINT
+  --launch-key LAUNCH_KEY
+                        idempotent launch identifier (32 lowercase hex
+                        characters)
+  --resume-session RESUME_SESSION
+                        continue a recorded Codex session UUID instead of
+                        starting a new one

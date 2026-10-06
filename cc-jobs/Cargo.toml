@@ -1,0 +1,35 @@
+[package]
+name = "cc-jobs"
+version = "0.1.0"
+edition = "2024"
+default-run = "codex_jobs"
+
+[dependencies]
+cc-job-policy = { path = "../cc-job-policy" }
+cc-chrome = { path = "../cc-chrome" }
+cc-task-title = { path = "../cc-task-title" }
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
+chrono = "0.4"
+regex = "1"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Threading", "Win32_Security"] }
+
+[[bin]]
+name = "codex_jobs"
+path = "src/main.rs"
+
+[[bin]]
+name = "cargo_gate"
+path = "src/bin/cargo_gate.rs"
+
+[[bin]]
+name = "cc_jobs_fixture"
+path = "src/bin/fixture.rs"
+test = false
+
+[[bin]]
+name = "cc_cache_finish"
+path = "src/bin/cache_finish.rs"

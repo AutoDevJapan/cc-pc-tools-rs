@@ -1,0 +1,13 @@
+usage: codex_jobs.py rate [-h] --quality {1,2,3,4,5} [--task-type TASK_TYPE]
+                          [--notes NOTES] [--force]
+                          id
+
+positional arguments:
+  id
+
+options:
+  -h, --help            show this help message and exit
+  --quality {1,2,3,4,5}
+  --task-type TASK_TYPE
+  --notes NOTES
+  --force               send even if cancelled/lost or already sent

@@ -19,6 +19,7 @@ struct Boundary {
     invalid: bool,
     first_item_at: Option<u64>,
     agents: HashMap<String, AgentRollout>,
+    finished: HashMap<String, AgentRollout>,
 }
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
@@ -29,6 +30,7 @@ struct AgentRollout {
     born: Option<f64>,
     turn: Option<String>,
     complete: bool,
+    message: String,
 }
 impl AgentRollout {
     fn completed(&mut self, id: &str, ctx: &Context, job: &Value) -> Result<bool> {
@@ -76,9 +78,11 @@ impl AgentRollout {
                 "task_started" if !s(payload, "turn_id").is_empty() => {
                     self.turn = Some(s(payload, "turn_id").into());
                     self.complete = false;
+                    self.message.clear();
                 }
                 "task_complete" if self.turn.as_deref() == Some(s(payload, "turn_id")) => {
-                    self.complete = true
+                    self.complete = true;
+                    self.message = s(payload, "last_agent_message").into();
                 }
                 _ => (),
             }
@@ -115,6 +119,7 @@ impl Boundary {
                             }
                             let entry = self.agents.entry(id.into()).or_default();
                             entry.fresh_spawn = s(item, "tool") == "spawn_agent";
+                            self.finished.remove(id);
                         }
                     }
                 }
@@ -122,6 +127,7 @@ impl Boundary {
                     for id in &ids {
                         if let Some(id) = id.as_str() {
                             self.agents.remove(id);
+                            self.finished.remove(id);
                         }
                     }
                 }
@@ -129,8 +135,11 @@ impl Boundary {
             }
             if let Some(states) = item["agents_states"].as_object() {
                 for (id, state) in states {
-                    if ["completed", "errored", "shutdown"].contains(&s(state, "status")) {
+                    if ["completed", "errored", "shutdown", "not_found"]
+                        .contains(&s(state, "status"))
+                    {
                         self.agents.remove(id);
+                        self.finished.remove(id);
                     } else if normalize_uuid(id).is_some() {
                         self.agents.entry(id.clone()).or_default();
                     } else {
@@ -208,12 +217,12 @@ impl Context {
         let Ok(file) = fs::File::open(dir.join("events.jsonl")) else {
             return Ok(None);
         };
-        if boundary.schema != 1
+        if boundary.schema != 2
             || boundary.attempt != attempt
             || file.metadata()?.len() < boundary.offset
         {
             boundary = Boundary {
-                schema: 1,
+                schema: 2,
                 attempt,
                 offset: job["attempt_events_offset"].as_u64().unwrap_or(0),
                 ..Boundary::default()
@@ -254,7 +263,9 @@ impl Context {
                 }
             }
             for id in complete {
-                boundary.agents.remove(&id);
+                if let Some(result) = boundary.agents.remove(&id) {
+                    boundary.finished.insert(id, result);
+                }
             }
             self.write_json(&cache, &serde_json::to_value(&boundary)?)?;
         }
@@ -401,6 +412,24 @@ impl Context {
                 self.job_dir(s(job, "id")).join("events.jsonl").display()
             ),
         )?;
+        let path = self.job_dir(s(job, "id")).join("yield-resume.md");
+        let mut resume = fs::read_to_string(&path)?;
+        let boundary: Boundary = serde_json::from_value(
+            self.read_json(&self.job_dir(s(job, "id")).join("yield-boundary.json"))?,
+        )?;
+        let redactor = LogRedactor::new(&self.rt.env());
+        job["yield_subagent_results"] = json!({});
+        for (id, result) in boundary.finished {
+            let message = redactor.redact(&result.message);
+            let source = result
+                .path
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default();
+            resume.push_str(&format!("\n停止前に完了し、親がまだ受け取っていないサブエージェント {id} の結果:\n{message}\n全文の記録: {source}\nwaitで取得し直すのではなく、この結果を使って作業を続け、同じ委任・送信を繰り返さないでください。\n"));
+            job["yield_subagent_results"][&id] = json!({"path":source,"message":message});
+        }
+        fs::write(path, resume)?;
         job["yield_last_message"] = job["last_message"].clone();
         job["yield_count"] = json!(number(job, "yield_count") + 1);
         job["last_yield_at"] = json!(self.rt.now());
@@ -477,6 +506,8 @@ impl Context {
             return Ok(true);
         }
         if self.is_ours(&source, "pid") && !self.own_supervisor(&source) {
+            self.rt
+                .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))?;
             return Ok(false);
         }
         for (pid, created) in self.journal_processes(&journal)? {

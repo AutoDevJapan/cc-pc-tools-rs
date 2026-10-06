@@ -156,13 +156,20 @@ mod queue_regressions {
             assert!(t.ctx.admit("other").unwrap().is_none());
             fs::write(&path, format!("{prefix}{{")).unwrap();
             assert!(t.ctx.admit("other").unwrap().is_none());
-            fs::write(&path,format!("{prefix}{}\n",json!({"timestamp":t.rt.now(),"type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}))).unwrap();
+            fs::write(&path,format!("{prefix}{}\n",json!({"timestamp":t.rt.now(),"type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn","last_agent_message":"結果: 送信は完了済み"}}))).unwrap();
             if send_input {
                 collab(&t, "more", "send_input", child, "running");
                 assert!(t.ctx.admit("other").unwrap().is_none());
                 collab(&t, "joined", "wait", child, "completed");
             }
             assert!(t.ctx.admit("other").unwrap().is_some());
+            let resume = fs::read_to_string(t.ctx.job_dir("long").join("yield-resume.md")).unwrap();
+            if send_input {
+                assert!(!resume.contains("結果: 送信は完了済み"));
+            } else {
+                assert!(resume.contains(child));
+                assert!(resume.contains("結果: 送信は完了済み"));
+            }
         }
     }
     #[test]

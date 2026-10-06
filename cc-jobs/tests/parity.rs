@@ -76,6 +76,173 @@ mod queue_regressions {
         t.ctx.save(&j).unwrap();
         j
     }
+    fn live_tool_parent(t: &Test) -> Value {
+        let mut parent = long_parent(t, "long");
+        parent["queue_fairness_version"] = json!(1);
+        parent["pid"] = json!(445);
+        parent["pid_created"] = json!(45);
+        parent["codex_pid"] = json!(444);
+        parent["codex_pid_created"] = json!(44);
+        t.rt.procs.lock().unwrap().extend([(444, 44), (445, 45)]);
+        t.rt.pause_allowed.store(true, Ordering::Relaxed);
+        t.ctx.save(&parent).unwrap();
+        waiting(t, "other", "orch-other");
+        parent
+    }
+    fn tool_events(t: &Test, events: &[(&str, &str)]) {
+        let text: String = events
+            .iter()
+            .map(|(ty, id)| {
+                format!(
+                    "{}\n",
+                    json!({"_ts":t.rt.now(),"type":ty,"item":{"id":id,"type":"command_execution"}})
+                )
+            })
+            .collect();
+        fs::write(t.ctx.job_dir("long").join("events.jsonl"), text).unwrap();
+    }
+    #[test]
+    fn legacy_running_turn_stops_only_at_tool_completion_and_gives_waiter_the_slot() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        live_tool_parent(&t);
+        tool_events(&t, &[("item.started", "cargo")]);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        tool_events(
+            &t,
+            &[("item.started", "cargo"), ("item.completed", "cargo")],
+        );
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        let j = t.ctx.load("long").unwrap();
+        assert_eq!(j["status"], "queued");
+        assert_eq!(j["resume_session"], SESSION_ID);
+        assert_eq!(j["todo_id"], 1956);
+        assert_eq!(j["yield_boundary_item"], "cargo");
+        assert_eq!(j["yield_count"], 1);
+        assert_eq!(*t.rt.kills.lock().unwrap(), vec![444, 445]);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(j["turn_completed"].is_null());
+    }
+    #[test]
+    fn new_item_racing_the_pause_prevents_stop_and_background_workers_delay_yield() {
+        for background in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            live_tool_parent(&t);
+            tool_events(
+                &t,
+                &[("item.started", "first"), ("item.completed", "first")],
+            );
+            if background {
+                t.rt.pause_allowed.store(false, Ordering::Relaxed);
+            } else {
+                let path = t.ctx.job_dir("long").join("events.jsonl");
+                let now = t.rt.now();
+                *t.rt.pause_hook.lock().unwrap() = Some(Box::new(move || {
+                    use std::io::Write;
+                    writeln!(fs::OpenOptions::new().append(true).open(&path).unwrap(),"{}",
+                        json!({"_ts":now,"type":"item.started","item":{"id":"next","type":"mcp_tool_call"}})).unwrap();
+                }));
+            }
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            assert_eq!(t.ctx.load("long").unwrap()["status"], "running");
+        }
+    }
+    #[test]
+    fn failed_spawn_after_stop_retries_the_same_durable_session_without_double_yield() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        live_tool_parent(&t);
+        tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
+        assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
+        t.rt.supervisor_fail.store(false, Ordering::Relaxed);
+        assert!(t.ctx.admit("long").unwrap().is_none());
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.load("long").unwrap()["resume_session"], SESSION_ID);
+        assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
+    }
+    #[test]
+    fn new_supervisor_stops_a_live_turn_and_resumes_after_another_job() {
+        live_supervisor_handoff(false, false);
+    }
+    #[test]
+    fn supervisor_keeps_monitoring_after_stop_failure_and_recovers_after_save_failure() {
+        live_supervisor_handoff(true, false);
+        live_supervisor_handoff(false, true);
+    }
+    fn live_supervisor_handoff(stop_failure: bool, save_failure: bool) {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.rt.pause_allowed.store(true, Ordering::Relaxed);
+        t.rt.paused_stop_failure
+            .store(stop_failure, Ordering::Relaxed);
+        t.rt.fail_queued_save.store(save_failure, Ordering::Relaxed);
+        waiting(&t, "long", "orch-long");
+        fs::write(t.ctx.job_dir("long").join("prompt.md"), "original").unwrap();
+        let ctx = t.ctx.clone();
+        let rt = t.rt.clone();
+        let seq = AtomicUsize::new(0);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            let first = seq.fetch_add(1, Ordering::Relaxed) == 0;
+            let text = if first {
+                rt.tick(7201.);
+                rt.procs.lock().unwrap().insert(321, 99);
+                rt.child_alive.store(true, Ordering::Relaxed);
+                fs::create_dir_all(ctx.job_dir("other")).unwrap();
+                ctx.save(&job(json!({"id":"other","name":"orch-other","pid":std::process::id(),"pid_created":123,"queued_at":"2026-10-01T11:59:59+09:00"}))).unwrap();
+                {
+                    let _gate = ctx.queue_lock().unwrap();
+                    ctx.track_queued_job("other").unwrap();
+                }
+                format!(
+                    "{}\n{}\n{}\n{}\n",
+                    json!({"type":"thread.started","thread_id":SESSION_ID}),
+                    json!({"type":"turn.started"}),
+                    json!({"type":"item.started","item":{"type":"command_execution","id":"build"}}),
+                    json!({"type":"item.completed","item":{"type":"command_execution","id":"build"}})
+                )
+            } else {
+                format!(
+                    "{}\n{}\n",
+                    json!({"type":"item.completed","item":{"type":"agent_message","text":"状態: 完了"}}),
+                    json!({"type":"turn.completed"})
+                )
+            };
+            Box::new(FakeChild {
+                alive: if first {
+                    rt.child_alive.clone()
+                } else {
+                    Arc::new(AtomicBool::new(false))
+                },
+                out: Some(Box::new(Cursor::new(text.into_bytes()))),
+            })
+        }));
+        let ctx = t.ctx.clone();
+        let observed = Arc::new(AtomicBool::new(false));
+        let seen = observed.clone();
+        *t.rt.sleep_hook.lock().unwrap() = Some(Box::new(move |seconds| {
+            if seconds == 3. && !seen.swap(true, Ordering::Relaxed) {
+                assert_eq!(ctx.load("long").unwrap()["yield_boundary_item"], "build");
+                assert!(ctx.admit("other").unwrap().is_some());
+                let mut j = ctx.load("other").unwrap();
+                j["status"] = json!("succeeded");
+                ctx.save(&j).unwrap();
+            }
+        }));
+        t.ctx.supervise("long").unwrap();
+        assert!(observed.load(Ordering::Relaxed));
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 2);
+        assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
+        assert_eq!(*t.rt.kills.lock().unwrap(), vec![321]);
+    }
     #[test]
     fn long_turn_yields_then_supervisor_resumes_same_session_after_another_job() {
         let t = Test::new();
@@ -1204,9 +1371,14 @@ struct Fake {
     replies: Mutex<VecDeque<io::Result<Reply>>>,
     handler: Mutex<Option<CallFn>>,
     sleeps: Mutex<Vec<f64>>,
-    procs: Mutex<HashMap<u32, u64>>,
+    procs: Arc<Mutex<HashMap<u32, u64>>>,
     kill_works: AtomicBool,
-    kills: Mutex<Vec<u32>>,
+    kills: Arc<Mutex<Vec<u32>>>,
+    pause_allowed: AtomicBool,
+    pause_calls: AtomicUsize,
+    paused_stop_failure: Arc<AtomicBool>,
+    fail_queued_save: AtomicBool,
+    pause_hook: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
     spawns: AtomicUsize,
     supervisors: AtomicUsize,
     spawn_live: AtomicBool,
@@ -1239,9 +1411,14 @@ impl Fake {
             replies: Mutex::new(VecDeque::new()),
             handler: Mutex::new(None),
             sleeps: Mutex::new(vec![]),
-            procs: Mutex::new(HashMap::from([(std::process::id(), 123)])),
+            procs: Arc::new(Mutex::new(HashMap::from([(std::process::id(), 123)]))),
             kill_works: AtomicBool::new(true),
-            kills: Mutex::new(vec![]),
+            kills: Arc::new(Mutex::new(vec![])),
+            pause_allowed: AtomicBool::new(false),
+            pause_calls: AtomicUsize::new(0),
+            paused_stop_failure: Arc::new(AtomicBool::new(false)),
+            fail_queued_save: AtomicBool::new(false),
+            pause_hook: Mutex::new(None),
             spawns: AtomicUsize::new(0),
             supervisors: AtomicUsize::new(0),
             spawn_live: AtomicBool::new(false),
@@ -1310,6 +1487,57 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn pause_idle_agent(
+        &self,
+        pid: u32,
+        _: u64,
+        _: Option<u64>,
+        _: Option<&Path>,
+    ) -> io::Result<Option<Box<dyn Paused>>> {
+        self.pause_calls.fetch_add(1, Ordering::Relaxed);
+        if !self.pause_allowed.load(Ordering::Relaxed) {
+            return Ok(None);
+        }
+        if let Some(hook) = self.pause_hook.lock().unwrap().as_ref() {
+            hook();
+        }
+        self.pause_supervisor(pid, 0).map(Some)
+    }
+    fn pause_supervisor(&self, pid: u32, _: u64) -> io::Result<Box<dyn Paused>> {
+        struct Guard {
+            pid: u32,
+            procs: Arc<Mutex<HashMap<u32, u64>>>,
+            kills: Arc<Mutex<Vec<u32>>>,
+            alive: Arc<AtomicBool>,
+            fail: Arc<AtomicBool>,
+        }
+        impl Paused for Guard {
+            fn arm_process(&mut self, _: u32, _: u64) -> io::Result<()> {
+                Ok(())
+            }
+            fn processes(&self) -> Vec<(u32, u64)> {
+                vec![(self.pid, self.procs.lock().unwrap()[&self.pid])]
+            }
+            fn stop(&mut self) -> io::Result<()> {
+                if self.fail.swap(false, Ordering::Relaxed) {
+                    return Err(io::Error::other("fixture stop failed"));
+                }
+                self.kills.lock().unwrap().push(self.pid);
+                self.procs.lock().unwrap().remove(&self.pid);
+                if self.pid == 321 {
+                    self.alive.store(false, Ordering::Relaxed);
+                }
+                Ok(())
+            }
+        }
+        Ok(Box::new(Guard {
+            pid,
+            procs: self.procs.clone(),
+            kills: self.kills.clone(),
+            alive: self.child_alive.clone(),
+            fail: self.paused_stop_failure.clone(),
+        }))
+    }
     fn diagnostic(&self, message: &str) {
         self.diagnostics.lock().unwrap().push(message.into());
     }
@@ -1434,6 +1662,12 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_save(&self, _path: &Path, j: &Value) -> io::Result<()> {
+        if s(j, "status") == "queued"
+            && truth(&j["yield_count"])
+            && self.fail_queued_save.swap(false, Ordering::Relaxed)
+        {
+            return Err(io::Error::other("fixture queued write failure"));
+        }
         if truth(&j["codex_pid"]) && self.save_failure.swap(false, Ordering::Relaxed) {
             Err(io::Error::other("disk full"))
         } else {
@@ -2928,6 +3162,156 @@ mod cargo_gate_tests {
         let v = intervals(2, 3);
         assert!(max_overlap(&v) <= 2);
         assert_eq!(max_overlap(&v[..2]), 2);
+    }
+}
+#[cfg(windows)]
+mod process_boundary_tests {
+    use super::*;
+    fn wait_file(path: &Path) {
+        let until = Instant::now() + Duration::from_secs(5);
+        while !path.exists() {
+            assert!(Instant::now() < until, "{}", path.display());
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+    #[test]
+    fn idle_startup_mcp_is_paused_but_its_later_worker_must_finish_first() {
+        let tmp = Temp::new();
+        for name in ["codex.exe", "worker.exe", "mcp.exe"] {
+            fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
+        }
+        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+            .arg("--controller-mcp")
+            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+            .spawn()
+            .unwrap();
+        wait_file(&tmp.0.join("worker.ready"));
+        let baseline = fs::read_to_string(tmp.0.join("first-tool.filetime"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let rt = System::default();
+        let created = proc_created(child.id()).unwrap();
+        assert!(
+            rt.pause_idle_agent(child.id(), created, Some(baseline), None)
+                .unwrap()
+                .is_none()
+        );
+        wait_file(&tmp.0.join("worker.done"));
+        wait_file(&tmp.0.join("heartbeat"));
+        assert!(
+            rt.pause_idle_agent(child.id(), created, None, None)
+                .unwrap()
+                .is_none()
+        );
+        let mut paused = rt
+            .pause_idle_agent(
+                child.id(),
+                created,
+                Some(baseline),
+                Some(&tmp.0.join("yield-paused.json")),
+            )
+            .unwrap()
+            .unwrap();
+        let ids = paused.processes();
+        assert!(ids.len() >= 2);
+        paused.stop().unwrap();
+        assert!(child.wait().unwrap().success());
+        assert!(ids.iter().all(|(pid, _)| proc_created(*pid).is_none()));
+    }
+    #[test]
+    fn a_dead_pausing_supervisor_is_recovered_without_abandoning_the_agent() {
+        let tmp = Temp::new();
+        for name in ["codex.exe", "worker.exe"] {
+            fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
+        }
+        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+            .arg("--controller")
+            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+            .spawn()
+            .unwrap();
+        wait_file(&tmp.0.join("worker.done"));
+        wait_file(&tmp.0.join("heartbeat"));
+        let created = proc_created(child.id()).unwrap();
+        let mut holder = hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
+            .args([
+                "--freeze-controller",
+                &child.id().to_string(),
+                &created.to_string(),
+            ])
+            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+            .spawn()
+            .unwrap();
+        wait_file(&tmp.0.join("freeze.ready"));
+        let heartbeat = fs::read(tmp.0.join("heartbeat")).unwrap();
+        holder.kill().unwrap();
+        holder.wait().unwrap();
+        std::thread::sleep(Duration::from_millis(70));
+        assert_eq!(fs::read(tmp.0.join("heartbeat")).unwrap(), heartbeat);
+        let rt = System::default();
+        rt.recover_paused(&tmp.0.join("yield-paused.json")).unwrap();
+        std::thread::sleep(Duration::from_millis(70));
+        assert_ne!(fs::read(tmp.0.join("heartbeat")).unwrap(), heartbeat);
+        let mut paused = rt
+            .pause_idle_agent(child.id(), created, None, None)
+            .unwrap()
+            .unwrap();
+        paused.stop().unwrap();
+        child.wait().unwrap();
+    }
+    #[test]
+    fn real_workers_finish_and_return_cargo_and_civ6_before_controllers_can_stop() {
+        let tmp = Temp::new();
+        for name in ["codex.exe", "worker.exe"] {
+            fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
+        }
+        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+            .arg("--controller")
+            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+            .spawn()
+            .unwrap();
+        let wait_for = |path: &Path| {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !path.exists() {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        wait_for(&tmp.0.join("worker.ready"));
+        let rt = System::default();
+        let created = proc_created(child.id()).unwrap();
+        assert!(
+            rt.pause_idle_agent(child.id(), created, None, None)
+                .unwrap()
+                .is_none()
+        );
+        assert!(FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).is_err());
+        assert!(tmp.0.join("civ6.lock").exists());
+        wait_for(&tmp.0.join("worker.done"));
+        wait_for(&tmp.0.join("heartbeat"));
+        let paused = rt
+            .pause_idle_agent(child.id(), created, None, None)
+            .unwrap()
+            .unwrap();
+        let heartbeat = fs::read(tmp.0.join("heartbeat")).unwrap();
+        std::thread::sleep(Duration::from_millis(100));
+        assert_eq!(fs::read(tmp.0.join("heartbeat")).unwrap(), heartbeat);
+        assert!(FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).is_ok());
+        assert!(!tmp.0.join("civ6.lock").exists());
+        drop(paused);
+        std::thread::sleep(Duration::from_millis(100));
+        assert_ne!(fs::read(tmp.0.join("heartbeat")).unwrap(), heartbeat);
+        assert!(
+            rt.pause_idle_agent(child.id(), created + 1, None, None)
+                .is_err()
+        );
+        let mut paused = rt
+            .pause_idle_agent(child.id(), created, None, None)
+            .unwrap()
+            .unwrap();
+        paused.stop().unwrap();
+        assert!(child.wait().unwrap().success());
+        assert!(proc_created(child.id()).is_none());
     }
 }
 mod task_notifier {

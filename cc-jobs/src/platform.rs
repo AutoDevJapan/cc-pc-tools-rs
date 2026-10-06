@@ -171,6 +171,22 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// Freeze only idle Codex controllers. None means a tool/worker is still live.
+    fn pause_idle_agent(
+        &self,
+        pid: u32,
+        created: u64,
+        baseline: Option<u64>,
+        marker: Option<&Path>,
+    ) -> io::Result<Option<Box<dyn Paused>>> {
+        crate::pause::idle_agent(pid, created, baseline, marker)
+    }
+    fn recover_paused(&self, path: &Path) -> io::Result<()> {
+        crate::pause::recover(path)
+    }
+    fn pause_supervisor(&self, pid: u32, created: u64) -> io::Result<Box<dyn Paused>> {
+        crate::pause::supervisor(pid, created)
+    }
     fn env(&self) -> BTreeMap<String, String> {
         std::env::vars().collect()
     }
@@ -237,6 +253,12 @@ pub trait Runtime: Send + Sync {
     fn replace(&self, src: &Path, dst: &Path) -> io::Result<()> {
         fs::rename(src, dst)
     }
+}
+/// A failed/deferred transition automatically resumes all frozen processes.
+pub trait Paused: Send {
+    fn stop(&mut self) -> io::Result<()>;
+    fn processes(&self) -> Vec<(u32, u64)>;
+    fn arm_process(&mut self, pid: u32, created: u64) -> io::Result<()>;
 }
 pub struct System {
     start: Instant,
@@ -308,6 +330,12 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn epoch(&self) -> f64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64()
+    }
     fn env(&self) -> BTreeMap<String, String> {
         std::env::vars()
             .map(|(k, v)| (k.to_uppercase(), v))

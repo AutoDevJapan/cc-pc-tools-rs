@@ -485,11 +485,13 @@ pub fn pump(
         }
         if let Ok(mut ev) = serde_json::from_slice::<Value>(&raw).filter_object() {
             let mut stamped = json!({"_ts":rt.now()});
+            stamped["_filetime"] = json!(((rt.epoch() + 11_644_473_600.) * 10_000_000.) as u64);
             for (k, v) in ev.as_object_mut().unwrap().iter() {
                 stamped[k] = v.clone();
             }
-            send(stamped.clone());
             writeln!(f, "{}", compact(&redactor.event(&stamped)))?;
+            f.flush()?;
+            send(stamped.clone());
         } else {
             f.write_all(redactor.redact(&String::from_utf8_lossy(&raw)).as_bytes())?;
         }

@@ -137,6 +137,11 @@ impl Context {
     }
     /// Mark a live job whose supervisor is gone as 'lost' (persisted, so it can never come back).
     pub fn refresh(&self, job: Value, auto_observe: bool) -> Result<Value> {
+        let pause = self.job_dir(s(&job, "id")).join("yield-paused.json");
+        if pause.exists() {
+            let _gate = self.queue_lock()?;
+            self.rt.recover_paused(&pause)?;
+        }
         if LIVE.contains(&s(&job, "status")) && !self.supervisor_alive(&job) {
             let fresh = {
                 let _state = match self.job_lock(s(&job, "id"), "state.lock") {
@@ -168,6 +173,9 @@ impl Context {
             return Ok(job);
         };
         if LIVE.contains(&s(&fresh, "status")) && !self.supervisor_alive(&fresh) {
+            if self.tool_handoff_pending(&fresh) {
+                return Ok(fresh);
+            }
             fresh["status"] = json!("lost");
             fresh["finished_at"] = json!(self.rt.now());
             if !truth(&fresh["last_error"]) {
@@ -693,6 +701,7 @@ impl Context {
         let mut notifier = None;
         let mut exit = None;
         let mut cleanup_failed = false;
+        let mut tool_yielded = false;
         #[cfg(windows)]
         let mut chrome_proxy = None;
         let work = (|| -> Result<()> {
@@ -703,7 +712,7 @@ impl Context {
             }
             let me = self.rt.pid();
             job["status"] = json!("running");
-            job["queue_fairness_version"] = json!(1);
+            job["queue_fairness_version"] = json!(2);
             job["pid"] = json!(me);
             job["pid_created"] = json!(self.rt.proc_created(me));
             job["started_at"] = json!(self.rt.now());
@@ -712,6 +721,11 @@ impl Context {
             }
             job["last_event_at"] = json!(self.rt.now());
             job["activity"] = json!("starting");
+            job["attempt_events_offset"] = json!(
+                fs::metadata(dir.join("events.jsonl"))
+                    .map(|m| m.len())
+                    .unwrap_or(0)
+            );
             self.save(&job)?;
             #[cfg(windows)]
             if matches!(s(&job, "mcp_profile"), "browser" | "full") {
@@ -722,6 +736,7 @@ impl Context {
             }
             let mut environment = self.job_environment();
             environment.insert("CC_JOB_ID".into(), jid.into());
+            environment.insert("CODEX_JOB_ID".into(), jid.into());
             if !s(&job, "chrome_pipe").is_empty() {
                 environment.insert(
                     "CDP_BROWSER_BACKEND_PIPE_PATH".into(),
@@ -779,6 +794,7 @@ impl Context {
             let mut sess = Session::default();
             let mut next_poll = 0.;
             let mut exited_at = None;
+            let mut next_yield_check = 0.;
             loop {
                 let ev = match qrx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(ev) => Some(ev),
@@ -793,6 +809,27 @@ impl Context {
                 if let Some(ev) = ev {
                     job["last_event_at"] = ev["_ts"].clone();
                     apply_event(&mut job, &ev);
+                    if s(&ev, "type") == "item.completed"
+                        && TOOL_KINDS.contains(&s(&ev["item"], "type"))
+                        && parse_iso(s(&job, "started_at"))
+                            .is_some_and(|at| self.rt.epoch() - at >= 7200.)
+                    {
+                        self.save(&job)?;
+                        let attempt = (|| -> Result<bool> {
+                            let _gate = self.queue_lock()?;
+                            self.yield_tool_boundary(&job, &self.admission_jobs()?)
+                        })();
+                        match attempt {
+                            Ok(true) => {
+                                tool_yielded = true;
+                                break;
+                            }
+                            Ok(false) => (),
+                            Err(error) => {
+                                self.yield_diagnostic(&error);
+                            }
+                        }
+                    }
                 }
                 if self.rt.mono() >= next_poll {
                     next_poll = self.rt.mono() + SESSION_POLL_S;
@@ -807,6 +844,29 @@ impl Context {
                 if changed {
                     self.save(&job)?;
                 }
+                if !had_event
+                    && self.rt.mono() >= next_yield_check
+                    && parse_iso(s(&job, "started_at"))
+                        .is_some_and(|at| self.rt.epoch() - at >= 7200.)
+                {
+                    next_yield_check = self.rt.mono() + 3.;
+                    let attempt = (|| -> Result<bool> {
+                        let _gate = self.queue_lock()?;
+                        if self.tool_handoff_pending(&job) {
+                            self.recover_tool_yield(&self.load(jid)?)?;
+                            return Ok(s(&self.load(jid)?, "status") == "queued");
+                        }
+                        self.yield_tool_boundary(&job, &self.admission_jobs()?)
+                    })();
+                    match attempt {
+                        Ok(true) => {
+                            tool_yielded = true;
+                            break;
+                        }
+                        Ok(false) => (),
+                        Err(error) => self.yield_diagnostic(&error),
+                    }
+                }
                 if let Some(n) = &mut notifier {
                     n.update(&job, false);
                 }
@@ -814,6 +874,9 @@ impl Context {
                     return Err(e.into());
                 }
                 if !had_event && let Some(code) = p.poll()? {
+                    if self.tool_handoff_pending(&job) {
+                        continue;
+                    }
                     let at = *exited_at.get_or_insert(self.rt.mono());
                     if readers.iter().all(thread::JoinHandle::is_finished)
                         || self.rt.mono() - at > EXIT_DRAIN_S
@@ -832,6 +895,15 @@ impl Context {
             Ok(())
         })();
         let setup_failed = work.is_err();
+        if tool_yielded {
+            if let Some(n) = &mut notifier {
+                n.close();
+            }
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            self.close_chrome_tabs(jid);
+            return Ok(true);
+        }
         if let Err(e) = work {
             job["last_error"] = json!(format!(
                 "supervisor error: {}",

@@ -27,9 +27,44 @@ impl Default for QueueConfig {
     }
 }
 impl Context {
+    /// Admission gate serializes this counter, including equal-second arrivals.
+    pub(crate) fn next_queue_sequence(&self) -> Result<u64> {
+        let path = self.jobs.join(".queue-sequence.json");
+        let previous = if path.exists() {
+            self.read_json(&path)?["sequence"]
+                .as_u64()
+                .ok_or_else(|| Error::new("invalid queue sequence"))?
+        } else {
+            0
+        };
+        let sequence = previous
+            .checked_add(1)
+            .ok_or_else(|| Error::new("queue sequence exhausted"))?;
+        self.write_json(&path, &json!({"sequence":sequence}))?;
+        Ok(sequence)
+    }
     /// Called under the admission gate. A separate ledger survives writes by
-    /// supervisors deployed before fairness existed. Never interrupt a turn.
+    /// supervisors deployed before tool-boundary fairness existed.
     fn maintain_yields(&self, jobs: &[Value]) -> Result<()> {
+        for job in jobs {
+            if let Err(error) = self
+                .rt
+                .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))
+            {
+                self.yield_diagnostic(&error.into());
+                continue;
+            }
+            let result = self.recover_tool_yield(job).and_then(|recovered| {
+                if recovered || job["queue_fairness_version"] == 2 {
+                    Ok(recovered)
+                } else {
+                    self.yield_tool_boundary(job, jobs)
+                }
+            });
+            if let Err(error) = result {
+                self.yield_diagnostic(&error);
+            }
+        }
         let path = self.jobs.join(".queue-yields.json");
         let mut ledger = match fs::read(&path) {
             Ok(bytes) => serde_json::from_slice::<HashMap<String, Value>>(&bytes)?,
@@ -39,7 +74,9 @@ impl Context {
         let before = ledger.clone();
         // Snapshot before taking any per-job lock (global gate always comes first).
         for job in jobs {
-            if job["queue_fairness_version"] != 1 && self.should_yield(job, jobs) {
+            if job["queue_fairness_version"].as_u64().unwrap_or(0) < 1
+                && self.should_yield(job, jobs)
+            {
                 let reservation = ledger.entry(s(job, "id").into()).or_insert_with(
                     || json!({"started_at":job["started_at"],"thread_id":job["thread_id"],"requested_at":self.rt.now()}),
                 );
@@ -81,7 +118,7 @@ impl Context {
     fn resume_legacy_yield(&self, id: &str, reservation: &Value, jobs: &[Value]) -> Result<bool> {
         let _state = self.job_lock(id, "state.lock")?;
         let mut job = self.load(id)?;
-        if job["queue_fairness_version"] == 1
+        if job["queue_fairness_version"].as_u64().unwrap_or(0) >= 1
             || job["started_at"] != reservation["started_at"]
             || job["thread_id"] != reservation["thread_id"]
         {
@@ -158,7 +195,7 @@ impl Context {
         })
     }
 
-    fn should_yield(&self, job: &Value, jobs: &[Value]) -> bool {
+    pub(crate) fn should_yield(&self, job: &Value, jobs: &[Value]) -> bool {
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
             && s(job, "status") == "running"
@@ -179,6 +216,7 @@ impl Context {
                 s(other, "id") != s(job, "id")
                     && s(other, "parent_job_id").is_empty()
                     && s(other, "status") == "queued"
+                    && queue_priority(other) <= queue_priority(job)
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
                     && other["retry_not_before"].as_f64().unwrap_or(0.) <= at
@@ -221,6 +259,7 @@ impl Context {
         job["last_yield_at"] = json!(self.rt.now());
         job["yield_resume"] = json!(true);
         prepare_resume(job, &session, &self.rt.now());
+        job["queue_sequence"] = json!(self.next_queue_sequence()?);
         job["retry_not_before"] = Value::Null;
         job["activity"] = json!("順番待ち: 長時間の作業が枠を譲りました");
         Ok(true)
@@ -321,7 +360,11 @@ impl Context {
         };
         let active: Vec<_> = jobs
             .into_iter()
-            .filter(|j| LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
+            .filter(|j| {
+                LIVE.contains(&s(j, "status"))
+                    || self.is_ours(j, "codex_pid")
+                    || self.tool_handoff_pending(j)
+            })
             .collect();
         let scanned_at = index["scanned_at"]
             .as_f64()
@@ -571,6 +614,7 @@ impl Context {
                 s(j, "parent_job_id").is_empty(),
                 queue_priority(j),
                 queue_time(j),
+                j["queue_sequence"].as_u64().unwrap_or(0),
                 s(j, "id"),
             )
         });
@@ -644,6 +688,7 @@ impl Context {
 
     pub fn running_job(&self, job: &Value) -> bool {
         self.is_ours(job, "codex_pid")
+            || (s(job, "status") != "queued" && self.tool_handoff_pending(job))
             || (s(job, "status") == "running" && self.supervisor_alive(job))
     }
 

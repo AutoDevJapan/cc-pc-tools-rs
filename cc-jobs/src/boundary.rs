@@ -506,6 +506,12 @@ impl Context {
         if self.is_ours(&source, "pid") && !self.own_supervisor(&source) {
             self.rt
                 .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))?;
+            if self
+                .read_json(&self.job_dir(s(job, "id")).join("yield-paused.json"))
+                .is_ok_and(|v| v["complete"] == true)
+            {
+                self.write_json(&path, &json!({"complete":true}))?;
+            }
             return Ok(false);
         }
         for (pid, created) in self.journal_processes(&journal)? {

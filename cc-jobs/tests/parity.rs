@@ -272,6 +272,20 @@ mod queue_regressions {
         live_supervisor_handoff(false, false);
     }
     #[test]
+    fn refresh_commits_pending_handoff_and_returns_the_new_queued_state() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let original = live_tool_parent(&t);
+        tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
+        t.rt.paused_stop_failure_pid.store(444, Ordering::Relaxed);
+        t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        let refreshed = t.ctx.refresh(original, false).unwrap();
+        assert_eq!(refreshed["status"], "queued");
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
+        assert!(refreshed["queue_sequence"].as_u64().unwrap() > 0);
+    }
+    #[test]
     fn supervisor_keeps_monitoring_after_stop_failure_and_recovers_after_save_failure() {
         live_supervisor_handoff(true, false);
         live_supervisor_handoff(false, true);

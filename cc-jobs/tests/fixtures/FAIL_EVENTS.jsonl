@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a0e884-05a2-7f80-ba35-8e25fe60eada"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `no-such-model-xyz` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"error","message":"Reconnecting... 1/5 (unexpected status 404 Not Found: Provider error 404: model 'no-such-model-xyz' not found, url: http://127.0.0.1:10101/v1/responses)"}
+{"type":"turn.failed","error":{"message":"unexpected status 404 Not Found: Provider error 404: model 'no-such-model-xyz' not found, url: http://127.0.0.1:10101/v1/responses"}}

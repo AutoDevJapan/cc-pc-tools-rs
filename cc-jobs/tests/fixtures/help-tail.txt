@@ -1,0 +1,9 @@
+usage: codex_jobs.py tail [-h] [-n N] [--follow] id
+
+positional arguments:
+  id
+
+options:
+  -h, --help    show this help message and exit
+  -n N
+  --follow, -f

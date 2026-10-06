@@ -56,7 +56,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -67,6 +67,50 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
+    #[test]
+    fn recovered_supervisor_identity_survives_recovery_command_exit() {
+        let t = Test::new();
+        failed(&t, "revive", 1, "2026-10-01T11:00:00+09:00");
+        t.rt.supervisor_pid.store(888, Ordering::Relaxed);
+        t.rt.procs.lock().unwrap().insert(888, 777);
+        let todo = t.ctx.root.join("todo.json");
+        fs::write(
+            &todo,
+            json!({"items":[{"id":1,"status":"doing","jobs":["revive"]}]}).to_string(),
+        )
+        .unwrap();
+        t.ctx
+            .recover_429("2026-10-01T12:00:00+09:00", &todo, true)
+            .unwrap();
+        // The detached supervisor has not executed any code yet, and the
+        // recovery process has exited. Its recorded child identity is enough.
+        t.rt.procs.lock().unwrap().remove(&std::process::id());
+        let j = t.ctx.refresh(t.ctx.load("revive").unwrap(), false).unwrap();
+        assert_eq!(j["pid"], 888);
+        assert_eq!(j["pid_created"], 777);
+        assert_eq!(j["status"], "queued");
+        assert!(t.ctx.supervisor_alive(&j));
+    }
+    #[test]
+    fn damaged_index_rebuilds_and_unreadable_active_record_blocks_admission() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        waiting(&t, "a", "one");
+        assert!(t.ctx.admit("a").unwrap().is_some());
+        waiting(&t, "b", "two");
+        fs::write(t.ctx.jobs.join(".queue-index.json"), "{").unwrap();
+        {
+            let _gate = t.ctx.queue_lock().unwrap();
+            t.ctx.track_queued_job("b").unwrap();
+        }
+        assert!(t.ctx.admit("b").unwrap().is_none());
+        fs::write(t.ctx.job_dir("a").join("job.json"), "{").unwrap();
+        assert!(t.ctx.admit("b").is_err());
+        assert_eq!(t.ctx.load("b").unwrap()["status"], "queued");
+        let j = job(json!({"id":"a","status":"succeeded"}));
+        t.ctx.save(&j).unwrap();
+        assert!(t.ctx.admit("b").unwrap().is_some());
+    }
     #[test]
     fn temporarily_invalid_settings_keep_waiting_job_then_admit_it() {
         let t = Test::new();
@@ -562,6 +606,7 @@ struct Fake {
     spawn_args: Mutex<Vec<Vec<String>>>,
     advance_epoch: AtomicBool,
     sleep_hook: Mutex<Option<Box<dyn Fn(f64) + Send + Sync>>>,
+    supervisor_pid: AtomicU32,
 }
 impl Fake {
     fn new() -> Self {
@@ -595,6 +640,7 @@ impl Fake {
             spawn_args: Mutex::new(vec![]),
             advance_epoch: AtomicBool::new(false),
             sleep_hook: Mutex::new(None),
+            supervisor_pid: AtomicU32::new(0),
         }
     }
     fn tick(&self, n: f64) {
@@ -731,6 +777,17 @@ impl Runtime for Fake {
     ) -> io::Result<bool> {
         self.supervisors.fetch_add(1, Ordering::Relaxed);
         Ok(true)
+    }
+    fn spawn_supervisor_identified(
+        &self,
+        exe: &Path,
+        root: &Path,
+        dir: &Path,
+        jid: &str,
+    ) -> io::Result<(bool, Option<u32>)> {
+        let detached = self.spawn_supervisor(exe, root, dir, jid)?;
+        let pid = self.supervisor_pid.load(Ordering::Relaxed);
+        Ok((detached, (pid != 0).then_some(pid)))
     }
     fn kill_tree(&self, pid: u32) -> io::Result<()> {
         self.kills.lock().unwrap().push(pid);

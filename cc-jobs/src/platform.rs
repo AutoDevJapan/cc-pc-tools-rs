@@ -204,6 +204,16 @@ pub trait Runtime: Send + Sync {
     fn call(&self, call: Call) -> io::Result<Reply>;
     fn spawn(&self, spec: &Spawn) -> io::Result<Box<dyn Running>>;
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool>;
+    fn spawn_supervisor_identified(
+        &self,
+        exe: &Path,
+        root: &Path,
+        dir: &Path,
+        jid: &str,
+    ) -> io::Result<(bool, Option<u32>)> {
+        self.spawn_supervisor(exe, root, dir, jid)
+            .map(|detached| (detached, None))
+    }
     fn kill_tree(&self, pid: u32) -> io::Result<()> {
         self.call(Call::new(
             vec![
@@ -391,7 +401,7 @@ impl Runtime for System {
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool> {
         #[cfg(windows)]
         {
-            spawn_supervisor_closed_handles(exe, root, dir, jid)
+            spawn_supervisor_closed_handles(exe, root, dir, jid).map(|result| result.0)
         }
         #[cfg(not(windows))]
         {
@@ -424,6 +434,24 @@ impl Runtime for System {
                     Ok(false)
                 }
             }
+        }
+    }
+    fn spawn_supervisor_identified(
+        &self,
+        exe: &Path,
+        root: &Path,
+        dir: &Path,
+        jid: &str,
+    ) -> io::Result<(bool, Option<u32>)> {
+        #[cfg(windows)]
+        {
+            spawn_supervisor_closed_handles(exe, root, dir, jid)
+                .map(|(detached, pid)| (detached, Some(pid)))
+        }
+        #[cfg(not(windows))]
+        {
+            self.spawn_supervisor(exe, root, dir, jid)
+                .map(|detached| (detached, None))
         }
     }
 }
@@ -583,7 +611,7 @@ fn spawn_supervisor_closed_handles(
     root: &Path,
     dir: &Path,
     jid: &str,
-) -> io::Result<bool> {
+) -> io::Result<(bool, u32)> {
     use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
     use windows_sys::Win32::{Foundation::*, System::Threading::*};
     struct Owned(HANDLE);
@@ -662,7 +690,7 @@ fn spawn_supervisor_closed_handles(
             .encode_wide()
             .chain([0])
             .collect::<Vec<_>>();
-        let spawn = |breakaway: bool| -> io::Result<()> {
+        let spawn = |breakaway: bool| -> io::Result<u32> {
             let mut line = format!("\"{}\" _supervise {jid}", exe.display())
                 .encode_utf16()
                 .chain([0])
@@ -693,14 +721,14 @@ fn spawn_supervisor_closed_handles(
             }
             CloseHandle(pi.hThread);
             CloseHandle(pi.hProcess);
-            Ok(())
+            Ok(pi.dwProcessId)
         };
-        if spawn(true).is_ok() {
-            return Ok(true);
+        if let Ok(pid) = spawn(true) {
+            return Ok((true, pid));
         }
         log.write_all(b"warning: breakaway from the caller's job object was refused; this job is killed if the caller's job object closes\n")?;
         log.flush()?;
-        spawn(false)?;
-        Ok(false)
+        let pid = spawn(false)?;
+        Ok((false, pid))
     }
 }

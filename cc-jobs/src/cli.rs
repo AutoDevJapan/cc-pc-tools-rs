@@ -568,10 +568,26 @@ impl Context {
         stored["prompt"] = json!(dst.to_string_lossy());
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
-        if !self
-            .rt
-            .spawn_supervisor(&self.executable, &self.root, &self.job_dir(&jid), &jid)?
-        {
+        let state = self.job_lock(&jid, "state.lock")?;
+        let mut stored = self.load(&jid)?;
+        let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {
+            let (detached, pid) = self.rt.spawn_supervisor_identified(
+                &self.executable,
+                &self.root,
+                &self.job_dir(&jid),
+                &jid,
+            )?;
+            if let Some(pid) = pid {
+                stored["pid"] = json!(pid);
+                stored["pid_created"] = json!(self.rt.proc_created(pid));
+                self.save(&stored)?;
+            }
+            detached
+        } else {
+            true
+        };
+        drop(state);
+        if !detached {
             writeln!(
                 err,
                 "warning: could not detach from the caller's job object; this job is killed if the caller's job object closes"
@@ -697,7 +713,7 @@ impl Context {
     ) -> Result<i32> {
         self.load(jid)?;
         let lock = self.job_lock(jid, "state.lock")?;
-        let mut job = self.refresh(self.load(jid)?, false)?;
+        let mut job = self.refresh_locked(self.load(jid)?, false)?;
         if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
             return Err(Error::new(format!(
                 "{jid} is already {}",

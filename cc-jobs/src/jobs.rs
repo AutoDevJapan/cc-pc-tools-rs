@@ -136,7 +136,18 @@ impl Context {
         }
     }
     /// Mark a live job whose supervisor is gone as 'lost' (persisted, so it can never come back).
-    pub fn refresh(&self, mut job: Value, auto_observe: bool) -> Result<Value> {
+    pub fn refresh(&self, job: Value, auto_observe: bool) -> Result<Value> {
+        if LIVE.contains(&s(&job, "status")) && !self.supervisor_alive(&job) {
+            let fresh = {
+                let _state = self.job_lock(s(&job, "id"), "state.lock")?;
+                self.refresh_locked(job, false)?
+            };
+            // Rating saves acquire state.lock independently.
+            return self.refresh_locked(fresh, auto_observe);
+        }
+        self.refresh_locked(job, auto_observe)
+    }
+    pub(crate) fn refresh_locked(&self, mut job: Value, auto_observe: bool) -> Result<Value> {
         if !LIVE.contains(&s(&job, "status")) {
             if auto_observe && TERMINAL.contains(&s(&job, "status")) && !truth(&job["gto"]) {
                 let last = parse_iso(s(&job, "gto_auto_attempt_at"));

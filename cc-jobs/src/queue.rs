@@ -27,19 +27,33 @@ impl Context {
     fn admission_jobs(&self) -> Result<Vec<Value>> {
         let path = self.jobs.join(".queue-index.json");
         let index = self.read_json(&path).unwrap_or(Value::Null);
+        let known = if let Some(ids) = index["ids"].as_array() {
+            ids.iter()
+                .map(|id| {
+                    self.load(
+                        id.as_str()
+                            .ok_or_else(|| Error::new("invalid queue index id"))?,
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?
+        } else {
+            Vec::new()
+        };
         let jobs = if index["scanned_at"]
             .as_f64()
             .is_some_and(|t| self.rt.epoch() >= t && self.rt.epoch() - t < 30.)
             && index["ids"].is_array()
         {
-            index["ids"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter_map(|id| id.as_str().and_then(|id| self.try_load(id)))
-                .collect()
+            known
         } else {
-            self.list_jobs(&HashSet::new())
+            let mut records = Vec::new();
+            for entry in fs::read_dir(&self.jobs)? {
+                let entry = entry?;
+                if entry.path().join("job.json").is_file() {
+                    records.push(self.load(&entry.file_name().to_string_lossy())?);
+                }
+            }
+            records
         };
         let active: Vec<_> = jobs
             .into_iter()
@@ -49,7 +63,10 @@ impl Context {
             .as_f64()
             .filter(|t| self.rt.epoch() >= *t && self.rt.epoch() - *t < 30.)
             .unwrap_or(self.rt.epoch());
-        self.write_json(&path,&json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>()}))?;
+        let next = json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>()});
+        if next != index {
+            self.write_json(&path, &next)?;
+        }
         Ok(active)
     }
     /// Register before exposing a newly queued record to a supervisor. If no
@@ -59,10 +76,12 @@ impl Context {
         if !path.exists() {
             return Ok(());
         }
-        let mut index = self.read_json(&path)?;
-        let ids = index["ids"]
-            .as_array_mut()
-            .ok_or_else(|| Error::new("invalid queue index"))?;
+        let mut index = self.read_json(&path).unwrap_or(Value::Null);
+        let Some(ids) = index["ids"].as_array_mut() else {
+            // Rebuild on the next admission; a damaged cache is never authority.
+            self.write_json(&path, &Value::Null)?;
+            return Ok(());
+        };
         if !ids.iter().any(|id| id.as_str() == Some(jid)) {
             ids.push(json!(jid));
             self.write_json(&path, &index)?;
@@ -172,21 +191,25 @@ impl Context {
                 job["recovered_429_at"] = json!(self.rt.now());
                 job["retry_count"] = json!(0);
                 job["retry_not_before"] = Value::Null;
-                // Older external monitors use created_at, so publish a live
-                // owner until the detached supervisor takes over.
-                job["pid"] = json!(self.rt.pid());
-                job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
+                job["pid"] = Value::Null;
+                job["pid_created"] = Value::Null;
                 prepare_resume(&mut job, session.as_deref().unwrap(), &self.rt.now());
                 self.save(&job)?;
                 self.track_queued_job(&jid)?;
                 drop(owner);
-                match self.rt.spawn_supervisor(
+                match self.rt.spawn_supervisor_identified(
                     &self.executable,
                     &self.root,
                     &self.job_dir(&jid),
                     &jid,
                 ) {
-                    Ok(_) => (),
+                    Ok((_, pid)) => {
+                        if let Some(pid) = pid {
+                            job["pid"] = json!(pid);
+                            job["pid_created"] = json!(self.rt.proc_created(pid));
+                            self.save(&job)?;
+                        }
+                    }
                     Err(e) => {
                         self.save(&fresh)?;
                         return Err(e.into());
@@ -342,7 +365,8 @@ pub fn prepare_resume(job: &mut Value, session: &str, now: &str) {
     }
     job["resume_session"] = json!(session);
     job["status"] = json!("queued");
-    // A new attempt joins the tail of its priority class after the cooldown.
+    // Requeue at failure time; cooldown controls eligibility, preserving FIFO
+    // among attempts that are ready within the same priority class.
     job["queued_at"] = json!(now);
     job["activity"] = json!("順番待ち");
     for field in [

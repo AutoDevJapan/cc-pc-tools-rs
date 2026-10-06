@@ -1,4 +1,5 @@
 use crate::notify::task_cancel;
+use crate::queue::valid_job_id;
 use crate::*;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -18,6 +19,9 @@ pub fn help_text(command: &str) -> &'static str {
         "backfill" => include_str!("../tests/fixtures/help-backfill.txt"),
         "recover-429" => {
             "usage: codex_jobs.exe recover-429 --since <RFC3339> [--todo-file <path>] [--apply]\n\nWithout --apply, print the recovery plan only.\n"
+        }
+        "recover-children" => {
+            "usage: codex_jobs.exe recover-children --since <RFC3339> [--apply]\n\nLink old queued children and recover never-started cancelled children of running parents.\n"
         }
         _ => include_str!("../tests/fixtures/help-root.txt"),
     }
@@ -79,6 +83,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "_supervise",
         "recover-429",
         "reload-queue",
+        "recover-children",
     ]
     .contains(&cmd.as_str())
     {
@@ -112,7 +117,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "tail" => name == "follow",
                 "rate" => name == "force",
                 "cancel" => name == "recovery",
-                "recover-429" => name == "apply",
+                "recover-429" | "recover-children" => name == "apply",
                 _ => false,
             };
             let allowed = match cmd.as_str() {
@@ -134,6 +139,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "notes-hint",
                     "launch-key",
                     "resume-session",
+                    "parent-job-id",
                 ]
                 .contains(&name.as_str()),
                 "status" => ["all", "json"].contains(&name.as_str()),
@@ -144,6 +150,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "backfill" => name == "days",
                 "cancel" => name == "recovery",
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
+                "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 _ => false,
             };
             if !allowed {
@@ -380,6 +387,14 @@ impl Context {
                 writeln!(out, "{}", pretty(&self.reload_queue()?))?;
                 Ok(0)
             }
+            "recover-children" => {
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.recover_children(a.required("since")?, a.flag("apply"))?)
+                )?;
+                Ok(0)
+            }
             "_supervise" => {
                 self.supervise(&a.id)?;
                 Ok(0)
@@ -433,30 +448,51 @@ impl Context {
         // Registration shares admission's gate. This also serializes different
         // launch keys targeting the same ToDo.
         let _queue = self.queue_lock()?;
-        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok()) {
-            if let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|j| {
+        let env = self.rt.env();
+        let parent = if let Some(id) = a.value("parent-job-id") {
+            if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
+                return Err(Error::new("parent job must be a running job in this queue"));
+            }
+            Some(id)
+        } else {
+            env.get("CC_JOB_ID")
+                .map(String::as_str)
+                .filter(|id| !id.is_empty())
+                .filter(|id| {
+                    let running = valid_job_id(id)
+                        && self.try_load(id).is_some_and(|job| self.running_job(&job));
+                    if !running {
+                        self.rt.diagnostic(
+                            "inherited parent has exited or is unavailable; queueing as a root job",
+                        );
+                    }
+                    running
+                })
+        };
+        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok())
+            && let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|j| {
                 j["todo_id"].as_u64() == Some(todo)
                     && (LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
-            }) {
-                return Err(Error::new(format!(
-                    "ToDo {todo} already has active job {}",
-                    s(&job, "id")
-                )));
-            }
+            })
+        {
+            return Err(Error::new(format!(
+                "ToDo {todo} already has active job {}",
+                s(&job, "id")
+            )));
         }
-        if let Some(session) = &resume {
-            if let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|job| {
+        if let Some(session) = &resume
+            && let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|job| {
                 (["queued", "starting", "running"].contains(&s(job, "status"))
                     || self.is_ours(job, "codex_pid"))
                     && ["thread_id", "resume_session"]
                         .iter()
                         .any(|field| s(job, field).eq_ignore_ascii_case(session))
-            }) {
-                return Err(Error::new(format!(
-                    "resume session {session} already has active job {}",
-                    s(&job, "id")
-                )));
-            }
+            })
+        {
+            return Err(Error::new(format!(
+                "resume session {session} already has active job {}",
+                s(&job, "id")
+            )));
         }
         if a.flag("network") && a.required("sandbox")? != "workspace-write" {
             return Err(Error::new(
@@ -518,6 +554,7 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
+        job["parent_job_id"] = json!(parent);
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
         job["approvals_reviewer"] = json!(policy.reviewer);

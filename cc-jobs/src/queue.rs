@@ -1,12 +1,16 @@
 use crate::*;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
-use std::{collections::HashSet, fs};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 #[derive(serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
     pub max_running: usize,
+    pub max_children_per_parent: usize,
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
     pub max_retry_delay_seconds: u64,
@@ -15,6 +19,7 @@ impl Default for QueueConfig {
     fn default() -> Self {
         Self {
             max_running: 6,
+            max_children_per_parent: 2,
             max_429_retries: 5,
             retry_delay_seconds: 60,
             max_retry_delay_seconds: 900,
@@ -39,42 +44,48 @@ impl Context {
             {
                 continue;
             }
-            if self.is_ours(&job, "pid") {
-                self.rt.kill_tree(job["pid"].as_u64().unwrap() as u32)?;
-                for _ in 0..50 {
-                    if !self.is_ours(&job, "pid") {
-                        break;
-                    }
-                    self.rt.sleep(0.1);
-                }
-                if self.is_ours(&job, "pid") {
-                    return Err(Error::new(format!(
-                        "queued supervisor {jid} could not be stopped"
-                    )));
-                }
-            }
-            job["pid"] = Value::Null;
-            // Wait until the exited owner's OS lock is released before spawning.
-            let owner = FileLock::acquire(&self.job_dir(jid).join("supervisor.lock"))?;
-            job["pid_created"] = Value::Null;
-            job["last_event_at"] = json!(self.rt.now());
-            self.save(&job)?;
-            self.track_queued_job(jid)?;
-            drop(owner);
-            let (_, pid) = self.rt.spawn_supervisor_identified(
-                &self.executable,
-                &self.root,
-                &self.job_dir(jid),
-                jid,
-            )?;
-            if let Some(pid) = pid {
-                job["pid"] = json!(pid);
-                job["pid_created"] = json!(self.rt.proc_created(pid));
-                self.save(&job)?;
-            }
+            self.restart_queued_supervisor(&mut job)?;
             restarted.push(json!(jid));
         }
         Ok(json!(restarted))
+    }
+    /// Caller holds the global gate and this job's state lock; no Codex is live.
+    pub(crate) fn restart_queued_supervisor(&self, job: &mut Value) -> Result<()> {
+        let jid = s(job, "id").to_string();
+        if self.is_ours(job, "pid") {
+            self.rt.kill_tree(job["pid"].as_u64().unwrap() as u32)?;
+            for _ in 0..50 {
+                if !self.is_ours(job, "pid") {
+                    break;
+                }
+                self.rt.sleep(0.1);
+            }
+            if self.is_ours(job, "pid") {
+                return Err(Error::new(format!(
+                    "queued supervisor {jid} could not be stopped"
+                )));
+            }
+        }
+        job["pid"] = Value::Null;
+        // Wait until the exited owner's OS lock is released before spawning.
+        let owner = FileLock::acquire(&self.job_dir(&jid).join("supervisor.lock"))?;
+        job["pid_created"] = Value::Null;
+        job["last_event_at"] = json!(self.rt.now());
+        self.save(job)?;
+        self.track_queued_job(&jid)?;
+        drop(owner);
+        let (_, pid) = self.rt.spawn_supervisor_identified(
+            &self.executable,
+            &self.root,
+            &self.job_dir(&jid),
+            &jid,
+        )?;
+        if let Some(pid) = pid {
+            job["pid"] = json!(pid);
+            job["pid_created"] = json!(self.rt.proc_created(pid));
+            self.save(job)?;
+        }
+        Ok(())
     }
     /// Called under the global gate. Active records are reread every poll;
     /// history is reconciled at most once per 30 seconds across all waiters.
@@ -84,10 +95,11 @@ impl Context {
         let known = if let Some(ids) = index["ids"].as_array() {
             ids.iter()
                 .map(|id| {
-                    self.load(
-                        id.as_str()
-                            .ok_or_else(|| Error::new("invalid queue index id"))?,
-                    )
+                    let id = id
+                        .as_str()
+                        .filter(|id| valid_job_id(id))
+                        .ok_or_else(|| Error::new("invalid queue index id"))?;
+                    Ok(self.admission_record(id))
                 })
                 .collect::<Result<Vec<_>>>()?
         } else {
@@ -104,7 +116,7 @@ impl Context {
             for entry in fs::read_dir(&self.jobs)? {
                 let entry = entry?;
                 if entry.path().join("job.json").is_file() {
-                    records.push(self.load(&entry.file_name().to_string_lossy())?);
+                    records.push(self.admission_record(&entry.file_name().to_string_lossy()));
                 }
             }
             records
@@ -122,6 +134,14 @@ impl Context {
             self.write_json(&path, &next)?;
         }
         Ok(active)
+    }
+    fn admission_record(&self, id: &str) -> Value {
+        self.try_load(id).unwrap_or_else(|| {
+            self.rt.diagnostic(&format!(
+                "unreadable queue record {id}; retaining its root slot"
+            ));
+            json!({"id":id,"status":"running","queue_unreadable":true})
+        })
     }
     /// Register before exposing a newly queued record to a supervisor. If no
     /// index exists, admission will build it from all records on the first poll.
@@ -290,11 +310,12 @@ impl Context {
             Err(e) => return Err(e.into()),
         };
         if cfg.max_running == 0
+            || cfg.max_children_per_parent == 0
             || cfg.retry_delay_seconds == 0
             || cfg.max_retry_delay_seconds < cfg.retry_delay_seconds
         {
             return Err(Error::new(
-                "queue-config.json: max_running and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
+                "queue-config.json: max_running, max_children_per_parent and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
             ));
         }
         Ok(cfg)
@@ -320,13 +341,20 @@ impl Context {
             return Ok(None);
         }
         let jobs = self.admission_jobs()?;
-        let running = jobs
+        let active: Vec<_> = jobs
             .iter()
-            .filter(|j| {
-                self.is_ours(j, "codex_pid")
-                    || (s(j, "status") == "running" && self.supervisor_alive(j))
-            })
-            .count();
+            .filter(|j| j["queue_unreadable"] == true || self.running_job(j))
+            .collect();
+        // Count occupied families even when the root/intermediate supervisor has
+        // exited. A surviving descendant must not silently free a root slot.
+        let mut families = HashSet::new();
+        let mut children = HashMap::<String, usize>::new();
+        for j in &active {
+            families.insert(self.queue_root(j));
+            if !s(j, "parent_job_id").is_empty() {
+                *children.entry(s(j, "parent_job_id").into()).or_default() += 1;
+            }
+        }
         let mut waiting: Vec<_> = jobs
             .iter()
             .filter(|j| {
@@ -336,9 +364,43 @@ impl Context {
                     && j["retry_not_before"].as_f64().unwrap_or(0.) <= self.rt.epoch()
             })
             .collect();
-        waiting.sort_by_key(|j| (!s(j, "name").starts_with("req-"), queue_time(j), s(j, "id")));
-        let position = waiting.iter().position(|j| s(j, "id") == jid);
-        if position.is_none_or(|p| p >= cfg.max_running.saturating_sub(running)) {
+        waiting.sort_by_key(|j| {
+            (
+                s(j, "parent_job_id").is_empty(),
+                !s(j, "name").starts_with("req-"),
+                queue_time(j),
+                s(j, "id"),
+            )
+        });
+        let mut selected = false;
+        let mut child_first = false;
+        for candidate in waiting {
+            let parent = s(candidate, "parent_job_id");
+            if parent.is_empty() && child_first {
+                continue;
+            }
+            if !parent.is_empty()
+                && children.get(parent).copied().unwrap_or(0) >= cfg.max_children_per_parent
+            {
+                continue;
+            }
+            let root = self.queue_root(candidate);
+            if !families.contains(&root) && families.len() >= cfg.max_running {
+                continue;
+            }
+            // Children have first claim; wait for the earlier eligible job to
+            // reserve its slot durably instead of allowing roots to overtake it.
+            if s(candidate, "id") == jid {
+                selected = true;
+                break;
+            }
+            families.insert(root);
+            if !parent.is_empty() {
+                child_first = true;
+                *children.entry(parent.into()).or_default() += 1;
+            }
+        }
+        if !selected {
             return Ok(None);
         }
         job["status"] = json!("running");
@@ -347,6 +409,40 @@ impl Context {
         job["activity"] = json!("starting");
         self.save(&job)?;
         Ok(Some(state))
+    }
+
+    fn queue_root(&self, job: &Value) -> String {
+        let mut current = job.clone();
+        let mut seen = HashSet::new();
+        loop {
+            let id = s(&current, "id").to_string();
+            if !seen.insert(id.clone()) {
+                self.rt
+                    .diagnostic("cycle in parent_job_id; retaining one root slot");
+                return seen.into_iter().min().unwrap();
+            }
+            let parent = s(&current, "parent_job_id");
+            if parent.is_empty() {
+                return id;
+            }
+            if !valid_job_id(parent) {
+                self.rt
+                    .diagnostic(&format!("invalid parent for {id}; retaining its root slot"));
+                return id;
+            }
+            let Some(ancestor) = self.try_load(parent) else {
+                self.rt.diagnostic(&format!(
+                    "unreadable parent {parent}; retaining its family slot"
+                ));
+                return parent.into();
+            };
+            current = ancestor;
+        }
+    }
+
+    pub fn running_job(&self, job: &Value) -> bool {
+        self.is_ours(job, "codex_pid")
+            || (s(job, "status") == "running" && self.supervisor_alive(job))
     }
 
     /// Called only after the child has exited and its final events have drained.
@@ -380,7 +476,7 @@ impl Context {
         true
     }
 }
-fn same_task(a: &Value, b: &Value) -> bool {
+pub(crate) fn same_task(a: &Value, b: &Value) -> bool {
     (a["todo_id"].as_u64().is_some() && a["todo_id"] == b["todo_id"])
         || (!s(a, "name").is_empty() && s(a, "name") == s(b, "name"))
         || ["thread_id", "resume_session"].iter().any(|ka| {
@@ -390,6 +486,12 @@ fn same_task(a: &Value, b: &Value) -> bool {
                     .any(|kb| normalize_uuid(s(b, kb)).as_ref() == Some(&id))
             })
         })
+}
+pub fn valid_job_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 fn last_event(path: &Path) -> Result<Value> {
     let mut file = match fs::File::open(path) {

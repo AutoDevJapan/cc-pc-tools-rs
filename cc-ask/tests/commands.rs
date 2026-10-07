@@ -957,7 +957,11 @@ fn external_stdout_retains_inprocess_notices_and_removes_only_cli_report() {
 #[test]
 fn tick_launches_resume_before_intake_and_shares_one_attempt_budget() {
     let mut h = Harness::new();
-    let external_work = tempfile::tempdir_in(r"C:\Windows\Temp").unwrap();
+    let external_work = if cfg!(windows) {
+        tempfile::tempdir_in(r"C:\Windows\Temp").unwrap()
+    } else {
+        tempfile::tempdir().unwrap()
+    };
     let work = external_work.path().join("work");
     std::fs::create_dir(&work).unwrap();
     let newest = snowflake(h.ctx.now(), 601.);

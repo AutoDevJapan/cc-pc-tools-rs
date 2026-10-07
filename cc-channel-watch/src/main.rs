@@ -167,11 +167,11 @@ fn run(root: &Path, config_path: &Path, seed_only: bool) -> Result<Value> {
                     .join(format!("{}-latest.json", channel.key)),
                 &value,
             )?;
-            if let Some(body) = metrics_report(channel, &value, &now()) {
-                if let Err(error) = report(&config, root, channel, Some(&body)) {
-                    errors += 1;
-                    results.push(json!({"channel":channel.key,"report_error":error.to_string()}));
-                }
+            if let Some(body) = metrics_report(channel, &value, &now())
+                && let Err(error) = report(&config, root, channel, Some(&body))
+            {
+                errors += 1;
+                results.push(json!({"channel":channel.key,"report_error":error.to_string()}));
             }
             let outcome = process_channel(
                 channel,

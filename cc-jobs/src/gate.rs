@@ -447,8 +447,8 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     });
     let target = target_dir.as_ref().map(|p| {
         // Create first, so the key is canonical before and after Cargo creates it.
-        let _ = std::fs::create_dir_all(&p);
-        key(&p)
+        let _ = std::fs::create_dir_all(p);
+        key(p)
     });
     if target.as_deref() == crate::cache::resolved(crate::cache::SHARED).as_deref() {
         child.insert("CARGO_TARGET_DIR".into(), crate::cache::SHARED.into());

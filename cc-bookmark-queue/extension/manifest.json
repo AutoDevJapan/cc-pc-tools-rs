@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "副業 GitHub ブックマーク",
+  "version": "1.0.0",
+  "description": "このPCのキューから、副業フォルダにGitHubリポジトリを追加します。",
+  "minimum_chrome_version": "110",
+  "permissions": ["bookmarks"],
+  "host_permissions": ["http://127.0.0.1:17643/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src http://127.0.0.1:17643"
+  }
+}

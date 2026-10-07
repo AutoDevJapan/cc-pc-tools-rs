@@ -1,0 +1,14 @@
+[
+  {"url":"https://github.com/arielshad/3d-asset-server","name":"3D Asset Server – 3D素材・テクスチャ・HDRIを横断検索する","folder":"3Dモデル・ゲーム"},
+  {"url":"https://github.com/genex-games/genex-desktop","name":"Genex – AIエージェントとゲームを制作する","folder":"3Dモデル・ゲーム"},
+  {"url":"https://github.com/vectorize-io/hindsight","name":"Hindsight – AIエージェントに長期記憶と振り返りを加える","folder":"MCP・記憶・ブラウザ操作"},
+  {"url":"https://github.com/paperclipai/paperclip","name":"Paperclip – AIチームの仕事・目標・予算を管理する","folder":"案件・業務管理"},
+  {"url":"https://github.com/dream-num/univer","name":"Univer – アプリに表計算・文書編集を組み込む","folder":"開発ライブラリ・インフラ"},
+  {"url":"https://github.com/cloudflare/security-audit-skill","name":"security-audit-skill – AIによる脆弱性調査と独立検証を進める","folder":"スキル・仕様駆動"},
+  {"url":"https://github.com/Tencent/WeKnora","name":"WeKnora – 社内資料を理解・検索しRAGで回答する","folder":"MCP・記憶・ブラウザ操作"},
+  {"url":"https://github.com/superdesigndev/treg","name":"Treg – AI用ツール・API・CLIの呼び出しを集約する","folder":"AIゲートウェイ・基盤"},
+  {"url":"https://github.com/mobile-next/mobile-mcp","name":"Mobile MCP – AIからiOS・Androidの画面を操作する","folder":"MCP・記憶・ブラウザ操作"},
+  {"url":"https://github.com/HKUDS/CLI-Anything","name":"CLI-Anything – 既存ソフトをAIが使えるCLIにする","folder":"開発ライブラリ・インフラ"},
+  {"url":"https://github.com/davila7/claude-code-templates","name":"Claude Code Templates – エージェント・コマンド・設定を導入する","folder":"Claude Code・Codex 拡張"},
+  {"url":"https://github.com/microsoft/ai-agents-for-beginners","name":"AI Agents for Beginners – AIエージェントの設計と実装を学ぶ","folder":"論文・学習資料"}
+]

@@ -1,0 +1,30 @@
+name: Bookmark queue
+on:
+  push:
+    branches: [main]
+    paths: ['cc-bookmark-queue/**', 'cc-ask/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/bookmark-queue.yml']
+  pull_request:
+    paths: ['cc-bookmark-queue/**', 'cc-ask/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/bookmark-queue.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cargo fmt --manifest-path cc-bookmark-queue/Cargo.toml --check
+      - run: cargo test --locked -p cc-bookmark-queue
+      - run: cargo clippy --locked -p cc-bookmark-queue --all-targets -- -D warnings
+      - run: node --test cc-bookmark-queue/tests/*.test.js
+      - if: runner.os == 'Windows'
+        run: cargo test --locked -p cc-ask --test commands --test resume

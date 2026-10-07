@@ -48,6 +48,9 @@ pub fn last_activity(j: &Value) -> f64 {
 fn healthy(j: &Value, ps: &Processes, t: f64) -> bool {
     policy::live(j) && policy::alive(j, ps, t) && t - last_activity(j) < HANG_S
 }
+fn owns_launch(j: &Value, ps: &Processes, t: f64) -> bool {
+    matches!(s(&j["status"]), "queued" | "starting") || healthy(j, ps, t)
+}
 fn linked(item: &Value, j: &Value) -> bool {
     // A working directory identifies a checkout, not the work item that owns it.
     (item["id"].is_number()
@@ -567,7 +570,7 @@ pub fn run_watch(
             if !launched
                 && fresh_jobs
                     .iter()
-                    .any(|j| linked(&item, j) && healthy(j, &fresh_ps, backend.clock()))
+                    .any(|j| linked(&item, j) && owns_launch(j, &fresh_ps, backend.clock()))
             {
                 edit(paths, |db| {
                     let row = find(db, id)?;
@@ -1101,7 +1104,7 @@ impl RecoveryBackend for RealRecovery {
         }
         if jobs
             .iter()
-            .any(|job| linked(&row, job) && healthy(job, &ps, time_s()))
+            .any(|job| linked(&row, job) && owns_launch(job, &ps, time_s()))
         {
             return Ok(Outcome::Obsolete);
         }
@@ -1155,7 +1158,7 @@ impl RecoveryBackend for RealRecovery {
         }
         if jobs
             .iter()
-            .any(|other| linked(&row, other) && healthy(other, &ps, time_s()))
+            .any(|other| linked(&row, other) && owns_launch(other, &ps, time_s()))
         {
             return Ok(Outcome::Obsolete);
         }

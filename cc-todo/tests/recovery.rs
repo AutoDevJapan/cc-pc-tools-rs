@@ -1231,3 +1231,22 @@ fn a_new_healthy_owner_invalidates_only_its_own_pending_request() {
     assert_eq!(current["items"][1]["jobs"], json!(["new-1"]));
     fs::remove_dir_all(root).unwrap();
 }
+#[test]
+fn old_queued_owner_invalidates_a_pending_retry_even_after_claim_expires() {
+    for status in ["queued", "starting"] {
+        let (root, p, mut f, mut notices) = fixture();
+        f.allow = false;
+        run_watch(&p, &mut notices, &mut f).unwrap();
+        assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_object());
+        f.jobs.push(json!({"id":"accepted-owner","todo_id":1,"project":"demo","status":status,"created_at":1,"last_event_at":1}));
+        f.allow = true;
+        f.t += 3600.;
+        run_watch(&p, &mut notices, &mut f).unwrap();
+        assert!(
+            f.calls.is_empty(),
+            "accepted {status} must not launch twice"
+        );
+        assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_null());
+        fs::remove_dir_all(root).unwrap();
+    }
+}

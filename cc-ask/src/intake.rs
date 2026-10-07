@@ -398,6 +398,11 @@ fn intake_thread_with_workers(
     workers: &[RequestWorker],
 ) -> Result<()> {
     let tid = s(&thread["id"]);
+    // Check before pending launches, adopted workers, and closed-question intake.
+    // Leave cursors and answer receipts untouched for the main session's inbox.
+    if crate::routing::thread_inbox_only(ctx, state, tid) {
+        return Ok(());
+    }
     let task_thread = !s(&ctx.cfg["task_channel_id"]).is_empty()
         && thread["parent_id"] == ctx.cfg["task_channel_id"];
     if state["questions"]

@@ -509,6 +509,9 @@ fn resume_at(
     budget: &mut bool,
 ) -> Result<()> {
     let thread = json!({"id":question["thread_id"],"name":question["title"]});
+    if crate::routing::thread_inbox_only(ctx, state, s(&question["thread_id"])) {
+        return Ok(());
+    }
     if !crate::routing::question_allowed(ctx, question)? {
         return Ok(());
     }
@@ -959,6 +962,9 @@ pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
         }
         state["resume_scan_after"] = json!(index);
         let mut question = state["questions"][index].clone();
+        if crate::routing::thread_inbox_only(ctx, &state, s(&question["thread_id"])) {
+            continue;
+        }
         if !(truth(&question["open"])
             || (truth(&question["continuation"])
                 && (!truth(&question["continuation"]["reported"])

@@ -1741,6 +1741,41 @@ fn new_job() -> Value {
     json!({"id":"20260929-000000-t","name":"t","model":"gpt-6-luna","effort":"max","sandbox":"read-only","cwd":"D:/work","created_at":"2026-10-01T12:00:00+09:00","status":"queued","pid":null,"steps":0,"tokens":{"total":0},"activity":"queued","last_error":null,"duration_ms":null})
 }
 #[test]
+fn unnamed_requests_are_classified_by_the_local_model_only_when_nothing_decides() {
+    let t = Test::new();
+    let p = t.ctx.root.join("p.md");
+    fs::write(&p, "## 作業の依頼\nPR #12 の差分を読むだけで確認する\n").unwrap();
+    let root = t.ctx.root.to_str().unwrap().to_owned();
+    let launch = |name: &str, extra: &[&str]| {
+        let mut args = vec!["run", "--name", name, "--cwd", &root, "--prompt-file", p.to_str().unwrap()];
+        args.extend(extra);
+        let (result, out, _) = t.cli(&args);
+        assert_eq!(result.unwrap(), 0);
+        t.ctx.load(out.trim()).unwrap()
+    };
+    *t.rt.classify_answer.lock().unwrap() = Some("review");
+    let job = launch("req-1", &[]);
+    assert_eq!((s(&job, "model"), s(&job, "task_type")), ("gpt-6-luna", "review"));
+    assert_eq!(
+        t.rt.classify_requests.lock().unwrap().as_slice(),
+        ["ジョブ名: req-1\n依頼: PR #12 の差分を読むだけで確認する"]
+    );
+    // Explicit model, explicit task type and deciding names never ask the model.
+    for (name, extra) in [
+        ("req-2", vec!["--model", "gpt-6-astra"]),
+        ("req-3", vec!["--task-type", "implementation"]),
+        ("rev-4", vec![]),
+    ] {
+        launch(name, &extra);
+    }
+    assert_eq!(t.rt.classify_requests.lock().unwrap().len(), 1);
+    // No usable answer keeps the implementation default.
+    *t.rt.classify_answer.lock().unwrap() = None;
+    let job = launch("req-5", &[]);
+    assert_eq!(s(&job, "model"), "gpt-6.1-sol");
+    assert!(job["task_type"].is_null());
+}
+#[test]
 fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
     for (name, kind, expected) in [
         ("rev-19", "review", "gpt-6-luna"),
@@ -1892,6 +1927,8 @@ struct Fake {
     sleep_hook: Mutex<Option<SleepHook>>,
     supervisor_pid: AtomicU32,
     supervisor_fail: AtomicBool,
+    classify_answer: Mutex<Option<&'static str>>,
+    classify_requests: Mutex<Vec<String>>,
 }
 impl Fake {
     fn new() -> Self {
@@ -1934,6 +1971,8 @@ impl Fake {
             sleep_hook: Mutex::new(None),
             supervisor_pid: AtomicU32::new(0),
             supervisor_fail: AtomicBool::new(false),
+            classify_answer: Mutex::new(None),
+            classify_requests: Mutex::new(vec![]),
         }
     }
     fn tick(&self, n: f64) {
@@ -1983,6 +2022,10 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn classify_request(&self, request: &str) -> Option<&'static str> {
+        self.classify_requests.lock().unwrap().push(request.into());
+        *self.classify_answer.lock().unwrap()
+    }
     fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
         Ok(vec!["stripe".into(), "unseen-server".into()])
     }

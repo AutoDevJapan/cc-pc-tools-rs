@@ -27,12 +27,19 @@ fn cargo_cmd_preserves_a_failing_child_exit_code() {
     )
     .unwrap();
     let launcher = bin.join("cargo.cmd");
-    fs::write(&launcher, include_str!("../bin/cargo.cmd")).unwrap();
+    fs::write(
+        &launcher,
+        include_str!("../bin/cargo.cmd")
+            .replace("\r\n", "\n")
+            .replace('\n', "\r\n"),
+    )
+    .unwrap();
     let fixture = temp.0.join("fixture.exe");
     fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), &fixture).unwrap();
     let result = hidden_command("cmd.exe")
         .current_dir(&bin)
-        .args(["/d", "/c", "cargo", "--exit-seven"])
+        .args(["/d", "/c", ".\\cargo.cmd", "--exit-seven"])
+        .env("NoDefaultCurrentDirectoryInExePath", "1")
         .env("CODEX_JOBS_REAL_CARGO", &fixture)
         .env("CODEX_JOBS_CARGO_LOCK_DIR", &temp.0)
         .env("CARGO_TARGET_DIR", &temp.0)

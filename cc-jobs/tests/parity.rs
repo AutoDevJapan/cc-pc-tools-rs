@@ -2414,6 +2414,12 @@ impl Runtime for Fake {
             .clone()
             .unwrap_or_else(|| PathBuf::from(cc_task_title::TOOLS))
     }
+    fn task_job_title(&self, job: &Value, prompt: &str) -> io::Result<String> {
+        let names =
+            cc_task_title::Names::load(&self.task_title_tools().join("client-projects.txt"))?;
+        // No installed cache or loopback model is used by offline tests.
+        Ok(cc_task_title::job_title(job, prompt, &Value::Null, &names))
+    }
     fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
         Ok(vec!["stripe".into(), "unseen-server".into()])
     }

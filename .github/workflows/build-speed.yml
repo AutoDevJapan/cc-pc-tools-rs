@@ -21,6 +21,6 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest
-      - run: cargo nextest run --locked -p cc-jobs -p cc-scheduler
+      - run: cargo nextest run --locked -p cc-jobs -p cc-scheduler --no-fail-fast
       - run: cargo test --locked -p cc-jobs -p cc-scheduler --doc
       - run: cargo clippy --locked -p cc-jobs -p cc-scheduler --all-targets -- -D warnings

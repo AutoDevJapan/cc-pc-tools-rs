@@ -2106,9 +2106,11 @@ fn junction_repo_resolves_to_original_worktree_container() {
             .unwrap()
             .unwrap();
     let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    let repo = f.repo.canonicalize().unwrap();
+    let repo = repo.to_string_lossy();
     assert_eq!(
         norm(target.parent().unwrap().to_str().unwrap()),
-        norm(&format!("{}-wt", f.repo.display()))
+        norm(&format!("{}-wt", repo.trim_start_matches(r"\\?\")))
     );
     let mut git = GitFake {
         calls: vec![],

@@ -178,6 +178,9 @@ pub trait Runtime: Send + Sync {
     fn task_title_tools(&self) -> PathBuf {
         PathBuf::from(cc_task_title::TOOLS)
     }
+    fn task_job_title(&self, job: &Value, prompt: &str) -> io::Result<String> {
+        cc_task_title::installed_job_title(job, prompt, &self.task_title_tools())
+    }
     /// Query public server metadata with plugins/apps disabled. Never retain
     /// transport environments or print the CLI's response to diagnostics.
     fn summary_mcp_servers(&self, codex: &str, cwd: &Path) -> io::Result<Vec<String>> {

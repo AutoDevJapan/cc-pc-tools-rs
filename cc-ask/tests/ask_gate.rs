@@ -32,6 +32,14 @@ fn routine_permissions_are_blocked_in_title_or_body() {
         "検査のため一時ファイルを完全削除してよいか",
         "検査結果のログを送信してよいか",
         "テスト用のデザインを変更してよいか",
+        "公開サイトを確認してもよいか",
+        "公開サイトを検査してよいか",
+        "ファイルハンドルを使って検証してよいか",
+        "payloadを検証してよいか",
+        "cargo build --releaseを実行してよいか",
+        "課金済みアカウントでログインしてもよいか",
+        "顧客サイトの請求画面を確認してよいか",
+        "返金画面のテストを実行してよいか",
     ] {
         assert!(blocked(title, "", None), "title: {title}");
         assert!(blocked("相談", title, None), "body: {title}");
@@ -52,6 +60,7 @@ fn routine_permissions_are_blocked_in_title_or_body() {
         "公開していません",
         "取り消せない操作ではありません",
         "不可逆ではない",
+        "有料プランを使う予定はなく、通常の検査のみです",
     ] {
         assert!(
             blocked("Chromeの検査の許可", context, None),
@@ -85,6 +94,12 @@ fn genuine_owner_decisions_and_non_permissions_pass() {
         "5.5ドルの予算を使って検査してよいか",
         "元に戻せない操作を進めてよいか",
         "費用なし、画面案Aで進めてよいか",
+        "ポリシーを公開して問題ないか。確認済み",
+        "月5ドルを払って問題ないか。検証用",
+        "本番DBを完全削除して問題ないか。検証済み",
+        "顧客へ納期を連絡して問題ないか。確認済み",
+        "A案でよいですか。実装を進めます",
+        "製品名はこれでよいですか。実装を進めます",
     ] {
         assert!(!blocked(title, "", None), "title: {title}");
     }

@@ -338,6 +338,7 @@ impl Runner for RealRunner {
             if let (false, Err(error)) = (call.kill_tree, &status) {
                 return Err(error.clone());
             }
+            #[cfg(windows)]
             drop(tree);
             let bytes = reader
                 .join()
@@ -367,6 +368,7 @@ impl Runner for RealRunner {
         if let (false, Err(error)) = (call.kill_tree, &status) {
             return Err(error.clone());
         }
+        #[cfg(windows)]
         drop(tree);
         let stdout = decode(
             &out.join()

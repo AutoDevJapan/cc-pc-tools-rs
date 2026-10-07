@@ -370,17 +370,17 @@ pub(crate) fn recover(ctx: &mut Context, cwd: &str, raw_title: &str) -> Result<(
                 {
                     continue;
                 }
-                let history = vec![ctx.call(
+                let starter = ctx.call(
                     "GET",
                     &format!("/channels/{0}/messages/{0}", s(&t["id"])),
                     None,
-                )?];
-                for starter in history.iter().filter(|m| matches_starter(m, &record)) {
+                )?;
+                if matches_starter(&starter, &record) {
                     found.push((s(&t["id"]).to_owned(), s(&starter["id"]).to_owned()));
                 }
             }
             if found.len() != 1 {
-                return Err("question creation outcome is unconfirmed; retry recovery without sending another question".into());
+                return Err(format!("question creation outcome is unconfirmed (reservation {id}, asked {}); inspect this reservation before retrying recovery without sending another question", s(&record["question"]["asked_at"])));
             }
             found.pop().unwrap()
         };

@@ -423,7 +423,10 @@ impl Context {
                 ));
             }
             fs::create_dir_all(&self.jobs)?;
-            let _lock = FileLock::acquire(&self.jobs.join(format!(".launch-{key}.lock")))?;
+            let path = self.jobs.join(format!(".launch-{key}.lock"));
+            let _lock = FileLock::acquire(&path).map_err(|e| {
+                Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e)
+            })?;
             if let Some(job) = self
                 .list_jobs(&HashSet::new())
                 .into_iter()
@@ -452,57 +455,13 @@ impl Context {
         fs::create_dir_all(&self.jobs)?;
         let _session_lock = resume
             .as_ref()
-            .map(|id| FileLock::acquire(&self.jobs.join(format!(".resume-{id}.lock"))))
-            .transpose()?;
-        // Registration shares admission's gate. This also serializes different
-        // launch keys targeting the same ToDo.
-        let _queue = self.queue_lock()?;
-        let env = self.rt.env();
-        let parent = if let Some(id) = a.value("parent-job-id") {
-            if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
-                return Err(Error::new("parent job must be a running job in this queue"));
-            }
-            Some(id)
-        } else {
-            env.get("CC_JOB_ID")
-                .map(String::as_str)
-                .filter(|id| !id.is_empty())
-                .filter(|id| {
-                    let running = valid_job_id(id)
-                        && self.try_load(id).is_some_and(|job| self.running_job(&job));
-                    if !running {
-                        self.rt.diagnostic(
-                            "inherited parent has exited or is unavailable; queueing as a root job",
-                        );
-                    }
-                    running
+            .map(|id| {
+                let path = self.jobs.join(format!(".resume-{id}.lock"));
+                FileLock::acquire(&path).map_err(|e| {
+                    Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e)
                 })
-        };
-        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok())
-            && let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|j| {
-                j["todo_id"].as_u64() == Some(todo)
-                    && (LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
             })
-        {
-            return Err(Error::new(format!(
-                "ToDo {todo} already has active job {}",
-                s(&job, "id")
-            )));
-        }
-        if let Some(session) = &resume
-            && let Some(job) = self.list_jobs(&HashSet::new()).into_iter().find(|job| {
-                (["queued", "starting", "running"].contains(&s(job, "status"))
-                    || self.is_ours(job, "codex_pid"))
-                    && ["thread_id", "resume_session"]
-                        .iter()
-                        .any(|field| s(job, field).eq_ignore_ascii_case(session))
-            })
-        {
-            return Err(Error::new(format!(
-                "resume session {session} already has active job {}",
-                s(&job, "id")
-            )));
-        }
+            .transpose()?;
         if a.flag("network") && a.required("sandbox")? != "workspace-write" {
             return Err(Error::new(
                 "--network only has an effect with --sandbox workspace-write",
@@ -515,7 +474,9 @@ impl Context {
                 prompt.display()
             )));
         }
-        let bytes = fs::read(prompt)?;
+        let bytes = self
+            .read_file(prompt)
+            .map_err(|e| Error::file_io("read prompt", prompt, e))?;
         if let Err(e) = std::str::from_utf8(&bytes) {
             return Err(Error::new(format!(
                 "prompt file is not UTF-8 ({e}); save it as UTF-8 (Windows PowerShell 5.1 writes UTF-16)"
@@ -563,6 +524,55 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
+        // Registration shares admission's gate. This also serializes different
+        // launch keys targeting the same ToDo.
+        let _queue = self.queue_lock()?;
+        let env = self.rt.env();
+        let parent = if let Some(id) = a.value("parent-job-id") {
+            if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
+                return Err(Error::new("parent job must be a running job in this queue"));
+            }
+            Some(id)
+        } else {
+            env.get("CC_JOB_ID")
+                .map(String::as_str)
+                .filter(|id| !id.is_empty())
+                .filter(|id| {
+                    let running = valid_job_id(id)
+                        && self.try_load(id).is_some_and(|job| self.running_job(&job));
+                    if !running {
+                        self.rt.diagnostic(
+                            "inherited parent has exited or is unavailable; queueing as a root job",
+                        );
+                    }
+                    running
+                })
+        };
+        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok())
+            && let Some(job) = self.admission_jobs()?.into_iter().find(|j| {
+                j["todo_id"].as_u64() == Some(todo)
+                    && (LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
+            })
+        {
+            return Err(Error::new(format!(
+                "ToDo {todo} already has active job {}",
+                s(&job, "id")
+            )));
+        }
+        if let Some(session) = &resume
+            && let Some(job) = self.admission_jobs()?.into_iter().find(|job| {
+                (["queued", "starting", "running"].contains(&s(job, "status"))
+                    || self.is_ours(job, "codex_pid"))
+                    && ["thread_id", "resume_session"]
+                        .iter()
+                        .any(|field| s(job, field).eq_ignore_ascii_case(session))
+            })
+        {
+            return Err(Error::new(format!(
+                "resume session {session} already has active job {}",
+                s(&job, "id")
+            )));
+        }
         job["parent_job_id"] = json!(parent);
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
@@ -610,7 +620,7 @@ impl Context {
         {
             stored_prompt.extend_from_slice(guidance.as_bytes());
         }
-        fs::write(&dst, stored_prompt)?;
+        fs::write(&dst, stored_prompt).map_err(|e| Error::file_io("write prompt", &dst, e))?;
         let mut stored = json!({"id":jid});
         stored
             .as_object_mut()
@@ -621,14 +631,24 @@ impl Context {
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
         let state = self.job_lock(&jid, "state.lock")?;
+        drop(_queue);
         let mut stored = self.load(&jid)?;
         let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {
-            let (detached, pid) = self.rt.spawn_supervisor_identified(
-                &self.executable,
-                &self.root,
-                &self.job_dir(&jid),
-                &jid,
-            )?;
+            let (detached, pid) = self
+                .rt
+                .spawn_supervisor_identified(
+                    &self.executable,
+                    &self.root,
+                    &self.job_dir(&jid),
+                    &jid,
+                )
+                .map_err(|e| {
+                    Error::file_io(
+                        "spawn supervisor with log",
+                        &self.job_dir(&jid).join("supervisor.log"),
+                        e,
+                    )
+                })?;
             if let Some(pid) = pid {
                 stored["pid"] = json!(pid);
                 stored["pid_created"] = json!(self.rt.proc_created(pid));

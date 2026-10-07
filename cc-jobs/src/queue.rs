@@ -76,10 +76,10 @@ impl Context {
             }
         }
         let path = self.jobs.join(".queue-yields.json");
-        let mut ledger = match fs::read(&path) {
+        let mut ledger = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice::<HashMap<String, Value>>(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => HashMap::new(),
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(Error::file_io("read entire file", &path, e)),
         };
         let before = ledger.clone();
         // Snapshot before taking any per-job lock (global gate always comes first).
@@ -286,14 +286,27 @@ impl Context {
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
     pub fn reload_queue(&self) -> Result<Value> {
-        let _gate = self.queue_lock()?;
         let mut restarted = Vec::new();
+        // Snapshot reads need no global gate. Release the gate between jobs so
+        // a long reload cannot prevent unrelated registration for a full minute.
         for snapshot in self.list_jobs(&HashSet::new()) {
             if s(&snapshot, "status") != "queued" {
                 continue;
             }
             let jid = s(&snapshot, "id");
-            let _state = self.job_lock(jid, "state.lock")?;
+            let _gate = self.queue_lock()?;
+            let path = self.job_dir(jid).join("state.lock");
+            let _state = match FileLock::try_acquire(&path) {
+                Ok(state) => state,
+                Err(error) if matches!(error.raw_os_error(), Some(32 | 33)) => continue,
+                Err(error) => {
+                    return Err(Error::file_io(
+                        "acquire exclusive lock byte range [0, 1)",
+                        &path,
+                        error,
+                    ));
+                }
+            };
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued"
                 || job["cancel_requested"] == true
@@ -325,7 +338,10 @@ impl Context {
         }
         job["pid"] = Value::Null;
         // Wait until the exited owner's OS lock is released before spawning.
-        let owner = FileLock::acquire(&self.job_dir(&jid).join("supervisor.lock"))?;
+        let owner_path = self.job_dir(&jid).join("supervisor.lock");
+        let owner = FileLock::acquire(&owner_path).map_err(|e| {
+            Error::file_io("acquire exclusive lock byte range [0, 1)", &owner_path, e)
+        })?;
         job["pid_created"] = Value::Null;
         job["last_event_at"] = json!(self.rt.now());
         self.save(job)?;
@@ -382,6 +398,7 @@ impl Context {
             .into_iter()
             .filter(|j| {
                 LIVE.contains(&s(j, "status"))
+                    || s(j, "status") == "starting"
                     || self.is_ours(j, "codex_pid")
                     || self.tool_handoff_pending(j)
             })
@@ -565,10 +582,10 @@ impl Context {
     }
     pub fn queue_config(&self) -> Result<QueueConfig> {
         let path = self.root.join("queue-config.json");
-        let cfg: QueueConfig = match fs::read(&path) {
+        let cfg: QueueConfig = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => QueueConfig::default(),
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(Error::file_io("read entire file", &path, e)),
         };
         if cfg.max_running == 0
             || !(1..=100).contains(&cfg.context_limit_percent)
@@ -586,7 +603,9 @@ impl Context {
     /// The global gate covers admission and registration (including manual resumes).
     pub fn queue_lock(&self) -> Result<FileLock> {
         fs::create_dir_all(&self.jobs)?;
-        Ok(FileLock::acquire_queue(&self.jobs.join(".queue.lock"))?)
+        let path = self.jobs.join(".queue.lock");
+        FileLock::acquire_queue(&path)
+            .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
     }
 
     /// Return the state lock with a durably reserved slot, or None while waiting.

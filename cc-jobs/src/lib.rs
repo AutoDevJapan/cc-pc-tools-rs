@@ -104,6 +104,16 @@ pub struct Error {
     pub message: String,
 }
 impl Error {
+    pub fn file_io(operation: &str, path: &std::path::Path, error: std::io::Error) -> Self {
+        Self {
+            code: if error.kind() == std::io::ErrorKind::TimedOut {
+                75
+            } else {
+                1
+            },
+            message: format!("{operation} {}: {error}", path.display()),
+        }
+    }
     pub fn new(m: impl Into<String>) -> Self {
         Self {
             code: 1,
@@ -113,7 +123,14 @@ impl Error {
 }
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Self::new(e.to_string())
+        Self {
+            code: if e.kind() == std::io::ErrorKind::TimedOut {
+                75
+            } else {
+                1
+            },
+            message: e.to_string(),
+        }
     }
 }
 impl From<serde_json::Error> for Error {

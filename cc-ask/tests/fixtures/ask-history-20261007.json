@@ -1,0 +1,1342 @@
+[
+  {
+    "title": "【質問】Q28 日本マップの開始時の栄え方",
+    "classification": "owner"
+  },
+  {
+    "title": "【要判断】Codex のサンドボックス停止と PC 再起動",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【質問】並列実装の確認事項（暦・初期知識・天下統一）",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項A：外交と開始時の規模",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項B：史実イベントと呼び名",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項C：資源と朝廷の裁定",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項D：黄金・暗黒時代と天下統一",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項E：栄えた開始・因縁・イベント",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項F：20 km の京都の区域",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項G：外交の透明度",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項H：味方の視界共有の終わり方",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項I：視界共有の範囲と太閤検地の表示先",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項J：公式制度の削除で消えていた仕組みの付け先",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項K：開始時の同盟の期限",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項L：時代・史実イベント・牧畜の9点",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項M：家紋と肖像の3点",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項N：硝石の交易と織田家の家名",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項O：朝廷の裁定と天下統一同盟の8点",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項P：改名の時期・西三川の砂金・暗黒期の既定",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項Q：家名の切り替えを研究で行う範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項R：正当性と、裁定を拒んだときの罰",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項K（続き）：同盟をすぐ解く方法の調査結果と期限の扱い",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項S：正当性の忠誠度への効果",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項T：ツリーの段階が変わるときの表示",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項U：元号＝時代の残り4点",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項U-1：織田家だけの「天下布武」の表示",
+    "classification": "owner"
+  },
+  {
+    "title": "【質問】確認事項U-1（続き）：「天下布武」を織田の誓約にした場合",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 最新在庫CSV原本の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] GoDD-13a13e1: Pythonのfloat割り算の意味を保つ修正範囲",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] Issue #3467 incident/quarantine と release-quarantine 理由コード",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] VT parity TEST-14の判定条件",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] Rosetta: 一時フォルダ2件の削除制限",
+    "classification": "routine"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Claude] 万世紀：手帳の未実装表示と暗黒期の政策の選び方",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] GoDD-13a13e1 一時フォルダ9.32MiBの削除拒否と片付け",
+    "classification": "routine"
+  },
+  {
+    "title": "[Codex] GoDD-13a13e1 次のfetch機能と未決の配布契約",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Claude] 作業の停滞対策と進行状況（2026-09-30 22時）",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Claude] 万世紀：暗殺者の決まっていない6点",
+    "classification": "owner"
+  },
+  {
+    "title": "[Claude] 万世紀：宗教の持続の決まっていない3点",
+    "classification": "owner"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Patrol] 止まった作業の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] PR496 自動処理が求めた人間レビューの扱い",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Claude] 万世紀：指導者の人物化の決まっていない2点",
+    "classification": "owner"
+  },
+  {
+    "title": "[Claude] 万世紀：吸収の決まっていない3点",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 仲裁の実機確認を、対象フォルダに書き込めるジョブで再開する",
+    "classification": "routine"
+  },
+  {
+    "title": "[Shepherd] 吸収PoCで休眠英雄を扱う範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 朝廷の裁定をAIが請求する範囲を決める",
+    "classification": "owner"
+  },
+  {
+    "title": "[Shepherd] PR #82 の実機検証を2回追加する判断",
+    "classification": "routine"
+  },
+  {
+    "title": "[Shepherd] PR #85 の残り2本の実機を追加実行するか",
+    "classification": "routine"
+  },
+  {
+    "title": "[Shepherd] PR #87の実機検証を追加2回行う許可",
+    "classification": "routine"
+  },
+  {
+    "title": "[Shepherd] PR #86の人物加入を直す追加実機の回数",
+    "classification": "routine"
+  },
+  {
+    "title": "[Shepherd] 暗殺者の育成期間に外交関係を含めるか",
+    "classification": "owner"
+  },
+  {
+    "title": "[Scheduler] 作業が2回停止: civ6 #242",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] #1056 required移行前の理由コード集計方法",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] PR86の担当が起動したCiv6の通常終了だけ例外にしてよいか",
+    "classification": "routine"
+  },
+  {
+    "title": "[Codex] AI提案用の隔離プロセスの通信方式",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【civ6-banseiki】[Codex] 【Civ6用万世紀】PR87の既存検証ドライバーを今回だけ使う許可",
+    "classification": "routine"
+  },
+  {
+    "title": "[Codex] 【GoDD-ad-Video】動画合成ライブラリの利用条件を確認したい",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 【ARPS】楽天へ画像を転送できる顧客店舗の設定確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Scheduler] 作業が2回停止: GoDD-13a13e1 #122",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【ADJ-official-site】[Codex] 【ADJ公式サイト】削除PRの承認条件への対応",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] 【GoDD-MCP-Alpha】匿名報告を公開する費用の上限",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 【GoDD-MCP-Alpha】Office機能を公開するコマンド名",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "[Codex] 【civ6-banseiki】起動復旧の検証に必要なSteamのサインイン",
+    "classification": "routine"
+  },
+  {
+    "title": "【GoDD-Press-seihok-v3】[Codex] 【GoDD-Press】Seihokをイラストだけで進めるか、写真の許諾記録があるか",
+    "classification": "owner"
+  },
+  {
+    "title": "[Codex] 【GoDD-13a13e1】所有権の試験2行に品質検査の注記を追加してよいか",
+    "classification": "routine"
+  },
+  {
+    "title": "【GoDD-Press-seihok-v3】[Codex] 【GoDD-Press】復旧鍵の保管とPC外の保全先を確認する",
+    "classification": "owner"
+  },
+  {
+    "title": "【cash-cow】会社ごとの新しい見本の公開と直接メール送付",
+    "classification": "owner"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【Skills】GPU提供と暗号資産の実機試験の範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "ビジネスアイデア",
+    "classification": "owner"
+  },
+  {
+    "title": "【PassShare】小規模企業向けの料金案を決めてください",
+    "classification": "owner"
+  },
+  {
+    "title": "【CoChara】価格案と利用許諾の方針",
+    "classification": "owner"
+  },
+  {
+    "title": "【QaJaRuEn】保存と復習のStandardを先に販売できる形へ進めるか",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-AO】外部向けの配布検証を再開するか決めてください",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Genesis】有料提供の料金体系",
+    "classification": "owner"
+  },
+  {
+    "title": "【adj-health-20261004】ADJへの投稿と公開範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Genesis】本番Stripeの請求設定の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【Skills】Motocrabの会員動画18本の扱い",
+    "classification": "owner"
+  },
+  {
+    "title": "【CC】Dockerを止めて仮想ディスクを縮める時間",
+    "classification": "routine"
+  },
+  {
+    "title": "【CC】専用OAuth設定のGoogle規約への同意",
+    "classification": "owner"
+  },
+  {
+    "title": "SocialPilotの検査済み配布ZIP",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【GitDo】買い切りプランの販売条件",
+    "classification": "owner"
+  },
+  {
+    "title": "【視聴時間コントロール】対象動画の扱い",
+    "classification": "owner"
+  },
+  {
+    "title": "【geonaut】提供案・価格・一般公開を決めてください",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】使いすぎると広告が挟まる視聴時間コントロールアプリ",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】使いすぎると広告が挟まる視聴時間コントロールアプリ",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】使いすぎると広告が挟まる視聴時間コントロールアプリ",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】使いすぎると広告が挟まる視聴時間コントロールアプリ",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】PhosGaeaを完成させる",
+    "classification": "owner"
+  },
+  {
+    "title": "【QaJaRuEn】明日の復習予定とデータ出力の画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】PhosGaeaを完成させる",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【phone-friction-control】Androidの実機で試す端末の接続",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【アイデア】使いすぎると広告が挟まる視聴時間コントロールアプリ",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【adj-health-20261004】ADJへの投稿と公開範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Genesis】本番Stripeの請求設定の確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【OmegaPortal】製品の仕上げ（進み具合）",
+    "classification": "owner"
+  },
+  {
+    "title": "ADJ製品の仕上げ依頼",
+    "classification": "owner"
+  },
+  {
+    "title": "【alt-line】受信記録の管理画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【xLIFE】初回設定と契約画面の方向確認",
+    "classification": "owner"
+  },
+  {
+    "title": "【OmegaPortal】製品の仕上げ（進み具合）",
+    "classification": "owner"
+  },
+  {
+    "title": "【makhmeto】提供開始のための4つの決めごと",
+    "classification": "owner"
+  },
+  {
+    "title": "【cash-cow】MTデザインの画面案を選ぶ",
+    "classification": "owner"
+  },
+  {
+    "title": "【ADJ-official-site】パチンコ風の演出の案",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】スマホを使いにくくするアプリ（広告収入）",
+    "classification": "owner"
+  },
+  {
+    "title": "【geonaut】ChatGPT利用枠のクラウド接続について利用申請を進めるか",
+    "classification": "owner"
+  },
+  {
+    "title": "【cash-cow】MTデザインの画面案を選ぶ",
+    "classification": "owner"
+  },
+  {
+    "title": "【xLIFE】非公開パッケージの取得資格を開発環境へ登録する",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【ARPS】本番昇格を直すRust検査の起動修正の承認",
+    "classification": "routine"
+  },
+  {
+    "title": "【PassShare】本番DBの永続化とバックアップの費用・保全範囲を決めてください",
+    "classification": "owner"
+  },
+  {
+    "title": "【ARPS】追加画像フォルダを登録する保存後の設定画面確認",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【PassShare】共有の本人確認を追加する画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【PassShare】パスワード変更の画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Genesis】税・返金・問い合わせの担当と方針",
+    "classification": "owner"
+  },
+  {
+    "title": "【GitDo】販売者情報・正式窓口とテスト決済の接続",
+    "classification": "owner"
+  },
+  {
+    "title": "【civ6-banseiki】小国取り込みと大国合併の画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Press】ケイトのスマホ表示を改善する画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Press】ケイトのスマホ表示を改善する画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【QaJaRuEn】本番バックアップと隔離復元に月5ドルまで使ってよいか",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Press】稚内印刷のスマホ表示を改善する画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【civ6-banseiki】取り込み時の保証金を返すか相手へ渡すか",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-Press】スズキ産業資材のスマホ表示を改善する画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【PCツール】ChromeでDiscordにログインして一覧を確認する",
+    "classification": "routine"
+  },
+  {
+    "title": "【PCツール】ChromeでDiscordにログインして一覧を確認する",
+    "classification": "routine"
+  },
+  {
+    "title": "【PCツール】Python製を無課金で試す範囲をまとめて確認",
+    "classification": "routine"
+  },
+  {
+    "title": "【CC】Chromeブックマーク整理：登録を残すか候補一覧までにするか",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【CC】検証済みの属性照合と手動CIの変更を取り込む確認",
+    "classification": "routine"
+  },
+  {
+    "title": "【SocialPilot】作業内容を確認して進める",
+    "classification": "routine"
+  },
+  {
+    "title": "【Skills】Minecraftの試写版を投稿するチャンネルと公開範囲",
+    "classification": "owner"
+  },
+  {
+    "title": "【GoDD-VirtualStreamer】実況画面とアバターの方向を決める",
+    "classification": "owner"
+  },
+  {
+    "title": "【civ6-banseiki】2人プレイの指導者候補を全員に揃えるか",
+    "classification": "owner"
+  },
+  {
+    "title": "【scoopa】思考の保存状態を見せる画面案",
+    "classification": "owner"
+  },
+  {
+    "title": "【CC】ChatGPT と Claude の毎月の支払いを調べてよいか",
+    "classification": "routine"
+  },
+  {
+    "title": "【CC】Plus で ChatGPT のブラウザ版を使う仕組みを作るか",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【CC】軽い作業を Local のモデルに任せてよいか",
+    "classification": "routine"
+  },
+  {
+    "title": "【PCツール】検証データを退避するリンク判定の限定修正",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【ARPS】受注監視の復旧に必要な顧客連絡の時期",
+    "classification": "owner"
+  },
+  {
+    "title": "【KaraokeMaker】歌詞動画とカラオケ制作の出品条件",
+    "classification": "owner"
+  },
+  {
+    "title": "【アイデア】Colonization（武力制圧に特化したCiv系ゲーム）",
+    "classification": "owner"
+  },
+  {
+    "title": "【CC】リポジトリを Chrome のブックマークへ自動で入れる拡張機能を作るか",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【civ6-banseiki】2人プレイの指導者候補を全員に揃えるか",
+    "classification": "owner"
+  },
+  {
+    "title": "GoDD-MCP-Alpha 認証値の更新",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【クライアント案件】楽天・メルカリの出品管理：PR980の表示確認に必要な写真の依頼時期",
+    "classification": "owner"
+  },
+  {
+    "title": "【CC】語源動画の1本目の確認と、YouTube に上げるための設定",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "Skills化依頼",
+    "classification": "ambiguous"
+  },
+  {
+    "title": "【GoDD-Press】Chromeの検査用タブで4画面幅を測る許可",
+    "classification": "routine"
+  },
+  {
+    "title": "【PCツール】麻臭の語源動画：YouTubeでファイルを選択する一手だけ",
+    "classification": "ambiguous"
+  }
+]

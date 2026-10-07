@@ -395,6 +395,7 @@ fn test_ask_records_cwd_and_agent() {
         source: None,
         scheduler_item: None,
         scheduler_job: None,
+        owner_only: None,
         dry_run: false,
     };
     cc_ask::commands::cmd_ask(&mut a.ctx, &args).unwrap();

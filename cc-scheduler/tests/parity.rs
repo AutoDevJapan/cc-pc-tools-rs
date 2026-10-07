@@ -1,6 +1,6 @@
 //! Offline scheduler checks; no real job launch, cancellation, Discord or credentials.
 use cc_scheduler::{backend::*, common::*, engine::*, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -882,12 +882,10 @@ fn preparation_retains_previous_result_session_and_redesigns_repeated_continuati
         Path::new("prompt.md"),
         &json!({"model":"gpt-6.1-sol","effort":"high"}),
     );
-    assert!(
-        command
-            .args
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-    );
+    assert!(command
+        .args
+        .windows(2)
+        .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
 }
 #[test]
 fn legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing() {
@@ -925,12 +923,10 @@ fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
             Path::new("prompt.md"),
             &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
         );
-        assert!(
-            command
-                .args
-                .windows(2)
-                .any(|pair| pair == ["--sandbox", expected])
-        );
+        assert!(command
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--sandbox", expected]));
     }
 }
 #[test]
@@ -1025,11 +1021,9 @@ fn revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive() {
     assert!(!busy.contains("civ6"));
     assert!(busy.contains("cargo"));
     write_json(&home.join("civ6.lock"), &json!({"job":"new-holder"}), 0).unwrap();
-    assert!(
-        resources_busy_with_lock(&[], &[old], &processes, T, home)
-            .unwrap()
-            .contains("civ6")
-    );
+    assert!(resources_busy_with_lock(&[], &[old], &processes, T, home)
+        .unwrap()
+        .contains("civ6"));
 }
 
 #[test]
@@ -1506,11 +1500,10 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
     assert_eq!(git.calls.len(), 4);
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree")));
 }
 #[test]
 fn test_step_entrypoint_never_raises() {
@@ -1609,17 +1602,13 @@ fn test_todo_live_lock_is_not_stolen_by_old_timestamp() {
     let lock = ByteLock::acquire(&lockpath, Duration::ZERO)
         .unwrap()
         .unwrap();
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_none()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_none());
     drop(lock);
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_some()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_some());
     assert!(lockpath.exists());
 }
 #[test]
@@ -1671,11 +1660,9 @@ fn test_question_close_failure_retries_close_without_reprocessing_reply() {
     let count = f.e.backend.reply_count;
     f.e.answers().unwrap();
     assert_eq!(f.e.backend.reply_count, count);
-    assert!(
-        f.get(1)["scheduler"]
-            .get("question_close_pending")
-            .is_none()
-    );
+    assert!(f.get(1)["scheduler"]
+        .get("question_close_pending")
+        .is_none());
 }
 #[test]
 fn test_new_hang_does_not_create_another_owner_question() {
@@ -1802,13 +1789,11 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .unwrap();
     cc_ask::resume::cmd_resume(&mut ctx, &mut false).unwrap();
     // Answer receipts now inspect scheduler questions too; the generic path still must never launch.
-    assert!(
-        !calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|call| call["argv"].is_array())
-    );
+    assert!(!calls
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|call| call["argv"].is_array()));
 }
 #[test]
 fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
@@ -2124,11 +2109,10 @@ fn junction_repo_resolves_to_original_worktree_container() {
     };
     fs::create_dir(f.repo.join(".git")).unwrap();
     ensure_worktree(&mut git, alias.to_str().unwrap(), &row).unwrap();
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch")));
 }
 #[test]
 fn attempts_and_retries_remain_json_integers() {
@@ -2248,4 +2232,98 @@ fn invalid_settings_shape_returns_error_and_never_rewrites_state() {
     write_json(&f.e.root.join("config.json"), &json!([]), 2).unwrap();
     assert_eq!(f.e.run("recover", false), Err(Error("TypeError")));
     assert!(!f.e.root.join("state.json").exists());
+}
+
+fn wait_row(f: &mut Fixture, id: u64, on: Value) {
+    f.e.edit(&json!(id), |row| {
+        row["status"] = json!("wait");
+        row["wait_on"] = on;
+    })
+    .unwrap();
+}
+#[test]
+fn waiting_item_is_never_dispatched_and_launches_after_target_done() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    f.put(item(2, "civ6", "todo", &[]));
+    // Waiting is honoured whatever the status says (a writer may only set wait_on).
+    f.e.edit(&json!(1), |row| row["wait_on"] = json!([2]))
+        .unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.e.report["waiting"][0]["message"], "ToDo 2 待ち");
+    assert_eq!(f.e.report["waiting"][0]["item"], 1);
+    // Missing target keeps it waiting.
+    let mut g = Fixture::new();
+    g.put(item(1, "civ6", "todo", &[]));
+    g.e.edit(&json!(1), |row| row["wait_on"] = json!([99]))
+        .unwrap();
+    g.dispatch();
+    assert!(g.e.backend.launched.is_empty());
+    // Target done: released item (as the shared helper leaves it) dispatches and drops the ready marker.
+    g.e.edit(&json!(1), |row| {
+        row.as_object_mut().unwrap().remove("wait_on");
+        row["dependency_ready"] = json!(true);
+    })
+    .unwrap();
+    g.dispatch();
+    assert_eq!(g.e.backend.launched[0]["item"]["id"], 1);
+    assert!(g.get(1).get("dependency_ready").is_none());
+}
+#[test]
+fn wait_recorded_while_job_completes_is_not_overwritten() {
+    for result in ["状態: 完了", "状態: 要判断\n質問"] {
+        // Wait command already stored status=wait: the finished job must not touch the item.
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.put(item(2, "civ6", "todo", &[]));
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!(result);
+        f.e.backend.ps.clear();
+        wait_row(&mut f, 1, json!([2]));
+        let before = f.get(1);
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "wait");
+        assert_eq!(f.get(1)["wait_on"], json!([2]));
+        assert_eq!(f.get(1)["note"], before["note"]);
+        // Only wait_on was written (status still doing): parked, not done/block, note kept.
+        let mut g = Fixture::new();
+        g.managed(1, 1, "civ6", 0);
+        g.put(item(2, "civ6", "todo", &[]));
+        g.e.backend.records[0]["status"] = json!("succeeded");
+        g.e.backend.records[0]["last_message"] = json!(result);
+        g.e.backend.ps.clear();
+        g.e.edit(&json!(1), |row| {
+            row["wait_on"] = json!([2]);
+            row["note"] = json!("既存のメモ");
+        })
+        .unwrap();
+        g.reconcile();
+        let row = g.get(1);
+        assert_eq!(row["status"], "wait");
+        assert_eq!(row["note"], "既存のメモ");
+        assert!(row["scheduler"]["job"].is_null());
+        assert_eq!(row["scheduler"]["last_job"], "j1");
+    }
+}
+#[test]
+fn recovery_requeue_keeps_wait_and_owner_block_is_not_converted() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.put(item(2, "civ6", "todo", &[]));
+    f.e.backend.records[0]["status"] = json!("lost");
+    f.e.backend.ps.clear();
+    f.e.edit(&json!(1), |row| row["wait_on"] = json!([2]))
+        .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "wait");
+    // A generic wait_on on an owner-blocked item does not turn it into wait.
+    let mut g = Fixture::new();
+    let mut blocked = item(1, "civ6", "block", &[]);
+    blocked["wait_on"] = json!([2]);
+    g.put(blocked);
+    g.put(item(2, "civ6", "todo", &[]));
+    g.reconcile();
+    assert_eq!(g.get(1)["status"], "block");
 }

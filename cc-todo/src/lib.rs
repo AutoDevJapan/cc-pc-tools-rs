@@ -4,13 +4,14 @@
 //! discord_ask.py tick) notices a project that has open, unblocked items but no running Codex job under its path,
 //! and posts a notice to the owner on Discord, so work never silently stops (owner, 2026-09-30: 16:00-21:00 lost).
 //!
-//!   python todo.py project civ6 C:/Users/makhmeto/Desktop/dev/ADJ/civ6-banseiki
-//!   python todo.py add civ6 "誓約を実装する" [--note "..."]
-//!   python todo.py list [civ6] [--all]
-//!   python todo.py start <id> [--job <codex job id>]   # mark in progress, optionally link a job
-//!   python todo.py block <id> "理由"                   # waiting on the owner or something external
-//!   python todo.py done <id> [--note "PR #81"]
-//!   python todo.py watch                               # stall check (called by tick)
+//!   todo.exe project civ6 C:/Users/makhmeto/Desktop/dev/ADJ/civ6-banseiki
+//!   todo.exe add civ6 "誓約を実装する" [--note "..."]
+//!   todo.exe list [civ6] [--all]
+//!   todo.exe start <id> [--job <codex job id>]
+//!   todo.exe block <id> "オーナーの判断待ちの理由"
+//!   todo.exe wait <id> --on <prerequisite id>
+//!   todo.exe done <id> [--note "PR #81"]
+//!   todo.exe watch
 
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
@@ -85,6 +86,14 @@ pub enum Command {
         id: i64,
         #[arg(long, default_value = "")]
         note: String,
+    },
+    /// Wait for every specified ToDo to finish; this is not an owner decision.
+    Wait {
+        id: i64,
+        #[arg(long, required = true, value_parser=clap::value_parser!(i64).range(1..))]
+        on: Vec<i64>,
+        #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
+        progress: Option<u8>,
     },
     /// Record measured completion without changing status, job ownership or the task note.
     Progress {
@@ -412,7 +421,9 @@ pub fn stalled(
             .unwrap()
             .iter()
             .filter(|i| {
-                i["project"] == *name && matches!(i["status"].as_str(), Some("todo" | "doing"))
+                i["project"] == *name
+                    && matches!(i["status"].as_str(), Some("todo" | "doing"))
+                    && !cc_job_policy::todo_wait::waiting(db, i)
             })
             .cloned()
             .collect();
@@ -527,6 +538,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
         | Command::Block { progress, .. } => *progress,
+        Command::Wait { progress, .. } => *progress,
         Command::Progress { percent, .. } => *percent,
         _ => None,
     };
@@ -575,6 +587,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 if let Some(percent) = i["progress"].as_u64().filter(|p| *p <= 100) {
                     extra.push_str(&format!(" — 進み具合 {percent}%"));
                 }
+                for id in cc_job_policy::todo_wait::pending_on(db, i) {
+                    extra.push_str(&format!(" — ToDo {id} 待ち"));
+                }
                 let note = i["note"].as_str().ok_or("invalid note")?;
                 output.push(format!(
                     "{:>3} {:<5} {:<8} {}{extra}{}",
@@ -591,6 +606,14 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
         }
         Command::Start { id, job, progress } => {
+            let item = db["items"]
+                .as_array()
+                .and_then(|items| items.iter().find(|i| i["id"] == *id))
+                .ok_or_else(|| format!("no item {id}"))?;
+            if cc_job_policy::todo_wait::waiting(db, item) {
+                return Err("待っているToDoが未完了です。完了すると自動で再開します".into());
+            }
+            cc_job_policy::todo_wait::release_ready(db);
             let i = find(db, *id)?;
             if i["status"] == "done" && progress.is_none() {
                 i.as_object_mut().ok_or("invalid item")?.remove("progress");
@@ -632,6 +655,29 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 i["note"] = json!(note);
             }
             i["updated"] = json!(now());
+            i.as_object_mut().ok_or("invalid item")?.remove("wait_on");
+            cc_job_policy::todo_wait::release_ready(db);
+        }
+        Command::Wait { id, on, progress } => {
+            cc_job_policy::todo_wait::validate(db, *id, on)?;
+            let i = find(db, *id)?;
+            let on: std::collections::BTreeSet<_> = on.iter().copied().collect();
+            i["wait_on"] = json!(on);
+            if i["status"] != "block" {
+                i["status"] = json!("wait");
+            }
+            i.as_object_mut()
+                .ok_or("invalid item")?
+                .remove("dependency_ready");
+            if let Some(percent) = progress {
+                set_progress(i, *percent)?;
+            }
+            if let Some(recovery) = i["stall_recovery"].as_object_mut() {
+                recovery.remove("pending");
+                recovery.remove("report");
+            }
+            i["updated"] = json!(now());
+            cc_job_policy::todo_wait::release_ready(db);
         }
         Command::Progress { id, percent, .. } => {
             let item = find(db, *id)?;
@@ -677,7 +723,32 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(cli.command, Command::List { .. }) {
         return Ok(());
     }
-    save(&paths.store, &db)
+    save(&paths.store, &db)?;
+    drop(_lock);
+    // Notify the ordinary watchdog immediately after committing a completed
+    // prerequisite. The production path uses the same existing admission gates.
+    // Isolated CLI stores never launch the PC's production workers.
+    if matches!(cli.command, Command::Done { .. } | Command::Wait { .. })
+        && paths.store == Paths::production().store
+        && db["items"]
+            .as_array()
+            .is_some_and(|items| items.iter().any(|i| i["dependency_ready"] == true))
+    {
+        let mut wake = std::process::Command::new(std::env::current_exe().map_err(err)?);
+        wake.arg("watch")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            wake.creation_flags(0x08000000);
+        }
+        if let Err(error) = wake.spawn() {
+            eprintln!("完了待ちの解除を保存しました。見張りは次の定期実行で再開します: {error}");
+        }
+    }
+    Ok(())
 }
 
 pub struct Discord {

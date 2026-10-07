@@ -55,6 +55,45 @@ fn cli_state_transitions_preserve_jobs_notes_and_failed_writes() {
     }
 }
 #[test]
+fn cli_wait_persists_repeated_dependencies_and_done_releases_after_reload() {
+    let temp = Temp::new();
+    for args in [
+        vec!["project", "a", "C:/repo"],
+        vec!["add", "a", "依存元"],
+        vec!["add", "a", "待ち先1"],
+        vec!["add", "a", "待ち先2"],
+        vec!["start", "1", "--job", "old", "--progress", "50"],
+        vec!["wait", "1", "--on", "2", "--on", "3"],
+    ] {
+        assert!(rust_command(&temp.0, &args).status.success());
+    }
+    let d = load(&temp.paths().store).unwrap();
+    assert_eq!(d["items"][0]["wait_on"], json!([2, 3]));
+    assert_eq!(d["items"][0]["status"], "wait");
+    let before = fs::read(&temp.paths().store).unwrap();
+    let listed = rust_command(&temp.0, &["list"]);
+    assert!(listed.status.success());
+    assert!(String::from_utf8_lossy(&listed.stdout).contains("ToDo 2 待ち"));
+    assert_eq!(before, fs::read(&temp.paths().store).unwrap());
+    assert!(
+        !rust_command(&temp.0, &["wait", "2", "--on", "1"])
+            .status
+            .success()
+    );
+    assert_eq!(before, fs::read(&temp.paths().store).unwrap());
+    assert!(rust_command(&temp.0, &["done", "2"]).status.success());
+    assert_eq!(
+        load(&temp.paths().store).unwrap()["items"][0]["status"],
+        "wait"
+    );
+    assert!(rust_command(&temp.0, &["done", "3"]).status.success());
+    let d = load(&temp.paths().store).unwrap();
+    assert_eq!(d["items"][0]["status"], "todo");
+    assert_eq!(d["items"][0]["dependency_ready"], true);
+    assert_eq!(d["items"][0]["jobs"], json!(["old"]));
+    assert_eq!(d["items"][0]["progress"], 50);
+}
+#[test]
 fn save_retries_real_windows_sharing_violation_until_handle_released() {
     let t = Temp::new();
     let p = t.paths();
@@ -399,15 +438,33 @@ fn save_backup_once_unicode_unknown_and_no_tmp() {
     );
 }
 #[test]
-fn real_state_read_only_roundtrip_all_fields() {
-    // Read every byte/field; write only an isolated copy under this crate.
-    let real = Path::new("D:/CC/Tools/todo/todo.json");
-    let bytes = fs::read(real).unwrap();
-    let original: Value = serde_json::from_slice(&bytes).unwrap();
+fn large_state_roundtrip_all_fields_without_production_data() {
+    // Exercise a complete large store using synthetic data on every host.
+    // Production names and notes must never be copied into assertion output.
+    let mut original = json!({"projects":{"PROBE":"C:/probe","probe":"C:/other"},"next_id":402,
+        "stalls":{"probe":{"since":1234.5678901234567}},
+        "unknown":{"日本語":["未知",null,true,{"integer":u64::MAX,"fraction":0.12345678901234566}]},"items":[]});
+    for id in 1..=401 {
+        original["items"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id":id,"project":"probe",
+            "title":format!("合成作業{id}"),"status":"doing","jobs":[format!("synthetic-{id}")],
+            "note":"保存するUnicodeのメモ","progress":id%101,
+            "scheduler":{"attempt":id,"worktree":format!("C:/probe-wt/{id}")},
+            "extra":{"counter":id*123,"negative_zero":-0.0,"nested":[null,{"保持":true}]}}));
+    }
     let t = Temp::new();
     save(&t.paths().store, &original).unwrap();
     assert_eq!(load(&t.paths().store).unwrap(), original);
-    assert!(original["items"].as_array().unwrap().len() > 300);
+    assert_eq!(original["items"].as_array().unwrap().len(), 401);
+    assert_eq!(
+        load(&t.paths().store).unwrap()["items"][0]["extra"]["negative_zero"]
+            .as_f64()
+            .unwrap()
+            .to_bits(),
+        (-0.0f64).to_bits()
+    );
 }
 #[test]
 fn job_filter_case_paths_worktrees_corrupt_and_display() {

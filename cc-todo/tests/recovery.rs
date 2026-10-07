@@ -714,6 +714,43 @@ fn accepted_manual_intake_replaces_stale_pending_and_watch_never_recreates_it() 
         fs::remove_dir_all(root).unwrap();
     }
 }
+
+#[test]
+fn dependency_release_is_consumed_after_started_or_accepted_and_retries_obey_history() {
+    for queued in [false, true] {
+        let (root, p, mut f, mut notices) = fixture();
+        let mut d = load(&p.store).unwrap();
+        d["items"][0]["dependency_ready"] = json!(true);
+        d["items"][0]["stall_recovery"] = json!({"history":[9000,9900],"next_at":20000});
+        save(&p.store, &d).unwrap();
+        f.queued = queued;
+        run_watch(&p, &mut notices, &mut f).unwrap();
+        let mut d = load(&p.store).unwrap();
+        assert!(d["items"][0]["dependency_ready"].is_null());
+        assert_eq!(f.calls.len(), 1);
+        if !queued {
+            f.jobs.last_mut().unwrap()["status"] = json!("failed");
+            f.jobs.last_mut().unwrap()["last_error"] = json!("task failed");
+            f.jobs.last_mut().unwrap()["finished_at"] = json!(10000);
+            d["items"][0]["stall_recovery"]["next_at"] = json!(0);
+            save(&p.store, &d).unwrap();
+            f.t = 10001.;
+            run_watch(&p, &mut notices, &mut f).unwrap();
+            assert_eq!(
+                f.calls.len(),
+                1,
+                "failed worker must respect retry history after release"
+            );
+            assert!(
+                load(&p.store).unwrap()["items"][0]["stall_recovery"]["next_at"]
+                    .as_f64()
+                    .unwrap()
+                    > f.t
+            );
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+}
 #[test]
 fn fresh_pending_and_unreadable_intake_never_start_against_a_manual_receipt() {
     let (root, p, mut f, mut notices) = fixture();

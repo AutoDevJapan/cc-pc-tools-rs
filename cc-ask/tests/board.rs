@@ -431,3 +431,150 @@ fn local_labels_must_be_short_closed_japanese_lines() {
     assert!(!accept_label("fix deployment"));
     assert!(!accept_label("shep-12 の修正"));
 }
+
+#[test]
+fn dependency_waits_include_overwritten_status_and_missing_targets_without_stale_warnings() {
+    let db = json!({"items":[
+        {"id":1,"project":"製品","title":"依存作業を待つ","status":"wait","wait_on":[10,11,99],"updated":"2026-09-30 22:00"},
+        {"id":2,"project":"製品","title":"以前の作業中表示を直す","status":"doing","wait_on":[99],"updated":"2026-09-30 22:00"},
+        {"id":3,"project":"製品","title":"未着手の依存作業を待つ","status":"todo","wait_on":[99],"board_unassigned":true},
+        {"id":4,"project":"製品","title":"完了した作業は表示しない","status":"done","wait_on":[99]},
+        {"id":10,"status":"done"},
+        {"id":11,"status":"todo"}
+    ]});
+    let before = db.clone();
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(text.starts_with("作業中 0件・止まっている 0件・完了待ち 3件"));
+    assert!(text.contains("依存作業を待つ\n進み具合：未記録｜ToDo 11 待ち、ToDo 99 待ち｜"));
+    assert!(text.contains("以前の作業中表示を直す\n進み具合：未記録｜ToDo 99 待ち｜"));
+    assert!(text.contains("未着手の依存作業を待つ\n進み具合：未記録｜ToDo 99 待ち｜"));
+    assert!(!text.contains("完了した作業は表示しない"));
+    assert!(!text.contains("ToDo 10 待ち"));
+    assert!(!text.contains("1時間以上動きなし"));
+    assert!(!text.contains("担当なし"));
+    assert!(text.contains("あなたの返事待ち 0件（質問）\n\n## あなたの返事待ち\n今はありません"));
+    assert!(!text.contains("質問を開く"));
+    assert_eq!(db, before, "render must not release or mutate dependencies");
+}
+
+#[test]
+fn finished_targets_stop_counting_as_pending_before_wait_metadata_is_cleared() {
+    let mut db = json!({"items":[
+        {"id":1,"project":"製品","title":"作業の再開を待つ","status":"wait","wait_on":[2],"updated":"2026-09-30 22:00"},
+        {"id":2,"status":"todo"}
+    ]});
+    let waiting = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    db["items"][1]["status"] = json!("done");
+    let ready = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert_ne!(waiting, ready);
+    assert!(ready.starts_with("作業中 0件・止まっている 0件・完了待ち 0件・再開待ち 1件"));
+    assert!(ready.contains("作業の再開を待つ\n進み具合：未記録｜再開待ち（待機先は完了）｜"));
+    assert!(!ready.contains("ToDo 2 待ち"));
+    assert!(!ready.contains("1時間以上動きなし"));
+    assert_eq!(db["items"][0]["wait_on"], json!([2]));
+
+    db["items"][0]["status"] = json!("doing");
+    let doing = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(doing.starts_with("作業中 1件・止まっている 0件・完了待ち 0件"));
+    assert!(doing.contains("1時間以上動きなし"));
+    assert!(!doing.contains("ToDo 2 待ち"));
+}
+
+#[test]
+fn wait_status_without_targets_remains_visible_without_inventing_dependencies() {
+    for wait_on in [json!([]), Value::Null] {
+        let db = json!({"items":[{"id":1,"project":"製品","title":"再開を確認する","status":"wait","wait_on":wait_on,"updated":"2026-09-30 22:00"}]});
+        let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+        assert!(text.contains("再開を確認する\n進み具合：未記録｜再開待ち｜"));
+        assert!(text.contains("完了待ち 0件・再開待ち 1件"));
+        assert!(!text.contains("待機先は完了"));
+        assert!(!text.contains("1時間以上動きなし"));
+        assert!(!text.contains("質問を開く"));
+    }
+}
+
+#[test]
+fn owner_block_and_real_question_remain_visible_alongside_dependency_wait() {
+    let mut db = json!({"items":[
+        {"id":1,"project":"製品","title":"公開を進める","status":"block","wait_on":[2],"progress":60,"note":"オーナー判断待ち。質問スレッド123","updated":"2026-09-30 22:00"},
+        {"id":2,"status":"todo"}
+    ]});
+    let questions = vec![
+        json!({"thread_id":"123","after":"124","project":"製品","title":"公開してよいか","open":true}),
+    ];
+    let text = render(
+        &db,
+        &questions,
+        &json!({"guild_id":"G"}),
+        &Names::parse(""),
+        1791270000.,
+    );
+    assert!(text.contains("完了待ち 1件・あなたの返事待ち 1件（質問）"));
+    assert!(text.contains("60%｜返事待ち（オーナー判断待ち）・ToDo 2 待ち｜"));
+    assert_eq!(text.matches("[質問を開く]").count(), 1);
+    assert!(text.contains("https://discord.com/channels/G/123"));
+    db["items"][1]["status"] = json!("done");
+    let ready = render(
+        &db,
+        &questions,
+        &json!({"guild_id":"G"}),
+        &Names::parse(""),
+        1791270000.,
+    );
+    assert!(ready.starts_with("作業中 0件・止まっている 1件・完了待ち 0件"));
+    assert!(ready.contains("60%｜返事待ち（オーナー判断待ち）｜"));
+    assert!(!ready.contains("ToDo 2 待ち"));
+    assert_eq!(db["items"][0]["status"], "block");
+}
+
+#[test]
+fn completion_wait_does_not_turn_into_unassigned_work() {
+    let mut db = json!({"items":[
+        {"id":1,"project":"tools","title":"待機状態の作業","status":"wait","wait_on":[99],"created_s":1.},
+        {"id":2,"project":"tools","title":"未着手に戻った待機作業","status":"todo","wait_on":[99],"created_s":1.},
+        {"id":3,"project":"tools","title":"通常の未担当作業","status":"todo","created_s":1.}
+    ]});
+    mark_unassigned(&mut db, &[], &json!({"queue":[]}), 1791270000.);
+    assert_eq!(db["items"][0]["board_unassigned"], false);
+    assert_eq!(db["items"][1]["board_unassigned"], false);
+    assert_eq!(db["items"][2]["board_unassigned"], true);
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(text.starts_with("作業中 0件・止まっている 1件・完了待ち 2件"));
+    assert_eq!(text.matches("止まっている（担当なし）").count(), 1);
+}
+
+#[test]
+fn wait_titles_are_rewritten_and_target_completion_edits_the_saved_board_without_release() {
+    let mut h = setup();
+    let mut db = json!({"items":[
+        {"id":1,"project":"製品","title":"fix dependency deployment","status":"wait","wait_on":[2],"updated":"2026-09-30 22:00"},
+        {"id":2,"status":"todo"}
+    ]});
+    atomic_json(&h.ctx.todo, &db, 1).unwrap();
+    h.fake.borrow_mut().llm_answer = "依存作業の完了を待って公開する".into();
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
+    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    assert_eq!(state["labels"]["todo:1"], "依存作業の完了を待って公開する");
+    assert!(state["body"].as_str().unwrap().contains("ToDo 2 待ち"));
+    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
+    let posts = h.fake.borrow().posts.len();
+    let edits = h.fake.borrow().patches.len();
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
+
+    db["items"][1]["status"] = json!("done");
+    atomic_json(&h.ctx.todo, &db, 1).unwrap();
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
+    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    assert!(state["body"]
+        .as_str()
+        .unwrap()
+        .contains("再開待ち（待機先は完了）"));
+    assert!(!state["body"].as_str().unwrap().contains("ToDo 2 待ち"));
+    assert!(h.fake.borrow().patches.len() > edits);
+    assert_eq!(h.fake.borrow().posts.len(), posts);
+    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
+    assert_eq!(read_json(&h.ctx.todo).unwrap(), db);
+    assert!(h.fake.borrow().launches.is_empty());
+    assert!(pending(&h.ctx.load().unwrap()).is_empty());
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
+}

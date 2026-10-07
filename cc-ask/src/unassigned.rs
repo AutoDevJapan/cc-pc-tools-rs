@@ -20,7 +20,8 @@ pub fn unspecified(item: &Value) -> bool {
 }
 
 pub fn linked(item: &Value, job: &Value) -> bool {
-    (item["id"].is_number()
+    (item["id"].is_number() && arr(&job["related_todo_ids"]).contains(&item["id"]))
+        || (item["id"].is_number()
         && item["id"] == job["todo_id"]
         && (s(&job["project"]).is_empty() || item["project"] == job["project"]))
         || (!s(&job["id"]).is_empty()

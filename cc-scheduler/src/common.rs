@@ -23,6 +23,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// A caller explicitly assigning a new worker supersedes the old worker's result.
 /// Keep the saved specification, worktree, answers and job history intact.
 pub fn assign_worker(item: &mut Value, job: &str) {
+    // A worker now owns the released item, so the one-shot "prerequisite finished" marker ends.
+    if let Some(fields) = item.as_object_mut() {
+        fields.remove("dependency_ready");
+    }
     if !item["scheduler"].is_object() || item["scheduler"]["job"] == job {
         return;
     }

@@ -2,9 +2,9 @@ name: Build speed
 on:
   push:
     branches: [main]
-    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
   pull_request:
-    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
 permissions:
   contents: read
 jobs:
@@ -21,6 +21,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest
-      - run: cargo nextest run --locked -p cc-jobs -p cc-scheduler --no-fail-fast
-      - run: cargo test --locked -p cc-jobs -p cc-scheduler --doc
-      - run: cargo clippy --locked -p cc-jobs -p cc-scheduler --all-targets -- -D warnings
+      - uses: FedericoCarboni/setup-ffmpeg@v3
+      - run: cargo nextest run --locked -p cc-jobs -p cc-scheduler -p cc-job-policy -p cc-todo -p cc-shepherd -p cc-ask --no-fail-fast
+      - run: cargo test --locked -p cc-jobs -p cc-scheduler -p cc-job-policy -p cc-todo -p cc-shepherd -p cc-ask --doc
+      - run: cargo clippy --locked -p cc-jobs -p cc-scheduler -p cc-job-policy -p cc-todo -p cc-shepherd -p cc-ask --all-targets -- -D warnings

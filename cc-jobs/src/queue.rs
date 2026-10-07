@@ -210,6 +210,7 @@ impl Context {
             return false;
         };
         let priorities = self.queue_priorities(jobs, &cfg);
+        let dependency_waits = self.dependency_waits(jobs);
         let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
@@ -232,6 +233,7 @@ impl Context {
                 s(other, "id") != s(job, "id")
                     && s(other, "parent_job_id").is_empty()
                     && s(other, "status") == "queued"
+                    && !dependency_waits.contains_key(s(other, "id"))
                     && priority(other) <= priority(job)
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
@@ -728,6 +730,7 @@ impl Context {
         caller: Option<&str>,
     ) -> HashMap<String, Value> {
         let priorities = self.queue_priorities(jobs, cfg);
+        let dependency_waits = self.dependency_waits(jobs);
         let mut decisions = HashMap::new();
         // A normal waiter blocks opportunistic roots even during cooldown or
         // when its child/family limit is full. Never reserve phantom spare slots
@@ -736,6 +739,7 @@ impl Context {
             s(j, "status") == "queued"
                 && j["cancel_requested"] != true
                 && self.supervisor_alive(j)
+                && !dependency_waits.contains_key(s(j, "id"))
                 && priorities.get(s(j, "id")).copied().unwrap_or(2) < 3
         });
         let active: Vec<_> = jobs
@@ -759,6 +763,10 @@ impl Context {
         }
         let mut waiting = Vec::new();
         for j in jobs.iter().filter(|j| s(j, "status") == "queued") {
+            if let Some(reason) = dependency_waits.get(s(j, "id")) {
+                decisions.insert(s(j, "id").into(), reason.clone());
+                continue;
+            }
             let reason = if j["cancel_requested"] == true {
                 Some(("cancel_requested", "取り消し処理待ち"))
             } else if caller != Some(s(j, "id")) && !self.supervisor_alive(j) {
@@ -818,6 +826,50 @@ impl Context {
             }
         }
         decisions
+    }
+
+    pub(crate) fn todo_store(&self) -> std::path::PathBuf {
+        self.rt
+            .env()
+            .get("CC_TODO_HOME")
+            .map(|home| std::path::PathBuf::from(home).join("todo.json"))
+            .unwrap_or_else(|| {
+                self.root
+                    .parent()
+                    .unwrap_or(&self.root)
+                    .join("todo/todo.json")
+            })
+    }
+
+    fn dependency_waits(&self, jobs: &[Value]) -> HashMap<String, Value> {
+        let db = match fs::read(self.todo_store()) {
+            Ok(bytes) => serde_json::from_slice::<Value>(&bytes).map_err(Error::from),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(json!({"items":[]})),
+            Err(error) => Err(Error::from(error)),
+        };
+        let mut waits = HashMap::new();
+        for job in jobs.iter().filter(|j| s(j, "status") == "queued") {
+            match &db {
+                Ok(db) => {
+                    let on = cc_job_policy::todo_wait::job_pending_on(db, job);
+                    if !on.is_empty() {
+                        let message = on
+                            .iter()
+                            .map(|id| format!("ToDo {id} 待ち"))
+                            .collect::<Vec<_>>()
+                            .join("、");
+                        waits.insert(
+                            s(job, "id").into(),
+                            json!({"code":"todo_dependency","message":message,"wait_on":on}),
+                        );
+                    }
+                }
+                Err(_) => {
+                    waits.insert(s(job,"id").into(),json!({"code":"todo_store_unavailable","message":"ToDoの完了待ちを確認できないため再確認待ち"}));
+                }
+            }
+        }
+        waits
     }
 
     fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u8> {

@@ -74,6 +74,128 @@ const SESSION: &str = include_str!("fixtures/SESSION_LINES.jsonl");
 mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
+    #[test]
+    fn todo_completion_wait_reserves_no_capacity_and_releases_on_done() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db =
+            json!({"items":[{"id":1,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let mut dependent = waiting(&t, "dependent", "dependent");
+        dependent["todo_id"] = json!(1);
+        t.ctx.save(&dependent).unwrap();
+        let mut normal = waiting(&t, "ordinary", "ordinary");
+        normal["todo_id"] = json!(2);
+        t.ctx.save(&normal).unwrap();
+        assert!(t.ctx.admit("dependent").unwrap().is_none());
+        let reason = t.ctx.load("dependent").unwrap()["queue_wait_reason"].clone();
+        assert_eq!(reason["code"], "todo_dependency");
+        assert_eq!(reason["message"], "ToDo 2 待ち");
+        assert!(t.ctx.admit("ordinary").unwrap().is_some());
+        normal = t.ctx.load("ordinary").unwrap();
+        normal["status"] = json!("succeeded");
+        t.ctx.save(&normal).unwrap();
+        db["items"][1]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("dependent").unwrap().is_some());
+    }
+    #[test]
+    fn missing_prerequisite_and_linked_legacy_jobs_remain_waiting() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        fs::write(
+            t.ctx.root.join("todo.json"),
+            json!({"items":[{"id":1,"status":"doing","wait_on":[99],"jobs":["legacy"]}]})
+                .to_string(),
+        )
+        .unwrap();
+        waiting(&t, "legacy", "shep-116");
+        assert!(t.ctx.admit("legacy").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("legacy").unwrap()["queue_wait_reason"]["wait_on"],
+            json!([99])
+        );
+    }
+    #[test]
+    fn unreadable_todo_store_defers_legacy_admission_until_next_check() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        fs::write(&store, "{broken").unwrap();
+        waiting(&t, "legacy", "shep-116");
+        assert!(t.ctx.admit("legacy").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("legacy").unwrap()["queue_wait_reason"]["code"],
+            "todo_store_unavailable"
+        );
+        fs::write(store, json!({"items":[]}).to_string()).unwrap();
+        assert!(t.ctx.admit("legacy").unwrap().is_some());
+    }
+    #[test]
+    fn waiting_todo_registration_does_not_spawn_a_supervisor() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        fs::write(
+            t.ctx.root.join("todo.json"),
+            json!({"items":[{"id":1,"status":"wait","wait_on":[2]},{"id":2,"status":"todo"}]})
+                .to_string(),
+        )
+        .unwrap();
+        let before = t.rt.supervisors.load(Ordering::SeqCst);
+        assert!(t.run(&["--todo-id", "1"], b"complete task").is_err());
+        assert_eq!(t.rt.supervisors.load(Ordering::SeqCst), before);
+        assert!(
+            !t.ctx.jobs.exists()
+                || fs::read_dir(&t.ctx.jobs)
+                    .unwrap()
+                    .flatten()
+                    .all(|e| !e.path().join("job.json").exists())
+        );
+    }
+    #[test]
+    fn shared_pr_worker_tracks_every_related_todo_at_registration_and_admission() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db = json!({"items":[{"id":1,"status":"todo"},{"id":2,"status":"wait","wait_on":[3]},{"id":3,"status":"doing"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(
+            t.run(&["--related-todo-ids", "1,2"], b"finish shared PR")
+                .is_err()
+        );
+        assert!(
+            t.run(&["--related-todo-ids", "1,bad"], b"finish shared PR")
+                .is_err()
+        );
+        let mut j = waiting(&t, "shared", "shep-116");
+        j["related_todo_ids"] = json!([1, 2]);
+        t.ctx.save(&j).unwrap();
+        assert!(t.ctx.admit("shared").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("shared").unwrap()["queue_wait_reason"]["message"],
+            "ToDo 3 待ち"
+        );
+        db["items"][2]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("shared").unwrap().is_some());
+        assert!(t.run(&["--todo-id", "2"], b"duplicate").is_err());
+    }
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
     fn long_parent(t: &Test, id: &str) -> Value {
         let mut j = waiting(t, id, "orch-long");
@@ -745,8 +867,12 @@ mod queue_regressions {
         live_tool_parent(&t);
         tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
         t.rt.supervisor_fail.store(true, Ordering::Relaxed);
-        assert!(t.ctx.admit("other").unwrap().is_some(), "job: {}; diagnostics: {:?}",
-            t.ctx.load("long").unwrap(), t.rt.diagnostics.lock().unwrap());
+        assert!(
+            t.ctx.admit("other").unwrap().is_some(),
+            "job: {}; diagnostics: {:?}",
+            t.ctx.load("long").unwrap(),
+            t.rt.diagnostics.lock().unwrap()
+        );
         assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
         assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
         t.rt.supervisor_fail.store(false, Ordering::Relaxed);
@@ -1030,6 +1156,7 @@ mod queue_regressions {
             "failed",
             "cancelled",
             "cooldown",
+            "dependency",
             "child",
         ] {
             let t = Test::new();
@@ -1046,6 +1173,15 @@ mod queue_regressions {
                 let mut other = waiting(&t, "other", "orch-other");
                 if case == "cooldown" {
                     other["retry_not_before"] = json!(t.rt.epoch() + 60.);
+                    t.ctx.save(&other).unwrap();
+                }
+                if case == "dependency" {
+                    t.rt.env.lock().unwrap().insert(
+                        "CC_TODO_HOME".into(),
+                        t.ctx.root.to_string_lossy().into_owned(),
+                    );
+                    fs::write(t.ctx.root.join("todo.json"),json!({"items":[{"id":2,"status":"wait","wait_on":[3]},{"id":3,"status":"doing"}]}).to_string()).unwrap();
+                    other["todo_id"] = json!(2);
                     t.ctx.save(&other).unwrap();
                 }
                 t.ctx.admit("other").unwrap();

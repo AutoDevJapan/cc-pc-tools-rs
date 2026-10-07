@@ -732,7 +732,21 @@ impl Context {
                 }
                 next_heartbeat = self.rt.mono() + 60.;
             }
-            let job = self.load(jid)?;
+            let job = match self.load(jid) {
+                Ok(job) => job,
+                Err(error) if error.code == 75 => {
+                    if self.rt.mono() >= next_diagnostic {
+                        self.rt.diagnostic(&format!(
+                            "順番待ちの状態読取りを再試行: {}",
+                            redact_local_log_secrets(&error.message, &self.rt.env())
+                        ));
+                        next_diagnostic = self.rt.mono() + 60.;
+                    }
+                    self.rt.sleep(3.);
+                    continue;
+                }
+                Err(error) => return Err(error),
+            };
             if s(&job, "status") != "queued" || job["cancel_requested"] == true {
                 return Ok(());
             }

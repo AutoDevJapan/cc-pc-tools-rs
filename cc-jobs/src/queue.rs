@@ -286,14 +286,27 @@ impl Context {
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
     pub fn reload_queue(&self) -> Result<Value> {
-        let _gate = self.queue_lock()?;
         let mut restarted = Vec::new();
+        // Snapshot reads need no global gate. Release the gate between jobs so
+        // a long reload cannot prevent unrelated registration for a full minute.
         for snapshot in self.list_jobs(&HashSet::new()) {
             if s(&snapshot, "status") != "queued" {
                 continue;
             }
             let jid = s(&snapshot, "id");
-            let _state = self.job_lock(jid, "state.lock")?;
+            let _gate = self.queue_lock()?;
+            let path = self.job_dir(jid).join("state.lock");
+            let _state = match FileLock::try_acquire(&path) {
+                Ok(state) => state,
+                Err(error) if matches!(error.raw_os_error(), Some(32 | 33)) => continue,
+                Err(error) => {
+                    return Err(Error::file_io(
+                        "acquire exclusive lock byte range [0, 1)",
+                        &path,
+                        error,
+                    ));
+                }
+            };
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued"
                 || job["cancel_requested"] == true
@@ -325,7 +338,10 @@ impl Context {
         }
         job["pid"] = Value::Null;
         // Wait until the exited owner's OS lock is released before spawning.
-        let owner = FileLock::acquire(&self.job_dir(&jid).join("supervisor.lock"))?;
+        let owner_path = self.job_dir(&jid).join("supervisor.lock");
+        let owner = FileLock::acquire(&owner_path).map_err(|e| {
+            Error::file_io("acquire exclusive lock byte range [0, 1)", &owner_path, e)
+        })?;
         job["pid_created"] = Value::Null;
         job["last_event_at"] = json!(self.rt.now());
         self.save(job)?;

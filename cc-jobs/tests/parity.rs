@@ -958,6 +958,58 @@ mod queue_regressions {
         assert_eq!(t.ctx.load("running").unwrap()["status"], "running");
     }
     #[test]
+    fn reload_does_not_wait_for_a_busy_registration_or_hold_the_queue_between_jobs() {
+        let t = Test::new();
+        let busy = waiting(&t, "busy", "busy");
+        waiting(&t, "available", "available");
+        let held = t.ctx.job_lock("busy", "state.lock").unwrap();
+        let begin = Instant::now();
+        assert_eq!(t.ctx.reload_queue().unwrap(), json!(["available"]));
+        assert!(begin.elapsed() < Duration::from_secs(2));
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.ctx.load("busy").unwrap(), busy);
+        drop(t.ctx.queue_lock().unwrap());
+        drop(held);
+        assert!(
+            t.ctx
+                .reload_queue()
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .contains(&json!("busy"))
+        );
+    }
+    #[test]
+    fn transient_waiting_record_read_failure_does_not_fail_the_job() {
+        let t = Test::new();
+        waiting(&t, "wait", "wait");
+        fs::write(t.ctx.job_dir("wait").join("prompt.md"), "work").unwrap();
+        let path = t.ctx.job_dir("wait").join("job.json");
+        let injected = Arc::new(AtomicBool::new(false));
+        let seen = injected.clone();
+        let runtime = Arc::downgrade(&t.rt);
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |loaded, _| {
+            if loaded == path && !seen.swap(true, Ordering::Relaxed) {
+                runtime
+                    .upgrade()
+                    .unwrap()
+                    .load_failures
+                    .store(50, Ordering::Relaxed);
+            }
+        }));
+        t.ctx.supervise("wait").unwrap();
+        assert!(injected.load(Ordering::Relaxed));
+        assert_eq!(t.ctx.load("wait").unwrap()["status"], "succeeded");
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+        assert!(
+            t.rt.diagnostics
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|line| line.starts_with("順番待ちの状態読取りを再試行"))
+        );
+    }
+    #[test]
     fn recovery_requeues_watchdog_cancelled_recovery_but_never_owner_cancelled() {
         for explicit in [false, true] {
             let t = Test::new();

@@ -146,7 +146,7 @@ mod queue_regressions {
         }
     }
     #[test]
-    fn failed_yield_backoff_skips_attempts_until_it_expires_but_not_mid_item() {
+    fn failed_yield_backoff_applies_to_its_attempt_but_not_mid_item() {
         let t = Test::new();
         config(&t, json!({"max_running":1,"context_limit_percent":50}));
         let mut parent = live_tool_parent(&t);
@@ -163,10 +163,24 @@ mod queue_regressions {
             &[("item.started", "cargo"), ("item.completed", "cargo")],
         );
         let epoch = parse_iso(&t.rt.now()).unwrap();
-        fs::write(&retry, json!({"not_before": epoch + 20.}).to_string()).unwrap();
+        let attempt = format!(
+            "{}:{}",
+            s(&parent, "started_at"),
+            parent["codex_pid_created"]
+        );
+        fs::write(
+            &retry,
+            json!({"not_before": epoch + 20., "attempt": attempt}).to_string(),
+        )
+        .unwrap();
         assert!(t.ctx.admit("other").unwrap().is_none());
         assert_eq!(t.ctx.load("long").unwrap()["status"], "running");
-        fs::write(&retry, json!({"not_before": epoch - 1.}).to_string()).unwrap();
+        // A backoff left by an earlier Codex attempt of the same job is ignored.
+        fs::write(
+            &retry,
+            json!({"not_before": epoch + 20., "attempt": "earlier:1"}).to_string(),
+        )
+        .unwrap();
         assert!(t.ctx.admit("other").unwrap().is_some());
         assert_eq!(t.ctx.load("long").unwrap()["context_phase"], "summarize");
     }

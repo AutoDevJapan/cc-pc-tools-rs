@@ -328,7 +328,7 @@ impl Context {
             // Losing the backoff only costs throughput; keep the attempt result.
             if let Err(error) = self.write_json(
                 &self.job_dir(s(snapshot, "id")).join("yield-retry.json"),
-                &json!({"not_before": not_before}),
+                &json!({"not_before": not_before, "attempt": yield_attempt_key(snapshot)}),
             ) {
                 self.yield_diagnostic(&error);
             }
@@ -338,9 +338,11 @@ impl Context {
     pub(crate) fn yield_backoff_active(&self, job: &Value) -> bool {
         self.read_json(&self.job_dir(s(job, "id")).join("yield-retry.json"))
             .is_ok_and(|v| {
-                v["not_before"]
-                    .as_f64()
-                    .is_some_and(|t| t > self.rt.epoch())
+                // Scoped to one Codex attempt; a requeued job starts fresh.
+                v["attempt"] == yield_attempt_key(job)
+                    && v["not_before"]
+                        .as_f64()
+                        .is_some_and(|t| t > self.rt.epoch())
             })
     }
     fn attempt_tool_yield(&self, snapshot: &Value, baseline: Option<u64>) -> Result<bool> {
@@ -588,6 +590,9 @@ impl Context {
     }
 }
 
+fn yield_attempt_key(job: &Value) -> String {
+    format!("{}:{}", s(job, "started_at"), job["codex_pid_created"])
+}
 #[cfg(test)]
 mod tests {
     use super::*;

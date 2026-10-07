@@ -221,6 +221,7 @@ fn plan_with_intake(
     clients: &str,
     accepted: &BTreeSet<i64>,
 ) -> Result<Vec<i64>> {
+    cc_job_policy::todo_wait::release_ready(db);
     if !db["stalls"].is_object() {
         db["stalls"] = json!({});
     }
@@ -267,7 +268,11 @@ fn plan_with_intake(
             .as_array()
             .ok_or("invalid items")?
             .iter()
-            .filter(|i| i["project"] == project && matches!(s(&i["status"]), "todo" | "doing"))
+            .filter(|i| {
+                i["project"] == project
+                    && matches!(s(&i["status"]), "todo" | "doing")
+                    && !cc_job_policy::todo_wait::waiting(db, i)
+            })
             .cloned()
             .collect();
         if items.is_empty() {
@@ -300,7 +305,9 @@ fn plan_with_intake(
                 unattended = true;
                 continue;
             }
-            if discord_wait(&item, t) || n(&item["stall_recovery"]["next_at"]) > t {
+            if item["dependency_ready"] != true
+                && (discord_wait(&item, t) || n(&item["stall_recovery"]["next_at"]) > t)
+            {
                 unattended = true;
                 continue;
             }
@@ -349,7 +356,12 @@ fn plan_with_intake(
                 && matches!(s(&job["status"]), "failed" | "lost");
             let continuing = matches!(s(&job["status"]), "succeeded" | "finished")
                 && cc_scheduler::backend::result_outcome(s(&job["last_message"])) == "todo";
-            if t - since < STALL_S && !policy::live(&job) && !failed_recovery && !continuing {
+            if item["dependency_ready"] != true
+                && t - since < STALL_S
+                && !policy::live(&job)
+                && !failed_recovery
+                && !continuing
+            {
                 continue;
             }
             let (kind, reason) = if policy::live(&job) {
@@ -434,7 +446,7 @@ fn plan_with_intake(
                 ));
             }
             let due = failure::retry_at(&history, t);
-            if due > t {
+            if item["dependency_ready"] != true && due > t {
                 row["stall_recovery"]["next_at"] = json!(due);
                 if row["discord_restart_thread"].is_string() {
                     row["discord_restart_not_before"] = json!(due);
@@ -696,6 +708,9 @@ pub fn run_watch(
         if excluded(project, path, &clients) {
             continue;
         }
+        if cc_job_policy::todo_wait::waiting(&db, &item) {
+            continue;
+        }
         let p = &item["stall_recovery"]["pending"];
         if p.is_object() {
             if excluded(project, s(&p["job"]["cwd"]), &clients)
@@ -779,7 +794,7 @@ pub fn run_watch(
                             .into_iter()
                             .filter(|at| t - n(at) < RETRY_WINDOW_S)
                             .collect();
-                        if failure::retry_at(&history, t) > t {
+                        if row["dependency_ready"] != true && failure::retry_at(&history, t) > t {
                             row["discord_restart_not_before"] =
                                 json!(failure::retry_at(&history, t));
                             return Ok(());
@@ -798,6 +813,10 @@ pub fn run_watch(
             }
             let token = uuid::Uuid::new_v4().to_string();
             let claimed = edit(paths, |db| {
+                let current = find(db, id)?.clone();
+                if cc_job_policy::todo_wait::waiting(db, &current) {
+                    return Ok(false);
+                }
                 let row = find(db, id)?;
                 if row["stall_recovery"]["pending"]["request"] != p["request"]
                     || !matches!(s(&row["status"]), "todo" | "doing")
@@ -893,6 +912,21 @@ pub fn run_watch(
                     release_claim(paths, id, &token)?;
                     continue; // Give the scheduled launcher time to replace the resident.
                 }
+            }
+            // Recheck immediately before effects, after remedies that may take time.
+            let latest = load(&paths.store)?;
+            if latest["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|i| i["id"] == id)
+                .is_none_or(|i| {
+                    !matches!(s(&i["status"]), "todo" | "doing")
+                        || cc_job_policy::todo_wait::waiting(&latest, i)
+                })
+            {
+                release_claim(paths, id, &token)?;
+                continue;
             }
             match remedy_result.and_then(|_| backend.perform(&item, p, &db)) {
                 Ok(Outcome::Started(job)) => {
@@ -1257,11 +1291,12 @@ impl RecoveryBackend for RealRecovery {
         };
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
+            || cc_job_policy::todo_wait::waiting(&fresh, &row)
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);
         }
-        if discord_wait(&row, time_s()) {
+        if row["dependency_ready"] != true && discord_wait(&row, time_s()) {
             return Ok(Outcome::Deferred);
         }
         let project = s(&row["project"]);
@@ -1342,6 +1377,7 @@ impl RecoveryBackend for RealRecovery {
         };
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
+            || cc_job_policy::todo_wait::waiting(&latest, &row)
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);

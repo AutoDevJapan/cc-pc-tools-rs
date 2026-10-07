@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 cc-task-title = { path = "../cc-task-title" }
 cc-scheduler = { path = "../cc-scheduler" }
+cc-job-policy = { path = "../cc-job-policy" }
 serde_json = { version = "1", features = ["preserve_order"] }
 
 [dev-dependencies]

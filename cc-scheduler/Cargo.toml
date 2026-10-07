@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 cc-ask = { path = "../cc-ask" }
+cc-job-policy = { path = "../cc-job-policy" }
 serde = "1"
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 chrono = "0.4"

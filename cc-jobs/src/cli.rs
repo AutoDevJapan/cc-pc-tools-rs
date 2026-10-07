@@ -540,6 +540,30 @@ impl Context {
         // Registration shares admission's gate. This also serializes different
         // launch keys targeting the same ToDo.
         let _queue = self.queue_lock()?;
+        // Do not create another supervisor for a task already waiting on a
+        // prerequisite. Existing queued supervisors are also gated at admission.
+        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<i64>().ok()) {
+            let store = self.todo_store();
+            if store.exists() {
+                let db = self.read_json(&store)?;
+                if let Some(item) = db["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|i| i["id"] == todo)
+                {
+                    let on = cc_job_policy::todo_wait::pending_on(&db, item);
+                    if !on.is_empty() {
+                        return Err(Error::new(
+                            on.iter()
+                                .map(|id| format!("ToDo {id} 待ち"))
+                                .collect::<Vec<_>>()
+                                .join("、"),
+                        ));
+                    }
+                }
+            }
+        }
         let env = self.rt.env();
         let parent = if let Some(id) = a.value("parent-job-id") {
             if !valid_job_id(id) || !self.running_job(&self.load(id)?) {

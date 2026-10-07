@@ -55,6 +55,45 @@ fn cli_state_transitions_preserve_jobs_notes_and_failed_writes() {
     }
 }
 #[test]
+fn cli_wait_persists_repeated_dependencies_and_done_releases_after_reload() {
+    let temp = Temp::new();
+    for args in [
+        vec!["project", "a", "C:/repo"],
+        vec!["add", "a", "依存元"],
+        vec!["add", "a", "待ち先1"],
+        vec!["add", "a", "待ち先2"],
+        vec!["start", "1", "--job", "old", "--progress", "50"],
+        vec!["wait", "1", "--on", "2", "--on", "3"],
+    ] {
+        assert!(rust_command(&temp.0, &args).status.success());
+    }
+    let d = load(&temp.paths().store).unwrap();
+    assert_eq!(d["items"][0]["wait_on"], json!([2, 3]));
+    assert_eq!(d["items"][0]["status"], "wait");
+    let before = fs::read(&temp.paths().store).unwrap();
+    let listed = rust_command(&temp.0, &["list"]);
+    assert!(listed.status.success());
+    assert!(String::from_utf8_lossy(&listed.stdout).contains("ToDo 2 待ち"));
+    assert_eq!(before, fs::read(&temp.paths().store).unwrap());
+    assert!(
+        !rust_command(&temp.0, &["wait", "2", "--on", "1"])
+            .status
+            .success()
+    );
+    assert_eq!(before, fs::read(&temp.paths().store).unwrap());
+    assert!(rust_command(&temp.0, &["done", "2"]).status.success());
+    assert_eq!(
+        load(&temp.paths().store).unwrap()["items"][0]["status"],
+        "wait"
+    );
+    assert!(rust_command(&temp.0, &["done", "3"]).status.success());
+    let d = load(&temp.paths().store).unwrap();
+    assert_eq!(d["items"][0]["status"], "todo");
+    assert_eq!(d["items"][0]["dependency_ready"], true);
+    assert_eq!(d["items"][0]["jobs"], json!(["old"]));
+    assert_eq!(d["items"][0]["progress"], 50);
+}
+#[test]
 fn save_retries_real_windows_sharing_violation_until_handle_released() {
     let t = Temp::new();
     let p = t.paths();

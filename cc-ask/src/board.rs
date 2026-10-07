@@ -1,5 +1,6 @@
 //! A silent, durable, owner-readable board. Never owns the shared question/ToDo writer lock.
 use crate::core::*;
+use cc_job_policy::todo_wait;
 use cc_task_title::Names;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use serde_json::{json, Value};
@@ -311,7 +312,7 @@ fn project(item: &Value, db: &Value, names: &Names) -> String {
         }
     }
 }
-fn waiting(item: &Value, questions: &[Value]) -> bool {
+fn owner_waiting(item: &Value, questions: &[Value]) -> bool {
     let note = s(&item["note"]);
     questions.iter().any(|q| note.contains(s(&q["thread_id"])))
         || (s(&item["status"]) == "block"
@@ -333,6 +334,15 @@ fn waiting(item: &Value, questions: &[Value]) -> bool {
             ]
             .iter()
             .any(|x| note.contains(x)))
+}
+fn completion_waiting(db: &Value, item: &Value) -> bool {
+    s(&item["status"]) == "wait" || todo_wait::waiting(db, item)
+}
+fn visible(db: &Value, item: &Value) -> bool {
+    s(&item["status"]) != "done"
+        && (matches!(s(&item["status"]), "doing" | "block" | "wait")
+            || todo_wait::waiting(db, item)
+            || item["board_unassigned"] == true)
 }
 fn prs(text: &str, names: &Names) -> Vec<String> {
     PR.find_iter(text)
@@ -357,14 +367,30 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|i| matches!(s(&i["status"]), "doing" | "block") || i["board_unassigned"] == true)
+        .filter(|i| visible(db, i))
         .collect();
-    let doing = items.iter().filter(|i| s(&i["status"]) == "doing").count();
+    let doing = items
+        .iter()
+        .filter(|i| s(&i["status"]) == "doing" && !completion_waiting(db, i))
+        .count();
     let stopped = items
         .iter()
-        .filter(|i| s(&i["status"]) == "block" || i["board_unassigned"] == true)
+        .filter(|i| {
+            !completion_waiting(db, i)
+                && (s(&i["status"]) == "block" || i["board_unassigned"] == true)
+        })
         .count();
-    let mut out = format!("作業中 {doing}件・止まっている {stopped}件・あなたの返事待ち {}件（質問）\n\n## あなたの返事待ち\n", questions.len());
+    let completion = items.iter().filter(|i| todo_wait::waiting(db, i)).count();
+    let ready = items
+        .iter()
+        .filter(|i| s(&i["status"]) == "wait" && !todo_wait::waiting(db, i))
+        .count();
+    let ready_summary = if ready > 0 {
+        format!("・再開待ち {ready}件")
+    } else {
+        String::new()
+    };
+    let mut out = format!("作業中 {doing}件・止まっている {stopped}件・完了待ち {completion}件{ready_summary}・あなたの返事待ち {}件（質問）\n\n## あなたの返事待ち\n", questions.len());
     if questions.is_empty() {
         out.push_str("今はありません\n");
     }
@@ -381,8 +407,14 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
     let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for item in items {
         let last = epoch(s(&item["updated"])).or_else(|| epoch(s(&item["created"])));
-        let is_waiting = waiting(item, questions);
-        let status = if item["board_unassigned"] == true {
+        let is_waiting = owner_waiting(item, questions);
+        let on = todo_wait::pending_on(db, item);
+        let wait_status = on
+            .iter()
+            .map(|id| format!("ToDo {id} 待ち"))
+            .collect::<Vec<_>>()
+            .join("、");
+        let status = if item["board_unassigned"] == true && !completion_waiting(db, item) {
             "止まっている（担当なし）".into()
         } else if s(&item["status"]) == "block" {
             let reason = s(&item["note"]).split(['。', '\n']).next().unwrap_or("");
@@ -401,10 +433,25 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
             )
         } else if is_waiting {
             "返事待ち".into()
+        } else if !on.is_empty() {
+            String::new()
+        } else if s(&item["status"]) == "wait" {
+            if item["wait_on"].as_array().is_some_and(|on| !on.is_empty()) {
+                "再開待ち（待機先は完了）".into()
+            } else {
+                "再開待ち".into()
+            }
         } else if last.is_some_and(|last| now - last >= 3600.) {
             "作業中・1時間以上動きなし".into()
         } else {
             "作業中".into()
+        };
+        let status = if wait_status.is_empty() {
+            status
+        } else if status.is_empty() {
+            wait_status
+        } else {
+            format!("{status}・{wait_status}")
         };
         let links = prs(
             &format!("{} {}", s(&item["title"]), s(&item["note"])),
@@ -428,7 +475,7 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
             ));
     }
     if groups.is_empty() {
-        out.push_str("\n作業中・止まっている作業はありません。\n");
+        out.push_str("\n作業中・止まっている作業・完了待ちの作業はありません。\n");
     }
     for (group, lines) in groups {
         out.push_str(&format!("\n## {group}\n{}\n", lines.join("\n\n")));
@@ -567,8 +614,20 @@ fn cc_scheduler_snapshot(root: &std::path::Path) -> Result<Vec<Value>> {
 }
 /// Derived display metadata never changes the shared ToDo or launches a worker.
 pub fn mark_unassigned(db: &mut Value, jobs: &[Value], intake: &Value, now: f64) {
-    for item in db["items"].as_array_mut().into_iter().flatten() {
-        let detected = crate::unassigned::detected(item, jobs, intake, now);
+    let detected: Vec<_> = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|item| {
+            !completion_waiting(db, item) && crate::unassigned::detected(item, jobs, intake, now)
+        })
+        .collect();
+    for (item, detected) in db["items"]
+        .as_array_mut()
+        .into_iter()
+        .flatten()
+        .zip(detected)
+    {
         item["board_unassigned"] = json!(detected);
     }
 }
@@ -597,13 +656,13 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         Ok((jobs, intake)) => {
             mark_unassigned(&mut db, &jobs, &intake, ctx.now());
             for item in db["items"].as_array_mut().into_iter().flatten() {
-                if waiting(item, &questions) {
+                if owner_waiting(item, &questions) {
                     item["board_unassigned"] = json!(false);
                 }
             }
         }
         Err(e) => {
-            // Unknown ownership is not absence. Existing doing/block rows still update.
+            // Unknown ownership is not absence. Existing work and wait rows still update.
             eprintln!("board ownership unavailable: {e}");
             for item in db["items"].as_array_mut().into_iter().flatten() {
                 item["board_unassigned"] = json!(false);
@@ -614,7 +673,7 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         .as_array()
         .ok_or("invalid ToDo items")?
         .iter()
-        .filter(|i| matches!(s(&i["status"]), "doing" | "block") || i["board_unassigned"] == true)
+        .filter(|i| visible(&db, i))
         .cloned()
         .collect();
     let mut state = load(ctx)?;

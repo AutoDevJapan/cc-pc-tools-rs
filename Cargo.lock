@@ -212,6 +212,9 @@ dependencies = [
 [[package]]
 name = "cc-job-policy"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "cc-jobs"
@@ -262,6 +265,7 @@ name = "cc-scheduler"
 version = "0.1.0"
 dependencies = [
  "cc-ask",
+ "cc-job-policy",
  "cc-todo",
  "chrono",
  "regex",
@@ -278,6 +282,7 @@ dependencies = [
 name = "cc-shepherd"
 version = "0.1.0"
 dependencies = [
+ "cc-job-policy",
  "cc-scheduler",
  "cc-task-title",
  "serde_json",

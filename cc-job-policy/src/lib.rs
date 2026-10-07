@@ -1,4 +1,5 @@
 //! Permissions for unattended jobs. Read-only work cannot escalate to write access.
+pub mod todo_wait;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
     pub sandbox: &'static str,
@@ -135,7 +136,7 @@ pub fn for_sandbox(sandbox: &str) -> Policy {
     }
 }
 
-pub const WRITE_GUIDANCE: &str = "\n## この実装ジョブの実行範囲\n依頼に必要な変更のgit commit・git push、ghによるPR作成・CI確認・別モデルのレビュー後のマージは、PCオーナーの作業指示の範囲で実行する。作業先が人間レビューを明示要求する場合はその規則に従う。通常の実行権限で行い、承認が必要な呼び出しは設定された自動審査に提出する。拒否された同じ操作を別経路で迂回しない。失敗の正確な理由と次の処置を元の共有ToDoへ記録する。\n一時データはSkill codex-safe-owned-temp-cleanup（D:/CC/Skills/codex-safe-owned-temp-cleanup/SKILL.md）に従う。新規の一時フォルダはD:/CC/Tools/safe-delete/safe-delete.exe createで所有記録を作り、planが返す通常削除を別の呼び出しで実行し、成功後はfinish --id <所有ID>で記録する。実行前に削除が拒否されたら再試行せずquarantine --id <所有ID> --reason policyで削除希望フォルダへ退避する。所有記録のない既存の一時データは作成元・不要性・絶対パス・リンクの有無を確認してからSkillの手順で同じドライブの削除希望へ移す。未コミット成果を先に保存し、他の担当のデータを片付けない。削除拒否だけをオーナー判断待ちにしない。\n";
+pub const WRITE_GUIDANCE: &str = "\n## この実装ジョブの実行範囲\n依頼に必要な変更のgit commit・git push、ghによるPR作成・CI確認・別モデルのレビュー後のマージは、PCオーナーの作業指示の範囲で実行する。作業先が人間レビューを明示要求する場合はその規則に従う。通常の実行権限で行い、承認が必要な呼び出しは設定された自動審査に提出する。拒否された同じ操作を別経路で迂回しない。失敗の正確な理由と次の処置を元の共有ToDoへ記録する。\n一時データはSkill codex-safe-owned-temp-cleanup（D:/CC/Skills/codex-safe-owned-temp-cleanup/SKILL.md）に従う。新規の一時フォルダはD:/CC/Tools/safe-delete/safe-delete.exe createで所有記録を作り、planが返す通常削除を別の呼び出しで実行し、成功後はfinish --id <所有ID>で記録する。実行前に削除が拒否されたら再試行せずquarantine --id <所有ID> --reason policyで削除希望フォルダへ退避する。所有記録のない既存の一時データは作成元・不要性・絶対パス・リンクの有無を確認してからSkillの手順で同じドライブの削除希望へ移す。未コミット成果を先に保存し、他の担当のデータを片付けない。削除拒否だけをオーナー判断待ちにしない。\n\nほかのToDoの完了だけを待って終了するときは、必ずD:/CC/Tools/todo/todo.exe wait <自分のToDo番号> --on <待ち先の番号>で記録する。メモだけで終了せず、判断待ちのblockを使わない。複数なら--onを繰り返す。待ち先がdoneになるまで担当を起動しない。\n";
 
 pub const READ_GUIDANCE: &str = "\n## この閲覧ジョブの実行範囲\n読むだけの調査・レビューです。ファイル編集・git push・PR作成・マージ・削除・退避は実行しない。調査結果を返す。\n";
 

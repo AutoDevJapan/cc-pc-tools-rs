@@ -7,6 +7,7 @@
 //! Rules: a PR is skipped while any running codex_jobs job works in its worktree (implementation or shepherd); at
 //! most MAX_RUNNING shepherds at once and one launch per call; after a shepherd ends the PR rests COOLDOWN_S
 //! (REST_DECISION_S when it ended waiting for the owner) before another is started.
+use cc_job_policy::todo_wait;
 use cc_scheduler::{common::*, policy::live};
 use serde_json::{json, Value};
 use std::{
@@ -26,6 +27,14 @@ pub trait Backend {
     fn trees(&mut self, repo: &Value) -> Result<Value>;
     fn is_dir(&self, path: &str) -> bool;
     fn last_state(&self, job: &str) -> String;
+    /// The shared ToDo database; tests without ToDo links keep the default empty one.
+    fn todo(&mut self) -> Result<Value> {
+        Ok(json!({"items":[]}))
+    }
+    /// End the one-shot "prerequisite finished" marker of these ToDos once a shepherd owns the PR.
+    fn clear_dependency_ready(&mut self, _keys: &[Value]) -> Result<()> {
+        Ok(())
+    }
 }
 pub struct RealBackend {
     pub jobs: PathBuf,
@@ -48,6 +57,31 @@ impl Backend for RealBackend {
     }
     fn is_dir(&self, p: &str) -> bool {
         Path::new(p).is_dir()
+    }
+    fn todo(&mut self) -> Result<Value> {
+        read_json(Path::new("D:/CC/Tools/todo/todo.json"), json!({"items":[]}))
+    }
+    fn clear_dependency_ready(&mut self, keys: &[Value]) -> Result<()> {
+        let path = Path::new("D:/CC/Tools/todo/todo.json");
+        let _lock = ByteLock::acquire(
+            &path.with_file_name("todo.lock"),
+            std::time::Duration::from_secs(5),
+        )?
+        .ok_or(Error("TimeoutError"))?;
+        let mut db = read_json(path, json!({"items":[]}))?;
+        let mut changed = false;
+        for item in db["items"].as_array_mut().into_iter().flatten() {
+            if keys.contains(&json!(release_key(item))) && item.get("dependency_ready").is_some() {
+                if let Some(fields) = item.as_object_mut() {
+                    fields.remove("dependency_ready");
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            write_json(path, &db, 1)?;
+        }
+        Ok(())
     }
     fn last_state(&self, j: &str) -> String {
         fs::read_to_string(self.jobs.join(j).join("last_message.md"))
@@ -74,6 +108,79 @@ pub fn parse_trees(text: &str) -> Value {
     }
     found
 }
+/// True when `text` contains `needle` not followed by another digit (PR#1 must not match PR#12).
+fn mentions(text: &str, needle: &str) -> bool {
+    let (text, needle) = (text.to_lowercase(), needle.to_lowercase());
+    let mut from = 0;
+    while let Some(p) = text[from..].find(&needle) {
+        let at = from + p;
+        if !text[at + needle.len()..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_digit())
+        {
+            return true;
+        }
+        from = at + text[at..].chars().next().map_or(1, char::len_utf8);
+    }
+    false
+}
+/// Identity of one release: the ToDo id plus its `dependency_generation` (absent = 0, synthetic only).
+fn release_key(item: &Value) -> String {
+    format!(
+        "{}:{}",
+        item["id"],
+        item["dependency_generation"].as_u64().unwrap_or(0)
+    )
+}
+fn in_repo(db: &Value, item: &Value, repo: &Value) -> bool {
+    let project = norm(s(&db["projects"][s(&item["project"])])).to_lowercase();
+    !project.is_empty()
+        && ["path", "wt"].iter().any(|field| {
+            let root = norm(s(&repo[*field])).trim_end_matches('\\').to_lowercase();
+            !root.is_empty() && (project == root || project.starts_with(&(root + "\\")))
+        })
+}
+/// Unfinished ToDos tied to this PR by explicit evidence only: the PR's own jobs listed in the ToDo,
+/// a job in the PR worktree carrying the ToDo's id, or an exact PR URL / `repo#N` / (same project path)
+/// `PR#N` in the title or note. Nothing is matched across repositories by similarity.
+pub fn linked_todos(
+    db: &Value,
+    repo: &Value,
+    pr: &Value,
+    path: &str,
+    entry: &Value,
+    jobs: &[Value],
+) -> Vec<Value> {
+    let here = norm(path);
+    let mut pr_jobs: Vec<Value> = jobs
+        .iter()
+        .filter(|j| !s(&j["cwd"]).is_empty() && norm(s(&j["cwd"])) == here)
+        .map(|j| j["id"].clone())
+        .collect();
+    if truth(&entry["job"]) {
+        pr_jobs.push(entry["job"].clone());
+    }
+    let number = pr["number"].to_string();
+    arr(&db["items"])
+        .into_iter()
+        .filter(|i| s(&i["status"]) != "done")
+        .filter(|i| {
+            let by_job = arr(&i["jobs"]).iter().any(|j| pr_jobs.contains(j))
+                || (truth(&i["scheduler"]["job"]) && pr_jobs.contains(&i["scheduler"]["job"]))
+                || jobs.iter().any(|j| {
+                    truth(&j["todo_id"]) && j["todo_id"] == i["id"] && pr_jobs.contains(&j["id"])
+                });
+            let text = format!("{}\n{}", s(&i["title"]), s(&i["note"]));
+            let url = !s(&pr["url"]).is_empty() && mentions(&text, s(&pr["url"]));
+            let named = mentions(&text, &format!("{}#{number}", s(&repo["slug"])));
+            let numbered = in_repo(db, i, repo)
+                && (mentions(&text, &format!("pr#{number}"))
+                    || mentions(&text, &format!("pr #{number}")));
+            by_job || url || named || numbered
+        })
+        .collect()
+}
 pub fn candidates<B: Backend>(
     b: &mut B,
     repos: &[Value],
@@ -81,6 +188,18 @@ pub fn candidates<B: Backend>(
     state: &Value,
     now: f64,
 ) -> Result<(Vec<Value>, usize)> {
+    candidates_with_waits(b, repos, jobs, state, now).map(|(ready, running, _)| (ready, running))
+}
+/// Same as `candidates`, also reporting the PRs skipped because their ToDo waits for another ToDo.
+pub fn candidates_with_waits<B: Backend>(
+    b: &mut B,
+    repos: &[Value],
+    jobs: &[Value],
+    state: &Value,
+    now: f64,
+) -> Result<(Vec<Value>, usize, Vec<String>)> {
+    let todo = b.todo()?;
+    let mut waits = vec![];
     let cwds: Vec<String> = jobs
         .iter()
         .filter(|j| live(j))
@@ -114,6 +233,31 @@ pub fn candidates<B: Backend>(
             {
                 continue;
             }
+            // Decide waiting from the checkout's expected path, before any fetch/worktree is created.
+            let expected = match s(&trees[s(&pr["headRefName"])]) {
+                "" => format!("{}/pr-{}", s(&repo["wt"]), pr["number"]),
+                found => found.to_owned(),
+            };
+            let linked = linked_todos(&todo, repo, &pr, &expected, &state[&key], jobs);
+            let mut pending: Vec<i64> = linked
+                .iter()
+                .flat_map(|i| todo_wait::pending_on(&todo, i))
+                .collect();
+            pending.sort_unstable();
+            pending.dedup();
+            let blockers: Vec<String> =
+                pending.iter().map(|id| format!("ToDo {id} 待ち")).collect();
+            if !blockers.is_empty() {
+                waits.push(format!("{key}: {}", blockers.join(", ")));
+                continue;
+            }
+            let consumed = arr(&state[&key]["dependency_consumed"]);
+            let released: Vec<&Value> = linked
+                .iter()
+                .filter(|i| {
+                    i["dependency_ready"] == true && !consumed.contains(&json!(release_key(i)))
+                })
+                .collect();
             let mut path = s(&trees[s(&pr["headRefName"])]).to_owned();
             if path.is_empty() {
                 path = format!("{}/pr-{}", s(&repo["wt"]), pr["number"]);
@@ -163,14 +307,22 @@ pub fn candidates<B: Backend>(
                 } else {
                     COOLDOWN_S
                 };
-                if now - ended < rest {
+                // A finished prerequisite lets the released PR work resume without the old rest period.
+                if now - ended < rest && released.is_empty() {
                     continue;
                 }
             }
-            ready.push(json!({"key":key,"repo":repo,"pr":pr,"path":path}));
+            let mut entry = json!({"key":key,"repo":repo,"pr":pr,"path":path});
+            if !released.is_empty() {
+                entry["dependency_ids"] =
+                    json!(released.iter().map(|i| i["id"].clone()).collect::<Vec<_>>());
+                entry["dependency_keys"] =
+                    json!(released.iter().map(|i| release_key(i)).collect::<Vec<_>>());
+            }
+            ready.push(entry);
         }
     }
-    Ok((ready, running))
+    Ok((ready, running, waits))
 }
 pub fn render(template: &str, r: &Value) -> Result<String> {
     let fields = [
@@ -217,38 +369,43 @@ pub fn render(template: &str, r: &Value) -> Result<String> {
     Ok(text)
 }
 pub fn launch_command(jobs: &Path, r: &Value, prompt: &Path) -> Invocation {
-    tool_command(
-        &jobs.join("codex_jobs.py"),
-        &[
-            "run",
-            "--name",
-            &format!("shep-{}", r["pr"]["number"]),
-            "--task-title",
-            &format!(
-                "{}（レビュー・仕上げ）",
-                cc_task_title::summary(s(&r["pr"]["title"]))
-            ),
-            "--project",
-            &cc_task_title::project_from_folder(s(&r["path"])),
-            "--model",
-            "gpt-6.1-sol",
-            "--effort",
-            "high",
-            "--sandbox",
-            "danger-full-access",
-            "--cwd",
-            s(&r["path"]),
-            "--add-dir",
-            "D:/CC",
-            "--add-dir",
-            "C:/Program Files (x86)/Steam/steamapps/common/Sid Meier's Civilization VI",
-            "--prompt-file",
-            prompt.to_str().unwrap(),
-            "--task-type",
-            "pr_shepherd",
-        ],
-        None,
-    )
+    let name = format!("shep-{}", r["pr"]["number"]);
+    let title = format!(
+        "{}（レビュー・仕上げ）",
+        cc_task_title::summary(s(&r["pr"]["title"]))
+    );
+    let project = cc_task_title::project_from_folder(s(&r["path"]));
+    let todo = r["todo_id"].as_u64().map(|id| id.to_string());
+    let mut args: Vec<&str> = vec![
+        "run",
+        "--name",
+        &name,
+        "--task-title",
+        &title,
+        "--project",
+        &project,
+        "--model",
+        "gpt-6.1-sol",
+        "--effort",
+        "high",
+        "--sandbox",
+        "danger-full-access",
+        "--cwd",
+        s(&r["path"]),
+        "--add-dir",
+        "D:/CC",
+        "--add-dir",
+        "C:/Program Files (x86)/Steam/steamapps/common/Sid Meier's Civilization VI",
+        "--prompt-file",
+        prompt.to_str().unwrap(),
+        "--task-type",
+        "pr_shepherd",
+    ];
+    if let Some(id) = &todo {
+        // The job carries its ToDo so job admission also honours that ToDo's prerequisites.
+        args.extend(["--todo-id", id]);
+    }
+    tool_command(&jobs.join("codex_jobs.py"), &args, None)
 }
 pub fn cmd_step<B: Backend>(
     root: &Path,
@@ -279,11 +436,13 @@ pub fn cmd_step<B: Backend>(
             entry["ended"] = json!(now);
         }
     }
-    let (ready, running) = candidates(b, repos, &jobs, &state, now)?;
+    let (ready, running, waits) = candidates_with_waits(b, repos, &jobs, &state, now)?;
     if dry_run {
-        return Ok(Some(
-            json!({"running_shepherds":running,"ready":ready.iter().map(|r|r["key"].clone()).collect::<Vec<_>>()}),
-        ));
+        let mut report = json!({"running_shepherds":running,"ready":ready.iter().map(|r|r["key"].clone()).collect::<Vec<_>>()});
+        if !waits.is_empty() {
+            report["waiting"] = json!(waits);
+        }
+        return Ok(Some(report));
     }
     if let Some(r) = ready.first().filter(|_| running < MAX_RUNNING) {
         let prompt = render(&fs::read_to_string(root.join("shepherd_prompt.md"))?, r)?;
@@ -291,10 +450,50 @@ pub fn cmd_step<B: Backend>(
         fs::create_dir_all(&folder)?;
         let pf = folder.join(format!("shep-{}.md", r["pr"]["number"]));
         fs::write(&pf, prompt)?;
-        let output = runner.run(&launch_command(jobs_dir, r, &pf))?.stdout;
+        // Late recheck: a ToDo may have started waiting while the checkout and prompt were prepared.
+        let todo = b.todo()?;
+        let linked = linked_todos(
+            &todo,
+            &r["repo"],
+            &r["pr"],
+            s(&r["path"]),
+            &state[s(&r["key"])],
+            &jobs,
+        );
+        if linked.iter().any(|i| todo_wait::waiting(&todo, i)) {
+            write_json(&statepath, &state, 1)?;
+            return Ok(None);
+        }
+        let mut r = r.clone();
+        if let [only] = linked.as_slice() {
+            r["todo_id"] = only["id"].clone();
+        }
+        let output = runner.run(&launch_command(jobs_dir, &r, &pf))?.stdout;
         let job = output.trim().lines().last().unwrap_or("").trim();
         if !job.is_empty() {
-            state[s(&r["key"])] = json!({"job":job,"started":now});
+            // The shepherd now owns the release: end the marker so the next wait cycle starts fresh.
+            let ready_keys: Vec<Value> = linked
+                .iter()
+                .filter(|i| i["dependency_ready"] == true)
+                .map(|i| json!(release_key(i)))
+                .collect();
+            let cleared = ready_keys.is_empty() || b.clear_dependency_ready(&ready_keys).is_ok();
+            let key = s(&r["key"]).to_owned();
+            let mut consumed: Vec<Value> = arr(&state[&key]["dependency_consumed"])
+                .into_iter()
+                .filter(|k| !s(k).ends_with(":0"))
+                .collect();
+            // A generation is unique per release; generation 0 is remembered only if clearing failed.
+            for k in arr(&r["dependency_keys"]) {
+                if (!cleared || !s(&k).ends_with(":0")) && !consumed.contains(&k) {
+                    consumed.push(k);
+                }
+            }
+            let mut entry = json!({"job":job,"started":now});
+            if !consumed.is_empty() {
+                entry["dependency_consumed"] = json!(consumed);
+            }
+            state[&key] = entry;
             println!("shepherd started {} {}", s(&r["key"]), job);
         }
     } // Preserve the original one-space state format.

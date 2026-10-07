@@ -4,6 +4,30 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, path::PathBuf};
 
+/// Main sessions consume their answers through inbox, even after closing a
+/// question. Configuration adds exact agent names to the built-in main session.
+pub fn question_inbox_only(ctx: &Context, question: &Value) -> bool {
+    if s(&question["source"]) == "routing" {
+        return false;
+    }
+    let agent = s(&question["agent"]);
+    agent == "claude-main"
+        || (!agent.is_empty()
+            && ctx.cfg["inbox_only_agents"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|name| name.as_str() == Some(agent)))
+}
+
+pub fn thread_inbox_only(ctx: &Context, state: &Value, thread: &str) -> bool {
+    state["questions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .any(|q| s(&q["thread_id"]) == thread && question_inbox_only(ctx, q))
+}
+
 /// Old automatic routing records are not genuine registered questions.
 /// Revalidate their Discord origin before any legacy answer handler uses them.
 pub fn question_allowed(ctx: &mut Context, question: &Value) -> Result<bool> {

@@ -640,11 +640,11 @@ pub fn run_watch(
             // Subsequent retries must preserve the accepted request's exact body.
             let mut effective = p.clone();
             if !launched && p["handoff_saved"] != true && p["job"].is_object() {
-                if let Ok(handoff) = backend.handoff(&p["job"]) {
-                    if !handoff.is_empty() {
-                        effective["job"]["recovery_prompt"] = json!(handoff);
-                        effective["prompt"] = json!(continuation(&item, &effective["job"]));
-                    }
+                if let Ok(handoff) = backend.handoff(&p["job"])
+                    && !handoff.is_empty()
+                {
+                    effective["job"]["recovery_prompt"] = json!(handoff);
+                    effective["prompt"] = json!(continuation(&item, &effective["job"]));
                 }
                 effective["handoff_saved"] = json!(true);
                 edit(paths, |db| {

@@ -74,7 +74,14 @@ fn explicit_main_worker_suppresses_only_its_pr_across_worktrees() {
     let worker = json!({"id":"root880","status":"running","cwd":"C:/Users/makhmeto/Desktop/dev/ADJ/civ6-banseiki-wt/agent-todo-880-owned","name":"orch-todo-880"});
     let mut state =
         json!({key:{"job":"old","ended":1,"hold":false},"other/repo#1":{"job":"untouched"}});
-    adopt_state(&mut state, key, "root880", &[worker.clone()], 10.).unwrap();
+    adopt_state(
+        &mut state,
+        key,
+        "root880",
+        std::slice::from_ref(&worker),
+        10.,
+    )
+    .unwrap();
     assert_eq!(state[key]["job"], "root880");
     assert!(state[key].get("ended").is_none());
     assert_eq!(state["other/repo#1"]["job"], "untouched");

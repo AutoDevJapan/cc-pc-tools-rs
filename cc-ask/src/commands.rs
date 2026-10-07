@@ -141,7 +141,24 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         print_json(&value, Some(2))?;
         return Ok(value);
     }
-    if let Some(thread) = args.thread.as_deref() {
+    // Serialize automatic lookup and new-thread registration across processes.
+    // Network work never holds state.lock, which background workers also need.
+    let _creation = if args.thread.is_none() {
+        Some(crate::ask_dedup::creation_lock(ctx)?)
+    } else {
+        None
+    };
+    let existing = if args.thread.is_none() {
+        crate::ask_dedup::recover(ctx, &cwd, &names.redact(&args.title))?;
+        crate::ask_dedup::find_open(&ctx.load_fresh()?, &cwd, &title, &names.redact(&args.title))
+    } else {
+        None
+    };
+    if let Some(thread) = args
+        .thread
+        .as_deref()
+        .or_else(|| existing.as_ref().map(|q| s(&q["thread_id"])))
+    {
         if !crate::questions::is_question(&body) || !crate::questions::is_question(&content) {
             return Err("既存スレッドへのask本文には具体的な質問を書いてください".into());
         }
@@ -157,7 +174,52 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             context["scheduler_item"] = json!(args.scheduler_item);
             context["scheduler_job"] = json!(args.scheduler_job);
         }
-        let result = post_text(ctx, thread, &content, &args.attach, true, Some(&context))?;
+        if let Some(original) = &existing {
+            // Do not ask a second caller to obtain an answer the owner already gave.
+            let replies = owner_replies(ctx, original, &owner)?;
+            if let Some(answer) = replies
+                .iter()
+                .rev()
+                .find(|m| !crate::snooze::control_only(m))
+            {
+                let result = json!({"thread_id":thread,"reused":true,"suppressed":"already_answered",
+                    "latest_owner_reply":{"id":answer["id"],"timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))}});
+                print_json(&result, None)?;
+                return Ok(result);
+            }
+            // Keep the first caller's resume/scheduler assignment on this question.
+            for key in [
+                "cwd",
+                "agent",
+                "project",
+                "title",
+                "ask_title",
+                "session_id",
+                "posting_job",
+                "source",
+                "scheduler_item",
+                "scheduler_job",
+                "owner_only",
+            ] {
+                context.as_object_mut().unwrap().remove(key);
+                if let Some(value) = original.get(key) {
+                    context[key] = value.clone();
+                }
+            }
+            // Append to the original generation instead of replacing its owner,
+            // answer cursor, reminders or snooze/restart state.
+            context["reuse_question"] = json!({"thread_id":original["thread_id"],"after":original["after"],
+                "asked_at":original["asked_at"],"question_message":original["question_message"]});
+            context["reuse_assignment"] = json!(true);
+        }
+        let result = post_text(
+            ctx,
+            thread,
+            &content,
+            &args.attach,
+            existing.is_none(),
+            Some(&context),
+        )?;
         return Ok(result);
     }
     let prepared = crate::attachments::prepare(ctx, &args.attach)?;
@@ -173,15 +235,35 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let parts = chunks(&content, MAX_CONTENT);
     let channel_id = s(&ctx.cfg["task_channel_id"]).to_owned();
     let channel = ctx.call("GET", &format!("/channels/{channel_id}"), None)?;
+    let mut question = json!({"title":title,"ask_title":names.redact(&args.title),"project":project,"agent":args.agent,"cwd":cwd,"cwd_key":crate::ask_dedup::folder_key(&cwd),"asked_at":timestamp(),"open":true});
+    if let Some(reason) = args.owner_only {
+        question["owner_only"] = json!(reason.as_str());
+    }
+    if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
+        question["session_id"] = json!(session);
+    }
+    if args.source.as_deref() == Some("scheduler") {
+        question["source"] = json!("scheduler");
+        question["scheduler_item"] = json!(args.scheduler_item);
+        question["scheduler_job"] = json!(args.scheduler_job);
+    }
+    let creation_id = crate::ask_dedup::reserve(
+        ctx,
+        &question,
+        &parts[0],
+        first_files,
+        n(&channel["type"]) == 15,
+    )?;
     let mentions = json!({"parse":[],"users":[owner]});
     let (thread_id, mut message_id) = if n(&channel["type"]) == 15 {
-        let thread = crate::attachments::send(
+        let response = crate::attachments::send(
             ctx,
             &format!("/channels/{channel_id}/threads"),
             &json!({"name":title,"message":{"content":parts[0],"allowed_mentions":mentions}}),
             first_files,
             limit,
-        )?;
+        );
+        let thread = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
         let tid = s(&thread["id"]).to_owned();
         let mid = if truth(&thread["last_message_id"]) {
             s(&thread["last_message_id"]).to_owned()
@@ -190,14 +272,19 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         };
         (tid, mid)
     } else {
-        let message = crate::attachments::send(
+        let response = crate::attachments::send(
             ctx,
             &format!("/channels/{channel_id}/messages"),
             &json!({"content":parts[0],"allowed_mentions":mentions}),
             first_files,
             limit,
-        )?;
+        );
+        let message = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
         let mid = s(&message["id"]).to_owned();
+        if mid.is_empty() {
+            return Err("text question returned no message ID".into());
+        }
+        crate::ask_dedup::text_starter(ctx, &creation_id, &mid)?;
         let thread = ctx.call(
             "POST",
             &format!("/channels/{channel_id}/messages/{mid}/threads"),
@@ -205,25 +292,20 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         )?;
         (s(&thread["id"]).to_owned(), mid)
     };
+    if thread_id.is_empty() || message_id.is_empty() {
+        return Err("question creation returned no Discord ID".into());
+    }
+    crate::ask_dedup::checkpoint(ctx, &creation_id, &thread_id, &message_id)?;
     {
         let _guard = lock(ctx)?;
         let mut state = ctx.load()?;
-        let mut question = json!({"thread_id":thread_id,"after":message_id,"title":title,"project":project,"agent":args.agent,"cwd":cwd,"asked_at":timestamp(),"open":true});
-        if let Some(reason) = args.owner_only {
-            question["owner_only"] = json!(reason.as_str());
-        }
-        if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
-            question["session_id"] = json!(session);
-        }
-        if args.source.as_deref() == Some("scheduler") {
-            question["source"] = json!("scheduler");
-            question["scheduler_item"] = json!(args.scheduler_item);
-            question["scheduler_job"] = json!(args.scheduler_job);
-        }
+        question["thread_id"] = json!(thread_id);
+        question["after"] = json!(message_id);
         state["questions"]
             .as_array_mut()
             .ok_or("ValueError")?
             .push(question);
+        crate::ask_dedup::clear(&mut state, &creation_id);
         ctx.save(&state)?;
     }
     // Register the question before continuation uploads: a failed later batch must not
@@ -780,7 +862,10 @@ fn post_text(
         question,
         context,
     )?;
-    let value = json!({"thread_id":thread,"message_ids":ids});
+    let mut value = json!({"thread_id":thread,"message_ids":ids});
+    if context.is_some_and(|c| c["reuse_question"].is_object()) {
+        value["reused"] = json!(true);
+    }
     print_json(&value, None)?;
     Ok(value)
 }

@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
@@ -434,7 +434,7 @@ pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     #[cfg(windows)]
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         if let Ok(key) = RegKey::predef(HKEY_CURRENT_USER).open_subkey("Environment") {
             value = key.get_value("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
         }
@@ -582,7 +582,7 @@ impl Effects for RealEffects {
                 Ok(r) => {
                     return r
                         .into_json()
-                        .map_err(|_| "invalid Discord upload response".into())
+                        .map_err(|_| "invalid Discord upload response".into());
                 }
                 Err(ureq::Error::Status(code, r)) => {
                     let detail: Value = r.into_json().unwrap_or(json!({}));
@@ -610,7 +610,7 @@ impl Effects for RealEffects {
                 Err(_) => {
                     return Err(
                         "Discord upload connection failed; check thread before retrying".into(),
-                    )
+                    );
                 }
             }
         }
@@ -723,7 +723,7 @@ impl Effects for RealEffects {
                         url.split('?').next().unwrap_or(""),
                         e.kind(),
                         safe_text(e.message().unwrap_or("transport failed"))
-                    ))
+                    ));
                 }
             }
         }
@@ -885,9 +885,30 @@ pub fn fallback_type(task: &str) -> &'static str {
     for (kind, words) in [
         (
             "live_debug",
-            vec!["debug", "デバッグ", "原因調査", "障害", "エラー", "失敗"],
+            vec![
+                "debug",
+                "デバッグ",
+                "原因調査",
+                "原因を調べ",
+                "停止原因",
+                "障害を調査",
+                "エラーの原因",
+                "失敗の原因",
+            ],
         ),
-        ("review", vec!["review", "レビュー"]),
+        (
+            "review",
+            vec![
+                "レビューして",
+                "レビューしてください",
+                "レビューをお願いします",
+                "コードレビュー",
+                "review this",
+                "review the",
+                "review pr",
+                "code review",
+            ],
+        ),
         ("documentation", vec!["readme", "ドキュメント", "文書"]),
         ("research", vec!["research", "調査", "調べて"]),
     ] {
@@ -909,12 +930,12 @@ pub fn pick_model(
             excluded.push(x.clone())
         }
     }
-    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false).and_then(|p|{for key in ["model","effort","task_type","reason"]{if s(&p[key]).trim().is_empty(){return Err("ValueError".into())}}if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(s(&p["model"]))||excluded.iter().any(|x|x==s(&p["model"]))||!["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])){return Err("ValueError".into())}let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let selected=json!({"model":p["model"],"effort":p["effort"],"task_type":task_type.unwrap_or(s(&p["task_type"])),"reason":reason,"source":p.get("source").cloned().unwrap_or(json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}Ok(selected)});
+    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false).and_then(|p|{for key in ["model","effort","task_type","reason"]{if s(&p[key]).trim().is_empty(){return Err("ValueError".into())}}if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(s(&p["model"]))||excluded.iter().any(|x|x==s(&p["model"]))||!["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])){return Err("ValueError".into())}let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let kind=task_type.unwrap_or(s(&p["task_type"]));let profile=crate::job_policy::model_profile("",kind);let model=if excluded.is_empty(){profile.model}else{s(&p["model"])};let selected=json!({"model":model,"effort":profile.effort,"task_type":kind,"reason":reason,"source":p.get("source").cloned().unwrap_or(json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}Ok(selected)});
     match picked {
         Ok(v) => Ok(v),
         Err(error) => {
             let kind = task_type.unwrap_or_else(|| fallback_type(task));
-            let models = if ["review", "documentation", "research"].contains(&kind) {
+            let models = if ["documentation", "research", "live_debug"].contains(&kind) {
                 ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-sol"]
             } else {
                 ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"]
@@ -927,8 +948,9 @@ pub fn pick_model(
                 "pick fallback (local) {} {model} {kind}",
                 error_detail(&error)
             );
+            let profile = crate::job_policy::model_profile("", kind);
             Ok(
-                json!({"model":model,"effort":"max","task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
+                json!({"model":if excluded.iter().any(|v| v == profile.model) { model } else { profile.model },"effort":profile.effort,"task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
             )
         }
     }
@@ -1435,9 +1457,11 @@ pub fn owner_replies(ctx: &mut Context, question: &Value, owner: &str) -> Result
         .collect())
 }
 pub fn acknowledge_reply(question: &mut Value, message_id: &str) {
-    question["seen_reply"] = json!(n(&question["seen_reply"])
-        .max(message_id.parse().unwrap_or(0))
-        .to_string());
+    question["seen_reply"] = json!(
+        n(&question["seen_reply"])
+            .max(message_id.parse().unwrap_or(0))
+            .to_string()
+    );
 }
 
 /// Open question replies belong to resume. A delayed inbox must also skip answers
@@ -1578,7 +1602,7 @@ pub fn receive_answers(
     index: usize,
     messages: &[Value],
 ) -> Result<()> {
-    use crate::project::{question_project, ProjectNames};
+    use crate::project::{ProjectNames, question_project};
     let owner = ctx.owner();
     let tid = s(&state["questions"][index]["thread_id"]).to_owned();
     record_owner_answers(state, &tid, messages, &owner);
@@ -1876,7 +1900,9 @@ fn without_inline_code(line: &str) -> String {
 pub fn log_result_misuse(job: &str, result: &str) {
     if result.lines().any(|l| l.trim() == "状態: 要判断") && result_state(result) == "状態: 継続中"
     {
-        eprintln!("result-status misuse job={job}: 要判断 without a concrete question or valid status; treating as 継続中");
+        eprintln!(
+            "result-status misuse job={job}: 要判断 without a concrete question or valid status; treating as 継続中"
+        );
     }
 }
 

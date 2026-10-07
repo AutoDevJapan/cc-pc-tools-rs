@@ -1201,6 +1201,7 @@ pub fn restart_args(
             v.to_owned()
         }
     };
+    let profile = cc_job_policy::model_profile(s(&job["name"]), s(&job["task_type"]));
     let mut args = vec![
         "run".into(),
         "--name".into(),
@@ -1212,9 +1213,9 @@ pub fn restart_args(
         "--todo-id".into(),
         item["id"].to_string(),
         "--model".into(),
-        val("model", "gpt-6.1-sol"),
+        val("model", profile.model),
         "--effort".into(),
-        val("effort", "high"),
+        val("effort", profile.effort),
         "--cwd".into(),
         val("cwd", project_path),
         "--sandbox".into(),

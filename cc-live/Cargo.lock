@@ -43,9 +43,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc-job-policy"
+version = "0.1.0"
+
+[[package]]
 name = "cc-live"
 version = "0.1.0"
 dependencies = [
+ "cc-job-policy",
  "chrono",
  "regex",
  "serde_json",

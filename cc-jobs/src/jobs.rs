@@ -721,7 +721,7 @@ impl Context {
             }
             let me = self.rt.pid();
             job["status"] = json!("running");
-            job["queue_fairness_version"] = json!(2);
+            job["queue_fairness_version"] = json!(3);
             job["pid"] = json!(me);
             job["pid_created"] = json!(self.rt.proc_created(me));
             job["started_at"] = json!(self.rt.now());
@@ -737,7 +737,9 @@ impl Context {
             );
             self.save(&job)?;
             #[cfg(windows)]
-            if matches!(s(&job, "mcp_profile"), "browser" | "full") {
+            if s(&job, "context_phase") != "summarize"
+                && matches!(s(&job, "mcp_profile"), "browser" | "full")
+            {
                 cc_chrome::install_plugin_hook(&self.home)?;
                 let proxy = cc_chrome::native::start(&dir, jid)?;
                 job["chrome_pipe"] = json!(proxy.pipe);
@@ -758,7 +760,11 @@ impl Context {
             }
             proc = Some(self.rt.spawn(&Spawn {
                 argv: codex_args(&job, &dir),
-                prompt: dir.join(if job["yield_resume"] == true {
+                prompt: dir.join(if s(&job, "context_phase") == "summarize" {
+                    "context-summary-prompt.md"
+                } else if s(&job, "context_phase") == "continue" && job["yield_resume"] != true {
+                    "context-continue.md"
+                } else if job["yield_resume"] == true {
                     "yield-resume.md"
                 } else {
                     "prompt.md"
@@ -820,8 +826,9 @@ impl Context {
                     apply_event(&mut job, &ev);
                     if s(&ev, "type") == "item.completed"
                         && TOOL_KINDS.contains(&s(&ev["item"], "type"))
-                        && parse_iso(s(&job, "started_at"))
-                            .is_some_and(|at| self.rt.epoch() - at >= 7200.)
+                        && (self.context_limit_reached(&job)
+                            || parse_iso(s(&job, "started_at"))
+                                .is_some_and(|at| self.rt.epoch() - at >= 7200.))
                     {
                         self.save(&job)?;
                         let attempt = (|| -> Result<bool> {
@@ -855,8 +862,9 @@ impl Context {
                 }
                 if !had_event
                     && self.rt.mono() >= next_yield_check
-                    && parse_iso(s(&job, "started_at"))
-                        .is_some_and(|at| self.rt.epoch() - at >= 7200.)
+                    && (self.context_limit_reached(&job)
+                        || parse_iso(s(&job, "started_at"))
+                            .is_some_and(|at| self.rt.epoch() - at >= 7200.))
                 {
                     next_yield_check = self.rt.mono() + 3.;
                     let attempt = (|| -> Result<bool> {
@@ -964,7 +972,10 @@ impl Context {
         if gate.is_some() && !cleanup_failed && !setup_failed && !retry {
             let mut candidate = job.clone();
             let attempt = (|| -> Result<bool> {
-                if !self.yield_completed_turn(&mut candidate, &self.admission_jobs()?)? {
+                if !self.complete_context_summary(&mut candidate)?
+                    && !self.yield_completed_turn(&mut candidate, &self.admission_jobs()?)?
+                {
+                    job = candidate.clone();
                     return Ok(false);
                 }
                 self.track_queued_job(jid)?;
@@ -976,7 +987,16 @@ impl Context {
                     yielded = true;
                 }
                 Ok(false) => (),
-                Err(error) => self.yield_diagnostic(&error),
+                Err(error) => {
+                    if s(&job, "context_phase") == "summarize" {
+                        job["status"] = json!("failed");
+                        job["last_error"] = json!(format!(
+                            "context handoff could not be persisted: {}",
+                            redact_local_log_secrets(&error.message, &self.rt.env())
+                        ));
+                    }
+                    self.yield_diagnostic(&error);
+                }
             }
         }
         self.save(&job)?;
@@ -1036,7 +1056,12 @@ fn find_session(dir: &Path, id: &str, recursive: bool) -> Option<PathBuf> {
     None
 }
 pub fn codex_args(j: &Value, d: &Path) -> Vec<String> {
-    let policy = cc_job_policy::for_sandbox(s(j, "sandbox"));
+    let summary = s(j, "context_phase") == "summarize";
+    let policy = cc_job_policy::for_sandbox(if summary {
+        "read-only"
+    } else {
+        s(j, "sandbox")
+    });
     let mut args = vec![
         s(j, "codex").into(),
         "exec".into(),
@@ -1053,8 +1078,41 @@ pub fn codex_args(j: &Value, d: &Path) -> Vec<String> {
         "-s".into(),
         policy.sandbox.into(),
         "-o".into(),
-        d.join("last_message.md").to_string_lossy().into(),
+        d.join(if summary {
+            "context-summary-output.md"
+        } else {
+            "last_message.md"
+        })
+        .to_string_lossy()
+        .into(),
     ];
+    if summary {
+        // Disable the whole plugin/app features and every configured server
+        // discovered in this job's working directory before the stop.
+        args.extend([
+            "-c".into(),
+            "features.plugins=false".into(),
+            "-c".into(),
+            "features.apps=false".into(),
+            "-c".into(),
+            "features.shell_tool=false".into(),
+            "-c".into(),
+            "web_search=disabled".into(),
+        ]);
+        for server in j["context_disabled_mcp_servers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            args.extend(["-c".into(), format!("mcp_servers.'{server}'.enabled=false")]);
+        }
+        if !s(j, "resume_session").is_empty() {
+            args.extend(["resume".into(), s(j, "resume_session").into()]);
+        }
+        args.push("-".into());
+        return args;
+    }
     if let Some(dirs) = j["add_dirs"].as_array() {
         for d in dirs {
             args.extend(["--add-dir".into(), pystr(d)]);

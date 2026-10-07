@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -41,7 +41,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -176,7 +176,7 @@ pub fn valid_effort(e: &str) -> bool {
     )
 }
 pub fn pick_model(http: &mut dyn Http, task: &str) -> Result<Value> {
-    let result=http.request("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":[]})),false,20).and_then(|v|{if !["model","effort","task_type","reason"].iter().all(|k|!s(&v[k]).trim().is_empty())||!valid_model(s(&v["model"]))||!valid_effort(s(&v["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&v["task_type"])){return Err(Error("ValueError"));}let reason=safe_text(s(&v["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let mut selected=json!({"model":v["model"],"effort":v["effort"],"task_type":v["task_type"],"reason":reason,"source":v.get("source").unwrap_or(&json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}remove(&mut selected,"exclude");Ok(selected)});
+    let result=http.request("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":[]})),false,20).and_then(|v|{if !["model","effort","task_type","reason"].iter().all(|k|!s(&v[k]).trim().is_empty())||!valid_model(s(&v["model"]))||!valid_effort(s(&v["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&v["task_type"])){return Err(Error("ValueError"));}let reason=safe_text(s(&v["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let profile=cc_ask::job_policy::model_profile("",s(&v["task_type"]));let model=profile.model;let mut selected=json!({"model":model,"effort":profile.effort,"task_type":v["task_type"],"reason":reason,"source":v.get("source").unwrap_or(&json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}remove(&mut selected,"exclude");Ok(selected)});
     match result {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -184,9 +184,30 @@ pub fn pick_model(http: &mut dyn Http, task: &str) -> Result<Value> {
             let kind = [
                 (
                     "live_debug",
-                    vec!["debug", "デバッグ", "原因調査", "障害", "エラー", "失敗"],
+                    vec![
+                        "debug",
+                        "デバッグ",
+                        "原因調査",
+                        "原因を調べ",
+                        "停止原因",
+                        "障害を調査",
+                        "エラーの原因",
+                        "失敗の原因",
+                    ],
                 ),
-                ("review", vec!["review", "レビュー"]),
+                (
+                    "review",
+                    vec![
+                        "レビューして",
+                        "レビューしてください",
+                        "レビューをお願いします",
+                        "コードレビュー",
+                        "review this",
+                        "review the",
+                        "review pr",
+                        "code review",
+                    ],
+                ),
                 ("documentation", vec!["readme", "ドキュメント", "文書"]),
                 ("research", vec!["research", "調査", "調べて"]),
             ]
@@ -194,13 +215,11 @@ pub fn pick_model(http: &mut dyn Http, task: &str) -> Result<Value> {
             .find(|(_, words)| words.iter().any(|w| lower.contains(w)))
             .map(|(k, _)| k)
             .unwrap_or("implementation");
-            let model = match kind {
-                "review" | "documentation" | "research" => "gpt-6-luna",
-                _ => "gpt-6.1-sol",
-            };
+            let profile = cc_ask::job_policy::model_profile("", kind);
+            let model = profile.model;
             eprintln!("pick fallback (local) {} {} {}", e.0, model, kind);
             Ok(
-                json!({"model":model,"effort":"max","task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
+                json!({"model":model,"effort":profile.effort,"task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
             )
         }
     }
@@ -530,7 +549,13 @@ pub fn result_outcome(result: &str) -> &'static str {
     }
 }
 pub fn question_body(i: &Value) -> String {
-    format!("🙇 {} の作業が2回止まったため、再開方法を決めてください。\n作業: {}\na. 原因を調べてから再開する（推奨）。同じ停止が続くのを防げます。\nb. この作業を停止したままにする。ほかの作業を進めます。\na か b で教えてほしいです！\n回答後の再開も、PC の負荷と作業の優先順を確認してから開始します。\n共有 ToDo の項目番号: {}\n作業フォルダ: {}\n",s(&i["project"]),s(&i["title"]),i["id"],s(&i["scheduler"]["worktree"]))
+    format!(
+        "🙇 {} の作業が2回止まったため、再開方法を決めてください。\n作業: {}\na. 原因を調べてから再開する（推奨）。同じ停止が続くのを防げます。\nb. この作業を停止したままにする。ほかの作業を進めます。\na か b で教えてほしいです！\n回答後の再開も、PC の負荷と作業の優先順を確認してから開始します。\n共有 ToDo の項目番号: {}\n作業フォルダ: {}\n",
+        s(&i["project"]),
+        s(&i["title"]),
+        i["id"],
+        s(&i["scheduler"]["worktree"])
+    )
 }
 pub fn run_git(runner: &mut dyn Runner, repo: &Path, args: &[&str]) -> Result<String> {
     let mut c = invocation(&["git", "-C", repo.to_str().unwrap()], Some(40));

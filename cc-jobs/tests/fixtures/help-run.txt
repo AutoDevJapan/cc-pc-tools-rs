@@ -1,4 +1,4 @@
-usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT
+usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--sandbox {read-only,workspace-write,danger-full-access}]
                          [--cwd CWD] [--add-dir ADD_DIR] [--network]
                          [--mcp-profile {minimal,browser,full}] --prompt-file
@@ -10,8 +10,9 @@ usage: codex_jobs.py run [-h] --name NAME --model MODEL --effort EFFORT
 options:
   -h, --help            show this help message and exit
   --name NAME
-  --model MODEL
-  --effort EFFORT
+  --model MODEL         default: gpt-6-luna for review/check/research/cleanup,
+                        gpt-6.1-sol for implementation; explicit values win
+  --effort EFFORT       default: high; max requires an explicit value
   --sandbox {read-only,workspace-write,danger-full-access}
   --cwd CWD
   --add-dir ADD_DIR

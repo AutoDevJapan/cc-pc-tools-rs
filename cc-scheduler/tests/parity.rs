@@ -2205,8 +2205,20 @@ fn router_failure_preserves_review_fallback_model() {
     let picked = pick_model(&mut http, "レビューしてください").unwrap();
     assert_eq!(picked["model"], "gpt-6-luna");
     assert_eq!(picked["task_type"], "review");
-    assert_eq!(picked["effort"], "max");
+    assert_eq!(picked["effort"], "high");
     assert_eq!(http.calls, 1);
+}
+
+#[test]
+fn review_word_in_implementation_prompt_does_not_select_light_profile() {
+    let mut http = HttpFake {
+        responses: vec![Err(Error("OSError"))],
+        calls: 0,
+    };
+    let picked = pick_model(&mut http, "実装して、画面にレビューという文字を表示する").unwrap();
+    assert_eq!(picked["model"], "gpt-6.1-sol");
+    assert_eq!(picked["task_type"], "implementation");
+    assert_eq!(picked["effort"], "high");
 }
 #[test]
 fn invalid_settings_shape_returns_error_and_never_rewrites_state() {

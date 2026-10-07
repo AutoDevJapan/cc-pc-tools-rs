@@ -479,6 +479,14 @@ fn continuation_selection(
             .join("\n")
     );
     let mut selection = pick_model(ctx, &task, &[], kind)?;
+    for field in ["model", "effort"] {
+        if let Some(saved) = sources
+            .iter()
+            .find_map(|source| source[field].as_str().filter(|value| !value.is_empty()))
+        {
+            selection[field] = json!(saved);
+        }
+    }
     let source = sources
         .iter()
         .find(|source| source["sandbox"].as_str().is_some_and(|v| !v.is_empty()))

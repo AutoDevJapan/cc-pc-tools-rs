@@ -306,16 +306,46 @@ impl Context {
     }
     /// Caller holds the queue gate. Freeze controllers before checking again;
     /// never kill a process simply because its tool returned a background session.
+    /// A failed attempt at a completed boundary backs off for 15–30 s (shared by every process through
+    /// the job directory): each attempt holds the global gate while it reads the
+    /// event log and pauses the agent, and a job that kept failing every 3 s
+    /// starved `run` and the other waiters.
     pub(crate) fn yield_tool_boundary(&self, snapshot: &Value, jobs: &[Value]) -> Result<bool> {
-        if !(self.context_rotation_due(snapshot, jobs) || self.should_yield(snapshot, jobs))
+        if self.yield_backoff_active(snapshot)
+            || !(self.context_rotation_due(snapshot, jobs) || self.should_yield(snapshot, jobs))
             || !self.is_ours(snapshot, "codex_pid")
             || self.owns_civ6_lease(snapshot)?
         {
             return Ok(false);
         }
+        // Not at a completed tool boundary yet: cheap, retry on the next event.
         let Some((_, baseline)) = self.tool_boundary(snapshot)? else {
             return Ok(false);
         };
+        let result = self.attempt_tool_yield(snapshot, baseline);
+        if !matches!(result, Ok(true)) {
+            let not_before = self.rt.epoch() + crate::jitter(15., 30.);
+            // Losing the backoff only costs throughput; keep the attempt result.
+            if let Err(error) = self.write_json(
+                &self.job_dir(s(snapshot, "id")).join("yield-retry.json"),
+                &json!({"not_before": not_before, "attempt": yield_attempt_key(snapshot)}),
+            ) {
+                self.yield_diagnostic(&error);
+            }
+        }
+        result
+    }
+    pub(crate) fn yield_backoff_active(&self, job: &Value) -> bool {
+        self.read_json(&self.job_dir(s(job, "id")).join("yield-retry.json"))
+            .is_ok_and(|v| {
+                // Scoped to one Codex attempt; a requeued job starts fresh.
+                v["attempt"] == yield_attempt_key(job)
+                    && v["not_before"]
+                        .as_f64()
+                        .is_some_and(|t| t > self.rt.epoch())
+            })
+    }
+    fn attempt_tool_yield(&self, snapshot: &Value, baseline: Option<u64>) -> Result<bool> {
         self.rt.sleep(0.1);
         if !self.rollout_ready(snapshot)? {
             return Ok(false);
@@ -560,6 +590,9 @@ impl Context {
     }
 }
 
+fn yield_attempt_key(job: &Value) -> String {
+    format!("{}:{}", s(job, "started_at"), job["codex_pid_created"])
+}
 #[cfg(test)]
 mod tests {
     use super::*;

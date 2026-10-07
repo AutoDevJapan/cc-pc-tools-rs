@@ -479,9 +479,10 @@ impl Context {
     /// the gated path decides.
     pub(crate) fn yield_may_be_due(&self, job: &Value) -> bool {
         self.tool_handoff_pending(job)
-            || self.admission_snapshot().is_none_or(|jobs| {
-                self.context_rotation_due(job, &jobs) || self.should_yield(job, &jobs)
-            })
+            || (!self.yield_backoff_active(job)
+                && self.admission_snapshot().is_none_or(|jobs| {
+                    self.context_rotation_due(job, &jobs) || self.should_yield(job, &jobs)
+                }))
     }
     fn admission_record(&self, id: &str) -> Value {
         self.try_load(id).unwrap_or_else(|| {

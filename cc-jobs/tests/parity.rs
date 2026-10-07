@@ -146,6 +146,45 @@ mod queue_regressions {
         }
     }
     #[test]
+    fn failed_yield_backoff_applies_to_its_attempt_but_not_mid_item() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1,"context_limit_percent":50}));
+        let mut parent = live_tool_parent(&t);
+        parent["started_at"] = json!("2026-10-01T11:59:00+09:00");
+        parent["context_pct"] = json!(51);
+        t.ctx.save(&parent).unwrap();
+        let retry = t.ctx.job_dir("long").join("yield-retry.json");
+        // Mid-item checks are cheap and must not delay the next boundary.
+        tool_events(&t, &[("item.started", "cargo")]);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert!(!retry.exists());
+        tool_events(
+            &t,
+            &[("item.started", "cargo"), ("item.completed", "cargo")],
+        );
+        let epoch = parse_iso(&t.rt.now()).unwrap();
+        let attempt = format!(
+            "{}:{}",
+            s(&parent, "started_at"),
+            parent["codex_pid_created"]
+        );
+        fs::write(
+            &retry,
+            json!({"not_before": epoch + 20., "attempt": attempt}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "running");
+        // A backoff left by an earlier Codex attempt of the same job is ignored.
+        fs::write(
+            &retry,
+            json!({"not_before": epoch + 20., "attempt": "earlier:1"}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert_eq!(t.ctx.load("long").unwrap()["context_phase"], "summarize");
+    }
+    #[test]
     fn context_handoff_resumes_for_summary_then_starts_fresh_with_the_same_todo_and_scope() {
         let t = Test::new();
         let mut j = waiting(&t, "handoff", "req-handoff");

@@ -1761,9 +1761,6 @@ fn test_owner_question_records_original_worktree_for_continuation() {
         .to_string_lossy()
         .into_owned();
     let args = cc_ask::commands::AskArgs {
-        thread: None,
-        owner_only: None,
-        attach: vec![],
         title: "作業が停止しました".into(),
         body_file: body,
         agent: "Scheduler".into(),
@@ -1771,7 +1768,6 @@ fn test_owner_question_records_original_worktree_for_continuation() {
         source: Some("scheduler".into()),
         scheduler_item: Some(1),
         scheduler_job: Some("stopped-job".into()),
-        dry_run: false,
         ..Default::default()
     };
     cc_ask::commands::cmd_ask(&mut ctx, &args).unwrap();

@@ -1105,7 +1105,7 @@ pub fn codex_args(j: &Value, d: &Path) -> Vec<String> {
             .flatten()
             .filter_map(Value::as_str)
         {
-            args.extend(["-c".into(), format!("mcp_servers.'{server}'.enabled=false")]);
+            args.extend(["-c".into(), format!("mcp_servers.{server}.enabled=false")]);
         }
         if !s(j, "resume_session").is_empty() {
             args.extend(["resume".into(), s(j, "resume_session").into()]);

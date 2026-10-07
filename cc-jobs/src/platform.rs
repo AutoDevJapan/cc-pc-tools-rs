@@ -210,7 +210,7 @@ pub trait Runtime: Send + Sync {
                     || name.len() > 120
                     || !name
                         .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c))
+                        .all(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
                 {
                     return Err(io::Error::other("invalid MCP name"));
                 }

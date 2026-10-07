@@ -187,6 +187,7 @@ fn receipt(bytes: u64, cap: u64) -> io::Result<()> {
 }
 pub fn guarded<T>(
     env: &BTreeMap<String, String>,
+    args: &[String],
     body: impl FnOnce() -> io::Result<T>,
 ) -> io::Result<T> {
     prepare()?;
@@ -220,9 +221,9 @@ pub fn guarded<T>(
             // Persist use BEFORE Cargo starts, even if the process crashes during the build.
             history.record(&before, &before, at, "", "");
             history.save(&history_path)?;
-            let producer = std::env::current_dir()?.to_string_lossy().into_owned();
+            let producer = source_dir(args)?.to_string_lossy().into_owned();
             let branch = crate::hidden_command("git")
-                .args(["branch", "--show-current"])
+                .args(["-C", &producer, "branch", "--show-current"])
                 .output()
                 .ok()
                 .filter(|o| o.status.success())
@@ -248,6 +249,28 @@ pub fn guarded<T>(
             result
         },
     )
+}
+fn source_dir(args: &[String]) -> io::Result<std::path::PathBuf> {
+    let mut manifest = None;
+    for (i, arg) in args.iter().enumerate() {
+        if arg == "--" {
+            break;
+        }
+        if arg == "--manifest-path" {
+            manifest = args.get(i + 1).map(String::as_str);
+        }
+        if let Some(value) = arg.strip_prefix("--manifest-path=") {
+            manifest = Some(value);
+        }
+    }
+    if let Some(manifest) = manifest {
+        let path = std::path::absolute(manifest)?;
+        return path
+            .parent()
+            .map(Path::to_path_buf)
+            .ok_or_else(|| io::Error::other("manifest has no parent"));
+    }
+    std::env::current_dir()
 }
 pub fn finish(_root: &Path, env: &BTreeMap<String, String>) -> io::Result<()> {
     if !shared_selected(&[], env) || !Path::new(SHARED).exists() {

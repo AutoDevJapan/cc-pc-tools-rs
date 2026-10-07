@@ -509,6 +509,7 @@ fn test_ask_records_cwd_and_agent() {
     let body = a.root.path().join("question.md");
     std::fs::write(&body, "作業の方針を教えてください").unwrap();
     let args = cc_ask::commands::AskArgs {
+        thread: None,
         attach: vec![],
         agent: "Codex".into(),
         title: "質問".into(),
@@ -535,6 +536,7 @@ fn test_ask_records_cwd_and_agent() {
 #[test]
 fn test_replies_acknowledges_only_returned_owner_messages_and_thread() {
     let mut a = AnswerResume::new();
+    let repo = a.repository();
     let first = a.answer(1200., "先の回答", "OWN");
     let last = a.answer(601., "最後の回答", "OWN");
     a.answer(0., "他人の発言", "OTHER");
@@ -542,7 +544,7 @@ fn test_replies_acknowledges_only_returned_owner_messages_and_thread() {
     state["questions"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"thread_id":"100","after":"0","title":"別の質問","open":true}));
+        .push(json!({"thread_id":"100","after":"0","title":"別の質問","cwd":repo,"open":true}));
     a.save(&state);
     let returned = a.replies(Some("200"));
     assert_eq!(
@@ -558,8 +560,11 @@ fn test_replies_acknowledges_only_returned_owner_messages_and_thread() {
     assert!(a.state()["questions"][1].get("seen_reply").is_none());
     assert!(last.parse::<u64>().unwrap() > first.parse().unwrap());
     a.resume();
-    // Consuming reads own the reply; inspection uses --read-only.
-    assert_eq!(a.count(), 0);
+    // Only thread 200 was consumed. Thread 100 still owns its pending owner reply
+    // and must resume regardless of the runner's surrounding repositories.
+    assert_eq!(a.count(), 1);
+    assert!(a.question()["continuation"]["job"].is_null());
+    assert_eq!(a.state()["questions"][1]["continuation"]["after"], "100");
 }
 #[test]
 fn test_replies_without_thread_acknowledges_all_returned_questions() {

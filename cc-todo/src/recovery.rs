@@ -488,28 +488,41 @@ pub fn reconcile_intake_files(
     clients: &str,
 ) -> Result<IntakeOwners> {
     let guard = common::ByteLock::acquire(&state.join("console-state.lock"), Duration::ZERO);
-    let Ok(Some(_guard)) = guard else {
-        return Ok(IntakeOwners {
-            deferred: true,
-            ..Default::default()
-        });
+    let _guard = match guard {
+        Ok(Some(guard)) => guard,
+        Ok(None) => {
+            return Ok(IntakeOwners {
+                deferred: true,
+                ..Default::default()
+            });
+        }
+        Err(error) => return Err(format!("console state lock unavailable: {}", error.0)),
     };
     // Match the console's lock order; do not call HTTP or launch under either lock.
     let queue = load(&state.join("console-state.json"))?;
     let _todo = Lock::acquire(&paths.lock, Duration::from_secs(2))?;
     let mut jobs = vec![];
+    let mut complete = true;
     for entry in fs::read_dir(&paths.jobs).map_err(|e| e.to_string())? {
         let path = entry.map_err(|e| e.to_string())?.path().join("job.json");
         if path.exists() {
-            let job = load(&path)?;
-            if !job.is_object() || !job["id"].is_string() || !job["status"].is_string() {
-                return Err("job receipt unavailable".into());
+            match load(&path) {
+                Ok(job)
+                    if job.is_object() && job["id"].is_string() && job["status"].is_string() =>
+                {
+                    jobs.push(job)
+                }
+                _ => {
+                    complete = false;
+                    eprintln!(
+                        "intake reconciliation: job receipt unavailable; preserving reservations"
+                    );
+                }
             }
-            jobs.push(job);
         }
     }
     let mut db = load(&paths.store)?;
-    let owners = reconcile_pending_intake(&mut db, &queue, &jobs, t, clients)?;
+    let owners = reconcile_pending_known(&mut db, &queue, &jobs, t, clients, complete)?;
     if !owners.migrated.is_empty() {
         save(&paths.store, &db)?;
     }
@@ -523,6 +536,16 @@ pub fn reconcile_pending_intake(
     jobs: &[Value],
     t: f64,
     clients: &str,
+) -> Result<IntakeOwners> {
+    reconcile_pending_known(db, state, jobs, t, clients, true)
+}
+fn reconcile_pending_known(
+    db: &mut Value,
+    state: &Value,
+    jobs: &[Value],
+    t: f64,
+    clients: &str,
+    complete: bool,
 ) -> Result<IntakeOwners> {
     let queue = state["queue"]
         .as_array()
@@ -557,16 +580,15 @@ pub fn reconcile_pending_intake(
         let key = s(&p["key"]);
         let reserved = n(&p["reserved_at"]);
         let old_receipt = format!("manual:{request}");
-        if !p.is_object()
+        if !complete
+            || !p.is_object()
             || request.is_empty()
             || key.is_empty()
             || reserved <= 0.
             || t - reserved < CLAIM_S
             || (!s(&p["claim"]).is_empty() && n(&p["claim_until"]) > t)
             || queue.iter().any(|q| q["key"] == old_receipt)
-            || launches
-                .get(&old_receipt)
-                .is_some_and(|id| !s(id).is_empty())
+            || launches.contains_key(&old_receipt)
             || jobs
                 .iter()
                 .any(|j| j["launch_key"] == key || (linked(row, j) && policy::live(j)))
@@ -628,8 +650,17 @@ pub fn run_watch(
         return Ok(());
     };
     let clients = backend.clients()?; // Missing exclusions must never authorize a launch.
-    let intake = backend.reconcile_intake(paths)?;
+    let intake = match backend.reconcile_intake(paths) {
+        Ok(owners) => owners,
+        Err(error) => {
+            eprintln!(
+                "intake reconciliation unavailable: {error}; preserving reservations and retrying next tick"
+            );
+            return Ok(());
+        }
+    };
     if intake.deferred {
+        eprintln!("intake reconciliation: console state busy; retrying next tick");
         return Ok(()); // The console is launching/receiving; retry next tick, not outside its lock.
     }
     let t = backend.clock();
@@ -685,6 +716,9 @@ pub fn run_watch(
             let (fresh_jobs, fresh_ps) = backend.snapshot()?;
             let launched =
                 p["key"].is_string() && fresh_jobs.iter().any(|j| j["launch_key"] == p["key"]);
+            if intake.accepted.contains(&id) && !launched {
+                continue; // A fresh/inflight reservation must not compete with accepted manual intake.
+            }
             if !launched && stopped(&item, &latest_linked(&item, &fresh_jobs)) {
                 edit(paths, |db| {
                     let row = find(db, id)?;

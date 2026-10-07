@@ -715,6 +715,32 @@ fn accepted_manual_intake_replaces_stale_pending_and_watch_never_recreates_it() 
     }
 }
 #[test]
+fn fresh_pending_and_unreadable_intake_never_start_against_a_manual_receipt() {
+    let (root, p, mut f, mut notices) = fixture();
+    let mut d = db("todo");
+    d["items"][0]["stall_recovery"] =
+        json!({"pending":{"request":"stall-1-1","key":"old-key","reserved_at":f.t}});
+    save(&p.store, &d).unwrap();
+    f.intake =
+        json!({"queue":[{"todo_id":1,"key":"manual:req-todo-1-triage-20261007"}],"launches":{}});
+    run_watch(&p, &mut notices, &mut f).unwrap();
+    assert!(f.calls.is_empty());
+    assert_eq!(
+        load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"],
+        d["items"][0]["stall_recovery"]["pending"]
+    );
+    f.t += 300.;
+    run_watch(&p, &mut notices, &mut f).unwrap();
+    assert!(f.calls.is_empty());
+    assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_null());
+    save(&p.store, &d).unwrap();
+    f.intake["launches"] = Value::Null;
+    run_watch(&p, &mut notices, &mut f).unwrap();
+    assert!(f.calls.is_empty());
+    assert_eq!(load(&p.store).unwrap(), d);
+    fs::remove_dir_all(root).unwrap();
+}
+#[test]
 fn capacity_deferral_queue_and_lost_receipt_never_double_start() {
     let (root, p, mut f, mut notices) = fixture();
     let mut initial = load(&p.store).unwrap();

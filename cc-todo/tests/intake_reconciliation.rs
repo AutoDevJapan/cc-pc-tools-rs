@@ -187,6 +187,17 @@ fn file_reconciliation_defers_for_console_lock_and_never_edits_the_queue() {
         "migration must not create a job"
     );
     save(&paths.store, &db()).unwrap();
+    let broken = jobs.join("broken");
+    fs::create_dir(&broken).unwrap();
+    fs::write(broken.join("job.json"), "corrupt").unwrap();
+    let unavailable = reconcile_intake_files(&paths, &state, 10000., "").unwrap();
+    assert!(unavailable.migrated.is_empty());
+    assert!(unavailable.accepted.contains(&1));
+    assert!(
+        !unavailable.deferred,
+        "broken job info must not stop the whole watcher"
+    );
+    assert_eq!(load(&paths.store).unwrap(), db());
     fs::write(state.join("console-state.json"), "corrupt").unwrap();
     assert!(reconcile_intake_files(&paths, &state, 10000., "").is_err());
     assert_eq!(load(&paths.store).unwrap(), db());
@@ -238,6 +249,10 @@ fn another_process_owns_the_console_lock_until_explicit_release() {
     let until = Instant::now() + Duration::from_secs(5);
     while !state.join("ready").exists() && Instant::now() < until {
         std::thread::sleep(Duration::from_millis(10));
+    }
+    if !state.join("ready").exists() {
+        let _ = child.kill();
+        let _ = child.wait();
     }
     assert!(
         state.join("ready").exists(),

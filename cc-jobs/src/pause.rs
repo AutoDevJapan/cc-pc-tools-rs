@@ -22,7 +22,7 @@ pub fn supervisor(_: u32, _: u64) -> io::Result<Box<dyn Paused>> {
 #[cfg(windows)]
 mod native {
     use super::*;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use windows_sys::Win32::{
         Foundation::*,
         System::{Diagnostics::ToolHelp::*, Threading::*},
@@ -31,6 +31,13 @@ mod native {
     unsafe extern "system" {
         fn NtSuspendProcess(handle: HANDLE) -> i32;
         fn NtResumeProcess(handle: HANDLE) -> i32;
+        fn NtQueryInformationProcess(
+            handle: HANDLE,
+            class: u32,
+            buffer: *mut std::ffi::c_void,
+            length: u32,
+            returned: *mut u32,
+        ) -> i32;
     }
     struct Handle(HANDLE);
     unsafe impl Send for Handle {}
@@ -149,8 +156,174 @@ mod native {
         parent: u32,
         name: String,
         created: u64,
+        browser_controller: bool,
     }
-    fn tree(root: u32, root_created: u64) -> io::Result<Vec<Process>> {
+    // Read only from a handle whose creation time was checked. Never log argv:
+    // CUA bootstraps can contain private paths and connection credentials.
+    fn browser_controller(handle: HANDLE, name: &str) -> bool {
+        let Some(local) = std::env::var_os("LOCALAPPDATA") else {
+            return false;
+        };
+        let mut path = vec![0u16; 32768];
+        let mut size = path.len() as u32;
+        if unsafe { QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut size) } == 0 {
+            return false;
+        }
+        let path = std::path::PathBuf::from(String::from_utf16_lossy(&path[..size as usize]));
+        let codex = std::path::PathBuf::from(local).join("OpenAI/Codex");
+        if !matches!(name, "node.exe" | "codex.exe") {
+            return false;
+        }
+        command_line(handle).is_some_and(|cmd| browser_invocation(&path, &codex, name, &cmd))
+    }
+    fn command_line(handle: HANDLE) -> Option<String> {
+        let mut needed = 0;
+        unsafe {
+            NtQueryInformationProcess(handle, 60, std::ptr::null_mut(), 0, &mut needed);
+        }
+        if !(16..=1024 * 1024).contains(&needed) {
+            return None;
+        }
+        // usize alignment is required for the returned UNICODE_STRING.
+        let mut buffer = vec![0usize; (needed as usize).div_ceil(std::mem::size_of::<usize>())];
+        if unsafe {
+            NtQueryInformationProcess(handle, 60, buffer.as_mut_ptr().cast(), needed, &mut needed)
+        } < 0
+        {
+            return None;
+        }
+        #[repr(C)]
+        struct UnicodeString {
+            length: u16,
+            maximum: u16,
+            data: *const u16,
+        }
+        let text = unsafe { &*buffer.as_ptr().cast::<UnicodeString>() };
+        let start = text.data as usize;
+        let low = buffer.as_ptr() as usize;
+        let high = low + buffer.len() * std::mem::size_of::<usize>();
+        if text.length % 2 != 0
+            || !start.is_multiple_of(std::mem::align_of::<u16>())
+            || start < low
+            || start
+                .checked_add(text.length as usize)
+                .is_none_or(|end| end > high)
+        {
+            return None;
+        }
+        Some(String::from_utf16_lossy(unsafe {
+            std::slice::from_raw_parts(text.data, text.length as usize / 2)
+        }))
+    }
+    fn browser_invocation(path: &Path, codex: &Path, name: &str, cmd: &str) -> bool {
+        let Some(argv) = windows_args(cmd) else {
+            return false;
+        };
+        let args = &argv[1..];
+        if name == "node.exe" {
+            let installed = path
+                .strip_prefix(codex.join("runtimes/cua_node"))
+                .is_ok_and(|relative| {
+                    let parts: Vec<_> = relative.components().collect();
+                    parts.len() == 3
+                        && parts[1].as_os_str() == "bin"
+                        && parts[2].as_os_str() == "node.exe"
+                });
+            // The installed runtime can also run ordinary user commands. Only
+            // CUA's eval bootstrap and its trusted worker are controllers.
+            // Strip every eval payload: flags or filenames inside JS strings
+            // are not actual bootstrap arguments.
+            let mut flags = Vec::new();
+            let mut iter = args.iter();
+            while let Some(arg) = iter.next() {
+                if matches!(arg.as_str(), "--eval" | "-e") {
+                    iter.next();
+                } else {
+                    flags.push(arg.as_str());
+                }
+            }
+            let worker_root = codex
+                .parent()
+                .and_then(Path::parent)
+                .map(|p| p.join("Temp"));
+            let worker = flags.iter().any(|arg| {
+                worker_root.as_ref().is_some_and(|root| {
+                    Path::new(arg).strip_prefix(root).is_ok_and(|relative| {
+                        let parts: Vec<_> = relative.components().collect();
+                        parts.len() == 2
+                            && parts[0].as_os_str().to_string_lossy().starts_with(".tmp")
+                            && parts[1].as_os_str() == "trusted-worker.js"
+                    })
+                })
+            });
+            return installed
+                && args.first().map(String::as_str) == Some("--eval")
+                && ((flags.contains(&"--session-id") && flags.contains(&"--working-dir"))
+                    || worker);
+        }
+        name == "codex.exe"
+            && path.starts_with(codex.join("bin"))
+            && args.first().map(String::as_str) == Some("app-server")
+    }
+    fn windows_args(cmd: &str) -> Option<Vec<String>> {
+        let wide: Vec<_> = cmd.trim_start().encode_utf16().chain(Some(0)).collect();
+        let mut count = 0;
+        unsafe {
+            let args = windows_sys::Win32::UI::Shell::CommandLineToArgvW(wide.as_ptr(), &mut count);
+            if args.is_null() {
+                return None;
+            }
+            let result = std::slice::from_raw_parts(args, count as usize)
+                .iter()
+                .map(|arg| {
+                    let mut len = 0;
+                    while *(*arg).add(len) != 0 {
+                        len += 1;
+                    }
+                    String::from_utf16_lossy(std::slice::from_raw_parts(*arg, len))
+                })
+                .collect();
+            LocalFree(args.cast());
+            Some(result)
+        }
+    }
+    fn inspect(pid: u32, name: &str) -> io::Result<Option<(u64, bool, bool)>> {
+        unsafe {
+            let h = Handle(OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                pid,
+            ));
+            if h.0.is_null() {
+                let error = io::Error::last_os_error();
+                // A ToolHelp snapshot also contains processes that exited meanwhile.
+                return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                    Ok(None)
+                } else {
+                    Err(error)
+                };
+            }
+            let live = match WaitForSingleObject(h.0, 0) {
+                WAIT_OBJECT_0 => false,
+                WAIT_TIMEOUT => true,
+                _ => return Err(io::Error::last_os_error()),
+            };
+            let mut ts: [FILETIME; 4] = std::mem::zeroed();
+            if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(Some((
+                ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
+                browser_controller(h.0, name),
+                live,
+            )))
+        }
+    }
+    fn tree(
+        root: u32,
+        root_created: u64,
+        prior: &HashMap<u32, u64>,
+    ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
         unsafe {
             let snapshot = Handle(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
             if snapshot.0 == INVALID_HANDLE_VALUE {
@@ -180,42 +353,72 @@ mod native {
             if crate::proc_created(root) != Some(root_created) {
                 return Err(io::Error::other("root process identity changed"));
             }
-            let mut found = HashMap::from([(root, root_created)]);
-            let mut result = Vec::new();
-            loop {
-                let before = result.len();
-                for (pid, parent, name) in &all {
-                    if (*pid == root || found.contains_key(parent))
-                        && !result.iter().any(|p: &Process| p.pid == *pid)
-                    {
-                        let created = crate::proc_created(*pid).ok_or_else(|| {
-                            io::Error::other("descendant process identity unavailable")
-                        })?;
-                        if *pid != root && found.get(parent).is_none_or(|pc| created < *pc) {
-                            continue;
-                        }
-                        found.insert(*pid, created);
-                        result.push(Process {
-                            pid: *pid,
-                            parent: *parent,
-                            name: name.clone(),
-                            created,
-                        });
+            walk(root, root_created, prior, &all, inspect)
+        }
+    }
+    // Keep exited ancestors in the topology, including during the second
+    // snapshot after freezing. Their live children must still block a yield.
+    fn walk(
+        root: u32,
+        root_created: u64,
+        prior: &HashMap<u32, u64>,
+        all: &[(u32, u32, String)],
+        mut inspect: impl FnMut(u32, &str) -> io::Result<Option<(u64, bool, bool)>>,
+    ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
+        let mut found = prior.clone();
+        found.insert(root, root_created);
+        let mut checked = HashSet::new();
+        let mut result = Vec::new();
+        loop {
+            let before = checked.len();
+            for (pid, parent, name) in all {
+                if (*pid == root || found.contains_key(parent)) && !checked.contains(pid) {
+                    checked.insert(*pid);
+                    let Some((created, browser_controller, live)) = inspect(*pid, name)? else {
+                        // The snapshot's PID has vanished. Retain the parent
+                        // edge conservatively, but never freeze that PID.
+                        let ancestor = found.get(parent).copied().unwrap_or(root_created);
+                        found.entry(*pid).or_insert(ancestor);
+                        continue;
+                    };
+                    if prior.get(pid).is_some_and(|old| *old != created) {
+                        return Err(io::Error::other(
+                            "descendant identity changed between snapshots",
+                        ));
                     }
-                }
-                if result.len() == before {
-                    break;
+                    if *pid != root && found.get(parent).is_none_or(|pc| created < *pc) {
+                        continue;
+                    }
+                    found.insert(*pid, created);
+                    if !live {
+                        continue;
+                    }
+                    result.push(Process {
+                        pid: *pid,
+                        parent: *parent,
+                        name: name.clone(),
+                        created,
+                        browser_controller,
+                    });
                 }
             }
-            Ok(result)
+            if checked.len() == before {
+                break;
+            }
         }
+        Ok((result, found))
     }
     fn controllers(processes: &[Process], root: u32, baseline: Option<u64>) -> bool {
         // A second native Codex is a delegated job: let it finish. Leaf Node
         // commands, shells, cargo, live_chain, browsers etc. are tools, not idle controllers.
-        processes.iter().filter(|p| p.name == "codex.exe").count() <= 1
+        processes
+            .iter()
+            .filter(|p| p.name == "codex.exe" && !p.browser_controller)
+            .count()
+            <= 1
             && processes.iter().all(|p| {
                 baseline.is_some_and(|at| p.created < at)
+                    || p.browser_controller
                     || match p.name.as_str() {
                         "cmd.exe" => p.pid == root,
                         "node.exe" => {
@@ -241,7 +444,7 @@ mod native {
         baseline: Option<u64>,
         marker: Option<&Path>,
     ) -> io::Result<Option<Box<dyn Paused>>> {
-        let before = tree(pid, created)?;
+        let (before, topology) = tree(pid, created, &HashMap::new())?;
         if !controllers(&before, pid, baseline) {
             return Ok(None);
         }
@@ -260,7 +463,7 @@ mod native {
         }
         // Freezing and enumerating are separate OS operations. Reject new
         // children, including a command that raced the initial snapshot.
-        let after = tree(pid, created)?;
+        let (after, _) = tree(pid, created, &topology)?;
         if after.len() != before.len()
             || !after.iter().all(|p| {
                 before
@@ -325,6 +528,152 @@ mod native {
             }
         }
         record(path, &serde_json::json!({"complete":true}))
+    }
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        fn process(pid: u32, parent: u32, name: &str, browser_controller: bool) -> Process {
+            Process {
+                pid,
+                parent,
+                name: name.into(),
+                created: 100,
+                browser_controller,
+            }
+        }
+        #[test]
+        fn browser_role_requires_installed_image_and_controller_arguments() {
+            let codex = Path::new("C:/Users/owner/AppData/Local/OpenAI/Codex");
+            let app = codex.join("bin/version/codex.exe");
+            let node = codex.join("runtimes/cua_node/version/bin/node.exe");
+            assert!(browser_invocation(
+                &app,
+                codex,
+                "codex.exe",
+                "\"C:/path with spaces/codex.exe\" app-server --listen stdio://"
+            ));
+            assert!(!browser_invocation(
+                &app,
+                codex,
+                "codex.exe",
+                "codex.exe exec --json"
+            ));
+            assert!(!browser_invocation(
+                Path::new("C:/worker/codex.exe"),
+                codex,
+                "codex.exe",
+                "codex.exe app-server"
+            ));
+            assert!(browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval bootstrap --session-id id --working-dir cwd"
+            ));
+            assert!(browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval bootstrap --eval load -- C:/Users/owner/AppData/Local/Temp/.tmpWorker/trusted-worker.js cwd"
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe build.js"
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval background_work"
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval \"console.log('foo --session-id --working-dir foo')\""
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval \"console.log('trusted-worker.js')\""
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval bootstrap --eval \"'--session-id'\" --eval \"'--working-dir'\""
+            ));
+            assert!(!browser_invocation(
+                Path::new("C:/worker/node.exe"),
+                codex,
+                "node.exe",
+                "node.exe --eval trusted-worker.js"
+            ));
+        }
+        #[test]
+        fn late_browser_helpers_do_not_block_but_workers_and_second_agents_do() {
+            let mut tree = vec![
+                process(1, 0, "codex.exe", false),
+                process(2, 1, "node_repl.exe", false),
+                process(3, 2, "codex.exe", true),
+                process(4, 2, "node.exe", true),
+            ];
+            assert!(controllers(&tree, 1, Some(10)));
+            tree.push(process(5, 4, "cargo.exe", false));
+            assert!(!controllers(&tree, 1, Some(10)));
+            tree.pop();
+            tree.push(process(6, 2, "codex.exe", false));
+            assert!(!controllers(&tree, 1, Some(10)));
+            tree.pop();
+            tree.push(process(7, 2, "node.exe", false));
+            assert!(!controllers(&tree, 1, Some(10)));
+        }
+        #[test]
+        fn exited_ancestor_stays_in_topology_until_its_live_worker_finishes() {
+            // The wrapper existed in the snapshot, then exited before inspect.
+            // Both an exited handle and an already vanished PID must preserve
+            // traversal to its worker. The next snapshot lacks the wrapper.
+            for vanished in [false, true] {
+                let all = vec![
+                    (3, 2, "cargo.exe".into()),
+                    (2, 1, "cmd.exe".into()),
+                    (1, 0, "codex.exe".into()),
+                ];
+                let (live, topology) = walk(1, 10, &HashMap::new(), &all, |pid, _| {
+                    Ok(if pid == 2 && vanished {
+                        None
+                    } else {
+                        Some((10 + u64::from(pid), false, pid != 2))
+                    })
+                })
+                .unwrap();
+                assert!(topology.contains_key(&2));
+                assert!(live.iter().any(|p| p.pid == 3));
+                assert!(!live.iter().any(|p| p.pid == 2));
+                assert!(!controllers(&live, 1, None));
+                let (again, _) = walk(
+                    1,
+                    10,
+                    &topology,
+                    &[all[0].clone(), all[2].clone()],
+                    |pid, _| Ok(Some((10 + u64::from(pid), false, true))),
+                )
+                .unwrap();
+                assert!(again.iter().any(|p| p.pid == 3));
+                assert!(!controllers(&again, 1, None));
+                assert!(
+                    walk(1, 10, &topology, &all, |pid, _| Ok(Some((
+                        100 + u64::from(pid),
+                        false,
+                        true
+                    ))))
+                    .is_err()
+                );
+            }
+        }
     }
 }
 #[cfg(windows)]

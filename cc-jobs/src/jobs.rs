@@ -306,14 +306,10 @@ impl Context {
                 return Some(p);
             }
         }
-        if !s(j, "resume_session").is_empty() {
-            return find_session(
-                &self.codex_home.join("sessions"),
-                s(j, "resume_session"),
-                true,
-            );
-        }
-        None
+        ["thread_id", "resume_session"].iter().find_map(|key| {
+            normalize_uuid(s(j, key))
+                .and_then(|id| find_session(&self.codex_home.join("sessions"), &id, true))
+        })
     }
     /// Read what codex appended to its session log since last time. `codex exec --json` reports usage only
     /// at the very end, the session log has it after every model call. Returns True if job changed.
@@ -936,6 +932,23 @@ impl Context {
                 };
                 let had_event = ev.is_some();
                 let mut changed = had_event;
+                // The rollout usage can arrive while a long tool is running.
+                // Refresh before deciding at its completion, not after the agent
+                // has already started its next tool. This also reads resumed logs.
+                let completed_tool = ev.as_ref().is_some_and(|ev| {
+                    s(ev, "type") == "item.completed"
+                        && TOOL_KINDS.contains(&s(&ev["item"], "type"))
+                });
+                if self.rt.mono() >= next_poll || completed_tool {
+                    next_poll = self.rt.mono() + SESSION_POLL_S;
+                    match self.poll_session(&mut job, &mut sess) {
+                        Ok(b) => changed |= b,
+                        Err(e) => self.rt.diagnostic(&format!(
+                            "session log: {}",
+                            redact_local_log_secrets(&e.message, &self.rt.env())
+                        )),
+                    }
+                }
                 if let Some(ev) = ev {
                     job["last_event_at"] = ev["_ts"].clone();
                     apply_event(&mut job, &ev);
@@ -964,16 +977,6 @@ impl Context {
                                 self.yield_diagnostic(&error);
                             }
                         }
-                    }
-                }
-                if self.rt.mono() >= next_poll {
-                    next_poll = self.rt.mono() + SESSION_POLL_S;
-                    match self.poll_session(&mut job, &mut sess) {
-                        Ok(b) => changed |= b,
-                        Err(e) => self.rt.diagnostic(&format!(
-                            "session log: {}",
-                            redact_local_log_secrets(&e.message, &self.rt.env())
-                        )),
                     }
                 }
                 if changed {

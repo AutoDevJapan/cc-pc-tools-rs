@@ -275,6 +275,7 @@ pub fn adopt_launch(
         state["answer_receipts"][s(id)]["thread"] = thread["id"].clone();
         state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
     }
+    crate::reply_recovery::close_delivered_questions(state, s(&thread["id"]));
     remove(entry, "recovery");
     if truth(&state["answer_receipts"][s(&entry["after"])]["posted"]) {
         checkpoint(ctx, state, thread, entry)?;
@@ -403,6 +404,22 @@ fn intake_thread_with_workers(
     if crate::routing::thread_inbox_only(ctx, state, tid) {
         return Ok(());
     }
+    // A posted question without an intake worker belongs to question resume.
+    // Never replace an unknown author session with a new unrelated worker.
+    if !valid_job(s(&state["requests"][tid]["job"]))
+        && state["questions"].as_array().is_some_and(|qs| {
+            qs.iter().any(|q| {
+                s(&q["thread_id"]) == tid
+                    && truth(&q["open"])
+                    && (s(&q["source"]) == "posted"
+                        || (s(&q["source"]) == "request"
+                            && truth(&state["requests"][tid]["recovered_question"])))
+                    && truth(&q["question_message"])
+            })
+        })
+    {
+        return Ok(());
+    }
     let task_thread = !s(&ctx.cfg["task_channel_id"]).is_empty()
         && thread["parent_id"] == ctx.cfg["task_channel_id"];
     if state["questions"]
@@ -411,7 +428,7 @@ fn intake_thread_with_workers(
         .flatten()
         .find(|q| {
             s(&q["thread_id"]) == tid
-                && s(&q["source"]) != "request"
+                && (s(&q["source"]) != "request" || truth(&q["continuation"]))
                 && truth(&q["open"])
                 && truth(&q["cwd"])
         })
@@ -557,7 +574,7 @@ fn intake_entry(
             .flatten()
             .find(|q| {
                 s(&q["thread_id"]) == tid
-                    && s(&q["source"]) != "request"
+                    && (s(&q["source"]) != "request" || truth(&q["continuation"]))
                     && (truth(&q["continuation"]["launch"])
                         || truth(&q["continuation"]["owner_update"])
                         || (!truth(&q["continuation"]["reported"])
@@ -664,8 +681,7 @@ fn intake_entry(
         );
         crate::steering::acknowledge(ctx, state, tid, &project, &owner_messages)?;
     }
-    // Closing an answered question must not depend on a successful worker handoff.
-    close_answered_questions(state, tid, &messages, owner);
+    // Receipt is not delivery. Keep the question until the launch is adopted.
     checkpoint(ctx, state, thread, entry)?;
     if truth(&entry["external_owner"]) {
         let info = job_info(ctx, s(&entry["job"]));

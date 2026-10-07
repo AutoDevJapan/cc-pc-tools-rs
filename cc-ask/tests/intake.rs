@@ -3,7 +3,7 @@ use cc_ask::core::*;
 use common::*;
 use serde_json::json;
 use std::{
-    panic::{AssertUnwindSafe, catch_unwind},
+    panic::{catch_unwind, AssertUnwindSafe},
     path::Path,
 };
 const COMPLETE: &str = "状態: 完了\n直しました https://example.test/pr/1";
@@ -514,10 +514,8 @@ fn bot_created_request_starts_only_on_owner_post_and_keeps_opening_context() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches.len(), 1);
-    assert!(
-        s(&f.launches[0]["prompt"])
-            .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。")
-    );
+    assert!(s(&f.launches[0]["prompt"])
+        .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。"));
     assert!(s(&f.launches[0]["prompt"]).contains("Civ6と7のUXを掛け合わせたい。"));
     assert_eq!(f.posts[0].1["message_reference"]["message_id"], reply);
     assert_eq!(f.posts[0].1["flags"], SILENT);
@@ -542,15 +540,12 @@ fn another_running_worker_gets_same_session_delivery_without_a_request_launch() 
         assert_eq!(f.launches[0]["effort"], "high");
         assert!(s(&f.launches[0]["prompt"]).contains("200|別のアイデア"));
         assert!(s(&f.launches[0]["prompt"]).contains("UXをCiv6と7に寄せたい。"));
-        assert!(
-            s(&f.launches[0]["prompt"])
-                .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。")
-        );
-        assert!(
-            f.runs
-                .iter()
-                .any(|(args, _)| args.windows(2).any(|a| a == ["cancel", "idea-brainstorm"]))
-        );
+        assert!(s(&f.launches[0]["prompt"])
+            .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。"));
+        assert!(f
+            .runs
+            .iter()
+            .any(|(args, _)| args.windows(2).any(|a| a == ["cancel", "idea-brainstorm"])));
         drop(f);
         assert_eq!(h.state()["answer_receipts"][&reply]["handled_by"], "job1");
         h.tick();
@@ -638,6 +633,9 @@ fn external_delivery_launch_failure_reuses_its_reservation() {
         "cancelled"
     );
     h.fake.borrow_mut().launch_transport_fail = false;
+    h.tick();
+    assert!(h.fake.borrow().launches.is_empty());
+    h.fake.borrow_mut().now += cc_ask::reply_recovery::RETRY_INTERVAL_S;
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches.len(), 1);
@@ -890,10 +888,8 @@ fn test_failure_resumes_same_session_model_effort_cwd_without_mention() {
     for field in ["model", "effort", "cwd"] {
         assert_eq!(f.launches[1][field], f.launches[0][field]);
     }
-    assert!(
-        s(&f.launches[1]["prompt"])
-            .starts_with("前回のジョブが止まったので続きから再開してください")
-    );
+    assert!(s(&f.launches[1]["prompt"])
+        .starts_with("前回のジョブが止まったので続きから再開してください"));
     assert!(s(&f.launches[1]["prompt"]).contains("READMEを直して"));
     assert_eq!(f.posts.len(), posts);
     assert_eq!(h.state()["requests"]["100"]["job"], "job2");
@@ -955,12 +951,10 @@ fn test_retry_cap_posts_one_silent_line_and_keeps_todo_then_expires() {
             .unwrap()
             > h.fake.borrow().now
     );
-    assert!(
-        db["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("job3"))
-    );
+    assert!(db["items"][0]["jobs"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("job3")));
     h.reply("再開すればいいじゃん", "100");
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 3);
@@ -1153,11 +1147,9 @@ fn test_ack_failure_does_not_launch_twice() {
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 1);
     assert!(h.text().contains("受け取りました。今の作業に反映します。"));
-    assert!(
-        h.state()["requests"]["100"]
-            .get("acknowledgement")
-            .is_none()
-    );
+    assert!(h.state()["requests"]["100"]
+        .get("acknowledgement")
+        .is_none());
 }
 #[test]
 fn test_failure_recovers_even_when_discord_post_is_unavailable() {
@@ -1289,11 +1281,9 @@ fn test_crash_after_restart_launch_is_adopted_without_another_launch() {
     assert_eq!(h.fake.borrow().launches.len(), 2);
     assert_eq!(h.fake.borrow().launches[1]["launch_key"], key);
     assert_eq!(h.state()["requests"]["100"]["job"], "job2");
-    assert!(
-        h.state()["requests"]["100"]["restart"]
-            .get("pending")
-            .is_none()
-    );
+    assert!(h.state()["requests"]["100"]["restart"]
+        .get("pending")
+        .is_none());
 }
 #[test]
 fn test_invalid_pick_and_excluded_pick_use_fallback() {

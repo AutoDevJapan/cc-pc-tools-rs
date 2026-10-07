@@ -80,14 +80,162 @@ pub fn acknowledge(
 }
 
 /// Resolve only an explicit thread association; an issue number or working folder is insufficient.
-pub fn associated_job(ctx: &Context, question: &Value) -> Result<Option<String>> {
+pub fn associated_job(ctx: &mut Context, question: &Value) -> Result<Option<String>> {
     let tid = s(&question["thread_id"]);
+    if let Some(id) = recorded_posting_job(ctx, question, tid) {
+        return Ok(Some(id));
+    }
+    // Legacy questions never trigger Discord reads; posted/request ones may.
+    let footers = if posted_source(question) {
+        Some(footer_candidates(ctx, question, tid)?)
+    } else {
+        None
+    };
+    if let Some(id) = footers.as_ref().and_then(|f| f.0.clone()) {
+        return Ok(Some(id));
+    }
+    let posts = if posted_source(question) {
+        Some(last_posting_job(ctx, question)?)
+    } else {
+        None
+    };
+    if let Some(id) = posts.as_ref().and_then(|p| p.0.clone()) {
+        return Ok(Some(id));
+    }
+    match local_match(ctx, question)? {
+        Local::One(id) => return Ok(Some(id)),
+        // Several live workers: never pick one (or a fresh one) by footer.
+        Local::Ambiguous => return Ok(None),
+        Local::None => {}
+    }
+    if let Some(id) = footers.and_then(|f| f.1.or(f.2)) {
+        return Ok(Some(id));
+    }
+    Ok(posts.and_then(|p| p.1.or(p.2)))
+}
+
+/// Successful post output proves the destination and message IDs even when the
+/// body had no job footer. Read a bounded tail, never a whole multi-hour log.
+fn last_posting_job(ctx: &Context, question: &Value) -> Result<Footers> {
+    use std::io::{Read, Seek, SeekFrom};
+    let tid = s(&question["thread_id"]);
+    let anchor = n(&question["question_message"]).max(n(&question["after"]));
+    let mut exact = None;
+    let mut before = None;
+    let mut latest = None;
+    for job in crate::automation::jobs(ctx)? {
+        crate::tick_runtime::check()?;
+        let id = s(&job["id"]);
+        if !resumable(ctx, id, tid) {
+            continue;
+        }
+        let path = ctx.jobs.join("jobs").join(id).join("events.jsonl");
+        let mut file = match std::fs::File::open(path) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(e.to_string()),
+        };
+        let size = file.metadata().map_err(|e| e.to_string())?.len();
+        let start = size.saturating_sub(256 * 1024);
+        file.seek(SeekFrom::Start(start))
+            .map_err(|e| e.to_string())?;
+        let mut bytes = Vec::new();
+        file.take(256 * 1024)
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
+        let text = String::from_utf8_lossy(&bytes);
+        for line in text.lines().skip(usize::from(start > 0)) {
+            let Ok(event) = serde_json::from_str::<Value>(line) else {
+                continue;
+            };
+            let item = &event["item"];
+            let command = s(&item["command"]);
+            if item["exit_code"] != 0
+                || !command.contains("discord_ask")
+                || !command.contains("post")
+            {
+                continue;
+            }
+            let output = s(&item["aggregated_output"]);
+            for (offset, _) in output.char_indices().filter(|(_, c)| *c == '{') {
+                let Some(Ok(post)) = serde_json::Deserializer::from_str(&output[offset..])
+                    .into_iter::<Value>()
+                    .next()
+                else {
+                    continue;
+                };
+                if s(&post["thread_id"]) != tid || truth(&post["suppressed"]) {
+                    continue;
+                }
+                for mid in post["message_ids"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .map(n)
+                    .filter(|mid| *mid > 0)
+                {
+                    let update = |slot: &mut Option<(u64, String)>| {
+                        if slot.as_ref().is_none_or(|(saved, _)| mid > *saved) {
+                            *slot = Some((mid, id.to_owned()));
+                        }
+                    };
+                    update(&mut latest);
+                    if mid <= anchor {
+                        update(&mut before);
+                    }
+                    if mid == anchor
+                        || question["message_ids"]
+                            .as_array()
+                            .is_some_and(|ids| ids.iter().any(|saved| n(saved) == mid))
+                    {
+                        update(&mut exact);
+                    }
+                }
+            }
+        }
+    }
+    Ok((
+        exact.map(|(_, id)| id),
+        before.map(|(_, id)| id),
+        latest.map(|(_, id)| id),
+    ))
+}
+
+fn posted_source(question: &Value) -> bool {
+    ["posted", "request"].contains(&s(&question["source"]))
+}
+
+enum Local {
+    None,
+    Ambiguous,
+    One(String),
+}
+
+/// Association from recorded state only (no Discord reads).
+pub fn local_associated_job(ctx: &Context, question: &Value) -> Result<Option<String>> {
+    let tid = s(&question["thread_id"]);
+    Ok(match recorded_posting_job(ctx, question, tid) {
+        Some(id) => Some(id),
+        None => match local_match(ctx, question)? {
+            Local::One(id) => Some(id),
+            _ => None,
+        },
+    })
+}
+
+fn local_match(ctx: &Context, question: &Value) -> Result<Local> {
+    let tid = s(&question["thread_id"]);
+    // A posted/request question without its own session only resolves jobs with a real session.
+    let need_session = posted_source(question) && s(&question["session_id"]).is_empty();
     let mut found = vec![];
     let mut live = vec![];
     for job in crate::automation::jobs(ctx)? {
         let id = s(&job["id"]);
-        if !valid_job(id)
-            || !["queued", "starting", "running", "succeeded"].contains(&s(&job["status"]))
+        if !valid_job(id) || ["missing", "cancelled", ""].contains(&s(&job["status"])) {
+            continue;
+        }
+        if s(&question["source"]) == "scheduler"
+            && !["queued", "starting", "running", "succeeded"].contains(&s(&job["status"]))
         {
             continue;
         }
@@ -106,7 +254,11 @@ pub fn associated_job(ctx: &Context, question: &Value) -> Result<Option<String>>
             || (!session.is_empty()
                 && (s(&job["thread_id"]) == session || s(&job["resume_session"]) == session))
         {
-            if RUNNING.contains(&s(&job["status"])) {
+            let running = RUNNING.contains(&s(&job["status"]));
+            if (!running || need_session) && !resumable(ctx, id, tid) {
+                continue;
+            }
+            if running {
                 live.push(id.to_owned());
             } else {
                 found.push((crate::automation::epoch(&job["started_at"]), id.to_owned()));
@@ -114,10 +266,95 @@ pub fn associated_job(ctx: &Context, question: &Value) -> Result<Option<String>>
         }
     }
     if !live.is_empty() {
-        return Ok(if live.len() == 1 { live.pop() } else { None });
+        return Ok(if live.len() == 1 {
+            Local::One(live.remove(0))
+        } else {
+            Local::Ambiguous
+        });
     }
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
-    Ok(found.pop().map(|(_, id)| id))
+    Ok(found.pop().map_or(Local::None, |(_, id)| Local::One(id)))
+}
+
+/// A job that can be resumed: it has a session and is not tied to a different thread.
+fn resumable(ctx: &Context, id: &str, tid: &str) -> bool {
+    if !valid_job(id) {
+        return false;
+    }
+    let info = job_info(ctx, id);
+    if s(&info["status"]) == "missing" {
+        return false;
+    }
+    let session = if s(&info["resume_session"]).is_empty() {
+        s(&info["thread_id"])
+    } else {
+        s(&info["resume_session"])
+    };
+    let explicit = s(&info["discord_thread_id"]);
+    !session.is_empty()
+        && (explicit.is_empty() || explicit == tid || explicit_thread_owner(&info, tid))
+}
+
+/// The job recorded when the question was posted (never a pasted or inferred id).
+fn recorded_posting_job(ctx: &Context, question: &Value, tid: &str) -> Option<String> {
+    let id = s(&question["posting_job"]);
+    resumable(ctx, id, tid).then(|| id.to_owned())
+}
+
+/// Fall back to job footers written by this bot: the footer on the question itself,
+/// then the latest footer before it, then the latest footer in the thread.
+type Footers = (Option<String>, Option<String>, Option<String>);
+
+/// Returns (footer on the question, latest earlier footer, latest footer).
+fn footer_candidates(ctx: &mut Context, question: &Value, tid: &str) -> Result<Footers> {
+    if tid.is_empty() {
+        return Ok((None, None, None));
+    }
+    let me = s(&ctx.call("GET", "/users/@me", None)?["id"]).to_owned();
+    if me.is_empty() {
+        return Err("bot identity unavailable".into());
+    }
+    let footer = regex::Regex::new(r"(?m)^-# ジョブ ([A-Za-z0-9_-]+)。").unwrap();
+    let mut posts: Vec<(u64, String, bool)> = vec![];
+    let anchor = [&question["question_message"], &question["after"]]
+        .iter()
+        .map(|v| n(v))
+        .find(|v| *v > 0)
+        .unwrap_or(0);
+    let mut own: Vec<String> = question["message_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|v| s(v).to_owned())
+        .collect();
+    own.push(s(&question["question_message"]).to_owned());
+    for m in thread_history(ctx, tid)? {
+        if s(&m["author"]["id"]) != me {
+            continue;
+        }
+        // Owner-pasted ids never count: only the last footer line of a bot message does.
+        if let Some(c) = footer.captures_iter(s(&m["content"])).last() {
+            posts.push((
+                n(&m["id"]),
+                c[1].to_owned(),
+                own.iter().any(|o| o == s(&m["id"])),
+            ));
+        }
+    }
+    posts.sort_by_key(|p| p.0);
+    let pick = |f: &dyn Fn(&(u64, String, bool)) -> bool| {
+        posts
+            .iter()
+            .rev()
+            .filter(|p| f(p))
+            .map(|p| p.1.clone())
+            .find(|id| resumable(ctx, id, tid))
+    };
+    Ok((
+        pick(&|p| p.2),
+        pick(&|p| anchor > 0 && p.0 <= anchor),
+        pick(&|_| true),
+    ))
 }
 
 /// Only a successful replies command in the owning job proves a manual delivery.
@@ -214,7 +451,7 @@ pub fn confirm_recorded_reads(
     if pending.is_empty() {
         return Ok(());
     }
-    let Some(jid) = associated_job(ctx, question)? else {
+    let Some(jid) = local_associated_job(ctx, question)? else {
         return Ok(());
     };
     for message in pending {
@@ -333,6 +570,9 @@ pub fn confirm_original_inputs(
 
 pub fn resume_unavailable(info: &Value) -> bool {
     let error = s(&info["last_error"]).to_lowercase();
+    if crate::reply_recovery::transient(&error) {
+        return false;
+    }
     [
         "session not found",
         "no rollout found",
@@ -430,6 +670,11 @@ pub fn deliver(
             }
         }
     }
+    crate::reply_recovery::refresh(state, record, tid);
+    if !crate::reply_recovery::due(record, ctx.now()) {
+        save(ctx, state, thread, record, slot)?;
+        return Ok(true);
+    }
     let current = entry(record, slot).clone();
     let jid = s(&current["job"]);
     if jid.is_empty() || jid == "launch-failed" || truth(&current["reported"]) {
@@ -452,6 +697,9 @@ pub fn deliver(
         && resume_unavailable(&info);
     if !RUNNING.contains(&s(&info["status"]))
         && s(&info["status"]) != "succeeded"
+        && !(truth(&current["answer_source_resolved"])
+            && !unseen.is_empty()
+            && (!s(&info["thread_id"]).is_empty() || !s(&info["resume_session"]).is_empty()))
         && !current["owner_update"].is_object()
         && !unavailable
     {
@@ -583,6 +831,7 @@ pub fn deliver(
         let handoff = format!("{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n", s(&source["cwd"]));
         let prompt = format!("オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}", quotes(&unseen));
         entry_mut(record, slot)["owner_update"] = json!({"key":key,"source":source,"session":session,"resume":resume,"prompt":prompt,"original_request":original,"after":latest,"messages":addressed_messages});
+        entry_mut(record, slot)["answer_source_resolved"] = json!(true);
         save(ctx, state, thread, record, slot)?;
     }
     let mut pending = entry(record, slot)["owner_update"].clone();
@@ -662,7 +911,11 @@ pub fn deliver(
             save(ctx, state, thread, record, slot)?;
             launch(ctx, &pending)?
         }
-        Err(error) => return Err(error),
+        Err(error) => {
+            crate::reply_recovery::failed(record, ctx.now(), &error, s(&pending["after"]));
+            save(ctx, state, thread, record, slot)?;
+            return Err(error);
+        }
     };
     adopt(ctx, state, thread, record, slot, &pending, &jid)?;
     println!("owner update delivered {tid}: {old} -> {jid}");
@@ -705,6 +958,10 @@ fn adopt(
     if let Slot::Question(_) = slot {
         record["open"] = json!(true);
         acknowledge_reply(record, s(&pending["after"]));
+    }
+    crate::reply_recovery::delivered(record);
+    if matches!(slot, Slot::Request) {
+        crate::reply_recovery::close_delivered_questions(state, s(&thread["id"]));
     }
     save(ctx, state, thread, record, slot)?;
     crate::automation::link_todos(ctx, &[s(&pending["source"]["id"]).to_owned()], jid)

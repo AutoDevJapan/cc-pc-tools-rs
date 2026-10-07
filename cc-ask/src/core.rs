@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
@@ -443,7 +443,7 @@ pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     #[cfg(windows)]
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         if let Ok(key) = RegKey::predef(HKEY_CURRENT_USER).open_subkey("Environment") {
             value = key.get_value("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
         }
@@ -1475,11 +1475,9 @@ pub fn owner_replies(ctx: &mut Context, question: &Value, owner: &str) -> Result
         .collect())
 }
 pub fn acknowledge_reply(question: &mut Value, message_id: &str) {
-    question["seen_reply"] = json!(
-        n(&question["seen_reply"])
-            .max(message_id.parse().unwrap_or(0))
-            .to_string()
-    );
+    question["seen_reply"] = json!(n(&question["seen_reply"])
+        .max(message_id.parse().unwrap_or(0))
+        .to_string());
 }
 
 /// Open question replies belong to resume. A delayed inbox must also skip answers
@@ -1620,7 +1618,7 @@ pub fn receive_answers(
     index: usize,
     messages: &[Value],
 ) -> Result<()> {
-    use crate::project::{ProjectNames, question_project};
+    use crate::project::{question_project, ProjectNames};
     let owner = ctx.owner();
     let tid = s(&state["questions"][index]["thread_id"]).to_owned();
     record_owner_answers(state, &tid, messages, &owner);
@@ -1692,23 +1690,6 @@ pub fn register_question(state: &mut Value, thread: &Value, after: &str) {
         questions.insert(index, question);
     } else {
         questions.push(question);
-    }
-}
-pub fn close_answered_questions(state: &mut Value, thread: &str, messages: &[Value], owner: &str) {
-    if let Some(questions) = state["questions"].as_array_mut() {
-        for q in questions {
-            if s(&q["thread_id"]) == thread
-                && truth(&q["open"])
-                && messages.iter().any(|m| {
-                    s(&m["author"]["id"]) == owner
-                        && n(&m["id"]) > n(&q["after"])
-                        && !crate::snooze::control_only(m)
-                })
-            {
-                q["open"] = json!(false);
-                q["answered_at"] = json!(timestamp());
-            }
-        }
     }
 }
 pub fn final_message(ctx: &Context, job: &str) -> String {
@@ -1842,7 +1823,7 @@ pub fn concrete_question_body(result: &str) -> bool {
     false
 }
 
-fn question_prose(line: &str) -> String {
+pub(crate) fn question_prose(line: &str) -> String {
     let line = without_inline_code(line);
     let mut cursor = 0;
     let mut prose = String::new();
@@ -1932,6 +1913,9 @@ pub fn result_footer(job: &str, disposition: &str) -> String {
     }
 }
 pub fn find_launch_job(ctx: &Context, key: &str) -> Option<String> {
+    if !valid_job(key) {
+        return None;
+    }
     for item in std::fs::read_dir(ctx.jobs.join("jobs")).ok()?.flatten() {
         let job = item.file_name().to_string_lossy().to_string();
         if s(&job_info(ctx, &job)["launch_key"]) == key {

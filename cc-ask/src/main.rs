@@ -57,6 +57,11 @@ enum Commands {
     },
     Intake,
     Resume,
+    /// Reopen one failed reply delivery for the next tick, including an expired retry.
+    RetryReply {
+        #[arg(long)]
+        thread: String,
+    },
     /// Retry one missed owner reply; confirmed deliveries never start another job.
     DeliverReply {
         #[arg(long)]
@@ -272,6 +277,10 @@ fn run(command: Commands) -> Result<()> {
         Commands::ReapHelpers { .. } => unreachable!(),
         Commands::Intake => intake::cmd_intake(&mut ctx, &mut false)?,
         Commands::Resume => resume::cmd_resume(&mut ctx, &mut false)?,
+        Commands::RetryReply { thread } => {
+            let result = cc_ask::reply_recovery::retry_reply(&mut ctx, &thread)?;
+            println!("{result}");
+        }
         Commands::DeliverReply {
             thread,
             message,

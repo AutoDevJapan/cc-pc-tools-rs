@@ -161,7 +161,56 @@ pub fn is_question(body: &str) -> bool {
         && !body.contains("（1時間たったので再送です）")
         && !body.contains("未回答の質問をまとめて再通知します")
         && (concrete_question_body(body)
-            || (first.starts_with("判断をお願いしたいです") && choice_question_body(body)))
+            || (choice_question_body(body) && choice_request_body(body, false))
+            || choice_request_body(body, true))
+}
+
+/// Prose (outside code, quotes and option lines) asks the reader to choose.
+/// With `inline`, the line itself must name the a/b choice ("a/bで返信してください").
+fn choice_request_body(body: &str, inline: bool) -> bool {
+    let mut fenced = false;
+    let inline_ab =
+        regex::Regex::new(r"(?i)(?:^|[^a-z0-9])[a-d]\s*[/／]\s*[a-d](?:[^a-z0-9]|$)").unwrap();
+    body.lines().any(|raw| {
+        if raw.starts_with("    ") || raw.starts_with('\t') {
+            return false;
+        }
+        let line = raw.trim();
+        if line.starts_with("```") || line.starts_with("~~~") {
+            fenced = !fenced;
+            return false;
+        }
+        if fenced
+            || line.starts_with('>')
+            || line.starts_with("添付ファイル:")
+            || line.starts_with("- ")
+        {
+            return false;
+        }
+        // Quotes and inline code repeat somebody else's ask.
+        let prose = question_prose(line);
+        if inline && !inline_ab.is_match(&prose) {
+            return false;
+        }
+        [
+            "判断をお願い",
+            "選んでください",
+            "選択してください",
+            "選んでいただ",
+            "どちらにしますか",
+            "どれにしますか",
+            "ご希望をお知らせ",
+            "返信してください",
+            "回答してください",
+            "ご回答ください",
+            "教えてください",
+            "決めてください",
+            "指定してください",
+            "お知らせください",
+        ]
+        .iter()
+        .any(|cue| prose.contains(cue))
+    })
 }
 
 /// Restore an existing question referenced by a wait report only when a matching
@@ -238,6 +287,34 @@ pub fn stopped(ctx: &Context, state: &Value, thread: &str) -> bool {
     })
 }
 
+/// Register a question posted by this process, recording the actual posting
+/// session/job (from CODEX_THREAD_ID) when known. Without one the question is
+/// session-less and resolved later through associated_job's footer lookup.
+pub fn register_posted_by(
+    ctx: &Context,
+    state: &mut Value,
+    channel: &Value,
+    first: &str,
+    ids: &[String],
+) {
+    register_posted(state, channel, first, ids);
+    let session = std::env::var("CODEX_THREAD_ID").unwrap_or_default();
+    let job = posting_job(ctx).ok().flatten();
+    let tid = s(&channel["id"]);
+    if let Some(q) = state["questions"].as_array_mut().and_then(|qs| {
+        qs.iter_mut()
+            .rev()
+            .find(|q| s(&q["thread_id"]) == tid && s(&q["question_message"]) == first)
+    }) {
+        if !session.is_empty() {
+            q["session_id"] = json!(session);
+        }
+        if let Some(job) = job {
+            q["posting_job"] = json!(job);
+        }
+    }
+}
+
 /// Caller holds state.lock. Preserve routing/snooze metadata, but never old answer cursors.
 pub fn register_posted(state: &mut Value, channel: &Value, first: &str, ids: &[String]) {
     let tid = s(&channel["id"]);
@@ -278,7 +355,8 @@ pub fn register_posted(state: &mut Value, channel: &Value, first: &str, ids: &[S
             "posted"
         });
         if let Some(previous) = previous {
-            for key in ["cwd", "project", "session_id", "agent"] {
+            // A previous caller's session must not be inherited by a new post.
+            for key in ["cwd", "project", "agent"] {
                 if let Some(value) = previous.get(key) {
                     q[key] = value.clone();
                 }

@@ -34,6 +34,7 @@ pub mod prompt_context;
 pub mod questions;
 pub mod recovery_failure;
 pub mod reminders;
+pub mod reply_recovery;
 pub mod restart;
 pub mod result_delivery;
 pub mod resume;

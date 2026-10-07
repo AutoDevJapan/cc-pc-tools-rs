@@ -145,39 +145,19 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         if !crate::questions::is_question(&body) || !crate::questions::is_question(&content) {
             return Err("既存スレッドへのask本文には具体的な質問を書いてください".into());
         }
-        let result = post_text(ctx, thread, &content, &args.attach, true)?;
-        if result.get("suppressed").is_some() {
-            return Ok(result);
+        let mut context = json!({"cwd":cwd,"agent":args.agent,"project":project,"title":title});
+        if let Some(reason) = args.owner_only {
+            context["owner_only"] = json!(reason.as_str());
         }
-        if let Some(first) = result["message_ids"]
-            .as_array()
-            .and_then(|ids| ids.first())
-            .and_then(Value::as_str)
-        {
-            let _guard = lock(ctx)?;
-            let mut state = ctx.load_fresh()?;
-            if let Some(question) = state["questions"]
-                .as_array_mut()
-                .into_iter()
-                .flatten()
-                .rev()
-                .find(|q| s(&q["thread_id"]) == thread && s(&q["question_message"]) == first)
-            {
-                question["cwd"] = json!(cwd);
-                question["agent"] = json!(args.agent);
-                question["project"] = json!(project);
-                question["title"] = json!(title);
-                if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
-                    question["session_id"] = json!(session);
-                }
-                if args.source.as_deref() == Some("scheduler") {
-                    question["source"] = json!("scheduler");
-                    question["scheduler_item"] = json!(args.scheduler_item);
-                    question["scheduler_job"] = json!(args.scheduler_job);
-                }
-            }
-            ctx.save(&state)?;
+        if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
+            context["session_id"] = json!(session);
         }
+        if args.source.as_deref() == Some("scheduler") {
+            context["source"] = json!("scheduler");
+            context["scheduler_item"] = json!(args.scheduler_item);
+            context["scheduler_job"] = json!(args.scheduler_job);
+        }
+        let result = post_text(ctx, thread, &content, &args.attach, true, Some(&context))?;
         return Ok(result);
     }
     let prepared = crate::attachments::prepare(ctx, &args.attach)?;
@@ -603,6 +583,16 @@ pub fn cmd_close(ctx: &mut Context, thread: &str) -> Result<()> {
     let _question_delivery = crate::attachments::question_lock(ctx, thread)?;
     let _work = crate::state_work::StateWork::begin(ctx)?;
     let mut state = ctx.load()?;
+    if state["questions"].as_array().is_some_and(|qs| {
+        qs.iter().any(|q| {
+            s(&q["thread_id"]) == thread && crate::reply_recovery::prevents_close(&state, q)
+        })
+    }) {
+        return Err(
+            "回答を担当へ届けられていないため、質問を閉じません。inboxで再開状況を確認してください"
+                .into(),
+        );
+    }
     for question in state["questions"].as_array_mut().ok_or("ValueError")? {
         if s(&question["thread_id"]) == thread {
             crate::restart::stop_todo(ctx, question)?;
@@ -699,7 +689,7 @@ pub fn cmd_post(
     attach: &[PathBuf],
     notify: bool,
 ) -> Result<Value> {
-    post_text(ctx, thread, &read_text(body_file)?, attach, notify)
+    post_text(ctx, thread, &read_text(body_file)?, attach, notify, None)
 }
 
 fn post_text(
@@ -708,6 +698,7 @@ fn post_text(
     body: &str,
     attach: &[PathBuf],
     notify: bool,
+    context: Option<&Value>,
 ) -> Result<Value> {
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
@@ -719,7 +710,7 @@ fn post_text(
     {
         return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
     }
-    let is_question = crate::questions::is_question(&body);
+    let is_question = crate::questions::is_question(body);
     let _guard = if is_question {
         Some(crate::attachments::question_lock(ctx, thread)?)
     } else {
@@ -729,16 +720,17 @@ fn post_text(
         let recovered = crate::attachments::recover_posted(
             ctx,
             thread,
-            &body,
+            body,
             prepared.as_ref(),
             notify,
             &channel,
+            context,
         )?;
         let caller = crate::questions::posting_job(ctx)?;
         if let Some(answer) = crate::questions::answered_repost(
             ctx,
             thread,
-            &body,
+            body,
             caller.as_deref(),
             &crate::attachments::fingerprints(prepared.as_ref())?,
         )? {
@@ -755,13 +747,14 @@ fn post_text(
         )?;
     }
     let question = is_question.then_some(&channel);
-    let ids = crate::attachments::post_tracked_locked(
+    let ids = crate::attachments::post_tracked_locked_with_context(
         ctx,
         thread,
-        &body,
+        body,
         prepared.as_ref(),
         notify,
         question,
+        context,
     )?;
     let value = json!({"thread_id":thread,"message_ids":ids});
     print_json(&value, None)?;
@@ -782,7 +775,8 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     };
     let mut places = BTreeMap::new();
     let mut inbox_only = std::collections::BTreeSet::new();
-    for (id, thread) in crate::routing::allowed_places(ctx, last)? {
+    let allowed = crate::routing::allowed_places(ctx, last)?;
+    for (id, thread) in &allowed {
         let latest = if truth(&thread["last_message_id"]) {
             &thread["last_message_id"]
         } else {
@@ -792,7 +786,7 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
             if truth(&thread["inbox_only"]) {
                 inbox_only.insert(id.clone());
             }
-            places.insert(id, s(&thread["routing_label"]).to_owned());
+            places.insert(id.clone(), s(&thread["routing_label"]).to_owned());
         }
     }
     let mut found = Vec::new();
@@ -848,6 +842,36 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     }
     if let Some((mid, _, _, _)) = found.last() {
         std::fs::write(state_file, mid.to_string()).map_err(|_| "OSError".to_string())?;
+    }
+    // Delivery failures remain visible after the ordinary message cursor has
+    // advanced. Inbox inspection neither acknowledges delivery nor starts jobs.
+    let state = ctx.load()?;
+    for q in state["questions"].as_array().into_iter().flatten() {
+        let tid = s(&q["thread_id"]);
+        if !allowed.contains_key(tid)
+            || crate::routing::thread_inbox_only(ctx, &state, tid)
+            || !crate::reply_recovery::prevents_close(&state, q)
+        {
+            continue;
+        }
+        let failure = if truth(&q["resume_status"]) || truth(&q["last_resume_error"]) {
+            q
+        } else {
+            &state["requests"][tid]
+        };
+        let status = if s(&failure["resume_status"]).is_empty() {
+            "再開失敗"
+        } else {
+            s(&failure["resume_status"])
+        };
+        let id = n(&q["answered_reply"])
+            .max(n(&state["owner_answers"][tid]))
+            .to_string();
+        let value = json!({"id":id,"channel":tid,"where":allowed[tid]["routing_label"],
+            "status":status,"text":format!("{status}: {} {}",safe_text(s(&q["title"])),safe_text(s(&failure["last_resume_error"]))),
+            "retry_exhausted":failure["reply_resume_retry"]["exhausted"],"retry_deadline":failure["reply_resume_retry"]["deadline"]});
+        print_json(&value, None)?;
+        out.push(value);
     }
     Ok(out)
 }

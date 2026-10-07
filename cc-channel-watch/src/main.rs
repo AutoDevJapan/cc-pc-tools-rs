@@ -8,7 +8,10 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 fn command(exe: &Path) -> Command {
+    #[cfg(windows)]
     let mut command = Command::new(exe);
+    #[cfg(not(windows))]
+    let command = Command::new(exe);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

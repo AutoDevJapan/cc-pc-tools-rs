@@ -1,6 +1,7 @@
 //! Reap only positively identified stale Codex helper sets, never arbitrary trees.
 use crate::core::Result;
 use serde::{Deserialize, Serialize};
+#[cfg(any(windows, test))]
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -10,7 +11,9 @@ use std::{
 
 const TICKS_PER_SECOND: u64 = 10_000_000;
 const GRACE: u64 = 2 * 60 * 60 * TICKS_PER_SECOND;
+#[cfg(any(windows, test))]
 const MAX_SAMPLE_GAP: u64 = 5 * 60 * TICKS_PER_SECOND;
+#[cfg(any(windows, test))]
 const STEAM_LIMIT: u64 = 4 * 1024 * 1024 * 1024;
 const LIMIT: usize = 50;
 
@@ -53,6 +56,7 @@ struct Exit {
     bytes: u64,
     steam: bool,
 }
+#[cfg(any(windows, test))]
 impl Watch {
     fn confirm(&mut self, exit: &Exit) {
         if exit.steam {
@@ -156,6 +160,7 @@ fn save_watch(path: &Path, watch: &Watch) -> Result<()> {
         .map_err(|_| "watch sync failed")?;
     crate::core::replace_file(temp.path(), path)
 }
+#[cfg(any(windows, test))]
 fn steam_target(p: &Process, table: &Table) -> bool {
     if p.excluded
         || p.created == 0
@@ -553,10 +558,12 @@ fn plan_guarded(
 }
 
 /// Unreadable job records disable reaping for this pass, rather than guessing.
+#[cfg(any(windows, test))]
 struct Jobs {
     roots: Vec<u32>,
     oldest: Option<u64>,
 }
+#[cfg(any(windows, test))]
 fn job_roots(home: &Path) -> Result<Jobs> {
     let mut roots = vec![];
     let mut oldest = None;
@@ -607,6 +614,7 @@ fn job_roots(home: &Path) -> Result<Jobs> {
     Ok(Jobs { roots, oldest })
 }
 
+#[cfg(any(windows, test))]
 fn revalidated(
     set: &Set,
     initial: &Table,
@@ -855,6 +863,7 @@ mod native {
 }
 
 pub fn run(jobs: &Path, dry_run: bool) -> Result<String> {
+    #[cfg(windows)]
     let chrome = cc_chrome::sweep(&jobs.join("jobs"), None, dry_run)
         .map(|s| {
             format!(
@@ -1208,7 +1217,9 @@ mod tests {
         fs::create_dir_all(root.path().join("jobs/a")).unwrap();
         let path = root.path().join("jobs/a/job.json");
         fs::write(&path, r#"{"status":"running","pid":1,"codex_pid":2}"#).unwrap();
-        assert_eq!(job_roots(root.path()).unwrap().roots, vec![1, 2]);
+        let jobs = job_roots(root.path()).unwrap();
+        assert_eq!(jobs.roots, vec![1, 2]);
+        assert_eq!(jobs.oldest, Some(0));
         fs::write(&path, "broken").unwrap();
         assert!(job_roots(root.path()).is_err());
     }

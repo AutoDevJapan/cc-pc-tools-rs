@@ -21,10 +21,9 @@
 
 ## このPCのモデルに任せる軽い作業（2026-10-07）
 
-次の3つは Codex を使わず、`http://127.0.0.1:11434` の llm-jp（`llm-jp-4-8b-thinking`）に頼みます。llm-jp の答えが使えないときだけ gemma3:4b に頼みます。どちらも時間の上限があり、失敗したら今までのやり方で続けます。
+次の2つは Codex を使わず、`http://127.0.0.1:11434` の llm-jp（`llm-jp-4-8b-thinking`）に頼みます。llm-jp の答えが使えないときだけ gemma3:4b に頼みます。どちらも時間の上限があり、失敗したら今までのやり方で続けます。
 
-1. 作業状況の一覧の作業名の言い換え（`cc-ask/src/board.rs`）。1件20秒・全体40秒まで。失敗したら記号を除いて短く切った題名のままにし、同じ題名は再試行しません。
-2. ジョブ名でも `--task-type` でも決まらない `codex_jobs.exe run`（`--model` なし）の作業の種類の判定（`cc-job-policy/src/classify.rs`）。依頼文を review・research・cleanup・documentation・implementation に分け、同じ規則で gpt-6-luna か gpt-6.1-sol を選びます。20秒以内に答えがなければ実装の既定のままです。
-3. オーナー向けの投稿の日本語の点検（`cc-ask/src/ja_check.rs`）。`discord_ask.exe lint --body-file <file>` で投稿前に確認できます。`ask`・`log`・`post` でも送る前に点検し、指摘を標準エラーへ出します。投稿は止めません。
+1. 作業状況の一覧の作業名の言い換え（`cc-ask/src/board.rs`）。1件20秒・全体40秒まで。答えは40字以内で括弧が閉じた日本語1行だけを使います。失敗したら記号を除いて短く切った題名のままにし、同じ題名は再試行しません。
+2. オーナー向けの投稿の日本語の点検（`cc-ask/src/ja_check.rs`）。語・文の長さ・英語の識別子・丸数字・謝罪の書き出しは決まった規則で、名詞の連なりは llm-jp で調べます。`discord_ask.exe lint --body-file <file>` で投稿前に確認できます。`ask`・`log`・`post` でも送る前に点検し、指摘を標準エラーへ出します。投稿は止めません。
 
-ジョブの完了通知の要約は、以前から GoDD-AO が同じ llm-jp で行っているので変更していません。Codex の結果との比較は `D:/CC/Reports/local-llm-light-tasks-2026-10-07.md` にあります。
+ジョブの完了通知の要約は、以前から GoDD-AO が同じ llm-jp で行っているので変更していません。ジョブのモデルの振り分けと、最初の1文に結論があるかの点検も llm-jp で試しましたが、実際の入力20件で誤りが多かったため任せていません（実装の作業を軽いモデルへ回す誤りが3件、結論の誤検出が11件）。Codex の結果との比較は `D:/CC/Reports/local-llm-light-tasks-2026-10-07.md` にあります。

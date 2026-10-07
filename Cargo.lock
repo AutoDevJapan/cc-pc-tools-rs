@@ -186,9 +186,6 @@ dependencies = [
 [[package]]
 name = "cc-job-policy"
 version = "0.1.0"
-dependencies = [
- "cc-local-llm",
-]
 
 [[package]]
 name = "cc-jobs"

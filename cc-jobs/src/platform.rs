@@ -173,10 +173,6 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
-    /// Router task type for a request the job name does not decide; `None` keeps the default.
-    fn classify_request(&self, _request: &str) -> Option<&'static str> {
-        None
-    }
     /// Query public server metadata with plugins/apps disabled. Never retain
     /// transport environments or print the CLI's response to diagnostics.
     fn summary_mcp_servers(&self, codex: &str, cwd: &Path) -> io::Result<Vec<String>> {
@@ -382,9 +378,6 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
-    fn classify_request(&self, request: &str) -> Option<&'static str> {
-        cc_job_policy::classify::classify(request, std::time::Duration::from_secs(20))
-    }
     fn epoch(&self) -> f64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

@@ -342,3 +342,12 @@ fn empty_or_identifier_only_block_notes_do_not_invent_a_reason() {
         assert!(!text.contains("止まっている（作業内容を確認する）"));
     }
 }
+#[test]
+fn local_labels_must_be_short_closed_japanese_lines() {
+    assert!(accept_label("公開の不具合を直す"));
+    assert!(accept_label("Places APIの月の上限を設定する（課金防止）"));
+    assert!(!accept_label("Places API 月1,000回上限設定（課金防止"));
+    assert!(!accept_label(&"長".repeat(41)));
+    assert!(!accept_label("fix deployment"));
+    assert!(!accept_label("shep-12 の修正"));
+}

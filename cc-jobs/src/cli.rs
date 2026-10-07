@@ -219,12 +219,6 @@ pub fn parse(args: &[String]) -> Result<Args> {
             a.required("name")?,
             a.value("task-type").unwrap_or("implementation"),
         );
-        if a.value("model").is_none()
-            && a.value("task-type").is_none()
-            && profile == cc_job_policy::model_profile("", "implementation")
-        {
-            a.flags.insert("classify-request".into());
-        }
         for (name, default) in [
             ("model", profile.model),
             ("effort", profile.effort),
@@ -527,25 +521,6 @@ impl Context {
                 "prompt file is not UTF-8 ({e}); save it as UTF-8 (Windows PowerShell 5.1 writes UTF-16)"
             )));
         }
-        // Neither the name nor the caller decided: the local model reads the request
-        // and the same light/implementation rule picks the model. No answer keeps the default.
-        let classified = if a.flag("classify-request") {
-            let name = a.value("name").unwrap_or("");
-            let request = cc_task_title::summary(std::str::from_utf8(&bytes).unwrap());
-            self.rt
-                .classify_request(&format!("ジョブ名: {name}\n依頼: {request}"))
-                .map(|kind| (kind, cc_job_policy::model_profile(name, kind)))
-        } else {
-            None
-        };
-        let (model, effort, task_type) = match classified {
-            Some((kind, p)) => (p.model, p.effort, Some(kind)),
-            None => (
-                a.required("model")?,
-                a.required("effort")?,
-                a.value("task-type"),
-            ),
-        };
         let cwd = abs(Path::new(
             a.value("cwd")
                 .map(str::to_string)
@@ -581,7 +556,7 @@ impl Context {
             .iter()
             .map(|p| abs(Path::new(p)).map(|p| p.to_string_lossy().into_owned()))
             .collect::<std::io::Result<Vec<_>>>()?;
-        let mut job = json!({"name":name,"model":model,"effort":effort,"sandbox":a.required("sandbox")?,"cwd":cwd.to_string_lossy(),"add_dirs":dirs,"network":a.flag("network"),"mcp_profile":a.required("mcp-profile")?,"task_type":task_type,"notes_hint":a.value("notes-hint"),"prompt_source":abs(prompt)?.to_string_lossy(),"codex":codex,"created_at":self.rt.now(),"status":"queued","pid":null,"codex_pid":null,"started_at":null,"finished_at":null,"exit_code":null,"duration_ms":null,"tokens":usage_tokens(&json!({})),"steps":0,"activity":"queued","last_message":null,"last_error":null,"thread_id":null,"launch_key":a.value("launch-key"),"resume_session":resume});
+        let mut job = json!({"name":name,"model":a.required("model")?,"effort":a.required("effort")?,"sandbox":a.required("sandbox")?,"cwd":cwd.to_string_lossy(),"add_dirs":dirs,"network":a.flag("network"),"mcp_profile":a.required("mcp-profile")?,"task_type":a.value("task-type"),"notes_hint":a.value("notes-hint"),"prompt_source":abs(prompt)?.to_string_lossy(),"codex":codex,"created_at":self.rt.now(),"status":"queued","pid":null,"codex_pid":null,"started_at":null,"finished_at":null,"exit_code":null,"duration_ms":null,"tokens":usage_tokens(&json!({})),"steps":0,"activity":"queued","last_message":null,"last_error":null,"thread_id":null,"launch_key":a.value("launch-key"),"resume_session":resume});
         let policy = cc_job_policy::for_sandbox(s(&job, "sandbox"));
         let scope_source = a.value("scope-source").unwrap_or("launcher");
         if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {

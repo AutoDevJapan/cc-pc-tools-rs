@@ -1,5 +1,4 @@
 //! Permissions for unattended jobs. Read-only work cannot escalate to write access.
-pub mod classify;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
     pub sandbox: &'static str,

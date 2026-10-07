@@ -663,7 +663,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             let i = find(db, *id)?;
             let on: std::collections::BTreeSet<_> = on.iter().copied().collect();
             i["wait_on"] = json!(on);
-            i["status"] = json!("wait");
+            if i["status"] != "block" {
+                i["status"] = json!("wait");
+            }
             i.as_object_mut()
                 .ok_or("invalid item")?
                 .remove("dependency_ready");

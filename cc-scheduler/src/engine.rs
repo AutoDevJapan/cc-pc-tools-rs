@@ -885,6 +885,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     && !jobs.iter().any(|j| {
                         live(j)
                             && (arr(&i["jobs"]).contains(&j["id"])
+                                || arr(&j["related_todo_ids"]).contains(&i["id"])
                                 || i["scheduler"]["job"] == j["id"])
                     })
             })

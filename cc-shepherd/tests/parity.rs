@@ -457,7 +457,7 @@ fn link_uses_explicit_jobs_and_exact_identifiers_only() {
         Fake {
             prs: pr_one(),
             trees: json!({"feat/one":"C:/w/one"}),
-            todo: json!({"projects":{"mine":"P/sub","other":"Z/elsewhere"},"items":[
+            todo: json!({"projects":{"mine":"P","nested":"P/sub","other":"Z/elsewhere"},"items":[
             {"id":11,"status":"doing"},
             row]}),
             ..Default::default()
@@ -479,6 +479,10 @@ fn link_uses_explicit_jobs_and_exact_identifiers_only() {
     // Not linked: same note but the ToDo belongs to another repository.
     assert_eq!(
         one(json!({"project":"other","note":"PR#1 を直す"})),
+        ["o/r#1"]
+    );
+    assert_eq!(
+        one(json!({"project":"nested","note":"PR#1 を直す"})),
         ["o/r#1"]
     );
     // Not linked: PR#12 / pull/12 are different PRs; a stranger's job id proves nothing.
@@ -553,6 +557,10 @@ fn each_release_generation_launches_once_and_state_is_preserved() {
         "10"
     );
     assert_eq!(b.cleared, [json!("10:1")]);
+    assert_eq!(
+        args[args.iter().position(|a| a == "--related-todo-ids").unwrap() + 1],
+        "10"
+    );
     let state = read_json(&root.join("shepherd_state.json"), Value::Null).unwrap();
     assert_eq!(state["o/r#1"]["dependency_consumed"], json!(["10:1"]));
     assert_eq!(state["retained"]["hold"], true);

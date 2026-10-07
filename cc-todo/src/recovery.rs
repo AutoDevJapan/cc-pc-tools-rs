@@ -15,6 +15,9 @@ pub const RETRY_WINDOW_S: f64 = 21600.;
 const CLAIM_S: f64 = 300.;
 
 fn discord_wait(item: &Value, t: f64) -> bool {
+    if item["dependency_ready"] == true {
+        return false;
+    }
     let reserved = n(&item["stall_recovery"]["pending"]["discord_reserved_at"]);
     let history = arr(&item["discord_restart_history"]);
     failure::retry_at(&history, t) > t && !(reserved > 0. && t - reserved < RETRY_WINDOW_S)
@@ -53,9 +56,10 @@ fn owns_launch(j: &Value, ps: &Processes, t: f64) -> bool {
 }
 fn linked(item: &Value, j: &Value) -> bool {
     // A working directory identifies a checkout, not the work item that owns it.
-    (item["id"].is_number()
-        && item["id"] == j["todo_id"]
-        && (s(&j["project"]).is_empty() || item["project"] == j["project"]))
+    (item["id"].is_number() && arr(&j["related_todo_ids"]).contains(&item["id"]))
+        || (item["id"].is_number()
+            && item["id"] == j["todo_id"]
+            && (s(&j["project"]).is_empty() || item["project"] == j["project"]))
         || item["jobs"]
             .as_array()
             .into_iter()
@@ -761,7 +765,10 @@ pub fn run_watch(
             if !launched && discord_wait(&item, backend.clock()) {
                 continue;
             }
-            if !launched && n(&item["stall_recovery"]["next_at"]) > backend.clock() {
+            if !launched
+                && item["dependency_ready"] != true
+                && n(&item["stall_recovery"]["next_at"]) > backend.clock()
+            {
                 continue;
             }
             if fresh_jobs.iter().any(|job| {
@@ -941,6 +948,7 @@ pub fn run_watch(
                         if !arr(&row["jobs"]).contains(&json!(job)) {
                             common::push(&mut row["jobs"], json!(job));
                         }
+                        common::remove(row, "dependency_ready");
                         // The old scheduler owner must not reconcile the cancelled job over this continuation.
                         if p["kind"] != "scheduler"
                             && row["scheduler"].is_object()
@@ -1005,7 +1013,16 @@ pub fn run_watch(
                         Ok(())
                     })?;
                 }
-                Ok(Outcome::Queued | Outcome::Deferred) => {}
+                Ok(Outcome::Queued) => {
+                    edit(paths, |db| {
+                        let row = find(db, id)?;
+                        if row["stall_recovery"]["pending"]["request"] == p["request"] {
+                            common::remove(row, "dependency_ready");
+                        }
+                        Ok(())
+                    })?;
+                }
+                Ok(Outcome::Deferred) => {}
                 Err(error) => {
                     let cause = failure::summary(&error);
                     let actual = failure::classify(&error);

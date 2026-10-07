@@ -130,6 +130,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "task-title",
                     "project",
                     "todo-id",
+                    "related-todo-ids",
                     "model",
                     "effort",
                     "sandbox",
@@ -540,27 +541,39 @@ impl Context {
         // Registration shares admission's gate. This also serializes different
         // launch keys targeting the same ToDo.
         let _queue = self.queue_lock()?;
+        let related: Vec<u64> = a
+            .value("related-todo-ids")
+            .map(|ids| {
+                ids.split(',')
+                    .map(|id| {
+                        id.parse::<u64>().ok().filter(|id| *id > 0).ok_or_else(|| {
+                            Error::new(
+                                "--related-todo-ids requires comma-separated positive ToDo IDs",
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()
+            })
+            .transpose()?
+            .unwrap_or_default();
+        job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
+        if !related.is_empty() {
+            job["related_todo_ids"] = json!(&related);
+        }
         // Do not create another supervisor for a task already waiting on a
         // prerequisite. Existing queued supervisors are also gated at admission.
-        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<i64>().ok()) {
+        if job["todo_id"].is_number() || !related.is_empty() {
             let store = self.todo_store();
             if store.exists() {
                 let db = self.read_json(&store)?;
-                if let Some(item) = db["items"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .find(|i| i["id"] == todo)
-                {
-                    let on = cc_job_policy::todo_wait::pending_on(&db, item);
-                    if !on.is_empty() {
-                        return Err(Error::new(
-                            on.iter()
-                                .map(|id| format!("ToDo {id} 待ち"))
-                                .collect::<Vec<_>>()
-                                .join("、"),
-                        ));
-                    }
+                let on = cc_job_policy::todo_wait::job_pending_on(&db, &job);
+                if !on.is_empty() {
+                    return Err(Error::new(
+                        on.iter()
+                            .map(|id| format!("ToDo {id} 待ち"))
+                            .collect::<Vec<_>>()
+                            .join("、"),
+                    ));
                 }
             }
         }
@@ -585,16 +598,23 @@ impl Context {
                     running
                 })
         };
-        if let Some(todo) = a.value("todo-id").and_then(|id| id.parse::<u64>().ok())
-            && let Some(job) = self.admission_jobs()?.into_iter().find(|j| {
-                j["todo_id"].as_u64() == Some(todo)
-                    && (LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
-            })
+        for todo in job["todo_id"]
+            .as_u64()
+            .into_iter()
+            .chain(related.iter().copied())
         {
-            return Err(Error::new(format!(
-                "ToDo {todo} already has active job {}",
-                s(&job, "id")
-            )));
+            if let Some(job) = self.admission_jobs()?.into_iter().find(|j| {
+                (j["todo_id"].as_u64() == Some(todo)
+                    || j["related_todo_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&json!(todo))))
+                    && (LIVE.contains(&s(j, "status")) || self.is_ours(j, "codex_pid"))
+            }) {
+                return Err(Error::new(format!(
+                    "ToDo {todo} already has active job {}",
+                    s(&job, "id")
+                )));
+            }
         }
         if let Some(session) = &resume
             && let Some(job) = self.admission_jobs()?.into_iter().find(|job| {

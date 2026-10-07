@@ -118,7 +118,11 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
 pub fn job_pending_on(db: &Value, job: &Value) -> Vec<i64> {
     let mut on = BTreeSet::new();
     for item in db["items"].as_array().into_iter().flatten() {
-        let linked = (job["todo_id"].as_i64().is_some() && job["todo_id"] == item["id"])
+        let linked = (item["id"].as_i64().is_some()
+            && job["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&item["id"])))
+            || (job["todo_id"].as_i64().is_some() && job["todo_id"] == item["id"])
             || (job["id"].is_string()
                 && (item["jobs"]
                     .as_array()

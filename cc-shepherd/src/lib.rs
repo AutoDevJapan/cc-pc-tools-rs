@@ -17,6 +17,12 @@ use std::{
 pub const MAX_RUNNING: usize = 4; // live runs still serialize on civ6.lock; review/test steps run in parallel
 pub const COOLDOWN_S: f64 = 30. * 60.;
 pub const REST_DECISION_S: f64 = 3. * 3600.;
+fn todo_path() -> PathBuf {
+    std::env::var_os("CC_TODO_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("D:/CC/Tools/todo"))
+        .join("todo.json")
+}
 pub fn repos() -> Vec<Value> {
     vec![
         json!({"slug":"AutoDevJapan/civ6-banseiki","path":"C:/Users/makhmeto/Desktop/dev/ADJ/civ6-banseiki","wt":"C:/Users/makhmeto/Desktop/dev/ADJ/civ6-banseiki-wt"}),
@@ -59,16 +65,17 @@ impl Backend for RealBackend {
         Path::new(p).is_dir()
     }
     fn todo(&mut self) -> Result<Value> {
-        read_json(Path::new("D:/CC/Tools/todo/todo.json"), json!({"items":[]}))
+        let path = todo_path();
+        read_json(&path, json!({"items":[]}))
     }
     fn clear_dependency_ready(&mut self, keys: &[Value]) -> Result<()> {
-        let path = Path::new("D:/CC/Tools/todo/todo.json");
+        let path = todo_path();
         let _lock = ByteLock::acquire(
             &path.with_file_name("todo.lock"),
             std::time::Duration::from_secs(5),
         )?
         .ok_or(Error("TimeoutError"))?;
-        let mut db = read_json(path, json!({"items":[]}))?;
+        let mut db = read_json(&path, json!({"items":[]}))?;
         let mut changed = false;
         for item in db["items"].as_array_mut().into_iter().flatten() {
             if keys.contains(&json!(release_key(item))) && item.get("dependency_ready").is_some() {
@@ -79,7 +86,7 @@ impl Backend for RealBackend {
             }
         }
         if changed {
-            write_json(path, &db, 1)?;
+            write_json(&path, &db, 1)?;
         }
         Ok(())
     }
@@ -138,7 +145,8 @@ fn in_repo(db: &Value, item: &Value, repo: &Value) -> bool {
     !project.is_empty()
         && ["path", "wt"].iter().any(|field| {
             let root = norm(s(&repo[*field])).trim_end_matches('\\').to_lowercase();
-            !root.is_empty() && (project == root || project.starts_with(&(root + "\\")))
+            !root.is_empty()
+                && (project == root || (*field == "wt" && project.starts_with(&(root + "\\"))))
         })
 }
 /// Unfinished ToDos tied to this PR by explicit evidence only: the PR's own jobs listed in the ToDo,
@@ -169,7 +177,9 @@ pub fn linked_todos(
             let by_job = arr(&i["jobs"]).iter().any(|j| pr_jobs.contains(j))
                 || (truth(&i["scheduler"]["job"]) && pr_jobs.contains(&i["scheduler"]["job"]))
                 || jobs.iter().any(|j| {
-                    truth(&j["todo_id"]) && j["todo_id"] == i["id"] && pr_jobs.contains(&j["id"])
+                    (j["todo_id"] == i["id"] || arr(&j["related_todo_ids"]).contains(&i["id"]))
+                        && i["id"].is_number()
+                        && pr_jobs.contains(&j["id"])
                 });
             let text = format!("{}\n{}", s(&i["title"]), s(&i["note"]));
             let url = !s(&pr["url"]).is_empty() && mentions(&text, s(&pr["url"]));
@@ -376,6 +386,12 @@ pub fn launch_command(jobs: &Path, r: &Value, prompt: &Path) -> Invocation {
     );
     let project = cc_task_title::project_from_folder(s(&r["path"]));
     let todo = r["todo_id"].as_u64().map(|id| id.to_string());
+    let related = arr(&r["related_todo_ids"])
+        .iter()
+        .filter_map(Value::as_u64)
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
     let mut args: Vec<&str> = vec![
         "run",
         "--name",
@@ -404,6 +420,9 @@ pub fn launch_command(jobs: &Path, r: &Value, prompt: &Path) -> Invocation {
     if let Some(id) = &todo {
         // The job carries its ToDo so job admission also honours that ToDo's prerequisites.
         args.extend(["--todo-id", id]);
+    }
+    if !related.is_empty() {
+        args.extend(["--related-todo-ids", &related]);
     }
     tool_command(&jobs.join("codex_jobs.py"), &args, None)
 }
@@ -465,6 +484,7 @@ pub fn cmd_step<B: Backend>(
             return Ok(None);
         }
         let mut r = r.clone();
+        r["related_todo_ids"] = json!(linked.iter().map(|i| i["id"].clone()).collect::<Vec<_>>());
         if let [only] = linked.as_slice() {
             r["todo_id"] = only["id"].clone();
         }

@@ -178,3 +178,30 @@ fn already_completed_target_does_not_leave_a_permanent_wait() {
     assert_eq!(d["items"][0]["status"], "todo");
     assert!(d["items"][0]["wait_on"].is_null());
 }
+#[test]
+fn explicit_owner_block_survives_wait_registration_and_release() {
+    let mut d = db();
+    d["items"][0]["status"] = json!("block");
+    execute(
+        &mut d,
+        &Command::Wait {
+            id: 1,
+            on: vec![2],
+            progress: None,
+        },
+        &paths(),
+    )
+    .unwrap();
+    assert_eq!(d["items"][0]["status"], "block");
+    execute(
+        &mut d,
+        &Command::Done {
+            id: 2,
+            note: "".into(),
+        },
+        &paths(),
+    )
+    .unwrap();
+    assert_eq!(d["items"][0]["status"], "block");
+    assert!(d["items"][0]["dependency_ready"].is_null());
+}

@@ -165,6 +165,37 @@ mod queue_regressions {
                     .all(|e| !e.path().join("job.json").exists())
         );
     }
+    #[test]
+    fn shared_pr_worker_tracks_every_related_todo_at_registration_and_admission() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db = json!({"items":[{"id":1,"status":"todo"},{"id":2,"status":"wait","wait_on":[3]},{"id":3,"status":"doing"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(
+            t.run(&["--related-todo-ids", "1,2"], b"finish shared PR")
+                .is_err()
+        );
+        assert!(
+            t.run(&["--related-todo-ids", "1,bad"], b"finish shared PR")
+                .is_err()
+        );
+        let mut j = waiting(&t, "shared", "shep-116");
+        j["related_todo_ids"] = json!([1, 2]);
+        t.ctx.save(&j).unwrap();
+        assert!(t.ctx.admit("shared").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("shared").unwrap()["queue_wait_reason"]["message"],
+            "ToDo 3 待ち"
+        );
+        db["items"][2]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("shared").unwrap().is_some());
+        assert!(t.run(&["--todo-id", "2"], b"duplicate").is_err());
+    }
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
     fn long_parent(t: &Test, id: &str) -> Value {
         let mut j = waiting(t, id, "orch-long");
@@ -836,8 +867,12 @@ mod queue_regressions {
         live_tool_parent(&t);
         tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
         t.rt.supervisor_fail.store(true, Ordering::Relaxed);
-        assert!(t.ctx.admit("other").unwrap().is_some(), "job: {}; diagnostics: {:?}",
-            t.ctx.load("long").unwrap(), t.rt.diagnostics.lock().unwrap());
+        assert!(
+            t.ctx.admit("other").unwrap().is_some(),
+            "job: {}; diagnostics: {:?}",
+            t.ctx.load("long").unwrap(),
+            t.rt.diagnostics.lock().unwrap()
+        );
         assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
         assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
         t.rt.supervisor_fail.store(false, Ordering::Relaxed);

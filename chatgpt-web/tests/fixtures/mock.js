@@ -78,6 +78,10 @@
       return;
     }
     const a = turn('assistant');
+    // 考え中の要約は回答の本文（.markdown）の外にある。上限・エラーの判定に混ぜないことを確かめる
+    const thought = document.createElement('div');
+    thought.textContent = 'Thought about the usage limit and why something went wrong';
+    a.appendChild(thought);
     const md = document.createElement('div');
     md.className = 'markdown prose';
     a.appendChild(md);

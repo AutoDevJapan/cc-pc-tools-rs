@@ -23,10 +23,10 @@ function state() {
   return document.readyState === 'complete' ? 'unknown' : 'loading';
 }
 
-// 依頼文と回答の本文を除いた画面の文字（エラー表示・上限表示の判定用）
+// 依頼文と回答（考え中の要約を含む）を除いた画面の文字（エラー表示・上限表示の判定用）
 function chromeText() {
   const root = (q('main') || document.body).cloneNode(true);
-  root.querySelectorAll('[data-message-author-role="user"], .markdown').forEach(n => n.remove());
+  root.querySelectorAll('[data-message-author-role]').forEach(n => n.remove());
   return root.textContent || '';
 }
 

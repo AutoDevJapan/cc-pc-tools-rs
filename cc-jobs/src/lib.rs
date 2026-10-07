@@ -14,6 +14,7 @@ pub mod notify;
 mod pause;
 pub mod platform;
 pub mod queue;
+pub mod queue_status;
 pub mod recovery;
 pub use events::*;
 pub use jobs::*;

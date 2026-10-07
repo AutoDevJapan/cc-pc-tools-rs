@@ -39,7 +39,7 @@
    "-h"
   ],
   "code": 0,
-  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n",
+  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json] [--summary]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n  --summary  one-line summary; with --json, return {summary, jobs}\n",
   "stderr": ""
  },
  {
@@ -48,7 +48,7 @@
    "--help"
   ],
   "code": 0,
-  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n",
+  "stdout": "usage: codex_jobs.py status [-h] [--all] [--json] [--summary]\n\noptions:\n  -h, --help  show this help message and exit\n  --all\n  --json\n  --summary  one-line summary; with --json, return {summary, jobs}\n",
   "stderr": ""
  },
  {

@@ -192,11 +192,19 @@ pub fn guarded<T>(
 ) -> io::Result<T> {
     prepare()?;
     // Fixed one-slot lock: every gated shared-cache build uses it, regardless of job slot settings.
+    let wait = std::cell::RefCell::new(None);
     gate::with_slot(
         Path::new(GUARD_DIR),
         1,
-        |s| std::thread::sleep(std::time::Duration::from_secs_f64(s)),
+        |s| {
+            if wait.borrow().is_none() {
+                *wait.borrow_mut() =
+                    crate::queue_status::ResourceWait::new(env, "cargoの共有キャッシュ枠待ち");
+            }
+            std::thread::sleep(std::time::Duration::from_secs_f64(s));
+        },
         || {
+            drop(wait.borrow_mut().take());
             let cache = Path::new(SHARED);
             let mut before = crate::cache_history::inventory(cache)?;
             let bytes: u64 = before.values().map(|s| s.bytes()).sum();

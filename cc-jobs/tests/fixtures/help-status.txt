@@ -1,6 +1,7 @@
-usage: codex_jobs.py status [-h] [--all] [--json]
+usage: codex_jobs.py status [-h] [--all] [--json] [--summary]
 
 options:
   -h, --help  show this help message and exit
   --all
   --json
+  --summary  one-line summary; with --json, return {summary, jobs}

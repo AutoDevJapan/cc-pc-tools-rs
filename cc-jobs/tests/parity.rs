@@ -956,6 +956,216 @@ mod queue_regressions {
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert_eq!(t.ctx.load("waiting").unwrap()["resume_session"], SESSION_ID);
         assert_eq!(t.ctx.load("running").unwrap()["status"], "running");
+        assert!(
+            !t.rt
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|call| call.argv.first().is_some_and(|a| a == "taskkill"))
+        );
+    }
+    #[test]
+    fn queue_summary_matches_real_admission_and_fills_eight_slots() {
+        let t = Test::new();
+        config(&t, json!({"max_running":8}));
+        for i in 0..10 {
+            waiting(&t, &format!("slot-{i:02}"), "ordinary name with spaces");
+        }
+        for i in 0..6 {
+            assert!(t.ctx.admit(&format!("slot-{i:02}")).unwrap().is_some());
+        }
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["occupied_slots"], 6);
+        assert_eq!(report["queued_count"], 4);
+        assert_eq!(report["queued"][0]["reason"]["code"], "ready");
+        assert_eq!(report["queued"][1]["reason"]["code"], "ready");
+        assert_eq!(report["queued"][2]["reason"]["code"], "running_limit");
+        assert!(t.ctx.admit("slot-06").unwrap().is_some());
+        assert!(t.ctx.admit("slot-07").unwrap().is_some());
+        assert!(t.ctx.admit("slot-08").unwrap().is_none());
+        let (result, out, _) = t.cli(&["status", "--summary", "--json"]);
+        assert_eq!(result.unwrap(), 0);
+        let report: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(report["summary"]["occupied_slots"], 8);
+        assert_eq!(report["summary"]["queued_count"], 2);
+        assert_eq!(report["jobs"][0]["name"], "ordinary name with spaces");
+        let (_, line, _) = t.cli(&["status", "--summary"]);
+        assert_eq!(line.lines().count(), 1);
+        assert!(line.contains("実行中 8/8枠"));
+    }
+    #[test]
+    fn wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs() {
+        let t = Test::new();
+        config(&t, json!({"max_running":8,"max_children_per_parent":1}));
+        let mut normal = waiting(&t, "normal", "normal");
+        normal["retry_not_before"] = json!(t.rt.epoch() + 60.);
+        t.ctx.save(&normal).unwrap();
+        let mut low = waiting(&t, "low", "normal");
+        low["todo_id"] = json!(18);
+        t.ctx.save(&low).unwrap();
+        let mut parent = waiting(&t, "parent", "parent");
+        parent["status"] = json!("running");
+        t.ctx.save(&parent).unwrap();
+        let mut one = child(&t, "child-one", "parent");
+        one["status"] = json!("running");
+        t.ctx.save(&one).unwrap();
+        child(&t, "child-two", "parent");
+        let mut yielded = waiting(&t, "yielded", "normal");
+        yielded["yield_resume"] = json!(true);
+        t.ctx.save(&yielded).unwrap();
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        let reason = |id: &str| {
+            report["queued"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|j| s(j, "id") == id)
+                .unwrap()["reason"]["code"]
+                .clone()
+        };
+        assert_eq!(reason("normal"), "retry_cooldown");
+        assert_eq!(reason("low"), "lowest_priority");
+        assert_eq!(reason("child-two"), "child_limit");
+        assert_eq!(reason("yielded"), "ready");
+        assert_eq!(report["occupied_slots"], 1);
+        assert_eq!(report["running"], 2);
+        assert!(t.ctx.admit("low").unwrap().is_none());
+        assert!(t.ctx.admit("child-two").unwrap().is_none());
+        assert!(t.ctx.admit("yielded").unwrap().is_some());
+    }
+    #[test]
+    fn starting_and_unreadable_reservations_cannot_be_hidden_by_status() {
+        let t = Test::new();
+        config(&t, json!({"max_running":2}));
+        let mut pending = waiting(&t, "starting", "starting");
+        pending["status"] = json!("starting");
+        t.ctx.save(&pending).unwrap();
+        waiting(&t, "unreadable", "unreadable");
+        fs::write(t.ctx.job_dir("unreadable").join("job.json"), "{").unwrap();
+        waiting(&t, "next", "next");
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        let (code, out, _) = t.cli(&["status", "--summary", "--json"]);
+        assert_eq!(code.unwrap(), 0);
+        let report: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(report["summary"]["occupied_slots"], 2);
+        assert_eq!(report["summary"]["queued_count"], 1);
+    }
+    #[test]
+    fn cleanup_only_stops_terminal_identity_without_live_child_or_handoff() {
+        let t = Test::new();
+        for (i, id) in [
+            "done",
+            "live-child",
+            "reused",
+            "handoff",
+            "running",
+            "queued",
+            "recent",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let pid = 500 + i as u32;
+            let mut j = waiting(&t, id, id);
+            j["pid"] = json!(pid);
+            j["pid_created"] = json!(55);
+            j["status"] = json!("succeeded");
+            j["finished_at"] = json!(if *id == "recent" {
+                t.rt.now()
+            } else {
+                "2026-10-01T11:57:00+09:00".into()
+            });
+            t.rt.procs
+                .lock()
+                .unwrap()
+                .insert(pid, if *id == "reused" { 56 } else { 55 });
+            if *id == "live-child" {
+                j["codex_pid"] = json!(600);
+                j["codex_pid_created"] = json!(66);
+                t.rt.procs.lock().unwrap().insert(600, 66);
+            }
+            if ["running", "queued"].contains(id) {
+                j["status"] = json!(id);
+            }
+            t.ctx.save(&j).unwrap();
+            if *id == "handoff" {
+                fs::write(
+                    t.ctx.job_dir(id).join("yield-transition.json"),
+                    json!({"complete":false,"source":{"id":id}}).to_string(),
+                )
+                .unwrap();
+            }
+        }
+        let original = t.ctx.load("done").unwrap();
+        let preview = t.ctx.cleanup_supervisors(false).unwrap();
+        assert_eq!(preview.as_array().unwrap().len(), 1);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert_eq!(t.ctx.load("done").unwrap(), original);
+        assert_eq!(t.ctx.cleanup_supervisors(true).unwrap()[0]["id"], "done");
+        assert_eq!(*t.rt.kills.lock().unwrap(), [500]);
+        let done = t.ctx.load("done").unwrap();
+        assert_eq!(done["finished_at"], original["finished_at"]);
+        assert_eq!(done["status"], "succeeded");
+        assert!(
+            t.ctx
+                .cleanup_supervisors(true)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+    }
+    #[test]
+    fn invalid_queue_config_keeps_status_available_with_explicit_error() {
+        let t = Test::new();
+        waiting(&t, "pending", "name with spaces");
+        fs::write(t.ctx.root.join("queue-config.json"), "{").unwrap();
+        for args in [
+            vec!["status"],
+            vec!["status", "--json"],
+            vec!["status", "--summary", "--json"],
+        ] {
+            let (result, out, _) = t.cli(&args);
+            assert_eq!(result.unwrap(), 0);
+            if args.contains(&"--json") {
+                let data: Value = serde_json::from_str(&out).unwrap();
+                if args.contains(&"--summary") {
+                    assert!(!data["summary"]["config_error"].is_null());
+                    assert!(data["summary"]["max_running"].is_null());
+                } else {
+                    assert!(data.is_array());
+                    assert_eq!(data[0]["queue_wait_reason"]["code"], "config_error");
+                }
+            } else {
+                assert!(out.contains("不明（設定エラー）"));
+                assert!(out.contains("name with spaces"));
+            }
+        }
+    }
+    #[test]
+    fn failed_supervisor_reload_does_not_prevent_other_waiters_upgrading() {
+        let t = Test::new();
+        for (id, pid) in [("a-failing", 444), ("b-good", 445)] {
+            let mut j = waiting(&t, id, id);
+            j["pid"] = json!(pid);
+            j["pid_created"] = json!(55);
+            t.ctx.save(&j).unwrap();
+            t.rt.procs.lock().unwrap().insert(pid, 55);
+        }
+        t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
+        t.rt.paused_stop_failure_pid.store(444, Ordering::Relaxed);
+        let report = t.ctx.reload_queue().unwrap();
+        assert_eq!(report[0]["action"], "deferred");
+        assert_eq!(report[1], "b-good");
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.ctx.load("a-failing").unwrap()["pid"], 444);
     }
     #[test]
     fn reload_does_not_wait_for_a_busy_registration_or_hold_the_queue_between_jobs() {
@@ -4558,6 +4768,104 @@ mod task_notifier {
 }
 mod end_to_end {
     use super::*;
+    #[test]
+    fn terminal_supervisor_cleanup_preserves_its_independent_descendant() {
+        let mut t = Test::new();
+        t.ctx.rt = Arc::new(System::default());
+        let fixture = env!("CARGO_BIN_EXE_cc_jobs_fixture");
+        let mut parent = hidden_command(fixture)
+            .arg("--supervisor-with-independent-job")
+            .env("CC_JOBS_FIXTURE_DIR", &t.ctx.root)
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !t.ctx.root.join("hold.pid").exists() {
+            if Instant::now() >= deadline {
+                let _ = parent.kill();
+                let _ = parent.wait();
+                panic!("fixture descendant did not start");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let child: u32 = fs::read_to_string(t.ctx.root.join("hold.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let child_created = proc_created(child).unwrap();
+        let j=t.put(job(json!({"id":"finished","status":"succeeded","pid":parent.id(),"pid_created":proc_created(parent.id()),"finished_at":(chrono::Local::now()-chrono::Duration::seconds(180)).to_rfc3339(),"codex_pid":null})));
+        let result = t.ctx.cleanup_supervisors(true);
+        let survived = proc_created(child) == Some(child_created);
+        // Release both owned processes before asserting, including failure paths.
+        if proc_created(child) == Some(child_created) {
+            t.ctx
+                .rt
+                .pause_supervisor(child, child_created)
+                .unwrap()
+                .stop()
+                .unwrap();
+        }
+        if parent.try_wait().unwrap().is_none() {
+            parent.kill().unwrap();
+        }
+        parent.wait().unwrap();
+        assert!(
+            survived,
+            "cleanup followed parent PID links into an independent job"
+        );
+        assert_eq!(result.unwrap()[0]["id"], "finished");
+        assert_eq!(
+            t.ctx.load("finished").unwrap()["finished_at"],
+            j["finished_at"]
+        );
+    }
+    #[test]
+    fn cargo_slot_wait_marker_is_visible_then_cleared_before_execution() {
+        let mut t = Test::new();
+        t.ctx.rt = Arc::new(System::default());
+        let job=t.put(job(json!({"id":"build","status":"running","pid":std::process::id(),"pid_created":proc_created(std::process::id())})));
+        let held = FileLock::try_acquire(&t.ctx.root.join("cargo-build.lock.0")).unwrap();
+        let mut gate = hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+            .arg("--exit-seven")
+            .env("CC_JOB_ID", "build")
+            .env("CODEX_JOBS_CARGO_GATE", t.ctx.root.join("cargo_gate.exe"))
+            .env("CODEX_JOBS_CARGO_LOCK_DIR", &t.ctx.root)
+            .env("CODEX_JOBS_CARGO_SLOTS", "1")
+            .env("CARGO_TARGET_DIR", &t.ctx.root)
+            .env(
+                "CODEX_JOBS_REAL_CARGO",
+                env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            )
+            .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
+            .env_remove("CODEX_JOBS_CACHE_LOCK_HELD")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let mut visible = false;
+        while Instant::now() < deadline {
+            if t.ctx.resource_waits(&job) == ["cargoの共有ビルド枠待ち"] {
+                visible = true;
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        drop(held);
+        let exit = gate.wait().unwrap();
+        assert!(
+            visible,
+            "running build did not expose its exact resource wait"
+        );
+        assert_eq!(exit.code(), Some(7));
+        assert!(t.ctx.resource_waits(&job).is_empty());
+        fs::write(
+            t.ctx.job_dir("build").join("resource-waits/stale.json"),
+            json!({"job_id":"build","pid":std::process::id(),"pid_created":0,"reason":"stale"})
+                .to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.resource_waits(&job).is_empty());
+    }
     #[test]
     fn state_lock_does_not_block_snapshot_readers() {
         let t = Test::new();

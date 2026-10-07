@@ -268,3 +268,21 @@ fn recorded_pages_are_read_correctly() {
     let want = "### Plan\n\nThis is a **simple** plan using `markdown` formatting.\n\n- Apple\n- Banana\n  - Yellow\n\n1. Start\n2. Finish\n\n| Item | Value |\n| --- | --- |\n| Fruit | Apple |\n\n```\nfn main() {\n    println!(\"Hello\");\n}\n```";
     assert!(out.contains(want), "{out}");
 }
+
+#[test]
+fn allow_logged_out_sends_without_recording_login_state() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let o = ask(
+        dir.path(),
+        "logged-out.html",
+        "q",
+        &["--timeout", "60", "--allow-logged-out"],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", stderr(&o));
+    assert!(stdout(&o).contains("### Answer"));
+    assert!(!dir.path().join("state.json").exists());
+    assert_browser_closed(dir.path());
+}

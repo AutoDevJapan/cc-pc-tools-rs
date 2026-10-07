@@ -243,6 +243,36 @@ pub fn prepare_target(
     env.insert(INJECTED_TARGET.into(), value);
     Some(dir)
 }
+/// Cargo's target environment variables are hashed by sccache for every Rust
+/// dependency. Pass the already resolved target as a Cargo option instead, so
+/// registry crates can hit across worktrees without changing their rustc inputs.
+pub fn target_arguments(
+    args: &[String],
+    env: &mut BTreeMap<String, String>,
+    target: &Path,
+) -> Vec<String> {
+    // External Cargo subcommands need not accept Cargo's --target-dir option.
+    if ![
+        "build", "check", "test", "bench", "rustc", "rustdoc", "run", "clippy", "clean", "nextest",
+        "doc", "fix", "install",
+    ]
+    .contains(&first_command(args))
+    {
+        return args.to_vec();
+    }
+    take_var(env, "CARGO_TARGET_DIR");
+    take_var(env, "CARGO_BUILD_TARGET_DIR");
+    take_var(env, INJECTED_TARGET);
+    let mut args = args.to_vec();
+    if explicit_target(&args).is_none() {
+        let end = args.iter().position(|a| a == "--").unwrap_or(args.len());
+        args.splice(
+            end..end,
+            ["--target-dir".into(), target.to_string_lossy().into_owned()],
+        );
+    }
+    args
+}
 /// Global options that change which workspace or configuration Cargo reads.
 fn metadata_args(args: &[String]) -> Vec<String> {
     let mut out: Vec<String> = args
@@ -412,10 +442,10 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let real = Path::new(cargo)
         .file_stem()
         .is_some_and(|s| s.eq_ignore_ascii_case("cargo"));
-    let target = prepare_target(&args, &mut child, |fresh| {
+    let target_dir = prepare_target(&args, &mut child, |fresh| {
         real.then(|| metadata(cargo, &args, env, fresh)).flatten()
-    })
-    .map(|p| {
+    });
+    let target = target_dir.as_ref().map(|p| {
         // Create first, so the key is canonical before and after Cargo creates it.
         let _ = std::fs::create_dir_all(&p);
         key(&p)
@@ -443,6 +473,13 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let slot = (!nested)
         .then(|| wait_for(&slot_paths(dir, slots), env, SLOT_WAIT))
         .transpose()?;
+    let args = if real {
+        target_dir
+            .as_ref()
+            .map_or_else(|| args.clone(), |p| target_arguments(&args, &mut child, p))
+    } else {
+        args
+    };
     let result = execute(&args, &child);
     drop((slot, target_guard));
     result

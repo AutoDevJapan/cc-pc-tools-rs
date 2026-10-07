@@ -394,14 +394,22 @@ mod queue_regressions {
     #[test]
     fn oversized_summary_is_shortened_in_the_same_read_only_session_then_rotates() {
         let t = Test::new();
-        oversized_summary_job(&t, vec![summary_of(27_000), summary_of(25_000), summary_of(3_000)]);
+        oversized_summary_job(
+            &t,
+            vec![summary_of(27_000), summary_of(25_000), summary_of(3_000)],
+        );
         t.ctx.supervise("handoff").unwrap();
         let saved = t.ctx.load("handoff").unwrap();
         assert_eq!(saved["status"], "succeeded");
         assert_eq!(saved["context_rotation_count"], 1);
         assert!(saved["context_summary_shorten_attempts"].is_null());
         let dir = t.ctx.job_dir("handoff");
-        assert!(fs::read_to_string(dir.join("context-handoff.md")).unwrap().len() < 24 * 1024);
+        assert!(
+            fs::read_to_string(dir.join("context-handoff.md"))
+                .unwrap()
+                .len()
+                < 24 * 1024
+        );
         let args = t.rt.spawn_args.lock().unwrap();
         assert_eq!(args.len(), 4);
         for a in &args[..3] {
@@ -410,7 +418,11 @@ mod queue_regressions {
             assert!(a.iter().any(|x| x == "features.shell_tool=false"));
         }
         assert!(!args[3].iter().any(|a| a == "resume"));
-        assert!(args[3].windows(2).any(|w| w == ["-s", "danger-full-access"]));
+        assert!(
+            args[3]
+                .windows(2)
+                .any(|w| w == ["-s", "danger-full-access"])
+        );
     }
     #[test]
     fn summary_still_oversized_after_two_shortenings_fails_and_keeps_the_session() {
@@ -425,7 +437,12 @@ mod queue_regressions {
         assert_eq!(saved["context_phase"], "summarize");
         assert_eq!(saved["context_summary_shorten_attempts"], 2);
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 3);
-        assert!(!t.ctx.job_dir("handoff").join("context-continue.md").exists());
+        assert!(
+            !t.ctx
+                .job_dir("handoff")
+                .join("context-continue.md")
+                .exists()
+        );
     }
     #[test]
     fn incomplete_summary_is_not_retried_as_a_shortening() {
@@ -2317,7 +2334,9 @@ impl Temp {
         fs::create_dir_all(&p).unwrap();
         // Windows temp_dir may contain an 8.3 username. Child processes report
         // the long spelling; normalize the shared fixture before making paths.
-        Self(cc_jobs::cli::normalize_windows_path(&p.canonicalize().unwrap()))
+        Self(cc_jobs::cli::normalize_windows_path(
+            &p.canonicalize().unwrap(),
+        ))
     }
 }
 impl Drop for Temp {
@@ -4171,6 +4190,48 @@ mod cargo_gate_tests {
         target_lock,
     };
     use std::process::{Child, Stdio};
+    #[test]
+    fn resolved_target_is_passed_to_cargo_without_poisoning_the_rust_cache() {
+        let a = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let mut env = BTreeMap::from([
+            ("cargo_target_dir".into(), r"D:\target-a".into()),
+            ("CARGO_BUILD_TARGET_DIR".into(), r"D:\target-b".into()),
+            (INJECTED_TARGET.into(), r"D:\target-a".into()),
+            ("CARGO_FEATURE_FAST".into(), "1".into()),
+        ]);
+        let args = cc_jobs::gate::target_arguments(
+            &a(&["test", "--locked", "--", "--nocapture"]),
+            &mut env,
+            Path::new(r"D:\target-a"),
+        );
+        assert_eq!(
+            args,
+            a(&[
+                "test",
+                "--locked",
+                "--target-dir",
+                r"D:\target-a",
+                "--",
+                "--nocapture"
+            ])
+        );
+        assert_eq!(
+            env,
+            BTreeMap::from([("CARGO_FEATURE_FAST".into(), "1".into())])
+        );
+        let explicit = a(&["nextest", "run", r"--target-dir=D:\chosen"]);
+        assert_eq!(
+            cc_jobs::gate::target_arguments(&explicit, &mut env, Path::new(r"D:\chosen")),
+            explicit
+        );
+        env.insert("CARGO_TARGET_DIR".into(), r"D:\custom".into());
+        let custom = a(&["custom", "run"]);
+        assert_eq!(
+            cc_jobs::gate::target_arguments(&custom, &mut env, Path::new(r"D:\custom")),
+            custom
+        );
+        assert_eq!(env["CARGO_TARGET_DIR"], r"D:\custom");
+    }
     /// A gated build of `target` (under `tmp`) that runs 600 ms once `ready`
     /// builds have been admitted.
     fn build(tmp: &Path, slots: Option<usize>, target: &str, ready: usize) -> Child {

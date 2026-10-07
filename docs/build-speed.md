@@ -10,6 +10,8 @@ Cargoの順番待ちを示す生存中のプロセス記録があるジョブは
 
 ## 検査の回し方
 
+sccache 0.18.0のRust用キーはCargoの環境変数を含むため、ゲートは決定した生成先を`--target-dir`でCargoへ渡し、生成先の環境変数をコンパイラーに引き継がない。生成先と排他の単位はそのまま維持する。registryの依存は別worktreeでも再利用できる。生成コードを含む依存や自作クレートには絶対パスが残るため、すべてのクレートの命中を保証するものではない。根拠は[sccacheのRust用キーの実装](https://github.com/mozilla/sccache/blob/v0.18.0/src/compiler/rust.rs)。
+
 - 作業途中は、変更したクレートと、その変更に依存するクレート・結合テストを選ぶ。例：`cargo nextest run --locked -p cc-jobs`。必要に応じて`--test <名前>`や`-E 'test(名前)'`で絞る。公開APIを変えたら利用側も含める。
 - 同じ生成先で、テスト・Clippy・ビルドを一つの順序にまとめる。保存のたびに全workspaceを回したり、同じ検査を別担当から重ねたりしない。
 - マージ前は最新の変更に対して`cargo nextest run --locked --workspace`を1回実行する。nextestが実行しないdoctestは`cargo test --locked --workspace --doc`で確認する。Lua・実機などRust以外の受入条件も別に確認する。

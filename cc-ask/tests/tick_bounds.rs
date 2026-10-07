@@ -8,6 +8,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+// Process startup is deliberately included in the integration-test budget.
+// Keep the fixture alive much longer than that budget so natural exit cannot
+// make broken process-tree cleanup pass. Short deadline arithmetic is covered
+// independently by tick_deadline_bounds_lock_wait_without_stealing_held_lock.
+const PROCESS_DEADLINE: Duration = Duration::from_secs(3);
+const FIXTURE_HOLD: Duration = Duration::from_secs(30);
+
 fn fixture_command(mode: &str, root: &Path) -> Command {
     let mut command = Command::new(std::env::current_exe().unwrap());
     command
@@ -55,7 +62,7 @@ fn process_capture_fixture() {
             .stderr(Stdio::inherit())
             .spawn()
             .unwrap();
-        std::thread::sleep(Duration::from_secs(5));
+        std::thread::sleep(FIXTURE_HOLD);
         return;
     }
     if mode == "failed_parent" {
@@ -82,7 +89,7 @@ fn process_capture_fixture() {
     } else {
         None
     };
-    std::thread::sleep(Duration::from_secs(5));
+    std::thread::sleep(FIXTURE_HOLD);
 }
 
 fn run_fixture(mode: &str, root: &Path, timeout: u64) -> Result<Output> {
@@ -110,11 +117,11 @@ fn run_fixture(mode: &str, root: &Path, timeout: u64) -> Result<Output> {
 fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
     let root = tempfile::tempdir().unwrap();
     let start = Instant::now();
-    let deadline = Deadline::new(Duration::from_millis(350));
+    let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("hang", root.path(), 0);
     drop(deadline);
     assert!(result.unwrap_err().starts_with("TimeoutExpired:"));
-    assert!(start.elapsed() < Duration::from_secs(2));
+    assert!(start.elapsed() < Duration::from_secs(5));
     assert!(root.path().join("ready").exists());
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
 }
@@ -122,10 +129,12 @@ fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
 #[test]
 fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     let root = tempfile::tempdir().unwrap();
-    let deadline = Deadline::new(Duration::from_millis(500));
+    let start = Instant::now();
+    let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("tree", root.path(), 0);
     drop(deadline);
     assert!(result.unwrap_err().starts_with("TimeoutExpired:"));
+    assert!(start.elapsed() < Duration::from_secs(5));
     assert!(
         root.path().join("ready").exists(),
         "grandchild fixture never held the lock"

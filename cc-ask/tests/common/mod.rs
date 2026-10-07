@@ -28,7 +28,8 @@ pub struct Fake {
     pub picks: Vec<Value>,
     pub pick_replies: VecDeque<Value>,
     pub runs: Vec<(Vec<String>, u64)>,
-    pub codex_labels: String,
+    pub llm_answer: String,
+    pub llm_calls: Vec<String>,
     pub launches: Vec<Value>,
     pub git_calls: Vec<(String, Vec<String>)>,
     pub git_roots: BTreeMap<String, String>,
@@ -89,7 +90,8 @@ impl Harness {
             picks: vec![],
             pick_replies: VecDeque::new(),
             runs: vec![],
-            codex_labels: String::new(),
+            llm_answer: String::new(),
+            llm_calls: vec![],
             launches: vec![],
             git_calls: vec![],
             git_roots: BTreeMap::new(),
@@ -168,6 +170,16 @@ impl Harness {
 }
 pub struct SharedFake(pub Rc<RefCell<Fake>>);
 impl Effects for SharedFake {
+    fn local_llm(
+        &mut self,
+        prompt: &str,
+        _budget: std::time::Duration,
+        accept: &dyn Fn(&str) -> bool,
+    ) -> Option<String> {
+        let mut f = self.0.borrow_mut();
+        f.llm_calls.push(prompt.into());
+        Some(f.llm_answer.clone()).filter(|a| accept(a))
+    }
     fn codex_directories(&mut self) -> Result<Vec<String>> {
         Ok(self.0.borrow().codex_directories.clone())
     }
@@ -402,12 +414,6 @@ impl Fake {
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
-        if argv.first().is_some_and(|s| s.ends_with("codex.exe")) {
-            return Ok(Output {
-                stdout: self.codex_labels.clone(),
-                ..Output::default()
-            });
-        }
         if argv.last().is_some_and(|a| a == "recover") && self.recover_fail {
             return Ok(Output {
                 code: 1,

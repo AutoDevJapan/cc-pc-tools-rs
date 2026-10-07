@@ -203,27 +203,30 @@ fn translations_and_failed_fallbacks_are_cached_once() {
     let mut h = setup();
     let db = json!({"items":[{"id":1,"project":"製品","title":"fix shep-123 worktree deployment","status":"doing","updated":"2026-09-30 22:00"}]});
     atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    h.fake.borrow_mut().codex_labels =
-        json!({"item":{"type":"agent_message","text":"{\"todo:1\":\"公開の不具合を直す\"}"}})
-            .to_string();
+    h.fake.borrow_mut().llm_answer = "「公開の不具合を直す」".into();
     update(&mut h.ctx).unwrap();
-    let calls = h.fake.borrow().runs.len();
     let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    // On machines without native Codex the sanitized fallback is still cached.
-    if calls > 0 {
-        assert_eq!(state["labels"]["todo:1"], "公開の不具合を直す");
-    }
+    assert_eq!(state["labels"]["todo:1"], "公開の不具合を直す");
+    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
+    // The model sees the sanitized title, never job names or worktree words.
+    let prompt = h.fake.borrow().llm_calls[0].clone();
+    assert!(!prompt.contains("shep-123") && !prompt.contains("worktree"));
     update(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().runs.len(), calls);
-    assert!(!s(&state["labels"]["todo:1"]).contains("shep"));
-    assert!(!s(&state["labels"]["todo:1"]).contains("worktree"));
+    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
     let db = json!({"items":[{"id":2,"project":"製品","title":"fix deployment failure","status":"doing","updated":"2026-09-30 22:00"}]});
     atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    h.fake.borrow_mut().codex_labels.clear();
+    // An unusable (English/multi-line) answer keeps the sanitized fallback, once.
+    h.fake.borrow_mut().llm_answer = "fix deployment\nfailure".into();
     update(&mut h.ctx).unwrap();
-    let calls = h.fake.borrow().runs.len();
     update(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().runs.len(), calls);
+    assert_eq!(h.fake.borrow().llm_calls.len(), 2);
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .all(|(argv, _)| !argv[0].ends_with("codex.exe"))
+    );
     assert_eq!(
         read_json(&h.ctx.here.join("board.json")).unwrap()["labels"]["todo:2"],
         "fix deployment failure"
@@ -338,4 +341,13 @@ fn empty_or_identifier_only_block_notes_do_not_invent_a_reason() {
         assert!(text.contains("止まっている（理由未記録）"));
         assert!(!text.contains("止まっている（作業内容を確認する）"));
     }
+}
+#[test]
+fn local_labels_must_be_short_closed_japanese_lines() {
+    assert!(accept_label("公開の不具合を直す"));
+    assert!(accept_label("Places APIの月の上限を設定する（課金防止）"));
+    assert!(!accept_label("Places API 月1,000回上限設定（課金防止"));
+    assert!(!accept_label(&"長".repeat(41)));
+    assert!(!accept_label("fix deployment"));
+    assert!(!accept_label("shep-12 の修正"));
 }

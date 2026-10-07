@@ -10,6 +10,7 @@
 - `cc-task-title`: オーナー向けの表示名と案件名の除去。
 - `cc-live`: 実機検査とプロセス管理の共通処理。
 - `cc-ocx-watchdog`: opencodexの応答停止を検出し、対象プロセスを終了してサービスの復旧を確認するRust監視。
+- `chatgpt-web`: ChatGPTのブラウザ版（専用プロフィールのChrome）へ質問を送り、回答の本文を返すCLIと毎日のログイン確認。
 
 稼働中のソースは `D:/CC/Tools/rs/` にあります。Windows上で `cargo test --manifest-path cc-ask/Cargo.toml`、`cargo build --release --manifest-path cc-ask/Cargo.toml` を実行します。ビルドと配置の前に別モデルでレビューし、Mustを解消します。
 

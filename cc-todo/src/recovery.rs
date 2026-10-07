@@ -8,7 +8,7 @@ use cc_scheduler::{
     policy::{self, Processes},
 };
 use serde_json::{Value, json};
-use std::{fs, path::PathBuf, time::Duration};
+use std::{collections::BTreeSet, fs, path::PathBuf, time::Duration};
 
 pub const HANG_S: f64 = 1800.;
 pub const RETRY_WINDOW_S: f64 = 21600.;
@@ -211,6 +211,16 @@ pub fn plan(
     t: f64,
     clients: &str,
 ) -> Result<Vec<i64>> {
+    plan_with_intake(db, jobs, ps, t, clients, &BTreeSet::new())
+}
+fn plan_with_intake(
+    db: &mut Value,
+    jobs: &[Value],
+    ps: &Processes,
+    t: f64,
+    clients: &str,
+    accepted: &BTreeSet<i64>,
+) -> Result<Vec<i64>> {
     if !db["stalls"].is_object() {
         db["stalls"] = json!({});
     }
@@ -267,6 +277,9 @@ pub fn plan(
         items.sort_by_key(|i| (s(&i["status"]) != "doing", i["id"].as_i64().unwrap_or(0)));
         let mut unattended = false;
         for mut item in items {
+            if item["id"].as_i64().is_some_and(|id| accepted.contains(&id)) {
+                continue;
+            }
             // Waiting for a launch is ownership, not a missing process to recover.
             if jobs
                 .iter()
@@ -462,7 +475,118 @@ pub enum Outcome {
     Deferred,
     Obsolete,
 }
+#[derive(Default)]
+pub struct IntakeOwners {
+    pub accepted: BTreeSet<i64>,
+    pub migrated: Vec<i64>,
+    pub deferred: bool,
+}
+pub fn reconcile_intake_files(
+    paths: &Paths,
+    state: &std::path::Path,
+    t: f64,
+    clients: &str,
+) -> Result<IntakeOwners> {
+    let guard = common::ByteLock::acquire(&state.join("console-state.lock"), Duration::ZERO);
+    let Ok(Some(_guard)) = guard else {
+        return Ok(IntakeOwners {
+            deferred: true,
+            ..Default::default()
+        });
+    };
+    // Match the console's lock order; do not call HTTP or launch under either lock.
+    let queue = load(&state.join("console-state.json"))?;
+    let _todo = Lock::acquire(&paths.lock, Duration::from_secs(2))?;
+    let mut jobs = vec![];
+    for entry in fs::read_dir(&paths.jobs).map_err(|e| e.to_string())? {
+        let path = entry.map_err(|e| e.to_string())?.path().join("job.json");
+        if path.exists() {
+            let job = load(&path)?;
+            if !job.is_object() || !job["id"].is_string() || !job["status"].is_string() {
+                return Err("job receipt unavailable".into());
+            }
+            jobs.push(job);
+        }
+    }
+    let mut db = load(&paths.store)?;
+    let owners = reconcile_pending_intake(&mut db, &queue, &jobs, t, clients)?;
+    if !owners.migrated.is_empty() {
+        save(&paths.store, &db)?;
+    }
+    Ok(owners)
+}
+/// Caller holds console-state.lock then todo.lock. Only a durable, explicit
+/// non-stall receipt may supersede a stale unlaunched reservation for that item.
+pub fn reconcile_pending_intake(
+    db: &mut Value,
+    state: &Value,
+    jobs: &[Value],
+    t: f64,
+    clients: &str,
+) -> Result<IntakeOwners> {
+    let queue = state["queue"]
+        .as_array()
+        .ok_or("intake queue unavailable")?;
+    let launches = state["launches"]
+        .as_object()
+        .ok_or("intake receipts unavailable")?;
+    let projects = db["projects"].clone();
+    let mut owners = IntakeOwners::default();
+    for row in db["items"].as_array_mut().ok_or("invalid items")? {
+        let Some(id) = row["id"].as_i64().filter(|id| *id > 0) else {
+            continue;
+        };
+        let project = s(&row["project"]);
+        if !matches!(s(&row["status"]), "todo" | "doing")
+            || excluded(project, s(&projects[project]), clients)
+            || stopped(row, &latest_linked(row, jobs))
+        {
+            continue;
+        }
+        let Some(receipt) = queue.iter().find(|q| {
+            q["todo_id"] == row["id"]
+                && s(&q["key"]).starts_with("manual:")
+                && !s(&q["key"]).starts_with("manual:stall-")
+                && !excluded(project, s(&q["cwd"]), clients)
+        }) else {
+            continue;
+        };
+        owners.accepted.insert(id);
+        let p = &row["stall_recovery"]["pending"];
+        let request = s(&p["request"]);
+        let key = s(&p["key"]);
+        let reserved = n(&p["reserved_at"]);
+        let old_receipt = format!("manual:{request}");
+        if !p.is_object()
+            || request.is_empty()
+            || key.is_empty()
+            || reserved <= 0.
+            || t - reserved < CLAIM_S
+            || (!s(&p["claim"]).is_empty() && n(&p["claim_until"]) > t)
+            || queue.iter().any(|q| q["key"] == old_receipt)
+            || launches
+                .get(&old_receipt)
+                .is_some_and(|id| !s(id).is_empty())
+            || jobs
+                .iter()
+                .any(|j| j["launch_key"] == key || (linked(row, j) && policy::live(j)))
+            || excluded(project, s(&p["job"]["cwd"]), clients)
+            || excluded(project, s(&p["workspace"]["cwd"]), clients)
+        {
+            continue;
+        }
+        let audit = json!({"pending":p,"accepted_key":receipt["key"],"reconciled_at":t});
+        row["stall_recovery"]["intake_reconciliation"] = audit;
+        row["stall_recovery"]["pending"] = Value::Null;
+        // Keep the saved instructions, history, job links, status and progress.
+        owners.migrated.push(id);
+    }
+    Ok(owners)
+}
 pub trait RecoveryBackend {
+    fn reconcile_intake(&mut self, _paths: &Paths) -> Result<IntakeOwners> {
+        Ok(IntakeOwners::default())
+    }
     fn remedy(&mut self, class: Failure) -> Result<String> {
         Ok(class.remedy().into())
     }
@@ -504,6 +628,10 @@ pub fn run_watch(
         return Ok(());
     };
     let clients = backend.clients()?; // Missing exclusions must never authorize a launch.
+    let intake = backend.reconcile_intake(paths)?;
+    if intake.deferred {
+        return Ok(()); // The console is launching/receiving; retry next tick, not outside its lock.
+    }
     let t = backend.clock();
     let (jobs, ps) = backend.snapshot()?;
     edit(paths, |db| {
@@ -514,7 +642,7 @@ pub fn run_watch(
             }
         }
         db["stall_observed"] = policy::ownership(&jobs, &ps, &previous);
-        plan(db, &jobs, &ps, t, &clients)?;
+        plan_with_intake(db, &jobs, &ps, t, &clients, &intake.accepted)?;
         Ok(())
     })?;
     // Reservations and claims serialize effects; tools must never inherit a state lock.
@@ -986,6 +1114,15 @@ impl RealRecovery {
     }
 }
 impl RecoveryBackend for RealRecovery {
+    fn reconcile_intake(&mut self, paths: &Paths) -> Result<IntakeOwners> {
+        let clients = self.clients()?;
+        let state = self
+            .scheduler
+            .backend
+            .tools
+            .join("localai-web-rs/target/release");
+        reconcile_intake_files(paths, &state, time_s(), &clients)
+    }
     fn handoff(&mut self, job: &Value) -> Result<String> {
         Ok(
             fs::read_to_string(self.paths.jobs.join(s(&job["id"])).join("prompt.md"))

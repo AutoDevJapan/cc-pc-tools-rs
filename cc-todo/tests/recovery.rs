@@ -540,6 +540,7 @@ fn resume_arguments_preserve_model_effort_cwd_and_fresh_fallback() {
 }
 
 struct Fake {
+    intake: Value,
     error: Option<String>,
     remedies: Vec<cc_scheduler::recovery_failure::Failure>,
     remedy_error: bool,
@@ -555,6 +556,14 @@ struct Fake {
     supersede: bool,
 }
 impl RecoveryBackend for Fake {
+    fn reconcile_intake(&mut self, paths: &Paths) -> Result<IntakeOwners> {
+        let mut db = load(&paths.store)?;
+        let result = reconcile_pending_intake(&mut db, &self.intake, &self.jobs, self.t, "")?;
+        if !result.migrated.is_empty() {
+            save(&paths.store, &db)?;
+        }
+        Ok(result)
+    }
     fn remedy(&mut self, class: cc_scheduler::recovery_failure::Failure) -> Result<String> {
         self.remedies.push(class);
         if self.remedy_error {
@@ -668,6 +677,7 @@ fn fixture() -> (PathBuf, Paths, Fake, Notices) {
     let p = Paths::at(&root, &root.join("jobs"));
     save(&p.store, &db("doing")).unwrap();
     let f = Fake {
+        intake: json!({"queue":[],"launches":{}}),
         error: None,
         remedies: vec![],
         remedy_error: false,
@@ -683,6 +693,26 @@ fn fixture() -> (PathBuf, Paths, Fake, Notices) {
         supersede: false,
     };
     (root, p, f, Notices::default())
+}
+#[test]
+fn accepted_manual_intake_replaces_stale_pending_and_watch_never_recreates_it() {
+    for spec in [true, false] {
+        let (root, p, mut f, mut notices) = fixture();
+        let mut d = db("todo");
+        if !spec {
+            d["items"][0]["spec"] = Value::Null;
+        }
+        d["items"][0]["stall_recovery"] = json!({"pending":{"request":"stall-1-1","key":"old-key","reserved_at":1.,"prompt":"保存済みの指示"}});
+        save(&p.store, &d).unwrap();
+        f.intake = json!({"queue":[{"todo_id":1,"key":"manual:req-todo-1-triage-20261007"}],"launches":{}});
+        for _ in 0..2 {
+            run_watch(&p, &mut notices, &mut f).unwrap();
+            assert!(f.calls.is_empty());
+            assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_null());
+        }
+        assert_eq!(f.intake["queue"].as_array().unwrap().len(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
 }
 #[test]
 fn capacity_deferral_queue_and_lost_receipt_never_double_start() {

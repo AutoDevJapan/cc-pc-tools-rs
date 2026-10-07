@@ -1,0 +1,16 @@
+[package]
+name = "cc-shepherd"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "shepherd"
+path = "src/main.rs"
+
+[dependencies]
+cc-task-title = { path = "../cc-task-title" }
+cc-scheduler = { path = "../cc-scheduler" }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3"

@@ -1055,7 +1055,7 @@ fn clean_history(ctx: &mut Context, tid: &str, latest: u64) -> Result<Vec<Value>
 
 /// One running request per thread; diagnoses are separate. At most one launch per tick.
 pub fn cmd_intake(ctx: &mut Context, budget: &mut bool) -> Result<()> {
-    let _lock = ByteLock::acquire(&ctx.here.join("state.lock"), Duration::from_secs(60))?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let mut state = ctx.load()?;
     recover_reply_reads(ctx, &mut state)?;
     migrate_reply_delivery(ctx, &mut state)?;
@@ -1148,7 +1148,7 @@ fn deliver_reply_inner(
         return Err("thread/message must be Discord snowflakes".into());
     }
     let _tick = ByteLock::acquire(&ctx.here.join("tick.lock"), Duration::from_secs(45))?;
-    let _lock = ByteLock::acquire(&ctx.here.join("state.lock"), Duration::from_secs(60))?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let mut state = ctx.load()?;
     migrate_reply_delivery(ctx, &mut state)?;
     let thread = ctx.call("GET", &format!("/channels/{tid}"), None)?;

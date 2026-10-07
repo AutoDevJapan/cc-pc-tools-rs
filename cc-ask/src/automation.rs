@@ -11,12 +11,11 @@ pub fn key(text: &str) -> String {
     format!("{:x}", Sha256::digest(text.as_bytes()))[..32].into()
 }
 pub fn recover_before_launch(ctx: &mut Context) -> bool {
-    ctx.effects
-        .run(
-            &command_argv(&ctx.scheduler_command, &["recover".into()]),
-            45,
-        )
-        .is_ok_and(|out| out.code == 0)
+    ctx.run(
+        &command_argv(&ctx.scheduler_command, &["recover".into()]),
+        45,
+    )
+    .is_ok_and(|out| out.code == 0)
 }
 pub fn epoch(value: &Value) -> f64 {
     value.as_f64().unwrap_or_else(|| {
@@ -81,12 +80,7 @@ pub fn link_todos(ctx: &mut Context, originals: &[String], jid: &str) -> Result<
             "--job".into(),
             jid.into(),
         ];
-        if ctx
-            .effects
-            .run(&command_argv(&ctx.todo_command, &args), 45)?
-            .code
-            != 0
-        {
+        if ctx.run(&command_argv(&ctx.todo_command, &args), 45)?.code != 0 {
             return Err("ToDo successor link failed".into());
         }
     }

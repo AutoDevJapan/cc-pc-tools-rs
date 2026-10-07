@@ -116,9 +116,7 @@ pub fn deliberate_cancel(info: &Value) -> bool {
 }
 
 fn todo_run(ctx: &mut Context, args: &[String]) -> Result<String> {
-    let out = ctx
-        .effects
-        .run(&command_argv(&ctx.todo_command, args), 45)?;
+    let out = ctx.run(&command_argv(&ctx.todo_command, args), 45)?;
     if out.code != 0 {
         return Err(format!("todo exited {}", out.code));
     }
@@ -508,7 +506,7 @@ pub fn recover(
     // A lost supervisor can leave a live child. The jobs tool validates PID
     // creation times and verifies termination before allowing another session.
     if s(&job_info(ctx, jid)["status"]) == "lost" && !deliberate_cancel(&job_info(ctx, jid)) {
-        let out = ctx.effects.run(
+        let out = ctx.run(
             &command_argv(
                 &ctx.codex_command,
                 &["cancel".into(), jid.into(), "--recovery".into()],
@@ -844,7 +842,6 @@ pub fn recover(
         record["restart"]["tried"] = json!(class.remedy());
         record["restart"]["next_at"] = json!(now + 60.);
         let remedy = ctx
-            .effects
             .run(
                 &[
                     "schtasks.exe".into(),

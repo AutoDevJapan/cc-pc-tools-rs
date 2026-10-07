@@ -390,7 +390,7 @@ fn file(path: PathBuf, name: String, limit: u64) -> Result<File> {
     })
 }
 fn media(ctx: &mut Context, argv: Vec<String>) -> Result<Output> {
-    let out = ctx.effects.run(&argv, 1800)?;
+    let out = ctx.run(&argv, 1800)?;
     if out.code != 0 {
         return Err("ffmpegによる添付ファイルの変換に失敗しました".into());
     }
@@ -725,6 +725,7 @@ pub fn send(
         body.extend_from_slice(b"\r\n");
     }
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    crate::state_work::check(ctx)?;
     ctx.effects.multipart(
         &format!("https://discord.com/api/v10{route}"),
         &format!("multipart/form-data; boundary={boundary}"),
@@ -753,17 +754,31 @@ pub fn post_tracked(
     question: Option<&Value>,
 ) -> Result<Vec<String>> {
     let _guard = if question.is_some() {
-        Some(crate::core::ByteLock::acquire(
-            &ctx.here.join("state.lock"),
-            std::time::Duration::from_secs(60),
-        )?)
+        Some(question_lock(ctx, thread)?)
     } else {
         None
     };
     post_tracked_locked(ctx, thread, body, prepared, notify, question)
 }
 
-/// Caller already holds state.lock when registering a question.
+pub(crate) fn question_lock(ctx: &Context, thread: &str) -> Result<ByteLock> {
+    question_lock_for(ctx, thread, std::time::Duration::from_secs(60))
+}
+pub(crate) fn question_lock_for(
+    ctx: &Context,
+    thread: &str,
+    timeout: std::time::Duration,
+) -> Result<ByteLock> {
+    if thread.is_empty() || !thread.bytes().all(|c| c.is_ascii_digit()) {
+        return Err("invalid question thread".into());
+    }
+    ByteLock::acquire(
+        &ctx.here.join(format!("question-post-{thread}.lock")),
+        timeout,
+    )
+}
+
+/// Caller holds only the per-thread delivery lock. Network waits never hold state.lock.
 pub(crate) fn post_tracked_locked(
     ctx: &mut Context,
     thread: &str,
@@ -772,6 +787,31 @@ pub(crate) fn post_tracked_locked(
     notify: bool,
     question: Option<&Value>,
 ) -> Result<Vec<String>> {
+    deliver_question(ctx, thread, body, prepared, (notify, false), question)
+}
+
+/// Recover only already delivered parts before a newer owner answer suppresses
+/// a retry. This never sends another message or finishes remaining text chunks.
+pub(crate) fn recover_posted(
+    ctx: &mut Context,
+    thread: &str,
+    body: &str,
+    prepared: Option<&Prepared>,
+    notify: bool,
+    question: &Value,
+) -> Result<Vec<String>> {
+    deliver_question(ctx, thread, body, prepared, (notify, true), Some(question))
+}
+
+fn deliver_question(
+    ctx: &mut Context,
+    thread: &str,
+    body: &str,
+    prepared: Option<&Prepared>,
+    mode: (bool, bool),
+    question: Option<&Value>,
+) -> Result<Vec<String>> {
+    let (notify, recover_only) = mode;
     let fingerprints = if question.is_some() {
         fingerprints(prepared)?
     } else {
@@ -783,23 +823,105 @@ pub(crate) fn post_tracked_locked(
     if count == 0 {
         return Err("本文または添付ファイルを指定してください".into());
     }
+    // A retry after response loss or a failed registration recovers the same
+    // delivered messages, even after Discord's nonce retention window expires.
+    let ledger_path = if question.is_some() {
+        use sha2::{Digest, Sha256};
+        let digest = format!(
+            "{:x}",
+            Sha256::digest(json!([thread, body, fingerprints, notify]).to_string())
+        );
+        Some(ctx.here.join(format!("question-post-{digest}.json")))
+    } else {
+        None
+    };
+    let mut ledger = match ledger_path.as_ref().filter(|p| p.is_file()) {
+        Some(p) => read_json(p)?,
+        None if recover_only => return Ok(vec![]),
+        None => json!({"parts":{}}),
+    };
+    if ledger_path.is_some() && s(&ledger["sender"]).is_empty() {
+        let me = ctx.call("GET", "/users/@me", None)?;
+        if s(&me["id"]).is_empty() || !truth(&me["bot"]) {
+            return Err("question sender unavailable".into());
+        }
+        ledger["sender"] = me["id"].clone();
+    }
     let mut ids = Vec::new();
     for i in 0..count {
-        let payload = json!({"content":parts.get(i).map(String::as_str).unwrap_or(""),"flags":if notify {0} else {SILENT},"allowed_mentions":{"parse":[]}});
-        let response = send(
-            ctx,
-            &format!("/channels/{thread}/messages"),
-            &payload,
-            files.get(i).copied().unwrap_or(&[]),
-            prepared.map(|p| p.limit).unwrap_or(BASE_LIMIT),
-        )?;
+        let mentions = if question.is_some() && notify && i == 0 {
+            json!({"parse":[],"users":[ctx.owner()],"replied_user":false})
+        } else {
+            json!({"parse":[]})
+        };
+        let mut payload = json!({"content":parts.get(i).map(String::as_str).unwrap_or(""),"flags":if notify {0} else {SILENT},"allowed_mentions":mentions});
+        let part = i.to_string();
+        let response = if let Some(path) = &ledger_path {
+            if !ledger["parts"][&part].is_object() {
+                if recover_only {
+                    break;
+                }
+                let cursor = thread_history(ctx, thread)?
+                    .iter()
+                    .map(|m| n(&m["id"]))
+                    .max()
+                    .unwrap_or(0)
+                    .to_string();
+                ledger["parts"][&part] =
+                    json!({"nonce":uuid::Uuid::new_v4().simple().to_string()[..24],"after":cursor});
+                atomic_json(path, &ledger, 2)?;
+            }
+            let entry = &ledger["parts"][&part];
+            let recovered = if truth(&entry["id"]) {
+                Some(json!({"id":entry["id"]}))
+            } else {
+                thread_history(ctx, thread)?.into_iter().find(|m| {
+                    m["author"]["id"] == ledger["sender"]
+                        && n(&m["id"]) > n(&entry["after"])
+                        && (m["nonce"] == entry["nonce"]
+                            || (m["content"] == payload["content"]
+                                && same_files(m, files.get(i).copied().unwrap_or(&[]))))
+                })
+            };
+            payload["nonce"] = entry["nonce"].clone();
+            payload["enforce_nonce"] = json!(true);
+            let response = match recovered {
+                Some(m) => m,
+                None if recover_only => break,
+                None => send(
+                    ctx,
+                    &format!("/channels/{thread}/messages"),
+                    &payload,
+                    files.get(i).copied().unwrap_or(&[]),
+                    prepared.map(|p| p.limit).unwrap_or(BASE_LIMIT),
+                )?,
+            };
+            if s(&response["id"]).is_empty() {
+                return Err("post returned no message ID".into());
+            }
+            ledger["parts"][&part]["id"] = response["id"].clone();
+            atomic_json(path, &ledger, 2)?;
+            response
+        } else {
+            send(
+                ctx,
+                &format!("/channels/{thread}/messages"),
+                &payload,
+                files.get(i).copied().unwrap_or(&[]),
+                prepared.map(|p| p.limit).unwrap_or(BASE_LIMIT),
+            )?
+        };
         let id = s(&response["id"]);
         if id.is_empty() {
             return Err("post returned no message ID".into());
         }
         ids.push(id.to_owned());
         if let Some(channel) = question {
-            let mut state = ctx.load()?;
+            let _state = ByteLock::acquire(
+                &ctx.here.join("state.lock"),
+                std::time::Duration::from_secs(60),
+            )?;
+            let mut state = ctx.load_fresh()?;
             crate::questions::register_posted(&mut state, channel, &ids[0], &ids);
             if let Some(q) = state["questions"]
                 .as_array_mut()
@@ -810,10 +932,22 @@ pub(crate) fn post_tracked_locked(
             {
                 q["attachment_hashes"] = json!(fingerprints);
             }
-            ctx.save(&state)?;
+            atomic_json(&ctx.here.join("state.json"), &state, 2)?;
         }
     }
     Ok(ids)
+}
+
+fn same_files(message: &Value, files: &[File]) -> bool {
+    let attached = message["attachments"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    attached.len() == files.len()
+        && attached
+            .iter()
+            .zip(files)
+            .all(|(a, f)| s(&a["filename"]) == f.name && n(&a["size"]) == f.size)
 }
 
 #[cfg(test)]

@@ -81,6 +81,9 @@ pub fn discord_tasks_dir() -> Result<PathBuf> {
 impl Context {
     pub fn call(&mut self, m: &str, p: &str, b: Option<&Value>) -> Result<Value> {
         crate::tick_runtime::check()?;
+        if m != "GET" {
+            crate::state_work::check(self)?;
+        }
         let _span = crate::tick_runtime::Span::new(format!(
             "http {m} {}",
             p.split('?').next().unwrap_or(p)
@@ -91,7 +94,17 @@ impl Context {
     pub fn now(&self) -> f64 {
         self.effects.now()
     }
+    pub fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
+        crate::state_work::check(self)?;
+        self.effects.run(argv, timeout_s)
+    }
     pub fn load(&self) -> Result<Value> {
+        if let Some(state) = crate::state_work::snapshot(self) {
+            return Ok(state);
+        }
+        self.load_fresh()
+    }
+    pub fn load_fresh(&self) -> Result<Value> {
         let p = self.here.join("state.json");
         if p.exists() {
             read_json(&p)
@@ -100,6 +113,9 @@ impl Context {
         }
     }
     pub fn save(&self, v: &Value) -> Result<()> {
+        if let Some(result) = crate::state_work::save(self, v) {
+            return result;
+        }
         atomic_json(&self.here.join("state.json"), v, 2)
     }
     pub fn owner(&self) -> String {
@@ -126,6 +142,132 @@ pub fn read_json(p: &std::path::Path) -> Result<Value> {
     let text =
         std::fs::read_to_string(p).map_err(|e| format!("OSError: read {}: {e}", p.display()))?;
     serde_json::from_str(&text).map_err(|e| format!("ValueError: parse {}: {e}", p.display()))
+}
+/// Update an existing small record through one OS-owned file handle. On Windows
+/// deny other writes/deletes until the fresh read, field update and flush finish.
+/// No network or subprocess may run in `update`.
+pub fn update_json_exclusive(
+    path: &std::path::Path,
+    update: impl FnOnce(&mut Value) -> Result<()>,
+) -> Result<()> {
+    use std::io::Write;
+    update_json_exclusive_with_writer(path, update, |file, bytes| file.write_all(bytes))
+}
+
+/// Injectable commit boundary; the durable journal precedes every target write.
+pub fn update_json_exclusive_with_writer(
+    path: &std::path::Path,
+    update: impl FnOnce(&mut Value) -> Result<()>,
+    writer: impl FnOnce(&mut std::fs::File, &[u8]) -> std::io::Result<()>,
+) -> Result<()> {
+    use std::io::{Read, Seek, SeekFrom, Write};
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true).write(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.share_mode(windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ);
+    }
+    let mut file = options
+        .open(path)
+        .map_err(|_| format!("record is busy or unavailable: {}", path.display()))?;
+    file.try_lock().map_err(|_| "record is busy")?;
+    let mut raw = Vec::new();
+    file.read_to_end(&mut raw)
+        .map_err(|_| "cannot read record")?;
+    // A process can stop in the middle of a Japanese UTF-8 character. Such
+    // bytes still reach journal recovery; decoding must not abort before it.
+    let mut text = String::from_utf8(raw).unwrap_or_default();
+    let journal_path = path.with_file_name(format!(
+        "{}.todo1818-journal.json",
+        path.file_name()
+            .ok_or("record filename missing")?
+            .to_string_lossy()
+    ));
+    if journal_path.exists() {
+        let journal = read_json(&journal_path)?;
+        if journal["target"] != json!(path) {
+            return Err("record recovery journal belongs to another path".into());
+        }
+        // A valid record written by another owner after an interrupted attempt
+        // wins. Only a partial/malformed target is restored from the complete old version.
+        let partial = journal["before_text"]
+            .as_str()
+            .zip(journal["after_text"].as_str())
+            .is_some_and(|(before, after)| {
+                let (old, new, actual) = (before.as_bytes(), after.as_bytes(), text.as_bytes());
+                let prefix = actual.iter().zip(new).take_while(|(a, b)| a == b).count();
+                actual != old
+                    && actual != new
+                    && ((actual.len() == old.len()
+                        && prefix <= old.len()
+                        && actual[prefix..] == old[prefix..])
+                        || (actual.len() > old.len() && prefix == actual.len()))
+            });
+        if serde_json::from_str::<Value>(&text).is_err() || partial {
+            let before = &journal["before"];
+            if !before.is_object() {
+                return Err("invalid recovery journal".into());
+            }
+            let bytes = serde_json::to_vec_pretty(before).map_err(|_| "invalid recovery record")?;
+            file.seek(SeekFrom::Start(0))
+                .map_err(|_| "cannot seek recovery record")?;
+            file.write_all(&bytes)
+                .map_err(|_| "cannot restore recovery record")?;
+            file.set_len(bytes.len() as u64)
+                .map_err(|_| "cannot truncate recovery record")?;
+            file.sync_all()
+                .map_err(|_| "cannot flush recovery record")?;
+            text = String::from_utf8(bytes).map_err(|_| "invalid recovery encoding")?;
+        }
+    }
+    let mut record: Value = serde_json::from_str(&text).map_err(|_| "invalid record")?;
+    let before = record.clone();
+    update(&mut record)?;
+    let bytes = serde_json::to_vec_pretty(&record).map_err(|_| "cannot serialize record")?;
+    atomic_json(
+        &journal_path,
+        &json!({"target":path,"before":before,"after":record,"before_text":text,
+        "after_text":std::str::from_utf8(&bytes).map_err(|_|"invalid staged encoding")?}),
+        2,
+    )?;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&journal_path)
+        .map_err(|_| "cannot open recovery journal")?
+        .sync_all()
+        .map_err(|_| "cannot flush recovery journal")?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|_| "cannot seek record")?;
+    let result = writer(&mut file, &bytes)
+        .and_then(|_| file.set_len(bytes.len() as u64))
+        .and_then(|_| file.sync_all());
+    if result.is_err() {
+        // Best-effort immediate rollback. Even a failed rollback leaves the
+        // complete prior JSON in the flushed journal for the next invocation.
+        let original = serde_json::to_vec_pretty(&before).map_err(|_| "invalid original record")?;
+        let _ = file
+            .seek(SeekFrom::Start(0))
+            .and_then(|_| file.write_all(&original))
+            .and_then(|_| file.set_len(original.len() as u64))
+            .and_then(|_| file.sync_all());
+        return Err("record commit failed; complete recovery journal retained".into());
+    }
+    std::fs::remove_file(&journal_path)
+        .map_err(|_| "record saved; recovery journal cleanup pending".to_owned())
+}
+
+pub fn recover_json_record(path: &std::path::Path) -> Result<()> {
+    let journal = path.with_file_name(format!(
+        "{}.todo1818-journal.json",
+        path.file_name()
+            .ok_or("record filename missing")?
+            .to_string_lossy()
+    ));
+    if journal.exists() {
+        update_json_exclusive(path, |_| Ok(()))?;
+    }
+    Ok(())
 }
 /// Python text files use universal newline decoding, including UTF-8 prompt bodies.
 pub fn read_text(p: &std::path::Path) -> Result<String> {
@@ -1162,9 +1304,7 @@ pub fn launch_job_with_session(
     if let Some(session) = session.filter(|s| !s.is_empty()) {
         args.extend(["--resume-session".into(), session.into()]);
     }
-    let out = ctx
-        .effects
-        .run(&command_argv(&ctx.codex_command, &args), 45)?;
+    let out = ctx.run(&command_argv(&ctx.codex_command, &args), 45)?;
     let jid = out
         .stdout
         .trim()
@@ -1319,6 +1459,16 @@ pub fn reply_unavailable(state: &Value, message: &str) -> bool {
 /// A successful command event proves delivery; otherwise the reservation expires
 /// and the original owner message remains available to the next consumer.
 pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
+    // A stalled output pipe is still a live consumer. Expiration alone cannot
+    // transfer its answer. The OS releases this dedicated lock after a crash.
+    let _reader = if crate::state_work::owns_reader(ctx) {
+        None // This newly started reader owns the lock and may recover old claims.
+    } else {
+        match ByteLock::acquire(&ctx.here.join("reply-work.lock"), std::time::Duration::ZERO) {
+            Ok(lock) => Some(lock),
+            Err(_) => return Ok(()),
+        }
+    };
     let pending: Vec<_> = state["answer_receipts"]
         .as_object()
         .into_iter()
@@ -1421,7 +1571,7 @@ pub fn question_handles_reply(state: &Value, thread: &str, message: &str) -> boo
 }
 
 /// Receipt is independent of seen_reply: receiving an answer must not cancel its job.
-/// Call with state.lock held. The stable Discord nonce also covers a lost POST response.
+/// Use short state checkpoints. Stable nonce also covers a lost POST response.
 pub fn receive_answers(
     ctx: &mut Context,
     state: &mut Value,
@@ -1468,12 +1618,19 @@ pub fn register_question(state: &mut Value, thread: &Value, after: &str) {
                 .filter(|entry| entry.is_object())
                 .cloned()
         });
+    let newer = state["questions"].as_array().unwrap().iter().position(|q| {
+        q["thread_id"] == thread["id"] && n(&q["after"]) > after.parse::<u64>().unwrap_or(0)
+    });
     for q in state["questions"].as_array_mut().unwrap() {
-        if q["thread_id"] == thread["id"] && truth(&q["open"]) {
+        if newer.is_none() && q["thread_id"] == thread["id"] && truth(&q["open"]) {
             q["open"] = json!(false)
         }
     }
     let mut question = json!({"thread_id":thread["id"],"after":after,"title":thread["name"],"agent":"Codex","asked_at":timestamp(),"open":true,"source":"request"});
+    if newer.is_some() {
+        question["open"] = json!(false);
+        question["superseded_by_newer_question"] = json!(true);
+    }
     let latest = n(&state["owner_answers"][s(&thread["id"])]);
     if latest > after.parse::<u64>().unwrap_or(0) {
         question["answered_reply"] = json!(latest.to_string());
@@ -1488,7 +1645,12 @@ pub fn register_question(state: &mut Value, thread: &Value, after: &str) {
             question["remind_set_at"] = at.clone();
         }
     }
-    state["questions"].as_array_mut().unwrap().push(question);
+    let questions = state["questions"].as_array_mut().unwrap();
+    if let Some(index) = newer {
+        questions.insert(index, question);
+    } else {
+        questions.push(question);
+    }
 }
 pub fn close_answered_questions(state: &mut Value, thread: &str, messages: &[Value], owner: &str) {
     if let Some(questions) = state["questions"].as_array_mut() {

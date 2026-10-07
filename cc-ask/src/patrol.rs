@@ -485,7 +485,7 @@ pub fn run(ctx: &mut Context, root: &Path, dry: bool, budget: &mut bool) -> Resu
         None
     } else {
         Some(ByteLock::acquire(
-            &ctx.here.join("state.lock"),
+            &ctx.here.join("patrol.lock"),
             Duration::from_secs(60),
         )?)
     };

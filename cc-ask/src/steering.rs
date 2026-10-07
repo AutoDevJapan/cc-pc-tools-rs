@@ -1,4 +1,4 @@
-//! Deliver owner corrections before publishing a stale result. state.lock is held by callers.
+//! Deliver owner corrections through durable short state checkpoints.
 use crate::{core::*, project::ProjectNames, restart::Slot};
 use serde_json::{json, Value};
 use std::time::Duration;
@@ -51,9 +51,10 @@ pub fn acknowledge(
         if !state["answer_receipts"].is_object() {
             state["answer_receipts"] = json!({});
         }
-        if state["answer_receipts"][id].is_null() {
-            state["answer_receipts"][id] =
-                json!({"thread":thread,"content":content,"posted":false});
+        if state["answer_receipts"][id]["content"].is_null() {
+            state["answer_receipts"][id]["thread"] = json!(thread);
+            state["answer_receipts"][id]["content"] = json!(content);
+            state["answer_receipts"][id]["posted"] = json!(false);
             ctx.save(state)?;
         } else if thread_history(ctx, thread)?.iter().any(|m| {
             m["message_reference"]["message_id"] == message["id"]
@@ -606,7 +607,7 @@ pub fn deliver(
     let source = &pending["source"];
     let old = s(&source["id"]).to_owned();
     if RUNNING.contains(&s(&job_info(ctx, &old)["status"])) {
-        let out = ctx.effects.run(
+        let out = ctx.run(
             &command_argv(
                 &ctx.codex_command,
                 &["cancel".into(), old.clone(), "--recovery".into()],

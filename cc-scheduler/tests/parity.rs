@@ -72,6 +72,7 @@ fn explicit_resume_supersedes_cancelled_and_old_owner_result() {
                 &cc_todo::Command::Start {
                     id: 1,
                     job: "new-worker".into(),
+                    progress: None,
                 },
                 &paths,
             )
@@ -82,6 +83,7 @@ fn explicit_resume_supersedes_cancelled_and_old_owner_result() {
                 &cc_todo::Command::Start {
                     id: 1,
                     job: "new-worker".into(),
+                    progress: None,
                 },
                 &paths,
             )
@@ -131,6 +133,7 @@ fn explicit_resume_invalidates_old_reconcile_and_cancel_snapshot() {
         &cc_todo::Command::Start {
             id: 1,
             job: "new-worker".into(),
+            progress: None,
         },
         &paths,
     )
@@ -158,6 +161,7 @@ fn explicit_resume_without_job_preserves_scheduler_and_manual_block_is_untouched
         &cc_todo::Command::Start {
             id: 1,
             job: String::new(),
+            progress: None,
         },
         &paths,
     )
@@ -1402,6 +1406,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
         model: Some("mock-model".into()),
         effort: Some("high".into()),
         needs: vec!["civ6".into(), "cargo".into()],
+        progress: None,
     };
     cc_todo::add_item(&mut db, &args, &paths).unwrap();
     fs::write(&original, "あとで変更").unwrap();
@@ -1416,6 +1421,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
         model: None,
         effort: None,
         needs: vec![],
+        progress: None,
     };
     cc_todo::add_item(&mut db, &args, &paths).unwrap();
     assert!(db["items"][1].get("dispatchable").is_none());

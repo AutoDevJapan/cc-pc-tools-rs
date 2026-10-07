@@ -1,15 +1,13 @@
 use crate::core::*;
 use regex::Regex;
 use serde_json::{json, Value};
-use std::{
-    path::{Component, Path, PathBuf},
-    time::Duration,
-};
+use std::path::{Component, Path, PathBuf};
 
 pub fn git(ctx: &mut Context, cwd: &str, arguments: &[&str]) -> Result<Output> {
     let mut argv = vec!["git".into(), "-C".into(), cwd.into()];
     argv.extend(arguments.iter().map(|arg| arg.to_string()));
-    ctx.effects.run(&argv, 45)
+    crate::state_work::check(ctx)?;
+    ctx.run(&argv, 45)
 }
 
 pub fn path_key(path: &str) -> String {
@@ -918,9 +916,9 @@ pub fn resume_question(
     result
 }
 
-/// Resume unanswered-by-the-agent owner replies, under the same state lock as intake.
+/// Resume replies with serialized decisions and short fresh-state checkpoints.
 pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
-    let _lock = ByteLock::acquire(&ctx.here.join("state.lock"), Duration::from_secs(60))?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let owner = ctx.owner();
     let mut state = ctx.load()?;
     recover_reply_reads(ctx, &mut state)?;

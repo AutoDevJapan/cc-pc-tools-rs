@@ -266,8 +266,8 @@ mod queue_regressions {
             "features.apps=false",
             "features.shell_tool=false",
             "web_search=disabled",
-            "mcp_servers.'stripe'.enabled=false",
-            "mcp_servers.'unseen-server'.enabled=false",
+            "mcp_servers.stripe.enabled=false",
+            "mcp_servers.unseen-server.enabled=false",
         ] {
             assert!(args.iter().any(|a| a == required), "{required}");
         }

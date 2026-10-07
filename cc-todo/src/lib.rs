@@ -97,6 +97,8 @@ pub enum Command {
     },
     #[command(args_override_self = true, infer_long_args = true)]
     Watch,
+    /// Reconcile stale unlaunched stall reservations with accepted intake; never launch jobs.
+    ReconcileIntake,
 }
 
 #[derive(Clone)]
@@ -647,11 +649,21 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             item["updated"] = json!(now());
         }
-        Command::Watch => unreachable!(),
+        Command::Watch | Command::ReconcileIntake => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if matches!(cli.command, Command::ReconcileIntake) {
+        use recovery::RecoveryBackend;
+        let _watch = Lock::acquire(&paths.store.with_file_name("watch.lock"), Duration::ZERO)?;
+        let result = recovery::RealRecovery::new(paths).reconcile_intake(paths)?;
+        println!(
+            "{}",
+            json!({"accepted":result.accepted,"migrated":result.migrated,"deferred":result.deferred})
+        );
+        return Ok(());
+    }
     if matches!(cli.command, Command::Watch) {
         return recovery::run_watch(paths, notifier, &mut recovery::RealRecovery::new(paths));
     }

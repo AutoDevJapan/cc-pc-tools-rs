@@ -11,6 +11,87 @@ fn setup() -> Harness {
     h
 }
 #[test]
+fn unassigned_todo_is_silent_and_queue_receipt_removes_it_without_launching() {
+    let mut h = setup();
+    h.ctx.jobs = h.root.path().join("codex-jobs");
+    let intake = h.root.path().join("localai-web-rs/target/release");
+    std::fs::create_dir_all(&intake).unwrap();
+    atomic_json(&intake.join("console-state.json"), &json!({"queue":[]}), 2).unwrap();
+    let jobs = h.ctx.jobs.join("jobs/other");
+    std::fs::create_dir_all(&jobs).unwrap();
+    atomic_json(
+        &jobs.join("job.json"),
+        &json!({"id":"other","todo_id":2,"status":"running","project":"tools"}),
+        2,
+    )
+    .unwrap();
+    let created = h.fake.borrow().now - 1799.;
+    let db = json!({"projects":{"tools":"D:/CC/Tools"},"items":[{"id":1,"project":"tools","title":"担当のいない作業を確認する","status":"todo","created_s":created,"jobs":[]}]});
+    atomic_json(&h.ctx.todo, &db, 2).unwrap();
+    update(&mut h.ctx).unwrap();
+    assert!(!read_json(&h.ctx.here.join("board.json")).unwrap()["body"]
+        .as_str()
+        .unwrap()
+        .contains("担当なし"));
+    h.fake.borrow_mut().now += 1.;
+    update(&mut h.ctx).unwrap();
+    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    assert!(state["body"]
+        .as_str()
+        .unwrap()
+        .contains("止まっている（担当なし）"));
+    assert!(state["body"].as_str().unwrap().contains("止まっている 1件"));
+    assert_eq!(
+        read_json(&h.ctx.todo).unwrap(),
+        db,
+        "display must not persist derived metadata"
+    );
+    atomic_json(
+        &intake.join("console-state.json"),
+        &json!({"queue":[{"todo_id":1,"key":"req-todo-1-triage-20261007"}]}),
+        2,
+    )
+    .unwrap();
+    update(&mut h.ctx).unwrap();
+    assert!(!read_json(&h.ctx.here.join("board.json")).unwrap()["body"]
+        .as_str()
+        .unwrap()
+        .contains("担当なし"));
+    assert!(h.fake.borrow().launches.is_empty());
+    assert!(h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .all(|c| c["body"]["allowed_mentions"]["parse"].is_null()
+            || c["body"]["allowed_mentions"]["parse"] == json!([])));
+}
+#[test]
+fn unreadable_ownership_does_not_break_existing_board_or_report_absence() {
+    for contents in ["broken", "{}", "{\"queue\":[]}"] {
+        let mut h = setup();
+        h.ctx.jobs = h.root.path().join("codex-jobs");
+        let intake = h.root.path().join("localai-web-rs/target/release");
+        std::fs::create_dir_all(&intake).unwrap();
+        let mut db = read_json(&h.ctx.todo).unwrap();
+        db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"tools","title":"未担当の確認","status":"todo","created_s":1.,"jobs":[]}));
+        atomic_json(&h.ctx.todo, &db, 2).unwrap();
+        std::fs::write(intake.join("console-state.json"), contents).unwrap();
+        if contents == "{\"queue\":[]}" {
+            let broken = h.ctx.jobs.join("jobs/broken");
+            std::fs::create_dir_all(&broken).unwrap();
+            std::fs::write(broken.join("job.json"), "broken").unwrap();
+        }
+        update(&mut h.ctx).unwrap();
+        let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+        assert!(state["body"]
+            .as_str()
+            .unwrap()
+            .contains("画面の読みやすさを改善する"));
+        assert!(!state["body"].as_str().unwrap().contains("担当なし"));
+    }
+}
+#[test]
 fn splits_at_lines_and_never_exceeds_2000_utf16_units() {
     let input = format!(
         "{}\n{}\n{}",
@@ -220,13 +301,12 @@ fn translations_and_failed_fallbacks_are_cached_once() {
     update(&mut h.ctx).unwrap();
     update(&mut h.ctx).unwrap();
     assert_eq!(h.fake.borrow().llm_calls.len(), 2);
-    assert!(
-        h.fake
-            .borrow()
-            .runs
-            .iter()
-            .all(|(argv, _)| !argv[0].ends_with("codex.exe"))
-    );
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .all(|(argv, _)| !argv[0].ends_with("codex.exe")));
     assert_eq!(
         read_json(&h.ctx.here.join("board.json")).unwrap()["labels"]["todo:2"],
         "fix deployment failure"

@@ -8,6 +8,7 @@ name = "todo"
 path = "src/main.rs"
 
 [dependencies]
+cc-ask = { path = "../cc-ask" }
 cc-job-policy = { path = "../cc-job-policy" }
 cc-scheduler = { path = "../cc-scheduler" }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }

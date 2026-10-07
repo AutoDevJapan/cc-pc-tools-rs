@@ -146,6 +146,170 @@ mod queue_regressions {
         }
     }
     #[test]
+    fn resumed_old_session_rotates_after_completed_command_and_keeps_todo() {
+        for resumed in [true, false] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1,"context_limit_percent":50}));
+            let mut parent = live_tool_parent(&t);
+            parent["started_at"] = json!("2026-10-01T11:59:00+09:00");
+            if resumed {
+                parent["resume_session"] = json!(SESSION_ID);
+            }
+            // Stored percentage is stale until the resumed rollout is read.
+            parent["context_pct"] = json!(20);
+            t.ctx.save(&parent).unwrap();
+            let old_dir = t.ctx.codex_home.join("sessions/2026/09/28");
+            fs::create_dir_all(&old_dir).unwrap();
+            fs::write(old_dir.join(format!("rollout-old-{SESSION_ID}.jsonl")),
+                format!("{}\n", json!({"type":"event_msg","payload":{"type":"token_count","info":{"model_context_window":1000,"last_token_usage":{"total_tokens":640}}}}))).unwrap();
+            assert!(
+                t.ctx
+                    .poll_session(&mut parent, &mut Session::default())
+                    .unwrap()
+            );
+            assert_eq!(parent["context_pct_exact"], 64.0);
+            t.ctx.save(&parent).unwrap();
+            tool_events(&t, &[("item.started", "long-command")]);
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            tool_events(
+                &t,
+                &[
+                    ("item.started", "long-command"),
+                    ("item.completed", "long-command"),
+                ],
+            );
+            assert!(t.ctx.admit("other").unwrap().is_some());
+            let saved = t.ctx.load("long").unwrap();
+            assert_eq!(saved["context_phase"], "summarize");
+            assert_eq!(saved["resume_session"], SESSION_ID);
+            assert_eq!(saved["todo_id"], 1956);
+            assert_eq!(saved["yield_boundary_item"], "long-command");
+        }
+    }
+    #[test]
+    fn resumed_supervisor_refreshes_usage_before_its_first_completed_command() {
+        struct CompletingCommand {
+            first: bool,
+            path: PathBuf,
+            rollout: PathBuf,
+            rt: Arc<Fake>,
+        }
+        impl Read for CompletingCommand {
+            fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+                let text = if self.first {
+                    self.first = false;
+                    format!(
+                        "{}\n{}\n",
+                        json!({"type":"thread.started","thread_id":SESSION_ID}),
+                        json!({"type":"item.started","item":{"id":"command","type":"command_execution"}})
+                    )
+                } else {
+                    // Wait until the supervisor saved the started command. Its
+                    // initial poll has consumed the low usage, and mono remains
+                    // below the three-second poll interval.
+                    let until = Instant::now() + Duration::from_secs(10);
+                    loop {
+                        let job: Value =
+                            serde_json::from_str(&fs::read_to_string(&self.path)?).unwrap();
+                        if s(&job, "activity").starts_with("running:") {
+                            break;
+                        }
+                        assert!(Instant::now() < until);
+                        std::thread::sleep(Duration::from_millis(1));
+                    }
+                    use std::io::Write;
+                    writeln!(
+                        fs::OpenOptions::new().append(true).open(&self.rollout)?,
+                        "{}",
+                        json!({"type":"event_msg","payload":{"type":"token_count","info":{"model_context_window":1000,"last_token_usage":{"total_tokens":640}}}})
+                    )?;
+                    self.rt.child_alive.store(true, Ordering::Relaxed);
+                    self.first = true;
+                    return Cursor::new(format!("{}\n", json!({"type":"item.completed","item":{"id":"command","type":"command_execution","exit_code":0,"aggregated_output":"done once"}})).into_bytes()).read(out);
+                };
+                Cursor::new(text.into_bytes()).read(out)
+            }
+        }
+        // Use a bounded reader so EOF after the completed item is deterministic.
+        struct OnceCommand {
+            inner: CompletingCommand,
+            reads: usize,
+        }
+        impl Read for OnceCommand {
+            fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+                if self.reads == 2 {
+                    self.inner.rt.child_alive.store(false, Ordering::Relaxed);
+                    return Ok(0);
+                }
+                self.reads += 1;
+                self.inner.read(out)
+            }
+        }
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut j = waiting(&t, "resumed", "req-resumed");
+        j["resume_session"] = json!(SESSION_ID);
+        j["thread_id"] = json!(SESSION_ID);
+        j["todo_id"] = json!(2006);
+        t.ctx.save(&j).unwrap();
+        let dir = t.ctx.job_dir("resumed");
+        fs::write(dir.join("prompt.md"), "元の作業").unwrap();
+        let date = t.ctx.codex_home.join("sessions/2026/09/28");
+        fs::create_dir_all(&date).unwrap();
+        let rollout = date.join(format!("rollout-old-{SESSION_ID}.jsonl"));
+        fs::write(&rollout, format!("{}\n", json!({"type":"event_msg","payload":{"type":"token_count","info":{"model_context_window":1000,"last_token_usage":{"total_tokens":200}}}}))).unwrap();
+        let seq = AtomicUsize::new(0);
+        let rt = t.rt.clone();
+        rt.pause_allowed.store(true, Ordering::Relaxed);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            rt.procs.lock().unwrap().insert(321, 32);
+            let n = seq.fetch_add(1, Ordering::Relaxed);
+            let out: Box<dyn Read + Send> = if n == 0 {
+                rt.child_alive.store(true, Ordering::Relaxed);
+                Box::new(OnceCommand {
+                    inner: CompletingCommand {
+                        first: true,
+                        path: dir.join("job.json"),
+                        rollout: rollout.clone(),
+                        rt: rt.clone(),
+                    },
+                    reads: 0,
+                })
+            } else {
+                rt.child_alive.store(false, Ordering::Relaxed);
+                let summary = "## 目的\n元の作業\n## 終わったこと\nコマンド完了\n## 残り\n確認\n## 次の一手\n結果を読む\n## 関係ファイルとPR\nなし\n## 最新の指示と注意点\nRustのみ\n";
+                let text = if n == 1 {
+                    format!(
+                        "{}\n{}\n{}\n",
+                        json!({"type":"thread.started","thread_id":SESSION_ID}),
+                        json!({"type":"item.completed","item":{"type":"agent_message","text":summary}}),
+                        json!({"type":"turn.completed","usage":{}})
+                    )
+                } else {
+                    OK.into()
+                };
+                Box::new(Cursor::new(text.into_bytes()))
+            };
+            Box::new(FakeChild {
+                alive: rt.child_alive.clone(),
+                out: Some(out),
+            })
+        }));
+        t.ctx.supervise("resumed").unwrap();
+        let saved = t.ctx.load("resumed").unwrap();
+        assert_eq!(saved["status"], "succeeded");
+        assert_eq!(saved["context_rotation_count"], 1);
+        assert_eq!(saved["context_source_pct"], 64);
+        assert_eq!(saved["todo_id"], 2006);
+        assert_eq!(saved["yield_boundary_item"], "command");
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 3);
+        assert!(args[0].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        assert!(!args[2].iter().any(|a| a == "resume"));
+    }
+    #[test]
     fn failed_yield_backoff_applies_to_its_attempt_but_not_mid_item() {
         let t = Test::new();
         config(&t, json!({"max_running":1,"context_limit_percent":50}));

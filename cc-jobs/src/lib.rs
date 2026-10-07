@@ -3,9 +3,10 @@
 //! Usage: codex_jobs.exe {run,status,tail,wait,watch,cancel,rate,backfill} ...
 //! Windows only (codex.CMD shim, taskkill, OpenProcess).
 pub mod boundary;
-pub mod context_rotation;
 pub mod cache;
+mod cache_history;
 pub mod cli;
+pub mod context_rotation;
 pub mod events;
 pub mod gate;
 pub mod jobs;

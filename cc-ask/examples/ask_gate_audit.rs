@@ -13,7 +13,7 @@ fn main() {
         .map(|row| {
             let title = row["title"].as_str().unwrap();
             let denied = blocked(title, "", None);
-            let explicit = ["許可", "承認", "よいか"].iter().any(|w| title.contains(w));
+            let explicit = row["expected_blocked"] == true;
             for key in ["total", if denied { "blocked" } else { "passed" }] {
                 counts[key] = json!(counts[key].as_u64().unwrap() + 1);
             }

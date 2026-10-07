@@ -913,7 +913,8 @@
   },
   {
     "title": "[Shepherd] PR #87の実機検証を追加2回行う許可",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "[Shepherd] PR #86の人物加入を直す追加実機の回数",
@@ -933,7 +934,8 @@
   },
   {
     "title": "[Codex] PR86の担当が起動したCiv6の通常終了だけ例外にしてよいか",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "[Codex] AI提案用の隔離プロセスの通信方式",
@@ -941,7 +943,8 @@
   },
   {
     "title": "【civ6-banseiki】[Codex] 【Civ6用万世紀】PR87の既存検証ドライバーを今回だけ使う許可",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "[Codex] 【GoDD-ad-Video】動画合成ライブラリの利用条件を確認したい",
@@ -977,7 +980,8 @@
   },
   {
     "title": "[Codex] 【GoDD-13a13e1】所有権の試験2行に品質検査の注記を追加してよいか",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "【GoDD-Press-seihok-v3】[Codex] 【GoDD-Press】復旧鍵の保管とPC外の保全先を確認する",
@@ -1181,7 +1185,8 @@
   },
   {
     "title": "【ARPS】本番昇格を直すRust検査の起動修正の承認",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "【PassShare】本番DBの永続化とバックアップの費用・保全範囲を決めてください",
@@ -1281,7 +1286,8 @@
   },
   {
     "title": "【CC】ChatGPT と Claude の毎月の支払いを調べてよいか",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "【CC】Plus で ChatGPT のブラウザ版を使う仕組みを作るか",
@@ -1289,7 +1295,8 @@
   },
   {
     "title": "【CC】軽い作業を Local のモデルに任せてよいか",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "【PCツール】検証データを退避するリンク判定の限定修正",
@@ -1333,7 +1340,8 @@
   },
   {
     "title": "【GoDD-Press】Chromeの検査用タブで4画面幅を測る許可",
-    "classification": "routine"
+    "classification": "routine",
+    "expected_blocked": true
   },
   {
     "title": "【PCツール】麻臭の語源動画：YouTubeでファイルを選択する一手だけ",

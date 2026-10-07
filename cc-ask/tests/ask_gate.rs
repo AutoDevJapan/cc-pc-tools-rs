@@ -23,6 +23,15 @@ fn routine_permissions_are_blocked_in_title_or_body() {
         "顧客の公開サイトのChrome検査の許可",
         "非公開タブでビルドする許可",
         "May I build and test?",
+        "Chromeを閉じてよいですか",
+        "ビルドを走らせて良いですか",
+        "テストをやってもよいですか",
+        "確認させてもらってもよいですか",
+        "検証を実行しても差し支えないですか",
+        "Ｃｈｒｏｍｅの検査の許　可",
+        "検査のため一時ファイルを完全削除してよいか",
+        "検査結果のログを送信してよいか",
+        "テスト用のデザインを変更してよいか",
     ] {
         assert!(blocked(title, "", None), "title: {title}");
         assert!(blocked("相談", title, None), "body: {title}");
@@ -34,6 +43,21 @@ fn routine_permissions_are_blocked_in_title_or_body() {
         None
     ));
     assert!(blocked("【費用の上限】Chromeの検査の許可", "", None));
+    assert!(blocked("相談", "【ログインしてよいか】", None));
+    for context in [
+        "予算内です",
+        "月額0円のため",
+        "有料プランは使いません",
+        "費用をかけていません",
+        "公開していません",
+        "取り消せない操作ではありません",
+        "不可逆ではない",
+    ] {
+        assert!(
+            blocked("Chromeの検査の許可", context, None),
+            "negative/background: {context}"
+        );
+    }
 }
 
 #[test]
@@ -50,6 +74,17 @@ fn genuine_owner_decisions_and_non_permissions_pass() {
         "ビルド結果の報告",
         "画面案を選んでください",
         "スマホでの承認をお願いします",
+        "この方向で進めてよいか。A案を採用します",
+        "画面案Aで進めてよいか",
+        "本番環境へデプロイしてよいか。テスト済み",
+        "リポジトリをpublicにしてよいか。検証済み",
+        "5 USDまで使って検証してよいか",
+        "従量課金のAPIを使ってよいか。検証用",
+        "May I publish this? tests passed",
+        "Can I spend $20 for a test run?",
+        "5.5ドルの予算を使って検査してよいか",
+        "元に戻せない操作を進めてよいか",
+        "費用なし、画面案Aで進めてよいか",
     ] {
         assert!(!blocked(title, "", None), "title: {title}");
     }
@@ -126,6 +161,8 @@ fn cli_blocks_before_config_and_returns_78() {
         .args(["ask", "--title", "検査の許可", "--body-file"])
         .arg(&body)
         .args(["--owner-only", "other"])
+        .env("CC_ASK_CONFIG", dir.path().join("missing.json"))
+        .env("CC_ASK_HOME", dir.path().join("not-created"))
         .output()
         .unwrap();
     assert_eq!(invalid.status.code(), Some(2));
@@ -146,15 +183,11 @@ fn historical_owner_decisions_pass_and_explicit_routine_permissions_stop() {
             owners += 1;
             assert!(!denied, "genuine owner question: {title}");
         }
-        if row["classification"] == "routine"
-            && ["許可", "承認", "よいか"]
-                .iter()
-                .any(|word| title.contains(word))
-        {
+        if row["expected_blocked"] == true {
             stopped += 1;
             assert!(denied, "unnecessary permission: {title}");
         }
     }
     assert_eq!(stopped, 8);
-    assert!(owners >= 80);
+    assert_eq!(owners, 100);
 }

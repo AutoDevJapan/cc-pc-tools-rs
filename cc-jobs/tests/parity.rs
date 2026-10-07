@@ -4506,6 +4506,179 @@ mod task_notifier {
 }
 mod end_to_end {
     use super::*;
+    #[test]
+    fn state_lock_does_not_block_snapshot_readers() {
+        let t = Test::new();
+        let job = t.put(new_job());
+        let held = t.ctx.job_lock(s(&job, "id"), "state.lock").unwrap();
+        let begin = Instant::now();
+        assert_eq!(t.ctx.load(s(&job, "id")).unwrap(), job);
+        assert!(begin.elapsed() < Duration::from_secs(1));
+        drop(held);
+    }
+    #[test]
+    fn cancelled_kernel_lock_wait_is_drained_and_reports_path_and_exit_75() {
+        let tmp = Temp::new();
+        let path = tmp.0.join(".queue.lock");
+        let held = FileLock::try_acquire(&path).unwrap();
+        let start = Instant::now();
+        let error = match FileLock::acquire_queue_timeout(&path, Duration::from_millis(80)) {
+            Ok(_) => panic!("contended byte lock unexpectedly acquired"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+        assert!(start.elapsed() < Duration::from_secs(2));
+        let error = Error::file_io("acquire exclusive lock byte range [0, 1)", &path, error);
+        assert_eq!(error.code, 75);
+        assert!(error.message.contains(path.to_str().unwrap()));
+        assert!(error.message.contains("[0, 1)"));
+        drop(held);
+        // A leaked pending request would acquire this byte after the holder exits.
+        let _next = FileLock::try_acquire(&path).unwrap();
+    }
+    #[test]
+    fn queue_config_read_retries_real_byte_lock_and_cli_reports_exhaustion() {
+        let t = E2e::new();
+        let path = t.exe.parent().unwrap().join("queue-config.json");
+        fs::write(&path, r#"{"max_running":3}"#).unwrap();
+        let held = FileLock::try_acquire(&path).unwrap();
+        let output = t.cli(
+            &[
+                "run",
+                "--name",
+                "locked-config",
+                "--prompt-file",
+                "unused.md",
+            ],
+            "ok",
+        );
+        assert_eq!(output.status.code(), Some(75));
+        assert!(output.stdout.is_empty());
+        assert!(String::from_utf8_lossy(&output.stderr).contains(path.to_str().unwrap()));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("os error 33"));
+        drop(held);
+        let held = FileLock::try_acquire(&path).unwrap();
+        let context = Context {
+            root: t.exe.parent().unwrap().to_path_buf(),
+            ..Context::installed().unwrap()
+        };
+        std::thread::scope(|scope| {
+            scope.spawn(move || {
+                std::thread::sleep(Duration::from_millis(100));
+                drop(held);
+            });
+            assert_eq!(context.queue_config().unwrap().max_running, 3);
+        });
+    }
+    #[test]
+    fn thirty_parallel_run_processes_share_the_real_queue_files() {
+        let t = E2e::new();
+        let prompt = t.tmp.0.join("parallel-prompt.md");
+        fs::write(&prompt, "fixture parallel launch").unwrap();
+        fs::write(
+            t.exe.parent().unwrap().join("queue-config.json"),
+            r#"{"max_running":1,"max_children_per_parent":1}"#,
+        )
+        .unwrap();
+        // Reserve the single running slot so supervisors keep polling admission.
+        let jobs = t.exe.parent().unwrap().join("jobs");
+        let dir = jobs.join("parallel-parent");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("job.json"),
+            pretty(
+                &json!({"id":"parallel-parent","name":"parent","status":"running",
+            "created_at":"2026-10-07T00:00:00+09:00","queue_unreadable":true}),
+            ),
+        )
+        .unwrap();
+        for n in 0..3132 {
+            let dir = jobs.join(format!("history-{n}"));
+            fs::create_dir(&dir).unwrap();
+            fs::write(dir.join("job.json"), pretty(&json!({"id":format!("history-{n}"),"status":"succeeded","created_at":"2026-10-06T00:00:00+09:00"}))).unwrap();
+        }
+        let barrier = Arc::new(std::sync::Barrier::new(30));
+        let outputs = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..30)
+                .map(|n| {
+                    let t = &t;
+                    let prompt = &prompt;
+                    let barrier = barrier.clone();
+                    scope.spawn(move || {
+                        barrier.wait();
+                        t.cli(
+                            &[
+                                "run",
+                                "--name",
+                                &format!("parallel-{n}"),
+                                "--model",
+                                "fixture",
+                                "--todo-id",
+                                &(10000 + n).to_string(),
+                                "--cwd",
+                                t.tmp.0.to_str().unwrap(),
+                                "--prompt-file",
+                                prompt.to_str().unwrap(),
+                                "--mcp-profile",
+                                "minimal",
+                            ],
+                            "ok",
+                        )
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|h| h.join().unwrap())
+                .collect::<Vec<_>>()
+        });
+        let mut ids = HashSet::new();
+        let mut failures = Vec::new();
+        for output in &outputs {
+            assert!(!String::from_utf8_lossy(&output.stderr).contains("os error 33"));
+            if output.status.success() {
+                ids.insert(String::from_utf8_lossy(&output.stdout).trim().to_string());
+            } else {
+                failures.push(format!(
+                    "{:?}: {}",
+                    output.status.code(),
+                    String::from_utf8_lossy(&output.stderr)
+                ));
+            }
+        }
+        eprintln!(
+            "30 launch results: {} accepted, {} failed",
+            ids.len(),
+            failures.len()
+        );
+        // These jobs are queued and have no child processes. Retain an OS handle
+        // while stopping each supervisor; taskkill /T can follow reused parent IDs.
+        for id in &ids {
+            let job = t.job(id);
+            assert_eq!(job["status"], "queued");
+            let pid = job["pid"].as_u64().unwrap() as u32;
+            assert_ne!(pid, std::process::id());
+            assert_eq!(proc_created(pid), job["pid_created"].as_u64());
+            unsafe {
+                use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
+                let handle = OpenProcess(PROCESS_TERMINATE | PROCESS_SYNCHRONIZE, 0, pid);
+                assert!(!handle.is_null());
+                assert_ne!(TerminateProcess(handle, 0), 0);
+                assert_eq!(WaitForSingleObject(handle, 5000), 0);
+                CloseHandle(handle);
+            }
+        }
+        assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
+        assert_eq!(ids.len(), 30);
+        let sequence: Value =
+            serde_json::from_slice(&fs::read(jobs.join(".queue-sequence.json")).unwrap()).unwrap();
+        assert_eq!(sequence["sequence"], 30);
+        let index: Value =
+            serde_json::from_slice(&fs::read(jobs.join(".queue-index.json")).unwrap()).unwrap();
+        for id in &ids {
+            assert!(index["ids"].as_array().unwrap().contains(&json!(id)));
+        }
+    }
     struct E2e {
         tmp: Temp,
         exe: PathBuf,

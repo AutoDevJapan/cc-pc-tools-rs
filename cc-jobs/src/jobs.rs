@@ -56,32 +56,93 @@ impl Context {
         self.jobs.join(jid)
     }
     pub fn job_lock(&self, jid: &str, name: &str) -> std::io::Result<FileLock> {
-        FileLock::acquire(&self.job_dir(jid).join(name))
+        let path = self.job_dir(jid).join(name);
+        FileLock::acquire(&path).map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!(
+                    "acquire exclusive lock {} byte range [0, 1): {e}",
+                    path.display()
+                ),
+            )
+        })
     }
     /// Atomic write: readers see either the old or the new file, never half of one.
     pub fn write_json(&self, path: &Path, v: &Value) -> Result<()> {
-        self.rt.before_save(path, v)?;
+        self.rt
+            .before_save(path, v)
+            .map_err(|e| Error::file_io("prepare write", path, e))?;
         let tmp = path.with_file_name(format!(
             "{}.{}.tmp",
             path.file_name().unwrap().to_string_lossy(),
             self.rt.pid()
         ));
-        fs::write(&tmp, pretty(v).replace("\n", "\r\n"))?;
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(1);
+        let bytes = pretty(v).replace("\n", "\r\n");
+        for i in 0..50 {
+            match fs::write(&tmp, &bytes) {
+                Ok(()) => break,
+                Err(e)
+                    if transient_file_access(&e) && i < 49 && std::time::Instant::now() < until =>
+                {
+                    self.rt.sleep(0.02)
+                }
+                Err(e) => {
+                    let transient = transient_file_access(&e);
+                    let mut error = Error::file_io("write temporary snapshot", &tmp, e);
+                    if transient {
+                        error.code = 75;
+                    }
+                    return Err(error);
+                }
+            }
+        }
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(1);
         for i in 0..50 {
             match self.rt.replace(&tmp, path) {
                 Ok(()) => return Ok(()),
-                Err(e) if transient_file_access(&e) && i < 49 => self.rt.sleep(0.02),
-                Err(e) => return Err(e.into()),
+                Err(e)
+                    if transient_file_access(&e) && i < 49 && std::time::Instant::now() < until =>
+                {
+                    self.rt.sleep(0.02)
+                }
+                Err(e) => {
+                    let code = if transient_file_access(&e) { 75 } else { 1 };
+                    return Err(Error {
+                        code,
+                        message: format!("replace {} -> {}: {e}", tmp.display(), path.display()),
+                    });
+                }
             }
         }
         unreachable!()
     }
     pub fn read_json(&self, path: &Path) -> Result<Value> {
+        let bytes = self
+            .read_file(path)
+            .map_err(|e| Error::file_io("read entire file", path, e))?;
+        serde_json::from_slice(&bytes)
+            .map_err(|e| Error::new(format!("parse JSON {}: {e}", path.display())))
+    }
+    /// JSON readers never take state.lock. Writers replace complete snapshots.
+    /// Retry only transient access failures, with a one-second absolute budget.
+    pub fn read_file(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(1);
         for i in 0..50 {
             match self.rt.before_load(path).and_then(|_| fs::read(path)) {
-                Ok(b) => return Ok(serde_json::from_slice(&b)?),
-                Err(e) if transient_file_access(&e) && i < 49 => self.rt.sleep(0.02),
-                Err(e) => return Err(e.into()),
+                Ok(b) => return Ok(b),
+                Err(e)
+                    if transient_file_access(&e) && i < 49 && std::time::Instant::now() < until =>
+                {
+                    self.rt.sleep(0.02)
+                }
+                Err(e) if transient_file_access(&e) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        format!("read retry budget exhausted: {e}"),
+                    ));
+                }
+                Err(e) => return Err(e),
             }
         }
         unreachable!()
@@ -96,8 +157,18 @@ impl Context {
             .filter(|v| v.is_object() && v.get("id").is_some() && v.get("status").is_some())
     }
     pub fn load(&self, jid: &str) -> Result<Value> {
-        self.try_load(jid)
-            .ok_or_else(|| Error::new(format!("no such job (or unreadable job.json): {jid}")))
+        let path = self.job_dir(jid).join("job.json");
+        let job = self.read_json(&path).map_err(|error| Error {
+            code: error.code,
+            message: format!(
+                "no such job (or unreadable job.json): {jid}; {}",
+                error.message
+            ),
+        })?;
+        if !job.is_object() || job.get("id").is_none() || job.get("status").is_none() {
+            return Err(Error::new(format!("invalid job record {}", path.display())));
+        }
+        Ok(job)
     }
     pub fn list_jobs(&self, skip: &HashSet<String>) -> Vec<Value> {
         let mut jobs = vec![];
@@ -604,7 +675,10 @@ impl Context {
     }
     pub fn supervise(&self, jid: &str) -> Result<()> {
         // A duplicate supervisor cannot start the same job while another waits.
-        let _owner = FileLock::try_acquire(&self.job_dir(jid).join("supervisor.lock"))?;
+        let owner_path = self.job_dir(jid).join("supervisor.lock");
+        let _owner = FileLock::try_acquire(&owner_path).map_err(|e| {
+            Error::file_io("acquire exclusive lock byte range [0, 1)", &owner_path, e)
+        })?;
         if let Err(error) = self.supervise_owned(jid) {
             let mut job = self.load(jid)?;
             if s(&job, "status") == "queued" && job["cancel_requested"] != true {

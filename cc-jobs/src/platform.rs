@@ -571,40 +571,102 @@ pub struct FileLock {
 }
 impl FileLock {
     pub fn acquire_queue(path: &Path) -> io::Result<Self> {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .read(true)
-            .open(path)?;
-        let until = Instant::now() + Duration::from_secs(60);
-        loop {
-            match lock_byte(&file, false) {
-                Ok(()) => return Ok(Self { file }),
-                Err(e) if matches!(e.raw_os_error(), Some(33)) && Instant::now() < until => {
-                    std::thread::sleep(Duration::from_millis(20))
+        Self::acquire_queue_timeout(path, Duration::from_secs(60))
+    }
+    /// Queue the lock request in the kernel instead of repeatedly competing
+    /// with newly arriving supervisors. A cancelled request is drained before
+    /// its OVERLAPPED structure or event can be dropped.
+    pub fn acquire_queue_timeout(path: &Path, timeout: Duration) -> io::Result<Self> {
+        #[cfg(windows)]
+        {
+            use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
+            use windows_sys::Win32::{
+                Foundation::*,
+                Storage::FileSystem::*,
+                System::{IO::*, Threading::*},
+            };
+            let started = Instant::now();
+            let file = OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .read(true)
+                .write(true)
+                .custom_flags(FILE_FLAG_OVERLAPPED)
+                .open(path)?;
+            struct Event(HANDLE);
+            impl Drop for Event {
+                fn drop(&mut self) {
+                    unsafe {
+                        CloseHandle(self.0);
+                    }
                 }
-                Err(e) => return Err(e),
             }
+            let event = Event(unsafe { CreateEventW(std::ptr::null(), 1, 0, std::ptr::null()) });
+            if event.0.is_null() {
+                return Err(io::Error::last_os_error());
+            }
+            let mut overlapped = OVERLAPPED {
+                hEvent: event.0,
+                ..Default::default()
+            };
+            if unsafe {
+                LockFileEx(
+                    file.as_raw_handle() as _,
+                    LOCKFILE_EXCLUSIVE_LOCK,
+                    0,
+                    1,
+                    0,
+                    &mut overlapped,
+                )
+            } != 0
+            {
+                return Ok(Self { file });
+            }
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() != Some(ERROR_IO_PENDING as i32) {
+                return Err(error);
+            }
+            let milliseconds = timeout
+                .saturating_sub(started.elapsed())
+                .as_millis()
+                .min((u32::MAX - 1) as u128) as u32;
+            let wait = unsafe { WaitForSingleObject(event.0, milliseconds) };
+            let wait_error = (wait == WAIT_FAILED).then(io::Error::last_os_error);
+            if wait != WAIT_OBJECT_0 {
+                unsafe {
+                    CancelIoEx(file.as_raw_handle() as _, &overlapped);
+                }
+            }
+            let mut bytes = 0;
+            if unsafe { GetOverlappedResult(file.as_raw_handle() as _, &overlapped, &mut bytes, 1) }
+                != 0
+            {
+                // Completion may win the race with cancellation.
+                return Ok(Self { file });
+            }
+            let completion_error = io::Error::last_os_error();
+            if let Some(error) = wait_error {
+                return Err(error);
+            }
+            if wait == WAIT_TIMEOUT {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    format!(
+                        "lock wait exceeded {} ms: {completion_error}",
+                        timeout.as_millis()
+                    ),
+                ));
+            }
+            Err(completion_error)
+        }
+        #[cfg(not(windows))]
+        {
+            let _ = timeout;
+            Self::try_acquire(path)
         }
     }
     pub fn acquire(path: &Path) -> io::Result<Self> {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .read(true)
-            .open(path)?;
-        for i in 0..10 {
-            match lock_byte(&file, false) {
-                Ok(()) => return Ok(Self { file }),
-                Err(e) => {
-                    if i == 9 {
-                        return Err(e);
-                    }
-                    std::thread::sleep(Duration::from_secs(1));
-                }
-            }
-        }
-        unreachable!()
+        Self::acquire_queue_timeout(path, Duration::from_secs(10))
     }
     pub fn try_acquire(path: &Path) -> io::Result<Self> {
         let file = OpenOptions::new()

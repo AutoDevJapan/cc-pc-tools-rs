@@ -76,10 +76,10 @@ impl Context {
             }
         }
         let path = self.jobs.join(".queue-yields.json");
-        let mut ledger = match fs::read(&path) {
+        let mut ledger = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice::<HashMap<String, Value>>(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => HashMap::new(),
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(Error::file_io("read entire file", &path, e)),
         };
         let before = ledger.clone();
         // Snapshot before taking any per-job lock (global gate always comes first).
@@ -382,6 +382,7 @@ impl Context {
             .into_iter()
             .filter(|j| {
                 LIVE.contains(&s(j, "status"))
+                    || s(j, "status") == "starting"
                     || self.is_ours(j, "codex_pid")
                     || self.tool_handoff_pending(j)
             })
@@ -565,10 +566,10 @@ impl Context {
     }
     pub fn queue_config(&self) -> Result<QueueConfig> {
         let path = self.root.join("queue-config.json");
-        let cfg: QueueConfig = match fs::read(&path) {
+        let cfg: QueueConfig = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => QueueConfig::default(),
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(Error::file_io("read entire file", &path, e)),
         };
         if cfg.max_running == 0
             || !(1..=100).contains(&cfg.context_limit_percent)
@@ -586,7 +587,9 @@ impl Context {
     /// The global gate covers admission and registration (including manual resumes).
     pub fn queue_lock(&self) -> Result<FileLock> {
         fs::create_dir_all(&self.jobs)?;
-        Ok(FileLock::acquire_queue(&self.jobs.join(".queue.lock"))?)
+        let path = self.jobs.join(".queue.lock");
+        FileLock::acquire_queue(&path)
+            .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
     }
 
     /// Return the state lock with a durably reserved slot, or None while waiting.

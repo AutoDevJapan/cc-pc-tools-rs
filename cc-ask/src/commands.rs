@@ -1,7 +1,7 @@
 //! Console commands compatible with the shared Python Discord question tool.
 use crate::core::*;
 use crate::project::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, HashSet},
     io::{self, Write},
@@ -141,6 +141,9 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             return Err("既存スレッドへのask本文には具体的な質問を書いてください".into());
         }
         let result = post_text(ctx, thread, &content, &args.attach, true)?;
+        if result.get("suppressed").is_some() {
+            return Ok(result);
+        }
         if let Some(first) = result["message_ids"]
             .as_array()
             .and_then(|ids| ids.first())

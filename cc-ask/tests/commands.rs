@@ -1,7 +1,7 @@
 mod common;
 use cc_ask::{commands::*, core::*};
-use common::{Harness, SharedFake, message};
-use serde_json::{Value, json};
+use common::{message, Harness, SharedFake};
+use serde_json::{json, Value};
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[test]
@@ -95,6 +95,28 @@ fn ask_existing_thread_dry_run_sends_nothing() {
     .unwrap();
     assert!(h.fake.borrow().posts.is_empty());
     assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
+fn answered_thread_ask_preserves_original_assignment() {
+    let mut h = Harness::new();
+    h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!("G");
+    let body = h.root.path().join("question.md");
+    std::fs::write(&body, "Chrome拡張を導入してもらえますか？").unwrap();
+    let mut args = AskArgs { thread: Some("100".into()), body_file: body, title: "導入".into(), agent: "Codex".into(), cwd: Some("fixture/bookmarks".into()), ..Default::default() };
+    cmd_ask(&mut h.ctx, &args).unwrap();
+    {
+        let mut fake = h.fake.borrow_mut();
+        let history = fake.messages.get_mut("100").unwrap();
+        history.last_mut().unwrap()["author"]["bot"] = json!(true);
+        history.push(message("2000", "入れた", "OWN"));
+    }
+    args.cwd = Some("another/bookmarks".into()); args.agent = "Claude".into();
+    let result = cmd_ask(&mut h.ctx, &args).unwrap();
+    assert_eq!(result["suppressed"], "already_answered");
+    let state = h.state();
+    let q = state["questions"].as_array().unwrap().iter().rev().find(|q| q["thread_id"] == "100").unwrap();
+    assert_eq!(q["cwd"], "fixture/bookmarks"); assert_eq!(q["agent"], "Codex");
 }
 
 /// Override only selected effects; all Discord and child process work stays fake.
@@ -285,10 +307,7 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
     assert_eq!(q["agent"], "");
     let project =
         cc_ask::project::project_from_folder(&std::env::current_dir().unwrap().to_string_lossy());
-    assert_eq!(
-        q["title"],
-        format!("【{}】質問", project.chars().take(22).collect::<String>())
-    );
+    assert_eq!(q["title"], format!("【{}】質問", project.chars().take(22).collect::<String>()));
     assert_eq!(q["project"], project);
     assert!(q.get("source").is_none());
     let fake = h.fake.borrow();
@@ -444,13 +463,12 @@ fn snooze_suppresses_due_reminders_until_deadline_then_keeps_hourly_interval() {
     cmd_snooze(&mut h.ctx, "200", "2026-10-03T09:00:00+09:00").unwrap();
     h.fake.borrow_mut().now = 1790985599.;
     cmd_remind(&mut h.ctx).unwrap();
-    assert!(
-        h.fake
-            .borrow()
-            .http_calls
-            .iter()
-            .all(|c| c["method"] == "GET")
-    );
+    assert!(h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .all(|c| c["method"] == "GET"));
     assert!(h.fake.borrow().posts.is_empty());
     h.fake.borrow_mut().now = 1790985600.;
     cmd_remind(&mut h.ctx).unwrap();
@@ -623,16 +641,15 @@ fn inbox_reads_allowed_threads_and_attachments_oldest_first() {
     assert_eq!(std::fs::read_to_string(&mark).unwrap(), "107");
     assert!(cmd_inbox(&mut h.ctx, &mark).unwrap().is_empty());
     assert_eq!(std::fs::read_to_string(&mark).unwrap(), "107");
-    assert!(
-        !h.fake
-            .borrow()
-            .http_calls
-            .iter()
-            .any(|c| s(&c["url"]).contains("/channels/10/")
-                || s(&c["url"]).contains("/channels/30/")
-                || s(&c["url"]).contains("/channels/90/messages")
-                || s(&c["url"]).contains("/channels/40/messages"))
-    );
+    assert!(!h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .any(|c| s(&c["url"]).contains("/channels/10/")
+            || s(&c["url"]).contains("/channels/30/")
+            || s(&c["url"]).contains("/channels/90/messages")
+            || s(&c["url"]).contains("/channels/40/messages")));
 }
 
 #[test]
@@ -692,13 +709,12 @@ fn external_steps_use_configured_single_paths_and_propagate_failure() {
     cmd_scheduler_step(&mut h.ctx).unwrap();
     cmd_shepherd_step(&mut h.ctx).unwrap();
     cmd_todo_watch(&mut h.ctx).unwrap();
-    assert!(
-        h.fake
-            .borrow()
-            .runs
-            .iter()
-            .all(|(_, timeout)| *timeout == 20)
-    );
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .all(|(_, timeout)| *timeout == 20));
     assert_eq!(
         h.fake
             .borrow()
@@ -875,11 +891,10 @@ fn tick_shares_launch_budget_and_runs_every_step_after_errors() {
     cmd_tick(&mut h.ctx).unwrap();
     // Even failed resume, intake launch, scheduler and shepherd leave reminder/sweep/watch runnable.
     let fake = h.fake.borrow();
-    assert!(
-        fake.runs
-            .iter()
-            .any(|(a, _)| a.last().is_some_and(|s| s == "watch"))
-    );
+    assert!(fake
+        .runs
+        .iter()
+        .any(|(a, _)| a.last().is_some_and(|s| s == "watch")));
     assert_eq!(
         fake.runs
             .iter()
@@ -894,11 +909,10 @@ fn tick_shares_launch_budget_and_runs_every_step_after_errors() {
             .count()
             >= 2
     );
-    assert!(
-        fake.http_calls
-            .iter()
-            .any(|c| s(&c["url"]).ends_with("/threads/active"))
-    );
+    assert!(fake
+        .http_calls
+        .iter()
+        .any(|c| s(&c["url"]).ends_with("/threads/active")));
 }
 
 #[test]

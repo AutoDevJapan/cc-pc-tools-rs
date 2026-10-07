@@ -201,7 +201,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         i += 1;
     }
     if cmd == "run" {
-        let missing = ["name", "model", "effort", "prompt-file"]
+        let missing = ["name", "prompt-file"]
             .into_iter()
             .filter(|name| a.value(name).is_none())
             .map(|name| format!("--{name}"))
@@ -215,7 +215,16 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 ),
             });
         }
-        for (name, default) in [("sandbox", "read-only"), ("mcp-profile", "minimal")] {
+        let profile = cc_job_policy::model_profile(
+            a.required("name")?,
+            a.value("task-type").unwrap_or("implementation"),
+        );
+        for (name, default) in [
+            ("model", profile.model),
+            ("effort", profile.effort),
+            ("sandbox", "read-only"),
+            ("mcp-profile", "minimal"),
+        ] {
             a.values.entry(name.into()).or_insert(default.into());
         }
         for (name, choices) in [

@@ -23,6 +23,9 @@ fn fixture_command(mode: &str, root: &Path) -> Command {
 }
 
 #[test]
+// Intentionally detach descendants to reproduce inherited pipes and process-tree
+// cleanup. The supervising tests below verify release/exit or OS job termination.
+#[allow(clippy::zombie_processes)]
 fn process_capture_fixture() {
     let Ok(mode) = std::env::var("CC_ASK_CAPTURE_FIXTURE") else {
         return;

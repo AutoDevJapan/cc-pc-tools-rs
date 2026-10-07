@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -54,7 +54,11 @@ impl Harness {
     pub fn new() -> Self {
         // The user's home may itself be a repository. Python keeps fixtures under
         // the tool directory so a mocked non-repository probe has no real .git ancestor.
-        let root = tempfile::tempdir_in(env!("CARGO_MANIFEST_DIR")).unwrap();
+        let root = if cfg!(windows) {
+            tempfile::tempdir_in(r"C:\Windows\Temp").unwrap()
+        } else {
+            tempfile::tempdir().unwrap()
+        };
         let path = root.path().to_path_buf();
         std::fs::write(path.join("client-projects.txt"), "").unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
@@ -511,9 +515,11 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
-                        .unwrap()
-                        .to_rfc3339());
+                    item["updated"] = json!(
+                        chrono::DateTime::from_timestamp(self.now as i64, 0)
+                            .unwrap()
+                            .to_rfc3339()
+                    );
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()

@@ -74,7 +74,7 @@ pub fn project_from_folder(folder: &str) -> String {
 }
 
 pub fn determine_project(ctx: &mut Context, cwd: &str, names: &ProjectNames) -> String {
-    let root = ctx.effects.run(
+    let root = ctx.run(
         &[
             "git".into(),
             "-C".into(),

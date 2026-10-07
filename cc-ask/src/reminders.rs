@@ -1,10 +1,7 @@
 //! Bounded hourly reminders, with a durable outbox and recovery of lost POST responses.
 use crate::{core::*, project::*};
 use serde_json::{json, Value};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    time::Duration,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const MAX_PER_RUN: usize = 3;
 pub const MAX_PER_HOUR: usize = 5;
@@ -178,10 +175,7 @@ pub fn run(ctx: &mut Context, args: &RemindArgs) -> Result<Value> {
     let _guard = if args.dry_run {
         None
     } else {
-        Some(ByteLock::acquire(
-            &ctx.here.join("state.lock"),
-            Duration::from_secs(60),
-        )?)
+        Some(crate::state_work::StateWork::begin(ctx)?)
     };
     run_locked(ctx, args)
 }

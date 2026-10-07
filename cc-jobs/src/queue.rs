@@ -9,6 +9,7 @@ use std::{
 #[derive(serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
+    pub context_limit_percent: u8,
     pub max_running: usize,
     pub max_children_per_parent: usize,
     pub max_429_retries: u32,
@@ -21,6 +22,7 @@ pub struct QueueConfig {
 impl Default for QueueConfig {
     fn default() -> Self {
         Self {
+            context_limit_percent: 50,
             max_running: 6,
             max_children_per_parent: 2,
             max_429_retries: 5,
@@ -61,7 +63,9 @@ impl Context {
                 continue;
             }
             let result = self.recover_tool_yield(job).and_then(|recovered| {
-                if recovered || job["queue_fairness_version"] == 2 {
+                if recovered
+                    || (job["queue_fairness_version"] == 3 && !self.context_rotation_due(job, jobs))
+                {
                     Ok(recovered)
                 } else {
                     self.yield_tool_boundary(job, jobs)
@@ -209,6 +213,7 @@ impl Context {
         let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
+            && s(job, "context_phase") != "summarize"
             && s(job, "status") == "running"
             && job["cancel_requested"] != true
             && normalize_uuid(s(job, "thread_id")).is_some()
@@ -251,7 +256,8 @@ impl Context {
         }
         let mut running = job.clone();
         running["status"] = json!("running");
-        if !self.should_yield(&running, jobs) {
+        let rotate = self.context_rotation_due(&running, jobs);
+        if !rotate && !self.should_yield(&running, jobs) {
             return Ok(false);
         }
         let Some(session) = ["thread_id", "resume_session"]
@@ -273,6 +279,9 @@ impl Context {
         job["queue_sequence"] = json!(self.next_queue_sequence()?);
         job["retry_not_before"] = Value::Null;
         job["activity"] = json!("順番待ち: 長時間の作業が枠を譲りました");
+        if rotate {
+            self.prepare_context_summary(job, &session)?;
+        }
         Ok(true)
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
@@ -562,6 +571,7 @@ impl Context {
             Err(e) => return Err(e.into()),
         };
         if cfg.max_running == 0
+            || !(1..=100).contains(&cfg.context_limit_percent)
             || cfg.max_children_per_parent == 0
             || cfg.retry_delay_seconds == 0
             || cfg.max_retry_delay_seconds < cfg.retry_delay_seconds

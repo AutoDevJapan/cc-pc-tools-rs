@@ -257,7 +257,7 @@ pub fn cmd_replies(ctx: &mut Context, thread: Option<&str>) -> Result<Value> {
         print_json(&value, Some(1))?;
         return Ok(value);
     }
-    let _guard = lock(ctx)?;
+    let _work = crate::state_work::StateWork::begin_on(ctx, "reply-work.lock")?;
     let mut state = ctx.load()?;
     recover_reply_reads(ctx, &mut state)?;
     let mut deliveries = Vec::new();
@@ -304,9 +304,6 @@ pub fn cmd_replies(ctx: &mut Context, thread: Option<&str>) -> Result<Value> {
     }
     // Reserve before stdout, commit only after successful output. A crash or
     // broken pipe leaves a recoverable reservation rather than losing input.
-    for (index, messages) in &deliveries {
-        receive_answers(ctx, &mut state, *index, messages)?;
-    }
     let reader = std::env::var("CODEX_THREAD_ID").unwrap_or_else(|_| "replies-command".into());
     let job = crate::questions::posting_job(ctx)?;
     for (index, messages) in &deliveries {
@@ -320,28 +317,71 @@ pub fn cmd_replies(ctx: &mut Context, thread: Option<&str>) -> Result<Value> {
         }
     }
     ctx.save(&state)?;
-    ctx.effects.reply_output(&python_json(&value, Some(1))?)?;
+    // Reserve before any receipt HTTP or output can wait, so the background
+    // worker cannot launch a second consumer while this reader is in flight.
     for (index, messages) in &deliveries {
+        if let Err(error) = receive_answers(ctx, &mut state, *index, messages) {
+            // No stdout has been delivered. Release this reader's reservations
+            // immediately; durable acknowledgement receipts remain retryable.
+            for (_, pending) in &deliveries {
+                for message in pending {
+                    let receipt = &mut state["answer_receipts"][s(&message["id"])];
+                    if let Some(receipt) = receipt.as_object_mut() {
+                        receipt.remove("read_reservation");
+                        receipt.insert("read_retry".into(), json!(true));
+                    }
+                }
+            }
+            ctx.save(&state)?;
+            return Err(error);
+        }
+    }
+    ctx.effects.reply_output(&python_json(&value, Some(1))?)?;
+    // Successful output is an irreversible delivery fact, independent of a
+    // concurrently changed snooze or question generation. Commit only that fact
+    // into fresh state instead of retrying the worker's stale whole question.
+    let _state_guard = lock(ctx)?;
+    let mut current = ctx.load_fresh()?;
+    for (index, messages) in &deliveries {
+        let original = &state["questions"][*index];
         for message in messages {
             let id = s(&message["id"]);
-            state["answer_receipts"][id]["read_by"] = json!(reader);
-            state["answer_receipts"][id]
-                .as_object_mut()
-                .unwrap()
-                .remove("read_reservation");
-            state["answer_receipts"][id]
+            if current["answer_receipts"][id]["read_by"].is_null() {
+                current["answer_receipts"][id]["read_by"] = json!(reader);
+            }
+            if s(&current["answer_receipts"][id]["read_reservation"]["reader"]) == reader {
+                current["answer_receipts"][id]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("read_reservation");
+            }
+            current["answer_receipts"][id]
                 .as_object_mut()
                 .unwrap()
                 .remove("read_retry");
         }
-        if !crate::snooze::paused(&state["questions"][*index], ctx.now()) {
-            acknowledge_reply(
-                &mut state["questions"][*index],
-                s(&messages.last().unwrap()["id"]),
-            );
+        if let Some(question) = current["questions"]
+            .as_array_mut()
+            .ok_or("missing questions")?
+            .iter_mut()
+            .find(|q| {
+                [
+                    "thread_id",
+                    "after",
+                    "asked_at",
+                    "source",
+                    "question_message",
+                ]
+                .iter()
+                .all(|k| q[*k] == original[*k])
+            })
+            .filter(|q| !crate::snooze::paused(q, ctx.now()))
+        {
+            acknowledge_reply(question, s(&messages.last().unwrap()["id"]));
         }
     }
-    ctx.save(&state)?;
+    atomic_json(&ctx.here.join("state.json"), &current, 2)?;
+    drop(_state_guard);
     Ok(value)
 }
 
@@ -415,6 +455,7 @@ pub fn cmd_snooze(ctx: &mut Context, thread: &str, until: &str) -> Result<()> {
     question["remind_not_before_iso"] = json!(deadline.to_rfc3339());
     question["remind_set_at"] = json!(ctx.now());
     ctx.save(&state)?;
+    drop(_guard);
     print_json(
         &json!({"thread_id":thread,"remind_not_before":deadline.to_rfc3339()}),
         None,
@@ -423,7 +464,7 @@ pub fn cmd_snooze(ctx: &mut Context, thread: &str, until: &str) -> Result<()> {
 
 /// Re-mention the owner on open questions that got no reply for an hour (owner rule, 2026-09-29).
 pub fn cmd_remind(ctx: &mut Context) -> Result<()> {
-    let _guard = lock(ctx)?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     remind_locked(ctx)
 }
 
@@ -434,7 +475,7 @@ pub fn remind_locked(ctx: &mut Context) -> Result<()> {
 /// Archive quiet task threads, except open questions and threads owned by active jobs.
 /// Progress edits do not advance last_message_id, so message age alone cannot show idleness.
 pub fn cmd_sweep(ctx: &mut Context) -> Result<()> {
-    let _guard = lock(ctx)?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let state = ctx.load()?;
     let questions: HashSet<_> = state["questions"]
         .as_array()
@@ -466,6 +507,19 @@ pub fn cmd_sweep(ctx: &mut Context) -> Result<()> {
             tid
         };
         if snowflake_time(latest) < cutoff {
+            let Ok(_question_delivery) =
+                crate::attachments::question_lock_for(ctx, tid, Duration::ZERO)
+            else {
+                continue;
+            };
+            // A foreground post may have registered an open question while the
+            // sweep was fetching Discord. Protect only this destination until PATCH.
+            if ctx.load_fresh()?["questions"].as_array().is_some_and(|qs| {
+                qs.iter()
+                    .any(|q| s(&q["thread_id"]) == tid && truth(&q["open"]))
+            }) {
+                continue;
+            }
             let Some(_ownership) = crate::sweep::archive_guard(ctx, tid)? else {
                 continue;
             };
@@ -496,7 +550,8 @@ pub fn cmd_sweep(ctx: &mut Context) -> Result<()> {
 
 /// Archive matching registered questions and persist their closed state.
 pub fn cmd_close(ctx: &mut Context, thread: &str) -> Result<()> {
-    let _guard = lock(ctx)?;
+    let _question_delivery = crate::attachments::question_lock(ctx, thread)?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let mut state = ctx.load()?;
     for question in state["questions"].as_array_mut().ok_or("ValueError")? {
         if s(&question["thread_id"]) == thread {
@@ -546,7 +601,8 @@ pub fn cmd_log_attached(
     }
     let thread_id;
     {
-        let _guard = lock(ctx)?;
+        let _guard =
+            ByteLock::acquire(&ctx.here.join("log-threads.lock"), Duration::from_secs(60))?;
         let path = ctx.here.join("log_threads.json");
         let mut known = if path.exists() {
             read_json(&path)?
@@ -605,8 +661,20 @@ pub fn cmd_post(
         return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
     }
     let is_question = crate::questions::is_question(&body);
-    let _guard = if is_question { Some(lock(ctx)?) } else { None };
+    let _guard = if is_question {
+        Some(crate::attachments::question_lock(ctx, thread)?)
+    } else {
+        None
+    };
     if is_question {
+        let recovered = crate::attachments::recover_posted(
+            ctx,
+            thread,
+            &body,
+            prepared.as_ref(),
+            notify,
+            &channel,
+        )?;
         let caller = crate::questions::posting_job(ctx)?;
         if let Some(answer) = crate::questions::answered_repost(
             ctx,
@@ -615,7 +683,7 @@ pub fn cmd_post(
             caller.as_deref(),
             &crate::attachments::fingerprints(prepared.as_ref())?,
         )? {
-            let value = json!({"thread_id":thread,"message_ids":[],"suppressed":"already_answered","latest_owner_reply":answer});
+            let value = json!({"thread_id":thread,"message_ids":recovered,"suppressed":"already_answered","latest_owner_reply":answer});
             print_json(&value, None)?;
             return Ok(value);
         }
@@ -727,7 +795,7 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
 
 fn external_step(ctx: &mut Context, path: PathBuf, verb: &str, report_json: bool) -> Result<()> {
     let argv = command_argv(&path, &[verb.to_owned()]);
-    let output = ctx.effects.run(&argv, 20)?;
+    let output = ctx.run(&argv, 20)?;
     // scheduler.main prints the returned report; scheduler.step itself does not.
     let stdout = if report_json {
         inprocess_stdout(&output.stdout)

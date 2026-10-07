@@ -1668,6 +1668,14 @@ fn review_preserves_facts_and_uses_jobs_executable() {
         .args
         .windows(2)
         .any(|s| s == ["--sandbox", "read-only"]));
+    assert!(r.calls[0]
+        .args
+        .windows(2)
+        .any(|s| s == ["--model", "gpt-6-luna"]));
+    assert!(r.calls[0]
+        .args
+        .windows(2)
+        .any(|s| s == ["--effort", "high"]));
     assert_eq!(r.printed, vec!["job-id"]);
 }
 #[test]

@@ -531,10 +531,10 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     if supplied.is_some_and(|p| p > 100) {
         return Err("進み具合は0〜100で記録してください".into());
     }
-    if let Command::Progress { percent, clear, .. } = cmd {
-        if percent.is_some() == *clear {
-            return Err("進み具合の数値か --clear を指定してください".into());
-        }
+    if let Command::Progress { percent, clear, .. } = cmd
+        && percent.is_some() == *clear
+    {
+        return Err("進み具合の数値か --clear を指定してください".into());
     }
     let mut output = Vec::new();
     match cmd {

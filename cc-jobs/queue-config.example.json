@@ -1,4 +1,5 @@
 {
+  "context_limit_percent": 50,
   "max_running": 6,
   "max_children_per_parent": 2,
   "max_429_retries": 5,

@@ -640,11 +640,11 @@ pub fn run_watch(
             // Subsequent retries must preserve the accepted request's exact body.
             let mut effective = p.clone();
             if !launched && p["handoff_saved"] != true && p["job"].is_object() {
-                if let Ok(handoff) = backend.handoff(&p["job"]) {
-                    if !handoff.is_empty() {
-                        effective["job"]["recovery_prompt"] = json!(handoff);
-                        effective["prompt"] = json!(continuation(&item, &effective["job"]));
-                    }
+                if let Ok(handoff) = backend.handoff(&p["job"])
+                    && !handoff.is_empty()
+                {
+                    effective["job"]["recovery_prompt"] = json!(handoff);
+                    effective["prompt"] = json!(continuation(&item, &effective["job"]));
                 }
                 effective["handoff_saved"] = json!(true);
                 edit(paths, |db| {
@@ -1201,6 +1201,7 @@ pub fn restart_args(
             v.to_owned()
         }
     };
+    let profile = cc_job_policy::model_profile(s(&job["name"]), s(&job["task_type"]));
     let mut args = vec![
         "run".into(),
         "--name".into(),
@@ -1212,9 +1213,9 @@ pub fn restart_args(
         "--todo-id".into(),
         item["id"].to_string(),
         "--model".into(),
-        val("model", "gpt-6.1-sol"),
+        val("model", profile.model),
         "--effort".into(),
-        val("effort", "high"),
+        val("effort", profile.effort),
         "--cwd".into(),
         val("cwd", project_path),
         "--sandbox".into(),

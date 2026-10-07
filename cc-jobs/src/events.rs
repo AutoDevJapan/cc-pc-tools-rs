@@ -384,6 +384,7 @@ pub fn apply_token_count(job: &mut Value, p: &Value) {
         info["last_token_usage"]["total_tokens"].as_f64(),
     ) && w != 0.
     {
+        job["context_pct_exact"] = json!(100. * last / w);
         job["context_pct"] = json!((100. * last / w).round_ties_even() as i64);
     }
     if !p["rate_limits"]["primary"]["used_percent"].is_null() {

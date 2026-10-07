@@ -102,6 +102,212 @@ mod queue_regressions {
             .collect();
         fs::write(t.ctx.job_dir("long").join("events.jsonl"), text).unwrap();
     }
+    #[test]
+    fn context_limit_rotates_a_short_job_only_at_the_existing_idle_boundary() {
+        for (pct, limit, phase, expected) in [
+            (50, 50, "", false),
+            (51, 50, "", true),
+            (60, 70, "", false),
+            (90, 50, "summarize", false),
+        ] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1,"context_limit_percent":limit}));
+            let mut parent = live_tool_parent(&t);
+            parent["started_at"] = json!("2026-10-01T11:59:00+09:00");
+            parent["context_pct"] = json!(pct);
+            parent["context_phase"] = json!(phase);
+            t.ctx.save(&parent).unwrap();
+            tool_events(&t, &[("item.started", "cargo")]);
+            assert!(t.ctx.admit("other").unwrap().is_none());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            tool_events(
+                &t,
+                &[("item.started", "cargo"), ("item.completed", "cargo")],
+            );
+            assert_eq!(t.ctx.admit("other").unwrap().is_some(), expected);
+            if expected {
+                let saved = t.ctx.load("long").unwrap();
+                assert_eq!(saved["context_phase"], "summarize");
+                assert_eq!(saved["resume_session"], SESSION_ID);
+                assert_eq!(saved["todo_id"], 1956);
+                assert!(
+                    fs::read_to_string(t.ctx.job_dir("long").join("context-summary-prompt.md"))
+                        .unwrap()
+                        .contains("関係ファイルとPR")
+                );
+            }
+        }
+    }
+    #[test]
+    fn context_handoff_resumes_for_summary_then_starts_fresh_with_the_same_todo_and_scope() {
+        let t = Test::new();
+        let mut j = waiting(&t, "handoff", "req-handoff");
+        j["context_phase"] = json!("summarize");
+        j["context_source_session"] = json!(SESSION_ID);
+        j["resume_session"] = json!(SESSION_ID);
+        j["thread_id"] = json!(SESSION_ID);
+        j["context_pct"] = json!(90);
+        j["todo_id"] = json!(1972);
+        j["sandbox"] = json!("danger-full-access");
+        t.ctx.save(&j).unwrap();
+        let dir = t.ctx.job_dir("handoff");
+        fs::write(dir.join("prompt.md"), "元の依頼全文と受入条件").unwrap();
+        fs::write(
+            dir.join("context-summary-prompt.md"),
+            "引き継ぎだけを書いてください",
+        )
+        .unwrap();
+        let seq = AtomicUsize::new(0);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            let text = if seq.fetch_add(1, Ordering::Relaxed) == 0 {
+                let summary = "## 目的\n消費を減らす\n## 終わったこと\nPRのpush済み\n## 残り\nテスト\n## 次の一手\ncargo test\n## 関係ファイルとPR\nD:/work/src.rs\n## 最新の指示と注意点\nRustのみ、送信を繰り返さない\n";
+                format!(
+                    "{}\n{}\n{}\n",
+                    json!({"type":"thread.started","thread_id":SESSION_ID}),
+                    json!({"type":"item.completed","item":{"type":"agent_message","text":summary}}),
+                    json!({"type":"turn.completed","usage":{}})
+                )
+            } else {
+                OK.into()
+            };
+            Box::new(FakeChild {
+                alive: Arc::new(AtomicBool::new(false)),
+                out: Some(Box::new(Cursor::new(text.into_bytes()))),
+            })
+        }));
+        t.ctx.supervise("handoff").unwrap();
+        let saved = t.ctx.load("handoff").unwrap();
+        assert_eq!(saved["status"], "succeeded");
+        assert_eq!(saved["context_rotation_count"], 1);
+        assert_eq!(saved["todo_id"], 1972);
+        assert_eq!(saved["sandbox"], "danger-full-access");
+        assert!(saved["context_pct"].is_null());
+        assert!(
+            fs::read_to_string(dir.join("context-continue.md"))
+                .unwrap()
+                .contains("PRのpush済み")
+        );
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 2);
+        assert!(args[0].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        assert!(args[0].windows(2).any(|w| w == ["-s", "read-only"]));
+        assert!(!args[1].iter().any(|a| a == "resume"));
+        assert!(
+            args[1]
+                .windows(2)
+                .any(|w| w == ["-s", "danger-full-access"])
+        );
+    }
+    #[test]
+    fn context_rotation_waits_for_descendants_and_does_not_resurrect_terminal_work() {
+        for case in ["child", "cancel", "turn.completed", "turn.failed"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1}));
+            let mut parent = live_tool_parent(&t);
+            parent["context_pct"] = json!(90);
+            if case == "cancel" {
+                parent["cancel_requested"] = json!(true);
+            }
+            t.ctx.save(&parent).unwrap();
+            tool_events(
+                &t,
+                &[("item.started", "cargo"), ("item.completed", "cargo")],
+            );
+            if case == "child" {
+                let mut child = waiting(&t, "child", "rev-child");
+                child["parent_job_id"] = json!("long");
+                t.ctx.save(&child).unwrap();
+            } else if case.starts_with("turn.") {
+                use std::io::Write;
+                writeln!(
+                    fs::OpenOptions::new()
+                        .append(true)
+                        .open(t.ctx.job_dir("long").join("events.jsonl"))
+                        .unwrap(),
+                    "{}",
+                    json!({"type":case,"_ts":t.rt.now()})
+                )
+                .unwrap();
+            }
+            let admission = t.ctx.admit("other").unwrap();
+            if ["child", "cancel"].contains(&case) {
+                assert!(admission.is_none(), "{case}");
+            }
+            assert!(t.rt.kills.lock().unwrap().is_empty(), "{case}");
+            assert_ne!(
+                t.ctx.load("long").unwrap()["context_phase"],
+                "summarize",
+                "{case}"
+            );
+        }
+    }
+    #[test]
+    fn context_uses_unrounded_usage_and_disables_discovered_tools_for_the_summary() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = live_tool_parent(&t);
+        parent["started_at"] = json!("2026-10-01T11:59:00+09:00");
+        parent["mcp_profile"] = json!("full");
+        apply_token_count(
+            &mut parent,
+            &json!({"info":{"model_context_window":1000,"last_token_usage":{"total_tokens":501}}}),
+        );
+        assert_eq!(parent["context_pct"], 50);
+        t.ctx.save(&parent).unwrap();
+        tool_events(
+            &t,
+            &[("item.started", "cargo"), ("item.completed", "cargo")],
+        );
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        let summary = t.ctx.load("long").unwrap();
+        let args = codex_args(&summary, &t.ctx.job_dir("long"));
+        for required in [
+            "features.plugins=false",
+            "features.apps=false",
+            "features.shell_tool=false",
+            "web_search=disabled",
+            "mcp_servers.'stripe'.enabled=false",
+            "mcp_servers.'unseen-server'.enabled=false",
+        ] {
+            assert!(args.iter().any(|a| a == required), "{required}");
+        }
+        assert!(!args.iter().any(|a| a.contains("enabled=true")));
+    }
+    #[test]
+    fn invalid_or_unwritable_context_summary_retains_the_session_and_never_reports_success() {
+        for broken in ["content", "context-continue.md", "context-handoff.md"] {
+            let t = Test::new();
+            let mut j = waiting(&t, "handoff", "req-handoff");
+            j["context_phase"] = json!("summarize");
+            j["context_source_session"] = json!(SESSION_ID);
+            j["resume_session"] = json!(SESSION_ID);
+            j["thread_id"] = json!(SESSION_ID);
+            t.ctx.save(&j).unwrap();
+            let dir = t.ctx.job_dir("handoff");
+            fs::write(dir.join("context-summary-prompt.md"), "summary").unwrap();
+            if broken != "content" {
+                fs::create_dir(dir.join(broken)).unwrap();
+            }
+            let summary = if broken == "content" {
+                "不足した引き継ぎ"
+            } else {
+                "## 目的\n1\n## 終わったこと\n2\n## 残り\n3\n## 次の一手\n4\n## 関係ファイルとPR\n5\n## 最新の指示と注意点\n6"
+            };
+            *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+                Box::new(FakeChild {
+                alive: Arc::new(AtomicBool::new(false)),
+                out: Some(Box::new(Cursor::new(format!("{}\n{}\n{}\n", json!({"type":"thread.started","thread_id":SESSION_ID}), json!({"type":"item.completed","item":{"type":"agent_message","text":summary}}), json!({"type":"turn.completed"})).into_bytes())))
+            })
+            }));
+            t.ctx.supervise("handoff").unwrap();
+            let saved = t.ctx.load("handoff").unwrap();
+            assert_eq!(saved["status"], "failed", "{broken}");
+            assert_eq!(saved["resume_session"], SESSION_ID);
+            assert_eq!(saved["thread_id"], SESSION_ID);
+            assert_eq!(saved["context_phase"], "summarize");
+            assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+        }
+    }
     fn collab(t: &Test, id: &str, tool: &str, child: &str, status: &str) {
         use std::io::Write;
         let path = t.ctx.job_dir("long").join("events.jsonl");
@@ -1534,6 +1740,57 @@ fn events(text: &str) -> Vec<Value> {
 fn new_job() -> Value {
     json!({"id":"20260929-000000-t","name":"t","model":"gpt-6-luna","effort":"max","sandbox":"read-only","cwd":"D:/work","created_at":"2026-10-01T12:00:00+09:00","status":"queued","pid":null,"steps":0,"tokens":{"total":0},"activity":"queued","last_error":null,"duration_ms":null})
 }
+#[test]
+fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
+    for (name, kind, expected) in [
+        ("rev-19", "review", "gpt-6-luna"),
+        ("task-review", "", "gpt-6-luna"),
+        ("req-19", "implementation", "gpt-6.1-sol"),
+        ("req-19", "research", "gpt-6-luna"),
+    ] {
+        let base = [
+            "run",
+            "--name",
+            name,
+            "--prompt-file",
+            "prompt.md",
+            "--task-type",
+            kind,
+        ];
+        let defaults =
+            cc_jobs::cli::parse(&base.iter().map(|s| s.to_string()).collect::<Vec<_>>()).unwrap();
+        assert_eq!(defaults.required("model").unwrap(), expected);
+        assert_eq!(defaults.required("effort").unwrap(), "high");
+        for explicit in [
+            vec!["--model", "gpt-6-astra"],
+            vec!["--effort", "max"],
+            vec!["--model", "gpt-6-astra", "--effort", "max"],
+        ] {
+            let args = base
+                .iter()
+                .chain(explicit.iter())
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>();
+            let parsed = cc_jobs::cli::parse(&args).unwrap();
+            assert_eq!(
+                parsed.required("model").unwrap(),
+                if explicit.contains(&"--model") {
+                    "gpt-6-astra"
+                } else {
+                    expected
+                }
+            );
+            assert_eq!(
+                parsed.required("effort").unwrap(),
+                if explicit.contains(&"--effort") {
+                    "max"
+                } else {
+                    "high"
+                }
+            );
+        }
+    }
+}
 fn patch(mut j: Value, p: Value) -> Value {
     j.as_object_mut()
         .unwrap()
@@ -1726,6 +1983,9 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
+        Ok(vec!["stripe".into(), "unseen-server".into()])
+    }
     fn recover_paused(&self, path: &Path) -> io::Result<()> {
         self.pause_recoveries.lock().unwrap().push(
             path.parent()

@@ -51,6 +51,7 @@ pub fn normalize_uuid(text: &str) -> Option<String> {
 
 #[derive(Clone, Debug)]
 pub struct Call {
+    pub cwd: Option<PathBuf>,
     pub argv: Vec<String>,
     pub input: Vec<u8>,
     pub timeout: f64,
@@ -59,6 +60,7 @@ pub struct Call {
 impl Call {
     pub fn new(argv: Vec<String>, input: Vec<u8>, timeout: f64) -> Self {
         Self {
+            cwd: None,
             argv,
             input,
             timeout,
@@ -171,6 +173,51 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// Query public server metadata with plugins/apps disabled. Never retain
+    /// transport environments or print the CLI's response to diagnostics.
+    fn summary_mcp_servers(&self, codex: &str, cwd: &Path) -> io::Result<Vec<String>> {
+        let mut call = Call::new(
+            vec![
+                "cmd.exe".into(),
+                "/d".into(),
+                "/c".into(),
+                codex.into(),
+                "mcp".into(),
+                "list".into(),
+                "--json".into(),
+                "-c".into(),
+                "features.plugins=false".into(),
+                "-c".into(),
+                "features.apps=false".into(),
+            ],
+            vec![],
+            20.,
+        );
+        call.cwd = Some(cwd.into());
+        let reply = self.call(call)?;
+        if reply.code != 0 {
+            return Err(io::Error::other("summary MCP inventory unavailable"));
+        }
+        let entries: Vec<Value> = serde_json::from_slice(&reply.stdout)
+            .map_err(|_| io::Error::other("invalid summary MCP inventory"))?;
+        entries
+            .iter()
+            .map(|entry| {
+                let name = entry["name"]
+                    .as_str()
+                    .ok_or_else(|| io::Error::other("missing MCP name"))?;
+                if name.is_empty()
+                    || name.len() > 120
+                    || !name
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c))
+                {
+                    return Err(io::Error::other("invalid MCP name"));
+                }
+                Ok(name.to_string())
+            })
+            .collect()
+    }
     /// Freeze only idle Codex controllers. None means a tool/worker is still live.
     fn pause_idle_agent(
         &self,
@@ -347,6 +394,9 @@ impl Runtime for System {
     }
     fn call(&self, call: Call) -> io::Result<Reply> {
         let mut cmd = hidden_command(&call.argv[0]);
+        if let Some(cwd) = &call.cwd {
+            cmd.current_dir(cwd);
+        }
         cmd.args(&call.argv[1..])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

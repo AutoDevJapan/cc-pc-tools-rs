@@ -463,6 +463,7 @@ fn retired_start_preserves_existing_ledgers_and_protected_paths_fail_closed() {
 #[test]
 fn routing_preserves_backlog_and_adopts_lost_response_once() {
     let mut h = setup();
+    let external_cwd = tempfile::tempdir_in(r"C:\Windows\Temp").unwrap();
     let now = h.fake.borrow().now;
     let since = now - 3600.;
     let mid = (((now * 1000. - 1420070400000.) as u64) << 22).to_string();
@@ -473,7 +474,7 @@ fn routing_preserves_backlog_and_adopts_lost_response_once() {
         .messages
         .insert(tid.into(), vec![message(&mid, "テストを追加して", "OWN")]);
     // Closed question routes to the original work, using a fixture directory.
-    h.save(&json!({"questions":[{"thread_id":tid,"after":"10","cwd":h.root.path(),"open":false,"title":"質問"}]}));
+    h.save(&json!({"questions":[{"thread_id":tid,"after":"10","cwd":external_cwd.path(),"open":false,"title":"質問"}]}));
     atomic_json(
         &h.ctx.here.join("automation.json"),
         &json!({"enabled":true,"since":since}),
@@ -488,6 +489,12 @@ fn routing_preserves_backlog_and_adopts_lost_response_once() {
     .unwrap();
     h.fake.borrow_mut().lose_launch_response = true;
     let report = routing::run(&mut h.ctx, &mut false).unwrap();
+    let failed_ledger = read_json(&h.ctx.here.join("routing_state.json")).unwrap();
+    assert_eq!(
+        report["errors"], 0,
+        "routing errors: {report}; row: {}",
+        failed_ledger["messages"][&mid]
+    );
     assert_eq!(report["launched"], json!(["job1"]));
     assert_eq!(h.fake.borrow().launches.len(), 1);
     routing::run(&mut h.ctx, &mut false).unwrap();

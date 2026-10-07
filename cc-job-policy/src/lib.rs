@@ -6,6 +6,62 @@ pub struct Policy {
     pub reviewer: &'static str,
 }
 
+/// Default model settings for an automatically routed job. Callers must keep
+/// explicit model/effort values and use this only when the router chooses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModelProfile {
+    pub model: &'static str,
+    pub effort: &'static str,
+}
+
+/// Shared classifier for launchers that know a job name and/or a router task
+/// type. Prompt text is deliberately not inspected: implementation requests
+/// often mention reviews while still requiring full implementation capability.
+pub fn model_profile(job_name: &str, task_type: &str) -> ModelProfile {
+    let name = job_name.to_ascii_lowercase();
+    let kind = task_type.to_ascii_lowercase();
+    let light_name = name.starts_with("rev-")
+        || name.ends_with("-review")
+        || [
+            "diag-",
+            "audit-",
+            "inspect-",
+            "check-",
+            "verify-",
+            "research-",
+            "cleanup-",
+            "clean-",
+        ]
+        .iter()
+        .any(|prefix| name.starts_with(prefix));
+    let light_kind = [
+        "review",
+        "code_review",
+        "documentation",
+        "research",
+        "live_debug",
+        "verification",
+        "check",
+        "confirmation",
+        "audit",
+        "inspection",
+        "cleanup",
+        "housekeeping",
+    ]
+    .contains(&kind.as_str());
+    if light_name || light_kind {
+        ModelProfile {
+            model: "gpt-6-luna",
+            effort: "high",
+        }
+    } else {
+        ModelProfile {
+            model: "gpt-6.1-sol",
+            effort: "high",
+        }
+    }
+}
+
 /// Model routing labels are not permission boundaries: a review may include fixes.
 pub fn for_task(_task_type: &str, requested_sandbox: &str) -> Policy {
     if requested_sandbox == "read-only" {
@@ -136,5 +192,45 @@ mod tests {
             );
             assert_eq!(for_task(task, "read-only"), for_sandbox("read-only"));
         }
+    }
+
+    #[test]
+    fn model_profiles_classify_job_names_and_task_types_without_reading_prompts() {
+        let light = ModelProfile {
+            model: "gpt-6-luna",
+            effort: "high",
+        };
+        let full = ModelProfile {
+            model: "gpt-6.1-sol",
+            effort: "high",
+        };
+        for name in [
+            "rev-123",
+            "abc-review",
+            "diag-123",
+            "audit-123",
+            "inspect-123",
+            "check-123",
+            "verify-123",
+            "cleanup-123",
+            "clean-123",
+            "research-123",
+        ] {
+            assert_eq!(model_profile(name, "implementation"), light, "{name}");
+        }
+        for kind in [
+            "review",
+            "code_review",
+            "documentation",
+            "research",
+            "live_debug",
+            "verification",
+            "cleanup",
+            "confirmation",
+        ] {
+            assert_eq!(model_profile("req-123", kind), light, "{kind}");
+        }
+        assert_eq!(model_profile("shep-123", "pr_shepherd"), full);
+        assert_eq!(model_profile("req-123", "implementation"), full);
     }
 }

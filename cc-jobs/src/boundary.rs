@@ -307,7 +307,7 @@ impl Context {
     /// Caller holds the queue gate. Freeze controllers before checking again;
     /// never kill a process simply because its tool returned a background session.
     pub(crate) fn yield_tool_boundary(&self, snapshot: &Value, jobs: &[Value]) -> Result<bool> {
-        if !self.should_yield(snapshot, jobs)
+        if !(self.context_rotation_due(snapshot, jobs) || self.should_yield(snapshot, jobs))
             || !self.is_ours(snapshot, "codex_pid")
             || self.owns_civ6_lease(snapshot)?
         {
@@ -370,7 +370,8 @@ impl Context {
         let job = self.load(s(snapshot, "id"))?;
         if job["started_at"] != snapshot["started_at"]
             || job["codex_pid_created"] != snapshot["codex_pid_created"]
-            || !self.should_yield(&job, &self.admission_jobs()?)
+            || !(self.context_rotation_due(&job, &self.admission_jobs()?)
+                || self.should_yield(&job, &self.admission_jobs()?))
             || self.owns_civ6_lease(&job)?
             || !self.rollout_ready(&job)?
         {
@@ -439,6 +440,9 @@ impl Context {
         job["queue_sequence"] = json!(self.next_queue_sequence()?);
         job["retry_not_before"] = Value::Null;
         job["activity"] = json!("順番待ち: ツール完了後に枠を譲りました");
+        if self.context_rotation_due(&self.load(s(job, "id"))?, &self.admission_jobs()?) {
+            self.prepare_context_summary(job, &session)?;
+        }
         Ok(())
     }
     fn commit_tool_yield(&self, journal: &Value) -> Result<()> {

@@ -1,7 +1,7 @@
 //! Recover already delivered questions. Inspection uses only GET; registration never posts.
 use crate::{core::*, project::ProjectNames};
 use serde_json::{json, Value};
-use std::{collections::BTreeSet, time::Duration};
+use std::collections::BTreeSet;
 
 /// Before a delayed worker posts a question, check the owner's actual thread
 /// history. An old worker must read a newer answer before asking again.
@@ -268,7 +268,8 @@ pub fn register_posted(state: &mut Value, channel: &Value, first: &str, ids: &[S
         let q = state["questions"]
             .as_array_mut()
             .unwrap()
-            .last_mut()
+            .iter_mut()
+            .find(|q| s(&q["thread_id"]) == tid && s(&q["after"]) == first)
             .unwrap();
         q["question_message"] = json!(first);
         q["source"] = json!(if s(&channel["parent_id"]) == REQUEST_CHANNEL_ID {
@@ -292,9 +293,6 @@ pub fn register_posted(state: &mut Value, channel: &Value, first: &str, ids: &[S
         .find(|q| s(&q["thread_id"]) == tid && s(&q["question_message"]) == first)
     {
         q["message_ids"] = json!(ids);
-        if !exists {
-            q["open"] = json!(true);
-        }
         // Keep the first posted ID: an answer between chunks must not disappear.
     }
 }
@@ -367,10 +365,7 @@ pub fn recover(ctx: &mut Context, args: &RecoverArgs) -> Result<Value> {
         }
     }
     let _guard = if args.apply {
-        Some(ByteLock::acquire(
-            &ctx.here.join("state.lock"),
-            Duration::from_secs(60),
-        )?)
+        Some(crate::state_work::StateWork::begin(ctx)?)
     } else {
         None
     };

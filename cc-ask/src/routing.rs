@@ -2,7 +2,7 @@
 use crate::{automation::*, core::*, resume::*};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+use std::{collections::BTreeMap, path::PathBuf};
 
 /// Old automatic routing records are not genuine registered questions.
 /// Revalidate their Discord origin before any legacy answer handler uses them.
@@ -149,10 +149,10 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
         if !board_id.is_empty() && id == board_id && !inbox_only {
             continue;
         }
-        if !inbox_only
-            && s(&t["parent_id"]) != REQUEST_CHANNEL_ID
-            && !known.contains(&id)
-            && !(s(&t["parent_id"]) == task_channel && !bot.is_empty() && s(&t["owner_id"]) == bot)
+        if !(inbox_only
+            || s(&t["parent_id"]) == REQUEST_CHANNEL_ID
+            || known.contains(&id)
+            || (s(&t["parent_id"]) == task_channel && !bot.is_empty() && s(&t["owner_id"]) == bot))
         {
             continue;
         }
@@ -516,7 +516,7 @@ pub fn run(ctx: &mut Context, budget: &mut bool) -> Result<Value> {
     let Some(since) = enabled(ctx)? else {
         return Ok(json!({"disabled":true}));
     };
-    let _lock = ByteLock::acquire(&ctx.here.join("state.lock"), Duration::from_secs(60))?;
+    let _work = crate::state_work::StateWork::begin(ctx)?;
     let path = ctx.here.join("routing_state.json");
     let mut ledger = read_or(&path, json!({"messages":{}}))?;
     if !ledger["messages"].is_object() {

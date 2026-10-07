@@ -787,7 +787,27 @@ pub(crate) fn post_tracked_locked(
     notify: bool,
     question: Option<&Value>,
 ) -> Result<Vec<String>> {
-    deliver_question(ctx, thread, body, prepared, (notify, false), question)
+    post_tracked_locked_with_context(ctx, thread, body, prepared, notify, question, None)
+}
+
+pub(crate) fn post_tracked_locked_with_context(
+    ctx: &mut Context,
+    thread: &str,
+    body: &str,
+    prepared: Option<&Prepared>,
+    notify: bool,
+    question: Option<&Value>,
+    context: Option<&Value>,
+) -> Result<Vec<String>> {
+    deliver_question(
+        ctx,
+        thread,
+        body,
+        prepared,
+        (notify, false),
+        question,
+        context,
+    )
 }
 
 /// Recover only already delivered parts before a newer owner answer suppresses
@@ -799,8 +819,17 @@ pub(crate) fn recover_posted(
     prepared: Option<&Prepared>,
     notify: bool,
     question: &Value,
+    context: Option<&Value>,
 ) -> Result<Vec<String>> {
-    deliver_question(ctx, thread, body, prepared, (notify, true), Some(question))
+    deliver_question(
+        ctx,
+        thread,
+        body,
+        prepared,
+        (notify, true),
+        Some(question),
+        context,
+    )
 }
 
 fn deliver_question(
@@ -810,6 +839,7 @@ fn deliver_question(
     prepared: Option<&Prepared>,
     mode: (bool, bool),
     question: Option<&Value>,
+    context: Option<&Value>,
 ) -> Result<Vec<String>> {
     let (notify, recover_only) = mode;
     let fingerprints = if question.is_some() {
@@ -835,11 +865,70 @@ fn deliver_question(
     } else {
         None
     };
+    let existing_ledger = ledger_path.as_ref().is_some_and(|p| p.is_file());
     let mut ledger = match ledger_path.as_ref().filter(|p| p.is_file()) {
         Some(p) => read_json(p)?,
         None if recover_only => return Ok(vec![]),
         None => json!({"parts":{}}),
     };
+    // Keep the original sender's context in the pre-send ledger. Response-loss
+    // recovery and later chunks register the same owner, even from a new process.
+    if question.is_some() && ledger["question_context"].is_null() {
+        let mut original = json!({"session_id":null,"posting_job":null});
+        if !existing_ledger {
+            if let Some(context) = context {
+                original = context.clone();
+            }
+            original["session_id"] = json!(std::env::var("CODEX_THREAD_ID")
+                .ok()
+                .filter(|id| !id.is_empty()));
+            original["posting_job"] = json!(crate::questions::posting_job(ctx)?);
+        } else {
+            // Legacy ledgers can only recover an already recorded origin. The
+            // current process is a recovery reader, not evidence of authorship.
+            let state = ctx.load_fresh()?;
+            if let Some(q) = state["questions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|q| {
+                    s(&q["thread_id"]) == thread
+                        && q["question_message"] == ledger["parts"]["0"]["id"]
+                        && !s(&q["question_message"]).is_empty()
+                })
+            {
+                for key in [
+                    "agent",
+                    "cwd",
+                    "project",
+                    "title",
+                    "session_id",
+                    "posting_job",
+                    "source",
+                    "scheduler_item",
+                    "scheduler_job",
+                    "owner_only",
+                ] {
+                    if let Some(value) = q.get(key) {
+                        original[key] = value.clone();
+                    }
+                }
+            }
+        }
+        ledger["question_context"] = original;
+    }
+    // A main's first POST may succeed while its response is lost. Publish the
+    // inbox-only ownership before that effect, so intake cannot adopt its reply
+    // while the per-message question record is still being recovered.
+    if question.is_some() && crate::routing::question_inbox_only(ctx, &ledger["question_context"]) {
+        let _state = ByteLock::acquire(
+            &ctx.here.join("state.lock"),
+            std::time::Duration::from_secs(60),
+        )?;
+        let mut state = ctx.load_fresh()?;
+        state["inbox_only_post_contexts"][thread] = ledger["question_context"].clone();
+        atomic_json(&ctx.here.join("state.json"), &state, 2)?;
+    }
     if ledger_path.is_some() && s(&ledger["sender"]).is_empty() {
         let me = ctx.call("GET", "/users/@me", None)?;
         if s(&me["id"]).is_empty() || !truth(&me["bot"]) {
@@ -931,6 +1020,16 @@ fn deliver_question(
                 .find(|q| s(&q["thread_id"]) == thread && s(&q["question_message"]) == ids[0])
             {
                 q["attachment_hashes"] = json!(fingerprints);
+                if let Some(context) = ledger["question_context"].as_object() {
+                    for (key, value) in context {
+                        q[key] = value.clone();
+                    }
+                }
+            }
+            if state["inbox_only_post_contexts"][thread] == ledger["question_context"] {
+                if let Some(contexts) = state["inbox_only_post_contexts"].as_object_mut() {
+                    contexts.remove(thread);
+                }
             }
             atomic_json(&ctx.here.join("state.json"), &state, 2)?;
         }

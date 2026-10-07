@@ -21,11 +21,12 @@ pub fn question_inbox_only(ctx: &Context, question: &Value) -> bool {
 }
 
 pub fn thread_inbox_only(ctx: &Context, state: &Value, thread: &str) -> bool {
-    state["questions"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .any(|q| s(&q["thread_id"]) == thread && question_inbox_only(ctx, q))
+    question_inbox_only(ctx, &state["inbox_only_post_contexts"][thread])
+        || state["questions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|q| s(&q["thread_id"]) == thread && question_inbox_only(ctx, q))
 }
 
 /// Old automatic routing records are not genuine registered questions.
@@ -67,12 +68,20 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
     let questions = state["questions"]
         .as_array()
         .ok_or("invalid questions ledger")?;
-    let known: std::collections::BTreeSet<String> = questions
+    let mut known: std::collections::BTreeSet<String> = questions
         .iter()
         .filter(|q| s(&q["source"]) != "routing")
         .map(|q| s(&q["thread_id"]).to_owned())
         .filter(|id| !id.is_empty())
         .collect();
+    known.extend(
+        state["inbox_only_post_contexts"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .filter(|(_, context)| question_inbox_only(ctx, context))
+            .map(|(id, _)| id.clone()),
+    );
     let guild = s(&ctx.cfg["guild_id"]).to_string();
     let task_channel = s(&ctx.cfg["task_channel_id"]).to_owned();
     let channels = ctx.call("GET", &format!("/guilds/{guild}/channels"), None)?;
@@ -126,7 +135,7 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
     // Pending questions may be private or absent from an archive page. Do not
     // GET every retired question each minute: a new reply unarchives its thread
     // into the active inventory, while task/forum archives cover rearchived replies.
-    let pending: std::collections::BTreeSet<_> = questions
+    let mut pending: std::collections::BTreeSet<_> = questions
         .iter()
         .filter(|q| {
             s(&q["source"]) != "routing" && (truth(&q["open"]) || truth(&q["continuation"]))
@@ -134,6 +143,14 @@ pub fn allowed_places(ctx: &mut Context, floor: u64) -> Result<BTreeMap<String, 
         .map(|q| s(&q["thread_id"]).to_owned())
         .filter(|id| !id.is_empty())
         .collect();
+    pending.extend(
+        state["inbox_only_post_contexts"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .filter(|(_, context)| question_inbox_only(ctx, context))
+            .map(|(id, _)| id.clone()),
+    );
     for id in &pending {
         if !threads.iter().any(|t| s(&t["id"]) == id) {
             if let Ok(t) = ctx.call("GET", &format!("/channels/{id}"), None) {

@@ -1,0 +1,9 @@
+[profile.default]
+test-threads = 10
+
+[test-groups.process-boundary]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_gate_tests::) | test(end_to_end::))'
+test-group = 'process-boundary'

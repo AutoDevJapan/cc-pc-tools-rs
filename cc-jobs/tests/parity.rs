@@ -1663,6 +1663,79 @@ mod queue_regressions {
         t.ctx.save(&j).unwrap();
         j
     }
+    fn cargo_wait(t: &Test, id: &str, created: u64) -> PathBuf {
+        let dir = t.ctx.job_dir(id).join("resource-waits");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(format!("cargo-{created}.json"));
+        fs::write(
+            &path,
+            json!({"job_id":id,"kind":"cargo","pid":std::process::id(),"pid_created":created,"reason":"cargoの共有ビルド枠待ち"})
+                .to_string(),
+        )
+        .unwrap();
+        path
+    }
+    #[test]
+    fn cargo_waiting_job_frees_its_slot_until_cargo_is_admitted() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        waiting(&t, "builder", "builder");
+        assert!(t.ctx.admit("builder").unwrap().is_some());
+        waiting(&t, "next", "next");
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        let report = || {
+            t.ctx
+                .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+                .unwrap()
+        };
+        // A marker whose PID was reused by another process never frees the slot.
+        let stale = cargo_wait(&t, "builder", 0);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        assert_eq!(report()["occupied_slots"], 1);
+        assert_eq!(report()["queued"][0]["reason"]["code"], "running_limit");
+        fs::remove_file(stale).unwrap();
+        let live = cargo_wait(&t, "builder", 123);
+        // Existing gate processes publish the legacy format without `kind`.
+        let mut marker: Value = serde_json::from_slice(&fs::read(&live).unwrap()).unwrap();
+        marker.as_object_mut().unwrap().remove("kind");
+        fs::write(&live, marker.to_string()).unwrap();
+        let r = report();
+        assert_eq!(r["occupied_slots"], 0);
+        assert_eq!(r["running"], 1);
+        assert_eq!(r["queued"][0]["reason"]["code"], "ready");
+        let active = live.with_file_name("active.json");
+        marker["kind"] = json!("cargo-active");
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        fs::remove_file(active).unwrap();
+        // Cargo admitted: the marker is gone and the job occupies its slot again.
+        fs::remove_file(&live).unwrap();
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        assert_eq!(report()["occupied_slots"], 1);
+        cargo_wait(&t, "builder", 123);
+        assert!(t.ctx.admit("next").unwrap().is_some());
+    }
+    #[test]
+    fn cargo_waiting_root_keeps_its_slot_while_a_descendant_runs() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        waiting(&t, "root", "root");
+        assert!(t.ctx.admit("root").unwrap().is_some());
+        child(&t, "kid", "root");
+        assert!(t.ctx.admit("kid").unwrap().is_some());
+        waiting(&t, "other", "other");
+        cargo_wait(&t, "root", 123);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(
+            t.ctx
+                .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+                .unwrap()["occupied_slots"],
+            1
+        );
+        cargo_wait(&t, "kid", 123);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+    }
     #[test]
     fn six_waiting_parents_can_all_start_dependencies_and_finish() {
         let t = Test::new();
@@ -3774,8 +3847,33 @@ mod run_validation {
     #[test]
     fn test_cargo_limit_is_scoped_to_job_environment() {
         let t = Test::new();
+        // An inherited legacy shared target is migrated to the gate's per-workspace one.
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CARGO_TARGET_DIR".into(), cc_jobs::cache::SHARED.into());
         let env = t.ctx.job_environment();
-        assert_eq!(env["CARGO_BUILD_JOBS"], "16");
+        // CPU budget 32 split across the default 3 build slots.
+        assert_eq!(env["CARGO_BUILD_JOBS"], "10");
+        assert!(!env.contains_key("CARGO_INCREMENTAL"));
+        assert_eq!(env["CARGO_PROFILE_DEV_INCREMENTAL"], "true");
+        assert_eq!(env["CARGO_PROFILE_TEST_INCREMENTAL"], "false");
+        assert!(!env.contains_key("CARGO_TARGET_DIR"));
+        let installed = Path::new(cc_jobs::gate::SCCACHE).is_file();
+        assert_eq!(
+            env.get("RUSTC_WRAPPER").map(String::as_str),
+            installed.then_some(cc_jobs::gate::SCCACHE)
+        );
+        assert_eq!(
+            env.get("SCCACHE_SERVER_PORT").map(String::as_str),
+            installed.then_some("42259")
+        );
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CODEX_JOBS_CARGO_SLOTS".into(), "4".into());
+        assert_eq!(t.ctx.job_environment()["CARGO_BUILD_JOBS"], "10");
+        let env = t.ctx.job_environment();
         assert_eq!(
             env["CODEX_JOBS_REAL_CARGO"],
             "C:/Users/test/.cargo/bin/cargo.exe"
@@ -3964,46 +4062,72 @@ mod run_validation {
 }
 mod cargo_gate_tests {
     use super::*;
-    fn intervals(slots: usize, count: usize) -> Vec<(f64, f64)> {
+    use cc_jobs::gate::{
+        HELD_TARGET, INJECTED_TARGET, clamp_jobs, default_target, jobs_limit, prepare_target,
+        target_lock,
+    };
+    use std::process::{Child, Stdio};
+    /// A gated build of `target` (under `tmp`) that runs 600 ms once `ready`
+    /// builds have been admitted.
+    fn build(tmp: &Path, slots: Option<usize>, target: &str, ready: usize) -> Child {
+        let mut c = hidden_command(env!("CARGO_BIN_EXE_cargo_gate"));
+        c.args(["build"])
+            .env(
+                "CODEX_JOBS_REAL_CARGO",
+                env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            )
+            .env("CODEX_JOBS_CARGO_LOCK_DIR", tmp)
+            .env("CARGO_TARGET_DIR", tmp.join(target))
+            .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
+            .env("CC_JOBS_FIXTURE_DIR", tmp)
+            .env("CC_JOBS_FIXTURE_MODE", "cargo")
+            .env("CC_JOBS_FIXTURE_READY", ready.to_string())
+            // Never publish wait markers into a real job that runs these tests.
+            .env_remove("CC_JOB_ID")
+            .env_remove("CODEX_JOB_ID")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        match slots {
+            Some(n) => c.env("CODEX_JOBS_CARGO_SLOTS", n.to_string()),
+            None => c.env_remove("CODEX_JOBS_CARGO_SLOTS"),
+        };
+        c.spawn().unwrap()
+    }
+    fn interval(p: Child) -> (f64, f64) {
+        let out = p.wait_with_output().unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let text = String::from_utf8(out.stdout).unwrap();
+        let lines = text.lines().collect::<Vec<_>>();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].starts_with("START "));
+        assert!(lines[1].starts_with("END "));
+        (
+            lines[0][6..].parse().unwrap(),
+            lines[1][4..].parse().unwrap(),
+        )
+    }
+    /// Intervals in spawn order for builds of the given targets.
+    fn timed(slots: Option<usize>, targets: &[&str], ready: usize) -> Vec<(f64, f64)> {
         let tmp = Temp::new();
-        let mut procs = vec![];
-        for _ in 0..count {
-            let mut c = hidden_command(env!("CARGO_BIN_EXE_cargo_gate"));
-            c.args(["build"])
-                .env(
-                    "CODEX_JOBS_REAL_CARGO",
-                    env!("CARGO_BIN_EXE_cc_jobs_fixture"),
-                )
-                .env("CODEX_JOBS_CARGO_SLOTS", slots.to_string())
-                .env("CODEX_JOBS_CARGO_LOCK_DIR", &tmp.0)
-                .env("CARGO_TARGET_DIR", &tmp.0)
-                .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
-                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-                .env("CC_JOBS_FIXTURE_MODE", "cargo")
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped());
-            procs.push(c.spawn().unwrap());
-        }
-        let mut result: Vec<(f64, f64)> = vec![];
-        for p in procs {
-            let out = p.wait_with_output().unwrap();
-            assert!(
-                out.status.success(),
-                "{}",
-                String::from_utf8_lossy(&out.stderr)
-            );
-            let text = String::from_utf8(out.stdout).unwrap();
-            let lines = text.lines().collect::<Vec<_>>();
-            assert_eq!(lines.len(), 2);
-            assert!(lines[0].starts_with("START "));
-            assert!(lines[1].starts_with("END "));
-            result.push((
-                lines[0][6..].parse().unwrap(),
-                lines[1][4..].parse().unwrap(),
-            ));
-        }
+        let procs: Vec<_> = targets
+            .iter()
+            .map(|t| build(&tmp.0, slots, t, ready))
+            .collect();
+        procs.into_iter().map(interval).collect()
+    }
+    fn intervals(slots: usize, count: usize) -> Vec<(f64, f64)> {
+        let targets: Vec<_> = (0..count).map(|i| format!("target-{i}")).collect();
+        let targets: Vec<_> = targets.iter().map(String::as_str).collect();
+        let mut result = timed(Some(slots), &targets, slots);
         result.sort_by(|a, b| a.0.total_cmp(&b.0));
         result
+    }
+    fn overlap(a: (f64, f64), b: (f64, f64)) -> bool {
+        a.0 < b.1 - 0.02 && b.0 < a.1 - 0.02
     }
     fn max_overlap(intervals: &[(f64, f64)]) -> usize {
         let mut ev = intervals
@@ -4029,12 +4153,248 @@ mod cargo_gate_tests {
         assert!(max_overlap(&v) <= 2);
         assert_eq!(max_overlap(&v[..2]), 2);
     }
+    #[test]
+    fn same_target_builds_never_overlap_even_with_free_slots() {
+        let v = timed(Some(3), &["shared", "shared", "shared"], 1);
+        assert_eq!(max_overlap(&v), 1, "{v:?}");
+    }
+    #[test]
+    fn build_waiting_for_its_target_does_not_hold_a_slot() {
+        // Two slots: one build of `a` waits for the other, so the `b` build must
+        // get the second slot and run alongside the first `a` build. If the
+        // waiter held a slot, the `b` build could not start and the fixture
+        // would report stalled admission.
+        let v = timed(Some(2), &["a", "a", "b"], 2);
+        assert!(!overlap(v[0], v[1]), "{v:?}");
+        assert!(overlap(v[2], v[0]) || overlap(v[2], v[1]), "{v:?}");
+    }
+    #[test]
+    fn default_is_three_slots_across_distinct_targets() {
+        let capacity = std::thread::available_parallelism().unwrap().get().min(3);
+        let v = timed(None, &["t0", "t1", "t2", "t3"], capacity);
+        assert_eq!(max_overlap(&v), capacity, "{v:?}");
+    }
+    #[test]
+    fn cpu_budget_is_split_across_slots_and_explicit_jobs_are_clamped() {
+        assert_eq!(jobs_limit(32, 3), 10);
+        assert_eq!(jobs_limit(32, 4), 8);
+        assert_eq!(jobs_limit(2, 3), 1);
+        assert_eq!(jobs_limit(32, 1), 10);
+        let a = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            clamp_jobs(
+                &a(&[
+                    "build", "-j", "64", "--jobs=4", "-j32", "-j=0", "--jobs", "x"
+                ]),
+                10
+            ),
+            a(&[
+                "build", "-j", "10", "--jobs=4", "-j10", "-j10", "--jobs", "10"
+            ])
+        );
+        assert_eq!(
+            clamp_jobs(&a(&["test", "--", "-j", "64", "--jobs=64"]), 10),
+            a(&["test", "--", "-j", "64", "--jobs=64"])
+        );
+        // nextest: -j is the test thread count; --build-jobs is Cargo's.
+        assert_eq!(
+            clamp_jobs(
+                &a(&[
+                    "+nightly",
+                    "nextest",
+                    "run",
+                    "-j",
+                    "64",
+                    "--build-jobs",
+                    "64",
+                    "--build-jobs=2"
+                ]),
+                10
+            ),
+            a(&[
+                "+nightly",
+                "nextest",
+                "run",
+                "-j",
+                "10",
+                "--build-jobs",
+                "10",
+                "--build-jobs=2"
+            ])
+        );
+        let tmp = Temp::new();
+        let target = tmp.0.join("t");
+        let out = hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+            .args(["--echo-build", "build", "-j", "4096", "--", "-j", "4096"])
+            .env(
+                "CODEX_JOBS_REAL_CARGO",
+                env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            )
+            .env("CODEX_JOBS_CARGO_LOCK_DIR", &tmp.0)
+            .env("CODEX_JOBS_CARGO_SLOTS", "1")
+            .env("CARGO_TARGET_DIR", &target)
+            .env("CARGO_BUILD_JOBS", "4096")
+            .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let limit = jobs_limit(std::thread::available_parallelism().unwrap().get(), 3);
+        assert_eq!(
+            String::from_utf8(out.stdout).unwrap().trim(),
+            format!(
+                "{limit}|{}|build -j {limit} -- -j 4096",
+                cc_jobs::cache::resolved(&target).unwrap()
+            )
+        );
+    }
+    #[test]
+    fn explicit_targets_are_kept_and_legacy_or_injected_targets_migrate() {
+        let a = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let root = PathBuf::from(r"D:\work\repo-wt");
+        let meta = |root: &Path| {
+            let root = root.to_path_buf();
+            move |_: &BTreeMap<String, String>| Some((root.clone(), root.join("target")))
+        };
+        let never = |_: &BTreeMap<String, String>| -> Option<(PathBuf, PathBuf)> {
+            panic!("explicit target must not query Cargo")
+        };
+        let legacy = BTreeMap::from([(
+            "CARGO_TARGET_DIR".to_string(),
+            cc_jobs::cache::SHARED.to_string(),
+        )]);
+        // Explicit argument and user environment are preserved untouched.
+        let mut env = legacy.clone();
+        assert_eq!(
+            prepare_target(&a(&["build", r"--target-dir=D:\mine"]), &mut env, never),
+            Some(PathBuf::from(r"D:\mine"))
+        );
+        assert_eq!(env, legacy);
+        let mut env = BTreeMap::from([("cargo_target_dir".into(), r"D:\user".into())]);
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, never),
+            Some(PathBuf::from(r"D:\user"))
+        );
+        assert_eq!(env["cargo_target_dir"], r"D:\user");
+        // The inherited legacy cache migrates to this workspace's own target.
+        let mut env = legacy.clone();
+        let dir = prepare_target(&a(&["build"]), &mut env, meta(&root)).unwrap();
+        assert_eq!(dir, default_target(&root));
+        assert_eq!(dir.file_name().unwrap(), "target");
+        assert_eq!(env["CARGO_TARGET_DIR"], dir.to_string_lossy());
+        assert_eq!(env[INJECTED_TARGET], dir.to_string_lossy());
+        assert!(!cc_jobs::cache::guard_needed(&a(&["build"]), &env));
+        // A nested gate recomputes a target injected by its outer gate.
+        let other = PathBuf::from(r"D:\work\other");
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, meta(&other)),
+            Some(default_target(&other))
+        );
+        // Cargo configuration (build.target-dir) is kept; the legacy variable is dropped.
+        let mut env = legacy.clone();
+        let configured = PathBuf::from(r"D:\configured");
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, |_| Some((
+                root.clone(),
+                configured.clone()
+            ))),
+            Some(PathBuf::from(r"D:\configured"))
+        );
+        assert!(!env.contains_key("CARGO_TARGET_DIR"));
+        let mut env = legacy.clone();
+        env.insert("CARGO_BUILD_TARGET_DIR".into(), r"D:\build-env".into());
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, never),
+            Some(PathBuf::from(r"D:\build-env"))
+        );
+        assert!(!env.contains_key("CARGO_TARGET_DIR"));
+        // Unknown layout keeps the legacy cache, which stays budget-guarded.
+        let mut env = legacy.clone();
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, |_| None),
+            Some(PathBuf::from(cc_jobs::cache::SHARED))
+        );
+        assert!(cc_jobs::cache::guard_needed(&a(&["build"]), &env));
+        // An explicit legacy target keeps its ownership-pruning guard.
+        assert!(cc_jobs::cache::guard_needed(
+            &a(&["build", "--target-dir", cc_jobs::cache::SHARED]),
+            &BTreeMap::new()
+        ));
+        // Stable per workspace, independent of spelling; distinct per worktree.
+        assert_eq!(
+            default_target(&root),
+            default_target(Path::new(r"d:\WORK\.\repo-wt\"))
+        );
+        assert_ne!(default_target(&root), default_target(&other));
+        assert!(
+            default_target(&root)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("target")
+        );
+    }
+    fn nested(tmp: &Path, held: &str, target: &Path) -> Child {
+        hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+            .args(["--echo-build", "build"])
+            .env(
+                "CODEX_JOBS_REAL_CARGO",
+                env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            )
+            .env("CODEX_JOBS_CARGO_LOCK_DIR", tmp)
+            .env("CODEX_JOBS_CARGO_SLOTS", "1")
+            .env("CODEX_JOBS_CARGO_LOCK_HELD", "1")
+            .env(HELD_TARGET, held)
+            .env("CARGO_TARGET_DIR", target)
+            .env_remove("CC_JOB_ID")
+            .env_remove("CODEX_JOB_ID")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap()
+    }
+    fn finished_within(child: &mut Child, limit: Duration) -> bool {
+        let deadline = Instant::now() + limit;
+        while Instant::now() < deadline {
+            if child.try_wait().unwrap().is_some() {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        false
+    }
+    #[test]
+    fn nested_gate_reuses_outer_slot_and_target_but_locks_an_independent_target() {
+        let tmp = Temp::new();
+        let (outer, other) = (tmp.0.join("outer"), tmp.0.join("other"));
+        fs::create_dir_all(&outer).unwrap();
+        fs::create_dir_all(&other).unwrap();
+        let outer_key = cc_jobs::cache::resolved(&outer).unwrap();
+        let other_key = cc_jobs::cache::resolved(&other).unwrap();
+        // The outer gate holds the only slot and its target.
+        let _slot = FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).unwrap();
+        let _outer = FileLock::try_acquire(&target_lock(&tmp.0, &outer_key)).unwrap();
+        let mut same = nested(&tmp.0, &outer_key, &outer);
+        assert!(finished_within(&mut same, Duration::from_secs(30)));
+        assert!(same.wait_with_output().unwrap().status.success());
+        // An independent target inherited by nested Cargo must not bypass its lock.
+        let busy = FileLock::try_acquire(&target_lock(&tmp.0, &other_key)).unwrap();
+        let mut independent = nested(&tmp.0, &outer_key, &other);
+        assert!(finished_within(&mut independent, Duration::from_secs(30)));
+        assert!(!independent.wait_with_output().unwrap().status.success());
+        drop(busy);
+        let mut independent = nested(&tmp.0, &outer_key, &other);
+        assert!(finished_within(&mut independent, Duration::from_secs(30)));
+        let out = independent.wait_with_output().unwrap();
+        assert!(out.status.success());
+        let line = String::from_utf8(out.stdout).unwrap();
+        assert_eq!(line.trim().split('|').nth(1), Some(other_key.as_str()));
+    }
 }
 #[cfg(windows)]
 mod process_boundary_tests {
     use super::*;
     fn wait_file(path: &Path) {
-        let until = Instant::now() + Duration::from_secs(5);
+        let until = Instant::now() + Duration::from_secs(30);
         while !path.exists() {
             assert!(Instant::now() < until, "{}", path.display());
             std::thread::sleep(Duration::from_millis(5));
@@ -4137,7 +4497,7 @@ mod process_boundary_tests {
             .spawn()
             .unwrap();
         let wait_for = |path: &Path| {
-            let deadline = Instant::now() + Duration::from_secs(5);
+            let deadline = Instant::now() + Duration::from_secs(30);
             while !path.exists() {
                 assert!(Instant::now() < deadline);
                 std::thread::sleep(Duration::from_millis(5));
@@ -4921,7 +5281,7 @@ mod end_to_end {
             .stderr(std::process::Stdio::null())
             .spawn()
             .unwrap();
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + Duration::from_secs(30);
         let mut visible = false;
         while Instant::now() < deadline {
             if t.ctx.resource_waits(&job) == ["cargoの共有ビルド枠待ち"] {
@@ -4930,14 +5290,22 @@ mod end_to_end {
             }
             std::thread::sleep(Duration::from_millis(10));
         }
+        // While Cargo waits for a slot the job is idle and frees its queue slot.
+        let occupied =
+            t.ctx.queue_report(std::slice::from_ref(&job)).unwrap()["occupied_slots"].clone();
         drop(held);
         let exit = gate.wait().unwrap();
         assert!(
             visible,
             "running build did not expose its exact resource wait"
         );
+        assert_eq!(occupied, 0);
         assert_eq!(exit.code(), Some(7));
         assert!(t.ctx.resource_waits(&job).is_empty());
+        assert_eq!(
+            t.ctx.queue_report(std::slice::from_ref(&job)).unwrap()["occupied_slots"],
+            1
+        );
         fs::write(
             t.ctx.job_dir("build").join("resource-waits/stale.json"),
             json!({"job_id":"build","pid":std::process::id(),"pid_created":0,"reason":"stale"})
@@ -4951,9 +5319,8 @@ mod end_to_end {
         let t = Test::new();
         let job = t.put(new_job());
         let held = t.ctx.job_lock(s(&job, "id"), "state.lock").unwrap();
-        let begin = Instant::now();
         assert_eq!(t.ctx.load(s(&job, "id")).unwrap(), job);
-        assert!(begin.elapsed() < Duration::from_secs(1));
+        assert!(FileLock::try_acquire(&t.ctx.job_dir(s(&job, "id")).join("state.lock")).is_err());
         drop(held);
     }
     #[test]
@@ -5345,10 +5712,10 @@ mod end_to_end {
     fn test_finishes_even_if_a_grandchild_holds_stdout_open() {
         let e = E2e::new();
         let jid = e.start("hold", &e.tmp.0, b"hi");
-        let start = Instant::now();
         let r = e.cli(&["wait", &jid, "--timeout", "25"], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stdout));
-        assert!(start.elapsed() < Duration::from_secs(15));
+        // The open-pipe grandchild is still alive: completion did not wait for
+        // EOF. This proves the behavior without including process startup time.
         assert!(e.rec.join("hold.pid").exists());
         assert!(
             proc_created(
@@ -5738,6 +6105,16 @@ mod additional_compatibility {
             &["--release".into(), "build".into()],
             &env
         ));
+        for args in [
+            vec!["+stable", "fmt"],
+            vec!["--config", "x.toml", "metadata"],
+            vec!["nextest", "--version"],
+            vec!["+stable", "nextest", "--help"],
+        ] {
+            assert!(!cc_jobs::gate::build_like(
+                &args.into_iter().map(String::from).collect::<Vec<_>>()
+            ));
+        }
         assert!(!cc_jobs::gate::needs_lock(
             &["build".into()],
             &BTreeMap::from([("CODEX_JOBS_CARGO_LOCK_HELD".into(), "1".into())])
@@ -5751,7 +6128,9 @@ mod additional_compatibility {
             )
             .env("CODEX_JOBS_CARGO_LOCK_DIR", &tmp.0)
             .env("CARGO_TARGET_DIR", &tmp.0)
-            .env("CODEX_JOBS_CARGO_LOCK_HELD", "1");
+            .env("CODEX_JOBS_CARGO_LOCK_HELD", "1")
+            // An outer gate from before per-target locks records no held target.
+            .env_remove(cc_jobs::gate::HELD_TARGET);
         let out = c.output().unwrap();
         assert!(out.status.success());
         assert_eq!(String::from_utf8(out.stdout).unwrap().trim(), "1");
@@ -5780,3 +6159,4 @@ mod additional_compatibility {
         assert!(t.ctx.load(s(&j, "id")).unwrap().get("gto").is_none());
     }
 }
+

@@ -1,0 +1,26 @@
+name: Build speed
+on:
+  push:
+    branches: [main]
+    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+  pull_request:
+    paths: ['cc-jobs/**', 'cc-scheduler/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+permissions:
+  contents: read
+jobs:
+  cc-jobs:
+    # The cargo gate, its locks and the process tests are Windows only.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+      - run: cargo nextest run --locked -p cc-jobs -p cc-scheduler
+      - run: cargo test --locked -p cc-jobs -p cc-scheduler --doc
+      - run: cargo clippy --locked -p cc-jobs -p cc-scheduler --all-targets -- -D warnings

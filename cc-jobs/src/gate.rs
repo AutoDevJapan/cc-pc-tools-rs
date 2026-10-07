@@ -39,6 +39,8 @@ pub const HELD_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_HELD";
 /// CARGO_TARGET_DIR value chosen by a gate rather than the user; nested gates
 /// recompute it for their own workspace.
 pub const INJECTED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_INJECTED";
+/// Explicit user target inherited by nested gates without entering Rust cache keys.
+pub const FORWARDED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_OVERRIDE";
 const LOCK_HELD: &str = "CODEX_JOBS_CARGO_LOCK_HELD";
 const SLOT_WAIT: &str = "cargoの共有ビルド枠待ち";
 const TARGET_WAIT: &str = "cargoの同じビルド先の使用終了待ち";
@@ -63,6 +65,12 @@ pub fn first_command(args: &[String]) -> &str {
     ""
 }
 pub fn build_like(args: &[String]) -> bool {
+    if first_command(args) == "nextest"
+        && nextest_command(args)
+            .is_some_and(|s| ["show-config", "self", "store", "help"].contains(&s))
+    {
+        return false;
+    }
     if args.is_empty()
         || args
             .iter()
@@ -85,6 +93,12 @@ pub fn build_like(args: &[String]) -> bool {
         .unwrap_or(first_command(args));
     !UNLOCKED.contains(&command)
 }
+fn nextest_command(args: &[String]) -> Option<&str> {
+    args.iter()
+        .position(|s| s == "nextest")
+        .and_then(|i| args.get(i + 1))
+        .map(String::as_str)
+}
 pub fn needs_lock(args: &[String], env: &BTreeMap<String, String>) -> bool {
     build_like(args) && env.get(LOCK_HELD).is_none_or(|v| v != "1")
 }
@@ -103,7 +117,7 @@ pub fn slots(env: &BTreeMap<String, String>) -> io::Result<usize> {
         .unwrap_or(3)
         .clamp(1, 3) as usize)
 }
-/// The CPU budget (all logical cores) is split evenly across the build slots.
+/// Reserve at least three equal CPU shares even when fewer slots are enabled.
 pub fn jobs_limit(cores: usize, slots: usize) -> usize {
     (cores / slots.max(3)).max(1)
 }
@@ -222,6 +236,12 @@ pub fn prepare_target(
     if let Some(dir) = inherited.as_ref().filter(|_| !stale) {
         return std::path::absolute(dir).ok();
     }
+    if inherited.is_none()
+        && var(env, LOCK_HELD).is_some_and(|v| v == "1")
+        && let Some(dir) = var(env, FORWARDED_TARGET).filter(|v| !v.is_empty())
+    {
+        return std::path::absolute(dir).ok();
+    }
     let mut fresh = env.clone();
     take_var(&mut fresh, "CARGO_TARGET_DIR");
     if let Some(dir) = var(&fresh, "CARGO_BUILD_TARGET_DIR").filter(|v| !v.is_empty()) {
@@ -252,6 +272,11 @@ pub fn target_arguments(
     target: &Path,
 ) -> Vec<String> {
     // External Cargo subcommands need not accept Cargo's --target-dir option.
+    if first_command(args) == "nextest"
+        && !nextest_command(args).is_some_and(|s| ["run", "list", "archive", "bench"].contains(&s))
+    {
+        return args.to_vec();
+    }
     if ![
         "build", "check", "test", "bench", "rustc", "rustdoc", "run", "clippy", "clean", "nextest",
         "doc", "fix", "install",
@@ -259,6 +284,21 @@ pub fn target_arguments(
     .contains(&first_command(args))
     {
         return args.to_vec();
+    }
+    // Keep the preexisting inheritance of an explicit user environment target.
+    // Automatically chosen workspace targets must still be recomputed by a
+    // nested gate in another workspace.
+    let user_target = explicit_target(args).is_some()
+        || var(env, "CARGO_TARGET_DIR").is_some_and(|v| {
+            var(env, INJECTED_TARGET) != Some(v)
+                && crate::cache::resolved(v) != crate::cache::resolved(crate::cache::SHARED)
+        })
+        || var(env, "CARGO_BUILD_TARGET_DIR").is_some();
+    if user_target {
+        env.insert(
+            FORWARDED_TARGET.into(),
+            target.to_string_lossy().into_owned(),
+        );
     }
     take_var(env, "CARGO_TARGET_DIR");
     take_var(env, "CARGO_BUILD_TARGET_DIR");
@@ -289,7 +329,7 @@ fn metadata_args(args: &[String]) -> Vec<String> {
         }
         if ["--locked", "--frozen", "--offline"].contains(&arg.as_str()) {
             out.push(arg.clone());
-        } else if ["--manifest-path", "--config", "-Z"].contains(&arg.as_str()) {
+        } else if ["--manifest-path", "--config", "-Z", "-C"].contains(&arg.as_str()) {
             out.push(arg.clone());
             out.extend(rest.next().cloned());
         } else if ["--manifest-path=", "--config=", "-Z"]

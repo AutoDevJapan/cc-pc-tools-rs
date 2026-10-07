@@ -4217,7 +4217,13 @@ mod cargo_gate_tests {
         );
         assert_eq!(
             env,
-            BTreeMap::from([("CARGO_FEATURE_FAST".into(), "1".into())])
+            BTreeMap::from([
+                ("CARGO_FEATURE_FAST".into(), "1".into()),
+                (
+                    cc_jobs::gate::FORWARDED_TARGET.into(),
+                    r"D:\target-a".into()
+                ),
+            ])
         );
         let explicit = a(&["nextest", "run", r"--target-dir=D:\chosen"]);
         assert_eq!(
@@ -4231,6 +4237,27 @@ mod cargo_gate_tests {
             custom
         );
         assert_eq!(env["CARGO_TARGET_DIR"], r"D:\custom");
+        for command in ["show-config", "self", "store", "help"] {
+            let args = a(&["nextest", command]);
+            let before = env.clone();
+            assert!(!cc_jobs::gate::build_like(&args));
+            assert_eq!(
+                cc_jobs::gate::target_arguments(&args, &mut env, Path::new(r"D:\custom")),
+                args
+            );
+            assert_eq!(env, before);
+        }
+        let args =
+            cc_jobs::gate::target_arguments(&a(&["build"]), &mut env, Path::new(r"D:\custom"));
+        assert_eq!(args, a(&["build", "--target-dir", r"D:\custom"]));
+        assert!(!env.contains_key("CARGO_TARGET_DIR"));
+        env.insert("CODEX_JOBS_CARGO_LOCK_HELD".into(), "1".into());
+        assert_eq!(
+            prepare_target(&a(&["build"]), &mut env, |_| panic!(
+                "explicit nested target needs no metadata"
+            )),
+            Some(PathBuf::from(r"D:\custom"))
+        );
     }
     /// A gated build of `target` (under `tmp`) that runs 600 ms once `ready`
     /// builds have been admitted.

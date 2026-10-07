@@ -189,12 +189,12 @@ fn valid_summary(text: &str) -> bool {
     let mut found = [false; 6];
     let prefixed = format!("\n{text}");
     for section in prefixed.split("\n## ").skip(1) {
-        if let Some((heading, body)) = section.split_once('\n') {
-            if !body.trim().is_empty() {
-                for (i, names) in aliases.iter().enumerate() {
-                    if names.iter().any(|name| heading.trim().starts_with(name)) {
-                        found[i] = true;
-                    }
+        if let Some((heading, body)) = section.split_once('\n')
+            && !body.trim().is_empty()
+        {
+            for (i, names) in aliases.iter().enumerate() {
+                if names.iter().any(|name| heading.trim().starts_with(name)) {
+                    found[i] = true;
                 }
             }
         }

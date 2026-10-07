@@ -325,10 +325,13 @@ impl Context {
         let result = self.attempt_tool_yield(snapshot, baseline);
         if !matches!(result, Ok(true)) {
             let not_before = self.rt.epoch() + crate::jitter(15., 30.);
-            self.write_json(
+            // Losing the backoff only costs throughput; keep the attempt result.
+            if let Err(error) = self.write_json(
                 &self.job_dir(s(snapshot, "id")).join("yield-retry.json"),
                 &json!({"not_before": not_before}),
-            )?;
+            ) {
+                self.yield_diagnostic(&error);
+            }
         }
         result
     }

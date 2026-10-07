@@ -16,6 +16,9 @@ const SECTIONS: [&str; 6] = [
     "## 最新の指示と注意点",
 ];
 
+const SUMMARY_LIMIT: usize = 24 * 1024;
+const MAX_SHORTEN_ATTEMPTS: i64 = 2;
+
 impl Context {
     pub(crate) fn context_limit_reached(&self, job: &Value) -> bool {
         let Ok(cfg) = self.queue_config() else {
@@ -84,6 +87,7 @@ impl Context {
         job["context_phase"] = json!("summarize");
         job["context_disabled_mcp_servers"] = json!(servers);
         job["context_source_session"] = json!(session);
+        job["context_summary_shorten_attempts"] = Value::Null;
         job["context_source_pct"] = job["context_pct"].clone();
         job["activity"] = json!("順番待ち: 新しいセッションへの引き継ぎを作成します");
         Ok(())
@@ -134,6 +138,29 @@ impl Context {
         }
         let summary = s(job, "last_message");
         if !valid_summary(summary) {
+            let attempts = number(job, "context_summary_shorten_attempts");
+            let session = s(job, "context_source_session").to_string();
+            // Only a structurally complete but oversized summary is worth asking to shorten.
+            if summary_complete(summary)
+                && summary.len() > SUMMARY_LIMIT
+                && attempts < MAX_SHORTEN_ATTEMPTS
+                && normalize_uuid(&session).is_some()
+            {
+                fs::write(
+                    self.job_dir(s(job, "id")).join("context-summary-prompt.md"),
+                    format!(
+                        "直前の引き継ぎ要約がUTF-8で{SUMMARY_LIMIT}バイトを超えました。これはジョブ管理の内部指示で、この要約ターンだけに適用します。同じセッションの文脈を使い、{}バイト以内に短くした引き継ぎ全文を書き直してください。ツールやコマンドは実行しないでください。次の6行をそのまま見出しに使い、目的と受入条件・終わった操作と検証結果・残り・次の一手・最新のオーナー指示と権限は削らず、重複や詳細な経過だけを削ってください。省略記号で切らず、完結した文章にしてください。\n{}\n",
+                        SUMMARY_LIMIT - 4 * 1024,
+                        SECTIONS.join("\n")
+                    ),
+                )?;
+                crate::queue::prepare_resume(job, &session, &self.rt.now());
+                job["context_summary_shorten_attempts"] = json!(attempts + 1);
+                job["queue_sequence"] = json!(self.next_queue_sequence()?);
+                job["retry_not_before"] = Value::Null;
+                job["activity"] = json!("順番待ち: 引き継ぎ要約を短くします");
+                return Ok(true);
+            }
             job["status"] = json!("failed");
             job["last_error"] = json!(
                 "context handoff summary is incomplete or exceeds 24KB; original session retained"
@@ -159,6 +186,7 @@ impl Context {
         job["context_pct_exact"] = Value::Null;
         job["tokens"] = usage_tokens(&json!({}));
         job["context_phase"] = json!("continue");
+        job["context_summary_shorten_attempts"] = Value::Null;
         job["yield_resume"] = json!(false);
         job["context_rotation_count"] = json!(number(job, "context_rotation_count") + 1);
         job["context_rotated_at"] = json!(self.rt.now());
@@ -170,7 +198,11 @@ impl Context {
 }
 
 fn valid_summary(text: &str) -> bool {
-    if text.is_empty() || text.len() > 24 * 1024 {
+    text.len() <= SUMMARY_LIMIT && summary_complete(text)
+}
+
+fn summary_complete(text: &str) -> bool {
+    if text.is_empty() {
         return false;
     }
     let aliases: [&[&str]; 6] = [
@@ -213,8 +245,16 @@ mod tests {
             .map(|s| format!("{s}\n具体的な引き継ぎ\n"))
             .collect::<String>();
         assert!(valid_summary(&valid));
-        assert!(!valid_summary(&format!("{valid}{}", "あ".repeat(9000))));
+        // The limit is in UTF-8 bytes: 3 bytes per char, so 9000 chars is already over.
+        let pad = |chars: usize| format!("{valid}{}", "あ".repeat(chars));
+        let base = valid.len();
+        let fill = (SUMMARY_LIMIT - base) / 3;
+        assert!(valid_summary(&pad(fill)));
+        assert!(!valid_summary(&pad(fill + 1)));
+        assert!(summary_complete(&pad(9000)) && !valid_summary(&pad(9000)));
+        assert!(!summary_complete("## 目的\n短い"));
         assert!(!valid_summary(&SECTIONS.join("\n")));
+        assert!(!valid_summary(""));
         let native = "状態: 継続中\n\n## 目的・受入条件\n2手順\n## 終わった操作と検証結果\n手順1完了\n## 未完了と判断待ち\n手順2\n## 次に実行する一手\n手順2の記録確認\n## 絶対ファイルパスとPR URL\nC:/probe\n## 最新のオーナー指示・権限・未コミット変更・送信済み操作\n読むだけ";
         assert!(valid_summary(native));
         assert!(!valid_summary(

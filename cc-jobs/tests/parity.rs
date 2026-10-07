@@ -354,6 +354,89 @@ mod queue_regressions {
             assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
         }
     }
+    fn oversized_summary_job(t: &Test, outputs: Vec<String>) {
+        let mut j = waiting(t, "handoff", "req-handoff");
+        j["context_phase"] = json!("summarize");
+        j["context_source_session"] = json!(SESSION_ID);
+        j["resume_session"] = json!(SESSION_ID);
+        j["thread_id"] = json!(SESSION_ID);
+        j["sandbox"] = json!("danger-full-access");
+        t.ctx.save(&j).unwrap();
+        let dir = t.ctx.job_dir("handoff");
+        fs::write(dir.join("prompt.md"), "元の依頼全文").unwrap();
+        fs::write(dir.join("context-summary-prompt.md"), "summary").unwrap();
+        let seq = AtomicUsize::new(0);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            let i = seq.fetch_add(1, Ordering::Relaxed);
+            let text = outputs.get(i).cloned().unwrap_or_else(|| OK.into());
+            let events = if i < outputs.len() {
+                format!(
+                    "{}\n{}\n{}\n",
+                    json!({"type":"thread.started","thread_id":SESSION_ID}),
+                    json!({"type":"item.completed","item":{"type":"agent_message","text":text}}),
+                    json!({"type":"turn.completed","usage":{}})
+                )
+            } else {
+                text
+            };
+            Box::new(FakeChild {
+                alive: Arc::new(AtomicBool::new(false)),
+                out: Some(Box::new(Cursor::new(events.into_bytes()))),
+            })
+        }));
+    }
+    fn summary_of(bytes: usize) -> String {
+        let head = "## 目的\nx\n## 終わったこと\nx\n## 残り\nx\n## 次の一手\nx\n## 関係ファイルとPR\nx\n## 最新の指示と注意点\n";
+        // Multibyte filler so the limit is checked in UTF-8 bytes, not chars.
+        let n = bytes.saturating_sub(head.len()) / 3;
+        format!("{head}{}", "あ".repeat(n))
+    }
+    #[test]
+    fn oversized_summary_is_shortened_in_the_same_read_only_session_then_rotates() {
+        let t = Test::new();
+        oversized_summary_job(&t, vec![summary_of(27_000), summary_of(25_000), summary_of(3_000)]);
+        t.ctx.supervise("handoff").unwrap();
+        let saved = t.ctx.load("handoff").unwrap();
+        assert_eq!(saved["status"], "succeeded");
+        assert_eq!(saved["context_rotation_count"], 1);
+        assert!(saved["context_summary_shorten_attempts"].is_null());
+        let dir = t.ctx.job_dir("handoff");
+        assert!(fs::read_to_string(dir.join("context-handoff.md")).unwrap().len() < 24 * 1024);
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 4);
+        for a in &args[..3] {
+            assert!(a.windows(2).any(|w| w == ["resume", SESSION_ID]));
+            assert!(a.windows(2).any(|w| w == ["-s", "read-only"]));
+            assert!(a.iter().any(|x| x == "features.shell_tool=false"));
+        }
+        assert!(!args[3].iter().any(|a| a == "resume"));
+        assert!(args[3].windows(2).any(|w| w == ["-s", "danger-full-access"]));
+    }
+    #[test]
+    fn summary_still_oversized_after_two_shortenings_fails_and_keeps_the_session() {
+        let t = Test::new();
+        oversized_summary_job(&t, vec![summary_of(30_000); 4]);
+        t.ctx.supervise("handoff").unwrap();
+        let saved = t.ctx.load("handoff").unwrap();
+        assert_eq!(saved["status"], "failed");
+        assert!(s(&saved, "last_error").contains("exceeds 24KB"));
+        assert_eq!(saved["resume_session"], SESSION_ID);
+        assert_eq!(saved["thread_id"], SESSION_ID);
+        assert_eq!(saved["context_phase"], "summarize");
+        assert_eq!(saved["context_summary_shorten_attempts"], 2);
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 3);
+        assert!(!t.ctx.job_dir("handoff").join("context-continue.md").exists());
+    }
+    #[test]
+    fn incomplete_summary_is_not_retried_as_a_shortening() {
+        let t = Test::new();
+        oversized_summary_job(&t, vec![format!("## 目的\nx\n{}", "あ".repeat(9000))]);
+        t.ctx.supervise("handoff").unwrap();
+        let saved = t.ctx.load("handoff").unwrap();
+        assert_eq!(saved["status"], "failed");
+        assert!(saved["context_summary_shorten_attempts"].is_null());
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    }
     fn collab(t: &Test, id: &str, tool: &str, child: &str, status: &str) {
         use std::io::Write;
         let path = t.ctx.job_dir("long").join("events.jsonl");
@@ -2232,7 +2315,9 @@ impl Temp {
             SEQ.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir_all(&p).unwrap();
-        Self(p)
+        // Windows temp_dir may contain an 8.3 username. Child processes report
+        // the long spelling; normalize the shared fixture before making paths.
+        Self(cc_jobs::cli::normalize_windows_path(&p.canonicalize().unwrap()))
     }
 }
 impl Drop for Temp {

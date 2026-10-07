@@ -749,7 +749,8 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let temp = tempfile::tempdir().unwrap();
-        let root = temp.path();
+        let canonical = temp.path().canonicalize().unwrap();
+        let root = PathBuf::from(canonical.to_string_lossy().trim_start_matches(r"\\?\"));
         fs::write(root.join("client-projects.txt"), "").unwrap();
         let repo = root.join("repo");
         fs::create_dir(&repo).unwrap();
@@ -1849,7 +1850,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
 }
 #[test]
 fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
-    let text = fs::read_to_string("D:/CC/Tools/discord-ask/discord-ask-tick-hidden.vbs").unwrap();
+    let text = include_str!("../deployment/discord-ask-tick-hidden.vbs");
     let lines: Vec<_> = text
         .lines()
         .filter(|l| l.starts_with("objShell.Run"))

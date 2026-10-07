@@ -32,23 +32,22 @@ pub fn metrics_report(channel: &Channel, value: &Value, measured_at: &str) -> Op
             for entry in entries {
                 collect(entry, items);
             }
-        } else if let (Some(id), Some(views)) = (v["id"].as_str(), v["view_count"].as_u64()) {
-            if valid_id(id)
-                && !items.iter().any(|i| i.0 == id)
-                && videos(v).first().is_some_and(Video::ready)
-            {
-                items.push((
-                    id.into(),
-                    v["title"]
-                        .as_str()
-                        .unwrap_or(id)
-                        .replace(['\r', '\n'], " ")
-                        .chars()
-                        .take(100)
-                        .collect(),
-                    views,
-                ));
-            }
+        } else if let (Some(id), Some(views)) = (v["id"].as_str(), v["view_count"].as_u64())
+            && valid_id(id)
+            && !items.iter().any(|i| i.0 == id)
+            && videos(v).first().is_some_and(Video::ready)
+        {
+            items.push((
+                id.into(),
+                v["title"]
+                    .as_str()
+                    .unwrap_or(id)
+                    .replace(['\r', '\n'], " ")
+                    .chars()
+                    .take(100)
+                    .collect(),
+                views,
+            ));
         }
     }
     let mut items = Vec::new();

@@ -312,7 +312,8 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
     assert_eq!(q["project"], project);
     assert!(q.get("source").is_none());
     let fake = h.fake.borrow();
-    let first = &fake.http_calls[1]["body"];
+    let first = &fake.http_calls.iter().find(|c| c["method"] == "POST"
+        && s(&c["url"]).ends_with("/channels/T/messages")).unwrap()["body"];
     assert_eq!(
         first["content"],
         format!(

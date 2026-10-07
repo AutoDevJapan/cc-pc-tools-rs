@@ -247,6 +247,13 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         question["scheduler_item"] = json!(args.scheduler_item);
         question["scheduler_job"] = json!(args.scheduler_job);
     }
+    let mentions = json!({"parse":[],"users":[owner]});
+    let first_payload = if n(&channel["type"]) == 15 {
+        json!({"name":title,"message":{"content":parts[0],"allowed_mentions":mentions}})
+    } else {
+        json!({"content":parts[0],"allowed_mentions":mentions})
+    };
+    let outgoing = crate::attachments::prepare_send(&first_payload, first_files, limit)?;
     let creation_id = crate::ask_dedup::reserve(
         ctx,
         &question,
@@ -254,14 +261,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         first_files,
         n(&channel["type"]) == 15,
     )?;
-    let mentions = json!({"parse":[],"users":[owner]});
     let (thread_id, mut message_id) = if n(&channel["type"]) == 15 {
-        let response = crate::attachments::send(
+        let response = crate::attachments::send_prepared(
             ctx,
             &format!("/channels/{channel_id}/threads"),
-            &json!({"name":title,"message":{"content":parts[0],"allowed_mentions":mentions}}),
-            first_files,
-            limit,
+            &outgoing,
         );
         let thread = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
         let tid = s(&thread["id"]).to_owned();
@@ -272,12 +276,10 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         };
         (tid, mid)
     } else {
-        let response = crate::attachments::send(
+        let response = crate::attachments::send_prepared(
             ctx,
             &format!("/channels/{channel_id}/messages"),
-            &json!({"content":parts[0],"allowed_mentions":mentions}),
-            first_files,
-            limit,
+            &outgoing,
         );
         let message = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
         let mid = s(&message["id"]).to_owned();
@@ -865,6 +867,25 @@ fn post_text(
     let mut value = json!({"thread_id":thread,"message_ids":ids});
     if context.is_some_and(|c| c["reuse_question"].is_object()) {
         value["reused"] = json!(true);
+        let identity = &context.unwrap()["reuse_question"];
+        let state = ctx.load_fresh()?;
+        value["tracked"] = json!(state["questions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|q| q["thread_id"] == identity["thread_id"] && truth(&q["open"])));
+        let owner = ctx.owner();
+        let replies = owner_replies(ctx, identity, &owner)?;
+        if let Some(answer) = replies
+            .iter()
+            .rev()
+            .find(|m| !crate::snooze::control_only(m))
+        {
+            value["suppressed"] = json!("already_answered");
+            value["latest_owner_reply"] = json!({"id":answer["id"],"timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))});
+        } else if value["tracked"] == false {
+            value["suppressed"] = json!("question_closed");
+        }
     }
     print_json(&value, None)?;
     Ok(value)

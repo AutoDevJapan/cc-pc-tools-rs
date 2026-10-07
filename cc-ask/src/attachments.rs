@@ -698,8 +698,18 @@ pub fn send(
     files: &[File],
     limit: u64,
 ) -> Result<Value> {
+    send_prepared(ctx, route, &prepare_send(payload, files, limit)?)
+}
+
+pub(crate) enum PreparedSend {
+    Json(Value),
+    Multipart { content_type: String, body: Vec<u8> },
+}
+
+/// Finish all local reads before a caller durably reserves a new Discord effect.
+pub(crate) fn prepare_send(payload: &Value, files: &[File], limit: u64) -> Result<PreparedSend> {
     if files.is_empty() {
-        return ctx.call("POST", route, Some(payload));
+        return Ok(PreparedSend::Json(payload.clone()));
     }
     if files.len() > 10 || files.iter().any(|f| f.size > limit) {
         return Err("添付数または容量が上限を超えています".into());
@@ -727,12 +737,26 @@ pub fn send(
         body.extend_from_slice(b"\r\n");
     }
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    Ok(PreparedSend::Multipart {
+        content_type: format!("multipart/form-data; boundary={boundary}"),
+        body,
+    })
+}
+
+pub(crate) fn send_prepared(
+    ctx: &mut Context,
+    route: &str,
+    prepared: &PreparedSend,
+) -> Result<Value> {
     crate::state_work::check(ctx)?;
-    ctx.effects.multipart(
-        &format!("https://discord.com/api/v10{route}"),
-        &format!("multipart/form-data; boundary={boundary}"),
-        &body,
-    )
+    match prepared {
+        PreparedSend::Json(payload) => ctx.call("POST", route, Some(payload)),
+        PreparedSend::Multipart { content_type, body } => ctx.effects.multipart(
+            &format!("https://discord.com/api/v10{route}"),
+            content_type,
+            body,
+        ),
+    }
 }
 
 pub fn post(
@@ -1017,23 +1041,39 @@ fn deliver_question(
             )?;
             let mut state = ctx.load_fresh()?;
             if let Some(identity) = ledger["question_context"]["reuse_question"].as_object() {
-                let q = state["questions"]
+                let qs = state["questions"]
                     .as_array_mut()
-                    .ok_or("questions missing")?
-                    .iter_mut()
-                    .find(|q| identity.iter().all(|(key, value)| q[key] == *value))
-                    .ok_or("original question changed during append; retry from fresh state")?;
-                let mut all = q["message_ids"]
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_else(|| vec![q["after"].clone()]);
-                for id in &ids {
-                    if !all.iter().any(|v| s(v) == id) {
-                        all.push(json!(id));
+                    .ok_or("questions missing")?;
+                let at = qs
+                    .iter()
+                    .rposition(|q| {
+                        q["thread_id"] == identity["thread_id"]
+                            && q["question_message"] == identity["question_message"]
+                    })
+                    .or_else(|| {
+                        qs.iter().rposition(|q| {
+                            q["thread_id"] == identity["thread_id"] && truth(&q["open"])
+                        })
+                    });
+                if let Some(at) = at {
+                    let q = &mut qs[at];
+                    let mut all = q["message_ids"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_else(|| vec![q["after"].clone()]);
+                    for id in &ids {
+                        if !all.iter().any(|v| s(v) == id) {
+                            all.push(json!(id));
+                        }
+                    }
+                    q["message_ids"] = json!(all);
+                }
+                // A concurrent close/answer remains authoritative. Never reopen it.
+                if state["inbox_only_post_contexts"][thread] == ledger["question_context"] {
+                    if let Some(contexts) = state["inbox_only_post_contexts"].as_object_mut() {
+                        contexts.remove(thread);
                     }
                 }
-                q["message_ids"] = json!(all);
-                // A concurrent close/answer remains authoritative. Never reopen it.
                 atomic_json(&ctx.here.join("state.json"), &state, 2)?;
                 continue;
             }

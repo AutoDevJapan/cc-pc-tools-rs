@@ -36,6 +36,74 @@ struct TextLoss {
     lose_starter: bool,
     lose_thread: bool,
 }
+
+struct RegistrationRace {
+    shared: SharedFake,
+    here: std::path::PathBuf,
+    close: bool,
+}
+impl Effects for RegistrationRace {
+    fn now(&self) -> f64 {
+        self.shared.now()
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.shared.run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&serde_json::Value>,
+        discord: bool,
+    ) -> Result<serde_json::Value> {
+        let result = self.shared.http(method, url, body, discord)?;
+        if method == "POST" && url.ends_with("/channels/300/messages") {
+            let path = self.here.join("state.json");
+            let mut state = read_json(&path)?;
+            state["questions"][0]["after"] = json!("999");
+            if self.close {
+                state["questions"][0]["open"] = json!(false);
+                let mut f = self.shared.0.borrow_mut();
+                f.sequence += 1;
+                let mid = f.sequence.to_string();
+                f.messages.get_mut("300").unwrap().push(common::message(
+                    &mid,
+                    "a 月額1000円",
+                    "OWN",
+                ));
+            }
+            atomic_json(&path, &state, 2)?;
+        }
+        Ok(result)
+    }
+}
+
+struct RejectOnce {
+    shared: SharedFake,
+    error: Option<String>,
+}
+impl Effects for RejectOnce {
+    fn now(&self) -> f64 {
+        self.shared.now()
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.shared.run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&serde_json::Value>,
+        discord: bool,
+    ) -> Result<serde_json::Value> {
+        if method == "POST" && url.ends_with("/channels/T/threads") {
+            if let Some(error) = self.error.take() {
+                return Err(error);
+            }
+        }
+        self.shared.http(method, url, body, discord)
+    }
+}
 impl Effects for TextLoss {
     fn now(&self) -> f64 {
         self.shared.now()
@@ -54,6 +122,20 @@ impl Effects for TextLoss {
         if method == "GET" && path == "/channels/T" {
             return Ok(json!({"type":0,"id":"T"}));
         }
+        if method == "GET"
+            && path.starts_with("/channels/")
+            && path.split('/').count() == 3
+            && !self
+                .shared
+                .0
+                .borrow()
+                .threads
+                .contains_key(path.split('/').nth(2).unwrap())
+        {
+            return Err(format!(
+                "Discord API GET {path} failed: 404 Unknown Channel"
+            ));
+        }
         if method == "POST"
             && path.starts_with("/channels/T/messages/")
             && path.ends_with("/threads")
@@ -62,14 +144,17 @@ impl Effects for TextLoss {
             f.http_calls
                 .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
             let mid = path.split('/').nth(4).unwrap();
-            let starter = f.messages["T"]
+            let mut starter = f.messages["T"]
                 .iter()
                 .find(|m| m["id"] == mid)
                 .unwrap()
                 .clone();
-            let thread = json!({"id":"600","guild_id":"G","type":11,"parent_id":"T","owner_id":"BOT","name":body.unwrap()["name"],"thread_metadata":{"archived":false}});
-            f.threads.insert("600".into(), thread.clone());
-            f.messages.insert("600".into(), vec![starter]);
+            let thread = json!({"id":mid,"guild_id":"G","type":11,"parent_id":"T","owner_id":"BOT","name":body.unwrap()["name"],"thread_metadata":{"archived":false}});
+            starter["type"] = json!(21);
+            starter["content"] = json!("");
+            starter["message_reference"] = json!({"message_id":mid,"channel_id":"T"});
+            f.threads.insert(mid.into(), thread.clone());
+            f.messages.insert(mid.into(), vec![starter]);
             if self.lose_thread {
                 self.lose_thread = false;
                 return Err("fixture: text thread response lost".into());
@@ -214,7 +299,7 @@ fn text_starter_and_thread_response_loss_each_recover_without_new_starter() {
         });
         assert!(cmd_ask(&mut h.ctx, &a).is_err());
         let result = cmd_ask(&mut h.ctx, &a).unwrap();
-        assert_eq!(result["thread_id"], "600");
+        assert_eq!(result["thread_id"], "1001");
         let f = h.fake.borrow();
         assert_eq!(
             f.http_calls
@@ -259,6 +344,56 @@ fn appending_preserves_question_generation_and_all_delivery_fields() {
     after.as_object_mut().unwrap().remove("message_ids");
     assert_eq!(after, before);
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn worker_advancing_cursor_or_closing_during_append_does_not_trap_the_ledger() {
+    for close in [false, true] {
+        let mut h = Harness::new();
+        let a = args(&h, "Steamのサインイン", "D:/CC/game");
+        cmd_ask(&mut h.ctx, &a).unwrap();
+        ready(&h);
+        h.ctx.effects = Box::new(RegistrationRace {
+            shared: SharedFake(h.fake.clone()),
+            here: h.ctx.here.clone(),
+            close,
+        });
+        let b = args(&h, "Steamログイン", "D:/CC/game");
+        let result = cmd_ask(&mut h.ctx, &b).unwrap();
+        assert_eq!(result["reused"], true);
+        assert_eq!(h.state()["questions"][0]["after"], "999");
+        assert_eq!(h.state()["questions"][0]["open"], !close);
+        assert_eq!(creates(&h), 1);
+        if close {
+            assert_eq!(result["suppressed"], "already_answered");
+            assert_eq!(result["latest_owner_reply"]["content"], "a 月額1000円");
+        } else {
+            assert_eq!(result["tracked"], true);
+            cmd_ask(&mut h.ctx, &b).unwrap();
+            assert_eq!(creates(&h), 1);
+        }
+    }
+}
+
+#[test]
+fn explicit_rejection_clears_intent_and_a_fixed_request_can_create_normally() {
+    for error in [
+        "Discord API POST /channels/T/threads failed: 403 Forbidden",
+        "Discord upload failed: 413 Too big",
+        "Discord API rate limited",
+    ] {
+        let mut h = Harness::new();
+        let a = args(&h, "Steamのサインイン", "D:/CC/game");
+        h.ctx.effects = Box::new(RejectOnce {
+            shared: SharedFake(h.fake.clone()),
+            error: Some(error.into()),
+        });
+        assert!(cmd_ask(&mut h.ctx, &a).is_err());
+        assert!(h.state()["ask_creations"].as_object().unwrap().is_empty());
+        assert!(h.state()["questions"].as_array().unwrap().is_empty());
+        cmd_ask(&mut h.ctx, &a).unwrap();
+        assert_eq!(creates(&h), 1);
+    }
 }
 
 #[test]

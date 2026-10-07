@@ -90,6 +90,7 @@ pub fn check(ctx: &Context) -> Result<()> {
                     && old.iter().any(|p| p["thread_id"] == q["thread_id"])
             })
             || current["answer_receipts"] != base["answer_receipts"]
+            || current["inbox_only_post_contexts"] != base["inbox_only_post_contexts"]
         {
             return Err(format!(
                 "StateConflict: worker view changed in {}; retry from fresh state",

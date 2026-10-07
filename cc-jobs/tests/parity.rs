@@ -27,7 +27,13 @@ fn cargo_cmd_preserves_a_failing_child_exit_code() {
     )
     .unwrap();
     let launcher = bin.join("cargo.cmd");
-    fs::write(&launcher, include_str!("../bin/cargo.cmd")).unwrap();
+    fs::write(
+        &launcher,
+        include_str!("../bin/cargo.cmd")
+            .replace("\r\n", "\n")
+            .replace('\n', "\r\n"),
+    )
+    .unwrap();
     let fixture = temp.0.join("fixture.exe");
     fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), &fixture).unwrap();
     let result = hidden_command("cmd.exe")

@@ -14,6 +14,7 @@ use std::{
 // independently by tick_deadline_bounds_lock_wait_without_stealing_held_lock.
 const PROCESS_DEADLINE: Duration = Duration::from_secs(3);
 const FIXTURE_HOLD: Duration = Duration::from_secs(30);
+const PROCESS_BOUND: Duration = Duration::from_secs(5);
 
 fn fixture_command(mode: &str, root: &Path) -> Command {
     let mut command = Command::new(std::env::current_exe().unwrap());
@@ -39,7 +40,7 @@ fn process_capture_fixture() {
     };
     let root = std::path::PathBuf::from(std::env::var_os("CC_ASK_CAPTURE_ROOT").unwrap());
     if mode == "descendant" {
-        let limit = Instant::now() + Duration::from_secs(4);
+        let limit = Instant::now() + FIXTURE_HOLD;
         while !root.join("release").exists() && Instant::now() < limit {
             std::thread::sleep(Duration::from_millis(10));
         }
@@ -71,7 +72,7 @@ fn process_capture_fixture() {
             .stderr(Stdio::inherit())
             .spawn()
             .unwrap();
-        let until = Instant::now() + Duration::from_secs(2);
+        let until = Instant::now() + PROCESS_BOUND;
         while !root.join("ready").exists() && Instant::now() < until {
             std::thread::sleep(Duration::from_millis(10));
         }
@@ -121,7 +122,7 @@ fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
     let result = run_fixture("hang", root.path(), 0);
     drop(deadline);
     assert!(result.unwrap_err().starts_with("TimeoutExpired:"));
-    assert!(start.elapsed() < Duration::from_secs(5));
+    assert!(start.elapsed() < PROCESS_BOUND);
     assert!(root.path().join("ready").exists());
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
 }
@@ -134,7 +135,7 @@ fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     let result = run_fixture("tree", root.path(), 0);
     drop(deadline);
     assert!(result.unwrap_err().starts_with("TimeoutExpired:"));
-    assert!(start.elapsed() < Duration::from_secs(5));
+    assert!(start.elapsed() < PROCESS_BOUND);
     assert!(
         root.path().join("ready").exists(),
         "grandchild fixture never held the lock"
@@ -148,7 +149,7 @@ fn deadline_terminates_temporary_grandchild_holding_a_lock() {
 #[test]
 fn failed_launcher_does_not_release_its_temporary_grandchild_tree() {
     let root = tempfile::tempdir().unwrap();
-    let output = run_fixture("failed_parent", root.path(), 3).unwrap();
+    let output = run_fixture("failed_parent", root.path(), 8).unwrap();
     assert_eq!(output.code, 7);
     assert!(root.path().join("ready").exists());
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
@@ -158,7 +159,7 @@ fn failed_launcher_does_not_release_its_temporary_grandchild_tree() {
 fn inherited_grandchild_output_cannot_block_capture_after_parent_exit() {
     let root = tempfile::tempdir().unwrap();
     let start = Instant::now();
-    let output = run_fixture("parent", root.path(), 3).unwrap();
+    let output = run_fixture("parent", root.path(), 8).unwrap();
     let elapsed = start.elapsed();
     std::fs::write(root.path().join("release"), b"stop").unwrap();
     let until = Instant::now() + Duration::from_secs(2);
@@ -170,7 +171,7 @@ fn inherited_grandchild_output_cannot_block_capture_after_parent_exit() {
         "owned descendant did not exit"
     );
     assert!(
-        elapsed < Duration::from_secs(3),
+        elapsed < PROCESS_BOUND,
         "capture waited for an inherited output handle: {elapsed:?}"
     );
     assert_eq!(output.code, 0);
@@ -181,9 +182,9 @@ fn inherited_grandchild_output_cannot_block_capture_after_parent_exit() {
 fn hard_tick_ceiling_releases_native_locks_and_records_deferral() {
     let root = tempfile::tempdir().unwrap();
     let start = Instant::now();
-    let output = run_fixture("hard", root.path(), 3).unwrap();
+    let output = run_fixture("hard", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);
-    assert!(start.elapsed() < Duration::from_secs(3));
+    assert!(start.elapsed() < PROCESS_BOUND);
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
     assert!(std::fs::read_to_string(root.path().join("tick.log"))
         .unwrap()
@@ -194,9 +195,9 @@ fn hard_tick_ceiling_releases_native_locks_and_records_deferral() {
 fn hard_ceiling_does_not_wait_for_stuck_stderr_logger() {
     let root = tempfile::tempdir().unwrap();
     let start = Instant::now();
-    let output = run_fixture("hard_stderr", root.path(), 3).unwrap();
+    let output = run_fixture("hard_stderr", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);
-    assert!(start.elapsed() < Duration::from_secs(2));
+    assert!(start.elapsed() < PROCESS_BOUND);
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
 }
 

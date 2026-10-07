@@ -1,7 +1,11 @@
 //! Stop at the existing idle tool boundary, summarize in the old session, then
 //! start a fresh session while preserving job/ToDo ownership and permissions.
 use crate::*;
-use std::{collections::HashSet, fs};
+use std::{
+    collections::HashSet,
+    fs,
+    io::{Read, Seek, SeekFrom},
+};
 
 const SECTIONS: [&str; 6] = [
     "## 目的",
@@ -69,10 +73,11 @@ impl Context {
             .summary_mcp_servers(s(job, "codex"), std::path::Path::new(s(job, "cwd")))?;
         let dir = self.job_dir(s(job, "id"));
         let prior = fs::read_to_string(dir.join("yield-resume.md"))?;
+        let completed = self.context_completed_tool(job)?;
         fs::write(
             dir.join("context-summary-prompt.md"),
             format!(
-                "文脈の使用率が上限を超えたので、新しいセッションへ引き継ぎます。実装や外部操作を続けず、これまでの文脈を使い引き継ぎだけを書いて終了してください。ツールやコマンドは実行しないでください。出力は24KB以内。次の見出しをすべて使用し各節に具体的な内容を書いてください（該当なしなら『なし』）。目的・受入条件、終わった操作と検証結果、未完了と判断待ち、次に実行する一手、絶対ファイルパスとPR URL、最新のオーナー指示・権限・未コミット変更・送信済み操作を必ず含めます。新しいセッションでは旧文脈を参照できません。\n{}\n\n停止前の記録:\n{prior}",
+                "文脈の使用率が上限を超えたので、新しいセッションへ引き継ぎます。実装や外部操作を続けず、これまでの文脈を使い引き継ぎだけを書いて終了してください。ツールやコマンドは実行しないでください。出力は24KB以内。次の6行をそのまま見出しとして使用し、各節に具体的な内容を書いてください（該当なしなら『なし』）。目的と受入条件、終わった操作と検証結果、未完了と判断待ち、次に実行する一手、ファイルパスとPR URL、最新のオーナー指示・権限・未コミット変更・送信済み操作を必ず含めます。新しいセッションでは旧文脈を参照できません。\n{}\n\n直前に完了した項目の実際の結果（ここに完了と記録された操作を未実行とせず、繰り返さない）:\n{completed}\n\n停止前の記録:\n{prior}",
                 SECTIONS.join("\n")
             ),
         )?;
@@ -82,6 +87,44 @@ impl Context {
         job["context_source_pct"] = job["context_pct"].clone();
         job["activity"] = json!("順番待ち: 新しいセッションへの引き継ぎを作成します");
         Ok(())
+    }
+
+    fn context_completed_tool(&self, job: &Value) -> Result<String> {
+        let path = self.job_dir(s(job, "id")).join("events.jsonl");
+        let mut file = fs::File::open(&path)?;
+        let start = file
+            .metadata()?
+            .len()
+            .saturating_sub(1024 * 1024)
+            .max(job["attempt_events_offset"].as_u64().unwrap_or(0));
+        file.seek(SeekFrom::Start(start))?;
+        let mut bytes = Vec::new();
+        file.take(1024 * 1024).read_to_end(&mut bytes)?;
+        let event = bytes
+            .split(|b| *b == b'\n')
+            .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
+            .rev()
+            .find(|v| {
+                s(v, "type") == "item.completed"
+                    && s(&v["item"], "id") == s(job, "yield_boundary_item")
+            });
+        let text = if let Some(event) = event {
+            let item = &event["item"];
+            let mut compact = item.clone();
+            for field in ["command", "aggregated_output"] {
+                if let Some(value) = item[field].as_str() {
+                    compact[field] = json!(short(value, 1800));
+                }
+            }
+            short(&compact.to_string(), 4000)
+        } else {
+            format!(
+                "項目 {} は完了済み。全文は {} を新しいセッションで読み、再実行しない。",
+                s(job, "yield_boundary_item"),
+                path.display()
+            )
+        };
+        Ok(redact_local_log_secrets(&text, &self.rt.env()))
     }
 
     /// The caller holds queue and state locks after the summary process exits.
@@ -127,13 +170,36 @@ impl Context {
 }
 
 fn valid_summary(text: &str) -> bool {
-    !text.is_empty()
-        && text.len() <= 24 * 1024
-        && SECTIONS.iter().all(|section| {
-            text.split_once(section).is_some_and(|(_, body)| {
-                !body.split("\n## ").next().unwrap_or("").trim().is_empty()
-            })
-        })
+    if text.is_empty() || text.len() > 24 * 1024 {
+        return false;
+    }
+    let aliases: [&[&str]; 6] = [
+        &["目的"],
+        &["終わった", "完了した", "成果"],
+        &["残り", "未完了", "残作業"],
+        &["次の一手", "次に実行", "次の作業"],
+        &[
+            "関係ファイル",
+            "関連ファイル",
+            "絶対ファイルパス",
+            "ファイルとPR",
+        ],
+        &["最新の指示", "最新のオーナー指示"],
+    ];
+    let mut found = [false; 6];
+    let prefixed = format!("\n{text}");
+    for section in prefixed.split("\n## ").skip(1) {
+        if let Some((heading, body)) = section.split_once('\n') {
+            if !body.trim().is_empty() {
+                for (i, names) in aliases.iter().enumerate() {
+                    if names.iter().any(|name| heading.trim().starts_with(name)) {
+                        found[i] = true;
+                    }
+                }
+            }
+        }
+    }
+    found.into_iter().all(|yes| yes)
 }
 
 #[cfg(test)]
@@ -149,5 +215,10 @@ mod tests {
         assert!(valid_summary(&valid));
         assert!(!valid_summary(&format!("{valid}{}", "あ".repeat(9000))));
         assert!(!valid_summary(&SECTIONS.join("\n")));
+        let native = "状態: 継続中\n\n## 目的・受入条件\n2手順\n## 終わった操作と検証結果\n手順1完了\n## 未完了と判断待ち\n手順2\n## 次に実行する一手\n手順2の記録確認\n## 絶対ファイルパスとPR URL\nC:/probe\n## 最新のオーナー指示・権限・未コミット変更・送信済み操作\n読むだけ";
+        assert!(valid_summary(native));
+        assert!(!valid_summary(
+            &native.replace("## 未完了と判断待ち\n手順2\n", "")
+        ));
     }
 }

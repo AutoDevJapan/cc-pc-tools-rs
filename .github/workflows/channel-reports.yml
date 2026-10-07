@@ -1,0 +1,25 @@
+name: Channel reports
+on:
+  push:
+    branches: [main]
+    paths: ['cc-ask/**', 'cc-channel-watch/**', 'cc-chrome/**', 'cc-live/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-local-llm/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/channel-reports.yml']
+  pull_request:
+    paths: ['cc-ask/**', 'cc-channel-watch/**', 'cc-chrome/**', 'cc-live/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-local-llm/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/channel-reports.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked -p cc-channel-watch
+      - run: cargo test --locked -p cc-ask --test channel_reports --test commands
+      - run: cargo clippy --locked -p cc-ask -p cc-channel-watch --all-targets -- -D warnings

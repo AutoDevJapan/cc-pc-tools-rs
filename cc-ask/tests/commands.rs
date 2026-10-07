@@ -536,7 +536,8 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
     let body = h.root.path().join("record.md");
     std::fs::write(&body, "  次の記録  ").unwrap();
     let second = cmd_log(&mut h.ctx, "後片付けの記録", "ignored", Some(&body), true).unwrap();
-    assert_eq!(first, second);
+    assert_eq!(first["thread_id"], second["thread_id"]);
+    assert_ne!(first["message_id"], second["message_id"]);
     assert_eq!(
         read_json(&h.root.path().join("log_threads.json")).unwrap(),
         json!({"後片付けの記録":"300"})

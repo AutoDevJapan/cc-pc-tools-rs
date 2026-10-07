@@ -1,0 +1,40 @@
+{
+  "yt_dlp": "D:/CC/Tools/yt-dlp/2026.08.19/yt-dlp.exe",
+  "todo": "D:/CC/Tools/todo/todo.exe",
+  "todo_store": "D:/CC/Tools/todo/todo.json",
+  "channels": [
+    {
+      "key": "xb-bittensor",
+      "name": "XB Bittensor",
+      "url": "https://www.youtube.com/@xb-bittensor",
+      "knowledge_skill": "xb-channel-knowledge",
+      "report_folder": "D:/CC/Reports/xb-bittensor",
+      "project": "channel-xb",
+      "seed_files": [
+        "D:/CC/Reports/xb-bittensor/videos.json"
+      ]
+    },
+    {
+      "key": "motocrab-love",
+      "name": "Motocrab",
+      "url": "https://www.youtube.com/@motocrab-love",
+      "knowledge_skill": "motocrab-channel-knowledge",
+      "report_folder": "D:/CC/Reports/motocrab-love",
+      "project": "channel-motocrab",
+      "seed_files": [
+        "D:/CC/Reports/motocrab-love/videos.json"
+      ]
+    },
+    {
+      "key": "health-channel",
+      "name": "健康ナビ",
+      "url": "https://www.youtube.com/channel/UCjQ-uqAiM-S6gOC3kLjWA6w",
+      "knowledge_skill": "health-channel-analysis",
+      "report_folder": "D:/CC/Reports/health-channel",
+      "project": "channel-health",
+      "seed_files": [
+        "D:/CC/Skills/health-channel-analysis/references/channel-analysis-20261004.md"
+      ]
+    }
+  ]
+}

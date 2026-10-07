@@ -631,6 +631,9 @@ pub fn cmd_log_attached(
     notify: bool,
     attach: &[PathBuf],
 ) -> Result<Value> {
+    let channel_topic = crate::channel_reports::canonical(topic);
+    let topic = channel_topic.unwrap_or(topic);
+    let notify = notify && channel_topic.is_none();
     let body = match body_file {
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
@@ -649,13 +652,34 @@ pub fn cmd_log_attached(
         } else {
             json!({})
         };
+        let mut rename = false;
+        if channel_topic.is_some() && !truth(&known[topic]) {
+            let prior = known.as_object().and_then(|topics| {
+                topics.iter().find_map(|(alias, id)| {
+                    (crate::channel_reports::canonical(alias) == channel_topic && truth(id))
+                        .then(|| id.clone())
+                })
+            });
+            if let Some(id) = prior {
+                ctx.call(
+                    "PATCH",
+                    &format!("/channels/{}", s(&id)),
+                    Some(&json!({"archived":false,"name":topic})),
+                )?;
+                rename = true;
+                known[topic] = id;
+                atomic_json(&path, &known, 1)?;
+            }
+        }
         if truth(&known[topic]) {
             thread_id = s(&known[topic]).to_owned();
-            ctx.call(
-                "PATCH",
-                &format!("/channels/{thread_id}"),
-                Some(&json!({"archived":false})),
-            )?;
+            if !rename {
+                ctx.call(
+                    "PATCH",
+                    &format!("/channels/{thread_id}"),
+                    Some(&json!({"archived":false})),
+                )?;
+            }
         } else {
             let thread = ctx.call("POST", &format!("/channels/{}/threads",s(&ctx.cfg["task_channel_id"])), Some(&json!({"name":topic.chars().take(100).collect::<String>(),
                 "message":{"content":format!("「{topic}」の記録です。通知は出しません。"),"flags":SILENT,"allowed_mentions":{"parse":[]}}})))?;
@@ -669,7 +693,7 @@ pub fn cmd_log_attached(
     } else {
         None
     };
-    crate::attachments::post_tracked(
+    let message_ids = crate::attachments::post_tracked(
         ctx,
         &thread_id,
         &body,
@@ -677,7 +701,7 @@ pub fn cmd_log_attached(
         notify,
         question.as_ref(),
     )?;
-    let value = json!({"thread_id":thread_id});
+    let value = json!({"thread_id":thread_id,"url":format!("https://discord.com/channels/{}/{}",s(&ctx.cfg["guild_id"]),thread_id),"message_id":message_ids.last(),"message_ids":message_ids});
     print_json(&value, None)?;
     Ok(value)
 }

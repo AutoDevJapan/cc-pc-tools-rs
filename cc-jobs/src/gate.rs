@@ -21,6 +21,17 @@ pub const UNLOCKED: &[&str] = &[
     "fmt",
     "metadata",
     "locate-project",
+    "tree",
+    "add",
+    "remove",
+    "update",
+    "fetch",
+    "search",
+    "info",
+    "vendor",
+    "new",
+    "init",
+    "generate-lockfile",
 ];
 pub const SCCACHE: &str = r"D:\CC\Tools\sccache\sccache.exe";
 /// Target key locked by the outer gate. Nested gates reuse the outer slot.
@@ -52,6 +63,14 @@ pub fn first_command(args: &[String]) -> &str {
     ""
 }
 pub fn build_like(args: &[String]) -> bool {
+    if args.is_empty()
+        || args
+            .iter()
+            .take_while(|arg| *arg != "--")
+            .any(|arg| arg == "--list")
+    {
+        return false;
+    }
     if args
         .iter()
         .take_while(|arg| *arg != "--")
@@ -316,44 +335,6 @@ pub fn with_slot<T>(
     result
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn metadata_keeps_lockfile_network_and_toolchain_constraints() {
-        let args = [
-            "+stable",
-            "build",
-            "--locked",
-            "--offline",
-            "--frozen",
-            "--manifest-path",
-            "repo/Cargo.toml",
-            "--",
-            "--config=ignored",
-        ]
-        .map(String::from);
-        assert_eq!(
-            metadata_args(&args),
-            [
-                "+stable",
-                "metadata",
-                "--format-version",
-                "1",
-                "--no-deps",
-                "--locked",
-                "--offline",
-                "--frozen",
-                "--manifest-path",
-                "repo/Cargo.toml"
-            ]
-        );
-        assert_eq!(
-            first_command(&["+stable", "--config", "settings.toml", "fmt"].map(String::from)),
-            "fmt"
-        );
-    }
-}
 fn wait_for(
     paths: &[PathBuf],
     env: &BTreeMap<String, String>,
@@ -412,6 +393,8 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let mut child = env.clone();
     let jobs = take_var(&mut child, "CARGO_BUILD_JOBS").map_or(limit, |v| clamp(&v, limit));
     child.insert("CARGO_BUILD_JOBS".into(), jobs.to_string());
+    let tests = take_var(&mut child, "RUST_TEST_THREADS").map_or(limit, |v| clamp(&v, limit));
+    child.insert("RUST_TEST_THREADS".into(), tests.to_string());
     if first_command(&args) == "nextest" {
         let tests =
             take_var(&mut child, "NEXTEST_TEST_THREADS").map_or(limit, |v| clamp(&v, limit));
@@ -463,4 +446,43 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let result = execute(&args, &child);
     drop((slot, target_guard));
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn metadata_keeps_lockfile_network_and_toolchain_constraints() {
+        let args = [
+            "+stable",
+            "build",
+            "--locked",
+            "--offline",
+            "--frozen",
+            "--manifest-path",
+            "repo/Cargo.toml",
+            "--",
+            "--config=ignored",
+        ]
+        .map(String::from);
+        assert_eq!(
+            metadata_args(&args),
+            [
+                "+stable",
+                "metadata",
+                "--format-version",
+                "1",
+                "--no-deps",
+                "--locked",
+                "--offline",
+                "--frozen",
+                "--manifest-path",
+                "repo/Cargo.toml"
+            ]
+        );
+        assert_eq!(
+            first_command(&["+stable", "--config", "settings.toml", "fmt"].map(String::from)),
+            "fmt"
+        );
+    }
 }

@@ -173,6 +173,11 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// Production uses the installed redaction data. Test runtimes provide
+    /// their own fixture root without modifying the owner's installed files.
+    fn task_title_tools(&self) -> PathBuf {
+        PathBuf::from(cc_task_title::TOOLS)
+    }
     /// Query public server metadata with plugins/apps disabled. Never retain
     /// transport environments or print the CLI's response to diagnostics.
     fn summary_mcp_servers(&self, codex: &str, cwd: &Path) -> io::Result<Vec<String>> {

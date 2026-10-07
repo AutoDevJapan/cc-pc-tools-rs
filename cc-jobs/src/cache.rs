@@ -24,6 +24,7 @@ pub fn build_environment(env: &mut BTreeMap<String, String>, sccache: &Path) {
     env.retain(|k, v| !k.eq_ignore_ascii_case("CARGO_INCREMENTAL") || v != "0");
     let mut defaults = vec![
         ("CARGO_PROFILE_DEV_INCREMENTAL", "true".to_string()),
+        ("CARGO_PROFILE_DEV_CODEGEN_UNITS", "16".to_string()),
         ("CARGO_PROFILE_TEST_INCREMENTAL", "false".to_string()),
     ];
     if sccache.is_file() {
@@ -365,6 +366,7 @@ mod tests {
             e,
             BTreeMap::from([
                 ("CARGO_PROFILE_DEV_INCREMENTAL".into(), "true".into()),
+                ("CARGO_PROFILE_DEV_CODEGEN_UNITS".into(), "16".into()),
                 ("CARGO_PROFILE_TEST_INCREMENTAL".into(), "false".into())
             ])
         );

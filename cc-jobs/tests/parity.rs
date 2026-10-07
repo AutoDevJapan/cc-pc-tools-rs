@@ -2279,6 +2279,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    title_tools: Mutex<Option<PathBuf>>,
     env: Mutex<BTreeMap<String, String>>,
     time: Mutex<f64>,
     calls: Mutex<Vec<Call>>,
@@ -2318,6 +2319,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            title_tools: Mutex::new(None),
             env: Mutex::new(BTreeMap::from([(
                 "GODD_AO_BIN".into(),
                 "Z:/missing-ao.exe".into(),
@@ -2405,6 +2407,13 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn task_title_tools(&self) -> PathBuf {
+        self.title_tools
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(cc_task_title::TOOLS))
+    }
     fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
         Ok(vec!["stripe".into(), "unseen-server".into()])
     }
@@ -2641,6 +2650,10 @@ impl Test {
         let tmp = Temp::new();
         let rt = Arc::new(Fake::new());
         let root = tmp.0.clone();
+        let title_tools = root.join("title-tools");
+        fs::create_dir(&title_tools).unwrap();
+        fs::write(title_tools.join("client-projects.txt"), "ExampleClient\n").unwrap();
+        *rt.title_tools.lock().unwrap() = Some(title_tools);
         let ctx = Context {
             jobs: root.join("jobs"),
             home: root.join("home"),
@@ -6159,4 +6172,3 @@ mod additional_compatibility {
         assert!(t.ctx.load(s(&j, "id")).unwrap().get("gto").is_none());
     }
 }
-

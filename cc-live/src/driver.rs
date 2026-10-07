@@ -4,6 +4,54 @@ use std::path::{Path, PathBuf};
 
 pub const MANIFEST: &str = "tools/civ6-autotest-rs/Cargo.toml";
 
+/// Match the driver's step defaults and allow its single internal startup
+/// recovery (second attempt plus bounded diagnostics). The chain further caps
+/// this budget at the remaining shared lease; it never reruns the scenario.
+pub fn scenario_timeout(scenario: &Path) -> Result<f64, String> {
+    let data = read_json(scenario)?;
+    let steps = data["steps"]
+        .as_array()
+        .filter(|s| !s.is_empty())
+        .ok_or("scenario needs a nonempty steps array")?;
+    let mut seconds = 60.0;
+    if steps[0]["action"] != "restart_game" {
+        seconds += 2.0 * 360.0 + 240.0;
+    }
+    for step in steps {
+        let action = step["action"]
+            .as_str()
+            .ok_or("scenario step action missing")?;
+        if action == "manual" {
+            return Err(
+                "live_chain requires bounded automated steps; manual is unsupported".into(),
+            );
+        }
+        let restart = action == "restart_game";
+        let timeout = match step.get("timeout") {
+            Some(v) => v
+                .as_f64()
+                .filter(|n| n.is_finite() && *n > 0.0)
+                .ok_or("scenario timeout must be finite and positive")?,
+            None => {
+                if restart {
+                    360.0
+                } else {
+                    120.0
+                }
+            }
+        };
+        seconds += if restart {
+            2.0 * timeout + 240.0
+        } else {
+            timeout
+        };
+        if !seconds.is_finite() {
+            return Err("scenario timeout sum overflowed".into());
+        }
+    }
+    Ok(seconds)
+}
+
 fn binary(worktree: &Path, name: &str) -> PathBuf {
     let name = if cfg!(windows) {
         format!("{name}.exe")
@@ -17,7 +65,7 @@ fn binary(worktree: &Path, name: &str) -> PathBuf {
 pub fn prepare(r: &mut impl Runner, p: &Paths, worktree: &Path) -> Result<(), String> {
     let manifest = worktree.join(MANIFEST);
     if !manifest.is_file() {
-        return Ok(());
+        return Err("Rust driver manifest is missing; Python drivers are unsupported".into());
     }
     let cargo = std::env::var("CC_LIVE_CARGO").unwrap_or_else(|_| {
         if cfg!(windows) {
@@ -104,15 +152,15 @@ pub fn prepare(r: &mut impl Runner, p: &Paths, worktree: &Path) -> Result<(), St
     Ok(())
 }
 
-pub fn scenario(p: &Paths, worktree: &Path) -> Result<Vec<String>, String> {
-    command(p, worktree, "civ6-autotest", "scenario.py")
+pub fn scenario(_p: &Paths, worktree: &Path) -> Result<Vec<String>, String> {
+    command(worktree, "civ6-autotest")
 }
 
-pub fn tuner(p: &Paths, worktree: &Path) -> Result<Vec<String>, String> {
-    command(p, worktree, "civ6-tuner", "tuner.py")
+pub fn tuner(_p: &Paths, worktree: &Path) -> Result<Vec<String>, String> {
+    command(worktree, "civ6-tuner")
 }
 
-fn command(p: &Paths, worktree: &Path, name: &str, legacy: &str) -> Result<Vec<String>, String> {
+fn command(worktree: &Path, name: &str) -> Result<Vec<String>, String> {
     if worktree.join(MANIFEST).is_file() {
         let executable = binary(worktree, name);
         if !executable.is_file() {
@@ -123,10 +171,6 @@ fn command(p: &Paths, worktree: &Path, name: &str, legacy: &str) -> Result<Vec<S
         }
         Ok(vec![path(executable)])
     } else {
-        // Only old branches without a Rust driver retain their legacy command.
-        Ok(args(&[
-            &p.python,
-            &path(worktree.join("tools/civ6-autotest").join(legacy)),
-        ]))
+        Err("Rust driver manifest is missing; Python drivers are unsupported".into())
     }
 }

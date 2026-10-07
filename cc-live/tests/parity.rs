@@ -29,7 +29,19 @@ impl Fixture {
         for dir in [&p.here, &p.wt, &p.jobs, &p.temp, &p.profile] {
             fs::create_dir_all(dir).unwrap();
         }
-        Self { root, p }
+        write_json(
+            root.join("scenario.json"),
+            &json!({"steps":[{"action":"restart_game","timeout":420}]}),
+        )
+        .unwrap();
+        write_json(
+            p.temp.join("scenario.json"),
+            &json!({"steps":[{"action":"restart_game","timeout":420}]}),
+        )
+        .unwrap();
+        let fixture = Self { root, p };
+        rust_driver_fixture(&fixture);
+        fixture
     }
     fn json(&self, relative: &str, v: serde_json::Value) -> PathBuf {
         let p = self.root.join(relative);
@@ -76,6 +88,28 @@ impl Fake {
 impl Runner for Fake {
     fn run(&mut self, call: Call) -> Result<Output, String> {
         assert_eq!(call.creationflags, CREATE_NO_WINDOW);
+        if call.args.contains(&"build".into()) && self.replies.is_empty() {
+            let manifest = std::path::Path::new(
+                &call.args[call
+                    .args
+                    .iter()
+                    .position(|a| a == "--manifest-path")
+                    .unwrap()
+                    + 1],
+            );
+            let target = std::path::Path::new(
+                &call.args[call.args.iter().position(|a| a == "--target-dir").unwrap() + 1],
+            );
+            let stdout=call.args.windows(2).filter(|w|w[0]=="--bin").map(|w|{
+                let filename=if cfg!(windows) {format!("{}.exe",w[1])} else {w[1].clone()};
+                json!({"reason":"compiler-artifact","manifest_path":path(manifest),"target":{"name":w[1],"kind":["bin"]},"executable":path(target.join("release").join(filename))}).to_string()
+            }).collect::<Vec<_>>().join("\n");
+            self.calls.push(call);
+            return Ok(Output {
+                stdout,
+                ..Output::default()
+            });
+        }
         self.calls.push(call);
         self.replies
             .pop_front()
@@ -97,6 +131,20 @@ impl Runner for Fake {
         self.errors.push(s.into());
         Ok(())
     }
+}
+fn is_driver(c: &Call) -> bool {
+    c.args[0].ends_with(if cfg!(windows) {
+        "civ6-autotest.exe"
+    } else {
+        "civ6-autotest"
+    })
+}
+fn is_tuner(c: &Call) -> bool {
+    c.args[0].ends_with(if cfg!(windows) {
+        "civ6-tuner.exe"
+    } else {
+        "civ6-tuner"
+    })
 }
 
 // The six original Python unittest methods retain their names and all subcases.
@@ -210,7 +258,7 @@ fn answering_game_is_still_closed_before_relaunch() {
     let f = Fixture::new();
     let mut r = Fake::outputs(&[("\"CivilizationVI.exe\",\"11\"", "", 0)]);
     assert_eq!(ensure_responsive_civ6(&mut r, &f.p).unwrap(), "killed");
-    assert_eq!(r.calls[1].args[0], "fixture-python");
+    assert!(is_tuner(&r.calls[1]));
     assert_eq!(r.calls[2].args[0], "taskkill");
     assert_eq!(r.sleeps, vec![45.0]);
 }
@@ -224,13 +272,7 @@ fn unresponsive_game_retries_tuner_three_times() {
         ("", "", 1),
     ]);
     ensure_responsive_civ6(&mut r, &f.p).unwrap();
-    assert_eq!(
-        r.calls
-            .iter()
-            .filter(|c| c.args[0] == "fixture-python")
-            .count(),
-        3
-    );
+    assert_eq!(r.calls.iter().filter(|c| is_tuner(c)).count(), 3);
     assert_eq!(r.sleeps, vec![10.0, 10.0, 10.0, 45.0]);
 }
 #[test]
@@ -650,23 +692,23 @@ fn acquisition_retries_a_protected_claim_and_respects_the_deadline() {
     }
 }
 #[test]
-fn final_cleanup_happens_after_invalid_input() {
+fn invalid_input_returns_before_lock_or_external_calls() {
     let f = Fixture::new();
     let mut r = Fake::success();
     assert!(cli(&mut r, &f.p, &["invalid".into()]).is_err());
     assert!(!f.p.here.join("civ6.lock").exists());
-    assert_eq!(r.calls[0].args[0], "taskkill");
+    assert!(r.calls.is_empty());
+    assert!(!f.p.here.join("queue").exists());
 }
 #[test]
 fn cleanup_failure_still_releases_lock() {
     let f = Fixture::new();
-    let mut r = Fake::outputs(&[
-        ("", "", 0),
-        ("", "", 0),
-        ("\"CivilizationVI.exe\",\"11\"", "", 0),
-    ]);
-    r.times = VecDeque::from([0.0, 0.0, 0.0, 0.0, 15.0]);
-    assert!(cli(&mut r, &f.p, &[]).unwrap_err().contains("refusing"));
+    let mut r = Fake::success();
+    r.replies.push_back(Ok(Output::default()));
+    r.replies.push_back(Err("cleanup refused".into()));
+    assert!(failed_prepare_cli(&mut r, &f.p)
+        .unwrap_err()
+        .contains("cleanup refused"));
     assert!(!f.p.here.join("civ6.lock").exists());
 }
 
@@ -790,7 +832,7 @@ impl Runner for Pending {
     }
     fn print(&mut self, s: &str) -> Result<(), String> {
         self.fake.print(s)?;
-        if s == "CHAIN DONE" {
+        if s.starts_with("RESULT fixture s.json prepare-failed") {
             self.reader = Some(OwnedReader::spawn(
                 &self.lock,
                 &self.ready,
@@ -814,7 +856,7 @@ fn delete_pending_compatible_reader_allows_immediate_future_acquire() {
         reader: None,
         release_on_sleep: true,
     };
-    assert_eq!(cli(&mut r, &f.p, &[]).unwrap(), 0);
+    assert_eq!(failed_prepare_cli(&mut r, &f.p).unwrap(), 1);
     let pending = fs::OpenOptions::new().read(true).open(&r.lock).unwrap_err();
     assert_eq!(pending.raw_os_error(), Some(5), "{pending}");
     acquire(&mut r, &f.p, &json!({"pid":77}), 1.0, false).unwrap();
@@ -910,7 +952,7 @@ fn delete_pending_access_denied_is_bounded_and_preserves_the_reader() {
         reader: None,
         release_on_sleep: false,
     };
-    assert_eq!(cli(&mut r, &f.p, &[]).unwrap(), 0);
+    assert_eq!(failed_prepare_cli(&mut r, &f.p).unwrap(), 1);
     let error = acquire(&mut r, &f.p, &json!({"pid":77}), 3600.0, false).unwrap_err();
     assert!(error.contains("civ6.lock"), "{error}");
     assert!(error.contains(&r.lock.display().to_string()), "{error}");
@@ -976,7 +1018,7 @@ fn release_waits_for_real_reader_then_deletes_only_its_own_lock() {
         }
         fn print(&mut self, s: &str) -> Result<(), String> {
             self.fake.print(s)?;
-            if s == "CHAIN DONE" {
+            if s.starts_with("RESULT fixture s.json prepare-failed") {
                 let child = Command::new(std::env::current_exe().unwrap())
                     .args(["--ignored", "--exact", "release_reader_child"])
                     .env("CC_LIVE_TEST_LOCK", &self.lock)
@@ -1011,7 +1053,7 @@ fn release_waits_for_real_reader_then_deletes_only_its_own_lock() {
         release: f.root.join("reader-release"),
         child: None,
     };
-    assert_eq!(cli(&mut r, &f.p, &[]).unwrap(), 0);
+    assert_eq!(failed_prepare_cli(&mut r, &f.p).unwrap(), 1);
     assert_eq!(r.fake.sleeps, vec![0.05]);
     assert_eq!(
         r.fake
@@ -1049,7 +1091,7 @@ fn release_skips_replaced_owner_after_a_sharing_violation() {
         }
         fn print(&mut self, s: &str) -> Result<(), String> {
             self.fake.print(s)?;
-            if s == "CHAIN DONE" {
+            if s.starts_with("RESULT fixture s.json prepare-failed") {
                 self.blocker = Some(
                     fs::OpenOptions::new()
                         .read(true)
@@ -1069,13 +1111,21 @@ fn release_skips_replaced_owner_after_a_sharing_violation() {
         blocker: None,
         peer: peer.clone(),
     };
-    let error = cli(&mut r, &f.p, &[]).unwrap_err();
+    let error = failed_prepare_cli(&mut r, &f.p).unwrap_err();
     assert!(
         error.contains("ownership changed before cleanup"),
         "{error}"
     );
     assert_eq!(read_json(&r.lock).unwrap(), peer);
-    assert!(r.fake.calls.is_empty(), "peer's game must not be closed");
+    assert!(
+        r.fake
+            .calls
+            .iter()
+            .filter(|c| c.args[0] == "taskkill")
+            .count()
+            == 2,
+        "only the owned pre-prepare game may be closed; never the peer's game"
+    );
     assert_eq!(r.fake.sleeps, vec![0.05]);
 }
 
@@ -1100,7 +1150,7 @@ fn release_reports_persistent_sharing_violation_and_keeps_the_lock() {
         }
         fn print(&mut self, s: &str) -> Result<(), String> {
             self.fake.print(s)?;
-            if s == "CHAIN DONE" {
+            if s.starts_with("RESULT fixture s.json prepare-failed") {
                 self.blocker = Some(
                     fs::OpenOptions::new()
                         .read(true)
@@ -1118,7 +1168,7 @@ fn release_reports_persistent_sharing_violation_and_keeps_the_lock() {
         lock: f.p.here.join("civ6.lock"),
         blocker: None,
     };
-    let error = cli(&mut r, &f.p, &[]).unwrap_err();
+    let error = failed_prepare_cli(&mut r, &f.p).unwrap_err();
     assert!(error.contains("open owned lock"), "{error}");
     assert!(error.contains(&r.lock.display().to_string()), "{error}");
     assert!(error.contains("os error 32"), "{error}");
@@ -1141,10 +1191,12 @@ fn ready_chain(f: &Fixture, run_code: i32) -> Fake {
         path(f.root.join("artifacts"))
     );
     Fake::outputs(&[
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
         (&prepare, "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
         ("[OK] one\n[FAIL] two\nnoise\n", "", run_code),
         ("", "", 0),
         ("", "", 0),
@@ -1152,6 +1204,19 @@ fn ready_chain(f: &Fixture, run_code: i32) -> Fake {
         ("", "", 0),
         ("", "", 0),
     ])
+}
+fn before_prepare(prepare: (&str, &str, i32)) -> Fake {
+    Fake::outputs(&[
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        prepare,
+    ])
+}
+fn failed_prepare_cli(r: &mut impl Runner, p: &Paths) -> Result<i32, String> {
+    cli(r, p, &args(&["fixture:s.json", "--stop-on-failure"]))
 }
 #[test]
 fn chain_closes_game_after_each_run_and_on_exit() {
@@ -1161,12 +1226,10 @@ fn chain_closes_game_after_each_run_and_on_exit() {
         cli(&mut r, &f.p, &["name:s.json".into(), "--test-mode".into()]).unwrap(),
         0
     );
-    let scenario = r
-        .calls
-        .iter()
-        .find(|c| c.args[0] == "fixture-python")
-        .unwrap();
+    let scenario = r.calls.iter().find(|c| is_driver(c)).unwrap();
     assert!(scenario.merge_stderr);
+    assert!(scenario.kill_tree);
+    assert_eq!(scenario.timeout, Some(1140.0));
     assert_eq!(scenario.args.last().unwrap(), "--test-mode");
     assert_eq!(
         r.calls.iter().filter(|c| c.args[0] == "taskkill").count(),
@@ -1208,6 +1271,978 @@ fn chain_stop_on_failure_retains_exit_code_and_cleans() {
         1
     );
     assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn help_and_all_invalid_arguments_ignore_a_live_foreign_lock() {
+    let f = Fixture::new();
+    let owner = json!({"pid":16084,"live_chain":true,"lock_token":"other-owner"});
+    f.json("here/civ6.lock", owner.clone());
+    for input in [
+        vec![],
+        args(&["--test-mode"]),
+        args(&["--stop-on-failure"]),
+        args(&["--help"]),
+        args(&["-h"]),
+        args(&["valid:s.json", "invalid"]),
+        args(&["--unknown"]),
+        args(&[":s.json"]),
+        args(&["name:"]),
+        args(&["--reliability"]),
+        args(&["--reliability", "a:s.json", "b:s.json"]),
+    ] {
+        let help = input == args(&["--help"]) || input == args(&["-h"]);
+        let mut r = Fake::success();
+        let result = cli(&mut r, &f.p, &input);
+        if help {
+            assert_eq!(result.unwrap(), 0);
+        } else {
+            assert!(result.is_err());
+        }
+        assert!(r.calls.is_empty());
+        assert!(r.sleeps.is_empty());
+        assert_eq!(read_json(f.p.here.join("civ6.lock")).unwrap(), owner);
+        assert!(!f.p.here.join("queue").exists());
+    }
+}
+
+#[test]
+fn default_chain_retains_failure_even_after_a_later_success() {
+    let f = Fixture::new();
+    let mut r = ready_chain(&f, 7);
+    // pre-close + prepare + run + per-scenario close = 12 calls.
+    r.replies.extend(ready_chain(&f, 0).replies);
+    assert_eq!(
+        cli(&mut r, &f.p, &args(&["a:s.json", "b:s.json"])).unwrap(),
+        7
+    );
+    assert_eq!(r.calls.iter().filter(|c| is_driver(c)).count(), 2);
+    assert_eq!(r.printed.last().unwrap(), "CHAIN FAILED");
+    assert!(!r.printed.iter().any(|s| s == "CHAIN DONE"));
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn nonzero_preparation_with_two_paths_never_launches_a_driver() {
+    let f = Fixture::new();
+    let paths = format!(
+        "{}\n{}",
+        path(f.root.join("scenario.json")),
+        path(f.root.join("artifacts"))
+    );
+    let mut r = before_prepare((&paths, "checkout denied", 42));
+    assert_eq!(cli(&mut r, &f.p, &args(&["a:s.json"])).unwrap(), 42);
+    assert_eq!(
+        r.calls
+            .iter()
+            .filter(|c| c.args[0].ends_with("ship.exe"))
+            .count(),
+        1
+    );
+    assert!(!r.calls.iter().any(is_driver));
+    assert!(r
+        .printed
+        .iter()
+        .any(|s| s.contains("prepare-failed 42") && s.contains("checkout denied")));
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn preparation_execution_error_is_propagated_without_retry() {
+    let f = Fixture::new();
+    let mut r = before_prepare(("", "", 0));
+    r.replies[5] = Err("ship timed out".into());
+    let error = cli(&mut r, &f.p, &args(&["a:s.json"])).unwrap_err();
+    assert!(error.contains("ship timed out"));
+    assert_eq!(
+        r.calls
+            .iter()
+            .filter(|c| c.args[0].ends_with("ship.exe"))
+            .count(),
+        1
+    );
+    let prepare = r
+        .calls
+        .iter()
+        .find(|c| c.args[0].ends_with("ship.exe"))
+        .unwrap();
+    assert!(prepare.kill_tree);
+    assert_eq!(prepare.timeout, Some(1200.0));
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn ship_rejects_invalid_requests_before_git_or_network() {
+    let f = Fixture::new();
+    for input in [
+        args(&["unknown"]),
+        args(&["live", "", "s.json"]),
+        args(&["live", "main", ""]),
+        args(&["live", "main", "s.json", "--bad"]),
+        args(&["pr", "n", "title", "message", "extra"]),
+        args(&["pr", "n", "", "message"]),
+    ] {
+        let mut r = Fake::success();
+        assert!(ship::cli(&mut r, &f.p, &input).is_err());
+        assert!(r.calls.is_empty());
+    }
+    let mut r = Fake::success();
+    assert_eq!(ship::cli(&mut r, &f.p, &args(&["--help"])).unwrap(), 0);
+    assert!(r.calls.is_empty());
+}
+
+#[test]
+fn maintenance_stops_other_jobs_before_prepare_but_allows_the_repairing_job() {
+    let f = Fixture::new();
+    f.json(
+        "here/reliability-maintenance.json",
+        json!({"todo":1971,"allowed_jobs":["repair-job"],"reason":"最小保存読込10回の確認中"}),
+    );
+    assert!(ship::check_live_maintenance(&f.p, Some("other-job"))
+        .unwrap_err()
+        .contains("再試行せず"));
+    assert!(ship::check_live_maintenance(&f.p, None).is_err());
+    ship::check_live_maintenance(&f.p, Some("repair-job")).unwrap();
+    let mut r = Fake::success();
+    assert!(ship::live(&mut r, &f.p, "main", "s.json", true).is_err());
+    assert!(r.calls.is_empty());
+    let mut r = Fake::success();
+    assert!(cli(&mut r, &f.p, &args(&["main:s.json"])).is_err());
+    assert!(r.calls.is_empty());
+    assert!(!f.p.here.join("queue").exists());
+}
+
+#[test]
+fn dirty_tracked_source_stops_before_the_driver_build_and_keeps_input() {
+    let f = Fixture::new();
+    let original = json!({"steps":[{"action":"pause","seconds":1}]});
+    let source = f.json(
+        "wt/live/tools/civ6-autotest/scenarios/s.json",
+        original.clone(),
+    );
+    let mut r = Fake::outputs(&[("", "", 0), ("", "", 0), ("", "tracked edits", 1)]);
+    assert!(ship::live(&mut r, &f.p, "main", "s.json", true)
+        .unwrap_err()
+        .contains("diff --quiet HEAD"));
+    assert_eq!(read_json(source).unwrap(), original);
+    assert!(!r.calls.iter().any(|c| c.args.contains(&"build".into())));
+    assert!(r.printed.is_empty());
+}
+
+#[test]
+fn lease_probe_keeps_quiet_work_unbounded_and_ignores_dead_waiters() {
+    let f = Fixture::new();
+    f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":1000}),
+    );
+    let limit = process::LeaseLimit::new(&f.p, "owned", 240.0);
+    let mut r = Fake::success();
+    r.time = 10000.0;
+    assert_eq!(
+        process::lease_probe(&mut r, &limit).unwrap(),
+        process::LeaseProbe::Clear
+    );
+    f.json("jobs/waiter/job.json", json!({"status":"succeeded"}));
+    f.json(
+        "here/queue/waiter.json",
+        json!({"job":"waiter","since":1000}),
+    );
+    assert_eq!(
+        process::lease_probe(&mut r, &limit).unwrap(),
+        process::LeaseProbe::Clear
+    );
+    f.json("jobs/waiter/job.json", json!({"status":"running"}));
+    r.time = 1100.0;
+    assert_eq!(
+        process::lease_probe(&mut r, &limit).unwrap(),
+        process::LeaseProbe::Contended(2800.0)
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn lease_monitor_can_read_the_lock_while_startup_recovery_pins_it() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let f = Fixture::new();
+    let locked = f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":1000}),
+    );
+    let recovery_pin = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(1)
+        .open(locked)
+        .unwrap();
+    let limit = process::LeaseLimit::new(&f.p, "owned", 240.0);
+    let mut r = Fake::success();
+    r.time = 10000.0;
+    assert_eq!(
+        process::lease_probe(&mut r, &limit).unwrap(),
+        process::LeaseProbe::Clear
+    );
+    drop(recovery_pin);
+}
+
+#[cfg(windows)]
+#[test]
+fn running_child_yields_to_a_waiter_arriving_after_it_started() {
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+    let f = Fixture::new();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+    f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":now}),
+    );
+    fs::create_dir_all(f.p.jobs.join("waiter")).unwrap();
+    fs::create_dir_all(f.p.here.join("queue")).unwrap();
+    let paths = f.p.clone();
+    let writer = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(300));
+        write_json(
+            paths.jobs.join("waiter/job.json"),
+            &json!({"status":"running"}),
+        )
+        .unwrap();
+        let since = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+        write_json(
+            paths.here.join("queue/waiter.json"),
+            &json!({"job":"waiter","since":since}),
+        )
+        .unwrap();
+    });
+    let start = Instant::now();
+    let error = process::RealRunner
+        .run(
+            Call::new(args(&["cmd.exe", "/d", "/c", "ping 127.0.0.1 -n 31 > nul"]))
+                .managed()
+                .timeout(15.0)
+                .lease(&f.p, "owned", 1797.0),
+        )
+        .unwrap_err();
+    writer.join().unwrap();
+    assert!(error.contains(process::LEASE_YIELD), "{error}");
+    assert!(start.elapsed().as_secs_f64() < 8.0);
+}
+
+#[cfg(windows)]
+#[test]
+fn quiet_running_child_is_not_cut_off_at_the_contention_lease() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let f = Fixture::new();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+    f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":now}),
+    );
+    let out = process::RealRunner
+        .run(
+            Call::new(args(&["cmd.exe", "/d", "/c", "ping 127.0.0.1 -n 5 > nul"]))
+                .managed()
+                .timeout(10.0)
+                .lease(&f.p, "owned", 1797.0),
+        )
+        .unwrap();
+    assert_eq!(out.code, 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn departed_waiter_cancels_the_competition_deadline_during_a_running_child() {
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    let f = Fixture::new();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+    f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":now}),
+    );
+    f.json("jobs/waiter/job.json", json!({"status":"running"}));
+    f.json(
+        "here/queue/waiter.json",
+        json!({"job":"waiter","since":now}),
+    );
+    let paths = f.p.clone();
+    let writer = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(350));
+        write_json(
+            paths.jobs.join("waiter/job.json"),
+            &json!({"status":"succeeded"}),
+        )
+        .unwrap();
+    });
+    let out = process::RealRunner
+        .run(
+            Call::new(args(&["cmd.exe", "/d", "/c", "ping 127.0.0.1 -n 5 > nul"]))
+                .managed()
+                .timeout(10.0)
+                .lease(&f.p, "owned", 1797.0),
+        )
+        .unwrap();
+    writer.join().unwrap();
+    assert_eq!(out.code, 0);
+}
+
+#[test]
+fn slow_waiter_investigation_does_not_extend_the_absolute_lease() {
+    struct SlowInspect(Fake);
+    impl Runner for SlowInspect {
+        fn run(&mut self, c: Call) -> Result<Output, String> {
+            self.0.time += 100.0;
+            self.0.run(c)
+        }
+        fn now(&mut self) -> f64 {
+            self.0.now()
+        }
+        fn sleep(&mut self, s: f64) -> Result<(), String> {
+            self.0.sleep(s)
+        }
+    }
+    let f = Fixture::new();
+    f.json(
+        "here/civ6.lock",
+        json!({"lock_token":"owned","job":"owner","acquired_at":1000}),
+    );
+    f.json("jobs/waiter/job.json", json!({"status":"running"}));
+    f.json(
+        "here/queue/waiter.json",
+        json!({"job":"waiter","live_chain":true,"pid":4321,"since":1000}),
+    );
+    let mut r = SlowInspect(Fake::outputs(&[("\"live_chain.exe\",\"4321\"", "", 0)]));
+    r.0.time = 1100.0;
+    let limit = process::LeaseLimit::new(&f.p, "owned", 240.0);
+    assert_eq!(
+        process::lease_probe(&mut r, &limit).unwrap(),
+        process::LeaseProbe::Contended(2800.0)
+    );
+    assert_eq!(r.0.time, 1200.0);
+}
+
+#[test]
+fn dynamic_lease_deadline_is_shared_with_civ6_cleanup_and_lock_release() {
+    struct TightCleanup {
+        inner: ReliabilityRunner,
+        mono: f64,
+        driver_done: bool,
+        timeouts: Vec<f64>,
+    }
+    impl Runner for TightCleanup {
+        fn run(&mut self, c: Call) -> Result<Output, String> {
+            if is_driver(&c) {
+                let limit = c.lease.clone().unwrap();
+                self.inner.run(c)?;
+                limit.record_probe(&process::LeaseProbe::Contended(0.25));
+                self.mono = 0.20;
+                self.driver_done = true;
+                return Err(format!(
+                    "{}: give the slot to its waiter",
+                    process::LEASE_YIELD
+                ));
+            }
+            if c.args[0] == "taskkill" && self.driver_done {
+                let timeout = c.timeout.unwrap();
+                self.timeouts.push(timeout);
+                assert!(timeout <= 0.050001);
+                self.mono += timeout;
+                return Err("simulated cleanup deadline".into());
+            }
+            self.inner.run(c)
+        }
+        fn now(&mut self) -> f64 {
+            self.inner.now()
+        }
+        fn monotonic(&mut self) -> f64 {
+            self.mono
+        }
+        fn sleep(&mut self, s: f64) -> Result<(), String> {
+            self.mono += s;
+            Ok(())
+        }
+        fn print(&mut self, s: &str) -> Result<(), String> {
+            self.inner.print(s)
+        }
+    }
+    let f = Fixture::new();
+    let mut r = TightCleanup {
+        inner: ReliabilityRunner::new(&f, vec![0; 10]),
+        mono: 0.0,
+        driver_done: false,
+        timeouts: vec![],
+    };
+    let error = cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"])).unwrap_err();
+    assert!(error.contains("simulated cleanup deadline"));
+    assert!(!r.timeouts.is_empty());
+    assert!(r.mono <= 0.250001);
+    let summary = reliability_summary(&r.inner);
+    assert_eq!(summary["rounds"][0]["contention_deadline_monotonic"], 0.25);
+    assert_eq!(summary["rounds"][0]["cleanup"]["lock_released"], true);
+    assert_eq!(summary["consecutive_successes"], 0);
+}
+
+#[test]
+fn shared_slot_yield_is_incomplete_and_never_counted_as_a_product_failure_or_success() {
+    struct Yielding(ReliabilityRunner);
+    impl Runner for Yielding {
+        fn run(&mut self, c: Call) -> Result<Output, String> {
+            let driver = is_driver(&c);
+            let out = self.0.run(c)?;
+            if driver {
+                Err(format!(
+                    "{}: interrupted for a live waiter",
+                    process::LEASE_YIELD
+                ))
+            } else {
+                Ok(out)
+            }
+        }
+        fn now(&mut self) -> f64 {
+            self.0.now()
+        }
+        fn monotonic(&mut self) -> f64 {
+            self.0.monotonic()
+        }
+        fn sleep(&mut self, s: f64) -> Result<(), String> {
+            self.0.sleep(s)
+        }
+        fn print(&mut self, s: &str) -> Result<(), String> {
+            self.0.print(s)
+        }
+    }
+    let f = Fixture::new();
+    let mut r = Yielding(ReliabilityRunner::new(&f, vec![0; 10]));
+    assert!(
+        cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"]))
+            .unwrap_err()
+            .contains(process::LEASE_YIELD)
+    );
+    let summary = reliability_summary(&r.0);
+    assert_eq!(summary["result"], "incomplete_shared_slot_yield");
+    assert_eq!(summary["consecutive_successes"], 0);
+    assert_eq!(r.0.artifacts.len(), 1);
+    assert_eq!(summary["rounds"][0]["cleanup"]["lock_released"], true);
+}
+
+#[test]
+fn failed_pr_api_is_an_error_even_if_it_prints_a_url() {
+    let f = Fixture::new();
+    let mut r = Fake::outputs(&[
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("https://example.invalid/pr", "API denied", 42),
+    ]);
+    let error = ship::pr(&mut r, &f.p, "name", "title", "message").unwrap_err();
+    assert!(error.contains("exit 42") && error.contains("API denied"));
+    assert!(r.printed.is_empty());
+}
+
+#[test]
+fn driver_timeout_keeps_failure_log_and_releases_lock() {
+    let f = Fixture::new();
+    let mut r = ready_chain(&f, 0);
+    r.replies[6] = Err("command timed out\npartial startup diagnostic".into());
+    let error = cli(&mut r, &f.p, &args(&["a:s.json", "b:s.json"])).unwrap_err();
+    assert!(error.contains("timed out"));
+    assert!(read_text(f.root.join("artifacts.log"))
+        .unwrap()
+        .contains("partial startup diagnostic"));
+    assert_eq!(r.calls.iter().filter(|c| is_driver(c)).count(), 1);
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn driver_and_cleanup_errors_are_both_reported() {
+    let f = Fixture::new();
+    let mut r = ready_chain(&f, 0);
+    r.replies[6] = Err("driver failed".into());
+    r.replies[7] = Err("cleanup failed".into());
+    let error = cli(&mut r, &f.p, &args(&["a:s.json"])).unwrap_err();
+    assert!(error.contains("driver failed"));
+    assert!(error.contains("cleanup failed"));
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[test]
+fn scenario_budget_uses_step_defaults_and_one_internal_recovery() {
+    let f = Fixture::new();
+    let scenario = f.json("budget.json", json!({"steps":[
+        {"action":"restart_game","timeout":420}, {"action":"load","timeout":240}, {"action":"assert"}
+    ]}));
+    assert_eq!(driver::scenario_timeout(&scenario).unwrap(), 1500.0);
+    for invalid in [
+        json!({"steps":[]}),
+        json!({"steps":[{"action":"pause","timeout":0}]}),
+        json!({"steps":[{"action":"pause","timeout":"120"}]}),
+        json!({"steps":[{"action":"manual"}]}),
+    ] {
+        write_json(&scenario, &invalid).unwrap();
+        assert!(driver::scenario_timeout(&scenario).is_err());
+    }
+}
+
+#[test]
+fn quiet_slot_keeps_a_long_scenarios_own_deadline() {
+    struct SlowPrepare(Fake);
+    impl Runner for SlowPrepare {
+        fn run(&mut self, c: Call) -> Result<Output, String> {
+            if c.args[0].ends_with("ship.exe") {
+                self.0.time += 700.0;
+            }
+            self.0.run(c)
+        }
+        fn now(&mut self) -> f64 {
+            self.0.now()
+        }
+        fn sleep(&mut self, s: f64) -> Result<(), String> {
+            self.0.sleep(s)
+        }
+        fn print(&mut self, s: &str) -> Result<(), String> {
+            self.0.print(s)
+        }
+    }
+    let f = Fixture::new();
+    write_json(
+        f.root.join("scenario.json"),
+        &json!({"steps":[{"action":"restart_game","timeout":2000}]}),
+    )
+    .unwrap();
+    let mut r = SlowPrepare(ready_chain(&f, 0));
+    assert_eq!(cli(&mut r, &f.p, &args(&["a:s.json"])).unwrap(), 0);
+    let call = r.0.calls.iter().find(|c| is_driver(c)).unwrap();
+    assert!(call.kill_tree);
+    assert_eq!(call.timeout, Some(4300.0));
+    assert!(call.lease.is_some());
+}
+
+#[test]
+fn driver_is_bounded_by_the_remaining_scenario_window() {
+    struct LateProbe {
+        p: Paths,
+        time: f64,
+        closed: bool,
+        probed: bool,
+    }
+    impl Runner for LateProbe {
+        fn now(&mut self) -> f64 {
+            self.time
+        }
+        fn run(&mut self, call: Call) -> Result<Output, String> {
+            if call.args[0].ends_with("ship.exe") {
+                self.time += 1545.0;
+                fs::create_dir_all(self.p.jobs.join("waiter")).unwrap();
+                write_json(
+                    self.p.jobs.join("waiter/job.json"),
+                    &json!({"status":"running"}),
+                )
+                .unwrap();
+                write_json(
+                    self.p.here.join("queue/waiter.json"),
+                    &json!({"job":"waiter","since":0}),
+                )
+                .unwrap();
+                return Ok(Output {
+                    stdout: format!(
+                        "{}\n{}",
+                        path(self.p.temp.join("scenario.json")),
+                        path(self.p.temp.join("artifacts"))
+                    ),
+                    ..Output::default()
+                });
+            }
+            if call.args[0] == "taskkill" {
+                self.closed = true;
+            }
+            if call.args[0] == "tasklist" && !self.closed {
+                return Ok(Output {
+                    stdout: "\"CivilizationVI.exe\",\"11\"".into(),
+                    ..Output::default()
+                });
+            }
+            if is_driver(&call) {
+                assert_eq!(call.timeout, Some(1140.0));
+                assert_eq!(call.lease.as_ref().unwrap().hard_deadline(), Some(1800.0));
+                self.time += 15.0;
+                self.probed = true;
+                return Err("command timed out in driver".into());
+            }
+            Ok(Output::default())
+        }
+        fn sleep(&mut self, seconds: f64) -> Result<(), String> {
+            self.time += seconds;
+            Ok(())
+        }
+        fn print(&mut self, _: &str) -> Result<(), String> {
+            Ok(())
+        }
+    }
+    let f = Fixture::new();
+    let mut r = LateProbe {
+        p: f.p.clone(),
+        time: 0.0,
+        closed: false,
+        probed: false,
+    };
+    assert!(cli(&mut r, &f.p, &args(&["a:s.json"]))
+        .unwrap_err()
+        .contains("driver"));
+    assert!(r.probed && r.closed);
+    assert!(r.time <= 1800.0);
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn managed_merged_timeout_retains_partial_output() {
+    let error = process::RealRunner
+        .run(
+            Call::new(args(&[
+                "cmd.exe",
+                "/d",
+                "/c",
+                "echo partial startup diagnostic & ping 127.0.0.1 -n 31 > nul",
+            ]))
+            .managed()
+            .merged()
+            .timeout(1.0),
+        )
+        .unwrap_err();
+    assert!(error.contains("command timed out"));
+    assert!(error.contains("partial startup diagnostic"));
+}
+
+struct ReliabilityRunner {
+    p: Paths,
+    codes: VecDeque<i32>,
+    artifacts: Vec<String>,
+    tokens: Vec<String>,
+    printed: Vec<String>,
+    kills: usize,
+    waited: usize,
+    add_waiter: bool,
+    fail_cleanup: bool,
+    revisions: VecDeque<String>,
+}
+impl ReliabilityRunner {
+    fn new(f: &Fixture, codes: Vec<i32>) -> Self {
+        f.json(
+            "wt/live/tools/civ6-autotest/scenarios/cycle.json",
+            json!({"steps":[
+                {"action":"restart_game","timeout":420},
+                {"action":"load","name":"JAC-Reliability-Seed-1971","exact_name":true},
+                {"action":"save","name":"cycle"}
+            ]}),
+        );
+        Self {
+            p: f.p.clone(),
+            codes: codes.into(),
+            artifacts: vec![],
+            tokens: vec![],
+            printed: vec![],
+            kills: 0,
+            waited: 0,
+            add_waiter: false,
+            fail_cleanup: false,
+            revisions: vec!["a".repeat(40); 10].into(),
+        }
+    }
+}
+impl Runner for ReliabilityRunner {
+    fn now(&mut self) -> f64 {
+        1000.0
+    }
+    fn monotonic(&mut self) -> f64 {
+        0.0
+    }
+    fn run(&mut self, call: Call) -> Result<Output, String> {
+        if call.args[0].ends_with("ship.exe") {
+            let owner = read_json(self.p.here.join("civ6.lock"))?;
+            assert_eq!(owner["fifo"], true);
+            self.tokens
+                .push(owner["lock_token"].as_str().unwrap().into());
+            assert_eq!(&call.args[1..4], &args(&["live", "main", "cycle.json"]));
+            assert_eq!(
+                call.args.len(),
+                4,
+                "installed ship protocol must stay compatible"
+            );
+            let mut ship_runner = Fake::success();
+            assert_eq!(ship::cli(&mut ship_runner, &self.p, &call.args[1..])?, 0);
+            return Ok(Output {
+                stdout: ship_runner.printed.join("\n"),
+                ..Output::default()
+            });
+        }
+        if call.args[0] == "git"
+            && call.args[3..] == args(&["show", "--format=%H%n%T", "--no-patch", "HEAD"])
+        {
+            let revision = self.revisions.pop_front().unwrap();
+            return Ok(Output {
+                stdout: if revision.contains('\n') {
+                    revision
+                } else {
+                    format!("{revision}\n{revision}")
+                },
+                ..Output::default()
+            });
+        }
+        if is_driver(&call) {
+            assert!(call.kill_tree && call.timeout.unwrap() <= 1560.0);
+            let scenario = read_json(&call.args[1])?;
+            assert_eq!(scenario["steps"][1]["name"], "JAC-Reliability-Seed-1971");
+            assert_eq!(
+                scenario["steps"][2]["name"],
+                format!("cycle-main-{:02}", self.artifacts.len() + 1)
+            );
+            let output = call.args.iter().position(|a| a == "--output").unwrap() + 1;
+            self.artifacts.push(call.args[output].clone());
+            fs::create_dir_all(&call.args[output]).map_err(|e| e.to_string())?;
+            return Ok(Output {
+                code: self.codes.pop_front().unwrap(),
+                stdout: "driver result".into(),
+                ..Output::default()
+            });
+        }
+        if call.args[0] == "taskkill" {
+            self.kills += 1;
+            if self.fail_cleanup && self.kills == 3 {
+                return Err("final cleanup denied".into());
+            }
+        }
+        Ok(Output::default())
+    }
+    fn print(&mut self, s: &str) -> Result<(), String> {
+        if s.starts_with("RELIABILITY SUCCESS") {
+            assert!(!self.p.here.join("civ6.lock").exists());
+            if self.add_waiter && self.artifacts.len() == 1 {
+                write_json(
+                    self.p.jobs.join("waiter/job.json"),
+                    &json!({"status":"running"}),
+                )?;
+                write_json(
+                    self.p.here.join("queue/waiter.json"),
+                    &json!({"job":"waiter","since":900,"long":0}),
+                )?;
+            }
+        }
+        self.printed.push(s.into());
+        Ok(())
+    }
+    fn sleep(&mut self, _: f64) -> Result<(), String> {
+        assert!(!self.p.here.join("civ6.lock").exists());
+        assert_eq!(self.artifacts.len(), 1);
+        self.waited += 1;
+        fs::remove_file(self.p.here.join("queue/waiter.json")).map_err(|e| e.to_string())
+    }
+}
+
+#[test]
+fn reliability_counts_ten_consecutive_successes_with_distinct_artifacts_and_lock_yield() {
+    let f = Fixture::new();
+    fs::create_dir_all(f.p.jobs.join("waiter")).unwrap();
+    let mut r = ReliabilityRunner::new(&f, vec![0; 10]);
+    r.add_waiter = true;
+    assert_eq!(
+        cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"])).unwrap(),
+        0
+    );
+    assert_eq!(
+        r.printed
+            .iter()
+            .filter(|s| s.starts_with("RELIABILITY SUCCESS"))
+            .count(),
+        10
+    );
+    assert_eq!(r.printed.last().unwrap(), "RELIABILITY DONE 10/10");
+    assert_eq!(r.kills, 40);
+    assert_eq!(r.waited, 1);
+    assert_eq!(
+        r.artifacts
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        10
+    );
+    assert_eq!(
+        r.tokens
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        10
+    );
+    assert!(r
+        .artifacts
+        .iter()
+        .all(|a| std::path::Path::new(&format!("{a}.log")).is_file()));
+    assert!(!f.p.here.join("civ6.lock").exists());
+    let summary = reliability_summary(&r);
+    assert_eq!(summary["result"], "success");
+    assert_eq!(summary["consecutive_successes"], 10);
+    assert_eq!(summary["source_revision"], "a".repeat(40));
+    let rounds = summary["rounds"].as_array().unwrap();
+    assert_eq!(rounds.len(), 10);
+    for round in rounds {
+        assert_eq!(round["source"]["revision"], "a".repeat(40));
+        assert!(
+            round["source"]["files"]["tools/civ6-autotest/scenarios/cycle.json"]
+                .as_str()
+                .unwrap()
+                .contains("JAC-Reliability-Seed-1971")
+        );
+        assert!(std::path::Path::new(round["source_manifest_path"].as_str().unwrap()).is_file());
+        assert!(round["driver_timeout_seconds"].as_f64().unwrap() <= 1560.0);
+        assert_eq!(round["prepare_exit_code"], 0);
+        assert_eq!(round["driver_exit_code"], 0);
+        assert_eq!(round["cleanup"]["game_closed"], true);
+        assert_eq!(round["cleanup"]["lock_released"], true);
+    }
+}
+
+#[test]
+fn merge_commit_time_changes_do_not_mix_or_reject_identical_source_trees() {
+    let f = Fixture::new();
+    let mut r = ReliabilityRunner::new(&f, vec![0; 10]);
+    r.revisions = (1..=10)
+        .map(|n| format!("{n:040x}\n{}", "a".repeat(40)))
+        .collect();
+    assert_eq!(
+        cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"])).unwrap(),
+        0
+    );
+    let summary = reliability_summary(&r);
+    assert_eq!(summary["consecutive_successes"], 10);
+    assert_eq!(summary["source_tree"], "a".repeat(40));
+    assert_ne!(
+        summary["rounds"][0]["source"]["revision"],
+        summary["rounds"][9]["source"]["revision"]
+    );
+}
+
+#[test]
+fn preparation_timeout_uses_the_budget_left_after_preparation_shutdown() {
+    struct SlowClose {
+        fake: Fake,
+        advanced: bool,
+    }
+    impl Runner for SlowClose {
+        fn run(&mut self, c: Call) -> Result<Output, String> {
+            if c.args[0] == "taskkill" && !self.advanced {
+                self.advanced = true;
+                self.fake.time += 700.0;
+            }
+            self.fake.run(c)
+        }
+        fn now(&mut self) -> f64 {
+            self.fake.now()
+        }
+        fn sleep(&mut self, s: f64) -> Result<(), String> {
+            self.fake.sleep(s)
+        }
+        fn print(&mut self, s: &str) -> Result<(), String> {
+            self.fake.print(s)
+        }
+    }
+    let f = Fixture::new();
+    let mut r = SlowClose {
+        fake: ready_chain(&f, 0),
+        advanced: false,
+    };
+    assert_eq!(cli(&mut r, &f.p, &args(&["a:s.json"])).unwrap(), 0);
+    let prepare = r
+        .fake
+        .calls
+        .iter()
+        .find(|c| c.args[0].ends_with("ship.exe"))
+        .unwrap();
+    assert_eq!(prepare.timeout, Some(860.0));
+    let driver = r.fake.calls.iter().find(|c| is_driver(c)).unwrap();
+    assert_eq!(driver.timeout, Some(1140.0));
+    assert!(!f.p.here.join("civ6.lock").exists());
+}
+
+fn reliability_summary(r: &ReliabilityRunner) -> serde_json::Value {
+    let summary = r
+        .printed
+        .iter()
+        .find_map(|line| line.strip_prefix("RELIABILITY SUMMARY "))
+        .unwrap();
+    read_json(summary).unwrap()
+}
+
+#[test]
+fn reliability_stops_before_driver_when_prepared_revision_changes() {
+    let f = Fixture::new();
+    let mut r = ReliabilityRunner::new(&f, vec![0; 10]);
+    r.revisions[1] = "b".repeat(40);
+    let error = cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"])).unwrap_err();
+    assert!(error.contains("SOURCE changed"));
+    assert_eq!(r.artifacts.len(), 1, "changed source must not run");
+    assert!(!f.p.here.join("civ6.lock").exists());
+    let summary = reliability_summary(&r);
+    assert_eq!(summary["result"], "failed");
+    assert_eq!(summary["consecutive_successes"], 1);
+    assert_eq!(summary["rounds"][1]["source"]["revision"], "b".repeat(40));
+    assert_eq!(summary["rounds"][1]["cleanup"]["lock_released"], true);
+    assert!(summary["rounds"][1]["driver_exit_code"].is_null());
+}
+
+#[test]
+fn reliability_stops_at_first_failure_without_counting_later_successes() {
+    let f = Fixture::new();
+    let mut r = ReliabilityRunner::new(&f, vec![0, 7, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(
+        cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"])).unwrap(),
+        7
+    );
+    assert_eq!(r.artifacts.len(), 2);
+    assert_eq!(r.kills, 8);
+    assert_eq!(
+        r.printed
+            .iter()
+            .filter(|s| s.starts_with("RELIABILITY SUCCESS"))
+            .count(),
+        1
+    );
+    assert!(r
+        .printed
+        .last()
+        .unwrap()
+        .starts_with("RELIABILITY FAILED 2/10"));
+    assert!(!f.p.here.join("civ6.lock").exists());
+    let summary = reliability_summary(&r);
+    assert_eq!(summary["consecutive_successes"], 1);
+    assert_eq!(summary["rounds"][1]["exit_code"], 7);
+}
+
+#[test]
+fn reliability_does_not_count_a_run_whose_cleanup_failed() {
+    let f = Fixture::new();
+    let mut r = ReliabilityRunner::new(&f, vec![0; 10]);
+    r.fail_cleanup = true;
+    assert!(
+        cli(&mut r, &f.p, &args(&["--reliability", "main:cycle.json"]))
+            .unwrap_err()
+            .contains("cleanup denied")
+    );
+    assert_eq!(r.artifacts.len(), 1);
+    assert!(!r
+        .printed
+        .iter()
+        .any(|s| s.starts_with("RELIABILITY SUCCESS")));
+    assert!(!f.p.here.join("civ6.lock").exists());
+    let summary = reliability_summary(&r);
+    assert_eq!(summary["consecutive_successes"], 0);
+    assert_eq!(summary["result"], "failed");
 }
 
 fn rust_driver_fixture(f: &Fixture) {
@@ -1301,25 +2336,20 @@ fn rust_driver_missing_binary_is_an_error_instead_of_a_legacy_fallback() {
 }
 
 #[test]
-fn branches_without_rust_driver_keep_their_own_legacy_commands() {
+fn branches_without_rust_driver_stop_without_starting_python() {
     let f = Fixture::new();
+    fs::remove_file(f.p.live().join(driver::MANIFEST)).unwrap();
     let mut r = Fake::success();
-    driver::prepare(&mut r, &f.p, &f.p.live()).unwrap();
+    assert!(driver::prepare(&mut r, &f.p, &f.p.live())
+        .unwrap_err()
+        .contains("unsupported"));
     assert!(r.calls.is_empty());
-    assert_eq!(
-        driver::scenario(&f.p, &f.p.live()).unwrap(),
-        args(&[
-            "fixture-python",
-            &path(f.p.live().join("tools/civ6-autotest/scenario.py"))
-        ])
-    );
-    assert_eq!(
-        driver::tuner(&f.p, &f.p.live()).unwrap(),
-        args(&[
-            "fixture-python",
-            &path(f.p.live().join("tools/civ6-autotest/tuner.py"))
-        ])
-    );
+    assert!(driver::scenario(&f.p, &f.p.live())
+        .unwrap_err()
+        .contains("unsupported"));
+    assert!(driver::tuner(&f.p, &f.p.live())
+        .unwrap_err()
+        .contains("unsupported"));
 }
 
 #[test]
@@ -1345,7 +2375,10 @@ fn chain_passes_legacy_flags_and_artifact_paths_to_rust_driver() {
         ]
     );
     assert!(scenario.merge_stderr);
-    assert!(!r.calls.iter().any(|c| c.args[0] == "fixture-python"));
+    assert!(!r.calls.iter().any(|c| c
+        .args
+        .iter()
+        .any(|a| a.contains("python") || a.ends_with(".py"))));
     assert_eq!(
         r.calls.iter().filter(|c| c.args[0] == "taskkill").count(),
         4
@@ -1361,7 +2394,7 @@ fn responsive_game_probe_uses_branch_rust_tuner() {
     assert_eq!(ensure_responsive_civ6(&mut r, &f.p).unwrap(), "killed");
     let tuner = driver::tuner(&f.p, &f.p.live()).unwrap().remove(0);
     assert_eq!(r.calls[1].args, vec![tuner, "states".into()]);
-    assert!(!r.calls.iter().any(|c| c.args[0] == "fixture-python"));
+    assert!(!r.calls.iter().any(is_driver));
     assert_eq!(r.sleeps, vec![45.0]);
 }
 
@@ -1475,13 +2508,23 @@ fn ship_builds_checked_out_rust_driver_before_publishing_scenario_and_artifacts(
         json!({"name":"s","steps":[{"action":"pause","seconds":1}]}),
     );
     let artifacts = cargo_artifacts(&f);
-    let mut r = Fake::outputs(&[("", "", 0), ("", "", 0), ("", "", 0), (&artifacts, "", 0)]);
+    let mut r = Fake::outputs(&[
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        (&artifacts, "", 0),
+    ]);
     let (scenario, _) = ship::live(&mut r, &f.p, "name", "s.json", true).unwrap();
     assert_eq!(&r.calls[0].args[3..5], &["fetch", "-q"]);
     assert_eq!(&r.calls[1].args[3..5], &["checkout", "-q"]);
     assert_eq!(&r.calls[2].args[3..5], &["merge", "-q"]);
-    assert!(r.calls[3].args.contains(&"build".into()));
-    assert!(r.calls[3].kill_tree);
+    assert_eq!(
+        r.calls[3].args[3..],
+        args(&["diff", "--quiet", "HEAD", "--"])
+    );
+    assert!(r.calls[4].args.contains(&"build".into()));
+    assert!(r.calls[4].kill_tree);
     assert_eq!(r.printed.len(), 2);
     assert!(std::path::Path::new(&scenario).is_file());
 
@@ -1495,27 +2538,20 @@ fn ship_builds_checked_out_rust_driver_before_publishing_scenario_and_artifacts(
         ("", "", 0),
         ("", "", 0),
         ("", "", 0),
+        ("", "", 0),
         ("", "build failed", 1),
     ]);
     assert!(ship::live(&mut r, &f.p, "name", "s.json", true)
         .unwrap_err()
         .contains("build failed"));
     assert!(r.printed.is_empty());
-    assert!(!r.calls.iter().any(|c| c.args[0] == "fixture-python"));
+    assert!(!r.calls.iter().any(is_driver));
     assert!(!f.p.temp.join("live_name_01.json").exists());
 }
 #[test]
-fn preparation_failure_retries_once_and_stops() {
+fn preparation_failure_is_not_retried_and_keeps_the_original_error() {
     let f = Fixture::new();
-    let mut r = Fake::outputs(&[
-        ("", "first", 1),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "checkout failed", 1),
-    ]);
+    let mut r = before_prepare(("", "first", 1));
     assert_eq!(
         main(
             &mut r,
@@ -1525,17 +2561,24 @@ fn preparation_failure_retries_once_and_stops() {
         .unwrap(),
         1
     );
-    assert_eq!(r.sleeps, vec![15.0]);
+    assert!(r.sleeps.is_empty());
+    assert_eq!(
+        r.calls
+            .iter()
+            .filter(|c| c.args[0].ends_with("ship.exe"))
+            .count(),
+        1
+    );
     assert_eq!(
         r.printed,
-        vec!["RESULT a s.json prepare-failed checkout failed"]
+        vec!["RESULT a s.json prepare-failed 1 stdout= stderr=first"]
     );
 }
 #[test]
 fn scenario_error_still_closes_and_releases() {
     let f = Fixture::new();
     let mut r = ready_chain(&f, 0);
-    r.replies[4] = Err("scenario spawn failed".into());
+    r.replies[6] = Err("scenario spawn failed".into());
     assert!(cli(&mut r, &f.p, &["a:s.json".into()])
         .unwrap_err()
         .contains("spawn failed"));
@@ -1576,21 +2619,41 @@ fn ship_merges_main_and_suffixes_save_names_without_changing_source() {
     );
 }
 #[test]
-fn merge_conflict_is_aborted_and_warned() {
+fn merge_conflict_is_aborted_and_stops_preparation() {
     let f = Fixture::new();
     f.json(
         "wt/live/tools/civ6-autotest/scenarios/s.json",
         json!({"steps":[{"action":"restart_game"}]}),
     );
     let mut r = Fake::outputs(&[("", "", 0), ("", "", 0), ("", "conflict", 1), ("", "", 0)]);
-    ship::live(&mut r, &f.p, "name", "s.json", true).unwrap();
+    let error = ship::live(&mut r, &f.p, "name", "s.json", true).unwrap_err();
     assert_eq!(r.calls[3].args[3..], args(&["merge", "--abort"]));
-    assert_eq!(
-        r.errors,
-        vec![
-            "warning: origin/main does not merge cleanly into feat/name; testing the branch alone"
-        ]
+    assert!(error.contains("merge into feat/name failed (exit 1)"));
+    assert!(error.contains("conflict"));
+    assert_eq!(r.calls.len(), 4);
+    assert!(r.printed.is_empty());
+    assert!(!f.p.temp.join("live_name_01.json").exists());
+}
+
+#[test]
+fn merge_and_abort_failures_both_stop_preparation_and_keep_their_diagnostics() {
+    let f = Fixture::new();
+    let mut r = Fake::outputs(&[
+        ("", "", 0),
+        ("", "", 0),
+        ("merge output", "conflict", 17),
+        ("", "abort denied", 51),
+    ]);
+    let error = ship::live(&mut r, &f.p, "name", "s.json", true).unwrap_err();
+    assert!(
+        error.contains("exit 17") && error.contains("merge output") && error.contains("conflict")
     );
+    assert!(
+        error.contains("abort failed")
+            && error.contains("exit 51")
+            && error.contains("abort denied")
+    );
+    assert!(r.printed.is_empty());
 }
 #[test]
 fn main_branch_skips_merge_and_no_restart_keeps_first_action() {
@@ -1601,7 +2664,7 @@ fn main_branch_skips_merge_and_no_restart_keeps_first_action() {
     );
     let mut r = Fake::success();
     let (target, _) = ship::live(&mut r, &f.p, "main", "s.json", false).unwrap();
-    assert_eq!(r.calls.len(), 2);
+    assert_eq!(r.calls.len(), 4);
     assert_eq!(r.calls[1].args.last().unwrap(), "origin/main");
     assert_eq!(read_json(target).unwrap()["steps"][0]["action"], "save");
 }
@@ -1668,14 +2731,6 @@ fn review_preserves_facts_and_uses_jobs_executable() {
         .args
         .windows(2)
         .any(|s| s == ["--sandbox", "read-only"]));
-    assert!(r.calls[0]
-        .args
-        .windows(2)
-        .any(|s| s == ["--model", "gpt-6-luna"]));
-    assert!(r.calls[0]
-        .args
-        .windows(2)
-        .any(|s| s == ["--effort", "high"]));
     assert_eq!(r.printed, vec!["job-id"]);
 }
 #[test]
@@ -1685,20 +2740,58 @@ fn merge_pr_posts_marks_ready_and_squashes_in_order() {
     fs::write(&md, "検証済み\n").unwrap();
     let mut r = Fake::outputs(&[
         ("url\n", "", 0),
-        ("", "ignored", 1),
-        ("", "merge failed", 1),
+        ("true", "", 0),
+        ("", "", 0),
+        ("", "", 0),
+        ("MERGED", "", 0),
     ]);
     assert_eq!(
         review::merge_cli(&mut r, &f.p, &["3".into(), path(md)]).unwrap(),
         0
     );
-    assert_eq!(r.printed, vec!["url", "merge failed"]);
-    assert_eq!(r.calls[1].args[2], "ready");
-    assert_eq!(r.calls[2].args.last().unwrap(), "--squash");
+    assert_eq!(r.printed, vec!["url", "merged"]);
+    assert_eq!(r.calls[2].args[2], "ready");
+    assert_eq!(r.calls[3].args.last().unwrap(), "--squash");
     assert_eq!(
         read_json(f.p.temp.join("c3.json")).unwrap(),
         json!({"body":"検証済み\n"})
     );
+}
+
+#[test]
+fn failed_review_launch_never_reports_success() {
+    let f = Fixture::new();
+    let facts = f.root.join("facts.txt");
+    fs::write(&facts, "検証済み").unwrap();
+    let mut r = Fake::outputs(&[("partial job id", "launch denied", 7)]);
+    let error = review::cli(&mut r, &f.p, &args(&["name", "123", &path(facts)])).unwrap_err();
+    assert!(error.contains("exit 7") && error.contains("launch denied"));
+    assert!(r.printed.is_empty());
+}
+
+#[test]
+fn merge_stops_at_each_failed_external_stage() {
+    for failed in 0..5 {
+        let f = Fixture::new();
+        let comment = f.root.join("comment.md");
+        fs::write(&comment, "検証済み").unwrap();
+        let mut r = Fake::outputs(&[
+            ("url", "", 0),
+            ("true", "", 0),
+            ("", "", 0),
+            ("", "", 0),
+            ("MERGED", "", 0),
+        ]);
+        r.replies[failed] = Ok(Output {
+            code: 41,
+            stderr: "stage denied".into(),
+            ..Output::default()
+        });
+        let error = review::merge_cli(&mut r, &f.p, &args(&["3", &path(comment)])).unwrap_err();
+        assert!(error.contains("exit 41") && error.contains("stage denied"));
+        assert_eq!(r.calls.len(), failed + 1);
+        assert!(!r.printed.iter().any(|s| s == "merged"));
+    }
 }
 
 #[test]
@@ -1720,7 +2813,9 @@ fn panic_still_closes_game_and_releases_lock() {
     }
     let f = Fixture::new();
     let mut r = PanicRunner(Fake::success());
-    assert!(cli(&mut r, &f.p, &[]).unwrap_err().contains("panicked"));
+    assert!(failed_prepare_cli(&mut r, &f.p)
+        .unwrap_err()
+        .contains("panicked"));
     assert_eq!(
         r.0.calls.iter().filter(|c| c.args[0] == "taskkill").count(),
         2
@@ -1750,39 +2845,34 @@ fn windows_fault_code_is_unsigned_in_result() {
 }
 
 #[test]
-fn restart_retry_preserves_first_artifacts_and_closes_each_run() {
+fn startup_failure_is_never_replayed_and_preserves_first_artifacts() {
     let f = Fixture::new();
     let artifacts = f.root.join("artifacts");
     fs::create_dir(&artifacts).unwrap();
     fs::write(artifacts.join("first.txt"), "first attempt").unwrap();
     fs::create_dir(f.root.join("artifacts-try1")).unwrap();
-    let prepare = format!("scenario.json\n{}\n", path(&artifacts));
-    let mut r = Fake::outputs(&[
-        (&prepare, "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("[FAIL] 1/ restart_game", "", 1),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("PASS second attempt", "", 0),
-    ]);
-    assert_eq!(main(&mut r, &f.p, &["a:s.json".into()]).unwrap(), 0);
-    assert_eq!(r.sleeps, vec![60.0]);
+    let prepare = format!(
+        "{}\n{}\n",
+        path(f.root.join("scenario.json")),
+        path(&artifacts)
+    );
+    let mut r = ready_chain(&f, 1);
+    r.replies[5] = Ok(Output {
+        stdout: prepare,
+        ..Output::default()
+    });
+    r.replies[6] = Ok(Output {
+        stdout: "[FAIL] 1/ restart_game".into(),
+        code: 1,
+        ..Output::default()
+    });
+    assert_eq!(main(&mut r, &f.p, &["a:s.json".into()]).unwrap(), 1);
+    assert!(r.sleeps.is_empty());
     assert_eq!(
-        read_text(f.root.join("artifacts-try1/artifacts/first.txt")).unwrap(),
+        read_text(artifacts.join("first.txt")).unwrap(),
         "first attempt"
     );
-    assert_eq!(
-        r.calls
-            .iter()
-            .filter(|c| c.args[0] == "fixture-python")
-            .count(),
-        2
-    );
+    assert_eq!(r.calls.iter().filter(|c| is_driver(c)).count(), 1);
     assert_eq!(
         r.calls.iter().filter(|c| c.args[0] == "taskkill").count(),
         4
@@ -1795,14 +2885,21 @@ fn recovered_startup_failure_does_not_launch_another_outer_retry() {
     let artifacts = f.root.join("artifacts");
     fs::create_dir(&artifacts).unwrap();
     fs::write(artifacts.join("diagnostic.json"), "saved before shutdown").unwrap();
-    let prepare = format!("scenario.json\n{}\n", path(&artifacts));
-    let mut r = Fake::outputs(&[
-        (&prepare, "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("", "", 0),
-        ("STARTUP_RECOVERY_ATTEMPTED\n[FAIL] 1/ restart_game", "", 1),
-    ]);
+    let prepare = format!(
+        "{}\n{}\n",
+        path(f.root.join("scenario.json")),
+        path(&artifacts)
+    );
+    let mut r = ready_chain(&f, 1);
+    r.replies[5] = Ok(Output {
+        stdout: prepare,
+        ..Output::default()
+    });
+    r.replies[6] = Ok(Output {
+        stdout: "STARTUP_RECOVERY_ATTEMPTED\n[FAIL] 1/ restart_game".into(),
+        code: 1,
+        ..Output::default()
+    });
     assert_eq!(
         main(
             &mut r,
@@ -1812,11 +2909,7 @@ fn recovered_startup_failure_does_not_launch_another_outer_retry() {
         .unwrap(),
         1
     );
-    let drivers: Vec<_> = r
-        .calls
-        .iter()
-        .filter(|c| c.args[0] == "fixture-python")
-        .collect();
+    let drivers: Vec<_> = r.calls.iter().filter(|c| is_driver(c)).collect();
     assert_eq!(drivers.len(), 1);
     assert_eq!(
         drivers[0].env["CIV6_LIVE_CHAIN_PID"],
@@ -1834,7 +2927,7 @@ fn recovered_startup_failure_does_not_launch_another_outer_retry() {
     );
     assert_eq!(
         r.calls.iter().filter(|c| c.args[0] == "taskkill").count(),
-        2
+        4
     );
 }
 
@@ -1904,7 +2997,7 @@ fn broken_stdout_stops_before_scenario_and_still_cleans() {
             .unwrap_err()
             .contains("broken pipe")
     );
-    assert!(!r.0.calls.iter().any(|c| c.args[0] == "fixture-python"));
+    assert!(!r.0.calls.iter().any(is_driver));
     assert_eq!(
         r.0.calls
             .iter()
@@ -2015,7 +3108,7 @@ fn chain_stops_before_a_second_scenario_if_its_lock_was_replaced() {
             .iter()
             .filter(|c| c.args[0] == "taskkill")
             .count(),
-        2
+        4
     );
 }
 
@@ -2028,6 +3121,11 @@ fn live_chain_finishes_scenario_then_requeues_fifo_before_next() {
         yielded: bool,
     }
     impl Runner for Contended {
+        // The contention clock advances to the lease boundary to exercise
+        // requeue; this fixture's child itself consumes no execution time.
+        fn monotonic(&mut self) -> f64 {
+            0.0
+        }
         fn now(&mut self) -> f64 {
             self.time
         }
@@ -2038,13 +3136,14 @@ fn live_chain_finishes_scenario_then_requeues_fifo_before_next() {
                 }
                 return Ok(Output {
                     stdout: format!(
-                        "scenario.json\n{}\n",
+                        "{}\n{}\n",
+                        path(self.p.temp.join("scenario.json")),
                         path(self.p.temp.join(format!("run{}", self.scenarios)))
                     ),
                     ..Output::default()
                 });
             }
-            if c.args[0] == "fixture-python" {
+            if is_driver(&c) {
                 assert!(self.p.here.join("civ6.lock").exists());
                 self.scenarios += 1;
                 if self.scenarios == 1 {
@@ -2120,4 +3219,89 @@ fn ready_scheduler_item_counts_as_competitor_and_blocks_requeued_chain() {
         json!({"pid":123,"since":2800,"long":0,"fifo":true}),
     );
     assert!(!my_turn(&mut r, &f.p, &me).unwrap());
+}
+
+#[test]
+fn review_launch_failure_or_missing_job_id_never_returns_success() {
+    let f = Fixture::new();
+    let facts = f.root.join("facts.txt");
+    fs::write(&facts, "検証済み").unwrap();
+    let mut rejected = Fake::outputs(&[("", "launch rejected", 17)]);
+    let error = review::cli(
+        &mut rejected,
+        &f.p,
+        &["name".into(), "122".into(), path(&facts)],
+    )
+    .unwrap_err();
+    assert!(error.contains("review launch failed (exit 17)"));
+    assert!(error.contains("launch rejected"));
+    assert_eq!(rejected.calls.len(), 1);
+    assert!(rejected.printed.is_empty());
+    let mut empty = Fake::success();
+    assert!(review::cli(
+        &mut empty,
+        &f.p,
+        &["name".into(), "122".into(), path(&facts)]
+    )
+    .unwrap_err()
+    .contains("no job id"));
+    assert!(empty.printed.is_empty());
+}
+
+#[test]
+fn merge_stops_at_each_failed_stage_and_keeps_the_original_error() {
+    let f = Fixture::new();
+    let md = f.root.join("comment.md");
+    fs::write(&md, "検証済み").unwrap();
+    for (failed_at, stage) in [
+        (0, "review comment post"),
+        (1, "PR draft query"),
+        (2, "PR ready"),
+        (3, "PR merge"),
+        (4, "PR merge verification"),
+    ] {
+        let mut replies = vec![
+            ("url", "", 0),
+            ("true", "", 0),
+            ("", "", 0),
+            ("", "", 0),
+            ("MERGED", "", 0),
+        ];
+        replies[failed_at] = ("", "original reason", 17);
+        let mut r = Fake::outputs(&replies);
+        let error = review::merge_cli(&mut r, &f.p, &["122".into(), path(&md)]).unwrap_err();
+        assert!(error.contains(stage), "{error}");
+        assert!(error.contains("exit 17"));
+        assert!(error.contains("original reason"));
+        assert_eq!(r.calls.len(), failed_at + 1);
+        assert!(!r.printed.iter().any(|message| message == "merged"));
+    }
+}
+
+#[test]
+fn already_ready_pr_skips_conversion_and_pending_merge_is_not_success() {
+    let f = Fixture::new();
+    let md = f.root.join("comment.md");
+    fs::write(&md, "検証済み").unwrap();
+    for state in ["MERGED", "OPEN"] {
+        let mut r = Fake::outputs(&[
+            ("url", "", 0),
+            ("false", "", 0),
+            ("", "", 0),
+            (state, "", 0),
+        ]);
+        let result = review::merge_cli(&mut r, &f.p, &["122".into(), path(&md)]);
+        assert_eq!(r.calls.len(), 4);
+        assert!(!r
+            .calls
+            .iter()
+            .any(|call| call.args.iter().any(|arg| arg == "ready")));
+        if state == "MERGED" {
+            assert_eq!(result.unwrap(), 0);
+            assert_eq!(r.printed.last().unwrap(), "merged");
+        } else {
+            assert!(result.unwrap_err().contains("not confirmed"));
+            assert!(!r.printed.iter().any(|message| message == "merged"));
+        }
+    }
 }

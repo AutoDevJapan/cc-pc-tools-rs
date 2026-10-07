@@ -157,15 +157,21 @@ pub(crate) fn find_open(state: &Value, cwd: &str, title: &str, raw_title: &str) 
                     similar(s(&q["title"]), title)
                         // Legacy records have only the displayed title. An
                         // explicit product label from the caller remains valid
-                        // when its working folder is a shared orchestration root.
+                        // even when the folder-derived display label differs.
                         || (raw_title.contains('【') && similar(s(&q["title"]), raw_title))
                 }
-                && question_folder_matches(state, q, cwd, &folder)
+                && question_folder_matches(state, q, cwd, &folder, raw_title)
         })
         .cloned()
 }
 
-fn question_folder_matches(state: &Value, question: &Value, cwd: &str, folder: &str) -> bool {
+fn question_folder_matches(
+    state: &Value,
+    question: &Value,
+    cwd: &str,
+    folder: &str,
+    raw_title: &str,
+) -> bool {
     let recorded = s(&question["cwd"]);
     let key = s(&question["cwd_key"]);
     if !recorded.is_empty() || !key.is_empty() {
@@ -174,6 +180,23 @@ fn question_folder_matches(state: &Value, question: &Value, cwd: &str, folder: &
             || (!recorded.is_empty()
                 && (folder_spelling(recorded) == folder_spelling(cwd)
                     || folder_spelling(recorded) == folder));
+    }
+    // A request may run from a root shared by multiple products. Without an
+    // explicit matching product in the caller's title, that route alone cannot
+    // establish which product an old question belongs to.
+    let labels = Regex::new(r"【[^】]+】").unwrap();
+    let original_labels: Vec<_> = labels
+        .find_iter(s(&question["title"]))
+        .map(|m| m.as_str().to_lowercase())
+        .collect();
+    if original_labels.is_empty()
+        || original_labels
+            != labels
+                .find_iter(raw_title)
+                .map(|m| m.as_str().to_lowercase())
+                .collect::<Vec<_>>()
+    {
+        return false;
     }
     // Older recovered questions may lack cwd. Use only context explicitly
     // attached to this thread; project-title guesses and broad default folders
@@ -439,6 +462,56 @@ pub(crate) fn recover(ctx: &mut Context, cwd: &str, raw_title: &str) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn recovered_routing_requires_an_explicit_product_and_keeps_context_priority() {
+        assert!(question_folder_matches(
+            &json!({}),
+            &json!({"cwd":"D:/shared"}),
+            "D:/shared",
+            "D:/shared",
+            ""
+        ));
+        let unlabelled = json!({"thread_id":"100","title":"税の方針"});
+        let routing = json!({"requests":{"100":{"job_info":{"cwd":"D:/shared"}}}});
+        assert!(!question_folder_matches(
+            &routing,
+            &unlabelled,
+            "D:/shared",
+            "D:/shared",
+            "税の方針"
+        ));
+        let state = json!({"questions":[{"open":true,"thread_id":"100",
+            "title":"【ProductA】税の方針","ask_title":"税の方針"}],
+            "requests":{"100":{"job_info":{"cwd":"D:/shared"}}}});
+        assert!(find_open(&state, "D:/shared", "【ProductB】税の方針", "税の方針").is_none());
+        let mut state = state;
+        state["questions"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("ask_title");
+        assert!(find_open(
+            &state,
+            "D:/shared",
+            "【Root】税の方針",
+            "【ProductB】税の方針"
+        )
+        .is_none());
+        assert!(find_open(
+            &state,
+            "D:/shared",
+            "【Root】税の方針",
+            "【ProductA】税の方針"
+        )
+        .is_some());
+        state["questions"][0]["continuation"] = json!({"cwd":"D:/other"});
+        assert!(find_open(
+            &state,
+            "D:/shared",
+            "【Root】税の方針",
+            "【ProductA】税の方針"
+        )
+        .is_none());
+    }
     #[test]
     fn production_discord_rejections_are_distinct_from_uncertain_delivery() {
         for e in [

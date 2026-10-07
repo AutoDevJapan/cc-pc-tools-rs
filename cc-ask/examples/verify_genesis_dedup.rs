@@ -126,7 +126,8 @@ fn verify() -> Result<()> {
         "{}",
         json!({"verified":true,"original_threads":2,"remote_gets":audit.gets.get(),
         "remote_write_attempts":audit.writes.get(),"blocked_subprocess_attempts":audit.subprocesses.get(),
-        "state_scope":"private scratch; explicit incident request routing"})
+        "state_scope":"private scratch; explicit incident request routing",
+        "limitations":"git project detection and cwd spelling variations are not exercised"})
     );
     Ok(())
 }

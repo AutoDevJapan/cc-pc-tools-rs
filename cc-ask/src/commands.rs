@@ -27,6 +27,9 @@ pub struct AskArgs {
     pub scheduler_item: Option<u64>,
     #[arg(long)]
     pub scheduler_job: Option<String>,
+    /// Owner decision only: money, publish, rights, customer, direction, irreversible.
+    #[arg(long, value_enum)]
+    pub owner_only: Option<crate::ask_gate::OwnerOnly>,
     /// Print the exact question formatting without posting or changing state.
     #[arg(long)]
     pub dry_run: bool,
@@ -92,6 +95,8 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
+    let raw_body = read_text(&args.body_file)?;
+    crate::ask_gate::enforce(&args.title, &raw_body, args.owner_only)?;
     let cwd = match args.cwd.as_deref().filter(|v| !v.is_empty()) {
         Some(v) => v.to_owned(),
         None => std::env::current_dir()
@@ -101,7 +106,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     };
     let names = ProjectNames::load(&ctx.client_projects)?;
     let mut project = determine_project(ctx, &cwd, &names);
-    let body = names.redact(&read_text(&args.body_file)?);
+    let body = names.redact(&raw_body);
     let owner = ctx.owner();
     let mut title = thread_title(
         &project,
@@ -129,7 +134,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let content = question_body(&project, &owner, &body);
     if args.dry_run {
         let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,
-            "reminder":reminder_text(&project, &owner, &title)});
+            "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str())});
         print_json(&value, Some(2))?;
         return Ok(value);
     }
@@ -182,6 +187,9 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         let _guard = lock(ctx)?;
         let mut state = ctx.load()?;
         let mut question = json!({"thread_id":thread_id,"after":message_id,"title":title,"project":project,"agent":args.agent,"cwd":cwd,"asked_at":timestamp(),"open":true});
+        if let Some(reason) = args.owner_only {
+            question["owner_only"] = json!(reason.as_str());
+        }
         if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
             question["session_id"] = json!(session);
         }

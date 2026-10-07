@@ -172,6 +172,10 @@ fn context(tick: bool) -> Result<Context> {
 }
 
 fn run(command: Commands) -> Result<()> {
+    // Check the original full text before config, lint/model calls, locks or Discord.
+    if let Commands::Ask(args) = &command {
+        cc_ask::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
+    }
     let _sync_deadline = if matches!(&command, Commands::SyncJobCard { .. }) {
         Some(cc_ask::tick_runtime::Deadline::new(
             std::time::Duration::from_secs(10),
@@ -347,7 +351,11 @@ fn main() {
     let cli = Cli::parse();
     if let Err(error) = run(cli.command) {
         eprintln!("{}", safe_text(&error));
-        std::process::exit(1);
+        std::process::exit(if error == cc_ask::ask_gate::BLOCKED_MESSAGE {
+            cc_ask::ask_gate::BLOCKED_EXIT
+        } else {
+            1
+        });
     }
 }
 

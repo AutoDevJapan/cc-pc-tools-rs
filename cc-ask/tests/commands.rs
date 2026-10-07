@@ -119,6 +119,7 @@ fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
         source: Some("scheduler".into()),
         scheduler_item: Some(12),
         scheduler_job: Some("job1".into()),
+        owner_only: None,
         dry_run: false,
     };
     let out = cmd_ask(&mut h.ctx, &args).unwrap();

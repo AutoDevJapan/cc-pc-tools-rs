@@ -15,6 +15,7 @@
 //! Every TUI agent on this PC shares this tool and state.json (Skill: discord-owner-ask), so every
 //! state change runs under one lock file.
 
+pub mod ask_gate;
 pub mod attachments;
 pub mod automation;
 pub mod board;

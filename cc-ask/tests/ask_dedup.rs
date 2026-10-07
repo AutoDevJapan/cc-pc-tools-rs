@@ -4,6 +4,185 @@ use common::Harness;
 use common::SharedFake;
 use serde_json::json;
 
+// ToDo1857: confirmed Discord title, thread IDs and owner answer IDs. The cwd
+// and open flag below replay the state before the second ask; they are not a
+// claim about the historical cwd (which was absent from the recovered record).
+const GENESIS_TITLE: &str = "【GoDD-Genesis】税・返金・問い合わせの担当と方針";
+const GENESIS_FIRST: &str = "1556678685426454568";
+fn genesis_args(h: &Harness, cwd: &str) -> AskArgs {
+    let args = args(h, GENESIS_TITLE, cwd);
+    std::fs::write(
+        &args.body_file,
+        "税の方針を決めてください。\na 税込\nb 税抜",
+    )
+    .unwrap();
+    args
+}
+
+fn genesis_question(h: &Harness, answered: bool) {
+    let mut state = h.state();
+    state["questions"] = json!([{
+        "thread_id":GENESIS_FIRST,"after":GENESIS_FIRST,"title":GENESIS_TITLE,
+        "cwd":"D:/CC/GoDD-Genesis","open":true,"agent":"Codex",
+        "asked_at":"2026-10-05T23:45:20+09:00","source":"request",
+        "seen_reply":"0","last_ping":77,"posting_job":"first-job"
+    }]);
+    h.save(&state);
+    let mut fake = h.fake.borrow_mut();
+    fake.sequence = GENESIS_FIRST.parse().unwrap();
+    fake.threads.insert(
+        GENESIS_FIRST.into(),
+        json!({
+            "id":GENESIS_FIRST,"type":11,"guild_id":"G","parent_id":"T",
+            "owner_id":"BOT","name":GENESIS_TITLE,"thread_metadata":{"archived":false}
+        }),
+    );
+    let mut starter = common::message(
+        GENESIS_FIRST,
+        "税の方針を決めてください。\na 税込\nb 税抜",
+        "BOT",
+    );
+    starter["author"]["bot"] = json!(true);
+    let mut history = vec![starter];
+    if answered {
+        let mut answer = common::message(
+            "1556678932798120018",
+            "<@1554269962229649478> \na税込",
+            "OWN",
+        );
+        answer["timestamp"] = json!("2026-10-05T14:46:19.275000+00:00");
+        history.push(answer);
+    }
+    fake.messages.insert(GENESIS_FIRST.into(), history);
+}
+
+#[test]
+fn genesis_incident_unanswered_question_appends_to_first_thread_without_duplicate() {
+    let mut h = Harness::new();
+    genesis_question(&h, false);
+    let before = h.state()["questions"][0].clone();
+    let mut a = genesis_args(&h, "D:/CC/GoDD-Genesis");
+    a.agent = "Claude".into();
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(result["thread_id"], GENESIS_FIRST);
+    assert_eq!(result["reused"], true);
+    assert_eq!(creates(&h), 0);
+    let fake = h.fake.borrow();
+    assert_eq!(fake.posts.len(), 1);
+    assert_eq!(fake.posts[0].0, GENESIS_FIRST);
+    assert_eq!(fake.posts[0].1["flags"], SILENT);
+    assert_eq!(fake.posts[0].1["allowed_mentions"], json!({"parse":[]}));
+    assert!(!fake.threads.contains_key("300"));
+    assert!(s(&fake.posts[0].1["content"]).contains("a 税込\nb 税抜"));
+    let posted = fake.messages[GENESIS_FIRST].last().unwrap()["id"].clone();
+    drop(fake);
+    let state = h.state();
+    assert_eq!(state["questions"].as_array().unwrap().len(), 1);
+    assert!(state["questions"][0]["message_ids"]
+        .as_array()
+        .unwrap()
+        .contains(&posted));
+    let mut after = state["questions"][0].clone();
+    after.as_object_mut().unwrap().remove("message_ids");
+    assert_eq!(after, before);
+}
+
+#[test]
+fn genesis_incident_tax_answer_is_returned_without_asking_owner_twice() {
+    let mut h = Harness::new();
+    genesis_question(&h, true);
+    let before = h.state();
+    let a = genesis_args(&h, "D:/CC/GoDD-Genesis");
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(result["thread_id"], GENESIS_FIRST);
+    assert_eq!(result["suppressed"], "already_answered");
+    assert_eq!(result["latest_owner_reply"]["id"], "1556678932798120018");
+    assert!(s(&result["latest_owner_reply"]["content"]).ends_with("a税込"));
+    assert_eq!(creates(&h), 0);
+    assert!(h.fake.borrow().posts.is_empty());
+    assert_eq!(h.state(), before);
+}
+
+#[test]
+fn genesis_same_title_in_another_task_folder_remains_a_separate_question() {
+    let mut h = Harness::new();
+    genesis_question(&h, false);
+    let a = genesis_args(&h, "D:/CC/another-task");
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_ne!(result["thread_id"], GENESIS_FIRST);
+    assert_eq!(creates(&h), 1);
+    assert_eq!(h.state()["questions"].as_array().unwrap().len(), 2);
+    assert!(h
+        .fake
+        .borrow()
+        .posts
+        .iter()
+        .all(|(tid, _)| tid != GENESIS_FIRST));
+}
+
+#[test]
+fn genesis_recovered_question_uses_its_recorded_request_job_folder() {
+    let mut h = Harness::new();
+    genesis_question(&h, false);
+    let mut state = h.state();
+    // The recovered incident record has no cwd. Its request job does have an
+    // explicit working folder; this is evidence, not inference from the title.
+    state["questions"][0].as_object_mut().unwrap().remove("cwd");
+    let cwd = "C:/Users/makhmeto/Desktop/dev/ADJ";
+    state["requests"][GENESIS_FIRST] = json!({"job_info":{"cwd":cwd}});
+    h.save(&state);
+    let a = genesis_args(&h, cwd);
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(result["thread_id"], GENESIS_FIRST);
+    assert_eq!(result["reused"], true);
+    assert_eq!(creates(&h), 0);
+    assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn genesis_newer_answer_is_returned_instead_of_the_old_tax_answer() {
+    let mut h = Harness::new();
+    genesis_question(&h, true);
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut(GENESIS_FIRST)
+        .unwrap()
+        .push(common::message("1556808758590578721", "b", "OWN"));
+    let a = genesis_args(&h, "D:/CC/GoDD-Genesis");
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(result["latest_owner_reply"]["id"], "1556808758590578721");
+    assert_eq!(result["latest_owner_reply"]["content"], "b");
+    assert_eq!(creates(&h), 0);
+    assert!(h.fake.borrow().posts.is_empty());
+}
+
+#[test]
+fn genesis_routing_evidence_never_overrides_an_explicit_question_folder() {
+    for recorded in [Some("D:/CC/another-task"), None] {
+        let mut h = Harness::new();
+        genesis_question(&h, false);
+        let mut state = h.state();
+        if let Some(cwd) = recorded {
+            state["questions"][0]["cwd"] = json!(cwd);
+            state["requests"][GENESIS_FIRST] = json!({"job_info":{"cwd":"D:/CC/GoDD-Genesis"}});
+        } else {
+            state["questions"][0].as_object_mut().unwrap().remove("cwd");
+            // Same product label with no explicit route is not proof of same work.
+        }
+        h.save(&state);
+        let a = genesis_args(&h, "D:/CC/GoDD-Genesis");
+        cmd_ask(&mut h.ctx, &a).unwrap();
+        assert_eq!(creates(&h), 1);
+        assert!(h
+            .fake
+            .borrow()
+            .posts
+            .iter()
+            .all(|(tid, _)| tid != GENESIS_FIRST));
+    }
+}
+
 struct LostCreation {
     shared: SharedFake,
     lose: bool,

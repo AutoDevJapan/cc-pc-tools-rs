@@ -34,6 +34,15 @@ pub trait Effects {
     fn codex_directories(&mut self) -> Result<Vec<String>> {
         Err("process inventory unavailable".into())
     }
+    /// One bounded local-model answer that passes `accept`; `None` keeps the caller's fallback.
+    fn local_llm(
+        &mut self,
+        _prompt: &str,
+        _budget: std::time::Duration,
+        _accept: &dyn Fn(&str) -> bool,
+    ) -> Option<String> {
+        None
+    }
     fn http(
         &mut self,
         method: &str,
@@ -618,6 +627,15 @@ impl Effects for RealEffects {
     }
     fn codex_directories(&mut self) -> Result<Vec<String>> {
         crate::patrol::codex_directories()
+    }
+    fn local_llm(
+        &mut self,
+        prompt: &str,
+        budget: std::time::Duration,
+        accept: &dyn Fn(&str) -> bool,
+    ) -> Option<String> {
+        let _span = crate::tick_runtime::Span::new("local model");
+        cc_local_llm::ask(prompt, budget, 600, |a| accept(a).then(|| a.to_owned()))
     }
     fn reap_helpers(&mut self, jobs: &std::path::Path) -> Result<String> {
         crate::helper_reaper::run(jobs, false)

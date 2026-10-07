@@ -153,6 +153,7 @@ dependencies = [
  "cc-chrome",
  "cc-job-policy",
  "cc-live",
+ "cc-local-llm",
  "cc-task-title",
  "chrono",
  "clap",
@@ -185,6 +186,9 @@ dependencies = [
 [[package]]
 name = "cc-job-policy"
 version = "0.1.0"
+dependencies = [
+ "cc-local-llm",
+]
 
 [[package]]
 name = "cc-jobs"
@@ -210,6 +214,14 @@ dependencies = [
  "regex",
  "serde_json",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "cc-local-llm"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]

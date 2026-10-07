@@ -8,6 +8,7 @@
 //!   discord_ask.exe replies --thread <thread_id>  # consume new replies once
 //!   discord_ask.exe replies --thread <thread_id> --read-only  # inspect history
 //!   discord_ask.exe close <thread_id>
+//!   discord_ask.exe lint --body-file report.md  # phrasing check before an owner post
 //!   discord_ask.exe intake
 //!   discord_ask.exe tick  # run every minute by CC-DiscordAskTick
 //!
@@ -22,6 +23,7 @@ pub mod commands;
 pub mod core;
 pub mod helper_reaper;
 pub mod intake;
+pub mod ja_check;
 pub mod job_titles;
 pub mod owner_wait;
 pub mod patrol;

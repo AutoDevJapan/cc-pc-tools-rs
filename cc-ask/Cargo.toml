@@ -12,6 +12,7 @@ cc-job-policy = { path = "../cc-job-policy" }
 cc-chrome = { path = "../cc-chrome" }
 cc-task-title = { path = "../cc-task-title" }
 cc-live = { path = "../cc-live" }
+cc-local-llm = { path = "../cc-local-llm" }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 serde = { version = "1", features = ["derive"] }
 regex = "1"

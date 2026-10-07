@@ -109,6 +109,21 @@ enum Commands {
     Close {
         thread: String,
     },
+    /// Check owner-facing Japanese (Skill japanese-report-writing) without posting.
+    Lint {
+        #[arg(long, default_value = "")]
+        text: String,
+        #[arg(long)]
+        body_file: Option<PathBuf>,
+    },
+}
+
+/// Owner posts get the phrasing advice on stderr first; the post is never blocked.
+fn advise(ctx: &mut Context, text: &str, body_file: Option<&std::path::Path>) {
+    let body = body_file
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .unwrap_or_default();
+    cc_ask::ja_check::advise(ctx.effects.as_mut(), &format!("{text}\n{body}"));
 }
 
 fn env_path(key: &str, default: &str) -> PathBuf {
@@ -195,7 +210,29 @@ fn run(command: Commands) -> Result<()> {
         }
         return Ok(());
     }
+    if let Commands::Lint { text, body_file } = &command {
+        let body = match body_file {
+            Some(p) => std::fs::read_to_string(p).map_err(|e| format!("OSError: {e}"))?,
+            None => String::new(),
+        };
+        let found = cc_ask::ja_check::check(&mut RealEffects, &format!("{text}\n{body}"));
+        if found.is_empty() {
+            println!("日本語の点検: 指摘なし");
+        }
+        for finding in found {
+            println!("日本語の点検: {finding}");
+        }
+        return Ok(());
+    }
     let mut ctx = context(matches!(&command, Commands::Tick))?;
+    match &command {
+        Commands::Ask(args) if !args.dry_run => advise(&mut ctx, "", Some(&args.body_file)),
+        Commands::Log {
+            text, body_file, ..
+        } => advise(&mut ctx, text, body_file.as_deref()),
+        Commands::Post { body_file, .. } => advise(&mut ctx, "", Some(body_file)),
+        _ => {}
+    }
     match command {
         Commands::Check => {
             cmd_check(&mut ctx)?;
@@ -292,6 +329,7 @@ fn run(command: Commands) -> Result<()> {
             cmd_inbox(&mut ctx, &state_file)?;
         }
         Commands::Close { thread } => cmd_close(&mut ctx, &thread)?,
+        Commands::Lint { .. } => unreachable!(),
     }
     Ok(())
 }

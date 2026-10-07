@@ -1700,6 +1700,10 @@ impl cc_ask::core::Effects for AskFake {
         if url.ends_with("/channels/FORUM") {
             return Ok(json!({"type":15}));
         }
+        if m == "GET" && url.ends_with("/users/@me") { return Ok(json!({"id":"BOT","bot":true})); }
+        if m == "GET" && (url.ends_with("/threads/active") || url.ends_with("/threads/archived/public?limit=25")) {
+            return Ok(json!({"threads":[]}));
+        }
         if m == "POST" {
             return Ok(json!({"id":"THREAD","last_message_id":"MESSAGE"}));
         }

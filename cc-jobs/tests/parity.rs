@@ -836,7 +836,8 @@ mod queue_regressions {
         live_tool_parent(&t);
         tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
         t.rt.supervisor_fail.store(true, Ordering::Relaxed);
-        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert!(t.ctx.admit("other").unwrap().is_some(), "job: {}; diagnostics: {:?}",
+            t.ctx.load("long").unwrap(), t.rt.diagnostics.lock().unwrap());
         assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
         assert_eq!(t.ctx.load("long").unwrap()["yield_count"], 1);
         t.rt.supervisor_fail.store(false, Ordering::Relaxed);

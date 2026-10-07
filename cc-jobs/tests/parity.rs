@@ -1156,6 +1156,7 @@ mod queue_regressions {
             "failed",
             "cancelled",
             "cooldown",
+            "dependency",
             "child",
         ] {
             let t = Test::new();
@@ -1172,6 +1173,15 @@ mod queue_regressions {
                 let mut other = waiting(&t, "other", "orch-other");
                 if case == "cooldown" {
                     other["retry_not_before"] = json!(t.rt.epoch() + 60.);
+                    t.ctx.save(&other).unwrap();
+                }
+                if case == "dependency" {
+                    t.rt.env.lock().unwrap().insert(
+                        "CC_TODO_HOME".into(),
+                        t.ctx.root.to_string_lossy().into_owned(),
+                    );
+                    fs::write(t.ctx.root.join("todo.json"),json!({"items":[{"id":2,"status":"wait","wait_on":[3]},{"id":3,"status":"doing"}]}).to_string()).unwrap();
+                    other["todo_id"] = json!(2);
                     t.ctx.save(&other).unwrap();
                 }
                 t.ctx.admit("other").unwrap();

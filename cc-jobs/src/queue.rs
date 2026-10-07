@@ -210,6 +210,7 @@ impl Context {
             return false;
         };
         let priorities = self.queue_priorities(jobs, &cfg);
+        let dependency_waits = self.dependency_waits(jobs);
         let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         s(job, "parent_job_id").is_empty()
@@ -232,6 +233,7 @@ impl Context {
                 s(other, "id") != s(job, "id")
                     && s(other, "parent_job_id").is_empty()
                     && s(other, "status") == "queued"
+                    && !dependency_waits.contains_key(s(other, "id"))
                     && priority(other) <= priority(job)
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)

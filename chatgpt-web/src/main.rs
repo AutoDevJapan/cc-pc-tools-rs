@@ -76,6 +76,9 @@ enum Cmd {
         /// 全体の制限時間（秒）。ほかの質問の終了待ちも含む
         #[arg(long, default_value_t = 900)]
         timeout: u64,
+        /// 保守用：未ログインの画面でも送る（画面の作りの確認だけに使う。ログイン状態の記録はしない）
+        #[arg(long, hide = true)]
+        allow_logged_out: bool,
     },
     /// ログインできているかを画面で確かめて記録する（毎日の定期確認用）
     Check,
@@ -85,6 +88,13 @@ enum Cmd {
     Login,
     /// 専用プロフィールの Chrome を閉じる
     Stop,
+    /// 画面の作りを調べる保守用：URL を開き、JS のファイルか「page:式」を順に評価して結果を表示する（「wait:秒」で待つ）
+    #[command(hide = true)]
+    Probe {
+        #[arg(long)]
+        url: Option<String>,
+        steps: Vec<String>,
+    },
 }
 
 struct Env {
@@ -120,11 +130,19 @@ fn main() -> ExitCode {
             prompt_file,
             model,
             timeout,
-        } => ask(&env, &prompt_file, model.as_deref(), timeout),
+            allow_logged_out,
+        } => ask(
+            &env,
+            &prompt_file,
+            model.as_deref(),
+            timeout,
+            allow_logged_out,
+        ),
         Cmd::Check => check(&env),
         Cmd::Status => status(&env),
         Cmd::Login => login(&env),
         Cmd::Stop => stop(&env),
+        Cmd::Probe { url, steps } => probe(&env, url.as_deref(), &steps),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -353,14 +371,23 @@ fn wait_login(tab: &mut Tab, deadline: Instant) -> Res<Login> {
     }
 }
 
-fn open_chat(env: &Env, browser: &mut Browser, url: &str, deadline: Instant) -> Res<Tab> {
+fn open_chat(
+    env: &Env,
+    browser: &mut Browser,
+    url: &str,
+    deadline: Instant,
+    anon: bool,
+) -> Res<Tab> {
     let mut tab = browser.new_tab(url, false)?;
     let login = wait_login(&mut tab, deadline);
-    if let Ok(l) = login {
+    if let Ok(l) = login
+        && !anon
+    {
         record_login(env, l);
     }
     match login {
         Ok(Login::LoggedIn) => Ok(tab),
+        Ok(Login::LoggedOut) if anon => Ok(tab),
         Ok(l) => {
             browser.close_tab(tab);
             Err(l.fail())
@@ -409,7 +436,7 @@ fn send_prompt(tab: &mut Tab, prompt: &str) -> Res<()> {
 }
 
 /// 回答が終わるまで待つ。生成中の表示が消え、本文の長さが2回続けて変わらなければ完了とする。
-fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant) -> Res<String> {
+fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant, anon: bool) -> Res<String> {
     let mut stable = 0;
     let mut last_len = u64::MAX;
     loop {
@@ -422,6 +449,7 @@ fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant) -> Res<String> {
         }
         if let Some(l) = p["state"].as_str().and_then(Login::from_key)
             && l != Login::LoggedIn
+            && !(anon && l == Login::LoggedOut)
         {
             record_login(env, l);
             return Err(l.fail());
@@ -458,14 +486,15 @@ fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant) -> Res<String> {
 
 // ---------- サブコマンド ----------
 
-fn ask(env: &Env, prompt_file: &Path, model: Option<&str>, timeout: u64) -> Res<()> {
+fn ask(env: &Env, prompt_file: &Path, model: Option<&str>, timeout: u64, anon: bool) -> Res<()> {
     let deadline = Instant::now() + Duration::from_secs(timeout);
     let prompt = read_prompt(prompt_file)?;
     let url = chat_url(&env.url, model)?;
     let _lock = lock(&env.home, deadline)?;
     let mut browser = Browser::open(&env.profile(), false)?;
-    let mut tab = open_chat(env, &mut browser, &url, deadline)?;
-    let result = send_prompt(&mut tab, &prompt).and_then(|()| wait_answer(env, &mut tab, deadline));
+    let mut tab = open_chat(env, &mut browser, &url, deadline, anon)?;
+    let result =
+        send_prompt(&mut tab, &prompt).and_then(|()| wait_answer(env, &mut tab, deadline, anon));
     browser.close_tab(tab);
     let text = result?;
     println!("{text}");
@@ -476,7 +505,7 @@ fn check(env: &Env) -> Res<()> {
     let deadline = Instant::now() + Duration::from_secs(600);
     let _lock = lock(&env.home, deadline)?;
     let mut browser = Browser::open(&env.profile(), false)?;
-    let tab = open_chat(env, &mut browser, &env.url, deadline)?;
+    let tab = open_chat(env, &mut browser, &env.url, deadline, false)?;
     browser.close_tab(tab);
     println!("ChatGPT にログインできています");
     Ok(())
@@ -536,6 +565,35 @@ fn stop(env: &Env) -> Res<()> {
         }
         Err(_) => println!("起動していません"),
     }
+    Ok(())
+}
+
+fn probe(env: &Env, url: Option<&str>, steps: &[String]) -> Res<()> {
+    let _lock = lock(&env.home, Instant::now() + Duration::from_secs(30))?;
+    let mut browser = Browser::open(&env.profile(), false)?;
+    let mut tab = browser.new_tab(url.unwrap_or(&env.url), false)?;
+    for step in steps {
+        if let Some(secs) = step.strip_prefix("wait:") {
+            sleep(Duration::from_secs(
+                secs.parse()
+                    .map_err(|_| fail(Code::Usage, "wait: の秒数が不正です"))?,
+            ));
+            continue;
+        }
+        // 「page:式」は page.js の関数を使って評価する（例: page:state()）
+        let v = match step.strip_prefix("page:") {
+            Some(call) => js(&mut tab, call)?,
+            None => tab.cdp.eval(&fs::read_to_string(step)?)?,
+        };
+        println!(
+            "== {step}
+{}",
+            v.as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| v.to_string())
+        );
+    }
+    browser.close_tab(tab);
     Ok(())
 }
 

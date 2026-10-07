@@ -8,19 +8,49 @@ use std::{
 };
 pub const SHARED: &str = r"D:\CC\BuildCache\cargo-shared";
 const GUARD_DIR: &str = r"D:\CC\BuildCache\cargo-shared-guard";
+/// Job environment: the gate picks a per-workspace target, so an inherited legacy
+/// shared target is dropped; explicit user targets are kept.
 pub fn environment(env: &mut BTreeMap<String, String>) {
-    if !env
-        .keys()
-        .any(|k| k.eq_ignore_ascii_case("CARGO_TARGET_DIR"))
-    {
-        env.insert("CARGO_TARGET_DIR".into(), SHARED.into());
+    env.retain(|k, v| {
+        !k.eq_ignore_ascii_case("CARGO_TARGET_DIR") || resolved(v) != resolved(SHARED)
+    });
+    build_environment(env, Path::new(gate::SCCACHE));
+}
+/// Compiler cache settings shared by jobs and the gate; explicit values win.
+/// sccache is used only when installed, so other machines (and CI) build normally.
+pub fn build_environment(env: &mut BTreeMap<String, String>, sccache: &Path) {
+    // Old supervisors injected a global 0. Keep dev path crates incremental,
+    // while registry dependencies and the final test profile remain cacheable.
+    env.retain(|k, v| !k.eq_ignore_ascii_case("CARGO_INCREMENTAL") || v != "0");
+    let mut defaults = vec![
+        ("CARGO_PROFILE_DEV_INCREMENTAL", "true".to_string()),
+        ("CARGO_PROFILE_DEV_CODEGEN_UNITS", "16".to_string()),
+        ("CARGO_PROFILE_TEST_INCREMENTAL", "false".to_string()),
+    ];
+    if sccache.is_file() {
+        defaults.extend([
+            ("RUSTC_WRAPPER", sccache.to_string_lossy().into_owned()),
+            ("SCCACHE_DIR", r"D:\CC\BuildCache\sccache".into()),
+            ("SCCACHE_CACHE_SIZE", "30G".into()),
+            ("SCCACHE_SERVER_PORT", "42259".into()),
+        ]);
     }
-    if !env
-        .keys()
-        .any(|k| k.eq_ignore_ascii_case("CARGO_INCREMENTAL"))
-    {
-        env.insert("CARGO_INCREMENTAL".into(), "0".into());
+    for (name, value) in defaults {
+        if !env.keys().any(|k| k.eq_ignore_ascii_case(name)) {
+            env.insert(name.into(), value);
+        }
     }
+}
+/// Case-insensitive canonical form used to compare and lock target directories.
+pub fn resolved(p: impl AsRef<Path>) -> Option<String> {
+    let p = std::path::absolute(p).ok()?;
+    let p = p.canonicalize().unwrap_or(p);
+    Some(
+        p.to_string_lossy()
+            .trim_start_matches(r"\\?\")
+            .trim_end_matches('\\')
+            .to_lowercase(),
+    )
 }
 fn no_link(p: &Path) -> io::Result<()> {
     use std::os::windows::fs::MetadataExt;
@@ -62,42 +92,15 @@ pub fn size(p: &Path) -> io::Result<u64> {
     Ok(bytes)
 }
 pub fn shared_selected(args: &[String], env: &BTreeMap<String, String>) -> bool {
-    let mut override_dir = None;
-    for (i, arg) in args.iter().enumerate() {
-        if arg == "--" {
-            break;
-        }
-        if arg == "--target-dir" {
-            override_dir = args.get(i + 1).map(String::as_str);
-        }
-        if let Some(v) = arg.strip_prefix("--target-dir=") {
-            override_dir = Some(v);
-        }
-    }
-    let selected = override_dir.or_else(|| {
+    let selected = gate::explicit_target(args).or_else(|| {
         env.iter()
             .find(|(k, _)| k.eq_ignore_ascii_case("CARGO_TARGET_DIR"))
             .map(|(_, v)| v.as_str())
     });
-    fn resolved(p: &str) -> Option<String> {
-        let p = std::path::absolute(p).ok()?;
-        let p = p.canonicalize().unwrap_or(p);
-        Some(
-            p.to_string_lossy()
-                .trim_start_matches(r"\\?\")
-                .trim_end_matches('\\')
-                .to_lowercase(),
-        )
-    }
     selected.is_some_and(|p| resolved(p) == resolved(SHARED))
 }
 pub fn guard_needed(args: &[String], env: &BTreeMap<String, String>) -> bool {
-    let command = args
-        .first()
-        .filter(|s| gate::UNLOCKED.contains(&s.as_str()))
-        .map(String::as_str)
-        .unwrap_or(gate::first_command(args));
-    !gate::UNLOCKED.contains(&command)
+    gate::build_like(args)
         && shared_selected(args, env)
         && env
             .get("CODEX_JOBS_CACHE_LOCK_HELD")
@@ -306,11 +309,15 @@ mod tests {
         assert!(adaptive_limit(0, 90 * GIB).is_err());
     }
     #[test]
-    fn default_is_shared_and_incremental_disabled() {
-        let mut e = BTreeMap::new();
+    fn legacy_shared_target_is_dropped_and_dev_incremental_retained() {
+        let mut e = BTreeMap::from([(
+            "Cargo_Target_Dir".into(),
+            "d:/CC/BuildCache/cargo-shared/".into(),
+        )]);
         environment(&mut e);
-        assert_eq!(e["CARGO_TARGET_DIR"], SHARED);
-        assert_eq!(e["CARGO_INCREMENTAL"], "0");
+        assert!(!e.keys().any(|k| k.eq_ignore_ascii_case("CARGO_TARGET_DIR")));
+        assert!(!e.contains_key("CARGO_INCREMENTAL"));
+        assert_eq!(e["CARGO_PROFILE_DEV_INCREMENTAL"], "true");
     }
     #[test]
     fn explicit_case_insensitive_settings_are_preserved() {
@@ -319,9 +326,10 @@ mod tests {
             ("cargo_incremental".into(), "1".into()),
         ]);
         environment(&mut e);
-        assert_eq!(e.len(), 2);
         assert_eq!(e["cargo_target_dir"], "D:\\custom");
         assert_eq!(e["cargo_incremental"], "1");
+        assert!(!e.contains_key("CARGO_TARGET_DIR"));
+        assert!(!e.contains_key("CARGO_INCREMENTAL"));
     }
     #[test]
     fn target_argument_overrides_shared_environment() {
@@ -348,6 +356,35 @@ mod tests {
             &["--target-dir=D:/CC/BuildCache/other/../cargo-shared".into()],
             &BTreeMap::new()
         ));
+    }
+    #[test]
+    fn sccache_is_configured_only_when_installed_and_explicit_values_win() {
+        let missing = std::env::temp_dir().join("cc-jobs-no-such-sccache.exe");
+        let mut e = BTreeMap::new();
+        build_environment(&mut e, &missing);
+        assert_eq!(
+            e,
+            BTreeMap::from([
+                ("CARGO_PROFILE_DEV_INCREMENTAL".into(), "true".into()),
+                ("CARGO_PROFILE_DEV_CODEGEN_UNITS".into(), "16".into()),
+                ("CARGO_PROFILE_TEST_INCREMENTAL".into(), "false".into())
+            ])
+        );
+        let installed = std::env::current_exe().unwrap();
+        let mut e = BTreeMap::from([("sccache_cache_size".into(), "5G".into())]);
+        build_environment(&mut e, &installed);
+        assert_eq!(e["RUSTC_WRAPPER"], installed.to_string_lossy());
+        assert_eq!(e["SCCACHE_DIR"], r"D:\CC\BuildCache\sccache");
+        assert_eq!(e["SCCACHE_SERVER_PORT"], "42259");
+        assert_eq!(e["sccache_cache_size"], "5G");
+        assert!(!e.contains_key("SCCACHE_CACHE_SIZE"));
+        let mut e = BTreeMap::new();
+        build_environment(&mut e, &installed);
+        assert_eq!(e["SCCACHE_CACHE_SIZE"], "30G");
+        assert!(!e.contains_key("CARGO_INCREMENTAL"));
+        e.insert("CARGO_INCREMENTAL".into(), "0".into());
+        build_environment(&mut e, &installed);
+        assert!(!e.contains_key("CARGO_INCREMENTAL"));
     }
     #[test]
     fn ordinary_slot_does_not_bypass_shared_budget() {

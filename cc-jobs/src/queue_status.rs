@@ -60,7 +60,9 @@ impl Context {
                 || self.running_job(job)
             {
                 running += 1;
-                families.insert(self.queue_root(job));
+                if !self.cargo_waiting(job) {
+                    families.insert(self.queue_root(job));
+                }
                 let reasons = self.resource_waits(job);
                 if !reasons.is_empty() {
                     resources.push(json!({"id":id,"reasons":reasons}));
@@ -138,18 +140,40 @@ impl Context {
         )
     }
 
+    /// Markers of this job's processes that are still alive with the same identity.
+    fn live_wait_markers(&self, job: &Value) -> Vec<Value> {
+        let Ok(entries) = fs::read_dir(self.job_dir(s(job, "id")).join("resource-waits")) else {
+            return Vec::new();
+        };
+        entries
+            .flatten()
+            .filter_map(|entry| self.read_json(&entry.path()).ok())
+            .filter(|wait| s(wait, "job_id") == s(job, "id") && self.is_ours(wait, "pid"))
+            .collect()
+    }
+
+    /// A job blocked in the Cargo gate is idle, so it does not occupy a queue
+    /// slot; it counts again as soon as Cargo is admitted and the marker is gone.
+    pub(crate) fn cargo_waiting(&self, job: &Value) -> bool {
+        let markers = self.live_wait_markers(job);
+        !markers.iter().any(|wait| s(wait, "kind") == "cargo-active")
+            && markers.iter().any(|wait| {
+                s(wait, "kind") == "cargo"
+                    || (s(wait, "kind").is_empty()
+                        && matches!(
+                            s(wait, "reason"),
+                            "cargoの共有ビルド枠待ち" | "cargoの共有キャッシュ枠待ち"
+                        ))
+            })
+    }
+
     pub fn resource_waits(&self, job: &Value) -> Vec<String> {
-        let mut reasons = Vec::new();
-        if let Ok(entries) = fs::read_dir(self.job_dir(s(job, "id")).join("resource-waits")) {
-            for entry in entries.flatten() {
-                if let Ok(wait) = self.read_json(&entry.path())
-                    && s(&wait, "job_id") == s(job, "id")
-                    && self.is_ours(&wait, "pid")
-                {
-                    reasons.push(s(&wait, "reason").to_string());
-                }
-            }
-        }
+        let mut reasons: Vec<String> = self
+            .live_wait_markers(job)
+            .iter()
+            .filter(|wait| s(wait, "kind") != "cargo-active")
+            .map(|wait| s(wait, "reason").to_string())
+            .collect();
         // live_chain already publishes exact job and process identities.
         if let Some(tools) = self.root.parent()
             && let Ok(entries) = fs::read_dir(tools.join("civ6-live/queue"))
@@ -211,10 +235,13 @@ impl Context {
 /// Per-process marker avoids competing with supervisors writing job.json.
 pub(crate) struct ResourceWait(std::path::PathBuf);
 impl ResourceWait {
-    pub(crate) fn cargo(env: &BTreeMap<String, String>) -> Option<Self> {
-        Self::new(env, "cargoの共有ビルド枠待ち")
-    }
     pub(crate) fn new(env: &BTreeMap<String, String>, reason: &str) -> Option<Self> {
+        Self::state(env, reason, "cargo")
+    }
+    pub(crate) fn active(env: &BTreeMap<String, String>) -> Option<Self> {
+        Self::state(env, "cargoのビルド・テスト実行中", "cargo-active")
+    }
+    fn state(env: &BTreeMap<String, String>, reason: &str, kind: &str) -> Option<Self> {
         let id = env.get("CC_JOB_ID").or_else(|| env.get("CODEX_JOB_ID"))?;
         if !crate::queue::valid_job_id(id) {
             return None;
@@ -230,7 +257,7 @@ impl ResourceWait {
         }
         fs::create_dir_all(&dir).ok()?;
         let path = dir.join(format!("cargo-{}.json", std::process::id()));
-        let data = json!({"job_id":id,"pid":std::process::id(),"pid_created":proc_created(std::process::id()),"reason":reason,"since":now_iso()});
+        let data = json!({"job_id":id,"kind":kind,"pid":std::process::id(),"pid_created":proc_created(std::process::id()),"reason":reason,"since":now_iso()});
         fs::write(&path, serde_json::to_vec(&data).ok()?).ok()?;
         Some(Self(path))
     }

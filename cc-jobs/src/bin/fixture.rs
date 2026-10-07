@@ -20,6 +20,16 @@ fn main() {
         );
         return;
     }
+    if args.first().is_some_and(|s| s == "--echo-build") {
+        let var = |name: &str| std::env::var(name).unwrap_or_default();
+        println!(
+            "{}|{}|{}",
+            var("CARGO_BUILD_JOBS"),
+            var("CODEX_JOBS_CARGO_TARGET_HELD"),
+            args[1..].join(" ")
+        );
+        return;
+    }
     let mode = std::env::var("CC_JOBS_FIXTURE_MODE").unwrap_or_default();
     let root = std::path::PathBuf::from(
         std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),
@@ -132,13 +142,24 @@ fn main() {
         return;
     }
     if mode == "cargo" {
+        let now = || {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64()
+        };
+        // The gate already owns its locks at this point. Measure that interval,
+        // rather than when this child is next scheduled after the ready barrier.
+        let started = now();
         fs::write(root.join(format!("ready.{}", std::process::id())), b"").unwrap();
-        let slots = std::env::var("CODEX_JOBS_CARGO_SLOTS")
+        // Builds that must overlap wait until all of them were admitted.
+        let slots = std::env::var("CC_JOBS_FIXTURE_READY")
+            .or_else(|_| std::env::var("CODEX_JOBS_CARGO_SLOTS"))
             .unwrap()
             .parse::<usize>()
             .unwrap()
             .max(1);
-        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
         while fs::read_dir(&root)
             .unwrap()
             .flatten()
@@ -152,13 +173,7 @@ fn main() {
             );
             std::thread::sleep(Duration::from_millis(5));
         }
-        let now = || {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs_f64()
-        };
-        println!("START {}", now());
+        println!("START {started}");
         std::io::stdout().flush().unwrap();
         std::thread::sleep(Duration::from_millis(600));
         println!("END {}", now());

@@ -85,9 +85,8 @@ pub fn ao_notify(
     if rt.mono() >= deadline {
         return json!({"ok":false});
     }
-    let Ok(names) =
-        cc_task_title::Names::load(&Path::new(cc_task_title::TOOLS).join("client-projects.txt"))
-    else {
+    let tools = rt.task_title_tools();
+    let Ok(names) = cc_task_title::Names::load(&tools.join("client-projects.txt")) else {
         return json!({"ok":false});
     };
     let mut args = vec![
@@ -102,9 +101,7 @@ pub fn ao_notify(
         "start" => {
             let prompt = std::fs::read_to_string(jobs.join(s(job, "id")).join("prompt.md"))
                 .unwrap_or_default();
-            let Ok(title) =
-                cc_task_title::installed_job_title(job, &prompt, Path::new(cc_task_title::TOOLS))
-            else {
+            let Ok(title) = rt.task_job_title(job, &prompt) else {
                 return json!({"ok":false});
             };
             args.extend([
@@ -185,7 +182,10 @@ pub fn ao_notify(
                     return json!({"ok":false});
                 }
                 let args = vec![
-                    format!("{}/discord-ask/discord_ask.exe", cc_task_title::TOOLS),
+                    tools
+                        .join("discord-ask/discord_ask.exe")
+                        .to_string_lossy()
+                        .into_owned(),
                     "sync-job-card".into(),
                     "--job".into(),
                     s(job, "id").into(),

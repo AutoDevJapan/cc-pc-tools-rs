@@ -1,6 +1,6 @@
 //! Offline scheduler checks; no real job launch, cancellation, Discord or credentials.
 use cc_scheduler::{backend::*, common::*, engine::*, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -749,7 +749,8 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let temp = tempfile::tempdir().unwrap();
-        let root = temp.path();
+        let canonical = temp.path().canonicalize().unwrap();
+        let root = PathBuf::from(canonical.to_string_lossy().trim_start_matches(r"\\?\"));
         fs::write(root.join("client-projects.txt"), "").unwrap();
         let repo = root.join("repo");
         fs::create_dir(&repo).unwrap();
@@ -881,10 +882,12 @@ fn preparation_retains_previous_result_session_and_redesigns_repeated_continuati
         Path::new("prompt.md"),
         &json!({"model":"gpt-6.1-sol","effort":"high"}),
     );
-    assert!(command
-        .args
-        .windows(2)
-        .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+    assert!(
+        command
+            .args
+            .windows(2)
+            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+    );
 }
 #[test]
 fn legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing() {
@@ -922,10 +925,12 @@ fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
             Path::new("prompt.md"),
             &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
         );
-        assert!(command
-            .args
-            .windows(2)
-            .any(|pair| pair == ["--sandbox", expected]));
+        assert!(
+            command
+                .args
+                .windows(2)
+                .any(|pair| pair == ["--sandbox", expected])
+        );
     }
 }
 #[test]
@@ -1020,9 +1025,11 @@ fn revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive() {
     assert!(!busy.contains("civ6"));
     assert!(busy.contains("cargo"));
     write_json(&home.join("civ6.lock"), &json!({"job":"new-holder"}), 0).unwrap();
-    assert!(resources_busy_with_lock(&[], &[old], &processes, T, home)
-        .unwrap()
-        .contains("civ6"));
+    assert!(
+        resources_busy_with_lock(&[], &[old], &processes, T, home)
+            .unwrap()
+            .contains("civ6")
+    );
 }
 
 #[test]
@@ -1499,10 +1506,11 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
     assert_eq!(git.calls.len(), 4);
-    assert!(git
-        .calls
-        .iter()
-        .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree")));
+    assert!(
+        git.calls
+            .iter()
+            .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree"))
+    );
 }
 #[test]
 fn test_step_entrypoint_never_raises() {
@@ -1601,13 +1609,17 @@ fn test_todo_live_lock_is_not_stolen_by_old_timestamp() {
     let lock = ByteLock::acquire(&lockpath, Duration::ZERO)
         .unwrap()
         .unwrap();
-    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
-        .unwrap()
-        .is_none());
+    assert!(
+        ByteLock::acquire(&lockpath, Duration::ZERO)
+            .unwrap()
+            .is_none()
+    );
     drop(lock);
-    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
-        .unwrap()
-        .is_some());
+    assert!(
+        ByteLock::acquire(&lockpath, Duration::ZERO)
+            .unwrap()
+            .is_some()
+    );
     assert!(lockpath.exists());
 }
 #[test]
@@ -1659,9 +1671,11 @@ fn test_question_close_failure_retries_close_without_reprocessing_reply() {
     let count = f.e.backend.reply_count;
     f.e.answers().unwrap();
     assert_eq!(f.e.backend.reply_count, count);
-    assert!(f.get(1)["scheduler"]
-        .get("question_close_pending")
-        .is_none());
+    assert!(
+        f.get(1)["scheduler"]
+            .get("question_close_pending")
+            .is_none()
+    );
 }
 #[test]
 fn test_new_hang_does_not_create_another_owner_question() {
@@ -1747,6 +1761,8 @@ fn test_owner_question_records_original_worktree_for_continuation() {
         .to_string_lossy()
         .into_owned();
     let args = cc_ask::commands::AskArgs {
+        thread: None,
+        owner_only: None,
         attach: vec![],
         title: "作業が停止しました".into(),
         body_file: body,
@@ -1786,11 +1802,13 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .unwrap();
     cc_ask::resume::cmd_resume(&mut ctx, &mut false).unwrap();
     // Answer receipts now inspect scheduler questions too; the generic path still must never launch.
-    assert!(!calls
-        .lock()
-        .unwrap()
-        .iter()
-        .any(|call| call["argv"].is_array()));
+    assert!(
+        !calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|call| call["argv"].is_array())
+    );
 }
 #[test]
 fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
@@ -1833,7 +1851,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
 }
 #[test]
 fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
-    let text = fs::read_to_string("D:/CC/Tools/discord-ask/discord-ask-tick-hidden.vbs").unwrap();
+    let text = include_str!("../deployment/discord-ask-tick-hidden.vbs");
     let lines: Vec<_> = text
         .lines()
         .filter(|l| l.starts_with("objShell.Run"))
@@ -1975,7 +1993,7 @@ fn todo_edits_preserve_unknown_fields() {
 }
 #[test]
 fn real_child_process_has_no_console_window() {
-    let code="Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win { [DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow(); }'; [Win]::GetConsoleWindow().ToInt64()";
+    let code = "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win { [DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow(); }'; [Win]::GetConsoleWindow().ToInt64()";
     let out = SystemRunner
         .run(&invocation(
             &[
@@ -2090,9 +2108,11 @@ fn junction_repo_resolves_to_original_worktree_container() {
             .unwrap()
             .unwrap();
     let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    let repo = f.repo.canonicalize().unwrap();
+    let repo = repo.to_string_lossy();
     assert_eq!(
         norm(target.parent().unwrap().to_str().unwrap()),
-        norm(&format!("{}-wt", f.repo.display()))
+        norm(&format!("{}-wt", repo.trim_start_matches(r"\\?\")))
     );
     let mut git = GitFake {
         calls: vec![],
@@ -2104,10 +2124,11 @@ fn junction_repo_resolves_to_original_worktree_container() {
     };
     fs::create_dir(f.repo.join(".git")).unwrap();
     ensure_worktree(&mut git, alias.to_str().unwrap(), &row).unwrap();
-    assert!(git
-        .calls
-        .iter()
-        .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch")));
+    assert!(
+        git.calls
+            .iter()
+            .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch"))
+    );
 }
 #[test]
 fn attempts_and_retries_remain_json_integers() {

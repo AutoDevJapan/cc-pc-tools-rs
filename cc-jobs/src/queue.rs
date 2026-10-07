@@ -746,10 +746,13 @@ impl Context {
             .collect();
         // Count occupied families even when the root/intermediate supervisor has
         // exited. A surviving descendant must not silently free a root slot.
+        // A job idle in the Cargo gate frees its family unless another member runs.
         let mut families = HashSet::new();
         let mut children = HashMap::<String, usize>::new();
         for j in &active {
-            families.insert(self.queue_root(j));
+            if !self.cargo_waiting(j) {
+                families.insert(self.queue_root(j));
+            }
             if !s(j, "parent_job_id").is_empty() {
                 *children.entry(s(j, "parent_job_id").into()).or_default() += 1;
             }

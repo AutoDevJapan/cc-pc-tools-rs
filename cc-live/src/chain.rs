@@ -793,53 +793,320 @@ fn python_repr(v: &Value) -> String {
 }
 
 pub fn main(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> {
-    main_owned(r, p, a, None)
+    let options = Options::parse(a)?;
+    if options.help {
+        r.print(HELP)?;
+        return Ok(0);
+    }
+    if options.reliability {
+        return cli(r, p, a);
+    }
+    main_owned(r, p, &options, None, None, &mut false, &mut None)
+}
+
+struct Reliability {
+    revision: Option<String>,
+    summary_path: std::path::PathBuf,
+    summary: Value,
+}
+impl Reliability {
+    fn round(&mut self) -> &mut Value {
+        self.summary["rounds"]
+            .as_array_mut()
+            .unwrap()
+            .last_mut()
+            .unwrap()
+    }
+    fn save(&self) -> Result<(), String> {
+        write_json(&self.summary_path, &self.summary)
+    }
+}
+
+/// Preserve the original tracked inputs alongside the prepared scenario.
+fn source_manifest(
+    r: &mut impl Runner,
+    p: &Paths,
+    scenario: &str,
+    prepared: &str,
+    deadline: f64,
+) -> Result<Value, String> {
+    let timeout = 30.0_f64.min(time_left(r, deadline)?);
+    let out = r.run(
+        Call::new(args(&[
+            "git",
+            "-C",
+            &path(p.live()),
+            "show",
+            "--format=%H%n%T",
+            "--no-patch",
+            "HEAD",
+        ]))
+        .managed()
+        .timeout(timeout),
+    )?;
+    let ids: Vec<_> = out
+        .stdout
+        .lines()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect();
+    if out.code != 0
+        || ids.len() != 2
+        || ids
+            .iter()
+            .any(|id| !matches!(id.len(), 40 | 64) || !id.bytes().all(|c| c.is_ascii_hexdigit()))
+    {
+        return Err(format!(
+            "could not identify prepared SOURCE (exit {}): {} {}",
+            out.code, out.stdout, out.stderr
+        ));
+    }
+    let (revision, tree) = (ids[0], ids[1]);
+    let mut files = serde_json::Map::new();
+    for relative in [
+        driver::MANIFEST.to_owned(),
+        "tools/Cargo.toml".into(),
+        "tools/Cargo.lock".into(),
+        "tools/civ6-autotest-rs/Cargo.lock".into(),
+        format!("tools/civ6-autotest/scenarios/{scenario}"),
+    ] {
+        let file = p.live().join(&relative);
+        let contents = match fs::read_to_string(&file) {
+            Ok(text) => json!(text),
+            Err(error) if error.kind() == ErrorKind::NotFound => Value::Null,
+            Err(error) => return Err(format!("read SOURCE {}: {error}", file.display())),
+        };
+        files.insert(relative, contents);
+    }
+    Ok(
+        json!({"revision":revision,"source_tree":tree,"worktree":path(p.live()),"files":files,
+        "prepared_scenario_path":prepared,"prepared_scenario":read_json(prepared)?}),
+    )
+}
+
+pub(crate) struct WithinDeadline<'a, R> {
+    pub(crate) runner: &'a mut R,
+    pub(crate) deadline: f64,
+}
+impl<R: Runner> Runner for WithinDeadline<'_, R> {
+    fn run(&mut self, mut call: Call) -> Result<Output, String> {
+        let left = time_left(self.runner, self.deadline)?;
+        call.timeout = Some(call.timeout.unwrap_or(left).min(left));
+        self.runner.run(call)
+    }
+    fn now(&mut self) -> f64 {
+        self.runner.now()
+    }
+    fn monotonic(&mut self) -> f64 {
+        self.runner.monotonic()
+    }
+    fn sleep(&mut self, seconds: f64) -> Result<(), String> {
+        let left = time_left(self.runner, self.deadline)?;
+        if seconds >= left {
+            self.runner.sleep(left)?;
+            return Err("Civ6 scenario deadline exhausted while waiting".into());
+        }
+        self.runner.sleep(seconds)
+    }
+    fn print(&mut self, text: &str) -> Result<(), String> {
+        self.runner.print(text)
+    }
+    fn error(&mut self, text: &str) -> Result<(), String> {
+        self.runner.error(text)
+    }
+}
+
+const HELP: &str = "Usage: live_chain [--test-mode] [--stop-on-failure] [--reliability] name:scenario.json [...]\n--reliability: run exactly one scenario 10 times, release the lock after each run, stop on any failure.\n-h, --help: show this help without acquiring the Civ6 lock.";
+const CLEANUP_RESERVE_SECONDS: f64 = 240.0;
+#[derive(Default)]
+struct Options {
+    items: Vec<String>,
+    test_mode: bool,
+    stop: bool,
+    reliability: bool,
+    help: bool,
+}
+impl Options {
+    fn parse(a: &[String]) -> Result<Self, String> {
+        let mut options = Self::default();
+        for arg in a {
+            match arg.as_str() {
+                "--help" | "-h" => options.help = true,
+                "--test-mode" => options.test_mode = true,
+                "--stop-on-failure" => options.stop = true,
+                "--reliability" => options.reliability = true,
+                _ if arg.starts_with('-') => return Err(format!("unknown argument: {arg}")),
+                _ => {
+                    let (name, scenario) =
+                        arg.split_once(':').ok_or("expected name:scenario.json")?;
+                    if name.is_empty()
+                        || scenario.is_empty()
+                        || name.trim() != name
+                        || scenario.trim() != scenario
+                    {
+                        return Err(format!("expected nonempty name:scenario.json: {arg}"));
+                    }
+                    options.items.push(arg.clone());
+                }
+            }
+        }
+        if options.reliability && options.items.len() != 1 && !options.help {
+            return Err("--reliability needs exactly one name:scenario.json".into());
+        }
+        if options.items.is_empty() && !options.help {
+            return Err("at least one name:scenario.json is required; use --help for usage".into());
+        }
+        Ok(options)
+    }
+}
+
+/// Reserve bounded cleanup time and account for a competitor already waiting.
+/// A waiter arriving during the synchronous child run still waits at most one
+/// scenario window (30 minutes including preparation and cleanup).
+fn preparation_deadline(
+    r: &mut impl Runner,
+    p: &Paths,
+    lease: Option<&process::LeaseLimit>,
+) -> Result<f64, String> {
+    let anchor = r.monotonic();
+    let epoch = r.now();
+    let mut deadline = anchor + fairness::LEASE_SECONDS - CLEANUP_RESERVE_SECONDS;
+    if let Some(limit) = lease {
+        let mut lock =
+            fairness::Lock::open(p)?.ok_or("owned Civ6 lock unavailable before preparation")?;
+        if lock.info["lock_token"].as_str() != Some(limit.token.as_str()) {
+            return Err("Civ6 lock ownership changed before preparation".into());
+        }
+        lock.expired(r, p, &fairness::todo_path(p))?;
+        if let Some(since) = lock.info["competitor_since"].as_f64() {
+            let hard_deadline = anchor + fairness::LEASE_SECONDS - (epoch - since).max(0.0);
+            limit.record_probe(&process::LeaseProbe::Contended(hard_deadline));
+            deadline = deadline.min(limit.work_deadline().unwrap());
+        }
+    }
+    if deadline <= r.monotonic() {
+        return Err("Civ6 lease has insufficient time for another scenario and cleanup".into());
+    }
+    Ok(deadline)
+}
+
+fn time_left(r: &mut impl Runner, deadline: f64) -> Result<f64, String> {
+    let remaining = deadline - r.monotonic();
+    if remaining > 0.0 {
+        Ok(remaining)
+    } else {
+        Err("Civ6 scenario deadline exhausted".into())
+    }
 }
 
 fn main_owned(
     r: &mut impl Runner,
     p: &Paths,
-    a: &[String],
+    options: &Options,
     token: Option<&str>,
+    mut reliability: Option<&mut Reliability>,
+    game_closed: &mut bool,
+    cleanup_deadline: &mut Option<f64>,
 ) -> Result<i32, String> {
-    let test_mode = a.iter().any(|s| s == "--test-mode");
-    let stop = a.iter().any(|s| s == "--stop-on-failure");
-    for item in a
-        .iter()
-        .filter(|s| !matches!(s.as_str(), "--test-mode" | "--stop-on-failure"))
-    {
+    let mut first_failure = 0;
+    for item in &options.items {
+        *game_closed = false;
         if let Some(token) = token {
             yield_if_expired(r, p, token)?;
         }
         let (name, scenario) = item.split_once(':').ok_or("expected name:scenario.json")?;
-        let command = Call::new(args(&[
-            &path(p.here.join("ship.exe")),
-            "live",
-            name,
-            scenario,
-        ]))
-        .managed();
-        let mut out = r.run(command.clone())?;
-        if out.stdout.trim().lines().count() < 2 {
-            // Civ6 locks mod files while running; close it and retry the checkout once (live 2026-09-29).
-            close_civ6(r)?;
-            r.sleep(15.0)?;
-            out = r.run(command)?;
+        // One lease spans preparation, the initial observation, the driver,
+        // and cleanup. Never replace already known contention with a fresh lease.
+        let lease = token.map(|token| process::LeaseLimit::new(p, token, CLEANUP_RESERVE_SECONDS));
+        let deadline = preparation_deadline(r, p, lease.as_ref())?;
+        let window = deadline - r.monotonic();
+        *cleanup_deadline = Some(deadline + CLEANUP_RESERVE_SECONDS);
+        if let Some(state) = reliability.as_deref_mut() {
+            state.round()["prepare_window_seconds"] = json!(window);
+        }
+        // Close while holding the acquired shared lock, before checkout can
+        // touch mod files. Never close and replay a failed preparation.
+        let protection = if let Some(token) = token {
+            Some(
+                open_owned_lock(r, &p.here.join("civ6.lock"), token)?
+                    .ok_or("Civ6 lock ownership changed before preparation close")?,
+            )
+        } else {
+            None
+        };
+        close_civ6(&mut WithinDeadline {
+            runner: r,
+            deadline,
+        })?;
+        drop(protection);
+        *game_closed = true;
+        let ship = std::env::var("CC_LIVE_SHIP").unwrap_or_else(|_| path(p.here.join("ship.exe")));
+        let prepare_args = args(&[&ship, "live", name, scenario]);
+        let prepare_timeout = time_left(r, deadline)?.min(1200.0);
+        let out = r
+            .run(Call::new(prepare_args).timeout(prepare_timeout).managed())
+            .map_err(|e| format!("prepare {name} {scenario} failed: {e}"))?;
+        if let Some(state) = reliability.as_deref_mut() {
+            state.round()["prepare_exit_code"] = json!(windows_exit_code(out.code));
+            state.round()["prepare_stderr"] = json!(out.stderr);
+            state.round()["prepare_elapsed_seconds"] =
+                json!((r.monotonic() - (deadline - window)).max(0.0));
         }
         let lines: Vec<_> = out.stdout.trim().lines().collect();
-        if lines.len() < 2 {
+        if out.code != 0 || lines.len() < 2 {
+            let code = if out.code == 0 { 1 } else { out.code };
             r.print(&format!(
-                "RESULT {name} {scenario} prepare-failed {}",
-                tail(out.stderr.trim(), 200)
+                "RESULT {name} {scenario} prepare-failed {} stdout={} stderr={}",
+                windows_exit_code(code),
+                tail(out.stdout.trim(), 800),
+                tail(out.stderr.trim(), 1600)
             ))?;
-            if stop {
-                return Ok(1);
+            if options.stop || options.reliability {
+                return Ok(code);
+            }
+            if first_failure == 0 {
+                first_failure = code;
             }
             continue;
         }
         let (live_json, artifacts) = (lines[lines.len() - 2], lines[lines.len() - 1]);
-        let responsive = ensure_responsive_civ6(r, p)?;
-        r.print(&format!("START {name} {scenario} civ6={responsive}"))?;
+        let scenario_timeout = driver::scenario_timeout(Path::new(live_json))?;
+        // Reserve ship's sequence directory before running the driver. This
+        // works with the installed ship protocol (only two output lines) and
+        // keeps its next save/load suffix unique, including failed spawns.
+        let artifacts = if let Some(state) = reliability.as_deref_mut() {
+            let id = state.round()["run_id"].as_str().unwrap().to_owned();
+            let root = Path::new(artifacts);
+            fs::create_dir_all(root.parent().ok_or("artifact root has no parent")?)
+                .map_err(|e| e.to_string())?;
+            fs::create_dir(root)
+                .map_err(|e| format!("reserve reliability artifacts {}: {e}", root.display()))?;
+            let artifacts = path(root.join(&id));
+            state.round()["artifacts"] = json!(artifacts);
+            let source = source_manifest(r, p, scenario, live_json, deadline)?;
+            let source_path = root.join("source-manifest.json");
+            write_json(&source_path, &source)?;
+            let revision = source["revision"].as_str().unwrap().to_owned();
+            let tree = source["source_tree"].as_str().unwrap().to_owned();
+            state.round()["source"] = source;
+            state.round()["source_manifest_path"] = json!(path(source_path));
+            r.print(&format!("SOURCE {name} {scenario} {revision}"))?;
+            if let Some(expected) = &state.revision {
+                if *expected != tree {
+                    return Err(format!("reliability SOURCE changed: expected tree {expected}, prepared {tree}; refusing another driver run"));
+                }
+            } else {
+                state.revision = Some(tree.clone());
+                state.summary["source_revision"] = json!(revision);
+                state.summary["source_tree"] = json!(tree);
+            }
+            artifacts
+        } else {
+            artifacts.into()
+        };
+        r.print(&format!(
+            "START {name} {scenario} civ6=closed-before-prepare"
+        ))?;
         // Use the driver of the branch under test: main's driver has moved past the old driver-diplo worktree
         // (popup closers from #65, save dismissing the tutorial advisor from #64).
         let mut argv = driver::scenario(p, &p.live())?;
@@ -847,49 +1114,83 @@ fn main_owned(
             live_json,
             "--no-auto-restart",
             "--output",
-            artifacts,
+            &artifacts,
         ]));
-        if test_mode {
+        if options.test_mode {
             argv.push("--test-mode".into());
         }
-        let command = Call::new(argv)
+        let timeout = scenario_timeout;
+        if let Some(limit) = &lease {
+            process::monitor_lease(r, limit)?;
+            if let Some(deadline) = limit.work_deadline() {
+                if r.monotonic() >= deadline {
+                    return Err(format!(
+                        "{}: waiting peer requires the slot before another driver run",
+                        process::LEASE_YIELD
+                    ));
+                }
+            }
+        }
+        *cleanup_deadline = Some(r.monotonic() + timeout + CLEANUP_RESERVE_SECONDS);
+        if let Some(state) = reliability.as_deref_mut() {
+            state.round()["scenario_budget_seconds"] = json!(scenario_timeout);
+            state.round()["driver_timeout_seconds"] = json!(timeout);
+        }
+        let mut command = Call::new(argv)
             .env("CIV6_LIVE_CHAIN_PID", std::process::id().to_string())
             .env("CIV6_LIVE_LOCK_PATH", path(p.here.join("civ6.lock")))
-            .merged();
-        let mut run = Output::default();
-        for attempt in 0..2 {
-            run = r.run(command.clone())?;
-            // The relaunch itself sometimes races Steam/FireTuner (unify-18/20/21, cascade-06); retry once from a closed game.
-            if attempt == 0
-                && run.stdout.contains("[FAIL] 1/")
-                && run.stdout.contains("restart_game")
-                && !run.stdout.contains("STARTUP_RECOVERY_ATTEMPTED")
-            {
-                r.print("  retry: restart_game failed, closing Civ6 and running again")?;
-                close_civ6(r)?;
-                r.sleep(60.0)?;
-                // The driver refuses an existing output folder (diplo-18); keep the failed attempt beside it.
-                if Path::new(artifacts).exists() {
-                    let dest = format!("{artifacts}-try1");
-                    let dest = Path::new(&dest);
-                    let target = if dest.is_dir() {
-                        dest.join(
-                            Path::new(artifacts)
-                                .file_name()
-                                .ok_or("artifact folder has no name")?,
-                        )
-                    } else {
-                        dest.into()
-                    };
-                    fs::rename(artifacts, target).map_err(|e| e.to_string())?;
-                }
-                continue;
+            .merged()
+            .managed()
+            .timeout(timeout);
+        command.lease = lease.clone();
+        let driver_started = r.monotonic();
+        *game_closed = false;
+        let execution = r.run(command);
+        if let Some(deadline) = lease.as_ref().and_then(|limit| limit.hard_deadline()) {
+            *cleanup_deadline = Some(cleanup_deadline.unwrap().min(deadline));
+            if let Some(state) = reliability.as_deref_mut() {
+                state.round()["contention_deadline_monotonic"] = json!(deadline);
             }
-            break;
+        }
+        if let Some(state) = reliability.as_deref_mut() {
+            state.round()["driver_elapsed_seconds"] =
+                json!((r.monotonic() - driver_started).max(0.0));
+        }
+        let run = match execution {
+            Ok(run) => run,
+            Err(error) => {
+                if let Some(state) = reliability.as_deref_mut() {
+                    state.round()["driver_error"] = json!(error);
+                }
+                let error = format!("driver {name} {scenario} failed (artifacts {artifacts}, deadline {timeout:.1}s): {error}");
+                let logged = write_text(format!("{artifacts}.log"), &error);
+                r.print(&format!(
+                    "RESULT {name} {scenario} driver-error {artifacts}"
+                ))?;
+                return Err(match logged {
+                    Ok(()) => error,
+                    Err(log_error) => format!("{error}; log failed: {log_error}"),
+                });
+            }
+        };
+        if let Some(state) = reliability.as_deref_mut() {
+            state.round()["driver_exit_code"] = json!(windows_exit_code(run.code));
         }
         // A long-running Civ6 slows the PC down; close it as soon as each run ends (owner, 2026-10-01).
-        close_civ6(r)?;
-        write_text(format!("{artifacts}.log"), &run.stdout)?;
+        write_text(
+            format!("{artifacts}.log"),
+            &format!("{}{}", run.stdout, run.stderr),
+        )?;
+        if let Err(error) = close_civ6(&mut WithinDeadline {
+            runner: r,
+            deadline: cleanup_deadline.unwrap(),
+        }) {
+            return Err(format!(
+                "driver exit {}; Civ6 close failed: {error}",
+                windows_exit_code(run.code)
+            ));
+        }
+        *game_closed = true;
         for line in run.stdout.lines().filter(|s| {
             ["[OK]", "[FAIL]", "PASS", "FAIL"]
                 .iter()
@@ -901,13 +1202,20 @@ fn main_owned(
             "RESULT {name} {scenario} {} {artifacts}",
             windows_exit_code(run.code)
         ))?;
-        if stop && run.code != 0 {
+        if (options.stop || options.reliability) && run.code != 0 {
             r.print("CHAIN STOPPED ON FAILURE")?;
             return Ok(run.code);
         }
+        if first_failure == 0 && run.code != 0 {
+            first_failure = run.code;
+        }
     }
-    r.print("CHAIN DONE")?;
-    Ok(0)
+    r.print(if first_failure == 0 {
+        "CHAIN DONE"
+    } else {
+        "CHAIN FAILED"
+    })?;
+    Ok(first_failure)
 }
 /// Called only at a scenario boundary; never revoke a running chain from tick.
 pub fn yield_if_expired(r: &mut impl Runner, p: &Paths, token: &str) -> Result<bool, String> {
@@ -961,6 +1269,98 @@ pub fn yield_if_expired(r: &mut impl Runner, p: &Paths, token: &str) -> Result<b
     Ok(true)
 }
 pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> {
+    // All syntax is checked before process inspection, queue registration or
+    // lock acquisition. An invalid later item cannot launch an earlier one.
+    let options = Options::parse(a)?;
+    if options.help {
+        r.print(HELP)?;
+        return Ok(0);
+    }
+    ship::check_live_maintenance(p, std::env::var("CODEX_JOB_ID").ok().as_deref())?;
+    if !options.reliability {
+        return cli_once(r, p, &options, None);
+    }
+    let session = new_lock_token();
+    let mut reliability = Reliability {
+        revision: None,
+        summary_path: p
+            .temp
+            .join(format!("live_chain_reliability_{session}.json")),
+        summary: json!({"schema_version":1,"session":session,"scenario":options.items[0],
+            "required_consecutive_successes":10,"consecutive_successes":0,"result":"running","rounds":[]}),
+    };
+    reliability.save()?;
+    r.print(&format!(
+        "RELIABILITY SUMMARY {}",
+        path(&reliability.summary_path)
+    ))?;
+    for round in 1..=10 {
+        let id = format!("reliability-{session}-{round:02}");
+        reliability.summary["rounds"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"round":round,"run_id":id,"result":"running"}));
+        r.print(&format!(
+            "RELIABILITY START {round}/10 {}",
+            options.items[0]
+        ))?;
+        let result = cli_once(r, p, &options, Some(&mut reliability));
+        let code = match &result {
+            Ok(code) => *code,
+            Err(_) => 1,
+        };
+        reliability.round()["exit_code"] = json!(windows_exit_code(code));
+        let yielded = result
+            .as_ref()
+            .err()
+            .is_some_and(|e| e.contains(process::LEASE_YIELD));
+        reliability.round()["result"] = json!(if code == 0 {
+            "success"
+        } else if yielded {
+            "incomplete_shared_slot_yield"
+        } else {
+            "failed"
+        });
+        if let Err(error) = &result {
+            reliability.round()["error"] = json!(error);
+        }
+        if code != 0 {
+            reliability.summary["result"] = json!(if yielded {
+                "incomplete_shared_slot_yield"
+            } else {
+                "failed"
+            });
+            let saved = reliability.save();
+            r.print(&format!(
+                "RELIABILITY FAILED {round}/10 exit={}",
+                windows_exit_code(code)
+            ))?;
+            return match (result, saved) {
+                (Err(error), Err(save)) => Err(format!("{error}; summary failed: {save}")),
+                (_, Err(save)) => Err(save),
+                (result, Ok(())) => result,
+            };
+        }
+        reliability.summary["consecutive_successes"] = json!(round);
+        reliability.summary["result"] = json!(if round == 10 { "success" } else { "running" });
+        reliability.save()?;
+        // Only a completed scenario AND successful cleanup/release count.
+        r.print(&format!(
+            "RELIABILITY SUCCESS {round}/10 {}",
+            options.items[0]
+        ))?;
+    }
+    r.print("RELIABILITY DONE 10/10")?;
+    Ok(0)
+}
+
+fn cli_once(
+    r: &mut impl Runner,
+    p: &Paths,
+    options: &Options,
+    mut reliability: Option<&mut Reliability>,
+) -> Result<i32, String> {
+    process::begin_cleanup_cycle();
     let mut owner = std::env::var("CODEX_JOB_ID")
         .ok()
         .filter(|s| !s.is_empty())
@@ -969,6 +1369,11 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
     owner["live_chain"] = json!(true);
     owner["pid"] = json!(std::process::id());
     owner["chain_pid"] = json!(std::process::id());
+    // Rejoin the existing priority queue at every reliability boundary;
+    // preserve its short-run priority and aging rules.
+    if reliability.is_some() {
+        owner["fifo"] = json!(true);
+    }
     #[cfg(windows)]
     {
         owner["pid_created_filetime"] = json!(process_created_filetime(std::process::id())?
@@ -976,29 +1381,39 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
     }
     let token = new_lock_token();
     owner["lock_token"] = json!(token);
-    acquire(
-        r,
-        p,
-        &owner,
-        6.0 * 3600.0,
-        is_long(
-            &a.iter()
-                .filter(|s| !s.starts_with("--"))
-                .cloned()
-                .collect::<Vec<_>>(),
-        ),
-    )?;
+    acquire(r, p, &owner, 6.0 * 3600.0, is_long(&options.items))?;
+    let mut game_closed = false;
+    let mut cleanup_deadline = None;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        main_owned(r, p, a, Some(&token))
+        main_owned(
+            r,
+            p,
+            options,
+            Some(&token),
+            reliability.as_deref_mut(),
+            &mut game_closed,
+            &mut cleanup_deadline,
+        )
     }))
     .unwrap_or_else(|_| Err("live chain panicked".into()));
     process::clear_interrupt_for_cleanup();
     // Also after a crash or failure of the chain itself. Release even when cleanup raises an error.
     let path = p.here.join("civ6.lock");
+    let mut lock_released = false;
+    let cleanup_started = r.monotonic();
+    let cleanup_end = cleanup_deadline.unwrap_or_else(|| r.monotonic() + CLEANUP_RESERVE_SECONDS);
     let cleanup = (|| {
+        let mut budget = WithinDeadline {
+            runner: r,
+            deadline: cleanup_end,
+        };
+        let r = &mut budget;
         let file = match open_owned_lock(r, &path, &token) {
             Ok(file) => file,
             Err(release_error) => {
+                if game_closed {
+                    return Err(release_error);
+                }
                 #[cfg(windows)]
                 {
                     return match close_owned_after_release_error(r, &path, &token) {
@@ -1021,15 +1436,42 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
                 path.display()
             ));
         };
-        let closed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| close_civ6(r)))
-            .unwrap_or_else(|_| Err("Civ6 cleanup panicked".into()));
+        let closed = if game_closed {
+            Ok(())
+        } else {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match cleanup_deadline {
+                Some(deadline) => close_civ6(&mut WithinDeadline {
+                    runner: r,
+                    deadline,
+                }),
+                None => close_civ6(r),
+            }))
+            .unwrap_or_else(|_| Err("Civ6 cleanup panicked".into()))
+        };
+        game_closed = closed.is_ok();
         let released = delete_owned_handle(file, &path, r, &token);
-        closed?;
-        released
+        lock_released = released.is_ok();
+        match (closed, released) {
+            (Err(close), Err(release)) => Err(format!("{close}; release failed: {release}")),
+            (Err(error), _) | (_, Err(error)) => Err(error),
+            _ => Ok(()),
+        }
     })();
     process::finish_cleanup();
-    cleanup?;
-    result
+    if let Some(state) = reliability {
+        state.round()["cleanup"] = json!({"game_closed":game_closed,"lock_released":lock_released,
+            "status":if cleanup.is_ok() { "success" } else { "failed" },"error":cleanup.as_ref().err(),
+            "elapsed_seconds":(r.monotonic() - cleanup_started).max(0.0)});
+    }
+    match (result, cleanup) {
+        (Err(error), Err(cleanup)) => Err(format!("{error}; cleanup failed: {cleanup}")),
+        (Ok(code), Err(cleanup)) if code != 0 => Err(format!(
+            "chain failed (exit {}); cleanup failed: {cleanup}",
+            windows_exit_code(code)
+        )),
+        (_, Err(cleanup)) => Err(cleanup),
+        (result, Ok(())) => result,
+    }
 }
 /// Python represents Windows process status as an unsigned DWORD.
 pub fn windows_exit_code(code: i32) -> u32 {
@@ -1048,6 +1490,76 @@ pub fn python_cli_exit(code: i32) -> i32 {
 #[cfg(test)]
 mod queue_entry_tests {
     use super::*;
+
+    #[test]
+    fn preparation_contention_survives_the_first_driver_observation_timeout() {
+        struct Probe {
+            mono: f64,
+            budgets: Vec<f64>,
+        }
+        impl Runner for Probe {
+            fn now(&mut self) -> f64 {
+                self.mono + 1090.0
+            }
+            fn monotonic(&mut self) -> f64 {
+                self.mono
+            }
+            fn run(&mut self, call: Call) -> Result<Output, String> {
+                assert_eq!(call.args[0], "tasklist");
+                let budget = call.timeout.unwrap();
+                self.budgets.push(budget);
+                self.mono += budget;
+                Err("command timed out".into())
+            }
+            fn sleep(&mut self, _: f64) -> Result<(), String> {
+                panic!("no wait expected")
+            }
+            fn error(&mut self, _: &str) -> Result<(), String> {
+                Ok(())
+            }
+        }
+        let root = std::env::temp_dir().join(format!("cc-live-prepare-{}", new_lock_token()));
+        let p = Paths {
+            here: root.join("here"),
+            jobs: root.join("jobs"),
+            wt: root.join("wt"),
+            temp: root.join("temp"),
+            profile: root.join("user"),
+            python: "unused".into(),
+        };
+        fs::create_dir_all(p.here.join("queue")).unwrap();
+        fs::create_dir_all(p.jobs.join("waiter")).unwrap();
+        write_json(
+            p.here.join("civ6.lock"),
+            &json!({"lock_token":"owned","job":"owner","acquired_at":1000}),
+        )
+        .unwrap();
+        write_json(p.jobs.join("waiter/job.json"), &json!({"status":"running"})).unwrap();
+        let queue = p.here.join("queue/waiter.json");
+        write_json(&queue, &json!({"job":"waiter","since":1000})).unwrap();
+        let limit = process::LeaseLimit::new(&p, "owned", CLEANUP_RESERVE_SECONDS);
+        let mut r = Probe {
+            mono: 10.0,
+            budgets: vec![],
+        };
+        assert_eq!(
+            preparation_deadline(&mut r, &p, Some(&limit)).unwrap(),
+            1470.0
+        );
+        assert_eq!(limit.hard_deadline(), Some(1710.0));
+        // Preparation used nearly all its window; the first monitor must use
+        // this prior absolute deadline even when its peer query is unknown.
+        r.mono = 1469.0;
+        write_json(queue, &json!({"pid":4321,"since":1000})).unwrap();
+        let driver_limit = limit.clone();
+        assert!(process::monitor_lease(&mut r, &driver_limit)
+            .unwrap_err()
+            .contains(process::LEASE_YIELD));
+        assert_eq!(r.budgets, vec![1.0]);
+        assert_eq!(r.mono, 1470.0);
+        assert_eq!(driver_limit.hard_deadline(), Some(1710.0));
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn same_pid_registrations_have_distinct_paths_and_old_cleanup_keeps_new_entry() {
@@ -1169,7 +1681,15 @@ mod unix_guard_tests {
             writer: None,
             kills: 0,
         };
-        assert_eq!(cli(&mut r, &f.paths, &[]).unwrap(), 0);
+        assert_eq!(
+            cli(
+                &mut r,
+                &f.paths,
+                &args(&["fixture:s.json", "--stop-on-failure"])
+            )
+            .unwrap(),
+            1
+        );
         r.writer.take().unwrap().join().unwrap();
         assert_eq!(r.kills, 2);
         assert_eq!(read_json(f.lock()).unwrap()["lock_token"], "peer");

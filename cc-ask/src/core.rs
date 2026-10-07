@@ -440,7 +440,10 @@ pub fn command_argv(path: &std::path::Path, args: &[String]) -> Vec<String> {
     out
 }
 pub fn token() -> Result<String> {
+    #[cfg(windows)]
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
+    #[cfg(not(windows))]
+    let value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     #[cfg(windows)]
     if value.is_empty() {
         use winreg::{enums::HKEY_CURRENT_USER, RegKey};

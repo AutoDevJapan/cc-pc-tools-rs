@@ -48,3 +48,4 @@ pub mod unassigned;
 pub use cc_job_policy as job_policy;
 pub use cc_task_title as task_title;
 pub use core::*;
+pub mod channel_reports;

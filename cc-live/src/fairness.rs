@@ -31,6 +31,7 @@ impl UnixGuard {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(&path)
             .map_err(|e| format!("open Unix lock guard {}: {e}", path.display()))?;
         // The current Civ6 queue has few concurrent claimants. Owner checks can

@@ -536,7 +536,8 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
     let body = h.root.path().join("record.md");
     std::fs::write(&body, "  次の記録  ").unwrap();
     let second = cmd_log(&mut h.ctx, "後片付けの記録", "ignored", Some(&body), true).unwrap();
-    assert_eq!(first, second);
+    assert_eq!(first["thread_id"], second["thread_id"]);
+    assert_ne!(first["message_id"], second["message_id"]);
     assert_eq!(
         read_json(&h.root.path().join("log_threads.json")).unwrap(),
         json!({"後片付けの記録":"300"})
@@ -956,7 +957,11 @@ fn external_stdout_retains_inprocess_notices_and_removes_only_cli_report() {
 #[test]
 fn tick_launches_resume_before_intake_and_shares_one_attempt_budget() {
     let mut h = Harness::new();
-    let external_work = tempfile::tempdir_in(r"C:\Windows\Temp").unwrap();
+    let external_work = if cfg!(windows) {
+        tempfile::tempdir_in(r"C:\Windows\Temp").unwrap()
+    } else {
+        tempfile::tempdir().unwrap()
+    };
     let work = external_work.path().join("work");
     std::fs::create_dir(&work).unwrap();
     let newest = snowflake(h.ctx.now(), 601.);

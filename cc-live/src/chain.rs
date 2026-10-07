@@ -439,47 +439,51 @@ fn open_owned_lock(
     let _ = r;
     #[cfg(unix)]
     let guard = fairness::UnixGuard::acquire(path)?;
+    #[cfg(not(windows))]
+    let opened = open_for_owned_delete(path);
     #[cfg(windows)]
-    let mut first_conflict = None;
-    loop {
-        match open_for_owned_delete(path) {
-            Ok(mut file) => {
-                if file_is_owned(&mut file, path, token)? {
-                    return Ok(Some(OwnedLock {
-                        file,
-                        #[cfg(unix)]
-                        _guard: guard,
-                    }));
+    let opened = {
+        let mut first_conflict = None;
+        loop {
+            match open_for_owned_delete(path) {
+                Err(e) if matches!(e.raw_os_error(), Some(32 | 33)) => {
+                    let since = *first_conflict.get_or_insert_with(|| r.monotonic());
+                    if r.monotonic() - since >= RELEASE_WAIT_SECONDS {
+                        return Err(format!(
+                            "open owned lock {} for release: {e}",
+                            path.display()
+                        ));
+                    }
+                    r.sleep(RELEASE_RETRY_SECONDS).map_err(|e| {
+                        format!(
+                            "wait to open owned lock {} for release: {e}",
+                            path.display()
+                        )
+                    })?;
                 }
-                return Ok(None);
-            }
-            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-            #[cfg(windows)]
-            Err(e) if matches!(e.raw_os_error(), Some(32 | 33)) => {
-                let since = *first_conflict.get_or_insert_with(|| r.monotonic());
-                if r.monotonic() - since >= RELEASE_WAIT_SECONDS {
-                    return Err(format!(
-                        "open owned lock {} for release: {e}",
-                        path.display()
-                    ));
-                }
-                r.sleep(RELEASE_RETRY_SECONDS).map_err(|e| {
-                    format!(
-                        "wait to open owned lock {} for release: {e}",
-                        path.display()
-                    )
-                })?;
-            }
-            Err(e) => {
-                return Err(format!(
-                    "open owned lock {} for release: {e}",
-                    path.display()
-                ))
+                result => break result,
             }
         }
+    };
+    match opened {
+        Ok(mut file) => {
+            if file_is_owned(&mut file, path, token)? {
+                Ok(Some(OwnedLock {
+                    file,
+                    #[cfg(unix)]
+                    _guard: guard,
+                }))
+            } else {
+                Ok(None)
+            }
+        }
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(format!(
+            "open owned lock {} for release: {e}",
+            path.display()
+        )),
     }
 }
-
 /// A persistent read-only inspector can block DELETE access. The chain still
 /// closes its own game under read protection and reports the release failure.
 #[cfg(windows)]

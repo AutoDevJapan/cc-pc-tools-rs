@@ -81,7 +81,9 @@ fn decoded_views(data: &[u8]) -> Vec<String> {
     for offset in 0..data.len().min(2) {
         for little in [true, false] {
             let words: Vec<u16> = data[offset..]
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|b| {
                     if little {
                         u16::from_le_bytes([b[0], b[1]])

@@ -22,7 +22,7 @@ pub fn supervisor(_: u32, _: u64) -> io::Result<Box<dyn Paused>> {
 #[cfg(windows)]
 mod native {
     use super::*;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use windows_sys::Win32::{
         Foundation::*,
         System::{Diagnostics::ToolHelp::*, Threading::*},
@@ -216,15 +216,10 @@ mod native {
         }))
     }
     fn browser_invocation(path: &Path, codex: &Path, name: &str, cmd: &str) -> bool {
-        let cmd = cmd.trim_start();
-        let args = if let Some(quoted) = cmd.strip_prefix('"') {
-            quoted.split_once('"').map(|(_, rest)| rest)
-        } else {
-            cmd.split_once(char::is_whitespace).map(|(_, rest)| rest)
-        };
-        let Some(args) = args else {
+        let Some(argv) = windows_args(cmd) else {
             return false;
         };
+        let args = &argv[1..];
         if name == "node.exe" {
             let installed = path
                 .strip_prefix(codex.join("runtimes/cua_node"))
@@ -236,17 +231,63 @@ mod native {
                 });
             // The installed runtime can also run ordinary user commands. Only
             // CUA's eval bootstrap and its trusted worker are controllers.
-            let flags: Vec<_> = args.split_whitespace().collect();
+            // Strip every eval payload: flags or filenames inside JS strings
+            // are not actual bootstrap arguments.
+            let mut flags = Vec::new();
+            let mut iter = args.iter();
+            while let Some(arg) = iter.next() {
+                if matches!(arg.as_str(), "--eval" | "-e") {
+                    iter.next();
+                } else {
+                    flags.push(arg.as_str());
+                }
+            }
+            let worker_root = codex
+                .parent()
+                .and_then(Path::parent)
+                .map(|p| p.join("Temp"));
+            let worker = flags.iter().any(|arg| {
+                worker_root.as_ref().is_some_and(|root| {
+                    Path::new(arg).strip_prefix(root).is_ok_and(|relative| {
+                        let parts: Vec<_> = relative.components().collect();
+                        parts.len() == 2
+                            && parts[0].as_os_str().to_string_lossy().starts_with(".tmp")
+                            && parts[1].as_os_str() == "trusted-worker.js"
+                    })
+                })
+            });
             return installed
-                && flags.first() == Some(&"--eval")
+                && args.first().map(String::as_str) == Some("--eval")
                 && ((flags.contains(&"--session-id") && flags.contains(&"--working-dir"))
-                    || args.contains("trusted-worker.js"));
+                    || worker);
         }
         name == "codex.exe"
             && path.starts_with(codex.join("bin"))
-            && args.split_whitespace().next() == Some("app-server")
+            && args.first().map(String::as_str) == Some("app-server")
     }
-    fn inspect(pid: u32, name: &str) -> io::Result<Option<(u64, bool)>> {
+    fn windows_args(cmd: &str) -> Option<Vec<String>> {
+        let wide: Vec<_> = cmd.trim_start().encode_utf16().chain(Some(0)).collect();
+        let mut count = 0;
+        unsafe {
+            let args = windows_sys::Win32::UI::Shell::CommandLineToArgvW(wide.as_ptr(), &mut count);
+            if args.is_null() {
+                return None;
+            }
+            let result = std::slice::from_raw_parts(args, count as usize)
+                .iter()
+                .map(|arg| {
+                    let mut len = 0;
+                    while *(*arg).add(len) != 0 {
+                        len += 1;
+                    }
+                    String::from_utf16_lossy(std::slice::from_raw_parts(*arg, len))
+                })
+                .collect();
+            LocalFree(args.cast());
+            Some(result)
+        }
+    }
+    fn inspect(pid: u32, name: &str) -> io::Result<Option<(u64, bool, bool)>> {
         unsafe {
             let h = Handle(OpenProcess(
                 PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
@@ -262,11 +303,11 @@ mod native {
                     Err(error)
                 };
             }
-            match WaitForSingleObject(h.0, 0) {
-                WAIT_OBJECT_0 => return Ok(None),
-                WAIT_TIMEOUT => (),
+            let live = match WaitForSingleObject(h.0, 0) {
+                WAIT_OBJECT_0 => false,
+                WAIT_TIMEOUT => true,
                 _ => return Err(io::Error::last_os_error()),
-            }
+            };
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
                 return Err(io::Error::last_os_error());
@@ -274,10 +315,15 @@ mod native {
             Ok(Some((
                 ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
                 browser_controller(h.0, name),
+                live,
             )))
         }
     }
-    fn tree(root: u32, root_created: u64) -> io::Result<Vec<Process>> {
+    fn tree(
+        root: u32,
+        root_created: u64,
+        prior: &HashMap<u32, u64>,
+    ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
         unsafe {
             let snapshot = Handle(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
             if snapshot.0 == INVALID_HANDLE_VALUE {
@@ -307,36 +353,60 @@ mod native {
             if crate::proc_created(root) != Some(root_created) {
                 return Err(io::Error::other("root process identity changed"));
             }
-            let mut found = HashMap::from([(root, root_created)]);
-            let mut result = Vec::new();
-            loop {
-                let before = result.len();
-                for (pid, parent, name) in &all {
-                    if (*pid == root || found.contains_key(parent))
-                        && !result.iter().any(|p: &Process| p.pid == *pid)
-                    {
-                        let Some((created, browser_controller)) = inspect(*pid, name)? else {
-                            continue;
-                        };
-                        if *pid != root && found.get(parent).is_none_or(|pc| created < *pc) {
-                            continue;
-                        }
-                        found.insert(*pid, created);
-                        result.push(Process {
-                            pid: *pid,
-                            parent: *parent,
-                            name: name.clone(),
-                            created,
-                            browser_controller,
-                        });
+            walk(root, root_created, prior, &all, inspect)
+        }
+    }
+    // Keep exited ancestors in the topology, including during the second
+    // snapshot after freezing. Their live children must still block a yield.
+    fn walk(
+        root: u32,
+        root_created: u64,
+        prior: &HashMap<u32, u64>,
+        all: &[(u32, u32, String)],
+        mut inspect: impl FnMut(u32, &str) -> io::Result<Option<(u64, bool, bool)>>,
+    ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
+        let mut found = prior.clone();
+        found.insert(root, root_created);
+        let mut checked = HashSet::new();
+        let mut result = Vec::new();
+        loop {
+            let before = checked.len();
+            for (pid, parent, name) in all {
+                if (*pid == root || found.contains_key(parent)) && !checked.contains(pid) {
+                    checked.insert(*pid);
+                    let Some((created, browser_controller, live)) = inspect(*pid, name)? else {
+                        // The snapshot's PID has vanished. Retain the parent
+                        // edge conservatively, but never freeze that PID.
+                        let ancestor = found.get(parent).copied().unwrap_or(root_created);
+                        found.entry(*pid).or_insert(ancestor);
+                        continue;
+                    };
+                    if prior.get(pid).is_some_and(|old| *old != created) {
+                        return Err(io::Error::other(
+                            "descendant identity changed between snapshots",
+                        ));
                     }
-                }
-                if result.len() == before {
-                    break;
+                    if *pid != root && found.get(parent).is_none_or(|pc| created < *pc) {
+                        continue;
+                    }
+                    found.insert(*pid, created);
+                    if !live {
+                        continue;
+                    }
+                    result.push(Process {
+                        pid: *pid,
+                        parent: *parent,
+                        name: name.clone(),
+                        created,
+                        browser_controller,
+                    });
                 }
             }
-            Ok(result)
+            if checked.len() == before {
+                break;
+            }
         }
+        Ok((result, found))
     }
     fn controllers(processes: &[Process], root: u32, baseline: Option<u64>) -> bool {
         // A second native Codex is a delegated job: let it finish. Leaf Node
@@ -374,7 +444,7 @@ mod native {
         baseline: Option<u64>,
         marker: Option<&Path>,
     ) -> io::Result<Option<Box<dyn Paused>>> {
-        let before = tree(pid, created)?;
+        let (before, topology) = tree(pid, created, &HashMap::new())?;
         if !controllers(&before, pid, baseline) {
             return Ok(None);
         }
@@ -393,7 +463,7 @@ mod native {
         }
         // Freezing and enumerating are separate OS operations. Reject new
         // children, including a command that raced the initial snapshot.
-        let after = tree(pid, created)?;
+        let (after, _) = tree(pid, created, &topology)?;
         if after.len() != before.len()
             || !after.iter().all(|p| {
                 before
@@ -504,7 +574,7 @@ mod native {
                 &node,
                 codex,
                 "node.exe",
-                "node.exe --eval trusted-worker.js"
+                "node.exe --eval bootstrap --eval load -- C:/Users/owner/AppData/Local/Temp/.tmpWorker/trusted-worker.js cwd"
             ));
             assert!(!browser_invocation(
                 &node,
@@ -517,6 +587,24 @@ mod native {
                 codex,
                 "node.exe",
                 "node.exe --eval background_work"
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval \"console.log('foo --session-id --working-dir foo')\""
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval \"console.log('trusted-worker.js')\""
+            ));
+            assert!(!browser_invocation(
+                &node,
+                codex,
+                "node.exe",
+                "node.exe --eval bootstrap --eval \"'--session-id'\" --eval \"'--working-dir'\""
             ));
             assert!(!browser_invocation(
                 Path::new("C:/worker/node.exe"),
@@ -542,6 +630,49 @@ mod native {
             tree.pop();
             tree.push(process(7, 2, "node.exe", false));
             assert!(!controllers(&tree, 1, Some(10)));
+        }
+        #[test]
+        fn exited_ancestor_stays_in_topology_until_its_live_worker_finishes() {
+            // The wrapper existed in the snapshot, then exited before inspect.
+            // Both an exited handle and an already vanished PID must preserve
+            // traversal to its worker. The next snapshot lacks the wrapper.
+            for vanished in [false, true] {
+                let all = vec![
+                    (3, 2, "cargo.exe".into()),
+                    (2, 1, "cmd.exe".into()),
+                    (1, 0, "codex.exe".into()),
+                ];
+                let (live, topology) = walk(1, 10, &HashMap::new(), &all, |pid, _| {
+                    Ok(if pid == 2 && vanished {
+                        None
+                    } else {
+                        Some((10 + u64::from(pid), false, pid != 2))
+                    })
+                })
+                .unwrap();
+                assert!(topology.contains_key(&2));
+                assert!(live.iter().any(|p| p.pid == 3));
+                assert!(!live.iter().any(|p| p.pid == 2));
+                assert!(!controllers(&live, 1, None));
+                let (again, _) = walk(
+                    1,
+                    10,
+                    &topology,
+                    &[all[0].clone(), all[2].clone()],
+                    |pid, _| Ok(Some((10 + u64::from(pid), false, true))),
+                )
+                .unwrap();
+                assert!(again.iter().any(|p| p.pid == 3));
+                assert!(!controllers(&again, 1, None));
+                assert!(
+                    walk(1, 10, &topology, &all, |pid, _| Ok(Some((
+                        100 + u64::from(pid),
+                        false,
+                        true
+                    ))))
+                    .is_err()
+                );
+            }
         }
     }
 }

@@ -214,6 +214,34 @@ fn a_main_post_reservation_invalidates_a_worker_started_before_it_even_after_che
     );
 }
 
+#[test]
+fn main_question_registration_still_invalidates_old_workers_after_the_reservation_is_released() {
+    let mut h = Harness::new();
+    h.save(&json!({"questions":[],"requests":{},"inbox_only_post_contexts":{}}));
+    let work = StateWork::begin(&h.ctx).unwrap();
+    let before = h.ctx.load().unwrap();
+    let mut current = h.ctx.load_fresh().unwrap();
+    current["inbox_only_post_contexts"]["200"] = json!({"agent":"claude-main"});
+    atomic_json(&h.ctx.here.join("state.json"), &current, 2).unwrap();
+    current["questions"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"thread_id":"200","after":"201","agent":"claude-main","open":true}));
+    current["inbox_only_post_contexts"] = json!({});
+    atomic_json(&h.ctx.here.join("state.json"), &current, 2).unwrap();
+    assert_eq!(
+        before["inbox_only_post_contexts"],
+        current["inbox_only_post_contexts"]
+    );
+    assert!(cc_ask::state_work::check(&h.ctx)
+        .unwrap_err()
+        .starts_with("StateConflict:"));
+    assert!(h.ctx.run(&["mock-launch".into()], 45).is_err());
+    assert!(h.fake.borrow().runs.is_empty());
+    drop(work);
+    assert_eq!(h.state(), current);
+}
+
 struct LoseResponse {
     fake: Rc<RefCell<Fake>>,
     home: PathBuf,

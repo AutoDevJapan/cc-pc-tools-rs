@@ -87,7 +87,8 @@ pub fn check(ctx: &Context) -> Result<()> {
         if old.iter().any(|q| !fresh.iter().any(|p| p == q))
             || fresh.iter().any(|q| {
                 !old.iter().any(|p| generation(p, q))
-                    && old.iter().any(|p| p["thread_id"] == q["thread_id"])
+                    && (old.iter().any(|p| p["thread_id"] == q["thread_id"])
+                        || crate::routing::question_inbox_only(ctx, q))
             })
             || current["answer_receipts"] != base["answer_receipts"]
             || current["inbox_only_post_contexts"] != base["inbox_only_post_contexts"]

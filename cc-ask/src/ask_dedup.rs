@@ -155,12 +155,42 @@ pub(crate) fn find_open(state: &Value, cwd: &str, title: &str, raw_title: &str) 
                     similar(original, raw_title)
                 } else {
                     similar(s(&q["title"]), title)
+                        // Legacy records have only the displayed title. An
+                        // explicit product label from the caller remains valid
+                        // when its working folder is a shared orchestration root.
+                        || (raw_title.contains('【') && similar(s(&q["title"]), raw_title))
                 }
-                && (s(&q["cwd_key"]) == folder
-                    || folder_spelling(s(&q["cwd"])) == folder_spelling(cwd)
-                    || folder_spelling(s(&q["cwd"])) == folder)
+                && question_folder_matches(state, q, cwd, &folder)
         })
         .cloned()
+}
+
+fn question_folder_matches(state: &Value, question: &Value, cwd: &str, folder: &str) -> bool {
+    let recorded = s(&question["cwd"]);
+    let key = s(&question["cwd_key"]);
+    if !recorded.is_empty() || !key.is_empty() {
+        // A question's own context takes precedence over its parent request.
+        return key == folder
+            || (!recorded.is_empty()
+                && (folder_spelling(recorded) == folder_spelling(cwd)
+                    || folder_spelling(recorded) == folder));
+    }
+    // Older recovered questions may lack cwd. Use only context explicitly
+    // attached to this thread; project-title guesses and broad default folders
+    // from infer_question_cwd are not sufficient evidence for deduplication.
+    let request = &state["requests"][s(&question["thread_id"])];
+    [
+        &question["continuation"],
+        &question["continuation"]["job_info"],
+        request,
+        &request["job_info"],
+    ]
+    .iter()
+    .map(|context| s(&context["cwd"]))
+    .find(|path| !path.is_empty())
+    .is_some_and(|path| {
+        folder_spelling(path) == folder_spelling(cwd) || folder_spelling(path) == folder
+    })
 }
 
 fn inventory(ctx: &mut Context, parent: &str) -> Result<Vec<Value>> {

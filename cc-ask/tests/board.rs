@@ -68,21 +68,26 @@ fn unassigned_todo_is_silent_and_queue_receipt_removes_it_without_launching() {
 }
 #[test]
 fn unreadable_ownership_does_not_break_existing_board_or_report_absence() {
-    let mut h = setup();
-    h.ctx.jobs = h.root.path().join("codex-jobs");
-    let intake = h.root.path().join("localai-web-rs/target/release");
-    std::fs::create_dir_all(&intake).unwrap();
-    let mut db = read_json(&h.ctx.todo).unwrap();
-    db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"tools","title":"未担当の確認","status":"todo","created_s":1.,"jobs":[]}));
-    atomic_json(&h.ctx.todo, &db, 2).unwrap();
     for contents in ["broken", "{}", "{\"queue\":[]}"] {
+        let mut h = setup();
+        h.ctx.jobs = h.root.path().join("codex-jobs");
+        let intake = h.root.path().join("localai-web-rs/target/release");
+        std::fs::create_dir_all(&intake).unwrap();
+        let mut db = read_json(&h.ctx.todo).unwrap();
+        db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"tools","title":"未担当の確認","status":"todo","created_s":1.,"jobs":[]}));
+        atomic_json(&h.ctx.todo, &db, 2).unwrap();
         std::fs::write(intake.join("console-state.json"), contents).unwrap();
-        let broken = h.ctx.jobs.join("jobs/broken");
-        std::fs::create_dir_all(&broken).unwrap();
-        std::fs::write(broken.join("job.json"), "broken").unwrap();
+        if contents == "{\"queue\":[]}" {
+            let broken = h.ctx.jobs.join("jobs/broken");
+            std::fs::create_dir_all(&broken).unwrap();
+            std::fs::write(broken.join("job.json"), "broken").unwrap();
+        }
         update(&mut h.ctx).unwrap();
         let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-        assert!(state["body"].as_str().unwrap().contains("画面の読みやすさを改善する"));
+        assert!(state["body"]
+            .as_str()
+            .unwrap()
+            .contains("画面の読みやすさを改善する"));
         assert!(!state["body"].as_str().unwrap().contains("担当なし"));
     }
 }

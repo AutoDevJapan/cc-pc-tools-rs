@@ -88,7 +88,7 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
             Ok(c.status()?.code().map(|c| c as u32 as i64).unwrap_or(1))
         };
         if crate::cache::guard_needed(args, env) {
-            crate::cache::guarded(env, execute)
+            crate::cache::guarded(env, args, execute)
         } else {
             execute()
         }

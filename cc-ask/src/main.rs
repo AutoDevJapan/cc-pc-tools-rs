@@ -154,7 +154,9 @@ fn context(tick: bool) -> Result<Context> {
     };
     Ok(Context {
         here,
-        client_projects: PathBuf::from("D:/CC/Tools/client-projects.txt"),
+        client_projects: std::env::var_os("CC_ASK_CLIENT_PROJECTS")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("D:/CC/Tools/client-projects.txt")),
         civ6_home: env_path("CC_CIV6_LIVE_HOME", "D:/CC/Tools/civ6-live"),
         jobs: env_path("CC_CODEX_JOBS_HOME", "D:/CC/Tools/codex-jobs"),
         discord_tasks: discord_tasks_dir()?,

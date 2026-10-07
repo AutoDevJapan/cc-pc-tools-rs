@@ -238,6 +238,8 @@ fn real_git_nested_folder_and_worktree_dry_run() {
     std::fs::create_dir_all(worktree.join("src")).unwrap();
     let body = temp.path().join("body.md");
     let config = temp.path().join("config.json");
+    let exclusions = temp.path().join("client-projects.txt");
+    std::fs::write(&exclusions, "# isolated test exclusions\n").unwrap();
     std::fs::write(&body, "確認").unwrap();
     std::fs::write(&config, r#"{"owner_user_id":"OWN"}"#).unwrap();
     for cwd in [repo.join("src"), worktree.join("src")] {
@@ -246,6 +248,7 @@ fn real_git_nested_folder_and_worktree_dry_run() {
             .current_dir(&cwd)
             .env("CC_ASK_CONFIG", &config)
             .env("CC_ASK_HOME", temp.path())
+            .env("CC_ASK_CLIENT_PROJECTS", &exclusions)
             .args(["ask", "--dry-run", "--title", "確認", "--body-file"])
             .arg(&body)
             .args(["--agent", "Codex"]);

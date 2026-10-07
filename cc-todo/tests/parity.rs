@@ -438,15 +438,33 @@ fn save_backup_once_unicode_unknown_and_no_tmp() {
     );
 }
 #[test]
-fn real_state_read_only_roundtrip_all_fields() {
-    // Read every byte/field; write only an isolated copy under this crate.
-    let real = Path::new("D:/CC/Tools/todo/todo.json");
-    let bytes = fs::read(real).unwrap();
-    let original: Value = serde_json::from_slice(&bytes).unwrap();
+fn large_state_roundtrip_all_fields_without_production_data() {
+    // Exercise a complete large store using synthetic data on every host.
+    // Production names and notes must never be copied into assertion output.
+    let mut original = json!({"projects":{"PROBE":"C:/probe","probe":"C:/other"},"next_id":402,
+        "stalls":{"probe":{"since":1234.5678901234567}},
+        "unknown":{"日本語":["未知",null,true,{"integer":u64::MAX,"fraction":0.12345678901234566}]},"items":[]});
+    for id in 1..=401 {
+        original["items"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id":id,"project":"probe",
+            "title":format!("合成作業{id}"),"status":"doing","jobs":[format!("synthetic-{id}")],
+            "note":"保存するUnicodeのメモ","progress":id%101,
+            "scheduler":{"attempt":id,"worktree":format!("C:/probe-wt/{id}")},
+            "extra":{"counter":id*123,"negative_zero":-0.0,"nested":[null,{"保持":true}]}}));
+    }
     let t = Temp::new();
     save(&t.paths().store, &original).unwrap();
     assert_eq!(load(&t.paths().store).unwrap(), original);
-    assert!(original["items"].as_array().unwrap().len() > 300);
+    assert_eq!(original["items"].as_array().unwrap().len(), 401);
+    assert_eq!(
+        load(&t.paths().store).unwrap()["items"][0]["extra"]["negative_zero"]
+            .as_f64()
+            .unwrap()
+            .to_bits(),
+        (-0.0f64).to_bits()
+    );
 }
 #[test]
 fn job_filter_case_paths_worktrees_corrupt_and_display() {

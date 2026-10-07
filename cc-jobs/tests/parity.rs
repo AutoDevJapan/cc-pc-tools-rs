@@ -1324,6 +1324,47 @@ mod queue_regressions {
         );
     }
     #[test]
+    fn waiting_supervisor_skips_global_gate_while_its_wait_reason_is_unchanged() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut busy = waiting(&t, "busy", "busy");
+        busy["status"] = json!("running");
+        t.ctx.save(&busy).unwrap();
+        waiting(&t, "wait", "wait");
+        let gate_path = t.ctx.jobs.join(".queue.lock");
+        let saved = t.ctx.job_dir("wait").join("job.json");
+        let polls = Arc::new(AtomicUsize::new(0));
+        let counted = polls.clone();
+        let held = Mutex::new(None);
+        *t.rt.sleep_hook.lock().unwrap() = Some(Box::new(move |seconds| {
+            if seconds != 3. {
+                return;
+            }
+            match counted.fetch_add(1, Ordering::Relaxed) {
+                // The first gated pass recorded the reason; hold the gate as a
+                // stuck registrar would. Later polls must not wait for it.
+                0 => *held.lock().unwrap() = Some(FileLock::acquire_queue(&gate_path).unwrap()),
+                5 => {
+                    let mut j: Value = serde_json::from_slice(&fs::read(&saved).unwrap()).unwrap();
+                    assert_eq!(j["queue_wait_reason"]["code"], "running_limit");
+                    j["cancel_requested"] = json!(true);
+                    fs::write(&saved, j.to_string()).unwrap();
+                    held.lock().unwrap().take();
+                }
+                _ => {}
+            }
+        }));
+        let started = std::time::Instant::now();
+        t.ctx.supervise("wait").unwrap();
+        assert_eq!(polls.load(Ordering::Relaxed), 6);
+        assert!(
+            started.elapsed() < Duration::from_secs(20),
+            "{:?}",
+            started.elapsed()
+        );
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+    }
+    #[test]
     fn broken_settings_after_spawn_do_not_erase_final_result() {
         let t = Test::new();
         waiting(&t, "finish", "finish");

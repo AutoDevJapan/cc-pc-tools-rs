@@ -140,3 +140,12 @@ impl From<serde_json::Error> for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
+/// Uniform-ish delay in [lo, hi) seconds so many waiters do not poll in lockstep.
+pub fn jitter(lo: f64, hi: f64) -> f64 {
+    use std::hash::{BuildHasher, Hasher};
+    // RandomState is seeded randomly per instance; no extra dependency needed.
+    let r = std::collections::hash_map::RandomState::new()
+        .build_hasher()
+        .finish();
+    lo + (hi - lo) * (r as f64 / u64::MAX as f64)
+}

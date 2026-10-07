@@ -171,6 +171,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc-bookmark-queue"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "cc-chrome"
 version = "0.1.0"
 dependencies = [

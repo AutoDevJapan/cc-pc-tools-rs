@@ -387,6 +387,7 @@ fn test_ask_records_cwd_and_agent() {
     let body = a.root.path().join("question.md");
     std::fs::write(&body, "作業の方針を教えてください").unwrap();
     let args = cc_ask::commands::AskArgs {
+        thread: None,
         attach: vec![],
         agent: "Codex".into(),
         title: "質問".into(),

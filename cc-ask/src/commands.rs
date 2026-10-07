@@ -1,7 +1,7 @@
 //! Console commands compatible with the shared Python Discord question tool.
 use crate::core::*;
 use crate::project::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, HashSet},
     io::{self, Write},
@@ -11,6 +11,9 @@ use std::{
 
 #[derive(Clone, Debug, Default, clap::Args)]
 pub struct AskArgs {
+    /// Ask in this existing Discord thread, using the tracked question post path.
+    #[arg(long)]
+    pub thread: Option<String>,
     #[arg(long = "attach")]
     pub attach: Vec<PathBuf>,
     #[arg(long, required = true)]
@@ -132,6 +135,42 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             "reminder":reminder_text(&project, &owner, &title)});
         print_json(&value, Some(2))?;
         return Ok(value);
+    }
+    if let Some(thread) = args.thread.as_deref() {
+        if !crate::questions::is_question(&body) || !crate::questions::is_question(&content) {
+            return Err("既存スレッドへのask本文には具体的な質問を書いてください".into());
+        }
+        let result = post_text(ctx, thread, &content, &args.attach, true)?;
+        if let Some(first) = result["message_ids"]
+            .as_array()
+            .and_then(|ids| ids.first())
+            .and_then(Value::as_str)
+        {
+            let _guard = lock(ctx)?;
+            let mut state = ctx.load_fresh()?;
+            if let Some(question) = state["questions"]
+                .as_array_mut()
+                .into_iter()
+                .flatten()
+                .rev()
+                .find(|q| s(&q["thread_id"]) == thread && s(&q["question_message"]) == first)
+            {
+                question["cwd"] = json!(cwd);
+                question["agent"] = json!(args.agent);
+                question["project"] = json!(project);
+                question["title"] = json!(title);
+                if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
+                    question["session_id"] = json!(session);
+                }
+                if args.source.as_deref() == Some("scheduler") {
+                    question["source"] = json!("scheduler");
+                    question["scheduler_item"] = json!(args.scheduler_item);
+                    question["scheduler_job"] = json!(args.scheduler_job);
+                }
+            }
+            ctx.save(&state)?;
+        }
+        return Ok(result);
     }
     let prepared = crate::attachments::prepare(ctx, &args.attach)?;
     let file_parts = prepared
@@ -649,10 +688,19 @@ pub fn cmd_post(
     attach: &[PathBuf],
     notify: bool,
 ) -> Result<Value> {
+    post_text(ctx, thread, &read_text(body_file)?, attach, notify)
+}
+
+fn post_text(
+    ctx: &mut Context,
+    thread: &str,
+    body: &str,
+    attach: &[PathBuf],
+    notify: bool,
+) -> Result<Value> {
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
-    let body = read_text(body_file)?;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
     if ![10, 11, 12].contains(&n(&channel["type"]))

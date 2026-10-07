@@ -3,3 +3,4 @@
 *.exe
 cc-ask/tests/*.json
 **/*.py
+cc-bookmark-queue/extension/config.js

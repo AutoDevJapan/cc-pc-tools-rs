@@ -357,10 +357,13 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|i| matches!(s(&i["status"]), "doing" | "block"))
+        .filter(|i| matches!(s(&i["status"]), "doing" | "block") || i["board_unassigned"] == true)
         .collect();
     let doing = items.iter().filter(|i| s(&i["status"]) == "doing").count();
-    let stopped = items.iter().filter(|i| s(&i["status"]) == "block").count();
+    let stopped = items
+        .iter()
+        .filter(|i| s(&i["status"]) == "block" || i["board_unassigned"] == true)
+        .count();
     let mut out = format!("作業中 {doing}件・止まっている {stopped}件・あなたの返事待ち {}件（質問）\n\n## あなたの返事待ち\n", questions.len());
     if questions.is_empty() {
         out.push_str("今はありません\n");
@@ -379,7 +382,9 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
     for item in items {
         let last = epoch(s(&item["updated"])).or_else(|| epoch(s(&item["created"])));
         let is_waiting = waiting(item, questions);
-        let status = if s(&item["status"]) == "block" {
+        let status = if item["board_unassigned"] == true {
+            "止まっている（担当なし）".into()
+        } else if s(&item["status"]) == "block" {
             let reason = s(&item["note"]).split(['。', '\n']).next().unwrap_or("");
             format!(
                 "{}（{}）",
@@ -546,19 +551,70 @@ fn ensure_thread(ctx: &mut Context, state: &mut Value) -> Result<String> {
     }
     Ok(tid)
 }
+fn cc_scheduler_snapshot(root: &std::path::Path) -> Result<Vec<Value>> {
+    if !root.exists() {
+        return Ok(vec![]);
+    }
+    let mut jobs = vec![];
+    for entry in std::fs::read_dir(root).map_err(|e| e.to_string())? {
+        crate::tick_runtime::check()?;
+        let path = entry.map_err(|e| e.to_string())?.path().join("job.json");
+        if path.exists() {
+            jobs.push(read_json(&path)?);
+        }
+    }
+    Ok(jobs)
+}
+/// Derived display metadata never changes the shared ToDo or launches a worker.
+pub fn mark_unassigned(db: &mut Value, jobs: &[Value], intake: &Value, now: f64) {
+    for item in db["items"].as_array_mut().into_iter().flatten() {
+        let detected = crate::unassigned::detected(item, jobs, intake, now);
+        item["board_unassigned"] = json!(detected);
+    }
+}
 pub fn update(ctx: &mut Context) -> Result<Value> {
     let _deadline = crate::tick_runtime::Deadline::new(LIMIT);
     let _network = NetworkScope::new();
     let _guard = ByteLock::acquire(&ctx.here.join("board.lock"), Duration::ZERO)?;
     let names = Names::load(&ctx.client_projects)
         .map_err(|e| format!("client exclusion list unavailable: {e}"))?;
-    let db = read_json(&ctx.todo)?;
+    let mut db = read_json(&ctx.todo)?;
     let questions = pending(&ctx.load()?);
+    let ownership = (|| -> Result<_> {
+        let jobs = cc_scheduler_snapshot(&ctx.jobs.join("jobs"))?;
+        let intake_path = ctx
+            .jobs
+            .parent()
+            .ok_or("jobs parent unavailable")?
+            .join("localai-web-rs/target/release/console-state.json");
+        let intake = read_json(&intake_path)?;
+        if !intake["queue"].is_array() {
+            return Err("intake queue unavailable".into());
+        }
+        Ok((jobs, intake))
+    })();
+    match ownership {
+        Ok((jobs, intake)) => {
+            mark_unassigned(&mut db, &jobs, &intake, ctx.now());
+            for item in db["items"].as_array_mut().into_iter().flatten() {
+                if waiting(item, &questions) {
+                    item["board_unassigned"] = json!(false);
+                }
+            }
+        }
+        Err(e) => {
+            // Unknown ownership is not absence. Existing doing/block rows still update.
+            eprintln!("board ownership unavailable: {e}");
+            for item in db["items"].as_array_mut().into_iter().flatten() {
+                item["board_unassigned"] = json!(false);
+            }
+        }
+    }
     let items: Vec<_> = db["items"]
         .as_array()
         .ok_or("invalid ToDo items")?
         .iter()
-        .filter(|i| matches!(s(&i["status"]), "doing" | "block"))
+        .filter(|i| matches!(s(&i["status"]), "doing" | "block") || i["board_unassigned"] == true)
         .cloned()
         .collect();
     let mut state = load(ctx)?;

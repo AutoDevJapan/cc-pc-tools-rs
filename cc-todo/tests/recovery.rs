@@ -4,7 +4,12 @@ use serde_json::{Value, json};
 use std::{fs, path::PathBuf};
 
 fn db(status: &str) -> Value {
-    json!({"projects":{"demo":"C:/repo"},"items":[{"id":1,"project":"demo","title":"実装を続ける","note":"残りの検証","status":status,"jobs":[]}],"stalls":{"demo":{"since":1}},"next_id":2})
+    let mut db = json!({"projects":{"demo":"C:/repo"},"items":[{"id":1,"project":"demo","title":"実装を続ける","note":"残りの検証","status":status,"jobs":[]}],"stalls":{"demo":{"since":1}},"next_id":2});
+    if status == "todo" {
+        db["items"][0]["spec"] = json!("spec.md");
+        db["items"][0]["dispatchable"] = json!(true);
+    }
+    db
 }
 fn job(status: &str) -> Value {
     json!({"id":"old","status":status,"cwd":"C:/repo-wt/task","created_at":1,"started_at":1,"last_event_at":8000,"finished_at":8000,"pid":100,"pid_created":10,"codex_pid":101,"codex_pid_created":11,"model":"gpt-6-astra","effort":"max","thread_id":"01a0fa4b-2898-7553-889f-0e934f0d32f8","last_message":"検証が残っています","last_error":"通信が途切れました"})
@@ -71,25 +76,37 @@ fn terminal_jobs_continue_with_previous_result_and_error_in_prompt() {
     }
 }
 #[test]
-fn spec_handoff_and_unspecified_continuation_reserve_despite_unlinked_running_work() {
+fn spec_handoff_reserves_but_unspecified_todo_only_appears_on_board() {
     for spec in [true, false] {
         let mut d = db("todo");
         if spec {
             d["items"][0]["dispatchable"] = json!(true);
             d["items"][0]["spec"] = json!("spec.md");
+        } else {
+            d["items"][0]["spec"] = Value::Null;
         }
         assert_eq!(
             plan(&mut d, &[], &Processes::new(), 10000., "").unwrap(),
-            vec![1]
+            if spec { vec![1] } else { vec![] }
         );
         assert_eq!(
             d["items"][0]["stall_recovery"]["pending"]["kind"],
-            if spec { "scheduler" } else { "delegate" }
+            if spec {
+                json!("scheduler")
+            } else {
+                Value::Null
+            }
         );
         let mut busy = db("todo");
+        if spec {
+            busy["items"][0]["dispatchable"] = json!(true);
+            busy["items"][0]["spec"] = json!("spec.md");
+        } else {
+            busy["items"][0]["spec"] = Value::Null;
+        }
         assert_eq!(
             plan(&mut busy, &[job("running")], &processes(), 10000., "").unwrap(),
-            vec![1],
+            if spec { vec![1] } else { vec![] },
             "an unrelated job cannot claim an unassigned work item"
         );
     }
@@ -170,7 +187,7 @@ fn all_projects_are_reserved_and_pending_requests_are_stable() {
         d["items"]
             .as_array_mut()
             .unwrap()
-            .push(json!({"id":id,"project":name,"title":"続ける","status":"todo","jobs":[]}));
+            .push(json!({"id":id,"project":name,"title":"続ける","status":"todo","spec":"spec.md","dispatchable":true,"jobs":[]}));
     }
     assert_eq!(
         plan(&mut d, &[], &Processes::new(), 10000., "").unwrap(),
@@ -205,9 +222,9 @@ fn healthy_and_pending_items_do_not_suppress_other_work_in_the_same_project() {
     dead["pid"] = Value::Null;
     dead["codex_pid"] = Value::Null;
     d["items"].as_array_mut().unwrap().extend([
-        json!({"id":2,"project":"demo","status":"todo","title":"未担当の実装","jobs":[]}),
+        json!({"id":2,"project":"demo","status":"todo","spec":"spec.md","dispatchable":true,"title":"未担当の実装","jobs":[]}),
         json!({"id":3,"project":"demo","status":"doing","title":"消えた担当の検証","jobs":["dead"]}),
-        json!({"id":4,"project":"demo","status":"todo","jobs":[],"stall_recovery":{"pending":{"request":"already-queued","key":"existing-key"}}}),
+        json!({"id":4,"project":"demo","status":"todo","spec":"spec.md","dispatchable":true,"jobs":[],"stall_recovery":{"pending":{"request":"already-queued","key":"existing-key"}}}),
     ]);
     let queued = d["items"][3].clone();
     assert_eq!(
@@ -217,7 +234,7 @@ fn healthy_and_pending_items_do_not_suppress_other_work_in_the_same_project() {
     assert!(d["items"][0]["stall_recovery"]["pending"].is_null());
     assert_eq!(
         d["items"][1]["stall_recovery"]["pending"]["kind"],
-        "delegate"
+        "scheduler"
     );
     assert_eq!(
         d["items"][2]["stall_recovery"]["pending"]["kind"],
@@ -241,7 +258,7 @@ fn explicit_todo_metadata_and_scheduler_links_prevent_only_the_same_item_duplica
             _ => d["items"][0]["jobs"] = json!([running["thread_id"]]),
         }
         d["items"].as_array_mut().unwrap().push(
-            json!({"id":2,"project":"demo","title":"別の未担当作業","status":"todo","jobs":[]}),
+            json!({"id":2,"project":"demo","title":"別の未担当作業","status":"todo","spec":"spec.md","dispatchable":true,"jobs":[]}),
         );
         assert_eq!(
             plan(&mut d, &[running], &processes(), 10000., "").unwrap(),
@@ -953,7 +970,7 @@ fn a_deferred_item_and_two_old_pending_requests_do_not_limit_other_launches() {
     let mut d = load(&p.store).unwrap();
     for id in 2..=5 {
         d["items"].as_array_mut().unwrap().push(
-            json!({"id":id,"project":"demo","status":"todo","title":"並行して検証する","jobs":[]}),
+            json!({"id":id,"project":"demo","status":"todo","spec":"spec.md","dispatchable":true,"title":"並行して検証する","jobs":[]}),
         );
     }
     assert_eq!(
@@ -988,7 +1005,7 @@ fn every_unassigned_item_can_enter_the_durable_queue_in_one_pass() {
     for id in 2..=5 {
         let project = format!("project-{id}");
         d["projects"][&project] = json!(format!("C:/project-{id}"));
-        d["items"].as_array_mut().unwrap().push(json!({"id":id,"project":project,"status":"todo","created_s":1,"title":"未担当の作業を再開する","jobs":[]}));
+        d["items"].as_array_mut().unwrap().push(json!({"id":id,"project":project,"status":"todo","spec":"spec.md","dispatchable":true,"created_s":1,"title":"未担当の作業を再開する","jobs":[]}));
     }
     save(&p.store, &d).unwrap();
     f.queued = true;
@@ -1026,7 +1043,7 @@ fn a_crashed_watch_claim_expires_and_does_not_block_another_item() {
     d["items"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"id":2,"project":"demo","status":"todo","title":"別の作業","jobs":[]}));
+        .push(json!({"id":2,"project":"demo","status":"todo","spec":"spec.md","dispatchable":true,"title":"別の作業","jobs":[]}));
     save(&p.store, &d).unwrap();
     run_watch(&p, &mut notices, &mut f).unwrap();
     assert_eq!(f.calls, vec!["stall-2-1"]);
@@ -1202,7 +1219,7 @@ fn a_new_healthy_owner_invalidates_only_its_own_pending_request() {
     d["items"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"id":2,"project":"demo","title":"別の未担当作業","status":"todo","jobs":[]}));
+        .push(json!({"id":2,"project":"demo","title":"別の未担当作業","status":"todo","spec":"spec.md","dispatchable":true,"jobs":[]}));
     save(&p.store, &d).unwrap();
     f.jobs.push(json!({"id":"another-worker","todo_id":1,"project":"demo","status":"running","cwd":"C:/repo-wt/owned","created_at":10000,"last_event_at":10000}));
     f.allow = true;

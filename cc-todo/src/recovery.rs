@@ -264,6 +264,18 @@ pub fn plan(
         items.sort_by_key(|i| (s(&i["status"]) != "doing", i["id"].as_i64().unwrap_or(0)));
         let mut unattended = false;
         for mut item in items {
+            // Waiting for a launch is ownership, not a missing process to recover.
+            if jobs
+                .iter()
+                .any(|j| linked(&item, j) && matches!(s(&j["status"]), "queued" | "starting"))
+            {
+                continue;
+            }
+            // No saved specification: the board reports missing ownership after
+            // 30 minutes. Do not create a second intake request or invent a spec.
+            if cc_ask::unassigned::unspecified(&item) && arr(&item["jobs"]).is_empty() {
+                continue;
+            }
             if excluded(&project, s(&item["scheduler"]["worktree"]), clients) {
                 continue;
             }

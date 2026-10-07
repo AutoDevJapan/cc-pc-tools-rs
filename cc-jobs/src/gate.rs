@@ -109,10 +109,21 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
         })?
         .unwrap_or(3)
         .max(1) as usize;
+    let wait = std::cell::RefCell::new(None);
     with_slot(
         dir,
         slots,
-        |s| std::thread::sleep(std::time::Duration::from_secs_f64(s)),
-        body,
+        |s| {
+            if wait.borrow().is_none() {
+                *wait.borrow_mut() = crate::queue_status::ResourceWait::cargo(env);
+            }
+            std::thread::sleep(std::time::Duration::from_secs_f64(s));
+        },
+        || {
+            // Markers are ignored after this process exits. Clear the marker
+            // before Cargo starts, so compilation is never reported as waiting.
+            drop(wait.borrow_mut().take());
+            body()
+        },
     )
 }

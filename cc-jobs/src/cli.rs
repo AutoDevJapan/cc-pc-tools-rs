@@ -23,6 +23,9 @@ pub fn help_text(command: &str) -> &'static str {
         "recover-children" => {
             "usage: codex_jobs.exe recover-children --since <RFC3339> [--apply]\n\nLink old queued children and recover never-started cancelled children of running parents.\n"
         }
+        "cleanup-supervisors" => {
+            "usage: codex_jobs.exe cleanup-supervisors [--apply]\n\nPreview terminal supervisors; --apply stops only their identified controller.\n"
+        }
         _ => include_str!("../tests/fixtures/help-root.txt"),
     }
 }
@@ -84,6 +87,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-429",
         "reload-queue",
         "recover-children",
+        "cleanup-supervisors",
     ]
     .contains(&cmd.as_str())
     {
@@ -113,11 +117,11 @@ pub fn parse(args: &[String]) -> Result<Args> {
             let val = parts.next();
             let is_flag = match cmd.as_str() {
                 "run" => name == "network",
-                "status" => ["all", "json"].contains(&name.as_str()),
+                "status" => ["all", "json", "summary"].contains(&name.as_str()),
                 "tail" => name == "follow",
                 "rate" => name == "force",
                 "cancel" => name == "recovery",
-                "recover-429" | "recover-children" => name == "apply",
+                "recover-429" | "recover-children" | "cleanup-supervisors" => name == "apply",
                 _ => false,
             };
             let allowed = match cmd.as_str() {
@@ -142,7 +146,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "parent-job-id",
                 ]
                 .contains(&name.as_str()),
-                "status" => ["all", "json"].contains(&name.as_str()),
+                "status" => ["all", "json", "summary"].contains(&name.as_str()),
                 "tail" => ["n", "follow"].contains(&name.as_str()),
                 "wait" => name == "timeout",
                 "watch" => name == "interval",
@@ -151,6 +155,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "cancel" => name == "recovery",
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
+                "cleanup-supervisors" => name == "apply",
                 _ => false,
             };
             if !allowed {
@@ -358,6 +363,14 @@ impl Context {
         match a.cmd.as_str() {
             "run" => self.cmd_run(&a, out, err),
             "status" => self.cmd_status(&a, out),
+            "cleanup-supervisors" => {
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.cleanup_supervisors(a.flag("apply"))?)
+                )?;
+                Ok(0)
+            }
             "tail" => self.cmd_tail(&a, out),
             "wait" => self.cmd_wait(&a, out),
             "watch" => {
@@ -674,13 +687,55 @@ impl Context {
             let j = self.refresh(j, true)?;
             if a.flag("all")
                 || LIVE.contains(&s(&j, "status"))
+                || s(&j, "status") == "starting"
+                || self.running_job(&j)
                 || parse_iso(s(&j, "finished_at")).is_some_and(|t| t >= self.rt.epoch() - 86400.)
             {
                 jobs.push(j);
             }
         }
+        // Admission reserves unreadable records conservatively. Include those
+        // reservations rather than displaying misleading empty capacity.
+        let known: HashSet<_> = jobs.iter().map(|j| s(j, "id").to_string()).collect();
+        if let Ok(entries) = fs::read_dir(&self.jobs) {
+            for entry in entries.flatten() {
+                let id = entry.file_name().to_string_lossy().to_string();
+                if !known.contains(&id)
+                    && entry.path().join("job.json").is_file()
+                    && self.try_load(&id).is_none()
+                {
+                    jobs.push(json!({"id":id,"status":"running","queue_unreadable":true,"activity":"状態ファイルを読めないため実行枠を保持"}));
+                }
+            }
+        }
+        let report = self.queue_report(&jobs)?;
+        for job in &mut jobs {
+            if let Some(wait) = report["queued"]
+                .as_array()
+                .and_then(|q| q.iter().find(|q| q["id"] == job["id"]))
+            {
+                job["queue_wait_reason"] = wait["reason"].clone();
+            }
+            let waits = self.resource_waits(job);
+            job["resource_waits"] = json!(waits);
+            if s(job, "status") == "queued" {
+                job["activity"] = job["queue_wait_reason"]["message"].clone();
+            } else if !waits.is_empty() {
+                job["activity"] = json!(waits.join("・"));
+            }
+        }
+        if !a.flag("json") {
+            writeln!(out, "{}", self.queue_report_line(&report))?;
+        }
         if a.flag("json") {
-            writeln!(out, "{}", pretty(&json!(jobs)))?;
+            let value = if a.flag("summary") {
+                json!({"summary":report,"jobs":jobs})
+            } else {
+                json!(jobs)
+            };
+            writeln!(out, "{}", pretty(&value))?;
+        } else if a.flag("summary") {
+            // The summary alone is useful to humans and monitoring scripts.
         } else if jobs.is_empty() {
             writeln!(
                 out,

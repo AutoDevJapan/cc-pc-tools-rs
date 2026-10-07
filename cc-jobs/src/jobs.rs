@@ -359,7 +359,8 @@ impl Context {
         for j in jobs {
             rows.push(vec![
                 s(j, "id").into(),
-                s(j, "name").into(),
+                // JSON quoting keeps spaces, tabs and newlines within one cell.
+                serde_json::to_string(s(j, "name")).unwrap(),
                 format!("{}/{}", getstr(j, "model"), getstr(j, "effort")),
                 crate::queue::display_state(j).into(),
                 fmt_elapsed(self.elapsed_s(j)),
@@ -703,6 +704,7 @@ impl Context {
             }
             job["pid"] = json!(self.rt.pid());
             job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
+            job["queue_supervisor_version"] = json!(4);
             job["last_event_at"] = json!(self.rt.now());
             job["activity"] = json!(if truth(&job["retry_count"]) {
                 s(&job, "activity")
@@ -713,6 +715,7 @@ impl Context {
         }
         let mut next_diagnostic = 0.;
         let mut next_heartbeat = self.rt.mono() + 60.;
+        let mut had_admission_error = false;
         loop {
             if self.rt.mono() >= next_heartbeat {
                 let heartbeat = (|| -> Result<()> {
@@ -763,10 +766,17 @@ impl Context {
             let (cfg, state) = match admission {
                 Ok((cfg, Some(state))) => (cfg, state),
                 Ok((_, None)) => {
+                    // A successful assessment supersedes an earlier lock error.
+                    if had_admission_error {
+                        self.record_admission_error(jid, None);
+                        had_admission_error = false;
+                    }
                     self.rt.sleep(3.);
                     continue;
                 }
                 Err(error) => {
+                    self.record_admission_error(jid, Some(&error));
+                    had_admission_error = true;
                     // Settings being saved and lock contention must never fail
                     // waiting jobs. Keep them queued until admission works.
                     if self.rt.mono() >= next_diagnostic {

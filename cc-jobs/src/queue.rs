@@ -298,7 +298,11 @@ impl Context {
             let path = self.job_dir(jid).join("state.lock");
             let _state = match FileLock::try_acquire(&path) {
                 Ok(state) => state,
-                Err(error) if matches!(error.raw_os_error(), Some(32 | 33)) => continue,
+                Err(error) if matches!(error.raw_os_error(), Some(32 | 33)) => {
+                    self.rt
+                        .diagnostic(&format!("見張りの更新を延期（状態保存中）: {jid}"));
+                    continue;
+                }
                 Err(error) => {
                     return Err(Error::file_io(
                         "acquire exclusive lock byte range [0, 1)",
@@ -314,8 +318,16 @@ impl Context {
             {
                 continue;
             }
-            self.restart_queued_supervisor(&mut job)?;
-            restarted.push(json!(jid));
+            match self.restart_queued_supervisor(&mut job) {
+                Ok(()) => restarted.push(json!(jid)),
+                Err(error) => {
+                    self.rt.diagnostic(&format!(
+                        "見張りの更新を延期: {jid}: {}",
+                        redact_local_log_secrets(&error.message, &self.rt.env())
+                    ));
+                    restarted.push(json!({"id":jid,"action":"deferred","error":redact_local_log_secrets(&error.message,&self.rt.env())}));
+                }
+            }
         }
         Ok(json!(restarted))
     }
@@ -323,7 +335,9 @@ impl Context {
     pub(crate) fn restart_queued_supervisor(&self, job: &mut Value) -> Result<()> {
         let jid = s(job, "id").to_string();
         if self.is_ours(job, "pid") {
-            self.rt.kill_tree(job["pid"].as_u64().unwrap() as u32)?;
+            // Detached supervisors launched by this process are independent
+            // owners. Never follow Windows parent PID links during an upgrade.
+            self.stop_supervisor_owner(job)?;
             for _ in 0..50 {
                 if !self.is_ours(job, "pid") {
                     break;
@@ -359,6 +373,20 @@ impl Context {
             self.save(job)?;
         }
         Ok(())
+    }
+    pub(crate) fn stop_supervisor_owner(&self, job: &Value) -> Result<()> {
+        match self
+            .rt
+            .pause_supervisor(
+                job["pid"].as_u64().unwrap() as u32,
+                job["pid_created"].as_u64().unwrap(),
+            )
+            .and_then(|mut owner| owner.stop())
+        {
+            Ok(()) => Ok(()),
+            Err(_) if !self.is_ours(job, "pid") => Ok(()),
+            Err(error) => Err(error.into()),
+        }
     }
     /// Called under the global gate. Active records are reread every poll;
     /// history is reconciled at most once per 30 seconds across all waiters.
@@ -625,25 +653,53 @@ impl Context {
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
             return Ok(None);
         }
-        let jobs = self.admission_jobs()?;
-        let priorities = self.queue_priorities(&jobs, cfg);
+        let mut jobs = self.admission_jobs()?;
+        if !jobs.iter().any(|j| s(j, "id") == jid) {
+            jobs.push(job.clone());
+        }
+        let decision = self.queue_decisions(&jobs, cfg, Some(jid));
+        if let Some(reason) = decision.get(jid) {
+            if job["queue_wait_reason"] != *reason {
+                job["queue_wait_reason"] = reason.clone();
+                job["queue_wait_checked_at"] = json!(self.rt.now());
+                self.save(&job)?;
+            }
+            return Ok(None);
+        }
+        job["queue_wait_reason"] = Value::Null;
+        job["queue_admission_error"] = Value::Null;
+        job["status"] = json!("running");
+        job["started_at"] = json!(self.rt.now());
+        job["last_event_at"] = json!(self.rt.now());
+        job["activity"] = json!("starting");
+        self.save(&job)?;
+        Ok(Some(state))
+    }
+
+    /// Pure admission assessment shared by the launcher and status. Earlier
+    /// candidates reserve capacity in this snapshot; only admit persists it.
+    pub(crate) fn queue_decisions(
+        &self,
+        jobs: &[Value],
+        cfg: &QueueConfig,
+        caller: Option<&str>,
+    ) -> HashMap<String, Value> {
+        let priorities = self.queue_priorities(jobs, cfg);
+        let mut decisions = HashMap::new();
         // A normal waiter blocks opportunistic roots even during cooldown or
         // when its child/family limit is full. Never reserve phantom spare slots
         // for low-priority work while another owner is actually waiting.
         let normal_waiting = jobs.iter().any(|j| {
-            s(j, "id") != jid
-                && s(j, "status") == "queued"
+            s(j, "status") == "queued"
                 && j["cancel_requested"] != true
                 && self.supervisor_alive(j)
                 && priorities.get(s(j, "id")).copied().unwrap_or(2) < 3
         });
-        if s(&job, "parent_job_id").is_empty() && priorities.get(jid) == Some(&3) && normal_waiting
-        {
-            return Ok(None);
-        }
         let active: Vec<_> = jobs
             .iter()
-            .filter(|j| j["queue_unreadable"] == true || self.running_job(j))
+            .filter(|j| {
+                j["queue_unreadable"] == true || s(j, "status") == "starting" || self.running_job(j)
+            })
             .collect();
         // Count occupied families even when the root/intermediate supervisor has
         // exited. A surviving descendant must not silently free a root slot.
@@ -655,15 +711,31 @@ impl Context {
                 *children.entry(s(j, "parent_job_id").into()).or_default() += 1;
             }
         }
-        let mut waiting: Vec<_> = jobs
-            .iter()
-            .filter(|j| {
-                s(j, "status") == "queued"
-                    && (s(j, "id") == jid || self.supervisor_alive(j))
-                    && j["cancel_requested"] != true
-                    && j["retry_not_before"].as_f64().unwrap_or(0.) <= self.rt.epoch()
-            })
-            .collect();
+        let mut waiting = Vec::new();
+        for j in jobs.iter().filter(|j| s(j, "status") == "queued") {
+            let reason = if j["cancel_requested"] == true {
+                Some(("cancel_requested", "取り消し処理待ち"))
+            } else if caller != Some(s(j, "id")) && !self.supervisor_alive(j) {
+                Some(("supervisor_missing", "見張りの再起動待ち"))
+            } else if j["retry_not_before"].as_f64().unwrap_or(0.) > self.rt.epoch() {
+                Some(("retry_cooldown", "利用枠の再試行時刻待ち"))
+            } else if s(j, "parent_job_id").is_empty()
+                && priorities.get(s(j, "id")) == Some(&3)
+                && normal_waiting
+            {
+                Some((
+                    "lowest_priority",
+                    "最低順位: 通常の待機ジョブが先（再試行待ちも含む）",
+                ))
+            } else {
+                None
+            };
+            if let Some((code, text)) = reason {
+                decisions.insert(s(j, "id").into(), json!({"code":code,"message":text}));
+            } else {
+                waiting.push(j);
+            }
+        }
         waiting.sort_by_key(|j| {
             (
                 s(j, "parent_job_id").is_empty(),
@@ -673,43 +745,33 @@ impl Context {
                 s(j, "id"),
             )
         });
-        let mut selected = false;
         let mut child_first = false;
         for candidate in waiting {
             let parent = s(candidate, "parent_job_id");
             if parent.is_empty() && child_first {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"child_priority","message":"子ジョブが先に枠を確保するのを待っています"}));
                 continue;
             }
             if !parent.is_empty()
                 && children.get(parent).copied().unwrap_or(0) >= cfg.max_children_per_parent
             {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"child_limit","message":"同じ親の子ジョブ上限待ち","parent_job_id":parent,"max_children":cfg.max_children_per_parent}));
                 continue;
             }
             let root = self.queue_root(candidate);
             if !families.contains(&root) && families.len() >= cfg.max_running {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":cfg.max_running}));
                 continue;
             }
             // Children have first claim; wait for the earlier eligible job to
             // reserve its slot durably instead of allowing roots to overtake it.
-            if s(candidate, "id") == jid {
-                selected = true;
-                break;
-            }
             families.insert(root);
             if !parent.is_empty() {
                 child_first = true;
                 *children.entry(parent.into()).or_default() += 1;
             }
         }
-        if !selected {
-            return Ok(None);
-        }
-        job["status"] = json!("running");
-        job["started_at"] = json!(self.rt.now());
-        job["last_event_at"] = json!(self.rt.now());
-        job["activity"] = json!("starting");
-        self.save(&job)?;
-        Ok(Some(state))
+        decisions
     }
 
     fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u8> {
@@ -751,7 +813,7 @@ impl Context {
             .collect()
     }
 
-    fn queue_root(&self, job: &Value) -> String {
+    pub(crate) fn queue_root(&self, job: &Value) -> String {
         let mut current = job.clone();
         let mut seen = HashSet::new();
         loop {

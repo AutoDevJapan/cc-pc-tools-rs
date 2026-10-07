@@ -24,6 +24,24 @@ fn main() {
     let root = std::path::PathBuf::from(
         std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),
     );
+    if args
+        .first()
+        .is_some_and(|s| s == "--supervisor-with-independent-job")
+    {
+        let mut child = hidden_command(&std::env::current_exe().unwrap().to_string_lossy())
+            .arg("--hold")
+            .spawn()
+            .unwrap();
+        fs::write(
+            root.join("controller.ready"),
+            std::process::id().to_string(),
+        )
+        .unwrap();
+        std::thread::sleep(Duration::from_secs(40));
+        let _ = child.kill();
+        let _ = child.wait();
+        return;
+    }
     if args.first().is_some_and(|s| s == "--resource-worker") {
         let held = FileLock::acquire(&root.join("cargo-build.lock.0")).unwrap();
         fs::write(root.join("civ6.lock"), "fixture owned lease").unwrap();

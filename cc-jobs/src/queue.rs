@@ -424,12 +424,7 @@ impl Context {
         };
         let active: Vec<_> = jobs
             .into_iter()
-            .filter(|j| {
-                LIVE.contains(&s(j, "status"))
-                    || s(j, "status") == "starting"
-                    || self.is_ours(j, "codex_pid")
-                    || self.tool_handoff_pending(j)
-            })
+            .filter(|j| self.admission_active(j))
             .collect();
         let scanned_at = index["scanned_at"]
             .as_f64()
@@ -440,6 +435,53 @@ impl Context {
             self.write_json(&path, &next)?;
         }
         Ok(active)
+    }
+    fn admission_active(&self, j: &Value) -> bool {
+        LIVE.contains(&s(j, "status"))
+            || s(j, "status") == "starting"
+            || self.is_ours(j, "codex_pid")
+            || self.tool_handoff_pending(j)
+    }
+    /// Lock-free view of the active index for pre-checks. Never rescans the
+    /// whole history or writes; None when no index exists yet.
+    pub(crate) fn admission_snapshot(&self) -> Option<Vec<Value>> {
+        let index = self.read_json(&self.jobs.join(".queue-index.json")).ok()?;
+        let ids = index["ids"].as_array()?;
+        Some(
+            ids.iter()
+                .filter_map(Value::as_str)
+                .filter(|id| valid_job_id(id))
+                .map(|id| {
+                    // A record being replaced reads as occupied, like admission does.
+                    self.try_load(id).unwrap_or_else(
+                        || json!({"id":id,"status":"running","queue_unreadable":true}),
+                    )
+                })
+                .filter(|j| self.admission_active(j))
+                .collect(),
+        )
+    }
+    /// Lock-free estimate of `admit`: true only when the snapshot says this job
+    /// still waits for exactly the reason already recorded, so the gate can be
+    /// skipped. Any possible admission or changed reason goes through the gate.
+    pub(crate) fn admission_wait_unchanged(&self, job: &Value, cfg: &QueueConfig) -> bool {
+        let Some(mut jobs) = self.admission_snapshot() else {
+            return false;
+        };
+        let jid = s(job, "id");
+        jobs.retain(|j| s(j, "id") != jid);
+        jobs.push(job.clone());
+        self.queue_decisions(&jobs, cfg, Some(jid))
+            .get(jid)
+            .is_some_and(|reason| *reason == job["queue_wait_reason"])
+    }
+    /// Lock-free pre-check for a running job's yield attempt. Without an index
+    /// the gated path decides.
+    pub(crate) fn yield_may_be_due(&self, job: &Value) -> bool {
+        self.tool_handoff_pending(job)
+            || self.admission_snapshot().is_none_or(|jobs| {
+                self.context_rotation_due(job, &jobs) || self.should_yield(job, &jobs)
+            })
     }
     fn admission_record(&self, id: &str) -> Value {
         self.try_load(id).unwrap_or_else(|| {
@@ -775,27 +817,37 @@ impl Context {
     }
 
     fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u8> {
-        let todo = self
+        let repeating_todos = self
             .root
             .parent()
-            .and_then(|tools| {
-                fs::read(tools.join("todo/todo.json"))
-                    .ok()
-                    .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .map(|tools| {
+                cached_by_mtime(
+                    &REPEATING_TODOS,
+                    &tools.join("todo/todo.json"),
+                    HashSet::new(),
+                    |bytes| {
+                        serde_json::from_slice::<Value>(bytes)
+                            .ok()
+                            .and_then(|todo| {
+                                todo["items"].as_array().map(|items| {
+                                    items
+                                        .iter()
+                                        .filter(|item| repeating_request(s(item, "title")))
+                                        .filter_map(|item| item["id"].as_u64())
+                                        .collect()
+                                })
+                            })
+                            .unwrap_or_default()
+                    },
+                )
             })
-            .unwrap_or(Value::Null);
+            .unwrap_or_default();
         jobs.iter()
             .map(|j| {
                 let id = j["todo_id"].as_u64();
                 let excepted = id.is_some_and(|id| cfg.normal_priority_todo_ids.contains(&id));
                 let listed = id.is_some_and(|id| cfg.lowest_priority_todo_ids.contains(&id));
-                let title_matches = todo["items"].as_array().is_some_and(|items| {
-                    items.iter().any(|item| {
-                        id.is_some()
-                            && item["id"].as_u64() == id
-                            && repeating_request(s(item, "title"))
-                    })
-                });
+                let title_matches = id.is_some_and(|id| repeating_todos.contains(&id));
                 // Dependents of already running parents keep their existing child
                 // admission rules so a parent can finish and release its slot.
                 let low = s(j, "parent_job_id").is_empty()
@@ -803,8 +855,12 @@ impl Context {
                     && (listed
                         || title_matches
                         || repeating_request(s(j, "task_title"))
-                        || fs::read_to_string(self.job_dir(s(j, "id")).join("prompt.md"))
-                            .is_ok_and(|prompt| repeating_request(&prompt)));
+                        || cached_by_mtime(
+                            &REPEATING_PROMPTS,
+                            &self.job_dir(s(j, "id")).join("prompt.md"),
+                            false,
+                            |prompt| std::str::from_utf8(prompt).is_ok_and(repeating_request),
+                        ));
                 (
                     s(j, "id").to_owned(),
                     if low { 3 } else { queue_priority(j) },
@@ -912,6 +968,41 @@ fn last_event(path: &Path) -> Result<Value> {
         .find(|line| !line.iter().all(u8::is_ascii_whitespace))
         .and_then(|line| serde_json::from_slice(line).ok())
         .unwrap_or(Value::Null))
+}
+type FileCache<T> = std::sync::Mutex<HashMap<std::path::PathBuf, (u64, std::time::SystemTime, T)>>;
+static REPEATING_TODOS: std::sync::LazyLock<FileCache<HashSet<u64>>> =
+    std::sync::LazyLock::new(Default::default);
+static REPEATING_PROMPTS: std::sync::LazyLock<FileCache<bool>> =
+    std::sync::LazyLock::new(Default::default);
+/// Derive a value from a file once per (path, length, mtime). The ~6 MB ToDo
+/// list used to be parsed for every job on every admission pass under the gate.
+fn cached_by_mtime<T: Clone>(
+    cache: &FileCache<T>,
+    path: &Path,
+    missing: T,
+    derive: impl FnOnce(&[u8]) -> T,
+) -> T {
+    let Ok(meta) = fs::metadata(path) else {
+        return missing;
+    };
+    let modified = meta.modified().ok();
+    if let Some(modified) = modified
+        && let Some((len, at, value)) = cache.lock().unwrap().get(path)
+        && (*len, *at) == (meta.len(), modified)
+    {
+        return value.clone();
+    }
+    let Ok(bytes) = fs::read(path) else {
+        return missing;
+    };
+    let value = derive(&bytes);
+    if let Some(modified) = modified {
+        cache
+            .lock()
+            .unwrap()
+            .insert(path.to_path_buf(), (meta.len(), modified, value.clone()));
+    }
+    value
 }
 fn queue_time(j: &Value) -> &str {
     if s(j, "queued_at").is_empty() {

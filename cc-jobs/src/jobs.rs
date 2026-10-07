@@ -716,6 +716,7 @@ impl Context {
         let mut next_diagnostic = 0.;
         let mut next_heartbeat = self.rt.mono() + 60.;
         let mut had_admission_error = false;
+        let mut next_gated_check = 0.;
         loop {
             if self.rt.mono() >= next_heartbeat {
                 let heartbeat = (|| -> Result<()> {
@@ -760,6 +761,21 @@ impl Context {
                 self.rt.sleep(3.);
                 continue;
             }
+            // Most polls end in "keep waiting". Decide that from a lock-free
+            // snapshot and take the global gate only when this job may start,
+            // its wait reason changed, or the periodic gated pass is due (that
+            // pass also runs yield maintenance). Holding the gate for every
+            // poll of every waiter starved `run` past its 60 s lock wait.
+            if !had_admission_error
+                && self.rt.mono() < next_gated_check
+                && self
+                    .queue_config()
+                    .is_ok_and(|cfg| self.admission_wait_unchanged(&job, &cfg))
+            {
+                self.rt.sleep(3.);
+                continue;
+            }
+            next_gated_check = self.rt.mono() + jitter(45., 90.);
             let admission = self
                 .queue_config()
                 .and_then(|cfg| self.admit_configured(jid, &cfg).map(|state| (cfg, state)));
@@ -930,6 +946,10 @@ impl Context {
                     {
                         self.save(&job)?;
                         let attempt = (|| -> Result<bool> {
+                            // Skip the global gate unless a yield is plausible.
+                            if !self.yield_may_be_due(&job) {
+                                return Ok(false);
+                            }
                             let _gate = self.queue_lock()?;
                             self.yield_tool_boundary(&job, &self.admission_jobs()?)
                         })();
@@ -966,6 +986,10 @@ impl Context {
                 {
                     next_yield_check = self.rt.mono() + 3.;
                     let attempt = (|| -> Result<bool> {
+                        // Skip the global gate unless a yield is plausible.
+                        if !self.yield_may_be_due(&job) {
+                            return Ok(false);
+                        }
                         let _gate = self.queue_lock()?;
                         if self.tool_handoff_pending(&job) {
                             self.recover_tool_yield(&self.load(jid)?)?;

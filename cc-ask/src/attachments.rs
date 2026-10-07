@@ -922,7 +922,7 @@ fn deliver_question(
                 std::time::Duration::from_secs(60),
             )?;
             let mut state = ctx.load_fresh()?;
-            crate::questions::register_posted(&mut state, channel, &ids[0], &ids);
+            crate::questions::register_posted_by(ctx, &mut state, channel, &ids[0], &ids);
             if let Some(q) = state["questions"]
                 .as_array_mut()
                 .unwrap()

@@ -1,9 +1,9 @@
 mod common;
 use cc_ask::{core::*, resume::*};
-use common::{Harness, SharedFake, message};
-use serde_json::{Value, json};
+use common::{message, Harness, SharedFake};
+use serde_json::{json, Value};
 use std::{
-    panic::{AssertUnwindSafe, catch_unwind},
+    panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
 };
 
@@ -159,6 +159,130 @@ struct AnswerResume {
 }
 
 #[test]
+fn transient_answer_launch_retries_same_reservation_and_stays_open_until_delivery() {
+    let mut a = AnswerResume::new();
+    a.answered();
+    a.fake.borrow_mut().launch_transport_fail = true;
+    a.resume();
+    assert_eq!(a.count(), 0);
+    let failed = a.question();
+    let key = failed["continuation"]["launch"]["key"].clone();
+    assert_eq!(failed["resume_status"], "再開失敗");
+    assert_eq!(failed["open"], true);
+    assert_ne!(failed["recovery_closed"], true);
+    a.fake.borrow_mut().launch_transport_fail = false;
+    a.resume();
+    assert_eq!(a.count(), 0);
+    a.advance(60.);
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.last()["launch_key"], key);
+    assert!(a.question()["resume_status"].is_null());
+    a.resume();
+    assert_eq!(a.count(), 1);
+}
+
+#[test]
+fn exhausted_answer_retry_does_not_close_or_launch_after_absolute_deadline() {
+    let mut a = AnswerResume::new();
+    a.answered();
+    a.fake.borrow_mut().launch_transport_fail = true;
+    a.resume();
+    let deadline = a.question()["reply_resume_retry"]["deadline"].clone();
+    a.advance(60.);
+    a.resume();
+    assert_eq!(a.question()["reply_resume_retry"]["deadline"], deadline);
+    a.advance(900.);
+    a.fake.borrow_mut().launch_transport_fail = false;
+    a.resume();
+    a.advance(3600.);
+    a.resume();
+    assert_eq!(a.count(), 0);
+    assert_eq!(a.question()["open"], true);
+    assert_eq!(a.question()["reply_resume_retry"]["exhausted"], true);
+    assert!(a.fake.borrow().patches.is_empty());
+    assert!(a.question()["continuation"]["launch"].is_object());
+}
+
+#[test]
+fn answer_after_expired_retry_and_manual_read_is_delivered_with_a_new_reservation() {
+    let mut a = AnswerResume::new();
+    let first = a.answered();
+    a.fake.borrow_mut().launch_transport_fail = true;
+    a.resume();
+    a.advance(901.);
+    a.resume();
+    let mut state = a.state();
+    state["answer_receipts"][&first]["read_by"] = json!("manual-reader");
+    a.save(&state);
+    let second = a.answer(601., "こちらの追加回答も反映してください", "OWN");
+    a.fake.borrow_mut().launch_transport_fail = false;
+    a.resume();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.state()["answer_receipts"][second]["handled_by"], "job1");
+    assert!(a.last()["prompt"]
+        .as_str()
+        .unwrap()
+        .contains("追加回答も反映"));
+    assert!(a.question()["resume_status"].is_null());
+}
+
+#[test]
+fn posted_and_request_answer_without_a_source_remains_in_inbox_without_new_worker() {
+    for source in ["posted", "request"] {
+        let mut a = AnswerResume::new();
+        a.change(json!({"source":source,"question_message":"200"}));
+        a.answered();
+        a.resume();
+        a.resume();
+        assert_eq!(a.count(), 0);
+        assert_eq!(a.question()["resume_status"], "再開先なし");
+        assert_eq!(a.question()["open"], true);
+        assert!(a.fake.borrow().patches.is_empty());
+    }
+}
+
+#[test]
+fn explicit_retry_restores_transport_closed_question_but_not_completed_or_stopped_questions() {
+    for stopped in [false, true] {
+        for completed in [false, true] {
+            let mut a = AnswerResume::new();
+            let answer = a.answered();
+            a.change(
+                json!({"open":false,"recovery_closed":true,"closed_at":a.ctx.now(),
+                "answered_reply":answer,"owner_stopped":stopped,"session_id":"original-session",
+                "last_resume_error":"URLError: transport failed"}),
+            );
+            if completed {
+                let mid = (answer.parse::<u64>().unwrap() + 1).to_string();
+                let mut done = message(&mid, "状態: 完了\n回答を反映して完了しました。", "BOT");
+                done["author"]["bot"] = json!(true);
+                a.fake
+                    .borrow_mut()
+                    .messages
+                    .get_mut("200")
+                    .unwrap()
+                    .push(done);
+            }
+            a.resume();
+            assert_eq!(a.count(), 0);
+            let retry = cc_ask::reply_recovery::retry_reply(&mut a.ctx, "200");
+            assert_eq!(retry.is_ok(), !stopped && !completed);
+            a.resume();
+            assert_eq!(a.count(), usize::from(!stopped && !completed));
+            if !stopped && !completed {
+                assert_eq!(a.last()["resume_session"], "original-session");
+                assert_eq!(a.question()["open"], true);
+                assert!(a.question()["recovery_closed"].is_null());
+            } else {
+                assert_eq!(a.question()["open"], false);
+            }
+        }
+    }
+}
+
+#[test]
 fn resume_inherits_permissions_and_routing_from_source_without_preamble_classification() {
     for sandbox in ["workspace-write", "read-only"] {
         let mut a = AnswerResume::new();
@@ -309,11 +433,9 @@ impl AnswerResume {
         let at = f.now - age;
         let mid = (((at * 1000.) as u64 - 1420070400000) << 22).to_string();
         let mut m = message(&mid, text, owner);
-        m["timestamp"] = json!(
-            chrono::DateTime::from_timestamp(at as i64, 0)
-                .unwrap()
-                .to_rfc3339()
-        );
+        m["timestamp"] = json!(chrono::DateTime::from_timestamp(at as i64, 0)
+            .unwrap()
+            .to_rfc3339());
         f.messages.get_mut("200").unwrap().push(m);
         f.sequence = f.sequence.max(mid.parse().unwrap());
         mid
@@ -557,13 +679,14 @@ fn test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answ
         let newest = a.answered();
         a.todo(0., "doing", "#3467 の実装を再開", None);
         let mut db = read_json(&a.ctx.todo).unwrap();
-        db["items"][0]["updated"] = json!(
-            chrono::DateTime::from_timestamp(a.fake.borrow().now as i64, 0)
-                .unwrap()
-                .with_timezone(&chrono::Local)
-                .format(format)
-                .to_string()
-        );
+        db["items"][0]["updated"] = json!(chrono::DateTime::from_timestamp(
+            a.fake.borrow().now as i64,
+            0
+        )
+        .unwrap()
+        .with_timezone(&chrono::Local)
+        .format(format)
+        .to_string());
         atomic_json(&a.ctx.todo, &db, 2).unwrap();
         a.resume();
         assert_eq!((a.count(), a.fake.borrow().picks.len()), (1, 1));
@@ -732,13 +855,12 @@ fn test_existing_worktree_is_reused() {
     a.answered();
     a.resume();
     assert_eq!(a.last()["cwd"], worktree.to_string_lossy().as_ref());
-    assert!(
-        !a.fake
-            .borrow()
-            .git_calls
-            .iter()
-            .any(|(_, args)| ["fetch", "worktree"].contains(&args[0].as_str()))
-    );
+    assert!(!a
+        .fake
+        .borrow()
+        .git_calls
+        .iter()
+        .any(|(_, args)| ["fetch", "worktree"].contains(&args[0].as_str())));
 }
 #[test]
 fn test_launch_failure_preserves_attempt_key_and_does_not_mark_seen() {
@@ -1332,13 +1454,12 @@ fn test_new_owner_reply_is_preserved_when_job_needs_decision() {
     a.resume();
     assert_eq!(a.question()["continuation"]["after"], newest);
     assert_eq!(a.count(), 2); // follow-up launches in the completion pass
-    assert!(
-        !a.fake
-            .borrow()
-            .posts
-            .iter()
-            .any(|(_, p)| s(&p["content"]).contains("次の方針を教えてください。"))
-    );
+    assert!(!a
+        .fake
+        .borrow()
+        .posts
+        .iter()
+        .any(|(_, p)| s(&p["content"]).contains("次の方針を教えてください。")));
     a.resume();
     assert_eq!(a.count(), 2);
     assert_eq!(a.question()["seen_reply"], newest);
@@ -1368,11 +1489,9 @@ fn test_question_registration_retries_after_reply_check_failure_without_repostin
         a.question()["after"],
         a.fake.borrow().messages["200"].last().unwrap()["id"]
     );
-    assert!(
-        a.question()["continuation"]
-            .get("question_pending")
-            .is_none()
-    );
+    assert!(a.question()["continuation"]
+        .get("question_pending")
+        .is_none());
 }
 #[test]
 fn test_result_delivery_failure_retries_and_keeps_question_open() {

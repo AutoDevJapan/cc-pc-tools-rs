@@ -14,6 +14,7 @@ fn repair_delivers_once_and_recovers_a_failed_same_key_launch() {
     assert!(!truth(&h.state()["answer_receipts"][&mid]["handled_by"]));
     let pending_key = h.state()["requests"]["100"]["owner_update"]["key"].clone();
     h.fake.borrow_mut().launch_transport_fail = false;
+    h.fake.borrow_mut().now += cc_ask::reply_recovery::RETRY_INTERVAL_S;
     let delivered = intake::deliver_reply(&mut h.ctx, "100", &mid, Some("job1")).unwrap();
     assert_eq!(delivered["delivery"], "delivered");
     assert_eq!(

@@ -428,6 +428,7 @@ fn adopt_continuation(
         }
     }
     acknowledge_reply(question, &after);
+    crate::reply_recovery::delivered(question);
     checkpoint(ctx, state, index, question)?;
     Ok(())
 }
@@ -454,6 +455,10 @@ fn continuation_selection(
             })
         {
             source_job = job;
+        }
+        if s(&source_job["status"]) == "missing" {
+            source_job = question.clone();
+            source_job["thread_id"] = json!(session);
         }
     }
     let sources = [
@@ -497,6 +502,20 @@ fn continuation_selection(
         .rev()
         .find(|m| s(&m["author"]["id"]) == owner && n(&m["id"]) > n(&question["after"]));
     apply_job_scope(&mut selection, source, newest.map(|m| s(&m["content"])));
+    selection["resume_session"] = sources
+        .iter()
+        .find_map(|source| {
+            source["resume_session"]
+                .as_str()
+                .filter(|id| !id.is_empty())
+                .or_else(|| {
+                    source["thread_id"]
+                        .as_str()
+                        .filter(|id| !id.is_empty() && *id != s(&question["thread_id"]))
+                })
+        })
+        .map(|id| json!(id))
+        .unwrap_or(Value::Null);
     Ok(selection)
 }
 
@@ -515,6 +534,26 @@ fn resume_at(
     if !crate::routing::question_allowed(ctx, question)? {
         return Ok(());
     }
+    crate::reply_recovery::refresh(state, question, s(&thread["id"]));
+    if !crate::reply_recovery::due(question, ctx.now()) {
+        if let Some(jid) = find_launch_job(ctx, s(&question["continuation"]["launch"]["key"])) {
+            return adopt_continuation(ctx, state, index, question, &jid);
+        }
+        if !s(&question["continuation"]["owner_update"]["key"]).is_empty()
+            && find_launch_job(ctx, s(&question["continuation"]["owner_update"]["key"])).is_some()
+        {
+            crate::steering::deliver(
+                ctx,
+                state,
+                &thread,
+                question,
+                crate::restart::Slot::Question(index),
+                owner,
+                budget,
+            )?;
+        }
+        return checkpoint(ctx, state, index, question);
+    }
     let tid = s(&thread["id"]);
     if let Some(jid) = crate::restart::progress_successor(ctx, question)? {
         question["continuation"]["job"] = json!(jid);
@@ -528,13 +567,22 @@ fn resume_at(
         && !owner_replies(ctx, question, owner)?
             .iter()
             .filter(|m| !crate::snooze::control_only(m))
+            .filter(|m| !reply_unavailable(state, s(&m["id"])))
             .collect::<Vec<_>>()
             .is_empty()
     {
         if let Some(jid) = crate::steering::associated_job(ctx, question)? {
             // Attach only a worker explicitly associated with this Discord thread.
             question["continuation"] = json!({"job":jid,"job_info":job_info(ctx,&jid),"after":question["after"],"reported":false});
+            question["continuation"]["answer_source_resolved"] = json!(true);
             checkpoint(ctx, state, index, question)?;
+        } else if ["posted", "request"].contains(&s(&question["source"]))
+            && s(&question["session_id"]).is_empty()
+        {
+            question["resume_status"] = json!("再開先なし");
+            question["resume_status_reply"] =
+                json!(crate::reply_recovery::pending_reply(state, question, tid));
+            return checkpoint(ctx, state, index, question);
         }
     }
     if crate::steering::deliver(
@@ -669,7 +717,7 @@ fn resume_at(
         )?);
         checkpoint(ctx, state, index, question)?;
         let entry = &question["continuation"];
-        let launched = launch_job(
+        let launched = launch_job_with_session(
             ctx,
             &thread,
             s(&entry["prompt"]),
@@ -678,6 +726,7 @@ fn resume_at(
             false,
             Some(s(&entry["cwd"])),
             Some("resume"),
+            entry["launch"]["selection"]["resume_session"].as_str(),
         );
         let jid = match launched {
             Ok(jid) => jid,
@@ -691,6 +740,9 @@ fn resume_at(
                     );
                     if launch_blocked(&error) {
                         return checkpoint(ctx, state, index, question);
+                    }
+                    if crate::reply_recovery::transient(&error) {
+                        return Err(error);
                     }
                     question["continuation"]["selection"] =
                         question["continuation"]["launch"]["selection"].clone();
@@ -998,7 +1050,16 @@ pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
                 continue;
             }
         }
-        if s(&question["source"]) == "request" {
+        // Questions emitted by intake's own result still use its worker handoff.
+        // Orphaned/posted request questions must reach the source resolver below.
+        if s(&question["source"]) == "request"
+            && !truth(&question["continuation"])
+            && (s(&question["question_message"]).is_empty()
+                || (valid_job(s(&state["requests"][s(&question["thread_id"])]["job"]))
+                    && n(&state["requests"][s(&question["thread_id"])]["result_after"])
+                        >= n(&question["question_message"])
+                    && !truth(&state["requests"][s(&question["thread_id"])]["recovered_question"])))
+        {
             continue;
         }
         if s(&question["source"]) == "scheduler"
@@ -1010,13 +1071,24 @@ pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
         // Receipt may have stored a new postponement; do not overwrite it with the old clone.
         question = state["questions"][index].clone();
         if let Err(error) = resume_at(ctx, &mut state, index, &mut question, &owner, budget) {
-            question["last_resume_error"] = json!(error_detail(&error));
+            if crate::reply_recovery::transient(&error)
+                && crate::reply_recovery::undelivered(&state, &question)
+            {
+                let reply = crate::reply_recovery::pending_reply(
+                    &state,
+                    &question,
+                    s(&question["thread_id"]),
+                );
+                crate::reply_recovery::failed(&mut question, ctx.now(), &error, &reply);
+            } else {
+                question["last_resume_error"] = json!(error_detail(&error));
+            }
             eprintln!(
                 "answer resume failed {} {}",
                 s(&question["thread_id"]),
                 error_detail(&error)
             );
-        } else {
+        } else if !truth(&question["resume_status"]) {
             remove(&mut question, "last_resume_error");
         }
         checkpoint(ctx, &mut state, index, &question)?;

@@ -553,6 +553,16 @@ pub fn cmd_close(ctx: &mut Context, thread: &str) -> Result<()> {
     let _question_delivery = crate::attachments::question_lock(ctx, thread)?;
     let _work = crate::state_work::StateWork::begin(ctx)?;
     let mut state = ctx.load()?;
+    if state["questions"].as_array().is_some_and(|qs| {
+        qs.iter().any(|q| {
+            s(&q["thread_id"]) == thread && crate::reply_recovery::prevents_close(&state, q)
+        })
+    }) {
+        return Err(
+            "回答を担当へ届けられていないため、質問を閉じません。inboxで再開状況を確認してください"
+                .into(),
+        );
+    }
     for question in state["questions"].as_array_mut().ok_or("ValueError")? {
         if s(&question["thread_id"]) == thread {
             crate::restart::stop_todo(ctx, question)?;
@@ -723,7 +733,8 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     };
     let mut places = BTreeMap::new();
     let mut inbox_only = std::collections::BTreeSet::new();
-    for (id, thread) in crate::routing::allowed_places(ctx, last)? {
+    let allowed = crate::routing::allowed_places(ctx, last)?;
+    for (id, thread) in &allowed {
         let latest = if truth(&thread["last_message_id"]) {
             &thread["last_message_id"]
         } else {
@@ -733,7 +744,7 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
             if truth(&thread["inbox_only"]) {
                 inbox_only.insert(id.clone());
             }
-            places.insert(id, s(&thread["routing_label"]).to_owned());
+            places.insert(id.clone(), s(&thread["routing_label"]).to_owned());
         }
     }
     let mut found = Vec::new();
@@ -789,6 +800,36 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     }
     if let Some((mid, _, _, _)) = found.last() {
         std::fs::write(state_file, mid.to_string()).map_err(|_| "OSError".to_string())?;
+    }
+    // Delivery failures remain visible after the ordinary message cursor has
+    // advanced. Inbox inspection neither acknowledges delivery nor starts jobs.
+    let state = ctx.load()?;
+    for q in state["questions"].as_array().into_iter().flatten() {
+        let tid = s(&q["thread_id"]);
+        if !allowed.contains_key(tid)
+            || crate::routing::thread_inbox_only(ctx, &state, tid)
+            || !crate::reply_recovery::prevents_close(&state, q)
+        {
+            continue;
+        }
+        let failure = if truth(&q["resume_status"]) || truth(&q["last_resume_error"]) {
+            q
+        } else {
+            &state["requests"][tid]
+        };
+        let status = if s(&failure["resume_status"]).is_empty() {
+            "再開失敗"
+        } else {
+            s(&failure["resume_status"])
+        };
+        let id = n(&q["answered_reply"])
+            .max(n(&state["owner_answers"][tid]))
+            .to_string();
+        let value = json!({"id":id,"channel":tid,"where":allowed[tid]["routing_label"],
+            "status":status,"text":format!("{status}: {} {}",safe_text(s(&q["title"])),safe_text(s(&failure["last_resume_error"]))),
+            "retry_exhausted":failure["reply_resume_retry"]["exhausted"],"retry_deadline":failure["reply_resume_retry"]["deadline"]});
+        print_json(&value, None)?;
+        out.push(value);
     }
     Ok(out)
 }

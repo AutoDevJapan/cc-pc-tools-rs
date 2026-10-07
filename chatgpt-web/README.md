@@ -42,7 +42,9 @@ cargo clippy --locked -p chatgpt-web --all-targets -- -D warnings
 cargo build --release --locked -p chatgpt-web
 ```
 
-`tests/fixtures/` は ChatGPT の画面の作り（`#prompt-textarea`・`data-testid="send-button"`/`"stop-button"`/`"login-button"`・`data-message-author-role`）を模した HTML です。試験は実際の Chrome を一時プロフィールで起動し、回答の取得・ログイン切れ・停止・エラー・上限・時間切れ・人間確認・ロック待ちを確かめます。Chrome が無い環境では画面の試験を飛ばします。
+`tests/fixtures/real-*.html` は 2026-10-07 に実際の chatgpt.com（未ログインの画面）から記録した画面です（スクリプトと見た目の属性を除去）。`chat2026*.html` はその作り（`textarea[name=prompt]`・aria-label が切り替わる送信ボタン・`li[data-message-role]`・`[data-assistant-markdown]`・`data-message-complete`）を、`chat*.html` はそれ以前の作り（`#prompt-textarea`・`data-testid`）を模しています。試験は実際の Chrome を一時プロフィールで起動し、回答の取得・ログイン切れ・停止・エラー・上限・時間切れ・人間確認・ロック待ちを確かめます。Chrome が無い環境では画面の試験を飛ばします。
+
+画面の作りが変わったら、保守用の `chatgpt_web probe --url <URL> wait:10 "page:state()" "page:JSON.stringify(poll())" <JSのファイル>` で調べ、`src/page.js` と記録を更新します。`ask --allow-logged-out` は未ログインの画面でも送る保守用の指定で、画面の作りの確認だけに使います（ログイン状態は記録しません）。
 
 環境変数 `CHATGPT_WEB_HOME`（保存先）、`CHATGPT_WEB_URL`（開く URL）、`CHATGPT_WEB_CHROME`（Chrome の場所）、`CHATGPT_WEB_DISCORD`（`discord_ask.exe` の場所、`off` で記録しない）で試験用に切り替えます。
 

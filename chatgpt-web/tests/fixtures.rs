@@ -193,3 +193,96 @@ fn bad_arguments_exit_2() {
     let o = ask(dir.path(), "chat.html", "  ", &[]);
     assert_eq!(o.status.code(), Some(2));
 }
+
+#[test]
+fn current_ui_mock_answers_and_reports_errors() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let o = ask(
+        dir.path(),
+        "chat2026.html",
+        "一行目\n二行目 <b>",
+        &["--model", "o3", "--timeout", "120"],
+    );
+    let out = stdout(&o);
+    assert_eq!(
+        o.status.code(),
+        Some(0),
+        "stdout={out} stderr={}",
+        stderr(&o)
+    );
+    let want = "### Answer\n\nModel: `o3`\n\n- Apple\n- Banana\n\n```\nfn main() {}\n```\n\n一行目\n二行目 <b>";
+    assert_eq!(out.trim_end(), want);
+    assert_eq!(login_state(dir.path()), "logged_in");
+    assert_browser_closed(dir.path());
+    for (page, code, text) in [
+        ("chat2026-error.html", 1, "エラー"),
+        ("chat2026-slow.html", 5, "制限時間"),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let o = ask(dir.path(), page, "q", &["--timeout", "12"]);
+        assert_eq!(o.status.code(), Some(code), "{page}: {}", stderr(&o));
+        assert!(stderr(&o).contains(text), "{page}: {}", stderr(&o));
+        assert_browser_closed(dir.path());
+    }
+}
+
+/// 2026-10 に実際の chatgpt.com から記録した画面（スクリプト・見た目の属性を除いたもの）を読む
+#[test]
+fn recorded_pages_are_read_correctly() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let probe = |page: &str| {
+        let o = run(
+            dir.path(),
+            page,
+            &[
+                "probe",
+                "wait:2",
+                "page:state()",
+                "page:JSON.stringify(poll())",
+                "page:answer()",
+            ],
+        );
+        assert_eq!(o.status.code(), Some(0), "{page}: {}", stderr(&o));
+        stdout(&o)
+    };
+    let out = probe("real-logged-out.html");
+    assert!(out.contains("== page:state()\nlogged_out\n"), "{out}");
+    assert!(out.contains(r#""users":0,"assistants":0"#), "{out}");
+    let out = probe("real-streaming.html");
+    assert!(
+        out.contains(r#""users":1,"assistants":1,"streaming":true"#),
+        "{out}"
+    );
+    let out = probe("real-answer.html");
+    assert!(
+        out.contains(r#""users":1,"assistants":1,"streaming":false"#),
+        "{out}"
+    );
+    assert!(out.contains(r#""error":false,"limit":false"#), "{out}");
+    let want = "### Plan\n\nThis is a **simple** plan using `markdown` formatting.\n\n- Apple\n- Banana\n  - Yellow\n\n1. Start\n2. Finish\n\n| Item | Value |\n| --- | --- |\n| Fruit | Apple |\n\n```\nfn main() {\n    println!(\"Hello\");\n}\n```";
+    assert!(out.contains(want), "{out}");
+}
+
+#[test]
+fn allow_logged_out_sends_without_recording_login_state() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let o = ask(
+        dir.path(),
+        "logged-out.html",
+        "q",
+        &["--timeout", "60", "--allow-logged-out"],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", stderr(&o));
+    assert!(stdout(&o).contains("### Answer"));
+    assert!(!dir.path().join("state.json").exists());
+    assert_browser_closed(dir.path());
+}

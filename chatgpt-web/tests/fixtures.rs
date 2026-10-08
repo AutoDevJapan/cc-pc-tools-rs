@@ -1,14 +1,15 @@
 //! ChatGPT の画面を模した tests/fixtures/ の HTML を、実際の Chrome で操作して確かめる。
-//! Chrome が無い環境では何もせずに成功する。
+//! Chrome が無い開発環境では画面試験を飛ばす。CI では Chrome を必須とする。
 
 use std::fs;
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::time::Duration;
+use std::process::{Command, Output, Stdio};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 fn chrome_available() -> bool {
-    std::env::var_os("CHATGPT_WEB_CHROME").is_some()
+    let available = std::env::var_os("CHATGPT_WEB_CHROME").is_some()
         || ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
             .iter()
             .filter_map(std::env::var_os)
@@ -16,7 +17,12 @@ fn chrome_available() -> bool {
                 PathBuf::from(b)
                     .join(r"Google\Chrome\Application\chrome.exe")
                     .is_file()
-            })
+            });
+    assert!(
+        available || std::env::var_os("CI").is_none(),
+        "CI requires Chrome"
+    );
+    available
 }
 
 fn fixture_url(name: &str) -> String {
@@ -26,15 +32,18 @@ fn fixture_url(name: &str) -> String {
     format!("file:///{}", p.to_string_lossy().replace('\\', "/"))
 }
 
-fn run(home: &Path, page: &str, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_chatgpt_web"))
-        .args(args)
+fn fixture_command(home: &Path, page: &str, args: &[&str]) -> Command {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_chatgpt_web"));
+    cmd.args(args)
         .env("CHATGPT_WEB_HOME", home)
         .env("CHATGPT_WEB_URL", fixture_url(page))
         .env("CHATGPT_WEB_DISCORD", "off")
-        .env("CHATGPT_WEB_HEADLESS", "1")
-        .output()
-        .unwrap()
+        .env("CHATGPT_WEB_HEADLESS", "1");
+    cmd
+}
+
+fn run(home: &Path, page: &str, args: &[&str]) -> Output {
+    fixture_command(home, page, args).output().unwrap()
 }
 
 fn ask(home: &Path, page: &str, prompt: &str, extra: &[&str]) -> Output {
@@ -79,14 +88,41 @@ fn fixture_chrome_runs_headless_and_closes() {
         return;
     }
     let dir = tempfile::tempdir().unwrap();
-    let o = run(
+    let mut child = fixture_command(
         dir.path(),
         "chat.html",
-        &["probe", "page:navigator.userAgent"],
-    );
+        &["probe", "page:navigator.userAgent", "wait:2"],
+    )
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
+    .unwrap();
+    // Read and connect to the port while Chrome is alive. Chrome may remove
+    // DevToolsActivePort on shutdown, so checking only that file afterwards
+    // would not prove the browser actually exited.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let active = loop {
+        if let Ok(text) = fs::read_to_string(dir.path().join("profile/DevToolsActivePort"))
+            && let Some(port) = text.lines().next().and_then(|s| s.parse::<u16>().ok())
+        {
+            let addr = SocketAddr::from(([127, 0, 0, 1], port));
+            if TcpStream::connect_timeout(&addr, Duration::from_secs(1)).is_ok() {
+                break Some(addr);
+            }
+        }
+        if child.try_wait().unwrap().is_some() || Instant::now() >= deadline {
+            break None;
+        }
+        sleep(Duration::from_millis(50));
+    };
+    let o = child.wait_with_output().unwrap();
     assert_eq!(o.status.code(), Some(0), "{}", stderr(&o));
     assert!(stdout(&o).contains("HeadlessChrome/"), "{}", stdout(&o));
-    assert_browser_closed(dir.path());
+    let addr = active.expect("Chrome's live CDP port was not observed");
+    assert!(
+        TcpStream::connect_timeout(&addr, Duration::from_secs(1)).is_err(),
+        "Chrome is still listening after probe exited"
+    );
 }
 
 #[test]

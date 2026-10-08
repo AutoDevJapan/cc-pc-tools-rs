@@ -184,6 +184,26 @@ impl Config {
                     Some("refs/remotes/origin/main"),
                 )];
             }
+            "cfee3edefd3704d67c140ca6952dd7ce" => {
+                c.id = "cfee3edefd3704d67c140ca6952dd7ce";
+                c.project = "todo1935";
+                c.content = "m1-finite-validation";
+                c.repos = vec![Repo {
+                    name: "fixed",
+                    // This is a fixed local verification snapshot, not a public clone.
+                    origin: "",
+                    head: "0f01ed0a36dcc5baea61bf1f689267a362f8784c".into(),
+                    saved_ref: None,
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Tools/agent-workspaces/todo-1842-9649f0c4667e/work/.git/worktrees/fixed",
+                        ),
+                        common: PathBuf::from(
+                            "D:/CC/Tools/agent-workspaces/todo-1842-9649f0c4667e/work/.git",
+                        ),
+                    },
+                }];
+            }
             _ => return Err("SCOPE_NOT_AUTHORIZED"),
         }
         Ok(c)
@@ -802,7 +822,11 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
         return Err("GIT_HEAD_CHANGED");
     }
     let saved_checks = before_move || !matches!(repo.kind, RepoKind::Linked { .. });
+    if saved_checks && repo.origin.is_empty() && !git(path, &["remote"])?.is_empty() {
+        return Err("GIT_ORIGIN_CHANGED");
+    }
     if saved_checks
+        && !repo.origin.is_empty()
         && git(
             path,
             &["config", "--local", "--get-all", "remote.origin.url"],
@@ -1123,7 +1147,7 @@ mod tests {
                 )
                 .unwrap();
                 repo.kind = RepoKind::Linked {
-                    admin: seed.join(".git/worktrees/work"),
+                    admin: seed.join(".git/worktrees").join(repo.name),
                     common: seed.join(".git"),
                 };
             }
@@ -1171,16 +1195,18 @@ mod tests {
         )
         .unwrap();
         repo.head = git(path, &["rev-parse", "HEAD"]).unwrap();
-        git(path, &["remote", "add", "origin", repo.origin]).unwrap();
-        git(
-            path,
-            &[
-                "update-ref",
-                repo.saved_ref.unwrap_or("refs/remotes/origin/main"),
-                &repo.head,
-            ],
-        )
-        .unwrap();
+        if !repo.origin.is_empty() {
+            git(path, &["remote", "add", "origin", repo.origin]).unwrap();
+            git(
+                path,
+                &[
+                    "update-ref",
+                    repo.saved_ref.unwrap_or("refs/remotes/origin/main"),
+                    &repo.head,
+                ],
+            )
+            .unwrap();
+        }
     }
     fn source(c: &Config) -> PathBuf {
         c.temp.join(format!("codex-owned-{}", c.id))
@@ -1429,6 +1455,67 @@ mod tests {
             .unwrap()
             .is_empty()
         );
+    }
+    #[test]
+    fn local_verification_worktree_preserves_repro_and_internal_hardlinks() {
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        let root = source(&c);
+        fs::create_dir(root.join("repro")).unwrap();
+        fs::write(root.join("repro/m1.rs"), b"preserved regression input").unwrap();
+        fs::write(
+            root.join("fixed/dependency-snapshot.txt"),
+            b"copied dependency",
+        )
+        .unwrap();
+        fs::create_dir(root.join("target")).unwrap();
+        let artifact = root.join("target/test.exe");
+        fs::write(&artifact, b"test artifact").unwrap();
+        fs::hard_link(&artifact, root.join("target/test-copy.exe")).unwrap();
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(&root, c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["state"], "quarantined");
+        let moved = c.destination().join("files");
+        assert_eq!(
+            fs::read(moved.join("repro/m1.rs")).unwrap(),
+            b"preserved regression input"
+        );
+        assert_eq!(
+            fs::read(moved.join("fixed/dependency-snapshot.txt")).unwrap(),
+            b"copied dependency"
+        );
+        assert_eq!(node(&moved.join("target/test.exe")).unwrap().links, 2);
+        assert_eq!(
+            git(&moved.join("fixed"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        c.finish(c.id).unwrap();
+    }
+    #[test]
+    fn local_verification_worktree_rejects_remotes_and_tracked_edits() {
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        git(
+            &source(&c).join("fixed"),
+            &[
+                "remote",
+                "add",
+                "origin",
+                "https://example.invalid/unexpected",
+            ],
+        )
+        .unwrap();
+        assert!(matches!(c.plan(c.id), Err("GIT_ORIGIN_CHANGED")));
+        assert!(!c.destination().exists());
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        fs::write(source(&c).join("fixed/source.txt"), b"unsaved change").unwrap();
+        assert!(matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")));
+        assert!(!c.destination().exists());
     }
     #[test]
     fn linked_worktree_backlink_tampering_keeps_receipt_owned() {

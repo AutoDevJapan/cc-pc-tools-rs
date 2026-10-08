@@ -81,6 +81,52 @@ fn cargo_gate_admission_keeps_unmanaged_builds_and_probe_errors_closed() {
     let busy = resources_busy_with_lock(&[], &[], &Processes::new(), T, &error_home).unwrap();
     assert_eq!(busy, ["cargo".to_string()].into_iter().collect());
 }
+#[test]
+fn cargo_gate_probe_rereads_dynamic_ceiling_and_keeps_legacy_installations() {
+    let (_temp, home, gate) = cargo_gate_fixture();
+    let held: Vec<_> = (0..3)
+        .map(|slot| {
+            ByteLock::acquire(
+                &gate.join(format!("cargo-build.lock.{slot}")),
+                Duration::ZERO,
+            )
+            .unwrap()
+            .unwrap()
+        })
+        .collect();
+    let busy = || {
+        resources_busy_with_lock(&[], &[], &Processes::new(), T, &home)
+            .unwrap()
+            .contains("cargo")
+    };
+    assert!(busy());
+    if std::thread::available_parallelism().unwrap().get() >= 4 {
+        fs::write(
+            gate.join(cc_job_policy::cargo::CONFIG_FILE),
+            r#"{"max_slots":4}"#,
+        )
+        .unwrap();
+        assert!(!busy());
+    }
+    fs::write(
+        gate.join(cc_job_policy::cargo::CONFIG_FILE),
+        r#"{"max_slots":2}"#,
+    )
+    .unwrap();
+    assert!(busy());
+    fs::write(gate.join(cc_job_policy::cargo::CONFIG_FILE), "{invalid").unwrap();
+    assert!(busy());
+    fs::write(
+        gate.join(cc_job_policy::cargo::CONFIG_FILE),
+        r#"{"max_slots":4,"pause_at_cpu_percent":50}"#,
+    )
+    .unwrap();
+    assert!(
+        busy(),
+        "scheduler must reject the same invalid thresholds as the gate"
+    );
+    drop(held);
+}
 
 #[test]
 fn cargo_gate_admission_probe_failure_still_dispatches_unrelated_work() {

@@ -5,7 +5,7 @@ test-threads = 10
 max-threads = 1
 
 [[profile.default.overrides]]
-filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_gate_tests::) | test(end_to_end::))'
+filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_) | test(end_to_end::) | binary(cargo_admission))'
 test-group = 'process-boundary'
 
 # These real Windows child-process tests assert short wall-clock lease deadlines.

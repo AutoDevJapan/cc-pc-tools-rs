@@ -736,10 +736,11 @@ impl Context {
         ] {
             env.retain(|key, _| !key.eq_ignore_ascii_case(name));
         }
-        let slots = crate::gate::slots(&env).unwrap_or(3);
         env.insert(
             "CARGO_BUILD_JOBS".into(),
-            crate::gate::jobs_limit(self.rt.cores(), slots).to_string(),
+            // Admission recalculates this at execution time; never bake an
+            // inherited machine slot setting into a supervisor's environment.
+            crate::gate::jobs_limit(self.rt.cores(), 1).to_string(),
         );
         if let Some(real) = self.rt.which("cargo.exe") {
             env.insert("CODEX_JOBS_REAL_CARGO".into(), real);

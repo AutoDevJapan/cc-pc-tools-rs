@@ -175,6 +175,19 @@ pub fn valid_effort(e: &str) -> bool {
         "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
     )
 }
+/// Explicit ToDo settings survive recovery; an unspecified field inherits its source.
+/// Keep invalid explicit values too, so validation rejects them instead of switching models.
+pub fn recovery_setting(item: &Value, source: &Value, field: &str) -> Value {
+    [item, source]
+        .into_iter()
+        .find_map(|row| {
+            row[field]
+                .as_str()
+                .filter(|value| !value.is_empty())
+                .map(|_| row[field].clone())
+        })
+        .unwrap_or(Value::Null)
+}
 pub fn pick_model(http: &mut dyn Http, task: &str) -> Result<Value> {
     let result=http.request("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":[]})),false,20).and_then(|v|{if !["model","effort","task_type","reason"].iter().all(|k|!s(&v[k]).trim().is_empty())||!valid_model(s(&v["model"]))||!valid_effort(s(&v["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&v["task_type"])){return Err(Error("ValueError"));}let reason=safe_text(s(&v["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let profile=cc_ask::job_policy::model_profile("",s(&v["task_type"]));let model=profile.model;let mut selected=json!({"model":model,"effort":profile.effort,"task_type":v["task_type"],"reason":reason,"source":v.get("source").unwrap_or(&json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}remove(&mut selected,"exclude");Ok(selected)});
     match result {

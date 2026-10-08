@@ -1308,8 +1308,8 @@ pub fn delegation_request(item: &Value, pending: &Value) -> Value {
         "resume_session":if pending["workspace"]["isolate_worktree"] == true { None } else { session(&pending["job"]) },
         "cwd":pending["workspace"]["cwd"],
         "isolate_worktree":pending["workspace"]["isolate_worktree"] != false,
-        "model":pending["job"]["model"],
-        "effort":pending["job"]["effort"]
+        "model":cc_scheduler::backend::recovery_setting(item, &pending["job"], "model"),
+        "effort":cc_scheduler::backend::recovery_setting(item, &pending["job"], "effort")
     })
 }
 /// A dead parent doesn't erase ownership; a reused PID or another live owner does.

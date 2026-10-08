@@ -1585,6 +1585,38 @@ fn test_explicit_model_effort_skip_picker() {
     assert_eq!(f.e.backend.pick_count, 0);
     assert_eq!(f.e.backend.launched.len(), 1);
 }
+#[test]
+fn todo1842_explicit_model_overrides_saved_selection() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6-astra");
+    row["effort"] = json!("high");
+    row["scheduler"] = json!({"selection":{"model":"gpt-6.1-sol","effort":"max"}});
+    f.put(row);
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let selection = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6-astra");
+    assert_eq!(selection["effort"], "high");
+    assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn todo1842_unavailable_explicit_model_is_retained_without_launch() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6.1-luna");
+    row["effort"] = json!("high");
+    f.put(row);
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
+    );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
+    assert_eq!(f.get(1)["status"], "todo");
+}
 struct GitFake {
     calls: Vec<Invocation>,
     existing: Option<(PathBuf, String, PathBuf)>,
@@ -1996,7 +2028,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
     assert_eq!(launched[5][0], "tasklist");
 }
 #[test]
-fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
+fn test_hidden_wrapper_runs_rust_tick_with_window_style_zero() {
     let text = include_str!("../deployment/discord-ask-tick-hidden.vbs");
     let lines: Vec<_> = text
         .lines()
@@ -2069,7 +2101,7 @@ fn test_worker_launch_uses_windowless_existing_launcher() {
     assert_eq!(NO_WINDOW, 0x08000000);
 }
 #[test]
-fn test_unknown_model_is_not_launched() {
+fn test_unknown_explicit_model_is_not_launched() {
     let mut f = Fixture::new();
     assert!(!f.e.backend.model_exists("gpt-6.1-luna"));
     assert!(f.e.backend.model_exists("gpt-6-luna"));
@@ -2077,12 +2109,13 @@ fn test_unknown_model_is_not_launched() {
     row["model"] = json!("gpt-6.1-luna");
     row["effort"] = json!("high");
     f.put(row);
-    f.dispatch();
-    assert_eq!(f.e.backend.launched.len(), 1);
     assert_eq!(
-        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
-        "mock-model"
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
     );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
 }
 
 #[test]

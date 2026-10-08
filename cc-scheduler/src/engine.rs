@@ -1,10 +1,10 @@
 use crate::{
-    backend::{safe_text, valid_effort, valid_model, Backend},
+    backend::{Backend, safe_text, valid_effort, valid_model},
     common::*,
     policy::*,
 };
 use cc_job_policy::todo_wait;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -794,16 +794,24 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             } else {
                 self.backend.pick(&task)?
             };
-            for k in ["model", "effort"] {
-                if truth(&item[k]) {
-                    selection[k] = item[k].clone();
-                }
+        }
+        // A cached selection is only a default, never authority over an explicit ToDo.
+        for k in ["model", "effort"] {
+            if truth(&item[k]) {
+                selection[k] = item[k].clone();
             }
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
+            if truth(&item["model"]) {
+                self.log(
+                    "WARNING",
+                    "指定モデルを利用できないため、指定を保持して再試行します。",
+                )?;
+                return Err(Error("ModelUnavailable"));
+            }
             // An agent asked for a model OpenCodex does not serve (2026-10-01: "gpt-6.1-luna" failed 4 times and
             // reached the owner as a question). Let Jev pick an existing model instead of failing again.
             self.log(

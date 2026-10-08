@@ -8,6 +8,13 @@ max-threads = 1
 filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_gate_tests::) | test(end_to_end::))'
 test-group = 'process-boundary'
 
+# These real Windows child-process tests assert short wall-clock lease deadlines.
+# Share the existing process slot so unrelated process-boundary tests cannot
+# delay their startup/cleanup past the command budget on a busy PC.
+[[profile.default.overrides]]
+filter = 'package(cc-live) & (test(running_child_yields_to_a_waiter_arriving_after_it_started) | test(quiet_running_child_is_not_cut_off_at_the_contention_lease) | test(departed_waiter_cancels_the_competition_deadline_during_a_running_child))'
+test-group = 'process-boundary'
+
 [[profile.default.overrides]]
 filter = 'package(cc-ask) & binary(tick_bounds)'
 threads-required = 'num-test-threads'

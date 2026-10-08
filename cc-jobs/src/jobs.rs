@@ -152,13 +152,111 @@ impl Context {
         unreachable!()
     }
     pub fn save(&self, job: &Value) -> Result<()> {
-        self.write_json(&self.job_dir(s(job, "id")).join("job.json"), job)
+        let job = self.display_snapshot(job.clone());
+        self.write_json(&self.job_dir(s(&job, "id")).join("job.json"), &job)
+    }
+    fn display_snapshot(&self, job: Value) -> Value {
+        match self.apply_display_rename(job.clone()) {
+            Ok(job) => job,
+            Err(error) => {
+                static REPORTED: std::sync::LazyLock<std::sync::Mutex<HashSet<PathBuf>>> =
+                    std::sync::LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
+                let path = self.job_dir(s(&job, "id"));
+                if REPORTED
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(path)
+                {
+                    self.rt.diagnostic(&format!(
+                        "表示名の改名規則を読めません。実行状態は保持します: {}",
+                        redact_local_log_secrets(&error.message, &self.rt.env())
+                    ));
+                }
+                job
+            }
+        }
+    }
+    // A durable rule keeps old supervisors' in-memory snapshots from restoring
+    // historical display names. It never changes execution identifiers or paths.
+    fn apply_display_rename(&self, mut job: Value) -> Result<Value> {
+        let path = self.job_dir(s(&job, "id")).join("display-name.json");
+        // Most jobs have no rename rule. Do not introduce a second snapshot
+        // read/retry budget into their existing read and admission behavior.
+        match fs::metadata(&path) {
+            Ok(_) => (),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(job),
+            Err(e) => return Err(Error::file_io("inspect display rename", &path, e)),
+        }
+        let bytes = match self.read_file(&path) {
+            Ok(bytes) => bytes,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(job),
+            Err(e) => return Err(Error::file_io("read display rename", &path, e)),
+        };
+        let rule: Value = serde_json::from_slice(&bytes).map_err(|e| Error::new(e.to_string()))?;
+        let from = rule["from"]
+            .as_str()
+            .filter(|s| !s.trim().is_empty())
+            .ok_or_else(|| Error::new("invalid display rename source"))?;
+        let to = rule["to"]
+            .as_str()
+            .filter(|s| !s.trim().is_empty())
+            .ok_or_else(|| Error::new("invalid display rename target"))?;
+        if s(&job, "project") != from && s(&job, "project") != to {
+            return Err(Error::new("job project conflicts with its display rename"));
+        }
+        job["project"] = json!(to);
+        for key in ["name", "task_title"] {
+            if let Some(text) = job.get(key).and_then(Value::as_str) {
+                let mut text = cc_task_title::replace_display_names(text, &[from.into()], to);
+                if to == cc_task_title::PRODUCT_NAME {
+                    text = cc_task_title::canonical_text(&text);
+                }
+                job[key] = json!(text);
+            }
+        }
+        Ok(job)
+    }
+    pub fn rename_display_project(&self, jid: &str, from: &str, to: &str) -> Result<Value> {
+        if !crate::queue::valid_job_id(jid) || from.trim().is_empty() || to.trim().is_empty() {
+            return Err(Error::new("invalid job id or display project name"));
+        }
+        let _state = self.job_lock(jid, "state.lock")?;
+        let mut job = self.load(jid)?;
+        if s(&job, "id") != jid || (s(&job, "project") != from && s(&job, "project") != to) {
+            return Err(Error::new(
+                "job does not belong to the selected display project",
+            ));
+        }
+        for key in ["name", "task_title"] {
+            if job.get(key).is_some_and(|v| !v.is_string()) {
+                return Err(Error::new("invalid job display field"));
+            }
+        }
+        let before = job.clone();
+        let path = self.job_dir(jid).join("display-name.json");
+        // Keep the original source on a repeated invocation, so legacy writers
+        // can still be read through the durable rule.
+        let rule = json!({"from":from,"to":to});
+        if path.exists() && self.read_json(&path)? != rule {
+            return Err(Error::new("job already has a different display rename"));
+        }
+        self.write_json(&path, &rule)?;
+        job = self.apply_display_rename(job)?;
+        // Legacy live supervisors do not lock every progress write. Their
+        // execution snapshot must never be overwritten from this CLI's copy.
+        // The rule is authoritative immediately; updated writers materialize
+        // it on their next save. Terminal snapshots are protected by state.lock.
+        if !LIVE.contains(&s(&job, "status")) {
+            self.save(&job)?;
+        }
+        Ok(json!({"project":to,"jobs_changed":usize::from(before != job)}))
     }
     /// job.json as a dict, or None if it is missing, deleted meanwhile or broken.
     pub fn try_load(&self, jid: &str) -> Option<Value> {
         self.read_json(&self.job_dir(jid).join("job.json"))
             .ok()
             .filter(|v| v.is_object() && v.get("id").is_some() && v.get("status").is_some())
+            .map(|v| self.display_snapshot(v))
     }
     pub fn load(&self, jid: &str) -> Result<Value> {
         let path = self.job_dir(jid).join("job.json");
@@ -172,7 +270,7 @@ impl Context {
         if !job.is_object() || job.get("id").is_none() || job.get("status").is_none() {
             return Err(Error::new(format!("invalid job record {}", path.display())));
         }
-        Ok(job)
+        Ok(self.display_snapshot(job))
     }
     pub fn list_jobs(&self, skip: &HashSet<String>) -> Vec<Value> {
         let mut jobs = vec![];

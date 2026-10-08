@@ -9,6 +9,9 @@ use std::{
 };
 pub fn help_text(command: &str) -> &'static str {
     match command {
+        "rename-project" => {
+            "usage: codex_jobs.exe rename-project <id> --from <name> --to <name>\n\nRename only this job's project, name and task_title under state.lock. Execution paths and identifiers are preserved.\n"
+        }
         "run" => include_str!("../tests/fixtures/help-run.txt"),
         "status" => include_str!("../tests/fixtures/help-status.txt"),
         "tail" => include_str!("../tests/fixtures/help-tail.txt"),
@@ -89,6 +92,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "adjust-limit",
         "recover-children",
         "cleanup-supervisors",
+        "rename-project",
     ]
     .contains(&cmd.as_str())
     {
@@ -159,6 +163,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 "cleanup-supervisors" => name == "apply",
+                "rename-project" => ["from", "to"].contains(&name.as_str()),
                 _ => false,
             };
             if !allowed {
@@ -197,7 +202,15 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 }
             }
         } else if a.id.is_empty()
-            && ["tail", "wait", "cancel", "rate", "_supervise"].contains(&cmd.as_str())
+            && [
+                "tail",
+                "wait",
+                "cancel",
+                "rate",
+                "_supervise",
+                "rename-project",
+            ]
+            .contains(&cmd.as_str())
         {
             a.id = arg.clone();
         } else {
@@ -253,7 +266,17 @@ pub fn parse(args: &[String]) -> Result<Args> {
             }
         }
     }
-    if ["tail", "wait", "cancel", "rate", "_supervise"].contains(&cmd.as_str()) && a.id.is_empty() {
+    if [
+        "tail",
+        "wait",
+        "cancel",
+        "rate",
+        "_supervise",
+        "rename-project",
+    ]
+    .contains(&cmd.as_str())
+        && a.id.is_empty()
+    {
         return Err(Error {
             code: 2,
             message: format!(
@@ -364,6 +387,18 @@ impl Context {
         }
         let a = parse(args).map_err(with_usage)?;
         match a.cmd.as_str() {
+            "rename-project" => {
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.rename_display_project(
+                        &a.id,
+                        a.required("from")?,
+                        a.required("to")?
+                    )?)
+                )?;
+                Ok(0)
+            }
             "run" => self.cmd_run(&a, out, err),
             "status" => self.cmd_status(&a, out),
             "cleanup-supervisors" => {
@@ -664,7 +699,18 @@ impl Context {
             std::str::from_utf8(&bytes).unwrap()
         ));
         job["task_title"] = json!(a.value("task-title"));
-        job["project"] = json!(a.value("project"));
+        job["project"] = json!(a.value("project").map(cc_task_title::canonical_project));
+        let inferred = cc_task_title::project_from_folder(s(&job, "cwd"));
+        if s(&job, "project").is_empty() && inferred == cc_task_title::PRODUCT_NAME {
+            job["project"] = json!(inferred);
+        }
+        if s(&job, "project") == cc_task_title::PRODUCT_NAME {
+            for key in ["name", "task_title"] {
+                if let Some(text) = job[key].as_str() {
+                    job[key] = json!(cc_task_title::canonical_text(text));
+                }
+            }
+        }
         job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
         self.record_work_owner(&mut job);
         if !job["work_owner"]["pr"].is_u64()

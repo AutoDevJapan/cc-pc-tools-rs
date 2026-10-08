@@ -2,6 +2,171 @@ use cc_jobs::notify::*;
 use cc_jobs::*;
 
 #[test]
+fn display_project_rename_keeps_execution_data_and_survives_stale_supervisor_snapshots() {
+    let t = Test::new();
+    let former = concat!("x", "LIFE");
+    let original = t.put(job(json!({"id":"rename-target","project":former,"name":format!("{former}の改修"),"task_title":"Re-Xの画面を直す","cwd":format!("C:/{former}-wt/agent-1"),"status":"running","pid":123,"todo_id":2053,"unknown":{"old":"keep"},"progress":70})));
+    let unrelated = t.put(job(
+        json!({"id":"rename-other","project":"other","name":former}),
+    ));
+    let (result, output, _) = t.cli(&[
+        "rename-project",
+        "rename-target",
+        "--from",
+        former,
+        "--to",
+        "Re:X",
+    ]);
+    assert_eq!(result.unwrap(), 0);
+    assert_eq!(
+        serde_json::from_str::<Value>(&output).unwrap()["jobs_changed"],
+        1
+    );
+    let mut expected = original.clone();
+    expected["project"] = json!("Re:X");
+    expected["name"] = json!("Re:Xの改修");
+    expected["task_title"] = json!("Re:Xの画面を直す");
+    assert_eq!(t.ctx.load("rename-target").unwrap(), expected);
+    assert_eq!(t.ctx.load("rename-other").unwrap(), unrelated);
+    assert_eq!(
+        t.ctx
+            .read_json(&t.ctx.job_dir("rename-target").join("job.json"))
+            .unwrap(),
+        original,
+        "live execution snapshots must not be overwritten by metadata migration"
+    );
+    let mut stale = original;
+    stale["progress"] = json!(80);
+    // Simulate an already-running old binary writing its original display names.
+    t.ctx
+        .write_json(&t.ctx.job_dir("rename-target").join("job.json"), &stale)
+        .unwrap();
+    expected["progress"] = json!(80);
+    assert_eq!(t.ctx.load("rename-target").unwrap(), expected);
+    assert_eq!(t.ctx.try_load("rename-target").unwrap(), expected);
+    // An updated supervisor carries the same durable rule into its next write.
+    t.ctx.save(&stale).unwrap();
+    assert_eq!(
+        t.ctx
+            .read_json(&t.ctx.job_dir("rename-target").join("job.json"))
+            .unwrap(),
+        expected
+    );
+    assert!(
+        t.cli(&[
+            "rename-project",
+            "rename-target",
+            "--from",
+            former,
+            "--to",
+            "Re:X"
+        ])
+        .0
+        .is_ok()
+    );
+    assert_eq!(t.ctx.load("rename-target").unwrap(), expected);
+}
+#[test]
+fn display_project_rename_rejects_wrong_project_without_writing() {
+    let t = Test::new();
+    let original = t.put(job(json!({"id":"rename-target","project":"other"})));
+    assert!(
+        t.cli(&[
+            "rename-project",
+            "rename-target",
+            "--from",
+            "source",
+            "--to",
+            "Re:X"
+        ])
+        .0
+        .is_err()
+    );
+    assert_eq!(t.ctx.load("rename-target").unwrap(), original);
+    assert!(
+        !t.ctx
+            .job_dir("rename-target")
+            .join("display-name.json")
+            .exists()
+    );
+    assert!(
+        t.cli(&[
+            "rename-project",
+            "../rename-target",
+            "--from",
+            "other",
+            "--to",
+            "Re:X"
+        ])
+        .0
+        .is_err()
+    );
+}
+#[test]
+fn corrupt_display_rule_never_hides_a_running_job_or_blocks_state_saving() {
+    let t = Test::new();
+    let original = t.put(job(
+        json!({"id":"rename-target","project":"Re:X","status":"running","name":"Re:Xの作業"}),
+    ));
+    fs::write(
+        t.ctx.job_dir("rename-target").join("display-name.json"),
+        "{broken",
+    )
+    .unwrap();
+    assert_eq!(t.ctx.load("rename-target").unwrap(), original);
+    assert_eq!(t.ctx.try_load("rename-target").unwrap(), original);
+    assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
+    let mut updated = original;
+    updated["progress"] = json!(90);
+    t.ctx.save(&updated).unwrap();
+    assert_eq!(t.ctx.load("rename-target").unwrap(), updated);
+    assert!(!t.rt.diagnostics.lock().unwrap().is_empty());
+}
+#[test]
+fn new_jobs_normalize_explicit_and_path_inferred_product_display_metadata() {
+    for explicit in [false, true] {
+        let t = Test::new();
+        let former = concat!("x", "LIFE");
+        let cwd = t.ctx.root.join(format!("{former}-wt")).join("agent-1");
+        fs::create_dir_all(&cwd).unwrap();
+        let cwd = cwd.to_string_lossy();
+        let mut args = vec!["--cwd", &cwd, "--task-title", "Re-Xの作業"];
+        if explicit {
+            args.extend(["--project", former]);
+        }
+        assert_eq!(t.run(&args, b"work").unwrap(), 0);
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0]["project"], "Re:X");
+        assert_eq!(jobs[0]["task_title"], "Re:Xの作業");
+        assert_eq!(jobs[0]["cwd"], cwd.as_ref());
+    }
+}
+#[test]
+fn display_project_rename_reads_the_latest_snapshot_after_state_lock() {
+    let t = Test::new();
+    t.put(job(
+        json!({"id":"rename-target","project":"source","name":"sourceの作業","progress":20}),
+    ));
+    let lock = t.ctx.job_lock("rename-target", "state.lock").unwrap();
+    let ctx = t.ctx.clone();
+    let worker =
+        std::thread::spawn(move || ctx.rename_display_project("rename-target", "source", "Re:X"));
+    std::thread::sleep(Duration::from_millis(250));
+    assert!(!worker.is_finished(), "rename ignored the job state lock");
+    let mut updated = t.ctx.load("rename-target").unwrap();
+    updated["progress"] = json!(90);
+    updated["activity"] = json!("concurrent update");
+    t.ctx.save(&updated).unwrap();
+    drop(lock);
+    worker.join().unwrap().unwrap();
+    let renamed = t.ctx.load("rename-target").unwrap();
+    assert_eq!(renamed["project"], "Re:X");
+    assert_eq!(renamed["progress"], 90);
+    assert_eq!(renamed["activity"], "concurrent update");
+}
+
+#[test]
 fn cargo_gate_windows_sys_exit_matches_python_long_conversion() {
     for (code, expected) in [
         (0, 0),

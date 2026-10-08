@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
@@ -446,7 +446,7 @@ pub fn token() -> Result<String> {
     let value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     #[cfg(windows)]
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         if let Ok(key) = RegKey::predef(HKEY_CURRENT_USER).open_subkey("Environment") {
             value = key.get_value("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
         }
@@ -1312,7 +1312,7 @@ pub fn launch_job_with_session(
             .and_then(|v| v.split_once('】'))
             .map(|(project, _)| project.to_owned())
             .unwrap_or_else(|| crate::task_title::project_from_folder(cwd.unwrap_or(REQUEST_CWD))),
-        "--model".into(),
+        "--auto-model".into(),
         s(&selection["model"]).into(),
         "--effort".into(),
         s(&selection["effort"]).into(),
@@ -1475,9 +1475,11 @@ pub fn owner_replies(ctx: &mut Context, question: &Value, owner: &str) -> Result
     owner_messages_after(ctx, s(&question["thread_id"]), s(&question["after"]), owner)
 }
 pub fn acknowledge_reply(question: &mut Value, message_id: &str) {
-    question["seen_reply"] = json!(n(&question["seen_reply"])
-        .max(message_id.parse().unwrap_or(0))
-        .to_string());
+    question["seen_reply"] = json!(
+        n(&question["seen_reply"])
+            .max(message_id.parse().unwrap_or(0))
+            .to_string()
+    );
 }
 
 /// Open question replies belong to resume. A delayed inbox must also skip answers
@@ -1578,12 +1580,14 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
             }
             if let Some(first) = replies.keys().next() {
                 let old = n(&q["first_owner_reply"]);
-                q["first_owner_reply"] = json!(if old > n(&q["after"]) {
-                    old.min(*first)
-                } else {
-                    *first
-                }
-                .to_string());
+                q["first_owner_reply"] = json!(
+                    if old > n(&q["after"]) {
+                        old.min(*first)
+                    } else {
+                        *first
+                    }
+                    .to_string()
+                );
             }
             q["owner_replies"] = json!(replies.into_values().collect::<Vec<_>>());
             if latest >= n(&q["answered_reply"]) {
@@ -1657,7 +1661,7 @@ pub fn receive_answers(
     index: usize,
     messages: &[Value],
 ) -> Result<()> {
-    use crate::project::{question_project, ProjectNames};
+    use crate::project::{ProjectNames, question_project};
     let owner = ctx.owner();
     let tid = s(&state["questions"][index]["thread_id"]).to_owned();
     record_owner_answers(state, &tid, messages, &owner);

@@ -20,6 +20,20 @@ const SUMMARY_LIMIT: usize = 24 * 1024;
 const MAX_SHORTEN_ATTEMPTS: i64 = 2;
 
 impl Context {
+    /// Inventory can start a CLI and wait up to 20 seconds. Do this before
+    /// taking the admission gate, retaining only validated server names.
+    pub(crate) fn prefetch_context_inventory(&self, job: &Value) -> Result<()> {
+        let mut running = job.clone();
+        running["status"] = json!("running");
+        if !self.context_limit_reached(&running) {
+            return Ok(());
+        }
+        let servers = self
+            .rt
+            .summary_mcp_servers(s(job, "codex"), std::path::Path::new(s(job, "cwd")))?;
+        self.write_json(&self.job_dir(s(job, "id")).join("context-inventory.json"),
+            &json!({"started_at":job["started_at"],"cwd":job["cwd"],"codex":job["codex"],"servers":servers}))
+    }
     pub(crate) fn context_limit_reached(&self, job: &Value) -> bool {
         let Ok(cfg) = self.queue_config() else {
             return false;
@@ -71,9 +85,18 @@ impl Context {
     }
 
     pub(crate) fn prepare_context_summary(&self, job: &mut Value, session: &str) -> Result<()> {
-        let servers = self
-            .rt
-            .summary_mcp_servers(s(job, "codex"), std::path::Path::new(s(job, "cwd")))?;
+        let inventory =
+            self.read_json(&self.job_dir(s(job, "id")).join("context-inventory.json"))?;
+        let source = self.load(s(job, "id"))?;
+        if inventory["started_at"] != source["started_at"]
+            || inventory["cwd"] != job["cwd"]
+            || inventory["codex"] != job["codex"]
+        {
+            return Err(Error::new(
+                "context inventory changed; retry before taking queue gate",
+            ));
+        }
+        let servers: Vec<String> = serde_json::from_value(inventory["servers"].clone())?;
         let dir = self.job_dir(s(job, "id"));
         let prior = fs::read_to_string(dir.join("yield-resume.md"))?;
         let completed = self.context_completed_tool(job)?;

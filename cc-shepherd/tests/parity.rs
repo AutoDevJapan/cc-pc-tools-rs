@@ -388,6 +388,8 @@ fn failed_command_exit_does_not_change_original_launcher_behavior() {
     );
     assert!(c.args.iter().any(|a| a == "danger-full-access"));
     assert!(c.args.iter().any(|a| a == "gpt-6.1-sol"));
+    assert!(c.args.iter().any(|a| a == "--auto-model"));
+    assert!(!c.args.iter().any(|a| a == "--model"));
     assert_eq!(
         c.args[c.args.iter().position(|v| v == "--task-title").unwrap() + 1],
         "捕虜を返還できない問題を修正する（レビュー・仕上げ）"

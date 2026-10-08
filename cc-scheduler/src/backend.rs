@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -41,7 +41,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -298,7 +298,11 @@ impl RealBackend {
                 s(&item["project"]),
                 "--todo-id",
                 &item["id"].to_string(),
-                "--model",
+                if truth(&item["model"]) {
+                    "--model"
+                } else {
+                    "--auto-model"
+                },
                 s(&selection["model"]),
                 "--effort",
                 s(&selection["effort"]),

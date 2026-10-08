@@ -100,6 +100,11 @@ pub struct LimitState {
     pub stable_since: f64,
     pub max_running: usize,
     pub reason: String,
+    pub claude_max_running: usize,
+    pub claude_stable_since: f64,
+    pub claude_last_429_at: f64,
+    pub claude_recent_429_count: usize,
+    pub claude_reason: String,
     pub mode: String,
     pub settings: Option<AdaptiveConfig>,
     pub machine: MachineSample,
@@ -408,7 +413,113 @@ pub fn decide(
     state
 }
 
+/// Run the same resource/429/availability controls for Claude using its own
+/// quota and quiet period, without feeding Codex spending into that lane.
+#[allow(clippy::too_many_arguments)]
+pub fn decide_providers(
+    cfg: &AdaptiveConfig,
+    state: LimitState,
+    sample: MachineSample,
+    now: f64,
+    queued: usize,
+    codex_recent: usize,
+    codex_latest: f64,
+    claude_recent: usize,
+    claude_latest: f64,
+) -> LimitState {
+    let mut lane = state.clone();
+    lane.max_running = if state.claude_max_running > 0 {
+        state.claude_max_running
+    } else {
+        cfg.min_running
+    };
+    lane.stable_since = state.claude_stable_since;
+    lane.last_429_at = state.claude_last_429_at;
+    lane.openai = vec![state.anthropic.clone()];
+    lane.pace_adjusted_at = 0.;
+    let lane = decide(
+        cfg,
+        lane,
+        sample.clone(),
+        now,
+        queued,
+        claude_recent,
+        claude_latest,
+    );
+    let mut state = decide(cfg, state, sample, now, queued, codex_recent, codex_latest);
+    state.claude_max_running = lane.max_running;
+    state.claude_stable_since = lane.stable_since;
+    state.claude_last_429_at = lane.last_429_at;
+    state.claude_recent_429_count = lane.recent_429_count;
+    state.claude_reason = lane.reason.replace("Codex", "Claude");
+    state
+}
+
 impl Context {
+    /// The hardware ceiling is shared; only Codex has the weekly pace ceiling.
+    pub(crate) fn provider_limits(&self, cfg: &QueueConfig) -> (usize, usize, usize, bool) {
+        let fallback = (cfg.max_running, cfg.max_running, cfg.max_running, false);
+        let Some(adaptive) = cfg
+            .adaptive
+            .as_ref()
+            .filter(|_| cfg.fixed_max_running.is_none())
+        else {
+            return fallback;
+        };
+        let Ok(state) = self.limit_state() else {
+            return fallback;
+        };
+        let now = self.rt.epoch();
+        if state.mode != "auto"
+            || state.checked_at <= 0.
+            || now < state.checked_at
+            || now - state.checked_at > adaptive.stale_after_seconds()
+        {
+            return fallback;
+        }
+        let claude = if state.claude_max_running > 0 {
+            state
+                .claude_max_running
+                .clamp(adaptive.min_running, adaptive.max_running)
+        } else {
+            adaptive.min_running
+        };
+        (
+            cfg.max_running.max(claude),
+            cfg.max_running,
+            claude,
+            state.preferred_provider.as_deref() == Some("anthropic"),
+        )
+    }
+
+    pub(crate) fn launch_model(&self, job: &Value, prefer_claude: bool) -> String {
+        // Old records have no provenance: keep their model, as with explicit jobs.
+        // Once an attempt has a session, retries/resumes must retain its model.
+        if !prefer_claude
+            || job["model_explicit"] != false
+            || !s(job, "thread_id").is_empty()
+            || !s(job, "resume_session").is_empty()
+            || !s(job, "context_phase").is_empty()
+            || truth(&job["first_started_at"])
+        {
+            return s(job, "model").to_owned();
+        }
+        // Haiku is limited to an explicitly classified single-file read task.
+        // Multi-file reviews, research and implementation require Sonnet.
+        if s(job, "sandbox") == "read-only"
+            && [
+                "single_file_review",
+                "single_file_summary",
+                "single_file_check",
+            ]
+            .contains(&s(job, "task_type"))
+        {
+            "anthropic/claude-haiku-5-5".into()
+        } else {
+            "anthropic/claude-sonnet-5-5".into()
+        }
+    }
+
     fn limit_state(&self) -> Result<LimitState> {
         let path = self.root.join("queue-limit-state.json");
         match self.read_file(&path) {
@@ -537,6 +648,8 @@ impl Context {
         let previous = cfg.max_running;
         if let Some(fixed) = cfg.fixed_max_running {
             state.max_running = fixed;
+            state.claude_max_running = fixed;
+            state.preferred_provider = None;
             state.mode = "fixed".into();
             state.reason = "手動で固定".into();
             state.checked_at = now;
@@ -585,16 +698,23 @@ impl Context {
                 .count();
             let mut recent = 0;
             let mut latest: f64 = 0.;
+            let mut claude_recent = 0;
+            let mut claude_latest: f64 = 0.;
             for job in &jobs {
+                let (recent, latest) = if s(job, "model").starts_with("anthropic/") {
+                    (&mut claude_recent, &mut claude_latest)
+                } else {
+                    (&mut recent, &mut latest)
+                };
                 if let Some(times) = job["rate_limit_times"].as_array() {
                     for time in times
                         .iter()
                         .filter_map(Value::as_f64)
                         .filter(|at| *at <= now)
                     {
-                        latest = latest.max(time);
+                        *latest = latest.max(time);
                         if now - time <= adaptive.quiet_seconds as f64 {
-                            recent += 1;
+                            *recent += 1;
                         }
                     }
                 } else if s(job, "status") != "succeeded"
@@ -606,14 +726,24 @@ impl Context {
                     let time =
                         parse_iso(s(job, "finished_at")).or_else(|| parse_iso(s(job, "queued_at")));
                     if let Some(at) = time.filter(|at| *at <= now) {
-                        latest = latest.max(at);
+                        *latest = latest.max(at);
                         if now - at <= adaptive.quiet_seconds as f64 {
-                            recent += 1;
+                            *recent += 1;
                         }
                     }
                 }
             }
-            state = decide(adaptive, state, machine, now, queued, recent, latest);
+            state = decide_providers(
+                adaptive,
+                state,
+                machine,
+                now,
+                queued,
+                recent,
+                latest,
+                claude_recent,
+                claude_latest,
+            );
         }
         // Keep a finite journal: roughly one day at the default cadence.
         let journal = self.root.join("queue-limit-history.json");

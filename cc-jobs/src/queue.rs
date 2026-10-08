@@ -54,19 +54,38 @@ impl Context {
         self.write_json(&path, &json!({"sequence":sequence}))?;
         Ok(sequence)
     }
-    /// Called under the admission gate. A separate ledger survives writes by
-    /// supervisors deployed before tool-boundary fairness existed.
-    fn maintain_yields(&self, jobs: &[Value]) -> Result<()> {
+    /// Called WITHOUT the global gate. Slow work (pausing, stopping, restarting)
+    /// runs under each job's own yield reservation; only the short recovery and
+    /// final commit steps take the gate, with bounded holds.
+    fn maintain_tool_yields(&self, jobs: &[Value]) {
         for job in jobs {
-            if !self.tool_handoff_pending(job)
-                && let Err(error) = self
-                    .rt
-                    .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))
+            if s(job, "status") == "succeeded"
+                && job["queue_fairness_version"].as_u64().unwrap_or(0) < 1
+                && let Err(error) = self.prefetch_context_inventory(job)
             {
-                self.yield_diagnostic(&error.into());
+                self.yield_diagnostic(&error);
                 continue;
             }
-            let result = self.recover_tool_yield(job).and_then(|recovered| {
+            let recovered = {
+                let Some(_reservation) = self.yield_reservation(s(job, "id")) else {
+                    continue;
+                };
+                if !self.tool_handoff_pending(job)
+                    && let Err(error) = self
+                        .rt
+                        .recover_paused(&self.job_dir(s(job, "id")).join("yield-paused.json"))
+                {
+                    self.yield_diagnostic(&error.into());
+                    continue;
+                }
+                if self.tool_handoff_pending(job) {
+                    self.queue_lock_for("recover_tool_yield", std::time::Duration::from_secs(60))
+                        .and_then(|_gate| self.recover_tool_yield(job))
+                } else {
+                    Ok(false)
+                }
+            };
+            let result = recovered.and_then(|recovered| {
                 if recovered
                     || (job["queue_fairness_version"] == 3 && !self.context_rotation_due(job, jobs))
                 {
@@ -79,6 +98,11 @@ impl Context {
                 self.yield_diagnostic(&error);
             }
         }
+    }
+    /// Called under the admission gate: only the short legacy ledger remains. A
+    /// separate ledger survives writes by supervisors deployed before
+    /// tool-boundary fairness existed.
+    fn maintain_yields(&self, jobs: &[Value]) -> Result<()> {
         let path = self.jobs.join(".queue-yields.json");
         let mut ledger = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice::<HashMap<String, Value>>(&bytes)?,
@@ -739,11 +763,13 @@ impl Context {
     }
 
     /// The global gate covers admission and registration (including manual resumes).
+    #[track_caller]
     pub fn queue_lock(&self) -> Result<FileLock> {
-        fs::create_dir_all(&self.jobs)?;
-        let path = self.jobs.join(".queue.lock");
-        FileLock::acquire_queue(&path)
-            .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
+        let caller = std::panic::Location::caller();
+        self.queue_lock_for(
+            &format!("{}:{}", caller.file(), caller.line()),
+            std::time::Duration::from_secs(60),
+        )
     }
 
     /// Return the state lock with a durably reserved slot, or None while waiting.
@@ -755,13 +781,28 @@ impl Context {
     pub fn admit_configured(&self, jid: &str, cfg: &QueueConfig) -> Result<Option<FileLock>> {
         // The separate minute task samples; admission only reads durable state.
         let mut cfg = cfg.clone();
-        let _gate = self.queue_lock()?;
+        // Slow yield work happens before the gate, from a lock-free snapshot.
+        if let Some(snapshot) = self.admission_snapshot() {
+            self.maintain_tool_yields(&snapshot);
+        }
+        let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
         cfg.max_running = self.effective_limit(&cfg)?;
         let jobs = self.admission_jobs()?;
         if let Err(error) = self.maintain_yields(&jobs) {
             self.yield_diagnostic(&error);
         }
-        let state = self.job_lock(jid, "state.lock")?;
+        // A live controller may still be saving/starting this job. Do not hold
+        // the whole queue hostage while waiting for that private lock.
+        let state = match FileLock::try_acquire(&self.job_dir(jid).join("state.lock")) {
+            Ok(state) => state,
+            Err(e)
+                if matches!(e.raw_os_error(), Some(32 | 33))
+                    || e.kind() == std::io::ErrorKind::WouldBlock =>
+            {
+                return Ok(None);
+            }
+            Err(e) => return Err(e.into()),
+        };
         let mut job = self.load(jid)?;
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
             return Ok(None);
@@ -792,6 +833,13 @@ impl Context {
         }
         job["queue_wait_reason"] = Value::Null;
         job["queue_admission_error"] = Value::Null;
+        let (_, _, _, prefer_claude) = self.provider_limits(&cfg);
+        let model = self.launch_model(&job, prefer_claude);
+        if model != s(&job, "model") {
+            job["model"] = json!(model);
+            job["model_routed_at"] = json!(self.rt.now());
+            job["model_route_reason"] = json!("Codexの週の利用ペースを抑えてClaudeへ割り当て");
+        }
         job["status"] = json!("running");
         job["started_at"] = json!(self.rt.now());
         job["last_event_at"] = json!(self.rt.now());
@@ -846,11 +894,20 @@ impl Context {
         // Count occupied families even when the root/intermediate supervisor has
         // exited. A surviving descendant must not silently free a root slot.
         // A job idle in the Cargo gate frees its family unless another member runs.
+        let (hardware_limit, codex_limit, claude_limit, prefer_claude) = self.provider_limits(cfg);
         let mut families = HashSet::new();
+        let mut codex_families = HashSet::new();
+        let mut claude_families = HashSet::new();
         let mut children = HashMap::<String, usize>::new();
         for j in &active {
             if !self.cargo_waiting(j) {
-                families.insert(self.queue_root(j));
+                let root = self.queue_root(j);
+                families.insert(root.clone());
+                if s(j, "model").starts_with("anthropic/") && j["queue_unreadable"] != true {
+                    claude_families.insert(root);
+                } else {
+                    codex_families.insert(root);
+                }
             }
             if !s(j, "parent_job_id").is_empty() {
                 *children.entry(s(j, "parent_job_id").into()).or_default() += 1;
@@ -914,12 +971,23 @@ impl Context {
                 continue;
             }
             let root = self.queue_root(candidate);
-            if !families.contains(&root) && families.len() >= cfg.max_running {
-                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":cfg.max_running}));
+            let model = self.launch_model(candidate, prefer_claude);
+            let claude = model.starts_with("anthropic/");
+            let provider_families = if claude {
+                &mut claude_families
+            } else {
+                &mut codex_families
+            };
+            let provider_limit = if claude { claude_limit } else { codex_limit };
+            if (!families.contains(&root) && families.len() >= hardware_limit)
+                || (!provider_families.contains(&root) && provider_families.len() >= provider_limit)
+            {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit}));
                 continue;
             }
             // Children have first claim; wait for the earlier eligible job to
             // reserve its slot durably instead of allowing roots to overtake it.
+            provider_families.insert(root.clone());
             families.insert(root);
             if !parent.is_empty() {
                 child_first = true;

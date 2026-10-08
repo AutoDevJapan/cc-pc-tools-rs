@@ -10,12 +10,13 @@ use std::{
     io::Write,
     os::windows::{ffi::OsStrExt, fs::MetadataExt, process::CommandExt},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, ExitStatus, Stdio},
     time::{Duration, Instant},
 };
 
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
+const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 
@@ -81,6 +82,7 @@ struct Repo {
     origin: &'static str,
     head: String,
     saved_ref: Option<&'static str>,
+    saved_merge: Option<String>,
     kind: RepoKind,
 }
 struct Config {
@@ -92,6 +94,7 @@ struct Config {
     id: &'static str,
     project: &'static str,
     content: &'static str,
+    pinned_identity: Option<(u32, u64)>,
 }
 
 impl Config {
@@ -112,6 +115,7 @@ impl Config {
                     origin: "https://github.com/katsushi2441/kcaldav.git",
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
                     saved_ref: None,
+                    saved_merge: None,
                     kind: RepoKind::Clone,
                 },
                 Repo {
@@ -119,12 +123,14 @@ impl Config {
                     origin: "https://github.com/katsushi2441/plane-jp.git",
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
                     saved_ref: None,
+                    saved_merge: None,
                     kind: RepoKind::Clone,
                 },
             ],
             id: ID,
             project: "todo-2001",
             content: "tool-verification",
+            pinned_identity: None,
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -132,6 +138,7 @@ impl Config {
             origin,
             head: head.into(),
             saved_ref,
+            saved_merge: None,
             kind: RepoKind::Clone,
         };
         match id {
@@ -152,6 +159,7 @@ impl Config {
                         origin: "",
                         head: String::new(),
                         saved_ref: None,
+                        saved_merge: None,
                         kind: RepoKind::OpaqueBare,
                     },
                 ];
@@ -165,6 +173,7 @@ impl Config {
                     origin: public,
                     head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
                     saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
+                    saved_merge: None,
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work6",
@@ -183,6 +192,27 @@ impl Config {
                     "0b017ae9c35dc499fbe9014f72288064576e7c2b",
                     Some("refs/remotes/origin/main"),
                 )];
+            }
+            CARGO_ID => {
+                c.id = CARGO_ID;
+                c.project = "cc-jobs";
+                c.content = "dynamic-cargo-gate";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 2814749782464451));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/dynamic-cargo-gate-2064"),
+                    saved_merge: Some("2a676778c27f9225060dfaf5758b0cdfe8ef94c9".into()),
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
             }
             _ => return Err("SCOPE_NOT_AUTHORIZED"),
         }
@@ -226,6 +256,9 @@ impl Config {
             || r.identity.content != self.content
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
+            || self.pinned_identity.is_some_and(|(volume, file_id)| {
+                r.identity.volume != volume || r.identity.file_id != file_id
+            })
         {
             return Err("RECEIPT_SCOPE_MISMATCH");
         }
@@ -625,6 +658,13 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
     Ok(nodes)
 }
 fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
+    let (output, status) = hidden_status(exe, args)?;
+    if !status.success() {
+        return Err("VALIDATOR_FAILED");
+    }
+    Ok(output)
+}
+fn hidden_status(exe: &Path, args: &[&OsStr]) -> Result<(Vec<u8>, ExitStatus)> {
     let mut c = Command::new(exe);
     c.args(args)
         .creation_flags(0x08000000)
@@ -668,14 +708,22 @@ fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
         .join()
         .map_err(|_| "VALIDATOR_OUTPUT")?
         .map_err(|_| "VALIDATOR_OUTPUT")?;
-    if !status.success() || output.len() > 1024 * 1024 {
+    if output.len() > 1024 * 1024 {
+        return Err("VALIDATOR_FAILED");
+    }
+    Ok((output, status))
+}
+fn git(path: &Path, args: &[&str]) -> Result<String> {
+    let (output, status) = git_status(path, args)?;
+    if !status.success() {
         return Err("VALIDATOR_FAILED");
     }
     Ok(output)
 }
-fn git(path: &Path, args: &[&str]) -> Result<String> {
+fn git_status(path: &Path, args: &[&str]) -> Result<(String, ExitStatus)> {
     let fixed = [
         "--no-optional-locks",
+        "--no-replace-objects",
         "-c",
         "core.fsmonitor=false",
         "-c",
@@ -685,9 +733,9 @@ fn git(path: &Path, args: &[&str]) -> Result<String> {
     let mut argv: Vec<&OsStr> = fixed.iter().map(OsStr::new).collect();
     argv.push(path.as_os_str());
     argv.extend(args.iter().map(OsStr::new));
-    String::from_utf8(hidden(Path::new("git.exe"), &argv)?)
-        .map(|s| s.trim().into())
-        .map_err(|_| "GIT_OUTPUT")
+    let (output, status) = hidden_status(Path::new("git.exe"), &argv)?;
+    let output = String::from_utf8(output).map_err(|_| "GIT_OUTPUT")?;
+    Ok((output.trim().into(), status))
 }
 fn bounded_text(path: &Path) -> Result<String> {
     let n = node(path)?;
@@ -820,10 +868,8 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
     if !git(path, &["status", "--porcelain=v1", untracked])?.is_empty() {
         return Err("GIT_TRACKED_CHANGES");
     }
-    if let Some(saved) = repo.saved_ref.filter(|_| saved_checks)
-        && git(path, &["rev-parse", saved])? != repo.head
-    {
-        return Err("GIT_UNPUSHED_COMMITS");
+    if let Some(saved) = repo.saved_ref.filter(|_| saved_checks) {
+        validate_saved_commit(path, repo, saved)?;
     }
     if !matches!(repo.kind, RepoKind::Linked { .. })
         && !git(
@@ -838,6 +884,49 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
         && !git(path, &["for-each-ref", "--format=%(refname)", "refs/stash"])?.is_empty()
     {
         return Err("GIT_STASH");
+    }
+    Ok(())
+}
+
+fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
+    if repo.saved_merge.is_none() {
+        return if git(path, &["rev-parse", saved])? == repo.head {
+            Ok(())
+        } else {
+            Err("GIT_UNPUSHED_COMMITS")
+        };
+    }
+    // Distinguish an absent ref from a failed validator or a changed existing ref.
+    if let RepoKind::Linked { common, .. } = &repo.kind
+        && present(&common.join("info/grafts"))?
+    {
+        return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+    }
+    match git_status(path, &["show-ref", "--exists", saved])?.1.code() {
+        Some(0) => {
+            return if git(path, &["rev-parse", saved])? == repo.head {
+                Ok(())
+            } else {
+                Err("GIT_UNPUSHED_COMMITS")
+            };
+        }
+        Some(2) => (),
+        _ => return Err("GIT_UNPUSHED_COMMITS"),
+    }
+    let merge = repo.saved_merge.as_deref().ok_or("GIT_UNPUSHED_COMMITS")?;
+    // Only the fixed PR56 merge may replace the pruned branch evidence. The
+    // target HEAD must reach that merge, which must reach saved origin/main.
+    for args in [
+        vec!["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        vec!["merge-base", "--is-ancestor", &repo.head, merge],
+        vec![
+            "merge-base",
+            "--is-ancestor",
+            merge,
+            "refs/remotes/origin/main",
+        ],
+    ] {
+        git(path, &args).map_err(|_| "GIT_UNPUSHED_COMMITS")?;
     }
     Ok(())
 }
@@ -1129,6 +1218,9 @@ mod tests {
             }
         }
         let n = node(&target).unwrap();
+        if c.pinned_identity.is_some() {
+            c.pinned_identity = Some((n.volume, n.file_id));
+        }
         let identity = Identity {
             version: 2,
             id: c.id.into(),
@@ -1181,6 +1273,27 @@ mod tests {
             ],
         )
         .unwrap();
+        if repo.saved_merge.is_some() {
+            let tree = format!("{}^{{tree}}", repo.head);
+            let merge = git(
+                path,
+                &[
+                    "-c",
+                    "user.name=Fixture",
+                    "-c",
+                    "user.email=fixture@example.invalid",
+                    "commit-tree",
+                    &tree,
+                    "-p",
+                    &repo.head,
+                    "-m",
+                    "fixture merge",
+                ],
+            )
+            .unwrap();
+            git(path, &["update-ref", "refs/remotes/origin/main", &merge]).unwrap();
+            repo.saved_merge = Some(merge);
+        }
     }
     fn source(c: &Config) -> PathBuf {
         c.temp.join(format!("codex-owned-{}", c.id))
@@ -1355,6 +1468,327 @@ mod tests {
         );
         fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
         assert!(matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")));
+    }
+    #[test]
+    fn cargo_receipt_scope_and_fixed_identity_reject_recomputed_tampering() {
+        let production = Config::production(CARGO_ID).unwrap();
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 2814749782464451))
+        );
+        for field in ["project", "content", "path", "volume", "file_id"] {
+            let c = fixture_for(CARGO_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "different-task".into(),
+                "content" => r.identity.content = "different-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_pruned_ref_requires_both_merge_reachability_checks() {
+        for failure in [
+            "none",
+            "missing-main",
+            "merge-not-in-main",
+            "main-before-merge",
+            "changed-ref",
+        ] {
+            let c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            let repo = &c.repos[0];
+            git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+            match failure {
+                "none" => (),
+                "missing-main" => {
+                    git(&path, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "merge-not-in-main" => {
+                    let tree = format!("{}^{{tree}}", repo.head);
+                    let unrelated = git(
+                        &path,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit-tree",
+                            &tree,
+                            "-m",
+                            "unrelated main",
+                        ],
+                    )
+                    .unwrap();
+                    git(
+                        &path,
+                        &["update-ref", "refs/remotes/origin/main", &unrelated],
+                    )
+                    .unwrap();
+                    // The fixed expected merge must not be an ancestor of this main.
+                }
+                "main-before-merge" => {
+                    git(
+                        &path,
+                        &["update-ref", "refs/remotes/origin/main", &repo.head],
+                    )
+                    .unwrap();
+                }
+                "changed-ref" => {
+                    git(
+                        &path,
+                        &[
+                            "update-ref",
+                            repo.saved_ref.unwrap(),
+                            repo.saved_merge.as_deref().unwrap(),
+                        ],
+                    )
+                    .unwrap();
+                }
+                _ => unreachable!(),
+            }
+            if failure == "none" {
+                c.plan(c.id).unwrap();
+            } else {
+                assert!(
+                    matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")),
+                    "{failure}"
+                );
+                assert!(!c.destination().exists());
+            }
+        }
+        let mut c = fixture_for(CARGO_ID);
+        let path = source(&c).join("work");
+        let repo = &mut c.repos[0];
+        git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+        let tree = format!("{}^{{tree}}", repo.head);
+        let unrelated = git(
+            &path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit-tree",
+                &tree,
+                "-m",
+                "unrelated merge",
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &["update-ref", "refs/remotes/origin/main", &unrelated],
+        )
+        .unwrap();
+        repo.saved_merge = Some(unrelated);
+        assert!(matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")));
+    }
+    #[test]
+    fn cargo_head_origin_and_external_admin_are_rejected() {
+        for failure in ["head", "origin", "admin", "common"] {
+            let mut c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            match failure {
+                "head" => {
+                    git(
+                        &path,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit",
+                            "--allow-empty",
+                            "-m",
+                            "unsaved commit",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "origin" => {
+                    git(
+                        &path,
+                        &[
+                            "remote",
+                            "set-url",
+                            "origin",
+                            "https://example.invalid/repo.git",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "admin" | "common" => {
+                    let replacement = c.temp.join("unexpected-admin");
+                    fs::create_dir(&replacement).unwrap();
+                    match &mut c.repos[0].kind {
+                        RepoKind::Linked { admin, common } => {
+                            if failure == "admin" {
+                                *admin = replacement;
+                            } else {
+                                *common = replacement;
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            }
+            let expected = match failure {
+                "head" => "GIT_HEAD_CHANGED",
+                "origin" => "GIT_ORIGIN_CHANGED",
+                _ => "EXTERNAL_GITDIR",
+            };
+            assert_eq!(c.plan(c.id).err(), Some(expected), "{failure}");
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_move_preserves_inventory_and_repairs_only_fixed_backlink() {
+        let c = fixture_for(CARGO_ID);
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        let sibling = common.join("worktrees/sibling");
+        fs::create_dir(&sibling).unwrap();
+        fs::write(sibling.join("gitdir"), b"fixture other worktree\n").unwrap();
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert!(
+            plan["powershell_command"]
+                .as_str()
+                .unwrap()
+                .starts_with("Move-Item -LiteralPath")
+        );
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        assert_eq!(
+            fs::read(sibling.join("gitdir")).unwrap(),
+            b"fixture other worktree\n"
+        );
+        assert!(
+            git(
+                &c.destination().join("files/work"),
+                &["status", "--porcelain=v1"]
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
+    #[test]
+    fn cargo_replaced_destination_never_commits_receipt_or_backlink() {
+        let c = fixture_for(CARGO_ID);
+        c.plan(c.id).unwrap();
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        let original = fs::read(admin.join("gitdir")).unwrap();
+        fs::rename(source(&c), c.temp.join("preserved-original")).unwrap();
+        fs::create_dir(c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("TARGET_IDENTITY_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+        assert_eq!(fs::read(admin.join("gitdir")).unwrap(), original);
+    }
+    #[test]
+    fn cargo_broken_ref_or_ref_backend_failure_is_not_absence() {
+        for failure in ["missing-object", "invalid-ref", "invalid-packed-refs"] {
+            let c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            let repo = &c.repos[0];
+            let common = match &repo.kind {
+                RepoKind::Linked { common, .. } => common,
+                _ => unreachable!(),
+            };
+            git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+            if failure == "invalid-packed-refs" {
+                fs::write(common.join("packed-refs"), b"invalid packed ref\n").unwrap();
+            } else {
+                fs::create_dir_all(common.join(repo.saved_ref.unwrap()).parent().unwrap()).unwrap();
+                fs::write(
+                    common.join(repo.saved_ref.unwrap()),
+                    if failure == "missing-object" {
+                        b"1111111111111111111111111111111111111111\n".as_slice()
+                    } else {
+                        b"invalid ref\n".as_slice()
+                    },
+                )
+                .unwrap();
+            }
+            assert!(
+                validate_saved_commit(&path, repo, repo.saved_ref.unwrap()).is_err(),
+                "{failure}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_replacement_history_and_grafts_cannot_fake_saved_merge() {
+        let mut c = fixture_for(CARGO_ID);
+        let path = source(&c).join("work");
+        let repo = &mut c.repos[0];
+        let head = repo.head.clone();
+        let real_merge = repo.saved_merge.clone().unwrap();
+        git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+        let tree = format!("{head}^{{tree}}");
+        let unrelated = git(
+            &path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit-tree",
+                &tree,
+                "-m",
+                "unrelated replacement",
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &[
+                "update-ref",
+                &format!("refs/replace/{unrelated}"),
+                &real_merge,
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &["update-ref", "refs/remotes/origin/main", &unrelated],
+        )
+        .unwrap();
+        repo.saved_merge = Some(unrelated);
+        assert!(matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")));
+        let c = fixture_for(CARGO_ID);
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        fs::write(common.join("info/grafts"), b"fixture graft\n").unwrap();
+        assert!(matches!(
+            c.plan(c.id),
+            Err("EXTERNAL_OR_SHARED_GIT_METADATA")
+        ));
     }
     #[test]
     fn opaque_audit_is_preserved_without_parsing_config_or_recording_ref_names() {

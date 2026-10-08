@@ -8,8 +8,13 @@
 | 938 | `76005ef45fe612479fd920447642497e` | 保存済み公開cloneと仕様に固定された監査用取得物 |
 | 2021 | `38e3fbc1767b66eef9127f2a27567c8a` | 保存済み公開worktreeと検証記録 |
 | 2050 | `438ee7d343a6c84558201e2778d2c890` | 保存済み公開cloneと検証ビルド |
+| 2098 | `c058c98f1288073adbd10236900199d1` | Cargo共有ゲートの保存済みworktreeと検証ビルド |
 
-追加3件も `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEADと保存済みorigin ref、変更なしを確認する。その他のIDは拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
+2098は既存の所有記録だけを使用する。projectは`cc-jobs`、contentは`dynamic-cargo-gate`、元パスは`C:/Users/makhmeto/AppData/Local/Temp/codex-owned-c058c98f1288073adbd10236900199d1`に固定する。volumeは2229119083、file IDは2814749782464451。HEADは`e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801`、公開originは`AutoDevJapan/cc-pc-tools-rs`。外部管理領域は`D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9`、commonは同じリポジトリーの`.git`だけを受理する。移動後はそのwork9のbacklinkだけを既存の原子的な手順で修復する。
+
+2098の保存済みbranch refが共有fetchで削除されている場合は、固定HEADがPR56の固定merge `2a676778c27f9225060dfaf5758b0cdfe8ef94c9`へ到達し、そのmergeが保存済みorigin/mainへ到達することの両方を確認する。refが存在して別commitを指す場合、検査自体が失敗した場合、mainが存在しない場合は拒否する。他の所有IDへこの代替条件を広げない。移動前後の内容・識別番号・メタデータの照合とfinishの既存receipt更新は同じ手順を使用する。通常のsafe-deleteのGit保護と元のCargoゲート本体は変更しない。
+
+追加4件も `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEADと保存済みorigin ref、変更なしを確認する。その他のIDは拒否する。2098では壊れたrefと不在をGitの終了コードで区別し、履歴置換を無効にして、graftsがあれば拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
 
 938の監査用取得物は、内容・config・ref・originを読み取らず、Gitも起動しない。メタデータだけで外部参照を拒否し、全体を保持する。退避票には監査用取得物のファイル名・ref名・パスのハッシュを保存せず、volume/file IDと同じ識別番号の出現数・メタデータで移動前後を照合する。
 

@@ -1213,12 +1213,16 @@ mod queue_regressions {
             ("req-new", "req-new", "11:30:00"),
             ("shep-old", "shep-old", "09:00:00"),
             ("req-old", "req-old", "10:00:00"),
+            // An owner's Discord reply resumes work; it ranks with req-.
+            ("resume", "resume-200", "10:30:00"),
         ] {
             let mut j = waiting(&t, id, name);
             j["queued_at"] = json!(format!("2026-10-01T{time}+09:00"));
             t.ctx.save(&j).unwrap();
         }
-        for id in ["req-old", "req-new", "shep-old", "shep-new", "other"] {
+        for id in [
+            "req-old", "resume", "req-new", "shep-old", "shep-new", "other",
+        ] {
             assert!(t.ctx.admit(id).unwrap().is_some(), "{id}");
             let mut j = t.ctx.load(id).unwrap();
             j["status"] = json!("succeeded");

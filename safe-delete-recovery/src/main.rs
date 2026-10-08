@@ -258,6 +258,14 @@ impl Config {
         if self.id != RESUME_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
+        let existing_proof = if !create {
+            if !present(&self.proof_path())? {
+                return Err("RESUME_PROOF_MISSING");
+            }
+            Some(read_record(&self.proof_path(), 8 * 1024 * 1024)?)
+        } else {
+            None
+        };
         let proof = ResumeProof {
             ticket_sha256: format!("{:x}", Sha256::digest(ticket)),
             files: file_digests(path, nodes)?,
@@ -271,8 +279,11 @@ impl Config {
             return Err("CONTENT_CHANGED_DURING_PROOF");
         }
         let bytes = serde_json::to_vec_pretty(&proof).map_err(|_| "PROOF_JSON")?;
-        if !create && !present(&self.proof_path())? {
-            return Err("RESUME_PROOF_MISSING");
+        if let Some(saved) = existing_proof {
+            if saved != bytes || read_record(&self.proof_path(), 8 * 1024 * 1024)? != saved {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            return Ok(());
         }
         publish_proof(&self.proof_path(), &bytes)
     }
@@ -443,14 +454,8 @@ impl Config {
     }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
         let mut r = self.load(id)?;
-        checked(&self.ticket_path())?;
-        let tn = node(&self.ticket_path())?;
-        if tn.links != 1 || tn.size > 8 * 1024 * 1024 {
-            return Err("INVALID_TICKET");
-        }
-        let t: Ticket =
-            serde_json::from_slice(&fs::read(self.ticket_path()).map_err(|_| "TICKET_READ")?)
-                .map_err(|_| "INVALID_TICKET")?;
+        let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
+        let t: Ticket = serde_json::from_slice(&ticket_bytes).map_err(|_| "INVALID_TICKET")?;
         let dest = self.destination();
         if t.id != self.id || t.source != r.identity.path || !same(Path::new(&t.destination), &dest)
         {
@@ -471,12 +476,7 @@ impl Config {
             return Err("CONTENT_CHANGED_AFTER_PLAN");
         }
         if has_proof {
-            self.content_proof(
-                &files,
-                &nodes,
-                &read_record(&self.ticket_path(), 8 * 1024 * 1024)?,
-                false,
-            )?;
+            self.content_proof(&files, &nodes, &ticket_bytes, false)?;
         }
         self.repair_backlink(&r, &files, t.backlink.as_ref())?;
         let why = dest.join("理由.txt");
@@ -775,6 +775,8 @@ fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
         .creation_flags(0x08000000)
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    #[cfg(test)]
+    c.stderr(Stdio::inherit());
     // Isolate Git from inherited repository/config/credential environment.
     for (key, _) in std::env::vars_os() {
         if key
@@ -814,6 +816,12 @@ fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
         .map_err(|_| "VALIDATOR_OUTPUT")?
         .map_err(|_| "VALIDATOR_OUTPUT")?;
     if !status.success() || output.len() > 1024 * 1024 {
+        #[cfg(test)]
+        eprintln!(
+            "fixture validator {:?}: {status}, output bytes {}",
+            exe.file_name(),
+            output.len()
+        );
         return Err("VALIDATOR_FAILED");
     }
     Ok(output)
@@ -1652,7 +1660,10 @@ mod tests {
                 .unwrap();
             assert_eq!(node(&output).unwrap(), old);
             let result = if moved { c.finish(c.id) } else { c.plan(c.id) };
-            assert!(matches!(result, Err("RECOVERY_RECORD_CHANGED")));
+            assert!(
+                matches!(result, Err("RECOVERY_RECORD_CHANGED")),
+                "unexpected result: {result:?}"
+            );
             assert_eq!(c.load(c.id).unwrap().state, "owned");
         }
     }

@@ -173,6 +173,56 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    fn queue_machine_sample(
+        &self,
+        cfg: &crate::adaptive::AdaptiveConfig,
+    ) -> crate::adaptive::MachineSample {
+        crate::adaptive::machine_sample(cfg)
+    }
+    fn queue_quota_sample(
+        &self,
+        provider: &str,
+        at: f64,
+        timeout: u64,
+    ) -> crate::adaptive::QuotaSnapshot {
+        let unavailable = || crate::adaptive::QuotaSnapshot {
+            at,
+            ..Default::default()
+        };
+        let env = self.env();
+        let Some(appdata) = env.get("APPDATA") else {
+            return unavailable();
+        };
+        let package = Path::new(appdata).join("npm/node_modules/@bitkyc08/opencodex");
+        // Execute the bundled runtime directly; a timed-out sample has no shell
+        // grandchild left behind. This command refreshes OAuth quotas only.
+        let argv = vec![
+            package
+                .join("node_modules/bun/bin/bun.exe")
+                .to_string_lossy()
+                .into_owned(),
+            package.join("bin/ocx.mjs").to_string_lossy().into_owned(),
+            "account".into(),
+            if provider == "anthropic" {
+                "list"
+            } else {
+                "refresh"
+            }
+            .into(),
+            provider.into(),
+            "--json".into(),
+        ];
+        let mut argv = argv;
+        if provider == "anthropic" {
+            argv.extend(["--quota".into(), "--refresh".into()]);
+        }
+        match self.call(Call::new(argv, vec![], timeout as f64)) {
+            Ok(reply) if reply.code == 0 => serde_json::from_slice::<Value>(&reply.stdout)
+                .map(|v| crate::adaptive::parse_quotas(&v, at))
+                .unwrap_or_else(|_| unavailable()),
+            _ => unavailable(),
+        }
+    }
     /// Production uses the installed redaction data. Test runtimes provide
     /// their own fixture root without modifying the owner's installed files.
     fn task_title_tools(&self) -> PathBuf {

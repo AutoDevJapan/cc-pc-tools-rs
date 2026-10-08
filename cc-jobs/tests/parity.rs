@@ -75,6 +75,99 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn automatic_limit_is_shared_once_per_minute_and_fixed_override_is_immediate() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx.adjust_limit().unwrap();
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 1);
+        let before = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        let (r, out, _) = t.cli(&["status", "--json", "--summary"]);
+        assert_eq!(r.unwrap(), 0);
+        let report: Value = serde_json::from_str(&out).unwrap();
+        assert!(s(&report["summary"], "limit_label").contains("上限 25（自動"));
+        assert_eq!(
+            before,
+            t.ctx
+                .read_json(&t.ctx.root.join("queue-limit-state.json"))
+                .unwrap()
+        );
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{},"fixed_max_running":7}),
+            )
+            .unwrap();
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 7);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 1);
+        let s = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(s["mode"], "fixed");
+    }
+    #[test]
+    fn lowering_limit_preserves_live_jobs_and_blocks_new_admission() {
+        let t = Test::new();
+        for n in 0..5 {
+            t.put(json!({"id":format!("running{n}"),"status":"running","pid":std::process::id(),"pid_created":123}));
+        }
+        t.put(json!({"id":"waiting","status":"queued","queued_at":t.rt.now()}));
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{}}),
+            )
+            .unwrap();
+        let now = t.rt.epoch();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({"mode":"auto","max_running":4,"checked_at":now}),
+            )
+            .unwrap();
+        assert!(t.ctx.admit("waiting").unwrap().is_none());
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 0);
+        for n in 0..5 {
+            assert_eq!(
+                t.ctx.load(&format!("running{n}")).unwrap()["status"],
+                "running"
+            );
+        }
+    }
+    #[test]
+    fn stale_or_corrupt_controller_recovers_at_floor_and_does_not_break_status() {
+        let t = Test::new();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({"mode":"auto","max_running":60,"checked_at":t.rt.epoch()-121.}),
+            )
+            .unwrap();
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 4);
+        fs::write(t.ctx.root.join("queue-limit-state.json"), b"broken").unwrap();
+        fs::write(t.ctx.root.join("queue-limit-history.json"), b"broken").unwrap();
+        let (r, _, _) = t.cli(&["status", "--json", "--summary"]);
+        assert_eq!(r.unwrap(), 0);
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 4);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 4);
+    }
+    #[test]
     fn todo_completion_wait_reserves_no_capacity_and_releases_on_done() {
         let t = Test::new();
         t.rt.env.lock().unwrap().insert(
@@ -2754,6 +2847,8 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
+    queue_samples: AtomicUsize,
     title_tools: Mutex<Option<PathBuf>>,
     env: Mutex<BTreeMap<String, String>>,
     time: Mutex<f64>,
@@ -2794,6 +2889,12 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
+                free_memory_gib: Some(20.),
+                cpu_times: Some([100, 200, 100]),
+                health_ms: Some(10.),
+            }),
+            queue_samples: AtomicUsize::new(0),
             title_tools: Mutex::new(None),
             env: Mutex::new(BTreeMap::from([(
                 "GODD_AO_BIN".into(),
@@ -2882,6 +2983,19 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn queue_machine_sample(
+        &self,
+        _: &cc_jobs::adaptive::AdaptiveConfig,
+    ) -> cc_jobs::adaptive::MachineSample {
+        self.queue_samples.fetch_add(1, Ordering::Relaxed);
+        self.queue_sample.lock().unwrap().clone()
+    }
+    fn queue_quota_sample(&self, _: &str, at: f64, _: u64) -> cc_jobs::adaptive::QuotaSnapshot {
+        cc_jobs::adaptive::parse_quotas(
+            &json!({"accounts":[{"id":"a","quota":{"weeklyPercent":20.,"weeklyResetAt":at+86400.}}]}),
+            at,
+        )
+    }
     fn task_title_tools(&self) -> PathBuf {
         self.title_tools
             .lock()

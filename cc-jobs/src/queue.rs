@@ -6,11 +6,13 @@ use std::{
     fs,
 };
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
     pub context_limit_percent: u8,
     pub max_running: usize,
+    pub fixed_max_running: Option<usize>,
+    pub adaptive: Option<crate::adaptive::AdaptiveConfig>,
     pub max_children_per_parent: usize,
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
@@ -24,6 +26,8 @@ impl Default for QueueConfig {
         Self {
             context_limit_percent: 50,
             max_running: 6,
+            fixed_max_running: None,
+            adaptive: None,
             max_children_per_parent: 2,
             max_429_retries: 5,
             retry_delay_seconds: 60,
@@ -660,7 +664,7 @@ impl Context {
     }
     pub fn queue_config(&self) -> Result<QueueConfig> {
         let path = self.root.join("queue-config.json");
-        let cfg: QueueConfig = match self.read_file(&path) {
+        let mut cfg: QueueConfig = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => QueueConfig::default(),
             Err(e) => return Err(Error::file_io("read entire file", &path, e)),
@@ -675,6 +679,13 @@ impl Context {
                 "queue-config.json: max_running, max_children_per_parent and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
             ));
         }
+        if cfg.fixed_max_running == Some(0) {
+            return Err(Error::new("fixed_max_running must be positive"));
+        }
+        if let Some(adaptive) = &cfg.adaptive {
+            adaptive.validate()?;
+        }
+        cfg.max_running = self.effective_limit(&cfg)?;
         Ok(cfg)
     }
 
@@ -693,7 +704,10 @@ impl Context {
         self.admit_configured(jid, &cfg)
     }
     pub fn admit_configured(&self, jid: &str, cfg: &QueueConfig) -> Result<Option<FileLock>> {
+        // The separate minute task samples; admission only reads durable state.
+        let mut cfg = cfg.clone();
         let _gate = self.queue_lock()?;
+        cfg.max_running = self.effective_limit(&cfg)?;
         let jobs = self.admission_jobs()?;
         if let Err(error) = self.maintain_yields(&jobs) {
             self.yield_diagnostic(&error);
@@ -707,7 +721,7 @@ impl Context {
         if !jobs.iter().any(|j| s(j, "id") == jid) {
             jobs.push(job.clone());
         }
-        let decision = self.queue_decisions(&jobs, cfg, Some(jid));
+        let decision = self.queue_decisions(&jobs, &cfg, Some(jid));
         if let Some(reason) = decision.get(jid) {
             if job["queue_wait_reason"] != *reason {
                 job["queue_wait_reason"] = reason.clone();

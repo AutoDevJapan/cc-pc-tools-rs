@@ -622,6 +622,8 @@ mod tests {
         }
     }
     // Only test-created cases: this is never compiled into the production tool.
+    // This module is Windows-only: false clears the DOS read-only bit, not Unix permissions.
+    #[allow(clippy::permissions_set_readonly_false)]
     fn remove_fixture(base: &Path, identity: &Node) -> Result<()> {
         let owner =
             PathBuf::from(std::env::var_os("SAFE_DELETE_TEST_ROOT").ok_or("TEST_ROOT_MISSING")?);

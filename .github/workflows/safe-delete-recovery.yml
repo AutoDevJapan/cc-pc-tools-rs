@@ -40,3 +40,11 @@ jobs:
       - run: cargo test --locked --workspace --doc
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo build --locked --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: safe-delete-recovery-windows
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            safe-delete-recovery/target/release/safe-delete-recovery.exe
+            safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe

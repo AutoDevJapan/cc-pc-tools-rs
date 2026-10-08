@@ -33,9 +33,9 @@ fn b64(raw: &str) -> String {
 fn assert_gone(out: &str, secret: &str) {
     let half = secret.len() / 2;
     for part in [secret, &secret[..half], &secret[half..]] {
-        assert!(!out.contains(part), "leaked {part:?} in {out:?}");
+        assert!(!out.contains(part), "credential content survived redaction");
     }
-    assert!(out.contains(MARK), "no mark in {out:?}");
+    assert!(out.contains(MARK), "redaction marker is missing");
 }
 
 #[test]

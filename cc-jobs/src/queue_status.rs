@@ -64,17 +64,19 @@ impl Context {
                 if !self.cargo_waiting(job) {
                     families.insert(self.queue_root(job));
                     provider_families
-                        .entry(
-                            if s(job, "model").starts_with("anthropic/")
-                                && job["queue_unreadable"] != true
-                            {
-                                "anthropic"
-                            } else {
-                                "openai"
-                            },
-                        )
+                        .entry(if s(job, "model").starts_with("anthropic/") {
+                            "anthropic"
+                        } else {
+                            "openai"
+                        })
                         .or_default()
                         .insert(self.queue_root(job));
+                    if job["queue_unreadable"] == true && s(job, "model").is_empty() {
+                        provider_families
+                            .entry("anthropic")
+                            .or_default()
+                            .insert(self.queue_root(job));
+                    }
                 }
                 let reasons = self.resource_waits(job);
                 if !reasons.is_empty() {

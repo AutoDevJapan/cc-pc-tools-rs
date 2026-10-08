@@ -122,6 +122,33 @@ mod claude_routing {
         assert_eq!(t.ctx.load("candidate").unwrap()["model"], "gpt-6.1-sol");
     }
     #[test]
+    fn mixed_provider_child_keeps_parent_slot_and_unknown_provider_reserves_both_lanes() {
+        let t = Test::new();
+        setup(&t);
+        for n in 0..4 {
+            waiting(
+                &t,
+                &format!("codex{n}"),
+                json!({"status":"running","model_explicit":true}),
+            );
+        }
+        waiting(
+            &t,
+            "parent",
+            json!({"status":"running","model":"anthropic/claude-sonnet-5-5"}),
+        );
+        waiting(
+            &t,
+            "child",
+            json!({"parent_job_id":"parent","model_explicit":true}),
+        );
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        assert_eq!(t.ctx.load("child").unwrap()["model"], "gpt-6.1-sol");
+        let unknown = json!({"id":"unknown","queue_unreadable":true,"status":"running"});
+        let report = t.ctx.queue_report(&[unknown]).unwrap();
+        assert_eq!(report["provider_slots"], json!({"openai":1,"anthropic":1}));
+    }
+    #[test]
     fn run_records_model_provenance_before_applying_defaults() {
         for option in [None, Some("--model"), Some("--auto-model")] {
             let t = Test::new();
@@ -1323,7 +1350,11 @@ mod queue_regressions {
             &t,
             &[("item.started", "cargo"), ("item.completed", "cargo")],
         );
-        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert!(
+            t.ctx.admit("other").unwrap().is_some(),
+            "{:?}",
+            t.rt.diagnostics.lock().unwrap()
+        );
         let summary = t.ctx.load("long").unwrap();
         let args = codex_args(&summary);
         for required in [

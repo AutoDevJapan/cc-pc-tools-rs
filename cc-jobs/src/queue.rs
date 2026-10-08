@@ -9,6 +9,8 @@ use std::{
 #[derive(Clone, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
+    #[serde(skip)]
+    pub(crate) admission_limits: Option<(usize, usize, usize, bool)>,
     pub context_limit_percent: u8,
     pub max_running: usize,
     pub fixed_max_running: Option<usize>,
@@ -24,6 +26,7 @@ pub struct QueueConfig {
 impl Default for QueueConfig {
     fn default() -> Self {
         Self {
+            admission_limits: None,
             context_limit_percent: 50,
             max_running: 6,
             fixed_max_running: None,
@@ -70,6 +73,14 @@ impl Context {
                 let Some(_reservation) = self.yield_reservation(s(job, "id")) else {
                     continue;
                 };
+                let fresh = match self.load(s(job, "id")) {
+                    Ok(fresh) => fresh,
+                    Err(error) => {
+                        self.yield_diagnostic(&error);
+                        continue;
+                    }
+                };
+                let job = &fresh;
                 if !self.tool_handoff_pending(job)
                     && let Err(error) = self
                         .rt
@@ -498,7 +509,7 @@ impl Context {
             .as_f64()
             .filter(|t| self.rt.epoch() >= *t && self.rt.epoch() - *t < 30.)
             .unwrap_or(self.rt.epoch());
-        let owners: serde_json::Map<String,Value> = active.iter().map(|j| (s(j,"id").to_owned(),json!({"work_owner":j["work_owner"],"parent_job_id":j["parent_job_id"],"todo_id":j["todo_id"],"created_at":j["created_at"],"queue_sequence":j["queue_sequence"]}))).collect();
+        let owners: serde_json::Map<String,Value> = active.iter().map(|j| (s(j,"id").to_owned(),json!({"work_owner":j["work_owner"],"parent_job_id":j["parent_job_id"],"todo_id":j["todo_id"],"created_at":j["created_at"],"queue_sequence":j["queue_sequence"],"model":j["model"]}))).collect();
         let next = json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>(),"owners":owners});
         if next != index {
             self.write_json(&path, &next)?;
@@ -591,7 +602,7 @@ impl Context {
         if !index["owners"].is_object() {
             index["owners"] = json!({});
         }
-        index["owners"][jid] = json!({"work_owner":job["work_owner"],"parent_job_id":job["parent_job_id"],"todo_id":job["todo_id"],"created_at":job["created_at"],"queue_sequence":job["queue_sequence"]});
+        index["owners"][jid] = json!({"work_owner":job["work_owner"],"parent_job_id":job["parent_job_id"],"todo_id":job["todo_id"],"created_at":job["created_at"],"queue_sequence":job["queue_sequence"],"model":job["model"]});
         self.write_json(&path, &index)?;
         Ok(())
     }
@@ -787,6 +798,8 @@ impl Context {
         }
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
         cfg.max_running = self.effective_limit(&cfg)?;
+        cfg.admission_limits = None;
+        cfg.admission_limits = Some(self.provider_limits(&cfg));
         let jobs = self.admission_jobs()?;
         if let Err(error) = self.maintain_yields(&jobs) {
             self.yield_diagnostic(&error);
@@ -903,10 +916,13 @@ impl Context {
             if !self.cargo_waiting(j) {
                 let root = self.queue_root(j);
                 families.insert(root.clone());
-                if s(j, "model").starts_with("anthropic/") && j["queue_unreadable"] != true {
+                if s(j, "model").starts_with("anthropic/") {
                     claude_families.insert(root);
                 } else {
-                    codex_families.insert(root);
+                    codex_families.insert(root.clone());
+                    if j["queue_unreadable"] == true && s(j, "model").is_empty() {
+                        claude_families.insert(root);
+                    }
                 }
             }
             if !s(j, "parent_job_id").is_empty() {
@@ -980,7 +996,9 @@ impl Context {
             };
             let provider_limit = if claude { claude_limit } else { codex_limit };
             if (!families.contains(&root) && families.len() >= hardware_limit)
-                || (!provider_families.contains(&root) && provider_families.len() >= provider_limit)
+                || (!provider_families.contains(&root)
+                    && provider_families.len() >= provider_limit
+                    && (parent.is_empty() || !families.contains(&root)))
             {
                 decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit}));
                 continue;

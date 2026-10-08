@@ -327,8 +327,9 @@ impl Context {
         let Some((_, baseline)) = self.tool_boundary(snapshot)? else {
             return Ok(false);
         };
-        self.prefetch_context_inventory(snapshot)?;
-        let result = self.attempt_tool_yield(snapshot, baseline);
+        let result = self
+            .prefetch_context_inventory(snapshot)
+            .and_then(|()| self.attempt_tool_yield(snapshot, baseline));
         if !matches!(result, Ok(true)) {
             let not_before = self.rt.epoch() + crate::jitter(15., 30.);
             // Losing the backoff only costs throughput; keep the attempt result.

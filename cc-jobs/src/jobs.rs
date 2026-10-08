@@ -1212,8 +1212,12 @@ impl Context {
             job["activity"] = json!("child process could not be stopped");
         }
         // Cancellation may have been recorded while the child was draining.
-        if let Err(error) = self.prefetch_context_inventory(&job) {
-            self.yield_diagnostic(&error);
+        let mut running = job.clone();
+        running["status"] = json!("running");
+        if self.context_limit_reached(&running) {
+            if let Err(error) = self.prefetch_context_inventory(&job) {
+                self.yield_diagnostic(&error);
+            }
         }
         let gate = match self.queue_lock() {
             Ok(gate) => Some(gate),

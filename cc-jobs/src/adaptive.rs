@@ -458,6 +458,9 @@ pub fn decide_providers(
 impl Context {
     /// The hardware ceiling is shared; only Codex has the weekly pace ceiling.
     pub(crate) fn provider_limits(&self, cfg: &QueueConfig) -> (usize, usize, usize, bool) {
+        if let Some(limits) = cfg.admission_limits {
+            return limits;
+        }
         let fallback = (cfg.max_running, cfg.max_running, cfg.max_running, false);
         let Some(adaptive) = cfg
             .adaptive

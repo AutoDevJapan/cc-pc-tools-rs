@@ -23,11 +23,6 @@ impl Context {
     /// Inventory can start a CLI and wait up to 20 seconds. Do this before
     /// taking the admission gate, retaining only validated server names.
     pub(crate) fn prefetch_context_inventory(&self, job: &Value) -> Result<()> {
-        let mut running = job.clone();
-        running["status"] = json!("running");
-        if !self.context_limit_reached(&running) {
-            return Ok(());
-        }
         let servers = self
             .rt
             .summary_mcp_servers(s(job, "codex"), std::path::Path::new(s(job, "cwd")))?;

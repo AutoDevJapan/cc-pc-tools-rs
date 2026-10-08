@@ -1,6 +1,6 @@
 # 所有フォルダーのGit管理情報を保って退避する
 
-共有ToDo #2027 / #2052 / #1935 / #2098 の復旧用モジュール。通常の `safe-delete.exe` のGit保護は変更しない。保存済み仕様で許可された下記の所有IDと取得物だけを扱う。一般的な `.git` 許可、既存フォルダーの所有登録、削除機能はない。
+共有ToDo #2027 / #2052 / #1935 / #2063 / #2098 の復旧用モジュール。通常の `safe-delete.exe` のGit保護は変更しない。保存済み仕様で許可された下記の所有IDと取得物だけを扱う。一般的な `.git` 許可、既存フォルダーの所有登録、削除機能はない。
 
 | ToDo | 所有ID | 確認する対象 |
 |---|---|---|
@@ -9,6 +9,7 @@
 | 2021 | `38e3fbc1767b66eef9127f2a27567c8a` | 保存済み公開worktreeと検証記録 |
 | 2050 | `438ee7d343a6c84558201e2778d2c890` | 保存済み公開cloneと検証ビルド |
 | 1935 | `cfee3edefd3704d67c140ca6952dd7ce` | 固定した検査用worktree、再現入力、コピーした依存ソースとビルド生成物 |
+| 2063 | `75cd71384cb094e47b19cf5d39b5b025` | 配備済みClaude振り分けの公開worktreeと確認記録 |
 | 2098 | `c058c98f1288073adbd10236900199d1` | Cargo共有ゲートの保存済みworktreeと検証ビルド |
 
 2098は既存の所有記録だけを使用する。projectは`cc-jobs`、contentは`dynamic-cargo-gate`、元パスは`C:/Users/makhmeto/AppData/Local/Temp/codex-owned-c058c98f1288073adbd10236900199d1`に固定する。volumeは2229119083、file IDは2814749782464451。HEADは`e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801`、公開originは`AutoDevJapan/cc-pc-tools-rs`。外部管理領域は`D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9`、commonは同じリポジトリーの`.git`だけを受理する。移動後はそのwork9のbacklinkだけを既存の原子的な手順で修復する。
@@ -20,9 +21,11 @@
 
 1935は公開cloneではない。保存した受付候補HEAD `0f01ed0a36dcc5baea61bf1f689267a362f8784c` と、その1つの外部管理領域に固定する。planではremoteがないことと追跡ファイルの変更なしを確認する。再現用コピーと未追跡の依存コピーも全内容を退避し、外部hardlinkは拒否する。1935の受付検査は修復後の別候補で完了済みなので、この旧検査データを製品の検査結果に代用しない。
 
+2063は保存済みcommit `70a48f412331b232c3cebac99bd36bb34f9cc41f` と保存用の参照 `origin/archive/claude-routing-2063` を照合します。指定した外部管理領域の参照先だけを修復し、他のworktreeを変更しません。この担当が作った固定の実行記録2ファイルだけを未追跡として許可し、ほかの未追跡ファイルと追跡されたソースの変更は拒否します。実行記録を含む全内容は退避後に照合して保持します。
+
 938の監査用取得物は、内容・config・ref・originを読み取らず、Gitも起動しない。メタデータだけで外部参照を拒否し、全体を保持する。退避票には監査用取得物のファイル名・ref名・パスのハッシュを保存せず、volume/file IDと同じ識別番号の出現数・メタデータで移動前後を照合する。
 
-2021・1935・2098のworktreeは、それぞれ仕様に固定された外部管理領域の1つだけを許可する。planで元のbacklinkと管理領域の識別番号を保存し、移動先を指す交換用ファイルを同期する。finishは全内容の一致を確認した後、そのbacklinkだけを原子的に交換する。他のworktree、共通refs、Git objectは変更しない。交換後に停止しても、移動票に保存した交換ファイルの識別番号と内容を確認してfinishを再開できる。外部管理領域は保持するため、退避先worktreeも引き続きそのGit管理領域を参照する。
+2021・1935・2063・2098のworktreeは、それぞれ仕様に固定された外部管理領域の1つだけを許可する。planで元のbacklinkと管理領域の識別番号を保存し、移動先を指す交換用ファイルを同期する。finishは全内容の一致を確認した後、そのbacklinkだけを原子的に交換する。他のworktree、共通refs、Git objectは変更しない。交換後に停止しても、移動票に保存した交換ファイルの識別番号と内容を確認してfinishを再開できる。外部管理領域は保持するため、退避先worktreeも引き続きそのGit管理領域を参照する。
 
 対象の所有ID、プロジェクト、用途、Temp直下のパス、Go形式のチェックサム、Windowsのvolume/file IDを確認する。公開取得元とcommitは仕様の記録に固定している。追跡ファイルの変更、未送信commit、追加のGit管理領域、未許可のworktree・submodule・外部object参照、リンク・外部hardlink、保護対象OpenMausBotや認証用ディレクトリー、クライアント資源は拒否する。独立cloneのstashは拒否するが、worktreeの共有Gitにある他担当のstashは対象外なので変更しない。全内容を退避先に保持する。
 
@@ -46,7 +49,7 @@ D:/CC/Tools/safe-delete/safe-delete-recovery.exe finish --id dee85bb67fa66449ba0
 # safe-delete createで作成した専用フォルダーを指定。
 $env:CARGO_TARGET_DIR='<所有フォルダー>/target'
 $env:SAFE_DELETE_TEST_ROOT='<所有フォルダー>'
-cargo nextest run --locked --workspace --test-threads 10
+cargo nextest run --locked --workspace
 cargo test --locked --workspace --doc
 cargo clippy --locked --all-targets -- -D warnings
 cargo build --locked --release

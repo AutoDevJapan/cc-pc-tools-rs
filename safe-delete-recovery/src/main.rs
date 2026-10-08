@@ -83,6 +83,7 @@ struct Repo {
     head: String,
     saved_ref: Option<&'static str>,
     saved_merge: Option<String>,
+    allowed_untracked: &'static [&'static str],
     kind: RepoKind,
 }
 struct Config {
@@ -116,6 +117,7 @@ impl Config {
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
                 Repo {
@@ -124,6 +126,7 @@ impl Config {
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
             ],
@@ -139,6 +142,7 @@ impl Config {
             head: head.into(),
             saved_ref,
             saved_merge: None,
+            allowed_untracked: &[],
             kind: RepoKind::Clone,
         };
         match id {
@@ -160,6 +164,7 @@ impl Config {
                         head: String::new(),
                         saved_ref: None,
                         saved_merge: None,
+                        allowed_untracked: &[],
                         kind: RepoKind::OpaqueBare,
                     },
                 ];
@@ -174,6 +179,7 @@ impl Config {
                     head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
                     saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
                     saved_merge: None,
+                    allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work6",
@@ -205,12 +211,37 @@ impl Config {
                     origin: public,
                     head: "e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801".into(),
                     saved_ref: Some("refs/remotes/origin/fix/dynamic-cargo-gate-2064"),
+                    allowed_untracked: &[],
                     saved_merge: Some("2a676778c27f9225060dfaf5758b0cdfe8ef94c9".into()),
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
                         ),
                         common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            "75cd71384cb094e47b19cf5d39b5b025" => {
+                c.id = "75cd71384cb094e47b19cf5d39b5b025";
+                c.project = "cc-jobs";
+                c.content = "provider-routing-review";
+                c.repos = vec![Repo {
+                    name: "worktree",
+                    origin: public,
+                    head: "70a48f412331b232c3cebac99bd36bb34f9cc41f".into(),
+                    saved_ref: Some("refs/remotes/origin/archive/claude-routing-2063"),
+                    saved_merge: None,
+                    allowed_untracked: &[
+                        ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
+                        ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
+                    ],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/worktree2",
+                        ),
+                        common: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git",
+                        ),
                     },
                 }];
             }
@@ -225,6 +256,7 @@ impl Config {
                     head: "0f01ed0a36dcc5baea61bf1f689267a362f8784c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Tools/agent-workspaces/todo-1842-9649f0c4667e/work/.git/worktrees/fixed",
@@ -749,6 +781,8 @@ fn git_status(path: &Path, args: &[&str]) -> Result<(String, ExitStatus)> {
         "core.fsmonitor=false",
         "-c",
         "core.hooksPath=NUL",
+        "-c",
+        "core.longpaths=true",
         "-C",
     ];
     let mut argv: Vec<&OsStr> = fixed.iter().map(OsStr::new).collect();
@@ -890,7 +924,12 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
     } else {
         "--untracked-files=no"
     };
-    if !git(path, &["status", "--porcelain=v1", untracked])?.is_empty() {
+    let status = git(path, &["status", "--porcelain=v1", untracked])?;
+    if !status.lines().all(|line| {
+        repo.allowed_untracked
+            .iter()
+            .any(|name| line == format!("?? {name}"))
+    }) {
         return Err("GIT_TRACKED_CHANGES");
     }
     if let Some(saved) = repo.saved_ref.filter(|_| saved_checks) {
@@ -1964,6 +2003,50 @@ mod tests {
         fs::rename(source(&c), c.destination().join("files")).unwrap();
         assert!(matches!(c.finish(c.id), Err("WORKTREE_BACKLINK_CHANGED")));
         assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn claude_routing_profile_preserves_only_its_runtime_registry_and_backlink() {
+        let c = fixture_for("75cd71384cb094e47b19cf5d39b5b025");
+        let work = source(&c).join("worktree");
+        for relative in c.repos[0].allowed_untracked {
+            let path = work.join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"runtime fixture\n").unwrap();
+        }
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        let before = bounded_text(&admin.join("gitdir")).unwrap();
+        c.plan(c.id).unwrap();
+        assert_eq!(bounded_text(&admin.join("gitdir")).unwrap(), before);
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        let moved = c.destination().join("files/worktree");
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &moved.join(".git")
+        ));
+        for relative in c.repos[0].allowed_untracked {
+            assert_eq!(
+                fs::read(moved.join(relative)).unwrap(),
+                b"runtime fixture\n"
+            );
+        }
+    }
+    #[test]
+    fn claude_routing_profile_rejects_other_untracked_or_modified_source_before_planning() {
+        for (name, tracked) in [("unpublished.rs", false), ("source.txt", true)] {
+            let c = fixture_for("75cd71384cb094e47b19cf5d39b5b025");
+            fs::write(source(&c).join("worktree").join(name), b"unsaved work\n").unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")),
+                "tracked={tracked}"
+            );
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+        }
     }
     #[test]
     fn long_path_inventory_survives_the_longer_quarantine_prefix() {

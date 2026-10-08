@@ -812,7 +812,9 @@ impl Context {
             job["queue_restart_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);
             job["last_event_at"] = json!(self.rt.now());
-            job["activity"] = json!(if truth(&job["retry_count"]) {
+            job["activity"] = json!(if truth(&job["retry_count"])
+                || truth(&job["capacity_retry_count"])
+            {
                 s(&job, "activity")
             } else {
                 "順番待ち"
@@ -1231,7 +1233,15 @@ impl Context {
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
         }
-        let retry = !cleanup_failed && !setup_failed && self.retry_429(&mut job, cfg);
+        // Capacity switches have their own bound. A combined capacity/429
+        // message must not escape that bound through the same-model retry.
+        let retry = !cleanup_failed
+            && !setup_failed
+            && if crate::capacity::is_capacity(s(&job, "last_error")) {
+                self.retry_capacity(&mut job)
+            } else {
+                self.retry_429(&mut job, cfg)
+            };
         let mut yielded = false;
         if gate.is_some() && !cleanup_failed && !setup_failed && !retry {
             let mut candidate = job.clone();
@@ -1442,6 +1452,7 @@ pub fn auto_quality(j: &Value, evaluation: Option<&str>) -> (i64, String) {
     let status = s(j, "status");
     let infra=Regex::new(r"(?i)supervisor|proxy|transport|connection|connecterror|timeout|timed out|rate.?limit|quota|provider error|model .*not found|model .*unavailable|spawn|filenotfound|permissionerror|without turn\.completed|could not be stopped|\b(?:401|403|404|429|502|503|504)\b|接続|通信|タイムアウト|利用枠").unwrap();
     if status == "lost"
+        || (status == "failed" && crate::capacity::is_capacity(s(j, "last_error")))
         || (["failed", "cancelled"].contains(&status) && infra.is_match(s(j, "last_error")))
     {
         return (1, format!("auto: infra; {status}"));

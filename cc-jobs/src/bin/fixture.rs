@@ -200,6 +200,30 @@ fn main() {
         pretty(&json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy()})),
     )
     .unwrap();
+    if mode == "capacity-once" || mode == "capacity-always" {
+        let calls = root.join("capacity-calls.jsonl");
+        let mut log = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(calls)
+            .unwrap();
+        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),"prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap())})).unwrap();
+        let selected = args
+            .windows(2)
+            .find(|w| w[0] == "-m")
+            .map(|w| w[1].as_str());
+        if mode == "capacity-always" || selected == Some("gpt-6-luna") {
+            println!(
+                "{}",
+                json!({"type":"thread.started","thread_id":"01a0e883-7628-7121-9540-6780fd4cd6f4"})
+            );
+            println!(
+                "{}",
+                json!({"type":"turn.failed","error":{"message":"Selected model is at capacity"}})
+            );
+            std::process::exit(1);
+        }
+    }
     if mode == "secret-events" || mode == "secret-hold" {
         // Synthetic credentials, assembled at run time.
         let token = format!("{}{}", "gh", "p_") + &"Ab3De5Gh7J".repeat(4);

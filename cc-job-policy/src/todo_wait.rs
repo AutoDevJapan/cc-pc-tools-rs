@@ -1,5 +1,5 @@
 //! Durable task prerequisites, shared by every automatic launcher.
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::BTreeSet;
 
 pub fn pending_on(db: &Value, item: &Value) -> Vec<i64> {
@@ -48,16 +48,16 @@ pub fn validate(db: &Value, id: i64, on: &[i64]) -> Result<(), String> {
             if !seen.insert(next) {
                 continue;
             }
-            if let Some(row) = items.iter().find(|i| i["id"].as_i64() == Some(next)) {
-                if row["status"] != "done" {
-                    stack.extend(
-                        row["wait_on"]
-                            .as_array()
-                            .into_iter()
-                            .flatten()
-                            .filter_map(Value::as_i64),
-                    );
-                }
+            if let Some(row) = items.iter().find(|i| i["id"].as_i64() == Some(next))
+                && row["status"] != "done"
+            {
+                stack.extend(
+                    row["wait_on"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_i64),
+                );
             }
         }
     }
@@ -88,10 +88,12 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
         }
         item["status"] = json!("todo");
         item["dependency_ready"] = json!(true);
-        item["dependency_generation"] = json!(item["dependency_generation"]
-            .as_u64()
-            .unwrap_or(0)
-            .saturating_add(1));
+        item["dependency_generation"] = json!(
+            item["dependency_generation"]
+                .as_u64()
+                .unwrap_or(0)
+                .saturating_add(1)
+        );
         if let Some(scheduler) = item["scheduler"].as_object_mut() {
             for key in ["job", "key", "selection"] {
                 scheduler.remove(key);

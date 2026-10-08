@@ -49,27 +49,28 @@ pub fn checkout(cwd: &str) -> Value {
             if line.starts_with('[') {
                 origin = line == "[remote \"origin\"]";
             }
-            if origin && let Some((key, url)) = line.split_once('=') {
-                if key.trim() == "url" {
-                    let url = url.trim();
-                    let path = url
-                        .split_once("github.com/")
-                        .or_else(|| url.split_once("github.com:"));
-                    if let Some((_, path)) = path {
-                        let parts: Vec<_> = path
-                            .trim_end_matches('/')
-                            .trim_end_matches(".git")
-                            .split('/')
-                            .collect();
-                        if parts.len() == 2
-                            && parts.iter().all(|p| {
-                                !p.is_empty()
-                                    && p.chars()
-                                        .all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c))
-                            })
-                        {
-                            repo = parts.join("/").to_lowercase();
-                        }
+            if origin
+                && let Some((key, url)) = line.split_once('=')
+                && key.trim() == "url"
+            {
+                let url = url.trim();
+                let path = url
+                    .split_once("github.com/")
+                    .or_else(|| url.split_once("github.com:"));
+                if let Some((_, path)) = path {
+                    let parts: Vec<_> = path
+                        .trim_end_matches('/')
+                        .trim_end_matches(".git")
+                        .split('/')
+                        .collect();
+                    if parts.len() == 2
+                        && parts.iter().all(|p| {
+                            !p.is_empty()
+                                && p.chars()
+                                    .all(|c| c.is_ascii_alphanumeric() || "_.-".contains(c))
+                        })
+                    {
+                        repo = parts.join("/").to_lowercase();
                     }
                 }
             }
@@ -77,10 +78,10 @@ pub fn checkout(cwd: &str) -> Value {
         json!({"repository":repo,"git_common":common_key})
     };
     value["worktree"] = json!(worktree);
-    if let Ok(head) = fs::read_to_string(gitdir.join("HEAD")) {
-        if let Some(branch) = head.trim().strip_prefix("ref: refs/heads/") {
-            value["branch"] = json!(branch);
-        }
+    if let Ok(head) = fs::read_to_string(gitdir.join("HEAD"))
+        && let Some(branch) = head.trim().strip_prefix("ref: refs/heads/")
+    {
+        value["branch"] = json!(branch);
     }
     value
 }
@@ -93,10 +94,10 @@ pub fn pr_number(text: &str) -> Option<u64> {
         }
         let tail = text[pos + 2..].trim_start_matches([' ', '#', '＃']);
         let digits: String = tail.chars().take_while(char::is_ascii_digit).collect();
-        if let Ok(id) = digits.parse::<u64>() {
-            if id > 0 {
-                return Some(id);
-            }
+        if let Ok(id) = digits.parse::<u64>()
+            && id > 0
+        {
+            return Some(id);
         }
     }
     None
@@ -106,10 +107,7 @@ pub fn from_job(job: &Value) -> Value {
         return job["work_owner"].clone();
     }
     let mut value = checkout(s(job, "cwd"));
-    // Legacy jobs have a structured title/project even before ownership metadata existed.
-    if s(&value, "repository").is_empty() {
-        value["repository"] = json!(s(job, "project").to_lowercase());
-    }
+    // A project display name is not a repository identity.
     if let Some(pr) = pr_number(s(job, "task_title")) {
         value["pr"] = json!(pr);
     }
@@ -136,7 +134,7 @@ pub fn same(a: &Value, b: &Value) -> bool {
     let equal = |key| !s(a, key).is_empty() && s(a, key) == s(b, key);
     equal("worktree")
         || (equal("repository") && a["pr"].is_u64() && a["pr"] == b["pr"])
-        || ((equal("git_common") || equal("repository")) && equal("branch"))
+        || (equal("git_common") && equal("branch"))
 }
 fn root(job: &Value) -> bool {
     s(job, "parent_job_id").is_empty()
@@ -214,26 +212,31 @@ pub fn reconcile_todos_if(
         }
         // Current task title supplies an explicit PR for an older record without one.
         let mut identity = from_job(&candidate);
+        if s(&identity, "repository").is_empty() {
+            // A project checkout supplies repository scope only, never a blanket
+            // worktree/branch claim for tasks that have not got a checkout yet.
+            let scope = checkout(db["projects"][s(item, "project")].as_str().unwrap_or(""));
+            identity["repository"] = scope["repository"].clone();
+        }
         if let Some(pr) = pr_number(s(item, "title")) {
             identity["pr"] = json!(pr);
         }
         candidate["work_owner"] = identity;
-        if let Some(owner) = blocker(&candidate, jobs) {
-            if let Some(on) = owner["todo_id"]
+        if let Some(owner) = blocker(&candidate, jobs)
+            && let Some(on) = owner["todo_id"]
                 .as_i64()
                 .filter(|id| Some(*id) != item["id"].as_i64())
+        {
+            if !db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|i| i["id"] == on && i["status"] != "done")
             {
-                if !db["items"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|i| i["id"] == on && i["status"] != "done")
-                {
-                    continue;
-                }
-                if crate::todo_wait::validate(db, item["id"].as_i64().unwrap(), &[on]).is_ok() {
-                    edges.push((item["id"].as_i64().unwrap(), on, owner["id"].clone()));
-                }
+                continue;
+            }
+            if crate::todo_wait::validate(db, item["id"].as_i64().unwrap(), &[on]).is_ok() {
+                edges.push((item["id"].as_i64().unwrap(), on, owner["id"].clone()));
             }
         }
     }
@@ -272,12 +275,12 @@ mod tests {
     fn pr_scope_children_and_same_checkout() {
         let a = job("a", "running", "adj/game", 86, "/a");
         let mut b = job("b", "queued", "adj/game", 86, "/b");
-        assert_eq!(blocker(&b, &[a.clone()]).unwrap()["id"], "a");
+        assert_eq!(blocker(&b, std::slice::from_ref(&a)).unwrap()["id"], "a");
         b["parent_job_id"] = json!("a");
-        assert!(blocker(&b, &[a.clone()]).is_none());
+        assert!(blocker(&b, std::slice::from_ref(&a)).is_none());
         b.as_object_mut().unwrap().remove("parent_job_id");
         b["work_owner"]["repository"] = json!("adj/other");
-        assert!(blocker(&b, &[a.clone()]).is_none());
+        assert!(blocker(&b, std::slice::from_ref(&a)).is_none());
         b["work_owner"]["worktree"] = json!("/a");
         assert!(blocker(&b, &[a]).is_some());
     }
@@ -285,20 +288,38 @@ mod tests {
     fn first_queued_owner_beats_priority_and_releases_on_completion() {
         let mut a = job("a", "queued", "adj/game", 86, "/a");
         let b = job("b", "queued", "adj/game", 86, "/b");
-        assert!(blocker(&b, &[a.clone()]).is_some());
-        assert!(blocker(&a, &[b.clone()]).is_none());
+        assert!(blocker(&b, std::slice::from_ref(&a)).is_some());
+        assert!(blocker(&a, std::slice::from_ref(&b)).is_none());
         a["status"] = json!("succeeded");
         assert!(blocker(&b, &[a]).is_none());
     }
     #[test]
     fn branch_is_scoped_and_detached_is_not_a_shared_branch() {
-        let mut a = json!({"repository":"adj/game","worktree":"/a","branch":"feat/x"});
-        let mut b = json!({"repository":"adj/game","worktree":"/b","branch":"feat/x"});
+        let mut a = json!({"repository":"adj/game","git_common":"/git/a","worktree":"/a","branch":"feat/x"});
+        let mut b = json!({"repository":"adj/game","git_common":"/git/a","worktree":"/b","branch":"feat/x"});
         assert!(same(&a, &b));
         b["repository"] = json!("adj/other");
+        b["git_common"] = json!("/git/b");
         assert!(!same(&a, &b));
         a["branch"] = json!("");
         b["branch"] = json!("");
+        assert!(!same(&a, &b));
+    }
+    #[test]
+    fn cancelling_active_owner_still_blocks_but_cancelled_waiter_does_not() {
+        let mut a = job("a", "running", "adj/game", 86, "/a");
+        let b = job("b", "queued", "adj/game", 86, "/b");
+        a["cancel_requested"] = json!(true);
+        assert!(blocker(&b, std::slice::from_ref(&a)).is_some());
+        a["status"] = json!("queued");
+        assert!(blocker(&b, &[a]).is_none());
+    }
+    #[test]
+    fn independent_clones_on_main_only_collide_if_the_pr_matches() {
+        let a =
+            json!({"repository":"adj/game","git_common":"/git/a","worktree":"/a","branch":"main"});
+        let b =
+            json!({"repository":"adj/game","git_common":"/git/b","worktree":"/b","branch":"main"});
         assert!(!same(&a, &b));
     }
     #[test]

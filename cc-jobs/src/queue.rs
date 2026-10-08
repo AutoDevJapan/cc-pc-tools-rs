@@ -440,7 +440,8 @@ impl Context {
             .as_f64()
             .filter(|t| self.rt.epoch() >= *t && self.rt.epoch() - *t < 30.)
             .unwrap_or(self.rt.epoch());
-        let next = json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>()});
+        let owners: serde_json::Map<String,Value> = active.iter().map(|j| (s(j,"id").to_owned(),json!({"work_owner":j["work_owner"],"parent_job_id":j["parent_job_id"],"todo_id":j["todo_id"],"created_at":j["created_at"],"queue_sequence":j["queue_sequence"]}))).collect();
+        let next = json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>(),"owners":owners});
         if next != index {
             self.write_json(&path, &next)?;
         }
@@ -499,7 +500,16 @@ impl Context {
             self.rt.diagnostic(&format!(
                 "unreadable queue record {id}; retaining its root slot"
             ));
-            json!({"id":id,"status":"running","queue_unreadable":true})
+            let mut fallback = self
+                .read_json(&self.jobs.join(".queue-index.json"))
+                .ok()
+                .and_then(|index| index["owners"][id].as_object().cloned())
+                .map(Value::Object)
+                .unwrap_or_else(|| json!({}));
+            fallback["id"] = json!(id);
+            fallback["status"] = json!("running");
+            fallback["queue_unreadable"] = json!(true);
+            fallback
         })
     }
     /// Register before exposing a newly queued record to a supervisor. If no
@@ -715,16 +725,13 @@ impl Context {
         if let Some(reason) = decision.get(jid) {
             let previous_wait = job["work_wait_on"].clone();
             // Keep task ownership across the original worker's context rotation or exit.
-            if reason["code"] == "work_owner" {
-                if let (Some(id), Some(on)) =
+            if reason["code"] == "work_owner"
+                && let (Some(id), Some(on)) =
                     (job["todo_id"].as_i64(), reason["owner_todo_id"].as_i64())
-                {
-                    if let Ok(db) = self.read_json(&self.todo_store()) {
-                        if cc_job_policy::todo_wait::validate(&db, id, &[on]).is_ok() {
-                            job["work_wait_on"] = json!([on]);
-                        }
-                    }
-                }
+                && let Ok(db) = self.read_json(&self.todo_store())
+                && cc_job_policy::todo_wait::validate(&db, id, &[on]).is_ok()
+            {
+                job["work_wait_on"] = json!([on]);
             }
             if job["queue_wait_reason"] != *reason || previous_wait != job["work_wait_on"] {
                 job["queue_wait_reason"] = reason.clone();
@@ -807,13 +814,6 @@ impl Context {
             }
             let reason = if j["cancel_requested"] == true {
                 Some(("cancel_requested", "取り消し処理待ち"))
-            } else if s(j, "parent_job_id").is_empty()
-                && jobs.iter().any(|other| other["queue_unreadable"] == true)
-            {
-                Some((
-                    "work_owner_unavailable",
-                    "先の担当の記録を読めないため再確認待ち",
-                ))
             } else if caller != Some(s(j, "id")) && !self.supervisor_alive(j) {
                 Some(("supervisor_missing", "見張りの再起動待ち"))
             } else if j["retry_not_before"].as_f64().unwrap_or(0.) > self.rt.epoch() {
@@ -890,18 +890,17 @@ impl Context {
         if job["work_owner"].is_object() {
             return;
         }
-        if s(job, "task_title").is_empty() {
-            if let Ok(db) = self.read_json(&self.todo_store()) {
-                if let Some(item) = db["items"].as_array().into_iter().flatten().find(|i| {
-                    (job["todo_id"].is_number() && job["todo_id"] == i["id"])
-                        || (job["id"].is_string()
-                            && i["jobs"]
-                                .as_array()
-                                .is_some_and(|ids| ids.contains(&job["id"])))
-                }) {
-                    job["task_title"] = item["title"].clone();
-                }
-            }
+        if s(job, "task_title").is_empty()
+            && let Ok(db) = self.read_json(&self.todo_store())
+            && let Some(item) = db["items"].as_array().into_iter().flatten().find(|i| {
+                (job["todo_id"].is_number() && job["todo_id"] == i["id"])
+                    || (job["id"].is_string()
+                        && i["jobs"]
+                            .as_array()
+                            .is_some_and(|ids| ids.contains(&job["id"])))
+            })
+        {
+            job["task_title"] = item["title"].clone();
         }
         job["work_owner"] = cc_job_policy::work_owner::from_job(job);
     }

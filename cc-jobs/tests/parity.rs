@@ -75,6 +75,29 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn unreadable_owner_record_keeps_cached_pr_claim_without_blocking_other_prs() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        let mut owner = waiting(&t, "owner", "orch-pr86");
+        owner["work_owner"] = json!({"repository":"o/r","pr":86});
+        t.ctx.save(&owner).unwrap();
+        assert!(t.ctx.admit("owner").unwrap().is_some());
+        let mut duplicate = waiting(&t, "duplicate", "req-pr86");
+        duplicate["work_owner"] = owner["work_owner"].clone();
+        t.ctx.save(&duplicate).unwrap();
+        assert!(t.ctx.admit("duplicate").unwrap().is_none());
+        fs::write(t.ctx.job_dir("owner").join("job.json"), "broken").unwrap();
+        assert!(t.ctx.admit("duplicate").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("duplicate").unwrap()["queue_wait_reason"]["owner_job_id"],
+            "owner"
+        );
+        let mut other = waiting(&t, "other", "req-pr87");
+        other["work_owner"] = json!({"repository":"o/r","pr":87});
+        t.ctx.save(&other).unwrap();
+        assert!(t.ctx.admit("other").unwrap().is_some());
+    }
+    #[test]
     fn later_normal_priority_does_not_deadlock_earlier_low_priority_owner() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));

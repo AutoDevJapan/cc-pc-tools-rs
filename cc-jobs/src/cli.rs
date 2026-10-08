@@ -657,17 +657,17 @@ impl Context {
         job["project"] = json!(a.value("project"));
         job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
         self.record_work_owner(&mut job);
-        if !job["work_owner"]["pr"].is_u64() {
+        if !job["work_owner"]["pr"].is_u64()
             // Only the task's first line, never PR references in embedded instructions.
-            if let Some(pr) = cc_job_policy::work_owner::pr_number(
+            && let Some(pr) = cc_job_policy::work_owner::pr_number(
                 std::str::from_utf8(&bytes)
                     .unwrap_or("")
                     .lines()
                     .next()
                     .unwrap_or(""),
-            ) {
-                job["work_owner"]["pr"] = json!(pr);
-            }
+            )
+        {
+            job["work_owner"]["pr"] = json!(pr);
         }
         if let Some(url) = a.value("pr-url") {
             let target = cc_job_policy::work_owner::pr_url(url)

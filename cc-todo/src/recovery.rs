@@ -1273,12 +1273,22 @@ pub fn session(job: &Value) -> Option<String> {
 }
 
 fn suppress_report(paths: &Paths, id: i64, item: &Value) -> Result<()> {
-    if !item["stall_recovery"]["report"].is_string() {
+    let terminal = matches!(s(&item["status"]), "done" | "block");
+    if !item["stall_recovery"]["report"].is_string() && !terminal {
         return Ok(());
     }
     edit(paths, |db| {
         let row = find(db, id)?;
-        if row["status"] == item["status"]
+        if row["status"] != item["status"] {
+            return Ok(());
+        }
+        // The old pending work is obsolete after completion or an owner hold.
+        // Retire it even when there is no report; an early skip must not bypass
+        // the original admission cleanup.
+        if terminal && row["stall_recovery"].is_object() {
+            row["stall_recovery"]["pending"] = Value::Null;
+        }
+        if item["stall_recovery"]["report"].is_string()
             && row["stall_recovery"]["report"] == item["stall_recovery"]["report"]
         {
             row["stall_recovery"]["suppressed_report"] =

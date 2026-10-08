@@ -210,6 +210,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc-gh-gate"
+version = "0.1.0"
+dependencies = [
+ "cc-redact",
+ "serde_json",
+]
+
+[[package]]
 name = "cc-job-policy"
 version = "0.1.0"
 dependencies = [
@@ -222,6 +230,7 @@ version = "0.1.0"
 dependencies = [
  "cc-chrome",
  "cc-job-policy",
+ "cc-redact",
  "cc-task-title",
  "chrono",
  "regex",
@@ -258,6 +267,14 @@ dependencies = [
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "cc-redact"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde_json",
 ]
 
 [[package]]

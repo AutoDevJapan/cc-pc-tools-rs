@@ -998,7 +998,7 @@ mod queue_regressions {
         );
         assert!(t.ctx.admit("other").unwrap().is_some());
         let summary = t.ctx.load("long").unwrap();
-        let args = codex_args(&summary, &t.ctx.job_dir("long"));
+        let args = codex_args(&summary);
         for required in [
             "features.plugins=false",
             "features.apps=false",
@@ -4680,11 +4680,8 @@ mod run_validation {
             ("workspace-write", "on-request", "auto_review"),
             ("read-only", "never", "user"),
         ] {
-            let args = codex_args(
-                &job(json!({"codex":"codex.cmd","sandbox":sandbox,
-                "resume_session":"12345678-1234-4321-9234-123456789abc"})),
-                Path::new("D:/jobs/j"),
-            );
+            let args = codex_args(&job(json!({"codex":"codex.cmd","sandbox":sandbox,
+            "resume_session":"12345678-1234-4321-9234-123456789abc"})));
             for value in [
                 format!("approval_policy={approval}"),
                 format!("approvals_reviewer={reviewer}"),
@@ -4725,7 +4722,9 @@ mod run_validation {
     #[test]
     fn test_args_have_no_cwd_flag() {
         let j = job(json!({"codex":"codex.CMD","add_dirs":["D:/x"],"network":true}));
-        let args = codex_args(&j, Path::new("D:/jobs/j"));
+        let args = codex_args(&j);
+        // The final message is written by the supervisor from masked events.
+        assert!(!args.iter().any(|a| a == "-o" || a.ends_with(".md")));
         assert_eq!(
             &args[..4],
             ["codex.CMD", "exec", "--json", "--skip-git-repo-check"]
@@ -4749,10 +4748,7 @@ mod run_validation {
             ("browser", vec!["godd-a", "headroom", "pencil"]),
             ("full", vec![]),
         ] {
-            let args = codex_args(
-                &job(json!({"codex":"codex.CMD","mcp_profile":profile})),
-                Path::new("D:/jobs/j"),
-            );
+            let args = codex_args(&job(json!({"codex":"codex.CMD","mcp_profile":profile})));
             let overrides = args
                 .windows(2)
                 .filter(|p| {
@@ -5521,8 +5517,18 @@ mod process_boundary_tests {
         assert!(FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).is_ok());
         assert!(!tmp.0.join("civ6.lock").exists());
         drop(paused);
-        std::thread::sleep(Duration::from_millis(100));
-        assert_ne!(fs::read(tmp.0.join("heartbeat")).unwrap(), heartbeat);
+        let resume_deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let current = fs::read(tmp.0.join("heartbeat")).unwrap();
+            if !current.is_empty() && current != heartbeat {
+                break;
+            }
+            assert!(
+                Instant::now() < resume_deadline,
+                "resumed controller did not advance its heartbeat"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
         assert!(
             rt.pause_idle_agent(child.id(), created + 1, None, None)
                 .is_err()
@@ -6141,7 +6147,8 @@ mod task_notifier {
         t.ctx.save(&j).unwrap();
         let log = fs::read_to_string(t.ctx.job_dir(s(&j, "id")).join("job.json")).unwrap();
         assert!(log.contains("private.test"));
-        assert!(log.contains("SENTINEL-BOT-TOKEN"));
+        // job.json is persisted with the same masking as the logs (ToDo 938).
+        assert!(!log.contains("SENTINEL-BOT-TOKEN"));
         pump(
             br#"{"type":"error","message":"\u0048TTPS://private.test/hidden"}
 "#
@@ -6624,6 +6631,101 @@ mod end_to_end {
             std::thread::sleep(Duration::from_millis(100));
         }
     }
+    /// Parts of the synthetic secrets the fixture prints.
+    const SECRET_PARTS: [&str; 8] = [
+        "Ab3De5Gh7J",
+        "sv7Hq2Xw",
+        "Zx9Kq2Lm",
+        "abcd1234efgh",
+        "Pk4Vb8Nm",
+        "Rt6Yu1Io",
+        "Lq3Wz5Ex",
+        "Mj2Kn4Bh",
+    ];
+    /// Every record file in the job directory, including temporaries, is masked.
+    fn assert_records_masked(dir: &Path) {
+        for entry in fs::read_dir(dir).unwrap().flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            // Lock files are held open by the supervisor and carry no text.
+            if name.starts_with("prompt") || name.ends_with(".lock") || !entry.path().is_file() {
+                continue;
+            }
+            let text = String::from_utf8_lossy(&fs::read(entry.path()).unwrap()).into_owned();
+            let leak = SECRET_PARTS.iter().find(|part| text.contains(*part));
+            assert_eq!(leak, None, "{name}: {text}");
+        }
+        for name in ["events.jsonl", "job.json", "stderr.log", "last_message.md"] {
+            let text = fs::read_to_string(dir.join(name)).unwrap();
+            assert!(text.contains("[REDACTED]"), "{name} was not masked: {text}");
+        }
+    }
+    #[test]
+    fn records_are_masked_while_codex_runs_and_after_it_is_killed() {
+        let e = E2e::new();
+        let jid = e.start("secret-hold", &e.tmp.0, b"hold");
+        let dir = e.tmp.0.join("tool/jobs").join(&jid);
+        let read = |name: &str| fs::read_to_string(dir.join(name)).unwrap_or_default();
+        e.until(|| {
+            read("last_message.md").starts_with("PARTIAL")
+                && read("stderr.log").contains("plain stderr line")
+                && read("events.jsonl").contains("not json")
+        });
+        // Mid-run: codex is still alive and nothing raw has reached the disk.
+        let pid = e.job(&jid)["codex_pid"].as_u64().unwrap() as u32;
+        assert!(proc_created(pid).is_some(), "codex exited early");
+        assert_records_masked(&dir);
+        assert_eq!(read("last_message.md"), "PARTIAL [REDACTED]");
+        // A crash leaves the same masked files behind.
+        System::default().kill_tree(pid).unwrap();
+        e.until(|| s(&e.job(&jid), "status") == "failed");
+        assert_records_masked(&dir);
+        assert_eq!(read("last_message.md"), "PARTIAL [REDACTED]");
+    }
+    #[test]
+    fn supervisor_persists_masked_records_but_feeds_the_prompt_unchanged() {
+        let e = E2e::new();
+        let prompt = format!(
+            "use serviceSecret=\"{}\" as given",
+            "pr0mptSecret9".repeat(2)
+        );
+        let jid = e.start("secret-events", &e.tmp.0, prompt.as_bytes());
+        e.until(|| s(&e.job(&jid), "status") == "succeeded");
+        let dir = e.tmp.0.join("tool/jobs").join(&jid);
+        assert_records_masked(&dir);
+        let stderr = fs::read_to_string(dir.join("stderr.log")).unwrap();
+        for kept in ["key: ", " after key", " after value", "plain stderr line"] {
+            assert!(stderr.contains(kept), "{kept:?} missing: {stderr}");
+        }
+        assert_eq!(
+            fs::read_to_string(dir.join("last_message.md")).unwrap(),
+            "DONE [REDACTED]"
+        );
+        let call: Value =
+            serde_json::from_str(&fs::read_to_string(e.rec.join("call.json")).unwrap()).unwrap();
+        let argv = call["argv"].as_array().unwrap();
+        assert!(
+            !argv.iter().any(|a| a == "-o"),
+            "codex must not write records itself: {call}"
+        );
+        let events = fs::read_to_string(dir.join("events.jsonl")).unwrap();
+        let lines = events.lines().collect::<Vec<_>>();
+        assert_eq!(lines.last(), Some(&"not json [REDACTED]"));
+        for line in &lines[..lines.len() - 1] {
+            let event: Value = serde_json::from_str(line).expect("masked event is valid JSON");
+            assert!(event["_ts"].is_string());
+        }
+        let job = e.job(&jid);
+        assert_eq!(job["last_message"], "DONE [REDACTED]");
+        assert_eq!(job["thread_id"], "01a0e883-7628-7121-9540-6780fd4cd6f4");
+        // The model still receives the prompt exactly as written.
+        let fed = fs::read(e.rec.join("stdin.bin")).unwrap();
+        assert!(fed.starts_with(prompt.as_bytes()));
+        assert!(
+            fs::read(dir.join("prompt.md"))
+                .unwrap()
+                .starts_with(prompt.as_bytes())
+        );
+    }
     #[test]
     fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
         let e = E2e::new();
@@ -7053,7 +7155,7 @@ mod additional_compatibility {
             .unwrap();
         let jobs = t.ctx.list_jobs(&HashSet::new());
         assert_eq!(jobs[0]["resume_session"], id);
-        let args = codex_args(&jobs[0], &t.ctx.job_dir(s(&jobs[0], "id")));
+        let args = codex_args(&jobs[0]);
         assert_eq!(&args[args.len() - 3..], ["resume", id, "-"]);
         let date = t.ctx.codex_home.join("sessions/2020/01/01");
         fs::create_dir_all(&date).unwrap();

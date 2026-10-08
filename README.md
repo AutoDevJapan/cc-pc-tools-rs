@@ -8,6 +8,8 @@
 - `cc-chrome`: オーナーのChromeで、担当が開いたタブを記録する補助。
 - `cc-job-policy`: ジョブの実行範囲と権限の共通設定。
 - `cc-task-title`: オーナー向けの表示名と案件名の除去。
+- `cc-redact`: 保存・公開する文章とJSONから、APIキー・トークン・Authorizationヘッダー・URLのパスワードなどの秘密を除く共通処理。ジョブの記録（events.jsonl・job.json・stderr.log・last_message.md・context-summary-output.md）は、ディスクに書く前にこれを通します。最後のメッセージのファイルは codex に直接書かせず（`-o` を使わない）、監視側が置き換え済みのイベントから書くので、実行中や異常終了の後にも生の値は残りません。複数行にまたがる秘密鍵や引用符付きの値は、閉じるまで（最大64KiB）ためてからまとめて置き換えます。codex に渡す入力（prompt.md・context-continue.md・yield-resume.md・context-summary-prompt.md と標準入力）は、依頼の意味を変えないよう置き換えません。これらには依頼者が書いた文がそのまま残ります。
+- `cc-gh-gate`: `gh` の前に置き、PR・Issue・リリース・`gh api` で公開する本文から秘密を除いてから本物の gh を実行するゲート。範囲と配置は [cc-gh-gate/README.md](cc-gh-gate/README.md)。
 - `cc-live`: 実機検査とプロセス管理の共通処理。
 - `cc-local-llm`: このPCのOllama（llm-jp、足りないときだけgemma3:4b）へ時間の上限付きで軽い文章作業を頼む共通処理。
 - `cc-ocx-watchdog`: opencodexの応答停止を検出し、対象プロセスを終了してサービスの復旧を確認するRust監視。

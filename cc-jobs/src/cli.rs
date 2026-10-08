@@ -685,7 +685,7 @@ impl Context {
             job["work_owner"]["repository"] = target["repository"].clone();
             job["work_owner"]["pr"] = target["pr"].clone();
         }
-        let bad = codex_args(&job, &self.jobs.join(&base))
+        let bad = codex_args(&job)
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))
             .collect::<Vec<_>>();

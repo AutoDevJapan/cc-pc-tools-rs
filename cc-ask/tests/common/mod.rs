@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -345,7 +345,9 @@ impl Fake {
                     .messages
                     .get_mut(&tid)
                     .and_then(|ms| ms.iter_mut().find(|m| s(&m["id"]) == mid))
-                    .ok_or("message missing")?;
+                    .ok_or_else(|| {
+                        format!("Discord API PATCH {path} failed: 404 Unknown Message")
+                    })?;
                 for (key, value) in b.as_object().unwrap() {
                     message[key] = value.clone();
                 }
@@ -414,6 +416,31 @@ impl Fake {
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
+        if argv.iter().any(|a| a == "--summary") {
+            let p = self.root.join("board-status.json");
+            return Ok(Output {
+                stdout: if p.exists() {
+                    std::fs::read_to_string(p).unwrap()
+                } else {
+                    "{\"jobs\":[]}".into()
+                },
+                ..Default::default()
+            });
+        }
+        if argv
+            .last()
+            .is_some_and(|a| a == cc_ask::board_display::MACHINE_PROBE)
+        {
+            let p = self.root.join("board-machine.json");
+            return Ok(Output {
+                stdout: if p.exists() {
+                    std::fs::read_to_string(p).unwrap()
+                } else {
+                    "null".into()
+                },
+                ..Default::default()
+            });
+        }
         if argv.last().is_some_and(|a| a == "recover") && self.recover_fail {
             return Ok(Output {
                 code: 1,
@@ -521,11 +548,9 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(
-                        chrono::DateTime::from_timestamp(self.now as i64, 0)
-                            .unwrap()
-                            .to_rfc3339()
-                    );
+                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
+                        .unwrap()
+                        .to_rfc3339());
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()

@@ -12,6 +12,9 @@ pub fn sync_job(ctx: &mut Context, job_id: &str) -> Result<()> {
     let path = ctx
         .discord_tasks
         .join(format!("{:x}.json", Sha256::digest(job_id.as_bytes())));
+    // An active card writer must be deferred before reading and polishing task
+    // metadata. That work can otherwise consume the tick budget before the lock.
+    let _held = card_lock(&path)?;
     let names = Names::load(&ctx.client_projects).map_err(|_| "client project list unavailable")?;
     let todo = if ctx.todo.is_file() {
         read_json(&ctx.todo)?
@@ -23,10 +26,16 @@ pub fn sync_job(ctx: &mut Context, job_id: &str) -> Result<()> {
     let prompt = fs::read_to_string(dir.join("prompt.md")).unwrap_or_default();
     let title =
         task_title::polish_title(&task_title::job_title(&job, &prompt, &todo, &names), &names);
-    sync_card(ctx, &path, &title, &names)
+    sync_card_locked(ctx, &path, &title, &names)
 }
 
 fn sync_card(ctx: &mut Context, path: &std::path::Path, title: &str, names: &Names) -> Result<()> {
+    let _held = card_lock(path)?;
+    sync_card_locked(ctx, path, title, names)
+}
+
+fn card_lock(path: &std::path::Path) -> Result<fs::File> {
+    crate::tick_runtime::check()?;
     // AO names both the record and the whole-file lock by the SHA256 of the job ID.
     let file = fs::OpenOptions::new()
         .create(true)
@@ -45,6 +54,15 @@ fn sync_card(ctx: &mut Context, path: &std::path::Path, title: &str, names: &Nam
         }
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
+    Ok(file)
+}
+
+fn sync_card_locked(
+    ctx: &mut Context,
+    path: &std::path::Path,
+    title: &str,
+    names: &Names,
+) -> Result<()> {
     let mut task = read_json(path)?;
     let tid = s(&task["thread_id"]).to_string();
     let channel = ctx.call("GET", &format!("/channels/{tid}"), None)?;

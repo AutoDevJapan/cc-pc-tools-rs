@@ -12,6 +12,10 @@ use std::{
 // Keep the fixture alive much longer than that budget so natural exit cannot
 // make broken process-tree cleanup pass. Short deadline arithmetic is covered
 // independently by tick_deadline_bounds_lock_wait_without_stealing_held_lock.
+// Load the fixture executable once as setup before the measurement. The actual
+// parent and grandchild starts remain inside the unchanged three-second budget;
+// first-load scanning on a busy Windows host must not prevent the lock-holder
+// precondition from being exercised at all.
 const PROCESS_DEADLINE: Duration = Duration::from_secs(3);
 const FIXTURE_HOLD: Duration = Duration::from_secs(30);
 const PROCESS_BOUND: Duration = Duration::from_secs(5);
@@ -39,6 +43,10 @@ fn process_capture_fixture() {
         return;
     };
     let root = std::path::PathBuf::from(std::env::var_os("CC_ASK_CAPTURE_ROOT").unwrap());
+    if mode == "warm" {
+        println!("capture fixture loaded");
+        return;
+    }
     if mode == "descendant" {
         let limit = Instant::now() + FIXTURE_HOLD;
         while !root.join("release").exists() && Instant::now() < limit {
@@ -117,6 +125,7 @@ fn run_fixture(mode: &str, root: &Path, timeout: u64) -> Result<Output> {
 #[test]
 fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
     let start = Instant::now();
     let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("hang", root.path(), 0);
@@ -130,6 +139,7 @@ fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
 #[test]
 fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
     let start = Instant::now();
     let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("tree", root.path(), 0);
@@ -143,6 +153,16 @@ fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     assert!(
         ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok(),
         "temporary grandchild survived the deadline"
+    );
+}
+
+fn warm_fixture(root: &Path) {
+    let output = run_fixture("warm", root, 8).expect("fixture startup preflight failed");
+    assert_eq!(output.code, 0);
+    assert!(output.stdout.contains("capture fixture loaded"));
+    assert!(
+        !root.join("ready").exists(),
+        "preflight must not create the measured lock-holder evidence"
     );
 }
 

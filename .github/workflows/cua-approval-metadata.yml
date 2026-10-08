@@ -1,0 +1,24 @@
+name: Computer Use approval metadata
+on:
+  push:
+    branches: [main]
+    paths: ['cua-approval-metadata/**', '.github/workflows/cua-approval-metadata.yml']
+  pull_request:
+    paths: ['cua-approval-metadata/**', '.github/workflows/cua-approval-metadata.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: false
+      - run: go test -race ./...
+        working-directory: cua-approval-metadata
+      - run: go vet ./...
+        working-directory: cua-approval-metadata
+      - run: go build -ldflags '-H=windowsgui' -o cua_approval_metadata.exe .
+        working-directory: cua-approval-metadata

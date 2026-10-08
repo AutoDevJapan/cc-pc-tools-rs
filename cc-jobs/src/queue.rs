@@ -902,7 +902,11 @@ impl Context {
         {
             job["task_title"] = item["title"].clone();
         }
-        job["work_owner"] = cc_job_policy::work_owner::from_job(job);
+        let mut identity = self.rt.work_checkout(s(job, "cwd"));
+        if let Some(pr) = cc_job_policy::work_owner::pr_number(s(job, "task_title")) {
+            identity["pr"] = json!(pr);
+        }
+        job["work_owner"] = identity;
     }
 
     fn dependency_waits(&self, jobs: &[Value]) -> HashMap<String, Value> {

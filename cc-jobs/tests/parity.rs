@@ -2785,7 +2785,9 @@ fn events(text: &str) -> Vec<Value> {
         .collect()
 }
 fn new_job() -> Value {
-    json!({"id":"20260929-000000-t","name":"t","model":"gpt-6-luna","effort":"max","sandbox":"read-only","cwd":"D:/work","created_at":"2026-10-01T12:00:00+09:00","status":"queued","pid":null,"steps":0,"tokens":{"total":0},"activity":"queued","last_error":null,"duration_ms":null})
+    // These jobs model independent virtual checkouts. Do not discover the
+    // host's personal dotfiles repository above Windows Temp fixture paths.
+    json!({"id":"20260929-000000-t","name":"t","model":"gpt-6-luna","effort":"max","sandbox":"read-only","cwd":"D:/work","work_owner":{},"created_at":"2026-10-01T12:00:00+09:00","status":"queued","pid":null,"steps":0,"tokens":{"total":0},"activity":"queued","last_error":null,"duration_ms":null})
 }
 #[test]
 fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
@@ -3036,6 +3038,9 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn work_checkout(&self, _cwd: &str) -> Value {
+        json!({})
+    }
     fn task_title_tools(&self) -> PathBuf {
         self.title_tools
             .lock()

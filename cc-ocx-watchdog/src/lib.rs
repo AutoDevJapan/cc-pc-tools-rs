@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+pub mod ownership;
 #[cfg(windows)]
 pub mod windows;
 

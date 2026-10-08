@@ -6836,16 +6836,29 @@ mod end_to_end {
     fn test_cancel_kills_the_whole_tree() {
         let e = E2e::new();
         let (jid, pids) = e.slow();
+        let identities: Vec<_> = pids
+            .iter()
+            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
+            .collect();
         let r = e.cli(&["cancel", &jid], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
-        assert!(pids.iter().all(|p| proc_created(*p).is_none()));
-        std::thread::sleep(Duration::from_millis(100));
+        // TerminateProcess is asynchronous; a reused PID must not look like a survivor.
+        e.until(|| {
+            identities
+                .iter()
+                .all(|(pid, born)| proc_created(*pid) != Some(*born))
+                && e.job(&jid)["status"] == "cancelled"
+        });
         assert_eq!(e.job(&jid)["status"], "cancelled");
     }
     #[test]
     fn test_cancel_of_a_lost_job_kills_the_leftover_codex() {
         let e = E2e::new();
         let (jid, pids) = e.slow();
+        let identities: Vec<_> = pids[1..]
+            .iter()
+            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
+            .collect();
         let mut c = hidden_command("taskkill");
         let r = c
             .args(["/F", "/PID", &pids[0].to_string()])
@@ -6861,7 +6874,11 @@ mod end_to_end {
         let r = e.cli(&["cancel", &jid], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
         assert!(String::from_utf8_lossy(&r.stdout).contains("killed the leftover"));
-        assert!(pids[1..].iter().all(|p| proc_created(*p).is_none()));
+        e.until(|| {
+            identities
+                .iter()
+                .all(|(pid, born)| proc_created(*pid) != Some(*born))
+        });
     }
 }
 mod additional_compatibility {

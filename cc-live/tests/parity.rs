@@ -2638,30 +2638,57 @@ fn missing_startup_helper_source_refuses_existing_stale_binary_before_build() {
 #[test]
 fn cancelled_build_waits_for_real_grandchildren_to_exit() {
     use windows_sys::Win32::{
-        Foundation::{CloseHandle, GetLastError, ERROR_INVALID_PARAMETER},
-        System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION},
+        Foundation::{CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, FILETIME, WAIT_OBJECT_0},
+        System::Threading::{
+            GetProcessTimes, OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
+            PROCESS_SYNCHRONIZE,
+        },
     };
     let f = Fixture::new();
     let marker = f.root.join("grandchild.pid");
-    let escaped = path(&marker).replace('\'', "''");
-    let script = format!("$info = New-Object System.Diagnostics.ProcessStartInfo; $info.FileName = 'cmd.exe'; $info.Arguments = '/d /c ping 127.0.0.1 -n 31 > nul'; $info.UseShellExecute = $false; $info.CreateNoWindow = $true; $child = [System.Diagnostics.Process]::Start($info); [System.IO.File]::WriteAllText('{escaped}', [string]$child.Id); Start-Sleep -Seconds 30");
     let result = process::RealRunner.run(
-        Call::new(args(&["powershell", "-NoProfile", "-Command", &script]))
-            .managed()
-            .timeout(5.0),
+        Call::new(args(&[
+            env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+            "parent",
+            &path(&marker),
+        ]))
+        .managed()
+        .timeout(5.0),
     );
     assert!(result.unwrap_err().contains("timed out"));
-    let pid: u32 = read_text(marker).unwrap().parse().unwrap();
+    let receipt = read_text(marker).unwrap();
+    let mut fields = receipt.split_whitespace();
+    let pid: u32 = fields.next().unwrap().parse().unwrap();
+    let born: u64 = fields.next().unwrap().parse().unwrap();
+    assert!(fields.next().is_none());
     unsafe {
-        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        let handle = OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+            0,
+            pid,
+        );
         if handle.is_null() {
             assert_eq!(GetLastError(), ERROR_INVALID_PARAMETER);
         } else {
-            let mut code = 259;
-            let success = GetExitCodeProcess(handle, &mut code);
+            let (mut created, mut exited, mut kernel, mut user) = (
+                FILETIME::default(),
+                FILETIME::default(),
+                FILETIME::default(),
+                FILETIME::default(),
+            );
+            let success =
+                GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user);
+            let observed_born =
+                (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
+            let state = WaitForSingleObject(handle, 0);
             CloseHandle(handle);
             assert_ne!(success, 0);
-            assert_ne!(code, 259, "Grandchild survived the cancelled build");
+            if observed_born == born {
+                assert_eq!(
+                    state, WAIT_OBJECT_0,
+                    "Grandchild survived the cancelled build"
+                );
+            }
         }
     }
 }

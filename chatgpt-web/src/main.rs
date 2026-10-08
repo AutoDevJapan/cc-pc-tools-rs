@@ -363,6 +363,7 @@ fn wait_login(tab: &mut Tab, deadline: Instant) -> Res<Login> {
                 code,
                 match last.as_str() {
                     "challenge" => "ChatGPT の画面で人間確認（Cloudflare）が出たまま進みません。`chatgpt_web login` の窓で確認を済ませてください".into(),
+                    s if page_deadline == deadline => format!("ChatGPT の画面を制限時間内に確認できませんでした（状態: {s}）"),
                     s => format!("ChatGPT の画面を判別できません（状態: {s}）。画面の作りが変わった可能性があります"),
                 },
             ));

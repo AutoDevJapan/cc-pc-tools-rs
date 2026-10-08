@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::{collections::BTreeMap, sync::LazyLock, time::Duration};
 
 pub const TITLE: &str = "作業状況の一覧";
-pub const INTERVAL: f64 = 300.;
+pub const INTERVAL: f64 = 60.;
 pub const LIMIT: Duration = Duration::from_secs(80);
 thread_local! { static BOARD_NETWORK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
 struct NetworkScope(bool);
@@ -249,56 +249,6 @@ pub fn accept_label(answer: &str) -> bool {
         && !line.contains("<|")
 }
 pub const LABEL_BUDGET: Duration = Duration::from_secs(40);
-fn translate(
-    ctx: &mut Context,
-    state: &mut Value,
-    items: &[Value],
-    questions: &[Value],
-    names: &Names,
-) -> Result<()> {
-    let mut missing = BTreeMap::new();
-    for (k, source) in items
-        .iter()
-        .map(|i| (key(i), s(&i["title"])))
-        .chain(questions.iter().map(|q| (qkey(q), s(&q["title"]))))
-    {
-        if state["labels"].get(&k).is_none() {
-            let clean = prose(source, names, 100);
-            state["labels"][&k] = json!(prose(source, names, 48));
-            if needs_label(source) {
-                missing.insert(k, clean);
-            }
-        }
-    }
-    // Save the one-time fallback first. A timeout or restart never retries a title.
-    save(ctx, state)?;
-    // The local model (llm-jp, then gemma3:4b) gets one bounded try per title.
-    let deadline = std::time::Instant::now() + LABEL_BUDGET;
-    let mut changed = false;
-    for (k, clean) in missing {
-        let left = deadline.saturating_duration_since(std::time::Instant::now());
-        let left = crate::tick_runtime::remaining().map_or(left, |t| t.min(left));
-        if left < Duration::from_secs(2) {
-            break;
-        }
-        if let Some(text) = ctx.effects.local_llm(
-            &label_prompt(&clean),
-            left.min(Duration::from_secs(20)),
-            &accept_label,
-        ) {
-            state["labels"][&k] = json!(prose(
-                text.trim().trim_matches(['「', '」', '"']),
-                names,
-                48
-            ));
-            changed = true;
-        }
-    }
-    if changed {
-        save(ctx, state)?;
-    }
-    Ok(())
-}
 fn project(item: &Value, db: &Value, names: &Names) -> String {
     let p = s(&item["project"]);
     let path = s(&db["projects"][p]);
@@ -557,9 +507,6 @@ pub fn split(text: &str) -> Vec<String> {
     }
     parts
 }
-fn payload(content: &str) -> Value {
-    json!({"content":content,"flags":SILENT | 4,"allowed_mentions":{"parse":[]}})
-}
 fn edit_payload(content: &str) -> Value {
     // Omit flags: Discord preserves the suppression bits on the original silent message.
     json!({"content":content,"allowed_mentions":{"parse":[]}})
@@ -578,90 +525,6 @@ pub fn find_general(channels: &Value) -> Result<String> {
         return Err("テキストチャンネル「一般」が1つに特定できません".into());
     }
     Ok(s(&matches[0]["id"]).to_string())
-}
-fn ensure_thread(ctx: &mut Context, state: &mut Value) -> Result<String> {
-    if s(&state["channel_id"]).is_empty() {
-        let channels = ctx.call(
-            "GET",
-            &format!("/guilds/{}/channels", s(&ctx.cfg["guild_id"])),
-            None,
-        )?;
-        state["channel_id"] = json!(find_general(&channels)?);
-        save(ctx, state)?;
-    }
-    let parent = s(&state["channel_id"]).to_owned();
-    if s(&state["thread_id"]).is_empty() {
-        // Reconcile creation before retrying: a lost POST response must not create another board.
-        let active = ctx.call(
-            "GET",
-            &format!("/guilds/{}/threads/active", s(&ctx.cfg["guild_id"])),
-            None,
-        )?;
-        let find = |v: &Value| -> Option<String> {
-            v["threads"]
-                .as_array()?
-                .iter()
-                .find(|t| s(&t["name"]) == TITLE && s(&t["parent_id"]) == parent)
-                .map(|t| s(&t["id"]).into())
-        };
-        let mut found = find(&active);
-        if found.is_none() {
-            let archived = ctx.call(
-                "GET",
-                &format!("/channels/{parent}/threads/archived/public?limit=100"),
-                None,
-            )?;
-            found = find(&archived);
-            if found.is_none() && (truth(&archived["has_more"]) || truth(&state["creating"])) {
-                return Err("一覧スレッドの作成結果を確認できません。次回に再確認します".into());
-            }
-        }
-        let tid = if let Some(tid) = found {
-            tid
-        } else {
-            state["creating"] = json!(true);
-            save(ctx, state)?;
-            let thread = ctx.call(
-                "POST",
-                &format!("/channels/{parent}/threads"),
-                Some(&json!({"name":TITLE,"type":11,"auto_archive_duration":1440})),
-            )?;
-            s(&thread["id"]).to_owned()
-        };
-        if tid.is_empty() {
-            return Err("一覧スレッドのIDがありません".into());
-        }
-        state["thread_id"] = json!(tid);
-        state["creating"] = json!(false);
-        save(ctx, state)?;
-    }
-    let tid = s(&state["thread_id"]).to_owned();
-    let thread = ctx.call("GET", &format!("/channels/{tid}"), None)?;
-    if !matches_saved(ctx, &thread, state) {
-        return Err("一覧スレッドのサーバー・親チャンネル・種類が登録と一致しません".into());
-    }
-    if truth(&thread["thread_metadata"]["archived"]) {
-        ctx.call(
-            "PATCH",
-            &format!("/channels/{tid}"),
-            Some(&json!({"archived":false})),
-        )?;
-    }
-    Ok(tid)
-}
-fn cc_scheduler_snapshot(root: &std::path::Path) -> Result<Vec<Value>> {
-    if !root.exists() {
-        return Ok(vec![]);
-    }
-    let mut jobs = vec![];
-    for entry in std::fs::read_dir(root).map_err(|e| e.to_string())? {
-        crate::tick_runtime::check()?;
-        let path = entry.map_err(|e| e.to_string())?.path().join("job.json");
-        if path.exists() {
-            jobs.push(read_json(&path)?);
-        }
-    }
-    Ok(jobs)
 }
 /// Derived display metadata never changes the shared ToDo or launches a worker.
 pub fn mark_unassigned(db: &mut Value, jobs: &[Value], intake: &Value, now: f64) {
@@ -687,171 +550,217 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
     let _network = NetworkScope::new();
     let _guard = ByteLock::acquire(&ctx.here.join("board.lock"), Duration::ZERO)?;
     let names = Names::load(&ctx.client_projects)
-        .map_err(|e| format!("client exclusion list unavailable: {e}"))?;
-    let mut db = read_json(&ctx.todo)?;
-    let question_state = ctx.load()?;
-    let questions = pending(&question_state);
-    let ownership = (|| -> Result<_> {
-        let jobs = cc_scheduler_snapshot(&ctx.jobs.join("jobs"))?;
-        let intake_path = ctx
-            .jobs
-            .parent()
-            .ok_or("jobs parent unavailable")?
-            .join("localai-web-rs/target/release/console-state.json");
-        let intake = read_json(&intake_path)?;
-        if !intake["queue"].is_array() {
-            return Err("intake queue unavailable".into());
-        }
-        Ok((jobs, intake))
-    })();
-    match ownership {
-        Ok((jobs, intake)) => {
-            mark_unassigned(&mut db, &jobs, &intake, ctx.now());
-            for item in db["items"].as_array_mut().into_iter().flatten() {
-                if owner_waiting(item, &questions) {
-                    item["board_unassigned"] = json!(false);
-                }
-            }
-        }
-        Err(e) => {
-            // Unknown ownership is not absence. Existing work and wait rows still update.
-            eprintln!("board ownership unavailable: {e}");
-            for item in db["items"].as_array_mut().into_iter().flatten() {
-                item["board_unassigned"] = json!(false);
-            }
-        }
-    }
-    let items: Vec<_> = db["items"]
-        .as_array()
-        .ok_or("invalid ToDo items")?
-        .iter()
-        .filter(|i| visible(&db, i))
-        .cloned()
-        .collect();
+        .map_err(|_| "client exclusion list unavailable".to_owned())?;
     let mut state = load(ctx)?;
-    if !state["guild_id"].is_null() && state["guild_id"] != ctx.cfg["guild_id"] {
-        return Err("一覧の保存先サーバーと現在の設定が違います".into());
+    if state["guild_id"] != ctx.cfg["guild_id"]
+        || n(&state["thread_id"]) == 0
+        || n(&state["channel_id"]) == 0
+    {
+        return Err("一覧の保存先が現在のサーバーに登録されていません".into());
     }
-    state["guild_id"] = ctx.cfg["guild_id"].clone();
-    // Recover a successful POST whose response/checkpoint was lost, even if the board shrank
-    // since that attempt. The slot then participates in normal edits (including （空き）).
-    if !state["pending_message"].is_null() && !s(&state["thread_id"]).is_empty() {
-        let tid = ensure_thread(ctx, &mut state)?;
-        let history = ctx.call("GET", &format!("/channels/{tid}/messages?limit=100"), None)?;
-        let pending = state["pending_message"].clone();
-        if let Some(message) = history
-            .as_array()
-            .ok_or("invalid board history")?
-            .iter()
-            .find(|m| {
-                s(&m["nonce"]) == s(&pending["nonce"])
-                    || (truth(&m["author"]["bot"]) && s(&m["content"]) == s(&pending["content"]))
-            })
-        {
-            if !state["messages"]
-                .as_array()
-                .ok_or("invalid board messages")?
-                .iter()
-                .any(|m| m["id"] == message["id"])
-            {
-                state["messages"]
-                    .as_array_mut()
-                    .unwrap()
-                    .push(json!({"id":message["id"],"content":pending["content"]}));
-            }
+    if !s(&state["parent_thread"]).is_empty() && state["parent_thread"] != state["thread_id"] {
+        for field in [
+            "parent_thread",
+            "parent_message_id",
+            "parent_message_channel",
+            "parent_content",
+            "parent_target",
+            "parent_migration_done",
+        ] {
+            state.as_object_mut().unwrap().remove(field);
         }
+        // Old slots and pending POSTs belong to the former registration.
+        state["messages"] = json!([]);
         state["pending_message"] = Value::Null;
         save(ctx, &state)?;
     }
-    // The local model may be unavailable; that is a translation failure, not a board failure.
-    let open_questions = latest_open(question_state["questions"].as_array().into_iter().flatten());
-    if let Err(e) = translate(ctx, &mut state, &items, &open_questions, &names) {
-        eprintln!("board labels: {e}");
+    if ctx.codex_command.extension().is_some_and(|ext| ext == "py")
+        && !ctx.codex_command.with_extension("exe").is_file()
+    {
+        return Err("ジョブ一覧のRust実行ファイルがありません".into());
     }
-    // Board persistence owns labels/messages only. Pass the question snapshot to
-    // render without copying answer cursors into board.json or taking its writer lock.
-    let mut render_state = state.clone();
-    render_state["questions"] = question_state["questions"].clone();
-    render_state["owner_answers"] = question_state["owner_answers"].clone();
-    let body = render(&db, &questions, &render_state, &names, ctx.now());
-    if s(&state["body"]) != body || state["target_parts"].as_array().is_none() {
-        state["body"] = json!(body);
-        state["target_parts"] = json!(split(&format!(
-            "更新: {}（日本時間）\n{}",
-            time(ctx.now()),
-            body
-        )));
+    let output = ctx.run(
+        &command_argv(
+            &ctx.codex_command,
+            &["status".into(), "--json".into(), "--summary".into()],
+        ),
+        30,
+    )?;
+    if output.code != 0 {
+        return Err("ジョブ一覧を取得できません".into());
+    }
+    let status: Value = serde_json::from_str(&output.stdout).map_err(|_| "invalid board status")?;
+    let machine = ctx.run(
+        &[
+            "powershell.exe".into(),
+            "-NoProfile".into(),
+            "-NonInteractive".into(),
+            "-Command".into(),
+            crate::board_display::MACHINE_PROBE.into(),
+        ],
+        10,
+    );
+    let machine = machine
+        .ok()
+        .filter(|o| o.code == 0)
+        .and_then(|o| serde_json::from_str::<Value>(&o.stdout).ok())
+        .unwrap_or(Value::Null);
+    let body = crate::board_display::render(&status, &machine, &names, ctx.now())?;
+    if s(&state["job_body"]) != body || state["parent_target"].is_null() {
+        state["job_body"] = json!(body);
+        state["parent_target"] = json!(crate::board_display::stamped(&body, ctx.now()));
         save(ctx, &state)?;
     }
-    let targets = state["target_parts"]
-        .as_array()
-        .ok_or("invalid board parts")?
-        .clone();
-    let previous = state["messages"]
-        .as_array()
-        .ok_or("invalid board messages")?
-        .clone();
-    let count = targets.len().max(previous.len());
-    let changed = (0..count).any(|i| {
-        s(&previous.get(i).unwrap_or(&Value::Null)["content"])
-            != targets.get(i).and_then(Value::as_str).unwrap_or("（空き）")
-    });
+    let tid = s(&state["thread_id"]).to_owned();
     let url = format!(
-        "https://discord.com/channels/{}/{}",
-        s(&ctx.cfg["guild_id"]),
-        s(&state["thread_id"])
+        "https://discord.com/channels/{}/{tid}",
+        s(&ctx.cfg["guild_id"])
     );
-    if !changed {
+    let migration_pending = !truth(&state["parent_migration_done"]);
+    if state["parent_content"] == state["parent_target"] && !migration_pending {
         return Ok(json!({"changed":false,"url":url}));
     }
-    let tid = ensure_thread(ctx, &mut state)?;
-    for i in 0..count {
-        crate::tick_runtime::check()?;
-        let content = targets.get(i).and_then(Value::as_str).unwrap_or("（空き）");
-        let previous = state["messages"].get(i).cloned().unwrap_or(Value::Null);
-        if s(&previous["content"]) == content {
-            continue;
+    let thread = ctx.call("GET", &format!("/channels/{tid}"), None)?;
+    if !matches_saved(ctx, &thread, &state) {
+        return Err("一覧のサーバー・親チャンネル・種類が登録と一致しません".into());
+    }
+    if truth(&thread["thread_metadata"]["archived"]) {
+        ctx.call(
+            "PATCH",
+            &format!("/channels/{tid}"),
+            Some(&json!({"archived":false})),
+        )?;
+    }
+    if n(&state["parent_message_id"]) == 0 {
+        let mut before = u64::MAX;
+        let mut earliest = None;
+        let first = loop {
+            let suffix = if before == u64::MAX {
+                String::new()
+            } else {
+                format!("&before={before}")
+            };
+            let page = ctx.call(
+                "GET",
+                &format!("/channels/{tid}/messages?limit=100{suffix}"),
+                None,
+            )?;
+            let messages = page.as_array().ok_or("invalid board history")?;
+            if messages.is_empty() {
+                break earliest.ok_or("board has no parent message")?;
+            }
+            let oldest = messages
+                .iter()
+                .min_by_key(|m| n(&m["id"]))
+                .ok_or("board has no parent message")?;
+            let id = n(&oldest["id"]);
+            if id == 0 || id >= before {
+                return Err("board history did not advance".into());
+            }
+            if messages.len() < 100 {
+                break oldest.clone();
+            }
+            before = id;
+            earliest = Some(oldest.clone());
+        };
+        // A thread started from a channel message exposes a system reference in the thread.
+        let (channel, mid) = if n(&first["type"]) == 21 {
+            (s(&state["channel_id"]).to_owned(), tid.clone())
+        } else {
+            (tid.clone(), s(&first["id"]).to_owned())
+        };
+        state["parent_thread"] = json!(tid);
+        state["parent_message_channel"] = json!(channel);
+        state["parent_message_id"] = json!(mid);
+        save(ctx, &state)?;
+    }
+    let parent_channel = s(&state["parent_message_channel"]).to_owned();
+    let parent_mid = s(&state["parent_message_id"]).to_owned();
+    let mut changed = false;
+    if state["parent_content"] != state["parent_target"] {
+        let target = s(&state["parent_target"]).to_owned();
+        ctx.call(
+            "PATCH",
+            &format!("/channels/{parent_channel}/messages/{parent_mid}"),
+            Some(&edit_payload(&target)),
+        )?;
+        state["parent_content"] = json!(target);
+        save(ctx, &state)?;
+        changed = true;
+    }
+    if migration_pending {
+        // Include an old POST whose response/checkpoint was lost before this migration.
+        if !state["pending_message"].is_null() {
+            let history = inbox_history(ctx, &tid, 0)?;
+            let pending = &state["pending_message"];
+            let found: Vec<_> = history
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|m| {
+                    truth(&m["author"]["bot"])
+                        && ((!s(&pending["nonce"]).is_empty()
+                            && s(&m["nonce"]) == s(&pending["nonce"]))
+                            || s(&m["content"]) == s(&pending["content"]))
+                })
+                .cloned()
+                .collect();
+            if !state["messages"].is_array() {
+                state["messages"] = json!([]);
+            }
+            for m in found {
+                if !state["messages"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|old| old["id"] == m["id"])
+                {
+                    state["messages"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!({"id":m["id"],"content":m["content"]}));
+                }
+            }
+            state["pending_message"] = Value::Null;
+            save(ctx, &state)?;
         }
-        if let Some(mid) = previous["id"].as_str() {
-            ctx.call(
+        let previous = state["messages"].as_array().cloned().unwrap_or_default();
+        for (i, message) in previous.iter().enumerate() {
+            let mid = s(&message["id"]);
+            if mid == parent_mid && parent_channel == tid {
+                state["messages"][i]["content"] = state["parent_content"].clone();
+                save(ctx, &state)?;
+                continue;
+            }
+            if mid.is_empty() || message["moved_to_parent"] == true {
+                continue;
+            }
+            let result = ctx.call(
                 "PATCH",
                 &format!("/channels/{tid}/messages/{mid}"),
-                Some(&edit_payload(content)),
-            )?;
-            state["messages"][i]["content"] = json!(content);
-        } else {
-            if state["pending_message"].is_null() {
-                state["pending_message"] = json!({"nonce":uuid::Uuid::new_v4().simple().to_string()[..24].to_string(),"content":content});
-                save(ctx, &state)?;
+                Some(&edit_payload("（この一覧は親の投稿に移りました）")),
+            );
+            // A deleted legacy slot is already retired; every other failure must retry.
+            if let Err(error) = result {
+                if !error.starts_with(&format!(
+                    "Discord API PATCH /channels/{tid}/messages/{mid} failed: 404 "
+                )) {
+                    return Err(error);
+                }
             }
-            let pending = state["pending_message"].clone();
-            let history = ctx.call("GET", &format!("/channels/{tid}/messages?limit=100"), None)?;
-            let existing = history.as_array().into_iter().flatten().find(|m| {
-                s(&m["nonce"]) == s(&pending["nonce"])
-                    || (truth(&m["author"]["bot"]) && s(&m["content"]) == s(&pending["content"]))
-            });
-            let message = if let Some(m) = existing {
-                m.clone()
-            } else {
-                let mut p = payload(s(&pending["content"]));
-                p["nonce"] = pending["nonce"].clone();
-                p["enforce_nonce"] = json!(true);
-                ctx.call("POST", &format!("/channels/{tid}/messages"), Some(&p))?
-            };
-            if s(&message["id"]).is_empty() {
-                return Err("一覧メッセージのIDがありません".into());
-            }
-            state["messages"]
-                .as_array_mut()
-                .unwrap()
-                .push(json!({"id":message["id"],"content":pending["content"]}));
-            state["pending_message"] = Value::Null;
+            state["messages"][i]["content"] = json!("（この一覧は親の投稿に移りました）");
+            state["messages"][i]["moved_to_parent"] = json!(true);
+            save(ctx, &state)?;
+            changed = true;
+        }
+        state["parent_migration_done"] = json!(true);
+        // Retire the old board text and cached labels, which are no longer used.
+        for field in ["body", "target_parts", "labels"] {
+            state.as_object_mut().unwrap().remove(field);
         }
         save(ctx, &state)?;
     }
-    Ok(
-        json!({"changed":true,"url":format!("https://discord.com/channels/{}/{tid}",s(&ctx.cfg["guild_id"]))}),
-    )
+    Ok(json!({"changed":changed,"url":url}))
 }
 /// Launch an independent bounded process; model/network waits cannot consume the minute tick.
 pub fn launch_due(ctx: &mut Context) -> Result<()> {

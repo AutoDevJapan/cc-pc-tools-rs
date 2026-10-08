@@ -20,6 +20,7 @@ pub mod ask_gate;
 pub mod attachments;
 pub mod automation;
 pub mod board;
+pub mod board_display;
 pub mod civ6_idle;
 pub mod commands;
 pub mod core;

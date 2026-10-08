@@ -275,27 +275,22 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
     let thread = std::thread::spawn(move || {
         let result = (|| -> io::Result<()> {
             runtime()?.block_on(async {
-            let mut server=ServerOptions::new().first_pipe_instance(true).create(&service_pipe)?;
-            let _=ready_tx.send(Ok(()));
-            let mut tasks=tokio::task::JoinSet::new();tokio::pin!(stop_rx);
-            loop {
-                tokio::select! {
-                    _=&mut stop_rx=>{
-                        // Drain creation replies after the worker has disconnected before aborting relays.
-                        let _=tokio::time::timeout(Duration::from_secs(4),async {while tasks.join_next().await.is_some(){}}).await;
-                        tasks.shutdown().await;return Ok(());
-                    },
-                    result=server.connect()=>{
-                        result?;
-                        let next=ServerOptions::new().create(&service_pipe)?;
-                        let connected=std::mem::replace(&mut server,next);
-                        let dir=path.clone();let job=job.clone();
-                        tasks.spawn(async move{if let Ok((upstream,info))=discover().await{let _=forward(connected,&upstream,&info,&dir,&job).await;}});
-                    },
-                    _=tasks.join_next(),if !tasks.is_empty()=>{},
-                }
-            }
-        })
+                let server = ServerOptions::new()
+                    .first_pipe_instance(true)
+                    .create(&service_pipe)?;
+                let _ = ready_tx.send(Ok(()));
+                accept_loop(server, &service_pipe, stop_rx, move |connected| {
+                    let dir = path.clone();
+                    let job = job.clone();
+                    async move {
+                        if let Ok((upstream, info)) = discover().await {
+                            let _ = forward(connected, &upstream, &info, &dir, &job).await;
+                        }
+                    }
+                })
+                .await;
+                Ok(())
+            })
         })();
         if let Err(e) = result {
             let _ = ready_tx.send(Err(e.to_string()));
@@ -315,6 +310,49 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
             )))
         }
     }
+}
+/// Listener failures never drop active responders. Recreate the listener independently
+/// and drain responders only on explicit supervisor shutdown.
+async fn accept_loop<F, Fut>(
+    server: tokio::net::windows::named_pipe::NamedPipeServer,
+    pipe: &str,
+    stop: tokio::sync::oneshot::Receiver<()>,
+    mut handler: F,
+) where
+    F: FnMut(tokio::net::windows::named_pipe::NamedPipeServer) -> Fut,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+{
+    let mut server = Some(server);
+    let mut tasks = tokio::task::JoinSet::new();
+    tokio::pin!(stop);
+    loop {
+        if server.is_none() {
+            // Yield on resource errors while existing responders continue to journal replies.
+            tokio::select! {
+                _=&mut stop=>break,
+                _=tokio::time::sleep(Duration::from_millis(25))=>{},
+            }
+            server = ServerOptions::new().create(pipe).ok();
+            continue;
+        }
+        tokio::select! {
+            _=&mut stop=>break,
+            result=server.as_mut().unwrap().connect()=>{
+                let connected=server.take().unwrap();
+                // Bind the next instance while this handle still keeps the pipe name alive.
+                // Backoff is only for an actual create failure, never for normal connections.
+                server=ServerOptions::new().create(pipe).ok();
+                if result.is_ok() {tasks.spawn(handler(connected));}
+                // ERROR_NO_DATA from an immediately disconnected probing client is recoverable.
+            },
+            _=tasks.join_next(),if !tasks.is_empty()=>{},
+        }
+    }
+    let _ = tokio::time::timeout(Duration::from_secs(5), async {
+        while tasks.join_next().await.is_some() {}
+    })
+    .await;
+    tasks.shutdown().await;
 }
 async fn forward(
     server: tokio::net::windows::named_pipe::NamedPipeServer,
@@ -516,6 +554,8 @@ mod tests {
         runtime().unwrap().block_on(async {
             let pipe=format!(r"\\.\pipe\cc-chrome-fixture-{}",uuid::Uuid::new_v4());
             let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            // Force a probe to disconnect before the listener starts connecting.
+            let probe=connect(&pipe).await.unwrap();drop(probe);
             let record=Record{job:"j".into(),pipe,instance:"extension".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:11,created:100};
             let mock=async move{
                 server.connect().await.unwrap();let mut server=server;
@@ -712,6 +752,40 @@ mod tests {
                     .count(),
                 0
             );
+        });
+    }
+    #[test]
+    fn immediately_disconnected_probes_do_not_stop_recording_or_drain() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            let pipe=format!(r"\\.\pipe\cc-chrome-probe-{}",uuid::Uuid::new_v4());
+            let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let (stop,stopped)=tokio::sync::oneshot::channel();
+            let dir=root.path().to_path_buf();
+            let serve=accept_loop(server,&pipe,stopped,move |client| {
+                let dir=dir.clone();
+                async move {
+                    let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+                    let info=json!({"metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                    let proxy=forward_streams(client,proxy_backend,"upstream",&info,&dir,"job");
+                    let fixture=async {
+                        if let Ok(v)=read_frame(&mut backend).await {
+                            let _=write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await;
+                        }
+                    };
+                    let _=tokio::join!(proxy,fixture);
+                }
+            });
+            let probes=async {
+                for _ in 0..12 {let client=connect(&pipe).await.unwrap();drop(client);}
+                let mut client=connect(&pipe).await.unwrap();
+                write_frame(&mut client,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut client).await.unwrap();assert_eq!(v["result"]["id"],42);
+                assert_eq!(fs::read_dir(root.path().join("chrome-tabs")).unwrap().count(),1);
+                drop(client);let _=stop.send(());
+            };
+            tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(serve,probes)}).await.unwrap();
         });
     }
 }

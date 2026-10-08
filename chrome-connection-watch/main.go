@@ -189,6 +189,7 @@ func main() {
 	collect(&r)
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	cmd := exec.CommandContext(ctx, *cli, "inventory")
+	cmd.WaitDelay = 2 * time.Second
 	hidden(cmd)
 	b, err := cmd.Output()
 	cancel()

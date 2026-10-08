@@ -4,6 +4,11 @@ use cc_task_title::Names;
 use chrono::{DateTime, FixedOffset};
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
+
+// Normalize historical job records to the current product name before display.
+static PRODUCT_NAME: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?i)x\x4c\x49\x46\x45").unwrap());
 
 pub const MACHINE_PROBE: &str = "$ErrorActionPreference='Stop'; $o=Get-CimInstance Win32_OperatingSystem; $c=(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average; [pscustomobject]@{cpu=$c; used=($o.TotalVisibleMemorySize-$o.FreePhysicalMemory)/1MB; total=$o.TotalVisibleMemorySize/1MB} | ConvertTo-Json -Compress";
 
@@ -14,6 +19,7 @@ fn clean(text: &str, names: &Names, limit: usize) -> String {
 
 fn display_text(text: &str, names: &Names, limit: usize) -> String {
     let text = text.replace(['`', '*', '@', '<', '>', '\n', '\r'], " ");
+    let text = PRODUCT_NAME.replace_all(&text, "Re:X");
     let text = names.redact(&text.split_whitespace().collect::<Vec<_>>().join(" "));
     let mut short: String = text.chars().take(limit).collect();
     if text.chars().count() > limit {
@@ -28,7 +34,11 @@ fn display_text(text: &str, names: &Names, limit: usize) -> String {
 
 pub fn project_label(project: &str, names: &Names) -> String {
     let p = names.project(project);
-    match p.as_str() {
+    let p = PRODUCT_NAME.replace_all(&p, "Re:X");
+    if p.eq_ignore_ascii_case("GoDD-Re:X") || p.eq_ignore_ascii_case("Re:X") {
+        return "Re:X".into();
+    }
+    match p.as_ref() {
         "civ6-banseiki" | "civ6" => "万世紀".into(),
         "GoDD-Teacher-Odin" => "Odin".into(),
         "GoDD-MCP-Alpha" => "GoDD MCP α".into(),

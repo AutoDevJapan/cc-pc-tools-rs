@@ -10,7 +10,7 @@ pub const MACHINE_PROBE: &str = "$ErrorActionPreference='Stop'; $o=Get-CimInstan
 fn clean(text: &str, names: &Names, limit: usize) -> String {
     let text = cc_task_title::clean(&names.redact(text));
     let text = text.replace(['`', '*', '@', '<', '>', '\n', '\r'], " ");
-    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let text = names.redact(&text.split_whitespace().collect::<Vec<_>>().join(" "));
     let mut short: String = text.chars().take(limit).collect();
     if text.chars().count() > limit {
         short.push('…');
@@ -153,6 +153,7 @@ pub fn render(status: &Value, machine: &Value, names: &Names, now: f64) -> Resul
             body.push_str(&format!("\nほか {}プロジェクト{each}\n", rest.len()));
         }
         body.push_str(&footer);
+        let body = names.redact(&body);
         // Include the timestamp prefix in the UTF-16 budget.
         if body.encode_utf16().count() + "作業状況  00:00\n".encode_utf16().count() <= MAX_CONTENT
         {

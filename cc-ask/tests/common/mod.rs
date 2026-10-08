@@ -345,7 +345,9 @@ impl Fake {
                     .messages
                     .get_mut(&tid)
                     .and_then(|ms| ms.iter_mut().find(|m| s(&m["id"]) == mid))
-                    .ok_or("message missing")?;
+                    .ok_or_else(|| {
+                        format!("Discord API PATCH {path} failed: 404 Unknown Message")
+                    })?;
                 for (key, value) in b.as_object().unwrap() {
                     message[key] = value.clone();
                 }

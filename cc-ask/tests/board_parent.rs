@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 
 fn setup() -> Harness {
     let h = Harness::new();
+    std::fs::write(h.ctx.codex_command.with_extension("exe"), "fake").unwrap();
     atomic_json(&h.ctx.here.join("board.json"), &json!({"guild_id":"G","thread_id":"500","channel_id":"10","messages":[{"id":"120","content":"old"}]}), 1).unwrap();
     let mut f = h.fake.borrow_mut();
     f.threads.insert("500".into(), json!({"id":"500","guild_id":"G","parent_id":"10","type":11,"thread_metadata":{"archived":false}}));
@@ -81,6 +82,9 @@ fn masks_client_names_case_insensitively_in_projects_and_task_titles() {
     assert!(body.contains("クライアント案件の接続を直す"));
     assert!(!body.to_lowercase().contains("acmeclient"));
     assert!(!body.to_lowercase().contains("otherclient"));
+    let body = render(&json!({"jobs":[{"project":"tools","task_title":"Acme【担当】Clientの接続を直す","status":"running"}]}), &Value::Null, &names, 0.).unwrap();
+    assert!(body.contains("クライアント案件の接続を直す"));
+    assert!(!body.to_lowercase().contains("acmeclient"));
 }
 
 #[test]
@@ -150,6 +154,14 @@ fn updates_parent_moves_old_message_once_and_sends_no_posts_or_mentions() {
     .unwrap();
     assert_eq!(board::update(&mut h.ctx).unwrap()["changed"], true);
     let f = h.fake.borrow();
+    assert_eq!(
+        f.runs
+            .iter()
+            .find(|(a, _)| a.contains(&"--summary".into()))
+            .unwrap()
+            .0[0],
+        h.ctx.codex_command.with_extension("exe").to_string_lossy()
+    );
     assert_eq!(f.patches.len(), 3);
     assert!(f.posts.is_empty());
     assert!(f
@@ -175,6 +187,60 @@ fn partial_migration_retries_only_unfinished_edits() {
     assert_eq!(h.fake.borrow().patches.len(), 2);
     assert_eq!(board::update(&mut h.ctx).unwrap()["changed"], false);
     assert!(h.fake.borrow().posts.is_empty());
+}
+
+#[test]
+fn deleted_legacy_slot_and_lost_pending_post_are_retired_without_posting() {
+    let mut h = setup();
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut("500")
+        .unwrap()
+        .retain(|m| m["id"] != "120");
+    let mut lost = message("130", "lost legacy body", "BOT");
+    lost["author"]["bot"] = json!(true);
+    lost["nonce"] = json!("pending-nonce");
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut("500")
+        .unwrap()
+        .push(lost);
+    let mut state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    state["pending_message"] = json!({"nonce":"pending-nonce","content":"lost legacy body"});
+    atomic_json(&h.ctx.here.join("board.json"), &state, 1).unwrap();
+    board::update(&mut h.ctx).unwrap();
+    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    assert_eq!(state["parent_migration_done"], true);
+    assert!(state["pending_message"].is_null());
+    assert_eq!(
+        h.fake.borrow().messages["500"][1]["content"],
+        "（この一覧は親の投稿に移りました）"
+    );
+    assert_eq!(board::update(&mut h.ctx).unwrap()["changed"], false);
+    assert!(h.fake.borrow().posts.is_empty());
+}
+
+#[test]
+fn changing_registration_never_edits_the_old_parent_or_slots() {
+    let mut h = setup();
+    board::update(&mut h.ctx).unwrap();
+    let old = h.fake.borrow().messages["500"].clone();
+    let mut state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    state["thread_id"] = json!("600");
+    atomic_json(&h.ctx.here.join("board.json"), &state, 1).unwrap();
+    h.fake.borrow_mut().threads.insert("600".into(), json!({"id":"600","guild_id":"G","parent_id":"10","type":11,"thread_metadata":{"archived":false}}));
+    h.fake
+        .borrow_mut()
+        .messages
+        .insert("600".into(), vec![message("200", "新しい親", "BOT")]);
+    board::update(&mut h.ctx).unwrap();
+    assert_eq!(h.fake.borrow().messages["500"], old);
+    assert!(h.fake.borrow().messages["600"][0]["content"]
+        .as_str()
+        .unwrap()
+        .starts_with("作業状況"));
 }
 
 #[test]

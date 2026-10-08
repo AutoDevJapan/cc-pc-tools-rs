@@ -558,13 +558,27 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
     {
         return Err("一覧の保存先が現在のサーバーに登録されていません".into());
     }
+    if !s(&state["parent_thread"]).is_empty() && state["parent_thread"] != state["thread_id"] {
+        for field in [
+            "parent_thread",
+            "parent_message_id",
+            "parent_message_channel",
+            "parent_content",
+            "parent_target",
+            "parent_migration_done",
+        ] {
+            state.as_object_mut().unwrap().remove(field);
+        }
+        // Old slots and pending POSTs belong to the former registration.
+        state["messages"] = json!([]);
+        state["pending_message"] = Value::Null;
+        save(ctx, &state)?;
+    }
     let output = ctx.run(
-        &[
-            ctx.codex_command.to_string_lossy().into_owned(),
-            "status".into(),
-            "--json".into(),
-            "--summary".into(),
-        ],
+        &command_argv(
+            &ctx.codex_command,
+            &["status".into(), "--json".into(), "--summary".into()],
+        ),
         30,
     )?;
     if output.code != 0 {
@@ -650,6 +664,7 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         } else {
             (tid.clone(), s(&first["id"]).to_owned())
         };
+        state["parent_thread"] = json!(tid);
         state["parent_message_channel"] = json!(channel);
         state["parent_message_id"] = json!(mid);
         save(ctx, &state)?;
@@ -714,11 +729,19 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
             if mid.is_empty() || message["moved_to_parent"] == true {
                 continue;
             }
-            ctx.call(
+            let result = ctx.call(
                 "PATCH",
                 &format!("/channels/{tid}/messages/{mid}"),
                 Some(&edit_payload("（この一覧は親の投稿に移りました）")),
-            )?;
+            );
+            // A deleted legacy slot is already retired; every other failure must retry.
+            if let Err(error) = result {
+                if !error.starts_with(&format!(
+                    "Discord API PATCH /channels/{tid}/messages/{mid} failed: 404 "
+                )) {
+                    return Err(error);
+                }
+            }
             state["messages"][i]["content"] = json!("（この一覧は親の投稿に移りました）");
             state["messages"][i]["moved_to_parent"] = json!(true);
             save(ctx, &state)?;

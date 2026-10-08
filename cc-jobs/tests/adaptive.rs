@@ -316,6 +316,8 @@ fn cache_supplements_all_accounts_without_private_fields_or_overriding_exclusion
         1
     );
     assert_eq!(parse_codex_quotas(None, &cache, 1300.).accounts.len(), 2);
+    assert!(!parse_codex_quotas(None, &cache, 1300.).complete);
+    assert!(!parse_codex_quotas(Some(&cli), &Value::Null, 1300.).complete);
     assert!(!parse_codex_quotas(None, &cache, 1800.).complete);
     assert!(!parse_codex_quotas(None, &Value::Null, 1300.).complete);
 }

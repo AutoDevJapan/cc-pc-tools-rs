@@ -46,6 +46,15 @@ pub fn merge_queue_config(current: &Value, patch: &Value, clear_fixed: bool) -> 
     if !current.is_object() || !patch.is_object() {
         return Err(Error::new("queue configuration and patch must be objects"));
     }
+    if !clear_fixed
+        && !current["fixed_max_running"].is_null()
+        && !patch["fixed_max_running"].is_null()
+        && current["fixed_max_running"] != patch["fixed_max_running"]
+    {
+        return Err(Error::new(
+            "fixed_max_running is already set; retain the owner's override",
+        ));
+    }
     let mut merged = current.clone();
     for (key, value) in patch.as_object().unwrap() {
         if key == "fixed_max_running" {
@@ -95,8 +104,9 @@ impl Context {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => json!({}),
             Err(e) => return Err(Error::file_io("read queue configuration", &path, e)),
         };
+        let merged = merge_queue_config(&current, patch, clear_fixed)?;
         if clear_fixed && !current["fixed_max_running"].is_null() {
-            let cfg: QueueConfig = serde_json::from_value(current.clone())?;
+            let cfg: QueueConfig = serde_json::from_value(merged.clone())?;
             let adaptive = cfg
                 .adaptive
                 .as_ref()
@@ -116,14 +126,20 @@ impl Context {
                 ));
             }
         }
-        let merged = merge_queue_config(&current, patch, clear_fixed)?;
         if merged != current {
-            if clear_fixed && !current["fixed_max_running"].is_null() {
+            let changes = if clear_fixed && !current["fixed_max_running"].is_null() {
+                Some(
+                    fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(self.root.join("queue-config.CHANGES.txt"))?,
+                )
+            } else {
+                None
+            };
+            self.write_json(&path, &merged)?;
+            if let Some(mut changes) = changes {
                 use std::io::Write;
-                let mut changes = fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(self.root.join("queue-config.CHANGES.txt"))?;
                 writeln!(
                     changes,
                     "{} fixed_max_runningを解除: CPU・空きメモリ・応答を実測し自動上限16以上を連続3回確認",
@@ -131,7 +147,6 @@ impl Context {
                 )?;
                 changes.sync_all()?;
             }
-            self.write_json(&path, &merged)?;
         }
         Ok(merged)
     }
@@ -1090,12 +1105,13 @@ impl Context {
                 &mut codex_families
             };
             let provider_limit = if claude { claude_limit } else { codex_limit };
-            if (!families.contains(&root) && families.len() >= hardware_limit)
-                || (!provider_families.contains(&root)
-                    && provider_families.len() >= provider_limit
-                    && (parent.is_empty() || !families.contains(&root)))
-            {
-                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit}));
+            let hardware_blocked = !families.contains(&root) && families.len() >= hardware_limit;
+            let provider_blocked = !provider_families.contains(&root)
+                && provider_families.len() >= provider_limit
+                && (parent.is_empty() || !families.contains(&root));
+            if hardware_blocked || provider_blocked {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit,
+                    "hardware_limited":hardware_blocked && (!provider_blocked || provider_limit >= hardware_limit)}));
                 continue;
             }
             // Children have first claim; wait for the earlier eligible job to

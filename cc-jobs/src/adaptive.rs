@@ -257,7 +257,7 @@ pub fn parse_codex_quotas(cli: Option<&Value>, cache: &Value, at: f64) -> QuotaS
         .and_then(|v| v["accounts"].as_array())
         .cloned()
         .unwrap_or_default();
-    let mut complete = true;
+    let mut complete = cli.is_some_and(|v| v["accounts"].is_array()) && cache["quotas"].is_object();
     if let Some(quotas) = cache["quotas"].as_object() {
         for (id, q) in quotas {
             if rows.iter().any(|row| row["id"] == *id) {
@@ -274,7 +274,7 @@ pub fn parse_codex_quotas(cli: Option<&Value>, cache: &Value, at: f64) -> QuotaS
         }
     }
     let mut snapshot = parse_quotas(&json!({"accounts":rows}), at);
-    snapshot.complete &= complete && (cli.is_some() || !snapshot.accounts.is_empty());
+    snapshot.complete &= complete;
     snapshot
 }
 
@@ -353,24 +353,24 @@ pub fn decide(
     } else if slow {
         state.reason = "単発のプロキシ応答遅延を確認中".into();
         current
-    } else if sample.free_memory_gib.is_none() || state.cpu_percent.is_none() {
+    } else if let (Some(cpu), Some(memory)) = (state.cpu_percent, sample.free_memory_gib) {
+        if cpu >= (cfg.cpu_percent - 10.).max(1.) {
+            state.reason = "CPUが目標の範囲内".into();
+            current
+        } else {
+            let step = if cpu < 40. && memory >= cfg.free_memory_gib * 2. {
+                cfg.increase_step.saturating_mul(4).max(current / 2)
+            } else if cpu < 60. && memory >= cfg.free_memory_gib * 1.5 {
+                cfg.increase_step.saturating_mul(2).max(current / 4)
+            } else {
+                cfg.increase_step.max(current / 8)
+            };
+            state.reason = "CPUと空きメモリに余裕があり増枠".into();
+            current.saturating_add(step).min(cfg.max_running)
+        }
+    } else {
         state.reason = "CPUと空きメモリの測定待ち".into();
         current
-    } else if state.cpu_percent.unwrap() >= (cfg.cpu_percent - 10.).max(1.) {
-        state.reason = "CPUが目標の範囲内".into();
-        current
-    } else {
-        let cpu = state.cpu_percent.unwrap();
-        let memory = sample.free_memory_gib.unwrap();
-        let step = if cpu < 40. && memory >= cfg.free_memory_gib * 2. {
-            cfg.increase_step.saturating_mul(4).max(current / 2)
-        } else if cpu < 60. && memory >= cfg.free_memory_gib * 1.5 {
-            cfg.increase_step.saturating_mul(2).max(current / 4)
-        } else {
-            cfg.increase_step.max(current / 8)
-        };
-        state.reason = "CPUと空きメモリに余裕があり増枠".into();
-        current.saturating_add(step).min(cfg.max_running)
     };
     state.settings = Some(cfg.clone());
     state.mode = "auto".into();
@@ -504,6 +504,7 @@ pub fn decide_providers(
             .health_ms
             .is_some_and(|ms| ms < cfg.health_fast_ms as f64)
         && old.checked_at > 0.
+        && old.settings.as_ref().is_none_or(|settings| settings == cfg)
         && now > old.checked_at
         && now - old.checked_at <= cfg.stale_after_seconds()
     {
@@ -776,7 +777,9 @@ impl Context {
             let queued = self
                 .queue_decisions(&jobs, &cfg, None)
                 .values()
-                .filter(|reason| reason["code"] == "running_limit")
+                .filter(|reason| {
+                    reason["code"] == "running_limit" && reason["hardware_limited"] == true
+                })
                 .count();
             let mut recent = 0;
             let mut latest: f64 = 0.;

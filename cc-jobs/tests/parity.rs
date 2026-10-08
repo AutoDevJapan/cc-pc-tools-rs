@@ -33,6 +33,11 @@ mod adaptive_config_updates {
         assert_eq!(saved["max_running"], 20);
         assert!(
             t.ctx
+                .update_queue_config(&json!({"fixed_max_running":24}), false)
+                .is_err()
+        );
+        assert!(
+            t.ctx
                 .update_queue_config(&json!({"max_running":0}), false)
                 .is_err()
         );
@@ -72,6 +77,63 @@ mod adaptive_config_updates {
         assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 1);
         t.ctx.update_queue_config(&json!({}), true).unwrap();
         assert_eq!(fs::read_to_string(log).unwrap().lines().count(), 1);
+    }
+    #[test]
+    fn simultaneous_policy_change_cannot_clear_using_old_measurements() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        let config = json!({"max_running":16,"fixed_max_running":32,"adaptive":{}});
+        t.ctx.write_json(&path, &config).unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "checked_at":t.rt.epoch(),"hardware_max_running":32,"auto_ready_samples":3,
+            "settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"adaptive":{"cpu_percent":60.}}), true)
+                .is_err()
+        );
+        assert_eq!(t.ctx.read_json(&path).unwrap(), config);
+    }
+    #[test]
+    fn provider_only_waits_do_not_grow_the_hardware_ceiling() {
+        let t = Test::new();
+        let now = t.rt.epoch();
+        let cfg = cc_jobs::adaptive::AdaptiveConfig::default();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"auto","checked_at":now-60.,"hardware_max_running":32,
+            "max_running":0,"claude_max_running":32,"settings":cfg,
+            "machine":{"cpu_times":[100,200,100]}}),
+            )
+            .unwrap();
+        t.put(job(json!({"id":"codex-demand","status":"queued","model":"gpt-6.1-sol",
+            "model_explicit":true,"pid":std::process::id(),"pid_created":123,"queued_at":t.rt.now()})));
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["queued"][0]["reason"]["hardware_limited"], false);
+        t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+        t.ctx.adjust_limit().unwrap();
+        let state = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        assert_eq!(state["queued"], 0);
+        assert_eq!(state["hardware_max_running"], 32);
     }
     #[test]
     fn fixed_mode_keeps_admission_fixed_while_sampling_shadow_automatic_limit() {

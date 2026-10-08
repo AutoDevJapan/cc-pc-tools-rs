@@ -33,6 +33,152 @@ fn healthy() -> MachineSample {
         health_ms: Some(10.),
     }
 }
+fn next_sample(s: &LimitState, health_ms: Option<f64>, memory: f64, cpu: u64) -> MachineSample {
+    let [idle, kernel, user] = s.machine.cpu_times.unwrap();
+    MachineSample {
+        cpu_times: Some([idle + 100 - cpu, kernel + 100, user]),
+        free_memory_gib: Some(memory),
+        health_ms,
+    }
+}
+#[test]
+fn isolated_slow_probe_preserves_quiet_time_and_recovery_after_serialization() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.stable_since = 1000.;
+    let sample = next_sample(&s, Some(1926.), 40., 7);
+    let s = decide(&cfg, s, sample, 1360., 36, 0, 0.);
+    assert_eq!(s.max_running, 25);
+    assert_eq!(s.stable_since, 1000.);
+    assert!(s.reason.contains("単発"));
+    let s: LimitState = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+    let sample = next_sample(&s, Some(2.), 40., 7);
+    let s = decide(&cfg, s, sample, 1420., 36, 0, 0.);
+    assert_eq!(s.max_running, 37);
+    assert_eq!(s.stable_since, 1000.);
+}
+#[test]
+fn repeated_slow_probes_halve_and_a_fast_probe_breaks_the_sequence() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    for (now, ms, expected) in [
+        (1360., 1129., 25),
+        (1420., 1926., 12),
+        (1480., 2., 12),
+        (1540., 1129., 12),
+        (1600., 1000., 6),
+    ] {
+        let sample = next_sample(&s, Some(ms), 40., 7);
+        s = decide(&cfg, s, sample, now, 36, 0, 0.);
+        assert_eq!(s.max_running, expected, "at {now}");
+    }
+    assert_eq!(s.stable_since, 1600.);
+}
+#[test]
+fn old_slow_probe_does_not_count_as_consecutive_pressure() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.machine.health_ms = Some(1926.);
+    s.checked_at = 1000.;
+    let sample = next_sample(&s, Some(1129.), 40., 7);
+    let s = decide(&cfg, s, sample, 1360., 36, 0, 0.);
+    assert_eq!(s.max_running, 25);
+}
+#[test]
+fn pace_spike_is_bounded_and_only_new_quota_can_reduce_again() {
+    let cfg = AdaptiveConfig::default();
+    for claude_available in [false, true] {
+        let mut s = state();
+        s.max_running = 14;
+        s.openai = vec![quota(1000., 20.), quota(1300., 22.2)];
+        if claude_available {
+            s.anthropic = quota(1300., 10.);
+        }
+        let sample = next_sample(&s, Some(2.), 40., 7);
+        let mut s = decide(&cfg, s, sample, 1360., 36, 0, 0.);
+        assert!(s.pace_ratio.unwrap() > 9.);
+        assert_eq!(s.max_running, 11);
+        assert_eq!(
+            s.preferred_provider.as_deref(),
+            claude_available.then_some("anthropic")
+        );
+        let sample = next_sample(&s, Some(2.), 40., 7);
+        s = decide(&cfg, s, sample, 1420., 36, 0, 0.);
+        assert_eq!(s.max_running, 11);
+        s.openai.push(quota(1600., 24.4));
+        s.quota_checked_at = 1600.;
+        s.anthropic.at = 1600.;
+        let sample = next_sample(&s, Some(2.), 40., 7);
+        s = decide(&cfg, s, sample, 1600., 36, 0, 0.);
+        assert_eq!(s.max_running, 9);
+        assert_eq!(
+            s.preferred_provider.as_deref(),
+            claude_available.then_some("anthropic")
+        );
+    }
+}
+#[test]
+fn pace_differences_shorter_than_five_minutes_are_not_used() {
+    assert!(pace_ratio(&[quota(1000., 20.), quota(1299., 22.)]).is_none());
+}
+#[test]
+fn ample_headroom_recovers_quickly_and_respects_all_growth_gates() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.max_running = 4;
+    s.stable_since = 1000.;
+    for (now, expected) in [
+        (1360., 12),
+        (1420., 20),
+        (1480., 30),
+        (1540., 45),
+        (1600., 60),
+    ] {
+        // A valid, unchanged quota remains fresh across the recovery sequence.
+        s.quota_checked_at = now;
+        s.openai = vec![quota(now, 20.)];
+        let sample = next_sample(&s, Some(2.), 40., 7);
+        s = decide(&cfg, s, sample, now, 36, 0, 0.);
+        assert_eq!(s.max_running, expected);
+    }
+    for (queued, errors, last, stable, quota_at) in [
+        (0, 0, 0., 1000., 1300.),
+        (36, 1, 1350., 1000., 1300.),
+        (36, 0, 0., 1300., 1300.),
+        (36, 0, 0., 1000., 500.),
+    ] {
+        let mut s = state();
+        s.max_running = 4;
+        s.stable_since = stable;
+        s.quota_checked_at = quota_at;
+        let sample = next_sample(&s, Some(2.), 40., 7);
+        assert_eq!(
+            decide(&cfg, s, sample, 1360., queued, errors, last).max_running,
+            4
+        );
+    }
+    for (ms, memory, cpu) in [(500., 40., 7), (2., 31.9, 7), (2., 40., 43)] {
+        let s = state();
+        let sample = next_sample(&s, Some(ms), memory, cpu);
+        assert_eq!(decide(&cfg, s, sample, 1360., 36, 0, 0.).max_running, 27);
+    }
+}
+#[test]
+fn machine_pressure_thresholds_still_halve_immediately_even_with_a_pace_spike() {
+    let cfg = AdaptiveConfig::default();
+    for (memory, cpu, expected) in [(16., 84, 27), (16., 85, 12), (15.99, 7, 12)] {
+        let s = state();
+        let sample = next_sample(&s, Some(2.), memory, cpu);
+        assert_eq!(
+            decide(&cfg, s, sample, 1360., 36, 0, 0.).max_running,
+            expected
+        );
+    }
+    let mut s = state();
+    s.openai = vec![quota(1000., 20.), quota(1300., 22.2)];
+    let sample = next_sample(&s, Some(2.), 40., 85);
+    assert_eq!(decide(&cfg, s, sample, 1360., 36, 0, 0.).max_running, 12);
+}
 #[test]
 fn stable_queue_increases_and_clamps_at_max() {
     let cfg = AdaptiveConfig::default();
@@ -67,15 +213,13 @@ fn queue_quiet_period_and_unknown_samples_prevent_growth() {
 #[test]
 fn every_pressure_signal_halves_without_going_below_min() {
     let cfg = AdaptiveConfig::default();
-    let mut slow = healthy();
-    slow.health_ms = Some(1000.);
     let mut failed = healthy();
     failed.health_ms = None;
     let mut memory = healthy();
     memory.free_memory_gib = Some(15.9);
     let mut cpu = healthy();
     cpu.cpu_times = Some([100, 300, 100]);
-    for sample in [slow, failed, memory, cpu] {
+    for sample in [failed, memory, cpu] {
         let s = decide(&cfg, state(), sample, 1360., 1, 0, 0.);
         assert_eq!(s.max_running, 12);
         assert!(!s.reason.is_empty());
@@ -140,12 +284,12 @@ fn pacing_reduces_once_per_new_measurement_and_recommends_claude() {
     s.openai = vec![quota(1000., 20.), quota(1300., 21.)];
     s.anthropic = quota(1300., 10.);
     let s = decide(&cfg, s, healthy(), 1360., 1, 0, 0.);
-    assert_eq!(s.max_running, 6);
+    assert_eq!(s.max_running, 19);
     assert_eq!(s.preferred_provider.as_deref(), Some("anthropic"));
     let mut sample = healthy();
     sample.cpu_times = Some([260, 400, 100]);
     let s = decide(&cfg, s, sample, 1420., 1, 0, 0.);
-    assert_eq!(s.max_running, 6);
+    assert_eq!(s.max_running, 19);
     assert!(s.reason.contains("減枠後"));
 }
 #[test]
@@ -171,7 +315,7 @@ fn changing_unused_reset_windows_do_not_hide_the_active_account_pace() {
     s.openai = history;
     s.anthropic = quota(1300., 48.);
     let s = decide(&AdaptiveConfig::default(), s, healthy(), 1360., 1, 0, 0.);
-    assert_eq!(s.max_running, 6);
+    assert_eq!(s.max_running, 19);
     assert_eq!(s.preferred_provider.as_deref(), Some("anthropic"));
 }
 #[test]
@@ -206,7 +350,7 @@ fn known_account_pressure_is_not_hidden_by_unknown_accounts_but_expired_windows_
     }
     assert_eq!(
         decide(&cfg, s.clone(), healthy(), 1360., 1, 0, 0.).max_running,
-        6
+        19
     );
     for snapshot in &mut s.openai {
         snapshot.accounts[0].reset_at = 1361.;

@@ -283,16 +283,26 @@ pub fn decide(
             q.complete && q.at <= now && q.accounts.iter().all(|a| a.reset_at > now)
         });
     let quota_empty = quota_known && !available(latest.unwrap());
+    let slow_health = sample
+        .health_ms
+        .is_some_and(|ms| ms >= cfg.health_fast_ms as f64);
+    // A single successful but slow probe holds growth without discarding the
+    // quiet period. Only consecutive, fresh samples indicate sustained pressure.
+    let repeated_slow_health = slow_health
+        && state.checked_at > 0.
+        && now > state.checked_at
+        && now - state.checked_at <= cfg.stale_after_seconds()
+        && state
+            .machine
+            .health_ms
+            .is_some_and(|ms| ms >= cfg.health_fast_ms as f64);
     let mut reasons = Vec::new();
     if recent_429_count >= 2 && last_429_at > state.last_429_at {
         reasons.push("429が続いた");
     }
     if sample.health_ms.is_none() {
         reasons.push("プロキシ応答失敗");
-    } else if sample
-        .health_ms
-        .is_some_and(|ms| ms >= cfg.health_fast_ms as f64)
-    {
+    } else if repeated_slow_health {
         reasons.push("プロキシ応答遅延");
     }
     if sample
@@ -333,9 +343,12 @@ pub fn decide(
             current
         };
         if pace_new {
-            reduced = reduced
-                .min((current as f64 / state.pace_ratio.unwrap()).floor() as usize)
-                .max(cfg.min_running);
+            // Quotas are rounded and refreshed asynchronously. One reading
+            // must not collapse the global limit; reduce by at most a quarter
+            // per new measurement, while retaining the Claude routing hint.
+            let paced = ((current as f64 / state.pace_ratio.unwrap()).floor() as usize)
+                .max(current.saturating_sub(current / 4));
+            reduced = reduced.min(paced).max(cfg.min_running);
         }
         if quota_empty {
             reduced = cfg.min_running;
@@ -344,6 +357,9 @@ pub fn decide(
         reduced
     } else if over_pace || pace_waiting {
         state.reason = "減枠後の利用ペースを確認中".into();
+        current
+    } else if slow_health {
+        state.reason = "単発のプロキシ応答遅延を確認中".into();
         current
     } else if recent_429_count > 0
         || (last_429_at > 0. && now - last_429_at < cfg.quiet_seconds as f64)
@@ -358,15 +374,29 @@ pub fn decide(
         state.reason = "順番待ちなし".into();
         current
     } else {
+        let ample_headroom = state
+            .cpu_percent
+            .is_some_and(|cpu| cpu < cfg.cpu_percent / 2.)
+            && sample
+                .free_memory_gib
+                .is_some_and(|gb| gb >= cfg.free_memory_gib * 2.)
+            && sample
+                .health_ms
+                .is_some_and(|ms| ms < cfg.health_fast_ms as f64 / 2.);
+        let step = if ample_headroom {
+            cfg.increase_step.saturating_mul(4).max(current / 2)
+        } else {
+            cfg.increase_step
+        };
         state.reason = if current == cfg.max_running {
             "設定の最大値"
+        } else if ample_headroom {
+            "応答・メモリ・CPUに余裕があり増枠を加速"
         } else {
             "応答・メモリ・CPU・利用枠が安定"
         }
         .into();
-        current
-            .saturating_add(cfg.increase_step)
-            .min(cfg.max_running)
+        current.saturating_add(step).min(cfg.max_running)
     };
     state.settings = Some(cfg.clone());
     state.mode = "auto".into();

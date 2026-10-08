@@ -19,3 +19,7 @@ threads-required = 'num-test-threads'
 [[profile.default.overrides]]
 filter = 'package(cc-scheduler) & test(real_child_process_has_no_console_window)'
 threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & test(busy_notifier_card_lock_returns_within_deadline_without_card_changes)'
+threads-required = 'num-test-threads'

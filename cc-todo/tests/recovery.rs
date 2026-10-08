@@ -589,6 +589,18 @@ fn restart_model_provenance_keeps_explicit_and_legacy_choices_but_routes_automat
             "--model",
             "anthropic/claude-opus-5-5",
         ),
+        (
+            json!({"model":"gpt-6-astra","model_explicit":false}),
+            json!({"id":1,"model":"anthropic/claude-opus-5-5"}),
+            "--model",
+            "anthropic/claude-opus-5-5",
+        ),
+        (
+            json!({"model":"gpt-6-astra","model_explicit":false,"thread_id":"01a0fa4b-2898-7553-889f-0e934f0d32f8"}),
+            json!({"id":1,"model":"anthropic/claude-opus-5-5"}),
+            "--model",
+            "gpt-6-astra",
+        ),
     ] {
         let args = restart_args(
             &j,

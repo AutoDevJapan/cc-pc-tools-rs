@@ -192,6 +192,13 @@ fn inbox_shows_old_failed_or_unroutable_answers_on_every_inspection_without_adva
         let mut state = h.state();
         state["answer_receipts"] = json!({"300":{"read_by":"owner-session"}});
         h.save(&state);
+        assert_eq!(
+            cmd_inbox(&mut h.ctx, &cursor).unwrap()[0]["delivered"],
+            true
+        );
+        let mut state = h.state();
+        state["questions"][0]["open"] = json!(false);
+        h.save(&state);
         assert!(cmd_inbox(&mut h.ctx, &cursor).unwrap().is_empty());
     }
 }

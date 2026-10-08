@@ -71,7 +71,30 @@ fn main_answers_only_reach_inbox_including_closed_archived_and_pending_questions
                     )
                     .unwrap();
                     assert!(!budget);
-                    let after = h.state();
+                    let mut after = h.state();
+                    if open {
+                        assert_eq!(after["questions"][0]["answered_reply"], "400");
+                        assert_eq!(
+                            after["questions"][0]["owner_reply"]["content"],
+                            "この方針で進めて"
+                        );
+                        after["questions"][0]
+                            .as_object_mut()
+                            .unwrap()
+                            .remove("answered_reply");
+                        after["questions"][0]
+                            .as_object_mut()
+                            .unwrap()
+                            .remove("owner_reply");
+                        after["questions"][0]
+                            .as_object_mut()
+                            .unwrap()
+                            .remove("owner_replies");
+                        after["questions"][0]
+                            .as_object_mut()
+                            .unwrap()
+                            .remove("first_owner_reply");
+                    }
                     assert_eq!(after["questions"], before["questions"]);
                     assert_eq!(after["requests"], before["requests"]);
                     assert!(after["answer_receipts"]["400"].is_null());
@@ -81,7 +104,12 @@ fn main_answers_only_reach_inbox_including_closed_archived_and_pending_questions
                     assert_eq!(messages.len(), 1);
                     assert_eq!(messages[0]["id"], "400");
                     assert_eq!(messages[0]["text"], "この方針で進めて");
-                    assert!(cmd_inbox(&mut h.ctx, &mark).unwrap().is_empty());
+                    let replay = cmd_inbox(&mut h.ctx, &mark).unwrap();
+                    assert_eq!(replay.len(), usize::from(open));
+                    if open {
+                        assert_eq!(replay[0]["status"], "答えあり・未反映");
+                        assert_eq!(replay[0]["text"], "この方針で進めて");
+                    }
                     let f = h.fake.borrow();
                     assert!(f.launches.is_empty());
                     assert!(f.picks.is_empty());

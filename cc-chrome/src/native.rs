@@ -10,16 +10,36 @@ use tokio::{
 };
 
 const MAX_FRAME: usize = 32 * 1024 * 1024;
-fn running(pid:u32,created:u64)->Option<bool> {
-    use windows_sys::Win32::{Foundation::*,System::Threading::*};
+fn running(pid: u32, created: u64) -> Option<bool> {
+    use windows_sys::Win32::{Foundation::*, System::Threading::*};
     unsafe {
-        let handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,0,pid);
-        if handle.is_null() {return if GetLastError()==ERROR_INVALID_PARAMETER {Some(false)} else {None};}
-        let mut code=0;
-        let mut times=[FILETIME{dwLowDateTime:0,dwHighDateTime:0};4];
-        let ok=GetExitCodeProcess(handle,&mut code)!=0 && GetProcessTimes(handle,&mut times[0],&mut times[1],&mut times[2],&mut times[3])!=0;
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return if GetLastError() == ERROR_INVALID_PARAMETER {
+                Some(false)
+            } else {
+                None
+            };
+        }
+        let mut code = 0;
+        let mut times = [FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        }; 4];
+        let ok = GetExitCodeProcess(handle, &mut code) != 0
+            && GetProcessTimes(
+                handle,
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            ) != 0;
         CloseHandle(handle);
-        ok.then_some(code==259 && (((times[0].dwHighDateTime as u64)<<32)|times[0].dwLowDateTime as u64)==created)
+        ok.then_some(
+            code == 259
+                && (((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64)
+                    == created,
+        )
     }
 }
 async fn read_frame(r: &mut (impl AsyncRead + Unpin)) -> io::Result<Value> {
@@ -91,36 +111,77 @@ fn runtime() -> io::Result<tokio::runtime::Runtime> {
         .build()
 }
 async fn discover() -> io::Result<(String, Value)> {
+    discover_matching(None).await
+}
+async fn discover_matching(record: Option<&Record>) -> io::Result<(String, Value)> {
+    let mut pipes = vec![];
     for entry in fs::read_dir(r"\\.\pipe\")? {
         let name = entry?.file_name().to_string_lossy().into_owned();
         if !name.starts_with("codex-browser-use\\") || name.contains("cc-job-") {
             continue;
         }
-        let pipe = format!(r"\\.\pipe\{name}");
-        let Ok(mut rpc) = Rpc::connect(&pipe).await else {
-            continue;
-        };
-        let Ok(info)=rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await else {continue};
-        if info["type"] == "extension" && info["family"] == "chrome" {
+        pipes.push(format!(r"\\.\pipe\{name}"));
+    }
+    discover_from(pipes, record).await
+}
+async fn discover_from(pipes: Vec<String>, record: Option<&Record>) -> io::Result<(String, Value)> {
+    for pipe in pipes {
+        let Ok(Ok(info))=tokio::time::timeout(Duration::from_millis(300),async {
+            let mut rpc=Rpc::connect(&pipe).await?;
+            rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await
+        }).await else {continue};
+        if info["type"] == "extension"
+            && info["family"] == "chrome"
+            && record.is_none_or(|r| r.matches_backend(&info))
+        {
             return Ok((pipe, info));
         }
     }
     Err(io::Error::other("owner Chrome extension is not connected"))
 }
+pub fn inventory() -> io::Result<Value> {
+    runtime()?.block_on(async {
+        let mut result=vec![];
+        for entry in fs::read_dir(r"\\.\pipe\")? {
+            let name=entry?.file_name().to_string_lossy().into_owned();
+            if !name.starts_with("codex-browser-use\\") || name.contains("cc-job-") {continue;}
+            let pipe=format!(r"\\.\pipe\{name}");
+            let Ok(mut rpc)=Rpc::connect(&pipe).await else {continue};
+            let params=json!({"session_id":"cc-chrome-audit","turn_id":"inventory","session_context":"live"});
+            let Ok(info)=rpc.call("getInfo",params.clone()).await else {continue};
+            if info["type"]!="extension" || info["family"]!="chrome" {continue;}
+            let tabs=rpc.call("getUserTabs",params).await?;
+            result.push(json!({"pipe":pipe,"instance":info["metadata"]["extensionInstanceId"],"generation":info["browserTabMentions"]["generation"],"tabs":tabs.as_array().ok_or_else(||io::Error::other("invalid inventory"))?.iter().map(|t| t["id"].clone()).collect::<Vec<_>>() }));
+        }
+        Ok(json!(result))
+    })
+}
 pub struct NativeCloser;
 impl Closer for NativeCloser {
     fn owner_running(&mut self, job: &Value) -> Option<bool> {
         let mut unknown = false;
-        for key in ["pid", "codex_pid"] {
-            let Some(pid) = job[key].as_u64().and_then(|n| u32::try_from(n).ok()) else { continue; };
-            let Some(created) = job[format!("{key}_created")].as_u64().filter(|n| *n != 0) else { unknown=true; continue; };
-            match running(pid, created) { Some(true)=>return Some(true), None=>unknown=true, _=>{} }
+        // pid is the admission supervisor: it remains alive while a worker is queued.
+        for key in ["codex_pid"] {
+            let Some(pid) = job[key].as_u64().and_then(|n| u32::try_from(n).ok()) else {
+                continue;
+            };
+            let Some(created) = job[format!("{key}_created")].as_u64().filter(|n| *n != 0) else {
+                unknown = true;
+                continue;
+            };
+            match running(pid, created) {
+                Some(true) => return Some(true),
+                None => unknown = true,
+                _ => {}
+            }
         }
         if unknown { None } else { Some(false) }
     }
     fn close(&mut self, r: &Record) -> io::Result<bool> {
         runtime()?.block_on(async {
-            tokio::time::timeout(Duration::from_secs(3), close_record(r)).await.map_err(io::Error::other)?
+            tokio::time::timeout(Duration::from_secs(3), close_record(r))
+                .await
+                .map_err(io::Error::other)?
         })
     }
 }
@@ -129,15 +190,18 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     let mut rpc = match Rpc::connect(&r.pipe).await {
         Ok(v) => v,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            let (pipe, info) = discover().await?;
-            if !r.matches_backend(&info) { return Ok(false); }
+            let (pipe, _) = discover_matching(Some(r)).await?;
             Rpc::connect(&pipe).await?
-        },
+        }
         Err(e) => return Err(e),
     };
     let info = rpc.call("getInfo", r.params()).await?;
     if !r.matches_backend(&info) {
-        return Ok(false);
+        let (pipe, _) = discover_matching(Some(r)).await?;
+        rpc = Rpc::connect(&pipe).await?;
+        if !r.matches_backend(&rpc.call("getInfo", r.params()).await?) {
+            return Err(io::Error::other("recorded browser identity unavailable"));
+        }
     }
     let tabs = rpc.call("getTabs", r.params()).await?;
     let tabs = tabs
@@ -146,10 +210,13 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     if !tabs.iter().any(|t| t["id"].as_u64() == Some(r.tab)) {
         // A turn-end hook may release a marked tab from session control while
         // leaving it open. Reclaim only this positively recorded agent-created ID.
-        let all=rpc.call("getUserTabs",r.params()).await?;
-        if !has_tab(&all,r.tab)? {return Ok(false);}
-        let mut p=r.params();p["tabId"]=json!(r.tab);
-        rpc.call("claimUserTab",p).await?;
+        let all = rpc.call("getUserTabs", r.params()).await?;
+        if !has_tab(&all, r.tab)? {
+            return Ok(false);
+        }
+        let mut p = r.params();
+        p["tabId"] = json!(r.tab);
+        rpc.call("claimUserTab", p).await?;
     }
     let mut p = r.params();
     p["tabId"] = json!(r.tab);
@@ -160,14 +227,20 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     p["commandParams"] = json!({});
     rpc.call("executeCdp", p).await?;
     let tabs = rpc.call("getUserTabs", r.params()).await?;
-    if has_tab(&tabs,r.tab)? {
+    if has_tab(&tabs, r.tab)? {
         return Err(io::Error::other("tab still open after close"));
     }
     Ok(true)
 }
-fn has_tab(tabs:&Value,id:u64)->io::Result<bool> {
-    let tabs=tabs.as_array().ok_or_else(||io::Error::other("invalid full tab inventory"))?;
-    Ok(tabs.iter().any(|t|["id","providerTabId","tabId"].iter().any(|key|t[*key].as_u64().or_else(||t[*key].as_str()?.parse().ok())==Some(id))))
+fn has_tab(tabs: &Value, id: u64) -> io::Result<bool> {
+    let tabs = tabs
+        .as_array()
+        .ok_or_else(|| io::Error::other("invalid full tab inventory"))?;
+    Ok(tabs.iter().any(|t| {
+        ["id", "providerTabId", "tabId"]
+            .iter()
+            .any(|key| t[*key].as_u64().or_else(|| t[*key].as_str()?.parse().ok()) == Some(id))
+    }))
 }
 
 /// Lives inside the supervisor: no resident child process, profile restart or debug port.
@@ -207,7 +280,11 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
             let mut tasks=tokio::task::JoinSet::new();tokio::pin!(stop_rx);
             loop {
                 tokio::select! {
-                    _=&mut stop_rx=>{tasks.shutdown().await;return Ok(());},
+                    _=&mut stop_rx=>{
+                        // Drain creation replies after the worker has disconnected before aborting relays.
+                        let _=tokio::time::timeout(Duration::from_secs(4),async {while tasks.join_next().await.is_some(){}}).await;
+                        tasks.shutdown().await;return Ok(());
+                    },
                     result=server.connect()=>{
                         result?;
                         let next=ServerOptions::new().create(&service_pipe)?;
@@ -252,7 +329,10 @@ async fn forward(
 async fn forward_streams(
     server: impl AsyncRead + AsyncWrite + Unpin,
     client: impl AsyncRead + AsyncWrite + Unpin,
-    upstream: &str, info: &Value, dir: &Path, job: &str,
+    upstream: &str,
+    info: &Value,
+    dir: &Path,
+    job: &str,
 ) -> io::Result<()> {
     let (mut ar, mut aw) = tokio::io::split(server);
     let (mut br, mut bw) = tokio::io::split(client);
@@ -270,6 +350,7 @@ async fn forward_streams(
                 {
                     return Err(io::Error::other("browser session does not own this job"));
                 }
+                lifecycle::activity(dir)?;
                 if v["method"] == "createTab" && v.get("id").is_some() {
                     sending
                         .lock()
@@ -289,33 +370,47 @@ async fn forward_streams(
                 && let Some(params) = pending.lock().unwrap().remove(&v["id"].to_string())
                 && v.get("error").is_none()
             {
-                    let tab = v["result"]["id"]
-                        .as_u64()
-                        .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-                    let record = Record {
-                        job: job.into(),
-                        pipe: upstream.into(),
-                        instance: info["metadata"]["extensionInstanceId"]
-                            .as_str()
-                            .unwrap_or("")
-                            .into(),
-                        generation: info["browserTabMentions"]["generation"]
-                            .as_str()
-                            .unwrap_or("")
-                            .into(),
-                        session: params["session_id"].as_str().unwrap_or("").into(),
-                        turn: params["turn_id"].as_str().unwrap_or("").into(),
-                        tab,
-                        created: epoch(),
-                    };
-                    persist(dir, &record)?; // Durable BEFORE exposing the new tab to the agent.
+                let tab = v["result"]["id"]
+                    .as_u64()
+                    .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
+                let record = Record {
+                    job: job.into(),
+                    pipe: upstream.into(),
+                    instance: info["metadata"]["extensionInstanceId"]
+                        .as_str()
+                        .unwrap_or("")
+                        .into(),
+                    generation: info["browserTabMentions"]["generation"]
+                        .as_str()
+                        .unwrap_or("")
+                        .into(),
+                    session: params["session_id"].as_str().unwrap_or("").into(),
+                    turn: params["turn_id"].as_str().unwrap_or("").into(),
+                    tab,
+                    created: epoch(),
+                };
+                persist(dir, &record)?; // Durable BEFORE exposing the new tab to the agent.
             }
-            write_frame(&mut aw, &v).await?;
+            if let Err(e) = write_frame(&mut aw, &v).await {
+                // The worker can exit before its createTab response. Persist all pending replies.
+                if pending.lock().unwrap().is_empty() {
+                    return Err(e);
+                }
+            }
         }
         #[allow(unreachable_code)]
         Ok::<(), io::Error>(())
     };
-    tokio::select! { r=up=>r,r=down=>r }
+    tokio::pin!(up, down);
+    tokio::select! {
+        r=&mut up=>{
+            if !pending.lock().unwrap().is_empty() {
+                let _=tokio::time::timeout(Duration::from_secs(4),&mut down).await;
+            }
+            r
+        },
+        r=&mut down=>r,
+    }
 }
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     if !safe_job(job)
@@ -324,6 +419,7 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         return Err(io::Error::other("invalid job or URL"));
     }
     runtime()?.block_on(async {
+        lifecycle::activity(dir)?;
         let (pipe, info) = discover().await?;
         let mut rpc = Rpc::connect(&pipe).await?;
         let mut r = Record {
@@ -366,12 +462,18 @@ mod tests {
     fn rpc_deadline_includes_write_to_a_connected_pipe_that_never_reads() {
         runtime().unwrap().block_on(async {
             let pipe = format!(r"\\.\pipe\cc-chrome-stalled-write-{}", uuid::Uuid::new_v4());
-            let server = ServerOptions::new().first_pipe_instance(true).in_buffer_size(4096).create(&pipe).unwrap();
+            let server = ServerOptions::new()
+                .first_pipe_instance(true)
+                .in_buffer_size(4096)
+                .create(&pipe)
+                .unwrap();
             let (stop, stopped) = tokio::sync::oneshot::channel();
             let connected = async {
                 let mut rpc = Rpc::connect(&pipe).await.unwrap();
                 let start = std::time::Instant::now();
-                let result = rpc.call("fixture", json!({"large":"x".repeat(1024 * 1024)})).await;
+                let result = rpc
+                    .call("fixture", json!({"large":"x".repeat(1024 * 1024)}))
+                    .await;
                 assert!(result.is_err());
                 assert!(start.elapsed() < Duration::from_secs(4));
                 let _ = stop.send(());
@@ -439,5 +541,54 @@ mod tests {
             };
             let (p,_)=tokio::join!(proxy,check);assert!(p.unwrap_err().to_string().contains("does not own"));
         });
+    }
+    #[test]
+    fn creation_reply_is_recorded_after_agent_disconnects() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+            let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+            let info=json!({"metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+            let proxy=forward_streams(proxy_agent,proxy_backend,"upstream",&info,root.path(),"job");
+            let disconnect=async move {
+                write_frame(&mut agent,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut backend).await.unwrap();
+                drop(agent);
+                tokio::time::sleep(Duration::from_millis(30)).await;
+                write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await.unwrap();
+            };
+            let _=tokio::join!(proxy,disconnect);
+            let paths:Vec<_>=fs::read_dir(root.path().join("chrome-tabs")).unwrap().collect();
+            assert_eq!(paths.len(),1);
+            let r:Record=serde_json::from_slice(&fs::read(paths[0].as_ref().unwrap().path()).unwrap()).unwrap();
+            assert_eq!(r.tab,42);
+        });
+    }
+    #[test]
+    fn discovery_skips_another_profile_instead_of_discarding_the_record() {
+        runtime().unwrap().block_on(async {
+            let mut pipes=vec![];let mut servers=vec![];
+            for _ in 0..2 {
+                let pipe=format!(r"\\.\pipe\cc-chrome-discovery-{}",uuid::Uuid::new_v4());
+                servers.push(ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap());pipes.push(pipe);
+            }
+            let record=Record{job:"job".into(),pipe:pipes[1].clone(),instance:"wanted".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:42,created:100};
+            let backend=async move {
+                for (mut server,instance) in servers.into_iter().zip(["other","wanted"]) {
+                    server.connect().await.unwrap();let v=read_frame(&mut server).await.unwrap();
+                    write_frame(&mut server,&json!({"id":v["id"],"result":{"type":"extension","family":"chrome","metadata":{"extensionInstanceId":instance},"browserTabMentions":{"generation":"generation"}}})).await.unwrap();
+                }
+            };
+            let (result,_)=tokio::join!(discover_from(pipes,Some(&record)),backend);
+            let (pipe,info)=result.unwrap();assert_eq!(pipe,record.pipe);assert!(record.matches_backend(&info));
+        });
+    }
+    #[test]
+    fn supervisor_without_worker_does_not_protect_tabs() {
+        let job = json!({"pid":std::process::id(),"pid_created":1,"codex_pid":null});
+        assert_eq!(NativeCloser.owner_running(&job), Some(false));
+        let job = json!({"codex_pid":std::process::id(),"codex_pid_created":null});
+        assert_eq!(NativeCloser.owner_running(&job), None);
     }
 }

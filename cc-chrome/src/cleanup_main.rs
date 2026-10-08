@@ -1,10 +1,18 @@
 //! Run independently of Discord's network-bound tick. No console or child processes.
 #![cfg_attr(windows, windows_subsystem = "windows")]
-use std::{fs::{File, OpenOptions}, io::{self, Write}, path::Path};
+use std::{
+    fs::{File, OpenOptions},
+    io::{self, Write},
+    path::Path,
+};
 
 fn open_log(path: &Path) -> io::Result<File> {
     // Windows requires read access when locking a file opened for append.
-    let log = OpenOptions::new().create(true).read(true).append(true).open(path)?;
+    let log = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .append(true)
+        .open(path)?;
     log.try_lock()?;
     Ok(log)
 }
@@ -15,15 +23,23 @@ fn run() -> io::Result<bool> {
     let mut log = open_log(Path::new("D:/CC/Tools/owner-chrome/cleanup.log"))?;
     let result = cc_chrome::sweep(jobs, None, false);
     let (line, success) = match result {
-        Ok(s) => (format!(
-            "chrome-tabs: closed={} gone={} kept={} failed={} deferred={}",
-            s.closed, s.gone, s.kept, s.failed, s.deferred
-        ), s.failed == 0 && !s.deferred),
+        Ok(s) => (
+            format!(
+                "chrome-tabs: closed={} gone={} kept={} failed={} deferred={}",
+                s.closed, s.gone, s.kept, s.failed, s.deferred
+            ),
+            s.failed == 0 && !s.deferred,
+        ),
         // Error kinds are enough for diagnosis here; don't copy external RPC text into logs.
-        Err(e) => (format!("chrome-tabs: sweep failed kind={:?}", e.kind()), false),
+        Err(e) => (
+            format!("chrome-tabs: sweep failed kind={:?}", e.kind()),
+            false,
+        ),
     };
     writeln!(log, "{} {line}", chrono::Local::now().to_rfc3339())?;
     log.sync_data()?;
+    #[cfg(windows)]
+    cc_chrome::lifecycle::notices(jobs)?;
     Ok(success)
 }
 
@@ -48,7 +64,10 @@ mod tests {
         // A second execution must not enter until this one's log handle is dropped.
         assert!(open_log(&path).is_err());
         drop(log);
-        assert_eq!(std::fs::read_to_string(&path).unwrap(), "earlier result\nnext result\n");
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "earlier result\nnext result\n"
+        );
         drop(open_log(&path).unwrap());
     }
 }

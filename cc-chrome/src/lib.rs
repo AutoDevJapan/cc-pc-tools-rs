@@ -6,6 +6,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub mod guard;
+pub mod lifecycle;
 #[cfg(windows)]
 pub mod native;
 
@@ -50,30 +52,50 @@ pub fn epoch() -> i64 {
 /// Let the bundled CUA server inherit the per-job native-pipe route. Do not replace
 /// its transport table with a partial user override (Codex rejects that table).
 pub fn install_plugin_hook(home: &Path) -> io::Result<usize> {
-    let root=home.join(".codex/plugins/cache/openai-bundled/unified-computer-use");
-    if !root.exists() {return Ok(0);}
-    let mut count=0;
-    let mut seen=std::collections::HashSet::new();
+    let root = home.join(".codex/plugins/cache/openai-bundled/unified-computer-use");
+    if !root.exists() {
+        return Ok(0);
+    }
+    let mut count = 0;
+    let mut seen = std::collections::HashSet::new();
     for entry in fs::read_dir(root)? {
-        let path=entry?.path().join(".mcp.json");
-        if !path.is_file() || !seen.insert(fs::canonicalize(&path)?) {continue;}
-        let bytes=fs::read(&path)?;
-        let mut value:Value=serde_json::from_slice(&bytes)?;
-        let server=&mut value["mcpServers"]["cua_repl"];
-        if !server.is_object(){continue;}
-        if server["env_vars"].is_null(){server["env_vars"]=json!([]);}
-        let vars=server["env_vars"].as_array_mut().ok_or_else(||io::Error::other("plugin env_vars is invalid"))?;
-        let mut changed=false;
-        for key in ["CC_JOB_ID","CDP_BROWSER_BACKEND_PIPE_PATH","BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET"] {
-            if !vars.iter().any(|v|v==key){vars.push(json!(key));changed=true;}
+        let path = entry?.path().join(".mcp.json");
+        if !path.is_file() || !seen.insert(fs::canonicalize(&path)?) {
+            continue;
+        }
+        let bytes = fs::read(&path)?;
+        let mut value: Value = serde_json::from_slice(&bytes)?;
+        let server = &mut value["mcpServers"]["cua_repl"];
+        if !server.is_object() {
+            continue;
+        }
+        if server["env_vars"].is_null() {
+            server["env_vars"] = json!([]);
+        }
+        let vars = server["env_vars"]
+            .as_array_mut()
+            .ok_or_else(|| io::Error::other("plugin env_vars is invalid"))?;
+        let mut changed = false;
+        for key in [
+            "CC_JOB_ID",
+            "CDP_BROWSER_BACKEND_PIPE_PATH",
+            "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET",
+        ] {
+            if !vars.iter().any(|v| v == key) {
+                vars.push(json!(key));
+                changed = true;
+            }
         }
         if changed {
-            let backup=path.with_extension("chrome-hygiene.before.json");
-            if !backup.exists(){fs::write(backup,bytes)?;}
-            let mut temp=tempfile::NamedTempFile::new_in(path.parent().unwrap())?;
-            serde_json::to_writer_pretty(&mut temp,&value)?;
-            temp.as_file().sync_all()?;temp.persist(&path).map_err(|e|e.error)?;
-            count+=1;
+            let backup = path.with_extension("chrome-hygiene.before.json");
+            if !backup.exists() {
+                fs::write(backup, bytes)?;
+            }
+            let mut temp = tempfile::NamedTempFile::new_in(path.parent().unwrap())?;
+            serde_json::to_writer_pretty(&mut temp, &value)?;
+            temp.as_file().sync_all()?;
+            temp.persist(&path).map_err(|e| e.error)?;
+            count += 1;
         }
     }
     Ok(count)
@@ -148,9 +170,12 @@ pub struct Sweep {
     pub kept: usize,
     pub failed: usize,
     pub deferred: bool,
+    pub eligible: usize,
 }
 pub trait Closer {
-    fn owner_running(&mut self, _job: &Value) -> Option<bool> { None }
+    fn owner_running(&mut self, _job: &Value) -> Option<bool> {
+        None
+    }
     /// True means closed, false means already gone or backend identity changed.
     fn close(&mut self, record: &Record) -> io::Result<bool>;
 }
@@ -163,6 +188,7 @@ pub fn sweep_with(
 ) -> io::Result<Sweep> {
     let mut result = Sweep::default();
     let started = std::time::Instant::now();
+    let mut candidates = vec![];
     for dir in fs::read_dir(jobs)? {
         let dir = dir?;
         if !dir.file_type()?.is_dir() {
@@ -179,60 +205,123 @@ pub fn sweep_with(
             Err(e) => return Err(e),
         };
         for entry in entries {
-            if result.closed + result.gone + result.failed >= 64 || started.elapsed() >= std::time::Duration::from_secs(8) { return Ok(result); }
             let entry = entry?;
             if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
                 continue;
             }
-            let record: Record = match fs::read(entry.path())
-                .and_then(|b| serde_json::from_slice::<Record>(&b).map_err(io::Error::other))
-            {
-                Ok(v) if v.job == name => v,
+            let last = lifecycle::retry(&entry.path())
+                .map(|r| r.last_attempt)
+                .unwrap_or(0);
+            candidates.push((last, entry.path(), dir.path(), name.clone()));
+        }
+    }
+    // Offline profiles must not consume every minute's budget ahead of other tabs.
+    candidates.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+    for (_, path, dir, name) in candidates {
+        if result.closed + result.gone + result.failed >= 64
+            || started.elapsed() >= std::time::Duration::from_secs(8)
+        {
+            result.deferred = true;
+            return Ok(result);
+        }
+        let record: Record = match fs::read(&path)
+            .and_then(|b| serde_json::from_slice::<Record>(&b).map_err(io::Error::other))
+        {
+            Ok(v) if v.job == name => v,
+            _ => {
+                result.failed += 1;
+                continue;
+            }
+        };
+        // Re-read the job before every close; do not let a corrupt/mid-write file authorize cleanup.
+        let job = match fs::read(dir.join("job.json")) {
+            Ok(b) => match serde_json::from_slice::<Value>(&b) {
+                Ok(j) if j["id"] == name => Some(j),
                 _ => {
-                    result.failed += 1;
-                    continue;
-                }
-            };
-            // Re-read the job before every close; do not let a corrupt/mid-write file authorize cleanup.
-            let job = match fs::read(dir.path().join("job.json")) {
-                Ok(b) => match serde_json::from_slice::<Value>(&b) {
-                    Ok(j) if j["id"] == name => Some(j),
-                    _ => {
-                        result.kept += 1;
-                        continue;
-                    }
-                },
-                Err(e) if e.kind() == io::ErrorKind::NotFound => None,
-                Err(_) => {
                     result.kept += 1;
                     continue;
                 }
-            };
-            let abandoned = job.as_ref().is_some_and(|j| ["running", "starting", "queued"].contains(&j["status"].as_str().unwrap_or("")) && closer.owner_running(j) == Some(false))
-                && now.saturating_sub(record.created) >= 30 * 60;
-            let live_or_unknown_lost = job.as_ref().is_some_and(|j| j["status"] == "lost" && closer.owner_running(j) != Some(false));
-            if live_or_unknown_lost || (!eligible(job.as_ref(), &record, now) && !abandoned) || dry_run {
+            },
+            Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(_) => {
                 result.kept += 1;
                 continue;
             }
-            match closer.close(&record) {
-                Ok(closed) => {
-                    if closed {
-                        result.closed += 1;
-                    } else {
-                        result.gone += 1;
-                    }
-                    match fs::remove_file(entry.path()) {Ok(())=>{},Err(e) if e.kind()==io::ErrorKind::NotFound=>{},Err(e)=>return Err(e)};
+        };
+        let abandoned = job.as_ref().is_some_and(|j| {
+            closer.owner_running(j) == Some(false)
+                && (j["status"] == "queued"
+                    || (["running", "starting"].contains(&j["status"].as_str().unwrap_or(""))
+                        && now.saturating_sub(record.created) >= 30 * 60))
+        });
+        let idle = job
+            .as_ref()
+            .is_some_and(|j| j["status"] == "running" && lifecycle::idle(&dir, j, &record, now));
+        let previous_attempt = job
+            .as_ref()
+            .filter(|j| {
+                ["queued", "starting", "running"].contains(&j["status"].as_str().unwrap_or(""))
+            })
+            .and_then(|j| j["started_at"].as_str())
+            .and_then(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
+            .is_some_and(|at| record.created < at.timestamp());
+        if !eligible(job.as_ref(), &record, now) && !abandoned && !idle && !previous_attempt {
+            result.kept += 1;
+            continue;
+        }
+        result.eligible += 1;
+        if dry_run {
+            continue;
+        }
+        match closer.close(&record) {
+            Ok(closed) => {
+                if closed {
+                    result.closed += 1;
+                } else {
+                    result.gone += 1;
                 }
-                Err(_) => result.failed += 1,
+                lifecycle::atomic_json(
+                    &dir.join("chrome-tab-history")
+                        .join(path.file_name().unwrap()),
+                    &json!({"record":record,"at":now,"closed":closed}),
+                )?;
+                match fs::remove_file(&path) {
+                    Ok(()) => {}
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                    Err(e) => return Err(e),
+                };
+                let retry = lifecycle::retry_path(&path);
+                match fs::remove_file(retry) {
+                    Ok(()) => {}
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                    Err(e) => return Err(e),
+                };
+            }
+            Err(e) => {
+                result.failed += 1;
+                let mut retry = lifecycle::retry(&path)?;
+                retry.attempts = retry.attempts.saturating_add(1);
+                retry.last_attempt = now;
+                retry.kind = format!("{:?}", e.kind());
+                lifecycle::atomic_json(&lifecycle::retry_path(&path), &retry)?;
             }
         }
     }
     Ok(result)
 }
 pub fn sweep(jobs: &Path, only: Option<&str>, dry_run: bool) -> io::Result<Sweep> {
-    let lock = fs::OpenOptions::new().create(true).truncate(false).read(true).write(true).open(jobs.join("chrome-cleanup.lock"))?;
-    if lock.try_lock().is_err() {return Ok(Sweep {deferred:true,..Default::default()});}
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(jobs.join("chrome-cleanup.lock"))?;
+    if lock.try_lock().is_err() {
+        return Ok(Sweep {
+            deferred: true,
+            ..Default::default()
+        });
+    }
     #[cfg(windows)]
     {
         sweep_with(jobs, only, epoch(), dry_run, &mut native::NativeCloser)
@@ -249,25 +338,48 @@ mod tests {
     use super::*;
     #[test]
     fn plugin_hook_preserves_transport_and_is_idempotent() {
-        let root=tempfile::tempdir().unwrap();
-        let dir=root.path().join(".codex/plugins/cache/openai-bundled/unified-computer-use/version");
+        let root = tempfile::tempdir().unwrap();
+        let dir = root
+            .path()
+            .join(".codex/plugins/cache/openai-bundled/unified-computer-use/version");
         fs::create_dir_all(&dir).unwrap();
-        let path=dir.join(".mcp.json");
-        let initial=json!({"mcpServers":{"cua_repl":{"command":"node.exe","args":["cua.mjs"],"env":{"NODE_REPL_TRUSTED_SERVICES":"service"},"env_vars":["EXISTING"]}}});
-        fs::write(&path,initial.to_string()).unwrap();
-        assert_eq!(install_plugin_hook(root.path()).unwrap(),1);
-        assert_eq!(install_plugin_hook(root.path()).unwrap(),0);
-        let value:Value=serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-        for key in ["command","args","env"] {assert_eq!(value["mcpServers"]["cua_repl"][key],initial["mcpServers"]["cua_repl"][key]);}
-        assert_eq!(value["mcpServers"]["cua_repl"]["env_vars"],json!(["EXISTING","CC_JOB_ID","CDP_BROWSER_BACKEND_PIPE_PATH","BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET"]));
+        let path = dir.join(".mcp.json");
+        let initial = json!({"mcpServers":{"cua_repl":{"command":"node.exe","args":["cua.mjs"],"env":{"NODE_REPL_TRUSTED_SERVICES":"service"},"env_vars":["EXISTING"]}}});
+        fs::write(&path, initial.to_string()).unwrap();
+        assert_eq!(install_plugin_hook(root.path()).unwrap(), 1);
+        assert_eq!(install_plugin_hook(root.path()).unwrap(), 0);
+        let value: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        for key in ["command", "args", "env"] {
+            assert_eq!(
+                value["mcpServers"]["cua_repl"][key],
+                initial["mcpServers"]["cua_repl"][key]
+            );
+        }
+        assert_eq!(
+            value["mcpServers"]["cua_repl"]["env_vars"],
+            json!([
+                "EXISTING",
+                "CC_JOB_ID",
+                "CDP_BROWSER_BACKEND_PIPE_PATH",
+                "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET"
+            ])
+        );
     }
     #[cfg(windows)]
     #[test]
     fn sweep_and_job_completion_share_one_cleanup_lock() {
-        let root=tempfile::tempdir().unwrap();
-        let guard=fs::OpenOptions::new().create(true).truncate(false).read(true).write(true).open(root.path().join("chrome-cleanup.lock")).unwrap();
-        guard.lock().unwrap();assert!(sweep(root.path(),None,true).unwrap().deferred);
-        drop(guard);assert!(!sweep(root.path(),None,true).unwrap().deferred);
+        let root = tempfile::tempdir().unwrap();
+        let guard = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(root.path().join("chrome-cleanup.lock"))
+            .unwrap();
+        guard.lock().unwrap();
+        assert!(sweep(root.path(), None, true).unwrap().deferred);
+        drop(guard);
+        assert!(!sweep(root.path(), None, true).unwrap().deferred);
     }
     struct Fake(Vec<u64>, bool);
     impl Closer for Fake {
@@ -296,7 +408,8 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         fs::write(
             dir.join("job.json"),
-            json!({"id":name,"status":status}).to_string(),
+            json!({"id":name,"status":status,"last_event_at":"1970-01-01T01:21:40+00:00"})
+                .to_string(),
         )
         .unwrap();
     }
@@ -333,7 +446,7 @@ mod tests {
         assert_eq!(
             sweep_with(root.path(), None, 1900, true, &mut fake)
                 .unwrap()
-                .kept,
+                .eligible,
             1
         );
         fs::write(root.path().join("orphan/job.json"), "broken").unwrap();
@@ -366,21 +479,188 @@ mod tests {
     }
     #[test]
     fn abandoned_job_requires_thirty_minutes_and_proven_owner_exit() {
-        struct Owner(Option<bool>,Vec<u64>);
+        struct Owner(Option<bool>, Vec<u64>);
         impl Closer for Owner {
-            fn owner_running(&mut self,_:&Value)->Option<bool>{self.0}
-            fn close(&mut self,r:&Record)->io::Result<bool>{self.1.push(r.tab);Ok(true)}
+            fn owner_running(&mut self, _: &Value) -> Option<bool> {
+                self.0
+            }
+            fn close(&mut self, r: &Record) -> io::Result<bool> {
+                self.1.push(r.tab);
+                Ok(true)
+            }
         }
-        let root=tempfile::tempdir().unwrap();job(root.path(),"stale","running");
-        persist(&root.path().join("stale"),&record("stale",123)).unwrap();
-        let mut fake=Owner(Some(false),vec![]);
-        assert_eq!(sweep_with(root.path(),None,1899,false,&mut fake).unwrap().kept,1);
-        for state in [None,Some(true)] {fake.0=state;assert_eq!(sweep_with(root.path(),None,1900,false,&mut fake).unwrap().kept,1);}
-        fake.0=Some(false);assert_eq!(sweep_with(root.path(),None,1900,false,&mut fake).unwrap().closed,1);
-        assert_eq!(fake.1,vec![123]);
-        job(root.path(),"lost","lost");persist(&root.path().join("lost"),&record("lost",124)).unwrap();
-        for state in [Some(true),None] {fake.0=state;assert_eq!(sweep_with(root.path(),None,5000,false,&mut fake).unwrap().kept,1);}
-        fake.0=Some(false);assert_eq!(sweep_with(root.path(),None,5000,false,&mut fake).unwrap().closed,1);
-        assert_eq!(fake.1,vec![123,124]);
+        let root = tempfile::tempdir().unwrap();
+        job(root.path(), "stale", "running");
+        persist(&root.path().join("stale"), &record("stale", 123)).unwrap();
+        let mut fake = Owner(Some(false), vec![]);
+        assert_eq!(
+            sweep_with(root.path(), None, 1899, false, &mut fake)
+                .unwrap()
+                .kept,
+            1
+        );
+        for state in [None, Some(true)] {
+            fake.0 = state;
+            assert_eq!(
+                sweep_with(root.path(), None, 1900, false, &mut fake)
+                    .unwrap()
+                    .kept,
+                1
+            );
+        }
+        fake.0 = Some(false);
+        assert_eq!(
+            sweep_with(root.path(), None, 1900, false, &mut fake)
+                .unwrap()
+                .closed,
+            1
+        );
+        assert_eq!(fake.1, vec![123]);
+        job(root.path(), "lost", "lost");
+        persist(&root.path().join("lost"), &record("lost", 124)).unwrap();
+        fake.0 = Some(true);
+        assert_eq!(
+            sweep_with(root.path(), None, 5000, false, &mut fake)
+                .unwrap()
+                .closed,
+            1
+        );
+        assert_eq!(fake.1, vec![123, 124]);
+    }
+    #[test]
+    fn queued_worker_exit_closes_immediately_despite_live_supervisor() {
+        struct Exited;
+        impl Closer for Exited {
+            fn owner_running(&mut self, _: &Value) -> Option<bool> {
+                Some(false)
+            }
+            fn close(&mut self, _: &Record) -> io::Result<bool> {
+                Ok(true)
+            }
+        }
+        let root = tempfile::tempdir().unwrap();
+        job(root.path(), "queued", "queued");
+        let p = persist(&root.path().join("queued"), &record("queued", 11)).unwrap();
+        assert_eq!(
+            sweep_with(root.path(), None, 101, false, &mut Exited)
+                .unwrap()
+                .closed,
+            1
+        );
+        assert!(!p.exists());
+    }
+    #[test]
+    fn idle_worker_recent_activity_and_previous_attempt() {
+        let root = tempfile::tempdir().unwrap();
+        job(root.path(), "live", "running");
+        let dir = root.path().join("live");
+        persist(&dir, &record("live", 11)).unwrap();
+        let mut fake = Fake(vec![], false);
+        assert_eq!(
+            sweep_with(root.path(), None, 6699, false, &mut fake)
+                .unwrap()
+                .kept,
+            1
+        );
+        assert_eq!(
+            sweep_with(root.path(), None, 6700, false, &mut fake)
+                .unwrap()
+                .closed,
+            1
+        );
+        persist(&dir, &record("live", 12)).unwrap();
+        lifecycle::atomic_json(&dir.join("chrome-activity.json"), &json!({"at":6600})).unwrap();
+        assert_eq!(
+            sweep_with(root.path(), None, 6700, false, &mut fake)
+                .unwrap()
+                .kept,
+            1
+        );
+        fs::write(
+            dir.join("job.json"),
+            json!({"id":"live","status":"running","started_at":"1970-01-01T00:01:41Z"}).to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            sweep_with(root.path(), None, 6700, false, &mut fake)
+                .unwrap()
+                .closed,
+            1
+        );
+    }
+    #[test]
+    fn failures_survive_restarts_and_third_failure_reports_once_in_one_batch() {
+        let root = tempfile::tempdir().unwrap();
+        job(root.path(), "done", "succeeded");
+        let dir = root.path().join("done");
+        let paths: Vec<_> = (1..=2)
+            .map(|tab| persist(&dir, &record("done", tab)).unwrap())
+            .collect();
+        let mut fake = Fake(vec![], true);
+        let mut sent = 0;
+        for now in 1..=3 {
+            assert_eq!(
+                sweep_with(root.path(), None, now, false, &mut fake)
+                    .unwrap()
+                    .failed,
+                2
+            );
+            for p in &paths {
+                assert_eq!(lifecycle::retry(p).unwrap().attempts, now as u32);
+                assert!(p.exists());
+            }
+            assert_eq!(
+                lifecycle::notices_with(root.path(), &mut |_| {
+                    sent += 1;
+                    Ok(())
+                })
+                .unwrap(),
+                if now == 3 { 2 } else { 0 }
+            );
+        }
+        assert_eq!(sent, 1);
+        assert_eq!(
+            sweep_with(root.path(), None, 4, false, &mut fake)
+                .unwrap()
+                .failed,
+            2
+        );
+        assert_eq!(
+            lifecycle::notices_with(root.path(), &mut |_| panic!("duplicate notice")).unwrap(),
+            0
+        );
+        fake.1 = false;
+        assert_eq!(
+            sweep_with(root.path(), None, 5, false, &mut fake)
+                .unwrap()
+                .closed,
+            2
+        );
+        for p in paths {
+            assert!(!p.exists());
+            assert!(!lifecycle::retry_path(&p).exists());
+        }
+    }
+    #[test]
+    fn failed_notice_retries_and_dry_run_does_not_change_attempts() {
+        let root = tempfile::tempdir().unwrap();
+        job(root.path(), "done", "failed");
+        let p = persist(&root.path().join("done"), &record("done", 1)).unwrap();
+        let mut fake = Fake(vec![], true);
+        for now in 1..=3 {
+            sweep_with(root.path(), None, now, false, &mut fake).unwrap();
+        }
+        assert!(
+            lifecycle::notices_with(root.path(), &mut |_| Err(io::Error::other("offline")))
+                .is_err()
+        );
+        assert!(!lifecycle::retry(&p).unwrap().notice_sent);
+        let report = sweep_with(root.path(), None, 4, true, &mut fake).unwrap();
+        assert_eq!((report.eligible, report.failed), (1, 0));
+        assert_eq!(lifecycle::retry(&p).unwrap().attempts, 3);
+        assert_eq!(
+            lifecycle::notices_with(root.path(), &mut |_| Ok(())).unwrap(),
+            1
+        );
     }
 }

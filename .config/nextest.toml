@@ -11,3 +11,7 @@ test-group = 'process-boundary'
 [[profile.default.overrides]]
 filter = 'package(cc-ask) & binary(tick_bounds)'
 threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(chatgpt-web) & binary(fixtures)'
+threads-required = 'num-test-threads'

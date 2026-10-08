@@ -561,6 +561,50 @@ fn resume_arguments_preserve_model_effort_cwd_and_fresh_fallback() {
     );
 }
 
+#[test]
+fn restart_model_provenance_keeps_explicit_and_legacy_choices_but_routes_automatic_defaults() {
+    for (j, item, option, model) in [
+        (json!({}), json!({"id":1}), "--auto-model", "gpt-6.1-sol"),
+        (
+            json!({"model":"gpt-6-astra","model_explicit":false}),
+            json!({"id":1}),
+            "--auto-model",
+            "gpt-6-astra",
+        ),
+        (
+            json!({"model":"gpt-6-astra","model_explicit":true}),
+            json!({"id":1}),
+            "--model",
+            "gpt-6-astra",
+        ),
+        (
+            json!({"model":"gpt-6-astra"}),
+            json!({"id":1}),
+            "--model",
+            "gpt-6-astra",
+        ),
+        (
+            json!({}),
+            json!({"id":1,"model":"anthropic/claude-opus-5-5"}),
+            "--model",
+            "anthropic/claude-opus-5-5",
+        ),
+    ] {
+        let args = restart_args(
+            &j,
+            &item,
+            "C:/repo",
+            "key",
+            std::path::Path::new("prompt.md"),
+        );
+        assert!(args.windows(2).any(|p| p == [option, model]));
+        assert!(
+            args.windows(2)
+                .any(|p| p == ["--task-type", "implementation"])
+        );
+    }
+}
+
 struct Fake {
     intake: Value,
     error: Option<String>,

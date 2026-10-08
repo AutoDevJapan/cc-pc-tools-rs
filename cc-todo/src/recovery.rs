@@ -1472,10 +1472,23 @@ pub fn restart_args(
         s(&item["project"]).into(),
         "--todo-id".into(),
         item["id"].to_string(),
-        "--model".into(),
-        val("model", profile.model),
+        if truth(&item["model"]) || (!s(&job["model"]).is_empty() && job["model_explicit"] != false)
+        {
+            "--model".into()
+        } else {
+            "--auto-model".into()
+        },
+        val(
+            "model",
+            item["model"]
+                .as_str()
+                .filter(|m| !m.is_empty())
+                .unwrap_or(profile.model),
+        ),
         "--effort".into(),
         val("effort", profile.effort),
+        "--task-type".into(),
+        val("task_type", "implementation"),
         "--cwd".into(),
         val("cwd", project_path),
         "--sandbox".into(),

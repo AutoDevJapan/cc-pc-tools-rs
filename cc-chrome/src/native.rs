@@ -365,9 +365,10 @@ async fn forward_streams(
     };
     let down = async {
         loop {
-            let v = read_frame(&mut br).await?;
+            let mut v = read_frame(&mut br).await?;
+            let params = { pending.lock().unwrap().get(&v["id"].to_string()).cloned() };
             if v.get("method").is_none()
-                && let Some(params) = pending.lock().unwrap().remove(&v["id"].to_string())
+                && let Some(params) = params
                 && v.get("error").is_none()
             {
                 let tab = v["result"]["id"]
@@ -389,7 +390,12 @@ async fn forward_streams(
                     tab,
                     created: epoch(),
                 };
-                persist(dir, &record)?; // Durable BEFORE exposing the new tab to the agent.
+                if persist_or_close(dir, &record).await.is_err() {
+                    v = json!({"jsonrpc":"2.0","id":v["id"],"error":{"code":-32000,"message":"Chrome tab could not be recorded; creation failed and cleanup was attempted"}});
+                }
+            }
+            if v.get("method").is_none() {
+                pending.lock().unwrap().remove(&v["id"].to_string());
             }
             if let Err(e) = write_frame(&mut aw, &v).await {
                 // The worker can exit before its createTab response. Persist all pending replies.
@@ -411,6 +417,22 @@ async fn forward_streams(
         },
         r=&mut down=>r,
     }
+}
+async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
+    if let Err(error) = persist(dir, record) {
+        // Keep a second journal if only chrome-tabs is inaccessible. This also survives
+        // cancellation while the rollback RPC is in flight.
+        let emergency = dir
+            .join("chrome-emergency-tabs")
+            .join(format!("{}.json", uuid::Uuid::new_v4()));
+        let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
+        let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
+        if matches!(closed, Ok(Ok(_))) && recorded {
+            let _ = fs::remove_file(emergency);
+        }
+        return Err(io::Error::new(error.kind(), "tab record write failed"));
+    }
+    Ok(())
 }
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     if !safe_job(job)
@@ -442,7 +464,7 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         r.tab = tab["id"]
             .as_u64()
             .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-        persist(dir, &r)?;
+        persist_or_close(dir, &r).await?;
         let mut p = r.params();
         p["tabId"] = json!(r.tab);
         rpc.call("attach", p).await?;
@@ -590,5 +612,106 @@ mod tests {
         assert_eq!(NativeCloser.owner_running(&job), Some(false));
         let job = json!({"codex_pid":std::process::id(),"codex_pid_created":null});
         assert_eq!(NativeCloser.owner_running(&job), None);
+    }
+    #[test]
+    fn proxy_rolls_back_unrecordable_creation_and_returns_error_instead_of_success() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            fs::write(root.path().join("chrome-tabs"),"not a directory").unwrap();
+            let pipe=format!(r"\\.\pipe\cc-chrome-rollback-{}",uuid::Uuid::new_v4());
+            let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+            let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+            let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+            let proxy=forward_streams(proxy_agent,proxy_backend,&pipe,&info,root.path(),"job");
+            let check=async {
+                write_frame(&mut agent,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut backend).await.unwrap();
+                write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await.unwrap();
+                let v=read_frame(&mut agent).await.unwrap();assert!(v.get("error").is_some());assert!(v.get("result").is_none());
+                assert_eq!(fs::read_dir(root.path().join("chrome-emergency-tabs")).unwrap().count(),0);
+                agent.shutdown().await.unwrap();
+            };
+            let rollback=async {
+                server.connect().await.unwrap();
+                for (method,result) in [("getInfo",info.clone()),("getTabs",json!([{"id":42}])),("attach",json!({})),("executeCdp",json!({})),("getUserTabs",json!([{"id":99}]))] {
+                    let v=read_frame(&mut server).await.unwrap();assert_eq!(v["method"],method);
+                    if method=="executeCdp" {assert_eq!(v["params"]["method"],"Page.close");assert_eq!(v["params"]["target"]["tabId"],42);}
+                    write_frame(&mut server,&json!({"id":v["id"],"result":result})).await.unwrap();
+                }
+            };
+            let (result,(),())=tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(proxy,check,rollback)}).await.unwrap();
+            assert!(result.is_err());
+        });
+    }
+    #[test]
+    fn failed_rollback_keeps_emergency_record_for_the_next_sweep() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            let dir = root.path().join("job");
+            fs::create_dir(&dir).unwrap();
+            fs::write(
+                dir.join("job.json"),
+                json!({"id":"job","status":"failed"}).to_string(),
+            )
+            .unwrap();
+            fs::write(dir.join("chrome-tabs"), "not a directory").unwrap();
+            let pipe = format!(
+                r"\\.\pipe\cc-chrome-rollback-offline-{}",
+                uuid::Uuid::new_v4()
+            );
+            let mut server = ServerOptions::new()
+                .first_pipe_instance(true)
+                .create(&pipe)
+                .unwrap();
+            let record = Record {
+                job: "job".into(),
+                pipe,
+                instance: "instance".into(),
+                generation: "generation".into(),
+                session: "session".into(),
+                turn: "turn".into(),
+                tab: 42,
+                created: 100,
+            };
+            let offline = async {
+                server.connect().await.unwrap();
+                let v = read_frame(&mut server).await.unwrap();
+                write_frame(
+                    &mut server,
+                    &json!({"id":v["id"],"error":{"message":"offline"}}),
+                )
+                .await
+                .unwrap();
+            };
+            let (result, _) = tokio::join!(persist_or_close(&dir, &record), offline);
+            assert!(result.is_err());
+            assert_eq!(
+                fs::read_dir(dir.join("chrome-emergency-tabs"))
+                    .unwrap()
+                    .count(),
+                1
+            );
+            struct Closed;
+            impl Closer for Closed {
+                fn close(&mut self, r: &Record) -> io::Result<bool> {
+                    assert_eq!(r.tab, 42);
+                    Ok(true)
+                }
+            }
+            assert_eq!(
+                sweep_with(root.path(), None, 101, false, &mut Closed)
+                    .unwrap()
+                    .closed,
+                1
+            );
+            assert_eq!(
+                fs::read_dir(dir.join("chrome-emergency-tabs"))
+                    .unwrap()
+                    .count(),
+                0
+            );
+        });
     }
 }

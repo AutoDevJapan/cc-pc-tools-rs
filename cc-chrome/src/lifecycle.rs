@@ -2,6 +2,7 @@
 use crate::*;
 
 #[derive(Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Retry {
     pub attempts: u32,
     pub last_attempt: i64,
@@ -15,7 +16,7 @@ pub fn atomic_json(path: &Path, value: &impl Serialize) -> io::Result<()> {
         .ok_or_else(|| io::Error::other("missing parent"))?;
     fs::create_dir_all(parent)?;
     let mut temp = tempfile::NamedTempFile::new_in(parent)?;
-    serde_json::to_writer(&mut temp, value)?;
+    serde_json::to_writer_pretty(&mut temp, value)?;
     temp.as_file().sync_all()?;
     temp.persist(path).map_err(|e| e.error)?;
     Ok(())
@@ -92,22 +93,32 @@ pub fn notices_with(
     }
     let mut pending = vec![];
     for dir in fs::read_dir(jobs)? {
-        let dir = dir?;
-        if !dir.file_type()?.is_dir() {
+        let Ok(dir) = dir else {
+            continue;
+        };
+        if !dir.file_type().is_ok_and(|t| t.is_dir()) {
             continue;
         }
         let folder = dir.path().join("chrome-retries");
         let entries = match fs::read_dir(folder) {
             Ok(v) => v,
             Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(e),
+            Err(_) => continue,
         };
         for entry in entries {
-            let path = entry?.path();
+            let Ok(entry) = entry else {
+                continue;
+            };
+            let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) != Some("json") {
                 continue;
             }
-            let r: Retry = serde_json::from_slice(&fs::read(&path)?).map_err(io::Error::other)?;
+            let Ok(bytes) = fs::read(&path) else {
+                continue;
+            };
+            let Ok(r) = serde_json::from_slice::<Retry>(&bytes) else {
+                continue;
+            };
             if r.attempts >= 3 && !r.notice_sent {
                 pending.push((path, r));
             }

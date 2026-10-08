@@ -190,29 +190,46 @@ pub fn sweep_with(
     let started = std::time::Instant::now();
     let mut candidates = vec![];
     for dir in fs::read_dir(jobs)? {
-        let dir = dir?;
-        if !dir.file_type()?.is_dir() {
+        let dir = match dir {
+            Ok(dir) => dir,
+            Err(_) => {
+                result.failed += 1;
+                continue;
+            }
+        };
+        if !dir.file_type().is_ok_and(|t| t.is_dir()) {
             continue;
         }
         let name = dir.file_name().to_string_lossy().into_owned();
         if !safe_job(&name) || only.is_some_and(|id| id != name) {
             continue;
         }
-        let folder = dir.path().join("chrome-tabs");
-        let entries = match fs::read_dir(folder) {
-            Ok(v) => v,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(e),
-        };
-        for entry in entries {
-            let entry = entry?;
-            if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
-                continue;
+        for kind in ["chrome-tabs", "chrome-emergency-tabs"] {
+            let folder = dir.path().join(kind);
+            let entries = match fs::read_dir(folder) {
+                Ok(v) => v,
+                Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+                Err(_) => {
+                    result.failed += 1;
+                    continue;
+                }
+            };
+            for entry in entries {
+                let entry = match entry {
+                    Ok(entry) => entry,
+                    Err(_) => {
+                        result.failed += 1;
+                        continue;
+                    }
+                };
+                if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
+                    continue;
+                }
+                let last = lifecycle::retry(&entry.path())
+                    .map(|r| r.last_attempt)
+                    .unwrap_or(0);
+                candidates.push((last, entry.path(), dir.path(), name.clone()));
             }
-            let last = lifecycle::retry(&entry.path())
-                .map(|r| r.last_attempt)
-                .unwrap_or(0);
-            candidates.push((last, entry.path(), dir.path(), name.clone()));
         }
     }
     // Offline profiles must not consume every minute's budget ahead of other tabs.
@@ -280,30 +297,41 @@ pub fn sweep_with(
                 } else {
                     result.gone += 1;
                 }
-                lifecycle::atomic_json(
+                if lifecycle::atomic_json(
                     &dir.join("chrome-tab-history")
                         .join(path.file_name().unwrap()),
                     &json!({"record":record,"at":now,"closed":closed}),
-                )?;
+                )
+                .is_err()
+                {
+                    result.failed += 1;
+                    continue;
+                }
                 match fs::remove_file(&path) {
                     Ok(()) => {}
                     Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-                    Err(e) => return Err(e),
+                    Err(_) => {
+                        result.failed += 1;
+                        continue;
+                    }
                 };
                 let retry = lifecycle::retry_path(&path);
                 match fs::remove_file(retry) {
                     Ok(()) => {}
                     Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-                    Err(e) => return Err(e),
+                    Err(_) => {
+                        result.failed += 1;
+                        continue;
+                    }
                 };
             }
             Err(e) => {
                 result.failed += 1;
-                let mut retry = lifecycle::retry(&path)?;
+                let mut retry = lifecycle::retry(&path).unwrap_or_default();
                 retry.attempts = retry.attempts.saturating_add(1);
                 retry.last_attempt = now;
                 retry.kind = format!("{:?}", e.kind());
-                lifecycle::atomic_json(&lifecycle::retry_path(&path), &retry)?;
+                let _ = lifecycle::atomic_json(&lifecycle::retry_path(&path), &retry);
             }
         }
     }
@@ -662,5 +690,48 @@ mod tests {
             lifecycle::notices_with(root.path(), &mut |_| Ok(())).unwrap(),
             1
         );
+    }
+    #[test]
+    fn corrupt_retry_and_unwritable_history_do_not_block_other_jobs_or_notices() {
+        let root = tempfile::tempdir().unwrap();
+        for name in ["bad", "good"] {
+            job(root.path(), name, "succeeded");
+        }
+        let bad = persist(&root.path().join("bad"), &record("bad", 1)).unwrap();
+        let good = persist(&root.path().join("good"), &record("good", 2)).unwrap();
+        lifecycle::atomic_json(&lifecycle::retry_path(&bad), &json!({"invalid":true})).unwrap();
+        fs::write(lifecycle::retry_path(&bad), "broken").unwrap();
+        struct Selective;
+        impl Closer for Selective {
+            fn close(&mut self, r: &Record) -> io::Result<bool> {
+                if r.tab == 1 {
+                    Err(io::Error::other("offline"))
+                } else {
+                    Ok(true)
+                }
+            }
+        }
+        let report = sweep_with(root.path(), None, 1, false, &mut Selective).unwrap();
+        assert_eq!((report.failed, report.closed), (1, 1));
+        assert!(bad.exists());
+        assert!(!good.exists());
+        assert_eq!(lifecycle::retry(&bad).unwrap().attempts, 1);
+        let notice = root.path().join("good/chrome-retries/notice.json");
+        lifecycle::atomic_json(&notice, &json!({"attempts":3})).unwrap();
+        fs::write(lifecycle::retry_path(&bad), "broken").unwrap();
+        assert_eq!(
+            lifecycle::notices_with(root.path(), &mut |_| Ok(())).unwrap(),
+            1
+        );
+        let good = persist(&root.path().join("good"), &record("good", 3)).unwrap();
+        fs::write(
+            root.path().join("bad/chrome-tab-history"),
+            "not a directory",
+        )
+        .unwrap();
+        let report = sweep_with(root.path(), None, 2, false, &mut Fake(vec![], false)).unwrap();
+        assert!(report.failed >= 1);
+        assert!(!good.exists());
+        assert!(bad.exists());
     }
 }

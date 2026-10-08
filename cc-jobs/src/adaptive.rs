@@ -541,7 +541,13 @@ impl Context {
                 state.quota_checked_at = now;
             }
             let jobs = self.list_jobs(&HashSet::new());
-            let queued = jobs.iter().filter(|j| s(j, "status") == "queued").count();
+            // Only unmet demand for global slots justifies raising that limit.
+            // Dependency/cooldown/child-limit waits cannot use extra slots.
+            let queued = self
+                .queue_decisions(&jobs, &cfg, None)
+                .values()
+                .filter(|reason| reason["code"] == "running_limit")
+                .count();
             let mut recent = 0;
             let mut latest: f64 = 0.;
             for job in &jobs {

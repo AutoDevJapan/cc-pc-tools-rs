@@ -75,6 +75,67 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn only_global_slot_waiters_justify_growth_not_cooldown_or_dependency_waits() {
+        for ready in [false, true] {
+            let t = Test::new();
+            let now = t.rt.epoch();
+            t.rt.env.lock().unwrap().insert(
+                "CC_TODO_HOME".into(),
+                t.ctx.root.to_string_lossy().into_owned(),
+            );
+            fs::write(
+                t.ctx.root.join("todo.json"),
+                json!({"items":[{"id":1,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]})
+                    .to_string(),
+            )
+            .unwrap();
+            config(&t, json!({"max_running":4,"adaptive":{}}));
+            for n in 0..4 {
+                let mut j = waiting(&t, &format!("busy{n}"), &format!("busy{n}"));
+                j["status"] = json!("running");
+                t.ctx.save(&j).unwrap();
+            }
+            let mut cooldown = waiting(&t, "cooldown", "cooldown");
+            cooldown["retry_not_before"] = json!(now + 900.);
+            t.ctx.save(&cooldown).unwrap();
+            let mut dependency = waiting(&t, "dependency", "dependency");
+            dependency["todo_id"] = json!(1);
+            t.ctx.save(&dependency).unwrap();
+            if ready {
+                waiting(&t, "ready", "ready");
+            }
+            let settings = cc_jobs::adaptive::AdaptiveConfig::default();
+            let quota = cc_jobs::adaptive::parse_quotas(
+                &json!({"accounts":[{"id":"a","quota":{"weeklyPercent":20.,"weeklyResetAt":now+86400.}}]}),
+                now,
+            );
+            let state = cc_jobs::adaptive::LimitState {
+                checked_at: now - 60.,
+                first_at: now - 600.,
+                stable_since: now - 600.,
+                max_running: 4,
+                mode: "auto".into(),
+                settings: Some(settings),
+                quota_checked_at: now,
+                openai: vec![quota],
+                machine: cc_jobs::adaptive::MachineSample {
+                    cpu_times: Some([100, 200, 100]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            t.ctx
+                .write_json(&t.ctx.root.join("queue-limit-state.json"), &json!(state))
+                .unwrap();
+            t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+            t.ctx.adjust_limit().unwrap();
+            assert_eq!(
+                t.ctx.queue_config().unwrap().max_running,
+                if ready { 6 } else { 4 }
+            );
+        }
+    }
+    #[test]
     fn minute_schedule_jitter_does_not_skip_next_bucket_or_reset_state() {
         let t = Test::new();
         t.rt.advance_epoch.store(true, Ordering::Relaxed);

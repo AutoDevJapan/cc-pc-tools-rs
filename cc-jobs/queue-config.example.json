@@ -1,6 +1,21 @@
 {
   "context_limit_percent": 50,
   "max_running": 6,
+  "fixed_max_running": null,
+  "adaptive": {
+    "min_running": 4,
+    "max_running": 60,
+    "increase_step": 2,
+    "interval_seconds": 60,
+    "quiet_seconds": 300,
+    "health_port": 10100,
+    "health_fast_ms": 1000,
+    "health_timeout_ms": 2000,
+    "free_memory_gib": 16,
+    "cpu_percent": 85,
+    "quota_interval_seconds": 300,
+    "quota_timeout_seconds": 15
+  },
   "max_children_per_parent": 2,
   "max_429_retries": 5,
   "retry_delay_seconds": 60,

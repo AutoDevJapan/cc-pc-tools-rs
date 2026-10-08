@@ -86,8 +86,10 @@ impl Context {
             *counts.entry(s(&reason, "message").into()).or_default() += 1;
             queued.push(json!({"id":id,"reason":reason,"yield_resume":job["yield_resume"]==true}));
         }
+        let limit = cfg.as_ref().map(|cfg| self.limit_status(cfg)).transpose()?;
         Ok(
             json!({"running":running,"occupied_slots":families.len(),"max_running":cfg.as_ref().map(|cfg|cfg.max_running),
+            "limit":limit,"limit_label":limit.as_ref().map(|v|v["label"].clone()),
             "queued_count":queued.len(),"queued":queued,"wait_reason_counts":counts,"resource_waits":resources,"config_error":config_error}),
         )
     }
@@ -130,10 +132,11 @@ impl Context {
             .map(|n| n.to_string())
             .unwrap_or_else(|| "不明（設定エラー）".into());
         format!(
-            "実行中 {}/{}枠（子を含む{}件） / 順番待ち {}件 [{}] / 共有資源待ち [{}]",
+            "実行中 {}/{}枠（子を含む{}件） / {} / 順番待ち {}件 [{}] / 共有資源待ち [{}]",
             report["occupied_slots"],
             limit,
             report["running"],
+            s(report, "limit_label"),
             report["queued_count"],
             reasons,
             resources

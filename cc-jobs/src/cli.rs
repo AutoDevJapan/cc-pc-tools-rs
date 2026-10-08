@@ -86,6 +86,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "_supervise",
         "recover-429",
         "reload-queue",
+        "adjust-limit",
         "recover-children",
         "cleanup-supervisors",
     ]
@@ -409,6 +410,15 @@ impl Context {
             }
             "reload-queue" => {
                 writeln!(out, "{}", pretty(&self.reload_queue()?))?;
+                Ok(0)
+            }
+            "adjust-limit" => {
+                self.adjust_limit()?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.limit_status(&self.queue_config()?)?)
+                )?;
                 Ok(0)
             }
             "recover-children" => {

@@ -1,0 +1,50 @@
+name: Owned download quarantine
+on:
+  push:
+    branches: [main]
+    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+  pull_request:
+    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: safe-delete-recovery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: safe-delete-recovery
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+      - name: Create isolated CI fixtures
+        shell: pwsh
+        run: |
+          $fixtures = Join-Path $env:RUNNER_TEMP 'safe-delete-recovery-fixtures'
+          New-Item -ItemType Directory -Path $fixtures | Out-Null
+          $guard = Join-Path $fixtures 'client-guard-fixture.exe'
+          rustc tests/support/client_guard.rs -o $guard
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "SAFE_DELETE_TEST_ROOT=$fixtures" >> $env:GITHUB_ENV
+          "SAFE_DELETE_TEST_GUARD=$guard" >> $env:GITHUB_ENV
+      - run: cargo fmt --check
+      - run: cargo nextest run --locked --workspace --test-threads 10
+      - run: cargo test --locked --workspace --doc
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo build --locked --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: safe-delete-recovery-windows
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            safe-delete-recovery/target/release/safe-delete-recovery.exe
+            safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe

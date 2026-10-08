@@ -75,6 +75,38 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn minute_controller_upgrades_only_legacy_queued_supervisors_and_rechecks_later_requeues() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        config(&t, json!({"max_running":4,"adaptive":{}}));
+        for (id, pid, status, version, child) in [
+            ("old-wait", 601, "queued", 4, None),
+            ("old-run", 602, "running", 4, None),
+            ("new-wait", 603, "queued", 5, None),
+            ("live-child", 604, "queued", 4, Some(605)),
+        ] {
+            t.rt.procs.lock().unwrap().insert(pid, 123);
+            if let Some(child) = child {
+                t.rt.procs.lock().unwrap().insert(child, 123);
+            }
+            t.put(json!({"id":id,"status":status,"pid":pid,"pid_created":123,"queue_supervisor_version":version,"codex_pid":child,"codex_pid_created":123}));
+        }
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(&*t.rt.kills.lock().unwrap(), &[601]);
+        assert_eq!(
+            t.ctx.load("old-wait").unwrap()["queue_supervisor_version"],
+            5
+        );
+        assert_eq!(t.ctx.load("old-run").unwrap()["status"], "running");
+        let mut job = t.ctx.load("old-run").unwrap();
+        job["status"] = json!("queued");
+        t.ctx.save(&job).unwrap();
+        t.rt.tick(60.);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(&*t.rt.kills.lock().unwrap(), &[601, 602]);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+    }
+    #[test]
     fn only_global_slot_waiters_justify_growth_not_cooldown_or_dependency_waits() {
         for ready in [false, true] {
             let t = Test::new();

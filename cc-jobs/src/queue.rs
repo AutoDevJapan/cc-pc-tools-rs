@@ -297,11 +297,21 @@ impl Context {
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
     pub fn reload_queue(&self) -> Result<Value> {
+        self.reload_queue_older_than(None)
+    }
+    pub(crate) fn reload_legacy_queue(&self) -> Result<Value> {
+        self.reload_queue_older_than(Some(5))
+    }
+    fn reload_queue_older_than(&self, version: Option<u64>) -> Result<Value> {
         let mut restarted = Vec::new();
         // Snapshot reads need no global gate. Release the gate between jobs so
         // a long reload cannot prevent unrelated registration for a full minute.
         for snapshot in self.list_jobs(&HashSet::new()) {
-            if s(&snapshot, "status") != "queued" {
+            if s(&snapshot, "status") != "queued"
+                || version.is_some_and(|v| {
+                    snapshot["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
+                })
+            {
                 continue;
             }
             let jid = s(&snapshot, "id");
@@ -324,6 +334,8 @@ impl Context {
             };
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued"
+                || version
+                    .is_some_and(|v| job["queue_supervisor_version"].as_u64().unwrap_or(0) >= v)
                 || job["cancel_requested"] == true
                 || self.is_ours(&job, "codex_pid")
             {
@@ -378,11 +390,13 @@ impl Context {
             &self.job_dir(&jid),
             &jid,
         )?;
+        // Do not mark a failed spawn as upgraded: the next minute must retry.
+        job["queue_supervisor_version"] = json!(5);
         if let Some(pid) = pid {
             job["pid"] = json!(pid);
             job["pid_created"] = json!(self.rt.proc_created(pid));
-            self.save(job)?;
         }
+        self.save(job)?;
         Ok(())
     }
     pub(crate) fn stop_supervisor_owner(&self, job: &Value) -> Result<()> {

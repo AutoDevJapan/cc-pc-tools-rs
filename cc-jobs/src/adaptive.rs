@@ -606,7 +606,12 @@ impl Context {
             history.drain(..history.len() - 1440);
         }
         self.write_json(&journal, &json!(history))?;
-        self.write_json(&self.root.join("queue-limit-state.json"), &json!(state))
+        self.write_json(&self.root.join("queue-limit-state.json"), &json!(state))?;
+        // Older running controllers may later requeue for context rotation or
+        // retry. They cannot parse the new config fields; upgrade only once
+        // they are queued, never while their Codex process is live.
+        self.reload_legacy_queue()?;
+        Ok(())
     }
 }
 

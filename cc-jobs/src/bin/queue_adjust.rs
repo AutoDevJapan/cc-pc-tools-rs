@@ -3,7 +3,10 @@ use cc_jobs::*;
 fn main() {
     let result = Context::installed()
         .map_err(Error::from)
-        .and_then(|ctx| ctx.adjust_limit());
+        .and_then(|mut ctx| {
+            ctx.executable = ctx.root.join("codex_jobs.exe");
+            ctx.adjust_limit()
+        });
     if result.is_err() {
         std::process::exit(1);
     }

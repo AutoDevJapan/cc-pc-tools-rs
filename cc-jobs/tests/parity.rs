@@ -100,6 +100,44 @@ mod adaptive_config_updates {
         assert_eq!(t.ctx.read_json(&path).unwrap(), config);
     }
     #[test]
+    fn removing_fixed_override_uses_shadow_provider_brakes_immediately() {
+        let t = Test::new();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({
+            "max_running":16,"fixed_max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"fixed","checked_at":t.rt.epoch(),"hardware_max_running":40,
+            "max_running":0,"claude_max_running":40,"preferred_provider":"anthropic",
+            "auto_ready_samples":3,"settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        let before = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                before["max_running"].clone(),
+                before["codex_max_running"].clone()
+            ),
+            (json!(32), json!(32))
+        );
+        t.ctx.update_queue_config(&json!({}), true).unwrap();
+        let after = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                after["max_running"].clone(),
+                after["codex_max_running"].clone()
+            ),
+            (json!(40), json!(0))
+        );
+        assert_eq!(after["preferred_provider"], "anthropic");
+    }
+    #[test]
     fn provider_only_waits_do_not_grow_the_hardware_ceiling() {
         let t = Test::new();
         let now = t.rt.epoch();

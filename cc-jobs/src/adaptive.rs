@@ -532,7 +532,9 @@ impl Context {
             return fallback;
         };
         let now = self.rt.epoch();
-        if state.mode != "auto"
+        // After a measured fixed override is removed, use the fresh shadow
+        // lanes immediately; do not briefly discard Codex exhaustion/routing.
+        if (state.mode != "auto" && !(state.mode == "fixed" && state.hardware_max_running > 0))
             || state.checked_at <= 0.
             || now < state.checked_at
             || now - state.checked_at > adaptive.stale_after_seconds()
@@ -675,7 +677,8 @@ impl Context {
                     > cfg.adaptive.as_ref().unwrap().stale_after_seconds())
         {
             ("auto", "測定が古いため最小値")
-        } else if state.mode != "auto" {
+        } else if state.mode != "auto" && !(state.mode == "fixed" && state.hardware_max_running > 0)
+        {
             ("auto", "最初の測定待ち")
         } else {
             ("auto", state.reason.as_str())
@@ -699,7 +702,7 @@ impl Context {
         );
         Ok(
             json!({"max_running":hardware,"codex_max_running":codex,"claude_max_running":claude,"mode":mode,"reason":reason,"claude_reason":state.claude_reason,"label":label,
-            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && state.mode == "auto" && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
+            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && (state.mode == "auto" || (state.mode == "fixed" && state.hardware_max_running > 0)) && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
             "pace_ratio":state.pace_ratio,"cpu_percent":state.cpu_percent,"free_memory_gib":state.machine.free_memory_gib,
             "health_ms":state.machine.health_ms,"recent_429_count":state.recent_429_count,"quota_checked_at":state.quota_checked_at,
             "auto_hardware_max_running":state.hardware_max_running,"auto_codex_max_running":state.max_running,

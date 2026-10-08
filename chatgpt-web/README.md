@@ -37,7 +37,7 @@ D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # 専用プロフィールの C
 ## 検証
 
 ```powershell
-cargo test --locked -p chatgpt-web
+cargo nextest run --locked -p chatgpt-web
 cargo clippy --locked -p chatgpt-web --all-targets -- -D warnings
 cargo build --release --locked -p chatgpt-web
 ```
@@ -47,6 +47,8 @@ cargo build --release --locked -p chatgpt-web
 画面の作りが変わったら、保守用の `chatgpt_web probe --url <URL> wait:10 "page:state()" "page:JSON.stringify(poll())" <JSのファイル>` で調べ、`src/page.js` と記録を更新します。`ask --allow-logged-out` は未ログインの画面でも送る保守用の指定で、画面の作りの確認だけに使います（ログイン状態は記録しません）。
 
 環境変数 `CHATGPT_WEB_HOME`（保存先）、`CHATGPT_WEB_URL`（開く URL）、`CHATGPT_WEB_CHROME`（Chrome の場所）、`CHATGPT_WEB_DISCORD`（`discord_ask.exe` の場所、`off` で記録しない）で試験用に切り替えます。
+
+画面の試験は必ず `CHATGPT_WEB_HEADLESS=1` を子プロセスへ渡し、Chrome を `--headless=new` で起動します。窓やタスクバーの表示を作らず、実際の Chrome で操作と終了を確かめます。手動で試験用に起動する場合も同じ環境変数を指定します。値が `1` の場合だけ有効です。未指定の場合、本番の `ask`・`check`・`probe` は従来の画面外の窓、`login` は見える窓で起動します。既に動いている Chrome を再利用する動きは変わりません。CI では Chrome を必須とし、Chrome が無い場合に画面試験を飛ばして成功させません。
 
 ## 配置
 

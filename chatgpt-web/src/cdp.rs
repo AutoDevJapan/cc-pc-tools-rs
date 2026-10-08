@@ -96,9 +96,42 @@ pub struct Browser {
     child: Option<Child>,
 }
 
+fn chrome_command(chrome: &Path, profile: &Path, visible: bool, headless: bool) -> Command {
+    let mut cmd = Command::new(chrome);
+    cmd.arg(format!("--user-data-dir={}", profile.display()))
+        .args([
+            "--remote-debugging-port=0",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--lang=en-US",
+            "--accept-lang=en-US,en",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-background-timer-throttling",
+            "--window-size=1280,900",
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    if headless {
+        cmd.arg("--headless=new");
+    } else if !visible {
+        cmd.arg("--window-position=-32000,-32000");
+    }
+    cmd.arg("about:blank");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
 impl Browser {
     /// 専用プロフィールの Chrome が CDP 付きで動いていれば再利用し、なければ起動する。
-    /// `visible` が false のときは画面外に窓を置き、見えないようにする。
+    /// 通常は `visible` が false のとき画面外に窓を置く。
+    /// 試験では `CHATGPT_WEB_HEADLESS=1` で窓を作らずに起動する。
     pub fn open(profile: &Path, visible: bool) -> io::Result<Self> {
         let port_file = profile.join("DevToolsActivePort");
         if let Some((port, path)) = fs::read_to_string(&port_file)
@@ -119,32 +152,9 @@ impl Browser {
         })?;
         fs::create_dir_all(profile)?;
         let _ = fs::remove_file(&port_file);
-        let mut cmd = Command::new(chrome);
-        cmd.arg(format!("--user-data-dir={}", profile.display()))
-            .args([
-                "--remote-debugging-port=0",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--lang=en-US",
-                "--accept-lang=en-US,en",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-renderer-backgrounding",
-                "--disable-background-timer-throttling",
-                "--window-size=1280,900",
-            ])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        if !visible {
-            cmd.arg("--window-position=-32000,-32000");
-        }
-        cmd.arg("about:blank");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        let headless =
+            std::env::var_os("CHATGPT_WEB_HEADLESS").as_deref() == Some(std::ffi::OsStr::new("1"));
+        let mut cmd = chrome_command(&chrome, profile, visible, headless);
         let mut child = cmd.spawn()?;
         let deadline = Instant::now() + Duration::from_secs(30);
         while Instant::now() < deadline {
@@ -226,6 +236,35 @@ pub struct Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_chrome_has_no_window_even_when_visible_is_requested() {
+        for visible in [false, true] {
+            let cmd = chrome_command(
+                Path::new("chrome"),
+                Path::new("test-profile"),
+                visible,
+                true,
+            );
+            let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy()).collect();
+            assert!(args.iter().any(|a| a == "--headless=new"));
+            assert!(!args.iter().any(|a| a.starts_with("--window-position=")));
+            assert!(args.iter().any(|a| a == "--remote-debugging-port=0"));
+        }
+    }
+
+    #[test]
+    fn production_chrome_keeps_its_window_behavior() {
+        for visible in [false, true] {
+            let cmd = chrome_command(Path::new("chrome"), Path::new("profile"), visible, false);
+            let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy()).collect();
+            assert!(!args.iter().any(|a| a.starts_with("--headless")));
+            assert_eq!(
+                args.iter().any(|a| a == "--window-position=-32000,-32000"),
+                !visible
+            );
+        }
+    }
 
     #[test]
     fn active_port_file_is_parsed_strictly() {

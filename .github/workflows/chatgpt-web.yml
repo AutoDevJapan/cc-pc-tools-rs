@@ -1,0 +1,35 @@
+name: ChatGPT browser fixtures
+on:
+  push:
+    branches: [main]
+    paths: ['chatgpt-web/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+  pull_request:
+    paths: ['chatgpt-web/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+permissions:
+  contents: read
+jobs:
+  fixtures:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+      - name: Require real Chrome for the fixtures
+        shell: pwsh
+        run: |
+          $chrome = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA) |
+            Where-Object { $_ } |
+            ForEach-Object { Join-Path $_ 'Google/Chrome/Application/chrome.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+            Select-Object -First 1
+          if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
+          "CHATGPT_WEB_CHROME=$chrome" >> $env:GITHUB_ENV
+      - run: cargo nextest run --locked -p chatgpt-web
+      # This package has only a binary target; Cargo cannot run --doc for it.
+      - run: cargo clippy --locked -p chatgpt-web --all-targets -- -D warnings

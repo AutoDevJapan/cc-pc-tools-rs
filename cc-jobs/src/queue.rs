@@ -793,9 +793,10 @@ impl Context {
         // The separate minute task samples; admission only reads durable state.
         let mut cfg = cfg.clone();
         // Slow yield work happens before the gate, from a lock-free snapshot.
-        if let Some(snapshot) = self.admission_snapshot() {
-            self.maintain_tool_yields(&snapshot);
-        }
+        // First admission must also inspect completed boundaries. Build a
+        // missing index under a brief gate, then release it before yield work.
+        let snapshot = self.yield_snapshot()?;
+        self.maintain_tool_yields(&snapshot);
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
         cfg.max_running = self.effective_limit(&cfg)?;
         cfg.admission_limits = None;

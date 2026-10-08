@@ -358,9 +358,8 @@ impl Context {
         lock.set_owner(&path, operation);
         Ok(lock)
     }
-    fn job_lock_within(&self, jid: &str, wait: Duration) -> Result<FileLock> {
+    fn try_yield_state(&self, jid: &str) -> Result<FileLock> {
         let path = self.job_dir(jid).join("state.lock");
-        let _ = wait;
         FileLock::try_acquire(&path)
             .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
     }
@@ -439,7 +438,7 @@ impl Context {
         // everything on drop and the caller backs off. Order: gate, then state.
         let wait = Duration::from_secs(if owner.is_some() { 3 } else { 5 });
         let gate = self.queue_lock_for(&format!("yield_commit:{}", s(snapshot, "id")), wait)?;
-        let state = self.job_lock_within(s(snapshot, "id"), wait)?;
+        let state = self.try_yield_state(s(snapshot, "id"))?;
         let job = self.load(s(snapshot, "id"))?;
         let fresh_jobs = self.admission_jobs()?;
         if job["started_at"] != snapshot["started_at"]

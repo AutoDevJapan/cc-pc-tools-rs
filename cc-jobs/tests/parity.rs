@@ -1370,6 +1370,28 @@ mod queue_regressions {
         assert!(!args.iter().any(|a| a.contains("enabled=true")));
     }
     #[test]
+    fn failed_inventory_keeps_agent_running_and_backs_off_before_retrying() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        let mut parent = live_tool_parent(&t);
+        parent["context_pct"] = json!(51);
+        t.ctx.save(&parent).unwrap();
+        tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
+        t.rt.summary_fail.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 1);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert!(!t.ctx.job_dir("long").join("yield-transition.json").exists());
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 1);
+        t.rt.summary_fail.store(false, Ordering::Relaxed);
+        t.rt.tick(31.);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.load("long").unwrap()["context_phase"], "summarize");
+    }
+    #[test]
     fn invalid_or_unwritable_context_summary_retains_the_session_and_never_reports_success() {
         for broken in ["content", "context-continue.md", "context-handoff.md"] {
             let t = Test::new();
@@ -3530,6 +3552,8 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    summary_calls: AtomicUsize,
+    summary_fail: AtomicBool,
     queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
     queue_samples: AtomicUsize,
     title_tools: Mutex<Option<PathBuf>>,
@@ -3572,6 +3596,8 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            summary_calls: AtomicUsize::new(0),
+            summary_fail: AtomicBool::new(false),
             queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
                 free_memory_gib: Some(20.),
                 cpu_times: Some([100, 200, 100]),
@@ -3696,11 +3722,15 @@ impl Runtime for Fake {
         Ok(cc_task_title::job_title(job, prompt, &Value::Null, &names))
     }
     fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
+        self.summary_calls.fetch_add(1, Ordering::Relaxed);
         if let Some(tools) = self.title_tools.lock().unwrap().as_ref() {
             let gate = tools.parent().unwrap().join("jobs/.queue.lock");
             if gate.parent().unwrap().is_dir() {
                 drop(FileLock::try_acquire(&gate).expect("MCP inventory monopolized queue gate"));
             }
+        }
+        if self.summary_fail.load(Ordering::Relaxed) {
+            return Err(io::Error::other("inventory unavailable"));
         }
         Ok(vec!["stripe".into(), "unseen-server".into()])
     }

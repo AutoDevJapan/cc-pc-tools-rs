@@ -599,18 +599,25 @@ impl Context {
         } else {
             ("auto", state.reason.as_str())
         };
+        let (hardware, codex, claude, _) = self.provider_limits(cfg);
+        let providers = if cfg.adaptive.is_some() && cfg.fixed_max_running.is_none() {
+            format!("・Codex {codex}枠・Claude {claude}枠")
+        } else {
+            String::new()
+        };
         let label = format!(
-            "上限 {}（{}・{}）",
-            cfg.max_running,
+            "上限 {}（{}・{}{}）",
+            hardware,
             match mode {
                 "auto" => "自動",
                 "fixed" => "固定",
                 _ => "手動",
             },
-            reason
+            reason,
+            providers
         );
         Ok(
-            json!({"max_running":cfg.max_running,"mode":mode,"reason":reason,"label":label,
+            json!({"max_running":hardware,"codex_max_running":codex,"claude_max_running":claude,"mode":mode,"reason":reason,"claude_reason":state.claude_reason,"label":label,
             "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && state.mode == "auto" && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
             "pace_ratio":state.pace_ratio,"cpu_percent":state.cpu_percent,"free_memory_gib":state.machine.free_memory_gib,
             "health_ms":state.machine.health_ms,"recent_429_count":state.recent_429_count,"quota_checked_at":state.quota_checked_at}),
@@ -769,7 +776,8 @@ impl Context {
         history.push(json!({"at":self.rt.now(),"epoch":now,"previous":previous,"max_running":state.max_running,
             "mode":state.mode,"reason":state.reason,"queued":state.queued,"cpu_percent":state.cpu_percent,
             "machine":state.machine,"recent_429_count":state.recent_429_count,"pace_ratio":state.pace_ratio,
-            "preferred_provider":state.preferred_provider,"openai":state.openai.last(),"anthropic":state.anthropic}));
+            "preferred_provider":state.preferred_provider,"openai":state.openai.last(),"anthropic":state.anthropic,
+            "claude_max_running":state.claude_max_running,"claude_reason":state.claude_reason,"claude_recent_429_count":state.claude_recent_429_count}));
         if history.len() > 1440 {
             history.drain(..history.len() - 1440);
         }

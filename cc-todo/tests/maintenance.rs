@@ -10,6 +10,58 @@ fn database() -> Value {
 }
 
 #[test]
+fn native_discord_get_has_no_body_and_html_error_never_exposes_the_response() {
+    struct Transport {
+        fail: bool,
+    }
+    impl cc_todo::HttpTransport for Transport {
+        fn request(
+            &mut self,
+            method: &str,
+            _path: &str,
+            body: &[u8],
+            _token: &str,
+        ) -> Result<(u32, Vec<u8>)> {
+            assert_eq!(method, "GET");
+            assert!(
+                body.is_empty(),
+                "Discord GET cannot send a JSON null payload"
+            );
+            if self.fail {
+                Ok((400, b"<html>private upstream error</html>".to_vec()))
+            } else {
+                Ok((200, br#"{"id":"123"}"#.to_vec()))
+            }
+        }
+        fn sleep(&mut self, _seconds: f64) {
+            panic!("no retry expected");
+        }
+    }
+    assert_eq!(
+        cc_todo::discord_call(
+            &mut Transport { fail: false },
+            "GET",
+            "/channels/123/messages/123",
+            &Value::Null,
+            "fixture-token"
+        )
+        .unwrap(),
+        json!({"id":"123"})
+    );
+    let error = cc_todo::discord_call(
+        &mut Transport { fail: true },
+        "GET",
+        "/channels/123/messages/123",
+        &Value::Null,
+        "fixture-token",
+    )
+    .unwrap_err();
+    assert!(error.contains("status=400"));
+    assert!(!error.contains("private upstream"));
+    assert!(!error.contains("fixture-token"));
+}
+
+#[test]
 fn two_synthetic_items_preview_then_admission_survive_restart_without_two_owners() {
     let mut db = database();
     let jobs = vec![

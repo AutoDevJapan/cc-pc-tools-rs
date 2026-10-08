@@ -981,12 +981,21 @@ pub fn discord_call(
     token: &str,
 ) -> Result<Value> {
     for _ in 0..3 {
-        let (status, raw) =
-            transport.request(method, path, &serde_json::to_vec(body).map_err(err)?, token)?;
+        let payload = if method == "GET" || body.is_null() {
+            Vec::new()
+        } else {
+            serde_json::to_vec(body).map_err(err)?
+        };
+        let (status, raw) = transport.request(method, path, &payload, token)?;
         let value: Value = if raw.is_empty() {
             Value::Null
         } else {
-            serde_json::from_slice(&raw).map_err(|_| "invalid Discord response".to_owned())?
+            serde_json::from_slice(&raw).map_err(|_| {
+                format!(
+                    "invalid Discord response: {method} status={status} bytes={}",
+                    raw.len()
+                )
+            })?
         };
         if status == 429 {
             transport.sleep(value["retry_after"].as_f64().unwrap_or(1.).max(0.));

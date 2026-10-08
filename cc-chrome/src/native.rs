@@ -10,16 +10,36 @@ use tokio::{
 };
 
 const MAX_FRAME: usize = 32 * 1024 * 1024;
-fn running(pid:u32,created:u64)->Option<bool> {
-    use windows_sys::Win32::{Foundation::*,System::Threading::*};
+fn running(pid: u32, created: u64) -> Option<bool> {
+    use windows_sys::Win32::{Foundation::*, System::Threading::*};
     unsafe {
-        let handle=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,0,pid);
-        if handle.is_null() {return if GetLastError()==ERROR_INVALID_PARAMETER {Some(false)} else {None};}
-        let mut code=0;
-        let mut times=[FILETIME{dwLowDateTime:0,dwHighDateTime:0};4];
-        let ok=GetExitCodeProcess(handle,&mut code)!=0 && GetProcessTimes(handle,&mut times[0],&mut times[1],&mut times[2],&mut times[3])!=0;
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return if GetLastError() == ERROR_INVALID_PARAMETER {
+                Some(false)
+            } else {
+                None
+            };
+        }
+        let mut code = 0;
+        let mut times = [FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        }; 4];
+        let ok = GetExitCodeProcess(handle, &mut code) != 0
+            && GetProcessTimes(
+                handle,
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            ) != 0;
         CloseHandle(handle);
-        ok.then_some(code==259 && (((times[0].dwHighDateTime as u64)<<32)|times[0].dwLowDateTime as u64)==created)
+        ok.then_some(
+            code == 259
+                && (((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64)
+                    == created,
+        )
     }
 }
 async fn read_frame(r: &mut (impl AsyncRead + Unpin)) -> io::Result<Value> {
@@ -91,36 +111,77 @@ fn runtime() -> io::Result<tokio::runtime::Runtime> {
         .build()
 }
 async fn discover() -> io::Result<(String, Value)> {
+    discover_matching(None).await
+}
+async fn discover_matching(record: Option<&Record>) -> io::Result<(String, Value)> {
+    let mut pipes = vec![];
     for entry in fs::read_dir(r"\\.\pipe\")? {
         let name = entry?.file_name().to_string_lossy().into_owned();
         if !name.starts_with("codex-browser-use\\") || name.contains("cc-job-") {
             continue;
         }
-        let pipe = format!(r"\\.\pipe\{name}");
-        let Ok(mut rpc) = Rpc::connect(&pipe).await else {
-            continue;
-        };
-        let Ok(info)=rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await else {continue};
-        if info["type"] == "extension" && info["family"] == "chrome" {
+        pipes.push(format!(r"\\.\pipe\{name}"));
+    }
+    discover_from(pipes, record).await
+}
+async fn discover_from(pipes: Vec<String>, record: Option<&Record>) -> io::Result<(String, Value)> {
+    for pipe in pipes {
+        let Ok(Ok(info))=tokio::time::timeout(Duration::from_millis(300),async {
+            let mut rpc=Rpc::connect(&pipe).await?;
+            rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await
+        }).await else {continue};
+        if info["type"] == "extension"
+            && info["family"] == "chrome"
+            && record.is_none_or(|r| r.matches_backend(&info))
+        {
             return Ok((pipe, info));
         }
     }
     Err(io::Error::other("owner Chrome extension is not connected"))
 }
+pub fn inventory() -> io::Result<Value> {
+    runtime()?.block_on(async {
+        let mut result=vec![];
+        for entry in fs::read_dir(r"\\.\pipe\")? {
+            let name=entry?.file_name().to_string_lossy().into_owned();
+            if !name.starts_with("codex-browser-use\\") || name.contains("cc-job-") {continue;}
+            let pipe=format!(r"\\.\pipe\{name}");
+            let Ok(mut rpc)=Rpc::connect(&pipe).await else {continue};
+            let params=json!({"session_id":"cc-chrome-audit","turn_id":"inventory","session_context":"live"});
+            let Ok(info)=rpc.call("getInfo",params.clone()).await else {continue};
+            if info["type"]!="extension" || info["family"]!="chrome" {continue;}
+            let tabs=rpc.call("getUserTabs",params).await?;
+            result.push(json!({"pipe":pipe,"instance":info["metadata"]["extensionInstanceId"],"generation":info["browserTabMentions"]["generation"],"tabs":tabs.as_array().ok_or_else(||io::Error::other("invalid inventory"))?.iter().map(|t| t["id"].clone()).collect::<Vec<_>>() }));
+        }
+        Ok(json!(result))
+    })
+}
 pub struct NativeCloser;
 impl Closer for NativeCloser {
     fn owner_running(&mut self, job: &Value) -> Option<bool> {
         let mut unknown = false;
-        for key in ["pid", "codex_pid"] {
-            let Some(pid) = job[key].as_u64().and_then(|n| u32::try_from(n).ok()) else { continue; };
-            let Some(created) = job[format!("{key}_created")].as_u64().filter(|n| *n != 0) else { unknown=true; continue; };
-            match running(pid, created) { Some(true)=>return Some(true), None=>unknown=true, _=>{} }
+        // pid is the admission supervisor: it remains alive while a worker is queued.
+        for key in ["codex_pid"] {
+            let Some(pid) = job[key].as_u64().and_then(|n| u32::try_from(n).ok()) else {
+                continue;
+            };
+            let Some(created) = job[format!("{key}_created")].as_u64().filter(|n| *n != 0) else {
+                unknown = true;
+                continue;
+            };
+            match running(pid, created) {
+                Some(true) => return Some(true),
+                None => unknown = true,
+                _ => {}
+            }
         }
         if unknown { None } else { Some(false) }
     }
     fn close(&mut self, r: &Record) -> io::Result<bool> {
         runtime()?.block_on(async {
-            tokio::time::timeout(Duration::from_secs(3), close_record(r)).await.map_err(io::Error::other)?
+            tokio::time::timeout(Duration::from_secs(3), close_record(r))
+                .await
+                .map_err(io::Error::other)?
         })
     }
 }
@@ -129,15 +190,18 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     let mut rpc = match Rpc::connect(&r.pipe).await {
         Ok(v) => v,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            let (pipe, info) = discover().await?;
-            if !r.matches_backend(&info) { return Ok(false); }
+            let (pipe, _) = discover_matching(Some(r)).await?;
             Rpc::connect(&pipe).await?
-        },
+        }
         Err(e) => return Err(e),
     };
     let info = rpc.call("getInfo", r.params()).await?;
     if !r.matches_backend(&info) {
-        return Ok(false);
+        let (pipe, _) = discover_matching(Some(r)).await?;
+        rpc = Rpc::connect(&pipe).await?;
+        if !r.matches_backend(&rpc.call("getInfo", r.params()).await?) {
+            return Err(io::Error::other("recorded browser identity unavailable"));
+        }
     }
     let tabs = rpc.call("getTabs", r.params()).await?;
     let tabs = tabs
@@ -146,10 +210,13 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     if !tabs.iter().any(|t| t["id"].as_u64() == Some(r.tab)) {
         // A turn-end hook may release a marked tab from session control while
         // leaving it open. Reclaim only this positively recorded agent-created ID.
-        let all=rpc.call("getUserTabs",r.params()).await?;
-        if !has_tab(&all,r.tab)? {return Ok(false);}
-        let mut p=r.params();p["tabId"]=json!(r.tab);
-        rpc.call("claimUserTab",p).await?;
+        let all = rpc.call("getUserTabs", r.params()).await?;
+        if !has_tab(&all, r.tab)? {
+            return Ok(false);
+        }
+        let mut p = r.params();
+        p["tabId"] = json!(r.tab);
+        rpc.call("claimUserTab", p).await?;
     }
     let mut p = r.params();
     p["tabId"] = json!(r.tab);
@@ -160,14 +227,20 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     p["commandParams"] = json!({});
     rpc.call("executeCdp", p).await?;
     let tabs = rpc.call("getUserTabs", r.params()).await?;
-    if has_tab(&tabs,r.tab)? {
+    if has_tab(&tabs, r.tab)? {
         return Err(io::Error::other("tab still open after close"));
     }
     Ok(true)
 }
-fn has_tab(tabs:&Value,id:u64)->io::Result<bool> {
-    let tabs=tabs.as_array().ok_or_else(||io::Error::other("invalid full tab inventory"))?;
-    Ok(tabs.iter().any(|t|["id","providerTabId","tabId"].iter().any(|key|t[*key].as_u64().or_else(||t[*key].as_str()?.parse().ok())==Some(id))))
+fn has_tab(tabs: &Value, id: u64) -> io::Result<bool> {
+    let tabs = tabs
+        .as_array()
+        .ok_or_else(|| io::Error::other("invalid full tab inventory"))?;
+    Ok(tabs.iter().any(|t| {
+        ["id", "providerTabId", "tabId"]
+            .iter()
+            .any(|key| t[*key].as_u64().or_else(|| t[*key].as_str()?.parse().ok()) == Some(id))
+    }))
 }
 
 /// Lives inside the supervisor: no resident child process, profile restart or debug port.
@@ -202,23 +275,22 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
     let thread = std::thread::spawn(move || {
         let result = (|| -> io::Result<()> {
             runtime()?.block_on(async {
-            let mut server=ServerOptions::new().first_pipe_instance(true).create(&service_pipe)?;
-            let _=ready_tx.send(Ok(()));
-            let mut tasks=tokio::task::JoinSet::new();tokio::pin!(stop_rx);
-            loop {
-                tokio::select! {
-                    _=&mut stop_rx=>{tasks.shutdown().await;return Ok(());},
-                    result=server.connect()=>{
-                        result?;
-                        let next=ServerOptions::new().create(&service_pipe)?;
-                        let connected=std::mem::replace(&mut server,next);
-                        let dir=path.clone();let job=job.clone();
-                        tasks.spawn(async move{if let Ok((upstream,info))=discover().await{let _=forward(connected,&upstream,&info,&dir,&job).await;}});
-                    },
-                    _=tasks.join_next(),if !tasks.is_empty()=>{},
-                }
-            }
-        })
+                let server = ServerOptions::new()
+                    .first_pipe_instance(true)
+                    .create(&service_pipe)?;
+                let _ = ready_tx.send(Ok(()));
+                accept_loop(server, &service_pipe, stop_rx, move |connected| {
+                    let dir = path.clone();
+                    let job = job.clone();
+                    async move {
+                        if let Ok((upstream, info)) = discover().await {
+                            let _ = forward(connected, &upstream, &info, &dir, &job).await;
+                        }
+                    }
+                })
+                .await;
+                Ok(())
+            })
         })();
         if let Err(e) = result {
             let _ = ready_tx.send(Err(e.to_string()));
@@ -239,6 +311,49 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
         }
     }
 }
+/// Listener failures never drop active responders. Recreate the listener independently
+/// and drain responders only on explicit supervisor shutdown.
+async fn accept_loop<F, Fut>(
+    server: tokio::net::windows::named_pipe::NamedPipeServer,
+    pipe: &str,
+    stop: tokio::sync::oneshot::Receiver<()>,
+    mut handler: F,
+) where
+    F: FnMut(tokio::net::windows::named_pipe::NamedPipeServer) -> Fut,
+    Fut: std::future::Future<Output = ()> + Send + 'static,
+{
+    let mut server = Some(server);
+    let mut tasks = tokio::task::JoinSet::new();
+    tokio::pin!(stop);
+    loop {
+        if server.is_none() {
+            // Yield on resource errors while existing responders continue to journal replies.
+            tokio::select! {
+                _=&mut stop=>break,
+                _=tokio::time::sleep(Duration::from_millis(25))=>{},
+            }
+            server = ServerOptions::new().create(pipe).ok();
+            continue;
+        }
+        tokio::select! {
+            _=&mut stop=>break,
+            result=server.as_mut().unwrap().connect()=>{
+                let connected=server.take().unwrap();
+                // Bind the next instance while this handle still keeps the pipe name alive.
+                // Backoff is only for an actual create failure, never for normal connections.
+                server=ServerOptions::new().create(pipe).ok();
+                if result.is_ok() {tasks.spawn(handler(connected));}
+                // ERROR_NO_DATA from an immediately disconnected probing client is recoverable.
+            },
+            _=tasks.join_next(),if !tasks.is_empty()=>{},
+        }
+    }
+    let _ = tokio::time::timeout(Duration::from_secs(5), async {
+        while tasks.join_next().await.is_some() {}
+    })
+    .await;
+    tasks.shutdown().await;
+}
 async fn forward(
     server: tokio::net::windows::named_pipe::NamedPipeServer,
     upstream: &str,
@@ -252,7 +367,10 @@ async fn forward(
 async fn forward_streams(
     server: impl AsyncRead + AsyncWrite + Unpin,
     client: impl AsyncRead + AsyncWrite + Unpin,
-    upstream: &str, info: &Value, dir: &Path, job: &str,
+    upstream: &str,
+    info: &Value,
+    dir: &Path,
+    job: &str,
 ) -> io::Result<()> {
     let (mut ar, mut aw) = tokio::io::split(server);
     let (mut br, mut bw) = tokio::io::split(client);
@@ -270,6 +388,7 @@ async fn forward_streams(
                 {
                     return Err(io::Error::other("browser session does not own this job"));
                 }
+                lifecycle::activity(dir)?;
                 if v["method"] == "createTab" && v.get("id").is_some() {
                     sending
                         .lock()
@@ -284,38 +403,74 @@ async fn forward_streams(
     };
     let down = async {
         loop {
-            let v = read_frame(&mut br).await?;
+            let mut v = read_frame(&mut br).await?;
+            let params = { pending.lock().unwrap().get(&v["id"].to_string()).cloned() };
             if v.get("method").is_none()
-                && let Some(params) = pending.lock().unwrap().remove(&v["id"].to_string())
+                && let Some(params) = params
                 && v.get("error").is_none()
             {
-                    let tab = v["result"]["id"]
-                        .as_u64()
-                        .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-                    let record = Record {
-                        job: job.into(),
-                        pipe: upstream.into(),
-                        instance: info["metadata"]["extensionInstanceId"]
-                            .as_str()
-                            .unwrap_or("")
-                            .into(),
-                        generation: info["browserTabMentions"]["generation"]
-                            .as_str()
-                            .unwrap_or("")
-                            .into(),
-                        session: params["session_id"].as_str().unwrap_or("").into(),
-                        turn: params["turn_id"].as_str().unwrap_or("").into(),
-                        tab,
-                        created: epoch(),
-                    };
-                    persist(dir, &record)?; // Durable BEFORE exposing the new tab to the agent.
+                let tab = v["result"]["id"]
+                    .as_u64()
+                    .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
+                let record = Record {
+                    job: job.into(),
+                    pipe: upstream.into(),
+                    instance: info["metadata"]["extensionInstanceId"]
+                        .as_str()
+                        .unwrap_or("")
+                        .into(),
+                    generation: info["browserTabMentions"]["generation"]
+                        .as_str()
+                        .unwrap_or("")
+                        .into(),
+                    session: params["session_id"].as_str().unwrap_or("").into(),
+                    turn: params["turn_id"].as_str().unwrap_or("").into(),
+                    tab,
+                    created: epoch(),
+                };
+                if persist_or_close(dir, &record).await.is_err() {
+                    v = json!({"jsonrpc":"2.0","id":v["id"],"error":{"code":-32000,"message":"Chrome tab could not be recorded; creation failed and cleanup was attempted"}});
+                }
             }
-            write_frame(&mut aw, &v).await?;
+            if v.get("method").is_none() {
+                pending.lock().unwrap().remove(&v["id"].to_string());
+            }
+            if let Err(e) = write_frame(&mut aw, &v).await {
+                // The worker can exit before its createTab response. Persist all pending replies.
+                if pending.lock().unwrap().is_empty() {
+                    return Err(e);
+                }
+            }
         }
         #[allow(unreachable_code)]
         Ok::<(), io::Error>(())
     };
-    tokio::select! { r=up=>r,r=down=>r }
+    tokio::pin!(up, down);
+    tokio::select! {
+        r=&mut up=>{
+            if !pending.lock().unwrap().is_empty() {
+                let _=tokio::time::timeout(Duration::from_secs(4),&mut down).await;
+            }
+            r
+        },
+        r=&mut down=>r,
+    }
+}
+async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
+    if let Err(error) = persist(dir, record) {
+        // Keep a second journal if only chrome-tabs is inaccessible. This also survives
+        // cancellation while the rollback RPC is in flight.
+        let emergency = dir
+            .join("chrome-emergency-tabs")
+            .join(format!("{}.json", uuid::Uuid::new_v4()));
+        let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
+        let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
+        if matches!(closed, Ok(Ok(_))) && recorded {
+            let _ = fs::remove_file(emergency);
+        }
+        return Err(io::Error::new(error.kind(), "tab record write failed"));
+    }
+    Ok(())
 }
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     if !safe_job(job)
@@ -324,6 +479,7 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         return Err(io::Error::other("invalid job or URL"));
     }
     runtime()?.block_on(async {
+        lifecycle::activity(dir)?;
         let (pipe, info) = discover().await?;
         let mut rpc = Rpc::connect(&pipe).await?;
         let mut r = Record {
@@ -346,7 +502,7 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         r.tab = tab["id"]
             .as_u64()
             .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-        persist(dir, &r)?;
+        persist_or_close(dir, &r).await?;
         let mut p = r.params();
         p["tabId"] = json!(r.tab);
         rpc.call("attach", p).await?;
@@ -366,12 +522,18 @@ mod tests {
     fn rpc_deadline_includes_write_to_a_connected_pipe_that_never_reads() {
         runtime().unwrap().block_on(async {
             let pipe = format!(r"\\.\pipe\cc-chrome-stalled-write-{}", uuid::Uuid::new_v4());
-            let server = ServerOptions::new().first_pipe_instance(true).in_buffer_size(4096).create(&pipe).unwrap();
+            let server = ServerOptions::new()
+                .first_pipe_instance(true)
+                .in_buffer_size(4096)
+                .create(&pipe)
+                .unwrap();
             let (stop, stopped) = tokio::sync::oneshot::channel();
             let connected = async {
                 let mut rpc = Rpc::connect(&pipe).await.unwrap();
                 let start = std::time::Instant::now();
-                let result = rpc.call("fixture", json!({"large":"x".repeat(1024 * 1024)})).await;
+                let result = rpc
+                    .call("fixture", json!({"large":"x".repeat(1024 * 1024)}))
+                    .await;
                 assert!(result.is_err());
                 assert!(start.elapsed() < Duration::from_secs(4));
                 let _ = stop.send(());
@@ -438,6 +600,192 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(10)).await;
             };
             let (p,_)=tokio::join!(proxy,check);assert!(p.unwrap_err().to_string().contains("does not own"));
+        });
+    }
+    #[test]
+    fn creation_reply_is_recorded_after_agent_disconnects() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+            let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+            let info=json!({"metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+            let proxy=forward_streams(proxy_agent,proxy_backend,"upstream",&info,root.path(),"job");
+            let disconnect=async move {
+                write_frame(&mut agent,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut backend).await.unwrap();
+                drop(agent);
+                tokio::time::sleep(Duration::from_millis(30)).await;
+                write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await.unwrap();
+            };
+            let _=tokio::join!(proxy,disconnect);
+            let paths:Vec<_>=fs::read_dir(root.path().join("chrome-tabs")).unwrap().collect();
+            assert_eq!(paths.len(),1);
+            let r:Record=serde_json::from_slice(&fs::read(paths[0].as_ref().unwrap().path()).unwrap()).unwrap();
+            assert_eq!(r.tab,42);
+        });
+    }
+    #[test]
+    fn discovery_skips_another_profile_instead_of_discarding_the_record() {
+        runtime().unwrap().block_on(async {
+            let mut pipes=vec![];let mut servers=vec![];
+            for _ in 0..2 {
+                let pipe=format!(r"\\.\pipe\cc-chrome-discovery-{}",uuid::Uuid::new_v4());
+                servers.push(ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap());pipes.push(pipe);
+            }
+            let record=Record{job:"job".into(),pipe:pipes[1].clone(),instance:"wanted".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:42,created:100};
+            let backend=async move {
+                for (mut server,instance) in servers.into_iter().zip(["other","wanted"]) {
+                    server.connect().await.unwrap();let v=read_frame(&mut server).await.unwrap();
+                    write_frame(&mut server,&json!({"id":v["id"],"result":{"type":"extension","family":"chrome","metadata":{"extensionInstanceId":instance},"browserTabMentions":{"generation":"generation"}}})).await.unwrap();
+                }
+            };
+            let (result,_)=tokio::join!(discover_from(pipes,Some(&record)),backend);
+            let (pipe,info)=result.unwrap();assert_eq!(pipe,record.pipe);assert!(record.matches_backend(&info));
+        });
+    }
+    #[test]
+    fn supervisor_without_worker_does_not_protect_tabs() {
+        let job = json!({"pid":std::process::id(),"pid_created":1,"codex_pid":null});
+        assert_eq!(NativeCloser.owner_running(&job), Some(false));
+        let job = json!({"codex_pid":std::process::id(),"codex_pid_created":null});
+        assert_eq!(NativeCloser.owner_running(&job), None);
+    }
+    #[test]
+    fn proxy_rolls_back_unrecordable_creation_and_returns_error_instead_of_success() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            fs::write(root.path().join("chrome-tabs"),"not a directory").unwrap();
+            let pipe=format!(r"\\.\pipe\cc-chrome-rollback-{}",uuid::Uuid::new_v4());
+            let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+            let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+            let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+            let proxy=forward_streams(proxy_agent,proxy_backend,&pipe,&info,root.path(),"job");
+            let check=async {
+                write_frame(&mut agent,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut backend).await.unwrap();
+                write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await.unwrap();
+                let v=read_frame(&mut agent).await.unwrap();assert!(v.get("error").is_some());assert!(v.get("result").is_none());
+                assert_eq!(fs::read_dir(root.path().join("chrome-emergency-tabs")).unwrap().count(),0);
+                agent.shutdown().await.unwrap();
+            };
+            let rollback=async {
+                server.connect().await.unwrap();
+                for (method,result) in [("getInfo",info.clone()),("getTabs",json!([{"id":42}])),("attach",json!({})),("executeCdp",json!({})),("getUserTabs",json!([{"id":99}]))] {
+                    let v=read_frame(&mut server).await.unwrap();assert_eq!(v["method"],method);
+                    if method=="executeCdp" {assert_eq!(v["params"]["method"],"Page.close");assert_eq!(v["params"]["target"]["tabId"],42);}
+                    write_frame(&mut server,&json!({"id":v["id"],"result":result})).await.unwrap();
+                }
+            };
+            let (result,(),())=tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(proxy,check,rollback)}).await.unwrap();
+            assert!(result.is_err());
+        });
+    }
+    #[test]
+    fn failed_rollback_keeps_emergency_record_for_the_next_sweep() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            let dir = root.path().join("job");
+            fs::create_dir(&dir).unwrap();
+            fs::write(
+                dir.join("job.json"),
+                json!({"id":"job","status":"failed"}).to_string(),
+            )
+            .unwrap();
+            fs::write(dir.join("chrome-tabs"), "not a directory").unwrap();
+            let pipe = format!(
+                r"\\.\pipe\cc-chrome-rollback-offline-{}",
+                uuid::Uuid::new_v4()
+            );
+            let mut server = ServerOptions::new()
+                .first_pipe_instance(true)
+                .create(&pipe)
+                .unwrap();
+            let record = Record {
+                job: "job".into(),
+                pipe,
+                instance: "instance".into(),
+                generation: "generation".into(),
+                session: "session".into(),
+                turn: "turn".into(),
+                tab: 42,
+                created: 100,
+            };
+            let offline = async {
+                server.connect().await.unwrap();
+                let v = read_frame(&mut server).await.unwrap();
+                write_frame(
+                    &mut server,
+                    &json!({"id":v["id"],"error":{"message":"offline"}}),
+                )
+                .await
+                .unwrap();
+            };
+            let (result, _) = tokio::join!(persist_or_close(&dir, &record), offline);
+            assert!(result.is_err());
+            assert_eq!(
+                fs::read_dir(dir.join("chrome-emergency-tabs"))
+                    .unwrap()
+                    .count(),
+                1
+            );
+            struct Closed;
+            impl Closer for Closed {
+                fn close(&mut self, r: &Record) -> io::Result<bool> {
+                    assert_eq!(r.tab, 42);
+                    Ok(true)
+                }
+            }
+            assert_eq!(
+                sweep_with(root.path(), None, 101, false, &mut Closed)
+                    .unwrap()
+                    .closed,
+                1
+            );
+            assert_eq!(
+                fs::read_dir(dir.join("chrome-emergency-tabs"))
+                    .unwrap()
+                    .count(),
+                0
+            );
+        });
+    }
+    #[test]
+    fn immediately_disconnected_probes_do_not_stop_recording_or_drain() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
+            let pipe=format!(r"\\.\pipe\cc-chrome-probe-{}",uuid::Uuid::new_v4());
+            let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            // Force a probe to disconnect before the listener starts connecting.
+            let probe=connect(&pipe).await.unwrap();drop(probe);
+            let (stop,stopped)=tokio::sync::oneshot::channel();
+            let dir=root.path().to_path_buf();
+            let serve=accept_loop(server,&pipe,stopped,move |client| {
+                let dir=dir.clone();
+                async move {
+                    let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+                    let info=json!({"metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                    let proxy=forward_streams(client,proxy_backend,"upstream",&info,&dir,"job");
+                    let fixture=async {
+                        if let Ok(v)=read_frame(&mut backend).await {
+                            let _=write_frame(&mut backend,&json!({"id":v["id"],"result":{"id":42}})).await;
+                        }
+                    };
+                    let _=tokio::join!(proxy,fixture);
+                }
+            });
+            let probes=async {
+                for _ in 0..12 {let client=connect(&pipe).await.unwrap();drop(client);}
+                let mut client=connect(&pipe).await.unwrap();
+                write_frame(&mut client,&json!({"id":1,"method":"createTab","params":{"session_id":"session","turn_id":"turn"}})).await.unwrap();
+                let v=read_frame(&mut client).await.unwrap();assert_eq!(v["result"]["id"],42);
+                assert_eq!(fs::read_dir(root.path().join("chrome-tabs")).unwrap().count(),1);
+                drop(client);let _=stop.send(());
+            };
+            tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(serve,probes)}).await.unwrap();
         });
     }
 }

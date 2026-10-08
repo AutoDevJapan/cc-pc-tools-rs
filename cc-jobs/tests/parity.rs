@@ -5127,9 +5127,15 @@ mod task_notifier {
         )
     }
     fn wait_calls(t: &Test, n: usize) {
-        let until = Instant::now() + Duration::from_secs(2);
+        // The fake clock verifies throttling; this bound only covers worker scheduling
+        // and fixture file IO on the two-core Windows CI runner.
+        let until = Instant::now() + Duration::from_secs(15);
         while t.rt.calls.lock().unwrap().len() < n {
-            assert!(Instant::now() < until, "notification timeout");
+            assert!(
+                Instant::now() < until,
+                "notification timeout: expected {n}, got {}",
+                t.rt.calls.lock().unwrap().len()
+            );
             std::thread::sleep(Duration::from_millis(1));
         }
     }

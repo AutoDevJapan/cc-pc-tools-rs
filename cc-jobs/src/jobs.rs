@@ -686,6 +686,7 @@ impl Context {
                 ));
                 finish(&mut job, None, 0, &self.rt.now());
                 self.save(&job)?;
+                self.close_chrome_tabs(jid);
                 return Ok(());
             }
             return Err(error);
@@ -711,6 +712,8 @@ impl Context {
             });
             self.save(&job)?;
         }
+        // Recovered supervisors may start with tabs from a yielded or rate-limited worker.
+        self.close_chrome_tabs(jid);
         let mut next_diagnostic = 0.;
         let mut next_heartbeat = self.rt.mono() + 60.;
         let mut had_admission_error = false;
@@ -849,9 +852,7 @@ impl Context {
             );
             self.save(&job)?;
             #[cfg(windows)]
-            if s(&job, "context_phase") != "summarize"
-                && matches!(s(&job, "mcp_profile"), "browser" | "full")
-            {
+            if s(&job, "context_phase") != "summarize" {
                 cc_chrome::install_plugin_hook(&self.home)?;
                 let proxy = cc_chrome::native::start(&dir, jid)?;
                 job["chrome_pipe"] = json!(proxy.pipe);

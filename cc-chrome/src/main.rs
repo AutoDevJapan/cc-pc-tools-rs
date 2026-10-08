@@ -9,7 +9,28 @@ fn run() -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let jobs = PathBuf::from("D:/CC/Tools/codex-jobs/jobs");
     match args.first().map(String::as_str) {
-        Some("install-plugin-hook")=>println!("updated={}",cc_chrome::install_plugin_hook(&PathBuf::from(std::env::var_os("USERPROFILE").ok_or_else(||io::Error::other("USERPROFILE missing"))?))?),
+        Some("guard") => {
+            let event: serde_json::Value = serde_json::from_reader(std::io::stdin().lock())?;
+            if let Some(decision) = cc_chrome::guard::decision(&event) {
+                println!("{decision}");
+            }
+        }
+        Some("install-claude-hook") => println!(
+            "updated={}",
+            cc_chrome::guard::install(&PathBuf::from(
+                std::env::var_os("USERPROFILE")
+                    .ok_or_else(|| io::Error::other("USERPROFILE missing"))?
+            ))?
+        ),
+        #[cfg(windows)]
+        Some("inventory") => println!("{}", cc_chrome::native::inventory()?),
+        Some("install-plugin-hook") => println!(
+            "updated={}",
+            cc_chrome::install_plugin_hook(&PathBuf::from(
+                std::env::var_os("USERPROFILE")
+                    .ok_or_else(|| io::Error::other("USERPROFILE missing"))?
+            ))?
+        ),
         Some("sweep") => println!(
             "{:?}",
             cc_chrome::sweep(&jobs, None, args.iter().any(|a| a == "--dry-run"))?

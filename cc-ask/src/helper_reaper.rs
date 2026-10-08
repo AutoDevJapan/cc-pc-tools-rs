@@ -203,8 +203,12 @@ pub fn flush_log(ctx: &mut crate::core::Context) -> Result<()> {
     {
         return Ok(());
     }
-    let text = format!("【GoDD-AO】メモリの見張りで、休止した Codex の補助プロセスを{}件、4 GiBを超えた Steam の画面用プロセスを{}件終了しました。終了前のメモリ使用量は合計約{:.2} GiBでした。",
-        watch.pending_helpers, watch.pending_steam, watch.pending_bytes as f64 / 1073741824.);
+    let text = format!(
+        "【GoDD-AO】メモリの見張りで、休止した Codex の補助プロセスを{}件、4 GiBを超えた Steam の画面用プロセスを{}件終了しました。終了前のメモリ使用量は合計約{:.2} GiBでした。",
+        watch.pending_helpers,
+        watch.pending_steam,
+        watch.pending_bytes as f64 / 1073741824.
+    );
     // Back off even on an ambiguous network failure; pending counts remain durable.
     watch.last_log = now;
     save_watch(&path, &watch)?;
@@ -921,7 +925,13 @@ pub fn run(jobs: &Path, dry_run: bool) -> Result<String> {
             .sum();
         if dry_run {
             let helpers = table.values().filter(|p| kind(p).is_some()).count();
-            let mut out = format!("dry-run: {count} processes, {:.1} MB, {} sets (limit {LIMIT}); identified_helpers={helpers}, job_roots={}, helper_eligible={helper_eligible}, helper_idle_ready={helper_ready}, steam_over_limit={}", bytes as f64 / 1048576., sets.len(), roots.roots.len(), sets.len() - helper_ready);
+            let mut out = format!(
+                "dry-run: {count} processes, {:.1} MB, {} sets (limit {LIMIT}); identified_helpers={helpers}, job_roots={}, helper_eligible={helper_eligible}, helper_idle_ready={helper_ready}, steam_over_limit={}",
+                bytes as f64 / 1048576.,
+                sets.len(),
+                roots.roots.len(),
+                sets.len() - helper_ready
+            );
             for s in sets {
                 out.push_str(&format!("\nset {}: {:?}; {}", s.root, s.members, s.reason));
                 for pid in s.members {
@@ -1021,7 +1031,17 @@ pub fn run(jobs: &Path, dry_run: bool) -> Result<String> {
                 }
             }
         }
-        Ok(format!("{chrome}\nhelper-reaper: killed={killed} freed_mb={:.1} planned={count} skipped={skipped} failed={failed} waiting={} scan_failed={}{}", freed as f64 / 1048576., watch.waiting.len(), !scan_error.is_empty(), if scan_error.is_empty() { String::new() } else { format!(" error={scan_error}") }))
+        Ok(format!(
+            "{chrome}\nhelper-reaper: killed={killed} freed_mb={:.1} planned={count} skipped={skipped} failed={failed} waiting={} scan_failed={}{}",
+            freed as f64 / 1048576.,
+            watch.waiting.len(),
+            !scan_error.is_empty(),
+            if scan_error.is_empty() {
+                String::new()
+            } else {
+                format!(" error={scan_error}")
+            }
+        ))
     }
 }
 
@@ -1537,8 +1557,19 @@ mod tests {
         wrong.cpu = p.cpu.map(|t| t + 1);
         assert!(native::pin(&[&wrong]).is_none());
         let handles = native::pin(&[p]).expect("idle owned child can be pinned");
+        assert!(child.0.try_wait().unwrap().is_none());
         assert!(native::request(&handles[0]));
-        assert!(native::exited(&handles[0]));
+        // TerminateProcess is asynchronous. The production probe is deliberately
+        // bounded to one second and may correctly return false on a busy VM.
+        // Verify eventual *actual* exit on the same pinned handle, without
+        // extending the production probe or accepting just the kill request.
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !native::exited(&handles[0]) {
+            assert!(
+                std::time::Instant::now() < until,
+                "owned child did not actually terminate"
+            );
+        }
         assert!(child.0.wait().is_ok());
     }
 }

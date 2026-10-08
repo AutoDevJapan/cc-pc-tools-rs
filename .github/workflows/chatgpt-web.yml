@@ -31,5 +31,5 @@ jobs:
           if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
           "CHATGPT_WEB_CHROME=$chrome" >> $env:GITHUB_ENV
       - run: cargo nextest run --locked -p chatgpt-web
-      - run: cargo test --locked -p chatgpt-web --doc
+      # This package has only a binary target; Cargo cannot run --doc for it.
       - run: cargo clippy --locked -p chatgpt-web --all-targets -- -D warnings

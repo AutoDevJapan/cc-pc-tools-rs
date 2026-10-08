@@ -8,8 +8,11 @@
 | 938 | `76005ef45fe612479fd920447642497e` | 保存済み公開cloneと仕様に固定された監査用取得物 |
 | 2021 | `38e3fbc1767b66eef9127f2a27567c8a` | 保存済み公開worktreeと検証記録 |
 | 2050 | `438ee7d343a6c84558201e2778d2c890` | 保存済み公開cloneと検証ビルド |
+| 2063 | `75cd71384cb094e47b19cf5d39b5b025` | 配備済みClaude振り分けの公開worktreeと確認記録 |
 
-追加3件も `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEADと保存済みorigin ref、変更なしを確認する。その他のIDは拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
+2063は保存済みcommit `70a48f412331b232c3cebac99bd36bb34f9cc41f` と保存用の参照 `origin/archive/claude-routing-2063` を照合します。指定した外部管理領域の参照先だけを修復し、他のworktreeを変更しません。この担当が作った固定の実行記録2ファイルだけを未追跡として許可し、ほかの未追跡ファイルと追跡されたソースの変更は拒否します。実行記録を含む全内容は退避後に照合して保持します。
+
+追加の対象も `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEADと保存済みorigin ref、変更なしを確認する。その他のIDは拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
 
 938の監査用取得物は、内容・config・ref・originを読み取らず、Gitも起動しない。メタデータだけで外部参照を拒否し、全体を保持する。退避票には監査用取得物のファイル名・ref名・パスのハッシュを保存せず、volume/file IDと同じ識別番号の出現数・メタデータで移動前後を照合する。
 
@@ -37,7 +40,7 @@ D:/CC/Tools/safe-delete/safe-delete-recovery.exe finish --id dee85bb67fa66449ba0
 # safe-delete createで作成した専用フォルダーを指定。
 $env:CARGO_TARGET_DIR='<所有フォルダー>/target'
 $env:SAFE_DELETE_TEST_ROOT='<所有フォルダー>'
-cargo nextest run --locked --workspace --test-threads 10
+cargo nextest run --locked --workspace
 cargo test --locked --workspace --doc
 cargo clippy --locked --all-targets -- -D warnings
 cargo build --locked --release

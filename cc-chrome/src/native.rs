@@ -554,8 +554,6 @@ mod tests {
         runtime().unwrap().block_on(async {
             let pipe=format!(r"\\.\pipe\cc-chrome-fixture-{}",uuid::Uuid::new_v4());
             let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
-            // Force a probe to disconnect before the listener starts connecting.
-            let probe=connect(&pipe).await.unwrap();drop(probe);
             let record=Record{job:"j".into(),pipe,instance:"extension".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:11,created:100};
             let mock=async move{
                 server.connect().await.unwrap();let mut server=server;
@@ -761,6 +759,8 @@ mod tests {
             fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session"}).to_string()).unwrap();
             let pipe=format!(r"\\.\pipe\cc-chrome-probe-{}",uuid::Uuid::new_v4());
             let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            // Force a probe to disconnect before the listener starts connecting.
+            let probe=connect(&pipe).await.unwrap();drop(probe);
             let (stop,stopped)=tokio::sync::oneshot::channel();
             let dir=root.path().to_path_buf();
             let serve=accept_loop(server,&pipe,stopped,move |client| {

@@ -5551,7 +5551,8 @@ mod task_notifier {
             let n = calls.fetch_add(1, Ordering::Relaxed);
             if c.argv[3] == action && (action == "finish" || n == 0) {
                 e.store(true, Ordering::Release);
-                let deadline = Instant::now() + Duration::from_secs(2);
+                // Liveness bound only; CI runners stall threads for seconds.
+                let deadline = Instant::now() + Duration::from_secs(30);
                 while !r.load(Ordering::Acquire) {
                     assert!(Instant::now() < deadline);
                     std::thread::sleep(Duration::from_millis(1));
@@ -5568,7 +5569,7 @@ mod task_notifier {
         (entered, release)
     }
     fn wait_entered(e: &AtomicBool) {
-        let end = Instant::now() + Duration::from_secs(2);
+        let end = Instant::now() + Duration::from_secs(30);
         while !e.load(Ordering::Acquire) {
             assert!(Instant::now() < end);
             std::thread::sleep(Duration::from_millis(1));

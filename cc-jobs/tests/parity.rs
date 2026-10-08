@@ -75,6 +75,47 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn minute_schedule_jitter_does_not_skip_next_bucket_or_reset_state() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.rt.tick(40.);
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx.adjust_limit().unwrap();
+        t.rt.tick(59.);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 25);
+        t.rt.tick(121.);
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 25);
+    }
+    #[test]
+    fn journal_io_error_does_not_publish_new_state_or_discard_history() {
+        let t = Test::new();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":25,"adaptive":{}}),
+            )
+            .unwrap();
+        let path = t.ctx.root.join("queue-limit-state.json");
+        t.ctx
+            .write_json(
+                &path,
+                &json!({"mode":"auto","max_running":12,"checked_at":t.rt.epoch()}),
+            )
+            .unwrap();
+        let before = fs::read(&path).unwrap();
+        fs::create_dir(t.ctx.root.join("queue-limit-history.json")).unwrap();
+        assert!(t.ctx.adjust_limit().is_err());
+        assert_eq!(fs::read(&path).unwrap(), before);
+        assert!(t.ctx.root.join("queue-limit-history.json").is_dir());
+    }
+    #[test]
     fn automatic_limit_is_shared_once_per_minute_and_fixed_override_is_immediate() {
         let t = Test::new();
         t.rt.advance_epoch.store(true, Ordering::Relaxed);
@@ -155,7 +196,7 @@ mod queue_regressions {
         t.ctx
             .write_json(
                 &t.ctx.root.join("queue-limit-state.json"),
-                &json!({"mode":"auto","max_running":60,"checked_at":t.rt.epoch()-121.}),
+                &json!({"mode":"auto","max_running":60,"checked_at":t.rt.epoch()-cc_jobs::adaptive::AdaptiveConfig::default().stale_after_seconds()-1.}),
             )
             .unwrap();
         assert_eq!(t.ctx.queue_config().unwrap().max_running, 4);

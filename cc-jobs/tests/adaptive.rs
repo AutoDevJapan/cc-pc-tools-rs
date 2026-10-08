@@ -159,6 +159,32 @@ fn exhausted_weekly_or_short_window_reduces_to_floor() {
     }
 }
 #[test]
+fn modest_overspend_is_proportional_and_next_sample_uses_post_reduction_baseline() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.openai = vec![quota(1000., 20.), quota(1300., 21.)];
+    for q in &mut s.openai {
+        q.accounts[0].reset_at = 27370.;
+    }
+    let mut s = decide(&cfg, s, healthy(), 1360., 1, 0, 0.);
+    assert_eq!(s.max_running, 22);
+    let mut next = quota(1600., 21.1);
+    next.accounts[0].reset_at = 27370.;
+    s.openai.push(next);
+    s.quota_checked_at = 1600.;
+    let mut sample = healthy();
+    sample.cpu_times = Some([260, 400, 100]);
+    let s = decide(&cfg, s, sample, 1600., 1, 0, 0.);
+    assert_eq!(s.max_running, 22);
+    assert!(s.pace_ratio.unwrap() < 1.);
+}
+#[test]
+fn incompatible_old_quota_does_not_hide_new_comparable_window() {
+    let mut history = vec![quota(1000., 20.), quota(1300., 20.), quota(1600., 21.)];
+    history[0].accounts[0].reset_at = 99999.;
+    assert!(pace_ratio(&history).is_some());
+}
+#[test]
 fn cpu_initial_reset_or_zero_delta_is_unknown() {
     assert_eq!(
         cpu_load(Some([100, 200, 100]), Some([180, 300, 100])),

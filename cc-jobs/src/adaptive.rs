@@ -44,6 +44,12 @@ impl Default for AdaptiveConfig {
     }
 }
 impl AdaptiveConfig {
+    pub fn stale_after_seconds(&self) -> f64 {
+        (2 * self.interval_seconds
+            + 2 * self.quota_timeout_seconds
+            + self.health_timeout_ms.div_ceil(1000)
+            + 10) as f64
+    }
     pub fn validate(&self) -> Result<()> {
         if self.min_running == 0
             || self.max_running < self.min_running
@@ -195,13 +201,26 @@ fn available(snapshot: &QuotaSnapshot) -> bool {
 /// Match account identities and reset windows, then protect the account whose
 /// consumption most exceeds its own remaining budget.
 pub fn pace_ratio(history: &[QuotaSnapshot]) -> Option<f64> {
+    pace_ratio_since(history, 0.)
+}
+fn pace_ratio_since(history: &[QuotaSnapshot], since: f64) -> Option<f64> {
     let latest = history.last()?;
     if !latest.complete {
         return None;
     }
-    let previous = history
-        .iter()
-        .find(|s| s.complete && latest.at - s.at >= 300.)?;
+    let previous = history.iter().find(|s| {
+        s.complete
+            && s.at >= since
+            && latest.at - s.at >= 300.
+            && s.accounts.len() == latest.accounts.len()
+            && latest.accounts.iter().all(|q| {
+                s.accounts.iter().any(|old| {
+                    old.id == q.id
+                        && (old.reset_at - q.reset_at).abs() <= 1.
+                        && old.used_percent <= q.used_percent
+                })
+            })
+    })?;
     let elapsed = latest.at - previous.at;
     if elapsed > 3600. || elapsed <= 0. {
         return None;
@@ -252,7 +271,7 @@ pub fn decide(
         state.stable_since = state.first_at;
     }
     state.cpu_percent = cpu_load(state.machine.cpu_times, sample.cpu_times);
-    state.pace_ratio = pace_ratio(&state.openai);
+    state.pace_ratio = pace_ratio_since(&state.openai, state.pace_adjusted_at);
     let latest = state.openai.last();
     let quota_fresh = state.quota_checked_at > 0.
         && now - state.quota_checked_at <= cfg.quota_interval_seconds as f64 + 60.;
@@ -284,19 +303,31 @@ pub fn decide(
         reasons.push("Codex利用枠が回復待ち");
     }
     let over_pace = quota_known && state.pace_ratio.is_some_and(|ratio| ratio > 1.);
-    if over_pace && latest.unwrap().at > state.pace_adjusted_at {
+    let pace_waiting = quota_known
+        && state.pace_adjusted_at > 0.
+        && state.pace_ratio.is_none()
+        && latest.is_some_and(|q| q.at - state.pace_adjusted_at < 300.);
+    let pace_new = over_pace && latest.unwrap().at > state.pace_adjusted_at;
+    let pressure = !reasons.is_empty();
+    if pace_new {
         reasons.push("週の利用枠を使うペースが速い");
         state.pace_adjusted_at = latest.unwrap().at;
     }
     if !reasons.is_empty() || recent_429_count > 0 {
         state.stable_since = now;
     }
-    state.preferred_provider =
-        ((over_pace || quota_empty) && quota_fresh && available(&state.anthropic))
-            .then(|| "anthropic".to_owned());
+    state.preferred_provider = ((over_pace || pace_waiting || quota_empty)
+        && quota_fresh
+        && available(&state.anthropic)
+        && state.anthropic.accounts.iter().all(|q| q.reset_at > now))
+    .then(|| "anthropic".to_owned());
     state.max_running = if !reasons.is_empty() {
-        let mut reduced = (current / 2).max(cfg.min_running);
-        if over_pace {
+        let mut reduced = if pressure {
+            (current / 2).max(cfg.min_running)
+        } else {
+            current
+        };
+        if pace_new {
             reduced = reduced
                 .min((current as f64 / state.pace_ratio.unwrap()).floor() as usize)
                 .max(cfg.min_running);
@@ -306,7 +337,7 @@ pub fn decide(
         }
         state.reason = reasons.join("・");
         reduced
-    } else if over_pace {
+    } else if over_pace || pace_waiting {
         state.reason = "減枠後の利用ペースを確認中".into();
         current
     } else if recent_429_count > 0
@@ -386,7 +417,7 @@ impl Context {
         };
         if state.checked_at > 0.
             && (self.rt.epoch() < state.checked_at
-                || self.rt.epoch() - state.checked_at > 2. * adaptive.interval_seconds as f64)
+                || self.rt.epoch() - state.checked_at > adaptive.stale_after_seconds())
         {
             return Ok(adaptive.min_running);
         }
@@ -411,7 +442,7 @@ impl Context {
         } else if state.checked_at > 0.
             && (self.rt.epoch() < state.checked_at
                 || self.rt.epoch() - state.checked_at
-                    > 2. * cfg.adaptive.as_ref().unwrap().interval_seconds as f64)
+                    > cfg.adaptive.as_ref().unwrap().stale_after_seconds())
         {
             ("auto", "測定が古いため最小値")
         } else if state.mode != "auto" {
@@ -422,12 +453,16 @@ impl Context {
         let label = format!(
             "上限 {}（{}・{}）",
             cfg.max_running,
-            if mode == "auto" { "自動" } else { "固定" },
+            match mode {
+                "auto" => "自動",
+                "fixed" => "固定",
+                _ => "手動",
+            },
             reason
         );
         Ok(
             json!({"max_running":cfg.max_running,"mode":mode,"reason":reason,"label":label,
-            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" { state.preferred_provider } else { None },
+            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && state.mode == "auto" && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
             "pace_ratio":state.pace_ratio,"cpu_percent":state.cpu_percent,"free_memory_gib":state.machine.free_memory_gib,
             "health_ms":state.machine.health_ms,"recent_429_count":state.recent_429_count,"quota_checked_at":state.quota_checked_at}),
         )
@@ -454,7 +489,8 @@ impl Context {
         let now = self.rt.epoch();
         if state.checked_at > 0.
             && now >= state.checked_at
-            && now - state.checked_at < adaptive.interval_seconds as f64
+            && (now / adaptive.interval_seconds as f64).floor()
+                == (state.checked_at / adaptive.interval_seconds as f64).floor()
             && state.settings.as_ref() == Some(adaptive)
             && ((cfg.fixed_max_running.is_some()
                 && state.mode == "fixed"
@@ -473,7 +509,7 @@ impl Context {
         } else {
             if state.checked_at > 0.
                 && (now < state.checked_at
-                    || now - state.checked_at > 2. * adaptive.interval_seconds as f64)
+                    || now - state.checked_at > adaptive.stale_after_seconds())
             {
                 state = LimitState {
                     max_running: adaptive.min_running,
@@ -485,6 +521,8 @@ impl Context {
             if state.max_running == 0 || state.mode != "auto" {
                 state.max_running = cfg.max_running;
                 state.first_at = now;
+                state.stable_since = now;
+                state.machine = MachineSample::default();
             }
             let machine = self.rt.queue_machine_sample(adaptive);
             if state.quota_checked_at <= 0.
@@ -518,8 +556,9 @@ impl Context {
                             recent += 1;
                         }
                     }
-                } else if crate::queue::is_429(s(job, "last_error"))
-                    || crate::queue::is_429(s(job, "retry_last_error"))
+                } else if s(job, "status") != "succeeded"
+                    && (crate::queue::is_429(s(job, "last_error"))
+                        || crate::queue::is_429(s(job, "retry_last_error")))
                 {
                     // Existing supervisors have no event counter; conservatively count
                     // one recent failed/retried job, not its whole log on every tick.
@@ -630,10 +669,10 @@ pub fn health_probe(port: u16, timeout: Duration) -> std::io::Result<f64> {
         .position(|w| w == b"\r\n\r\n")
         .ok_or_else(|| std::io::Error::other("health headers"))?;
     let headers = std::str::from_utf8(&data[..boundary]).map_err(std::io::Error::other)?;
-    if !headers
+    if headers
         .lines()
         .next()
-        .is_some_and(|line| line.split_whitespace().nth(1) == Some("200"))
+        .is_none_or(|line| line.split_whitespace().nth(1) != Some("200"))
     {
         return Err(std::io::Error::other("health status"));
     }

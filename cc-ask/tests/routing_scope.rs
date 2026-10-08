@@ -160,6 +160,32 @@ fn legacy_routing_question_does_not_reenter_reply_resume_or_reminder_handlers() 
     assert_no_personal_reads(&h);
     assert_eq!(h.state()["questions"][0]["after"], "1");
 }
+
+#[test]
+fn old_182_question_batch_is_not_resent_or_reasked_after_restart() {
+    let mut h = Harness::new();
+    inventory(&mut h);
+    let questions:Vec<_>=(0..182).map(|i|json!({"thread_id":"legacy","open":true,"source":"routing","after":(i+1).to_string(),"cwd":h.root.path(),"title":"古い質問","continuation":{"launch":{"key":format!("old-{i}")},"after":(i+1).to_string()}})).collect();
+    h.save(&json!({"questions":questions,"future":{"keep":true}}));
+    let state = h.state();
+    for _ in 0..2 {
+        assert_eq!(cmd_replies(&mut h.ctx, None).unwrap(), json!([]));
+        cmd_remind(&mut h.ctx).unwrap();
+        resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
+        let reloaded = h.ctx.load().unwrap();
+        assert_eq!(reloaded["questions"], state["questions"]);
+        assert_eq!(reloaded["future"], state["future"]);
+    }
+    let f = h.fake.borrow();
+    assert_eq!(f.posts.len(), 0);
+    assert_eq!(f.patches.len(), 0);
+    assert_eq!(f.picks.len(), 0);
+    assert_eq!(f.launches.len(), 0);
+    assert!(
+        f.http_calls.iter().any(|c| c["method"] == "GET"),
+        "the actual handlers must execute"
+    );
+}
 #[test]
 fn unavailable_bot_identity_never_reads_any_messages_or_advances_cursor() {
     let mut h = Harness::new();

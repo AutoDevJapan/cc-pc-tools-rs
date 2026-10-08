@@ -125,6 +125,11 @@ pub enum Command {
     Watch,
     /// Reconcile stale unlaunched stall reservations with accepted intake; never launch jobs.
     ReconcileIntake,
+    /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
+    WatchPreview {
+        #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
+        id: Vec<i64>,
+    },
 }
 
 #[derive(Clone)]
@@ -533,20 +538,13 @@ pub fn notify(
     text: &str,
     _mention: bool,
 ) -> Result<()> {
-    // Never mention or notify the owner: a stall is for the agents and the scheduler to resolve, not him
-    // (2026-10-01: 「それって俺に報告して何をして欲しいの？自己解決するならメンションしないでほしい」). `mention` is ignored.
-    for part in chunks(text, 2000) {
-        let id = stall_thread(api, cfg, &paths.thread)?;
-        api.call(
-            "POST",
-            &format!("/channels/{id}/messages"),
-            &json!({"content":part,"flags":4096,"allowed_mentions":{"parse":[]}}),
-        )?;
-    }
-    Ok(())
+    summary::publish(api, cfg, paths, text)
 }
 pub trait Notifier {
     fn notify(&mut self, paths: &Paths, text: &str, mention: bool) -> Result<()>;
+    fn report(&mut self, paths: &Paths, _id: i64, _source: &str, text: &str) -> Result<()> {
+        self.notify(paths, text, false)
+    }
 }
 pub fn set_progress(item: &mut Value, percent: u8) -> Result<()> {
     if percent > 100 {
@@ -841,11 +839,16 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             item["updated"] = json!(now());
         }
-        Command::Watch | Command::ReconcileIntake => unreachable!(),
+        Command::Watch | Command::ReconcileIntake | Command::WatchPreview { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::WatchPreview { id } = &cli.command {
+        let report = recovery::preview_files(paths, id)?;
+        println!("{report}");
+        return Ok(());
+    }
     if matches!(cli.command, Command::ReconcileIntake) {
         use recovery::RecoveryBackend;
         let _watch = Lock::acquire(&paths.store.with_file_name("watch.lock"), Duration::ZERO)?;
@@ -930,6 +933,10 @@ impl Discord {
     }
 }
 impl Notifier for Discord {
+    fn report(&mut self, paths: &Paths, id: i64, source: &str, text: &str) -> Result<()> {
+        let cfg = load_job(&self.config)?;
+        summary::publish_report(self, &cfg, paths, &format!("{id}:{source}"), text)
+    }
     fn notify(&mut self, paths: &Paths, text: &str, mention: bool) -> Result<()> {
         let cfg = load_job(&self.config)?;
         notify(self, &cfg, paths, text, mention)
@@ -974,12 +981,21 @@ pub fn discord_call(
     token: &str,
 ) -> Result<Value> {
     for _ in 0..3 {
-        let (status, raw) =
-            transport.request(method, path, &serde_json::to_vec(body).map_err(err)?, token)?;
+        let payload = if method == "GET" || body.is_null() {
+            Vec::new()
+        } else {
+            serde_json::to_vec(body).map_err(err)?
+        };
+        let (status, raw) = transport.request(method, path, &payload, token)?;
         let value: Value = if raw.is_empty() {
             Value::Null
         } else {
-            serde_json::from_slice(&raw).map_err(|_| "invalid Discord response".to_owned())?
+            serde_json::from_slice(&raw).map_err(|_| {
+                format!(
+                    "invalid Discord response: {method} status={status} bytes={}",
+                    raw.len()
+                )
+            })?
         };
         if status == 429 {
             transport.sleep(value["retry_after"].as_f64().unwrap_or(1.).max(0.));
@@ -998,3 +1014,4 @@ pub fn discord_call(
 }
 mod platform;
 pub mod recovery;
+pub mod summary;

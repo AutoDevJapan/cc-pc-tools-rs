@@ -29,4 +29,3 @@ Codexが速く枠を消費しているか回復待ちで、Claudeの週・短時
 `queue-limit-history.json` に毎回の値・理由・測定値と利用枠を最大1440回保存する。`queue-limit-state.json` は再起動後も使う。保存は既存の一時ファイルとWindows置換処理を使い、読み手に不完全なJSONを見せない。
 
 配備順は2つのexe、毎分のタスク登録、設定に `adaptive: {}` を追加、`adjust-limit`、`reload-queue`。古い実行中ジョブは止めず、待機中の見張りだけ新しい実行ファイルへ移す。最後に30分間の履歴と実際の状況表示を照合する。
-

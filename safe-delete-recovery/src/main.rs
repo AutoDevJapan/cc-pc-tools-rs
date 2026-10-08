@@ -1,5 +1,6 @@
 #![cfg(windows)]
 
+use safe_delete_recovery::powershell_literal as quote;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -330,9 +331,6 @@ fn present(path: &Path) -> Result<bool> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(_) => Err("PATH_METADATA_FAILED"),
     }
-}
-fn quote(path: &Path) -> String {
-    format!("'{}'", path.to_string_lossy().replace('\'', "''"))
 }
 fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
     checked(path)?;
@@ -734,6 +732,12 @@ mod tests {
         c.temp = base.clone();
         c.store = base.join("receipts");
         c.quarantine = base.join("quarantine");
+        let mut fixture = Fixture {
+            config: c,
+            identity: node(&base).unwrap(),
+            base: base.clone(),
+        };
+        let c = &mut fixture.config;
         fs::create_dir(&c.store).unwrap();
         let target = base.join(format!("codex-owned-{ID}"));
         fs::create_dir(&target).unwrap();
@@ -787,11 +791,7 @@ mod tests {
             destination: None,
         };
         write_new(&c.receipt_path(), &serde_json::to_vec(&r).unwrap()).unwrap();
-        Fixture {
-            config: c,
-            identity: node(&base).unwrap(),
-            base,
-        }
+        fixture
     }
     fn source(c: &Config) -> PathBuf {
         c.temp.join(format!("codex-owned-{ID}"))

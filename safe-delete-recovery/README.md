@@ -32,4 +32,6 @@ cargo build --locked --release
 
 今回の旧版の試験が残したcaseは、同じ所有フォルダーだけに限定した無視指定の検査 `retire_prior_generated_fixtures` で一度だけ片付ける。拒否された動画試行データはこの検査の対象にならない。
 
+他の試験が終了してから単独で `cargo nextest run --locked --run-ignored only -E 'test(retire_prior_generated_fixtures)'` を実行する。片付けの前に生成物の項目数を確認し、通常のsafe-deleteの上限10,000件以内に収まることを確認する。
+
 移動前に担当が止まった場合も、移動票と内容が完全一致する場合だけ `plan` から再開できる。CIの判定用プログラムは試験factoryだけが環境変数で指定し、本番のクライアント判定は固定のscrub391.exeを使う。

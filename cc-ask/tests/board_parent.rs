@@ -103,6 +103,17 @@ fn truncation_does_not_merge_distinct_projects_or_tasks() {
 }
 
 #[test]
+fn historical_product_names_are_displayed_as_re_x_in_projects_and_titles() {
+    let former = String::from_utf8(vec![120, 76, 73, 70, 69]).unwrap();
+    let names = Names::parse("");
+    assert!(project_label(&format!("GoDD-{former}"), &names) == "Re:X");
+    let body = render(&json!({"jobs":[{"project":former.to_lowercase(),"task_title":format!("{former}の予約画面を直す"),"status":"running"}]}), &Value::Null, &names, 0.).unwrap();
+    assert!(body.contains("■ Re:X"));
+    assert!(body.contains("・Re:Xの予約画面を直す"));
+    assert!(!body.to_ascii_lowercase().contains(&former.to_lowercase()));
+}
+
+#[test]
 fn missing_pending_nonce_does_not_retire_unrelated_bot_messages() {
     let mut h = setup();
     let mut unrelated = message("140", "別の通知", "BOT");

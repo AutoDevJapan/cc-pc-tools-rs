@@ -904,9 +904,47 @@ fn notification_failure_for_one_item_does_not_stop_another_recovery() {
     assert_eq!(f.calls, vec!["stall-1-1"]);
     assert_eq!(f.jobs.len(), 1);
     assert_eq!(
-        load(&p.store).unwrap()["items"][0]["stall_recovery"]["report"],
+        load(&p.store).unwrap()["items"][0]["stall_recovery"]["suppressed_report"]["text"],
         "原因の通知を再試行"
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn old_182_reports_are_retired_without_notifications_and_do_not_return_on_reopen() {
+    let (root, p, mut backend, mut notices) = fixture();
+    let mut records = db("doing");
+    records["items"]=json!((1..=182).map(|id|json!({"id":id,"project":"demo","title":"古い依頼","jobs":[],"status":if id%2==0 {"done"} else {"block"},"stall_recovery":{"report":format!("古い質問{id}")}})).collect::<Vec<_>>());
+    save(&p.store, &records).unwrap();
+    for _ in 0..2 {
+        run_watch(&p, &mut notices, &mut backend).unwrap();
+    }
+    assert_eq!(backend.calls.len(), 0);
+    assert_eq!(notices.lines.len(), 0);
+    let mut current = load(&p.store).unwrap();
+    assert!(
+        current["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["stall_recovery"]["report"].is_null()
+                && row["stall_recovery"]["suppressed_report"]["text"].is_string())
+    );
+    for row in current["items"].as_array_mut().unwrap() {
+        row["status"] = json!("doing");
+        row["jobs"] = json!(["owned"]);
+    }
+    backend.jobs = vec![json!({"id":"owned","status":"queued"})];
+    save(&p.store, &current).unwrap();
+    run_watch(&p, &mut notices, &mut backend).unwrap();
+    assert_eq!(backend.calls.len(), 0);
+    assert_eq!(notices.lines.len(), 0);
+    // Positive control: one real recovery still produces a report.
+    save(&p.store, &db("doing")).unwrap();
+    backend.jobs.clear();
+    run_watch(&p, &mut notices, &mut backend).unwrap();
+    assert_eq!(backend.calls.len(), 1);
+    assert_eq!(notices.lines.len(), 1);
     fs::remove_dir_all(root).unwrap();
 }
 #[test]

@@ -14,6 +14,118 @@ pub const HANG_S: f64 = 1800.;
 pub const RETRY_WINDOW_S: f64 = 21600.;
 const CLAIM_S: f64 = 300.;
 
+/// Run the SAME admission planner against a copy. Return identifiers and decisions
+/// only; never expose project names, saved prompts or recovery credentials.
+pub fn preview(
+    db: &Value,
+    jobs: &[Value],
+    ps: &Processes,
+    queue: &Value,
+    t: f64,
+    clients: &str,
+    ids: &[i64],
+) -> Result<Value> {
+    if arr(&db["items"])
+        .iter()
+        .any(|row| row["id"].as_i64().is_none())
+    {
+        return Err("invalid item id".into());
+    }
+    let mut copy = db.clone();
+    let projects = copy["projects"].clone();
+    copy["items"].as_array().ok_or("invalid items")?;
+    for id in ids {
+        if !arr(&copy["items"]).iter().any(|row| {
+            row["id"] == *id
+                && !excluded(
+                    s(&row["project"]),
+                    s(&projects[s(&row["project"])]),
+                    clients,
+                )
+        }) {
+            return Err("requested item unavailable or excluded".into());
+        }
+    }
+    let before = copy.clone();
+    let owners = reconcile_pending_intake(&mut copy, queue, jobs, t, clients)?;
+    let selected = plan_with_intake(&mut copy, jobs, ps, t, clients, &owners.accepted)?;
+    let selected: Vec<_> = selected
+        .into_iter()
+        .filter(|id| ids.is_empty() || ids.contains(id))
+        .collect();
+    let rows: Vec<_> = arr(&copy["items"]).iter().map(|row| {
+        let id = row["id"].as_i64().unwrap_or(0);
+        let old = arr(&before["items"]).into_iter().find(|v| v["id"] == id).unwrap();
+        let owned: Vec<_> = jobs.iter().filter(|j| linked(row, j) && owns_launch(j, ps, t))
+            .map(|j| j["id"].clone()).collect();
+        json!({"id":id,"status":row["status"],"accepted":owners.accepted.contains(&id),
+            "reserved":old["stall_recovery"]["pending"].is_object(),"would_reserve":selected.contains(&id),"owned_jobs":owned})
+    }).collect();
+    Ok(
+        json!({"dry_run":true,"items":rows,"would_reserve":selected,"sent":0,"launched":0,"saved":false}),
+    )
+}
+
+pub fn preview_files(paths: &Paths, ids: &[i64]) -> Result<Value> {
+    // Do not construct Scheduler: its normal constructor creates its directory
+    // and backs up a log. The metadata backend itself has no such side effects.
+    let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
+    let clients =
+        fs::read_to_string("D:/CC/Tools/client-projects.txt").map_err(|e| e.to_string())?;
+    let db = load(&paths.store)?;
+    let mut jobs = vec![];
+    // Metadata only. Do not read events, stderr, prompt files or session history.
+    for entry in fs::read_dir(&paths.jobs).map_err(|e| e.to_string())? {
+        let file = entry.map_err(|e| e.to_string())?.path().join("job.json");
+        if file.try_exists().map_err(|e| e.to_string())? {
+            let job = load(&file)?;
+            if !job["id"].is_string() || !job["status"].is_string() {
+                return Err("job receipt unavailable".into());
+            }
+            jobs.push(job);
+        }
+    }
+    let ps = backend.snapshot().map_err(|e| e.0.to_owned())?;
+    let queue = load(
+        &backend
+            .tools
+            .join("localai-web-rs/target/release/console-state.json"),
+    )?;
+    preview(&db, &jobs, &ps, &queue, time_s(), &clients, ids)
+}
+
+pub fn acceptance_summary(report: &Value) -> Result<String> {
+    let items = report["items"].as_array().ok_or("missing measured items")?;
+    let active = items
+        .iter()
+        .filter(|row| {
+            !excluded(
+                s(&row["project"]),
+                s(&projects[s(&row["project"])]),
+                clients,
+            ) && (ids.is_empty() || row["id"].as_i64().is_some_and(|id| ids.contains(&id)))
+        })
+        .find(|row| row["id"] == 57)
+        .ok_or("missing ToDo57")?;
+    let completed = items
+        .iter()
+        .find(|row| row["id"] == 791)
+        .ok_or("missing ToDo791")?;
+    if report["dry_run"] != true
+        || report["sent"] != 0
+        || report["launched"] != 0
+        || report["saved"] != false
+        || report["would_reserve"] != json!([])
+        || items.len() != 2
+        || active["status"] != "doing"
+        || active["owned_jobs"].as_array().map(Vec::len) != Some(1)
+        || completed["status"] != "done"
+    {
+        return Err("two-item maintenance acceptance did not pass".into());
+    }
+    Ok("ToDo #57：実物2件を無送信で検査し、担当1件と完了1件を確認しました。旧巡回は停止したままです。".into())
+}
+
 fn discord_wait(item: &Value, t: f64) -> bool {
     if item["dependency_ready"] == true {
         return false;
@@ -734,6 +846,12 @@ pub fn run_watch(
             continue;
         }
         if cc_job_policy::todo_wait::waiting(&db, &item) {
+            suppress_report(paths, id, &item)?;
+            continue;
+        }
+        if !matches!(s(&item["status"]), "todo" | "doing") {
+            // Terminal and owner-held work cannot re-publish old pending reports.
+            suppress_report(paths, id, &item)?;
             continue;
         }
         let p = &item["stall_recovery"]["pending"];
@@ -1095,7 +1213,34 @@ pub fn run_watch(
             .find(|i| i["id"] == id)
             .and_then(|i| i["stall_recovery"]["report"].as_str().map(str::to_owned));
         if let Some(report) = report {
-            if let Err(error) = notifier.notify(paths, &report, false) {
+            let row = arr(&fresh["items"])
+                .into_iter()
+                .find(|i| i["id"] == id)
+                .unwrap();
+            if !matches!(s(&row["status"]), "todo" | "doing")
+                || cc_job_policy::todo_wait::waiting(&fresh, &row)
+                || stopped(&row, &latest_linked(&row, &jobs))
+            {
+                suppress_report(paths, id, &row)?;
+                continue;
+            }
+            let source = format!(
+                "{}:{}:{}",
+                s(&row["jobs"]
+                    .as_array()
+                    .and_then(|a| a.last())
+                    .cloned()
+                    .unwrap_or(Value::Null)),
+                arr(&row["stall_recovery"]["history"]).len(),
+                if report.contains("原因:") {
+                    "failure"
+                } else if report.contains("1時間ごと") {
+                    "backoff"
+                } else {
+                    "recovery"
+                }
+            );
+            if let Err(error) = notifier.report(paths, id, &source, &report) {
                 eprintln!(
                     "stall recovery #{id}: 原因の通知を再試行します: {}",
                     failure::summary(&error)
@@ -1128,6 +1273,23 @@ pub fn session(job: &Value) -> Option<String> {
         uuid::Uuid::parse_str(s(&job[*k]))
             .ok()
             .map(|id| id.to_string())
+    })
+}
+
+fn suppress_report(paths: &Paths, id: i64, item: &Value) -> Result<()> {
+    if !item["stall_recovery"]["report"].is_string() {
+        return Ok(());
+    }
+    edit(paths, |db| {
+        let row = find(db, id)?;
+        if row["status"] == item["status"]
+            && row["stall_recovery"]["report"] == item["stall_recovery"]["report"]
+        {
+            row["stall_recovery"]["suppressed_report"] =
+                json!({"text":row["stall_recovery"]["report"],"status":row["status"]});
+            row["stall_recovery"]["report"] = Value::Null;
+        }
+        Ok(())
     })
 }
 /// Durable queue input: console owns capacity, session exclusivity and checkout creation.

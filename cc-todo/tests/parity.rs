@@ -476,20 +476,15 @@ fn original_python_stalled_test() {
     assert_eq!(got, vec!["a"]);
 }
 #[test]
-fn thread_create_reopen_chunk_and_silence() {
+fn existing_maintenance_thread_is_created_once_and_reopened() {
     let t = Temp::new();
     let mut f = Fake::default();
     let p = t.paths();
-    notify(
-        &mut f,
-        &json!({"task_channel_id":"456"}),
-        &p,
-        &"🦀".repeat(2001),
-        true,
-    )
-    .unwrap();
+    let cfg = json!({"task_channel_id":"456"});
+    assert_eq!(stall_thread(&mut f, &cfg, &p.thread).unwrap(), "123");
+    assert_eq!(stall_thread(&mut f, &cfg, &p.thread).unwrap(), "123");
     assert_eq!(fs::read_to_string(&p.thread).unwrap(), "123");
-    assert_eq!(f.calls.len(), 4);
+    assert_eq!(f.calls.len(), 2);
     assert_eq!(f.calls[0].0, "POST");
     assert_eq!(f.calls[0].1, "/channels/456/threads");
     assert_eq!(
@@ -497,22 +492,13 @@ fn thread_create_reopen_chunk_and_silence() {
         json!({"name":"【PCツール】止まった作業の再開記録","message":{"content":"止まった作業の終了と再開を、通知を出さずに記録します。","flags":4096,"allowed_mentions":{"parse":[]}}})
     );
     assert_eq!(
-        f.calls[2],
+        f.calls[1],
         (
             "PATCH".into(),
             "/channels/123".into(),
             json!({"archived":false})
         )
     );
-    for n in [1, 3] {
-        assert_eq!(f.calls[n].2["flags"], 4096);
-        assert_eq!(f.calls[n].2["allowed_mentions"], json!({"parse":[]}));
-    }
-    assert_eq!(
-        f.calls[1].2["content"].as_str().unwrap().chars().count(),
-        2000
-    );
-    assert_eq!(f.calls[3].2["content"], "🦀");
 }
 #[test]
 fn failed_thread_create_leaves_no_cache() {
@@ -521,16 +507,7 @@ fn failed_thread_create_leaves_no_cache() {
         fail: true,
         ..Default::default()
     };
-    assert!(
-        notify(
-            &mut f,
-            &json!({"task_channel_id":"456"}),
-            &t.paths(),
-            "hi",
-            false
-        )
-        .is_err()
-    );
+    assert!(stall_thread(&mut f, &json!({"task_channel_id":"456"}), &t.paths().thread).is_err());
     assert!(!t.paths().thread.exists());
 }
 #[test]

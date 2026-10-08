@@ -144,6 +144,196 @@ fn unanswered_questions_appear_before_projects_and_answered_questions_are_exclud
     assert!(text.contains("https://discord.com/channels/G/10"));
     assert!(render(&db, &[], &json!({}), &Names::parse(""), 1790773200.).contains("今はありません"));
 }
+
+fn answer_snowflake(at: f64) -> String {
+    ((((at * 1000.) as u64) - 1420070400000) << 22).to_string()
+}
+
+#[test]
+fn answered_open_questions_stay_visible_regardless_of_destination_or_delivery() {
+    let at = 1790773200.;
+    let reply = answer_snowflake(at);
+    for metadata in [
+        json!({"agent":"main"}),
+        json!({"resume_status":"再開先なし"}),
+        json!({"agent":"worker","resume_status":"再開失敗","last_resume_error":"transport failed"}),
+        json!({"agent":"worker","resumed_reply":reply}),
+    ] {
+        let mut q = json!({"thread_id":"10","after":answer_snowflake(at - 1.),
+            "project":"製品","title":"公開してよいか","open":true});
+        q.as_object_mut()
+            .unwrap()
+            .extend(metadata.as_object().unwrap().clone());
+        let mut state = json!({"guild_id":"G","questions":[q],"owner_answers":{"10":reply},
+            "answer_receipts":{}});
+        // A read receipt or successful delivery must not close an open question on the board.
+        for receipt in [
+            json!({}),
+            json!({"thread":"10","read_by":"reader"}),
+            json!({"thread":"10","handled_by":"worker","posted":true}),
+        ] {
+            state["answer_receipts"][&reply] = receipt;
+            let before = state.clone();
+            assert!(pending(&state).is_empty());
+            let text = render(
+                &json!({}),
+                &pending(&state),
+                &state,
+                &Names::parse(""),
+                at + 600.,
+            );
+            assert!(text.contains("あなたの返事待ち 0件（質問）"));
+            assert!(text.contains("## あなたの返事待ち\n今はありません"));
+            assert!(text.contains("## 答えあり・未反映（1件）\n• 製品：公開してよいか"));
+            assert_eq!(text.matches("https://discord.com/channels/G/10").count(), 1);
+            assert_eq!(state, before, "render must not close or deliver questions");
+        }
+        state["questions"][0]["open"] = json!(false);
+        let closed = render(&json!({}), &[], &state, &Names::parse(""), at + 3600.);
+        assert!(!closed.contains("答えあり・未反映"));
+        assert!(!closed.contains("公開してよいか"));
+    }
+}
+
+#[test]
+fn answer_age_uses_the_newest_recorded_reply_with_an_inclusive_ten_minute_boundary() {
+    let at = 1790773200.125;
+    for (owner, recorded) in [
+        (json!(answer_snowflake(at)), Value::Null),
+        (json!({"id":answer_snowflake(at)}), Value::Null),
+        (
+            json!(answer_snowflake(at).parse::<u64>().unwrap()),
+            Value::Null,
+        ),
+        (Value::Null, json!(answer_snowflake(at))),
+        (
+            json!(answer_snowflake(at - 120.)),
+            json!(answer_snowflake(at)),
+        ),
+        (
+            json!({"id":answer_snowflake(at)}),
+            json!(answer_snowflake(at - 120.)),
+        ),
+    ] {
+        let state = json!({"questions":[{"thread_id":"10","after":answer_snowflake(at - 300.),
+            "title":"公開してよいか","open":true,"answered_reply":recorded}],
+            "owner_answers":{"10":owner}});
+        for (now, visible) in [
+            (at - 1., false),
+            (at + 599.999, false),
+            (at + 600., true),
+            (at + 3600., true),
+        ] {
+            let text = render(&json!({}), &pending(&state), &state, &Names::parse(""), now);
+            assert_eq!(
+                text.contains("答えあり・未反映"),
+                visible,
+                "now={now}, state={state}"
+            );
+            assert!(text.contains("あなたの返事待ち 0件（質問）"));
+        }
+    }
+}
+
+#[test]
+fn old_answers_do_not_answer_a_new_question_and_threads_are_counted_once() {
+    let at = 1790773200.;
+    for answer in [answer_snowflake(at - 1.), answer_snowflake(at)] {
+        let state = json!({"guild_id":"G","questions":[
+            {"thread_id":"10","after":answer_snowflake(at),"title":"新しい質問","open":true,"answered_reply":answer},
+            {"thread_id":"10","after":answer_snowflake(at - 120.),"title":"以前の質問","open":true},
+            {"thread_id":"20","after":answer_snowflake(at - 120.),"title":"古い未回答","open":true},
+            {"thread_id":"20","after":answer_snowflake(at),"title":"新しい回答済み","open":true},
+            {"thread_id":"","after":"0","title":"届け先のスレッド不明","open":true}],
+            "owner_answers":{"10":{"id":answer},"20":answer_snowflake(at + 1.)}});
+        let q = pending(&state);
+        assert_eq!(q.len(), 1);
+        assert_eq!(q[0]["title"], "新しい質問");
+        let text = render(&json!({}), &q, &state, &Names::parse(""), at + 601.);
+        assert!(text.contains("あなたの返事待ち 1件（質問）"));
+        assert!(text.contains("## 答えあり・未反映（1件）"));
+        assert!(text.contains("新しい回答済み"));
+        assert!(!text.contains("以前の質問"));
+        assert!(!text.contains("古い未回答"));
+        assert_eq!(text.matches("[質問を開く]").count(), 2);
+    }
+}
+
+#[test]
+fn followup_owner_messages_do_not_reset_the_unreflected_answer_deadline() {
+    let at = 1790773200.;
+    let state = json!({"questions":[{"thread_id":"10","after":answer_snowflake(at-1.),
+        "title":"製品の方針","open":true,"first_owner_reply":answer_snowflake(at),
+        "answered_reply":answer_snowflake(at+590.)}]});
+    let text = render(
+        &json!({}),
+        &pending(&state),
+        &state,
+        &Names::parse(""),
+        at + 600.,
+    );
+    assert!(text.contains("答えあり・未反映（1件）"));
+    assert!(text.contains("あなたの返事待ち 0件"));
+}
+
+#[test]
+fn board_run_passes_answer_state_and_retains_the_section_until_question_closure() {
+    let mut h = setup();
+    let at = h.fake.borrow().now;
+    let reply = answer_snowflake(at);
+    let mut state = h.state();
+    state["questions"] = json!([{"thread_id":"10","after":answer_snowflake(at - 1.),
+        "project":"製品","title":"fix publication failure","agent":"main","open":true}]);
+    state["owner_answers"] = json!({"10":{"id":reply}});
+    state["answer_receipts"] = json!({});
+    h.save(&state);
+    h.fake.borrow_mut().llm_answer = "公開の方針を確認する".into();
+    update(&mut h.ctx).unwrap();
+    let path = h.ctx.here.join("board.json");
+    assert!(!s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
+    h.fake.borrow_mut().now = at + 599.999;
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
+    h.fake.borrow_mut().now = at + 600.;
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
+    let board = read_json(&path).unwrap();
+    assert!(s(&board["body"]).contains("## 答えあり・未反映（1件）\n• 製品：公開の方針を確認する"));
+    assert!(s(&board["body"]).contains("あなたの返事待ち 0件（質問）"));
+    assert!(board["questions"].is_null() && board["owner_answers"].is_null());
+    let posts = h.fake.borrow().posts.len();
+    state["answer_receipts"][&reply] = json!({"thread":"10","handled_by":"main","posted":true});
+    h.save(&state);
+    h.fake.borrow_mut().now += 300.;
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
+    assert!(s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
+    state["questions"][0]["open"] = json!(false);
+    h.save(&state);
+    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
+    assert!(!s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
+    assert_eq!(h.fake.borrow().posts.len(), posts);
+    assert!(h.fake.borrow().launches.is_empty());
+    assert_eq!(
+        h.state(),
+        state,
+        "board must not mutate the question writer state"
+    );
+}
+
+#[test]
+fn answered_question_does_not_keep_its_task_marked_as_waiting_for_the_owner() {
+    let at = 1790773200.;
+    let state = json!({"questions":[
+        {"thread_id":"123","after":answer_snowflake(at - 1.),"open":true},
+        {"thread_id":"456","after":answer_snowflake(at - 1.),"open":true}],
+        "owner_answers":{"123":answer_snowflake(at)}});
+    let mut db = json!({"items":[{"id":1,"project":"製品","title":"公開を進める",
+        "status":"block","note":"オーナー判断待ち。質問スレッド123"}]});
+    let text = render(&db, &pending(&state), &state, &Names::parse(""), at + 600.);
+    assert!(text.contains("止まっている（オーナー判断待ち）"));
+    assert!(!text.contains("｜返事待ち"));
+    db["items"][0]["note"] = json!("オーナー判断待ち。質問スレッド123と456");
+    let text = render(&db, &pending(&state), &state, &Names::parse(""), at + 600.);
+    assert!(text.contains("｜返事待ち（オーナー判断待ち）"));
+}
 #[test]
 fn unchanged_board_makes_no_discord_calls_even_after_five_minutes() {
     let mut h = setup();

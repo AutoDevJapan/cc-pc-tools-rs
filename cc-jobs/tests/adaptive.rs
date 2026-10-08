@@ -149,6 +149,44 @@ fn pacing_reduces_once_per_new_measurement_and_recommends_claude() {
     assert!(s.reason.contains("減枠後"));
 }
 #[test]
+fn changing_unused_reset_windows_do_not_hide_the_active_account_pace() {
+    let mut earlier = quota(1000., 11.);
+    let mut later = quota(1300., 12.);
+    earlier.accounts.push(AccountQuota {
+        id: "unused".into(),
+        used_percent: 0.,
+        reset_at: 200000.,
+        short_exhausted: false,
+    });
+    later.accounts.push(AccountQuota {
+        id: "unused".into(),
+        used_percent: 0.,
+        reset_at: 200300.,
+        short_exhausted: false,
+    });
+    let expected = (1. / 300.) / (88. / 98700.);
+    let history = vec![earlier, later];
+    assert!((pace_ratio(&history).unwrap() - expected).abs() < 1e-8);
+    let mut s = state();
+    s.openai = history;
+    s.anthropic = quota(1300., 48.);
+    let s = decide(&AdaptiveConfig::default(), s, healthy(), 1360., 1, 0, 0.);
+    assert_eq!(s.max_running, 6);
+    assert_eq!(s.preferred_provider.as_deref(), Some("anthropic"));
+}
+#[test]
+fn account_addition_and_another_account_reset_keep_stable_account_comparisons() {
+    let old = quota(1000., 20.);
+    let mut new = quota(1300., 21.);
+    new.accounts.push(AccountQuota {
+        id: "new".into(),
+        used_percent: 1.,
+        reset_at: 200000.,
+        short_exhausted: false,
+    });
+    assert!(pace_ratio(&[old, new]).is_some());
+}
+#[test]
 fn exhausted_weekly_or_short_window_reduces_to_floor() {
     let cfg = AdaptiveConfig::default();
     for short in [false, true] {
@@ -157,6 +195,24 @@ fn exhausted_weekly_or_short_window_reduces_to_floor() {
         s.openai[0].accounts[0].short_exhausted = short;
         assert_eq!(decide(&cfg, s, healthy(), 1360., 1, 0, 0.).max_running, 4);
     }
+}
+#[test]
+fn known_account_pressure_is_not_hidden_by_unknown_accounts_but_expired_windows_are_not_used() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.openai = vec![quota(1000., 20.), quota(1300., 21.)];
+    for snapshot in &mut s.openai {
+        snapshot.complete = false;
+    }
+    assert_eq!(
+        decide(&cfg, s.clone(), healthy(), 1360., 1, 0, 0.).max_running,
+        6
+    );
+    for snapshot in &mut s.openai {
+        snapshot.accounts[0].reset_at = 1361.;
+    }
+    s.openai[1].accounts[0].used_percent = 100.;
+    assert_eq!(decide(&cfg, s, healthy(), 1362., 1, 0, 0.).max_running, 25);
 }
 #[test]
 fn modest_overspend_is_proportional_and_next_sample_uses_post_reduction_baseline() {
@@ -181,8 +237,20 @@ fn modest_overspend_is_proportional_and_next_sample_uses_post_reduction_baseline
 #[test]
 fn incompatible_old_quota_does_not_hide_new_comparable_window() {
     let mut history = vec![quota(1000., 20.), quota(1300., 20.), quota(1600., 21.)];
-    history[0].accounts[0].reset_at = 99999.;
-    assert!(pace_ratio(&history).is_some());
+    history[0].accounts[0].reset_at = 99000.;
+    let expected = (1. / 300.) / (79. / 98400.);
+    assert!((pace_ratio(&history).unwrap() - expected).abs() < 1e-8);
+}
+#[test]
+fn usage_decrease_rebases_only_that_account_and_future_quota_cannot_grow_the_limit() {
+    let history = vec![quota(1000., 90.), quota(1300., 20.), quota(1600., 21.)];
+    let expected = (1. / 300.) / (79. / 98400.);
+    assert!((pace_ratio(&history).unwrap() - expected).abs() < 1e-8);
+    let mut s = state();
+    s.openai[0].at = 1460.;
+    let s = decide(&AdaptiveConfig::default(), s, healthy(), 1360., 1, 0, 0.);
+    assert!(s.pace_ratio.is_none());
+    assert_eq!(s.max_running, 25);
 }
 #[test]
 fn cpu_initial_reset_or_zero_delta_is_unknown() {

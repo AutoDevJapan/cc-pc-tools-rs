@@ -146,7 +146,7 @@ fn live(job: &Value) -> bool {
 }
 fn rank(job: &Value) -> (u8, u64, &str, &str) {
     (
-        u8::from(s(job, "status") == "queued"),
+        u8::from(s(job, "status") == "queued" && job["work_owner_live"] != true),
         job["queue_sequence"].as_u64().unwrap_or(0),
         s(job, "created_at"),
         s(job, "id"),

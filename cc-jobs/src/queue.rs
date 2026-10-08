@@ -527,8 +527,14 @@ impl Context {
         };
         if !ids.iter().any(|id| id.as_str() == Some(jid)) {
             ids.push(json!(jid));
-            self.write_json(&path, &index)?;
         }
+        let mut job = self.load(jid)?;
+        self.record_work_owner(&mut job);
+        if !index["owners"].is_object() {
+            index["owners"] = json!({});
+        }
+        index["owners"][jid] = json!({"work_owner":job["work_owner"],"parent_job_id":job["parent_job_id"],"todo_id":job["todo_id"],"created_at":job["created_at"],"queue_sequence":job["queue_sequence"]});
+        self.write_json(&path, &index)?;
         Ok(())
     }
     /// Resurrect the existing record so ToDo/scheduler references remain valid.
@@ -762,7 +768,11 @@ impl Context {
         let dependency_waits = self.dependency_waits(jobs);
         let ownership_jobs: Vec<_> = jobs
             .iter()
-            .filter(|j| !dependency_waits.contains_key(s(j, "id")))
+            .filter(|j| {
+                !dependency_waits.contains_key(s(j, "id"))
+                    || self.running_job(j)
+                    || s(j, "status") == "starting"
+            })
             .map(|j| {
                 let mut j = j.clone();
                 if self.is_ours(&j, "codex_pid") {

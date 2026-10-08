@@ -40,7 +40,116 @@ impl Default for QueueConfig {
         }
     }
 }
+/// Apply a partial config update, retaining every existing field. A running
+/// owner's fixed limit survives omitted or null fields in deployment patches.
+pub fn merge_queue_config(current: &Value, patch: &Value, clear_fixed: bool) -> Result<Value> {
+    if !current.is_object() || !patch.is_object() {
+        return Err(Error::new("queue configuration and patch must be objects"));
+    }
+    if !clear_fixed
+        && !current["fixed_max_running"].is_null()
+        && !patch["fixed_max_running"].is_null()
+        && current["fixed_max_running"] != patch["fixed_max_running"]
+    {
+        return Err(Error::new(
+            "fixed_max_running is already set; retain the owner's override",
+        ));
+    }
+    let mut merged = current.clone();
+    for (key, value) in patch.as_object().unwrap() {
+        if key == "fixed_max_running" {
+            continue;
+        }
+        if key == "adaptive" && value.is_object() && merged[key].is_object() {
+            for (name, value) in value.as_object().unwrap() {
+                merged[key][name] = value.clone();
+            }
+        } else {
+            merged[key] = value.clone();
+        }
+    }
+    if clear_fixed {
+        merged.as_object_mut().unwrap().remove("fixed_max_running");
+    } else if current["fixed_max_running"].is_null() && !patch["fixed_max_running"].is_null() {
+        merged["fixed_max_running"] = patch["fixed_max_running"].clone();
+    }
+    let cfg: QueueConfig = serde_json::from_value(merged.clone())?;
+    cfg.validate()?;
+    Ok(merged)
+}
+impl QueueConfig {
+    pub fn validate(&self) -> Result<()> {
+        if self.max_running == 0
+            || !(1..=100).contains(&self.context_limit_percent)
+            || self.max_children_per_parent == 0
+            || self.retry_delay_seconds == 0
+            || self.max_retry_delay_seconds < self.retry_delay_seconds
+            || self.fixed_max_running == Some(0)
+        {
+            return Err(Error::new("invalid queue configuration"));
+        }
+        if let Some(adaptive) = &self.adaptive {
+            adaptive.validate()?;
+        }
+        Ok(())
+    }
+}
 impl Context {
+    pub fn update_queue_config(&self, patch: &Value, clear_fixed: bool) -> Result<Value> {
+        fs::create_dir_all(&self.root)?;
+        let _lock = FileLock::acquire(&self.root.join("queue-config.lock"))?;
+        let path = self.root.join("queue-config.json");
+        let current = match self.read_file(&path) {
+            Ok(bytes) => serde_json::from_slice(&bytes)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => json!({}),
+            Err(e) => return Err(Error::file_io("read queue configuration", &path, e)),
+        };
+        let merged = merge_queue_config(&current, patch, clear_fixed)?;
+        if clear_fixed && !current["fixed_max_running"].is_null() {
+            let cfg: QueueConfig = serde_json::from_value(merged.clone())?;
+            let adaptive = cfg
+                .adaptive
+                .as_ref()
+                .ok_or_else(|| Error::new("automatic control is disabled"))?;
+            let state: crate::adaptive::LimitState = self
+                .read_json(&self.root.join("queue-limit-state.json"))
+                .and_then(|v| serde_json::from_value(v).map_err(Error::from))?;
+            let now = self.rt.epoch();
+            if state.hardware_max_running < 16
+                || state.auto_ready_samples < 3
+                || state.settings.as_ref() != Some(adaptive)
+                || now < state.checked_at
+                || now - state.checked_at > adaptive.stale_after_seconds()
+            {
+                return Err(Error::new(
+                    "fixed limit retained: need three fresh healthy automatic samples at 16 or more",
+                ));
+            }
+        }
+        if merged != current {
+            let changes = if clear_fixed && !current["fixed_max_running"].is_null() {
+                Some(
+                    fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(self.root.join("queue-config.CHANGES.txt"))?,
+                )
+            } else {
+                None
+            };
+            self.write_json(&path, &merged)?;
+            if let Some(mut changes) = changes {
+                use std::io::Write;
+                writeln!(
+                    changes,
+                    "{} fixed_max_runningを解除: CPU・空きメモリ・応答を実測し自動上限16以上を連続3回確認",
+                    self.rt.now()
+                )?;
+                changes.sync_all()?;
+            }
+        }
+        Ok(merged)
+    }
     /// Admission gate serializes this counter, including equal-second arrivals.
     pub(crate) fn next_queue_sequence(&self) -> Result<u64> {
         let path = self.jobs.join(".queue-sequence.json");
@@ -996,12 +1105,13 @@ impl Context {
                 &mut codex_families
             };
             let provider_limit = if claude { claude_limit } else { codex_limit };
-            if (!families.contains(&root) && families.len() >= hardware_limit)
-                || (!provider_families.contains(&root)
-                    && provider_families.len() >= provider_limit
-                    && (parent.is_empty() || !families.contains(&root)))
-            {
-                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit}));
+            let hardware_blocked = !families.contains(&root) && families.len() >= hardware_limit;
+            let provider_blocked = !provider_families.contains(&root)
+                && provider_families.len() >= provider_limit
+                && (parent.is_empty() || !families.contains(&root));
+            if hardware_blocked || provider_blocked {
+                decisions.insert(s(candidate,"id").into(), json!({"code":"running_limit","message":"実行枠待ち（先に起動するジョブの予約を含む）","max_running":hardware_limit,"provider":if claude {"anthropic"} else {"openai"},"provider_limit":provider_limit,
+                    "hardware_limited":hardware_blocked && (!provider_blocked || provider_limit >= hardware_limit)}));
                 continue;
             }
             // Children have first claim; wait for the earlier eligible job to

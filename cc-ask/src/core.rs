@@ -773,6 +773,9 @@ pub fn run_hidden_with_env(
         } else {
             timeout_s
         }))?;
+    // The budget includes file capture, process startup and suspended-thread
+    // discovery. Starting it after spawn silently adds that latency to a tick.
+    let start = std::time::Instant::now();
     let _span = crate::tick_runtime::Span::new(format!(
         "child {} {} timeout_ms={}",
         argv.first().map(String::as_str).unwrap_or(""),
@@ -804,7 +807,6 @@ pub fn run_hidden_with_env(
     }
     let (mut child, group) = crate::process_guard::Group::spawn(&mut cmd)
         .map_err(|e| format!("OSError: start {}: {e}", argv[0]))?;
-    let start = std::time::Instant::now();
     let status = loop {
         if let Some(x) = child
             .try_wait()

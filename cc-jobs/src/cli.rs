@@ -91,6 +91,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-429",
         "reload-queue",
         "adjust-limit",
+        "update-queue-config",
         "recover-children",
         "cleanup-supervisors",
         "rename-project",
@@ -128,6 +129,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "tail" => name == "follow",
                 "rate" => name == "force",
                 "cancel" => name == "recovery",
+                "update-queue-config" => name == "clear-fixed",
                 "recover-429" | "recover-children" | "cleanup-supervisors" => name == "apply",
                 _ => false,
             };
@@ -167,6 +169,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 "cleanup-supervisors" => name == "apply",
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
+                "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
             };
             if !allowed {
@@ -467,6 +470,19 @@ impl Context {
                     out,
                     "{}",
                     pretty(&self.limit_status(&self.queue_config()?)?)
+                )?;
+                Ok(0)
+            }
+            "update-queue-config" => {
+                let patch = if let Some(file) = a.value("patch-file") {
+                    self.read_json(Path::new(file))?
+                } else {
+                    json!({})
+                };
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.update_queue_config(&patch, a.flag("clear-fixed"))?)
                 )?;
                 Ok(0)
             }

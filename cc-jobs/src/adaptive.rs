@@ -99,6 +99,9 @@ pub struct LimitState {
     pub first_at: f64,
     pub stable_since: f64,
     pub max_running: usize,
+    /// Independent hardware ceiling; max_running remains the Codex lane.
+    pub hardware_max_running: usize,
+    pub auto_ready_samples: usize,
     pub reason: String,
     pub claude_max_running: usize,
     pub claude_stable_since: f64,
@@ -203,28 +206,24 @@ fn available(snapshot: &QuotaSnapshot) -> bool {
             .iter()
             .any(|q| q.used_percent < 100. && !q.short_exhausted)
 }
-/// Match account identities and reset windows, then protect the account whose
-/// consumption most exceeds its own remaining budget.
+/// Consumption is summed across comparable accounts. Every current account's
+/// remaining budget contributes, including unused accounts with rolling resets.
 pub fn pace_ratio(history: &[QuotaSnapshot]) -> Option<f64> {
-    pace_ratio_since(history, 0., history.last()?.at)
-}
-fn pace_ratio_since(history: &[QuotaSnapshot], since: f64, now: f64) -> Option<f64> {
     let latest = history.last()?;
-    if latest.at > now {
+    if !latest.complete {
         return None;
     }
-    let mut ratio: f64 = 0.;
+    let mut actual = 0.;
+    let mut budget = 0.;
     let mut compared = false;
     for q in &latest.accounts {
-        if q.reset_at <= now {
+        if q.reset_at <= latest.at {
             continue;
         }
-        // Unused accounts can publish a rolling estimate for their reset time.
-        // Their changing window must not suppress a stable account's spending.
-        // Find each account's own oldest comparable observation independently.
+        budget += (100. - q.used_percent) / (q.reset_at - latest.at);
         let previous = history.iter().find_map(|snapshot| {
             let elapsed = latest.at - snapshot.at;
-            if snapshot.at < since || !(300. ..=3600.).contains(&elapsed) {
+            if !snapshot.complete || !(300. ..=3600.).contains(&elapsed) {
                 return None;
             }
             snapshot
@@ -237,63 +236,87 @@ fn pace_ratio_since(history: &[QuotaSnapshot], since: f64, now: f64) -> Option<f
                 })
                 .map(|old| (old, elapsed))
         });
-        let Some((old, elapsed)) = previous else {
-            continue;
-        };
-        compared = true;
-        let actual = (q.used_percent - old.used_percent) / elapsed;
-        let budget = (100. - q.used_percent) / (q.reset_at - latest.at);
-        ratio = ratio.max(if budget > 0. {
-            actual / budget
-        } else if actual > 0. {
-            f64::MAX
-        } else {
-            0.
-        });
+        if let Some((old, elapsed)) = previous {
+            actual += (q.used_percent - old.used_percent) / elapsed;
+            compared = true;
+        }
     }
-    compared.then_some(ratio)
+    compared.then_some(if budget > 0. {
+        actual / budget
+    } else if actual > 0. {
+        f64::MAX
+    } else {
+        0.
+    })
+}
+/// Supplement the refresh response from OpenCodex's whole-account cache.
+/// CLI exclusions take precedence; stale/invalid cache entries cannot establish
+/// pool exhaustion. Only quota metadata reaches the durable snapshot.
+pub fn parse_codex_quotas(cli: Option<&Value>, cache: &Value, at: f64) -> QuotaSnapshot {
+    let mut rows = cli
+        .and_then(|v| v["accounts"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    let mut complete = cli.is_some_and(|v| v["accounts"].is_array()) && cache["quotas"].is_object();
+    if let Some(quotas) = cache["quotas"].as_object() {
+        for (id, q) in quotas {
+            if rows.iter().any(|row| row["id"] == *id) {
+                continue;
+            }
+            let updated = q["updatedAt"]
+                .as_f64()
+                .map(|t| if t > 1e12 { t / 1000. } else { t });
+            if updated.is_none_or(|t| t > at || at - t > 360.) {
+                complete = false;
+                continue;
+            }
+            rows.push(json!({"id":id,"quota":q}));
+        }
+    }
+    let mut snapshot = parse_quotas(&json!({"accounts":rows}), at);
+    snapshot.complete &= complete;
+    snapshot
 }
 
+fn fresh_quota(q: &QuotaSnapshot, now: f64, cfg: &AdaptiveConfig) -> bool {
+    q.complete
+        && q.at > 0.
+        && q.at <= now
+        && now - q.at <= cfg.quota_interval_seconds as f64 + 60.
+        && q.accounts.iter().all(|a| a.reset_at > now)
+}
+fn nearly_empty(q: &QuotaSnapshot) -> bool {
+    !q.accounts.is_empty()
+        && q.accounts
+            .iter()
+            .map(|a| 100. - a.used_percent)
+            .sum::<f64>()
+            <= 10. * q.accounts.len() as f64
+}
+
+/// Hardware control only. Provider failures and spending never reduce this
+/// ceiling. CPU deltas average the entire sampling interval, not a point sample.
 pub fn decide(
     cfg: &AdaptiveConfig,
     mut state: LimitState,
     sample: MachineSample,
     now: f64,
     queued: usize,
-    recent_429_count: usize,
-    last_429_at: f64,
+    _recent_429_count: usize,
+    _last_429_at: f64,
 ) -> LimitState {
-    if let (Some(old), Some(new)) = (state.machine.cpu_times, sample.cpu_times)
-        && old.iter().zip(new).any(|(a, b)| b < *a)
-    {
-        state.max_running = cfg.min_running;
-        state.first_at = now;
-        state.stable_since = now;
-    }
     let current = state.max_running.clamp(cfg.min_running, cfg.max_running);
+    state.cpu_percent = cpu_load(state.machine.cpu_times, sample.cpu_times);
     if state.first_at <= 0. || now < state.first_at {
         state.first_at = now;
     }
     if state.stable_since <= 0. || now < state.stable_since {
-        state.stable_since = state.first_at;
+        state.stable_since = now;
     }
-    state.cpu_percent = cpu_load(state.machine.cpu_times, sample.cpu_times);
-    state.pace_ratio = pace_ratio_since(&state.openai, state.pace_adjusted_at, now);
-    let latest = state.openai.last();
-    let quota_fresh = state.quota_checked_at > 0.
-        && now >= state.quota_checked_at
-        && now - state.quota_checked_at <= cfg.quota_interval_seconds as f64 + 60.;
-    let quota_known = quota_fresh
-        && latest.is_some_and(|q| {
-            q.complete && q.at <= now && q.accounts.iter().all(|a| a.reset_at > now)
-        });
-    let quota_empty = quota_known && !available(latest.unwrap());
-    let slow_health = sample
+    let slow = sample
         .health_ms
         .is_some_and(|ms| ms >= cfg.health_fast_ms as f64);
-    // A single successful but slow probe holds growth without discarding the
-    // quiet period. Only consecutive, fresh samples indicate sustained pressure.
-    let repeated_slow_health = slow_health
+    let repeated_slow = slow
         && state.checked_at > 0.
         && now > state.checked_at
         && now - state.checked_at <= cfg.stale_after_seconds()
@@ -301,120 +324,107 @@ pub fn decide(
             .machine
             .health_ms
             .is_some_and(|ms| ms >= cfg.health_fast_ms as f64);
-    let mut reasons = Vec::new();
-    if recent_429_count >= 2 && last_429_at > state.last_429_at {
-        reasons.push("429が続いた");
-    }
-    if sample.health_ms.is_none() {
-        reasons.push("プロキシ応答失敗");
-    } else if repeated_slow_health {
-        reasons.push("プロキシ応答遅延");
-    }
-    if sample
+    let memory_pressure = sample
         .free_memory_gib
-        .is_some_and(|gb| gb < cfg.free_memory_gib)
-    {
-        reasons.push("空きメモリ不足");
-    }
-    if state.cpu_percent.is_some_and(|cpu| cpu >= cfg.cpu_percent) {
-        reasons.push("CPU高負荷");
-    }
-    if quota_empty {
-        reasons.push("Codex利用枠が回復待ち");
-    }
-    let over_pace = quota_fresh && state.pace_ratio.is_some_and(|ratio| ratio > 1.);
-    let pace_waiting = quota_known
-        && state.pace_adjusted_at > 0.
-        && state.pace_ratio.is_none()
-        && latest.is_some_and(|q| q.at - state.pace_adjusted_at < 300.);
-    let pace_new = over_pace && latest.unwrap().at > state.pace_adjusted_at;
-    let pressure = !reasons.is_empty();
-    if pace_new {
-        reasons.push("週の利用枠を使うペースが速い");
-        state.pace_adjusted_at = latest.unwrap().at;
-    }
-    if !reasons.is_empty() || recent_429_count > 0 {
+        .is_some_and(|gb| gb < cfg.free_memory_gib);
+    let cpu_pressure = state.cpu_percent.is_some_and(|cpu| cpu >= cfg.cpu_percent);
+    state.max_running = if sample.health_ms.is_none() || repeated_slow {
+        state.reason = "プロキシ応答失敗または連続遅延".into();
         state.stable_since = now;
-    }
-    state.preferred_provider = ((over_pace || pace_waiting || quota_empty)
-        && quota_fresh
-        && available(&state.anthropic)
-        && state.anthropic.accounts.iter().all(|q| q.reset_at > now))
-    .then(|| "anthropic".to_owned());
-    state.max_running = if !reasons.is_empty() {
-        let mut reduced = if pressure {
-            (current / 2).max(cfg.min_running)
+        (current / 2).max(cfg.min_running)
+    } else if memory_pressure || cpu_pressure {
+        // Move towards the operating band without repeatedly halving all work.
+        let factor = if memory_pressure {
+            0.8
         } else {
-            current
+            ((cfg.cpu_percent - 5.).max(1.) / state.cpu_percent.unwrap()).min(0.9)
         };
-        if pace_new {
-            // Quotas are rounded and refreshed asynchronously. One reading
-            // must not collapse the global limit; reduce by at most a quarter
-            // per new measurement, while retaining the Claude routing hint.
-            let paced = ((current as f64 / state.pace_ratio.unwrap()).floor() as usize)
-                .max(current.saturating_sub(current / 4));
-            reduced = reduced.min(paced).max(cfg.min_running);
+        state.reason = if memory_pressure {
+            "空きメモリ不足"
+        } else {
+            "CPU高負荷"
         }
-        if quota_empty {
-            reduced = cfg.min_running;
-        }
-        state.reason = reasons.join("・");
-        reduced
-    } else if over_pace || pace_waiting {
-        state.reason = "減枠後の利用ペースを確認中".into();
-        current
-    } else if slow_health {
-        state.reason = "単発のプロキシ応答遅延を確認中".into();
-        current
-    } else if recent_429_count > 0
-        || (last_429_at > 0. && now - last_429_at < cfg.quiet_seconds as f64)
-        || now - state.stable_since < cfg.quiet_seconds as f64
-    {
-        state.reason = "429なしの安定時間を確認中".into();
-        current
-    } else if sample.free_memory_gib.is_none() || state.cpu_percent.is_none() || !quota_known {
-        state.reason = "増枠に必要な測定値または利用枠を確認中".into();
-        current
+        .into();
+        state.stable_since = now;
+        ((current as f64 * factor).floor() as usize).max(cfg.min_running)
     } else if queued == 0 {
         state.reason = "順番待ちなし".into();
         current
-    } else {
-        let ample_headroom = state
-            .cpu_percent
-            .is_some_and(|cpu| cpu < cfg.cpu_percent / 2.)
-            && sample
-                .free_memory_gib
-                .is_some_and(|gb| gb >= cfg.free_memory_gib * 2.)
-            && sample
-                .health_ms
-                .is_some_and(|ms| ms < cfg.health_fast_ms as f64 / 2.);
-        let step = if ample_headroom {
-            cfg.increase_step.saturating_mul(4).max(current / 2)
+    } else if slow {
+        state.reason = "単発のプロキシ応答遅延を確認中".into();
+        current
+    } else if let (Some(cpu), Some(memory)) = (state.cpu_percent, sample.free_memory_gib) {
+        if cpu >= (cfg.cpu_percent - 10.).max(1.) {
+            state.reason = "CPUが目標の範囲内".into();
+            current
         } else {
-            cfg.increase_step
-        };
-        state.reason = if current == cfg.max_running {
-            "設定の最大値"
-        } else if ample_headroom {
-            "応答・メモリ・CPUに余裕があり増枠を加速"
-        } else {
-            "応答・メモリ・CPU・利用枠が安定"
+            let step = if cpu < 40. && memory >= cfg.free_memory_gib * 2. {
+                cfg.increase_step.saturating_mul(4).max(current / 2)
+            } else if cpu < 60. && memory >= cfg.free_memory_gib * 1.5 {
+                cfg.increase_step.saturating_mul(2).max(current / 4)
+            } else {
+                cfg.increase_step.max(current / 8)
+            };
+            state.reason = "CPUと空きメモリに余裕があり増枠".into();
+            current.saturating_add(step).min(cfg.max_running)
         }
-        .into();
-        current.saturating_add(step).min(cfg.max_running)
+    } else {
+        state.reason = "CPUと空きメモリの測定待ち".into();
+        current
     };
     state.settings = Some(cfg.clone());
     state.mode = "auto".into();
     state.checked_at = now;
     state.machine = sample;
     state.queued = queued;
-    state.last_429_at = state.last_429_at.max(last_429_at);
-    state.recent_429_count = recent_429_count;
     state
 }
 
-/// Run the same resource/429/availability controls for Claude using its own
-/// quota and quiet period, without feeding Codex spending into that lane.
+#[allow(clippy::too_many_arguments)]
+fn provider_limit(
+    cfg: &AdaptiveConfig,
+    previous: usize,
+    hardware: usize,
+    stable: &mut f64,
+    last: &mut f64,
+    recent: usize,
+    latest: f64,
+    now: f64,
+    exhausted: bool,
+    pace_pressure: bool,
+    claude: bool,
+) -> (usize, String) {
+    if exhausted {
+        return (0, "利用枠が回復待ち".into());
+    }
+    let floor = cfg.min_running.min(hardware);
+    let initial = if claude {
+        16.max(cfg.min_running)
+    } else {
+        cfg.min_running
+    };
+    let current = if previous == 0 { initial } else { previous }.min(hardware);
+    if recent >= 2 && latest > *last {
+        *last = latest;
+        *stable = now;
+        return ((current / 2).max(floor), "429が続いたため減枠".into());
+    }
+    *last = last.max(latest);
+    if recent > 0 || (*last > 0. && now - *last < cfg.quiet_seconds as f64) {
+        *stable = now;
+        return (current, "429後の安定時間を確認中".into());
+    }
+    if pace_pressure {
+        return (
+            current.min(hardware.div_ceil(4)).max(floor),
+            "全アカウントの週の残り枠が少ないためClaudeへ振り分け".into(),
+        );
+    }
+    *stable = now;
+    (hardware, "CPUと空きメモリに応じた上限".into())
+}
+
+/// Independent provider admission limits beneath a shared hardware ceiling.
 #[allow(clippy::too_many_arguments)]
 pub fn decide_providers(
     cfg: &AdaptiveConfig,
@@ -427,34 +437,83 @@ pub fn decide_providers(
     claude_recent: usize,
     claude_latest: f64,
 ) -> LimitState {
-    let mut lane = state.clone();
-    lane.max_running = if state.claude_max_running > 0 {
-        state.claude_max_running
+    let old = state.clone();
+    let mut hardware_state = state;
+    hardware_state.max_running = if old.hardware_max_running > 0 {
+        old.hardware_max_running
     } else {
-        cfg.min_running
+        old.max_running.max(old.claude_max_running)
     };
-    lane.stable_since = state.claude_stable_since;
-    lane.last_429_at = state.claude_last_429_at;
-    lane.openai = vec![state.anthropic.clone()];
-    lane.pace_adjusted_at = 0.;
-    let lane = decide(
+    let mut state = decide(cfg, hardware_state, sample, now, queued, 0, 0.);
+    let hardware = state.max_running;
+    state.hardware_max_running = hardware;
+    state.pace_ratio = pace_ratio(&state.openai);
+    let codex_quota = state.openai.last().filter(|q| fresh_quota(q, now, cfg));
+    let codex_empty = codex_quota.is_some_and(|q| !available(q));
+    let pace_pressure =
+        codex_quota.is_some_and(nearly_empty) && state.pace_ratio.is_some_and(|r| r > 1.);
+    let claude_known = fresh_quota(&state.anthropic, now, cfg);
+    let claude_empty = claude_known && !available(&state.anthropic);
+    let (codex, codex_reason) = provider_limit(
         cfg,
-        lane,
-        sample.clone(),
+        old.max_running,
+        hardware,
+        &mut state.stable_since,
+        &mut state.last_429_at,
+        codex_recent,
+        codex_latest,
         now,
-        queued,
+        codex_empty,
+        pace_pressure,
+        false,
+    );
+    let (claude, claude_reason) = provider_limit(
+        cfg,
+        old.claude_max_running,
+        hardware,
+        &mut state.claude_stable_since,
+        &mut state.claude_last_429_at,
         claude_recent,
         claude_latest,
+        now,
+        claude_empty,
+        false,
+        true,
     );
-    let mut state = decide(cfg, state, sample, now, queued, codex_recent, codex_latest);
-    state.claude_max_running = lane.max_running;
-    state.claude_stable_since = lane.stable_since;
-    state.claude_last_429_at = lane.last_429_at;
-    state.claude_recent_429_count = lane.recent_429_count;
-    state.claude_reason = lane.reason.replace("Codex", "Claude");
+    state.max_running = codex;
+    state.claude_max_running = claude;
+    state.recent_429_count = codex_recent;
+    state.claude_recent_429_count = claude_recent;
+    state.claude_reason = claude_reason;
+    if codex < hardware {
+        state.reason.push_str(&format!("・Codex: {codex_reason}"));
+    }
+    state.preferred_provider = ((codex_empty || pace_pressure || codex < hardware)
+        && claude_known
+        && !claude_empty
+        && claude_recent == 0)
+        .then(|| "anthropic".to_owned());
+    state.auto_ready_samples = if hardware >= 16
+        && state.cpu_percent.is_some_and(|p| p < cfg.cpu_percent)
+        && state
+            .machine
+            .free_memory_gib
+            .is_some_and(|m| m >= cfg.free_memory_gib)
+        && state
+            .machine
+            .health_ms
+            .is_some_and(|ms| ms < cfg.health_fast_ms as f64)
+        && old.checked_at > 0.
+        && old.settings.as_ref().is_none_or(|settings| settings == cfg)
+        && now > old.checked_at
+        && now - old.checked_at <= cfg.stale_after_seconds()
+    {
+        old.auto_ready_samples.saturating_add(1)
+    } else {
+        0
+    };
     state
 }
-
 impl Context {
     /// The hardware ceiling is shared; only Codex has the weekly pace ceiling.
     pub(crate) fn provider_limits(&self, cfg: &QueueConfig) -> (usize, usize, usize, bool) {
@@ -473,12 +532,25 @@ impl Context {
             return fallback;
         };
         let now = self.rt.epoch();
-        if state.mode != "auto"
+        // After a measured fixed override is removed, use the fresh shadow
+        // lanes immediately; do not briefly discard Codex exhaustion/routing.
+        if (state.mode != "auto" && !(state.mode == "fixed" && state.hardware_max_running > 0))
             || state.checked_at <= 0.
             || now < state.checked_at
             || now - state.checked_at > adaptive.stale_after_seconds()
         {
             return fallback;
+        }
+        if state.hardware_max_running > 0 {
+            let hardware = state
+                .hardware_max_running
+                .clamp(adaptive.min_running, adaptive.max_running);
+            return (
+                hardware,
+                state.max_running.min(hardware),
+                state.claude_max_running.min(hardware),
+                state.preferred_provider.as_deref() == Some("anthropic"),
+            );
         }
         let claude = if state.claude_max_running > 0 {
             state
@@ -579,7 +651,9 @@ impl Context {
         {
             return Ok(adaptive.min_running);
         }
-        Ok(if state.mode == "auto" && state.max_running > 0 {
+        Ok(if state.hardware_max_running > 0 {
+            state.hardware_max_running
+        } else if state.mode == "auto" && state.max_running > 0 {
             state.max_running
         } else {
             cfg.max_running
@@ -603,7 +677,8 @@ impl Context {
                     > cfg.adaptive.as_ref().unwrap().stale_after_seconds())
         {
             ("auto", "測定が古いため最小値")
-        } else if state.mode != "auto" {
+        } else if state.mode != "auto" && !(state.mode == "fixed" && state.hardware_max_running > 0)
+        {
             ("auto", "最初の測定待ち")
         } else {
             ("auto", state.reason.as_str())
@@ -627,9 +702,11 @@ impl Context {
         );
         Ok(
             json!({"max_running":hardware,"codex_max_running":codex,"claude_max_running":claude,"mode":mode,"reason":reason,"claude_reason":state.claude_reason,"label":label,
-            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && state.mode == "auto" && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
+            "checked_at":state.checked_at,"preferred_provider":if mode == "auto" && !state_error && (state.mode == "auto" || (state.mode == "fixed" && state.hardware_max_running > 0)) && self.rt.epoch() >= state.checked_at && self.rt.epoch()-state.checked_at <= cfg.adaptive.as_ref().unwrap().stale_after_seconds() { state.preferred_provider } else { None },
             "pace_ratio":state.pace_ratio,"cpu_percent":state.cpu_percent,"free_memory_gib":state.machine.free_memory_gib,
-            "health_ms":state.machine.health_ms,"recent_429_count":state.recent_429_count,"quota_checked_at":state.quota_checked_at}),
+            "health_ms":state.machine.health_ms,"recent_429_count":state.recent_429_count,"quota_checked_at":state.quota_checked_at,
+            "auto_hardware_max_running":state.hardware_max_running,"auto_codex_max_running":state.max_running,
+            "auto_claude_max_running":state.claude_max_running,"auto_ready_samples":state.auto_ready_samples}),
         )
     }
     /// Sampling holds only its own nonblocking lock, never the admission lock.
@@ -657,23 +734,13 @@ impl Context {
             && (now / adaptive.interval_seconds as f64).floor()
                 == (state.checked_at / adaptive.interval_seconds as f64).floor()
             && state.settings.as_ref() == Some(adaptive)
-            && ((cfg.fixed_max_running.is_some()
-                && state.mode == "fixed"
-                && cfg.max_running == state.max_running)
+            && ((cfg.fixed_max_running.is_some() && state.mode == "fixed")
                 || (cfg.fixed_max_running.is_none() && state.mode == "auto"))
         {
             return Ok(());
         }
         let previous = cfg.max_running;
-        if let Some(fixed) = cfg.fixed_max_running {
-            state.max_running = fixed;
-            state.claude_max_running = fixed;
-            state.preferred_provider = None;
-            state.mode = "fixed".into();
-            state.reason = "手動で固定".into();
-            state.checked_at = now;
-            state.settings = Some(adaptive.clone());
-        } else {
+        {
             if state.checked_at > 0.
                 && (now < state.checked_at
                     || now - state.checked_at > adaptive.stale_after_seconds())
@@ -685,7 +752,7 @@ impl Context {
                     ..Default::default()
                 };
             }
-            if state.max_running == 0 || state.mode != "auto" {
+            if state.hardware_max_running == 0 && (state.max_running == 0 || state.mode != "auto") {
                 state.max_running = cfg.max_running;
                 state.first_at = now;
                 state.stable_since = now;
@@ -713,7 +780,9 @@ impl Context {
             let queued = self
                 .queue_decisions(&jobs, &cfg, None)
                 .values()
-                .filter(|reason| reason["code"] == "running_limit")
+                .filter(|reason| {
+                    reason["code"] == "running_limit" && reason["hardware_limited"] == true
+                })
                 .count();
             let mut recent = 0;
             let mut latest: f64 = 0.;
@@ -763,6 +832,9 @@ impl Context {
                 claude_recent,
                 claude_latest,
             );
+            if cfg.fixed_max_running.is_some() {
+                state.mode = "fixed".into();
+            }
         }
         // Keep a finite journal: roughly one day at the default cadence.
         let journal = self.root.join("queue-limit-history.json");
@@ -786,7 +858,8 @@ impl Context {
             "mode":state.mode,"reason":state.reason,"queued":state.queued,"cpu_percent":state.cpu_percent,
             "machine":state.machine,"recent_429_count":state.recent_429_count,"pace_ratio":state.pace_ratio,
             "preferred_provider":state.preferred_provider,"openai":state.openai.last(),"anthropic":state.anthropic,
-            "claude_max_running":state.claude_max_running,"claude_reason":state.claude_reason,"claude_recent_429_count":state.claude_recent_429_count}));
+            "claude_max_running":state.claude_max_running,"claude_reason":state.claude_reason,"claude_recent_429_count":state.claude_recent_429_count,
+            "hardware_max_running":state.hardware_max_running,"auto_ready_samples":state.auto_ready_samples}));
         if history.len() > 1440 {
             history.drain(..history.len() - 1440);
         }

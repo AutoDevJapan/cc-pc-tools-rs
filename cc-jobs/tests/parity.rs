@@ -1,6 +1,205 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
 
+mod adaptive_config_updates {
+    use super::*;
+    #[test]
+    fn partial_update_and_deployment_defaults_preserve_owner_fixed_limit() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        t.ctx
+            .write_json(
+                &path,
+                &json!({"max_running":16,"fixed_max_running":32,
+            "adaptive":{"min_running":16},"retry_delay_seconds":77}),
+            )
+            .unwrap();
+        let patch_path = t.ctx.root.join("config-patch.json");
+        t.ctx
+            .write_json(
+                &patch_path,
+                &json!({"max_running":20,"fixed_max_running":null,
+            "adaptive":{"increase_step":3}}),
+            )
+            .unwrap();
+        let patch_file = patch_path.to_string_lossy();
+        let (result, _, _) = t.cli(&["update-queue-config", "--patch-file", &patch_file]);
+        assert_eq!(result.unwrap(), 0);
+        let saved = t.ctx.read_json(&path).unwrap();
+        assert_eq!(saved["fixed_max_running"], 32);
+        assert_eq!(saved["adaptive"]["min_running"], 16);
+        assert_eq!(saved["adaptive"]["increase_step"], 3);
+        assert_eq!(saved["retry_delay_seconds"], 77);
+        assert_eq!(saved["max_running"], 20);
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"fixed_max_running":24}), false)
+                .is_err()
+        );
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"max_running":0}), false)
+                .is_err()
+        );
+        assert_eq!(t.ctx.read_json(&path).unwrap(), saved);
+    }
+    #[test]
+    fn explicit_clear_requires_measured_healthy_samples_and_logs_once() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        let config = json!({"max_running":16,"fixed_max_running":32,"adaptive":{}});
+        t.ctx.write_json(&path, &config).unwrap();
+        for (samples, age, hardware) in [(2, 0., 32), (3, 1000., 32), (3, 0., 15)] {
+            t.ctx.write_json(&t.ctx.root.join("queue-limit-state.json"),&json!({
+                "checked_at":t.rt.epoch()-age,"hardware_max_running":hardware,"auto_ready_samples":samples,
+                "settings":cc_jobs::adaptive::AdaptiveConfig::default()})).unwrap();
+            assert!(t.ctx.update_queue_config(&json!({}), true).is_err());
+            assert_eq!(t.ctx.read_json(&path).unwrap(), config);
+        }
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "checked_at":t.rt.epoch(),"hardware_max_running":32,"auto_ready_samples":3,
+            "settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        let (result, _, _) = t.cli(&["update-queue-config", "--clear-fixed"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(
+            t.ctx
+                .read_json(&path)
+                .unwrap()
+                .get("fixed_max_running")
+                .is_none()
+        );
+        let log = t.ctx.root.join("queue-config.CHANGES.txt");
+        assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 1);
+        t.ctx.update_queue_config(&json!({}), true).unwrap();
+        assert_eq!(fs::read_to_string(log).unwrap().lines().count(), 1);
+    }
+    #[test]
+    fn simultaneous_policy_change_cannot_clear_using_old_measurements() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        let config = json!({"max_running":16,"fixed_max_running":32,"adaptive":{}});
+        t.ctx.write_json(&path, &config).unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "checked_at":t.rt.epoch(),"hardware_max_running":32,"auto_ready_samples":3,
+            "settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"adaptive":{"cpu_percent":60.}}), true)
+                .is_err()
+        );
+        assert_eq!(t.ctx.read_json(&path).unwrap(), config);
+    }
+    #[test]
+    fn removing_fixed_override_uses_shadow_provider_brakes_immediately() {
+        let t = Test::new();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({
+            "max_running":16,"fixed_max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"fixed","checked_at":t.rt.epoch(),"hardware_max_running":40,
+            "max_running":0,"claude_max_running":40,"preferred_provider":"anthropic",
+            "auto_ready_samples":3,"settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        let before = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                before["max_running"].clone(),
+                before["codex_max_running"].clone()
+            ),
+            (json!(32), json!(32))
+        );
+        t.ctx.update_queue_config(&json!({}), true).unwrap();
+        let after = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                after["max_running"].clone(),
+                after["codex_max_running"].clone()
+            ),
+            (json!(40), json!(0))
+        );
+        assert_eq!(after["preferred_provider"], "anthropic");
+    }
+    #[test]
+    fn provider_only_waits_do_not_grow_the_hardware_ceiling() {
+        let t = Test::new();
+        let now = t.rt.epoch();
+        let cfg = cc_jobs::adaptive::AdaptiveConfig::default();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"auto","checked_at":now-60.,"hardware_max_running":32,
+            "max_running":0,"claude_max_running":32,"settings":cfg,
+            "machine":{"cpu_times":[100,200,100]}}),
+            )
+            .unwrap();
+        t.put(job(json!({"id":"codex-demand","status":"queued","model":"gpt-6.1-sol",
+            "model_explicit":true,"pid":std::process::id(),"pid_created":123,"queued_at":t.rt.now()})));
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["queued"][0]["reason"]["hardware_limited"], false);
+        t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+        t.ctx.adjust_limit().unwrap();
+        let state = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        assert_eq!(state["queued"], 0);
+        assert_eq!(state["hardware_max_running"], 32);
+    }
+    #[test]
+    fn fixed_mode_keeps_admission_fixed_while_sampling_shadow_automatic_limit() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({
+            "max_running":16,"fixed_max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx.adjust_limit().unwrap();
+        t.rt.tick(61.);
+        t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 32);
+        let state = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        assert_eq!(state["mode"], "fixed");
+        assert!(state["hardware_max_running"].as_u64().unwrap() >= 16);
+        assert!(state["cpu_percent"].is_number());
+    }
+}
+
 mod claude_routing {
     use super::*;
     fn setup(t: &Test) {
@@ -1037,7 +1236,7 @@ mod queue_regressions {
             .unwrap();
         assert_eq!(t.ctx.queue_config().unwrap().max_running, 7);
         t.ctx.adjust_limit().unwrap();
-        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 2);
         let s = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
         assert_eq!(s["mode"], "fixed");
     }

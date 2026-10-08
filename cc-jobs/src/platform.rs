@@ -220,7 +220,23 @@ pub trait Runtime: Send + Sync {
         if provider == "anthropic" {
             argv.extend(["--quota".into(), "--refresh".into()]);
         }
-        match self.call(Call::new(argv, vec![], timeout as f64)) {
+        let reply = self.call(Call::new(argv, vec![], timeout as f64));
+        if provider == "openai" {
+            let cli = reply
+                .as_ref()
+                .ok()
+                .filter(|r| r.code == 0)
+                .and_then(|r| serde_json::from_slice::<Value>(&r.stdout).ok());
+            let cache = env
+                .get("USERPROFILE")
+                .and_then(|home| {
+                    std::fs::read(Path::new(home).join(".opencodex/codex-quota-cache.json")).ok()
+                })
+                .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                .unwrap_or(Value::Null);
+            return crate::adaptive::parse_codex_quotas(cli.as_ref(), &cache, at);
+        }
+        match reply {
             Ok(reply) if reply.code == 0 => serde_json::from_slice::<Value>(&reply.stdout)
                 .map(|v| crate::adaptive::parse_quotas(&v, at))
                 .unwrap_or_else(|_| unavailable()),

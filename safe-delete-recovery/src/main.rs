@@ -392,8 +392,23 @@ impl Config {
             return Err("RECEIPT_NOT_OWNED");
         }
         let path = Path::new(&r.identity.path);
-        let nodes = self.validate(&r, path, true)?;
         let dest = self.destination();
+        // Git's -C/discovery runs before core.longpaths is applied. Its root
+        // must fit the startup limit even though internal object paths may not.
+        for repo in &self.repos {
+            if !matches!(repo.kind, RepoKind::OpaqueBare)
+                && dest
+                    .join("files")
+                    .join(repo.name)
+                    .as_os_str()
+                    .encode_wide()
+                    .count()
+                    > 240
+            {
+                return Err("GIT_DESTINATION_ROOT_TOO_LONG");
+            }
+        }
+        let nodes = self.validate(&r, path, true)?;
         checked(&dest)?;
         self.client_guard(&dest)?;
         if path.components().next() != dest.components().next() {
@@ -1582,10 +1597,18 @@ mod tests {
         let mut c = fixture_for(RESUME_ID);
         // Both a longer quarantine prefix and the content inventory must work.
         // The old helper failed in Git when its loose-object path crossed 260.
-        c.quarantine = c.base.join("long-quarantine-".repeat(6));
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 230);
+        c.quarantine = c.base.join("q".repeat(231 - initial));
         assert!(
             c.destination()
-                .join("files/source/.git/objects/aa")
+                .join("files/source/.git/objects/aa/01234567890123456789012345678901234567")
                 .as_os_str()
                 .encode_wide()
                 .count()
@@ -1605,6 +1628,16 @@ mod tests {
         c.finish(c.id).unwrap();
         assert_eq!(fs::read(c.ticket_path()).unwrap(), original);
         assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn git_startup_root_limit_is_rejected_before_preparing_a_move() {
+        let mut c = fixture_for(RESUME_ID);
+        c.quarantine = c.base.join("long-quarantine-".repeat(6));
+        assert!(matches!(c.plan(c.id), Err("GIT_DESTINATION_ROOT_TOO_LONG")));
+        assert!(!c.ticket_path().exists());
+        assert!(!c.destination().exists());
+        assert!(source(&c).exists());
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
     }
     #[test]
     fn directory_tolerance_is_fixed_to_2050_and_only_written_field() {

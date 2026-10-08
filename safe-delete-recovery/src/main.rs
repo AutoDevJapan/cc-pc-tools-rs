@@ -7,7 +7,7 @@ use std::{
     collections::BTreeMap,
     ffi::OsStr,
     fs::{self, OpenOptions},
-    io::Write,
+    io::{Read, Write},
     os::windows::{ffi::OsStrExt, fs::MetadataExt, process::CommandExt},
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
@@ -17,6 +17,7 @@ use std::{
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 
@@ -70,6 +71,54 @@ struct BacklinkTicket {
     replacement: Node,
     admin: Node,
     common: Node,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ResumeProof {
+    ticket_sha256: String,
+    files: BTreeMap<String, String>,
+}
+
+// Only the explicitly authorized 2050 receipt may accept directory write-time
+// drift. Every name and every other Win32 metadata field remains exact.
+fn same_inventory(id: &str, old: &BTreeMap<String, Node>, now: &BTreeMap<String, Node>) -> bool {
+    old.len() == now.len()
+        && old.iter().all(|(name, expected)| {
+            let Some(actual) = now.get(name) else {
+                return false;
+            };
+            let mut expected = expected.clone();
+            if id == RESUME_ID && expected.attributes & 0x10 != 0 {
+                expected.written = actual.written;
+            }
+            expected == *actual
+        })
+}
+
+fn file_digests(root: &Path, nodes: &BTreeMap<String, Node>) -> Result<BTreeMap<String, String>> {
+    let mut files = BTreeMap::new();
+    for (relative, expected) in nodes.iter().filter(|(_, n)| n.attributes & 0x10 == 0) {
+        // These keys come from the fresh, validated public clone inventory.
+        let path = root.join(relative);
+        if node(&path)? != *expected {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        let mut file = fs::File::open(&path).map_err(|_| "CONTENT_PROOF_READ")?;
+        let mut hash = Sha256::new();
+        let mut buf = [0u8; 65536];
+        loop {
+            let count = file.read(&mut buf).map_err(|_| "CONTENT_PROOF_READ")?;
+            if count == 0 {
+                break;
+            }
+            hash.update(&buf[..count]);
+        }
+        if node(&path)? != *expected {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        files.insert(relative.clone(), format!("{:x}", hash.finalize()));
+    }
+    Ok(files)
 }
 enum RepoKind {
     Clone,
@@ -278,6 +327,49 @@ impl Config {
         self.store
             .join(format!("{}.download-quarantine.json", self.id))
     }
+    fn proof_path(&self) -> PathBuf {
+        self.store
+            .join(format!("{}.directory-resume-proof.json", self.id))
+    }
+    fn content_proof(
+        &self,
+        path: &Path,
+        nodes: &BTreeMap<String, Node>,
+        ticket: &[u8],
+        create: bool,
+    ) -> Result<()> {
+        if self.id != RESUME_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let existing_proof = if !create {
+            if !present(&self.proof_path())? {
+                return Err("RESUME_PROOF_MISSING");
+            }
+            Some(read_record(&self.proof_path(), 8 * 1024 * 1024)?)
+        } else {
+            None
+        };
+        let proof = ResumeProof {
+            ticket_sha256: format!("{:x}", Sha256::digest(ticket)),
+            files: file_digests(path, nodes)?,
+        };
+        // Re-enumerate after reading all files, including file IDs and links.
+        // A second content pass also detects changes which restore size/mtime.
+        if scan(path, &self.repos)? != *nodes
+            || file_digests(path, nodes)? != proof.files
+            || scan(path, &self.repos)? != *nodes
+        {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        let bytes = serde_json::to_vec_pretty(&proof).map_err(|_| "PROOF_JSON")?;
+        if let Some(saved) = existing_proof {
+            if saved != bytes || read_record(&self.proof_path(), 8 * 1024 * 1024)? != saved {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            return Ok(());
+        }
+        publish_proof(&self.proof_path(), &bytes)
+    }
     fn destination(&self) -> PathBuf {
         if self.id == ID {
             return self
@@ -366,8 +458,23 @@ impl Config {
             return Err("RECEIPT_NOT_OWNED");
         }
         let path = Path::new(&r.identity.path);
-        let nodes = self.validate(&r, path, true)?;
         let dest = self.destination();
+        // Git's -C/discovery runs before core.longpaths is applied. Its root
+        // must fit the startup limit even though internal object paths may not.
+        for repo in &self.repos {
+            if !matches!(repo.kind, RepoKind::OpaqueBare)
+                && dest
+                    .join("files")
+                    .join(repo.name)
+                    .as_os_str()
+                    .encode_wide()
+                    .count()
+                    > 240
+            {
+                return Err("GIT_DESTINATION_ROOT_TOO_LONG");
+            }
+        }
+        let nodes = self.validate(&r, path, true)?;
         checked(&dest)?;
         self.client_guard(&dest)?;
         if path.components().next() != dest.components().next() {
@@ -393,14 +500,35 @@ impl Config {
                 r.identity.path, self.id
             )
         };
-        let ticket = Ticket {
+        let mut ticket = Ticket {
             id: self.id.into(),
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
-            nodes,
+            nodes: nodes.clone(),
             backlink: self.prepare_backlink(path, &dest.join("files"))?,
         };
-        let ticket_bytes = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
+        let mut original_bytes = None;
+        if self.id == RESUME_ID && prepared {
+            let saved = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
+            let old: Ticket = serde_json::from_slice(&saved).map_err(|_| "INVALID_TICKET")?;
+            if old.id != ticket.id
+                || old.source != ticket.source
+                || old.destination != ticket.destination
+                || old.backlink.is_some()
+                || ticket.backlink.is_some()
+                || !same_inventory(self.id, &old.nodes, &nodes)
+            {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            // Retain the original ticket verbatim. The content proof binds to
+            // those bytes; the original file is never rewritten or discarded.
+            ticket.nodes = old.nodes;
+            original_bytes = Some(saved);
+        }
+        let ticket_bytes = match original_bytes {
+            Some(saved) => saved,
+            None => serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?,
+        };
         // Publish intent before creating the destination so an interrupted plan can resume.
         write_or_verify(&self.ticket_path(), &ticket_bytes, 8 * 1024 * 1024)?;
         fs::create_dir_all(&self.quarantine).map_err(|_| "QUARANTINE_PARENT_CREATE")?;
@@ -416,6 +544,9 @@ impl Config {
             }
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
+        if self.id == RESUME_ID {
+            self.content_proof(path, &nodes, &ticket_bytes, true)?;
+        }
         Ok(
             serde_json::json!({"id": self.id, "action": "submit_quarantine_to_exec_tool", "bytes": bytes,
             "entries": ticket.nodes.len(), "destination": dest, "reason": "owned_public_download_git",
@@ -424,14 +555,8 @@ impl Config {
     }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
         let mut r = self.load(id)?;
-        checked(&self.ticket_path())?;
-        let tn = node(&self.ticket_path())?;
-        if tn.links != 1 || tn.size > 8 * 1024 * 1024 {
-            return Err("INVALID_TICKET");
-        }
-        let t: Ticket =
-            serde_json::from_slice(&fs::read(self.ticket_path()).map_err(|_| "TICKET_READ")?)
-                .map_err(|_| "INVALID_TICKET")?;
+        let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
+        let t: Ticket = serde_json::from_slice(&ticket_bytes).map_err(|_| "INVALID_TICKET")?;
         let dest = self.destination();
         if t.id != self.id || t.source != r.identity.path || !same(Path::new(&t.destination), &dest)
         {
@@ -445,8 +570,14 @@ impl Config {
         }
         let files = dest.join("files");
         let nodes = self.validate(&r, &files, false)?;
-        if nodes != t.nodes {
+        let has_proof = self.id == RESUME_ID;
+        if (has_proof && !same_inventory(self.id, &t.nodes, &nodes))
+            || (!has_proof && nodes != t.nodes)
+        {
             return Err("CONTENT_CHANGED_AFTER_PLAN");
+        }
+        if has_proof {
+            self.content_proof(&files, &nodes, &ticket_bytes, false)?;
         }
         self.repair_backlink(&r, &files, t.backlink.as_ref())?;
         let why = dest.join("理由.txt");
@@ -645,6 +776,35 @@ fn write_or_verify(path: &Path, bytes: &[u8], limit: u64) -> Result<()> {
         write_new(path, bytes)
     }
 }
+fn read_record(path: &Path, limit: u64) -> Result<Vec<u8>> {
+    checked(path)?;
+    let n = node(path)?;
+    if n.links != 1 || n.size > limit || n.attributes & 0x10 != 0 {
+        return Err("INVALID_RECOVERY_RECORD");
+    }
+    fs::read(path).map_err(|_| "RECOVERY_RECORD_READ")
+}
+fn publish_proof(path: &Path, bytes: &[u8]) -> Result<()> {
+    if present(path)? {
+        return write_or_verify(path, bytes, 8 * 1024 * 1024);
+    }
+    // Publish a fully synchronized new record without replacing an existing one.
+    // An interruption leaves only a uniquely named unpublished staging record;
+    // the next attempt creates a different staging record, never edits that one.
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "PROOF_CLOCK")?
+        .as_nanos();
+    let stage = path.with_extension(format!("proof-writing-{}-{nonce}", std::process::id()));
+    write_new(&stage, bytes)?;
+    let source = extended_path(&stage)?;
+    let destination = extended_path(path)?;
+    // WRITE_THROUGH without REPLACE_EXISTING: fail rather than overwrite.
+    if unsafe { MoveFileExW(source.as_ptr(), destination.as_ptr(), 0x8) } == 0 {
+        return Err("PROOF_PUBLISH_FAILED");
+    }
+    write_or_verify(path, bytes, 8 * 1024 * 1024)
+}
 fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
     let mut nodes = BTreeMap::new();
     let mut pending = vec![root.to_owned()];
@@ -723,6 +883,8 @@ fn hidden_status(exe: &Path, args: &[&OsStr]) -> Result<(Vec<u8>, ExitStatus)> {
         .creation_flags(0x08000000)
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    #[cfg(test)]
+    c.stderr(Stdio::inherit());
     // Isolate Git from inherited repository/config/credential environment.
     for (key, _) in std::env::vars_os() {
         if key
@@ -761,6 +923,14 @@ fn hidden_status(exe: &Path, args: &[&OsStr]) -> Result<(Vec<u8>, ExitStatus)> {
         .join()
         .map_err(|_| "VALIDATOR_OUTPUT")?
         .map_err(|_| "VALIDATOR_OUTPUT")?;
+    #[cfg(test)]
+    if !status.success() || output.len() > 1024 * 1024 {
+        eprintln!(
+            "fixture validator {:?}: {status}, output bytes {}",
+            exe.file_name(),
+            output.len()
+        );
+    }
     if output.len() > 1024 * 1024 {
         return Err("VALIDATOR_FAILED");
     }
@@ -778,11 +948,11 @@ fn git_status(path: &Path, args: &[&str]) -> Result<(String, ExitStatus)> {
         "--no-optional-locks",
         "--no-replace-objects",
         "-c",
+        "core.longpaths=true",
+        "-c",
         "core.fsmonitor=false",
         "-c",
         "core.hooksPath=NUL",
-        "-c",
-        "core.longpaths=true",
         "-C",
     ];
     let mut argv: Vec<&OsStr> = fixed.iter().map(OsStr::new).collect();
@@ -1011,6 +1181,7 @@ struct WinInfo {
 }
 #[link(name = "kernel32")]
 unsafe extern "system" {
+    fn MoveFileExW(source: *const u16, destination: *const u16, flags: u32) -> i32;
     fn CreateFileW(
         name: *const u16,
         access: u32,
@@ -1883,6 +2054,237 @@ mod tests {
         let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
         fs::create_dir_all(source(&c).join("unexpected/.git")).unwrap();
         assert!(matches!(c.plan(c.id), Err("UNDECLARED_GIT_METADATA")));
+    }
+    fn drift_directory(path: &Path) {
+        use std::os::windows::fs::OpenOptionsExt;
+        let stamp = fs::metadata(path).unwrap().modified().unwrap() + Duration::from_secs(30);
+        OpenOptions::new()
+            .write(true)
+            .custom_flags(0x02000000)
+            .open(path)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+    }
+    #[test]
+    fn legacy_2050_directory_drift_preserves_ticket_and_resumes_through_finish() {
+        let mut c = fixture_for(RESUME_ID);
+        // Both a longer quarantine prefix and the content inventory must work.
+        // The old helper failed in Git when its loose-object path crossed 260.
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 240);
+        c.quarantine = c.base.join("q".repeat(241 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            240
+        );
+        assert!(
+            c.destination()
+                .join("files/source/.git/objects/aa/01234567890123456789012345678901234567")
+                .as_os_str()
+                .encode_wide()
+                .count()
+                > 260
+        );
+        let first = c.plan(c.id).unwrap();
+        let original = fs::read(c.ticket_path()).unwrap();
+        // Model an old deployed plan, which has no content proof.
+        fs::remove_file(c.proof_path()).unwrap();
+        drift_directory(&source(&c).join("source/.git"));
+        assert_eq!(first, c.plan(c.id).unwrap());
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), original);
+        assert_eq!(first, c.plan(c.id).unwrap());
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        drift_directory(&c.destination().join("files/source/.git"));
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), original);
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn git_startup_root_limit_is_rejected_before_preparing_a_move() {
+        let mut c = fixture_for(RESUME_ID);
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 241);
+        c.quarantine = c.base.join("q".repeat(242 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            241
+        );
+        assert!(matches!(c.plan(c.id), Err("GIT_DESTINATION_ROOT_TOO_LONG")));
+        assert!(!c.ticket_path().exists());
+        assert!(!c.destination().exists());
+        assert!(source(&c).exists());
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn directory_tolerance_is_fixed_to_2050_and_only_written_field() {
+        let c = fixture_for(RESUME_ID);
+        let old = c
+            .validate(&c.load(c.id).unwrap(), &source(&c), true)
+            .unwrap();
+        let mut changed = old.clone();
+        changed.get_mut("source/.git").unwrap().written += 1;
+        assert!(same_inventory(RESUME_ID, &old, &changed));
+        assert!(!same_inventory(ID, &old, &changed));
+        for field in 0..6 {
+            let mut changed = old.clone();
+            let n = changed.get_mut("source/.git").unwrap();
+            match field {
+                0 => n.volume += 1,
+                1 => n.file_id += 1,
+                2 => n.size += 1,
+                3 => n.links += 1,
+                4 => n.attributes ^= 2,
+                _ => n.attributes &= !0x10,
+            }
+            assert!(!same_inventory(RESUME_ID, &old, &changed));
+        }
+        let mut changed = old.clone();
+        changed.get_mut("source/.git/HEAD").unwrap().written += 1;
+        assert!(!same_inventory(RESUME_ID, &old, &changed));
+        changed = old.clone();
+        changed.remove("source/.git/HEAD");
+        assert!(!same_inventory(RESUME_ID, &old, &changed));
+        let c = fixture();
+        c.plan(c.id).unwrap();
+        drift_directory(&source(&c).join("kcaldav/.git"));
+        assert!(matches!(c.plan(c.id), Err("RECOVERY_RECORD_CHANGED")));
+    }
+    #[test]
+    fn resumed_plan_rejects_new_nodes_changed_files_and_external_links() {
+        for mutation in 0..4 {
+            let c = fixture_for(RESUME_ID);
+            c.plan(c.id).unwrap();
+            let target = source(&c).join("source/.git");
+            drift_directory(&target);
+            match mutation {
+                0 => fs::write(target.join("unexpected"), b"new").unwrap(),
+                1 => {
+                    let p = target.join("HEAD");
+                    let stamp =
+                        fs::metadata(&p).unwrap().modified().unwrap() + Duration::from_secs(30);
+                    fs::File::options()
+                        .write(true)
+                        .open(&p)
+                        .unwrap()
+                        .set_times(fs::FileTimes::new().set_modified(stamp))
+                        .unwrap();
+                }
+                2 => fs::hard_link(target.join("HEAD"), c.base.join("external-link")).unwrap(),
+                _ => {
+                    fs::remove_file(target.join("description")).unwrap();
+                }
+            }
+            let expected = if mutation == 2 {
+                "HARD_LINK"
+            } else {
+                "RECOVERY_RECORD_CHANGED"
+            };
+            assert!(matches!(c.plan(c.id), Err(code) if code == expected));
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            assert!(!c.destination().join("files").exists());
+        }
+    }
+    #[test]
+    fn content_proof_rejects_same_metadata_content_change_before_and_after_move() {
+        for moved in [false, true] {
+            let c = fixture_for(RESUME_ID);
+            let output = source(&c).join("output");
+            fs::write(&output, b"aaaa").unwrap();
+            c.plan(c.id).unwrap();
+            let output = if moved {
+                fs::rename(source(&c), c.destination().join("files")).unwrap();
+                c.destination().join("files/output")
+            } else {
+                output
+            };
+            let old = node(&output).unwrap();
+            let modified = fs::metadata(&output).unwrap().modified().unwrap();
+            fs::write(&output, b"bbbb").unwrap();
+            fs::File::options()
+                .write(true)
+                .open(&output)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(modified))
+                .unwrap();
+            assert_eq!(node(&output).unwrap(), old);
+            let result = if moved { c.finish(c.id) } else { c.plan(c.id) };
+            assert!(
+                matches!(result, Err("RECOVERY_RECORD_CHANGED")),
+                "unexpected result: {result:?}"
+            );
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn invalid_resume_proof_never_reissues_move_or_finishes() {
+        for moved in [false, true] {
+            let c = fixture_for(RESUME_ID);
+            c.plan(c.id).unwrap();
+            fs::write(c.proof_path(), b"invalid proof").unwrap();
+            if moved {
+                fs::rename(source(&c), c.destination().join("files")).unwrap();
+            }
+            let result = if moved { c.finish(c.id) } else { c.plan(c.id) };
+            assert!(matches!(result, Err("RECOVERY_RECORD_CHANGED")));
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn missing_proof_and_changed_ticket_cannot_finish_a_2050_move() {
+        let c = fixture_for(RESUME_ID);
+        c.plan(c.id).unwrap();
+        fs::remove_file(c.proof_path()).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("RESUME_PROOF_MISSING")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+        let c = fixture_for(RESUME_ID);
+        c.plan(c.id).unwrap();
+        let mut ticket: Ticket =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        ticket.nodes.get_mut("source/.git").unwrap().written += 1;
+        fs::write(c.ticket_path(), serde_json::to_vec_pretty(&ticket).unwrap()).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn proof_publish_resumes_past_unpublished_partial_and_never_overwrites() {
+        let c = fixture_for(RESUME_ID);
+        let partial = c
+            .proof_path()
+            .with_extension("proof-writing-prior-interrupted");
+        fs::write(&partial, b"partial").unwrap();
+        publish_proof(&c.proof_path(), b"complete").unwrap();
+        assert_eq!(fs::read(&partial).unwrap(), b"partial");
+        assert_eq!(fs::read(c.proof_path()).unwrap(), b"complete");
+        publish_proof(&c.proof_path(), b"complete").unwrap();
+        assert!(matches!(
+            publish_proof(&c.proof_path(), b"different"),
+            Err("RECOVERY_RECORD_CHANGED")
+        ));
+        assert_eq!(fs::read(c.proof_path()).unwrap(), b"complete");
     }
     #[test]
     fn linked_worktree_move_repairs_only_its_backlink_and_resumes_after_repair() {

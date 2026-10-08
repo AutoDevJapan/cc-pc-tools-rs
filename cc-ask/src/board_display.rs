@@ -33,7 +33,7 @@ pub fn project_label(project: &str, names: &Names) -> String {
         "phone-friction-control" => "視聴時間アプリ".into(),
         "tools" | "PCツール" | "cc-ask" => "PCの道具".into(),
         "" => "その他".into(),
-        _ => clean(&p, names, 32),
+        _ => clean(&p, names, usize::MAX),
     }
 }
 
@@ -51,18 +51,17 @@ pub fn render(status: &Value, machine: &Value, names: &Names, now: f64) -> Resul
     let (mut running, mut queued, mut finished, mut failed) = (0, 0, 0, 0);
     for job in jobs {
         let st = s(&job["status"]);
-        if matches!(st, "succeeded" | "failed" | "lost") {
-            if DateTime::parse_from_rfc3339(s(&job["finished_at"]))
+        if matches!(st, "succeeded" | "failed" | "lost")
+            && DateTime::parse_from_rfc3339(s(&job["finished_at"]))
                 .ok()
                 .is_some_and(|at| {
                     let age = now - at.timestamp() as f64;
                     (0.0..=10800.0).contains(&age)
                 })
-            {
-                finished += 1;
-                if st != "succeeded" {
-                    failed += 1;
-                }
+        {
+            finished += 1;
+            if st != "succeeded" {
+                failed += 1;
             }
         }
         if !matches!(st, "running" | "starting" | "queued") {
@@ -113,6 +112,7 @@ pub fn render(status: &Value, machine: &Value, names: &Names, now: f64) -> Resul
     let blocks: Vec<_> = groups
         .iter()
         .map(|(name, g)| {
+            let name = clean(name, names, 32);
             let mut text = format!("\n■ {name}    実行中 {}", g.running);
             if g.queued > 0 {
                 text.push_str(&format!(" ・ 待ち {}", g.queued));

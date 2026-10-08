@@ -84,6 +84,43 @@ fn masks_client_names_case_insensitively_in_projects_and_task_titles() {
 }
 
 #[test]
+fn truncation_does_not_merge_distinct_projects_or_tasks() {
+    let prefix = "共通".repeat(40);
+    let status = json!({"jobs":[
+        {"project":format!("{prefix}甲"),"task_title":format!("{prefix}保存"),"status":"running"},
+        {"project":format!("{prefix}甲"),"task_title":format!("{prefix}削除"),"status":"running"},
+        {"project":format!("{prefix}乙"),"task_title":"別の作業","status":"running"}
+    ]});
+    let body = render(&status, &Value::Null, &Names::parse(""), 0.).unwrap();
+    assert_eq!(body.matches('■').count(), 2);
+    assert_eq!(body.matches("    ・").count(), 3);
+    assert!(!body.contains("（2件）"));
+}
+
+#[test]
+fn exact_full_history_page_and_old_parent_in_slots_are_migrated() {
+    let mut h = setup();
+    let mut state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    state["messages"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"100","content":"old parent"}));
+    atomic_json(&h.ctx.here.join("board.json"), &state, 1).unwrap();
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut("500")
+        .unwrap()
+        .extend((121..219).map(|id| message(&id.to_string(), "人の返信", "OWN")));
+    assert_eq!(h.fake.borrow().messages["500"].len(), 100);
+    board::update(&mut h.ctx).unwrap();
+    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    assert_eq!(state["parent_message_id"], "100");
+    assert_eq!(state["messages"][1]["content"], state["parent_content"]);
+    assert_eq!(h.fake.borrow().patches.len(), 2);
+}
+
+#[test]
 fn updates_parent_moves_old_message_once_and_sends_no_posts_or_mentions() {
     let mut h = setup();
     let shared = h.state();

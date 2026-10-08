@@ -159,10 +159,19 @@ impl Context {
         match self.apply_display_rename(job.clone()) {
             Ok(job) => job,
             Err(error) => {
-                self.rt.diagnostic(&format!(
-                    "表示名の改名規則を読めません。実行状態は保持します: {}",
-                    redact_local_log_secrets(&error.message, &self.rt.env())
-                ));
+                static REPORTED: std::sync::LazyLock<std::sync::Mutex<HashSet<PathBuf>>> =
+                    std::sync::LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
+                let path = self.job_dir(s(&job, "id"));
+                if REPORTED
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(path)
+                {
+                    self.rt.diagnostic(&format!(
+                        "表示名の改名規則を読めません。実行状態は保持します: {}",
+                        redact_local_log_secrets(&error.message, &self.rt.env())
+                    ));
+                }
                 job
             }
         }
@@ -233,7 +242,13 @@ impl Context {
         }
         self.write_json(&path, &rule)?;
         job = self.apply_display_rename(job)?;
-        self.save(&job)?;
+        // Legacy live supervisors do not lock every progress write. Their
+        // execution snapshot must never be overwritten from this CLI's copy.
+        // The rule is authoritative immediately; updated writers materialize
+        // it on their next save. Terminal snapshots are protected by state.lock.
+        if !LIVE.contains(&s(&job, "status")) {
+            self.save(&job)?;
+        }
         Ok(json!({"project":to,"jobs_changed":usize::from(before != job)}))
     }
     /// job.json as a dict, or None if it is missing, deleted meanwhile or broken.

@@ -1,7 +1,7 @@
 //! Owner-facing job titles, with no model calls or Discord side effects.
 use regex::{Regex, RegexBuilder};
 use serde_json::Value;
-use std::{fs, io, path::Path};
+use std::{fs, io, path::Path, sync::LazyLock};
 pub const TOOLS: &str = "D:/CC/Tools";
 pub const PRODUCT_NAME: &str = "Re:X";
 
@@ -34,10 +34,15 @@ pub fn replace_display_names(text: &str, aliases: &[String], replacement: &str) 
         .case_insensitive(true)
         .build()
         .unwrap();
+    replace_display_matches(text, &regex, replacement)
+}
+
+fn replace_display_matches(text: &str, regex: &Regex, replacement: &str) -> String {
     let token_char = |c: char| c.is_ascii_alphanumeric() || "_-./\\:@?=%&#+".contains(c);
     let identifier_char = |c: char| c.is_ascii_alphanumeric() || "_-".contains(c);
-    let code = Regex::new(r"(?s)```.*?```|`[^`\n]+`").unwrap();
-    let code: Vec<_> = code.find_iter(text).map(|m| m.range()).collect();
+    static CODE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?s)```.*?```|`[^`\n]+`").unwrap());
+    let code: Vec<_> = CODE.find_iter(text).map(|m| m.range()).collect();
     let mut output = String::new();
     let mut end = 0;
     for m in regex.find_iter(text) {
@@ -74,17 +79,17 @@ pub fn replace_display_names(text: &str, aliases: &[String], replacement: &str) 
 }
 
 pub fn canonical_text(text: &str) -> String {
-    replace_display_names(
-        text,
-        &[
-            format!("GoDD-{}", concat!("x", "LIFE")),
-            "GoDD-Re-X".into(),
-            "GoDD-Re:X".into(),
-            concat!("x", "LIFE").into(),
-            "Re-X".into(),
-        ],
-        PRODUCT_NAME,
-    )
+    static PRODUCT: LazyLock<Regex> = LazyLock::new(|| {
+        RegexBuilder::new(concat!(
+            r"GoDD-x",
+            r"LIFE|GoDD-Re-X|GoDD-Re:X|x",
+            r"LIFE|Re-X"
+        ))
+        .case_insensitive(true)
+        .build()
+        .unwrap()
+    });
+    replace_display_matches(text, &PRODUCT, PRODUCT_NAME)
 }
 
 /// Explicitly authorized GitHub web URL migration; API endpoints and local paths are untouched.

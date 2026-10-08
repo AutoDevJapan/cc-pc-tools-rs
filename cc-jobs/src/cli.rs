@@ -699,7 +699,18 @@ impl Context {
             std::str::from_utf8(&bytes).unwrap()
         ));
         job["task_title"] = json!(a.value("task-title"));
-        job["project"] = json!(a.value("project"));
+        job["project"] = json!(a.value("project").map(cc_task_title::canonical_project));
+        let inferred = cc_task_title::project_from_folder(s(&job, "cwd"));
+        if s(&job, "project").is_empty() && inferred == cc_task_title::PRODUCT_NAME {
+            job["project"] = json!(inferred);
+        }
+        if s(&job, "project") == cc_task_title::PRODUCT_NAME {
+            for key in ["name", "task_title"] {
+                if let Some(text) = job[key].as_str() {
+                    job[key] = json!(cc_task_title::canonical_text(text));
+                }
+            }
+        }
         job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
         self.record_work_owner(&mut job);
         if !job["work_owner"]["pr"].is_u64()

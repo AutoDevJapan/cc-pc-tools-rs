@@ -157,6 +157,62 @@ fn rename_missing_optional_stalls_keeps_unknown_fields_and_backs_up_only_changes
     assert_eq!(fs::read(backups[0].path()).unwrap(), before);
 }
 #[test]
+fn legacy_project_registration_and_add_cannot_restore_historical_display_names() {
+    let temp = Temp::new();
+    let former = concat!("x", "LIFE");
+    assert!(
+        rust_command(&temp.0, &["project", former, "C:/old"])
+            .status
+            .success()
+    );
+    assert!(
+        rust_command(
+            &temp.0,
+            &["add", "Re-X", "Re-Xの作業", "--note", "Re-Xを確認"]
+        )
+        .status
+        .success()
+    );
+    let db = load(&temp.paths().store).unwrap();
+    assert!(db["projects"].get(former).is_none());
+    assert!(db["projects"].get("Re-X").is_none());
+    assert_eq!(db["projects"]["Re:X"], "C:/old");
+    assert_eq!(db["items"][0]["project"], "Re:X");
+    assert_eq!(db["items"][0]["title"], "Re:Xの作業");
+    assert_eq!(db["items"][0]["note"], "Re:Xを確認");
+}
+#[test]
+fn rename_stall_collision_is_rejected_and_rerun_moves_a_remaining_source_stall() {
+    let temp = Temp::new();
+    let mut db = rename_fixture();
+    db["stalls"]["Re:X"] = json!({"keep":true});
+    save(&temp.paths().store, &db).unwrap();
+    let before = fs::read(&temp.paths().store).unwrap();
+    assert!(
+        !rust_command(&temp.0, &["rename-project", "old", "Re:X"])
+            .status
+            .success()
+    );
+    assert_eq!(fs::read(&temp.paths().store).unwrap(), before);
+    db["stalls"].as_object_mut().unwrap().shift_remove("Re:X");
+    let project = db["projects"]
+        .as_object_mut()
+        .unwrap()
+        .shift_remove("old")
+        .unwrap();
+    db["projects"]["Re:X"] = project;
+    db["items"][0]["project"] = json!("Re:X");
+    save(&temp.paths().store, &db).unwrap();
+    assert!(
+        rust_command(&temp.0, &["rename-project", "old", "Re:X"])
+            .status
+            .success()
+    );
+    let renamed = load(&temp.paths().store).unwrap();
+    assert_eq!(renamed["stalls"]["Re:X"], db["stalls"]["old"]);
+    assert!(renamed["stalls"].get("old").is_none());
+}
+#[test]
 fn rename_waits_for_lock_and_reads_the_latest_concurrent_update() {
     let temp = Temp::new();
     let paths = temp.paths();

@@ -267,6 +267,7 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     else {
         unreachable!()
     };
+    let project = &cc_task_title::canonical_project(project);
     let spec = spec.as_ref().filter(|p| !p.as_os_str().is_empty());
     if db["projects"].get(project).is_none() {
         return Err("add failed (ValueError)".into());
@@ -286,7 +287,14 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         return Err("add failed (ValueError)".into());
     }
     let id = db["next_id"].as_i64().ok_or("invalid next_id")?;
-    let mut item = json!({"id":id,"project":project,"title":title,"note":note,"status":"todo","jobs":[],"created":now(),"created_s":time_s(),"updated":now()});
+    let display = |text: &str| {
+        if project == cc_task_title::PRODUCT_NAME {
+            cc_task_title::canonical_text(text)
+        } else {
+            text.into()
+        }
+    };
+    let mut item = json!({"id":id,"project":project,"title":display(title),"note":display(note),"status":"todo","jobs":[],"created":now(),"created_s":time_s(),"updated":now()});
     if let Some(percent) = progress {
         set_progress(&mut item, *percent)?;
     }
@@ -638,11 +646,12 @@ pub fn rename_project(
         let projects = db["projects"].as_object_mut().unwrap();
         projects.shift_remove(from);
         projects.insert(to.into(), source.unwrap());
-        if let Some(stalls) = db.get_mut("stalls").and_then(Value::as_object_mut)
-            && let Some(stall) = stalls.shift_remove(from)
-        {
-            stalls.insert(to.into(), stall);
-        }
+    }
+    if from != to
+        && let Some(stalls) = db.get_mut("stalls").and_then(Value::as_object_mut)
+        && let Some(stall) = stalls.shift_remove(from)
+    {
+        stalls.insert(to.into(), stall);
     }
     Ok(
         json!({"project":to,"projects_renamed":usize::from(renamed),"items_renamed":project_items,"text_items_changed":text_items,"fields_changed":fields,"github_fields_changed":github_fields}),
@@ -668,7 +677,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     }
     let mut output = Vec::new();
     match cmd {
-        Command::Project { name, path } => db["projects"][name] = json!(path),
+        Command::Project { name, path } => {
+            db["projects"][cc_task_title::canonical_project(name)] = json!(path)
+        }
         Command::RenameProject {
             from,
             to,

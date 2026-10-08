@@ -8,6 +8,7 @@ default-run = "codex_jobs"
 cc-job-policy = { path = "../cc-job-policy" }
 cc-chrome = { path = "../cc-chrome" }
 cc-task-title = { path = "../cc-task-title" }
+cc-redact = { path = "../cc-redact" }
 serde = "1"
 serde_json = { version = "1", features = ["preserve_order"] }
 chrono = "0.4"

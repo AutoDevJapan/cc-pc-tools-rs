@@ -655,7 +655,7 @@ impl Context {
         job["task_title"] = json!(a.value("task-title"));
         job["project"] = json!(a.value("project"));
         job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
-        let bad = codex_args(&job, &self.jobs.join(&base))
+        let bad = codex_args(&job)
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))
             .collect::<Vec<_>>();

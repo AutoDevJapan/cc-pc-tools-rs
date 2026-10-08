@@ -414,8 +414,11 @@ pub fn redact_local_log_secrets(text: &str, env: &BTreeMap<String, String>) -> S
     LogRedactor::new(env).redact(text)
 }
 /// Cache environment and compiled patterns once per stdout/stderr pump.
+/// Besides the configured Discord values it masks every credential form known
+/// to `cc_redact` and the values of credential-named environment variables.
 pub struct LogRedactor {
     secrets: Vec<Regex>,
+    common: cc_redact::Redactor,
 }
 impl LogRedactor {
     pub fn new(env: &BTreeMap<String, String>) -> Self {
@@ -433,9 +436,13 @@ impl LogRedactor {
                 })
                 .map(|(_, value)| Regex::new(&format!("(?i){}", regex::escape(value))).unwrap())
                 .collect(),
+            common: cc_redact::Redactor::with_env(env),
         }
     }
     pub fn redact(&self, text: &str) -> String {
+        self.common.text(&self.configured(text)).into_owned()
+    }
+    fn configured(&self, text: &str) -> String {
         static RE: OnceLock<Regex> = OnceLock::new();
         let mut text = RE
             .get_or_init(|| {
@@ -449,13 +456,20 @@ impl LogRedactor {
         }
         text
     }
+    /// Redact parsed string values (and keys), never the serialized JSON, so
+    /// quotes and escapes stay valid. Credential-named keys mask their value.
     pub fn event(&self, v: &Value) -> Value {
+        let mut v = self.configured_event(v);
+        self.common.json(&mut v);
+        v
+    }
+    fn configured_event(&self, v: &Value) -> Value {
         match v {
-            Value::String(s) => json!(self.redact(s)),
-            Value::Array(a) => Value::Array(a.iter().map(|v| self.event(v)).collect()),
+            Value::String(s) => json!(self.configured(s)),
+            Value::Array(a) => Value::Array(a.iter().map(|v| self.configured_event(v)).collect()),
             Value::Object(o) => Value::Object(
                 o.iter()
-                    .map(|(k, v)| (self.redact(k), self.event(v)))
+                    .map(|(k, v)| (self.configured(k), self.configured_event(v)))
                     .collect(),
             ),
             _ => v.clone(),
@@ -479,6 +493,10 @@ pub fn pump(
         .open(path)?;
     let mut reader = std::io::BufReader::new(stream);
     let redactor = LogRedactor::new(&rt.env());
+    let mask = |t: &str| redactor.redact(t);
+    // Plain lines can carry a private key or quoted credential over several
+    // lines; their state continues across the JSON events in between.
+    let mut plain = cc_redact::Stream::default();
     loop {
         let mut raw = vec![];
         if reader.read_until(b'\n', &mut raw)? == 0 {
@@ -490,15 +508,19 @@ pub fn pump(
             for (k, v) in ev.as_object_mut().unwrap().iter() {
                 stamped[k] = v.clone();
             }
-            writeln!(f, "{}", compact(&redactor.event(&stamped)))?;
+            // job.json, notifications and recovery prompts are built from the
+            // queued event, so it gets the same masked values as events.jsonl.
+            let stamped = redactor.event(&stamped);
+            writeln!(f, "{}", compact(&stamped))?;
             f.flush()?;
-            send(stamped.clone());
+            send(stamped);
         } else {
-            f.write_all(redactor.redact(&String::from_utf8_lossy(&raw)).as_bytes())?;
+            f.write_all(plain.line(&String::from_utf8_lossy(&raw), mask).as_bytes())?;
         }
         f.flush()?;
     }
-    Ok(())
+    f.write_all(plain.finish(mask).as_bytes())?;
+    f.flush()
 }
 trait ObjectResult {
     fn filter_object(self) -> std::result::Result<Value, ()>;
@@ -522,13 +544,16 @@ pub fn pump_stderr(
         .open(path)?;
     let mut reader = std::io::BufReader::new(stream);
     let redactor = LogRedactor::new(&rt.env());
+    let mask = |t: &str| redactor.redact(t);
+    let mut stream = cc_redact::Stream::default();
     loop {
         let mut raw = vec![];
         if reader.read_until(b'\n', &mut raw)? == 0 {
             break;
         }
-        f.write_all(redactor.redact(&String::from_utf8_lossy(&raw)).as_bytes())?;
+        f.write_all(stream.line(&String::from_utf8_lossy(&raw), mask).as_bytes())?;
         f.flush()?;
     }
-    Ok(())
+    f.write_all(stream.finish(mask).as_bytes())?;
+    f.flush()
 }

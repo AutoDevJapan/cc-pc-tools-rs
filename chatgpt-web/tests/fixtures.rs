@@ -32,6 +32,7 @@ fn run(home: &Path, page: &str, args: &[&str]) -> Output {
         .env("CHATGPT_WEB_HOME", home)
         .env("CHATGPT_WEB_URL", fixture_url(page))
         .env("CHATGPT_WEB_DISCORD", "off")
+        .env("CHATGPT_WEB_HEADLESS", "1")
         .output()
         .unwrap()
 }
@@ -70,6 +71,22 @@ fn stdout(o: &Output) -> String {
 
 fn stderr(o: &Output) -> String {
     String::from_utf8_lossy(&o.stderr).into_owned()
+}
+
+#[test]
+fn fixture_chrome_runs_headless_and_closes() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let o = run(
+        dir.path(),
+        "chat.html",
+        &["probe", "page:navigator.userAgent"],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", stderr(&o));
+    assert!(stdout(&o).contains("HeadlessChrome/"), "{}", stdout(&o));
+    assert_browser_closed(dir.path());
 }
 
 #[test]

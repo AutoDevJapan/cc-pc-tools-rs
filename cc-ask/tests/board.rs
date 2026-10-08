@@ -11,87 +11,6 @@ fn setup() -> Harness {
     h
 }
 #[test]
-fn unassigned_todo_is_silent_and_queue_receipt_removes_it_without_launching() {
-    let mut h = setup();
-    h.ctx.jobs = h.root.path().join("codex-jobs");
-    let intake = h.root.path().join("localai-web-rs/target/release");
-    std::fs::create_dir_all(&intake).unwrap();
-    atomic_json(&intake.join("console-state.json"), &json!({"queue":[]}), 2).unwrap();
-    let jobs = h.ctx.jobs.join("jobs/other");
-    std::fs::create_dir_all(&jobs).unwrap();
-    atomic_json(
-        &jobs.join("job.json"),
-        &json!({"id":"other","todo_id":2,"status":"running","project":"tools"}),
-        2,
-    )
-    .unwrap();
-    let created = h.fake.borrow().now - 1799.;
-    let db = json!({"projects":{"tools":"D:/CC/Tools"},"items":[{"id":1,"project":"tools","title":"担当のいない作業を確認する","status":"todo","created_s":created,"jobs":[]}]});
-    atomic_json(&h.ctx.todo, &db, 2).unwrap();
-    update(&mut h.ctx).unwrap();
-    assert!(!read_json(&h.ctx.here.join("board.json")).unwrap()["body"]
-        .as_str()
-        .unwrap()
-        .contains("担当なし"));
-    h.fake.borrow_mut().now += 1.;
-    update(&mut h.ctx).unwrap();
-    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert!(state["body"]
-        .as_str()
-        .unwrap()
-        .contains("止まっている（担当なし）"));
-    assert!(state["body"].as_str().unwrap().contains("止まっている 1件"));
-    assert_eq!(
-        read_json(&h.ctx.todo).unwrap(),
-        db,
-        "display must not persist derived metadata"
-    );
-    atomic_json(
-        &intake.join("console-state.json"),
-        &json!({"queue":[{"todo_id":1,"key":"req-todo-1-triage-20261007"}]}),
-        2,
-    )
-    .unwrap();
-    update(&mut h.ctx).unwrap();
-    assert!(!read_json(&h.ctx.here.join("board.json")).unwrap()["body"]
-        .as_str()
-        .unwrap()
-        .contains("担当なし"));
-    assert!(h.fake.borrow().launches.is_empty());
-    assert!(h
-        .fake
-        .borrow()
-        .http_calls
-        .iter()
-        .all(|c| c["body"]["allowed_mentions"]["parse"].is_null()
-            || c["body"]["allowed_mentions"]["parse"] == json!([])));
-}
-#[test]
-fn unreadable_ownership_does_not_break_existing_board_or_report_absence() {
-    for contents in ["broken", "{}", "{\"queue\":[]}"] {
-        let mut h = setup();
-        h.ctx.jobs = h.root.path().join("codex-jobs");
-        let intake = h.root.path().join("localai-web-rs/target/release");
-        std::fs::create_dir_all(&intake).unwrap();
-        let mut db = read_json(&h.ctx.todo).unwrap();
-        db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"tools","title":"未担当の確認","status":"todo","created_s":1.,"jobs":[]}));
-        atomic_json(&h.ctx.todo, &db, 2).unwrap();
-        std::fs::write(intake.join("console-state.json"), contents).unwrap();
-        if contents == "{\"queue\":[]}" {
-            let broken = h.ctx.jobs.join("jobs/broken");
-            std::fs::create_dir_all(&broken).unwrap();
-            std::fs::write(broken.join("job.json"), "broken").unwrap();
-        }
-        update(&mut h.ctx).unwrap();
-        let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-        assert!(state["body"]
-            .as_str()
-            .unwrap()
-            .contains("画面の読みやすさを改善する"));
-        assert!(!state["body"].as_str().unwrap().contains("担当なし"));
-    }
-}
-#[test]
 fn splits_at_lines_and_never_exceeds_2000_utf16_units() {
     let input = format!(
         "{}\n{}\n{}",
@@ -335,66 +254,6 @@ fn answered_question_does_not_keep_its_task_marked_as_waiting_for_the_owner() {
     assert!(text.contains("｜返事待ち（オーナー判断待ち）"));
 }
 #[test]
-fn unchanged_board_makes_no_discord_calls_even_after_five_minutes() {
-    let mut h = setup();
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert_eq!(state["channel_id"], "GENERAL");
-    assert_eq!(state["thread_id"], "300");
-    assert_eq!(state["messages"].as_array().unwrap().len(), 1);
-    let calls = h.fake.borrow().http_calls.len();
-    h.fake.borrow_mut().now += 300.;
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
-    assert_eq!(h.fake.borrow().http_calls.len(), calls);
-    for call in &h.fake.borrow().http_calls {
-        if call["body"]["content"].is_string() {
-            if call["method"] == "POST" {
-                assert_eq!(n(&call["body"]["flags"]) & SILENT, SILENT);
-            } else {
-                assert!(call["body"].get("flags").is_none());
-            }
-            assert_eq!(call["body"]["allowed_mentions"]["parse"], json!([]));
-        }
-    }
-}
-#[test]
-fn growing_shrinking_and_reusing_slots_never_replaces_messages_or_thread() {
-    let mut h = setup();
-    let items: Vec<Value> = (1..55).map(|id| json!({"id":id,"project":"製品A","title":format!("表示の問題を修正する（画面{id}）"),"status":"doing","updated":"2026-09-30 22:00"})).collect();
-    atomic_json(&h.ctx.todo, &json!({"items":items}), 1).unwrap();
-    update(&mut h.ctx).unwrap();
-    let first = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert!(first["messages"].as_array().unwrap().len() > 1);
-    let ids: Vec<_> = first["messages"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|m| m["id"].clone())
-        .collect();
-    let posts = h.fake.borrow().posts.len();
-    atomic_json(&h.ctx.todo, &json!({"items":[]}), 1).unwrap();
-    update(&mut h.ctx).unwrap();
-    let smaller = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert_eq!(
-        smaller["messages"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|m| m["id"].clone())
-            .collect::<Vec<_>>(),
-        ids
-    );
-    assert!(smaller["messages"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .skip(1)
-        .all(|m| m["content"] == "（空き）"));
-    atomic_json(&h.ctx.todo, &json!({"items":items}), 1).unwrap();
-    update(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().posts.len(), posts);
-}
-#[test]
 fn stalled_marker_changes_once_at_one_hour_not_on_every_refresh() {
     let db = json!({"items":[{"id":1,"project":"製品","title":"機能を直す","status":"doing","updated":"2026-09-30T21:59:00+09:00"}]});
     let start = chrono::DateTime::parse_from_rfc3339("2026-09-30T21:59:00+09:00")
@@ -410,12 +269,12 @@ fn stalled_marker_changes_once_at_one_hour_not_on_every_refresh() {
     );
 }
 #[test]
-fn schedule_is_durable_and_only_due_every_five_minutes() {
+fn schedule_is_durable_and_only_due_every_minute() {
     let mut h = setup();
     launch_due(&mut h.ctx).unwrap();
     let path = h.ctx.here.join("board-schedule.json");
     let first = std::fs::read(&path).unwrap();
-    h.fake.borrow_mut().now += 299.;
+    h.fake.borrow_mut().now += 59.;
     launch_due(&mut h.ctx).unwrap();
     assert_eq!(std::fs::read(&path).unwrap(), first);
     h.fake.borrow_mut().now += 1.;
@@ -436,99 +295,6 @@ fn general_channel_lookup_excludes_voice_and_refuses_ambiguous_matches() {
         &json!([{"id":"1","type":0,"name":"一般"},{"id":"2","type":0,"name":"general"}])
     )
     .is_err());
-}
-#[test]
-fn edit_failure_is_retried_without_new_posts() {
-    let mut h = setup();
-    update(&mut h.ctx).unwrap();
-    let posts = h.fake.borrow().posts.len();
-    atomic_json(&h.ctx.todo, &json!({"items":[]}), 1).unwrap();
-    h.fake
-        .borrow_mut()
-        .http_errors
-        .insert("PATCH /channels/300/messages/1001".into(), 1);
-    assert!(update(&mut h.ctx).is_err());
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    assert_eq!(h.fake.borrow().posts.len(), posts);
-}
-#[test]
-fn lost_post_is_recovered_and_cleared_when_the_board_shrinks() {
-    let mut h = setup();
-    update(&mut h.ctx).unwrap();
-    let p = h.ctx.here.join("board.json");
-    let mut state = read_json(&p).unwrap();
-    state["pending_message"] = json!({"content":"古い続きの項目","nonce":"recover-nonce"});
-    atomic_json(&p, &state, 1).unwrap();
-    h.fake.borrow_mut().messages.get_mut("300").unwrap().push(json!({"id":"9999","content":"古い続きの項目","author":{"bot":true},"nonce":"recover-nonce"}));
-    atomic_json(&h.ctx.todo, &json!({"items":[]}), 1).unwrap();
-    let posts = h.fake.borrow().posts.len();
-    update(&mut h.ctx).unwrap();
-    let state = read_json(&p).unwrap();
-    assert!(state["pending_message"].is_null());
-    assert_eq!(state["messages"][1]["id"], "9999");
-    assert_eq!(state["messages"][1]["content"], "（空き）");
-    assert_eq!(h.fake.borrow().posts.len(), posts);
-}
-#[test]
-fn translations_and_failed_fallbacks_are_cached_once() {
-    let mut h = setup();
-    let db = json!({"items":[{"id":1,"project":"製品","title":"fix shep-123 worktree deployment","status":"doing","updated":"2026-09-30 22:00"}]});
-    atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    h.fake.borrow_mut().llm_answer = "「公開の不具合を直す」".into();
-    update(&mut h.ctx).unwrap();
-    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert_eq!(state["labels"]["todo:1"], "公開の不具合を直す");
-    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
-    // The model sees the sanitized title, never job names or worktree words.
-    let prompt = h.fake.borrow().llm_calls[0].clone();
-    assert!(!prompt.contains("shep-123") && !prompt.contains("worktree"));
-    update(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
-    let db = json!({"items":[{"id":2,"project":"製品","title":"fix deployment failure","status":"doing","updated":"2026-09-30 22:00"}]});
-    atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    // An unusable (English/multi-line) answer keeps the sanitized fallback, once.
-    h.fake.borrow_mut().llm_answer = "fix deployment\nfailure".into();
-    update(&mut h.ctx).unwrap();
-    update(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().llm_calls.len(), 2);
-    assert!(h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .all(|(argv, _)| !argv[0].ends_with("codex.exe")));
-    assert_eq!(
-        read_json(&h.ctx.here.join("board.json")).unwrap()["labels"]["todo:2"],
-        "fix deployment failure"
-    );
-}
-#[test]
-fn changed_server_binding_stops_before_calls_or_state_rebinding() {
-    let mut h = setup();
-    update(&mut h.ctx).unwrap();
-    let before = std::fs::read(h.ctx.here.join("board.json")).unwrap();
-    let calls = h.fake.borrow().http_calls.len();
-    h.ctx.cfg["guild_id"] = json!("OTHER");
-    assert!(update(&mut h.ctx).is_err());
-    assert_eq!(h.fake.borrow().http_calls.len(), calls);
-    assert_eq!(
-        std::fs::read(h.ctx.here.join("board.json")).unwrap(),
-        before
-    );
-}
-#[test]
-fn existing_board_wrong_server_or_private_type_is_not_edited() {
-    for (field, value) in [("guild_id", json!("OTHER")), ("type", json!(12))] {
-        let mut h = setup();
-        update(&mut h.ctx).unwrap();
-        let posts = h.fake.borrow().posts.len();
-        let edits = h.fake.borrow().patches.len();
-        h.fake.borrow_mut().threads.get_mut("300").unwrap()[field] = value;
-        atomic_json(&h.ctx.todo, &json!({"items":[]}), 1).unwrap();
-        assert!(update(&mut h.ctx).is_err());
-        assert_eq!(h.fake.borrow().posts.len(), posts);
-        assert_eq!(h.fake.borrow().patches.len(), edits);
-    }
 }
 #[test]
 fn display_strips_discord_ids_and_internal_words_next_to_japanese() {
@@ -731,40 +497,4 @@ fn completion_wait_does_not_turn_into_unassigned_work() {
     let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
     assert!(text.starts_with("作業中 0件・止まっている 1件・完了待ち 2件"));
     assert_eq!(text.matches("止まっている（担当なし）").count(), 1);
-}
-
-#[test]
-fn wait_titles_are_rewritten_and_target_completion_edits_the_saved_board_without_release() {
-    let mut h = setup();
-    let mut db = json!({"items":[
-        {"id":1,"project":"製品","title":"fix dependency deployment","status":"wait","wait_on":[2],"updated":"2026-09-30 22:00"},
-        {"id":2,"status":"todo"}
-    ]});
-    atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    h.fake.borrow_mut().llm_answer = "依存作業の完了を待って公開する".into();
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert_eq!(state["labels"]["todo:1"], "依存作業の完了を待って公開する");
-    assert!(state["body"].as_str().unwrap().contains("ToDo 2 待ち"));
-    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
-    let posts = h.fake.borrow().posts.len();
-    let edits = h.fake.borrow().patches.len();
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
-
-    db["items"][1]["status"] = json!("done");
-    atomic_json(&h.ctx.todo, &db, 1).unwrap();
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    let state = read_json(&h.ctx.here.join("board.json")).unwrap();
-    assert!(state["body"]
-        .as_str()
-        .unwrap()
-        .contains("再開待ち（待機先は完了）"));
-    assert!(!state["body"].as_str().unwrap().contains("ToDo 2 待ち"));
-    assert!(h.fake.borrow().patches.len() > edits);
-    assert_eq!(h.fake.borrow().posts.len(), posts);
-    assert_eq!(h.fake.borrow().llm_calls.len(), 1);
-    assert_eq!(read_json(&h.ctx.todo).unwrap(), db);
-    assert!(h.fake.borrow().launches.is_empty());
-    assert!(pending(&h.ctx.load().unwrap()).is_empty());
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
 }

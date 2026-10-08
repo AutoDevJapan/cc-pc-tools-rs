@@ -276,9 +276,12 @@ pub fn decide(
     state.pace_ratio = pace_ratio_since(&state.openai, state.pace_adjusted_at, now);
     let latest = state.openai.last();
     let quota_fresh = state.quota_checked_at > 0.
+        && now >= state.quota_checked_at
         && now - state.quota_checked_at <= cfg.quota_interval_seconds as f64 + 60.;
     let quota_known = quota_fresh
-        && latest.is_some_and(|q| q.complete && q.accounts.iter().all(|a| a.reset_at > now));
+        && latest.is_some_and(|q| {
+            q.complete && q.at <= now && q.accounts.iter().all(|a| a.reset_at > now)
+        });
     let quota_empty = quota_known && !available(latest.unwrap());
     let mut reasons = Vec::new();
     if recent_429_count >= 2 && last_429_at > state.last_429_at {

@@ -237,8 +237,20 @@ fn modest_overspend_is_proportional_and_next_sample_uses_post_reduction_baseline
 #[test]
 fn incompatible_old_quota_does_not_hide_new_comparable_window() {
     let mut history = vec![quota(1000., 20.), quota(1300., 20.), quota(1600., 21.)];
-    history[0].accounts[0].reset_at = 99999.;
-    assert!(pace_ratio(&history).is_some());
+    history[0].accounts[0].reset_at = 99000.;
+    let expected = (1. / 300.) / (79. / 98400.);
+    assert!((pace_ratio(&history).unwrap() - expected).abs() < 1e-8);
+}
+#[test]
+fn usage_decrease_rebases_only_that_account_and_future_quota_cannot_grow_the_limit() {
+    let history = vec![quota(1000., 90.), quota(1300., 20.), quota(1600., 21.)];
+    let expected = (1. / 300.) / (79. / 98400.);
+    assert!((pace_ratio(&history).unwrap() - expected).abs() < 1e-8);
+    let mut s = state();
+    s.openai[0].at = 1460.;
+    let s = decide(&AdaptiveConfig::default(), s, healthy(), 1360., 1, 0, 0.);
+    assert!(s.pace_ratio.is_none());
+    assert_eq!(s.max_running, 25);
 }
 #[test]
 fn cpu_initial_reset_or_zero_delta_is_unknown() {

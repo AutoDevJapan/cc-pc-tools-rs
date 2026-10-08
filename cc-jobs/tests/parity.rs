@@ -75,6 +75,30 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn failed_supervisor_upgrade_survives_refresh_and_is_retried_next_minute() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        config(&t, json!({"max_running":4,"adaptive":{}}));
+        t.rt.procs.lock().unwrap().insert(601, 123);
+        t.put(json!({"id":"old-wait","status":"queued","queued_at":"2020-01-01T00:00:00+09:00","pid":601,"pid_created":123,"queue_supervisor_version":4}));
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        t.ctx.adjust_limit().unwrap();
+        let failed = t.ctx.load("old-wait").unwrap();
+        assert_eq!(failed["queue_restart_pending"], true);
+        assert_eq!(t.ctx.refresh(failed, false).unwrap()["status"], "queued");
+        t.rt.tick(180.);
+        assert_eq!(
+            t.ctx
+                .refresh(t.ctx.load("old-wait").unwrap(), false)
+                .unwrap()["status"],
+            "queued"
+        );
+        t.rt.supervisor_fail.store(false, Ordering::Relaxed);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(&*t.rt.kills.lock().unwrap(), &[601]);
+    }
+    #[test]
     fn minute_controller_upgrades_only_legacy_queued_supervisors_and_rechecks_later_requeues() {
         let t = Test::new();
         t.rt.advance_epoch.store(true, Ordering::Relaxed);
@@ -93,10 +117,11 @@ mod queue_regressions {
         }
         t.ctx.adjust_limit().unwrap();
         assert_eq!(&*t.rt.kills.lock().unwrap(), &[601]);
-        assert_eq!(
-            t.ctx.load("old-wait").unwrap()["queue_supervisor_version"],
-            5
-        );
+        let mut ack = t.ctx.load("old-wait").unwrap();
+        assert_eq!(ack["queue_supervisor_version"], 4);
+        ack["queue_supervisor_version"] = json!(5);
+        ack["queue_restart_pending"] = json!(false);
+        t.ctx.save(&ack).unwrap();
         assert_eq!(t.ctx.load("old-run").unwrap()["status"], "running");
         let mut job = t.ctx.load("old-run").unwrap();
         job["status"] = json!("queued");
@@ -3393,6 +3418,7 @@ impl Test {
             rt: rt.clone(),
         };
         fs::write(&ctx.gto, b"").unwrap();
+        fs::write(&ctx.executable, b"fake supervisor executable").unwrap();
         Self { _tmp: tmp, ctx, rt }
     }
     fn put(&self, j: Value) -> Value {

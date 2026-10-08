@@ -310,6 +310,7 @@ impl Context {
             if s(&snapshot, "status") != "queued"
                 || version.is_some_and(|v| {
                     snapshot["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
+                        && snapshot["queue_restart_pending"] != true
                 })
             {
                 continue;
@@ -334,8 +335,10 @@ impl Context {
             };
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued"
-                || version
-                    .is_some_and(|v| job["queue_supervisor_version"].as_u64().unwrap_or(0) >= v)
+                || version.is_some_and(|v| {
+                    job["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
+                        && job["queue_restart_pending"] != true
+                })
                 || job["cancel_requested"] == true
                 || self.is_ours(&job, "codex_pid")
             {
@@ -356,6 +359,20 @@ impl Context {
     }
     /// Caller holds the global gate and this job's state lock; no Codex is live.
     pub(crate) fn restart_queued_supervisor(&self, job: &mut Value) -> Result<()> {
+        let executable = fs::metadata(&self.executable).map_err(|e| {
+            Error::file_io(
+                "inspect replacement supervisor executable",
+                &self.executable,
+                e,
+            )
+        })?;
+        if !executable.is_file() {
+            return Err(Error::new(
+                "replacement supervisor executable is not a file",
+            ));
+        }
+        job["queue_restart_pending"] = json!(true);
+        self.save(job)?;
         let jid = s(job, "id").to_string();
         if self.is_ours(job, "pid") {
             // Detached supervisors launched by this process are independent
@@ -390,8 +407,7 @@ impl Context {
             &self.job_dir(&jid),
             &jid,
         )?;
-        // Do not mark a failed spawn as upgraded: the next minute must retry.
-        job["queue_supervisor_version"] = json!(5);
+        // Only the new controller acknowledges its version and clears pending.
         if let Some(pid) = pid {
             job["pid"] = json!(pid);
             job["pid_created"] = json!(self.rt.proc_created(pid));
@@ -802,7 +818,9 @@ impl Context {
             }
             let reason = if j["cancel_requested"] == true {
                 Some(("cancel_requested", "取り消し処理待ち"))
-            } else if caller != Some(s(j, "id")) && !self.supervisor_alive(j) {
+            } else if caller != Some(s(j, "id"))
+                && (j["queue_restart_pending"] == true || !self.supervisor_alive(j))
+            {
                 Some(("supervisor_missing", "見張りの再起動待ち"))
             } else if j["retry_not_before"].as_f64().unwrap_or(0.) > self.rt.epoch() {
                 Some(("retry_cooldown", "利用枠の再試行時刻待ち"))

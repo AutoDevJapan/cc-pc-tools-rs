@@ -195,6 +195,10 @@ impl Context {
         created.is_some() && created == j[format!("{key}_created")].as_u64()
     }
     pub fn supervisor_alive(&self, j: &Value) -> bool {
+        // An intentional replacement is durable queue work, not an orphan.
+        if s(j, "status") == "queued" && j["queue_restart_pending"] == true {
+            return true;
+        }
         if truth(&j["pid"]) {
             self.is_ours(j, "pid")
         } else {
@@ -703,6 +707,7 @@ impl Context {
             job["pid"] = json!(self.rt.pid());
             job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
             job["queue_supervisor_version"] = json!(5);
+            job["queue_restart_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);
             job["last_event_at"] = json!(self.rt.now());
             job["activity"] = json!(if truth(&job["retry_count"]) {

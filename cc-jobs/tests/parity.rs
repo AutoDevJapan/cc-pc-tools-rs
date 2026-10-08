@@ -293,6 +293,13 @@ mod capacity_regressions {
         assert!(args[1].iter().any(|a| a == "model_reasoning_effort=high"));
         assert!(t.rt.kills.lock().unwrap().is_empty());
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert!(
+            t.rt.diagnostics
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|line| line.contains("gpt-6-astraで再開"))
+        );
     }
 
     #[test]
@@ -302,6 +309,13 @@ mod capacity_regressions {
         assert_eq!(saved["capacity_retry_count"], 3);
         assert_eq!(saved["capacity_history"].as_array().unwrap().len(), 3);
         assert_eq!(saved["last_error"], "Selected model is at capacity");
+        assert!(
+            t.rt.diagnostics
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|line| line.contains("最大3回に達しました"))
+        );
         let args = t.rt.spawn_args.lock().unwrap();
         assert_eq!(args.len(), 4);
         for (arg, model) in
@@ -6737,6 +6751,55 @@ mod end_to_end {
             });
             assert_eq!(context.queue_config().unwrap().max_running, 3);
         });
+    }
+    #[test]
+    fn real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit() {
+        for (mode, expected, count) in [
+            ("capacity-once", "succeeded", 1),
+            ("capacity-always", "failed", 3),
+        ] {
+            let t = E2e::new();
+            let jid = t.start(mode, &t.tmp.0, "再開する内容\nsecond line".as_bytes());
+            t.until(|| TERMINAL.contains(&s(&t.job(&jid), "status")));
+            let job = t.job(&jid);
+            assert_eq!(job["status"], expected);
+            assert_eq!(job["capacity_retry_count"], count);
+            let calls: Vec<Value> = fs::read_to_string(t.rec.join("capacity-calls.jsonl"))
+                .unwrap()
+                .lines()
+                .map(|line| serde_json::from_str(line).unwrap())
+                .collect();
+            assert_eq!(calls.len(), count as usize + 1);
+            for call in &calls {
+                assert_eq!(call["cwd"], t.tmp.0.to_string_lossy().as_ref());
+                assert_eq!(call["prompt"], calls[0]["prompt"]);
+            }
+            assert!(
+                calls[0]["prompt"]
+                    .as_str()
+                    .unwrap()
+                    .contains("再開する内容\nsecond line")
+            );
+            for (index, call) in calls.iter().enumerate() {
+                let args: Vec<_> = call["argv"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap())
+                    .collect();
+                assert!(args.windows(2).any(|w| w
+                    == [
+                        "-m",
+                        ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"][index]
+                    ]));
+                if index > 0 {
+                    assert!(
+                        args.windows(2)
+                            .any(|w| w == ["resume", "01a0e883-7628-7121-9540-6780fd4cd6f4"])
+                    );
+                }
+            }
+        }
     }
     #[test]
     fn thirty_parallel_run_processes_share_the_real_queue_files() {

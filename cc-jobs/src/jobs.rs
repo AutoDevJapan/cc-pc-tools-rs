@@ -812,7 +812,9 @@ impl Context {
             job["queue_restart_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);
             job["last_event_at"] = json!(self.rt.now());
-            job["activity"] = json!(if truth(&job["retry_count"]) {
+            job["activity"] = json!(if truth(&job["retry_count"])
+                || truth(&job["capacity_retry_count"])
+            {
                 s(&job, "activity")
             } else {
                 "順番待ち"

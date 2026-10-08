@@ -20,28 +20,33 @@ impl Context {
         {
             return false;
         }
+        let stop = |reason: &str| {
+            self.rt
+                .diagnostic(&format!("モデルの混雑による自動再開を終了: {reason}"));
+            false
+        };
         let count = job["capacity_retry_count"].as_u64().unwrap_or(0);
         if count >= MAX_SWITCHES {
-            return false;
+            return stop("切り替えが最大3回に達しました");
         }
         let Some(index) = MODELS.iter().position(|model| *model == s(job, "model")) else {
-            return false;
+            return stop("指定モデルは切り替えの対象外です");
         };
         let Some(session) = ["thread_id", "resume_session"]
             .iter()
             .find_map(|key| normalize_uuid(s(job, key)))
         else {
-            return false;
+            return stop("有効なセッションIDがありません");
         };
         if !job["capacity_history"].is_null() && !job["capacity_history"].is_array() {
-            return false;
+            return stop("保存された切り替え履歴の形式が不正です");
         }
         let next = MODELS[(index + 1) % MODELS.len()];
         let now = self.rt.now();
         let entry = json!({
             "attempt": count + 1, "at": now, "session": session,
             "from_model": job["model"], "to_model": next,
-            "error": redact_local_log_secrets(s(job, "last_error"), &self.rt.env())
+            "error": short(&redact_local_log_secrets(s(job, "last_error"), &self.rt.env()), 1000)
         });
         if job["capacity_history"].is_null() {
             job["capacity_history"] = json!([]);
@@ -55,6 +60,7 @@ impl Context {
             "順番待ち: モデルの混雑により{next}で再開（{}回目、最大3回）",
             count + 1
         ));
+        self.rt.diagnostic(s(job, "activity"));
         true
     }
 }

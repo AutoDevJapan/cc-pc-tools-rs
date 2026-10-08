@@ -1641,8 +1641,16 @@ mod tests {
             .as_os_str()
             .encode_wide()
             .count();
-        assert!(initial < 230);
-        c.quarantine = c.base.join("q".repeat(231 - initial));
+        assert!(initial < 240);
+        c.quarantine = c.base.join("q".repeat(241 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            240
+        );
         assert!(
             c.destination()
                 .join("files/source/.git/objects/aa/01234567890123456789012345678901234567")
@@ -1669,7 +1677,23 @@ mod tests {
     #[test]
     fn git_startup_root_limit_is_rejected_before_preparing_a_move() {
         let mut c = fixture_for(RESUME_ID);
-        c.quarantine = c.base.join("long-quarantine-".repeat(6));
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 241);
+        c.quarantine = c.base.join("q".repeat(242 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            241
+        );
         assert!(matches!(c.plan(c.id), Err("GIT_DESTINATION_ROOT_TOO_LONG")));
         assert!(!c.ticket_path().exists());
         assert!(!c.destination().exists());

@@ -23,6 +23,28 @@ fn processes() -> Processes {
     .collect()
 }
 #[test]
+fn duplicate_pr_recovery_becomes_owner_completion_wait_without_dispatch() {
+    let mut d = db("doing");
+    d["items"][0]["jobs"] = json!(["owner"]);
+    d["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"demo","status":"doing","title":"PR86を修正","jobs":["previous"],"spec":"saved","note":"original evidence"}));
+    let mut owner = job("running");
+    owner["id"] = json!("owner");
+    owner["todo_id"] = json!(1);
+    owner["last_event_at"] = json!(9900);
+    owner["work_owner"] = json!({"repository":"o/r","pr":86,"worktree":"/owner"});
+    let old = json!({"id":"previous","status":"succeeded","todo_id":2,"created_at":1,"work_owner":{"repository":"o/r","pr":86,"worktree":"/other"}});
+    assert!(
+        plan(&mut d, &[owner, old], &processes(), 10000., "")
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(d["items"][1]["status"], "wait");
+    assert_eq!(d["items"][1]["wait_on"], json!([1]));
+    assert_eq!(d["items"][1]["spec"], "saved");
+    assert_eq!(d["items"][1]["note"], "original evidence");
+    assert!(d["items"][1]["stall_recovery"]["pending"].is_null());
+}
+#[test]
 fn running_stale_and_missing_tree_restart_but_fresh_and_reused_pids_do_not_look_alive() {
     for ps in [
         processes(),

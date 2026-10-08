@@ -226,6 +226,27 @@ fn plan_with_intake(
     accepted: &BTreeSet<i64>,
 ) -> Result<Vec<i64>> {
     cc_job_policy::todo_wait::release_ready(db);
+    let owner_projects = db["projects"].clone();
+    let owner_jobs: Vec<_> = jobs
+        .iter()
+        .filter(|j| !excluded(s(&j["project"]), s(&j["cwd"]), clients))
+        .cloned()
+        .collect();
+    cc_job_policy::work_owner::reconcile_todos_if(db, &owner_jobs, |item| {
+        !excluded(
+            s(&item["project"]),
+            s(&owner_projects[s(&item["project"])]),
+            clients,
+        ) && !excluded(
+            s(&item["project"]),
+            s(&latest_linked(item, jobs)["cwd"]),
+            clients,
+        ) && !excluded(
+            s(&item["project"]),
+            s(&item["scheduler"]["worktree"]),
+            clients,
+        )
+    });
     if !db["stalls"].is_object() {
         db["stalls"] = json!({});
     }

@@ -75,6 +75,137 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn later_normal_priority_does_not_deadlock_earlier_low_priority_owner() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        let mut first = waiting(&t, "first", "orch-todo-18");
+        first["todo_id"] = json!(18);
+        first["queue_sequence"] = json!(1);
+        first["work_owner"] = json!({"repository":"adj/game","pr":86});
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "req-pr86");
+        later["queue_sequence"] = json!(2);
+        later["work_owner"] = first["work_owner"].clone();
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        assert!(t.ctx.admit("first").unwrap().is_some());
+    }
+    #[test]
+    fn duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db = json!({"items":[{"id":880,"status":"doing"},{"id":1595,"status":"todo"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let mut first = waiting(&t, "first", "orch-todo-880");
+        first["todo_id"] = json!(880);
+        first["queue_sequence"] = json!(1);
+        first["work_owner"] = json!({"repository":"adj/game","pr":86});
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "orch-todo-1595");
+        later["todo_id"] = json!(1595);
+        later["queue_sequence"] = json!(2);
+        later["work_owner"] = first["work_owner"].clone();
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        assert_eq!(t.ctx.load("later").unwrap()["work_wait_on"], json!([880]));
+        first["status"] = json!("succeeded");
+        t.ctx.save(&first).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("later").unwrap()["queue_wait_reason"]["code"],
+            "todo_dependency"
+        );
+        db["items"][0]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_some());
+    }
+    #[test]
+    fn git_metadata_recognizes_subdirectories_and_linked_worktrees_without_shells() {
+        let t = Test::new();
+        let git = t.ctx.root.join(".git");
+        fs::create_dir(&git).unwrap();
+        fs::write(
+            git.join("config"),
+            "[remote \"origin\"]\n url = git@github.com:AutoDevJapan/game.git\n",
+        )
+        .unwrap();
+        fs::write(git.join("HEAD"), "ref: refs/heads/main\n").unwrap();
+        let sub = t.ctx.root.join("src");
+        fs::create_dir(&sub).unwrap();
+        let a = cc_job_policy::work_owner::checkout(sub.to_str().unwrap());
+        assert_eq!(a["repository"], "autodevjapan/game");
+        assert_eq!(a["branch"], "main");
+        let wt = t.ctx.root.join("linked");
+        fs::create_dir(&wt).unwrap();
+        let meta = git.join("worktrees").join("linked");
+        fs::create_dir_all(&meta).unwrap();
+        fs::write(wt.join(".git"), format!("gitdir: {}\n", meta.display())).unwrap();
+        fs::write(meta.join("commondir"), "../..\n").unwrap();
+        fs::write(meta.join("HEAD"), "ref: refs/heads/main\n").unwrap();
+        let b = cc_job_policy::work_owner::checkout(wt.to_str().unwrap());
+        assert_ne!(a["worktree"], b["worktree"]);
+        assert_eq!(a["git_common"], b["git_common"]);
+        assert!(cc_job_policy::work_owner::same(&a, &b));
+        let c = cc_job_policy::work_owner::checkout(t.ctx.root.to_str().unwrap());
+        assert_eq!(a["worktree"], c["worktree"]);
+    }
+    #[test]
+    fn same_pr_different_todos_wait_at_admission_but_child_review_can_run() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        let mut a = waiting(&t, "owner", "orch-todo-880");
+        a["todo_id"] = json!(880);
+        a["created_at"] = json!("2026-10-01T10:00:00+09:00");
+        a["work_owner"] = json!({"repository":"adj/game","pr":86,"worktree":"/owner"});
+        t.ctx.save(&a).unwrap();
+        let mut b = waiting(&t, "later", "req-todo-1595");
+        b["todo_id"] = json!(1595);
+        b["work_owner"] = json!({"repository":"adj/game","pr":86,"worktree":"/later"});
+        t.ctx.save(&b).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("later").unwrap()["queue_wait_reason"]["owner_job_id"],
+            "owner"
+        );
+        assert!(t.ctx.admit("owner").unwrap().is_some());
+        let mut review = waiting(&t, "review", "rev-pr86");
+        review["parent_job_id"] = json!("owner");
+        review["work_owner"] = a["work_owner"].clone();
+        t.ctx.save(&review).unwrap();
+        assert!(t.ctx.admit("review").unwrap().is_some());
+        let mut owner = t.ctx.load("owner").unwrap();
+        owner["status"] = json!("succeeded");
+        t.ctx.save(&owner).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_some());
+    }
+    #[test]
+    fn concurrent_same_pr_admission_reserves_one_root() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        for id in ["first", "second"] {
+            let mut j = waiting(&t, id, "req-pr86");
+            j["work_owner"] = json!({"repository":"adj/game","pr":86,"worktree":id});
+            t.ctx.save(&j).unwrap();
+        }
+        std::thread::scope(|scope| {
+            let one = scope.spawn(|| t.ctx.admit("first").unwrap().is_some());
+            let two = scope.spawn(|| t.ctx.admit("second").unwrap().is_some());
+            assert_ne!(one.join().unwrap(), two.join().unwrap());
+        });
+        assert_eq!(
+            ["first", "second"]
+                .iter()
+                .filter(|id| t.ctx.load(id).unwrap()["status"] == "running")
+                .count(),
+            1
+        );
+    }
+    #[test]
     fn todo_completion_wait_reserves_no_capacity_and_releases_on_done() {
         let t = Test::new();
         t.rt.env.lock().unwrap().insert(

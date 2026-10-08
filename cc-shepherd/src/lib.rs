@@ -9,7 +9,7 @@
 //! (REST_DECISION_S when it ended waiting for the owner) before another is started.
 use cc_job_policy::todo_wait;
 use cc_scheduler::{common::*, policy::live};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -248,6 +248,12 @@ pub fn candidates_with_waits<B: Backend>(
                 "" => format!("{}/pr-{}", s(&repo["wt"]), pr["number"]),
                 found => found.to_owned(),
             };
+            let candidate = json!({"id":format!("shepherd-candidate-{key}"),"work_owner":{
+                "repository":s(&repo["slug"]).to_lowercase(),"pr":pr["number"],"worktree":cc_job_policy::work_owner::norm(Path::new(&expected)),"branch":pr["headRefName"]}});
+            if let Some(owner) = cc_job_policy::work_owner::blocker(&candidate, jobs) {
+                waits.push(format!("{key}: 担当 {} の完了待ち", s(&owner["id"])));
+                continue;
+            }
             let linked = linked_todos(&todo, repo, &pr, &expected, &state[&key], jobs);
             let mut pending: Vec<i64> = linked
                 .iter()
@@ -400,6 +406,8 @@ pub fn launch_command(jobs: &Path, r: &Value, prompt: &Path) -> Invocation {
         &title,
         "--project",
         &project,
+        "--pr-url",
+        s(&r["pr"]["url"]),
         "--model",
         "gpt-6.1-sol",
         "--effort",

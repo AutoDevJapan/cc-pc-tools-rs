@@ -145,6 +145,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "launch-key",
                     "resume-session",
                     "parent-job-id",
+                    "pr-url",
                 ]
                 .contains(&name.as_str()),
                 "status" => ["all", "json", "summary"].contains(&name.as_str()),
@@ -655,6 +656,25 @@ impl Context {
         job["task_title"] = json!(a.value("task-title"));
         job["project"] = json!(a.value("project"));
         job["todo_id"] = json!(a.value("todo-id").and_then(|id| id.parse::<u64>().ok()));
+        self.record_work_owner(&mut job);
+        if !job["work_owner"]["pr"].is_u64() {
+            // Only the task's first line, never PR references in embedded instructions.
+            if let Some(pr) = cc_job_policy::work_owner::pr_number(
+                std::str::from_utf8(&bytes)
+                    .unwrap_or("")
+                    .lines()
+                    .next()
+                    .unwrap_or(""),
+            ) {
+                job["work_owner"]["pr"] = json!(pr);
+            }
+        }
+        if let Some(url) = a.value("pr-url") {
+            let target = cc_job_policy::work_owner::pr_url(url)
+                .ok_or_else(|| Error::new("invalid --pr-url"))?;
+            job["work_owner"]["repository"] = target["repository"].clone();
+            job["work_owner"]["pr"] = target["pr"].clone();
+        }
         let bad = codex_args(&job, &self.jobs.join(&base))
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))

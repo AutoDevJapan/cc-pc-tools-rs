@@ -114,6 +114,12 @@ async fn discover() -> io::Result<(String, Value)> {
     discover_matching(None).await
 }
 async fn discover_matching(record: Option<&Record>) -> io::Result<(String, Value)> {
+    discover_for(record, false).await
+}
+async fn discover_for(
+    record: Option<&Record>,
+    include_reconnected: bool,
+) -> io::Result<(String, Value)> {
     let mut pipes = vec![];
     for entry in fs::read_dir(r"\\.\pipe\")? {
         let name = entry?.file_name().to_string_lossy().into_owned();
@@ -122,9 +128,17 @@ async fn discover_matching(record: Option<&Record>) -> io::Result<(String, Value
         }
         pipes.push(format!(r"\\.\pipe\{name}"));
     }
-    discover_from(pipes, record).await
+    discover_from_mode(pipes, record, include_reconnected).await
 }
+#[cfg(test)]
 async fn discover_from(pipes: Vec<String>, record: Option<&Record>) -> io::Result<(String, Value)> {
+    discover_from_mode(pipes, record, false).await
+}
+async fn discover_from_mode(
+    pipes: Vec<String>,
+    record: Option<&Record>,
+    include_reconnected: bool,
+) -> io::Result<(String, Value)> {
     for pipe in pipes {
         let Ok(Ok(info))=tokio::time::timeout(Duration::from_millis(300),async {
             let mut rpc=Rpc::connect(&pipe).await?;
@@ -132,7 +146,9 @@ async fn discover_from(pipes: Vec<String>, record: Option<&Record>) -> io::Resul
         }).await else {continue};
         if info["type"] == "extension"
             && info["family"] == "chrome"
-            && record.is_none_or(|r| r.matches_backend(&info))
+            && record.is_none_or(|r| {
+                r.matches_backend(&info) || (include_reconnected && same_instance(r, &info))
+            })
         {
             return Ok((pipe, info));
         }
@@ -190,17 +206,20 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     let mut rpc = match Rpc::connect(&r.pipe).await {
         Ok(v) => v,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            let (pipe, _) = discover_matching(Some(r)).await?;
+            let (pipe, _) = discover_for(Some(r), true).await?;
             Rpc::connect(&pipe).await?
         }
         Err(e) => return Err(e),
     };
-    let info = rpc.call("getInfo", r.params()).await?;
+    let mut info = rpc.call("getInfo", r.params()).await?;
     if !r.matches_backend(&info) {
-        let (pipe, _) = discover_matching(Some(r)).await?;
-        rpc = Rpc::connect(&pipe).await?;
-        if !r.matches_backend(&rpc.call("getInfo", r.params()).await?) {
-            return Err(io::Error::other("recorded browser identity unavailable"));
+        if !same_instance(r, &info) {
+            let (pipe, _) = discover_for(Some(r), true).await?;
+            rpc = Rpc::connect(&pipe).await?;
+            info = rpc.call("getInfo", r.params()).await?;
+        }
+        if !r.matches_backend(&info) {
+            return retired_record_absent(&mut rpc, r, &info).await;
         }
     }
     let tabs = rpc.call("getTabs", r.params()).await?;
@@ -231,6 +250,51 @@ async fn close_record(r: &Record) -> io::Result<bool> {
         return Err(io::Error::other("tab still open after close"));
     }
     Ok(true)
+}
+fn same_instance(r: &Record, info: &Value) -> bool {
+    !r.instance.is_empty()
+        && !r.generation.is_empty()
+        && info["type"] == "extension"
+        && info["family"] == "chrome"
+        && info["metadata"]["extensionInstanceId"] == r.instance
+        && info["browserTabMentions"]["generation"]
+            .as_str()
+            .is_some_and(|g| !g.is_empty())
+}
+async fn retired_record_absent(rpc: &mut Rpc, r: &Record, info: &Value) -> io::Result<bool> {
+    if !same_instance(r, info) || info["browserTabMentions"]["generation"] == r.generation {
+        return Err(io::Error::other("recorded browser identity unavailable"));
+    }
+    // A new generation cannot authorize closing a numeric ID from the old one.
+    // It can only prove absence, using the complete inventory of the same instance.
+    let inventory = rpc.call("getUserTabs", r.params()).await?;
+    let tabs = inventory
+        .as_array()
+        .ok_or_else(|| io::Error::other("invalid retirement inventory"))?;
+    for tab in tabs {
+        if !["id", "providerTabId", "tabId"].iter().any(|key| {
+            tab[*key]
+                .as_u64()
+                .or_else(|| tab[*key].as_str()?.parse().ok())
+                .is_some_and(|id| id > 0)
+        }) {
+            return Err(io::Error::other("invalid retirement tab identity"));
+        }
+    }
+    if has_tab(&inventory, r.tab)? {
+        return Err(io::Error::other(
+            "recorded tab ID present after browser generation changed",
+        ));
+    }
+    let after = rpc.call("getInfo", r.params()).await?;
+    if !same_instance(r, &after)
+        || after["browserTabMentions"]["generation"] != info["browserTabMentions"]["generation"]
+    {
+        return Err(io::Error::other(
+            "browser identity changed during retirement inventory",
+        ));
+    }
+    Ok(false)
 }
 fn has_tab(tabs: &Value, id: u64) -> io::Result<bool> {
     let tabs = tabs
@@ -548,6 +612,58 @@ mod tests {
             };
             tokio::join!(connected, stalled);
         });
+    }
+    #[test]
+    fn retirement_only_reads_and_retires_absent_tabs_of_the_same_instance() {
+        runtime().unwrap().block_on(async {
+            for (tabs, after_instance, after_generation, accepted) in [
+                (json!([{"id":"99"}]), "extension", "new", true),
+                (json!([{"id":"11"},{"id":"99"}]), "extension", "new", false),
+                (json!([null]), "extension", "new", false),
+                (json!({}), "extension", "new", false),
+                (json!([]), "other", "new", false),
+                (json!([]), "extension", "newer", false),
+            ] {
+                let pipe=format!(r"\\.\pipe\cc-chrome-retirement-{}",uuid::Uuid::new_v4());
+                let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                let record=Record{job:"j".into(),pipe:pipe.clone(),instance:"extension".into(),generation:"old".into(),session:"session".into(),turn:"turn".into(),tab:11,created:100};
+                let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"new"}});
+                let mock=async {
+                    server.connect().await.unwrap();
+                    let v=read_frame(&mut server).await.unwrap();assert_eq!(v["method"],"getUserTabs");
+                    write_frame(&mut server,&json!({"id":v["id"],"result":tabs})).await.unwrap();
+                    if tabs==json!([]) || tabs==json!([{"id":"99"}]) {
+                        let v=read_frame(&mut server).await.unwrap();assert_eq!(v["method"],"getInfo");
+                        write_frame(&mut server,&json!({"id":v["id"],"result":{"type":"extension","family":"chrome","metadata":{"extensionInstanceId":after_instance},"browserTabMentions":{"generation":after_generation}}})).await.unwrap();
+                    }
+                    // EOF proves no claim/attach/close command was sent, including rejection cases.
+                    assert!(read_frame(&mut server).await.is_err());
+                };
+                let client=async {
+                    let mut rpc=Rpc::connect(&pipe).await.unwrap();
+                    let result=retired_record_absent(&mut rpc,&record,&info).await;
+                    if accepted {assert!(!result.unwrap());} else {assert!(result.is_err());}
+                };
+                tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(client,mock)}).await.unwrap();
+            }
+        });
+    }
+    #[test]
+    fn retirement_rejects_other_instances_and_incomplete_identities() {
+        let record = Record {
+            job: "j".into(),
+            pipe: "unused".into(),
+            instance: "extension".into(),
+            generation: "old".into(),
+            session: "session".into(),
+            turn: "turn".into(),
+            tab: 11,
+            created: 100,
+        };
+        for (instance, generation) in [("other", "new"), ("extension", ""), ("", "new")] {
+            let info = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":instance},"browserTabMentions":{"generation":generation}});
+            assert!(!same_instance(&record, &info));
+        }
     }
     #[test]
     fn cleanup_reclaims_a_released_recorded_tab_and_keeps_user_tabs() {

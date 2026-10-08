@@ -152,13 +152,32 @@ impl Context {
         unreachable!()
     }
     pub fn save(&self, job: &Value) -> Result<()> {
-        let job = self.apply_display_rename(job.clone())?;
+        let job = self.display_snapshot(job.clone());
         self.write_json(&self.job_dir(s(&job, "id")).join("job.json"), &job)
+    }
+    fn display_snapshot(&self, job: Value) -> Value {
+        match self.apply_display_rename(job.clone()) {
+            Ok(job) => job,
+            Err(error) => {
+                self.rt.diagnostic(&format!(
+                    "表示名の改名規則を読めません。実行状態は保持します: {}",
+                    redact_local_log_secrets(&error.message, &self.rt.env())
+                ));
+                job
+            }
+        }
     }
     // A durable rule keeps old supervisors' in-memory snapshots from restoring
     // historical display names. It never changes execution identifiers or paths.
     fn apply_display_rename(&self, mut job: Value) -> Result<Value> {
         let path = self.job_dir(s(&job, "id")).join("display-name.json");
+        // Most jobs have no rename rule. Do not introduce a second snapshot
+        // read/retry budget into their existing read and admission behavior.
+        match fs::metadata(&path) {
+            Ok(_) => (),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(job),
+            Err(e) => return Err(Error::file_io("inspect display rename", &path, e)),
+        }
         let bytes = match self.read_file(&path) {
             Ok(bytes) => bytes,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(job),
@@ -222,7 +241,7 @@ impl Context {
         self.read_json(&self.job_dir(jid).join("job.json"))
             .ok()
             .filter(|v| v.is_object() && v.get("id").is_some() && v.get("status").is_some())
-            .and_then(|v| self.apply_display_rename(v).ok())
+            .map(|v| self.display_snapshot(v))
     }
     pub fn load(&self, jid: &str) -> Result<Value> {
         let path = self.job_dir(jid).join("job.json");
@@ -236,7 +255,7 @@ impl Context {
         if !job.is_object() || job.get("id").is_none() || job.get("status").is_none() {
             return Err(Error::new(format!("invalid job record {}", path.display())));
         }
-        self.apply_display_rename(job)
+        Ok(self.display_snapshot(job))
     }
     pub fn list_jobs(&self, skip: &HashSet<String>) -> Vec<Value> {
         let mut jobs = vec![];

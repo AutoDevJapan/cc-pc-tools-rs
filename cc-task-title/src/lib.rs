@@ -36,6 +36,8 @@ pub fn replace_display_names(text: &str, aliases: &[String], replacement: &str) 
         .unwrap();
     let token_char = |c: char| c.is_ascii_alphanumeric() || "_-./\\:@?=%&#+".contains(c);
     let identifier_char = |c: char| c.is_ascii_alphanumeric() || "_-".contains(c);
+    let code = Regex::new(r"(?s)```.*?```|`[^`\n]+`").unwrap();
+    let code: Vec<_> = code.find_iter(text).map(|m| m.range()).collect();
     let mut output = String::new();
     let mut end = 0;
     for m in regex.find_iter(text) {
@@ -54,7 +56,10 @@ pub fn replace_display_names(text: &str, aliases: &[String], replacement: &str) 
             .last()
             .map_or(m.end(), |(index, c)| m.end() + index + c.len_utf8());
         let token = &text[start..stop];
-        let protected = token.contains(['/', '\\', '_', '@'])
+        let protected = code
+            .iter()
+            .any(|r| r.start <= m.start() && m.end() <= r.end)
+            || token.contains(['/', '\\', '_', '@'])
             || token
                 .char_indices()
                 .any(|(i, c)| c == '.' && i > 0 && i + 1 < token.len())
@@ -108,8 +113,13 @@ pub fn replace_github_repo_urls(text: &str, from: &str, to: &str) -> Result<Stri
         output.push_str(&text[end..m.start()]);
         let before = text[..m.start()].chars().next_back();
         let after = text[m.end()..].chars().next();
-        let embedded = before.is_some_and(|c| c.is_ascii_alphanumeric() || "_=/?:&.-".contains(c));
-        let suffix = after.is_some_and(|c| c.is_ascii_alphanumeric() || "_.-".contains(c));
+        let embedded = before.is_some_and(|c| c.is_ascii_alphanumeric() || "_=/?&.-".contains(c));
+        let suffix = after.is_some_and(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
+            || (after == Some('.')
+                && text[m.end() + 1..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_alphanumeric()));
         if embedded || suffix {
             output.push_str(m.as_str());
         } else {
@@ -589,6 +599,19 @@ mod tests {
             "oldの作業 https://github.com/Org/Re-X/pull/1 https://github.com/Org/Re-X#readme (https://github.com/Org/Re-X) https://github.com/Org/old-extra https://api.github.com/repos/Org/old C:/Org/old https://elsewhere/?url=https://github.com/Org/old"
         );
         assert!(replace_github_repo_urls(source, "bad", "Org/Re-X").is_err());
+        assert_eq!(
+            replace_github_repo_urls(
+                "PR:https://github.com/Org/old. https://github.com/Org/old.git",
+                "Org/old",
+                "Org/Re-X"
+            )
+            .unwrap(),
+            "PR:https://github.com/Org/Re-X. https://github.com/Org/old.git"
+        );
+        assert_eq!(
+            canonical_text("Re-Xの作業 `gh repo rename Re-X`"),
+            "Re:Xの作業 `gh repo rename Re-X`"
+        );
     }
     #[test]
     fn scheduler_console_and_stall_use_real_todo_work() {

@@ -1090,7 +1090,10 @@ impl Context {
 }
 pub(crate) fn same_task(a: &Value, b: &Value) -> bool {
     (a["todo_id"].as_u64().is_some() && a["todo_id"] == b["todo_id"])
-        || (!s(a, "name").is_empty() && s(a, "name") == s(b, "name"))
+        || (!s(a, "name").is_empty()
+            && (s(a, "name") == s(b, "name")
+                || cc_task_title::canonical_text(s(a, "name"))
+                    == cc_task_title::canonical_text(s(b, "name"))))
         || ["thread_id", "resume_session"].iter().any(|ka| {
             normalize_uuid(s(a, ka)).is_some_and(|id| {
                 ["thread_id", "resume_session"]
@@ -1177,5 +1180,19 @@ pub fn display_state(job: &Value) -> &str {
         "順番待ち"
     } else {
         s(job, "status")
+    }
+}
+
+#[cfg(test)]
+mod display_name_tests {
+    use super::*;
+    #[test]
+    fn duplicate_task_identity_survives_product_display_rename() {
+        let old = json!({"name":format!("{}の画面を直す", concat!("x", "LIFE"))});
+        let renamed = json!({"name":"Re:Xの画面を直す"});
+        assert!(same_task(&old, &renamed));
+        assert!(same_task(&json!({"name":"Re-Xの画面を直す"}), &renamed));
+        assert!(!same_task(&json!({"name":"Re:Xの別作業"}), &renamed));
+        assert!(!same_task(&json!({"name":""}), &json!({"name":""})));
     }
 }

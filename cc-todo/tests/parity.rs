@@ -129,6 +129,34 @@ fn rename_only_updates_authorized_github_urls_in_selected_notes() {
     assert_eq!(renamed["items"][1], db["items"][1]);
 }
 #[test]
+fn rename_missing_optional_stalls_keeps_unknown_fields_and_backs_up_only_changes() {
+    let temp = Temp::new();
+    let db = json!({"projects":{"old":"C:/old","other":"C:/other"},"items":[{"id":1,"project":"old","title":"oldの作業"}],"unknown":99});
+    save(&temp.paths().store, &db).unwrap();
+    let before = fs::read(&temp.paths().store).unwrap();
+    for _ in 0..2 {
+        assert!(
+            rust_command(&temp.0, &["rename-project", "old", "Re:X"])
+                .status
+                .success()
+        );
+    }
+    let renamed = load(&temp.paths().store).unwrap();
+    assert!(renamed.get("stalls").is_none());
+    assert_eq!(renamed["unknown"], 99);
+    let backups: Vec<_> = fs::read_dir(&temp.0)
+        .unwrap()
+        .flatten()
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with("todo.before-rename-")
+        })
+        .collect();
+    assert_eq!(backups.len(), 1);
+    assert_eq!(fs::read(backups[0].path()).unwrap(), before);
+}
+#[test]
 fn rename_waits_for_lock_and_reads_the_latest_concurrent_update() {
     let temp = Temp::new();
     let paths = temp.paths();

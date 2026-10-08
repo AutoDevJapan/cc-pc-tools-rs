@@ -96,6 +96,26 @@ fn display_project_rename_rejects_wrong_project_without_writing() {
     );
 }
 #[test]
+fn corrupt_display_rule_never_hides_a_running_job_or_blocks_state_saving() {
+    let t = Test::new();
+    let original = t.put(job(
+        json!({"id":"rename-target","project":"Re:X","status":"running","name":"Re:Xの作業"}),
+    ));
+    fs::write(
+        t.ctx.job_dir("rename-target").join("display-name.json"),
+        "{broken",
+    )
+    .unwrap();
+    assert_eq!(t.ctx.load("rename-target").unwrap(), original);
+    assert_eq!(t.ctx.try_load("rename-target").unwrap(), original);
+    assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
+    let mut updated = original;
+    updated["progress"] = json!(90);
+    t.ctx.save(&updated).unwrap();
+    assert_eq!(t.ctx.load("rename-target").unwrap(), updated);
+    assert!(!t.rt.diagnostics.lock().unwrap().is_empty());
+}
+#[test]
 fn display_project_rename_reads_the_latest_snapshot_after_state_lock() {
     let t = Test::new();
     t.put(job(

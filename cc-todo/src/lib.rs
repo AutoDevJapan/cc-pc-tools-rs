@@ -558,7 +558,7 @@ pub fn rename_project(
     extra: &[String],
     github: Option<(&str, &str)>,
 ) -> Result<Value> {
-    if from.trim().is_empty() || to.trim().is_empty() || extra.iter().any(|s| s.is_empty()) {
+    if from.trim().is_empty() || to.trim().is_empty() || extra.iter().any(|s| s.trim().is_empty()) {
         return Err("製品名と置換する名前は空にできません".into());
     }
     if let Some((from, to)) = github {
@@ -636,10 +636,10 @@ pub fn rename_project(
     let renamed = from != to && source.is_some();
     if renamed {
         let projects = db["projects"].as_object_mut().unwrap();
-        projects.remove(from);
+        projects.shift_remove(from);
         projects.insert(to.into(), source.unwrap());
         if let Some(stalls) = db.get_mut("stalls").and_then(Value::as_object_mut)
-            && let Some(stall) = stalls.remove(from)
+            && let Some(stall) = stalls.shift_remove(from)
         {
             stalls.insert(to.into(), stall);
         }
@@ -850,6 +850,8 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     }
     let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
     let mut db = load(&paths.store)?;
+    let before_rename =
+        matches!(cli.command, Command::RenameProject { dry_run: false, .. }).then(|| db.clone());
     let output = execute(&mut db, &cli.command, paths)?;
     // Listing is read-only; keep the shared byte lock but do not rewrite or back up state.
     if matches!(
@@ -860,6 +862,19 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             println!("{line}");
         }
         return Ok(());
+    }
+    if before_rename.as_ref().is_some_and(|before| *before != db) {
+        let backup = paths
+            .store
+            .with_file_name(format!("todo.before-rename-{}.json", uuid::Uuid::new_v4()));
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&backup)
+            .map_err(err)?;
+        file.write_all(&fs::read(&paths.store).map_err(err)?)
+            .map_err(err)?;
+        file.sync_all().map_err(err)?;
     }
     save(&paths.store, &db)?;
     for line in output {

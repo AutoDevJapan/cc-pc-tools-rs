@@ -3,6 +3,126 @@ use regex::{Regex, RegexBuilder};
 use serde_json::Value;
 use std::{fs, io, path::Path};
 pub const TOOLS: &str = "D:/CC/Tools";
+pub const PRODUCT_NAME: &str = "Re:X";
+
+/// Display names only. Repository slugs, URLs and filesystem identities stay intact.
+pub fn canonical_project(name: &str) -> String {
+    let name_without_prefix = name.strip_prefix("GoDD-").unwrap_or(name);
+    if [concat!("x", "LIFE"), "Re-X", PRODUCT_NAME]
+        .iter()
+        .any(|alias| name_without_prefix.eq_ignore_ascii_case(alias))
+    {
+        PRODUCT_NAME.into()
+    } else {
+        name.into()
+    }
+}
+
+/// Replace product mentions in prose, preserving URL/path/API identifier tokens.
+pub fn replace_display_names(text: &str, aliases: &[String], replacement: &str) -> String {
+    let mut aliases: Vec<_> = aliases.iter().filter(|s| !s.is_empty()).collect();
+    aliases.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    if aliases.is_empty() {
+        return text.into();
+    }
+    let pattern = aliases
+        .iter()
+        .map(|s| regex::escape(s))
+        .collect::<Vec<_>>()
+        .join("|");
+    let regex = RegexBuilder::new(&pattern)
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    let token_char = |c: char| c.is_ascii_alphanumeric() || "_-./\\:@?=%&#+".contains(c);
+    let identifier_char = |c: char| c.is_ascii_alphanumeric() || "_-".contains(c);
+    let mut output = String::new();
+    let mut end = 0;
+    for m in regex.find_iter(text) {
+        output.push_str(&text[end..m.start()]);
+        let left = &text[..m.start()];
+        let right = &text[m.end()..];
+        let start = left
+            .char_indices()
+            .rev()
+            .take_while(|(_, c)| token_char(*c))
+            .last()
+            .map_or(m.start(), |(index, _)| index);
+        let stop = right
+            .char_indices()
+            .take_while(|(_, c)| token_char(*c))
+            .last()
+            .map_or(m.end(), |(index, c)| m.end() + index + c.len_utf8());
+        let token = &text[start..stop];
+        let protected = token.contains(['/', '\\', '_', '@'])
+            || token
+                .char_indices()
+                .any(|(i, c)| c == '.' && i > 0 && i + 1 < token.len())
+            || left.chars().next_back().is_some_and(identifier_char)
+            || right.chars().next().is_some_and(identifier_char)
+            || left.ends_with(':');
+        output.push_str(if protected { m.as_str() } else { replacement });
+        end = m.end();
+    }
+    output.push_str(&text[end..]);
+    output
+}
+
+pub fn canonical_text(text: &str) -> String {
+    replace_display_names(
+        text,
+        &[
+            format!("GoDD-{}", concat!("x", "LIFE")),
+            "GoDD-Re-X".into(),
+            "GoDD-Re:X".into(),
+            concat!("x", "LIFE").into(),
+            "Re-X".into(),
+        ],
+        PRODUCT_NAME,
+    )
+}
+
+/// Explicitly authorized GitHub web URL migration; API endpoints and local paths are untouched.
+pub fn replace_github_repo_urls(text: &str, from: &str, to: &str) -> Result<String, &'static str> {
+    let valid = |slug: &str| {
+        let parts: Vec<_> = slug.split('/').collect();
+        parts.len() == 2
+            && parts.iter().all(|s| {
+                !s.is_empty()
+                    && *s != "."
+                    && *s != ".."
+                    && s.bytes()
+                        .all(|c| c.is_ascii_alphanumeric() || b"_.-".contains(&c))
+            })
+    };
+    if !valid(from) || !valid(to) {
+        return Err("invalid GitHub repository slug");
+    }
+    let regex = RegexBuilder::new(&format!("https?://github\\.com/{}", regex::escape(from)))
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    let mut output = String::new();
+    let mut end = 0;
+    for m in regex.find_iter(text) {
+        output.push_str(&text[end..m.start()]);
+        let before = text[..m.start()].chars().next_back();
+        let after = text[m.end()..].chars().next();
+        let embedded = before.is_some_and(|c| c.is_ascii_alphanumeric() || "_=/?:&.-".contains(c));
+        let suffix = after.is_some_and(|c| c.is_ascii_alphanumeric() || "_.-".contains(c));
+        if embedded || suffix {
+            output.push_str(m.as_str());
+        } else {
+            // Keep the URL's scheme and GitHub domain spelling.
+            let repo_start = m.end() - from.len();
+            output.push_str(&text[m.start()..repo_start]);
+            output.push_str(to);
+        }
+        end = m.end();
+    }
+    output.push_str(&text[end..]);
+    Ok(output)
+}
 
 pub struct Names(Vec<Regex>);
 impl Names {
@@ -47,18 +167,18 @@ pub fn project_from_folder(cwd: &str) -> String {
     let parts: Vec<_> = path.split('/').filter(|p| !p.is_empty()).collect();
     for pair in parts.windows(2) {
         if pair[0].eq_ignore_ascii_case("worktrees") {
-            return pair[1].into();
+            return canonical_project(pair[1]);
         }
     }
     for part in &parts {
         if part.to_lowercase().ends_with("-wt") {
-            return part[..part.len() - 3].into();
+            return canonical_project(&part[..part.len() - 3]);
         }
     }
     if path.to_lowercase().starts_with("d:/cc/tools") {
         return "PCツール".into();
     }
-    parts.last().unwrap_or(&"PCツール").to_string()
+    canonical_project(parts.last().unwrap_or(&"PCツール"))
 }
 fn text<'a>(v: &'a Value, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
@@ -254,7 +374,7 @@ fn english_subject(source: &str) -> String {
     clean(&subject).chars().take(32).collect()
 }
 pub fn format_title(names: &Names, project: &str, task: &str) -> String {
-    let project = clean(&names.project(project))
+    let project = clean(&canonical_project(&names.project(project)))
         .chars()
         .take(22)
         .collect::<String>();
@@ -264,7 +384,7 @@ pub fn format_title(names: &Names, project: &str, task: &str) -> String {
         &project
     };
     let prefix = format!("【{project}】");
-    let work = names.redact(&summary(&names.redact(task)));
+    let work = canonical_text(&names.redact(&summary(&names.redact(task))));
     let budget = 60 - prefix.chars().count();
     let work = if work.chars().count() > budget {
         format!("{}…", work.chars().take(budget - 1).collect::<String>())
@@ -346,7 +466,7 @@ pub fn polish_title(title: &str, names: &Names) -> String {
     if let Ok(value) = fs::read_to_string(&cache) {
         if let Ok(value) = serde_json::from_str::<Value>(&value) {
             if let Some(work) = value["title"].as_str() {
-                return names.redact(work);
+                return canonical_text(&names.redact(work));
             }
         }
     }
@@ -413,6 +533,64 @@ mod tests {
     use super::*;
     use serde_json::json;
     #[test]
+    fn canonical_product_is_generated_from_legacy_paths_and_metadata() {
+        let former = concat!("x", "LIFE");
+        for path in [
+            format!("C:/dev/{former}"),
+            format!("C:/dev/{former}-wt/agent-1"),
+            format!("D:/worktrees/{former}/agent-1"),
+            "D:/worktrees/Re-X/agent-1".into(),
+            format!("C:/dev/GoDD-{former}-wt/agent-1"),
+        ] {
+            assert_eq!(project_from_folder(&path), PRODUCT_NAME);
+        }
+        assert_eq!(
+            project_from_folder("C:/dev/unrelated-wt/agent-1"),
+            "unrelated"
+        );
+        let names = Names::parse("");
+        assert_eq!(
+            format_title(&names, former, "Re-Xの画面を直す"),
+            "【Re:X】Re:Xの画面を直す"
+        );
+        let title = job_title(
+            &json!({"cwd":format!("C:/dev/{former}-wt/agent-1"),"name":"task","task_title":"Re-Xの画面を直す"}),
+            "",
+            &json!({}),
+            &names,
+        );
+        assert_eq!(title, "【Re:X】Re:Xの画面を直す");
+    }
+    #[test]
+    fn display_replacement_preserves_compatibility_tokens_and_literal_replacement() {
+        let former = concat!("x", "LIFE");
+        let technical = format!(
+            "https://example.com/{former}/a C:/{former}/file {former}_API API:{former} foo-{former}-v2 {former}.exe AutoDevJapan/{former}"
+        );
+        let source = format!("【Re-X】{former}の作業。{technical} Re-X.");
+        assert_eq!(
+            canonical_text(&source),
+            format!("【Re:X】Re:Xの作業。{technical} Re:X.")
+        );
+        assert_eq!(
+            replace_display_names("oldの作業", &["old".into()], "$name"),
+            "$nameの作業"
+        );
+        assert_eq!(
+            canonical_text(&canonical_text(&source)),
+            canonical_text(&source)
+        );
+    }
+    #[test]
+    fn github_url_rename_is_explicit_exact_and_preserves_api_and_paths() {
+        let source = "oldの作業 https://github.com/Org/old/pull/1 https://github.com/Org/old#readme (https://github.com/Org/old) https://github.com/Org/old-extra https://api.github.com/repos/Org/old C:/Org/old https://elsewhere/?url=https://github.com/Org/old";
+        assert_eq!(
+            replace_github_repo_urls(source, "Org/old", "Org/Re-X").unwrap(),
+            "oldの作業 https://github.com/Org/Re-X/pull/1 https://github.com/Org/Re-X#readme (https://github.com/Org/Re-X) https://github.com/Org/old-extra https://api.github.com/repos/Org/old C:/Org/old https://elsewhere/?url=https://github.com/Org/old"
+        );
+        assert!(replace_github_repo_urls(source, "bad", "Org/Re-X").is_err());
+    }
+    #[test]
     fn scheduler_console_and_stall_use_real_todo_work() {
         let db = json!({"items":[{"id":1104,"project":"GoDD-13a13e1","title":"実helperの署名拒否と依存供給と通常回帰を別モデルで確認する","jobs":["restart-1"]}]});
         for name in [
@@ -449,7 +627,14 @@ mod tests {
     #[test]
     fn privacy_unicode_budget_and_no_machine_ids() {
         let names = Names::parse("\u{feff}# comment\nSecretClient\nSecret\n");
-        assert_eq!(format_title(&names, "secretclient-wt", "【SecretClient】[Codex] todo-1104 orch-foo shep-86 SECRETCLIENTの接続を修正する。詳細"), "【クライアント案件】クライアント案件の接続を修正する");
+        assert_eq!(
+            format_title(
+                &names,
+                "secretclient-wt",
+                "【SecretClient】[Codex] todo-1104 orch-foo shep-86 SECRETCLIENTの接続を修正する。詳細"
+            ),
+            "【クライアント案件】クライアント案件の接続を修正する"
+        );
         let long = format_title(
             &names,
             &"案件".repeat(40),
@@ -460,7 +645,12 @@ mod tests {
     }
     #[test]
     fn prompt_skips_preamble_and_handoff() {
-        assert_eq!(summary("あなたは引き継ぐエージェントです\n## 作業の依頼\n共有ToDo #12: 保存後に署名を再照合する。詳細です\n## 引き継ぎ\n古い仕事"), "保存後に署名を再照合する");
+        assert_eq!(
+            summary(
+                "あなたは引き継ぐエージェントです\n## 作業の依頼\n共有ToDo #12: 保存後に署名を再照合する。詳細です\n## 引き継ぎ\n古い仕事"
+            ),
+            "保存後に署名を再照合する"
+        );
         assert_eq!(
             format_title(&Names::parse(""), "tools", "todo-1104"),
             "【tools】作業内容を確認して進める"
@@ -477,7 +667,12 @@ mod tests {
             summary("Fix crash when returning captives"),
             "異常終了 時の 捕虜の返還を修正する"
         );
-        assert_eq!(summary("Continue the Minecraft AI spectator series work only. Final message in Japanese, 状態: 完了"), "MinecraftのAI観戦シリーズの制作を進める");
+        assert_eq!(
+            summary(
+                "Continue the Minecraft AI spectator series work only. Final message in Japanese, 状態: 完了"
+            ),
+            "MinecraftのAI観戦シリーズの制作を進める"
+        );
         let title = "【ツール】object lifetime route handlerを修正する";
         assert_eq!(
             polish_with(title, &Names::parse("ClientName"), |_| Some(
@@ -499,8 +694,18 @@ mod tests {
             summary("Owner request (Discord): 「動画を解析してSkills化する。」\nDo:\nother"),
             "動画を解析してSkills化する"
         );
-        assert_eq!(summary("オーナーから追加の指示が届きました。\nオーナー投稿 123の原文:\n<@123>\nhttps://example.test\nSunoの音楽生成を画面に追加したい。\n最終返信には日時を明記\n古い仕事"), "Sunoの音楽生成を画面に追加したい");
-        assert_eq!(summary("オーナー（Makhmeto）が書いた依頼です。\n### オーナー（古い日時）\n古い仕事\n### エージェント（日時）\n返事\n### オーナー（新しい日時）\n保存と読み込みを実装する。"), "保存と読み込みを実装する");
+        assert_eq!(
+            summary(
+                "オーナーから追加の指示が届きました。\nオーナー投稿 123の原文:\n<@123>\nhttps://example.test\nSunoの音楽生成を画面に追加したい。\n最終返信には日時を明記\n古い仕事"
+            ),
+            "Sunoの音楽生成を画面に追加したい"
+        );
+        assert_eq!(
+            summary(
+                "オーナー（Makhmeto）が書いた依頼です。\n### オーナー（古い日時）\n古い仕事\n### エージェント（日時）\n返事\n### オーナー（新しい日時）\n保存と読み込みを実装する。"
+            ),
+            "保存と読み込みを実装する"
+        );
     }
     #[test]
     fn explicit_todo_beats_a_shared_parent_job_link() {

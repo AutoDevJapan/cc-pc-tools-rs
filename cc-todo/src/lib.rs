@@ -40,6 +40,23 @@ pub struct Cli {
 pub enum Command {
     #[command(args_override_self = true, infer_long_args = true)]
     Project { name: String, path: String },
+    /// Rename one project and its display text without changing paths or task state.
+    RenameProject {
+        from: String,
+        to: String,
+        #[arg(long, help = "Additional display-name alias; repeat as needed")]
+        replace_name: Vec<String>,
+        #[arg(
+            long,
+            requires = "github_to",
+            help = "GitHub owner/repo whose web URLs should be updated"
+        )]
+        github_from: Option<String>,
+        #[arg(long, requires = "github_from")]
+        github_to: Option<String>,
+        #[arg(long, help = "Validate and report counts without saving")]
+        dry_run: bool,
+    },
     #[command(args_override_self = true, infer_long_args = true)]
     Add {
         project: String,
@@ -533,6 +550,105 @@ pub fn set_progress(item: &mut Value, percent: u8) -> Result<()> {
     item["progress"] = json!(percent);
     Ok(())
 }
+/// Validate the complete rename before touching the caller's snapshot.
+pub fn rename_project(
+    db: &mut Value,
+    from: &str,
+    to: &str,
+    extra: &[String],
+    github: Option<(&str, &str)>,
+) -> Result<Value> {
+    if from.trim().is_empty() || to.trim().is_empty() || extra.iter().any(|s| s.is_empty()) {
+        return Err("製品名と置換する名前は空にできません".into());
+    }
+    if let Some((from, to)) = github {
+        cc_task_title::replace_github_repo_urls("", from, to).map_err(err)?;
+    }
+    let projects = db["projects"].as_object().ok_or("invalid projects")?;
+    let source = projects.get(from).cloned();
+    if source.is_none() && !projects.contains_key(to) {
+        return Err("改名するプロジェクトがありません".into());
+    }
+    if from != to && source.is_some() && projects.contains_key(to) {
+        return Err("改名先のプロジェクトが既にあります".into());
+    }
+    if let Some(stalls) = db.get("stalls") {
+        let stalls = stalls.as_object().ok_or("invalid stalls")?;
+        if from != to && stalls.contains_key(from) && stalls.contains_key(to) {
+            return Err("改名先の停滞記録が既にあります".into());
+        }
+    }
+    let items = db["items"].as_array().ok_or("invalid items")?;
+    for item in items
+        .iter()
+        .filter(|i| i["project"] == from || i["project"] == to)
+    {
+        for key in ["title", "note", "notes"] {
+            if item.get(key).is_some_and(|v| !v.is_string()) {
+                return Err(format!("invalid display field {key}"));
+            }
+        }
+    }
+    let mut aliases = vec![from.to_owned()];
+    aliases.extend_from_slice(extra);
+    let mut project_items = 0;
+    let mut text_items = 0;
+    let mut fields = 0;
+    let mut github_fields = 0;
+    for item in db["items"].as_array_mut().unwrap() {
+        if item["project"] != from && item["project"] != to {
+            continue;
+        }
+        if item["project"] != to {
+            item["project"] = json!(to);
+            project_items += 1;
+        }
+        let mut changed = false;
+        for key in ["title", "note", "notes"] {
+            if let Some(text) = item.get(key).and_then(Value::as_str) {
+                let mut replacement = cc_task_title::replace_display_names(text, &aliases, to);
+                if to == cc_task_title::PRODUCT_NAME {
+                    replacement = cc_task_title::canonical_text(&replacement);
+                }
+                if let Some((github_from, github_to)) = github {
+                    let urls = cc_task_title::replace_github_repo_urls(
+                        &replacement,
+                        github_from,
+                        github_to,
+                    )
+                    .map_err(err)?;
+                    if urls != replacement {
+                        github_fields += 1;
+                    }
+                    replacement = urls;
+                }
+                if replacement != text {
+                    item[key] = json!(replacement);
+                    changed = true;
+                    fields += 1;
+                }
+            }
+        }
+        if changed {
+            text_items += 1;
+        }
+    }
+    let renamed = from != to && source.is_some();
+    if renamed {
+        let projects = db["projects"].as_object_mut().unwrap();
+        projects.remove(from);
+        projects.insert(to.into(), source.unwrap());
+        if let Some(stalls) = db.get_mut("stalls").and_then(Value::as_object_mut)
+            && let Some(stall) = stalls.remove(from)
+        {
+            stalls.insert(to.into(), stall);
+        }
+    }
+    Ok(
+        json!({"project":to,"projects_renamed":usize::from(renamed),"items_renamed":project_items,"text_items_changed":text_items,"fields_changed":fields,"github_fields_changed":github_fields}),
+    )
+}
+
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
     let supplied = match cmd {
         Command::Add { progress, .. }
@@ -553,6 +669,25 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     let mut output = Vec::new();
     match cmd {
         Command::Project { name, path } => db["projects"][name] = json!(path),
+        Command::RenameProject {
+            from,
+            to,
+            replace_name,
+            github_from,
+            github_to,
+            ..
+        } => {
+            output.push(
+                rename_project(
+                    db,
+                    from,
+                    to,
+                    replace_name,
+                    github_from.as_deref().zip(github_to.as_deref()),
+                )?
+                .to_string(),
+            );
+        }
         Command::Add { .. } => output.push(format!("added {}", add_item(db, cmd, paths)?)),
         Command::List { project, all } => {
             for i in db["items"].as_array().ok_or("invalid items")? {
@@ -716,14 +851,20 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
     let mut db = load(&paths.store)?;
     let output = execute(&mut db, &cli.command, paths)?;
-    for line in output {
-        println!("{line}");
-    }
     // Listing is read-only; keep the shared byte lock but do not rewrite or back up state.
-    if matches!(cli.command, Command::List { .. }) {
+    if matches!(
+        cli.command,
+        Command::List { .. } | Command::RenameProject { dry_run: true, .. }
+    ) {
+        for line in output {
+            println!("{line}");
+        }
         return Ok(());
     }
     save(&paths.store, &db)?;
+    for line in output {
+        println!("{line}");
+    }
     drop(_lock);
     // Notify the ordinary watchdog immediately after committing a completed
     // prerequisite. The production path uses the same existing admission gates.

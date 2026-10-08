@@ -8,6 +8,7 @@ name = "todo"
 path = "src/main.rs"
 
 [dependencies]
+cc-task-title = { path = "../cc-task-title" }
 cc-ask = { path = "../cc-ask" }
 cc-job-policy = { path = "../cc-job-policy" }
 cc-scheduler = { path = "../cc-scheduler" }

@@ -11,6 +11,160 @@ use std::{
 };
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+fn rename_fixture() -> Value {
+    json!({"projects":{"old":{"path":"C:/old","unknown":[1,2]},"other":"C:/other"},
+    "items":[{"id":1,"project":"old","title":"【old】Re-Xの画面を直す","note":"oldの記録 https://host/old old_API C:/old/a","notes":"oldを確認","status":"doing","jobs":["active"],"progress":50,"wait_on":[7],"updated":"unchanged","spec":"C:/old/spec.md","scheduler":{"key":"old-key","unknown":true},"unknown":[1]},
+    {"id":2,"project":"other","title":"oldの連携","note":"old","jobs":[],"status":"done"}],
+    "stalls":{"old":{"last":123,"pending":"old-id"},"other":{"last":456}},"next_id":88,"unknown":{"old":"keep"}})
+}
+#[test]
+fn rename_project_keeps_every_non_display_field_and_other_project() {
+    let temp = Temp::new();
+    let original = rename_fixture();
+    save(&temp.paths().store, &original).unwrap();
+    let args = ["rename-project", "old", "Re:X"];
+    let before = fs::read(&temp.paths().store).unwrap();
+    assert!(
+        rust_command(&temp.0, &["rename-project", "old", "Re:X", "--dry-run"])
+            .status
+            .success()
+    );
+    assert_eq!(fs::read(&temp.paths().store).unwrap(), before);
+    let out = rust_command(&temp.0, &args);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let counts: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(counts["items_renamed"], 1);
+    assert_eq!(counts["fields_changed"], 3);
+    let mut expected = original;
+    expected["projects"]["Re:X"] = expected["projects"]
+        .as_object_mut()
+        .unwrap()
+        .remove("old")
+        .unwrap();
+    expected["stalls"]["Re:X"] = expected["stalls"]
+        .as_object_mut()
+        .unwrap()
+        .remove("old")
+        .unwrap();
+    expected["items"][0]["project"] = json!("Re:X");
+    expected["items"][0]["title"] = json!("【Re:X】Re:Xの画面を直す");
+    expected["items"][0]["note"] = json!("Re:Xの記録 https://host/old old_API C:/old/a");
+    expected["items"][0]["notes"] = json!("Re:Xを確認");
+    assert_eq!(load(&temp.paths().store).unwrap(), expected);
+    assert!(rust_command(&temp.0, &args).status.success());
+    assert_eq!(load(&temp.paths().store).unwrap(), expected);
+}
+#[test]
+fn rename_collision_and_malformed_selected_text_do_not_write() {
+    let temp = Temp::new();
+    for malformed in [false, true] {
+        let mut db = rename_fixture();
+        if malformed {
+            db["items"][0]["notes"] = json!(["keep"]);
+        } else {
+            db["projects"]["Re:X"] = json!("C:/different");
+        }
+        save(&temp.paths().store, &db).unwrap();
+        let before = fs::read(&temp.paths().store).unwrap();
+        assert!(
+            !rust_command(&temp.0, &["rename-project", "old", "Re:X"])
+                .status
+                .success()
+        );
+        assert_eq!(fs::read(&temp.paths().store).unwrap(), before);
+    }
+}
+#[test]
+fn rename_only_updates_authorized_github_urls_in_selected_notes() {
+    let temp = Temp::new();
+    let mut db = rename_fixture();
+    let note = "https://github.com/Org/old/pull/1 https://api.github.com/repos/Org/old C:/old/a";
+    db["items"][0]["note"] = json!(note);
+    db["items"][1]["note"] = json!(note);
+    save(&temp.paths().store, &db).unwrap();
+    let before = fs::read(&temp.paths().store).unwrap();
+    assert!(
+        !rust_command(
+            &temp.0,
+            &[
+                "rename-project",
+                "old",
+                "Re:X",
+                "--github-from",
+                "invalid",
+                "--github-to",
+                "Org/Re-X"
+            ]
+        )
+        .status
+        .success()
+    );
+    assert_eq!(fs::read(&temp.paths().store).unwrap(), before);
+    let out = rust_command(
+        &temp.0,
+        &[
+            "rename-project",
+            "old",
+            "Re:X",
+            "--github-from",
+            "Org/old",
+            "--github-to",
+            "Org/Re-X",
+        ],
+    );
+    assert!(out.status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&out.stdout).unwrap()["github_fields_changed"],
+        1
+    );
+    let renamed = load(&temp.paths().store).unwrap();
+    assert_eq!(
+        renamed["items"][0]["note"],
+        "https://github.com/Org/Re-X/pull/1 https://api.github.com/repos/Org/old C:/old/a"
+    );
+    assert_eq!(renamed["items"][1], db["items"][1]);
+}
+#[test]
+fn rename_waits_for_lock_and_reads_the_latest_concurrent_update() {
+    let temp = Temp::new();
+    let paths = temp.paths();
+    save(&paths.store, &rename_fixture()).unwrap();
+    let lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
+    let mut child = Process::new(env!("CARGO_BIN_EXE_todo"));
+    child
+        .creation_flags(CREATE_NO_WINDOW)
+        .env("CC_TODO_HOME", &temp.0)
+        .args(["rename-project", "old", "Re:X"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = child.spawn().unwrap();
+    std::thread::sleep(Duration::from_millis(250));
+    assert!(
+        child.try_wait().unwrap().is_none(),
+        "rename did not wait for the store lock"
+    );
+    let mut current = load(&paths.store).unwrap();
+    current["items"][0]["jobs"] = json!(["active", "concurrent"]);
+    current["items"][0]["progress"] = json!(75);
+    current["items"][1]["note"] = json!("concurrent other project update");
+    save(&paths.store, &current).unwrap();
+    drop(lock);
+    let out = child.wait_with_output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let renamed = load(&paths.store).unwrap();
+    assert_eq!(renamed["items"][0]["jobs"], current["items"][0]["jobs"]);
+    assert_eq!(renamed["items"][0]["progress"], 75);
+    assert_eq!(renamed["items"][1], current["items"][1]);
+    assert_eq!(renamed["items"][0]["project"], "Re:X");
+}
 #[test]
 fn rust_lock_child() {
     let Some(path) = std::env::var_os("CC_LOCK_PROBE") else {

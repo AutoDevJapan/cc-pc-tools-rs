@@ -850,6 +850,8 @@ fn git(path: &Path, args: &[&str]) -> Result<String> {
     let fixed = [
         "--no-optional-locks",
         "-c",
+        "core.longpaths=true",
+        "-c",
         "core.fsmonitor=false",
         "-c",
         "core.hooksPath=NUL",
@@ -1577,7 +1579,18 @@ mod tests {
     }
     #[test]
     fn legacy_2050_directory_drift_preserves_ticket_and_resumes_through_finish() {
-        let c = fixture_for(RESUME_ID);
+        let mut c = fixture_for(RESUME_ID);
+        // Both a longer quarantine prefix and the content inventory must work.
+        // The old helper failed in Git when its loose-object path crossed 260.
+        c.quarantine = c.base.join("long-quarantine-".repeat(6));
+        assert!(
+            c.destination()
+                .join("files/source/.git/objects/aa")
+                .as_os_str()
+                .encode_wide()
+                .count()
+                > 260
+        );
         let first = c.plan(c.id).unwrap();
         let original = fs::read(c.ticket_path()).unwrap();
         // Model an old deployed plan, which has no content proof.

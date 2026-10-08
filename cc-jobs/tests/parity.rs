@@ -236,6 +236,192 @@ use std::{
 const OK: &str = include_str!("fixtures/OK_EVENTS.jsonl");
 const FAIL: &str = include_str!("fixtures/FAIL_EVENTS.jsonl");
 const SESSION: &str = include_str!("fixtures/SESSION_LINES.jsonl");
+mod capacity_regressions {
+    use super::*;
+    use cc_jobs::capacity::is_capacity;
+    const SESSION_ID: &str = "01a0e883-7628-7121-9540-6780fd4cd6f4";
+
+    fn supervise(failures: usize, patch_value: Value) -> (Test, Value) {
+        let t = Test::new();
+        let j = t.put(patch(
+            job(json!({"id":"capacity","name":"req-capacity","model":"gpt-6.1-sol","cwd":t.ctx.root,"codex":"codex.CMD"})),
+            patch_value,
+        ));
+        fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), "continue").unwrap();
+        let count = AtomicUsize::new(0);
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
+            let text = if count.fetch_add(1, Ordering::Relaxed) < failures {
+                format!(
+                    "{{\"type\":\"thread.started\",\"thread_id\":\"{SESSION_ID}\"}}\n{{\"type\":\"turn.failed\",\"error\":{{\"message\":\"Selected model is at capacity\"}}}}\n"
+                )
+            } else {
+                OK.into()
+            };
+            Box::new(FakeChild {
+                alive: Arc::new(AtomicBool::new(false)),
+                out: Some(Box::new(Cursor::new(text.into_bytes()))),
+            })
+        }));
+        t.ctx.supervise("capacity").unwrap();
+        let saved = t.ctx.load("capacity").unwrap();
+        (t, saved)
+    }
+
+    #[test]
+    fn capacity_supervisor_resumes_same_session_on_next_model() {
+        let (t, saved) = supervise(
+            1,
+            json!({"sandbox":"read-only","effort":"high","todo_id":1793}),
+        );
+        assert_eq!(saved["status"], "succeeded");
+        assert_eq!(saved["model"], "gpt-6-astra");
+        assert_eq!(saved["capacity_retry_count"], 1);
+        assert_eq!(saved["capacity_history"][0]["session"], SESSION_ID);
+        assert_eq!(saved["capacity_history"][0]["from_model"], "gpt-6.1-sol");
+        assert_eq!(saved["capacity_history"][0]["to_model"], "gpt-6-astra");
+        assert_eq!(
+            saved["capacity_history"][0]["error"],
+            "Selected model is at capacity"
+        );
+        assert_eq!(saved["todo_id"], 1793);
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 2);
+        assert!(!args[0].iter().any(|a| a == "resume"));
+        assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
+        assert!(args[1].windows(2).any(|w| w == ["-m", "gpt-6-astra"]));
+        assert!(args[1].windows(2).any(|w| w == ["-s", "read-only"]));
+        assert!(args[1].iter().any(|a| a == "model_reasoning_effort=high"));
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn capacity_supervisor_stops_after_three_switches() {
+        let (t, saved) = supervise(usize::MAX, json!({}));
+        assert_eq!(saved["status"], "failed");
+        assert_eq!(saved["capacity_retry_count"], 3);
+        assert_eq!(saved["capacity_history"].as_array().unwrap().len(), 3);
+        assert_eq!(saved["last_error"], "Selected model is at capacity");
+        let args = t.rt.spawn_args.lock().unwrap();
+        assert_eq!(args.len(), 4);
+        for (arg, model) in
+            args.iter()
+                .zip(["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol"])
+        {
+            assert!(arg.windows(2).any(|w| w == ["-m", model]));
+        }
+    }
+
+    #[test]
+    fn capacity_switch_order_starts_from_each_selected_model() {
+        let t = Test::new();
+        for (from, to) in [
+            ("gpt-6.1-sol", "gpt-6-astra"),
+            ("gpt-6-astra", "gpt-6-luna"),
+            ("gpt-6-luna", "gpt-6.1-sol"),
+        ] {
+            let mut j = job(
+                json!({"status":"failed","model":from,"last_error":"Selected model is at capacity","thread_id":SESSION_ID,"retry_count":4,"retry_not_before":9999999999.,"context_phase":"continue","yield_resume":true,"turn_completed":true}),
+            );
+            assert!(t.ctx.retry_capacity(&mut j));
+            assert_eq!(j["model"], to);
+            assert_eq!(j["resume_session"], SESSION_ID);
+            assert_eq!(j["retry_count"], 4);
+            assert!(j["retry_not_before"].is_null());
+            assert_eq!(j["context_phase"], "continue");
+            assert_eq!(j["yield_resume"], true);
+            assert!(j["turn_completed"].is_null());
+            assert!(j["last_error"].is_null());
+        }
+    }
+
+    #[test]
+    fn capacity_does_not_restart_cancelled_completed_invalid_or_other_models() {
+        let t = Test::new();
+        for p in [
+            json!({"status":"succeeded"}),
+            json!({"status":"cancelled"}),
+            json!({"cancel_requested":true}),
+            json!({"model":"anthropic/claude-sonnet-5-5"}),
+            json!({"thread_id":null,"resume_session":null}),
+            json!({"thread_id":"invalid","resume_session":"invalid"}),
+            json!({"last_error":"429 Too Many Requests"}),
+            json!({"last_error":"model not found"}),
+            json!({"capacity_retry_count":3}),
+            json!({"capacity_retry_count":u64::MAX}),
+            json!({"capacity_history":{}}),
+        ] {
+            let mut j = patch(
+                job(
+                    json!({"status":"failed","model":"gpt-6.1-sol","last_error":"Selected model is at capacity","thread_id":SESSION_ID}),
+                ),
+                p,
+            );
+            let before = j.clone();
+            assert!(!t.ctx.retry_capacity(&mut j));
+            assert_eq!(j, before);
+        }
+    }
+
+    #[test]
+    fn capacity_falls_back_to_existing_resume_id_and_masks_history() {
+        let t = Test::new();
+        let secret = ["secret", "-synthetic-1793"].concat();
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("OPENAI_API_KEY".into(), secret.clone());
+        let mut j = job(
+            json!({"status":"failed","model":"gpt-6-astra","last_error":format!("Selected model is at capacity; key={secret}"),"thread_id":null,"resume_session":SESSION_ID}),
+        );
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["resume_session"], SESSION_ID);
+        assert!(!j.to_string().contains(&secret));
+    }
+
+    #[test]
+    fn capacity_is_case_insensitive_and_is_infrastructure_failure() {
+        assert!(is_capacity(
+            "upstream: Selected Model Is At Capacity. Please try again."
+        ));
+        assert!(!is_capacity("storage is at capacity"));
+        assert_eq!(
+            auto_quality(
+                &job(json!({"status":"failed","last_error":"Selected model is at capacity"})),
+                None
+            )
+            .0,
+            1
+        );
+    }
+
+    #[test]
+    fn capacity_switch_budget_survives_supervisor_restart() {
+        let (t, saved) = supervise(
+            usize::MAX,
+            json!({"capacity_retry_count":2,"capacity_history":[{"attempt":1},{"attempt":2}],"model":"gpt-6-luna"}),
+        );
+        assert_eq!(saved["capacity_retry_count"], 3);
+        assert_eq!(saved["capacity_history"].as_array().unwrap().len(), 3);
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 2);
+    }
+
+    #[test]
+    fn capacity_with_429_does_not_escape_the_switch_limit() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"limit","name":"req-capacity-limit","model":"gpt-6.1-sol","cwd":t.ctx.root,"codex":"codex.CMD","capacity_retry_count":3})));
+        fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), "continue").unwrap();
+        *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(|| {
+            Box::new(FakeChild {
+            alive: Arc::new(AtomicBool::new(false)),
+            out: Some(Box::new(Cursor::new(format!("{{\"type\":\"thread.started\",\"thread_id\":\"{SESSION_ID}\"}}\n{{\"type\":\"turn.failed\",\"error\":{{\"message\":\"429 Too Many Requests: Selected model is at capacity\"}}}}\n").into_bytes()))),
+        })
+        }));
+        t.ctx.supervise("limit").unwrap();
+        assert_eq!(t.ctx.load("limit").unwrap()["status"], "failed");
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    }
+}
 mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;

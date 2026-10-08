@@ -6,6 +6,7 @@ pub mod adaptive;
 pub mod boundary;
 pub mod cache;
 mod cache_history;
+pub mod capacity;
 pub mod cli;
 pub mod context_rotation;
 pub mod events;

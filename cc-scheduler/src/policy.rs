@@ -331,7 +331,23 @@ pub fn resources_busy_with_lock(
     {
         let mut free_slots = Vec::new();
         let mut probe_failed = false;
-        for slot in 0..3 {
+        let dynamic = gate_home.join(cc_job_policy::cargo::CONFIG_FILE).exists()
+            || gate_home.join("cargo-admission-state.json").exists();
+        let ceiling = if dynamic {
+            match cc_job_policy::cargo::configured_ceiling(
+                &gate_home,
+                std::thread::available_parallelism().map_or(1, |n| n.get()),
+            ) {
+                Ok(ceiling) => ceiling,
+                Err(_) => {
+                    probe_failed = true;
+                    0
+                }
+            }
+        } else {
+            3
+        }; // Compatibility with installations that still run the old gate.
+        for slot in 0..ceiling {
             match ByteLock::acquire(
                 &gate_home.join(format!("cargo-build.lock.{slot}")),
                 std::time::Duration::ZERO,

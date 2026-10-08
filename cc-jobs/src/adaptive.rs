@@ -651,6 +651,16 @@ impl Context {
 }
 
 pub fn machine_sample(cfg: &AdaptiveConfig) -> MachineSample {
+    let mut sample = machine_resources();
+    sample.health_ms = health_probe(
+        cfg.health_port,
+        Duration::from_millis(cfg.health_timeout_ms),
+    )
+    .ok();
+    sample
+}
+/// Native machine counters without the queue controller's HTTP health probe.
+pub fn machine_resources() -> MachineSample {
     let mut sample = MachineSample::default();
     #[cfg(windows)]
     unsafe {
@@ -674,11 +684,6 @@ pub fn machine_sample(cfg: &AdaptiveConfig) -> MachineSample {
             sample.cpu_times = Some([time(idle), time(kernel), time(user)]);
         }
     }
-    sample.health_ms = health_probe(
-        cfg.health_port,
-        Duration::from_millis(cfg.health_timeout_ms),
-    )
-    .ok();
     sample
 }
 pub fn health_probe(port: u16, timeout: Duration) -> std::io::Result<f64> {

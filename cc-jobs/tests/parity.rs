@@ -184,6 +184,7 @@ fn cargo_gate_windows_sys_exit_matches_python_long_conversion() {
 #[test]
 fn cargo_cmd_preserves_a_failing_child_exit_code() {
     let temp = Temp::new();
+    cargo_test_policy(&temp.0, 1);
     let bin = temp.0.join("bin");
     fs::create_dir(&bin).unwrap();
     fs::copy(
@@ -221,6 +222,23 @@ fn cargo_cmd_preserves_a_failing_child_exit_code() {
     assert_eq!(result.stdout, b"");
     assert_eq!(result.stderr, b"");
     assert!(temp.0.join("cargo-build.lock.0").exists());
+}
+// Isolated gates exercise native counters even on memory-small CI runners.
+// Production defaults are covered by deterministic admission policy tests.
+fn cargo_test_policy(dir: &Path, slots: usize) {
+    fs::write(
+        dir.join(cc_jobs::gate::admission::CONFIG_FILE),
+        serde_json::to_vec(&cc_jobs::gate::admission::Config {
+            max_slots: Some(slots),
+            min_free_memory_gib: 0.,
+            grow_below_cpu_percent: 100.,
+            pause_at_cpu_percent: 100.,
+            settle_seconds: 0.,
+            ..Default::default()
+        })
+        .unwrap(),
+    )
+    .unwrap();
 }
 use std::{
     collections::{BTreeMap, HashMap, HashSet, VecDeque},
@@ -5270,6 +5288,7 @@ mod cargo_gate_tests {
     /// Intervals in spawn order for builds of the given targets.
     fn timed(slots: Option<usize>, targets: &[&str], ready: usize) -> Vec<(f64, f64)> {
         let tmp = Temp::new();
+        cargo_test_policy(&tmp.0, slots.unwrap_or(4));
         let procs: Vec<_> = targets
             .iter()
             .map(|t| build(&tmp.0, slots, t, ready))
@@ -5326,9 +5345,9 @@ mod cargo_gate_tests {
         assert!(overlap(v[2], v[0]) || overlap(v[2], v[1]), "{v:?}");
     }
     #[test]
-    fn default_is_three_slots_across_distinct_targets() {
-        let capacity = std::thread::available_parallelism().unwrap().get().min(3);
-        let v = timed(None, &["t0", "t1", "t2", "t3"], capacity);
+    fn live_policy_can_admit_more_than_three_distinct_targets() {
+        let capacity = std::thread::available_parallelism().unwrap().get().min(4);
+        let v = timed(None, &["t0", "t1", "t2", "t3", "t4"], capacity);
         assert_eq!(max_overlap(&v), capacity, "{v:?}");
     }
     #[test]
@@ -5380,6 +5399,7 @@ mod cargo_gate_tests {
             ])
         );
         let tmp = Temp::new();
+        cargo_test_policy(&tmp.0, 1);
         let target = tmp.0.join("t");
         let out = hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
             .args(["--echo-build", "build", "-j", "4096", "--", "-j", "4096"])
@@ -5395,7 +5415,7 @@ mod cargo_gate_tests {
             .output()
             .unwrap();
         assert!(out.status.success());
-        let limit = jobs_limit(std::thread::available_parallelism().unwrap().get(), 3);
+        let limit = jobs_limit(std::thread::available_parallelism().unwrap().get(), 1);
         assert_eq!(
             String::from_utf8(out.stdout).unwrap().trim(),
             format!(
@@ -6436,6 +6456,7 @@ mod end_to_end {
     #[test]
     fn cargo_slot_wait_marker_is_visible_then_cleared_before_execution() {
         let mut t = Test::new();
+        cargo_test_policy(&t.ctx.root, 1);
         t.ctx.rt = Arc::new(System::default());
         let job=t.put(job(json!({"id":"build","status":"running","pid":std::process::id(),"pid_created":proc_created(std::process::id())})));
         let held = FileLock::try_acquire(&t.ctx.root.join("cargo-build.lock.0")).unwrap();
@@ -7051,6 +7072,7 @@ mod additional_compatibility {
     #[test]
     fn cargo_path_wrapper_runs_the_rust_gate_and_preserves_streaming() {
         let t = Test::new();
+        cargo_test_policy(&t.ctx.root, 1);
         let bin = t.ctx.root.join("bin");
         fs::create_dir_all(&bin).unwrap();
         fs::copy(

@@ -1,11 +1,12 @@
 //! Limit concurrent Cargo build-like commands across codex-jobs supervisors on Windows.
 //!
 //! A build first locks its effective target directory, then takes one of
-//! CODEX_JOBS_CARGO_SLOTS (default 3) machine slots, so a build waiting for a busy
-//! target never holds a slot. The logical cores are split evenly across the slots
+//! dynamically admitted machine slots, so a build waiting for a busy
+//! target never holds a slot. The logical cores are split across active builds
 //! (CARGO_BUILD_JOBS and explicit job counts are clamped), and a build without an
 //! explicit target gets a stable per-workspace directory shared with sccache.
 use crate::*;
+pub mod admission;
 use std::{
     collections::BTreeMap,
     io,
@@ -42,6 +43,7 @@ pub const INJECTED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_INJECTED";
 /// Explicit user target inherited by nested gates without entering Rust cache keys.
 pub const FORWARDED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_OVERRIDE";
 const LOCK_HELD: &str = "CODEX_JOBS_CARGO_LOCK_HELD";
+const HELD_JOBS: &str = "CODEX_JOBS_CARGO_JOBS_LIMIT";
 const SLOT_WAIT: &str = "cargoの共有ビルド枠待ち";
 const TARGET_WAIT: &str = "cargoの同じビルド先の使用終了待ち";
 /// Windows CPython's sys.exit converts its argument through a signed C long.
@@ -102,24 +104,10 @@ fn nextest_command(args: &[String]) -> Option<&str> {
 pub fn needs_lock(args: &[String], env: &BTreeMap<String, String>) -> bool {
     build_like(args) && env.get(LOCK_HELD).is_none_or(|v| v != "1")
 }
-pub fn slots(env: &BTreeMap<String, String>) -> io::Result<usize> {
-    Ok(env
-        .get("CODEX_JOBS_CARGO_SLOTS")
-        .filter(|s| !s.is_empty())
-        .map(|s| s.parse::<isize>())
-        .transpose()
-        .map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "invalid CODEX_JOBS_CARGO_SLOTS",
-            )
-        })?
-        .unwrap_or(3)
-        .clamp(1, 3) as usize)
-}
-/// Reserve at least three equal CPU shares even when fewer slots are enabled.
-pub fn jobs_limit(cores: usize, slots: usize) -> usize {
-    (cores / slots.max(3)).max(1)
+/// New commands share the CPU budget according to the actual active count.
+/// Running Cargo jobservers keep their initial budget until the command ends.
+pub fn jobs_limit(cores: usize, active: usize) -> usize {
+    (cores / active.max(1)).clamp(1, 10)
 }
 fn clamp(value: &str, limit: usize) -> usize {
     value
@@ -457,24 +445,14 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
         return execute(args, env);
     }
     let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
-    let slots = slots(env)?.min(cores);
-    let limit = jobs_limit(cores, slots);
-    let args = clamp_jobs(args, limit);
     let mut child = env.clone();
-    let jobs = take_var(&mut child, "CARGO_BUILD_JOBS").map_or(limit, |v| clamp(&v, limit));
-    child.insert("CARGO_BUILD_JOBS".into(), jobs.to_string());
-    let tests = take_var(&mut child, "RUST_TEST_THREADS").map_or(limit, |v| clamp(&v, limit));
-    child.insert("RUST_TEST_THREADS".into(), tests.to_string());
-    if first_command(&args) == "nextest" {
-        let tests =
-            take_var(&mut child, "NEXTEST_TEST_THREADS").map_or(limit, |v| clamp(&v, limit));
-        child.insert("NEXTEST_TEST_THREADS".into(), tests.to_string());
-    }
     crate::cache::build_environment(&mut child, Path::new(SCCACHE));
     let nested = env.get(LOCK_HELD).is_some_and(|v| v == "1");
     let held = env.get(HELD_TARGET).map(String::as_str);
     if nested && held.is_none() {
         // The outer gate predates target locks; it already owns a slot.
+        let limit = nested_jobs_limit(&child, cores);
+        let args = apply_jobs(args, &mut child, limit);
         return execute(&args, &child);
     }
     // Only a real Cargo is asked for metadata; test doubles and other commands
@@ -482,8 +460,8 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let real = Path::new(cargo)
         .file_stem()
         .is_some_and(|s| s.eq_ignore_ascii_case("cargo"));
-    let target_dir = prepare_target(&args, &mut child, |fresh| {
-        real.then(|| metadata(cargo, &args, env, fresh)).flatten()
+    let target_dir = prepare_target(args, &mut child, |fresh| {
+        real.then(|| metadata(cargo, args, env, fresh)).flatten()
     });
     let target = target_dir.as_ref().map(|p| {
         // Create first, so the key is canonical before and after Cargo creates it.
@@ -511,8 +489,12 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
             } else { wait_for(&[path], env, TARGET_WAIT) }
         }).transpose()?;
     let slot = (!nested)
-        .then(|| wait_for(&slot_paths(dir, slots), env, SLOT_WAIT))
+        .then(|| admission::wait(dir, env, cores))
         .transpose()?;
+    let limit = slot
+        .as_ref()
+        .map_or_else(|| nested_jobs_limit(&child, cores), |p| p.jobs);
+    let args = apply_jobs(args, &mut child, limit);
     let args = if real {
         target_dir
             .as_ref()
@@ -525,9 +507,42 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     result
 }
 
+fn apply_jobs(args: &[String], child: &mut BTreeMap<String, String>, limit: usize) -> Vec<String> {
+    child.insert(HELD_JOBS.into(), limit.to_string());
+    for name in [
+        "CARGO_BUILD_JOBS",
+        "RUST_TEST_THREADS",
+        "NEXTEST_TEST_THREADS",
+    ] {
+        if name == "NEXTEST_TEST_THREADS" && first_command(args) != "nextest" {
+            continue;
+        }
+        let jobs = take_var(child, name).map_or(limit, |v| clamp(&v, limit));
+        child.insert(name.into(), jobs.to_string());
+    }
+    clamp_jobs(args, limit)
+}
+
+fn nested_jobs_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
+    let fallback = jobs_limit(cores, 1);
+    var(child, HELD_JOBS)
+        .or_else(|| var(child, "CARGO_BUILD_JOBS"))
+        .map_or(fallback, |v| clamp(v, fallback))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nested_explicit_jobs_never_exceed_the_parent_budget() {
+        let mut child = BTreeMap::from([("CARGO_BUILD_JOBS".into(), "4".into())]);
+        let limit = nested_jobs_limit(&child, 32);
+        assert_eq!(
+            apply_jobs(&["build".into(), "-j64".into()], &mut child, limit),
+            ["build", "-j4"]
+        );
+        assert_eq!(child[HELD_JOBS], "4");
+    }
     #[test]
     fn metadata_keeps_lockfile_network_and_toolchain_constraints() {
         let args = [

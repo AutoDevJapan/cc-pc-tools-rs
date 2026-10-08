@@ -50,6 +50,37 @@ fn busy_notifier_card_lock_returns_within_deadline_without_card_changes() {
     assert!(start.elapsed() < std::time::Duration::from_secs(1));
     assert!(h.fake.borrow().patches.is_empty());
 }
+
+#[test]
+fn busy_notifier_card_defers_before_reading_task_metadata() {
+    let mut h = fixture();
+    let path = h
+        .ctx
+        .discord_tasks
+        .join(format!("{:x}.lock", Sha256::digest(b"job-todo-1104")));
+    let held = std::fs::OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .truncate(false)
+        .open(path)
+        .unwrap();
+    held.lock().unwrap();
+    std::fs::write(
+        &h.ctx.todo,
+        "incomplete metadata: do not read while card is busy",
+    )
+    .unwrap();
+    let _deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::from_millis(75));
+    let error = sync_job(&mut h.ctx, "job-todo-1104")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("TickDeadline") || error.contains("task card lock is busy"),
+        "{error}"
+    );
+    assert!(h.fake.borrow().patches.is_empty());
+}
 #[test]
 fn preview_has_no_mutations_apply_updates_channel_card_and_state_then_is_idempotent() {
     let mut h = fixture();

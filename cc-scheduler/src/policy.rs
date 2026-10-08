@@ -322,7 +322,67 @@ pub fn resources_busy_with_lock(
     if !lock.is_null() {
         busy.insert("civ6".into());
     }
+    // A ToDo's `needs: cargo` describes future work, not a build lease for the
+    // whole model session. The installed gate owns target and machine-slot locks.
+    // Older installations retain the conservative, process-based policy.
+    let gate_home = home.parent().unwrap_or(home).join("codex-jobs");
+    if home.file_name().is_some_and(|name| name == "civ6-live")
+        && gate_home.join("cargo_gate.exe").is_file()
+    {
+        let mut free_slots = Vec::new();
+        let mut probe_failed = false;
+        for slot in 0..3 {
+            match ByteLock::acquire(
+                &gate_home.join(format!("cargo-build.lock.{slot}")),
+                std::time::Duration::ZERO,
+            ) {
+                Ok(Some(guard)) => free_slots.push(guard),
+                Ok(None) => (),
+                // Only Cargo admission closes; reconciliation and unrelated
+                // work must still run when a slot file cannot be inspected.
+                Err(_) => probe_failed = true,
+            }
+        }
+        let unmanaged = processes.values().any(|p| {
+            matches!(
+                s(&p["name"]).to_ascii_lowercase().as_str(),
+                "cargo.exe" | "rustc.exe" | "cargo" | "rustc"
+            ) && !cargo_gate_ancestor(p, &processes)
+        });
+        if free_slots.is_empty() || unmanaged || probe_failed {
+            busy.insert("cargo".into());
+        } else {
+            busy.remove("cargo");
+        }
+        // This is an admission observation, never a reservation. The build gate
+        // rechecks and acquires its own locks when the command actually runs.
+    }
     Ok(busy)
+}
+
+fn cargo_gate_ancestor(process: &Value, processes: &Processes) -> bool {
+    let mut current = process;
+    let mut seen = BTreeSet::new();
+    while seen.insert(n(&current["pid"]) as u32) {
+        if matches!(
+            s(&current["name"]).to_ascii_lowercase().as_str(),
+            "cargo_gate.exe" | "cargo_gate"
+        ) {
+            return true;
+        }
+        let Some(parent) = processes.get(&(n(&current["ppid"]) as u32)) else {
+            return false;
+        };
+        if current["created"]
+            .as_u64()
+            .zip(parent["created"].as_u64())
+            .is_none_or(|(child, parent)| child < parent)
+        {
+            return false;
+        }
+        current = parent;
+    }
+    false
 }
 pub fn pressure_victim(
     items: &[Value],

@@ -72,15 +72,19 @@ impl Context {
         self.rt
             .before_save(path, v)
             .map_err(|e| Error::file_io("prepare write", path, e))?;
+        // Every persisted record (job.json, journals) is masked before serialization.
+        let v = &LogRedactor::new(&self.rt.env()).event(v);
+        self.write_snapshot(path, pretty(v).replace("\n", "\r\n").as_bytes())
+    }
+    pub fn write_snapshot(&self, path: &Path, bytes: &[u8]) -> Result<()> {
         let tmp = path.with_file_name(format!(
             "{}.{}.tmp",
             path.file_name().unwrap().to_string_lossy(),
             self.rt.pid()
         ));
         let until = std::time::Instant::now() + std::time::Duration::from_secs(1);
-        let bytes = pretty(v).replace("\n", "\r\n");
         for i in 0..50 {
-            match fs::write(&tmp, &bytes) {
+            match fs::write(&tmp, bytes) {
                 Ok(()) => break,
                 Err(e)
                     if transient_file_access(&e) && i < 49 && std::time::Instant::now() < until =>
@@ -817,6 +821,20 @@ impl Context {
             }
         }
     }
+    /// Apply a masked event. A completed agent message also replaces the
+    /// attempt's output file, as `codex exec -o` did with the final message.
+    fn apply_recorded(&self, job: &mut Value, ev: &Value, output: &Path) {
+        apply_event(job, ev);
+        if s(ev, "type") == "item.completed" && s(&ev["item"], "type") == "agent_message" {
+            let text = redact_local_log_secrets(s(&ev["item"], "text"), &self.rt.env());
+            if let Err(error) = self.write_snapshot(output, text.as_bytes()) {
+                self.rt.diagnostic(&format!(
+                    "write the final message: {}",
+                    redact_local_log_secrets(&error.message, &self.rt.env())
+                ));
+            }
+        }
+    }
     fn supervise_attempt(
         &self,
         jid: &str,
@@ -876,8 +894,14 @@ impl Context {
                     "true".into(),
                 );
             }
+            // Read by `wait`, handoffs and retries; written only from masked events.
+            let output = dir.join(if s(&job, "context_phase") == "summarize" {
+                "context-summary-output.md"
+            } else {
+                "last_message.md"
+            });
             proc = Some(self.rt.spawn(&Spawn {
-                argv: codex_args(&job, &dir),
+                argv: codex_args(&job),
                 prompt: dir.join(if s(&job, "context_phase") == "summarize" {
                     "context-summary-prompt.md"
                 } else if s(&job, "context_phase") == "continue" && job["yield_resume"] != true {
@@ -958,7 +982,7 @@ impl Context {
                 }
                 if let Some(ev) = ev {
                     job["last_event_at"] = ev["_ts"].clone();
-                    apply_event(&mut job, &ev);
+                    self.apply_recorded(&mut job, &ev, &output);
                     if s(&ev, "type") == "item.completed"
                         && TOOL_KINDS.contains(&s(&ev["item"], "type"))
                         && (self.context_limit_reached(&job)
@@ -1035,7 +1059,7 @@ impl Context {
                         // Drain them after observing exit so turn.completed is never lost.
                         while let Ok(ev) = qrx.try_recv() {
                             job["last_event_at"] = ev["_ts"].clone();
-                            apply_event(&mut job, &ev);
+                            self.apply_recorded(&mut job, &ev, &output);
                         }
                         exit = Some(code);
                         break;
@@ -1188,7 +1212,9 @@ fn find_session(dir: &Path, id: &str, recursive: bool) -> Option<PathBuf> {
     }
     None
 }
-pub fn codex_args(j: &Value, d: &Path) -> Vec<String> {
+/// No `-o`: codex would write its raw final message to the job directory.
+/// The supervisor writes that file from masked events instead (`record_message`).
+pub fn codex_args(j: &Value) -> Vec<String> {
     let summary = s(j, "context_phase") == "summarize";
     let policy = cc_job_policy::for_sandbox(if summary {
         "read-only"
@@ -1210,14 +1236,6 @@ pub fn codex_args(j: &Value, d: &Path) -> Vec<String> {
         format!("model_reasoning_effort={}", getstr(j, "effort")),
         "-s".into(),
         policy.sandbox.into(),
-        "-o".into(),
-        d.join(if summary {
-            "context-summary-output.md"
-        } else {
-            "last_message.md"
-        })
-        .to_string_lossy()
-        .into(),
     ];
     if summary {
         // Disable the whole plugin/app features and every configured server

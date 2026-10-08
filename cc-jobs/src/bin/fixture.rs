@@ -200,8 +200,46 @@ fn main() {
         pretty(&json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy()})),
     )
     .unwrap();
-    let out = args.iter().position(|a| a == "-o").unwrap();
-    fs::write(&args[out + 1], "DONE").unwrap();
+    if mode == "secret-events" || mode == "secret-hold" {
+        // Synthetic credentials, assembled at run time.
+        let token = format!("{}{}", "gh", "p_") + &"Ab3De5Gh7J".repeat(4);
+        let secret = format!("\"serviceSecret\":\"{}\"", "sv7Hq2Xw".repeat(3));
+        eprintln!("Authorization: Bearer {}", "v1.Zx9Kq2Lm".repeat(3));
+        // A private key and a quoted value, each split over several lines.
+        let pem = ["PRIVATE", "KEY"].join(" ");
+        eprintln!("key: -----BEGIN RSA {pem}-----");
+        eprintln!("{}", "Pk4Vb8Nm".repeat(8));
+        eprintln!("{}", "Rt6Yu1Io".repeat(8));
+        eprintln!("-----END RSA {pem}----- after key");
+        eprintln!("licenseKey = \"{}", "Lq3Wz5Ex".repeat(3));
+        eprintln!("{}\" after value", "Mj2Kn4Bh".repeat(3));
+        eprintln!("plain stderr line");
+        let command = format!("curl -H \"Authorization: token {token}\" -d '{{{secret}}}'");
+        if mode == "secret-hold" {
+            // Report a final message, then stay running until the test kills
+            // this process: the records must already be masked mid-run.
+            println!(
+                "{}",
+                json!({"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":format!("PARTIAL {token}")}})
+            );
+            println!("not json {token}");
+            std::thread::sleep(Duration::from_secs(40));
+            return;
+        }
+        for event in [
+            json!({"type":"thread.started","thread_id":"01a0e883-7628-7121-9540-6780fd4cd6f4"}),
+            json!({"type":"turn.started"}),
+            json!({"type":"item.started","item":{"id":"item_1","type":"command_execution","command":command,"aggregated_output":"","exit_code":null,"status":"in_progress"}}),
+            json!({"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":command,"aggregated_output":format!("{{{secret}}}\r\n"),"exit_code":0,"status":"completed"}}),
+            json!({"type":"item.completed","item":{"id":"item_2","type":"mcp_tool_call","server":"s","tool":"t","arguments":{"serviceSecret":"abcd1234efgh"},"status":"completed"}}),
+            json!({"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":format!("DONE {token}")}}),
+            json!({"type":"turn.completed","usage":{"input_tokens":1,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":1,"reasoning_output_tokens":0}}),
+        ] {
+            println!("{event}");
+        }
+        println!("not json {token}");
+        return;
+    }
     std::thread::sleep(Duration::from_secs(1));
     print!("{}", include_str!("../../tests/fixtures/OK_EVENTS.jsonl"));
     println!();

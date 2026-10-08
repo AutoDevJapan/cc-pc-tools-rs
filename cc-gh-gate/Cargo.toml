@@ -1,0 +1,18 @@
+[package]
+name = "cc-gh-gate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cc-redact = { path = "../cc-redact" }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[[bin]]
+name = "gh_gate"
+path = "src/main.rs"
+
+# Stand-in for the real gh in tests: records argv, stdin and the files it was given.
+[[bin]]
+name = "gh_gate_fixture"
+path = "src/bin/fixture.rs"
+test = false

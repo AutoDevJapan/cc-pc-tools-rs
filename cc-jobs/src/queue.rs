@@ -213,18 +213,22 @@ impl Context {
         let dependency_waits = self.dependency_waits(jobs);
         let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
+        let long_running = parse_iso(s(job, "started_at")).is_some_and(|start| {
+            job["duration_ms"]
+                .as_f64()
+                .map(|ms| ms / 1000.)
+                .unwrap_or(at - start)
+                >= 7200.
+        });
+        // Lowest-tier work never keeps a slot from higher tiers, however short
+        // its run so far; equal tiers share slots after two hours.
+        let lowest = priority(job) == 3;
         s(job, "parent_job_id").is_empty()
             && s(job, "context_phase") != "summarize"
             && s(job, "status") == "running"
             && job["cancel_requested"] != true
             && normalize_uuid(s(job, "thread_id")).is_some()
-            && parse_iso(s(job, "started_at")).is_some_and(|start| {
-                job["duration_ms"]
-                    .as_f64()
-                    .map(|ms| ms / 1000.)
-                    .unwrap_or(at - start)
-                    >= 7200.
-            })
+            && parse_iso(s(job, "started_at")).is_some()
             && !self.has_pending_descendants(job, jobs)
             && !jobs
                 .iter()
@@ -235,6 +239,7 @@ impl Context {
                     && s(other, "status") == "queued"
                     && !dependency_waits.contains_key(s(other, "id"))
                     && priority(other) <= priority(job)
+                    && (long_running || (lowest && priority(other) < 3))
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
                     && other["retry_not_before"].as_f64().unwrap_or(0.) <= at
@@ -906,17 +911,12 @@ impl Context {
                 let title_matches = id.is_some_and(|id| repeating_todos.contains(&id));
                 // Dependents of already running parents keep their existing child
                 // admission rules so a parent can finish and release its slot.
+                // Only declared titles classify a loop: prompt bodies carry shared
+                // guidance and quoted history, which once marked every job lowest
+                // and collapsed all tiers into plain FIFO.
                 let low = s(j, "parent_job_id").is_empty()
                     && !excepted
-                    && (listed
-                        || title_matches
-                        || repeating_request(s(j, "task_title"))
-                        || cached_by_mtime(
-                            &REPEATING_PROMPTS,
-                            &self.job_dir(s(j, "id")).join("prompt.md"),
-                            false,
-                            |prompt| std::str::from_utf8(prompt).is_ok_and(repeating_request),
-                        ));
+                    && (listed || title_matches || repeating_request(s(j, "task_title")));
                 (
                     s(j, "id").to_owned(),
                     if low { 3 } else { queue_priority(j) },
@@ -1027,8 +1027,6 @@ fn last_event(path: &Path) -> Result<Value> {
 }
 type FileCache<T> = std::sync::Mutex<HashMap<std::path::PathBuf, (u64, std::time::SystemTime, T)>>;
 static REPEATING_TODOS: std::sync::LazyLock<FileCache<HashSet<u64>>> =
-    std::sync::LazyLock::new(Default::default);
-static REPEATING_PROMPTS: std::sync::LazyLock<FileCache<bool>> =
     std::sync::LazyLock::new(Default::default);
 /// Derive a value from a file once per (path, length, mtime). The ~6 MB ToDo
 /// list used to be parsed for every job on every admission pass under the gate.

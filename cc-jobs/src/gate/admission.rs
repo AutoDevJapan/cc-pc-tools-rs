@@ -4,54 +4,7 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::{fs, thread, time::Duration};
 
-pub use cc_job_policy::cargo::CONFIG_FILE;
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct Config {
-    pub max_slots: Option<usize>,
-    pub jobs_per_build: usize,
-    pub min_free_memory_gib: f64,
-    pub grow_below_cpu_percent: f64,
-    pub pause_at_cpu_percent: f64,
-    /// Give a newly started compiler time to appear in the next CPU sample.
-    pub settle_seconds: f64,
-}
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            max_slots: None,
-            jobs_per_build: 10,
-            min_free_memory_gib: 16.,
-            grow_below_cpu_percent: 75.,
-            pause_at_cpu_percent: 90.,
-            settle_seconds: 2.,
-        }
-    }
-}
-impl Config {
-    pub fn max_slots(&self, cores: usize) -> usize {
-        cc_job_policy::cargo::slot_ceiling(self.max_slots, cores)
-    }
-    fn validate(&self) -> io::Result<()> {
-        if self.max_slots == Some(0)
-            || self.jobs_per_build == 0
-            || !self.min_free_memory_gib.is_finite()
-            || self.min_free_memory_gib < 0.
-            || !self.grow_below_cpu_percent.is_finite()
-            || !(0. ..=100.).contains(&self.grow_below_cpu_percent)
-            || !self.pause_at_cpu_percent.is_finite()
-            || !(self.grow_below_cpu_percent..=100.).contains(&self.pause_at_cpu_percent)
-            || !self.settle_seconds.is_finite()
-            || !(0. ..=60.).contains(&self.settle_seconds)
-        {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "invalid cargo-gate.json policy",
-            ));
-        }
-        Ok(())
-    }
-}
+pub use cc_job_policy::cargo::{CONFIG_FILE, Config, STATE_FILE};
 fn read_json<T: serde::de::DeserializeOwned + Default>(path: &Path) -> io::Result<T> {
     match fs::read(path) {
         Ok(bytes) => serde_json::from_slice(&bytes).map_err(|e| {
@@ -80,8 +33,8 @@ pub struct Sample {
     pub cpu_percent: f64,
     pub free_memory_gib: f64,
 }
-/// Unknown/invalid measurements never admit. The middle band keeps the last
-/// capacity; a healthy measurement allows growth by one, bounded by core count.
+/// Unknown/invalid measurements never admit. The middle band never grows live
+/// occupancy; a healthy measurement allows one more, bounded by core count.
 pub fn capacity(cfg: &Config, cores: usize, previous: usize, sample: Sample) -> Option<usize> {
     if !sample.cpu_percent.is_finite()
         || !(0. ..=100.).contains(&sample.cpu_percent)
@@ -121,7 +74,8 @@ fn native_sample() -> io::Result<Sample> {
             cpu_percent,
             free_memory_gib,
         }),
-        _ => Err(io::Error::other(
+        _ => Err(io::Error::new(
+            io::ErrorKind::WouldBlock,
             "cannot measure Cargo gate CPU or free memory",
         )),
     }
@@ -134,6 +88,19 @@ fn now() -> f64 {
 }
 fn occupied(error: &io::Error) -> bool {
     matches!(error.raw_os_error(), Some(32) | Some(33))
+}
+fn warn_history() {
+    static WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+        eprintln!(
+            "cargo gate: admission history unavailable; using live CPU, memory and slot locks"
+        );
+    }
+}
+fn record_state(path: &Path, state: &State) {
+    if save_state(path, state).is_err() {
+        warn_history();
+    }
 }
 fn save_state(path: &Path, state: &State) -> io::Result<()> {
     // The admission lock serializes writers; a crash can leave the temporary
@@ -153,6 +120,15 @@ pub fn try_admit(
     cores: usize,
     sample: impl FnOnce() -> io::Result<Sample>,
 ) -> io::Result<Option<Permit>> {
+    let mut reason = SLOT_WAIT;
+    attempt(dir, cores, sample, &mut reason)
+}
+fn attempt(
+    dir: &Path,
+    cores: usize,
+    sample: impl FnOnce() -> io::Result<Sample>,
+    reason: &mut &'static str,
+) -> io::Result<Option<Permit>> {
     let _admission = match FileLock::acquire_queue_timeout(
         &dir.join("cargo-admission.lock"),
         Duration::from_secs(5),
@@ -161,27 +137,28 @@ pub fn try_admit(
         Err(e) if occupied(&e) || e.kind() == io::ErrorKind::TimedOut => return Ok(None),
         Err(e) => return Err(e),
     };
-    let cfg: Config = read_json(&dir.join(CONFIG_FILE))?;
-    cfg.validate()?;
-    let state_path = dir.join("cargo-admission-state.json");
+    let cfg = Config::read(dir)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("cargo-gate.json: {e}")))?;
+    let state_path = dir.join(STATE_FILE);
     let mut state: State = match read_json(&state_path) {
         Ok(state) => state,
-        Err(e) if e.kind() == io::ErrorKind::InvalidData => {
-            eprintln!("cargo gate: invalid admission history; rebuilding from live counters");
+        Err(_) => {
+            warn_history();
             State::default()
         }
-        Err(e) => return Err(e),
     };
-    if !state.last_admitted.is_finite() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "invalid Cargo admission state",
-        ));
-    }
     let max = cfg.max_slots(cores);
     // Do not hold free slot locks during measurement: old gates do not use
     // our admission lock and must remain able to start in the meantime.
     let measured = sample()?;
+    if measured.free_memory_gib < cfg.min_free_memory_gib {
+        *reason = "cargoの空きメモリ不足で待機中";
+        return Ok(None);
+    }
+    if measured.cpu_percent >= cfg.pause_at_cpu_percent {
+        *reason = "cargoのCPU使用率が高いため待機中";
+        return Ok(None);
+    }
     // Include locks created by older/larger policies even after max_slots is
     // reduced. Hold every free lock until reservation so legacy contenders
     // cannot invalidate our occupancy snapshot.
@@ -212,7 +189,7 @@ pub fn try_admit(
     // wall time to catch up. Nothing is interrupted when capacity falls.
     if state.last_admitted > at {
         state.last_admitted = at;
-        save_state(&state_path, &state)?;
+        record_state(&state_path, &state);
     }
     if active > 0 && at - state.last_admitted < cfg.settle_seconds {
         return Ok(None);
@@ -240,17 +217,41 @@ pub fn try_admit(
     state.measurement = Some(measured);
     state.active_at_admission = active + 1;
     state.jobs_at_admission = jobs;
-    save_state(&state_path, &state)?;
+    record_state(&state_path, &state);
     Ok(Some(Permit { _slot: slot, jobs }))
 }
 pub fn wait(dir: &Path, env: &BTreeMap<String, String>, cores: usize) -> io::Result<Permit> {
     let mut marker = None;
+    let mut marked_reason = "";
+    let mut reported_error = String::new();
     loop {
-        if let Some(permit) = try_admit(dir, cores, native_sample)? {
-            return Ok(permit);
+        let mut reason = SLOT_WAIT;
+        match attempt(dir, cores, native_sample, &mut reason) {
+            Ok(Some(permit)) => return Ok(permit),
+            Ok(None) => reported_error.clear(),
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    io::ErrorKind::InvalidData | io::ErrorKind::WouldBlock
+                ) =>
+            {
+                reason = if e.kind() == io::ErrorKind::InvalidData {
+                    "cargoの設定を読み取れないため待機中"
+                } else {
+                    "cargoの負荷を再測定するため待機中"
+                };
+                let message = e.to_string();
+                if reported_error != message {
+                    eprintln!("cargo gate: {message}; retrying");
+                    reported_error = message;
+                }
+            }
+            Err(e) => return Err(e),
         }
-        if marker.is_none() {
-            marker = crate::queue_status::ResourceWait::new(env, SLOT_WAIT);
+        if marked_reason != reason {
+            drop(marker.take());
+            marker = crate::queue_status::ResourceWait::new(env, reason);
+            marked_reason = reason;
         }
         thread::sleep(Duration::from_millis(500));
     }

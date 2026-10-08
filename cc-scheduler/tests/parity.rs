@@ -116,6 +116,15 @@ fn cargo_gate_probe_rereads_dynamic_ceiling_and_keeps_legacy_installations() {
     assert!(busy());
     fs::write(gate.join(cc_job_policy::cargo::CONFIG_FILE), "{invalid").unwrap();
     assert!(busy());
+    fs::write(
+        gate.join(cc_job_policy::cargo::CONFIG_FILE),
+        r#"{"max_slots":4,"pause_at_cpu_percent":50}"#,
+    )
+    .unwrap();
+    assert!(
+        busy(),
+        "scheduler must reject the same invalid thresholds as the gate"
+    );
     drop(held);
 }
 

@@ -332,7 +332,7 @@ pub fn resources_busy_with_lock(
         let mut free_slots = Vec::new();
         let mut probe_failed = false;
         let dynamic = gate_home.join(cc_job_policy::cargo::CONFIG_FILE).exists()
-            || gate_home.join("cargo-admission-state.json").exists();
+            || gate_home.join(cc_job_policy::cargo::STATE_FILE).exists();
         let ceiling = if dynamic {
             match cc_job_policy::cargo::configured_ceiling(
                 &gate_home,

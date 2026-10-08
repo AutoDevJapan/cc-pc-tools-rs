@@ -146,6 +146,34 @@ fn concurrent_admissions_cannot_exceed_live_ceiling() {
     assert!(!permits.is_empty());
     assert!(permits.len() <= 2);
 }
+
+#[test]
+fn concurrent_admission_respects_a_shared_settling_period() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join(CONFIG_FILE),
+        serde_json::to_vec(&Config {
+            settle_seconds: 60.,
+            ..Default::default()
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let permits = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..16)
+            .map(|_| scope.spawn(|| t.admit(40., 32.).unwrap()))
+            .collect();
+        workers
+            .into_iter()
+            .filter_map(|w| w.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(
+        permits.len(),
+        1,
+        "the admission mutex must serialize the cooldown check and reservation"
+    );
+}
 #[test]
 fn malformed_or_unreadable_policy_and_measurement_failures_are_errors() {
     let t = Temp::new();
@@ -182,6 +210,23 @@ fn damaged_history_is_rebuilt_and_atomic_snapshot_replaces_old_state() {
     assert!(!t.0.join("cargo-admission-state.json.tmp").exists());
     drop(permit);
     assert!(t.admit(40., 32.).unwrap().is_some());
+}
+
+#[test]
+fn diagnostic_snapshot_sharing_failure_does_not_abort_a_build() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let t = Temp::new();
+    let permit = t.admit(40., 32.).unwrap().unwrap();
+    drop(permit);
+    let _reader = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(1)
+        .open(t.0.join(STATE_FILE))
+        .unwrap();
+    assert!(
+        t.admit(40., 32.).unwrap().is_some(),
+        "admission history is advisory; actual slot locks and live counters still control builds"
+    );
 }
 
 #[test]
@@ -259,7 +304,7 @@ fn waiting_process_rereads_config_despite_its_inherited_one_slot_setting() {
             .spawn()
             .unwrap(),
     ));
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + Duration::from_secs(30);
     while !job_dir.join("resource-waits").exists() {
         assert!(
             Instant::now() < deadline,
@@ -269,6 +314,32 @@ fn waiting_process_rereads_config_despite_its_inherited_one_slot_setting() {
         thread::sleep(Duration::from_millis(10));
     }
     assert!(child.0.as_mut().unwrap().try_wait().unwrap().is_none());
+    let broken = t.0.join("config.tmp");
+    fs::write(&broken, "{invalid").unwrap();
+    fs::rename(broken, t.0.join(CONFIG_FILE)).unwrap();
+    loop {
+        let seen = fs::read_dir(job_dir.join("resource-waits"))
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|entry| {
+                fs::read(entry.path())
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+                    .is_some_and(|value| value["reason"] == "cargoの設定を読み取れないため待機中")
+            });
+        if seen {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "invalid config did not produce a retryable wait"
+        );
+        assert!(
+            child.0.as_mut().unwrap().try_wait().unwrap().is_none(),
+            "a transient config error killed the waiting gate"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
     policy(2);
     // On one-core machines both ceilings are 1; assert the unchanged ceiling
     // instead. Supported production/CI machines have at least two cores.

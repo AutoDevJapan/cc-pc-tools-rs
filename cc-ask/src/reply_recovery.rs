@@ -50,7 +50,7 @@ pub fn failed(record: &mut Value, now: f64, error: &str, reply: &str) {
 }
 
 pub fn pending_reply(state: &Value, record: &Value, thread: &str) -> String {
-    let latest = n(&record["answered_reply"]).max(n(&state["owner_answers"][thread]));
+    let latest = question_answer_id(state, record);
     let receipts = state["answer_receipts"]
         .as_object()
         .into_iter()
@@ -109,8 +109,7 @@ pub fn delivered(record: &mut Value) {
 }
 
 pub fn undelivered(state: &Value, record: &Value) -> bool {
-    let reply =
-        n(&record["answered_reply"]).max(n(&state["owner_answers"][s(&record["thread_id"])]));
+    let reply = question_answer_id(state, record);
     reply > n(&record["after"]) && !reply_delivered(state, &reply.to_string())
 }
 

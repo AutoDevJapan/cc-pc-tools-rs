@@ -1472,10 +1472,7 @@ pub fn thread_history(ctx: &mut Context, thread: &str) -> Result<Vec<Value>> {
     Ok(history.into_values().collect())
 }
 pub fn owner_replies(ctx: &mut Context, question: &Value, owner: &str) -> Result<Vec<Value>> {
-    Ok(thread_history(ctx, s(&question["thread_id"]))?
-        .into_iter()
-        .filter(|m| n(&m["id"]) > n(&question["after"]) && s(&m["author"]["id"]) == owner)
-        .collect())
+    owner_messages_after(ctx, s(&question["thread_id"]), s(&question["after"]), owner)
 }
 pub fn acknowledge_reply(question: &mut Value, message_id: &str) {
     question["seen_reply"] = json!(n(&question["seen_reply"])
@@ -1548,13 +1545,12 @@ pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
 /// One monotonic answer cursor per thread, independent of delivery and question
 /// generations. The receipt cursor must never be mistaken for the question ID.
 pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value], owner: &str) {
-    let latest = messages
+    let answer = messages
         .iter()
         .filter(|m| s(&m["author"]["id"]) == owner && !crate::snooze::control_only(m))
-        .map(|m| n(&m["id"]))
-        .max()
-        .unwrap_or(0);
-    if latest > n(&state["owner_answers"][thread]) {
+        .max_by_key(|m| n(&m["id"]));
+    let latest = answer.map(|m| n(&m["id"])).unwrap_or(0);
+    if latest > n(&state["owner_answers"][thread]).max(n(&state["owner_answers"][thread]["id"])) {
         state["owner_answers"][thread] = json!(latest.to_string());
     }
     if let Some(qs) = state["questions"].as_array_mut() {
@@ -1562,14 +1558,54 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
             .iter_mut()
             .filter(|q| s(&q["thread_id"]) == thread && latest > n(&q["after"]))
         {
+            // Keep split answers and attachment-only replies independently of
+            // the inbox cursor. The original question anchor never advances.
+            let mut replies = std::collections::BTreeMap::new();
+            for message in q["owner_replies"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .chain(messages.iter())
+            {
+                let id = n(&message["id"]);
+                if id > n(&q["after"])
+                    && (message.get("author").is_none() || s(&message["author"]["id"]) == owner)
+                    && !crate::snooze::control_only(message)
+                {
+                    replies.insert(id, json!({"id":message["id"],"timestamp":message["timestamp"],
+                        "content":safe_text(s(&message["content"])),"attachments":message["attachments"]}));
+                }
+            }
+            if let Some(first) = replies.keys().next() {
+                let old = n(&q["first_owner_reply"]);
+                q["first_owner_reply"] = json!(if old > n(&q["after"]) {
+                    old.min(*first)
+                } else {
+                    *first
+                }
+                .to_string());
+            }
+            q["owner_replies"] = json!(replies.into_values().collect::<Vec<_>>());
+            if latest >= n(&q["answered_reply"]) {
+                if let Some(answer) = answer {
+                    q["owner_reply"] = json!({"id":answer["id"],"timestamp":answer["timestamp"],
+                        "content":safe_text(s(&answer["content"])),"attachments":answer["attachments"]});
+                }
+            }
             q["answered_reply"] = json!(latest.max(n(&q["answered_reply"])).to_string());
         }
     }
 }
 
 pub fn question_answered(state: &Value, question: &Value) -> bool {
-    n(&question["answered_reply"]).max(n(&state["owner_answers"][s(&question["thread_id"])]))
-        > n(&question["after"])
+    question_answer_id(state, question) > n(&question["after"])
+}
+
+pub fn question_answer_id(state: &Value, question: &Value) -> u64 {
+    let answer = &state["owner_answers"][s(&question["thread_id"])];
+    n(&question["answered_reply"])
+        .max(n(answer))
+        .max(n(&answer["id"]))
 }
 
 /// Receipt cursors never prove delivery. Repair the old migration without
@@ -1973,6 +2009,18 @@ pub fn pending_owner_messages(
     after: &str,
     owner: &str,
 ) -> Result<Vec<Value>> {
+    Ok(owner_messages_after(ctx, thread, after, owner)?
+        .into_iter()
+        .filter(|m| !crate::snooze::control_only(m))
+        .collect())
+}
+
+fn owner_messages_after(
+    ctx: &mut Context,
+    thread: &str,
+    after: &str,
+    owner: &str,
+) -> Result<Vec<Value>> {
     let mut messages = ctx
         .call(
             "GET",
@@ -1988,9 +2036,10 @@ pub fn pending_owner_messages(
             .filter(|message| n(&message["id"]) > after.parse::<u64>().unwrap_or(0))
             .collect();
     }
+    messages.sort_by_key(|m| n(&m["id"]));
     Ok(messages
         .into_iter()
-        .filter(|m| s(&m["author"]["id"]) == owner && !crate::snooze::control_only(m))
+        .filter(|m| s(&m["author"]["id"]) == owner)
         .collect())
 }
 pub fn archive_completed(

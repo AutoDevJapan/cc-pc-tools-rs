@@ -1,6 +1,6 @@
-# Gitを含む公開配布物の所有フォルダーを退避する
+# 所有フォルダーのGit管理情報を保って退避する
 
-共有ToDo #2027 / #2052 の復旧用モジュール。通常の `safe-delete.exe` のGit保護は変更しない。保存済み仕様で許可された下記の所有IDと取得物だけを扱う。一般的な `.git` 許可、既存フォルダーの所有登録、削除機能はない。
+共有ToDo #2027 / #2052 / #1935 / #2098 の復旧用モジュール。通常の `safe-delete.exe` のGit保護は変更しない。保存済み仕様で許可された下記の所有IDと取得物だけを扱う。一般的な `.git` 許可、既存フォルダーの所有登録、削除機能はない。
 
 | ToDo | 所有ID | 確認する対象 |
 |---|---|---|
@@ -8,19 +8,23 @@
 | 938 | `76005ef45fe612479fd920447642497e` | 保存済み公開cloneと仕様に固定された監査用取得物 |
 | 2021 | `38e3fbc1767b66eef9127f2a27567c8a` | 保存済み公開worktreeと検証記録 |
 | 2050 | `438ee7d343a6c84558201e2778d2c890` | 保存済み公開cloneと検証ビルド |
+| 1935 | `cfee3edefd3704d67c140ca6952dd7ce` | 固定した検査用worktree、再現入力、コピーした依存ソースとビルド生成物 |
 | 2098 | `c058c98f1288073adbd10236900199d1` | Cargo共有ゲートの保存済みworktreeと検証ビルド |
 
 2098は既存の所有記録だけを使用する。projectは`cc-jobs`、contentは`dynamic-cargo-gate`、元パスは`C:/Users/makhmeto/AppData/Local/Temp/codex-owned-c058c98f1288073adbd10236900199d1`に固定する。volumeは2229119083、file IDは2814749782464451。HEADは`e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801`、公開originは`AutoDevJapan/cc-pc-tools-rs`。外部管理領域は`D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9`、commonは同じリポジトリーの`.git`だけを受理する。移動後はそのwork9のbacklinkだけを既存の原子的な手順で修復する。
 
-2098の保存済みbranch refが共有fetchで削除されている場合は、固定HEADがPR56の固定merge `2a676778c27f9225060dfaf5758b0cdfe8ef94c9`へ到達し、そのmergeが保存済みorigin/mainへ到達することの両方を確認する。refが存在して別commitを指す場合、検査自体が失敗した場合、mainが存在しない場合は拒否する。他の所有IDへこの代替条件を広げない。移動前後の内容・識別番号・メタデータの照合とfinishの既存receipt更新は同じ手順を使用する。通常のsafe-deleteのGit保護と元のCargoゲート本体は変更しない。
+2098の保存済みbranch refが共有fetchで削除されている場合は、固定HEADがPR56の固定merge `2a676778c27f9225060dfaf5758b0cdfe8ef94c9`へ到達し、そのmergeが保存済みorigin/mainへ到達することの両方を確認する。refが存在して別commitを指す場合、検査自体が失敗した場合、mainが存在しない場合は拒否する。他の所有IDへこの代替条件を広げない。壊れたrefと不在をGitの終了コードで区別し、履歴置換を無効にしてgraftsがあれば拒否する。移動前後の内容・識別番号・メタデータの照合とfinishの既存receipt更新は同じ手順を使用する。通常のsafe-deleteのGit保護と元のCargoゲート本体は変更しない。
 
-追加4件も `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEADと保存済みorigin ref、変更なしを確認する。その他のIDは拒否する。2098では壊れたrefと不在をGitの終了コードで区別し、履歴置換を無効にして、graftsがあれば拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
+
+追加された所有IDも `plan --id <所有ID>` が返す `Move-Item` を通常の実行ツールに別の呼び出しで提出し、成功後に `finish --id <所有ID>` を実行する。IDだけで許可せず、元のproject/content/path、チェックサム、volume/file ID、固定HEAD、公開取得物の保存済みorigin ref、追跡ファイルの変更なしを確認する。その他のIDは拒否する。別ToDoの担当は、この一覧にないIDが自動的に許可されると解釈しない。
+
+1935は公開cloneではない。保存した受付候補HEAD `0f01ed0a36dcc5baea61bf1f689267a362f8784c` と、その1つの外部管理領域に固定する。planではremoteがないことと追跡ファイルの変更なしを確認する。再現用コピーと未追跡の依存コピーも全内容を退避し、外部hardlinkは拒否する。1935の受付検査は修復後の別候補で完了済みなので、この旧検査データを製品の検査結果に代用しない。
 
 938の監査用取得物は、内容・config・ref・originを読み取らず、Gitも起動しない。メタデータだけで外部参照を拒否し、全体を保持する。退避票には監査用取得物のファイル名・ref名・パスのハッシュを保存せず、volume/file IDと同じ識別番号の出現数・メタデータで移動前後を照合する。
 
-2021のworktreeは、仕様に固定された外部管理領域の1つだけを許可する。planで元のbacklinkと管理領域の識別番号を保存し、移動先を指す交換用ファイルを同期する。finishは全内容の一致を確認した後、そのbacklinkだけを原子的に交換する。他のworktree、共通refs、Git objectは変更しない。交換後に停止しても、移動票に保存した交換ファイルの識別番号と内容を確認してfinishを再開できる。外部管理領域は保持するため、退避先worktreeも引き続きそのGit管理領域を参照する。
+2021・1935・2098のworktreeは、それぞれ仕様に固定された外部管理領域の1つだけを許可する。planで元のbacklinkと管理領域の識別番号を保存し、移動先を指す交換用ファイルを同期する。finishは全内容の一致を確認した後、そのbacklinkだけを原子的に交換する。他のworktree、共通refs、Git objectは変更しない。交換後に停止しても、移動票に保存した交換ファイルの識別番号と内容を確認してfinishを再開できる。外部管理領域は保持するため、退避先worktreeも引き続きそのGit管理領域を参照する。
 
-対象の所有ID、プロジェクト、用途、Temp直下のパス、Go形式のチェックサム、Windowsのvolume/file IDを確認する。公開取得元とcommitは仕様の記録に固定している。追跡ファイルの変更、未送信commit、追加のGit管理領域、未許可のworktree・submodule・外部object参照、リンク・外部hardlink、保護対象OpenMausBotや認証用ディレクトリー、クライアント資源は拒否する。独立cloneのstashは拒否するが、2021の共有Gitにある他担当のstashは対象外なので変更しない。全内容を退避先に保持する。
+対象の所有ID、プロジェクト、用途、Temp直下のパス、Go形式のチェックサム、Windowsのvolume/file IDを確認する。公開取得元とcommitは仕様の記録に固定している。追跡ファイルの変更、未送信commit、追加のGit管理領域、未許可のworktree・submodule・外部object参照、リンク・外部hardlink、保護対象OpenMausBotや認証用ディレクトリー、クライアント資源は拒否する。独立cloneのstashは拒否するが、worktreeの共有Gitにある他担当のstashは対象外なので変更しない。全内容を退避先に保持する。
 
 移動したら同じ担当が直ちにfinishする。完了まで、対象worktreeのGit管理情報をpruneする作業を重ねない。保存済みorigin refが共有fetchで削除されても、planで保存済み成果を確認できているためfinishは継続できる。finishでは移動先のHEAD・変更なし・参照先・内容一致を確認し、他担当のorigin設定やrefを改めて要求しない。移動前にデータが変わり移動票と一致しない場合は移動せず保持する。この実装は古い移動票を消したり所有記録を再作成したりする機能を持たない。
 

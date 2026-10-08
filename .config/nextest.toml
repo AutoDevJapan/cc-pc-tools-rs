@@ -12,6 +12,12 @@ test-group = 'process-boundary'
 filter = 'package(cc-ask) & binary(tick_bounds)'
 threads-required = 'num-test-threads'
 
+# A 200ms loopback deadline is measured against an unchanged 800ms bound.
+# Keep VM scheduling and other process/network tests out of that measurement.
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & binary(connect_timeout)'
+threads-required = 'num-test-threads'
+
 [[profile.default.overrides]]
 filter = 'package(chatgpt-web) & binary(fixtures)'
 threads-required = 'num-test-threads'

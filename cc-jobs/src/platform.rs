@@ -173,6 +173,10 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// Fixture runtimes use virtual checkout metadata; production reads local Git files.
+    fn work_checkout(&self, cwd: &str) -> Value {
+        cc_job_policy::work_owner::checkout(cwd)
+    }
     fn queue_machine_sample(
         &self,
         cfg: &crate::adaptive::AdaptiveConfig,

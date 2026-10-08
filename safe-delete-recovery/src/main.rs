@@ -59,11 +59,29 @@ struct Ticket {
     source: String,
     destination: String,
     nodes: BTreeMap<String, Node>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    backlink: Option<BacklinkTicket>,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BacklinkTicket {
+    original: Node,
+    replacement: Node,
+    admin: Node,
+    common: Node,
+}
+enum RepoKind {
+    Clone,
+    Linked { admin: PathBuf, common: PathBuf },
+    // A fixed, read-only audit acquisition. Never invoke Git or read its contents.
+    OpaqueBare,
 }
 struct Repo {
     name: &'static str,
     origin: &'static str,
     head: String,
+    saved_ref: Option<&'static str>,
+    kind: RepoKind,
 }
 struct Config {
     store: PathBuf,
@@ -71,16 +89,19 @@ struct Config {
     quarantine: PathBuf,
     repos: Vec<Repo>,
     guard: PathBuf,
+    id: &'static str,
+    project: &'static str,
+    content: &'static str,
 }
 
 impl Config {
-    fn production() -> Result<Self> {
+    fn production(id: &str) -> Result<Self> {
         let parent = std::env::current_exe()
             .map_err(|_| "EXE_PATH")?
             .parent()
             .ok_or("EXE_PATH")?
             .to_owned();
-        Ok(Self {
+        let mut c = Self {
             store: parent.join("receipts-go"),
             temp: std::env::temp_dir(),
             quarantine: PathBuf::from(r"C:\Users\makhmeto\Downloads\削除希望"),
@@ -90,28 +111,104 @@ impl Config {
                     name: "kcaldav",
                     origin: "https://github.com/katsushi2441/kcaldav.git",
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
+                    saved_ref: None,
+                    kind: RepoKind::Clone,
                 },
                 Repo {
                     name: "plane-jp",
                     origin: "https://github.com/katsushi2441/plane-jp.git",
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
+                    saved_ref: None,
+                    kind: RepoKind::Clone,
                 },
             ],
-        })
+            id: ID,
+            project: "todo-2001",
+            content: "tool-verification",
+        };
+        let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
+        let clone = |name, origin, head: &str, saved_ref| Repo {
+            name,
+            origin,
+            head: head.into(),
+            saved_ref,
+            kind: RepoKind::Clone,
+        };
+        match id {
+            ID => (),
+            "76005ef45fe612479fd920447642497e" => {
+                c.id = "76005ef45fe612479fd920447642497e";
+                c.project = "tools";
+                c.content = "todo938";
+                c.repos = vec![
+                    clone(
+                        "repo",
+                        public,
+                        "d98217fe0922f217fda7b12564bfa826fc772bc0",
+                        Some("refs/remotes/origin/fix/todo938-secret-redaction"),
+                    ),
+                    Repo {
+                        name: "customer-audit.git",
+                        origin: "",
+                        head: String::new(),
+                        saved_ref: None,
+                        kind: RepoKind::OpaqueBare,
+                    },
+                ];
+            }
+            "38e3fbc1767b66eef9127f2a27567c8a" => {
+                c.id = "38e3fbc1767b66eef9127f2a27567c8a";
+                c.project = "chrome-tab-leak";
+                c.content = "implementation-review";
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work6",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            "438ee7d343a6c84558201e2778d2c890" => {
+                c.id = "438ee7d343a6c84558201e2778d2c890";
+                c.project = "youtube-job-compat";
+                c.content = "verified-main-tool-build";
+                c.repos = vec![clone(
+                    "source",
+                    "git@github.com:AutoDevJapan/cc-pc-tools-rs.git",
+                    "0b017ae9c35dc499fbe9014f72288064576e7c2b",
+                    Some("refs/remotes/origin/main"),
+                )];
+            }
+            _ => return Err("SCOPE_NOT_AUTHORIZED"),
+        }
+        Ok(c)
     }
     fn receipt_path(&self) -> PathBuf {
-        self.store.join(format!("{ID}.json"))
+        self.store.join(format!("{}.json", self.id))
     }
     fn ticket_path(&self) -> PathBuf {
-        self.store.join(format!("{ID}.download-quarantine.json"))
+        self.store
+            .join(format!("{}.download-quarantine.json", self.id))
     }
     fn destination(&self) -> PathBuf {
-        self.quarantine
-            .join(format!("20261008-todo-2001-tool-verification-{}", &ID[..8]))
+        if self.id == ID {
+            return self
+                .quarantine
+                .join(format!("20261008-todo-2001-tool-verification-{}", &ID[..8]));
+        }
+        self.quarantine.join(format!(
+            "20261009-{}-{}-{}",
+            self.project, self.content, self.id
+        ))
     }
 
     fn load(&self, id: &str) -> Result<Receipt> {
-        if id != ID {
+        if id != self.id {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         checked(&self.receipt_path())?;
@@ -122,11 +219,11 @@ impl Config {
         let r: Receipt =
             serde_json::from_slice(&fs::read(self.receipt_path()).map_err(|_| "RECEIPT_READ")?)
                 .map_err(|_| "INVALID_RECEIPT_FILE")?;
-        let expected = self.temp.join(format!("codex-owned-{ID}"));
+        let expected = self.temp.join(format!("codex-owned-{}", self.id));
         if r.identity.version != 2
-            || r.identity.id != ID
-            || r.identity.project != "todo-2001"
-            || r.identity.content != "tool-verification"
+            || r.identity.id != self.id
+            || r.identity.project != self.project
+            || r.identity.content != self.content
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
         {
@@ -151,7 +248,12 @@ impl Config {
         }
         Ok(())
     }
-    fn validate(&self, r: &Receipt, path: &Path) -> Result<BTreeMap<String, Node>> {
+    fn validate(
+        &self,
+        r: &Receipt,
+        path: &Path,
+        before_move: bool,
+    ) -> Result<BTreeMap<String, Node>> {
         checked(path)?;
         self.client_guard(path)?;
         let n = node(path)?;
@@ -163,7 +265,12 @@ impl Config {
         }
         let nodes = scan(path, &self.repos)?;
         for repo in &self.repos {
-            validate_repo(&path.join(repo.name), repo)?;
+            self.client_guard(&path.join(repo.name))?;
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                self.client_guard(admin)?;
+                self.client_guard(common)?;
+            }
+            validate_repo(&path.join(repo.name), repo, before_move)?;
         }
         Ok(nodes)
     }
@@ -173,7 +280,7 @@ impl Config {
             return Err("RECEIPT_NOT_OWNED");
         }
         let path = Path::new(&r.identity.path);
-        let nodes = self.validate(&r, path)?;
+        let nodes = self.validate(&r, path, true)?;
         let dest = self.destination();
         checked(&dest)?;
         self.client_guard(&dest)?;
@@ -189,15 +296,23 @@ impl Config {
             .filter(|x| x.attributes & 0x10 == 0)
             .map(|x| x.size)
             .sum();
-        let why = format!(
-            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データ内の公開配布物にGit管理領域があり、通常の削除計画と退避が停止した。\n取得元・commit・未変更・外部リンクなしを確認し、Gitを含む全内容を保持して退避する。\n所有ID: {ID}\n",
-            r.identity.path
-        );
+        let why = if self.id == ID {
+            format!(
+                "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データ内の公開配布物にGit管理領域があり、通常の削除計画と退避が停止した。\n取得元・commit・未変更・外部リンクなしを確認し、Gitを含む全内容を保持して退避する。\n所有ID: {ID}\n",
+                r.identity.path
+            )
+        } else {
+            format!(
+                "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データのGit保護による退避停止。\n仕様に固定した取得物・成果保存・リンクを確認し、Gitを含む全内容を保持する。\n所有ID: {}\n",
+                r.identity.path, self.id
+            )
+        };
         let ticket = Ticket {
-            id: ID.into(),
+            id: self.id.into(),
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
             nodes,
+            backlink: self.prepare_backlink(path, &dest.join("files"))?,
         };
         let ticket_bytes = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
         // Publish intent before creating the destination so an interrupted plan can resume.
@@ -216,7 +331,7 @@ impl Config {
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
         Ok(
-            serde_json::json!({"id": ID, "action": "submit_quarantine_to_exec_tool", "bytes": bytes,
+            serde_json::json!({"id": self.id, "action": "submit_quarantine_to_exec_tool", "bytes": bytes,
             "entries": ticket.nodes.len(), "destination": dest, "reason": "owned_public_download_git",
             "powershell_command": format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(path), quote(&dest.join("files"))) }),
         )
@@ -232,7 +347,8 @@ impl Config {
             serde_json::from_slice(&fs::read(self.ticket_path()).map_err(|_| "TICKET_READ")?)
                 .map_err(|_| "INVALID_TICKET")?;
         let dest = self.destination();
-        if t.id != ID || t.source != r.identity.path || !same(Path::new(&t.destination), &dest) {
+        if t.id != self.id || t.source != r.identity.path || !same(Path::new(&t.destination), &dest)
+        {
             return Err("TICKET_SCOPE_MISMATCH");
         }
         if r.state == "quarantined" && r.destination.as_deref() != Some(t.destination.as_str()) {
@@ -242,10 +358,11 @@ impl Config {
             return Err("TARGET_STILL_EXISTS");
         }
         let files = dest.join("files");
-        let nodes = self.validate(&r, &files)?;
+        let nodes = self.validate(&r, &files, false)?;
         if nodes != t.nodes {
             return Err("CONTENT_CHANGED_AFTER_PLAN");
         }
+        self.repair_backlink(&r, &files, t.backlink.as_ref())?;
         let why = dest.join("理由.txt");
         checked(&why)?;
         if node(&why)?.links != 1 {
@@ -281,10 +398,94 @@ impl Config {
             fs::rename(writing, self.receipt_path()).map_err(|_| "RECEIPT_COMMIT_FAILED")?;
         }
         Ok(
-            serde_json::json!({"id":ID, "state":"quarantined", "source_absent":true,
+            serde_json::json!({"id":self.id, "state":"quarantined", "source_absent":true,
             "destination":dest, "bytes": nodes.values().filter(|x| x.attributes & 0x10 == 0).map(|x| x.size).sum::<u64>(),
             "entries":nodes.len(), "inventory_verified":true}),
         )
+    }
+    fn prepare_backlink(&self, root: &Path, destination: &Path) -> Result<Option<BacklinkTicket>> {
+        for repo in &self.repos {
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                checked_admin(admin)?;
+                let backlink = admin.join("gitdir");
+                if !same(
+                    Path::new(&bounded_text(&backlink)?),
+                    &root.join(repo.name).join(".git"),
+                ) {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                let replacement = admin.join("gitdir.todo2052-repair");
+                let text = format!("{}\n", destination.join(repo.name).join(".git").display());
+                if present(&replacement)? {
+                    if bounded_text(&replacement)? != text.trim() {
+                        return Err("WORKTREE_REPAIR_FILE_CHANGED");
+                    }
+                } else {
+                    let mut f = OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&replacement)
+                        .map_err(|_| "WORKTREE_REPAIR_PREPARE_FAILED")?;
+                    f.write_all(text.as_bytes())
+                        .and_then(|()| f.sync_all())
+                        .map_err(|_| "WORKTREE_REPAIR_PREPARE_FAILED")?;
+                }
+                return Ok(Some(BacklinkTicket {
+                    original: node(&backlink)?,
+                    replacement: node(&replacement)?,
+                    admin: node(admin)?,
+                    common: node(common)?,
+                }));
+            }
+        }
+        Ok(None)
+    }
+    fn repair_backlink(
+        &self,
+        r: &Receipt,
+        root: &Path,
+        saved: Option<&BacklinkTicket>,
+    ) -> Result<()> {
+        for repo in &self.repos {
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                let backlink = admin.join("gitdir");
+                let current = node(&backlink)?;
+                let old = Path::new(&r.identity.path).join(repo.name).join(".git");
+                let new = root.join(repo.name).join(".git");
+                let text = bounded_text(&backlink)?;
+                let saved = saved.ok_or("WORKTREE_TICKET_MISSING")?;
+                let same_id = |a: &Node, b: &Node| a.volume == b.volume && a.file_id == b.file_id;
+                if !same_id(&node(admin)?, &saved.admin) || !same_id(&node(common)?, &saved.common)
+                {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                if current == saved.replacement && same(Path::new(&text), &new) {
+                    return Ok(());
+                }
+                if current != saved.original || !same(Path::new(&text), &old) {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                // Only this fixed worktree's backlink changes. Common refs/other worktrees are untouched.
+                let replacement = admin.join("gitdir.todo2052-repair");
+                if node(&replacement)? != saved.replacement
+                    || !same(Path::new(&bounded_text(&replacement)?), &new)
+                {
+                    return Err("WORKTREE_REPAIR_FAILED");
+                }
+                fs::rename(&replacement, &backlink).map_err(|_| "WORKTREE_REPAIR_FAILED")?;
+                if node(&backlink)? != saved.replacement
+                    || !same(Path::new(&bounded_text(&backlink)?), &new)
+                {
+                    return Err("WORKTREE_REPAIR_FAILED");
+                }
+                validate_repo(&root.join(repo.name), repo, false)?;
+                return Ok(());
+            }
+        }
+        if saved.is_some() {
+            return Err("UNEXPECTED_WORKTREE_TICKET");
+        }
+        Ok(())
     }
 }
 
@@ -362,6 +563,7 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
     let mut nodes = BTreeMap::new();
     let mut pending = vec![root.to_owned()];
     let mut links: BTreeMap<(u32, u64), (u32, u32)> = BTreeMap::new();
+    let mut opaque_counts: BTreeMap<(u32, u64), usize> = BTreeMap::new();
     while let Some(path) = pending.pop() {
         let relative = path
             .strip_prefix(root)
@@ -378,7 +580,12 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
             return Err("UNDECLARED_GIT_METADATA");
         }
         let n = node(&path)?;
-        if name.eq_ignore_ascii_case(".git") && n.attributes & 0x10 == 0 {
+        if name.eq_ignore_ascii_case(".git")
+            && n.attributes & 0x10 == 0
+            && !repos.iter().any(|r| {
+                relative == format!("{}/.git", r.name) && matches!(r.kind, RepoKind::Linked { .. })
+            })
+        {
             return Err("EXTERNAL_GITDIR");
         }
         if nodes.len() >= LIMIT {
@@ -399,7 +606,18 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
             }
             count.0 += 1;
         }
-        nodes.insert(relative, n);
+        // Do not recreate confidential audit ref/path names in the recovery ticket.
+        let key = if repos.iter().any(|r| {
+            matches!(r.kind, RepoKind::OpaqueBare)
+                && (relative == r.name || relative.starts_with(&format!("{}/", r.name)))
+        }) {
+            let count = opaque_counts.entry((n.volume, n.file_id)).or_default();
+            *count += 1;
+            format!("opaque:{}:{}:{}", n.volume, n.file_id, count)
+        } else {
+            relative
+        };
+        nodes.insert(key, n);
     }
     if links.values().any(|(inside, total)| inside != total) {
         return Err("HARD_LINK");
@@ -471,11 +689,93 @@ fn git(path: &Path, args: &[&str]) -> Result<String> {
         .map(|s| s.trim().into())
         .map_err(|_| "GIT_OUTPUT")
 }
-fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
-    let gitdir = path.join(".git");
-    if node(&gitdir)?.attributes & 0x10 == 0 {
-        return Err("EXTERNAL_GITDIR");
+fn bounded_text(path: &Path) -> Result<String> {
+    let n = node(path)?;
+    if n.size > 4096 || n.links != 1 || n.attributes & 0x10 != 0 {
+        return Err("INVALID_GIT_POINTER");
     }
+    fs::read_to_string(path)
+        .map(|s| s.trim().into())
+        .map_err(|_| "INVALID_GIT_POINTER")
+}
+fn checked_admin(path: &Path) -> Result<()> {
+    if !path.is_absolute()
+        || path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("INVALID_GIT_ADMIN_PATH");
+    }
+    for p in path.ancestors() {
+        if p.file_name()
+            .is_some_and(|n| protected(&n.to_string_lossy()))
+        {
+            return Err("PROTECTED_PATH");
+        }
+        if node(p)?.attributes & 0x10 == 0 {
+            return Err("INVALID_GIT_ADMIN_PATH");
+        }
+    }
+    Ok(())
+}
+fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
+    let gitdir = match &repo.kind {
+        RepoKind::OpaqueBare => {
+            // Inspect only names and metadata of the fixed audit acquisition.
+            // Its config, refs, object contents and origin are never read or executed.
+            for special in [
+                "commondir",
+                "gitdir",
+                "worktrees",
+                "modules",
+                "objects/info/alternates",
+                "objects/info/http-alternates",
+            ] {
+                if present(&path.join(special))? {
+                    return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+                }
+            }
+            for required in ["HEAD", "config", "objects", "refs"] {
+                node(&path.join(required))?;
+            }
+            return Ok(());
+        }
+        RepoKind::Clone => {
+            let dir = path.join(".git");
+            if node(&dir)?.attributes & 0x10 == 0 {
+                return Err("EXTERNAL_GITDIR");
+            }
+            dir
+        }
+        RepoKind::Linked { admin, common } => {
+            checked_admin(admin)?;
+            checked_admin(common)?;
+            let pointer = bounded_text(&path.join(".git"))?;
+            if admin.parent() != Some(common.join("worktrees").as_path())
+                || !pointer
+                    .strip_prefix("gitdir: ")
+                    .is_some_and(|p| same(Path::new(p), admin))
+                || bounded_text(&admin.join("commondir"))? != "../.."
+                || !same(
+                    Path::new(&git(path, &["rev-parse", "--git-common-dir"])?),
+                    common,
+                )
+            {
+                return Err("EXTERNAL_GITDIR");
+            }
+            // External objects/submodules remain forbidden even for the one fixed worktree.
+            for special in [
+                "modules",
+                "objects/info/alternates",
+                "objects/info/http-alternates",
+            ] {
+                if (before_move || special != "modules") && present(&common.join(special))? {
+                    return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+                }
+            }
+            admin.clone()
+        }
+    };
     for special in [
         "commondir",
         "gitdir",
@@ -484,6 +784,10 @@ fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
         "objects/info/alternates",
         "objects/info/http-alternates",
     ] {
+        if matches!(repo.kind, RepoKind::Linked { .. }) && matches!(special, "commondir" | "gitdir")
+        {
+            continue;
+        }
         if present(&gitdir.join(special))? {
             return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
         }
@@ -497,25 +801,42 @@ fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
     if git(path, &["rev-parse", "HEAD"])? != repo.head {
         return Err("GIT_HEAD_CHANGED");
     }
-    if git(
-        path,
-        &["config", "--local", "--get-all", "remote.origin.url"],
-    )? != repo.origin
+    let saved_checks = before_move || !matches!(repo.kind, RepoKind::Linked { .. });
+    if saved_checks
+        && git(
+            path,
+            &["config", "--local", "--get-all", "remote.origin.url"],
+        )?
+        .trim_end_matches(".git")
+            != repo.origin.trim_end_matches(".git")
     {
         return Err("GIT_ORIGIN_CHANGED");
     }
-    if !git(path, &["status", "--porcelain=v1", "--untracked-files=no"])?.is_empty() {
+    let untracked = if repo.saved_ref.is_some() {
+        "--untracked-files=all"
+    } else {
+        "--untracked-files=no"
+    };
+    if !git(path, &["status", "--porcelain=v1", untracked])?.is_empty() {
         return Err("GIT_TRACKED_CHANGES");
     }
-    if !git(
-        path,
-        &["rev-list", "--branches", "--not", "--remotes=origin"],
-    )?
-    .is_empty()
+    if let Some(saved) = repo.saved_ref.filter(|_| saved_checks)
+        && git(path, &["rev-parse", saved])? != repo.head
     {
         return Err("GIT_UNPUSHED_COMMITS");
     }
-    if !git(path, &["for-each-ref", "--format=%(refname)", "refs/stash"])?.is_empty() {
+    if !matches!(repo.kind, RepoKind::Linked { .. })
+        && !git(
+            path,
+            &["rev-list", "--branches", "--not", "--remotes=origin"],
+        )?
+        .is_empty()
+    {
+        return Err("GIT_UNPUSHED_COMMITS");
+    }
+    if !matches!(repo.kind, RepoKind::Linked { .. })
+        && !git(path, &["for-each-ref", "--format=%(refname)", "refs/stash"])?.is_empty()
+    {
         return Err("GIT_STASH");
     }
     Ok(())
@@ -549,8 +870,30 @@ unsafe extern "system" {
     fn GetFileInformationByHandle(handle: isize, info: *mut WinInfo) -> i32;
     fn CloseHandle(handle: isize) -> i32;
 }
+fn extended_path(path: &Path) -> Result<Vec<u16>> {
+    if !path.is_absolute() {
+        return Err("INVALID_PATH");
+    }
+    let raw: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .map(|c| if c == 47 { 92 } else { c })
+        .collect();
+    let mut name = if raw.starts_with(&[92, 92, 63, 92]) {
+        raw
+    } else if raw.starts_with(&[92, 92]) {
+        OsStr::new(r"\\?\UNC\")
+            .encode_wide()
+            .chain(raw[2..].iter().copied())
+            .collect()
+    } else {
+        OsStr::new(r"\\?\").encode_wide().chain(raw).collect()
+    };
+    name.push(0);
+    Ok(name)
+}
 fn node(path: &Path) -> Result<Node> {
-    let name: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let name = extended_path(path)?;
     let mut info = WinInfo::default();
     // Metadata access only, with OPEN_REPARSE_POINT; never follows a junction.
     let ok = unsafe {
@@ -582,7 +925,7 @@ fn run() -> Result<serde_json::Value> {
     if args.len() != 3 || args[1] != "--id" {
         return Err("INVALID_ARGUMENTS");
     }
-    let c = Config::production()?;
+    let c = Config::production(&args[2])?;
     match args[0].as_str() {
         "plan" => c.plan(&args[2]),
         "finish" => c.finish(&args[2]),
@@ -719,6 +1062,9 @@ mod tests {
         );
     }
     fn fixture() -> Fixture {
+        fixture_for(ID)
+    }
+    fn fixture_for(id: &str) -> Fixture {
         let owner = std::env::var_os("SAFE_DELETE_TEST_ROOT")
             .expect("tests require an owned safe-delete folder");
         let base = PathBuf::from(owner).join(format!(
@@ -727,7 +1073,7 @@ mod tests {
             SERIAL.fetch_add(1, Ordering::SeqCst)
         ));
         fs::create_dir(&base).unwrap();
-        let mut c = Config::production().unwrap();
+        let mut c = Config::production(id).unwrap();
         if let Some(guard) = std::env::var_os("SAFE_DELETE_TEST_GUARD") {
             c.guard = guard.into();
         }
@@ -741,46 +1087,58 @@ mod tests {
         };
         let c = &mut fixture.config;
         fs::create_dir(&c.store).unwrap();
-        let target = base.join(format!("codex-owned-{ID}"));
+        let target = base.join(format!("codex-owned-{}", c.id));
         fs::create_dir(&target).unwrap();
         for repo in &mut c.repos {
             let path = target.join(repo.name);
-            fs::create_dir(&path).unwrap();
-            git(&path, &["init", "-b", "main"]).unwrap();
-            fs::write(path.join("source.txt"), b"public fixture\n").unwrap();
-            git(&path, &["add", "source.txt"]).unwrap();
-            git(
-                &path,
-                &[
-                    "-c",
-                    "user.name=Fixture",
-                    "-c",
-                    "user.email=fixture@example.invalid",
-                    "commit",
-                    "-m",
-                    "fixture",
-                ],
-            )
-            .unwrap();
-            repo.head = git(&path, &["rev-parse", "HEAD"]).unwrap();
-            git(&path, &["remote", "add", "origin", repo.origin]).unwrap();
-            git(
-                &path,
-                &["update-ref", "refs/remotes/origin/main", &repo.head],
-            )
-            .unwrap();
+            if matches!(repo.kind, RepoKind::OpaqueBare) {
+                fs::create_dir(&path).unwrap();
+                git(&path, &["init", "--bare"]).unwrap();
+                // Invalid config proves the opaque acquisition is never executed/read by Git.
+                fs::write(
+                    path.join("config"),
+                    b"opaque fixture; not a valid git config\n",
+                )
+                .unwrap();
+                fs::write(path.join("refs/fixture-private-name"), b"opaque fixture\n").unwrap();
+                continue;
+            }
+            let seed = if matches!(repo.kind, RepoKind::Linked { .. }) {
+                base.join("common")
+            } else {
+                path.clone()
+            };
+            fs::create_dir(&seed).unwrap();
+            seed_repo(&seed, repo);
+            if matches!(repo.kind, RepoKind::Linked { .. }) {
+                git(
+                    &seed,
+                    &[
+                        "worktree",
+                        "add",
+                        "-b",
+                        "fixture-linked",
+                        path.to_str().unwrap(),
+                    ],
+                )
+                .unwrap();
+                repo.kind = RepoKind::Linked {
+                    admin: seed.join(".git/worktrees/work"),
+                    common: seed.join(".git"),
+                };
+            }
         }
         let n = node(&target).unwrap();
         let identity = Identity {
             version: 2,
-            id: ID.into(),
+            id: c.id.into(),
             root: base.to_string_lossy().into_owned(),
             path: target.to_string_lossy().into_owned(),
             volume: n.volume,
             file_id: n.file_id,
             created_at: "2026-10-08T15:34:13.325996+09:00".into(),
-            project: "todo-2001".into(),
-            content: "tool-verification".into(),
+            project: c.project.into(),
+            content: c.content.into(),
         };
         let integrity = format!(
             "{:x}",
@@ -795,8 +1153,37 @@ mod tests {
         write_new(&c.receipt_path(), &serde_json::to_vec(&r).unwrap()).unwrap();
         fixture
     }
+    fn seed_repo(path: &Path, repo: &mut Repo) {
+        git(path, &["init", "-b", "main"]).unwrap();
+        fs::write(path.join("source.txt"), b"public fixture\n").unwrap();
+        git(path, &["add", "source.txt"]).unwrap();
+        git(
+            path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "-m",
+                "fixture",
+            ],
+        )
+        .unwrap();
+        repo.head = git(path, &["rev-parse", "HEAD"]).unwrap();
+        git(path, &["remote", "add", "origin", repo.origin]).unwrap();
+        git(
+            path,
+            &[
+                "update-ref",
+                repo.saved_ref.unwrap_or("refs/remotes/origin/main"),
+                &repo.head,
+            ],
+        )
+        .unwrap();
+    }
     fn source(c: &Config) -> PathBuf {
-        c.temp.join(format!("codex-owned-{ID}"))
+        c.temp.join(format!("codex-owned-{}", c.id))
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {
@@ -952,5 +1339,143 @@ mod tests {
         c.guard = c.temp.join("missing-guard.exe");
         assert!(matches!(c.plan(ID), Err("VALIDATOR_START_FAILED")));
         assert!(!c.destination().exists());
+    }
+    #[test]
+    fn fixed_profiles_reject_unknown_id_and_cross_task_receipt() {
+        assert!(matches!(
+            Config::production("00000000000000000000000000000000"),
+            Err("SCOPE_NOT_AUTHORIZED")
+        ));
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        let mut r = c.load(c.id).unwrap();
+        r.identity.project = "another-task".into();
+        r.integrity = format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+        );
+        fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+        assert!(matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")));
+    }
+    #[test]
+    fn opaque_audit_is_preserved_without_parsing_config_or_recording_ref_names() {
+        let c = fixture_for("76005ef45fe612479fd920447642497e");
+        c.plan(c.id).unwrap();
+        let ticket = fs::read_to_string(c.ticket_path()).unwrap();
+        assert!(!ticket.contains("fixture-private-name"));
+        assert!(!ticket.contains("customer-audit.git"));
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            fs::read(c.destination().join("files/customer-audit.git/config")).unwrap(),
+            b"opaque fixture; not a valid git config\n"
+        );
+    }
+    #[test]
+    fn build_internal_hardlinks_are_preserved_and_extra_git_is_rejected() {
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        let target = source(&c).join("target");
+        fs::create_dir(&target).unwrap();
+        fs::write(target.join("output"), b"fixture").unwrap();
+        fs::hard_link(target.join("output"), target.join("output-linked")).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        fs::create_dir_all(source(&c).join("unexpected/.git")).unwrap();
+        assert!(matches!(c.plan(c.id), Err("UNDECLARED_GIT_METADATA")));
+    }
+    #[test]
+    fn linked_worktree_move_repairs_only_its_backlink_and_resumes_after_repair() {
+        let c = fixture_for("38e3fbc1767b66eef9127f2a27567c8a");
+        let (admin, common) = match &c.repos[0].kind {
+            RepoKind::Linked { admin, common } => (admin, common),
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        let first = c.plan(c.id).unwrap();
+        assert_eq!(first, c.plan(c.id).unwrap());
+        let ticket: Ticket = serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        git(
+            common.parent().unwrap(),
+            &["update-ref", "-d", c.repos[0].saved_ref.unwrap()],
+        )
+        .unwrap();
+        let refs_after_prune = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        assert_ne!(refs_after_prune, refs);
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        // Model interruption immediately after the atomic backlink commit, before receipt commit.
+        c.repair_backlink(
+            &c.load(c.id).unwrap(),
+            &c.destination().join("files"),
+            ticket.backlink.as_ref(),
+        )
+        .unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &c.destination().join("files/work/.git")
+        ));
+        assert_eq!(
+            git(common.parent().unwrap(), &["show-ref"]).unwrap(),
+            refs_after_prune
+        );
+        assert!(!present(&admin.join("gitdir.todo2052-repair")).unwrap());
+        assert!(
+            git(
+                &c.destination().join("files/work"),
+                &["status", "--porcelain=v1"]
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
+    #[test]
+    fn linked_worktree_backlink_tampering_keeps_receipt_owned() {
+        let c = fixture_for("38e3fbc1767b66eef9127f2a27567c8a");
+        c.plan(c.id).unwrap();
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        fs::write(admin.join("gitdir"), b"C:/someone-else/.git\n").unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("WORKTREE_BACKLINK_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn long_path_inventory_survives_the_longer_quarantine_prefix() {
+        let c = fixture();
+        let relative = PathBuf::from("kcaldav")
+            .join("a".repeat(100))
+            .join("b".repeat(100));
+        let path = source(&c).join(&relative);
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("proof.txt"), b"long path fixture").unwrap();
+        assert!(path.as_os_str().encode_wide().count() > 260);
+        c.plan(ID).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(ID).unwrap();
+        assert!(
+            c.destination()
+                .join("files")
+                .join(relative)
+                .join("proof.txt")
+                .is_file()
+        );
+    }
+    #[test]
+    fn extended_metadata_paths_handle_drive_unc_and_existing_prefix() {
+        let decode = |s| String::from_utf16(&extended_path(Path::new(s)).unwrap()).unwrap();
+        assert_eq!(decode("C:/trial/name"), "\\\\?\\C:\\trial\\name\0");
+        assert_eq!(
+            decode(r"\\server\share\trial"),
+            "\\\\?\\UNC\\server\\share\\trial\0"
+        );
+        assert_eq!(decode(r"\\?\C:\trial"), "\\\\?\\C:\\trial\0");
+        assert!(matches!(
+            extended_path(Path::new("relative")),
+            Err("INVALID_PATH")
+        ));
     }
 }

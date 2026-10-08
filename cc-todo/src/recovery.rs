@@ -53,7 +53,10 @@ pub fn preview(
         .into_iter()
         .filter(|id| ids.is_empty() || ids.contains(id))
         .collect();
-    let rows: Vec<_> = arr(&copy["items"]).iter().map(|row| {
+    let rows: Vec<_> = arr(&copy["items"]).iter().filter(|row| {
+        !excluded(s(&row["project"]), s(&projects[s(&row["project"])]), clients)
+            && (ids.is_empty() || row["id"].as_i64().is_some_and(|id| ids.contains(&id)))
+    }).map(|row| {
         let id = row["id"].as_i64().unwrap_or(0);
         let old = arr(&before["items"]).into_iter().find(|v| v["id"] == id).unwrap();
         let owned: Vec<_> = jobs.iter().filter(|j| linked(row, j) && owns_launch(j, ps, t))
@@ -98,13 +101,6 @@ pub fn acceptance_summary(report: &Value) -> Result<String> {
     let items = report["items"].as_array().ok_or("missing measured items")?;
     let active = items
         .iter()
-        .filter(|row| {
-            !excluded(
-                s(&row["project"]),
-                s(&projects[s(&row["project"])]),
-                clients,
-            ) && (ids.is_empty() || row["id"].as_i64().is_some_and(|id| ids.contains(&id)))
-        })
         .find(|row| row["id"] == 57)
         .ok_or("missing ToDo57")?;
     let completed = items

@@ -574,6 +574,11 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         state["pending_message"] = Value::Null;
         save(ctx, &state)?;
     }
+    if ctx.codex_command.extension().is_some_and(|ext| ext == "py")
+        && !ctx.codex_command.with_extension("exe").is_file()
+    {
+        return Err("ジョブ一覧のRust実行ファイルがありません".into());
+    }
     let output = ctx.run(
         &command_argv(
             &ctx.codex_command,

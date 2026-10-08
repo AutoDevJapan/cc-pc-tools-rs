@@ -256,6 +256,17 @@ fn missing_registration_or_invalid_binding_never_posts_or_edits() {
 }
 
 #[test]
+fn missing_rust_jobs_executable_never_runs_python_or_edits_discord() {
+    let mut h = setup();
+    std::fs::remove_file(h.ctx.codex_command.with_extension("exe")).unwrap();
+    assert!(board::update(&mut h.ctx)
+        .unwrap_err()
+        .contains("Rust実行ファイル"));
+    assert!(h.fake.borrow().runs.is_empty());
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
 fn selects_first_message_behind_full_history_pages_and_handles_channel_starter() {
     let mut h = setup();
     h.fake

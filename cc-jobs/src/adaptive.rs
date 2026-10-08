@@ -487,9 +487,18 @@ impl Context {
         } else {
             adaptive.min_running
         };
+        // Derive both lanes and the routing hint from this single durable
+        // snapshot. The sampler can publish while the admission gate is held.
+        let codex = if state.max_running > 0 {
+            state
+                .max_running
+                .clamp(adaptive.min_running, adaptive.max_running)
+        } else {
+            cfg.max_running
+        };
         (
-            cfg.max_running.max(claude),
-            cfg.max_running,
+            codex.max(claude),
+            codex,
             claude,
             state.preferred_provider.as_deref() == Some("anthropic"),
         )

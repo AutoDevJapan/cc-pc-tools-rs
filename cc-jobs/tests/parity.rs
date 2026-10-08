@@ -149,6 +149,49 @@ mod claude_routing {
         assert_eq!(report["provider_slots"], json!({"openai":1,"anthropic":1}));
     }
     #[test]
+    fn minute_update_uses_one_snapshot_for_both_lanes_at_admission() {
+        let t = Test::new();
+        setup(&t);
+        let state_path = t.ctx.root.join("queue-limit-state.json");
+        let mut state = t.ctx.read_json(&state_path).unwrap();
+        state["max_running"] = json!(8);
+        t.ctx.write_json(&state_path, &state).unwrap();
+        let cfg = t.ctx.queue_config().unwrap();
+        assert_eq!(cfg.max_running, 8);
+        for n in 0..4 {
+            waiting(
+                &t,
+                &format!("codex{n}"),
+                json!({"status":"running","model_explicit":true,"queue_fairness_version":3}),
+            );
+        }
+        waiting(&t, "candidate", json!({"model_explicit":true}));
+        let previous = Arc::new(Mutex::new(None::<PathBuf>));
+        let updated = Arc::new(AtomicBool::new(false));
+        let changed = updated.clone();
+        state["max_running"] = json!(4);
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+            let mut last = previous.lock().unwrap();
+            // Publish between the effective-limit read and the provider read.
+            if path == state_path
+                && last.as_deref() == Some(path)
+                && !changed.swap(true, Ordering::Relaxed)
+            {
+                fs::write(&state_path, state.to_string()).unwrap();
+            }
+            *last = Some(path.to_path_buf());
+        }));
+        assert!(t.ctx.admit_configured("candidate", &cfg).unwrap().is_none());
+        assert!(
+            updated.load(Ordering::Relaxed),
+            "sampler publication was not exercised"
+        );
+        assert_eq!(
+            t.ctx.load("candidate").unwrap()["queue_wait_reason"]["provider_limit"],
+            4
+        );
+    }
+    #[test]
     fn run_records_model_provenance_before_applying_defaults() {
         for option in [None, Some("--model"), Some("--auto-model")] {
             let t = Test::new();

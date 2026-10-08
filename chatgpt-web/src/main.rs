@@ -572,7 +572,26 @@ fn stop(env: &Env) -> Res<()> {
 fn probe(env: &Env, url: Option<&str>, steps: &[String]) -> Res<()> {
     let _lock = lock(&env.home, Instant::now() + Duration::from_secs(30))?;
     let mut browser = Browser::open(&env.profile(), false)?;
-    let mut tab = browser.new_tab(url.unwrap_or(&env.url), false)?;
+    let target_url = url.unwrap_or(&env.url);
+    let mut tab = browser.new_tab(target_url, false)?;
+    // createTarget can attach while the initial about:blank document is still
+    // complete. Wait from Rust so navigation can replace the execution context
+    // without losing a JavaScript promise used as the readiness signal.
+    let allow_blank = target_url == "about:blank";
+    let ready_expr = format!(
+        "document.readyState === 'complete' && ({allow_blank} || location.href !== 'about:blank')"
+    );
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while tab.cdp.eval(&ready_expr).ok().and_then(|v| v.as_bool()) != Some(true) {
+        if Instant::now() >= deadline {
+            browser.close_tab(tab);
+            return Err(fail(
+                Code::Timeout,
+                "調査対象の画面を制限時間内に読み込めませんでした",
+            ));
+        }
+        sleep(Duration::from_millis(25));
+    }
     for step in steps {
         if let Some(secs) = step.strip_prefix("wait:") {
             sleep(Duration::from_secs(

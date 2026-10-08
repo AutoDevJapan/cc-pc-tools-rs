@@ -242,7 +242,6 @@ fn recorded_pages_are_read_correctly() {
             page,
             &[
                 "probe",
-                "page:(async()=>{const end=Date.now()+15000;while(state()==='loading'&&Date.now()<end){await new Promise(resolve=>setTimeout(resolve,25));}if(state()==='loading')throw new Error('fixture did not finish loading');return 'ready';})()",
                 "page:state()",
                 "page:JSON.stringify(poll())",
                 "page:answer()",

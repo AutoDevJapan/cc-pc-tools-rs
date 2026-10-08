@@ -175,6 +175,12 @@ pub struct Process {
     handle: HANDLE,
     pub identity: Identity,
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TerminationOutcome {
+    Confirmed,
+    Pending,
+}
 impl Drop for Process {
     fn drop(&mut self) {
         unsafe {
@@ -273,11 +279,8 @@ impl Process {
             cpu_100ns: self.times().ok()?.1,
         })
     }
-    pub fn terminate_if_still_owner(&self, config: &Config) -> Result<(), String> {
-        if !matches!(std::fs::read_to_string(config.home.join("ocx.pid")), Ok(s) if s.trim().parse::<u32>() == Ok(self.identity.pid))
-        {
-            return Err("pid_record_changed".into());
-        }
+    pub fn terminate_if_still_owner(&self, config: &Config) -> Result<TerminationOutcome, String> {
+        crate::ownership::verify(&config.home, self.identity.pid, config.port)?;
         if listener_pid(config.port)? != Some(self.identity.pid) {
             return Err("listener_changed".into());
         }
@@ -289,9 +292,9 @@ impl Process {
             return Err("terminate_process".into());
         }
         if unsafe { WaitForSingleObject(self.handle, 5000) } != WAIT_OBJECT_0 {
-            return Err("termination_wait".into());
+            return Ok(TerminationOutcome::Pending);
         }
-        Ok(())
+        Ok(TerminationOutcome::Confirmed)
     }
 }
 
@@ -299,11 +302,7 @@ pub fn discover(config: &Config) -> Result<Option<Process>, String> {
     let Some(pid) = listener_pid(config.port)? else {
         return Ok(None);
     };
-    let recorded =
-        std::fs::read_to_string(config.home.join("ocx.pid")).map_err(|_| "pid_record")?;
-    if recorded.trim().parse::<u32>() != Ok(pid) {
-        return Err("pid_record_disagrees".into());
-    }
+    crate::ownership::verify(&config.home, pid, config.port)?;
     Process::open(pid, &config.expected_exe).map(Some)
 }
 

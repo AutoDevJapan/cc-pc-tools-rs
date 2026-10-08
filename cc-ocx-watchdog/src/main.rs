@@ -2,7 +2,7 @@
 
 #[cfg(windows)]
 mod runtime {
-    use cc_ocx_watchdog::windows::{MutexGuard, Process, discover};
+    use cc_ocx_watchdog::windows::{MutexGuard, Process, TerminationOutcome, discover};
     use cc_ocx_watchdog::{
         Config, FailureStreak, Identity, hidden_command, probe, run_bounded, unresponsive,
     };
@@ -57,6 +57,22 @@ mod runtime {
     fn status(config: &Config, value: serde_json::Value) -> Result<(), String> {
         atomic_json(&config.log_dir.join("status.json"), &value)
     }
+    #[derive(Default)]
+    struct Observations {
+        failures: u64,
+    }
+    impl Observations {
+        fn record(&mut self, config: &Config, event: serde_json::Value) {
+            if log(config, event).is_err() {
+                self.failures = self.failures.saturating_add(1);
+            }
+        }
+        fn publish(&mut self, config: &Config, value: serde_json::Value) {
+            if status(config, value).is_err() {
+                self.failures = self.failures.saturating_add(1);
+            }
+        }
+    }
     fn atomic_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
         let bytes = serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?;
         let temp = path.with_extension("tmp");
@@ -75,10 +91,7 @@ mod runtime {
             )
         } == 0
         {
-            return Err(format!(
-                "publish_journal: {}",
-                std::io::Error::last_os_error()
-            ));
+            return Err(format!("publish_json: {}", std::io::Error::last_os_error()));
         }
         Ok(())
     }
@@ -89,8 +102,11 @@ mod runtime {
         at: String,
         recovered_pid: Option<u32>,
         terminated: bool,
+        #[serde(default)]
+        termination_accepted: bool,
     }
     #[derive(Default, Deserialize, Serialize)]
+    #[serde(default)]
     struct Journal {
         events: Vec<Pending>,
         older_recoveries: u64,
@@ -119,12 +135,13 @@ mod runtime {
                 event.recovered_pid.unwrap(),
                 if event.terminated {
                     "済み"
+                } else if event.termination_accepted {
+                    "受理済み・5秒以内の終了確認は未了"
                 } else {
                     "記録前に監視が中断"
                 }
             ));
         }
-        text.push_str("詳細は監視の記録に保存しています。通知とメンションは付けていません。");
         let mut command = hidden_command(executable);
         command.args(["log", "--topic", "後片付けの記録", "--text", &text]);
         run_bounded(command, Duration::from_secs(30))
@@ -141,10 +158,11 @@ mod runtime {
     fn watch(config: &Config, once: bool) -> Result<(), String> {
         fs::create_dir_all(&config.log_dir).map_err(|e| e.to_string())?;
         let _guard = MutexGuard::acquire()?;
-        log(
+        let mut observations = Observations::default();
+        observations.record(
             config,
             json!({"kind":"started","watchdog_pid":std::process::id(),"port":config.port}),
-        )?;
+        );
         let pending_path = config.log_dir.join("restart-pending.json");
         let mut pending: Journal = match fs::read(&pending_path) {
             Ok(bytes) => {
@@ -161,6 +179,7 @@ mod runtime {
         let mut service_after = Instant::now();
         loop {
             let observed = discover(config);
+            let listener_absent = matches!(&observed, Ok(None));
             let mut discovery_error = None;
             match observed {
                 Ok(process) => {
@@ -193,14 +212,47 @@ mod runtime {
             let kill = streak.observe(identity, !timed_out, can_kill);
             let state = json!({"at":chrono::Local::now().to_rfc3339(),"watchdog_pid":std::process::id(),"identity":identity,
                 "healthy":healthy,"failures":streak.failures(),"eligible":can_kill,"probe_ms":started.elapsed().as_millis(),
-                "error":outcome.as_ref().err(),"metrics":current.as_ref().and_then(|p| p.metrics())});
-            status(config, state.clone())?;
+                "error":outcome.as_ref().err(),"metrics":current.as_ref().and_then(|p| p.metrics()),
+                "observation_write_failures":observations.failures});
+            // Status readers or scanners may briefly deny atomic replacement. Observation
+            // writes must not disable health checks; kill intent remains durable/mandatory.
+            observations.publish(config, state.clone());
             if !healthy || last_sample.elapsed() >= Duration::from_secs(60) {
-                log(config, json!({"kind":"sample","status":state}))?;
+                observations.record(config, json!({"kind":"sample","status":state}));
                 last_sample = Instant::now();
             }
             if healthy {
                 let mut changed = false;
+                // An intent journaled before a crashed/rejected kill must not resurrect
+                // an intentionally stopped service later. The original healthy incarnation
+                // proves this unaccepted intent no longer needs recovery.
+                for event in &pending.events {
+                    if !event.terminated
+                        && !event.termination_accepted
+                        && event.recovered_pid.is_none()
+                        && identity
+                            == Some(Identity {
+                                pid: event.pid,
+                                born: event.born,
+                            })
+                    {
+                        observations.record(
+                            config,
+                            json!({"kind":"restart_intent_cancelled","identity":identity}),
+                        );
+                        changed = true;
+                    }
+                }
+                pending.events.retain(|event| {
+                    event.terminated
+                        || event.termination_accepted
+                        || event.recovered_pid.is_some()
+                        || identity
+                            != Some(Identity {
+                                pid: event.pid,
+                                born: event.born,
+                            })
+                });
                 for event in &mut pending.events {
                     if identity
                         != Some(Identity {
@@ -211,10 +263,10 @@ mod runtime {
                     {
                         event.recovered_pid = identity.map(|i| i.pid);
                         changed = true;
-                        log(
+                        observations.record(
                             config,
                             json!({"kind":"restart_confirmed","old_pid":event.pid,"new_identity":identity}),
-                        )?;
+                        );
                     }
                 }
                 if changed {
@@ -230,7 +282,8 @@ mod runtime {
                             save_pending(config, &pending)?;
                         }
                         Err(error) => {
-                            log(config, json!({"kind":"report_failed","error":error}))?;
+                            observations
+                                .record(config, json!({"kind":"report_failed","error":error}));
                         }
                     }
                     notify_after = Instant::now() + Duration::from_secs(600);
@@ -238,24 +291,24 @@ mod runtime {
             }
             // Retry a service-start failure only for a restart this watchdog requested.
             // An intentionally absent service, with no outstanding restart, remains stopped.
-            if current.is_none()
+            if listener_absent
                 && pending.events.iter().any(|p| p.recovered_pid.is_none())
                 && Instant::now() >= service_after
             {
                 let restart = start_service(config);
-                log(
+                observations.record(
                     config,
                     json!({"kind":"service_requested","error":restart.err()}),
-                )?;
+                );
                 service_after = Instant::now() + Duration::from_secs(60);
             }
             if kill {
                 let process = current.as_ref().unwrap();
                 // Persist the intent before attempting termination. A storage failure must never cause an unrecorded restart.
-                log(
+                observations.record(
                     config,
                     json!({"kind":"termination_requested","identity":process.identity,"failures":3}),
-                )?;
+                );
                 // Store recoverable intent before the kill, so a watchdog restart can finish it.
                 pending.events.push(Pending {
                     pid: process.identity.pid,
@@ -263,6 +316,7 @@ mod runtime {
                     at: chrono::Local::now().to_rfc3339(),
                     recovered_pid: None,
                     terminated: false,
+                    termination_accepted: false,
                 });
                 while pending.events.len() > 100 {
                     let Some(index) = pending
@@ -277,28 +331,32 @@ mod runtime {
                 }
                 save_pending(config, &pending)?;
                 match process.terminate_if_still_owner(config) {
-                    Ok(()) => {
+                    Ok(termination) => {
                         last_kill = Some(Instant::now());
-                        pending.events.last_mut().unwrap().terminated = true;
+                        let confirmed = termination == TerminationOutcome::Confirmed;
+                        let event = pending.events.last_mut().unwrap();
+                        event.termination_accepted = true;
+                        event.terminated = confirmed;
                         save_pending(config, &pending)?;
-                        log(
+                        observations.record(
                             config,
-                            json!({"kind":"terminated","identity":process.identity}),
-                        )?;
+                            json!({"kind": if confirmed {"terminated"} else {"termination_pending"},"identity":process.identity}),
+                        );
                         // Usually the existing wrapper respawns. A repaired/manual proxy can be orphaned;
                         // running the service task also covers that case (Task Scheduler ignores duplicate runs).
                         let restart = start_service(config);
                         service_after = Instant::now() + Duration::from_secs(60);
-                        log(
+                        observations.record(
                             config,
                             json!({"kind":"service_requested","error":restart.err()}),
-                        )?;
+                        );
                         current = None;
                     }
                     Err(error) => {
                         pending.events.pop();
                         save_pending(config, &pending)?;
-                        log(config, json!({"kind":"termination_refused","error":error}))?;
+                        observations
+                            .record(config, json!({"kind":"termination_refused","error":error}));
                     }
                 }
                 streak.reset();
@@ -323,8 +381,10 @@ mod runtime {
         }
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
         let owner_sid = cc_ocx_watchdog::windows::current_user_sid()?;
+        let start_boundary =
+            chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false);
         let xml = format!(
-            r#"<?xml version="1.0" encoding="UTF-8"?><Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"><Triggers><LogonTrigger><Enabled>true</Enabled><UserId>{owner_sid}</UserId></LogonTrigger></Triggers><Principals><Principal id="Owner"><UserId>{owner_sid}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals><Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><StartWhenAvailable>true</StartWhenAvailable><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure></Settings><Actions Context="Owner"><Exec><Command>{}</Command><Arguments>watch</Arguments><WorkingDirectory>{}</WorkingDirectory></Exec></Actions></Task>"#,
+            r#"<?xml version="1.0" encoding="UTF-8"?><Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"><Triggers><LogonTrigger><Enabled>true</Enabled><UserId>{owner_sid}</UserId></LogonTrigger><TimeTrigger><Repetition><Interval>PT1M</Interval><StopAtDurationEnd>false</StopAtDurationEnd></Repetition><StartBoundary>{start_boundary}</StartBoundary><Enabled>true</Enabled></TimeTrigger></Triggers><Principals><Principal id="Owner"><UserId>{owner_sid}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals><Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><StartWhenAvailable>true</StartWhenAvailable><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure></Settings><Actions Context="Owner"><Exec><Command>{}</Command><Arguments>watch</Arguments><WorkingDirectory>{}</WorkingDirectory></Exec></Actions></Task>"#,
             xml_escape(&exe.to_string_lossy()),
             xml_escape(&config.log_dir.to_string_lossy())
         );
@@ -339,7 +399,8 @@ mod runtime {
         let mut command = hidden_command(system_exe("schtasks.exe"));
         command.args(["/Run", "/TN", WATCH_TASK]);
         run_bounded(command, Duration::from_secs(15))?;
-        log(config, json!({"kind":"installed","task":WATCH_TASK}))
+        Observations::default().record(config, json!({"kind":"installed","task":WATCH_TASK}));
+        Ok(())
     }
     pub fn run() -> Result<(), String> {
         let mut args = std::env::args().skip(1);

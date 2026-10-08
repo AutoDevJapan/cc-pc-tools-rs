@@ -12,7 +12,15 @@ fn main() {
     let mode = args.next().unwrap();
     let home = PathBuf::from(args.next().unwrap());
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).unwrap();
-    std::fs::write(home.join("ocx.pid"), std::process::id().to_string()).unwrap();
+    if args.next().as_deref() == Some("runtime-only") {
+        std::fs::write(
+            home.join("runtime-port.json"),
+            format!("{{\"pid\":{},\"port\":{port}}}", std::process::id()),
+        )
+        .unwrap();
+    } else {
+        std::fs::write(home.join("ocx.pid"), std::process::id().to_string()).unwrap();
+    }
     for socket in listener.incoming() {
         let mut socket = socket.unwrap();
         if mode == "hang" {

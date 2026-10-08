@@ -25,3 +25,8 @@ path = "src/bin/review.rs"
 [[bin]]
 name = "merge_pr"
 path = "src/bin/merge_pr.rs"
+
+[[bin]]
+name = "cc_live_process_fixture"
+path = "src/bin/process_fixture.rs"
+test = false

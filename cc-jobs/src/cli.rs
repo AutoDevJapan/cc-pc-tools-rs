@@ -598,6 +598,20 @@ impl Context {
                     running
                 })
         };
+        // The child exemption is for a running job's own sub-work. A job for a
+        // different ToDo is top-level work and must wait in the shared queue.
+        let parent = parent.filter(|id| {
+            let own = job["todo_id"].as_u64().is_none_or(|todo| {
+                self.try_load(id)
+                    .is_some_and(|p| p["todo_id"].as_u64() == Some(todo))
+            });
+            if !own {
+                self.rt.diagnostic(
+                    "job for another ToDo is not sub-work of its parent; queueing as a root job",
+                );
+            }
+            own
+        });
         for todo in job["todo_id"]
             .as_u64()
             .into_iter()

@@ -1946,29 +1946,41 @@ mod queue_regressions {
         assert!(t.ctx.admit("b").unwrap().is_none());
     }
     #[test]
-    fn text_matching_and_config_changes_apply_to_existing_waiters() {
-        for word in ["くり返す", "回し続ける", "agents.prompt", "繰り返す"] {
-            for field in ["task_title", "prompt"] {
-                let t = Test::new();
-                let mut j = loop_job(&t, "loop", 9000);
-                if field == "prompt" {
-                    fs::write(t.ctx.job_dir("loop").join("prompt.md"), word).unwrap();
-                } else {
-                    j[field] = json!(word);
-                    t.ctx.save(&j).unwrap();
-                }
-                waiting(&t, "ordinary", "ordinary");
-                assert!(t.ctx.admit("loop").unwrap().is_none(), "{word}/{field}");
-                config(&t, json!({"normal_priority_todo_ids":[9000]}));
-                assert!(t.ctx.admit("loop").unwrap().is_some());
-            }
+    fn only_configured_ids_set_the_lowest_tier_and_config_changes_apply() {
+        // Prompt bodies, job titles and ToDo titles quote shared guidance and
+        // ordinary wording ("繰り返し起動しない"); none of them is a tier.
+        for word in [
+            "くり返す",
+            "回し続ける",
+            "agents.prompt",
+            "繰り返し起動しない",
+        ] {
+            let mut t = Test::new();
+            let tools = t.ctx.root.clone();
+            t.ctx.root = tools.join("codex-jobs");
+            t.ctx.jobs = t.ctx.root.join("jobs");
+            fs::create_dir_all(tools.join("todo")).unwrap();
+            fs::write(
+                tools.join("todo/todo.json"),
+                json!({"items":[{"id":9000,"title":word}]}).to_string(),
+            )
+            .unwrap();
+            let mut j = loop_job(&t, "loop", 9000);
+            j["task_title"] = json!(word);
+            t.ctx.save(&j).unwrap();
+            fs::write(t.ctx.job_dir("loop").join("prompt.md"), word).unwrap();
+            waiting(&t, "ordinary", "ordinary");
+            assert!(t.ctx.admit("loop").unwrap().is_some(), "{word}");
         }
         let t = Test::new();
         loop_job(&t, "loop", 9000);
         waiting(&t, "ordinary", "ordinary");
         config(&t, json!({"lowest_priority_todo_ids":[9000]}));
         assert!(t.ctx.admit("loop").unwrap().is_none());
-        config(&t, json!({"lowest_priority_todo_ids":[]}));
+        config(
+            &t,
+            json!({"lowest_priority_todo_ids":[9000],"normal_priority_todo_ids":[9000]}),
+        );
         assert!(t.ctx.admit("loop").unwrap().is_some());
     }
     #[test]
@@ -1988,21 +2000,64 @@ mod queue_regressions {
         loop_job(&t, "another-loop", 23);
         assert!(t.ctx.admit("another-loop").unwrap().is_none());
     }
+    /// 2026-10-08: shared write guidance ("複数なら--onを繰り返す") was in every
+    /// prompt, so prompt scanning marked all jobs lowest and admission became
+    /// plain FIFO: older orch- work and ToDo 18 started ahead of req- jobs.
     #[test]
-    fn shared_todo_title_sets_lowest_priority_without_a_copied_job_title() {
-        let mut t = Test::new();
-        let tools = t.ctx.root.clone();
-        t.ctx.root = tools.join("codex-jobs");
-        t.ctx.jobs = t.ctx.root.join("jobs");
-        fs::create_dir_all(tools.join("todo")).unwrap();
-        fs::write(
-            tools.join("todo/todo.json"),
-            json!({"items":[{"id":9000,"title":"agents.promptを回し続ける"}]}).to_string(),
-        )
-        .unwrap();
-        loop_job(&t, "loop", 9000);
-        waiting(&t, "ordinary", "ordinary");
-        assert!(t.ctx.admit("loop").unwrap().is_none());
+    fn shared_prompt_guidance_keeps_req_first_and_loops_last() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let guidance = cc_job_policy::WRITE_GUIDANCE;
+        assert!(guidance.contains("繰り返す"));
+        let mut lowest = loop_job(&t, "loop-18", 18);
+        lowest["name"] = json!("orch-todo-18");
+        lowest["created_at"] = json!("2026-10-08T08:00:00+09:00");
+        t.ctx.save(&lowest).unwrap();
+        for (id, name, at) in [
+            ("orch-old", "orch-todo-1161", "2026-10-08T09:16:00+09:00"),
+            ("req-new", "req-x-skill", "2026-10-08T09:23:00+09:00"),
+        ] {
+            let mut j = waiting(&t, id, name);
+            j["created_at"] = json!(at);
+            t.ctx.save(&j).unwrap();
+        }
+        for id in ["loop-18", "orch-old", "req-new"] {
+            fs::write(
+                t.ctx.job_dir(id).join("prompt.md"),
+                format!("work{guidance}"),
+            )
+            .unwrap();
+        }
+        assert!(t.ctx.admit("loop-18").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("loop-18").unwrap()["queue_wait_reason"]["code"],
+            "lowest_priority"
+        );
+        assert!(t.ctx.admit("orch-old").unwrap().is_none());
+        assert!(t.ctx.admit("req-new").unwrap().is_some());
+    }
+    #[test]
+    fn running_loop_yields_to_normal_waiter_before_two_hours() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = live_tool_parent(&t);
+        parent["todo_id"] = json!(18);
+        parent["started_at"] = json!(t.rt.now());
+        t.ctx.save(&parent).unwrap();
+        tool_events(&t, &[("item.started", "work"), ("item.completed", "work")]);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "queued");
+    }
+    #[test]
+    fn short_normal_job_does_not_yield_before_two_hours() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = live_tool_parent(&t);
+        parent["started_at"] = json!(t.rt.now());
+        t.ctx.save(&parent).unwrap();
+        tool_events(&t, &[("item.started", "work"), ("item.completed", "work")]);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.ctx.load("long").unwrap()["status"], "running");
     }
     #[test]
     fn fairness_uses_the_new_tier_in_both_directions() {
@@ -2230,6 +2285,21 @@ mod queue_regressions {
         for parent in ["../parent", "missing"] {
             assert!(t.run(&["--parent-job-id", parent], b"review").is_err());
         }
+        // A running job starting another ToDo's work is a dispatcher, not a
+        // parent: that job queues as a root under the shared priority order.
+        let mut parent = t.ctx.load("parent").unwrap();
+        parent["todo_id"] = json!(7);
+        t.ctx.save(&parent).unwrap();
+        assert!(t.run(&["--todo-id", "7"], b"same ToDo").is_err());
+        assert_eq!(t.run(&["--todo-id", "8"], b"other ToDo").unwrap(), 0);
+        let other = t
+            .ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|j| j["todo_id"] == 8)
+            .unwrap();
+        assert!(other["parent_job_id"].is_null());
+        fs::remove_dir_all(t.ctx.job_dir(s(&other, "id"))).unwrap();
         let mut parent = t.ctx.load("parent").unwrap();
         parent["status"] = json!("succeeded");
         t.ctx.save(&parent).unwrap();
@@ -5481,7 +5551,8 @@ mod task_notifier {
             let n = calls.fetch_add(1, Ordering::Relaxed);
             if c.argv[3] == action && (action == "finish" || n == 0) {
                 e.store(true, Ordering::Release);
-                let deadline = Instant::now() + Duration::from_secs(2);
+                // Liveness bound only; CI runners stall threads for seconds.
+                let deadline = Instant::now() + Duration::from_secs(30);
                 while !r.load(Ordering::Acquire) {
                     assert!(Instant::now() < deadline);
                     std::thread::sleep(Duration::from_millis(1));
@@ -5498,7 +5569,7 @@ mod task_notifier {
         (entered, release)
     }
     fn wait_entered(e: &AtomicBool) {
-        let end = Instant::now() + Duration::from_secs(2);
+        let end = Instant::now() + Duration::from_secs(30);
         while !e.load(Ordering::Acquire) {
             assert!(Instant::now() < end);
             std::thread::sleep(Duration::from_millis(1));

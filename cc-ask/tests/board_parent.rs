@@ -89,6 +89,7 @@ fn masks_client_names_case_insensitively_in_projects_and_task_titles() {
 
 #[test]
 fn truncation_does_not_merge_distinct_projects_or_tasks() {
+    assert_eq!(project_label("todo-app", &Names::parse("")), "todo-app");
     let prefix = "共通".repeat(40);
     let status = json!({"jobs":[
         {"project":format!("{prefix}甲"),"task_title":format!("{prefix}保存"),"status":"running"},
@@ -99,6 +100,24 @@ fn truncation_does_not_merge_distinct_projects_or_tasks() {
     assert_eq!(body.matches('■').count(), 2);
     assert_eq!(body.matches("    ・").count(), 3);
     assert!(!body.contains("（2件）"));
+}
+
+#[test]
+fn missing_pending_nonce_does_not_retire_unrelated_bot_messages() {
+    let mut h = setup();
+    let mut unrelated = message("140", "別の通知", "BOT");
+    unrelated["author"]["bot"] = json!(true);
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut("500")
+        .unwrap()
+        .push(unrelated);
+    let mut state = read_json(&h.ctx.here.join("board.json")).unwrap();
+    state["pending_message"] = json!({"content":"届かなかった旧投稿"});
+    atomic_json(&h.ctx.here.join("board.json"), &state, 1).unwrap();
+    board::update(&mut h.ctx).unwrap();
+    assert_eq!(h.fake.borrow().messages["500"][2]["content"], "別の通知");
 }
 
 #[test]

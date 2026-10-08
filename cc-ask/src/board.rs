@@ -699,7 +699,8 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
                 .flatten()
                 .filter(|m| {
                     truth(&m["author"]["bot"])
-                        && (s(&m["nonce"]) == s(&pending["nonce"])
+                        && ((!s(&pending["nonce"]).is_empty()
+                            && s(&m["nonce"]) == s(&pending["nonce"]))
                             || s(&m["content"]) == s(&pending["content"]))
                 })
                 .cloned()

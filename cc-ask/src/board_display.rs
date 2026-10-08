@@ -9,6 +9,10 @@ pub const MACHINE_PROBE: &str = "$ErrorActionPreference='Stop'; $o=Get-CimInstan
 
 fn clean(text: &str, names: &Names, limit: usize) -> String {
     let text = cc_task_title::clean(&names.redact(text));
+    display_text(&text, names, limit)
+}
+
+fn display_text(text: &str, names: &Names, limit: usize) -> String {
     let text = text.replace(['`', '*', '@', '<', '>', '\n', '\r'], " ");
     let text = names.redact(&text.split_whitespace().collect::<Vec<_>>().join(" "));
     let mut short: String = text.chars().take(limit).collect();
@@ -33,7 +37,7 @@ pub fn project_label(project: &str, names: &Names) -> String {
         "phone-friction-control" => "視聴時間アプリ".into(),
         "tools" | "PCツール" | "cc-ask" => "PCの道具".into(),
         "" => "その他".into(),
-        _ => clean(&p, names, usize::MAX),
+        _ => display_text(&p, names, usize::MAX),
     }
 }
 
@@ -112,7 +116,7 @@ pub fn render(status: &Value, machine: &Value, names: &Names, now: f64) -> Resul
     let blocks: Vec<_> = groups
         .iter()
         .map(|(name, g)| {
-            let name = clean(name, names, 32);
+            let name = display_text(name, names, 32);
             let mut text = format!("\n■ {name}    実行中 {}", g.running);
             if g.queued > 0 {
                 text.push_str(&format!(" ・ 待ち {}", g.queued));

@@ -2,6 +2,7 @@
 //!
 //! Usage: codex_jobs.exe {run,status,tail,wait,watch,cancel,rate,backfill} ...
 //! Windows only (codex.CMD shim, taskkill, OpenProcess).
+pub mod adaptive;
 pub mod boundary;
 pub mod cache;
 mod cache_history;

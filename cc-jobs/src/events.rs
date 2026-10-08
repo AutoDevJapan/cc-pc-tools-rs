@@ -309,6 +309,33 @@ pub fn usage_tokens(u: &Value) -> Value {
 /// Fold one codex JSONL event into job.json fields.
 pub fn apply_event(job: &mut Value, ev: &Value) {
     let t = s(ev, "type");
+    if matches!(t, "error" | "turn.failed")
+        && crate::queue::is_429(&if t == "error" {
+            s(ev, "message").to_owned()
+        } else {
+            err_text(&ev["error"])
+        })
+        && let Some(at) = crate::parse_iso(s(ev, "_ts"))
+    {
+        let mut times = job["rate_limit_times"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        times.retain(|v| v.as_f64().is_some_and(|old| at - old <= 3600.));
+        // error + turn.failed can describe the same request failure.
+        if t != "turn.failed"
+            || times
+                .last()
+                .and_then(Value::as_f64)
+                .is_none_or(|old| at - old > 5.)
+        {
+            times.push(json!(at));
+        }
+        if times.len() > 128 {
+            times.drain(..times.len() - 128);
+        }
+        job["rate_limit_times"] = json!(times);
+    }
     match t {
         "thread.started" => job["thread_id"] = ev["thread_id"].clone(),
         "turn.started" => {

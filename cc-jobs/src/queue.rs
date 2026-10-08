@@ -6,11 +6,13 @@ use std::{
     fs,
 };
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
     pub context_limit_percent: u8,
     pub max_running: usize,
+    pub fixed_max_running: Option<usize>,
+    pub adaptive: Option<crate::adaptive::AdaptiveConfig>,
     pub max_children_per_parent: usize,
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
@@ -24,6 +26,8 @@ impl Default for QueueConfig {
         Self {
             context_limit_percent: 50,
             max_running: 6,
+            fixed_max_running: None,
+            adaptive: None,
             max_children_per_parent: 2,
             max_429_retries: 5,
             retry_delay_seconds: 60,
@@ -293,11 +297,22 @@ impl Context {
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
     pub fn reload_queue(&self) -> Result<Value> {
+        self.reload_queue_older_than(None)
+    }
+    pub(crate) fn reload_legacy_queue(&self) -> Result<Value> {
+        self.reload_queue_older_than(Some(5))
+    }
+    fn reload_queue_older_than(&self, version: Option<u64>) -> Result<Value> {
         let mut restarted = Vec::new();
         // Snapshot reads need no global gate. Release the gate between jobs so
         // a long reload cannot prevent unrelated registration for a full minute.
         for snapshot in self.list_jobs(&HashSet::new()) {
-            if s(&snapshot, "status") != "queued" {
+            if s(&snapshot, "status") != "queued"
+                || version.is_some_and(|v| {
+                    snapshot["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
+                        && snapshot["queue_restart_pending"] != true
+                })
+            {
                 continue;
             }
             let jid = s(&snapshot, "id");
@@ -320,6 +335,10 @@ impl Context {
             };
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued"
+                || version.is_some_and(|v| {
+                    job["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
+                        && job["queue_restart_pending"] != true
+                })
                 || job["cancel_requested"] == true
                 || self.is_ours(&job, "codex_pid")
             {
@@ -340,6 +359,20 @@ impl Context {
     }
     /// Caller holds the global gate and this job's state lock; no Codex is live.
     pub(crate) fn restart_queued_supervisor(&self, job: &mut Value) -> Result<()> {
+        let executable = fs::metadata(&self.executable).map_err(|e| {
+            Error::file_io(
+                "inspect replacement supervisor executable",
+                &self.executable,
+                e,
+            )
+        })?;
+        if !executable.is_file() {
+            return Err(Error::new(
+                "replacement supervisor executable is not a file",
+            ));
+        }
+        job["queue_restart_pending"] = json!(true);
+        self.save(job)?;
         let jid = s(job, "id").to_string();
         if self.is_ours(job, "pid") {
             // Detached supervisors launched by this process are independent
@@ -374,11 +407,12 @@ impl Context {
             &self.job_dir(&jid),
             &jid,
         )?;
+        // Only the new controller acknowledges its version and clears pending.
         if let Some(pid) = pid {
             job["pid"] = json!(pid);
             job["pid_created"] = json!(self.rt.proc_created(pid));
-            self.save(job)?;
         }
+        self.save(job)?;
         Ok(())
     }
     pub(crate) fn stop_supervisor_owner(&self, job: &Value) -> Result<()> {
@@ -660,7 +694,7 @@ impl Context {
     }
     pub fn queue_config(&self) -> Result<QueueConfig> {
         let path = self.root.join("queue-config.json");
-        let cfg: QueueConfig = match self.read_file(&path) {
+        let mut cfg: QueueConfig = match self.read_file(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => QueueConfig::default(),
             Err(e) => return Err(Error::file_io("read entire file", &path, e)),
@@ -675,6 +709,13 @@ impl Context {
                 "queue-config.json: max_running, max_children_per_parent and retry_delay_seconds must be positive; max_retry_delay_seconds must be >= retry_delay_seconds",
             ));
         }
+        if cfg.fixed_max_running == Some(0) {
+            return Err(Error::new("fixed_max_running must be positive"));
+        }
+        if let Some(adaptive) = &cfg.adaptive {
+            adaptive.validate()?;
+        }
+        cfg.max_running = self.effective_limit(&cfg)?;
         Ok(cfg)
     }
 
@@ -693,7 +734,10 @@ impl Context {
         self.admit_configured(jid, &cfg)
     }
     pub fn admit_configured(&self, jid: &str, cfg: &QueueConfig) -> Result<Option<FileLock>> {
+        // The separate minute task samples; admission only reads durable state.
+        let mut cfg = cfg.clone();
         let _gate = self.queue_lock()?;
+        cfg.max_running = self.effective_limit(&cfg)?;
         let jobs = self.admission_jobs()?;
         if let Err(error) = self.maintain_yields(&jobs) {
             self.yield_diagnostic(&error);
@@ -707,7 +751,7 @@ impl Context {
         if !jobs.iter().any(|j| s(j, "id") == jid) {
             jobs.push(job.clone());
         }
-        let decision = self.queue_decisions(&jobs, cfg, Some(jid));
+        let decision = self.queue_decisions(&jobs, &cfg, Some(jid));
         if let Some(reason) = decision.get(jid) {
             if job["queue_wait_reason"] != *reason {
                 job["queue_wait_reason"] = reason.clone();
@@ -774,7 +818,9 @@ impl Context {
             }
             let reason = if j["cancel_requested"] == true {
                 Some(("cancel_requested", "取り消し処理待ち"))
-            } else if caller != Some(s(j, "id")) && !self.supervisor_alive(j) {
+            } else if caller != Some(s(j, "id"))
+                && (j["queue_restart_pending"] == true || !self.supervisor_alive(j))
+            {
                 Some(("supervisor_missing", "見張りの再起動待ち"))
             } else if j["retry_not_before"].as_f64().unwrap_or(0.) > self.rt.epoch() {
                 Some(("retry_cooldown", "利用枠の再試行時刻待ち"))

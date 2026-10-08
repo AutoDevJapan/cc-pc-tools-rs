@@ -1946,29 +1946,41 @@ mod queue_regressions {
         assert!(t.ctx.admit("b").unwrap().is_none());
     }
     #[test]
-    fn text_matching_and_config_changes_apply_to_existing_waiters() {
-        for word in ["くり返す", "回し続ける", "agents.prompt", "繰り返す"] {
-            let t = Test::new();
+    fn only_configured_ids_set_the_lowest_tier_and_config_changes_apply() {
+        // Prompt bodies, job titles and ToDo titles quote shared guidance and
+        // ordinary wording ("繰り返し起動しない"); none of them is a tier.
+        for word in [
+            "くり返す",
+            "回し続ける",
+            "agents.prompt",
+            "繰り返し起動しない",
+        ] {
+            let mut t = Test::new();
+            let tools = t.ctx.root.clone();
+            t.ctx.root = tools.join("codex-jobs");
+            t.ctx.jobs = t.ctx.root.join("jobs");
+            fs::create_dir_all(tools.join("todo")).unwrap();
+            fs::write(
+                tools.join("todo/todo.json"),
+                json!({"items":[{"id":9000,"title":word}]}).to_string(),
+            )
+            .unwrap();
             let mut j = loop_job(&t, "loop", 9000);
             j["task_title"] = json!(word);
             t.ctx.save(&j).unwrap();
-            waiting(&t, "ordinary", "ordinary");
-            assert!(t.ctx.admit("loop").unwrap().is_none(), "{word}");
-            config(&t, json!({"normal_priority_todo_ids":[9000]}));
-            assert!(t.ctx.admit("loop").unwrap().is_some());
-            // Prompt bodies quote shared guidance and history; never a tier.
-            let t = Test::new();
-            loop_job(&t, "loop", 9000);
             fs::write(t.ctx.job_dir("loop").join("prompt.md"), word).unwrap();
             waiting(&t, "ordinary", "ordinary");
-            assert!(t.ctx.admit("loop").unwrap().is_some(), "prompt {word}");
+            assert!(t.ctx.admit("loop").unwrap().is_some(), "{word}");
         }
         let t = Test::new();
         loop_job(&t, "loop", 9000);
         waiting(&t, "ordinary", "ordinary");
         config(&t, json!({"lowest_priority_todo_ids":[9000]}));
         assert!(t.ctx.admit("loop").unwrap().is_none());
-        config(&t, json!({"lowest_priority_todo_ids":[]}));
+        config(
+            &t,
+            json!({"lowest_priority_todo_ids":[9000],"normal_priority_todo_ids":[9000]}),
+        );
         assert!(t.ctx.admit("loop").unwrap().is_some());
     }
     #[test]
@@ -1987,22 +1999,6 @@ mod queue_regressions {
         t.ctx.save(&other).unwrap();
         loop_job(&t, "another-loop", 23);
         assert!(t.ctx.admit("another-loop").unwrap().is_none());
-    }
-    #[test]
-    fn shared_todo_title_sets_lowest_priority_without_a_copied_job_title() {
-        let mut t = Test::new();
-        let tools = t.ctx.root.clone();
-        t.ctx.root = tools.join("codex-jobs");
-        t.ctx.jobs = t.ctx.root.join("jobs");
-        fs::create_dir_all(tools.join("todo")).unwrap();
-        fs::write(
-            tools.join("todo/todo.json"),
-            json!({"items":[{"id":9000,"title":"agents.promptを回し続ける"}]}).to_string(),
-        )
-        .unwrap();
-        loop_job(&t, "loop", 9000);
-        waiting(&t, "ordinary", "ordinary");
-        assert!(t.ctx.admit("loop").unwrap().is_none());
     }
     /// 2026-10-08: shared write guidance ("複数なら--onを繰り返す") was in every
     /// prompt, so prompt scanning marked all jobs lowest and admission became

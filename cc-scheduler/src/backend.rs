@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -41,7 +41,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))

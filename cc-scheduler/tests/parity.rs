@@ -8,6 +8,97 @@ use std::{
 };
 const T: f64 = 100000.;
 
+fn cargo_gate_fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("civ6-live");
+    let gate = temp.path().join("codex-jobs");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(&gate).unwrap();
+    fs::write(gate.join("cargo_gate.exe"), b"fixture, never executed").unwrap();
+    (temp, home, gate)
+}
+
+#[test]
+fn cargo_gate_admission_uses_build_slots_not_worker_lifetime() {
+    let (_temp, home, gate) = cargo_gate_fixture();
+    let mut worker = item(1, "tools", "doing", &["cargo", "civ6"]);
+    worker["jobs"] = json!(["j1"]);
+    let jobs = vec![job("j1", 1, "queued")];
+    let processes = ps(vec![proc(1, 0, "codex.exe")]);
+    let busy = resources_busy_with_lock(&[worker], &jobs, &processes, T, &home).unwrap();
+    assert!(!busy.contains("cargo"));
+    assert!(busy.contains("civ6"));
+    // Admission probes release every lock; the real gate can immediately acquire them.
+    for slot in 0..3 {
+        assert!(ByteLock::acquire(
+            &gate.join(format!("cargo-build.lock.{slot}")),
+            Duration::ZERO
+        )
+        .unwrap()
+        .is_some());
+    }
+}
+
+#[test]
+fn cargo_gate_admission_allows_three_targets_and_waits_when_full() {
+    let (_temp, home, gate) = cargo_gate_fixture();
+    let processes = ps(vec![
+        proc(10, 0, "cargo_gate.exe"),
+        proc(11, 10, "cargo.exe"),
+        proc(12, 11, "rustc.exe"),
+    ]);
+    let mut held = Vec::new();
+    for slot in 0..3 {
+        held.push(
+            ByteLock::acquire(
+                &gate.join(format!("cargo-build.lock.{slot}")),
+                Duration::ZERO,
+            )
+            .unwrap()
+            .unwrap(),
+        );
+        let busy = resources_busy_with_lock(&[], &[], &processes, T, &home).unwrap();
+        assert_eq!(busy.contains("cargo"), slot == 2);
+    }
+    held.pop();
+    assert!(!resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
+}
+
+#[test]
+fn cargo_gate_admission_keeps_unmanaged_builds_and_probe_errors_closed() {
+    let (_temp, home, _gate) = cargo_gate_fixture();
+    for name in ["cargo.exe", "rustc.exe"] {
+        assert!(
+            resources_busy_with_lock(&[], &[], &ps(vec![proc(11, 0, name)]), T, &home)
+                .unwrap()
+                .contains("cargo")
+        );
+    }
+    let (_error_temp, error_home, error_gate) = cargo_gate_fixture();
+    fs::create_dir(error_gate.join("cargo-build.lock.0")).unwrap();
+    let busy = resources_busy_with_lock(&[], &[], &Processes::new(), T, &error_home).unwrap();
+    assert_eq!(busy, ["cargo".to_string()].into_iter().collect());
+}
+
+#[test]
+fn cargo_gate_admission_probe_failure_still_dispatches_unrelated_work() {
+    let mut fixture = Fixture::new();
+    let gate = fixture.e.root.parent().unwrap().join("codex-jobs");
+    fs::create_dir_all(&gate).unwrap();
+    fs::write(gate.join("cargo_gate.exe"), b"fixture, never executed").unwrap();
+    fs::create_dir(gate.join("cargo-build.lock.0")).unwrap();
+    fixture.put(item(1, "other", "todo", &["cargo"]));
+    fixture.put(item(2, "other", "todo", &[]));
+    fixture.e.run("step", false).unwrap();
+    assert_eq!(fixture.get(1)["status"], "todo");
+    assert_eq!(fixture.get(2)["status"], "doing");
+    assert_eq!(fixture.e.backend.launched.len(), 1);
+    assert!(fixture.e.failures.is_empty());
+    assert!(fixture.e.root.join("state.json").is_file());
+}
+
 #[test]
 fn shared_worker_result_does_not_finish_parent_or_copy_child_question() {
     for result in [
@@ -1700,8 +1791,13 @@ impl cc_ask::core::Effects for AskFake {
         if url.ends_with("/channels/FORUM") {
             return Ok(json!({"type":15}));
         }
-        if m == "GET" && url.ends_with("/users/@me") { return Ok(json!({"id":"BOT","bot":true})); }
-        if m == "GET" && (url.ends_with("/threads/active") || url.ends_with("/threads/archived/public?limit=25")) {
+        if m == "GET" && url.ends_with("/users/@me") {
+            return Ok(json!({"id":"BOT","bot":true}));
+        }
+        if m == "GET"
+            && (url.ends_with("/threads/active")
+                || url.ends_with("/threads/archived/public?limit=25"))
+        {
             return Ok(json!({"threads":[]}));
         }
         if m == "POST" {

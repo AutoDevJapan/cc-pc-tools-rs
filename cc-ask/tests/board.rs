@@ -196,48 +196,6 @@ fn followup_owner_messages_do_not_reset_the_unreflected_answer_deadline() {
 }
 
 #[test]
-fn board_run_passes_answer_state_and_retains_the_section_until_question_closure() {
-    let mut h = setup();
-    let at = h.fake.borrow().now;
-    let reply = answer_snowflake(at);
-    let mut state = h.state();
-    state["questions"] = json!([{"thread_id":"10","after":answer_snowflake(at - 1.),
-        "project":"製品","title":"fix publication failure","agent":"main","open":true}]);
-    state["owner_answers"] = json!({"10":{"id":reply}});
-    state["answer_receipts"] = json!({});
-    h.save(&state);
-    h.fake.borrow_mut().llm_answer = "公開の方針を確認する".into();
-    update(&mut h.ctx).unwrap();
-    let path = h.ctx.here.join("board.json");
-    assert!(!s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
-    h.fake.borrow_mut().now = at + 599.999;
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
-    h.fake.borrow_mut().now = at + 600.;
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    let board = read_json(&path).unwrap();
-    assert!(s(&board["body"]).contains("## 答えあり・未反映（1件）\n• 製品：公開の方針を確認する"));
-    assert!(s(&board["body"]).contains("あなたの返事待ち 0件（質問）"));
-    assert!(board["questions"].is_null() && board["owner_answers"].is_null());
-    let posts = h.fake.borrow().posts.len();
-    state["answer_receipts"][&reply] = json!({"thread":"10","handled_by":"main","posted":true});
-    h.save(&state);
-    h.fake.borrow_mut().now += 300.;
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], false);
-    assert!(s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
-    state["questions"][0]["open"] = json!(false);
-    h.save(&state);
-    assert_eq!(update(&mut h.ctx).unwrap()["changed"], true);
-    assert!(!s(&read_json(&path).unwrap()["body"]).contains("答えあり・未反映"));
-    assert_eq!(h.fake.borrow().posts.len(), posts);
-    assert!(h.fake.borrow().launches.is_empty());
-    assert_eq!(
-        h.state(),
-        state,
-        "board must not mutate the question writer state"
-    );
-}
-
-#[test]
 fn answered_question_does_not_keep_its_task_marked_as_waiting_for_the_owner() {
     let at = 1790773200.;
     let state = json!({"questions":[

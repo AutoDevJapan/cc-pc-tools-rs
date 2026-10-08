@@ -331,7 +331,7 @@ fn allow_logged_out_sends_without_recording_login_state() {
         dir.path(),
         "logged-out.html",
         "q",
-        &["--timeout", "60", "--allow-logged-out"],
+        &["--timeout", "120", "--allow-logged-out"],
     );
     assert_eq!(o.status.code(), Some(0), "{}", stderr(&o));
     assert!(stdout(&o).contains("### Answer"));

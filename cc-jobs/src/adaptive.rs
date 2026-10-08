@@ -208,29 +208,31 @@ fn pace_ratio_since(history: &[QuotaSnapshot], since: f64) -> Option<f64> {
     if !latest.complete {
         return None;
     }
-    let previous = history.iter().find(|s| {
-        s.complete
-            && s.at >= since
-            && latest.at - s.at >= 300.
-            && s.accounts.len() == latest.accounts.len()
-            && latest.accounts.iter().all(|q| {
-                s.accounts.iter().any(|old| {
+    let mut ratio: f64 = 0.;
+    let mut compared = false;
+    for q in &latest.accounts {
+        // Unused accounts can publish a rolling estimate for their reset time.
+        // Their changing window must not suppress a stable account's spending.
+        // Find each account's own oldest comparable observation independently.
+        let previous = history.iter().find_map(|snapshot| {
+            let elapsed = latest.at - snapshot.at;
+            if !snapshot.complete || snapshot.at < since || !(300. ..=3600.).contains(&elapsed) {
+                return None;
+            }
+            snapshot
+                .accounts
+                .iter()
+                .find(|old| {
                     old.id == q.id
                         && (old.reset_at - q.reset_at).abs() <= 1.
                         && old.used_percent <= q.used_percent
                 })
-            })
-    })?;
-    let elapsed = latest.at - previous.at;
-    if elapsed > 3600. || elapsed <= 0. {
-        return None;
-    }
-    let mut ratio: f64 = 0.;
-    for q in &latest.accounts {
-        let old = previous.accounts.iter().find(|old| old.id == q.id)?;
-        if (old.reset_at - q.reset_at).abs() > 1. || q.used_percent < old.used_percent {
-            return None;
-        }
+                .map(|old| (old, elapsed))
+        });
+        let Some((old, elapsed)) = previous else {
+            continue;
+        };
+        compared = true;
         let actual = (q.used_percent - old.used_percent) / elapsed;
         let budget = (100. - q.used_percent) / (q.reset_at - latest.at);
         ratio = ratio.max(if budget > 0. {
@@ -241,10 +243,7 @@ fn pace_ratio_since(history: &[QuotaSnapshot], since: f64) -> Option<f64> {
             0.
         });
     }
-    if latest.accounts.len() != previous.accounts.len() {
-        return None;
-    }
-    Some(ratio)
+    compared.then_some(ratio)
 }
 
 pub fn decide(

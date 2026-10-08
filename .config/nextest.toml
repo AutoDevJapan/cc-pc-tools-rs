@@ -15,3 +15,7 @@ threads-required = 'num-test-threads'
 [[profile.default.overrides]]
 filter = 'package(chatgpt-web) & binary(fixtures)'
 threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(cc-scheduler) & test(real_child_process_has_no_console_window)'
+threads-required = 'num-test-threads'

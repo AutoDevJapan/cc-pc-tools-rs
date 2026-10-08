@@ -50,6 +50,7 @@ impl Context {
             .unwrap_or_default();
         let mut running = 0;
         let mut families = HashSet::new();
+        let mut provider_families = BTreeMap::<&str, HashSet<String>>::new();
         let mut queued = Vec::new();
         let mut resources = Vec::new();
         let mut counts = BTreeMap::<String, usize>::new();
@@ -62,6 +63,20 @@ impl Context {
                 running += 1;
                 if !self.cargo_waiting(job) {
                     families.insert(self.queue_root(job));
+                    provider_families
+                        .entry(if s(job, "model").starts_with("anthropic/") {
+                            "anthropic"
+                        } else {
+                            "openai"
+                        })
+                        .or_default()
+                        .insert(self.queue_root(job));
+                    if job["queue_unreadable"] == true && s(job, "model").is_empty() {
+                        provider_families
+                            .entry("anthropic")
+                            .or_default()
+                            .insert(self.queue_root(job));
+                    }
                 }
                 let reasons = self.resource_waits(job);
                 if !reasons.is_empty() {
@@ -87,8 +102,11 @@ impl Context {
             queued.push(json!({"id":id,"reason":reason,"yield_resume":job["yield_resume"]==true}));
         }
         let limit = cfg.as_ref().map(|cfg| self.limit_status(cfg)).transpose()?;
+        let limits = cfg.as_ref().map(|cfg| self.provider_limits(cfg));
         Ok(
-            json!({"running":running,"occupied_slots":families.len(),"max_running":cfg.as_ref().map(|cfg|cfg.max_running),
+            json!({"running":running,"occupied_slots":families.len(),"max_running":limits.map(|v|v.0),
+            "provider_slots":{"openai":provider_families.get("openai").map_or(0,HashSet::len),"anthropic":provider_families.get("anthropic").map_or(0,HashSet::len)},
+            "provider_limits":limits.map(|v|json!({"openai":v.1,"anthropic":v.2})),
             "limit":limit,"limit_label":limit.as_ref().map(|v|v["label"].clone()),
             "queued_count":queued.len(),"queued":queued,"wait_reason_counts":counts,"resource_waits":resources,"config_error":config_error}),
         )

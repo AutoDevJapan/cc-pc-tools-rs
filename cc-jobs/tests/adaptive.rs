@@ -11,6 +11,46 @@ fn quota(at: f64, used: f64) -> QuotaSnapshot {
         at,
     )
 }
+
+#[test]
+fn claude_lane_ignores_codex_pace_but_obeys_resources_and_its_own_429() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.max_running = 4;
+    s.claude_max_running = 12;
+    s.claude_stable_since = 1000.;
+    s.anthropic = quota(1300., 10.);
+    s.openai = vec![quota(1000., 20.), quota(1300., 22.2)];
+    let result = decide_providers(
+        &cfg,
+        s.clone(),
+        next_sample(&s, Some(2.), 40., 7),
+        1360.,
+        36,
+        2,
+        1350.,
+        0,
+        0.,
+    );
+    assert_eq!(result.max_running, 4);
+    assert_eq!(result.claude_max_running, 20);
+    assert_eq!(result.preferred_provider.as_deref(), Some("anthropic"));
+    for (health, memory, cpu, recent, latest) in [
+        (None, 40., 7, 0, 0.),
+        (Some(2.), 15., 7, 0, 0.),
+        (Some(2.), 40., 85, 0, 0.),
+        (Some(2.), 40., 7, 2, 1350.),
+    ] {
+        let sample = next_sample(&s, health, memory, cpu);
+        let result = decide_providers(&cfg, s.clone(), sample, 1360., 36, 0, 0., recent, latest);
+        assert_eq!(result.claude_max_running, 6);
+    }
+    s.anthropic = quota(1300., 100.);
+    let sample = next_sample(&s, Some(2.), 40., 7);
+    let result = decide_providers(&cfg, s, sample, 1360., 36, 0, 0., 0, 0.);
+    assert_eq!(result.claude_max_running, 4);
+    assert_eq!(result.preferred_provider, None);
+}
 fn state() -> LimitState {
     LimitState {
         max_running: 25,

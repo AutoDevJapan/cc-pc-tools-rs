@@ -408,7 +408,7 @@ pub fn launch_command(jobs: &Path, r: &Value, prompt: &Path) -> Invocation {
         &project,
         "--pr-url",
         s(&r["pr"]["url"]),
-        "--model",
+        "--auto-model",
         "gpt-6.1-sol",
         "--effort",
         "high",

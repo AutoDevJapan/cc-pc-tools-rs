@@ -1,6 +1,238 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
 
+mod claude_routing {
+    use super::*;
+    fn setup(t: &Test) {
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":4,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+                    "checked_at":t.rt.epoch(),"mode":"auto","max_running":4,
+                    "claude_max_running":8,"preferred_provider":"anthropic"
+                }),
+            )
+            .unwrap();
+    }
+    fn waiting(t: &Test, id: &str, extra: Value) {
+        t.put(job(patch(
+            json!({"id":id,"name":id,"status":"queued","model":"gpt-6.1-sol",
+            "model_explicit":false,"pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root}),
+            extra,
+        )));
+    }
+    #[test]
+    fn automatic_models_route_at_admission_and_explicit_or_session_models_stay() {
+        for (extra, expected) in [
+            (json!({}), "anthropic/claude-sonnet-5-5"),
+            (
+                json!({"task_type":"single_file_summary","sandbox":"read-only"}),
+                "anthropic/claude-haiku-5-5",
+            ),
+            (
+                json!({"task_type":"review","sandbox":"read-only"}),
+                "anthropic/claude-sonnet-5-5",
+            ),
+            (
+                json!({"task_type":"single_file_summary","sandbox":"danger-full-access"}),
+                "anthropic/claude-sonnet-5-5",
+            ),
+            (json!({"model_explicit":true}), "gpt-6.1-sol"),
+            (json!({"model_explicit":null}), "gpt-6.1-sol"),
+            (
+                json!({"resume_session":"01a0e883-7628-7121-9540-6780fd4cd6f4"}),
+                "gpt-6.1-sol",
+            ),
+            (json!({"first_started_at":"old"}), "gpt-6.1-sol"),
+        ] {
+            let t = Test::new();
+            setup(&t);
+            waiting(&t, "candidate", extra);
+            assert!(t.ctx.admit("candidate").unwrap().is_some());
+            let j = t.ctx.load("candidate").unwrap();
+            assert_eq!(j["model"], expected);
+            let args = codex_args(&j);
+            assert_eq!(
+                args[args.iter().position(|a| a == "-m").unwrap() + 1],
+                expected
+            );
+        }
+    }
+    #[test]
+    fn codex_full_lane_does_not_block_claude_but_shared_hardware_still_caps_total() {
+        let t = Test::new();
+        setup(&t);
+        for n in 0..4 {
+            waiting(
+                &t,
+                &format!("codex{n}"),
+                json!({"status":"running","model_explicit":true}),
+            );
+        }
+        waiting(&t, "codex-extra", json!({"model_explicit":true}));
+        for n in 0..5 {
+            waiting(&t, &format!("claude{n}"), json!({}));
+        }
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["max_running"], 8);
+        assert_eq!(report["provider_limits"]["openai"], 4);
+        assert!(t.ctx.admit("codex-extra").unwrap().is_none());
+        for n in 0..4 {
+            assert!(t.ctx.admit(&format!("claude{n}")).unwrap().is_some());
+        }
+        assert!(t.ctx.admit("claude4").unwrap().is_none());
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["provider_slots"], json!({"openai":4,"anthropic":4}));
+    }
+    #[test]
+    fn stale_future_and_fixed_measurements_do_not_route() {
+        for delta in [-1000., 1000.] {
+            let t = Test::new();
+            setup(&t);
+            let p = t.ctx.root.join("queue-limit-state.json");
+            let mut state = t.ctx.read_json(&p).unwrap();
+            state["checked_at"] = json!(t.rt.epoch() + delta);
+            t.ctx.write_json(&p, &state).unwrap();
+            waiting(&t, "candidate", json!({}));
+            assert!(t.ctx.admit("candidate").unwrap().is_some());
+            assert_eq!(t.ctx.load("candidate").unwrap()["model"], "gpt-6.1-sol");
+        }
+        let t = Test::new();
+        setup(&t);
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"adaptive":{},"fixed_max_running":4}),
+            )
+            .unwrap();
+        waiting(&t, "candidate", json!({}));
+        assert!(t.ctx.admit("candidate").unwrap().is_some());
+        assert_eq!(t.ctx.load("candidate").unwrap()["model"], "gpt-6.1-sol");
+    }
+    #[test]
+    fn mixed_provider_child_keeps_parent_slot_and_unknown_provider_reserves_both_lanes() {
+        let t = Test::new();
+        setup(&t);
+        for n in 0..4 {
+            waiting(
+                &t,
+                &format!("codex{n}"),
+                json!({"status":"running","model_explicit":true}),
+            );
+        }
+        waiting(
+            &t,
+            "parent",
+            json!({"status":"running","model":"anthropic/claude-sonnet-5-5"}),
+        );
+        waiting(
+            &t,
+            "child",
+            json!({"parent_job_id":"parent","model_explicit":true}),
+        );
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        assert_eq!(t.ctx.load("child").unwrap()["model"], "gpt-6.1-sol");
+        let unknown = json!({"id":"unknown","queue_unreadable":true,"status":"running"});
+        let report = t.ctx.queue_report(&[unknown]).unwrap();
+        assert_eq!(report["provider_slots"], json!({"openai":1,"anthropic":1}));
+    }
+    #[test]
+    fn minute_update_uses_one_snapshot_for_both_lanes_at_admission() {
+        let t = Test::new();
+        setup(&t);
+        let state_path = t.ctx.root.join("queue-limit-state.json");
+        let mut state = t.ctx.read_json(&state_path).unwrap();
+        state["max_running"] = json!(8);
+        t.ctx.write_json(&state_path, &state).unwrap();
+        let cfg = t.ctx.queue_config().unwrap();
+        assert_eq!(cfg.max_running, 8);
+        for n in 0..4 {
+            waiting(
+                &t,
+                &format!("codex{n}"),
+                json!({"status":"running","model_explicit":true,"queue_fairness_version":3}),
+            );
+        }
+        waiting(&t, "candidate", json!({"model_explicit":true}));
+        let previous = Arc::new(Mutex::new(None::<PathBuf>));
+        let updated = Arc::new(AtomicBool::new(false));
+        let changed = updated.clone();
+        state["max_running"] = json!(4);
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+            let mut last = previous.lock().unwrap();
+            // Publish between the effective-limit read and the provider read.
+            if path == state_path
+                && last.as_deref() == Some(path)
+                && !changed.swap(true, Ordering::Relaxed)
+            {
+                fs::write(&state_path, state.to_string()).unwrap();
+            }
+            *last = Some(path.to_path_buf());
+        }));
+        assert!(t.ctx.admit_configured("candidate", &cfg).unwrap().is_none());
+        assert!(
+            updated.load(Ordering::Relaxed),
+            "sampler publication was not exercised"
+        );
+        assert_eq!(
+            t.ctx.load("candidate").unwrap()["queue_wait_reason"]["provider_limit"],
+            4
+        );
+    }
+    #[test]
+    fn run_records_model_provenance_before_applying_defaults() {
+        for option in [None, Some("--model"), Some("--auto-model")] {
+            let t = Test::new();
+            let prompt = t.ctx.root.join("prompt.md");
+            fs::write(&prompt, "work").unwrap();
+            let mut args = vec![
+                "run",
+                "--name",
+                "routing",
+                "--cwd",
+                t.ctx.root.to_str().unwrap(),
+                "--prompt-file",
+                prompt.to_str().unwrap(),
+            ];
+            if let Some(option) = option {
+                args.extend([option, "gpt-6.1-sol"]);
+            }
+            assert_eq!(t.cli(&args).0.unwrap(), 0);
+            let jobs = t.ctx.list_jobs(&HashSet::new());
+            assert_eq!(jobs.len(), 1);
+            assert_eq!(jobs[0]["model_explicit"], option == Some("--model"));
+        }
+        let t = Test::new();
+        assert!(
+            t.cli(&[
+                "run",
+                "--name",
+                "routing",
+                "--prompt-file",
+                "p",
+                "--model",
+                "m",
+                "--auto-model",
+                "m"
+            ])
+            .0
+            .is_err()
+        );
+    }
+}
+
 #[test]
 fn display_project_rename_keeps_execution_data_and_survives_stale_supervisor_snapshots() {
     let t = Test::new();
@@ -1379,7 +1611,11 @@ mod queue_regressions {
             &t,
             &[("item.started", "cargo"), ("item.completed", "cargo")],
         );
-        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert!(
+            t.ctx.admit("other").unwrap().is_some(),
+            "{:?}",
+            t.rt.diagnostics.lock().unwrap()
+        );
         let summary = t.ctx.load("long").unwrap();
         let args = codex_args(&summary);
         for required in [
@@ -1393,6 +1629,28 @@ mod queue_regressions {
             assert!(args.iter().any(|a| a == required), "{required}");
         }
         assert!(!args.iter().any(|a| a.contains("enabled=true")));
+    }
+    #[test]
+    fn failed_inventory_keeps_agent_running_and_backs_off_before_retrying() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        let mut parent = live_tool_parent(&t);
+        parent["context_pct"] = json!(51);
+        t.ctx.save(&parent).unwrap();
+        tool_events(&t, &[("item.started", "tool"), ("item.completed", "tool")]);
+        t.rt.summary_fail.store(true, Ordering::Relaxed);
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 1);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert!(!t.ctx.job_dir("long").join("yield-transition.json").exists());
+        assert!(t.ctx.admit("other").unwrap().is_none());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 1);
+        t.rt.summary_fail.store(false, Ordering::Relaxed);
+        t.rt.tick(31.);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.load("long").unwrap()["context_phase"], "summarize");
     }
     #[test]
     fn invalid_or_unwritable_context_summary_retains_the_session_and_never_reports_success() {
@@ -1605,6 +1863,15 @@ mod queue_regressions {
         let t = Test::new();
         config(&t, json!({"max_running":1}));
         live_tool_parent(&t);
+        let gate_path = t.ctx.jobs.join(".queue.lock");
+        let probes = Arc::new(AtomicUsize::new(0));
+        let seen = probes.clone();
+        *t.rt.pause_hook.lock().unwrap() = Some(Box::new(move || {
+            // This callback used to run with the global gate held. A separate
+            // acquisition proves registration can proceed during slow freezing.
+            drop(FileLock::try_acquire(&gate_path).expect("pause monopolized queue gate"));
+            seen.fetch_add(1, Ordering::Relaxed);
+        }));
         tool_events(&t, &[("item.started", "cargo")]);
         assert!(t.ctx.admit("other").unwrap().is_none());
         assert!(t.rt.kills.lock().unwrap().is_empty());
@@ -1621,6 +1888,7 @@ mod queue_regressions {
         assert_eq!(j["yield_count"], 1);
         assert_eq!(*t.rt.kills.lock().unwrap(), vec![445, 444]);
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(probes.load(Ordering::Relaxed) > 0);
         assert!(j["turn_completed"].is_null());
     }
     #[test]
@@ -3545,6 +3813,8 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    summary_calls: AtomicUsize,
+    summary_fail: AtomicBool,
     queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
     queue_samples: AtomicUsize,
     title_tools: Mutex<Option<PathBuf>>,
@@ -3587,6 +3857,8 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            summary_calls: AtomicUsize::new(0),
+            summary_fail: AtomicBool::new(false),
             queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
                 free_memory_gib: Some(20.),
                 cpu_times: Some([100, 200, 100]),
@@ -3711,6 +3983,16 @@ impl Runtime for Fake {
         Ok(cc_task_title::job_title(job, prompt, &Value::Null, &names))
     }
     fn summary_mcp_servers(&self, _codex: &str, _cwd: &Path) -> io::Result<Vec<String>> {
+        self.summary_calls.fetch_add(1, Ordering::Relaxed);
+        if let Some(tools) = self.title_tools.lock().unwrap().as_ref() {
+            let gate = tools.parent().unwrap().join("jobs/.queue.lock");
+            if gate.parent().unwrap().is_dir() {
+                drop(FileLock::try_acquire(&gate).expect("MCP inventory monopolized queue gate"));
+            }
+        }
+        if self.summary_fail.load(Ordering::Relaxed) {
+            return Err(io::Error::other("inventory unavailable"));
+        }
         Ok(vec!["stripe".into(), "unseen-server".into()])
     }
     fn recover_paused(&self, path: &Path) -> io::Result<()> {

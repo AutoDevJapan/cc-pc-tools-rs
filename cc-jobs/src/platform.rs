@@ -630,8 +630,38 @@ pub fn proc_created(_pid: u32) -> Option<u64> {
 /// Locks byte zero, without reading or writing it; interoperates with msvcrt.locking.
 pub struct FileLock {
     file: File,
+    /// Sidecar describing the holder (pid + operation only, never secrets).
+    owner: Option<PathBuf>,
+}
+fn lock_owner_path(path: &Path) -> PathBuf {
+    let mut name = path.as_os_str().to_owned();
+    name.push(".owner");
+    PathBuf::from(name)
+}
+/// Short holder description for timeout diagnostics; empty when unknown.
+fn lock_owner_note(path: &Path) -> String {
+    match std::fs::read_to_string(lock_owner_path(path)) {
+        Ok(text) if text.len() <= 512 => format!("; last recorded holder {}", text.trim()),
+        _ => String::new(),
+    }
 }
 impl FileLock {
+    /// Record who holds this lock and why. Best effort: diagnostics must never
+    /// change locking behaviour. Removed again when the lock is released.
+    pub fn set_owner(&mut self, path: &Path, operation: &str) {
+        let owner = lock_owner_path(path);
+        let note = format!(
+            "{{\"pid\":{},\"operation\":{},\"since_epoch\":{}}}",
+            std::process::id(),
+            serde_json::Value::from(operation),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs())
+        );
+        if std::fs::write(&owner, note).is_ok() {
+            self.owner = Some(owner);
+        }
+    }
     pub fn acquire_queue(path: &Path) -> io::Result<Self> {
         Self::acquire_queue_timeout(path, Duration::from_secs(60))
     }
@@ -682,7 +712,7 @@ impl FileLock {
                 )
             } != 0
             {
-                return Ok(Self { file });
+                return Ok(Self { file, owner: None });
             }
             let error = io::Error::last_os_error();
             if error.raw_os_error() != Some(ERROR_IO_PENDING as i32) {
@@ -704,7 +734,7 @@ impl FileLock {
                 != 0
             {
                 // Completion may win the race with cancellation.
-                return Ok(Self { file });
+                return Ok(Self { file, owner: None });
             }
             let completion_error = io::Error::last_os_error();
             if let Some(error) = wait_error {
@@ -714,8 +744,9 @@ impl FileLock {
                 return Err(io::Error::new(
                     io::ErrorKind::TimedOut,
                     format!(
-                        "lock wait exceeded {} ms: {completion_error}",
-                        timeout.as_millis()
+                        "lock wait exceeded {} ms: {completion_error}{}",
+                        timeout.as_millis(),
+                        lock_owner_note(path)
                     ),
                 ));
             }
@@ -737,11 +768,14 @@ impl FileLock {
             .read(true)
             .open(path)?;
         lock_byte(&file, false)?;
-        Ok(Self { file })
+        Ok(Self { file, owner: None })
     }
 }
 impl Drop for FileLock {
     fn drop(&mut self) {
+        if let Some(owner) = self.owner.take() {
+            let _ = std::fs::remove_file(owner);
+        }
         let _ = lock_byte(&self.file, true);
     }
 }

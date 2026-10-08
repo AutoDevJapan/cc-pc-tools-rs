@@ -5,6 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     io::{BufRead, Seek, SeekFrom},
+    time::Duration,
 };
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
@@ -304,13 +305,17 @@ impl Context {
             !s(&lease, key).is_empty() && [s(job, "id"), s(job, "name")].contains(&s(&lease, key))
         }))
     }
-    /// Caller holds the queue gate. Freeze controllers before checking again;
+    /// Caller does not hold the queue gate. Freeze controllers before checking again;
     /// never kill a process simply because its tool returned a background session.
     /// A failed attempt at a completed boundary backs off for 15–30 s (shared by every process through
-    /// the job directory): each attempt holds the global gate while it reads the
-    /// event log and pauses the agent, and a job that kept failing every 3 s
-    /// starved `run` and the other waiters.
+    /// the job directory). Slow preparation runs under a per-job reservation;
+    /// the shared gate covers only revalidation and the durable transition.
     pub(crate) fn yield_tool_boundary(&self, snapshot: &Value, jobs: &[Value]) -> Result<bool> {
+        // Per-job reservation: slow pause/stop work for one job never needs the
+        // global gate, and two supervisors never run the same job's yield.
+        let Some(_reservation) = self.yield_reservation(s(snapshot, "id")) else {
+            return Ok(false);
+        };
         if self.yield_backoff_active(snapshot)
             || !(self.context_rotation_due(snapshot, jobs) || self.should_yield(snapshot, jobs))
             || !self.is_ours(snapshot, "codex_pid")
@@ -322,7 +327,9 @@ impl Context {
         let Some((_, baseline)) = self.tool_boundary(snapshot)? else {
             return Ok(false);
         };
-        let result = self.attempt_tool_yield(snapshot, baseline);
+        let result = self
+            .prefetch_context_inventory(snapshot)
+            .and_then(|()| self.attempt_tool_yield(snapshot, baseline));
         if !matches!(result, Ok(true)) {
             let not_before = self.rt.epoch() + crate::jitter(15., 30.);
             // Losing the backoff only costs throughput; keep the attempt result.
@@ -334,6 +341,36 @@ impl Context {
             }
         }
         result
+    }
+    /// Non-blocking per-job yield reservation; None while another yield is running.
+    pub(crate) fn yield_reservation(&self, jid: &str) -> Option<FileLock> {
+        let path = self.job_dir(jid).join("yield.lock");
+        let mut lock = FileLock::try_acquire(&path).ok()?;
+        lock.set_owner(&path, "yield_reservation");
+        Some(lock)
+    }
+    /// Global gate with holder diagnostics (pid + operation) and a bounded wait.
+    pub(crate) fn queue_lock_for(&self, operation: &str, wait: Duration) -> Result<FileLock> {
+        fs::create_dir_all(&self.jobs)?;
+        let path = self.jobs.join(".queue.lock");
+        let mut lock = FileLock::acquire_queue_timeout(&path, wait)
+            .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))?;
+        lock.set_owner(&path, operation);
+        Ok(lock)
+    }
+    fn try_yield_state(&self, jid: &str) -> Result<FileLock> {
+        let path = self.job_dir(jid).join("state.lock");
+        FileLock::try_acquire(&path)
+            .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
+    }
+    /// Active jobs for a yield decision. Reads the index without the gate; only
+    /// a missing index takes a brief gate to build one.
+    pub(crate) fn yield_snapshot(&self) -> Result<Vec<Value>> {
+        if let Some(jobs) = self.admission_snapshot() {
+            return Ok(jobs);
+        }
+        let _gate = self.queue_lock_for("yield_snapshot", Duration::from_secs(60))?;
+        self.admission_jobs()
     }
     pub(crate) fn yield_backoff_active(&self, job: &Value) -> bool {
         self.read_json(&self.job_dir(s(job, "id")).join("yield-retry.json"))
@@ -377,7 +414,6 @@ impl Context {
         if stable < 4 {
             return Ok(false);
         }
-        let _state = self.job_lock(s(snapshot, "id"), "state.lock")?;
         let external = !self.own_supervisor(snapshot);
         let mut owner = if external && self.is_ours(snapshot, "pid") {
             agent.arm_process(
@@ -397,11 +433,19 @@ impl Context {
         } else {
             None
         };
+        // Frozen controllers may themselves hold the gate or the state lock, so
+        // after any freeze only bounded waits are allowed; failure unfreezes
+        // everything on drop and the caller backs off. Order: gate, then state.
+        let wait = Duration::from_secs(if owner.is_some() { 3 } else { 5 });
+        let gate = self.queue_lock_for(&format!("yield_commit:{}", s(snapshot, "id")), wait)?;
+        let state = self.try_yield_state(s(snapshot, "id"))?;
         let job = self.load(s(snapshot, "id"))?;
+        let fresh_jobs = self.admission_jobs()?;
         if job["started_at"] != snapshot["started_at"]
             || job["codex_pid_created"] != snapshot["codex_pid_created"]
-            || !(self.context_rotation_due(&job, &self.admission_jobs()?)
-                || self.should_yield(&job, &self.admission_jobs()?))
+            || job["cancel_requested"] == true
+            || !(self.context_rotation_due(&job, &fresh_jobs)
+                || self.should_yield(&job, &fresh_jobs))
             || self.owns_civ6_lease(&job)?
             || !self.rollout_ready(&job)?
         {
@@ -429,6 +473,8 @@ impl Context {
         self.write_json(&journal_path, &journal)?;
         self.commit_tool_yield(&journal)?;
         if external {
+            drop(state);
+            drop(gate);
             self.close_chrome_tabs(s(&job, "id"));
         }
         Ok(true)

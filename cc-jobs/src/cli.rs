@@ -47,6 +47,7 @@ pub fn with_usage(mut e: Error) -> Error {
 }
 #[derive(Debug, Clone)]
 pub struct Args {
+    pub model_explicit: bool,
     pub cmd: String,
     pub id: String,
     pub values: BTreeMap<String, String>,
@@ -104,6 +105,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         });
     }
     let mut a = Args {
+        model_explicit: false,
         cmd: cmd.clone(),
         id: String::new(),
         values: BTreeMap::new(),
@@ -137,6 +139,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "todo-id",
                     "related-todo-ids",
                     "model",
+                    "auto-model",
                     "effort",
                     "sandbox",
                     "scope-source",
@@ -198,6 +201,9 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 if name == "add-dir" {
                     a.add_dirs.push(value);
                 } else {
+                    if name == "model" {
+                        a.model_explicit = true;
+                    }
                     a.values.insert(name, value);
                 }
             }
@@ -222,6 +228,14 @@ pub fn parse(args: &[String]) -> Result<Args> {
         i += 1;
     }
     if cmd == "run" {
+        if a.value("auto-model").is_some() && a.value("model").is_some() {
+            return Err(Error::new(
+                "--model and --auto-model are mutually exclusive",
+            ));
+        }
+        if let Some(model) = a.values.remove("auto-model") {
+            a.values.insert("model".into(), model);
+        }
         let missing = ["name", "prompt-file"]
             .into_iter()
             .filter(|name| a.value(name).is_none())
@@ -579,6 +593,8 @@ impl Context {
             .collect::<std::io::Result<Vec<_>>>()?;
         let mut job = json!({"name":name,"model":a.required("model")?,"effort":a.required("effort")?,"sandbox":a.required("sandbox")?,"cwd":cwd.to_string_lossy(),"add_dirs":dirs,"network":a.flag("network"),"mcp_profile":a.required("mcp-profile")?,"task_type":a.value("task-type"),"notes_hint":a.value("notes-hint"),"prompt_source":abs(prompt)?.to_string_lossy(),"codex":codex,"created_at":self.rt.now(),"status":"queued","pid":null,"codex_pid":null,"started_at":null,"finished_at":null,"exit_code":null,"duration_ms":null,"tokens":usage_tokens(&json!({})),"steps":0,"activity":"queued","last_message":null,"last_error":null,"thread_id":null,"launch_key":a.value("launch-key"),"resume_session":resume});
         let policy = cc_job_policy::for_sandbox(s(&job, "sandbox"));
+        job["model_explicit"] = json!(a.model_explicit);
+        job["requested_model"] = job["model"].clone();
         let scope_source = a.value("scope-source").unwrap_or("launcher");
         if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));

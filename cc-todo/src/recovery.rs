@@ -3,7 +3,7 @@ use crate::{Lock, Notifier, Paths, Result, STALL_S, find, load, normalized, now,
 use cc_scheduler::recovery_failure::{self as failure, Failure, SLOW_RETRY_S};
 use cc_scheduler::{
     backend::{Backend, RealBackend},
-    common::{self, arr, epoch, n, s},
+    common::{self, arr, epoch, n, s, truth},
     engine::Scheduler,
     policy::{self, Processes},
 };
@@ -1630,6 +1630,20 @@ pub fn restart_args(
         }
     };
     let profile = cc_job_policy::model_profile(s(&job["name"]), s(&job["task_type"]));
+    // A newly explicit ToDo choice overrides an earlier automatic selection
+    // only for a fresh session. Existing explicit/legacy session bindings stay.
+    let model = if truth(&item["model"]) && job["model_explicit"] == false && session(job).is_none()
+    {
+        s(&item["model"]).to_owned()
+    } else {
+        val(
+            "model",
+            item["model"]
+                .as_str()
+                .filter(|m| !m.is_empty())
+                .unwrap_or(profile.model),
+        )
+    };
     let mut args = vec![
         "run".into(),
         "--name".into(),
@@ -1640,10 +1654,17 @@ pub fn restart_args(
         s(&item["project"]).into(),
         "--todo-id".into(),
         item["id"].to_string(),
-        "--model".into(),
-        val("model", profile.model),
+        if truth(&item["model"]) || (!s(&job["model"]).is_empty() && job["model_explicit"] != false)
+        {
+            "--model".into()
+        } else {
+            "--auto-model".into()
+        },
+        model,
         "--effort".into(),
         val("effort", profile.effort),
+        "--task-type".into(),
+        val("task_type", "implementation"),
         "--cwd".into(),
         val("cwd", project_path),
         "--sandbox".into(),

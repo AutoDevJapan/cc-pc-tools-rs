@@ -72,8 +72,6 @@ impl Todo for RealTodo<'_> {
             batch.title.clone(),
             "--spec".into(),
             batch.spec.display().to_string(),
-            "--model".into(),
-            "gpt-6.1-sol".into(),
             "--effort".into(),
             "high".into(),
             "--note".into(),

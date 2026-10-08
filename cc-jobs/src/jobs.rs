@@ -1096,8 +1096,7 @@ impl Context {
                             if !self.yield_may_be_due(&job) {
                                 return Ok(false);
                             }
-                            let _gate = self.queue_lock()?;
-                            self.yield_tool_boundary(&job, &self.admission_jobs()?)
+                            self.yield_tool_boundary(&job, &self.yield_snapshot()?)
                         })();
                         match attempt {
                             Ok(true) => {
@@ -1126,12 +1125,15 @@ impl Context {
                         if !self.yield_may_be_due(&job) {
                             return Ok(false);
                         }
-                        let _gate = self.queue_lock()?;
                         if self.tool_handoff_pending(&job) {
+                            let _gate = self.queue_lock_for(
+                                "recover_tool_yield",
+                                std::time::Duration::from_secs(60),
+                            )?;
                             self.recover_tool_yield(&self.load(jid)?)?;
                             return Ok(s(&self.load(jid)?, "status") == "queued");
                         }
-                        self.yield_tool_boundary(&job, &self.admission_jobs()?)
+                        self.yield_tool_boundary(&job, &self.yield_snapshot()?)
                     })();
                     match attempt {
                         Ok(true) => {
@@ -1213,6 +1215,13 @@ impl Context {
             job["activity"] = json!("child process could not be stopped");
         }
         // Cancellation may have been recorded while the child was draining.
+        let mut running = job.clone();
+        running["status"] = json!("running");
+        if self.context_limit_reached(&running)
+            && let Err(error) = self.prefetch_context_inventory(&job)
+        {
+            self.yield_diagnostic(&error);
+        }
         let gate = match self.queue_lock() {
             Ok(gate) => Some(gate),
             Err(error) => {

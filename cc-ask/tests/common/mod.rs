@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -548,9 +548,11 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
-                        .unwrap()
-                        .to_rfc3339());
+                    item["updated"] = json!(
+                        chrono::DateTime::from_timestamp(self.now as i64, 0)
+                            .unwrap()
+                            .to_rfc3339()
+                    );
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()
@@ -592,7 +594,7 @@ impl Fake {
         let prompt_path = arg("--prompt-file");
         let prompt = std::fs::read_to_string(&prompt_path).unwrap();
         let name = arg("--name");
-        let mut record = json!({"model":arg("--model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
+        let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {

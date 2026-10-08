@@ -413,7 +413,7 @@ fn plan_guarded(
         .values()
         .filter(|p| {
             let text = format!("{} {}", norm(&p.image), norm(&p.command));
-            p.excluded || text.contains("openmausbot") || text.contains("autoselling")
+            p.excluded || text.contains("openmausbot") || text.contains("[client]")
         })
         .map(|p| p.pid)
         .collect();
@@ -1345,7 +1345,7 @@ mod tests {
             ),
         ];
         assert_eq!(plan(&procs, &[], NOW)[0].members, vec![2, 3]);
-        for hint in ["OpenMausBot", "autoselling"] {
+        for hint in ["OpenMausBot", "[client]"] {
             procs[1].command = format!("shim D:/CC/bin/godd-native.exe --cwd D:/{hint}");
             assert_eq!(plan(&procs, &[], NOW), vec![]);
         }

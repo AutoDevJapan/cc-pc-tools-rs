@@ -894,6 +894,36 @@ fn post_text(
 /// Owner messages on trusted request/question/bot task threads, oldest first.
 pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     let owner = ctx.owner();
+    // Receive every open generation independently of the ordinary inbox cursor.
+    // This is observation only: no acknowledgement, delivery or launch occurs.
+    {
+        let _work = crate::state_work::StateWork::begin_on(ctx, "inbox-work.lock")?;
+        let mut state = ctx.load()?;
+        let questions = state["questions"]
+            .as_array()
+            .ok_or("invalid questions ledger")?
+            .clone();
+        for q in questions.iter().filter(|q| truth(&q["open"])) {
+            match crate::routing::question_allowed(ctx, q) {
+                Ok(true) => (),
+                Ok(false) => continue,
+                Err(error) => {
+                    eprintln!("inbox question scope failed: {}", error_detail(&error));
+                    continue;
+                }
+            }
+            match owner_replies(ctx, q, &owner) {
+                Ok(messages) => {
+                    record_owner_answers(&mut state, s(&q["thread_id"]), &messages, &owner);
+                    if let Err(error) = ctx.save(&state) {
+                        eprintln!("inbox answer checkpoint failed: {}", error_detail(&error));
+                        break;
+                    }
+                }
+                Err(error) => eprintln!("inbox answer scan failed: {}", error_detail(&error)),
+            }
+        }
+    }
     let last: u64 = if state_file.exists() {
         std::fs::read_to_string(state_file)
             .map_err(|_| "OSError".to_string())?
@@ -905,7 +935,16 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
     };
     let mut places = BTreeMap::new();
     let mut inbox_only = std::collections::BTreeSet::new();
-    let allowed = crate::routing::allowed_places(ctx, last)?;
+    let allowed = match crate::routing::allowed_places(ctx, last) {
+        Ok(allowed) => allowed,
+        Err(error) => {
+            eprintln!(
+                "inbox inventory failed; showing saved answers: {}",
+                error_detail(&error)
+            );
+            BTreeMap::new()
+        }
+    };
     for (id, thread) in &allowed {
         let latest = if truth(&thread["last_message_id"]) {
             &thread["last_message_id"]
@@ -967,20 +1006,17 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
             }
         );
         let value = json!({"id":mid.to_string(),"channel":cid,"where":label,"at":s(&m["timestamp"]).chars().take(16).collect::<String>(),"text":text});
-        print_json(&value, None)?;
         out.push(value);
     }
-    if let Some((mid, _, _, _)) = found.last() {
-        std::fs::write(state_file, mid.to_string()).map_err(|_| "OSError".to_string())?;
-    }
-    // Delivery failures remain visible after the ordinary message cursor has
-    // advanced. Inbox inspection neither acknowledges delivery nor starts jobs.
+    // All unanswered delivery paths remain visible after the cursor advances,
+    // including main sessions, missing destinations and answers already handed
+    // to a worker whose question has not yet been resolved.
     let state = ctx.load()?;
     for q in state["questions"].as_array().into_iter().flatten() {
         let tid = s(&q["thread_id"]);
-        if !allowed.contains_key(tid)
-            || crate::routing::thread_inbox_only(ctx, &state, tid)
-            || !crate::reply_recovery::prevents_close(&state, q)
+        if !truth(&q["open"])
+            || !question_answered(&state, q)
+            || (s(&q["source"]) == "routing" && !allowed.contains_key(tid))
         {
             continue;
         }
@@ -990,18 +1026,86 @@ pub fn cmd_inbox(ctx: &mut Context, state_file: &Path) -> Result<Vec<Value>> {
             &state["requests"][tid]
         };
         let status = if s(&failure["resume_status"]).is_empty() {
-            "再開失敗"
+            "答えあり・未反映"
         } else {
             s(&failure["resume_status"])
         };
-        let id = n(&q["answered_reply"])
-            .max(n(&state["owner_answers"][tid]))
-            .to_string();
-        let value = json!({"id":id,"channel":tid,"where":allowed[tid]["routing_label"],
-            "status":status,"text":format!("{status}: {} {}",safe_text(s(&q["title"])),safe_text(s(&failure["last_resume_error"]))),
+        let latest = question_answer_id(&state, q).to_string();
+        let replies = q["owner_replies"]
+            .as_array()
+            .filter(|ms| !ms.is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                vec![if s(&q["owner_reply"]["id"]) == latest {
+                    q["owner_reply"].clone()
+                } else {
+                    json!({"id":latest})
+                }]
+            });
+        for reply in replies {
+            let id = s(&reply["id"]).to_owned();
+            if n(&reply["id"]) <= n(&q["after"]) {
+                continue;
+            }
+            let reference = json!({"after":q["after"],"title":q["title"]});
+            if let Some(existing) = out
+                .iter_mut()
+                .find(|m| m["id"] == id && m["channel"] == tid)
+            {
+                existing["status"] = json!(status);
+                if !existing["questions"].is_array() {
+                    existing["questions"] = json!([]);
+                }
+                if !existing["questions"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&reference)
+                {
+                    existing["questions"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(reference);
+                }
+                continue;
+            }
+            let files = reply["attachments"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|a| safe_text(s(&a["url"])))
+                .filter(|url| !url.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let text = if !s(&reply["content"]).is_empty() || !files.is_empty() {
+                format!(
+                    "{}{}{}",
+                    safe_text(s(&reply["content"])),
+                    if files.is_empty() { "" } else { " " },
+                    files
+                )
+            } else {
+                format!(
+                    "{status}: {} {}",
+                    safe_text(s(&q["title"])),
+                    safe_text(s(&failure["last_resume_error"]))
+                )
+            };
+            let label = allowed
+                .get(tid)
+                .map(|place| place["routing_label"].clone())
+                .unwrap_or_else(|| json!(safe_text(s(&q["title"]))));
+            let value = json!({"id":id,"channel":tid,"where":label,"saved_only":!allowed.contains_key(tid),
+            "status":status,"text":text,"question":q["title"],"questions":[reference],"reply":reply,
+            "delivered":reply_delivered(&state,&id),"destination":state["answer_receipts"][&id],
             "retry_exhausted":failure["reply_resume_retry"]["exhausted"],"retry_deadline":failure["reply_resume_retry"]["deadline"]});
-        print_json(&value, None)?;
-        out.push(value);
+            out.push(value);
+        }
+    }
+    for value in &out {
+        print_json(value, None)?;
+    }
+    if let Some((mid, _, _, _)) = found.last() {
+        std::fs::write(state_file, mid.to_string()).map_err(|_| "OSError".to_string())?;
     }
     Ok(out)
 }

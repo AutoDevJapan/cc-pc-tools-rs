@@ -1014,9 +1014,6 @@ pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
         }
         state["resume_scan_after"] = json!(index);
         let mut question = state["questions"][index].clone();
-        if crate::routing::thread_inbox_only(ctx, &state, s(&question["thread_id"])) {
-            continue;
-        }
         if !(truth(&question["open"])
             || (truth(&question["continuation"])
                 && (!truth(&question["continuation"]["reported"])
@@ -1035,6 +1032,25 @@ pub fn cmd_resume(ctx: &mut Context, budget: &mut bool) -> Result<()> {
                 eprintln!("question scope unavailable: {}", error_detail(&error));
                 continue;
             }
+        }
+        // Main-session answers still need durable receipt and visibility, but
+        // must never trigger acknowledgements or worker launches.
+        if crate::routing::thread_inbox_only(ctx, &state, s(&question["thread_id"])) {
+            if truth(&question["open"]) {
+                match owner_replies(ctx, &question, &owner) {
+                    Ok(messages) => {
+                        record_owner_answers(
+                            &mut state,
+                            s(&question["thread_id"]),
+                            &messages,
+                            &owner,
+                        );
+                        ctx.save(&state)?;
+                    }
+                    Err(error) => eprintln!("main answer receipt failed: {}", error_detail(&error)),
+                }
+            }
+            continue;
         }
         if truth(&question["open"]) {
             let received = owner_replies(ctx, &question, &owner).and_then(|messages| {

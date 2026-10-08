@@ -199,15 +199,12 @@ fn key(item: &Value) -> String {
 fn qkey(q: &Value) -> String {
     format!("question:{}:{}", s(&q["thread_id"]), s(&q["after"]))
 }
-pub fn pending(state: &Value) -> Vec<Value> {
+fn latest_open<'a>(source: impl Iterator<Item = &'a Value>) -> Vec<Value> {
     let mut questions = BTreeMap::new();
-    for q in state["questions"].as_array().into_iter().flatten() {
+    for q in source {
         let tid = s(&q["thread_id"]);
         if truth(&q["open"])
             && !tid.is_empty()
-            && n(&q["answered_reply"]) <= n(&q["after"])
-            && n(&state["owner_answers"][tid]).max(n(&state["owner_answers"][tid]["id"]))
-                <= n(&q["after"])
             && questions
                 .get(tid)
                 .is_none_or(|old: &Value| n(&old["after"]) < n(&q["after"]))
@@ -216,6 +213,16 @@ pub fn pending(state: &Value) -> Vec<Value> {
         }
     }
     questions.into_values().collect()
+}
+// Answer detection is independent of delivery, resumption and the selected agent.
+fn answer_id(state: &Value, q: &Value) -> u64 {
+    question_answer_id(state, q)
+}
+pub fn pending(state: &Value) -> Vec<Value> {
+    latest_open(state["questions"].as_array().into_iter().flatten())
+        .into_iter()
+        .filter(|q| answer_id(state, q) <= n(&q["after"]))
+        .collect()
 }
 fn label(k: &str, source: &str, state: &Value, names: &Names) -> String {
     prose(state["labels"][k].as_str().unwrap_or(source), names, 48)
@@ -363,6 +370,29 @@ pub fn progress_bar(item: &Value) -> String {
 }
 /// The body excludes the update stamp: the passage of five minutes alone is not a change.
 pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now: f64) -> String {
+    let all_questions = latest_open(
+        questions
+            .iter()
+            .chain(state["questions"].as_array().into_iter().flatten()),
+    );
+    let questions: Vec<_> = all_questions
+        .iter()
+        .filter(|q| answer_id(state, q) <= n(&q["after"]))
+        .cloned()
+        .collect();
+    let unreflected: Vec<_> = all_questions
+        .iter()
+        .filter(|q| {
+            let id = answer_id(state, q);
+            let first = n(&q["first_owner_reply"]);
+            let since = if first > n(&q["after"]) && first <= id {
+                first
+            } else {
+                id
+            };
+            id > n(&q["after"]) && now - snowflake_time(&since.to_string()) >= 600.
+        })
+        .collect();
     let items: Vec<_> = db["items"]
         .as_array()
         .into_iter()
@@ -394,7 +424,7 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
     if questions.is_empty() {
         out.push_str("今はありません\n");
     }
-    for q in questions {
+    for q in &questions {
         let name = label(&qkey(q), s(&q["title"]), state, names);
         out.push_str(&format!(
             "• {}：{} [質問を開く](https://discord.com/channels/{}/{})\n",
@@ -404,10 +434,31 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
             s(&q["thread_id"])
         ));
     }
+    if !unreflected.is_empty() {
+        out.push_str(&format!(
+            "\n## 答えあり・未反映（{}件）\n",
+            unreflected.len()
+        ));
+        for q in unreflected {
+            out.push_str(&format!(
+                "• {}：{} [質問を開く](https://discord.com/channels/{}/{})\n",
+                project(q, db, names),
+                label(&qkey(q), s(&q["title"]), state, names),
+                s(&state["guild_id"]),
+                s(&q["thread_id"])
+            ));
+        }
+    }
     let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for item in items {
         let last = epoch(s(&item["updated"])).or_else(|| epoch(s(&item["created"])));
-        let is_waiting = owner_waiting(item, questions);
+        let answered = all_questions.iter().any(|q| {
+            s(&item["note"]).contains(s(&q["thread_id"])) && answer_id(state, q) > n(&q["after"])
+        });
+        let unanswered = questions
+            .iter()
+            .any(|q| s(&item["note"]).contains(s(&q["thread_id"])));
+        let is_waiting = unanswered || (!answered && owner_waiting(item, &questions));
         let on = todo_wait::pending_on(db, item);
         let wait_status = on
             .iter()
@@ -638,7 +689,8 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
     let names = Names::load(&ctx.client_projects)
         .map_err(|e| format!("client exclusion list unavailable: {e}"))?;
     let mut db = read_json(&ctx.todo)?;
-    let questions = pending(&ctx.load()?);
+    let question_state = ctx.load()?;
+    let questions = pending(&question_state);
     let ownership = (|| -> Result<_> {
         let jobs = cc_scheduler_snapshot(&ctx.jobs.join("jobs"))?;
         let intake_path = ctx
@@ -712,10 +764,16 @@ pub fn update(ctx: &mut Context) -> Result<Value> {
         save(ctx, &state)?;
     }
     // The local model may be unavailable; that is a translation failure, not a board failure.
-    if let Err(e) = translate(ctx, &mut state, &items, &questions, &names) {
+    let open_questions = latest_open(question_state["questions"].as_array().into_iter().flatten());
+    if let Err(e) = translate(ctx, &mut state, &items, &open_questions, &names) {
         eprintln!("board labels: {e}");
     }
-    let body = render(&db, &questions, &state, &names, ctx.now());
+    // Board persistence owns labels/messages only. Pass the question snapshot to
+    // render without copying answer cursors into board.json or taking its writer lock.
+    let mut render_state = state.clone();
+    render_state["questions"] = question_state["questions"].clone();
+    render_state["owner_answers"] = question_state["owner_answers"].clone();
+    let body = render(&db, &questions, &render_state, &names, ctx.now());
     if s(&state["body"]) != body || state["target_parts"].as_array().is_none() {
         state["body"] = json!(body);
         state["target_parts"] = json!(split(&format!(

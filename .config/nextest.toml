@@ -9,5 +9,5 @@ filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_gate_t
 test-group = 'process-boundary'
 
 [[profile.default.overrides]]
-filter = 'package(cc-ask) & test(tick_bounds::)'
+filter = 'package(cc-ask) & binary(tick_bounds)'
 threads-required = 'num-test-threads'

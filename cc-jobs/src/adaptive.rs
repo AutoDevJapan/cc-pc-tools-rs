@@ -201,22 +201,25 @@ fn available(snapshot: &QuotaSnapshot) -> bool {
 /// Match account identities and reset windows, then protect the account whose
 /// consumption most exceeds its own remaining budget.
 pub fn pace_ratio(history: &[QuotaSnapshot]) -> Option<f64> {
-    pace_ratio_since(history, 0.)
+    pace_ratio_since(history, 0., history.last()?.at)
 }
-fn pace_ratio_since(history: &[QuotaSnapshot], since: f64) -> Option<f64> {
+fn pace_ratio_since(history: &[QuotaSnapshot], since: f64, now: f64) -> Option<f64> {
     let latest = history.last()?;
-    if !latest.complete {
+    if latest.at > now {
         return None;
     }
     let mut ratio: f64 = 0.;
     let mut compared = false;
     for q in &latest.accounts {
+        if q.reset_at <= now {
+            continue;
+        }
         // Unused accounts can publish a rolling estimate for their reset time.
         // Their changing window must not suppress a stable account's spending.
         // Find each account's own oldest comparable observation independently.
         let previous = history.iter().find_map(|snapshot| {
             let elapsed = latest.at - snapshot.at;
-            if !snapshot.complete || snapshot.at < since || !(300. ..=3600.).contains(&elapsed) {
+            if snapshot.at < since || !(300. ..=3600.).contains(&elapsed) {
                 return None;
             }
             snapshot
@@ -270,7 +273,7 @@ pub fn decide(
         state.stable_since = state.first_at;
     }
     state.cpu_percent = cpu_load(state.machine.cpu_times, sample.cpu_times);
-    state.pace_ratio = pace_ratio_since(&state.openai, state.pace_adjusted_at);
+    state.pace_ratio = pace_ratio_since(&state.openai, state.pace_adjusted_at, now);
     let latest = state.openai.last();
     let quota_fresh = state.quota_checked_at > 0.
         && now - state.quota_checked_at <= cfg.quota_interval_seconds as f64 + 60.;
@@ -301,7 +304,7 @@ pub fn decide(
     if quota_empty {
         reasons.push("Codex利用枠が回復待ち");
     }
-    let over_pace = quota_known && state.pace_ratio.is_some_and(|ratio| ratio > 1.);
+    let over_pace = quota_fresh && state.pace_ratio.is_some_and(|ratio| ratio > 1.);
     let pace_waiting = quota_known
         && state.pace_adjusted_at > 0.
         && state.pace_ratio.is_none()

@@ -197,6 +197,24 @@ fn exhausted_weekly_or_short_window_reduces_to_floor() {
     }
 }
 #[test]
+fn known_account_pressure_is_not_hidden_by_unknown_accounts_but_expired_windows_are_not_used() {
+    let cfg = AdaptiveConfig::default();
+    let mut s = state();
+    s.openai = vec![quota(1000., 20.), quota(1300., 21.)];
+    for snapshot in &mut s.openai {
+        snapshot.complete = false;
+    }
+    assert_eq!(
+        decide(&cfg, s.clone(), healthy(), 1360., 1, 0, 0.).max_running,
+        6
+    );
+    for snapshot in &mut s.openai {
+        snapshot.accounts[0].reset_at = 1361.;
+    }
+    s.openai[1].accounts[0].used_percent = 100.;
+    assert_eq!(decide(&cfg, s, healthy(), 1362., 1, 0, 0.).max_running, 25);
+}
+#[test]
 fn modest_overspend_is_proportional_and_next_sample_uses_post_reduction_baseline() {
     let cfg = AdaptiveConfig::default();
     let mut s = state();

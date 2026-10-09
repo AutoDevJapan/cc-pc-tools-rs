@@ -1191,7 +1191,7 @@ fn failed_writer_conflict_waits_without_consuming_answer_then_recovers_fresh() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1231,15 +1231,25 @@ fn successful_manual_writer_is_not_restarted_or_reported_twice() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
     a.resume();
     assert_eq!(a.question()["restart"]["waiting_for"], "manual-writer");
+    std::fs::copy(
+        a.ctx.jobs.join("jobs/job1/prompt.md"),
+        dir.join("prompt.md"),
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("prompt.md"),
+        format!("オーナー投稿 {answer}\n調査して最適案を選んで実装"),
+    )
+    .unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"succeeded","resume_session":"session-job1"}),
+        &json!({"status":"succeeded","steps":1,"resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1258,7 +1268,7 @@ fn successful_manual_writer_is_not_restarted_or_reported_twice() {
 #[test]
 fn reply_arriving_during_manual_writer_is_followed_up_after_success() {
     let mut a = AnswerResume::new();
-    a.answered();
+    let first = a.answered();
     a.resume();
     a.finish(
         "job1",
@@ -1273,16 +1283,26 @@ fn reply_arriving_during_manual_writer_is_followed_up_after_success() {
         .to_rfc3339();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1","started_at":started}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1","started_at":started}),
         2,
     )
     .unwrap();
     a.resume();
     a.advance(60.);
+    std::fs::copy(
+        a.ctx.jobs.join("jobs/job1/prompt.md"),
+        dir.join("prompt.md"),
+    )
+    .unwrap();
     let pending = a.answer(0., "実行中に届いた新しい回答を反映する", "OWN");
+    std::fs::write(
+        dir.join("prompt.md"),
+        format!("オーナー投稿 {first}\n調査して最適案を選んで実装"),
+    )
+    .unwrap();
     a.resume();
     assert_eq!(a.count(), 1);
-    atomic_json(&dir.join("job.json"), &json!({"status":"succeeded","resume_session":"session-job1","started_at":started,
+    atomic_json(&dir.join("job.json"), &json!({"status":"succeeded","steps":1,"resume_session":"session-job1","started_at":started,
         "finished_at":chrono::DateTime::from_timestamp(a.ctx.now() as i64 + 60, 0).unwrap().to_rfc3339()}), 2).unwrap();
     a.resume();
     assert!(!truth(
@@ -1317,7 +1337,7 @@ fn duplicate_or_superseded_writer_keeps_a_failed_jobs_answer_dispatchable() {
             .to_rfc3339();
         atomic_json(
             &dir.join("job.json"),
-            &json!({"status":"running","resume_session":"session-job1","started_at":started}),
+            &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1","started_at":started}),
             2,
         )
         .unwrap();
@@ -1370,7 +1390,7 @@ fn test_continuation_backoff_and_intentional_duplicate_cancel_are_silent() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1798,4 +1818,194 @@ fn test_git_worktree_setup_and_recovery_with_real_local_repository() {
         "main"
     );
     assert_eq!(a.question()["continuation"]["job"], "job2");
+}
+
+#[test]
+fn occupied_unrelated_session_uses_fresh_answer_worker_once() {
+    let mut a = AnswerResume::new();
+    a.change(json!({"session_id":"original-session","job_info":{"model":"gpt-6.1-sol","effort":"high","thread_id":"original-session","sandbox":"read-only","scope_source":"launcher"}}));
+    let dir = a.ctx.jobs.join("jobs/unrelated-writer");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"), &json!({"status":"running","thread_id":"original-session","discord_thread_id":"300","cwd":a.cwd}), 2).unwrap();
+    let answer = a.answered();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.last()["resume_session"], "");
+    assert_eq!(a.last()["sandbox"], "read-only");
+    assert!(s(&a.last()["prompt"]).contains("調査して最適案を選んで実装"));
+    assert_eq!(job_info(&a.ctx, "unrelated-writer")["status"], "running");
+    assert_eq!(a.state()["answer_receipts"][&answer]["handled_by"], "job1");
+    a.resume();
+    assert_eq!(a.count(), 1);
+}
+
+#[test]
+fn queued_answer_is_reserved_until_start_then_unblocks_existing_todo() {
+    let mut a = AnswerResume::new();
+    a.change(json!({"job":"original","session_id":"original-session"}));
+    let dir = a.ctx.jobs.join("jobs/original");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"), &json!({"id":"original","status":"succeeded","model":"gpt-6.1-sol","effort":"high","thread_id":"original-session","cwd":a.cwd}),2).unwrap();
+    a.todo(800., "block", "承認待ち", None);
+    let mut db = read_json(&a.ctx.todo).unwrap();
+    db["items"][0]["jobs"] = json!(["original"]);
+    atomic_json(&a.ctx.todo, &db, 2).unwrap();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert!(reply_reserved(&a.state(), &answer));
+    assert!(n(&a.question()["seen_reply"]) < answer.parse::<u64>().unwrap());
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(
+        read_json(&a.ctx.todo).unwrap()["items"][0]["status"],
+        "block"
+    );
+    let path = a.ctx.jobs.join("jobs/job1/job.json");
+    let mut job = read_json(&path).unwrap();
+    job["status"] = json!("running");
+    job["activity"] = json!("thinking");
+    atomic_json(&path, &job, 2).unwrap();
+    a.resume();
+    assert!(reply_delivered(&a.state(), &answer));
+    assert!(!reply_reserved(&a.state(), &answer));
+    assert_eq!(a.question()["seen_reply"], answer);
+    let db = read_json(&a.ctx.todo).unwrap();
+    assert_eq!(db["items"].as_array().unwrap().len(), 1);
+    assert_eq!(db["items"][0]["status"], "doing");
+    assert!(db["items"][0]["jobs"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("job1")));
+}
+
+#[test]
+fn zero_step_writer_failure_does_not_consume_answer_or_wait_for_unrelated_writer() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    a.finish(
+        "job1",
+        "failed",
+        None,
+        Some("thread-store conflict: already has an active writer"),
+    );
+    // Reproduce the previous version's premature delivery receipt.
+    let mut state = a.state();
+    state["answer_receipts"][&answer]
+        .as_object_mut()
+        .unwrap()
+        .remove("launch_job");
+    state["answer_receipts"][&answer]["handled_by"] = json!("job1");
+    a.save(&state);
+    let dir = a.ctx.jobs.join("jobs/unrelated");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"running","resume_session":"session-job1","discord_thread_id":"300"}),
+        2,
+    )
+    .unwrap();
+    a.resume();
+    assert_eq!(a.count(), 2);
+    assert_eq!(a.last()["resume_session"], "");
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job2");
+    assert_eq!(job_info(&a.ctx, "unrelated")["status"], "running");
+    a.resume();
+    assert_eq!(a.count(), 2);
+}
+
+#[test]
+fn legacy_queued_receipt_is_reserved_and_unreadable_job_cannot_release_it() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    let mut state = a.state();
+    state["answer_receipts"][&answer]
+        .as_object_mut()
+        .unwrap()
+        .remove("launch_job");
+    state["answer_receipts"][&answer]["handled_by"] = json!("job1");
+    a.save(&state);
+    a.resume();
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job1");
+    std::fs::write(a.ctx.jobs.join("jobs/job1/job.json"), "{").unwrap();
+    assert!(cmd_resume(&mut a.ctx, &mut false).is_err());
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job1");
+}
+
+#[test]
+fn same_task_writer_success_without_answer_input_does_not_consume_it() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    a.finish("job1", "failed", None, Some("already has an active writer"));
+    let dir = a.ctx.jobs.join("jobs/manual-writer");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"),&json!({"status":"running","discord_thread_id":"200","thread_id":"session-job1","model":"gpt-6.1-sol","effort":"high","cwd":a.cwd}),2).unwrap();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    atomic_json(&dir.join("job.json"),&json!({"status":"succeeded","steps":1,"thread_id":"session-job1","model":"gpt-6.1-sol","effort":"high","cwd":a.cwd}),2).unwrap();
+    a.resume();
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.question()["open"], true);
+    a.resume();
+    assert_eq!(a.count(), 2);
+    assert!(reply_reserved(&a.state(), &answer));
+    a.resume();
+    assert_eq!(a.count(), 2);
+}
+
+#[test]
+fn thread_created_alone_is_not_start_but_turn_event_survives_activity_changes() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/queued");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"),&json!({"status":"running","steps":0,"thread_id":"some-session","activity":"running command"}),2).unwrap();
+    std::fs::write(
+        dir.join("events.jsonl"),
+        "{\"type\":\"thread.started\",\"thread_id\":\"some-session\"}\n",
+    )
+    .unwrap();
+    assert!(!job_started(&a.ctx, "queued"));
+    std::fs::write(dir.join("events.jsonl"),"{\"type\":\"thread.started\",\"thread_id\":\"some-session\"}\n{\"type\":\"turn.started\"}\n{unfinished").unwrap();
+    assert!(job_started(&a.ctx, "queued"));
+}
+
+#[test]
+fn prestart_failure_releases_legacy_receipt_but_explicit_delivery_is_monotonic() {
+    for (reason, via, confirmed, expected) in [
+        ("app-server init failed", "", false, false),
+        ("model not found", "", false, false),
+        ("app-server init failed", "replies-event", false, true),
+        ("app-server init failed", "", true, true),
+    ] {
+        let a = AnswerResume::new();
+        let dir = a.ctx.jobs.join("jobs/legacy");
+        std::fs::create_dir_all(&dir).unwrap();
+        atomic_json(
+            &dir.join("job.json"),
+            &json!({"status":"failed","steps":0,"last_error":reason}),
+            2,
+        )
+        .unwrap();
+        let mut state = a.state();
+        state["answer_receipts"]["501"] = json!({"handled_by":"legacy","thread":"200","handled_via":via,"launch_confirmed":confirmed});
+        a.save(&state);
+        recover_reply_reads(&a.ctx, &mut state).unwrap();
+        assert_eq!(
+            reply_delivered(&state, "501"),
+            expected,
+            "{reason}/{via}/{confirmed}"
+        );
+        assert_eq!(reply_delivered(&a.state(), "501"), expected, "persisted");
+    }
 }

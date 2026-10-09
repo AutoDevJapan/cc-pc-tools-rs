@@ -376,8 +376,22 @@ pub fn continuation_prompt(
     } else {
         s(&question["agent"])
     };
+    let original_path = ctx
+        .jobs
+        .join("jobs")
+        .join(s(&question["job"]))
+        .join("prompt.md");
+    let original = if valid_job(s(&question["job"])) && original_path.is_file() {
+        crate::prompt_context::bounded(
+            &read_text(&original_path)?,
+            12 * 1024,
+            &original_path.to_string_lossy(),
+        )
+    } else {
+        String::new()
+    };
     Ok(safe_text(format!(
-        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}\n\n{}",
+        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}\n元の作業指示:\n{original}\n\n{}",
         s(&question["cwd"]),
         s(&thread["id"]),
         crate::prompt_context::conversation(ctx, &thread, history, owner, 32 * 1024)?
@@ -423,12 +437,13 @@ fn adopt_continuation(
     // once the question's child exists, independently of the receipt cursor.
     if let Some(ids) = question["continuation"]["owner_message_ids"].as_array() {
         for id in ids {
-            state["answer_receipts"][s(id)]["thread"] = question["thread_id"].clone();
-            state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
+            record_launch_delivery(ctx, state, s(id), s(&question["thread_id"]), jid);
         }
     }
-    acknowledge_reply(question, &after);
-    crate::reply_recovery::delivered(question);
+    if job_started(ctx, jid) {
+        acknowledge_reply(question, &after);
+        crate::reply_recovery::delivered(question);
+    }
     checkpoint(ctx, state, index, question)?;
     Ok(())
 }
@@ -449,6 +464,10 @@ fn continuation_selection(
         if let Some(job) = crate::automation::jobs(ctx)?
             .into_iter()
             .filter(|job| [s(&job["thread_id"]), s(&job["resume_session"])].contains(&session))
+            .filter(|job| {
+                s(&job["discord_thread_id"]).is_empty()
+                    || explicit_thread_owner(job, s(&question["thread_id"]))
+            })
             .max_by(|a, b| {
                 crate::automation::epoch(&a["created_at"])
                     .total_cmp(&crate::automation::epoch(&b["created_at"]))
@@ -484,6 +503,7 @@ fn continuation_selection(
             .join("\n")
     );
     let mut selection = pick_model(ctx, &task, &[], kind)?;
+    selection["source_job_id"] = source_job["id"].clone();
     for field in ["model", "effort"] {
         if let Some(saved) = sources
             .iter()
@@ -516,6 +536,9 @@ fn continuation_selection(
         })
         .map(|id| json!(id))
         .unwrap_or(Value::Null);
+    if crate::restart::session_busy(ctx, s(&selection["resume_session"]), "")? {
+        selection["resume_session"] = Value::Null;
+    }
     Ok(selection)
 }
 
@@ -533,6 +556,14 @@ fn resume_at(
     }
     if !crate::routing::question_allowed(ctx, question)? {
         return Ok(());
+    }
+    let jid = s(&question["continuation"]["job"]).to_owned();
+    if !jid.is_empty() && job_started(ctx, &jid) {
+        let after = s(&question["continuation"]["after"]).to_owned();
+        acknowledge_reply(question, &after);
+        crate::restart::link_answer_todo(ctx, question, &jid)?;
+        crate::reply_recovery::delivered(question);
+        checkpoint(ctx, state, index, question)?;
     }
     crate::reply_recovery::refresh(state, question, s(&thread["id"]));
     if !crate::reply_recovery::due(question, ctx.now()) {
@@ -716,6 +747,14 @@ fn resume_at(
             &key
         )?);
         checkpoint(ctx, state, index, question)?;
+        if crate::restart::session_busy(
+            ctx,
+            s(&question["continuation"]["launch"]["selection"]["resume_session"]),
+            "",
+        )? {
+            question["continuation"]["launch"]["selection"]["resume_session"] = Value::Null;
+            checkpoint(ctx, state, index, question)?;
+        }
         let entry = &question["continuation"];
         let launched = launch_job_with_session(
             ctx,

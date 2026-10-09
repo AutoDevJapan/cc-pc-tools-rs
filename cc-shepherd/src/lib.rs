@@ -209,6 +209,7 @@ pub fn candidates_with_waits<B: Backend>(
     now: f64,
 ) -> Result<(Vec<Value>, usize, Vec<String>)> {
     let todo = b.todo()?;
+    let ownership_jobs = cc_job_policy::work_owner::observed_jobs(&todo, jobs);
     let mut waits = vec![];
     let cwds: Vec<String> = jobs
         .iter()
@@ -250,7 +251,7 @@ pub fn candidates_with_waits<B: Backend>(
             };
             let candidate = json!({"id":format!("shepherd-candidate-{key}"),"work_owner":{
                 "repository":s(&repo["slug"]).to_lowercase(),"pr":pr["number"],"worktree":cc_job_policy::work_owner::norm(Path::new(&expected)),"branch":pr["headRefName"]}});
-            if let Some(owner) = cc_job_policy::work_owner::blocker(&candidate, jobs) {
+            if let Some(owner) = cc_job_policy::work_owner::blocker(&candidate, &ownership_jobs) {
                 waits.push(format!("{key}: 担当 {} の完了待ち", s(&owner["id"])));
                 continue;
             }

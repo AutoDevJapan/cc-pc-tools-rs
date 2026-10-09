@@ -1,5 +1,6 @@
 //! Permissions for unattended jobs. Read-only work cannot escalate to write access.
 pub mod cargo;
+pub mod subwork;
 pub mod todo_wait;
 pub mod work_owner;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

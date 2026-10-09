@@ -137,7 +137,7 @@ pub fn same(a: &Value, b: &Value) -> bool {
         || (equal("git_common") && equal("branch"))
 }
 fn root(job: &Value) -> bool {
-    s(job, "parent_job_id").is_empty()
+    job["subwork"].is_object() || s(job, "parent_job_id").is_empty()
 }
 fn live(job: &Value) -> bool {
     ["starting", "running"].contains(&s(job, "status"))
@@ -159,12 +159,32 @@ pub fn blocker<'a>(candidate: &Value, jobs: &'a [Value]) -> Option<&'a Value> {
     let identity = from_job(candidate);
     jobs.iter()
         .filter(|j| root(j) && live(j) && j["id"] != candidate["id"])
+        .filter(|j| !crate::subwork::permits(candidate, j))
         .filter(|j| !live(candidate) || rank(j) < rank(candidate))
         .filter(|j| same(&identity, &from_job(j)))
         .min_by_key(|j| rank(j))
 }
 pub fn reason(owner: &Value) -> Value {
     json!({"code":"work_owner","message":format!("同じPR・作業フォルダの担当 {} の完了待ち",s(owner,"id")),"owner_job_id":owner["id"],"owner_todo_id":owner["todo_id"]})
+}
+/// Queued subwork that cannot be admitted must not reserve a PR indefinitely.
+/// Retain starting/running jobs (and observed surviving processes) until they actually stop.
+pub fn observed_jobs(db: &Value, jobs: &[Value]) -> Vec<Value> {
+    jobs.iter()
+        .filter_map(|j| {
+            let mut candidate = j.clone();
+            if j["subwork"].is_object() {
+                candidate["subwork_validated"] = json!(false);
+                if crate::subwork::refresh_job(db, jobs, &mut candidate).is_err()
+                    && s(j, "status") == "queued"
+                    && j["work_owner_live"] != true
+                {
+                    return None;
+                }
+            }
+            Some(candidate)
+        })
+        .collect()
 }
 /// Under the ToDo store lock: preserve all evidence and turn collisions into real prerequisites.
 pub fn reconcile_todos(db: &mut Value, jobs: &[Value]) -> Vec<i64> {
@@ -175,6 +195,8 @@ pub fn reconcile_todos_if(
     jobs: &[Value],
     eligible: impl Fn(&Value) -> bool,
 ) -> Vec<i64> {
+    let jobs = observed_jobs(db, jobs);
+    let jobs = jobs.as_slice();
     let mut edges = Vec::new();
     for item in db["items"].as_array().into_iter().flatten() {
         if !eligible(item) || item["id"].as_i64().is_none() {
@@ -222,6 +244,12 @@ pub fn reconcile_todos_if(
             identity["pr"] = json!(pr);
         }
         candidate["work_owner"] = identity;
+        if item["subwork"].is_object() {
+            // An invalid relation is held for repair, never converted into a parent prerequisite.
+            if crate::subwork::apply(db, item, jobs, &mut candidate, false).is_err() {
+                continue;
+            }
+        }
         if let Some(owner) = blocker(&candidate, jobs)
             && let Some(on) = owner["todo_id"]
                 .as_i64()

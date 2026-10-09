@@ -170,11 +170,17 @@ impl Browser {
                     child: Some(child),
                 });
             }
-            if let Ok(Some(_)) = child.try_wait() {
-                return Err(io::Error::other(
-                    "Chrome がすぐ終了しました。専用プロフィールの Chrome が CDP なしで開いている場合は閉じてから再実行してください",
-                ));
+            if let Ok(Some(status)) = child.try_wait()
+                && !status.success()
+            {
+                return Err(io::Error::other(format!(
+                    "Chrome の起動処理が失敗しました（終了コード {:?}）",
+                    status.code()
+                )));
             }
+            // On Windows the Chrome launcher can exit successfully before its
+            // replacement browser writes DevToolsActivePort. The owned profile's
+            // live CDP endpoint, rather than the launcher PID, certifies readiness.
             sleep(Duration::from_millis(200));
         }
         let _ = child.kill();
@@ -211,6 +217,15 @@ impl Drop for Browser {
     fn drop(&mut self) {
         if let Some(child) = self.child.take() {
             let _ = self.cdp.call("Browser.close", json!({}));
+            // The launcher may already have exited while the browser is still
+            // shutting down. Keep the profile alive until that browser stops.
+            let deadline = Instant::now() + Duration::from_secs(15);
+            let addr = SocketAddr::from(([127, 0, 0, 1], self.port));
+            while Instant::now() < deadline
+                && TcpStream::connect_timeout(&addr, Duration::from_millis(200)).is_ok()
+            {
+                sleep(Duration::from_millis(50));
+            }
             reap(child);
         }
     }

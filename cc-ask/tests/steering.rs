@@ -127,6 +127,107 @@ fn run(h: &mut Harness, question: bool) {
     }
 }
 
+#[test]
+fn existing_wait_and_reservation_checkpoint_new_input_before_failed_todo_read() {
+    for q in [false, true] {
+        for pending in [false, true] {
+            let mut h = Harness::new();
+            h.tick();
+            source(&h, 10);
+            if q {
+                question(&h);
+            }
+            let mid = h.reply("待機中に追加された原文を保持して", "100");
+            let mut state = h.state();
+            let mut record = if q {
+                state["questions"][0].clone()
+            } else {
+                state["requests"]["100"].clone()
+            };
+            let entry = if q {
+                &mut record["continuation"]
+            } else {
+                &mut record
+            };
+            if pending {
+                entry["owner_update"] = json!({"key":"retained-attempt","source":job_info(&h.ctx,"job1"),
+                    "session":"session-job1","resume":true,"prompt":"元の依頼", "original_request":"元の依頼",
+                    "after":"100","messages":[]});
+            } else {
+                entry["work_wait_on"] = json!([32]);
+            }
+            std::fs::remove_file(&h.ctx.todo).unwrap();
+            let thread = h.fake.borrow().threads["100"].clone();
+            let slot = if q {
+                cc_ask::restart::Slot::Question(0)
+            } else {
+                cc_ask::restart::Slot::Request
+            };
+            assert!(cc_ask::steering::deliver(
+                &mut h.ctx,
+                &mut state,
+                &thread,
+                &mut record,
+                slot,
+                "OWN",
+                &mut false
+            )
+            .is_err());
+            let saved = h.state();
+            let saved = if q {
+                &saved["questions"][0]["continuation"]
+            } else {
+                &saved["requests"]["100"]
+            };
+            assert_eq!(saved["dependency_messages"][0]["id"], mid);
+            assert_eq!(
+                saved["dependency_messages"][0]["content"],
+                "待機中に追加された原文を保持して"
+            );
+            assert_eq!(h.fake.borrow().launches.len(), 1);
+            assert_eq!(job_info(&h.ctx, "job1")["status"], "running");
+            h.fake
+                .borrow_mut()
+                .messages
+                .get_mut("100")
+                .unwrap()
+                .retain(|m| m["id"] != mid);
+            atomic_json(
+                &h.ctx.todo,
+                &json!({"items":[{"id":32,"status":"done"}],"projects":{}}),
+                2,
+            )
+            .unwrap();
+            assert!(cc_ask::steering::deliver(
+                &mut h.ctx,
+                &mut state,
+                &thread,
+                &mut record,
+                slot,
+                "OWN",
+                &mut false
+            )
+            .unwrap());
+            assert_eq!(h.fake.borrow().launches.len(), 2);
+            assert!(s(&h.fake.borrow().launches[1]["prompt"])
+                .contains("待機中に追加された原文を保持して"));
+            let entry = if q { &record["continuation"] } else { &record };
+            assert!(entry["dependency_messages"].is_null());
+            assert!(!cc_ask::steering::deliver(
+                &mut h.ctx,
+                &mut state,
+                &thread,
+                &mut record,
+                slot,
+                "OWN",
+                &mut false
+            )
+            .unwrap());
+            assert_eq!(h.fake.borrow().launches.len(), 2);
+        }
+    }
+}
+
 fn dependency_db(h: &Harness, association: &str, status: &str) {
     let mut item = json!({"id":2073,"status":"wait","wait_on":[32,33],"jobs":[]});
     match association {

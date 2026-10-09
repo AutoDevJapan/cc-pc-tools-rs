@@ -746,6 +746,41 @@ pub fn deliver(
     budget: &mut bool,
 ) -> Result<bool> {
     let tid = s(&thread["id"]);
+    let initial = entry(record, slot).clone();
+    if !initial["owner_update"].is_object()
+        && (s(&initial["job"]).is_empty()
+            || s(&initial["job"]) == "launch-failed"
+            || truth(&initial["reported"]))
+    {
+        return Ok(false);
+    }
+    // Capture input before any dependency lookup or retry eligibility decision.
+    // Waiting and reserved attempts can receive additional messages as well.
+    let mut history = thread_history(ctx, tid)?;
+    for message in initial["dependency_messages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        if !history.iter().any(|saved| saved["id"] == message["id"]) {
+            history.push(message.clone());
+        }
+    }
+    history.sort_by_key(|message| n(&message["id"]));
+    let retained: Vec<_> = history
+        .iter()
+        .filter(|message| {
+            s(&message["author"]["id"]) == owner
+                && n(&message["id"]) > n(&initial["after"])
+                && !crate::snooze::control_only(message)
+                && !reply_unavailable(state, s(&message["id"]))
+        })
+        .cloned()
+        .collect();
+    if !retained.is_empty() && initial["dependency_messages"] != json!(retained) {
+        entry_mut(record, slot)["dependency_messages"] = json!(retained);
+        save(ctx, state, thread, record, slot)?;
+    }
     // Dependency completion is independent of transport retry deadlines. It
     // restores this attempt's eligibility without changing stops/generations.
     if entry(record, slot)["work_wait_on"]
@@ -835,19 +870,6 @@ pub fn deliver(
     if jid.is_empty() || jid == "launch-failed" || truth(&current["reported"]) {
         return Ok(false);
     }
-    let mut history = thread_history(ctx, tid)?;
-    // Keep the exact reply bytes while waiting, even if a later history page no
-    // longer contains them. The delivery cursor still belongs to the old job.
-    for message in current["dependency_messages"]
-        .as_array()
-        .into_iter()
-        .flatten()
-    {
-        if !history.iter().any(|saved| saved["id"] == message["id"]) {
-            history.push(message.clone());
-        }
-    }
-    history.sort_by_key(|message| n(&message["id"]));
     let unseen: Vec<_> = history
         .iter()
         .filter(|m| {

@@ -8443,36 +8443,24 @@ mod end_to_end {
         }
         // These jobs are queued and have no child processes. Retain an OS handle
         // while stopping each supervisor; taskkill /T can follow reused parent IDs.
+        let mut owners = FixtureOwners {
+            handles: Vec::new(),
+            shutdown_started: false,
+        };
         for id in &ids {
             let job = t.job(id);
             assert_eq!(job["status"], "queued");
             let pid = job["pid"].as_u64().unwrap() as u32;
             assert_ne!(pid, std::process::id());
             assert_eq!(proc_created(pid), job["pid_created"].as_u64());
-            unsafe {
-                use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
-                let handle = OpenProcess(
-                    PROCESS_TERMINATE | PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
-                    0,
-                    pid,
-                );
-                assert!(!handle.is_null());
-                let mut created = std::mem::zeroed();
-                let mut exited = std::mem::zeroed();
-                let mut kernel = std::mem::zeroed();
-                let mut user = std::mem::zeroed();
-                assert_ne!(
-                    GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user),
-                    0
-                );
-                let identity =
-                    ((created.dwHighDateTime as u64) << 32) | created.dwLowDateTime as u64;
-                assert_eq!(Some(identity), job["pid_created"].as_u64());
-                assert_ne!(TerminateProcess(handle, 0), 0);
-                assert_eq!(WaitForSingleObject(handle, 5000), 0);
-                CloseHandle(handle);
-            }
+            owners
+                .handles
+                .push(FixtureProcess::retain(pid, job["pid_created"].as_u64().unwrap()).unwrap());
         }
+        // Cancel every owner first: waiting for one scanner while the other
+        // 29 owners keep issuing I/O delays the scanner's kernel cancellation.
+        let all_exited = owners.shutdown();
+        assert!(all_exited, "parallel fixture shutdown did not confirm exit");
         assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
         assert_eq!(ids.len(), 30);
         assert!(
@@ -8496,6 +8484,120 @@ mod end_to_end {
         tmp: Temp,
         exe: PathBuf,
         rec: PathBuf,
+        diagnostic: std::sync::atomic::AtomicBool,
+        handles: Mutex<Vec<FixtureProcess>>,
+        inherited_home: Option<PathBuf>,
+    }
+    struct FixtureProcess {
+        handle: windows_sys::Win32::Foundation::HANDLE,
+        pid: u32,
+        created: u64,
+    }
+    struct FixtureOwners {
+        handles: Vec<FixtureProcess>,
+        shutdown_started: bool,
+    }
+    impl FixtureOwners {
+        fn shutdown(&mut self) -> bool {
+            self.shutdown_started = true;
+            for owner in &self.handles {
+                owner.request_stop();
+            }
+            let mut all = true;
+            for owner in &self.handles {
+                all &= owner.wait_exit();
+            }
+            all
+        }
+    }
+    impl Drop for FixtureOwners {
+        fn drop(&mut self) {
+            // A retention/identity assertion can fail before normal shutdown.
+            if !self.shutdown_started {
+                let _ = self.shutdown();
+            }
+        }
+    }
+    // The test owns these handles; the mutex serializes retention and cleanup.
+    unsafe impl Send for FixtureProcess {}
+    impl FixtureProcess {
+        fn retain(pid: u32, created: u64) -> Option<Self> {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                let handle = OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SYNCHRONIZE,
+                    0,
+                    pid,
+                );
+                if handle.is_null() {
+                    return None;
+                }
+                let mut times = [std::mem::zeroed::<FILETIME>(); 4];
+                let valid = GetProcessTimes(
+                    handle,
+                    &mut times[0],
+                    &mut times[1],
+                    &mut times[2],
+                    &mut times[3],
+                ) != 0
+                    && (((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64)
+                        == created;
+                if !valid {
+                    CloseHandle(handle);
+                    return None;
+                }
+                Some(Self {
+                    handle,
+                    pid,
+                    created,
+                })
+            }
+        }
+        fn live(&self) -> bool {
+            unsafe {
+                windows_sys::Win32::System::Threading::WaitForSingleObject(self.handle, 0)
+                    == windows_sys::Win32::Foundation::WAIT_TIMEOUT
+            }
+        }
+        fn request_stop(&self) {
+            use windows_sys::Win32::System::Threading::*;
+            unsafe {
+                if !self.live() || TerminateProcess(self.handle, 0) != 0 {
+                    return;
+                }
+                let error = io::Error::last_os_error();
+                if self.live() {
+                    eprintln!(
+                        "fixture termination request failed: pid={} created={} error={error}",
+                        self.pid, self.created
+                    );
+                }
+            }
+        }
+        fn wait_exit(&self) -> bool {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                let result = WaitForSingleObject(self.handle, 5000);
+                if result != WAIT_OBJECT_0 {
+                    eprintln!(
+                        "fixture cleanup failed: pid={} created={} wait={result}",
+                        self.pid, self.created
+                    );
+                }
+                result == WAIT_OBJECT_0
+            }
+        }
+        fn stop(&self) -> bool {
+            self.request_stop();
+            self.wait_exit()
+        }
+    }
+    impl Drop for FixtureProcess {
+        fn drop(&mut self) {
+            unsafe {
+                windows_sys::Win32::Foundation::CloseHandle(self.handle);
+            }
+        }
     }
     impl E2e {
         fn new() -> Self {
@@ -8518,7 +8620,14 @@ mod end_to_end {
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
             )
             .unwrap();
-            Self { tmp, exe, rec }
+            Self {
+                tmp,
+                exe,
+                rec,
+                diagnostic: std::sync::atomic::AtomicBool::new(false),
+                handles: Mutex::new(Vec::new()),
+                inherited_home: None,
+            }
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
@@ -8539,6 +8648,13 @@ mod end_to_end {
                 .env_remove("GODD_DISCORD_BOT_TOKEN")
                 .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
+            if let Some(home) = &self.inherited_home {
+                c.env("USERPROFILE", home).env("HOME", home);
+            }
+            // CODEX_HOME alone does not isolate native plugin initialization:
+            // Context::installed also resolves USERPROFILE/HOME independently.
+            c.env("USERPROFILE", self.tmp.0.join("home"))
+                .env("HOME", self.tmp.0.join("home"));
             c.output().unwrap()
         }
         fn start(&self, mode: &str, cwd: &Path, prompt: &[u8]) -> String {
@@ -8570,15 +8686,155 @@ mod end_to_end {
             .unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
+            self.until_phase("unspecified", &mut condition);
+        }
+        fn retain_fixture_processes(&self) {
+            let mut identities = Vec::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        for key in ["pid", "codex_pid"] {
+                            if let (Some(pid), Some(created)) =
+                                (job[key].as_u64(), job[format!("{key}_created")].as_u64())
+                            {
+                                identities.push((pid as u32, created));
+                            }
+                        }
+                    }
+                }
+            }
+            // The marker belongs to this unique fixture directory; verify its
+            // process image before retaining the creation-time-bound OS handle.
+            for name in ["sleep.pid", "hold.pid"] {
+                if let Ok(bytes) = fs::read_to_string(self.rec.join(name))
+                    && let Ok(pid) = bytes.trim().parse::<u32>()
+                    && let Ok(bytes) =
+                        fs::read(self.rec.join(name.replace(".pid", ".identity.json")))
+                    && let Ok(identity) = serde_json::from_slice::<Value>(&bytes)
+                    && identity["pid"].as_u64() == Some(pid as u64)
+                    && let Some(created) = identity["created"].as_u64()
+                {
+                    use windows_sys::Win32::{Foundation::*, System::Threading::*};
+                    unsafe {
+                        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+                        if !handle.is_null() {
+                            let mut path = [0u16; 32768];
+                            let mut size = path.len() as u32;
+                            let own =
+                                QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut size)
+                                    != 0
+                                    && String::from_utf16_lossy(&path[..size as usize])
+                                        .replace('\\', "/")
+                                        .eq_ignore_ascii_case(
+                                            &self
+                                                .tmp
+                                                .0
+                                                .join("bin/fixture.exe")
+                                                .to_string_lossy()
+                                                .replace('\\', "/"),
+                                        );
+                            CloseHandle(handle);
+                            if own {
+                                identities.push((pid, created));
+                            }
+                        }
+                    }
+                }
+            }
+            let mut handles = self.handles.lock().unwrap();
+            for (pid, created) in identities {
+                if !handles.iter().any(|h| h.pid == pid && h.created == created)
+                    && let Some(handle) = FixtureProcess::retain(pid, created)
+                {
+                    handles.push(handle);
+                }
+            }
+        }
+        fn phase_snapshot(&self, phase: &str, elapsed: Duration) -> Value {
+            let mut jobs = Vec::new();
+            let mut names = HashMap::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        let role = if s(&job, "name") == "dependency"
+                            || !s(&job, "parent_job_id").is_empty()
+                        {
+                            "child"
+                        } else if jobs.is_empty() {
+                            "parent"
+                        } else {
+                            "other"
+                        };
+                        names.insert(s(&job, "id").to_owned(), role);
+                        jobs.push(job);
+                    }
+                }
+            }
+            jobs.sort_by(|a, b| {
+                s(a, "created_at")
+                    .cmp(s(b, "created_at"))
+                    .then_with(|| s(a, "id").cmp(s(b, "id")))
+            });
+            for (n, job) in jobs
+                .iter()
+                .filter(|j| s(j, "parent_job_id").is_empty())
+                .enumerate()
+            {
+                names.insert(
+                    s(job, "id").to_owned(),
+                    if n == 0 { "parent" } else { "other" },
+                );
+            }
+            let alias = |id: &str| names.get(id).copied().unwrap_or("unknown");
+            let rows: Vec<_> = jobs.iter().map(|job| {
+                let process = |key| { let pid = job[key].as_u64().unwrap_or(0) as u32; let current = proc_created(pid);
+                    let handles = self.handles.lock().unwrap();
+                    let retained_live = handles.iter().find(|handle| handle.pid == pid && Some(handle.created) == job[format!("{key}_created")].as_u64()).map(FixtureProcess::live);
+                    json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"retained_handle_live":retained_live,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
+                let error_kind = if s(job,"last_error").contains("plugin env_vars") { "plugin_metadata" } else if job["last_error"].is_null() { "none" } else { "other" };
+                json!({"role":alias(s(job,"id")),"status":job["status"],"error_kind":error_kind,"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
+                    "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
+                    "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
+            }).collect();
+            let index: Value = fs::read(self.tmp.0.join("tool/jobs/.queue-index.json"))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+                .unwrap_or(Value::Null);
+            json!({"phase":phase,"elapsed_ms":elapsed.as_millis() as u64,"jobs":rows,"sleep_marker":self.rec.join("sleep.pid").exists(),
+                "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
+        }
+        fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
+            let started = Instant::now();
             let end = Instant::now() + Duration::from_secs(20);
             while !condition() {
-                assert!(Instant::now() < end, "timed out");
+                if self.diagnostic.load(Ordering::Relaxed) {
+                    self.retain_fixture_processes();
+                }
+                if Instant::now() >= end {
+                    let snapshot = self.phase_snapshot(phase, started.elapsed());
+                    eprintln!("dependency fixture timeout: {snapshot}");
+                    panic!("timed out in {phase}");
+                }
                 std::thread::sleep(Duration::from_millis(100));
+            }
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                eprintln!(
+                    "dependency fixture completed: {}",
+                    self.phase_snapshot(phase, started.elapsed())
+                );
             }
         }
         fn slow(&self) -> (String, Vec<u32>) {
-            let jid = self.start("slow", &self.tmp.0, b"hi");
-            self.until(|| {
+            self.slow_at("slow", &self.tmp.0)
+        }
+        fn slow_at(&self, mode: &str, cwd: &Path) -> (String, Vec<u32>) {
+            let jid = self.start(mode, cwd, b"hi");
+            self.until_phase("parent_fixture_start", || {
                 self.rec.join("sleep.pid").exists() && truth(&self.job(&jid)["codex_pid"])
             });
             let j = self.job(&jid);
@@ -8598,6 +8854,22 @@ mod end_to_end {
     }
     impl Drop for E2e {
         fn drop(&mut self) {
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                let mut handles = self.handles.lock().unwrap();
+                for handle in handles.iter() {
+                    handle.request_stop();
+                }
+                let mut stopped = true;
+                for handle in handles.iter() {
+                    stopped &= handle.wait_exit();
+                }
+                handles.clear();
+                if !std::thread::panicking() {
+                    assert!(stopped, "fixture cleanup did not confirm exit");
+                }
+                return;
+            }
             let rt = System::default();
             for f in ["hold.pid", "sleep.pid"] {
                 if let Ok(s) = fs::read_to_string(self.rec.join(f))
@@ -8725,14 +8997,117 @@ mod end_to_end {
     #[test]
     fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
         let e = E2e::new();
+        dependency_contract(&e);
+    }
+    #[test]
+    fn dependency_fixture_does_not_read_its_callers_plugin_configuration() {
+        let mut e = E2e::new();
+        let home = e.tmp.0.join("caller-home");
+        let plugin = home.join(".codex/plugins/cache/openai-bundled/unified-computer-use/v1");
+        fs::create_dir_all(&plugin).unwrap();
+        let file = plugin.join(".mcp.json");
+        let sentinel = r#"{"mcpServers":{"cua_repl":{"env_vars":"caller-owned-invalid-type"}}}"#;
+        fs::write(&file, sentinel).unwrap();
+        e.inherited_home = Some(home);
+        dependency_contract(&e);
+        assert_eq!(fs::read_to_string(file).unwrap(), sentinel);
+    }
+    #[test]
+    fn fixture_process_handle_rejects_a_mismatched_creation_time() {
+        let pid = std::process::id();
+        let created = proc_created(pid).unwrap();
+        assert!(FixtureProcess::retain(pid, created + 1).is_none());
+        let retained = FixtureProcess::retain(pid, created).unwrap();
+        assert!(retained.live());
+        // Dropping the reference closes the handle; it never terminates a PID.
+        drop(retained);
+        assert_eq!(proc_created(pid), Some(created));
+    }
+    #[test]
+    fn fixture_marker_must_match_its_saved_process_creation_time() {
+        struct ChildGuard {
+            child: std::process::Child,
+            process: FixtureProcess,
+        }
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = self.process.stop();
+                let _ = self.child.wait();
+            }
+        }
+        let e = E2e::new();
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let child = hidden_command(&e.tmp.0.join("bin/fixture.exe").to_string_lossy())
+            .env("CC_JOBS_FIXTURE_MODE", "dependency-parent")
+            .env("CC_JOBS_FIXTURE_DIR", &e.rec)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        let created = proc_created(pid).unwrap();
+        let _guard = ChildGuard {
+            child,
+            process: FixtureProcess::retain(pid, created).unwrap(),
+        };
+        e.until_phase("fixture_identity_published", || {
+            e.rec.join("sleep.pid").exists()
+        });
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created + 1})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles.lock().unwrap().is_empty(),
+            "a reused marker must not bind to the current PID"
+        );
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|handle| handle.pid == pid && handle.created == created && handle.live())
+        );
+        e.diagnostic.store(true, Ordering::Relaxed);
+    }
+    fn dependency_contract(e: &E2e) {
+        e.diagnostic.store(true, Ordering::Relaxed);
         fs::write(
             e.tmp.0.join("tool/queue-config.json"),
             r#"{"max_running":1}"#,
         )
         .unwrap();
-        let (parent, _) = e.slow();
-        let other = e.start("", &e.tmp.0, b"other root");
+        // Distinct worktrees prevent an inherited home Git checkout from
+        // making work_owner, rather than capacity 1, block the other root.
+        let workspace = |name| {
+            let path = e.tmp.0.join(name);
+            fs::create_dir_all(path.join(".git")).unwrap();
+            fs::write(path.join(".git/HEAD"), "ref: refs/heads/fixture\n").unwrap();
+            fs::write(
+                path.join(".git/config"),
+                "[core]\nrepositoryformatversion = 0\n",
+            )
+            .unwrap();
+            path
+        };
+        let parent_work = workspace("parent-work");
+        let other_work = workspace("other-work");
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let (parent, parent_pids) = e.slow_at("dependency-parent", &parent_work);
+        let other = e.start("", &other_work, b"other root");
         assert_eq!(e.job(&other)["status"], "queued");
+        e.until_phase("other_root_waits_for_capacity", || {
+            e.job(&other)["queue_wait_reason"]["code"] == "running_limit"
+        });
         let prompt = e.tmp.0.join("child-prompt.md");
         fs::write(&prompt, "dependency").unwrap();
         let result = e.cli(
@@ -8745,7 +9120,7 @@ mod end_to_end {
                 "--effort",
                 "max",
                 "--cwd",
-                e.tmp.0.to_str().unwrap(),
+                parent_work.to_str().unwrap(),
                 "--prompt-file",
                 prompt.to_str().unwrap(),
                 "--parent-job-id",
@@ -8759,12 +9134,24 @@ mod end_to_end {
             String::from_utf8_lossy(&result.stderr)
         );
         let child = String::from_utf8(result.stdout).unwrap().trim().to_string();
-        e.until(|| e.job(&child)["status"] == "succeeded");
+        e.until_phase("child_success_with_full_root", || {
+            e.job(&child)["status"] == "succeeded"
+        });
         assert_eq!(e.job(&child)["parent_job_id"], parent);
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
         assert!(e.cli(&["cancel", &parent], "").status.success());
-        e.until(|| e.job(&other)["status"] == "succeeded");
+        e.until_phase("parent_processes_exited", || {
+            let handles = e.handles.lock().unwrap();
+            parent_pids.iter().all(|pid| {
+                handles
+                    .iter()
+                    .any(|handle| handle.pid == *pid && !handle.live())
+            })
+        });
+        e.until_phase("other_success_after_parent_cancel", || {
+            e.job(&other)["status"] == "succeeded"
+        });
     }
     #[test]
     fn test_run_survives_its_caller_and_passes_prompt_and_cwd_verbatim() {

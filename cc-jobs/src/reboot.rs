@@ -115,10 +115,14 @@ impl Context {
         };
         let _gate = self.queue_lock_for("recover-reboot", Duration::from_secs(2))?;
         let receipt = self.root.join("reboot-recovery.json");
+        let mut skipped = json!({});
         if apply && receipt.exists() {
             let saved = self.read_json(&receipt)?;
             if same_boot(&saved["boot"], boot) && saved["complete"] == true {
                 return Ok(json!([]));
+            }
+            if same_boot(&saved["boot"], boot) && saved["skipped"].is_object() {
+                skipped = saved["skipped"].clone();
             }
         }
         let mut jobs = self.reboot_inventory()?;
@@ -144,12 +148,26 @@ impl Context {
                 continue;
             }
             let id = s(old, "id").to_string();
+            if skipped.get(&id).is_some() {
+                continue;
+            }
             if deadline.saturating_duration_since(Instant::now()) < Duration::from_secs(2) {
                 report.push(json!({"id":id,"action":"deferred","reason":"今回の復旧時間の上限"}));
                 continue;
             }
             match self.rt.recovery_protected(s(old, "cwd")) {
-                Ok(true) => continue,
+                Ok(true) => {
+                    // Store only opaque ID in the recovery ledger, never
+                    // mutate a protected record or retain its name/cwd.
+                    skipped[&id] = json!("protected");
+                    if apply {
+                        self.write_json(
+                            &receipt,
+                            &json!({"boot":boot,"complete":false,"skipped":skipped}),
+                        )?;
+                    }
+                    continue;
+                }
                 Ok(false) => {}
                 Err(_) => {
                     report.push(json!({"id":id,"action":"deferred","reason":"作業範囲を確認できないため次回再確認"}));
@@ -239,7 +257,9 @@ impl Context {
                 None
             };
             if let Some(reason) = reason {
-                if reason == "元の依頼文または作業フォルダーがない" {
+                if reason == "元の依頼文または作業フォルダーがない"
+                    && job["reboot_launch_pending"] == true
+                {
                     report.push(json!({"id":id,"action":"deferred","reason":reason}));
                     continue;
                 }
@@ -255,6 +275,13 @@ impl Context {
                     job["reboot_recovery_aborted"] = json!(reason);
                     self.save(&job)?;
                     jobs[index] = job;
+                }
+                skipped[&id] = json!(reason);
+                if apply {
+                    self.write_json(
+                        &receipt,
+                        &json!({"boot":boot,"complete":false,"skipped":skipped}),
+                    )?;
                 }
                 report.push(json!({"id":id,"action":"skip","reason":reason}));
                 continue;
@@ -318,16 +345,33 @@ impl Context {
         });
         let deferred = report.iter().any(|entry| entry["action"] == "deferred");
         if apply && !launches_pending && !deferred {
-            self.log_reboot_recovery(&jobs)?;
+            if self.log_reboot_recovery(&jobs).is_err() {
+                // Reporting is independent of job ownership. Leave pending
+                // flags for the next tick without stopping healthy dispatch.
+                report.push(
+                    json!({"action":"log_pending","reason":"Discordへの復旧記録を次回再試行"}),
+                );
+                self.write_json(
+                    &receipt,
+                    &json!({"boot":boot,"complete":false,"skipped":skipped}),
+                )?;
+                return Ok(json!(report));
+            }
             if !report.iter().any(|entry| entry["action"] == "pending") {
                 // Avoid reading thousands of historical jobs on every minute
                 // tick after this boot's recovery and quiet report are complete.
                 self.write_json(
                     &receipt,
-                    &json!({"boot":boot,"complete":true,
+                    &json!({"boot":boot,"complete":true,"skipped":skipped,
                     "completed_at":self.rt.now(),"report":report}),
                 )?;
             }
+        }
+        if apply && (launches_pending || deferred) {
+            self.write_json(
+                &receipt,
+                &json!({"boot":boot,"complete":false,"skipped":skipped}),
+            )?;
         }
         Ok(json!(report))
     }

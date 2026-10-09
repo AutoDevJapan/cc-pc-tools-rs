@@ -211,7 +211,9 @@ mod reboot_recovery {
             stdout: vec![],
             stderr: vec![],
         }));
-        assert!(t.ctx.recover_reboot(true).is_err());
+        let (result, output, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(output.contains("log_pending"));
         assert_eq!(t.ctx.load("log-retry").unwrap()["reboot_log_pending"], true);
         t.ctx.recover_reboot(true).unwrap();
         assert_eq!(
@@ -285,7 +287,12 @@ mod reboot_recovery {
                 .iter()
                 .any(|entry| entry["action"] == "deferred")
         );
-        assert!(!t.ctx.root.join("reboot-recovery.json").exists());
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["complete"],
+            false
+        );
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert_eq!(
             t.ctx.load("valid").unwrap()["thread_id"],
@@ -385,6 +392,59 @@ mod reboot_recovery {
         assert_eq!(t.ctx.load("protected").unwrap(), original);
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
         assert!(t.rt.calls.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn missing_unreserved_prompt_is_a_permanent_boot_skip_not_a_dispatch_blocker() {
+        let t = Test::new();
+        let original = interrupted(&t, "missing-prompt", "lost");
+        fs::rename(
+            t.ctx.job_dir("missing-prompt").join("prompt.md"),
+            t.ctx.root.join("held-prompt.md"),
+        )
+        .unwrap();
+        let (result, output, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(output.contains("skip"));
+        assert_eq!(t.ctx.load("missing-prompt").unwrap(), original);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["complete"],
+            true
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn protected_skip_is_cached_while_another_job_is_deferred() {
+        let t = Test::new();
+        let protected = interrupted(&t, "protected", "lost");
+        let mut later = interrupted(&t, "later", "lost");
+        later["thread_id"] = Value::Null;
+        later["cwd"] = json!(t.ctx.root.join("later"));
+        fs::create_dir(t.ctx.root.join("later")).unwrap();
+        t.ctx.save(&later).unwrap();
+        {
+            let mut guards = t.rt.recovery_guards.lock().unwrap();
+            guards.insert(s(&protected, "cwd").into(), Some(true));
+            guards.insert(s(&later, "cwd").into(), None);
+        }
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 75);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["skipped"]["protected"],
+            "protected"
+        );
+        {
+            let mut guards = t.rt.recovery_guards.lock().unwrap();
+            // Rechecking the protected entry now fails. A cached skip must
+            // permit the remaining ordinary job to progress anyway.
+            guards.insert(s(&protected, "cwd").into(), None);
+            guards.insert(s(&later, "cwd").into(), Some(false));
+        }
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 0);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.ctx.load("protected").unwrap(), protected);
     }
 }
 

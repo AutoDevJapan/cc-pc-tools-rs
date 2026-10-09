@@ -158,6 +158,11 @@ impl Effects for Overrides {
         self.shared.http(method, url, body, discord)
     }
     fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        if self.run_error && argv.iter().any(|arg| arg == "recover-reboot") {
+            // These cases exercise failures after startup recovery. A separate
+            // regression verifies deferred recovery suppresses replacements.
+            return self.shared.run(argv, timeout);
+        }
         if let Some(report) = self.routes.get("RUN") {
             self.shared
                 .0

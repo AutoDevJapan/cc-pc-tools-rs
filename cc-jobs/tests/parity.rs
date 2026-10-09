@@ -2269,6 +2269,48 @@ mod queue_regressions {
         assert!(t.ctx.admit("shared").unwrap().is_some());
         assert!(t.run(&["--todo-id", "2"], b"duplicate").is_err());
     }
+    #[test]
+    fn reply_metadata_rechecks_dependencies_added_after_registration() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db = json!({"items":[{"id":2073,"status":"todo"},
+            {"id":2074,"status":"todo"},{"id":32,"status":"todo"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert_eq!(
+            t.run(
+                &["--todo-id", "2073", "--related-todo-ids", "2073,2074"],
+                b"reply continuation"
+            )
+            .unwrap(),
+            0
+        );
+        let path = fs::read_dir(&t.ctx.jobs)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| p.join("job.json").is_file())
+            .unwrap();
+        let id = path.file_name().unwrap().to_str().unwrap();
+        assert_eq!(
+            t.ctx.load(id).unwrap()["related_todo_ids"],
+            json!([2073, 2074])
+        );
+        db["items"][1]["status"] = json!("wait");
+        db["items"][1]["wait_on"] = json!([32]);
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit(id).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(id).unwrap()["queue_wait_reason"]["wait_on"],
+            json!([32])
+        );
+        db["items"][2]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit(id).unwrap().is_some());
+    }
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
     fn long_parent(t: &Test, id: &str) -> Value {
         let mut j = waiting(t, id, "orch-long");

@@ -604,6 +604,11 @@ impl Fake {
         let name = arg("--name");
         let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
+        record["todo_id"] = json!(arg("--todo-id").parse::<i64>().ok());
+        record["related_todo_ids"] = json!(arg("--related-todo-ids")
+            .split(',')
+            .filter_map(|id| id.parse::<i64>().ok())
+            .collect::<Vec<_>>());
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {
             self.launch_error = false;
@@ -621,6 +626,8 @@ impl Fake {
         atomic_json(&dir.join("job.json"),&json!({"id":jid,"status":"running","model":record["model"],"effort":record["effort"],"task_type":record["task_type"],"sandbox":record["sandbox"],"scope_source":record["scope_source"],"thread_id":format!("session-{jid}"),"launch_key":record["launch_key"],"cwd":record["cwd"]}),2).unwrap();
         std::fs::write(dir.join("prompt.md"), s(&record["prompt"])).unwrap();
         let mut job = read_json(&dir.join("job.json"))?;
+        job["todo_id"] = record["todo_id"].clone();
+        job["related_todo_ids"] = record["related_todo_ids"].clone();
         job["steps"] = json!(if self.launch_queued { 0 } else { 1 });
         if self.launch_queued {
             job["status"] = json!("queued");

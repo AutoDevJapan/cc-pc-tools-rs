@@ -59,6 +59,432 @@ fn run(h: &mut Harness, question: bool) {
         h.tick();
     }
 }
+
+fn dependency_db(h: &Harness, association: &str, status: &str) {
+    let mut item = json!({"id":2073,"status":"wait","wait_on":[32,33],"jobs":[]});
+    match association {
+        "jobs" => item["jobs"] = json!(["job1"]),
+        "scheduler" => item["scheduler"] = json!({"job":"job1"}),
+        _ => {}
+    }
+    atomic_json(
+        &h.ctx.todo,
+        &json!({"items":[item,
+        {"id":32,"status":status},{"id":33,"status":"todo"}]}),
+        2,
+    )
+    .unwrap();
+}
+
+#[test]
+fn dependency_wait_precedes_owner_update_reservation_and_cancellation() {
+    for q in [false, true] {
+        for status in ["queued", "succeeded"] {
+            for association in [
+                "todo_id",
+                "related_todo_ids",
+                "jobs",
+                "scheduler",
+                "selection",
+            ] {
+                let mut h = Harness::new();
+                h.tick();
+                source(&h, 10);
+                if q {
+                    question(&h);
+                }
+                h.finish("job1", status, Some("状態: 完了\n以前の結果"), None);
+                let path = h.ctx.jobs.join("jobs/job1/job.json");
+                let mut job = read_json(&path).unwrap();
+                if association == "todo_id" {
+                    job["todo_id"] = json!(2073);
+                }
+                if association == "related_todo_ids" {
+                    job["related_todo_ids"] = json!([2073]);
+                }
+                atomic_json(&path, &job, 2).unwrap();
+                if association == "selection" {
+                    let mut st = h.state();
+                    let e = if q {
+                        &mut st["questions"][0]["continuation"]
+                    } else {
+                        &mut st["requests"]["100"]
+                    };
+                    e["selection"]["todo_id"] = json!(2073);
+                    h.save(&st);
+                }
+                dependency_db(&h, association, "todo");
+                let mid = h.reply("依存完了後に反映するテスト指示", "100");
+                for _ in 0..2 {
+                    run(&mut h, q);
+                }
+                assert_eq!(
+                    h.fake.borrow().launches.len(),
+                    1,
+                    "{q} {status} {association}"
+                );
+                assert!(!h
+                    .fake
+                    .borrow()
+                    .runs
+                    .iter()
+                    .any(|(a, _)| a.iter().any(|s| s == "cancel")));
+                let st = h.state();
+                let e = if q {
+                    &st["questions"][0]["continuation"]
+                } else {
+                    &st["requests"]["100"]
+                };
+                assert_eq!(e["work_wait_on"], json!([32, 33]));
+                assert!(!e["owner_update"].is_object());
+                assert_eq!(e["after"], "100");
+                assert_eq!(
+                    e["dependency_messages"][0]["content"],
+                    "依存完了後に反映するテスト指示"
+                );
+                assert_eq!(st["answer_receipts"][&mid]["posted"], true);
+                assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
+                let mut db = read_json(&h.ctx.todo).unwrap();
+                db["items"][1]["status"] = json!("done");
+                atomic_json(&h.ctx.todo, &db, 2).unwrap();
+                run(&mut h, q);
+                assert_eq!(h.fake.borrow().launches.len(), 1);
+                db["items"][2]["status"] = json!("done");
+                atomic_json(&h.ctx.todo, &db, 2).unwrap();
+                run(&mut h, q);
+                run(&mut h, q);
+                assert_eq!(h.fake.borrow().launches.len(), 2);
+                let f = h.fake.borrow();
+                let args = &f
+                    .runs
+                    .iter()
+                    .find(|(a, _)| {
+                        a.iter().any(|s| s == "--name") && a.iter().any(|s| s == "resume-100")
+                    })
+                    .unwrap()
+                    .0;
+                let at = args.iter().position(|s| s == "--related-todo-ids").unwrap();
+                assert_eq!(args[at + 1], "2073");
+            }
+        }
+    }
+}
+
+fn deliver_direct(h: &mut Harness, q: bool) -> bool {
+    deliver_attempt(h, q).unwrap()
+}
+
+fn deliver_attempt(h: &mut Harness, q: bool) -> Result<bool> {
+    let mut st = h.state();
+    let mut record = if q {
+        st["questions"][0].clone()
+    } else {
+        st["requests"]["100"].clone()
+    };
+    let slot = if q {
+        cc_ask::restart::Slot::Question(0)
+    } else {
+        cc_ask::restart::Slot::Request
+    };
+    cc_ask::steering::deliver(
+        &mut h.ctx,
+        &mut st,
+        &json!({"id":"100","name":"依頼A"}),
+        &mut record,
+        slot,
+        "OWN",
+        &mut false,
+    )
+}
+
+fn complete_dependencies(h: &Harness) {
+    let mut db = read_json(&h.ctx.todo).unwrap();
+    for item in db["items"].as_array_mut().unwrap().iter_mut().skip(1) {
+        item["status"] = json!("done");
+    }
+    atomic_json(&h.ctx.todo, &db, 2).unwrap();
+}
+
+#[test]
+fn dependency_wait_rechecks_pending_before_lost_response_recovery() {
+    for q in [false, true] {
+        for recovery in ["before", "queued", "cancelled", "dispatched"] {
+            let mut h = Harness::new();
+            h.tick();
+            source(&h, 10);
+            if q {
+                question(&h);
+            }
+            dependency_db(&h, "jobs", "done");
+            complete_dependencies(&h);
+            let mid = h.reply("予約後に依存が追加されるテスト", "100");
+            if recovery == "before" {
+                h.fake.borrow_mut().crash_before_launch = true;
+            } else {
+                h.fake.borrow_mut().launch_queued = true;
+                h.fake.borrow_mut().crash_after_launch = true;
+            }
+            assert!(catch_unwind(AssertUnwindSafe(|| deliver_direct(&mut h, q))).is_err());
+            let before = h.state();
+            let e = if q {
+                &before["questions"][0]["continuation"]
+            } else {
+                &before["requests"]["100"]
+            };
+            let key = e["owner_update"]["key"].clone();
+            if ["cancelled", "dispatched"].contains(&recovery) {
+                h.finish("job2", "cancelled", None, None);
+            }
+            if recovery == "dispatched" {
+                std::fs::write(
+                    h.ctx.jobs.join("jobs/job2/events.jsonl"),
+                    "{\"type\":\"item.started\",\"item\":{\"type\":\"command_execution\"}}\n",
+                )
+                .unwrap();
+            }
+            dependency_db(&h, "jobs", "todo");
+            deliver_direct(&mut h, q);
+            let st = h.state();
+            let e = if q {
+                &st["questions"][0]["continuation"]
+            } else {
+                &st["requests"]["100"]
+            };
+            if recovery == "dispatched" {
+                assert_eq!(e["job"], "job2");
+                assert_eq!(st["answer_receipts"][&mid]["handled_by"], "job2");
+            } else {
+                assert_eq!(e["job"], "job1", "{q} {recovery}");
+                assert_eq!(e["owner_update"]["key"], key);
+                assert_eq!(e["work_wait_on"], json!([32, 33]));
+                assert_eq!(e["after"], "100");
+                assert_eq!(
+                    e["owner_update"]["messages"][0]["content"],
+                    "予約後に依存が追加されるテスト"
+                );
+                assert_eq!(st["answer_receipts"][&mid]["posted"], true);
+                assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
+            }
+            let count = h.fake.borrow().launches.len();
+            deliver_direct(&mut h, q);
+            assert_eq!(h.fake.borrow().launches.len(), count);
+            complete_dependencies(&h);
+            h.fake.borrow_mut().launch_queued = false;
+            deliver_direct(&mut h, q);
+            deliver_direct(&mut h, q);
+            assert_eq!(
+                h.fake.borrow().launches.len(),
+                if recovery == "cancelled" { 3 } else { 2 }
+            );
+            let st = h.state();
+            if recovery == "queued" {
+                assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
+                assert_eq!(st["answer_receipts"][&mid]["launch_job"], "job2");
+                assert_eq!(job_info(&h.ctx, "job2")["related_todo_ids"], json!([2073]));
+            }
+        }
+    }
+}
+
+#[test]
+fn dependency_scope_does_not_infer_numbers_or_folders_and_keeps_all_explicit_ids() {
+    for associated in [false, true] {
+        let mut h = Harness::new();
+        h.tick();
+        source(&h, 10);
+        dependency_db(&h, "none", "todo");
+        let mut st = h.state();
+        if associated {
+            st["requests"]["100"]["selection"]["related_todo_ids"] = json!([2073, 2074]);
+        }
+        h.save(&st);
+        let path = h.ctx.jobs.join("jobs/job1/job.json");
+        let mut job = read_json(&path).unwrap();
+        if associated {
+            job["todo_id"] = json!(2075);
+        }
+        atomic_json(&path, &job, 2).unwrap();
+        h.reply("ToDo2073と同じフォルダーを使うだけのテスト", "100");
+        deliver_direct(&mut h, false);
+        assert_eq!(
+            h.fake.borrow().launches.len(),
+            if associated { 1 } else { 2 }
+        );
+        if associated {
+            complete_dependencies(&h);
+            deliver_direct(&mut h, false);
+            assert_eq!(
+                job_info(&h.ctx, "job2")["related_todo_ids"],
+                json!([2073, 2074, 2075])
+            );
+            assert_eq!(job_info(&h.ctx, "job2")["todo_id"], 2075);
+        }
+    }
+}
+
+#[test]
+fn dependency_release_preserves_other_writer_and_scheduler_reservation_priority() {
+    for reservation in [false, true] {
+        let mut h = Harness::new();
+        h.tick();
+        source(&h, 10);
+        dependency_db(&h, "jobs", "todo");
+        h.reply("依存解除後も担当を重ねないテスト", "100");
+        deliver_direct(&mut h, false);
+        complete_dependencies(&h);
+        if reservation {
+            let mut db = read_json(&h.ctx.todo).unwrap();
+            db["items"][0]["stall_recovery"]["pending"] = json!({"key":"scheduler-key"});
+            atomic_json(&h.ctx.todo, &db, 2).unwrap();
+        } else {
+            let dir = h.ctx.jobs.join("jobs/other");
+            std::fs::create_dir_all(&dir).unwrap();
+            atomic_json(
+                &dir.join("job.json"),
+                &json!({"id":"other","status":"queued","todo_id":2073}),
+                2,
+            )
+            .unwrap();
+        }
+        deliver_direct(&mut h, false);
+        assert_eq!(h.fake.borrow().launches.len(), 1);
+        assert!(!h
+            .fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(a, _)| a.iter().any(|s| s == "cancel")));
+    }
+}
+
+struct WaitDuringCancellation(SharedFake);
+impl Effects for WaitDuringCancellation {
+    fn now(&self) -> f64 {
+        self.0.now()
+    }
+    fn http(&mut self, m: &str, u: &str, b: Option<&Value>, d: bool) -> Result<Value> {
+        self.0.http(m, u, b, d)
+    }
+    fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+        let out = self.0.run(args, timeout)?;
+        if args.iter().any(|arg| arg == "cancel") {
+            let path = self.0 .0.borrow().root.join("todo.json");
+            let mut db = read_json(&path)?;
+            db["items"][0]["wait_on"] = json!([32, 33]);
+            db["items"][1]["status"] = json!("todo");
+            db["items"][2]["status"] = json!("todo");
+            atomic_json(&path, &db, 2)?;
+        }
+        Ok(out)
+    }
+}
+
+#[test]
+fn dependency_added_after_reservation_is_checked_again_before_launch() {
+    for q in [false, true] {
+        let mut h = Harness::new();
+        h.tick();
+        source(&h, 10);
+        if q {
+            question(&h);
+        }
+        dependency_db(&h, "jobs", "done");
+        complete_dependencies(&h);
+        h.ctx.effects = Box::new(WaitDuringCancellation(SharedFake(h.fake.clone())));
+        let mid = h.reply("起動直前に依存が追加されるテスト", "100");
+        deliver_direct(&mut h, q);
+        assert_eq!(h.fake.borrow().launches.len(), 1);
+        let st = h.state();
+        let e = if q {
+            &st["questions"][0]["continuation"]
+        } else {
+            &st["requests"]["100"]
+        };
+        assert_eq!(e["work_wait_on"], json!([32, 33]));
+        assert!(e["owner_update"].is_object());
+        assert_eq!(e["after"], "100");
+        assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
+        complete_dependencies(&h);
+        deliver_direct(&mut h, q);
+        deliver_direct(&mut h, q);
+        assert_eq!(h.fake.borrow().launches.len(), 2);
+    }
+}
+
+#[test]
+fn dependency_wait_preserves_verbatim_reply_when_history_no_longer_has_it() {
+    for q in [false, true] {
+        let mut h = Harness::new();
+        h.tick();
+        source(&h, 10);
+        if q {
+            question(&h);
+        }
+        dependency_db(&h, "jobs", "todo");
+        let mid = h.reply("原文保持のテスト\n二行目も保持", "100");
+        deliver_direct(&mut h, q);
+        h.fake
+            .borrow_mut()
+            .messages
+            .get_mut("100")
+            .unwrap()
+            .retain(|m| m["id"] != mid);
+        let mut st = h.state();
+        let r = if q {
+            &mut st["questions"][0]
+        } else {
+            &mut st["requests"]["100"]
+        };
+        r["reply_resume_retry"] = json!({"deadline":0,"next_at":0,"exhausted":true,"reply":mid});
+        r["resume_status_reply"] = json!(mid);
+        r["resume_status"] = json!("再開失敗");
+        h.save(&st);
+        deliver_direct(&mut h, q);
+        complete_dependencies(&h);
+        deliver_direct(&mut h, q);
+        deliver_direct(&mut h, q);
+        assert_eq!(h.fake.borrow().launches.len(), 2);
+        assert!(
+            s(&h.fake.borrow().launches[1]["prompt"]).contains("原文保持のテスト\n二行目も保持")
+        );
+        let st = h.state();
+        let e = if q {
+            &st["questions"][0]["continuation"]
+        } else {
+            &st["requests"]["100"]
+        };
+        assert!(e["dependency_messages"].is_null());
+        assert!(e["work_wait_on"].is_null());
+        assert_eq!(st["answer_receipts"][&mid]["handled_by"], "job2");
+    }
+}
+
+#[test]
+fn dependency_recovery_keeps_unknown_dispatch_evidence_reserved() {
+    let mut h = Harness::new();
+    h.tick();
+    source(&h, 10);
+    dependency_db(&h, "jobs", "done");
+    complete_dependencies(&h);
+    h.reply("不明な実行記録を再配送しないテスト", "100");
+    h.fake.borrow_mut().launch_queued = true;
+    h.fake.borrow_mut().crash_after_launch = true;
+    assert!(catch_unwind(AssertUnwindSafe(|| deliver_direct(&mut h, false))).is_err());
+    h.finish("job2", "cancelled", None, None);
+    let events = h.ctx.jobs.join("jobs/job2/events.jsonl");
+    std::fs::write(&events, "{incomplete\n").unwrap();
+    assert!(deliver_attempt(&mut h, false).is_err());
+    assert_eq!(h.fake.borrow().launches.len(), 2);
+    assert!(h.state()["requests"]["100"]["owner_update"].is_object());
+    std::fs::write(
+        &events,
+        "{\"type\":\"item.started\",\"item\":{\"type\":\"mcp_tool_call\"}}\n",
+    )
+    .unwrap();
+    deliver_direct(&mut h, false);
+    assert_eq!(h.fake.borrow().launches.len(), 2);
+    assert_eq!(h.state()["requests"]["100"]["job"], "job2");
+}
 #[test]
 fn message_during_run_cancels_only_source_and_resumes_with_verbatim_quote_and_same_settings() {
     for q in [false, true] {

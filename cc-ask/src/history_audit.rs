@@ -6,11 +6,15 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     path::PathBuf,
 };
+mod reference;
 
 #[derive(clap::Args)]
 pub struct Args {
     #[arg(long)]
     pub output: PathBuf,
+    /// Privately select candidate ToDo IDs for explicit historical owner messages.
+    #[arg(long, conflicts_with_all = ["capture", "refresh", "partition", "partitions"])]
+    pub reference_targets: Option<PathBuf>,
     #[arg(long, default_value_t = 100)]
     pub limit: usize,
     /// Save missing owner replies in the existing receipt/question store without posting.
@@ -436,6 +440,9 @@ pub fn summary(report: &Value) -> Value {
 
 pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
     let _connections = ScopedHttpPool::new();
+    if args.reference_targets.is_some() {
+        return reference::run(ctx, args);
+    }
     if args.limit == 0
         || args.partitions == 0
         || args.partitions > 8
@@ -451,7 +458,7 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
     } else {
         json!({"version":1,"rows":{},"errors":{}})
     };
-    if report["version"] != 1 {
+    if report["version"] != 1 || (!report["kind"].is_null() && report["kind"] != "history-audit") {
         return Err("invalid audit checkpoint".into());
     }
     if report["partition"].is_number()

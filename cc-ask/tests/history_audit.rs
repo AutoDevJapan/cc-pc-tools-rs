@@ -33,6 +33,7 @@ fn recovery_measurement_survives_new_message_and_repeat_audit() {
     let mut h = harness();
     let mut args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: true,
         refresh: false,
@@ -71,6 +72,7 @@ fn bot_only_history_does_not_rewrite_shared_state() {
     let before = std::fs::metadata(&path).unwrap().modified().unwrap();
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: true,
         refresh: false,
@@ -135,6 +137,7 @@ fn reader_session_resolves_to_own_job_with_successful_receipt_event() {
     h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","read_by":"reader-session"}}}));
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -174,6 +177,7 @@ fn legacy_minute_and_text_do_not_prove_an_exact_reply_id() {
     h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","handled_by":"worker"}}}));
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -200,6 +204,7 @@ fn operator_confirmed_read_still_requires_exact_successful_event() {
     std::fs::write(root.join("events.jsonl"), format!("{event}\n")).unwrap();
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -257,6 +262,7 @@ fn command_shaped_started_event_and_other_completed_message_do_not_prove_read() 
     h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","handled_by":"worker"}}}));
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -309,6 +315,7 @@ fn audits_more_than_one_hundred_messages_without_consuming_or_posting() {
     );
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -348,6 +355,7 @@ fn captures_archived_closed_question_without_claiming_delivery() {
     h.save(&json!({"questions":[{"thread_id":"100","after":"100","open":false,"title":"Old"}],"requests":{},"answer_receipts":{}}));
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: true,
         refresh: false,
@@ -369,6 +377,7 @@ fn client_thread_is_excluded_before_history_read() {
     h.fake.borrow_mut().threads.get_mut("100").unwrap()["name"] = json!("Protected");
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: true,
         refresh: false,
@@ -393,6 +402,7 @@ fn failure_is_recorded_and_never_counted_as_audited() {
         .insert("/channels/100/messages?limit=100".into(), 1);
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -414,6 +424,7 @@ fn incomplete_inventory_is_rediscovered_without_refresh_flag() {
     h.save(&json!({"questions":[],"requests":{"999":{}},"answer_receipts":{}}));
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: false,
         refresh: false,
@@ -477,6 +488,7 @@ fn protection_changed_during_network_read_prevents_capture() {
     });
     let args = Args {
         output: h.root.path().join("audit.json"),
+        reference_targets: None,
         limit: 10,
         capture: true,
         refresh: false,

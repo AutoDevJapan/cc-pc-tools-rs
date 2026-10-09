@@ -7,6 +7,8 @@ use serde_json::{json, Value};
 use std::sync::LazyLock;
 
 const CLIENT: &str = "クライアント案件";
+static REDACTOR: LazyLock<cc_redact::Redactor> =
+    LazyLock::new(|| cc_redact::Redactor::with_env(std::env::vars()));
 fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or("")
 }
@@ -25,7 +27,7 @@ fn secret_pattern() -> &'static regex::Regex {
 fn clean(names: &Names, value: &str) -> String {
     static LOCATION: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"https?://\S+|[A-Za-z]:[/\\]\S+").unwrap());
-    let value = cc_ask::task_title::canonical_text(&names.redact(value));
+    let value = cc_ask::task_title::canonical_text(&names.redact(&REDACTOR.text(value)));
     let value = secret_pattern().replace_all(&value, "[非表示]");
     LOCATION.replace_all(&value, "[非表示]").into_owned()
 }
@@ -40,7 +42,9 @@ fn spec_path(names: &Names, value: &str) -> String {
     {
         return "[非表示]".into();
     }
-    secret_pattern().replace_all(value, "[非表示]").into_owned()
+    secret_pattern()
+        .replace_all(&REDACTOR.text(value), "[非表示]")
+        .into_owned()
 }
 fn timestamp(value: &Value) -> Option<String> {
     if let Some(seconds) = value.as_u64() {
@@ -103,10 +107,16 @@ fn linked(item: &Value, job: &Value) -> bool {
     item["id"]
         .as_u64()
         .is_some_and(|id| job["todo_id"].as_u64() == Some(id))
-        || job["id"].is_string()
-            && (item["job"] == job["id"]
-                || item["scheduler"]["job"] == job["id"]
-                || rows(item, "jobs").contains(&job["id"]))
+        || ["id", "thread_id", "resume_session"].iter().any(|key| {
+            job[*key].as_str().is_some_and(|id| {
+                !id.is_empty()
+                    && (item["job"].as_str() == Some(id)
+                        || item["scheduler"]["job"].as_str() == Some(id)
+                        || rows(item, "jobs")
+                            .iter()
+                            .any(|saved| saved.as_str() == Some(id)))
+            })
+        })
 }
 fn private_item(names: &Names, db: &Value, item: &Value) -> bool {
     [
@@ -283,6 +293,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn quoted_multiline_secrets_and_basic_auth_are_removed_from_notes_and_history() {
+        let names = Names::parse("");
+        let note = "password=\"artificial alpha beta\"\nsecret='artificial gamma\ndelta'\nAuthorization: Basic dXNlcjpwYXNzd29yZA==\n正常な本文";
+        let db = json!({"projects":{"demo":"D:/demo"},"items":[
+            {"id":1,"project":"demo","status":"doing","note":note,
+             "note_history":[{"note":note}]}]});
+        let response = display_todos(&names, &db, &[]);
+        let output = response.to_string();
+        for forbidden in ["alpha", "beta", "gamma", "delta", "dXNlcjpwYXNzd29yZA=="] {
+            assert!(!output.contains(forbidden), "secret residue in display");
+        }
+        assert!(response["items"][0]["note"]
+            .as_str()
+            .unwrap()
+            .contains("正常な本文"));
+        assert!(response["items"][0]["history"][0]["note"]
+            .as_str()
+            .unwrap()
+            .contains("正常な本文"));
+    }
+
+    #[test]
     fn display_projects_allowlisted_records_and_merges_actual_old_contents() {
         let names = Names::parse("SecretClient\n");
         let db = json!({"projects":{"demo":"D:/CC/Work/demo","alias":"D:/CC/Work/SecretClient"},"items":[
@@ -364,6 +396,8 @@ mod tests {
             json!({"id":"linked","cwd":"D:/neutral-other"}),
             json!({"id":"todo-job","todo_id":12,"cwd":"D:/neutral-other"}),
             json!({"id":"path-job","cwd":"D:/neutral-wt/agent"}),
+            json!({"id":"other-job","thread_id":"linked","cwd":"D:/common"}),
+            json!({"id":"session-job","resume_session":"linked","cwd":"D:/common"}),
         ] {
             assert!(private_job(&names, &db, &job));
             assert_eq!(display_jobs(&names, &db, &[job])["jobs"][0]["summary"], "");

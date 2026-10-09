@@ -559,15 +559,28 @@ impl Console {
             }
             // Display never uses prompts, reservation receipts or metadata-supplied paths.
             job["last_message"] = Value::Null;
-            if kind != "todo" && terminal(&job) && !console_ui::private_job(&names, &db, &job) {
-                let last = dir.join("last_message.md");
+            jobs.push(job);
+        }
+        jobs.sort_by(|a, b| strv(b, "id").cmp(strv(a, "id")));
+        if kind == "handoff" {
+            for job in jobs
+                .iter_mut()
+                .filter(|job| terminal(job) && strv(job, "name").starts_with("orch-"))
+                .take(10)
+            {
+                if console_ui::private_job(&names, &db, job) {
+                    continue;
+                }
+                let last = self
+                    .paths
+                    .jobs
+                    .join(strv(job, "id"))
+                    .join("last_message.md");
                 if last.try_exists().map_err(|_| io_fault())? {
                     job["last_message"] = json!(redact(&read_text(&last, 256 * 1024)?));
                 }
             }
-            jobs.push(job);
         }
-        jobs.sort_by(|a, b| strv(b, "id").cmp(strv(a, "id")));
         Ok(match kind {
             "todo" => console_ui::display_todos(&names, &db, &jobs),
             "jobs" => console_ui::display_jobs(&names, &db, &jobs),
@@ -6030,7 +6043,7 @@ mod tests {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .any(|job| job["summary"] == "次の作業を再開 [非表示]")),
+                    .all(|job| job["summary"] == "")),
                 _ => assert!(response["data"]["text"]
                     .as_str()
                     .unwrap()
@@ -6064,6 +6077,58 @@ mod tests {
                 assert_eq!(response["error"]["code"], "privacy_unavailable");
                 assert!(response.get("data").is_none());
                 assert!(!response.to_string().contains("SecretClient"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn display_only_reads_selected_public_handoff_messages() {
+        let f = Fixture::new();
+        fs::write(f.root.join("client-projects.txt"), "SecretClient\n").unwrap();
+        fs::write(
+            f.console.paths.todo.join("todo.json"),
+            json!({
+                "projects":{"alias":"D:/SecretClient"},
+                "items":[{"id":1,"project":"alias","jobs":["saved-session"]}]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        for id in ["00-not-orchestrator", "01-old-orchestrator", "20-private"] {
+            let dir = f.console.paths.jobs.join(id);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(
+                dir.join("job.json"),
+                json!({"id":id,
+                    "name":if id == "00-not-orchestrator" { "ordinary" } else { "orch-demo" },
+                    "status":"succeeded","cwd":f.root,
+                    "thread_id":if id == "20-private" { "saved-session" } else { "" }
+                })
+                .to_string(),
+            )
+            .unwrap();
+            fs::write(dir.join("last_message.md"), [0xff]).unwrap();
+        }
+        for index in 10..20 {
+            f.job(
+                &index.to_string(),
+                "orch-demo",
+                "succeeded",
+                "公開された引き継ぎ本文",
+                "",
+            );
+        }
+        for kind in ["todo", "jobs", "handoff"] {
+            let (code, response) = f.http(Method::GET, &format!("display/{kind}"), "").await;
+            assert_eq!(code, StatusCode::OK, "{kind}");
+            if kind == "handoff" {
+                let decisions = response["data"]["decisions"].as_array().unwrap();
+                assert_eq!(decisions.len(), 10);
+                assert_eq!(
+                    decisions[0]["summary"],
+                    "クライアント案件の記録（内容は非表示）"
+                );
+                assert_eq!(decisions[1]["summary"], "公開された引き継ぎ本文");
             }
         }
     }

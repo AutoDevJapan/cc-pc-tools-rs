@@ -1526,6 +1526,102 @@ pub fn reply_delivered(state: &Value, message: &str) -> bool {
 
 pub fn reply_reserved(state: &Value, message: &str) -> bool {
     state["answer_receipts"][message]["read_reservation"].is_object()
+        || truth(&state["answer_receipts"][message]["launch_job"])
+}
+
+/// A supervisor accepting a job does not mean Codex accepted its input.
+pub fn job_started(ctx: &Context, jid: &str) -> bool {
+    let job = job_info(ctx, jid);
+    n(&job["steps"]) > 0
+        || truth(&job["turn_completed"])
+        || s(&job["activity"]) == "thinking"
+        || (s(&job["status"]) == "succeeded" && !final_message(ctx, jid).trim().is_empty())
+        || {
+            use std::io::Read;
+            let mut events = Vec::new();
+            std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl"))
+                .is_ok_and(|file| file.take(65536).read_to_end(&mut events).is_ok())
+                && events
+                    .split(|byte| *byte == b'\n')
+                    .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
+                    .any(|event| s(&event["type"]) == "turn.started")
+        }
+}
+
+pub fn record_launch_delivery(ctx: &Context, state: &mut Value, id: &str, tid: &str, jid: &str) {
+    state["answer_receipts"][id]["thread"] = json!(tid);
+    if job_started(ctx, jid) {
+        state["answer_receipts"][id]["handled_by"] = json!(jid);
+        state["answer_receipts"][id]["launch_confirmed"] = json!(true);
+        state["answer_receipts"][id]
+            .as_object_mut()
+            .unwrap()
+            .remove("launch_job");
+    } else {
+        state["answer_receipts"][id]["launch_job"] = json!(jid);
+        let receipt = state["answer_receipts"][id].as_object_mut().unwrap();
+        receipt.remove("handled_by");
+        receipt.remove("launch_confirmed");
+    }
+}
+
+fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
+    let mut changed = false;
+    let receipts = state["answer_receipts"]
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
+    for (id, receipt) in receipts {
+        let jid = if truth(&receipt["launch_job"]) {
+            s(&receipt["launch_job"])
+        } else {
+            s(&receipt["handled_by"])
+        };
+        if !valid_job(jid)
+            || truth(&receipt["read_by"])
+            || truth(&receipt["launch_confirmed"])
+            || s(&receipt["handled_via"]) == "replies-event"
+        {
+            continue;
+        }
+        let path = ctx.jobs.join("jobs").join(jid).join("job.json");
+        if !path.exists() && !truth(&receipt["launch_job"]) {
+            // A retired legacy job has unknown input history. Do not replay it.
+            continue;
+        }
+        // An unreadable record is not evidence that the supervisor stopped.
+        read_json(&path)?;
+        let job = job_info(ctx, jid);
+        if job_started(ctx, jid) {
+            changed = true;
+            state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+            if truth(&receipt["launch_job"]) {
+                changed = true;
+                state["answer_receipts"][&id]["handled_by"] = json!(jid);
+                state["answer_receipts"][&id]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("launch_job");
+            }
+        } else if RUNNING.contains(&s(&job["status"])) && truth(&receipt["handled_by"]) {
+            changed = true;
+            state["answer_receipts"][&id]["launch_job"] = json!(jid);
+            state["answer_receipts"][&id]
+                .as_object_mut()
+                .unwrap()
+                .remove("handled_by");
+        } else if ["failed", "cancelled", "lost", "succeeded"].contains(&s(&job["status"])) {
+            changed = true;
+            // No input-start evidence: any pre-start failure is recoverable.
+            let entry = state["answer_receipts"][&id].as_object_mut().unwrap();
+            entry.remove("launch_job");
+            entry.remove("handled_by");
+        }
+    }
+    if changed {
+        ctx.save(state)?;
+    }
+    Ok(())
 }
 
 pub fn reply_unavailable(state: &Value, message: &str) -> bool {
@@ -1536,6 +1632,7 @@ pub fn reply_unavailable(state: &Value, message: &str) -> bool {
 /// A successful command event proves delivery; otherwise the reservation expires
 /// and the original owner message remains available to the next consumer.
 pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
+    recover_launch_deliveries(ctx, state)?;
     // A stalled output pipe is still a live consumer. Expiration alone cannot
     // transfer its answer. The OS releases this dedicated lock after a crash.
     let _reader = if crate::state_work::owns_reader(ctx) {

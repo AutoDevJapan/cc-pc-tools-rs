@@ -272,8 +272,7 @@ pub fn adopt_launch(
         .into_iter()
         .flatten()
     {
-        state["answer_receipts"][s(id)]["thread"] = thread["id"].clone();
-        state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
+        record_launch_delivery(ctx, state, s(id), s(&thread["id"]), jid);
     }
     crate::reply_recovery::close_delivered_questions(state, s(&thread["id"]));
     remove(entry, "recovery");

@@ -8443,36 +8443,25 @@ mod end_to_end {
         }
         // These jobs are queued and have no child processes. Retain an OS handle
         // while stopping each supervisor; taskkill /T can follow reused parent IDs.
+        let mut owners = Vec::new();
         for id in &ids {
             let job = t.job(id);
             assert_eq!(job["status"], "queued");
             let pid = job["pid"].as_u64().unwrap() as u32;
             assert_ne!(pid, std::process::id());
             assert_eq!(proc_created(pid), job["pid_created"].as_u64());
-            unsafe {
-                use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
-                let handle = OpenProcess(
-                    PROCESS_TERMINATE | PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
-                    0,
-                    pid,
-                );
-                assert!(!handle.is_null());
-                let mut created = std::mem::zeroed();
-                let mut exited = std::mem::zeroed();
-                let mut kernel = std::mem::zeroed();
-                let mut user = std::mem::zeroed();
-                assert_ne!(
-                    GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user),
-                    0
-                );
-                let identity =
-                    ((created.dwHighDateTime as u64) << 32) | created.dwLowDateTime as u64;
-                assert_eq!(Some(identity), job["pid_created"].as_u64());
-                assert_ne!(TerminateProcess(handle, 0), 0);
-                assert_eq!(WaitForSingleObject(handle, 5000), 0);
-                CloseHandle(handle);
-            }
+            owners.push(FixtureProcess::retain(pid, job["pid_created"].as_u64().unwrap()).unwrap());
         }
+        // Cancel every owner first: waiting for one scanner while the other
+        // 29 owners keep issuing I/O delays the scanner's kernel cancellation.
+        for owner in &owners {
+            owner.request_stop();
+        }
+        let mut all_exited = true;
+        for owner in &owners {
+            all_exited &= owner.wait_exit();
+        }
+        assert!(all_exited, "parallel fixture shutdown did not confirm exit");
         assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
         assert_eq!(ids.len(), 30);
         assert!(
@@ -8546,12 +8535,17 @@ mod end_to_end {
                     == windows_sys::Win32::Foundation::WAIT_TIMEOUT
             }
         }
-        fn stop(&self) -> bool {
-            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+        fn request_stop(&self) {
+            use windows_sys::Win32::System::Threading::*;
             unsafe {
                 if self.live() {
                     let _ = TerminateProcess(self.handle, 0);
                 }
+            }
+        }
+        fn wait_exit(&self) -> bool {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
                 let result = WaitForSingleObject(self.handle, 5000);
                 if result != WAIT_OBJECT_0 {
                     eprintln!(
@@ -8561,6 +8555,10 @@ mod end_to_end {
                 }
                 result == WAIT_OBJECT_0
             }
+        }
+        fn stop(&self) -> bool {
+            self.request_stop();
+            self.wait_exit()
         }
     }
     impl Drop for FixtureProcess {
@@ -8681,7 +8679,11 @@ mod end_to_end {
             for name in ["sleep.pid", "hold.pid"] {
                 if let Ok(bytes) = fs::read_to_string(self.rec.join(name))
                     && let Ok(pid) = bytes.trim().parse::<u32>()
-                    && let Some(created) = proc_created(pid)
+                    && let Ok(bytes) =
+                        fs::read(self.rec.join(name.replace(".pid", ".identity.json")))
+                    && let Ok(identity) = serde_json::from_slice::<Value>(&bytes)
+                    && identity["pid"].as_u64() == Some(pid as u64)
+                    && let Some(created) = identity["created"].as_u64()
                 {
                     use windows_sys::Win32::{Foundation::*, System::Threading::*};
                     unsafe {
@@ -8824,9 +8826,12 @@ mod end_to_end {
             if self.diagnostic.load(Ordering::Relaxed) {
                 self.retain_fixture_processes();
                 let mut handles = self.handles.lock().unwrap();
+                for handle in handles.iter() {
+                    handle.request_stop();
+                }
                 let mut stopped = true;
                 for handle in handles.iter() {
-                    stopped &= handle.stop();
+                    stopped &= handle.wait_exit();
                 }
                 handles.clear();
                 if !std::thread::panicking() {
@@ -8986,6 +8991,62 @@ mod end_to_end {
         // Dropping the reference closes the handle; it never terminates a PID.
         drop(retained);
         assert_eq!(proc_created(pid), Some(created));
+    }
+    #[test]
+    fn fixture_marker_must_match_its_saved_process_creation_time() {
+        struct ChildGuard {
+            child: std::process::Child,
+            process: FixtureProcess,
+        }
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = self.process.stop();
+                let _ = self.child.wait();
+            }
+        }
+        let e = E2e::new();
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let child = hidden_command(&e.tmp.0.join("bin/fixture.exe").to_string_lossy())
+            .env("CC_JOBS_FIXTURE_MODE", "dependency-parent")
+            .env("CC_JOBS_FIXTURE_DIR", &e.rec)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        let created = proc_created(pid).unwrap();
+        let _guard = ChildGuard {
+            child,
+            process: FixtureProcess::retain(pid, created).unwrap(),
+        };
+        e.until_phase("fixture_identity_published", || {
+            e.rec.join("sleep.pid").exists()
+        });
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created + 1})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles.lock().unwrap().is_empty(),
+            "a reused marker must not bind to the current PID"
+        );
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|handle| handle.pid == pid && handle.created == created && handle.live())
+        );
+        e.diagnostic.store(true, Ordering::Relaxed);
     }
     fn dependency_contract(e: &E2e) {
         e.diagnostic.store(true, Ordering::Relaxed);

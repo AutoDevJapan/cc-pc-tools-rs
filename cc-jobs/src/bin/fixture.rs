@@ -75,7 +75,13 @@ fn main() {
                     ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64,
                     created
                 );
-                fs::write(root.join("sleep.pid"), std::process::id().to_string()).unwrap();
+                let me = std::process::id();
+                fs::write(
+                    root.join("sleep.identity.json"),
+                    pretty(&json!({"pid":me,"created":proc_created(me).unwrap()})),
+                )
+                .unwrap();
+                fs::write(root.join("sleep.pid"), me.to_string()).unwrap();
                 loop {
                     let waited = WaitForSingleObject(handle.0, 50);
                     if waited == WAIT_OBJECT_0 || root.join("parent.release").exists() {

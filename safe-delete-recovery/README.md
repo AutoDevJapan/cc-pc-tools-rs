@@ -11,6 +11,15 @@
 | 1935 | `cfee3edefd3704d67c140ca6952dd7ce` | 固定した検査用worktree、再現入力、コピーした依存ソースとビルド生成物 |
 | 2063 | `75cd71384cb094e47b19cf5d39b5b025` | 配備済みClaude振り分けの公開worktreeと確認記録 |
 | 2098 | `c058c98f1288073adbd10236900199d1` | Cargo共有ゲートの保存済みworktreeと検証ビルド |
+| 2126 | `80b350ade8bb05cd61ab94f7485d09cc` | Scoopa画面担当の検証データとPNPM相対依存リンク |
+
+2126はGit取得物の例外ではなく、専用のメタデータ検査で退避する。所有記録のproject/content、作成時刻、チェックサム、Cドライブの固定Tempパス、volume `2229119083` とfile ID `9851624200190911` を照合する。上限は実測した根を含む17,799項目、105リンク、通常ファイル411,015,031バイトだけ。一般のリンク・項目数・Git保護は変更しない。
+
+リンクは `frontend-runtime/node_modules` 内の相対シンボリックリンクだけを受理する。Win32のOPEN_REPARSE_POINTとFSCTL_GET_REPARSE_POINTでリンク自身の識別番号・メタデータ・生のリンク情報を取得し、ターゲットを開かない。列挙した一覧だけで到達先を照合し、外部・絶対リンク、ジャンクション、循環、リンクを経由するターゲット、欠落した対象、外部hardlink、Git管理領域、保護・クライアント資源は拒否する。PNPMの先頭の親参照と通常名の形式を受理し、途中のディレクトリー名を消す親参照は拒否する。
+
+planは全一覧を2回照合し、名前・通常ファイルのメタデータ・リンクターゲットと生の情報を退避票に保存する。票と指紋の補助票は上書きせず同期・公開し、中断後のplanは同一内容でのみ再開する。返る通常の `Move-Item -LiteralPath` を別呼び出しで提出し、直ちにfinishする。finishは元パス不在、同一root識別番号、一覧とリンクの完全一致、票の指紋を確認し、理由と既存receiptのstate/destinationを更新する。元データの内容、JWT試験値などは読み取らない。これはメタデータによる保持確認であり、更新時刻まで戻した内容改変の検知は主張しない。対象のwriterが停止していることは実行担当が移動直前に確認する。
+
+2126は完了した停止・DB片付け・Chrome閉鎖を繰り返さない。親2109はこの復旧がdoneになってから元担当のworktreeで再開し、自身で完了を記録する。
 
 2098は既存の所有記録だけを使用する。projectは`cc-jobs`、contentは`dynamic-cargo-gate`、元パスは`C:/Users/makhmeto/AppData/Local/Temp/codex-owned-c058c98f1288073adbd10236900199d1`に固定する。volumeは2229119083、file IDは2814749782464451。HEADは`e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801`、公開originは`AutoDevJapan/cc-pc-tools-rs`。外部管理領域は`D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9`、commonは同じリポジトリーの`.git`だけを受理する。移動後はそのwork9のbacklinkだけを既存の原子的な手順で修復する。
 

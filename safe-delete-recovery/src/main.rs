@@ -20,6 +20,7 @@ const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
+mod scoopa;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -195,6 +196,15 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            scoopa::ID => {
+                c.id = scoopa::ID;
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.project = "scoopa-1242-ui";
+                c.content = "review-and-validation";
+                c.temp = PathBuf::from(r"C:\Users\makhmeto\AppData\Local\Temp");
+                c.pinned_identity = Some((2229119083, 9851624200190911));
+                c.repos.clear();
+            }
             ID => (),
             "76005ef45fe612479fd920447642497e" => {
                 c.id = "76005ef45fe612479fd920447642497e";
@@ -453,6 +463,9 @@ impl Config {
         Ok(nodes)
     }
     fn plan(&self, id: &str) -> Result<serde_json::Value> {
+        if self.id == scoopa::ID {
+            return scoopa::plan(self, id);
+        }
         let r = self.load(id)?;
         if r.state != "owned" {
             return Err("RECEIPT_NOT_OWNED");
@@ -554,6 +567,9 @@ impl Config {
         )
     }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
+        if self.id == scoopa::ID {
+            return scoopa::finish(self, id);
+        }
         let mut r = self.load(id)?;
         let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
         let t: Ticket = serde_json::from_slice(&ticket_bytes).map_err(|_| "INVALID_TICKET")?;
@@ -1217,6 +1233,14 @@ fn extended_path(path: &Path) -> Result<Vec<u16>> {
     Ok(name)
 }
 fn node(path: &Path) -> Result<Node> {
+    let info = node_no_follow(path)?;
+    if info.attributes & REPARSE != 0 {
+        return Err("LINK_OR_REPARSE_POINT");
+    }
+    Ok(info)
+}
+// Used only by the fixed Scoopa inventory, which validates symlink reparse data.
+fn node_no_follow(path: &Path) -> Result<Node> {
     let name = extended_path(path)?;
     let mut info = WinInfo::default();
     // Metadata access only, with OPEN_REPARSE_POINT; never follows a junction.
@@ -1231,9 +1255,6 @@ fn node(path: &Path) -> Result<Node> {
     };
     if ok == 0 {
         return Err("IDENTITY_READ_FAILED");
-    }
-    if info.attr & REPARSE != 0 {
-        return Err("LINK_OR_REPARSE_POINT");
     }
     Ok(Node {
         volume: info.volume,
@@ -1534,6 +1555,235 @@ mod tests {
     }
     fn source(c: &Config) -> PathBuf {
         c.temp.join(format!("codex-owned-{}", c.id))
+    }
+    fn scoopa_fixture() -> Fixture {
+        let c = fixture_for(scoopa::ID);
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        fs::create_dir_all(modules.join(".pnpm/pkg/node_modules/pkg")).unwrap();
+        fs::write(modules.join(".pnpm/pkg/node_modules/pkg/value"), b"keep me").unwrap();
+        std::os::windows::fs::symlink_dir(r".pnpm\pkg\node_modules\pkg", modules.join("pkg"))
+            .unwrap();
+        c
+    }
+    #[test]
+    fn scoopa_fixed_production_identity_matches_original_go_checksum() {
+        let c = Config::production(scoopa::ID).unwrap();
+        assert_eq!(c.store, Path::new("D:/CC/Tools/safe-delete/receipts-go"));
+        let (volume, file_id) = c.pinned_identity.unwrap();
+        let identity = Identity {
+            version: 2,
+            id: scoopa::ID.into(),
+            root: c.temp.to_string_lossy().into_owned(),
+            path: source(&c).to_string_lossy().into_owned(),
+            volume,
+            file_id,
+            created_at: scoopa::CREATED_AT.into(),
+            project: c.project.into(),
+            content: c.content.into(),
+        };
+        assert_eq!(
+            format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&identity).unwrap())
+            ),
+            scoopa::INTEGRITY
+        );
+    }
+    fn move_scoopa_fixture(c: &Config) {
+        // Simulate the caller's ordinary directory rename, never a production API.
+        fs::rename(source(c), c.destination().join("files")).unwrap();
+    }
+    #[test]
+    fn scoopa_relative_link_is_enumerated_once_and_move_preserves_identity() {
+        let c = scoopa_fixture();
+        let original = node(&source(&c)).unwrap();
+        let plan = c.plan(scoopa::ID).unwrap();
+        assert_eq!(plan["links"], 1);
+        assert_eq!(plan["bytes"], 7);
+        let ticket: serde_json::Value =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        let names = ticket["nodes"].as_object().unwrap();
+        assert!(!names.contains_key("frontend-runtime/node_modules/pkg/value"));
+        assert_eq!(
+            names["frontend-runtime/node_modules/pkg"]["link"]["target"],
+            r".pnpm\pkg\node_modules\pkg"
+        );
+        assert_eq!(c.plan(scoopa::ID).unwrap(), plan);
+        move_scoopa_fixture(&c);
+        assert_eq!(node(&c.destination().join("files")).unwrap(), original);
+        let result = c.finish(scoopa::ID).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        assert_eq!(result["links"], 1);
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "quarantined");
+        assert_eq!(c.finish(scoopa::ID).unwrap(), result);
+        assert_eq!(
+            fs::read(
+                c.destination()
+                    .join("files/frontend-runtime/node_modules/pkg/value")
+            )
+            .unwrap(),
+            b"keep me"
+        );
+    }
+    #[test]
+    fn scoopa_rejects_external_absolute_and_missing_targets_without_traversing() {
+        for target in [r"..\..\..\..\outside", "missing", "C:/Windows"] {
+            let c = fixture_for(scoopa::ID);
+            let modules = source(&c).join("frontend-runtime/node_modules");
+            fs::create_dir_all(&modules).unwrap();
+            std::os::windows::fs::symlink_dir(target, modules.join("bad")).unwrap();
+            assert!(matches!(
+                c.plan(scoopa::ID),
+                Err("EXTERNAL_LINK" | "LINK_TARGET_MISSING" | "NOT_RELATIVE_SYMLINK")
+            ));
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn scoopa_rejects_cycle_and_link_ancestors() {
+        let c = scoopa_fixture();
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        std::os::windows::fs::symlink_dir("pkg", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_TARGET_IS_LINK")));
+        fs::remove_dir(modules.join("cycle")).unwrap();
+        std::os::windows::fs::symlink_dir(r"pkg\..", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_NON_PNPM_TARGET")));
+        fs::remove_dir(modules.join("cycle")).unwrap();
+        std::os::windows::fs::symlink_dir(r"..\..", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_TARGET_ANCESTOR")));
+    }
+    #[test]
+    fn scoopa_root_replacement_and_receipt_tampering_are_rejected() {
+        let c = scoopa_fixture();
+        let mut receipt = c.load(scoopa::ID).unwrap();
+        receipt.integrity = "changed".into();
+        fs::write(c.receipt_path(), serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("RECEIPT_INTEGRITY_MISMATCH")
+        ));
+        let c = scoopa_fixture();
+        fs::rename(source(&c), c.base.join("original")).unwrap();
+        fs::create_dir(source(&c)).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("TARGET_IDENTITY_CHANGED")));
+        let c = scoopa_fixture();
+        fs::rename(source(&c), c.base.join("original")).unwrap();
+        std::os::windows::fs::symlink_dir(c.base.join("original"), source(&c)).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_OR_REPARSE_POINT")));
+    }
+    #[test]
+    fn scoopa_rejects_changed_file_before_move_and_after_move() {
+        for moved in [false, true] {
+            let c = scoopa_fixture();
+            c.plan(scoopa::ID).unwrap();
+            let root = if moved {
+                move_scoopa_fixture(&c);
+                c.destination().join("files")
+            } else {
+                source(&c)
+            };
+            fs::write(
+                root.join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
+                b"changed size",
+            )
+            .unwrap();
+            if moved {
+                assert!(matches!(
+                    c.finish(scoopa::ID),
+                    Err("CONTENT_CHANGED_AFTER_PLAN")
+                ));
+            } else {
+                assert!(matches!(c.plan(scoopa::ID), Err("RECOVERY_RECORD_CHANGED")));
+            }
+            assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn scoopa_changed_link_and_missing_proof_are_rejected_after_move() {
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        let modules = c.destination().join("files/frontend-runtime/node_modules");
+        fs::remove_dir(modules.join("pkg")).unwrap();
+        std::os::windows::fs::symlink_dir(r".pnpm\pkg\node_modules", modules.join("pkg")).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("CONTENT_CHANGED_AFTER_PLAN")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::remove_file(c.ticket_path().with_extension("scoopa-proof.json")).unwrap();
+        assert!(c.finish(scoopa::ID).is_err());
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+    }
+    #[test]
+    fn scoopa_ticket_tampering_and_destination_replacement_are_rejected() {
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        let mut bytes = fs::read(c.ticket_path()).unwrap();
+        bytes.push(b' ');
+        fs::write(c.ticket_path(), bytes).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("RECOVERY_RECORD_CHANGED")
+        ));
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::rename(c.destination().join("files"), c.base.join("original")).unwrap();
+        fs::create_dir(c.destination().join("files")).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("TARGET_IDENTITY_CHANGED")
+        ));
+    }
+    #[test]
+    fn scoopa_keeps_normal_scanner_and_protected_paths_closed() {
+        let c = scoopa_fixture();
+        assert!(matches!(
+            scan(&source(&c), &[]),
+            Err("LINK_OR_REPARSE_POINT")
+        ));
+        fs::create_dir(source(&c).join("OpenMausBot")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("PROTECTED_PATH")));
+        assert!(!c.ticket_path().exists());
+        assert!(matches!(c.plan(ID), Err("SCOPE_NOT_AUTHORIZED")));
+    }
+    #[test]
+    fn scoopa_supports_measured_scale_but_keeps_its_fixed_entry_bound() {
+        let c = scoopa_fixture();
+        let root = source(&c);
+        let generated = root.join("generated");
+        fs::create_dir(&generated).unwrap();
+        for i in 0..10001 {
+            fs::write(generated.join(format!("{i}")), b"").unwrap();
+        }
+        assert!(matches!(
+            scan(&root, &[]),
+            Err("ENTRY_LIMIT_EXCEEDED" | "LINK_OR_REPARSE_POINT")
+        ));
+        assert!(c.plan(scoopa::ID).unwrap()["entries"].as_u64().unwrap() > 10000);
+        for i in 10001..17800 {
+            fs::write(generated.join(format!("{i}")), b"").unwrap();
+        }
+        assert!(matches!(c.plan(scoopa::ID), Err("ENTRY_LIMIT_EXCEEDED")));
+    }
+    #[test]
+    fn scoopa_rejects_external_hardlinks_and_unexpected_git_metadata() {
+        let c = scoopa_fixture();
+        fs::hard_link(
+            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
+            c.base.join("outside"),
+        )
+        .unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("HARD_LINK")));
+        let c = scoopa_fixture();
+        fs::create_dir(source(&c).join(".git")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("PROTECTED_PATH")));
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {

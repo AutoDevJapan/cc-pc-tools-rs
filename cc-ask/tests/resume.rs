@@ -2009,3 +2009,26 @@ fn prestart_failure_releases_legacy_receipt_but_explicit_delivery_is_monotonic()
         assert_eq!(reply_delivered(&a.state(), "501"), expected, "persisted");
     }
 }
+
+#[test]
+fn turn_event_before_split_utf8_boundary_keeps_legacy_delivery_confirmed() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/legacy");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0,"activity":"failed"}),
+        2,
+    )
+    .unwrap();
+    let mut events = b"{\"type\":\"turn.started\"}\n".to_vec();
+    events.resize(65535, b' ');
+    events.extend_from_slice("あ\n".as_bytes());
+    std::fs::write(dir.join("events.jsonl"), events).unwrap();
+    assert!(job_started(&a.ctx, "legacy"));
+    let mut state = a.state();
+    state["answer_receipts"]["502"] = json!({"handled_by":"legacy","thread":"200"});
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert!(reply_delivered(&state, "502"));
+    assert_eq!(state["answer_receipts"]["502"]["launch_confirmed"], true);
+}

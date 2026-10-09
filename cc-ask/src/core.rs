@@ -1503,12 +1503,12 @@ pub fn job_started(ctx: &Context, jid: &str) -> bool {
         || (s(&job["status"]) == "succeeded" && !final_message(ctx, jid).trim().is_empty())
         || {
             use std::io::Read;
-            let mut events = String::new();
+            let mut events = Vec::new();
             std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl"))
-                .is_ok_and(|file| file.take(65536).read_to_string(&mut events).is_ok())
+                .is_ok_and(|file| file.take(65536).read_to_end(&mut events).is_ok())
                 && events
-                    .lines()
-                    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+                    .split(|byte| *byte == b'\n')
+                    .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
                     .any(|event| s(&event["type"]) == "turn.started")
         }
 }

@@ -173,6 +173,13 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// None on unsupported platforms and fixture runtimes.
+    fn boot_epoch(&self) -> Option<f64> {
+        None
+    }
+    fn recovery_protected(&self, _cwd: &str) -> io::Result<bool> {
+        Ok(false)
+    }
     /// Fixture runtimes use virtual checkout metadata; production reads local Git files.
     fn work_checkout(&self, cwd: &str) -> Value {
         cc_job_policy::work_owner::checkout(cwd)
@@ -456,6 +463,39 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn boot_epoch(&self) -> Option<f64> {
+        #[cfg(windows)]
+        {
+            Some(
+                self.epoch()
+                    - unsafe { windows_sys::Win32::System::SystemInformation::GetTickCount64() }
+                        as f64
+                        / 1000.,
+            )
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
+    }
+    fn recovery_protected(&self, cwd: &str) -> io::Result<bool> {
+        let reply = self.call(Call::new(
+            vec![
+                "D:/CC/Tools/client-records/scrub391.exe".into(),
+                "--guard-path".into(),
+                cwd.into(),
+            ],
+            vec![],
+            10.,
+        ))?;
+        if reply.code != 0 {
+            return Err(io::Error::other("recovery resource guard unavailable"));
+        }
+        serde_json::from_slice::<Value>(&reply.stdout)
+            .ok()
+            .and_then(|v| v["client_resource"].as_bool())
+            .ok_or_else(|| io::Error::other("invalid recovery resource guard"))
+    }
     fn epoch(&self) -> f64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

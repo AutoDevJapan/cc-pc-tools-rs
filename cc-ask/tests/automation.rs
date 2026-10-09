@@ -529,6 +529,17 @@ fn patrol_rechecks_new_process_after_selection_and_recover_failure_blocks_dispat
     assert!(!recover_before_launch(&mut h.ctx));
     h.fake.borrow_mut().recover_fail = false;
     assert!(recover_before_launch(&mut h.ctx));
+    let runs = &h.fake.borrow().runs;
+    let reboot = runs
+        .iter()
+        .rposition(|(argv, _)| argv.iter().any(|a| a == "recover-reboot"))
+        .unwrap();
+    let scheduler = runs
+        .iter()
+        .rposition(|(argv, _)| argv.last().is_some_and(|a| a == "recover"))
+        .unwrap();
+    assert!(reboot < scheduler);
+    assert!(runs[reboot].0.iter().any(|a| a == "--apply"));
 }
 
 #[test]

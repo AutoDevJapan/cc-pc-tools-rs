@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -416,6 +416,9 @@ impl Fake {
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
+        if argv.iter().any(|a| a == "recover-reboot") {
+            return Ok(Output::default());
+        }
         if argv.iter().any(|a| a == "--summary") {
             let p = self.root.join("board-status.json");
             return Ok(Output {
@@ -548,11 +551,9 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(
-                        chrono::DateTime::from_timestamp(self.now as i64, 0)
-                            .unwrap()
-                            .to_rfc3339()
-                    );
+                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
+                        .unwrap()
+                        .to_rfc3339());
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()

@@ -23,6 +23,9 @@ pub fn help_text(command: &str) -> &'static str {
         "recover-429" => {
             "usage: codex_jobs.exe recover-429 --since <RFC3339> [--todo-file <path>] [--apply]\n\nWithout --apply, print the recovery plan only.\n"
         }
+        "recover-reboot" => {
+            "usage: codex_jobs.exe recover-reboot [--apply]\n\nRecover only jobs interrupted by the current Windows boot; preview without --apply.\n"
+        }
         "recover-children" => {
             "usage: codex_jobs.exe recover-children --since <RFC3339> [--apply]\n\nLink old queued children and recover never-started cancelled children of running parents.\n"
         }
@@ -89,6 +92,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "backfill",
         "_supervise",
         "recover-429",
+        "recover-reboot",
         "reload-queue",
         "adjust-limit",
         "update-queue-config",
@@ -130,7 +134,9 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "rate" => name == "force",
                 "cancel" => name == "recovery",
                 "update-queue-config" => name == "clear-fixed",
-                "recover-429" | "recover-children" | "cleanup-supervisors" => name == "apply",
+                "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
+                    name == "apply"
+                }
                 _ => false,
             };
             let allowed = match cmd.as_str() {
@@ -167,6 +173,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "cancel" => name == "recovery",
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
+                "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
@@ -458,6 +465,10 @@ impl Context {
                     "{}",
                     pretty(&self.recover_429(since, &todo, a.flag("apply"))?)
                 )?;
+                Ok(0)
+            }
+            "recover-reboot" => {
+                writeln!(out, "{}", pretty(&self.recover_reboot(a.flag("apply"))?))?;
                 Ok(0)
             }
             "reload-queue" => {

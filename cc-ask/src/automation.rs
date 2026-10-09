@@ -11,6 +11,20 @@ pub fn key(text: &str) -> String {
     format!("{:x}", Sha256::digest(text.as_bytes()))[..32].into()
 }
 pub fn recover_before_launch(ctx: &mut Context) -> bool {
+    // Requeue the original job before the scheduler/ToDo watchdog can launch
+    // a replacement. The job queue owns duplicate suppression and boot proof.
+    if !ctx
+        .run(
+            &command_argv(
+                &ctx.codex_command,
+                &["recover-reboot".into(), "--apply".into()],
+            ),
+            30,
+        )
+        .is_ok_and(|out| out.code == 0)
+    {
+        return false;
+    }
     ctx.run(
         &command_argv(&ctx.scheduler_command, &["recover".into()]),
         45,

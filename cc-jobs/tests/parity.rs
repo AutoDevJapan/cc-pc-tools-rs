@@ -1,6 +1,230 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
 
+mod reboot_recovery {
+    use super::*;
+    const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
+    fn interrupted(t: &Test, id: &str, status: &str) -> Value {
+        *t.rt.boot.lock().unwrap() = Some(parse_iso("2026-10-01T11:55:00+09:00").unwrap());
+        let j = t.put(job(json!({"id":id,"name":id,"status":status,
+            "created_at":"2026-10-01T11:00:00+09:00",
+            "started_at":"2026-10-01T11:01:00+09:00",
+            "last_event_at":"2026-10-01T11:54:00+09:00",
+            "finished_at":"2026-10-01T11:56:00+09:00",
+            "last_error":"scheduler: both job roots are gone",
+            "pid":12345,"pid_created":12,"codex_pid":23456,"codex_pid_created":23,
+            "thread_id":SESSION_ID,"cwd":t.ctx.root,"sandbox":"danger-full-access",
+            "mcp_profile":"browser","codex":"codex.CMD"})));
+        fs::write(t.ctx.job_dir(id).join("prompt.md"), "元の依頼文").unwrap();
+        j
+    }
+    #[test]
+    fn preview_preserves_state_then_resume_preserves_identity_and_logs_one_batch() {
+        let t = Test::new();
+        let a = interrupted(&t, "reboot-a", "lost");
+        let mut b = interrupted(&t, "reboot-b", "queued");
+        b["thread_id"] = Value::Null;
+        b["started_at"] = Value::Null;
+        t.ctx.save(&b).unwrap();
+        let preview = t.cli(&["recover-reboot"]);
+        assert_eq!(preview.0.unwrap(), 0);
+        assert!(preview.1.contains("would_queue"));
+        assert_eq!(t.ctx.load("reboot-a").unwrap(), a);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        assert_eq!(
+            t.ctx
+                .recover_reboot(true)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        let resumed = t.ctx.load("reboot-a").unwrap();
+        for field in ["id", "name", "cwd", "sandbox", "mcp_profile", "thread_id"] {
+            assert_eq!(resumed[field], a[field], "{field}");
+        }
+        assert_eq!(resumed["status"], "queued");
+        assert_eq!(resumed["resume_session"], SESSION_ID);
+        assert!(
+            codex_args(&resumed)
+                .windows(2)
+                .any(|w| w == ["resume", SESSION_ID])
+        );
+        assert_eq!(t.ctx.load("reboot-b").unwrap()["resume_session"], "");
+        assert_eq!(
+            fs::read_to_string(t.ctx.job_dir("reboot-b").join("prompt.md")).unwrap(),
+            "元の依頼文"
+        );
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        let calls = t.rt.calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert!(calls[0].argv.iter().any(|a| a == "後片付けの記録"));
+        assert!(!calls[0].argv.iter().any(|a| a == "--notify"));
+        assert!(calls[0].argv.last().unwrap().contains("2件"));
+        assert!(calls[0].argv.last().unwrap().contains("reboot-a"));
+        assert!(calls[0].argv.last().unwrap().contains("reboot-b"));
+    }
+    #[test]
+    fn only_current_boot_interruption_is_eligible_even_with_502() {
+        for case in [
+            "failed",
+            "cancelled",
+            "cancel_requested",
+            "old_lost",
+            "new_activity",
+            "created_after_boot",
+            "normal_lost",
+            "completed",
+            "final_failure",
+            "live_root",
+        ] {
+            let t = Test::new();
+            let mut j = interrupted(&t, "excluded", "lost");
+            match case {
+                "failed" | "cancelled" => {
+                    j["status"] = json!(case);
+                    j["last_error"] = json!("502 Bad Gateway");
+                }
+                "cancel_requested" => j["cancel_requested"] = json!(true),
+                "old_lost" => j["finished_at"] = json!("2026-10-01T11:54:00+09:00"),
+                "new_activity" => j["last_event_at"] = json!("2026-10-01T11:56:00+09:00"),
+                "created_after_boot" => j["created_at"] = json!("2026-10-01T11:56:00+09:00"),
+                "normal_lost" => j["last_error"] = json!("child process could not be stopped"),
+                "completed" => j["turn_completed"] = json!(true),
+                "final_failure" => fs::write(
+                    t.ctx.job_dir("excluded").join("events.jsonl"),
+                    "{\"type\":\"turn.failed\"}\n{partial",
+                )
+                .unwrap(),
+                "live_root" => {
+                    t.rt.procs.lock().unwrap().insert(23456, 23);
+                }
+                _ => unreachable!(),
+            }
+            t.ctx.save(&j).unwrap();
+            t.ctx.recover_reboot(true).unwrap();
+            assert_eq!(t.ctx.load("excluded").unwrap(), j, "{case}");
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{case}");
+        }
+        let t = Test::new();
+        let mut j = interrupted(&t, "reconnect", "lost");
+        j["last_error"] = json!("502 Bad Gateway");
+        t.ctx.save(&j).unwrap();
+        fs::write(
+            t.ctx.job_dir("reconnect").join("events.jsonl"),
+            "{\"type\":\"error\",\"message\":\"502 Bad Gateway\"}\n{partial",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn spawn_failure_keeps_pending_claim_and_retry_never_requeues_again() {
+        let t = Test::new();
+        interrupted(&t, "pending", "running");
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        t.ctx.recover_reboot(true).unwrap();
+        let claimed = t.ctx.load("pending").unwrap();
+        assert_eq!(claimed["reboot_launch_pending"], true);
+        assert_eq!(claimed["queue_restart_pending"], true);
+        assert_eq!(claimed["status"], "queued");
+        assert!(t.ctx.supervisor_alive(&claimed));
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        t.rt.supervisor_fail.store(false, Ordering::Relaxed);
+        t.ctx.recover_reboot(true).unwrap();
+        let resumed = t.ctx.load("pending").unwrap();
+        assert_eq!(
+            resumed["reboot_recovered_at"],
+            claimed["reboot_recovered_at"]
+        );
+        assert_eq!(resumed["reboot_launch_pending"], false);
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2); // failed spawn + success
+    }
+    #[test]
+    fn deliberate_cancel_of_pending_claim_is_never_restarted() {
+        let t = Test::new();
+        let mut j = interrupted(&t, "pending-cancel", "cancelled");
+        j["reboot_launch_pending"] = json!(true);
+        j["cancel_requested"] = json!(true);
+        t.ctx.save(&j).unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.ctx.load("pending-cancel").unwrap(), j);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn concurrent_recoveries_launch_and_report_only_once() {
+        let t = Test::new();
+        interrupted(&t, "race", "lost");
+        std::thread::scope(|scope| {
+            let barrier = Arc::new(std::sync::Barrier::new(8));
+            for _ in 0..8 {
+                let barrier = barrier.clone();
+                let ctx = &t.ctx;
+                scope.spawn(move || {
+                    barrier.wait();
+                    ctx.recover_reboot(true).unwrap();
+                });
+            }
+        });
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 1);
+    }
+    #[test]
+    fn successor_and_finished_todo_prevent_recovery() {
+        for status in ["done", "block", "wait"] {
+            let t = Test::new();
+            let mut j = interrupted(&t, "todo-stop", "lost");
+            j["todo_id"] = json!(77);
+            t.ctx.save(&j).unwrap();
+            let todo = t.ctx.root.parent().unwrap().join("todo");
+            // Unique test roots share Temp's parent; use a tools-shaped context.
+            let mut ctx = t.ctx.clone();
+            ctx.root = t.ctx.root.join("tools/codex-jobs");
+            fs::create_dir_all(ctx.root.parent().unwrap().join("todo")).unwrap();
+            fs::write(
+                ctx.root.parent().unwrap().join("todo/todo.json"),
+                json!({"items":[{"id":77,"status":status,"jobs":["todo-stop"]}]}).to_string(),
+            )
+            .unwrap();
+            let _ = todo;
+            ctx.recover_reboot(true).unwrap();
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{status}");
+        }
+        let t = Test::new();
+        let j = interrupted(&t, "superseded", "lost");
+        t.put(job(
+            json!({"id":"new-attempt","name":"different","thread_id":SESSION_ID,
+            "created_at":"2026-10-01T11:57:00+09:00","status":"succeeded"}),
+        ));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.ctx.load("superseded").unwrap(), j);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn log_failure_retries_log_without_relaunching() {
+        let t = Test::new();
+        interrupted(&t, "log-retry", "lost");
+        t.rt.replies.lock().unwrap().push_back(Ok(Reply {
+            code: 1,
+            stdout: vec![],
+            stderr: vec![],
+        }));
+        assert!(t.ctx.recover_reboot(true).is_err());
+        assert_eq!(t.ctx.load("log-retry").unwrap()["reboot_log_pending"], true);
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(
+            t.ctx.load("log-retry").unwrap()["reboot_log_pending"],
+            false
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 2);
+    }
+}
+
 mod adaptive_config_updates {
     use super::*;
     #[test]
@@ -4012,6 +4236,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    boot: Mutex<Option<f64>>,
     summary_calls: AtomicUsize,
     summary_fail: AtomicBool,
     queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
@@ -4056,6 +4281,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            boot: Mutex::new(None),
             summary_calls: AtomicUsize::new(0),
             summary_fail: AtomicBool::new(false),
             queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
@@ -4152,6 +4378,9 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn boot_epoch(&self) -> Option<f64> {
+        *self.boot.lock().unwrap()
+    }
     fn work_checkout(&self, _cwd: &str) -> Value {
         json!({})
     }

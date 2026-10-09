@@ -1208,7 +1208,7 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
     }
     // Recovery is required for direct CLI ticks as well as the scheduled VBS caller.
     // A failed inventory recovery permits receipts but blocks new children this pass.
-    if !crate::tick_runtime::stage("startup-recovery", Duration::from_secs(5), || {
+    if !crate::tick_runtime::stage("startup-recovery", Duration::from_secs(20), || {
         Ok(crate::automation::recover_before_launch(ctx))
     })
     .unwrap_or(false)

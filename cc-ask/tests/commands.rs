@@ -24,11 +24,10 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
     .unwrap();
     assert_eq!(result["thread_id"], "100");
     let fake = h.fake.borrow();
-    assert!(
-        fake.http_calls
-            .iter()
-            .all(|r| !s(&r["url"]).ends_with("/threads"))
-    );
+    assert!(fake
+        .http_calls
+        .iter()
+        .all(|r| !s(&r["url"]).ends_with("/threads")));
     let posted = &fake.posts.last().unwrap().1;
     assert!(s(&posted["content"]).contains("<@OWN>"));
     assert_eq!(posted["allowed_mentions"]["users"], json!(["OWN"]));
@@ -42,13 +41,11 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
         .unwrap();
     assert_eq!(recorded["cwd"], "fixture/bookmarks");
     assert_eq!(recorded["agent"], "Codex");
-    assert!(
-        state["questions"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|q| q["thread_id"] == "100" && q["open"] == true)
-    );
+    assert!(state["questions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|q| q["thread_id"] == "100" && q["open"] == true));
 }
 
 #[test]
@@ -61,18 +58,16 @@ fn ask_existing_thread_rejects_foreign_server_and_nonquestion() {
         h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!(guild);
         let body = h.root.path().join("question.md");
         std::fs::write(&body, text).unwrap();
-        assert!(
-            cmd_ask(
-                &mut h.ctx,
-                &AskArgs {
-                    thread: Some("100".into()),
-                    title: "導入".into(),
-                    body_file: body,
-                    ..Default::default()
-                }
-            )
-            .is_err()
-        );
+        assert!(cmd_ask(
+            &mut h.ctx,
+            &AskArgs {
+                thread: Some("100".into()),
+                title: "導入".into(),
+                body_file: body,
+                ..Default::default()
+            }
+        )
+        .is_err());
         assert!(h.fake.borrow().posts.is_empty());
     }
 }
@@ -103,7 +98,14 @@ fn answered_thread_ask_preserves_original_assignment() {
     h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!("G");
     let body = h.root.path().join("question.md");
     std::fs::write(&body, "Chrome拡張を導入してもらえますか？").unwrap();
-    let mut args = AskArgs { thread: Some("100".into()), body_file: body, title: "導入".into(), agent: "Codex".into(), cwd: Some("fixture/bookmarks".into()), ..Default::default() };
+    let mut args = AskArgs {
+        thread: Some("100".into()),
+        body_file: body,
+        title: "導入".into(),
+        agent: "Codex".into(),
+        cwd: Some("fixture/bookmarks".into()),
+        ..Default::default()
+    };
     cmd_ask(&mut h.ctx, &args).unwrap();
     {
         let mut fake = h.fake.borrow_mut();
@@ -111,12 +113,20 @@ fn answered_thread_ask_preserves_original_assignment() {
         history.last_mut().unwrap()["author"]["bot"] = json!(true);
         history.push(message("2000", "入れた", "OWN"));
     }
-    args.cwd = Some("another/bookmarks".into()); args.agent = "Claude".into();
+    args.cwd = Some("another/bookmarks".into());
+    args.agent = "Claude".into();
     let result = cmd_ask(&mut h.ctx, &args).unwrap();
     assert_eq!(result["suppressed"], "already_answered");
     let state = h.state();
-    let q = state["questions"].as_array().unwrap().iter().rev().find(|q| q["thread_id"] == "100").unwrap();
-    assert_eq!(q["cwd"], "fixture/bookmarks"); assert_eq!(q["agent"], "Codex");
+    let q = state["questions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .rev()
+        .find(|q| q["thread_id"] == "100")
+        .unwrap();
+    assert_eq!(q["cwd"], "fixture/bookmarks");
+    assert_eq!(q["agent"], "Codex");
 }
 
 /// Override only selected effects; all Discord and child process work stays fake.
@@ -308,12 +318,18 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
     assert_eq!(q["agent"], "");
     let project =
         cc_ask::project::project_from_folder(&std::env::current_dir().unwrap().to_string_lossy());
-    assert_eq!(q["title"], format!("【{}】質問", project.chars().take(22).collect::<String>()));
+    assert_eq!(
+        q["title"],
+        format!("【{}】質問", project.chars().take(22).collect::<String>())
+    );
     assert_eq!(q["project"], project);
     assert!(q.get("source").is_none());
     let fake = h.fake.borrow();
-    let first = &fake.http_calls.iter().find(|c| c["method"] == "POST"
-        && s(&c["url"]).ends_with("/channels/T/messages")).unwrap()["body"];
+    let first = &fake
+        .http_calls
+        .iter()
+        .find(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/messages"))
+        .unwrap()["body"];
     assert_eq!(
         first["content"],
         format!(

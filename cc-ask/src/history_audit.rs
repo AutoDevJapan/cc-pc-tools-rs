@@ -256,6 +256,12 @@ pub fn captured(state: &Value, routing: &Value, tid: &str, mid: &str) -> bool {
             })
 }
 
+#[derive(Default)]
+struct EvidenceCache {
+    paths: BTreeMap<String, bool>,
+    readers: Option<Value>,
+}
+
 fn evidence(
     ctx: &mut Context,
     state: &Value,
@@ -263,7 +269,7 @@ fn evidence(
     message: &Value,
     history: &[Value],
     names: &crate::project::ProjectNames,
-    cache: &mut BTreeMap<String, bool>,
+    cache: &mut EvidenceCache,
 ) -> Result<Value> {
     let mid = s(&message["id"]);
     let receipt = &state["answer_receipts"][mid];
@@ -271,6 +277,49 @@ fn evidence(
     for key in ["handled_by", "read_by"] {
         if valid_job(s(&receipt[key])) {
             candidates.insert(s(&receipt[key]).into());
+        }
+    }
+    let reader = s(&receipt["read_by"]);
+    if valid_job(reader)
+        && !ctx
+            .jobs
+            .join("jobs")
+            .join(reader)
+            .join("job.json")
+            .is_file()
+    {
+        if cache.readers.is_none() {
+            let command = ctx.jobs.join("codex_jobs.exe");
+            let out = ctx.effects.run(
+                &[
+                    command.to_string_lossy().into_owned(),
+                    "status".into(),
+                    "--all".into(),
+                    "--json".into(),
+                ],
+                45,
+            )?;
+            if out.code != 0 {
+                return Err("reader job inventory unavailable".into());
+            }
+            let value: Value =
+                serde_json::from_str(&out.stdout).map_err(|_| "invalid reader job inventory")?;
+            if !value.is_array() && !value["jobs"].is_array() {
+                return Err("invalid reader job inventory".into());
+            }
+            cache.readers = Some(value);
+        }
+        let index = cache.readers.as_ref().unwrap();
+        for job in index
+            .as_array()
+            .or_else(|| index["jobs"].as_array())
+            .unwrap()
+        {
+            if [s(&job["thread_id"]), s(&job["resume_session"])].contains(&reader)
+                && valid_job(s(&job["id"]))
+            {
+                candidates.insert(s(&job["id"]).to_owned());
+            }
         }
     }
     let req = &state["requests"][tid];
@@ -302,12 +351,12 @@ fn evidence(
     let mut workers = vec![];
     for jid in candidates {
         let root = ctx.jobs.join("jobs").join(&jid);
-        if guard(ctx, &root.to_string_lossy(), cache)? {
+        if guard(ctx, &root.to_string_lossy(), &mut cache.paths)? {
             continue;
         }
         let info = job_info(ctx, &jid);
         let cwd = s(&info["cwd"]);
-        if names.redact(cwd) != cwd || (!cwd.is_empty() && guard(ctx, cwd, cache)?) {
+        if names.redact(cwd) != cwd || (!cwd.is_empty() && guard(ctx, cwd, &mut cache.paths)?) {
             continue;
         }
         let path = root.join("prompt.md");
@@ -322,11 +371,18 @@ fn evidence(
             safe_text(s(&message["content"]))
         );
         let explicit_quote = format!("オーナー投稿 {mid}（{}）の原文:", s(&message["timestamp"]));
+        let legacy_context = thread_owner(&info, &prompt, tid)
+            && crate::automation::epoch(&info["created_at"]) >= snowflake_time(mid)
+            && !s(&message["content"]).is_empty()
+            && prompt.contains(&quote);
+        // A minute and body can match two identical replies. Only an explicit
+        // input ID (or a successful read event below) proves this exact reply.
         let input = thread_owner(&info, &prompt, tid)
             && crate::automation::epoch(&info["created_at"]) >= snowflake_time(mid)
-            && (prompt.contains(&explicit_quote)
-                || (!s(&message["content"]).is_empty() && prompt.contains(&quote)));
-        let read = crate::steering::recorded_read(ctx, &jid, tid, message)?;
+            && prompt.contains(&explicit_quote);
+        let operator_confirmed =
+            s(&receipt["handled_by"]) == jid && s(&receipt["handled_via"]) == "manual-confirmation";
+        let read = crate::steering::reply_seen_in_job(ctx, &jid, tid, message, operator_confirmed)?;
         let events_path = root.join("events.jsonl");
         let events = if events_path.is_file() {
             use std::io::{BufRead, BufReader};
@@ -337,8 +393,11 @@ fn evidence(
             for line in reader.lines() {
                 let line = line.map_err(|_| "worker events unavailable")?;
                 if let Ok(event) = serde_json::from_str::<Value>(&line) {
-                    if ["command_execution", "agent_message", "mcp_tool_call"]
-                        .contains(&s(&event["item"]["type"]))
+                    let item = &event["item"];
+                    if event["type"] == "item.completed"
+                        && ((item["type"] == "command_execution" && item["exit_code"] == 0)
+                            || (item["type"] == "agent_message" && !s(&item["text"]).is_empty())
+                            || (item["type"] == "mcp_tool_call" && item["status"] == "completed"))
                     {
                         executed = true;
                         break;
@@ -357,11 +416,11 @@ fn evidence(
         };
         let accepted = input || read;
         if accepted || s(&receipt["handled_by"]) == jid {
-            workers.push(json!({"job":jid,"status":info["status"],"exact_input":input,"successful_reply_read":read,"events_present":events,"completed_result":s(&info["status"]) == "succeeded" && final_text.starts_with("状態: 完了")}));
+            workers.push(json!({"job":jid,"status":info["status"],"exact_input":input,"matching_legacy_context":legacy_context,"successful_reply_read":read,"operator_confirmed_inspection":operator_confirmed,"events_present":events,"completed_result":s(&info["status"]) == "succeeded" && final_text.starts_with("状態: 完了")}));
         }
     }
     Ok(
-        json!({"claimed_delivery":reply_delivered(state,mid),"proven_delivery":workers.iter().any(|w| (w["exact_input"] == true || w["successful_reply_read"] == true) && w["events_present"] == true),"worker_finished_after_reply":workers.iter().any(|w| (w["exact_input"] == true || w["successful_reply_read"] == true) && w["completed_result"] == true),"workers":workers}),
+        json!({"claimed_delivery":reply_delivered(state,mid),"proven_delivery":workers.iter().any(|w| (w["exact_input"] == true || w["successful_reply_read"] == true) && w["events_present"] == true),"worker_finished_after_reply":workers.iter().any(|w| (w["exact_input"] == true || w["successful_reply_read"] == true) && w["events_present"] == true && w["completed_result"] == true),"workers":workers}),
     )
 }
 
@@ -428,6 +487,7 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
         .collect();
     ids.sort_by_key(|id| std::cmp::Reverse(id.parse::<u64>().unwrap_or(0)));
     let mut count = 0;
+    let mut evidence_cache = EvidenceCache::default();
     for tid in ids {
         if count >= args.limit {
             break;
@@ -487,7 +547,7 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
                 .unwrap_or_else(|| captured(&current, &routing, &tid, mid));
             let recovered = previous.is_some_and(|m| m["recovered"] == true)
                 || s(&current["answer_receipts"][mid]["received_via"]) == "history-audit";
-            owners.push(json!({"id":mid,"captured_before":captured_before,"recovered":recovered,"evidence":evidence(ctx,&current,&tid,message,&history,&names,&mut cache)?}));
+            owners.push(json!({"id":mid,"captured_before":captured_before,"recovered":recovered,"evidence":evidence(ctx,&current,&tid,message,&history,&names,&mut evidence_cache)?}));
         }
         if args.capture && !messages.is_empty() {
             let _work = crate::state_work::StateWork::begin(ctx)?;

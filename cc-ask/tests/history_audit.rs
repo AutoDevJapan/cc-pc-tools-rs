@@ -96,11 +96,143 @@ impl Effects for Guarded {
                 ..Default::default()
             });
         }
+        if a.iter().any(|v| v == "status") && a.iter().any(|v| v == "--all") {
+            let path = std::path::Path::new(&a[0])
+                .parent()
+                .unwrap()
+                .join("reader-index.json");
+            return Ok(Output {
+                stdout: std::fs::read_to_string(path).unwrap_or_else(|_| "[]".into()),
+                ..Default::default()
+            });
+        }
         self.0.run(a, t)
     }
     fn now(&self) -> f64 {
         self.0.now()
     }
+}
+
+#[test]
+fn reader_session_resolves_to_own_job_with_successful_receipt_event() {
+    let mut h = harness();
+    let job = h.ctx.jobs.join("jobs").join("reader");
+    std::fs::create_dir_all(&job).unwrap();
+    atomic_json(
+        &job.join("job.json"),
+        &json!({"id":"reader","status":"running","discord_thread_id":"100"}),
+        2,
+    )
+    .unwrap();
+    atomic_json(
+        &h.ctx.jobs.join("reader-index.json"),
+        &json!([{"id":"reader","thread_id":"reader-session","status":"running"}]),
+        2,
+    )
+    .unwrap();
+    let event = json!({"type":"item.completed","item":{"type":"command_execution","command":"discord_ask.exe replies --thread 100","exit_code":0,"aggregated_output":json!([{"thread_id":"100","replies":[{"id":"100"}]}]).to_string()}});
+    std::fs::write(job.join("events.jsonl"), format!("{event}\n")).unwrap();
+    h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","read_by":"reader-session"}}}));
+    let args = Args {
+        output: h.root.path().join("audit.json"),
+        limit: 10,
+        capture: false,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    let result = history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(result["unproven_delivery"], 0);
+    let checkpoint = read_json(&args.output).unwrap();
+    assert!(
+        checkpoint["rows"]["100"]["owner_messages"][0]["evidence"]["workers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|w| w["job"] == "reader" && w["successful_reply_read"] == true)
+    );
+    assert!(h.fake.borrow().launches.is_empty());
+}
+
+#[test]
+fn legacy_minute_and_text_do_not_prove_an_exact_reply_id() {
+    let mut h = harness();
+    let root = h.ctx.jobs.join("jobs").join("worker");
+    std::fs::create_dir_all(&root).unwrap();
+    atomic_json(&root.join("job.json"),&json!({"id":"worker","status":"succeeded","created_at":"2026-10-01T00:00:00Z","discord_thread_id":"100"}),2).unwrap();
+    std::fs::write(
+        root.join("prompt.md"),
+        "### オーナー（2026-09-30T10:00）\nREADMEを直して",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("events.jsonl"),
+        "{\"item\":{\"type\":\"agent_message\"}}\n",
+    )
+    .unwrap();
+    std::fs::write(root.join("last_message.md"), "状態: 完了\n反映しました").unwrap();
+    h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","handled_by":"worker"}}}));
+    let args = Args {
+        output: h.root.path().join("audit.json"),
+        limit: 10,
+        capture: false,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    let result = history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(result["unproven_delivery"], 1);
+    assert_eq!(result["worker_finished_after_reply"], 0);
+}
+
+#[test]
+fn operator_confirmed_read_still_requires_exact_successful_event() {
+    let mut h = harness();
+    let root = h.ctx.jobs.join("jobs").join("worker");
+    std::fs::create_dir_all(&root).unwrap();
+    atomic_json(
+        &root.join("job.json"),
+        &json!({"id":"worker","status":"running","discord_thread_id":"100"}),
+        2,
+    )
+    .unwrap();
+    let event = json!({"type":"item.completed","item":{"type":"command_execution","command":"discord_ask.exe replies --thread 100 --read-only","exit_code":0,"aggregated_output":json!([{"thread_id":"100","replies":[{"id":"100"}]}]).to_string()}});
+    std::fs::write(root.join("events.jsonl"), format!("{event}\n")).unwrap();
+    let args = Args {
+        output: h.root.path().join("audit.json"),
+        limit: 10,
+        capture: false,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","handled_by":"worker"}}}));
+    assert_eq!(
+        history_audit::run(&mut h.ctx, &args).unwrap()["unproven_delivery"],
+        1
+    );
+    let mut state = h.state();
+    state["answer_receipts"]["100"]["handled_via"] = json!("manual-confirmation");
+    h.save(&state);
+    let mut report = read_json(&args.output).unwrap();
+    report["rows"]["100"]["last_message_id"] = serde_json::Value::Null;
+    atomic_json(&args.output, &report, 2).unwrap();
+    assert_eq!(
+        history_audit::run(&mut h.ctx, &args).unwrap()["unproven_delivery"],
+        0
+    );
+    std::fs::write(
+        root.join("events.jsonl"),
+        "{\"item\":{\"type\":\"agent_message\"}}\n",
+    )
+    .unwrap();
+    let mut report = read_json(&args.output).unwrap();
+    report["rows"]["100"]["last_message_id"] = serde_json::Value::Null;
+    atomic_json(&args.output, &report, 2).unwrap();
+    assert_eq!(
+        history_audit::run(&mut h.ctx, &args).unwrap()["unproven_delivery"],
+        1
+    );
 }
 fn harness() -> Harness {
     let mut h = Harness::new();

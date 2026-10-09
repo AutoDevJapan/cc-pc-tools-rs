@@ -324,7 +324,7 @@ mod reboot_recovery {
         assert_eq!(stopped["status"], "lost");
         assert_eq!(stopped["queue_restart_pending"], false);
         assert_eq!(stopped["reboot_launch_pending"], false);
-        assert!(!t.ctx.supervisor_alive(&stopped));
+        assert!(!t.ctx.running_job(&stopped));
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1); // original failed spawn only
         assert!(t.rt.calls.lock().unwrap().is_empty());
     }

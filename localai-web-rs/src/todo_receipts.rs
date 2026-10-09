@@ -60,6 +60,7 @@ pub(crate) fn ensure(paths: &Paths, request: &Value) -> Result<Value> {
     let item_id = cc_todo::add_item(
         &mut db,
         &cc_todo::Command::Add {
+            subwork: Default::default(),
             project: project.into(),
             title: title.into(),
             note: note.into(),

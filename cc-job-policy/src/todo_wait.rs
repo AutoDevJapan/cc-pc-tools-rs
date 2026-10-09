@@ -35,6 +35,32 @@ pub fn validate(db: &Value, id: i64, on: &[i64]) -> Result<(), String> {
     if on.is_empty() {
         return Err("待つToDoを --on で指定してください".into());
     }
+    // Independent work must never (even through another prerequisite) wait for its root.
+    for child in items.iter().filter(|row| row["subwork"].is_object()) {
+        let mut stack = vec![child["id"].as_i64().ok_or("invalid subwork id")?];
+        let mut seen = BTreeSet::new();
+        while let Some(next) = stack.pop() {
+            if Some(next) == child["subwork"]["parent_todo_id"].as_i64() {
+                return Err("独立した下位作業は主担当の完了を待てません".into());
+            }
+            if !seen.insert(next) {
+                continue;
+            }
+            if next == id {
+                stack.extend(on.iter().copied());
+            } else if let Some(row) = items.iter().find(|row| row["id"] == next)
+                && row["status"] != "done"
+            {
+                stack.extend(
+                    row["wait_on"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_i64),
+                );
+            }
+        }
+    }
     for target in on {
         if !items.iter().any(|i| i["id"].as_i64() == Some(*target)) {
             return Err(format!("no item {target}"));

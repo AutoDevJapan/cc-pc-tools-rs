@@ -11,6 +11,15 @@ const REGISTRY_LINKS: [&str; 2] = [
     "measurement/measurement-80712-1791286803451627800/cargo-home/registry",
 ];
 const RECORD_LIMIT: u64 = 8 * 1024 * 1024;
+// The preserved real MCP ticket is 9,255,686 bytes. Its filesystem limits
+// stay unchanged; only this pinned tree needs a larger metadata envelope.
+pub(super) fn record_limit(c: &Config) -> u64 {
+    if c.id == INTEGRATION {
+        16 * 1024 * 1024
+    } else {
+        RECORD_LIMIT
+    }
+}
 
 #[derive(Clone, Copy)]
 pub(super) struct Profile {
@@ -563,7 +572,10 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         nodes,
     };
     let encoded = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
-    write_or_verify(&ticket_path(c), &encoded, RECORD_LIMIT)?;
+    if encoded.len() as u64 > record_limit(c) {
+        return Err("TICKET_SIZE_LIMIT");
+    }
+    write_or_verify(&ticket_path(c), &encoded, record_limit(c))?;
     let digest = format!("{:x}", Sha256::digest(&encoded));
     if present(&proof_path(c))? {
         write_or_verify(&proof_path(c), digest.as_bytes(), 128)?;
@@ -594,7 +606,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
 }
 pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     let mut r = c.load(id)?;
-    let encoded = read_record(&ticket_path(c), RECORD_LIMIT)?;
+    let encoded = read_record(&ticket_path(c), record_limit(c))?;
     let t: MoveTicket = serde_json::from_slice(&encoded).map_err(|_| "INVALID_TICKET")?;
     let dest = c.destination();
     if t.id != id

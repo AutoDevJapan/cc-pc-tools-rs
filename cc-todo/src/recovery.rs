@@ -410,6 +410,8 @@ fn plan_with_intake(
                 i["project"] == project
                     && matches!(s(&i["status"]), "todo" | "doing")
                     && !cc_job_policy::todo_wait::waiting(db, i)
+                    // Finite independent work uses scheduler's resource-aware launch contract.
+                    && !i["subwork"].is_object()
             })
             .cloned()
             .collect();
@@ -843,6 +845,9 @@ pub fn run_watch(
         };
         let project = s(&item["project"]);
         let path = s(&db["projects"][project]);
+        if item["subwork"].is_object() {
+            continue;
+        }
         if excluded(project, path, &clients) {
             continue;
         }

@@ -50,6 +50,7 @@ pub fn register(
         || child["dispatchable"] != true
         || s(child, "spec").is_empty()
         || child["subwork"].is_object()
+        || child["stall_recovery"]["pending"].is_object()
     {
         return Err("subwork requires a new finite research/check/review with a saved spec".into());
     }
@@ -187,6 +188,7 @@ pub fn resolve(
                 && actual["worktree"] == owner["worktree"]
                 && same_repo(&from_job(j), owner)
                 && from_job(j)["worktree"] == owner["worktree"]
+                && (!owner["pr"].is_u64() || from_job(j)["pr"] == owner["pr"])
         }
     });
     let current = live_parents.next().map(|j| s(j, "id").to_owned());

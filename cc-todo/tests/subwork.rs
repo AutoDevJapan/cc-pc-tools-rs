@@ -144,3 +144,17 @@ fn invalid_parent_or_unproven_repair_never_changes_store() {
         assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before);
     }
 }
+
+#[test]
+fn watchdog_leaves_independent_work_for_the_scheduler_instead_of_console_delegation() {
+    let mut f = Fixture::new();
+    f.register();
+    f.db["items"][1]["created_s"] = json!(1);
+    f.db["items"][1]["dependency_ready"] = json!(true);
+    f.db["items"][0]["status"] = json!("done");
+    let reservations =
+        cc_todo::recovery::plan(&mut f.db, &[], &Default::default(), 10000., "").unwrap();
+    assert!(reservations.is_empty());
+    assert_eq!(f.db["items"][1]["status"], "todo");
+    assert!(f.db["items"][1]["stall_recovery"]["pending"].is_null());
+}

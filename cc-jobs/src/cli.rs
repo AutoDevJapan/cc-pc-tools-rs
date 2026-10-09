@@ -875,7 +875,6 @@ impl Context {
                     ));
                 }
                 let mut jobs = registrations.clone();
-                cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 if let Some(requested) = a.value("parent-job-id") {
                     let p = self.load(requested)?;
                     if p["todo_id"] != parent
@@ -885,7 +884,11 @@ impl Context {
                     {
                         return Err(Error::new("requested parent is not this subwork's owner"));
                     }
+                    if !jobs.iter().any(|job| job["id"] == p["id"]) {
+                        jobs.push(p);
+                    }
                 }
+                cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
             }
         } else if a.value("subwork-of").is_some() {

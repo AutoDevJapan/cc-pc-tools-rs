@@ -8443,24 +8443,23 @@ mod end_to_end {
         }
         // These jobs are queued and have no child processes. Retain an OS handle
         // while stopping each supervisor; taskkill /T can follow reused parent IDs.
-        let mut owners = Vec::new();
+        let mut owners = FixtureOwners {
+            handles: Vec::new(),
+            shutdown_started: false,
+        };
         for id in &ids {
             let job = t.job(id);
             assert_eq!(job["status"], "queued");
             let pid = job["pid"].as_u64().unwrap() as u32;
             assert_ne!(pid, std::process::id());
             assert_eq!(proc_created(pid), job["pid_created"].as_u64());
-            owners.push(FixtureProcess::retain(pid, job["pid_created"].as_u64().unwrap()).unwrap());
+            owners
+                .handles
+                .push(FixtureProcess::retain(pid, job["pid_created"].as_u64().unwrap()).unwrap());
         }
         // Cancel every owner first: waiting for one scanner while the other
         // 29 owners keep issuing I/O delays the scanner's kernel cancellation.
-        for owner in &owners {
-            owner.request_stop();
-        }
-        let mut all_exited = true;
-        for owner in &owners {
-            all_exited &= owner.wait_exit();
-        }
+        let all_exited = owners.shutdown();
         assert!(all_exited, "parallel fixture shutdown did not confirm exit");
         assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
         assert_eq!(ids.len(), 30);
@@ -8493,6 +8492,31 @@ mod end_to_end {
         handle: windows_sys::Win32::Foundation::HANDLE,
         pid: u32,
         created: u64,
+    }
+    struct FixtureOwners {
+        handles: Vec<FixtureProcess>,
+        shutdown_started: bool,
+    }
+    impl FixtureOwners {
+        fn shutdown(&mut self) -> bool {
+            self.shutdown_started = true;
+            for owner in &self.handles {
+                owner.request_stop();
+            }
+            let mut all = true;
+            for owner in &self.handles {
+                all &= owner.wait_exit();
+            }
+            all
+        }
+    }
+    impl Drop for FixtureOwners {
+        fn drop(&mut self) {
+            // A retention/identity assertion can fail before normal shutdown.
+            if !self.shutdown_started {
+                let _ = self.shutdown();
+            }
+        }
     }
     // The test owns these handles; the mutex serializes retention and cleanup.
     unsafe impl Send for FixtureProcess {}
@@ -8538,8 +8562,15 @@ mod end_to_end {
         fn request_stop(&self) {
             use windows_sys::Win32::System::Threading::*;
             unsafe {
+                if !self.live() || TerminateProcess(self.handle, 0) != 0 {
+                    return;
+                }
+                let error = io::Error::last_os_error();
                 if self.live() {
-                    let _ = TerminateProcess(self.handle, 0);
+                    eprintln!(
+                        "fixture termination request failed: pid={} created={} error={error}",
+                        self.pid, self.created
+                    );
                 }
             }
         }

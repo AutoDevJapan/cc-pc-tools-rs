@@ -458,6 +458,31 @@ pub fn token() -> Result<String> {
     }
 }
 pub struct RealEffects;
+
+thread_local! {
+    static HTTP_POOL: std::cell::RefCell<Option<Option<ureq::Agent>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Connection reuse for an explicit bulk read. Normal tick/board calls retain
+/// their existing independent transport and dynamically computed time limits.
+pub struct ScopedHttpPool(Option<Option<ureq::Agent>>);
+impl ScopedHttpPool {
+    pub fn new() -> Self {
+        Self(HTTP_POOL.with(|slot| slot.replace(Some(None))))
+    }
+}
+impl Default for ScopedHttpPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Drop for ScopedHttpPool {
+    fn drop(&mut self) {
+        HTTP_POOL.with(|slot| {
+            slot.replace(self.0.take());
+        });
+    }
+}
 static DNS_IN_FLIGHT: std::sync::LazyLock<std::sync::Arc<std::sync::atomic::AtomicBool>> =
     std::sync::LazyLock::new(|| std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)));
 
@@ -665,13 +690,23 @@ impl Effects for RealEffects {
             url.split('?').next().unwrap_or(url)
         ));
         let deadline = std::time::Instant::now() + timeout;
-        let agent = ureq::AgentBuilder::new()
-            .resolver(bounded_dns)
-            .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
-            .timeout_read(timeout)
-            .timeout_write(timeout)
-            .timeout(timeout)
-            .build();
+        let make_agent = || {
+            ureq::AgentBuilder::new()
+                .resolver(bounded_dns)
+                .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
+                .timeout_read(timeout)
+                .timeout_write(timeout)
+                .timeout(timeout)
+                .build()
+        };
+        let agent = HTTP_POOL.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            if let Some(agent) = slot.as_mut() {
+                agent.get_or_insert_with(make_agent).clone()
+            } else {
+                make_agent()
+            }
+        });
         for attempt in 0..3 {
             crate::tick_runtime::check()?;
             let left = deadline.saturating_duration_since(std::time::Instant::now());

@@ -43,11 +43,12 @@ fn large_notifier_inventory_stops_without_authorizing_partial_cleanup() {
         task(&h, &format!("old-{index}"), "777", "completed");
     }
     let deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::from_millis(10));
-    let start = std::time::Instant::now();
     let result = cc_ask::sweep::protected_threads(&h.ctx, &json!({"requests":{}}));
     drop(deadline);
     assert!(result.unwrap_err().starts_with("TickDeadline:"));
-    assert!(start.elapsed() < std::time::Duration::from_secs(1));
+    // The semantic deadline must reject the inventory, never authorize a
+    // partial cleanup. Filesystem/syscall scheduling has no one-second bound;
+    // process-level hard ceilings are verified separately in tick_bounds.
     assert!(h.fake.borrow().patches.is_empty());
 }
 

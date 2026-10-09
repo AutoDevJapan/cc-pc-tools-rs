@@ -36,6 +36,15 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
 }
+#[derive(clap::Args, Debug, Default)]
+pub struct SubworkOptions {
+    #[arg(long, requires_all=["parent_job_id", "subwork_kind"], value_parser=clap::value_parser!(i64).range(1..))]
+    pub subwork_of: Option<i64>,
+    #[arg(long, requires = "subwork_of")]
+    pub parent_job_id: Option<String>,
+    #[arg(long, requires = "subwork_of", value_parser=["research", "check", "review"])]
+    pub subwork_kind: Option<String>,
+}
 #[derive(Subcommand, Debug)]
 pub enum Command {
     #[command(args_override_self = true, infer_long_args = true)]
@@ -73,6 +82,16 @@ pub enum Command {
         needs: Vec<String>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+        #[command(flatten)]
+        subwork: SubworkOptions,
+    },
+    /// Register finite independent work; only repair the explicitly recorded owner wait.
+    Subwork {
+        id: i64,
+        #[command(flatten)]
+        relation: SubworkOptions,
+        #[arg(long)]
+        repair_owner_wait: bool,
     },
     #[command(args_override_self = true, infer_long_args = true)]
     List {
@@ -265,6 +284,40 @@ pub fn save(path: &Path, db: &Value) -> Result<()> {
     unreachable!()
 }
 
+fn subwork_relation(
+    db: &Value,
+    item: &Value,
+    options: &SubworkOptions,
+    paths: &Paths,
+    repair: bool,
+) -> Result<Value> {
+    let mut jobs =
+        cc_scheduler::common::jobs_from(&paths.jobs, true).map_err(|e| e.0.to_owned())?;
+    cc_job_policy::subwork::mark_live(&mut jobs, |j| {
+        ["pid", "codex_pid"].iter().any(|key| {
+            j[*key].as_u64().is_some_and(|pid| {
+                cc_scheduler::native::process_birth(pid as u32)
+                    .is_some_and(|birth| j[format!("{key}_created")].as_u64() == Some(birth))
+            })
+        })
+    });
+    cc_job_policy::subwork::register(
+        db,
+        item,
+        options.subwork_of.ok_or("--subwork-of is required")?,
+        options
+            .parent_job_id
+            .as_deref()
+            .ok_or("--parent-job-id is required")?,
+        options
+            .subwork_kind
+            .as_deref()
+            .ok_or("--subwork-kind is required")?,
+        &jobs,
+        repair,
+    )
+}
+
 /// Freeze a supplied UTF-8 prompt in the store; titles alone never authorize dispatch.
 pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     let Command::Add {
@@ -276,6 +329,7 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         effort,
         needs,
         progress,
+        subwork,
     } = args
     else {
         unreachable!()
@@ -308,6 +362,14 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         }
     };
     let mut item = json!({"id":id,"project":project,"title":display(title),"note":display(note),"status":"todo","jobs":[],"created":now(),"created_s":time_s(),"updated":now()});
+    if subwork.subwork_of.is_some() {
+        if spec.is_none() {
+            return Err("独立作業には --spec が必要です".into());
+        }
+        item["spec"] = json!(spec.unwrap());
+        item["dispatchable"] = json!(true);
+        item["subwork"] = subwork_relation(db, &item, subwork, paths, false)?;
+    }
     if let Some(percent) = progress {
         set_progress(&mut item, *percent)?;
     }
@@ -801,6 +863,44 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             );
         }
         Command::Add { .. } => output.push(format!("added {}", add_item(db, cmd, paths)?)),
+        Command::Subwork {
+            id,
+            relation,
+            repair_owner_wait,
+        } => {
+            let current = db["items"]
+                .as_array()
+                .and_then(|items| items.iter().find(|i| i["id"] == *id))
+                .ok_or_else(|| format!("no item {id}"))?;
+            let registered = subwork_relation(db, current, relation, paths, *repair_owner_wait)?;
+            let row = find(db, *id)?;
+            row["subwork"] = registered;
+            if *repair_owner_wait {
+                let parent = row["subwork"]["parent_todo_id"].clone();
+                row["wait_on"] = json!(
+                    row["wait_on"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter(|id| **id != parent)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                );
+                row.as_object_mut().unwrap().remove("work_owner_job");
+                if row["wait_on"].as_array().is_some_and(Vec::is_empty) {
+                    row.as_object_mut().unwrap().remove("wait_on");
+                    if row["status"] == "wait" {
+                        row["status"] = json!("todo");
+                        row["dependency_ready"] = json!(true);
+                        if let Some(scheduler) = row["scheduler"].as_object_mut() {
+                            scheduler.insert("not_before".into(), json!(0));
+                        }
+                    }
+                }
+            }
+            row["updated"] = json!(now());
+            output.push(format!("registered subwork {id}"));
+        }
         Command::List { project, all } => {
             for i in db["items"].as_array().ok_or("invalid items")? {
                 if project

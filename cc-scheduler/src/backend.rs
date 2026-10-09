@@ -281,7 +281,9 @@ impl RealBackend {
         Ok(output.stdout)
     }
     pub fn launch_command(&self, item: &Value, prompt: &Path, selection: &Value) -> Invocation {
-        let sandbox = if cc_ask::job_policy::explicit_read_only(s(&item["title"])) {
+        let sandbox = if ["research", "review"].contains(&s(&item["subwork"]["kind"]))
+            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
+        {
             "read-only"
         } else {
             selection["sandbox"]
@@ -332,6 +334,23 @@ impl RealBackend {
             invocation
                 .args
                 .extend(["--resume-session".into(), session.into()]);
+        }
+        if item["subwork"].is_object() {
+            invocation.args.extend([
+                "--subwork-of".into(),
+                item["subwork"]["parent_todo_id"].to_string(),
+                "--assigned-needs".into(),
+                arr(&item["needs"])
+                    .iter()
+                    .map(|v| s(v))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]);
+            if let Some(parent) = item["scheduler"]["subwork_parent_job"].as_str() {
+                invocation
+                    .args
+                    .extend(["--parent-job-id".into(), parent.into()]);
+            }
         }
         invocation
     }

@@ -7,6 +7,91 @@ use std::{
     time::Duration,
 };
 const T: f64 = 100000.;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
+
+#[test]
+fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
+    for gate in ["open", "cargo", "cpu", "memory", "interval"] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "cargo" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "interval" => f.e.state["last_launch"] = json!(T),
+            _ => {}
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        f.e.dispatch(&f.cfg, &f.pri).unwrap();
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}: {:?}",
+            f.e.report
+        );
+        assert!(f.get(2)["wait_on"].is_null());
+        if gate == "open" {
+            assert_eq!(
+                f.e.backend.launched[0]["item"]["scheduler"]["subwork_parent_job"],
+                "parent"
+            );
+        }
+    }
+}
+
+#[test]
+fn subwork_launch_arguments_carry_relation_and_resource_allocation() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    let mut item = sub.db["items"][1].clone();
+    item["needs"] = json!(["cargo"]);
+    item["scheduler"]["subwork_parent_job"] = json!("parent");
+    let backend = RealBackend::new(sub.dir.path().to_path_buf());
+    let c = backend.launch_command(
+        &item,
+        Path::new("prompt.md"),
+        &json!({"task_type":"check","model":"gpt-6-luna","effort":"high"}),
+    );
+    for pair in [
+        ["--subwork-of", "1"],
+        ["--parent-job-id", "parent"],
+        ["--assigned-needs", "cargo"],
+    ] {
+        assert!(c.args.windows(2).any(|w| w == pair));
+    }
+}
+
+#[test]
+fn subwork_prepare_does_not_launch_stale_spec_needs_relation_or_owner_stop() {
+    for field in ["spec", "needs", "subwork", "status"] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        let mut changed = sub.db.clone();
+        changed["items"][1][field] = match field {
+            "spec" => json!("another-spec.md"),
+            "needs" => json!(["cargo"]),
+            "subwork" => {
+                let mut rel = changed["items"][1]["subwork"].clone();
+                rel["kind"] = json!("research");
+                rel
+            }
+            _ => json!("block"),
+        };
+        let mut f = Fixture::new();
+        f.e.backend.prepare_edit = Some((f.e.todo_path.clone(), changed));
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        f.e.dispatch(&f.cfg, &f.pri).unwrap();
+        assert!(f.e.backend.launched.is_empty(), "{field}");
+    }
+}
 
 #[test]
 fn reboot_deployment_preserves_installed_subscription_model_validation() {
@@ -946,6 +1031,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
     outcome_block_before: bool,
     outcome_count: usize,
@@ -973,6 +1059,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            prepare_edit: None,
             outcome_edit: None,
             outcome_block_before: false,
             outcome_count: 0,
@@ -1111,6 +1198,9 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if let Some((path, db)) = self.prepare_edit.take() {
+            write_json(&path, &db, 1)?;
+        }
         if self.prepare_pressure {
             self.m["available_gb"] = json!(3);
         }
@@ -1779,6 +1869,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
     let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
     let mut db = f.e.todo().unwrap();
     let args = cc_todo::Command::Add {
+        subwork: Default::default(),
         project: "civ6".into(),
         title: "指示つきの作業".into(),
         note: "".into(),
@@ -1794,6 +1885,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
     assert_eq!(fs::read_to_string(s(&copied["spec"])).unwrap(), "元の指示");
     assert_eq!(copied["needs"], json!(["civ6", "cargo"]));
     let args = cc_todo::Command::Add {
+        subwork: Default::default(),
         project: "civ6".into(),
         title: "指示なし".into(),
         note: "".into(),

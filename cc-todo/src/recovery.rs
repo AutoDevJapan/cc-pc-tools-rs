@@ -335,11 +335,16 @@ fn plan_with_intake(
 ) -> Result<Vec<i64>> {
     cc_job_policy::todo_wait::release_ready(db);
     let owner_projects = db["projects"].clone();
-    let owner_jobs: Vec<_> = jobs
+    let mut owner_jobs: Vec<_> = jobs
         .iter()
         .filter(|j| !excluded(s(&j["project"]), s(&j["cwd"]), clients))
         .cloned()
         .collect();
+    cc_job_policy::subwork::mark_live(&mut owner_jobs, |j| {
+        ["pid", "codex_pid"]
+            .iter()
+            .any(|key| cc_scheduler::policy::matches(j, key, ps))
+    });
     cc_job_policy::work_owner::reconcile_todos_if(db, &owner_jobs, |item| {
         !excluded(
             s(&item["project"]),

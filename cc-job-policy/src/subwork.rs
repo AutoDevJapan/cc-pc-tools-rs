@@ -234,6 +234,12 @@ pub fn permits(candidate: &Value, owner: &Value) -> bool {
 }
 
 /// Validate an actual queued job against the authoritative relation and prepared launch.
+pub fn admission(child: &Value) -> Value {
+    json!({"key":child["scheduler"]["key"],"spec":child["spec"],"needs":child["needs"],
+        "subwork":child["subwork"],"worktree":child["scheduler"]["worktree"]})
+}
+
+/// A launch key created by preparation alone is not evidence of resource admission.
 pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), String> {
     let child = item(db, &job["todo_id"])?;
     let ownership = from_job(job);
@@ -243,6 +249,7 @@ pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), St
         || child["dispatchable"] != true
         || child["spec"] != job["subwork_spec"]
         || child["needs"] != job["assigned_needs"]
+        || child["scheduler"]["subwork_admission"] != admission(child)
         || !same_repo(&ownership, &child["subwork"]["owner"])
         || s(&ownership, "worktree") != norm(Path::new(s(job, "cwd")))
         || (ownership["pr"].is_u64()

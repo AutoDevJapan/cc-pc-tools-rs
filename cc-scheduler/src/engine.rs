@@ -1023,6 +1023,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             if current["subwork"].is_object() {
                 let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
                     .map_err(|_| Error("InvalidSubwork"))?;
+                // Publish proof of this resource/capacity check, not just preparation's launch key.
+                let receipt = cc_job_policy::subwork::admission(&prepared);
+                let saved = self.edit(&prepared["id"], |row| {
+                    if row["status"] == "todo"
+                        && row["scheduler"]["key"] == prepared["scheduler"]["key"]
+                        && launch_inputs(row) == launch_inputs(&prepared)
+                    {
+                        row["scheduler"]["subwork_admission"] = receipt.clone();
+                    }
+                })?;
+                if saved["status"] != "todo"
+                    || launch_inputs(&saved) != launch_inputs(&prepared)
+                    || saved["scheduler"]["subwork_admission"] != receipt
+                {
+                    return Ok(());
+                }
                 prepared["scheduler"]["subwork_parent_job"] = json!(parent);
             }
             // Sampling may yield while the owner changes the requested model.

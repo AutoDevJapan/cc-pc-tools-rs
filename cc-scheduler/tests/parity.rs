@@ -16,6 +16,10 @@ fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
         let mut sub = subwork_support::Fixture::new();
         sub.register();
         sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("subwork_admission");
         sub.jobs[0]["pid"] = json!(1);
         sub.jobs[0]["created_at"] = json!(T - 1200.);
         sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
@@ -39,6 +43,10 @@ fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
             f.e.report
         );
         assert!(f.get(2)["wait_on"].is_null());
+        assert_eq!(
+            f.get(2)["scheduler"]["subwork_admission"].is_object(),
+            gate == "open"
+        );
         if gate == "open" {
             assert_eq!(
                 f.e.backend.launched[0]["item"]["scheduler"]["subwork_parent_job"],

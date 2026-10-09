@@ -136,6 +136,7 @@ fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
         "wait",
         "owner_repo",
         "owner_pr",
+        "no_admission",
     ] {
         let mut f = Fixture::new();
         f.register();
@@ -150,6 +151,9 @@ fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
             "wait" => f.db["items"][1]["wait_on"] = json!([99]),
             "owner_repo" => job["work_owner"]["repository"] = json!("elsewhere/project"),
             "owner_pr" => job["work_owner"]["pr"] = json!(87),
+            "no_admission" => {
+                f.db["items"][1]["scheduler"]["subwork_admission"] = serde_json::Value::Null
+            }
             _ => unreachable!(),
         }
         assert!(

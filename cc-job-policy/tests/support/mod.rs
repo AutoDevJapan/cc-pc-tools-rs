@@ -67,6 +67,8 @@ impl Fixture {
             false,
         )
         .unwrap();
+        self.db["items"][1]["scheduler"]["subwork_admission"] =
+            subwork::admission(&self.db["items"][1]);
     }
     pub fn child_job(&self) -> Value {
         let row = &self.db["items"][1];

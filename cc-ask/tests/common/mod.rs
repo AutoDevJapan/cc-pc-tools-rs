@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -15,6 +15,7 @@ pub struct Harness {
 }
 pub struct Fake {
     pub recover_fail: bool,
+    pub reboot_recover_fail: bool,
     pub codex_directories: Vec<String>,
     pub channels: Vec<Value>,
     pub root: PathBuf,
@@ -65,6 +66,7 @@ impl Harness {
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
             recover_fail: false,
+            reboot_recover_fail: false,
             codex_directories: vec![],
             channels: vec![],
             root: path.clone(),
@@ -416,6 +418,12 @@ impl Fake {
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
+        if argv.iter().any(|a| a == "recover-reboot") {
+            return Ok(Output {
+                code: if self.reboot_recover_fail { 1 } else { 0 },
+                ..Default::default()
+            });
+        }
         if argv.iter().any(|a| a == "--summary") {
             let p = self.root.join("board-status.json");
             return Ok(Output {
@@ -548,11 +556,9 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(
-                        chrono::DateTime::from_timestamp(self.now as i64, 0)
-                            .unwrap()
-                            .to_rfc3339()
-                    );
+                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
+                        .unwrap()
+                        .to_rfc3339());
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()

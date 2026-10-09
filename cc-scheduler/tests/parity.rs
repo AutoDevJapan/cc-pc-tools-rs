@@ -1,12 +1,47 @@
 //! Offline scheduler checks; no real job launch, cancellation, Discord or credentials.
 use cc_scheduler::{backend::*, common::*, engine::*, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
 const T: f64 = 100000.;
+
+#[test]
+fn reboot_deployment_preserves_installed_subscription_model_validation() {
+    for model in [
+        "gpt-6.1-sol",
+        "anthropic/claude-sonnet-5-5",
+        "anthropic/claude-haiku-5-5",
+    ] {
+        assert!(valid_model(model), "{model}");
+    }
+    for model in [
+        "anthropic/",
+        "anthropic/../model",
+        "anthropic/a/b",
+        "-model",
+        "model --flag",
+    ] {
+        assert!(!valid_model(model), "{model}");
+    }
+    assert!(!valid_model(&format!("anthropic/{}", "a".repeat(71))));
+}
+
+#[test]
+fn reboot_launch_reservation_is_not_marked_lost_between_spawn_retries() {
+    let mut job = json!({"status":"queued","created_at":1,
+        "queue_restart_pending":true,"reboot_launch_pending":true});
+    assert!(alive(&job, &Processes::new(), T));
+    job["cancel_requested"] = json!(true);
+    assert!(!alive(&job, &Processes::new(), T));
+    job["cancel_requested"] = json!(false);
+    job["status"] = json!("cancelled");
+    assert!(!alive(&job, &Processes::new(), T));
+    job["status"] = json!("lost");
+    assert!(!alive(&job, &Processes::new(), T));
+}
 
 fn cargo_gate_fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
     let temp = tempfile::tempdir().unwrap();
@@ -30,14 +65,12 @@ fn cargo_gate_admission_uses_build_slots_not_worker_lifetime() {
     assert!(busy.contains("civ6"));
     // Admission probes release every lock; the real gate can immediately acquire them.
     for slot in 0..3 {
-        assert!(
-            ByteLock::acquire(
-                &gate.join(format!("cargo-build.lock.{slot}")),
-                Duration::ZERO
-            )
-            .unwrap()
-            .is_some()
-        );
+        assert!(ByteLock::acquire(
+            &gate.join(format!("cargo-build.lock.{slot}")),
+            Duration::ZERO
+        )
+        .unwrap()
+        .is_some());
     }
 }
 
@@ -63,11 +96,9 @@ fn cargo_gate_admission_allows_three_targets_and_waits_when_full() {
         assert_eq!(busy.contains("cargo"), slot == 2);
     }
     held.pop();
-    assert!(
-        !resources_busy_with_lock(&[], &[], &processes, T, &home)
-            .unwrap()
-            .contains("cargo")
-    );
+    assert!(!resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
 }
 
 #[test]
@@ -1023,12 +1054,10 @@ fn preparation_retains_previous_result_session_and_redesigns_repeated_continuati
         Path::new("prompt.md"),
         &json!({"model":"gpt-6.1-sol","effort":"high"}),
     );
-    assert!(
-        command
-            .args
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-    );
+    assert!(command
+        .args
+        .windows(2)
+        .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
 }
 #[test]
 fn legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing() {
@@ -1066,12 +1095,10 @@ fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
             Path::new("prompt.md"),
             &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
         );
-        assert!(
-            command
-                .args
-                .windows(2)
-                .any(|pair| pair == ["--sandbox", expected])
-        );
+        assert!(command
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--sandbox", expected]));
     }
 }
 #[test]
@@ -1166,11 +1193,9 @@ fn revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive() {
     assert!(!busy.contains("civ6"));
     assert!(busy.contains("cargo"));
     write_json(&home.join("civ6.lock"), &json!({"job":"new-holder"}), 0).unwrap();
-    assert!(
-        resources_busy_with_lock(&[], &[old], &processes, T, home)
-            .unwrap()
-            .contains("civ6")
-    );
+    assert!(resources_busy_with_lock(&[], &[old], &processes, T, home)
+        .unwrap()
+        .contains("civ6"));
 }
 
 #[test]
@@ -1679,11 +1704,10 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
     assert_eq!(git.calls.len(), 4);
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree")));
 }
 #[test]
 fn test_step_entrypoint_never_raises() {
@@ -1782,17 +1806,13 @@ fn test_todo_live_lock_is_not_stolen_by_old_timestamp() {
     let lock = ByteLock::acquire(&lockpath, Duration::ZERO)
         .unwrap()
         .unwrap();
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_none()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_none());
     drop(lock);
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_some()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_some());
     assert!(lockpath.exists());
 }
 #[test]
@@ -1844,11 +1864,9 @@ fn test_question_close_failure_retries_close_without_reprocessing_reply() {
     let count = f.e.backend.reply_count;
     f.e.answers().unwrap();
     assert_eq!(f.e.backend.reply_count, count);
-    assert!(
-        f.get(1)["scheduler"]
-            .get("question_close_pending")
-            .is_none()
-    );
+    assert!(f.get(1)["scheduler"]
+        .get("question_close_pending")
+        .is_none());
 }
 #[test]
 fn test_new_hang_does_not_create_another_owner_question() {
@@ -1980,13 +1998,11 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .unwrap();
     cc_ask::resume::cmd_resume(&mut ctx, &mut false).unwrap();
     // Answer receipts now inspect scheduler questions too; the generic path still must never launch.
-    assert!(
-        !calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|call| call["argv"].is_array())
-    );
+    assert!(!calls
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|call| call["argv"].is_array()));
 }
 #[test]
 fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
@@ -2017,15 +2033,17 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
                 .collect::<Vec<_>>()
         })
         .collect();
-    assert_eq!(launched.len(), 6);
-    assert!(launched[0].iter().any(|v| v.ends_with("scheduler.exe")));
-    assert_eq!(launched[0].last().unwrap(), "recover");
-    assert!(launched[1].iter().any(|v| v.ends_with("todo.exe")));
-    assert!(launched[2].iter().any(|v| v.ends_with("scheduler.exe")));
-    assert_eq!(launched[2].last().unwrap(), "step");
-    assert!(launched[3].iter().any(|v| v.ends_with("shepherd.exe")));
-    assert_eq!(launched[4][0], "tasklist");
+    assert_eq!(launched.len(), 7);
+    assert!(launched[0].iter().any(|v| v == "recover-reboot"));
+    assert_eq!(launched[0].last().unwrap(), "--apply");
+    assert!(launched[1].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[1].last().unwrap(), "recover");
+    assert!(launched[2].iter().any(|v| v.ends_with("todo.exe")));
+    assert!(launched[3].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[3].last().unwrap(), "step");
+    assert!(launched[4].iter().any(|v| v.ends_with("shepherd.exe")));
     assert_eq!(launched[5][0], "tasklist");
+    assert_eq!(launched[6][0], "tasklist");
 }
 #[test]
 fn test_hidden_wrapper_runs_rust_tick_with_window_style_zero() {
@@ -2321,11 +2339,10 @@ fn junction_repo_resolves_to_original_worktree_container() {
     };
     fs::create_dir(f.repo.join(".git")).unwrap();
     ensure_worktree(&mut git, alias.to_str().unwrap(), &row).unwrap();
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch")));
 }
 #[test]
 fn attempts_and_retries_remain_json_integers() {

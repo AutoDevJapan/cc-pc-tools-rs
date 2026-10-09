@@ -529,6 +529,37 @@ fn patrol_rechecks_new_process_after_selection_and_recover_failure_blocks_dispat
     assert!(!recover_before_launch(&mut h.ctx));
     h.fake.borrow_mut().recover_fail = false;
     assert!(recover_before_launch(&mut h.ctx));
+    let runs = &h.fake.borrow().runs;
+    let reboot = runs
+        .iter()
+        .rposition(|(argv, _)| argv.iter().any(|a| a == "recover-reboot"))
+        .unwrap();
+    let scheduler = runs
+        .iter()
+        .rposition(|(argv, _)| argv.last().is_some_and(|a| a == "recover"))
+        .unwrap();
+    assert!(reboot < scheduler);
+    assert!(runs[reboot].0.iter().any(|a| a == "--apply"));
+}
+
+#[test]
+fn reboot_recovery_failure_prevents_scheduler_from_resurrecting_same_work() {
+    let mut h = setup();
+    assert!(recover_before_launch(&mut h.ctx));
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|a| a == "recover")));
+    h.fake.borrow_mut().runs.clear();
+    h.fake.borrow_mut().reboot_recover_fail = true;
+    assert!(!recover_before_launch(&mut h.ctx));
+    assert_eq!(h.fake.borrow().runs.len(), 1);
+    assert!(h.fake.borrow().runs[0]
+        .0
+        .iter()
+        .any(|a| a == "recover-reboot"));
 }
 
 #[test]

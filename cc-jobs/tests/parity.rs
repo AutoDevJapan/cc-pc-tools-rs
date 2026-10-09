@@ -1,6 +1,652 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
 
+mod reboot_recovery {
+    use super::*;
+    const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
+    fn interrupted(t: &Test, id: &str, status: &str) -> Value {
+        *t.rt.boot.lock().unwrap() = Some(parse_iso("2026-10-01T11:55:00+09:00").unwrap());
+        let j = t.put(job(json!({"id":id,"name":id,"status":status,
+            "created_at":"2026-10-01T11:00:00+09:00",
+            "started_at":"2026-10-01T11:01:00+09:00",
+            "last_event_at":"2026-10-01T11:54:00+09:00",
+            "finished_at":"2026-10-01T11:56:00+09:00",
+            "last_error":"scheduler: both job roots are gone",
+            "pid":12345,"pid_created":12,"codex_pid":23456,"codex_pid_created":23,
+            "thread_id":SESSION_ID,"cwd":t.ctx.root,"sandbox":"danger-full-access",
+            "mcp_profile":"browser","codex":"codex.CMD"})));
+        fs::write(t.ctx.job_dir(id).join("prompt.md"), "元の依頼文").unwrap();
+        j
+    }
+    #[test]
+    fn preview_preserves_state_then_resume_preserves_identity_and_logs_one_batch() {
+        let t = Test::new();
+        let a = interrupted(&t, "reboot-a", "lost");
+        let mut b = interrupted(&t, "reboot-b", "queued");
+        b["thread_id"] = Value::Null;
+        b["started_at"] = Value::Null;
+        t.ctx.save(&b).unwrap();
+        let preview = t.cli(&["recover-reboot"]);
+        assert_eq!(preview.0.unwrap(), 0);
+        assert!(preview.1.contains("would_queue"));
+        assert_eq!(t.ctx.load("reboot-a").unwrap(), a);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        assert_eq!(
+            t.ctx
+                .recover_reboot(true)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        let resumed = t.ctx.load("reboot-a").unwrap();
+        for field in ["id", "name", "cwd", "sandbox", "mcp_profile", "thread_id"] {
+            assert_eq!(resumed[field], a[field], "{field}");
+        }
+        assert_eq!(resumed["status"], "queued");
+        assert_eq!(resumed["resume_session"], SESSION_ID);
+        assert!(
+            codex_args(&resumed)
+                .windows(2)
+                .any(|w| w == ["resume", SESSION_ID])
+        );
+        assert_eq!(t.ctx.load("reboot-b").unwrap()["resume_session"], "");
+        assert_eq!(
+            fs::read_to_string(t.ctx.job_dir("reboot-b").join("prompt.md")).unwrap(),
+            "元の依頼文"
+        );
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        let calls = t.rt.calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert!(calls[0].argv.iter().any(|a| a == "後片付けの記録"));
+        assert!(!calls[0].argv.iter().any(|a| a == "--notify"));
+        assert!(calls[0].argv.last().unwrap().contains("2件"));
+        assert!(calls[0].argv.last().unwrap().contains("reboot-a"));
+        assert!(calls[0].argv.last().unwrap().contains("reboot-b"));
+    }
+    #[test]
+    fn only_current_boot_interruption_is_eligible_even_with_502() {
+        for case in [
+            "failed",
+            "cancelled",
+            "cancel_requested",
+            "old_lost",
+            "new_activity",
+            "created_after_boot",
+            "normal_lost",
+            "completed",
+            "final_failure",
+            "live_root",
+        ] {
+            let t = Test::new();
+            let mut j = interrupted(&t, "excluded", "lost");
+            match case {
+                "failed" | "cancelled" => {
+                    j["status"] = json!(case);
+                    j["last_error"] = json!("502 Bad Gateway");
+                }
+                "cancel_requested" => j["cancel_requested"] = json!(true),
+                "old_lost" => j["finished_at"] = json!("2026-10-01T11:54:00+09:00"),
+                "new_activity" => j["last_event_at"] = json!("2026-10-01T11:56:00+09:00"),
+                "created_after_boot" => j["created_at"] = json!("2026-10-01T11:56:00+09:00"),
+                "normal_lost" => j["last_error"] = json!("child process could not be stopped"),
+                "completed" => j["turn_completed"] = json!(true),
+                "final_failure" => fs::write(
+                    t.ctx.job_dir("excluded").join("events.jsonl"),
+                    "{\"type\":\"turn.failed\"}\n{partial",
+                )
+                .unwrap(),
+                "live_root" => {
+                    t.rt.procs.lock().unwrap().insert(23456, 23);
+                }
+                _ => unreachable!(),
+            }
+            t.ctx.save(&j).unwrap();
+            t.ctx.recover_reboot(true).unwrap();
+            assert_eq!(t.ctx.load("excluded").unwrap(), j, "{case}");
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{case}");
+        }
+        let t = Test::new();
+        let mut j = interrupted(&t, "reconnect", "lost");
+        j["last_error"] = json!("502 Bad Gateway");
+        t.ctx.save(&j).unwrap();
+        fs::write(
+            t.ctx.job_dir("reconnect").join("events.jsonl"),
+            "{\"type\":\"error\",\"message\":\"502 Bad Gateway\"}\n{partial",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn spawn_failure_keeps_pending_claim_and_retry_never_requeues_again() {
+        let t = Test::new();
+        interrupted(&t, "pending", "running");
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        t.ctx.recover_reboot(true).unwrap();
+        let claimed = t.ctx.load("pending").unwrap();
+        assert_eq!(claimed["reboot_launch_pending"], true);
+        assert_eq!(claimed["queue_restart_pending"], true);
+        assert_eq!(claimed["status"], "queued");
+        assert!(t.ctx.supervisor_alive(&claimed));
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        t.rt.supervisor_fail.store(false, Ordering::Relaxed);
+        t.ctx.recover_reboot(true).unwrap();
+        let resumed = t.ctx.load("pending").unwrap();
+        assert_eq!(
+            resumed["reboot_recovered_at"],
+            claimed["reboot_recovered_at"]
+        );
+        assert_eq!(resumed["reboot_launch_pending"], false);
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2); // failed spawn + success
+    }
+    #[test]
+    fn deliberate_cancel_of_pending_claim_is_never_restarted() {
+        let t = Test::new();
+        let mut j = interrupted(&t, "pending-cancel", "cancelled");
+        j["reboot_launch_pending"] = json!(true);
+        j["cancel_requested"] = json!(true);
+        t.ctx.save(&j).unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.ctx.load("pending-cancel").unwrap(), j);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn concurrent_recoveries_launch_and_report_only_once() {
+        let t = Test::new();
+        interrupted(&t, "race", "lost");
+        std::thread::scope(|scope| {
+            let barrier = Arc::new(std::sync::Barrier::new(8));
+            for _ in 0..8 {
+                let barrier = barrier.clone();
+                let ctx = &t.ctx;
+                scope.spawn(move || {
+                    barrier.wait();
+                    ctx.recover_reboot(true).unwrap();
+                });
+            }
+        });
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 1);
+    }
+    #[test]
+    fn successor_and_finished_todo_prevent_recovery() {
+        for status in ["done", "block", "wait"] {
+            let t = Test::new();
+            let mut j = interrupted(&t, "todo-stop", "lost");
+            j["todo_id"] = json!(77);
+            t.ctx.save(&j).unwrap();
+            // Unique test roots share Temp's parent; use a tools-shaped context.
+            let mut ctx = t.ctx.clone();
+            ctx.root = t.ctx.root.join("tools/codex-jobs");
+            fs::create_dir_all(ctx.root.parent().unwrap().join("todo")).unwrap();
+            fs::write(
+                ctx.root.parent().unwrap().join("todo/todo.json"),
+                json!({"items":[{"id":77,"status":status,"jobs":["todo-stop"]}]}).to_string(),
+            )
+            .unwrap();
+            ctx.recover_reboot(true).unwrap();
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{status}");
+        }
+        let t = Test::new();
+        let j = interrupted(&t, "superseded", "lost");
+        t.put(job(
+            json!({"id":"new-attempt","name":"different","thread_id":SESSION_ID,
+            "created_at":"2026-10-01T11:57:00+09:00","status":"succeeded"}),
+        ));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.ctx.load("superseded").unwrap(), j);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn log_failure_retries_log_without_relaunching() {
+        let t = Test::new();
+        interrupted(&t, "log-retry", "lost");
+        t.rt.replies.lock().unwrap().push_back(Ok(Reply {
+            code: 1,
+            stdout: vec![],
+            stderr: vec![],
+        }));
+        let (result, output, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(output.contains("log_pending"));
+        assert_eq!(t.ctx.load("log-retry").unwrap()["reboot_log_pending"], true);
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(
+            t.ctx.load("log-retry").unwrap()["reboot_log_pending"],
+            false
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 2);
+    }
+    #[test]
+    fn completed_boot_receipt_skips_history_and_missing_boot_cannot_recover() {
+        let t = Test::new();
+        let lost = interrupted(&t, "cached", "lost");
+        *t.rt.boot.lock().unwrap() = None;
+        assert_eq!(t.ctx.recover_reboot(true).unwrap(), json!([]));
+        assert_eq!(t.ctx.load("cached").unwrap(), lost);
+        *t.rt.boot.lock().unwrap() = Some(parse_iso("2026-10-01T11:55:00+09:00").unwrap());
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(|path, _| {
+            assert_ne!(
+                path.file_name().unwrap(),
+                "job.json",
+                "completed boot must not rescan history"
+            );
+        }));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn queued_retry_does_not_mistake_previous_failure_for_this_attempt() {
+        let t = Test::new();
+        let mut queued = interrupted(&t, "retry", "lost");
+        queued["started_at"] = Value::Null;
+        queued["queued_at"] = json!("2026-10-01T11:54:00+09:00");
+        t.ctx.save(&queued).unwrap();
+        fs::write(
+            t.ctx.job_dir("retry").join("events.jsonl"),
+            "{\"type\":\"turn.failed\",\"_ts\":\"2026-10-01T11:53:00+09:00\"}\n",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn running_job_without_session_uses_original_prompt() {
+        let t = Test::new();
+        let mut running = interrupted(&t, "no-thread", "running");
+        running["thread_id"] = Value::Null;
+        t.ctx.save(&running).unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        let resumed = t.ctx.load("no-thread").unwrap();
+        assert_eq!(resumed["resume_session"], "");
+        assert!(!codex_args(&resumed).iter().any(|a| a == "resume"));
+        assert_eq!(
+            fs::read_to_string(t.ctx.job_dir("no-thread").join("prompt.md")).unwrap(),
+            "元の依頼文"
+        );
+    }
+    #[test]
+    fn unreadable_inventory_is_not_recorded_as_an_empty_completed_boot() {
+        let t = Test::new();
+        let original = interrupted(&t, "valid", "lost");
+        fs::create_dir(t.ctx.job_dir("broken")).unwrap();
+        fs::write(t.ctx.job_dir("broken").join("job.json"), b"{bad").unwrap();
+        let report = t.ctx.recover_reboot(true).unwrap();
+        assert!(
+            report
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|entry| entry["action"] == "deferred")
+        );
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["complete"],
+            false
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            t.ctx.load("valid").unwrap()["thread_id"],
+            original["thread_id"]
+        );
+        assert_eq!(
+            fs::read(t.ctx.job_dir("broken").join("job.json")).unwrap(),
+            b"{bad"
+        );
+        t.put(job(json!({"id":"broken","status":"failed"})));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn pending_reservation_is_released_after_todo_finishes() {
+        let t = Test::new();
+        let mut ctx = t.ctx.clone();
+        ctx.root = t.ctx.root.join("tools/codex-jobs");
+        fs::create_dir_all(ctx.root.parent().unwrap().join("todo")).unwrap();
+        let mut j = interrupted(&t, "no-longer-needed", "lost");
+        j["todo_id"] = json!(77);
+        t.ctx.save(&j).unwrap();
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        ctx.recover_reboot(true).unwrap();
+        assert_eq!(
+            t.ctx.load("no-longer-needed").unwrap()["reboot_launch_pending"],
+            true
+        );
+        fs::write(
+            ctx.root.parent().unwrap().join("todo/todo.json"),
+            json!({"items":[{"id":77,"status":"done"}]}).to_string(),
+        )
+        .unwrap();
+        ctx.recover_reboot(true).unwrap();
+        let stopped = t.ctx.load("no-longer-needed").unwrap();
+        assert_eq!(stopped["status"], "lost");
+        assert_eq!(stopped["queue_restart_pending"], false);
+        assert_eq!(stopped["reboot_launch_pending"], false);
+        assert!(!t.ctx.running_job(&stopped));
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1); // original failed spawn only
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn running_resume_ignores_prior_attempt_terminal_event() {
+        let t = Test::new();
+        let mut running = interrupted(&t, "old-terminal", "lost");
+        running["started_at"] = json!("2026-10-01T11:53:00+09:00");
+        t.ctx.save(&running).unwrap();
+        fs::write(
+            t.ctx.job_dir("old-terminal").join("events.jsonl"),
+            "{\"type\":\"turn.failed\",\"_ts\":\"2026-10-01T11:52:00+09:00\"}\n",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn guard_failure_defers_only_its_job_and_retry_reports_one_batch() {
+        let t = Test::new();
+        let mut denied = interrupted(&t, "guard-late", "lost");
+        denied["thread_id"] = Value::Null;
+        denied["cwd"] = json!(t.ctx.root.join("guard-late"));
+        fs::create_dir(t.ctx.root.join("guard-late")).unwrap();
+        t.ctx.save(&denied).unwrap();
+        interrupted(&t, "ready", "lost");
+        t.rt.recovery_guards
+            .lock()
+            .unwrap()
+            .insert(s(&denied, "cwd").into(), None);
+        let (result, _, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 75);
+        assert_eq!(t.ctx.load("guard-late").unwrap(), denied);
+        assert_eq!(t.ctx.load("ready").unwrap()["status"], "queued");
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        t.rt.recovery_guards.lock().unwrap().clear();
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 0);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 1);
+        assert!(
+            t.rt.calls.lock().unwrap()[0]
+                .argv
+                .last()
+                .unwrap()
+                .contains("2件")
+        );
+    }
+    #[test]
+    fn protected_work_is_never_mutated_or_reported() {
+        let t = Test::new();
+        let original = interrupted(&t, "protected", "lost");
+        t.rt.recovery_guards
+            .lock()
+            .unwrap()
+            .insert(s(&original, "cwd").into(), Some(true));
+        assert_eq!(t.ctx.recover_reboot(true).unwrap(), json!([]));
+        assert_eq!(t.ctx.load("protected").unwrap(), original);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn missing_unreserved_prompt_is_a_permanent_boot_skip_not_a_dispatch_blocker() {
+        let t = Test::new();
+        let original = interrupted(&t, "missing-prompt", "lost");
+        fs::rename(
+            t.ctx.job_dir("missing-prompt").join("prompt.md"),
+            t.ctx.root.join("held-prompt.md"),
+        )
+        .unwrap();
+        let (result, output, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(output.contains("skip"));
+        assert_eq!(t.ctx.load("missing-prompt").unwrap(), original);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["complete"],
+            true
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+    }
+    #[test]
+    fn protected_skip_is_cached_while_another_job_is_deferred() {
+        let t = Test::new();
+        let protected = interrupted(&t, "protected", "lost");
+        let mut later = interrupted(&t, "later", "lost");
+        later["thread_id"] = Value::Null;
+        later["cwd"] = json!(t.ctx.root.join("later"));
+        fs::create_dir(t.ctx.root.join("later")).unwrap();
+        t.ctx.save(&later).unwrap();
+        {
+            let mut guards = t.rt.recovery_guards.lock().unwrap();
+            guards.insert(s(&protected, "cwd").into(), Some(true));
+            guards.insert(s(&later, "cwd").into(), None);
+        }
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 75);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.root.join("reboot-recovery.json"))
+                .unwrap()["skipped"]["protected"],
+            "protected"
+        );
+        {
+            let mut guards = t.rt.recovery_guards.lock().unwrap();
+            // Rechecking the protected entry now fails. A cached skip must
+            // permit the remaining ordinary job to progress anyway.
+            guards.insert(s(&protected, "cwd").into(), None);
+            guards.insert(s(&later, "cwd").into(), Some(false));
+        }
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 0);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(t.ctx.load("protected").unwrap(), protected);
+    }
+}
+
+mod adaptive_config_updates {
+    use super::*;
+    #[test]
+    fn partial_update_and_deployment_defaults_preserve_owner_fixed_limit() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        t.ctx
+            .write_json(
+                &path,
+                &json!({"max_running":16,"fixed_max_running":32,
+            "adaptive":{"min_running":16},"retry_delay_seconds":77}),
+            )
+            .unwrap();
+        let patch_path = t.ctx.root.join("config-patch.json");
+        t.ctx
+            .write_json(
+                &patch_path,
+                &json!({"max_running":20,"fixed_max_running":null,
+            "adaptive":{"increase_step":3}}),
+            )
+            .unwrap();
+        let patch_file = patch_path.to_string_lossy();
+        let (result, _, _) = t.cli(&["update-queue-config", "--patch-file", &patch_file]);
+        assert_eq!(result.unwrap(), 0);
+        let saved = t.ctx.read_json(&path).unwrap();
+        assert_eq!(saved["fixed_max_running"], 32);
+        assert_eq!(saved["adaptive"]["min_running"], 16);
+        assert_eq!(saved["adaptive"]["increase_step"], 3);
+        assert_eq!(saved["retry_delay_seconds"], 77);
+        assert_eq!(saved["max_running"], 20);
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"fixed_max_running":24}), false)
+                .is_err()
+        );
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"max_running":0}), false)
+                .is_err()
+        );
+        assert_eq!(t.ctx.read_json(&path).unwrap(), saved);
+    }
+    #[test]
+    fn explicit_clear_requires_measured_healthy_samples_and_logs_once() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        let config = json!({"max_running":16,"fixed_max_running":32,"adaptive":{}});
+        t.ctx.write_json(&path, &config).unwrap();
+        for (samples, age, hardware) in [(2, 0., 32), (3, 1000., 32), (3, 0., 15)] {
+            t.ctx.write_json(&t.ctx.root.join("queue-limit-state.json"),&json!({
+                "checked_at":t.rt.epoch()-age,"hardware_max_running":hardware,"auto_ready_samples":samples,
+                "settings":cc_jobs::adaptive::AdaptiveConfig::default()})).unwrap();
+            assert!(t.ctx.update_queue_config(&json!({}), true).is_err());
+            assert_eq!(t.ctx.read_json(&path).unwrap(), config);
+        }
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "checked_at":t.rt.epoch(),"hardware_max_running":32,"auto_ready_samples":3,
+            "settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        let (result, _, _) = t.cli(&["update-queue-config", "--clear-fixed"]);
+        assert_eq!(result.unwrap(), 0);
+        assert!(
+            t.ctx
+                .read_json(&path)
+                .unwrap()
+                .get("fixed_max_running")
+                .is_none()
+        );
+        let log = t.ctx.root.join("queue-config.CHANGES.txt");
+        assert_eq!(fs::read_to_string(&log).unwrap().lines().count(), 1);
+        t.ctx.update_queue_config(&json!({}), true).unwrap();
+        assert_eq!(fs::read_to_string(log).unwrap().lines().count(), 1);
+    }
+    #[test]
+    fn simultaneous_policy_change_cannot_clear_using_old_measurements() {
+        let t = Test::new();
+        let path = t.ctx.root.join("queue-config.json");
+        let config = json!({"max_running":16,"fixed_max_running":32,"adaptive":{}});
+        t.ctx.write_json(&path, &config).unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "checked_at":t.rt.epoch(),"hardware_max_running":32,"auto_ready_samples":3,
+            "settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        assert!(
+            t.ctx
+                .update_queue_config(&json!({"adaptive":{"cpu_percent":60.}}), true)
+                .is_err()
+        );
+        assert_eq!(t.ctx.read_json(&path).unwrap(), config);
+    }
+    #[test]
+    fn removing_fixed_override_uses_shadow_provider_brakes_immediately() {
+        let t = Test::new();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({
+            "max_running":16,"fixed_max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"fixed","checked_at":t.rt.epoch(),"hardware_max_running":40,
+            "max_running":0,"claude_max_running":40,"preferred_provider":"anthropic",
+            "auto_ready_samples":3,"settings":cc_jobs::adaptive::AdaptiveConfig::default()}),
+            )
+            .unwrap();
+        let before = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                before["max_running"].clone(),
+                before["codex_max_running"].clone()
+            ),
+            (json!(32), json!(32))
+        );
+        t.ctx.update_queue_config(&json!({}), true).unwrap();
+        let after = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
+        assert_eq!(
+            (
+                after["max_running"].clone(),
+                after["codex_max_running"].clone()
+            ),
+            (json!(40), json!(0))
+        );
+        assert_eq!(after["preferred_provider"], "anthropic");
+    }
+    #[test]
+    fn provider_only_waits_do_not_grow_the_hardware_ceiling() {
+        let t = Test::new();
+        let now = t.rt.epoch();
+        let cfg = cc_jobs::adaptive::AdaptiveConfig::default();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({"max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-limit-state.json"),
+                &json!({
+            "mode":"auto","checked_at":now-60.,"hardware_max_running":32,
+            "max_running":0,"claude_max_running":32,"settings":cfg,
+            "machine":{"cpu_times":[100,200,100]}}),
+            )
+            .unwrap();
+        t.put(job(json!({"id":"codex-demand","status":"queued","model":"gpt-6.1-sol",
+            "model_explicit":true,"pid":std::process::id(),"pid_created":123,"queued_at":t.rt.now()})));
+        let report = t
+            .ctx
+            .queue_report(&t.ctx.list_jobs(&HashSet::new()))
+            .unwrap();
+        assert_eq!(report["queued"][0]["reason"]["hardware_limited"], false);
+        t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+        t.ctx.adjust_limit().unwrap();
+        let state = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        assert_eq!(state["queued"], 0);
+        assert_eq!(state["hardware_max_running"], 32);
+    }
+    #[test]
+    fn fixed_mode_keeps_admission_fixed_while_sampling_shadow_automatic_limit() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.ctx
+            .write_json(
+                &t.ctx.root.join("queue-config.json"),
+                &json!({
+            "max_running":16,"fixed_max_running":32,"adaptive":{}}),
+            )
+            .unwrap();
+        t.ctx.adjust_limit().unwrap();
+        t.rt.tick(61.);
+        t.rt.queue_sample.lock().unwrap().cpu_times = Some([180, 300, 100]);
+        t.ctx.adjust_limit().unwrap();
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 2);
+        assert_eq!(t.ctx.queue_config().unwrap().max_running, 32);
+        let state = t
+            .ctx
+            .read_json(&t.ctx.root.join("queue-limit-state.json"))
+            .unwrap();
+        assert_eq!(state["mode"], "fixed");
+        assert!(state["hardware_max_running"].as_u64().unwrap() >= 16);
+        assert!(state["cpu_percent"].is_number());
+    }
+}
+
 mod claude_routing {
     use super::*;
     fn setup(t: &Test) {
@@ -1037,7 +1683,7 @@ mod queue_regressions {
             .unwrap();
         assert_eq!(t.ctx.queue_config().unwrap().max_running, 7);
         t.ctx.adjust_limit().unwrap();
-        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 1);
+        assert_eq!(t.rt.queue_samples.load(Ordering::Relaxed), 2);
         let s = t.ctx.limit_status(&t.ctx.queue_config().unwrap()).unwrap();
         assert_eq!(s["mode"], "fixed");
     }
@@ -3813,6 +4459,8 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    boot: Mutex<Option<f64>>,
+    recovery_guards: Mutex<HashMap<String, Option<bool>>>,
     summary_calls: AtomicUsize,
     summary_fail: AtomicBool,
     queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
@@ -3857,6 +4505,8 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            boot: Mutex::new(None),
+            recovery_guards: Mutex::new(HashMap::new()),
             summary_calls: AtomicUsize::new(0),
             summary_fail: AtomicBool::new(false),
             queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
@@ -3953,6 +4603,19 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn boot_epoch(&self) -> Option<f64> {
+        *self.boot.lock().unwrap()
+    }
+    fn recovery_protected(&self, cwd: &str) -> io::Result<bool> {
+        match self.recovery_guards.lock().unwrap().get(cwd) {
+            Some(None) => Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "fixture guard timeout",
+            )),
+            Some(Some(protected)) => Ok(*protected),
+            None => Ok(false),
+        }
+    }
     fn work_checkout(&self, _cwd: &str) -> Value {
         json!({})
     }

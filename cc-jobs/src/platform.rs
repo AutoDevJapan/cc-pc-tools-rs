@@ -173,6 +173,13 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    /// None on unsupported platforms and fixture runtimes.
+    fn boot_epoch(&self) -> Option<f64> {
+        None
+    }
+    fn recovery_protected(&self, _cwd: &str) -> io::Result<bool> {
+        Ok(false)
+    }
     /// Fixture runtimes use virtual checkout metadata; production reads local Git files.
     fn work_checkout(&self, cwd: &str) -> Value {
         cc_job_policy::work_owner::checkout(cwd)
@@ -220,7 +227,23 @@ pub trait Runtime: Send + Sync {
         if provider == "anthropic" {
             argv.extend(["--quota".into(), "--refresh".into()]);
         }
-        match self.call(Call::new(argv, vec![], timeout as f64)) {
+        let reply = self.call(Call::new(argv, vec![], timeout as f64));
+        if provider == "openai" {
+            let cli = reply
+                .as_ref()
+                .ok()
+                .filter(|r| r.code == 0)
+                .and_then(|r| serde_json::from_slice::<Value>(&r.stdout).ok());
+            let cache = env
+                .get("USERPROFILE")
+                .and_then(|home| {
+                    std::fs::read(Path::new(home).join(".opencodex/codex-quota-cache.json")).ok()
+                })
+                .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                .unwrap_or(Value::Null);
+            return crate::adaptive::parse_codex_quotas(cli.as_ref(), &cache, at);
+        }
+        match reply {
             Ok(reply) if reply.code == 0 => serde_json::from_slice::<Value>(&reply.stdout)
                 .map(|v| crate::adaptive::parse_quotas(&v, at))
                 .unwrap_or_else(|_| unavailable()),
@@ -440,6 +463,39 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn boot_epoch(&self) -> Option<f64> {
+        #[cfg(windows)]
+        {
+            Some(
+                self.epoch()
+                    - unsafe { windows_sys::Win32::System::SystemInformation::GetTickCount64() }
+                        as f64
+                        / 1000.,
+            )
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
+    }
+    fn recovery_protected(&self, cwd: &str) -> io::Result<bool> {
+        let reply = self.call(Call::new(
+            vec![
+                "D:/CC/Tools/client-records/scrub391.exe".into(),
+                "--guard-path".into(),
+                cwd.into(),
+            ],
+            vec![],
+            2.,
+        ))?;
+        if reply.code != 0 {
+            return Err(io::Error::other("recovery resource guard unavailable"));
+        }
+        serde_json::from_slice::<Value>(&reply.stdout)
+            .ok()
+            .and_then(|v| v["client_resource"].as_bool())
+            .ok_or_else(|| io::Error::other("invalid recovery resource guard"))
+    }
     fn epoch(&self) -> f64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

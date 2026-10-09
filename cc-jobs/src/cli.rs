@@ -23,6 +23,9 @@ pub fn help_text(command: &str) -> &'static str {
         "recover-429" => {
             "usage: codex_jobs.exe recover-429 --since <RFC3339> [--todo-file <path>] [--apply]\n\nWithout --apply, print the recovery plan only.\n"
         }
+        "recover-reboot" => {
+            "usage: codex_jobs.exe recover-reboot [--apply]\n\nRecover only jobs interrupted by the current Windows boot; preview without --apply.\n"
+        }
         "recover-children" => {
             "usage: codex_jobs.exe recover-children --since <RFC3339> [--apply]\n\nLink old queued children and recover never-started cancelled children of running parents.\n"
         }
@@ -89,8 +92,10 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "backfill",
         "_supervise",
         "recover-429",
+        "recover-reboot",
         "reload-queue",
         "adjust-limit",
+        "update-queue-config",
         "recover-children",
         "cleanup-supervisors",
         "rename-project",
@@ -128,7 +133,10 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "tail" => name == "follow",
                 "rate" => name == "force",
                 "cancel" => name == "recovery",
-                "recover-429" | "recover-children" | "cleanup-supervisors" => name == "apply",
+                "update-queue-config" => name == "clear-fixed",
+                "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
+                    name == "apply"
+                }
                 _ => false,
             };
             let allowed = match cmd.as_str() {
@@ -165,8 +173,10 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "cancel" => name == "recovery",
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
+                "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
+                "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
             };
             if !allowed {
@@ -457,6 +467,15 @@ impl Context {
                 )?;
                 Ok(0)
             }
+            "recover-reboot" => {
+                let report = self.recover_reboot(a.flag("apply"))?;
+                let deferred = a.flag("apply")
+                    && report.as_array().is_some_and(|entries| {
+                        entries.iter().any(|entry| entry["action"] == "deferred")
+                    });
+                writeln!(out, "{}", pretty(&report))?;
+                Ok(if deferred { 75 } else { 0 })
+            }
             "reload-queue" => {
                 writeln!(out, "{}", pretty(&self.reload_queue()?))?;
                 Ok(0)
@@ -467,6 +486,19 @@ impl Context {
                     out,
                     "{}",
                     pretty(&self.limit_status(&self.queue_config()?)?)
+                )?;
+                Ok(0)
+            }
+            "update-queue-config" => {
+                let patch = if let Some(file) = a.value("patch-file") {
+                    self.read_json(Path::new(file))?
+                } else {
+                    json!({})
+                };
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.update_queue_config(&patch, a.flag("clear-fixed"))?)
                 )?;
                 Ok(0)
             }

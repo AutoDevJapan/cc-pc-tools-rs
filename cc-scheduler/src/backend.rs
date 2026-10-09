@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -41,7 +41,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -165,9 +165,13 @@ pub fn safe_text(text: &str) -> String {
     text
 }
 pub fn valid_model(m: &str) -> bool {
-    regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
-        .unwrap()
-        .is_match(m)
+    // Preserve the installed scheduler's subscription-model support when
+    // deploying the reboot reservation policy alongside it.
+    static MODEL_SYNTAX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    m.len() <= 80
+        && MODEL_SYNTAX
+            .get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap())
+            .is_match(m.strip_prefix("anthropic/").unwrap_or(m))
 }
 pub fn valid_effort(e: &str) -> bool {
     matches!(

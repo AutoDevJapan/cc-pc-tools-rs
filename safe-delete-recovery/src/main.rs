@@ -7,17 +7,23 @@ use std::{
     collections::BTreeMap,
     ffi::OsStr,
     fs::{self, OpenOptions},
-    io::Write,
+    io::{Read, Write},
     os::windows::{ffi::OsStrExt, fs::MetadataExt, process::CommandExt},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, ExitStatus, Stdio},
     time::{Duration, Instant},
 };
 
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
+const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
+const REBOOT_REPORT_SHA256: &str =
+    "5b87f8926728c7e692e0ca14d8e02655a2f25474d85fee998eb9c756afd5a5e1";
+const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
+mod scoopa;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -59,11 +65,79 @@ struct Ticket {
     source: String,
     destination: String,
     nodes: BTreeMap<String, Node>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    backlink: Option<BacklinkTicket>,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BacklinkTicket {
+    original: Node,
+    replacement: Node,
+    admin: Node,
+    common: Node,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ResumeProof {
+    ticket_sha256: String,
+    files: BTreeMap<String, String>,
+}
+
+// Only the explicitly authorized 2050 receipt may accept directory write-time
+// drift. Every name and every other Win32 metadata field remains exact.
+fn same_inventory(id: &str, old: &BTreeMap<String, Node>, now: &BTreeMap<String, Node>) -> bool {
+    old.len() == now.len()
+        && old.iter().all(|(name, expected)| {
+            let Some(actual) = now.get(name) else {
+                return false;
+            };
+            let mut expected = expected.clone();
+            if id == RESUME_ID && expected.attributes & 0x10 != 0 {
+                expected.written = actual.written;
+            }
+            expected == *actual
+        })
+}
+
+fn file_digests(root: &Path, nodes: &BTreeMap<String, Node>) -> Result<BTreeMap<String, String>> {
+    let mut files = BTreeMap::new();
+    for (relative, expected) in nodes.iter().filter(|(_, n)| n.attributes & 0x10 == 0) {
+        // These keys come from the fresh, validated public clone inventory.
+        let path = root.join(relative);
+        if node(&path)? != *expected {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        let mut file = fs::File::open(&path).map_err(|_| "CONTENT_PROOF_READ")?;
+        let mut hash = Sha256::new();
+        let mut buf = [0u8; 65536];
+        loop {
+            let count = file.read(&mut buf).map_err(|_| "CONTENT_PROOF_READ")?;
+            if count == 0 {
+                break;
+            }
+            hash.update(&buf[..count]);
+        }
+        if node(&path)? != *expected {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        files.insert(relative.clone(), format!("{:x}", hash.finalize()));
+    }
+    Ok(files)
+}
+enum RepoKind {
+    Clone,
+    Linked { admin: PathBuf, common: PathBuf },
+    // A fixed, read-only audit acquisition. Never invoke Git or read its contents.
+    OpaqueBare,
 }
 struct Repo {
     name: &'static str,
     origin: &'static str,
     head: String,
+    saved_ref: Option<&'static str>,
+    saved_merge: Option<String>,
+    allowed_untracked: &'static [&'static str],
+    kind: RepoKind,
 }
 struct Config {
     store: PathBuf,
@@ -71,16 +145,22 @@ struct Config {
     quarantine: PathBuf,
     repos: Vec<Repo>,
     guard: PathBuf,
+    id: &'static str,
+    project: &'static str,
+    content: &'static str,
+    pinned_identity: Option<(u32, u64)>,
+    project_alias_target: Option<PathBuf>,
+    project_alias_preservation_enabled: bool,
 }
 
 impl Config {
-    fn production() -> Result<Self> {
+    fn production(id: &str) -> Result<Self> {
         let parent = std::env::current_exe()
             .map_err(|_| "EXE_PATH")?
             .parent()
             .ok_or("EXE_PATH")?
             .to_owned();
-        Ok(Self {
+        let mut c = Self {
             store: parent.join("receipts-go"),
             temp: std::env::temp_dir(),
             quarantine: PathBuf::from(r"C:\Users\makhmeto\Downloads\削除希望"),
@@ -90,28 +170,262 @@ impl Config {
                     name: "kcaldav",
                     origin: "https://github.com/katsushi2441/kcaldav.git",
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
+                    saved_ref: None,
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Clone,
                 },
                 Repo {
                     name: "plane-jp",
                     origin: "https://github.com/katsushi2441/plane-jp.git",
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
+                    saved_ref: None,
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Clone,
                 },
             ],
-        })
+            id: ID,
+            project: "todo-2001",
+            content: "tool-verification",
+            pinned_identity: None,
+            project_alias_target: None,
+            project_alias_preservation_enabled: false,
+        };
+        let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
+        let clone = |name, origin, head: &str, saved_ref| Repo {
+            name,
+            origin,
+            head: head.into(),
+            saved_ref,
+            saved_merge: None,
+            allowed_untracked: &[],
+            kind: RepoKind::Clone,
+        };
+        match id {
+            scoopa::ID => {
+                c.id = scoopa::ID;
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.project = "scoopa-1242-ui";
+                c.content = "review-and-validation";
+                c.temp = PathBuf::from(r"C:\Users\makhmeto\AppData\Local\Temp");
+                c.pinned_identity = Some((2229119083, 9851624200190911));
+                c.repos.clear();
+                c.project_alias_target = Some(PathBuf::from(scoopa::PROJECT_TARGET));
+                // Preserve the owned link itself; its target is neither opened nor owned.
+                c.project_alias_preservation_enabled = true;
+            }
+            ID => (),
+            "76005ef45fe612479fd920447642497e" => {
+                c.id = "76005ef45fe612479fd920447642497e";
+                c.project = "tools";
+                c.content = "todo938";
+                c.repos = vec![
+                    clone(
+                        "repo",
+                        public,
+                        "d98217fe0922f217fda7b12564bfa826fc772bc0",
+                        Some("refs/remotes/origin/fix/todo938-secret-redaction"),
+                    ),
+                    Repo {
+                        name: "customer-audit.git",
+                        origin: "",
+                        head: String::new(),
+                        saved_ref: None,
+                        saved_merge: None,
+                        allowed_untracked: &[],
+                        kind: RepoKind::OpaqueBare,
+                    },
+                ];
+            }
+            "38e3fbc1767b66eef9127f2a27567c8a" => {
+                c.id = "38e3fbc1767b66eef9127f2a27567c8a";
+                c.project = "chrome-tab-leak";
+                c.content = "implementation-review";
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work6",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            "438ee7d343a6c84558201e2778d2c890" => {
+                c.id = "438ee7d343a6c84558201e2778d2c890";
+                c.project = "youtube-job-compat";
+                c.content = "verified-main-tool-build";
+                c.repos = vec![clone(
+                    "source",
+                    "git@github.com:AutoDevJapan/cc-pc-tools-rs.git",
+                    "0b017ae9c35dc499fbe9014f72288064576e7c2b",
+                    Some("refs/remotes/origin/main"),
+                )];
+            }
+            CARGO_ID => {
+                c.id = CARGO_ID;
+                c.project = "cc-jobs";
+                c.content = "dynamic-cargo-gate";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 2814749782464451));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "e5b9fb2858b0fc4357dcb9e3745a2ddaa1240801".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/dynamic-cargo-gate-2064"),
+                    allowed_untracked: &[],
+                    saved_merge: Some("2a676778c27f9225060dfaf5758b0cdfe8ef94c9".into()),
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            REBOOT_ID => {
+                c.id = REBOOT_ID;
+                c.project = "cc-jobs";
+                c.content = "reboot-recovery";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 13229323920896790));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/reboot-job-recovery"),
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work10",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            "75cd71384cb094e47b19cf5d39b5b025" => {
+                c.id = "75cd71384cb094e47b19cf5d39b5b025";
+                c.project = "cc-jobs";
+                c.content = "provider-routing-review";
+                c.repos = vec![Repo {
+                    name: "worktree",
+                    origin: public,
+                    head: "70a48f412331b232c3cebac99bd36bb34f9cc41f".into(),
+                    saved_ref: Some("refs/remotes/origin/archive/claude-routing-2063"),
+                    saved_merge: None,
+                    allowed_untracked: &[
+                        ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
+                        ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
+                    ],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/worktree2",
+                        ),
+                        common: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git",
+                        ),
+                    },
+                }];
+            }
+            "cfee3edefd3704d67c140ca6952dd7ce" => {
+                c.id = "cfee3edefd3704d67c140ca6952dd7ce";
+                c.project = "todo1935";
+                c.content = "m1-finite-validation";
+                c.repos = vec![Repo {
+                    name: "fixed",
+                    // This is a fixed local verification snapshot, not a public clone.
+                    origin: "",
+                    head: "0f01ed0a36dcc5baea61bf1f689267a362f8784c".into(),
+                    saved_ref: None,
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Tools/agent-workspaces/todo-1842-9649f0c4667e/work/.git/worktrees/fixed",
+                        ),
+                        common: PathBuf::from(
+                            "D:/CC/Tools/agent-workspaces/todo-1842-9649f0c4667e/work/.git",
+                        ),
+                    },
+                }];
+            }
+            _ => return Err("SCOPE_NOT_AUTHORIZED"),
+        }
+        Ok(c)
     }
     fn receipt_path(&self) -> PathBuf {
-        self.store.join(format!("{ID}.json"))
+        self.store.join(format!("{}.json", self.id))
     }
     fn ticket_path(&self) -> PathBuf {
-        self.store.join(format!("{ID}.download-quarantine.json"))
+        self.store
+            .join(format!("{}.download-quarantine.json", self.id))
+    }
+    fn proof_path(&self) -> PathBuf {
+        self.store
+            .join(format!("{}.directory-resume-proof.json", self.id))
+    }
+    fn content_proof(
+        &self,
+        path: &Path,
+        nodes: &BTreeMap<String, Node>,
+        ticket: &[u8],
+        create: bool,
+    ) -> Result<()> {
+        if self.id != RESUME_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let existing_proof = if !create {
+            if !present(&self.proof_path())? {
+                return Err("RESUME_PROOF_MISSING");
+            }
+            Some(read_record(&self.proof_path(), 8 * 1024 * 1024)?)
+        } else {
+            None
+        };
+        let proof = ResumeProof {
+            ticket_sha256: format!("{:x}", Sha256::digest(ticket)),
+            files: file_digests(path, nodes)?,
+        };
+        // Re-enumerate after reading all files, including file IDs and links.
+        // A second content pass also detects changes which restore size/mtime.
+        if scan(path, &self.repos)? != *nodes
+            || file_digests(path, nodes)? != proof.files
+            || scan(path, &self.repos)? != *nodes
+        {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        let bytes = serde_json::to_vec_pretty(&proof).map_err(|_| "PROOF_JSON")?;
+        if let Some(saved) = existing_proof {
+            if saved != bytes || read_record(&self.proof_path(), 8 * 1024 * 1024)? != saved {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            return Ok(());
+        }
+        publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
-        self.quarantine
-            .join(format!("20261008-todo-2001-tool-verification-{}", &ID[..8]))
+        if self.id == ID {
+            return self
+                .quarantine
+                .join(format!("20261008-todo-2001-tool-verification-{}", &ID[..8]));
+        }
+        self.quarantine.join(format!(
+            "20261009-{}-{}-{}",
+            self.project, self.content, self.id
+        ))
     }
 
     fn load(&self, id: &str) -> Result<Receipt> {
-        if id != ID {
+        if id != self.id {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         checked(&self.receipt_path())?;
@@ -122,13 +436,16 @@ impl Config {
         let r: Receipt =
             serde_json::from_slice(&fs::read(self.receipt_path()).map_err(|_| "RECEIPT_READ")?)
                 .map_err(|_| "INVALID_RECEIPT_FILE")?;
-        let expected = self.temp.join(format!("codex-owned-{ID}"));
+        let expected = self.temp.join(format!("codex-owned-{}", self.id));
         if r.identity.version != 2
-            || r.identity.id != ID
-            || r.identity.project != "todo-2001"
-            || r.identity.content != "tool-verification"
+            || r.identity.id != self.id
+            || r.identity.project != self.project
+            || r.identity.content != self.content
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
+            || self.pinned_identity.is_some_and(|(volume, file_id)| {
+                r.identity.volume != volume || r.identity.file_id != file_id
+            })
         {
             return Err("RECEIPT_SCOPE_MISMATCH");
         }
@@ -151,7 +468,12 @@ impl Config {
         }
         Ok(())
     }
-    fn validate(&self, r: &Receipt, path: &Path) -> Result<BTreeMap<String, Node>> {
+    fn validate(
+        &self,
+        r: &Receipt,
+        path: &Path,
+        before_move: bool,
+    ) -> Result<BTreeMap<String, Node>> {
         checked(path)?;
         self.client_guard(path)?;
         let n = node(path)?;
@@ -163,18 +485,41 @@ impl Config {
         }
         let nodes = scan(path, &self.repos)?;
         for repo in &self.repos {
-            validate_repo(&path.join(repo.name), repo)?;
+            self.client_guard(&path.join(repo.name))?;
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                self.client_guard(admin)?;
+                self.client_guard(common)?;
+            }
+            validate_repo(&path.join(repo.name), repo, before_move)?;
         }
         Ok(nodes)
     }
     fn plan(&self, id: &str) -> Result<serde_json::Value> {
+        if self.id == scoopa::ID {
+            return scoopa::plan(self, id);
+        }
         let r = self.load(id)?;
         if r.state != "owned" {
             return Err("RECEIPT_NOT_OWNED");
         }
         let path = Path::new(&r.identity.path);
-        let nodes = self.validate(&r, path)?;
         let dest = self.destination();
+        // Git's -C/discovery runs before core.longpaths is applied. Its root
+        // must fit the startup limit even though internal object paths may not.
+        for repo in &self.repos {
+            if !matches!(repo.kind, RepoKind::OpaqueBare)
+                && dest
+                    .join("files")
+                    .join(repo.name)
+                    .as_os_str()
+                    .encode_wide()
+                    .count()
+                    > 240
+            {
+                return Err("GIT_DESTINATION_ROOT_TOO_LONG");
+            }
+        }
+        let nodes = self.validate(&r, path, true)?;
         checked(&dest)?;
         self.client_guard(&dest)?;
         if path.components().next() != dest.components().next() {
@@ -189,17 +534,46 @@ impl Config {
             .filter(|x| x.attributes & 0x10 == 0)
             .map(|x| x.size)
             .sum();
-        let why = format!(
-            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データ内の公開配布物にGit管理領域があり、通常の削除計画と退避が停止した。\n取得元・commit・未変更・外部リンクなしを確認し、Gitを含む全内容を保持して退避する。\n所有ID: {ID}\n",
-            r.identity.path
-        );
-        let ticket = Ticket {
-            id: ID.into(),
+        let why = if self.id == ID {
+            format!(
+                "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データ内の公開配布物にGit管理領域があり、通常の削除計画と退避が停止した。\n取得元・commit・未変更・外部リンクなしを確認し、Gitを含む全内容を保持して退避する。\n所有ID: {ID}\n",
+                r.identity.path
+            )
+        } else {
+            format!(
+                "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n理由: 所有一時データのGit保護による退避停止。\n仕様に固定した取得物・成果保存・リンクを確認し、Gitを含む全内容を保持する。\n所有ID: {}\n",
+                r.identity.path, self.id
+            )
+        };
+        let mut ticket = Ticket {
+            id: self.id.into(),
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
-            nodes,
+            nodes: nodes.clone(),
+            backlink: self.prepare_backlink(path, &dest.join("files"))?,
         };
-        let ticket_bytes = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
+        let mut original_bytes = None;
+        if self.id == RESUME_ID && prepared {
+            let saved = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
+            let old: Ticket = serde_json::from_slice(&saved).map_err(|_| "INVALID_TICKET")?;
+            if old.id != ticket.id
+                || old.source != ticket.source
+                || old.destination != ticket.destination
+                || old.backlink.is_some()
+                || ticket.backlink.is_some()
+                || !same_inventory(self.id, &old.nodes, &nodes)
+            {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            // Retain the original ticket verbatim. The content proof binds to
+            // those bytes; the original file is never rewritten or discarded.
+            ticket.nodes = old.nodes;
+            original_bytes = Some(saved);
+        }
+        let ticket_bytes = match original_bytes {
+            Some(saved) => saved,
+            None => serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?,
+        };
         // Publish intent before creating the destination so an interrupted plan can resume.
         write_or_verify(&self.ticket_path(), &ticket_bytes, 8 * 1024 * 1024)?;
         fs::create_dir_all(&self.quarantine).map_err(|_| "QUARANTINE_PARENT_CREATE")?;
@@ -215,24 +589,143 @@ impl Config {
             }
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
+        if self.id == RESUME_ID {
+            self.content_proof(path, &nodes, &ticket_bytes, true)?;
+        }
         Ok(
-            serde_json::json!({"id": ID, "action": "submit_quarantine_to_exec_tool", "bytes": bytes,
+            serde_json::json!({"id": self.id, "action": "submit_quarantine_to_exec_tool", "bytes": bytes,
             "entries": ticket.nodes.len(), "destination": dest, "reason": "owned_public_download_git",
             "powershell_command": format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(path), quote(&dest.join("files"))) }),
         )
     }
-    fn finish(&self, id: &str) -> Result<serde_json::Value> {
-        let mut r = self.load(id)?;
-        checked(&self.ticket_path())?;
-        let tn = node(&self.ticket_path())?;
-        if tn.links != 1 || tn.size > 8 * 1024 * 1024 {
+    /// The task wrote its final public PR description after a read-only
+    /// preflight. Permit only that fixed addition before any source movement;
+    /// archive the old intent rather than replacing or discarding its evidence.
+    fn renew_reboot_preflight(&self, id: &str, report_hash: &str) -> Result<serde_json::Value> {
+        if self.id != REBOOT_ID || id != REBOOT_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let r = self.load(id)?;
+        let destination = self.destination();
+        if r.state != "owned" || present(&destination.join("files"))? {
+            return Err("MOVEMENT_ALREADY_STARTED");
+        }
+        let archived = self.ticket_path().with_extension("pre-final-report.json");
+        let ticket_archived = present(&archived)?;
+        let ticket_path = self.ticket_path();
+        let saved = read_record(
+            if ticket_archived {
+                &archived
+            } else {
+                &ticket_path
+            },
+            8 * 1024 * 1024,
+        )?;
+        let old: Ticket = serde_json::from_slice(&saved).map_err(|_| "INVALID_TICKET")?;
+        if old.id != id
+            || old.source != r.identity.path
+            || old.destination != destination.to_string_lossy()
+        {
             return Err("INVALID_TICKET");
         }
-        let t: Ticket =
-            serde_json::from_slice(&fs::read(self.ticket_path()).map_err(|_| "TICKET_READ")?)
-                .map_err(|_| "INVALID_TICKET")?;
+        let source = Path::new(&r.identity.path);
+        let nodes = self.validate(&r, source, true)?;
+        let mut comparable = nodes.clone();
+        if old.nodes.contains_key("pr-body-final.txt")
+            || comparable.remove("pr-body-final.txt").is_none()
+        {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let report = read_record(&source.join("pr-body-final.txt"), 64 * 1024)?;
+        if format!("{:x}", Sha256::digest(&report)) != report_hash {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        // Adding the one file changes only the containing root's write time.
+        // Every original file, directory, alias and identity remains exact.
+        comparable.get_mut("").ok_or("INVALID_TICKET")?.written =
+            old.nodes.get("").ok_or("INVALID_TICKET")?.written;
+        if comparable != old.nodes {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let current_backlink = self.prepare_backlink(source, &destination.join("files"))?;
+        match (&old.backlink, &current_backlink) {
+            (None, None) => {}
+            (Some(old), Some(now))
+                if old.original == now.original
+                    && old.replacement == now.replacement
+                    && old.admin.volume == now.admin.volume
+                    && old.admin.file_id == now.admin.file_id
+                    && old.common.volume == now.common.volume
+                    && old.common.file_id == now.common.file_id => {}
+            _ => return Err("INVALID_TICKET"),
+        }
+        let replacement = Ticket {
+            id: id.into(),
+            source: r.identity.path.clone(),
+            destination: old.destination,
+            nodes,
+            backlink: old.backlink,
+        };
+        let replacement_bytes =
+            serde_json::to_vec_pretty(&replacement).map_err(|_| "TICKET_JSON")?;
+        let replacement_published = ticket_archived && present(&self.ticket_path())?;
+        if replacement_published {
+            write_or_verify(&self.ticket_path(), &replacement_bytes, 8 * 1024 * 1024)?;
+        }
+        let reason = destination.join("理由.txt");
+        let archived_reason = destination.with_extension("pre-final-report.reason.txt");
+        let reason_archived = present(&archived_reason)?;
+        if reason_archived && !ticket_archived {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_reason = if reason_archived {
+            &archived_reason
+        } else {
+            &reason
+        };
+        checked(old_reason)?;
+        let reason_node = node(old_reason)?;
+        if reason_node.attributes & (REPARSE | 0x10) != 0 || reason_node.links != 1 {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_bytes: u64 = old
+            .nodes
+            .values()
+            .filter(|n| n.attributes & 0x10 == 0)
+            .map(|n| n.size)
+            .sum();
+        let expected_reason = format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {old_bytes} byte\n理由: 所有一時データのGit保護による退避停止。\n仕様に固定した取得物・成果保存・リンクを確認し、Gitを含む全内容を保持する。\n所有ID: {}\n",
+            r.identity.path, self.id
+        );
+        if read_record(old_reason, 64 * 1024)? != expected_reason.as_bytes() {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if reason_archived && present(&reason)? && !replacement_published {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if self.validate(&r, source, true)? != replacement.nodes {
+            return Err("SOURCE_CHANGED_DURING_PREFLIGHT");
+        }
+        if !ticket_archived {
+            fs::rename(self.ticket_path(), &archived).map_err(|_| "PREFLIGHT_ARCHIVE_FAILED")?;
+        }
+        if !reason_archived {
+            fs::rename(&reason, &archived_reason).map_err(|_| "PREFLIGHT_REASON_ARCHIVE_FAILED")?;
+        }
+        publish_proof(&self.ticket_path(), &replacement_bytes)?;
+        self.plan(id)
+    }
+    fn finish(&self, id: &str) -> Result<serde_json::Value> {
+        if self.id == scoopa::ID {
+            return scoopa::finish(self, id);
+        }
+        let mut r = self.load(id)?;
+        let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
+        let t: Ticket = serde_json::from_slice(&ticket_bytes).map_err(|_| "INVALID_TICKET")?;
         let dest = self.destination();
-        if t.id != ID || t.source != r.identity.path || !same(Path::new(&t.destination), &dest) {
+        if t.id != self.id || t.source != r.identity.path || !same(Path::new(&t.destination), &dest)
+        {
             return Err("TICKET_SCOPE_MISMATCH");
         }
         if r.state == "quarantined" && r.destination.as_deref() != Some(t.destination.as_str()) {
@@ -242,10 +735,17 @@ impl Config {
             return Err("TARGET_STILL_EXISTS");
         }
         let files = dest.join("files");
-        let nodes = self.validate(&r, &files)?;
-        if nodes != t.nodes {
+        let nodes = self.validate(&r, &files, false)?;
+        let has_proof = self.id == RESUME_ID;
+        if (has_proof && !same_inventory(self.id, &t.nodes, &nodes))
+            || (!has_proof && nodes != t.nodes)
+        {
             return Err("CONTENT_CHANGED_AFTER_PLAN");
         }
+        if has_proof {
+            self.content_proof(&files, &nodes, &ticket_bytes, false)?;
+        }
+        self.repair_backlink(&r, &files, t.backlink.as_ref())?;
         let why = dest.join("理由.txt");
         checked(&why)?;
         if node(&why)?.links != 1 {
@@ -281,10 +781,94 @@ impl Config {
             fs::rename(writing, self.receipt_path()).map_err(|_| "RECEIPT_COMMIT_FAILED")?;
         }
         Ok(
-            serde_json::json!({"id":ID, "state":"quarantined", "source_absent":true,
+            serde_json::json!({"id":self.id, "state":"quarantined", "source_absent":true,
             "destination":dest, "bytes": nodes.values().filter(|x| x.attributes & 0x10 == 0).map(|x| x.size).sum::<u64>(),
             "entries":nodes.len(), "inventory_verified":true}),
         )
+    }
+    fn prepare_backlink(&self, root: &Path, destination: &Path) -> Result<Option<BacklinkTicket>> {
+        for repo in &self.repos {
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                checked_admin(admin)?;
+                let backlink = admin.join("gitdir");
+                if !same(
+                    Path::new(&bounded_text(&backlink)?),
+                    &root.join(repo.name).join(".git"),
+                ) {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                let replacement = admin.join("gitdir.todo2052-repair");
+                let text = format!("{}\n", destination.join(repo.name).join(".git").display());
+                if present(&replacement)? {
+                    if bounded_text(&replacement)? != text.trim() {
+                        return Err("WORKTREE_REPAIR_FILE_CHANGED");
+                    }
+                } else {
+                    let mut f = OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&replacement)
+                        .map_err(|_| "WORKTREE_REPAIR_PREPARE_FAILED")?;
+                    f.write_all(text.as_bytes())
+                        .and_then(|()| f.sync_all())
+                        .map_err(|_| "WORKTREE_REPAIR_PREPARE_FAILED")?;
+                }
+                return Ok(Some(BacklinkTicket {
+                    original: node(&backlink)?,
+                    replacement: node(&replacement)?,
+                    admin: node(admin)?,
+                    common: node(common)?,
+                }));
+            }
+        }
+        Ok(None)
+    }
+    fn repair_backlink(
+        &self,
+        r: &Receipt,
+        root: &Path,
+        saved: Option<&BacklinkTicket>,
+    ) -> Result<()> {
+        for repo in &self.repos {
+            if let RepoKind::Linked { admin, common } = &repo.kind {
+                let backlink = admin.join("gitdir");
+                let current = node(&backlink)?;
+                let old = Path::new(&r.identity.path).join(repo.name).join(".git");
+                let new = root.join(repo.name).join(".git");
+                let text = bounded_text(&backlink)?;
+                let saved = saved.ok_or("WORKTREE_TICKET_MISSING")?;
+                let same_id = |a: &Node, b: &Node| a.volume == b.volume && a.file_id == b.file_id;
+                if !same_id(&node(admin)?, &saved.admin) || !same_id(&node(common)?, &saved.common)
+                {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                if current == saved.replacement && same(Path::new(&text), &new) {
+                    return Ok(());
+                }
+                if current != saved.original || !same(Path::new(&text), &old) {
+                    return Err("WORKTREE_BACKLINK_CHANGED");
+                }
+                // Only this fixed worktree's backlink changes. Common refs/other worktrees are untouched.
+                let replacement = admin.join("gitdir.todo2052-repair");
+                if node(&replacement)? != saved.replacement
+                    || !same(Path::new(&bounded_text(&replacement)?), &new)
+                {
+                    return Err("WORKTREE_REPAIR_FAILED");
+                }
+                fs::rename(&replacement, &backlink).map_err(|_| "WORKTREE_REPAIR_FAILED")?;
+                if node(&backlink)? != saved.replacement
+                    || !same(Path::new(&bounded_text(&backlink)?), &new)
+                {
+                    return Err("WORKTREE_REPAIR_FAILED");
+                }
+                validate_repo(&root.join(repo.name), repo, false)?;
+                return Ok(());
+            }
+        }
+        if saved.is_some() {
+            return Err("UNEXPECTED_WORKTREE_TICKET");
+        }
+        Ok(())
     }
 }
 
@@ -358,10 +942,40 @@ fn write_or_verify(path: &Path, bytes: &[u8], limit: u64) -> Result<()> {
         write_new(path, bytes)
     }
 }
+fn read_record(path: &Path, limit: u64) -> Result<Vec<u8>> {
+    checked(path)?;
+    let n = node(path)?;
+    if n.links != 1 || n.size > limit || n.attributes & 0x10 != 0 {
+        return Err("INVALID_RECOVERY_RECORD");
+    }
+    fs::read(path).map_err(|_| "RECOVERY_RECORD_READ")
+}
+fn publish_proof(path: &Path, bytes: &[u8]) -> Result<()> {
+    if present(path)? {
+        return write_or_verify(path, bytes, 8 * 1024 * 1024);
+    }
+    // Publish a fully synchronized new record without replacing an existing one.
+    // An interruption leaves only a uniquely named unpublished staging record;
+    // the next attempt creates a different staging record, never edits that one.
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "PROOF_CLOCK")?
+        .as_nanos();
+    let stage = path.with_extension(format!("proof-writing-{}-{nonce}", std::process::id()));
+    write_new(&stage, bytes)?;
+    let source = extended_path(&stage)?;
+    let destination = extended_path(path)?;
+    // WRITE_THROUGH without REPLACE_EXISTING: fail rather than overwrite.
+    if unsafe { MoveFileExW(source.as_ptr(), destination.as_ptr(), 0x8) } == 0 {
+        return Err("PROOF_PUBLISH_FAILED");
+    }
+    write_or_verify(path, bytes, 8 * 1024 * 1024)
+}
 fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
     let mut nodes = BTreeMap::new();
     let mut pending = vec![root.to_owned()];
     let mut links: BTreeMap<(u32, u64), (u32, u32)> = BTreeMap::new();
+    let mut opaque_counts: BTreeMap<(u32, u64), usize> = BTreeMap::new();
     while let Some(path) = pending.pop() {
         let relative = path
             .strip_prefix(root)
@@ -378,7 +992,12 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
             return Err("UNDECLARED_GIT_METADATA");
         }
         let n = node(&path)?;
-        if name.eq_ignore_ascii_case(".git") && n.attributes & 0x10 == 0 {
+        if name.eq_ignore_ascii_case(".git")
+            && n.attributes & 0x10 == 0
+            && !repos.iter().any(|r| {
+                relative == format!("{}/.git", r.name) && matches!(r.kind, RepoKind::Linked { .. })
+            })
+        {
             return Err("EXTERNAL_GITDIR");
         }
         if nodes.len() >= LIMIT {
@@ -399,7 +1018,18 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
             }
             count.0 += 1;
         }
-        nodes.insert(relative, n);
+        // Do not recreate confidential audit ref/path names in the recovery ticket.
+        let key = if repos.iter().any(|r| {
+            matches!(r.kind, RepoKind::OpaqueBare)
+                && (relative == r.name || relative.starts_with(&format!("{}/", r.name)))
+        }) {
+            let count = opaque_counts.entry((n.volume, n.file_id)).or_default();
+            *count += 1;
+            format!("opaque:{}:{}:{}", n.volume, n.file_id, count)
+        } else {
+            relative
+        };
+        nodes.insert(key, n);
     }
     if links.values().any(|(inside, total)| inside != total) {
         return Err("HARD_LINK");
@@ -407,11 +1037,20 @@ fn scan(root: &Path, repos: &[Repo]) -> Result<BTreeMap<String, Node>> {
     Ok(nodes)
 }
 fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
+    let (output, status) = hidden_status(exe, args)?;
+    if !status.success() {
+        return Err("VALIDATOR_FAILED");
+    }
+    Ok(output)
+}
+fn hidden_status(exe: &Path, args: &[&OsStr]) -> Result<(Vec<u8>, ExitStatus)> {
     let mut c = Command::new(exe);
     c.args(args)
         .creation_flags(0x08000000)
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    #[cfg(test)]
+    c.stderr(Stdio::inherit());
     // Isolate Git from inherited repository/config/credential environment.
     for (key, _) in std::env::vars_os() {
         if key
@@ -450,14 +1089,32 @@ fn hidden(exe: &Path, args: &[&OsStr]) -> Result<Vec<u8>> {
         .join()
         .map_err(|_| "VALIDATOR_OUTPUT")?
         .map_err(|_| "VALIDATOR_OUTPUT")?;
+    #[cfg(test)]
     if !status.success() || output.len() > 1024 * 1024 {
+        eprintln!(
+            "fixture validator {:?}: {status}, output bytes {}",
+            exe.file_name(),
+            output.len()
+        );
+    }
+    if output.len() > 1024 * 1024 {
+        return Err("VALIDATOR_FAILED");
+    }
+    Ok((output, status))
+}
+fn git(path: &Path, args: &[&str]) -> Result<String> {
+    let (output, status) = git_status(path, args)?;
+    if !status.success() {
         return Err("VALIDATOR_FAILED");
     }
     Ok(output)
 }
-fn git(path: &Path, args: &[&str]) -> Result<String> {
+fn git_status(path: &Path, args: &[&str]) -> Result<(String, ExitStatus)> {
     let fixed = [
         "--no-optional-locks",
+        "--no-replace-objects",
+        "-c",
+        "core.longpaths=true",
         "-c",
         "core.fsmonitor=false",
         "-c",
@@ -467,15 +1124,97 @@ fn git(path: &Path, args: &[&str]) -> Result<String> {
     let mut argv: Vec<&OsStr> = fixed.iter().map(OsStr::new).collect();
     argv.push(path.as_os_str());
     argv.extend(args.iter().map(OsStr::new));
-    String::from_utf8(hidden(Path::new("git.exe"), &argv)?)
-        .map(|s| s.trim().into())
-        .map_err(|_| "GIT_OUTPUT")
+    let (output, status) = hidden_status(Path::new("git.exe"), &argv)?;
+    let output = String::from_utf8(output).map_err(|_| "GIT_OUTPUT")?;
+    Ok((output.trim().into(), status))
 }
-fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
-    let gitdir = path.join(".git");
-    if node(&gitdir)?.attributes & 0x10 == 0 {
-        return Err("EXTERNAL_GITDIR");
+fn bounded_text(path: &Path) -> Result<String> {
+    let n = node(path)?;
+    if n.size > 4096 || n.links != 1 || n.attributes & 0x10 != 0 {
+        return Err("INVALID_GIT_POINTER");
     }
+    fs::read_to_string(path)
+        .map(|s| s.trim().into())
+        .map_err(|_| "INVALID_GIT_POINTER")
+}
+fn checked_admin(path: &Path) -> Result<()> {
+    if !path.is_absolute()
+        || path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err("INVALID_GIT_ADMIN_PATH");
+    }
+    for p in path.ancestors() {
+        if p.file_name()
+            .is_some_and(|n| protected(&n.to_string_lossy()))
+        {
+            return Err("PROTECTED_PATH");
+        }
+        if node(p)?.attributes & 0x10 == 0 {
+            return Err("INVALID_GIT_ADMIN_PATH");
+        }
+    }
+    Ok(())
+}
+fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
+    let gitdir = match &repo.kind {
+        RepoKind::OpaqueBare => {
+            // Inspect only names and metadata of the fixed audit acquisition.
+            // Its config, refs, object contents and origin are never read or executed.
+            for special in [
+                "commondir",
+                "gitdir",
+                "worktrees",
+                "modules",
+                "objects/info/alternates",
+                "objects/info/http-alternates",
+            ] {
+                if present(&path.join(special))? {
+                    return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+                }
+            }
+            for required in ["HEAD", "config", "objects", "refs"] {
+                node(&path.join(required))?;
+            }
+            return Ok(());
+        }
+        RepoKind::Clone => {
+            let dir = path.join(".git");
+            if node(&dir)?.attributes & 0x10 == 0 {
+                return Err("EXTERNAL_GITDIR");
+            }
+            dir
+        }
+        RepoKind::Linked { admin, common } => {
+            checked_admin(admin)?;
+            checked_admin(common)?;
+            let pointer = bounded_text(&path.join(".git"))?;
+            if admin.parent() != Some(common.join("worktrees").as_path())
+                || !pointer
+                    .strip_prefix("gitdir: ")
+                    .is_some_and(|p| same(Path::new(p), admin))
+                || bounded_text(&admin.join("commondir"))? != "../.."
+                || !same(
+                    Path::new(&git(path, &["rev-parse", "--git-common-dir"])?),
+                    common,
+                )
+            {
+                return Err("EXTERNAL_GITDIR");
+            }
+            // External objects/submodules remain forbidden even for the one fixed worktree.
+            for special in [
+                "modules",
+                "objects/info/alternates",
+                "objects/info/http-alternates",
+            ] {
+                if (before_move || special != "modules") && present(&common.join(special))? {
+                    return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+                }
+            }
+            admin.clone()
+        }
+    };
     for special in [
         "commondir",
         "gitdir",
@@ -484,6 +1223,10 @@ fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
         "objects/info/alternates",
         "objects/info/http-alternates",
     ] {
+        if matches!(repo.kind, RepoKind::Linked { .. }) && matches!(special, "commondir" | "gitdir")
+        {
+            continue;
+        }
         if present(&gitdir.join(special))? {
             return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
         }
@@ -497,26 +1240,93 @@ fn validate_repo(path: &Path, repo: &Repo) -> Result<()> {
     if git(path, &["rev-parse", "HEAD"])? != repo.head {
         return Err("GIT_HEAD_CHANGED");
     }
-    if git(
-        path,
-        &["config", "--local", "--get-all", "remote.origin.url"],
-    )? != repo.origin
+    let saved_checks = before_move || !matches!(repo.kind, RepoKind::Linked { .. });
+    if saved_checks && repo.origin.is_empty() && !git(path, &["remote"])?.is_empty() {
+        return Err("GIT_ORIGIN_CHANGED");
+    }
+    if saved_checks
+        && !repo.origin.is_empty()
+        && git(
+            path,
+            &["config", "--local", "--get-all", "remote.origin.url"],
+        )?
+        .trim_end_matches(".git")
+            != repo.origin.trim_end_matches(".git")
     {
         return Err("GIT_ORIGIN_CHANGED");
     }
-    if !git(path, &["status", "--porcelain=v1", "--untracked-files=no"])?.is_empty() {
+    let untracked = if repo.saved_ref.is_some() {
+        "--untracked-files=all"
+    } else {
+        "--untracked-files=no"
+    };
+    let status = git(path, &["status", "--porcelain=v1", untracked])?;
+    if !status.lines().all(|line| {
+        repo.allowed_untracked
+            .iter()
+            .any(|name| line == format!("?? {name}"))
+    }) {
         return Err("GIT_TRACKED_CHANGES");
     }
-    if !git(
-        path,
-        &["rev-list", "--branches", "--not", "--remotes=origin"],
-    )?
-    .is_empty()
+    if let Some(saved) = repo.saved_ref.filter(|_| saved_checks) {
+        validate_saved_commit(path, repo, saved)?;
+    }
+    if !matches!(repo.kind, RepoKind::Linked { .. })
+        && !git(
+            path,
+            &["rev-list", "--branches", "--not", "--remotes=origin"],
+        )?
+        .is_empty()
     {
         return Err("GIT_UNPUSHED_COMMITS");
     }
-    if !git(path, &["for-each-ref", "--format=%(refname)", "refs/stash"])?.is_empty() {
+    if !matches!(repo.kind, RepoKind::Linked { .. })
+        && !git(path, &["for-each-ref", "--format=%(refname)", "refs/stash"])?.is_empty()
+    {
         return Err("GIT_STASH");
+    }
+    Ok(())
+}
+
+fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
+    if repo.saved_merge.is_none() {
+        return if git(path, &["rev-parse", saved])? == repo.head {
+            Ok(())
+        } else {
+            Err("GIT_UNPUSHED_COMMITS")
+        };
+    }
+    // Distinguish an absent ref from a failed validator or a changed existing ref.
+    if let RepoKind::Linked { common, .. } = &repo.kind
+        && present(&common.join("info/grafts"))?
+    {
+        return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+    }
+    match git_status(path, &["show-ref", "--exists", saved])?.1.code() {
+        Some(0) => {
+            return if git(path, &["rev-parse", saved])? == repo.head {
+                Ok(())
+            } else {
+                Err("GIT_UNPUSHED_COMMITS")
+            };
+        }
+        Some(2) => (),
+        _ => return Err("GIT_UNPUSHED_COMMITS"),
+    }
+    let merge = repo.saved_merge.as_deref().ok_or("GIT_UNPUSHED_COMMITS")?;
+    // Only the fixed PR56 merge may replace the pruned branch evidence. The
+    // target HEAD must reach that merge, which must reach saved origin/main.
+    for args in [
+        vec!["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        vec!["merge-base", "--is-ancestor", &repo.head, merge],
+        vec![
+            "merge-base",
+            "--is-ancestor",
+            merge,
+            "refs/remotes/origin/main",
+        ],
+    ] {
+        git(path, &args).map_err(|_| "GIT_UNPUSHED_COMMITS")?;
     }
     Ok(())
 }
@@ -537,6 +1347,7 @@ struct WinInfo {
 }
 #[link(name = "kernel32")]
 unsafe extern "system" {
+    fn MoveFileExW(source: *const u16, destination: *const u16, flags: u32) -> i32;
     fn CreateFileW(
         name: *const u16,
         access: u32,
@@ -549,8 +1360,38 @@ unsafe extern "system" {
     fn GetFileInformationByHandle(handle: isize, info: *mut WinInfo) -> i32;
     fn CloseHandle(handle: isize) -> i32;
 }
+fn extended_path(path: &Path) -> Result<Vec<u16>> {
+    if !path.is_absolute() {
+        return Err("INVALID_PATH");
+    }
+    let raw: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .map(|c| if c == 47 { 92 } else { c })
+        .collect();
+    let mut name = if raw.starts_with(&[92, 92, 63, 92]) {
+        raw
+    } else if raw.starts_with(&[92, 92]) {
+        OsStr::new(r"\\?\UNC\")
+            .encode_wide()
+            .chain(raw[2..].iter().copied())
+            .collect()
+    } else {
+        OsStr::new(r"\\?\").encode_wide().chain(raw).collect()
+    };
+    name.push(0);
+    Ok(name)
+}
 fn node(path: &Path) -> Result<Node> {
-    let name: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let info = node_no_follow(path)?;
+    if info.attributes & REPARSE != 0 {
+        return Err("LINK_OR_REPARSE_POINT");
+    }
+    Ok(info)
+}
+// Used only by the fixed Scoopa inventory, which validates symlink reparse data.
+fn node_no_follow(path: &Path) -> Result<Node> {
+    let name = extended_path(path)?;
     let mut info = WinInfo::default();
     // Metadata access only, with OPEN_REPARSE_POINT; never follows a junction.
     let ok = unsafe {
@@ -564,9 +1405,6 @@ fn node(path: &Path) -> Result<Node> {
     };
     if ok == 0 {
         return Err("IDENTITY_READ_FAILED");
-    }
-    if info.attr & REPARSE != 0 {
-        return Err("LINK_OR_REPARSE_POINT");
     }
     Ok(Node {
         volume: info.volume,
@@ -582,9 +1420,13 @@ fn run() -> Result<serde_json::Value> {
     if args.len() != 3 || args[1] != "--id" {
         return Err("INVALID_ARGUMENTS");
     }
-    let c = Config::production()?;
+    let c = Config::production(&args[2])?;
     match args[0].as_str() {
+        "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
+        "renew-plan" if c.id == REBOOT_ID => {
+            c.renew_reboot_preflight(&args[2], REBOOT_REPORT_SHA256)
+        }
         "finish" => c.finish(&args[2]),
         _ => Err("INVALID_ACTION"),
     }
@@ -601,6 +1443,201 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reboot_renewal_resumes_every_publication_boundary_and_preserves_archives() {
+        for stage in ["ticket", "reason", "staging", "published", "complete"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            let reason = c.destination().join("理由.txt");
+            let old_reason = fs::read(&reason).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            let mut replacement: Ticket = serde_json::from_slice(&old).unwrap();
+            replacement.nodes = c
+                .validate(&c.load(c.id).unwrap(), &source(&c), true)
+                .unwrap();
+            let bytes = serde_json::to_vec_pretty(&replacement).unwrap();
+            fs::rename(c.ticket_path(), &archived).unwrap();
+            if stage != "ticket" {
+                fs::rename(&reason, &archived_reason).unwrap();
+            }
+            let unpublished = c.ticket_path().with_extension("proof-writing-interrupted");
+            if stage == "staging" {
+                write_new(&unpublished, b"partial unpublished record").unwrap();
+            }
+            if matches!(stage, "published" | "complete") {
+                publish_proof(&c.ticket_path(), &bytes).unwrap();
+            }
+            if stage == "complete" {
+                c.plan(c.id).unwrap();
+            }
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            assert_eq!(fs::read(&archived).unwrap(), old, "{stage}");
+            assert_eq!(fs::read(&archived_reason).unwrap(), old_reason, "{stage}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), bytes, "{stage}");
+            if stage == "staging" {
+                assert_eq!(
+                    fs::read(unpublished).unwrap(),
+                    b"partial unpublished record"
+                );
+            }
+            fs::rename(source(&c), c.destination().join("files")).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn reboot_renewal_rejects_changed_archives_and_published_replacement() {
+        for change in ["archive", "reason", "new-ticket", "reason-link"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            match change {
+                "archive" => fs::write(&archived, b"{}").unwrap(),
+                "reason" => fs::write(&archived_reason, b"changed").unwrap(),
+                "new-ticket" => fs::write(c.ticket_path(), b"{}").unwrap(),
+                "reason-link" => {
+                    fs::hard_link(&archived_reason, c.destination().join("alias")).unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let before = fs::read(&archived).unwrap();
+            let reason_before = fs::read(&archived_reason).unwrap();
+            let ticket_before = fs::read(c.ticket_path()).unwrap();
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(&archived).unwrap(), before);
+            assert_eq!(fs::read(&archived_reason).unwrap(), reason_before);
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), ticket_before);
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_final_report_renewal_preserves_old_intent_and_moves_only_after_validation() {
+        let c = fixture_for(REBOOT_ID);
+        c.plan(c.id).unwrap();
+        let old = fs::read(c.ticket_path()).unwrap();
+        fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+        assert!(matches!(c.plan(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        let hash = format!("{:x}", Sha256::digest(b"final public report"));
+        c.renew_reboot_preflight(c.id, &hash).unwrap();
+        assert_eq!(
+            fs::read(c.ticket_path().with_extension("pre-final-report.json")).unwrap(),
+            old
+        );
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(
+            c.renew_reboot_preflight(c.id, &hash),
+            Err("MOVEMENT_ALREADY_STARTED")
+        ));
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn reboot_renewal_rejects_any_other_artifact_or_modified_original() {
+        for change in ["wrong-report", "extra-artifact", "modified-original"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            match change {
+                "wrong-report" => {
+                    fs::write(source(&c).join("pr-body-final.txt"), b"unexpected").unwrap()
+                }
+                "extra-artifact" => {
+                    fs::write(source(&c).join("unrelated.txt"), b"different").unwrap()
+                }
+                "modified-original" => {
+                    fs::write(source(&c).join("work/source.txt"), b"changed").unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), old);
+            assert!(
+                !c.ticket_path()
+                    .with_extension("pre-final-report.json")
+                    .exists()
+            );
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = super::Config::production(super::REBOOT_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "reboot-recovery");
+        assert_eq!(
+            config.pinned_identity,
+            Some((2229119083, 13229323920896790))
+        );
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/reboot-job-recovery")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(super::Config::production("464577ad28cdf40461bb04a301f7e8e8").is_err());
+    }
+    #[test]
+    fn reboot_profile_moves_its_worktree_without_losing_git_or_receipt_identity() {
+        let c = fixture_for(REBOOT_ID);
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        let old = source(&c);
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!old.exists());
+    }
+    #[test]
+    fn reboot_profile_rejects_dirty_unpushed_or_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(REBOOT_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.file_id += 1;
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
     use super::*;
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -719,6 +1756,9 @@ mod tests {
         );
     }
     fn fixture() -> Fixture {
+        fixture_for(ID)
+    }
+    fn fixture_for(id: &str) -> Fixture {
         let owner = std::env::var_os("SAFE_DELETE_TEST_ROOT")
             .expect("tests require an owned safe-delete folder");
         let base = PathBuf::from(owner).join(format!(
@@ -727,7 +1767,8 @@ mod tests {
             SERIAL.fetch_add(1, Ordering::SeqCst)
         ));
         fs::create_dir(&base).unwrap();
-        let mut c = Config::production().unwrap();
+        let mut c = Config::production(id).unwrap();
+        c.project_alias_preservation_enabled = false;
         if let Some(guard) = std::env::var_os("SAFE_DELETE_TEST_GUARD") {
             c.guard = guard.into();
         }
@@ -741,46 +1782,61 @@ mod tests {
         };
         let c = &mut fixture.config;
         fs::create_dir(&c.store).unwrap();
-        let target = base.join(format!("codex-owned-{ID}"));
+        let target = base.join(format!("codex-owned-{}", c.id));
         fs::create_dir(&target).unwrap();
         for repo in &mut c.repos {
             let path = target.join(repo.name);
-            fs::create_dir(&path).unwrap();
-            git(&path, &["init", "-b", "main"]).unwrap();
-            fs::write(path.join("source.txt"), b"public fixture\n").unwrap();
-            git(&path, &["add", "source.txt"]).unwrap();
-            git(
-                &path,
-                &[
-                    "-c",
-                    "user.name=Fixture",
-                    "-c",
-                    "user.email=fixture@example.invalid",
-                    "commit",
-                    "-m",
-                    "fixture",
-                ],
-            )
-            .unwrap();
-            repo.head = git(&path, &["rev-parse", "HEAD"]).unwrap();
-            git(&path, &["remote", "add", "origin", repo.origin]).unwrap();
-            git(
-                &path,
-                &["update-ref", "refs/remotes/origin/main", &repo.head],
-            )
-            .unwrap();
+            if matches!(repo.kind, RepoKind::OpaqueBare) {
+                fs::create_dir(&path).unwrap();
+                git(&path, &["init", "--bare"]).unwrap();
+                // Invalid config proves the opaque acquisition is never executed/read by Git.
+                fs::write(
+                    path.join("config"),
+                    b"opaque fixture; not a valid git config\n",
+                )
+                .unwrap();
+                fs::write(path.join("refs/fixture-private-name"), b"opaque fixture\n").unwrap();
+                continue;
+            }
+            let seed = if matches!(repo.kind, RepoKind::Linked { .. }) {
+                base.join("common")
+            } else {
+                path.clone()
+            };
+            fs::create_dir(&seed).unwrap();
+            seed_repo(&seed, repo);
+            if matches!(repo.kind, RepoKind::Linked { .. }) {
+                git(
+                    &seed,
+                    &[
+                        "worktree",
+                        "add",
+                        "-b",
+                        "fixture-linked",
+                        path.to_str().unwrap(),
+                    ],
+                )
+                .unwrap();
+                repo.kind = RepoKind::Linked {
+                    admin: seed.join(".git/worktrees").join(repo.name),
+                    common: seed.join(".git"),
+                };
+            }
         }
         let n = node(&target).unwrap();
+        if c.pinned_identity.is_some() {
+            c.pinned_identity = Some((n.volume, n.file_id));
+        }
         let identity = Identity {
             version: 2,
-            id: ID.into(),
+            id: c.id.into(),
             root: base.to_string_lossy().into_owned(),
             path: target.to_string_lossy().into_owned(),
             volume: n.volume,
             file_id: n.file_id,
             created_at: "2026-10-08T15:34:13.325996+09:00".into(),
-            project: "todo-2001".into(),
-            content: "tool-verification".into(),
+            project: c.project.into(),
+            content: c.content.into(),
         };
         let integrity = format!(
             "{:x}",
@@ -795,8 +1851,485 @@ mod tests {
         write_new(&c.receipt_path(), &serde_json::to_vec(&r).unwrap()).unwrap();
         fixture
     }
+    fn seed_repo(path: &Path, repo: &mut Repo) {
+        git(path, &["init", "-b", "main"]).unwrap();
+        fs::write(path.join("source.txt"), b"public fixture\n").unwrap();
+        git(path, &["add", "source.txt"]).unwrap();
+        git(
+            path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "-m",
+                "fixture",
+            ],
+        )
+        .unwrap();
+        repo.head = git(path, &["rev-parse", "HEAD"]).unwrap();
+        if !repo.origin.is_empty() {
+            git(path, &["remote", "add", "origin", repo.origin]).unwrap();
+            git(
+                path,
+                &[
+                    "update-ref",
+                    repo.saved_ref.unwrap_or("refs/remotes/origin/main"),
+                    &repo.head,
+                ],
+            )
+            .unwrap();
+        }
+        if repo.saved_merge.is_some() {
+            let tree = format!("{}^{{tree}}", repo.head);
+            let merge = git(
+                path,
+                &[
+                    "-c",
+                    "user.name=Fixture",
+                    "-c",
+                    "user.email=fixture@example.invalid",
+                    "commit-tree",
+                    &tree,
+                    "-p",
+                    &repo.head,
+                    "-m",
+                    "fixture merge",
+                ],
+            )
+            .unwrap();
+            git(path, &["update-ref", "refs/remotes/origin/main", &merge]).unwrap();
+            repo.saved_merge = Some(merge);
+        }
+    }
     fn source(c: &Config) -> PathBuf {
-        c.temp.join(format!("codex-owned-{ID}"))
+        c.temp.join(format!("codex-owned-{}", c.id))
+    }
+    fn scoopa_fixture() -> Fixture {
+        let c = fixture_for(scoopa::ID);
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        fs::create_dir_all(modules.join(".pnpm/pkg/node_modules/pkg")).unwrap();
+        fs::write(modules.join(".pnpm/pkg/node_modules/pkg/value"), b"keep me").unwrap();
+        std::os::windows::fs::symlink_dir(r".pnpm\pkg\node_modules\pkg", modules.join("pkg"))
+            .unwrap();
+        c
+    }
+    #[test]
+    fn scoopa_fixed_production_identity_matches_original_go_checksum() {
+        let c = Config::production(scoopa::ID).unwrap();
+        assert_eq!(c.store, Path::new("D:/CC/Tools/safe-delete/receipts-go"));
+        let (volume, file_id) = c.pinned_identity.unwrap();
+        let identity = Identity {
+            version: 2,
+            id: scoopa::ID.into(),
+            root: c.temp.to_string_lossy().into_owned(),
+            path: source(&c).to_string_lossy().into_owned(),
+            volume,
+            file_id,
+            created_at: scoopa::CREATED_AT.into(),
+            project: c.project.into(),
+            content: c.content.into(),
+        };
+        assert_eq!(
+            format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&identity).unwrap())
+            ),
+            scoopa::INTEGRITY
+        );
+    }
+    fn move_scoopa_fixture(c: &Config) {
+        // Simulate the caller's ordinary directory rename, never a production API.
+        fs::rename(source(c), c.destination().join("files")).unwrap();
+    }
+    #[test]
+    fn scoopa_relative_link_is_enumerated_once_and_move_preserves_identity() {
+        let c = scoopa_fixture();
+        let original = node(&source(&c)).unwrap();
+        let plan = c.plan(scoopa::ID).unwrap();
+        assert_eq!(plan["links"], 1);
+        assert_eq!(plan["bytes"], 7);
+        let ticket: serde_json::Value =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        let names = ticket["nodes"].as_object().unwrap();
+        assert!(!names.contains_key("frontend-runtime/node_modules/pkg/value"));
+        assert_eq!(
+            names["frontend-runtime/node_modules/pkg"]["link"]["target"],
+            r".pnpm\pkg\node_modules\pkg"
+        );
+        assert_eq!(c.plan(scoopa::ID).unwrap(), plan);
+        move_scoopa_fixture(&c);
+        assert_eq!(node(&c.destination().join("files")).unwrap(), original);
+        let result = c.finish(scoopa::ID).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        assert_eq!(result["links"], 1);
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "quarantined");
+        assert_eq!(c.finish(scoopa::ID).unwrap(), result);
+        assert_eq!(
+            fs::read(
+                c.destination()
+                    .join("files/frontend-runtime/node_modules/pkg/value")
+            )
+            .unwrap(),
+            b"keep me"
+        );
+    }
+    #[test]
+    fn scoopa_rejects_external_absolute_and_missing_targets_without_traversing() {
+        for target in [r"..\..\..\..\outside", "missing", "C:/Windows"] {
+            let c = fixture_for(scoopa::ID);
+            let modules = source(&c).join("frontend-runtime/node_modules");
+            fs::create_dir_all(&modules).unwrap();
+            std::os::windows::fs::symlink_dir(target, modules.join("bad")).unwrap();
+            assert!(matches!(
+                c.plan(scoopa::ID),
+                Err("EXTERNAL_LINK" | "LINK_TARGET_MISSING" | "NOT_RELATIVE_SYMLINK")
+            ));
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn scoopa_rejects_cycle_and_link_ancestors() {
+        let c = scoopa_fixture();
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        std::os::windows::fs::symlink_dir("pkg", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_TARGET_IS_LINK")));
+        fs::remove_dir(modules.join("cycle")).unwrap();
+        std::os::windows::fs::symlink_dir(r"pkg\..", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_NON_PNPM_TARGET")));
+        fs::remove_dir(modules.join("cycle")).unwrap();
+        std::os::windows::fs::symlink_dir(r"..\..", modules.join("cycle")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_TARGET_ANCESTOR")));
+    }
+    #[test]
+    fn scoopa_root_replacement_and_receipt_tampering_are_rejected() {
+        let c = scoopa_fixture();
+        let mut receipt = c.load(scoopa::ID).unwrap();
+        receipt.integrity = "changed".into();
+        fs::write(c.receipt_path(), serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("RECEIPT_INTEGRITY_MISMATCH")
+        ));
+        let c = scoopa_fixture();
+        fs::rename(source(&c), c.base.join("original")).unwrap();
+        fs::create_dir(source(&c)).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("TARGET_IDENTITY_CHANGED")));
+        let c = scoopa_fixture();
+        fs::rename(source(&c), c.base.join("original")).unwrap();
+        std::os::windows::fs::symlink_dir(c.base.join("original"), source(&c)).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("LINK_OR_REPARSE_POINT")));
+    }
+    #[test]
+    fn scoopa_rejects_changed_file_before_move_and_after_move() {
+        for moved in [false, true] {
+            let c = scoopa_fixture();
+            c.plan(scoopa::ID).unwrap();
+            let root = if moved {
+                move_scoopa_fixture(&c);
+                c.destination().join("files")
+            } else {
+                source(&c)
+            };
+            fs::write(
+                root.join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
+                b"changed size",
+            )
+            .unwrap();
+            if moved {
+                assert!(matches!(
+                    c.finish(scoopa::ID),
+                    Err("CONTENT_CHANGED_AFTER_PLAN")
+                ));
+            } else {
+                assert!(matches!(c.plan(scoopa::ID), Err("RECOVERY_RECORD_CHANGED")));
+            }
+            assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn scoopa_changed_link_and_missing_proof_are_rejected_after_move() {
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        let modules = c.destination().join("files/frontend-runtime/node_modules");
+        fs::remove_dir(modules.join("pkg")).unwrap();
+        std::os::windows::fs::symlink_dir(r".pnpm\pkg\node_modules", modules.join("pkg")).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("CONTENT_CHANGED_AFTER_PLAN")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::remove_file(c.ticket_path().with_extension("scoopa-proof.json")).unwrap();
+        assert!(c.finish(scoopa::ID).is_err());
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+    }
+    #[test]
+    fn scoopa_ticket_tampering_and_destination_replacement_are_rejected() {
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        let mut bytes = fs::read(c.ticket_path()).unwrap();
+        bytes.push(b' ');
+        fs::write(c.ticket_path(), bytes).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("RECOVERY_RECORD_CHANGED")
+        ));
+        let c = scoopa_fixture();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::rename(c.destination().join("files"), c.base.join("original")).unwrap();
+        fs::create_dir(c.destination().join("files")).unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("TARGET_IDENTITY_CHANGED")
+        ));
+    }
+    #[test]
+    fn scoopa_keeps_normal_scanner_and_protected_paths_closed() {
+        let c = scoopa_fixture();
+        assert!(matches!(
+            scan(&source(&c), &[]),
+            Err("LINK_OR_REPARSE_POINT")
+        ));
+        fs::create_dir(source(&c).join("OpenMausBot")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("PROTECTED_PATH")));
+        assert!(!c.ticket_path().exists());
+        assert!(matches!(c.plan(ID), Err("SCOPE_NOT_AUTHORIZED")));
+    }
+    #[test]
+    fn scoopa_supports_measured_scale_but_keeps_its_fixed_entry_bound() {
+        let c = scoopa_fixture();
+        let root = source(&c);
+        let generated = root.join("generated");
+        fs::create_dir(&generated).unwrap();
+        for i in 0..10001 {
+            fs::write(generated.join(format!("{i}")), b"").unwrap();
+        }
+        assert!(matches!(
+            scan(&root, &[]),
+            Err("ENTRY_LIMIT_EXCEEDED" | "LINK_OR_REPARSE_POINT")
+        ));
+        assert!(c.plan(scoopa::ID).unwrap()["entries"].as_u64().unwrap() > 10000);
+        for i in 10001..17800 {
+            fs::write(generated.join(format!("{i}")), b"").unwrap();
+        }
+        assert!(matches!(c.plan(scoopa::ID), Err("ENTRY_LIMIT_EXCEEDED")));
+    }
+    #[test]
+    fn scoopa_rejects_external_hardlinks_and_unexpected_git_metadata() {
+        let c = scoopa_fixture();
+        fs::write(source(&c).join("outside-pnpm"), b"fixture").unwrap();
+        fs::hard_link(source(&c).join("outside-pnpm"), c.base.join("outside")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("HARD_LINK")));
+        let c = scoopa_fixture();
+        fs::create_dir(source(&c).join(".git")).unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("PROTECTED_PATH")));
+    }
+    #[test]
+    fn scoopa_pnpm_regular_alias_and_dangling_internal_link_survive_move() {
+        let c = scoopa_fixture();
+        let file =
+            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value");
+        let external = c.base.join("external-regular-name");
+        fs::hard_link(&file, &external).unwrap();
+        let original = node(&external).unwrap();
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        std::os::windows::fs::symlink_dir(r".pnpm\pruned\node_modules\pkg", modules.join("pruned"))
+            .unwrap();
+        let inspected = c.plan(scoopa::ID).unwrap();
+        assert_eq!(inspected["preservation"]["outside_regular_alias_names"], 1);
+        assert_eq!(
+            inspected["preservation"]["missing_internal_pnpm_targets"],
+            1
+        );
+        let ticket: serde_json::Value =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        let security = ticket["nodes"]["frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"]["security_sha256"].clone();
+        move_scoopa_fixture(&c);
+        c.finish(scoopa::ID).unwrap();
+        assert_eq!(node(&external).unwrap(), original);
+        assert_eq!(
+            security,
+            scoopa::security_hash(&external, &original).unwrap()
+        );
+        assert_eq!(fs::read(&external).unwrap(), b"keep me");
+        assert!(
+            fs::symlink_metadata(
+                c.destination()
+                    .join("files/frontend-runtime/node_modules/pruned")
+            )
+            .is_ok()
+        );
+    }
+    #[test]
+    fn scoopa_shared_alias_count_changes_refuse_finish() {
+        let c = scoopa_fixture();
+        let file =
+            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value");
+        fs::hard_link(&file, c.base.join("outside")).unwrap();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::hard_link(
+            c.destination()
+                .join("files/frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
+            c.base.join("new-name"),
+        )
+        .unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("CONTENT_CHANGED_AFTER_PLAN")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+    }
+    fn scoopa_project_fixture() -> Fixture {
+        let mut c = scoopa_fixture();
+        c.project_alias_preservation_enabled = false;
+        let old = source(&c);
+        c.temp = c.base.join("source/deep");
+        fs::create_dir_all(&c.temp).unwrap();
+        fs::rename(old, source(&c)).unwrap();
+        let mut r: Receipt = serde_json::from_slice(&fs::read(c.receipt_path()).unwrap()).unwrap();
+        r.identity.root = c.temp.to_string_lossy().into_owned();
+        r.identity.path = source(&c).to_string_lossy().into_owned();
+        r.integrity = format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+        );
+        fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+        c.project_alias_target = Some(
+            c.base
+                .parent()
+                .unwrap()
+                .join("Desktop/dev/ADJ/scoopa-wt/agent-todo-1242-3e3e30bb3a02/frontend"),
+        );
+        fs::create_dir_all(source(&c).join("frontend-runtime/node_modules/.pnpm/node_modules"))
+            .unwrap();
+        std::os::windows::fs::symlink_dir(
+            scoopa::PROJECT_RAW,
+            source(&c).join(scoopa::PROJECT_LINK),
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn scoopa_fixed_project_alias_is_not_followed_and_keeps_same_lexical_target() {
+        let mut c = scoopa_project_fixture();
+        let inspected = scoopa::inspect(&c, scoopa::ID).unwrap();
+        assert_eq!(inspected["preservation"]["fixed_project_aliases"], 1);
+        assert_eq!(inspected["fixed_project_aliases_present"], true);
+        assert!(!c.ticket_path().exists());
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("PROJECT_ALIAS_PRESERVATION_DISABLED")
+        ));
+        assert!(!c.ticket_path().exists());
+        c.project_alias_preservation_enabled = true; // Re-enable preservation for this explicitly disabled fixture.
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        c.project_alias_preservation_enabled = false;
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("PROJECT_ALIAS_PRESERVATION_DISABLED")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        c.project_alias_preservation_enabled = true;
+        assert_eq!(
+            c.finish(scoopa::ID).unwrap()["preservation"]["fixed_project_aliases"],
+            1
+        );
+        let c = scoopa_project_fixture();
+        fs::remove_dir(source(&c).join(scoopa::PROJECT_LINK)).unwrap();
+        std::os::windows::fs::symlink_dir(
+            r"..\..\..\..\..\..\..\..\different",
+            source(&c).join(scoopa::PROJECT_LINK),
+        )
+        .unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("EXTERNAL_LINK")));
+        let mut c = scoopa_project_fixture();
+        c.project_alias_preservation_enabled = true;
+        c.quarantine = c.base.join("extra/deep/quarantine");
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("PROJECT_ALIAS_TARGET_CHANGED")
+        ));
+        assert!(!c.ticket_path().exists());
+    }
+    #[test]
+    fn scoopa_missing_pnpm_target_cannot_hide_case_or_short_name_alias() {
+        for (target, expected) in [
+            (
+                r".pnpm\NODE_MODULES\scoopa-frontend\other",
+                "LINK_TARGET_CASE_MISMATCH",
+            ),
+            (
+                r".pnpm\node_modules\SCOOPA~1\other",
+                "SHORT_NAME_MISSING_TARGET",
+            ),
+        ] {
+            let c = scoopa_project_fixture();
+            std::os::windows::fs::symlink_dir(
+                target,
+                source(&c).join("frontend-runtime/node_modules/bypass"),
+            )
+            .unwrap();
+            assert_eq!(c.plan(scoopa::ID).unwrap_err(), expected);
+            assert!(!c.ticket_path().exists());
+        }
+    }
+    #[test]
+    fn scoopa_production_alias_keeps_target_at_real_destination_depth() {
+        let c = Config::production(scoopa::ID).unwrap();
+        assert!(c.project_alias_preservation_enabled);
+        assert!(
+            !Config::production(ID)
+                .unwrap()
+                .project_alias_preservation_enabled
+        );
+        assert!(
+            scoopa::project_alias(&c, &source(&c), scoopa::PROJECT_LINK, scoopa::PROJECT_RAW)
+                .unwrap()
+        );
+        assert!(
+            scoopa::project_alias(
+                &c,
+                &c.destination().join("files"),
+                scoopa::PROJECT_LINK,
+                scoopa::PROJECT_RAW
+            )
+            .unwrap()
+        );
+    }
+    #[test]
+    fn production_enables_fixed_project_preservation_only_for_scoopa() {
+        for id in [
+            ID,
+            "76005ef45fe612479fd920447642497e",
+            "38e3fbc1767b66eef9127f2a27567c8a",
+            "438ee7d343a6c84558201e2778d2c890",
+            "cfee3edefd3704d67c140ca6952dd7ce",
+            "75cd71384cb094e47b19cf5d39b5b025",
+            CARGO_ID,
+            scoopa::ID,
+        ] {
+            assert_eq!(
+                Config::production(id)
+                    .unwrap()
+                    .project_alias_preservation_enabled,
+                id == scoopa::ID,
+                "{id}"
+            );
+        }
+        assert!(matches!(
+            Config::production("00000000000000000000000000000000"),
+            Err("SCOPE_NOT_AUTHORIZED")
+        ));
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {
@@ -952,5 +2485,800 @@ mod tests {
         c.guard = c.temp.join("missing-guard.exe");
         assert!(matches!(c.plan(ID), Err("VALIDATOR_START_FAILED")));
         assert!(!c.destination().exists());
+    }
+    #[test]
+    fn fixed_profiles_reject_unknown_id_and_cross_task_receipt() {
+        assert!(matches!(
+            Config::production("00000000000000000000000000000000"),
+            Err("SCOPE_NOT_AUTHORIZED")
+        ));
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        let mut r = c.load(c.id).unwrap();
+        r.identity.project = "another-task".into();
+        r.integrity = format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+        );
+        fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+        assert!(matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")));
+    }
+    #[test]
+    fn cargo_receipt_scope_and_fixed_identity_reject_recomputed_tampering() {
+        let production = Config::production(CARGO_ID).unwrap();
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 2814749782464451))
+        );
+        for field in ["project", "content", "path", "volume", "file_id"] {
+            let c = fixture_for(CARGO_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "different-task".into(),
+                "content" => r.identity.content = "different-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_pruned_ref_requires_both_merge_reachability_checks() {
+        for failure in [
+            "none",
+            "missing-main",
+            "merge-not-in-main",
+            "main-before-merge",
+            "changed-ref",
+        ] {
+            let c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            let repo = &c.repos[0];
+            git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+            match failure {
+                "none" => (),
+                "missing-main" => {
+                    git(&path, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "merge-not-in-main" => {
+                    let tree = format!("{}^{{tree}}", repo.head);
+                    let unrelated = git(
+                        &path,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit-tree",
+                            &tree,
+                            "-m",
+                            "unrelated main",
+                        ],
+                    )
+                    .unwrap();
+                    git(
+                        &path,
+                        &["update-ref", "refs/remotes/origin/main", &unrelated],
+                    )
+                    .unwrap();
+                    // The fixed expected merge must not be an ancestor of this main.
+                }
+                "main-before-merge" => {
+                    git(
+                        &path,
+                        &["update-ref", "refs/remotes/origin/main", &repo.head],
+                    )
+                    .unwrap();
+                }
+                "changed-ref" => {
+                    git(
+                        &path,
+                        &[
+                            "update-ref",
+                            repo.saved_ref.unwrap(),
+                            repo.saved_merge.as_deref().unwrap(),
+                        ],
+                    )
+                    .unwrap();
+                }
+                _ => unreachable!(),
+            }
+            if failure == "none" {
+                c.plan(c.id).unwrap();
+            } else {
+                assert!(
+                    matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")),
+                    "{failure}"
+                );
+                assert!(!c.destination().exists());
+            }
+        }
+        let mut c = fixture_for(CARGO_ID);
+        let path = source(&c).join("work");
+        let repo = &mut c.repos[0];
+        git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+        let tree = format!("{}^{{tree}}", repo.head);
+        let unrelated = git(
+            &path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit-tree",
+                &tree,
+                "-m",
+                "unrelated merge",
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &["update-ref", "refs/remotes/origin/main", &unrelated],
+        )
+        .unwrap();
+        repo.saved_merge = Some(unrelated);
+        assert!(matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")));
+    }
+    #[test]
+    fn cargo_head_origin_and_external_admin_are_rejected() {
+        for failure in ["head", "origin", "admin", "common"] {
+            let mut c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            match failure {
+                "head" => {
+                    git(
+                        &path,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit",
+                            "--allow-empty",
+                            "-m",
+                            "unsaved commit",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "origin" => {
+                    git(
+                        &path,
+                        &[
+                            "remote",
+                            "set-url",
+                            "origin",
+                            "https://example.invalid/repo.git",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "admin" | "common" => {
+                    let replacement = c.temp.join("unexpected-admin");
+                    fs::create_dir(&replacement).unwrap();
+                    match &mut c.repos[0].kind {
+                        RepoKind::Linked { admin, common } => {
+                            if failure == "admin" {
+                                *admin = replacement;
+                            } else {
+                                *common = replacement;
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            }
+            let expected = match failure {
+                "head" => "GIT_HEAD_CHANGED",
+                "origin" => "GIT_ORIGIN_CHANGED",
+                _ => "EXTERNAL_GITDIR",
+            };
+            assert_eq!(c.plan(c.id).err(), Some(expected), "{failure}");
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_move_preserves_inventory_and_repairs_only_fixed_backlink() {
+        let c = fixture_for(CARGO_ID);
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        let sibling = common.join("worktrees/sibling");
+        fs::create_dir(&sibling).unwrap();
+        fs::write(sibling.join("gitdir"), b"fixture other worktree\n").unwrap();
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert!(
+            plan["powershell_command"]
+                .as_str()
+                .unwrap()
+                .starts_with("Move-Item -LiteralPath")
+        );
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        assert_eq!(
+            fs::read(sibling.join("gitdir")).unwrap(),
+            b"fixture other worktree\n"
+        );
+        assert!(
+            git(
+                &c.destination().join("files/work"),
+                &["status", "--porcelain=v1"]
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
+    #[test]
+    fn cargo_replaced_destination_never_commits_receipt_or_backlink() {
+        let c = fixture_for(CARGO_ID);
+        c.plan(c.id).unwrap();
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        let original = fs::read(admin.join("gitdir")).unwrap();
+        fs::rename(source(&c), c.temp.join("preserved-original")).unwrap();
+        fs::create_dir(c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("TARGET_IDENTITY_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+        assert_eq!(fs::read(admin.join("gitdir")).unwrap(), original);
+    }
+    #[test]
+    fn cargo_broken_ref_or_ref_backend_failure_is_not_absence() {
+        for failure in ["missing-object", "invalid-ref", "invalid-packed-refs"] {
+            let c = fixture_for(CARGO_ID);
+            let path = source(&c).join("work");
+            let repo = &c.repos[0];
+            let common = match &repo.kind {
+                RepoKind::Linked { common, .. } => common,
+                _ => unreachable!(),
+            };
+            git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+            if failure == "invalid-packed-refs" {
+                fs::write(common.join("packed-refs"), b"invalid packed ref\n").unwrap();
+            } else {
+                fs::create_dir_all(common.join(repo.saved_ref.unwrap()).parent().unwrap()).unwrap();
+                fs::write(
+                    common.join(repo.saved_ref.unwrap()),
+                    if failure == "missing-object" {
+                        b"1111111111111111111111111111111111111111\n".as_slice()
+                    } else {
+                        b"invalid ref\n".as_slice()
+                    },
+                )
+                .unwrap();
+            }
+            assert!(
+                validate_saved_commit(&path, repo, repo.saved_ref.unwrap()).is_err(),
+                "{failure}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn cargo_replacement_history_and_grafts_cannot_fake_saved_merge() {
+        let mut c = fixture_for(CARGO_ID);
+        let path = source(&c).join("work");
+        let repo = &mut c.repos[0];
+        let head = repo.head.clone();
+        let real_merge = repo.saved_merge.clone().unwrap();
+        git(&path, &["update-ref", "-d", repo.saved_ref.unwrap()]).unwrap();
+        let tree = format!("{head}^{{tree}}");
+        let unrelated = git(
+            &path,
+            &[
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit-tree",
+                &tree,
+                "-m",
+                "unrelated replacement",
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &[
+                "update-ref",
+                &format!("refs/replace/{unrelated}"),
+                &real_merge,
+            ],
+        )
+        .unwrap();
+        git(
+            &path,
+            &["update-ref", "refs/remotes/origin/main", &unrelated],
+        )
+        .unwrap();
+        repo.saved_merge = Some(unrelated);
+        assert!(matches!(c.plan(c.id), Err("GIT_UNPUSHED_COMMITS")));
+        let c = fixture_for(CARGO_ID);
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        fs::write(common.join("info/grafts"), b"fixture graft\n").unwrap();
+        assert!(matches!(
+            c.plan(c.id),
+            Err("EXTERNAL_OR_SHARED_GIT_METADATA")
+        ));
+    }
+    #[test]
+    fn opaque_audit_is_preserved_without_parsing_config_or_recording_ref_names() {
+        let c = fixture_for("76005ef45fe612479fd920447642497e");
+        c.plan(c.id).unwrap();
+        let ticket = fs::read_to_string(c.ticket_path()).unwrap();
+        assert!(!ticket.contains("fixture-private-name"));
+        assert!(!ticket.contains("customer-audit.git"));
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            fs::read(c.destination().join("files/customer-audit.git/config")).unwrap(),
+            b"opaque fixture; not a valid git config\n"
+        );
+    }
+    #[test]
+    fn build_internal_hardlinks_are_preserved_and_extra_git_is_rejected() {
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        let target = source(&c).join("target");
+        fs::create_dir(&target).unwrap();
+        fs::write(target.join("output"), b"fixture").unwrap();
+        fs::hard_link(target.join("output"), target.join("output-linked")).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        let c = fixture_for("438ee7d343a6c84558201e2778d2c890");
+        fs::create_dir_all(source(&c).join("unexpected/.git")).unwrap();
+        assert!(matches!(c.plan(c.id), Err("UNDECLARED_GIT_METADATA")));
+    }
+    fn drift_directory(path: &Path) {
+        use std::os::windows::fs::OpenOptionsExt;
+        let stamp = fs::metadata(path).unwrap().modified().unwrap() + Duration::from_secs(30);
+        OpenOptions::new()
+            .write(true)
+            .custom_flags(0x02000000)
+            .open(path)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+    }
+    #[test]
+    fn legacy_2050_directory_drift_preserves_ticket_and_resumes_through_finish() {
+        let mut c = fixture_for(RESUME_ID);
+        // Both a longer quarantine prefix and the content inventory must work.
+        // The old helper failed in Git when its loose-object path crossed 260.
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 240);
+        c.quarantine = c.base.join("q".repeat(241 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            240
+        );
+        assert!(
+            c.destination()
+                .join("files/source/.git/objects/aa/01234567890123456789012345678901234567")
+                .as_os_str()
+                .encode_wide()
+                .count()
+                > 260
+        );
+        let first = c.plan(c.id).unwrap();
+        let original = fs::read(c.ticket_path()).unwrap();
+        // Model an old deployed plan, which has no content proof.
+        fs::remove_file(c.proof_path()).unwrap();
+        drift_directory(&source(&c).join("source/.git"));
+        assert_eq!(first, c.plan(c.id).unwrap());
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), original);
+        assert_eq!(first, c.plan(c.id).unwrap());
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        drift_directory(&c.destination().join("files/source/.git"));
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), original);
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn git_startup_root_limit_is_rejected_before_preparing_a_move() {
+        let mut c = fixture_for(RESUME_ID);
+        c.quarantine = c.base.join("q");
+        let initial = c
+            .destination()
+            .join("files/source")
+            .as_os_str()
+            .encode_wide()
+            .count();
+        assert!(initial < 241);
+        c.quarantine = c.base.join("q".repeat(242 - initial));
+        assert_eq!(
+            c.destination()
+                .join("files/source")
+                .as_os_str()
+                .encode_wide()
+                .count(),
+            241
+        );
+        assert!(matches!(c.plan(c.id), Err("GIT_DESTINATION_ROOT_TOO_LONG")));
+        assert!(!c.ticket_path().exists());
+        assert!(!c.destination().exists());
+        assert!(source(&c).exists());
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn directory_tolerance_is_fixed_to_2050_and_only_written_field() {
+        let c = fixture_for(RESUME_ID);
+        let old = c
+            .validate(&c.load(c.id).unwrap(), &source(&c), true)
+            .unwrap();
+        let mut changed = old.clone();
+        changed.get_mut("source/.git").unwrap().written += 1;
+        assert!(same_inventory(RESUME_ID, &old, &changed));
+        assert!(!same_inventory(ID, &old, &changed));
+        for field in 0..6 {
+            let mut changed = old.clone();
+            let n = changed.get_mut("source/.git").unwrap();
+            match field {
+                0 => n.volume += 1,
+                1 => n.file_id += 1,
+                2 => n.size += 1,
+                3 => n.links += 1,
+                4 => n.attributes ^= 2,
+                _ => n.attributes &= !0x10,
+            }
+            assert!(!same_inventory(RESUME_ID, &old, &changed));
+        }
+        let mut changed = old.clone();
+        changed.get_mut("source/.git/HEAD").unwrap().written += 1;
+        assert!(!same_inventory(RESUME_ID, &old, &changed));
+        changed = old.clone();
+        changed.remove("source/.git/HEAD");
+        assert!(!same_inventory(RESUME_ID, &old, &changed));
+        let c = fixture();
+        c.plan(c.id).unwrap();
+        drift_directory(&source(&c).join("kcaldav/.git"));
+        assert!(matches!(c.plan(c.id), Err("RECOVERY_RECORD_CHANGED")));
+    }
+    #[test]
+    fn resumed_plan_rejects_new_nodes_changed_files_and_external_links() {
+        for mutation in 0..4 {
+            let c = fixture_for(RESUME_ID);
+            c.plan(c.id).unwrap();
+            let target = source(&c).join("source/.git");
+            drift_directory(&target);
+            match mutation {
+                0 => fs::write(target.join("unexpected"), b"new").unwrap(),
+                1 => {
+                    let p = target.join("HEAD");
+                    let stamp =
+                        fs::metadata(&p).unwrap().modified().unwrap() + Duration::from_secs(30);
+                    fs::File::options()
+                        .write(true)
+                        .open(&p)
+                        .unwrap()
+                        .set_times(fs::FileTimes::new().set_modified(stamp))
+                        .unwrap();
+                }
+                2 => fs::hard_link(target.join("HEAD"), c.base.join("external-link")).unwrap(),
+                _ => {
+                    fs::remove_file(target.join("description")).unwrap();
+                }
+            }
+            let expected = if mutation == 2 {
+                "HARD_LINK"
+            } else {
+                "RECOVERY_RECORD_CHANGED"
+            };
+            assert!(matches!(c.plan(c.id), Err(code) if code == expected));
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            assert!(!c.destination().join("files").exists());
+        }
+    }
+    #[test]
+    fn content_proof_rejects_same_metadata_content_change_before_and_after_move() {
+        for moved in [false, true] {
+            let c = fixture_for(RESUME_ID);
+            let output = source(&c).join("output");
+            fs::write(&output, b"aaaa").unwrap();
+            c.plan(c.id).unwrap();
+            let output = if moved {
+                fs::rename(source(&c), c.destination().join("files")).unwrap();
+                c.destination().join("files/output")
+            } else {
+                output
+            };
+            let old = node(&output).unwrap();
+            let modified = fs::metadata(&output).unwrap().modified().unwrap();
+            fs::write(&output, b"bbbb").unwrap();
+            fs::File::options()
+                .write(true)
+                .open(&output)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(modified))
+                .unwrap();
+            assert_eq!(node(&output).unwrap(), old);
+            let result = if moved { c.finish(c.id) } else { c.plan(c.id) };
+            assert!(
+                matches!(result, Err("RECOVERY_RECORD_CHANGED")),
+                "unexpected result: {result:?}"
+            );
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn invalid_resume_proof_never_reissues_move_or_finishes() {
+        for moved in [false, true] {
+            let c = fixture_for(RESUME_ID);
+            c.plan(c.id).unwrap();
+            fs::write(c.proof_path(), b"invalid proof").unwrap();
+            if moved {
+                fs::rename(source(&c), c.destination().join("files")).unwrap();
+            }
+            let result = if moved { c.finish(c.id) } else { c.plan(c.id) };
+            assert!(matches!(result, Err("RECOVERY_RECORD_CHANGED")));
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn missing_proof_and_changed_ticket_cannot_finish_a_2050_move() {
+        let c = fixture_for(RESUME_ID);
+        c.plan(c.id).unwrap();
+        fs::remove_file(c.proof_path()).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("RESUME_PROOF_MISSING")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+        let c = fixture_for(RESUME_ID);
+        c.plan(c.id).unwrap();
+        let mut ticket: Ticket =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        ticket.nodes.get_mut("source/.git").unwrap().written += 1;
+        fs::write(c.ticket_path(), serde_json::to_vec_pretty(&ticket).unwrap()).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn proof_publish_resumes_past_unpublished_partial_and_never_overwrites() {
+        let c = fixture_for(RESUME_ID);
+        let partial = c
+            .proof_path()
+            .with_extension("proof-writing-prior-interrupted");
+        fs::write(&partial, b"partial").unwrap();
+        publish_proof(&c.proof_path(), b"complete").unwrap();
+        assert_eq!(fs::read(&partial).unwrap(), b"partial");
+        assert_eq!(fs::read(c.proof_path()).unwrap(), b"complete");
+        publish_proof(&c.proof_path(), b"complete").unwrap();
+        assert!(matches!(
+            publish_proof(&c.proof_path(), b"different"),
+            Err("RECOVERY_RECORD_CHANGED")
+        ));
+        assert_eq!(fs::read(c.proof_path()).unwrap(), b"complete");
+    }
+    #[test]
+    fn linked_worktree_move_repairs_only_its_backlink_and_resumes_after_repair() {
+        let c = fixture_for("38e3fbc1767b66eef9127f2a27567c8a");
+        let (admin, common) = match &c.repos[0].kind {
+            RepoKind::Linked { admin, common } => (admin, common),
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        let first = c.plan(c.id).unwrap();
+        assert_eq!(first, c.plan(c.id).unwrap());
+        let ticket: Ticket = serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        git(
+            common.parent().unwrap(),
+            &["update-ref", "-d", c.repos[0].saved_ref.unwrap()],
+        )
+        .unwrap();
+        let refs_after_prune = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        assert_ne!(refs_after_prune, refs);
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        // Model interruption immediately after the atomic backlink commit, before receipt commit.
+        c.repair_backlink(
+            &c.load(c.id).unwrap(),
+            &c.destination().join("files"),
+            ticket.backlink.as_ref(),
+        )
+        .unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &c.destination().join("files/work/.git")
+        ));
+        assert_eq!(
+            git(common.parent().unwrap(), &["show-ref"]).unwrap(),
+            refs_after_prune
+        );
+        assert!(!present(&admin.join("gitdir.todo2052-repair")).unwrap());
+        assert!(
+            git(
+                &c.destination().join("files/work"),
+                &["status", "--porcelain=v1"]
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
+    #[test]
+    fn local_verification_worktree_preserves_repro_and_internal_hardlinks() {
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        let root = source(&c);
+        fs::create_dir(root.join("repro")).unwrap();
+        fs::write(root.join("repro/m1.rs"), b"preserved regression input").unwrap();
+        fs::write(
+            root.join("fixed/dependency-snapshot.txt"),
+            b"copied dependency",
+        )
+        .unwrap();
+        fs::create_dir(root.join("target")).unwrap();
+        let artifact = root.join("target/test.exe");
+        fs::write(&artifact, b"test artifact").unwrap();
+        fs::hard_link(&artifact, root.join("target/test-copy.exe")).unwrap();
+        let common = match &c.repos[0].kind {
+            RepoKind::Linked { common, .. } => common,
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(&root, c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["state"], "quarantined");
+        let moved = c.destination().join("files");
+        assert_eq!(
+            fs::read(moved.join("repro/m1.rs")).unwrap(),
+            b"preserved regression input"
+        );
+        assert_eq!(
+            fs::read(moved.join("fixed/dependency-snapshot.txt")).unwrap(),
+            b"copied dependency"
+        );
+        assert_eq!(node(&moved.join("target/test.exe")).unwrap().links, 2);
+        assert_eq!(
+            git(&moved.join("fixed"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        c.finish(c.id).unwrap();
+    }
+    #[test]
+    fn local_verification_worktree_rejects_remotes_and_tracked_edits() {
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        git(
+            &source(&c).join("fixed"),
+            &[
+                "remote",
+                "add",
+                "origin",
+                "https://example.invalid/unexpected",
+            ],
+        )
+        .unwrap();
+        assert!(matches!(c.plan(c.id), Err("GIT_ORIGIN_CHANGED")));
+        assert!(!c.destination().exists());
+        let c = fixture_for("cfee3edefd3704d67c140ca6952dd7ce");
+        fs::write(source(&c).join("fixed/source.txt"), b"unsaved change").unwrap();
+        assert!(matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")));
+        assert!(!c.destination().exists());
+    }
+    #[test]
+    fn linked_worktree_backlink_tampering_keeps_receipt_owned() {
+        let c = fixture_for("38e3fbc1767b66eef9127f2a27567c8a");
+        c.plan(c.id).unwrap();
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        fs::write(admin.join("gitdir"), b"C:/someone-else/.git\n").unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(c.finish(c.id), Err("WORKTREE_BACKLINK_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn claude_routing_profile_preserves_only_its_runtime_registry_and_backlink() {
+        let c = fixture_for("75cd71384cb094e47b19cf5d39b5b025");
+        let work = source(&c).join("worktree");
+        for relative in c.repos[0].allowed_untracked {
+            let path = work.join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"runtime fixture\n").unwrap();
+        }
+        let admin = match &c.repos[0].kind {
+            RepoKind::Linked { admin, .. } => admin,
+            _ => unreachable!(),
+        };
+        let before = bounded_text(&admin.join("gitdir")).unwrap();
+        c.plan(c.id).unwrap();
+        assert_eq!(bounded_text(&admin.join("gitdir")).unwrap(), before);
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        let moved = c.destination().join("files/worktree");
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &moved.join(".git")
+        ));
+        for relative in c.repos[0].allowed_untracked {
+            assert_eq!(
+                fs::read(moved.join(relative)).unwrap(),
+                b"runtime fixture\n"
+            );
+        }
+    }
+    #[test]
+    fn claude_routing_profile_rejects_other_untracked_or_modified_source_before_planning() {
+        for (name, tracked) in [("unpublished.rs", false), ("source.txt", true)] {
+            let c = fixture_for("75cd71384cb094e47b19cf5d39b5b025");
+            fs::write(source(&c).join("worktree").join(name), b"unsaved work\n").unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")),
+                "tracked={tracked}"
+            );
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn long_path_inventory_survives_the_longer_quarantine_prefix() {
+        let c = fixture();
+        let relative = PathBuf::from("kcaldav")
+            .join("a".repeat(100))
+            .join("b".repeat(100));
+        let path = source(&c).join(&relative);
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("proof.txt"), b"long path fixture").unwrap();
+        assert!(path.as_os_str().encode_wide().count() > 260);
+        c.plan(ID).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(ID).unwrap();
+        assert!(
+            c.destination()
+                .join("files")
+                .join(relative)
+                .join("proof.txt")
+                .is_file()
+        );
+    }
+    #[test]
+    fn extended_metadata_paths_handle_drive_unc_and_existing_prefix() {
+        let decode = |s| String::from_utf16(&extended_path(Path::new(s)).unwrap()).unwrap();
+        assert_eq!(decode("C:/trial/name"), "\\\\?\\C:\\trial\\name\0");
+        assert_eq!(
+            decode(r"\\server\share\trial"),
+            "\\\\?\\UNC\\server\\share\\trial\0"
+        );
+        assert_eq!(decode(r"\\?\C:\trial"), "\\\\?\\C:\\trial\0");
+        assert!(matches!(
+            extended_path(Path::new("relative")),
+            Err("INVALID_PATH")
+        ));
     }
 }

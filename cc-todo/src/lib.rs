@@ -413,17 +413,17 @@ pub fn edit_item(
         }
     }
     let mut changed = false;
-    if let Some(note) = note {
-        if item["note"] != note {
-            if let Some(old) = item.get("note").cloned() {
-                cc_scheduler::common::push(
-                    &mut item["note_history"],
-                    json!({"note":old,"updated":previous_updated}),
-                );
-            }
-            item["note"] = json!(note);
-            changed = true;
+    if let Some(note) = note
+        && item["note"] != note
+    {
+        if let Some(old) = item.get("note").cloned() {
+            cc_scheduler::common::push(
+                &mut item["note_history"],
+                json!({"note":old,"updated":previous_updated}),
+            );
         }
+        item["note"] = json!(note);
+        changed = true;
     }
     if let Some(text) = spec_text {
         // Repeating an identical recovery edit must not add another copy or history entry.

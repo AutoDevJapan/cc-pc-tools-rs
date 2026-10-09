@@ -344,7 +344,10 @@ fn wait_login(tab: &mut Tab, deadline: Instant) -> Res<Login> {
     let mut last = String::new();
     loop {
         // 読み込み中の評価失敗（遷移中など）は待って再試行する
-        if let Ok(v) = js(tab, "state()") {
+        if let Ok(v) = js(
+            tab,
+            "document.readyState === 'complete' ? state() : 'loading'",
+        ) {
             last = v.as_str().unwrap_or_default().to_string();
             match last.as_str() {
                 "logged_in" => return Ok(Login::LoggedIn),

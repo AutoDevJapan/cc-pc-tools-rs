@@ -2754,9 +2754,9 @@ fn explicit_source_todo(job: &Value, db: &Value) -> std::result::Result<Option<u
         .iter()
         .filter(|item| {
             job["id"].is_string()
-                && !item["wait_on"]
+                && item["wait_on"]
                     .as_array()
-                    .is_some_and(|parents| !parents.is_empty())
+                    .is_none_or(|parents| parents.is_empty())
                 && ((item["worker_receipt"]["job"] == job["id"]
                     && item["worker_receipt"]["generation"] == item["resume_generation"])
                     || item["scheduler"]["job"] == job["id"]

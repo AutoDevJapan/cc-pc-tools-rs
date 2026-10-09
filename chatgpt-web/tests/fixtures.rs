@@ -227,7 +227,7 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     if !chrome_available() {
         return;
     }
-    use std::io::{Read, Write};
+    use std::io::{BufRead, Read, Write};
     let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let address = server.local_addr().unwrap();
     server.set_nonblocking(true).unwrap();
@@ -239,12 +239,20 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
                 sleep(Duration::from_millis(10));
                 continue;
             };
+            socket.set_nonblocking(false).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();
-            let mut request = [0; 4096];
-            let n = socket.read(&mut request).unwrap_or(0);
-            let script = String::from_utf8_lossy(&request[..n]).starts_with("GET /mock.js ");
+            let mut request = Vec::new();
+            std::io::BufReader::new(&mut socket)
+                .take(4096)
+                .read_until(b'\n', &mut request)
+                .unwrap();
+            assert!(
+                request.ends_with(b"\r\n"),
+                "complete bounded HTTP request line is required"
+            );
+            let script = String::from_utf8_lossy(&request).starts_with("GET /mock.js ");
             let body = if script {
                 // Composer DOM exists while its blocking script is still loading.
                 // Premature paste/insertText would miss the event listeners.

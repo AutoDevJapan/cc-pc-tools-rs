@@ -849,14 +849,26 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         ));
         backup(&target)?;
         fs::write(&target, prompt)?;
-        Ok(Some(self.edit(&item["id"], |row| {
-            if s(&row["status"]) == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"] {
+        let selection_input = json!({"model":item["model"],"effort":item["effort"]});
+        let prepared = self.edit(&item["id"], |row| {
+            if s(&row["status"]) == "todo"
+                && row["scheduler"]["key"] == item["scheduler"]["key"]
+                && ["model", "effort"].iter().all(|field| row[*field] == selection_input[*field]) {
                 merge(
                     &mut row["scheduler"],
-                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session}),
+                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input}),
                 );
             }
-        })?))
+        })?;
+        if s(&prepared["status"]) != "todo"
+            || prepared["scheduler"]["key"] != item["scheduler"]["key"]
+            || ["model", "effort"]
+                .iter()
+                .any(|field| prepared[*field] != selection_input[*field])
+        {
+            return Ok(None);
+        }
+        Ok(Some(prepared))
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
@@ -966,7 +978,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             // the next pass, using the same durable launch key.
             if ["model", "effort"]
                 .iter()
-                .any(|field| current[*field] != prepared[*field])
+                .any(|field| current[*field] != prepared["scheduler"]["selection_input"][*field])
             {
                 return Ok(());
             }

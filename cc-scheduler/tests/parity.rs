@@ -789,6 +789,7 @@ struct Fake {
     reply_count: usize,
     settings_change: Option<(PathBuf, Value)>,
     measure_count: usize,
+    change_during_prepare: bool,
 }
 impl Default for Fake {
     fn default() -> Self {
@@ -814,6 +815,7 @@ impl Default for Fake {
             reply_count: 0,
             settings_change: None,
             measure_count: 0,
+            change_during_prepare: false,
         }
     }
 }
@@ -916,6 +918,13 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if self.change_during_prepare {
+            if let Some((path, settings)) = self.settings_change.take() {
+                let mut db = read_json(&path, json!({}))?;
+                merge(&mut db["items"][0], settings);
+                write_json(&path, &db, 2)?;
+            }
+        }
         if self.prepare_pressure {
             self.m["available_gb"] = json!(3);
         }
@@ -1671,36 +1680,39 @@ fn todo1842_changed_model_does_not_resume_previous_conversation() {
 
 #[test]
 fn todo1842_setting_change_during_last_sample_defers_and_reprepares() {
-    let mut f = Fixture::new();
-    f.managed(1, 1, "civ6", 0);
-    let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
-    f.e.backend.records[0]["status"] = json!("succeeded");
-    f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n検証する");
-    f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
-    f.e.backend.records[0]["cwd"] = json!(cwd);
-    f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
-    f.e.backend.records[0]["effort"] = json!("high");
-    f.e.backend.ps.clear();
-    f.reconcile();
-    f.e.edit(&json!(1), |row| {
-        row["model"] = json!("gpt-6.1-sol");
-        row["effort"] = json!("high");
-    })
-    .unwrap();
-    f.e.backend.measure_count = 0;
-    f.e.backend.clock += 61.;
-    f.e.backend.settings_change = Some((
-        f.e.todo_path.clone(),
-        json!({"model":"gpt-6-astra","effort":"max"}),
-    ));
-    f.dispatch();
-    assert!(f.e.backend.launched.is_empty());
-    f.dispatch();
-    assert_eq!(f.e.backend.launched.len(), 1);
-    let launched = &f.e.backend.launched[0]["item"]["scheduler"];
-    assert_eq!(launched["selection"]["model"], "gpt-6-astra");
-    assert_eq!(launched["selection"]["effort"], "max");
-    assert!(launched["resume_session"].is_null());
+    for during_prepare in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n検証する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!("gpt-6.1-sol");
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        f.e.backend.measure_count = 0;
+        f.e.backend.change_during_prepare = during_prepare;
+        f.e.backend.clock += 61.;
+        f.e.backend.settings_change = Some((
+            f.e.todo_path.clone(),
+            json!({"model":"gpt-6-astra","effort":"max"}),
+        ));
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty());
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let launched = &f.e.backend.launched[0]["item"]["scheduler"];
+        assert_eq!(launched["selection"]["model"], "gpt-6-astra");
+        assert_eq!(launched["selection"]["effort"], "max");
+        assert!(launched["resume_session"].is_null());
+    }
 }
 
 #[test]

@@ -1340,11 +1340,11 @@ mod queue_regressions {
         let t = Test::new();
         let reads = Arc::new(AtomicUsize::new(0));
         let observed = reads.clone();
-        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+        *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
             if file.file_name().is_some_and(|name| name == "job.json") {
                 assert!(
                     FileLock::try_acquire(&file.with_file_name("state.lock")).is_err(),
-                    "registration must reserve state before a published record can be read"
+                    "registration must reserve state before first publication"
                 );
                 reads.fetch_add(1, Ordering::Relaxed);
             }
@@ -1389,6 +1389,10 @@ mod queue_regressions {
         let t = Test::new();
         t.put(job(json!({"id":"history-first","status":"succeeded"})));
         let jobs = t.ctx.jobs.clone();
+        let writer = Context {
+            rt: Arc::new(Fake::new()),
+            ..t.ctx.clone()
+        };
         let once = Arc::new(AtomicBool::new(false));
         let observed = once.clone();
         *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
@@ -1403,13 +1407,7 @@ mod queue_regressions {
                     pretty(&job(json!({"id":"late-registration"}))),
                 )
                 .unwrap();
-                // The durable publication made by track_queued_job, including
-                // its incomplete-bootstrap timestamp, occurs during the scan.
-                fs::write(
-                    jobs.join(".queue-index.json"),
-                    r#"{"scanned_at":0,"ids":["late-registration"]}"#,
-                )
-                .unwrap();
+                writer.track_queued_job("late-registration").unwrap();
             }
         }));
         drop(t.ctx.queue_lock().unwrap());
@@ -1417,6 +1415,82 @@ mod queue_regressions {
         let index: Value =
             serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
                 .unwrap();
+        assert_eq!(index["ids"], json!(["late-registration"]));
+    }
+    #[test]
+    fn partial_index_replaced_after_preparation_cannot_admit_a_job() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.procs.lock().unwrap().insert(888, 77);
+        t.put(job(
+            json!({"id":"orphan","status":"running","codex_pid":888,"codex_pid_created":77}),
+        ));
+        waiting(&t, "waiting", "ordinary");
+        let gate = t.ctx.jobs.join(".queue.lock");
+        let once = Arc::new(AtomicBool::new(false));
+        let changed = once.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file
+                .file_name()
+                .is_some_and(|name| name == ".queue-index.json")
+                && FileLock::try_acquire(&gate).is_err()
+                && !once.swap(true, Ordering::Relaxed)
+            {
+                fs::write(
+                    file,
+                    r#"{"scan_complete":false,"scanned_at":0,"ids":["waiting"]}"#,
+                )
+                .unwrap();
+            }
+        }));
+        let error = t
+            .ctx
+            .admit("waiting")
+            .err()
+            .expect("partial index must defer admission");
+        assert_eq!(error.code, 75);
+        assert!(changed.load(Ordering::Relaxed));
+        *t.rt.load_hook.lock().unwrap() = None;
+        assert_eq!(t.ctx.load("waiting").unwrap()["status"], "queued");
+        assert!(t.ctx.admit("waiting").unwrap().is_none());
+    }
+    #[test]
+    fn scan_commit_read_failure_preserves_concurrent_registration() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history-first","status":"succeeded"})));
+        let writer = Context {
+            rt: Arc::new(Fake::new()),
+            ..t.ctx.clone()
+        };
+        let jobs = t.ctx.jobs.clone();
+        let failed_path = t.rt.load_error_path.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                let _gate = FileLock::try_acquire(&jobs.join(".queue.lock")).unwrap();
+                let dir = jobs.join("late-registration");
+                fs::create_dir(&dir).unwrap();
+                fs::write(
+                    dir.join("job.json"),
+                    pretty(&job(json!({"id":"late-registration"}))),
+                )
+                .unwrap();
+                writer.track_queued_job("late-registration").unwrap();
+                *failed_path.lock().unwrap() = Some(jobs.join(".queue-index.json"));
+            }
+        }));
+        assert!(t.ctx.queue_lock().is_err());
+        *t.rt.load_hook.lock().unwrap() = None;
+        *t.rt.load_error_path.lock().unwrap() = None;
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["scan_complete"], false);
+        assert_eq!(index["ids"], json!(["late-registration"]));
+        drop(t.ctx.queue_lock().unwrap());
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["scan_complete"], true);
         assert_eq!(index["ids"], json!(["late-registration"]));
     }
     #[test]
@@ -4195,9 +4269,11 @@ mod queue_regressions {
     fn orphan_child_consumes_slot_and_reused_pid_does_not() {
         let t = Test::new();
         config(&t, json!({"max_running":1}));
-        waiting(&t, "waiting", "ordinary");
         t.rt.procs.lock().unwrap().insert(888, 77);
         t.put(job(json!({"id":"orphan","status":"running","pid":999,"pid_created":22,"codex_pid":888,"codex_pid_created":77})));
+        // This is pre-existing history, present when the queue bootstraps.
+        // Late legacy writes are covered by the 30-second reconciliation test.
+        waiting(&t, "waiting", "ordinary");
         assert!(t.ctx.admit("waiting").unwrap().is_none());
         t.rt.procs.lock().unwrap().insert(888, 78);
         assert!(t.ctx.admit("waiting").unwrap().is_some());
@@ -4572,6 +4648,8 @@ struct Fake {
     child_alive: Arc<AtomicBool>,
     load_count: AtomicUsize,
     load_hook: Mutex<Option<LoadFn>>,
+    save_hook: Mutex<Option<LoadFn>>,
+    load_error_path: Arc<Mutex<Option<PathBuf>>>,
     save_failure: AtomicBool,
     replace_failures: AtomicUsize,
     replace_count: AtomicUsize,
@@ -4625,6 +4703,8 @@ impl Fake {
             child_alive: Arc::new(AtomicBool::new(false)),
             load_count: AtomicUsize::new(0),
             load_hook: Mutex::new(None),
+            save_hook: Mutex::new(None),
+            load_error_path: Arc::new(Mutex::new(None)),
             save_failure: AtomicBool::new(false),
             replace_failures: AtomicUsize::new(0),
             replace_count: AtomicUsize::new(0),
@@ -4923,6 +5003,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_load(&self, path: &Path) -> io::Result<()> {
+        if self.load_error_path.lock().unwrap().as_deref() == Some(path) {
+            return Err(io::Error::from_raw_os_error(32));
+        }
         let n = self.load_count.fetch_add(1, Ordering::Relaxed);
         if self.load_failures.load(Ordering::Relaxed) > 0 {
             self.load_failures.fetch_sub(1, Ordering::Relaxed);
@@ -4934,6 +5017,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_save(&self, _path: &Path, j: &Value) -> io::Result<()> {
+        if let Some(h) = self.save_hook.lock().unwrap().as_ref() {
+            h(_path, 0);
+        }
         if s(j, "status") == "queued"
             && truth(&j["yield_count"])
             && self.fail_queued_save.swap(false, Ordering::Relaxed)

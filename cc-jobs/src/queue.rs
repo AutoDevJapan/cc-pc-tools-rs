@@ -617,11 +617,17 @@ impl Context {
             return Ok(());
         }
         let scan_path = self.jobs.join(".queue-scan.lock");
-        let _scan = FileLock::acquire_queue(&scan_path)
-            .map_err(|e| Error::file_io("acquire history scan lock", &scan_path, e))?;
+        let started = std::time::Instant::now();
+        let mut _scan = FileLock::try_acquire(&scan_path).map_err(|e| Error {
+            code: 75,
+            message: format!("history reconciliation is already running: {e}"),
+        })?;
+        _scan.set_owner(&scan_path, "history_scan:begin");
+        let lock_wait_ms = started.elapsed().as_millis();
         if self.index_fresh(&self.read_admission_index()?) {
             return Ok(());
         }
+        let begin_started = std::time::Instant::now();
         {
             let _gate =
                 self.queue_lock_for("begin_history_scan", std::time::Duration::from_secs(60))?;
@@ -634,19 +640,37 @@ impl Context {
             index["scan_complete"] = json!(false);
             self.write_json(&path, &index)?;
         }
+        let begin_ms = begin_started.elapsed().as_millis();
         let mut candidates = HashSet::new();
+        _scan.set_owner(&scan_path, "history_scan:enumerate");
+        let enumerate_started = std::time::Instant::now();
         let entries = fs::read_dir(&self.jobs)?.collect::<std::io::Result<Vec<_>>>()?;
+        let enumerate_ms = enumerate_started.elapsed().as_millis();
+        let mut record_count = 0usize;
+        let mut max_record_ms = 0u128;
+        let records_started = std::time::Instant::now();
+        _scan.set_owner(&scan_path, "history_scan:records");
         for entry in entries {
             if entry.file_type()?.is_dir() {
                 let id = entry.file_name().to_string_lossy().into_owned();
                 if valid_job_id(&id) && entry.path().join("job.json").is_file() {
+                    let record_started = std::time::Instant::now();
                     let job = self.admission_record(&id);
+                    record_count += 1;
+                    if record_count % 128 == 0 {
+                        _scan
+                            .set_owner(&scan_path, &format!("history_scan:records:{record_count}"));
+                    }
+                    max_record_ms = max_record_ms.max(record_started.elapsed().as_millis());
                     if self.admission_active(&job) {
                         candidates.insert(id);
                     }
                 }
             }
         }
+        let records_ms = records_started.elapsed().as_millis();
+        _scan.set_owner(&scan_path, "history_scan:commit");
+        let commit_started = std::time::Instant::now();
         let _gate =
             self.queue_lock_for("commit_history_scan", std::time::Duration::from_secs(60))?;
         // Do not turn access/parse failure into an empty index: it may contain
@@ -659,6 +683,11 @@ impl Context {
         ids.sort();
         let active = ids.iter().map(|id| self.admission_record(id)).collect();
         self.save_admission_index(&index, active, self.rt.epoch())?;
+        drop(_gate);
+        let metrics = json!({"pid":std::process::id(),"record_count":record_count,"lock_wait_ms":lock_wait_ms as u64,"begin_ms":begin_ms as u64,"enumerate_ms":enumerate_ms as u64,"records_ms":records_ms as u64,"max_record_ms":max_record_ms as u64,"commit_ms":commit_started.elapsed().as_millis() as u64,"total_ms":started.elapsed().as_millis() as u64});
+        let _ = self.write_json(&self.jobs.join(".queue-scan-metrics.json"), &metrics);
+        self.rt
+            .diagnostic(&format!("history scan metrics: {metrics}"));
         Ok(())
     }
     /// Called under the gate after preparation. Never reads terminal history.
@@ -692,7 +721,10 @@ impl Context {
         for job in &mut active {
             self.record_work_owner(job);
         }
-        let owners: serde_json::Map<String,Value> = active.iter().map(|j| (s(j,"id").to_owned(),json!({"work_owner":j["work_owner"],"parent_job_id":j["parent_job_id"],"todo_id":j["todo_id"],"created_at":j["created_at"],"queue_sequence":j["queue_sequence"],"model":j["model"]}))).collect();
+        let owners: serde_json::Map<String, Value> = active
+            .iter()
+            .map(|j| (s(j, "id").to_owned(), admission_owner(j)))
+            .collect();
         let next = json!({"scan_complete":true,"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>(),"owners":owners});
         if next != *index {
             self.write_json(&self.jobs.join(".queue-index.json"), &next)?;
@@ -704,6 +736,21 @@ impl Context {
             || s(j, "status") == "starting"
             || self.is_ours(j, "codex_pid")
             || self.tool_handoff_pending(j)
+    }
+    /// Registration is durable intake, not execution admission. Read only the
+    /// already published IDs; a supervisor reconciles legacy history before it
+    /// may reserve any running slot. Never prune or complete a partial index.
+    pub(crate) fn registration_jobs(&self) -> Result<Vec<Value>> {
+        let index = self.read_admission_index()?;
+        if self.index_ids(&index).is_err() {
+            return Ok(Vec::new());
+        }
+        Ok(self
+            .index_ids(&index)?
+            .into_iter()
+            .map(|id| self.admission_record(id))
+            .filter(|job| self.admission_active(job))
+            .collect())
     }
     /// Lock-free view of the active index for pre-checks. Never rescans the
     /// whole history or writes; None when no index exists yet.
@@ -785,7 +832,7 @@ impl Context {
         if !index["owners"].is_object() {
             index["owners"] = json!({});
         }
-        index["owners"][jid] = json!({"work_owner":job["work_owner"],"parent_job_id":job["parent_job_id"],"todo_id":job["todo_id"],"created_at":job["created_at"],"queue_sequence":job["queue_sequence"],"model":job["model"]});
+        index["owners"][jid] = admission_owner(&job);
         self.write_json(&path, &index)?;
         Ok(())
     }
@@ -1120,6 +1167,34 @@ impl Context {
                 decisions.insert(s(j, "id").into(), reason.clone());
                 continue;
             }
+            // Intake may precede discovery of a legacy writer. Recheck session
+            // ownership under the admission gate, including real process identity.
+            // Earlier queued writers also reserve their session, even with spare
+            // hardware capacity. A display name is not a session identity.
+            if let Some(owner) = jobs.iter().find(|other| {
+                s(other, "id") != s(j, "id")
+                    && (intake_todos_overlap(j, other)
+                        || ["thread_id", "resume_session"].iter().any(|key| {
+                            normalize_uuid(s(j, key)).is_some_and(|session| {
+                                ["thread_id", "resume_session"].iter().any(|other_key| {
+                                    normalize_uuid(s(other, other_key)).as_ref() == Some(&session)
+                                })
+                            })
+                        }))
+                    && (other["queue_unreadable"] == true
+                        || s(other, "status") == "starting"
+                        || self.running_job(other)
+                        || (s(other, "status") == "queued"
+                            && other["cancel_requested"] != true
+                            && (
+                                queue_time(other),
+                                number(other, "queue_sequence"),
+                                s(other, "id"),
+                            ) < (queue_time(j), number(j, "queue_sequence"), s(j, "id"))))
+            }) {
+                decisions.insert(s(j, "id").into(), json!({"code":"intake_owner","message":"同じToDo・セッションの担当が先","owner_job_id":owner["id"]}));
+                continue;
+            }
             if let Some(owner) = cc_job_policy::work_owner::blocker(j, &ownership_jobs) {
                 decisions.insert(s(j, "id").into(), cc_job_policy::work_owner::reason(owner));
                 continue;
@@ -1373,6 +1448,41 @@ pub(crate) fn same_task(a: &Value, b: &Value) -> bool {
                     .any(|kb| normalize_uuid(s(b, kb)).as_ref() == Some(&id))
             })
         })
+}
+fn intake_todos_overlap(a: &Value, b: &Value) -> bool {
+    let ids = |job: &Value| -> Vec<u64> {
+        job["todo_id"]
+            .as_u64()
+            .into_iter()
+            .chain(
+                job["related_todo_ids"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_u64),
+            )
+            .collect()
+    };
+    let other = ids(b);
+    ids(a).iter().any(|id| other.contains(id))
+}
+fn admission_owner(job: &Value) -> Value {
+    Value::Object(
+        [
+            "work_owner",
+            "parent_job_id",
+            "todo_id",
+            "related_todo_ids",
+            "thread_id",
+            "resume_session",
+            "created_at",
+            "queue_sequence",
+            "model",
+        ]
+        .into_iter()
+        .map(|key| (key.to_owned(), job[key].clone()))
+        .collect(),
+    )
 }
 pub fn valid_job_id(id: &str) -> bool {
     !id.is_empty()

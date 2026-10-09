@@ -961,6 +961,15 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             {
                 return Ok(());
             }
+            // Sampling may yield while the owner changes the requested model.
+            // Defer this receipt so prepare recomputes settings and session on
+            // the next pass, using the same durable launch key.
+            if ["model", "effort"]
+                .iter()
+                .any(|field| current[*field] != prepared[*field])
+            {
+                return Ok(());
+            }
             self.state["last_launch"] = json!(self.backend.clock());
             if !self.state["project_last_launch"].is_object() {
                 self.state["project_last_launch"] = json!({});

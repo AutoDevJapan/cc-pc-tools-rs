@@ -8342,6 +8342,77 @@ mod end_to_end {
         tmp: Temp,
         exe: PathBuf,
         rec: PathBuf,
+        diagnostic: std::sync::atomic::AtomicBool,
+        handles: Mutex<Vec<FixtureProcess>>,
+    }
+    struct FixtureProcess {
+        handle: windows_sys::Win32::Foundation::HANDLE,
+        pid: u32,
+        created: u64,
+    }
+    // The test owns these handles; the mutex serializes retention and cleanup.
+    unsafe impl Send for FixtureProcess {}
+    impl FixtureProcess {
+        fn retain(pid: u32, created: u64) -> Option<Self> {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                let handle = OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SYNCHRONIZE,
+                    0,
+                    pid,
+                );
+                if handle.is_null() {
+                    return None;
+                }
+                let mut times = [std::mem::zeroed::<FILETIME>(); 4];
+                let valid = GetProcessTimes(
+                    handle,
+                    &mut times[0],
+                    &mut times[1],
+                    &mut times[2],
+                    &mut times[3],
+                ) != 0
+                    && (((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64)
+                        == created;
+                if !valid {
+                    CloseHandle(handle);
+                    return None;
+                }
+                Some(Self {
+                    handle,
+                    pid,
+                    created,
+                })
+            }
+        }
+        fn live(&self) -> bool {
+            unsafe {
+                windows_sys::Win32::System::Threading::WaitForSingleObject(self.handle, 0)
+                    == windows_sys::Win32::Foundation::WAIT_TIMEOUT
+            }
+        }
+        fn stop(&self) {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                if self.live() {
+                    let _ = TerminateProcess(self.handle, 0);
+                }
+                let result = WaitForSingleObject(self.handle, 5000);
+                if result != WAIT_OBJECT_0 {
+                    eprintln!(
+                        "fixture cleanup failed: pid={} created={} wait={result}",
+                        self.pid, self.created
+                    );
+                }
+            }
+        }
+    }
+    impl Drop for FixtureProcess {
+        fn drop(&mut self) {
+            unsafe {
+                windows_sys::Win32::Foundation::CloseHandle(self.handle);
+            }
+        }
     }
     impl E2e {
         fn new() -> Self {
@@ -8364,7 +8435,13 @@ mod end_to_end {
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
             )
             .unwrap();
-            Self { tmp, exe, rec }
+            Self {
+                tmp,
+                exe,
+                rec,
+                diagnostic: std::sync::atomic::AtomicBool::new(false),
+                handles: Mutex::new(Vec::new()),
+            }
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
@@ -8416,15 +8493,139 @@ mod end_to_end {
             .unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
+            self.until_phase("unspecified", &mut condition);
+        }
+        fn retain_fixture_processes(&self) {
+            let mut identities = Vec::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        for key in ["pid", "codex_pid"] {
+                            if let (Some(pid), Some(created)) =
+                                (job[key].as_u64(), job[format!("{key}_created")].as_u64())
+                            {
+                                identities.push((pid as u32, created));
+                            }
+                        }
+                    }
+                }
+            }
+            // The marker belongs to this unique fixture directory; verify its
+            // process image before retaining the creation-time-bound OS handle.
+            for name in ["sleep.pid", "hold.pid"] {
+                if let Ok(bytes) = fs::read_to_string(self.rec.join(name))
+                    && let Ok(pid) = bytes.trim().parse::<u32>()
+                    && let Some(created) = proc_created(pid)
+                {
+                    use windows_sys::Win32::{Foundation::*, System::Threading::*};
+                    unsafe {
+                        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+                        if !handle.is_null() {
+                            let mut path = [0u16; 32768];
+                            let mut size = path.len() as u32;
+                            let own =
+                                QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut size)
+                                    != 0
+                                    && String::from_utf16_lossy(&path[..size as usize])
+                                        .eq_ignore_ascii_case(
+                                            &self.tmp.0.join("bin/fixture.exe").to_string_lossy(),
+                                        );
+                            CloseHandle(handle);
+                            if own {
+                                identities.push((pid, created));
+                            }
+                        }
+                    }
+                }
+            }
+            let mut handles = self.handles.lock().unwrap();
+            for (pid, created) in identities {
+                if !handles.iter().any(|h| h.pid == pid && h.created == created)
+                    && let Some(handle) = FixtureProcess::retain(pid, created)
+                {
+                    handles.push(handle);
+                }
+            }
+        }
+        fn phase_snapshot(&self, phase: &str, elapsed: Duration) -> Value {
+            let mut jobs = Vec::new();
+            let mut names = HashMap::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        let role = if s(&job, "name") == "dependency" {
+                            "child"
+                        } else if !s(&job, "parent_job_id").is_empty() {
+                            "child"
+                        } else if jobs.is_empty() {
+                            "parent"
+                        } else {
+                            "other"
+                        };
+                        names.insert(s(&job, "id").to_owned(), role);
+                        jobs.push(job);
+                    }
+                }
+            }
+            jobs.sort_by(|a, b| {
+                s(a, "created_at")
+                    .cmp(s(b, "created_at"))
+                    .then_with(|| s(a, "id").cmp(s(b, "id")))
+            });
+            for (n, job) in jobs
+                .iter()
+                .filter(|j| s(j, "parent_job_id").is_empty())
+                .enumerate()
+            {
+                names.insert(
+                    s(job, "id").to_owned(),
+                    if n == 0 { "parent" } else { "other" },
+                );
+            }
+            let alias = |id: &str| names.get(id).copied().unwrap_or("unknown");
+            let rows: Vec<_> = jobs.iter().map(|job| {
+                let process = |key| { let pid = job[key].as_u64().unwrap_or(0) as u32; let current = proc_created(pid);
+                    json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
+                json!({"role":alias(s(job,"id")),"status":job["status"],"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
+                    "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
+                    "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
+            }).collect();
+            let index: Value = fs::read(self.tmp.0.join("tool/jobs/.queue-index.json"))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+                .unwrap_or(Value::Null);
+            json!({"phase":phase,"elapsed_ms":elapsed.as_millis() as u64,"jobs":rows,"sleep_marker":self.rec.join("sleep.pid").exists(),
+                "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
+        }
+        fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
+            let started = Instant::now();
             let end = Instant::now() + Duration::from_secs(20);
             while !condition() {
-                assert!(Instant::now() < end, "timed out");
+                if self.diagnostic.load(Ordering::Relaxed) {
+                    self.retain_fixture_processes();
+                }
+                if Instant::now() >= end {
+                    let snapshot = self.phase_snapshot(phase, started.elapsed());
+                    eprintln!("dependency fixture timeout: {snapshot}");
+                    panic!("timed out in {phase}");
+                }
                 std::thread::sleep(Duration::from_millis(100));
+            }
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                eprintln!(
+                    "dependency fixture completed: {}",
+                    self.phase_snapshot(phase, started.elapsed())
+                );
             }
         }
         fn slow(&self) -> (String, Vec<u32>) {
             let jid = self.start("slow", &self.tmp.0, b"hi");
-            self.until(|| {
+            self.until_phase("parent_fixture_start", || {
                 self.rec.join("sleep.pid").exists() && truth(&self.job(&jid)["codex_pid"])
             });
             let j = self.job(&jid);
@@ -8444,6 +8645,13 @@ mod end_to_end {
     }
     impl Drop for E2e {
         fn drop(&mut self) {
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                for handle in self.handles.lock().unwrap().iter() {
+                    handle.stop();
+                }
+                return;
+            }
             let rt = System::default();
             for f in ["hold.pid", "sleep.pid"] {
                 if let Ok(s) = fs::read_to_string(self.rec.join(f))
@@ -8571,6 +8779,7 @@ mod end_to_end {
     #[test]
     fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
         let e = E2e::new();
+        e.diagnostic.store(true, Ordering::Relaxed);
         fs::write(
             e.tmp.0.join("tool/queue-config.json"),
             r#"{"max_running":1}"#,
@@ -8605,12 +8814,16 @@ mod end_to_end {
             String::from_utf8_lossy(&result.stderr)
         );
         let child = String::from_utf8(result.stdout).unwrap().trim().to_string();
-        e.until(|| e.job(&child)["status"] == "succeeded");
+        e.until_phase("child_success_with_full_root", || {
+            e.job(&child)["status"] == "succeeded"
+        });
         assert_eq!(e.job(&child)["parent_job_id"], parent);
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
         assert!(e.cli(&["cancel", &parent], "").status.success());
-        e.until(|| e.job(&other)["status"] == "succeeded");
+        e.until_phase("other_success_after_parent_cancel", || {
+            e.job(&other)["status"] == "succeeded"
+        });
     }
     #[test]
     fn test_run_survives_its_caller_and_passes_prompt_and_cwd_verbatim() {

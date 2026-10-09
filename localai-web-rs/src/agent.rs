@@ -6109,7 +6109,7 @@ mod tests {
             .unwrap();
             fs::write(dir.join("last_message.md"), [0xff]).unwrap();
         }
-        for index in 10..20 {
+        for index in 11..20 {
             f.job(
                 &index.to_string(),
                 "orch-demo",

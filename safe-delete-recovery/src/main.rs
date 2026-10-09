@@ -17,6 +17,7 @@ use std::{
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
 const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
@@ -280,6 +281,28 @@ impl Config {
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            REBOOT_ID => {
+                c.id = REBOOT_ID;
+                c.project = "cc-jobs";
+                c.content = "reboot-recovery";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 13229323920896790));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/reboot-job-recovery"),
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work10",
                         ),
                         common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
                     },
@@ -1295,6 +1318,70 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reboot_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = super::Config::production(super::REBOOT_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "reboot-recovery");
+        assert_eq!(
+            config.pinned_identity,
+            Some((2229119083, 13229323920896790))
+        );
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/reboot-job-recovery")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(super::Config::production("464577ad28cdf40461bb04a301f7e8e8").is_err());
+    }
+    #[test]
+    fn reboot_profile_moves_its_worktree_without_losing_git_or_receipt_identity() {
+        let c = fixture_for(REBOOT_ID);
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        let old = source(&c);
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!old.exists());
+    }
+    #[test]
+    fn reboot_profile_rejects_dirty_unpushed_or_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(REBOOT_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.file_id += 1;
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
     use super::*;
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};

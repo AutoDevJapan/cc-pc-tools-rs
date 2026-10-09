@@ -95,3 +95,9 @@ cargo build --locked --release
 Git確認には `git --no-optional-locks` を使い、対象を使う担当やプロセスがないことを確認してからplanする。返るMove-Item命令を別呼び出しに提出し、同じ所有IDで直ちにfinishする。この修復担当はplanの成立までを確認し、実移動はToDo2050の担当が行う。旧票を置き換えたり、他のIDへの許可を追加したりする手順ではない。
 
 ツール内のGit確認は全IDで `--no-optional-locks` と `-c core.longpaths=true` を指定する。退避先の前置きが長くなりGit内部のオブジェクトのパスが260文字を超えても確認できる。ただしGitが起動時に移るリポジトリーの根は、長いパスの設定が有効になる前に処理される。移動先の根が240 UTF-16単位を超える場合は、票や退避先を作る前に `GIT_DESTINATION_ROOT_TOO_LONG` で停止する。この上限は固定の2050実物の退避先には達しない。所有範囲・リンク・保護対象の確認条件は変わらない。
+
+## ToDo2128の再起動復旧の検証データ
+
+所有ID `464577ad28cdf40461bb04a301f7e8e7`、project `cc-jobs`、content `reboot-recovery` だけを追加する。元の所有記録のvolume `2229119083`、file ID `13229323920896790`、固定のTempパスを照合し、公開取得元 `AutoDevJapan/cc-pc-tools-rs`、HEAD `fa80a74f15b50c0ba0cf3865a19da53e2c23a00b` と保存済み `origin/fix/reboot-job-recovery` を確認する。
+
+対象のGit管理先は `D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work10`、commonは同じ取得元の `.git` のみ。同じCドライブの削除希望へ退避し、このworktreeの参照だけを既存の手順で修復する。通常のsafe-delete.exeのGit保護、他の所有ID、項目数、リンク、未push・未保存の変更への制限は変えない。planが返す通常のMove-Itemを別の実行ツール呼び出しで提出し、成功直後にfinishで一覧と元記録を確認する。

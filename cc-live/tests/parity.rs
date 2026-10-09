@@ -7,6 +7,11 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 static SERIAL: AtomicUsize = AtomicUsize::new(0);
+// Exercise the private native guard directly for unwind/drop, in addition to
+// the RealRunner integration paths below. This is the production source.
+#[cfg(windows)]
+#[path = "../src/process_tree.rs"]
+mod native_build_tree;
 struct Fixture {
     root: PathBuf,
     p: Paths,
@@ -2635,62 +2640,221 @@ fn missing_startup_helper_source_refuses_existing_stale_binary_before_build() {
 }
 
 #[cfg(windows)]
-#[test]
-fn cancelled_build_waits_for_real_grandchildren_to_exit() {
-    use windows_sys::Win32::{
-        Foundation::{CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, FILETIME, WAIT_OBJECT_0},
-        System::Threading::{
-            GetProcessTimes, OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
-            PROCESS_SYNCHRONIZE,
-        },
-    };
-    let f = Fixture::new();
-    let marker = f.root.join("grandchild.pid");
-    let result = process::RealRunner.run(
-        Call::new(args(&[
-            env!("CARGO_BIN_EXE_cc_live_process_fixture"),
-            "parent",
-            &path(&marker),
-        ]))
-        .managed()
-        .timeout(5.0),
-    );
-    assert!(result.unwrap_err().contains("timed out"));
-    let receipt = read_text(marker).unwrap();
-    let mut fields = receipt.split_whitespace();
-    let pid: u32 = fields.next().unwrap().parse().unwrap();
-    let born: u64 = fields.next().unwrap().parse().unwrap();
-    assert!(fields.next().is_none());
-    unsafe {
-        let handle = OpenProcess(
-            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
-            0,
-            pid,
-        );
-        if handle.is_null() {
-            assert_eq!(GetLastError(), ERROR_INVALID_PARAMETER);
-        } else {
+struct FixtureProcess(std::os::windows::io::OwnedHandle);
+
+#[cfg(windows)]
+impl FixtureProcess {
+    fn pin(marker: &std::path::Path) -> Self {
+        use std::os::windows::io::{AsRawHandle, FromRawHandle};
+        use windows_sys::Win32::{
+            Foundation::{FILETIME, WAIT_TIMEOUT},
+            System::Threading::{
+                GetProcessTimes, OpenProcess, QueryFullProcessImageNameW, WaitForSingleObject,
+                PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
+            },
+        };
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
+        let receipt = loop {
+            if let Ok(text) = fs::read_to_string(marker) {
+                if text.split_whitespace().count() == 2 {
+                    break text;
+                }
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "fixture did not publish readiness"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        };
+        let mut fields = receipt.split_whitespace();
+        let pid: u32 = fields.next().unwrap().parse().unwrap();
+        let born: u64 = fields.next().unwrap().parse().unwrap();
+        unsafe {
+            let handle = OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE,
+                0,
+                pid,
+            );
+            assert!(!handle.is_null(), "could not pin live fixture process");
+            let handle = std::os::windows::io::OwnedHandle::from_raw_handle(handle);
             let (mut created, mut exited, mut kernel, mut user) = (
                 FILETIME::default(),
                 FILETIME::default(),
                 FILETIME::default(),
                 FILETIME::default(),
             );
-            let success =
-                GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user);
-            let observed_born =
-                (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
-            let state = WaitForSingleObject(handle, 0);
-            CloseHandle(handle);
-            assert_ne!(success, 0);
-            if observed_born == born {
-                assert_eq!(
-                    state, WAIT_OBJECT_0,
-                    "Grandchild survived the cancelled build"
+            assert_ne!(
+                GetProcessTimes(
+                    handle.as_raw_handle(),
+                    &mut created,
+                    &mut exited,
+                    &mut kernel,
+                    &mut user
+                ),
+                0
+            );
+            assert_eq!(
+                (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime),
+                born
+            );
+            let mut image = vec![0u16; 32768];
+            let mut length = image.len() as u32;
+            assert_ne!(
+                QueryFullProcessImageNameW(
+                    handle.as_raw_handle(),
+                    0,
+                    image.as_mut_ptr(),
+                    &mut length
+                ),
+                0
+            );
+            let image = PathBuf::from(String::from_utf16(&image[..length as usize]).unwrap());
+            assert_eq!(
+                image.canonicalize().unwrap(),
+                PathBuf::from(env!("CARGO_BIN_EXE_cc_live_process_fixture"))
+                    .canonicalize()
+                    .unwrap()
+            );
+            assert_eq!(
+                WaitForSingleObject(handle.as_raw_handle(), 0),
+                WAIT_TIMEOUT,
+                "fixture exited before cancellation"
+            );
+            eprintln!("fixture pinned: pid={pid} created={born} exe=cc_live_process_fixture handle={:?} state=258", handle.as_raw_handle());
+            Self(handle)
+        }
+    }
+
+    fn assert_exited(&self) {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::{
+            Foundation::WAIT_OBJECT_0, System::Threading::WaitForSingleObject,
+        };
+        let state = unsafe { WaitForSingleObject(self.0.as_raw_handle(), 0) };
+        eprintln!(
+            "fixture after runner: handle={:?} state={state}",
+            self.0.as_raw_handle()
+        );
+        assert_eq!(
+            state, WAIT_OBJECT_0,
+            "Grandchild survived the cancelled build"
+        );
+    }
+}
+
+#[cfg(windows)]
+impl Drop for FixtureProcess {
+    fn drop(&mut self) {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::{
+            Foundation::WAIT_OBJECT_0,
+            System::Threading::{TerminateProcess, WaitForSingleObject},
+        };
+        unsafe {
+            if WaitForSingleObject(self.0.as_raw_handle(), 0) != WAIT_OBJECT_0 {
+                // The handle was validated against this fixture's creation time and executable.
+                TerminateProcess(self.0.as_raw_handle(), 1);
+                let state = WaitForSingleObject(self.0.as_raw_handle(), 5000);
+                eprintln!(
+                    "fixture fallback cleanup: handle={:?} state={state}",
+                    self.0.as_raw_handle()
                 );
             }
         }
     }
+}
+
+#[cfg(windows)]
+#[test]
+fn cancelled_build_waits_for_real_grandchildren_to_exit() {
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            process::RealRunner.run(
+                Call::new(args(&[
+                    env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+                    "parent",
+                    &path(&marker),
+                ]))
+                .managed()
+                .timeout(5.0),
+            )
+        });
+        let root = FixtureProcess::pin(&marker.with_extension("root"));
+        let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+        let grandchild = FixtureProcess::pin(&marker);
+        assert!(worker.join().unwrap().unwrap_err().contains("timed out"));
+        root.assert_exited();
+        worker_process.assert_exited();
+        grandchild.assert_exited();
+    });
+}
+
+#[cfg(windows)]
+#[test]
+fn completed_build_waits_for_descendants_after_root_exit() {
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            process::RealRunner.run(
+                Call::new(args(&[
+                    env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+                    "parent-exit",
+                    &path(&marker),
+                ]))
+                .managed()
+                .merged()
+                .timeout(5.0),
+            )
+        });
+        let root = FixtureProcess::pin(&marker.with_extension("root"));
+        let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+        let grandchild = FixtureProcess::pin(&marker);
+        fs::write(marker.with_extension("root-release"), b"release").unwrap();
+        assert_eq!(worker.join().unwrap().unwrap().code, 0);
+        root.assert_exited();
+        worker_process.assert_exited();
+        grandchild.assert_exited();
+    });
+}
+
+#[cfg(windows)]
+#[test]
+fn dropped_build_guard_drains_pinned_root_and_grandchildren() {
+    use std::process::{Command, Stdio};
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_cc_live_process_fixture"));
+    command
+        .arg("parent-delayed")
+        .arg(&marker)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let (mut child, mut tree) =
+        native_build_tree::Tree::spawn(&mut command, CREATE_NO_WINDOW, true).unwrap();
+    assert!(tree.managed());
+    let root = FixtureProcess::pin(&marker.with_extension("root"));
+    let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+    tree.observe().unwrap();
+    // Add a new member only after the existing handles have been captured.
+    // stop()/Drop must query the job again instead of reusing that snapshot.
+    fs::write(marker.with_extension("spawn-release"), b"release").unwrap();
+    let grandchild = FixtureProcess::pin(&marker);
+    // An unwind must go through the guard's synchronous drain too.
+    assert!(
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            let _guard = tree;
+            panic!("fixture cancellation unwind");
+        }))
+        .is_err()
+    );
+    root.assert_exited();
+    worker_process.assert_exited();
+    grandchild.assert_exited();
+    child.wait().unwrap();
 }
 
 #[test]

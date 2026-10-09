@@ -426,11 +426,29 @@ fn wait(
     timeout: Option<f64>,
     lease: Option<&LeaseLimit>,
 ) -> Result<i32, String> {
+    let result = wait_running(child, tree, timeout, lease);
+    // All paths, including try_wait/observation errors, drain the job before
+    // readers are joined or the caller is allowed to restore operation state.
+    match tree.stop(child) {
+        Ok(()) => result,
+        Err(cleanup) => Err(match result {
+            Ok(_) => cleanup,
+            Err(reason) => format!("{reason}; build process cleanup failed: {cleanup}"),
+        }),
+    }
+}
+
+fn wait_running(
+    child: &mut std::process::Child,
+    tree: &mut crate::process_tree::Tree,
+    timeout: Option<f64>,
+    lease: Option<&LeaseLimit>,
+) -> Result<i32, String> {
     let start = Instant::now();
     let mut next_probe = start;
     loop {
+        tree.observe()?;
         if let Some(s) = child.try_wait().map_err(|e| e.to_string())? {
-            tree.stop(child)?;
             return Ok(s.code().unwrap_or(1));
         }
         let mut lease_error = None;
@@ -464,9 +482,12 @@ fn wait(
             || interrupted().is_err()
             || timeout.is_some_and(|t| start.elapsed().as_secs_f64() >= t)
         {
-            tree.stop(child)?;
-            let _ = child.kill();
-            let _ = child.wait();
+            // Managed children are terminated together by the outer wait's
+            // drain. Unmanaged commands retain their original root-only stop.
+            if !tree.managed() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
             if let Some(error) = lease_error {
                 return Err(error);
             }

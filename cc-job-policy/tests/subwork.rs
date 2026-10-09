@@ -126,7 +126,16 @@ fn parent_exit_disappearance_and_resumption_recompute_the_actual_parent() {
 #[test]
 fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
     for case in [
-        "block", "done", "needs", "spec", "key", "worktree", "relation", "wait",
+        "block",
+        "done",
+        "needs",
+        "spec",
+        "key",
+        "worktree",
+        "relation",
+        "wait",
+        "owner_repo",
+        "owner_pr",
     ] {
         let mut f = Fixture::new();
         f.register();
@@ -139,6 +148,8 @@ fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
             "worktree" => job["cwd"] = f.jobs[0]["cwd"].clone(),
             "relation" => f.db["items"][1]["subwork"]["kind"] = json!("research"),
             "wait" => f.db["items"][1]["wait_on"] = json!([99]),
+            "owner_repo" => job["work_owner"]["repository"] = json!("elsewhere/project"),
+            "owner_pr" => job["work_owner"]["pr"] = json!(87),
             _ => unreachable!(),
         }
         assert!(
@@ -160,4 +171,22 @@ fn parent_waits_for_results_but_subwork_cannot_wait_for_parent_even_indirectly()
         .push(json!({"id":3,"status":"todo"}));
     f.db["items"][1]["wait_on"] = json!([3]);
     assert!(todo_wait::validate(&f.db, 3, &[1]).is_err());
+}
+
+#[test]
+fn generic_titles_and_parallel_siblings_keep_the_parent_pr_scope() {
+    let mut f = Fixture::new();
+    f.db["items"][1]["title"] = json!("有限の検査");
+    f.register();
+    let mut child = f.child_job();
+    child["work_owner"].as_object_mut().unwrap().remove("pr");
+    subwork::refresh_job(&f.db, &f.jobs, &mut child).unwrap();
+    assert_eq!(child["work_owner"]["pr"], 86);
+    let mut sibling = child.clone();
+    sibling["id"] = json!("sibling");
+    sibling["todo_id"] = json!(3);
+    sibling["status"] = json!("running");
+    assert!(work_owner::blocker(&child, &[sibling.clone()]).is_none());
+    sibling["subwork"]["parent_todo_id"] = json!(99);
+    assert!(work_owner::blocker(&child, &[sibling]).is_some());
 }

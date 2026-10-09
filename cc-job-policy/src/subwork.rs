@@ -31,7 +31,9 @@ fn root(job: &Value) -> bool {
 /// Callers overwrite this observation from process identity, never trust it from disk.
 pub fn mark_live(jobs: &mut [Value], alive: impl Fn(&Value) -> bool) {
     for job in jobs {
-        let active = alive(job) && job["cancel_requested"] != true && s(job, "status") != "queued";
+        let active = alive(job)
+            && job["cancel_requested"] != true
+            && ["starting", "running"].contains(&s(job, "status"));
         job["subwork_live"] = json!(active);
     }
 }
@@ -210,6 +212,10 @@ pub fn apply(
     candidate["subwork_owner_job_id"] = Value::Null;
     let parent = resolve(db, child, jobs, require_checkout)?;
     candidate["subwork"] = child["subwork"].clone();
+    // A generic review title still belongs to its parent's PR ownership scope.
+    if !candidate["work_owner"]["pr"].is_u64() {
+        candidate["work_owner"]["pr"] = child["subwork"]["owner"]["pr"].clone();
+    }
     candidate["subwork_validated"] = json!(true);
     candidate["subwork_owner_job_id"] = json!(parent);
     candidate["parent_job_id"] = json!(parent);
@@ -230,12 +236,18 @@ pub fn permits(candidate: &Value, owner: &Value) -> bool {
 /// Validate an actual queued job against the authoritative relation and prepared launch.
 pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), String> {
     let child = item(db, &job["todo_id"])?;
+    let ownership = from_job(job);
     if !child["subwork"].is_object()
         || child["subwork"] != job["subwork"]
         || !["todo", "doing"].contains(&s(child, "status"))
         || child["dispatchable"] != true
         || child["spec"] != job["subwork_spec"]
         || child["needs"] != job["assigned_needs"]
+        || !same_repo(&ownership, &child["subwork"]["owner"])
+        || s(&ownership, "worktree") != norm(Path::new(s(job, "cwd")))
+        || (ownership["pr"].is_u64()
+            && child["subwork"]["owner"]["pr"].is_u64()
+            && ownership["pr"] != child["subwork"]["owner"]["pr"])
         || crate::todo_wait::waiting(db, child)
         || s(&child["scheduler"], "worktree").is_empty()
         || norm(Path::new(s(job, "cwd"))) != norm(Path::new(s(&child["scheduler"], "worktree")))

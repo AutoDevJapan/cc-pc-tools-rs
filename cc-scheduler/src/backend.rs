@@ -342,7 +342,7 @@ impl RealBackend {
                 "--assigned-needs".into(),
                 arr(&item["needs"])
                     .iter()
-                    .map(|v| s(v))
+                    .map(s)
                     .collect::<Vec<_>>()
                     .join(","),
             ]);

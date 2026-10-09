@@ -21,6 +21,7 @@ todo.exe add demo "PR86の関連検査" --spec checks.md --needs cargo --subwork
 同じPRの主担当との所有権衝突だけを除外する。別の親や普通の実装担当との衝突は従来どおり待つ。
 CPU、RAM、起動間隔、Cargo、Civ6、同じToDoの重複防止、OAuthのキューは通過する必要がある。
 独立ToDoは親と別の実行枠を使う。親の枠を使って上限を回避しない。
+起動と再開はschedulerが担い、停滞監視から別のConsole受付へ二重に委譲しない。
 起動引数の `--subwork-of` と `--assigned-needs` は、保存済み関係・起動識別子・割当と照合する。
 親がまだ稼働していれば、schedulerが確認した親ジョブを `--parent-job-id` でも渡す。
 

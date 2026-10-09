@@ -1052,6 +1052,13 @@ impl Context {
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
             return Ok(None);
         }
+        let _subwork_store_lock = job["subwork"]
+            .is_object()
+            .then(|| {
+                FileLock::acquire(&self.todo_store().with_file_name("todo.lock"))
+                    .map_err(Error::from)
+            })
+            .transpose()?;
         self.record_work_owner(&mut job);
         let mut jobs = self.admission_jobs()?;
         if !jobs.iter().any(|j| s(j, "id") == jid) {
@@ -1075,6 +1082,15 @@ impl Context {
                 self.save(&job)?;
             }
             return Ok(None);
+        }
+        if job["subwork"].is_object() {
+            cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
+            cc_job_policy::subwork::refresh_job(
+                &self.read_json(&self.todo_store())?,
+                &jobs,
+                &mut job,
+            )
+            .map_err(Error::new)?;
         }
         job["queue_wait_reason"] = Value::Null;
         job["queue_admission_error"] = Value::Null;
@@ -1101,12 +1117,45 @@ impl Context {
         cfg: &QueueConfig,
         caller: Option<&str>,
     ) -> HashMap<String, Value> {
+        let mut observed = jobs.to_vec();
+        cc_job_policy::subwork::mark_live(&mut observed, |j| self.running_job(j));
+        let db = observed
+            .iter()
+            .any(|j| j["subwork"].is_object())
+            .then(|| self.read_json(&self.todo_store()));
+        let mut subwork_waits = HashMap::new();
+        let normalized: Vec<_> = observed
+            .iter()
+            .map(|j| {
+                let mut candidate = j.clone();
+                if j["subwork"].is_object() {
+                    candidate["subwork_validated"] = json!(false);
+                    candidate["subwork_owner_job_id"] = Value::Null;
+                    candidate["parent_job_id"] = Value::Null;
+                    let result = match &db {
+                        Some(Ok(db)) => {
+                            cc_job_policy::subwork::refresh_job(db, &observed, &mut candidate)
+                        }
+                        _ => Err("subwork ToDo store is unavailable".into()),
+                    };
+                    if let Err(message) = result {
+                        subwork_waits.insert(
+                            s(j, "id").to_owned(),
+                            json!({"code":"subwork_invalid","message":message}),
+                        );
+                    }
+                }
+                candidate
+            })
+            .collect();
+        let jobs = normalized.as_slice();
         let priorities = self.queue_priorities(jobs, cfg);
         let dependency_waits = self.dependency_waits(jobs);
         let ownership_jobs: Vec<_> = jobs
             .iter()
             .filter(|j| {
-                !dependency_waits.contains_key(s(j, "id"))
+                (!dependency_waits.contains_key(s(j, "id"))
+                    && !subwork_waits.contains_key(s(j, "id")))
                     || self.running_job(j)
                     || s(j, "status") == "starting"
             })
@@ -1127,6 +1176,7 @@ impl Context {
                 && j["cancel_requested"] != true
                 && self.supervisor_alive(j)
                 && !dependency_waits.contains_key(s(j, "id"))
+                && !subwork_waits.contains_key(s(j, "id"))
                 && cc_job_policy::work_owner::blocker(j, &ownership_jobs).is_none()
                 && priorities.get(s(j, "id")).copied().unwrap_or(2) < 3
         });
@@ -1163,6 +1213,10 @@ impl Context {
         }
         let mut waiting = Vec::new();
         for j in jobs.iter().filter(|j| s(j, "status") == "queued") {
+            if let Some(reason) = subwork_waits.get(s(j, "id")) {
+                decisions.insert(s(j, "id").into(), reason.clone());
+                continue;
+            }
             if let Some(reason) = dependency_waits.get(s(j, "id")) {
                 decisions.insert(s(j, "id").into(), reason.clone());
                 continue;
@@ -1374,6 +1428,10 @@ impl Context {
             .collect()
     }
     pub(crate) fn queue_root(&self, job: &Value) -> String {
+        // Independent ToDos consume ordinary hardware/provider capacity even with a live parent.
+        if job["subwork"].is_object() {
+            return s(job, "id").into();
+        }
         let mut current = job.clone();
         let mut seen = HashSet::new();
         loop {

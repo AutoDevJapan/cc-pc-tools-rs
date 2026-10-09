@@ -1,5 +1,159 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
+
+mod independent_subwork {
+    use super::*;
+    fn setup(cap: usize) -> (Test, subwork_support::Fixture) {
+        let t = Test::new();
+        let mut f = subwork_support::Fixture::new();
+        f.register();
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":cap}).to_string(),
+        )
+        .unwrap();
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), f.dir.path().to_string_lossy().into());
+        fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+        f.jobs[0]["pid"] = json!(std::process::id());
+        f.jobs[0]["pid_created"] = json!(123);
+        t.put(f.jobs[0].clone());
+        (t, f)
+    }
+    fn register(t: &Test, f: &subwork_support::Fixture, extra: &[&str]) -> Result<i32> {
+        let row = &f.db["items"][1];
+        let mut args = vec![
+            "--todo-id",
+            "2",
+            "--subwork-of",
+            "1",
+            "--parent-job-id",
+            "parent",
+            "--assigned-needs",
+            "",
+            "--launch-key",
+            s(&row["scheduler"], "key"),
+            "--cwd",
+            s(&row["scheduler"], "worktree"),
+            "--sandbox",
+            "danger-full-access",
+        ];
+        args.extend(extra);
+        t.run(&args, b"finite check")
+    }
+    fn child(t: &Test) -> Value {
+        t.ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|j| j["todo_id"] == 2)
+            .unwrap()
+    }
+    #[test]
+    fn registration_keeps_cross_todo_parent_but_does_not_exempt_hardware_capacity() {
+        let (t, f) = setup(1);
+        register(&t, &f, &[]).unwrap();
+        let child = child(&t);
+        assert_eq!(child["parent_job_id"], "parent");
+        assert!(t.ctx.admit(s(&child, "id")).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(s(&child, "id")).unwrap()["queue_wait_reason"]["code"],
+            "running_limit"
+        );
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":2}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit(s(&child, "id")).unwrap().is_some());
+    }
+    #[test]
+    fn registration_validates_allocation_parent_and_queued_duplicates() {
+        let (t, f) = setup(8);
+        assert!(register(&t, &f, &["--assigned-needs", "cargo"]).is_err());
+        assert!(register(&t, &f, &["--parent-job-id", "fake"]).is_err());
+        assert!(register(&t, &f, &["--subwork-of", "9"]).is_err());
+        register(&t, &f, &[]).unwrap();
+        assert!(
+            register(
+                &t,
+                &f,
+                &["--launch-key", "33333333333333333333333333333333"]
+            )
+            .is_err()
+        );
+        assert_eq!(
+            t.ctx
+                .list_jobs(&HashSet::new())
+                .iter()
+                .filter(|j| j["todo_id"] == 2)
+                .count(),
+            1
+        );
+    }
+    #[test]
+    fn queued_job_revalidates_parent_exit_and_changed_todo() {
+        for changed in [false, true] {
+            let (t, mut f) = setup(8);
+            register(&t, &f, &[]).unwrap();
+            let child = child(&t);
+            let mut parent = t.ctx.load("parent").unwrap();
+            parent["status"] = json!("succeeded");
+            parent["pid"] = Value::Null;
+            t.ctx.save(&parent).unwrap();
+            if changed {
+                f.db["items"][1]["needs"] = json!(["cargo"]);
+                fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            }
+            assert_eq!(t.ctx.admit(s(&child, "id")).unwrap().is_some(), !changed);
+            let saved = t.ctx.load(s(&child, "id")).unwrap();
+            if changed {
+                assert_eq!(saved["queue_wait_reason"]["code"], "subwork_invalid");
+            } else {
+                assert!(saved["parent_job_id"].is_null());
+            }
+        }
+    }
+    #[test]
+    fn invalid_queued_subwork_does_not_block_a_normal_root_but_running_subwork_does() {
+        for running in [false, true] {
+            let (t, mut f) = setup(8);
+            register(&t, &f, &[]).unwrap();
+            let mut child = child(&t);
+            let mut parent = t.ctx.load("parent").unwrap();
+            parent["status"] = json!("succeeded");
+            parent["pid"] = Value::Null;
+            t.ctx.save(&parent).unwrap();
+            f.db["items"][1]["needs"] = json!(["cargo"]);
+            fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            if running {
+                child["status"] = json!("running");
+                child["pid"] = json!(std::process::id());
+                child["pid_created"] = json!(123);
+                t.ctx.save(&child).unwrap();
+            }
+            t.put(job(
+                json!({"id":"normal","name":"normal","status":"queued","todo_id":3,
+                "cwd":f.repo,"pid":std::process::id(),"pid_created":123,"queue_sequence":500,
+                "created_at":"2026-10-10T03:00:00+09:00","work_owner":child["work_owner"]}),
+            ));
+            {
+                let _lock = t.ctx.queue_lock().unwrap();
+                t.ctx.track_queued_job("normal").unwrap();
+            }
+            assert_eq!(t.ctx.admit("normal").unwrap().is_some(), !running);
+            if running {
+                assert_eq!(
+                    t.ctx.load("normal").unwrap()["queue_wait_reason"]["code"],
+                    "work_owner"
+                );
+            }
+        }
+    }
+}
 
 mod reboot_recovery {
     use super::*;
@@ -4877,8 +5031,8 @@ impl Runtime for Fake {
             None => Ok(false),
         }
     }
-    fn work_checkout(&self, _cwd: &str) -> Value {
-        json!({})
+    fn work_checkout(&self, cwd: &str) -> Value {
+        cc_job_policy::work_owner::checkout(cwd)
     }
     fn queue_machine_sample(
         &self,

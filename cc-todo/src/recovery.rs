@@ -335,11 +335,19 @@ fn plan_with_intake(
 ) -> Result<Vec<i64>> {
     cc_job_policy::todo_wait::release_ready(db);
     let owner_projects = db["projects"].clone();
-    let owner_jobs: Vec<_> = jobs
+    let mut owner_jobs: Vec<_> = jobs
         .iter()
         .filter(|j| !excluded(s(&j["project"]), s(&j["cwd"]), clients))
         .cloned()
         .collect();
+    cc_job_policy::subwork::mark_live(&mut owner_jobs, |j| {
+        ["pid", "codex_pid"]
+            .iter()
+            .any(|key| cc_scheduler::policy::matches(j, key, ps))
+    });
+    for job in &mut owner_jobs {
+        job["work_owner_live"] = json!(cc_scheduler::policy::matches(job, "codex_pid", ps));
+    }
     cc_job_policy::work_owner::reconcile_todos_if(db, &owner_jobs, |item| {
         !excluded(
             s(&item["project"]),
@@ -405,6 +413,8 @@ fn plan_with_intake(
                 i["project"] == project
                     && matches!(s(&i["status"]), "todo" | "doing")
                     && !cc_job_policy::todo_wait::waiting(db, i)
+                    // Finite independent work uses scheduler's resource-aware launch contract.
+                    && !i["subwork"].is_object()
             })
             .cloned()
             .collect();
@@ -838,6 +848,9 @@ pub fn run_watch(
         };
         let project = s(&item["project"]);
         let path = s(&db["projects"][project]);
+        if item["subwork"].is_object() {
+            continue;
+        }
         if excluded(project, path, &clients) {
             continue;
         }

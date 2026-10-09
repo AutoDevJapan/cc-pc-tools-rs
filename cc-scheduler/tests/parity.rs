@@ -969,6 +969,9 @@ struct Fake {
     fail_lost: bool,
     close_fails: bool,
     reply_count: usize,
+    settings_change: Option<(PathBuf, Value)>,
+    measure_count: usize,
+    change_during_prepare: bool,
 }
 impl Default for Fake {
     fn default() -> Self {
@@ -996,6 +999,9 @@ impl Default for Fake {
             fail_lost: false,
             close_fails: false,
             reply_count: 0,
+            settings_change: None,
+            measure_count: 0,
+            change_during_prepare: false,
         }
     }
 }
@@ -1004,6 +1010,14 @@ impl Backend for Fake {
         self.clock
     }
     fn measure(&mut self, _: &mut Value) -> Result<(Value, Processes)> {
+        self.measure_count += 1;
+        if self.measure_count == 2 {
+            if let Some((path, settings)) = self.settings_change.take() {
+                let mut db = read_json(&path, json!({}))?;
+                merge(&mut db["items"][0], settings);
+                write_json(&path, &db, 2)?;
+            }
+        }
         Ok((self.m.clone(), self.ps.clone()))
     }
     fn snapshot(&mut self) -> Result<Processes> {
@@ -1111,6 +1125,13 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if self.change_during_prepare {
+            if let Some((path, settings)) = self.settings_change.take() {
+                let mut db = read_json(&path, json!({}))?;
+                merge(&mut db["items"][0], settings);
+                write_json(&path, &db, 2)?;
+            }
+        }
         if self.prepare_pressure {
             self.m["available_gb"] = json!(3);
         }
@@ -1817,6 +1838,106 @@ fn test_explicit_model_effort_skip_picker() {
     assert_eq!(f.e.backend.pick_count, 0);
     assert_eq!(f.e.backend.launched.len(), 1);
 }
+#[test]
+fn todo1842_explicit_model_overrides_saved_selection() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6-astra");
+    row["effort"] = json!("high");
+    row["scheduler"] = json!({"selection":{"model":"gpt-6.1-sol","effort":"max"}});
+    f.put(row);
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let selection = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6-astra");
+    assert_eq!(selection["effort"], "high");
+    assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn todo1842_changed_model_does_not_resume_previous_conversation() {
+    for (requested, retained) in [("gpt-6-astra", false), ("gpt-6.1-sol", true)] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n指定モデルで再開する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!(requested);
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            prepared["scheduler"]["resume_session"].is_string(),
+            retained
+        );
+        assert_eq!(prepared["scheduler"]["selection"]["model"], requested);
+    }
+}
+
+#[test]
+fn todo1842_setting_change_during_last_sample_defers_and_reprepares() {
+    for during_prepare in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n検証する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!("gpt-6.1-sol");
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        f.e.backend.measure_count = 0;
+        f.e.backend.change_during_prepare = during_prepare;
+        f.e.backend.clock += 61.;
+        f.e.backend.settings_change = Some((
+            f.e.todo_path.clone(),
+            json!({"model":"gpt-6-astra","effort":"max"}),
+        ));
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty());
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let launched = &f.e.backend.launched[0]["item"]["scheduler"];
+        assert_eq!(launched["selection"]["model"], "gpt-6-astra");
+        assert_eq!(launched["selection"]["effort"], "max");
+        assert!(launched["resume_session"].is_null());
+    }
+}
+
+#[test]
+fn todo1842_unavailable_explicit_model_is_retained_without_launch() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6.1-luna");
+    row["effort"] = json!("high");
+    f.put(row);
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
+    );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
+    assert_eq!(f.get(1)["status"], "todo");
+}
 struct GitFake {
     calls: Vec<Invocation>,
     existing: Option<(PathBuf, String, PathBuf)>,
@@ -2221,7 +2342,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
     assert_eq!(launched[6][0], "tasklist");
 }
 #[test]
-fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
+fn test_hidden_wrapper_runs_rust_tick_with_window_style_zero() {
     let text = include_str!("../deployment/discord-ask-tick-hidden.vbs");
     let lines: Vec<_> = text
         .lines()
@@ -2294,7 +2415,7 @@ fn test_worker_launch_uses_windowless_existing_launcher() {
     assert_eq!(NO_WINDOW, 0x08000000);
 }
 #[test]
-fn test_unknown_model_is_not_launched() {
+fn test_unknown_explicit_model_is_not_launched() {
     let mut f = Fixture::new();
     assert!(!f.e.backend.model_exists("gpt-6.1-luna"));
     assert!(f.e.backend.model_exists("gpt-6-luna"));
@@ -2302,12 +2423,13 @@ fn test_unknown_model_is_not_launched() {
     row["model"] = json!("gpt-6.1-luna");
     row["effort"] = json!("high");
     f.put(row);
-    f.dispatch();
-    assert_eq!(f.e.backend.launched.len(), 1);
     assert_eq!(
-        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
-        "mock-model"
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
     );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
 }
 
 #[test]

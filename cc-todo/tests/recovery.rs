@@ -1,6 +1,18 @@
 use cc_scheduler::policy::Processes;
 use cc_todo::{recovery::*, *};
 use serde_json::{Value, json};
+
+#[test]
+fn todo1842_recovery_keeps_explicit_todo_model_and_source_defaults() {
+    let pending = json!({"job":{"model":"gpt-6.1-sol","effort":"max"}});
+    let explicit = json!({"id":1804,"model":"gpt-6-astra","effort":"high"});
+    let request = delegation_request(&explicit, &pending);
+    assert_eq!(request["model"], "gpt-6-astra");
+    assert_eq!(request["effort"], "high");
+    let request = delegation_request(&json!({"id":1805}), &pending);
+    assert_eq!(request["model"], "gpt-6.1-sol");
+    assert_eq!(request["effort"], "max");
+}
 use std::{fs, path::PathBuf};
 
 fn db(status: &str) -> Value {

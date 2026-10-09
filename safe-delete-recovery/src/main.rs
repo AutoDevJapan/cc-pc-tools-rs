@@ -1714,6 +1714,24 @@ mod tests {
         );
         assert!(Config::production("ef300280dcb8c0e08fcb9be1318565ee").is_err());
     }
+    #[test]
+    fn unslop_large_metadata_envelope_is_readable_only_for_the_fixed_integration() {
+        let c = fixture_for(unslop::INTEGRATION);
+        let large = c.temp.join("metadata-envelope.json");
+        let bytes = vec![b' '; 9 * 1024 * 1024];
+        fs::write(&large, &bytes).unwrap();
+        assert_eq!(
+            read_record(&large, unslop::record_limit(&c)).unwrap(),
+            bytes
+        );
+        for id in [unslop::BUILD, unslop::CORE, unslop::MEASUREMENT] {
+            let other = Config::production(id).unwrap();
+            assert!(read_record(&large, unslop::record_limit(&other)).is_err());
+        }
+        let too_large = c.temp.join("oversize-envelope.json");
+        fs::write(&too_large, vec![b' '; 16 * 1024 * 1024 + 1]).unwrap();
+        assert!(read_record(&too_large, unslop::record_limit(&c)).is_err());
+    }
     fn unslop_move(c: &Config) {
         fs::rename(source(c), c.destination().join("files")).unwrap();
     }

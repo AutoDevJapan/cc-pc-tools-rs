@@ -1,0 +1,4 @@
+{"type":"user","timestamp":"2026-10-01T23:59:00+09:00","cwd":"D:/work/demo","uuid":"user-1","message":{"role":"user","content":[]}}
+{"type":"assistant","timestamp":"2026-10-02T00:01:00+09:00","cwd":"D:/work/demo","uuid":"a1","message":{"id":"answer-1","usage":{"input_tokens":100,"output_tokens":20,"cache_read_input_tokens":80},"content":[{"type":"tool_use","id":"tool-1"}]}}
+{"type":"assistant","timestamp":"2026-10-02T00:01:01+09:00","cwd":"D:/work/demo","uuid":"a2","message":{"id":"answer-1","usage":{"input_tokens":100,"output_tokens":25,"cache_read_input_tokens":80},"content":[{"type":"tool_use","id":"tool-1"}]}}
+{"type":"user","timestamp":"2026-10-02T01:01:01+09:00","cwd":"D:/work/demo","uuid":"user-2","message":{"role":"user","content":[]}}

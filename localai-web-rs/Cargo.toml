@@ -1,0 +1,30 @@
+[package]
+name = "localai-web-rs"
+version = "0.1.0"
+edition = "2021"
+default-run = "localai-web-rs"
+
+[features]
+recovery-integration = []
+
+[dependencies]
+cc-chrome = { path = "../cc-chrome" }
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12.28", default-features = false, features = ["json"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+cc-ask = { path = "../cc-ask" }
+cc-scheduler = { path = "../cc-scheduler" }
+cc-todo = { path = "../cc-todo" }
+chrono = "0.4"
+regex = "1"
+proc-macro2 = "1"
+syn = "2"
+
+[dev-dependencies]
+uuid = "1"
+tower = { version = "0.5", features = ["util"] }

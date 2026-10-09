@@ -1,4 +1,7 @@
 **/target/
+!localai-web-rs/tests/fixtures/operations/localai-web-rs/target/
+!localai-web-rs/tests/fixtures/operations/localai-web-rs/target/release/
+!localai-web-rs/tests/fixtures/operations/localai-web-rs/target/release/console-state.json
 *.log
 *.exe
 cc-ask/tests/*.json

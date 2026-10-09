@@ -8498,6 +8498,7 @@ mod end_to_end {
         rec: PathBuf,
         diagnostic: std::sync::atomic::AtomicBool,
         handles: Mutex<Vec<FixtureProcess>>,
+        inherited_home: Option<PathBuf>,
     }
     struct FixtureProcess {
         handle: windows_sys::Win32::Foundation::HANDLE,
@@ -8545,7 +8546,7 @@ mod end_to_end {
                     == windows_sys::Win32::Foundation::WAIT_TIMEOUT
             }
         }
-        fn stop(&self) {
+        fn stop(&self) -> bool {
             use windows_sys::Win32::{Foundation::*, System::Threading::*};
             unsafe {
                 if self.live() {
@@ -8558,6 +8559,7 @@ mod end_to_end {
                         self.pid, self.created
                     );
                 }
+                result == WAIT_OBJECT_0
             }
         }
     }
@@ -8595,6 +8597,7 @@ mod end_to_end {
                 rec,
                 diagnostic: std::sync::atomic::AtomicBool::new(false),
                 handles: Mutex::new(Vec::new()),
+                inherited_home: None,
             }
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
@@ -8616,6 +8619,13 @@ mod end_to_end {
                 .env_remove("GODD_DISCORD_BOT_TOKEN")
                 .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
+            if let Some(home) = &self.inherited_home {
+                c.env("USERPROFILE", home).env("HOME", home);
+            }
+            // CODEX_HOME alone does not isolate native plugin initialization:
+            // Context::installed also resolves USERPROFILE/HOME independently.
+            c.env("USERPROFILE", self.tmp.0.join("home"))
+                .env("HOME", self.tmp.0.join("home"));
             c.output().unwrap()
         }
         fn start(&self, mode: &str, cwd: &Path, prompt: &[u8]) -> String {
@@ -8683,8 +8693,14 @@ mod end_to_end {
                                 QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut size)
                                     != 0
                                     && String::from_utf16_lossy(&path[..size as usize])
+                                        .replace('\\', "/")
                                         .eq_ignore_ascii_case(
-                                            &self.tmp.0.join("bin/fixture.exe").to_string_lossy(),
+                                            &self
+                                                .tmp
+                                                .0
+                                                .join("bin/fixture.exe")
+                                                .to_string_lossy()
+                                                .replace('\\', "/"),
                                         );
                             CloseHandle(handle);
                             if own {
@@ -8711,9 +8727,9 @@ mod end_to_end {
                     if let Ok(bytes) = fs::read(entry.path().join("job.json"))
                         && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
                     {
-                        let role = if s(&job, "name") == "dependency" {
-                            "child"
-                        } else if !s(&job, "parent_job_id").is_empty() {
+                        let role = if s(&job, "name") == "dependency"
+                            || !s(&job, "parent_job_id").is_empty()
+                        {
                             "child"
                         } else if jobs.is_empty() {
                             "parent"
@@ -8743,8 +8759,11 @@ mod end_to_end {
             let alias = |id: &str| names.get(id).copied().unwrap_or("unknown");
             let rows: Vec<_> = jobs.iter().map(|job| {
                 let process = |key| { let pid = job[key].as_u64().unwrap_or(0) as u32; let current = proc_created(pid);
-                    json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
-                json!({"role":alias(s(job,"id")),"status":job["status"],"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
+                    let handles = self.handles.lock().unwrap();
+                    let retained_live = handles.iter().find(|handle| handle.pid == pid && Some(handle.created) == job[format!("{key}_created")].as_u64()).map(FixtureProcess::live);
+                    json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"retained_handle_live":retained_live,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
+                let error_kind = if s(job,"last_error").contains("plugin env_vars") { "plugin_metadata" } else if job["last_error"].is_null() { "none" } else { "other" };
+                json!({"role":alias(s(job,"id")),"status":job["status"],"error_kind":error_kind,"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
                     "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
                     "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
             }).collect();
@@ -8778,7 +8797,10 @@ mod end_to_end {
             }
         }
         fn slow(&self) -> (String, Vec<u32>) {
-            let jid = self.start("slow", &self.tmp.0, b"hi");
+            self.slow_at("slow", &self.tmp.0)
+        }
+        fn slow_at(&self, mode: &str, cwd: &Path) -> (String, Vec<u32>) {
+            let jid = self.start(mode, cwd, b"hi");
             self.until_phase("parent_fixture_start", || {
                 self.rec.join("sleep.pid").exists() && truth(&self.job(&jid)["codex_pid"])
             });
@@ -8801,8 +8823,14 @@ mod end_to_end {
         fn drop(&mut self) {
             if self.diagnostic.load(Ordering::Relaxed) {
                 self.retain_fixture_processes();
-                for handle in self.handles.lock().unwrap().iter() {
-                    handle.stop();
+                let mut handles = self.handles.lock().unwrap();
+                let mut stopped = true;
+                for handle in handles.iter() {
+                    stopped &= handle.stop();
+                }
+                handles.clear();
+                if !std::thread::panicking() {
+                    assert!(stopped, "fixture cleanup did not confirm exit");
                 }
                 return;
             }
@@ -8933,15 +8961,61 @@ mod end_to_end {
     #[test]
     fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
         let e = E2e::new();
+        dependency_contract(&e);
+    }
+    #[test]
+    fn dependency_fixture_does_not_read_its_callers_plugin_configuration() {
+        let mut e = E2e::new();
+        let home = e.tmp.0.join("caller-home");
+        let plugin = home.join(".codex/plugins/cache/openai-bundled/unified-computer-use/v1");
+        fs::create_dir_all(&plugin).unwrap();
+        let file = plugin.join(".mcp.json");
+        let sentinel = r#"{"mcpServers":{"cua_repl":{"env_vars":"caller-owned-invalid-type"}}}"#;
+        fs::write(&file, sentinel).unwrap();
+        e.inherited_home = Some(home);
+        dependency_contract(&e);
+        assert_eq!(fs::read_to_string(file).unwrap(), sentinel);
+    }
+    #[test]
+    fn fixture_process_handle_rejects_a_mismatched_creation_time() {
+        let pid = std::process::id();
+        let created = proc_created(pid).unwrap();
+        assert!(FixtureProcess::retain(pid, created + 1).is_none());
+        let retained = FixtureProcess::retain(pid, created).unwrap();
+        assert!(retained.live());
+        // Dropping the reference closes the handle; it never terminates a PID.
+        drop(retained);
+        assert_eq!(proc_created(pid), Some(created));
+    }
+    fn dependency_contract(e: &E2e) {
         e.diagnostic.store(true, Ordering::Relaxed);
         fs::write(
             e.tmp.0.join("tool/queue-config.json"),
             r#"{"max_running":1}"#,
         )
         .unwrap();
-        let (parent, _) = e.slow();
-        let other = e.start("", &e.tmp.0, b"other root");
+        // Distinct worktrees prevent an inherited home Git checkout from
+        // making work_owner, rather than capacity 1, block the other root.
+        let workspace = |name| {
+            let path = e.tmp.0.join(name);
+            fs::create_dir_all(path.join(".git")).unwrap();
+            fs::write(path.join(".git/HEAD"), "ref: refs/heads/fixture\n").unwrap();
+            fs::write(
+                path.join(".git/config"),
+                "[core]\nrepositoryformatversion = 0\n",
+            )
+            .unwrap();
+            path
+        };
+        let parent_work = workspace("parent-work");
+        let other_work = workspace("other-work");
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let (parent, parent_pids) = e.slow_at("dependency-parent", &parent_work);
+        let other = e.start("", &other_work, b"other root");
         assert_eq!(e.job(&other)["status"], "queued");
+        e.until_phase("other_root_waits_for_capacity", || {
+            e.job(&other)["queue_wait_reason"]["code"] == "running_limit"
+        });
         let prompt = e.tmp.0.join("child-prompt.md");
         fs::write(&prompt, "dependency").unwrap();
         let result = e.cli(
@@ -8954,7 +9028,7 @@ mod end_to_end {
                 "--effort",
                 "max",
                 "--cwd",
-                e.tmp.0.to_str().unwrap(),
+                parent_work.to_str().unwrap(),
                 "--prompt-file",
                 prompt.to_str().unwrap(),
                 "--parent-job-id",
@@ -8975,6 +9049,14 @@ mod end_to_end {
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
         assert!(e.cli(&["cancel", &parent], "").status.success());
+        e.until_phase("parent_processes_exited", || {
+            let handles = e.handles.lock().unwrap();
+            parent_pids.iter().all(|pid| {
+                handles
+                    .iter()
+                    .any(|handle| handle.pid == *pid && !handle.live())
+            })
+        });
         e.until_phase("other_success_after_parent_cancel", || {
             e.job(&other)["status"] == "succeeded"
         });

@@ -147,7 +147,7 @@ struct Config {
     content: &'static str,
     pinned_identity: Option<(u32, u64)>,
     project_alias_target: Option<PathBuf>,
-    project_alias_approved: bool,
+    project_alias_preservation_enabled: bool,
 }
 
 impl Config {
@@ -187,7 +187,7 @@ impl Config {
             content: "tool-verification",
             pinned_identity: None,
             project_alias_target: None,
-            project_alias_approved: false,
+            project_alias_preservation_enabled: false,
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -209,6 +209,8 @@ impl Config {
                 c.pinned_identity = Some((2229119083, 9851624200190911));
                 c.repos.clear();
                 c.project_alias_target = Some(PathBuf::from(scoopa::PROJECT_TARGET));
+                // Preserve the already-owned project reference without entering its target.
+                c.project_alias_preservation_enabled = true;
             }
             ID => (),
             "76005ef45fe612479fd920447642497e" => {
@@ -1846,6 +1848,7 @@ mod tests {
     }
     fn scoopa_project_fixture() -> Fixture {
         let mut c = scoopa_fixture();
+        c.project_alias_preservation_enabled = false;
         let old = source(&c);
         c.temp = c.base.join("source/deep");
         fs::create_dir_all(&c.temp).unwrap();
@@ -1878,14 +1881,14 @@ mod tests {
         let mut c = scoopa_project_fixture();
         let inspected = scoopa::inspect(&c, scoopa::ID).unwrap();
         assert_eq!(inspected["preservation"]["fixed_project_aliases"], 1);
-        assert_eq!(inspected["requires_fixed_project_alias_approval"], true);
+        assert_eq!(inspected["fixed_project_aliases_present"], true);
         assert!(!c.ticket_path().exists());
         assert!(matches!(
             c.plan(scoopa::ID),
-            Err("PROJECT_ALIAS_APPROVAL_REQUIRED")
+            Err("PROJECT_ALIAS_PRESERVATION_DISABLED")
         ));
         assert!(!c.ticket_path().exists());
-        c.project_alias_approved = true; // Test-only fake approval; no runtime override exists.
+        c.project_alias_preservation_enabled = true; // Test-only preservation switch; no runtime override exists.
         c.plan(scoopa::ID).unwrap();
         move_scoopa_fixture(&c);
         assert_eq!(
@@ -1901,7 +1904,7 @@ mod tests {
         .unwrap();
         assert!(matches!(c.plan(scoopa::ID), Err("EXTERNAL_LINK")));
         let mut c = scoopa_project_fixture();
-        c.project_alias_approved = true;
+        c.project_alias_preservation_enabled = true;
         c.quarantine = c.base.join("extra/deep/quarantine");
         assert!(matches!(
             c.plan(scoopa::ID),
@@ -1934,7 +1937,12 @@ mod tests {
     #[test]
     fn scoopa_production_alias_keeps_target_at_real_destination_depth() {
         let c = Config::production(scoopa::ID).unwrap();
-        assert!(!c.project_alias_approved);
+        assert!(c.project_alias_preservation_enabled);
+        assert!(
+            !Config::production(ID)
+                .unwrap()
+                .project_alias_preservation_enabled
+        );
         assert!(
             scoopa::project_alias(&c, &source(&c), scoopa::PROJECT_LINK, scoopa::PROJECT_RAW)
                 .unwrap()

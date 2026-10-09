@@ -244,20 +244,19 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();
             let mut request = Vec::new();
-            std::io::BufReader::new(&mut socket)
+            let read = std::io::BufReader::new(&mut socket)
                 .take(4096)
-                .read_until(b'\n', &mut request)
-                .unwrap();
-            assert!(
-                request.ends_with(b"\r\n"),
-                "complete bounded HTTP request line is required"
-            );
+                .read_until(b'\n', &mut request);
+            // Chrome can open and close a speculative connection without GET.
+            // It is not a request, and must not stop the fixture server.
+            if read.is_err() || !request.ends_with(b"\r\n") {
+                continue;
+            }
             let script = String::from_utf8_lossy(&request).starts_with("GET /mock.js ");
             let body = if script {
                 // Composer DOM exists while its blocking script is still loading.
                 // Premature paste/insertText would miss the event listeners.
                 sleep(Duration::from_secs(2));
-                script_sent = true;
                 include_str!("fixtures/mock.js")
             } else {
                 include_str!("fixtures/chat.html")
@@ -271,7 +270,10 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
                 },
                 body.len()
             );
-            if socket.write_all(header.as_bytes()).is_ok() {
+            script_sent = script
+                && socket.write_all(header.as_bytes()).is_ok()
+                && socket.write_all(body.as_bytes()).is_ok();
+            if !script && socket.write_all(header.as_bytes()).is_ok() {
                 let _ = socket.write_all(body.as_bytes());
             }
             if script_sent {
@@ -280,6 +282,9 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
         }
         script_sent
     });
+    // Explicitly cover the idle/closed connections that Chrome may speculate.
+    drop(TcpStream::connect(address).unwrap());
+    let idle = TcpStream::connect(address).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let q = dir.path().join("q.md");
     fs::write(&q, "delayed script question").unwrap();
@@ -297,6 +302,7 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     .env("CHATGPT_WEB_URL", format!("http://{address}/chat.html"))
     .output()
     .unwrap();
+    drop(idle);
     assert!(
         handler.join().unwrap(),
         "must actually exercise a delayed script"

@@ -9,7 +9,7 @@
 //! (REST_DECISION_S when it ended waiting for the owner) before another is started.
 use cc_job_policy::todo_wait;
 use cc_scheduler::{common::*, policy::live};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},

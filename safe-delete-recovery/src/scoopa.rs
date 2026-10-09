@@ -503,7 +503,7 @@ pub(super) fn inspect(c: &Config, id: &str) -> Result<serde_json::Value> {
     Ok(
         serde_json::json!({"id":ID,"action":"read_only_inspection","bytes":bytes,
         "entries":nodes.len(),"links":links,"preservation":preservation(&nodes),
-        "requires_fixed_project_alias_approval":nodes.values().any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)),
+        "fixed_project_aliases_present":nodes.values().any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)),
         "proposed_ticket_bytes":proposed.len(),"fixed_alias_target_preserved_after_move":true,
         "ticket_created":false,"move_command_issued":false}),
     )
@@ -531,12 +531,12 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let source = Path::new(&r.identity.path);
     let nodes = validate(c, &r, source)?;
-    if !c.project_alias_approved
+    if !c.project_alias_preservation_enabled
         && nodes
             .values()
             .any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias))
     {
-        return Err("PROJECT_ALIAS_APPROVAL_REQUIRED");
+        return Err("PROJECT_ALIAS_PRESERVATION_DISABLED");
     }
     preflight_project_alias(c, &nodes)?;
     let dest = c.destination();
@@ -620,12 +620,12 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("TARGET_STILL_EXISTS");
     }
     let nodes = validate(c, &r, &dest.join("files"))?;
-    if !c.project_alias_approved
+    if !c.project_alias_preservation_enabled
         && nodes
             .values()
             .any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias))
     {
-        return Err("PROJECT_ALIAS_APPROVAL_REQUIRED");
+        return Err("PROJECT_ALIAS_PRESERVATION_DISABLED");
     }
     if nodes != ticket.nodes {
         return Err("CONTENT_CHANGED_AFTER_PLAN");

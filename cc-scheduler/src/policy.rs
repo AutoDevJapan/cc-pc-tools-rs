@@ -19,6 +19,13 @@ pub fn matches(j: &Value, k: &str, ps: &Processes) -> bool {
         .is_some_and(|p| !p["created"].is_null() && p["created"] == j[format!("{k}_created")])
 }
 pub fn alive(j: &Value, ps: &Processes, now: f64) -> bool {
+    if s(&j["status"]) == "queued"
+        && j["cancel_requested"] != true
+        && j["queue_restart_pending"] == true
+        && j["reboot_launch_pending"] == true
+    {
+        return true; // Durable reboot launch reservation; the minute tick retries it.
+    }
     for k in ["pid", "codex_pid"] {
         if let Some(p) = j[k].as_u64().and_then(|p| ps.get(&(p as u32))) {
             if p["created"].is_null() || matches(j, k, ps) {

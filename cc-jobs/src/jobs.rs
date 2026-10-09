@@ -811,6 +811,7 @@ impl Context {
             job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
             job["queue_supervisor_version"] = json!(5);
             job["queue_restart_pending"] = json!(false);
+            job["reboot_launch_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);
             job["last_event_at"] = json!(self.rt.now());
             job["activity"] = json!(if truth(&job["retry_count"])

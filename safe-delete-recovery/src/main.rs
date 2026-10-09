@@ -1565,6 +1565,32 @@ mod tests {
             .unwrap();
         c
     }
+    #[test]
+    fn scoopa_fixed_production_identity_matches_original_go_checksum() {
+        let c = Config::production(scoopa::ID).unwrap();
+        assert_eq!(c.store, Path::new("D:/CC/Tools/safe-delete/receipts-go"));
+        let identity = Identity {
+            version: 2,
+            id: scoopa::ID.into(),
+            root: r"C:\Users\makhmeto\AppData\Local\Temp".into(),
+            path: format!(
+                r"C:\Users\makhmeto\AppData\Local\Temp\codex-owned-{}",
+                scoopa::ID
+            ),
+            volume: 2229119083,
+            file_id: 9851624200190911,
+            created_at: "2026-10-09T08:25:27.1778086+09:00".into(),
+            project: c.project.into(),
+            content: c.content.into(),
+        };
+        assert_eq!(
+            format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&identity).unwrap())
+            ),
+            scoopa::INTEGRITY
+        );
+    }
     fn move_scoopa_fixture(c: &Config) {
         // Simulate the caller's ordinary directory rename, never a production API.
         fs::rename(source(c), c.destination().join("files")).unwrap();

@@ -2,8 +2,8 @@
 use super::*;
 
 pub(super) const ID: &str = "80b350ade8bb05cd61ab94f7485d09cc";
-#[cfg(not(test))]
-const INTEGRITY: &str = "ec6d702beea2c00011eed142fa8f9e14f1e684d45b09eaf1dea9629c26ab2413";
+pub(super) const INTEGRITY: &str =
+    "ec6d702beea2c00011eed142fa8f9e14f1e684d45b09eaf1dea9629c26ab2413";
 // Includes the root; this is the measured tree, not a general larger limit.
 const ENTRY_LIMIT: usize = 17799;
 const LINK_LIMIT: usize = 105;
@@ -155,6 +155,9 @@ fn scan_links(root: &Path) -> Result<Inventory> {
         }
         let n = node_no_follow(&path)?;
         let link = if n.attributes & REPARSE != 0 {
+            if n.links != 1 {
+                return Err("HARD_LINK");
+            }
             if !key.starts_with("frontend-runtime/node_modules/") {
                 return Err("LINK_OUTSIDE_PNPM");
             }
@@ -303,7 +306,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         integrity: r.integrity.clone(),
         nodes,
     };
-    let serialized = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
+    let serialized = serde_json::to_vec(&ticket).map_err(|_| "TICKET_JSON")?;
     if serialized.len() as u64 > RECORD_LIMIT {
         return Err("INVALID_RECOVERY_RECORD");
     }

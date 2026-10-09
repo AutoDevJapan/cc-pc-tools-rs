@@ -5,6 +5,12 @@ pub(super) const ID: &str = "80b350ade8bb05cd61ab94f7485d09cc";
 pub(super) const INTEGRITY: &str =
     "ec6d702beea2c00011eed142fa8f9e14f1e684d45b09eaf1dea9629c26ab2413";
 pub(super) const CREATED_AT: &str = "2026-10-09T08:25:27.1778086+09:00";
+pub(super) const PROJECT_TARGET: &str =
+    r"C:\Users\makhmeto\Desktop\dev\ADJ\scoopa-wt\agent-todo-1242-3e3e30bb3a02\frontend";
+pub(super) const PROJECT_LINK: &str =
+    "frontend-runtime/node_modules/.pnpm/node_modules/scoopa-frontend";
+pub(super) const PROJECT_RAW: &str =
+    r"..\..\..\..\..\..\..\..\Desktop\dev\ADJ\scoopa-wt\agent-todo-1242-3e3e30bb3a02\frontend";
 // Includes the root; this is the measured tree, not a general larger limit.
 const ENTRY_LIMIT: usize = 17799;
 const LINK_LIMIT: usize = 105;
@@ -16,12 +22,16 @@ const RECORD_LIMIT: u64 = 8 * 1024 * 1024;
 struct Link {
     target: String,
     reparse: Vec<u8>,
+    missing_internal: bool,
+    fixed_project_alias: bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct Entry {
     node: Node,
     link: Option<Link>,
+    security_sha256: String,
+    aliases_inside: u32,
 }
 type Inventory = BTreeMap<String, Entry>;
 #[derive(Serialize, Deserialize)]
@@ -46,6 +56,70 @@ unsafe extern "system" {
         returned: *mut u32,
         overlapped: *mut u8,
     ) -> i32;
+    fn LocalFree(memory: *mut u8) -> *mut u8;
+}
+#[link(name = "advapi32")]
+unsafe extern "system" {
+    fn GetSecurityInfo(
+        handle: isize,
+        kind: u32,
+        information: u32,
+        owner: *mut *mut u8,
+        group: *mut *mut u8,
+        dacl: *mut *mut u8,
+        sacl: *mut *mut u8,
+        descriptor: *mut *mut u8,
+    ) -> u32;
+    fn GetSecurityDescriptorLength(descriptor: *const u8) -> u32;
+}
+pub(super) fn security_hash(path: &Path) -> Result<String> {
+    let name = extended_path(path)?;
+    let mut descriptor = std::ptr::null_mut();
+    let result = unsafe {
+        // READ_CONTROL and FILE_READ_ATTRIBUTES only, never FILE_READ_DATA.
+        let handle = CreateFileW(
+            name.as_ptr(),
+            0x20080,
+            7,
+            std::ptr::null(),
+            3,
+            0x02200000,
+            0,
+        );
+        if handle == -1 {
+            return Err("SECURITY_METADATA_FAILED");
+        }
+        let status = GetSecurityInfo(
+            handle,
+            1,
+            7,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            &mut descriptor,
+        );
+        CloseHandle(handle);
+        if status != 0 || descriptor.is_null() {
+            Err("SECURITY_METADATA_FAILED")
+        } else {
+            let length = GetSecurityDescriptorLength(descriptor) as usize;
+            if length == 0 || length > 131072 {
+                Err("SECURITY_METADATA_FAILED")
+            } else {
+                Ok(format!(
+                    "{:x}",
+                    Sha256::digest(std::slice::from_raw_parts(descriptor, length))
+                ))
+            }
+        }
+    };
+    if !descriptor.is_null() {
+        unsafe {
+            LocalFree(descriptor);
+        }
+    }
+    result
 }
 
 fn read_relative_link(path: &Path) -> Result<Link> {
@@ -100,6 +174,8 @@ fn read_relative_link(path: &Path) -> Result<Link> {
     Ok(Link {
         target,
         reparse: buf,
+        missing_internal: false,
+        fixed_project_alias: false,
     })
 }
 
@@ -135,11 +211,35 @@ fn target_key(key: &str, target: &str) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn scan_links(root: &Path) -> Result<Inventory> {
+fn project_alias(c: &Config, root: &Path, key: &str, target: &str) -> Result<bool> {
+    if key != PROJECT_LINK || target != PROJECT_RAW {
+        return Ok(false);
+    }
+    let expected = c
+        .project_alias_target
+        .as_ref()
+        .ok_or("PROJECT_ALIAS_NOT_PINNED")?;
+    let mut resolved = root.join(Path::new(key).parent().ok_or("INVALID_PATH")?);
+    for part in target.split('\\') {
+        if part == ".." {
+            if resolved.file_name().is_none() || !resolved.pop() {
+                return Err("EXTERNAL_LINK");
+            }
+        } else {
+            resolved.push(part);
+        }
+    }
+    // Compare lexical names only. Never open, resolve or enter the other worktree.
+    if !same(&resolved, expected) {
+        return Err("PROJECT_ALIAS_TARGET_CHANGED");
+    }
+    Ok(true)
+}
+fn scan_links(c: &Config, root: &Path) -> Result<Inventory> {
     checked(root)?;
     let mut nodes = Inventory::new();
     let mut pending = vec![(root.to_owned(), String::new())];
-    let mut hardlinks: BTreeMap<(u32, u64), (u32, u32)> = BTreeMap::new();
+    let mut hardlinks: BTreeMap<(u32, u64), (u32, u32, bool)> = BTreeMap::new();
     let mut bytes = 0u64;
     let mut link_count = 0usize;
     while let Some((path, key)) = pending.pop() {
@@ -194,35 +294,57 @@ fn scan_links(root: &Path) -> Result<Inventory> {
             }
             let count = hardlinks
                 .entry((n.volume, n.file_id))
-                .or_insert((0, n.links));
+                .or_insert((0, n.links, true));
             if count.1 != n.links {
                 return Err("HARD_LINK");
             }
             count.0 += 1;
+            count.2 &= key.starts_with("frontend-runtime/node_modules/.pnpm/");
             None
         };
-        nodes.insert(key, Entry { node: n, link });
+        let security_sha256 = security_hash(&path)?;
+        nodes.insert(
+            key,
+            Entry {
+                node: n,
+                link,
+                security_sha256,
+                aliases_inside: 0,
+            },
+        );
     }
-    if hardlinks.values().any(|(inside, total)| inside != total) {
+    if hardlinks
+        .values()
+        .any(|(inside, total, pnpm)| inside > total || (inside != total && !pnpm))
+    {
         return Err("HARD_LINK");
     }
+    let mut link_states = Vec::new();
     for (key, entry) in &nodes {
         if entry.node.volume != nodes[""].node.volume {
             return Err("EXTERNAL_VOLUME");
         }
         if let Some(link) = &entry.link {
+            if project_alias(c, root, key, &link.target)? {
+                link_states.push((key.clone(), false, true));
+                continue;
+            }
             let target = target_key(key, &link.target)?;
             if target.is_empty() || key.starts_with(&format!("{target}/")) {
                 return Err("LINK_TARGET_ANCESTOR");
             }
             let mut prefix = String::new();
             let parts: Vec<&str> = target.split('/').collect();
+            let mut missing = false;
             for (i, part) in parts.iter().enumerate() {
                 if i != 0 {
                     prefix.push('/');
                 }
                 prefix.push_str(part);
-                let found = nodes.get(&prefix).ok_or("LINK_TARGET_MISSING")?;
+                let Some(found) = nodes.get(&prefix) else {
+                    missing = true;
+                    continue;
+                };
                 if found.link.is_some() {
                     return Err("LINK_TARGET_IS_LINK");
                 }
@@ -230,10 +352,25 @@ fn scan_links(root: &Path) -> Result<Inventory> {
                     return Err("LINK_TARGET_NOT_DIRECTORY");
                 }
             }
-            if nodes[&target].node.attributes & 0x10 != entry.node.attributes & 0x10 {
+            if !missing && nodes[&target].node.attributes & 0x10 != entry.node.attributes & 0x10 {
                 return Err("LINK_TARGET_TYPE_MISMATCH");
             }
+            if missing && !target.starts_with("frontend-runtime/node_modules/.pnpm/") {
+                return Err("LINK_TARGET_MISSING");
+            }
+            link_states.push((key.clone(), missing, false));
         }
+    }
+    for entry in nodes
+        .values_mut()
+        .filter(|e| e.link.is_none() && e.node.attributes & 0x10 == 0)
+    {
+        entry.aliases_inside = hardlinks[&(entry.node.volume, entry.node.file_id)].0;
+    }
+    for (key, missing, project) in link_states {
+        let link = nodes.get_mut(&key).unwrap().link.as_mut().unwrap();
+        link.missing_internal = missing;
+        link.fixed_project_alias = project;
     }
     Ok(nodes)
 }
@@ -262,8 +399,8 @@ fn validate(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
     {
         return Err("TARGET_IDENTITY_CHANGED");
     }
-    let first = scan_links(root)?;
-    if scan_links(root)? != first {
+    let first = scan_links(c, root)?;
+    if scan_links(c, root)? != first {
         return Err("CONTENT_CHANGED_DURING_SCAN");
     }
     Ok(first)
@@ -282,6 +419,38 @@ fn totals(nodes: &Inventory) -> (u64, usize) {
 fn proof_path(c: &Config) -> PathBuf {
     c.ticket_path().with_extension("scoopa-proof.json")
 }
+fn preservation(nodes: &Inventory) -> serde_json::Value {
+    let mut groups = BTreeMap::new();
+    for e in nodes
+        .values()
+        .filter(|e| e.link.is_none() && e.node.attributes & 0x10 == 0)
+    {
+        groups.insert(
+            (e.node.volume, e.node.file_id),
+            (e.node.links, e.aliases_inside),
+        );
+    }
+    serde_json::json!({"shared_regular_file_ids":groups.values().filter(|(all, _)| *all > 1).count(),
+        "outside_regular_alias_names":groups.values().map(|(all, inside)| u64::from(all - inside)).sum::<u64>(),
+        "outside_alias_names_opened_or_recorded":0,
+        "missing_internal_pnpm_targets":nodes.values().filter(|e| e.link.as_ref().is_some_and(|l| l.missing_internal)).count(),
+        "fixed_project_aliases":nodes.values().filter(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)).count(),
+        "security_descriptors_verified":nodes.len()})
+}
+pub(super) fn inspect(c: &Config, id: &str) -> Result<serde_json::Value> {
+    let r = load(c, id)?;
+    if r.state != "owned" {
+        return Err("RECEIPT_NOT_OWNED");
+    }
+    let nodes = validate(c, &r, Path::new(&r.identity.path))?;
+    let (bytes, links) = totals(&nodes);
+    Ok(
+        serde_json::json!({"id":ID,"action":"read_only_inspection","bytes":bytes,
+        "entries":nodes.len(),"links":links,"preservation":preservation(&nodes),
+        "requires_fixed_project_alias_approval":nodes.values().any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)),
+        "ticket_created":false,"move_command_issued":false}),
+    )
+}
 
 pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     let r = load(c, id)?;
@@ -290,6 +459,18 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let source = Path::new(&r.identity.path);
     let nodes = validate(c, &r, source)?;
+    for (key, entry) in &nodes {
+        if entry.link.as_ref().is_some_and(|l| l.fixed_project_alias)
+            && !project_alias(
+                c,
+                &c.destination().join("files"),
+                key,
+                &entry.link.as_ref().unwrap().target,
+            )?
+        {
+            return Err("PROJECT_ALIAS_TARGET_CHANGED");
+        }
+    }
     let dest = c.destination();
     checked(&dest)?;
     c.client_guard(&dest)?;
@@ -329,8 +510,9 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
             return Err("QUARANTINE_DESTINATION_NOT_EMPTY");
         }
     }
+    let kept = preservation(&ticket.nodes);
     let why = format!(
-        "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n項目数: {}（根を含む）、相対リンク: {links}件\n理由: 通常の退避が依存リンクと項目数の上限で停止した。所有IDを固定した復旧手順でリンク自身だけを検査し、全データを保持して同じドライブへ退避する。\n所有ID: {ID}\n",
+        "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {bytes} byte\n項目数: {}（根を含む）、相対リンク: {links}件\n理由: 通常の退避が依存リンクと項目数の上限で停止した。所有IDを固定した復旧手順でリンク自身だけを検査し、全データを保持して同じドライブへ退避する。\nPNPM共有ファイルの別名、欠けた内部参照、固定した元担当への参照は、その名前・識別番号・リンク数・属性・時刻・ACLを変えず保持する。外部の別名と参照先には入らない。\n保持確認: {kept}\n所有ID: {ID}\n",
         r.identity.path,
         ticket.nodes.len()
     );
@@ -342,6 +524,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     Ok(
         serde_json::json!({"id":ID,"action":"submit_quarantine_to_exec_tool","bytes":bytes,
         "entries":ticket.nodes.len(),"links":links,"destination":dest,"inventory_sha256":digest,
+        "preservation":kept,
         "powershell_command":format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(source), quote(&dest.join("files")))}),
     )
 }
@@ -402,6 +585,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     Ok(
         serde_json::json!({"id":ID,"state":"quarantined","source_absent":true,"destination":dest,
         "bytes":bytes,"entries":nodes.len(),"links":links,"inventory_verified":true,
+        "preservation":preservation(&nodes),
         "inventory_sha256":digest,"root_volume":r.identity.volume,"root_file_id":r.identity.file_id}),
     )
 }

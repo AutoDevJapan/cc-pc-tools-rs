@@ -146,6 +146,7 @@ struct Config {
     project: &'static str,
     content: &'static str,
     pinned_identity: Option<(u32, u64)>,
+    project_alias_target: Option<PathBuf>,
 }
 
 impl Config {
@@ -184,6 +185,7 @@ impl Config {
             project: "todo-2001",
             content: "tool-verification",
             pinned_identity: None,
+            project_alias_target: None,
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -204,6 +206,7 @@ impl Config {
                 c.temp = PathBuf::from(r"C:\Users\makhmeto\AppData\Local\Temp");
                 c.pinned_identity = Some((2229119083, 9851624200190911));
                 c.repos.clear();
+                c.project_alias_target = Some(PathBuf::from(scoopa::PROJECT_TARGET));
             }
             ID => (),
             "76005ef45fe612479fd920447642497e" => {
@@ -1272,6 +1275,7 @@ fn run() -> Result<serde_json::Value> {
     }
     let c = Config::production(&args[2])?;
     match args[0].as_str() {
+        "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
         "finish" => c.finish(&args[2]),
         _ => Err("INVALID_ACTION"),
@@ -1775,15 +1779,123 @@ mod tests {
     #[test]
     fn scoopa_rejects_external_hardlinks_and_unexpected_git_metadata() {
         let c = scoopa_fixture();
-        fs::hard_link(
-            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
-            c.base.join("outside"),
-        )
-        .unwrap();
+        fs::write(source(&c).join("outside-pnpm"), b"fixture").unwrap();
+        fs::hard_link(source(&c).join("outside-pnpm"), c.base.join("outside")).unwrap();
         assert!(matches!(c.plan(scoopa::ID), Err("HARD_LINK")));
         let c = scoopa_fixture();
         fs::create_dir(source(&c).join(".git")).unwrap();
         assert!(matches!(c.plan(scoopa::ID), Err("PROTECTED_PATH")));
+    }
+    #[test]
+    fn scoopa_pnpm_regular_alias_and_dangling_internal_link_survive_move() {
+        let c = scoopa_fixture();
+        let file =
+            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value");
+        let external = c.base.join("external-regular-name");
+        fs::hard_link(&file, &external).unwrap();
+        let original = node(&external).unwrap();
+        let modules = source(&c).join("frontend-runtime/node_modules");
+        std::os::windows::fs::symlink_dir(r".pnpm\pruned\node_modules\pkg", modules.join("pruned"))
+            .unwrap();
+        let inspected = c.plan(scoopa::ID).unwrap();
+        assert_eq!(inspected["preservation"]["outside_regular_alias_names"], 1);
+        assert_eq!(
+            inspected["preservation"]["missing_internal_pnpm_targets"],
+            1
+        );
+        let ticket: serde_json::Value =
+            serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+        let security = ticket["nodes"]["frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"]["security_sha256"].clone();
+        move_scoopa_fixture(&c);
+        c.finish(scoopa::ID).unwrap();
+        assert_eq!(node(&external).unwrap(), original);
+        assert_eq!(security, scoopa::security_hash(&external).unwrap());
+        assert_eq!(fs::read(&external).unwrap(), b"keep me");
+        assert!(
+            fs::symlink_metadata(
+                c.destination()
+                    .join("files/frontend-runtime/node_modules/pruned")
+            )
+            .is_ok()
+        );
+    }
+    #[test]
+    fn scoopa_shared_alias_count_changes_refuse_finish() {
+        let c = scoopa_fixture();
+        let file =
+            source(&c).join("frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value");
+        fs::hard_link(&file, c.base.join("outside")).unwrap();
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        fs::hard_link(
+            c.destination()
+                .join("files/frontend-runtime/node_modules/.pnpm/pkg/node_modules/pkg/value"),
+            c.base.join("new-name"),
+        )
+        .unwrap();
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("CONTENT_CHANGED_AFTER_PLAN")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+    }
+    fn scoopa_project_fixture() -> Fixture {
+        let mut c = scoopa_fixture();
+        let old = source(&c);
+        c.temp = c.base.join("source/deep");
+        fs::create_dir_all(&c.temp).unwrap();
+        fs::rename(old, source(&c)).unwrap();
+        let mut r: Receipt = serde_json::from_slice(&fs::read(c.receipt_path()).unwrap()).unwrap();
+        r.identity.root = c.temp.to_string_lossy().into_owned();
+        r.identity.path = source(&c).to_string_lossy().into_owned();
+        r.integrity = format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+        );
+        fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+        c.project_alias_target = Some(
+            c.base
+                .parent()
+                .unwrap()
+                .join("Desktop/dev/ADJ/scoopa-wt/agent-todo-1242-3e3e30bb3a02/frontend"),
+        );
+        fs::create_dir_all(source(&c).join("frontend-runtime/node_modules/.pnpm/node_modules"))
+            .unwrap();
+        std::os::windows::fs::symlink_dir(
+            scoopa::PROJECT_RAW,
+            source(&c).join(scoopa::PROJECT_LINK),
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn scoopa_fixed_project_alias_is_not_followed_and_keeps_same_lexical_target() {
+        let c = scoopa_project_fixture();
+        let inspected = scoopa::inspect(&c, scoopa::ID).unwrap();
+        assert_eq!(inspected["preservation"]["fixed_project_aliases"], 1);
+        assert_eq!(inspected["requires_fixed_project_alias_approval"], true);
+        assert!(!c.ticket_path().exists());
+        c.plan(scoopa::ID).unwrap();
+        move_scoopa_fixture(&c);
+        assert_eq!(
+            c.finish(scoopa::ID).unwrap()["preservation"]["fixed_project_aliases"],
+            1
+        );
+        let c = scoopa_project_fixture();
+        fs::remove_dir(source(&c).join(scoopa::PROJECT_LINK)).unwrap();
+        std::os::windows::fs::symlink_dir(
+            r"..\..\..\..\..\..\..\..\different",
+            source(&c).join(scoopa::PROJECT_LINK),
+        )
+        .unwrap();
+        assert!(matches!(c.plan(scoopa::ID), Err("EXTERNAL_LINK")));
+        let mut c = scoopa_project_fixture();
+        c.quarantine = c.base.join("extra/deep/quarantine");
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("PROJECT_ALIAS_TARGET_CHANGED")
+        ));
+        assert!(!c.ticket_path().exists());
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {

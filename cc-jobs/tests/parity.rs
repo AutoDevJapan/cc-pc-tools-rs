@@ -6715,6 +6715,38 @@ mod cargo_gate_tests {
 #[cfg(windows)]
 mod process_boundary_tests {
     use super::*;
+    use std::process::Child;
+    struct FixtureChild {
+        child: Child,
+        created: u64,
+    }
+    impl FixtureChild {
+        fn new(child: Child) -> Self {
+            let created = proc_created(child.id()).unwrap();
+            Self { child, created }
+        }
+    }
+    impl std::ops::Deref for FixtureChild {
+        type Target = Child;
+        fn deref(&self) -> &Child {
+            &self.child
+        }
+    }
+    impl std::ops::DerefMut for FixtureChild {
+        fn deref_mut(&mut self) -> &mut Child {
+            &mut self.child
+        }
+    }
+    impl Drop for FixtureChild {
+        fn drop(&mut self) {
+            if self.child.try_wait().ok().flatten().is_none()
+                && proc_created(self.child.id()) == Some(self.created)
+            {
+                let _ = System::default().kill_tree(self.child.id());
+            }
+            let _ = self.child.wait();
+        }
+    }
     fn wait_file(path: &Path) {
         let until = Instant::now() + Duration::from_secs(30);
         while !path.exists() {
@@ -6728,11 +6760,14 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe", "mcp.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller-mcp")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller-mcp")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .env("CC_JOBS_FIXTURE_RESOURCE_BARRIER", "1")
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("worker.ready"));
         let baseline = fs::read_to_string(tmp.0.join("first-tool.filetime"))
             .unwrap()
@@ -6745,6 +6780,7 @@ mod process_boundary_tests {
                 .unwrap()
                 .is_none()
         );
+        fs::write(tmp.0.join("worker.release"), "release").unwrap();
         wait_file(&tmp.0.join("worker.done"));
         wait_file(&tmp.0.join("heartbeat"));
         assert!(
@@ -6773,23 +6809,27 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("worker.done"));
         wait_file(&tmp.0.join("heartbeat"));
         let created = proc_created(child.id()).unwrap();
-        let mut holder = hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
-            .args([
-                "--freeze-controller",
-                &child.id().to_string(),
-                &created.to_string(),
-            ])
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut holder = FixtureChild::new(
+            hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
+                .args([
+                    "--freeze-controller",
+                    &child.id().to_string(),
+                    &created.to_string(),
+                ])
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("freeze.ready"));
         let heartbeat = fs::read(tmp.0.join("heartbeat")).unwrap();
         holder.kill().unwrap();
@@ -6813,11 +6853,14 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .env("CC_JOBS_FIXTURE_RESOURCE_BARRIER", "1")
+                .spawn()
+                .unwrap(),
+        );
         let wait_for = |path: &Path| {
             let deadline = Instant::now() + Duration::from_secs(30);
             while !path.exists() {
@@ -6835,6 +6878,7 @@ mod process_boundary_tests {
         );
         assert!(FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).is_err());
         assert!(tmp.0.join("civ6.lock").exists());
+        fs::write(tmp.0.join("worker.release"), "release").unwrap();
         wait_for(&tmp.0.join("worker.done"));
         wait_for(&tmp.0.join("heartbeat"));
         let paused = rt

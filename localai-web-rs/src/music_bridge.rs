@@ -125,7 +125,25 @@ async fn proxy(client: reqwest::Client, request: Request, broker: &str) -> Respo
         }
         _ => bytes,
     };
-    let mut response = Response::new(Body::from(bytes));
+    let is_html = !is_head
+        && source_headers
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| {
+                v.split(';')
+                    .next()
+                    .is_some_and(|mime| mime.trim().eq_ignore_ascii_case("text/html"))
+            })
+        && !source_headers.contains_key(header::CONTENT_RANGE)
+        && status != StatusCode::PARTIAL_CONTENT;
+    let decorated = is_html
+        .then(|| std::str::from_utf8(&bytes).ok())
+        .flatten()
+        .map(localai_web_rs::console_ui::decorate_html);
+    let transformed = decorated.is_some();
+    let mut response = Response::new(Body::from(
+        decorated.map(String::into_bytes).unwrap_or(bytes),
+    ));
     *response.status_mut() = status;
     for name in [
         header::CONTENT_TYPE,
@@ -138,13 +156,16 @@ async fn proxy(client: reqwest::Client, request: Request, broker: &str) -> Respo
         header::ACCEPT_RANGES,
     ] {
         if let Some(value) = source_headers.get(&name) {
+            if transformed && name == header::CONTENT_LENGTH {
+                continue;
+            }
             response.headers_mut().insert(name, value.clone());
         }
     }
     response
 }
 fn unavailable(message: &str) -> Response {
-    (StatusCode::SERVICE_UNAVAILABLE,axum::response::Html(format!("<!doctype html><html lang=\"ja\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>音楽制作</title><body style=\"font-family:system-ui;padding:32px\"><h1>音楽制作</h1><p>{message}</p><a href=\"/music\">画面を更新する</a><p><a href=\"/\">Consoleに戻る</a></p></body></html>"))).into_response()
+    (StatusCode::SERVICE_UNAVAILABLE,axum::response::Html(localai_web_rs::console_ui::decorate_html(&format!("<!doctype html><html lang=\"ja\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>音楽制作</title><body><h1>音楽制作</h1><p>{message}</p><a href=\"/music\">画面を更新する</a><p><a href=\"/\">Consoleに戻る</a></p></body></html>")))).into_response()
 }
 
 #[cfg(test)]
@@ -154,6 +175,90 @@ mod tests {
         Router,
         routing::{get, post},
     };
+    #[tokio::test]
+    async fn music_html_gets_shared_shell_but_head_and_ranges_remain_original() {
+        let original = "<html><body><form action='/music/drafts'><input name='csrf' value='fixture'></form></body></html>";
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let backend = Router::new()
+            .route(
+                "/api/health",
+                get(|| async { axum::Json(serde_json::json!({"app":"KaraokeMaker"})) }),
+            )
+            .route(
+                "/music",
+                get(move |request: Request| async move {
+                    if request.headers().contains_key(header::RANGE) {
+                        (
+                            StatusCode::PARTIAL_CONTENT,
+                            [
+                                (header::CONTENT_TYPE, "text/html"),
+                                (header::CONTENT_RANGE, "bytes 0-5/107"),
+                            ],
+                            "<html>",
+                        )
+                            .into_response()
+                    } else {
+                        axum::response::Html(original).into_response()
+                    }
+                }),
+            );
+        let task = tokio::spawn(async move {
+            axum::serve(listener, backend).await.unwrap();
+        });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let request = Request::builder()
+            .uri("/music")
+            .body(Body::empty())
+            .unwrap();
+        let response = proxy(client.clone(), request, &base).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key(header::CONTENT_LENGTH));
+        let rendered = String::from_utf8(
+            to_bytes(response.into_body(), 1024 * 1024)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(rendered.contains("name=\"local-ai-console-shell\""));
+        assert!(
+            rendered.contains(
+                "<form action='/music/drafts'><input name='csrf' value='fixture'></form>"
+            )
+        );
+        let head = Request::builder()
+            .method("HEAD")
+            .uri("/music")
+            .body(Body::empty())
+            .unwrap();
+        let response = proxy(client.clone(), head, &base).await;
+        assert_eq!(
+            response.headers()[header::CONTENT_LENGTH],
+            original.len().to_string()
+        );
+        assert!(
+            to_bytes(response.into_body(), 1024)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let range = Request::builder()
+            .uri("/music")
+            .header(header::RANGE, "bytes=0-5")
+            .body(Body::empty())
+            .unwrap();
+        let response = proxy(client, range, &base).await;
+        assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        assert_eq!(
+            to_bytes(response.into_body(), 1024).await.unwrap(),
+            "<html>"
+        );
+        task.abort();
+        let _ = task.await;
+    }
     #[tokio::test]
     async fn bridge_preserves_large_upload_audio_and_byte_ranges() {
         let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))

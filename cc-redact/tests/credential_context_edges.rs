@@ -107,3 +107,11 @@ fn short_named_environment_secrets_are_registered_without_corrupting_identifiers
         "gpt-6.1-sol 019abc123"
     );
 }
+#[test]
+fn single_quoted_multiline_credential_masks_the_whole_value() {
+    let raw = "secret='artificial gamma\ndelta'\n正常な本文";
+    let masked = cc_redact::Redactor::new().text(raw).into_owned();
+    assert!(!masked.contains("gamma"));
+    assert!(!masked.contains("delta"));
+    assert!(masked.ends_with("\n正常な本文"));
+}

@@ -148,9 +148,11 @@ fn app(state: AppState) -> Router {
 }
 
 async fn index_html() -> Html<String> {
-    Html(INDEX_HTML.replace(
-        "</body>",
-        &format!("{}\n</body>", include_str!("workload.html")),
+    Html(localai_web_rs::console_ui::decorate_html(
+        &INDEX_HTML.replace(
+            "</body>",
+            &format!("{}\n</body>", include_str!("workload.html")),
+        ),
     ))
 }
 

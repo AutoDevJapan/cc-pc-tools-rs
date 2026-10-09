@@ -528,6 +528,77 @@ impl Console {
         jobs.sort_by(|a, b| strv(b, "id").cmp(strv(a, "id")));
         Ok(jobs)
     }
+    fn display(&self, kind: &str) -> Result<Value> {
+        use localai_web_rs::console_ui;
+        // Load first; no partial/raw response when the privacy list is unavailable.
+        let names = cc_ask::task_title::Names::load(&self.paths.tools.join("client-projects.txt"))
+            .map_err(|_| {
+                fault(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "privacy_unavailable",
+                    "表示の秘匿設定を読み取れません。",
+                )
+            })?;
+        let db = self.todos()?;
+        let mut jobs = Vec::new();
+        for entry in fs::read_dir(&self.paths.jobs).map_err(|_| io_fault())? {
+            let dir = entry.map_err(|_| io_fault())?.path();
+            if !dir.is_dir() {
+                continue;
+            }
+            let file = dir.join("job.json");
+            if !file.try_exists().map_err(|_| io_fault())? {
+                continue;
+            }
+            let mut job: Value = serde_json::from_str(&read_text(&file, 2 * 1024 * 1024)?)
+                .map_err(|_| io_fault())?;
+            if job["id"].as_str() != dir.file_name().and_then(|s| s.to_str())
+                || !job["status"].is_string()
+            {
+                return Err(io_fault());
+            }
+            // Display never uses prompts, reservation receipts or metadata-supplied paths.
+            job["last_message"] = Value::Null;
+            jobs.push(job);
+        }
+        jobs.sort_by(|a, b| strv(b, "id").cmp(strv(a, "id")));
+        if kind == "handoff" {
+            for job in jobs
+                .iter_mut()
+                .filter(|job| console_ui::handoff_job(job))
+                .take(10)
+            {
+                if console_ui::private_job(&names, &db, job) {
+                    continue;
+                }
+                let last = self
+                    .paths
+                    .jobs
+                    .join(strv(job, "id"))
+                    .join("last_message.md");
+                if last.try_exists().map_err(|_| io_fault())? {
+                    job["last_message"] = json!(redact(&read_text(&last, 256 * 1024)?));
+                }
+            }
+        }
+        Ok(match kind {
+            "todo" => console_ui::display_todos(&names, &db, &jobs),
+            "jobs" => console_ui::display_jobs(&names, &db, &jobs),
+            "handoff" => {
+                let state = self.read_state()?;
+                console_ui::display_handoff(
+                    &names,
+                    &db,
+                    &jobs,
+                    self.paths.on().is_file(),
+                    state.last_tick,
+                    state.prs.len(),
+                    state.prs_error.is_some(),
+                )
+            }
+            _ => return Err(invalid()),
+        })
+    }
     fn board(&self) -> Result<Value> {
         let db = self.todos()?;
         let jobs = self.jobs()?;
@@ -2134,6 +2205,11 @@ impl Console {
         result
     }
     fn api(&self, method: &Method, path: &str, v: Value) -> Result<Value> {
+        if *method == Method::GET {
+            if let Some(kind @ ("todo" | "jobs" | "handoff")) = path.strip_prefix("display/") {
+                return self.display(kind);
+            }
+        }
         // off gets its own fast path so a slow inbox/gh never delays the kill switch.
         if *method == Method::POST && path == "delegation/off" {
             match fs::remove_file(self.paths.on()) {
@@ -5885,6 +5961,176 @@ mod tests {
         assert!(restarted
             .api(&Method::POST, "todo/ensure", invalid)
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn display_api_masks_client_paths_messages_and_fails_closed_without_mutation() {
+        let f = Fixture::new();
+        fs::write(f.root.join("client-projects.txt"), "SecretClient\n").unwrap();
+        let db = json!({"projects":{"public":f.root.join("public"),"alias":"D:/SecretClient"},"items":[
+            {"id":1,"project":"public","title":"保存を確認","note":"現在のメモ password=artificial-secret","status":"doing","updated":"2026-10-10 09:15",
+                "spec":"D:/artificial-missing/current.md","note_history":[{"note":"旧メモの内容を保持","updated":"2026-10-10 08:00"}],
+                "spec_history":[{"spec":"D:/artificial-missing/old.md","updated":"2026-10-10 08:30"}]},
+            {"id":2,"project":"alias","title":"artificial-private-title","note":"artificial-private-note","status":"block","jobs":["client-job"],"note_history":[{"note":"artificial-private-history"}]}
+        ]});
+        let todo_path = f.console.paths.todo.join("todo.json");
+        fs::write(&todo_path, db.to_string()).unwrap();
+        f.job(
+            "client-job",
+            "orch-client",
+            "succeeded",
+            "artificial-private-message",
+            "artificial-private-prompt",
+        );
+        let client_dir = f.console.paths.jobs.join("client-job");
+        let raw_job = json!({"id":"client-job","name":"orch-SecretClient","status":"succeeded","cwd":"D:/SecretClient-wt/agent","todo_id":2,"launch_key":"artificial-private-reservation"});
+        fs::write(client_dir.join("job.json"), raw_job.to_string()).unwrap();
+        // A directory in place of the client transcript proves display doesn't read it.
+        let unreadable = f.console.paths.jobs.join("client-no-message");
+        fs::create_dir_all(unreadable.join("last_message.md")).unwrap();
+        fs::write(unreadable.join("job.json"), json!({"id":"client-no-message","name":"orch-private","status":"succeeded","cwd":"D:/SecretClient"}).to_string()).unwrap();
+        f.job(
+            "public-job",
+            "orch-public",
+            "succeeded",
+            "次の作業を再開 secret=artificial-message-secret",
+            "artificial-unlisted-prompt",
+        );
+        let mut state = f.console.read_state().unwrap();
+        state
+            .request_cwds
+            .insert("reservation".into(), "D:/SecretClient".into());
+        state.prs_error = Some("SecretClient token=artificial-pr-error".into());
+        state.prs.push(json!({"title":"artificial-private-pr","url":"https://github.com/SecretClient/repo/pull/1"}));
+        f.console.save(&state).unwrap();
+        let before = (
+            fs::read(&todo_path).unwrap(),
+            fs::read(f.console.paths.db()).unwrap(),
+            fs::read(client_dir.join("job.json")).unwrap(),
+        );
+        for kind in ["todo", "jobs", "handoff"] {
+            let (code, response) = f.http(Method::GET, &format!("display/{kind}"), "").await;
+            assert_eq!(code, StatusCode::OK);
+            assert_eq!(response["ok"], true);
+            assert_eq!(response["version"], 1);
+            let all = response.to_string();
+            for forbidden in [
+                "SecretClient",
+                "artificial-secret",
+                "artificial-private",
+                "artificial-message-secret",
+                "artificial-unlisted",
+                "artificial-pr-error",
+            ] {
+                assert!(!all.contains(forbidden), "{kind}: unexpected {forbidden}");
+            }
+            match kind {
+                "todo" => {
+                    assert_eq!(
+                        response["data"]["items"][0]["history"][0]["note"],
+                        "旧メモの内容を保持"
+                    );
+                    assert_eq!(
+                        response["data"]["items"][0]["history"][1]["note"],
+                        "以前の指示書: D:/artificial-missing/old.md"
+                    );
+                    assert_eq!(
+                        response["data"]["items"][0]["updated_at"],
+                        "2026-10-10T09:15:00+09:00"
+                    );
+                }
+                "jobs" => assert!(response["data"]["jobs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|job| job["summary"] == "")),
+                _ => assert!(response["data"]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains("保存を確認\n  現在のメモ [非表示]")),
+            }
+        }
+        assert_eq!(
+            (
+                fs::read(&todo_path).unwrap(),
+                fs::read(f.console.paths.db()).unwrap(),
+                fs::read(client_dir.join("job.json")).unwrap()
+            ),
+            before
+        );
+        // Machine API remains available with its original schema and content.
+        fs::remove_dir(unreadable.join("last_message.md")).unwrap();
+        assert_eq!(
+            f.http(Method::GET, "todo", "").await.1["data"]["items"],
+            db["items"]
+        );
+        for bytes in [Vec::new(), vec![0xff]] {
+            if bytes.is_empty() {
+                fs::remove_file(f.root.join("client-projects.txt")).unwrap();
+            } else {
+                fs::write(f.root.join("client-projects.txt"), bytes).unwrap();
+            }
+            for kind in ["todo", "jobs", "handoff"] {
+                let (code, response) = f.http(Method::GET, &format!("display/{kind}"), "").await;
+                assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE);
+                assert_eq!(response["ok"], false);
+                assert_eq!(response["error"]["code"], "privacy_unavailable");
+                assert!(response.get("data").is_none());
+                assert!(!response.to_string().contains("SecretClient"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn display_only_reads_selected_public_handoff_messages() {
+        let f = Fixture::new();
+        fs::write(f.root.join("client-projects.txt"), "SecretClient\n").unwrap();
+        fs::write(
+            f.console.paths.todo.join("todo.json"),
+            json!({
+                "projects":{"alias":"D:/SecretClient"},
+                "items":[{"id":1,"project":"alias","jobs":["saved-session"]}]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        for id in ["00-not-orchestrator", "01-old-orchestrator", "20-private"] {
+            let dir = f.console.paths.jobs.join(id);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(
+                dir.join("job.json"),
+                json!({"id":id,
+                    "name":if id == "00-not-orchestrator" { "ordinary" } else { "orch-demo" },
+                    "status":if id == "20-private" { "completed" } else { "succeeded" },"cwd":f.root,
+                    "thread_id":if id == "20-private" { "saved-session" } else { "" }
+                })
+                .to_string(),
+            )
+            .unwrap();
+            fs::write(dir.join("last_message.md"), [0xff]).unwrap();
+        }
+        for index in 11..20 {
+            f.job(
+                &index.to_string(),
+                "orch-demo",
+                "succeeded",
+                "公開された引き継ぎ本文",
+                "",
+            );
+        }
+        for kind in ["todo", "jobs", "handoff"] {
+            let (code, response) = f.http(Method::GET, &format!("display/{kind}"), "").await;
+            assert_eq!(code, StatusCode::OK, "{kind}");
+            if kind == "handoff" {
+                let decisions = response["data"]["decisions"].as_array().unwrap();
+                assert_eq!(decisions.len(), 10);
+                assert_eq!(
+                    decisions[0]["summary"],
+                    "クライアント案件の記録（内容は非表示）"
+                );
+                assert_eq!(decisions[1]["summary"], "公開された引き継ぎ本文");
+            }
+        }
     }
 
     #[tokio::test]

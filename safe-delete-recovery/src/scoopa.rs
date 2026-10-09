@@ -87,8 +87,10 @@ fn read_relative_link(path: &Path) -> Result<Link> {
         return Err("INVALID_LINK_DATA");
     }
     let wide: Vec<u16> = buf[20 + offset..20 + offset + length]
-        .chunks_exact(2)
-        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| u16::from_le_bytes(*b))
         .collect();
     let target = String::from_utf16(&wide).map_err(|_| "INVALID_LINK_DATA")?;
     if target.contains(['\0', ':', '/']) || Path::new(&target).has_root() {

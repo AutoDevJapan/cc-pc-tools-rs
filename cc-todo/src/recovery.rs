@@ -1299,19 +1299,9 @@ fn suppress_report(paths: &Paths, id: i64, item: &Value) -> Result<()> {
     })
 }
 /// Durable queue input: console owns capacity, session exclusivity and checkout creation.
-pub fn delegation_request(item: &Value, pending: &Value) -> Value {
-    json!({
-        "id":item["id"],
-        "request_id":pending["request"],
-        "prompt":pending["prompt"],
-        "source_job_id":pending["job"]["id"],
-        "resume_session":if pending["workspace"]["isolate_worktree"] == true { None } else { session(&pending["job"]) },
-        "cwd":pending["workspace"]["cwd"],
-        "isolate_worktree":pending["workspace"]["isolate_worktree"] != false,
-        "model":cc_scheduler::backend::recovery_setting(item, &pending["job"], "model"),
-        "effort":cc_scheduler::backend::recovery_setting(item, &pending["job"], "effort")
-    })
-}
+#[path = "delegation_request.rs"]
+mod delegation_contract;
+pub use delegation_contract::{delegation_request, freeze_delegation_request};
 /// A dead parent doesn't erase ownership; a reused PID or another live owner does.
 pub fn owned_helpers(job: &Value, jobs: &[Value], ps: &Processes, observed: &Value) -> Vec<Value> {
     if !job["id"].is_string() {
@@ -1588,7 +1578,22 @@ impl RecoveryBackend for RealRecovery {
         {
             return Ok(Outcome::Obsolete);
         }
-        let payload = delegation_request(&row, p);
+        // Freeze the complete request before sending, including a lost HTTP response.
+        // Console rechecks current model settings immediately before launch.
+        let payload = edit(&self.paths, |db| {
+            let id = item["id"].as_i64().ok_or("invalid todo id")?;
+            let row = db["items"]
+                .as_array()
+                .and_then(|rows| rows.iter().find(|r| r["id"] == id));
+            if row.is_none_or(|row| cc_job_policy::todo_wait::waiting(db, row)) {
+                return Ok(None);
+            }
+            let current = find(db, id)?;
+            freeze_delegation_request(current, &p["request"])
+        })?;
+        let Some(payload) = payload else {
+            return Ok(Outcome::Obsolete);
+        };
         let result = self
             .scheduler
             .backend

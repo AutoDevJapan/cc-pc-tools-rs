@@ -1,10 +1,10 @@
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
 use cc_job_policy::todo_wait;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -765,7 +765,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         let source = jobs
             .iter()
             .find(|j| j["id"] == item["scheduler"]["last_job"]);
-        let resume_session =
+        let mut resume_session =
             source.and_then(|j| continuation_session(j, s(&item["scheduler"]["worktree"]), &jobs));
         if let Some(source) = source {
             let result = safe_text(s(&source["last_message"]));
@@ -829,6 +829,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         if !valid_effort(s(&selection["effort"])) {
             return Err(Error("ValueError"));
+        }
+        // A resumed conversation may restore the previous model. Reuse it only
+        // when the selected settings agree, including partial explicit choices.
+        if source.is_some_and(|source| {
+            ["model", "effort"].iter().any(|field| {
+                (truth(&item[*field]) || source[*field].is_string())
+                    && source[*field] != selection[*field]
+            })
+        }) {
+            resume_session = None;
         }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;

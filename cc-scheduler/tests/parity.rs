@@ -1627,6 +1627,37 @@ fn todo1842_explicit_model_overrides_saved_selection() {
 }
 
 #[test]
+fn todo1842_changed_model_does_not_resume_previous_conversation() {
+    for (requested, retained) in [("gpt-6-astra", false), ("gpt-6.1-sol", true)] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n指定モデルで再開する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!(requested);
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            prepared["scheduler"]["resume_session"].is_string(),
+            retained
+        );
+        assert_eq!(prepared["scheduler"]["selection"]["model"], requested);
+    }
+}
+
+#[test]
 fn todo1842_unavailable_explicit_model_is_retained_without_launch() {
     let mut f = Fixture::new();
     let mut row = item(1, "civ6", "todo", &[]);

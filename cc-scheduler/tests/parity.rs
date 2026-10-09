@@ -293,6 +293,184 @@ fn explicit_resume_supersedes_cancelled_and_old_owner_result() {
     }
 }
 
+fn start_fixture(f: &mut Fixture, worker: &str) {
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(2)).unwrap();
+    let mut db = f.e.todo().unwrap();
+    cc_todo::execute(
+        &mut db,
+        &cc_todo::Command::Start {
+            id: 1,
+            job: worker.into(),
+            progress: None,
+        },
+        &paths,
+    )
+    .unwrap();
+    cc_todo::save(&f.e.todo_path, &db).unwrap();
+}
+
+#[test]
+fn resume2172_finished_result_is_durable_and_never_replayed_by_same_worker_start() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.records[0]["last_message"] =
+        json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    assert!(f.get(1)["processed_results"]["j1"].is_object());
+    start_fixture(&mut f, "j1");
+    let resumed = f.get(1);
+    start_fixture(&mut f, "j1");
+    assert_eq!(f.get(1)["resume_generation"], resumed["resume_generation"]);
+    // The ledger lives in todo.json, not the scheduler's in-memory state.
+    f.e.state = json!({});
+    f.reconcile();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.backend.outcome_count, 1);
+}
+
+#[test]
+fn resume2172_legacy_finished_result_can_resume_without_job_or_same_job() {
+    for worker in ["", "j1", "new-worker"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.e.edit(&json!(1), |row| {
+            row["status"] = json!("block");
+            row["progress"] = json!(63);
+            row["scheduler"]["phase"] = json!("finished");
+            row["scheduler"]["answer"] = json!("keep answer");
+        })
+        .unwrap();
+        let before = f.get(1);
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] =
+            json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+        start_fixture(&mut f, worker);
+        if worker == "new-worker" {
+            f.e.backend.records.push(job(worker, 2, "running"));
+            f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
+        }
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "doing", "worker={worker}");
+        assert_eq!(f.e.backend.outcome_count, 0);
+        for field in ["spec", "progress"] {
+            assert_eq!(f.get(1)[field], before[field]);
+        }
+        for field in ["answer", "worktree", "branch"] {
+            assert_eq!(f.get(1)["scheduler"][field], before["scheduler"][field]);
+        }
+        assert!(arr(&f.get(1)["jobs"]).contains(&json!("j1")));
+        assert!(f.get(1)["processed_results"]["j1"].is_object());
+    }
+}
+
+#[test]
+fn resume2172_outcome_read_race_preserves_start_block_wait_and_aba_resume() {
+    for action in ["start", "block", "wait", "aba"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.put(item(2, "civ6", "todo", &[]));
+        if action == "aba" {
+            start_fixture(&mut f, "j1");
+        }
+        let snapshot = f.get(1);
+        let command = match action {
+            "start" => cc_todo::Command::Start {
+                id: 1,
+                job: "".into(),
+                progress: None,
+            },
+            "aba" => cc_todo::Command::Start {
+                id: 1,
+                job: "j1".into(),
+                progress: None,
+            },
+            "block" => cc_todo::Command::Block {
+                id: 1,
+                reason: "owner stop".into(),
+                progress: None,
+            },
+            _ => cc_todo::Command::Wait {
+                id: 1,
+                on: vec![2],
+                progress: None,
+            },
+        };
+        // ABA is performed within outcome(): doing -> block -> doing must also be detected.
+        f.e.backend.outcome_block_before = action == "aba";
+        f.e.backend.outcome_edit = Some((f.e.todo_path.clone(), command));
+        let mut records = vec![job("j1", 1, "succeeded")];
+        f.e.reconcile_item(&snapshot, &mut records, &Processes::new(), &f.cfg)
+            .unwrap();
+        let row = f.get(1);
+        assert_eq!(
+            row["status"],
+            match action {
+                "block" => "block",
+                "wait" => "wait",
+                _ => "doing",
+            },
+            "action={action}"
+        );
+        assert!(
+            row["processed_results"]["j1"].is_null(),
+            "stale result was committed: {action}"
+        );
+        assert_ne!(row["scheduler"]["phase"], "finished");
+        assert_eq!(
+            f.e.todo().unwrap(),
+            f.e.backend.outcome_saved.clone().unwrap(),
+            "stale snapshot must not even touch updated"
+        );
+    }
+}
+
+#[test]
+fn resume2172_start_creates_explicit_receipt_without_prior_scheduler() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "block", &[]);
+    row["jobs"] = json!(["old"]);
+    row["progress"] = json!(42);
+    f.put(row);
+    start_fixture(&mut f, "new-worker");
+    let started = f.get(1);
+    assert_eq!(started["scheduler"]["job"], "new-worker");
+    assert_eq!(started["worker_receipt"]["job"], "new-worker");
+    assert_eq!(
+        started["worker_receipt"]["generation"],
+        started["resume_generation"]
+    );
+    assert_eq!(started["jobs"], json!(["old", "new-worker"]));
+    assert_eq!(started["progress"], 42);
+    start_fixture(&mut f, "new-worker");
+    assert_eq!(f.get(1)["resume_generation"], started["resume_generation"]);
+}
+
+#[test]
+fn resume2172_each_shared_job_result_is_received_per_item_and_repeated_tick_is_noop() {
+    let mut f = Fixture::new();
+    for id in [1, 2] {
+        let mut row = item(id, "civ6", "doing", &[]);
+        row["scheduler"] = json!({"job":"shared","phase":"running"});
+        row["jobs"] = json!(["shared"]);
+        f.put(row);
+    }
+    f.e.backend.records = vec![job("shared", 1, "succeeded")];
+    f.e.backend.records[0]["last_message"] = json!("状態: 完了\n終了しました。");
+    f.reconcile();
+    for id in [1, 2] {
+        assert_eq!(f.get(id)["status"], "todo");
+        assert_eq!(f.get(id)["processed_results"]["shared"]["reason"], "todo");
+    }
+    let before = fs::read(&f.e.todo_path).unwrap();
+    f.reconcile();
+    assert_eq!(fs::read(&f.e.todo_path).unwrap(), before);
+    assert_eq!(f.e.backend.outcome_count, 2);
+}
+
 #[test]
 fn explicit_resume_invalidates_old_reconcile_and_cancel_snapshot() {
     let mut f = Fixture::new();
@@ -768,6 +946,10 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    outcome_edit: Option<(PathBuf, cc_todo::Command)>,
+    outcome_block_before: bool,
+    outcome_count: usize,
+    outcome_saved: Option<Value>,
     records: Vec<Value>,
     launched: Vec<Value>,
     cancelled: Vec<Value>,
@@ -791,6 +973,10 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            outcome_edit: None,
+            outcome_block_before: false,
+            outcome_count: 0,
+            outcome_saved: None,
             records: vec![],
             launched: vec![],
             cancelled: vec![],
@@ -897,6 +1083,27 @@ impl Backend for Fake {
         Ok(())
     }
     fn outcome(&mut self, j: &Value) -> Result<String> {
+        self.outcome_count += 1;
+        if let Some((store, command)) = self.outcome_edit.take() {
+            let paths = cc_todo::Paths::at(store.parent().unwrap(), &store.with_file_name("jobs"));
+            let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(2)).unwrap();
+            let mut db = cc_todo::load(&store).unwrap();
+            if self.outcome_block_before {
+                cc_todo::execute(
+                    &mut db,
+                    &cc_todo::Command::Block {
+                        id: 1,
+                        reason: "owner stop".into(),
+                        progress: None,
+                    },
+                    &paths,
+                )
+                .unwrap();
+            }
+            cc_todo::execute(&mut db, &command, &paths).unwrap();
+            cc_todo::save(&store, &db).unwrap();
+            self.outcome_saved = Some(db);
+        }
         Ok(j["last_message"]
             .as_str()
             .map(cc_scheduler::backend::result_outcome)

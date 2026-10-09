@@ -565,7 +565,7 @@ impl Console {
         if kind == "handoff" {
             for job in jobs
                 .iter_mut()
-                .filter(|job| terminal(job) && strv(job, "name").starts_with("orch-"))
+                .filter(|job| console_ui::handoff_job(job))
                 .take(10)
             {
                 if console_ui::private_job(&names, &db, job) {
@@ -6101,7 +6101,7 @@ mod tests {
                 dir.join("job.json"),
                 json!({"id":id,
                     "name":if id == "00-not-orchestrator" { "ordinary" } else { "orch-demo" },
-                    "status":"succeeded","cwd":f.root,
+                    "status":if id == "20-private" { "completed" } else { "succeeded" },"cwd":f.root,
                     "thread_id":if id == "20-private" { "saved-session" } else { "" }
                 })
                 .to_string(),

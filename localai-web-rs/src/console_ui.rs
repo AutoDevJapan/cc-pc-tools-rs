@@ -223,6 +223,13 @@ pub fn display_jobs(names: &Names, db: &Value, jobs: &[Value]) -> Value {
             "finished_at":timestamp(&job["finished_at"]), "summary":if client { String::new() } else { clean(names, text(job, "last_message")) }})
     }).collect::<Vec<_>>()})
 }
+pub fn handoff_job(job: &Value) -> bool {
+    text(job, "name").starts_with("orch-")
+        && matches!(
+            status(job),
+            "succeeded" | "completed" | "failed" | "cancelled" | "lost"
+        )
+}
 pub fn display_handoff(
     names: &Names,
     db: &Value,
@@ -264,7 +271,7 @@ pub fn display_handoff(
         ));
     }
     output.push_str(&format!("\n未完了のPR: {pr_count}件\n"));
-    let decisions: Vec<_> = jobs.iter().filter(|job| text(job, "name").starts_with("orch-") && matches!(status(job), "succeeded" | "completed" | "failed" | "cancelled" | "lost"))
+    let decisions: Vec<_> = jobs.iter().filter(|job| handoff_job(job))
         .take(10).map(|job| json!({"id":job_id(job), "summary":if private_job(names, db, job) { "クライアント案件の記録（内容は非表示）".into() } else { clean(names, text(job, "last_message")) }})).collect();
     json!({"text":output, "decisions":decisions, "prs_error":if prs_error { Some("PRの状態を取得できません。") } else { None },
         "delegation":{"enabled":enabled, "last_tick":timestamp(&json!(last_tick))}})

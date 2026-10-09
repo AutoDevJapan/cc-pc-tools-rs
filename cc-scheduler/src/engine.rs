@@ -806,7 +806,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         let source = jobs
             .iter()
             .find(|j| j["id"] == item["scheduler"]["last_job"]);
-        let resume_session =
+        let mut resume_session =
             source.and_then(|j| continuation_session(j, s(&item["scheduler"]["worktree"]), &jobs));
         if let Some(source) = source {
             let result = safe_text(s(&source["last_message"]));
@@ -838,16 +838,24 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             } else {
                 self.backend.pick(&task)?
             };
-            for k in ["model", "effort"] {
-                if truth(&item[k]) {
-                    selection[k] = item[k].clone();
-                }
+        }
+        // A cached selection is only a default, never authority over an explicit ToDo.
+        for k in ["model", "effort"] {
+            if truth(&item[k]) {
+                selection[k] = item[k].clone();
             }
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
+            if truth(&item["model"]) {
+                self.log(
+                    "WARNING",
+                    "指定モデルを利用できないため、指定を保持して再試行します。",
+                )?;
+                return Err(Error("ModelUnavailable"));
+            }
             // An agent asked for a model OpenCodex does not serve (2026-10-01: "gpt-6.1-luna" failed 4 times and
             // reached the owner as a question). Let Jev pick an existing model instead of failing again.
             self.log(
@@ -869,6 +877,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
+        // A resumed conversation may restore the previous model. Reuse it only
+        // when the selected settings agree, including partial explicit choices.
+        if source.is_some_and(|source| {
+            ["model", "effort"].iter().any(|field| {
+                (truth(&item[*field]) || source[*field].is_string())
+                    && source[*field] != selection[*field]
+            })
+        }) {
+            resume_session = None;
+        }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
         let target = folder.join(format!(
@@ -878,18 +896,25 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         ));
         backup(&target)?;
         fs::write(&target, prompt)?;
+        let selection_input = json!({"model":item["model"],"effort":item["effort"]});
         let prepared = self.edit(&item["id"], |row| {
-            if s(&row["status"]) == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
+            if s(&row["status"]) == "todo"
+                && row["scheduler"]["key"] == item["scheduler"]["key"]
                 && launch_inputs(row) == launch_inputs(&item) {
                 merge(
                     &mut row["scheduler"],
-                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session}),
+                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input}),
                 );
             }
         })?;
-        Ok((launch_inputs(&prepared) == launch_inputs(&item)
-            && prepared["scheduler"]["prompt"] == json!(target))
-        .then_some(prepared))
+        if s(&prepared["status"]) != "todo"
+            || prepared["scheduler"]["key"] != item["scheduler"]["key"]
+            || launch_inputs(&prepared) != launch_inputs(&item)
+            || prepared["scheduler"]["prompt"] != json!(target)
+        {
+            return Ok(None);
+        }
+        Ok(Some(prepared))
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
@@ -999,6 +1024,15 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
                     .map_err(|_| Error("InvalidSubwork"))?;
                 prepared["scheduler"]["subwork_parent_job"] = json!(parent);
+            }
+            // Sampling may yield while the owner changes the requested model.
+            // Defer this receipt so prepare recomputes settings and session on
+            // the next pass, using the same durable launch key.
+            if ["model", "effort"]
+                .iter()
+                .any(|field| current[*field] != prepared["scheduler"]["selection_input"][*field])
+            {
+                return Ok(());
             }
             self.state["last_launch"] = json!(self.backend.clock());
             if !self.state["project_last_launch"].is_object() {

@@ -532,17 +532,62 @@ impl Context {
             }
             fs::create_dir_all(&self.jobs)?;
             let path = self.jobs.join(format!(".launch-{key}.lock"));
+            // Legacy launchers created this permanent per-key lock before any
+            // record. Only its first creator can skip legacy-key reconciliation.
+            let first_key = match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(file) => {
+                    drop(file);
+                    true
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
+                Err(error) => return Err(Error::file_io("create launch key lock", &path, error)),
+            };
             let _lock = FileLock::acquire(&path).map_err(|e| {
                 Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e)
             })?;
-            if let Some(job) = self
-                .list_jobs(&HashSet::new())
-                .into_iter()
-                .find(|j| s(j, "launch_key") == key)
+            // Never read the lock's byte zero on Windows. The receipt uses an
+            // atomic sidecar, and its claimed record must match this exact key.
+            let receipt_path = self.jobs.join(format!(".launch-{key}.json"));
+            match self.read_file(&receipt_path) {
+                Ok(bytes) => {
+                    let receipt: Value = serde_json::from_slice(&bytes)?;
+                    let id = s(&receipt, "id");
+                    if !valid_job_id(id) || s(&self.load(id)?, "launch_key") != key {
+                        return Err(Error::new("invalid launch key receipt"));
+                    }
+                    writeln!(out, "{id}")?;
+                    return Ok(0);
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => {
+                    return Err(Error::file_io(
+                        "read launch key receipt",
+                        &receipt_path,
+                        error,
+                    ));
+                }
+            }
+            // Another caller may acquire the lock between create_new and our
+            // acquisition. Its in-progress receipt makes that crash window
+            // recover through history rather than issuing a second record.
+            let pending_path = self.jobs.join(format!(".launch-{key}.pending"));
+            if (!first_key || pending_path.exists())
+                && let Some(job) = self
+                    .list_jobs(&HashSet::new())
+                    .into_iter()
+                    .find(|j| s(j, "launch_key") == key)
             {
+                self.write_json(&receipt_path, &json!({"id":job["id"]}))?;
                 writeln!(out, "{}", s(&job, "id"))?;
                 return Ok(0);
             }
+            fs::write(&pending_path, b"receipt pending").map_err(|error| {
+                Error::file_io("reserve launch key receipt", &pending_path, error)
+            })?;
             self.run_new_job(a, out, err)
         } else {
             self.run_new_job(a, out, err)
@@ -634,9 +679,8 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
-        // Registration shares admission's gate. This also serializes different
-        // launch keys targeting the same ToDo.
-        let _queue = self.queue_lock()?;
+        // Intake uses the short publication gate; history reconciliation remains outside it.
+        let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
         // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
         let _subwork_store_lock = (self.todo_store().exists()
             && (a.value("todo-id").is_some() || a.value("related-todo-ids").is_some()))
@@ -705,6 +749,12 @@ impl Context {
         };
         // The child exemption is for a running job's own sub-work. A job for a
         // different ToDo is top-level work and must wait in the shared queue.
+        let mut registrations = self.registration_jobs()?;
+        if let Some(parent) = parent.and_then(|id| self.try_load(id))
+            && !registrations.iter().any(|job| job["id"] == parent["id"])
+        {
+            registrations.push(parent);
+        }
         let parent = parent.filter(|id| {
             let own = job["todo_id"].as_u64().is_none_or(|todo| {
                 self.try_load(id)
@@ -722,7 +772,7 @@ impl Context {
             .into_iter()
             .chain(related.iter().copied())
         {
-            if let Some(job) = self.admission_jobs()?.into_iter().find(|j| {
+            if let Some(job) = registrations.iter().find(|j| {
                 (j["todo_id"].as_u64() == Some(todo)
                     || j["related_todo_ids"]
                         .as_array()
@@ -731,12 +781,12 @@ impl Context {
             }) {
                 return Err(Error::new(format!(
                     "ToDo {todo} already has active job {}",
-                    s(&job, "id")
+                    s(job, "id")
                 )));
             }
         }
         if let Some(session) = &resume
-            && let Some(job) = self.admission_jobs()?.into_iter().find(|job| {
+            && let Some(job) = registrations.iter().find(|job| {
                 (["queued", "starting", "running"].contains(&s(job, "status"))
                     || self.is_ours(job, "codex_pid"))
                     && ["thread_id", "resume_session"]
@@ -746,7 +796,7 @@ impl Context {
         {
             return Err(Error::new(format!(
                 "resume session {session} already has active job {}",
-                s(&job, "id")
+                s(job, "id")
             )));
         }
         job["parent_job_id"] = json!(parent);
@@ -824,7 +874,7 @@ impl Context {
                         "independent research/review requires read-only scope",
                     ));
                 }
-                let mut jobs = self.admission_jobs()?;
+                let mut jobs = registrations.clone();
                 cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 if let Some(requested) = a.value("parent-job-id") {
                     let p = self.load(requested)?;
@@ -891,6 +941,14 @@ impl Context {
         stored["queue_sequence"] = json!(self.next_queue_sequence()?);
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
+        if let Some(key) = a.value("launch-key") {
+            // Publication precedes spawn and response. A failed spawn or lost
+            // response still has exactly one durable receipt for this key.
+            self.write_json(
+                &self.jobs.join(format!(".launch-{key}.json")),
+                &json!({"id":jid}),
+            )?;
+        }
         drop(_queue);
         let mut stored = self.load(&jid)?;
         let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {

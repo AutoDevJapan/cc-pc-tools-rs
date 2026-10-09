@@ -235,6 +235,11 @@ fn jobs(root: &Path) -> Result<Vec<Value>, ()> {
     Ok(out)
 }
 fn collect(root: &Path, now: u64) -> Value {
+    static QUESTION_URL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let question_pattern = QUESTION_URL.get_or_init(|| {
+        regex::Regex::new(r"https://discord\.com/channels/[0-9]+/[0-9]+(?:/[0-9]+)?")
+            .expect("fixed Discord URL pattern")
+    });
     let mut sources = Vec::new();
     let privacy = cc_ask::task_title::Names::load(&root.join("client-projects.txt"));
     if privacy.is_err() {
@@ -368,6 +373,27 @@ fn collect(root: &Path, now: u64) -> Value {
                 clean(&names, text(item, "title"))
             };
             let progress = item["progress"].as_u64().filter(|p| *p <= 100);
+            let summary = if client {
+                String::new()
+            } else {
+                clean(&names, text(item, "note"))
+                    .chars()
+                    .take(180)
+                    .collect::<String>()
+            };
+            let wait_kind = match text(item, "status") {
+                "block" => "owner",
+                "wait" => "dependency",
+                _ if status == "waiting" => "resource",
+                _ => "none",
+            };
+            let question_url = if client {
+                None
+            } else {
+                question_pattern
+                    .find(text(item, "note"))
+                    .map(|value| value.as_str().to_owned())
+            };
             let history = associated.iter().filter(|j| failed(j)).count();
             let detail = match status {
                 "working" => "共有ToDoに紐づく担当が稼働中です。",
@@ -385,7 +411,7 @@ fn collect(root: &Path, now: u64) -> Value {
                 department(if client { &project } else { raw_project }),
                 project,
                 json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
-                    "task":task,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
+                    "task":task,"summary":summary,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                     "detail":detail,"historyFailures":history}),
             );
         }
@@ -489,7 +515,7 @@ fn collect(root: &Path, now: u64) -> Value {
             "detail":if unknown{"常駐の稼働状態を確認できません。"}else if ok{"常駐監視の記録を確認しました。"}else{"常駐監視の応答または新しい記録を確認できません。"},"historyFailures":0}),
         );
     }
-    let metrics = if scheduler_ok {
+    let mut metrics = if scheduler_ok {
         json!({"cpuPercent":scheduler["cpu_percent"],
         "memoryUsedGb":scheduler["ram_total_gb"].as_f64().zip(scheduler["available_gb"].as_f64()).map(|(t,a)|t-a),
         "memoryTotalGb":scheduler["ram_total_gb"],"activeJobs":scheduler["running_jobs"],
@@ -497,6 +523,17 @@ fn collect(root: &Path, now: u64) -> Value {
     } else {
         json!({"cpuPercent":null,"memoryUsedGb":null,"memoryTotalGb":null,"activeJobs":js.iter().filter(|j|active(j)).count(),"jobLimit":null,"waitingJobs":null})
     };
+    metrics["ownerDecisions"] = db
+        .and_then(|db| db["items"].as_array())
+        .map(|items| {
+            json!(
+                items
+                    .iter()
+                    .filter(|item| text(item, "status") == "block")
+                    .count()
+            )
+        })
+        .unwrap_or(Value::Null);
     json!({"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":{"id":"commander","name":"司令塔","status":if commander_ok{"working"}else{"waiting"},
             "detail":if commander_ok{"常駐の巡回が稼働中です。配下の障害は各作業に表示します。"}else{"司令塔の巡回記録を確認できません。配下の状態とは別に表示しています。"}},
@@ -550,6 +587,28 @@ mod tests {
         assert_eq!(find("todo-1")["progress"], 40);
         assert_eq!(find("todo-1")["historyFailures"], 1);
         assert_eq!(find("todo-2")["status"], "waiting");
+        assert_eq!(find("todo-2")["waitKind"], "owner");
+        assert_eq!(find("todo-6")["waitKind"], "resource");
+        assert_eq!(find("todo-7")["waitKind"], "dependency");
+        assert_eq!(find("todo-5")["summary"], "");
+        assert!(find("todo-5")["questionUrl"].is_null());
+        assert_eq!(output["metrics"]["ownerDecisions"], 1);
+        assert!(
+            find("todo-2")["summary"]
+                .as_str()
+                .unwrap()
+                .contains("画像案への回答を待っています")
+        );
+        assert!(
+            !find("todo-2")["summary"]
+                .as_str()
+                .unwrap()
+                .contains("hidden-value")
+        );
+        assert_eq!(
+            find("todo-2")["questionUrl"],
+            "https://discord.com/channels/100/200"
+        );
         assert!(find("todo-2")["progress"].is_null());
         assert_eq!(find("todo-3")["status"], "attention");
         assert_eq!(find("todo-4")["status"], "done");

@@ -1454,6 +1454,100 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn unreconciled_legacy_identity_is_checked_before_execution_and_on_pid_reuse() {
+        for identity in ["todo", "session", "related-todo"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":10}));
+            let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+            let mut old = job(
+                json!({"id":"legacy","name":"old","status":"succeeded","codex_pid":888,"codex_pid_created":77}),
+            );
+            let args = match identity {
+                "todo" => {
+                    old["todo_id"] = json!(77);
+                    vec!["--todo-id", "77"]
+                }
+                "related-todo" => {
+                    old["related_todo_ids"] = json!([77]);
+                    vec!["--todo-id", "77"]
+                }
+                _ => {
+                    old["thread_id"] = json!(session);
+                    vec!["--resume-session", session]
+                }
+            };
+            t.put(old);
+            t.rt.procs.lock().unwrap().insert(888, 77);
+            // Intake must not scan this terminal-looking legacy record. Its
+            // surviving writer is discovered by reconciliation before admit.
+            assert_eq!(t.run(&args, b"new receipt").unwrap(), 0);
+            let new = t
+                .ctx
+                .list_jobs(&HashSet::new())
+                .into_iter()
+                .find(|job| job["id"] != "legacy")
+                .unwrap();
+            let id = s(&new, "id");
+            assert!(t.ctx.admit(id).unwrap().is_none(), "{identity}");
+            assert_eq!(
+                t.ctx.load(id).unwrap()["queue_wait_reason"]["code"],
+                "intake_owner"
+            );
+            // A PID with another creation time must not keep the old claim.
+            t.rt.procs.lock().unwrap().insert(888, 78);
+            assert!(t.ctx.admit(id).unwrap().is_some(), "{identity}");
+        }
+    }
+    #[test]
+    fn unreadable_indexed_session_keeps_its_identity_with_spare_capacity() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+        t.put(job(
+            json!({"id":"legacy","status":"running","queue_unreadable":true,"thread_id":session}),
+        ));
+        drop(t.ctx.queue_lock().unwrap());
+        fs::write(t.ctx.job_dir("legacy").join("job.json"), "broken").unwrap();
+        t.put(job(
+            json!({"id":"next","name":"different","resume_session":session}),
+        ));
+        {
+            let _gate = t.ctx.queue_lock().unwrap();
+            t.ctx.track_queued_job("next").unwrap();
+        }
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("next").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+    }
+    #[test]
+    fn same_todo_children_share_family_but_a_shared_session_still_waits() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+        t.rt.procs.lock().unwrap().insert(888, 77);
+        t.put(job(json!({"id":"parent","name":"parent","todo_id":77,"status":"running","codex_pid":888,"codex_pid_created":77,"thread_id":session})));
+        t.put(job(
+            json!({"id":"child","name":"review","todo_id":77,"parent_job_id":"parent"}),
+        ));
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        t.put(job(json!({"id":"same-session-child","name":"resume","todo_id":77,"parent_job_id":"parent","resume_session":session})));
+        assert!(t.ctx.admit("same-session-child").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("same-session-child").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+        t.put(job(
+            json!({"id":"other-root","name":"unrelated","todo_id":77}),
+        ));
+        assert!(t.ctx.admit("other-root").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("other-root").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+    }
+    #[test]
     fn registration_owns_state_before_publishing_a_queued_job() {
         let t = Test::new();
         let reads = Arc::new(AtomicUsize::new(0));
@@ -4580,6 +4674,9 @@ mod queue_regressions {
         let mut j = t.ctx.load("existing").unwrap();
         j["todo_id"] = json!(77);
         t.ctx.save(&j).unwrap();
+        // Reconciled legacy owners are rejected during intake. Owners not yet
+        // discovered are checked again before any actual execution admission.
+        drop(t.ctx.queue_lock().unwrap());
         fs::write(t.ctx.root.join("p.md"), "work").unwrap();
         let p = t.ctx.root.join("p.md").to_string_lossy().into_owned();
         let (result, _, _) = t.cli(&[
@@ -6486,6 +6583,74 @@ mod run_validation {
         assert_eq!(first["launch_key"], key);
     }
     #[test]
+    fn new_launch_key_and_terminal_receipt_never_read_terminal_history() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history","status":"succeeded"})));
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(|path, _| {
+            assert!(
+                !path.ends_with("history/job.json"),
+                "receipt must not scan history"
+            );
+        }));
+        let key = "ab".repeat(16);
+        t.run(&["--launch-key", &key], b"hi").unwrap();
+        let receipt = t
+            .ctx
+            .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+            .unwrap();
+        let id = s(&receipt, "id");
+        let mut existing = t.ctx.load(id).unwrap();
+        existing["status"] = json!("succeeded");
+        t.ctx.save(&existing).unwrap();
+        t.run(&["--launch-key", &key], b"hi").unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn legacy_launch_lock_without_receipt_adopts_completed_job() {
+        let t = Test::new();
+        let key = "ab".repeat(16);
+        t.put(job(
+            json!({"id":"legacy-key","status":"succeeded","launch_key":key}),
+        ));
+        fs::write(t.ctx.jobs.join(format!(".launch-{key}.lock")), "").unwrap();
+        fs::write(
+            t.ctx.jobs.join(format!(".launch-{key}.pending")),
+            "interrupted receipt",
+        )
+        .unwrap();
+        t.run(&["--launch-key", &key], b"retry").unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+                .unwrap()["id"],
+            "legacy-key"
+        );
+    }
+    #[test]
+    fn concurrent_same_launch_key_returns_one_receipt_and_one_supervisor() {
+        let t = Test::new();
+        let key = "ab".repeat(16);
+        let barrier = std::sync::Barrier::new(8);
+        std::thread::scope(|scope| {
+            for _ in 0..8 {
+                scope.spawn(|| {
+                    barrier.wait();
+                    assert_eq!(t.run(&["--launch-key", &key], b"once").unwrap(), 0);
+                });
+            }
+        });
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+                .unwrap()["id"],
+            jobs[0]["id"]
+        );
+    }
+    #[test]
     fn test_launch_key_stays_idempotent_after_the_original_job_finishes() {
         let t = Test::new();
         let key = "cd".repeat(16);
@@ -6522,6 +6687,7 @@ mod run_validation {
                 let mut active = json!({"id":"active-writer","status":status});
                 active[field] = json!(session);
                 t.put(active);
+                drop(t.ctx.queue_lock().unwrap());
                 for key in [None, Some("abcdabcdabcdabcdabcdabcdabcdabcd")] {
                     let mut args = vec!["--resume-session", session];
                     if let Some(key) = key {
@@ -8101,6 +8267,13 @@ mod end_to_end {
     }
     #[test]
     fn thirty_parallel_run_processes_share_the_real_queue_files() {
+        parallel_intake(false);
+    }
+    #[test]
+    fn thirty_parallel_run_processes_are_durable_while_history_scan_is_held() {
+        parallel_intake(true);
+    }
+    fn parallel_intake(hold_scan: bool) {
         let t = E2e::new();
         let prompt = t.tmp.0.join("parallel-prompt.md");
         fs::write(&prompt, "fixture parallel launch").unwrap();
@@ -8126,6 +8299,12 @@ mod end_to_end {
             fs::create_dir(&dir).unwrap();
             fs::write(dir.join("job.json"), pretty(&json!({"id":format!("history-{n}"),"status":"succeeded","created_at":"2026-10-06T00:00:00+09:00"}))).unwrap();
         }
+        let scan_path = jobs.join(".queue-scan.lock");
+        let mut held_scan = hold_scan.then(|| FileLock::try_acquire(&scan_path).unwrap());
+        if let Some(lock) = &mut held_scan {
+            lock.set_owner(&scan_path, "fixture:history_scan:blocked");
+        }
+        let started = Instant::now();
         let barrier = Arc::new(std::sync::Barrier::new(30));
         let outputs = std::thread::scope(|scope| {
             let handles: Vec<_> = (0..30)
@@ -8135,24 +8314,28 @@ mod end_to_end {
                     let barrier = barrier.clone();
                     scope.spawn(move || {
                         barrier.wait();
-                        t.cli(
-                            &[
-                                "run",
-                                "--name",
-                                &format!("parallel-{n}"),
-                                "--model",
-                                "fixture",
-                                "--todo-id",
-                                &(10000 + n).to_string(),
-                                "--cwd",
-                                t.tmp.0.to_str().unwrap(),
-                                "--prompt-file",
-                                prompt.to_str().unwrap(),
-                                "--mcp-profile",
-                                "minimal",
-                            ],
-                            "ok",
-                        )
+                        let name = format!("parallel-{n}");
+                        let todo = (10000 + n).to_string();
+                        let key = format!("{n:032x}");
+                        let mut args = vec![
+                            "run",
+                            "--name",
+                            &name,
+                            "--model",
+                            "fixture",
+                            "--todo-id",
+                            &todo,
+                            "--cwd",
+                            t.tmp.0.to_str().unwrap(),
+                            "--prompt-file",
+                            prompt.to_str().unwrap(),
+                            "--mcp-profile",
+                            "minimal",
+                        ];
+                        if hold_scan {
+                            args.extend(["--launch-key", &key]);
+                        }
+                        t.cli(&args, "ok")
                     })
                 })
                 .collect();
@@ -8180,6 +8363,48 @@ mod end_to_end {
             ids.len(),
             failures.len()
         );
+        eprintln!(
+            "intake elapsed {:?}; held history scan={hold_scan}",
+            started.elapsed()
+        );
+        if hold_scan && !ids.is_empty() {
+            // The test-owned scan handle has remained held throughout intake.
+            // No supervisor can have established a complete admission index.
+            let index: Value =
+                serde_json::from_slice(&fs::read(jobs.join(".queue-index.json")).unwrap()).unwrap();
+            assert_eq!(index["scan_complete"], false);
+            assert!(FileLock::try_acquire(&scan_path).is_err());
+            assert!(
+                !t.rec.join("call.json").exists(),
+                "no fixture agent may start before reconciliation"
+            );
+        }
+        drop(held_scan);
+        // Observe reconciliation separately from receipt. The running legacy
+        // parent must be discovered before execution, while all new IDs survive.
+        let reconciled = if failures.is_empty() {
+            let until = Instant::now() + Duration::from_secs(120);
+            loop {
+                let complete = fs::read(jobs.join(".queue-index.json"))
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                    .is_some_and(|index| {
+                        index["scan_complete"] == true
+                            && index["ids"]
+                                .as_array()
+                                .is_some_and(|ids| ids.contains(&json!("parallel-parent")))
+                    });
+                if complete || Instant::now() >= until {
+                    break complete;
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        } else {
+            false
+        };
+        if let Ok(metrics) = fs::read_to_string(jobs.join(".queue-scan-metrics.json")) {
+            eprintln!("history scan phase metrics: {metrics}");
+        }
         // These jobs are queued and have no child processes. Retain an OS handle
         // while stopping each supervisor; taskkill /T can follow reused parent IDs.
         for id in &ids {
@@ -8190,8 +8415,23 @@ mod end_to_end {
             assert_eq!(proc_created(pid), job["pid_created"].as_u64());
             unsafe {
                 use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
-                let handle = OpenProcess(PROCESS_TERMINATE | PROCESS_SYNCHRONIZE, 0, pid);
+                let handle = OpenProcess(
+                    PROCESS_TERMINATE | PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                    0,
+                    pid,
+                );
                 assert!(!handle.is_null());
+                let mut created = std::mem::zeroed();
+                let mut exited = std::mem::zeroed();
+                let mut kernel = std::mem::zeroed();
+                let mut user = std::mem::zeroed();
+                assert_ne!(
+                    GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user),
+                    0
+                );
+                let identity =
+                    ((created.dwHighDateTime as u64) << 32) | created.dwLowDateTime as u64;
+                assert_eq!(Some(identity), job["pid_created"].as_u64());
                 assert_ne!(TerminateProcess(handle, 0), 0);
                 assert_eq!(WaitForSingleObject(handle, 5000), 0);
                 CloseHandle(handle);
@@ -8199,6 +8439,14 @@ mod end_to_end {
         }
         assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
         assert_eq!(ids.len(), 30);
+        assert!(
+            reconciled,
+            "legacy running owner must be discovered after intake"
+        );
+        assert!(
+            !t.rec.join("call.json").exists(),
+            "the discovered legacy owner still occupies the slot"
+        );
         let sequence: Value =
             serde_json::from_slice(&fs::read(jobs.join(".queue-sequence.json")).unwrap()).unwrap();
         assert_eq!(sequence["sequence"], 30);

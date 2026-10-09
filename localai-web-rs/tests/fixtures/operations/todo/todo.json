@@ -1,8 +1,8 @@
 {"projects":{"GoDD-AO":"D:/demo/GoDD-AO","alias":"D:/demo/SecretClient"},"items":[
 {"id":1,"project":"GoDD-AO","title":"再開した作業","status":"doing","jobs":["old","current"],"updated":"2026-10-09 22:00","progress":40},
-{"id":2,"project":"GoDD-AO","title":"判断待ち","status":"block","jobs":["old"],"updated":"2026-10-09 22:00"},
+{"id":2,"project":"GoDD-AO","title":"判断待ち","note":"画像案への回答を待っています。https://discord.com/channels/100/200 access_token=hidden-value","status":"block","jobs":["old"],"updated":"2026-10-09 22:00"},
 {"id":3,"project":"GoDD-AO","title":"停止した未完了作業","status":"doing","jobs":["broken"],"updated":"2026-10-09 22:00"},
 {"id":4,"project":"GoDD-AO","title":"完了した作業","status":"done","jobs":["finished"],"updated":"2026-10-09 22:00","progress":100},
-{"id":5,"project":"alias","title":"SecretClient password=hidden-value","status":"doing","jobs":[],"updated":"2026-10-09 22:00"},
+{"id":5,"project":"alias","title":"SecretClient password=hidden-value","note":"SecretClient access_token=hidden-value https://discord.com/channels/100/300","status":"doing","jobs":[],"updated":"2026-10-09 22:00"},
 {"id":6,"project":"GoDD-AO","title":"昔の失敗の後に再開を待つ作業","status":"doing","jobs":["ancient"],"updated":"2026-10-09 22:00"}
-]}
+,{"id":7,"project":"GoDD-AO","title":"別のToDoを待つ","status":"wait","jobs":[],"updated":"2026-10-09 22:00"}]}

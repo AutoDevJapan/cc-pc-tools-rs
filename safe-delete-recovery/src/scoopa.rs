@@ -444,22 +444,29 @@ pub(super) fn inspect(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let nodes = validate(c, &r, Path::new(&r.identity.path))?;
     let (bytes, links) = totals(&nodes);
+    preflight_project_alias(c, &nodes)?;
+    let proposed = serde_json::to_vec(&MoveTicket {
+        id: ID.into(),
+        source: r.identity.path.clone(),
+        destination: c.destination().to_string_lossy().into_owned(),
+        integrity: r.integrity.clone(),
+        nodes: nodes.clone(),
+    })
+    .map_err(|_| "TICKET_JSON")?;
+    if proposed.len() as u64 > RECORD_LIMIT {
+        return Err("INVALID_RECOVERY_RECORD");
+    }
     Ok(
         serde_json::json!({"id":ID,"action":"read_only_inspection","bytes":bytes,
         "entries":nodes.len(),"links":links,"preservation":preservation(&nodes),
         "requires_fixed_project_alias_approval":nodes.values().any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)),
+        "proposed_ticket_bytes":proposed.len(),"fixed_alias_target_preserved_after_move":true,
         "ticket_created":false,"move_command_issued":false}),
     )
 }
 
-pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
-    let r = load(c, id)?;
-    if r.state != "owned" || r.destination.is_some() {
-        return Err("RECEIPT_NOT_OWNED");
-    }
-    let source = Path::new(&r.identity.path);
-    let nodes = validate(c, &r, source)?;
-    for (key, entry) in &nodes {
+fn preflight_project_alias(c: &Config, nodes: &Inventory) -> Result<()> {
+    for (key, entry) in nodes {
         if entry.link.as_ref().is_some_and(|l| l.fixed_project_alias)
             && !project_alias(
                 c,
@@ -471,6 +478,16 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
             return Err("PROJECT_ALIAS_TARGET_CHANGED");
         }
     }
+    Ok(())
+}
+pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
+    let r = load(c, id)?;
+    if r.state != "owned" || r.destination.is_some() {
+        return Err("RECEIPT_NOT_OWNED");
+    }
+    let source = Path::new(&r.identity.path);
+    let nodes = validate(c, &r, source)?;
+    preflight_project_alias(c, &nodes)?;
     let dest = c.destination();
     checked(&dest)?;
     c.client_guard(&dest)?;

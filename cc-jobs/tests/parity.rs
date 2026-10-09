@@ -117,6 +117,42 @@ mod independent_subwork {
             }
         }
     }
+    #[test]
+    fn invalid_queued_subwork_does_not_block_a_normal_root_but_running_subwork_does() {
+        for running in [false, true] {
+            let (t, mut f) = setup(8);
+            register(&t, &f, &[]).unwrap();
+            let mut child = child(&t);
+            let mut parent = t.ctx.load("parent").unwrap();
+            parent["status"] = json!("succeeded");
+            parent["pid"] = Value::Null;
+            t.ctx.save(&parent).unwrap();
+            f.db["items"][1]["needs"] = json!(["cargo"]);
+            fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            if running {
+                child["status"] = json!("running");
+                child["pid"] = json!(std::process::id());
+                child["pid_created"] = json!(123);
+                t.ctx.save(&child).unwrap();
+            }
+            t.put(job(
+                json!({"id":"normal","name":"normal","status":"queued","todo_id":3,
+                "cwd":f.repo,"pid":std::process::id(),"pid_created":123,"queue_sequence":500,
+                "created_at":"2026-10-10T03:00:00+09:00","work_owner":child["work_owner"]}),
+            ));
+            {
+                let _lock = t.ctx.queue_lock().unwrap();
+                t.ctx.track_queued_job("normal").unwrap();
+            }
+            assert_eq!(t.ctx.admit("normal").unwrap().is_some(), !running);
+            if running {
+                assert_eq!(
+                    t.ctx.load("normal").unwrap()["queue_wait_reason"]["code"],
+                    "work_owner"
+                );
+            }
+        }
+    }
 }
 
 mod reboot_recovery {

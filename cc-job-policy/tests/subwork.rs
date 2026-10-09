@@ -194,3 +194,28 @@ fn generic_titles_and_parallel_siblings_keep_the_parent_pr_scope() {
     sibling["subwork"]["parent_todo_id"] = json!(99);
     assert!(work_owner::blocker(&child, &[sibling]).is_some());
 }
+
+#[test]
+fn invalid_queued_subwork_releases_ownership_but_running_work_still_protects_it() {
+    let mut f = Fixture::new();
+    f.register();
+    let mut child = f.child_job();
+    let mut normal = child.clone();
+    normal["id"] = json!("normal");
+    normal["todo_id"] = json!(3);
+    normal["created_at"] = json!("2026-10-10T02:00:00+09:00");
+    normal.as_object_mut().unwrap().remove("subwork");
+    f.db["items"][1]["needs"] = json!(["cargo"]);
+    let observed = work_owner::observed_jobs(&f.db, &[child.clone()]);
+    assert!(work_owner::blocker(&normal, &observed).is_none());
+    for state in ["running", "starting", "surviving"] {
+        child["status"] = json!(if state == "surviving" {
+            "queued"
+        } else {
+            state
+        });
+        child["work_owner_live"] = json!(state == "surviving");
+        let observed = work_owner::observed_jobs(&f.db, &[child.clone()]);
+        assert!(work_owner::blocker(&normal, &observed).is_some(), "{state}");
+    }
+}

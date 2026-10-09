@@ -345,6 +345,9 @@ fn plan_with_intake(
             .iter()
             .any(|key| cc_scheduler::policy::matches(j, key, ps))
     });
+    for job in &mut owner_jobs {
+        job["work_owner_live"] = json!(cc_scheduler::policy::matches(job, "codex_pid", ps));
+    }
     cc_job_policy::work_owner::reconcile_todos_if(db, &owner_jobs, |item| {
         !excluded(
             s(&item["project"]),

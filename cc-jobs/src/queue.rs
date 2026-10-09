@@ -1154,7 +1154,8 @@ impl Context {
         let ownership_jobs: Vec<_> = jobs
             .iter()
             .filter(|j| {
-                !dependency_waits.contains_key(s(j, "id"))
+                (!dependency_waits.contains_key(s(j, "id"))
+                    && !subwork_waits.contains_key(s(j, "id")))
                     || self.running_job(j)
                     || s(j, "status") == "starting"
             })

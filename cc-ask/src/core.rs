@@ -51,6 +51,14 @@ pub trait Effects {
         discord: bool,
     ) -> Result<Value>;
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output>;
+    /// Structured output must be complete; diagnostic text capture may be capped.
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        let out = self.run(argv, timeout_s)?;
+        if out.code != 0 {
+            return Err("structured command failed".into());
+        }
+        serde_json::from_str(&out.stdout).map_err(|_| "invalid structured command output".into())
+    }
     // Fake effects never inspect or terminate real processes.
     fn reap_helpers(&mut self, _jobs: &std::path::Path) -> Result<String> {
         Ok(String::new())
@@ -788,6 +796,9 @@ impl Effects for RealEffects {
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
         run_hidden(argv, timeout_s)
     }
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        run_hidden_json(argv, timeout_s)
+    }
 }
 /// Every child uses CREATE_NO_WINDOW (0x08000000), including Git and Python fallbacks.
 pub fn run_hidden(argv: &[String], timeout_s: u64) -> Result<Output> {
@@ -798,10 +809,45 @@ pub fn run_hidden_with_env(
     timeout_s: u64,
     environment: &[(String, String)],
 ) -> Result<Output> {
-    use std::{
-        io::{Read, Seek},
-        process::{Command, Stdio},
-    };
+    run_hidden_captured(argv, timeout_s, environment, |code, stdout, stderr| {
+        use std::io::{Read, Seek};
+        let read = |file: &mut std::fs::File| -> Result<String> {
+            file.rewind().map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            file.take(8 * 1024 * 1024)
+                .read_to_end(&mut bytes)
+                .map_err(|e| e.to_string())?;
+            Ok(String::from_utf8_lossy(&bytes).into_owned())
+        };
+        Ok(Output {
+            code,
+            stdout: read(stdout)?,
+            stderr: read(stderr)?,
+        })
+    })
+}
+/// Parse the entire captured stream, including its end, without the text log cap.
+/// No output or parser excerpt is included in errors because it can be private.
+pub fn run_hidden_json(argv: &[String], timeout_s: u64) -> Result<Value> {
+    run_hidden_captured(argv, timeout_s, &[], |code, stdout, _stderr| {
+        use std::io::Seek;
+        if code != 0 {
+            return Err("structured command failed".into());
+        }
+        stdout
+            .rewind()
+            .map_err(|_| "structured output unavailable")?;
+        serde_json::from_reader(std::io::BufReader::new(stdout))
+            .map_err(|_| "invalid structured command output".into())
+    })
+}
+fn run_hidden_captured<T>(
+    argv: &[String],
+    timeout_s: u64,
+    environment: &[(String, String)],
+    consume: impl FnOnce(i32, &mut std::fs::File, &mut std::fs::File) -> Result<T>,
+) -> Result<T> {
+    use std::process::{Command, Stdio};
     let timeout =
         crate::tick_runtime::timeout(std::time::Duration::from_secs(if timeout_s == 0 {
             20
@@ -864,19 +910,7 @@ pub fn run_hidden_with_env(
     } else {
         group.stop(&mut child);
     }
-    let read = |file: &mut std::fs::File| -> Result<String> {
-        file.rewind().map_err(|e| e.to_string())?;
-        let mut bytes = Vec::new();
-        file.take(8 * 1024 * 1024)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
-        Ok(String::from_utf8_lossy(&bytes).into_owned())
-    };
-    Ok(Output {
-        code: status.code().unwrap_or(1),
-        stdout: read(&mut stdout)?,
-        stderr: read(&mut stderr)?,
-    })
+    consume(status.code().unwrap_or(1), &mut stdout, &mut stderr)
 }
 pub fn chunks(text: &str, limit: usize) -> Vec<String> {
     let mut parts = Vec::new();

@@ -290,7 +290,7 @@ fn evidence(
     {
         if cache.readers.is_none() {
             let command = ctx.jobs.join("codex_jobs.exe");
-            let out = ctx.effects.run(
+            let value = ctx.effects.run_json(
                 &[
                     command.to_string_lossy().into_owned(),
                     "status".into(),
@@ -299,11 +299,6 @@ fn evidence(
                 ],
                 45,
             )?;
-            if out.code != 0 {
-                return Err("reader job inventory unavailable".into());
-            }
-            let value: Value =
-                serde_json::from_str(&out.stdout).map_err(|_| "invalid reader job inventory")?;
             if !value.is_array() && !value["jobs"].is_array() {
                 return Err("invalid reader job inventory".into());
             }

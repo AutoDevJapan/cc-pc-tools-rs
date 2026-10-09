@@ -12,6 +12,7 @@ use std::{
 
 const KIND: &str = "private-reference-candidates";
 const BUDGET: Duration = Duration::from_secs(20);
+const MAX_SCOPED_CANDIDATES: usize = 60;
 
 fn destination(path: &Path) -> Result<String> {
     let resolved = if path.exists() {
@@ -139,6 +140,10 @@ fn candidates(ctx: &mut Context, names: &ProjectNames, text: &str) -> Result<Vec
             continue;
         };
         let title = s(&item["title"]);
+        let score = words(title).intersection(&query).count();
+        if score == 0 {
+            continue;
+        }
         let project = s(&item["project"]);
         let cwd = s(&item["cwd"]);
         let path = s(&db["projects"][project]);
@@ -151,34 +156,35 @@ fn candidates(ctx: &mut Context, names: &ProjectNames, text: &str) -> Result<Vec
         {
             continue;
         }
+        scored.push((
+            score,
+            Candidate {
+                id: tid,
+                title: title.to_owned(),
+                project: project.to_owned(),
+                paths: [cwd, path].iter().map(|p| (*p).to_owned()).collect(),
+            },
+        ));
+    }
+    scored.sort_by_key(|(score, candidate)| (std::cmp::Reverse(*score), candidate.id));
+    // Do not spawn path guards for the entire store. Rank in memory first,
+    // then inspect a finite shortlist, stopping after fifteen safe choices.
+    let mut selected = vec![];
+    for (_, candidate) in scored.into_iter().take(MAX_SCOPED_CANDIDATES) {
         let mut protected = false;
-        for path in [cwd, path] {
+        for path in &candidate.paths {
             if !path.is_empty() && guard(ctx, path, &mut cache).map_err(|_| "guard_unavailable")? {
                 protected = true;
             }
         }
-        if protected {
-            continue;
-        }
-        let score = words(title).intersection(&query).count();
-        if score > 0 {
-            scored.push((
-                score,
-                Candidate {
-                    id: tid,
-                    title: title.to_owned(),
-                    project: project.to_owned(),
-                    paths: [cwd, path].iter().map(|p| (*p).to_owned()).collect(),
-                },
-            ));
+        if !protected {
+            selected.push(candidate);
+            if selected.len() == 15 {
+                break;
+            }
         }
     }
-    scored.sort_by_key(|(score, candidate)| (std::cmp::Reverse(*score), candidate.id));
-    Ok(scored
-        .into_iter()
-        .take(15)
-        .map(|(_, candidate)| candidate)
-        .collect())
+    Ok(selected)
 }
 
 fn selection(answer: &str, candidates: &[Candidate]) -> Option<Vec<u64>> {
@@ -307,14 +313,15 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
     {
         return Err("excluded".into());
     }
-    let Some(reply) = history.iter().find(|m| {
-        s(&m["id"]) == target.message
-            && s(&m["author"]["id"]) == ctx.owner()
-            && !truth(&m["author"]["bot"])
-            && !crate::snooze::control_only(m)
-    }) else {
-        return Ok(());
+    let Some(reply) = history.iter().find(|m| s(&m["id"]) == target.message) else {
+        return Err("unknown_owner_message_missing".into());
     };
+    if s(&reply["author"]["id"]) != ctx.owner() || truth(&reply["author"]["bot"]) {
+        return Err("unknown_owner_identity_mismatch".into());
+    }
+    if crate::snooze::control_only(reply) {
+        return Err("unknown_control_reply".into());
+    }
     let mut generations: Vec<_> = state["questions"]
         .as_array()
         .into_iter()
@@ -327,31 +334,64 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
         .collect();
     generations.sort_by_key(|q| std::cmp::Reverse(n(&q["after"])));
     let Some(q) = generations.first() else {
-        return Ok(());
+        return Err("unknown_registration_missing_before_reply".into());
     };
     // Ambiguous registrations and routing cursors cannot identify a question.
-    if s(&q["source"]) == "routing"
-        || generations
-            .get(1)
-            .is_some_and(|other| other["after"] == q["after"])
+    if s(&q["source"]) == "routing" {
+        return Err("unknown_registration_routing".into());
+    }
+    if generations
+        .get(1)
+        .is_some_and(|other| other["after"] == q["after"])
     {
-        return Ok(());
+        return Err("unknown_registration_ambiguous".into());
     }
     let anchor = q
         .get("original_question")
         .or_else(|| q.get("question_message"))
         .unwrap_or(&q["after"]);
     if !id(s(anchor)) || n(anchor) > n(&q["after"]) || n(anchor) >= n(&reply["id"]) {
-        return Ok(());
+        return Err("unknown_anchor_invalid_order".into());
     }
-    let Some(question) = history.iter().find(|m| {
-        m["id"] == *anchor
-            && m["author"]["id"] == bot["id"]
-            && m["author"]["bot"] == true
-            && crate::questions::is_question(s(&m["content"]))
-    }) else {
-        return Ok(());
+    row["question_message_id"] = anchor.clone();
+    let fetched;
+    let question = if let Some(question) = history.iter().find(|m| m["id"] == *anchor) {
+        question
+    } else {
+        // Exact registered IDs only. A missing page entry does not establish
+        // deletion; distinguish the API's not-found response from acquisition
+        // failures without retaining or exposing its diagnostic text.
+        let path = format!("/channels/{}/messages/{}", target.thread, s(anchor));
+        fetched = match ctx.call("GET", &path, None) {
+            Ok(message) => message,
+            Err(error) if error.starts_with(&format!("Discord API GET {path} failed: 404 ")) => {
+                return Err("unknown_anchor_not_found".into());
+            }
+            Err(_) => return Err("anchor_unavailable".into()),
+        };
+        if fetched["id"] != *anchor || s(&fetched["channel_id"]) != target.thread {
+            return Err("unknown_anchor_reference_mismatch".into());
+        }
+        &fetched
     };
+    if question["author"]["bot"] != true {
+        return Err("unknown_anchor_not_bot".into());
+    }
+    let owned_origin =
+        question["author"]["id"] == thread["owner_id"] && !s(&thread["owner_id"]).is_empty();
+    if question["author"]["id"] != bot["id"] && !owned_origin {
+        return Err("unknown_bot_identity_mismatch".into());
+    }
+    let modern_question = crate::questions::is_question(s(&question["content"]));
+    // Legacy syntax is not inferred from text. Trust an exact registered
+    // origin only when the Discord thread owner authored it. A bare cursor
+    // inside an existing thread is not a posting record for an arbitrary bot.
+    let registered_origin = *anchor == thread["id"]
+        || q["question_message"] == *anchor
+        || q["original_question"] == *anchor;
+    if !(modern_question || owned_origin && registered_origin) {
+        return Err("unknown_question_format_unrecognized".into());
+    }
     let reference = &reply["message_reference"];
     if (!reference["channel_id"].is_null() && s(&reference["channel_id"]) != target.thread)
         || (!reference["message_id"].is_null()
@@ -360,7 +400,7 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
                 .as_array()
                 .is_some_and(|ids| ids.contains(&reference["message_id"])))
     {
-        return Ok(());
+        return Err("unknown_reply_reference_mismatch".into());
     }
     // A newer unregistered question must not lend its a/b reply to the old one.
     if history.iter().any(|m| {
@@ -375,7 +415,23 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
                     .as_array()
                     .is_some_and(|ids| ids.contains(&m["id"])))
     }) {
-        return Ok(());
+        return Err("unknown_newer_question".into());
+    }
+    if !modern_question
+        && history.iter().any(|m| {
+            n(&m["id"]) > n(anchor)
+                && n(&m["id"]) < n(&reply["id"])
+                && truth(&m["author"]["bot"])
+                && m["author"]["id"] == question["author"]["id"]
+                && (q
+                    .get("original_question")
+                    .is_some_and(|original| *original != q["question_message"])
+                    || !q["message_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&m["id"])))
+        })
+    {
+        return Err("unknown_intervening_legacy_post".into());
     }
     row["question_message_id"] = anchor.clone();
     // Attachment labels can reveal a protected project even though attachment
@@ -383,7 +439,7 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
     for message in [question, reply] {
         let attachments = message["attachments"].to_string();
         if names.redact(&attachments) != attachments || safe_text(&attachments) != attachments {
-            return Ok(());
+            return Err("unknown_private_attachment".into());
         }
     }
     let original_question = s(&question["content"]);
@@ -392,7 +448,7 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
     if names.redact(original_question) != original_question
         || safe_text(original_question) != original_question
     {
-        return Ok(());
+        return Err("unknown_private_question".into());
     }
     let question = question_without_footer(original_question);
     let reply = s(&reply["content"]);
@@ -400,11 +456,11 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
         || !private_text(reply, &names)
         || question.chars().count() + reply.chars().count() > 12000
     {
-        return Ok(());
+        return Err("unknown_private_text_or_size".into());
     }
     let candidates = candidates(ctx, &names, &format!("{question}\n{reply}"))?;
     if candidates.is_empty() {
-        return Ok(());
+        return Err("unknown_no_candidates".into());
     }
     // Recheck the deny list immediately before the only private inference.
     let names = ProjectNames::load(&ctx.client_projects).map_err(|_| "exclusions_unavailable")?;
@@ -423,12 +479,12 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
                 || c.paths.iter().any(|path| names.redact(path) != *path)
         })
     {
-        return Ok(());
+        return Err("unknown_private_text_after_selection".into());
     }
     for candidate in &candidates {
         for path in &candidate.paths {
             if !path.is_empty() && guard(ctx, path, &mut cache).map_err(|_| "guard_unavailable")? {
-                return Ok(());
+                return Err("unknown_protected_candidate".into());
             }
         }
     }
@@ -438,15 +494,17 @@ fn inspect(ctx: &mut Context, target: &Target, row: &mut Value) -> Result<()> {
             .map(|c| json!({"id":c.id,"title":c.title})).collect::<Vec<_>>()})
     );
     let accept = |answer: &str| selection(answer, &candidates).is_some();
-    if let Some(ids) = ctx
-        .effects
-        .local_llm(&prompt, BUDGET, &accept)
-        .and_then(|answer| selection(&answer, &candidates))
-        .filter(|ids| !ids.is_empty())
-    {
-        row["candidate_todos"] = json!(ids);
-        row["status"] = json!("candidates");
+    let Some(answer) = ctx.effects.local_llm(&prompt, BUDGET, &accept) else {
+        return Err("unknown_model_no_usable_answer".into());
+    };
+    let Some(ids) = selection(&answer, &candidates) else {
+        return Err("unknown_model_invalid_response".into());
+    };
+    if ids.is_empty() {
+        return Err("unknown_model_empty_selection".into());
     }
+    row["candidate_todos"] = json!(ids);
+    row["status"] = json!("candidates");
     Ok(())
 }
 
@@ -509,8 +567,12 @@ pub(super) fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
     let rows = report["rows"].as_array().unwrap();
     Ok(
         json!({"targets":rows.len(),"candidates":rows.iter().filter(|r| r["status"] == "candidates").count(),
-        "unknown":rows.iter().filter(|r| r["status"] == "unknown").count(),
+        "unknown":rows.iter().filter(|r| unresolved(s(&r["status"]))).count(),
         "excluded":rows.iter().filter(|r| r["status"] == "excluded" || r["status"] == "outside_scope").count(),
-        "errors":rows.iter().filter(|r| !["candidates","unknown","excluded","outside_scope"].contains(&s(&r["status"]))).count()}),
+        "errors":rows.iter().filter(|r| !unresolved(s(&r["status"])) && !["candidates","excluded","outside_scope"].contains(&s(&r["status"]))).count()}),
     )
+}
+
+fn unresolved(status: &str) -> bool {
+    status == "unknown" || status.starts_with("unknown_")
 }

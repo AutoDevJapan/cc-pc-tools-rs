@@ -26,7 +26,17 @@ impl Effects for PrivateEffects {
         if self.malformed_history && url.contains("/messages?") {
             return Ok(json!({}));
         }
-        let result = self.inner.http(method, url, body, discord);
+        let result = self
+            .inner
+            .http(method, url, body, discord)
+            .map_err(|error| {
+                if error == "message missing" && url.contains("/messages/") {
+                    let path = url.strip_prefix("https://discord.com/api/v10").unwrap();
+                    format!("Discord API GET {path} failed: 404 Unknown Message")
+                } else {
+                    error
+                }
+            });
         if url.contains("/messages?") {
             if let Some(path) = self.change_protection.take() {
                 std::fs::write(path, "Confidential").unwrap();
@@ -173,7 +183,7 @@ fn generated_job_dates_do_not_block_questions_but_contacts_and_protection_still_
         let before = std::fs::read(h.ctx.here.join("state.json")).unwrap();
         let todo = std::fs::read(&h.ctx.todo).unwrap();
         history_audit::run(&mut h.ctx, &args).unwrap();
-        assert_eq!(row(&args)["status"], if eligible { "candidates" } else { "unknown" });
+        if eligible { assert_eq!(row(&args)["status"], "candidates"); } else { assert!(s(&row(&args)["status"]).starts_with("unknown_")); }
         let fake = h.fake.borrow();
         assert_eq!(fake.llm_calls.len(), usize::from(eligible));
         if eligible {
@@ -274,7 +284,7 @@ fn missing_or_newer_unregistered_question_is_unknown() {
                 .push(newer);
         }
         history_audit::run(&mut h.ctx, &args).unwrap();
-        assert_eq!(row(&args)["status"], "unknown");
+        assert!(s(&row(&args)["status"]).starts_with("unknown_"));
         assert!(h.fake.borrow().llm_calls.is_empty());
     }
 }
@@ -297,7 +307,7 @@ fn invalid_empty_incomplete_or_out_of_candidate_model_answer_is_unknown() {
         let (mut h, args, _) = setup();
         h.fake.borrow_mut().llm_answer = answer.into();
         history_audit::run(&mut h.ctx, &args).unwrap();
-        assert_eq!(row(&args)["status"], "unknown");
+        assert!(s(&row(&args)["status"]).starts_with("unknown_"));
         assert_eq!(row(&args)["candidate_todos"], json!([]));
         assert_eq!(h.fake.borrow().llm_calls.len(), 1);
     }
@@ -364,7 +374,7 @@ fn secrets_contact_data_and_changed_client_exclusion_never_enter_inference() {
                 atomic_json(&h.ctx.todo, &db, 2).unwrap();
             }
             history_audit::run(&mut h.ctx, &args).unwrap();
-            assert_eq!(row(&args)["status"], "unknown");
+            assert!(s(&row(&args)["status"]).starts_with("unknown_"));
             assert!(h.fake.borrow().llm_calls.is_empty());
         }
     }
@@ -425,7 +435,7 @@ fn no_lexical_candidates_means_no_model_call_and_malformed_history_is_an_error()
     )
     .unwrap();
     history_audit::run(&mut h.ctx, &args).unwrap();
-    assert_eq!(row(&args)["status"], "unknown");
+    assert!(s(&row(&args)["status"]).starts_with("unknown_"));
     assert!(h.fake.borrow().llm_calls.is_empty());
     let (mut h, args, _) = setup();
     h.ctx.effects = Box::new(PrivateEffects {
@@ -528,7 +538,7 @@ fn untrusted_scope_is_refused_before_history_but_allowed_log_and_bot_task_work()
                 .iter()
                 .any(|c| s(&c["url"]).contains("/messages")));
         } else {
-            assert_eq!(row(&args)["status"], "unknown");
+            assert!(s(&row(&args)["status"]).starts_with("unknown_"));
             assert!(h
                 .fake
                 .borrow()
@@ -587,7 +597,7 @@ fn protected_attachment_labels_and_ambiguous_or_routing_generations_are_unknown(
             }
         }
         history_audit::run(&mut h.ctx, &args).unwrap();
-        assert_eq!(row(&args)["status"], "unknown");
+        assert!(s(&row(&args)["status"]).starts_with("unknown_"));
         assert!(h.fake.borrow().llm_calls.is_empty());
     }
 }
@@ -677,6 +687,234 @@ fn old_anchor_link_cannot_steal_a_reply_to_a_new_question() {
         .unwrap()
         .push(question);
     history_audit::run(&mut h.ctx, &args).unwrap();
-    assert_eq!(row(&args)["status"], "unknown");
+    assert!(s(&row(&args)["status"]).starts_with("unknown_"));
+    assert!(h.fake.borrow().llm_calls.is_empty());
+}
+
+#[test]
+fn diagnostic_statuses_separate_unresolved_origins_from_acquisition_failures() {
+    for (case, expected) in [
+        (0, "unknown_owner_message_missing"),
+        (1, "unknown_owner_identity_mismatch"),
+        (2, "unknown_registration_missing_before_reply"),
+        (3, "unknown_registration_ambiguous"),
+        (4, "unknown_anchor_not_found"),
+        (5, "unknown_anchor_not_bot"),
+        (6, "unknown_bot_identity_mismatch"),
+        (7, "unknown_question_format_unrecognized"),
+        (8, "anchor_unavailable"),
+    ] {
+        let (mut h, args, _) = setup();
+        match case {
+            0 => {
+                h.fake
+                    .borrow_mut()
+                    .messages
+                    .get_mut("100")
+                    .unwrap()
+                    .remove(1);
+            }
+            1 => {
+                h.fake.borrow_mut().messages.get_mut("100").unwrap()[1]["author"]["id"] =
+                    json!("OTHER")
+            }
+            2 => {
+                let mut state = h.state();
+                state["questions"] = json!([]);
+                h.save(&state);
+            }
+            3 => {
+                let mut state = h.state();
+                let duplicate = state["questions"][0].clone();
+                state["questions"].as_array_mut().unwrap().push(duplicate);
+                h.save(&state);
+            }
+            4 => {
+                h.fake
+                    .borrow_mut()
+                    .messages
+                    .get_mut("100")
+                    .unwrap()
+                    .remove(0);
+            }
+            5 => {
+                h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["author"]["bot"] =
+                    json!(false)
+            }
+            6 => {
+                h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["author"]["id"] =
+                    json!("UNTRUSTED")
+            }
+            7 => {
+                h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["content"] =
+                    json!("legacy migration material")
+            }
+            _ => {
+                let mut state = h.state();
+                state["questions"][0]["after"] = json!("105");
+                state["questions"][0]["question_message"] = json!("105");
+                h.save(&state);
+                h.fake
+                    .borrow_mut()
+                    .http_errors
+                    .insert("/channels/100/messages/105".into(), 1);
+            }
+        }
+        let before = std::fs::read(h.ctx.here.join("state.json")).unwrap();
+        let todo = std::fs::read(&h.ctx.todo).unwrap();
+        let result = history_audit::run(&mut h.ctx, &args).unwrap();
+        assert_eq!(row(&args)["status"], expected);
+        assert_eq!(result["unknown"], if case == 8 { 0 } else { 1 });
+        assert_eq!(result["errors"], if case == 8 { 1 } else { 0 });
+        assert!(h.fake.borrow().llm_calls.is_empty());
+        assert_eq!(row(&args).as_object().unwrap().len(), 5);
+        unchanged(&h, &before, &todo);
+    }
+}
+
+#[test]
+fn legacy_format_requires_registered_exact_origin_and_verified_bot_thread_owner() {
+    for (historical, registered, owner_matches) in [
+        (false, true, true),
+        (true, true, true),
+        (true, false, true),
+        (true, true, false),
+        (false, true, false),
+    ] {
+        let (mut h, args, _) = setup();
+        let author = if historical { "OLDBOT" } else { "BOT" };
+        h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["author"]["id"] = json!(author);
+        h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["content"] =
+            json!("legacy Atlas migration material");
+        if owner_matches {
+            h.fake.borrow_mut().threads.get_mut("100").unwrap()["owner_id"] = json!(author);
+        }
+        if !registered {
+            let mut state = h.state();
+            state["questions"] = json!([]);
+            h.save(&state);
+        }
+        let before = std::fs::read(h.ctx.here.join("state.json")).unwrap();
+        let todo = std::fs::read(&h.ctx.todo).unwrap();
+        history_audit::run(&mut h.ctx, &args).unwrap();
+        let accepted = registered && owner_matches;
+        assert_eq!(h.fake.borrow().llm_calls.len(), usize::from(accepted));
+        if accepted {
+            assert_eq!(row(&args)["status"], "candidates");
+        } else {
+            assert!(s(&row(&args)["status"]).starts_with("unknown_"));
+        }
+        unchanged(&h, &before, &todo);
+    }
+}
+
+#[test]
+fn legacy_origin_does_not_accept_an_arbitrary_cursor_or_intervening_bot_post() {
+    for mode in 0..2 {
+        let (mut h, args, _) = setup();
+        h.fake.borrow_mut().threads.get_mut("100").unwrap()["owner_id"] = json!("BOT");
+        h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["content"] =
+            json!("legacy Atlas migration material");
+        let mut later = message("105", "another legacy post", "BOT");
+        later["author"]["bot"] = json!(true);
+        h.fake
+            .borrow_mut()
+            .messages
+            .get_mut("100")
+            .unwrap()
+            .push(later);
+        if mode == 0 {
+            let mut state = h.state();
+            state["questions"][0]["after"] = json!("105");
+            state["questions"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("question_message");
+            h.save(&state);
+        }
+        history_audit::run(&mut h.ctx, &args).unwrap();
+        assert_eq!(
+            row(&args)["status"],
+            if mode == 0 {
+                "unknown_question_format_unrecognized"
+            } else {
+                "unknown_intervening_legacy_post"
+            }
+        );
+        assert!(h.fake.borrow().llm_calls.is_empty());
+    }
+}
+
+#[test]
+fn not_found_registered_anchor_is_not_replaced_by_an_older_available_root() {
+    let (mut h, args, _) = setup();
+    let mut state = h.state();
+    state["questions"][0]["after"] = json!("105");
+    state["questions"][0]["question_message"] = json!("105");
+    h.save(&state);
+    h.fake.borrow_mut().threads.get_mut("100").unwrap()["owner_id"] = json!("BOT");
+    let result = history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(row(&args)["status"], "unknown_anchor_not_found");
+    assert_eq!(row(&args)["question_message_id"], "105");
+    assert_eq!(result["unknown"], 1);
+    assert_eq!(result["errors"], 0);
+    assert!(h.fake.borrow().llm_calls.is_empty());
+    assert!(h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .any(|call| s(&call["url"]).ends_with("/messages/105")));
+}
+
+#[test]
+fn path_guards_are_bounded_after_lexical_ranking_and_do_not_scan_unrelated_items() {
+    let (mut h, args, _) = setup();
+    let mut items: Vec<Value> = (1..=60)
+        .map(|id| {
+            json!({"id":id,"title":"Atlas migration",
+        "cwd":format!("D:/item-{id}/protected")})
+        })
+        .collect();
+    items.push(json!({"id":61,"title":"Atlas migration","cwd":"D:/safe"}));
+    items.push(json!({"id":62,"title":"Differentword","cwd":"D:/unrelated"}));
+    atomic_json(&h.ctx.todo, &json!({"items":items}), 2).unwrap();
+    history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(row(&args)["status"], "unknown_no_candidates");
+    let fake = h.fake.borrow();
+    assert!(fake.llm_calls.is_empty());
+    assert_eq!(
+        fake.runs
+            .iter()
+            .filter(|(args, _)| args[2].ends_with("/protected"))
+            .count(),
+        60
+    );
+    assert!(!fake
+        .runs
+        .iter()
+        .any(|(args, _)| args[2] == "D:/safe" || args[2] == "D:/unrelated"));
+}
+
+#[test]
+fn reanchored_legacy_generation_cannot_hide_a_new_legacy_post() {
+    let (mut h, args, _) = setup();
+    h.fake.borrow_mut().threads.get_mut("100").unwrap()["owner_id"] = json!("BOT");
+    h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["content"] =
+        json!("legacy Atlas migration material");
+    let mut later = message("105", "new legacy migration material", "BOT");
+    later["author"]["bot"] = json!(true);
+    h.fake
+        .borrow_mut()
+        .messages
+        .get_mut("100")
+        .unwrap()
+        .push(later);
+    let mut state = h.state();
+    state["questions"].as_array_mut().unwrap().push(json!({"thread_id":"100","after":"105",
+        "question_message":"105","original_question":"100","message_ids":["100","105"],"source":"posted"}));
+    h.save(&state);
+    history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(row(&args)["status"], "unknown_intervening_legacy_post");
     assert!(h.fake.borrow().llm_calls.is_empty());
 }

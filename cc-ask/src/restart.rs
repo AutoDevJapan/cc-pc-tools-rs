@@ -59,6 +59,59 @@ fn links(item: &Value, job: &Value) -> bool {
         || (truth(&item["scheduler"]["job"]) && item["scheduler"]["job"] == job["id"])
 }
 
+pub fn session_busy(ctx: &Context, session: &str, exclude: &str) -> Result<bool> {
+    if session.is_empty() {
+        return Ok(false);
+    }
+    Ok(jobs(ctx)?.iter().any(|job| {
+        s(&job["id"]) != exclude
+            && RUNNING.contains(&s(&job["status"]))
+            && [s(&job["thread_id"]), s(&job["resume_session"])].contains(&session)
+    }))
+}
+
+/// Link the existing task only after its answer worker actually started.
+pub fn link_answer_todo(ctx: &mut Context, question: &mut Value, jid: &str) -> Result<()> {
+    if s(&question["continuation"]["todo_linked_job"]) == jid || !ctx.todo.is_file() {
+        return Ok(());
+    }
+    let db = read_json(&ctx.todo)?;
+    let source = job_info(ctx, s(&question["job"]));
+    let session = s(&question["session_id"]);
+    for item in db["items"].as_array().into_iter().flatten() {
+        let associated = links(item, &source)
+            || item["id"] == question["restart"]["todo"]
+            || item["jobs"].as_array().into_iter().flatten().any(|id| {
+                s(id) == jid
+                    || (!s(&question["continuation"]["selection"]["source_job_id"]).is_empty()
+                        && id == &question["continuation"]["selection"]["source_job_id"])
+            })
+            || item["jobs"].as_array().into_iter().flatten().any(|id| {
+                !session.is_empty()
+                    && (s(id) == session || {
+                        let job = job_info(ctx, s(id));
+                        [s(&job["thread_id"]), s(&job["resume_session"])].contains(&session)
+                    })
+            });
+        let newer_block = s(&item["status"]) == "block"
+            && crate::automation::epoch(&item["updated"])
+                > snowflake_time(s(&question["continuation"]["after"]));
+        if associated && !newer_block && ["todo", "doing", "block"].contains(&s(&item["status"])) {
+            todo_run(
+                ctx,
+                &[
+                    "start".into(),
+                    n(&item["id"]).to_string(),
+                    "--job".into(),
+                    jid.into(),
+                ],
+            )?;
+        }
+    }
+    question["continuation"]["todo_linked_job"] = json!(jid);
+    Ok(())
+}
+
 /// Direct Discord/session association and shared ToDo ownership take precedence over recovery.
 pub fn other_owner(
     ctx: &Context,
@@ -78,13 +131,6 @@ pub fn other_owner(
         if job["id"] == source["id"] || !RUNNING.contains(&s(&job["status"])) {
             continue;
         }
-        let session = if truth(&source["thread_id"]) {
-            s(&source["thread_id"])
-        } else {
-            s(&source["resume_session"])
-        };
-        let same_session = !session.is_empty()
-            && (s(&job["thread_id"]) == session || s(&job["resume_session"]) == session);
         let shared_todo = todo["items"]
             .as_array()
             .into_iter()
@@ -96,8 +142,7 @@ pub fn other_owner(
         } else {
             String::new()
         };
-        if same_session
-            || shared_todo
+        if shared_todo
             || (thread_owner(&job_info(ctx, s(&job["id"])), &prompt, s(&thread["id"]))
                 && !(RUNNING.contains(&s(&source["status"]))
                     && explicit_thread_owner(source, s(&thread["id"]))
@@ -139,8 +184,10 @@ fn ensure_todo(
     }
     let marker = format!("Discordの作業再開: {}", s(&thread["id"]));
     if let Some(item) = db["items"].as_array().into_iter().flatten().find(|item| {
-        ["todo", "doing"].contains(&s(&item["status"]))
-            && (links(item, source) || s(&item["note"]).contains(&marker))
+        ["todo", "doing", "block"].contains(&s(&item["status"]))
+            && (links(item, source)
+                || links(item, &job_info(ctx, s(&record["job"])))
+                || s(&item["note"]).contains(&marker))
     }) {
         record["restart"]["todo"] = item["id"].clone();
         if s(&item["note"]).contains(&marker) {
@@ -193,6 +240,9 @@ fn ensure_todo(
 }
 
 fn link_todo(ctx: &mut Context, record: &Value, jid: &str) -> Result<()> {
+    if !job_started(ctx, jid) {
+        return Ok(());
+    }
     let id = n(&record["restart"]["todo"]);
     if id != 0 && valid_job(jid) {
         todo_run(
@@ -284,14 +334,23 @@ fn end_todo(ctx: &mut Context, record: &mut Value, note: &str) -> Result<()> {
     Ok(())
 }
 
-fn adopt(state: &mut Value, thread: &Value, record: &mut Value, jid: &str, slot: Slot) {
+fn adopt(
+    ctx: &Context,
+    state: &mut Value,
+    thread: &Value,
+    record: &mut Value,
+    jid: &str,
+    slot: Slot,
+) {
     let pending = record["restart"]["pending"].clone();
     match slot {
         Slot::Question(_) => {
             record["continuation"]["job"] = json!(jid);
             if n(&pending["after"]) > n(&record["continuation"]["after"]) {
                 record["continuation"]["after"] = pending["after"].clone();
-                acknowledge_reply(record, s(&pending["after"]));
+                if job_started(ctx, jid) {
+                    acknowledge_reply(record, s(&pending["after"]));
+                }
             }
         }
         Slot::Request => {
@@ -307,8 +366,7 @@ fn adopt(state: &mut Value, thread: &Value, record: &mut Value, jid: &str, slot:
         .into_iter()
         .flatten()
     {
-        state["answer_receipts"][s(id)]["thread"] = thread["id"].clone();
-        state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
+        record_launch_delivery(ctx, state, s(id), s(&thread["id"]), jid);
     }
     record["restart"].as_object_mut().unwrap().remove("pending");
     for field in [
@@ -561,11 +619,25 @@ pub fn recover(
             }
         }
     }
-    let class = if failure::classify(previous_error) != Failure::Task {
+    let mut class = if failure::classify(previous_error) != Failure::Task {
         failure::classify(previous_error)
     } else {
         failure::classify(&evidence)
     };
+    if class == Failure::Task
+        && s(&source["status"]) != "cancelled"
+        && session_busy(
+            ctx,
+            if truth(&source["thread_id"]) {
+                s(&source["thread_id"])
+            } else {
+                s(&source["resume_session"])
+            },
+            jid,
+        )?
+    {
+        class = Failure::Writer;
+    }
     source = failure::repaired_job(&source, class);
     if class == Failure::Context {
         crate::prompt_context::reduce(&mut source);
@@ -582,7 +654,7 @@ pub fn recover(
     if !key.is_empty() {
         if let Some(found) = find_launch_job(ctx, &key) {
             link_todo(ctx, record, &found)?;
-            adopt(state, thread, record, &found, slot);
+            adopt(ctx, state, thread, record, &found, slot);
             match slot {
                 Slot::Question(_) => record["continuation"]["job_info"] = job_info(ctx, &found),
                 Slot::Request => record["job_info"] = job_info(ctx, &found),
@@ -617,11 +689,22 @@ pub fn recover(
             Slot::Request => n(&record["after"]),
         };
         let history = thread_history(ctx, s(&thread["id"]))?;
+        let input_path = ctx.jobs.join("jobs").join(&waiting).join("prompt.md");
+        let input = if input_path.is_file() {
+            read_text(&input_path)?
+        } else {
+            String::new()
+        };
         let delivered: Vec<_> = history
             .iter()
             .filter(|m| {
                 s(&m["author"]["id"]) == owner
                     && !crate::snooze::control_only(m)
+                    && job_started(ctx, &waiting)
+                    && (s(&state["answer_receipts"][s(&m["id"])]["handled_by"]) == waiting
+                        || (input.contains(&format!("オーナー投稿 {}", s(&m["id"])))
+                            && !s(&m["content"]).trim().is_empty()
+                            && input.contains(s(&m["content"]))))
                     && ((cutoff == 0. && n(&m["id"]) <= cursor)
                         || (cutoff > 0. && snowflake_time(s(&m["id"])) <= cutoff))
             })
@@ -924,6 +1007,19 @@ pub fn recover(
         share_attempts(ctx, thread, record, &attempts)?;
     }
     record["restart"]["pending"]["tried"] = json!(true);
+    let pending_source = &record["restart"]["pending"]["source"];
+    if session_busy(
+        ctx,
+        if truth(&pending_source["thread_id"]) {
+            s(&pending_source["thread_id"])
+        } else {
+            s(&pending_source["resume_session"])
+        },
+        jid,
+    )? {
+        record["restart"]["pending"]["source"]["thread_id"] = Value::Null;
+        record["restart"]["pending"]["source"]["resume_session"] = Value::Null;
+    }
     save(ctx, state, thread, record, slot)?;
     *budget = true;
     let pending = record["restart"]["pending"].clone();
@@ -947,7 +1043,7 @@ pub fn recover(
     match launched {
         Ok(new) => {
             link_todo(ctx, record, &new)?;
-            adopt(state, thread, record, &new, slot);
+            adopt(ctx, state, thread, record, &new, slot);
             match slot {
                 Slot::Question(_) => record["continuation"]["job_info"] = job_info(ctx, &new),
                 Slot::Request => record["job_info"] = job_info(ctx, &new),

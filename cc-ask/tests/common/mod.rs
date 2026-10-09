@@ -37,6 +37,7 @@ pub struct Fake {
     pub pick_down: bool,
     pub remove_session_on_pick: Option<PathBuf>,
     pub launch_error: bool,
+    pub launch_queued: bool,
     pub launch_error_message: String,
     pub launch_transport_fail: bool,
     pub crash_after_todo_add: bool,
@@ -100,6 +101,7 @@ impl Harness {
             pick_down: false,
             remove_session_on_pick: None,
             launch_error: false,
+            launch_queued: false,
             launch_error_message: "mock failure".into(),
             launch_transport_fail: false,
             crash_after_todo_add: false,
@@ -618,6 +620,12 @@ impl Fake {
         std::fs::create_dir_all(&dir).unwrap();
         atomic_json(&dir.join("job.json"),&json!({"id":jid,"status":"running","model":record["model"],"effort":record["effort"],"task_type":record["task_type"],"sandbox":record["sandbox"],"scope_source":record["scope_source"],"thread_id":format!("session-{jid}"),"launch_key":record["launch_key"],"cwd":record["cwd"]}),2).unwrap();
         std::fs::write(dir.join("prompt.md"), s(&record["prompt"])).unwrap();
+        let mut job = read_json(&dir.join("job.json"))?;
+        job["steps"] = json!(if self.launch_queued { 0 } else { 1 });
+        if self.launch_queued {
+            job["status"] = json!("queued");
+        }
+        atomic_json(&dir.join("job.json"), &job, 2)?;
         self.launches.push(record);
         if self.lose_launch_response {
             self.lose_launch_response = false;

@@ -56,7 +56,18 @@ fn main() {
         let held = FileLock::acquire(&root.join("cargo-build.lock.0")).unwrap();
         fs::write(root.join("civ6.lock"), "fixture owned lease").unwrap();
         fs::write(root.join("worker.ready"), "ready").unwrap();
-        std::thread::sleep(Duration::from_millis(350));
+        if std::env::var_os("CC_JOBS_FIXTURE_RESOURCE_BARRIER").is_some() {
+            let deadline = std::time::Instant::now() + Duration::from_secs(30);
+            while !root.join("worker.release").exists() {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "worker release timeout"
+                );
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        } else {
+            std::thread::sleep(Duration::from_millis(350));
+        }
         fs::remove_file(root.join("civ6.lock")).unwrap();
         drop(held);
         fs::write(root.join("worker.done"), "done").unwrap();

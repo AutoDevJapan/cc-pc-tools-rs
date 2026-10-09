@@ -1636,7 +1636,7 @@ fn test_todo_add_interruption_restores_generated_item_ownership() {
 }
 
 #[test]
-fn test_lost_job_is_retired_before_resume_and_same_resume_session_owner_is_detected() {
+fn test_lost_job_is_retired_before_resume_and_same_task_owner_is_detected() {
     let mut h = Harness::new();
     h.tick();
     h.finish("job1", "lost", None, None);
@@ -1667,7 +1667,7 @@ fn test_lost_job_is_retired_before_resume_and_same_resume_session_owner_is_detec
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","thread_id":"original-session"}),
+        &json!({"status":"running","thread_id":"original-session","discord_thread_id":"100"}),
         2,
     )
     .unwrap();

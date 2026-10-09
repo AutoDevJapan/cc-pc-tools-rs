@@ -939,7 +939,7 @@ fn adopt(
     e["after"] = pending["after"].clone();
     e["steering_messages"] = pending["messages"].clone();
     for message in pending["messages"].as_array().into_iter().flatten() {
-        state["answer_receipts"][s(&message["id"])]["handled_by"] = json!(jid);
+        record_launch_delivery(ctx, state, s(&message["id"]), s(&thread["id"]), jid);
     }
     e["steering_resume"] = pending["resume"].clone();
     e["reported"] = json!(false);
@@ -957,12 +957,19 @@ fn adopt(
     }
     if let Slot::Question(_) = slot {
         record["open"] = json!(true);
-        acknowledge_reply(record, s(&pending["after"]));
+        if job_started(ctx, jid) {
+            acknowledge_reply(record, s(&pending["after"]));
+        }
     }
-    crate::reply_recovery::delivered(record);
+    if job_started(ctx, jid) {
+        crate::reply_recovery::delivered(record);
+    }
     if matches!(slot, Slot::Request) {
         crate::reply_recovery::close_delivered_questions(state, s(&thread["id"]));
     }
     save(ctx, state, thread, record, slot)?;
-    crate::automation::link_todos(ctx, &[s(&pending["source"]["id"]).to_owned()], jid)
+    if job_started(ctx, jid) {
+        crate::automation::link_todos(ctx, &[s(&pending["source"]["id"]).to_owned()], jid)?;
+    }
+    Ok(())
 }

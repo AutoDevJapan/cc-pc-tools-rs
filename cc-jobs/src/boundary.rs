@@ -366,6 +366,7 @@ impl Context {
     /// Active jobs for a yield decision. Reads the index without the gate; only
     /// a missing index takes a brief gate to build one.
     pub(crate) fn yield_snapshot(&self) -> Result<Vec<Value>> {
+        self.prepare_admission_index()?;
         if let Some(jobs) = self.admission_snapshot() {
             return Ok(jobs);
         }

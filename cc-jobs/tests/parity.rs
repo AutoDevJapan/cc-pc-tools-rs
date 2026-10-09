@@ -1336,6 +1336,90 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn registration_owns_state_before_publishing_a_queued_job() {
+        let t = Test::new();
+        let reads = Arc::new(AtomicUsize::new(0));
+        let observed = reads.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                assert!(
+                    FileLock::try_acquire(&file.with_file_name("state.lock")).is_err(),
+                    "registration must reserve state before a published record can be read"
+                );
+                reads.fetch_add(1, Ordering::Relaxed);
+            }
+        }));
+        assert_eq!(t.run(&[], b"fixture registration").unwrap(), 0);
+        assert!(observed.load(Ordering::Relaxed) > 0);
+    }
+    #[test]
+    fn history_bootstrap_and_refresh_do_not_hold_the_queue_gate() {
+        let t = Test::new();
+        for n in 0..32 {
+            t.put(job(
+                json!({"id":format!("history-{n}"),"status":"succeeded"}),
+            ));
+        }
+        let path = t.ctx.jobs.join(".queue.lock");
+        let reads = Arc::new(AtomicUsize::new(0));
+        let count = reads.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                let gate = FileLock::try_acquire(&path)
+                    .expect("terminal history must be read outside the queue gate");
+                drop(gate);
+                count.fetch_add(1, Ordering::Relaxed);
+            }
+        }));
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(reads.load(Ordering::Relaxed), 32);
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(
+            reads.load(Ordering::Relaxed),
+            32,
+            "bootstrap must be shared"
+        );
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.rt.tick(31.);
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(reads.load(Ordering::Relaxed), 64);
+    }
+    #[test]
+    fn scan_commit_merges_a_registration_published_after_history_was_read() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history-first","status":"succeeded"})));
+        let jobs = t.ctx.jobs.clone();
+        let once = Arc::new(AtomicBool::new(false));
+        let observed = once.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json")
+                && !once.swap(true, Ordering::Relaxed)
+            {
+                let _gate = FileLock::try_acquire(&jobs.join(".queue.lock")).unwrap();
+                let dir = jobs.join("late-registration");
+                fs::create_dir(&dir).unwrap();
+                fs::write(
+                    dir.join("job.json"),
+                    pretty(&job(json!({"id":"late-registration"}))),
+                )
+                .unwrap();
+                // The durable publication made by track_queued_job, including
+                // its incomplete-bootstrap timestamp, occurs during the scan.
+                fs::write(
+                    jobs.join(".queue-index.json"),
+                    r#"{"scanned_at":0,"ids":["late-registration"]}"#,
+                )
+                .unwrap();
+            }
+        }));
+        drop(t.ctx.queue_lock().unwrap());
+        assert!(observed.load(Ordering::Relaxed));
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["ids"], json!(["late-registration"]));
+    }
+    #[test]
     fn unreadable_owner_record_keeps_cached_pr_claim_without_blocking_other_prs() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));

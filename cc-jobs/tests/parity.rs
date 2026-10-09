@@ -180,7 +180,6 @@ mod reboot_recovery {
             let mut j = interrupted(&t, "todo-stop", "lost");
             j["todo_id"] = json!(77);
             t.ctx.save(&j).unwrap();
-            let todo = t.ctx.root.parent().unwrap().join("todo");
             // Unique test roots share Temp's parent; use a tools-shaped context.
             let mut ctx = t.ctx.clone();
             ctx.root = t.ctx.root.join("tools/codex-jobs");
@@ -190,7 +189,6 @@ mod reboot_recovery {
                 json!({"items":[{"id":77,"status":status,"jobs":["todo-stop"]}]}).to_string(),
             )
             .unwrap();
-            let _ = todo;
             ctx.recover_reboot(true).unwrap();
             assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0, "{status}");
         }
@@ -222,6 +220,70 @@ mod reboot_recovery {
         );
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert_eq!(t.rt.calls.lock().unwrap().len(), 2);
+    }
+    #[test]
+    fn completed_boot_receipt_skips_history_and_missing_boot_cannot_recover() {
+        let t = Test::new();
+        let lost = interrupted(&t, "cached", "lost");
+        *t.rt.boot.lock().unwrap() = None;
+        assert_eq!(t.ctx.recover_reboot(true).unwrap(), json!([]));
+        assert_eq!(t.ctx.load("cached").unwrap(), lost);
+        *t.rt.boot.lock().unwrap() = Some(parse_iso("2026-10-01T11:55:00+09:00").unwrap());
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(|path, _| {
+            assert_ne!(
+                path.file_name().unwrap(),
+                "job.json",
+                "completed boot must not rescan history"
+            );
+        }));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn queued_retry_does_not_mistake_previous_failure_for_this_attempt() {
+        let t = Test::new();
+        let mut queued = interrupted(&t, "retry", "lost");
+        queued["started_at"] = Value::Null;
+        queued["queued_at"] = json!("2026-10-01T11:54:00+09:00");
+        t.ctx.save(&queued).unwrap();
+        fs::write(
+            t.ctx.job_dir("retry").join("events.jsonl"),
+            "{\"type\":\"turn.failed\",\"_ts\":\"2026-10-01T11:53:00+09:00\"}\n",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn running_job_without_session_uses_original_prompt() {
+        let t = Test::new();
+        let mut running = interrupted(&t, "no-thread", "running");
+        running["thread_id"] = Value::Null;
+        t.ctx.save(&running).unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        let resumed = t.ctx.load("no-thread").unwrap();
+        assert_eq!(resumed["resume_session"], "");
+        assert!(!codex_args(&resumed).iter().any(|a| a == "resume"));
+        assert_eq!(
+            fs::read_to_string(t.ctx.job_dir("no-thread").join("prompt.md")).unwrap(),
+            "元の依頼文"
+        );
+    }
+    #[test]
+    fn unreadable_inventory_is_not_recorded_as_an_empty_completed_boot() {
+        let t = Test::new();
+        let original = interrupted(&t, "valid", "lost");
+        fs::create_dir(t.ctx.job_dir("broken")).unwrap();
+        fs::write(t.ctx.job_dir("broken").join("job.json"), b"{bad").unwrap();
+        assert!(t.ctx.recover_reboot(true).is_err());
+        assert!(!t.ctx.root.join("reboot-recovery.json").exists());
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert_eq!(t.ctx.load("valid").unwrap(), original);
+        t.put(job(json!({"id":"broken","status":"failed"})));
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
     }
 }
 

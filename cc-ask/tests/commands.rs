@@ -1016,7 +1016,7 @@ fn missing_config_does_not_starve_external_tick_steps_or_touch_questions() {
     cmd_tick(&mut h.ctx).unwrap();
     assert_eq!(h.state(), state);
     assert!(h.fake.borrow().http_calls.is_empty());
-    assert_eq!(h.fake.borrow().runs.len(), 6);
+    assert_eq!(h.fake.borrow().runs.len(), 7);
     assert_eq!(
         h.fake
             .borrow()
@@ -1024,7 +1024,7 @@ fn missing_config_does_not_starve_external_tick_steps_or_touch_questions() {
             .iter()
             .map(|(a, _)| a.last().unwrap().as_str())
             .collect::<Vec<_>>(),
-        ["recover", "watch", "step", "step", "/NH", "/NH"]
+        ["--apply", "recover", "watch", "step", "step", "/NH", "/NH"]
     );
 }
 

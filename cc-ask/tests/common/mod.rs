@@ -15,6 +15,7 @@ pub struct Harness {
 }
 pub struct Fake {
     pub recover_fail: bool,
+    pub reboot_recover_fail: bool,
     pub codex_directories: Vec<String>,
     pub channels: Vec<Value>,
     pub root: PathBuf,
@@ -65,6 +66,7 @@ impl Harness {
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
             recover_fail: false,
+            reboot_recover_fail: false,
             codex_directories: vec![],
             channels: vec![],
             root: path.clone(),
@@ -417,7 +419,10 @@ impl Fake {
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.runs.push((argv.to_vec(), timeout));
         if argv.iter().any(|a| a == "recover-reboot") {
-            return Ok(Output::default());
+            return Ok(Output {
+                code: if self.reboot_recover_fail { 1 } else { 0 },
+                ..Default::default()
+            });
         }
         if argv.iter().any(|a| a == "--summary") {
             let p = self.root.join("board-status.json");

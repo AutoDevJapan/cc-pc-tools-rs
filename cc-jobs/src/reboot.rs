@@ -4,7 +4,6 @@ use crate::{
     *,
 };
 use std::{
-    collections::HashSet,
     fs,
     io::{Read, Seek, SeekFrom},
     path::Path,
@@ -113,7 +112,7 @@ impl Context {
                 return Ok(json!([]));
             }
         }
-        let mut jobs = self.list_jobs(&HashSet::new());
+        let mut jobs = self.reboot_inventory()?;
         let todo_path = self
             .root
             .parent()
@@ -261,6 +260,31 @@ impl Context {
             }
         }
         Ok(json!(report))
+    }
+
+    fn reboot_inventory(&self) -> Result<Vec<Value>> {
+        let entries = match fs::read_dir(&self.jobs) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
+        let mut jobs = Vec::new();
+        for entry in entries {
+            let entry = entry?;
+            let id = entry.file_name().to_string_lossy().into_owned();
+            if !entry.file_type()?.is_dir() || !crate::queue::valid_job_id(&id) {
+                continue;
+            }
+            match fs::metadata(entry.path().join("job.json")) {
+                Ok(_) => jobs.push(self.load(&id)?),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e.into()),
+            }
+        }
+        jobs.sort_by(|a, b| {
+            (s(a, "created_at"), s(a, "id")).cmp(&(s(b, "created_at"), s(b, "id")))
+        });
+        Ok(jobs)
     }
 
     fn log_reboot_recovery(&self, jobs: &[Value]) -> Result<()> {

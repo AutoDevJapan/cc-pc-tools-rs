@@ -543,6 +543,26 @@ fn patrol_rechecks_new_process_after_selection_and_recover_failure_blocks_dispat
 }
 
 #[test]
+fn reboot_recovery_failure_prevents_scheduler_from_resurrecting_same_work() {
+    let mut h = setup();
+    assert!(recover_before_launch(&mut h.ctx));
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|a| a == "recover")));
+    h.fake.borrow_mut().runs.clear();
+    h.fake.borrow_mut().reboot_recover_fail = true;
+    assert!(!recover_before_launch(&mut h.ctx));
+    assert_eq!(h.fake.borrow().runs.len(), 1);
+    assert!(h.fake.borrow().runs[0]
+        .0
+        .iter()
+        .any(|a| a == "recover-reboot"));
+}
+
+#[test]
 fn abort_of_another_turn_does_not_overwrite_top_level_completion() {
     let h = setup();
     let (path, _) = log(&h, "partial");

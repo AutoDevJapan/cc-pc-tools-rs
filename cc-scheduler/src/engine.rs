@@ -174,7 +174,11 @@ impl<B: Backend> Scheduler<B> {
             .iter_mut()
             .find(|row| row["id"] == *id)
             .ok_or(Error("ValueError"))?;
+        let before = row.clone();
         action(row);
+        if *row == before {
+            return Ok(before);
+        }
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
         let out = row.clone();
         write_json(&self.todo_path, &db, 1)?;
@@ -504,10 +508,11 @@ impl<B: Backend> Scheduler<B> {
         let current = arr(&self.todo()?["items"])
             .into_iter()
             .find(|row| row["id"] == i["id"]);
-        if current
-            .as_ref()
-            .is_none_or(|row| row["status"] != i["status"] || row["scheduler"] != i["scheduler"])
-        {
+        if current.as_ref().is_none_or(|row| {
+            row["status"] != i["status"]
+                || row["scheduler"] != i["scheduler"]
+                || row["resume_generation"] != i["resume_generation"]
+        }) {
             return Ok(());
         }
         let m = &i["scheduler"];
@@ -574,6 +579,21 @@ impl<B: Backend> Scheduler<B> {
                 },
             )?;
         } else if s(&j["status"]) == "succeeded" {
+            if result_received(i, &j["id"]) {
+                return Ok(());
+            }
+            // Legacy finished rows have already consumed this result, even without a ledger.
+            if m["phase"] == "finished" {
+                self.edit(&i["id"], |row| {
+                    if row["status"] == i["status"]
+                        && row["scheduler"] == i["scheduler"]
+                        && row["resume_generation"] == i["resume_generation"]
+                    {
+                        record_result(row, &j["id"], "legacy_finished");
+                    }
+                })?;
+                return Ok(());
+            }
             let mut outcome = self.backend.outcome(j)?;
             // A shared worker can finish one child while its parent still has work.
             // An explicit per-item completion remains authoritative (the edit below
@@ -589,7 +609,15 @@ impl<B: Backend> Scheduler<B> {
             }
             let next_at = self.backend.clock() + 60.;
             self.edit(&i["id"], |row| {
-                if s(&row["status"]) == "doing" && row["scheduler"]["job"] == j["id"] {
+                // Revalidate under the shared OS lock after the potentially slow backend read.
+                // Generation prevents doing -> block -> start (same worker) ABA as well.
+                if s(&row["status"]) == "doing"
+                    && row["scheduler"] == i["scheduler"]
+                    && row["resume_generation"] == i["resume_generation"]
+                    && row["wait_on"] == i["wait_on"]
+                    && !result_received(row, &j["id"])
+                {
+                    record_result(row, &j["id"], &outcome);
                     if park_waiting(row, Some(&j["id"])) {
                         return;
                     }

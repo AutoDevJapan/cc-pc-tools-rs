@@ -89,6 +89,14 @@ pub enum Command {
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
     },
+    /// Update the note or saved specification without changing task state or ownership.
+    Edit {
+        id: i64,
+        #[arg(long, required_unless_present = "spec")]
+        note_file: Option<PathBuf>,
+        #[arg(long, required_unless_present = "note_file")]
+        spec: Option<PathBuf>,
+    },
     #[command(args_override_self = true, infer_long_args = true)]
     Block {
         #[arg(allow_negative_numbers = true)]
@@ -366,6 +374,101 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     db["next_id"] = json!(id + 1);
     Ok(id)
 }
+fn edit_text(source: &Path) -> Result<String> {
+    if source.as_os_str().is_empty() || fs::metadata(source).map_err(err)?.len() > 1024 * 1024 {
+        return Err("編集するファイルは1 MiB以内で指定してください".into());
+    }
+    let text = fs::read_to_string(source).map_err(err)?;
+    let text = text
+        .strip_prefix('\u{feff}')
+        .unwrap_or(&text)
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    if text.trim_matches(python_whitespace).is_empty() {
+        return Err("編集するファイルの本文は空にできません".into());
+    }
+    Ok(text)
+}
+
+/// Validate every input before changing the caller's snapshot. run() holds todo.lock
+/// across this operation and the atomic store replacement.
+pub fn edit_item(
+    db: &mut Value,
+    id: i64,
+    note_file: Option<&Path>,
+    spec: Option<&Path>,
+    paths: &Paths,
+) -> Result<()> {
+    if note_file.is_none() && spec.is_none() {
+        return Err("--note-file か --spec を指定してください".into());
+    }
+    let mut item = find(db, id)?.clone();
+    let previous_updated = item["updated"].clone();
+    let note = note_file.map(edit_text).transpose()?;
+    let spec_text = spec.map(edit_text).transpose()?;
+    // Malformed histories must not be silently discarded.
+    for field in ["note_history", "spec_history"] {
+        if item.get(field).is_some_and(|v| !v.is_array()) {
+            return Err(format!("invalid {field}"));
+        }
+    }
+    let mut changed = false;
+    if let Some(note) = note {
+        if item["note"] != note {
+            if let Some(old) = item.get("note").cloned() {
+                cc_scheduler::common::push(
+                    &mut item["note_history"],
+                    json!({"note":old,"updated":previous_updated}),
+                );
+            }
+            item["note"] = json!(note);
+            changed = true;
+        }
+    }
+    if let Some(text) = spec_text {
+        // Repeating an identical recovery edit must not add another copy or history entry.
+        let identical = match item["spec"].as_str().filter(|p| !p.is_empty()) {
+            Some(path) => match fs::read_to_string(path) {
+                Ok(old) => old == text,
+                // A missing old file can be repaired; its path remains in history.
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+                Err(e) => return Err(err(e)),
+            },
+            None => false,
+        };
+        if !identical {
+            let folder = paths
+                .store
+                .parent()
+                .ok_or("invalid store path")?
+                .join("specs");
+            fs::create_dir_all(&folder).map_err(err)?;
+            let target = folder.join(format!("{id}-{}.md", uuid::Uuid::new_v4().simple()));
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&target)
+                .map_err(err)?;
+            file.write_all(text.as_bytes()).map_err(err)?;
+            file.sync_all().map_err(err)?;
+            let target = cc_scheduler::common::resolve(&target).map_err(|e| e.0.to_owned())?;
+            if let Some(old) = item.get("spec").cloned() {
+                cc_scheduler::common::push(
+                    &mut item["spec_history"],
+                    json!({"spec":old,"updated":previous_updated}),
+                );
+            }
+            item["spec"] = json!(target.to_string_lossy());
+            changed = true;
+        }
+    }
+    if changed {
+        item["updated"] = json!(now());
+        *find(db, id)? = item;
+    }
+    Ok(())
+}
+
 pub fn find(db: &mut Value, id: i64) -> Result<&mut Value> {
     db["items"]
         .as_array_mut()
@@ -762,6 +865,11 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             if i["status"] == "done" && progress.is_none() {
                 i.as_object_mut().ok_or("invalid item")?.remove("progress");
             }
+            if job.is_empty() {
+                cc_scheduler::common::resume_without_worker(i);
+            } else {
+                cc_scheduler::common::assign_worker(i, job);
+            }
             i["status"] = json!("doing");
             if let Some(percent) = progress {
                 set_progress(i, *percent)?;
@@ -771,10 +879,14 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 if !jobs.contains(&json!(job)) {
                     jobs.push(json!(job));
                 }
-                cc_scheduler::common::assign_worker(i, job);
             }
             i["updated"] = json!(now());
         }
+        Command::Edit {
+            id,
+            note_file,
+            spec,
+        } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
         Command::Block {
             id,
             reason,

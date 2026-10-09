@@ -1,6 +1,40 @@
 use cc_ask::*;
 use serde_json::json;
 
+#[cfg(windows)]
+#[test]
+fn structured_child_output_reads_past_text_capture_cap_and_requires_complete_success() {
+    let argv = |script: &str| -> Vec<String> {
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            script,
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+    };
+    let large = argv(
+        r#"[Console]::Write('{"padding":"' + ('x' * (9 * 1024 * 1024)) + '","last_reader":{"id":"tail","thread_id":"session-at-end"}}')"#,
+    );
+    let value = run_hidden_json(&large, 45).unwrap();
+    assert_eq!(value["padding"].as_str().unwrap().len(), 9 * 1024 * 1024);
+    assert_eq!(value["last_reader"]["thread_id"], "session-at-end");
+    for script in [
+        r#"[Console]::Write('{"private":"unfinished')"#,
+        r#"[Console]::Write('{"private":"tail"} extra')"#,
+        r#"[Console]::Write('{"private":"failed"}'); exit 7"#,
+    ] {
+        let error = run_hidden_json(&argv(script), 45).unwrap_err();
+        assert!(!error.contains("private"));
+        assert!(!error.contains("unfinished"));
+        assert!(!error.contains("tail"));
+        assert!(!error.contains("failed\""));
+    }
+}
+
 #[test]
 fn snooze_registration_uses_latest_deadline_and_does_not_revive_an_older_one() {
     let older = json!({"thread_id":"200","open":false,"remind_not_before":1790982000.,

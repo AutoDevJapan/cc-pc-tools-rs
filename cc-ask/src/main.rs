@@ -16,6 +16,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Check,
+    /// Audit full archived histories with an ID-only checkpoint; never posts or launches.
+    AuditHistory(cc_ask::history_audit::Args),
     Ask(AskArgs),
     Replies {
         #[arg(long)]
@@ -245,6 +247,9 @@ fn run(command: Commands) -> Result<()> {
         _ => {}
     }
     match command {
+        Commands::AuditHistory(args) => {
+            println!("{}", cc_ask::history_audit::run(&mut ctx, &args)?)
+        }
         Commands::Check => {
             cmd_check(&mut ctx)?;
         }

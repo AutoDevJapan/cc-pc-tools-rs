@@ -51,6 +51,14 @@ pub trait Effects {
         discord: bool,
     ) -> Result<Value>;
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output>;
+    /// Structured output must be complete; diagnostic text capture may be capped.
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        let out = self.run(argv, timeout_s)?;
+        if out.code != 0 {
+            return Err("structured command failed".into());
+        }
+        serde_json::from_str(&out.stdout).map_err(|_| "invalid structured command output".into())
+    }
     // Fake effects never inspect or terminate real processes.
     fn reap_helpers(&mut self, _jobs: &std::path::Path) -> Result<String> {
         Ok(String::new())
@@ -458,6 +466,31 @@ pub fn token() -> Result<String> {
     }
 }
 pub struct RealEffects;
+
+thread_local! {
+    static HTTP_POOL: std::cell::RefCell<Option<Option<ureq::Agent>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Connection reuse for an explicit bulk read. Normal tick/board calls retain
+/// their existing independent transport and dynamically computed time limits.
+pub struct ScopedHttpPool(Option<Option<ureq::Agent>>);
+impl ScopedHttpPool {
+    pub fn new() -> Self {
+        Self(HTTP_POOL.with(|slot| slot.replace(Some(None))))
+    }
+}
+impl Default for ScopedHttpPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Drop for ScopedHttpPool {
+    fn drop(&mut self) {
+        HTTP_POOL.with(|slot| {
+            slot.replace(self.0.take());
+        });
+    }
+}
 static DNS_IN_FLIGHT: std::sync::LazyLock<std::sync::Arc<std::sync::atomic::AtomicBool>> =
     std::sync::LazyLock::new(|| std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)));
 
@@ -665,13 +698,23 @@ impl Effects for RealEffects {
             url.split('?').next().unwrap_or(url)
         ));
         let deadline = std::time::Instant::now() + timeout;
-        let agent = ureq::AgentBuilder::new()
-            .resolver(bounded_dns)
-            .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
-            .timeout_read(timeout)
-            .timeout_write(timeout)
-            .timeout(timeout)
-            .build();
+        let make_agent = || {
+            ureq::AgentBuilder::new()
+                .resolver(bounded_dns)
+                .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
+                .timeout_read(timeout)
+                .timeout_write(timeout)
+                .timeout(timeout)
+                .build()
+        };
+        let agent = HTTP_POOL.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            if let Some(agent) = slot.as_mut() {
+                agent.get_or_insert_with(make_agent).clone()
+            } else {
+                make_agent()
+            }
+        });
         for attempt in 0..3 {
             crate::tick_runtime::check()?;
             let left = deadline.saturating_duration_since(std::time::Instant::now());
@@ -753,6 +796,9 @@ impl Effects for RealEffects {
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
         run_hidden(argv, timeout_s)
     }
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        run_hidden_json(argv, timeout_s)
+    }
 }
 /// Every child uses CREATE_NO_WINDOW (0x08000000), including Git and Python fallbacks.
 pub fn run_hidden(argv: &[String], timeout_s: u64) -> Result<Output> {
@@ -763,10 +809,45 @@ pub fn run_hidden_with_env(
     timeout_s: u64,
     environment: &[(String, String)],
 ) -> Result<Output> {
-    use std::{
-        io::{Read, Seek},
-        process::{Command, Stdio},
-    };
+    run_hidden_captured(argv, timeout_s, environment, |code, stdout, stderr| {
+        use std::io::{Read, Seek};
+        let read = |file: &mut std::fs::File| -> Result<String> {
+            file.rewind().map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            file.take(8 * 1024 * 1024)
+                .read_to_end(&mut bytes)
+                .map_err(|e| e.to_string())?;
+            Ok(String::from_utf8_lossy(&bytes).into_owned())
+        };
+        Ok(Output {
+            code,
+            stdout: read(stdout)?,
+            stderr: read(stderr)?,
+        })
+    })
+}
+/// Parse the entire captured stream, including its end, without the text log cap.
+/// No output or parser excerpt is included in errors because it can be private.
+pub fn run_hidden_json(argv: &[String], timeout_s: u64) -> Result<Value> {
+    run_hidden_captured(argv, timeout_s, &[], |code, stdout, _stderr| {
+        use std::io::Seek;
+        if code != 0 {
+            return Err("structured command failed".into());
+        }
+        stdout
+            .rewind()
+            .map_err(|_| "structured output unavailable")?;
+        serde_json::from_reader(std::io::BufReader::new(stdout))
+            .map_err(|_| "invalid structured command output".into())
+    })
+}
+fn run_hidden_captured<T>(
+    argv: &[String],
+    timeout_s: u64,
+    environment: &[(String, String)],
+    consume: impl FnOnce(i32, &mut std::fs::File, &mut std::fs::File) -> Result<T>,
+) -> Result<T> {
+    use std::process::{Command, Stdio};
     let timeout =
         crate::tick_runtime::timeout(std::time::Duration::from_secs(if timeout_s == 0 {
             20
@@ -829,19 +910,7 @@ pub fn run_hidden_with_env(
     } else {
         group.stop(&mut child);
     }
-    let read = |file: &mut std::fs::File| -> Result<String> {
-        file.rewind().map_err(|e| e.to_string())?;
-        let mut bytes = Vec::new();
-        file.take(8 * 1024 * 1024)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
-        Ok(String::from_utf8_lossy(&bytes).into_owned())
-    };
-    Ok(Output {
-        code: status.code().unwrap_or(1),
-        stdout: read(&mut stdout)?,
-        stderr: read(&mut stderr)?,
-    })
+    consume(status.code().unwrap_or(1), &mut stdout, &mut stderr)
 }
 pub fn chunks(text: &str, limit: usize) -> Vec<String> {
     let mut parts = Vec::new();
@@ -1496,21 +1565,86 @@ pub fn reply_reserved(state: &Value, message: &str) -> bool {
 
 /// A supervisor accepting a job does not mean Codex accepted its input.
 pub fn job_started(ctx: &Context, jid: &str) -> bool {
+    job_start_evidence(ctx, jid).unwrap_or(false)
+}
+
+fn job_start_evidence(ctx: &Context, jid: &str) -> Result<bool> {
     let job = job_info(ctx, jid);
-    n(&job["steps"]) > 0
+    if n(&job["steps"]) > 0
         || truth(&job["turn_completed"])
-        || s(&job["activity"]) == "thinking"
         || (s(&job["status"]) == "succeeded" && !final_message(ctx, jid).trim().is_empty())
-        || {
-            use std::io::Read;
-            let mut events = Vec::new();
-            std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl"))
-                .is_ok_and(|file| file.take(65536).read_to_end(&mut events).is_ok())
-                && events
-                    .split(|byte| *byte == b'\n')
-                    .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
-                    .any(|event| s(&event["type"]) == "turn.started")
+    {
+        return Ok(true);
+    }
+    use std::io::{BufRead, BufReader};
+    let file = match std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl")) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(_) => return Err("worker events unavailable".into()),
+    };
+    for line in BufReader::new(file).lines() {
+        let line = line.map_err(|_| "worker events unavailable")?;
+        if line.trim().is_empty() {
+            continue;
         }
+        let event: Value = serde_json::from_str(&line).map_err(|_| "invalid worker events")?;
+        // Local turn.started does not prove API input acceptance. Scan to the
+        // end so a large earlier record cannot hide a dispatched side effect.
+        if event["type"] == "turn.completed"
+            || (event["type"] == "item.completed"
+                && [
+                    "agent_message",
+                    "command_execution",
+                    "mcp_tool_call",
+                    "file_change",
+                    "reasoning",
+                ]
+                .contains(&s(&event["item"]["type"])))
+            || (event["type"] == "item.started"
+                && ["command_execution", "mcp_tool_call", "file_change"]
+                    .contains(&s(&event["item"]["type"])))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn restore_unstarted_reply(state: &mut Value, id: &str, tid: &str, jid: &str, job: &Value) {
+    let Some(message) = id.parse::<u64>().ok().filter(|id| *id > 0) else {
+        return;
+    };
+    if let Some(questions) = state["questions"].as_array_mut() {
+        for question in questions {
+            let baseline = n(&question["after"]);
+            if s(&question["thread_id"]) != tid
+                || s(&question["continuation"]["job"]) != jid
+                || message <= baseline
+            {
+                continue;
+            }
+            let cursor = message.saturating_sub(1).max(baseline);
+            if n(&question["continuation"]["after"]) >= message {
+                question["continuation"]["after"] = json!(cursor.to_string());
+            }
+            if n(&question["seen_reply"]) >= message {
+                question["seen_reply"] = json!(cursor.to_string());
+            }
+            question["continuation"]["job_info"] = job.clone();
+            // Do not reopen a stopped/completed question or change its generation.
+        }
+    }
+    if let Some(request) = state
+        .get_mut("requests")
+        .and_then(Value::as_object_mut)
+        .and_then(|requests| requests.get_mut(tid))
+        .filter(|request| s(&request["job"]) == jid && message > n(&json!(tid)))
+    {
+        if n(&request["after"]) >= message {
+            request["after"] = json!(message.saturating_sub(1).to_string());
+        }
+        request["job_info"] = job.clone();
+    }
 }
 
 pub fn record_launch_delivery(ctx: &Context, state: &mut Value, id: &str, tid: &str, jid: &str) {
@@ -1544,8 +1678,7 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
         };
         if !valid_job(jid)
             || truth(&receipt["read_by"])
-            || truth(&receipt["launch_confirmed"])
-            || s(&receipt["handled_via"]) == "replies-event"
+            || ["replies-event", "manual-confirmation"].contains(&s(&receipt["handled_via"]))
         {
             continue;
         }
@@ -1557,9 +1690,16 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
         // An unreadable record is not evidence that the supervisor stopped.
         read_json(&path)?;
         let job = job_info(ctx, jid);
-        if job_started(ctx, jid) {
-            changed = true;
-            state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+        let Ok(started) = job_start_evidence(ctx, jid) else {
+            // Unknown evidence preserves this reservation; one incomplete
+            // stream must not prevent recovery of other independent replies.
+            continue;
+        };
+        if started {
+            if receipt["launch_confirmed"] != true {
+                changed = true;
+                state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+            }
             if truth(&receipt["launch_job"]) {
                 changed = true;
                 state["answer_receipts"][&id]["handled_by"] = json!(jid);
@@ -1581,6 +1721,9 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
             let entry = state["answer_receipts"][&id].as_object_mut().unwrap();
             entry.remove("launch_job");
             entry.remove("handled_by");
+            entry.remove("launch_confirmed");
+            entry.insert("failed_launch_job".into(), json!(jid));
+            restore_unstarted_reply(state, &id, s(&receipt["thread"]), jid, &job);
         }
     }
     if changed {

@@ -265,6 +265,10 @@ pub trait Runner {
 }
 pub struct RealRunner;
 
+#[cfg(windows)]
+#[path = "process_output.rs"]
+mod output_capture;
+
 pub fn install_interrupt_handler() {
     #[cfg(windows)]
     unsafe {
@@ -322,75 +326,94 @@ impl Runner for RealRunner {
             use std::os::windows::process::CommandExt;
             cmd.creation_flags(call.creationflags);
         }
-        // Using the same pipe preserves scenario.py's stdout/stderr line order.
-        if call.merge_stderr {
-            let (mut source, sink) = std::io::pipe().map_err(|e| e.to_string())?;
-            cmd.stdout(Stdio::from(sink.try_clone().map_err(|e| e.to_string())?))
-                .stderr(Stdio::from(sink));
+        #[cfg(windows)]
+        {
+            run_windows(call, cmd)
+        }
+        #[cfg(not(windows))]
+        {
+            // Using the same pipe preserves scenario.py's stdout/stderr line order.
+            if call.merge_stderr {
+                let (mut source, sink) = std::io::pipe().map_err(|e| e.to_string())?;
+                cmd.stdout(Stdio::from(sink.try_clone().map_err(|e| e.to_string())?))
+                    .stderr(Stdio::from(sink));
+                let (mut child, mut tree) =
+                    crate::process_tree::Tree::spawn(&mut cmd, call.creationflags, call.kill_tree)?;
+                drop(cmd);
+                let reader = thread::spawn(move || {
+                    let mut b = Vec::new();
+                    source.read_to_end(&mut b).map(|_| b)
+                });
+                let status = wait(
+                    &mut child,
+                    &mut tree,
+                    call.timeout,
+                    call.lease.as_ref(),
+                    || Ok(()),
+                );
+                if let (false, Err(error)) = (call.kill_tree, &status) {
+                    return Err(error.clone());
+                }
+                #[cfg(windows)]
+                drop(tree);
+                let bytes = reader
+                    .join()
+                    .map_err(|_| "stdout reader failed")?
+                    .map_err(|e| e.to_string())?;
+                let stdout = decode(&bytes);
+                return Ok(Output {
+                    code: status.map_err(|e| format!("{e}\n{}", crate::tail(&stdout, 4000)))?,
+                    stdout,
+                    stderr: String::new(),
+                });
+            }
+            cmd.stderr(Stdio::piped());
             let (mut child, mut tree) =
                 crate::process_tree::Tree::spawn(&mut cmd, call.creationflags, call.kill_tree)?;
-            drop(cmd);
-            let reader = thread::spawn(move || {
+            let mut stdout = child.stdout.take().unwrap();
+            let mut stderr = child.stderr.take().unwrap();
+            let out = thread::spawn(move || {
                 let mut b = Vec::new();
-                source.read_to_end(&mut b).map(|_| b)
+                stdout.read_to_end(&mut b).map(|_| b)
             });
-            let status = wait(&mut child, &mut tree, call.timeout, call.lease.as_ref());
+            let err = thread::spawn(move || {
+                let mut b = Vec::new();
+                stderr.read_to_end(&mut b).map(|_| b)
+            });
+            let status = wait(
+                &mut child,
+                &mut tree,
+                call.timeout,
+                call.lease.as_ref(),
+                || Ok(()),
+            );
             if let (false, Err(error)) = (call.kill_tree, &status) {
                 return Err(error.clone());
             }
             #[cfg(windows)]
             drop(tree);
-            let bytes = reader
-                .join()
-                .map_err(|_| "stdout reader failed")?
-                .map_err(|e| e.to_string())?;
-            let stdout = decode(&bytes);
-            return Ok(Output {
-                code: status.map_err(|e| format!("{e}\n{}", crate::tail(&stdout, 4000)))?,
+            let stdout = decode(
+                &out.join()
+                    .map_err(|_| "stdout reader failed")?
+                    .map_err(|e| e.to_string())?,
+            );
+            let stderr = decode(
+                &err.join()
+                    .map_err(|_| "stderr reader failed")?
+                    .map_err(|e| e.to_string())?,
+            );
+            Ok(Output {
+                code: status.map_err(|e| {
+                    format!(
+                        "{e}\n{}{}",
+                        crate::tail(&stdout, 2000),
+                        crate::tail(&stderr, 2000)
+                    )
+                })?,
                 stdout,
-                stderr: String::new(),
-            });
+                stderr,
+            })
         }
-        cmd.stderr(Stdio::piped());
-        let (mut child, mut tree) =
-            crate::process_tree::Tree::spawn(&mut cmd, call.creationflags, call.kill_tree)?;
-        let mut stdout = child.stdout.take().unwrap();
-        let mut stderr = child.stderr.take().unwrap();
-        let out = thread::spawn(move || {
-            let mut b = Vec::new();
-            stdout.read_to_end(&mut b).map(|_| b)
-        });
-        let err = thread::spawn(move || {
-            let mut b = Vec::new();
-            stderr.read_to_end(&mut b).map(|_| b)
-        });
-        let status = wait(&mut child, &mut tree, call.timeout, call.lease.as_ref());
-        if let (false, Err(error)) = (call.kill_tree, &status) {
-            return Err(error.clone());
-        }
-        #[cfg(windows)]
-        drop(tree);
-        let stdout = decode(
-            &out.join()
-                .map_err(|_| "stdout reader failed")?
-                .map_err(|e| e.to_string())?,
-        );
-        let stderr = decode(
-            &err.join()
-                .map_err(|_| "stderr reader failed")?
-                .map_err(|e| e.to_string())?,
-        );
-        Ok(Output {
-            code: status.map_err(|e| {
-                format!(
-                    "{e}\n{}{}",
-                    crate::tail(&stdout, 2000),
-                    crate::tail(&stderr, 2000)
-                )
-            })?,
-            stdout,
-            stderr,
-        })
     }
     fn now(&mut self) -> f64 {
         SystemTime::now()
@@ -415,18 +438,55 @@ impl Runner for RealRunner {
         Ok(())
     }
 }
+#[cfg(not(windows))]
 fn decode(b: &[u8]) -> String {
     String::from_utf8_lossy(b)
         .replace("\r\n", "\n")
         .replace('\r', "\n")
 }
+#[cfg(windows)]
+fn run_windows(call: Call, mut command: Command) -> Result<Output, String> {
+    let (source, sink) = output_capture::pipe()?;
+    let pipes = if call.merge_stderr {
+        command
+            .stdout(Stdio::from(sink.try_clone().map_err(|e| e.to_string())?))
+            .stderr(Stdio::from(sink));
+        vec![source]
+    } else {
+        let (err_source, err_sink) = output_capture::pipe()?;
+        command
+            .stdout(Stdio::from(sink))
+            .stderr(Stdio::from(err_sink));
+        vec![source, err_source]
+    };
+    let (mut child, mut tree) =
+        crate::process_tree::Tree::spawn(&mut command, call.creationflags, call.kill_tree)?;
+    drop(command);
+    let mut capture = output_capture::Capture::new(pipes);
+    let status = wait(
+        &mut child,
+        &mut tree,
+        call.timeout,
+        call.lease.as_ref(),
+        || capture.poll(),
+    );
+    let confirmed = tree.stop_confirmed();
+    let deadline = tree
+        .stop_deadline()
+        .unwrap_or_else(|| Instant::now() + Duration::from_secs(30));
+    // Keep the tree and capture owned through the whole flight. No blocking
+    // output worker exists to detach on a failed stop. Drop reuses this deadline.
+    capture.finish(status, confirmed, deadline)
+}
+
 fn wait(
     child: &mut std::process::Child,
     tree: &mut crate::process_tree::Tree,
     timeout: Option<f64>,
     lease: Option<&LeaseLimit>,
+    mut drain: impl FnMut() -> Result<(), String>,
 ) -> Result<i32, String> {
-    let result = wait_running(child, tree, timeout, lease);
+    let result = wait_running(child, tree, timeout, lease, &mut drain);
     // All paths, including try_wait/observation errors, drain the job before
     // readers are joined or the caller is allowed to restore operation state.
     match tree.stop(child) {
@@ -443,10 +503,12 @@ fn wait_running(
     tree: &mut crate::process_tree::Tree,
     timeout: Option<f64>,
     lease: Option<&LeaseLimit>,
+    drain: &mut impl FnMut() -> Result<(), String>,
 ) -> Result<i32, String> {
     let start = Instant::now();
     let mut next_probe = start;
     loop {
+        drain()?;
         tree.observe()?;
         if let Some(s) = child.try_wait().map_err(|e| e.to_string())? {
             return Ok(s.code().unwrap_or(1));

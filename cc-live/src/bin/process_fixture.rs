@@ -44,8 +44,16 @@ fn spawn(mode: &str, marker: &Path) -> Child {
         .arg(mode)
         .arg(marker)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(if mode.starts_with("pipe-") {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        })
+        .stderr(if mode.starts_with("pipe-") {
+            Stdio::inherit()
+        } else {
+            Stdio::null()
+        });
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -79,6 +87,36 @@ fn main() {
     let marker = Path::new(&marker);
     assert!(args.next().is_none());
     match mode.to_str().unwrap() {
+        "output-burst" => {
+            use std::io::Write;
+            std::io::stdout()
+                .write_all(&vec![b'O'; 256 * 1024])
+                .unwrap();
+            std::io::stdout().flush().unwrap();
+            std::io::stderr()
+                .write_all(&vec![b'E'; 256 * 1024])
+                .unwrap();
+            std::io::stderr().flush().unwrap();
+        }
+        "pipe-leaf" => {
+            use std::io::Write;
+            println!("PIPE_READY_STDOUT");
+            eprintln!("PIPE_READY_STDERR");
+            std::io::stdout().flush().unwrap();
+            std::io::stderr().flush().unwrap();
+            publish(marker);
+            wait_release(&marker.with_extension("leaf-release"));
+        }
+        "pipe-worker" => {
+            publish(&marker.with_extension("worker"));
+            let mut child = spawn("pipe-leaf", marker);
+            let _ = child.wait();
+        }
+        "pipe-parent" => {
+            publish(&marker.with_extension("root"));
+            let mut child = spawn("pipe-worker", marker);
+            let _ = child.wait();
+        }
         "descendant" => {
             publish(marker);
             // Lifetime is controlled by the test, rather than a fixed sleep.

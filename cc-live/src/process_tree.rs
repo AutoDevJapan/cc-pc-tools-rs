@@ -44,6 +44,7 @@ mod platform {
         handle: OwnedHandle,
         members: BTreeMap<(u32, u64), OwnedHandle>,
         stopped: bool,
+        stop_deadline: Option<Instant>,
     }
     impl Drop for Tree {
         fn drop(&mut self) {
@@ -83,6 +84,7 @@ mod platform {
                 handle: unsafe { OwnedHandle::from_raw_handle(job) },
                 members: BTreeMap::new(),
                 stopped: false,
+                stop_deadline: None,
             }));
             let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
             limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -142,6 +144,45 @@ mod platform {
         }
         pub fn managed(&self) -> bool {
             self.0.is_some()
+        }
+        pub fn stop_confirmed(&self) -> bool {
+            self.0.as_ref().is_none_or(|job| job.stopped)
+        }
+        pub fn stop_deadline(&self) -> Option<Instant> {
+            self.0.as_ref().and_then(|job| job.stop_deadline)
+        }
+
+        #[cfg(test)]
+        #[allow(dead_code)] // Used by the parity integration test including this source.
+        pub fn restrict_termination_for_test(
+            &mut self,
+            deadline: Instant,
+        ) -> Result<OwnedHandle, String> {
+            use windows_sys::Win32::{
+                Foundation::DuplicateHandle, System::Threading::GetCurrentProcess,
+            };
+            const JOB_OBJECT_QUERY: u32 = 0x0004;
+            const JOB_OBJECT_SET_ATTRIBUTES: u32 = 0x0002;
+            let job = self.0.as_mut().ok_or("test requires a managed job")?;
+            let mut restricted = std::ptr::null_mut();
+            let current = unsafe { GetCurrentProcess() };
+            if unsafe {
+                DuplicateHandle(
+                    current,
+                    job.handle.as_raw_handle(),
+                    current,
+                    &mut restricted,
+                    JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES,
+                    0,
+                    0,
+                )
+            } == 0
+            {
+                return Err(error());
+            }
+            let restricted = unsafe { OwnedHandle::from_raw_handle(restricted) };
+            job.stop_deadline = Some(deadline);
+            Ok(std::mem::replace(&mut job.handle, restricted))
         }
     }
 
@@ -264,6 +305,9 @@ mod platform {
         }
 
         fn stop_until(&mut self, deadline: Instant) -> Result<(), String> {
+            // The first stop owns the deadline. Retry and Drop may inspect or
+            // request termination again, but cannot acquire another wait budget.
+            let deadline = *self.stop_deadline.get_or_insert(deadline);
             if self.stopped {
                 return Ok(());
             }
@@ -401,6 +445,7 @@ mod platform {
                 handle: unsafe { OwnedHandle::from_raw_handle(job) },
                 members: BTreeMap::from([((1, 2), unsafe { OwnedHandle::from_raw_handle(event) })]),
                 stopped: false,
+                stop_deadline: None,
             };
             let result = job.stop_until(Instant::now());
             assert!(result.unwrap_err().contains("did not signal exit"));

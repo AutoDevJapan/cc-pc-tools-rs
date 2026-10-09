@@ -20,6 +20,7 @@ tracing-subscriber = "0.3"
 cc-ask = { path = "../cc-ask" }
 cc-scheduler = { path = "../cc-scheduler" }
 cc-todo = { path = "../cc-todo" }
+cc-redact = { path = "../cc-redact" }
 chrono = "0.4"
 regex = "1"
 proc-macro2 = "1"

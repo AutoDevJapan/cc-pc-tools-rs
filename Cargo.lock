@@ -1089,6 +1089,7 @@ dependencies = [
  "axum",
  "cc-ask",
  "cc-chrome",
+ "cc-redact",
  "cc-scheduler",
  "cc-todo",
  "chrono",

@@ -137,7 +137,7 @@ pub(super) fn security_hash(path: &Path, expected: &Node) -> Result<String> {
     result
 }
 
-fn read_relative_link(path: &Path) -> Result<Link> {
+pub(super) fn raw_reparse(path: &Path) -> Result<Vec<u8>> {
     let name = extended_path(path)?;
     let mut buf = vec![0u8; 16384];
     let mut returned = 0u32;
@@ -165,6 +165,11 @@ fn read_relative_link(path: &Path) -> Result<Link> {
         return Err("LINK_METADATA_FAILED");
     }
     buf.truncate(returned as usize);
+    Ok(buf)
+}
+
+fn read_relative_link(path: &Path) -> Result<Link> {
+    let buf = raw_reparse(path)?;
     let u16_at = |offset| u16::from_le_bytes([buf[offset], buf[offset + 1]]) as usize;
     let tag = u32::from_le_bytes(buf[0..4].try_into().unwrap());
     let flags = u32::from_le_bytes(buf[16..20].try_into().unwrap());

@@ -24,6 +24,7 @@ const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 mod scoopa;
+mod unslop;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -203,6 +204,7 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            id if unslop::profile(id).is_some() => unslop::configure(&mut c, id)?,
             scoopa::ID => {
                 c.id = scoopa::ID;
                 c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
@@ -413,6 +415,12 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
+        if unslop::profile(self.id).is_some() {
+            return self.quarantine.join(format!(
+                "20261010-{}-{}-{}",
+                self.project, self.content, self.id
+            ));
+        }
         if self.id == ID {
             return self
                 .quarantine
@@ -495,6 +503,9 @@ impl Config {
         Ok(nodes)
     }
     fn plan(&self, id: &str) -> Result<serde_json::Value> {
+        if unslop::profile(self.id).is_some() {
+            return unslop::plan(self, id);
+        }
         if self.id == scoopa::ID {
             return scoopa::plan(self, id);
         }
@@ -717,6 +728,9 @@ impl Config {
         self.plan(id)
     }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
+        if unslop::profile(self.id).is_some() {
+            return unslop::finish(self, id);
+        }
         if self.id == scoopa::ID {
             return scoopa::finish(self, id);
         }
@@ -861,7 +875,12 @@ impl Config {
                 {
                     return Err("WORKTREE_REPAIR_FAILED");
                 }
-                validate_repo(&root.join(repo.name), repo, false)?;
+                validate_repo_options(
+                    &root.join(repo.name),
+                    repo,
+                    false,
+                    self.id == unslop::INTEGRATION,
+                )?;
                 return Ok(());
             }
         }
@@ -1158,6 +1177,16 @@ fn checked_admin(path: &Path) -> Result<()> {
     Ok(())
 }
 fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
+    validate_repo_options(path, repo, before_move, false)
+}
+
+// ToDo1940 separately verifies its fixed submodule before archival.
+fn validate_repo_options(
+    path: &Path,
+    repo: &Repo,
+    before_move: bool,
+    archived_submodule: bool,
+) -> Result<()> {
     let gitdir = match &repo.kind {
         RepoKind::OpaqueBare => {
             // Inspect only names and metadata of the fixed audit acquisition.
@@ -1208,7 +1237,10 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
                 "objects/info/alternates",
                 "objects/info/http-alternates",
             ] {
-                if (before_move || special != "modules") && present(&common.join(special))? {
+                if special == "modules" && (!before_move || archived_submodule) {
+                    continue;
+                }
+                if present(&common.join(special))? {
                     return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
                 }
             }
@@ -1223,6 +1255,9 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
         "objects/info/alternates",
         "objects/info/http-alternates",
     ] {
+        if archived_submodule && special == "modules" {
+            continue;
+        }
         if matches!(repo.kind, RepoKind::Linked { .. }) && matches!(special, "commondir" | "gitdir")
         {
             continue;
@@ -1260,7 +1295,19 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
     } else {
         "--untracked-files=no"
     };
-    let status = git(path, &["status", "--porcelain=v1", untracked])?;
+    let status = if archived_submodule {
+        git(
+            path,
+            &[
+                "status",
+                "--porcelain=v1",
+                untracked,
+                "--ignore-submodules=all",
+            ],
+        )?
+    } else {
+        git(path, &["status", "--porcelain=v1", untracked])?
+    };
     if !status.lines().all(|line| {
         repo.allowed_untracked
             .iter()
@@ -1422,6 +1469,7 @@ fn run() -> Result<serde_json::Value> {
     }
     let c = Config::production(&args[2])?;
     match args[0].as_str() {
+        "inspect" if unslop::profile(c.id).is_some() => unslop::inspect(&c, &args[2]),
         "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
         "renew-plan" if c.id == REBOOT_ID => {
@@ -1642,6 +1690,378 @@ mod tests {
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
+    #[test]
+    fn unslop_profiles_pin_four_original_identities_and_the_saved_worktree() {
+        let expected = [
+            (unslop::BUILD, 1215965535, 8162774328342697),
+            (unslop::CORE, 2229119083, 3377699730734494),
+            (unslop::MEASUREMENT, 2229119083, 25895697868367764),
+            (unslop::INTEGRATION, 2229119083, 2533274803590816),
+        ];
+        for (id, volume, file_id) in expected {
+            let c = Config::production(id).unwrap();
+            assert_eq!(c.pinned_identity, Some((volume, file_id)));
+            assert!(!c.project_alias_preservation_enabled);
+        }
+        let c = Config::production(unslop::BUILD).unwrap();
+        assert_eq!(c.temp, PathBuf::from("D:/CC/Apps/GoDD-Unslop"));
+        assert_eq!(c.quarantine, PathBuf::from("D:/削除希望"));
+        let c = Config::production(unslop::INTEGRATION).unwrap();
+        assert_eq!(c.repos[0].head, "0621aac55a3035ab473cb2f7b49887a5a0925d6c");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/codex/todo1931-unslop-20261006")
+        );
+        assert!(Config::production("ef300280dcb8c0e08fcb9be1318565ee").is_err());
+    }
+    fn unslop_move(c: &Config) {
+        fs::rename(source(c), c.destination().join("files")).unwrap();
+    }
+    fn unslop_registry_fixture() -> Fixture {
+        let c = fixture_for(unslop::MEASUREMENT);
+        let registry = c.temp.join("registry-target");
+        fs::create_dir(&registry).unwrap();
+        fs::write(registry.join("sentinel"), b"owned fixture target").unwrap();
+        for name in [
+            "measurement-63628-1791287330489098600",
+            "measurement-80712-1791286803451627800",
+        ] {
+            let parent = source(&c).join("measurement").join(name).join("cargo-home");
+            fs::create_dir_all(&parent).unwrap();
+            std::os::windows::fs::symlink_dir(&registry, parent.join("registry")).unwrap();
+        }
+        c
+    }
+    #[test]
+    fn unslop_build_internal_hardlinks_and_repeat_finish_preserve_the_same_files() {
+        for id in [unslop::BUILD, unslop::CORE] {
+            let c = fixture_for(id);
+            let target = source(&c).join("target");
+            fs::create_dir(&target).unwrap();
+            fs::write(target.join("binary"), b"retired build").unwrap();
+            fs::hard_link(target.join("binary"), target.join("alias")).unwrap();
+            let before = node(&target.join("binary")).unwrap();
+            let plan = c.plan(id).unwrap();
+            assert_eq!(plan, c.plan(id).unwrap());
+            unslop_move(&c);
+            let done = c.finish(id).unwrap();
+            assert_eq!(done, c.finish(id).unwrap());
+            assert_eq!(
+                before,
+                node(&c.destination().join("files/target/binary")).unwrap()
+            );
+            assert_eq!(c.load(id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn unslop_external_build_alias_is_rejected_before_preparing_any_destination() {
+        let c = fixture_for(unslop::CORE);
+        fs::write(source(&c).join("binary"), b"fixture").unwrap();
+        fs::hard_link(source(&c).join("binary"), c.temp.join("external-alias")).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "EXTERNAL_HARD_LINK");
+        assert!(!c.destination().exists());
+        assert!(source(&c).exists());
+    }
+    #[test]
+    fn unslop_registry_links_are_preserved_without_mutating_the_owned_mock_target() {
+        let c = unslop_registry_fixture();
+        let sentinel = c.temp.join("registry-target/sentinel");
+        let before = node(&sentinel).unwrap();
+        assert_eq!(unslop::inspect(&c, c.id).unwrap()["links"], 2);
+        assert!(!c.ticket_path().with_extension("unslop.json").exists());
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(node(&sentinel).unwrap(), before);
+        assert_eq!(fs::read(&sentinel).unwrap(), b"owned fixture target");
+    }
+    #[test]
+    fn unslop_registry_link_retargeting_is_rejected_before_move() {
+        let c = unslop_registry_fixture();
+        let link = source(&c)
+            .join("measurement/measurement-63628-1791287330489098600/cargo-home/registry");
+        fs::remove_dir(&link).unwrap();
+        std::os::windows::fs::symlink_dir(&c.temp, &link).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "REGISTRY_LINK_CHANGED");
+        assert!(!c.destination().exists());
+    }
+    fn unslop_junction_fixture() -> Fixture {
+        let c = fixture_for(unslop::INTEGRATION);
+        // Match the real repository's ignored installed dependencies. The
+        // fixture still rejects untracked sources outside node_modules.
+        if let RepoKind::Linked { common, .. } = &c.repos[0].kind {
+            fs::write(
+                common.join("info/exclude"),
+                b"godd-mcp-alpha/node_modules/\n",
+            )
+            .unwrap();
+        }
+        let target =
+            source(&c).join("worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("index.js"), b"owned fixture package").unwrap();
+        fs::hard_link(target.join("index.js"), c.temp.join("package-store-alias")).unwrap();
+        let junction = source(&c).join("worktree/godd-mcp-alpha/node_modules/pkg");
+        let junction_arg = junction.to_string_lossy().replace('/', "\\");
+        let target_arg = target.to_string_lossy().replace('/', "\\");
+        hidden(
+            Path::new("cmd.exe"),
+            &[
+                OsStr::new("/C"),
+                OsStr::new("mklink"),
+                OsStr::new("/J"),
+                OsStr::new(&junction_arg),
+                OsStr::new(&target_arg),
+            ],
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn unslop_pnpm_junction_shared_files_and_git_backlink_survive_archival() {
+        let c = unslop_junction_fixture();
+        let link = source(&c).join("worktree/godd-mcp-alpha/node_modules/pkg");
+        let raw = scoopa::raw_reparse(&link).unwrap();
+        let outside = c.temp.join("package-store-alias");
+        let outside_node = node(&outside).unwrap();
+        assert_eq!(unslop::inspect(&c, c.id).unwrap()["links"], 1);
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            raw,
+            scoopa::raw_reparse(
+                &c.destination()
+                    .join("files/worktree/godd-mcp-alpha/node_modules/pkg")
+            )
+            .unwrap()
+        );
+        assert_eq!(outside_node, node(&outside).unwrap());
+        assert_eq!(
+            git(
+                &c.destination().join("files/worktree"),
+                &["rev-parse", "HEAD"]
+            )
+            .unwrap(),
+            c.repos[0].head
+        );
+        if let RepoKind::Linked { admin, .. } = &c.repos[0].kind {
+            assert!(same(
+                Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+                &c.destination().join("files/worktree/.git")
+            ));
+        }
+    }
+    #[test]
+    fn unslop_external_pnpm_alias_count_can_change_without_losing_owned_names() {
+        let c = unslop_junction_fixture();
+        c.plan(c.id).unwrap();
+        let package = source(&c)
+            .join("worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg/index.js");
+        fs::hard_link(&package, c.temp.join("another-external-alias")).unwrap();
+        let before = node(&package).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            before,
+            node(&c.destination().join(
+                "files/worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg/index.js"
+            ))
+            .unwrap()
+        );
+        assert!(c.temp.join("another-external-alias").exists());
+    }
+    #[test]
+    fn unslop_dirty_worktree_and_additional_git_are_rejected() {
+        let c = fixture_for(unslop::INTEGRATION);
+        fs::write(source(&c).join("worktree/source.txt"), b"unsaved change").unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "GIT_TRACKED_CHANGES");
+        let c = fixture_for(unslop::BUILD);
+        fs::create_dir(source(&c).join(".git")).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "UNDECLARED_GIT_METADATA");
+    }
+    fn unslop_submodule_fixture() -> Fixture {
+        let mut c = fixture_for(unslop::INTEGRATION);
+        let seed = c.temp.join("site-seed");
+        fs::create_dir(&seed).unwrap();
+        git(&seed, &["init", "-b", "main"]).unwrap();
+        git(&seed, &["config", "user.name", "fixture"]).unwrap();
+        git(&seed, &["config", "user.email", "fixture@example.invalid"]).unwrap();
+        fs::write(seed.join("source.txt"), b"owned submodule fixture").unwrap();
+        git(&seed, &["add", "source.txt"]).unwrap();
+        git(&seed, &["commit", "-m", "fixture"]).unwrap();
+        let work = source(&c).join("worktree");
+        // Build the same independent module metadata layout as the archived
+        // source. Modern `submodule add` in a linked fixture may instead share
+        // objects through an extra commondir, which is intentionally rejected.
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let module = admin.join("modules/officialsite");
+        fs::create_dir_all(module.parent().unwrap()).unwrap();
+        let site = work.join("officialsite");
+        git(
+            &work,
+            &[
+                "clone",
+                "--no-hardlinks",
+                "--separate-git-dir",
+                module.to_str().unwrap(),
+                seed.to_str().unwrap(),
+                site.to_str().unwrap(),
+            ],
+        )
+        .unwrap();
+        let pointer = format!(
+            "gitdir: {}{}\n",
+            "../".repeat(site.strip_prefix(&c.temp).unwrap().components().count()),
+            module.strip_prefix(&c.temp).unwrap().display()
+        );
+        fs::write(site.join(".git"), pointer).unwrap();
+        git(
+            &work,
+            &[
+                "config",
+                "--file",
+                ".gitmodules",
+                "submodule.officialsite.path",
+                "officialsite",
+            ],
+        )
+        .unwrap();
+        git(
+            &work,
+            &[
+                "config",
+                "--file",
+                ".gitmodules",
+                "submodule.officialsite.url",
+                seed.to_str().unwrap(),
+            ],
+        )
+        .unwrap();
+        git(&work, &["add", ".gitmodules", "officialsite"]).unwrap();
+        git(
+            &work,
+            &[
+                "-c",
+                "user.name=fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "-m",
+                "owned submodule fixture",
+            ],
+        )
+        .unwrap();
+        c.repos[0].head = git(&work, &["rev-parse", "HEAD"]).unwrap();
+        git(
+            &work,
+            &[
+                "update-ref",
+                c.repos[0].saved_ref.unwrap(),
+                &c.repos[0].head,
+            ],
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn unslop_fixed_submodule_is_archived_verbatim_and_unsaved_changes_are_rejected() {
+        let c = unslop_submodule_fixture();
+        let pointer = fs::read(source(&c).join("worktree/officialsite/.git")).unwrap();
+        let before = node(&source(&c).join("worktree/officialsite/source.txt")).unwrap();
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            pointer,
+            fs::read(c.destination().join("files/worktree/officialsite/.git")).unwrap()
+        );
+        assert_eq!(
+            before,
+            node(
+                &c.destination()
+                    .join("files/worktree/officialsite/source.txt")
+            )
+            .unwrap()
+        );
+        let c = unslop_submodule_fixture();
+        fs::write(
+            source(&c).join("worktree/officialsite/source.txt"),
+            b"unsaved submodule",
+        )
+        .unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "SUBMODULE_UNSAVED_CHANGES");
+        assert!(!c.destination().exists());
+    }
+    #[test]
+    fn unslop_backlink_acl_difference_is_rejected_before_movement() {
+        let c = fixture_for(unslop::INTEGRATION);
+        c.prepare_backlink(&source(&c), &c.destination().join("files"))
+            .unwrap();
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let replacement = admin.join("gitdir.todo2052-repair");
+        hidden(
+            Path::new("icacls.exe"),
+            &[replacement.as_os_str(), OsStr::new("/inheritance:d")],
+        )
+        .unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "BACKLINK_SECURITY_MISMATCH");
+        assert!(source(&c).exists());
+        assert!(!c.destination().exists());
+    }
+    #[test]
+    fn unslop_late_replacement_acl_change_cannot_commit_the_git_backlink() {
+        let c = fixture_for(unslop::INTEGRATION);
+        c.plan(c.id).unwrap();
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let old = bounded_text(&admin.join("gitdir")).unwrap();
+        let replacement = admin.join("gitdir.todo2052-repair");
+        hidden(
+            Path::new("icacls.exe"),
+            &[replacement.as_os_str(), OsStr::new("/inheritance:d")],
+        )
+        .unwrap();
+        unslop_move(&c);
+        assert_eq!(c.finish(c.id).unwrap_err(), "BACKLINK_SECURITY_MISMATCH");
+        assert_eq!(old, bounded_text(&admin.join("gitdir")).unwrap());
+        assert!(replacement.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn unslop_changed_file_and_missing_proof_never_mark_the_receipt_complete() {
+        for failure in ["file", "proof"] {
+            let c = fixture_for(unslop::CORE);
+            fs::write(source(&c).join("binary"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            unslop_move(&c);
+            if failure == "file" {
+                fs::write(c.destination().join("files/binary"), b"changed bytes").unwrap();
+            } else {
+                fs::remove_file(
+                    c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256"),
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            if failure == "proof" {
+                assert!(
+                    !c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256")
+                        .exists()
+                );
+            }
+        }
+    }
     struct Fixture {
         config: Config,
         base: PathBuf,

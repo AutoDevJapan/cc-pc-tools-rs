@@ -885,6 +885,12 @@ pub fn deliver(
     }
     let project = crate::project::question_project(ctx, &labelled, &names);
     acknowledge(ctx, state, tid, &project, &unseen)?;
+    // Retain the exact input before a dependency read can fail. This source's
+    // next attempt merges it with history, even if Discord no longer has it.
+    if !unseen.is_empty() {
+        entry_mut(record, slot)["dependency_messages"] = json!(unseen);
+        save(ctx, state, thread, record, slot)?;
+    }
     let db = todo_db(ctx)?;
     let mut ownership = info.clone();
     ownership["id"] = json!(jid);

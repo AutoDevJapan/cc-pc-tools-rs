@@ -85,6 +85,37 @@ fn unavailable_todo_store_keeps_each_source_and_reply_unprocessed() {
             assert!(record["owner_update"].is_null());
             assert!(state["answer_receipts"][&mid]["handled_by"].is_null());
             assert!(state["answer_receipts"][&mid]["launch_job"].is_null());
+            assert_eq!(record["dependency_messages"][0]["id"], mid);
+            assert_eq!(
+                record["dependency_messages"][0]["content"],
+                "保存された待ち先を確認してから反映して"
+            );
+            let checkpoint = h.state();
+            assert_eq!(
+                checkpoint["requests"]["100"]["dependency_messages"],
+                record["dependency_messages"]
+            );
+            h.fake
+                .borrow_mut()
+                .messages
+                .get_mut("100")
+                .unwrap()
+                .retain(|message| message["id"] != mid);
+            atomic_json(&h.ctx.todo, &json!({"items":[],"projects":{}}), 2).unwrap();
+            assert!(cc_ask::steering::deliver(
+                &mut h.ctx,
+                &mut state,
+                &thread,
+                &mut record,
+                cc_ask::restart::Slot::Request,
+                "OWN",
+                &mut false
+            )
+            .unwrap());
+            assert_eq!(h.fake.borrow().launches.len(), 2);
+            assert!(s(&h.fake.borrow().launches[1]["prompt"])
+                .contains("保存された待ち先を確認してから反映して"));
+            assert!(record["dependency_messages"].is_null());
         }
     }
 }

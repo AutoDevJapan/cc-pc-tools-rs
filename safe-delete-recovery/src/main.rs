@@ -21,6 +21,7 @@ const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 mod scoopa;
+mod seller2140;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -148,6 +149,8 @@ struct Config {
     pinned_identity: Option<(u32, u64)>,
     project_alias_target: Option<PathBuf>,
     project_alias_approved: bool,
+    // Fixed repositories of the seller2140 profile; empty for every other ID.
+    seller: Vec<seller2140::RepoSpec>,
 }
 
 impl Config {
@@ -188,6 +191,7 @@ impl Config {
             pinned_identity: None,
             project_alias_target: None,
             project_alias_approved: false,
+            seller: Vec::new(),
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -331,7 +335,10 @@ impl Config {
                     },
                 }];
             }
-            _ => return Err("SCOPE_NOT_AUTHORIZED"),
+            _ => match seller2140::fixed(id) {
+                Some(f) => seller2140::configure(&mut c, f),
+                None => return Err("SCOPE_NOT_AUTHORIZED"),
+            },
         }
         Ok(c)
     }
@@ -471,6 +478,9 @@ impl Config {
         if self.id == scoopa::ID {
             return scoopa::plan(self, id);
         }
+        if !self.seller.is_empty() {
+            return seller2140::plan(self, id);
+        }
         let r = self.load(id)?;
         if r.state != "owned" {
             return Err("RECEIPT_NOT_OWNED");
@@ -574,6 +584,9 @@ impl Config {
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
         if self.id == scoopa::ID {
             return scoopa::finish(self, id);
+        }
+        if !self.seller.is_empty() {
+            return seller2140::finish(self, id);
         }
         let mut r = self.load(id)?;
         let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
@@ -1278,6 +1291,7 @@ fn run() -> Result<serde_json::Value> {
     let c = Config::production(&args[2])?;
     match args[0].as_str() {
         "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
+        "inspect" if !c.seller.is_empty() => seller2140::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
         "finish" => c.finish(&args[2]),
         _ => Err("INVALID_ACTION"),
@@ -1299,6 +1313,7 @@ mod tests {
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
+    mod fixed_receipts;
     struct Fixture {
         config: Config,
         base: PathBuf,

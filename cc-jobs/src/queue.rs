@@ -573,40 +573,118 @@ impl Context {
             Err(error) => Err(error.into()),
         }
     }
-    /// Called under the global gate. Active records are reread every poll;
-    /// history is reconciled at most once per 30 seconds across all waiters.
-    pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {
+    fn index_ids<'a>(&self, index: &'a Value) -> Result<Vec<&'a str>> {
+        index["ids"]
+            .as_array()
+            .ok_or_else(|| Error::new("queue index is not prepared"))?
+            .iter()
+            .map(|id| {
+                id.as_str()
+                    .filter(|id| valid_job_id(id))
+                    .ok_or_else(|| Error::new("invalid queue index id"))
+            })
+            .collect()
+    }
+    fn read_admission_index(&self) -> Result<Value> {
         let path = self.jobs.join(".queue-index.json");
-        let index = self.read_json(&path).unwrap_or(Value::Null);
-        let known = if let Some(ids) = index["ids"].as_array() {
-            ids.iter()
-                .map(|id| {
-                    let id = id
-                        .as_str()
-                        .filter(|id| valid_job_id(id))
-                        .ok_or_else(|| Error::new("invalid queue index id"))?;
-                    Ok(self.admission_record(id))
-                })
-                .collect::<Result<Vec<_>>>()?
-        } else {
-            Vec::new()
-        };
-        let jobs = if index["scanned_at"]
-            .as_f64()
-            .is_some_and(|t| self.rt.epoch() >= t && self.rt.epoch() - t < 30.)
-            && index["ids"].is_array()
+        match self.read_file(&path) {
+            Ok(bytes) => Ok(serde_json::from_slice(&bytes).unwrap_or(Value::Null)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Value::Null),
+            Err(e) => Err(Error::file_io("read queue index", &path, e)),
+        }
+    }
+    fn index_complete(&self, index: &Value) -> bool {
+        self.index_ids(index).is_ok()
+            && index["scan_complete"] != false
+            && index["scanned_at"]
+                .as_f64()
+                .is_some_and(|at| at > 0. && at.is_finite())
+    }
+    fn index_fresh(&self, index: &Value) -> bool {
+        self.index_complete(index)
+            && index["scanned_at"].as_f64().is_some_and(|at| {
+                let now = self.rt.epoch();
+                now >= at && now - at < 30.
+            })
+    }
+    /// Prepare history WITHOUT the queue gate. One scanner serves concurrent
+    /// launchers; only active candidates and registrations are reread at commit.
+    /// Lock order is scan -> queue -> state, never queue -> scan.
+    pub(crate) fn prepare_admission_index(&self) -> Result<()> {
+        fs::create_dir_all(&self.jobs)?;
+        let path = self.jobs.join(".queue-index.json");
+        if self.index_fresh(&self.read_admission_index()?) {
+            return Ok(());
+        }
+        let scan_path = self.jobs.join(".queue-scan.lock");
+        let _scan = FileLock::acquire_queue(&scan_path)
+            .map_err(|e| Error::file_io("acquire history scan lock", &scan_path, e))?;
+        if self.index_fresh(&self.read_admission_index()?) {
+            return Ok(());
+        }
         {
-            known
-        } else {
-            let mut records = Vec::new();
-            for entry in fs::read_dir(&self.jobs)? {
-                let entry = entry?;
-                if entry.path().join("job.json").is_file() {
-                    records.push(self.admission_record(&entry.file_name().to_string_lossy()));
+            let _gate =
+                self.queue_lock_for("begin_history_scan", std::time::Duration::from_secs(60))?;
+            let mut index = self.read_admission_index()?;
+            if self.index_ids(&index).is_err() {
+                index = json!({"ids":[], "scanned_at":0., "owners":{}});
+            }
+            // Durable publication point: registrations append here while the
+            // scanner is outside the gate. A crashed scan remains incomplete.
+            index["scan_complete"] = json!(false);
+            self.write_json(&path, &index)?;
+        }
+        let mut candidates = HashSet::new();
+        let entries = fs::read_dir(&self.jobs)?.collect::<std::io::Result<Vec<_>>>()?;
+        for entry in entries {
+            if entry.file_type()?.is_dir() {
+                let id = entry.file_name().to_string_lossy().into_owned();
+                if valid_job_id(&id) && entry.path().join("job.json").is_file() {
+                    let job = self.admission_record(&id);
+                    if self.admission_active(&job) {
+                        candidates.insert(id);
+                    }
                 }
             }
-            records
-        };
+        }
+        let _gate =
+            self.queue_lock_for("commit_history_scan", std::time::Duration::from_secs(60))?;
+        // Do not turn access/parse failure into an empty index: it may contain
+        // registrations made after the directory snapshot was collected.
+        let index = self.read_json(&path)?;
+        // Registrations/requeues occurring during the scan must not be lost,
+        // including a formerly terminal job scanned before it was requeued.
+        candidates.extend(self.index_ids(&index)?.into_iter().map(str::to_owned));
+        let mut ids: Vec<_> = candidates.into_iter().collect();
+        ids.sort();
+        let active = ids.iter().map(|id| self.admission_record(id)).collect();
+        self.save_admission_index(&index, active, self.rt.epoch())?;
+        Ok(())
+    }
+    /// Called under the gate after preparation. Never reads terminal history.
+    pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {
+        let index = self.read_json(&self.jobs.join(".queue-index.json"))?;
+        // Preparation and gate acquisition are separate. A writer can repair
+        // a damaged cache to a partial index between them; never admit from it.
+        if !self.index_complete(&index) {
+            return Err(Error {
+                code: 75,
+                message: "queue index reconciliation required; retry outside queue gate".into(),
+            });
+        }
+        let active = self
+            .index_ids(&index)?
+            .into_iter()
+            .map(|id| self.admission_record(id))
+            .collect();
+        self.save_admission_index(&index, active, index["scanned_at"].as_f64().unwrap_or(0.))
+    }
+    fn save_admission_index(
+        &self,
+        index: &Value,
+        jobs: Vec<Value>,
+        scanned_at: f64,
+    ) -> Result<Vec<Value>> {
         let mut active: Vec<_> = jobs
             .into_iter()
             .filter(|j| self.admission_active(j))
@@ -614,14 +692,10 @@ impl Context {
         for job in &mut active {
             self.record_work_owner(job);
         }
-        let scanned_at = index["scanned_at"]
-            .as_f64()
-            .filter(|t| self.rt.epoch() >= *t && self.rt.epoch() - *t < 30.)
-            .unwrap_or(self.rt.epoch());
         let owners: serde_json::Map<String,Value> = active.iter().map(|j| (s(j,"id").to_owned(),json!({"work_owner":j["work_owner"],"parent_job_id":j["parent_job_id"],"todo_id":j["todo_id"],"created_at":j["created_at"],"queue_sequence":j["queue_sequence"],"model":j["model"]}))).collect();
-        let next = json!({"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>(),"owners":owners});
-        if next != index {
-            self.write_json(&path, &next)?;
+        let next = json!({"scan_complete":true,"scanned_at":scanned_at,"ids":active.iter().map(|j|s(j,"id")).collect::<Vec<_>>(),"owners":owners});
+        if next != *index {
+            self.write_json(&self.jobs.join(".queue-index.json"), &next)?;
         }
         Ok(active)
     }
@@ -635,6 +709,9 @@ impl Context {
     /// whole history or writes; None when no index exists yet.
     pub(crate) fn admission_snapshot(&self) -> Option<Vec<Value>> {
         let index = self.read_json(&self.jobs.join(".queue-index.json")).ok()?;
+        if !self.index_complete(&index) {
+            return None;
+        }
         let ids = index["ids"].as_array()?;
         Some(
             ids.iter()
@@ -690,19 +767,16 @@ impl Context {
             fallback
         })
     }
-    /// Register before exposing a newly queued record to a supervisor. If no
-    /// index exists, admission will build it from all records on the first poll.
+    /// Register before exposing a newly queued record to a supervisor. Preserve
+    /// registrations even while another process bootstraps a missing index.
     pub fn track_queued_job(&self, jid: &str) -> Result<()> {
         let path = self.jobs.join(".queue-index.json");
-        if !path.exists() {
-            return Ok(());
+        let mut index = self.read_admission_index()?;
+        if self.index_ids(&index).is_err() {
+            // Keep the new ID durable; a stale timestamp forces reconciliation.
+            index = json!({"ids":[], "scan_complete":false, "scanned_at":0., "owners":{}});
         }
-        let mut index = self.read_json(&path).unwrap_or(Value::Null);
-        let Some(ids) = index["ids"].as_array_mut() else {
-            // Rebuild on the next admission; a damaged cache is never authority.
-            self.write_json(&path, &Value::Null)?;
-            return Ok(());
-        };
+        let ids = index["ids"].as_array_mut().unwrap();
         if !ids.iter().any(|id| id.as_str() == Some(jid)) {
             ids.push(json!(jid));
         }
@@ -885,6 +959,7 @@ impl Context {
     /// The global gate covers admission and registration (including manual resumes).
     #[track_caller]
     pub fn queue_lock(&self) -> Result<FileLock> {
+        self.prepare_admission_index()?;
         let caller = std::panic::Location::caller();
         self.queue_lock_for(
             &format!("{}:{}", caller.file(), caller.line()),

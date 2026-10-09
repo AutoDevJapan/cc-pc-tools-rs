@@ -802,6 +802,10 @@ impl Context {
                 Err(e) => return Err(e.into()),
             }
         }
+        // The directory is private until job.json/index publication. Reserve
+        // its state now so a supervisor cannot win it and make registration
+        // wait under the global gate. Never wait for a private lock here.
+        let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
         let guidance = if policy.sandbox == "read-only" {
@@ -825,7 +829,6 @@ impl Context {
         stored["queue_sequence"] = json!(self.next_queue_sequence()?);
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
-        let state = self.job_lock(&jid, "state.lock")?;
         drop(_queue);
         let mut stored = self.load(&jid)?;
         let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {

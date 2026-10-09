@@ -277,13 +277,114 @@ mod reboot_recovery {
         let original = interrupted(&t, "valid", "lost");
         fs::create_dir(t.ctx.job_dir("broken")).unwrap();
         fs::write(t.ctx.job_dir("broken").join("job.json"), b"{bad").unwrap();
-        assert!(t.ctx.recover_reboot(true).is_err());
+        let report = t.ctx.recover_reboot(true).unwrap();
+        assert!(
+            report
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|entry| entry["action"] == "deferred")
+        );
         assert!(!t.ctx.root.join("reboot-recovery.json").exists());
-        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
-        assert_eq!(t.ctx.load("valid").unwrap(), original);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            t.ctx.load("valid").unwrap()["thread_id"],
+            original["thread_id"]
+        );
+        assert_eq!(
+            fs::read(t.ctx.job_dir("broken").join("job.json")).unwrap(),
+            b"{bad"
+        );
         t.put(job(json!({"id":"broken","status":"failed"})));
         t.ctx.recover_reboot(true).unwrap();
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn pending_reservation_is_released_after_todo_finishes() {
+        let t = Test::new();
+        let mut ctx = t.ctx.clone();
+        ctx.root = t.ctx.root.join("tools/codex-jobs");
+        fs::create_dir_all(ctx.root.parent().unwrap().join("todo")).unwrap();
+        let mut j = interrupted(&t, "no-longer-needed", "lost");
+        j["todo_id"] = json!(77);
+        t.ctx.save(&j).unwrap();
+        t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+        ctx.recover_reboot(true).unwrap();
+        assert_eq!(
+            t.ctx.load("no-longer-needed").unwrap()["reboot_launch_pending"],
+            true
+        );
+        fs::write(
+            ctx.root.parent().unwrap().join("todo/todo.json"),
+            json!({"items":[{"id":77,"status":"done"}]}).to_string(),
+        )
+        .unwrap();
+        ctx.recover_reboot(true).unwrap();
+        let stopped = t.ctx.load("no-longer-needed").unwrap();
+        assert_eq!(stopped["status"], "lost");
+        assert_eq!(stopped["queue_restart_pending"], false);
+        assert_eq!(stopped["reboot_launch_pending"], false);
+        assert!(!t.ctx.supervisor_alive(&stopped));
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1); // original failed spawn only
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn running_resume_ignores_prior_attempt_terminal_event() {
+        let t = Test::new();
+        let mut running = interrupted(&t, "old-terminal", "lost");
+        running["started_at"] = json!("2026-10-01T11:53:00+09:00");
+        t.ctx.save(&running).unwrap();
+        fs::write(
+            t.ctx.job_dir("old-terminal").join("events.jsonl"),
+            "{\"type\":\"turn.failed\",\"_ts\":\"2026-10-01T11:52:00+09:00\"}\n",
+        )
+        .unwrap();
+        t.ctx.recover_reboot(true).unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn guard_failure_defers_only_its_job_and_retry_reports_one_batch() {
+        let t = Test::new();
+        let mut denied = interrupted(&t, "guard-late", "lost");
+        denied["thread_id"] = Value::Null;
+        denied["cwd"] = json!(t.ctx.root.join("guard-late"));
+        fs::create_dir(t.ctx.root.join("guard-late")).unwrap();
+        t.ctx.save(&denied).unwrap();
+        interrupted(&t, "ready", "lost");
+        t.rt.recovery_guards
+            .lock()
+            .unwrap()
+            .insert(s(&denied, "cwd").into(), None);
+        let (result, _, _) = t.cli(&["recover-reboot", "--apply"]);
+        assert_eq!(result.unwrap(), 75);
+        assert_eq!(t.ctx.load("guard-late").unwrap(), denied);
+        assert_eq!(t.ctx.load("ready").unwrap()["status"], "queued");
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
+        t.rt.recovery_guards.lock().unwrap().clear();
+        assert_eq!(t.cli(&["recover-reboot", "--apply"]).0.unwrap(), 0);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(t.rt.calls.lock().unwrap().len(), 1);
+        assert!(
+            t.rt.calls.lock().unwrap()[0]
+                .argv
+                .last()
+                .unwrap()
+                .contains("2件")
+        );
+    }
+    #[test]
+    fn protected_work_is_never_mutated_or_reported() {
+        let t = Test::new();
+        let original = interrupted(&t, "protected", "lost");
+        t.rt.recovery_guards
+            .lock()
+            .unwrap()
+            .insert(s(&original, "cwd").into(), Some(true));
+        assert_eq!(t.ctx.recover_reboot(true).unwrap(), json!([]));
+        assert_eq!(t.ctx.load("protected").unwrap(), original);
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert!(t.rt.calls.lock().unwrap().is_empty());
     }
 }
 
@@ -4299,6 +4400,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
 }
 struct Fake {
     boot: Mutex<Option<f64>>,
+    recovery_guards: Mutex<HashMap<String, Option<bool>>>,
     summary_calls: AtomicUsize,
     summary_fail: AtomicBool,
     queue_sample: Mutex<cc_jobs::adaptive::MachineSample>,
@@ -4344,6 +4446,7 @@ impl Fake {
     fn new() -> Self {
         Self {
             boot: Mutex::new(None),
+            recovery_guards: Mutex::new(HashMap::new()),
             summary_calls: AtomicUsize::new(0),
             summary_fail: AtomicBool::new(false),
             queue_sample: Mutex::new(cc_jobs::adaptive::MachineSample {
@@ -4442,6 +4545,16 @@ impl Read for BadReader {
 impl Runtime for Fake {
     fn boot_epoch(&self) -> Option<f64> {
         *self.boot.lock().unwrap()
+    }
+    fn recovery_protected(&self, cwd: &str) -> io::Result<bool> {
+        match self.recovery_guards.lock().unwrap().get(cwd) {
+            Some(None) => Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "fixture guard timeout",
+            )),
+            Some(Some(protected)) => Ok(*protected),
+            None => Ok(false),
+        }
     }
     fn work_checkout(&self, _cwd: &str) -> Value {
         json!({})

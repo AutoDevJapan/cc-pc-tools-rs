@@ -1029,6 +1029,44 @@ fn missing_config_does_not_starve_external_tick_steps_or_touch_questions() {
 }
 
 #[test]
+fn deferred_reboot_recovery_suppresses_replacement_watch_and_dispatch_for_one_tick() {
+    let mut h = Harness::new();
+    h.ctx.cfg = json!({"__cc_ask_config_error":"OSError"});
+    h.fake.borrow_mut().reboot_recover_fail = true;
+    cmd_tick(&mut h.ctx).unwrap();
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.iter().any(|arg| arg == "recover-reboot")));
+    assert!(!h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch")));
+    assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| argv
+        .first()
+        .is_some_and(|arg| arg.ends_with("scheduler.py"))));
+    h.fake.borrow_mut().runs.clear();
+    h.fake.borrow_mut().reboot_recover_fail = false;
+    cmd_tick(&mut h.ctx).unwrap();
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch")));
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "recover")));
+}
+
+#[test]
 fn ask_and_log_normalize_file_line_endings_like_python_read_text() {
     let mut h = Harness::new();
     let body = h.root.path().join("windows-body.md");

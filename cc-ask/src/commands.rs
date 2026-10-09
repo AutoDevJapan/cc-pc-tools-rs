@@ -1260,6 +1260,11 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         ("cmd_sweep", cmd_sweep),
         ("cmd_civ6_idle", crate::civ6_idle::cmd_civ6_idle),
     ] {
+        if truth(&ctx.cfg["__reboot_recovery_deferred"])
+            && ["cmd_todo_watch", "cmd_scheduler_step"].contains(&name)
+        {
+            continue; // Do not replace jobs whose boot recovery will retry.
+        }
         let result = crate::tick_runtime::stage(name, Duration::from_secs(5), || {
             if ["cmd_remind", "cmd_sweep"].contains(&name) {
                 match &config_error {

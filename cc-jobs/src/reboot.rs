@@ -7,6 +7,7 @@ use std::{
     fs,
     io::{Read, Seek, SeekFrom},
     path::Path,
+    time::{Duration, Instant},
 };
 
 fn same_boot(value: &Value, boot: f64) -> bool {
@@ -79,9 +80,14 @@ fn ended(path: &Path, job: &Value) -> Result<bool> {
         .rev()
         .find_map(|line| serde_json::from_slice::<Value>(line).ok());
     Ok(event.is_some_and(|event| {
+        let attempt = if truth(&job["started_at"]) {
+            "started_at"
+        } else {
+            "queued_at"
+        };
         let earlier_attempt = parse_iso(s(&event, "_ts"))
-            .zip(parse_iso(s(job, "queued_at")))
-            .is_some_and(|(event, queued)| event < queued && !truth(&job["started_at"]));
+            .zip(parse_iso(s(job, attempt)))
+            .is_some_and(|(event, started)| event < started);
         !earlier_attempt && ["turn.completed", "turn.failed"].contains(&s(&event, "type"))
     }))
 }
@@ -90,6 +96,9 @@ impl Context {
     /// Called before the existing minute tick reconciles lost work. Keeping the
     /// same ID preserves scheduler/ToDo/launch-key references and queue limits.
     pub fn recover_reboot(&self, apply: bool) -> Result<Value> {
+        // Start the clock before preparation/locks, reserving time for the
+        // single quiet report inside the caller's 20-second recovery stage.
+        let deadline = Instant::now() + Duration::from_secs(12);
         let Some(boot) = self.rt.boot_epoch().filter(|at| at.is_finite() && *at > 0.) else {
             return Ok(json!([]));
         };
@@ -104,7 +113,7 @@ impl Context {
             }
             Err(e) => return Err(e.into()),
         };
-        let _gate = self.queue_lock_for("recover-reboot", std::time::Duration::from_secs(10))?;
+        let _gate = self.queue_lock_for("recover-reboot", Duration::from_secs(2))?;
         let receipt = self.root.join("reboot-recovery.json");
         if apply && receipt.exists() {
             let saved = self.read_json(&receipt)?;
@@ -127,15 +136,56 @@ impl Context {
         // Latest attempts first, so recovering one excludes its older duplicate.
         for index in (0..jobs.len()).rev() {
             let old = &jobs[index];
+            if old["reboot_inventory_error"] == true {
+                report.push(json!({"id":old["id"],"action":"deferred","reason":"履歴を読み取れないため次回再確認"}));
+                continue;
+            }
             if !candidate(old, boot) {
                 continue;
             }
             let id = s(old, "id").to_string();
-            if self.rt.recovery_protected(s(old, "cwd"))? {
+            if deadline.saturating_duration_since(Instant::now()) < Duration::from_secs(2) {
+                report.push(json!({"id":id,"action":"deferred","reason":"今回の復旧時間の上限"}));
                 continue;
             }
-            let _state = self.job_lock(&id, "state.lock")?;
+            match self.rt.recovery_protected(s(old, "cwd")) {
+                Ok(true) => continue,
+                Ok(false) => {}
+                Err(_) => {
+                    report.push(json!({"id":id,"action":"deferred","reason":"作業範囲を確認できないため次回再確認"}));
+                    continue;
+                }
+            }
+            if apply && self.tool_handoff_pending(old) {
+                // The existing transition has its own state lock and durable
+                // spawn protocol. Resolve it before claiming reboot recovery.
+                match self.recover_tool_yield(old) {
+                    Ok(_) => {
+                        let fresh = self.load(&id)?;
+                        jobs[index] = fresh;
+                        report.push(json!({"id":id,"action":"deferred","reason":"既存の引き継ぎを確認したため次回再確認"}));
+                    }
+                    Err(_) => report
+                        .push(json!({"id":id,"action":"deferred","reason":"既存の引き継ぎ処理中"})),
+                }
+                continue;
+            }
+            let _state = match FileLock::try_acquire(&self.job_dir(&id).join("state.lock")) {
+                Ok(lock) => lock,
+                Err(e)
+                    if matches!(e.raw_os_error(), Some(32 | 33))
+                        || e.kind() == std::io::ErrorKind::WouldBlock =>
+                {
+                    report.push(json!({"id":id,"action":"deferred","reason":"状態の更新中"}));
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            };
             let mut job = self.load(&id)?;
+            if s(&job, "cwd") != s(old, "cwd") {
+                report.push(json!({"id":id,"action":"deferred","reason":"作業フォルダーが変更されたため次回再確認"}));
+                continue;
+            }
             if !candidate(&job, boot)
                 || self.is_ours(&job, "pid")
                 || self.is_ours(&job, "codex_pid")
@@ -143,8 +193,20 @@ impl Context {
                 continue;
             }
             if self.tool_handoff_pending(&job) {
+                report.push(json!({"id":id,"action":"deferred","reason":"既存の引き継ぎ処理中"}));
                 continue; // The durable yield protocol owns this transition.
             }
+            let owner = match FileLock::try_acquire(&self.job_dir(&id).join("supervisor.lock")) {
+                Ok(lock) => lock,
+                Err(e)
+                    if matches!(e.raw_os_error(), Some(32 | 33))
+                        || e.kind() == std::io::ErrorKind::WouldBlock =>
+                {
+                    report.push(json!({"id":id,"action":"deferred","reason":"監督の交代中"}));
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            };
             let item = todo["items"].as_array().and_then(|items| {
                 items.iter().find(|item| {
                     item["id"] == job["todo_id"]
@@ -177,6 +239,23 @@ impl Context {
                 None
             };
             if let Some(reason) = reason {
+                if reason == "元の依頼文または作業フォルダーがない" {
+                    report.push(json!({"id":id,"action":"deferred","reason":reason}));
+                    continue;
+                }
+                if apply && job["reboot_launch_pending"] == true {
+                    // A terminal ToDo or successor invalidates an unlaunched
+                    // reservation. Release its slot without starting work.
+                    job["reboot_launch_pending"] = json!(false);
+                    job["queue_restart_pending"] = json!(false);
+                    job["reboot_log_pending"] = json!(false);
+                    job["status"] = json!("lost");
+                    job["finished_at"] = json!(self.rt.now());
+                    job["last_error"] = job["reboot_original_error"].clone();
+                    job["reboot_recovery_aborted"] = json!(reason);
+                    self.save(&job)?;
+                    jobs[index] = job;
+                }
                 report.push(json!({"id":id,"action":"skip","reason":reason}));
                 continue;
             }
@@ -184,16 +263,6 @@ impl Context {
                 report.push(json!({"id":id,"name":job["name"],"action":"would_queue"}));
                 continue;
             }
-            let owner = match FileLock::try_acquire(&self.job_dir(&id).join("supervisor.lock")) {
-                Ok(lock) => lock,
-                Err(e)
-                    if matches!(e.raw_os_error(), Some(32 | 33))
-                        || e.kind() == std::io::ErrorKind::WouldBlock =>
-                {
-                    continue;
-                }
-                Err(e) => return Err(e.into()),
-            };
             if job["reboot_launch_pending"] != true
                 || !same_boot(&job["reboot_recovered_boot"], boot)
             {
@@ -247,7 +316,8 @@ impl Context {
                 && job["cancel_requested"] != true
                 && job["reboot_launch_pending"] == true
         });
-        if apply && !launches_pending {
+        let deferred = report.iter().any(|entry| entry["action"] == "deferred");
+        if apply && !launches_pending && !deferred {
             self.log_reboot_recovery(&jobs)?;
             if !report.iter().any(|entry| entry["action"] == "pending") {
                 // Avoid reading thousands of historical jobs on every minute
@@ -276,7 +346,11 @@ impl Context {
                 continue;
             }
             match fs::metadata(entry.path().join("job.json")) {
-                Ok(_) => jobs.push(self.load(&id)?),
+                Ok(_) => match self.load(&id) {
+                    Ok(job) => jobs.push(job),
+                    Err(_) => jobs
+                        .push(json!({"id":id,"status":"unreadable","reboot_inventory_error":true})),
+                },
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
                 Err(e) => return Err(e.into()),
             }
@@ -320,7 +394,7 @@ impl Context {
                 body,
             ],
             vec![],
-            10.,
+            3.,
         ))?;
         if result.code != 0 {
             return Err(Error::new("reboot recovery log failed; retry next tick"));

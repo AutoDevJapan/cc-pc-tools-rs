@@ -468,8 +468,13 @@ impl Context {
                 Ok(0)
             }
             "recover-reboot" => {
-                writeln!(out, "{}", pretty(&self.recover_reboot(a.flag("apply"))?))?;
-                Ok(0)
+                let report = self.recover_reboot(a.flag("apply"))?;
+                let deferred = a.flag("apply")
+                    && report.as_array().is_some_and(|entries| {
+                        entries.iter().any(|entry| entry["action"] == "deferred")
+                    });
+                writeln!(out, "{}", pretty(&report))?;
+                Ok(if deferred { 75 } else { 0 })
             }
             "reload-queue" => {
                 writeln!(out, "{}", pretty(&self.reload_queue()?))?;

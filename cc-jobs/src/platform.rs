@@ -486,7 +486,7 @@ impl Runtime for System {
                 cwd.into(),
             ],
             vec![],
-            10.,
+            2.,
         ))?;
         if reply.code != 0 {
             return Err(io::Error::other("recovery resource guard unavailable"));

@@ -771,7 +771,7 @@ impl Context {
             }) {
                 return Err(Error::new(format!(
                     "ToDo {todo} already has active job {}",
-                    s(&job, "id")
+                    s(job, "id")
                 )));
             }
         }
@@ -786,7 +786,7 @@ impl Context {
         {
             return Err(Error::new(format!(
                 "resume session {session} already has active job {}",
-                s(&job, "id")
+                s(job, "id")
             )));
         }
         job["parent_job_id"] = json!(parent);

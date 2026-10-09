@@ -57,6 +57,13 @@ unsafe extern "system" {
         overlapped: *mut u8,
     ) -> i32;
     fn LocalFree(memory: *mut u8) -> *mut u8;
+    fn CompareStringOrdinal(
+        a: *const u16,
+        a_length: i32,
+        b: *const u16,
+        b_length: i32,
+        ignore_case: i32,
+    ) -> i32;
 }
 #[link(name = "advapi32")]
 unsafe extern "system" {
@@ -72,7 +79,7 @@ unsafe extern "system" {
     ) -> u32;
     fn GetSecurityDescriptorLength(descriptor: *const u8) -> u32;
 }
-pub(super) fn security_hash(path: &Path) -> Result<String> {
+pub(super) fn security_hash(path: &Path, expected: &Node) -> Result<String> {
     let name = extended_path(path)?;
     let mut descriptor = std::ptr::null_mut();
     let result = unsafe {
@@ -88,6 +95,14 @@ pub(super) fn security_hash(path: &Path) -> Result<String> {
         );
         if handle == -1 {
             return Err("SECURITY_METADATA_FAILED");
+        }
+        let mut info = WinInfo::default();
+        if GetFileInformationByHandle(handle, &mut info) == 0
+            || info.volume != expected.volume
+            || ((u64::from(info.index_high) << 32) | u64::from(info.index_low)) != expected.file_id
+        {
+            CloseHandle(handle);
+            return Err("SECURITY_IDENTITY_CHANGED");
         }
         let status = GetSecurityInfo(
             handle,
@@ -211,7 +226,7 @@ fn target_key(key: &str, target: &str) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn project_alias(c: &Config, root: &Path, key: &str, target: &str) -> Result<bool> {
+pub(super) fn project_alias(c: &Config, root: &Path, key: &str, target: &str) -> Result<bool> {
     if key != PROJECT_LINK || target != PROJECT_RAW {
         return Ok(false);
     }
@@ -302,7 +317,7 @@ fn scan_links(c: &Config, root: &Path) -> Result<Inventory> {
             count.2 &= key.starts_with("frontend-runtime/node_modules/.pnpm/");
             None
         };
-        let security_sha256 = security_hash(&path)?;
+        let security_sha256 = security_hash(&path, &n)?;
         nodes.insert(
             key,
             Entry {
@@ -320,6 +335,11 @@ fn scan_links(c: &Config, root: &Path) -> Result<Inventory> {
         return Err("HARD_LINK");
     }
     let mut link_states = Vec::new();
+    let mut case_names: BTreeMap<usize, Vec<Vec<u16>>> = BTreeMap::new();
+    for key in nodes.keys() {
+        let wide: Vec<u16> = key.encode_utf16().collect();
+        case_names.entry(wide.len()).or_default().push(wide);
+    }
     for (key, entry) in &nodes {
         if entry.node.volume != nodes[""].node.volume {
             return Err("EXTERNAL_VOLUME");
@@ -342,6 +362,30 @@ fn scan_links(c: &Config, root: &Path) -> Result<Inventory> {
                 }
                 prefix.push_str(part);
                 let Some(found) = nodes.get(&prefix) else {
+                    if part.contains('~') {
+                        return Err("SHORT_NAME_MISSING_TARGET");
+                    }
+                    let wide: Vec<u16> = prefix.encode_utf16().collect();
+                    if let Some(candidates) = case_names.get(&wide.len()) {
+                        let length = i32::try_from(wide.len()).map_err(|_| "INVALID_PATH")?;
+                        for candidate in candidates {
+                            let comparison = unsafe {
+                                CompareStringOrdinal(
+                                    wide.as_ptr(),
+                                    length,
+                                    candidate.as_ptr(),
+                                    length,
+                                    1,
+                                )
+                            };
+                            if comparison == 0 {
+                                return Err("CASE_COMPARISON_FAILED");
+                            }
+                            if comparison == 2 {
+                                return Err("LINK_TARGET_CASE_MISMATCH");
+                            }
+                        }
+                    }
                     missing = true;
                     continue;
                 };
@@ -435,7 +479,7 @@ fn preservation(nodes: &Inventory) -> serde_json::Value {
         "outside_alias_names_opened_or_recorded":0,
         "missing_internal_pnpm_targets":nodes.values().filter(|e| e.link.as_ref().is_some_and(|l| l.missing_internal)).count(),
         "fixed_project_aliases":nodes.values().filter(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias)).count(),
-        "security_descriptors_verified":nodes.len()})
+        "security_descriptors_recorded":nodes.len()})
 }
 pub(super) fn inspect(c: &Config, id: &str) -> Result<serde_json::Value> {
     let r = load(c, id)?;
@@ -487,6 +531,13 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let source = Path::new(&r.identity.path);
     let nodes = validate(c, &r, source)?;
+    if !c.project_alias_approved
+        && nodes
+            .values()
+            .any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias))
+    {
+        return Err("PROJECT_ALIAS_APPROVAL_REQUIRED");
+    }
     preflight_project_alias(c, &nodes)?;
     let dest = c.destination();
     checked(&dest)?;
@@ -569,12 +620,19 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("TARGET_STILL_EXISTS");
     }
     let nodes = validate(c, &r, &dest.join("files"))?;
+    if !c.project_alias_approved
+        && nodes
+            .values()
+            .any(|e| e.link.as_ref().is_some_and(|l| l.fixed_project_alias))
+    {
+        return Err("PROJECT_ALIAS_APPROVAL_REQUIRED");
+    }
     if nodes != ticket.nodes {
         return Err("CONTENT_CHANGED_AFTER_PLAN");
     }
     let reason_path = dest.join("理由.txt");
     let reason = read_record(&reason_path, 8192)?;
-    let completed = "退避状態: 完了。元の場所の不在、同一の根の識別番号、通常ファイルと相対リンク自身の全メタデータ・ターゲットの一致を確認した。\n";
+    let completed = "退避状態: 完了。元の場所の不在、同一の根の識別番号、通常ファイルと相対リンク自身の全メタデータ・ターゲット・ACLの一致を確認した。\n";
     if !reason
         .windows(completed.len())
         .any(|s| s == completed.as_bytes())
@@ -603,6 +661,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
         serde_json::json!({"id":ID,"state":"quarantined","source_absent":true,"destination":dest,
         "bytes":bytes,"entries":nodes.len(),"links":links,"inventory_verified":true,
         "preservation":preservation(&nodes),
+        "security_descriptors_verified":nodes.len(),
         "inventory_sha256":digest,"root_volume":r.identity.volume,"root_file_id":r.identity.file_id}),
     )
 }

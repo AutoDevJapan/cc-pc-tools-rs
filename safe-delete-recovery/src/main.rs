@@ -147,6 +147,7 @@ struct Config {
     content: &'static str,
     pinned_identity: Option<(u32, u64)>,
     project_alias_target: Option<PathBuf>,
+    project_alias_approved: bool,
 }
 
 impl Config {
@@ -186,6 +187,7 @@ impl Config {
             content: "tool-verification",
             pinned_identity: None,
             project_alias_target: None,
+            project_alias_approved: false,
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -1809,7 +1811,10 @@ mod tests {
         move_scoopa_fixture(&c);
         c.finish(scoopa::ID).unwrap();
         assert_eq!(node(&external).unwrap(), original);
-        assert_eq!(security, scoopa::security_hash(&external).unwrap());
+        assert_eq!(
+            security,
+            scoopa::security_hash(&external, &original).unwrap()
+        );
         assert_eq!(fs::read(&external).unwrap(), b"keep me");
         assert!(
             fs::symlink_metadata(
@@ -1870,11 +1875,17 @@ mod tests {
     }
     #[test]
     fn scoopa_fixed_project_alias_is_not_followed_and_keeps_same_lexical_target() {
-        let c = scoopa_project_fixture();
+        let mut c = scoopa_project_fixture();
         let inspected = scoopa::inspect(&c, scoopa::ID).unwrap();
         assert_eq!(inspected["preservation"]["fixed_project_aliases"], 1);
         assert_eq!(inspected["requires_fixed_project_alias_approval"], true);
         assert!(!c.ticket_path().exists());
+        assert!(matches!(
+            c.plan(scoopa::ID),
+            Err("PROJECT_ALIAS_APPROVAL_REQUIRED")
+        ));
+        assert!(!c.ticket_path().exists());
+        c.project_alias_approved = true; // Test-only fake approval; no runtime override exists.
         c.plan(scoopa::ID).unwrap();
         move_scoopa_fixture(&c);
         assert_eq!(
@@ -1890,12 +1901,53 @@ mod tests {
         .unwrap();
         assert!(matches!(c.plan(scoopa::ID), Err("EXTERNAL_LINK")));
         let mut c = scoopa_project_fixture();
+        c.project_alias_approved = true;
         c.quarantine = c.base.join("extra/deep/quarantine");
         assert!(matches!(
             c.plan(scoopa::ID),
             Err("PROJECT_ALIAS_TARGET_CHANGED")
         ));
         assert!(!c.ticket_path().exists());
+    }
+    #[test]
+    fn scoopa_missing_pnpm_target_cannot_hide_case_or_short_name_alias() {
+        for (target, expected) in [
+            (
+                r".pnpm\NODE_MODULES\scoopa-frontend\other",
+                "LINK_TARGET_CASE_MISMATCH",
+            ),
+            (
+                r".pnpm\node_modules\SCOOPA~1\other",
+                "SHORT_NAME_MISSING_TARGET",
+            ),
+        ] {
+            let c = scoopa_project_fixture();
+            std::os::windows::fs::symlink_dir(
+                target,
+                source(&c).join("frontend-runtime/node_modules/bypass"),
+            )
+            .unwrap();
+            assert_eq!(c.plan(scoopa::ID).unwrap_err(), expected);
+            assert!(!c.ticket_path().exists());
+        }
+    }
+    #[test]
+    fn scoopa_production_alias_keeps_target_at_real_destination_depth() {
+        let c = Config::production(scoopa::ID).unwrap();
+        assert!(!c.project_alias_approved);
+        assert!(
+            scoopa::project_alias(&c, &source(&c), scoopa::PROJECT_LINK, scoopa::PROJECT_RAW)
+                .unwrap()
+        );
+        assert!(
+            scoopa::project_alias(
+                &c,
+                &c.destination().join("files"),
+                scoopa::PROJECT_LINK,
+                scoopa::PROJECT_RAW
+            )
+            .unwrap()
+        );
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {

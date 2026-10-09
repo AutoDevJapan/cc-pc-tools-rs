@@ -4,6 +4,7 @@ use super::*;
 pub(super) const ID: &str = "80b350ade8bb05cd61ab94f7485d09cc";
 pub(super) const INTEGRITY: &str =
     "ec6d702beea2c00011eed142fa8f9e14f1e684d45b09eaf1dea9629c26ab2413";
+pub(super) const CREATED_AT: &str = "2026-10-09T08:25:27.1778086+09:00";
 // Includes the root; this is the measured tree, not a general larger limit.
 const ENTRY_LIMIT: usize = 17799;
 const LINK_LIMIT: usize = 105;
@@ -247,7 +248,7 @@ fn load(c: &Config, id: &str) -> Result<Receipt> {
     }
     // Fixture construction is compile-time test-only; production has no override.
     #[cfg(not(test))]
-    if r.integrity != INTEGRITY || r.identity.created_at != "2026-10-09T08:25:27.1778086+09:00" {
+    if r.integrity != INTEGRITY || r.identity.created_at != CREATED_AT {
         return Err("RECEIPT_SCOPE_MISMATCH");
     }
     Ok(r)

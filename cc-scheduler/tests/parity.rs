@@ -9,6 +9,27 @@ use std::{
 const T: f64 = 100000.;
 
 #[test]
+fn reboot_deployment_preserves_installed_subscription_model_validation() {
+    for model in [
+        "gpt-6.1-sol",
+        "anthropic/claude-sonnet-5-5",
+        "anthropic/claude-haiku-5-5",
+    ] {
+        assert!(valid_model(model), "{model}");
+    }
+    for model in [
+        "anthropic/",
+        "anthropic/../model",
+        "anthropic/a/b",
+        "-model",
+        "model --flag",
+    ] {
+        assert!(!valid_model(model), "{model}");
+    }
+    assert!(!valid_model(&format!("anthropic/{}", "a".repeat(71))));
+}
+
+#[test]
 fn reboot_launch_reservation_is_not_marked_lost_between_spawn_retries() {
     let mut job = json!({"status":"queued","created_at":1,
         "queue_restart_pending":true,"reboot_launch_pending":true});

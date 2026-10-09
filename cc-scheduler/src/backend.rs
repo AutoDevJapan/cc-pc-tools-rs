@@ -165,9 +165,13 @@ pub fn safe_text(text: &str) -> String {
     text
 }
 pub fn valid_model(m: &str) -> bool {
-    regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
-        .unwrap()
-        .is_match(m)
+    // Preserve the installed scheduler's subscription-model support when
+    // deploying the reboot reservation policy alongside it.
+    static MODEL_SYNTAX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    m.len() <= 80
+        && MODEL_SYNTAX
+            .get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap())
+            .is_match(m.strip_prefix("anthropic/").unwrap_or(m))
 }
 pub fn valid_effort(e: &str) -> bool {
     matches!(

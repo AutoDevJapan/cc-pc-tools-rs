@@ -657,7 +657,7 @@ impl Context {
                     let record_started = std::time::Instant::now();
                     let job = self.admission_record(&id);
                     record_count += 1;
-                    if record_count % 128 == 0 {
+                    if record_count.is_multiple_of(128) {
                         _scan
                             .set_owner(&scan_path, &format!("history_scan:records:{record_count}"));
                     }
@@ -1173,7 +1173,11 @@ impl Context {
             // hardware capacity. A display name is not a session identity.
             if let Some(owner) = jobs.iter().find(|other| {
                 s(other, "id") != s(j, "id")
-                    && (intake_todos_overlap(j, other)
+                    && ((intake_todos_overlap(j, other)
+                        // Existing child work in the same live family shares
+                        // its parent's ToDo, but never its writable session.
+                        && (s(j, "parent_job_id").is_empty()
+                            || self.queue_root(j) != self.queue_root(other)))
                         || ["thread_id", "resume_session"].iter().any(|key| {
                             normalize_uuid(s(j, key)).is_some_and(|session| {
                                 ["thread_id", "resume_session"].iter().any(|other_key| {

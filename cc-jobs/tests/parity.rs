@@ -1404,6 +1404,32 @@ mod queue_regressions {
         );
     }
     #[test]
+    fn same_todo_children_share_family_but_a_shared_session_still_waits() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+        t.rt.procs.lock().unwrap().insert(888, 77);
+        t.put(job(json!({"id":"parent","name":"parent","todo_id":77,"status":"running","codex_pid":888,"codex_pid_created":77,"thread_id":session})));
+        t.put(job(
+            json!({"id":"child","name":"review","todo_id":77,"parent_job_id":"parent"}),
+        ));
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        t.put(job(json!({"id":"same-session-child","name":"resume","todo_id":77,"parent_job_id":"parent","resume_session":session})));
+        assert!(t.ctx.admit("same-session-child").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("same-session-child").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+        t.put(job(
+            json!({"id":"other-root","name":"unrelated","todo_id":77}),
+        ));
+        assert!(t.ctx.admit("other-root").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("other-root").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+    }
+    #[test]
     fn registration_owns_state_before_publishing_a_queued_job() {
         let t = Test::new();
         let reads = Arc::new(AtomicUsize::new(0));

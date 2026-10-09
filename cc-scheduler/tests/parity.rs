@@ -2001,15 +2001,17 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
                 .collect::<Vec<_>>()
         })
         .collect();
-    assert_eq!(launched.len(), 6);
-    assert!(launched[0].iter().any(|v| v.ends_with("scheduler.exe")));
-    assert_eq!(launched[0].last().unwrap(), "recover");
-    assert!(launched[1].iter().any(|v| v.ends_with("todo.exe")));
-    assert!(launched[2].iter().any(|v| v.ends_with("scheduler.exe")));
-    assert_eq!(launched[2].last().unwrap(), "step");
-    assert!(launched[3].iter().any(|v| v.ends_with("shepherd.exe")));
-    assert_eq!(launched[4][0], "tasklist");
+    assert_eq!(launched.len(), 7);
+    assert!(launched[0].iter().any(|v| v == "recover-reboot"));
+    assert_eq!(launched[0].last().unwrap(), "--apply");
+    assert!(launched[1].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[1].last().unwrap(), "recover");
+    assert!(launched[2].iter().any(|v| v.ends_with("todo.exe")));
+    assert!(launched[3].iter().any(|v| v.ends_with("scheduler.exe")));
+    assert_eq!(launched[3].last().unwrap(), "step");
+    assert!(launched[4].iter().any(|v| v.ends_with("shepherd.exe")));
     assert_eq!(launched[5][0], "tasklist");
+    assert_eq!(launched[6][0], "tasklist");
 }
 #[test]
 fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {

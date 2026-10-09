@@ -165,8 +165,8 @@ pub(super) fn configure(c: &mut Config, f: Fixed) {
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 struct Entry {
     node: Node,
-    // Raw FSCTL_GET_REPARSE_POINT bytes of a dependency link, as hex.
-    reparse: Option<String>,
+    // Raw FSCTL_GET_REPARSE_POINT bytes of a dependency link.
+    reparse: Option<Vec<u8>>,
 }
 type Inventory = BTreeMap<String, Entry>;
 struct Counts {
@@ -174,6 +174,8 @@ struct Counts {
     bytes: u64,
     links: usize,
     outside_dependency_aliases: u64,
+    internal_targets: usize,
+    external_targets: usize,
 }
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 struct Id {
@@ -250,6 +252,119 @@ pub(super) fn reparse_data(path: &Path) -> Result<Vec<u8>> {
     Ok(buf)
 }
 
+// Path interpretation is lexical only: no canonicalize, metadata or target open.
+pub(super) fn target_path(root: &Path, key: &str, raw: &[u8]) -> Result<PathBuf> {
+    if raw.len() < 16 {
+        return Err("INVALID_LINK_DATA");
+    }
+    let word = |i| u16::from_le_bytes([raw[i], raw[i + 1]]) as usize;
+    if word(4) + 8 != raw.len() {
+        return Err("INVALID_LINK_DATA");
+    }
+    let tag = u32::from_le_bytes(raw[..4].try_into().unwrap());
+    let (base, relative) = match tag {
+        0xa000000c if raw.len() >= 20 => {
+            let flags = u32::from_le_bytes(raw[16..20].try_into().unwrap());
+            if flags > 1 {
+                return Err("INVALID_LINK_DATA");
+            }
+            (20, flags == 1)
+        }
+        0xa0000003 => (16, false),
+        _ => return Err("UNSUPPORTED_REPARSE"),
+    };
+    let (offset, length) = (word(8), word(10));
+    if offset % 2 != 0 || length % 2 != 0 || length == 0 || base + offset + length > raw.len() {
+        return Err("INVALID_LINK_DATA");
+    }
+    let wide: Vec<u16> = raw[base + offset..base + offset + length]
+        .chunks_exact(2)
+        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+        .collect();
+    let mut text = String::from_utf16(&wide).map_err(|_| "INVALID_LINK_DATA")?;
+    if text.contains('\0') {
+        return Err("INVALID_LINK_DATA");
+    }
+    for prefix in [r"\??\", r"\\?\"] {
+        if let Some(rest) = text.strip_prefix(prefix) {
+            text = if let Some(unc) = rest.strip_prefix("UNC\\") {
+                format!(r"\\{unc}")
+            } else {
+                rest.into()
+            };
+            break;
+        }
+    }
+    let target = Path::new(&text);
+    if (relative && (target.has_root() || text.contains(':')))
+        || (!relative && !target.is_absolute())
+    {
+        return Err("INVALID_LINK_DATA");
+    }
+    let candidate = if relative {
+        root.join(Path::new(key).parent().ok_or("INVALID_LINK_DATA")?)
+            .join(target)
+    } else {
+        target.to_owned()
+    };
+    let mut normalized = PathBuf::new();
+    for part in candidate.components() {
+        match part {
+            std::path::Component::ParentDir => {
+                if !normalized.pop() {
+                    return Err("INVALID_LINK_DATA");
+                }
+            }
+            std::path::Component::CurDir => (),
+            std::path::Component::Normal(name) => {
+                if protected(&name.to_string_lossy()) {
+                    return Err("PROTECTED_LINK_TARGET");
+                }
+                normalized.push(name);
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    if !normalized.is_absolute() {
+        return Err("INVALID_LINK_DATA");
+    }
+    Ok(normalized)
+}
+fn within(path: &Path, root: &Path) -> bool {
+    let path: Vec<_> = path
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_ascii_lowercase())
+        .collect();
+    let root: Vec<_> = root
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_ascii_lowercase())
+        .collect();
+    path.starts_with(&root)
+}
+fn target_counts(root: &Path, c: &Config, nodes: &Inventory) -> Result<(usize, usize)> {
+    let original = c.temp.join(format!("codex-owned-{}", c.id));
+    let mut external = std::collections::BTreeSet::new();
+    let (mut inside, mut outside) = (0, 0);
+    for (key, entry) in nodes {
+        if let Some(raw) = &entry.reparse {
+            let target = target_path(root, key, raw)?;
+            if within(&target, root) {
+                inside += 1;
+            } else {
+                outside += 1;
+            }
+            // Original-tree absolute junctions remain unchanged in the archive.
+            // The owned original root is guarded separately, even after moving.
+            if !within(&target, root) && !within(&target, &original) {
+                external.insert(target);
+            }
+        }
+    }
+    for target in external {
+        c.client_guard(&target)?;
+    }
+    Ok((inside, outside))
+}
 fn scan(root: &Path, c: &Config) -> Result<(Inventory, Counts)> {
     let (entry_limit, link_limit, byte_limit) = limits(c.id)?;
     let mut nodes = Inventory::new();
@@ -295,7 +410,8 @@ fn scan(root: &Path, c: &Config) -> Result<(Inventory, Counts)> {
             if node_no_follow(&path)? != n {
                 return Err("LINK_CHANGED_DURING_SCAN");
             }
-            reparse = Some(raw.iter().map(|b| format!("{b:02x}")).collect());
+            target_path(root, &key, &raw)?;
+            reparse = Some(raw);
         } else if dir {
             for child in fs::read_dir(&path).map_err(|_| "CONTENT_METADATA_FAILED")? {
                 let child = child.map_err(|_| "CONTENT_METADATA_FAILED")?;
@@ -345,6 +461,7 @@ fn scan(root: &Path, c: &Config) -> Result<(Inventory, Counts)> {
         .map(|(inside, total, _)| u64::from(total - inside))
         .sum();
     let entries = nodes.len();
+    let (internal_targets, external_targets) = target_counts(root, c, &nodes)?;
     Ok((
         nodes,
         Counts {
@@ -352,6 +469,8 @@ fn scan(root: &Path, c: &Config) -> Result<(Inventory, Counts)> {
             bytes,
             links,
             outside_dependency_aliases,
+            internal_targets,
+            external_targets,
         },
     ))
 }
@@ -502,6 +621,7 @@ fn validate(
 ) -> Result<(Inventory, Counts)> {
     checked(root)?;
     c.client_guard(root)?;
+    c.client_guard(Path::new(&r.identity.path))?;
     for repo in &c.seller {
         if !repo.dir.is_empty() {
             c.client_guard(&repo.path(root))?;
@@ -547,6 +667,7 @@ pub(super) fn inspect(c: &Config, id: &str) -> Result<serde_json::Value> {
         serde_json::json!({"id":c.id,"action":"read_only_inspection","entries":n.entries,
         "bytes":n.bytes,"links":n.links,"repositories":c.seller.len(),
         "outside_dependency_aliases":n.outside_dependency_aliases,"outside_aliases_opened":0,
+        "internal_link_targets":n.internal_targets,"external_link_targets":n.external_targets,"link_targets_opened":0,
         "ticket_created":false,"move_command_issued":false}),
     )
 }
@@ -661,6 +782,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("QUARANTINE_ALREADY_PREPARED");
     }
     let inventory_sha256 = digest(&nodes)?;
+    let (moved_internal, moved_external) = target_counts(&files, c, &nodes)?;
     let ticket = MoveTicket {
         id: c.id.into(),
         source: r.identity.path.clone(),
@@ -692,7 +814,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
             return Err("QUARANTINE_DESTINATION_NOT_EMPTY");
         }
     }
-    let why = format!(
+    let mut why = format!(
         "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）、依存リンク: {}件\n理由: 通常のplanとquarantineは{}で停止した。所有IDを固定した復旧手順で、リンク先に入らず、Git管理情報と全データを保持して同じドライブへ退避する。\n所有ID: {}\n",
         r.identity.path,
         n.bytes,
@@ -701,11 +823,14 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         original_error(c.id),
         c.id
     );
+    why.push_str(&format!("移動前のリンク参照: 内部{}件・外部{}件。移動後の文字列上の参照: 内部{}件・外部{}件。外部参照は文字列でクライアント判定を行い、参照先は開かない。元rootを指す絶対リンクも文字列を変更しない。\n", n.internal_targets, n.external_targets, moved_internal, moved_external));
     write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
     Ok(
         serde_json::json!({"id":c.id,"action":"submit_quarantine_to_exec_tool","bytes":n.bytes,
         "entries":n.entries,"links":n.links,"destination":dest,"inventory_sha256":inventory_sha256,
         "worktree_backlinks":ticket.backlinks.len(),
+        "internal_link_targets":n.internal_targets,"external_link_targets":n.external_targets,
+        "destination_internal_link_targets":moved_internal,"destination_external_link_targets":moved_external,"link_targets_opened":0,
         "powershell_command":format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(source), quote(&files))}),
     )
 }
@@ -770,6 +895,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
         "bytes":n.bytes,"entries":n.entries,"links":n.links,"inventory_verified":true,
         "worktree_backlinks_repaired":t.backlinks.len(),
         "outside_dependency_aliases":n.outside_dependency_aliases,"outside_aliases_opened":0,
+        "internal_link_targets":n.internal_targets,"external_link_targets":n.external_targets,"link_targets_opened":0,
         "inventory_sha256":t.inventory_sha256,"root_volume":r.identity.volume,"root_file_id":r.identity.file_id}),
     )
 }

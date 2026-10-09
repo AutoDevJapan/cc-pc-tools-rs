@@ -316,8 +316,9 @@ fn unexpected_backlink_blocks_success() {
     let (mut c, _) = linked_fixture();
     let mut spoofed = c.seller[0].link.clone().unwrap();
     spoofed.1 = c.base.join("elsewhere/.git");
+    fs::create_dir_all(&spoofed.1).unwrap();
     c.seller[0].link = Some(spoofed);
-    assert!(c.plan(c.id).is_err());
+    assert!(matches!(c.plan(c.id), Err("EXTERNAL_GITDIR")));
     assert!(!c.ticket_path().exists());
 }
 
@@ -344,4 +345,70 @@ fn outside_dependency_alias_is_preserved_without_changing_the_outside_name() {
         node(&c.destination().join("files/node_modules/dependency")).unwrap(),
         before
     );
+}
+
+#[test]
+fn external_link_targets_are_counted_and_client_targets_rejected_without_traversal() {
+    let (c, link, _) = link_fixture();
+    assert_eq!(
+        seller::inspect(&c, c.id).unwrap()["external_link_targets"],
+        1
+    );
+    let raw = seller::reparse_data(&link).unwrap();
+    let parsed = seller::target_path(&source(&c), "node_modules/dep", &raw).unwrap();
+    assert!(same(&parsed, &c.base.join("outside")));
+    let c = clone_fixture();
+    fs::create_dir(source(&c).join("node_modules")).unwrap();
+    let target = outside(&c, "fixture-client-denied");
+    std::os::windows::fs::symlink_dir(target, source(&c).join("node_modules/dep")).unwrap();
+    assert!(matches!(c.plan(c.id), Err("CLIENT_RESOURCE")));
+    assert!(!c.ticket_path().exists());
+}
+
+#[test]
+fn junction_raw_data_and_dormant_absolute_target_are_preserved() {
+    let c = clone_fixture();
+    let root = source(&c);
+    let modules = root.join("node_modules");
+    fs::create_dir_all(modules.join("package")).unwrap();
+    let link = modules.join("alias");
+    let link_name = link.to_string_lossy().replace('/', "\\");
+    let target_name = modules.join("package").to_string_lossy().replace('/', "\\");
+    hidden(
+        Path::new("cmd.exe"),
+        &[
+            OsStr::new("/c"),
+            OsStr::new("mklink"),
+            OsStr::new("/J"),
+            OsStr::new(&link_name),
+            OsStr::new(&target_name),
+        ],
+    )
+    .unwrap();
+    let raw = seller::reparse_data(&link).unwrap();
+    assert!(same(
+        &seller::target_path(&root, "node_modules/alias", &raw).unwrap(),
+        &modules.join("package")
+    ));
+    let plan = c.plan(c.id).unwrap();
+    assert_eq!(plan["internal_link_targets"], 1);
+    assert_eq!(plan["destination_external_link_targets"], 1);
+    move_root(&c);
+    assert_eq!(c.finish(c.id).unwrap()["external_link_targets"], 1);
+    assert_eq!(
+        seller::reparse_data(&c.destination().join("files/node_modules/alias")).unwrap(),
+        raw
+    );
+}
+
+#[test]
+fn tampered_move_ticket_keeps_original_receipt_owned() {
+    let c = clone_fixture();
+    c.plan(c.id).unwrap();
+    move_root(&c);
+    let mut bytes = fs::read(c.ticket_path()).unwrap();
+    bytes.push(b' ');
+    fs::write(c.ticket_path(), bytes).unwrap();
+    assert!(matches!(c.finish(c.id), Err("RECOVERY_RECORD_CHANGED")));
+    assert_eq!(c.load(c.id).unwrap().state, "owned");
 }

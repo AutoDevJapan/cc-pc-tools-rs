@@ -17,6 +17,9 @@ use std::{
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
+const REBOOT_REPORT_SHA256: &str =
+    "5b87f8926728c7e692e0ca14d8e02655a2f25474d85fee998eb9c756afd5a5e1";
 const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
@@ -282,6 +285,28 @@ impl Config {
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            REBOOT_ID => {
+                c.id = REBOOT_ID;
+                c.project = "cc-jobs";
+                c.content = "reboot-recovery";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 13229323920896790));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/reboot-job-recovery"),
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work10",
                         ),
                         common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
                     },
@@ -572,6 +597,124 @@ impl Config {
             "entries": ticket.nodes.len(), "destination": dest, "reason": "owned_public_download_git",
             "powershell_command": format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(path), quote(&dest.join("files"))) }),
         )
+    }
+    /// The task wrote its final public PR description after a read-only
+    /// preflight. Permit only that fixed addition before any source movement;
+    /// archive the old intent rather than replacing or discarding its evidence.
+    fn renew_reboot_preflight(&self, id: &str, report_hash: &str) -> Result<serde_json::Value> {
+        if self.id != REBOOT_ID || id != REBOOT_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let r = self.load(id)?;
+        let destination = self.destination();
+        if r.state != "owned" || present(&destination.join("files"))? {
+            return Err("MOVEMENT_ALREADY_STARTED");
+        }
+        let archived = self.ticket_path().with_extension("pre-final-report.json");
+        let ticket_archived = present(&archived)?;
+        let ticket_path = self.ticket_path();
+        let saved = read_record(
+            if ticket_archived {
+                &archived
+            } else {
+                &ticket_path
+            },
+            8 * 1024 * 1024,
+        )?;
+        let old: Ticket = serde_json::from_slice(&saved).map_err(|_| "INVALID_TICKET")?;
+        if old.id != id
+            || old.source != r.identity.path
+            || old.destination != destination.to_string_lossy()
+        {
+            return Err("INVALID_TICKET");
+        }
+        let source = Path::new(&r.identity.path);
+        let nodes = self.validate(&r, source, true)?;
+        let mut comparable = nodes.clone();
+        if old.nodes.contains_key("pr-body-final.txt")
+            || comparable.remove("pr-body-final.txt").is_none()
+        {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let report = read_record(&source.join("pr-body-final.txt"), 64 * 1024)?;
+        if format!("{:x}", Sha256::digest(&report)) != report_hash {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        // Adding the one file changes only the containing root's write time.
+        // Every original file, directory, alias and identity remains exact.
+        comparable.get_mut("").ok_or("INVALID_TICKET")?.written =
+            old.nodes.get("").ok_or("INVALID_TICKET")?.written;
+        if comparable != old.nodes {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let current_backlink = self.prepare_backlink(source, &destination.join("files"))?;
+        match (&old.backlink, &current_backlink) {
+            (None, None) => {}
+            (Some(old), Some(now))
+                if old.original == now.original
+                    && old.replacement == now.replacement
+                    && old.admin.volume == now.admin.volume
+                    && old.admin.file_id == now.admin.file_id
+                    && old.common.volume == now.common.volume
+                    && old.common.file_id == now.common.file_id => {}
+            _ => return Err("INVALID_TICKET"),
+        }
+        let replacement = Ticket {
+            id: id.into(),
+            source: r.identity.path.clone(),
+            destination: old.destination,
+            nodes,
+            backlink: old.backlink,
+        };
+        let replacement_bytes =
+            serde_json::to_vec_pretty(&replacement).map_err(|_| "TICKET_JSON")?;
+        let replacement_published = ticket_archived && present(&self.ticket_path())?;
+        if replacement_published {
+            write_or_verify(&self.ticket_path(), &replacement_bytes, 8 * 1024 * 1024)?;
+        }
+        let reason = destination.join("理由.txt");
+        let archived_reason = destination.with_extension("pre-final-report.reason.txt");
+        let reason_archived = present(&archived_reason)?;
+        if reason_archived && !ticket_archived {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_reason = if reason_archived {
+            &archived_reason
+        } else {
+            &reason
+        };
+        checked(old_reason)?;
+        let reason_node = node(old_reason)?;
+        if reason_node.attributes & (REPARSE | 0x10) != 0 || reason_node.links != 1 {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_bytes: u64 = old
+            .nodes
+            .values()
+            .filter(|n| n.attributes & 0x10 == 0)
+            .map(|n| n.size)
+            .sum();
+        let expected_reason = format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {old_bytes} byte\n理由: 所有一時データのGit保護による退避停止。\n仕様に固定した取得物・成果保存・リンクを確認し、Gitを含む全内容を保持する。\n所有ID: {}\n",
+            r.identity.path, self.id
+        );
+        if read_record(old_reason, 64 * 1024)? != expected_reason.as_bytes() {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if reason_archived && present(&reason)? && !replacement_published {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if self.validate(&r, source, true)? != replacement.nodes {
+            return Err("SOURCE_CHANGED_DURING_PREFLIGHT");
+        }
+        if !ticket_archived {
+            fs::rename(self.ticket_path(), &archived).map_err(|_| "PREFLIGHT_ARCHIVE_FAILED")?;
+        }
+        if !reason_archived {
+            fs::rename(&reason, &archived_reason).map_err(|_| "PREFLIGHT_REASON_ARCHIVE_FAILED")?;
+        }
+        publish_proof(&self.ticket_path(), &replacement_bytes)?;
+        self.plan(id)
     }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
         if self.id == scoopa::ID {
@@ -1281,6 +1424,9 @@ fn run() -> Result<serde_json::Value> {
     match args[0].as_str() {
         "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
+        "renew-plan" if c.id == REBOOT_ID => {
+            c.renew_reboot_preflight(&args[2], REBOOT_REPORT_SHA256)
+        }
         "finish" => c.finish(&args[2]),
         _ => Err("INVALID_ACTION"),
     }
@@ -1297,6 +1443,201 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reboot_renewal_resumes_every_publication_boundary_and_preserves_archives() {
+        for stage in ["ticket", "reason", "staging", "published", "complete"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            let reason = c.destination().join("理由.txt");
+            let old_reason = fs::read(&reason).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            let mut replacement: Ticket = serde_json::from_slice(&old).unwrap();
+            replacement.nodes = c
+                .validate(&c.load(c.id).unwrap(), &source(&c), true)
+                .unwrap();
+            let bytes = serde_json::to_vec_pretty(&replacement).unwrap();
+            fs::rename(c.ticket_path(), &archived).unwrap();
+            if stage != "ticket" {
+                fs::rename(&reason, &archived_reason).unwrap();
+            }
+            let unpublished = c.ticket_path().with_extension("proof-writing-interrupted");
+            if stage == "staging" {
+                write_new(&unpublished, b"partial unpublished record").unwrap();
+            }
+            if matches!(stage, "published" | "complete") {
+                publish_proof(&c.ticket_path(), &bytes).unwrap();
+            }
+            if stage == "complete" {
+                c.plan(c.id).unwrap();
+            }
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            assert_eq!(fs::read(&archived).unwrap(), old, "{stage}");
+            assert_eq!(fs::read(&archived_reason).unwrap(), old_reason, "{stage}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), bytes, "{stage}");
+            if stage == "staging" {
+                assert_eq!(
+                    fs::read(unpublished).unwrap(),
+                    b"partial unpublished record"
+                );
+            }
+            fs::rename(source(&c), c.destination().join("files")).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn reboot_renewal_rejects_changed_archives_and_published_replacement() {
+        for change in ["archive", "reason", "new-ticket", "reason-link"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            match change {
+                "archive" => fs::write(&archived, b"{}").unwrap(),
+                "reason" => fs::write(&archived_reason, b"changed").unwrap(),
+                "new-ticket" => fs::write(c.ticket_path(), b"{}").unwrap(),
+                "reason-link" => {
+                    fs::hard_link(&archived_reason, c.destination().join("alias")).unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let before = fs::read(&archived).unwrap();
+            let reason_before = fs::read(&archived_reason).unwrap();
+            let ticket_before = fs::read(c.ticket_path()).unwrap();
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(&archived).unwrap(), before);
+            assert_eq!(fs::read(&archived_reason).unwrap(), reason_before);
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), ticket_before);
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_final_report_renewal_preserves_old_intent_and_moves_only_after_validation() {
+        let c = fixture_for(REBOOT_ID);
+        c.plan(c.id).unwrap();
+        let old = fs::read(c.ticket_path()).unwrap();
+        fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+        assert!(matches!(c.plan(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        let hash = format!("{:x}", Sha256::digest(b"final public report"));
+        c.renew_reboot_preflight(c.id, &hash).unwrap();
+        assert_eq!(
+            fs::read(c.ticket_path().with_extension("pre-final-report.json")).unwrap(),
+            old
+        );
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(
+            c.renew_reboot_preflight(c.id, &hash),
+            Err("MOVEMENT_ALREADY_STARTED")
+        ));
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn reboot_renewal_rejects_any_other_artifact_or_modified_original() {
+        for change in ["wrong-report", "extra-artifact", "modified-original"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            match change {
+                "wrong-report" => {
+                    fs::write(source(&c).join("pr-body-final.txt"), b"unexpected").unwrap()
+                }
+                "extra-artifact" => {
+                    fs::write(source(&c).join("unrelated.txt"), b"different").unwrap()
+                }
+                "modified-original" => {
+                    fs::write(source(&c).join("work/source.txt"), b"changed").unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), old);
+            assert!(
+                !c.ticket_path()
+                    .with_extension("pre-final-report.json")
+                    .exists()
+            );
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = super::Config::production(super::REBOOT_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "reboot-recovery");
+        assert_eq!(
+            config.pinned_identity,
+            Some((2229119083, 13229323920896790))
+        );
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/reboot-job-recovery")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(super::Config::production("464577ad28cdf40461bb04a301f7e8e8").is_err());
+    }
+    #[test]
+    fn reboot_profile_moves_its_worktree_without_losing_git_or_receipt_identity() {
+        let c = fixture_for(REBOOT_ID);
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        let old = source(&c);
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!old.exists());
+    }
+    #[test]
+    fn reboot_profile_rejects_dirty_unpushed_or_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(REBOOT_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.file_id += 1;
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
     use super::*;
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};

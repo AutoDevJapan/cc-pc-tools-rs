@@ -382,7 +382,7 @@ fn evidence(
             && prompt.contains(&explicit_quote);
         let operator_confirmed =
             s(&receipt["handled_by"]) == jid && s(&receipt["handled_via"]) == "manual-confirmation";
-        let read = crate::steering::reply_seen_in_job(ctx, &jid, tid, message, operator_confirmed)?;
+        let read = crate::steering::exact_reply_read(ctx, &jid, tid, message, operator_confirmed)?;
         let events_path = root.join("events.jsonl");
         let events = if events_path.is_file() {
             use std::io::{BufRead, BufReader};

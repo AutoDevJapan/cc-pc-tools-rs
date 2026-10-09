@@ -234,6 +234,54 @@ fn operator_confirmed_read_still_requires_exact_successful_event() {
         1
     );
 }
+
+#[test]
+fn command_shaped_started_event_and_other_completed_message_do_not_prove_read() {
+    let mut h = harness();
+    let root = h.ctx.jobs.join("jobs").join("worker");
+    std::fs::create_dir_all(&root).unwrap();
+    atomic_json(
+        &root.join("job.json"),
+        &json!({"id":"worker","status":"running","discord_thread_id":"100"}),
+        2,
+    )
+    .unwrap();
+    let started = json!({"type":"item.started","item":{"type":"command_execution","command":"discord_ask.exe replies --thread 100","exit_code":0,"aggregated_output":json!([{"thread_id":"100","replies":[{"id":"100"}]}]).to_string()}});
+    let completed =
+        json!({"type":"item.completed","item":{"type":"agent_message","text":"other work"}});
+    std::fs::write(
+        root.join("events.jsonl"),
+        format!("{started}\n{completed}\n"),
+    )
+    .unwrap();
+    h.save(&json!({"questions":[],"requests":{},"answer_receipts":{"100":{"thread":"100","handled_by":"worker"}}}));
+    let args = Args {
+        output: h.root.path().join("audit.json"),
+        limit: 10,
+        capture: false,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    assert_eq!(
+        history_audit::run(&mut h.ctx, &args).unwrap()["unproven_delivery"],
+        1
+    );
+}
+
+#[test]
+fn strict_read_rejects_matching_text_and_time_with_a_different_message_id() {
+    let h = harness();
+    let root = h.ctx.jobs.join("jobs").join("worker");
+    std::fs::create_dir_all(&root).unwrap();
+    let message = message("100", "same answer", "OWN");
+    let mut other = message.clone();
+    other["id"] = json!("999");
+    let event = json!({"type":"item.completed","item":{"type":"command_execution","command":"discord_ask.exe replies --thread 100","exit_code":0,"aggregated_output":json!([{"thread_id":"100","replies":[other]}]).to_string()}});
+    std::fs::write(root.join("events.jsonl"), format!("{event}\n")).unwrap();
+    assert!(!cc_ask::steering::exact_reply_read(&h.ctx, "worker", "100", &message, false).unwrap());
+    assert!(cc_ask::steering::reply_seen_in_job(&h.ctx, "worker", "100", &message, false).unwrap());
+}
 fn harness() -> Harness {
     let mut h = Harness::new();
     h.ctx.effects = Box::new(Guarded(Box::new(SharedFake(h.fake.clone()))));

@@ -369,6 +369,29 @@ pub fn reply_seen_in_job(
     message: &Value,
     inspection: bool,
 ) -> Result<bool> {
+    reply_event_in_job(ctx, jid, tid, message, inspection, false)
+}
+
+/// Audit evidence must be a completed native command event, not a receipt or
+/// an arbitrary JSON item carrying a command-shaped payload.
+pub fn exact_reply_read(
+    ctx: &Context,
+    jid: &str,
+    tid: &str,
+    message: &Value,
+    inspection: bool,
+) -> Result<bool> {
+    reply_event_in_job(ctx, jid, tid, message, inspection, true)
+}
+
+fn reply_event_in_job(
+    ctx: &Context,
+    jid: &str,
+    tid: &str,
+    message: &Value,
+    inspection: bool,
+    strict_event: bool,
+) -> Result<bool> {
     let path = ctx.jobs.join("jobs").join(jid).join("events.jsonl");
     if !path.is_file() {
         return Ok(false);
@@ -382,6 +405,11 @@ pub fn reply_seen_in_job(
             continue;
         };
         let item = &event["item"];
+        if strict_event
+            && (event["type"] != "item.completed" || item["type"] != "command_execution")
+        {
+            continue;
+        }
         let command = s(&item["command"]);
         if item["exit_code"] != 0
             || !(command.contains("replies") || (inspection && command.contains("post")))
@@ -416,6 +444,9 @@ pub fn reply_seen_in_job(
                 if record["replies"].as_array().into_iter().flatten().any(|r| {
                     if r["id"] == message["id"] {
                         return true;
+                    }
+                    if strict_event {
+                        return false;
                     }
                     let parse = |v: &Value| {
                         chrono::DateTime::parse_from_rfc3339(s(v))

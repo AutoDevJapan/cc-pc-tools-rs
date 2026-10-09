@@ -1565,21 +1565,86 @@ pub fn reply_reserved(state: &Value, message: &str) -> bool {
 
 /// A supervisor accepting a job does not mean Codex accepted its input.
 pub fn job_started(ctx: &Context, jid: &str) -> bool {
+    job_start_evidence(ctx, jid).unwrap_or(false)
+}
+
+fn job_start_evidence(ctx: &Context, jid: &str) -> Result<bool> {
     let job = job_info(ctx, jid);
-    n(&job["steps"]) > 0
+    if n(&job["steps"]) > 0
         || truth(&job["turn_completed"])
-        || s(&job["activity"]) == "thinking"
         || (s(&job["status"]) == "succeeded" && !final_message(ctx, jid).trim().is_empty())
-        || {
-            use std::io::Read;
-            let mut events = Vec::new();
-            std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl"))
-                .is_ok_and(|file| file.take(65536).read_to_end(&mut events).is_ok())
-                && events
-                    .split(|byte| *byte == b'\n')
-                    .filter_map(|line| serde_json::from_slice::<Value>(line).ok())
-                    .any(|event| s(&event["type"]) == "turn.started")
+    {
+        return Ok(true);
+    }
+    use std::io::{BufRead, BufReader};
+    let file = match std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl")) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(_) => return Err("worker events unavailable".into()),
+    };
+    for line in BufReader::new(file).lines() {
+        let line = line.map_err(|_| "worker events unavailable")?;
+        if line.trim().is_empty() {
+            continue;
         }
+        let event: Value = serde_json::from_str(&line).map_err(|_| "invalid worker events")?;
+        // Local turn.started does not prove API input acceptance. Scan to the
+        // end so a large earlier record cannot hide a dispatched side effect.
+        if event["type"] == "turn.completed"
+            || (event["type"] == "item.completed"
+                && [
+                    "agent_message",
+                    "command_execution",
+                    "mcp_tool_call",
+                    "file_change",
+                    "reasoning",
+                ]
+                .contains(&s(&event["item"]["type"])))
+            || (event["type"] == "item.started"
+                && ["command_execution", "mcp_tool_call", "file_change"]
+                    .contains(&s(&event["item"]["type"])))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn restore_unstarted_reply(state: &mut Value, id: &str, tid: &str, jid: &str, job: &Value) {
+    let Some(message) = id.parse::<u64>().ok().filter(|id| *id > 0) else {
+        return;
+    };
+    if let Some(questions) = state["questions"].as_array_mut() {
+        for question in questions {
+            let baseline = n(&question["after"]);
+            if s(&question["thread_id"]) != tid
+                || s(&question["continuation"]["job"]) != jid
+                || message <= baseline
+            {
+                continue;
+            }
+            let cursor = message.saturating_sub(1).max(baseline);
+            if n(&question["continuation"]["after"]) >= message {
+                question["continuation"]["after"] = json!(cursor.to_string());
+            }
+            if n(&question["seen_reply"]) >= message {
+                question["seen_reply"] = json!(cursor.to_string());
+            }
+            question["continuation"]["job_info"] = job.clone();
+            // Do not reopen a stopped/completed question or change its generation.
+        }
+    }
+    if let Some(request) = state
+        .get_mut("requests")
+        .and_then(Value::as_object_mut)
+        .and_then(|requests| requests.get_mut(tid))
+        .filter(|request| s(&request["job"]) == jid && message > n(&json!(tid)))
+    {
+        if n(&request["after"]) >= message {
+            request["after"] = json!(message.saturating_sub(1).to_string());
+        }
+        request["job_info"] = job.clone();
+    }
 }
 
 pub fn record_launch_delivery(ctx: &Context, state: &mut Value, id: &str, tid: &str, jid: &str) {
@@ -1613,8 +1678,7 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
         };
         if !valid_job(jid)
             || truth(&receipt["read_by"])
-            || truth(&receipt["launch_confirmed"])
-            || s(&receipt["handled_via"]) == "replies-event"
+            || ["replies-event", "manual-confirmation"].contains(&s(&receipt["handled_via"]))
         {
             continue;
         }
@@ -1626,9 +1690,16 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
         // An unreadable record is not evidence that the supervisor stopped.
         read_json(&path)?;
         let job = job_info(ctx, jid);
-        if job_started(ctx, jid) {
-            changed = true;
-            state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+        let Ok(started) = job_start_evidence(ctx, jid) else {
+            // Unknown evidence preserves this reservation; one incomplete
+            // stream must not prevent recovery of other independent replies.
+            continue;
+        };
+        if started {
+            if receipt["launch_confirmed"] != true {
+                changed = true;
+                state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+            }
             if truth(&receipt["launch_job"]) {
                 changed = true;
                 state["answer_receipts"][&id]["handled_by"] = json!(jid);
@@ -1650,6 +1721,9 @@ fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
             let entry = state["answer_receipts"][&id].as_object_mut().unwrap();
             entry.remove("launch_job");
             entry.remove("handled_by");
+            entry.remove("launch_confirmed");
+            entry.insert("failed_launch_job".into(), json!(jid));
+            restore_unstarted_reply(state, &id, s(&receipt["thread"]), jid, &job);
         }
     }
     if changed {

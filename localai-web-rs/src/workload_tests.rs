@@ -541,12 +541,12 @@ fn arbitrary_worktree_uses_git_common_directory_without_subprocesses() {
     )
     .unwrap();
     assert_eq!(
-        normalize(&repository_root(&checkout.join("src")).unwrap()),
-        normalize(&root.to_string_lossy())
+        fs::canonicalize(repository_root(&checkout.join("src")).unwrap()).unwrap(),
+        fs::canonicalize(&root).unwrap()
     );
     assert_eq!(
-        normalize(&repository_root(&root).unwrap()),
-        normalize(&root.to_string_lossy())
+        fs::canonicalize(repository_root(&root).unwrap()).unwrap(),
+        fs::canonicalize(&root).unwrap()
     );
 }
 #[test]
@@ -645,12 +645,10 @@ fn old_summary_is_removed_when_inputs_change_or_disappear() {
     c.days.get_mut("2026-10-01").unwrap()[0].results.clear();
     apply_summaries(&mut c);
     assert_eq!(c.days["2026-10-01"][0].summary_source, "titles");
-    assert!(
-        !c.days["2026-10-01"][0]
-            .summary
-            .iter()
-            .any(|l| l.text == "画面を追加しました。")
-    );
+    assert!(!c.days["2026-10-01"][0]
+        .summary
+        .iter()
+        .any(|l| l.text == "画面を追加しました。"));
 }
 #[test]
 fn excluded_registration_protects_unrelated_directory_names() {
@@ -959,11 +957,9 @@ fn end_to_end_excluded_job_never_enters_cache_or_summary() {
         at("2026-10-02T00:05:00+09:00"),
     );
     assert!(c.days.is_empty());
-    assert!(
-        !serde_json::to_string(&c)
-            .unwrap()
-            .contains("imaginary-client-product")
-    );
+    assert!(!serde_json::to_string(&c)
+        .unwrap()
+        .contains("imaginary-client-product"));
 }
 #[tokio::test]
 async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {

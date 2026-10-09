@@ -1,7 +1,7 @@
 //! Bounded calls to the PC's loopback Ollama for light text work.
 //! llm-jp is the main model; gemma3:4b only runs when llm-jp gives no usable
 //! answer. Callers always keep a deterministic fallback for `None`.
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 
 pub const MAIN: &str = "llm-jp-4-8b-thinking:latest";

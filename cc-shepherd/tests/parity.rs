@@ -1,6 +1,6 @@
 use cc_scheduler::common::*;
 use cc_shepherd::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{fs, path::Path};
 struct Fake {
     calls: Vec<Vec<String>>,
@@ -134,11 +134,10 @@ fn explicit_main_worker_suppresses_only_its_pr_across_worktrees() {
         ["AutoDevJapan/civ6-banseiki#87"]
     );
     // An adopted live worker needs no spare checkout of its public branch.
-    assert!(
-        b.calls
-            .iter()
-            .all(|c| !c.iter().any(|s| s == "feat/leaderperson"))
-    );
+    assert!(b
+        .calls
+        .iter()
+        .all(|c| !c.iter().any(|s| s == "feat/leaderperson")));
 }
 
 #[test]
@@ -175,12 +174,10 @@ fn adopted_worker_completion_returns_to_existing_cooldown() {
         prs: json!([{"number":86,"headRefName":"feat/leaderperson","url":"u"}]),
         ..Default::default()
     };
-    assert!(
-        candidates(&mut b, &repos(), &jobs, &state, 1500.)
-            .unwrap()
-            .0
-            .is_empty()
-    );
+    assert!(candidates(&mut b, &repos(), &jobs, &state, 1500.)
+        .unwrap()
+        .0
+        .is_empty());
     assert_eq!(
         candidates(&mut b, &repos(), &jobs, &state, 3000.)
             .unwrap()
@@ -462,12 +459,10 @@ fn missing_wait_target_keeps_the_pr_suppressed() {
         todo: json!({"items":[{"id":10,"status":"todo","wait_on":[99],"note":"https://github.com/o/r/pull/1"}]}),
         ..Default::default()
     };
-    assert!(
-        candidates(&mut b, &repo(), &[], &json!({}), 10.)
-            .unwrap()
-            .0
-            .is_empty()
-    );
+    assert!(candidates(&mut b, &repo(), &[], &json!({}), 10.)
+        .unwrap()
+        .0
+        .is_empty());
 }
 
 #[test]
@@ -532,20 +527,16 @@ fn released_dependency_bypasses_rest_once() {
     assert_eq!(ready[0]["dependency_ids"], json!([10]));
     // Once a shepherd was launched for that release the marker no longer bypasses the rest period.
     let used = json!({"o/r#2":{"job":"old","ended":4500,"dependency_consumed":["10:0"]}});
-    assert!(
-        candidates(&mut b, &repo(), &jobs, &used, 4600.)
-            .unwrap()
-            .0
-            .is_empty()
-    );
+    assert!(candidates(&mut b, &repo(), &jobs, &used, 4600.)
+        .unwrap()
+        .0
+        .is_empty());
     // Without any marker the owner-decision rest still applies.
     b.todo = json!({"items":[]});
-    assert!(
-        candidates(&mut b, &repo(), &jobs, &rest, 4600.)
-            .unwrap()
-            .0
-            .is_empty()
-    );
+    assert!(candidates(&mut b, &repo(), &jobs, &rest, 4600.)
+        .unwrap()
+        .0
+        .is_empty());
 }
 
 fn one_pr_fake(todo: Value) -> Fake {

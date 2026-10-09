@@ -22,8 +22,8 @@ pub fn unspecified(item: &Value) -> bool {
 pub fn linked(item: &Value, job: &Value) -> bool {
     (item["id"].is_number() && arr(&job["related_todo_ids"]).contains(&item["id"]))
         || (item["id"].is_number()
-        && item["id"] == job["todo_id"]
-        && (s(&job["project"]).is_empty() || item["project"] == job["project"]))
+            && item["id"] == job["todo_id"]
+            && (s(&job["project"]).is_empty() || item["project"] == job["project"]))
         || (!s(&job["id"]).is_empty()
             && (arr(&item["jobs"]).contains(&job["id"]) || item["scheduler"]["job"] == job["id"]))
         || (!s(&job["thread_id"]).is_empty() && arr(&item["jobs"]).contains(&job["thread_id"]))

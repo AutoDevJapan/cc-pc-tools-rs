@@ -21,15 +21,15 @@ planは全一覧を2回照合し、名前・通常ファイルのメタデータ
 
 2126は完了した停止・DB片付け・Chrome閉鎖を繰り返さない。親2109はこの復旧がdoneになってから元担当のworktreeで再開し、自身で完了を記録する。
 
-### 2126の実物検査後の追加案（限定許可の確認前はplanを適用しない）
+### 2126の実物検査後の保持条件
 
-PR67の実物planは、PNPMの通常ファイルが別の名前でも共有されているため `HARD_LINK` で停止した。元データと所有記録は保持され、退避票と移動先は作られていない。105相対リンクのうち84件は内部の実ディレクトリーを参照し、20件は内部の欠けた依存先を参照していた。残り1件 `frontend-runtime/node_modules/.pnpm/node_modules/scoopa-frontend` は元担当2109の画面ソースを参照している。依頼の外部リンク拒否条件と異なるため、この1件をそのまま保持する限定許可が必要である。
+PR67の実物planは、PNPMの通常ファイルが別の名前でも共有されているため `HARD_LINK` で停止した。元データと所有記録は保持され、退避票と移動先は作られていない。105相対リンクのうち84件は内部の実ディレクトリーを参照し、20件は内部の欠けた依存先を参照していた。残り1件 `frontend-runtime/node_modules/.pnpm/node_modules/scoopa-frontend` は元担当2109の画面ソースを参照している。親担当が追加した外部リンク拒否の技術条件は、この固定参照を変更せず保持する方法へ見直した。参照先には一切触れない。
 
 この追加案は所有ID80b350だけを扱う。共有された通常ファイルは `.pnpm` 配下のものだけを受理し、全名前のFileID、サイズ、リンク数、属性、更新時刻、所有者・グループ・DACLの指紋と、root内の別名数を保存する。外部の別名は数だけを推定し、名前や内容を取得しない。リンク自身は引き続きリンク数1を要求する。欠けた内部依存先は、既存の祖先が実ディレクトリーである場合だけ、欠けた状態を保持する。移動の前後で全項目とACLが一致しなければfinishしない。
 
 元担当への参照は、リンク自身の固定した名前と生の相対ターゲット、固定した参照先の文字列が一致する場合だけを候補とする。移動先での字句上の参照先も同じになることをplan前に確認する。参照先を開かず、元担当のworktreeへ入らない。その他の外部・絶対リンクやリンクを経由する参照先は拒否する。一般のscannerと通常のsafe-deleteの条件は変更しない。
 
-`inspect --id 80b350ade8bb05cd61ab94f7485d09cc` はメタデータだけを検査し、所有記録・退避票・移動先を作らず、Move-Item命令も返さない。出力の `requires_fixed_project_alias_approval` がtrueなら、この提案を承認するまで実物のplan・移動は行わない。既存の所有記録に独自の項目は増やさず、保持した別名と参照先の件数はfinishの結果と理由.txtに記録する。
+`inspect --id 80b350ade8bb05cd61ab94f7485d09cc` はメタデータだけを検査し、所有記録・退避票・移動先を作らず、Move-Item命令も返さない。出力の `fixed_project_aliases_present` は固定参照の有無を示す。保存方式はコードに固定し、この所有IDだけで有効にする。実行時の切替機能はない。未設定の試験構成は `PROJECT_ALIAS_PRESERVATION_DISABLED` で停止する。既存の所有記録に独自の項目は増やさず、保持した別名と参照先の件数はfinishの結果と理由.txtに記録する。
 
 一次資料: [GetSecurityInfo](https://learn.microsoft.com/windows/win32/api/aclapi/nf-aclapi-getsecurityinfo)、[MoveFileExW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw)。セキュリティ記述子はREAD_CONTROLで取得し、返された領域をLocalFreeで解放する。設定や継承の再適用は行わない。
 

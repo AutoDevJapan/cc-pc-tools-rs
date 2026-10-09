@@ -209,7 +209,7 @@ impl Config {
                 c.pinned_identity = Some((2229119083, 9851624200190911));
                 c.repos.clear();
                 c.project_alias_target = Some(PathBuf::from(scoopa::PROJECT_TARGET));
-                // Preserve the already-owned project reference without entering its target.
+                // Preserve the owned link itself; its target is neither opened nor owned.
                 c.project_alias_preservation_enabled = true;
             }
             ID => (),
@@ -1427,6 +1427,7 @@ mod tests {
         ));
         fs::create_dir(&base).unwrap();
         let mut c = Config::production(id).unwrap();
+        c.project_alias_preservation_enabled = false;
         if let Some(guard) = std::env::var_os("SAFE_DELETE_TEST_GUARD") {
             c.guard = guard.into();
         }
@@ -1888,9 +1889,16 @@ mod tests {
             Err("PROJECT_ALIAS_PRESERVATION_DISABLED")
         ));
         assert!(!c.ticket_path().exists());
-        c.project_alias_preservation_enabled = true; // Test-only preservation switch; no runtime override exists.
+        c.project_alias_preservation_enabled = true; // Re-enable preservation for this explicitly disabled fixture.
         c.plan(scoopa::ID).unwrap();
         move_scoopa_fixture(&c);
+        c.project_alias_preservation_enabled = false;
+        assert!(matches!(
+            c.finish(scoopa::ID),
+            Err("PROJECT_ALIAS_PRESERVATION_DISABLED")
+        ));
+        assert_eq!(c.load(scoopa::ID).unwrap().state, "owned");
+        c.project_alias_preservation_enabled = true;
         assert_eq!(
             c.finish(scoopa::ID).unwrap()["preservation"]["fixed_project_aliases"],
             1
@@ -1956,6 +1964,31 @@ mod tests {
             )
             .unwrap()
         );
+    }
+    #[test]
+    fn production_enables_fixed_project_preservation_only_for_scoopa() {
+        for id in [
+            ID,
+            "76005ef45fe612479fd920447642497e",
+            "38e3fbc1767b66eef9127f2a27567c8a",
+            "438ee7d343a6c84558201e2778d2c890",
+            "cfee3edefd3704d67c140ca6952dd7ce",
+            "75cd71384cb094e47b19cf5d39b5b025",
+            CARGO_ID,
+            scoopa::ID,
+        ] {
+            assert_eq!(
+                Config::production(id)
+                    .unwrap()
+                    .project_alias_preservation_enabled,
+                id == scoopa::ID,
+                "{id}"
+            );
+        }
+        assert!(matches!(
+            Config::production("00000000000000000000000000000000"),
+            Err("SCOPE_NOT_AUTHORIZED")
+        ));
     }
     #[test]
     fn receipt_digest_matches_go_and_tampering_is_rejected() {

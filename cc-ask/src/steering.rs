@@ -692,11 +692,11 @@ fn todo_scope(db: &Value, source: &mut Value, selection: &Value) {
 }
 
 fn todo_db(ctx: &Context) -> Result<Value> {
-    if ctx.todo.is_file() {
-        read_json(&ctx.todo)
-    } else {
-        Ok(json!({}))
+    let db = read_json(&ctx.todo)?;
+    if !db["items"].is_array() {
+        return Err("invalid ToDo store items".into());
     }
+    Ok(db)
 }
 
 fn wait_on(db: &Value, source: &Value, remembered: &Value) -> Vec<i64> {

@@ -1212,11 +1212,9 @@ impl Context {
         let lock = self.job_lock(&a.id, "state.lock")?;
         let mut job = self.load(&a.id)?;
         let todo = FileLock::acquire(&store.with_file_name("todo.lock"))?;
-        let db: Value = match fs::read(&store) {
-            Ok(bytes) => serde_json::from_slice(&bytes)?,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => json!({"items":[]}),
-            Err(error) => return Err(error.into()),
-        };
+        // An unavailable managed store cannot prove that the source is ready.
+        // Keep the source unchanged until its dependencies can be checked.
+        let db: Value = serde_json::from_slice(&fs::read(&store)?)?;
         if !db["items"].is_array() {
             return Err(Error::new("invalid ToDo store items"));
         }

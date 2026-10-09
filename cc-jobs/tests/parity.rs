@@ -6194,6 +6194,21 @@ mod cancel {
         assert_eq!(t.ctx.load("source").unwrap(), j);
     }
     #[test]
+    fn guarded_missing_todo_store_never_commits_cancellation() {
+        for status in ["queued", "running", "succeeded"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            fs::remove_file(&store).unwrap();
+            t.put(job(json!({"id":"source","status":status,"todo_id":2073})));
+            let file = t.ctx.job_dir("source").join("job.json");
+            let before = fs::read(&file).unwrap();
+            assert!(guarded(&t, "source", &store, "attempt").0.is_err());
+            assert_eq!(fs::read(&file).unwrap(), before);
+            assert!(t.ctx.load("source").unwrap()["recovery_cancel"].is_null());
+            assert!(!store.exists());
+        }
+    }
+    #[test]
     fn native_guarded_cancellation_defers_without_refreshing_or_rewriting_source() {
         let tmp = Temp::new();
         let exe = tmp

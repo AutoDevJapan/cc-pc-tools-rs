@@ -52,6 +52,42 @@ fn question(h: &Harness) {
     state["questions"] = json!([{"thread_id":"100","after":"100","title":"依頼A","project":"テスト","open":true,"continuation":{"job":"job1","after":"100","selection":{"model":"gpt-6.1-sol","effort":"max"}}}]);
     h.save(&state);
 }
+#[test]
+fn unavailable_todo_store_keeps_each_source_and_reply_unprocessed() {
+    for status in ["queued", "running", "succeeded"] {
+        for missing in [true, false] {
+            let mut h = Harness::new();
+            h.tick();
+            source(&h, 10);
+            h.finish("job1", status, None, None);
+            let mid = h.reply("保存された待ち先を確認してから反映して", "100");
+            if missing {
+                std::fs::remove_file(&h.ctx.todo).unwrap();
+            } else {
+                std::fs::write(&h.ctx.todo, "{}").unwrap();
+            }
+            let mut state = h.state();
+            let mut record = state["requests"]["100"].clone();
+            let thread = h.fake.borrow().threads["100"].clone();
+            assert!(cc_ask::steering::deliver(
+                &mut h.ctx,
+                &mut state,
+                &thread,
+                &mut record,
+                cc_ask::restart::Slot::Request,
+                "OWN",
+                &mut false
+            )
+            .is_err());
+            assert_eq!(h.fake.borrow().launches.len(), 1);
+            assert_eq!(job_info(&h.ctx, "job1")["status"], status);
+            assert_eq!(record["after"], "100");
+            assert!(record["owner_update"].is_null());
+            assert!(state["answer_receipts"][&mid]["handled_by"].is_null());
+            assert!(state["answer_receipts"][&mid]["launch_job"].is_null());
+        }
+    }
+}
 fn run(h: &mut Harness, question: bool) {
     if question {
         cc_ask::resume::cmd_resume(&mut h.ctx, &mut false).unwrap();

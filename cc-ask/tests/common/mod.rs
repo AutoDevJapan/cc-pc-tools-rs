@@ -64,6 +64,12 @@ impl Harness {
         };
         let path = root.path().to_path_buf();
         std::fs::write(path.join("client-projects.txt"), "").unwrap();
+        atomic_json(
+            &path.join("todo.json"),
+            &json!({"items":[],"projects":{}}),
+            2,
+        )
+        .unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
             recover_fail: false,

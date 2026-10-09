@@ -357,7 +357,7 @@ fn dependency_release_preserves_other_writer_and_scheduler_reservation_priority(
     }
 }
 
-struct WaitDuringCancellation(SharedFake);
+struct WaitDuringCancellation(SharedFake, bool);
 impl Effects for WaitDuringCancellation {
     fn now(&self) -> f64 {
         self.0.now()
@@ -366,21 +366,70 @@ impl Effects for WaitDuringCancellation {
         self.0.http(m, u, b, d)
     }
     fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
-        let out = self.0.run(args, timeout)?;
-        if args.iter().any(|arg| arg == "cancel") {
+        if !self.1 && args.iter().any(|arg| arg == "cancel") {
+            self.1 = true;
             let path = self.0 .0.borrow().root.join("todo.json");
+            let _todo =
+                ByteLock::acquire(&path.with_file_name("todo.lock"), std::time::Duration::ZERO)?;
             let mut db = read_json(&path)?;
             db["items"][0]["wait_on"] = json!([32, 33]);
             db["items"][1]["status"] = json!("todo");
             db["items"][2]["status"] = json!("todo");
             atomic_json(&path, &db, 2)?;
         }
-        Ok(out)
+        self.0.run(args, timeout)
     }
 }
 
 #[test]
 fn dependency_added_after_reservation_is_checked_again_before_launch() {
+    for q in [false, true] {
+        for status in ["queued", "running", "succeeded"] {
+            let mut h = Harness::new();
+            h.tick();
+            source(&h, 10);
+            if q {
+                question(&h);
+            }
+            h.finish("job1", status, None, None);
+            let original = job_info(&h.ctx, "job1");
+            dependency_db(&h, "jobs", "done");
+            complete_dependencies(&h);
+            h.ctx.effects = Box::new(WaitDuringCancellation(SharedFake(h.fake.clone()), false));
+            let mid = h.reply("起動直前に依存が追加されるテスト", "100");
+            deliver_direct(&mut h, q);
+            assert_eq!(h.fake.borrow().launches.len(), 1);
+            assert_eq!(
+                job_info(&h.ctx, "job1"),
+                original,
+                "wait registered before cancellation must preserve the source"
+            );
+            let st = h.state();
+            let e = if q {
+                &st["questions"][0]["continuation"]
+            } else {
+                &st["requests"]["100"]
+            };
+            assert_eq!(e["work_wait_on"], json!([32, 33]));
+            assert!(e["owner_update"].is_object());
+            assert_eq!(e["after"], "100");
+            assert_eq!(
+                e["owner_update"]["messages"][0]["content"],
+                "起動直前に依存が追加されるテスト"
+            );
+            assert_eq!(st["answer_receipts"][&mid]["posted"], true);
+            assert!(!truth(&st["answer_receipts"][&mid]["launch_job"]));
+            assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
+            complete_dependencies(&h);
+            deliver_direct(&mut h, q);
+            deliver_direct(&mut h, q);
+            assert_eq!(h.fake.borrow().launches.len(), 2);
+        }
+    }
+}
+
+#[test]
+fn deliberate_stop_during_pending_update_keeps_reply_and_does_not_launch() {
     for q in [false, true] {
         let mut h = Harness::new();
         h.tick();
@@ -388,11 +437,17 @@ fn dependency_added_after_reservation_is_checked_again_before_launch() {
         if q {
             question(&h);
         }
-        dependency_db(&h, "jobs", "done");
-        complete_dependencies(&h);
-        h.ctx.effects = Box::new(WaitDuringCancellation(SharedFake(h.fake.clone())));
-        let mid = h.reply("起動直前に依存が追加されるテスト", "100");
-        deliver_direct(&mut h, q);
+        let mid = h.reply("本人の停止後は起動しないテスト", "100");
+        h.fake.borrow_mut().crash_before_launch = true;
+        assert!(catch_unwind(AssertUnwindSafe(|| deliver_direct(&mut h, q))).is_err());
+        let path = h.ctx.jobs.join("jobs/job1/job.json");
+        let mut source = read_json(&path).unwrap();
+        source["cancel_requested"] = json!(true);
+        atomic_json(&path, &source, 2).unwrap();
+        for _ in 0..2 {
+            deliver_direct(&mut h, q);
+        }
+        assert_eq!(read_json(&path).unwrap(), source);
         assert_eq!(h.fake.borrow().launches.len(), 1);
         let st = h.state();
         let e = if q {
@@ -400,14 +455,13 @@ fn dependency_added_after_reservation_is_checked_again_before_launch() {
         } else {
             &st["requests"]["100"]
         };
-        assert_eq!(e["work_wait_on"], json!([32, 33]));
-        assert!(e["owner_update"].is_object());
         assert_eq!(e["after"], "100");
+        assert_eq!(
+            e["owner_update"]["messages"][0]["content"],
+            "本人の停止後は起動しないテスト"
+        );
+        assert_eq!(st["answer_receipts"][&mid]["posted"], true);
         assert!(!truth(&st["answer_receipts"][&mid]["handled_by"]));
-        complete_dependencies(&h);
-        deliver_direct(&mut h, q);
-        deliver_direct(&mut h, q);
-        assert_eq!(h.fake.borrow().launches.len(), 2);
     }
 }
 

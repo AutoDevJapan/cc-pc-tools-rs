@@ -4877,6 +4877,7 @@ type CallFn = Box<dyn Fn(&Call) -> io::Result<Reply> + Send + Sync>;
 type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;
 type SpawnHook = Box<dyn Fn() -> Box<dyn Running> + Send + Sync>;
 type SleepHook = Box<dyn Fn(f64) + Send + Sync>;
+type KillHook = Box<dyn Fn(u32) + Send + Sync>;
 
 #[test]
 fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win() {
@@ -4927,6 +4928,7 @@ struct Fake {
     sleeps: Mutex<Vec<f64>>,
     procs: Arc<Mutex<HashMap<u32, u64>>>,
     kill_works: AtomicBool,
+    kill_hook: Mutex<Option<KillHook>>,
     kills: Arc<Mutex<Vec<u32>>>,
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
@@ -4982,6 +4984,7 @@ impl Fake {
             sleeps: Mutex::new(vec![]),
             procs: Arc::new(Mutex::new(HashMap::from([(std::process::id(), 123)]))),
             kill_works: AtomicBool::new(true),
+            kill_hook: Mutex::new(None),
             kills: Arc::new(Mutex::new(vec![])),
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
@@ -5286,6 +5289,9 @@ impl Runtime for Fake {
         Ok((detached, (pid != 0).then_some(pid)))
     }
     fn kill_tree(&self, pid: u32) -> io::Result<()> {
+        if let Some(hook) = self.kill_hook.lock().unwrap().as_ref() {
+            hook(pid);
+        }
         self.kills.lock().unwrap().push(pid);
         if self.kill_works.load(Ordering::Relaxed) {
             self.procs.lock().unwrap().remove(&pid);
@@ -5925,6 +5931,322 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    fn guard_store(t: &Test) -> PathBuf {
+        let store = t.ctx.root.join("todo.json");
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        fs::write(&store,json!({"items":[{"id":2073,"status":"todo","jobs":[]},{"id":2074,"status":"todo"},{"id":32,"status":"todo"}]}).to_string()).unwrap();
+        store
+    }
+    fn add_wait(store: &Path) {
+        let mut db: Value = serde_json::from_slice(&fs::read(store).unwrap()).unwrap();
+        db["items"][1]["wait_on"] = json!([32]);
+        fs::write(store, db.to_string()).unwrap();
+    }
+    fn guarded(t: &Test, jid: &str, store: &Path, key: &str) -> (Result<i32>, String, String) {
+        t.cli(&[
+            "cancel",
+            jid,
+            "--recovery",
+            "--if-todo-ready",
+            "--cancel-key",
+            key,
+            "--todo-file",
+            store.to_str().unwrap(),
+            "--todo-id",
+            "2073",
+            "--related-todo-ids",
+            "2073,2074",
+        ])
+    }
+    #[test]
+    #[cfg(windows)]
+    fn guarded_wait_registration_wins_before_cancellation_and_refresh() {
+        for status in ["queued", "running", "succeeded"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            let j = t.put(job(
+                json!({"id":"source","status":status,"pid":std::process::id(),"pid_created":123}),
+            ));
+            let original = fs::read(t.ctx.job_dir("source").join("job.json")).unwrap();
+            let todo = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
+            let (ready, arrived) = std::sync::mpsc::channel();
+            let job_path = t.ctx.job_dir("source").join("job.json");
+            let queue_path = t.ctx.jobs.join(".queue.lock");
+            let state_path = t.ctx.job_dir("source").join("state.lock");
+            t.rt.load_count.store(0, Ordering::Relaxed);
+            *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, n| {
+                if path == job_path && n == 1 {
+                    assert!(FileLock::try_acquire(&queue_path).is_err());
+                    assert!(FileLock::try_acquire(&state_path).is_err());
+                    ready.send(()).unwrap();
+                }
+            }));
+            let ctx = t.ctx.clone();
+            let path = store.clone();
+            let cancel = std::thread::spawn(move || {
+                let mut out = vec![];
+                let mut err = vec![];
+                let result = ctx.dispatch(
+                    &[
+                        "cancel",
+                        "source",
+                        "--recovery",
+                        "--if-todo-ready",
+                        "--cancel-key",
+                        "attempt",
+                        "--todo-file",
+                        path.to_str().unwrap(),
+                        "--todo-id",
+                        "2073",
+                        "--related-todo-ids",
+                        "2074",
+                    ]
+                    .map(String::from),
+                    &mut out,
+                    &mut err,
+                );
+                (result, out, err)
+            });
+            arrived
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap();
+            add_wait(&store);
+            drop(todo);
+            let (result, out, err) = cancel.join().unwrap();
+            assert_eq!(result.unwrap(), 0, "{}", String::from_utf8_lossy(&err));
+            let response: Value = serde_json::from_slice(&out).unwrap();
+            assert_eq!(response["outcome"], "deferred");
+            assert_eq!(response["wait_on"], json!([32]));
+            assert_eq!(
+                fs::read(t.ctx.job_dir("source").join("job.json")).unwrap(),
+                original
+            );
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            assert!(t.rt.calls.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn guarded_cancel_commits_before_later_wait_and_releases_locks_before_killing() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        t.put(job(
+            json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123}),
+        ));
+        let todo_path = store.with_file_name("todo.lock");
+        let queue_path = t.ctx.jobs.join(".queue.lock");
+        let state_path = t.ctx.job_dir("source").join("state.lock");
+        let job_path = t.ctx.job_dir("source").join("job.json");
+        let (ready, arrived) = std::sync::mpsc::channel();
+        let (release, resume) = std::sync::mpsc::channel();
+        let resume = Mutex::new(resume);
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |_| {
+            let todo = FileLock::try_acquire(&todo_path).expect("kill retained todo.lock");
+            drop(FileLock::try_acquire(&queue_path).expect("kill retained queue lock"));
+            assert!(FileLock::try_acquire(&state_path).is_err());
+            let j: Value = serde_json::from_slice(&fs::read(&job_path).unwrap()).unwrap();
+            assert_eq!(j["recovery_cancel"]["key"], "attempt");
+            ready.send(()).unwrap();
+            resume
+                .lock()
+                .unwrap()
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap();
+            drop(todo);
+        }));
+        let ctx = t.ctx.clone();
+        let path = store.clone();
+        let cancel = std::thread::spawn(move || {
+            let mut out = vec![];
+            let mut err = vec![];
+            let result = ctx.dispatch(
+                &[
+                    "cancel",
+                    "source",
+                    "--recovery",
+                    "--if-todo-ready",
+                    "--cancel-key",
+                    "attempt",
+                    "--todo-file",
+                    path.to_str().unwrap(),
+                    "--related-todo-ids",
+                    "2073,2074",
+                ]
+                .map(String::from),
+                &mut out,
+                &mut err,
+            );
+            (result, out)
+        });
+        arrived
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .unwrap();
+        // The hook owns the real shared lock on behalf of this wait writer.
+        add_wait(&store);
+        release.send(()).unwrap();
+        let (result, out) = cancel.join().unwrap();
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out).unwrap()["outcome"],
+            "cancelled"
+        );
+        assert_eq!(t.ctx.load("source").unwrap()["status"], "cancelled");
+        assert_eq!(
+            t.ctx.load("source").unwrap()["related_todo_ids"],
+            json!([2073, 2074])
+        );
+        assert_ne!(t.ctx.load("source").unwrap()["cancel_requested"], true);
+        assert_eq!(t.rt.kills.lock().unwrap().len(), 1);
+        t.rt.procs.lock().unwrap().insert(777, 777);
+        t.put(job(
+            json!({"id":"successor","status":"queued","pid":777,"pid_created":777,
+            "related_todo_ids":[2073,2074],"cwd":t.ctx.root}),
+        ));
+        assert!(t.ctx.admit("successor").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("successor").unwrap()["queue_wait_reason"]["wait_on"],
+            json!([32])
+        );
+    }
+    #[test]
+    fn guarded_commit_is_attempt_specific_and_owner_stop_always_wins() {
+        for key in ["old", "attempt"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            add_wait(&store);
+            t.put(job(
+                json!({"id":"source","status":"queued","pid":std::process::id(),"pid_created":123,
+                "recovery_cancel":{"key":key,"committed_at":"saved"}}),
+            ));
+            let (result, out, _) = guarded(&t, "source", &store, "attempt");
+            assert_eq!(result.unwrap(), 0);
+            assert_eq!(
+                serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+                if key == "old" {
+                    "deferred"
+                } else {
+                    "cancelled"
+                }
+            );
+        }
+        for stop in [
+            json!({"status":"running","cancel_requested":true}),
+            json!({"status":"cancelled","cancel_reason":"manual"}),
+        ] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            let j = t.put(patch(
+                job(json!({"id":"source","recovery_cancel":{"key":"attempt"}})),
+                stop,
+            ));
+            let (result, out, _) = guarded(&t, "source", &store, "attempt");
+            assert_eq!(result.unwrap(), 0);
+            assert_eq!(
+                serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+                "owner_stopped"
+            );
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn guarded_terminal_scope_validation_and_missing_dependency_remain_explicit() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        let j = t.put(job(json!({"id":"source","status":"succeeded"})));
+        let (result, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+            "already_terminal"
+        );
+        assert_eq!(t.ctx.load("source").unwrap(), j);
+        for args in [
+            vec!["cancel", "source", "--if-todo-ready"],
+            vec!["cancel", "source", "--related-todo-ids", "2073"],
+            vec![
+                "cancel",
+                "source",
+                "--recovery",
+                "--if-todo-ready",
+                "--cancel-key",
+                "attempt",
+                "--related-todo-ids",
+                "bad",
+            ],
+        ] {
+            assert!(t.cli(&args).0.is_err());
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+        }
+        let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
+        db["items"][1]["wait_on"] = json!([99]);
+        fs::write(&store, db.to_string()).unwrap();
+        let (_, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["wait_on"],
+            json!([99])
+        );
+        fs::write(&store, "{broken").unwrap();
+        assert!(guarded(&t, "source", &store, "attempt").0.is_err());
+        assert_eq!(t.ctx.load("source").unwrap(), j);
+    }
+    #[test]
+    fn native_guarded_cancellation_defers_without_refreshing_or_rewriting_source() {
+        let tmp = Temp::new();
+        let exe = tmp
+            .0
+            .join(format!("codex_jobs{}", std::env::consts::EXE_SUFFIX));
+        fs::copy(env!("CARGO_BIN_EXE_codex_jobs"), &exe).unwrap();
+        let dir = tmp.0.join("jobs/source");
+        fs::create_dir_all(&dir).unwrap();
+        let store = tmp.0.join("todo.json");
+        fs::write(
+            &store,
+            json!({"items":[{"id":2074,"status":"wait","wait_on":[32]},{"id":32,"status":"todo"}]})
+                .to_string(),
+        )
+        .unwrap();
+        for status in ["queued", "succeeded"] {
+            let original=json!({"id":"source","status":status,"steps":0,"model":"gpt-6-luna","effort":"max","pid":null}).to_string();
+            fs::write(dir.join("job.json"), &original).unwrap();
+            let mut cmd = hidden_command(&exe.to_string_lossy());
+            cmd.env_clear()
+                .env("USERPROFILE", &tmp.0)
+                .env("HOME", &tmp.0)
+                .env("TMP", &tmp.0)
+                .env("TEMP", &tmp.0);
+            if let Some(root) = std::env::var_os("SystemRoot") {
+                cmd.env("SystemRoot", root);
+            }
+            let output = cmd
+                .args([
+                    "cancel",
+                    "source",
+                    "--recovery",
+                    "--if-todo-ready",
+                    "--cancel-key",
+                    "attempt",
+                    "--related-todo-ids",
+                    "2074",
+                    "--todo-file",
+                    store.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(result["outcome"], "deferred");
+            assert_eq!(result["wait_on"], json!([32]));
+            assert_eq!(fs::read_to_string(dir.join("job.json")).unwrap(), original);
+        }
+    }
     #[test]
     fn recovery_cleanup_does_not_record_a_deliberate_cancel() {
         let t = Test::new();

@@ -813,7 +813,12 @@ pub fn deliver(
                 } else if remaining.len() != messages.len() {
                     let mut pending = pending.clone();
                     pending["messages"] = json!(remaining);
-                    pending["prompt"] = json!(format!("オーナーからの今回未配送の追加指示を最優先してください。\n{}\n{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{}", quotes(&remaining),s(&pending["source"]["cwd"]),s(&pending["original_request"])));
+                    pending["prompt"] = json!(format!(
+                        "オーナーからの今回未配送の追加指示を最優先してください。\n{}\n{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{}",
+                        quotes(&remaining),
+                        s(&pending["source"]["cwd"]),
+                        s(&pending["original_request"])
+                    ));
                     entry_mut(record, slot)["owner_update"] = pending;
                     save(ctx, state, thread, record, slot)?;
                 }
@@ -1000,8 +1005,14 @@ pub fn deliver(
                 .join("last_message.md")
                 .to_string_lossy(),
         );
-        let handoff = format!("{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n", s(&source["cwd"]));
-        let prompt = format!("オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}", quotes(&unseen));
+        let handoff = format!(
+            "{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n",
+            s(&source["cwd"])
+        );
+        let prompt = format!(
+            "オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}",
+            quotes(&unseen)
+        );
         entry_mut(record, slot)["owner_update"] = json!({"key":key,"source":source,"session":session,"resume":resume,"prompt":prompt,"original_request":original,"after":latest,"messages":addressed_messages});
         entry_mut(record, slot)["answer_source_resolved"] = json!(true);
         save(ctx, state, thread, record, slot)?;
@@ -1041,17 +1052,62 @@ pub fn deliver(
     }
     let source = &pending["source"];
     let old = s(&source["id"]).to_owned();
-    if RUNNING.contains(&s(&job_info(ctx, &old)["status"])) {
-        let out = ctx.run(
-            &command_argv(
-                &ctx.codex_command,
-                &["cancel".into(), old.clone(), "--recovery".into()],
-            ),
-            45,
-        )?;
-        // A completion racing cancellation is harmless, but a live process may not overlap the resume.
-        if out.code != 0 && RUNNING.contains(&s(&job_info(ctx, &old)["status"])) {
+    {
+        let mut args = vec![
+            "cancel".into(),
+            old.clone(),
+            "--recovery".into(),
+            "--if-todo-ready".into(),
+            "--todo-file".into(),
+            ctx.todo.to_string_lossy().into_owned(),
+            "--cancel-key".into(),
+            s(&pending["key"]).into(),
+        ];
+        if let Some(id) = source["todo_id"].as_i64().filter(|id| *id > 0) {
+            args.extend(["--todo-id".into(), id.to_string()]);
+        }
+        let ids: Vec<_> = source["related_todo_ids"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_i64)
+            .filter(|id| *id > 0)
+            .map(|id| id.to_string())
+            .collect();
+        if !ids.is_empty() {
+            args.extend(["--related-todo-ids".into(), ids.join(",")]);
+        }
+        let out = ctx.run(&command_argv(&ctx.codex_command, &args), 45)?;
+        if out.code != 0 {
             return Err("could not stop owner update source".into());
+        }
+        let result: Value = serde_json::from_str(out.stdout.trim())
+            .map_err(|_| "invalid guarded cancellation response")?;
+        if s(&result["job"]) != old {
+            return Err("guarded cancellation returned another job".into());
+        }
+        match s(&result["outcome"]) {
+            "deferred" => {
+                let on = result["wait_on"]
+                    .as_array()
+                    .ok_or("missing guarded cancellation dependencies")?
+                    .iter()
+                    .map(|id| {
+                        id.as_i64()
+                            .filter(|id| *id > 0)
+                            .ok_or("invalid guarded cancellation dependency")
+                    })
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+                if on.is_empty() {
+                    return Err("empty guarded cancellation dependencies".into());
+                }
+                update_wait(record, slot, &on);
+                save(ctx, state, thread, record, slot)?;
+                return Ok(true);
+            }
+            "owner_stopped" => return Ok(true),
+            "cancelled" | "already_terminal" => (),
+            _ => return Err("unknown guarded cancellation outcome".into()),
         }
     }
     let mut selection = pending["source"].clone();

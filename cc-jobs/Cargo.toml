@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 default-run = "codex_jobs"
 
+[dev-dependencies]
+tempfile = "3"
+
 [dependencies]
 cc-job-policy = { path = "../cc-job-policy" }
 cc-chrome = { path = "../cc-chrome" }

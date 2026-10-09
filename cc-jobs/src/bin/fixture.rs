@@ -34,6 +34,66 @@ fn main() {
     let root = std::path::PathBuf::from(
         std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),
     );
+    if mode == "dependency-parent" {
+        // Dedicated dependency fixture: hold the source process until explicit
+        // cancellation/release or actual controller exit, not a 40-second clock.
+        #[cfg(windows)]
+        {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            let owner: Value =
+                serde_json::from_slice(&fs::read(root.join("fixture-owner.json")).unwrap())
+                    .unwrap();
+            let pid = owner["pid"].as_u64().unwrap() as u32;
+            let created = owner["created"].as_u64().unwrap();
+            unsafe {
+                struct Handle(HANDLE);
+                impl Drop for Handle {
+                    fn drop(&mut self) {
+                        unsafe {
+                            CloseHandle(self.0);
+                        }
+                    }
+                }
+                let handle = Handle(OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                    0,
+                    pid,
+                ));
+                assert!(!handle.0.is_null());
+                let mut times = [std::mem::zeroed::<FILETIME>(); 4];
+                assert_ne!(
+                    GetProcessTimes(
+                        handle.0,
+                        &mut times[0],
+                        &mut times[1],
+                        &mut times[2],
+                        &mut times[3]
+                    ),
+                    0
+                );
+                assert_eq!(
+                    ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64,
+                    created
+                );
+                let me = std::process::id();
+                fs::write(
+                    root.join("sleep.identity.json"),
+                    pretty(&json!({"pid":me,"created":proc_created(me).unwrap()})),
+                )
+                .unwrap();
+                fs::write(root.join("sleep.pid"), me.to_string()).unwrap();
+                loop {
+                    let waited = WaitForSingleObject(handle.0, 50);
+                    if waited == WAIT_OBJECT_0 || root.join("parent.release").exists() {
+                        break;
+                    }
+                    assert_eq!(waited, WAIT_TIMEOUT);
+                }
+            }
+        }
+        #[cfg(not(windows))]
+        panic!("dependency parent fixture requires Windows");
+    }
     if args
         .first()
         .is_some_and(|s| s == "--supervisor-with-independent-job")

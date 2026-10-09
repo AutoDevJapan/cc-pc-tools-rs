@@ -10,6 +10,12 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
+fn launch_inputs(item: &Value) -> Value {
+    json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
+        "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
+        "model":item["model"],"effort":item["effort"],"wait_on":item["wait_on"],
+        "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"]})
+}
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
 /// `block`/`todo` rows are never converted. The existing note is kept (the wait is reported via
@@ -192,7 +198,10 @@ impl<B: Backend> Scheduler<B> {
             }
         }
         self.state["boot_s"] = m["boot_s"].clone();
-        let jobs = self.backend.jobs()?;
+        let mut jobs = self.backend.jobs()?;
+        cc_job_policy::subwork::mark_live(&mut jobs, |j| {
+            ["pid", "codex_pid"].iter().any(|key| matches(j, key, &ps))
+        });
         let now = self.backend.clock();
         self.state["observed"] = ownership(&jobs, &ps, &self.state["observed"]);
         merge(
@@ -765,6 +774,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Ok(None);
         }
         self.backend.worktree(repo, &item)?;
+        if item["subwork"].is_object() {
+            cc_job_policy::subwork::resolve(&self.todo()?, &item, &[], true)
+                .map_err(|_| Error("InvalidSubwork"))?;
+        }
         let spec = Path::new(s(&item["spec"]));
         if spec.metadata()?.len() > 1024 * 1024 {
             return Err(Error("ValueError"));
@@ -814,6 +827,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             );
         }
         prompt += &format!("\n依頼:\n{text}");
+        if item["subwork"].is_object() {
+            prompt += &format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n", item["subwork"]["parent_todo_id"], s(&item["subwork"]["kind"]));
+        }
         let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
         let mut selection = item["scheduler"]["selection"].clone();
         if !truth(&selection) {
@@ -858,6 +874,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if !valid_effort(s(&selection["effort"])) {
             return Err(Error("ValueError"));
         }
+        if item["subwork"].is_object() {
+            selection["task_type"] = item["subwork"]["kind"].clone();
+        }
         // A resumed conversation may restore the previous model. Reuse it only
         // when the selected settings agree, including partial explicit choices.
         if source.is_some_and(|source| {
@@ -881,7 +900,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         let prepared = self.edit(&item["id"], |row| {
             if s(&row["status"]) == "todo"
                 && row["scheduler"]["key"] == item["scheduler"]["key"]
-                && ["model", "effort"].iter().all(|field| row[*field] == selection_input[*field]) {
+                && launch_inputs(row) == launch_inputs(&item) {
                 merge(
                     &mut row["scheduler"],
                     json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input}),
@@ -890,9 +909,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         })?;
         if s(&prepared["status"]) != "todo"
             || prepared["scheduler"]["key"] != item["scheduler"]["key"]
-            || ["model", "effort"]
-                .iter()
-                .any(|field| prepared[*field] != selection_input[*field])
+            || launch_inputs(&prepared) != launch_inputs(&item)
+            || prepared["scheduler"]["prompt"] != json!(target)
         {
             return Ok(None);
         }
@@ -969,7 +987,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Ok(());
         };
         let result: Result<()> = (|| {
-            let Some(prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))? else {
+            let Some(mut prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))? else {
                 return Ok(());
             };
             if s(&prepared["status"]) != "todo" {
@@ -998,8 +1016,30 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
             if s(&current["status"]) != "todo"
                 || current["scheduler"]["key"] != prepared["scheduler"]["key"]
+                || launch_inputs(&current) != launch_inputs(&prepared)
             {
                 return Ok(());
+            }
+            if current["subwork"].is_object() {
+                let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
+                    .map_err(|_| Error("InvalidSubwork"))?;
+                // Publish proof of this resource/capacity check, not just preparation's launch key.
+                let receipt = cc_job_policy::subwork::admission(&prepared);
+                let saved = self.edit(&prepared["id"], |row| {
+                    if row["status"] == "todo"
+                        && row["scheduler"]["key"] == prepared["scheduler"]["key"]
+                        && launch_inputs(row) == launch_inputs(&prepared)
+                    {
+                        row["scheduler"]["subwork_admission"] = receipt.clone();
+                    }
+                })?;
+                if saved["status"] != "todo"
+                    || launch_inputs(&saved) != launch_inputs(&prepared)
+                    || saved["scheduler"]["subwork_admission"] != receipt
+                {
+                    return Ok(());
+                }
+                prepared["scheduler"]["subwork_parent_job"] = json!(parent);
             }
             // Sampling may yield while the owner changes the requested model.
             // Defer this receipt so prepare recomputes settings and session on

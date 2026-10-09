@@ -161,6 +161,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "launch-key",
                     "resume-session",
                     "parent-job-id",
+                    "subwork-of",
+                    "assigned-needs",
                     "pr-url",
                 ]
                 .contains(&name.as_str()),
@@ -677,9 +679,15 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
-        // Intake shares the short publication gate, but never waits for legacy
-        // history reconciliation. Supervisors require a complete index at admit.
+        // Intake uses the short publication gate; history reconciliation remains outside it.
         let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
+        // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
+        let _subwork_store_lock = (self.todo_store().exists()
+            && (a.value("todo-id").is_some() || a.value("related-todo-ids").is_some()))
+        .then(|| {
+            FileLock::acquire(&self.todo_store().with_file_name("todo.lock")).map_err(Error::from)
+        })
+        .transpose()?;
         let related: Vec<u64> = a
             .value("related-todo-ids")
             .map(|ids| {
@@ -717,7 +725,9 @@ impl Context {
             }
         }
         let env = self.rt.env();
-        let parent = if let Some(id) = a.value("parent-job-id") {
+        let parent = if a.value("subwork-of").is_some() {
+            None // The saved relation below, not the invoking process, chooses this parent.
+        } else if let Some(id) = a.value("parent-job-id") {
             if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
                 return Err(Error::new("parent job must be a running job in this queue"));
             }
@@ -829,6 +839,60 @@ impl Context {
                 .ok_or_else(|| Error::new("invalid --pr-url"))?;
             job["work_owner"]["repository"] = target["repository"].clone();
             job["work_owner"]["pr"] = target["pr"].clone();
+        }
+        let store = self.todo_store();
+        if store.exists() {
+            let db = self.read_json(&store)?;
+            let item = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|i| i["id"] == job["todo_id"]);
+            if a.value("subwork-of").is_some() || item.is_some_and(|i| i["subwork"].is_object()) {
+                let item = item.ok_or_else(|| Error::new("subwork ToDo is missing"))?;
+                let parent = a
+                    .required("subwork-of")?
+                    .parse::<i64>()
+                    .map_err(|_| Error::new("invalid --subwork-of"))?;
+                if item["subwork"]["parent_todo_id"] != parent {
+                    return Err(Error::new(
+                        "subwork parent does not match the saved relation",
+                    ));
+                }
+                let needs = a
+                    .required("assigned-needs")?
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>();
+                job["assigned_needs"] = json!(needs);
+                job["subwork"] = item["subwork"].clone();
+                job["subwork_spec"] = item["spec"].clone();
+                if ["research", "review"].contains(&s(&job["subwork"], "kind"))
+                    && s(&job, "sandbox") != "read-only"
+                {
+                    return Err(Error::new(
+                        "independent research/review requires read-only scope",
+                    ));
+                }
+                let mut jobs = registrations.clone();
+                if let Some(requested) = a.value("parent-job-id") {
+                    let p = self.load(requested)?;
+                    if p["todo_id"] != parent
+                        || !s(&p, "parent_job_id").is_empty()
+                        || self.rt.work_checkout(s(&p, "cwd"))["worktree"]
+                            != job["subwork"]["owner"]["worktree"]
+                    {
+                        return Err(Error::new("requested parent is not this subwork's owner"));
+                    }
+                    if !jobs.iter().any(|job| job["id"] == p["id"]) {
+                        jobs.push(p);
+                    }
+                }
+                cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
+                cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
+            }
+        } else if a.value("subwork-of").is_some() {
+            return Err(Error::new("subwork ToDo store is missing"));
         }
         let bad = codex_args(&job)
             .into_iter()

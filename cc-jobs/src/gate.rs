@@ -44,6 +44,7 @@ pub const INJECTED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_INJECTED";
 pub const FORWARDED_TARGET: &str = "CODEX_JOBS_CARGO_TARGET_OVERRIDE";
 const LOCK_HELD: &str = "CODEX_JOBS_CARGO_LOCK_HELD";
 const HELD_JOBS: &str = "CODEX_JOBS_CARGO_JOBS_LIMIT";
+const HELD_TESTS: &str = "CODEX_JOBS_CARGO_TEST_LIMIT";
 const SLOT_WAIT: &str = "cargoの共有ビルド枠待ち";
 const TARGET_WAIT: &str = "cargoの同じビルド先の使用終了待ち";
 /// Windows CPython's sys.exit converts its argument through a signed C long.
@@ -119,12 +120,21 @@ fn clamp(value: &str, limit: usize) -> usize {
 /// Clamp explicit build job counts before `--`: `-j`/`--jobs`, or `--build-jobs`
 /// for cargo-nextest (whose `-j` is the test thread count, not a build setting).
 pub fn clamp_jobs(args: &[String], limit: usize) -> Vec<String> {
+    clamp_parallel_args(args, limit, limit).0
+}
+fn clamp_parallel_args(
+    args: &[String],
+    build_limit: usize,
+    test_limit: usize,
+) -> (Vec<String>, usize, usize) {
     let nextest = first_command(args) == "nextest";
     let flags: &[&str] = if nextest {
         &["--build-jobs", "--test-threads", "--jobs", "-j"]
     } else {
         &["--jobs", "-j"]
     };
+    let mut build = build_limit;
+    let mut tests = test_limit;
     let mut out = Vec::with_capacity(args.len());
     let mut rest = args.iter();
     while let Some(arg) = rest.next() {
@@ -133,9 +143,61 @@ pub fn clamp_jobs(args: &[String], limit: usize) -> Vec<String> {
             out.extend(rest.by_ref().cloned());
             break;
         }
+        // A flag-looking option value is data, not another parallelism flag.
+        if [
+            "--manifest-path",
+            "--config",
+            "-Z",
+            "-C",
+            "--color",
+            "--target",
+            "--target-dir",
+            "--package",
+            "-p",
+            "--exclude",
+            "--features",
+            "-F",
+            "--message-format",
+            "--profile",
+            "--bin",
+            "--example",
+            "--test",
+            "--bench",
+            "--filter-expr",
+            "-E",
+            "--config-file",
+            "--status-level",
+            "--final-status-level",
+            "--failure-output",
+            "--success-output",
+            "--retries",
+            "--run-ignored",
+            "--partition",
+            "--archive-file",
+            "--archive-format",
+            "--workspace-remap",
+            "--extract-to",
+            "--stress-count",
+            "--stress-duration",
+        ]
+        .contains(&arg.as_str())
+        {
+            out.push(arg.clone());
+            out.extend(rest.next().cloned());
+            continue;
+        }
+        let mut update = |flag: &str, value: &str| {
+            if nextest && flag != "--build-jobs" {
+                tests = clamp(value, test_limit);
+                tests
+            } else {
+                build = clamp(value, build_limit);
+                build
+            }
+        };
         if flags.contains(&arg.as_str()) {
             out.push(arg.clone());
-            out.extend(rest.next().map(|v| clamp(v, limit).to_string()));
+            out.extend(rest.next().map(|value| update(arg, value).to_string()));
             continue;
         }
         let inline = flags.iter().find_map(|flag| {
@@ -147,11 +209,51 @@ pub fn clamp_jobs(args: &[String], limit: usize) -> Vec<String> {
             }
         });
         out.push(match inline {
-            Some((flag, sep, value)) => format!("{flag}{sep}{}", clamp(value, limit)),
+            Some((flag, sep, value)) => format!("{flag}{sep}{}", update(flag, value)),
             None => arg.clone(),
         });
     }
-    out
+    (out, build, tests)
+}
+/// Do not invent arguments for custom harnesses. libtest honors the bounded
+/// RUST_TEST_THREADS environment when no explicit thread argument is supplied.
+fn clamp_harness_threads(args: &[String], limit: usize) -> (Vec<String>, usize) {
+    let mut out = args.to_vec();
+    let Some(start) = out.iter().position(|s| s == "--").map(|i| i + 1) else {
+        return (out, limit);
+    };
+    let mut effective = limit;
+    let mut i = start;
+    while i < out.len() && out[i] != "--" {
+        if [
+            "--skip",
+            "--logfile",
+            "--format",
+            "--color",
+            "--shuffle-seed",
+        ]
+        .contains(&out[i].as_str())
+        {
+            i += 2;
+        } else if out[i] == "--test-threads" {
+            if let Some(value) = out.get_mut(i + 1)
+                && value.parse::<usize>().is_ok_and(|n| n > 0)
+            {
+                effective = clamp(value, limit);
+                *value = effective.to_string();
+            }
+            i += 2;
+        } else {
+            if let Some(value) = out[i].strip_prefix("--test-threads=")
+                && value.parse::<usize>().is_ok_and(|n| n > 0)
+            {
+                effective = clamp(value, limit);
+                out[i] = format!("--test-threads={effective}");
+            }
+            i += 1;
+        }
+    }
+    (out, effective)
 }
 fn var<'a>(env: &'a BTreeMap<String, String>, name: &str) -> Option<&'a String> {
     env.iter()
@@ -452,7 +554,9 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     if nested && held.is_none() {
         // The outer gate predates target locks; it already owns a slot.
         let limit = nested_jobs_limit(&child, cores);
-        let args = apply_jobs(args, &mut child, limit);
+        let cfg = admission::Config::read(dir)?;
+        let tests = nested_test_limit(&child, cores).min(cfg.test_threads);
+        let args = apply_limits(args, &mut child, limit.min(cfg.jobs_per_build), tests);
         return execute(&args, &child);
     }
     // Only a real Cargo is asked for metadata; test doubles and other commands
@@ -491,10 +595,17 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     let slot = (!nested)
         .then(|| admission::wait(dir, env, cores))
         .transpose()?;
-    let limit = slot
-        .as_ref()
-        .map_or_else(|| nested_jobs_limit(&child, cores), |p| p.jobs);
-    let args = apply_jobs(args, &mut child, limit);
+    let (limit, tests) = match slot.as_ref() {
+        Some(p) => (p.jobs, p.test_threads),
+        None => {
+            let cfg = admission::Config::read(dir)?;
+            (
+                nested_jobs_limit(&child, cores).min(cfg.jobs_per_build),
+                nested_test_limit(&child, cores).min(cfg.test_threads),
+            )
+        }
+    };
+    let args = apply_limits(args, &mut child, limit, tests);
     let args = if real {
         target_dir
             .as_ref()
@@ -507,20 +618,47 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
     result
 }
 
+#[cfg(test)]
 fn apply_jobs(args: &[String], child: &mut BTreeMap<String, String>, limit: usize) -> Vec<String> {
-    child.insert(HELD_JOBS.into(), limit.to_string());
-    for name in [
-        "CARGO_BUILD_JOBS",
-        "RUST_TEST_THREADS",
-        "NEXTEST_TEST_THREADS",
-    ] {
-        if name == "NEXTEST_TEST_THREADS" && first_command(args) != "nextest" {
-            continue;
-        }
-        let jobs = take_var(child, name).map_or(limit, |v| clamp(&v, limit));
-        child.insert(name.into(), jobs.to_string());
+    apply_limits(args, child, limit, limit)
+}
+fn apply_limits(
+    args: &[String],
+    child: &mut BTreeMap<String, String>,
+    build_limit: usize,
+    test_limit: usize,
+) -> Vec<String> {
+    // Resolve all sources once before rewriting arguments or publishing child
+    // limits. Neither an absent CLI flag nor a final env write can raise these.
+    let build_cap =
+        take_var(child, "CARGO_BUILD_JOBS").map_or(build_limit, |v| clamp(&v, build_limit));
+    let rust_cap =
+        take_var(child, "RUST_TEST_THREADS").map_or(test_limit, |v| clamp(&v, test_limit));
+    let nextest = first_command(args) == "nextest";
+    let test_cap = if nextest {
+        take_var(child, "NEXTEST_TEST_THREADS").map_or(rust_cap, |v| clamp(&v, rust_cap))
+    } else {
+        rust_cap
+    };
+    let (out, build, tests) = clamp_parallel_args(args, build_cap, test_cap);
+    let (out, tests) = if first_command(args) == "test" {
+        clamp_harness_threads(&out, tests)
+    } else {
+        (out, tests)
+    };
+    child.insert(HELD_JOBS.into(), build.to_string());
+    child.insert("CARGO_BUILD_JOBS".into(), build.to_string());
+    child.insert(HELD_TESTS.into(), tests.to_string());
+    child.insert("RUST_TEST_THREADS".into(), tests.to_string());
+    if nextest {
+        child.insert("NEXTEST_TEST_THREADS".into(), tests.to_string());
     }
-    clamp_jobs(args, limit)
+    out
+}
+
+fn nested_test_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
+    let fallback = nested_jobs_limit(child, cores);
+    var(child, HELD_TESTS).map_or(fallback, |v| clamp(v, jobs_limit(cores, 1)))
 }
 
 fn nested_jobs_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
@@ -533,6 +671,177 @@ fn nested_jobs_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn args(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| (*s).into()).collect()
+    }
+    #[test]
+    fn nextest_build_and_test_limits_are_independent() {
+        let mut env = BTreeMap::new();
+        assert_eq!(
+            apply_limits(
+                &args(&[
+                    "+stable",
+                    "nextest",
+                    "run",
+                    "--build-jobs=32",
+                    "-j32",
+                    "--test-threads",
+                    "32"
+                ]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&[
+                "+stable",
+                "nextest",
+                "run",
+                "--build-jobs=8",
+                "-j3",
+                "--test-threads",
+                "3"
+            ])
+        );
+        assert_eq!(env["CARGO_BUILD_JOBS"], "8");
+        assert_eq!(env["NEXTEST_TEST_THREADS"], "3");
+        assert_eq!(env["RUST_TEST_THREADS"], "3");
+        assert_eq!(nested_test_limit(&env, 32), 3);
+        assert_eq!(
+            apply_limits(
+                &args(&["nextest", "run", "--build-jobs", "1", "--jobs=1"]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&["nextest", "run", "--build-jobs", "1", "--jobs=1"])
+        );
+    }
+    #[test]
+    fn cargo_test_clamps_harness_flags_and_preserves_serial_tests() {
+        let mut env = BTreeMap::new();
+        assert_eq!(
+            apply_limits(
+                &args(&[
+                    "test",
+                    "-j32",
+                    "--",
+                    "filter",
+                    "--test-threads=32",
+                    "--nocapture"
+                ]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&[
+                "test",
+                "-j8",
+                "--",
+                "filter",
+                "--test-threads=3",
+                "--nocapture"
+            ])
+        );
+        assert_eq!(
+            apply_limits(
+                &args(&["test", "--", "--test-threads", "1"]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&["test", "--", "--test-threads", "1"])
+        );
+        assert_eq!(
+            apply_limits(&args(&["+stable", "test", "--doc"]), &mut env, 8, 3),
+            args(&["+stable", "test", "--doc"])
+        );
+        assert_eq!(
+            apply_limits(
+                &args(&["test", "--", "--", "--test-threads=32"]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&["test", "--", "--", "--test-threads=32"])
+        );
+        assert_eq!(
+            apply_limits(&args(&["test", "--no-run"]), &mut env, 8, 3),
+            args(&["test", "--no-run"])
+        );
+    }
+    #[test]
+    fn harness_option_values_and_custom_arguments_are_kept() {
+        for input in [
+            args(&["test", "--", "--skip", "--test-threads=32"]),
+            args(&["test", "--", "--custom-output", "json"]),
+            args(&["bench", "--", "--custom-output", "json"]),
+            args(&["nextest", "run", "-E", "--test-threads=32"]),
+            args(&["build", "--config", "--jobs=32"]),
+        ] {
+            let mut env = BTreeMap::new();
+            assert_eq!(apply_limits(&input, &mut env, 8, 3), input);
+        }
+        let mut env = BTreeMap::new();
+        assert_eq!(
+            apply_limits(
+                &args(&["test", "--", "--skip", "--", "--test-threads=32"]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&["test", "--", "--skip", "--", "--test-threads=3"])
+        );
+    }
+    #[test]
+    fn serial_parent_cli_sets_the_nested_test_environment() {
+        for input in [
+            args(&["test", "--", "--test-threads=1"]),
+            args(&["nextest", "run", "-j1"]),
+        ] {
+            let mut env = BTreeMap::new();
+            assert_eq!(apply_limits(&input, &mut env, 8, 8), input);
+            assert_eq!(env[HELD_TESTS], "1");
+            assert_eq!(env["RUST_TEST_THREADS"], "1");
+            let tests = nested_test_limit(&env, 32);
+            assert_eq!(tests, 1);
+            assert_eq!(
+                apply_limits(
+                    &args(&["nextest", "run", "--test-threads=32"]),
+                    &mut env,
+                    8,
+                    tests
+                ),
+                args(&["nextest", "run", "--test-threads=1"])
+            );
+        }
+        let mut env = BTreeMap::new();
+        apply_limits(&args(&["build", "-j1"]), &mut env, 8, 8);
+        assert_eq!(nested_jobs_limit(&env, 32), 1);
+    }
+    #[test]
+    fn smaller_inherited_limits_are_never_increased_by_absent_or_explicit_cli_flags() {
+        for input in [
+            args(&["build"]),
+            args(&["build", "-j32"]),
+            args(&["nextest", "run"]),
+            args(&["nextest", "run", "--build-jobs=32", "--test-threads=32"]),
+        ] {
+            let mut env = BTreeMap::from([
+                ("cargo_build_jobs".into(), "1".into()),
+                ("rust_test_threads".into(), "1".into()),
+                ("NEXTEST_TEST_THREADS".into(), "8".into()),
+            ]);
+            apply_limits(&input, &mut env, 8, 8);
+            assert_eq!(env["CARGO_BUILD_JOBS"], "1");
+            assert_eq!(env["RUST_TEST_THREADS"], "1");
+            assert_eq!(env[HELD_JOBS], "1");
+            assert_eq!(env[HELD_TESTS], "1");
+            assert!(!env.contains_key("cargo_build_jobs"));
+            if first_command(&input) == "nextest" {
+                assert_eq!(env["NEXTEST_TEST_THREADS"], "1");
+            }
+        }
+    }
     #[test]
     fn nested_explicit_jobs_never_exceed_the_parent_budget() {
         let mut child = BTreeMap::from([("CARGO_BUILD_JOBS".into(), "4".into())]);

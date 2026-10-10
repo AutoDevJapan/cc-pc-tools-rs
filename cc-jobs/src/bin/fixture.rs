@@ -7,6 +7,17 @@ use std::{
 };
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.first().is_some_and(|s| s == "--echo-test-limits") {
+        let var = |name: &str| std::env::var(name).unwrap_or_default();
+        println!(
+            "{}|{}|{}|{}",
+            var("CARGO_BUILD_JOBS"),
+            var("RUST_TEST_THREADS"),
+            var("NEXTEST_TEST_THREADS"),
+            args[1..].join(" ")
+        );
+        return;
+    }
     if args.first().is_some_and(|s| s == "--exit-seven") {
         std::process::exit(7);
     }

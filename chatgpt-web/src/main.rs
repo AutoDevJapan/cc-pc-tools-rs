@@ -144,10 +144,11 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(f) => {
-            if checks_readiness && matches!(f.code, Code::Failed | Code::Timeout) {
-                if let Err(error) = record_login(&env, Login::Unknown) {
-                    eprintln!("chatgpt_web: {}", error.msg);
-                }
+            if checks_readiness
+                && matches!(f.code, Code::Failed | Code::Timeout)
+                && let Err(error) = record_login(&env, Login::Unknown)
+            {
+                eprintln!("chatgpt_web: {}", error.msg);
             }
             eprintln!("chatgpt_web: {}", f.msg);
             ExitCode::from(f.code as u8)

@@ -201,19 +201,28 @@ fn inherited_grandchild_output_cannot_block_capture_after_parent_exit() {
 #[test]
 fn hard_tick_ceiling_releases_native_locks_and_records_deferral() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
+    // The independent killer gives the logger 100ms, not a first-load budget
+    // for scanning a new executable/file. Prepare only those cold resources;
+    // keep the measured deadline, termination bound and complete-log assertion.
+    std::fs::write(root.path().join("tick.log"), b"").unwrap();
     let start = Instant::now();
     let output = run_fixture("hard", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);
     assert!(start.elapsed() < PROCESS_BOUND);
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
-    assert!(std::fs::read_to_string(root.path().join("tick.log"))
-        .unwrap()
-        .contains("remaining work deferred; releasing locks"));
+    assert!(
+        std::fs::read_to_string(root.path().join("tick.log"))
+            .unwrap()
+            .contains("remaining work deferred; releasing locks")
+    );
 }
 
 #[test]
 fn hard_ceiling_does_not_wait_for_stuck_stderr_logger() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
+    std::fs::write(root.path().join("tick.log"), b"").unwrap();
     let start = Instant::now();
     let output = run_fixture("hard_stderr", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);

@@ -139,21 +139,48 @@ async fn discover_from_mode(
     record: Option<&Record>,
     include_reconnected: bool,
 ) -> io::Result<(String, Value)> {
+    let mut selected: Option<(String, Value)> = None;
     for pipe in pipes {
         let Ok(Ok(info))=tokio::time::timeout(Duration::from_millis(300),async {
             let mut rpc=Rpc::connect(&pipe).await?;
             rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await
         }).await else {continue};
-        if info["type"] == "extension"
-            && info["family"] == "chrome"
+        if chrome_identity(&info).is_some()
             && record.is_none_or(|r| {
                 r.matches_backend(&info) || (include_reconnected && same_instance(r, &info))
             })
         {
-            return Ok((pipe, info));
+            if let Some((_, prev)) = &selected {
+                if prev["metadata"]["extensionInstanceId"]
+                    != info["metadata"]["extensionInstanceId"]
+                    || prev["browserTabMentions"]["generation"]
+                        != info["browserTabMentions"]["generation"]
+                {
+                    return Err(io::Error::other(
+                        "multiple Chrome profiles are connected; owner connection is ambiguous",
+                    ));
+                }
+            } else {
+                selected = Some((pipe, info));
+            }
         }
     }
-    Err(io::Error::other("owner Chrome extension is not connected"))
+    selected.ok_or_else(|| io::Error::other("owner Chrome extension is not connected"))
+}
+
+// Creation, reconnection and cleanup share a complete browser identity.
+// An extension response without identity is not permission to create a tab.
+fn chrome_identity(info: &Value) -> Option<(&str, &str)> {
+    if info["type"] != "extension" || info["family"] != "chrome" {
+        return None;
+    }
+    let instance = info["metadata"]["extensionInstanceId"]
+        .as_str()
+        .filter(|v| !v.is_empty())?;
+    let generation = info["browserTabMentions"]["generation"]
+        .as_str()
+        .filter(|v| !v.is_empty())?;
+    Some((instance, generation))
 }
 pub fn inventory() -> io::Result<Value> {
     runtime()?.block_on(async {
@@ -245,9 +272,16 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     p["method"] = json!("Page.close");
     p["commandParams"] = json!({});
     rpc.call("executeCdp", p).await?;
-    let tabs = rpc.call("getUserTabs", r.params()).await?;
-    if has_tab(&tabs, r.tab)? {
-        return Err(io::Error::other("tab still open after close"));
+    let deadline = std::time::Instant::now() + Duration::from_millis(500);
+    loop {
+        let tabs = rpc.call("getUserTabs", r.params()).await?;
+        if !has_tab(&tabs, r.tab)? {
+            break;
+        }
+        if std::time::Instant::now() >= deadline {
+            return Err(io::Error::other("tab still open after close"));
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
     }
     Ok(true)
 }
@@ -537,12 +571,16 @@ async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
     Ok(())
 }
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+    runtime()?.block_on(open_inner(dir, job, url))
+}
+
+async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     if !safe_job(job)
         || !(url.starts_with("https://") || url.starts_with("http://") || url == "about:blank")
     {
         return Err(io::Error::other("invalid job or URL"));
     }
-    runtime()?.block_on(async {
+    {
         lifecycle::activity(dir)?;
         let (pipe, info) = discover().await?;
         let mut rpc = Rpc::connect(&pipe).await?;
@@ -569,19 +607,162 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         persist_or_close(dir, &r).await?;
         let mut p = r.params();
         p["tabId"] = json!(r.tab);
-        rpc.call("attach", p).await?;
+        let attached = rpc.call("attach", p).await;
+        if let Err(e) = attached {
+            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+            return Err(e);
+        }
         let mut p = r.params();
         p["target"] = json!({"tabId":r.tab});
         p["method"] = json!("Page.navigate");
         p["commandParams"] = json!({"url":url});
-        rpc.call("executeCdp", p).await?;
+        if let Err(e) = rpc.call("executeCdp", p).await {
+            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+            return Err(e);
+        }
         Ok(r)
+    }
+}
+
+fn remaining(deadline: std::time::Instant) -> io::Result<Duration> {
+    deadline
+        .checked_duration_since(std::time::Instant::now())
+        .filter(|d| !d.is_zero())
+        .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "browser deadline reached"))
+}
+
+/// The stored ownership record is also used by the caller to retry cleanup.
+pub fn open_until(
+    dir: &Path,
+    job: &str,
+    url: &str,
+    deadline: std::time::Instant,
+) -> io::Result<Record> {
+    let budget = remaining(deadline)?;
+    runtime()?.block_on(async {
+        tokio::time::timeout(budget, open_inner(dir, job, url))
+            .await
+            .map_err(|_| {
+                io::Error::new(io::ErrorKind::TimedOut, "opening owner Chrome timed out")
+            })?
+    })
+}
+
+/// Execute only page operations on a positively recorded tab in the same Chrome generation.
+pub fn page_command(
+    record: &Record,
+    method: &str,
+    params: Value,
+    deadline: std::time::Instant,
+) -> io::Result<Value> {
+    if !matches!(
+        method,
+        "Runtime.evaluate" | "Input.insertText" | "Page.navigate"
+    ) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "unsupported page operation",
+        ));
+    }
+    let budget = remaining(deadline)?;
+    runtime()?.block_on(async {
+        tokio::time::timeout(budget, async {
+            let mut rpc = Rpc::connect(&record.pipe).await?;
+            let info = rpc.call("getInfo", record.params()).await?;
+            if !record.matches_backend(&info) {
+                return Err(io::Error::other("Chrome generation changed"));
+            }
+            let tabs = rpc.call("getTabs", record.params()).await?;
+            if !has_tab(&tabs, record.tab)? {
+                return Err(io::Error::other("owned tab is no longer attached"));
+            }
+            let mut p = record.params();
+            p["target"] = json!({"tabId":record.tab});
+            p["method"] = json!(method);
+            p["commandParams"] = params;
+            rpc.call("executeCdp", p).await
+        })
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "owner Chrome operation timed out"))?
+    })
+}
+
+/// Cleanup has its own bounded grace; it never closes the user's browser.
+pub fn close_page(record: &Record) -> io::Result<bool> {
+    runtime()?.block_on(async {
+        tokio::time::timeout(Duration::from_secs(3), close_record(record))
+            .await
+            .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "owned tab cleanup timed out"))?
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn incomplete_connection_identity_is_rejected_before_creation() {
+        let valid = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+        assert_eq!(chrome_identity(&valid), Some(("instance", "generation")));
+        for invalid in [
+            json!({"type":"extension","family":"chrome"}),
+            json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":""},"browserTabMentions":{"generation":"generation"}}),
+            json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":""}}),
+        ] {
+            assert!(chrome_identity(&invalid).is_none());
+        }
+    }
+    #[test]
+    fn discovery_refuses_two_distinct_chrome_profiles() {
+        runtime().unwrap().block_on(async {
+            let mut servers = Vec::new();
+            let mut pipes = Vec::new();
+            for _ in 0..2 {
+                let pipe = format!(r"\\.\pipe\cc-chrome-profile-test-{}", uuid::Uuid::new_v4());
+                servers.push(ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap());
+                pipes.push(pipe);
+            }
+            let reply = |mut server: tokio::net::windows::named_pipe::NamedPipeServer, instance: &'static str| async move {
+                server.connect().await.unwrap();
+                let request = read_frame(&mut server).await.unwrap();
+                assert_eq!(request["method"], "getInfo");
+                write_frame(&mut server, &json!({"id":request["id"],"result":{"type":"extension","family":"chrome","metadata":{"extensionInstanceId":instance},"browserTabMentions":{"generation":"generation"}}})).await.unwrap();
+            };
+            let second = servers.pop().unwrap();
+            let first = servers.pop().unwrap();
+            let (result, _, _) = tokio::join!(discover_from(pipes, None), reply(first, "owner"), reply(second, "other"));
+            assert!(result.unwrap_err().to_string().contains("ambiguous"));
+        });
+    }
+
+    #[test]
+    fn page_commands_require_matching_generation_and_recorded_tab() {
+        runtime().unwrap().block_on(async {
+            for (generation, tabs, succeeds) in [("generation", json!([{"id":42}]), true), ("different", json!([{"id":42}]), false), ("generation", json!([{"id":99}]), false)] {
+                let pipe = format!(r"\\.\pipe\cc-chrome-page-test-{}", uuid::Uuid::new_v4());
+                let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                let record = Record { job:"chatgpt-web".into(), pipe, instance:"instance".into(), generation:"generation".into(), session:"session".into(), turn:"turn".into(), tab:42, created:epoch() };
+                let call = tokio::task::spawn_blocking(move || page_command(&record, "Runtime.evaluate", json!({"expression":"1+1","returnByValue":true}), std::time::Instant::now()+Duration::from_secs(2)));
+                let mock = async {
+                    server.connect().await.unwrap();
+                    let request=read_frame(&mut server).await.unwrap();
+                    assert_eq!(request["method"],"getInfo");
+                    write_frame(&mut server,&json!({"id":request["id"],"result":{"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":generation}}})).await.unwrap();
+                    if generation=="generation" {
+                        let request=read_frame(&mut server).await.unwrap();assert_eq!(request["method"],"getTabs");
+                        write_frame(&mut server,&json!({"id":request["id"],"result":tabs})).await.unwrap();
+                        if succeeds {
+                            let request=read_frame(&mut server).await.unwrap();assert_eq!(request["method"],"executeCdp");
+                            assert_eq!(request["params"]["target"]["tabId"],42);
+                            assert_eq!(request["params"]["method"],"Runtime.evaluate");
+                            write_frame(&mut server,&json!({"id":request["id"],"result":{"result":{"value":2}}})).await.unwrap();
+                        }
+                    }
+                };
+                let (result, _) = tokio::join!(call, mock);
+                assert_eq!(result.unwrap().is_ok(), succeeds);
+            }
+        });
+    }
     #[test]
     fn rpc_deadline_includes_write_to_a_connected_pipe_that_never_reads() {
         runtime().unwrap().block_on(async {

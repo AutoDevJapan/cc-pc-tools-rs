@@ -38,6 +38,7 @@ fn fixture_command(home: &Path, page: &str, args: &[&str]) -> Command {
         .env("CHATGPT_WEB_HOME", home)
         .env("CHATGPT_WEB_URL", fixture_url(page))
         .env("CHATGPT_WEB_DISCORD", "off")
+        .env("CHATGPT_WEB_FIXTURE", "1")
         .env("CHATGPT_WEB_HEADLESS", "1");
     cmd
 }
@@ -202,6 +203,27 @@ fn check_on_logged_in_page_succeeds_and_status_reads_it() {
 }
 
 #[test]
+fn observed_owner_composer_is_detected_without_the_old_id() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let result = run(
+        dir.path(),
+        "chat.html",
+        &[
+            "probe",
+            "page:(()=>{const b=q('#prompt-textarea');b.removeAttribute('id');b.setAttribute('role','textbox');b.setAttribute('aria-label','Ask ChatGPT');return !!q(COMPOSER);})()",
+            "page:state()",
+        ],
+    );
+    assert_eq!(result.status.code(), Some(0), "{}", stderr(&result));
+    assert!(stdout(&result).contains("true"));
+    assert!(stdout(&result).contains("logged_in"));
+    assert_browser_closed(dir.path());
+}
+
+#[test]
 fn answer_errors_and_limits_have_their_own_codes() {
     if !chrome_available() {
         return;
@@ -232,7 +254,9 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     let address = server.local_addr().unwrap();
     server.set_nonblocking(true).unwrap();
     let handler = std::thread::spawn(move || {
-        let until = Instant::now() + Duration::from_secs(20);
+        // This test asserts document initialization, not Chrome cold-start speed.
+        // Keep the 2s blocked script and answer assertions; allow startup on CI hosts.
+        let until = Instant::now() + Duration::from_secs(60);
         let mut script_sent = false;
         while Instant::now() < until {
             let Ok((mut socket, _)) = server.accept() else {
@@ -296,7 +320,7 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
             "--prompt-file",
             q.to_str().unwrap(),
             "--timeout",
-            "20",
+            "60",
         ],
     )
     .env("CHATGPT_WEB_URL", format!("http://{address}/chat.html"))

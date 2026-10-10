@@ -188,10 +188,6 @@ impl Browser {
         Err(io::Error::other("Chrome の CDP に接続できませんでした"))
     }
 
-    pub fn launched(&self) -> bool {
-        self.child.is_some()
-    }
-
     /// 新しいタブを開き、そのページへ接続する。
     pub fn new_tab(&mut self, url: &str, new_window: bool) -> io::Result<Tab> {
         let r = self.cdp.call(

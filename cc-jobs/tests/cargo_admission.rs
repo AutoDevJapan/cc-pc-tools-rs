@@ -378,8 +378,14 @@ fn waiting_process_rereads_config_despite_its_inherited_one_slot_setting() {
     fs::write(job_dir.join("job.json"), "{}").unwrap();
     let lock = FileLock::try_acquire(&t.0.join("cargo-build.lock.0")).unwrap();
     let mut child = OwnedChild(Some(
-        hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+        // The contract is configuration reload on a healthy machine. Sampling
+        // the busy CI host can legitimately pause admission at 100% CPU even
+        // after the new ceiling is read. Keep the full real gate protocol and
+        // child environment, but supply health only through the fixture binary.
+        hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
+            .arg("--healthy-cargo-gate")
             .arg("--echo-env")
+            .env("CC_JOBS_FIXTURE_DIR", &t.0)
             .env(
                 "CODEX_JOBS_REAL_CARGO",
                 env!("CARGO_BIN_EXE_cc_jobs_fixture"),

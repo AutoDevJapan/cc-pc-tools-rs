@@ -230,12 +230,22 @@ fn attempt(
     }))
 }
 pub fn wait(dir: &Path, env: &BTreeMap<String, String>, cores: usize) -> io::Result<Permit> {
+    wait_with_sample(dir, env, cores, native_sample)
+}
+
+/// Share the real retry/config/lock protocol with deterministic process fixtures.
+pub fn wait_with_sample(
+    dir: &Path,
+    env: &BTreeMap<String, String>,
+    cores: usize,
+    mut sample: impl FnMut() -> io::Result<Sample>,
+) -> io::Result<Permit> {
     let mut marker = None;
     let mut marked_reason = "";
     let mut reported_error = String::new();
     loop {
         let mut reason = SLOT_WAIT;
-        match attempt(dir, cores, native_sample, &mut reason) {
+        match attempt(dir, cores, &mut sample, &mut reason) {
             Ok(Some(permit)) => return Ok(permit),
             Ok(None) => reported_error.clear(),
             Err(e)

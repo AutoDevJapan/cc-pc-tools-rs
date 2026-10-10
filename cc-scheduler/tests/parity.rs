@@ -107,7 +107,8 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
     let mut f = Fixture::new();
     f.e.backend.records = sub.jobs.clone();
     write_json(&f.e.todo_path, &sub.db, 1).unwrap();
-    let first = json!({"key":"manual:first","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prompt":"First body"});
+    let first = json!({"key":"manual:first","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prompt":"First body",
+        "options":{"model":"gpt-6-luna","effort":"medium"}});
     let second = json!({"key":"manual:second","launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prompt":"Second body"});
     f.e.backend.m["cpu_percent"] = json!(99);
     assert_eq!(
@@ -170,6 +171,10 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
         .unwrap()
         .is_some());
     assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.e.backend.launched[1]["item"]["scheduler"]["selection"]["model"],
+        "mock-model"
+    );
     assert!(f.e.backend.launched[1]["text"]
         .as_str()
         .unwrap()

@@ -1091,6 +1091,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     // A new accepted body starts its own conversation. The files
                     // and all earlier receipts remain, but their conversation does not.
                     row["scheduler"]["console_fresh_request"] = json!(true);
+                    remove(&mut row["scheduler"], "selection");
+                    remove(&mut row["scheduler"], "resume_session");
                 }
                 if !truth(&row["scheduler"]["key"]) {
                     row["scheduler"]["key"] = request["launch_key"].clone();

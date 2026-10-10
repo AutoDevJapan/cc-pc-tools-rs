@@ -1934,7 +1934,9 @@ impl Console {
         ];
         for cwd in candidates.into_iter().flatten().filter(|p| !p.is_empty()) {
             match fs::metadata(cwd) {
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound && owned_source => continue,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound
+                    && owned_source
+                    && source.is_some_and(|s| !same_folder(cwd, strv(s, "cwd"))) => continue,
                 Err(_) => return Err(io_fault()),
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
                 Ok(_) => (),

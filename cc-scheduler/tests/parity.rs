@@ -3096,7 +3096,7 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .any(|call| call["argv"].is_array()));
 }
 #[test]
-fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
+fn test_discord_tick_calls_scheduler_before_intake_even_if_intake_fails() {
     let temp = tempfile::tempdir().unwrap();
     let fake = AskFake::default();
     let calls = fake.calls.clone();
@@ -3113,7 +3113,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
                 && arr(&v["argv"]).last().is_some_and(|v| s(v) == "step")
         })
         .unwrap();
-    assert!(scheduler > api);
+    assert!(scheduler < api);
     let launched: Vec<_> = calls
         .iter()
         .filter(|v| truth(&v["argv"]))

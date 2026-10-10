@@ -1,7 +1,7 @@
 //! Console commands compatible with the shared Python Discord question tool.
 use crate::core::*;
 use crate::project::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, HashSet},
     io::{self, Write},
@@ -869,11 +869,13 @@ fn post_text(
         value["reused"] = json!(true);
         let identity = &context.unwrap()["reuse_question"];
         let state = ctx.load_fresh()?;
-        value["tracked"] = json!(state["questions"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .any(|q| q["thread_id"] == identity["thread_id"] && truth(&q["open"])));
+        value["tracked"] = json!(
+            state["questions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|q| q["thread_id"] == identity["thread_id"] && truth(&q["open"]))
+        );
         let owner = ctx.owner();
         let replies = owner_replies(ctx, identity, &owner)?;
         if let Some(answer) = replies
@@ -1135,6 +1137,11 @@ fn external_step(ctx: &mut Context, path: PathBuf, verb: &str, report_json: bool
         && output.code == 1
         && trailing_report(&output.stdout)
             .is_some_and(|(_, report)| report.is_object() && report.get("error").is_some());
+    let scheduler_busy = report_json
+        && trailing_report(&output.stdout).is_some_and(|(_, report)| report["busy"] == true);
+    if swallowed_scheduler_error || scheduler_busy {
+        ctx.cfg["__scheduler_step_failed"] = json!(true);
+    }
     if output.code != 0 && !swallowed_scheduler_error {
         return Err(format!("{verb} exited {}", output.code));
     }
@@ -1147,7 +1154,24 @@ pub fn cmd_todo_watch(ctx: &mut Context) -> Result<()> {
 }
 /// Capacity, dispatch and recovery; scheduler.step isolates and logs its own failures.
 pub fn cmd_scheduler_step(ctx: &mut Context) -> Result<()> {
+    ctx.cfg["__scheduler_step_failed"] = json!(false);
     external_step(ctx, ctx.scheduler_command.clone(), "step", true)
+}
+// Observation must continue even while boot ownership prevents new launches.
+// Discard the report: watch-preview can contain private work metadata.
+fn observe_only(ctx: &mut Context, path: PathBuf, verb: &str) -> Result<()> {
+    let output = ctx.run(&command_argv(&path, &[verb.to_owned()]), 20)?;
+    if verb == "status"
+        && trailing_report(&output.stdout)
+            .is_some_and(|(_, report)| report["busy"] == true || !report["error"].is_null())
+    {
+        return Err("observation unavailable".into());
+    }
+    if output.code == 0 {
+        Ok(())
+    } else {
+        Err("observation failed".into())
+    }
 }
 /// PR shepherds (D:/CC/Tools/shepherd): one Codex job per idle open PR drives it to merge (2026-10-01).
 pub fn cmd_shepherd_step(ctx: &mut Context) -> Result<()> {
@@ -1183,6 +1207,8 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         return Ok(());
     };
     let _deadline = crate::tick_runtime::Deadline::new(crate::tick_runtime::TICK_LIMIT);
+    let mut health = json!({"started_at":ctx.now() as u64,"stages":{}});
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     let _finish = crate::tick_runtime::Span::new("tick total");
     println!(
         "{} tick start; prompt_limit_bytes={}; writer_guard=enabled; pid={}; limit_ms={}",
@@ -1208,14 +1234,67 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
     }
     // Recovery is required for direct CLI ticks as well as the scheduled VBS caller.
     // A failed inventory recovery permits receipts but blocks new children this pass.
-    if !crate::tick_runtime::stage("startup-recovery", Duration::from_secs(20), || {
+    let recovered = crate::tick_runtime::stage("startup-recovery", Duration::from_secs(20), || {
         Ok(crate::automation::recover_before_launch(ctx))
     })
-    .unwrap_or(false)
-    {
+    .unwrap_or(false);
+    health["stages"]["startup_recovery"] = json!(recovered);
+    if !recovered {
         budget = true;
         eprintln!("startup recovery failed; launches deferred");
     }
+    // Observe/recover work before Discord scans can consume the whole deadline.
+    // Reuse this tick and its launch gates; never add another polling loop.
+    for (name, step) in [
+        (
+            "cmd_todo_watch",
+            cmd_todo_watch as fn(&mut Context) -> Result<()>,
+        ),
+        (
+            "cmd_scheduler_step",
+            cmd_scheduler_step as fn(&mut Context) -> Result<()>,
+        ),
+    ] {
+        let deferred = truth(&ctx.cfg["__reboot_recovery_deferred"]);
+        // The metadata inventory spans thousands of receipts; retain its
+        // normal 20s ceiling within the existing whole-tick deadline.
+        let limit = if name == "cmd_todo_watch" { 20 } else { 8 };
+        let result = crate::tick_runtime::stage(name, Duration::from_secs(limit), || {
+            if deferred {
+                if name == "cmd_todo_watch" {
+                    observe_only(ctx, ctx.todo_command.clone(), "watch-preview")
+                } else {
+                    observe_only(ctx, ctx.scheduler_command.clone(), "status")
+                }
+            } else {
+                step(ctx)
+            }
+        });
+        health["stages"][name] = json!(
+            result.is_ok()
+                && !(name == "cmd_scheduler_step" && truth(&ctx.cfg["__scheduler_step_failed"]))
+        );
+        if let Err(error) = result {
+            eprintln!("{name} failed: {}", error_detail(&error));
+        }
+    }
+    health["observed_at"] = json!(ctx.now() as u64);
+    health["mode"] = json!(if truth(&ctx.cfg["__reboot_recovery_deferred"]) {
+        "observe_only"
+    } else {
+        "recovery"
+    });
+    health["error"] = if health["stages"]
+        .as_object()
+        .unwrap()
+        .values()
+        .all(|v| v == true)
+    {
+        Value::Null
+    } else {
+        json!("core_stage_failed")
+    };
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     let config_error = ctx.cfg["__cc_ask_config_error"].as_str().map(str::to_owned);
     let intake_first = if config_error.is_none() {
         let _state_lock = lock(ctx)?;
@@ -1250,21 +1329,11 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
             "cmd_civ6_fairness",
             crate::civ6_idle::cmd_civ6_fairness as fn(&mut Context) -> Result<()>,
         ),
-        ("cmd_todo_watch", cmd_todo_watch),
-        (
-            "cmd_scheduler_step",
-            cmd_scheduler_step as fn(&mut Context) -> Result<()>,
-        ),
         ("cmd_shepherd_step", cmd_shepherd_step),
         ("cmd_remind", cmd_remind),
         ("cmd_sweep", cmd_sweep),
         ("cmd_civ6_idle", crate::civ6_idle::cmd_civ6_idle),
     ] {
-        if truth(&ctx.cfg["__reboot_recovery_deferred"])
-            && ["cmd_todo_watch", "cmd_scheduler_step"].contains(&name)
-        {
-            continue; // Do not replace jobs whose boot recovery will retry.
-        }
         let result = crate::tick_runtime::stage(name, Duration::from_secs(5), || {
             if ["cmd_remind", "cmd_sweep"].contains(&name) {
                 match &config_error {
@@ -1279,6 +1348,8 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
             eprintln!("{name} failed: {}", error_detail(&error));
         }
     }
+    health["finished_at"] = json!(ctx.now() as u64);
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     Ok(())
 }
 

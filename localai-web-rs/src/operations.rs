@@ -1,6 +1,10 @@
 //! A session-independent, read-only projection of the shared operational records.
 //! Never read job prompts, credentials, client workspaces or session transcripts.
 use chrono::DateTime;
+#[path = "commander_health.rs"]
+mod commander_health;
+#[path = "waiting_state.rs"]
+mod waiting_state;
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -55,7 +59,7 @@ pub async fn resident(board: Arc<Operations>) {
 }
 fn empty() -> Value {
     json!({"fetchedAt":null,"sourceOk":false,"sources":[],
-        "commander":{"id":"commander","name":"司令塔","status":"waiting","detail":"共有データを取得中"},
+        "commander":{"id":"commander","name":"司令塔","status":"unknown","detail":"共有データを取得中"},
         "metrics":{},"departments":departments(BTreeMap::new())})
 }
 fn now_ms() -> u64 {
@@ -302,20 +306,30 @@ fn collect(root: &Path, now: u64) -> Value {
         },
     ));
     let queue_path = root.join("localai-web-rs/target/release/console-state.json");
-    let queue = read_json(&queue_path).unwrap_or(Value::Null);
-    let tick_at = queue["last_tick"].as_u64().map(|v| v * 1000);
-    let commander_ok = fresh(tick_at, now, 180_000);
-    sources.push(source(
+    let queue_read = read_json(&queue_path);
+    let queue = queue_read.as_ref().cloned().unwrap_or(Value::Null);
+    let health_path = queue_path.with_file_name("commander-health.json");
+    let health = read_json(&health_path);
+    let commander = commander_health::project(
+        health.as_ref().ok(),
+        &queue,
+        now,
+        (queue_read.is_err() && queue_path.try_exists().unwrap_or(true))
+            || (health.is_err() && health_path.try_exists().unwrap_or(true)),
+    );
+    let commander_ok = commander["status"] == "working";
+    let tick_at = commander["completedAt"]
+        .as_u64()
+        .or(commander["startedAt"].as_u64());
+    let mut commander_source = source(
         "console",
         "司令塔の巡回",
         commander_ok,
         tick_at,
-        if commander_ok {
-            "巡回中"
-        } else {
-            "巡回の記録を確認できません"
-        },
-    ));
+        text(&commander, "detail"),
+    );
+    commander_source["state"] = commander["state"].clone();
+    sources.push(commander_source);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
     let js = jobs.as_ref().map(Vec::as_slice).unwrap_or(&[]);
@@ -384,7 +398,15 @@ fn collect(root: &Path, now: u64) -> Value {
             let wait_kind = match text(item, "status") {
                 "block" => "owner",
                 "wait" => "dependency",
-                _ if status == "waiting" => "resource",
+                _ if status == "waiting" => waiting_state::kind(
+                    item,
+                    current.copied(),
+                    &queue,
+                    scheduler_ok
+                        && scheduler["reasons"]
+                            .as_array()
+                            .is_some_and(|reasons| !reasons.is_empty()),
+                ),
                 _ => "none",
             };
             let question_url = if client {
@@ -399,7 +421,16 @@ fn collect(root: &Path, now: u64) -> Value {
                 "working" => "共有ToDoに紐づく担当が稼働中です。",
                 "waiting" if text(item, "status") == "block" => "オーナーの判断待ちです。",
                 "waiting" if text(item, "status") == "wait" => "別のToDoの完了待ちです。",
-                "waiting" => "担当の開始または再開を待っています。",
+                "waiting" if wait_kind == "job_queue" => "ジョブの起動順を待っています。",
+                "waiting" if wait_kind == "startup_error" => {
+                    "起動準備が失敗しています。既存の復旧処理が再確認します。"
+                }
+                "waiting" if wait_kind == "resource" => {
+                    "実測したCPU・メモリなどの起動条件を待っています。"
+                }
+                "waiting" => {
+                    "担当の開始または再開を待っています。CPU枠の待ちとは確定していません。"
+                }
                 "attention" => {
                     "未完了の作業で直近の担当が失敗または停止しました。再開状況を確認してください。"
                 }
@@ -466,6 +497,7 @@ fn collect(root: &Path, now: u64) -> Value {
         if key.is_empty() {
             continue;
         }
+        let mut observation_only = false;
         let (ok, at) = match key {
             "relay" => {
                 let p = root.join("ocx-health-watchdog/status.json");
@@ -474,23 +506,43 @@ fn collect(root: &Path, now: u64) -> Value {
                 (v["healthy"] == true && fresh(at, now, 180_000), at)
             }
             "discord" => {
-                let at = modified(&root.join("discord-ask/tick.log"));
-                (fresh(at, now, 300_000), at)
+                let path = root.join("discord-ask/tick-health.json");
+                let v = read_json(&path).unwrap_or(Value::Null);
+                let at = v["observed_at"]
+                    .as_u64()
+                    .filter(|v| *v > 0)
+                    .and_then(|v| v.checked_mul(1000));
+                observation_only = v["mode"] == "observe_only" && v["stages"]["cmd_todo_watch"] == true && v["stages"]["cmd_scheduler_step"] == true && fresh(at, now, 180_000);
+                (
+                    v["error"].is_null()
+                        && v["stages"]["startup_recovery"] == true
+                        && v["stages"]["cmd_todo_watch"] == true
+                        && v["stages"]["cmd_scheduler_step"] == true
+                        && fresh(at, now, 180_000),
+                    at,
+                )
             }
             // The guard's log is event-driven. Its absence or age does not prove
             // failure. Report an unknown state rather than invent an incident.
             "guard" => (false, None),
             _ => (false, None),
         };
-        let unknown = key == "guard" || !matches!(key, "relay" | "discord");
+        let unknown = key == "guard"
+            || !matches!(key, "relay" | "discord")
+            || (key == "discord"
+                && root.join("discord-ask/tick-health.json").try_exists().is_ok_and(|exists| !exists));
         let label = clean(&names, text(tool, "name"));
         let mut resident_source = source(
             key,
             &label,
             ok,
             at,
-            if unknown {
+            if observation_only {
+                "停止監視・容量確認を観測しました。起動時復旧は保留中です。"
+            } else if unknown {
                 "稼働状態の記録なし"
+            } else if key == "discord" && ok {
+                "停滞監視・容量確認・起動時復旧を確認（Discord取得は別工程）"
             } else if ok {
                 "監視中"
             } else {
@@ -510,9 +562,9 @@ fn collect(root: &Path, now: u64) -> Value {
             5,
             "常駐".into(),
             json!({"id":safe_id("resident",key),"name":label,"task":clean(&names,text(tool,"role")),
-            "status":if unknown{"waiting"}else if ok{"working"}else{"attention"},"progress":null,
+            "status":if unknown{"unknown"}else if ok{"working"}else{"attention"},"progress":null,
             "updatedAt":at.and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
-            "detail":if unknown{"常駐の稼働状態を確認できません。"}else if ok{"常駐監視の記録を確認しました。"}else{"常駐監視の応答または新しい記録を確認できません。"},"historyFailures":0}),
+            "detail":if observation_only{"停止監視・容量確認を観測しました。起動時復旧は保留中です。"}else if unknown{"常駐の稼働状態を確認できません。"}else if ok{"常駐監視の記録を確認しました。"}else{"常駐監視の応答または新しい記録を確認できません。"},"historyFailures":0}),
         );
     }
     let mut metrics = if scheduler_ok {
@@ -534,9 +586,33 @@ fn collect(root: &Path, now: u64) -> Value {
             )
         })
         .unwrap_or(Value::Null);
+    // These are distinct inventories, not a total of waits for CPU capacity.
+    let todo_count = |status| {
+        db.and_then(|v| v["items"].as_array())
+            .map(|items| items.iter().filter(|i| text(i, "status") == status).count())
+    };
+    metrics["todoDependencyWaits"] = json!(todo_count("wait"));
+    metrics["todoPendingStarts"] = json!(todo_count("todo"));
+    metrics["todoBlocked"] = json!(todo_count("block"));
+    metrics["jobQueued"] = if jobs.is_ok() {
+        json!(js.iter().filter(|j| text(j, "status") == "queued").count())
+    } else {
+        Value::Null
+    };
+    metrics["consoleQueued"] = json!(queue["queue"].as_array().map(Vec::len));
+    metrics["consolePreparationFailures"] = json!(queue["queue"].as_array().map(|items| {
+        items
+            .iter()
+            .filter(|t| queue["preparation_failures"][text(t, "key")].is_array())
+            .count()
+    }));
+    metrics["capacityReasons"] = if scheduler_ok {
+        scheduler["reasons"].clone()
+    } else {
+        Value::Null
+    };
     json!({"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
-        "commander":{"id":"commander","name":"司令塔","status":if commander_ok{"working"}else{"waiting"},
-            "detail":if commander_ok{"常駐の巡回が稼働中です。配下の障害は各作業に表示します。"}else{"司令塔の巡回記録を確認できません。配下の状態とは別に表示しています。"}},
+        "commander":commander,
         "metrics":metrics,"departments":departments(tree)})
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
@@ -588,7 +664,7 @@ mod tests {
         assert_eq!(find("todo-1")["historyFailures"], 1);
         assert_eq!(find("todo-2")["status"], "waiting");
         assert_eq!(find("todo-2")["waitKind"], "owner");
-        assert_eq!(find("todo-6")["waitKind"], "resource");
+        assert_eq!(find("todo-6")["waitKind"], "start");
         assert_eq!(find("todo-7")["waitKind"], "dependency");
         assert_eq!(find("todo-5")["summary"], "");
         assert!(find("todo-5")["questionUrl"].is_null());

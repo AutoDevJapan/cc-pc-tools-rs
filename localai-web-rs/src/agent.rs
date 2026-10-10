@@ -1,24 +1,26 @@
 //! Local agent API and a durable, bounded delegation queue. No Discord credentials enter this module.
 use axum::{
+    Json,
     body::to_bytes,
     extract::{Request, State},
     http::{Method, StatusCode},
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
-    sync::{Arc, Mutex},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    process::Command,
+    sync::{Arc, Mutex, MutexGuard, TryLockError},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const LIMIT: usize = 128 * 1024;
+#[path = "command_capture.rs"]
+mod command_capture;
 #[path = "agent_workspace.rs"]
 mod source_workspace;
 #[path = "todo_receipts.rs"]
@@ -195,57 +197,13 @@ impl Runner for RealRunner {
             }))
     }
     fn run(&self, program: &Path, args: &[String], cwd: &Path) -> Result<String> {
-        let mut cmd = Command::new(program);
-        windowless(&mut cmd)
-            .args(args)
-            .current_dir(cwd)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
-        let mut child = cmd.spawn().map_err(|_| external())?;
-        let stdout = child.stdout.take().ok_or_else(external)?;
-        // Drain the pipe concurrently, retaining only a bounded amount. Never expose stderr/secrets.
-        let reader = std::thread::spawn(move || {
-            let mut kept = Vec::new();
-            let mut stream = stdout;
-            let mut buf = [0; 8192];
-            let mut overflow = false;
-            loop {
-                let n = stream.read(&mut buf)?;
-                if n == 0 {
-                    break;
-                }
-                if kept.len() + n <= 2 * 1024 * 1024 {
-                    kept.extend_from_slice(&buf[..n]);
-                } else {
-                    overflow = true;
-                }
-            }
-            Ok::<_, std::io::Error>((kept, overflow))
-        });
-        let inbox = program.file_name().is_some_and(|n| n == "cc-inbox.exe");
-        let deadline = Instant::now() + Duration::from_secs(if inbox { 600 } else { 45 });
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(s)) => break s,
-                Ok(None) if Instant::now() < deadline => {
-                    std::thread::sleep(Duration::from_millis(30))
-                }
-                _ => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(external());
-                }
-            }
-        };
-        let (bytes, overflow) = reader
-            .join()
-            .map_err(|_| external())?
-            .map_err(|_| external())?;
-        if !status.success() || overflow {
-            return Err(external());
-        }
-        String::from_utf8(bytes).map_err(|_| external())
+        command_capture::run(program, args, cwd).map_err(|code| {
+            fault(
+                StatusCode::BAD_GATEWAY,
+                code,
+                "連携処理が失敗したため次の巡回で再確認します。",
+            )
+        })
     }
 }
 
@@ -344,11 +302,24 @@ pub struct Console {
     lock: Mutex<()>,
 }
 impl Console {
+    // Fixed labels only. This does not renew the patrol's start or certify completion.
+    fn patrol_stage(&self, stage: &'static str) {
+        if cc_ask::tick_runtime::remaining().is_none() {
+            return;
+        }
+        let path = self.paths.state.join("commander-health.json");
+        if let Ok(mut record) = fs::read(&path).map_err(|_| ()).and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ())) {
+            if record["pid"] == std::process::id() && record["finished_at"].is_null() {
+                record["stage"] = json!(stage);
+                let _ = atomic_write(&path, record.to_string().as_bytes());
+            }
+        }
+    }
     fn state_guard(&self) -> Result<cc_scheduler::common::ByteLock> {
         fs::create_dir_all(&self.paths.state).map_err(|_| io_fault())?;
         cc_scheduler::common::ByteLock::acquire(
             &self.paths.state.join("console-state.lock"),
-            Duration::from_secs(60),
+            cc_ask::tick_runtime::timeout(Duration::from_secs(60)).map_err(|_| external())?,
         )
         .map_err(|_| io_fault())?
         .ok_or_else(io_fault)
@@ -491,6 +462,7 @@ impl Console {
         Ok(false)
     }
     fn jobs(&self) -> Result<Vec<Value>> {
+        self.patrol_stage("jobs");
         let mut jobs = Vec::new();
         for entry in fs::read_dir(&self.paths.jobs).map_err(|_| io_fault())? {
             let dir = entry.map_err(|_| io_fault())?.path();
@@ -648,14 +620,16 @@ impl Console {
             {
                 let mut row = item.clone();
                 let links = item["jobs"].as_array().cloned().unwrap_or_default();
-                row["linked_jobs"] = json!(links
-                    .iter()
-                    .map(|id| jobs
+                row["linked_jobs"] = json!(
+                    links
                         .iter()
-                        .find(|j| j["id"] == *id)
-                        .map(public_job)
-                        .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
-                    .collect::<Vec<_>>());
+                        .map(|id| jobs
+                            .iter()
+                            .find(|j| j["id"] == *id)
+                            .map(public_job)
+                            .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
+                        .collect::<Vec<_>>()
+                );
                 let status = strv(item, "status");
                 if let Some(rows) = statuses[status].as_array_mut() {
                     rows.push(row);
@@ -667,7 +641,7 @@ impl Console {
         Ok(json!({"groups":groups,"items":db["items"],"projects":db["projects"]}))
     }
     fn ensure_todo(&self, v: &Value) -> Result<Value> {
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let request_id = field(v, "request_id", 100)?;
         if !safe_id(request_id, 100) {
@@ -1003,7 +977,39 @@ impl Console {
         }
         Ok(())
     }
+    fn queue_lock(&self) -> Result<MutexGuard<'_, ()>> {
+        if cc_ask::tick_runtime::remaining().is_none() {
+            return self.lock.lock().map_err(|_| io_fault());
+        }
+        loop {
+            cc_ask::tick_runtime::check().map_err(|_| {
+                fault(
+                    StatusCode::GATEWAY_TIMEOUT,
+                    "command_timeout",
+                    "共有状態の取得待ちが巡回の期限を超えました。",
+                )
+            })?;
+            match self.lock.try_lock() {
+                Ok(guard) => return Ok(guard),
+                Err(TryLockError::Poisoned(_)) => return Err(io_fault()),
+                Err(TryLockError::WouldBlock) => std::thread::sleep(Duration::from_millis(20)),
+            }
+        }
+    }
+    fn patrol_budget(&self, state: &QueueState) -> Result<()> {
+        if cc_ask::tick_runtime::check().is_err() {
+            self.save(state)?;
+            return Err(fault(
+                StatusCode::GATEWAY_TIMEOUT,
+                "command_timeout",
+                "巡回の処理時間を超えたため次の巡回で続けます。",
+            ));
+        }
+        Ok(())
+    }
     fn dispatch(&self, s: &mut QueueState, jobs: &[Value]) -> Result<()> {
+        self.patrol_stage("dispatch");
+        self.patrol_budget(s)?;
         let scheduler_root = self.paths.tools.join("scheduler");
         fs::create_dir_all(&scheduler_root).map_err(|_| io_fault())?;
         let Some(_launch_guard) = cc_scheduler::common::ByteLock::acquire(
@@ -1016,8 +1022,10 @@ impl Console {
         };
         // Reconcile a lost launcher response before capacity or eligibility checks.
         // The reservation may have been cleared after the job actually started.
+        self.patrol_stage("dispatch_receipts");
         let db = self.todos()?;
         for mut t in s.queue.clone() {
+            self.patrol_budget(s)?;
             match decision_todo(&t, jobs, &db) {
                 Ok(id) => {
                     t.todo_id = id;
@@ -1135,7 +1143,9 @@ impl Console {
             .iter()
             .map(|trigger| trigger_todo_id(trigger, jobs, &db))
             .collect();
+        self.patrol_stage("dispatch_merge");
         for (index, trigger) in queue.iter().enumerate() {
+            self.patrol_budget(s)?;
             if !automatic_recovery(&trigger.key) {
                 continue;
             }
@@ -1182,34 +1192,43 @@ impl Console {
         self.save(s)?;
         // Preserve missing receipts for reconciliation, but do not let one
         // historical record consume every unrelated project's execution slot.
-        let scan_limit = s.queue.len();
+        // A resident patrol is also the monitor. Preparation checks can run
+        // several Git probes, so plan a small batch and rotate parked work.
+        // Ordinary API dispatch keeps its existing full-batch behavior.
+        let scan_limit = if cc_ask::tick_runtime::remaining().is_some() {
+            s.queue.len().min(2)
+        } else {
+            s.queue.len()
+        };
         let mut scanned = 0;
         // Eligibility is a batch plan. Refresh actual ownership again before
         // every launch; repeatedly reopening thousands of historical job files
         // for ineligible reservations cannot make that final check safer.
+        self.patrol_stage("capacity");
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
-        let mut candidate_jobs = if s.queue.is_empty() {
-            Vec::new()
-        } else {
-            self.jobs()?
-        };
+        let mut candidate_jobs = jobs.to_vec();
         let mut launch_failure = None;
+        let mut evidence_cache = BTreeMap::new();
+        self.patrol_stage("dispatch_launch");
         while !s.queue.is_empty() && scanned < scan_limit {
+            self.patrol_budget(s)?;
             scanned += 1;
             if !self.paths.on().is_file() {
                 break;
             }
             let mut t = s.queue[0].clone();
-            if !self.recovery_ready(s, &t)? {
+            let db = self.todos()?;
+            self.patrol_stage("recovery_evidence");
+            if !self.recovery_ready(s, &t, &db, &candidate_jobs, &mut evidence_cache)? {
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
             }
             let stall = t.key.starts_with("manual:stall-");
             let fresh_jobs = &candidate_jobs;
-            let db = self.todos()?;
+            self.patrol_stage("dispatch_launch");
             match decision_todo(&t, fresh_jobs, &db) {
                 Ok(id) => {
                     t.todo_id = id;
@@ -1336,7 +1355,7 @@ impl Console {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
                     } else {
-                        self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                        self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
                         continue;
                     }
                     let source_owned = source.is_some_and(|job| {
@@ -1446,6 +1465,7 @@ impl Console {
                         }
                         self.record_launch(s, &t, &id)?;
                         candidate_jobs = self.jobs()?;
+                        evidence_cache.clear();
                     }
                     Ok(None) => {
                         let waiting = s.queue.remove(0);
@@ -1453,7 +1473,7 @@ impl Console {
                         self.save(s)?;
                     }
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code)?;
+                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     }
                 }
                 continue;
@@ -1476,7 +1496,7 @@ impl Console {
                     t.cwd = match self.restored_workspace(item, source, &db, base) {
                         Ok(cwd) => cwd.into(),
                         Err(_) => {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                            self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
                             continue;
                         }
                     };
@@ -1489,7 +1509,7 @@ impl Console {
             {
                 Ok(options) => options,
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code)?;
+                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1520,7 +1540,7 @@ impl Console {
                     cwd
                 }
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code)?;
+                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1676,7 +1696,7 @@ impl Console {
                     }) {
                     Ok(options) => options,
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code)?;
+                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                         continue;
                     }
                 };
@@ -1819,7 +1839,7 @@ impl Console {
             let output = match output {
                 Ok(out) => out,
                 Err(e) => {
-                    self.defer_failure(s, &t.key, e.code)?;
+                    self.defer_failure(s, &t.key, e.code, &db, fresh_jobs, &mut evidence_cache)?;
                     launch_failure.get_or_insert(e);
                     continue;
                 }
@@ -1832,12 +1852,13 @@ impl Console {
             // A launch changes PR coverage and ownership for later candidates
             // in this same batch; keep the next plan aware of that new worker.
             candidate_jobs = self.jobs()?;
+            evidence_cache.clear();
         }
         launch_failure.map_or(Ok(()), Err)
     }
-    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str) -> Result<()> {
+    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<()> {
         let trigger = s.queue.iter().find(|t| t.key == key).ok_or_else(io_fault)?;
-        let evidence = self.recovery_evidence(trigger);
+        let evidence = self.recovery_evidence_from(trigger, Some(db), Some(jobs), cache);
         let record = s
             .preparation_recovery
             .entry(key.into())
@@ -1864,23 +1885,25 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn recovery_evidence(&self, t: &Trigger) -> Value {
+    fn recovery_evidence_from(&self, t: &Trigger, db: Option<&Value>, jobs: Option<&[Value]>, cache: &mut BTreeMap<(String, String), Value>) -> Value {
         let metadata = |p: &Path| match fs::metadata(p) {
             Ok(m) => json!({"exists":true,"directory":m.is_dir(),"bytes":m.len(),
                 "modified":m.modified().ok().and_then(|at|at.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string())}),
             Err(e) => json!({"error":format!("{:?}",e.kind())}),
         };
-        let db = self.todos().ok();
-        let item = db.as_ref().and_then(|db| {
+        let item = db.and_then(|db| {
             db["items"]
                 .as_array()?
                 .iter()
                 .find(|i| i["id"].as_u64() == t.todo_id)
         });
-        let jobs = self.jobs().ok();
-        let source = jobs.as_ref().and_then(|jobs| launch_source(t, item, jobs));
-        let registered = item.and_then(|i| db.as_ref()?["projects"][strv(i, "project")].as_str());
-        let checkout = |path: &str| {
+        let source = jobs.and_then(|jobs| launch_source(t, item, jobs));
+        let registered = item.and_then(|i| db?["projects"][strv(i, "project")].as_str());
+        let mut checkout = |path: &str| {
+            let key = (path.to_owned(), registered.unwrap_or("").to_owned());
+            if let Some(value) = cache.get(&key) {
+                return value.clone();
+            }
             let p = Path::new(path);
             let dirty = if p.join(".git").exists() {
                 self.runner
@@ -1890,8 +1913,10 @@ impl Console {
             } else {
                 None
             };
-            json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
-                "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
+            let value = json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
+                "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty});
+            cache.insert(key, value.clone());
+            value
         };
         json!({"workspace_policy_version":5,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
@@ -1905,11 +1930,11 @@ impl Console {
             "store_readable":db.is_some(),"jobs_readable":jobs.is_some(),
             "launcher":metadata(&self.paths.jobs.parent().unwrap_or(&self.paths.tools).join("codex_jobs.exe"))})
     }
-    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger) -> Result<bool> {
+    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<bool> {
         let Some((retry, code)) = s.preparation_failures.get(&t.key).cloned() else {
             return Ok(true);
         };
-        let current = self.recovery_evidence(t);
+        let current = self.recovery_evidence_from(t, Some(db), Some(jobs), cache);
         let old = s.preparation_recovery.get(&t.key).map(|r| &r["evidence"]);
         if old.is_none() {
             return Ok(retry <= now());
@@ -2023,7 +2048,7 @@ impl Console {
                         && owned_source
                         && source.is_some_and(|s| !same_folder(cwd, strv(s, "cwd"))) =>
                 {
-                    continue
+                    continue;
                 }
                 Err(_) => return Err(io_fault()),
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
@@ -2233,6 +2258,7 @@ impl Console {
         self.link_todos(s)
     }
     fn link_todos(&self, s: &mut QueueState) -> Result<()> {
+        self.patrol_stage("todo_links");
         for (id, job) in s.pending_links.clone() {
             let db = self.todos()?;
             let item = db["items"]
@@ -2267,6 +2293,7 @@ impl Console {
         .map_err(|_| io_fault())
     }
     fn inbox(&self) -> Result<()> {
+        self.patrol_stage("inbox");
         let questions = self.questions()?;
         let stage = self.paths.state.join("console-inbox.stage");
         atomic_write(
@@ -2285,10 +2312,12 @@ impl Console {
             .filter(|l| !l.trim().is_empty())
             .map(|l| serde_json::from_str(l).map_err(|_| external()))
             .collect::<Result<_>>()?;
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
-        self.maintain(&mut s, &self.jobs()?)?;
+        let jobs = self.jobs()?;
+        self.patrol_stage("inbox_maintain");
+        self.maintain(&mut s, &jobs)?;
         for m in messages {
             if !inbox_allowed(&m, &questions) {
                 continue;
@@ -2321,9 +2350,12 @@ impl Console {
     }
     fn tick_inner(&self, s: &mut QueueState) -> Result<()> {
         let jobs = self.jobs()?;
+        self.patrol_stage("initialize");
         self.initialize(s, &jobs)?;
         self.link_todos(s)?;
+        self.patrol_stage("prs");
         self.refresh_prs(s, &jobs);
+        self.patrol_stage("maintain");
         self.maintain(s, &jobs)?;
         self.save(s)?;
         if !self.paths.on().is_file() {
@@ -2331,7 +2363,11 @@ impl Console {
         }
         let db = self.todos()?;
         let mut intake_error = None;
-        for mut t in detect(&jobs, s) {
+        self.patrol_stage("detect");
+        let triggers = detect(&jobs, s);
+        self.patrol_stage("intake");
+        for mut t in triggers {
+            self.patrol_budget(s)?;
             // Automatic detection must not re-submit a durable accepted request.
             // Legacy bodies and fingerprints describe what was accepted before
             // ToDo association existed; dispatch reconciles them in place.
@@ -2367,8 +2403,9 @@ impl Console {
         intake_error.map_or(Ok(()), Err)
     }
     pub fn tick(&self) -> Result<()> {
+        self.patrol_stage("queue_lock");
         let result = {
-            let _guard = self.lock.lock().map_err(|_| io_fault())?;
+            let _guard = self.queue_lock()?;
             let _state_guard = self.state_guard()?;
             let mut s = self.read_state()?;
             self.tick_inner(&mut s)
@@ -2379,12 +2416,14 @@ impl Console {
         } else {
             Ok(())
         };
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
-        self.maintain(&mut s, &self.jobs()?)?;
+        let jobs = self.jobs()?;
+        self.patrol_stage("final_maintain");
+        self.maintain(&mut s, &jobs)?;
         let dispatch = if result.is_ok() {
-            self.dispatch(&mut s, &self.jobs()?)
+            self.dispatch(&mut s, &jobs)
         } else {
             Ok(())
         };
@@ -2433,7 +2472,7 @@ impl Console {
                 return self.todo_write(action, &v);
             }
         }
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
         match (method.as_str(), path) {
@@ -3801,12 +3840,53 @@ pub async fn resident(console: Arc<Console>) {
     loop {
         interval.tick().await;
         let c = console.clone();
-        let _ = tokio::task::spawn_blocking(move || c.tick()).await;
+        let started = now();
+        let record = console.paths.state.join("commander-health.json");
+        let previous = fs::read(&record)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
+        let previous_error = previous
+            .get("error")
+            .filter(|v| v.is_string())
+            .or_else(|| previous.get("previous_error").filter(|v| v.is_string()))
+            .cloned();
+        let _ = atomic_write(
+            &record,
+            json!({"started_at":started,"pid":std::process::id(),"previous_error":previous_error})
+                .to_string()
+                .as_bytes(),
+        );
+        let result = tokio::task::spawn_blocking(move || {
+            let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(50));
+            c.tick()
+        })
+        .await;
+        let error = match result {
+            Ok(Ok(())) => None,
+            Ok(Err(e)) => Some(e.code),
+            Err(_) => Some("worker_failed"),
+        };
+        let _ = atomic_write(&record, json!({"started_at":started,"finished_at":now(),"error":error,"pid":std::process::id()}).to_string().as_bytes());
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn resident_queue_mutex_wait_obeys_patrol_deadline_and_recovers() {
+        let fixture = Fixture::new();
+        let held = fixture.console.lock.lock().unwrap();
+        let deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::ZERO);
+        let error = match fixture.console.queue_lock() {
+            Err(e) => e,
+            Ok(_) => panic!("held lock must not be acquired"),
+        };
+        assert_eq!(error.code, "command_timeout");
+        drop(deadline);
+        drop(held);
+        assert!(fixture.console.queue_lock().is_ok());
+    }
     include!("delegation_model_tests.rs");
     include!("receipt_workspace_tests.rs");
     include!("resume_recovery_tests.rs");
@@ -4243,9 +4323,11 @@ mod tests {
         );
         state.prs = prs;
         state.prs_error = Some("test".into());
-        assert!(!detect(&f.console.jobs().unwrap(), &state)
-            .iter()
-            .any(|t| t.key.starts_with("pr:")));
+        assert!(
+            !detect(&f.console.jobs().unwrap(), &state)
+                .iter()
+                .any(|t| t.key.starts_with("pr:"))
+        );
     }
     #[test]
     fn pr_reviews_repeat_only_after_three_new_handoffs_and_survive_restart() {
@@ -4658,9 +4740,11 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|s| s == "run"))
             .unwrap();
-        assert!(launch
-            .windows(2)
-            .any(|pair| pair == ["--mcp-profile", "browser"]));
+        assert!(
+            launch
+                .windows(2)
+                .any(|pair| pair == ["--mcp-profile", "browser"])
+        );
     }
     #[test]
     fn inbox_does_not_redelegate_consumed_answers_after_question_closes() {
@@ -4818,13 +4902,14 @@ mod tests {
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
         assert_eq!(f.console.read_state().unwrap().queue.len(), 1);
-        assert!(!f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe"))));
+        assert!(
+            !f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe")))
+        );
         f.on();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 1);
@@ -4915,9 +5000,11 @@ mod tests {
         f.console.tick().unwrap();
         let calls = f.fake.calls.lock().unwrap();
         let launch = calls.iter().find(|c| c.iter().any(|a| a == "run")).unwrap();
-        assert!(launch
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            launch
+                .windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
         assert!(launch.windows(2).any(|p| p == ["--todo-id", "1"]));
         drop(calls);
         assert_eq!(f.console.todos().unwrap()["items"][0]["status"], "doing");
@@ -4966,9 +5053,10 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            run.windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
         assert!(run.windows(2).any(|p| p == ["--model", "gpt-6-sol"]));
         assert!(run.windows(2).any(|p| p == ["--effort", "max"]));
     }
@@ -5021,9 +5109,10 @@ mod tests {
         assert_eq!(jobs.len(), 2);
         assert_ne!(jobs[0]["cwd"], jobs[1]["cwd"]);
         assert_ne!(jobs[0]["cwd"], json!(f.root));
-        assert!(jobs
-            .iter()
-            .all(|j| Path::new(strv(j, "cwd")).join(".git").exists()));
+        assert!(
+            jobs.iter()
+                .all(|j| Path::new(strv(j, "cwd")).join(".git").exists())
+        );
         let calls = f.fake.calls.lock().unwrap();
         assert_eq!(
             calls
@@ -5197,9 +5286,10 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            run.windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
     }
     #[test]
     fn queued_message_becoming_an_open_question_is_not_launched() {
@@ -5226,12 +5316,13 @@ mod tests {
         .unwrap();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
-        assert!(f
-            .console
-            .read_state()
-            .unwrap()
-            .handled
-            .contains("discord:12:99"));
+        assert!(
+            f.console
+                .read_state()
+                .unwrap()
+                .handled
+                .contains("discord:12:99")
+        );
     }
     #[test]
     fn inbox_checkpoint_advances_only_after_persisting_and_deduplicates() {
@@ -5851,12 +5942,11 @@ mod tests {
         let path = f.console.paths.jobs.join(&id).join("job.json");
         let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         job["status"] = json!("succeeded");
-        job["finished_at"] = json!(chrono::DateTime::from_timestamp(
-            (now() - HISTORY_SECONDS) as i64,
-            0
-        )
-        .unwrap()
-        .to_rfc3339());
+        job["finished_at"] = json!(
+            chrono::DateTime::from_timestamp((now() - HISTORY_SECONDS) as i64, 0)
+                .unwrap()
+                .to_rfc3339()
+        );
         fs::write(&path, job.to_string()).unwrap();
         let mut s = f.console.read_state().unwrap();
         maintain_state(&mut s, &f.console.jobs().unwrap(), now());
@@ -5885,12 +5975,13 @@ mod tests {
         f.console.todo_write("done", &json!({"id":1})).unwrap();
         f.console.tick().unwrap();
         assert!(!f.console.read_state().unwrap().suppressed.is_empty());
-        assert!(!f
-            .console
-            .read_state()
-            .unwrap()
-            .launches
-            .contains_key("manual:one"));
+        assert!(
+            !f.console
+                .read_state()
+                .unwrap()
+                .launches
+                .contains_key("manual:one")
+        );
     }
     #[test]
     fn receipt_metadata_errors_cannot_create_another_item() {
@@ -6050,10 +6141,11 @@ mod tests {
             let f = Fixture::new();
             let body = json!({"request_id":"music-atomic","project":"demo","title":"合成曲の担当","note":"元の要求"});
             *f.fake.lose_receipt.lock().unwrap() = true;
-            assert!(f
-                .console
-                .api(&Method::POST, "todo/ensure", body.clone())
-                .is_err());
+            assert!(
+                f.console
+                    .api(&Method::POST, "todo/ensure", body.clone())
+                    .is_err()
+            );
             let paths = cc_todo::Paths::at(&f.console.paths.todo, &f.console.paths.jobs);
             {
                 let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(1)).unwrap();
@@ -6106,10 +6198,11 @@ mod tests {
         fs::write(&store, db.to_string()).unwrap();
         let body = json!({"request_id":"music-global","project":"demo","title":"合成曲の担当","note":"元の要求"});
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         let mut other = body.clone();
         other["project"] = json!("other");
         assert_eq!(
@@ -6170,10 +6263,11 @@ mod tests {
         let body = json!({"request_id":"music-test-once","project":"demo",
             "title":"合成曲の担当","note":"生成要求の合成確認"});
         *f.fake.fail_todo.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6183,10 +6277,11 @@ mod tests {
         );
         *f.fake.fail_todo.lock().unwrap() = false;
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6230,9 +6325,11 @@ mod tests {
         );
         let mut invalid = body;
         invalid["request_id"] = json!("../outside");
-        assert!(restarted
-            .api(&Method::POST, "todo/ensure", invalid)
-            .is_err());
+        assert!(
+            restarted
+                .api(&Method::POST, "todo/ensure", invalid)
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -6311,15 +6408,19 @@ mod tests {
                         "2026-10-10T09:15:00+09:00"
                     );
                 }
-                "jobs" => assert!(response["data"]["jobs"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .all(|job| job["summary"] == "")),
-                _ => assert!(response["data"]["text"]
-                    .as_str()
-                    .unwrap()
-                    .contains("保存を確認\n  現在のメモ [非表示]")),
+                "jobs" => assert!(
+                    response["data"]["jobs"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .all(|job| job["summary"] == "")
+                ),
+                _ => assert!(
+                    response["data"]["text"]
+                        .as_str()
+                        .unwrap()
+                        .contains("保存を確認\n  現在のメモ [非表示]")
+                ),
             }
         }
         assert_eq!(
@@ -6479,13 +6580,14 @@ mod tests {
             f.http(Method::POST, "delegation/off", "{}").await.1["data"]["enabled"],
             false
         );
-        assert!(f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|c| c.iter().any(|a| a.ends_with("todo.exe"))));
+        assert!(
+            f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.iter().any(|a| a.ends_with("todo.exe")))
+        );
     }
     #[tokio::test]
     async fn agent_routes_reject_external_headers_and_oversized_bodies() {
@@ -6686,10 +6788,12 @@ mod tests {
             .dispatch(&mut s, &f.console.jobs().unwrap())
             .unwrap();
         assert_eq!(f.launches(), 1);
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!(s.launches["decision:source"])));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(s.launches["decision:source"]))
+        );
     }
     #[test]
     fn todo1597_intake_binds_source_before_dispatch_even_without_capacity() {
@@ -6791,10 +6895,11 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         assert_eq!(f.launches(), 1);
         let mut db = f.console.todos().unwrap();
         db["items"][0]["status"] = json!("block");
@@ -6818,10 +6923,11 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         let source = f.console.paths.jobs.join("source");
         let backup = f.root.join("source-backup");
         fs::rename(&source, &backup).unwrap();
@@ -6854,10 +6960,11 @@ mod tests {
         let mut s = f.console.read_state().unwrap();
         fs::rename(&state, &backup).unwrap();
         fs::create_dir(&state).unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         assert_eq!(f.launches(), 0);
         fs::remove_dir(&state).unwrap();
         fs::rename(backup, state).unwrap();
@@ -6952,27 +7059,32 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|v| v == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|pair| pair == ["--cwd", restored.to_str().unwrap()]));
-        assert!(run
-            .windows(2)
-            .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"]));
+        assert!(
+            run.windows(2)
+                .any(|pair| pair == ["--cwd", restored.to_str().unwrap()])
+        );
+        assert!(
+            run.windows(2)
+                .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"])
+        );
         let prompt = &run[run.iter().position(|v| v == "--prompt-file").unwrap() + 1];
         assert!(fs::read_to_string(prompt).unwrap().contains("#1 [todo]"));
         drop(calls);
         assert!(state.queue.is_empty());
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!(state.launches["decision:source"])));
-        assert!(f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) }));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(state.launches["decision:source"]))
+        );
+        assert!(
+            f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) })
+        );
     }
 
     #[test]
@@ -7065,10 +7177,12 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert!(state.launches.contains_key("manual:formal-other"));
-        assert!(!state
-            .queue
-            .iter()
-            .any(|entry| entry.key == "decision:source"));
+        assert!(
+            !state
+                .queue
+                .iter()
+                .any(|entry| entry.key == "decision:source")
+        );
         assert_eq!(state.last_error.as_deref(), Some("state_capacity_exceeded"));
     }
 
@@ -7101,10 +7215,12 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert_eq!(state.queue.len(), 499);
-        assert!(state
-            .queue
-            .iter()
-            .all(|entry| entry.key.starts_with("decision:missing-")));
+        assert!(
+            state
+                .queue
+                .iter()
+                .all(|entry| entry.key.starts_with("decision:missing-"))
+        );
         assert!(state.launches.contains_key("manual:formal-other"));
         assert_eq!(state.last_error.as_deref(), Some("queue_full"));
     }
@@ -7441,10 +7557,12 @@ mod tests {
         fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
         f.console.link_todos(&mut state).unwrap();
         assert!(state.pending_links.is_empty());
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("worker")));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("worker"))
+        );
         assert_eq!(f.launches(), 0);
     }
     #[test]

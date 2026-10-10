@@ -32,6 +32,8 @@ pub mod job_titles;
 pub mod owner_wait;
 pub mod patrol;
 mod process_guard;
+/// Own the transient subprocess tree while permitting explicit successful detachment.
+pub use process_guard::Group as ProcessGroup;
 pub mod project;
 pub mod prompt_context;
 pub mod questions;

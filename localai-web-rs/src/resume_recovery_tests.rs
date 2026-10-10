@@ -1,3 +1,57 @@
+#[test]
+fn todo2299_recovery_reuses_the_batch_and_refreshes_checkout_after_launch() {
+    let f = todo1597_fixture("doing");
+    fs::create_dir_all(f.root.join(".git")).unwrap();
+    let db = f.console.todos().unwrap();
+    let jobs = f.console.jobs().unwrap();
+    let mut state = f.console.read_state().unwrap();
+    let trigger = state.queue[0].clone();
+    let mut cache = BTreeMap::new();
+    let first = f.console.recovery_evidence_from(&trigger, Some(&db), Some(&jobs), &mut cache);
+    let calls = f.fake.calls.lock().unwrap().len();
+    let second = f.console.recovery_evidence_from(&trigger, Some(&db), Some(&jobs), &mut cache);
+    assert_eq!(first, second);
+    assert_eq!(f.fake.calls.lock().unwrap().len(), calls, "same checkout must be measured once per batch");
+    state.preparation_failures.insert(trigger.key.clone(), (now() + 3600, "source_workspace_unavailable".into()));
+    state.preparation_recovery.insert(trigger.key.clone(), json!({"evidence":first}));
+    fs::write(f.console.paths.jobs.join("source/job.json"), "broken").unwrap();
+    assert!(!f.console.recovery_ready(&mut state, &trigger, &db, &jobs, &mut cache).unwrap(), "must use the acquired batch rather than reopen all job files");
+    fs::write(f.root.join("pending-change.rs"), "changed").unwrap();
+    cache.clear();
+    let fresh = f.console.recovery_evidence_from(&trigger, Some(&db), Some(&jobs), &mut cache);
+    assert_ne!(fresh["workspace"]["dirty"], second["workspace"]["dirty"]);
+}
+
+#[test]
+fn todo2299_stage_does_not_renew_start_or_clear_previous_error() {
+    let f = Fixture::new();
+    let path = f.console.paths.state.join("commander-health.json");
+    atomic_write(&path, json!({"started_at":1,"pid":std::process::id(),"previous_error":"command_timeout"}).to_string().as_bytes()).unwrap();
+    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(1));
+    f.console.patrol_stage("jobs");
+    let record: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    assert_eq!(record["started_at"], 1);
+    assert_eq!(record["previous_error"], "command_timeout");
+    assert_eq!(record["stage"], "jobs");
+    assert!(record["finished_at"].is_null());
+}
+
+#[test]
+fn todo2299_patrol_rotates_a_bounded_batch_without_losing_later_work() {
+    let f = Fixture::new();
+    f.on();
+    let mut state = f.console.read_state().unwrap();
+    for key in ["manual:a", "manual:b", "manual:c"] {
+        state.queue.push(Trigger { key:key.into(), name:key.into(), cwd:f.root.to_string_lossy().into(), prompt:"調べる".into(), todo_id:None, options:json!({"isolate_worktree":false}) });
+        state.preparation_failures.insert(key.into(), (now()+3600,"source_workspace_unavailable".into()));
+    }
+    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+    f.console.dispatch(&mut state, &[]).unwrap();
+    assert_eq!(state.queue.iter().map(|t|t.key.as_str()).collect::<Vec<_>>(), ["manual:c","manual:a","manual:b"]);
+    assert_eq!(f.launches(),0);
+    f.console.dispatch(&mut state, &[]).unwrap();
+    assert_eq!(state.queue.iter().map(|t|t.key.as_str()).collect::<Vec<_>>(), ["manual:b","manual:c","manual:a"]);
+}
 fn shared_source(f: &Fixture, binding: Value, receipt: bool) {
     let path = f.console.paths.jobs.join("source/job.json");
     let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();

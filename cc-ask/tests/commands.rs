@@ -1,7 +1,7 @@
 mod common;
 use cc_ask::{commands::*, core::*};
-use common::{message, Harness, SharedFake};
-use serde_json::{json, Value};
+use common::{Harness, SharedFake, message};
+use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[test]
@@ -24,10 +24,11 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
     .unwrap();
     assert_eq!(result["thread_id"], "100");
     let fake = h.fake.borrow();
-    assert!(fake
-        .http_calls
-        .iter()
-        .all(|r| !s(&r["url"]).ends_with("/threads")));
+    assert!(
+        fake.http_calls
+            .iter()
+            .all(|r| !s(&r["url"]).ends_with("/threads"))
+    );
     let posted = &fake.posts.last().unwrap().1;
     assert!(s(&posted["content"]).contains("<@OWN>"));
     assert_eq!(posted["allowed_mentions"]["users"], json!(["OWN"]));
@@ -41,11 +42,13 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
         .unwrap();
     assert_eq!(recorded["cwd"], "fixture/bookmarks");
     assert_eq!(recorded["agent"], "Codex");
-    assert!(state["questions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|q| q["thread_id"] == "100" && q["open"] == true));
+    assert!(
+        state["questions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|q| q["thread_id"] == "100" && q["open"] == true)
+    );
 }
 
 #[test]
@@ -58,16 +61,18 @@ fn ask_existing_thread_rejects_foreign_server_and_nonquestion() {
         h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!(guild);
         let body = h.root.path().join("question.md");
         std::fs::write(&body, text).unwrap();
-        assert!(cmd_ask(
-            &mut h.ctx,
-            &AskArgs {
-                thread: Some("100".into()),
-                title: "導入".into(),
-                body_file: body,
-                ..Default::default()
-            }
-        )
-        .is_err());
+        assert!(
+            cmd_ask(
+                &mut h.ctx,
+                &AskArgs {
+                    thread: Some("100".into()),
+                    title: "導入".into(),
+                    body_file: body,
+                    ..Default::default()
+                }
+            )
+            .is_err()
+        );
         assert!(h.fake.borrow().posts.is_empty());
     }
 }
@@ -486,12 +491,13 @@ fn snooze_suppresses_due_reminders_until_deadline_then_keeps_hourly_interval() {
     cmd_snooze(&mut h.ctx, "200", "2026-10-03T09:00:00+09:00").unwrap();
     h.fake.borrow_mut().now = 1790985599.;
     cmd_remind(&mut h.ctx).unwrap();
-    assert!(h
-        .fake
-        .borrow()
-        .http_calls
-        .iter()
-        .all(|c| c["method"] == "GET"));
+    assert!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .all(|c| c["method"] == "GET")
+    );
     assert!(h.fake.borrow().posts.is_empty());
     h.fake.borrow_mut().now = 1790985600.;
     cmd_remind(&mut h.ctx).unwrap();
@@ -665,15 +671,16 @@ fn inbox_reads_allowed_threads_and_attachments_oldest_first() {
     assert_eq!(std::fs::read_to_string(&mark).unwrap(), "107");
     assert!(cmd_inbox(&mut h.ctx, &mark).unwrap().is_empty());
     assert_eq!(std::fs::read_to_string(&mark).unwrap(), "107");
-    assert!(!h
-        .fake
-        .borrow()
-        .http_calls
-        .iter()
-        .any(|c| s(&c["url"]).contains("/channels/10/")
-            || s(&c["url"]).contains("/channels/30/")
-            || s(&c["url"]).contains("/channels/90/messages")
-            || s(&c["url"]).contains("/channels/40/messages")));
+    assert!(
+        !h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .any(|c| s(&c["url"]).contains("/channels/10/")
+                || s(&c["url"]).contains("/channels/30/")
+                || s(&c["url"]).contains("/channels/90/messages")
+                || s(&c["url"]).contains("/channels/40/messages"))
+    );
 }
 
 #[test]
@@ -733,12 +740,13 @@ fn external_steps_use_configured_single_paths_and_propagate_failure() {
     cmd_scheduler_step(&mut h.ctx).unwrap();
     cmd_shepherd_step(&mut h.ctx).unwrap();
     cmd_todo_watch(&mut h.ctx).unwrap();
-    assert!(h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .all(|(_, timeout)| *timeout == 20));
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .all(|(_, timeout)| *timeout == 20)
+    );
     assert_eq!(
         h.fake
             .borrow()
@@ -798,6 +806,14 @@ fn scheduler_error_report_matches_swallowed_inprocess_error_but_other_failures_p
     let mut h = Harness::new();
     overrides(
         &mut h,
+        vec![("RUN", json!({"code":0,"stdout":"{\"busy\":true}\n"}))],
+        false,
+    );
+    cmd_scheduler_step(&mut h.ctx).unwrap();
+    assert_eq!(h.ctx.cfg["__scheduler_step_failed"], true);
+    h.fake.borrow_mut().runs.clear();
+    overrides(
+        &mut h,
         vec![(
             "RUN",
             json!({"code":1,"stdout":"scheduler progress\n{\n  \"error\": \"RuntimeError\"\n}\n","stderr":"scheduler tick failed RuntimeError\n"}),
@@ -805,6 +821,7 @@ fn scheduler_error_report_matches_swallowed_inprocess_error_but_other_failures_p
         false,
     );
     cmd_scheduler_step(&mut h.ctx).unwrap();
+    assert_eq!(h.ctx.cfg["__scheduler_step_failed"], true);
     assert_eq!(h.fake.borrow().runs[0].1, 20);
     assert!(cmd_shepherd_step(&mut h.ctx).is_err());
     assert!(cmd_todo_watch(&mut h.ctx).is_err());
@@ -904,6 +921,37 @@ fn tick_ignores_old_enabled_scanners_and_preserves_ledgers_while_running_watch()
 }
 
 #[test]
+fn patrol_observes_work_before_discord_history_and_records_real_core_results() {
+    let mut h = Harness::new();
+    h.save(&json!({"questions":[question("200")]}));
+    cmd_tick(&mut h.ctx).unwrap();
+    let f = h.fake.borrow();
+    let history = f
+        .chronology
+        .iter()
+        .position(|event| event.starts_with("http:GET:") && event.contains("/messages?limit="))
+        .unwrap();
+    let watch = f
+        .chronology
+        .iter()
+        .position(|event| event.starts_with("run:") && event.ends_with(":watch"))
+        .unwrap();
+    let scheduler = f
+        .chronology
+        .iter()
+        .position(|event| {
+            event.starts_with("run:") && event.contains("scheduler") && event.ends_with(":step")
+        })
+        .unwrap();
+    assert!(watch < history && scheduler < history, "{:?}", f.chronology);
+    let health = read_json(&h.ctx.here.join("tick-health.json")).unwrap();
+    assert_eq!(health["stages"]["cmd_todo_watch"], true);
+    assert_eq!(health["stages"]["cmd_scheduler_step"], true);
+    assert!(health["finished_at"].is_u64());
+    assert!(health["error"].is_null());
+}
+
+#[test]
 fn tick_shares_launch_budget_and_runs_every_step_after_errors() {
     let mut h = Harness::new();
     h.save(&json!({"questions":[question("200")]}));
@@ -915,10 +963,11 @@ fn tick_shares_launch_budget_and_runs_every_step_after_errors() {
     cmd_tick(&mut h.ctx).unwrap();
     // Even failed resume, intake launch, scheduler and shepherd leave reminder/sweep/watch runnable.
     let fake = h.fake.borrow();
-    assert!(fake
-        .runs
-        .iter()
-        .any(|(a, _)| a.last().is_some_and(|s| s == "watch")));
+    assert!(
+        fake.runs
+            .iter()
+            .any(|(a, _)| a.last().is_some_and(|s| s == "watch"))
+    );
     assert_eq!(
         fake.runs
             .iter()
@@ -933,10 +982,11 @@ fn tick_shares_launch_budget_and_runs_every_step_after_errors() {
             .count()
             >= 2
     );
-    assert!(fake
-        .http_calls
-        .iter()
-        .any(|c| s(&c["url"]).ends_with("/threads/active")));
+    assert!(
+        fake.http_calls
+            .iter()
+            .any(|c| s(&c["url"]).ends_with("/threads/active"))
+    );
 }
 
 #[test]
@@ -1039,36 +1089,60 @@ fn deferred_reboot_recovery_suppresses_replacement_watch_and_dispatch_for_one_ti
     h.ctx.cfg = json!({"__cc_ask_config_error":"OSError"});
     h.fake.borrow_mut().reboot_recover_fail = true;
     cmd_tick(&mut h.ctx).unwrap();
-    assert!(h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .any(|(argv, _)| argv.iter().any(|arg| arg == "recover-reboot")));
-    assert!(!h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch")));
-    assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| argv
-        .first()
-        .is_some_and(|arg| arg.ends_with("scheduler.py"))));
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.iter().any(|arg| arg == "recover-reboot"))
+    );
+    assert!(
+        !h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch"))
+    );
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch-preview"))
+    );
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "status"))
+    );
+    assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| {
+        argv.iter().any(|arg| arg.ends_with("scheduler.py"))
+            && argv.last().is_some_and(|arg| arg == "step")
+    }));
+    let health = read_json(&h.ctx.here.join("tick-health.json")).unwrap();
+    assert_eq!(health["mode"], "observe_only");
+    assert_eq!(health["stages"]["cmd_todo_watch"], true);
+    assert_eq!(health["stages"]["cmd_scheduler_step"], true);
+    assert_eq!(health["error"], "core_stage_failed");
     h.fake.borrow_mut().runs.clear();
     h.fake.borrow_mut().reboot_recover_fail = false;
     cmd_tick(&mut h.ctx).unwrap();
-    assert!(h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch")));
-    assert!(h
-        .fake
-        .borrow()
-        .runs
-        .iter()
-        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "recover")));
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch"))
+    );
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "recover"))
+    );
 }
 
 #[test]

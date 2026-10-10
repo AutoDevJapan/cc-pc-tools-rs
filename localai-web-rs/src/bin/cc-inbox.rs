@@ -156,7 +156,8 @@ fn verified(
         .collect();
     let mut places: BTreeMap<String, Value> = array(&channels)?
         .iter()
-        .filter(|c| matches!(c["type"].as_u64(), Some(0 | 5)))
+        .filter(|c| matches!(c["type"].as_u64(), Some(0 | 5))
+            && !id(&c["last_message_id"]).is_ok_and(|newest| newest <= last))
         .map(|c| (s(c, "id").into(), c.clone()))
         .collect();
     for t in threads {
@@ -241,7 +242,7 @@ fn run() -> Result<()> {
             true,
         )
     };
-    let rows = batch(
+    let rows = resumable_batch(
         Path::new(&args[1]),
         &cfg,
         || {
@@ -258,6 +259,66 @@ fn run() -> Result<()> {
     }
     Ok(())
 }
+// Keep verified GET pages while a bounded child is interrupted. The committed
+// cursor still moves only after the complete frozen batch has been verified.
+fn resumable_batch(mark: &Path, cfg: &Value, clock: impl FnOnce() -> u64, get: &mut impl FnMut(&str) -> Result<Value>) -> Result<Vec<Value>> {
+    use std::io::{Read, Write};
+    let last = std::fs::read_to_string(mark).map_err(|_| "cannot read staged checkpoint")?;
+    let last: u64 = last.trim().parse().map_err(|_| "invalid checkpoint")?;
+    let cache_path = mark.with_extension("batch.json");
+    let mut cache = match std::fs::File::open(&cache_path) {
+        Ok(file) => {
+            let mut bytes = Vec::new();
+            file.take(16 * 1024 * 1024 + 1).read_to_end(&mut bytes).map_err(|_| "cannot read inbox progress")?;
+            if bytes.len() > 16 * 1024 * 1024 { return Err("inbox progress exceeds capacity".into()); }
+            serde_json::from_slice::<Value>(&bytes).map_err(|_| "invalid inbox progress")?
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Value::Null,
+        Err(_) => return Err("cannot read inbox progress".into()),
+    };
+    let identity = json!({"guild":cfg["guild_id"],"owner":cfg["owner_user_id"]});
+    if cache["last"] != last || cache["identity"] != identity {
+        cache = json!({"last":last,"upper":clock(),"identity":identity,"pages":{}});
+    }
+    let upper = cache["upper"].as_u64().filter(|upper| *upper >= last).ok_or("invalid inbox boundary")?;
+    if !cache["pages"].is_object() { return Err("invalid inbox pages".into()); }
+    let mut transport_failed = false;
+    let mut cached_get = |path: &str| {
+        if let Some(page) = cache["pages"].get(path) { return Ok(page.clone()); }
+        let mut page = match get(path) {
+            Ok(page) => page,
+            Err(error) => { transport_failed = true; return Err(error); }
+        };
+        cc_redact::redact_json(&mut page);
+        fn mask(value: &mut Value) {
+            match value {
+                Value::String(text) => *text = safe_text(&*text),
+                Value::Array(values) => values.iter_mut().for_each(mask),
+                Value::Object(values) => values.values_mut().for_each(mask),
+                _ => (),
+            }
+        }
+        mask(&mut page);
+        cache["pages"][path] = page.clone();
+        let bytes = serde_json::to_vec(&cache).map_err(|_| "cannot encode inbox progress")?;
+        if bytes.len() > 16 * 1024 * 1024 { return Err("inbox progress exceeds capacity".into()); }
+        let mut file = tempfile::NamedTempFile::new_in(mark.parent().ok_or("invalid inbox directory")?).map_err(|_| "cannot stage inbox progress")?;
+        file.write_all(&bytes).and_then(|_| file.as_file().sync_all()).map_err(|_| "cannot save inbox progress")?;
+        file.persist(&cache_path).map_err(|_| "cannot commit inbox progress")?;
+        Ok(page)
+    };
+    let result = batch(mark, cfg, || upper, &mut cached_get);
+    if result.is_err() && !transport_failed {
+        // Malformed pages and ambiguous cursors must be fetched again; a
+        // temporary transport failure retains useful verified progress.
+        cache["pages"] = json!({});
+        let bytes = serde_json::to_vec(&cache).map_err(|_| "cannot encode inbox reset")?;
+        let mut file = tempfile::NamedTempFile::new_in(mark.parent().ok_or("invalid inbox directory")?).map_err(|_| "cannot stage inbox reset")?;
+        file.write_all(&bytes).and_then(|_| file.as_file().sync_all()).map_err(|_| "cannot save inbox reset")?;
+        file.persist(&cache_path).map_err(|_| "cannot commit inbox reset")?;
+    }
+    result
+}
 fn main() {
     if let Err(error) = run() {
         eprintln!(
@@ -271,6 +332,79 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn malformed_success_page_is_refetched_after_validation_failure() {
+        let directory = tempfile::tempdir().unwrap();
+        let mark = directory.path().join("inbox.stage");
+        std::fs::write(&mark, "10").unwrap();
+        let mut first = |_: &str| Ok(json!({"temporary":"invalid shape"}));
+        assert!(resumable_batch(&mark, &cfg(), || 30, &mut first).is_err());
+        assert_eq!(std::fs::read_to_string(&mark).unwrap(), "10");
+        let mut refetched = false;
+        let mut second = |path: &str| {
+            refetched |= path.ends_with("/channels");
+            Ok(if path.ends_with("/channels") { channel() } else if path.contains("threads") { json!({"threads":[],"has_more":false}) } else { json!([]) })
+        };
+        assert!(resumable_batch(&mark, &cfg(), || 50, &mut second).unwrap().is_empty());
+        assert!(refetched);
+        assert_eq!(std::fs::read_to_string(&mark).unwrap(), "29");
+    }
+    #[test]
+    fn interrupted_batch_resumes_pages_and_keeps_the_frozen_boundary() {
+        let directory = tempfile::tempdir().unwrap();
+        let mark = directory.path().join("inbox.stage");
+        std::fs::write(&mark, "10").unwrap();
+        let mut first = |path: &str| if path.ends_with("/channels") { Ok(channel()) } else { Err("interrupted".into()) };
+        assert!(resumable_batch(&mark, &cfg(), || 30, &mut first).is_err());
+        assert_eq!(std::fs::read_to_string(&mark).unwrap(), "10");
+        let mut calls = Vec::new();
+        let mut second = |path: &str| {
+            calls.push(path.to_owned());
+            Ok(if path.contains("threads") { json!({"threads":[],"has_more":false}) } else {
+                json!([{"id":"20","author":{"id":"2"},"content":"依頼"},{"id":"40","author":{"id":"2"},"content":"次回"}])
+            })
+        };
+        let rows = resumable_batch(&mark, &cfg(), || 50, &mut second).unwrap();
+        assert!(!calls.iter().any(|path| path.ends_with("/channels")));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "20");
+        assert_eq!(std::fs::read_to_string(&mark).unwrap(), "29");
+        let mut reread = false;
+        let mut next = |path: &str| { reread |= path.ends_with("/channels"); Err("next window".into()) };
+        assert!(resumable_batch(&mark, &cfg(), || 50, &mut next).is_err());
+        assert!(reread);
+    }
+    #[test]
+    fn unreadable_progress_never_advances_checkpoint() {
+        let directory = tempfile::tempdir().unwrap();
+        let mark = directory.path().join("inbox.stage");
+        std::fs::write(&mark, "10").unwrap();
+        std::fs::write(mark.with_extension("batch.json"), "broken").unwrap();
+        let mut calls = 0;
+        let mut get = |_: &str| { calls += 1; Ok(Value::Null) };
+        assert!(resumable_batch(&mark, &cfg(), || 30, &mut get).is_err());
+        assert_eq!(calls, 0);
+        assert_eq!(std::fs::read_to_string(&mark).unwrap(), "10");
+    }
+    #[test]
+    fn idle_text_channel_skips_messages_but_still_checks_archived_threads() {
+        let mut messages_read = false;
+        let mut archives_read = false;
+        let mut get = |path: &str| {
+            Ok(if path.ends_with("/channels") {
+                json!([{"id":"10","name":"chat","type":0,"last_message_id":"9"}])
+            } else if path.contains("threads") {
+                archives_read |= path.contains("/archived/");
+                json!({"threads":[],"has_more":false})
+            } else {
+                messages_read = true;
+                json!([])
+            })
+        };
+        assert!(verified(&mut get, &cfg(), 10, 30).unwrap().is_empty());
+        assert!(archives_read);
+        assert!(!messages_read);
+    }
     #[test]
     fn bare_discord_token_is_not_output() {
         assert_eq!(

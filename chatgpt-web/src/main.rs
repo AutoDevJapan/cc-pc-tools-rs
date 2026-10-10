@@ -144,8 +144,11 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(f) => {
-            if checks_readiness && matches!(f.code, Code::Failed | Code::Timeout) {
-                record_login(&env, Login::Unknown);
+            if checks_readiness
+                && matches!(f.code, Code::Failed | Code::Timeout)
+                && let Err(error) = record_login(&env, Login::Unknown)
+            {
+                eprintln!("chatgpt_web: {}", error.msg);
             }
             eprintln!("chatgpt_web: {}", f.msg);
             ExitCode::from(f.code as u8)
@@ -301,7 +304,7 @@ fn read_state(home: &Path) -> Option<Value> {
     serde_json::from_str(&fs::read_to_string(home.join("state.json")).ok()?).ok()
 }
 
-fn record_login(env: &Env, new: Login) {
+fn record_login(env: &Env, new: Login) -> Res<()> {
     let prev = read_state(&env.home).and_then(|v| v["login"].as_str().and_then(Login::from_key));
     let changed = prev != Some(new);
     let mut st = read_state(&env.home).unwrap_or_else(|| json!({}));
@@ -315,12 +318,12 @@ fn record_login(env: &Env, new: Login) {
     if changed {
         st["since"] = json!(now());
     }
-    if let Err(e) = cc_chrome::lifecycle::atomic_json(&env.home.join("state.json"), &st) {
-        eprintln!("chatgpt_web: 状態の保存に失敗しました: {e}");
-    }
+    cc_chrome::lifecycle::atomic_json(&env.home.join("state.json"), &st)
+        .map_err(|e| fail(Code::Failed, format!("状態の保存に失敗しました: {e}")))?;
     if let Some(msg) = transition_message(prev, new) {
         discord_log(env, msg);
     }
+    Ok(())
 }
 
 /// 「後片付けの記録」スレッドへ通知なしで残す。失敗しても本処理は止めない。
@@ -391,11 +394,12 @@ fn open_chat(
             Ok(Login::PendingPlus)
         }
     });
-    if let Ok(l) = login
-        && !anon
-    {
-        record_login(env, l);
-    }
+    let login = login.and_then(|l| {
+        if !anon {
+            record_login(env, l)?;
+        }
+        Ok(l)
+    });
     match login {
         Ok(Login::LoggedIn) => Ok(tab),
         Ok(Login::LoggedOut) if anon => Ok(tab),
@@ -513,7 +517,9 @@ fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant, anon: bool) -> Res<S
             && l != Login::LoggedIn
             && !(anon && l == Login::LoggedOut)
         {
-            record_login(env, l);
+            if let Err(error) = record_login(env, l) {
+                eprintln!("chatgpt_web: {}", error.msg);
+            }
             return Err(l.fail());
         }
         let streaming = p["streaming"].as_bool().unwrap_or(true);
@@ -733,18 +739,32 @@ mod tests {
     }
 
     #[test]
+    fn failed_readiness_persistence_is_not_reported_as_a_successful_check() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("state.json")).unwrap();
+        let env = Env {
+            home: dir.path().into(),
+            url: DEFAULT_URL.into(),
+        };
+        let error = record_login(&env, Login::LoggedIn).unwrap_err();
+        assert_eq!(error.code, Code::Failed);
+        assert!(status(&env).is_err());
+        assert!(env.home.join("state.json").is_dir());
+    }
+
+    #[test]
     fn state_file_records_since_only_on_change() {
         let dir = tempfile::tempdir().unwrap();
         let env = Env {
             home: dir.path().into(),
             url: DEFAULT_URL.into(),
         };
-        record_login(&env, Login::LoggedOut);
+        record_login(&env, Login::LoggedOut).unwrap();
         let first = read_state(&env.home).unwrap();
         assert_eq!(first["login"], "logged_out");
-        record_login(&env, Login::LoggedOut);
+        record_login(&env, Login::LoggedOut).unwrap();
         assert_eq!(read_state(&env.home).unwrap()["since"], first["since"]);
-        record_login(&env, Login::LoggedIn);
+        record_login(&env, Login::LoggedIn).unwrap();
         assert_eq!(read_state(&env.home).unwrap()["login"], "logged_in");
     }
 
@@ -773,7 +793,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
-        record_login(&env, Login::LoggedIn);
+        record_login(&env, Login::LoggedIn).unwrap();
         assert!(status(&env).is_ok());
         cc_chrome::lifecycle::atomic_json(
             &env.home.join("state.json"),
@@ -781,9 +801,9 @@ mod tests {
         )
         .unwrap();
         assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
-        record_login(&env, Login::Unknown);
+        record_login(&env, Login::Unknown).unwrap();
         assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
-        record_login(&env, Login::PendingPlus);
+        record_login(&env, Login::PendingPlus).unwrap();
         assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
     }
 

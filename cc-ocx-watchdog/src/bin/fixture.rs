@@ -7,18 +7,35 @@ use std::time::Duration;
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let port: u16 = args.next().unwrap().parse().unwrap();
+    let first = args.next().unwrap();
+    // Test-only Bun-shaped invocation: a pinned inert CLI file and home in env.
+    let native_owner = first.parse::<u16>().is_err();
+    let (port, mode, home, record_mode) = if native_owner {
+        assert_eq!(args.next().as_deref(), Some("start"));
+        assert_eq!(args.next().as_deref(), Some("--port"));
+        (
+            args.next().unwrap().parse::<u16>().unwrap(),
+            std::env::var("OCX_FIXTURE_MODE").unwrap_or_else(|_| "healthy".into()),
+            PathBuf::from(std::env::var_os("OPENCODEX_HOME").unwrap()),
+            Some("none".to_owned()),
+        )
+    } else {
+        (
+            first.parse::<u16>().unwrap(),
+            args.next().unwrap(),
+            PathBuf::from(args.next().unwrap()),
+            args.next(),
+        )
+    };
     assert_ne!(port, 10100, "fixture cannot use the production port");
-    let mode = args.next().unwrap();
-    let home = PathBuf::from(args.next().unwrap());
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).unwrap();
-    if args.next().as_deref() == Some("runtime-only") {
+    if record_mode.as_deref() == Some("runtime-only") {
         std::fs::write(
             home.join("runtime-port.json"),
             format!("{{\"pid\":{},\"port\":{port}}}", std::process::id()),
         )
         .unwrap();
-    } else {
+    } else if record_mode.as_deref() != Some("none") {
         std::fs::write(home.join("ocx.pid"), std::process::id().to_string()).unwrap();
     }
     for socket in listener.incoming() {

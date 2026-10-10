@@ -1,4 +1,4 @@
-//! Preserve exactly the four retired ToDo1940 trees. No delete or move API.
+//! Preserve fixed, receipt-pinned trees with full metadata. No delete or move API.
 use super::*;
 
 pub(super) const BUILD: &str = "ef300280dcb8c0e08fcb9be1318565ef";
@@ -34,6 +34,15 @@ pub(super) struct Profile {
 
 pub(super) fn profile(id: &str) -> Option<Profile> {
     let (id, content, volume, file_id, entries, links, bytes) = match id {
+        CHROME_ID => (
+            CHROME_ID,
+            "todo2296",
+            2229119083,
+            3377699727596925,
+            6475,
+            0,
+            11727605043,
+        ),
         BUILD => (
             BUILD,
             "rust-build",
@@ -86,7 +95,9 @@ pub(super) fn profile(id: &str) -> Option<Profile> {
 pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
     let p = profile(id).ok_or("SCOPE_NOT_AUTHORIZED")?;
     c.id = p.id;
-    c.project = if id == INTEGRATION {
+    c.project = if id == CHROME_ID {
+        "cc-chrome"
+    } else if id == INTEGRATION {
         "GoDD-MCP-Alpha"
     } else {
         "GoDD-Unslop"
@@ -103,6 +114,23 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
     }
     c.pinned_identity = Some((p.volume, p.file_id));
     c.repos.clear();
+    if id == CHROME_ID {
+        c.repos.push(Repo {
+            name: "work",
+            origin: "https://github.com/AutoDevJapan/cc-pc-tools-rs.git",
+            head: "c5e27e17a9ca0fe680bdd222f0c4281d260a364b".into(),
+            saved_ref: Some("refs/remotes/origin/main"),
+            saved_merge: Some("f50158091aaa2a8d383bc38f61808a2033950054".into()),
+            squash_tree: Some("c3fec2c09f6ca28844655013f3bfdbfda78b1142".into()),
+            allowed_untracked: &[],
+            kind: RepoKind::Linked {
+                admin: PathBuf::from(
+                    "D:/CC/Tools/agent-workspaces/chrome-bridge-2055/.git/worktrees/work",
+                ),
+                common: PathBuf::from("D:/CC/Tools/agent-workspaces/chrome-bridge-2055/.git"),
+            },
+        });
+    }
     if id == INTEGRATION {
         c.repos.push(Repo {
             name: "worktree",
@@ -110,6 +138,7 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
             head: "0621aac55a3035ab473cb2f7b49887a5a0925d6c".into(),
             saved_ref: Some("refs/remotes/origin/codex/todo1931-unslop-20261006"),
             saved_merge: None,
+            squash_tree: None,
             allowed_untracked: &[],
             kind: RepoKind::Linked {
                 admin: PathBuf::from(
@@ -167,6 +196,8 @@ struct MoveTicket {
     nodes: Inventory,
     backlink: Option<BacklinkTicket>,
     backlink_security_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    content_sha256: Option<BTreeMap<String, String>>,
 }
 
 // Decode only the substitute-name field. Preserve the entire original reparse
@@ -274,6 +305,7 @@ fn inventory(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
         if name.eq_ignore_ascii_case(".git")
             && !(c.id == INTEGRATION
                 && matches!(key.as_str(), "worktree/.git" | "worktree/officialsite/.git"))
+            && !(c.id == CHROME_ID && key == "work/.git")
         {
             return Err("UNDECLARED_GIT_METADATA");
         }
@@ -374,8 +406,10 @@ fn inventory(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
             c.client_guard(common)?;
         }
         let before = same(root, Path::new(&r.identity.path));
-        validate_repo_options(&root.join(repo.name), repo, before, true)?;
-        validate_submodule(c, root, before)?;
+        validate_repo_options(&root.join(repo.name), repo, before, c.id == INTEGRATION)?;
+        if c.id == INTEGRATION {
+            validate_submodule(c, root, before)?;
+        }
     }
     Ok(entries)
 }
@@ -517,6 +551,15 @@ fn total(nodes: &Inventory) -> u64 {
         .sum()
 }
 fn why(c: &Config, r: &Receipt, nodes: &Inventory) -> String {
+    if c.id == CHROME_ID {
+        return format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: 通常のplanとquarantineはwork/.gitを名称で保護しPROTECTED_PATHで停止した。削除コマンドや承認審査の拒否ではない。ToDo2296と2303で許可された所有ID1件を、Git成果・検証ログ・旧実行ファイル・隠し属性・ACL・内部ハードリンクを含め全て保持して同じCドライブの削除希望へ退避する。公開PR98のsquashマージと元HEADのtree一致を確認した。このworktreeのbacklink1件だけを修復する。\n所有ID: {}\n",
+            r.identity.path,
+            total(nodes),
+            nodes.len(),
+            c.id
+        );
+    }
     format!(
         "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: 通常の所有確認がハードリンク・依存リンクで停止した。ToDo1940の4件だけを固定し、全内容・リンク自身・ACL・Git管理情報を保持して同じドライブへ退避する。\nPNPMの絶対参照と公式サイトの相対Git参照は元の文字列を保つため、退避後はそのまま再利用できない。参照先とサイトの実体も全てfiles内に保持する。Cargo registryの参照先と外部の共有ファイルには触れない。\n所有ID: {}\n",
         r.identity.path,
@@ -545,9 +588,10 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     if path.components().next() != dest.components().next() {
         return Err("QUARANTINE_CROSS_DRIVE");
     }
-    if c.id == INTEGRATION
+    if matches!(c.id, INTEGRATION | CHROME_ID)
         && dest
-            .join("files/worktree")
+            .join("files")
+            .join(c.repos[0].name)
             .as_os_str()
             .encode_wide()
             .count()
@@ -556,6 +600,22 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("GIT_DESTINATION_ROOT_TOO_LONG");
     }
     let nodes = snapshot(c, &r, path)?;
+    let content_sha256 = if c.id == CHROME_ID {
+        let plain = nodes
+            .iter()
+            .map(|(key, entry)| (key.clone(), entry.node.clone()))
+            .collect();
+        let hashes = file_digests(path, &plain)?;
+        if !same_nodes(c, &nodes, &snapshot(c, &r, path)?)
+            || file_digests(path, &plain)? != hashes
+            || !same_nodes(c, &nodes, &snapshot(c, &r, path)?)
+        {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        Some(hashes)
+    } else {
+        None
+    };
     let prepared = present(&ticket_path(c))?;
     if present(&dest)? && !prepared {
         return Err("QUARANTINE_ALREADY_PREPARED");
@@ -570,6 +630,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         backlink,
         backlink_security_sha256,
         nodes,
+        content_sha256,
     };
     let encoded = serde_json::to_vec_pretty(&ticket).map_err(|_| "TICKET_JSON")?;
     if encoded.len() as u64 > record_limit(c) {
@@ -631,6 +692,20 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     if !same_nodes(c, &t.nodes, &now) {
         return Err("CONTENT_CHANGED_AFTER_PLAN");
     }
+    if c.id == CHROME_ID {
+        let plain = now
+            .iter()
+            .map(|(key, entry)| (key.clone(), entry.node.clone()))
+            .collect();
+        let expected = t.content_sha256.as_ref().ok_or("CONTENT_PROOF_MISSING")?;
+        if file_digests(&files, &plain)? != *expected
+            || !same_nodes(c, &now, &snapshot(c, &r, &files)?)
+        {
+            return Err("CONTENT_CHANGED_AFTER_PLAN");
+        }
+    } else if t.content_sha256.is_some() {
+        return Err("TICKET_SCOPE_MISMATCH");
+    }
     if backlink_security(c, t.backlink.as_ref(), false)? != t.backlink_security_sha256 {
         return Err("BACKLINK_SECURITY_CHANGED");
     }
@@ -640,7 +715,11 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let reason = dest.join("理由.txt");
     let expected = why(c, &r, &t.nodes);
-    let completed = "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・リンク情報の一致を確認した。ファイル内容は読まず、同じ実体の保持を確認した。\n";
+    let completed = if c.id == CHROME_ID {
+        "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認した。元の所有記録とこのworktreeのbacklinkを更新した。\n"
+    } else {
+        "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・リンク情報の一致を確認した。ファイル内容は読まず、同じ実体の保持を確認した。\n"
+    };
     let saved = read_record(&reason, 8192)?;
     if saved != expected.as_bytes() && saved != format!("{expected}{completed}").as_bytes() {
         return Err("REASON_CHANGED");

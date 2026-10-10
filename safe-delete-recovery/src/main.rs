@@ -22,6 +22,8 @@ const QUEUE_ID: &str = "9f836113c154d11da358e0cef15db869";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
 const BOARD_ID: &str = "67feb7811b6d0a94c98465c784b64f45";
 const BOARD_CREATED: &str = "2026-10-08T18:04:44.1608254+09:00";
+const CHROME_ID: &str = "e87d9c55880dce0cfd7bb1d3fe3ca85e";
+const CHROME_CREATED: &str = "2026-10-10T21:38:58.2660427+09:00";
 const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
     "todo-note-tool/.git",
@@ -161,6 +163,7 @@ struct Repo {
     head: String,
     saved_ref: Option<&'static str>,
     saved_merge: Option<String>,
+    squash_tree: Option<String>,
     allowed_untracked: &'static [&'static str],
     kind: RepoKind,
 }
@@ -197,6 +200,7 @@ impl Config {
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
@@ -206,6 +210,7 @@ impl Config {
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
@@ -224,6 +229,7 @@ impl Config {
             head: head.into(),
             saved_ref,
             saved_merge: None,
+            squash_tree: None,
             allowed_untracked: &[],
             kind: RepoKind::Clone,
         };
@@ -243,6 +249,7 @@ impl Config {
                     saved_ref: Some("refs/remotes/origin/main"),
                     // This deployed integration commit is already in main.
                     saved_merge: Some(head.into()),
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -297,6 +304,7 @@ impl Config {
                         head: String::new(),
                         saved_ref: None,
                         saved_merge: None,
+                        squash_tree: None,
                         allowed_untracked: &[],
                         kind: RepoKind::OpaqueBare,
                     },
@@ -312,6 +320,7 @@ impl Config {
                     head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
                     saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -346,6 +355,7 @@ impl Config {
                     saved_ref: Some("refs/remotes/origin/fix/dynamic-cargo-gate-2064"),
                     allowed_untracked: &[],
                     saved_merge: Some("2a676778c27f9225060dfaf5758b0cdfe8ef94c9".into()),
+                    squash_tree: None,
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
@@ -367,6 +377,7 @@ impl Config {
                     head: "0ac365ab478efa36206c968400e48ac5150abf1b".into(),
                     saved_ref: Some("refs/remotes/origin/fix/adaptive-account-windows"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -389,6 +400,7 @@ impl Config {
                     head: "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b".into(),
                     saved_ref: Some("refs/remotes/origin/fix/reboot-job-recovery"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -408,6 +420,7 @@ impl Config {
                     head: "70a48f412331b232c3cebac99bd36bb34f9cc41f".into(),
                     saved_ref: Some("refs/remotes/origin/archive/claude-routing-2063"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[
                         ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
                         ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
@@ -433,6 +446,7 @@ impl Config {
                     head: "0f01ed0a36dcc5baea61bf1f689267a362f8784c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -576,6 +590,7 @@ impl Config {
             || (self.id == INTERNAL_2184_ID
                 && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
+            || (self.id == CHROME_ID && r.identity.created_at != CHROME_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -996,6 +1011,7 @@ impl Config {
             head: self.repos[1].head.clone(),
             saved_ref: self.repos[1].saved_ref,
             saved_merge: None,
+            squash_tree: None,
             allowed_untracked: &[],
             kind: RepoKind::Linked { admin, common },
         };
@@ -1733,6 +1749,35 @@ fn validate_repo_scoped(
 }
 
 fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
+    if let Some(tree) = &repo.squash_tree {
+        let merge = repo.saved_merge.as_deref().ok_or("GIT_UNPUSHED_COMMITS")?;
+        if saved != "refs/remotes/origin/main" {
+            return Err("GIT_UNPUSHED_COMMITS");
+        }
+        if let RepoKind::Linked { common, .. } = &repo.kind
+            && present(&common.join("info/grafts"))?
+        {
+            return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+        }
+        // PR98 was squash-merged: preserve the original HEAD and prove its
+        // exact tree was published, without claiming HEAD is an ancestor.
+        for revision in [
+            format!("{}^{{tree}}", repo.head),
+            format!("{merge}^{{tree}}"),
+        ] {
+            if git(path, &["rev-parse", "--verify", &revision])? != *tree {
+                return Err("GIT_PUBLISHED_TREE_MISMATCH");
+            }
+        }
+        git(
+            path,
+            &["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        )
+        .map_err(|_| "GIT_UNPUSHED_COMMITS")?;
+        return git(path, &["merge-base", "--is-ancestor", merge, saved])
+            .map(|_| ())
+            .map_err(|_| "GIT_UNPUSHED_COMMITS");
+    }
     if repo.saved_merge.is_none() {
         return if git(path, &["rev-parse", saved])? == repo.head {
             Ok(())
@@ -1902,6 +1947,143 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn chrome_squash_and_full_archive_preserve_hidden_files_hardlinks_acl_and_backlink() {
+        let c = fixture_for(CHROME_ID);
+        let old = source(&c);
+        let work = old.join("work");
+        assert_eq!(
+            git_status(
+                &work,
+                &[
+                    "merge-base",
+                    "--is-ancestor",
+                    &c.repos[0].head,
+                    c.repos[0].saved_merge.as_ref().unwrap()
+                ]
+            )
+            .unwrap()
+            .1
+            .code(),
+            Some(1)
+        );
+        fs::write(old.join("verification.log"), b"preserved verification\n").unwrap();
+        fs::hard_link(
+            old.join("verification.log"),
+            old.join("verification-alias.log"),
+        )
+        .unwrap();
+        fs::write(old.join("old.exe"), b"preserved old binary\n").unwrap();
+        hidden(
+            Path::new("attrib.exe"),
+            &[OsStr::new("+H"), old.join("old.exe").as_os_str()],
+        )
+        .unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        fs::rename(&old, c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        let files = c.destination().join("files");
+        assert_eq!(
+            fs::read(files.join("verification.log")).unwrap(),
+            b"preserved verification\n"
+        );
+        assert_eq!(node(&files.join("verification.log")).unwrap().links, 2);
+        assert_ne!(node(&files.join("old.exe")).unwrap().attributes & 2, 0);
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &files.join("work/.git")
+        ));
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        c.finish(c.id).unwrap();
+    }
+
+    #[test]
+    fn chrome_ref_tree_git_scope_and_receipt_substitutions_do_not_prepare_moves() {
+        for failure in [
+            "missing-main",
+            "unrelated-main",
+            "different-tree",
+            "dirty",
+            "untracked",
+            "additional-git",
+            "external-hardlink",
+            "identity",
+            "created",
+        ] {
+            let mut c = fixture_for(CHROME_ID);
+            let old = source(&c);
+            let work = old.join("work");
+            match failure {
+                "missing-main" => {
+                    git(&work, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "unrelated-main" => {
+                    git(
+                        &work,
+                        &["update-ref", "refs/remotes/origin/main", &c.repos[0].head],
+                    )
+                    .unwrap();
+                }
+                "different-tree" => {
+                    c.repos[0].squash_tree = Some("0".repeat(40));
+                }
+                "dirty" => fs::write(work.join("source.txt"), b"changed").unwrap(),
+                "untracked" => fs::write(work.join("unpublished.txt"), b"changed").unwrap(),
+                "additional-git" => {
+                    fs::create_dir(old.join("extra")).unwrap();
+                    fs::write(old.join("extra/.git"), b"unapproved").unwrap();
+                }
+                "external-hardlink" => {
+                    fs::write(old.join("record"), b"record").unwrap();
+                    fs::hard_link(old.join("record"), c.temp.join("outside-alias")).unwrap();
+                }
+                "identity" | "created" => {
+                    let mut r = c.load(c.id).unwrap();
+                    if failure == "identity" {
+                        r.identity.file_id += 1;
+                    } else {
+                        r.identity.created_at = BOARD_CREATED.into();
+                    }
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists(), "{failure}");
+            assert!(old.exists());
+        }
+    }
+
+    #[test]
+    fn chrome_finish_rejects_same_size_and_timestamp_restored_content_change() {
+        let c = fixture_for(CHROME_ID);
+        let old = source(&c);
+        fs::write(old.join("verification.log"), b"original").unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(&old, c.destination().join("files")).unwrap();
+        let p = c.destination().join("files/verification.log");
+        let old_time = fs::metadata(&p).unwrap().modified().unwrap();
+        fs::write(&p, b"modified").unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&p)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(old_time))
+            .unwrap();
+        assert_eq!(c.finish(c.id).unwrap_err(), "CONTENT_CHANGED_AFTER_PLAN");
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+
     #[test]
     fn board_crlf_checkout_is_archived_verbatim_but_real_edits_are_rejected() {
         for changed in [false, true] {
@@ -2980,6 +3162,8 @@ mod tests {
                 "2026-10-10T00:39:58.8390892+09:00"
             } else if c.id == BOARD_ID {
                 BOARD_CREATED
+            } else if c.id == CHROME_ID {
+                CHROME_CREATED
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
             }
@@ -3032,6 +3216,27 @@ mod tests {
         }
         if repo.saved_merge.is_some() {
             let tree = format!("{}^{{tree}}", repo.head);
+            if repo.squash_tree.is_some() {
+                let tree_id = git(path, &["rev-parse", &tree]).unwrap();
+                let squash = git(
+                    path,
+                    &[
+                        "-c",
+                        "user.name=Fixture",
+                        "-c",
+                        "user.email=fixture@example.invalid",
+                        "commit-tree",
+                        &tree_id,
+                        "-m",
+                        "published squash fixture",
+                    ],
+                )
+                .unwrap();
+                git(path, &["update-ref", "refs/remotes/origin/main", &squash]).unwrap();
+                repo.saved_merge = Some(squash);
+                repo.squash_tree = Some(tree_id);
+                return;
+            }
             let merge = git(
                 path,
                 &[

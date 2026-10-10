@@ -6,6 +6,14 @@ Rustで、同じWindowsプロセスの `/healthz` が20秒以内に応答しな�
 
 ## 検証・配置
 
+所有記録が両方とも欠落した場合は、設定の `expected_cli` があるときだけ、保持したプロセスハンドルから別の所有確認を行います。同じ利用者のプロセスで、指定された実行ファイルとCLIを使い、起動引数が厳密に `CLI start --port <設定ポート>` の形であることを確認します。プロセスの現在の環境から `OPENCODEX_HOME`、または `USERPROFILE/.opencodex` を確認し、監視の設定先と一致することも要求します。起動記録を作り直したり、インストール履歴 `serving-runtimes.json` で代用したりしません。
+
+この確認はx64 Windowsのプロセス構造に限定し、読み取り失敗・不明な構造・環境の重複キー・相対的な設定先・3秒の読み取り期限を超えた場合は拒否します。現在の環境は不可分なスナップショットではないため、構造の変化を検出し、終了直前に全条件を照合し直します。生の起動コマンドや環境は出力・保存しません。存在する所有記録の不正や矛盾は、この確認で上書きしません。古い設定では `expected_cli` を省略すると従来の記録による確認だけを使います。配布時の設定は配置済みのnpmパッケージのCLIを指定します。
+
+プロセス構造の参照: [Microsoft PEB](https://learn.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb)、[CrashpadのWindowsプロセス構造](https://chromium.googlesource.com/crashpad/crashpad/+/refs/heads/main/util/win/process_structs.h)。
+
+`inspect` は所有確認と健康検査を読み取りだけで実行し、PID・起動時刻・健康状態・検査時間だけを出力します。監視の状態や復旧記録を書かず、稼働中の監視と並行して配置前の確認に使えます。
+
 ```powershell
 cargo test --locked --manifest-path cc-ocx-watchdog/Cargo.toml
 cargo clippy --locked --manifest-path cc-ocx-watchdog/Cargo.toml --all-targets -- -D warnings

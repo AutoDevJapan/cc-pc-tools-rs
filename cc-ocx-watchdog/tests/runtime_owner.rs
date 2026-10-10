@@ -47,6 +47,7 @@ fn runtime_only_listener_is_verified_and_rechecked_before_termination() {
     let config = Config {
         home: fixture.home.0.clone(),
         expected_exe: exe,
+        expected_cli: None,
         port,
         task: "unused-in-unit-test".into(),
         log_dir: fixture.home.0.clone(),

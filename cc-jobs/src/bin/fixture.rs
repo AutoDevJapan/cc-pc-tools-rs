@@ -7,6 +7,22 @@ use std::{
 };
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.first().is_some_and(|s| s == "--healthy-cargo-gate") {
+        let dir = std::path::PathBuf::from(
+            std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),
+        );
+        let env = std::env::vars().collect();
+        let exit = gate::run_with_admitter(&args[1..], &dir, &env, |dir, env, cores| {
+            gate::admission::wait_with_sample(dir, env, cores, || {
+                Ok(gate::admission::Sample {
+                    cpu_percent: 50.,
+                    free_memory_gib: 32.,
+                })
+            })
+        })
+        .unwrap();
+        std::process::exit(exit as i32);
+    }
     if args.first().is_some_and(|s| s == "--echo-test-limits") {
         let var = |name: &str| std::env::var(name).unwrap_or_default();
         println!(

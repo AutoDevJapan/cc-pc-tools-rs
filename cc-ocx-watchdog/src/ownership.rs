@@ -59,6 +59,26 @@ pub fn verify(home: &Path, pid: u32, port: u16) -> Result<(), String> {
     Ok(())
 }
 
+/// Only absence may use another proof. Re-read after that proof so a conflicting
+/// record published during inspection cannot be mistaken for continued absence.
+pub fn verify_or_else(
+    home: &Path,
+    pid: u32,
+    port: u16,
+    missing: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    match verify(home, pid, port) {
+        Err(error) if error == "owner_record_missing" => {
+            missing()?;
+            match verify(home, pid, port) {
+                Err(error) if error == "owner_record_missing" => Ok(()),
+                result => result,
+            }
+        }
+        result => result,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,6 +104,36 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn alternative_proof_is_only_for_absence_and_rechecks_new_records() {
+        let home = Home::new();
+        home.write(
+            "serving-runtimes.json",
+            br#"{"runtimes":[{"pid":123,"port":10200}]}"#,
+        );
+        assert_eq!(
+            verify(&home.0, 123, 10200),
+            Err("owner_record_missing".into())
+        );
+        assert_eq!(verify_or_else(&home.0, 123, 10200, || Ok(())), Ok(()));
+        assert_eq!(
+            verify_or_else(&home.0, 123, 10200, || {
+                home.write("ocx.pid", "124");
+                Ok(())
+            }),
+            Err("pid_record_disagrees".into())
+        );
+        let called = std::cell::Cell::new(false);
+        assert_eq!(
+            verify_or_else(&home.0, 123, 10200, || {
+                called.set(true);
+                Ok(())
+            }),
+            Err("pid_record_disagrees".into())
+        );
+        assert!(!called.get());
     }
 
     #[test]

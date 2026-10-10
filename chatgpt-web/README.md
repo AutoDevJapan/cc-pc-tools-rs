@@ -35,6 +35,10 @@ D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # この道具が作ったタ�
 
 定期タスク `CC-ChatGptWebLoginCheck` が毎日 9:15 に `check-hidden.vbs`（`wscript.exe`、窓なし）から `chatgpt_web check` を実行します。目的の Plus が画面で確認できた日に状態を保存し、その後は status が 0 を返します。未確認・別プランの場合は送信せず、元ToDo 1974に実送受信の受入を残します。
 
+復旧前の1974は `todo.exe wait-ready 1974 --condition chatgpt-plus` で待機します。
+定期確認の実終了コードが0の場合だけ、同じ項目をresume-readyで再開します。
+VBSも確認失敗の終了コードを返します。担当の起動・引き継ぎだけを繰り返しません。
+
 ## 検証
 
 ```powershell

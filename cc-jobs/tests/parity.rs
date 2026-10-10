@@ -8425,7 +8425,19 @@ mod task_notifier {
         wait_entered(&e);
         assert!(!n.close());
         r.store(true, Ordering::Release);
+        // The 20ms cap was tested while finish was held. Draining after release
+        // is an eventual-completion assertion, not a 20ms CI scheduling promise.
+        n.shutdown_cap = 30.;
         assert!(n.close());
+        assert_eq!(
+            t.rt.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|c| c.argv[3].clone())
+                .collect::<Vec<_>>(),
+            ["start", "finish", "start", "finish"]
+        );
         assert_eq!(NOTIFY_SHUTDOWN_CAP_S, 300.);
     }
     #[test]

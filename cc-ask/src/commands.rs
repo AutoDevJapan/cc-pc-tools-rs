@@ -1256,7 +1256,10 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         ),
     ] {
         let deferred = truth(&ctx.cfg["__reboot_recovery_deferred"]);
-        let result = crate::tick_runtime::stage(name, Duration::from_secs(8), || {
+        // The metadata inventory spans thousands of receipts; retain its
+        // normal 20s ceiling within the existing whole-tick deadline.
+        let limit = if name == "cmd_todo_watch" { 20 } else { 8 };
+        let result = crate::tick_runtime::stage(name, Duration::from_secs(limit), || {
             if deferred {
                 if name == "cmd_todo_watch" {
                     observe_only(ctx, ctx.todo_command.clone(), "watch-preview")

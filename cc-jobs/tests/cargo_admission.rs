@@ -104,21 +104,24 @@ fn cargo_gate_applies_separate_test_limits_to_the_real_child_boundary() {
     let cores = std::thread::available_parallelism().unwrap().get();
     let build = cores.min(8);
     let tests = cores.min(3);
-    for (input, expected, env_tests) in [
+    for (input, expected, rust_tests, nextest_tests) in [
         (
             vec!["nextest", "run", "--build-jobs=32", "--test-threads=32"],
             format!("nextest run --build-jobs={build} --test-threads={tests}"),
+            tests,
             tests,
         ),
         (
             vec!["test", "--", "--test-threads", "32"],
             format!("test -- --test-threads {tests}"),
+            tests,
             32,
         ),
-        (vec!["test"], format!("test -- --test-threads {tests}"), 32),
+        (vec!["test"], "test".into(), tests, 32),
         (
             vec!["test", "--", "--test-threads=1"],
             "test -- --test-threads=1".into(),
+            1,
             32,
         ),
     ] {
@@ -144,7 +147,7 @@ fn cargo_gate_applies_separate_test_limits_to_the_real_child_boundary() {
         );
         assert_eq!(
             String::from_utf8(output.stdout).unwrap().trim(),
-            format!("{build}|{tests}|{env_tests}|{expected}")
+            format!("{build}|{rust_tests}|{nextest_tests}|{expected}")
         );
     }
 }

@@ -120,15 +120,21 @@ fn clamp(value: &str, limit: usize) -> usize {
 /// Clamp explicit build job counts before `--`: `-j`/`--jobs`, or `--build-jobs`
 /// for cargo-nextest (whose `-j` is the test thread count, not a build setting).
 pub fn clamp_jobs(args: &[String], limit: usize) -> Vec<String> {
-    clamp_parallel_args(args, limit, limit)
+    clamp_parallel_args(args, limit, limit).0
 }
-fn clamp_parallel_args(args: &[String], build_limit: usize, test_limit: usize) -> Vec<String> {
+fn clamp_parallel_args(
+    args: &[String],
+    build_limit: usize,
+    test_limit: usize,
+) -> (Vec<String>, usize, usize) {
     let nextest = first_command(args) == "nextest";
     let flags: &[&str] = if nextest {
         &["--build-jobs", "--test-threads", "--jobs", "-j"]
     } else {
         &["--jobs", "-j"]
     };
+    let mut build = build_limit;
+    let mut tests = test_limit;
     let mut out = Vec::with_capacity(args.len());
     let mut rest = args.iter();
     while let Some(arg) = rest.next() {
@@ -137,14 +143,61 @@ fn clamp_parallel_args(args: &[String], build_limit: usize, test_limit: usize) -
             out.extend(rest.by_ref().cloned());
             break;
         }
-        if flags.contains(&arg.as_str()) {
-            let limit = if nextest && arg != "--build-jobs" {
-                test_limit
-            } else {
-                build_limit
-            };
+        // A flag-looking option value is data, not another parallelism flag.
+        if [
+            "--manifest-path",
+            "--config",
+            "-Z",
+            "-C",
+            "--color",
+            "--target",
+            "--target-dir",
+            "--package",
+            "-p",
+            "--exclude",
+            "--features",
+            "-F",
+            "--message-format",
+            "--profile",
+            "--bin",
+            "--example",
+            "--test",
+            "--bench",
+            "--filter-expr",
+            "-E",
+            "--config-file",
+            "--status-level",
+            "--final-status-level",
+            "--failure-output",
+            "--success-output",
+            "--retries",
+            "--run-ignored",
+            "--partition",
+            "--archive-file",
+            "--archive-format",
+            "--workspace-remap",
+            "--extract-to",
+            "--stress-count",
+            "--stress-duration",
+        ]
+        .contains(&arg.as_str())
+        {
             out.push(arg.clone());
-            out.extend(rest.next().map(|v| clamp(v, limit).to_string()));
+            out.extend(rest.next().cloned());
+            continue;
+        }
+        let mut update = |flag: &str, value: &str| {
+            if nextest && flag != "--build-jobs" {
+                tests = clamp(value, test_limit);
+                tests
+            } else {
+                build = clamp(value, build_limit);
+                build
+            }
+        };
+        if flags.contains(&arg.as_str()) {
+            out.push(arg.clone());
+            out.extend(rest.next().map(|value| update(arg, value).to_string()));
             continue;
         }
         let inline = flags.iter().find_map(|flag| {
@@ -156,51 +209,51 @@ fn clamp_parallel_args(args: &[String], build_limit: usize, test_limit: usize) -
             }
         });
         out.push(match inline {
-            Some((flag, sep, value)) => {
-                let limit = if nextest && *flag != "--build-jobs" {
-                    test_limit
-                } else {
-                    build_limit
-                };
-                format!("{flag}{sep}{}", clamp(value, limit))
-            }
+            Some((flag, sep, value)) => format!("{flag}{sep}{}", update(flag, value)),
             None => arg.clone(),
         });
     }
-    out
+    (out, build, tests)
 }
-/// Only libtest's part after `--` accepts this flag. Keep every other harness
-/// argument (including a second `--` and literal test names) unchanged.
-fn clamp_harness_threads(args: &[String], limit: usize) -> Vec<String> {
+/// Do not invent arguments for custom harnesses. libtest honors the bounded
+/// RUST_TEST_THREADS environment when no explicit thread argument is supplied.
+fn clamp_harness_threads(args: &[String], limit: usize) -> (Vec<String>, usize) {
     let mut out = args.to_vec();
-    let start = match out.iter().position(|s| s == "--") {
-        Some(i) => i + 1,
-        None => {
-            out.push("--".into());
-            out.len()
-        }
+    let Some(start) = out.iter().position(|s| s == "--").map(|i| i + 1) else {
+        return (out, limit);
     };
-    let mut found = false;
+    let mut effective = limit;
     let mut i = start;
     while i < out.len() && out[i] != "--" {
-        if out[i] == "--test-threads" {
-            found = true;
-            if let Some(value) = out.get_mut(i + 1) {
-                *value = clamp(value, limit).to_string();
+        if [
+            "--skip",
+            "--logfile",
+            "--format",
+            "--color",
+            "--shuffle-seed",
+        ]
+        .contains(&out[i].as_str())
+        {
+            i += 2;
+        } else if out[i] == "--test-threads" {
+            if let Some(value) = out.get_mut(i + 1)
+                && value.parse::<usize>().is_ok_and(|n| n > 0)
+            {
+                effective = clamp(value, limit);
+                *value = effective.to_string();
             }
             i += 2;
         } else {
-            if let Some(value) = out[i].strip_prefix("--test-threads=") {
-                out[i] = format!("--test-threads={}", clamp(value, limit));
-                found = true;
+            if let Some(value) = out[i].strip_prefix("--test-threads=")
+                && value.parse::<usize>().is_ok_and(|n| n > 0)
+            {
+                effective = clamp(value, limit);
+                out[i] = format!("--test-threads={effective}");
             }
             i += 1;
         }
     }
-    if !found {
-        out.splice(start..start, ["--test-threads".into(), limit.to_string()]);
-    }
-    out
+    (out, effective)
 }
 fn var<'a>(env: &'a BTreeMap<String, String>, name: &str) -> Option<&'a String> {
     env.iter()
@@ -598,18 +651,20 @@ fn apply_limits(
         "RUST_TEST_THREADS"
     };
     let test_limit = clamp(&child[test_var], test_limit);
-    child.insert(HELD_TESTS.into(), test_limit.to_string());
-    let out = clamp_parallel_args(args, build_limit, test_limit);
-    if matches!(first_command(args), "test" | "bench")
-        && !args
-            .iter()
-            .take_while(|s| *s != "--")
-            .any(|s| s == "--no-run")
-    {
-        clamp_harness_threads(&out, test_limit)
+    let (out, build, tests) = clamp_parallel_args(args, build_limit, test_limit);
+    let (out, tests) = if first_command(args) == "test" {
+        clamp_harness_threads(&out, tests)
     } else {
-        out
+        (out, tests)
+    };
+    child.insert(HELD_JOBS.into(), build.to_string());
+    child.insert("CARGO_BUILD_JOBS".into(), build.to_string());
+    child.insert(HELD_TESTS.into(), tests.to_string());
+    child.insert("RUST_TEST_THREADS".into(), tests.to_string());
+    if first_command(args) == "nextest" {
+        child.insert("NEXTEST_TEST_THREADS".into(), tests.to_string());
     }
+    out
 }
 
 fn nested_test_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
@@ -709,7 +764,7 @@ mod tests {
         );
         assert_eq!(
             apply_limits(&args(&["+stable", "test", "--doc"]), &mut env, 8, 3),
-            args(&["+stable", "test", "--doc", "--", "--test-threads", "3"])
+            args(&["+stable", "test", "--doc"])
         );
         assert_eq!(
             apply_limits(
@@ -718,19 +773,61 @@ mod tests {
                 8,
                 3
             ),
-            args(&[
-                "test",
-                "--",
-                "--test-threads",
-                "3",
-                "--",
-                "--test-threads=32"
-            ])
+            args(&["test", "--", "--", "--test-threads=32"])
         );
         assert_eq!(
             apply_limits(&args(&["test", "--no-run"]), &mut env, 8, 3),
             args(&["test", "--no-run"])
         );
+    }
+    #[test]
+    fn harness_option_values_and_custom_arguments_are_kept() {
+        for input in [
+            args(&["test", "--", "--skip", "--test-threads=32"]),
+            args(&["test", "--", "--custom-output", "json"]),
+            args(&["bench", "--", "--custom-output", "json"]),
+            args(&["nextest", "run", "-E", "--test-threads=32"]),
+            args(&["build", "--config", "--jobs=32"]),
+        ] {
+            let mut env = BTreeMap::new();
+            assert_eq!(apply_limits(&input, &mut env, 8, 3), input);
+        }
+        let mut env = BTreeMap::new();
+        assert_eq!(
+            apply_limits(
+                &args(&["test", "--", "--skip", "--", "--test-threads=32"]),
+                &mut env,
+                8,
+                3
+            ),
+            args(&["test", "--", "--skip", "--", "--test-threads=3"])
+        );
+    }
+    #[test]
+    fn serial_parent_cli_sets_the_nested_test_environment() {
+        for input in [
+            args(&["test", "--", "--test-threads=1"]),
+            args(&["nextest", "run", "-j1"]),
+        ] {
+            let mut env = BTreeMap::new();
+            assert_eq!(apply_limits(&input, &mut env, 8, 8), input);
+            assert_eq!(env[HELD_TESTS], "1");
+            assert_eq!(env["RUST_TEST_THREADS"], "1");
+            let tests = nested_test_limit(&env, 32);
+            assert_eq!(tests, 1);
+            assert_eq!(
+                apply_limits(
+                    &args(&["nextest", "run", "--test-threads=32"]),
+                    &mut env,
+                    8,
+                    tests
+                ),
+                args(&["nextest", "run", "--test-threads=1"])
+            );
+        }
+        let mut env = BTreeMap::new();
+        apply_limits(&args(&["build", "-j1"]), &mut env, 8, 8);
+        assert_eq!(nested_jobs_limit(&env, 32), 1);
     }
     #[test]
     fn nested_explicit_jobs_never_exceed_the_parent_budget() {

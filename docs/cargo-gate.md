@@ -12,12 +12,23 @@
 {
   "max_slots": null,
   "jobs_per_build": 10,
+  "test_threads": 10,
   "min_free_memory_gib": 16,
   "grow_below_cpu_percent": 75,
   "pause_at_cpu_percent": 90,
   "settle_seconds": 2
 }
 ```
+
+ジョブと同じフォルダーの `queue-config.json` でも、`cargo_slots`、`cargo_jobs_per_build`、`test_threads` を指定できる。指定した項目だけが `cargo-gate.json` より優先する。省略またはnullなら共有ゲートの設定に戻る。ビルドとテストの並列上限はそれぞれ1〜10。実際の並列数は、その上限と「論理コア数÷受付時の実行中件数」の小さい方になる。受付のたびに両方のファイルを読み直す。ジョブの同時起動上限や `fixed_max_running` とは別の設定である。
+
+例えば32コアのPCでビルドを2件・各8並列に制限するなら、`codex_jobs.exe update-queue-config --patch-file <JSON>` に次の部分更新を渡す。2件×8並列で論理コア数の半分となる。指定していない場合は上記のCPU・メモリによる動的な方針を使う。これは後のPCルールで採用した方針であり、常時2件へ固定するものではない。
+
+```json
+{"cargo_slots": 2, "cargo_jobs_per_build": 8, "test_threads": 8}
+```
+
+nextestはテスト用の明示引数と環境変数をテスト上限に収める。`--build-jobs` はビルド上限に収める。`cargo test` は `--` の後の `--test-threads` を制限し、指定がなければ追加する。1並列など、小さい明示値は維持する。`--no-run` はテストを実行しないため引数を追加しない。入れ子のCargoはビルドとテストそれぞれの親の上限を超えず、現在の設定でさらに制限できる。
 
 `max_slots` がnullならコア数÷4、数値なら指定値と論理コア数の小さい方が上限になる。設定を変えるときは一時ファイルに完成したJSONを書いてから置換する。設定が壊れている、読めない、または負荷を測れない間は、理由を表示して待機し、読み直す。スケジューラーとゲートは同じ設定の検査を使う。容量の記録は補助情報であり、壊れている・読めない・保存できない場合も、その場の測定値と使用中のロックで受付を判断する。
 

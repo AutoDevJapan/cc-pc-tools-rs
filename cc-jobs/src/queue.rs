@@ -15,6 +15,9 @@ pub struct QueueConfig {
     pub max_running: usize,
     pub fixed_max_running: Option<usize>,
     pub adaptive: Option<crate::adaptive::AdaptiveConfig>,
+    pub cargo_slots: Option<usize>,
+    pub cargo_jobs_per_build: Option<usize>,
+    pub test_threads: Option<usize>,
     pub max_children_per_parent: usize,
     pub max_429_retries: u32,
     pub retry_delay_seconds: u64,
@@ -31,6 +34,9 @@ impl Default for QueueConfig {
             max_running: 6,
             fixed_max_running: None,
             adaptive: None,
+            cargo_slots: None,
+            cargo_jobs_per_build: None,
+            test_threads: None,
             max_children_per_parent: 2,
             max_429_retries: 5,
             retry_delay_seconds: 60,
@@ -79,6 +85,12 @@ pub fn merge_queue_config(current: &Value, patch: &Value, clear_fixed: bool) -> 
 }
 impl QueueConfig {
     pub fn validate(&self) -> Result<()> {
+        cc_job_policy::cargo::QueueCargoLimits {
+            cargo_slots: self.cargo_slots,
+            cargo_jobs_per_build: self.cargo_jobs_per_build,
+            test_threads: self.test_threads,
+        }
+        .validate()?;
         if self.max_running == 0
             || !(1..=100).contains(&self.context_limit_percent)
             || self.max_children_per_parent == 0

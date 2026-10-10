@@ -152,6 +152,8 @@ pub enum Command {
     Watch,
     /// Reconcile stale unlaunched stall reservations with accepted intake; never launch jobs.
     ReconcileIntake,
+    /// Recheck this item's automatic owner wait; retain explicit prerequisites.
+    ReevaluateOwnerWait { id: i64 },
     /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
     WatchPreview {
         #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
@@ -1017,6 +1019,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Wait { id, on, progress } => {
             cc_job_policy::todo_wait::validate(db, *id, on)?;
             let i = find(db, *id)?;
+            // An explicit prerequisite replaces automatic owner provenance.
+            i.as_object_mut().unwrap().remove("work_owner_job");
+            i.as_object_mut().unwrap().remove("work_owner_wait_on");
             let on: std::collections::BTreeSet<_> = on.iter().copied().collect();
             i["wait_on"] = json!(on);
             if i["status"] != "block" {
@@ -1051,11 +1056,19 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             item["updated"] = json!(now());
         }
-        Command::Watch | Command::ReconcileIntake | Command::WatchPreview { .. } => unreachable!(),
+        Command::Watch
+        | Command::ReconcileIntake
+        | Command::WatchPreview { .. }
+        | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ReevaluateOwnerWait { id } = &cli.command {
+        let changed = recovery::reevaluate_owner_wait_files(paths, *id)?;
+        println!("{}", json!({"reevaluated":id,"released":changed}));
+        return Ok(());
+    }
     if let Command::WatchPreview { id } = &cli.command {
         let report = recovery::preview_files(paths, id)?;
         println!("{report}");

@@ -21,6 +21,62 @@ function all(s) { return Array.from(document.querySelectorAll(s)); }
 // 閉じたダイアログや hidden の中にある要素は画面に出ていないので数えない
 function shown(e) { return !e.closest('[hidden], dialog:not([open]), [aria-hidden="true"]'); }
 
+function accountVisible(e) {
+  return shown(e) && e.getClientRects().length > 0
+    && !e.closest('[data-message-role], [data-message-author-role]');
+}
+
+// プラン名だけを返す。アカウント名・メール・金額・請求履歴は返さない。
+function planName(text) {
+  const clean = text.replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, '').trim();
+  // 現行のProは見出しに数字の区分が付く。数字は返さずProとして扱う。
+  if (/^(?:ChatGPT\s+)?Pro\s+\d+$/i.test(clean)) return 'pro';
+  const m = clean.match(/^(?:ChatGPT\s+)?(Plus|Pro|Free)(?:\s+plan)?\s*$/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function settingsNav() {
+  const heading = all('nav h1, nav h2').find(e => accountVisible(e) && /^(Settings|設定)$/.test(e.innerText.trim()));
+  return heading ? heading.closest('nav') : null;
+}
+
+function accountPlan() {
+  let controls = all('[data-testid=profile-button], [data-plan], [data-subscription-plan]');
+  // 2026-10 の設定画面は dialog/tab ではなく、ナビゲーションと main を使う。
+  if (settingsNav() && all('main h1').some(e => accountVisible(e) && /^(Billing|請求)$/.test(e.innerText.trim()))) {
+    controls = all('main [class]').filter(e => e.classList.contains('group/settings'))
+      .flatMap(root => Array.from(root.querySelectorAll('.font-medium')))
+      .filter(e => !e.closest('table'));
+  }
+  const plans = [...new Set(controls.filter(accountVisible).map(e => planName(e.innerText)).filter(Boolean))];
+  return plans.length === 1 ? plans[0] : '';
+}
+
+function openProfileMenu() {
+  if (all('[role=menu]').some(accountVisible)) return true;
+  const b = all('button[aria-label="Open profile menu"]').find(accountVisible);
+  if (!b) return false;
+  b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
+  return true;
+}
+
+function openSettings() {
+  if (settingsNav()) return true;
+  const b = all('[role=menuitem]').find(e => accountVisible(e) && /^(Settings|設定)(?:\s|$)/.test(e.innerText.trim()));
+  if (!b) return false;
+  b.click();
+  return true;
+}
+
+function openBilling() {
+  const nav = settingsNav();
+  if (!nav) return false;
+  const b = Array.from(nav.querySelectorAll('button')).find(e => accountVisible(e) && /^(Billing|請求)$/.test(e.innerText.trim()));
+  if (!b) return false;
+  b.click();
+  return true;
+}
+
 function bodyText() { return document.body ? document.body.innerText : ''; }
 
 function state() {

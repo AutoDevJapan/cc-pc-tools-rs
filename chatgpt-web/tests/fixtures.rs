@@ -224,6 +224,58 @@ fn observed_owner_composer_is_detected_without_the_old_id() {
 }
 
 #[test]
+fn current_plan_excludes_history_hidden_controls_and_conversation() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let result = run(
+        dir.path(),
+        "chat.html",
+        &[
+            "probe",
+            r#"page:(()=>{document.body.innerHTML = '<nav><h1>Settings</h1></nav><main><h1>Billing</h1><div class="group/settings"><div class="font-medium" id="current">ChatGPT Pro 100</div><table><tr><td class="font-medium">ChatGPT Plus</td></tr></table><div class="font-medium" hidden>ChatGPT Plus</div><div data-message-author-role="assistant"><div class="font-medium">ChatGPT Plus</div></div></div></main><button data-testid="profile-button">Upgrade to Plus</button>'; const pro=accountPlan(); q('#current').innerText='\u2066ChatGPT Plus\u2069'; const plus=accountPlan(); q('#current').remove(); const missing=accountPlan(); q('main h1').innerText='General'; const outside=accountPlan(); return JSON.stringify({pro,plus,missing,outside});})()"#,
+        ],
+    );
+    assert_eq!(result.status.code(), Some(0), "{}", stderr(&result));
+    assert!(
+        stdout(&result).contains(r#"{"pro":"pro","plus":"plus","missing":"","outside":""}"#),
+        "{}",
+        stdout(&result)
+    );
+    assert_browser_closed(dir.path());
+}
+
+#[test]
+fn settings_menu_and_billing_wait_for_rendered_controls() {
+    if !chrome_available() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let result = run(
+        dir.path(),
+        "settings.html",
+        &[
+            "probe",
+            "page:openProfileMenu()",
+            "wait:1",
+            "page:openSettings()",
+            "wait:1",
+            "page:openBilling()",
+            "wait:1",
+            "page:accountPlan()",
+        ],
+    );
+    assert_eq!(result.status.code(), Some(0), "{}", stderr(&result));
+    let text = stdout(&result);
+    assert!(text.contains("== page:openProfileMenu()\ntrue"), "{text}");
+    assert!(text.contains("== page:openSettings()\ntrue"), "{text}");
+    assert!(text.contains("== page:openBilling()\ntrue"), "{text}");
+    assert!(text.contains("== page:accountPlan()\nplus"), "{text}");
+    assert_browser_closed(dir.path());
+}
+
+#[test]
 fn answer_errors_and_limits_have_their_own_codes() {
     if !chrome_available() {
         return;

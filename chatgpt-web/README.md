@@ -15,7 +15,7 @@ D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # この道具が作ったタ�
 | 0 | 回答あり（標準出力が回答の本文） |
 | 1 | 失敗（送信できない・回答中のエラー表示・人間確認・画面の作りの変化） |
 | 2 | 引数の誤り（質問のファイルが無い・空・UTF-8 でない、モデル名の文字） |
-| 3 | ログインが必要（未ログイン・ログイン切れ） |
+| 3 | 未ログイン・ログイン切れ・目的のPlus未確認 |
 | 4 | アカウントが止められている表示 |
 | 5 | 時間切れ |
 | 6 | ほかの質問が実行中で、時間内に始められない |
@@ -29,6 +29,7 @@ D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # この道具が作ったタ�
 - 回答の完了は、生成中の停止ボタンが消え、回答の長さが2回続けて変わらないことで判断します。
 - 状態は state.json に保存します。道具は Discord に直接投稿しません。確認に失敗した場合、26時間を超えた場合、旧プロフィールの記録の場合は準備済みとして扱いません。会話本文以外のアカウント欄で Plus を確認できるまで送信を止めます。
 - オーナーの Chrome の言語設定は変えません。画面の判定と回答の変換は既存の src/page.js を使います。
+- 現行画面ではプロフィールのSettingsからBillingへ進み、現在のプラン欄だけを読みます。過去の請求履歴、会話、非表示の欄、アップグレード案内を照合に使いません。Plus確認後は同じ自作タブを新しいチャットへ戻します。プランの画面対応が変わった場合も終了コード3になるため、3だけで外部の復旧待ちと断定しません。
 
 ## 毎日のログイン確認
 
@@ -46,7 +47,7 @@ cargo build --release --locked -p chatgpt-web
 
 画面の作りが変わったら、保守用の `chatgpt_web probe --url <URL> wait:10 "page:state()" "page:JSON.stringify(poll())" <JSのファイル>` で調べ、`src/page.js` と記録を更新します。`ask --allow-logged-out` は未ログインの画面でも送る保守用の指定で、画面の作りの確認だけに使います（ログイン状態は記録しません）。
 
-環境変数 `CHATGPT_WEB_HOME`（保存先）、`CHATGPT_WEB_URL`（開く URL）、`CHATGPT_WEB_CHROME`（Chrome の場所）、`CHATGPT_WEB_DISCORD`（`discord_ask.exe` の場所、`off` で記録しない）で試験用に切り替えます。
+環境変数 `CHATGPT_WEB_HOME`（保存先）、`CHATGPT_WEB_URL`（開く URL）、`CHATGPT_WEB_CHROME`（HTML試験用のChromeの場所）で試験用に切り替えます。旧`CHATGPT_WEB_DISCORD`の指定による直接投稿は行いません。
 
 HTML試験の file:/// URL、または CHATGPT_WEB_FIXTURE=1 と数値ポートの 127.0.0.1 の HTTP URL に、CHATGPT_WEB_HEADLESS=1 を指定した場合だけ、隔離した Chrome を使います。本番の https:// URL ではこの設定があっても既存の Chrome 拡張機能へ接続します。未ログイン送信の保守用指定は HTML 試験に限定し、本番では拒否します。実際の Plus での送受信は未確認です。
 ## 配置

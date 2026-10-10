@@ -1,6 +1,23 @@
 //! One root worker per PR, branch or checkout. Child reviews do not claim work.
 use serde_json::{Value, json};
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::Command};
+
+fn tracked_scope(root: &Path, registered: &Path) -> Option<bool> {
+    let relative = registered.strip_prefix(root).ok()?;
+    let mut command = Command::new("git");
+    command
+        .args(["--literal-pathspecs", "-C"])
+        .arg(root)
+        .args(["ls-files", "-z", "--"])
+        .arg(relative);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let output = command.output().ok()?;
+    output.status.success().then_some(!output.stdout.is_empty())
+}
 
 fn s<'a>(v: &'a Value, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
@@ -13,6 +30,10 @@ pub fn norm(path: &Path) -> String {
         .trim_end_matches('/')
         .to_string();
     if cfg!(windows) { p.to_lowercase() } else { p }
+}
+fn is_user_home(root: &str) -> bool {
+    let key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    std::env::var_os(key).is_some_and(|p| !root.is_empty() && norm(Path::new(&p)) == root)
 }
 /// Read local Git metadata only; never fetch, launch a shell or retain remote credentials.
 pub fn checkout(cwd: &str) -> Value {
@@ -78,6 +99,9 @@ pub fn checkout(cwd: &str) -> Value {
         json!({"repository":repo,"git_common":common_key})
     };
     value["worktree"] = json!(worktree);
+    if is_user_home(s(&value, "worktree")) {
+        value["root_kind"] = json!("user_home");
+    }
     if let Ok(head) = fs::read_to_string(gitdir.join("HEAD"))
         && let Some(branch) = head.trim().strip_prefix("ref: refs/heads/")
     {
@@ -103,15 +127,57 @@ pub fn pr_number(text: &str) -> Option<u64> {
     None
 }
 pub fn from_job(job: &Value) -> Value {
-    if job["work_owner"].is_object() {
-        return job["work_owner"].clone();
+    let mut value = if job["work_owner"].is_object() {
+        job["work_owner"].clone()
+    } else {
+        checkout(s(job, "cwd"))
+    };
+    let registered = norm(Path::new(s(job, "registered_cwd")));
+    let cwd = norm(Path::new(s(job, "cwd")));
+    let tree = s(&value, "worktree").to_owned();
+    // A registered non-repository folder can sit inside the owner's home Git.
+    // Keep that discovery as evidence, but claim the actual working folder only.
+    if !s(job, "registered_cwd").is_empty()
+        && !s(job, "cwd").is_empty()
+        && !tree.is_empty()
+        && (value["root_kind"] == "user_home" || is_user_home(&tree))
+        && registered.starts_with(&format!("{tree}/"))
+        && (cwd == registered || cwd.starts_with(&format!("{registered}/")))
+    {
+        let explicit_pr = value["explicit_pr"].clone();
+        let ancestor = value.clone();
+        let actual = checkout(s(job, "cwd"));
+        if !s(&actual, "worktree").is_empty() && s(&actual, "worktree") != tree {
+            value = actual;
+            value["scope"] = json!("git_checkout");
+            value["ancestor_checkout"] = ancestor;
+        } else if tracked_scope(Path::new(&tree), Path::new(&registered)) == Some(false) {
+            value =
+                json!({"worktree":cwd,"scope":"registered_folder","ancestor_checkout":ancestor});
+        }
+        if explicit_pr.is_object() {
+            value["repository"] = explicit_pr["repository"].clone();
+            value["pr"] = explicit_pr["pr"].clone();
+            value["explicit_pr"] = explicit_pr;
+        }
     }
-    let mut value = checkout(s(job, "cwd"));
     // A project display name is not a repository identity.
-    if let Some(pr) = pr_number(s(job, "task_title")) {
+    if !value["explicit_pr"].is_object()
+        && let Some(pr) = pr_number(s(job, "task_title"))
+    {
         value["pr"] = json!(pr);
     }
     value
+}
+/// Registration is authoritative; do not infer a project from a display title.
+pub fn registered_job(db: &Value, job: &Value) -> Value {
+    let mut job = job.clone();
+    if s(&job, "registered_cwd").is_empty()
+        && let Some(path) = db["projects"][s(&job, "project")].as_str()
+    {
+        job["registered_cwd"] = json!(path);
+    }
+    job
 }
 pub fn pr_url(url: &str) -> Option<Value> {
     let path = url.strip_prefix("https://github.com/")?;
@@ -131,10 +197,21 @@ pub fn pr_url(url: &str) -> Option<Value> {
     Some(json!({"repository":parts[..2].join("/").to_lowercase(),"pr":pr}))
 }
 pub fn same(a: &Value, b: &Value) -> bool {
+    relation(a, b).is_some()
+}
+/// Only a shared PR or branch is a durable result dependency. A folder alone
+/// reserves a live writer, not completion of every task ever using that folder.
+pub fn relation(a: &Value, b: &Value) -> Option<&'static str> {
     let equal = |key| !s(a, key).is_empty() && s(a, key) == s(b, key);
-    equal("worktree")
-        || (equal("repository") && a["pr"].is_u64() && a["pr"] == b["pr"])
-        || (equal("git_common") && equal("branch"))
+    if equal("repository") && a["pr"].is_u64() && a["pr"] == b["pr"] {
+        Some("shared_pr")
+    } else if equal("git_common") && equal("branch") {
+        Some("shared_branch")
+    } else if equal("worktree") {
+        Some("live_worktree")
+    } else {
+        None
+    }
 }
 fn root(job: &Value) -> bool {
     job["subwork"].is_object() || s(job, "parent_job_id").is_empty()
@@ -172,7 +249,7 @@ pub fn reason(owner: &Value) -> Value {
 pub fn observed_jobs(db: &Value, jobs: &[Value]) -> Vec<Value> {
     jobs.iter()
         .filter_map(|j| {
-            let mut candidate = j.clone();
+            let mut candidate = registered_job(db, j);
             if j["subwork"].is_object() {
                 candidate["subwork_validated"] = json!(false);
                 if crate::subwork::refresh_job(db, jobs, &mut candidate).is_err()
@@ -195,6 +272,7 @@ pub fn reconcile_todos_if(
     jobs: &[Value],
     eligible: impl Fn(&Value) -> bool,
 ) -> Vec<i64> {
+    let mut changed = reevaluate_todos_if(db, jobs, &eligible);
     let jobs = observed_jobs(db, jobs);
     let jobs = jobs.as_slice();
     let mut edges = Vec::new();
@@ -225,7 +303,10 @@ pub fn reconcile_todos_if(
             .map(|j| s(j, "cwd"))
             .filter(|p| !p.is_empty())
             .unwrap_or_else(|| s(&item["scheduler"], "worktree"));
-        let mut candidate = json!({"id":format!("todo-{}",item["id"]),"cwd":cwd,"project":item["project"],"task_title":item["title"],"todo_id":item["id"]});
+        let mut candidate = registered_job(
+            db,
+            &json!({"id":format!("todo-{}",item["id"]),"cwd":cwd,"project":item["project"],"task_title":item["title"],"todo_id":item["id"]}),
+        );
         if let Some(old) = old {
             if live(old) {
                 candidate = old.clone();
@@ -234,7 +315,7 @@ pub fn reconcile_todos_if(
         }
         // Current task title supplies an explicit PR for an older record without one.
         let mut identity = from_job(&candidate);
-        if s(&identity, "repository").is_empty() {
+        if s(&identity, "repository").is_empty() && identity["scope"] != "registered_folder" {
             // A project checkout supplies repository scope only, never a blanket
             // worktree/branch claim for tasks that have not got a checkout yet.
             let scope = checkout(db["projects"][s(item, "project")].as_str().unwrap_or(""));
@@ -268,7 +349,6 @@ pub fn reconcile_todos_if(
             }
         }
     }
-    let mut changed = Vec::new();
     for (id, on, job) in edges {
         // Recheck cycles after each edge, including edges added in this transaction.
         if crate::todo_wait::validate(db, id, &[on]).is_err() {
@@ -283,6 +363,7 @@ pub fn reconcile_todos_if(
         item["status"] = json!("wait");
         item["wait_on"] = json!([on]);
         item["work_owner_job"] = job;
+        item["work_owner_wait_on"] = json!(on);
         item.as_object_mut().unwrap().remove("dependency_ready");
         if let Some(recovery) = item["stall_recovery"].as_object_mut() {
             recovery.remove("pending");
@@ -293,9 +374,311 @@ pub fn reconcile_todos_if(
     changed
 }
 
+/// Retain unclassified legacy waits. Only exact recorded automatic owner edges
+/// may be released; a manual wait never has this provenance.
+pub fn remembered_pending(db: &Value, candidate: &Value, jobs: &[Value]) -> Vec<i64> {
+    let candidate = registered_job(db, candidate);
+    crate::todo_wait::pending_on(db, &json!({"wait_on":candidate["work_wait_on"]}))
+        .into_iter()
+        .filter(|on| {
+            let evidence = &candidate["work_wait_evidence"];
+            let owner_id = evidence["owner_job_id"]
+                .as_str()
+                .or_else(|| candidate["queue_wait_reason"]["owner_job_id"].as_str())
+                .or_else(|| {
+                    db["items"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .find(|i| i["id"] == candidate["todo_id"])
+                        .and_then(|i| automatic_owner(i, *on))
+                });
+            let owner = owner_id.and_then(|id| jobs.iter().find(|j| s(j, "id") == id));
+            if let Some(owner) = owner.filter(|o| o["todo_id"].as_i64() == Some(*on)) {
+                return owner_wait_valid(db, &candidate, owner);
+            }
+            // New records preserve the exact owner claim across worker exit.
+            if evidence["owner"]["todo_id"].as_i64() == Some(*on) {
+                let mut owner = evidence["owner"].clone();
+                // A missing record is not evidence that its writer has stopped.
+                owner["work_owner_live"] = json!(true);
+                return owner_wait_valid(db, &candidate, &owner);
+            }
+            true
+        })
+        .collect()
+}
+pub fn owner_wait_valid(db: &Value, candidate: &Value, owner: &Value) -> bool {
+    match relation(
+        &from_job(&registered_job(db, candidate)),
+        &from_job(&registered_job(db, owner)),
+    ) {
+        Some("shared_pr" | "shared_branch") => true,
+        Some("live_worktree") => live(owner),
+        _ => false,
+    }
+}
+/// The evidence contains identity and ownership fields only, never prompts or logs.
+pub fn owner_evidence(owner: &Value) -> Value {
+    Value::Object(
+        [
+            "id",
+            "todo_id",
+            "cwd",
+            "project",
+            "registered_cwd",
+            "work_owner",
+        ]
+        .into_iter()
+        .map(|key| (key.to_owned(), owner[key].clone()))
+        .collect(),
+    )
+}
+/// Every DB-derived release uses this single provenance check. Legacy marks
+/// alone cannot distinguish an automatic collision from a later manual wait.
+fn automatic_owner(item: &Value, on: i64) -> Option<&str> {
+    if item["work_owner_wait_on"].as_i64() == Some(on)
+        && item["wait_on"]
+            .as_array()
+            .is_some_and(|ids| ids.contains(&json!(on)))
+    {
+        item["work_owner_job"].as_str()
+    } else {
+        None
+    }
+}
+pub fn reevaluate_todos_if(
+    db: &mut Value,
+    jobs: &[Value],
+    eligible: impl Fn(&Value) -> bool,
+) -> Vec<i64> {
+    let mut releases = Vec::new();
+    for item in db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|i| i["id"].is_i64() && eligible(i))
+    {
+        let Some(owner) = jobs
+            .iter()
+            .find(|j| j["id"].is_string() && j["id"] == item["work_owner_job"])
+        else {
+            continue;
+        };
+        let Some(on) = owner["todo_id"].as_i64() else {
+            continue;
+        };
+        if automatic_owner(item, on) != owner["id"].as_str() {
+            continue;
+        }
+        let Some(candidate) = jobs
+            .iter()
+            .filter(|j| {
+                j["todo_id"] == item["id"]
+                    || item["jobs"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&j["id"]))
+            })
+            .max_by_key(|j| (s(j, "created_at"), s(j, "id")))
+        else {
+            continue;
+        };
+        if !owner_wait_valid(db, candidate, owner) {
+            releases.push((
+                item["id"].clone(),
+                on,
+                owner["id"].clone(),
+                from_job(&registered_job(db, candidate)),
+                from_job(&registered_job(db, owner)),
+            ));
+        }
+    }
+    let mut changed = Vec::new();
+    for (id, on, owner, candidate_identity, owner_identity) in releases {
+        let item = db["items"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|i| i["id"] == id)
+            .unwrap();
+        if !item["work_owner_wait_history"].is_array() {
+            item["work_owner_wait_history"] = json!([]);
+        }
+        item["work_owner_wait_history"].as_array_mut().unwrap().push(json!({"wait_on":on,"owner_job_id":owner,"reason":"owner_claim_reevaluated","candidate":candidate_identity,"owner":owner_identity}));
+        item["wait_on"] = json!(
+            item["wait_on"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|i| **i != on)
+                .cloned()
+                .collect::<Vec<_>>()
+        );
+        item.as_object_mut().unwrap().remove("work_owner_job");
+        item.as_object_mut().unwrap().remove("work_owner_wait_on");
+        if item["wait_on"].as_array().is_some_and(Vec::is_empty) {
+            item.as_object_mut().unwrap().remove("wait_on");
+            crate::todo_wait::release_item(item);
+        }
+        changed.push(id.as_i64().unwrap());
+    }
+    changed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn registered_folders_do_not_inherit_home_git_ownership() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(
+            Command::new("git")
+                .arg("init")
+                .arg(dir.path())
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let tree = norm(dir.path());
+        let a_path = dir.path().join("products/a");
+        let b_path = dir.path().join("products/b");
+        fs::create_dir_all(&a_path).unwrap();
+        fs::create_dir_all(&b_path).unwrap();
+        let identity = json!({"repository":"adj/home","git_common":format!("{tree}/.git"),"worktree":tree,"root_kind":"user_home","branch":"fix/other"});
+        let a = json!({"cwd":a_path,"registered_cwd":a_path,"work_owner":identity});
+        let b = json!({"cwd":b_path,"registered_cwd":b_path,"work_owner":identity});
+        assert!(!same(&from_job(&a), &from_job(&b)));
+        assert!(same(&from_job(&a), &from_job(&a)));
+        // An actual nested repository still claims its real checkout and branch.
+        let mut nested = a.clone();
+        nested["work_owner"]["worktree"] = json!(format!("{tree}/products/a/repo"));
+        nested["work_owner"]["git_common"] = json!(format!("{tree}/products/a/repo/.git"));
+        nested["work_owner"]
+            .as_object_mut()
+            .unwrap()
+            .remove("root_kind");
+        assert_eq!(from_job(&nested)["branch"], "fix/other");
+        // Registered source folders tracked by the real Git still share writer exclusion.
+        fs::write(a_path.join("source.rs"), "tracked").unwrap();
+        assert!(
+            Command::new("git")
+                .arg("-C")
+                .arg(dir.path())
+                .args(["add", "."])
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        assert_eq!(from_job(&a)["worktree"], tree);
+        assert_eq!(from_job(&a)["branch"], "fix/other");
+    }
+    #[test]
+    fn stale_ancestor_identity_recovers_actual_nested_checkout() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(
+            Command::new("git")
+                .arg("init")
+                .arg(dir.path())
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let registered = dir.path().join("products");
+        let cwd = registered.join("repo");
+        fs::create_dir_all(&cwd).unwrap();
+        assert!(
+            Command::new("git")
+                .arg("init")
+                .arg(&cwd)
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let mut job = json!({"registered_cwd":registered,"cwd":cwd,"work_owner":checkout(dir.path().to_str().unwrap())});
+        job["work_owner"]["root_kind"] = json!("user_home");
+        assert_eq!(from_job(&job)["worktree"], norm(&cwd));
+        assert_eq!(from_job(&job)["git_common"], norm(&cwd.join(".git")));
+    }
+    #[test]
+    fn automatic_owner_waits_release_only_disproved_claims_and_keep_manual_edges() {
+        let a = json!({"id":"a","todo_id":1,"status":"succeeded","work_owner":{"worktree":"/a"}});
+        let b = json!({"id":"b","todo_id":2,"status":"queued","work_owner":{"worktree":"/b"}});
+        let mut db = json!({"items":[{"id":1,"status":"todo"},{"id":2,"status":"wait","wait_on":[1,3],"work_owner_job":"a","work_owner_wait_on":1,"jobs":["b"],"spec":"saved","note":"proof"},{"id":3,"status":"todo"},{"id":4,"status":"wait","wait_on":[1],"work_owner_job":"a","jobs":["legacy"]}]});
+        assert_eq!(
+            reevaluate_todos_if(&mut db, &[a.clone(), b.clone()], |_| true),
+            vec![2]
+        );
+        assert_eq!(db["items"][1]["wait_on"], json!([3]));
+        assert_eq!(db["items"][1]["status"], "wait");
+        assert_eq!(db["items"][1]["spec"], "saved");
+        assert_eq!(db["items"][1]["note"], "proof");
+        assert_eq!(db["items"][3]["wait_on"], json!([1]));
+        assert_eq!(db["items"][1]["work_owner_wait_history"][0]["wait_on"], 1);
+        assert!(reevaluate_todos_if(&mut db, &[a, b], |_| true).is_empty());
+    }
+    #[test]
+    fn untracked_registered_subfolders_of_real_repo_keep_worktree_exclusion() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(
+            Command::new("git")
+                .arg("init")
+                .arg(dir.path())
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let a = dir.path().join("a");
+        let b = dir.path().join("b");
+        fs::create_dir(&a).unwrap();
+        fs::create_dir(&b).unwrap();
+        let first = json!({"cwd":a,"registered_cwd":a,"work_owner":checkout(a.to_str().unwrap())});
+        let second = json!({"cwd":b,"registered_cwd":b,"work_owner":checkout(b.to_str().unwrap())});
+        assert!(same(&from_job(&first), &from_job(&second)));
+    }
+    #[test]
+    fn remembered_claims_keep_real_pr_and_branch_dependencies_after_worker_exit() {
+        let db = json!({"items":[{"id":1,"status":"todo"}]});
+        let mut owner =
+            json!({"id":"a","todo_id":1,"status":"succeeded","work_owner":{"worktree":"/a"}});
+        let mut candidate = json!({"id":"b","work_wait_on":[1],"queue_wait_reason":{"owner_job_id":"a"},"work_owner":{"worktree":"/a"}});
+        assert!(remembered_pending(&db, &candidate, std::slice::from_ref(&owner)).is_empty());
+        owner["status"] = json!("running");
+        assert_eq!(
+            remembered_pending(&db, &candidate, std::slice::from_ref(&owner)),
+            vec![1]
+        );
+        owner["status"] = json!("succeeded");
+        for identity in [
+            json!({"repository":"adj/game","pr":7}),
+            json!({"git_common":"/git","branch":"fix/shared"}),
+        ] {
+            owner["work_owner"] = identity.clone();
+            candidate["work_owner"] = identity;
+            assert_eq!(
+                remembered_pending(&db, &candidate, std::slice::from_ref(&owner)),
+                vec![1]
+            );
+        }
+        assert_eq!(remembered_pending(&db, &candidate, &[]), vec![1]);
+    }
+    #[test]
+    fn remembered_db_fallback_requires_typed_automatic_provenance() {
+        let owner =
+            json!({"id":"owner","todo_id":1,"status":"succeeded","work_owner":{"worktree":"/a"}});
+        let candidate = json!({"id":"candidate","todo_id":2,"work_wait_on":[1],"queue_wait_reason":{"code":"todo_dependency"},"work_owner":{"worktree":"/b"}});
+        let mut db = json!({"items":[{"id":1,"status":"todo"},{"id":2,"status":"wait","wait_on":[1],"work_owner_job":"owner"}]});
+        assert_eq!(
+            remembered_pending(&db, &candidate, std::slice::from_ref(&owner)),
+            vec![1]
+        );
+        db["items"][1]["work_owner_wait_on"] = json!(1);
+        assert!(remembered_pending(&db, &candidate, std::slice::from_ref(&owner)).is_empty());
+    }
     fn job(id: &str, status: &str, repo: &str, pr: u64, tree: &str) -> Value {
         json!({"id":id,"status":status,"created_at":id,"todo_id":if id=="a" {1} else {2},"work_owner":{"repository":repo,"pr":pr,"worktree":tree}})
     }

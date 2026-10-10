@@ -187,6 +187,35 @@ pub fn ensure_workspace(
     if owned {
         return Err(Error("CwdMissing"));
     }
+    // Preparation can lose its directory after reserving the branch. Reuse
+    // that exact ref, preserving its commit instead of recreating it from main.
+    let reference = format!("refs/heads/{branch}");
+    let mut check = invocation(
+        &[
+            "git",
+            "-C",
+            base.to_str().unwrap(),
+            "show-ref",
+            "--exists",
+            &reference,
+        ],
+        Some(40),
+    );
+    check.git_prompt_off = true;
+    let result = runner.run(&check).map_err(tool_error)?;
+    match result.code {
+        0 => {
+            fs::create_dir_all(container)?;
+            return run_git(
+                runner,
+                &base,
+                &["worktree", "add", target.to_str().unwrap(), branch],
+            )
+            .map(|_| ());
+        }
+        2 => (), // Git's --exists distinguishes a missing ref from lookup failure.
+        _ => return Err(classify_output(&result)),
+    }
     run_git(runner, &base, &["remote", "get-url", "origin"])?;
     run_git(runner, &base, &["fetch", "--quiet", "origin", "main"])?;
     run_git(

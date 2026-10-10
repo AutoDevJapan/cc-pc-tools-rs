@@ -18,7 +18,8 @@ fn launch_inputs(item: &Value) -> Value {
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
-        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"]})
+        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
+        "console_request":item["scheduler"]["console_request"]})
 }
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
@@ -894,6 +895,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             );
         }
         prompt += &format!("\n依頼:\n{text}");
+        if let Some(body) = item["scheduler"]["console_request"]["prompt"].as_str() {
+            prompt += &format!("\n受付済みの引き継ぎ本文:\n{body}\n");
+        }
         if item["subwork"].is_object() {
             prompt += &format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n", item["subwork"]["parent_todo_id"], s(&item["subwork"]["kind"]));
         }
@@ -989,6 +993,72 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
+    }
+    /// Caller holds scheduler.lock. The accepted body is durable before any launch.
+    /// Preparation and admission remain the same as ordinary finite work.
+    pub fn dispatch_console_subwork(
+        &mut self,
+        cfg: &Value,
+        pri: &Value,
+        id: i64,
+        request: &Value,
+    ) -> Result<Option<String>> {
+        if !request["key"].is_string()
+            || s(&request["key"]).is_empty()
+            || !request["launch_key"].is_string()
+            || s(&request["launch_key"]).is_empty()
+            || !request["prompt"].is_string()
+            || s(&request["prompt"]).len() > 128 * 1024
+        {
+            return Err(Error("ValueError"));
+        }
+        let db = self.todo()?;
+        let item = arr(&db["items"])
+            .into_iter()
+            .find(|i| i["id"] == id)
+            .ok_or(Error("ValueError"))?;
+        if !item["subwork"].is_object() {
+            return Err(Error("InvalidSubwork"));
+        }
+        let old = &item["scheduler"]["console_request"];
+        if old.is_object() && old != request {
+            return Err(Error("InputRejected"));
+        }
+        // Recover a response lost after the launcher accepted the exact reservation.
+        if old == request {
+            if let Some(job) = self
+                .backend
+                .jobs()?
+                .iter()
+                .find(|j| j["launch_key"] == item["scheduler"]["key"] && j["todo_id"] == id)
+            {
+                return Ok(Some(s(&job["id"]).to_string()));
+            }
+        }
+        if item["status"] != "todo"
+            || todo_wait::waiting(&db, &item)
+            || n(&item["scheduler"]["not_before"]) > self.backend.clock()
+        {
+            return Ok(None);
+        }
+        let inputs = launch_inputs(&item);
+        let saved = self.edit(&json!(id), |row| {
+            if row["status"] == "todo" && launch_inputs(row) == inputs {
+                if !row["scheduler"].is_object() {
+                    row["scheduler"] = json!({});
+                }
+                row["scheduler"]["console_request"] = request.clone();
+                if !truth(&row["scheduler"]["key"]) {
+                    row["scheduler"]["key"] = request["launch_key"].clone();
+                }
+            }
+        })?;
+        if saved["scheduler"]["console_request"] != *request {
+            return Ok(None);
+        }
+        self.dispatch_for(cfg, pri, Some(id))?;
+        self.persist()?;
+        Ok(self.report["launched"]["job"].as_str().map(str::to_string))
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {

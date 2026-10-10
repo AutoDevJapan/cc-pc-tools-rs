@@ -11,6 +11,93 @@ const T: f64 = 100000.;
 mod subwork_support;
 
 #[test]
+fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
+    for gate in [
+        "open", "cargo", "cpu", "memory", "interval", "deadline", "owner",
+    ] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("subwork_admission");
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "cargo" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "interval" => f.e.state["last_launch"] = json!(T),
+            "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
+            "owner" => sub.db["items"][1]["status"] = json!("block"),
+            _ => {}
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:finite-check","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Keep the fixed input and the saved acceptance criteria."});
+        let result =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(result.is_some(), gate == "open", "{gate}");
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if gate != "open" {
+            continue;
+        }
+        let row = f.get(2);
+        assert_eq!(row["spec"], sub.db["items"][1]["spec"]);
+        assert_eq!(row["scheduler"]["console_request"], request);
+        assert_eq!(
+            row["scheduler"]["key"],
+            sub.db["items"][1]["scheduler"]["key"]
+        );
+        let mut candidate = sub.child_job();
+        candidate["subwork_spec"] = row["spec"].clone();
+        candidate["assigned_needs"] = row["needs"].clone();
+        // This is the admission validator used by cc-jobs, not merely an argv assertion.
+        cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate)
+            .unwrap();
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains(request["prompt"].as_str().unwrap()));
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Inspect the fixed change"));
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            &row,
+            Path::new(row["scheduler"]["prompt"].as_str().unwrap()),
+            &row["scheduler"]["selection"],
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--assigned-needs", "cargo"]));
+        let again =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(again, result);
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let mut changed = request.clone();
+        changed["prompt"] = json!("Different accepted body");
+        assert!(f
+            .e
+            .dispatch_console_subwork(&f.cfg, &f.pri, 2, &changed)
+            .is_err());
+    }
+}
+
+#[test]
 fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
     for gate in ["open", "cargo", "cpu", "memory", "interval"] {
         let mut sub = subwork_support::Fixture::new();
@@ -1151,6 +1238,7 @@ impl Backend for Fake {
         let mut j = job(&jid, 99, "running");
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
+        j["todo_id"] = i["id"].clone();
         self.records.push(j);
         if self.crash_after_launch {
             self.crash_after_launch = false;

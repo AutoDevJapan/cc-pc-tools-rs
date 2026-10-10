@@ -107,6 +107,14 @@ trait Runner: Send + Sync {
         todo_receipts::ensure(paths, request)
     }
     fn run(&self, program: &Path, args: &[String], cwd: &Path) -> Result<String>;
+    fn dispatch_subwork(
+        &self,
+        _paths: &Paths,
+        _id: u64,
+        _request: &Value,
+    ) -> Result<Option<String>> {
+        Err(external())
+    }
     fn stall_capacity(&self, _paths: &Paths, _item: Option<&Value>) -> Result<bool> {
         Ok(true)
     }
@@ -116,6 +124,27 @@ trait Runner: Send + Sync {
 }
 struct RealRunner;
 impl Runner for RealRunner {
+    fn dispatch_subwork(&self, paths: &Paths, id: u64, request: &Value) -> Result<Option<String>> {
+        use cc_scheduler::{backend::RealBackend, common, engine::Scheduler};
+        let root = paths.tools.join("scheduler");
+        let mut scheduler = Scheduler::new(
+            root.clone(),
+            paths.todo.join("todo.json"),
+            RealBackend::new(root.clone()),
+        )
+        .map_err(|_| io_fault())?;
+        scheduler.state =
+            common::read_json(&root.join("state.json"), json!({})).map_err(|_| io_fault())?;
+        let (cfg, pri) = scheduler.settings().map_err(|_| io_fault())?;
+        scheduler
+            .dispatch_console_subwork(
+                &cfg,
+                &pri,
+                i64::try_from(id).map_err(|_| invalid())?,
+                request,
+            )
+            .map_err(|_| external())
+    }
     fn stall_capacity(&self, paths: &Paths, item: Option<&Value>) -> Result<bool> {
         use cc_scheduler::{
             backend::{Backend, RealBackend},
@@ -1004,7 +1033,20 @@ impl Console {
                     continue;
                 }
             }
-            if let Some(job) = jobs.iter().find(|j| j["launch_key"] == key_hash(&t.key)) {
+            let scheduler_key = t
+                .todo_id
+                .and_then(|id| {
+                    db["items"].as_array()?.iter().find(|i| {
+                        i["id"] == id && i["scheduler"]["console_request"]["key"] == t.key
+                    })
+                })
+                .and_then(|i| i["scheduler"]["key"].as_str());
+            if let Some(job) = jobs.iter().find(|j| {
+                j["launch_key"] == key_hash(&t.key)
+                    || scheduler_key.is_some_and(|key| {
+                        j["launch_key"] == key && j["todo_id"].as_u64() == t.todo_id
+                    })
+            }) {
                 self.record_launch(s, &t, strv(job, "id"))?;
                 continue;
             }
@@ -1393,6 +1435,31 @@ impl Console {
                 self.save(s)?;
                 continue;
             }
+            if let Some(item) = item.filter(|i| i["subwork"].is_object()) {
+                let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt});
+                match self.runner.dispatch_subwork(
+                    &self.paths,
+                    item["id"].as_u64().ok_or_else(invalid)?,
+                    &request,
+                ) {
+                    Ok(Some(id)) => {
+                        if !safe_id(&id, 120) {
+                            return Err(external());
+                        }
+                        self.record_launch(s, &t, &id)?;
+                        candidate_jobs = self.jobs()?;
+                    }
+                    Ok(None) => {
+                        let waiting = s.queue.remove(0);
+                        s.queue.push(waiting);
+                        self.save(s)?;
+                    }
+                    Err(error) => {
+                        self.defer_failure(s, &t.key, error.code)?;
+                    }
+                }
+                continue;
+            }
             // A queued handoff never competes with an already linked job for the same item.
             if item.is_some_and(|i| todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
                 let waiting = s.queue.remove(0);
@@ -1656,9 +1723,6 @@ impl Console {
             if let Some(id) = t.todo_id {
                 args.extend(["--todo-id".into(), id.to_string()]);
             }
-            if let Some(parent) = item.and_then(|i| i["subwork"]["parent_todo_id"].as_u64()) {
-                args.extend(["--subwork-of".into(), parent.to_string()]);
-            }
             if let Some(task_type) = t.options["task_type"].as_str() {
                 args.extend(["--task-type".into(), task_type.into()]);
             }
@@ -1812,7 +1876,7 @@ impl Console {
             json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
                 "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
         };
-        json!({"workspace_policy_version":2,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
+        json!({"workspace_policy_version":3,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
             "pending":i["stall_recovery"]["pending"],"jobs":i["jobs"],"spec":i["spec"],
             "spec_file":metadata(Path::new(strv(i,"spec"))),

@@ -177,7 +177,7 @@ fn todo2164_broad_saved_root_returns_to_registered_source_without_copying_ancest
 }
 
 #[test]
-fn todo2164_saved_subwork_parent_is_forwarded_to_the_independent_launcher() {
+fn todo2164_subwork_is_never_launched_through_the_unallocated_console_cli() {
     let f = todo1597_fixture("todo");
     let mut db = f.console.todos().unwrap();
     db["items"][0]["subwork"] = json!({"parent_todo_id":122,"kind":"check"});
@@ -186,8 +186,31 @@ fn todo2164_saved_subwork_parent_is_forwarded_to_the_independent_launcher() {
     f.console
         .dispatch(&mut state, &f.console.jobs().unwrap())
         .unwrap();
-    let run = model_run(&f);
-    assert_eq!(model_arg(&run, "--todo-id").as_deref(), Some("1"));
-    assert_eq!(model_arg(&run, "--subwork-of").as_deref(), Some("122"));
-    assert_eq!(f.launches(), 1);
+    // The fake does not support Scheduler admission. Keep the accepted request
+    // queued instead of falling through to a malformed/unallocated CLI launch.
+    assert_eq!(f.launches(), 0);
+    assert!(!state.queue.is_empty());
+    assert!(!state.preparation_failures.is_empty());
+}
+
+#[test]
+fn todo2164_subwork_reconciles_scheduler_key_after_console_response_loss() {
+    let f = todo1597_fixture("doing");
+    let mut db = f.console.todos().unwrap();
+    db["items"][0]["scheduler"] = json!({"key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "console_request":{"key":"decision:source"}});
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    f.job("scheduler-worker", "todo-1", "running", "", "");
+    let path = f.console.paths.jobs.join("scheduler-worker/job.json");
+    let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    job["todo_id"] = json!(1);
+    job["launch_key"] = json!("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    fs::write(path, job.to_string()).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    f.console
+        .dispatch(&mut state, &f.console.jobs().unwrap())
+        .unwrap();
+    assert_eq!(state.launches["decision:source"], "scheduler-worker");
+    assert!(state.queue.is_empty());
+    assert_eq!(f.launches(), 0);
 }

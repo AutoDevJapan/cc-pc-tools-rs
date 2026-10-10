@@ -629,7 +629,14 @@ impl Config {
                 self.client_guard(admin)?;
                 self.client_guard(common)?;
             }
-            validate_repo(&path.join(repo.name), repo, before_move)?;
+            validate_repo_scoped(
+                &path.join(repo.name),
+                repo,
+                before_move,
+                false,
+                false,
+                self.id == BOARD_ID,
+            )?;
         }
         Ok(nodes)
     }
@@ -975,7 +982,14 @@ impl Config {
         {
             return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
         }
-        validate_repo_scoped(&root.join("repo"), &self.repos[0], before, false, true)?;
+        validate_repo_scoped(
+            &root.join("repo"),
+            &self.repos[0],
+            before,
+            false,
+            true,
+            false,
+        )?;
         let linked = Repo {
             name: self.repos[1].name,
             origin: self.repos[1].origin,
@@ -1245,11 +1259,13 @@ impl Config {
                 {
                     return Err("WORKTREE_REPAIR_FAILED");
                 }
-                validate_repo_options(
+                validate_repo_scoped(
                     &root.join(repo.name),
                     repo,
                     false,
                     self.id == unslop::INTEGRATION,
+                    false,
+                    self.id == BOARD_ID,
                 )?;
                 return Ok(());
             }
@@ -1557,7 +1573,7 @@ fn validate_repo_options(
     before_move: bool,
     archived_submodule: bool,
 ) -> Result<()> {
-    validate_repo_scoped(path, repo, before_move, archived_submodule, false)
+    validate_repo_scoped(path, repo, before_move, archived_submodule, false, false)
 }
 fn validate_repo_scoped(
     path: &Path,
@@ -1565,6 +1581,7 @@ fn validate_repo_scoped(
     before_move: bool,
     archived_submodule: bool,
     owned_worktree: bool,
+    board_checkout_crlf: bool,
 ) -> Result<()> {
     let gitdir = match &repo.kind {
         RepoKind::OpaqueBare => {
@@ -1677,19 +1694,17 @@ fn validate_repo_scoped(
     } else {
         "--untracked-files=no"
     };
-    let status = if archived_submodule {
-        git(
-            path,
-            &[
-                "status",
-                "--porcelain=v1",
-                untracked,
-                "--ignore-submodules=all",
-            ],
-        )?
-    } else {
-        git(path, &["status", "--porcelain=v1", untracked])?
-    };
+    let mut status_args = Vec::new();
+    if board_checkout_crlf {
+        // This fixed worktree was checked out with Windows CRLF conversion.
+        // Normalize only Git's comparison; archival hashes cover actual bytes.
+        status_args.extend(["-c", "core.autocrlf=true"]);
+    }
+    status_args.extend(["status", "--porcelain=v1", untracked]);
+    if archived_submodule {
+        status_args.push("--ignore-submodules=all");
+    }
+    let status = git(path, &status_args)?;
     if !status.lines().all(|line| {
         repo.allowed_untracked
             .iter()
@@ -1887,6 +1902,40 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn board_crlf_checkout_is_archived_verbatim_but_real_edits_are_rejected() {
+        for changed in [false, true] {
+            let c = fixture_for(BOARD_ID);
+            let old = source(&c);
+            let tracked = old.join("work/source.txt");
+            let content = if changed {
+                b"edited fixture\r\n".as_slice()
+            } else {
+                b"public fixture\r\n".as_slice()
+            };
+            assert_eq!(fs::read(&tracked).unwrap(), b"public fixture\r\n");
+            if changed {
+                fs::write(&tracked, content).unwrap();
+            }
+            if changed {
+                assert!(matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")));
+                assert!(!c.destination().exists());
+                continue;
+            }
+            // The normal isolated comparison really sees a change: this
+            // ensures the new profile-specific comparison is exercised.
+            assert!(matches!(
+                validate_repo(&old.join("work"), &c.repos[0], true),
+                Err("GIT_TRACKED_CHANGES")
+            ));
+            c.plan(c.id).unwrap();
+            let dest = c.destination().join("files");
+            fs::rename(old, &dest).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(fs::read(dest.join("work/source.txt")).unwrap(), content);
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        }
+    }
     #[test]
     fn board_receipt_pins_original_identity_and_rejects_recomputed_tampering() {
         let production = Config::production(BOARD_ID).unwrap();
@@ -2895,17 +2944,18 @@ mod tests {
                 seed_repo(&seed, repo);
             }
             if matches!(repo.kind, RepoKind::Linked { .. }) {
-                git(
-                    &seed,
-                    &[
-                        "worktree",
-                        "add",
-                        "-b",
-                        "fixture-linked",
-                        path.to_str().unwrap(),
-                    ],
-                )
-                .unwrap();
+                let mut add = Vec::new();
+                if c.id == BOARD_ID {
+                    add.extend(["-c", "core.autocrlf=true"]);
+                }
+                add.extend([
+                    "worktree",
+                    "add",
+                    "-b",
+                    "fixture-linked",
+                    path.to_str().unwrap(),
+                ]);
+                git(&seed, &add).unwrap();
                 repo.kind = RepoKind::Linked {
                     admin: seed.join(".git/worktrees").join(repo.name),
                     common: seed.join(".git"),

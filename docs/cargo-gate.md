@@ -12,7 +12,7 @@
 {
   "max_slots": null,
   "jobs_per_build": 10,
-  "test_threads": 10,
+  "test_threads": 8,
   "min_free_memory_gib": 16,
   "grow_below_cpu_percent": 75,
   "pause_at_cpu_percent": 90,
@@ -21,6 +21,8 @@
 ```
 
 ジョブと同じフォルダーの `queue-config.json` でも、`cargo_slots`、`cargo_jobs_per_build`、`test_threads` を指定できる。指定した項目だけが `cargo-gate.json` より優先する。省略またはnullなら共有ゲートの設定に戻る。ビルドとテストの並列上限はそれぞれ1〜10。実際の並列数は、その上限と「論理コア数÷受付時の実行中件数」の小さい方になる。受付のたびに両方のファイルを読み直す。ジョブの同時起動上限や `fixed_max_running` とは別の設定である。
+
+旧版の見張りが稼働している配備では、`queue-config.json` に新しい項目を追加すると旧版が未知の項目を拒否する。今回の配備はキューの内容を変えず、既存の `cargo-gate.json` の `jobs_per_build` を8にする。新ゲートのテスト上限も初期値8とし、旧版の待機ゲートが読める設定のまま反映する。キューの新しい項目を本番で使う場合は、そのキューを読む旧版の見張りが終了・更新した後に部分更新する。
 
 例えば32コアのPCでビルドを2件・各8並列に制限するなら、`codex_jobs.exe update-queue-config --patch-file <JSON>` に次の部分更新を渡す。2件×8並列で論理コア数の半分となる。指定していない場合は上記のCPU・メモリによる動的な方針を使う。これは後のPCルールで採用した方針であり、常時2件へ固定するものではない。
 

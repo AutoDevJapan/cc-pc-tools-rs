@@ -20,7 +20,7 @@ impl Default for Config {
         Self {
             max_slots: None,
             jobs_per_build: 10,
-            test_threads: 10,
+            test_threads: 8,
             min_free_memory_gib: 16.,
             grow_below_cpu_percent: 75.,
             pause_at_cpu_percent: 90.,
@@ -175,6 +175,6 @@ mod tests {
             assert!(Config::read(dir.path()).is_err(), "accepted {bad}");
         }
         fs::remove_file(&queue).unwrap();
-        assert_eq!(Config::read(dir.path()).unwrap().test_threads, 10);
+        assert_eq!(Config::read(dir.path()).unwrap().test_threads, 8);
     }
 }

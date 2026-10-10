@@ -1,5 +1,37 @@
 # 所有フォルダーのGit管理情報を保って退避する
 
+## ToDo2303のChrome修正で作った所有フォルダー1件
+
+所有ID `e87d9c55880dce0cfd7bb1d3fe3ca85e`、project `cc-chrome`、content `todo2296`、
+作成日時 `2026-10-10T21:38:58.2660427+09:00` と元のGo形式のチェックサムを照合する。
+元パスはCドライブのTemp直下、volume `2229119083`、file ID `3377699727596925` に固定する。
+再計測した根を含む6,475項目、11,727,605,043バイト、reparse 0件を上限とする。
+通常のsafe-deleteのplanとquarantineは `work/.git` の名称保護で `PROTECTED_PATH` となった。
+削除コマンドは実行しておらず、自動承認レビューの拒否ではない。その2呼び出しを繰り返さない。
+
+公開取得元は `AutoDevJapan/cc-pc-tools-rs`。HEAD
+`c5e27e17a9ca0fe680bdd222f0c4281d260a364b` を変更せず、公開PR98のsquashマージ
+`f50158091aaa2a8d383bc38f61808a2033950054` が実際の `origin/main` に含まれ、
+両コミットのtreeが `c3fec2c09f6ca28844655013f3bfdbfda78b1142` と一致することを確認する。
+mainの進行は許容するが、HEADがマージの祖先とは主張しない。未保存変更・未追跡ソース・
+grafts・置換履歴・追加Git領域・外部hardlink・リンク・顧客資源は従来どおり拒否する。
+
+Git管理先は `D:/CC/Tools/agent-workspaces/chrome-bridge-2055/.git/worktrees/work`、
+commonは同じ取得元の `.git` のみ。隠し項目も含む全名前・識別番号・容量・更新時刻・属性・
+所有者/グループ/DACL・内部hardlinkの別名を2回照合する。全通常ファイルのSHA256を2回取得し、
+その前後の一覧の不変も確認する。移動票と独立した指紋票を上書きせず保存する。
+Git成果・検査ログ・旧実行ファイルを全て保持し、このworktreeのbacklink1件だけを修復する。
+
+`inspect --id <このID>` は読み取りだけ。対象を使う担当・プロセスの終了を移動直前に再確認する。
+`plan` が返す同じCドライブへの通常 `Move-Item -LiteralPath` を別の実行ツールに提出し、
+直ちに同じIDで `finish` する。finishは元パス不在、同一実体・全メタデータ・ACL・全内容のSHA256、
+backlinkを確認して元receiptをquarantinedへ更新する。中断後も同じ票から再開できる。
+実際の承認拒否があれば操作と理由を2303と2296へ記録し、別経路で移動しない。
+
+今回のGit作業はTempとは別の専用worktreeを使い、ビルドと試験は `safe-delete create` で
+作った所有フォルダーへ置く。試験factoryのGitだけは既存のテスト用Dropで回収する。
+製品のGitを新たな所有Tempへ入れず、同じ後片付けを連鎖させない。
+
 ## ToDo2051の配備済み同時実行調整の旧検証データ
 
 所有ID `b6ef1394c70c4f11ee5ac370ad82886e` のみを追加する。project `cc-jobs`、content `adaptive-concurrency`、元のTempパス、volume `2229119083`、file ID `6473924479268101` を照合する。公開取得元 `AutoDevJapan/cc-pc-tools-rs`、HEAD `0ac365ab478efa36206c968400e48ac5150abf1b`、保存済み `origin/fix/adaptive-account-windows` と一致する場合にだけ退避する。

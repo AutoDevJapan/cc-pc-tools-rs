@@ -1,4 +1,4 @@
-//! ChatGPT のブラウザ版（専用プロフィールの Chrome）に質問を送り、回答の本文を返す CLI。
+//! オーナーの Chrome で ChatGPT のブラウザ版に質問を送り、回答の本文を返す CLI。
 
 mod cdp;
 
@@ -382,12 +382,14 @@ fn open_chat(
 ) -> Res<Tab> {
     let mut tab = browser.new_tab(url, false)?;
     let login = wait_login(&mut tab, deadline).and_then(|l| {
-        if l != Login::LoggedIn || browser::fixture_url(url) { return Ok(l); }
-        // Read only visible account/plan controls, never the conversation or an auth API.
-        let plan = tab.cdp.eval("Array.from(document.querySelectorAll('[data-testid=profile-button], [data-plan], [data-subscription-plan]')).filter(e => e.getClientRects().length > 0).map(e => e.innerText || '').join(' ').trim()")?;
-        if plan.as_str().is_some_and(|s| s.split_whitespace().any(|w| w.eq_ignore_ascii_case("plus"))) {
+        if l != Login::LoggedIn || browser::fixture_url(url) {
+            return Ok(l);
+        }
+        if confirm_plus(&mut tab, url, deadline)? {
             Ok(Login::LoggedIn)
-        } else { Ok(Login::PendingPlus) }
+        } else {
+            Ok(Login::PendingPlus)
+        }
     });
     if let Ok(l) = login
         && !anon
@@ -406,6 +408,57 @@ fn open_chat(
             Err(e)
         }
     }
+}
+
+/// 自作タブの設定画面で現在のプランだけを確認する。Plus以外では送信しない。
+fn confirm_plus(tab: &mut Tab, url: &str, deadline: Instant) -> Res<bool> {
+    let pending = || {
+        if Instant::now() >= deadline {
+            Err(fail(Code::Timeout, "プラン確認が制限時間を超えました"))
+        } else {
+            Ok(false)
+        }
+    };
+    let direct = js(tab, "accountPlan()")?;
+    if let Some(plan) = direct.as_str().filter(|s| !s.is_empty()) {
+        if plan != "plus" {
+            eprintln!("chatgpt_web: 現在のプランは {plan} です。目的のPlusは未確認です");
+        }
+        return Ok(plan == "plus");
+    }
+    let until = deadline.min(Instant::now() + Duration::from_secs(30));
+    if !js(tab, "openProfileMenu()")?.as_bool().unwrap_or(false) {
+        return Ok(false);
+    }
+    // 各クリックは表示された要素に1回だけ行い、次の画面の描画を待つ。
+    for action in ["openSettings()", "openBilling()"] {
+        loop {
+            if Instant::now() >= until {
+                return pending();
+            }
+            if js(tab, action)?.as_bool().unwrap_or(false) {
+                break;
+            }
+            sleep(Duration::from_millis(200));
+        }
+    }
+    let plan = loop {
+        if Instant::now() >= until {
+            return pending();
+        }
+        let value = js(tab, "accountPlan()")?;
+        if let Some(plan) = value.as_str().filter(|s| !s.is_empty()) {
+            break plan.to_string();
+        }
+        sleep(Duration::from_millis(200));
+    };
+    if plan != "plus" {
+        eprintln!("chatgpt_web: 現在のプランは {plan} です。目的のPlusは未確認です");
+        return Ok(false);
+    }
+    // 設定を表示した同じ所有タブを新しいチャットに戻してから入力する。
+    tab.cdp.call("Page.navigate", json!({"url": url}))?;
+    Ok(wait_login(tab, deadline)? == Login::LoggedIn)
 }
 
 fn send_prompt(tab: &mut Tab, prompt: &str, deadline: Instant) -> Res<()> {

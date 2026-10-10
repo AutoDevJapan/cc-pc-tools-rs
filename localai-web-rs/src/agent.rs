@@ -1293,25 +1293,13 @@ impl Console {
                     let project_cwd = db["projects"][strv(item, "project")]
                         .as_str()
                         .ok_or_else(io_fault)?;
-                    let restored = pending["workspace"]["cwd"]
-                        .as_str()
-                        .or_else(|| item["scheduler"]["worktree"].as_str())
-                        .or_else(|| {
-                            source.and_then(|j| j["cwd"].as_str()).map(|cwd| {
-                                if self.checkout_belongs(cwd, project_cwd) {
-                                    cwd
-                                } else {
-                                    project_cwd
-                                }
-                            })
-                        });
-                    if let Some(cwd) = restored.filter(|cwd| !cwd.is_empty()) {
-                        if !Path::new(cwd).is_dir() || !self.checkout_belongs(cwd, project_cwd) {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
-                            continue;
-                        }
+                    let restored = self.restored_workspace(item, source, &db, project_cwd);
+                    if let Ok(cwd) = restored {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
+                    } else {
+                        self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                        continue;
                     }
                     let source_owned = source.is_some_and(|job| {
                         source_todo_id(job, &db) == t.todo_id
@@ -1428,7 +1416,9 @@ impl Console {
                 // A receipt for work launched from a broad Tools/ADJ directory is
                 // not authority to copy that whole directory as this project's source.
                 // Continue from the registered project, retaining the old receipt.
-                if !self.checkout_belongs(strv(source, "cwd"), base) {
+                if !self.checkout_belongs(strv(source, "cwd"), base)
+                    && !self.receipt_artifact_directory(&t.cwd, item, source, &db, base)?
+                {
                     let record = s
                         .preparation_recovery
                         .entry(t.key.clone())
@@ -1819,7 +1809,7 @@ impl Console {
             json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
                 "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
         };
-        json!({"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
+        json!({"workspace_policy_version":2,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
             "pending":i["stall_recovery"]["pending"],"jobs":i["jobs"],"spec":i["spec"],
             "spec_file":metadata(Path::new(strv(i,"spec"))),
@@ -1865,6 +1855,14 @@ impl Console {
             let base = db["projects"][strv(item, "project")]
                 .as_str()
                 .ok_or_else(io_fault)?;
+            if self.receipt_artifact_directory(&t.cwd, item, source, db, base)? {
+                // A recorded artifact directory is used in place, never copied as a
+                // repository. Start a fresh conversation while preserving its bytes.
+                options["isolate_worktree"] = json!(false);
+                options["fresh_conversation"] = json!(true);
+                options["resume_session"] = Value::Null;
+                return Ok(options);
+            }
             if !self.checkout_belongs(strv(source, "cwd"), base) {
                 if !self.checkout_belongs(&t.cwd, base) {
                     return Err(fault(
@@ -1879,6 +1877,84 @@ impl Console {
             }
         }
         Ok(options)
+    }
+    fn receipt_artifact_directory(
+        &self,
+        cwd: &str,
+        item: &Value,
+        source: &Value,
+        db: &Value,
+        base: &str,
+    ) -> Result<bool> {
+        if !explicit_workspace_receipt(item, source)
+            || !same_folder(cwd, strv(source, "cwd"))
+            || !(source["todo_id"] == item["id"]
+                || source["related_todo_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&item["id"])))
+            || !Path::new(cwd).is_dir()
+            || Path::new(cwd).join(".git").exists()
+            || self.checkout_belongs(cwd, base)
+            || self.excluded(strv(item, "project"), cwd, db)?
+        {
+            return Ok(false);
+        }
+        // Broad launch roots (Tools/ADJ/home) are not artifact ownership. Resolve
+        // both paths so a link cannot disguise an ancestor of the registration.
+        let resolved = |path: &str| {
+            cc_scheduler::common::resolve(Path::new(path))
+                .map(|p| p.to_string_lossy().into_owned())
+                .map_err(|_| io_fault())
+        };
+        Ok(!path_under(&resolved(base)?, &resolved(cwd)?))
+    }
+    fn restored_workspace<'a>(
+        &self,
+        item: &'a Value,
+        source: Option<&'a Value>,
+        db: &Value,
+        base: &'a str,
+    ) -> Result<&'a str> {
+        let owned_source = match source {
+            Some(s)
+                if explicit_workspace_receipt(item, s)
+                    && !same_folder(strv(s, "cwd"), base)
+                    && Path::new(strv(s, "cwd")).is_dir() =>
+            {
+                self.checkout_belongs(strv(s, "cwd"), base)
+                    || self.receipt_artifact_directory(strv(s, "cwd"), item, s, db, base)?
+            }
+            _ => false,
+        };
+        let candidates = [
+            item["stall_recovery"]["pending"]["workspace"]["cwd"].as_str(),
+            item["scheduler"]["worktree"].as_str(),
+            source.and_then(|s| s["cwd"].as_str()),
+            Some(base),
+        ];
+        for cwd in candidates.into_iter().flatten().filter(|p| !p.is_empty()) {
+            match fs::metadata(cwd) {
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound && owned_source => continue,
+                Err(_) => return Err(io_fault()),
+                Ok(m) if !m.is_dir() => return Err(io_fault()),
+                Ok(_) => (),
+            }
+            let artifact = match source {
+                Some(s) => self.receipt_artifact_directory(cwd, item, s, db, base)?,
+                None => false,
+            };
+            if self.checkout_belongs(cwd, base) || artifact {
+                return Ok(cwd);
+            }
+            if source.is_none_or(|s| {
+                !explicit_workspace_receipt(item, s)
+                    || !same_folder(cwd, strv(s, "cwd"))
+                    || !path_under(base, cwd)
+            }) {
+                return Err(io_fault());
+            }
+        }
+        Err(io_fault())
     }
     fn delegation_cwd(&self, t: &Trigger) -> Result<String> {
         if t.options["isolate_worktree"] != true {
@@ -2476,6 +2552,18 @@ fn validate_model_options(v: &Value) -> Result<()> {
 }
 fn automatic_recovery(key: &str) -> bool {
     key.starts_with("manual:stall-") || key.starts_with("decision:")
+}
+fn explicit_workspace_receipt(item: &Value, source: &Value) -> bool {
+    terminal(source)
+        && source["id"].is_string()
+        && (item["scheduler"]["job"] == source["id"]
+            || item["jobs"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&source["id"])))
+        && (source["todo_id"] == item["id"]
+            || source["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&item["id"])))
 }
 fn same_folder(a: &str, b: &str) -> bool {
     a.replace('\\', "/")
@@ -3612,6 +3700,7 @@ pub async fn resident(console: Arc<Console>) {
 #[cfg(test)]
 mod tests {
     include!("delegation_model_tests.rs");
+    include!("receipt_workspace_tests.rs");
     include!("resume_recovery_tests.rs");
     use super::*;
 

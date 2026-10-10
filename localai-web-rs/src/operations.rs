@@ -497,6 +497,7 @@ fn collect(root: &Path, now: u64) -> Value {
         if key.is_empty() {
             continue;
         }
+        let mut observation_only = false;
         let (ok, at) = match key {
             "relay" => {
                 let p = root.join("ocx-health-watchdog/status.json");
@@ -511,6 +512,7 @@ fn collect(root: &Path, now: u64) -> Value {
                     .as_u64()
                     .filter(|v| *v > 0)
                     .and_then(|v| v.checked_mul(1000));
+                observation_only = v["mode"] == "observe_only" && v["stages"]["cmd_todo_watch"] == true && v["stages"]["cmd_scheduler_step"] == true && fresh(at, now, 180_000);
                 (
                     v["error"].is_null()
                         && v["stages"]["startup_recovery"] == true
@@ -535,7 +537,9 @@ fn collect(root: &Path, now: u64) -> Value {
             &label,
             ok,
             at,
-            if unknown {
+            if observation_only {
+                "停止監視・容量確認を観測しました。起動時復旧は保留中です。"
+            } else if unknown {
                 "稼働状態の記録なし"
             } else if key == "discord" && ok {
                 "停滞監視・容量確認・起動時復旧を確認（Discord取得は別工程）"
@@ -560,7 +564,7 @@ fn collect(root: &Path, now: u64) -> Value {
             json!({"id":safe_id("resident",key),"name":label,"task":clean(&names,text(tool,"role")),
             "status":if unknown{"unknown"}else if ok{"working"}else{"attention"},"progress":null,
             "updatedAt":at.and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
-            "detail":if unknown{"常駐の稼働状態を確認できません。"}else if ok{"常駐監視の記録を確認しました。"}else{"常駐監視の応答または新しい記録を確認できません。"},"historyFailures":0}),
+            "detail":if observation_only{"停止監視・容量確認を観測しました。起動時復旧は保留中です。"}else if unknown{"常駐の稼働状態を確認できません。"}else if ok{"常駐監視の記録を確認しました。"}else{"常駐監視の応答または新しい記録を確認できません。"},"historyFailures":0}),
         );
     }
     let mut metrics = if scheduler_ok {

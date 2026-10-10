@@ -806,6 +806,14 @@ fn scheduler_error_report_matches_swallowed_inprocess_error_but_other_failures_p
     let mut h = Harness::new();
     overrides(
         &mut h,
+        vec![("RUN", json!({"code":0,"stdout":"{\"busy\":true}\n"}))],
+        false,
+    );
+    cmd_scheduler_step(&mut h.ctx).unwrap();
+    assert_eq!(h.ctx.cfg["__scheduler_step_failed"], true);
+    h.fake.borrow_mut().runs.clear();
+    overrides(
+        &mut h,
         vec![(
             "RUN",
             json!({"code":1,"stdout":"scheduler progress\n{\n  \"error\": \"RuntimeError\"\n}\n","stderr":"scheduler tick failed RuntimeError\n"}),
@@ -1095,10 +1103,29 @@ fn deferred_reboot_recovery_suppresses_replacement_watch_and_dispatch_for_one_ti
             .iter()
             .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch"))
     );
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch-preview"))
+    );
+    assert!(
+        h.fake
+            .borrow()
+            .runs
+            .iter()
+            .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "status"))
+    );
     assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| {
-        argv.first()
-            .is_some_and(|arg| arg.ends_with("scheduler.py"))
+        argv.iter().any(|arg| arg.ends_with("scheduler.py"))
+            && argv.last().is_some_and(|arg| arg == "step")
     }));
+    let health = read_json(&h.ctx.here.join("tick-health.json")).unwrap();
+    assert_eq!(health["mode"], "observe_only");
+    assert_eq!(health["stages"]["cmd_todo_watch"], true);
+    assert_eq!(health["stages"]["cmd_scheduler_step"], true);
+    assert_eq!(health["error"], "core_stage_failed");
     h.fake.borrow_mut().runs.clear();
     h.fake.borrow_mut().reboot_recover_fail = false;
     cmd_tick(&mut h.ctx).unwrap();

@@ -1137,7 +1137,9 @@ fn external_step(ctx: &mut Context, path: PathBuf, verb: &str, report_json: bool
         && output.code == 1
         && trailing_report(&output.stdout)
             .is_some_and(|(_, report)| report.is_object() && report.get("error").is_some());
-    if swallowed_scheduler_error {
+    let scheduler_busy = report_json
+        && trailing_report(&output.stdout).is_some_and(|(_, report)| report["busy"] == true);
+    if swallowed_scheduler_error || scheduler_busy {
         ctx.cfg["__scheduler_step_failed"] = json!(true);
     }
     if output.code != 0 && !swallowed_scheduler_error {
@@ -1154,6 +1156,22 @@ pub fn cmd_todo_watch(ctx: &mut Context) -> Result<()> {
 pub fn cmd_scheduler_step(ctx: &mut Context) -> Result<()> {
     ctx.cfg["__scheduler_step_failed"] = json!(false);
     external_step(ctx, ctx.scheduler_command.clone(), "step", true)
+}
+// Observation must continue even while boot ownership prevents new launches.
+// Discard the report: watch-preview can contain private work metadata.
+fn observe_only(ctx: &mut Context, path: PathBuf, verb: &str) -> Result<()> {
+    let output = ctx.run(&command_argv(&path, &[verb.to_owned()]), 20)?;
+    if verb == "status"
+        && trailing_report(&output.stdout)
+            .is_some_and(|(_, report)| report["busy"] == true || !report["error"].is_null())
+    {
+        return Err("observation unavailable".into());
+    }
+    if output.code == 0 {
+        Ok(())
+    } else {
+        Err("observation failed".into())
+    }
 }
 /// PR shepherds (D:/CC/Tools/shepherd): one Codex job per idle open PR drives it to merge (2026-10-01).
 pub fn cmd_shepherd_step(ctx: &mut Context) -> Result<()> {
@@ -1237,11 +1255,18 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
             cmd_scheduler_step as fn(&mut Context) -> Result<()>,
         ),
     ] {
-        if truth(&ctx.cfg["__reboot_recovery_deferred"]) {
-            health["stages"][name] = json!(false);
-            continue;
-        }
-        let result = crate::tick_runtime::stage(name, Duration::from_secs(8), || step(ctx));
+        let deferred = truth(&ctx.cfg["__reboot_recovery_deferred"]);
+        let result = crate::tick_runtime::stage(name, Duration::from_secs(8), || {
+            if deferred {
+                if name == "cmd_todo_watch" {
+                    observe_only(ctx, ctx.todo_command.clone(), "watch-preview")
+                } else {
+                    observe_only(ctx, ctx.scheduler_command.clone(), "status")
+                }
+            } else {
+                step(ctx)
+            }
+        });
         health["stages"][name] = json!(
             result.is_ok()
                 && !(name == "cmd_scheduler_step" && truth(&ctx.cfg["__scheduler_step_failed"]))
@@ -1251,6 +1276,11 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         }
     }
     health["observed_at"] = json!(ctx.now() as u64);
+    health["mode"] = json!(if truth(&ctx.cfg["__reboot_recovery_deferred"]) {
+        "observe_only"
+    } else {
+        "recovery"
+    });
     health["error"] = if health["stages"]
         .as_object()
         .unwrap()

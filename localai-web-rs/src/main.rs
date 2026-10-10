@@ -97,18 +97,22 @@ async fn main() {
                 .expect("LOCALAI_WEB_PORT must be a port number")
         })
         .unwrap_or(10012);
+    // Claim the endpoint before loading shared history. The scheduled launcher
+    // must not mistake a slow initial projection for an absent server.
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+        .await
+        .unwrap();
     let state = AppState::new(port, 10013);
     let console = state.agent.clone();
     let workload = state.workload.clone();
     let operations = state.operations.clone();
     // Preview performs a single read-only projection; residents refresh independently
     // of browser sessions. Neither path changes shared operational records.
-    let initial_operations = operations.clone();
-    let _ = tokio::task::spawn_blocking(move || initial_operations.refresh()).await;
+    if std::env::var("LOCALAI_WEB_PREVIEW").as_deref() == Ok("1") {
+        let initial_operations = operations.clone();
+        let _ = tokio::task::spawn_blocking(move || initial_operations.refresh()).await;
+    }
     let app = app(state);
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
-        .await
-        .unwrap();
     println!("Rust Web Server listening on http://127.0.0.1:{port}");
     if std::env::var("LOCALAI_WEB_PREVIEW").as_deref() != Ok("1") {
         tokio::spawn(agent::resident(console));

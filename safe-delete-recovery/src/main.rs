@@ -20,6 +20,8 @@ const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
 const QUEUE_ID: &str = "9f836113c154d11da358e0cef15db869";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
+const BOARD_ID: &str = "67feb7811b6d0a94c98465c784b64f45";
+const BOARD_CREATED: &str = "2026-10-08T18:04:44.1608254+09:00";
 const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
     "todo-note-tool/.git",
@@ -226,6 +228,30 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            BOARD_ID => {
+                c.id = BOARD_ID;
+                c.project = "cc-board";
+                c.content = "parent-post";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 2251799828682344));
+                let head = "759f74fb8a1db87308feac491d982b18cde62382";
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: head.into(),
+                    saved_ref: Some("refs/remotes/origin/main"),
+                    // This deployed integration commit is already in main.
+                    saved_merge: Some(head.into()),
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work8",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
             QUEUE_ID => {
                 c.id = QUEUE_ID;
                 c.project = "cc-pc-tools-rs";
@@ -475,7 +501,7 @@ impl Config {
         ticket: &[u8],
         create: bool,
     ) -> Result<()> {
-        if self.id != RESUME_ID && self.id != INTERNAL_2184_ID {
+        if self.id != RESUME_ID && self.id != INTERNAL_2184_ID && self.id != BOARD_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let existing_proof = if !create {
@@ -549,6 +575,7 @@ impl Config {
             || r.identity.content != self.content
             || (self.id == INTERNAL_2184_ID
                 && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
+            || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -714,7 +741,7 @@ impl Config {
         if self.id == INTERNAL_2184_ID {
             self.prepare_internal_repair(path, &ticket_bytes)?;
         }
-        if self.id == RESUME_ID || self.id == INTERNAL_2184_ID {
+        if self.id == RESUME_ID || self.id == INTERNAL_2184_ID || self.id == BOARD_ID {
             self.content_proof(path, &nodes, &ticket_bytes, true)?;
         }
         Ok(
@@ -868,7 +895,7 @@ impl Config {
         } else {
             self.validate(&r, &files, false)?
         };
-        let has_proof = self.id == RESUME_ID;
+        let has_proof = self.id == RESUME_ID || self.id == BOARD_ID;
         if (has_proof && !same_inventory(self.id, &t.nodes, &nodes))
             || (!has_proof && nodes != t.nodes)
         {
@@ -1704,6 +1731,20 @@ fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
     {
         return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
     }
+    if saved == "refs/remotes/origin/main"
+        && repo.saved_merge.as_deref() == Some(repo.head.as_str())
+    {
+        // Only the board profile pins its published integration commit as
+        // both HEAD and saved merge. Main may advance, but cannot lose HEAD.
+        git(
+            path,
+            &["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        )
+        .map_err(|_| "GIT_UNPUSHED_COMMITS")?;
+        return git(path, &["merge-base", "--is-ancestor", &repo.head, saved])
+            .map(|_| ())
+            .map_err(|_| "GIT_UNPUSHED_COMMITS");
+    }
     match git_status(path, &["show-ref", "--exists", saved])?.1.code() {
         Some(0) => {
             return if git(path, &["rev-parse", saved])? == repo.head {
@@ -1846,6 +1887,159 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn board_receipt_pins_original_identity_and_rejects_recomputed_tampering() {
+        let production = Config::production(BOARD_ID).unwrap();
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 2251799828682344))
+        );
+        assert_eq!(
+            production.repos[0].head,
+            "759f74fb8a1db87308feac491d982b18cde62382"
+        );
+        assert_eq!(
+            production.repos[0].saved_ref,
+            Some("refs/remotes/origin/main")
+        );
+        assert_eq!(
+            production.repos[0].saved_merge.as_deref(),
+            Some(production.repos[0].head.as_str())
+        );
+        assert!(Config::production("67feb7811b6d0a94c98465c784b64f46").is_err());
+        for field in [
+            "project",
+            "content",
+            "path",
+            "volume",
+            "file_id",
+            "created_at",
+        ] {
+            let c = fixture_for(BOARD_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "other-task".into(),
+                "content" => r.identity.content = "other-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                "created_at" => r.identity.created_at = "2026-10-09T18:04:44.1608254+09:00".into(),
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn board_published_integration_can_precede_main_and_preserves_all_bytes() {
+        let c = fixture_for(BOARD_ID);
+        let old = source(&c);
+        let work = old.join("work");
+        let refs = git(&work, &["show-ref"]).unwrap();
+        assert_ne!(
+            git(&work, &["rev-parse", "refs/remotes/origin/main"]).unwrap(),
+            c.repos[0].head
+        );
+        fs::write(old.join("verification.log"), b"saved board evidence\n").unwrap();
+        c.plan(c.id).unwrap();
+        let ticket = fs::read(c.ticket_path()).unwrap();
+        let nodes = scan(&old, &c.repos).unwrap();
+        let hashes = file_digests(&old, &nodes).unwrap();
+        let dest = c.destination().join("files");
+        fs::rename(&old, &dest).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert_eq!(
+            file_digests(&dest, &scan(&dest, &c.repos).unwrap()).unwrap(),
+            hashes
+        );
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), ticket);
+        assert_eq!(git(&dest.join("work"), &["show-ref"]).unwrap(), refs);
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            unreachable!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &dest.join("work/.git")
+        ));
+    }
+    #[test]
+    fn board_rejects_missing_or_unrelated_main_dirty_worktree_and_grafts() {
+        for failure in ["missing-main", "unrelated-main", "dirty", "grafts"] {
+            let c = fixture_for(BOARD_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "missing-main" => {
+                    git(&work, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "unrelated-main" => {
+                    let tree = format!("{}^{{tree}}", c.repos[0].head);
+                    let unrelated = git(
+                        &work,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit-tree",
+                            &tree,
+                            "-m",
+                            "unrelated main",
+                        ],
+                    )
+                    .unwrap();
+                    git(
+                        &work,
+                        &["update-ref", "refs/remotes/origin/main", &unrelated],
+                    )
+                    .unwrap();
+                }
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "grafts" => {
+                    let RepoKind::Linked { common, .. } = &c.repos[0].kind else {
+                        unreachable!()
+                    };
+                    fs::write(common.join("info/grafts"), format!("{}\n", c.repos[0].head))
+                        .unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn board_content_proof_rejects_changes_that_restore_size_and_time() {
+        let c = fixture_for(BOARD_ID);
+        let old = source(&c);
+        let log = old.join("verification.log");
+        fs::write(&log, b"first evidence").unwrap();
+        let stamp = fs::metadata(&log).unwrap().modified().unwrap();
+        c.plan(c.id).unwrap();
+        let dest = c.destination().join("files");
+        fs::rename(old, &dest).unwrap();
+        let log = dest.join("verification.log");
+        fs::write(&log, b"other evidence").unwrap();
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&log)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+        assert!(matches!(c.finish(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
     #[test]
     fn reboot_renewal_resumes_every_publication_boundary_and_preserves_archives() {
         for stage in ["ticket", "reason", "staging", "published", "complete"] {
@@ -2717,6 +2911,9 @@ mod tests {
                     common: seed.join(".git"),
                 };
             }
+            if c.id == BOARD_ID {
+                repo.saved_merge = Some(repo.head.clone());
+            }
         }
         let n = node(&target).unwrap();
         if c.pinned_identity.is_some() {
@@ -2731,6 +2928,8 @@ mod tests {
             file_id: n.file_id,
             created_at: if c.id == INTERNAL_2184_ID {
                 "2026-10-10T00:39:58.8390892+09:00"
+            } else if c.id == BOARD_ID {
+                BOARD_CREATED
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
             }

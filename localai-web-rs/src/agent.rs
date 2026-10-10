@@ -302,6 +302,19 @@ pub struct Console {
     lock: Mutex<()>,
 }
 impl Console {
+    // Fixed labels only. This does not renew the patrol's start or certify completion.
+    fn patrol_stage(&self, stage: &'static str) {
+        if cc_ask::tick_runtime::remaining().is_none() {
+            return;
+        }
+        let path = self.paths.state.join("commander-health.json");
+        if let Ok(mut record) = fs::read(&path).map_err(|_| ()).and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ())) {
+            if record["pid"] == std::process::id() && record["finished_at"].is_null() {
+                record["stage"] = json!(stage);
+                let _ = atomic_write(&path, record.to_string().as_bytes());
+            }
+        }
+    }
     fn state_guard(&self) -> Result<cc_scheduler::common::ByteLock> {
         fs::create_dir_all(&self.paths.state).map_err(|_| io_fault())?;
         cc_scheduler::common::ByteLock::acquire(
@@ -449,6 +462,7 @@ impl Console {
         Ok(false)
     }
     fn jobs(&self) -> Result<Vec<Value>> {
+        self.patrol_stage("jobs");
         let mut jobs = Vec::new();
         for entry in fs::read_dir(&self.paths.jobs).map_err(|_| io_fault())? {
             let dir = entry.map_err(|_| io_fault())?.path();
@@ -994,6 +1008,7 @@ impl Console {
         Ok(())
     }
     fn dispatch(&self, s: &mut QueueState, jobs: &[Value]) -> Result<()> {
+        self.patrol_stage("dispatch");
         self.patrol_budget(s)?;
         let scheduler_root = self.paths.tools.join("scheduler");
         fs::create_dir_all(&scheduler_root).map_err(|_| io_fault())?;
@@ -1007,6 +1022,7 @@ impl Console {
         };
         // Reconcile a lost launcher response before capacity or eligibility checks.
         // The reservation may have been cleared after the job actually started.
+        self.patrol_stage("dispatch_receipts");
         let db = self.todos()?;
         for mut t in s.queue.clone() {
             self.patrol_budget(s)?;
@@ -1127,6 +1143,7 @@ impl Console {
             .iter()
             .map(|trigger| trigger_todo_id(trigger, jobs, &db))
             .collect();
+        self.patrol_stage("dispatch_merge");
         for (index, trigger) in queue.iter().enumerate() {
             self.patrol_budget(s)?;
             if !automatic_recovery(&trigger.key) {
@@ -1180,6 +1197,7 @@ impl Console {
         // Eligibility is a batch plan. Refresh actual ownership again before
         // every launch; repeatedly reopening thousands of historical job files
         // for ineligible reservations cannot make that final check safer.
+        self.patrol_stage("capacity");
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
@@ -1189,20 +1207,25 @@ impl Console {
             self.jobs()?
         };
         let mut launch_failure = None;
+        let mut evidence_cache = BTreeMap::new();
+        self.patrol_stage("dispatch_launch");
         while !s.queue.is_empty() && scanned < scan_limit {
+            self.patrol_budget(s)?;
             scanned += 1;
             if !self.paths.on().is_file() {
                 break;
             }
             let mut t = s.queue[0].clone();
-            if !self.recovery_ready(s, &t)? {
+            let db = self.todos()?;
+            self.patrol_stage("recovery_evidence");
+            if !self.recovery_ready(s, &t, &db, &candidate_jobs, &mut evidence_cache)? {
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
             }
             let stall = t.key.starts_with("manual:stall-");
             let fresh_jobs = &candidate_jobs;
-            let db = self.todos()?;
+            self.patrol_stage("dispatch_launch");
             match decision_todo(&t, fresh_jobs, &db) {
                 Ok(id) => {
                     t.todo_id = id;
@@ -1329,7 +1352,7 @@ impl Console {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
                     } else {
-                        self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                        self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
                         continue;
                     }
                     let source_owned = source.is_some_and(|job| {
@@ -1439,6 +1462,7 @@ impl Console {
                         }
                         self.record_launch(s, &t, &id)?;
                         candidate_jobs = self.jobs()?;
+                        evidence_cache.clear();
                     }
                     Ok(None) => {
                         let waiting = s.queue.remove(0);
@@ -1446,7 +1470,7 @@ impl Console {
                         self.save(s)?;
                     }
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code)?;
+                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     }
                 }
                 continue;
@@ -1469,7 +1493,7 @@ impl Console {
                     t.cwd = match self.restored_workspace(item, source, &db, base) {
                         Ok(cwd) => cwd.into(),
                         Err(_) => {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                            self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
                             continue;
                         }
                     };
@@ -1482,7 +1506,7 @@ impl Console {
             {
                 Ok(options) => options,
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code)?;
+                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1513,7 +1537,7 @@ impl Console {
                     cwd
                 }
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code)?;
+                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1669,7 +1693,7 @@ impl Console {
                     }) {
                     Ok(options) => options,
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code)?;
+                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
                         continue;
                     }
                 };
@@ -1812,7 +1836,7 @@ impl Console {
             let output = match output {
                 Ok(out) => out,
                 Err(e) => {
-                    self.defer_failure(s, &t.key, e.code)?;
+                    self.defer_failure(s, &t.key, e.code, &db, fresh_jobs, &mut evidence_cache)?;
                     launch_failure.get_or_insert(e);
                     continue;
                 }
@@ -1825,12 +1849,13 @@ impl Console {
             // A launch changes PR coverage and ownership for later candidates
             // in this same batch; keep the next plan aware of that new worker.
             candidate_jobs = self.jobs()?;
+            evidence_cache.clear();
         }
         launch_failure.map_or(Ok(()), Err)
     }
-    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str) -> Result<()> {
+    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<()> {
         let trigger = s.queue.iter().find(|t| t.key == key).ok_or_else(io_fault)?;
-        let evidence = self.recovery_evidence(trigger);
+        let evidence = self.recovery_evidence_from(trigger, Some(db), Some(jobs), cache);
         let record = s
             .preparation_recovery
             .entry(key.into())
@@ -1857,23 +1882,25 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn recovery_evidence(&self, t: &Trigger) -> Value {
+    fn recovery_evidence_from(&self, t: &Trigger, db: Option<&Value>, jobs: Option<&[Value]>, cache: &mut BTreeMap<(String, String), Value>) -> Value {
         let metadata = |p: &Path| match fs::metadata(p) {
             Ok(m) => json!({"exists":true,"directory":m.is_dir(),"bytes":m.len(),
                 "modified":m.modified().ok().and_then(|at|at.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string())}),
             Err(e) => json!({"error":format!("{:?}",e.kind())}),
         };
-        let db = self.todos().ok();
-        let item = db.as_ref().and_then(|db| {
+        let item = db.and_then(|db| {
             db["items"]
                 .as_array()?
                 .iter()
                 .find(|i| i["id"].as_u64() == t.todo_id)
         });
-        let jobs = self.jobs().ok();
-        let source = jobs.as_ref().and_then(|jobs| launch_source(t, item, jobs));
-        let registered = item.and_then(|i| db.as_ref()?["projects"][strv(i, "project")].as_str());
-        let checkout = |path: &str| {
+        let source = jobs.and_then(|jobs| launch_source(t, item, jobs));
+        let registered = item.and_then(|i| db?["projects"][strv(i, "project")].as_str());
+        let mut checkout = |path: &str| {
+            let key = (path.to_owned(), registered.unwrap_or("").to_owned());
+            if let Some(value) = cache.get(&key) {
+                return value.clone();
+            }
             let p = Path::new(path);
             let dirty = if p.join(".git").exists() {
                 self.runner
@@ -1883,8 +1910,10 @@ impl Console {
             } else {
                 None
             };
-            json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
-                "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
+            let value = json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
+                "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty});
+            cache.insert(key, value.clone());
+            value
         };
         json!({"workspace_policy_version":5,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
@@ -1898,11 +1927,11 @@ impl Console {
             "store_readable":db.is_some(),"jobs_readable":jobs.is_some(),
             "launcher":metadata(&self.paths.jobs.parent().unwrap_or(&self.paths.tools).join("codex_jobs.exe"))})
     }
-    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger) -> Result<bool> {
+    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<bool> {
         let Some((retry, code)) = s.preparation_failures.get(&t.key).cloned() else {
             return Ok(true);
         };
-        let current = self.recovery_evidence(t);
+        let current = self.recovery_evidence_from(t, Some(db), Some(jobs), cache);
         let old = s.preparation_recovery.get(&t.key).map(|r| &r["evidence"]);
         if old.is_none() {
             return Ok(retry <= now());
@@ -2226,6 +2255,7 @@ impl Console {
         self.link_todos(s)
     }
     fn link_todos(&self, s: &mut QueueState) -> Result<()> {
+        self.patrol_stage("todo_links");
         for (id, job) in s.pending_links.clone() {
             let db = self.todos()?;
             let item = db["items"]
@@ -2260,6 +2290,7 @@ impl Console {
         .map_err(|_| io_fault())
     }
     fn inbox(&self) -> Result<()> {
+        self.patrol_stage("inbox");
         let questions = self.questions()?;
         let stage = self.paths.state.join("console-inbox.stage");
         atomic_write(
@@ -2281,7 +2312,9 @@ impl Console {
         let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
-        self.maintain(&mut s, &self.jobs()?)?;
+        let jobs = self.jobs()?;
+        self.patrol_stage("inbox_maintain");
+        self.maintain(&mut s, &jobs)?;
         for m in messages {
             if !inbox_allowed(&m, &questions) {
                 continue;
@@ -2314,9 +2347,12 @@ impl Console {
     }
     fn tick_inner(&self, s: &mut QueueState) -> Result<()> {
         let jobs = self.jobs()?;
+        self.patrol_stage("initialize");
         self.initialize(s, &jobs)?;
         self.link_todos(s)?;
+        self.patrol_stage("prs");
         self.refresh_prs(s, &jobs);
+        self.patrol_stage("maintain");
         self.maintain(s, &jobs)?;
         self.save(s)?;
         if !self.paths.on().is_file() {
@@ -2324,7 +2360,10 @@ impl Console {
         }
         let db = self.todos()?;
         let mut intake_error = None;
-        for mut t in detect(&jobs, s) {
+        self.patrol_stage("detect");
+        let triggers = detect(&jobs, s);
+        self.patrol_stage("intake");
+        for mut t in triggers {
             self.patrol_budget(s)?;
             // Automatic detection must not re-submit a durable accepted request.
             // Legacy bodies and fingerprints describe what was accepted before
@@ -2361,6 +2400,7 @@ impl Console {
         intake_error.map_or(Ok(()), Err)
     }
     pub fn tick(&self) -> Result<()> {
+        self.patrol_stage("queue_lock");
         let result = {
             let _guard = self.queue_lock()?;
             let _state_guard = self.state_guard()?;
@@ -2376,9 +2416,11 @@ impl Console {
         let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
-        self.maintain(&mut s, &self.jobs()?)?;
+        let jobs = self.jobs()?;
+        self.patrol_stage("final_maintain");
+        self.maintain(&mut s, &jobs)?;
         let dispatch = if result.is_ok() {
-            self.dispatch(&mut s, &self.jobs()?)
+            self.dispatch(&mut s, &jobs)
         } else {
             Ok(())
         };

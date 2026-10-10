@@ -26,6 +26,9 @@ mod runtime {
             home: user.join(".opencodex"),
             expected_exe: appdata
                 .join("npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/bun.exe"),
+            expected_cli: Some(
+                appdata.join("npm/node_modules/@bitkyc08/opencodex/src/cli/index.ts"),
+            ),
             port: 10100,
             task: "opencodex-proxy".into(),
             log_dir: PathBuf::from("D:/CC/Tools/ocx-health-watchdog"),
@@ -154,6 +157,20 @@ mod runtime {
     fn eligible(config: &Config, process: &Process, last_kill: Option<Instant>) -> bool {
         process.age_ms() >= config.startup_grace_ms
             && last_kill.is_none_or(|at| at.elapsed() >= Duration::from_millis(config.cooldown_ms))
+    }
+    fn inspect(config: &Config) -> Result<(), String> {
+        let process = discover(config)?.ok_or("no_listener")?;
+        let started = Instant::now();
+        probe(
+            config.port,
+            Duration::from_millis(config.timeout_ms),
+            process.identity.pid,
+        )?;
+        println!(
+            "{}",
+            json!({"identity":process.identity,"healthy":true,"probe_ms":started.elapsed().as_millis()})
+        );
+        Ok(())
     }
     fn watch(config: &Config, once: bool) -> Result<(), String> {
         fs::create_dir_all(&config.log_dir).map_err(|e| e.to_string())?;
@@ -408,7 +425,9 @@ mod runtime {
         let config_file = match args.next().as_deref() {
             Some("--config") => Some(PathBuf::from(args.next().ok_or("missing config path")?)),
             None => None,
-            _ => return Err("usage: watch|check|install [--config <absolute path>]".into()),
+            _ => {
+                return Err("usage: watch|check|inspect|install [--config <absolute path>]".into());
+            }
         };
         if args.next().is_some() {
             return Err("extra arguments".into());
@@ -423,6 +442,7 @@ mod runtime {
         match mode.as_str() {
             "watch" => watch(&config, false),
             "check" => watch(&config, true),
+            "inspect" => inspect(&config),
             "install" => install(&config, config_file.as_deref()),
             _ => Err("unknown command".into()),
         }

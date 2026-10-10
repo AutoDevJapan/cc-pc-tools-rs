@@ -1473,7 +1473,13 @@ impl Console {
                     // Preserve the accepted launch root as history; it is not authority
                     // to copy the whole ancestor as this item's project.
                     s.request_cwds.entry(t.key.clone()).or_insert(t.cwd.clone());
-                    t.cwd = self.restored_workspace(item, source, &db, base)?.into();
+                    t.cwd = match self.restored_workspace(item, source, &db, base) {
+                        Ok(cwd) => cwd.into(),
+                        Err(_) => {
+                            self.defer_failure(s, &t.key, "source_workspace_unavailable")?;
+                            continue;
+                        }
+                    };
                     s.queue[0].cwd = t.cwd.clone();
                     self.save(s)?;
                 }
@@ -2023,7 +2029,7 @@ impl Console {
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
                 Ok(_) => (),
             }
-            if self.workspace_ancestor(cwd, base)? {
+            if item["scheduler"]["worktree"] != cwd && self.workspace_ancestor(cwd, base)? {
                 continue;
             }
             let artifact = match source {

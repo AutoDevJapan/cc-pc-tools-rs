@@ -1,13 +1,13 @@
 # ChatGPT ブラウザ版への質問
 
-`chatgpt_web` は、専用プロフィールの Chrome（`D:/CC/Apps/chatgpt-web/profile`）で ChatGPT のブラウザ版を開き、新しいチャットに質問を送り、回答の本文を Markdown で標準出力に返します。API キーは使いません。設計の相談・レビューの2人目・文章の推敲・調べもののような、ファイル操作の要らない作業を Codex から移すために使います。使いどころは Skill `web-thinking-offload` に書いています。
+`chatgpt_web` は、ログイン済みのオーナーの Chrome（既存の拡張機能経由）で ChatGPT のブラウザ版を開き、新しいチャットに質問を送り、回答の本文を Markdown で標準出力に返します。API キーは使いません。設計の相談・レビューの2人目・文章の推敲・調べもののような、ファイル操作の要らない作業を Codex から移すために使います。使いどころは Skill `web-thinking-offload` に書いています。
 
 ```powershell
 D:/CC/Tools/chatgpt-web/chatgpt_web.exe ask --prompt-file <UTF-8のファイル> [--model <名前>] [--timeout <秒、既定900>]
 D:/CC/Tools/chatgpt-web/chatgpt_web.exe status   # 最後に確かめたログイン状態（ブラウザを起動しない）
 D:/CC/Tools/chatgpt-web/chatgpt_web.exe check    # 画面でログインを確かめて記録する（毎日の定期確認）
-D:/CC/Tools/chatgpt-web/chatgpt_web.exe login    # 見える窓でログイン画面を開く
-D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # 専用プロフィールの Chrome を閉じる
+D:/CC/Tools/chatgpt-web/chatgpt_web.exe login    # オーナーの Chrome で状態を再確認する
+D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # この道具が作ったタブだけを片付ける
 ```
 
 | 終了コード | 意味 |
@@ -24,15 +24,15 @@ D:/CC/Tools/chatgpt-web/chatgpt_web.exe stop     # 専用プロフィールの C
 ## 動き
 
 - 同時に動くのは1件だけです。`D:/CC/Apps/chatgpt-web/ask.lock` のファイルロックで順番を待ち、待ち時間も `--timeout` に含めます。
-- 専用プロフィールの Chrome が CDP 付きで動いていれば再利用し、なければ画面外（-32000,-32000）の窓で起動します。自分で起動した Chrome は終了時に閉じます。`login` で開いた窓は閉じません。
+- 本番では既存の Chrome 拡張機能に接続します。Chrome を起動したり、プロフィール・保護設定・起動引数を変えたりしません。作成したタブだけを記録し、途中で失敗した場合も閉じます。閉じられなかった記録は次の check または stop で再試行します。後片付けには1タブにつき最大3秒の猶予があります。
 - `--model` は ChatGPT の URL の `?model=` に渡します。チャットの履歴は ChatGPT 側に残ります。
 - 回答の完了は、生成中の停止ボタンが消え、回答の長さが2回続けて変わらないことで判断します。
-- ログイン状態が変わったとき（ログイン確認・ログイン切れ・停止）だけ、`state.json` を更新して Discord の「後片付けの記録」へ通知なしで1件残します。同じ状態が続く間は送りません。
-- Chrome は `--lang=en-US` で起動し、英語の画面を前提に判定します。画面の判定と回答の Markdown への変換は `src/page.js` にあります。
+- 状態は state.json に保存します。道具は Discord に直接投稿しません。確認に失敗した場合、26時間を超えた場合、旧プロフィールの記録の場合は準備済みとして扱いません。会話本文以外のアカウント欄で Plus を確認できるまで送信を止めます。
+- オーナーの Chrome の言語設定は変えません。画面の判定と回答の変換は既存の src/page.js を使います。
 
 ## 毎日のログイン確認
 
-定期タスク `CC-ChatGptWebLoginCheck` が毎日 9:15 に `check-hidden.vbs`（`wscript.exe`、窓なし）から `chatgpt_web check` を実行します。ログインできるようになった日に「ログインを確認しました」と記録され、その後は `status` が 0 を返します。
+定期タスク `CC-ChatGptWebLoginCheck` が毎日 9:15 に `check-hidden.vbs`（`wscript.exe`、窓なし）から `chatgpt_web check` を実行します。目的の Plus が画面で確認できた日に状態を保存し、その後は status が 0 を返します。未確認・別プランの場合は送信せず、元ToDo 1974に実送受信の受入を残します。
 
 ## 検証
 
@@ -48,8 +48,7 @@ cargo build --release --locked -p chatgpt-web
 
 環境変数 `CHATGPT_WEB_HOME`（保存先）、`CHATGPT_WEB_URL`（開く URL）、`CHATGPT_WEB_CHROME`（Chrome の場所）、`CHATGPT_WEB_DISCORD`（`discord_ask.exe` の場所、`off` で記録しない）で試験用に切り替えます。
 
-画面の試験は必ず `CHATGPT_WEB_HEADLESS=1` を子プロセスへ渡し、Chrome を `--headless=new` で起動します。窓やタスクバーの表示を作らず、実際の Chrome で操作と終了を確かめます。手動で試験用に起動する場合も同じ環境変数を指定します。値が `1` の場合だけ有効です。未指定の場合、本番の `ask`・`check`・`probe` は従来の画面外の窓、`login` は見える窓で起動します。既に動いている Chrome を再利用する動きは変わりません。CI では Chrome を必須とし、Chrome が無い場合に画面試験を飛ばして成功させません。
-
+HTML試験の file:/// URL、または CHATGPT_WEB_FIXTURE=1 と数値ポートの 127.0.0.1 の HTTP URL に、CHATGPT_WEB_HEADLESS=1 を指定した場合だけ、隔離した Chrome を使います。本番の https:// URL ではこの設定があっても既存の Chrome 拡張機能へ接続します。未ログイン送信の保守用指定は HTML 試験に限定し、本番では拒否します。実際の Plus での送受信は未確認です。
 ## 配置
 
 ```powershell

@@ -38,6 +38,7 @@ fn fixture_command(home: &Path, page: &str, args: &[&str]) -> Command {
         .env("CHATGPT_WEB_HOME", home)
         .env("CHATGPT_WEB_URL", fixture_url(page))
         .env("CHATGPT_WEB_DISCORD", "off")
+        .env("CHATGPT_WEB_FIXTURE", "1")
         .env("CHATGPT_WEB_HEADLESS", "1");
     cmd
 }

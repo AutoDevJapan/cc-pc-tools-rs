@@ -18,7 +18,9 @@ fn launch_inputs(item: &Value) -> Value {
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
-        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"]})
+        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
+        "console_request":item["scheduler"]["console_request"],
+        "console_fresh_request":item["scheduler"]["console_fresh_request"]})
 }
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
@@ -803,7 +805,15 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
             return Ok(None);
         }
-        if let Some(until) = self.backend.resource_until(&json!({"model":i["model"]}))? {
+        let requested_model = if truth(&i["model"]) {
+            &i["model"]
+        } else {
+            &i["scheduler"]["console_request"]["options"]["model"]
+        };
+        if let Some(until) = self
+            .backend
+            .resource_until(&json!({"model":requested_model}))?
+        {
             self.edit(&i["id"], |row| {
                 if row["status"] == "todo" && launch_inputs(row) == launch_inputs(i) {
                     if !row["scheduler"].is_object() {
@@ -868,8 +878,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         let jobs = self.backend.jobs()?;
         let source = jobs.iter().find(|j| {
-            (j["id"] == item["scheduler"]["last_job"]
-                || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
+            !truth(&item["scheduler"]["console_fresh_request"])
+                && (j["id"] == item["scheduler"]["last_job"]
+                    || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
                 && owns_workspace(&item, j)
         });
         let mut resume_session = source.and_then(|j| {
@@ -894,11 +905,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             );
         }
         prompt += &format!("\n依頼:\n{text}");
+        if let Some(body) = item["scheduler"]["console_request"]["prompt"]
+            .as_str()
+            .filter(|_| {
+                item["scheduler"]["console_receipts"]
+                    [s(&item["scheduler"]["console_request"]["key"])]["launch_key"]
+                    == item["scheduler"]["key"]
+            })
+        {
+            prompt += &format!("\n受付済みの引き継ぎ本文:\n{body}\n");
+        }
         if item["subwork"].is_object() {
             prompt += &format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n", item["subwork"]["parent_todo_id"], s(&item["subwork"]["kind"]));
         }
         let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
         let mut selection = item["scheduler"]["selection"].clone();
+        let accepted_options = &item["scheduler"]["console_request"]["options"];
         if !truth(&selection) {
             selection = if truth(&item["model"]) && truth(&item["effort"]) {
                 json!({"model":item["model"],"effort":item["effort"],"task_type":"implementation"})
@@ -908,6 +930,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         // A cached selection is only a default, never authority over an explicit ToDo.
         for k in ["model", "effort"] {
+            if truth(&accepted_options[k]) {
+                selection[k] = accepted_options[k].clone();
+            }
             if truth(&item[k]) {
                 selection[k] = item[k].clone();
             }
@@ -920,7 +945,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
-            if truth(&item["model"]) {
+            if truth(&item["model"]) || truth(&accepted_options["model"]) {
                 self.log(
                     "WARNING",
                     "指定モデルを利用できないため、指定を保持して再試行します。",
@@ -948,13 +973,17 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
+        if item["scheduler"]["console_request"]["read_only"] == true {
+            selection["sandbox"] = json!("read-only");
+        }
         // A resumed conversation may restore the previous model. Reuse it only
         // when the selected settings agree, including partial explicit choices.
         if source.is_some_and(|source| {
-            ["model", "effort"].iter().any(|field| {
-                (truth(&item[*field]) || source[*field].is_string())
-                    && source[*field] != selection[*field]
-            })
+            (selection["sandbox"] == "read-only" && source["sandbox"] != "read-only")
+                || ["model", "effort"].iter().any(|field| {
+                    (truth(&item[*field]) || source[*field].is_string())
+                        && source[*field] != selection[*field]
+                })
         }) {
             resume_session = None;
         }
@@ -989,6 +1018,98 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
+    }
+    /// Caller holds scheduler.lock. The accepted body is durable before any launch.
+    /// Preparation and admission remain the same as ordinary finite work.
+    pub fn dispatch_console_subwork(
+        &mut self,
+        cfg: &Value,
+        pri: &Value,
+        id: i64,
+        request: &Value,
+    ) -> Result<Option<String>> {
+        if !request["key"].is_string()
+            || s(&request["key"]).is_empty()
+            || !request["launch_key"].is_string()
+            || s(&request["launch_key"]).is_empty()
+            || !request["prompt"].is_string()
+            || s(&request["prompt"]).len() > 128 * 1024
+        {
+            return Err(Error("ValueError"));
+        }
+        let db = self.todo()?;
+        let item = arr(&db["items"])
+            .into_iter()
+            .find(|i| i["id"] == id)
+            .ok_or(Error("ValueError"))?;
+        if !item["subwork"].is_object() {
+            return Err(Error("InvalidSubwork"));
+        }
+        let receipt = &item["scheduler"]["console_receipts"][s(&request["key"])];
+        if receipt.is_object() && receipt["request"] != *request {
+            return Err(Error("InputRejected"));
+        }
+        let jobs = self.backend.jobs()?;
+        // Recover a response lost after the launcher accepted the exact reservation.
+        if receipt.is_object() {
+            if let Some(job) = jobs
+                .iter()
+                .find(|j| j["launch_key"] == receipt["launch_key"] && j["todo_id"] == id)
+            {
+                return Ok(Some(s(&job["id"]).to_string()));
+            }
+        }
+        if item["status"] != "todo"
+            || todo_wait::waiting(&db, &item)
+            || n(&item["scheduler"]["not_before"]) > self.backend.clock()
+        {
+            return Ok(None);
+        }
+        let old = &item["scheduler"]["console_request"];
+        if old.is_object() && old != request {
+            let previous = &item["scheduler"]["console_receipts"][s(&old["key"])];
+            // Distinct bodies wait for the previous real job, retaining both receipts.
+            // Never overwrite an unlaunched reservation or reuse its launch key.
+            if !jobs.iter().any(|j| {
+                j["launch_key"] == previous["launch_key"] && j["todo_id"] == id && !live(j)
+            }) || (truth(&item["scheduler"]["key"])
+                && jobs
+                    .iter()
+                    .any(|j| j["launch_key"] == item["scheduler"]["key"]))
+            {
+                return Ok(None);
+            }
+        }
+        let inputs = launch_inputs(&item);
+        let saved = self.edit(&json!(id), |row| {
+            if row["status"] == "todo" && launch_inputs(row) == inputs {
+                if !row["scheduler"].is_object() {
+                    row["scheduler"] = json!({});
+                }
+                row["scheduler"]["console_request"] = request.clone();
+                if old.is_object() && old != request {
+                    // A new accepted body starts its own conversation. The files
+                    // and all earlier receipts remain, but their conversation does not.
+                    row["scheduler"]["console_fresh_request"] = json!(true);
+                    remove(&mut row["scheduler"], "selection");
+                    remove(&mut row["scheduler"], "resume_session");
+                }
+                if !truth(&row["scheduler"]["key"]) {
+                    row["scheduler"]["key"] = request["launch_key"].clone();
+                }
+                if !row["scheduler"]["console_receipts"].is_object() {
+                    row["scheduler"]["console_receipts"] = json!({});
+                }
+                row["scheduler"]["console_receipts"][s(&request["key"])] =
+                    json!({"request":request,"launch_key":row["scheduler"]["key"]});
+            }
+        })?;
+        if saved["scheduler"]["console_request"] != *request {
+            return Ok(None);
+        }
+        self.dispatch_for(cfg, pri, Some(id))?;
+        self.persist()?;
+        Ok(self.report["launched"]["job"].as_str().map(str::to_string))
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {

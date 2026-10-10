@@ -11,6 +11,249 @@ const T: f64 = 100000.;
 mod subwork_support;
 
 #[test]
+fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
+    for gate in [
+        "open", "cargo", "cpu", "memory", "interval", "deadline", "owner",
+    ] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("subwork_admission");
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "cargo" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "interval" => f.e.state["last_launch"] = json!(T),
+            "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
+            "owner" => sub.db["items"][1]["status"] = json!("block"),
+            _ => {}
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:finite-check","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Keep the fixed input and the saved acceptance criteria."});
+        let result =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(result.is_some(), gate == "open", "{gate}");
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if gate != "open" {
+            continue;
+        }
+        let row = f.get(2);
+        assert_eq!(row["spec"], sub.db["items"][1]["spec"]);
+        assert_eq!(row["scheduler"]["console_request"], request);
+        assert_eq!(
+            row["scheduler"]["key"],
+            sub.db["items"][1]["scheduler"]["key"]
+        );
+        let mut candidate = sub.child_job();
+        candidate["subwork_spec"] = row["spec"].clone();
+        candidate["assigned_needs"] = row["needs"].clone();
+        // This is the admission validator used by cc-jobs, not merely an argv assertion.
+        cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate)
+            .unwrap();
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains(request["prompt"].as_str().unwrap()));
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Inspect the fixed change"));
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            &row,
+            Path::new(row["scheduler"]["prompt"].as_str().unwrap()),
+            &row["scheduler"]["selection"],
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--assigned-needs", "cargo"]));
+        let again =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(again, result);
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let mut changed = request.clone();
+        changed["prompt"] = json!("Different accepted body");
+        assert!(f
+            .e
+            .dispatch_console_subwork(&f.cfg, &f.pri, 2, &changed)
+            .is_err());
+    }
+}
+
+#[test]
+fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    sub.jobs[0]["pid"] = json!(1);
+    sub.jobs[0]["created_at"] = json!(T - 1200.);
+    sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+    let mut f = Fixture::new();
+    f.e.backend.records = sub.jobs.clone();
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let first = json!({"key":"manual:first","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prompt":"First body",
+        "options":{"model":"gpt-6-luna","effort":"medium"}});
+    let second = json!({"key":"manual:second","launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prompt":"Second body"});
+    f.e.backend.m["cpu_percent"] = json!(99);
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    assert_eq!(f.get(2)["scheduler"]["console_request"], first);
+    f.e.backend.m = measurement();
+    f.e.backend.clock += n(&f.cfg["cpu_window_s"]) + 1.;
+    f.e.backend.crash_after_launch = true;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+        .is_err());
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let recovered =
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap()
+            .unwrap();
+    let key = f.get(2)["scheduler"]["key"].clone();
+    let job =
+        f.e.backend
+            .records
+            .iter()
+            .find(|j| j["id"] == recovered)
+            .unwrap()
+            .clone();
+    f.e.link(&json!(2), &job, &key).unwrap();
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    f.e.backend
+        .records
+        .iter_mut()
+        .find(|j| j["id"] == recovered)
+        .unwrap()["status"] = json!("succeeded");
+    let previous_cwd = f.get(2)["scheduler"]["worktree"].clone();
+    let previous =
+        f.e.backend
+            .records
+            .iter_mut()
+            .find(|j| j["id"] == recovered)
+            .unwrap();
+    previous["cwd"] = previous_cwd;
+    previous["thread_id"] = json!("11111111-1111-4111-8111-111111111111");
+    previous["last_message"] = json!("状態: 継続中\nFirst body");
+    f.e.requeue(&json!(2), &json!(recovered), "failed").unwrap();
+    f.e.backend.clock += 3600.;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+        .unwrap()
+        .is_some());
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.e.backend.launched[1]["item"]["scheduler"]["selection"]["model"],
+        "mock-model"
+    );
+    assert!(f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Second body"));
+    assert!(!f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("First body"));
+    assert!(f.e.backend.launched[1]["item"]["scheduler"]["resume_session"].is_null());
+    // Replaying the first receipt still identifies its own job after later work.
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        Some(recovered)
+    );
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.get(2)["scheduler"]["console_receipts"]
+            .as_object()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[test]
+fn console_subwork_preserves_read_only_and_model_preferences_without_widening_todo_scope() {
+    for explicit_todo in [false, true] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        if explicit_todo {
+            sub.db["items"][1]["model"] = json!("gpt-6.1-sol");
+            sub.db["items"][1]["effort"] = json!("high");
+        }
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:restricted","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Read only the fixed change.","read_only":true,
+            "options":{"model":"gpt-6-luna","effort":"medium","sandbox":"read-only"}});
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap()
+            .unwrap();
+        let prepared = &f.e.backend.launched[0]["item"];
+        let selection = &prepared["scheduler"]["selection"];
+        assert_eq!(
+            selection["model"],
+            if explicit_todo {
+                "gpt-6.1-sol"
+            } else {
+                "gpt-6-luna"
+            }
+        );
+        assert_eq!(
+            selection["effort"],
+            if explicit_todo { "high" } else { "medium" }
+        );
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            prepared,
+            Path::new(prepared["scheduler"]["prompt"].as_str().unwrap()),
+            selection,
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--sandbox", "read-only"]));
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--model", selection["model"].as_str().unwrap()]));
+        assert!(!invocation.args.iter().any(|arg| arg == "--auto-model"));
+        assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
+    }
+}
+
+#[test]
 fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
     for gate in ["open", "cargo", "cpu", "memory", "interval"] {
         let mut sub = subwork_support::Fixture::new();
@@ -1151,6 +1394,7 @@ impl Backend for Fake {
         let mut j = job(&jid, 99, "running");
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
+        j["todo_id"] = i["id"].clone();
         self.records.push(j);
         if self.crash_after_launch {
             self.crash_after_launch = false;

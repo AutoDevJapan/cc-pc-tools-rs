@@ -6,6 +6,12 @@
 
 Git管理先は `D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7`、commonは同じ親の `.git` に固定する。既存の全項目・リンク・未保存成果の検査を使い、専用ビルドの内部ハードリンクと全Git記録を保持する。planが返す通常のMove-Itemを別呼び出しで実行し、finishで元位置不在、退避前後の同一実体・全メタデータ、所有記録を照合してこのworktreeのbacklinkだけを修復する。通常のsafe-deleteの保護、他の所有ID、稼働中サービスは変更しない。
 
+## ToDo1968の保存済み検証フォルダー
+
+所有ID `9f836113c154d11da358e0cef15db869` だけを追加する。元仕様の固定Tempパス、project `cc-pc-tools-rs`、content `queue-loop-tier`、volume `2229119083`、file ID `23362423072822789` を照合する。公開取得元 `AutoDevJapan/cc-pc-tools-rs`、HEAD `80c4bb370fce4e7645fafd8ac3eda1422168626b` と保存済み `origin/feat/queue-loop-tier-1967` が一致し、未保存変更がない場合だけ退避する。
+
+通常のGit保護や他の所有IDの条件は変更しない。内部ハードリンクはすべての別名が所有フォルダー内にある場合だけ受理する。全一覧を2回照合し、planが返す通常のMove-Itemを別呼び出しで実行する。直ちにfinishで元パス不在と同一実体・全メタデータ・Git成果の保持を確認し、元の所有記録を更新する。移動前に対象へ書き込む担当・プロセスが終了していることを確認する。
+
 ## ToDo1940の旧ビルドと検証記録を保持する
 
 MCPの実物の移動票は9,255,686バイトあるため、その固定IDだけは票の上限を16MiBとする。他のIDは8MiBのまま。planは符号化した票が上限内かを保存前に確認し、finishと同じ上限を使う。既存の移動票と指紋は変更せず、そのまま完了確認へ使用する。項目数・対象の容量・リンク・Git・所有・ACLの条件は変えない。

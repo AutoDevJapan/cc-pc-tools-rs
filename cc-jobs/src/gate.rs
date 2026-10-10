@@ -513,6 +513,16 @@ fn wait_for(
     lock
 }
 pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::Result<i64> {
+    run_with_admitter(args, dir, env, admission::wait)
+}
+
+/// Inject only the machine measurement for a process fixture; production uses `run`.
+pub fn run_with_admitter(
+    args: &[String],
+    dir: &Path,
+    env: &BTreeMap<String, String>,
+    mut admit: impl FnMut(&Path, &BTreeMap<String, String>, usize) -> io::Result<admission::Permit>,
+) -> io::Result<i64> {
     let Some(cargo) = env
         .get("CODEX_JOBS_REAL_CARGO")
         .filter(|s| Path::new(s).is_file())
@@ -592,9 +602,7 @@ pub fn run(args: &[String], dir: &Path, env: &BTreeMap<String, String>) -> io::R
                 })
             } else { wait_for(&[path], env, TARGET_WAIT) }
         }).transpose()?;
-    let slot = (!nested)
-        .then(|| admission::wait(dir, env, cores))
-        .transpose()?;
+    let slot = (!nested).then(|| admit(dir, env, cores)).transpose()?;
     let (limit, tests) = match slot.as_ref() {
         Some(p) => (p.jobs, p.test_threads),
         None => {

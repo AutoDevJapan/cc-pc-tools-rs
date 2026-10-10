@@ -3564,6 +3564,36 @@ fn wait_row(f: &mut Fixture, id: u64, on: Value) {
     .unwrap();
 }
 #[test]
+fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "wait", &[]));
+    f.put(item(2, "civ6", "todo", &[]));
+    f.e.edit(&json!(1), |row| {
+        row["wait_ready"] = json!({"condition":"chatgpt-plus","since":100})
+    })
+    .unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    assert_eq!(
+        f.e.report["waiting"][0]["message"],
+        "ChatGPT Plusの復旧確認待ち"
+    );
+    let mut db = f.e.todo().unwrap();
+    let state = json!({"backend":"owner_chrome","login":"logged_in","checked_at":100});
+    assert!(cc_todo::ready::resume(&mut db, 1, "chatgpt-plus", &state, 100).unwrap());
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    // Normal admission still honours the launch interval after another task started.
+    f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+    f.dispatch();
+    assert!(f
+        .e
+        .backend
+        .launched
+        .iter()
+        .any(|launch| launch["item"]["id"] == 1));
+}
+#[test]
 fn waiting_item_is_never_dispatched_and_launches_after_target_done() {
     let mut f = Fixture::new();
     f.put(item(1, "civ6", "todo", &[]));

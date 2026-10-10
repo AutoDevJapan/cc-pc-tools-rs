@@ -23,6 +23,7 @@ use std::{
 };
 
 pub type Result<T> = std::result::Result<T, String>;
+pub mod ready;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
 
@@ -138,6 +139,20 @@ pub enum Command {
         on: Vec<i64>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+    },
+    /// Wait for a scheduled readiness check without repeatedly launching a worker.
+    WaitReady {
+        id: i64,
+        #[arg(long, value_parser=["chatgpt-plus"])]
+        condition: String,
+        #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
+        progress: Option<u8>,
+    },
+    /// Release only this recorded wait after a fresh readiness check succeeds.
+    ResumeReady {
+        id: i64,
+        #[arg(long, value_parser=["chatgpt-plus"])]
+        condition: String,
     },
     /// Record measured completion without changing status, job ownership or the task note.
     Progress {
@@ -828,7 +843,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
         | Command::Block { progress, .. } => *progress,
-        Command::Wait { progress, .. } => *progress,
+        Command::Wait { progress, .. } | Command::WaitReady { progress, .. } => *progress,
         Command::Progress { percent, .. } => *percent,
         _ => None,
     };
@@ -939,6 +954,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 for id in cc_job_policy::todo_wait::pending_on(db, i) {
                     extra.push_str(&format!(" — ToDo {id} 待ち"));
                 }
+                if i["wait_ready"]["condition"] == "chatgpt-plus" {
+                    extra.push_str(" — ChatGPT Plusの復旧確認待ち");
+                }
                 let note = i["note"].as_str().ok_or("invalid note")?;
                 output.push(format!(
                     "{:>3} {:<5} {:<8} {}{extra}{}",
@@ -962,8 +980,14 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             if cc_job_policy::todo_wait::waiting(db, item) {
                 return Err("待っているToDoが未完了です。完了すると自動で再開します".into());
             }
+            if !item["wait_ready"].is_null() && !ready::confirmed_production(&item["wait_ready"])? {
+                return Err("再開条件をまだ確認できていません。定期確認後に再開します".into());
+            }
             cc_job_policy::todo_wait::release_ready(db);
             let i = find(db, *id)?;
+            i.as_object_mut()
+                .ok_or("invalid item")?
+                .remove("wait_ready");
             if i["status"] == "done" && progress.is_none() {
                 i.as_object_mut().ok_or("invalid item")?.remove("progress");
             }
@@ -1014,7 +1038,24 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             i["updated"] = json!(now());
             i.as_object_mut().ok_or("invalid item")?.remove("wait_on");
+            i.as_object_mut()
+                .ok_or("invalid item")?
+                .remove("wait_ready");
             cc_job_policy::todo_wait::release_ready(db);
+        }
+        Command::WaitReady {
+            id,
+            condition,
+            progress,
+        } => {
+            ready::register(db, *id, condition)?;
+            if let Some(percent) = progress {
+                set_progress(find(db, *id)?, *percent)?;
+            }
+        }
+        Command::ResumeReady { id, condition } => {
+            let resumed = ready::resume_production(db, *id, condition)?;
+            output.push(json!({"id":id,"resumed":resumed}).to_string());
         }
         Command::Wait { id, on, progress } => {
             cc_job_policy::todo_wait::validate(db, *id, on)?;
@@ -1123,8 +1164,10 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     // Notify the ordinary watchdog immediately after committing a completed
     // prerequisite. The production path uses the same existing admission gates.
     // Isolated CLI stores never launch the PC's production workers.
-    if matches!(cli.command, Command::Done { .. } | Command::Wait { .. })
-        && paths.store == Paths::production().store
+    if matches!(
+        cli.command,
+        Command::Done { .. } | Command::Wait { .. } | Command::ResumeReady { .. }
+    ) && paths.store == Paths::production().store
         && db["items"]
             .as_array()
             .is_some_and(|items| items.iter().any(|i| i["dependency_ready"] == true))

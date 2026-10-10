@@ -224,11 +224,17 @@ impl<B: Backend> Scheduler<B> {
         // Name the prerequisites being waited for ("ToDo 2005 待ち"), with the waiting item separately.
         let waiting: Vec<Value> = arr(&db["items"])
             .iter()
-            .filter(|i| s(&i["status"]) != "done" && todo_wait::waiting(&db, i))
+            .filter(|i| {
+                s(&i["status"]) != "done"
+                    && (todo_wait::waiting(&db, i) || !i["wait_ready"].is_null())
+            })
             .map(|i| {
                 let pending = todo_wait::pending_on(&db, i);
-                let message: Vec<String> =
+                let mut message: Vec<String> =
                     pending.iter().map(|id| format!("ToDo {id} 待ち")).collect();
+                if i["wait_ready"]["condition"] == "chatgpt-plus" {
+                    message.push("ChatGPT Plusの復旧確認待ち".into());
+                }
                 json!({"item":i["id"],"wait_on":pending,"message":message.join(", ")})
             })
             .collect();

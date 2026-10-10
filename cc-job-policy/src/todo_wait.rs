@@ -98,6 +98,7 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
         .into_iter()
         .flatten()
         .filter(|i| i["wait_on"].as_array().is_some_and(|a| !a.is_empty()) && !waiting(db, i))
+        .filter(|i| i["wait_ready"].is_null())
         .filter_map(|i| i["id"].as_i64())
         .collect();
     let mut released = Vec::new();
@@ -119,6 +120,9 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
 }
 /// An exhausted automatic owner edge uses the same normal resumption path.
 pub fn release_item(item: &mut Value) {
+    if !item["wait_ready"].is_null() {
+        return;
+    }
     if item["status"] == "wait" {
         item["status"] = json!("todo");
         item["dependency_ready"] = json!(true);

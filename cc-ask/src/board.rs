@@ -363,14 +363,25 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
     let completion = items.iter().filter(|i| todo_wait::waiting(db, i)).count();
     let ready = items
         .iter()
-        .filter(|i| s(&i["status"]) == "wait" && !todo_wait::waiting(db, i))
+        .filter(|i| {
+            s(&i["status"]) == "wait" && !todo_wait::waiting(db, i) && i["wait_ready"].is_null()
+        })
         .count();
     let ready_summary = if ready > 0 {
         format!("・再開待ち {ready}件")
     } else {
         String::new()
     };
-    let mut out = format!("作業中 {doing}件・止まっている {stopped}件・完了待ち {completion}件{ready_summary}・あなたの返事待ち {}件（質問）\n\n## あなたの返事待ち\n", questions.len());
+    let restoring = items
+        .iter()
+        .filter(|i| i["wait_ready"]["condition"] == "chatgpt-plus")
+        .count();
+    let restoring_summary = if restoring > 0 {
+        format!("・Plusの復旧確認待ち {restoring}件")
+    } else {
+        String::new()
+    };
+    let mut out = format!("作業中 {doing}件・止まっている {stopped}件・完了待ち {completion}件{ready_summary}{restoring_summary}・あなたの返事待ち {}件（質問）\n\n## あなたの返事待ち\n", questions.len());
     if questions.is_empty() {
         out.push_str("今はありません\n");
     }
@@ -434,6 +445,8 @@ pub fn render(db: &Value, questions: &[Value], state: &Value, names: &Names, now
             )
         } else if is_waiting {
             "返事待ち".into()
+        } else if item["wait_ready"]["condition"] == "chatgpt-plus" {
+            "ChatGPT Plusの復旧確認待ち".into()
         } else if !on.is_empty() {
             String::new()
         } else if s(&item["status"]) == "wait" {

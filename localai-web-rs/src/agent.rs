@@ -1192,7 +1192,14 @@ impl Console {
         self.save(s)?;
         // Preserve missing receipts for reconciliation, but do not let one
         // historical record consume every unrelated project's execution slot.
-        let scan_limit = s.queue.len();
+        // A resident patrol is also the monitor. Preparation checks can run
+        // several Git probes, so plan a small batch and rotate parked work.
+        // Ordinary API dispatch keeps its existing full-batch behavior.
+        let scan_limit = if cc_ask::tick_runtime::remaining().is_some() {
+            s.queue.len().min(2)
+        } else {
+            s.queue.len()
+        };
         let mut scanned = 0;
         // Eligibility is a batch plan. Refresh actual ownership again before
         // every launch; repeatedly reopening thousands of historical job files

@@ -35,6 +35,23 @@ fn todo2299_stage_does_not_renew_start_or_clear_previous_error() {
     assert_eq!(record["stage"], "jobs");
     assert!(record["finished_at"].is_null());
 }
+
+#[test]
+fn todo2299_patrol_rotates_a_bounded_batch_without_losing_later_work() {
+    let f = Fixture::new();
+    f.on();
+    let mut state = f.console.read_state().unwrap();
+    for key in ["manual:a", "manual:b", "manual:c"] {
+        state.queue.push(Trigger { key:key.into(), name:key.into(), cwd:f.root.to_string_lossy().into(), prompt:"調べる".into(), todo_id:None, options:json!({"isolate_worktree":false}) });
+        state.preparation_failures.insert(key.into(), (now()+3600,"source_workspace_unavailable".into()));
+    }
+    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+    f.console.dispatch(&mut state, &[]).unwrap();
+    assert_eq!(state.queue.iter().map(|t|t.key.as_str()).collect::<Vec<_>>(), ["manual:c","manual:a","manual:b"]);
+    assert_eq!(f.launches(),0);
+    f.console.dispatch(&mut state, &[]).unwrap();
+    assert_eq!(state.queue.iter().map(|t|t.key.as_str()).collect::<Vec<_>>(), ["manual:b","manual:c","manual:a"]);
+}
 fn shared_source(f: &Fixture, binding: Value, receipt: bool) {
     let path = f.console.paths.jobs.join("source/job.json");
     let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();

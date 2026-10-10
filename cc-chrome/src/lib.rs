@@ -270,13 +270,13 @@ fn sweep_selected(
                 continue;
             }
         };
-        let completed = match completion::requested(&dir, &path, &record) {
-            Ok(Some(false)) => {
+        let (completed, completion_reason) = match completion::requested(&dir, &path, &record) {
+            Ok(Some((false, _))) => {
                 result.kept += 1;
                 continue;
             }
-            Ok(Some(true)) => true,
-            Ok(None) => false,
+            Ok(Some((true, reason))) => (true, Some(reason)),
+            Ok(None) => (false, None),
             Err(_) => {
                 result.failed += 1;
                 continue;
@@ -352,7 +352,7 @@ fn sweep_selected(
                 if lifecycle::atomic_json(
                     &dir.join("chrome-tab-history")
                         .join(path.file_name().unwrap()),
-                    &json!({"record":record,"at":now,"closed":closed}),
+                    &json!({"record":record,"at":now,"closed":closed,"completion_reason":completion_reason}),
                 )
                 .is_err()
                 {

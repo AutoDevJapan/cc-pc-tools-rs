@@ -11,14 +11,18 @@ fn request_path(dir: &Path, path: &Path) -> PathBuf {
     dir.join("chrome-tab-requests")
         .join(path.file_name().unwrap())
 }
-pub(crate) fn requested(dir: &Path, path: &Path, record: &Record) -> io::Result<Option<bool>> {
+pub(crate) fn requested(
+    dir: &Path,
+    path: &Path,
+    record: &Record,
+) -> io::Result<Option<(bool, String)>> {
     match fs::read(request_path(dir, path)) {
         Ok(bytes) => {
             let request: Request = serde_json::from_slice(&bytes)?;
             if request.record != *record || request.reason.trim().is_empty() {
                 return Err(io::Error::other("tab completion identity mismatch"));
             }
-            Ok(Some(request.close))
+            Ok(Some((request.close, request.reason)))
         }
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e),
@@ -54,7 +58,7 @@ fn mark(jobs: &Path, job: &str, id: &str, close: bool, reason: &str) -> io::Resu
     {
         return Err(io::Error::other("invalid tab ownership"));
     }
-    if close && requested(&dir, path, &record)? == Some(false) {
+    if close && requested(&dir, path, &record)?.is_some_and(|(close, _)| !close) {
         return Err(io::Error::other("owner-retained tab cannot be closed"));
     }
     lifecycle::atomic_json(
@@ -169,6 +173,15 @@ mod tests {
         let retry = sweep_with(root.path(), None, epoch(), false, &mut fake).unwrap();
         assert_eq!((retry.closed, retry.kept, retry.failed), (1, 1, 0));
         assert_eq!(fake.calls, [11, 11]);
+        let history: Value = serde_json::from_slice(
+            &fs::read(
+                root.path()
+                    .join(format!("live/chrome-tab-history/{id}.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(history["completion_reason"], "browser work completed");
     }
     #[test]
     fn retained_delivery_survives_terminal_job_and_explicit_close() {

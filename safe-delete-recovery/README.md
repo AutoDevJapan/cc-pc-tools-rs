@@ -14,7 +14,8 @@
 `f50158091aaa2a8d383bc38f61808a2033950054` が実際の `origin/main` に含まれ、
 両コミットのtreeが `c3fec2c09f6ca28844655013f3bfdbfda78b1142` と一致することを確認する。
 mainの進行は許容するが、HEADがマージの祖先とは主張しない。未保存変更・未追跡ソース・
-grafts・置換履歴・追加Git領域・外部hardlink・リンク・顧客資源は従来どおり拒否する。
+grafts・追加Git領域・外部hardlink・リンク・顧客資源は従来どおり拒否する。
+Gitの履歴置換は `--no-replace-objects` で無効化し、保存判定に使用しない。
 
 Git管理先は `D:/CC/Tools/agent-workspaces/chrome-bridge-2055/.git/worktrees/work`、
 commonは同じ取得元の `.git` のみ。隠し項目も含む全名前・識別番号・容量・更新時刻・属性・

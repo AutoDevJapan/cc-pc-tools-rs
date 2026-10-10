@@ -94,7 +94,7 @@ pub fn resume_without_worker(item: &mut Value) {
         merge(
             &mut item["scheduler"],
             json!({
-                "last_job":job,"job":null,"key":null,"phase":"resumed","resume":true,"not_before":0
+                "last_job":job,"job":null,"key":null,"phase":"resumed","resume":true
             }),
         );
         remove(&mut item["scheduler"], "pending_cancel");

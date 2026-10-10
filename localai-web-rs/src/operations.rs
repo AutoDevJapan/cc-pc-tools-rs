@@ -314,7 +314,8 @@ fn collect(root: &Path, now: u64) -> Value {
         health.as_ref().ok(),
         &queue,
         now,
-        (queue_read.is_err() && queue_path.exists()) || (health.is_err() && health_path.exists()),
+        (queue_read.is_err() && queue_path.try_exists().unwrap_or(true))
+            || (health.is_err() && health_path.try_exists().unwrap_or(true)),
     );
     let commander_ok = commander["status"] == "working";
     let tick_at = commander["completedAt"]
@@ -526,7 +527,8 @@ fn collect(root: &Path, now: u64) -> Value {
         };
         let unknown = key == "guard"
             || !matches!(key, "relay" | "discord")
-            || (key == "discord" && !root.join("discord-ask/tick-health.json").exists());
+            || (key == "discord"
+                && root.join("discord-ask/tick-health.json").try_exists() == Ok(false));
         let label = clean(&names, text(tool, "name"));
         let mut resident_source = source(
             key,
@@ -535,6 +537,8 @@ fn collect(root: &Path, now: u64) -> Value {
             at,
             if unknown {
                 "稼働状態の記録なし"
+            } else if key == "discord" && ok {
+                "停滞監視・容量確認・起動時復旧を確認（Discord取得は別工程）"
             } else if ok {
                 "監視中"
             } else {

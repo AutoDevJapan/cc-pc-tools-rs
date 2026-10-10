@@ -20,7 +20,13 @@ pub fn kind(
     });
     if preparation_failed {
         "startup_error"
-    } else if capacity_blocked {
+    } else if capacity_blocked
+        && queue["queue"].as_array().is_some_and(|triggers| {
+            triggers
+                .iter()
+                .any(|t| t["todo_id"].is_u64() && t["todo_id"] == item["id"])
+        })
+    {
         "resource"
     } else {
         "start"
@@ -33,6 +39,7 @@ mod tests {
     #[test]
     fn separates_unstarted_work_job_queue_and_current_preparation_failure() {
         let item = json!({"id":12});
+        assert_eq!(kind(&item, None, &json!({}), true), "start");
         let queue = json!({"queue":[{"todo_id":12,"key":"current"}],"preparation_failures":{"old":[1,"tool_failed"]}});
         assert_eq!(kind(&item, None, &queue, false), "start");
         assert_eq!(kind(&item, None, &queue, true), "resource");

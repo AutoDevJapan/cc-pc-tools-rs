@@ -1,3 +1,4 @@
+use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
     backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
@@ -14,7 +15,10 @@ fn launch_inputs(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
         "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
         "model":item["model"],"effort":item["effort"],"wait_on":item["wait_on"],
-        "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"]})
+        "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
+        "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
+        "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
+        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"]})
 }
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
@@ -276,7 +280,7 @@ impl<B: Backend> Scheduler<B> {
                 return;
             }
             let budget = i["scheduler"]["retry_count"].clone();
-            let delay = if reason == "memory" { 180. } else if n(&budget) >= 1. {
+            let delay = if reason == "resource_wait" { 3600. } else if reason == "memory" { 180. } else if n(&budget) >= 1. {
                 crate::recovery_failure::SLOW_RETRY_S
             } else { crate::recovery_failure::FAST_RETRY_S };
             i["status"] = json!("todo");
@@ -285,14 +289,17 @@ impl<B: Backend> Scheduler<B> {
                 "lost" => "担当ジョブのプロセスが消失しました",
                 "memory" => "空きメモリ不足で停止しました",
                 "failed" => "担当ジョブが失敗しました",
+                "resource_wait" => "指定モデルの利用枠を待っています",
                 _ => "担当ジョブが停止しました",
             };
             i["note"] = json!(format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。"));
+            if reason == "resource_wait" { record_result(i, jid, "resource_wait"); }
+            let until = n(&i["scheduler"]["not_before"]).max(n(&i["scheduler"]["resource_wait"]["until"])).max(now+delay);
             let m = &mut i["scheduler"];
-            merge(m, json!({"last_job":jid,"last_stop":reason,"job":null,"key":null,"phase":"retry","resume":true,"not_before":now+delay}));
+            merge(m, json!({"last_job":jid,"last_stop":reason,"job":null,"key":null,"phase":"retry","resume":true,"not_before":until}));
             remove(m, "pending_cancel");
             remove(m, "notice_pending");
-            if reason != "memory" {
+            if reason != "memory" && reason != "resource_wait" {
                 m["retry_count"] = add_count(&budget, 1);
             }
         })?;
@@ -429,7 +436,8 @@ impl<B: Backend> Scheduler<B> {
                         merge(&mut row["scheduler"],json!({"job":owner["id"],"phase":"running"}));
                     } else {
                         row["status"] = json!("todo");
-                        merge(&mut row["scheduler"], json!({"job":null,"key":null,"phase":"retry","resume":true,"not_before":now+60.}));
+                        let until = n(&row["scheduler"]["not_before"]).max(now+60.);
+                        merge(&mut row["scheduler"], json!({"job":null,"key":null,"phase":"retry","resume":true,"not_before":until}));
                     }
                     remove(&mut row["scheduler"], "notice_pending");
                     remove(&mut row["scheduler"], "pending_cancel");
@@ -541,6 +549,32 @@ impl<B: Backend> Scheduler<B> {
         let Some(j) = job else {
             return self.requeue(&i["id"], &m["job"], "lost");
         };
+        if !live(j) && result_received(i, &j["id"]) {
+            return Ok(());
+        }
+        let saved_until = (i["scheduler"]["resource_wait"]["job"] == j["id"])
+            .then(|| i["scheduler"]["resource_wait"]["until"].as_f64())
+            .flatten();
+        let resource_until = match saved_until {
+            Some(until) => Some(until),
+            None => self.backend.resource_until(j)?,
+        };
+        if let Some(until) = resource_until {
+            let fresh = self.edit(&i["id"], |row| {
+                if row["status"] == "doing" && row["scheduler"] == i["scheduler"] {
+                    row["scheduler"]["resource_wait"] =
+                        json!({"reason":"http_429","until":until,"job":j["id"]});
+                    row["scheduler"]["not_before"] =
+                        json!(n(&row["scheduler"]["not_before"]).max(until));
+                }
+            })?;
+            if live(j) {
+                self.cancel_for(&fresh, j, "resource_wait", cfg)?;
+            } else {
+                self.requeue(&i["id"], &j["id"], "resource_wait")?;
+            }
+            return Ok(());
+        }
         if live(j) {
             if truth(&m["pending_cancel"]) {
                 return self.cancel_for(i, j, s(&m["pending_cancel"]), cfg);
@@ -645,7 +679,8 @@ impl<B: Backend> Scheduler<B> {
                         row["scheduler"]["key"] = Value::Null;
                         row["scheduler"]["phase"] = json!("queued");
                         row["scheduler"]["resume"] = json!(true);
-                        row["scheduler"]["not_before"] = json!(next_at);
+                        row["scheduler"]["not_before"] =
+                            json!(n(&row["scheduler"]["not_before"]).max(next_at));
                         row["scheduler"]["continuation_count"] =
                             add_count(&row["scheduler"]["continuation_count"], 1);
                     }
@@ -752,7 +787,7 @@ impl<B: Backend> Scheduler<B> {
             if !truth(&r) {
                 continue;
             }
-            self.guard(&format!("answer item {}",i["id"]),|e|{let mut current=i.clone();if s(&i["status"])=="block"&&!truth(&i["scheduler"]["answer"]){let Some(response)=e.backend.reply(&r)?else{return Ok(());};current=e.edit(&i["id"],|row|{if s(&row["status"])!="block"||row["scheduler"]["question"]!=r||truth(&row["scheduler"]["answer"]){return;}merge(&mut row["scheduler"],json!({"answer":response["id"],"question_close_pending":true}));if truth(&response["stop"]){row["note"]=json!("オーナーの回答に従い、停止したままにします。");}else{merge(row,json!({"status":"todo","note":"オーナーの回答を受け、同じ worktree から再開します。"}));merge(&mut row["scheduler"],json!({"job":null,"key":null,"phase":"retry","resume":true,"retry_count":0,"not_before":0,"owner_instruction":format!("原因を調べてから元の依頼を再開してください。\nオーナーの回答: {}",s(&response["text"]))}));remove(&mut row["scheduler"],"selection");}})?;}
+            self.guard(&format!("answer item {}",i["id"]),|e|{let mut current=i.clone();if s(&i["status"])=="block"&&!truth(&i["scheduler"]["answer"]){let Some(response)=e.backend.reply(&r)?else{return Ok(());};current=e.edit(&i["id"],|row|{if s(&row["status"])!="block"||row["scheduler"]["question"]!=r||truth(&row["scheduler"]["answer"]){return;}merge(&mut row["scheduler"],json!({"answer":response["id"],"question_close_pending":true}));if truth(&response["stop"]){row["note"]=json!("オーナーの回答に従い、停止したままにします。");}else{merge(row,json!({"status":"todo","note":"オーナーの回答を受け、同じ worktree から再開します。"}));merge(&mut row["scheduler"],json!({"job":null,"key":null,"phase":"retry","resume":true,"retry_count":0,"owner_instruction":format!("原因を調べてから元の依頼を再開してください。\nオーナーの回答: {}",s(&response["text"]))}));remove(&mut row["scheduler"],"selection");}})?;}
 if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_question(&r)?;e.edit(&i["id"],|row|{
     if row["scheduler"]["question"] != r { return; }
     remove(&mut row["scheduler"],"question_close_pending");
@@ -765,12 +800,40 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         Ok(())
     }
     pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
+        if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
+            return Ok(None);
+        }
+        if let Some(until) = self.backend.resource_until(&json!({"model":i["model"]}))? {
+            self.edit(&i["id"], |row| {
+                if row["status"] == "todo" && launch_inputs(row) == launch_inputs(i) {
+                    if !row["scheduler"].is_object() {
+                        row["scheduler"] = json!({});
+                    }
+                    row["scheduler"]["not_before"] = json!(until);
+                    row["scheduler"]["resource_wait"] =
+                        json!({"reason":"quota_exhausted","until":until});
+                }
+            })?;
+            return Ok(None);
+        }
         let base = resolve(Path::new(repo))?;
+        let jobs = self.backend.jobs()?;
+        let recovered = self.backend.workspace_recovery(repo, i, &jobs)?;
+        let expected_inputs = launch_inputs(i);
+        let now = self.backend.clock();
+        let mut reserved = false;
         let item=self.edit(&i["id"],|row|{if s(&row["status"])!="todo"||!truth(&row["dispatchable"])||!arr(&row["wait_on"]).is_empty(){return;}
+if launch_inputs(row)!=expected_inputs || n(&row["scheduler"]["not_before"])>now {return;}
+reserved=true;
 if !row["scheduler"].is_object(){row["scheduler"]=json!({});}
+if let Some(recovered)=recovered {merge(&mut row["scheduler"], recovered);}
 if !truth(&row["scheduler"]["worktree"]){let slug=regex::Regex::new("[^a-z0-9]+").unwrap().replace_all(&s(&row["title"]).to_lowercase(),"-").trim_matches('-').chars().take(32).collect::<String>();let name=format!("todo-{}-{}",row["id"],if slug.is_empty(){"work"}else{&slug});merge(&mut row["scheduler"],json!({"worktree":PathBuf::from(format!("{}-wt",base.display())).join(&name),"branch":format!("scheduler/{name}")}));}
 if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["attempt"],1);merge(&mut row["scheduler"],json!({"key":uuid::Uuid::new_v4().simple().to_string(),"attempt":attempt}));}row["scheduler"]["phase"]=json!("preparing");})?;
-        if s(&item["status"]) != "todo" || !truth(&item["scheduler"]["key"]) {
+        if !reserved
+            || s(&item["status"]) != "todo"
+            || !truth(&item["scheduler"]["key"])
+            || n(&item["scheduler"]["not_before"]) > self.backend.clock()
+        {
             return Ok(None);
         }
         self.backend.worktree(repo, &item)?;
@@ -779,7 +842,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .map_err(|_| Error("InvalidSubwork"))?;
         }
         let spec = Path::new(s(&item["spec"]));
-        if spec.metadata()?.len() > 1024 * 1024 {
+        if spec.metadata().map_err(|_| Error("InputRejected"))?.len() > 1024 * 1024 {
             return Err(Error("ValueError"));
         }
         let text = fs::read_to_string(spec)?;
@@ -799,15 +862,19 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 &resources
             }
         );
+        prompt += &format!("\n元の登録作業場所: {repo}\n資料は元の登録範囲内で参照し、原資料を保持してください。専用作業場所の作成は依頼の範囲を広げる許可ではありません。\n");
         if truth(&item["scheduler"]["resume"]) {
             prompt += &format!("{RESUME_INSTRUCTION}\n");
         }
         let jobs = self.backend.jobs()?;
-        let source = jobs
-            .iter()
-            .find(|j| j["id"] == item["scheduler"]["last_job"]);
-        let mut resume_session =
-            source.and_then(|j| continuation_session(j, s(&item["scheduler"]["worktree"]), &jobs));
+        let source = jobs.iter().find(|j| {
+            (j["id"] == item["scheduler"]["last_job"]
+                || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
+                && owns_workspace(&item, j)
+        });
+        let mut resume_session = source.and_then(|j| {
+            crate::preparation::recovery_session(&item, j, s(&item["scheduler"]["worktree"]), &jobs)
+        });
         if let Some(source) = source {
             let result = safe_text(s(&source["last_message"]));
             if !result.is_empty() {
@@ -844,6 +911,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             if truth(&item[k]) {
                 selection[k] = item[k].clone();
             }
+        }
+        // OpenCodex requires the provider qualifier for Claude subscriptions.
+        if s(&selection["model"]).starts_with("claude-") {
+            selection["model"] = json!(format!("anthropic/{}", s(&selection["model"])));
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
@@ -980,130 +1051,160 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if !truth(&self.report["allowance_now"]) {
             return Ok(());
         }
-        let Some(i) = queue
+        let mut first_failure = None;
+        for i in queue
             .iter()
-            .find(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
-        else {
-            return Ok(());
-        };
-        let result: Result<()> = (|| {
-            let Some(mut prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))? else {
-                return Ok(());
-            };
-            if s(&prepared["status"]) != "todo" {
-                return Ok(());
-            }
-            let (_, ps, jobs) = self.sample(cfg)?;
-            let db = self.todo()?;
-            let busy = resources_busy_with_lock(
-                &arr(&db["items"]),
-                &jobs,
-                &ps,
-                self.backend.clock(),
-                &self.civ6_home(),
-            )?;
-            if !truth(&self.report["allowance_now"])
-                || arr(&prepared["needs"]).iter().any(|v| busy.contains(s(v)))
-            {
-                return Ok(());
-            }
-            let current = arr(&db["items"])
-                .into_iter()
-                .find(|r| r["id"] == prepared["id"])
-                .ok_or(Error("ValueError"))?;
-            if todo_wait::waiting(&db, &current) {
-                return Ok(());
-            }
-            if s(&current["status"]) != "todo"
-                || current["scheduler"]["key"] != prepared["scheduler"]["key"]
-                || launch_inputs(&current) != launch_inputs(&prepared)
-            {
-                return Ok(());
-            }
-            if current["subwork"].is_object() {
-                let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
-                    .map_err(|_| Error("InvalidSubwork"))?;
-                // Publish proof of this resource/capacity check, not just preparation's launch key.
-                let receipt = cc_job_policy::subwork::admission(&prepared);
-                let saved = self.edit(&prepared["id"], |row| {
-                    if row["status"] == "todo"
-                        && row["scheduler"]["key"] == prepared["scheduler"]["key"]
-                        && launch_inputs(row) == launch_inputs(&prepared)
-                    {
-                        row["scheduler"]["subwork_admission"] = receipt.clone();
-                    }
-                })?;
-                if saved["status"] != "todo"
-                    || launch_inputs(&saved) != launch_inputs(&prepared)
-                    || saved["scheduler"]["subwork_admission"] != receipt
+            .filter(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
+        {
+            let result: Result<()> = (|| {
+                let Some(mut prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))?
+                else {
+                    return Ok(());
+                };
+                if s(&prepared["status"]) != "todo" {
+                    return Ok(());
+                }
+                let (_, ps, jobs) = self.sample(cfg)?;
+                let db = self.todo()?;
+                let busy = resources_busy_with_lock(
+                    &arr(&db["items"]),
+                    &jobs,
+                    &ps,
+                    self.backend.clock(),
+                    &self.civ6_home(),
+                )?;
+                if !truth(&self.report["allowance_now"])
+                    || arr(&prepared["needs"]).iter().any(|v| busy.contains(s(v)))
                 {
                     return Ok(());
                 }
-                prepared["scheduler"]["subwork_parent_job"] = json!(parent);
-            }
-            // Sampling may yield while the owner changes the requested model.
-            // Defer this receipt so prepare recomputes settings and session on
-            // the next pass, using the same durable launch key.
-            if ["model", "effort"]
-                .iter()
-                .any(|field| current[*field] != prepared["scheduler"]["selection_input"][*field])
-            {
-                return Ok(());
-            }
-            self.state["last_launch"] = json!(self.backend.clock());
-            if !self.state["project_last_launch"].is_object() {
-                self.state["project_last_launch"] = json!({});
-            }
-            self.state["project_last_launch"][s(&prepared["project"])] =
-                json!(self.backend.clock());
-            self.persist()?;
-            let jid = self.backend.launch(
-                &prepared,
-                Path::new(s(&prepared["scheduler"]["prompt"])),
-                &prepared["scheduler"]["selection"],
-            )?;
-            let j = self
-                .backend
-                .jobs()?
-                .into_iter()
-                .find(|r| s(&r["id"]) == jid)
-                .unwrap_or(json!({"id":jid,"created_at":self.backend.clock()}));
-            self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
-            merge(
-                &mut self.report,
-                json!({"launched":{"item":i["id"],"job":jid},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
-            );
-            self.log(
-                "INFO",
-                &format!(
-                    "launched item {} job {} priority {}",
-                    i["id"],
-                    jid,
-                    priority(i, pri)
-                ),
-            )?;
-            Ok(())
-        })();
-        if let Err(e) = &result {
-            if e.0 != "KeyboardInterrupt" {
-                let until = self.backend.clock() + 300.;
-                self.guard(&format!("defer item {}", i["id"]), |eng| {
+                let current = arr(&db["items"])
+                    .into_iter()
+                    .find(|r| r["id"] == prepared["id"])
+                    .ok_or(Error("ValueError"))?;
+                if todo_wait::waiting(&db, &current) {
+                    return Ok(());
+                }
+                if s(&current["status"]) != "todo"
+                    || current["scheduler"]["key"] != prepared["scheduler"]["key"]
+                    || launch_inputs(&current) != launch_inputs(&prepared)
+                {
+                    return Ok(());
+                }
+                if current["subwork"].is_object() {
+                    let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
+                        .map_err(|_| Error("InvalidSubwork"))?;
+                    // Publish proof of this resource/capacity check, not just preparation's launch key.
+                    let receipt = cc_job_policy::subwork::admission(&prepared);
+                    let saved = self.edit(&prepared["id"], |row| {
+                        if row["status"] == "todo"
+                            && row["scheduler"]["key"] == prepared["scheduler"]["key"]
+                            && launch_inputs(row) == launch_inputs(&prepared)
+                        {
+                            row["scheduler"]["subwork_admission"] = receipt.clone();
+                        }
+                    })?;
+                    if saved["status"] != "todo"
+                        || launch_inputs(&saved) != launch_inputs(&prepared)
+                        || saved["scheduler"]["subwork_admission"] != receipt
+                    {
+                        return Ok(());
+                    }
+                    prepared["scheduler"]["subwork_parent_job"] = json!(parent);
+                }
+                // Sampling may yield while the owner changes the requested model.
+                // Defer this receipt so prepare recomputes settings and session on
+                // the next pass, using the same durable launch key.
+                if ["model", "effort"].iter().any(|field| {
+                    current[*field] != prepared["scheduler"]["selection_input"][*field]
+                }) {
+                    return Ok(());
+                }
+                self.state["last_launch"] = json!(self.backend.clock());
+                if !self.state["project_last_launch"].is_object() {
+                    self.state["project_last_launch"] = json!({});
+                }
+                self.state["project_last_launch"][s(&prepared["project"])] =
+                    json!(self.backend.clock());
+                self.persist()?;
+                let jid = self.backend.launch(
+                    &prepared,
+                    Path::new(s(&prepared["scheduler"]["prompt"])),
+                    &prepared["scheduler"]["selection"],
+                )?;
+                let j = self
+                    .backend
+                    .jobs()?
+                    .into_iter()
+                    .find(|r| s(&r["id"]) == jid)
+                    .unwrap_or(json!({"id":jid,"created_at":self.backend.clock()}));
+                self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
+                merge(
+                    &mut self.report,
+                    json!({"launched":{"item":i["id"],"job":jid},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
+                );
+                self.log(
+                    "INFO",
+                    &format!(
+                        "launched item {} job {} priority {}",
+                        i["id"],
+                        jid,
+                        priority(i, pri)
+                    ),
+                )?;
+                Ok(())
+            })();
+            if let Err(e) = &result {
+                if e.0 != "KeyboardInterrupt" {
+                    let until =
+                        self.backend.clock() + if e.0 == "ResourceWait" { 3600. } else { 300. };
+                    let failed_at = self.backend.clock();
+                    self.guard(&format!("defer item {}", i["id"]), |eng| {
                     eng.edit(&i["id"], |row| {
                         if s(&row["status"]) == "todo" {
                             if !row["scheduler"].is_object() {
                                 row["scheduler"] = json!({});
                             }
+                            let until = n(&row["scheduler"]["not_before"]).max(until);
                             row["scheduler"]["not_before"] = json!(until);
+                            let (reason, message) = failure_reason(e);
+                            if e.0 == "ResourceWait" { row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":until}); }
+                            row["scheduler"]["preparation_failure"] = json!({"reason":reason,"at":failed_at,"retry_at":until});
                             row["note"] = json!(format!(
-                                "起動の準備でエラーが発生しました（{}）。5分後に再確認します。",
-                                e.0
+                                "起動の準備: {message}。保存済みの作業を保ち、待機期限後に再確認します。"
                             ));
                         }
                     })
                 });
+                }
+            }
+            if result.as_ref().is_err_and(|e| e.0 == "KeyboardInterrupt") {
+                return result;
+            }
+            if let Err(e) = result {
+                self.log(
+                    "WARNING",
+                    &format!(
+                        "preparation item {} reason={}",
+                        i["id"],
+                        failure_reason(&e).0
+                    ),
+                )?;
+                if target.is_some() {
+                    return Err(e);
+                }
+                first_failure.get_or_insert(e);
+                continue;
+            }
+            if self.report["launched"].is_object() {
+                break;
             }
         }
-        result
+        if self.report["launched"].is_object() {
+            Ok(())
+        } else {
+            first_failure.map_or(Ok(()), Err)
+        }
     }
     pub fn run(&mut self, mode: &str, apply: bool) -> Result<Value> {
         let Some(_lock) = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::ZERO)?

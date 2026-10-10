@@ -1465,6 +1465,19 @@ impl Console {
                 continue;
             }
             let source = launch_source(&t, item, fresh_jobs);
+            if let Some(item) = item {
+                let base = db["projects"][strv(item, "project")]
+                    .as_str()
+                    .ok_or_else(io_fault)?;
+                if self.workspace_ancestor(&t.cwd, base)? {
+                    // Preserve the accepted launch root as history; it is not authority
+                    // to copy the whole ancestor as this item's project.
+                    s.request_cwds.entry(t.key.clone()).or_insert(t.cwd.clone());
+                    t.cwd = self.restored_workspace(item, source, &db, base)?.into();
+                    s.queue[0].cwd = t.cwd.clone();
+                    self.save(s)?;
+                }
+            }
             t.options = match trigger_launch_options(&t, item, &t.options, source)
                 .and_then(|options| self.resolve_launch_workspace(&t, item, source, &db, options))
             {
@@ -1874,7 +1887,7 @@ impl Console {
             json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
                 "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
         };
-        json!({"workspace_policy_version":3,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
+        json!({"workspace_policy_version":4,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
             "pending":i["stall_recovery"]["pending"],"jobs":i["jobs"],"spec":i["spec"],
             "spec_file":metadata(Path::new(strv(i,"spec"))),
@@ -2010,6 +2023,9 @@ impl Console {
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
                 Ok(_) => (),
             }
+            if self.workspace_ancestor(cwd, base)? {
+                continue;
+            }
             let artifact = match source {
                 Some(s) => self.receipt_artifact_directory(cwd, item, s, db, base)?,
                 None => false,
@@ -2026,6 +2042,21 @@ impl Console {
             }
         }
         Err(io_fault())
+    }
+    fn workspace_ancestor(&self, cwd: &str, base: &str) -> Result<bool> {
+        // Resolve both paths so a junction cannot disguise an unrelated directory.
+        // Missing/read-denied paths retain their existing recovery semantics.
+        if !Path::new(cwd).is_dir() || !Path::new(base).is_dir() {
+            return Ok(false);
+        }
+        let resolved = |path: &str| {
+            cc_scheduler::common::resolve(Path::new(path))
+                .map(|p| p.to_string_lossy().into_owned())
+                .map_err(|_| io_fault())
+        };
+        let cwd = resolved(cwd)?;
+        let base = resolved(base)?;
+        Ok(!same_folder(&cwd, &base) && path_under(&base, &cwd))
     }
     fn delegation_cwd(&self, t: &Trigger) -> Result<String> {
         if t.options["isolate_worktree"] != true {

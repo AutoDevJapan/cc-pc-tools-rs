@@ -177,6 +177,86 @@ fn todo2164_broad_saved_root_returns_to_registered_source_without_copying_ancest
 }
 
 #[test]
+fn todo2164_legacy_ancestor_without_numeric_owner_uses_registration_and_retains_request() {
+    let (f, mut db, mut source, registered, _) = receipt_workspace_fixture();
+    source["cwd"] = json!(f.root);
+    source["todo_id"] = Value::Null;
+    source["related_todo_ids"] = json!([]);
+    fs::write(
+        f.console.paths.jobs.join("source/job.json"),
+        source.to_string(),
+    )
+    .unwrap();
+    db["items"][0]["stall_recovery"] = Value::Null;
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    fs::write(registered.join("source.txt"), b"registered source").unwrap();
+    fs::write(f.root.join("outside.txt"), b"ancestor data").unwrap();
+    let mut state = f.console.read_state().unwrap();
+    let options = json!({"model":"gpt-6.1-sol","effort":"high","isolate_worktree":true,
+        "source_job_id":"source","fresh_conversation":true,"source_workspace_owned":true,
+        "source_workspace":f.root});
+    state.queue.push(Trigger {
+        key: "decision:source".into(),
+        name: "orch-todo-1".into(),
+        cwd: f.root.to_string_lossy().into(),
+        prompt: "同じ元の作業を続ける".into(),
+        todo_id: Some(1),
+        options,
+    });
+    f.console
+        .dispatch(&mut state, &f.console.jobs().unwrap())
+        .unwrap();
+    assert_eq!(
+        f.launches(),
+        1,
+        "failures={:?}; suppressed={:?}",
+        state.preparation_failures,
+        state.suppressed
+    );
+    assert_eq!(
+        state.request_cwds["decision:source"],
+        f.root.to_string_lossy()
+    );
+    let run = model_run(&f);
+    let cwd = model_arg(&run, "--cwd").unwrap();
+    assert_ne!(cwd, f.root.to_string_lossy());
+    assert_eq!(
+        state.preparation_recovery["decision:source"]["workspace_resolution"]["selected_workspace"],
+        registered.to_string_lossy().as_ref()
+    );
+    assert_eq!(
+        fs::read(registered.join("source.txt")).unwrap(),
+        b"registered source"
+    );
+    assert!(!Path::new(&cwd).join("outside.txt").exists());
+    assert_eq!(
+        fs::read(f.root.join("outside.txt")).unwrap(),
+        b"ancestor data"
+    );
+}
+
+#[test]
+fn todo2164_unrelated_existing_workspace_is_never_replaced_by_registration() {
+    let (f, mut db, mut source, registered, artifact) = receipt_workspace_fixture();
+    source["todo_id"] = Value::Null;
+    source["related_todo_ids"] = json!([]);
+    db["items"][0]["stall_recovery"] = json!({"pending":{"workspace":{"cwd":artifact}}});
+    assert!(f
+        .console
+        .restored_workspace(
+            &db["items"][0],
+            Some(&source),
+            &db,
+            registered.to_str().unwrap()
+        )
+        .is_err());
+    assert!(!f
+        .console
+        .workspace_ancestor(artifact.to_str().unwrap(), registered.to_str().unwrap())
+        .unwrap());
+}
+
+#[test]
 fn todo2164_subwork_is_never_launched_through_the_unallocated_console_cli() {
     let f = todo1597_fixture("todo");
     let mut db = f.console.todos().unwrap();

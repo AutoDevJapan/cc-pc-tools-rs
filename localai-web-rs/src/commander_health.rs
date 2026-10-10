@@ -23,7 +23,12 @@ pub fn project(record: Option<&Value>, queue: &Value, now: u64, failed_read: boo
         "last_error"
     }]
     .as_str()
-    .filter(|e| !e.is_empty());
+    .filter(|e| !e.is_empty())
+    .or_else(|| {
+        record
+            .and_then(|v| v["previous_error"].as_str())
+            .filter(|e| !e.is_empty())
+    });
     let (status, detail) = if failed_read {
         ("attention", "司令塔の巡回記録を読み取れません。")
     } else if error.is_some() {
@@ -59,6 +64,15 @@ mod tests {
     #[test]
     fn distinguishes_unobserved_failure_expiry_and_actual_running_patrol() {
         let now = 1_000_000;
+        assert_eq!(
+            project(
+                Some(&json!({"started_at":999,"previous_error":"command_timeout"})),
+                &json!({}),
+                now,
+                false
+            )["status"],
+            "attention"
+        );
         assert_eq!(
             project(
                 Some(&json!({"started_at":900})),

@@ -1,30 +1,30 @@
 //! Local agent API and a durable, bounded delegation queue. No Discord credentials enter this module.
 use axum::{
+    Json,
     body::to_bytes,
     extract::{Request, State},
     http::{Method, StatusCode},
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard, TryLockError},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const LIMIT: usize = 128 * 1024;
+#[path = "command_capture.rs"]
+mod command_capture;
 #[path = "agent_workspace.rs"]
 mod source_workspace;
 #[path = "todo_receipts.rs"]
 mod todo_receipts;
-#[path = "command_capture.rs"]
-mod command_capture;
 const HISTORY_SECONDS: u64 = 7 * 24 * 60 * 60;
 const TODO_CONTEXT: &str = "\n共有ToDoの文脈:\n";
 const REQUEST_FORUM: &str = "1554771264298819675";
@@ -606,14 +606,16 @@ impl Console {
             {
                 let mut row = item.clone();
                 let links = item["jobs"].as_array().cloned().unwrap_or_default();
-                row["linked_jobs"] = json!(links
-                    .iter()
-                    .map(|id| jobs
+                row["linked_jobs"] = json!(
+                    links
                         .iter()
-                        .find(|j| j["id"] == *id)
-                        .map(public_job)
-                        .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
-                    .collect::<Vec<_>>());
+                        .map(|id| jobs
+                            .iter()
+                            .find(|j| j["id"] == *id)
+                            .map(public_job)
+                            .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
+                        .collect::<Vec<_>>()
+                );
                 let status = strv(item, "status");
                 if let Some(rows) = statuses[status].as_array_mut() {
                     rows.push(row);
@@ -625,7 +627,7 @@ impl Console {
         Ok(json!({"groups":groups,"items":db["items"],"projects":db["projects"]}))
     }
     fn ensure_todo(&self, v: &Value) -> Result<Value> {
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let request_id = field(v, "request_id", 100)?;
         if !safe_id(request_id, 100) {
@@ -960,6 +962,25 @@ impl Console {
             self.save(s)?;
         }
         Ok(())
+    }
+    fn queue_lock(&self) -> Result<MutexGuard<'_, ()>> {
+        if cc_ask::tick_runtime::remaining().is_none() {
+            return self.lock.lock().map_err(|_| io_fault());
+        }
+        loop {
+            cc_ask::tick_runtime::check().map_err(|_| {
+                fault(
+                    StatusCode::GATEWAY_TIMEOUT,
+                    "command_timeout",
+                    "共有状態の取得待ちが巡回の期限を超えました。",
+                )
+            })?;
+            match self.lock.try_lock() {
+                Ok(guard) => return Ok(guard),
+                Err(TryLockError::Poisoned(_)) => return Err(io_fault()),
+                Err(TryLockError::WouldBlock) => std::thread::sleep(Duration::from_millis(20)),
+            }
+        }
     }
     fn patrol_budget(&self, state: &QueueState) -> Result<()> {
         if cc_ask::tick_runtime::check().is_err() {
@@ -1995,7 +2016,7 @@ impl Console {
                         && owned_source
                         && source.is_some_and(|s| !same_folder(cwd, strv(s, "cwd"))) =>
                 {
-                    continue
+                    continue;
                 }
                 Err(_) => return Err(io_fault()),
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
@@ -2257,7 +2278,7 @@ impl Console {
             .filter(|l| !l.trim().is_empty())
             .map(|l| serde_json::from_str(l).map_err(|_| external()))
             .collect::<Result<_>>()?;
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
         self.maintain(&mut s, &self.jobs()?)?;
@@ -2341,7 +2362,7 @@ impl Console {
     }
     pub fn tick(&self) -> Result<()> {
         let result = {
-            let _guard = self.lock.lock().map_err(|_| io_fault())?;
+            let _guard = self.queue_lock()?;
             let _state_guard = self.state_guard()?;
             let mut s = self.read_state()?;
             self.tick_inner(&mut s)
@@ -2352,7 +2373,7 @@ impl Console {
         } else {
             Ok(())
         };
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
         self.maintain(&mut s, &self.jobs()?)?;
@@ -2406,7 +2427,7 @@ impl Console {
                 return self.todo_write(action, &v);
             }
         }
-        let _guard = self.lock.lock().map_err(|_| io_fault())?;
+        let _guard = self.queue_lock()?;
         let _state_guard = self.state_guard()?;
         let mut s = self.read_state()?;
         match (method.as_str(), path) {
@@ -3776,9 +3797,18 @@ pub async fn resident(console: Arc<Console>) {
         let c = console.clone();
         let started = now();
         let record = console.paths.state.join("commander-health.json");
+        let previous = fs::read(&record)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
+        let previous_error = previous
+            .get("error")
+            .filter(|v| v.is_string())
+            .or_else(|| previous.get("previous_error").filter(|v| v.is_string()))
+            .cloned();
         let _ = atomic_write(
             &record,
-            json!({"started_at":started,"pid":std::process::id()})
+            json!({"started_at":started,"pid":std::process::id(),"previous_error":previous_error})
                 .to_string()
                 .as_bytes(),
         );
@@ -3798,6 +3828,20 @@ pub async fn resident(console: Arc<Console>) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn resident_queue_mutex_wait_obeys_patrol_deadline_and_recovers() {
+        let fixture = Fixture::new();
+        let held = fixture.console.lock.lock().unwrap();
+        let deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::ZERO);
+        let error = match fixture.console.queue_lock() {
+            Err(e) => e,
+            Ok(_) => panic!("held lock must not be acquired"),
+        };
+        assert_eq!(error.code, "command_timeout");
+        drop(deadline);
+        drop(held);
+        assert!(fixture.console.queue_lock().is_ok());
+    }
     include!("delegation_model_tests.rs");
     include!("receipt_workspace_tests.rs");
     include!("resume_recovery_tests.rs");
@@ -4234,9 +4278,11 @@ mod tests {
         );
         state.prs = prs;
         state.prs_error = Some("test".into());
-        assert!(!detect(&f.console.jobs().unwrap(), &state)
-            .iter()
-            .any(|t| t.key.starts_with("pr:")));
+        assert!(
+            !detect(&f.console.jobs().unwrap(), &state)
+                .iter()
+                .any(|t| t.key.starts_with("pr:"))
+        );
     }
     #[test]
     fn pr_reviews_repeat_only_after_three_new_handoffs_and_survive_restart() {
@@ -4649,9 +4695,11 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|s| s == "run"))
             .unwrap();
-        assert!(launch
-            .windows(2)
-            .any(|pair| pair == ["--mcp-profile", "browser"]));
+        assert!(
+            launch
+                .windows(2)
+                .any(|pair| pair == ["--mcp-profile", "browser"])
+        );
     }
     #[test]
     fn inbox_does_not_redelegate_consumed_answers_after_question_closes() {
@@ -4809,13 +4857,14 @@ mod tests {
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
         assert_eq!(f.console.read_state().unwrap().queue.len(), 1);
-        assert!(!f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe"))));
+        assert!(
+            !f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe")))
+        );
         f.on();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 1);
@@ -4906,9 +4955,11 @@ mod tests {
         f.console.tick().unwrap();
         let calls = f.fake.calls.lock().unwrap();
         let launch = calls.iter().find(|c| c.iter().any(|a| a == "run")).unwrap();
-        assert!(launch
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            launch
+                .windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
         assert!(launch.windows(2).any(|p| p == ["--todo-id", "1"]));
         drop(calls);
         assert_eq!(f.console.todos().unwrap()["items"][0]["status"], "doing");
@@ -4957,9 +5008,10 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            run.windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
         assert!(run.windows(2).any(|p| p == ["--model", "gpt-6-sol"]));
         assert!(run.windows(2).any(|p| p == ["--effort", "max"]));
     }
@@ -5012,9 +5064,10 @@ mod tests {
         assert_eq!(jobs.len(), 2);
         assert_ne!(jobs[0]["cwd"], jobs[1]["cwd"]);
         assert_ne!(jobs[0]["cwd"], json!(f.root));
-        assert!(jobs
-            .iter()
-            .all(|j| Path::new(strv(j, "cwd")).join(".git").exists()));
+        assert!(
+            jobs.iter()
+                .all(|j| Path::new(strv(j, "cwd")).join(".git").exists())
+        );
         let calls = f.fake.calls.lock().unwrap();
         assert_eq!(
             calls
@@ -5188,9 +5241,10 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
+        assert!(
+            run.windows(2)
+                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
+        );
     }
     #[test]
     fn queued_message_becoming_an_open_question_is_not_launched() {
@@ -5217,12 +5271,13 @@ mod tests {
         .unwrap();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
-        assert!(f
-            .console
-            .read_state()
-            .unwrap()
-            .handled
-            .contains("discord:12:99"));
+        assert!(
+            f.console
+                .read_state()
+                .unwrap()
+                .handled
+                .contains("discord:12:99")
+        );
     }
     #[test]
     fn inbox_checkpoint_advances_only_after_persisting_and_deduplicates() {
@@ -5842,12 +5897,11 @@ mod tests {
         let path = f.console.paths.jobs.join(&id).join("job.json");
         let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         job["status"] = json!("succeeded");
-        job["finished_at"] = json!(chrono::DateTime::from_timestamp(
-            (now() - HISTORY_SECONDS) as i64,
-            0
-        )
-        .unwrap()
-        .to_rfc3339());
+        job["finished_at"] = json!(
+            chrono::DateTime::from_timestamp((now() - HISTORY_SECONDS) as i64, 0)
+                .unwrap()
+                .to_rfc3339()
+        );
         fs::write(&path, job.to_string()).unwrap();
         let mut s = f.console.read_state().unwrap();
         maintain_state(&mut s, &f.console.jobs().unwrap(), now());
@@ -5876,12 +5930,13 @@ mod tests {
         f.console.todo_write("done", &json!({"id":1})).unwrap();
         f.console.tick().unwrap();
         assert!(!f.console.read_state().unwrap().suppressed.is_empty());
-        assert!(!f
-            .console
-            .read_state()
-            .unwrap()
-            .launches
-            .contains_key("manual:one"));
+        assert!(
+            !f.console
+                .read_state()
+                .unwrap()
+                .launches
+                .contains_key("manual:one")
+        );
     }
     #[test]
     fn receipt_metadata_errors_cannot_create_another_item() {
@@ -6041,10 +6096,11 @@ mod tests {
             let f = Fixture::new();
             let body = json!({"request_id":"music-atomic","project":"demo","title":"合成曲の担当","note":"元の要求"});
             *f.fake.lose_receipt.lock().unwrap() = true;
-            assert!(f
-                .console
-                .api(&Method::POST, "todo/ensure", body.clone())
-                .is_err());
+            assert!(
+                f.console
+                    .api(&Method::POST, "todo/ensure", body.clone())
+                    .is_err()
+            );
             let paths = cc_todo::Paths::at(&f.console.paths.todo, &f.console.paths.jobs);
             {
                 let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(1)).unwrap();
@@ -6097,10 +6153,11 @@ mod tests {
         fs::write(&store, db.to_string()).unwrap();
         let body = json!({"request_id":"music-global","project":"demo","title":"合成曲の担当","note":"元の要求"});
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         let mut other = body.clone();
         other["project"] = json!("other");
         assert_eq!(
@@ -6161,10 +6218,11 @@ mod tests {
         let body = json!({"request_id":"music-test-once","project":"demo",
             "title":"合成曲の担当","note":"生成要求の合成確認"});
         *f.fake.fail_todo.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6174,10 +6232,11 @@ mod tests {
         );
         *f.fake.fail_todo.lock().unwrap() = false;
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(f
-            .console
-            .api(&Method::POST, "todo/ensure", body.clone())
-            .is_err());
+        assert!(
+            f.console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err()
+        );
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6221,9 +6280,11 @@ mod tests {
         );
         let mut invalid = body;
         invalid["request_id"] = json!("../outside");
-        assert!(restarted
-            .api(&Method::POST, "todo/ensure", invalid)
-            .is_err());
+        assert!(
+            restarted
+                .api(&Method::POST, "todo/ensure", invalid)
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -6302,15 +6363,19 @@ mod tests {
                         "2026-10-10T09:15:00+09:00"
                     );
                 }
-                "jobs" => assert!(response["data"]["jobs"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .all(|job| job["summary"] == "")),
-                _ => assert!(response["data"]["text"]
-                    .as_str()
-                    .unwrap()
-                    .contains("保存を確認\n  現在のメモ [非表示]")),
+                "jobs" => assert!(
+                    response["data"]["jobs"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .all(|job| job["summary"] == "")
+                ),
+                _ => assert!(
+                    response["data"]["text"]
+                        .as_str()
+                        .unwrap()
+                        .contains("保存を確認\n  現在のメモ [非表示]")
+                ),
             }
         }
         assert_eq!(
@@ -6470,13 +6535,14 @@ mod tests {
             f.http(Method::POST, "delegation/off", "{}").await.1["data"]["enabled"],
             false
         );
-        assert!(f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|c| c.iter().any(|a| a.ends_with("todo.exe"))));
+        assert!(
+            f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.iter().any(|a| a.ends_with("todo.exe")))
+        );
     }
     #[tokio::test]
     async fn agent_routes_reject_external_headers_and_oversized_bodies() {
@@ -6677,10 +6743,12 @@ mod tests {
             .dispatch(&mut s, &f.console.jobs().unwrap())
             .unwrap();
         assert_eq!(f.launches(), 1);
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!(s.launches["decision:source"])));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(s.launches["decision:source"]))
+        );
     }
     #[test]
     fn todo1597_intake_binds_source_before_dispatch_even_without_capacity() {
@@ -6782,10 +6850,11 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         assert_eq!(f.launches(), 1);
         let mut db = f.console.todos().unwrap();
         db["items"][0]["status"] = json!("block");
@@ -6809,10 +6878,11 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         let source = f.console.paths.jobs.join("source");
         let backup = f.root.join("source-backup");
         fs::rename(&source, &backup).unwrap();
@@ -6845,10 +6915,11 @@ mod tests {
         let mut s = f.console.read_state().unwrap();
         fs::rename(&state, &backup).unwrap();
         fs::create_dir(&state).unwrap();
-        assert!(f
-            .console
-            .dispatch(&mut s, &f.console.jobs().unwrap())
-            .is_err());
+        assert!(
+            f.console
+                .dispatch(&mut s, &f.console.jobs().unwrap())
+                .is_err()
+        );
         assert_eq!(f.launches(), 0);
         fs::remove_dir(&state).unwrap();
         fs::rename(backup, state).unwrap();
@@ -6943,27 +7014,32 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|v| v == "run"))
             .unwrap();
-        assert!(run
-            .windows(2)
-            .any(|pair| pair == ["--cwd", restored.to_str().unwrap()]));
-        assert!(run
-            .windows(2)
-            .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"]));
+        assert!(
+            run.windows(2)
+                .any(|pair| pair == ["--cwd", restored.to_str().unwrap()])
+        );
+        assert!(
+            run.windows(2)
+                .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"])
+        );
         let prompt = &run[run.iter().position(|v| v == "--prompt-file").unwrap() + 1];
         assert!(fs::read_to_string(prompt).unwrap().contains("#1 [todo]"));
         drop(calls);
         assert!(state.queue.is_empty());
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!(state.launches["decision:source"])));
-        assert!(f
-            .fake
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) }));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(state.launches["decision:source"]))
+        );
+        assert!(
+            f.fake
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) })
+        );
     }
 
     #[test]
@@ -7056,10 +7132,12 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert!(state.launches.contains_key("manual:formal-other"));
-        assert!(!state
-            .queue
-            .iter()
-            .any(|entry| entry.key == "decision:source"));
+        assert!(
+            !state
+                .queue
+                .iter()
+                .any(|entry| entry.key == "decision:source")
+        );
         assert_eq!(state.last_error.as_deref(), Some("state_capacity_exceeded"));
     }
 
@@ -7092,10 +7170,12 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert_eq!(state.queue.len(), 499);
-        assert!(state
-            .queue
-            .iter()
-            .all(|entry| entry.key.starts_with("decision:missing-")));
+        assert!(
+            state
+                .queue
+                .iter()
+                .all(|entry| entry.key.starts_with("decision:missing-"))
+        );
         assert!(state.launches.contains_key("manual:formal-other"));
         assert_eq!(state.last_error.as_deref(), Some("queue_full"));
     }
@@ -7432,10 +7512,12 @@ mod tests {
         fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
         f.console.link_todos(&mut state).unwrap();
         assert!(state.pending_links.is_empty());
-        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("worker")));
+        assert!(
+            f.console.todos().unwrap()["items"][0]["jobs"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("worker"))
+        );
         assert_eq!(f.launches(), 0);
     }
     #[test]

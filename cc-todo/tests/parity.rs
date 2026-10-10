@@ -11,6 +11,20 @@ use std::{
 };
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[test]
+fn explicit_wait_replaces_automatic_owner_provenance() {
+    let temp = Temp::new();
+    let mut db = json!({"items":[{"id":1,"status":"wait","wait_on":[2],"work_owner_job":"owner","work_owner_wait_on":2,"spec":"saved","work_owner_wait_history":[{"reason":"old"}]},{"id":2,"status":"todo"}]});
+    execute(&mut db, &cli(&["wait", "1", "--on", "2"]), &temp.paths()).unwrap();
+    assert!(db["items"][0]["work_owner_job"].is_null());
+    assert!(db["items"][0]["work_owner_wait_on"].is_null());
+    assert_eq!(db["items"][0]["wait_on"], json!([2]));
+    assert_eq!(db["items"][0]["spec"], "saved");
+    assert_eq!(
+        db["items"][0]["work_owner_wait_history"][0]["reason"],
+        "old"
+    );
+}
 fn rename_fixture() -> Value {
     json!({"projects":{"old":{"path":"C:/old","unknown":[1,2]},"other":"C:/other"},
     "items":[{"id":1,"project":"old","title":"【old】Re-Xの画面を直す","note":"oldの記録 https://host/old old_API C:/old/a","notes":"oldを確認","status":"doing","jobs":["active"],"progress":50,"wait_on":[7],"updated":"unchanged","spec":"C:/old/spec.md","scheduler":{"key":"old-key","unknown":true},"unknown":[1]},

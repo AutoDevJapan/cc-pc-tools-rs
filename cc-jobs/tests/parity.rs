@@ -1815,6 +1815,90 @@ mod queue_regressions {
         assert!(t.ctx.admit("later").unwrap().is_some());
     }
     #[test]
+    fn legacy_home_git_wait_is_reevaluated_and_archived_without_rewaiting() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into());
+        assert!(
+            std::process::Command::new("git")
+                .arg("init")
+                .arg(&t.ctx.root)
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let a = t.ctx.root.join("a");
+        let b = t.ctx.root.join("b");
+        fs::create_dir(&a).unwrap();
+        fs::create_dir(&b).unwrap();
+        let db = json!({"projects":{"a":a,"b":b},"items":[{"id":880,"status":"todo"},{"id":1595,"status":"wait","wait_on":[880],"work_owner_job":"first","work_owner_wait_on":880,"jobs":["later"]}]});
+        fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+        let identity = json!({"worktree":cc_job_policy::work_owner::norm(&t.ctx.root),"git_common":cc_job_policy::work_owner::norm(&t.ctx.root.join(".git")),"root_kind":"user_home","branch":"fix/other"});
+        let mut first = waiting(&t, "first", "orch-first");
+        first["todo_id"] = json!(880);
+        first["cwd"] = json!(a);
+        first["project"] = json!("a");
+        first["work_owner"] = identity.clone();
+        first["status"] = json!("succeeded");
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "orch-later");
+        later["todo_id"] = json!(1595);
+        later["cwd"] = json!(b);
+        later["project"] = json!("b");
+        later["work_owner"] = identity;
+        later["work_wait_on"] = json!([880]);
+        later["queue_wait_reason"] = json!({"code":"todo_dependency"});
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_some());
+        let saved = t.ctx.load("later").unwrap();
+        assert_eq!(saved["work_wait_on"], json!([]));
+        assert_eq!(saved["work_wait_history"][0]["wait_on"], json!([880]));
+        assert_eq!(saved["work_owner"]["scope"], "registered_folder");
+        assert!(saved["queue_wait_reason"].is_null());
+        // Admission reads the current ToDo store but never rewrites it outside its lock.
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(t.ctx.root.join("todo.json")).unwrap())
+                .unwrap(),
+            db
+        );
+    }
+    #[test]
+    fn manual_db_wait_survives_disproved_automatic_queue_wait() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into());
+        let db = json!({"items":[{"id":880,"status":"todo"},{"id":1595,"status":"wait","wait_on":[880],"work_owner_job":"first","jobs":["later"]}]});
+        fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+        let mut first = waiting(&t, "first", "orch-first");
+        first["todo_id"] = json!(880);
+        first["work_owner"] = json!({"worktree":"/a"});
+        first["status"] = json!("succeeded");
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "orch-later");
+        later["todo_id"] = json!(1595);
+        later["work_owner"] = json!({"worktree":"/b"});
+        later["work_wait_on"] = json!([880]);
+        later["queue_wait_reason"] = json!({"code":"work_owner","owner_job_id":"first"});
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        let saved = t.ctx.load("later").unwrap();
+        assert_eq!(saved["work_wait_on"], json!([]));
+        assert_eq!(saved["queue_wait_reason"]["code"], "todo_dependency");
+        assert_eq!(saved["queue_wait_reason"]["wait_on"], json!([880]));
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(t.ctx.root.join("todo.json")).unwrap())
+                .unwrap(),
+            db
+        );
+    }
+    #[test]
     fn git_metadata_recognizes_subdirectories_and_linked_worktrees_without_shells() {
         let t = Test::new();
         let git = t.ctx.root.join(".git");

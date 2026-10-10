@@ -112,6 +112,14 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
         if item["status"] != "wait" {
             continue;
         }
+        release_item(item);
+        released.push(id);
+    }
+    released
+}
+/// An exhausted automatic owner edge uses the same normal resumption path.
+pub fn release_item(item: &mut Value) {
+    if item["status"] == "wait" {
         item["status"] = json!("todo");
         item["dependency_ready"] = json!(true);
         item["dependency_generation"] = json!(
@@ -137,9 +145,7 @@ pub fn release_ready(db: &mut Value) -> Vec<i64> {
         item.as_object_mut()
             .unwrap()
             .remove("discord_restart_not_before");
-        released.push(id);
     }
-    released
 }
 
 /// Exact job ownership; never infer a dependency from arbitrary prompt text.

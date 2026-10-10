@@ -860,6 +860,7 @@ impl Context {
                 .ok_or_else(|| Error::new("invalid --pr-url"))?;
             job["work_owner"]["repository"] = target["repository"].clone();
             job["work_owner"]["pr"] = target["pr"].clone();
+            job["work_owner"]["explicit_pr"] = target;
         }
         let store = self.todo_store();
         if store.exists() {

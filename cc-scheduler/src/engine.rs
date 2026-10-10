@@ -19,7 +19,8 @@ fn launch_inputs(item: &Value) -> Value {
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
-        "console_request":item["scheduler"]["console_request"]})
+        "console_request":item["scheduler"]["console_request"],
+        "console_fresh_request":item["scheduler"]["console_fresh_request"]})
 }
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
@@ -869,8 +870,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         let jobs = self.backend.jobs()?;
         let source = jobs.iter().find(|j| {
-            (j["id"] == item["scheduler"]["last_job"]
-                || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
+            !truth(&item["scheduler"]["console_fresh_request"])
+                && (j["id"] == item["scheduler"]["last_job"]
+                    || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
                 && owns_workspace(&item, j)
         });
         let mut resume_session = source.and_then(|j| {
@@ -1069,6 +1071,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     row["scheduler"] = json!({});
                 }
                 row["scheduler"]["console_request"] = request.clone();
+                if old.is_object() && old != request {
+                    // A new accepted body starts its own conversation. The files
+                    // and all earlier receipts remain, but their conversation does not.
+                    row["scheduler"]["console_fresh_request"] = json!(true);
+                }
                 if !truth(&row["scheduler"]["key"]) {
                     row["scheduler"]["key"] = request["launch_key"].clone();
                 }

@@ -152,6 +152,16 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
         .iter_mut()
         .find(|j| j["id"] == recovered)
         .unwrap()["status"] = json!("succeeded");
+    let previous_cwd = f.get(2)["scheduler"]["worktree"].clone();
+    let previous =
+        f.e.backend
+            .records
+            .iter_mut()
+            .find(|j| j["id"] == recovered)
+            .unwrap();
+    previous["cwd"] = previous_cwd;
+    previous["thread_id"] = json!("11111111-1111-4111-8111-111111111111");
+    previous["last_message"] = json!("状態: 継続中\nFirst body");
     f.e.requeue(&json!(2), &json!(recovered), "failed").unwrap();
     f.e.backend.clock += 3600.;
     assert!(f
@@ -168,6 +178,7 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
         .as_str()
         .unwrap()
         .contains("First body"));
+    assert!(f.e.backend.launched[1]["item"]["scheduler"]["resume_session"].is_null());
     // Replaying the first receipt still identifies its own job after later work.
     assert_eq!(
         f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)

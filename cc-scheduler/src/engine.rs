@@ -895,7 +895,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             );
         }
         prompt += &format!("\n依頼:\n{text}");
-        if let Some(body) = item["scheduler"]["console_request"]["prompt"].as_str() {
+        if let Some(body) = item["scheduler"]["console_request"]["prompt"]
+            .as_str()
+            .filter(|_| {
+                item["scheduler"]["console_receipts"]
+                    [s(&item["scheduler"]["console_request"]["key"])]["launch_key"]
+                    == item["scheduler"]["key"]
+            })
+        {
             prompt += &format!("\n受付済みの引き継ぎ本文:\n{body}\n");
         }
         if item["subwork"].is_object() {
@@ -1020,17 +1027,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if !item["subwork"].is_object() {
             return Err(Error("InvalidSubwork"));
         }
-        let old = &item["scheduler"]["console_request"];
-        if old.is_object() && old != request {
+        let receipt = &item["scheduler"]["console_receipts"][s(&request["key"])];
+        if receipt.is_object() && receipt["request"] != *request {
             return Err(Error("InputRejected"));
         }
+        let jobs = self.backend.jobs()?;
         // Recover a response lost after the launcher accepted the exact reservation.
-        if old == request {
-            if let Some(job) = self
-                .backend
-                .jobs()?
+        if receipt.is_object() {
+            if let Some(job) = jobs
                 .iter()
-                .find(|j| j["launch_key"] == item["scheduler"]["key"] && j["todo_id"] == id)
+                .find(|j| j["launch_key"] == receipt["launch_key"] && j["todo_id"] == id)
             {
                 return Ok(Some(s(&job["id"]).to_string()));
             }
@@ -1040,6 +1046,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             || n(&item["scheduler"]["not_before"]) > self.backend.clock()
         {
             return Ok(None);
+        }
+        let old = &item["scheduler"]["console_request"];
+        if old.is_object() && old != request {
+            let previous = &item["scheduler"]["console_receipts"][s(&old["key"])];
+            // Distinct bodies wait for the previous real job, retaining both receipts.
+            // Never overwrite an unlaunched reservation or reuse its launch key.
+            if !jobs.iter().any(|j| {
+                j["launch_key"] == previous["launch_key"] && j["todo_id"] == id && !live(j)
+            }) || (truth(&item["scheduler"]["key"])
+                && jobs
+                    .iter()
+                    .any(|j| j["launch_key"] == item["scheduler"]["key"]))
+            {
+                return Ok(None);
+            }
         }
         let inputs = launch_inputs(&item);
         let saved = self.edit(&json!(id), |row| {
@@ -1051,6 +1072,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 if !truth(&row["scheduler"]["key"]) {
                     row["scheduler"]["key"] = request["launch_key"].clone();
                 }
+                if !row["scheduler"]["console_receipts"].is_object() {
+                    row["scheduler"]["console_receipts"] = json!({});
+                }
+                row["scheduler"]["console_receipts"][s(&request["key"])] =
+                    json!({"request":request,"launch_key":row["scheduler"]["key"]});
             }
         })?;
         if saved["scheduler"]["console_request"] != *request {

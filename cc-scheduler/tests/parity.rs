@@ -98,6 +98,93 @@ fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
 }
 
 #[test]
+fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    sub.jobs[0]["pid"] = json!(1);
+    sub.jobs[0]["created_at"] = json!(T - 1200.);
+    sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+    let mut f = Fixture::new();
+    f.e.backend.records = sub.jobs.clone();
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let first = json!({"key":"manual:first","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prompt":"First body"});
+    let second = json!({"key":"manual:second","launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prompt":"Second body"});
+    f.e.backend.m["cpu_percent"] = json!(99);
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    assert_eq!(f.get(2)["scheduler"]["console_request"], first);
+    f.e.backend.m = measurement();
+    f.e.backend.clock += n(&f.cfg["cpu_window_s"]) + 1.;
+    f.e.backend.crash_after_launch = true;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+        .is_err());
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let recovered =
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap()
+            .unwrap();
+    let key = f.get(2)["scheduler"]["key"].clone();
+    let job =
+        f.e.backend
+            .records
+            .iter()
+            .find(|j| j["id"] == recovered)
+            .unwrap()
+            .clone();
+    f.e.link(&json!(2), &job, &key).unwrap();
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    f.e.backend
+        .records
+        .iter_mut()
+        .find(|j| j["id"] == recovered)
+        .unwrap()["status"] = json!("succeeded");
+    f.e.requeue(&json!(2), &json!(recovered), "failed").unwrap();
+    f.e.backend.clock += 3600.;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+        .unwrap()
+        .is_some());
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert!(f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Second body"));
+    assert!(!f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("First body"));
+    // Replaying the first receipt still identifies its own job after later work.
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        Some(recovered)
+    );
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.get(2)["scheduler"]["console_receipts"]
+            .as_object()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[test]
 fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
     for gate in ["open", "cargo", "cpu", "memory", "interval"] {
         let mut sub = subwork_support::Fixture::new();

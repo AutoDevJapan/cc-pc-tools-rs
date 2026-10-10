@@ -1035,12 +1035,8 @@ impl Console {
             }
             let scheduler_key = t
                 .todo_id
-                .and_then(|id| {
-                    db["items"].as_array()?.iter().find(|i| {
-                        i["id"] == id && i["scheduler"]["console_request"]["key"] == t.key
-                    })
-                })
-                .and_then(|i| i["scheduler"]["key"].as_str());
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id))
+                .and_then(|i| i["scheduler"]["console_receipts"][&t.key]["launch_key"].as_str());
             if let Some(job) = jobs.iter().find(|j| {
                 j["launch_key"] == key_hash(&t.key)
                     || scheduler_key.is_some_and(|key| {

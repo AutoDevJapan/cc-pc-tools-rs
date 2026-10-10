@@ -13,9 +13,8 @@
 
 保存済みsubwork関係がある受付は、Consoleによる複製・直接CLI起動の前に
 共通scheduler.lockを保持してSchedulerへ渡す。受付本文・受付識別子は
-scheduler.console_requestに保存し、元specと一緒に起動指示へ含める。
+scheduler.console_requestと受付別のconsole_receiptsに保存し、元specと一緒に起動指示へ含める。
 Schedulerの通常の準備・親所有照合・CPU/メモリ/起動間隔・資源割当・
 subwork_admission保存・CLI起動を使う。資源待ちでは受付を残す。
 既存Schedulerの起動キーは保持し、応答喪失後はそのキーと元ToDo番号から
 実ジョブを照合して元Console受付へ結び直す。受付保存だけでは実開始と数えない。
-

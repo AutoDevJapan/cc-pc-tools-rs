@@ -198,7 +198,7 @@ fn todo2164_subwork_reconciles_scheduler_key_after_console_response_loss() {
     let f = todo1597_fixture("doing");
     let mut db = f.console.todos().unwrap();
     db["items"][0]["scheduler"] = json!({"key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "console_request":{"key":"decision:source"}});
+        "console_receipts":{"decision:source":{"launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}});
     fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
     f.job("scheduler-worker", "todo-1", "running", "", "");
     let path = f.console.paths.jobs.join("scheduler-worker/job.json");

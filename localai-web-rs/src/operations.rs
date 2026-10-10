@@ -528,7 +528,7 @@ fn collect(root: &Path, now: u64) -> Value {
         let unknown = key == "guard"
             || !matches!(key, "relay" | "discord")
             || (key == "discord"
-                && root.join("discord-ask/tick-health.json").try_exists() == Ok(false));
+                && root.join("discord-ask/tick-health.json").try_exists().is_ok_and(|exists| !exists));
         let label = clean(&names, text(tool, "name"));
         let mut resident_source = source(
             key,

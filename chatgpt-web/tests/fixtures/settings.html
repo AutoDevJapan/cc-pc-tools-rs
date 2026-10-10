@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ChatGPT</title></head><body>
+<button aria-label="Open profile menu">Profile</button>
+<main><div id="prompt-textarea" contenteditable="true"></div></main>
+<script>
+document.querySelector('button').addEventListener('pointerdown', () => {
+  setTimeout(() => {
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = '<button role="menuitem">Settings</button>';
+    document.body.append(menu);
+    menu.querySelector('button').onclick = () => {
+      menu.remove();
+      setTimeout(() => {
+        const nav = document.createElement('nav');
+        nav.innerHTML = '<h1>Settings</h1><button>Account</button><button>Billing</button>';
+        document.body.append(nav);
+        document.querySelector('main').innerHTML = '<h1>General</h1>';
+        nav.lastElementChild.onclick = () => {
+          setTimeout(() => {
+            document.querySelector('main').innerHTML = '<h1>Billing</h1><div class="group/settings"><div class="font-medium">ChatGPT Plus</div></div>';
+          }, 100);
+        };
+      }, 100);
+    };
+  }, 100);
+});
+</script></body></html>

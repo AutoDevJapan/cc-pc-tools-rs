@@ -38,6 +38,21 @@ fn run() -> io::Result<()> {
         Some("finish") if args.len() == 2 && cc_chrome::safe_job(&args[1]) => {
             println!("{:?}", cc_chrome::sweep(&jobs, Some(&args[1]), false)?)
         }
+        Some(command @ ("close" | "keep")) if args.len() == 4 => {
+            let report = cc_chrome::completion::complete(
+                &jobs,
+                &args[1],
+                &args[2],
+                command == "close",
+                &args[3],
+            )?;
+            println!("{report:?}");
+            if report.failed > 0 || report.deferred {
+                return Err(io::Error::other(
+                    "tab completion pending; existing sweep will retry",
+                ));
+            }
+        }
         #[cfg(windows)]
         Some("open") if args.len() == 3 && cc_chrome::safe_job(&args[1]) => {
             let dir = jobs.join(&args[1]);
@@ -53,7 +68,7 @@ fn run() -> io::Result<()> {
         }
         _ => {
             return Err(io::Error::other(
-                "usage: owner_chrome open <job-id> <url> | finish <job-id> | sweep [--dry-run]",
+                "usage: owner_chrome open <job-id> <url> | close <job-id> <record-uuid> <reason> | keep <job-id> <record-uuid> <owner-instruction> | finish <job-id> | inventory | sweep [--dry-run]",
             ));
         }
     }

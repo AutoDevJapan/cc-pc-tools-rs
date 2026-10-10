@@ -201,6 +201,13 @@ pub fn inventory() -> io::Result<Value> {
 }
 pub struct NativeCloser;
 impl Closer for NativeCloser {
+    fn absent(&mut self, r: &Record) -> io::Result<bool> {
+        runtime()?.block_on(async {
+            tokio::time::timeout(Duration::from_secs(3), absent_record(r))
+                .await
+                .map_err(|_| io::Error::other("tab absence check timed out"))?
+        })
+    }
     fn owner_running(&mut self, job: &Value) -> Option<bool> {
         let mut unknown = false;
         // pid is the admission supervisor: it remains alive while a worker is queued.
@@ -285,6 +292,25 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     }
     Ok(true)
 }
+async fn absent_record(r: &Record) -> io::Result<bool> {
+    let (pipe, _) = discover_for(Some(r), true).await?;
+    let mut rpc = Rpc::connect(&pipe).await?;
+    let before = rpc.call("getInfo", r.params()).await?;
+    if !r.matches_backend(&before) {
+        return retired_record_absent(&mut rpc, r, &before)
+            .await
+            .map(|gone| !gone);
+    }
+    let tabs = rpc.call("getUserTabs", r.params()).await?;
+    let absent = !has_tab(&tabs, r.tab)?;
+    let after = rpc.call("getInfo", r.params()).await?;
+    if !r.matches_backend(&after) {
+        return Err(io::Error::other(
+            "browser identity changed during absence check",
+        ));
+    }
+    Ok(absent)
+}
 fn same_instance(r: &Record, info: &Value) -> bool {
     !r.instance.is_empty()
         && !r.generation.is_empty()
@@ -334,6 +360,16 @@ fn has_tab(tabs: &Value, id: u64) -> io::Result<bool> {
     let tabs = tabs
         .as_array()
         .ok_or_else(|| io::Error::other("invalid full tab inventory"))?;
+    for t in tabs {
+        if !["id", "providerTabId", "tabId"].iter().any(|key| {
+            t[*key]
+                .as_u64()
+                .or_else(|| t[*key].as_str()?.parse().ok())
+                .is_some_and(|n| n > 0)
+        }) {
+            return Err(io::Error::other("invalid full tab identity"));
+        }
+    }
     Ok(tabs.iter().any(|t| {
         ["id", "providerTabId", "tabId"]
             .iter()
@@ -699,6 +735,19 @@ pub fn close_page(record: &Record) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn malformed_inventory_cannot_prove_a_recorded_tab_absent() {
+        for tabs in [
+            json!([{}]),
+            json!([{"id":0}]),
+            json!([{"id":"invalid"}]),
+            json!({}),
+        ] {
+            assert!(has_tab(&tabs, 11).is_err());
+        }
+        assert!(has_tab(&json!([{"providerTabId":"11"},{"tabId":99}]), 11).unwrap());
+        assert!(!has_tab(&json!([]), 11).unwrap());
+    }
     #[test]
     fn incomplete_connection_identity_is_rejected_before_creation() {
         let valid = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});

@@ -45,7 +45,10 @@ pub fn recovery_session<'a>(
         let session = s(&job["thread_id"]);
         (truth(&item["scheduler"]["resume"])
             && owns_workspace(item, job)
-            && matches!(s(&job["status"]), "failed" | "lost" | "cancelled")
+            && matches!(
+                s(&job["status"]),
+                "failed" | "lost" | "cancelled" | "canceled"
+            )
             && crate::policy::valid_session(session)
             && norm(s(&job["cwd"])) == norm(cwd)
             && !jobs.iter().any(|j| {

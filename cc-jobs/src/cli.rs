@@ -1237,12 +1237,12 @@ impl Context {
         ));
         on.sort_unstable();
         on.dedup();
-        let outcome = if job["cancel_requested"] == true
-            || (["cancelled", "lost"].contains(&s(&job, "status"))
-                && ["manual", "person"].contains(&s(&job, "cancel_reason")))
-        {
+        let outcome = if cc_job_policy::cancellation::owner_stopped(&Value::Null, &job) {
             Some(json!({"outcome":"owner_stopped","job":a.id}))
-        } else if !on.is_empty() && job["recovery_cancel"]["key"] != key {
+        } else if !on.is_empty()
+            && (job["recovery_cancel"]["key"] != key
+                || !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job))
+        {
             Some(json!({"outcome":"deferred","job":a.id,"wait_on":on}))
         } else if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
             Some(json!({"outcome":"already_terminal","job":a.id}))
@@ -1286,8 +1286,15 @@ impl Context {
                 s(&job, "status")
             )));
         }
-        if recovery && job["cancel_requested"] == true {
+        if recovery && cc_job_policy::cancellation::owner_stopped(&Value::Null, &job) {
             return Err(Error::new("job was explicitly cancelled"));
+        }
+        if recovery && !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job) {
+            // Plain scheduler/watchdog recovery uses this path as well as the
+            // guarded console path. Save intent before killing, under state.lock.
+            job["recovery_cancel"] =
+                json!({"key":format!("recovery-{jid}"),"committed_at":self.rt.now()});
+            self.save(&job)?;
         }
         if !recovery {
             // Save cancellation intent before killing; restart uses the same job lock.

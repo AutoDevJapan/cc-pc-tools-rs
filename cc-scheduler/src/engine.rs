@@ -4,7 +4,7 @@ use crate::{
     common::*,
     policy::*,
 };
-use cc_job_policy::todo_wait;
+use cc_job_policy::{cancellation, todo_wait};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -346,7 +346,7 @@ impl<B: Backend> Scheduler<B> {
         {
             return Ok(());
         }
-        if self.backend.cancel(j)? {
+        if self.backend.cancel_for_recovery(j)? {
             self.requeue(&i["id"], &j["id"], reason)?;
         } else {
             self.log(
@@ -560,6 +560,37 @@ impl<B: Backend> Scheduler<B> {
         if !live(j) && result_received(i, &j["id"]) {
             return Ok(());
         }
+        if matches!(
+            s(&j["status"]),
+            "lost" | "failed" | "cancelled" | "canceled"
+        ) && (cancellation::blocks_recovery(i, j)
+            || (truth(&m["question"]) && !truth(&m["answer"]))
+            || (truth(&m["answer"])
+                && ["停止したまま", "再開しない", "止めておく"]
+                    .iter()
+                    .any(|text| s(&i["note"]).contains(text)))
+            || crate::backend::result_outcome(s(&j["last_message"])) == "block")
+        {
+            self.edit(&i["id"], |row| {
+                if row["status"] != i["status"]
+                    || row["scheduler"] != i["scheduler"]
+                    || row["resume_generation"] != i["resume_generation"]
+                {
+                    return;
+                }
+                if park_waiting(row, Some(&j["id"])) {
+                    return;
+                }
+                row["status"] = json!("block");
+                if !truth(&m["question"]) {
+                    row["note"] = json!(
+                        "担当ジョブが取り消されました。再開する場合は担当者が確認してください。"
+                    );
+                }
+                row["scheduler"]["phase"] = json!("cancelled");
+            })?;
+            return Ok(());
+        }
         let saved_until = (i["scheduler"]["resource_wait"]["job"] == j["id"])
             .then(|| i["scheduler"]["resource_wait"]["until"].as_f64())
             .flatten();
@@ -615,11 +646,10 @@ impl<B: Backend> Scheduler<B> {
             if hung {
                 self.cancel_for(i, j, "hung", cfg)?;
             }
-        } else if matches!(s(&j["status"]), "lost" | "cancelled" | "failed") {
-            if s(&j["status"]) == "cancelled" && !truth(&m["pending_cancel"]) {
-                self.edit(&i["id"],|row|{if s(&row["status"])=="doing"&&row["scheduler"]["job"]==j["id"]{if park_waiting(row,Some(&j["id"])){return;}merge(row,json!({"status":"block","note":"担当ジョブが取り消されました。再開する場合は担当者が確認してください。"}));row["scheduler"]["phase"]=json!("cancelled");}})?;
-                return Ok(());
-            }
+        } else if matches!(
+            s(&j["status"]),
+            "lost" | "cancelled" | "canceled" | "failed"
+        ) {
             self.requeue(
                 &i["id"],
                 &j["id"],
@@ -933,6 +963,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             } else {
                 self.backend.pick(&task)?
             };
+        }
+        // Automatic termination does not authorize routing the saved work to a
+        // different model or widening its sandbox. Explicit new inputs still win.
+        if let Some(source) = source.filter(|source| cancellation::recovery_cancel(&item, source)) {
+            for field in ["model", "effort", "sandbox"] {
+                if !truth(&item[field]) && !truth(&accepted_options[field]) && truth(&source[field])
+                {
+                    selection[field] = source[field].clone();
+                }
+            }
         }
         // A cached selection is only a default, never authority over an explicit ToDo.
         for k in ["model", "effort"] {

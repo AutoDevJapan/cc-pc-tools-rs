@@ -1412,6 +1412,11 @@ impl Backend for Fake {
         }
         Ok(self.cancel_ok)
     }
+    fn cancel_for_recovery(&mut self, j: &mut Value) -> Result<bool> {
+        j["recovery_cancel"] =
+            json!({"key":"scheduler-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        self.cancel(j)
+    }
     fn kill_orphan(&mut self, c: &Value) -> Result<bool> {
         self.killed.push(c["pid"].clone());
         Ok(true)
@@ -2202,6 +2207,181 @@ fn todo1842_explicit_model_overrides_saved_selection() {
     assert_eq!(selection["model"], "gpt-6-astra");
     assert_eq!(selection["effort"], "high");
     assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn durable_automatic_cancel_reconciles_and_prepares_original_work_without_pending() {
+    for status in ["cancelled", "canceled"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let original = f.get(1);
+        let cwd = s(&original["scheduler"]["worktree"]).to_owned();
+        fs::create_dir_all(&cwd).unwrap();
+        let uncommitted = Path::new(&cwd).join("uncommitted.txt");
+        fs::write(&uncommitted, "saved work").unwrap();
+        let source = &mut f.e.backend.records[0];
+        source["status"] = json!(status);
+        source["recovery_cancel"] =
+            json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        source["cwd"] = json!(cwd);
+        source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        source["model"] = json!("gpt-6.1-sol");
+        source["effort"] = json!("high");
+        source["sandbox"] = json!("read-only");
+        let saved_source = source.clone();
+        f.e.backend.ps.clear();
+        // The same job is eligible in the watchdog after item-side intent vanished.
+        let mut copy = f.e.todo().unwrap();
+        cc_todo::recovery::plan(
+            &mut copy,
+            &[saved_source.clone()],
+            &Processes::new(),
+            T + 2000.,
+            "",
+        )
+        .unwrap();
+        assert!(copy["items"][0]["stall_recovery"]["pending"].is_object());
+        f.reconcile();
+        let row = f.get(1);
+        assert_eq!(row["status"], "todo");
+        assert_eq!(row["scheduler"]["last_job"], "j1");
+        assert_eq!(
+            row["scheduler"]["worktree"],
+            original["scheduler"]["worktree"]
+        );
+        assert_eq!(row["spec"], original["spec"]);
+        assert_eq!(f.e.backend.records[0], saved_source);
+        f.e.backend.clock += 301.;
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            prepared["scheduler"]["resume_session"],
+            saved_source["thread_id"]
+        );
+        assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+        assert_eq!(prepared["scheduler"]["selection"]["effort"], "high");
+        assert_eq!(prepared["scheduler"]["selection"]["sandbox"], "read-only");
+        assert_eq!(fs::read_to_string(&uncommitted).unwrap(), "saved work");
+    }
+}
+
+#[test]
+fn automatic_cancel_never_overrides_explicit_stop_unknown_cancel_or_question() {
+    for hold in [
+        "manual",
+        "person",
+        "cancel_requested",
+        "item_stopped",
+        "question",
+        "unknown",
+        "owner_result",
+    ] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let source = &mut f.e.backend.records[0];
+        source["status"] = json!("cancelled");
+        if hold != "unknown" {
+            source["recovery_cancel"] =
+                json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        }
+        match hold {
+            "manual" | "person" => source["cancel_reason"] = json!(hold),
+            "cancel_requested" => source["cancel_requested"] = json!(true),
+            "owner_result" => {
+                source["last_message"] =
+                    json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 停止")
+            }
+            _ => {}
+        }
+        f.e.edit(&json!(1), |row| {
+            if hold == "item_stopped" {
+                row["stopped"] = json!(true);
+            }
+            if hold == "question" {
+                row["scheduler"]["question"] = json!("saved-question");
+                row["note"] = json!("公開先の回答を待っています");
+            }
+        })
+        .unwrap();
+        let mut copy = f.e.todo().unwrap();
+        assert!(
+            cc_todo::recovery::plan(
+                &mut copy,
+                &f.e.backend.records,
+                &Processes::new(),
+                T + 2000.,
+                ""
+            )
+            .unwrap()
+            .is_empty(),
+            "{hold}"
+        );
+        f.e.backend.ps.clear();
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "block", "{hold}");
+        f.e.backend.clock += 3601.;
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty(), "{hold}");
+        if hold == "question" {
+            assert_eq!(f.get(1)["scheduler"]["question"], "saved-question");
+            assert_eq!(f.get(1)["note"], "公開先の回答を待っています");
+        }
+    }
+}
+
+#[test]
+fn automatic_cancel_keeps_dependency_and_explicit_launch_deadline() {
+    for dependency in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.put(item(2, "other", "todo", &[]));
+        f.e.backend.records[0]["status"] = json!("cancelled");
+        f.e.backend.records[0]["recovery_cancel"] =
+            json!({"key":"intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        f.e.edit(&json!(1), |row| {
+            row["scheduler"]["not_before"] = json!(T + 10000.);
+            if dependency {
+                row["wait_on"] = json!([2]);
+            }
+        })
+        .unwrap();
+        let mut copy = f.e.todo().unwrap();
+        let selected = cc_todo::recovery::plan(
+            &mut copy,
+            &f.e.backend.records,
+            &Processes::new(),
+            T + 2000.,
+            "",
+        )
+        .unwrap();
+        assert!(!selected.contains(&1));
+        f.e.backend.ps.clear();
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], if dependency { "wait" } else { "todo" });
+        assert_eq!(f.get(1)["scheduler"]["not_before"], T + 10000.);
+        if dependency {
+            assert_eq!(f.get(1)["wait_on"], json!([2]));
+        }
+    }
+}
+
+#[test]
+fn scheduler_automatic_stop_uses_recovery_cancellation_and_persists_its_intent() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let mut source = f.e.backend.records[0].clone();
+    f.e.cancel_for(&f.get(1), &mut source, "memory", &f.cfg)
+        .unwrap();
+    assert_eq!(source["status"], "cancelled");
+    assert_ne!(source["cancel_requested"], true);
+    assert!(cc_job_policy::cancellation::recovery_cancel(
+        &json!({}),
+        &source
+    ));
+    assert_eq!(f.get(1)["status"], "todo");
+    assert!(f.get(1)["scheduler"].get("pending_cancel").is_none());
 }
 
 #[test]
@@ -3152,6 +3332,35 @@ fn test_hidden_wrapper_runs_rust_tick_with_window_style_zero() {
 }
 struct Capture {
     calls: std::sync::Arc<std::sync::Mutex<Vec<Invocation>>>,
+}
+#[test]
+fn real_backend_automatic_cancel_passes_the_recovery_flag_to_jobs_cli() {
+    let f = Fixture::new();
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+    let mut backend = RealBackend::new(f.temp.path().join("scheduler"));
+    backend.runner = Box::new(Capture {
+        calls: calls.clone(),
+    });
+    let source = json!({"id":"source","status":"cancelled","pid":null,"codex_pid":null,
+        "recovery_cancel":{"key":"persisted-cli-intent","committed_at":"2026-10-11T02:01:36+09:00"}});
+    let dir = f.temp.path().join("codex-jobs/jobs/source");
+    fs::create_dir_all(&dir).unwrap();
+    write_json(&dir.join("job.json"), &source, 0).unwrap();
+    let mut observed = json!({"id":"source","status":"running"});
+    assert!(backend.cancel_for_recovery(&mut observed).unwrap());
+    let calls = calls.lock().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert!(calls[0]
+        .args
+        .ends_with(&["cancel".into(), "source".into(), "--recovery".into()]));
+    assert_eq!(
+        observed, source,
+        "backend re-reads the CLI's durable job receipt"
+    );
+    assert!(!cc_job_policy::cancellation::blocks_recovery(
+        &json!({}),
+        &observed
+    ));
 }
 impl Runner for Capture {
     fn run(&mut self, c: &Invocation) -> Result<Output> {

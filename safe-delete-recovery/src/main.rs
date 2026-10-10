@@ -18,6 +18,7 @@ type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
+const QUEUE_ID: &str = "9f836113c154d11da358e0cef15db869";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
 const REBOOT_REPORT_SHA256: &str =
     "5b87f8926728c7e692e0ca14d8e02655a2f25474d85fee998eb9c756afd5a5e1";
@@ -205,6 +206,20 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            QUEUE_ID => {
+                c.id = QUEUE_ID;
+                c.project = "cc-pc-tools-rs";
+                c.content = "queue-loop-tier";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 23362423072822789));
+                c.repos = vec![clone(
+                    "repo",
+                    public,
+                    "80c4bb370fce4e7645fafd8ac3eda1422168626b",
+                    Some("refs/remotes/origin/feat/queue-loop-tier-1967"),
+                )];
+            }
             id if unslop::profile(id).is_some() => unslop::configure(&mut c, id)?,
             scoopa::ID => {
                 c.id = scoopa::ID;
@@ -3056,6 +3071,57 @@ mod tests {
         );
         fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
         assert!(matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")));
+    }
+    #[test]
+    fn queue_cleanup_pins_original_identity_and_preserves_owned_clone() {
+        let production = Config::production(QUEUE_ID).unwrap();
+        assert_eq!(production.project, "cc-pc-tools-rs");
+        assert_eq!(production.content, "queue-loop-tier");
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 23362423072822789))
+        );
+        assert_eq!(
+            production.repos[0].head,
+            "80c4bb370fce4e7645fafd8ac3eda1422168626b"
+        );
+        assert_eq!(
+            production.repos[0].saved_ref,
+            Some("refs/remotes/origin/feat/queue-loop-tier-1967")
+        );
+        let c = fixture_for(QUEUE_ID);
+        let before = scan(&source(&c), &c.repos).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            before,
+            scan(&c.destination().join("files"), &c.repos).unwrap()
+        );
+        assert!(!source(&c).exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        for field in ["project", "content", "path", "volume", "file_id"] {
+            let c = fixture_for(QUEUE_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "another-task".into(),
+                "content" => r.identity.content = "another-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
     }
     #[test]
     fn cargo_receipt_scope_and_fixed_identity_reject_recomputed_tampering() {

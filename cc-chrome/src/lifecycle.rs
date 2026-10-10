@@ -37,6 +37,13 @@ pub fn retry(record: &Path) -> io::Result<Retry> {
         Err(e) => Err(e),
     }
 }
+pub fn failed(record: &Path, now: i64, error: &io::Error) {
+    let mut retry = retry(record).unwrap_or_default();
+    retry.attempts = retry.attempts.saturating_add(1);
+    retry.last_attempt = now;
+    retry.kind = format!("{:?}", error.kind());
+    let _ = atomic_json(&retry_path(record), &retry);
+}
 pub fn activity(dir: &Path) -> io::Result<()> {
     atomic_json(&dir.join("chrome-activity.json"), &json!({"at":epoch()}))
 }

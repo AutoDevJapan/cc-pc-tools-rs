@@ -322,8 +322,9 @@ fn sweep_selected(
         let absent = if protected {
             match closer.absent(&record) {
                 Ok(absent) => absent,
-                Err(_) => {
+                Err(e) => {
                     result.failed += 1;
+                    lifecycle::failed(&path, now, &e);
                     continue;
                 }
             }
@@ -382,11 +383,7 @@ fn sweep_selected(
             }
             Err(e) => {
                 result.failed += 1;
-                let mut retry = lifecycle::retry(&path).unwrap_or_default();
-                retry.attempts = retry.attempts.saturating_add(1);
-                retry.last_attempt = now;
-                retry.kind = format!("{:?}", e.kind());
-                let _ = lifecycle::atomic_json(&lifecycle::retry_path(&path), &retry);
+                lifecycle::failed(&path, now, &e);
             }
         }
     }

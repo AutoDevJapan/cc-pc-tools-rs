@@ -210,6 +210,33 @@ mod tests {
         assert_eq!(fake.calls, [22]);
     }
     #[test]
+    fn offline_running_probe_records_retry_and_yields_order_to_other_tabs() {
+        struct Probe(Vec<u64>);
+        impl Closer for Probe {
+            fn absent(&mut self, r: &Record) -> io::Result<bool> {
+                self.0.push(r.tab);
+                if r.tab == 11 {
+                    Err(io::Error::other("offline"))
+                } else {
+                    Ok(false)
+                }
+            }
+            fn close(&mut self, _: &Record) -> io::Result<bool> {
+                panic!("must not close")
+            }
+        }
+        let (root, id, _) = setup();
+        let mut probe = Probe(vec![]);
+        let r = sweep_with(root.path(), None, epoch(), false, &mut probe).unwrap();
+        assert_eq!((r.failed, r.kept), (1, 1));
+        let path = root.path().join(format!("live/chrome-tabs/{id}.json"));
+        assert_eq!(lifecycle::retry(&path).unwrap().attempts, 1);
+        probe.0.clear();
+        sweep_with(root.path(), None, epoch(), false, &mut probe).unwrap();
+        assert_eq!(probe.0, [22, 11]);
+        assert_eq!(lifecycle::retry(&path).unwrap().attempts, 2);
+    }
+    #[test]
     fn running_worker_absence_retires_only_gone_records_without_close() {
         struct Probe;
         impl Closer for Probe {

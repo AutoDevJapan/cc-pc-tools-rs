@@ -13,8 +13,10 @@ pub fn run(program: &Path, args: &[String], cwd: &Path) -> Result<String, &'stat
         "cc-inbox" => 20,
         _ => 45,
     };
-    let timeout =
-        cc_ask::tick_runtime::timeout(Duration::from_secs(limit)).map_err(|_| "command_timeout")?;
+    let ceiling = Duration::from_secs(limit);
+    let patrol_limited = cc_ask::tick_runtime::remaining().is_some_and(|left| left < ceiling);
+    let timeout = cc_ask::tick_runtime::timeout(ceiling).map_err(|_| "patrol_deferred")?;
+    let timeout_code = if patrol_limited { "patrol_deferred" } else { "command_timeout" };
     let start = Instant::now();
     let mut output = tempfile::tempfile().map_err(|_| "tool_failed")?;
     let mut command = Command::new(program);
@@ -36,7 +38,7 @@ pub fn run(program: &Path, args: &[String], cwd: &Path) -> Result<String, &'stat
             Ok(None) if start.elapsed() < timeout => std::thread::sleep(Duration::from_millis(20)),
             _ => {
                 group.stop(&mut child);
-                return Err("command_timeout");
+                return Err(timeout_code);
             }
         }
     };
@@ -105,7 +107,7 @@ mod tests {
         let start = Instant::now();
         assert_eq!(
             run(Path::new("cmd.exe"), &args("ping -n 30 127.0.0.1"), cwd),
-            Err("command_timeout")
+            Err("patrol_deferred")
         );
         assert!(start.elapsed() < Duration::from_secs(5));
         drop(deadline);

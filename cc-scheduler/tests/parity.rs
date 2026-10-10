@@ -2234,7 +2234,7 @@ fn durable_automatic_cancel_reconciles_and_prepares_original_work_without_pendin
         let mut copy = f.e.todo().unwrap();
         cc_todo::recovery::plan(
             &mut copy,
-            &[saved_source.clone()],
+            std::slice::from_ref(&saved_source),
             &Processes::new(),
             T + 2000.,
             "",

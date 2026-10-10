@@ -226,41 +226,6 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
-            INTERNAL_2184_ID => {
-                c.id = INTERNAL_2184_ID;
-                c.project = "cc-jobs-2184";
-                c.content = "git-fix-and-verification";
-                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
-                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
-                c.pinned_identity = Some((2229119083, 5348024573249873));
-                let root = c.temp.join(format!("codex-owned-{INTERNAL_2184_ID}"));
-                c.repos = vec![
-                    Repo {
-                        allowed_untracked: &[
-                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
-                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
-                        ],
-                        ..clone(
-                            "repo",
-                            public,
-                            "5b10ae4f0c0a55ee234813fc01e8aae8b6f7b025",
-                            Some("refs/remotes/origin/fix/todo2184-queue-bootstrap"),
-                        )
-                    },
-                    Repo {
-                        kind: RepoKind::Linked {
-                            admin: root.join("repo/.git/worktrees/todo-note-tool"),
-                            common: root.join("repo/.git"),
-                        },
-                        ..clone(
-                            "todo-note-tool",
-                            public,
-                            "fb62c76e74ac782b1b01a0539b332a8535c4907e",
-                            Some("refs/remotes/origin/fix/todo-2172-resume"),
-                        )
-                    },
-                ];
-            }
             QUEUE_ID => {
                 c.id = QUEUE_ID;
                 c.project = "cc-pc-tools-rs";
@@ -452,6 +417,41 @@ impl Config {
                         ),
                     },
                 }];
+            }
+            INTERNAL_2184_ID => {
+                c.id = INTERNAL_2184_ID;
+                c.project = "cc-jobs-2184";
+                c.content = "git-fix-and-verification";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 5348024573249873));
+                let root = c.temp.join(format!("codex-owned-{INTERNAL_2184_ID}"));
+                c.repos = vec![
+                    Repo {
+                        allowed_untracked: &[
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
+                        ],
+                        ..clone(
+                            "repo",
+                            public,
+                            "5b10ae4f0c0a55ee234813fc01e8aae8b6f7b025",
+                            Some("refs/remotes/origin/fix/todo2184-queue-bootstrap"),
+                        )
+                    },
+                    Repo {
+                        kind: RepoKind::Linked {
+                            admin: root.join("repo/.git/worktrees/todo-note-tool"),
+                            common: root.join("repo/.git"),
+                        },
+                        ..clone(
+                            "todo-note-tool",
+                            public,
+                            "fb62c76e74ac782b1b01a0539b332a8535c4907e",
+                            Some("refs/remotes/origin/fix/todo-2172-resume"),
+                        )
+                    },
+                ];
             }
             _ => return Err("SCOPE_NOT_AUTHORIZED"),
         }

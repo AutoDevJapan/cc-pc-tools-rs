@@ -121,6 +121,13 @@ impl Capture {
     }
 
     pub fn poll(&mut self) -> Result<(), String> {
+        self.poll_with(read_pipe)
+    }
+
+    fn poll_with(
+        &mut self,
+        mut read: impl FnMut(&Pipe, &mut [u8]) -> Result<usize, u32>,
+    ) -> Result<(), String> {
         for stream in &mut self.streams {
             // A busy writer cannot starve process cancellation or deadlines.
             for _ in 0..16 {
@@ -128,38 +135,26 @@ impl Capture {
                     break;
                 }
                 let mut buffer = [0u8; 4096];
-                let mut count = 0u32;
                 // std::fs::File::read normalizes ERROR_NO_DATA to Ok(0) on
                 // Windows. Preserve the native distinction between a live,
                 // empty pipe and EOF instead of losing late child output.
-                if unsafe {
-                    ReadFile(
-                        stream.pipe.0.as_raw_handle(),
-                        buffer.as_mut_ptr().cast(),
-                        buffer.len() as u32,
-                        &mut count,
-                        std::ptr::null_mut(),
-                    )
-                } != 0
-                {
-                    if count == 0 {
+                match read(&stream.pipe, &mut buffer) {
+                    Ok(0) => {
+                        // A successful zero-byte pipe read can follow an empty
+                        // WriteFile. Only ERROR_BROKEN_PIPE proves closure.
+                        break;
+                    }
+                    Ok(count) => stream.bytes.extend_from_slice(&buffer[..count]),
+                    Err(ERROR_NO_DATA) => break,
+                    Err(ERROR_BROKEN_PIPE) => {
                         stream.eof = true;
                         break;
                     }
-                    stream.bytes.extend_from_slice(&buffer[..count as usize]);
-                } else {
-                    match unsafe { GetLastError() } {
-                        ERROR_NO_DATA => break,
-                        ERROR_BROKEN_PIPE => {
-                            stream.eof = true;
-                            break;
-                        }
-                        reason => {
-                            return Err(format!(
-                                "Output capture failed: {}",
-                                std::io::Error::from_raw_os_error(reason as i32)
-                            ))
-                        }
+                    Err(reason) => {
+                        return Err(format!(
+                            "Output capture failed: {}",
+                            std::io::Error::from_raw_os_error(reason as i32)
+                        ))
                     }
                 }
             }
@@ -236,5 +231,56 @@ impl Capture {
             crate::tail(&stdout, tail_budget),
             crate::tail(&stderr, tail_budget)
         )
+    }
+}
+
+fn read_pipe(pipe: &Pipe, buffer: &mut [u8]) -> Result<usize, u32> {
+    let mut count = 0u32;
+    if unsafe {
+        ReadFile(
+            pipe.0.as_raw_handle(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len() as u32,
+            &mut count,
+            std::ptr::null_mut(),
+        )
+    } != 0
+    {
+        Ok(count as usize)
+    } else {
+        Err(unsafe { GetLastError() })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn successful_empty_read_keeps_later_native_output_until_real_closure() {
+        let (source, mut sink) = pipe().unwrap();
+        let mut capture = Capture::new(vec![source]);
+        let mut calls = 0;
+        // Exercise the documented ReadFile success/zero result deterministically;
+        // later bytes and final closure still use the real native pipe.
+        capture
+            .poll_with(|_, _| {
+                calls += 1;
+                Ok(0)
+            })
+            .unwrap();
+        assert_eq!(calls, 1);
+        sink.write_all(b"output after the empty write").unwrap();
+        sink.flush().unwrap();
+        capture.poll().unwrap();
+        sink.write_all(b"; final output").unwrap();
+        drop(sink);
+        let output = capture
+            .finish(Ok(0), true, Instant::now() + Duration::from_secs(1))
+            .unwrap();
+        assert_eq!(output.code, 0);
+        assert_eq!(output.stdout, "output after the empty write; final output");
+        assert!(output.stderr.is_empty());
     }
 }

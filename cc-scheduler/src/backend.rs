@@ -342,7 +342,9 @@ impl RealBackend {
                 s(&item["project"]),
                 "--todo-id",
                 &item["id"].to_string(),
-                if truth(&item["model"]) {
+                if truth(&item["model"])
+                    || truth(&item["scheduler"]["console_request"]["options"]["model"])
+                {
                     "--model"
                 } else {
                     "--auto-model"

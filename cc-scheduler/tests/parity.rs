@@ -244,6 +244,11 @@ fn console_subwork_preserves_read_only_and_model_preferences_without_widening_to
             .args
             .windows(2)
             .any(|w| w == ["--sandbox", "read-only"]));
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--model", selection["model"].as_str().unwrap()]));
+        assert!(!invocation.args.iter().any(|arg| arg == "--auto-model"));
         assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
     }
 }

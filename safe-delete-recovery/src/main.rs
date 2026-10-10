@@ -20,6 +20,11 @@ const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
 const QUEUE_ID: &str = "9f836113c154d11da358e0cef15db869";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
+const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
+const QUEUE_POINTERS: [&str; 2] = [
+    "todo-note-tool/.git",
+    "repo/.git/worktrees/todo-note-tool/gitdir",
+];
 const REBOOT_REPORT_SHA256: &str =
     "5b87f8926728c7e692e0ca14d8e02655a2f25474d85fee998eb9c756afd5a5e1";
 const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
@@ -84,6 +89,21 @@ struct BacklinkTicket {
 struct ResumeProof {
     ticket_sha256: String,
     files: BTreeMap<String, String>,
+}
+
+// Only the two pointers belonging to the fixed, entirely owned ToDo2184
+// clone/worktree pair can be repaired. Original bytes remain in this record.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InternalPointer {
+    original: Vec<u8>,
+    replacement: Node,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InternalRepair {
+    ticket_sha256: String,
+    pointers: [InternalPointer; 2],
 }
 
 // Only the explicitly authorized 2050 receipt may accept directory write-time
@@ -398,6 +418,41 @@ impl Config {
                     },
                 }];
             }
+            INTERNAL_2184_ID => {
+                c.id = INTERNAL_2184_ID;
+                c.project = "cc-jobs-2184";
+                c.content = "git-fix-and-verification";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 5348024573249873));
+                let root = c.temp.join(format!("codex-owned-{INTERNAL_2184_ID}"));
+                c.repos = vec![
+                    Repo {
+                        allowed_untracked: &[
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
+                        ],
+                        ..clone(
+                            "repo",
+                            public,
+                            "5b10ae4f0c0a55ee234813fc01e8aae8b6f7b025",
+                            Some("refs/remotes/origin/fix/todo2184-queue-bootstrap"),
+                        )
+                    },
+                    Repo {
+                        kind: RepoKind::Linked {
+                            admin: root.join("repo/.git/worktrees/todo-note-tool"),
+                            common: root.join("repo/.git"),
+                        },
+                        ..clone(
+                            "todo-note-tool",
+                            public,
+                            "fb62c76e74ac782b1b01a0539b332a8535c4907e",
+                            Some("refs/remotes/origin/fix/todo-2172-resume"),
+                        )
+                    },
+                ];
+            }
             _ => return Err("SCOPE_NOT_AUTHORIZED"),
         }
         Ok(c)
@@ -420,7 +475,7 @@ impl Config {
         ticket: &[u8],
         create: bool,
     ) -> Result<()> {
-        if self.id != RESUME_ID {
+        if self.id != RESUME_ID && self.id != INTERNAL_2184_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let existing_proof = if !create {
@@ -453,6 +508,11 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
+        if self.id == INTERNAL_2184_ID {
+            return self
+                .quarantine
+                .join(format!("20261010-cc-jobs-2184-{INTERNAL_2184_ID}"));
+        }
         if unslop::profile(self.id).is_some() {
             return self.quarantine.join(format!(
                 "20261010-{}-{}-{}",
@@ -487,6 +547,8 @@ impl Config {
             || r.identity.id != self.id
             || r.identity.project != self.project
             || r.identity.content != self.content
+            || (self.id == INTERNAL_2184_ID
+                && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -530,6 +592,10 @@ impl Config {
             return Err("TARGET_IDENTITY_CHANGED");
         }
         let nodes = scan(path, &self.repos)?;
+        if self.id == INTERNAL_2184_ID {
+            self.validate_internal_repos(path, before_move)?;
+            return Ok(nodes);
+        }
         for repo in &self.repos {
             self.client_guard(&path.join(repo.name))?;
             if let RepoKind::Linked { admin, common } = &repo.kind {
@@ -599,7 +665,11 @@ impl Config {
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
             nodes: nodes.clone(),
-            backlink: self.prepare_backlink(path, &dest.join("files"))?,
+            backlink: if self.id == INTERNAL_2184_ID {
+                None
+            } else {
+                self.prepare_backlink(path, &dest.join("files"))?
+            },
         };
         let mut original_bytes = None;
         if self.id == RESUME_ID && prepared {
@@ -631,14 +701,20 @@ impl Config {
             fs::create_dir(&dest).map_err(|_| "QUARANTINE_DESTINATION_CREATE")?;
         }
         for entry in fs::read_dir(&dest).map_err(|_| "QUARANTINE_METADATA_FAILED")? {
-            if entry.map_err(|_| "QUARANTINE_METADATA_FAILED")?.file_name()
-                != OsStr::new("理由.txt")
+            let name = entry.map_err(|_| "QUARANTINE_METADATA_FAILED")?.file_name();
+            if name != OsStr::new("理由.txt")
+                && !(self.id == INTERNAL_2184_ID
+                    && (name == OsStr::new("git-pointer-0.replacement")
+                        || name == OsStr::new("git-pointer-1.replacement")))
             {
                 return Err("QUARANTINE_DESTINATION_NOT_EMPTY");
             }
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
-        if self.id == RESUME_ID {
+        if self.id == INTERNAL_2184_ID {
+            self.prepare_internal_repair(path, &ticket_bytes)?;
+        }
+        if self.id == RESUME_ID || self.id == INTERNAL_2184_ID {
             self.content_proof(path, &nodes, &ticket_bytes, true)?;
         }
         Ok(
@@ -787,7 +863,11 @@ impl Config {
             return Err("TARGET_STILL_EXISTS");
         }
         let files = dest.join("files");
-        let nodes = self.validate(&r, &files, false)?;
+        let nodes = if self.id == INTERNAL_2184_ID {
+            self.finish_internal_repair(&r, &files, &t, &ticket_bytes)?
+        } else {
+            self.validate(&r, &files, false)?
+        };
         let has_proof = self.id == RESUME_ID;
         if (has_proof && !same_inventory(self.id, &t.nodes, &nodes))
             || (!has_proof && nodes != t.nodes)
@@ -797,7 +877,9 @@ impl Config {
         if has_proof {
             self.content_proof(&files, &nodes, &ticket_bytes, false)?;
         }
-        self.repair_backlink(&r, &files, t.backlink.as_ref())?;
+        if self.id != INTERNAL_2184_ID {
+            self.repair_backlink(&r, &files, t.backlink.as_ref())?;
+        }
         let why = dest.join("理由.txt");
         checked(&why)?;
         if node(&why)?.links != 1 {
@@ -837,6 +919,229 @@ impl Config {
             "destination":dest, "bytes": nodes.values().filter(|x| x.attributes & 0x10 == 0).map(|x| x.size).sum::<u64>(),
             "entries":nodes.len(), "inventory_verified":true}),
         )
+    }
+    fn validate_internal_repos(&self, root: &Path, before: bool) -> Result<()> {
+        if self.id != INTERNAL_2184_ID || self.repos.len() != 2 {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let common = root.join("repo/.git");
+        let admin = common.join("worktrees/todo-note-tool");
+        for p in [&common, &admin, &root.join("todo-note-tool")] {
+            self.client_guard(p)?;
+        }
+        // A fixed single worktree, entirely inside the owned tree; no extra
+        // worktree, graft, submodule or object store may be referenced.
+        let names = fs::read_dir(common.join("worktrees"))
+            .map_err(|_| "INVALID_GIT_ADMIN_PATH")?
+            .map(|entry| {
+                entry
+                    .map(|e| e.file_name())
+                    .map_err(|_| "INVALID_GIT_ADMIN_PATH")
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if names != vec![OsStr::new("todo-note-tool").to_owned()]
+            || present(&common.join("info/grafts"))?
+            || !same(
+                Path::new(&bounded_text(&admin.join("gitdir"))?),
+                &root.join(QUEUE_POINTERS[0]),
+            )
+        {
+            return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+        }
+        validate_repo_scoped(&root.join("repo"), &self.repos[0], before, false, true)?;
+        let linked = Repo {
+            name: self.repos[1].name,
+            origin: self.repos[1].origin,
+            head: self.repos[1].head.clone(),
+            saved_ref: self.repos[1].saved_ref,
+            saved_merge: None,
+            allowed_untracked: &[],
+            kind: RepoKind::Linked { admin, common },
+        };
+        validate_repo(&root.join(linked.name), &linked, true)
+    }
+
+    fn internal_record_path(&self) -> PathBuf {
+        self.store.join(format!("{}.internal-repair.json", self.id))
+    }
+    fn internal_stage(&self, index: usize) -> PathBuf {
+        self.destination()
+            .join(format!("git-pointer-{index}.replacement"))
+    }
+    fn internal_text(root: &Path, index: usize) -> Vec<u8> {
+        if index == 0 {
+            format!(
+                "gitdir: {}\n",
+                root.join("repo/.git/worktrees/todo-note-tool").display()
+            )
+            .into_bytes()
+        } else {
+            format!("{}\n", root.join(QUEUE_POINTERS[0]).display()).into_bytes()
+        }
+    }
+    fn internal_pointer_bytes(&self, root: &Path, index: usize) -> Result<Vec<u8>> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let path = root.join(QUEUE_POINTERS[index]);
+        checked_admin(path.parent().ok_or("INVALID_PATH")?)?;
+        let before = node(&path)?;
+        if before.links != 1 || before.size > 8192 || before.attributes & 0x10 != 0 {
+            return Err("INVALID_INTERNAL_REPAIR");
+        }
+        let bytes = fs::read(&path).map_err(|_| "RECOVERY_RECORD_READ")?;
+        if node(&path)? != before {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        Ok(bytes)
+    }
+    fn prepare_internal_repair(&self, source: &Path, ticket: &[u8]) -> Result<()> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let mut pointers = Vec::new();
+        for index in 0..QUEUE_POINTERS.len() {
+            let original = self.internal_pointer_bytes(source, index)?;
+            let expected = Self::internal_text(source, index);
+            // Git uses '/' in its pointers on this PC; compare their meaning,
+            // retaining the original byte sequence without newline conversion.
+            let text = std::str::from_utf8(&original)
+                .map_err(|_| "EXTERNAL_GITDIR")?
+                .trim();
+            let expected = std::str::from_utf8(&expected)
+                .map_err(|_| "EXTERNAL_GITDIR")?
+                .trim();
+            let (text, expected) = if index == 0 {
+                (
+                    text.strip_prefix("gitdir: ").ok_or("EXTERNAL_GITDIR")?,
+                    expected.strip_prefix("gitdir: ").ok_or("EXTERNAL_GITDIR")?,
+                )
+            } else {
+                (text, expected)
+            };
+            if !same(Path::new(text), Path::new(expected)) {
+                return Err("EXTERNAL_GITDIR");
+            }
+            let stage = self.internal_stage(index);
+            write_or_verify(
+                &stage,
+                &Self::internal_text(&self.destination().join("files"), index),
+                8192,
+            )?;
+            pointers.push(InternalPointer {
+                original,
+                replacement: node(&stage)?,
+            });
+        }
+        let record = InternalRepair {
+            ticket_sha256: format!("{:x}", Sha256::digest(ticket)),
+            pointers: pointers.try_into().map_err(|_| "INVALID_INTERNAL_REPAIR")?,
+        };
+        let bytes = serde_json::to_vec_pretty(&record).map_err(|_| "PROOF_JSON")?;
+        write_or_verify(&self.internal_record_path(), &bytes, 32768)
+    }
+    fn verify_internal_inventory(
+        &self,
+        root: &Path,
+        t: &Ticket,
+        ticket: &[u8],
+        record: &InternalRepair,
+    ) -> Result<BTreeMap<String, Node>> {
+        checked(root)?;
+        self.client_guard(root)?;
+        if record.ticket_sha256 != format!("{:x}", Sha256::digest(ticket)) || t.backlink.is_some() {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        let current = scan(root, &self.repos)?;
+        let mut expected = t.nodes.clone();
+        let proof_bytes = read_record(&self.proof_path(), 8 * 1024 * 1024)?;
+        let proof: ResumeProof =
+            serde_json::from_slice(&proof_bytes).map_err(|_| "INVALID_INTERNAL_REPAIR")?;
+        if proof.ticket_sha256 != record.ticket_sha256 {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        let mut digests = file_digests(root, &current)?;
+        for (i, name) in QUEUE_POINTERS.iter().enumerate() {
+            let original_node = t.nodes.get(*name).ok_or("INVALID_INTERNAL_REPAIR")?;
+            let actual_node = current.get(*name).ok_or("INVALID_INTERNAL_REPAIR")?;
+            let pointer = &record.pointers[i];
+            let original_hash = format!("{:x}", Sha256::digest(&pointer.original));
+            if proof.files.get(*name) != Some(&original_hash) {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            let bytes = self.internal_pointer_bytes(root, i)?;
+            if actual_node == original_node && bytes == pointer.original {
+                // Still waiting for this pointer's atomic replacement.
+            } else if actual_node == &pointer.replacement && bytes == Self::internal_text(root, i) {
+                expected.insert(name.to_string(), pointer.replacement.clone());
+                let parent = Path::new(name)
+                    .parent()
+                    .ok_or("INVALID_PATH")?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                let actual_parent = current.get(&parent).ok_or("INVALID_INTERNAL_REPAIR")?;
+                expected
+                    .get_mut(&parent)
+                    .ok_or("INVALID_INTERNAL_REPAIR")?
+                    .written = actual_parent.written;
+                digests.insert(name.to_string(), original_hash);
+            } else {
+                return Err("WORKTREE_BACKLINK_CHANGED");
+            }
+        }
+        if expected != current
+            || digests != proof.files
+            || scan(root, &self.repos)? != current
+            || read_record(&self.proof_path(), 8 * 1024 * 1024)? != proof_bytes
+        {
+            return Err("CONTENT_CHANGED_AFTER_PLAN");
+        }
+        Ok(current)
+    }
+    fn finish_internal_repair(
+        &self,
+        r: &Receipt,
+        root: &Path,
+        t: &Ticket,
+        ticket: &[u8],
+    ) -> Result<BTreeMap<String, Node>> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let identity = node(root)?;
+        if identity.volume != r.identity.volume || identity.file_id != r.identity.file_id {
+            return Err("TARGET_IDENTITY_CHANGED");
+        }
+        let bytes = read_record(&self.internal_record_path(), 32768)?;
+        let record: InternalRepair =
+            serde_json::from_slice(&bytes).map_err(|_| "INVALID_INTERNAL_REPAIR")?;
+        self.verify_internal_inventory(root, t, ticket, &record)?;
+        for (i, name) in QUEUE_POINTERS.iter().enumerate() {
+            let target = root.join(name);
+            if node(&target)? == record.pointers[i].replacement {
+                continue;
+            }
+            if r.state != "owned" {
+                return Err("RECEIPT_NOT_OWNED");
+            }
+            let stage = self.internal_stage(i);
+            if node(&stage)? != record.pointers[i].replacement
+                || read_record(&stage, 8192)? != Self::internal_text(root, i)
+            {
+                return Err("WORKTREE_REPAIR_FILE_CHANGED");
+            }
+            // Both the stage and target are on C:. Only these fixed pointer
+            // files change; no Git repair command traverses the old paths.
+            fs::rename(&stage, &target).map_err(|_| "WORKTREE_REPAIR_FAILED")?;
+        }
+        self.verify_internal_inventory(root, t, ticket, &record)?;
+        self.validate(r, root, false)?;
+        if read_record(&self.internal_record_path(), 32768)? != bytes {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        // Normal finish commits the existing receipt only after every original
+        // byte is accounted for (including the archived original pointers).
+        Ok(t.nodes.clone())
     }
     fn prepare_backlink(&self, root: &Path, destination: &Path) -> Result<Option<BacklinkTicket>> {
         for repo in &self.repos {
@@ -1225,6 +1530,15 @@ fn validate_repo_options(
     before_move: bool,
     archived_submodule: bool,
 ) -> Result<()> {
+    validate_repo_scoped(path, repo, before_move, archived_submodule, false)
+}
+fn validate_repo_scoped(
+    path: &Path,
+    repo: &Repo,
+    before_move: bool,
+    archived_submodule: bool,
+    owned_worktree: bool,
+) -> Result<()> {
     let gitdir = match &repo.kind {
         RepoKind::OpaqueBare => {
             // Inspect only names and metadata of the fixed audit acquisition.
@@ -1293,6 +1607,9 @@ fn validate_repo_options(
         "objects/info/alternates",
         "objects/info/http-alternates",
     ] {
+        if owned_worktree && special == "worktrees" {
+            continue;
+        }
         if archived_submodule && special == "modules" {
             continue;
         }
@@ -2368,13 +2685,21 @@ mod tests {
                 fs::write(path.join("refs/fixture-private-name"), b"opaque fixture\n").unwrap();
                 continue;
             }
-            let seed = if matches!(repo.kind, RepoKind::Linked { .. }) {
+            let internal = c.id == INTERNAL_2184_ID && matches!(repo.kind, RepoKind::Linked { .. });
+            let seed = if internal {
+                target.join("repo")
+            } else if matches!(repo.kind, RepoKind::Linked { .. }) {
                 base.join("common")
             } else {
                 path.clone()
             };
-            fs::create_dir(&seed).unwrap();
-            seed_repo(&seed, repo);
+            if internal {
+                repo.head = git(&seed, &["rev-parse", "HEAD"]).unwrap();
+                git(&seed, &["update-ref", repo.saved_ref.unwrap(), &repo.head]).unwrap();
+            } else {
+                fs::create_dir(&seed).unwrap();
+                seed_repo(&seed, repo);
+            }
             if matches!(repo.kind, RepoKind::Linked { .. }) {
                 git(
                     &seed,
@@ -2404,7 +2729,12 @@ mod tests {
             path: target.to_string_lossy().into_owned(),
             volume: n.volume,
             file_id: n.file_id,
-            created_at: "2026-10-08T15:34:13.325996+09:00".into(),
+            created_at: if c.id == INTERNAL_2184_ID {
+                "2026-10-10T00:39:58.8390892+09:00"
+            } else {
+                "2026-10-08T15:34:13.325996+09:00"
+            }
+            .into(),
             project: c.project.into(),
             content: c.content.into(),
         };
@@ -2471,6 +2801,120 @@ mod tests {
             .unwrap();
             git(path, &["update-ref", "refs/remotes/origin/main", &merge]).unwrap();
             repo.saved_merge = Some(merge);
+        }
+    }
+    #[test]
+    fn queue_owned_internal_pair_moves_and_resumes_after_each_pointer_replacement() {
+        for replaced in 0..=2 {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            fs::write(root.join("verification.log"), b"saved evidence\n").unwrap();
+            for name in c.repos[0].allowed_untracked {
+                let path = root.join("repo").join(name);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, b"runtime evidence\n").unwrap();
+            }
+            let original = QUEUE_POINTERS.map(|name| fs::read(root.join(name)).unwrap());
+            c.plan(c.id).unwrap();
+            c.plan(c.id).unwrap();
+            let t: Ticket = serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+            let record: InternalRepair =
+                serde_json::from_slice(&fs::read(c.internal_record_path()).unwrap()).unwrap();
+            for (i, bytes) in original.iter().enumerate() {
+                assert_eq!(record.pointers[i].original, *bytes);
+            }
+            let moved = c.destination().join("files");
+            fs::rename(&root, &moved).unwrap();
+            for (i, name) in QUEUE_POINTERS.iter().enumerate().take(replaced) {
+                fs::rename(c.internal_stage(i), moved.join(name)).unwrap();
+            }
+            c.finish(c.id).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+            assert_eq!(
+                fs::read(moved.join("verification.log")).unwrap(),
+                b"saved evidence\n"
+            );
+            for repo in &c.repos {
+                assert_eq!(
+                    git(&moved.join(repo.name), &["rev-parse", "HEAD"]).unwrap(),
+                    repo.head
+                );
+            }
+            assert_eq!(t.nodes.len(), scan(&moved, &c.repos).unwrap().len());
+        }
+    }
+    #[test]
+    fn queue_profile_rejects_other_worktrees_unsaved_and_unpushed_changes() {
+        for kind in [
+            "extra-worktree",
+            "tracked",
+            "untracked",
+            "ref",
+            "pointer",
+            "grafts",
+        ] {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            match kind {
+                "extra-worktree" => {
+                    fs::create_dir(root.join("repo/.git/worktrees/other")).unwrap();
+                }
+                "tracked" => fs::write(root.join("todo-note-tool/source.txt"), b"unsaved").unwrap(),
+                "untracked" => fs::write(root.join("repo/unpublished.rs"), b"unsaved").unwrap(),
+                "ref" => {
+                    git(
+                        &root.join("repo"),
+                        &["update-ref", "-d", c.repos[1].saved_ref.unwrap()],
+                    )
+                    .unwrap();
+                }
+                "pointer" => {
+                    fs::write(root.join(QUEUE_POINTERS[0]), b"gitdir: C:/outside\n").unwrap()
+                }
+                _ => fs::write(root.join("repo/.git/info/grafts"), b"replacement").unwrap(),
+            }
+            assert!(c.plan(c.id).is_err(), "{kind}");
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn queue_internal_finish_rejects_changed_content_pointer_and_record() {
+        for kind in ["content", "pointer", "stage", "record", "proof", "root"] {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            let file = root.join("verification.log");
+            fs::write(&file, b"aaaa").unwrap();
+            c.plan(c.id).unwrap();
+            let moved = c.destination().join("files");
+            fs::rename(&root, &moved).unwrap();
+            match kind {
+                "content" => {
+                    let file = moved.join("verification.log");
+                    let stamp = fs::metadata(&file).unwrap().modified().unwrap();
+                    fs::write(&file, b"bbbb").unwrap();
+                    fs::File::options()
+                        .write(true)
+                        .open(file)
+                        .unwrap()
+                        .set_times(fs::FileTimes::new().set_modified(stamp))
+                        .unwrap();
+                }
+                "pointer" => {
+                    fs::write(moved.join(QUEUE_POINTERS[0]), b"gitdir: C:/outside\n").unwrap()
+                }
+                "stage" => fs::write(c.internal_stage(1), b"replacement").unwrap(),
+                "record" => fs::write(c.internal_record_path(), b"{}").unwrap(),
+                "proof" => fs::write(c.proof_path(), b"{}").unwrap(),
+                _ => {
+                    fs::rename(&moved, c.destination().join("kept")).unwrap();
+                    fs::create_dir(&moved).unwrap();
+                }
+            }
+            assert!(c.finish(c.id).is_err(), "{kind}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
         }
     }
     fn source(c: &Config) -> PathBuf {

@@ -255,6 +255,8 @@ struct QueueState {
     preparation_failures: BTreeMap<String, (u64, String)>,
     // Failure observations are separate from the immutable accepted request.
     preparation_recovery: BTreeMap<String, Value>,
+    // Alternate which ready class gets the fresh patrol's first attempt.
+    patrol_turn: u64,
     initialized: bool,
     baseline: BTreeSet<String>,
     handled: BTreeSet<String>,
@@ -508,6 +510,7 @@ impl Console {
                 "thread_id",
                 "resume_session",
                 "todo_id",
+                "related_todo_ids",
                 "model",
                 "effort",
                 "sandbox",
@@ -1001,7 +1004,7 @@ impl Console {
             self.save(state)?;
             return Err(fault(
                 StatusCode::GATEWAY_TIMEOUT,
-                "command_timeout",
+                "patrol_deferred",
                 "巡回の処理時間を超えたため次の巡回で続けます。",
             ));
         }
@@ -1195,18 +1198,42 @@ impl Console {
         // A resident patrol is also the monitor. Preparation checks can run
         // several Git probes, so plan a small batch and rotate parked work.
         // Ordinary API dispatch keeps its existing full-batch behavior.
-        let scan_limit = if cc_ask::tick_runtime::remaining().is_some() {
-            s.queue.len().min(2)
-        } else {
-            s.queue.len()
-        };
+        let scan_limit = s.queue.len();
+        let attempt_limit = if cc_ask::tick_runtime::remaining().is_some() { 2 } else { scan_limit };
+        let mut attempted = 0;
         let mut scanned = 0;
         // Eligibility is a batch plan. Refresh actual ownership again before
         // every launch; repeatedly reopening thousands of historical job files
         // for ineligible reservations cannot make that final check safer.
+        // Repair old unscoped timeout metadata even while capacity is full.
+        // Resolve ownership and exclusions first; no checkout probes or launches.
+        let mut repaired_timeout = false;
+        for queued in s.queue.clone() {
+            if s.preparation_failures.get(&queued.key).is_none_or(|(_, code)| code != "command_timeout")
+                || s.preparation_recovery.get(&queued.key).is_some_and(|record| record["timeout_scope"] == "command") { continue; }
+            let mut trigger = queued;
+            let Ok(id) = decision_todo(&trigger, jobs, &db) else { continue; };
+            trigger.todo_id = id;
+            let item = id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            if item.is_some_and(|i| matches!(strv(i, "status"), "done" | "block" | "wait") || strv(i, "project") == "owner") { continue; }
+            let project = item.map(|i| strv(i, "project")).unwrap_or("");
+            let source = launch_source(&trigger, item, jobs);
+            if self.excluded(project, &trigger.cwd, &db)?
+                || source.map(|source| self.excluded(project, strv(source, "cwd"), &db)).transpose()?.unwrap_or(false)
+                || matches!((item, source), (Some(item), Some(source)) if !(explicit_workspace_receipt(item, source)
+                    || terminal(source) && source_todo_id(source, &db) == item["id"].as_u64() && todo_has_job(item, source))) { continue; }
+            repaired_timeout |= self.recheck_legacy_timeout(s, &trigger.key);
+        }
+        if repaired_timeout { self.save(s)?; }
         self.patrol_stage("capacity");
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
+        }
+        if cc_ask::tick_runtime::remaining().is_some() {
+            let prefer_todo = s.patrol_turn.is_multiple_of(2);
+            s.queue.sort_by_cached_key(|trigger| trigger_todo_id(trigger, jobs, &db).is_some() != prefer_todo);
+            s.patrol_turn = s.patrol_turn.wrapping_add(1);
+            self.save(s)?;
         }
         let mut candidate_jobs = jobs.to_vec();
         let mut launch_failure = None;
@@ -1219,9 +1246,26 @@ impl Console {
                 break;
             }
             let mut t = s.queue[0].clone();
-            let db = self.todos()?;
+            let db = &db;
+            match decision_todo(&t, &candidate_jobs, db) {
+                Ok(id) => { t.todo_id = id; s.queue[0].todo_id = id; }
+                Err(reason) => {
+                    s.suppressed.insert(t.key.clone(), reason.into());
+                    let waiting = s.queue.remove(0);
+                    s.queue.push(waiting);
+                    continue;
+                }
+            }
+            let project = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id)).map(|item| strv(item, "project")).unwrap_or("");
+            let item = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            let source_excluded = launch_source(&t, item, &candidate_jobs).map(|source| self.excluded(project, strv(source,"cwd"), db)).transpose()?.unwrap_or(false);
+            if self.excluded(project, &t.cwd, db)? || source_excluded {
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
             self.patrol_stage("recovery_evidence");
-            if !self.recovery_ready(s, &t, &db, &candidate_jobs, &mut evidence_cache)? {
+            if !self.recovery_ready(s, &t, db, &candidate_jobs, &mut evidence_cache)? {
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
@@ -1229,7 +1273,7 @@ impl Console {
             let stall = t.key.starts_with("manual:stall-");
             let fresh_jobs = &candidate_jobs;
             self.patrol_stage("dispatch_launch");
-            match decision_todo(&t, fresh_jobs, &db) {
+            match decision_todo(&t, fresh_jobs, db) {
                 Ok(id) => {
                     t.todo_id = id;
                     s.queue[0].todo_id = id;
@@ -1247,7 +1291,8 @@ impl Console {
             }
             if let Some(url) = pr_review_url(&t.key) {
                 let owner_waiting = pr_owner_waiting(url, fresh_jobs);
-                if s.prs_error.is_some() || pr_review_busy(url, s, fresh_jobs) || owner_waiting {
+                let stale_prs = cc_ask::tick_runtime::remaining().is_some() && now().saturating_sub(s.prs_at) >= 60;
+                if stale_prs || s.prs_error.is_some() || pr_review_busy(url, s, fresh_jobs) || owner_waiting {
                     let waiting = s.queue.remove(0);
                     s.queue.push(waiting);
                     continue;
@@ -1328,6 +1373,21 @@ impl Console {
             let item = t
                 .todo_id
                 .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            if item.is_some_and(|i| strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(&db, i) || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
+            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, &db)? || item.is_some_and(|i| matches!(strv(i,"status"),"done"|"block") || strv(i,"project")=="owner") {
+                suppress_trigger(s, &t, "対象外のプロジェクト、または完了済みの作業です。");
+                continue;
+            }
+            if attempted >= attempt_limit { break; }
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+                self.defer_patrol(s, &t.key)?;
+                return Err(fault(StatusCode::GATEWAY_TIMEOUT, "patrol_deferred", "起動確認の時間を次の巡回で確保します。"));
+            }
+            attempted += 1;
             if t.options.is_null() {
                 if let Some(item) = item {
                     let pending = &item["stall_recovery"]["pending"];
@@ -1854,9 +1914,23 @@ impl Console {
             candidate_jobs = self.jobs()?;
             evidence_cache.clear();
         }
+        self.save(s)?;
         launch_failure.map_or(Ok(()), Err)
     }
+    fn defer_patrol(&self, s: &mut QueueState, key: &str) -> Result<()> {
+        let index = s.queue.iter().position(|t| t.key == key).ok_or_else(io_fault)?;
+        let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+        record["state"] = json!("waiting_for_patrol_budget");
+        record["budget_deferred_at"] = json!(now());
+        record["next_action"] = json!("次の巡回で起動確認の時間を確保して同じ受付を続ける。");
+        let waiting = s.queue.remove(index);
+        s.queue.push(waiting);
+        self.save(s)
+    }
     fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<()> {
+        if code == "patrol_deferred" || cc_ask::tick_runtime::remaining().is_some_and(|left| left.is_zero()) {
+            return self.defer_patrol(s, key);
+        }
         let trigger = s.queue.iter().find(|t| t.key == key).ok_or_else(io_fault)?;
         let evidence = self.recovery_evidence_from(trigger, Some(db), Some(jobs), cache);
         let record = s
@@ -1866,6 +1940,7 @@ impl Console {
         let attempts = record["attempts"].as_u64().unwrap_or(0).saturating_add(1);
         record["attempts"] = json!(attempts);
         record["code"] = json!(code);
+        if code == "command_timeout" { record["timeout_scope"] = json!("command"); }
         record["observed_at"] = json!(now());
         record["evidence"] = evidence;
         record["state"] = json!("waiting_for_repair");
@@ -1930,7 +2005,24 @@ impl Console {
             "store_readable":db.is_some(),"jobs_readable":jobs.is_some(),
             "launcher":metadata(&self.paths.jobs.parent().unwrap_or(&self.paths.tools).join("codex_jobs.exe"))})
     }
+    fn recheck_legacy_timeout(&self, s: &mut QueueState, key: &str) -> bool {
+        let Some((retry, code)) = s.preparation_failures.get(key).cloned() else { return false; };
+        if code == "command_timeout" && s.preparation_recovery.get(key).is_none_or(|record| record["timeout_scope"] != "command") {
+            // Old captures could not distinguish a full command timeout from
+            // the patrol's truncated remainder. Recheck once under scoped rules.
+            let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+            record["legacy_timeout"] = json!({"retry_at":retry,"attempts":record["attempts"],"observed_at":record["observed_at"]});
+            record["state"] = json!("rechecking_timeout_scope");
+            s.preparation_failures.remove(key);
+            return true;
+        }
+        false
+    }
     fn recovery_ready(&self, s: &mut QueueState, t: &Trigger, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<bool> {
+        if self.recheck_legacy_timeout(s, &t.key) {
+            self.save(s)?;
+            return Ok(true);
+        }
         let Some((retry, code)) = s.preparation_failures.get(&t.key).cloned() else {
             return Ok(true);
         };
@@ -2353,6 +2445,11 @@ impl Console {
         self.patrol_stage("initialize");
         self.initialize(s, &jobs)?;
         self.link_todos(s)?;
+        if cc_ask::tick_runtime::remaining().is_some() {
+            self.maintain(s, &jobs)?;
+            // Give accepted work the fresh patrol budget before network intake.
+            self.dispatch(s, &jobs)?;
+        }
         self.patrol_stage("prs");
         self.refresh_prs(s, &jobs);
         self.patrol_stage("maintain");
@@ -2399,7 +2496,7 @@ impl Console {
             }
         }
         // Refusing additional work must not prevent accepted work from making progress.
-        self.dispatch(s, &jobs)?;
+        if cc_ask::tick_runtime::remaining().is_none() { self.dispatch(s, &jobs)?; }
         intake_error.map_or(Ok(()), Err)
     }
     pub fn tick(&self) -> Result<()> {
@@ -2422,11 +2519,11 @@ impl Console {
         let jobs = self.jobs()?;
         self.patrol_stage("final_maintain");
         self.maintain(&mut s, &jobs)?;
-        let dispatch = if result.is_ok() {
+        // Fresh inbox requests are durable and get the next patrol's full
+        // preparation phase, rather than a second launch with a tiny remainder.
+        let dispatch = if result.is_ok() && cc_ask::tick_runtime::remaining().is_none() {
             self.dispatch(&mut s, &jobs)
-        } else {
-            Ok(())
-        };
+        } else { Ok(()) };
         let result = result.and(inbox).and(dispatch);
         s.last_tick = now();
         s.last_error = result.as_ref().err().map(|e| e.code.into());
@@ -2495,7 +2592,8 @@ impl Console {
                 }
                 let id = v["id"].as_u64().filter(|n| *n > 0).ok_or_else(invalid)?;
                 let prompt = field(&v, "prompt", 64 * 1024)?;
-                self.maintain(&mut s, &self.jobs()?)?;
+                let jobs = self.jobs()?;
+                self.maintain(&mut s, &jobs)?;
                 self.save(&s)?;
                 let db = self.todos()?;
                 let item = db["items"]
@@ -2516,11 +2614,6 @@ impl Console {
                     return Err(invalid());
                 }
                 let requested_cwd = v["cwd"].as_str().filter(|cwd| !cwd.is_empty());
-                if requested_cwd.is_some_and(|cwd| {
-                    !Path::new(cwd).is_dir() || !self.checkout_belongs(cwd, project_cwd)
-                }) {
-                    return Err(invalid());
-                }
                 for name in ["source_job_id", "resume_session", "model", "effort"] {
                     if !v[name].is_null() && !v[name].is_string() {
                         return Err(invalid());
@@ -2556,6 +2649,19 @@ impl Console {
                     return Err(invalid());
                 }
                 validate_model_options(item)?;
+                if let Some(cwd) = requested_cwd {
+                    if !Path::new(cwd).is_dir() { return Err(invalid()); }
+                    if !self.checkout_belongs(cwd, project_cwd) {
+                        let source = v["source_job_id"].as_str()
+                            .and_then(|id| jobs.iter().find(|job| job["id"] == id))
+                            .ok_or_else(invalid)?;
+                        if matches!(strv(item, "status"), "done" | "block" | "wait")
+                            || project == "owner"
+                            || !self.receipt_artifact_directory(cwd, item, source, &db, project_cwd)? {
+                            return Err(invalid());
+                        }
+                    }
+                }
                 let key = format!("manual:{request_id}");
                 let cwd = requested_cwd
                     .or_else(|| s.request_cwds.get(&key).map(String::as_str))

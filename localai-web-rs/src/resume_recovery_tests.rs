@@ -83,6 +83,22 @@ fn todo2299_capacity_detail_needs_same_named_target_and_this_measurement() {
 }
 
 #[test]
+fn todo2299_shared_launch_lock_wait_is_recorded_without_changing_receipt() {
+    let f=Fixture::new(); f.on(); f.delegate("lock-wait").unwrap();
+    let mut state=f.console.read_state().unwrap();let original=state.queue[0].clone();
+    let root=f.console.paths.tools.join("scheduler");fs::create_dir_all(&root).unwrap();
+    let guard=cc_scheduler::common::ByteLock::acquire(&root.join("scheduler.lock"),Duration::ZERO).unwrap().unwrap();
+    f.console.dispatch(&mut state,&[]).unwrap();
+    let saved=f.console.read_state().unwrap();
+    assert_eq!(saved.last_dispatch_wait["kind"],"scheduler_launch_lock");
+    assert_eq!(saved.queue[0].key,original.key);assert_eq!(saved.queue[0].prompt,original.prompt);
+    assert_eq!(saved.queue[0].options,original.options);assert!(saved.preparation_failures.is_empty());assert_eq!(f.launches(),0);
+    drop(guard);
+    f.console.dispatch(&mut state,&[]).unwrap();
+    assert!(state.last_dispatch_wait.is_null());assert_eq!(f.launches(),1);
+}
+
+#[test]
 fn todo2299_patrol_alternates_todo_and_orphan_ready_classes() {
     let f = Fixture::new();
     f.on();

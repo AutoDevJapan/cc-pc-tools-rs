@@ -270,6 +270,7 @@ struct QueueState {
     preparation_failures: BTreeMap<String, (u64, String)>,
     // Failure observations are separate from the immutable accepted request.
     preparation_recovery: BTreeMap<String, Value>,
+    last_dispatch_wait: Value,
     // Alternate which ready class gets the fresh patrol's first attempt.
     patrol_turn: u64,
     initialized: bool,
@@ -1036,8 +1037,11 @@ impl Console {
         )
         .map_err(|_| io_fault())?
         else {
+            s.last_dispatch_wait = json!({"at":now(),"kind":"scheduler_launch_lock"});
+            self.save(s)?;
             return Ok(());
         };
+        s.last_dispatch_wait = Value::Null;
         // Reconcile a lost launcher response before capacity or eligibility checks.
         // The reservation may have been cleared after the job actually started.
         self.patrol_stage("dispatch_receipts");

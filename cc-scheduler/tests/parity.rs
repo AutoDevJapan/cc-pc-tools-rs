@@ -1067,6 +1067,7 @@ struct Fake {
     settings_change: Option<(PathBuf, Value)>,
     measure_count: usize,
     change_during_prepare: bool,
+    worktree_failure: Option<u64>,
 }
 impl Default for Fake {
     fn default() -> Self {
@@ -1098,6 +1099,7 @@ impl Default for Fake {
             settings_change: None,
             measure_count: 0,
             change_during_prepare: false,
+            worktree_failure: None,
         }
     }
 }
@@ -1221,6 +1223,9 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if i["id"].as_u64() == self.worktree_failure && self.worktree_failure.is_some() {
+            return Err(Error("OriginMissing"));
+        }
         if let Some((path, db)) = self.prepare_edit.take() {
             write_json(&path, &db, 1)?;
         }
@@ -1969,6 +1974,7 @@ fn todo1842_changed_model_does_not_resume_previous_conversation() {
         f.e.backend.records[0]["effort"] = json!("high");
         f.e.backend.ps.clear();
         f.reconcile();
+        f.e.backend.clock += 61.;
         f.e.edit(&json!(1), |row| {
             row["model"] = json!(requested);
             row["effort"] = json!("high");
@@ -2043,17 +2049,301 @@ struct GitFake {
     calls: Vec<Invocation>,
     existing: Option<(PathBuf, String, PathBuf)>,
 }
+
+#[test]
+fn preparation2164_non_git_documents_keep_source_and_dedicated_workspace() {
+    let mut f = Fixture::new();
+    f.put(item(1, "other", "todo", &[]));
+    fs::write(f.repo.join("reference.txt"), "original").unwrap();
+    let row =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    fs::remove_dir(&target).unwrap();
+    ensure_worktree(&mut SystemRunner, f.repo.to_str().unwrap(), &row).unwrap();
+    assert!(target.is_dir());
+    assert!(!target.join(".git").exists());
+    assert_eq!(
+        fs::read_to_string(f.repo.join("reference.txt")).unwrap(),
+        "original"
+    );
+}
+
+#[test]
+fn preparation2164_explicit_resume_retains_resource_deadline() {
+    let mut row = json!({"status":"todo","scheduler":{"job":"cancelled","phase":"finished","not_before":1791820800.},"processed_results":{"cancelled":{"reason":"superseded"}}});
+    resume_without_worker(&mut row);
+    assert_eq!(row["scheduler"]["not_before"], 1791820800.);
+    assert_eq!(
+        row["processed_results"]["cancelled"]["reason"],
+        "superseded"
+    );
+}
+
+#[test]
+fn preparation2164_owner_answer_keeps_known_resource_wait_deadline() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "block", &[]);
+    row["scheduler"] =
+        json!({"question":{"thread_id":"saved-question"},"phase":"blocked","not_before":T+86400.});
+    f.put(row);
+    f.e.backend.owner_reply = Some(json!({"id":"answer","text":"原因を直して再開","stop":false}));
+    f.e.answers().unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 86400.);
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn preparation2164_prepare_respects_wait_even_after_selection_change() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "todo", &[]);
+    row["model"] = json!("anthropic/claude-haiku-5-5");
+    row["scheduler"] = json!({"not_before":T+3600.,"selection_input":{"model":"claude-haiku-5-5"}});
+    f.put(row);
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 3600.);
+    assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn preparation2164_failure_does_not_stop_independent_dispatch() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    f.put(item(2, "other", "todo", &[]));
+    f.e.backend.worktree_failure = Some(1);
+    f.e.dispatch(&f.cfg, &f.pri).unwrap();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(
+        f.get(1)["scheduler"]["preparation_failure"]["reason"],
+        "origin_missing"
+    );
+}
+
+#[test]
+fn preparation2164_http429_parks_worker_despite_supervisor_cpu_and_replays_once() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    f.e.backend.records[0]["last_error"] =
+        json!("HTTP 429 Too Many Requests private/path TOKEN=secret");
+    f.e.backend.records[0]["retry_not_before"] = json!(T + 86400.);
+    f.e.backend.ps.get_mut(&1).unwrap()["cpu"] = json!(0.01);
+    f.reconcile();
+    let saved = f.get(1);
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+    assert_eq!(saved["status"], "todo");
+    assert_eq!(saved["scheduler"]["not_before"], T + 86400.);
+    assert_eq!(saved["scheduler"]["retry_count"], 0);
+    assert_eq!(saved["processed_results"]["j1"]["reason"], "resource_wait");
+    assert!(!saved["note"].as_str().unwrap().contains("secret"));
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("doing");
+        row["scheduler"]["job"] = json!("j1");
+    })
+    .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 86400.);
+    assert_ne!(f.get(1)["status"], "block");
+    assert_eq!(f.e.backend.cancelled.len(), 1);
+}
+
+#[test]
+fn preparation2164_quota_evidence_waits_until_reset_without_model_substitution() {
+    use cc_scheduler::preparation::*;
+    let quota = json!({"anthropic":{"complete":true,"accounts":[{"used_percent":100.,"reset_at":1791820800.}]}});
+    assert_eq!(
+        cached_exhausted(&quota, "anthropic/claude-haiku-5-5", T),
+        Some(1791820800.)
+    );
+    assert_eq!(
+        cached_exhausted(&quota, "anthropic/claude-haiku-5-5", 1791820800.),
+        None
+    );
+    assert_eq!(cached_exhausted(&quota, "mock-model", T), None);
+    let several = json!({"anthropic":{"complete":true,"accounts":[{"used_percent":100.,"reset_at":T+3600.},{"used_percent":100.,"reset_at":T+7200.}]}});
+    assert_eq!(
+        cached_exhausted(&several, "anthropic/claude-haiku-5-5", T),
+        Some(T + 3600.)
+    );
+    assert_eq!(
+        cached_exhausted(&several, "anthropic/claude-haiku-5-5", T + 3600.),
+        None
+    );
+    for (stderr, code, reason) in [
+        ("not a git repository private/path", 1, "NonGit"),
+        ("No such remote 'origin'", 1, "OriginMissing"),
+        ("HTTP 429 private-token", 1, "ResourceWait"),
+        ("secret command arguments", 2, "InputRejected"),
+    ] {
+        assert_eq!(
+            classify_output(&Output {
+                code,
+                stdout: String::new(),
+                stderr: stderr.into()
+            })
+            .0,
+            reason
+        );
+    }
+}
+
+#[test]
+fn preparation2164_exact_ownership_excludes_prompt_and_pid_matches() {
+    use cc_scheduler::preparation::*;
+    let row = json!({"id":1,"jobs":["other","owned"]});
+    let jobs = vec![
+        json!({"id":"other","cwd":"elsewhere","prompt":"todo 1","pid":1}),
+        json!({"id":"owned","cwd":"original","related_todo_ids":[1]}),
+    ];
+    assert_eq!(workspace_source(&row, &jobs).unwrap()["id"], "owned");
+    assert!(!owns_workspace(&row, &jobs[0]));
+    assert!(workspace_source(&row, &jobs[..1]).is_none());
+}
+
+#[test]
+fn preparation2164_reuses_owned_terminal_session_only_without_other_worker() {
+    use cc_scheduler::preparation::*;
+    let row = json!({"id":1,"scheduler":{"resume":true}});
+    let job = json!({"id":"original","todo_id":1,"status":"lost","cwd":"D:/fixture-original","thread_id":"12345678-1234-4321-9234-123456789abc"});
+    assert_eq!(
+        recovery_session(&row, &job, "D:/fixture-original", &[]),
+        job["thread_id"].as_str()
+    );
+    let mut wrong = job.clone();
+    wrong["todo_id"] = json!(2);
+    assert!(recovery_session(&row, &wrong, "D:/fixture-original", &[]).is_none());
+    assert!(recovery_session(&row, &job, "D:/elsewhere", &[]).is_none());
+    let concurrent = json!({"status":"running","resume_session":job["thread_id"]});
+    assert!(recovery_session(&row, &job, "D:/fixture-original", &[concurrent]).is_none());
+}
+
+#[test]
+fn preparation2164_bare_claude_routes_to_subscription_provider_with_original_scope() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "todo", &[]);
+    row["model"] = json!("claude-haiku-5-5");
+    row["effort"] = json!("high");
+    f.put(row);
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
+        "anthropic/claude-haiku-5-5"
+    );
+    assert!(f.e.backend.launched[0]["text"]
+        .as_str()
+        .unwrap()
+        .contains(f.repo.to_str().unwrap()));
+    assert_eq!(f.get(1)["model"], "claude-haiku-5-5");
+}
+
+#[test]
+fn preparation2164_preserves_dirty_original_git_workspace_and_intermediate_commit() {
+    use cc_scheduler::preparation::*;
+    let f = Fixture::new();
+    let mut runner = SystemRunner;
+    run_git(&mut runner, &f.repo, &["init", "--quiet"]).unwrap();
+    fs::write(f.repo.join("original.txt"), "committed").unwrap();
+    run_git(&mut runner, &f.repo, &["add", "original.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "original",
+        ],
+    )
+    .unwrap();
+    let original = f.temp.path().join("agent-workspaces").join("agent-todo-1");
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            "-b",
+            "agent/original",
+            original.to_str().unwrap(),
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("original.txt"), "intermediate").unwrap();
+    run_git(&mut runner, &original, &["add", "original.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &original,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "intermediate",
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("unfinished.txt"), "dirty").unwrap();
+    let head = run_git(&mut runner, &original, &["rev-parse", "HEAD"]).unwrap();
+    let status = run_git(&mut runner, &original, &["status", "--porcelain"]).unwrap();
+    let mut row = json!({"id":1,"jobs":["owned"],"scheduler":{"worktree":f.temp.path().join("missing"),"branch":"scheduler/todo-1-stale"}});
+    let jobs = vec![json!({"id":"owned","todo_id":1,"cwd":original})];
+    let recovered = recover_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs)
+        .unwrap()
+        .unwrap();
+    merge(&mut row["scheduler"], recovered);
+    ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs).unwrap();
+    assert_eq!(
+        run_git(&mut runner, &original, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+    assert_eq!(
+        run_git(&mut runner, &original, &["status", "--porcelain"]).unwrap(),
+        status
+    );
+    assert_eq!(
+        fs::read_to_string(original.join("unfinished.txt")).unwrap(),
+        "dirty"
+    );
+    let mut wrong = jobs.clone();
+    wrong[0]["todo_id"] = json!(2);
+    assert!(ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &wrong).is_err());
+    row["scheduler"]["branch"] = json!("wrong");
+    assert_eq!(
+        ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs)
+            .unwrap_err()
+            .0,
+        "BranchMismatch"
+    );
+}
 impl Runner for GitFake {
     fn run(&mut self, c: &Invocation) -> Result<Output> {
         self.calls.push(c.clone());
-        let output = if let Some((target, branch, git)) = &self.existing {
+        let output = if let Some((_target, branch, git)) = &self.existing {
             match c.args.last().map(String::as_str) {
-                Some("--show-toplevel") => target.to_string_lossy().into_owned(),
+                Some("--show-toplevel") => c.args[1].clone(),
                 Some("--show-current") => branch.clone(),
                 _ => git.to_string_lossy().into_owned(),
             }
-        } else if c.args.last().map(String::as_str) == Some("--is-inside-work-tree") {
-            "true".into()
+        } else if c.args.last().map(String::as_str) == Some("--show-toplevel") {
+            c.args[1].clone()
         } else {
             "".into()
         };
@@ -2079,19 +2369,19 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
         existing: None,
     };
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
-    assert_eq!(git.calls.len(), 4);
+    assert_eq!(git.calls.len(), 5);
     assert_eq!(
-        &git.calls[1].args[2..],
+        &git.calls[2].args[2..],
         ["fetch", "--quiet", "origin", "main"]
     );
     assert_eq!(
-        &git.calls[2].args[2..],
+        &git.calls[3].args[2..],
         ["rev-parse", "--verify", "refs/remotes/origin/main"]
     );
-    assert_eq!(git.calls[3].args[2], "worktree");
-    assert_eq!(git.calls[3].args[3], "add");
-    assert_eq!(git.calls[3].args[5], row["scheduler"]["branch"]);
-    assert_eq!(git.calls[3].args.last().unwrap(), "origin/main");
+    assert_eq!(git.calls[4].args[2], "worktree");
+    assert_eq!(git.calls[4].args[3], "add");
+    assert_eq!(git.calls[4].args[5], row["scheduler"]["branch"]);
+    assert_eq!(git.calls[4].args.last().unwrap(), "origin/main");
     fs::create_dir(&target).unwrap();
     git.existing = Some((
         target,
@@ -2100,7 +2390,7 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     ));
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
-    assert_eq!(git.calls.len(), 4);
+    assert_eq!(git.calls.len(), 5);
     assert!(git
         .calls
         .iter()
@@ -2758,6 +3048,7 @@ fn attempts_and_retries_remain_json_integers() {
     .unwrap();
     f.e.requeue(&json!(1), &json!("j1"), "lost").unwrap();
     assert_eq!(f.get(1)["scheduler"]["retry_count"].as_u64(), Some(1));
+    f.e.backend.clock += 61.;
     let row =
         f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
             .unwrap()

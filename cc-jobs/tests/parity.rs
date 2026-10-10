@@ -4935,27 +4935,50 @@ fn patch(mut j: Value, p: Value) -> Value {
 fn job(p: Value) -> Value {
     patch(new_job(), p)
 }
-struct Temp(PathBuf);
+// The second field owns the directory even though callers only use the normalized path.
+struct Temp(PathBuf, #[allow(dead_code)] tempfile::TempDir);
 impl Temp {
     fn new() -> Self {
-        static SEQ: AtomicUsize = AtomicUsize::new(0);
-        let p = std::env::temp_dir().join(format!(
-            "cc-jobs-rust-{}-{}",
-            std::process::id(),
-            SEQ.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&p).unwrap();
+        Self::in_dir(&std::env::temp_dir())
+    }
+    fn in_dir(parent: &Path) -> Self {
+        // PIDs are reused, and an interrupted test can leave its old directory.
+        // Atomically create a fresh random directory instead of reusing that fixture.
+        let owner = tempfile::Builder::new()
+            .prefix("cc-jobs-rust-")
+            .tempdir_in(parent)
+            .unwrap();
         // Windows temp_dir may contain an 8.3 username. Child processes report
         // the long spelling; normalize the shared fixture before making paths.
-        Self(cc_jobs::cli::normalize_windows_path(
-            &p.canonicalize().unwrap(),
-        ))
+        let path = cc_jobs::cli::normalize_windows_path(&owner.path().canonicalize().unwrap());
+        Self(path, owner)
     }
 }
-impl Drop for Temp {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
-    }
+
+#[test]
+fn temporary_fixture_never_reuses_a_stale_pid_directory() {
+    let root = tempfile::tempdir().unwrap();
+    let stale = root
+        .path()
+        .join(format!("cc-jobs-rust-{}-0", std::process::id()));
+    fs::create_dir_all(stale.join("title-tools")).unwrap();
+    fs::write(stale.join("sentinel"), b"previous fixture").unwrap();
+    let first = Temp::in_dir(root.path());
+    let second = Temp::in_dir(root.path());
+    assert_ne!(first.0, second.0);
+    assert_ne!(
+        first.0,
+        cc_jobs::cli::normalize_windows_path(&stale.canonicalize().unwrap())
+    );
+    assert_eq!(fs::read_dir(&first.0).unwrap().count(), 0);
+    let first_path = first.0.clone();
+    drop(first);
+    assert!(!first_path.exists());
+    assert!(second.0.is_dir());
+    assert_eq!(
+        fs::read(stale.join("sentinel")).unwrap(),
+        b"previous fixture"
+    );
 }
 type CallFn = Box<dyn Fn(&Call) -> io::Result<Reply> + Send + Sync>;
 type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;

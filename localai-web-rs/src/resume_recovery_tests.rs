@@ -45,6 +45,60 @@ fn todo2299_unresolved_source_is_parked_before_checkout_probe() {
 }
 
 #[test]
+fn todo2299_wait_diagnostics_preserve_receipt_and_failure_history() {
+    let f = Fixture::new(); f.on();
+    let source = model_source(&f);
+    f.job("other-session", "work", "running", "", "");
+    fs::write(f.console.paths.jobs.join("other-session/job.json"),
+        json!({"id":"other-session","status":"running","cwd":f.root,"todo_id":2,"thread_id":source["thread_id"]}).to_string()).unwrap();
+    let body = json!({"id":1,"request_id":"original-wait","prompt":"元の作業を続ける","source_job_id":"source","resume_session":source["thread_id"],"isolate_worktree":false,"model":"gpt-6.1-sol","effort":"high","sandbox":"danger-full-access"});
+    f.console.api(&Method::POST,"delegate",body).unwrap();
+    let key="manual:original-wait";
+    let mut state=f.console.read_state().unwrap();
+    let accepted=state.request_options[key].clone();let prompt=state.queue[0].prompt.clone();
+    state.preparation_recovery.insert(key.into(),json!({"attempts":3,"legacy_timeout":{"attempts":3,"retry_at":1}}));
+    f.console.dispatch(&mut state,&f.console.jobs().unwrap()).unwrap();
+    assert_eq!(f.launches(),0);
+    let saved=f.console.read_state().unwrap();
+    assert_eq!(saved.preparation_recovery[key]["last_wait"]["kind"],"source_session_busy");
+    assert_eq!(saved.preparation_recovery[key]["attempts"],3);
+    assert_eq!(saved.preparation_recovery[key]["legacy_timeout"]["retry_at"],1);
+    assert!(!saved.preparation_failures.contains_key(key));
+    assert_eq!(saved.request_options[key],accepted);
+    assert_eq!(saved.queue[0].prompt,prompt);
+    f.console.note_wait(&mut state,key,"late_scope_or_session",json!({"changed_fields":["effort"]}));
+    assert_eq!(state.preparation_recovery[key]["attempts"],3);
+}
+
+#[test]
+fn todo2299_capacity_detail_needs_same_named_target_and_this_measurement() {
+    let report=json!({"todo_id":1,"allowed":false,"at":now(),"at_nanos":"101","report":{"resource_slots":0}});
+    assert_eq!(capacity_wait_detail(report.clone(),Some(1),100),report);
+    for (id,field,value) in [(None,"todo_id",Value::Null),(Some(1),"todo_id",Value::Null),
+        (Some(2),"todo_id",json!(1)),(Some(1),"allowed",json!(true)),
+        (Some(1),"at_nanos",json!("99")),(Some(1),"at",json!(now()-20))] {
+        let mut observation=report.clone();observation[field]=value;
+        assert!(capacity_wait_detail(observation,id,100).is_null(),"{id:?}: {field}");
+    }
+}
+
+#[test]
+fn todo2299_shared_launch_lock_wait_is_recorded_without_changing_receipt() {
+    let f=Fixture::new(); f.on(); f.delegate("lock-wait").unwrap();
+    let mut state=f.console.read_state().unwrap();let original=state.queue[0].clone();
+    let root=f.console.paths.tools.join("scheduler");fs::create_dir_all(&root).unwrap();
+    let guard=cc_scheduler::common::ByteLock::acquire(&root.join("scheduler.lock"),Duration::ZERO).unwrap().unwrap();
+    f.console.dispatch(&mut state,&[]).unwrap();
+    let saved=f.console.read_state().unwrap();
+    assert_eq!(saved.last_dispatch_wait["kind"],"scheduler_launch_lock");
+    assert_eq!(saved.queue[0].key,original.key);assert_eq!(saved.queue[0].prompt,original.prompt);
+    assert_eq!(saved.queue[0].options,original.options);assert!(saved.preparation_failures.is_empty());assert_eq!(f.launches(),0);
+    drop(guard);
+    f.console.dispatch(&mut state,&[]).unwrap();
+    assert!(state.last_dispatch_wait.is_null());assert_eq!(f.launches(),1);
+}
+
+#[test]
 fn todo2299_patrol_alternates_todo_and_orphan_ready_classes() {
     let f = Fixture::new();
     f.on();

@@ -3423,6 +3423,8 @@ fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
     let state = json!({"backend":"owner_chrome","login":"logged_in","checked_at":100});
     assert!(cc_todo::ready::resume(&mut db, 1, "chatgpt-plus", &state, 100).unwrap());
     write_json(&f.e.todo_path, &db, 2).unwrap();
+    // Normal admission still honours the launch interval after another task started.
+    f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
     f.dispatch();
     assert!(f
         .e

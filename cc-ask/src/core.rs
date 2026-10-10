@@ -1410,6 +1410,26 @@ pub fn launch_job_with_session(
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);
+    if let Some(id) = selection["todo_id"].as_i64().filter(|id| *id > 0) {
+        args.extend(["--todo-id".into(), id.to_string()]);
+    }
+    let ids: std::collections::BTreeSet<_> = selection["related_todo_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_i64)
+        .filter(|id| *id > 0)
+        .chain(selection["todo_id"].as_i64().filter(|id| *id > 0))
+        .collect();
+    if !ids.is_empty() {
+        args.extend([
+            "--related-todo-ids".into(),
+            ids.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        ]);
+    }
     if let Some(dirs) = selection["add_dirs"].as_array() {
         for dir in dirs.iter().filter_map(Value::as_str) {
             args.extend(["--add-dir".into(), dir.into()]);
@@ -1568,7 +1588,7 @@ pub fn job_started(ctx: &Context, jid: &str) -> bool {
     job_start_evidence(ctx, jid).unwrap_or(false)
 }
 
-fn job_start_evidence(ctx: &Context, jid: &str) -> Result<bool> {
+pub(crate) fn job_start_evidence(ctx: &Context, jid: &str) -> Result<bool> {
     let job = job_info(ctx, jid);
     if n(&job["steps"]) > 0
         || truth(&job["turn_completed"])

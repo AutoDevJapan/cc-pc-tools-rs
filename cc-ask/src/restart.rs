@@ -51,11 +51,16 @@ fn jobs(ctx: &Context) -> Result<Vec<Value>> {
 }
 
 fn links(item: &Value, job: &Value) -> bool {
-    item["jobs"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .any(|id| id == &job["id"] || (truth(&job["thread_id"]) && id == &job["thread_id"]))
+    (item["id"].as_i64().is_some()
+        && (job["todo_id"] == item["id"]
+            || job["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&item["id"]))))
+        || item["jobs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|id| id == &job["id"] || (truth(&job["thread_id"]) && id == &job["thread_id"]))
         || (truth(&item["scheduler"]["job"]) && item["scheduler"]["job"] == job["id"])
 }
 

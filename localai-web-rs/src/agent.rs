@@ -44,7 +44,13 @@ fn fault(status: StatusCode, code: &'static str, message: &'static str) -> Fault
         message,
     }
 }
+#[track_caller]
 fn io_fault() -> Fault {
+    #[cfg(test)]
+    {
+        let caller = std::panic::Location::caller();
+        eprintln!("state I/O failure at {}:{}", caller.file(), caller.line());
+    }
     fault(
         StatusCode::SERVICE_UNAVAILABLE,
         "state_unavailable",
@@ -3208,7 +3214,22 @@ fn atomic_write(p: &Path, bytes: &[u8]) -> Result<()> {
     f.write_all(safe.as_bytes()).map_err(|_| io_fault())?;
     f.sync_all().map_err(|_| io_fault())?;
     drop(f);
-    fs::rename(tmp, p).map_err(|_| io_fault())
+    replace_state_file(|| fs::rename(&tmp, p))
+}
+fn replace_state_file(mut rename: impl FnMut() -> std::io::Result<()>) -> Result<()> {
+    for delay in [15, 30, 60, 120, 240] {
+        match rename() {
+            Ok(()) => return Ok(()),
+            // Windows readers, including file scanners, can temporarily deny
+            // delete sharing. Retry only the already-synced file replacement;
+            // never rebuild or initialize the store after an I/O failure.
+            Err(error) if cfg!(windows) && matches!(error.raw_os_error(), Some(5 | 32 | 33)) => {
+                std::thread::sleep(Duration::from_millis(delay));
+            }
+            Err(_) => return Err(io_fault()),
+        }
+    }
+    rename().map_err(|_| io_fault())
 }
 fn redact(text: &str) -> String {
     let mut safe = text.to_owned();
@@ -3593,6 +3614,52 @@ mod tests {
     include!("delegation_model_tests.rs");
     include!("resume_recovery_tests.rs");
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn state_replacement_retries_a_real_reader_without_losing_the_original() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let fixture = Fixture::new();
+        let target = fixture.root.join("queue.json");
+        let source = fixture.root.join("queue.tmp");
+        fs::write(&target, b"original").unwrap();
+        fs::write(&source, b"updated").unwrap();
+        let mut reader = Some(
+            fs::OpenOptions::new()
+                .read(true)
+                .share_mode(3)
+                .open(&target)
+                .unwrap(),
+        );
+        let old_error = fs::rename(&source, &target).unwrap_err();
+        assert!(matches!(old_error.raw_os_error(), Some(5 | 32 | 33)));
+        assert_eq!(fs::read(&target).unwrap(), b"original");
+        let mut attempts = 0;
+        replace_state_file(|| {
+            attempts += 1;
+            let result = fs::rename(&source, &target);
+            if result.is_err() {
+                reader.take();
+            }
+            result
+        })
+        .unwrap();
+        assert_eq!(attempts, 2);
+        assert_eq!(fs::read(&target).unwrap(), b"updated");
+        assert!(!source.exists());
+    }
+
+    #[test]
+    fn state_replacement_keeps_nontransient_io_errors_without_retrying() {
+        let mut attempts = 0;
+        let error = replace_state_file(|| {
+            attempts += 1;
+            Err(std::io::Error::from_raw_os_error(112))
+        })
+        .unwrap_err();
+        assert_eq!(error.code, "state_unavailable");
+        assert_eq!(attempts, 1);
+    }
     use axum::{body::Body, http::header};
     use std::sync::atomic::{AtomicU64, Ordering};
     use tower::ServiceExt;

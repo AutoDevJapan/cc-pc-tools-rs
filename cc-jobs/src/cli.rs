@@ -132,7 +132,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "status" => ["all", "json", "summary"].contains(&name.as_str()),
                 "tail" => name == "follow",
                 "rate" => name == "force",
-                "cancel" => name == "recovery",
+                "cancel" => ["recovery", "if-todo-ready"].contains(&name.as_str()),
                 "update-queue-config" => name == "clear-fixed",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
@@ -172,7 +172,15 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "watch" => name == "interval",
                 "rate" => ["quality", "task-type", "notes", "force"].contains(&name.as_str()),
                 "backfill" => name == "days",
-                "cancel" => name == "recovery",
+                "cancel" => [
+                    "recovery",
+                    "if-todo-ready",
+                    "todo-id",
+                    "related-todo-ids",
+                    "todo-file",
+                    "cancel-key",
+                ]
+                .contains(&name.as_str()),
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 "recover-reboot" => name == "apply",
@@ -451,7 +459,20 @@ impl Context {
                     }
                 }
             }
-            "cancel" => self.cmd_cancel_mode(&a.id, a.flag("recovery"), out, err),
+            "cancel" => {
+                if a.flag("if-todo-ready") {
+                    self.cmd_cancel_if_todo_ready(&a, out, err)
+                } else if ["todo-id", "related-todo-ids", "todo-file", "cancel-key"]
+                    .iter()
+                    .any(|key| a.value(key).is_some())
+                {
+                    Err(Error::new(
+                        "cancel ToDo metadata requires --if-todo-ready --recovery",
+                    ))
+                } else {
+                    self.cmd_cancel_mode(&a.id, a.flag("recovery"), out, err)
+                }
+            }
             "rate" => self.cmd_rate(&a, out),
             "backfill" => self.cmd_backfill(a.required("days")?.parse().unwrap(), out),
             "recover-429" => {
@@ -1148,6 +1169,115 @@ impl Context {
     ) -> Result<i32> {
         self.load(jid)?;
         let lock = self.job_lock(jid, "state.lock")?;
+        self.cancel_locked(jid, recovery, lock, out, err)
+    }
+
+    /// Linearize recovery cancellation with wait registration. Never run a
+    /// subprocess or refresh/notify while holding the shared ToDo lock.
+    fn cmd_cancel_if_todo_ready(
+        &self,
+        a: &Args,
+        out: &mut dyn Write,
+        err: &mut dyn Write,
+    ) -> Result<i32> {
+        if !a.flag("recovery") {
+            return Err(Error::new("--if-todo-ready requires --recovery"));
+        }
+        let key = a.required("cancel-key")?;
+        if !valid_job_id(key) {
+            return Err(Error::new("invalid guarded cancellation key"));
+        }
+        let id = |text: &str| {
+            text.parse::<i64>()
+                .ok()
+                .filter(|id| *id > 0)
+                .ok_or_else(|| Error::new("cancel ToDo metadata requires positive ToDo IDs"))
+        };
+        let primary = a.value("todo-id").map(id).transpose()?;
+        let related = a
+            .value("related-todo-ids")
+            .map(|text| text.split(',').map(id).collect::<Result<Vec<_>>>())
+            .transpose()?
+            .unwrap_or_default();
+        let store = a
+            .value("todo-file")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| self.todo_store());
+        self.load(&a.id)?;
+        // Same ordering as registration/admission: queue -> job state -> ToDo.
+        let queue = self.queue_lock_for(
+            "dependency guarded cancellation",
+            std::time::Duration::from_secs(60),
+        )?;
+        let lock = self.job_lock(&a.id, "state.lock")?;
+        let mut job = self.load(&a.id)?;
+        let todo = FileLock::acquire(&store.with_file_name("todo.lock"))?;
+        // An unavailable managed store cannot prove that the source is ready.
+        // Keep the source unchanged until its dependencies can be checked.
+        let db: Value = serde_json::from_slice(&fs::read(&store)?)?;
+        if !db["items"].is_array() {
+            return Err(Error::new("invalid ToDo store items"));
+        }
+        let mut identity = job.clone();
+        let mut ids: std::collections::BTreeSet<i64> = identity["related_todo_ids"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_i64)
+            .collect();
+        ids.extend(identity["todo_id"].as_i64());
+        ids.extend(primary);
+        ids.extend(related);
+        identity["related_todo_ids"] = json!(ids);
+        let mut on = cc_job_policy::todo_wait::job_pending_on(&db, &identity);
+        on.extend(cc_job_policy::todo_wait::pending_on(
+            &db,
+            &json!({"wait_on":job["work_wait_on"]}),
+        ));
+        on.sort_unstable();
+        on.dedup();
+        let outcome = if job["cancel_requested"] == true
+            || (["cancelled", "lost"].contains(&s(&job, "status"))
+                && ["manual", "person"].contains(&s(&job, "cancel_reason")))
+        {
+            Some(json!({"outcome":"owner_stopped","job":a.id}))
+        } else if !on.is_empty() && job["recovery_cancel"]["key"] != key {
+            Some(json!({"outcome":"deferred","job":a.id,"wait_on":on}))
+        } else if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
+            Some(json!({"outcome":"already_terminal","job":a.id}))
+        } else {
+            None
+        };
+        if let Some(result) = outcome {
+            writeln!(out, "{result}")?;
+            return Ok(0);
+        }
+        // This durable intent is the ordering point, not process termination.
+        // A wait registered afterwards may block the successor, but cannot undo
+        // this admitted cancellation. Keep deliberate owner stops distinct.
+        job["related_todo_ids"] = identity["related_todo_ids"].clone();
+        if job["todo_id"].as_i64().is_none() {
+            job["todo_id"] = json!(primary);
+        }
+        job["recovery_cancel"] = json!({"key":key,"committed_at":self.rt.now()});
+        self.save(&job)?;
+        drop(todo);
+        drop(queue);
+        let code = self.cancel_locked(&a.id, true, lock, &mut Vec::new(), err)?;
+        if code == 0 {
+            writeln!(out, "{}", json!({"outcome":"cancelled","job":a.id}))?;
+        }
+        Ok(code)
+    }
+
+    fn cancel_locked(
+        &self,
+        jid: &str,
+        recovery: bool,
+        lock: FileLock,
+        out: &mut dyn Write,
+        err: &mut dyn Write,
+    ) -> Result<i32> {
         let mut job = self.refresh_locked(self.load(jid)?, false)?;
         if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
             return Err(Error::new(format!(

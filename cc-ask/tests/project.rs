@@ -242,7 +242,22 @@ fn real_git_nested_folder_and_worktree_dry_run() {
     std::fs::write(&exclusions, "# isolated test exclusions\n").unwrap();
     std::fs::write(&body, "確認").unwrap();
     std::fs::write(&config, r#"{"owner_user_id":"OWN"}"#).unwrap();
-    for cwd in [repo.join("src"), worktree.join("src")] {
+    // The configured test temp directory may live under the PC tools tree,
+    // whose plain repository folders deliberately share the PC tools label.
+    let repo_project = if repo
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase()
+        .starts_with("d:/cc/tools/")
+    {
+        "PCツール"
+    } else {
+        "alpha"
+    };
+    for (cwd, project) in [
+        (repo.join("src"), repo_project),
+        (worktree.join("src"), "alpha"),
+    ] {
         let mut command = Command::new(env!("CARGO_BIN_EXE_discord_ask"));
         command
             .current_dir(&cwd)
@@ -264,8 +279,8 @@ fn real_git_nested_folder_and_worktree_dry_run() {
             String::from_utf8_lossy(&output.stderr)
         );
         let preview: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(preview["project"], "alpha");
-        assert_eq!(preview["title"], "【alpha】確認");
+        assert_eq!(preview["project"], project);
+        assert_eq!(preview["title"], format!("【{project}】確認"));
         assert_eq!(preview["cwd"], cwd.to_string_lossy().as_ref());
     }
     assert!(!temp.path().join("state.json").exists());

@@ -64,6 +64,12 @@ impl Harness {
         };
         let path = root.path().to_path_buf();
         std::fs::write(path.join("client-projects.txt"), "").unwrap();
+        atomic_json(
+            &path.join("todo.json"),
+            &json!({"items":[],"projects":{}}),
+            2,
+        )
+        .unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
             recover_fail: false,
@@ -590,6 +596,60 @@ impl Fake {
                 let i = argv.iter().position(|a| a == "cancel").unwrap();
                 let file = self.root.join("jobs").join(&argv[i + 1]).join("job.json");
                 let mut job = read_json(&file)?;
+                if argv.iter().any(|a| a == "--if-todo-ready") {
+                    let store = PathBuf::from(arg("--todo-file"));
+                    let _todo = ByteLock::acquire(
+                        &store.with_file_name("todo.lock"),
+                        std::time::Duration::ZERO,
+                    )?;
+                    let db = if store.is_file() {
+                        read_json(&store)?
+                    } else {
+                        json!({"items":[]})
+                    };
+                    let mut identity = job.clone();
+                    identity["id"] = json!(&argv[i + 1]);
+                    let mut ids: std::collections::BTreeSet<_> = job["related_todo_ids"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_i64)
+                        .collect();
+                    ids.extend(job["todo_id"].as_i64());
+                    ids.extend(arg("--todo-id").parse::<i64>().ok());
+                    ids.extend(
+                        arg("--related-todo-ids")
+                            .split(',')
+                            .filter_map(|id| id.parse::<i64>().ok()),
+                    );
+                    identity["related_todo_ids"] = json!(ids);
+                    let on = cc_job_policy::todo_wait::job_pending_on(&db, &identity);
+                    let outcome = if job["cancel_requested"] == true
+                        || (["cancelled", "lost"].contains(&s(&job["status"]))
+                            && ["manual", "person"].contains(&s(&job["cancel_reason"])))
+                    {
+                        "owner_stopped"
+                    } else if !on.is_empty()
+                        && s(&job["recovery_cancel"]["key"]) != arg("--cancel-key")
+                    {
+                        "deferred"
+                    } else if !RUNNING.contains(&s(&job["status"])) {
+                        "already_terminal"
+                    } else {
+                        "cancelled"
+                    };
+                    if outcome == "cancelled" {
+                        job["status"] = json!("cancelled");
+                        job["related_todo_ids"] = identity["related_todo_ids"].clone();
+                        job["recovery_cancel"] =
+                            json!({"committed_at":self.now,"key":arg("--cancel-key")});
+                        atomic_json(&file, &job, 2)?;
+                    }
+                    return Ok(Output {
+                        stdout: json!({"outcome":outcome,"job":argv[i+1],"wait_on":on}).to_string(),
+                        ..Default::default()
+                    });
+                }
                 job["status"] = json!("cancelled");
                 atomic_json(&file, &job, 2)?;
             }
@@ -604,6 +664,11 @@ impl Fake {
         let name = arg("--name");
         let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
+        record["todo_id"] = json!(arg("--todo-id").parse::<i64>().ok());
+        record["related_todo_ids"] = json!(arg("--related-todo-ids")
+            .split(',')
+            .filter_map(|id| id.parse::<i64>().ok())
+            .collect::<Vec<_>>());
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {
             self.launch_error = false;
@@ -621,6 +686,8 @@ impl Fake {
         atomic_json(&dir.join("job.json"),&json!({"id":jid,"status":"running","model":record["model"],"effort":record["effort"],"task_type":record["task_type"],"sandbox":record["sandbox"],"scope_source":record["scope_source"],"thread_id":format!("session-{jid}"),"launch_key":record["launch_key"],"cwd":record["cwd"]}),2).unwrap();
         std::fs::write(dir.join("prompt.md"), s(&record["prompt"])).unwrap();
         let mut job = read_json(&dir.join("job.json"))?;
+        job["todo_id"] = record["todo_id"].clone();
+        job["related_todo_ids"] = record["related_todo_ids"].clone();
         job["steps"] = json!(if self.launch_queued { 0 } else { 1 });
         if self.launch_queued {
             job["status"] = json!("queued");

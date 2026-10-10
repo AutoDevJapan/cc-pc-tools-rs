@@ -7,6 +7,14 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 static SERIAL: AtomicUsize = AtomicUsize::new(0);
+// Exercise the private native guard directly for unwind/drop, in addition to
+// the RealRunner integration paths below. This is the production source.
+#[cfg(windows)]
+#[path = "../src/process_tree.rs"]
+mod native_build_tree;
+#[cfg(windows)]
+#[path = "../src/process_output.rs"]
+mod native_output_capture;
 struct Fixture {
     root: PathBuf,
     p: Paths,
@@ -2635,62 +2643,423 @@ fn missing_startup_helper_source_refuses_existing_stale_binary_before_build() {
 }
 
 #[cfg(windows)]
-#[test]
-fn cancelled_build_waits_for_real_grandchildren_to_exit() {
-    use windows_sys::Win32::{
-        Foundation::{CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, FILETIME, WAIT_OBJECT_0},
-        System::Threading::{
-            GetProcessTimes, OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
-            PROCESS_SYNCHRONIZE,
-        },
-    };
-    let f = Fixture::new();
-    let marker = f.root.join("grandchild.pid");
-    let result = process::RealRunner.run(
-        Call::new(args(&[
-            env!("CARGO_BIN_EXE_cc_live_process_fixture"),
-            "parent",
-            &path(&marker),
-        ]))
-        .managed()
-        .timeout(5.0),
-    );
-    assert!(result.unwrap_err().contains("timed out"));
-    let receipt = read_text(marker).unwrap();
-    let mut fields = receipt.split_whitespace();
-    let pid: u32 = fields.next().unwrap().parse().unwrap();
-    let born: u64 = fields.next().unwrap().parse().unwrap();
-    assert!(fields.next().is_none());
-    unsafe {
-        let handle = OpenProcess(
-            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
-            0,
-            pid,
-        );
-        if handle.is_null() {
-            assert_eq!(GetLastError(), ERROR_INVALID_PARAMETER);
-        } else {
+struct FixtureProcess(std::os::windows::io::OwnedHandle);
+
+#[cfg(windows)]
+impl FixtureProcess {
+    fn pin(marker: &std::path::Path) -> Self {
+        use std::os::windows::io::{AsRawHandle, FromRawHandle};
+        use windows_sys::Win32::{
+            Foundation::{FILETIME, WAIT_TIMEOUT},
+            System::Threading::{
+                GetProcessTimes, OpenProcess, QueryFullProcessImageNameW, WaitForSingleObject,
+                PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
+            },
+        };
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(4);
+        let receipt = loop {
+            if let Ok(text) = fs::read_to_string(marker) {
+                if text.split_whitespace().count() == 2 {
+                    break text;
+                }
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "fixture did not publish readiness"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        };
+        let mut fields = receipt.split_whitespace();
+        let pid: u32 = fields.next().unwrap().parse().unwrap();
+        let born: u64 = fields.next().unwrap().parse().unwrap();
+        unsafe {
+            let handle = OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE,
+                0,
+                pid,
+            );
+            assert!(!handle.is_null(), "could not pin live fixture process");
+            let handle = std::os::windows::io::OwnedHandle::from_raw_handle(handle);
             let (mut created, mut exited, mut kernel, mut user) = (
                 FILETIME::default(),
                 FILETIME::default(),
                 FILETIME::default(),
                 FILETIME::default(),
             );
-            let success =
-                GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user);
-            let observed_born =
-                (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
-            let state = WaitForSingleObject(handle, 0);
-            CloseHandle(handle);
-            assert_ne!(success, 0);
-            if observed_born == born {
-                assert_eq!(
-                    state, WAIT_OBJECT_0,
-                    "Grandchild survived the cancelled build"
+            assert_ne!(
+                GetProcessTimes(
+                    handle.as_raw_handle(),
+                    &mut created,
+                    &mut exited,
+                    &mut kernel,
+                    &mut user
+                ),
+                0
+            );
+            assert_eq!(
+                (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime),
+                born
+            );
+            let mut image = vec![0u16; 32768];
+            let mut length = image.len() as u32;
+            assert_ne!(
+                QueryFullProcessImageNameW(
+                    handle.as_raw_handle(),
+                    0,
+                    image.as_mut_ptr(),
+                    &mut length
+                ),
+                0
+            );
+            let image = PathBuf::from(String::from_utf16(&image[..length as usize]).unwrap());
+            assert_eq!(
+                image.canonicalize().unwrap(),
+                PathBuf::from(env!("CARGO_BIN_EXE_cc_live_process_fixture"))
+                    .canonicalize()
+                    .unwrap()
+            );
+            assert_eq!(
+                WaitForSingleObject(handle.as_raw_handle(), 0),
+                WAIT_TIMEOUT,
+                "fixture exited before cancellation"
+            );
+            eprintln!("fixture pinned: pid={pid} created={born} exe=cc_live_process_fixture handle={:?} state=258", handle.as_raw_handle());
+            Self(handle)
+        }
+    }
+
+    fn assert_exited(&self) {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::{
+            Foundation::WAIT_OBJECT_0, System::Threading::WaitForSingleObject,
+        };
+        let state = unsafe { WaitForSingleObject(self.0.as_raw_handle(), 0) };
+        eprintln!(
+            "fixture after runner: handle={:?} state={state}",
+            self.0.as_raw_handle()
+        );
+        assert_eq!(
+            state, WAIT_OBJECT_0,
+            "Grandchild survived the cancelled build"
+        );
+    }
+}
+
+#[cfg(windows)]
+impl Drop for FixtureProcess {
+    fn drop(&mut self) {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::{
+            Foundation::WAIT_OBJECT_0,
+            System::Threading::{TerminateProcess, WaitForSingleObject},
+        };
+        unsafe {
+            if WaitForSingleObject(self.0.as_raw_handle(), 0) != WAIT_OBJECT_0 {
+                // The handle was validated against this fixture's creation time and executable.
+                TerminateProcess(self.0.as_raw_handle(), 1);
+                let state = WaitForSingleObject(self.0.as_raw_handle(), 5000);
+                eprintln!(
+                    "fixture fallback cleanup: handle={:?} state={state}",
+                    self.0.as_raw_handle()
                 );
             }
         }
     }
+}
+
+#[cfg(windows)]
+#[test]
+fn cancelled_build_waits_for_real_grandchildren_to_exit() {
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            process::RealRunner.run(
+                Call::new(args(&[
+                    env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+                    "parent",
+                    &path(&marker),
+                ]))
+                .managed()
+                .timeout(5.0),
+            )
+        });
+        let root = FixtureProcess::pin(&marker.with_extension("root"));
+        let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+        let grandchild = FixtureProcess::pin(&marker);
+        assert!(worker.join().unwrap().unwrap_err().contains("timed out"));
+        root.assert_exited();
+        worker_process.assert_exited();
+        grandchild.assert_exited();
+    });
+}
+
+#[cfg(windows)]
+#[test]
+fn completed_build_waits_for_descendants_after_root_exit() {
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            process::RealRunner.run(
+                Call::new(args(&[
+                    env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+                    "parent-exit",
+                    &path(&marker),
+                ]))
+                .managed()
+                .merged()
+                .timeout(5.0),
+            )
+        });
+        let root = FixtureProcess::pin(&marker.with_extension("root"));
+        let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+        let grandchild = FixtureProcess::pin(&marker);
+        fs::write(marker.with_extension("root-release"), b"release").unwrap();
+        assert_eq!(worker.join().unwrap().unwrap().code, 0);
+        root.assert_exited();
+        worker_process.assert_exited();
+        grandchild.assert_exited();
+    });
+}
+
+#[cfg(windows)]
+#[test]
+fn dropped_build_guard_drains_pinned_root_and_grandchildren() {
+    use std::process::{Command, Stdio};
+    let f = Fixture::new();
+    let marker = f.root.join("grandchild.pid");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_cc_live_process_fixture"));
+    command
+        .arg("parent-delayed")
+        .arg(&marker)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let (mut child, mut tree) =
+        native_build_tree::Tree::spawn(&mut command, CREATE_NO_WINDOW, true).unwrap();
+    assert!(tree.managed());
+    let root = FixtureProcess::pin(&marker.with_extension("root"));
+    let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+    tree.observe().unwrap();
+    // Add a new member only after the existing handles have been captured.
+    // stop()/Drop must query the job again instead of reusing that snapshot.
+    fs::write(marker.with_extension("spawn-release"), b"release").unwrap();
+    let grandchild = FixtureProcess::pin(&marker);
+    // An unwind must go through the guard's synchronous drain too.
+    assert!(
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            let _guard = tree;
+            panic!("fixture cancellation unwind");
+        }))
+        .is_err()
+    );
+    root.assert_exited();
+    worker_process.assert_exited();
+    grandchild.assert_exited();
+    child.wait().unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn stop_error_with_live_pipe_writers_returns_without_restore_or_extra_drop_budget() {
+    use std::{
+        os::windows::io::AsRawHandle,
+        process::{Command, Stdio},
+        sync::mpsc,
+        time::{Duration, Instant},
+    };
+    use windows_sys::Win32::{
+        Foundation::WAIT_TIMEOUT,
+        System::{JobObjects::TerminateJobObject, Threading::WaitForSingleObject},
+    };
+    fn restore_after_capture(
+        capture: native_output_capture::Capture,
+        status: Result<i32, String>,
+        confirmed: bool,
+        deadline: Instant,
+        path: &std::path::Path,
+    ) -> Result<Output, String> {
+        let output = capture.finish(status, confirmed, deadline)?;
+        fs::write(path, output.stdout.as_bytes()).map_err(|e| e.to_string())?;
+        Ok(output)
+    }
+    for merged in [false, true] {
+        let f = Fixture::new();
+        let marker = f.root.join("pipe-writer.pid");
+        let restored = f.root.join("restored");
+        let mut command = Command::new(env!("CARGO_BIN_EXE_cc_live_process_fixture"));
+        command.arg("pipe-parent").arg(&marker).stdin(Stdio::null());
+        let (source, sink) = native_output_capture::pipe().unwrap();
+        let pipes = if merged {
+            command
+                .stdout(Stdio::from(sink.try_clone().unwrap()))
+                .stderr(Stdio::from(sink));
+            vec![source]
+        } else {
+            let (err_source, err_sink) = native_output_capture::pipe().unwrap();
+            command
+                .stdout(Stdio::from(sink))
+                .stderr(Stdio::from(err_sink));
+            vec![source, err_source]
+        };
+        let (mut child, mut tree) =
+            native_build_tree::Tree::spawn(&mut command, CREATE_NO_WINDOW, true).unwrap();
+        drop(command);
+        let mut capture = native_output_capture::Capture::new(pipes);
+        let root = FixtureProcess::pin(&marker.with_extension("root"));
+        let worker_process = FixtureProcess::pin(&marker.with_extension("worker"));
+        let grandchild = FixtureProcess::pin(&marker);
+        tree.observe().unwrap();
+        capture.poll().unwrap(); // Readiness was published after both flushes.
+        let deadline = Instant::now() + Duration::from_millis(250);
+        // Actual native access denial, not a mocked stop result. The full job
+        // handle remains owned by this test so kill-on-close cannot hide it.
+        let full_job = tree.restrict_termination_for_test(deadline).unwrap();
+        let (send, receive) = mpsc::sync_channel(1);
+        let restore_path = restored.clone();
+        let flight = std::thread::spawn(move || {
+            let stop = tree.stop(&mut child);
+            assert!(
+                stop.is_err(),
+                "restricted native job unexpectedly terminated"
+            );
+            assert!(!tree.stop_confirmed());
+            assert_eq!(tree.stop_deadline(), Some(deadline));
+            let result = restore_after_capture(
+                capture,
+                stop.map(|_| 0),
+                tree.stop_confirmed(),
+                deadline,
+                &restore_path,
+            );
+            drop(tree); // Must reuse the expired deadline, not another 30s.
+            send.send(result).unwrap();
+            child
+        });
+        let before_cleanup = receive.recv_timeout(Duration::from_secs(2));
+        let returned_while_writers_live = before_cleanup.is_ok();
+        let live_state = unsafe { WaitForSingleObject(grandchild.0.as_raw_handle(), 0) };
+        eprintln!("stop error phase: merged={merged} finite_return={returned_while_writers_live} writer_state={live_state} original_budget_ms=250");
+        // Always release our actual job before assertions/join, including when
+        // testing the old infinite-join path. No test worker is detached.
+        assert_ne!(
+            unsafe { TerminateJobObject(full_job.as_raw_handle(), 1) },
+            0
+        );
+        // TerminateJobObject is only a request even in test cleanup. Wait on
+        // the same validated handles under one separate fixture-cleanup budget.
+        let fixture_cleanup = Instant::now() + Duration::from_secs(5);
+        for process in [&root, &worker_process, &grandchild] {
+            let remaining = fixture_cleanup
+                .saturating_duration_since(Instant::now())
+                .as_millis() as u32;
+            let state = unsafe { WaitForSingleObject(process.0.as_raw_handle(), remaining) };
+            eprintln!(
+                "fixture cleanup wait: handle={:?} state={state}",
+                process.0.as_raw_handle()
+            );
+        }
+        let result = before_cleanup
+            .unwrap_or_else(|_| receive.recv_timeout(Duration::from_secs(5)).unwrap());
+        let mut child = flight.join().unwrap();
+        child.wait().unwrap();
+        root.assert_exited();
+        worker_process.assert_exited();
+        grandchild.assert_exited();
+        assert!(
+            returned_while_writers_live,
+            "caller waited for external pipe-writer cleanup past its original deadline"
+        );
+        assert_eq!(live_state, WAIT_TIMEOUT);
+        let error = result.unwrap_err();
+        assert!(error.contains("os error 5"), "{error}");
+        assert!(
+            error.contains("exit unconfirmed") && error.contains("output incomplete"),
+            "{error}"
+        );
+        assert!(
+            error.contains("PIPE_READY_STDOUT") && error.contains("PIPE_READY_STDERR"),
+            "captured diagnostics lost: {error}"
+        );
+        assert!(!restored.exists());
+
+        // Positive control: this same restoration continuation really runs
+        // once both output streams have completed successfully.
+        let (source, mut sink) = native_output_capture::pipe().unwrap();
+        use std::io::Write;
+        sink.write_all(b"completed output").unwrap();
+        drop(sink);
+        let capture = native_output_capture::Capture::new(vec![source]);
+        restore_after_capture(
+            capture,
+            Ok(0),
+            true,
+            Instant::now() + Duration::from_secs(2),
+            &restored,
+        )
+        .unwrap();
+        assert_eq!(fs::read(&restored).unwrap(), b"completed output");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn output_capture_keeps_complete_large_split_and_merged_output() {
+    let f = Fixture::new();
+    for merged in [false, true] {
+        let mut call = Call::new(args(&[
+            env!("CARGO_BIN_EXE_cc_live_process_fixture"),
+            "output-burst",
+            &path(&f.root),
+        ]))
+        .managed()
+        .timeout(5.0);
+        call.merge_stderr = merged;
+        let output = process::RealRunner.run(call).unwrap();
+        assert_eq!(output.code, 0);
+        let stdout = "O".repeat(256 * 1024);
+        let stderr = "E".repeat(256 * 1024);
+        if merged {
+            assert_eq!(output.stdout, format!("{stdout}{stderr}"));
+            assert!(output.stderr.is_empty());
+        } else {
+            assert_eq!(output.stdout, stdout);
+            assert_eq!(output.stderr, stderr);
+        }
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn output_capture_with_held_writer_uses_original_deadline_and_is_not_success() {
+    use std::{
+        io::Write,
+        sync::mpsc,
+        time::{Duration, Instant},
+    };
+    let (source, mut sink) = native_output_capture::pipe().unwrap();
+    sink.write_all(b"partial output retained").unwrap();
+    let mut capture = native_output_capture::Capture::new(vec![source]);
+    capture.poll().unwrap();
+    let deadline = Instant::now() + Duration::from_millis(250);
+    let (send, receive) = mpsc::sync_channel(1);
+    let flight = std::thread::spawn(move || {
+        send.send(capture.finish(Ok(0), true, deadline)).unwrap();
+    });
+    let before_cleanup = receive.recv_timeout(Duration::from_secs(2));
+    let finite = before_cleanup.is_ok();
+    drop(sink);
+    let result =
+        before_cleanup.unwrap_or_else(|_| receive.recv_timeout(Duration::from_secs(5)).unwrap());
+    flight.join().unwrap();
+    assert!(finite, "output EOF wait exceeded the original deadline");
+    let error = result.unwrap_err();
+    assert!(
+        error.contains("original cleanup deadline exhausted")
+            && error.contains("partial output retained"),
+        "{error}"
+    );
 }
 
 #[test]

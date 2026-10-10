@@ -1498,6 +1498,7 @@ fn test_other_job_owns_same_thread_or_todo_so_no_restart_or_post() {
 #[test]
 fn test_explicit_cancel_is_silent_even_without_another_live_job() {
     let mut h = Harness::new();
+    let todo_before = std::fs::read(&h.ctx.todo).unwrap();
     h.tick();
     h.finish("job1", "cancelled", None, None);
     let file = h.ctx.jobs.join("jobs/job1/job.json");
@@ -1509,7 +1510,7 @@ fn test_explicit_cancel_is_silent_even_without_another_live_job() {
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 1);
     assert_eq!(h.fake.borrow().posts.len(), posts);
-    assert!(!h.ctx.todo.exists());
+    assert_eq!(std::fs::read(&h.ctx.todo).unwrap(), todo_before);
 }
 
 #[test]

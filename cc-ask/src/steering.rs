@@ -661,6 +661,80 @@ pub fn addressed(entry: &Value) -> String {
     format!("\n\n今回反映したオーナーの投稿:\n{lines}")
 }
 
+/// Carry only recorded task ownership across a handoff, never prompt/cwd guesses.
+fn todo_scope(db: &Value, source: &mut Value, selection: &Value) {
+    let mut ids = std::collections::BTreeSet::new();
+    for job in [&*source, selection] {
+        ids.extend(job["todo_id"].as_i64().filter(|id| *id > 0));
+        ids.extend(
+            job["related_todo_ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_i64)
+                .filter(|id| *id > 0),
+        );
+        for item in db["items"].as_array().into_iter().flatten() {
+            if job["id"].is_string()
+                && (item["jobs"]
+                    .as_array()
+                    .is_some_and(|jobs| jobs.contains(&job["id"]))
+                    || item["scheduler"]["job"] == job["id"])
+            {
+                ids.extend(item["id"].as_i64().filter(|id| *id > 0));
+            }
+        }
+    }
+    if source["todo_id"].as_i64().is_none() && selection["todo_id"].as_i64().is_some() {
+        source["todo_id"] = selection["todo_id"].clone();
+    }
+    source["related_todo_ids"] = json!(ids);
+}
+
+fn todo_db(ctx: &Context) -> Result<Value> {
+    let db = read_json(&ctx.todo)?;
+    if !db["items"].is_array() {
+        return Err("invalid ToDo store items".into());
+    }
+    Ok(db)
+}
+
+fn wait_on(db: &Value, source: &Value, remembered: &Value) -> Vec<i64> {
+    let mut on = cc_job_policy::todo_wait::job_pending_on(db, source);
+    on.extend(cc_job_policy::todo_wait::pending_on(
+        db,
+        &json!({"wait_on":remembered}),
+    ));
+    on.sort_unstable();
+    on.dedup();
+    on
+}
+
+fn update_wait(record: &mut Value, slot: Slot, on: &[i64]) {
+    let e = entry_mut(record, slot);
+    if on.is_empty() {
+        let released = e.as_object_mut().unwrap().remove("work_wait_on").is_some();
+        if released {
+            crate::reply_recovery::delivered(record);
+        }
+    } else {
+        e["work_wait_on"] = json!(on);
+    }
+}
+
+/// An accepted queued launch is still a reservation. A terminated launch without
+/// input evidence cannot consume a reply; dispatched side effects must not replay.
+fn update_job(ctx: &Context, key: &str) -> Result<Option<String>> {
+    let Some(id) = find_launch_job(ctx, key) else {
+        return Ok(None);
+    };
+    if job_start_evidence(ctx, &id)? || RUNNING.contains(&s(&job_info(ctx, &id)["status"])) {
+        Ok(Some(id))
+    } else {
+        Ok(None)
+    }
+}
+
 /// True means the old job's reply must be withheld, even if delivery is temporarily blocked.
 pub fn deliver(
     ctx: &mut Context,
@@ -672,32 +746,117 @@ pub fn deliver(
     budget: &mut bool,
 ) -> Result<bool> {
     let tid = s(&thread["id"]);
+    let initial = entry(record, slot).clone();
+    if !initial["owner_update"].is_object()
+        && (s(&initial["job"]).is_empty()
+            || s(&initial["job"]) == "launch-failed"
+            || truth(&initial["reported"]))
+    {
+        return Ok(false);
+    }
+    // Capture input before any dependency lookup or retry eligibility decision.
+    // Waiting and reserved attempts can receive additional messages as well.
+    let mut history = thread_history(ctx, tid)?;
+    for message in initial["dependency_messages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        if !history.iter().any(|saved| saved["id"] == message["id"]) {
+            history.push(message.clone());
+        }
+    }
+    history.sort_by_key(|message| n(&message["id"]));
+    let retained: Vec<_> = history
+        .iter()
+        .filter(|message| {
+            s(&message["author"]["id"]) == owner
+                && n(&message["id"]) > n(&initial["after"])
+                && !crate::snooze::control_only(message)
+                && !reply_unavailable(state, s(&message["id"]))
+        })
+        .cloned()
+        .collect();
+    if !retained.is_empty() && initial["dependency_messages"] != json!(retained) {
+        entry_mut(record, slot)["dependency_messages"] = json!(retained);
+        save(ctx, state, thread, record, slot)?;
+    }
+    // Dependency completion is independent of transport retry deadlines. It
+    // restores this attempt's eligibility without changing stops/generations.
+    if entry(record, slot)["work_wait_on"]
+        .as_array()
+        .is_some_and(|on| !on.is_empty())
+        && !entry(record, slot)["owner_update"].is_object()
+    {
+        let db = todo_db(ctx)?;
+        let e = entry(record, slot);
+        let mut source = job_info(ctx, s(&e["job"]));
+        source["id"] = e["job"].clone();
+        todo_scope(&db, &mut source, &e["selection"]);
+        let on = wait_on(&db, &source, &e["work_wait_on"]);
+        update_wait(record, slot, &on);
+        save(ctx, state, thread, record, slot)?;
+    }
     // Recover a launch response/checkpoint loss before considering another cancellation.
-    let pending = entry(record, slot)["owner_update"].clone();
+    let mut pending = entry(record, slot)["owner_update"].clone();
     if pending.is_object() {
-        if let Some(jid) = find_launch_job(ctx, s(&pending["key"])) {
+        let db = todo_db(ctx)?;
+        let selection = entry(record, slot)["selection"].clone();
+        let source_info = job_info(ctx, s(&pending["source"]["id"]));
+        todo_scope(&db, &mut pending["source"], &source_info);
+        todo_scope(&db, &mut pending["source"], &selection);
+        let on = wait_on(
+            &db,
+            &pending["source"],
+            &entry(record, slot)["work_wait_on"],
+        );
+        entry_mut(record, slot)["owner_update"] = pending.clone();
+        update_wait(record, slot, &on);
+        save(ctx, state, thread, record, slot)?;
+        let recovered = update_job(ctx, s(&pending["key"]))?;
+        let started = recovered
+            .as_ref()
+            .map(|id| job_start_evidence(ctx, id))
+            .transpose()?
+            .unwrap_or(false);
+        if !on.is_empty() && !started {
+            return Ok(true);
+        }
+        if let Some(jid) = recovered {
             adopt(ctx, state, thread, record, slot, &pending, &jid)?;
-        } else if let Some(messages) = pending["messages"].as_array().filter(|ms| !ms.is_empty()) {
-            if messages.iter().any(|m| reply_reserved(state, s(&m["id"]))) {
-                return Ok(true);
+        } else {
+            if find_launch_job(ctx, s(&pending["key"])).is_some() {
+                pending["key"] = json!(uuid::Uuid::new_v4().simple().to_string());
+                entry_mut(record, slot)["owner_update"] = pending.clone();
+                save(ctx, state, thread, record, slot)?;
             }
-            let remaining: Vec<_> = messages
-                .iter()
-                .filter(|m| !reply_delivered(state, s(&m["id"])))
-                .cloned()
-                .collect();
-            if remaining.is_empty() {
-                entry_mut(record, slot)
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("owner_update");
-                save(ctx, state, thread, record, slot)?;
-            } else if remaining.len() != messages.len() {
-                let mut pending = pending.clone();
-                pending["messages"] = json!(remaining);
-                pending["prompt"] = json!(format!("オーナーからの今回未配送の追加指示を最優先してください。\n{}\n{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{}", quotes(&remaining),s(&pending["source"]["cwd"]),s(&pending["original_request"])));
-                entry_mut(record, slot)["owner_update"] = pending;
-                save(ctx, state, thread, record, slot)?;
+            if let Some(messages) = pending["messages"].as_array().filter(|ms| !ms.is_empty()) {
+                if messages.iter().any(|m| reply_reserved(state, s(&m["id"]))) {
+                    return Ok(true);
+                }
+                let remaining: Vec<_> = messages
+                    .iter()
+                    .filter(|m| !reply_delivered(state, s(&m["id"])))
+                    .cloned()
+                    .collect();
+                if remaining.is_empty() {
+                    entry_mut(record, slot)
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("owner_update");
+                    save(ctx, state, thread, record, slot)?;
+                } else if remaining.len() != messages.len() {
+                    let mut pending = pending.clone();
+                    pending["messages"] = json!(remaining);
+                    pending["prompt"] = json!(format!(
+                        "オーナーからの今回未配送の追加指示を最優先してください。\n{}\n{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{}",
+                        quotes(&remaining),
+                        s(&pending["source"]["cwd"]),
+                        s(&pending["original_request"])
+                    ));
+                    entry_mut(record, slot)["owner_update"] = pending;
+                    save(ctx, state, thread, record, slot)?;
+                }
             }
         }
     }
@@ -711,7 +870,6 @@ pub fn deliver(
     if jid.is_empty() || jid == "launch-failed" || truth(&current["reported"]) {
         return Ok(false);
     }
-    let history = thread_history(ctx, tid)?;
     let unseen: Vec<_> = history
         .iter()
         .filter(|m| {
@@ -749,6 +907,28 @@ pub fn deliver(
     }
     let project = crate::project::question_project(ctx, &labelled, &names);
     acknowledge(ctx, state, tid, &project, &unseen)?;
+    // Retain the exact input before a dependency read can fail. This source's
+    // next attempt merges it with history, even if Discord no longer has it.
+    if !unseen.is_empty() {
+        entry_mut(record, slot)["dependency_messages"] = json!(unseen);
+        save(ctx, state, thread, record, slot)?;
+    }
+    let db = todo_db(ctx)?;
+    let mut ownership = info.clone();
+    ownership["id"] = json!(jid);
+    todo_scope(&db, &mut ownership, &current["selection"]);
+    let on = wait_on(&db, &ownership, &current["work_wait_on"]);
+    entry_mut(record, slot)["selection"]["todo_id"] = ownership["todo_id"].clone();
+    entry_mut(record, slot)["selection"]["related_todo_ids"] =
+        ownership["related_todo_ids"].clone();
+    update_wait(record, slot, &on);
+    if !on.is_empty() {
+        entry_mut(record, slot)["dependency_messages"] = json!(unseen);
+    }
+    save(ctx, state, thread, record, slot)?;
+    if !on.is_empty() {
+        return Ok(true);
+    }
     // Keep the same start gate as scheduled recovery; no other thread/job is cancelled.
     let root = ctx
         .scheduler_command
@@ -766,13 +946,6 @@ pub fn deliver(
         return Err("tracked job belongs to another Discord thread".into());
     }
     // Waiting for another writer must not turn into a fresh duplicate worker.
-    let mut ownership = info.clone();
-    ownership["id"] = json!(jid);
-    let db = if ctx.todo.is_file() {
-        read_json(&ctx.todo)?
-    } else {
-        json!({})
-    };
     if let Some(other) = crate::restart::other_owner(ctx, thread, &ownership, &db)? {
         eprintln!("owner update deferred {tid}: other owner {other}; retry next tick");
         return Ok(true);
@@ -787,6 +960,7 @@ pub fn deliver(
             source = current["job_info"].clone();
         }
         source["id"] = json!(jid);
+        todo_scope(&db, &mut source, &ownership);
         for field in ["model", "effort", "task_type", "sandbox", "scope_source"] {
             if !truth(&source[field]) {
                 source[field] = current["selection"][field].clone();
@@ -859,8 +1033,14 @@ pub fn deliver(
                 .join("last_message.md")
                 .to_string_lossy(),
         );
-        let handoff = format!("{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n", s(&source["cwd"]));
-        let prompt = format!("オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}", quotes(&unseen));
+        let handoff = format!(
+            "{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n",
+            s(&source["cwd"])
+        );
+        let prompt = format!(
+            "オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}",
+            quotes(&unseen)
+        );
         entry_mut(record, slot)["owner_update"] = json!({"key":key,"source":source,"session":session,"resume":resume,"prompt":prompt,"original_request":original,"after":latest,"messages":addressed_messages});
         entry_mut(record, slot)["answer_source_resolved"] = json!(true);
         save(ctx, state, thread, record, slot)?;
@@ -884,19 +1064,78 @@ pub fn deliver(
         entry_mut(record, slot)["owner_update"] = pending.clone();
         save(ctx, state, thread, record, slot)?;
     }
+    // Re-read after the reservation checkpoint: waits can be added while queued.
+    let db = todo_db(ctx)?;
+    todo_scope(&db, &mut pending["source"], &ownership);
+    let on = wait_on(
+        &db,
+        &pending["source"],
+        &entry(record, slot)["work_wait_on"],
+    );
+    entry_mut(record, slot)["owner_update"] = pending.clone();
+    update_wait(record, slot, &on);
+    save(ctx, state, thread, record, slot)?;
+    if !on.is_empty() {
+        return Ok(true);
+    }
     let source = &pending["source"];
     let old = s(&source["id"]).to_owned();
-    if RUNNING.contains(&s(&job_info(ctx, &old)["status"])) {
-        let out = ctx.run(
-            &command_argv(
-                &ctx.codex_command,
-                &["cancel".into(), old.clone(), "--recovery".into()],
-            ),
-            45,
-        )?;
-        // A completion racing cancellation is harmless, but a live process may not overlap the resume.
-        if out.code != 0 && RUNNING.contains(&s(&job_info(ctx, &old)["status"])) {
+    {
+        let mut args = vec![
+            "cancel".into(),
+            old.clone(),
+            "--recovery".into(),
+            "--if-todo-ready".into(),
+            "--todo-file".into(),
+            ctx.todo.to_string_lossy().into_owned(),
+            "--cancel-key".into(),
+            s(&pending["key"]).into(),
+        ];
+        if let Some(id) = source["todo_id"].as_i64().filter(|id| *id > 0) {
+            args.extend(["--todo-id".into(), id.to_string()]);
+        }
+        let ids: Vec<_> = source["related_todo_ids"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_i64)
+            .filter(|id| *id > 0)
+            .map(|id| id.to_string())
+            .collect();
+        if !ids.is_empty() {
+            args.extend(["--related-todo-ids".into(), ids.join(",")]);
+        }
+        let out = ctx.run(&command_argv(&ctx.codex_command, &args), 45)?;
+        if out.code != 0 {
             return Err("could not stop owner update source".into());
+        }
+        let result: Value = serde_json::from_str(out.stdout.trim())
+            .map_err(|_| "invalid guarded cancellation response")?;
+        if s(&result["job"]) != old {
+            return Err("guarded cancellation returned another job".into());
+        }
+        match s(&result["outcome"]) {
+            "deferred" => {
+                let on = result["wait_on"]
+                    .as_array()
+                    .ok_or("missing guarded cancellation dependencies")?
+                    .iter()
+                    .map(|id| {
+                        id.as_i64()
+                            .filter(|id| *id > 0)
+                            .ok_or("invalid guarded cancellation dependency")
+                    })
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+                if on.is_empty() {
+                    return Err("empty guarded cancellation dependencies".into());
+                }
+                update_wait(record, slot, &on);
+                save(ctx, state, thread, record, slot)?;
+                return Ok(true);
+            }
+            "owner_stopped" => return Ok(true),
+            "cancelled" | "already_terminal" => (),
+            _ => return Err("unknown guarded cancellation outcome".into()),
         }
     }
     let mut selection = pending["source"].clone();
@@ -909,6 +1148,17 @@ pub fn deliver(
         newest.map(|m| s(&m["content"])),
     );
     selection["verbatim_owner_messages"] = json!(true);
+    let db = todo_db(ctx)?;
+    todo_scope(&db, &mut selection, &job_info(ctx, &old));
+    pending["source"]["todo_id"] = selection["todo_id"].clone();
+    pending["source"]["related_todo_ids"] = selection["related_todo_ids"].clone();
+    entry_mut(record, slot)["owner_update"] = pending.clone();
+    let on = wait_on(&db, &selection, &entry(record, slot)["work_wait_on"]);
+    update_wait(record, slot, &on);
+    if !on.is_empty() {
+        save(ctx, state, thread, record, slot)?;
+        return Ok(true);
+    }
     *budget = true;
     record["last_launch_attempt_at"] = json!(ctx.now());
     save(ctx, state, thread, record, slot)?;
@@ -930,7 +1180,10 @@ pub fn deliver(
         )
     };
     let result = launch(ctx, &pending);
-    let result = result.or_else(|error| find_launch_job(ctx, s(&pending["key"])).ok_or(error));
+    let result = match result {
+        Err(error) => update_job(ctx, s(&pending["key"]))?.ok_or(error),
+        result => result,
+    };
     let jid = match result {
         Ok(jid) => jid,
         Err(error)
@@ -976,6 +1229,8 @@ fn adopt(
     e["reported"] = json!(false);
     for field in [
         "owner_update",
+        "work_wait_on",
+        "dependency_messages",
         "close_pending",
         "question_pending",
         "launch",

@@ -318,6 +318,8 @@ func TestGitRootAdmission(t *testing.T) {
 	if _, err := runHidden(10*time.Second, "git", "init", "--quiet", repo); err != nil {
 		t.Fatal(err)
 	}
+	gitTop, gitErr := runHidden(10*time.Second, "git", "-C", repo, "rev-parse", "--show-toplevel")
+	t.Logf("fixture root=%q Git top=%q error=%v", repo, strings.TrimSpace(string(gitTop)), gitErr)
 	c.Temp = filepath.Join(root, "only-allowed-temp")
 	if os.Mkdir(c.Temp, 0700) != nil {
 		t.Fatal("mkdir")
@@ -335,6 +337,41 @@ func TestGitRootAdmission(t *testing.T) {
 	}
 	_, err = c.create(nested, "test", "nested")
 	code(t, err, "ROOT_MUST_BE_TEMP_OR_WORKTREE_TOP")
+}
+
+func TestGitRootAdmissionWithShortPath(t *testing.T) {
+	c, root := fixture(t)
+	repo := filepath.Join(root, "long-fixture-repository-name")
+	if _, err := runHidden(10*time.Second, "git", "init", "--quiet", repo); err != nil {
+		t.Fatal(err)
+	}
+	u, err := syscall.UTF16PtrFromString(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]uint16, 32768)
+	n, err := syscall.GetShortPathName(u, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || int(n) >= len(buffer) {
+		t.Fatal("short path lookup", n, err)
+	}
+	short := syscall.UTF16ToString(buffer[:n])
+	if same(short, repo) {
+		t.Skip("volume does not generate 8.3 names")
+	}
+	c.Temp = filepath.Join(root, "only-allowed-temp")
+	if err = os.Mkdir(c.Temp, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = c.create(short, "test", "short-path"); err != nil {
+		t.Fatal(err)
+	}
+	child := filepath.Join(repo, "child")
+	if err = os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = c.create(child, "test", "not-top"); err == nil {
+		t.Fatal("nested directory admitted")
+	}
 }
 func TestShellMissingReportsLocationsBeforeDestinationCreated(t *testing.T) {
 	c, root := fixture(t)

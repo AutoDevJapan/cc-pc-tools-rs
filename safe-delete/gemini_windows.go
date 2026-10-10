@@ -127,6 +127,10 @@ func (s *geminiScope) snapshot(root string) (map[string]geminiEntry, error) {
 	if err := s.externalUnchanged(); err != nil {
 		return nil, err
 	}
+	shared, err := fileIdentity(filepath.Join(root, "verified-preview.mp4"))
+	if err != nil || !s.accepts(filepath.Join(root, "verified-preview.mp4"), root, shared) {
+		return nil, fail("SHARED_MEDIA_IDENTITY_CHANGED")
+	}
 	result := make(map[string]geminiEntry)
 	// Enumerate metadata with the bounded, reparse-free scanner before hashing.
 	c := config{MaxEntries: 10000}
@@ -140,6 +144,9 @@ func (s *geminiScope) snapshot(root string) (map[string]geminiEntry, error) {
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return fail("CONTENT_METADATA_FAILED")
+		}
+		if len(result) > s.entries || protected(filepath.Base(path)) {
+			return fail("GEMINI_INVENTORY_CHANGED")
 		}
 		i, e := fileIdentity(path)
 		if e != nil {

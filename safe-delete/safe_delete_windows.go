@@ -186,7 +186,15 @@ func (c config) root(value string) (string, error) {
 		return "", fail("ROOT_MUST_BE_TEMP_OR_WORKTREE_TOP")
 	}
 	top, err := checked(strings.TrimSpace(string(output)))
-	if err != nil || !same(top, p) {
+	if err != nil {
+		return "", fail("ROOT_MUST_BE_TEMP_OR_WORKTREE_TOP")
+	}
+	// Git expands Windows short (8.3) path components. Compare the checked
+	// directories' actual identities, rather than rejecting spelling aliases.
+	requested, requestErr := fileIdentity(p)
+	gitTop, topErr := fileIdentity(top)
+	if requestErr != nil || topErr != nil || requested.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 ||
+		gitTop.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 || requested.VolumeSerialNumber != gitTop.VolumeSerialNumber || fileID(requested) != fileID(gitTop) {
 		return "", fail("ROOT_MUST_BE_TEMP_OR_WORKTREE_TOP")
 	}
 	return p, nil
@@ -484,7 +492,7 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 	}
 	dest := filepath.Join(c.Quarantine, time.Now().Format("20060102")+"-"+r.Project+"-"+r.Content+"-"+id[:8])
 	phase := "preflight"
-	reasonWritten, moveConfirmed := false, false
+	reasonWritten, moveConfirmed, recordConfirmed := false, false, false
 	whyPath := filepath.Join(dest, "理由.txt")
 	// Every failure after source validation reports both locations and capacity.
 	defer func() {
@@ -498,6 +506,9 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 				status := "退避状態: 未完了。元の場所と退避先の両方を確認すること。"
 				if moveConfirmed {
 					status = "データの移動は確認済み。記録処理が未完了。"
+				}
+				if recordConfirmed {
+					status = "データの移動と所有記録の更新は確認済み。理由の更新が未完了。"
 				}
 				_ = appendReason(whyPath, status+" 段階: "+phase+" 理由: "+code+"\n")
 			}
@@ -561,15 +572,16 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 		}
 	}
 	moveConfirmed = true
-	phase = "reason_complete"
-	if appendReason(whyPath, "退避状態: 完了。元の場所の不在と退避先の存在を確認した。\n") != nil {
-		return nil, fail("QUARANTINE_REASON_UPDATE_FAILED")
-	}
 	phase = "record"
 	r.State = "quarantined"
 	r.Destination = dest
 	if err = c.save(r, false); err != nil {
 		return nil, err
+	}
+	recordConfirmed = true
+	phase = "reason_complete"
+	if appendReason(whyPath, "退避状態: 完了。元の場所の不在・退避先の存在・所有記録の更新を確認した。\n") != nil {
+		return nil, fail("QUARANTINE_REASON_UPDATE_FAILED")
 	}
 	return map[string]any{"id": id, "state": r.State, "destination": dest, "bytes": m.Bytes, "entries": m.Entries}, nil
 }

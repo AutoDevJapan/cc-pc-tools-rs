@@ -2577,9 +2577,169 @@ fn preparation2164_preserves_dirty_original_git_workspace_and_intermediate_commi
         "BranchMismatch"
     );
 }
+fn reserved_branch_fixture() -> (Fixture, Value, String) {
+    let f = Fixture::new();
+    let mut runner = SystemRunner;
+    run_git(&mut runner, &f.repo, &["init", "--quiet"]).unwrap();
+    fs::write(f.repo.join("source.txt"), "reserved input").unwrap();
+    run_git(&mut runner, &f.repo, &["add", "source.txt"]).unwrap();
+    let commit = |runner: &mut SystemRunner, args: &[&str]| {
+        let mut command = vec![
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+        ];
+        command.extend_from_slice(args);
+        run_git(runner, &f.repo, &command).unwrap();
+    };
+    commit(&mut runner, &["-m", "reserved input"]);
+    let head = run_git(&mut runner, &f.repo, &["rev-parse", "HEAD"]).unwrap();
+    let branch = "scheduler/todo-1-reserved";
+    run_git(&mut runner, &f.repo, &["branch", branch]).unwrap();
+    fs::write(f.repo.join("source.txt"), "main advanced").unwrap();
+    commit(&mut runner, &["-am", "advance base"]);
+    let target = PathBuf::from(format!("{}-wt", f.repo.display())).join("todo-1-reserved");
+    let row = json!({"id":1,"scheduler":{"worktree":target,"branch":branch}});
+    (f, row, head)
+}
+
+#[test]
+fn preparation2164_restores_reserved_branch_without_replacing_its_commit() {
+    let (f, row, head) = reserved_branch_fixture();
+    let target = Path::new(s(&row["scheduler"]["worktree"]));
+    let mut runner = SystemRunner;
+    cc_scheduler::preparation::ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &[])
+        .unwrap();
+    assert_eq!(
+        run_git(&mut runner, target, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("source.txt")).unwrap(),
+        "reserved input"
+    );
+    assert_eq!(
+        fs::read_to_string(f.repo.join("source.txt")).unwrap(),
+        "main advanced"
+    );
+    assert_ne!(
+        run_git(&mut runner, &f.repo, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_missing_worker_receipt_never_reconstructs_only_committed_bytes() {
+    let (f, mut row, head) = reserved_branch_fixture();
+    let target = row["scheduler"]["worktree"].clone();
+    row["scheduler"]["workspace_receipt"] = json!({"job":"source","todo_id":1,"cwd":target});
+    let jobs = [json!({"id":"source","todo_id":1,"cwd":target})];
+    let mut runner = SystemRunner;
+    let error = cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &jobs,
+    )
+    .unwrap_err();
+    assert_eq!(error.0, "CwdMissing");
+    assert!(!Path::new(target.as_str().unwrap()).exists());
+    assert_eq!(
+        run_git(
+            &mut runner,
+            &f.repo,
+            &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+        )
+        .unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_reserved_ref_lookup_failure_is_not_a_new_branch() {
+    struct RefFailure {
+        observed: bool,
+    }
+    impl Runner for RefFailure {
+        fn run(&mut self, command: &Invocation) -> Result<Output> {
+            if command.args.iter().any(|arg| arg == "show-ref") {
+                self.observed = true;
+                return Ok(Output {
+                    code: 1,
+                    stdout: String::new(),
+                    stderr: "ref lookup failed".into(),
+                });
+            }
+            SystemRunner.run(command)
+        }
+    }
+    let (f, row, head) = reserved_branch_fixture();
+    let mut runner = RefFailure { observed: false };
+    let error = cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &[],
+    )
+    .unwrap_err();
+    assert!(runner.observed);
+    assert_eq!(error.0, "ToolFailed");
+    assert!(!Path::new(s(&row["scheduler"]["worktree"])).exists());
+    assert_eq!(
+        run_git(
+            &mut SystemRunner,
+            &f.repo,
+            &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+        )
+        .unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_reserved_branch_in_another_checkout_keeps_its_dirty_files() {
+    let (f, row, _) = reserved_branch_fixture();
+    let original = f.temp.path().join("existing-reservation");
+    let mut runner = SystemRunner;
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            original.to_str().unwrap(),
+            "scheduler/todo-1-reserved",
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("pending.txt"), "uncommitted work").unwrap();
+    assert!(cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &[]
+    )
+    .is_err());
+    assert!(!Path::new(s(&row["scheduler"]["worktree"])).exists());
+    assert_eq!(
+        fs::read_to_string(original.join("pending.txt")).unwrap(),
+        "uncommitted work"
+    );
+}
+
 impl Runner for GitFake {
     fn run(&mut self, c: &Invocation) -> Result<Output> {
         self.calls.push(c.clone());
+        if c.args.iter().any(|arg| arg == "show-ref") {
+            return Ok(Output {
+                code: 2,
+                stdout: String::new(),
+                stderr: String::new(),
+            });
+        }
         let output = if let Some((_target, branch, git)) = &self.existing {
             match c.args.last().map(String::as_str) {
                 Some("--show-toplevel") => c.args[1].clone(),
@@ -2613,19 +2773,19 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
         existing: None,
     };
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
-    assert_eq!(git.calls.len(), 5);
+    assert_eq!(git.calls.len(), 6);
     assert_eq!(
-        &git.calls[2].args[2..],
+        &git.calls[3].args[2..],
         ["fetch", "--quiet", "origin", "main"]
     );
     assert_eq!(
-        &git.calls[3].args[2..],
+        &git.calls[4].args[2..],
         ["rev-parse", "--verify", "refs/remotes/origin/main"]
     );
-    assert_eq!(git.calls[4].args[2], "worktree");
-    assert_eq!(git.calls[4].args[3], "add");
-    assert_eq!(git.calls[4].args[5], row["scheduler"]["branch"]);
-    assert_eq!(git.calls[4].args.last().unwrap(), "origin/main");
+    assert_eq!(git.calls[5].args[2], "worktree");
+    assert_eq!(git.calls[5].args[3], "add");
+    assert_eq!(git.calls[5].args[5], row["scheduler"]["branch"]);
+    assert_eq!(git.calls[5].args.last().unwrap(), "origin/main");
     fs::create_dir(&target).unwrap();
     git.existing = Some((
         target,

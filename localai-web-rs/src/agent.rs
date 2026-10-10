@@ -1865,7 +1865,7 @@ impl Console {
             json!({"metadata":metadata(p),"origin_marker":metadata(&p.join(".cc-agent-origin.json")),
                 "belongs":registered.map(|base|self.checkout_belongs(path,base)),"dirty":dirty})
         };
-        json!({"workspace_policy_version":4,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
+        json!({"workspace_policy_version":5,"todo":item.map(|i|json!({"status":i["status"],"scheduler":i["scheduler"],
             "project":i["project"],"registered_source":registered,
             "pending":i["stall_recovery"]["pending"],"jobs":i["jobs"],"spec":i["spec"],
             "spec_file":metadata(Path::new(strv(i,"spec"))),

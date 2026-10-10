@@ -1656,6 +1656,9 @@ impl Console {
             if let Some(id) = t.todo_id {
                 args.extend(["--todo-id".into(), id.to_string()]);
             }
+            if let Some(parent) = item.and_then(|i| i["subwork"]["parent_todo_id"].as_u64()) {
+                args.extend(["--subwork-of".into(), parent.to_string()]);
+            }
             if let Some(task_type) = t.options["task_type"].as_str() {
                 args.extend(["--task-type".into(), task_type.into()]);
             }
@@ -1934,9 +1937,13 @@ impl Console {
         ];
         for cwd in candidates.into_iter().flatten().filter(|p| !p.is_empty()) {
             match fs::metadata(cwd) {
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound
-                    && owned_source
-                    && source.is_some_and(|s| !same_folder(cwd, strv(s, "cwd"))) => continue,
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::NotFound
+                        && owned_source
+                        && source.is_some_and(|s| !same_folder(cwd, strv(s, "cwd"))) =>
+                {
+                    continue
+                }
                 Err(_) => return Err(io_fault()),
                 Ok(m) if !m.is_dir() => return Err(io_fault()),
                 Ok(_) => (),

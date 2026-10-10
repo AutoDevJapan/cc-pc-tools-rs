@@ -175,3 +175,19 @@ fn todo2164_broad_saved_root_returns_to_registered_source_without_copying_ancest
     assert_eq!(cwd, registered.to_str().unwrap());
     assert_eq!(fs::read(registered.join("source.rs")).unwrap(), b"source");
 }
+
+#[test]
+fn todo2164_saved_subwork_parent_is_forwarded_to_the_independent_launcher() {
+    let f = todo1597_fixture("todo");
+    let mut db = f.console.todos().unwrap();
+    db["items"][0]["subwork"] = json!({"parent_todo_id":122,"kind":"check"});
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    f.console
+        .dispatch(&mut state, &f.console.jobs().unwrap())
+        .unwrap();
+    let run = model_run(&f);
+    assert_eq!(model_arg(&run, "--todo-id").as_deref(), Some("1"));
+    assert_eq!(model_arg(&run, "--subwork-of").as_deref(), Some("122"));
+    assert_eq!(f.launches(), 1);
+}

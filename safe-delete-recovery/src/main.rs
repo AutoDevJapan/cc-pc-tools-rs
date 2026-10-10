@@ -547,7 +547,8 @@ impl Config {
             || r.identity.id != self.id
             || r.identity.project != self.project
             || r.identity.content != self.content
-            || (self.id == INTERNAL_2184_ID && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
+            || (self.id == INTERNAL_2184_ID
+                && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {

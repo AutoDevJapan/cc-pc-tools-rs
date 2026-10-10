@@ -19,7 +19,7 @@ const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
 const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
-const QUEUE_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
+const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
     "todo-note-tool/.git",
     "repo/.git/worktrees/todo-note-tool/gitdir",
@@ -225,14 +225,14 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
-            QUEUE_ID => {
-                c.id = QUEUE_ID;
+            INTERNAL_2184_ID => {
+                c.id = INTERNAL_2184_ID;
                 c.project = "cc-jobs-2184";
                 c.content = "git-fix-and-verification";
                 c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
                 c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
                 c.pinned_identity = Some((2229119083, 5348024573249873));
-                let root = c.temp.join(format!("codex-owned-{QUEUE_ID}"));
+                let root = c.temp.join(format!("codex-owned-{INTERNAL_2184_ID}"));
                 c.repos = vec![
                     Repo {
                         allowed_untracked: &[
@@ -460,7 +460,7 @@ impl Config {
         ticket: &[u8],
         create: bool,
     ) -> Result<()> {
-        if self.id != RESUME_ID && self.id != QUEUE_ID {
+        if self.id != RESUME_ID && self.id != INTERNAL_2184_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let existing_proof = if !create {
@@ -493,10 +493,10 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
-        if self.id == QUEUE_ID {
+        if self.id == INTERNAL_2184_ID {
             return self
                 .quarantine
-                .join(format!("20261010-cc-jobs-2184-{QUEUE_ID}"));
+                .join(format!("20261010-cc-jobs-2184-{INTERNAL_2184_ID}"));
         }
         if unslop::profile(self.id).is_some() {
             return self.quarantine.join(format!(
@@ -532,7 +532,7 @@ impl Config {
             || r.identity.id != self.id
             || r.identity.project != self.project
             || r.identity.content != self.content
-            || (self.id == QUEUE_ID && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
+            || (self.id == INTERNAL_2184_ID && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -576,7 +576,7 @@ impl Config {
             return Err("TARGET_IDENTITY_CHANGED");
         }
         let nodes = scan(path, &self.repos)?;
-        if self.id == QUEUE_ID {
+        if self.id == INTERNAL_2184_ID {
             self.validate_internal_repos(path, before_move)?;
             return Ok(nodes);
         }
@@ -649,7 +649,7 @@ impl Config {
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
             nodes: nodes.clone(),
-            backlink: if self.id == QUEUE_ID {
+            backlink: if self.id == INTERNAL_2184_ID {
                 None
             } else {
                 self.prepare_backlink(path, &dest.join("files"))?
@@ -687,7 +687,7 @@ impl Config {
         for entry in fs::read_dir(&dest).map_err(|_| "QUARANTINE_METADATA_FAILED")? {
             let name = entry.map_err(|_| "QUARANTINE_METADATA_FAILED")?.file_name();
             if name != OsStr::new("理由.txt")
-                && !(self.id == QUEUE_ID
+                && !(self.id == INTERNAL_2184_ID
                     && (name == OsStr::new("git-pointer-0.replacement")
                         || name == OsStr::new("git-pointer-1.replacement")))
             {
@@ -695,10 +695,10 @@ impl Config {
             }
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
-        if self.id == QUEUE_ID {
+        if self.id == INTERNAL_2184_ID {
             self.prepare_internal_repair(path, &ticket_bytes)?;
         }
-        if self.id == RESUME_ID || self.id == QUEUE_ID {
+        if self.id == RESUME_ID || self.id == INTERNAL_2184_ID {
             self.content_proof(path, &nodes, &ticket_bytes, true)?;
         }
         Ok(
@@ -847,7 +847,7 @@ impl Config {
             return Err("TARGET_STILL_EXISTS");
         }
         let files = dest.join("files");
-        let nodes = if self.id == QUEUE_ID {
+        let nodes = if self.id == INTERNAL_2184_ID {
             self.finish_internal_repair(&r, &files, &t, &ticket_bytes)?
         } else {
             self.validate(&r, &files, false)?
@@ -861,7 +861,7 @@ impl Config {
         if has_proof {
             self.content_proof(&files, &nodes, &ticket_bytes, false)?;
         }
-        if self.id != QUEUE_ID {
+        if self.id != INTERNAL_2184_ID {
             self.repair_backlink(&r, &files, t.backlink.as_ref())?;
         }
         let why = dest.join("理由.txt");
@@ -905,7 +905,7 @@ impl Config {
         )
     }
     fn validate_internal_repos(&self, root: &Path, before: bool) -> Result<()> {
-        if self.id != QUEUE_ID || self.repos.len() != 2 {
+        if self.id != INTERNAL_2184_ID || self.repos.len() != 2 {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let common = root.join("repo/.git");
@@ -964,7 +964,7 @@ impl Config {
         }
     }
     fn internal_pointer_bytes(&self, root: &Path, index: usize) -> Result<Vec<u8>> {
-        if self.id != QUEUE_ID {
+        if self.id != INTERNAL_2184_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let path = root.join(QUEUE_POINTERS[index]);
@@ -980,7 +980,7 @@ impl Config {
         Ok(bytes)
     }
     fn prepare_internal_repair(&self, source: &Path, ticket: &[u8]) -> Result<()> {
-        if self.id != QUEUE_ID {
+        if self.id != INTERNAL_2184_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let mut pointers = Vec::new();
@@ -1089,7 +1089,7 @@ impl Config {
         t: &Ticket,
         ticket: &[u8],
     ) -> Result<BTreeMap<String, Node>> {
-        if self.id != QUEUE_ID {
+        if self.id != INTERNAL_2184_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let identity = node(root)?;
@@ -2669,7 +2669,7 @@ mod tests {
                 fs::write(path.join("refs/fixture-private-name"), b"opaque fixture\n").unwrap();
                 continue;
             }
-            let internal = c.id == QUEUE_ID && matches!(repo.kind, RepoKind::Linked { .. });
+            let internal = c.id == INTERNAL_2184_ID && matches!(repo.kind, RepoKind::Linked { .. });
             let seed = if internal {
                 target.join("repo")
             } else if matches!(repo.kind, RepoKind::Linked { .. }) {
@@ -2713,7 +2713,7 @@ mod tests {
             path: target.to_string_lossy().into_owned(),
             volume: n.volume,
             file_id: n.file_id,
-            created_at: if c.id == QUEUE_ID {
+            created_at: if c.id == INTERNAL_2184_ID {
                 "2026-10-10T00:39:58.8390892+09:00"
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
@@ -2790,7 +2790,7 @@ mod tests {
     #[test]
     fn queue_owned_internal_pair_moves_and_resumes_after_each_pointer_replacement() {
         for replaced in 0..=2 {
-            let c = fixture_for(QUEUE_ID);
+            let c = fixture_for(INTERNAL_2184_ID);
             let root = source(&c);
             fs::write(root.join("verification.log"), b"saved evidence\n").unwrap();
             for name in c.repos[0].allowed_untracked {
@@ -2838,7 +2838,7 @@ mod tests {
             "pointer",
             "grafts",
         ] {
-            let c = fixture_for(QUEUE_ID);
+            let c = fixture_for(INTERNAL_2184_ID);
             let root = source(&c);
             match kind {
                 "extra-worktree" => {
@@ -2867,7 +2867,7 @@ mod tests {
     #[test]
     fn queue_internal_finish_rejects_changed_content_pointer_and_record() {
         for kind in ["content", "pointer", "stage", "record", "proof", "root"] {
-            let c = fixture_for(QUEUE_ID);
+            let c = fixture_for(INTERNAL_2184_ID);
             let root = source(&c);
             let file = root.join("verification.log");
             fs::write(&file, b"aaaa").unwrap();

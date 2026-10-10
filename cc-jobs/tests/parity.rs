@@ -6226,7 +6226,7 @@ mod cancel {
             add_wait(&store);
             t.put(job(
                 json!({"id":"source","status":"queued","pid":std::process::id(),"pid_created":123,
-                "recovery_cancel":{"key":key,"committed_at":"saved"}}),
+                "recovery_cancel":{"key":key,"committed_at":"2026-10-11T02:01:36+09:00"}}),
             ));
             let (result, out, _) = guarded(&t, "source", &store, "attempt");
             assert_eq!(result.unwrap(), 0);
@@ -6242,6 +6242,8 @@ mod cancel {
         for stop in [
             json!({"status":"running","cancel_requested":true}),
             json!({"status":"cancelled","cancel_reason":"manual"}),
+            json!({"status":"running","cancel_reason":"person"}),
+            json!({"status":"running","stopped":true}),
         ] {
             let t = Test::new();
             let store = guard_store(&t);
@@ -6375,6 +6377,45 @@ mod cancel {
         let j = t.put(t.running());
         assert_eq!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.unwrap(), 0);
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["cancel_requested"], true);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert!(cc_job_policy::cancellation::recovery_cancel(
+            &Value::Null,
+            &saved
+        ));
+        assert!(!cc_job_policy::cancellation::blocks_recovery(
+            &json!({}),
+            &saved
+        ));
+    }
+    #[test]
+    fn plain_recovery_preserves_guarded_intent_and_never_overrides_explicit_stops() {
+        let t = Test::new();
+        let mut j = t.running();
+        j["recovery_cancel"] =
+            json!({"key":"guarded-original","committed_at":"2026-10-11T02:01:36+09:00"});
+        t.put(j.clone());
+        assert_eq!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.unwrap(), 0);
+        assert_eq!(
+            t.ctx.load(s(&j, "id")).unwrap()["recovery_cancel"],
+            j["recovery_cancel"]
+        );
+        for stop in [
+            json!({"cancel_requested":true}),
+            json!({"stopped":true}),
+            json!({"cancel_reason":"manual"}),
+            json!({"cancel_reason":"person"}),
+        ] {
+            let t = Test::new();
+            let mut j = t.running();
+            j["recovery_cancel"] = json!({"key":"old","committed_at":"2026-10-11T02:01:36+09:00"});
+            let j = t.put(patch(j, stop));
+            assert!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.is_err());
+            assert_eq!(
+                t.ctx.load(s(&j, "id")).unwrap()["recovery_cancel"],
+                j["recovery_cancel"]
+            );
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
     }
     #[test]
     fn test_cancel_queued_before_supervisor_starts_never_launches_codex() {
@@ -9731,6 +9772,90 @@ mod end_to_end {
                 && e.job(&jid)["status"] == "cancelled"
         });
         assert_eq!(e.job(&jid)["status"], "cancelled");
+    }
+    #[test]
+    fn test_native_recovery_cancel_preserves_intent_after_process_tree_stops() {
+        let e = E2e::new();
+        let key = "fa8563e2a26943a8aa8e9c1af8b8d284";
+        let prompt = e.tmp.0.join("prompt.md");
+        fs::write(&prompt, "saved acceptance").unwrap();
+        let started = e.cli(
+            &[
+                "run",
+                "--name",
+                "native-recovery",
+                "--model",
+                "gpt-6-luna",
+                "--effort",
+                "max",
+                "--cwd",
+                e.tmp.0.to_str().unwrap(),
+                "--prompt-file",
+                prompt.to_str().unwrap(),
+                "--launch-key",
+                key,
+            ],
+            "slow",
+        );
+        assert!(
+            started.status.success(),
+            "{}",
+            String::from_utf8_lossy(&started.stderr)
+        );
+        let jid = String::from_utf8(started.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
+        e.until_phase("recovery_fixture_start", || {
+            e.rec.join("sleep.pid").exists() && truth(&e.job(&jid)["codex_pid"])
+        });
+        let before = e.job(&jid);
+        assert_eq!(before["launch_key"], key);
+        let child: u32 = fs::read_to_string(e.rec.join("sleep.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let pids = [
+            before["pid"].as_u64().unwrap() as u32,
+            before["codex_pid"].as_u64().unwrap() as u32,
+            child,
+        ];
+        let identities: Vec<_> = pids
+            .iter()
+            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
+            .collect();
+        let result = e.cli(&["cancel", &jid, "--recovery"], "");
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        e.until(|| {
+            identities
+                .iter()
+                .all(|(pid, born)| proc_created(*pid) != Some(*born))
+        });
+        let saved = e.job(&jid);
+        assert_eq!(saved["status"], "cancelled");
+        assert_ne!(saved["cancel_requested"], true);
+        assert!(cc_job_policy::cancellation::recovery_cancel(
+            &Value::Null,
+            &saved
+        ));
+        for field in [
+            "cwd",
+            "model",
+            "effort",
+            "sandbox",
+            "thread_id",
+            "launch_key",
+        ] {
+            assert_eq!(saved[field], before[field], "{field}");
+        }
+        assert!(!cc_job_policy::cancellation::blocks_recovery(
+            &json!({}),
+            &saved
+        ));
     }
     #[test]
     fn test_cancel_of_a_lost_job_kills_the_leftover_codex() {

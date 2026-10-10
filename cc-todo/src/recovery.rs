@@ -235,12 +235,7 @@ fn linked(item: &Value, j: &Value) -> bool {
 }
 
 fn stopped(item: &Value, job: &Value) -> bool {
-    item["cancel_requested"] == true
-        || item["stopped"] == true
-        || job["cancel_requested"] == true
-        || (matches!(s(&job["status"]), "cancelled" | "canceled")
-            && !(job["id"].is_string()
-                && item["stall_recovery"]["pending"]["recovery_cancel"] == job["id"]))
+    cc_job_policy::cancellation::blocks_recovery(item, job)
         || (common::truth(&item["scheduler"]["question"])
             && !common::truth(&item["scheduler"]["answer"]))
         || (common::truth(&item["scheduler"]["answer"])
@@ -469,6 +464,7 @@ fn plan_with_intake(
                 i["project"] == project
                     && matches!(s(&i["status"]), "todo" | "doing")
                     && !cc_job_policy::todo_wait::waiting(db, i)
+                    && n(&i["scheduler"]["not_before"]) <= t
                     // Finite independent work uses scheduler's resource-aware launch contract.
                     && !i["subwork"].is_object()
             })
@@ -914,6 +910,9 @@ pub fn run_watch(
             suppress_report(paths, id, &item)?;
             continue;
         }
+        if n(&item["scheduler"]["not_before"]) > backend.clock() {
+            continue;
+        }
         if !matches!(s(&item["status"]), "todo" | "doing") {
             // Terminal and owner-held work cannot re-publish old pending reports.
             suppress_report(paths, id, &item)?;
@@ -1028,6 +1027,9 @@ pub fn run_watch(
                 if cc_job_policy::todo_wait::waiting(db, &current) {
                     return Ok(false);
                 }
+                if n(&current["scheduler"]["not_before"]) > backend.clock() {
+                    return Ok(false);
+                }
                 let row = find(db, id)?;
                 if row["stall_recovery"]["pending"]["request"] != p["request"]
                     || !matches!(s(&row["status"]), "todo" | "doing")
@@ -1134,6 +1136,7 @@ pub fn run_watch(
                 .is_none_or(|i| {
                     !matches!(s(&i["status"]), "todo" | "doing")
                         || cc_job_policy::todo_wait::waiting(&latest, i)
+                        || n(&i["scheduler"]["not_before"]) > backend.clock()
                 })
             {
                 release_claim(paths, id, &token)?;
@@ -1557,6 +1560,7 @@ impl RecoveryBackend for RealRecovery {
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
             || cc_job_policy::todo_wait::waiting(&fresh, &row)
+            || n(&row["scheduler"]["not_before"]) > time_s()
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);
@@ -1643,6 +1647,7 @@ impl RecoveryBackend for RealRecovery {
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
             || cc_job_policy::todo_wait::waiting(&latest, &row)
+            || n(&row["scheduler"]["not_before"]) > time_s()
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);

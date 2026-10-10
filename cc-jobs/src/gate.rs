@@ -628,30 +628,19 @@ fn apply_limits(
     build_limit: usize,
     test_limit: usize,
 ) -> Vec<String> {
-    child.insert(HELD_JOBS.into(), build_limit.to_string());
-    for name in [
-        "CARGO_BUILD_JOBS",
-        "RUST_TEST_THREADS",
-        "NEXTEST_TEST_THREADS",
-    ] {
-        if name == "NEXTEST_TEST_THREADS" && first_command(args) != "nextest" {
-            continue;
-        }
-        let limit = if name == "CARGO_BUILD_JOBS" {
-            build_limit
-        } else {
-            test_limit
-        };
-        let jobs = take_var(child, name).map_or(limit, |v| clamp(&v, limit));
-        child.insert(name.into(), jobs.to_string());
-    }
-    let test_var = if first_command(args) == "nextest" {
-        "NEXTEST_TEST_THREADS"
+    // Resolve all sources once before rewriting arguments or publishing child
+    // limits. Neither an absent CLI flag nor a final env write can raise these.
+    let build_cap =
+        take_var(child, "CARGO_BUILD_JOBS").map_or(build_limit, |v| clamp(&v, build_limit));
+    let rust_cap =
+        take_var(child, "RUST_TEST_THREADS").map_or(test_limit, |v| clamp(&v, test_limit));
+    let nextest = first_command(args) == "nextest";
+    let test_cap = if nextest {
+        take_var(child, "NEXTEST_TEST_THREADS").map_or(rust_cap, |v| clamp(&v, rust_cap))
     } else {
-        "RUST_TEST_THREADS"
+        rust_cap
     };
-    let test_limit = clamp(&child[test_var], test_limit);
-    let (out, build, tests) = clamp_parallel_args(args, build_limit, test_limit);
+    let (out, build, tests) = clamp_parallel_args(args, build_cap, test_cap);
     let (out, tests) = if first_command(args) == "test" {
         clamp_harness_threads(&out, tests)
     } else {
@@ -661,7 +650,7 @@ fn apply_limits(
     child.insert("CARGO_BUILD_JOBS".into(), build.to_string());
     child.insert(HELD_TESTS.into(), tests.to_string());
     child.insert("RUST_TEST_THREADS".into(), tests.to_string());
-    if first_command(args) == "nextest" {
+    if nextest {
         child.insert("NEXTEST_TEST_THREADS".into(), tests.to_string());
     }
     out
@@ -828,6 +817,30 @@ mod tests {
         let mut env = BTreeMap::new();
         apply_limits(&args(&["build", "-j1"]), &mut env, 8, 8);
         assert_eq!(nested_jobs_limit(&env, 32), 1);
+    }
+    #[test]
+    fn smaller_inherited_limits_are_never_increased_by_absent_or_explicit_cli_flags() {
+        for input in [
+            args(&["build"]),
+            args(&["build", "-j32"]),
+            args(&["nextest", "run"]),
+            args(&["nextest", "run", "--build-jobs=32", "--test-threads=32"]),
+        ] {
+            let mut env = BTreeMap::from([
+                ("cargo_build_jobs".into(), "1".into()),
+                ("rust_test_threads".into(), "1".into()),
+                ("NEXTEST_TEST_THREADS".into(), "8".into()),
+            ]);
+            apply_limits(&input, &mut env, 8, 8);
+            assert_eq!(env["CARGO_BUILD_JOBS"], "1");
+            assert_eq!(env["RUST_TEST_THREADS"], "1");
+            assert_eq!(env[HELD_JOBS], "1");
+            assert_eq!(env[HELD_TESTS], "1");
+            assert!(!env.contains_key("cargo_build_jobs"));
+            if first_command(&input) == "nextest" {
+                assert_eq!(env["NEXTEST_TEST_THREADS"], "1");
+            }
+        }
     }
     #[test]
     fn nested_explicit_jobs_never_exceed_the_parent_budget() {

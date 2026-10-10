@@ -805,7 +805,15 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
             return Ok(None);
         }
-        if let Some(until) = self.backend.resource_until(&json!({"model":i["model"]}))? {
+        let requested_model = if truth(&i["model"]) {
+            &i["model"]
+        } else {
+            &i["scheduler"]["console_request"]["options"]["model"]
+        };
+        if let Some(until) = self
+            .backend
+            .resource_until(&json!({"model":requested_model}))?
+        {
             self.edit(&i["id"], |row| {
                 if row["status"] == "todo" && launch_inputs(row) == launch_inputs(i) {
                     if !row["scheduler"].is_object() {
@@ -912,6 +920,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
         let mut selection = item["scheduler"]["selection"].clone();
+        let accepted_options = &item["scheduler"]["console_request"]["options"];
         if !truth(&selection) {
             selection = if truth(&item["model"]) && truth(&item["effort"]) {
                 json!({"model":item["model"],"effort":item["effort"],"task_type":"implementation"})
@@ -921,6 +930,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         // A cached selection is only a default, never authority over an explicit ToDo.
         for k in ["model", "effort"] {
+            if truth(&accepted_options[k]) {
+                selection[k] = accepted_options[k].clone();
+            }
             if truth(&item[k]) {
                 selection[k] = item[k].clone();
             }
@@ -933,7 +945,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
-            if truth(&item["model"]) {
+            if truth(&item["model"]) || truth(&accepted_options["model"]) {
                 self.log(
                     "WARNING",
                     "指定モデルを利用できないため、指定を保持して再試行します。",
@@ -961,13 +973,17 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
+        if item["scheduler"]["console_request"]["read_only"] == true {
+            selection["sandbox"] = json!("read-only");
+        }
         // A resumed conversation may restore the previous model. Reuse it only
         // when the selected settings agree, including partial explicit choices.
         if source.is_some_and(|source| {
-            ["model", "effort"].iter().any(|field| {
-                (truth(&item[*field]) || source[*field].is_string())
-                    && source[*field] != selection[*field]
-            })
+            (selection["sandbox"] == "read-only" && source["sandbox"] != "read-only")
+                || ["model", "effort"].iter().any(|field| {
+                    (truth(&item[*field]) || source[*field].is_string())
+                        && source[*field] != selection[*field]
+                })
         }) {
             resume_session = None;
         }

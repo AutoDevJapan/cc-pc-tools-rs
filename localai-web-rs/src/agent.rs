@@ -1432,7 +1432,9 @@ impl Console {
                 continue;
             }
             if let Some(item) = item.filter(|i| i["subwork"].is_object()) {
-                let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt});
+                let accepted = s.request_options.get(&t.key).unwrap_or(&t.options);
+                let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt,
+                    "options":accepted,"read_only":trigger_read_only(&t) || accepted["sandbox"] == "read-only"});
                 match self.runner.dispatch_subwork(
                     &self.paths,
                     item["id"].as_u64().ok_or_else(invalid)?,
@@ -3838,6 +3840,14 @@ mod tests {
         before_admission: Mutex<Option<Value>>,
     }
     impl Runner for Fake {
+        fn dispatch_subwork(&self, _: &Paths, id: u64, request: &Value) -> Result<Option<String>> {
+            self.calls.lock().unwrap().push(vec![
+                "subwork".into(),
+                id.to_string(),
+                request.to_string(),
+            ]);
+            Err(external())
+        }
         fn receipt_exists(&self, path: &Path) -> Result<bool> {
             if *self.fail_receipt_metadata.lock().unwrap() {
                 Err(io_fault())

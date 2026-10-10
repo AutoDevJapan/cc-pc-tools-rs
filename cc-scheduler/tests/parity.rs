@@ -196,6 +196,54 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
 }
 
 #[test]
+fn console_subwork_preserves_read_only_and_model_preferences_without_widening_todo_scope() {
+    for explicit_todo in [false, true] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        if explicit_todo {
+            sub.db["items"][1]["model"] = json!("gpt-6.1-sol");
+            sub.db["items"][1]["effort"] = json!("high");
+        }
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:restricted","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Read only the fixed change.","read_only":true,
+            "options":{"model":"gpt-6-luna","effort":"medium","sandbox":"read-only"}});
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap()
+            .unwrap();
+        let prepared = &f.e.backend.launched[0]["item"];
+        let selection = &prepared["scheduler"]["selection"];
+        assert_eq!(
+            selection["model"],
+            if explicit_todo {
+                "gpt-6.1-sol"
+            } else {
+                "gpt-6-luna"
+            }
+        );
+        assert_eq!(
+            selection["effort"],
+            if explicit_todo { "high" } else { "medium" }
+        );
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            prepared,
+            Path::new(prepared["scheduler"]["prompt"].as_str().unwrap()),
+            selection,
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--sandbox", "read-only"]));
+        assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
+    }
+}
+
+#[test]
 fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
     for gate in ["open", "cargo", "cpu", "memory", "interval"] {
         let mut sub = subwork_support::Fixture::new();

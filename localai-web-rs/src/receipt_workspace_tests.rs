@@ -183,6 +183,8 @@ fn todo2164_subwork_is_never_launched_through_the_unallocated_console_cli() {
     db["items"][0]["subwork"] = json!({"parent_todo_id":122,"kind":"check"});
     fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
     let mut state = f.console.read_state().unwrap();
+    state.queue[0].prompt = "読み取り専用\n固定された変更だけを確認する".into();
+    state.queue[0].options = json!({"model":"gpt-6-luna","effort":"medium","sandbox":"read-only"});
     f.console
         .dispatch(&mut state, &f.console.jobs().unwrap())
         .unwrap();
@@ -191,6 +193,16 @@ fn todo2164_subwork_is_never_launched_through_the_unallocated_console_cli() {
     assert_eq!(f.launches(), 0);
     assert!(!state.queue.is_empty());
     assert!(!state.preparation_failures.is_empty());
+    let calls = f.fake.calls.lock().unwrap();
+    let call = calls.iter().find(|c| c[0] == "subwork").unwrap();
+    let accepted: Value = serde_json::from_str(&call[2]).unwrap();
+    assert_eq!(accepted["read_only"], true);
+    assert_eq!(accepted["options"]["model"], "gpt-6-luna");
+    assert_eq!(accepted["options"]["effort"], "medium");
+    assert!(accepted["prompt"]
+        .as_str()
+        .unwrap()
+        .contains("固定された変更"));
 }
 
 #[test]

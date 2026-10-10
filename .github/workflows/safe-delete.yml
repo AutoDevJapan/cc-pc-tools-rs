@@ -1,0 +1,25 @@
+name: Owned temporary data cleanup
+on:
+  push:
+    branches: [main]
+    paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
+  pull_request:
+    paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: safe-delete
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: safe-delete/go.mod
+          cache: false
+      - run: go test -race -v ./...
+      - run: go vet ./...
+      - run: go build -trimpath .

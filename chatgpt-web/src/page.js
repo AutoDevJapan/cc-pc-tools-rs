@@ -3,7 +3,7 @@
 // 画面の作りが変わったときは、ここと tests/fixtures/ を合わせて直す。
 // 2026-10 の画面（tests/fixtures/real-*.html に記録）と、それ以前の画面（data-testid 中心）の両方を扱う。
 
-const COMPOSER = 'textarea[name="prompt"], #prompt-textarea';
+const COMPOSER = 'textarea[name="prompt"], #prompt-textarea, [role="textbox"][contenteditable="true"][aria-label="Ask ChatGPT"]';
 const SEND = 'button[aria-label="Send message"], button[aria-label="Send prompt"], [data-testid="send-button"], #composer-submit-button';
 const STOP = 'button[aria-label="Stop generating"], button[aria-label="Stop streaming"], [data-testid="stop-button"]';
 const LOGIN = '[data-mobile-auth-entry-action="login"], [data-login-button], [data-testid="login-button"]';

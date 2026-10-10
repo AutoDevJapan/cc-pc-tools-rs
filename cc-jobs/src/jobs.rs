@@ -743,6 +743,12 @@ impl Context {
             crate::gate::jobs_limit(self.rt.cores(), 1).to_string(),
         );
         if let Some(real) = self.rt.which("cargo.exe") {
+            // Every new gate reads the current policy here, including gates
+            // launched by supervisors that predate a queue config edit.
+            env.insert(
+                "CODEX_JOBS_CARGO_LOCK_DIR".into(),
+                self.root.to_string_lossy().into(),
+            );
             env.insert("CODEX_JOBS_REAL_CARGO".into(), real);
             env.insert(
                 "CODEX_JOBS_CARGO_GATE".into(),

@@ -5,6 +5,33 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[test]
+fn cargo_limit_patch_retains_owner_job_limit_and_rejects_invalid_values() {
+    let current = json!({"fixed_max_running":100,"max_running":100});
+    let merged = queue::merge_queue_config(
+        &current,
+        &json!({"cargo_slots":2,"cargo_jobs_per_build":8,"test_threads":8}),
+        false,
+    )
+    .unwrap();
+    assert_eq!(merged["fixed_max_running"], 100);
+    assert_eq!(merged["max_running"], 100);
+    let cfg: queue::QueueConfig = serde_json::from_value(merged).unwrap();
+    assert_eq!(
+        (cfg.cargo_slots, cfg.cargo_jobs_per_build, cfg.test_threads),
+        (Some(2), Some(8), Some(8))
+    );
+    for patch in [
+        json!({"cargo_slots":0}),
+        json!({"cargo_jobs_per_build":11}),
+        json!({"test_threads":0}),
+        json!({"test_threads":11}),
+        json!({"test_threds":8}),
+    ] {
+        assert!(queue::merge_queue_config(&current, &patch, false).is_err());
+    }
+}
+
 fn quota(at: f64, used: f64) -> QuotaSnapshot {
     parse_quotas(
         &json!({"accounts":[{"id":"pool-a","quota":{"weeklyPercent":used,"weeklyResetAt":100000.}}]}),

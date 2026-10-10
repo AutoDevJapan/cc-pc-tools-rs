@@ -2,6 +2,9 @@
   "context_limit_percent": 50,
   "max_running": 6,
   "fixed_max_running": null,
+  "cargo_slots": null,
+  "cargo_jobs_per_build": null,
+  "test_threads": null,
   "adaptive": {
     "min_running": 4,
     "max_running": 60,

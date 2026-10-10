@@ -9776,8 +9776,50 @@ mod end_to_end {
     #[test]
     fn test_native_recovery_cancel_preserves_intent_after_process_tree_stops() {
         let e = E2e::new();
-        let (jid, pids) = e.slow();
+        let key = "fa8563e2a26943a8aa8e9c1af8b8d284";
+        let prompt = e.tmp.0.join("prompt.md");
+        fs::write(&prompt, "saved acceptance").unwrap();
+        let started = e.cli(
+            &[
+                "run",
+                "--name",
+                "native-recovery",
+                "--model",
+                "gpt-6-luna",
+                "--effort",
+                "max",
+                "--cwd",
+                e.tmp.0.to_str().unwrap(),
+                "--prompt-file",
+                prompt.to_str().unwrap(),
+                "--launch-key",
+                key,
+            ],
+            "slow",
+        );
+        assert!(
+            started.status.success(),
+            "{}",
+            String::from_utf8_lossy(&started.stderr)
+        );
+        let jid = String::from_utf8(started.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
+        e.until_phase("recovery_fixture_start", || {
+            e.rec.join("sleep.pid").exists() && truth(&e.job(&jid)["codex_pid"])
+        });
         let before = e.job(&jid);
+        assert_eq!(before["launch_key"], key);
+        let child: u32 = fs::read_to_string(e.rec.join("sleep.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let pids = [
+            before["pid"].as_u64().unwrap() as u32,
+            before["codex_pid"].as_u64().unwrap() as u32,
+            child,
+        ];
         let identities: Vec<_> = pids
             .iter()
             .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))

@@ -1061,12 +1061,57 @@ impl Context {
             .transpose()?;
         self.record_work_owner(&mut job);
         let mut jobs = self.admission_jobs()?;
+        // Recheck only the exact remembered owner, never scan terminal history
+        // under the admission gate. Missing/unreadable evidence remains waiting.
+        let owner_id = job["work_wait_evidence"]["owner_job_id"]
+            .as_str()
+            .or_else(|| job["queue_wait_reason"]["owner_job_id"].as_str())
+            .unwrap_or("");
+        if valid_job_id(owner_id)
+            && !jobs.iter().any(|j| s(j, "id") == owner_id)
+            && let Ok(mut owner) = self.load(owner_id)
+        {
+            owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
+            jobs.push(owner);
+        }
+        if let Ok(db) = self.read_json(&self.todo_store()) {
+            if let Some(owner_id) = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|i| i["id"] == job["todo_id"])
+                .and_then(|i| i["work_owner_job"].as_str())
+                && valid_job_id(owner_id)
+                && !jobs.iter().any(|j| s(j, "id") == owner_id)
+                && let Ok(mut owner) = self.load(owner_id)
+            {
+                owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
+                jobs.push(owner);
+            }
+            let on = cc_job_policy::work_owner::remembered_pending(&db, &job, &jobs);
+            if job["work_wait_on"].is_array() && job["work_wait_on"] != json!(on) {
+                if !job["work_wait_history"].is_array() {
+                    job["work_wait_history"] = json!([]);
+                }
+                let history = json!({"wait_on":job["work_wait_on"],"evidence":job["work_wait_evidence"],"reason":"owner_claim_reevaluated","checked_at":self.rt.now()});
+                job["work_wait_history"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(history);
+                job["work_wait_on"] = json!(on);
+                self.save(&job)?;
+            }
+        }
+        if let Some(current) = jobs.iter_mut().find(|j| s(j, "id") == jid) {
+            *current = job.clone();
+        }
         if !jobs.iter().any(|j| s(j, "id") == jid) {
             jobs.push(job.clone());
         }
         let decision = self.queue_decisions(&jobs, &cfg, Some(jid));
         if let Some(reason) = decision.get(jid) {
             let previous_wait = job["work_wait_on"].clone();
+            let previous_evidence = job["work_wait_evidence"].clone();
             // Keep task ownership across the original worker's context rotation or exit.
             if reason["code"] == "work_owner"
                 && let (Some(id), Some(on)) =
@@ -1075,8 +1120,14 @@ impl Context {
                 && cc_job_policy::todo_wait::validate(&db, id, &[on]).is_ok()
             {
                 job["work_wait_on"] = json!([on]);
+                if let Some(owner) = jobs.iter().find(|j| j["id"] == reason["owner_job_id"]) {
+                    job["work_wait_evidence"] = json!({"owner_job_id":owner["id"],"owner":cc_job_policy::work_owner::owner_evidence(owner),"candidate_identity":job["work_owner"],"recorded_at":self.rt.now()});
+                }
             }
-            if job["queue_wait_reason"] != *reason || previous_wait != job["work_wait_on"] {
+            if job["queue_wait_reason"] != *reason
+                || previous_wait != job["work_wait_on"]
+                || previous_evidence != job["work_wait_evidence"]
+            {
                 job["queue_wait_reason"] = reason.clone();
                 job["queue_wait_checked_at"] = json!(self.rt.now());
                 self.save(&job)?;
@@ -1348,8 +1399,8 @@ impl Context {
     }
 
     pub(crate) fn record_work_owner(&self, job: &mut Value) {
-        if job["work_owner"].is_object() {
-            return;
+        if let Ok(db) = self.read_json(&self.todo_store()) {
+            *job = cc_job_policy::work_owner::registered_job(&db, job);
         }
         if s(job, "task_title").is_empty()
             && let Ok(db) = self.read_json(&self.todo_store())
@@ -1363,11 +1414,16 @@ impl Context {
         {
             job["task_title"] = item["title"].clone();
         }
-        let mut identity = self.rt.work_checkout(s(job, "cwd"));
+        let mut identity = if job["work_owner"].is_object() {
+            job["work_owner"].clone()
+        } else {
+            self.rt.work_checkout(s(job, "cwd"))
+        };
         if let Some(pr) = cc_job_policy::work_owner::pr_number(s(job, "task_title")) {
             identity["pr"] = json!(pr);
         }
         job["work_owner"] = identity;
+        job["work_owner"] = cc_job_policy::work_owner::from_job(job);
     }
 
     fn dependency_waits(&self, jobs: &[Value]) -> HashMap<String, Value> {
@@ -1380,9 +1436,46 @@ impl Context {
         for job in jobs.iter().filter(|j| s(j, "status") == "queued") {
             match &db {
                 Ok(db) => {
-                    let mut on = cc_job_policy::todo_wait::job_pending_on(db, job);
-                    let remembered = json!({"wait_on":job["work_wait_on"]});
-                    on.extend(cc_job_policy::todo_wait::pending_on(db, &remembered));
+                    let source_db = db;
+                    let mut db = db.clone();
+                    let mut evidence_jobs = jobs.to_vec();
+                    let ids: Vec<_> = db["items"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter(|i| {
+                            i["id"] == job["todo_id"]
+                                || job["related_todo_ids"]
+                                    .as_array()
+                                    .is_some_and(|ids| ids.contains(&i["id"]))
+                                || i["jobs"]
+                                    .as_array()
+                                    .is_some_and(|ids| ids.contains(&job["id"]))
+                        })
+                        .filter_map(|i| i["work_owner_job"].as_str())
+                        .chain(job["work_wait_evidence"]["owner_job_id"].as_str())
+                        .chain(job["queue_wait_reason"]["owner_job_id"].as_str())
+                        .collect();
+                    for id in ids {
+                        if valid_job_id(id)
+                            && !evidence_jobs.iter().any(|j| s(j, "id") == id)
+                            && let Ok(mut owner) = self.load(id)
+                        {
+                            owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
+                            evidence_jobs.push(owner);
+                        }
+                    }
+                    cc_job_policy::work_owner::reevaluate_todos_if(
+                        &mut db,
+                        &evidence_jobs,
+                        |item| item["id"] == job["todo_id"],
+                    );
+                    let mut on = cc_job_policy::todo_wait::job_pending_on(&db, job);
+                    on.extend(cc_job_policy::work_owner::remembered_pending(
+                        source_db,
+                        job,
+                        &evidence_jobs,
+                    ));
                     on.sort_unstable();
                     on.dedup();
                     if !on.is_empty() {
@@ -1532,6 +1625,9 @@ fn admission_owner(job: &Value) -> Value {
     Value::Object(
         [
             "work_owner",
+            "registered_cwd",
+            "cwd",
+            "project",
             "parent_job_id",
             "todo_id",
             "related_todo_ids",

@@ -14,6 +14,62 @@ pub const HANG_S: f64 = 1800.;
 pub const RETRY_WINDOW_S: f64 = 21600.;
 const CLAIM_S: f64 = 300.;
 
+/// Finite repair under todo.lock. It neither launches nor cancels any worker.
+/// Only the selected item's recorded receipts are read; secret names stay internal.
+pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
+    let clients = fs::read_to_string("D:/CC/Tools/client-projects.txt")
+        .map_err(|_| "client guard unavailable")?;
+    let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
+    let ps = backend
+        .snapshot()
+        .map_err(|_| "process identity unavailable")?;
+    let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
+    let mut db = load(&paths.store)?;
+    let item = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|i| i["id"] == id)
+        .ok_or("no item")?;
+    if excluded(
+        s(&item["project"]),
+        s(&db["projects"][s(&item["project"])]),
+        &clients,
+    ) {
+        return Err("requested item excluded".into());
+    }
+    let ids: BTreeSet<_> = item["jobs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .chain(item["work_owner_job"].as_str())
+        .chain(item["scheduler"]["job"].as_str())
+        .collect();
+    let mut jobs = vec![];
+    for jid in ids {
+        if jid.is_empty()
+            || !jid
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            return Err("invalid receipt identifier".into());
+        }
+        let job = load(&paths.jobs.join(jid).join("job.json"))?;
+        if job["id"] != jid || excluded(s(&job["project"]), s(&job["cwd"]), &clients) {
+            return Err("receipt unavailable or excluded".into());
+        }
+        let mut job = job;
+        job["work_owner_live"] = json!(policy::matches(&job, "codex_pid", &ps));
+        jobs.push(job);
+    }
+    let changed = cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &jobs, |i| i["id"] == id);
+    if !changed.is_empty() {
+        save(&paths.store, &db)?;
+    }
+    Ok(changed)
+}
+
 /// Run the SAME admission planner against a copy. Return identifiers and decisions
 /// only; never expose project names, saved prompts or recovery credentials.
 pub fn preview(

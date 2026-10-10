@@ -155,7 +155,7 @@
     // Only the sanitized Operations endpoint feeds this view.
     const opsState={snapshot:null,loading:false,error:'',receivedAt:null,items:new Map(),expanded:new Map(),products:new Map(),filterProducts:new Map(),filterDepartments:new Map(),filter:'',limits:new Map(),selected:null,returnFocus:null,returnKey:null};
     const OPS_COLORS={'ゲーム部':'#1E8C93','GoDD事業部':'#8E5BB5','自社サービス部':'#3B73C4','発信部':'#C2508F','受託部':'#4E9A4E','情報システム部':'#5C7080'};
-    const OPS_STATUS={working:'稼働中',waiting:'待機',attention:'要対応',idle:'休止',done:'完了'};
+    const OPS_STATUS={working:'稼働中',waiting:'待機',attention:'要対応',idle:'休止',done:'完了',unknown:'状態未取得'};
     function opsList(value){return Array.isArray(value)?value:[]}
     function opsNumber(value){return typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null}
     function opsDecimal(value){return value.toLocaleString('ja-JP',{maximumFractionDigits:1})}
@@ -204,7 +204,7 @@
       const error=$('#ops-error');error.hidden=!opsState.error&&(!data||good);
       error.textContent=opsState.error||(data&&!good?'一部のデータを取得できません。接続状況と更新時刻を確認してください。':'');
       $('#ops-update').innerHTML=`<span class="ops-status ${good?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · ${good?'接続中':'接続を確認'}`:'未取得'}</span>`;
-      $('#ops-source-summary').textContent=data?`${sources.filter(s=>s.ok===true).length} / ${sources.length} 接続 · 起動待ち ${opsNumber(metric.waitingJobs)===null?'—':opsDecimal(metric.waitingJobs)}件`:'未取得';
+      $('#ops-source-summary').textContent=data?`${sources.filter(s=>s.ok===true).length} / ${sources.length} 接続 · ToDo完了待ち ${opsValue(metric.todoDependencyWaits)} · 未着手 ${opsValue(metric.todoPendingStarts)} · 停止 ${opsValue(metric.todoBlocked)} · ジョブ起動待ち ${opsValue(metric.jobQueued)} · 受付待ち ${opsValue(metric.consoleQueued)}（準備失敗 ${opsValue(metric.consolePreparationFailures)}） · 容量確認後の起動待ち ${opsValue(metric.waitingJobs)}`:'未取得';
       $('#ops-sources').innerHTML=sources.map(s=>`<div class="ops-source"><strong>${esc(s.label||s.key)}</strong><span class="ops-status ${s.state==='unknown'?'unknown':s.ok===true?'working':'attention'}">${s.state==='unknown'?'状態未取得':s.ok===true?'接続中':'取得できません'}</span><span>更新 ${esc(opsTime(s.updatedAt))}</span>${s.message?`<span class="ops-source-message">${esc(s.message)}</span>`:''}</div>`).join('')||'<p class="ops-empty">接続元の記録はありません。</p>';
       const commander=data&&data.commander;
       // The commander's face and status use only its own record, never child incidents.

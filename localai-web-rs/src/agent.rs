@@ -13,9 +13,9 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
     sync::{Arc, Mutex},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const LIMIT: usize = 128 * 1024;
@@ -23,6 +23,8 @@ const LIMIT: usize = 128 * 1024;
 mod source_workspace;
 #[path = "todo_receipts.rs"]
 mod todo_receipts;
+#[path = "command_capture.rs"]
+mod command_capture;
 const HISTORY_SECONDS: u64 = 7 * 24 * 60 * 60;
 const TODO_CONTEXT: &str = "\n共有ToDoの文脈:\n";
 const REQUEST_FORUM: &str = "1554771264298819675";
@@ -195,57 +197,13 @@ impl Runner for RealRunner {
             }))
     }
     fn run(&self, program: &Path, args: &[String], cwd: &Path) -> Result<String> {
-        let mut cmd = Command::new(program);
-        windowless(&mut cmd)
-            .args(args)
-            .current_dir(cwd)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
-        let mut child = cmd.spawn().map_err(|_| external())?;
-        let stdout = child.stdout.take().ok_or_else(external)?;
-        // Drain the pipe concurrently, retaining only a bounded amount. Never expose stderr/secrets.
-        let reader = std::thread::spawn(move || {
-            let mut kept = Vec::new();
-            let mut stream = stdout;
-            let mut buf = [0; 8192];
-            let mut overflow = false;
-            loop {
-                let n = stream.read(&mut buf)?;
-                if n == 0 {
-                    break;
-                }
-                if kept.len() + n <= 2 * 1024 * 1024 {
-                    kept.extend_from_slice(&buf[..n]);
-                } else {
-                    overflow = true;
-                }
-            }
-            Ok::<_, std::io::Error>((kept, overflow))
-        });
-        let inbox = program.file_name().is_some_and(|n| n == "cc-inbox.exe");
-        let deadline = Instant::now() + Duration::from_secs(if inbox { 600 } else { 45 });
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(s)) => break s,
-                Ok(None) if Instant::now() < deadline => {
-                    std::thread::sleep(Duration::from_millis(30))
-                }
-                _ => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(external());
-                }
-            }
-        };
-        let (bytes, overflow) = reader
-            .join()
-            .map_err(|_| external())?
-            .map_err(|_| external())?;
-        if !status.success() || overflow {
-            return Err(external());
-        }
-        String::from_utf8(bytes).map_err(|_| external())
+        command_capture::run(program, args, cwd).map_err(|code| {
+            fault(
+                StatusCode::BAD_GATEWAY,
+                code,
+                "連携処理が失敗したため次の巡回で再確認します。",
+            )
+        })
     }
 }
 
@@ -348,7 +306,7 @@ impl Console {
         fs::create_dir_all(&self.paths.state).map_err(|_| io_fault())?;
         cc_scheduler::common::ByteLock::acquire(
             &self.paths.state.join("console-state.lock"),
-            Duration::from_secs(60),
+            cc_ask::tick_runtime::timeout(Duration::from_secs(60)).map_err(|_| external())?,
         )
         .map_err(|_| io_fault())?
         .ok_or_else(io_fault)
@@ -1003,7 +961,19 @@ impl Console {
         }
         Ok(())
     }
+    fn patrol_budget(&self, state: &QueueState) -> Result<()> {
+        if cc_ask::tick_runtime::check().is_err() {
+            self.save(state)?;
+            return Err(fault(
+                StatusCode::GATEWAY_TIMEOUT,
+                "command_timeout",
+                "巡回の処理時間を超えたため次の巡回で続けます。",
+            ));
+        }
+        Ok(())
+    }
     fn dispatch(&self, s: &mut QueueState, jobs: &[Value]) -> Result<()> {
+        self.patrol_budget(s)?;
         let scheduler_root = self.paths.tools.join("scheduler");
         fs::create_dir_all(&scheduler_root).map_err(|_| io_fault())?;
         let Some(_launch_guard) = cc_scheduler::common::ByteLock::acquire(
@@ -1018,6 +988,7 @@ impl Console {
         // The reservation may have been cleared after the job actually started.
         let db = self.todos()?;
         for mut t in s.queue.clone() {
+            self.patrol_budget(s)?;
             match decision_todo(&t, jobs, &db) {
                 Ok(id) => {
                     t.todo_id = id;
@@ -1136,6 +1107,7 @@ impl Console {
             .map(|trigger| trigger_todo_id(trigger, jobs, &db))
             .collect();
         for (index, trigger) in queue.iter().enumerate() {
+            self.patrol_budget(s)?;
             if !automatic_recovery(&trigger.key) {
                 continue;
             }
@@ -2332,6 +2304,7 @@ impl Console {
         let db = self.todos()?;
         let mut intake_error = None;
         for mut t in detect(&jobs, s) {
+            self.patrol_budget(s)?;
             // Automatic detection must not re-submit a durable accepted request.
             // Legacy bodies and fingerprints describe what was accepted before
             // ToDo association existed; dispatch reconciles them in place.
@@ -3801,7 +3774,25 @@ pub async fn resident(console: Arc<Console>) {
     loop {
         interval.tick().await;
         let c = console.clone();
-        let _ = tokio::task::spawn_blocking(move || c.tick()).await;
+        let started = now();
+        let record = console.paths.state.join("commander-health.json");
+        let _ = atomic_write(
+            &record,
+            json!({"started_at":started,"pid":std::process::id()})
+                .to_string()
+                .as_bytes(),
+        );
+        let result = tokio::task::spawn_blocking(move || {
+            let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(50));
+            c.tick()
+        })
+        .await;
+        let error = match result {
+            Ok(Ok(())) => None,
+            Ok(Err(e)) => Some(e.code),
+            Err(_) => Some("worker_failed"),
+        };
+        let _ = atomic_write(&record, json!({"started_at":started,"finished_at":now(),"error":error,"pid":std::process::id()}).to_string().as_bytes());
     }
 }
 

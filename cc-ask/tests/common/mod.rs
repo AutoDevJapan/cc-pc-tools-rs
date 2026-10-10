@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -14,6 +14,7 @@ pub struct Harness {
     pub fake: Rc<RefCell<Fake>>,
 }
 pub struct Fake {
+    pub chronology: Vec<String>,
     pub recover_fail: bool,
     pub reboot_recover_fail: bool,
     pub codex_directories: Vec<String>,
@@ -72,6 +73,7 @@ impl Harness {
         .unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
+            chronology: vec![],
             recover_fail: false,
             reboot_recover_fail: false,
             codex_directories: vec![],
@@ -246,6 +248,7 @@ impl Fake {
         body: Option<&Value>,
         discord: bool,
     ) -> Result<Value> {
+        self.chronology.push(format!("http:{method}:{url}"));
         if method == "GET" && url.contains("/messages?limit=100") {
             if let Some((remaining, _, _)) = &mut self.history_injection {
                 *remaining -= 1;
@@ -425,6 +428,11 @@ impl Fake {
             .ok_or("unknown thread".into())
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.chronology.push(format!(
+            "run:{}:{}",
+            argv.join("|"),
+            argv.last().map(String::as_str).unwrap_or("")
+        ));
         self.runs.push((argv.to_vec(), timeout));
         if argv.iter().any(|a| a == "recover-reboot") {
             return Ok(Output {
@@ -564,9 +572,11 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
-                        .unwrap()
-                        .to_rfc3339());
+                    item["updated"] = json!(
+                        chrono::DateTime::from_timestamp(self.now as i64, 0)
+                            .unwrap()
+                            .to_rfc3339()
+                    );
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()
@@ -665,10 +675,12 @@ impl Fake {
         let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
         record["todo_id"] = json!(arg("--todo-id").parse::<i64>().ok());
-        record["related_todo_ids"] = json!(arg("--related-todo-ids")
-            .split(',')
-            .filter_map(|id| id.parse::<i64>().ok())
-            .collect::<Vec<_>>());
+        record["related_todo_ids"] = json!(
+            arg("--related-todo-ids")
+                .split(',')
+                .filter_map(|id| id.parse::<i64>().ok())
+                .collect::<Vec<_>>()
+        );
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {
             self.launch_error = false;

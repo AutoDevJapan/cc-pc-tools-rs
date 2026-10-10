@@ -17,6 +17,7 @@ use std::{
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
 const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
 const QUEUE_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
@@ -342,6 +343,28 @@ impl Config {
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            ADAPTIVE_ID => {
+                c.id = ADAPTIVE_ID;
+                c.project = "cc-jobs";
+                c.content = "adaptive-concurrency";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 6473924479268101));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "0ac365ab478efa36206c968400e48ac5150abf1b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/adaptive-account-windows"),
+                    saved_merge: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7",
                         ),
                         common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
                     },
@@ -1935,6 +1958,100 @@ mod tests {
                     .with_extension("pre-final-report.json")
                     .exists()
             );
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn adaptive_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = Config::production(ADAPTIVE_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "adaptive-concurrency");
+        assert_eq!(config.pinned_identity, Some((2229119083, 6473924479268101)));
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "0ac365ab478efa36206c968400e48ac5150abf1b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/adaptive-account-windows")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(config.repos[0].saved_merge.is_none());
+        match &config.repos[0].kind {
+            RepoKind::Linked { admin, common } => {
+                assert_eq!(
+                    admin,
+                    Path::new("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7")
+                );
+                assert_eq!(
+                    common,
+                    Path::new("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git")
+                );
+            }
+            _ => panic!("expected linked worktree"),
+        }
+        assert!(Config::production("b6ef1394c70c4f11ee5ac370ad82886f").is_err());
+    }
+    #[test]
+    fn adaptive_profile_preserves_build_hardlinks_refs_and_repairs_its_backlink() {
+        let c = fixture_for(ADAPTIVE_ID);
+        let source_root = source(&c);
+        fs::create_dir(source_root.join("target")).unwrap();
+        let artifact = source_root.join("target/test.exe");
+        fs::write(&artifact, b"preserved adaptive build").unwrap();
+        fs::hard_link(&artifact, source_root.join("target/test-copy.exe")).unwrap();
+        let (admin, common) = match &c.repos[0].kind {
+            RepoKind::Linked { admin, common } => (admin, common),
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        c.plan(c.id).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(&source_root, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!source_root.exists());
+        assert_eq!(
+            fs::read(destination.join("target/test.exe")).unwrap(),
+            b"preserved adaptive build"
+        );
+        assert_eq!(node(&destination.join("target/test.exe")).unwrap().links, 2);
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &destination.join("work/.git")
+        ));
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+    }
+    #[test]
+    fn adaptive_profile_rejects_dirty_unpushed_and_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(ADAPTIVE_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut receipt = c.load(c.id).unwrap();
+                    receipt.identity.file_id += 1;
+                    receipt.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&receipt.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&receipt).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
             assert!(source(&c).exists());
         }
     }

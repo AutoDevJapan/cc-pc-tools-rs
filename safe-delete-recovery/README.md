@@ -28,6 +28,12 @@ finishは元パス不在と同一の根の識別番号、全ファイルの内�
 GitのHEAD・保存済み成果・変更なしを再検証し、全確認後に元の所有記録をquarantinedへ更新する。
 資料・ビルド生成物はすべて退避先で保持する。削除機能、任意の所有IDやパスを指定する例外は追加しない。
 
+## ToDo2051の配備済み同時実行調整の旧検証データ
+
+所有ID `b6ef1394c70c4f11ee5ac370ad82886e` のみを追加する。project `cc-jobs`、content `adaptive-concurrency`、元のTempパス、volume `2229119083`、file ID `6473924479268101` を照合する。公開取得元 `AutoDevJapan/cc-pc-tools-rs`、HEAD `0ac365ab478efa36206c968400e48ac5150abf1b`、保存済み `origin/fix/adaptive-account-windows` と一致する場合にだけ退避する。
+
+Git管理先は `D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7`、commonは同じ親の `.git` に固定する。既存の全項目・リンク・未保存成果の検査を使い、専用ビルドの内部ハードリンクと全Git記録を保持する。planが返す通常のMove-Itemを別呼び出しで実行し、finishで元位置不在、退避前後の同一実体・全メタデータ、所有記録を照合してこのworktreeのbacklinkだけを修復する。通常のsafe-deleteの保護、他の所有ID、稼働中サービスは変更しない。
+
 ## ToDo1940の旧ビルドと検証記録を保持する
 
 MCPの実物の移動票は9,255,686バイトあるため、その固定IDだけは票の上限を16MiBとする。他のIDは8MiBのまま。planは符号化した票が上限内かを保存前に確認し、finishと同じ上限を使う。既存の移動票と指紋は変更せず、そのまま完了確認へ使用する。項目数・対象の容量・リンク・Git・所有・ACLの条件は変えない。

@@ -233,7 +233,9 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     let address = server.local_addr().unwrap();
     server.set_nonblocking(true).unwrap();
     let handler = std::thread::spawn(move || {
-        let until = Instant::now() + Duration::from_secs(20);
+        // This test asserts document initialization, not Chrome cold-start speed.
+        // Keep the 2s blocked script and answer assertions; allow startup on CI hosts.
+        let until = Instant::now() + Duration::from_secs(60);
         let mut script_sent = false;
         while Instant::now() < until {
             let Ok((mut socket, _)) = server.accept() else {
@@ -297,7 +299,7 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
             "--prompt-file",
             q.to_str().unwrap(),
             "--timeout",
-            "20",
+            "60",
         ],
     )
     .env("CHATGPT_WEB_URL", format!("http://{address}/chat.html"))

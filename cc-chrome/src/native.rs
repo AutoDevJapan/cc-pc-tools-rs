@@ -145,8 +145,7 @@ async fn discover_from_mode(
             let mut rpc=Rpc::connect(&pipe).await?;
             rpc.call("getInfo",json!({"session_id":"cc-chrome-discovery","turn_id":"discovery","session_context":"live"})).await
         }).await else {continue};
-        if info["type"] == "extension"
-            && info["family"] == "chrome"
+        if chrome_identity(&info).is_some()
             && record.is_none_or(|r| {
                 r.matches_backend(&info) || (include_reconnected && same_instance(r, &info))
             })
@@ -167,6 +166,21 @@ async fn discover_from_mode(
         }
     }
     selected.ok_or_else(|| io::Error::other("owner Chrome extension is not connected"))
+}
+
+// Creation, reconnection and cleanup share a complete browser identity.
+// An extension response without identity is not permission to create a tab.
+fn chrome_identity(info: &Value) -> Option<(&str, &str)> {
+    if info["type"] != "extension" || info["family"] != "chrome" {
+        return None;
+    }
+    let instance = info["metadata"]["extensionInstanceId"]
+        .as_str()
+        .filter(|v| !v.is_empty())?;
+    let generation = info["browserTabMentions"]["generation"]
+        .as_str()
+        .filter(|v| !v.is_empty())?;
+    Some((instance, generation))
 }
 pub fn inventory() -> io::Result<Value> {
     runtime()?.block_on(async {
@@ -685,6 +699,18 @@ pub fn close_page(record: &Record) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn incomplete_connection_identity_is_rejected_before_creation() {
+        let valid = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+        assert_eq!(chrome_identity(&valid), Some(("instance", "generation")));
+        for invalid in [
+            json!({"type":"extension","family":"chrome"}),
+            json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":""},"browserTabMentions":{"generation":"generation"}}),
+            json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":""}}),
+        ] {
+            assert!(chrome_identity(&invalid).is_none());
+        }
+    }
     #[test]
     fn discovery_refuses_two_distinct_chrome_profiles() {
         runtime().unwrap().block_on(async {

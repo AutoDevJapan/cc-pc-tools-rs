@@ -2,9 +2,9 @@ name: ChatGPT browser fixtures
 on:
   push:
     branches: [main]
-    paths: ['chatgpt-web/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+    paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
   pull_request:
-    paths: ['chatgpt-web/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+    paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
 permissions:
   contents: read
 jobs:
@@ -30,6 +30,6 @@ jobs:
             Select-Object -First 1
           if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
           "CHATGPT_WEB_CHROME=$chrome" >> $env:GITHUB_ENV
-      - run: cargo nextest run --locked -p chatgpt-web
+      - run: cargo nextest run --locked -p chatgpt-web -p cc-chrome
       # This package has only a binary target; Cargo cannot run --doc for it.
-      - run: cargo clippy --locked -p chatgpt-web --all-targets -- -D warnings
+      - run: cargo clippy --locked -p chatgpt-web -p cc-chrome --all-targets -- -D warnings

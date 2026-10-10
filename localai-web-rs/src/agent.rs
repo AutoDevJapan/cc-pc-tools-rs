@@ -1208,11 +1208,7 @@ impl Console {
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
-        let mut candidate_jobs = if s.queue.is_empty() {
-            Vec::new()
-        } else {
-            self.jobs()?
-        };
+        let mut candidate_jobs = jobs.to_vec();
         let mut launch_failure = None;
         let mut evidence_cache = BTreeMap::new();
         self.patrol_stage("dispatch_launch");

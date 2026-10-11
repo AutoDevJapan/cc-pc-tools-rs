@@ -24,6 +24,8 @@ const BOARD_ID: &str = "67feb7811b6d0a94c98465c784b64f45";
 const BOARD_CREATED: &str = "2026-10-08T18:04:44.1608254+09:00";
 const CHROME_ID: &str = "e87d9c55880dce0cfd7bb1d3fe3ca85e";
 const CHROME_CREATED: &str = "2026-10-10T21:38:58.2660427+09:00";
+const DECISION_ID: &str = "50189b66c7f196bf436305cb29f91b42";
+const DECISION_CREATED: &str = "2026-10-11T12:02:44.5926082+09:00";
 const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
     "todo-note-tool/.git",
@@ -234,6 +236,31 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            DECISION_ID => {
+                c.id = DECISION_ID;
+                c.project = "cc-ask";
+                c.content = "decision-dedup";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 39969446694675659));
+                c.repos = vec![Repo {
+                    name: "repo",
+                    origin: public,
+                    head: "94ab1cbec9a35e131ce1a2f135984cc07dca2505".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/todo2382-question-associations"),
+                    saved_merge: None,
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/repo",
+                        ),
+                        common: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git",
+                        ),
+                    },
+                }];
+            }
             BOARD_ID => {
                 c.id = BOARD_ID;
                 c.project = "cc-board";
@@ -548,6 +575,11 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
+        if self.id == DECISION_ID {
+            return self
+                .quarantine
+                .join(format!("20261011-cc-ask-2382-{DECISION_ID}"));
+        }
         if self.id == INTERNAL_2184_ID {
             return self
                 .quarantine
@@ -591,6 +623,7 @@ impl Config {
                 && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
             || (self.id == CHROME_ID && r.identity.created_at != CHROME_CREATED)
+            || (self.id == DECISION_ID && r.identity.created_at != DECISION_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -1948,6 +1981,51 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn decision_archive_is_bound_to_one_owned_worktree_and_its_published_head() {
+        let c = Config::production(DECISION_ID).unwrap();
+        assert_eq!(c.pinned_identity, Some((2229119083, 39969446694675659)));
+        assert_eq!((c.project, c.content), ("cc-ask", "decision-dedup"));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].head, "94ab1cbec9a35e131ce1a2f135984cc07dca2505");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/todo2382-question-associations")
+        );
+        assert!(matches!(c.repos[0].kind, RepoKind::Linked { .. }));
+        assert!(c.repos[0].allowed_untracked.is_empty());
+        assert!(
+            c.destination()
+                .ends_with(format!("20261011-cc-ask-2382-{DECISION_ID}"))
+        );
+    }
+
+    #[test]
+    fn decision_archive_preserves_inventory_receipt_and_external_git_backlink() {
+        let c = fixture_for(DECISION_ID);
+        let old = source(&c);
+        let before = scan(&old, &c.repos).unwrap();
+        let plan = c.plan(DECISION_ID).unwrap();
+        let dest = PathBuf::from(plan["destination"].as_str().unwrap());
+        assert!(
+            plan["powershell_command"]
+                .as_str()
+                .unwrap()
+                .contains("Move-Item -LiteralPath")
+        );
+        let files = dest.join("files");
+        fs::rename(&old, &files).unwrap();
+        c.finish(DECISION_ID).unwrap();
+        assert_eq!(scan(&files, &c.repos).unwrap(), before);
+        assert!(!old.exists());
+        let receipt = c.load(DECISION_ID).unwrap();
+        assert_eq!(receipt.state, "quarantined");
+        assert_eq!(receipt.destination.as_deref(), dest.to_str());
+        assert_eq!(
+            git(&files.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+    }
+    #[test]
     fn chrome_squash_and_full_archive_preserve_hidden_files_hardlinks_acl_and_backlink() {
         let c = fixture_for(CHROME_ID);
         let old = source(&c);
@@ -3164,6 +3242,8 @@ mod tests {
                 BOARD_CREATED
             } else if c.id == CHROME_ID {
                 CHROME_CREATED
+            } else if c.id == DECISION_ID {
+                DECISION_CREATED
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
             }

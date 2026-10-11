@@ -630,11 +630,12 @@ fn intake_entry(
             // Fill missing legacy metadata even when this worker was adopted
             // before the fix and its ID has not changed.
             if !worker.legacy_thread_ids.is_empty() {
-                let sidecar = ctx.jobs.join("jobs").join(jid).join("discord-threads.json");
-                let associations = json!({"thread_ids":worker.legacy_thread_ids,"source":"prompt"});
-                if !sidecar.is_file() || read_json(&sidecar)? != associations {
-                    atomic_json(&sidecar, &associations, 2)?;
-                }
+                let mut store=crate::job_associations::Store::open(ctx,jid)?;
+                store.update(|associations|{
+                    associations["thread_ids"]=json!(worker.legacy_thread_ids);
+                    associations["source"]=json!("prompt");
+                    Ok(())
+                })?;
                 info["discord_thread_ids"] = json!(worker.legacy_thread_ids);
                 info["discord_thread_ids_source"] = json!("prompt");
             }
@@ -994,18 +995,16 @@ fn request_workers(ctx: &Context) -> Result<Vec<RequestWorker>> {
         }
         if associations.is_file() {
             let threads = read_json(&associations)?;
-            if !threads["thread_ids"].is_array() {
-                return Err("invalid Discord thread associations".into());
-            }
+            let request_ids = crate::job_associations::request_ids(&threads, s(&job["id"]))?;
             if s(&threads["source"]) == "prompt" {
-                legacy_thread_ids = threads["thread_ids"]
+                legacy_thread_ids = request_ids
                     .as_array()
                     .unwrap()
                     .iter()
                     .filter_map(|id| id.as_str().map(str::to_owned))
                     .collect();
             } else {
-                job["discord_thread_ids"] = threads["thread_ids"].clone();
+                job["discord_thread_ids"] = request_ids;
             }
         }
         let id = s(&job["id"]);

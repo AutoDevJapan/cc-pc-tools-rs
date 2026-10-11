@@ -300,25 +300,25 @@ fn install(ctx: &Context, record: &Value) -> Result<()> {
     let job = s(&record["context"]["posting_job"]);
     let job_dir = ctx.jobs.join("jobs").join(job);
     if valid_job(job) && job_dir.join("job.json").is_file() {
-        let path = job_dir.join("discord-threads.json");
-        let mut association = if path.is_file() {
-            read_json(&path)?
-        } else {
-            json!({})
-        };
-        let mut ids = std::collections::BTreeSet::new();
-        ids.extend(
-            association["question_thread_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .map(str::to_owned),
-        );
-        ids.insert(tid.to_owned());
-        association["question_thread_ids"] = json!(ids);
-        association["question_routes"][tid] = state["question_routes"][tid].clone();
-        atomic_json(&path, &association, 2)?;
+        let mut store = crate::job_associations::Store::open(ctx, job)?;
+        store.update(|association| {
+            if association.get("thread_ids").is_none() {
+                association["thread_ids"] = json!([]);
+            }
+            let mut ids = std::collections::BTreeSet::new();
+            ids.extend(
+                association["question_thread_ids"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+            ids.insert(tid.to_owned());
+            association["question_thread_ids"] = json!(ids);
+            association["question_routes"][tid] = state["question_routes"][tid].clone();
+            Ok(())
+        })?;
     }
     Ok(())
 }

@@ -694,6 +694,109 @@ fn explicit_multi_thread_owner_wins_over_a_job_only_quoting_the_bug_report() {
         "running"
     );
 }
+
+#[test]
+fn valid_question_only_association_does_not_block_unrelated_intake_or_claim_request_ownership() {
+    let mut h = Harness::new();
+    let dir = h.ctx.jobs.join("jobs/question-worker");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"id":"question-worker","status":"running","cwd":"D:/ProductA"}),
+        2,
+    )
+    .unwrap();
+    let sidecar = json!({"question_thread_ids":["700"],"question_routes":{"700":{"question_thread_id":"700","posting_job":"question-worker","work_thread_id":"100"}}});
+    atomic_json(&dir.join("discord-threads.json"), &sidecar, 2).unwrap();
+    h.tick();
+    assert_eq!(h.fake.borrow().launches.len(), 1);
+    assert_eq!(h.state()["requests"]["100"]["job"], "job1");
+    assert!(h.state()["requests"]["100"]["external_owner"].is_null());
+    assert_eq!(
+        read_json(&dir.join("discord-threads.json")).unwrap(),
+        sidecar
+    );
+}
+
+#[test]
+fn malformed_request_association_cannot_be_hidden_by_valid_question_fields() {
+    let mut h = Harness::new();
+    let dir = h.ctx.jobs.join("jobs/question-worker");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"id":"question-worker","status":"running"}),
+        2,
+    )
+    .unwrap();
+    atomic_json(&dir.join("discord-threads.json"),&json!({"thread_ids":"100","question_thread_ids":["700"],"question_routes":{"700":{"question_thread_id":"700","posting_job":"question-worker"}}}),2).unwrap();
+    assert!(cc_ask::intake::cmd_intake(&mut h.ctx, &mut false).is_err());
+    assert!(h.fake.borrow().launches.is_empty());
+}
+
+struct QuestionDuringLaunch(common::SharedFake);
+impl Effects for QuestionDuringLaunch {
+    fn http(
+        &mut self,
+        m: &str,
+        u: &str,
+        b: Option<&serde_json::Value>,
+        d: bool,
+    ) -> Result<serde_json::Value> {
+        self.0.http(m, u, b, d)
+    }
+    fn run(&mut self, a: &[String], t: u64) -> Result<Output> {
+        let out = self.0.run(a, t)?;
+        if a.iter().any(|v| v == "--launch-key") && out.code == 0 {
+            let job = out.stdout.trim();
+            let dir = self.0 .0.borrow().root.join("jobs").join(job);
+            atomic_json(
+                &dir.join("discord-threads.json"),
+                &json!({"question_thread_ids":["700"],"question_routes":{"700":{"question_thread_id":"700","posting_job":job}}}),
+                2,
+            )?;
+        }
+        Ok(out)
+    }
+}
+#[test]
+fn request_launch_registration_keeps_questions_created_before_its_checkpoint() {
+    let mut h = Harness::new();
+    h.ctx.effects = Box::new(QuestionDuringLaunch(common::SharedFake(h.fake.clone())));
+    let cwd = h.root.path().to_string_lossy().into_owned();
+    let job=launch_job(&mut h.ctx,&json!({"id":"100","name":"ツール修正"}),"依頼を進める",
+        &json!({"model":"gpt-6.1-sol","effort":"high","task_type":"implementation","sandbox":"danger-full-access"}),
+        "1234567890abcdef1234567890abcdef",false,Some(&cwd),Some("req")).unwrap();
+    let sidecar = read_json(
+        &h.ctx
+            .jobs
+            .join("jobs")
+            .join(&job)
+            .join("discord-threads.json"),
+    )
+    .unwrap();
+    assert_eq!(sidecar["thread_ids"], json!(["100"]));
+    assert_eq!(sidecar["question_thread_ids"], json!(["700"]));
+    assert_eq!(sidecar["question_routes"]["700"]["posting_job"], job);
+}
+
+#[test]
+fn legacy_owner_registration_merges_request_fields_and_keeps_question_routes() {
+    let mut h = Harness::new();
+    bot_thread(&h);
+    external_worker(&h, false);
+    let path = h.ctx.jobs.join("jobs/idea-brainstorm/discord-threads.json");
+    let question = json!({"question_thread_id":"700","posting_job":"idea-brainstorm"});
+    atomic_json(&path,&json!({"question_thread_ids":["700"],"question_routes":{"700":question},"opaque":{"kept":true}}),2).unwrap();
+    h.reply("既存の担当へ条件を引き継いでください。", "100");
+    h.tick();
+    assert_eq!(h.fake.borrow().launches.len(), 1);
+    let saved = read_json(&path).unwrap();
+    assert_eq!(saved["thread_ids"], json!(["100", "200"]));
+    assert_eq!(saved["question_thread_ids"], json!(["700"]));
+    assert_eq!(saved["question_routes"]["700"], question);
+    assert_eq!(saved["opaque"], json!({"kept":true}));
+}
 #[test]
 fn website_login_and_screen_check_enable_owner_chrome() {
     for task in [

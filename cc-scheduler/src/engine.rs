@@ -1194,7 +1194,6 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 project != "owner"
                     && !todo_wait::waiting(&db, i)
                     && !excluded
-                    && target.is_none_or(|id| i["id"].as_i64() == Some(id))
                     && (target.is_some() || !i["stall_recovery"]["pending"].is_object())
                     && !jobs.iter().any(|j| {
                         live(j)
@@ -1210,7 +1209,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         queue.sort_by(|a, b| {
             ranks
                 .get(&a["id"].as_u64().unwrap_or(0))
-                .cmp(&ranks.get(&b["id"].as_u64().unwrap_or(0)))
+                .copied().unwrap_or(cc_job_policy::priority::DEFAULT)
+                .cmp(&ranks.get(&b["id"].as_u64().unwrap_or(0)).copied().unwrap_or(cc_job_policy::priority::DEFAULT))
                 .then_with(|| {
                     n(&self.state["project_last_launch"][s(&a["project"])])
                         .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
@@ -1222,6 +1222,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         );
         if !truth(&self.report["allowance_now"]) {
             return Ok(());
+        }
+        if let Some(target) = target {
+            let target_rank = queue.iter().find(|i| i["id"].as_i64() == Some(target))
+                .and_then(|i| ranks.get(&i["id"].as_u64().unwrap_or(0))).copied();
+            if target_rank.is_some_and(|rank| queue.iter().any(|i| {
+                ranks.get(&i["id"].as_u64().unwrap_or(0)).is_some_and(|other| *other < rank)
+                    && !arr(&i["needs"]).iter().any(|v| busy.contains(s(v)))
+            })) {
+                self.report["priority_wait"] = json!(target);
+                return Ok(());
+            }
+            queue.retain(|i| i["id"].as_i64() == Some(target));
         }
         let mut first_failure = None;
         for i in queue

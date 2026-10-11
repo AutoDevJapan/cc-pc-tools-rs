@@ -1610,6 +1610,17 @@ fn recorded_prerequisite_inherits_rank_and_resource_exclusion_still_applies() {
     f.dispatch(); assert_eq!(f.e.backend.launched[0]["item"]["id"],3);
 }
 #[test]
+fn targeted_recovery_cannot_overtake_a_ready_higher_department() {
+    for blocked in [false,true] {
+        let mut f=Fixture::new(); f.pri=json!({"civ6":20,"other":100});
+        f.put(item(1,"civ6","todo", &["cargo"])); f.put(item(3,"other","todo", &[]));
+        if blocked { f.e.backend.ps.insert(1,proc(1,0,"cargo.exe")); }
+        f.e.dispatch_for(&f.cfg,&f.pri,Some(3)).unwrap();
+        assert_eq!(f.e.backend.launched.len(),usize::from(blocked));
+        if blocked { assert_eq!(f.e.backend.launched[0]["item"]["id"],3); }
+    }
+}
+#[test]
 fn preparation_retains_previous_result_session_and_redesigns_repeated_continuations() {
     let mut f = Fixture::new();
     f.managed(1, 1, "civ6", 0);

@@ -5,7 +5,7 @@ use chrono::DateTime;
 mod commander_health;
 #[path = "waiting_state.rs"]
 mod waiting_state;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -30,12 +30,14 @@ const RECENT_MS: u64 = 3 * 60 * 60 * 1000;
 pub struct Operations {
     root: PathBuf,
     snapshot: RwLock<Value>,
+    questions: RwLock<Value>,
 }
 impl Operations {
     pub fn production() -> Self {
         Self {
             root: "D:/CC/Tools".into(),
             snapshot: RwLock::new(empty()),
+            questions: RwLock::new(Value::Null),
         }
     }
     pub fn snapshot(&self) -> Value {
@@ -45,11 +47,92 @@ impl Operations {
             .clone()
     }
     pub fn refresh(&self) {
-        let value = collect(&self.root, now_ms());
+        let live = self
+            .questions
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let value = collect_with_questions(&self.root, now_ms(), &live);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
+    }
+    pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
+        let names = cc_ask::task_title::Names::load(&self.root.join("client-projects.txt"))
+            .map_err(|_| 503u16)?;
+        let db = cc_todo::read_store(&self.root.join("todo/todo.json")).map_err(|_| 503u16)?;
+        let items = db["items"].as_array().ok_or(503u16)?;
+        if !db["projects"].is_object() {
+            return Err(503);
+        }
+        let jobs = jobs(&self.root).map_err(|_| 503u16)?;
+        let mut privacy = crate::console_ui::PrivacyIndex::new(&names, &db);
+        if id.starts_with("job-") {
+            let job = jobs
+                .iter()
+                .find(|job| safe_id("job", text(job, "id")) == id)
+                .ok_or(404u16)?;
+            if privacy.is_private_job(job) {
+                return Err(404);
+            }
+            return Ok(
+                json!({"ok":true,"id":id,"updatedAt":job["finished_at"].as_str().or(job["started_at"].as_str()),
+                "detailVersion":detail_version(job),"report":crate::console_ui::clean(&names,text(job,"last_message")),"note":"","history":[],"offset":0,"total":0,"nextOffset":null}),
+            );
+        }
+        let todo_id = id
+            .strip_prefix("todo-")
+            .and_then(|id| id.parse::<u64>().ok())
+            .ok_or(404u16)?;
+        let item = items
+            .iter()
+            .find(|item| item["id"].as_u64() == Some(todo_id))
+            .ok_or(404u16)?;
+        let client = [
+            text(item, "project"),
+            text(item, "cwd"),
+            text(item, "spec"),
+            db["projects"][text(item, "project")].as_str().unwrap_or(""),
+        ]
+        .iter()
+        .any(|value| names.project(value) == "クライアント案件")
+            || jobs
+                .iter()
+                .filter(|job| linked(item, job))
+                .any(|job| privacy.is_private_job(job));
+        if client {
+            return Err(404);
+        }
+        let total = crate::console_ui::history_count(item);
+        let history = crate::console_ui::history_page(&names, item, offset, 10);
+        let next = offset.saturating_add(history.len());
+        Ok(
+            json!({"ok":true,"id":id,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
+            "detailVersion":detail_version(item),"note":crate::console_ui::clean(&names,text(item,"note")),"history":history,
+            "offset":offset,"total":total,"nextOffset":(next < total).then_some(next)}),
+        )
     }
 }
 pub async fn resident(board: Arc<Operations>) {
+    let inspection = board.clone();
+    tokio::spawn(async move {
+        let mut tick = tokio::time::interval(Duration::from_secs(120));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tick.tick().await;
+            let board = inspection.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                let previous = board
+                    .questions
+                    .read()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .clone();
+                let value = crate::owner_decisions::inspect(&board.root, &previous);
+                *board.questions.write().unwrap_or_else(|e| e.into_inner()) = value;
+                // The 15-second resident alone collects the board. Inspection
+                // publishes its facts for the next tick without a second scan.
+            })
+            .await;
+        }
+    });
     let mut tick = tokio::time::interval(Duration::from_secs(15));
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
@@ -125,16 +208,40 @@ fn linked(item: &Value, job: &Value) -> bool {
     job["todo_id"]
         .as_u64()
         .is_some_and(|id| item["id"].as_u64() == Some(id))
-        || item["job"] == job["id"] && job["id"].is_string()
-        || item["scheduler"]["job"] == job["id"] && job["id"].is_string()
-        || item["jobs"]
-            .as_array()
-            .is_some_and(|ids| ids.contains(&job["id"]))
+        || ["id", "thread_id", "resume_session"].iter().any(|key| {
+            job[*key]
+                .as_str()
+                .filter(|id| !id.is_empty())
+                .is_some_and(|id| {
+                    item["job"].as_str() == Some(id)
+                        || item["scheduler"]["job"].as_str() == Some(id)
+                        || item["jobs"]
+                            .as_array()
+                            .is_some_and(|ids| ids.iter().any(|v| v.as_str() == Some(id)))
+                })
+        })
 }
 fn safe_id(prefix: &str, value: &str) -> String {
     let mut hash = std::collections::hash_map::DefaultHasher::new();
     value.hash(&mut hash);
     format!("{prefix}-{:016x}", hash.finish())
+}
+fn detail_version(value: &Value) -> String {
+    let mut hash = std::collections::hash_map::DefaultHasher::new();
+    for key in [
+        "note",
+        "history",
+        "note_history",
+        "spec_history",
+        "last_message",
+        "updated",
+        "updated_at",
+        "finished_at",
+        "started_at",
+    ] {
+        value[key].to_string().hash(&mut hash);
+    }
+    format!("{:016x}", hash.finish())
 }
 fn clean(names: &cc_ask::task_title::Names, value: &str) -> String {
     // No raw activity, errors or transcripts are ever projected. Mask embedded secrets
@@ -247,6 +354,15 @@ fn owner_department_order_and_explicit_projects_match_admission() {
     );
 }
 fn add(tree: &mut Tree, dept: usize, product: String, worker: Value) {
+    let mut worker = worker;
+    let defaults = crate::work_facts::project(&Value::Null, false, str::to_owned);
+    for (key, value) in defaults.as_object().unwrap() {
+        worker
+            .as_object_mut()
+            .unwrap()
+            .entry(key.clone())
+            .or_insert(value.clone());
+    }
     tree.entry((dept, product)).or_default().push(worker);
 }
 fn departments(tree: Tree) -> Vec<Value> {
@@ -286,7 +402,15 @@ fn jobs(root: &Path) -> Result<Vec<Value>, ()> {
     out.sort_by(|a, b| text(b, "created_at").cmp(text(a, "created_at")));
     Ok(out)
 }
+#[cfg(test)]
 fn collect(root: &Path, now: u64) -> Value {
+    collect_with_questions(
+        root,
+        now,
+        &read_json(&root.join("discord-ask/operations-history.json")).unwrap_or(Value::Null),
+    )
+}
+fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     static QUESTION_URL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let question_pattern = QUESTION_URL.get_or_init(|| {
         regex::Regex::new(r"https://discord\.com/channels/[0-9]+/[0-9]+(?:/[0-9]+)?")
@@ -385,6 +509,35 @@ fn collect(root: &Path, now: u64) -> Value {
     let mut used = BTreeSet::new();
     let js = jobs.as_ref().map(Vec::as_slice).unwrap_or(&[]);
     let db = todo.as_ref().ok();
+    let empty_db = Value::Null;
+    let mut question_state = read_json(&root.join("discord-ask/state.json")).unwrap_or(Value::Null);
+    if question_state.is_object() {
+        question_state["operations_jobs"] = json!(crate::owner_decisions::job_metadata(
+            js,
+            &names,
+            db.unwrap_or(&empty_db)
+        ));
+        question_state["jobs_source_ok"] = json!(jobs.is_ok());
+    }
+    let decisions = crate::owner_decisions::project(
+        db.unwrap_or(&empty_db),
+        &question_state,
+        live,
+        &names,
+        now,
+    );
+    sources.push(source(
+        "questions",
+        "Discordの質問・回答・配送",
+        decisions["sourceOk"] == true,
+        live["checkedAt"].as_u64(),
+        if decisions["sourceOk"] == true {
+            "質問の投稿ごとに照合"
+        } else {
+            "質問の記録を取得できません"
+        },
+    ));
+    let mut privacy = crate::console_ui::PrivacyIndex::new(&names, db.unwrap_or(&empty_db));
     if let Some(items) = db.and_then(|v| v["items"].as_array()) {
         for item in items {
             let is_done = text(item, "status") == "done";
@@ -405,6 +558,8 @@ fn collect(root: &Path, now: u64) -> Value {
             let client = project == "クライアント案件"
                 || cc_scheduler::priority::item_rank(item, &policy) == 10
                 || names.project(text(item, "cwd")) == "クライアント案件"
+                || names.project(text(item, "spec")) == "クライアント案件"
+                || associated.iter().any(|job| privacy.is_private_job(job))
                 || db.is_some_and(|db| {
                     names.project(db["projects"][raw_project].as_str().unwrap_or(""))
                         == "クライアント案件"
@@ -444,16 +599,24 @@ fn collect(root: &Path, now: u64) -> Value {
                 clean(&names, text(item, "title"))
             };
             let progress = item["progress"].as_u64().filter(|p| *p <= 100);
-            let summary = if client {
-                String::new()
-            } else {
-                clean(&names, text(item, "note"))
-                    .chars()
-                    .take(180)
-                    .collect::<String>()
-            };
+            let facts = crate::work_facts::project(item, client, |value| {
+                crate::console_ui::clean(&names, value)
+            });
+            let decision_kind = decisions["tasks"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|t| t["id"] == item["id"])
+                .map(|t| text(t, "kind"))
+                .unwrap_or("none");
             let wait_kind = match text(item, "status") {
-                "block" => "owner",
+                "block" => {
+                    if decision_kind == "none" {
+                        "unverified"
+                    } else {
+                        decision_kind
+                    }
+                }
                 "wait" => "dependency",
                 _ if status == "waiting" => waiting_state::kind(
                     item,
@@ -469,14 +632,35 @@ fn collect(root: &Path, now: u64) -> Value {
             let question_url = if client {
                 None
             } else {
-                question_pattern
-                    .find(text(item, "note"))
-                    .map(|value| value.as_str().to_owned())
+                decisions["questions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|q| {
+                        q["taskIds"]
+                            .as_array()
+                            .is_some_and(|ids| ids.contains(&item["id"]))
+                    })
+                    .rev()
+                    .find_map(|q| q["questionUrl"].as_str().map(str::to_owned))
+                    .or_else(|| {
+                        question_pattern
+                            .find(text(item, "note"))
+                            .map(|value| value.as_str().to_owned())
+                    })
             };
             let history = associated.iter().filter(|j| failed(j)).count();
             let detail = match status {
                 "working" => "共有ToDoに紐づく担当が稼働中です。",
-                "waiting" if text(item, "status") == "block" => "オーナーの判断待ちです。",
+                "waiting" if wait_kind == "owner" => "送信済みの質問への回答を待っています。",
+                "waiting" if wait_kind == "answer_received" => {
+                    "回答を受領しています。担当への配送・反映を確認中です。"
+                }
+                "waiting" if wait_kind == "deferred" => "オーナーが指定した延期を保持しています。",
+                "waiting" if wait_kind == "owner_stopped" => "オーナーの停止指示を保持しています。",
+                "waiting" if wait_kind == "unsent" => "具体的な質問をまだ送信できていません。",
+                "waiting" if wait_kind == "technical" => "技術上の停止からの再開を待っています。",
+                "waiting" if wait_kind == "unverified" => "停止理由と質問の配送を確認中です。",
                 "waiting" if text(item, "status") == "wait" => "別のToDoの完了待ちです。",
                 "waiting" if wait_kind == "job_queue" => "ジョブの起動順を待っています。",
                 "waiting" if wait_kind == "startup_error" => {
@@ -494,6 +678,24 @@ fn collect(root: &Path, now: u64) -> Value {
                 "done" => "共有ToDoで完了が記録されています。",
                 _ => "未着手です。",
             };
+            let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
+                "detail":detail,"historyFailures":history});
+            if !client {
+                worker["factsSource"] =
+                    json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));
+                worker["note"] = json!(crate::console_ui::clean(&names, text(item, "note"))
+                    .chars()
+                    .take(360)
+                    .collect::<String>());
+                worker["historyCount"] = json!(crate::console_ui::history_count(item));
+                worker["detailAvailable"] = json!(true);
+                worker["detailVersion"] = json!(detail_version(item));
+            }
+            worker
+                .as_object_mut()
+                .unwrap()
+                .extend(facts.as_object().unwrap().clone());
             add(
                 &mut tree,
                 if client {
@@ -502,9 +704,7 @@ fn collect(root: &Path, now: u64) -> Value {
                     rank_department(cc_scheduler::priority::item_rank(item, &policy))
                 },
                 project,
-                json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
-                    "task":task,"summary":summary,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
-                    "detail":detail,"historyFailures":history}),
+                worker,
             );
         }
     }
@@ -544,6 +744,23 @@ fn collect(root: &Path, now: u64) -> Value {
         } else {
             "idle"
         };
+        let mut worker = json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
+                "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});
+        if !client {
+            worker["report"] = json!(crate::console_ui::clean(&names, text(j, "last_message"))
+                .chars()
+                .take(360)
+                .collect::<String>());
+            worker["detailAvailable"] = json!(true);
+            worker["detailVersion"] = json!(detail_version(j));
+        }
+        let facts =
+            crate::work_facts::project(j, client, |value| crate::console_ui::clean(&names, value));
+        worker
+            .as_object_mut()
+            .unwrap()
+            .extend(facts.as_object().unwrap().clone());
         add(
             &mut tree,
             if client {
@@ -554,9 +771,7 @@ fn collect(root: &Path, now: u64) -> Value {
                 rank_department(cc_scheduler::priority::item_rank(&owned, &policy))
             },
             project,
-            json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
-                "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
-                "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))}),
+            worker,
         );
     }
     let tools = read_json(&root.join("tool-names.json")).unwrap_or(Value::Null);
@@ -649,18 +864,11 @@ fn collect(root: &Path, now: u64) -> Value {
     } else {
         json!({"cpuPercent":null,"memoryUsedGb":null,"memoryTotalGb":null,"activeJobs":js.iter().filter(|j|active(j)).count(),"jobLimit":null,"waitingJobs":null})
     };
-    metrics["ownerDecisions"] = db
-        .and_then(|db| db["items"].as_array())
-        .map(|items| {
-            json!(
-                items
-                    .iter()
-                    .filter(|item| text(item, "status") == "block")
-                    .count()
-            )
-        })
-        .unwrap_or(Value::Null);
-    // These are distinct inventories, not a total of waits for CPU capacity.
+    metrics
+        .as_object_mut()
+        .unwrap()
+        .extend(decisions["metrics"].as_object().unwrap().clone());
+    // These are different inventories; none is a count of CPU-bound waits.
     let todo_count = |status| {
         db.and_then(|v| v["items"].as_array())
             .map(|items| items.iter().filter(|i| text(i, "status") == status).count())
@@ -687,7 +895,7 @@ fn collect(root: &Path, now: u64) -> Value {
     };
     json!({"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
-        "metrics":metrics,"departments":departments(tree)})
+        "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],"departments":departments(tree)})
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
     let cwd = text(job, "cwd").replace('\\', "/").to_lowercase();
@@ -721,6 +929,84 @@ fn infer_project(job: &Value, db: Option<&Value>) -> String {
 mod tests {
     use super::*;
     #[test]
+    fn board_is_bounded_but_paged_detail_keeps_notes_facts_and_privacy() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("todo")).unwrap();
+        fs::create_dir_all(root.join("codex-jobs/jobs")).unwrap();
+        fs::write(root.join("client-projects.txt"), "SecretClient\n").unwrap();
+        let note = format!(
+            "要約: 接続復旧\n現在の工程: 検査\n次の行動: 再取得\n{}",
+            "詳細な本文".repeat(3000)
+        );
+        let history: Vec<_> = (0..41).map(|i| json!({"note":format!("記録{i}:{}", "履歴".repeat(5000)),"updated":"2026-10-11 10:00"})).collect();
+        let db = json!({"projects":{"demo":"D:/test/demo","SecretClient":"D:/private"},"items":[
+            {"id":1,"project":"demo","status":"doing","title":"接続復旧","progress":42,"note":note,"note_history":history,"updated":"2026-10-11 10:00","wait_on":[2]},
+            {"id":2,"project":"SecretClient","status":"doing","title":"hidden-value","note":"hidden-value"}]});
+        fs::write(root.join("todo/todo.json"), db.to_string()).unwrap();
+        let board = Operations {
+            root: root.into(),
+            snapshot: RwLock::new(empty()),
+            questions: RwLock::new(Value::Null),
+        };
+        board.refresh();
+        let snapshot = board.snapshot();
+        let workers: Vec<_> = snapshot["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|dept| dept["products"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
+            .collect();
+        let worker = workers.iter().find(|w| w["id"] == "todo-1").unwrap();
+        assert!(worker["history"].is_null());
+        assert_eq!(worker["historyCount"], 41);
+        assert!(worker["note"].as_str().unwrap().chars().count() <= 360);
+        assert_eq!(worker["progress"], 42);
+        assert_eq!(worker["currentStage"], "検査");
+        assert_eq!(worker["nextAction"], "再取得");
+        assert_eq!(worker["dependencies"], json!([2]));
+        assert!(snapshot.to_string().len() < 20_000);
+        assert!(!snapshot.to_string().contains("hidden-value"));
+        let mut offset = 0;
+        let mut pages = Vec::new();
+        loop {
+            let detail = board.worker_detail("todo-1", offset).unwrap();
+            assert_eq!(detail["note"], note);
+            assert_eq!(detail["updatedAt"], worker["updatedAt"]);
+            let page = detail["history"].as_array().unwrap();
+            assert!(page.len() <= 10);
+            pages.extend(page.iter().cloned());
+            match detail["nextOffset"].as_u64() {
+                Some(next) => offset = next as usize,
+                None => break,
+            }
+        }
+        assert_eq!(pages.len(), 41);
+        assert_eq!(
+            pages,
+            crate::console_ui::history(
+                &cc_ask::task_title::Names::parse("SecretClient\n"),
+                &db["items"][0]
+            )
+        );
+        assert_eq!(board.worker_detail("todo-2", 0), Err(404));
+        assert_eq!(board.worker_detail("todo-999", 0), Err(404));
+        let original = board.worker_detail("todo-1", 0).unwrap();
+        let mut changed = db.clone();
+        changed["items"][0]["note"] = json!("同じ分の別メモ");
+        fs::write(root.join("todo/todo.json"), changed.to_string()).unwrap();
+        let changed = board.worker_detail("todo-1", 10).unwrap();
+        assert_eq!(original["updatedAt"], changed["updatedAt"]);
+        assert_ne!(original["detailVersion"], changed["detailVersion"]);
+        fs::write(root.join("todo/todo.json"), "invalid").unwrap();
+        assert_eq!(board.worker_detail("todo-1", 0), Err(503));
+        fs::write(root.join("todo/todo.json"), db.to_string()).unwrap();
+        fs::create_dir(root.join("codex-jobs/jobs/broken")).unwrap();
+        fs::write(root.join("codex-jobs/jobs/broken/job.json"), "invalid").unwrap();
+        assert_eq!(board.worker_detail("todo-1", 0), Err(503));
+    }
+    #[test]
     fn shared_records_project_recovery_current_incidents_history_and_client_paths() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/operations");
         let now = stamp(&json!("2026-10-09T13:00:00Z")).unwrap();
@@ -743,21 +1029,17 @@ mod tests {
         assert_eq!(find("todo-5")["summary"], "");
         assert!(find("todo-5")["questionUrl"].is_null());
         assert_eq!(output["metrics"]["ownerDecisions"], 1);
-        assert!(
-            find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
-                .contains("画像案への回答を待っています")
-        );
-        assert!(
-            !find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
-                .contains("hidden-value")
-        );
+        assert!(find("todo-2")["summary"]
+            .as_str()
+            .unwrap()
+            .contains("画像案への回答を待っています"));
+        assert!(!find("todo-2")["summary"]
+            .as_str()
+            .unwrap()
+            .contains("hidden-value"));
         assert_eq!(
             find("todo-2")["questionUrl"],
-            "https://discord.com/channels/100/200"
+            "https://discord.com/channels/100/200/200"
         );
         assert!(find("todo-2")["progress"].is_null());
         assert_eq!(find("todo-3")["status"], "attention");
@@ -769,13 +1051,11 @@ mod tests {
         assert_ne!(output["commander"]["status"], "attention");
         assert_eq!(output["commander"]["status"], "working");
         assert_eq!(output["sourceOk"], true);
-        assert!(
-            output["sources"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|s| s["state"] == "unknown")
-        );
+        assert!(output["sources"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|s| s["state"] == "unknown"));
         assert_eq!(output["metrics"]["memoryUsedGb"], 56.0);
         assert!(find("todo-1")["updatedAt"].is_string());
         let serialized = output.to_string();
@@ -793,6 +1073,12 @@ mod tests {
         assert!(linked(&item, &old) && linked(&item, &new));
         assert!(!active(&old) && active(&new));
         assert!(item["progress"].as_u64().is_none());
+        let alias = json!({"id":"launcher","thread_id":"new","status":"running"});
+        assert!(linked(&item, &alias));
+        assert!(!linked(
+            &json!({"job":""}),
+            &json!({"id":"","thread_id":""})
+        ));
     }
     #[test]
     fn client_names_and_embedded_credentials_are_masked_before_projection() {

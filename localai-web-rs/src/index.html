@@ -21,7 +21,7 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand"><div class="mark">✦</div><div><h1>Local AI Console</h1><p>Local-first workspace</p></div></div>
-      <nav class="nav"><button data-view="chat">Chat</button><button data-view="minimax">MiniMax-H3</button><button data-view="kanban" class="active">Operations</button><a href="/music" style="display:block;padding:12px 14px;text-decoration:none;color:inherit">音楽制作 · Suno</a><button data-view="workload">仕事量</button><button data-view="systems">Systems</button></nav>
+      <nav class="nav"><button data-view="chat">Chat</button><button data-view="minimax">MiniMax-H3</button><button data-view="kanban" class="active">Operations</button><a href="/music" data-view="music" style="display:block;padding:12px 14px;text-decoration:none;color:inherit">音楽制作 · Suno</a><button data-view="workload">仕事量</button><button data-view="systems">Systems</button></nav>
       <section class="side-card"><h2>Runtime</h2><div id="mini-services"></div></section>
       <section class="side-card"><h2>Local models</h2><div id="model-summary" class="service-mini">Loading…</div></section>
       <div class="sidebar-footer">127.0.0.1 only · port <span id="port-label">10012</span></div>
@@ -29,6 +29,7 @@
     <main>
       <header class="topbar"><div><h2 id="page-title">Operations</h2><p id="page-subtitle">司令塔・部署・製品ごとの作業状況</p></div><div class="top-actions"><span class="pill" id="runtime-pill">● connecting</span><button class="ghost" id="refresh-btn">更新</button><button class="danger" id="stop-btn">Local AI停止</button></div></header>
 
+      <!-- console-music-view -->
       <section id="view-chat" class="view">
         <div class="toolbar"><div class="toolbar-left"><label for="model-select">モデル</label><select id="model-select"></select></div><span class="pill" id="chat-state">待機中</span></div>
         <div class="chat"><div id="messages" class="messages"><div class="message"><div class="who">Local AI Console</div><div class="body">モデルを選んで、最初のプロンプトを入力してください。</div></div></div><div class="composer"><div class="composer-head">メッセージ</div><textarea id="chat-input" placeholder="質問、コード、要約など…（Ctrl+Enterで送信）"></textarea><div class="composer-foot"><div class="chips"><button class="chip" data-prompt="このPCのLocal AIの状態を要約して">状態を要約</button><button class="chip" data-prompt="このコードをレビューして、改善点を箇条書きにして">コードレビュー</button><button class="chip" data-prompt="次の文章を短く要約して">要約</button></div><button class="primary" id="send-btn">送信　Ctrl+↵</button></div></div><div class="hint">ローカルAPIのみ使用 · Autoはタスク内容を分類 · 返信中も画面を閉じないでください</div></div>
@@ -48,13 +49,14 @@
       <section id="view-kanban" class="view active operations" aria-label="組織の作業状況">
         <div class="ops-toolbar">
           <div class="ops-update" id="ops-update" role="status">作業状況を読み込み中…</div>
-          <div class="ops-filters"><label class="ops-search"><span class="ops-sr-only">製品・作業・担当を検索</span><input id="ops-search" type="search" placeholder="製品・作業を検索" autocomplete="off"></label><label class="ops-sr-only" for="ops-status">作業の状態</label><select id="ops-status"><option value="">すべて</option><option value="working">● 稼働中</option><option value="waiting">● 待機</option><option value="attention">● 要対応</option><option value="idle">休止</option><option value="done">完了</option></select><button id="ops-refresh" class="ghost" type="button">更新</button></div>
+          <div class="ops-filters"><label class="ops-search"><span class="ops-sr-only">製品・作業・担当・要約・工程・停止理由・次の行動・依存先を検索</span><input id="ops-search" type="search" placeholder="作業・要約・工程・停止・次・依存を検索" autocomplete="off"></label><label class="ops-sr-only" for="ops-status">作業の状態</label><select id="ops-status"><option value="">すべて</option><option value="working">● 稼働中</option><option value="waiting">● 待機</option><option value="attention">● 要対応</option><option value="idle">休止</option><option value="done">完了</option></select><button id="ops-refresh" class="ghost" type="button">更新</button></div>
         </div>
         <p id="ops-error" class="ops-error" role="status" hidden></p>
         <div id="ops-metrics" class="ops-metrics" aria-label="稼働状況とPCの使用量"></div>
         <div id="ops-commander" class="ops-command"></div>
         <div id="ops-departments" class="ops-departments"><p class="ops-empty">部署の状況を読み込み中…</p></div>
         <p id="ops-results" class="ops-note" role="status"></p>
+        <details class="ops-sources"><summary>質問と回答を確認する</summary><section id="ops-questions" aria-label="Discordの質問と回答"><p>質問の送信を確認中です。</p></section></details>
         <details class="ops-sources"><summary>データの接続状況 <span id="ops-source-summary">未取得</span></summary><div id="ops-sources"></div></details>
         <p class="ops-note">進み具合は記録された実測値のみ表示します。未記録は「未記録」と表示します。</p>
       </section>
@@ -114,6 +116,7 @@
 .ops-worker .ops-robot{width:32px;height:32px}
 .ops-worker-text{min-width:0}.ops-worker-text strong{display:block;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ops-worker-text small{display:block;color:#b1c6de;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ops-worker-meta{display:grid;justify-items:end;gap:6px}
+.ops-worker-facts{grid-column:1/-1;display:grid;gap:5px;min-width:0;font-size:13px;color:#c8d7e8;white-space:normal;overflow-wrap:anywhere}.ops-worker-facts>span{display:block;min-width:0}.ops-worker-facts b{font-weight:600;color:#e1e9ee}
 .ops-progress{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums;font-size:11px;color:#c6dbf5}
 .ops-progress progress{appearance:none;width:62px;height:8px;border:0;border-radius:2px;background:#1b2e47;overflow:hidden}
 .ops-progress progress::-webkit-progress-bar{background:#1b2e47}.ops-progress progress::-webkit-progress-value{background:#64a7fa;border-radius:2px}.ops-progress progress::-moz-progress-bar{background:#64a7fa}
@@ -153,7 +156,7 @@
     function renderQueueStatus(q){if(!q||!q.latest){if(q&&q.stale){$('#minimax-job').textContent='待機中';$('#mini-route').textContent='MiniMax-H3 · 前回ログは履歴に保存'}return}const latest=q.latest;const current=Number(latest.currentScene||0);const total=Number(latest.totalScenes||0);if(latest.status==='running'){if(q.busy){$('#minimax-job').textContent=`生成中 · Scene ${current}/${total}`;$('#mini-route').textContent='MiniMax-H3 · 実行中'}else{$('#minimax-job').textContent='前回キューが中断';$('#mini-route').textContent='MiniMax-H3 · ログを確認'}}else if(latest.status==='completed'){$('#minimax-job').textContent=`完了 · ${total} scenes`;$('#mini-route').textContent='MiniMax-H3 · 完了'}else if(latest.status==='failed'){$('#minimax-job').textContent=`失敗 · Scene ${current}/${total}`;$('#mini-route').textContent='MiniMax-H3 · ログを確認';if(latest.error)toast(`MiniMax-H3失敗: ${latest.error}`)}}
 
     // Only the sanitized Operations endpoint feeds this view.
-    const opsState={snapshot:null,loading:false,error:'',receivedAt:null,items:new Map(),expanded:new Map(),products:new Map(),filterProducts:new Map(),filterDepartments:new Map(),filter:'',limits:new Map(),selected:null,returnFocus:null,returnKey:null};
+    const opsState={snapshot:null,loading:false,error:'',receivedAt:null,failures:0,retryAt:0,controller:null,details:new Map(),detailController:null,items:new Map(),expanded:new Map(),products:new Map(),filterProducts:new Map(),filterDepartments:new Map(),filter:'',limits:new Map(),selected:null,returnFocus:null,returnKey:null};
     const OPS_COLORS={'ゲーム部':'#1E8C93','GoDD事業部':'#8E5BB5','自社サービス部':'#3B73C4','発信部':'#C2508F','受託部':'#4E9A4E','情報システム部':'#5C7080'};
     const OPS_STATUS={working:'稼働中',waiting:'待機',attention:'要対応',idle:'休止',done:'完了',unknown:'状態未取得'};
     function opsList(value){return Array.isArray(value)?value:[]}
@@ -179,9 +182,16 @@
     function opsWorkers(dept){return opsList(dept.products).flatMap(p=>opsList(p.workers))}
     function opsIsOpen(worker){return ['working','attention','waiting'].includes(worker.status)}
     // Never infer an owner decision from the general waiting state or free text.
-    function opsWaitKind(worker){const reason=worker.waitKind||worker.waitingReason||worker.waitReason;return worker.todoStatus==='block'||['decision','owner','owner_decision'].includes(reason)?'decision':['resource','capacity','build'].includes(reason)?'resource':worker.todoStatus==='wait'||['dependency','todo'].includes(reason)?'dependency':''}
+    function opsWaitKind(worker){const reason=worker.waitKind||worker.waitingReason||worker.waitReason;return ['decision','owner','owner_decision'].includes(reason)?'decision':['resource','capacity','build'].includes(reason)?'resource':worker.todoStatus==='wait'||['dependency','todo'].includes(reason)?'dependency':''}
     function opsMatchesStatus(worker,status){return !status||(['decision','resource','dependency'].includes(status)?worker.status==='waiting'&&opsWaitKind(worker)===status:worker.status===status)}
-    function opsShort(value){const text=String(value||'').trim().replace(/\s+/g,' ');return text.length>120?text.slice(0,120)+'…':text}
+    function opsShort(value){const text=String(value||'').trim().replace(/\s+/g,' ');return text.length>180?text.slice(0,180)+'…':text}
+    function opsDependencies(worker){return worker.dependencySummary||opsList(worker.dependencies).map(id=>'ToDo #'+id).join('、')||'未記録'}
+    function opsFacts(worker,full=false){
+      const rows=[['作業要約',worker.summary||'未記録'],['最終成果の時刻',opsTime(worker.lastResultAt)],['成果内容',worker.lastResult||'未記録'],['現在の工程',worker.currentStage||'未記録'],['停止理由',worker.stopReason||'未記録'],['次の行動',worker.nextAction||'未記録'],['依存先',opsDependencies(worker)]];
+      if(worker.factsSource)rows.push(['記録元',worker.factsSource]);
+      return rows.map(([label,value])=>full?`<dt>${label}</dt><dd>${esc(value)}</dd>`:`<span><b>${label}</b>: ${esc(opsShort(value))}</span>`).join('');
+    }
+    function opsHistory(worker){return opsList(worker.history).map(entry=>{if(typeof entry==='string')return `<li>${esc(entry)}</li>`;if(!entry||typeof entry!=='object')return '<li>内容未記録</li>';return `<li>${esc(opsTime(entry.at||entry.updated_at||entry.timestamp||entry.updated))} · ${esc(entry.note||entry.message||entry.summary||entry.status||'内容未記録')}</li>`}).join('')}
     function opsQuestionUrl(value){try{const url=new URL(value);return url.protocol==='https:'&&['discord.com','www.discord.com'].includes(url.hostname)&&/^\/channels\/\d+\/\d+(?:\/\d+)?\/?$/.test(url.pathname)&&!url.username&&!url.password?url.href:null}catch{return null}}
     function opsPriority(worker){return ({attention:0,working:1,waiting:2,idle:3,done:4})[worker.status]??5}
     function opsCount(workers){return `稼働 ${workers.filter(w=>w.status==='working').length} / ${workers.length}`}
@@ -193,6 +203,9 @@
       const metric=data&&data.metrics||{};
       const metricCard=(label,value,kind='')=>`<div class="ops-metric ${kind}"><span>${label}</span><strong>${value}</strong></div>`;
       $('#ops-metrics').innerHTML=[
+        metricCard('送信を確認した未回答質問',opsValue(metric.confirmedUnansweredQuestions),'waiting'),
+        metricCard('質問を待つ作業',opsValue(metric.ownerDecisionTasks),'waiting'),
+        metricCard('未送信の質問',opsValue(metric.unsentQuestions),'attention'),
         metricCard('稼働 / 登録ワーカー',data?`${all.filter(w=>w.status==='working').length} <small>/ ${all.length}</small>`:'—'),
         metricCard('待機ワーカー',data?all.filter(w=>w.status==='waiting').length:'—','waiting'),
         metricCard('要対応ワーカー',data?all.filter(w=>w.status==='attention').length:'—','attention'),
@@ -200,10 +213,11 @@
         metricCard('メモリ',`${opsValue(metric.memoryUsedGb)} <small>/ ${opsValue(metric.memoryTotalGb)} GB</small>`),
         metricCard('実行ジョブ / 起動枠',`${opsValue(metric.activeJobs)} <small>/ ${opsValue(metric.jobLimit)}</small>`)
       ].join('');
+      renderOpsQuestions(data);
       const sources=opsList(data&&data.sources), good=data&&data.sourceOk===true&&sources.every(s=>s.ok===true||s.state==='unknown')&&!opsState.error;
       const error=$('#ops-error');error.hidden=!opsState.error&&(!data||good);
       error.textContent=opsState.error||(data&&!good?'一部のデータを取得できません。接続状況と更新時刻を確認してください。':'');
-      $('#ops-update').innerHTML=`<span class="ops-status ${good?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · ${good?'接続中':'接続を確認'}`:'未取得'}</span>`;
+      $('#ops-update').innerHTML=`<span class="ops-status ${good?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · 受信 ${esc(opsTime(opsState.receivedAt))} · ${good?'接続中':'接続を確認'}`:'未取得'}</span>`;
       $('#ops-source-summary').textContent=data?`${sources.filter(s=>s.ok===true).length} / ${sources.length} 接続 · ToDo完了待ち ${opsValue(metric.todoDependencyWaits)} · 未着手 ${opsValue(metric.todoPendingStarts)} · 停止 ${opsValue(metric.todoBlocked)} · ジョブ起動待ち ${opsValue(metric.jobQueued)} · 受付待ち ${opsValue(metric.consoleQueued)}（準備失敗 ${opsValue(metric.consolePreparationFailures)}） · 容量確認後の起動待ち ${opsValue(metric.waitingJobs)}`:'未取得';
       $('#ops-sources').innerHTML=sources.map(s=>`<div class="ops-source"><strong>${esc(s.label||s.key)}</strong><span class="ops-status ${s.state==='unknown'?'unknown':s.ok===true?'working':'attention'}">${s.state==='unknown'?'状態未取得':s.ok===true?'接続中':'取得できません'}</span><span>更新 ${esc(opsTime(s.updatedAt))}</span>${s.message?`<span class="ops-source-message">${esc(s.message)}</span>`:''}</div>`).join('')||'<p class="ops-empty">接続元の記録はありません。</p>';
       const commander=data&&data.commander;
@@ -215,6 +229,17 @@
       if(!board.contains(document.activeElement)&&!(selection&&!selection.isCollapsed&&board.contains(selection.anchorNode)))renderOpsDepartments(departments);
       if($('#ops-dialog').open&&!$('#ops-dialog-body').contains(document.activeElement)&&!(selection&&!selection.isCollapsed&&$('#ops-dialog-body').contains(selection.anchorNode)))renderOpsDetail();
       if(focused)opsRestoreBoardFocus(focused);
+    }
+    function renderOpsQuestions(data){
+      const host=$('#ops-questions'),selection=window.getSelection();
+      if(host.contains(document.activeElement)||(selection&&!selection.isCollapsed&&host.contains(selection.anchorNode)))return;
+      const metric=data&&data.metrics||{},labels={unanswered:'送信済み・未回答',unsent:'未送信',send_failed:'送信失敗',send_unknown:'配送結果を確認中',answer_received_unverified:'回答と質問世代の対応を確認中',answer_scope_unverified:'後続の回答がどの質問への回答か確認中',delivery_unverified:'送信・回答の確認不能',answer_received:'回答受領・担当への配送待ち',answer_delivery_failed:'回答受領・担当への配送失敗',applying:'回答を配送済み・反映中',answered:'回答済み・質問を閉鎖',deferred:'オーナー指定の延期',owner_stopped:'オーナー指定の停止'};
+      const questions=opsList(data&&data.ownerQuestions).slice().sort((a,b)=>Number(b.state==='unanswered')-Number(a.state==='unanswered'));
+      host.innerHTML='<h3>質問と回答</h3>'+`<p>送信確認不能 ${opsValue(metric.unverifiedQuestions)}件 · 質問を特定できない停止作業 ${opsValue(metric.unclassifiedBlockedTasks)}件 · ToDoの停止状態 ${opsValue(metric.blockedTasks)}件。履歴確認が残るスレッド ${opsValue(metric.historyInspectionPendingThreads)}件。質問件数は確認済みのものだけを数え、未確認を0件とみなしません。</p>`+
+        (questions.map(q=>`<article class="ops-source"><strong>${esc(labels[q.state]||'状態未確認')} · 関連作業 ${esc(String(q.taskCount||0))}件</strong><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(q.question||'質問本文を確認できません')}</p>${q.answer?`<p style="white-space:pre-wrap;overflow-wrap:anywhere">回答: ${esc(q.answer)}</p>`:''}<span>質問 ${esc(opsTime(q.askedAt))} · 回答 ${esc(opsTime(q.replyAt))} · 配送確認 ${esc(opsTime(q.checkedAt))}${q.deliveryVerified?'':'（現在の送信確認なし）'}</span>${q.taskIds&&q.taskIds.length?`<span>ToDo ${esc(q.taskIds.map(id=>'#'+id).join('、'))}</span>`:''}${opsQuestionUrl(q.questionUrl)?`<a href="${esc(opsQuestionUrl(q.questionUrl))}" target="_blank" rel="noopener noreferrer">Discordの質問を読む</a>`:'<span>Discordリンクは未確認または保護対象です。</span>'}</article>`).join('')||'<p>確認できた質問の記録はありません。未取得や確認不能は上の件数で示します。</p>');
+      const controls={owner:'送信済みの質問への回答待ち',unsent:'具体的な質問が未送信',answer_received:'回答の配送・反映を確認中',answered:'回答済み・停止状態を確認中',deferred:'オーナーが明示した延期',owner_stopped:'オーナーの停止指示',dependency:'別ToDoの完了待ち',technical:'技術上の停止・復旧待ち',unverified:'質問と停止理由を確認中'};
+      const stopped=opsList(data&&data.blockedDecisionTasks);
+      const note=document.createElement('p');note.textContent='停止したToDoの分類: '+stopped.map(t=>'#'+t.id+' '+(controls[t.kind]||'未確認')).join('、');host.append(note);
     }
     function renderOpsDepartments(departments=opsList(opsState.snapshot&&opsState.snapshot.departments)){
       const host=$('#ops-departments'),focused=document.activeElement&&document.activeElement.dataset.opFocus;
@@ -229,16 +254,16 @@
         total+=workers.length;
         const products=opsList(dept.products).map((product,pi)=>({product,pi})).sort((a,b)=>Number(opsList(b.product.workers).some(opsIsOpen))-Number(opsList(a.product.workers).some(opsIsOpen))).map(({product,pi})=>{
           const members=opsList(product.workers);
-          const visible=members.map((worker,wi)=>({worker,wi})).filter(({worker})=>opsMatchesStatus(worker,status)&&(!query||[dept.name,product.name,worker.name,worker.task,worker.summary,worker.detail].some(v=>String(v||'').toLocaleLowerCase('ja-JP').includes(query)))).sort((a,b)=>opsPriority(a.worker)-opsPriority(b.worker)||a.wi-b.wi);
+          const visible=members.map((worker,wi)=>({worker,wi})).filter(({worker})=>opsMatchesStatus(worker,status)&&(!query||[dept.name,product.name,worker.name,worker.task,worker.summary,worker.detail,worker.currentStage,worker.stopReason,worker.nextAction,opsDependencies(worker)].some(v=>String(v||'').toLocaleLowerCase('ja-JP').includes(query)))).sort((a,b)=>opsPriority(a.worker)-opsPriority(b.worker)||a.wi-b.wi);
           if(filtering&&!visible.length)return '';
           shown+=visible.length;
-          const productKey=opsKey(dept.id,di,product.id,pi),productOpen=productChoices.has(productKey)?productChoices.get(productKey):filtering||members.some(opsIsOpen);
+          const productKey=opsKey(dept.id,di,product.id,pi),productOpen=productChoices.has(productKey)?productChoices.get(productKey):filtering;
           const limit=opsState.limits.get(productKey)||6;
           const rendered=productOpen?visible.slice(0,limit):[];
           const rows=rendered.map(({worker,wi})=>{
             const key=opsKey(dept.id,di,product.id,pi,worker.id,wi);
             opsState.items.set(key,{kind:'worker',worker,department:dept.name,product:product.name,color});
-            return `<button type="button" class="ops-worker" data-op-key="${esc(key)}" data-op-focus="${esc(key)}" ${opsState.selected===key?'aria-current="true"':''} aria-label="${esc(worker.name)}、${esc(worker.task||'作業未記録')}、${esc(OPS_STATUS[worker.status]||'状態未取得')} の詳細">${opsRobot(color,false,worker.status)}<span class="ops-worker-text"><strong>${esc(worker.task||worker.name||'作業未記録')}</strong><span class="ops-worker-summary">${esc(opsShort(worker.summary||worker.detail)||'要約は未記録です。')}</span><small>${esc(worker.name)}</small></span><span class="ops-worker-meta">${opsStatus(worker.status)}${opsProgress(worker.progress)}</span></button>`;
+            return `<button type="button" class="ops-worker" data-op-key="${esc(key)}" data-op-focus="${esc(key)}" ${opsState.selected===key?'aria-current="true"':''}>${opsRobot(color,false,worker.status)}<span class="ops-worker-text"><strong>${esc(opsShort(worker.task||worker.name)||'作業未記録')}</strong><small>${esc(worker.name)}</small></span><span class="ops-worker-meta">${opsStatus(worker.status)}${opsProgress(worker.progress)}</span><span class="ops-worker-facts">${opsFacts(worker)}<span>クリックして全文と履歴を見る</span></span></button>`;
           }).join('');
           const remaining=visible.length-rendered.length,remainingOpen=visible.slice(rendered.length).filter(({worker})=>opsIsOpen(worker)).length;
           return `<details class="ops-product" data-op-product="${esc(productKey)}" ${productOpen?'open':''}><summary class="ops-product-heading" data-op-focus="${esc('product:'+productKey)}">${opsRobot(color)}<h4>${esc(product.name)}</h4><span class="ops-count">${opsCount(members)}</span></summary>${rows||(productOpen?'<p class="ops-empty">登録ワーカーなし</p>':'')}${productOpen&&remaining>0?`<button class="ops-more" type="button" data-op-more="${esc(productKey)}" data-op-focus="${esc('more:'+productKey)}">さらに表示 · 残り ${remaining}件（稼働・要対応・待機 ${remainingOpen}件）</button>`:''}</details>`;
@@ -258,33 +283,53 @@
       let item=opsState.items.get(opsState.selected);const body=$('#ops-dialog-body');
       if(!item&&opsState.selected){try{const [deptId,,productId,,workerId]=JSON.parse(opsState.selected),dept=opsList(opsState.snapshot&&opsState.snapshot.departments).find(d=>d.id===deptId),product=dept&&opsList(dept.products).find(p=>p.id===productId),worker=product&&opsList(product.workers).find(w=>w.id===workerId);if(worker)item={kind:'worker',worker,department:dept.name,product:product.name,color:opsColor(dept)}}catch{}}
       if(!item){body.innerHTML='<p>この作業は現在の記録にありません。詳細を開いた後に状態が変わりました。</p>';return}
-      const worker=item.worker,commander=item.kind==='commander';
+      const commander=item.kind==='commander',record=opsState.details.get(item.worker.id),fresh=record&&record.version===item.worker.detailVersion;
+      const detail=fresh&&record.data,worker=detail?{...item.worker,...detail}:item.worker;
       $('#ops-dialog-title').textContent=commander?'司令塔の詳細':worker.task||worker.name||'作業の詳細';
       body.innerHTML=`<div class="ops-detail-head">${opsRobot(item.color,commander,worker.status)}<div><strong>${esc(worker.name)}</strong><p>${commander?'司令塔':esc(item.department)+' › '+esc(item.product)}</p>${opsStatus(worker.status)}</div></div><dl class="ops-detail-list">
         ${commander?'':`<dt>いまの作業</dt><dd>${esc(worker.task||'未記録')}</dd><dt>進み具合</dt><dd>${opsProgress(worker.progress)}</dd><dt>更新時刻</dt><dd>${esc(opsTime(worker.updatedAt))}</dd>`}
-        <dt>要約</dt><dd>${esc(worker.summary||worker.detail||'要約は未記録です。')}</dd>
+        ${opsFacts(worker,true)}
         <dt>詳細</dt><dd>${esc(worker.detail||'詳細は未記録です。')}</dd>
+        ${worker.note?`<dt>${detail?'作業メモの全文':'作業メモの要約'}</dt><dd>${esc(worker.note)}</dd>`:''}
+        ${worker.report?`<dt>最終報告</dt><dd>${esc(worker.report)}</dd>`:''}
         ${opsQuestionUrl(worker.questionUrl)?`<dt>判断の質問</dt><dd><a href="${esc(opsQuestionUrl(worker.questionUrl))}" target="_blank" rel="noopener noreferrer">Discordで原本の質問を見る（別タブ）</a></dd>`:''}
         ${commander?'':`<dt>過去の失敗</dt><dd>${opsValue(worker.historyFailures)}件（現在の状態とは別の記録）</dd>`}
         <dt>取得時刻</dt><dd>${esc(opsTime(opsState.snapshot&&opsState.snapshot.fetchedAt))}</dd>
-        </dl><p class="ops-detail-note">${commander?'司令塔自身の状態を表示しています。配下の作業の要対応・過去の失敗は、この状態に含めません。':'進み具合は記録された実測値です。未記録の進捗や完了率は推定しません。'}${opsState.error||opsState.snapshot&&opsState.snapshot.sourceOk!==true?' データの取得に問題があります。更新時刻を確認してください。':''}</p>`;
+        </dl>${commander?'':`<h4>履歴</h4>${opsList(worker.history).length?`<ul>${opsHistory(worker)}</ul>`:detail?'<p>履歴は未記録です。</p>':worker.detailAvailable?'<p>全文と履歴は未取得です。</p>':'<p>履歴は未記録です。</p>'}${fresh&&record.loading?'<p role="status">詳細を取得中です。</p>':fresh&&record.error?`<p role="alert">${esc(record.error)}</p><button type="button" id="ops-detail-retry">詳細を再取得</button>`:worker.detailAvailable&&!detail?'<button type="button" id="ops-detail-retry">全文と履歴を取得</button>':''}${detail&&detail.nextOffset!==null?'<button type="button" id="ops-history-more">続きを取得</button>':''}`}<p class="ops-detail-note">${commander?'司令塔自身の状態を表示しています。配下の作業の要対応・過去の失敗は、この状態に含めません。':'進み具合は記録された実測値です。未記録の進捗や完了率は推定しません。成果の時刻は成果として記録された時刻です。更新・開始・終了の時刻や最終報告からは補いません。'}${opsState.error||opsState.snapshot&&opsState.snapshot.sourceOk!==true?' データの取得に問題があります。更新時刻を確認してください。':''}</p>`;
+      if($('#ops-detail-retry'))$('#ops-detail-retry').onclick=()=>loadOpsDetail(item.worker);
+      if($('#ops-history-more'))$('#ops-history-more').onclick=()=>loadOpsDetail(item.worker,detail.nextOffset);
     }
-    function openOpsDetail(key,trigger){opsState.selected=key;opsState.returnFocus=trigger;opsState.returnKey=trigger.dataset.opFocus;renderOpsDetail();$$('[data-op-key]').forEach(el=>el.setAttribute('aria-current',String(el.dataset.opKey===key)));if(!$('#ops-dialog').open)$('#ops-dialog').showModal()}
-    function closeOpsDetail(){if($('#ops-dialog').open)$('#ops-dialog').close()}
+    async function loadOpsDetail(worker,offset=0){
+      if(!worker.detailAvailable)return;
+      const previous=opsState.details.get(worker.id);if(previous&&previous.loading)return;
+      if(opsState.detailController)opsState.detailController.abort();
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000),record={version:worker.detailVersion,data:offset&&previous?previous.data:null,loading:true,error:''};
+      opsState.detailController=controller;opsState.details.set(worker.id,record);renderOpsDetail();
+      try{const data=await api(`/api/operations/workers/${encodeURIComponent(worker.id)}?offset=${offset}`,{signal:controller.signal,cache:'no-store'});
+        if(data.ok!==true||data.id!==worker.id||!Array.isArray(data.history)||typeof data.note!=='string'||!(data.nextOffset===null||Number.isSafeInteger(data.nextOffset)))throw new Error('詳細の形式を確認してください');
+        if(controller.signal.aborted)return;
+        if(data.detailVersion!==worker.detailVersion)throw new Error('作業の記録が更新されました。一覧の更新後に再取得してください');
+        record.data={...data,history:offset&&record.data?[...record.data.history,...data.history]:data.history};
+      }catch(e){if(!controller.signal.aborted||e.name==='AbortError')record.error=`詳細を取得できません。${e.name==='AbortError'?'接続がタイムアウトしました。':e.message}`}
+      finally{clearTimeout(timer);record.loading=false;if(opsState.detailController===controller)opsState.detailController=null;if(opsState.selected)renderOpsDetail()}
+    }
+    function openOpsDetail(key,trigger){opsState.selected=key;opsState.returnFocus=trigger;opsState.returnKey=trigger.dataset.opFocus;renderOpsDetail();$$('[data-op-key]').forEach(el=>el.setAttribute('aria-current',String(el.dataset.opKey===key)));if(!$('#ops-dialog').open)$('#ops-dialog').showModal();const item=opsState.items.get(key);if(item&&item.worker.detailAvailable){const record=opsState.details.get(item.worker.id);if(!record||record.version!==item.worker.detailVersion||!record.data)loadOpsDetail(item.worker)}}
+    function closeOpsDetail(){if(opsState.detailController)opsState.detailController.abort();if($('#ops-dialog').open)$('#ops-dialog').close()}
     $('#ops-dialog-close').onclick=closeOpsDetail;
     $('#ops-dialog').addEventListener('click',e=>{if(e.target===$('#ops-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeOpsDetail()}});
-    $('#ops-dialog').addEventListener('close',()=>{const target=opsState.returnFocus,key=opsState.returnKey;opsState.selected=null;$$('[data-op-key]').forEach(el=>el.removeAttribute('aria-current'));if(target&&target.isConnected)target.focus();else if(key){const replacement=$$('[data-op-focus]').find(el=>el.dataset.opFocus===key);(replacement||$('#ops-search')).focus()}});
+    $('#ops-dialog').addEventListener('close',()=>{if(opsState.detailController)opsState.detailController.abort();const target=opsState.returnFocus,key=opsState.returnKey;opsState.selected=null;opsState.details.clear();$$('[data-op-key]').forEach(el=>el.removeAttribute('aria-current'));if(target&&target.isConnected)target.focus();else if(key){const replacement=$$('[data-op-focus]').find(el=>el.dataset.opFocus===key);(replacement||$('#ops-search')).focus()}});
     $('#ops-search').addEventListener('input',e=>{if(!e.isComposing)renderOpsDepartments()});
     $('#ops-search').addEventListener('compositionend',()=>renderOpsDepartments());
     $('#ops-status').addEventListener('change',()=>renderOpsDepartments());
     matchMedia('(max-width:620px)').addEventListener('change',()=>renderOpsDepartments());
-    async function refreshOperations(){
-      if(opsState.loading)return;opsState.loading=true;$('#ops-refresh').disabled=true;publishConsoleSource('operations',{loading:true});
-      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
-      try{const snapshot=await api('/api/operations',{signal:controller.signal});if(!snapshot||!Array.isArray(snapshot.departments))throw new Error('Operations のデータ形式を確認してください');opsState.snapshot=snapshot;opsState.receivedAt=Date.now();opsState.error='';publishConsoleSource('operations',{data:snapshot,receivedAt:opsState.receivedAt,error:''})}
-      catch(e){opsState.error=`作業状況を取得できません。${opsState.snapshot?' 最後に取得した状態を表示しています。':''} ${e.name==='AbortError'?'接続がタイムアウトしました。':e.message}`}
-      finally{clearTimeout(timeout);opsState.loading=false;$('#ops-refresh').disabled=false;publishConsoleSource('operations',{loading:false,error:opsState.error});renderOperations()}
+    async function refreshOperations({force=false}={}){
+      if(opsState.loading||(!force&&Date.now()<opsState.retryAt))return;opsState.loading=true;$('#ops-refresh').disabled=true;publishConsoleSource('operations',{loading:true});
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);opsState.controller=controller;
+      try{const snapshot=await api('/api/operations',{signal:controller.signal,cache:'no-store'});if(!snapshot||!Array.isArray(snapshot.departments)||!Number.isFinite(snapshot.fetchedAt)||!Array.isArray(snapshot.sources)||typeof snapshot.sourceOk!=='boolean')throw new Error('Operations のデータ形式を確認してください');if(controller.signal.aborted)return;opsState.snapshot=snapshot;opsState.receivedAt=Date.now();opsState.error='';opsState.failures=0;opsState.retryAt=0;publishConsoleSource('operations',{data:snapshot,receivedAt:opsState.receivedAt,error:''})}
+      catch(e){opsState.failures=Math.min(opsState.failures+1,3);opsState.retryAt=Date.now()+Math.min(60000,15000*2**(opsState.failures-1));opsState.error=`作業状況を取得できません。${opsState.snapshot?' 最後に取得した状態を表示しています。':''} ${e.name==='AbortError'?'接続がタイムアウトしました。':e.message} 自動で再取得します。`}
+      finally{clearTimeout(timeout);opsState.controller=null;opsState.loading=false;$('#ops-refresh').disabled=false;publishConsoleSource('operations',{loading:false,error:opsState.error});renderOperations()}
     }
+    window.addEventListener('pagehide',()=>{if(opsState.controller)opsState.controller.abort();if(opsState.detailController)opsState.detailController.abort()});
 
     function publishConsoleSource(key,patch){window.consoleStatusSources=window.consoleStatusSources||{};window.consoleStatusSources[key]={...(window.consoleStatusSources[key]||{}),...patch};window.dispatchEvent(new CustomEvent('console-source',{detail:{key,...window.consoleStatusSources[key]}}))}
     let refreshInFlight=false,consoleComposing=false;
@@ -365,12 +410,12 @@
     async function loadHistory(){renderHistory(await api('/api/history'))}
     async function restorePreviousQueue(){const button=$('#mini-restore');button.disabled=true;try{const result=await api('/api/minimax-last-queue');$('#mini-steps').value=result.steps;$('#mini-frames').value=result.frames;$('#mini-height').value=result.height;$('#mini-width').value=result.width;state.scenes=(result.scenes||[]).map((scene,index)=>{const names=Array.isArray(scene.characterNames)?scene.characterNames:[];return{title:scene.title||`Scene ${index+1}`,prompt:scene.prompt||'',notes:scene.notes||'',seconds:scene.seconds||'',images:scene.image?[scene.image]:[],imageNames:scene.image?['前回参照ボード']:[],characterIds:state.characters.filter(c=>names.includes(c.name)).map(c=>c.id),uploading:false}});if(!state.scenes.length)throw new Error('復元できるシーンがありません');renderScenes();$('#mini-route').textContent='前回キュー · 復元済み';$('#minimax-job').textContent=`${state.scenes.length} scenes · 復元完了`;toast(`前回の${state.scenes.length}シーンPromptを復元しました`)}catch(e){toast(e.message)}finally{button.disabled=false}}
     async function retryPreviousQueue(){const button=$('#mini-retry');button.disabled=true;try{const result=await api('/api/minimax-retry',{method:'POST',body:JSON.stringify({})});$('#minimax-job').textContent='前回キューを再実行中';$('#mini-route').textContent='MiniMax-H3 · 再実行';toast('前回のPrompt・参照ボードをCドライブ出力で再実行しました');setTimeout(refresh,1000);return result}catch(e){toast(e.message)}finally{button.disabled=false}}
-    function switchView(view,{historyMode='push',focus=false}={}){if(!['chat','minimax','kanban','workload','systems'].includes(view))view='kanban';$$('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${view}`));$$('.nav [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});$('#page-title').textContent=view==='workload'?'仕事量':view==='minimax'?'MiniMax-H3':view==='kanban'?'Operations':view==='systems'?'Systems':'Chat';$('#page-subtitle').textContent=view==='workload'?'プロジェクトごとに、何をしたかを日本時間の日別で確認できます。':view==='minimax'?'Promptを主役にした動画生成ワークスペース':view==='kanban'?'司令塔・部署・製品ごとの作業状況':view==='systems'?'OpenCodex / GoDD AO / Docker / Local AIの稼働状態':'会話中にモデルを切り替えられます。Autoはsemantic proxy経由です';if(historyMode!=='none'){const url=new URL(location.href);if(url.searchParams.get('view')!==view){url.searchParams.set('view',view);url.searchParams.delete('opsStatus');url.searchParams.delete('opsSearch');url.searchParams.delete('opsPanel');history[historyMode==='replace'?'replaceState':'pushState']({},'',url)}}if(view==='kanban')refreshOperations();if(view==='minimax')refresh();if(view==='workload'&&window.refreshWorkload)refreshWorkload();if(focus){$('#page-title').tabIndex=-1;$('#page-title').focus()}window.dispatchEvent(new CustomEvent('console-view',{detail:{view}}))}
-    window.addEventListener('popstate',()=>switchView(new URL(location.href).searchParams.get('view')||'kanban',{historyMode:'none'}));
+    function switchView(view,{historyMode='push',focus=false}={}){if(!['chat','minimax','kanban','workload','systems','music'].includes(view)||(view==='music'&&!$('#view-music')))view='kanban';$$('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${view}`));$$('.nav [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});$('#page-title').textContent=view==='music'?'音楽制作 · Suno':view==='workload'?'仕事量':view==='minimax'?'MiniMax-H3':view==='kanban'?'Operations':view==='systems'?'Systems':'Chat';$('#page-subtitle').textContent=view==='music'?'曲の下書きと生成候補を選ぶ':view==='workload'?'プロジェクトごとに、何をしたかを日本時間の日別で確認できます。':view==='minimax'?'Promptを主役にした動画生成ワークスペース':view==='kanban'?'司令塔・部署・製品ごとの作業状況':view==='systems'?'OpenCodex / GoDD AO / Docker / Local AIの稼働状態':'会話中にモデルを切り替えられます。Autoはsemantic proxy経由です';if(historyMode!=='none'){const url=new URL(location.href);if(url.searchParams.get('view')!==view){url.searchParams.set('view',view);url.searchParams.delete('opsStatus');url.searchParams.delete('opsSearch');url.searchParams.delete('opsPanel');history[historyMode==='replace'?'replaceState':'pushState']({},'',url)}}if(view==='music'&&window.loadConsoleMusic)window.loadConsoleMusic();if(view==='kanban')refreshOperations();if(view==='minimax')refresh();if(view==='workload'&&window.refreshWorkload)refreshWorkload();if(focus){$('#page-title').tabIndex=-1;$('#page-title').focus()}window.dispatchEvent(new CustomEvent('console-view',{detail:{view}}))}
+    window.addEventListener('popstate',()=>switchView(new URL(location.href).searchParams.get('view')||(new URL(location.href).pathname.startsWith('/music')?'music':'kanban'),{historyMode:'none'}));
     for(const name of ['steps','frames','height','width'])$(`#mini-${name}`).addEventListener('input',()=>{if(name==='frames')syncSceneCountForDuration();else updateMiniFormatHint();saveDraft()});
      $$('.nav button').forEach(b=>b.onclick=()=>switchView(b.dataset.view));$('#refresh-btn').onclick=()=>{refresh();refreshOperations()};$('#ops-refresh').onclick=refreshOperations;$('#stop-btn').onclick=()=>control('stop-local');$('#send-btn').onclick=send;$('#chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();send()}});$$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#chat-input').value=b.dataset.prompt;$('#chat-input').focus()});$('#mini-preset').onchange=e=>applyPreset(e.target.value);$('#mini-format').onchange=e=>applyFormat(e.target.value);$('#mini-duration').onchange=syncSceneCountForDuration;$('#mini-idea').addEventListener('input',saveDraft);$('#mini-style').addEventListener('input',saveDraft);$('#mini-audience').addEventListener('input',saveDraft);$('#mini-format').addEventListener('change',saveDraft);$('#mini-duration').addEventListener('change',saveDraft);$('#mini-preset').addEventListener('change',saveDraft);$('#mini-scene-count').addEventListener('change',saveDraft);$('#mini-prompt-generate').onclick=generateVideoPrompt;$('#mini-image-generate').onclick=generateReferenceImage;$('#mini-scenes-generate').onclick=generateScenes;$('#scene-add').onclick=addScene;$('#characters-refresh').onclick=async()=>{state.characterSignature='';await refresh()};$('#characters-apply').onclick=applyGlobalCharacters;$('#mini-run').onclick=runMini;$('#mini-stop').onclick=()=>control('stop-local');$('#open-output').onclick=async()=>{try{await api('/api/open-folder');toast('出力フォルダを開きました')}catch(e){toast(e.message)}};renderCharacters();renderScenes();refresh();refreshOperations();setInterval(()=>{refresh();refreshOperations()},15000);
     $('#mini-restore').onclick=restorePreviousQueue;$('#mini-retry').onclick=retryPreviousQueue;
-    switchView(new URL(location.href).searchParams.get('view')||'kanban',{historyMode:'none'});
+    switchView(new URL(location.href).searchParams.get('view')||(new URL(location.href).pathname.startsWith('/music')?'music':'kanban'),{historyMode:'none'});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();refreshOperations()}});
   </script>
 </body>

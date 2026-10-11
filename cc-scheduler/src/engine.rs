@@ -1145,7 +1145,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 live(job) && (job["todo_id"] == id || arr(&item["jobs"]).contains(&job["id"]))
             });
         if idle_retry && !todo_wait::waiting(&db, &item) {
-            cc_job_policy::subwork::resolve(&db, &item, &jobs, true)
+            // Checkout creation and its mandatory validation remain in prepare().
+            cc_job_policy::subwork::resolve(&db, &item, &jobs, false)
                 .map_err(|_| Error("InvalidSubwork"))?;
             let before = item.clone();
             item = self.edit(&json!(id), |row| {

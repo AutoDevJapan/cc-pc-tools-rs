@@ -1,8 +1,8 @@
 //! Install this module in the existing Console, behind its Host/Origin guard.
 use axum::{
-    body::{Body, to_bytes},
+    body::{to_bytes, Body},
     extract::Request,
-    http::{StatusCode, header},
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
 use std::{process::Command, time::Duration};
@@ -139,7 +139,7 @@ async fn proxy(client: reqwest::Client, request: Request, broker: &str) -> Respo
     let decorated = is_html
         .then(|| std::str::from_utf8(&bytes).ok())
         .flatten()
-        .map(localai_web_rs::console_ui::decorate_html);
+        .and_then(localai_web_rs::console_page::music);
     let transformed = decorated.is_some();
     let mut response = Response::new(Body::from(
         decorated.map(String::into_bytes).unwrap_or(bytes),
@@ -155,6 +155,19 @@ async fn proxy(client: reqwest::Client, request: Request, broker: &str) -> Respo
         header::CONTENT_RANGE,
         header::ACCEPT_RANGES,
     ] {
+        if transformed && name == header::CONTENT_SECURITY_POLICY {
+            for value in source_headers.get_all(&name) {
+                let Ok(policy) = value.to_str() else {
+                    return unavailable("音楽制作の表示ポリシーを確認できませんでした。");
+                };
+                let policy = localai_web_rs::console_page::music_script_policy(policy);
+                let Ok(policy) = axum::http::HeaderValue::from_str(&policy) else {
+                    return unavailable("音楽制作の表示ポリシーを組み立てられませんでした。");
+                };
+                response.headers_mut().append(name.clone(), policy);
+            }
+            continue;
+        }
         if let Some(value) = source_headers.get(&name) {
             if transformed && name == header::CONTENT_LENGTH {
                 continue;
@@ -165,15 +178,24 @@ async fn proxy(client: reqwest::Client, request: Request, broker: &str) -> Respo
     response
 }
 fn unavailable(message: &str) -> Response {
-    (StatusCode::SERVICE_UNAVAILABLE,axum::response::Html(localai_web_rs::console_ui::decorate_html(&format!("<!doctype html><html lang=\"ja\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>音楽制作</title><body><h1>音楽制作</h1><p>{message}</p><a href=\"/music\">画面を更新する</a><p><a href=\"/\">Consoleに戻る</a></p></body></html>")))).into_response()
+    let html = format!(
+        "<!doctype html><html lang=\"ja\"><body><h1>音楽制作</h1><p>{message}</p><a href=\"/music\">画面を更新する</a></body></html>"
+    );
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        axum::response::Html(
+            localai_web_rs::console_page::music(&html).expect("music error page has a body"),
+        ),
+    )
+        .into_response()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::{
-        Router,
         routing::{get, post},
+        Router,
     };
     #[tokio::test]
     async fn music_html_gets_shared_shell_but_head_and_ranges_remain_original() {
@@ -201,7 +223,12 @@ mod tests {
                         )
                             .into_response()
                     } else {
-                        axum::response::Html(original).into_response()
+                        let mut response = axum::response::Html(original).into_response();
+                        response.headers_mut().insert(header::CONTENT_SECURITY_POLICY,
+                            axum::http::HeaderValue::from_static("default-src 'self'; media-src 'self' https://*.suno.com; form-action 'self'"));
+                        response.headers_mut().append(header::CONTENT_SECURITY_POLICY,
+                            axum::http::HeaderValue::from_static("script-src-elem 'none'; base-uri 'none'"));
+                        response
                     }
                 }),
             );
@@ -216,6 +243,17 @@ mod tests {
         let response = proxy(client.clone(), request, &base).await;
         assert_eq!(response.status(), StatusCode::OK);
         assert!(!response.headers().contains_key(header::CONTENT_LENGTH));
+        let policies: Vec<_> = response
+            .headers()
+            .get_all(header::CONTENT_SECURITY_POLICY)
+            .iter()
+            .map(|value| value.to_str().unwrap().to_owned())
+            .collect();
+        assert_eq!(policies.len(), 2);
+        assert!(policies[0].contains("media-src 'self' https://*.suno.com; form-action 'self'"));
+        assert!(policies[0].contains("script-src 'self' 'sha256-"));
+        assert!(policies[1].contains("script-src-elem  'sha256-"));
+        assert!(policies[1].contains("base-uri 'none'"));
         let rendered = String::from_utf8(
             to_bytes(response.into_body(), 1024 * 1024)
                 .await
@@ -224,11 +262,8 @@ mod tests {
         )
         .unwrap();
         assert!(rendered.contains("name=\"local-ai-console-shell\""));
-        assert!(
-            rendered.contains(
-                "<form action='/music/drafts'><input name='csrf' value='fixture'></form>"
-            )
-        );
+        assert!(rendered
+            .contains("<form action='/music/drafts'><input name='csrf' value='fixture'></form>"));
         let head = Request::builder()
             .method("HEAD")
             .uri("/music")
@@ -239,12 +274,14 @@ mod tests {
             response.headers()[header::CONTENT_LENGTH],
             original.len().to_string()
         );
-        assert!(
-            to_bytes(response.into_body(), 1024)
-                .await
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            response.headers()[header::CONTENT_SECURITY_POLICY],
+            "default-src 'self'; media-src 'self' https://*.suno.com; form-action 'self'"
         );
+        assert!(to_bytes(response.into_body(), 1024)
+            .await
+            .unwrap()
+            .is_empty());
         let range = Request::builder()
             .uri("/music")
             .header(header::RANGE, "bytes=0-5")

@@ -21,6 +21,7 @@ fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() 
         "active",
         "unknown_cancel",
         "waiting",
+        "unprepared_cpu",
     ] {
         let mut sub = subwork_support::Fixture::new();
         sub.register();
@@ -38,6 +39,11 @@ fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() 
             "recovery_cancel":{"key":"repair","committed_at":"2026-10-12T07:00:00+09:00"}}));
         let mut f = Fixture::new();
         match gate {
+            "unprepared_cpu" => {
+                sub.db["items"][1]["scheduler"]["worktree"] = Value::Null;
+                sub.db["items"][1]["scheduler"]["branch"] = Value::Null;
+                f.e.backend.m["cpu_percent"] = json!(99);
+            }
             "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
             "memory" => f.e.backend.m["available_gb"] = json!(3),
             "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
@@ -77,6 +83,9 @@ fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() 
             assert_eq!(f.e.backend.launched.len(), 1);
         } else if ["owner", "active", "unknown_cancel", "waiting"].contains(&gate) {
             assert_eq!(f.get(2)["status"], "doing", "{gate}");
+        } else if gate == "unprepared_cpu" {
+            assert_eq!(f.get(2)["status"], "todo");
+            assert!(f.get(2)["scheduler"]["worktree"].is_null());
         }
     }
 }

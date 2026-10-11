@@ -499,6 +499,13 @@ impl Workload {
                 }
                 cache
             }
+            Err(error)
+                if error
+                    .get_ref()
+                    .is_some_and(|e| e.is::<cc_todo::StoreError>()) =>
+            {
+                cache
+            }
             _ => Cache::default(),
         };
         Self {
@@ -808,9 +815,31 @@ fn read_session_limited(
     now: i64,
     budget: u64,
 ) -> bool {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    read_session_with_stop(
+        path,
+        cache,
+        registered,
+        exclusions,
+        earliest,
+        now,
+        budget,
+        || Instant::now() >= deadline,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn read_session_with_stop(
+    path: &Path,
+    cache: &mut Cache,
+    registered: &BTreeMap<String, String>,
+    exclusions: &Exclusions,
+    earliest: i64,
+    now: i64,
+    budget: u64,
+    mut expired: impl FnMut() -> bool,
+) -> bool {
     cache.last_read_bytes = 0;
     let read_limit = READ_BUDGET.min(budget);
-    let deadline = Instant::now() + Duration::from_secs(2);
     let key = path.to_string_lossy().into_owned();
     let Ok(mut file) = File::open(path) else {
         return false;
@@ -861,7 +890,7 @@ fn read_session_limited(
     let mut consumed = 0u64;
     let mut line = Vec::new();
     while consumed < read_limit {
-        if Instant::now() >= deadline {
+        if expired() {
             break;
         }
         line.clear();
@@ -870,7 +899,7 @@ fn read_session_limited(
         let mut count = 0usize;
         let mut oversized = cursor.discarding;
         while let Ok(buf) = reader.fill_buf() {
-            if Instant::now() >= deadline {
+            if expired() {
                 break;
             }
             if buf.is_empty() {
@@ -1318,14 +1347,21 @@ fn aggregate_progress(
     let exclusions = match load_exclusions(sources) {
         Ok(exclusions) => exclusions,
         Err(error) => {
-            return Cache {
-                version: 1,
-                warnings: vec![if error.to_string().starts_with("todo_store_too_large:") {
+            if error
+                .get_ref()
+                .is_some_and(|e| e.is::<cc_todo::StoreError>())
+            {
+                cache.warnings = vec![if error.to_string().starts_with("todo_store_too_large:") {
                     "共有ToDoが上限64MiBを超えています。除外確認と仕事量の集計を停止しています。"
                 } else {
-                    "除外設定または共有ToDoを読み取れないため、仕事量の集計を停止しています。"
+                    "共有ToDoを読み取れないため、除外確認と仕事量の集計を停止しています。"
                 }
-                .into()],
+                .into()];
+                return cache;
+            }
+            return Cache {
+                version: 1,
+                warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
                 ..Cache::default()
             };
         }
@@ -1333,20 +1369,18 @@ fn aggregate_progress(
     let todo = match cc_todo::read_store(&sources.todo) {
         Ok(todo) => todo,
         Err(error) => {
-            cache.warnings.push(
-                match error {
-                    cc_todo::StoreError::TooLarge => {
-                        "共有ToDoが上限64MiBを超えています。集計を更新できません。"
-                    }
-                    cc_todo::StoreError::InvalidJson(_) => {
-                        "共有ToDoのJSONが不正です。集計を更新できません。"
-                    }
-                    cc_todo::StoreError::Io(_) => {
-                        "共有ToDoを取得できませんでした。集計を更新できません。"
-                    }
+            cache.warnings = vec![match error {
+                cc_todo::StoreError::TooLarge => {
+                    "共有ToDoが上限64MiBを超えています。集計を更新できません。"
                 }
-                .into(),
-            );
+                cc_todo::StoreError::InvalidJson(_) => {
+                    "共有ToDoのJSONが不正です。集計を更新できません。"
+                }
+                cc_todo::StoreError::Io(_) => {
+                    "共有ToDoを取得できませんでした。集計を更新できません。"
+                }
+            }
+            .into()];
             return cache;
         }
     };

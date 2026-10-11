@@ -1,28 +1,5 @@
 use super::*;
 #[test]
-fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_hash() {
-    let f = Fixture::new();
-    let mut bytes = b"{\"projects\":{},\"items\":[]}".to_vec();
-    bytes.resize(cc_todo::STORE_MAX_BYTES + 1, b' ');
-    fs::write(&f.sources.todo, &bytes).unwrap();
-    let error = match load_exclusions(&f.sources) {
-        Err(error) => error,
-        Ok(_) => panic!("oversized ToDo cannot certify exclusions"),
-    };
-    assert!(error.to_string().starts_with("todo_store_too_large:"));
-    let before = Cache {
-        exclusion_hash: "old-hash".into(),
-        updated_at: 123,
-        ..Cache::default()
-    };
-    let stopped = aggregate(&f.sources, before, 1791756000);
-    assert_eq!(stopped.updated_at, 0);
-    assert!(stopped.exclusion_hash.is_empty());
-    assert!(stopped.warnings.iter().any(|w| w.contains("64MiB")));
-    fs::write(&f.sources.todo, "{broken").unwrap();
-    assert!(load_exclusions(&f.sources).is_err());
-}
-#[test]
 fn intervals_merge_reverse_order_bridges_and_adjacent_events() {
     let mut intervals = vec![(10, 20), (40, 50), (70, 80)];
     merge_interval(&mut intervals, 25, 30);
@@ -293,7 +270,7 @@ fn read_session(
     oldest: i64,
     now: i64,
 ) -> bool {
-    read_session_limited(path, c, r, e, oldest, now, READ_BUDGET)
+    read_session_with_stop(path, c, r, e, oldest, now, READ_BUDGET, || false)
 }
 #[test]
 fn combined_fractional_files_never_exceed_total_read_budget() {
@@ -820,6 +797,45 @@ impl Drop for Fixture {
     }
 }
 #[test]
+fn elapsed_read_deadline_preserves_cursor_for_next_pass() {
+    let f = Fixture::new();
+    let file = f.sources.claude.join("deadline.jsonl");
+    let line = include_str!("../tests/fixtures/workload/claude.jsonl")
+        .lines()
+        .next()
+        .unwrap();
+    fs::write(&file, format!("{line}\n")).unwrap();
+    let mut c = Cache::default();
+    let r = BTreeMap::new();
+    let e = exclusions();
+    let oldest = date_ms("2026-10-01").unwrap();
+    let now = at("2026-10-02T02:00:00+09:00");
+    // Force expiry before reading and after fill_buf but before consume.
+    for after_outer in [false, true] {
+        let mut checks = 0;
+        assert!(read_session_with_stop(
+            &file,
+            &mut c,
+            &r,
+            &e,
+            oldest,
+            now,
+            READ_BUDGET,
+            || {
+                checks += 1;
+                !after_outer || checks > 1
+            }
+        ));
+        assert_eq!(c.last_read_bytes, 0);
+        assert_eq!(c.cursors[&file.to_string_lossy().into_owned()].offset, 0);
+    }
+    assert!(!read_session(&file, &mut c, &r, &e, oldest, now));
+    assert_eq!(
+        c.cursors[&file.to_string_lossy().into_owned()].offset,
+        (line.len() + 1) as u64
+    );
+}
+#[test]
 fn incremental_offsets_survive_restart_and_partial_lines() {
     let f = Fixture::new();
     let file = f.sources.claude.join("session.jsonl");
@@ -1031,4 +1047,40 @@ async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[test]
+fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_hash() {
+    let f = Fixture::new();
+    let mut bytes = b"{\"projects\":{},\"items\":[]}".to_vec();
+    bytes.resize(cc_todo::STORE_MAX_BYTES + 1, b' ');
+    fs::write(&f.sources.todo, &bytes).unwrap();
+    let error = match load_exclusions(&f.sources) {
+        Err(error) => error,
+        Ok(_) => panic!("oversized ToDo cannot certify exclusions"),
+    };
+    assert!(error.to_string().starts_with("todo_store_too_large:"));
+    let before = Cache {
+        exclusion_hash: "old-hash".into(),
+        updated_at: 123,
+        ..Cache::default()
+    };
+    let stopped = aggregate(&f.sources, before, 1791756000);
+    assert_eq!(stopped.updated_at, 123);
+    assert_eq!(stopped.exclusion_hash, "old-hash");
+    assert!(stopped.warnings.iter().any(|w| w.contains("64MiB")));
+    let workload = Workload {
+        sources: f.sources.clone(),
+        cache: RwLock::new(stopped),
+        phase: RwLock::new(String::new()),
+    };
+    assert!(workload.snapshot("2026-10-12")["collecting"]
+        .as_bool()
+        .unwrap());
+    assert!(workload.snapshot("2026-10-12")["projects"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    fs::write(&f.sources.todo, "{broken").unwrap();
+    assert!(load_exclusions(&f.sources).is_err());
 }

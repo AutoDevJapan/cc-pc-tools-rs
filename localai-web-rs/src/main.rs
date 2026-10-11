@@ -1,13 +1,13 @@
 use axum::{
-    Router,
-    body::{Body, to_bytes},
-    extract::{Request, State},
-    http::{HeaderMap, Method, StatusCode, header},
+    body::{to_bytes, Body},
+    extract::{Path, Query, Request, State},
+    http::{header, HeaderMap, Method, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Json, Response},
     routing::{get, post},
+    Router,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{process::Command, time::Duration};
 use tower_http::services::ServeDir;
 mod agent;
@@ -16,7 +16,6 @@ use localai_web_rs::operations;
 mod resident;
 mod workload;
 
-const INDEX_HTML: &str = include_str!("index.html");
 const JSON_LIMIT: usize = 2 * 1024 * 1024;
 // Existing PowerShell upload validation accepts a 50 MiB image as base64 JSON.
 const UPLOAD_LIMIT: usize = 70_100_000;
@@ -97,8 +96,7 @@ async fn main() {
                 .expect("LOCALAI_WEB_PORT must be a port number")
         })
         .unwrap_or(10012);
-    // Claim the endpoint before loading shared history. The scheduled launcher
-    // must not mistake a slow initial projection for an absent server.
+    // Bind before the initial shared-record scan to prevent duplicate scheduled starts.
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
         .await
         .unwrap();
@@ -113,6 +111,7 @@ async fn main() {
         let _ = tokio::task::spawn_blocking(move || initial_operations.refresh()).await;
     }
     let app = app(state);
+
     println!("Rust Web Server listening on http://127.0.0.1:{port}");
     if std::env::var("LOCALAI_WEB_PREVIEW").as_deref() != Ok("1") {
         tokio::spawn(agent::resident(console));
@@ -131,6 +130,7 @@ fn app(state: AppState) -> Router {
         .route("/api/resident/restart", post(restart_resident))
         .route("/api/omb-board", get(omb_board))
         .route("/api/operations", get(operations_snapshot))
+        .route("/api/operations/workers/:id", get(operations_worker_detail))
         .route("/api/tasks", get(get_tasks))
         .route("/api/agent/workload", get(workload::handle))
         .route("/api/agent/*path", axum::routing::any(agent::handle))
@@ -152,16 +152,35 @@ fn app(state: AppState) -> Router {
 }
 
 async fn index_html() -> Html<String> {
-    Html(localai_web_rs::console_ui::decorate_html(
-        &INDEX_HTML.replace(
-            "</body>",
-            &format!("{}\n</body>", include_str!("workload.html")),
-        ),
-    ))
+    Html(localai_web_rs::console_page::index())
 }
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
     Json(state.operations.snapshot())
+}
+
+#[derive(serde::Deserialize)]
+struct HistoryPage {
+    #[serde(default)]
+    offset: usize,
+}
+async fn operations_worker_detail(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(page): Query<HistoryPage>,
+) -> Response {
+    let board = state.operations.clone();
+    match tokio::task::spawn_blocking(move || board.worker_detail(&id, page.offset)).await {
+        Ok(Ok(value)) => Json(value).into_response(),
+        Ok(Err(code)) => json_error(
+            StatusCode::from_u16(code).unwrap(),
+            "作業の詳細を取得できません",
+        ),
+        Err(_) => json_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "作業の詳細を取得できません",
+        ),
+    }
 }
 
 async fn restart_resident() -> Response {
@@ -506,11 +525,10 @@ mod tests {
             .insert("sec-fetch-site", "same-origin".parse().unwrap());
         let res = app.clone().oneshot(req).await.unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        assert!(
-            res.headers()
-                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                .is_none()
-        );
+        assert!(res
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+            .is_none());
         for path in ["/api/private", "/api/shared-todo", "/api/chat"] {
             assert_eq!(
                 app.clone()

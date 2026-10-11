@@ -164,6 +164,24 @@ fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
 }
 
 #[test]
+fn reserved_admission_cannot_be_borrowed_from_a_registered_job() {
+    let mut f = Fixture::new();
+    f.register();
+    let registered = f.child_job();
+    f.jobs.push(registered.clone());
+    let mut original = registered.clone();
+    subwork::refresh_job(&f.db, &f.jobs, &mut original).unwrap();
+    let mut replacement = registered.clone();
+    replacement["id"] = json!("replacement");
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut replacement).is_err());
+    f.jobs.push(replacement);
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut original).is_err());
+    // Changing the other job's ToDo does not make a duplicate global launch key legitimate.
+    f.jobs.last_mut().unwrap()["todo_id"] = json!(99);
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut original).is_err());
+}
+
+#[test]
 fn transferred_admission_requires_the_exact_registered_worker_and_launch() {
     for case in [
         "valid",

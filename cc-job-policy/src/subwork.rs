@@ -241,7 +241,7 @@ pub fn admission(child: &Value) -> Value {
 
 /// Resource admission stays bound to its launch, even after Start transfers the reservation.
 /// The worker receipt is independent evidence of that transfer; preparation alone has none.
-fn admitted_launch(child: &Value, job: &Value) -> bool {
+fn admitted_launch(child: &Value, jobs: &[Value], job: &Value) -> bool {
     if s(job, "launch_key").is_empty() {
         return false;
     }
@@ -249,6 +249,13 @@ fn admitted_launch(child: &Value, job: &Value) -> bool {
     let mut expected = admission(child);
     expected["key"] = job["launch_key"].clone();
     if scheduler["subwork_admission"] != expected {
+        return false;
+    }
+    // Registration validates a prospective job before publishing it. Once that key has a
+    // registered job, another candidate must not borrow the still-unreleased reservation.
+    if jobs.iter().any(|registered| {
+        registered["launch_key"] == job["launch_key"] && registered["id"] != job["id"]
+    }) {
         return false;
     }
     if scheduler["key"] == job["launch_key"] {
@@ -279,7 +286,7 @@ pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), St
         || child["dispatchable"] != true
         || child["spec"] != job["subwork_spec"]
         || child["needs"] != job["assigned_needs"]
-        || !admitted_launch(child, job)
+        || !admitted_launch(child, jobs, job)
         || !same_repo(&ownership, &child["subwork"]["owner"])
         || s(&ownership, "worktree") != norm(Path::new(s(job, "cwd")))
         || (ownership["pr"].is_u64()

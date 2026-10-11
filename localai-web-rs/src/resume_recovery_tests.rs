@@ -109,18 +109,26 @@ fn todo2299_patrol_alternates_todo_and_orphan_ready_classes() {
     for (key,id) in [("manual:orphan-a",None),("manual:orphan-b",None),("manual:orphan-c",None),("manual:todo-a",Some(1)),("manual:todo-b",Some(2)),("manual:todo-c",Some(3))] {
         state.queue.push(Trigger {key:key.into(), name:format!("orch-{key}"),cwd:f.root.to_string_lossy().into(),prompt:format!("原本文 {key}"),todo_id:id,options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false})});
     }
-    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
-    f.console.dispatch(&mut state,&[]).unwrap();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state,&[]).unwrap();
+    }
     assert!(state.launches.contains_key("manual:todo-a"));
     assert!(state.launches.contains_key("manual:todo-b"));
     assert_eq!(state.launches.len(),2);
     state=f.console.read_state().unwrap();
-    f.console.dispatch(&mut state,&f.console.jobs().unwrap()).unwrap();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state,&f.console.jobs().unwrap()).unwrap();
+    }
     assert!(state.launches.contains_key("manual:orphan-a"));
     assert!(state.launches.contains_key("manual:orphan-b"));
     assert_eq!(state.launches.len(),4);
     state=f.console.read_state().unwrap();
-    f.console.dispatch(&mut state,&f.console.jobs().unwrap()).unwrap();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state,&f.console.jobs().unwrap()).unwrap();
+    }
     assert!(state.launches.contains_key("manual:todo-c"));
     assert!(state.launches.contains_key("manual:orphan-c"));
     assert_eq!(f.launches(),6);

@@ -1272,6 +1272,7 @@ impl Console {
         let mut candidate_jobs = jobs.to_vec();
         let mut launch_failure = None;
         let mut evidence_cache = BTreeMap::new();
+        let mut parked_recovery = Vec::new();
         self.patrol_stage("dispatch_launch");
         while !s.queue.is_empty() && scanned < scan_limit {
             self.patrol_budget(s)?;
@@ -1304,6 +1305,17 @@ impl Console {
                 || cc_ask::job_policy::todo_wait::waiting(db, i)
                 || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
+            // Cached failures are not ready work. Their checkout probes must not
+            // consume the fresh patrol before an unattempted receipt is reached.
+            // Refresh a rotating, bounded repair batch after normal dispatch.
+            if cc_ask::tick_runtime::remaining().is_some()
+                && s.preparation_failures.contains_key(&t.key)
+            {
+                parked_recovery.push(t.key.clone());
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
@@ -1970,6 +1982,34 @@ impl Console {
             candidate_jobs = self.jobs()?;
             evidence_cache.clear();
         }
+        // Oldest probes first, independently of launch priority. This only
+        // refreshes eligibility; the next dispatch still applies priority and
+        // every current ownership, exclusion, dependency and admission check.
+        parked_recovery.sort_by_key(|key| {
+            s.preparation_recovery.get(key)
+                .and_then(|r| r["last_recovery_probe_nanos"].as_str())
+                .and_then(|n| n.parse::<u128>().ok())
+                .unwrap_or(0)
+        });
+        for key in parked_recovery.into_iter().take(2) {
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+                break;
+            }
+            let Some(trigger) = s.queue.iter().find(|t| t.key == key).cloned() else { continue; };
+            let item = trigger.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            if item.is_some_and(|i| todo_has_active_worker(i, &candidate_jobs, &key_hash(&key))) {
+                continue;
+            }
+            let at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+            s.preparation_recovery.entry(key.clone()).or_insert(json!({}))["last_recovery_probe_nanos"] = json!(at.to_string());
+            // Persist the cursor before an external probe can exhaust the deadline.
+            self.save(s)?;
+            self.patrol_stage("recovery_evidence");
+            if self.recovery_ready(s, &trigger, &db, &candidate_jobs, &mut evidence_cache)? {
+                s.preparation_failures.remove(&key);
+                s.preparation_recovery.entry(key).or_insert(json!({}))["state"] = json!("recovery_ready_for_launch");
+            }
+        }
         self.save(s)?;
         launch_failure.map_or(Ok(()), Err)
     }
@@ -2088,7 +2128,8 @@ impl Console {
             return Ok(true);
         };
         let current = self.recovery_evidence_from(t, Some(db), Some(jobs), cache);
-        let old = s.preparation_recovery.get(&t.key).map(|r| &r["evidence"]);
+        let old = s.preparation_recovery.get(&t.key)
+            .and_then(|r| r.get("evidence")).filter(|e| !e.is_null());
         if old.is_none() {
             return Ok(retry <= now());
         }

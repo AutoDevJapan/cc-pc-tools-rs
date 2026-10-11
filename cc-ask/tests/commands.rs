@@ -119,6 +119,7 @@ fn new_caller_question_preserves_answered_question_assignment() {
         cwd: Some("fixture/bookmarks".into()),
         ..Default::default()
     };
+    common::decision(&h, &mut args, "first resource");
     let first = cmd_ask(&mut h.ctx, &args).unwrap();
     {
         let mut fake = h.fake.borrow_mut();
@@ -129,6 +130,7 @@ fn new_caller_question_preserves_answered_question_assignment() {
     let before = h.state()["questions"][0].clone();
     args.cwd = Some("another/bookmarks".into());
     args.agent = "Claude".into();
+    common::decision(&h, &mut args, "other resource");
     let result = cmd_ask(&mut h.ctx, &args).unwrap();
     assert_ne!(result["thread_id"], first["thread_id"]);
     assert_ne!(result["progress_thread_id"], first["progress_thread_id"]);
@@ -266,6 +268,7 @@ fn ask_records_context_and_starter_cursor_across_silent_continuations() {
         attach: vec![],
         title: "質問".repeat(100),
         body_file: body,
+        decision_file: None,
         agent: "Codex".into(),
         cwd: Some("fixture/worktree".into()),
         source: Some("scheduler".into()),

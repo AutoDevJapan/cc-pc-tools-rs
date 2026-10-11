@@ -54,6 +54,17 @@ pub struct Fake {
 pub fn message(mid: &str, text: &str, owner: &str) -> Value {
     json!({"id":mid,"author":{"id":owner},"content":text,"timestamp":"2026-09-30T10:00:00+00:00","attachments":[]})
 }
+pub fn decision(h: &Harness, args: &mut cc_ask::commands::AskArgs, scope: &str) {
+    let path = h.root.path().join("decision.json");
+    atomic_json(
+        &path,
+        &json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],
+        "decision":"direction","scope":{"specification":scope}}),
+        2,
+    )
+    .unwrap();
+    args.decision_file = Some(path);
+}
 impl Harness {
     pub fn new() -> Self {
         // The user's home may itself be a repository. Python keeps fixtures under

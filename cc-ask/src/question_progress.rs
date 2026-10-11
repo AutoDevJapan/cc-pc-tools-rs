@@ -33,7 +33,7 @@ fn directory(ctx: &Context) -> std::path::PathBuf {
     ctx.here.join("question-progress")
 }
 
-fn routes(ctx: &Context) -> Result<Vec<Value>> {
+pub(crate) fn routes(ctx: &Context) -> Result<Vec<Value>> {
     let dir = directory(ctx);
     if !dir.exists() {
         return Ok(vec![]);
@@ -334,18 +334,73 @@ pub fn ask(
         &ctx.here.join("question-progress.lock"),
         Duration::from_secs(60),
     )?;
+    // One boundary for every producer: direct ask, post and automatic result.
+    // Keeping extraction here prevents a new caller from leaking metadata or
+    // falling back to a body/session key instead of permission identity.
+    let (clean_body, embedded) = crate::decision_identity::extract(body)?;
+    let body = clean_body.as_str();
+    let mut context = context.clone();
+    let decision = crate::decision_identity::bind(ctx, &mut context, embedded.as_ref())?;
     let prepared = attachments::prepare(ctx, paths)?;
     let hashes = attachments::fingerprints(prepared.as_ref())?;
     let work = route(ctx, origin)?
         .map(|r| s(&r["work_thread_id"]).to_owned())
         .unwrap_or_else(|| origin.into());
-    let identity = json!({"guild":ctx.cfg["guild_id"],"parent":ctx.cfg["task_channel_id"],"work":work,
-        "cwd":context["cwd"],"title":context["title"],"body":body,"hashes":hashes,
-        "caller":if s(&context["session_id"]).is_empty() {&context["posting_job"]} else {&context["session_id"]},"request_key":context["request_key"]});
+    let todo = crate::decision_identity::todo(ctx, &context)?;
+    if todo > 0 {
+        context["todo_id"] = json!(todo);
+    }
+    // All callers share this lock, including automatic result delivery. A new job,
+    // title or session is never evidence of a new permission scope.
+    let records = routes(ctx)?;
+    let mut previous = None;
+    let mut duplicates = Vec::new();
+    let mut uncertain = None;
+    for record in &records {
+        let attachments_same = record["attachment_hashes"] == json!(hashes)
+            || (record["attachment_hashes"].is_null() && hashes.is_empty());
+        let same = if decision.is_object() && record["decision_identity"].is_object() {
+            decision == record["decision_identity"]
+        } else if decision.is_object() {
+            false
+        } else {
+            crate::decision_identity::same_work(ctx, record, &context, &work)?
+                && s(&record["body"]) == body
+                && attachments_same
+        };
+        if same {
+            previous.get_or_insert_with(|| record.clone());
+            duplicates.push(record.clone());
+        }
+        if (!decision.is_object() || !record["decision_identity"].is_object())
+            && crate::decision_identity::same_work(ctx, record, &context, &work)?
+        {
+            uncertain.get_or_insert(record);
+        }
+    }
+    if let Some(record) = &previous {
+        if truth(&record["complete"]) {
+            // Untyped callers may recover exact text, but can never consume an approval
+            // for a paraphrased/different target merely because the work matches.
+            return crate::decision_identity::reuse(ctx, &duplicates, record, false);
+        }
+    } else if let Some(record) = uncertain {
+        return crate::decision_identity::reuse(ctx, &[], record, true);
+    }
+    let identity = if decision.is_object() {
+        json!({"decision":decision})
+    } else {
+        json!({"guild":ctx.cfg["guild_id"],"parent":ctx.cfg["task_channel_id"],"owner":ctx.owner(),
+            "todo":todo,"work":work,"cwd":context["cwd"],"body":body,"hashes":hashes})
+    };
     let key = format!("{:x}", Sha256::digest(identity.to_string().as_bytes()));
     let dir = directory(ctx);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = dir.join(format!("{key}.json"));
+    let path = if let Some(record) = &previous {
+        crate::decision_identity::path(ctx, record)?
+    } else {
+        dir.join(format!("{key}.json"))
+    };
     let mut record = if path.exists() {
         read_json(&path)?
     } else {
@@ -356,14 +411,13 @@ pub fn ask(
             return Err("question sender unavailable".into());
         }
         let record = json!({"guild":ctx.cfg["guild_id"],"parent":parent,"forum":n(&channel["type"])==15,"sender":me["id"],
-            "context":context,"body":body,"work_thread_id":work,"origin_thread_id":origin,"key":key});
+            "context":context,"body":body,"work_thread_id":work,"origin_thread_id":origin,"key":key,
+            "decision_identity":decision,"attachment_hashes":hashes});
         atomic_json(&path, &record, 2)?;
         record
     };
-    let batches = prepared
-        .as_ref()
-        .map(|p| attachments::batches(&p.files))
-        .unwrap_or_default();
+    let context = record["context"].clone();
+    let body = s(&record["body"]);
     let limit = prepared
         .as_ref()
         .map_or(attachments::BASE_LIMIT, |p| p.limit);
@@ -397,6 +451,11 @@ pub fn ask(
         record["files"] = json!(snapshots);
         atomic_json(&path, &record, 2)?;
     }
+    // Retrying the same scope uses the saved original assets, even if this caller
+    // has renamed or re-encoded its files. New asset conditions must change scope.
+    let stored_files = saved_files(&record)?;
+    let batches = attachments::batches(&stored_files);
+    let limit = n(&record["upload_limit"]);
     let tid = create_thread(
         ctx,
         &path,
@@ -421,9 +480,8 @@ pub fn ask(
     )
 }
 
-fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<()> {
-    let parts = record["text_parts"].as_array().cloned().unwrap_or_default();
-    let files = record["files"]
+fn saved_files(record: &Value) -> Result<Vec<attachments::File>> {
+    record["files"]
         .as_array()
         .into_iter()
         .flatten()
@@ -453,7 +511,12 @@ fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<(
                 size: n(&v["size"]),
             })
         })
-        .collect::<Result<Vec<_>>>()?;
+        .collect()
+}
+
+fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<()> {
+    let parts = record["text_parts"].as_array().cloned().unwrap_or_default();
+    let files = saved_files(record)?;
     let batches = attachments::batches(&files);
     let tid = s(&record["question_thread_id"]).to_owned();
     for index in 1..parts.len().max(batches.len()) {
@@ -614,8 +677,7 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
         context["title"] = json!("作業の判断をお願いします");
     }
     context["posting_job"] = json!(job);
-    // The result job is the durable question generation. A later result in the
-    // same resumed session is a new question even if its text/title are identical.
+    // Worker generation is delivery context, never decision identity.
     context["request_key"] = json!(job);
     context["job"] = json!(job);
     context["job_info"] = info.clone();
@@ -642,5 +704,10 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
         context.as_object_mut().unwrap().remove(key);
     }
     let (body, paths) = crate::result_delivery::extract(text)?;
+    let (body, decision) = crate::decision_identity::extract(&body)?;
+    // A new result must explicitly state its scope; inheriting a prior decision
+    // would apply an old a/b to the new proposal.
+    context.as_object_mut().unwrap().remove("decision_identity");
+    crate::decision_identity::bind(ctx, &mut context, decision.as_ref())?;
     ask(ctx, &context, origin, &body, &paths)
 }

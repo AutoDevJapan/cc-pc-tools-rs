@@ -34,7 +34,8 @@ impl Effects for PartialAsk {
         body: Option<&Value>,
         discord: bool,
     ) -> Result<Value> {
-        if method == "POST" && (url.ends_with("/messages") || url.ends_with("/channels/T/threads")) {
+        if method == "POST" && (url.ends_with("/messages") || url.ends_with("/channels/T/threads"))
+        {
             self.posts += 1;
             if !self.lost_first && self.posts == 2 {
                 return Err("URLError: transport failed".into());
@@ -133,7 +134,15 @@ fn lost_first_response_recovers_original_context_without_reposting_question() {
     assert_ne!(result["progress_thread_id"], result["thread_id"]);
     assert_eq!(h.state()["questions"][0]["agent"], "claude-main");
     assert_eq!(h.state()["questions"][0]["owner_only"], "publish");
-    assert_eq!(h.fake.borrow().http_calls.iter().filter(|c| c["method"] == "POST" && cc_ask::core::s(&c["url"]).ends_with("/threads")).count(), 2);
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && cc_ask::core::s(&c["url"]).ends_with("/threads"))
+            .count(),
+        2
+    );
     resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     intake::cmd_intake(&mut h.ctx, &mut false).unwrap();
     assert!(h.fake.borrow().launches.is_empty());
@@ -141,25 +150,35 @@ fn lost_first_response_recovers_original_context_without_reposting_question() {
 }
 
 #[test]
-fn new_posting_session_gets_its_own_question_without_overwriting_original_context() {
+fn new_posting_session_reuses_same_question_without_overwriting_original_context() {
     let _session = SESSION_ENV.lock().unwrap();
     let _restore = RestoreSession(std::env::var_os("CODEX_THREAD_ID"));
     let _restore_job = RestoreJob(std::env::var_os("CC_JOB_ID"));
     let mut h = Harness::new();
     h.fake.borrow_mut().threads.get_mut("200").unwrap()["guild_id"] = json!("G");
-    for (job, session) in [("author", "session-author"), ("recoverer", "session-recoverer")] {
+    for (job, session) in [
+        ("author", "session-author"),
+        ("recoverer", "session-recoverer"),
+    ] {
         let dir = h.ctx.jobs.join("jobs").join(job);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("job.json"), json!({
-            "status":"succeeded","thread_id":session,
-            "created_at":"2026-09-30T00:00:00Z","model":"gpt-6.1-sol",
-            "effort":"high","cwd":h.root.path(),"sandbox":"danger-full-access"
-        }).to_string()).unwrap();
+        std::fs::write(
+            dir.join("job.json"),
+            json!({
+                "status":"succeeded","thread_id":session,
+                "created_at":"2026-09-30T00:00:00Z","model":"gpt-6.1-sol",
+                "effort":"high","cwd":h.root.path(),"sandbox":"danger-full-access"
+            })
+            .to_string(),
+        )
+        .unwrap();
     }
     std::env::set_var("CODEX_THREAD_ID", "session-author");
     std::env::set_var("CC_JOB_ID", "author");
     h.ctx.effects = Box::new(PartialAsk {
-        shared: SharedFake(h.fake.clone()), posts: 0, lost_first: true,
+        shared: SharedFake(h.fake.clone()),
+        posts: 0,
+        lost_first: true,
     });
     let body = h.root.path().join("post.txt");
     std::fs::write(&body, "a/bで返信してください").unwrap();
@@ -174,17 +193,22 @@ fn new_posting_session_gets_its_own_question_without_overwriting_original_contex
     std::env::set_var("CODEX_THREAD_ID", "session-recoverer");
     std::env::set_var("CC_JOB_ID", "recoverer");
     let next = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
-    assert_ne!(next["thread_id"], original["thread_id"]);
-    assert_ne!(next["progress_thread_id"], original["progress_thread_id"]);
+    assert_eq!(next["thread_id"], original["thread_id"]);
+    assert_eq!(next["progress_thread_id"], original["progress_thread_id"]);
     let state = h.state();
     assert_eq!(state["questions"][0], before);
-    assert_eq!(state["questions"][1]["session_id"], "session-recoverer");
-    assert_eq!(state["questions"][1]["work_thread_id"], "200");
-    assert_eq!(state["questions"].as_array().unwrap().len(), 2);
+    assert_eq!(state["questions"].as_array().unwrap().len(), 1);
     let retry = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
     assert_eq!(retry["thread_id"], next["thread_id"]);
-    assert_eq!(h.fake.borrow().http_calls.iter().filter(|c|
-        c["method"] == "POST" && s(&c["url"]).ends_with("/threads")).count(), 4);
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/threads"))
+            .count(),
+        2
+    );
 }
 
 struct RestoreJob(Option<OsString>);

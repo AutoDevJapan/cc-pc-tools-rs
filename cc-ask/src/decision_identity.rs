@@ -131,6 +131,11 @@ pub fn todo(ctx: &Context, context: &Value) -> Result<u64> {
         })
         .collect();
     if matches.len() > 1 {
+        // A product parent may legitimately retain multiple original ToDos.
+        // An explicit decision can select only one of this worker's records.
+        if direct > 0 && matches.iter().any(|item| n(&item["id"]) == direct) {
+            return Ok(direct);
+        }
         return Err("質問の元ToDoが一意に決まりません".into());
     }
     let inferred = matches.first().map_or(0, |v| n(&v["id"]));

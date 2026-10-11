@@ -1,4 +1,58 @@
 #[test]
+fn todo2341_busy_source_sessions_do_not_charge_ready_attempts() {
+    let f = Fixture::new(); f.on();
+    let source = model_source(&f);
+    f.job("other-session", "work", "running", "", "");
+    fs::write(f.console.paths.jobs.join("other-session/job.json"),
+        json!({"id":"other-session","status":"running","cwd":f.root,"todo_id":99,"thread_id":source["thread_id"]}).to_string()).unwrap();
+    let mut db = f.console.todos().unwrap();
+    db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"demo","status":"todo","title":"実行できる検査","jobs":[]}));
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    for key in ["manual:busy-a","manual:busy-b"] {
+        state.queue.push(Trigger {key:key.into(),name:format!("orch-{key}"),cwd:f.root.to_string_lossy().into(),
+            prompt:format!("元の本文 {key}"),todo_id:Some(1),
+            options:json!({"source_job_id":"source","resume_session":source["thread_id"],"model":"gpt-6.1-sol","effort":"high","sandbox":"read-only","isolate_worktree":false})});
+    }
+    state.queue.push(Trigger {key:"manual:ready".into(),name:"orch-ready".into(),cwd:f.root.to_string_lossy().into(),
+        prompt:"実行できる元本文".into(),todo_id:Some(2),
+        options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false})});
+    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+    f.console.dispatch(&mut state, &f.console.jobs().unwrap()).unwrap();
+    assert_eq!(f.launches(), 1);
+    assert!(state.launches.contains_key("manual:ready"));
+    for key in ["manual:busy-a","manual:busy-b"] {
+        assert!(state.queue.iter().any(|t| t.key == key && t.prompt == format!("元の本文 {key}")));
+        assert_eq!(state.preparation_recovery[key]["last_wait"]["kind"], "source_session_busy");
+        assert!(!state.preparation_failures.contains_key(key));
+    }
+}
+
+#[test]
+fn todo2341_pending_reservations_do_not_charge_ready_attempts() {
+    let f = Fixture::new(); f.on();
+    let mut db = f.console.todos().unwrap();
+    db["items"][0]["stall_recovery"] = json!({"pending":{"request":"other-reservation"}});
+    db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"demo","status":"todo","title":"実行できる検査","jobs":[]}));
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    state.patrol_turn = 1; // Orphan class is first in this patrol.
+    for (key, id) in [("manual:parked-a",None),("manual:parked-b",None),("manual:ready",Some(2))] {
+        state.queue.push(Trigger {key:key.into(),name:format!("orch-{key}"),cwd:f.root.to_string_lossy().into(),
+            prompt:format!("元の本文 {key}"),todo_id:id,
+            options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false})});
+    }
+    let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+    f.console.dispatch(&mut state, &[]).unwrap();
+    assert_eq!(f.launches(), 1);
+    assert!(state.launches.contains_key("manual:ready"));
+    for key in ["manual:parked-a","manual:parked-b"] {
+        assert!(state.queue.iter().any(|t| t.key == key && t.prompt == format!("元の本文 {key}")));
+        assert!(!state.handled.contains(key));
+    }
+}
+
+#[test]
 fn todo2341_ready_receipt_precedes_bounded_rotating_failed_checkout_probes() {
     let f = Fixture::new();
     f.on();

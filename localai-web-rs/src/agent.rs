@@ -1438,12 +1438,6 @@ impl Console {
                 suppress_trigger(s, &t, "対象外のプロジェクト、または完了済みの作業です。");
                 continue;
             }
-            if attempted >= attempt_limit { break; }
-            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
-                self.defer_patrol(s, &t.key)?;
-                return Err(fault(StatusCode::GATEWAY_TIMEOUT, "patrol_deferred", "起動確認の時間を次の巡回で確保します。"));
-            }
-            attempted += 1;
             if t.options.is_null() {
                 if let Some(item) = item {
                     let pending = &item["stall_recovery"]["pending"];
@@ -1552,6 +1546,7 @@ impl Console {
                             })
                         })))
             {
+                self.note_wait(s, &t.key, "pending_reservation", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
@@ -1566,6 +1561,23 @@ impl Console {
                 self.save(s)?;
                 continue;
             }
+            // Cheap parking predicates precede the preparation budget. Reusing
+            // an occupied session or waiting behind a reservation is not an attempt.
+            // Independent subwork retains its own admission and session rules.
+            if item.is_none_or(|i| !i["subwork"].is_object())
+                && source_session_busy(launch_source(&t, item, fresh_jobs), fresh_jobs)
+            {
+                self.note_wait(s, &t.key, "source_session_busy", Value::Null);
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
+            if attempted >= attempt_limit { break; }
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+                self.defer_patrol(s, &t.key)?;
+                return Err(fault(StatusCode::GATEWAY_TIMEOUT, "patrol_deferred", "起動確認の時間を次の巡回で確保します。"));
+            }
+            attempted += 1;
             if let Some(item) = item.filter(|i| i["subwork"].is_object()) {
                 let accepted = s.request_options.get(&t.key).unwrap_or(&t.options);
                 let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt,
@@ -1727,14 +1739,7 @@ impl Console {
                     })
                 })
             };
-            if source.is_some_and(|j| {
-                fresh_jobs.iter().any(|other| {
-                    active(other)
-                        && j["thread_id"].is_string()
-                        && (other["thread_id"] == j["thread_id"]
-                            || other["resume_session"] == j["thread_id"])
-                })
-            }) {
+            if source_session_busy(source, fresh_jobs) {
                 self.note_wait(s, &t.key, "source_session_busy", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
@@ -3185,6 +3190,16 @@ fn launch_options(
         }
     }
     Ok(options)
+}
+fn source_session_busy(source: Option<&Value>, jobs: &[Value]) -> bool {
+    source.is_some_and(|j| {
+        jobs.iter().any(|other| {
+            active(other)
+                && j["thread_id"].is_string()
+                && (other["thread_id"] == j["thread_id"]
+                    || other["resume_session"] == j["thread_id"])
+        })
+    })
 }
 fn active(j: &Value) -> bool {
     matches!(strv(j, "status"), "queued" | "starting" | "running")

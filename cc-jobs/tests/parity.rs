@@ -9332,10 +9332,17 @@ mod end_to_end {
             String::from_utf8(r.stdout).unwrap().trim().into()
         }
         fn job(&self, jid: &str) -> Value {
-            serde_json::from_slice(
-                &fs::read(self.tmp.0.join("tool/jobs").join(jid).join("job.json")).unwrap(),
-            )
-            .unwrap()
+            let root = self.tmp.0.join("tool");
+            let reader = Context {
+                jobs: root.join("jobs"),
+                root,
+                home: self.tmp.0.join("home"),
+                codex_home: self.tmp.0.join("codexhome"),
+                gto: self.tmp.0.join("missing-gto.exe"),
+                executable: self.exe.clone(),
+                rt: Arc::new(System::default()),
+            };
+            reader.read_json(&reader.job_dir(jid).join("job.json")).unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
             self.until_phase("unspecified", &mut condition);

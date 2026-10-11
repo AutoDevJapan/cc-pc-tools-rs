@@ -629,6 +629,7 @@ impl Config {
                 && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
             || (self.id == CHROME_ID && r.identity.created_at != CHROME_CREATED)
+            || (self.id == unslop::XB && r.identity.created_at != unslop::XB_CREATED)
             || (self.id == DECISION_ID && r.identity.created_at != DECISION_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
@@ -1986,6 +1987,174 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn xb_archive_preserves_clone_environment_and_inputs_and_finishes_idempotently() {
+        let c = fixture_for(unslop::XB);
+        let old = source(&c);
+        fs::create_dir(old.join("agent-reach-env")).unwrap();
+        fs::write(
+            old.join("agent-reach-env/package.txt"),
+            b"distributed package",
+        )
+        .unwrap();
+        fs::write(old.join("subtitle.json3"), b"public input").unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        assert!(old.exists());
+        let dest = c.destination().join("files");
+        fs::rename(&old, &dest).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["source_absent"], true);
+        assert_eq!(result["inventory_verified"], true);
+        assert_eq!(
+            fs::read(dest.join("subtitle.json3")).unwrap(),
+            b"public input"
+        );
+        assert_eq!(
+            fs::read(dest.join("agent-reach-env/package.txt")).unwrap(),
+            b"distributed package"
+        );
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        c.finish(c.id).unwrap();
+    }
+
+    #[test]
+    fn xb_rejects_unowned_git_unsaved_work_and_receipt_substitutions_before_planning() {
+        for failure in [
+            "origin",
+            "head",
+            "saved-ref",
+            "dirty",
+            "untracked",
+            "extra-git",
+            "external-hardlink",
+            "created",
+            "identity",
+            "project",
+            "bytes",
+        ] {
+            let c = fixture_for(unslop::XB);
+            let old = source(&c);
+            let repo = old.join("agent-reach-src");
+            match failure {
+                "origin" => {
+                    git(
+                        &repo,
+                        &[
+                            "remote",
+                            "set-url",
+                            "origin",
+                            "https://example.invalid/unowned",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "head" => {
+                    git(
+                        &repo,
+                        &[
+                            "-c",
+                            "user.name=fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit",
+                            "--allow-empty",
+                            "-m",
+                            "unsaved",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "saved-ref" => {
+                    git(&repo, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "dirty" => fs::write(repo.join("source.txt"), b"unsaved").unwrap(),
+                "untracked" => fs::write(repo.join("new.rs"), b"unsaved").unwrap(),
+                "extra-git" => {
+                    fs::create_dir(old.join("other")).unwrap();
+                    fs::write(old.join("other/.git"), b"unowned").unwrap();
+                }
+                "external-hardlink" => {
+                    fs::write(old.join("input"), b"input").unwrap();
+                    fs::hard_link(old.join("input"), c.temp.join("outside")).unwrap();
+                }
+                "bytes" => {
+                    fs::File::create(old.join("oversize"))
+                        .unwrap()
+                        .set_len(34109829)
+                        .unwrap();
+                }
+                "created" | "identity" | "project" => {
+                    let mut r = c.load(c.id).unwrap();
+                    match failure {
+                        "created" => r.identity.created_at = BOARD_CREATED.into(),
+                        "identity" => r.identity.file_id += 1,
+                        "project" => r.identity.project = "other".into(),
+                        _ => unreachable!(),
+                    }
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists(), "{failure}");
+            assert!(old.exists());
+        }
+    }
+
+    #[test]
+    fn xb_finish_rejects_same_metadata_content_changes_and_missing_proof() {
+        for failure in ["content", "proof"] {
+            let c = fixture_for(unslop::XB);
+            let old = source(&c);
+            fs::write(old.join("input"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            fs::rename(&old, c.destination().join("files")).unwrap();
+            if failure == "content" {
+                let file = c.destination().join("files/input");
+                let time = fs::metadata(&file).unwrap().modified().unwrap();
+                fs::write(&file, b"modified").unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(file)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(time))
+                    .unwrap();
+            } else {
+                fs::remove_file(
+                    c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256"),
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+
+    #[test]
+    fn xb_production_scope_is_fixed_to_the_original_public_acquisition() {
+        let c = Config::production(unslop::XB).unwrap();
+        assert_eq!(c.project, "todo-2322-xb");
+        assert_eq!(c.content, "acquisition-review");
+        assert_eq!(c.pinned_identity, Some((2229119083, 4785074608285915)));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].name, "agent-reach-src");
+        assert_eq!(
+            c.repos[0].origin,
+            "https://github.com/Panniantong/Agent-Reach.git"
+        );
+        assert_eq!(c.repos[0].head, "94f06c1969dfc1834001269d79d3ad0972d9dee6");
+        assert!(matches!(c.repos[0].kind, RepoKind::Clone));
+        assert!(Config::production("ab2f5f90a2c3855727cdcfee180254e4").is_err());
+    }
+
     #[test]
     fn decision_archive_is_bound_to_one_owned_worktree_and_its_published_head() {
         let c = Config::production(DECISION_ID).unwrap();
@@ -3406,6 +3575,8 @@ mod tests {
                 DECISION_CREATED
             } else if c.id == unslop::CC_ASK {
                 unslop::CC_ASK_CREATED
+            } else if c.id == unslop::XB {
+                unslop::XB_CREATED
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
             }

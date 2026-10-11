@@ -1,5 +1,28 @@
 # 所有フォルダーのGit管理情報を保って退避する
 
+## ToDo2350のXB動画解析で取得した一時フォルダー
+
+所有ID `ab2f5f90a2c3855727cdcfee180254e3`、project `todo-2322-xb`、content
+`acquisition-review`、作成日時 `2026-10-11T09:38:59.7691682+09:00`、version 2と
+元のGo形式のチェックサム、CドライブTemp直下の固定パス、volume `2229119083`、
+file ID `4785074608285915`だけを受理する。現在の実測は根を含め3,005項目、
+34,109,828バイト、reparse 0件で、これを上限とする。
+
+通常のplanとquarantineは `agent-reach-src/.git` の名称保護で
+`PROTECTED_PATH`となった。削除コマンドや自動承認審査の拒否ではない。
+通常の保護を変更せず、既存の保持退避処理をこの所有IDへ追加する。
+Git管理領域は `agent-reach-src/.git` 1件だけ。公開取得元は
+`https://github.com/Panniantong/Agent-Reach.git`、HEADと保存済みorigin/mainは
+`94f06c1969dfc1834001269d79d3ad0972d9dee6`に固定する。
+追跡変更・未追跡の自作成果・未push commit・stash・追加Git領域・外部管理領域・
+submodule・外部object・リンク・外部hardlink・保護対象・クライアント資源を拒否する。
+
+inspectで所有記録・祖先・全項目を読み取り確認し、対象を使う担当が終了してからplanする。
+全メタデータ・ACL・全ファイルのSHA256を2回照合し、独立した指紋票と移動票を保存する。
+planが返す通常のMove-Itemを別呼び出しに提出し、同じCドライブの削除希望へ丸ごと保持退避する。
+直ちにfinishで内容一致・元パス不在・同一実体・公式cloneの状態を確認し、既存所有記録を
+quarantinedへ更新する。Git参照の修復や一般の保護の緩和は追加しない。
+
 ## ToDo2382の配布済み質問修正の所有フォルダー1件
 
 所有ID `50189b66c7f196bf436305cb29f91b42`、project `cc-ask`、content

@@ -142,7 +142,8 @@ fn bounded_history_keeps_registered_question_with_bare_answer_before_chatter() {
     answer["channel_id"] = json!("100");
     answer["timestamp"] = json!("2026-10-11T09:17:20.599+09:00");
     messages.push(answer);
-    let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(prompt.len() <= 4096);
     assert!(prompt.contains("架空データだけを指定検査先へ送る"));
     assert!(prompt.contains("投稿 200 / 投稿者 BOT"));
@@ -173,12 +174,14 @@ fn explicit_reply_does_not_bind_to_a_newer_or_cross_thread_question() {
     let mut answer = message("300", "a", "OWN");
     answer["message_reference"] = json!({"message_id":"150","channel_id":"100"});
     messages.push(answer);
-    let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(prompt.contains("指定先への検査だけを確認する質問"));
     assert!(!prompt.contains("別件の恒久連携を確認する質問"));
     assert!(prompt.contains("返信先 150"));
     messages.last_mut().unwrap()["message_reference"]["channel_id"] = json!("999");
-    let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(!prompt.contains("別件の恒久連携を確認する質問"));
     assert!(!prompt.contains("指定先への検査だけを確認する質問"));
 }
@@ -195,7 +198,8 @@ fn oversized_question_is_referenced_without_a_partial_approval_quote() {
         message("150", &question, "BOT"),
         answer,
     ];
-    let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(prompt.len() <= 4096);
     assert!(prompt.contains("この短縮文だけで承認を判断しないこと"));
     assert!(!prompt.contains("a: 検査送信を行う"));

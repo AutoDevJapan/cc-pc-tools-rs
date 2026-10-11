@@ -2139,12 +2139,9 @@ impl Console {
         db: &Value,
         base: &str,
     ) -> Result<bool> {
-        if !explicit_workspace_receipt(item, source)
+        if !(explicit_workspace_receipt(item, source)
+            || current_legacy_workspace_receipt(item, source, db))
             || !same_folder(cwd, strv(source, "cwd"))
-            || !(source["todo_id"] == item["id"]
-                || source["related_todo_ids"]
-                    .as_array()
-                    .is_some_and(|ids| ids.contains(&item["id"])))
             || !Path::new(cwd).is_dir()
             || Path::new(cwd).join(".git").exists()
             || self.checkout_belongs(cwd, base)
@@ -2170,7 +2167,8 @@ impl Console {
     ) -> Result<&'a str> {
         let owned_source = match source {
             Some(s)
-                if explicit_workspace_receipt(item, s)
+                if (explicit_workspace_receipt(item, s)
+                    || current_legacy_workspace_receipt(item, s, db))
                     && !same_folder(strv(s, "cwd"), base)
                     && Path::new(strv(s, "cwd")).is_dir() =>
             {
@@ -2877,6 +2875,47 @@ fn explicit_workspace_receipt(item: &Value, source: &Value) -> bool {
             || source["related_todo_ids"]
                 .as_array()
                 .is_some_and(|ids| ids.contains(&item["id"])))
+}
+/// Older daily producers omitted numeric job ownership. Recover only the current,
+/// uniquely linked, generation-bound worker receipt; never infer from a note or
+/// change job metadata. All directory/exclusion checks remain with the caller.
+fn current_legacy_workspace_receipt(item: &Value, source: &Value, db: &Value) -> bool {
+    let Some(id) = source["id"].as_str().filter(|id| !id.is_empty()) else {
+        return false;
+    };
+    let Some(generation) = item["resume_generation"].as_u64().filter(|g| *g > 0) else {
+        return false;
+    };
+    if !terminal(source)
+        || !source["todo_id"].is_null()
+        || !(source["related_todo_ids"].is_null()
+            || source["related_todo_ids"]
+                .as_array()
+                .is_some_and(Vec::is_empty))
+        || item["id"].as_u64().is_none()
+        || item["scheduler"]["job"] != id
+        || item["worker_receipt"]["job"] != id
+        || item["worker_receipt"]["generation"].as_u64() != Some(generation)
+        || !item["jobs"]
+            .as_array()
+            .is_some_and(|ids| ids.iter().any(|j| j == id))
+    {
+        return false;
+    }
+    let Some(rows) = db["items"].as_array() else {
+        return false;
+    };
+    let linked: Vec<_> = rows
+        .iter()
+        .filter(|row| {
+            row["scheduler"]["job"] == id
+                || row["worker_receipt"]["job"] == id
+                || row["jobs"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|j| j == id))
+        })
+        .collect();
+    linked.len() == 1 && linked[0] == item
 }
 fn same_folder(a: &str, b: &str) -> bool {
     a.replace('\\', "/")

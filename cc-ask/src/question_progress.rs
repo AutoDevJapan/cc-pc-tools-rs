@@ -614,6 +614,9 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
         context["title"] = json!("作業の判断をお願いします");
     }
     context["posting_job"] = json!(job);
+    // The result job is the durable question generation. A later result in the
+    // same resumed session is a new question even if its text/title are identical.
+    context["request_key"] = json!(job);
     context["job"] = json!(job);
     context["job_info"] = info.clone();
     if !s(&info["cwd"]).is_empty() {

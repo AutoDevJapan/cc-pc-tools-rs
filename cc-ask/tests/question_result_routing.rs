@@ -284,6 +284,48 @@ fn concrete_intake_result_registers_new_question_once_and_keeps_work_context() {
 }
 
 #[test]
+fn later_result_in_same_session_is_a_new_question_even_with_identical_truncated_title() {
+    let mut h = Harness::new();
+    let cwd = h.root.path().to_string_lossy().into_owned();
+    for job in ["job1", "job2"] {
+        let dir = h.ctx.jobs.join("jobs").join(job);
+        std::fs::create_dir_all(&dir).unwrap();
+        atomic_json(
+            &dir.join("job.json"),
+            &json!({"id":job,"thread_id":"same-session","cwd":cwd,"status":"succeeded"}),
+            2,
+        )
+        .unwrap();
+    }
+    let mut state = h.state();
+    state["requests"]["100"] = json!({"title":"長".repeat(100),"cwd":cwd});
+    h.save(&state);
+    let text = "状態: 要判断\nこの版を公開してよいですか？\na 公開する\nb 待つ";
+    let first = question_progress::ask_result(&mut h.ctx, "100", text, "job1").unwrap();
+    let second =
+        question_progress::ask_result(&mut h.ctx, s(&first["thread_id"]), text, "job2").unwrap();
+    assert_ne!(first["thread_id"], second["thread_id"]);
+    assert_ne!(first["progress_thread_id"], second["progress_thread_id"]);
+    assert_eq!(second["work_thread_id"], "100");
+    assert_eq!(
+        h.state()["questions"][0]["session_id"],
+        h.state()["questions"][1]["session_id"]
+    );
+    let repeated =
+        question_progress::ask_result(&mut h.ctx, s(&first["thread_id"]), text, "job2").unwrap();
+    assert_eq!(second, repeated);
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        4
+    );
+}
+
+#[test]
 fn resumed_question_closes_origin_generation_without_replacing_its_cursor() {
     let mut h = Harness::new();
     h.ctx.effects = Box::new(ForumEffects(h.fake.clone()));

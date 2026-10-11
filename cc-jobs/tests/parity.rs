@@ -5911,7 +5911,10 @@ mod atomic_updates {
     #[test]
     fn test_roundtrip_leaves_no_temp_files() {
         let t = Test::new();
-        let mut j = t.put(new_job());
+        // This checks only atomic state storage, not a runnable job fixture.
+        let mut j = new_job();
+        fs::create_dir_all(t.ctx.job_dir(s(&j, "id"))).unwrap();
+        t.ctx.save(&j).unwrap();
         j["status"] = json!("running");
         t.ctx.save(&j).unwrap();
         assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");

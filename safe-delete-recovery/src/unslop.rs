@@ -36,6 +36,15 @@ pub(super) struct Profile {
 
 pub(super) fn profile(id: &str) -> Option<Profile> {
     let (id, content, volume, file_id, entries, links, bytes) = match id {
+        DECISION_ID => (
+            DECISION_ID,
+            "decision-dedup",
+            2229119083,
+            39969446694675659,
+            10000,
+            0,
+            20 * 1024 * 1024 * 1024,
+        ),
         CC_ASK => (
             CC_ASK,
             "todo2341-resume-notes",
@@ -331,6 +340,7 @@ fn inventory(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
             && !(c.id == INTEGRATION
                 && matches!(key.as_str(), "worktree/.git" | "worktree/officialsite/.git"))
             && !(c.id == CHROME_ID && key == "work/.git")
+            && !(c.id == DECISION_ID && key == "repo/.git")
             && !(c.id == CC_ASK && key == "repo/.git")
         {
             return Err("UNDECLARED_GIT_METADATA");
@@ -577,6 +587,15 @@ fn total(nodes: &Inventory) -> u64 {
         .sum()
 }
 fn why(c: &Config, r: &Receipt, nodes: &Inventory) -> String {
+    if c.id == DECISION_ID {
+        return format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: 通常のplanとquarantineはrepo/.gitの名称保護によりPROTECTED_PATHで停止した。削除命令や承認審査の拒否ではない。ToDo2382の固定所有ID1件の保存済みGit成果・検査ログ・旧実行ファイルを全て保持し、同じCドライブの削除希望へ退避する。全項目のACLと全通常ファイルのSHA256を照合し、このworktreeのbacklink1件だけを修復する。削除・容量回収ではない。\n所有ID: {}\n",
+            r.identity.path,
+            total(nodes),
+            nodes.len(),
+            c.id
+        );
+    }
     if c.id == CC_ASK {
         return format!(
             "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: ToDo2341の通常planとquarantineは1万項目上限で停止した。削除コマンドや自動承認審査の拒否ではない。固定した所有ID1件の保存済みclone、実行記録、ビルド生成物を全て同じCドライブの削除希望へ保持する。未保存変更、外部ハードリンク、追加Git領域、リンク、クライアント資源は拒否する。全メタデータと全通常ファイルのSHA256を移動前後に照合する。\n所有ID: {}\n",
@@ -623,7 +642,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     if path.components().next() != dest.components().next() {
         return Err("QUARANTINE_CROSS_DRIVE");
     }
-    if matches!(c.id, INTEGRATION | CHROME_ID | CC_ASK)
+    if matches!(c.id, INTEGRATION | CHROME_ID | DECISION_ID | CC_ASK)
         && dest
             .join("files")
             .join(c.repos[0].name)
@@ -635,7 +654,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("GIT_DESTINATION_ROOT_TOO_LONG");
     }
     let nodes = snapshot(c, &r, path)?;
-    let content_sha256 = if matches!(c.id, CHROME_ID | CC_ASK) {
+    let content_sha256 = if matches!(c.id, CHROME_ID | DECISION_ID | CC_ASK) {
         let plain = nodes
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -727,7 +746,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     if !same_nodes(c, &t.nodes, &now) {
         return Err("CONTENT_CHANGED_AFTER_PLAN");
     }
-    if matches!(c.id, CHROME_ID | CC_ASK) {
+    if matches!(c.id, CHROME_ID | DECISION_ID | CC_ASK) {
         let plain = now
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -752,7 +771,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     let expected = why(c, &r, &t.nodes);
     let completed = if c.id == CC_ASK {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認し、元の所有記録を更新した。削除は行っていない。\n"
-    } else if c.id == CHROME_ID {
+    } else if matches!(c.id, CHROME_ID | DECISION_ID) {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認した。元の所有記録とこのworktreeのbacklinkを更新した。\n"
     } else {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・リンク情報の一致を確認した。ファイル内容は読まず、同じ実体の保持を確認した。\n"

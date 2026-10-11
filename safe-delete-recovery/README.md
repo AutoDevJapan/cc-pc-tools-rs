@@ -1,5 +1,35 @@
 # 所有フォルダーのGit管理情報を保って退避する
 
+## ToDo2382の配布済み質問修正の所有フォルダー1件
+
+所有ID `50189b66c7f196bf436305cb29f91b42`、project `cc-ask`、content
+`decision-dedup`、作成日時 `2026-10-11T12:02:44.5926082+09:00` に限定する。
+元のGo形式のチェックサムと、Cドライブのvolume `2229119083`、file ID
+`39969446694675659` を照合する。通常のplan/quarantineは `repo/.git` の
+名前保護で `PROTECTED_PATH` を返した。削除命令・自動承認拒否ではない。
+通常の削除保護や10,000項目の上限は変更しない。
+実測した8,970項目・18,010,065,925バイト・リンク0件を根拠に、このIDの保持退避は
+10,000項目・20GiB・リンク0件を上限とする。既存の保持退避モジュールで
+全通常ファイルのSHA256と所有者・グループ・DACLを移動前後に照合する。
+
+公開取得元は `AutoDevJapan/cc-pc-tools-rs`。保存済み・レビュー済みの質問修正
+HEAD `94ab1cbec9a35e131ce1a2f135984cc07dca2505` と、その公開済みbranchの
+`refs/remotes/origin/fix/todo2382-question-associations` に固定する。
+本番への配布と実承認の照会を済ませ、書き込み中の検査とレビューを終了した後に、
+このHEADのcleanな作業ツリーを保って退避する。復旧モジュール自体の変更も
+別の公開PRへ保存し、その後にこの固定HEADへ戻す。未保存の成果を捨てない。
+
+移動するのはTemp下のこの所有フォルダーだけ。Git管理先は
+`C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/repo`、commonは
+同じリポジトリーの `.git` に固定し、移動後にこのworktreeのbacklinkだけを
+既存手順で直す。ほかの担当のGit領域・branch・ファイルには触らない。
+顧客資源・リンク・外部hardlink・追加Git領域・grafts・未保存変更の拒否を維持する。
+
+`safe-delete-recovery.exe plan --id <所有ID>` の通常の `Move-Item -LiteralPath`
+を別の実行ツールに提出し、成功後ただちに `finish --id <所有ID>` で同じファイル一覧・
+識別番号・容量とGit参照を確認する。削除ではなく保持退避である。
+実際の承認拒否があれば操作と理由を元2382へ記録し、別経路で移動しない。
+
 ## ToDo2341の保存済みcloneとビルド生成物1件
 
 所有ID `3d50e5d7c49761d809521892cfe84937`、project `cc-ask`、content

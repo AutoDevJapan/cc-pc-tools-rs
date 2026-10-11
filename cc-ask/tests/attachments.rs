@@ -447,8 +447,15 @@ fn failed_followup_keeps_question_registered_with_starter_cursor() {
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
     assert_eq!(h.state()["questions"][0]["after"], "300");
     assert_eq!(h.state()["questions"][0]["open"], true);
-    let records: Vec<_> = std::fs::read_dir(h.ctx.here.join("question-progress")).unwrap()
-        .map(|e| read_json(&e.unwrap().path()).unwrap()).collect();
+    let records: Vec<_> = std::fs::read_dir(h.ctx.here.join("question-progress"))
+        .unwrap()
+        .filter_map(|e| {
+            let p = e.unwrap().path();
+            p.extension()
+                .is_some_and(|x| x == "json")
+                .then(|| read_json(&p).unwrap())
+        })
+        .collect();
     assert_eq!(records.len(), 1);
     assert_eq!(records[0]["question"]["starter"], "300");
     assert_ne!(records[0]["complete"], true);

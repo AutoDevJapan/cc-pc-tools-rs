@@ -899,7 +899,7 @@ pub fn recover(
                 ctx.call(
                     "POST",
                     &format!("/channels/{target}/messages"),
-                    Some(&json!({"content":content,"flags":SILENT|4,
+                    Some(&json!({"content":content,"flags":if crate::question_progress::is_separated(ctx,original)? {SILENT|4} else {SILENT},
                         "allowed_mentions":{"parse":[],"users":[],"replied_user":false},
                         "nonce":nonce,"enforce_nonce":true})),
                 )?;

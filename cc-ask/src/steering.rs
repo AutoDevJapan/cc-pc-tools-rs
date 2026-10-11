@@ -37,8 +37,13 @@ pub fn acknowledge(
     project: &str,
     messages: &[Value],
 ) -> Result<()> {
-    record_owner_answers(state, thread, messages, &ctx.owner());
+    let repairing = crate::question_progress::route(ctx, thread)?
+        .is_some_and(|r| s(&r["progress_thread_id"]).is_empty());
     let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    if repairing {
+        *state = ctx.load()?;
+    }
+    record_owner_answers(state, thread, messages, &ctx.owner());
     let separated = destination != thread;
     let names = ProjectNames::load(&ctx.client_projects)?;
     let content = format!(

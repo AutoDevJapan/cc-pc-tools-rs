@@ -78,7 +78,15 @@ pub fn result_target(ctx: &mut Context, origin: &str, _job: &str) -> Result<Stri
         Some(r) if !s(&r["progress_thread_id"]).is_empty() => {
             Ok(s(&r["progress_thread_id"]).into())
         }
-        Some(_) => Err("質問の進捗投稿を回収中です。質問投稿へ結果を送信しません".into()),
+        Some(r) => {
+            recover_pending_for(ctx, Some(s(&r["key"])))?;
+            match route(ctx, origin)? {
+                Some(r) if !s(&r["progress_thread_id"]).is_empty() => {
+                    Ok(s(&r["progress_thread_id"]).into())
+                }
+                _ => Err("質問の進捗投稿を回収中です。質問投稿へ結果を送信しません".into()),
+            }
+        }
         None => Ok(origin.into()),
     }
 }
@@ -125,9 +133,9 @@ fn create_thread(
     phase: &str,
     title: &str,
     payload: &Value,
-    files: &[attachments::File],
-    limit: u64,
+    upload: (&[attachments::File], u64),
 ) -> Result<String> {
+    let (files, limit) = upload;
     let parent = s(&record["parent"]).to_owned();
     let forum = truth(&record["forum"]);
     if !s(&record[phase]["id"]).is_empty() {
@@ -180,23 +188,22 @@ fn create_thread(
             .map(|v| n(&v["id"]))
             .max()
             .unwrap_or(0);
-        record[phase] = json!({"attempted":true,"before":before.to_string(),"payload":payload,"title":title,
-            "files":files.iter().map(|f|json!({"filename":f.name,"size":f.size})).collect::<Vec<_>>()});
-        atomic_json(path, record, 2)?;
         let body = if forum {
             json!({"name":title,"message":payload})
         } else {
             payload.clone()
         };
-        let response = attachments::send(
+        let prepared = attachments::prepare_send(&body, files, limit)?;
+        record[phase] = json!({"attempted":true,"before":before.to_string(),"payload":payload,"title":title,
+            "files":files.iter().map(|f|json!({"filename":f.name,"size":f.size})).collect::<Vec<_>>()});
+        atomic_json(path, record, 2)?;
+        let response = attachments::send_prepared(
             ctx,
             &format!(
                 "/channels/{parent}/{}",
                 if forum { "threads" } else { "messages" }
             ),
-            &body,
-            files,
-            limit,
+            &prepared,
         );
         let response = match response {
             Ok(v) => v,
@@ -289,7 +296,31 @@ fn install(ctx: &Context, record: &Value) -> Result<()> {
     state["question_routes"][tid] = json!({"question_thread_id":tid,"work_thread_id":record["work_thread_id"],
         "progress_thread_id":record["progress_thread_id"],"posting_job":record["context"]["posting_job"],
         "todo_id":record["context"]["todo_id"],"session_id":record["context"]["session_id"]});
-    ctx.save(&state)
+    ctx.save(&state)?;
+    let job = s(&record["context"]["posting_job"]);
+    let job_dir = ctx.jobs.join("jobs").join(job);
+    if valid_job(job) && job_dir.join("job.json").is_file() {
+        let path = job_dir.join("discord-threads.json");
+        let mut association = if path.is_file() {
+            read_json(&path)?
+        } else {
+            json!({})
+        };
+        let mut ids = std::collections::BTreeSet::new();
+        ids.extend(
+            association["question_thread_ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_owned),
+        );
+        ids.insert(tid.to_owned());
+        association["question_thread_ids"] = json!(ids);
+        association["question_routes"][tid] = state["question_routes"][tid].clone();
+        atomic_json(&path, &association, 2)?;
+    }
+    Ok(())
 }
 
 pub fn ask(
@@ -342,7 +373,13 @@ pub fn ask(
     } else {
         crate::project::question_body(s(&context["project"]), &owner, &silent_text(body))
     };
-    let parts = chunks(&body, MAX_CONTENT);
+    // A long second line must not strand the project header in a separate
+    // starter without its one owner mention (the generic line chunker can).
+    let chars: Vec<_> = body.chars().collect();
+    let parts: Vec<String> = chars
+        .chunks(MAX_CONTENT)
+        .map(|p| p.iter().collect())
+        .collect();
     if !record["text_parts"].is_array() {
         record["text_parts"] = json!(parts);
         record["upload_limit"] = json!(limit);
@@ -367,8 +404,7 @@ pub fn ask(
         "question",
         s(&context["title"]),
         &json!({"content":parts[0],"flags":SUPPRESS_EMBEDS,"allowed_mentions":{"parse":[],"users":[owner],"replied_user":false}}),
-        batches.first().copied().unwrap_or(&[]),
-        limit,
+        (batches.first().copied().unwrap_or(&[]), limit),
     )?;
     record["question_thread_id"] = json!(tid);
     atomic_json(&path, &record, 2)?;
@@ -498,8 +534,7 @@ fn finish_bridge(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<S
         "progress",
         &title,
         &json!({"content":bridge,"flags":SILENT|SUPPRESS_EMBEDS,"allowed_mentions":{"parse":[],"users":[],"replied_user":false}}),
-        &[],
-        attachments::BASE_LIMIT,
+        (&[], attachments::BASE_LIMIT),
     )?;
     record["progress_thread_id"] = json!(progress);
     atomic_json(path, record, 2)?;
@@ -510,8 +545,14 @@ fn finish_bridge(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<S
 /// Repair at most one new-format interrupted creation. Never migrate legacy
 /// questions or emit another question while its first POST is uncertain.
 pub fn recover_pending(ctx: &mut Context) -> Result<()> {
+    recover_pending_for(ctx, None)
+}
+fn recover_pending_for(ctx: &mut Context, requested: Option<&str>) -> Result<()> {
     let _guard = ByteLock::acquire(&ctx.here.join("question-progress.lock"), Duration::ZERO)?;
     for mut record in routes(ctx)? {
+        if requested.is_some_and(|key| s(&record["key"]) != key) {
+            continue;
+        }
         if truth(&record["complete"]) || !truth(&record["question"]["attempted"]) {
             continue;
         }
@@ -529,8 +570,7 @@ pub fn recover_pending(ctx: &mut Context) -> Result<()> {
             "question",
             &title,
             &payload,
-            &[],
-            attachments::BASE_LIMIT,
+            (&[], attachments::BASE_LIMIT),
         )?;
         record["question_thread_id"] = json!(tid);
         atomic_json(&path, &record, 2)?;

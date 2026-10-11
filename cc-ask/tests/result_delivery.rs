@@ -393,8 +393,16 @@ fn permanent_upload_response_enters_repair_even_if_notice_is_forbidden() {
 fn separated_question_receipt_and_result_use_only_silent_progress() {
     let mut h = Harness::new();
     h.tick();
-    h.finish("job1", "succeeded",
-        Some("状態: 要判断\nどちらを公開しますか？\na 見本\nb 完成版"), None);
+    let job_path = h.ctx.jobs.join("jobs/job1/job.json");
+    let mut info = read_json(&job_path).unwrap();
+    info["cwd"] = json!(h.root.path().to_string_lossy());
+    atomic_json(&job_path, &info, 2).unwrap();
+    h.finish(
+        "job1",
+        "succeeded",
+        Some("状態: 要判断\nどちらを公開しますか？\na 見本\nb 完成版"),
+        None,
+    );
     h.tick();
     let state = h.state();
     let q = state["questions"][0].clone();
@@ -408,17 +416,25 @@ fn separated_question_receipt_and_result_use_only_silent_progress() {
     cc_ask::resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     assert_eq!(h.fake.borrow().launches.len(), 2);
     assert_eq!(h.state()["answer_receipts"][&reply]["handled_by"], "job2");
-    h.finish("job2", "succeeded", Some("状態: 完了\n見本を公開しました。"), None);
+    h.finish(
+        "job2",
+        "succeeded",
+        Some("状態: 完了\n見本を公開しました。"),
+        None,
+    );
     cc_ask::resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     let fake = h.fake.borrow();
     let delivered = &fake.posts[before..];
     assert!(!delivered.is_empty());
     assert!(delivered.iter().all(|(tid, body)| {
-        tid == &progress && body["flags"] == json!(SILENT | 4)
+        tid == &progress
+            && body["flags"] == json!(SILENT | 4)
             && body["allowed_mentions"]["users"] == json!([])
             && body["allowed_mentions"]["replied_user"] == json!(false)
             && !s(&body["content"]).contains("<@OWN>")
     }));
-    assert!(delivered.iter().any(|(_, body)| s(&body["content"]).contains("見本を公開しました。")));
+    assert!(delivered
+        .iter()
+        .any(|(_, body)| s(&body["content"]).contains("見本を公開しました。")));
     assert!(!fake.patches.iter().any(|(tid, _)| tid == "100"));
 }

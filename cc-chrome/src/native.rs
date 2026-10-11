@@ -85,6 +85,9 @@ impl Rpc {
         })
     }
     async fn call(&mut self, method: &str, params: Value) -> io::Result<Value> {
+        if registrar::rpc_denied(method, &params) {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied, registrar::REASON));
+        }
         let id = self.next;
         self.next += 1;
         tokio::time::timeout(Duration::from_secs(3), async {
@@ -506,7 +509,8 @@ async fn forward_streams(
     dir: &Path,
     job: &str,
 ) -> io::Result<()> {
-    let (mut ar, mut aw) = tokio::io::split(server);
+    let (mut ar, aw) = tokio::io::split(server);
+    let aw = Arc::new(tokio::sync::Mutex::new(aw));
     let (mut br, mut bw) = tokio::io::split(client);
     let pending = Arc::new(Mutex::new(HashMap::<String, Value>::new()));
     let sending = pending.clone();
@@ -521,6 +525,12 @@ async fn forward_streams(
                     || own["thread_id"] != v["params"]["session_id"]
                 {
                     return Err(io::Error::other("browser session does not own this job"));
+                }
+                if registrar::rpc_denied(v["method"].as_str().unwrap_or(""), &v["params"]) {
+                    if let Some(id) = v.get("id") {
+                        write_frame(&mut *aw.lock().await, &json!({"jsonrpc":"2.0","id":id,"error":{"code":-32000,"message":registrar::REASON}})).await?;
+                    }
+                    continue;
                 }
                 lifecycle::activity(dir)?;
                 if v["method"] == "createTab" && v.get("id").is_some() {
@@ -569,7 +579,7 @@ async fn forward_streams(
             if v.get("method").is_none() {
                 pending.lock().unwrap().remove(&v["id"].to_string());
             }
-            if let Err(e) = write_frame(&mut aw, &v).await {
+            if let Err(e) = write_frame(&mut *aw.lock().await, &v).await {
                 // The worker can exit before its createTab response. Persist all pending replies.
                 if pending.lock().unwrap().is_empty() {
                     return Err(e);
@@ -611,6 +621,9 @@ pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
 }
 
 async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+    if registrar::restricted_url(url) {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, registrar::REASON));
+    }
     if !safe_job(job)
         || !(url.starts_with("https://") || url.starts_with("http://") || url == "about:blank")
     {
@@ -916,6 +929,81 @@ mod tests {
                 }
             };
             let (closed,_)=tokio::join!(close_record(&record),mock);assert!(closed.unwrap());
+        });
+    }
+    #[test]
+    fn registrar_rejection_never_reaches_backend_and_connection_remains_usable() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"), json!({"thread_id":"session"}).to_string()).unwrap();
+            let (mut agent, proxy_agent) = tokio::io::duplex(65536);
+            let (proxy_backend, mut backend) = tokio::io::duplex(65536);
+            let info = json!({});
+            let proxy = forward_streams(proxy_agent, proxy_backend, "fixture", &info, root.path(), "job");
+            let check = async {
+                for id in [1, 2] {
+                    let (method, params) = if id == 1 {
+                        ("createTab", json!({"session_id":"session","url":"https://onamae.com"}))
+                    } else {
+                        ("executeCdp", json!({"session_id":"session","method":"Page.navigate","commandParams":{"url":"https://navi.onamae.com"}}))
+                    };
+                    write_frame(&mut agent, &json!({"id":id,"method":method,"params":params})).await.unwrap();
+                    let reply = read_frame(&mut agent).await.unwrap();
+                    assert_eq!(reply["id"], id);
+                    assert_eq!(reply["error"]["code"], -32000);
+                }
+                // The first frame reaching the backend must be this allowed request.
+                let allowed = json!({"id":3,"method":"getUserTabs","params":{"session_id":"session"}});
+                write_frame(&mut agent, &allowed).await.unwrap();
+                assert_eq!(read_frame(&mut backend).await.unwrap(), allowed);
+                write_frame(&mut backend, &json!({"id":3,"result":[]})).await.unwrap();
+                assert_eq!(read_frame(&mut agent).await.unwrap()["id"], 3);
+                assert!(!root.path().join("chrome-tabs").exists());
+            };
+            tokio::pin!(proxy);
+            tokio::select! {
+                result = &mut proxy => panic!("proxy ended before checks: {result:?}"),
+                result = tokio::time::timeout(Duration::from_secs(3), check) => { result.expect("registrar checks timed out"); },
+            }
+        });
+    }
+    #[test]
+    fn simultaneous_policy_rejection_and_backend_reply_preserve_frame_boundaries() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"), json!({"thread_id":"session"}).to_string()).unwrap();
+            let (mut agent, proxy_agent) = tokio::io::duplex(65536);
+            let (proxy_backend, mut backend) = tokio::io::duplex(65536);
+            let info = json!({});
+            let proxy = forward_streams(proxy_agent, proxy_backend, "fixture", &info, root.path(), "job");
+            let check = async {
+                write_frame(&mut agent, &json!({"id":1,"method":"getUserTabs","params":{"session_id":"session"}})).await.unwrap();
+                assert_eq!(read_frame(&mut backend).await.unwrap()["id"], 1);
+                let denied = json!({"id":2,"method":"executeCdp","params":{"session_id":"session","method":"Page.navigate","commandParams":{"url":"https://onamae.com"}}});
+                let response = json!({"id":1,"result":[]});
+                let (sent, replied) = tokio::join!(write_frame(&mut agent, &denied), write_frame(&mut backend, &response));
+                sent.unwrap();
+                replied.unwrap();
+                let first = read_frame(&mut agent).await.unwrap();
+                let second = read_frame(&mut agent).await.unwrap();
+                let mut ids = [first["id"].as_u64().unwrap(), second["id"].as_u64().unwrap()];
+                ids.sort();
+                assert_eq!(ids, [1, 2]);
+                for reply in [first, second] {
+                    if reply["id"] == 2 {
+                        assert_eq!(reply["error"]["code"], -32000);
+                    } else {
+                        assert_eq!(reply["result"], json!([]));
+                    }
+                }
+                write_frame(&mut agent, &json!({"id":3,"method":"getInfo","params":{"session_id":"session"}})).await.unwrap();
+                assert_eq!(read_frame(&mut backend).await.unwrap()["id"], 3);
+            };
+            tokio::pin!(proxy);
+            tokio::select! {
+                result = &mut proxy => panic!("proxy ended before checks: {result:?}"),
+                result = tokio::time::timeout(Duration::from_secs(3), check) => { result.expect("concurrent replies timed out"); },
+            }
         });
     }
     #[test]

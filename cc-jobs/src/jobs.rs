@@ -21,6 +21,31 @@ pub struct Context {
     pub rt: SharedRuntime,
 }
 impl Context {
+    /// Enforce the current site restriction on the selected launch input,
+    /// including old saved jobs and both kinds of continuation. Keep the
+    /// original input immutable; appending this rule does not elevate scope.
+    pub fn prompt_for_attempt(&self, job: &Value) -> Result<PathBuf> {
+        let dir = self.job_dir(s(job, "id"));
+        let source = dir.join(if s(job, "context_phase") == "summarize" {
+            "context-summary-prompt.md"
+        } else if s(job, "context_phase") == "continue" && job["yield_resume"] != true {
+            "context-continue.md"
+        } else if job["yield_resume"] == true {
+            "yield-resume.md"
+        } else {
+            "prompt.md"
+        });
+        let mut text = fs::read_to_string(&source)?;
+        if text.contains(cc_job_policy::REGISTRAR_GUIDANCE) {
+            return Ok(source);
+        }
+        text.push('\n');
+        text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
+        text.push('\n');
+        let selected = dir.join("execution-prompt.md");
+        fs::write(&selected, text)?;
+        Ok(selected)
+    }
     pub fn installed() -> std::io::Result<Self> {
         let exe = std::env::current_exe()?;
         let rt: SharedRuntime = Arc::new(System::default());
@@ -1010,15 +1035,7 @@ impl Context {
             });
             proc = Some(self.rt.spawn(&Spawn {
                 argv: codex_args(&job),
-                prompt: dir.join(if s(&job, "context_phase") == "summarize" {
-                    "context-summary-prompt.md"
-                } else if s(&job, "context_phase") == "continue" && job["yield_resume"] != true {
-                    "context-continue.md"
-                } else if job["yield_resume"] == true {
-                    "yield-resume.md"
-                } else {
-                    "prompt.md"
-                }),
+                prompt: self.prompt_for_attempt(&job)?,
                 cwd: PathBuf::from(s(&job, "cwd")),
                 env: environment,
                 flags: NO_WINDOW,

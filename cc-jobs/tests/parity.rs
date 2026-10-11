@@ -5524,6 +5524,10 @@ impl Test {
     }
     fn put(&self, j: Value) -> Value {
         fs::create_dir_all(self.ctx.job_dir(s(&j, "id"))).unwrap();
+        let prompt = self.ctx.job_dir(s(&j, "id")).join("prompt.md");
+        if !prompt.exists() {
+            fs::write(prompt, "fixture task").unwrap();
+        }
         self.ctx.save(&j).unwrap();
         j
     }
@@ -5732,6 +5736,46 @@ mod event_parsing {
             assert_eq!(clean_cmd(&format!("{p}{src}")), want);
         }
         assert_eq!(clean_cmd("ls -la"), "ls -la");
+    }
+}
+
+mod registrar_launch_policy {
+    use super::*;
+    #[test]
+    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope() {
+        for sandbox in ["read-only", "danger-full-access"] {
+            for (phase, yielded, source) in [
+                ("", false, "prompt.md"),
+                ("continue", false, "context-continue.md"),
+                ("continue", true, "yield-resume.md"),
+                ("summarize", true, "context-summary-prompt.md"),
+            ] {
+                let t = Test::new();
+                let j = t.put(job(json!({"id":"old-job","sandbox":sandbox,"context_phase":phase,"yield_resume":yielded})));
+                let original = t.ctx.job_dir("old-job").join(source);
+                fs::write(&original, "old task\r\noriginal scope").unwrap();
+                let path = t.ctx.prompt_for_attempt(&j).unwrap();
+                let fed = fs::read_to_string(&path).unwrap();
+                assert!(fed.starts_with("old task\r\noriginal scope"));
+                assert!(fed.contains(cc_job_policy::REGISTRAR_GUIDANCE));
+                assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 1);
+                assert_eq!(fs::read_to_string(&original).unwrap(), "old task\r\noriginal scope");
+                assert_eq!(j["sandbox"], sandbox);
+                assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), path);
+                assert_eq!(fs::read_to_string(path).unwrap(), fed);
+                fs::write(&original, &fed).unwrap();
+                assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), original);
+            }
+        }
+    }
+    #[test]
+    fn missing_or_invalid_input_cannot_be_replaced_with_a_policy_only_launch() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"old-job","context_phase":"continue"})));
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        fs::write(t.ctx.job_dir("old-job").join("context-continue.md"), [0xff]).unwrap();
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        assert!(!t.ctx.job_dir("old-job").join("execution-prompt.md").exists());
     }
 }
 mod token_accounting {

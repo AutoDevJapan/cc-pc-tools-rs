@@ -157,9 +157,28 @@ fn original_todo(ctx: &Context, context: &Value) -> Result<OriginalTodo> {
         if direct > 0 {
             return Err("decision original ToDo differs from recorded worker".into());
         }
-        return Ok(OriginalTodo::Ambiguous(
-            matches.iter().map(|item| n(&item["id"])).collect(),
-        ));
+        let mut candidates: Vec<_> = matches.iter().map(|item| n(&item["id"])).collect();
+        // A saved question can retain original/related task evidence no longer
+        // present in the live jobs index. That evidence must not be discarded
+        // when proving disjointness. Invalid entries keep the set uncertain.
+        for related in [
+            &context["related_todo_ids"],
+            &context["job_info"]["related_todo_ids"],
+        ] {
+            match related {
+                Value::Null => {}
+                Value::Array(ids) => candidates.extend(ids.iter().map(n)),
+                _ => candidates.push(0),
+            }
+        }
+        let saved = &context["job_info"]["todo_id"];
+        if !saved.is_null() {
+            candidates.push(n(saved));
+        }
+        if !context["job_info"].is_null() && !context["job_info"].is_object() {
+            candidates.push(0);
+        }
+        return Ok(OriginalTodo::Ambiguous(candidates));
     }
     let inferred = matches.first().map_or(0, |v| n(&v["id"]));
     if direct > 0 && inferred > 0 && direct != inferred {

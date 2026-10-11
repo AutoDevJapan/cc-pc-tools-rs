@@ -102,9 +102,22 @@ fn probe() -> Result<Value> {
                     // Only comparison evidence, never bodies, replies, tokens
                     // or attachments. Production ledgers are read-only.
                     let mut context = json!({});
-                    for key in ["todo_id", "posting_job", "session_id", "cwd", "project"] {
+                    for key in [
+                        "todo_id",
+                        "posting_job",
+                        "session_id",
+                        "cwd",
+                        "project",
+                        "related_todo_ids",
+                    ] {
                         context[key] = record["context"][key].clone();
                     }
+                    let info = &record["context"]["job_info"];
+                    context["job_info"] = if !info.is_null() && !info.is_object() {
+                        json!("invalid")
+                    } else {
+                        json!({"todo_id":info["todo_id"],"related_todo_ids":info["related_todo_ids"]})
+                    };
                     atomic_json(
                         &projected.join(path.file_name().ok_or("invalid route path")?),
                         &json!({"guild":record["guild"],"parent":record["parent"],

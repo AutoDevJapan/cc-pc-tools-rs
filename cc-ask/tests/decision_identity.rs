@@ -86,6 +86,64 @@ fn overlapping_or_unknown_legacy_candidates_still_fail_closed() {
 }
 
 #[test]
+fn saved_overlapping_or_invalid_legacy_candidates_cannot_be_excluded() {
+    for evidence in [
+        json!({"related_todo_ids":[11,12,2380]}),
+        json!({"job_info":{"todo_id":2380}}),
+        json!({"job_info":{"related_todo_ids":[2380]}}),
+        json!({"related_todo_ids":[11,"unknown"]}),
+        json!({"related_todo_ids":"invalid"}),
+        json!({"job_info":{"todo_id":"unknown"}}),
+        json!({"job_info":{"related_todo_ids":[0]}}),
+        json!({"job_info":"invalid"}),
+    ] {
+        let mut h = Harness::new();
+        legacy_multi_todo_route(&mut h, &[11, 12]);
+        let file = std::fs::read_dir(h.ctx.here.join("question-progress"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let mut record = read_json(&file).unwrap();
+        for (key, value) in evidence.as_object().unwrap() {
+            record["context"][key] = value.clone();
+        }
+        atomic_json(&file, &record, 2).unwrap();
+        let before = creates(&h);
+        let state = h.state();
+        let a = args(&h, "新しい対象の判断", "D:/models/new");
+        assert!(cmd_ask(&mut h.ctx, &a).unwrap_err().contains("一意"));
+        assert_eq!(creates(&h), before);
+        assert_eq!(h.state(), state);
+        assert_eq!(read_json(&file).unwrap(), record);
+    }
+}
+
+#[test]
+fn saved_disjoint_legacy_candidates_allow_only_the_new_explicit_original() {
+    let mut h = Harness::new();
+    legacy_multi_todo_route(&mut h, &[11, 12]);
+    let file = std::fs::read_dir(h.ctx.here.join("question-progress"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let mut record = read_json(&file).unwrap();
+    record["context"]["related_todo_ids"] = json!([11, 12, 13]);
+    record["context"]["job_info"] = json!({"todo_id":11,"related_todo_ids":[12,14]});
+    atomic_json(&file, &record, 2).unwrap();
+    let before = creates(&h);
+    let a = args(&h, "新しい対象の判断", "D:/models/new");
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(creates(&h), before + 2);
+    assert_eq!(h.state()["questions"][1]["todo_id"], 2380);
+    assert!(result["latest_owner_reply"].is_null());
+    assert_eq!(read_json(&file).unwrap(), record);
+}
+
+#[test]
 fn disjoint_legacy_evidence_does_not_hide_conflicting_explicit_original() {
     let mut h = Harness::new();
     legacy_multi_todo_route(&mut h, &[11, 12]);

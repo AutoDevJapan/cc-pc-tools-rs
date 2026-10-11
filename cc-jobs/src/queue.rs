@@ -637,7 +637,7 @@ impl Context {
     }
     fn index_complete(&self, index: &Value) -> bool {
         self.index_ids(index).is_ok()
-            && index["scan_complete"] != false
+            && index["scan_complete"] == true
             && index["scanned_at"]
                 .as_f64()
                 .is_some_and(|at| at > 0. && at.is_finite())
@@ -864,6 +864,11 @@ impl Context {
         if self.index_ids(&index).is_err() {
             // Keep the new ID durable; a stale timestamp forces reconciliation.
             index = json!({"ids":[], "scan_complete":false, "scanned_at":0., "owners":{}});
+        }
+        if !self.index_complete(&index) {
+            // Preserve registrations, but only a completed full scan can publish completion.
+            index["scan_complete"] = json!(false);
+            index["scanned_at"] = json!(0.);
         }
         let ids = index["ids"].as_array_mut().unwrap();
         if !ids.iter().any(|id| id.as_str() == Some(jid)) {

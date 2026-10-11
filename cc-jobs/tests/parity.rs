@@ -3683,6 +3683,9 @@ mod queue_regressions {
             "busy",
             "missing_index",
             "broken_index",
+            "missing_scan_flag",
+            "wrong_scan_flag",
+            "wrong_scan_time",
         ] {
             let t = Test::new();
             let mut target = waiting(&t, "target", "target");
@@ -3712,6 +3715,20 @@ mod queue_regressions {
                 "broken_index" => {
                     fs::write(t.ctx.jobs.join(".queue-index.json"), "{broken").unwrap()
                 }
+                "missing_scan_flag" | "wrong_scan_flag" | "wrong_scan_time" => {
+                    let path = t.ctx.jobs.join(".queue-index.json");
+                    let mut index = t.ctx.read_json(&path).unwrap();
+                    index["scanned_at"] = json!(t.rt.epoch());
+                    index["scan_complete"] = json!(true);
+                    match case {
+                        "missing_scan_flag" => {
+                            index.as_object_mut().unwrap().remove("scan_complete");
+                        }
+                        "wrong_scan_flag" => index["scan_complete"] = json!("complete"),
+                        _ => index["scanned_at"] = json!("recent"),
+                    }
+                    t.ctx.write_json(&path, &index).unwrap();
+                }
                 _ => {}
             }
             let target_path = t.ctx.job_dir("target").join("job.json");
@@ -3719,7 +3736,15 @@ mod queue_regressions {
             let other_path = t.ctx.job_dir("other").join("job.json");
             let untouched = fs::read(&other_path).unwrap();
             let held = (case == "busy").then(|| t.ctx.job_lock("target", "state.lock").unwrap());
-            let updates = ["queued", "missing_index", "broken_index"].contains(&case);
+            let updates = [
+                "queued",
+                "missing_index",
+                "broken_index",
+                "missing_scan_flag",
+                "wrong_scan_flag",
+                "wrong_scan_time",
+            ]
+            .contains(&case);
             let (result, out, _) = t.cli(&["reload-queue", "--job-id", requested]);
             if ["wrong_id", "bad_id", "missing"].contains(&case) {
                 assert!(result.is_err(), "{case}");
@@ -3746,12 +3771,19 @@ mod queue_regressions {
                 assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
                 assert_eq!(t.ctx.load("target").unwrap()["resume_session"], SESSION_ID);
                 assert!(t.ctx.load("target").unwrap()["started_at"].is_null());
-                if ["missing_index", "broken_index"].contains(&case) {
+                if case.contains("index") || case.contains("scan_") {
                     let index = t
                         .ctx
                         .read_json(&t.ctx.jobs.join(".queue-index.json"))
                         .unwrap();
-                    assert_eq!(index["ids"], json!(["target"]));
+                    assert_eq!(
+                        index["ids"],
+                        if case.contains("scan_") {
+                            json!(["target", "other"])
+                        } else {
+                            json!(["target"])
+                        }
+                    );
                     assert_eq!(index["scan_complete"], false);
                     assert_eq!(index["scanned_at"], 0.);
                     let scan = FileLock::try_acquire(&t.ctx.jobs.join(".queue-scan.lock")).unwrap();

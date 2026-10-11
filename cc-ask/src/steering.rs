@@ -617,7 +617,7 @@ pub fn resume_unavailable(info: &Value) -> bool {
     .any(|x| error.contains(x))
 }
 
-fn quotes(messages: &[Value]) -> String {
+fn quotes(thread: &str, messages: &[Value]) -> String {
     messages
         .iter()
         .map(|m| {
@@ -628,9 +628,10 @@ fn quotes(messages: &[Value]) -> String {
                 .map(|a| format!("\n添付: {}", s(&a["url"])))
                 .collect::<String>();
             format!(
-                "\nオーナー投稿 {}（{}）の原文:\n{}{}\n",
+                "\nオーナー投稿 {}（{}）の原文:\n{}\n{}{}\n",
                 s(&m["id"]),
                 s(&m["timestamp"]),
+                message_source(m, thread),
                 s(&m["content"]),
                 files
             )
@@ -850,7 +851,7 @@ pub fn deliver(
                     pending["messages"] = json!(remaining);
                     pending["prompt"] = json!(format!(
                         "オーナーからの今回未配送の追加指示を最優先してください。\n{}\n{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{}",
-                        quotes(&remaining),
+                        quotes(tid, &remaining),
                         s(&pending["source"]["cwd"]),
                         s(&pending["original_request"])
                     ));
@@ -1039,7 +1040,7 @@ pub fn deliver(
         );
         let prompt = format!(
             "オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}",
-            quotes(&unseen)
+            quotes(tid, &unseen)
         );
         entry_mut(record, slot)["owner_update"] = json!({"key":key,"source":source,"session":session,"resume":resume,"prompt":prompt,"original_request":original,"after":latest,"messages":addressed_messages});
         entry_mut(record, slot)["answer_source_resolved"] = json!(true);
@@ -1056,7 +1057,7 @@ pub fn deliver(
     if let Some(last) = extra.last() {
         pending["prompt"] = json!(format!(
             "さらに届いた次の原文を最優先してください。\n{}\n{}",
-            quotes(&extra),
+            quotes(tid, &extra),
             s(&pending["prompt"])
         ));
         pending["after"] = last["id"].clone();

@@ -1,13 +1,13 @@
 //! Local agent API and a durable, bounded delegation queue. No Discord credentials enter this module.
 use axum::{
-    Json,
     body::to_bytes,
     extract::{Request, State},
     http::{Method, StatusCode},
     response::{IntoResponse, Response},
+    Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -73,9 +73,43 @@ fn external() -> Fault {
         "連携ツールが失敗しました。状態を確認して再試行してください。",
     )
 }
+fn todo_invalid() -> Fault {
+    fault(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "todo_store_invalid_json",
+        "共有ToDoのJSONまたは構造が不正です。",
+    )
+}
+fn todo_store_fault(error: cc_todo::StoreError) -> Fault {
+    match error {
+        cc_todo::StoreError::TooLarge => fault(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "todo_store_too_large",
+            "共有ToDoが読取・保存の上限64MiB（67,108,864 bytes）を超えています。",
+        ),
+        cc_todo::StoreError::InvalidJson(_) => todo_invalid(),
+        cc_todo::StoreError::Io(_) => io_fault(),
+    }
+}
+fn todo_write_fault(error: String) -> Fault {
+    if error.starts_with("todo_store_too_large:") {
+        todo_store_fault(cc_todo::StoreError::TooLarge)
+    } else {
+        io_fault()
+    }
+}
 fn reply(result: Result<Value>) -> Response {
     match result {
-        Ok(data) => Json(json!({"ok":true,"version":1,"data":data})).into_response(),
+        Ok(data) => {
+            // The store reader preserves canonical bytes; redact only the response.
+            let safe = redact(&json!({"ok":true,"version":1,"data":data}).to_string());
+            (
+                StatusCode::OK,
+                [(axum::http::header::CONTENT_TYPE, "application/json")],
+                safe,
+            )
+                .into_response()
+        }
         Err(e) => (
             e.status,
             Json(json!({"ok":false,"version":1,"error":{"code":e.code,"message":e.message}})),
@@ -196,19 +230,37 @@ impl Runner for RealRunner {
                     .any(|r| busy.contains(common::s(r)))
             });
         let mut safe_report = json!({});
-        for field in ["measured_at", "available_gb", "commit_percent", "cpu_percent", "cpu_rolling_percent",
-            "cpu_slots", "memory_slots", "resource_slots", "allowance_now", "launch_wait_s", "reasons", "expected_job_gb"] {
+        for field in [
+            "measured_at",
+            "available_gb",
+            "commit_percent",
+            "cpu_percent",
+            "cpu_rolling_percent",
+            "cpu_slots",
+            "memory_slots",
+            "resource_slots",
+            "allowance_now",
+            "launch_wait_s",
+            "reasons",
+            "expected_job_gb",
+        ] {
             safe_report[field] = report[field].clone();
         }
-        let requested_busy: Vec<_> = item.into_iter().flat_map(|i| common::arr(&i["needs"]))
-            .filter(|need| busy.contains(common::s(need))).collect();
+        let requested_busy: Vec<_> = item
+            .into_iter()
+            .flat_map(|i| common::arr(&i["needs"]))
+            .filter(|need| busy.contains(common::s(need)))
+            .collect();
         let observation = json!({"at":now(),"at_nanos":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos().to_string(),
             "todo_id":item.map(|i| &i["id"]),"allowed":allowed,
             "dispatch_enabled":cfg["dispatch_enabled"],"busy_resources":requested_busy,
             "needs":item.map(|i| &i["needs"]),"report":safe_report});
         // Admission diagnostics are not authoritative queue state. A failed
         // observation write must not change the measured launch decision.
-        let _ = atomic_write(&paths.state.join("console-capacity.json"), observation.to_string().as_bytes());
+        let _ = atomic_write(
+            &paths.state.join("console-capacity.json"),
+            observation.to_string().as_bytes(),
+        );
         Ok(allowed)
     }
     fn run(&self, program: &Path, args: &[String], cwd: &Path) -> Result<String> {
@@ -326,7 +378,10 @@ impl Console {
             return;
         }
         let path = self.paths.state.join("commander-health.json");
-        if let Ok(mut record) = fs::read(&path).map_err(|_| ()).and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ())) {
+        if let Ok(mut record) = fs::read(&path)
+            .map_err(|_| ())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ()))
+        {
             if record["pid"] == std::process::id() && record["finished_at"].is_null() {
                 record["stage"] = json!(stage);
                 let _ = atomic_write(&path, record.to_string().as_bytes());
@@ -434,13 +489,10 @@ impl Console {
         }
     }
     fn todos(&self) -> Result<Value> {
-        let v: Value = serde_json::from_str(&read_text(
-            &self.paths.todo.join("todo.json"),
-            16 * 1024 * 1024,
-        )?)
-        .map_err(|_| io_fault())?;
+        let v =
+            cc_todo::read_store(&self.paths.todo.join("todo.json")).map_err(todo_store_fault)?;
         if !v["projects"].is_object() || !v["items"].is_array() {
-            return Err(io_fault());
+            return Err(todo_invalid());
         }
         Ok(v)
     }
@@ -639,16 +691,14 @@ impl Console {
             {
                 let mut row = item.clone();
                 let links = item["jobs"].as_array().cloned().unwrap_or_default();
-                row["linked_jobs"] = json!(
-                    links
+                row["linked_jobs"] = json!(links
+                    .iter()
+                    .map(|id| jobs
                         .iter()
-                        .map(|id| jobs
-                            .iter()
-                            .find(|j| j["id"] == *id)
-                            .map(public_job)
-                            .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
-                        .collect::<Vec<_>>()
-                );
+                        .find(|j| j["id"] == *id)
+                        .map(public_job)
+                        .unwrap_or_else(|| json!({"id":id,"status":"missing","cwd":null})))
+                    .collect::<Vec<_>>());
                 let status = strv(item, "status");
                 if let Some(rows) = statuses[status].as_array_mut() {
                     rows.push(row);
@@ -939,10 +989,10 @@ impl Console {
         let signature = trigger_signature(&t);
         if let Some(position) = s.queue.iter().position(|old| {
             old.key == t.key
-                && old.options.is_null()
-                && !t.options.is_null()
+                && options_upgrade(&old.options, &t.options)
                 && old.todo_id == t.todo_id
                 && old.prompt == t.prompt
+                && old.cwd == t.cwd
         }) {
             // Upgrade only an accepted, unlaunched legacy request with the same body.
             // Its launch key stays stable, so a lost launcher response remains recoverable.
@@ -1066,7 +1116,8 @@ impl Console {
             let scheduler_key = t
                 .todo_id
                 .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id))
-                .and_then(|i| i["scheduler"]["console_receipts"][&t.key]["launch_key"].as_str());
+                .and_then(|i| i["scheduler"]["console_receipts"][&t.key]["launch_key"].as_str())
+                .filter(|key| *key == key_hash(&t.key));
             if let Some(job) = jobs.iter().find(|j| {
                 j["launch_key"] == key_hash(&t.key)
                     || scheduler_key.is_some_and(|key| {
@@ -1218,7 +1269,11 @@ impl Console {
         // several Git probes, so plan a small batch and rotate parked work.
         // Ordinary API dispatch keeps its existing full-batch behavior.
         let scan_limit = s.queue.len();
-        let attempt_limit = if cc_ask::tick_runtime::remaining().is_some() { 2 } else { scan_limit };
+        let attempt_limit = if cc_ask::tick_runtime::remaining().is_some() {
+            2
+        } else {
+            scan_limit
+        };
         let mut attempted = 0;
         let mut scanned = 0;
         // Eligibility is a batch plan. Refresh actual ownership again before
@@ -1228,41 +1283,79 @@ impl Console {
         // Resolve ownership and exclusions first; no checkout probes or launches.
         let mut repaired_timeout = false;
         for queued in s.queue.clone() {
-            if s.preparation_failures.get(&queued.key).is_none_or(|(_, code)| code != "command_timeout")
-                || s.preparation_recovery.get(&queued.key).is_some_and(|record| record["timeout_scope"] == "command") { continue; }
+            if s.preparation_failures
+                .get(&queued.key)
+                .is_none_or(|(_, code)| code != "command_timeout")
+                || s.preparation_recovery
+                    .get(&queued.key)
+                    .is_some_and(|record| record["timeout_scope"] == "command")
+            {
+                continue;
+            }
             let mut trigger = queued;
-            let Ok(id) = decision_todo(&trigger, jobs, &db) else { continue; };
+            let Ok(id) = decision_todo(&trigger, jobs, &db) else {
+                continue;
+            };
             trigger.todo_id = id;
             let item = id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            if item.is_some_and(|i| matches!(strv(i, "status"), "done" | "block" | "wait") || strv(i, "project") == "owner") { continue; }
+            if item.is_some_and(|i| {
+                matches!(strv(i, "status"), "done" | "block" | "wait")
+                    || strv(i, "project") == "owner"
+            }) {
+                continue;
+            }
             let project = item.map(|i| strv(i, "project")).unwrap_or("");
             let source = launch_source(&trigger, item, jobs);
             if self.excluded(project, &trigger.cwd, &db)?
-                || source.map(|source| self.excluded(project, strv(source, "cwd"), &db)).transpose()?.unwrap_or(false)
+                || source
+                    .map(|source| self.excluded(project, strv(source, "cwd"), &db))
+                    .transpose()?
+                    .unwrap_or(false)
                 || matches!((item, source), (Some(item), Some(source)) if !(explicit_workspace_receipt(item, source)
-                    || terminal(source) && source_todo_id(source, &db) == item["id"].as_u64() && todo_has_job(item, source))) { continue; }
+                    || terminal(source) && source_todo_id(source, &db) == item["id"].as_u64() && todo_has_job(item, source)))
+            {
+                continue;
+            }
             repaired_timeout |= self.recheck_legacy_timeout(s, &trigger.key);
         }
-        if repaired_timeout { self.save(s)?; }
+        if repaired_timeout {
+            self.save(s)?;
+        }
         self.patrol_stage("capacity");
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
         let priorities = fs::read(self.paths.tools.join("scheduler/priorities.json"))
-            .ok().and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok()).unwrap_or(Value::Null);
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
         let ranks = cc_scheduler::priority::todo_ranks(&db, &priorities);
         let job_ranks = cc_scheduler::priority::job_ranks(jobs, &db, &priorities);
         let prefer_todo = s.patrol_turn.is_multiple_of(2);
         s.queue.sort_by_cached_key(|trigger| {
             let id = trigger_todo_id(trigger, jobs, &db);
-            let rank = id.and_then(|id| ranks.get(&id).copied()).or_else(|| {
-                launch_source(trigger, None, jobs).and_then(|j| job_ranks.get(strv(j,"id")).copied())
-            }).unwrap_or_else(|| {
-                let project = db["projects"].as_object().and_then(|projects| projects.iter()
-                    .filter(|(_,path)| path.as_str().is_some_and(|path| path_under(&trigger.cwd,path)))
-                    .max_by_key(|(_,path)| path.as_str().unwrap_or("").len()).map(|(project,_)|project.as_str())).unwrap_or("");
-                cc_scheduler::priority::item_rank(&json!({"project":project}), &priorities)
-            });
+            let rank = id
+                .and_then(|id| ranks.get(&id).copied())
+                .or_else(|| {
+                    launch_source(trigger, None, jobs)
+                        .and_then(|j| job_ranks.get(strv(j, "id")).copied())
+                })
+                .unwrap_or_else(|| {
+                    let project = db["projects"]
+                        .as_object()
+                        .and_then(|projects| {
+                            projects
+                                .iter()
+                                .filter(|(_, path)| {
+                                    path.as_str()
+                                        .is_some_and(|path| path_under(&trigger.cwd, path))
+                                })
+                                .max_by_key(|(_, path)| path.as_str().unwrap_or("").len())
+                                .map(|(project, _)| project.as_str())
+                        })
+                        .unwrap_or("");
+                    cc_scheduler::priority::item_rank(&json!({"project":project}), &priorities)
+                });
             (rank, id.is_some() != prefer_todo)
         });
         if cc_ask::tick_runtime::remaining().is_some() {
@@ -1283,7 +1376,10 @@ impl Console {
             let mut t = s.queue[0].clone();
             let db = &db;
             match decision_todo(&t, &candidate_jobs, db) {
-                Ok(id) => { t.todo_id = id; s.queue[0].todo_id = id; }
+                Ok(id) => {
+                    t.todo_id = id;
+                    s.queue[0].todo_id = id;
+                }
                 Err(reason) => {
                     s.suppressed.insert(t.key.clone(), reason.into());
                     let waiting = s.queue.remove(0);
@@ -1291,9 +1387,18 @@ impl Console {
                     continue;
                 }
             }
-            let project = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id)).map(|item| strv(item, "project")).unwrap_or("");
-            let item = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            let source_excluded = launch_source(&t, item, &candidate_jobs).map(|source| self.excluded(project, strv(source,"cwd"), db)).transpose()?.unwrap_or(false);
+            let project = t
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id))
+                .map(|item| strv(item, "project"))
+                .unwrap_or("");
+            let item = t
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            let source_excluded = launch_source(&t, item, &candidate_jobs)
+                .map(|source| self.excluded(project, strv(source, "cwd"), db))
+                .transpose()?
+                .unwrap_or(false);
             if self.excluded(project, &t.cwd, db)? || source_excluded {
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
@@ -1301,9 +1406,11 @@ impl Console {
             }
             // Known waits cannot launch. Keep their recovery evidence intact;
             // investigating them again consumes the next ready item's budget.
-            if item.is_some_and(|i| strv(i, "status") == "wait"
-                || cc_ask::job_policy::todo_wait::waiting(db, i)
-                || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))) {
+            if item.is_some_and(|i| {
+                strv(i, "status") == "wait"
+                    || cc_ask::job_policy::todo_wait::waiting(db, i)
+                    || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))
+            }) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
@@ -1347,8 +1454,13 @@ impl Console {
             }
             if let Some(url) = pr_review_url(&t.key) {
                 let owner_waiting = pr_owner_waiting(url, fresh_jobs);
-                let stale_prs = cc_ask::tick_runtime::remaining().is_some() && now().saturating_sub(s.prs_at) >= 60;
-                if stale_prs || s.prs_error.is_some() || pr_review_busy(url, s, fresh_jobs) || owner_waiting {
+                let stale_prs = cc_ask::tick_runtime::remaining().is_some()
+                    && now().saturating_sub(s.prs_at) >= 60;
+                if stale_prs
+                    || s.prs_error.is_some()
+                    || pr_review_busy(url, s, fresh_jobs)
+                    || owner_waiting
+                {
                     let waiting = s.queue.remove(0);
                     s.queue.push(waiting);
                     continue;
@@ -1428,13 +1540,21 @@ impl Console {
             let item = t
                 .todo_id
                 .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            if item.is_some_and(|i| strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(db, i) || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
+            if item.is_some_and(|i| {
+                strv(i, "status") == "wait"
+                    || cc_ask::job_policy::todo_wait::waiting(db, i)
+                    || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))
+            }) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
             }
-            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, db)? || item.is_some_and(|i| matches!(strv(i,"status"),"done"|"block") || strv(i,"project")=="owner") {
+            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, db)?
+                || item.is_some_and(|i| {
+                    matches!(strv(i, "status"), "done" | "block") || strv(i, "project") == "owner"
+                })
+            {
                 suppress_trigger(s, &t, "対象外のプロジェクト、または完了済みの作業です。");
                 continue;
             }
@@ -1465,7 +1585,14 @@ impl Console {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
                     } else {
-                        self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            "source_workspace_unavailable",
+                            db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                         continue;
                     }
                     let source_owned = source.is_some_and(|job| {
@@ -1572,14 +1699,36 @@ impl Console {
                 s.queue.push(waiting);
                 continue;
             }
-            if attempted >= attempt_limit { break; }
-            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+            if attempted >= attempt_limit {
+                break;
+            }
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20))
+            {
                 self.defer_patrol(s, &t.key)?;
-                return Err(fault(StatusCode::GATEWAY_TIMEOUT, "patrol_deferred", "起動確認の時間を次の巡回で確保します。"));
+                return Err(fault(
+                    StatusCode::GATEWAY_TIMEOUT,
+                    "patrol_deferred",
+                    "起動確認の時間を次の巡回で確保します。",
+                ));
             }
             attempted += 1;
             if let Some(item) = item.filter(|i| i["subwork"].is_object()) {
                 let accepted = s.request_options.get(&t.key).unwrap_or(&t.options);
+                let source = launch_source(&t, Some(item), fresh_jobs);
+                let accepted = match trigger_launch_options(&t, Some(item), accepted, source) {
+                    Ok(options) => options,
+                    Err(error) => {
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            error.code,
+                            db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
+                        continue;
+                    }
+                };
                 let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt,
                     "options":accepted,"read_only":trigger_read_only(&t) || accepted["sandbox"] == "read-only"});
                 match self.runner.dispatch_subwork(
@@ -1601,7 +1750,14 @@ impl Console {
                         self.save(s)?;
                     }
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code, db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            error.code,
+                            db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                     }
                 }
                 continue;
@@ -1624,7 +1780,14 @@ impl Console {
                     t.cwd = match self.restored_workspace(item, source, db, base) {
                         Ok(cwd) => cwd.into(),
                         Err(_) => {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
+                            self.defer_failure(
+                                s,
+                                &t.key,
+                                "source_workspace_unavailable",
+                                db,
+                                fresh_jobs,
+                                &mut evidence_cache,
+                            )?;
                             continue;
                         }
                     };
@@ -1672,9 +1835,13 @@ impl Console {
                     continue;
                 }
             };
-            let capacity_started = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+            let capacity_started = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
             if !self.runner.stall_capacity(&self.paths, item)? {
-                let capacity = fs::read(self.paths.state.join("console-capacity.json")).ok()
+                let capacity = fs::read(self.paths.state.join("console-capacity.json"))
+                    .ok()
                     .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
                     .map(|value| capacity_wait_detail(value, t.todo_id, capacity_started))
                     .unwrap_or(Value::Null);
@@ -1825,7 +1992,14 @@ impl Console {
                     }) {
                     Ok(options) => options,
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            error.code,
+                            &db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                         continue;
                     }
                 };
@@ -1848,10 +2022,20 @@ impl Console {
                     })
                 })
             {
-                let changed: BTreeSet<_> = latest_options.as_object().into_iter().flat_map(|v| v.keys())
+                let changed: BTreeSet<_> = latest_options
+                    .as_object()
+                    .into_iter()
+                    .flat_map(|v| v.keys())
                     .chain(t.options.as_object().into_iter().flat_map(|v| v.keys()))
-                    .filter(|key| latest_options[*key] != t.options[*key]).cloned().collect();
-                self.note_wait(s, &t.key, "late_scope_or_session", json!({"changed_fields":changed}));
+                    .filter(|key| latest_options[*key] != t.options[*key])
+                    .cloned()
+                    .collect();
+                self.note_wait(
+                    s,
+                    &t.key,
+                    "late_scope_or_session",
+                    json!({"changed_fields":changed}),
+                );
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
@@ -1991,41 +2175,63 @@ impl Console {
         // refreshes eligibility; the next dispatch still applies priority and
         // every current ownership, exclusion, dependency and admission check.
         parked_recovery.sort_by_key(|key| {
-            s.preparation_recovery.get(key)
+            s.preparation_recovery
+                .get(key)
                 .and_then(|r| r["last_recovery_probe_nanos"].as_str())
                 .and_then(|n| n.parse::<u128>().ok())
                 .unwrap_or(0)
         });
         for key in parked_recovery.into_iter().take(2) {
-            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20))
+            {
                 break;
             }
-            let Some(trigger) = s.queue.iter().find(|t| t.key == key).cloned() else { continue; };
-            let item = trigger.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            let Some(trigger) = s.queue.iter().find(|t| t.key == key).cloned() else {
+                continue;
+            };
+            let item = trigger
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
             if item.is_some_and(|i| todo_has_active_worker(i, &candidate_jobs, &key_hash(&key))) {
                 continue;
             }
-            let at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-            s.preparation_recovery.entry(key.clone()).or_insert(json!({}))["last_recovery_probe_nanos"] = json!(at.to_string());
+            let at = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
+            s.preparation_recovery
+                .entry(key.clone())
+                .or_insert(json!({}))["last_recovery_probe_nanos"] = json!(at.to_string());
             // Persist the cursor before an external probe can exhaust the deadline.
             self.save(s)?;
             self.patrol_stage("recovery_evidence");
             if self.recovery_ready(s, &trigger, &db, &candidate_jobs, &mut evidence_cache)? {
                 s.preparation_failures.remove(&key);
-                s.preparation_recovery.entry(key).or_insert(json!({}))["state"] = json!("recovery_ready_for_launch");
+                s.preparation_recovery.entry(key).or_insert(json!({}))["state"] =
+                    json!("recovery_ready_for_launch");
             }
         }
         self.save(s)?;
         launch_failure.map_or(Ok(()), Err)
     }
     fn note_wait(&self, s: &mut QueueState, key: &str, kind: &str, detail: Value) {
-        let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+        let record = s
+            .preparation_recovery
+            .entry(key.into())
+            .or_insert(json!({}));
         record["last_wait"] = json!({"at":now(),"kind":kind,"detail":detail});
         // Saved with the ordinary dispatch checkpoint, not once per parked item.
     }
     fn defer_patrol(&self, s: &mut QueueState, key: &str) -> Result<()> {
-        let index = s.queue.iter().position(|t| t.key == key).ok_or_else(io_fault)?;
-        let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+        let index = s
+            .queue
+            .iter()
+            .position(|t| t.key == key)
+            .ok_or_else(io_fault)?;
+        let record = s
+            .preparation_recovery
+            .entry(key.into())
+            .or_insert(json!({}));
         record["state"] = json!("waiting_for_patrol_budget");
         record["budget_deferred_at"] = json!(now());
         record["next_action"] = json!("次の巡回で起動確認の時間を確保して同じ受付を続ける。");
@@ -2033,8 +2239,18 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<()> {
-        if code == "patrol_deferred" || cc_ask::tick_runtime::remaining().is_some_and(|left| left.is_zero()) {
+    fn defer_failure(
+        &self,
+        s: &mut QueueState,
+        key: &str,
+        code: &str,
+        db: &Value,
+        jobs: &[Value],
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Result<()> {
+        if code == "patrol_deferred"
+            || cc_ask::tick_runtime::remaining().is_some_and(|left| left.is_zero())
+        {
             return self.defer_patrol(s, key);
         }
         let trigger = s.queue.iter().find(|t| t.key == key).ok_or_else(io_fault)?;
@@ -2046,7 +2262,9 @@ impl Console {
         let attempts = record["attempts"].as_u64().unwrap_or(0).saturating_add(1);
         record["attempts"] = json!(attempts);
         record["code"] = json!(code);
-        if code == "command_timeout" { record["timeout_scope"] = json!("command"); }
+        if code == "command_timeout" {
+            record["timeout_scope"] = json!("command");
+        }
         record["observed_at"] = json!(now());
         record["evidence"] = evidence;
         record["state"] = json!("waiting_for_repair");
@@ -2066,7 +2284,13 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn recovery_evidence_from(&self, t: &Trigger, db: Option<&Value>, jobs: Option<&[Value]>, cache: &mut BTreeMap<(String, String), Value>) -> Value {
+    fn recovery_evidence_from(
+        &self,
+        t: &Trigger,
+        db: Option<&Value>,
+        jobs: Option<&[Value]>,
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Value {
         let metadata = |p: &Path| match fs::metadata(p) {
             Ok(m) => json!({"exists":true,"directory":m.is_dir(),"bytes":m.len(),
                 "modified":m.modified().ok().and_then(|at|at.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string())}),
@@ -2112,11 +2336,20 @@ impl Console {
             "launcher":metadata(&self.paths.jobs.parent().unwrap_or(&self.paths.tools).join("codex_jobs.exe"))})
     }
     fn recheck_legacy_timeout(&self, s: &mut QueueState, key: &str) -> bool {
-        let Some((retry, code)) = s.preparation_failures.get(key).cloned() else { return false; };
-        if code == "command_timeout" && s.preparation_recovery.get(key).is_none_or(|record| record["timeout_scope"] != "command") {
+        let Some((retry, code)) = s.preparation_failures.get(key).cloned() else {
+            return false;
+        };
+        if code == "command_timeout"
+            && s.preparation_recovery
+                .get(key)
+                .is_none_or(|record| record["timeout_scope"] != "command")
+        {
             // Old captures could not distinguish a full command timeout from
             // the patrol's truncated remainder. Recheck once under scoped rules.
-            let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+            let record = s
+                .preparation_recovery
+                .entry(key.into())
+                .or_insert(json!({}));
             record["legacy_timeout"] = json!({"retry_at":retry,"attempts":record["attempts"],"observed_at":record["observed_at"]});
             record["state"] = json!("rechecking_timeout_scope");
             s.preparation_failures.remove(key);
@@ -2124,7 +2357,14 @@ impl Console {
         }
         false
     }
-    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<bool> {
+    fn recovery_ready(
+        &self,
+        s: &mut QueueState,
+        t: &Trigger,
+        db: &Value,
+        jobs: &[Value],
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Result<bool> {
         if self.recheck_legacy_timeout(s, &t.key) {
             self.save(s)?;
             return Ok(true);
@@ -2133,8 +2373,11 @@ impl Console {
             return Ok(true);
         };
         let current = self.recovery_evidence_from(t, Some(db), Some(jobs), cache);
-        let old = s.preparation_recovery.get(&t.key)
-            .and_then(|r| r.get("evidence")).filter(|e| !e.is_null());
+        let old = s
+            .preparation_recovery
+            .get(&t.key)
+            .and_then(|r| r.get("evidence"))
+            .filter(|e| !e.is_null());
         if old.is_none() {
             return Ok(retry <= now());
         }
@@ -2211,7 +2454,36 @@ impl Console {
                 .map(|p| p.to_string_lossy().into_owned())
                 .map_err(|_| io_fault())
         };
-        Ok(!path_under(&resolved(base)?, &resolved(cwd)?))
+        let cwd = resolved(cwd)?;
+        let home = std::env::var_os("USERPROFILE")
+            .map(PathBuf::from)
+            .map(|p| cc_scheduler::common::resolve(&p).map_err(|_| io_fault()))
+            .transpose()?;
+        if broad_launch_directory(
+            &cwd,
+            &resolved(&self.paths.tools.to_string_lossy())?,
+            home.as_deref(),
+        ) {
+            return Ok(false);
+        }
+        if self.excluded(strv(item, "project"), &cwd, db)? {
+            return Ok(false);
+        }
+        let names_file = self.paths.root.join("excluded-projects.txt");
+        if names_file.exists() {
+            for name in read_text(&names_file, 64 * 1024)?
+                .lines()
+                .map(str::trim)
+                .filter(|n| !n.is_empty() && !n.starts_with('#'))
+            {
+                if let Some(base) = db["projects"][name].as_str() {
+                    if path_under(&cwd, &resolved(base)?) {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+        Ok(!path_under(&resolved(base)?, &cwd))
     }
     fn restored_workspace<'a>(
         &self,
@@ -2601,7 +2873,9 @@ impl Console {
             }
         }
         // Refusing additional work must not prevent accepted work from making progress.
-        if cc_ask::tick_runtime::remaining().is_none() { self.dispatch(s, &jobs)?; }
+        if cc_ask::tick_runtime::remaining().is_none() {
+            self.dispatch(s, &jobs)?;
+        }
         intake_error.map_or(Ok(()), Err)
     }
     pub fn tick(&self) -> Result<()> {
@@ -2628,7 +2902,9 @@ impl Console {
         // preparation phase, rather than a second launch with a tiny remainder.
         let dispatch = if result.is_ok() && cc_ask::tick_runtime::remaining().is_none() {
             self.dispatch(&mut s, &jobs)
-        } else { Ok(()) };
+        } else {
+            Ok(())
+        };
         let result = result.and(inbox).and(dispatch);
         s.last_tick = now();
         s.last_error = result.as_ref().err().map(|e| e.code.into());
@@ -2755,14 +3031,24 @@ impl Console {
                 }
                 validate_model_options(item)?;
                 if let Some(cwd) = requested_cwd {
-                    if !Path::new(cwd).is_dir() { return Err(invalid()); }
+                    if !Path::new(cwd).is_dir() {
+                        return Err(invalid());
+                    }
                     if !self.checkout_belongs(cwd, project_cwd) {
-                        let source = v["source_job_id"].as_str()
+                        let source = v["source_job_id"]
+                            .as_str()
                             .and_then(|id| jobs.iter().find(|job| job["id"] == id))
                             .ok_or_else(invalid)?;
                         if matches!(strv(item, "status"), "done" | "block" | "wait")
                             || project == "owner"
-                            || !self.receipt_artifact_directory(cwd, item, source, &db, project_cwd)? {
+                            || !self.receipt_artifact_directory(
+                                cwd,
+                                item,
+                                source,
+                                &db,
+                                project_cwd,
+                            )?
+                        {
                             return Err(invalid());
                         }
                     }
@@ -2805,6 +3091,39 @@ impl Console {
                         }
                     })
                 };
+                // The durable accepted representation is authoritative. Rebuilding
+                // all nullable members changes fingerprints of pre-update receipts.
+                if let Some(accepted) = s.request_options.get(&key).filter(|v| v.is_object()) {
+                    let incoming = options;
+                    options = accepted.clone();
+                    for field in [
+                        "source_job_id",
+                        "resume_session",
+                        "isolate_worktree",
+                        "model",
+                        "effort",
+                        "task_type",
+                        "sandbox",
+                    ] {
+                        if !incoming[field].is_null() {
+                            options[field] = incoming[field].clone();
+                        }
+                    }
+                }
+                let upgrade_baseline = s.queue.iter().any(|old| {
+                    old.key == key
+                        && !s.launches.contains_key(&key)
+                        && !s.handled.contains(&key)
+                        && ["model", "effort"].iter().any(|field| {
+                            old.options[*field].is_null() && !options[*field].is_null()
+                        })
+                });
+                if options["_todo_defaults"].is_null()
+                    && (!s.fingerprints.contains_key(&key) || upgrade_baseline)
+                {
+                    options["_todo_defaults"] =
+                        json!({"model":item["model"],"effort":item["effort"]});
+                }
                 // Recovery settings are derived from a mutable ToDo. Retrying its
                 // reservation keeps the accepted identity; dispatch rechecks the ToDo.
                 if key.starts_with("manual:stall-")
@@ -2872,10 +3191,18 @@ const PREAMBLE: &str = "あなたはこのPCの作業を引き継ぐオーケス
 fn capacity_wait_detail(value: Value, todo_id: Option<u64>, started: u128) -> Value {
     if todo_id.is_some_and(|id| value["todo_id"].as_u64() == Some(id))
         && value["allowed"] == false
-        && value["at_nanos"].as_str().and_then(|at| at.parse::<u128>().ok()).is_some_and(|at| at >= started)
-        && value["at"].as_u64().is_some_and(|at| now().saturating_sub(at) <= 10) {
+        && value["at_nanos"]
+            .as_str()
+            .and_then(|at| at.parse::<u128>().ok())
+            .is_some_and(|at| at >= started)
+        && value["at"]
+            .as_u64()
+            .is_some_and(|at| now().saturating_sub(at) <= 10)
+    {
         value
-    } else { Value::Null }
+    } else {
+        Value::Null
+    }
 }
 fn protected(path: &str) -> bool {
     #[cfg(not(test))]
@@ -2977,6 +3304,46 @@ fn same_folder(a: &str, b: &str) -> bool {
         .trim_end_matches('/')
         .eq_ignore_ascii_case(b.replace('\\', "/").trim_end_matches('/'))
 }
+fn broad_launch_directory(cwd: &str, tools: &str, home: Option<&Path>) -> bool {
+    let normalized = cwd.replace('\\', "/");
+    if normalized.split('/').filter(|p| !p.is_empty()).count() <= 1 || same_folder(cwd, tools) {
+        return true;
+    }
+    if let Some(parent) = Path::new(tools).parent() {
+        if same_folder(cwd, &parent.to_string_lossy()) {
+            return true;
+        }
+    }
+    if let Some(home) = home {
+        let home = home.to_string_lossy();
+        if path_under(&home, cwd) {
+            return true;
+        }
+        for suffix in ["Desktop", "Documents", "Downloads", "Desktop/dev/ADJ"] {
+            if same_folder(cwd, &format!("{home}/{suffix}")) {
+                return true;
+            }
+        }
+    }
+    false
+}
+#[cfg(test)] // Production uses the scheduler's shared reservation transaction.
+fn install_console_subwork_request(row: &mut Value, request: &Value) {
+    if !row["scheduler"].is_object() {
+        row["scheduler"] = json!({});
+    }
+    row["scheduler"]["key"] = request["launch_key"].clone();
+    row["scheduler"]["console_request"] = request.clone();
+    row["scheduler"]["console_fresh_request"] = json!(true);
+    if !row["scheduler"]["console_receipts"].is_object() {
+        row["scheduler"]["console_receipts"] = json!({});
+    }
+    row["scheduler"]["console_receipts"][strv(request, "key")] =
+        json!({"request":request,"launch_key":request["launch_key"]});
+    for field in ["selection", "resume_session", "prompt"] {
+        row["scheduler"].as_object_mut().unwrap().remove(field);
+    }
+}
 fn canonical_request<'a>(state: &'a QueueState, key: &'a str) -> &'a str {
     let mut current = key;
     for _ in 0..state.merged_requests.len() {
@@ -3049,6 +3416,9 @@ fn trigger_launch_options(
     };
     if trigger_read_only(t) {
         requested["sandbox"] = json!("read-only");
+    }
+    if automatic_recovery(&t.key) {
+        requested.as_object_mut().unwrap().remove("_todo_defaults");
     }
     launch_options(item, &requested, source, inherited)
 }
@@ -3123,6 +3493,38 @@ fn todo_has_active_worker(item: &Value, jobs: &[Value], launch_key: &str) -> boo
                 }))
     })
 }
+fn options_upgrade(old: &Value, new: &Value) -> bool {
+    if !new.is_object() {
+        return false;
+    }
+    let normalize = |value: &Value| {
+        let mut value = value.as_object().cloned().unwrap_or_default();
+        value.remove("schema");
+        value.remove("_todo_defaults");
+        value.retain(|_, value| !value.is_null());
+        value
+    };
+    let mut old = normalize(old);
+    let new = normalize(new);
+    let mut changed = false;
+    for field in [
+        "model",
+        "effort",
+        "source_job_id",
+        "resume_session",
+        "isolate_worktree",
+        "task_type",
+        "sandbox",
+    ] {
+        if !old.contains_key(field) {
+            if let Some(value) = new.get(field) {
+                old.insert(field.into(), value.clone());
+                changed = true;
+            }
+        }
+    }
+    changed && old == new
+}
 fn launch_options(
     item: Option<&Value>,
     requested: &Value,
@@ -3139,9 +3541,15 @@ fn launch_options(
         json!({})
     };
     for (field, default) in [("model", "gpt-6.1-sol"), ("effort", "high")] {
+        // A later ToDo edit overrides the intake. An unchanged ToDo default
+        // must not replace an explicitly requested independent review model.
+        let todo_changed = !requested["_todo_defaults"].is_object()
+            || item.is_some_and(|i| i[field] != requested["_todo_defaults"][field]);
         let value = item
+            .filter(|_| todo_changed)
             .and_then(|i| i[field].as_str())
             .or_else(|| requested[field].as_str())
+            .or_else(|| item.and_then(|i| i[field].as_str()))
             .or_else(|| {
                 source.and_then(|s| s[field].as_str()).filter(|v| {
                     if field == "model" {
@@ -4143,23 +4551,11 @@ pub async fn resident(console: Arc<Console>) {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn resident_queue_mutex_wait_obeys_patrol_deadline_and_recovers() {
-        let fixture = Fixture::new();
-        let held = fixture.console.lock.lock().unwrap();
-        let deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::ZERO);
-        let error = match fixture.console.queue_lock() {
-            Err(e) => e,
-            Ok(_) => panic!("held lock must not be acquired"),
-        };
-        assert_eq!(error.code, "command_timeout");
-        drop(deadline);
-        drop(held);
-        assert!(fixture.console.queue_lock().is_ok());
-    }
     include!("delegation_model_tests.rs");
-    include!("receipt_workspace_tests.rs");
+    include!("todo1842_tests.rs");
     include!("resume_recovery_tests.rs");
+    include!("todo_capacity_tests.rs");
+    include!("todo2341_receipt_tests.rs");
     use super::*;
 
     #[cfg(windows)]
@@ -4227,13 +4623,17 @@ mod tests {
         before_admission: Mutex<Option<Value>>,
     }
     impl Runner for Fake {
-        fn dispatch_subwork(&self, _: &Paths, id: u64, request: &Value) -> Result<Option<String>> {
-            self.calls.lock().unwrap().push(vec![
-                "subwork".into(),
-                id.to_string(),
-                request.to_string(),
-            ]);
-            Err(external())
+        fn dispatch_subwork(
+            &self,
+            _paths: &Paths,
+            _id: u64,
+            request: &Value,
+        ) -> Result<Option<String>> {
+            self.calls
+                .lock()
+                .unwrap()
+                .push(vec!["dispatch_subwork".into(), request.to_string()]);
+            Ok(None)
         }
         fn receipt_exists(&self, path: &Path) -> Result<bool> {
             if *self.fail_receipt_metadata.lock().unwrap() {
@@ -4593,11 +4993,9 @@ mod tests {
         );
         state.prs = prs;
         state.prs_error = Some("test".into());
-        assert!(
-            !detect(&f.console.jobs().unwrap(), &state)
-                .iter()
-                .any(|t| t.key.starts_with("pr:"))
-        );
+        assert!(!detect(&f.console.jobs().unwrap(), &state)
+            .iter()
+            .any(|t| t.key.starts_with("pr:")));
     }
     #[test]
     fn pr_reviews_repeat_only_after_three_new_handoffs_and_survive_restart() {
@@ -5010,11 +5408,9 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|s| s == "run"))
             .unwrap();
-        assert!(
-            launch
-                .windows(2)
-                .any(|pair| pair == ["--mcp-profile", "browser"])
-        );
+        assert!(launch
+            .windows(2)
+            .any(|pair| pair == ["--mcp-profile", "browser"]));
     }
     #[test]
     fn inbox_does_not_redelegate_consumed_answers_after_question_closes() {
@@ -5172,14 +5568,13 @@ mod tests {
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
         assert_eq!(f.console.read_state().unwrap().queue.len(), 1);
-        assert!(
-            !f.fake
-                .calls
-                .lock()
-                .unwrap()
-                .iter()
-                .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe")))
-        );
+        assert!(!f
+            .fake
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|c| c.iter().any(|a| a.ends_with("cc-inbox.exe"))));
         f.on();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 1);
@@ -5270,11 +5665,9 @@ mod tests {
         f.console.tick().unwrap();
         let calls = f.fake.calls.lock().unwrap();
         let launch = calls.iter().find(|c| c.iter().any(|a| a == "run")).unwrap();
-        assert!(
-            launch
-                .windows(2)
-                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-        );
+        assert!(launch
+            .windows(2)
+            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
         assert!(launch.windows(2).any(|p| p == ["--todo-id", "1"]));
         drop(calls);
         assert_eq!(f.console.todos().unwrap()["items"][0]["status"], "doing");
@@ -5323,10 +5716,9 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(
-            run.windows(2)
-                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-        );
+        assert!(run
+            .windows(2)
+            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
         assert!(run.windows(2).any(|p| p == ["--model", "gpt-6-sol"]));
         assert!(run.windows(2).any(|p| p == ["--effort", "max"]));
     }
@@ -5379,10 +5771,9 @@ mod tests {
         assert_eq!(jobs.len(), 2);
         assert_ne!(jobs[0]["cwd"], jobs[1]["cwd"]);
         assert_ne!(jobs[0]["cwd"], json!(f.root));
-        assert!(
-            jobs.iter()
-                .all(|j| Path::new(strv(j, "cwd")).join(".git").exists())
-        );
+        assert!(jobs
+            .iter()
+            .all(|j| Path::new(strv(j, "cwd")).join(".git").exists()));
         let calls = f.fake.calls.lock().unwrap();
         assert_eq!(
             calls
@@ -5391,6 +5782,197 @@ mod tests {
                 .count(),
             2
         );
+    }
+    #[test]
+    fn subwork_foreign_reservation_cannot_acknowledge_new_body() {
+        let f = Fixture::new();
+        f.on();
+        let key = "manual:new-subwork-body";
+        let old_key = key_hash("ordinary-old-body");
+        let path = f.console.paths.todo.join("todo.json");
+        let mut db = f.console.todos().unwrap();
+        db["items"][0]["subwork"] = json!({"kind":"check"});
+        db["items"][0]["scheduler"]["console_receipts"][key] = json!({"launch_key":old_key});
+        fs::write(&path, db.to_string()).unwrap();
+        f.job(
+            "old-subwork",
+            "ordinary",
+            "succeeded",
+            "状態: 継続中\n以前の本文",
+            "",
+        );
+        let jp = f.console.paths.jobs.join("old-subwork/job.json");
+        let mut job: Value = serde_json::from_slice(&fs::read(&jp).unwrap()).unwrap();
+        job["launch_key"] = json!(old_key);
+        job["todo_id"] = json!(1);
+        fs::write(jp, job.to_string()).unwrap();
+        let mut queue = QueueState {
+            initialized: true,
+            ..Default::default()
+        };
+        f.console
+            .enqueue(
+                &mut queue,
+                Trigger {
+                    key: key.into(),
+                    name: "new-subwork".into(),
+                    cwd: f.root.to_string_lossy().into(),
+                    prompt: "新しい本文を確認する".into(),
+                    todo_id: Some(1),
+                    options: Value::Null,
+                },
+            )
+            .unwrap();
+        let jobs = f.console.jobs().unwrap();
+        f.console.dispatch(&mut queue, &jobs).unwrap();
+        assert!(!queue.handled.contains(key));
+        assert_eq!(queue.queue[0].prompt, "新しい本文を確認する");
+        assert!(!queue.launches.contains_key(key));
+    }
+    #[test]
+    fn subwork_checkpoint_survives_interruption_before_dispatch() {
+        let f = Fixture::new();
+        f.on();
+        let key = "manual:crash-before-subwork-dispatch";
+        let request = json!({"key":key,"launch_key":key_hash(key),"prompt":"追加で確認する本文","options":{},"read_only":true});
+        let mut db = f.console.todos().unwrap();
+        db["items"][0]["subwork"] = json!({"kind":"check"});
+        install_console_subwork_request(&mut db["items"][0], &request);
+        fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+        // Restart from the durable checkpoint as the ordinary scheduler does first.
+        let restored = f.console.todos().unwrap();
+        let scheduler = &restored["items"][0]["scheduler"];
+        assert_eq!(
+            scheduler["console_receipts"][key]["launch_key"],
+            scheduler["key"]
+        );
+        assert_eq!(scheduler["console_receipts"][key]["request"], request);
+        let body = restored["items"][0]["scheduler"]["console_request"]["prompt"]
+            .as_str()
+            .unwrap_or("元の保存仕様だけ");
+        f.job(
+            "recovered-checkpoint",
+            "subwork",
+            "succeeded",
+            "状態: 継続中",
+            body,
+        );
+        let jp = f.console.paths.jobs.join("recovered-checkpoint/job.json");
+        let mut job: Value = serde_json::from_slice(&fs::read(&jp).unwrap()).unwrap();
+        job["launch_key"] = restored["items"][0]["scheduler"]["key"].clone();
+        job["todo_id"] = json!(1);
+        fs::write(jp, job.to_string()).unwrap();
+        let mut queue = QueueState {
+            initialized: true,
+            ..Default::default()
+        };
+        f.console
+            .enqueue(
+                &mut queue,
+                Trigger {
+                    key: key.into(),
+                    name: "crash-recovery".into(),
+                    cwd: f.root.to_string_lossy().into(),
+                    prompt: "追加で確認する本文".into(),
+                    todo_id: Some(1),
+                    options: Value::Null,
+                },
+            )
+            .unwrap();
+        let jobs = f.console.jobs().unwrap();
+        f.console.dispatch(&mut queue, &jobs).unwrap();
+        assert_eq!(body, "追加で確認する本文");
+        assert_eq!(
+            queue.launches.get(key).map(String::as_str),
+            Some("recovered-checkpoint")
+        );
+        assert!(queue.queue.is_empty());
+    }
+    #[test]
+    fn subwork_continuation_passes_inherited_read_only_to_scheduler() {
+        let f = Fixture::new();
+        f.on();
+        f.job(
+            "readonly-source",
+            "check",
+            "succeeded",
+            "状態: 継続中\n確認の残り",
+            "",
+        );
+        let jp = f.console.paths.jobs.join("readonly-source/job.json");
+        let mut job: Value = serde_json::from_slice(&fs::read(&jp).unwrap()).unwrap();
+        job["sandbox"] = json!("read-only");
+        job["todo_id"] = json!(1);
+        fs::write(jp, job.to_string()).unwrap();
+        let mut db = f.console.todos().unwrap();
+        db["items"][0]["subwork"] = json!({"kind":"check"});
+        db["items"][0]["jobs"] = json!(["readonly-source"]);
+        fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+        let mut queue = QueueState {
+            initialized: true,
+            ..Default::default()
+        };
+        f.console
+            .enqueue(
+                &mut queue,
+                Trigger {
+                    key: "decision:readonly-source".into(),
+                    name: "check-continue".into(),
+                    cwd: f.root.to_string_lossy().into(),
+                    prompt: "残る確認を続ける".into(),
+                    todo_id: Some(1),
+                    options: json!({"source_job_id":"readonly-source"}),
+                },
+            )
+            .unwrap();
+        let jobs = f.console.jobs().unwrap();
+        f.console.dispatch(&mut queue, &jobs).unwrap();
+        let calls = f.fake.calls.lock().unwrap();
+        let call = calls
+            .iter()
+            .find(|c| c[0] == "dispatch_subwork")
+            .expect("must reach scheduler adapter");
+        let request: Value = serde_json::from_str(&call[1]).unwrap();
+        assert_eq!(request["read_only"], true);
+        assert_eq!(request["options"]["sandbox"], "read-only");
+    }
+    #[test]
+    fn artifact_home_is_rejected_independently_of_registration_drive() {
+        assert!(broad_launch_directory(
+            "C:/Users/test-owner",
+            "D:/CC/Tools",
+            Some(Path::new("C:/Users/test-owner"))
+        ));
+        assert!(broad_launch_directory("D:/CC/Tools", "D:/CC/Tools", None));
+        assert!(!broad_launch_directory(
+            "C:/owned-artifacts/todo-1",
+            "D:/CC/Tools",
+            Some(Path::new("C:/Users/test-owner"))
+        ));
+    }
+    #[test]
+    fn artifact_exclusion_uses_resolved_alias_not_raw_path() {
+        let f = Fixture::new();
+        let registered = f.root.join("registered");
+        let excluded = f.root.join("excluded");
+        let alias = f.root.join("alias");
+        for path in [&registered, &excluded, &alias] {
+            fs::create_dir(path).unwrap();
+        }
+        let cwd = alias.join("../excluded").to_string_lossy().into_owned();
+        let item = json!({"id":1,"project":"demo","jobs":["source"]});
+        let source = json!({"id":"source","todo_id":1,"status":"succeeded","cwd":cwd});
+        let db = json!({"projects":{"demo":registered,"excluded-project":excluded}});
+        fs::write(
+            f.console.paths.root.join("excluded-projects.txt"),
+            "excluded-project\n",
+        )
+        .unwrap();
+        assert!(!f.console.excluded("demo", &cwd, &db).unwrap());
+        assert!(!f
+            .console
+            .receipt_artifact_directory(&cwd, &item, &source, &db, &registered.to_string_lossy())
+            .unwrap());
     }
     #[test]
     fn non_git_items_get_independent_source_copies_without_runtime_state_or_overwrites() {
@@ -5556,10 +6138,9 @@ mod tests {
             .iter()
             .find(|c| c.get(1).is_some_and(|a| a == "run"))
             .unwrap();
-        assert!(
-            run.windows(2)
-                .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-        );
+        assert!(run
+            .windows(2)
+            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
     }
     #[test]
     fn queued_message_becoming_an_open_question_is_not_launched() {
@@ -5586,13 +6167,12 @@ mod tests {
         .unwrap();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 0);
-        assert!(
-            f.console
-                .read_state()
-                .unwrap()
-                .handled
-                .contains("discord:12:99")
-        );
+        assert!(f
+            .console
+            .read_state()
+            .unwrap()
+            .handled
+            .contains("discord:12:99"));
     }
     #[test]
     fn inbox_checkpoint_advances_only_after_persisting_and_deduplicates() {
@@ -6212,11 +6792,12 @@ mod tests {
         let path = f.console.paths.jobs.join(&id).join("job.json");
         let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         job["status"] = json!("succeeded");
-        job["finished_at"] = json!(
-            chrono::DateTime::from_timestamp((now() - HISTORY_SECONDS) as i64, 0)
-                .unwrap()
-                .to_rfc3339()
-        );
+        job["finished_at"] = json!(chrono::DateTime::from_timestamp(
+            (now() - HISTORY_SECONDS) as i64,
+            0
+        )
+        .unwrap()
+        .to_rfc3339());
         fs::write(&path, job.to_string()).unwrap();
         let mut s = f.console.read_state().unwrap();
         maintain_state(&mut s, &f.console.jobs().unwrap(), now());
@@ -6245,13 +6826,12 @@ mod tests {
         f.console.todo_write("done", &json!({"id":1})).unwrap();
         f.console.tick().unwrap();
         assert!(!f.console.read_state().unwrap().suppressed.is_empty());
-        assert!(
-            !f.console
-                .read_state()
-                .unwrap()
-                .launches
-                .contains_key("manual:one")
-        );
+        assert!(!f
+            .console
+            .read_state()
+            .unwrap()
+            .launches
+            .contains_key("manual:one"));
     }
     #[test]
     fn receipt_metadata_errors_cannot_create_another_item() {
@@ -6411,11 +6991,10 @@ mod tests {
             let f = Fixture::new();
             let body = json!({"request_id":"music-atomic","project":"demo","title":"合成曲の担当","note":"元の要求"});
             *f.fake.lose_receipt.lock().unwrap() = true;
-            assert!(
-                f.console
-                    .api(&Method::POST, "todo/ensure", body.clone())
-                    .is_err()
-            );
+            assert!(f
+                .console
+                .api(&Method::POST, "todo/ensure", body.clone())
+                .is_err());
             let paths = cc_todo::Paths::at(&f.console.paths.todo, &f.console.paths.jobs);
             {
                 let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(1)).unwrap();
@@ -6468,11 +7047,10 @@ mod tests {
         fs::write(&store, db.to_string()).unwrap();
         let body = json!({"request_id":"music-global","project":"demo","title":"合成曲の担当","note":"元の要求"});
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(
-            f.console
-                .api(&Method::POST, "todo/ensure", body.clone())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .api(&Method::POST, "todo/ensure", body.clone())
+            .is_err());
         let mut other = body.clone();
         other["project"] = json!("other");
         assert_eq!(
@@ -6533,11 +7111,10 @@ mod tests {
         let body = json!({"request_id":"music-test-once","project":"demo",
             "title":"合成曲の担当","note":"生成要求の合成確認"});
         *f.fake.fail_todo.lock().unwrap() = true;
-        assert!(
-            f.console
-                .api(&Method::POST, "todo/ensure", body.clone())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .api(&Method::POST, "todo/ensure", body.clone())
+            .is_err());
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6547,11 +7124,10 @@ mod tests {
         );
         *f.fake.fail_todo.lock().unwrap() = false;
         *f.fake.lose_receipt.lock().unwrap() = true;
-        assert!(
-            f.console
-                .api(&Method::POST, "todo/ensure", body.clone())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .api(&Method::POST, "todo/ensure", body.clone())
+            .is_err());
         assert_eq!(
             f.console.todos().unwrap()["items"]
                 .as_array()
@@ -6595,11 +7171,9 @@ mod tests {
         );
         let mut invalid = body;
         invalid["request_id"] = json!("../outside");
-        assert!(
-            restarted
-                .api(&Method::POST, "todo/ensure", invalid)
-                .is_err()
-        );
+        assert!(restarted
+            .api(&Method::POST, "todo/ensure", invalid)
+            .is_err());
     }
 
     #[tokio::test]
@@ -6678,19 +7252,15 @@ mod tests {
                         "2026-10-10T09:15:00+09:00"
                     );
                 }
-                "jobs" => assert!(
-                    response["data"]["jobs"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .all(|job| job["summary"] == "")
-                ),
-                _ => assert!(
-                    response["data"]["text"]
-                        .as_str()
-                        .unwrap()
-                        .contains("保存を確認\n  現在のメモ [非表示]")
-                ),
+                "jobs" => assert!(response["data"]["jobs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|job| job["summary"] == "")),
+                _ => assert!(response["data"]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains("保存を確認\n  現在のメモ [非表示]")),
             }
         }
         assert_eq!(
@@ -6850,14 +7420,13 @@ mod tests {
             f.http(Method::POST, "delegation/off", "{}").await.1["data"]["enabled"],
             false
         );
-        assert!(
-            f.fake
-                .calls
-                .lock()
-                .unwrap()
-                .iter()
-                .any(|c| c.iter().any(|a| a.ends_with("todo.exe")))
-        );
+        assert!(f
+            .fake
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|c| c.iter().any(|a| a.ends_with("todo.exe"))));
     }
     #[tokio::test]
     async fn agent_routes_reject_external_headers_and_oversized_bodies() {
@@ -7058,12 +7627,10 @@ mod tests {
             .dispatch(&mut s, &f.console.jobs().unwrap())
             .unwrap();
         assert_eq!(f.launches(), 1);
-        assert!(
-            f.console.todos().unwrap()["items"][0]["jobs"]
-                .as_array()
-                .unwrap()
-                .contains(&json!(s.launches["decision:source"]))
-        );
+        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
+            .as_array()
+            .unwrap()
+            .contains(&json!(s.launches["decision:source"])));
     }
     #[test]
     fn todo1597_intake_binds_source_before_dispatch_even_without_capacity() {
@@ -7165,11 +7732,10 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(
-            f.console
-                .dispatch(&mut s, &f.console.jobs().unwrap())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .dispatch(&mut s, &f.console.jobs().unwrap())
+            .is_err());
         assert_eq!(f.launches(), 1);
         let mut db = f.console.todos().unwrap();
         db["items"][0]["status"] = json!("block");
@@ -7193,11 +7759,10 @@ mod tests {
         let f = todo1597_fixture("todo");
         *f.fake.lose_receipt.lock().unwrap() = true;
         let mut s = f.console.read_state().unwrap();
-        assert!(
-            f.console
-                .dispatch(&mut s, &f.console.jobs().unwrap())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .dispatch(&mut s, &f.console.jobs().unwrap())
+            .is_err());
         let source = f.console.paths.jobs.join("source");
         let backup = f.root.join("source-backup");
         fs::rename(&source, &backup).unwrap();
@@ -7230,11 +7795,10 @@ mod tests {
         let mut s = f.console.read_state().unwrap();
         fs::rename(&state, &backup).unwrap();
         fs::create_dir(&state).unwrap();
-        assert!(
-            f.console
-                .dispatch(&mut s, &f.console.jobs().unwrap())
-                .is_err()
-        );
+        assert!(f
+            .console
+            .dispatch(&mut s, &f.console.jobs().unwrap())
+            .is_err());
         assert_eq!(f.launches(), 0);
         fs::remove_dir(&state).unwrap();
         fs::rename(backup, state).unwrap();
@@ -7329,32 +7893,27 @@ mod tests {
             .iter()
             .find(|call| call.get(1).is_some_and(|v| v == "run"))
             .unwrap();
-        assert!(
-            run.windows(2)
-                .any(|pair| pair == ["--cwd", restored.to_str().unwrap()])
-        );
-        assert!(
-            run.windows(2)
-                .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"])
-        );
+        assert!(run
+            .windows(2)
+            .any(|pair| pair == ["--cwd", restored.to_str().unwrap()]));
+        assert!(run
+            .windows(2)
+            .any(|pair| pair == ["--resume-session", "11111111-1111-4111-8111-111111111111"]));
         let prompt = &run[run.iter().position(|v| v == "--prompt-file").unwrap() + 1];
         assert!(fs::read_to_string(prompt).unwrap().contains("#1 [todo]"));
         drop(calls);
         assert!(state.queue.is_empty());
-        assert!(
-            f.console.todos().unwrap()["items"][0]["jobs"]
-                .as_array()
-                .unwrap()
-                .contains(&json!(state.launches["decision:source"]))
-        );
-        assert!(
-            f.fake
-                .calls
-                .lock()
-                .unwrap()
-                .iter()
-                .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) })
-        );
+        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
+            .as_array()
+            .unwrap()
+            .contains(&json!(state.launches["decision:source"])));
+        assert!(f
+            .fake
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|call| { call.windows(2).any(|pair| pair == ["--todo-id", "1"]) }));
     }
 
     #[test]
@@ -7447,12 +8006,10 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert!(state.launches.contains_key("manual:formal-other"));
-        assert!(
-            !state
-                .queue
-                .iter()
-                .any(|entry| entry.key == "decision:source")
-        );
+        assert!(!state
+            .queue
+            .iter()
+            .any(|entry| entry.key == "decision:source"));
         assert_eq!(state.last_error.as_deref(), Some("state_capacity_exceeded"));
     }
 
@@ -7485,12 +8042,10 @@ mod tests {
         let state = f.console.read_state().unwrap();
         assert_eq!(f.launches(), 1);
         assert_eq!(state.queue.len(), 499);
-        assert!(
-            state
-                .queue
-                .iter()
-                .all(|entry| entry.key.starts_with("decision:missing-"))
-        );
+        assert!(state
+            .queue
+            .iter()
+            .all(|entry| entry.key.starts_with("decision:missing-")));
         assert!(state.launches.contains_key("manual:formal-other"));
         assert_eq!(state.last_error.as_deref(), Some("queue_full"));
     }
@@ -7827,12 +8382,10 @@ mod tests {
         fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
         f.console.link_todos(&mut state).unwrap();
         assert!(state.pending_links.is_empty());
-        assert!(
-            f.console.todos().unwrap()["items"][0]["jobs"]
-                .as_array()
-                .unwrap()
-                .contains(&json!("worker"))
-        );
+        assert!(f.console.todos().unwrap()["items"][0]["jobs"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("worker")));
         assert_eq!(f.launches(), 0);
     }
     #[test]

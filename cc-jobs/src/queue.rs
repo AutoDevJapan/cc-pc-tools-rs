@@ -396,7 +396,8 @@ impl Context {
                     && s(other, "status") == "queued"
                     && !dependency_waits.contains_key(s(other, "id"))
                     && priority(other) <= priority(job)
-                    && (long_running || priority(other) / 10 < priority(job) / 10
+                    && (long_running
+                        || priority(other) / 10 < priority(job) / 10
                         || (priority(job) % 10 == 3 && priority(other) < priority(job)))
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
@@ -1193,10 +1194,17 @@ impl Context {
             }
             match FileLock::try_acquire(&store.with_file_name("todo.lock")) {
                 Ok(lock) => Some(lock),
-                Err(e) if matches!(e.raw_os_error(), Some(32 | 33)) || e.kind() == std::io::ErrorKind::WouldBlock => return Ok(None),
+                Err(e)
+                    if matches!(e.raw_os_error(), Some(32 | 33))
+                        || e.kind() == std::io::ErrorKind::WouldBlock =>
+                {
+                    return Ok(None);
+                }
                 Err(e) => return Err(e.into()),
             }
-        } else { None };
+        } else {
+            None
+        };
         if store.exists() {
             let db = self.read_json(&store)?;
             let reason = self.dependency_reason(&db, &job, &jobs);
@@ -1218,7 +1226,11 @@ impl Context {
         }
         job["queue_wait_reason"] = Value::Null;
         job["queue_admission_error"] = Value::Null;
-        job["department_priority"] = json!(self.queue_priorities(&jobs, &cfg).get(jid).map(|rank| rank / 10));
+        job["department_priority"] = json!(
+            self.queue_priorities(&jobs, &cfg)
+                .get(jid)
+                .map(|rank| rank / 10)
+        );
         let (_, _, _, prefer_claude) = self.provider_limits(&cfg);
         let model = self.launch_model(&job, prefer_claude);
         if model != s(&job, "model") {
@@ -1512,51 +1524,85 @@ impl Context {
     fn dependency_reason(&self, source_db: &Value, job: &Value, jobs: &[Value]) -> Option<Value> {
         let mut db = source_db.clone();
         let mut evidence_jobs = jobs.to_vec();
-        let ids: Vec<_> = db["items"].as_array().into_iter().flatten()
-            .filter(|i| i["id"] == job["todo_id"]
-                || job["related_todo_ids"].as_array().is_some_and(|ids| ids.contains(&i["id"]))
-                || i["jobs"].as_array().is_some_and(|ids| ids.contains(&job["id"])))
+        let ids: Vec<_> = db["items"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|i| {
+                i["id"] == job["todo_id"]
+                    || job["related_todo_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&i["id"]))
+                    || i["jobs"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&job["id"]))
+            })
             .filter_map(|i| i["work_owner_job"].as_str())
             .chain(job["work_wait_evidence"]["owner_job_id"].as_str())
-            .chain(job["queue_wait_reason"]["owner_job_id"].as_str()).collect();
+            .chain(job["queue_wait_reason"]["owner_job_id"].as_str())
+            .collect();
         for id in ids {
-            if valid_job_id(id) && !evidence_jobs.iter().any(|j| s(j, "id") == id)
-                && let Ok(mut owner) = self.load(id) {
+            if valid_job_id(id)
+                && !evidence_jobs.iter().any(|j| s(j, "id") == id)
+                && let Ok(mut owner) = self.load(id)
+            {
                 owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
                 evidence_jobs.push(owner);
             }
         }
-        cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &evidence_jobs,
-            |item| item["id"] == job["todo_id"]);
+        cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &evidence_jobs, |item| {
+            item["id"] == job["todo_id"]
+        });
         let ready = cc_job_policy::todo_wait::job_ready_waits(&db, job);
         if !ready.is_empty() {
-            let message = ready.iter().filter_map(|wait| wait["message"].as_str())
-                .collect::<Vec<_>>().join("、");
+            let message = ready
+                .iter()
+                .filter_map(|wait| wait["message"].as_str())
+                .collect::<Vec<_>>()
+                .join("、");
             return Some(json!({"code":"todo_readiness","message":message,"wait_ready":ready}));
         }
         let mut on = cc_job_policy::todo_wait::job_pending_on(&db, job);
-        on.extend(cc_job_policy::work_owner::remembered_pending(source_db, job, &evidence_jobs));
+        on.extend(cc_job_policy::work_owner::remembered_pending(
+            source_db,
+            job,
+            &evidence_jobs,
+        ));
         on.sort_unstable();
         on.dedup();
-        if on.is_empty() { None } else {
-            let message = on.iter().map(|id| format!("ToDo {id} 待ち")).collect::<Vec<_>>().join("、");
+        if on.is_empty() {
+            None
+        } else {
+            let message = on
+                .iter()
+                .map(|id| format!("ToDo {id} 待ち"))
+                .collect::<Vec<_>>()
+                .join("、");
             Some(json!({"code":"todo_dependency","message":message,"wait_on":on}))
         }
     }
 
     fn dependency_waits(&self, jobs: &[Value]) -> HashMap<String, Value> {
-        let db = match fs::read(self.todo_store()) {
-            Ok(bytes) => serde_json::from_slice::<Value>(&bytes).map_err(Error::from),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(json!({"items":[]})),
-            Err(error) => Err(Error::from(error)),
+        let db = match cc_job_policy::todo_store::read(&self.todo_store()) {
+            Ok(db) => Ok(db),
+            Err(cc_job_policy::todo_store::Error::Io(error))
+                if error.kind() == std::io::ErrorKind::NotFound =>
+            {
+                Ok(json!({"items":[]}))
+            }
+            Err(error) => Err(Error::new(error.to_string())),
         };
         let mut waits = HashMap::new();
         for job in jobs.iter().filter(|j| s(j, "status") == "queued") {
             let reason = match &db {
                 Ok(db) => self.dependency_reason(db, job, jobs),
-                Err(_) => Some(json!({"code":"todo_store_unavailable","message":"ToDoの完了待ちを確認できないため再確認待ち"})),
+                Err(_) => Some(
+                    json!({"code":"todo_store_unavailable","message":"ToDoの完了待ちを確認できないため再確認待ち"}),
+                ),
             };
-            if let Some(reason) = reason { waits.insert(s(job, "id").into(), reason); }
+            if let Some(reason) = reason {
+                waits.insert(s(job, "id").into(), reason);
+            }
         }
         waits
     }
@@ -1565,7 +1611,11 @@ impl Context {
     /// titles carry shared guidance ("複数なら--onを繰り返す") and ordinary
     /// wording ("繰り返し起動しない"); text matching once marked every job
     /// lowest and collapsed req-/shep-/other into plain FIFO.
-    pub(crate) fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u32> {
+    pub(crate) fn queue_priorities(
+        &self,
+        jobs: &[Value],
+        cfg: &QueueConfig,
+    ) -> HashMap<String, u32> {
         let db = self.read_json(&self.todo_store()).unwrap_or(Value::Null);
         let policy = self
             .root

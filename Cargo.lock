@@ -1100,6 +1100,7 @@ name = "localai-web-rs"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "cc-ask",
  "cc-chrome",
  "cc-redact",
@@ -1109,6 +1110,7 @@ dependencies = [
  "proc-macro2",
  "regex",
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "syn 2.0.119",

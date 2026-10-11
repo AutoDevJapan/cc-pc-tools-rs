@@ -23,6 +23,8 @@ cc-todo = { path = "../cc-todo" }
 cc-redact = { path = "../cc-redact" }
 chrono = "0.4"
 regex = "1"
+base64 = "0.22.1"
+ring = "0.17.14"
 proc-macro2 = "1"
 syn = "2"
 tempfile = "3"

@@ -1233,7 +1233,7 @@ impl Context {
         let todo = FileLock::acquire(&store.with_file_name("todo.lock"))?;
         // An unavailable managed store cannot prove that the source is ready.
         // Keep the source unchanged until its dependencies can be checked.
-        let db: Value = serde_json::from_slice(&fs::read(&store)?)?;
+        let db = cc_job_policy::todo_store::read(&store).map_err(|e| Error::new(e.to_string()))?;
         if !db["items"].is_array() {
             return Err(Error::new("invalid ToDo store items"));
         }

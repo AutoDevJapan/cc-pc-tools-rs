@@ -1,13 +1,13 @@
 //! Incremental, local-only work accounting. Never reads credential files or tool arguments.
 use axum::{
-    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, File},
@@ -402,9 +402,8 @@ impl Sources {
 fn load_exclusions(sources: &Sources) -> std::io::Result<Exclusions> {
     let mut e = Exclusions::load(&sources.exclusion)?;
     // A protected registration remains protected even if its directory has an unrelated name.
-    if let Some(todo) =
-        json_file(&sources.todo, 16 * 1024 * 1024).filter(|v| v["projects"].is_object())
-    {
+    let todo = cc_todo::read_store(&sources.todo).map_err(std::io::Error::other)?;
+    if todo["projects"].is_object() {
         for (name, path) in todo["projects"].as_object().into_iter().flatten() {
             if e.contains(name) {
                 if let Some(path) = path.as_str() {
@@ -498,6 +497,13 @@ impl Workload {
                 for path in blocked {
                     purge_repo(&mut cache, &path);
                 }
+                cache
+            }
+            Err(error)
+                if error
+                    .get_ref()
+                    .is_some_and(|e| e.is::<cc_todo::StoreError>()) =>
+            {
                 cache
             }
             _ => Cache::default(),
@@ -809,9 +815,31 @@ fn read_session_limited(
     now: i64,
     budget: u64,
 ) -> bool {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    read_session_with_stop(
+        path,
+        cache,
+        registered,
+        exclusions,
+        earliest,
+        now,
+        budget,
+        || Instant::now() >= deadline,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn read_session_with_stop(
+    path: &Path,
+    cache: &mut Cache,
+    registered: &BTreeMap<String, String>,
+    exclusions: &Exclusions,
+    earliest: i64,
+    now: i64,
+    budget: u64,
+    mut expired: impl FnMut() -> bool,
+) -> bool {
     cache.last_read_bytes = 0;
     let read_limit = READ_BUDGET.min(budget);
-    let deadline = Instant::now() + Duration::from_secs(2);
     let key = path.to_string_lossy().into_owned();
     let Ok(mut file) = File::open(path) else {
         return false;
@@ -862,7 +890,7 @@ fn read_session_limited(
     let mut consumed = 0u64;
     let mut line = Vec::new();
     while consumed < read_limit {
-        if Instant::now() >= deadline {
+        if expired() {
             break;
         }
         line.clear();
@@ -871,7 +899,7 @@ fn read_session_limited(
         let mut count = 0usize;
         let mut oversized = cursor.discarding;
         while let Ok(buf) = reader.fill_buf() {
-            if Instant::now() >= deadline {
+            if expired() {
                 break;
             }
             if buf.is_empty() {
@@ -1316,12 +1344,45 @@ fn aggregate_progress(
     report: &dyn Fn(&str),
 ) -> Cache {
     report("除外設定とプロジェクトを確認しています");
-    let Ok(exclusions) = load_exclusions(sources) else {
-        return Cache {
-            version: 1,
-            warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
-            ..Cache::default()
-        };
+    let exclusions = match load_exclusions(sources) {
+        Ok(exclusions) => exclusions,
+        Err(error) => {
+            if error
+                .get_ref()
+                .is_some_and(|e| e.is::<cc_todo::StoreError>())
+            {
+                cache.warnings = vec![if error.to_string().starts_with("todo_store_too_large:") {
+                    "共有ToDoが上限64MiBを超えています。除外確認と仕事量の集計を停止しています。"
+                } else {
+                    "共有ToDoを読み取れないため、除外確認と仕事量の集計を停止しています。"
+                }
+                .into()];
+                return cache;
+            }
+            return Cache {
+                version: 1,
+                warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
+                ..Cache::default()
+            };
+        }
+    };
+    let todo = match cc_todo::read_store(&sources.todo) {
+        Ok(todo) => todo,
+        Err(error) => {
+            cache.warnings = vec![match error {
+                cc_todo::StoreError::TooLarge => {
+                    "共有ToDoが上限64MiBを超えています。集計を更新できません。"
+                }
+                cc_todo::StoreError::InvalidJson(_) => {
+                    "共有ToDoのJSONが不正です。集計を更新できません。"
+                }
+                cc_todo::StoreError::Io(_) => {
+                    "共有ToDoを取得できませんでした。集計を更新できません。"
+                }
+            }
+            .into()];
+            return cache;
+        }
     };
     let exclusion_hash = hash(&exclusions.0.join("\n"));
     if cache.exclusion_hash != exclusion_hash {
@@ -1331,12 +1392,6 @@ fn aggregate_progress(
     cache.exclusion_hash = exclusion_hash;
     cache.warnings.clear();
     let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
-    let todo = json_file(&sources.todo, 16 * 1024 * 1024).unwrap_or_else(|| {
-        cache
-            .warnings
-            .push("共有ToDoを取得できませんでした。".into());
-        json!({})
-    });
     let registered: BTreeMap<String, String> = todo["projects"]
         .as_object()
         .into_iter()

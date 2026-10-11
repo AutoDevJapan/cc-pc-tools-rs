@@ -146,6 +146,9 @@ impl Context {
         unreachable!()
     }
     pub fn read_json(&self, path: &Path) -> Result<Value> {
+        if path == self.todo_store() {
+            return cc_job_policy::todo_store::read(path).map_err(|e| Error::new(e.to_string()));
+        }
         let bytes = self
             .read_file(path)
             .map_err(|e| Error::file_io("read entire file", path, e))?;

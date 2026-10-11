@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -27,24 +29,26 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
   package-tools:
     # Only this finite repair needs downloadable PC binaries; do not grow storage on every PR.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460') && github.event.pull_request.head.repo.full_name == github.repository
     needs: cc-jobs
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --locked --release -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask --bins
+      - run: cargo build --locked --release -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask -p localai-web-rs --bins
       - name: Record the exact checked-out source and binary hashes
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $revision = git rev-parse HEAD
-          if ($LASTEXITCODE -ne 0 -or $revision -ne $env:GITHUB_SHA) { throw 'Checked-out source differs from the workflow revision' }
+          if ($LASTEXITCODE -ne 0 -or $revision -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Checked-out source differs from the fixed source revision' }
           $tree = git rev-parse 'HEAD^{tree}'
           if ($LASTEXITCODE -ne 0 -or $tree -notmatch '^[0-9a-f]{40}$') { throw 'Source tree is unavailable' }
-          $files = foreach ($name in @('todo.exe', 'codex_jobs.exe', 'scheduler.exe', 'discord_ask.exe')) {
+          $files = foreach ($name in @('todo.exe', 'codex_jobs.exe', 'scheduler.exe', 'discord_ask.exe', 'localai-web-rs.exe')) {
             $path = Join-Path 'target/release' $name
             $file = Get-Item -LiteralPath $path
             @{ name = $name; bytes = $file.Length; sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
@@ -61,4 +65,5 @@ jobs:
             target/release/codex_jobs.exe
             target/release/scheduler.exe
             target/release/discord_ask.exe
+            target/release/localai-web-rs.exe
             target/release/tools-manifest.json

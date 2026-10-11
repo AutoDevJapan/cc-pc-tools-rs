@@ -151,7 +151,7 @@ impl<B: Backend> Scheduler<B> {
         {
             return Err(Error("ValueError"));
         }
-        let mut pri = json!({"civ6":1,"GoDD-AO":2});
+        let mut pri = json!({});
         let configured = read_json(&self.root.join("priorities.json"), json!({}))?;
         if !configured.is_object() {
             return Err(Error("TypeError"));
@@ -161,7 +161,7 @@ impl<B: Backend> Scheduler<B> {
             .as_object()
             .unwrap()
             .values()
-            .any(|v| v.as_u64().is_none_or(|x| x < 1))
+            .any(|v| !v.is_object() && v.as_u64().is_none_or(|x| x < 1))
         {
             return Err(Error("ValueError"));
         }
@@ -1205,11 +1205,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             })
             .collect();
         let mut queue = priority_queue(&eligible, pri, self.backend.clock());
-        // Rotate projects after a successful launch; recurring high-priority work
-        // must not indefinitely starve every other product.
+        let ranks = cc_job_policy::priority::todo_ranks(&db, pri);
+        // Rotation is only a tie breaker within the owner's priority class.
         queue.sort_by(|a, b| {
-            n(&self.state["project_last_launch"][s(&a["project"])])
-                .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
+            ranks
+                .get(&a["id"].as_u64().unwrap_or(0))
+                .cmp(&ranks.get(&b["id"].as_u64().unwrap_or(0)))
+                .then_with(|| {
+                    n(&self.state["project_last_launch"][s(&a["project"])])
+                        .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
+                })
         });
         merge(
             &mut self.report,

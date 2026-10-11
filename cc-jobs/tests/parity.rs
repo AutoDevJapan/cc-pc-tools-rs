@@ -3675,7 +3675,7 @@ mod queue_regressions {
     #[test]
     fn wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs() {
         let t = Test::new();
-        config(&t, json!({"max_running":8,"max_children_per_parent":1}));
+        config(&t, json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}));
         let mut normal = waiting(&t, "normal", "normal");
         normal["retry_not_before"] = json!(t.rt.epoch() + 60.);
         t.ctx.save(&normal).unwrap();
@@ -4143,10 +4143,42 @@ mod queue_regressions {
         fs::write(t.ctx.root.join("queue-config.json"), value.to_string()).unwrap();
     }
     fn loop_job(t: &Test, id: &str, todo: u64) -> Value {
+        fs::create_dir_all(&t.ctx.root).unwrap();
+        // These regression cases exercise an explicitly configured legacy tier.
+        if !t.ctx.root.join("queue-config.json").exists() {
+            config(t, json!({"lowest_priority_todo_ids":[18,23]}));
+        }
         let mut j = waiting(t, id, "req-loop");
         j["todo_id"] = json!(todo);
         t.ctx.save(&j).unwrap();
         j
+    }
+    #[test]
+    fn department_order_wins_over_request_prefix_and_children() {
+        let t=Test::new();
+        config(&t,json!({"max_running":1}));
+        let mut low=waiting(&t,"low","req-low"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); t.ctx.save(&high).unwrap();
+        assert!(t.ctx.admit("low").unwrap().is_none());
+        assert!(t.ctx.admit("high").unwrap().is_some());
+        assert!(t.ctx.admit("low").unwrap().is_none());
+    }
+    #[test]
+    fn configured_legacy_lowest_cannot_demote_contract_below_own_products() {
+        let t=Test::new();
+        config(&t,json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
+        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); high["todo_id"]=json!(18); t.ctx.save(&high).unwrap();
+        let mut low=waiting(&t,"low","req-own"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        assert!(t.ctx.admit("high").unwrap().is_some());
+    }
+    #[test]
+    fn running_own_product_yields_to_a_ready_higher_department_at_tool_boundary() {
+        let t=Test::new(); config(&t,json!({"max_running":1}));
+        let mut parent=live_tool_parent(&t); parent["project"]=json!("unknown"); parent["started_at"]=json!(t.rt.now()); t.ctx.save(&parent).unwrap();
+        let mut other=t.ctx.load("other").unwrap(); other["project"]=json!("SocialPilot"); t.ctx.save(&other).unwrap();
+        tool_events(&t,&[("item.started","work"),("item.completed","work")]);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        let saved=t.ctx.load("long").unwrap(); assert_eq!(saved["status"],"queued"); assert_eq!(saved["resume_session"],SESSION_ID);
     }
     #[test]
     fn loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown() {
@@ -4241,7 +4273,7 @@ mod queue_regressions {
     #[test]
     fn shared_prompt_guidance_keeps_req_first_and_loops_last() {
         let t = Test::new();
-        config(&t, json!({"max_running":1}));
+        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}));
         let guidance = cc_job_policy::WRITE_GUIDANCE;
         assert!(guidance.contains("繰り返す"));
         let mut lowest = loop_job(&t, "loop-18", 18);
@@ -4274,7 +4306,10 @@ mod queue_regressions {
     #[test]
     fn running_loop_yields_to_normal_waiter_before_two_hours() {
         let t = Test::new();
-        config(&t, json!({"max_running":1}));
+        config(
+            &t,
+            json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let mut parent = live_tool_parent(&t);
         parent["todo_id"] = json!(18);
         parent["started_at"] = json!(t.rt.now());
@@ -4298,7 +4333,10 @@ mod queue_regressions {
     fn fairness_uses_the_new_tier_in_both_directions() {
         for low_parent in [false, true] {
             let t = Test::new();
-            config(&t, json!({"max_running":1}));
+            config(
+                &t,
+                json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+            );
             let mut parent = live_tool_parent(&t);
             if low_parent {
                 parent["todo_id"] = json!(18);

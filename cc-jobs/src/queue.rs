@@ -41,7 +41,7 @@ impl Default for QueueConfig {
             max_429_retries: 5,
             retry_delay_seconds: 60,
             max_retry_delay_seconds: 900,
-            lowest_priority_todo_ids: vec![18, 23],
+            lowest_priority_todo_ids: Vec::new(),
             normal_priority_todo_ids: Vec::new(),
         }
     }
@@ -218,9 +218,7 @@ impl Context {
                 }
             };
             let result = recovered.and_then(|recovered| {
-                if recovered
-                    || (job["queue_fairness_version"] == 3 && !self.context_rotation_due(job, jobs))
-                {
+                if recovered {
                     Ok(recovered)
                 } else {
                     self.yield_tool_boundary(job, jobs)
@@ -371,7 +369,7 @@ impl Context {
         };
         let priorities = self.queue_priorities(jobs, &cfg);
         let dependency_waits = self.dependency_waits(jobs);
-        let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(2);
+        let priority = |j: &Value| priorities.get(s(j, "id")).copied().unwrap_or(1002);
         let at = parse_iso(s(job, "finished_at")).unwrap_or(self.rt.epoch());
         let long_running = parse_iso(s(job, "started_at")).is_some_and(|start| {
             job["duration_ms"]
@@ -382,7 +380,6 @@ impl Context {
         });
         // Lowest-tier work never keeps a slot from higher tiers, however short
         // its run so far; equal tiers share slots after two hours.
-        let lowest = priority(job) == 3;
         s(job, "parent_job_id").is_empty()
             && s(job, "context_phase") != "summarize"
             && s(job, "status") == "running"
@@ -399,7 +396,8 @@ impl Context {
                     && s(other, "status") == "queued"
                     && !dependency_waits.contains_key(s(other, "id"))
                     && priority(other) <= priority(job)
-                    && (long_running || (lowest && priority(other) < 3))
+                    && (long_running || priority(other) / 10 < priority(job) / 10
+                        || (priority(job) % 10 == 3 && priority(other) < priority(job)))
                     && other["cancel_requested"] != true
                     && self.supervisor_alive(other)
                     && other["retry_not_before"].as_f64().unwrap_or(0.) <= at
@@ -1157,6 +1155,7 @@ impl Context {
         }
         job["queue_wait_reason"] = Value::Null;
         job["queue_admission_error"] = Value::Null;
+        job["department_priority"] = json!(self.queue_priorities(&jobs, &cfg).get(jid).map(|rank| rank / 10));
         let (_, _, _, prefer_claude) = self.provider_limits(&cfg);
         let model = self.launch_model(&job, prefer_claude);
         if model != s(&job, "model") {
@@ -1234,15 +1233,19 @@ impl Context {
         // A normal waiter blocks opportunistic roots even during cooldown or
         // when its child/family limit is full. Never reserve phantom spare slots
         // for low-priority work while another owner is actually waiting.
-        let normal_waiting = jobs.iter().any(|j| {
-            s(j, "status") == "queued"
-                && j["cancel_requested"] != true
-                && self.supervisor_alive(j)
-                && !dependency_waits.contains_key(s(j, "id"))
-                && !subwork_waits.contains_key(s(j, "id"))
-                && cc_job_policy::work_owner::blocker(j, &ownership_jobs).is_none()
-                && priorities.get(s(j, "id")).copied().unwrap_or(2) < 3
-        });
+        let normal_waiting = jobs
+            .iter()
+            .filter(|j| {
+                s(j, "status") == "queued"
+                    && j["cancel_requested"] != true
+                    && self.supervisor_alive(j)
+                    && !dependency_waits.contains_key(s(j, "id"))
+                    && !subwork_waits.contains_key(s(j, "id"))
+                    && cc_job_policy::work_owner::blocker(j, &ownership_jobs).is_none()
+                    && priorities.get(s(j, "id")).copied().unwrap_or(1002) % 10 < 3
+            })
+            .filter_map(|j| priorities.get(s(j, "id")).copied())
+            .min();
         let active: Vec<_> = jobs
             .iter()
             .filter(|j| {
@@ -1329,8 +1332,9 @@ impl Context {
             } else if j["retry_not_before"].as_f64().unwrap_or(0.) > self.rt.epoch() {
                 Some(("retry_cooldown", "利用枠の再試行時刻待ち"))
             } else if s(j, "parent_job_id").is_empty()
-                && priorities.get(s(j, "id")) == Some(&3)
-                && normal_waiting
+                && priorities.get(s(j, "id")).is_some_and(|rank| {
+                    rank % 10 == 3 && normal_waiting.is_some_and(|other| other < *rank)
+                })
             {
                 Some((
                     "lowest_priority",
@@ -1347,8 +1351,9 @@ impl Context {
         }
         waiting.sort_by_key(|j| {
             (
+                priorities.get(s(j, "id")).copied().unwrap_or(1002) / 10,
                 s(j, "parent_job_id").is_empty(),
-                priorities.get(s(j, "id")).copied().unwrap_or(2),
+                priorities.get(s(j, "id")).copied().unwrap_or(1002) % 10,
                 queue_time(j),
                 j["queue_sequence"].as_u64().unwrap_or(0),
                 s(j, "id"),
@@ -1514,7 +1519,15 @@ impl Context {
     /// titles carry shared guidance ("複数なら--onを繰り返す") and ordinary
     /// wording ("繰り返し起動しない"); text matching once marked every job
     /// lowest and collapsed req-/shep-/other into plain FIFO.
-    fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u8> {
+    pub(crate) fn queue_priorities(&self, jobs: &[Value], cfg: &QueueConfig) -> HashMap<String, u32> {
+        let db = self.read_json(&self.todo_store()).unwrap_or(Value::Null);
+        let policy = self
+            .root
+            .parent()
+            .unwrap_or(&self.root)
+            .join("scheduler/priorities.json");
+        let policy = self.read_json(&policy).unwrap_or(Value::Null);
+        let departments = cc_job_policy::priority::job_ranks(jobs, &db, &policy);
         jobs.iter()
             .map(|j| {
                 let id = j["todo_id"].as_u64();
@@ -1527,7 +1540,8 @@ impl Context {
                     });
                 (
                     s(j, "id").to_owned(),
-                    if low { 3 } else { queue_priority(j) },
+                    departments.get(s(j, "id")).copied().unwrap_or(100) * 10
+                        + u32::from(if low { 3 } else { queue_priority(j) }),
                 )
             })
             .collect()

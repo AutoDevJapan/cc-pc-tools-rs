@@ -53,6 +53,44 @@ mod independent_subwork {
             .unwrap()
     }
     #[test]
+    fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
+        let (t, f) = setup(1);
+        register(&t, &f, &[]).unwrap();
+        let registered = child(&t);
+        let paths = cc_todo::Paths::at(f.dir.path(), &t.ctx.jobs);
+        let mut db = cc_todo::load(&paths.store).unwrap();
+        cc_todo::execute(
+            &mut db,
+            &cc_todo::Command::Start {
+                id: 2,
+                job: s(&registered, "id").into(),
+                progress: None,
+            },
+            &paths,
+        )
+        .unwrap();
+        fs::write(&paths.store, db.to_string()).unwrap();
+        assert!(db["items"][1]["scheduler"]["key"].is_null());
+        assert_eq!(db["items"][1]["scheduler"]["job"], registered["id"]);
+        assert!(t.ctx.admit(s(&registered, "id")).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(s(&registered, "id")).unwrap()["queue_wait_reason"]["code"],
+            "running_limit"
+        );
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":2}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit(s(&registered, "id")).unwrap().is_some());
+        let started = t.ctx.load(s(&registered, "id")).unwrap();
+        assert_eq!(started["status"], "running");
+        assert!(started["started_at"].is_string());
+        assert!(started["queue_wait_reason"].is_null());
+        assert_eq!(started["launch_key"], registered["launch_key"]);
+        assert_eq!(started["parent_job_id"], "parent");
+    }
+    #[test]
     fn registration_keeps_cross_todo_parent_but_does_not_exempt_hardware_capacity() {
         let (t, f) = setup(1);
         register(&t, &f, &[]).unwrap();

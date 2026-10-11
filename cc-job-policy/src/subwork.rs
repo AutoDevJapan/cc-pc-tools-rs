@@ -239,6 +239,43 @@ pub fn admission(child: &Value) -> Value {
         "subwork":child["subwork"],"worktree":child["scheduler"]["worktree"]})
 }
 
+/// Resource admission stays bound to its launch, even after Start transfers the reservation.
+/// The worker receipt is independent evidence of that transfer; preparation alone has none.
+fn admitted_launch(child: &Value, jobs: &[Value], job: &Value) -> bool {
+    if s(job, "launch_key").is_empty() {
+        return false;
+    }
+    let scheduler = &child["scheduler"];
+    let mut expected = admission(child);
+    expected["key"] = job["launch_key"].clone();
+    if scheduler["subwork_admission"] != expected {
+        return false;
+    }
+    // Registration validates a prospective job before publishing it. Once that key has a
+    // registered job, another candidate must not borrow the still-unreleased reservation.
+    if jobs.iter().any(|registered| {
+        registered["launch_key"] == job["launch_key"] && registered["id"] != job["id"]
+    }) {
+        return false;
+    }
+    if scheduler["key"] == job["launch_key"] {
+        // Registration can precede the ToDo link. A different linked worker cannot use this key.
+        return scheduler["job"].is_null() || scheduler["job"] == job["id"];
+    }
+    scheduler["key"].is_null()
+        && child["status"] == "doing"
+        && !s(job, "id").is_empty()
+        && linked(child, job)
+        && scheduler["job"] == job["id"]
+        && scheduler["phase"] == "running"
+        && child["worker_receipt"]["job"] == job["id"]
+        && child["resume_generation"]
+            .as_u64()
+            .is_some_and(|generation| {
+                child["worker_receipt"]["generation"].as_u64() == Some(generation)
+            })
+}
+
 /// A launch key created by preparation alone is not evidence of resource admission.
 pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), String> {
     let child = item(db, &job["todo_id"])?;
@@ -249,7 +286,7 @@ pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), St
         || child["dispatchable"] != true
         || child["spec"] != job["subwork_spec"]
         || child["needs"] != job["assigned_needs"]
-        || child["scheduler"]["subwork_admission"] != admission(child)
+        || !admitted_launch(child, jobs, job)
         || !same_repo(&ownership, &child["subwork"]["owner"])
         || s(&ownership, "worktree") != norm(Path::new(s(job, "cwd")))
         || (ownership["pr"].is_u64()
@@ -258,9 +295,6 @@ pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), St
         || crate::todo_wait::waiting(db, child)
         || s(&child["scheduler"], "worktree").is_empty()
         || norm(Path::new(s(job, "cwd"))) != norm(Path::new(s(&child["scheduler"], "worktree")))
-        || s(job, "launch_key").is_empty()
-        || !(child["scheduler"]["key"] == job["launch_key"]
-            || (job["id"].is_string() && child["scheduler"]["job"] == job["id"]))
     {
         return Err(
             "subwork launch no longer matches the saved ToDo, allocation or workspace".into(),

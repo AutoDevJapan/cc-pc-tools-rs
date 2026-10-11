@@ -44,6 +44,57 @@ quarantineは1万項目上限で停止した。削除や自動承認審査を提
 同じCドライブへのMove-Itemを別の実行ツールに提出し、直ちにfinishで元位置の不在と
 全内容の一致を確認して元の所有記録を更新する。削除機能や審査の迂回は追加しない。
 
+## ToDo2382の配布済み質問修正の所有フォルダー1件
+
+所有ID `50189b66c7f196bf436305cb29f91b42`、project `cc-ask`、content
+`decision-dedup`、作成日時 `2026-10-11T12:02:44.5926082+09:00` に限定する。
+元のGo形式のチェックサムと、Cドライブのvolume `2229119083`、file ID
+`39969446694675659` を照合する。通常のplan/quarantineは `repo/.git` の
+名前保護で `PROTECTED_PATH` を返した。削除命令・自動承認拒否ではない。
+通常の削除保護や10,000項目の上限は変更しない。
+実測した8,970項目・18,010,065,925バイト・リンク0件を根拠に、このIDの保持退避は
+10,000項目・20GiB・リンク0件を上限とする。既存の保持退避モジュールで
+全通常ファイルのSHA256と所有者・グループ・DACLを移動前後に照合する。
+
+公開取得元は `AutoDevJapan/cc-pc-tools-rs`。保存済み・レビュー済みの質問修正
+HEAD `94ab1cbec9a35e131ce1a2f135984cc07dca2505` と、その公開済みbranchの
+`refs/remotes/origin/fix/todo2382-question-associations` に固定する。
+本番への配布と実承認の照会を済ませ、書き込み中の検査とレビューを終了した後に、
+このHEADのcleanな作業ツリーを保って退避する。復旧モジュール自体の変更も
+別の公開PRへ保存し、その後にこの固定HEADへ戻す。未保存の成果を捨てない。
+
+移動するのはTemp下のこの所有フォルダーだけ。Git管理先は
+`C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/repo`、commonは
+同じリポジトリーの `.git` に固定し、移動後にこのworktreeのbacklinkだけを
+既存手順で直す。ほかの担当のGit領域・branch・ファイルには触らない。
+顧客資源・リンク・外部hardlink・追加Git領域・grafts・未保存変更の拒否を維持する。
+
+`safe-delete-recovery.exe plan --id <所有ID>` の通常の `Move-Item -LiteralPath`
+を別の実行ツールに提出し、成功後ただちに `finish --id <所有ID>` で同じファイル一覧・
+識別番号・容量とGit参照を確認する。削除ではなく保持退避である。
+実際の承認拒否があれば操作と理由を元2382へ記録し、別経路で移動しない。
+
+## ToDo2341の保存済みcloneとビルド生成物1件
+
+所有ID `3d50e5d7c49761d809521892cfe84937`、project `cc-ask`、content
+`todo2341-resume-notes`、作成日時 `2026-10-11T14:07:52.0792269+09:00`、
+volume `2229119083`、file ID `9851624198224777` に固定する。通常のplanと
+quarantineは1万項目上限で停止した。削除や自動承認審査を提出した結果ではない。
+一般の1万項目上限、Git保護、他の所有IDの条件を変更しない。
+
+この1件だけは12,500項目・16GiB・リンク0件を上限とする。実測は11,735項目・
+15,669,581,367 byte・reparse0であり、残る有限検査の生成物も含めて最終計測する。
+移動票は全ファイルのSHA256も保持するため、この1件の記録だけ16MiBまでとする。
+`repo`の取得元は `AutoDevJapan/cc-pc-tools-rs`、HEADは
+`d2e2724d9760675a4ec590950804b7ba021d3432`、保存済みの
+`origin/fix/todo2341-recovery-probe-queue` と一致することを必須とする。
+復旧ツール自身の変更は別ブランチへpushし、対象を上記HEADへ戻してから計画する。
+
+未保存の変更、追加Git領域、外部ハードリンク、リンク、クライアント資源は拒否する。
+全内容とACL・時刻・識別番号・内部別名を移動前後に照合する。planが返す通常の
+同じCドライブへのMove-Itemを別の実行ツールに提出し、直ちにfinishで元位置の不在と
+全内容の一致を確認して元の所有記録を更新する。削除機能や審査の迂回は追加しない。
+
 ## ToDo2303のChrome修正で作った所有フォルダー1件
 
 所有ID `e87d9c55880dce0cfd7bb1d3fe3ca85e`、project `cc-chrome`、content `todo2296`、

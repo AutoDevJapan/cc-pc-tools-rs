@@ -1867,6 +1867,53 @@ mod queue_regressions {
         assert!(t.run(&[], b"unrelated finite work").is_ok());
     }
     #[test]
+    fn initial_todo_creation_cannot_race_running_publication() {
+        for directory_exists in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":10}));
+            let home = t.ctx.root.join("initial-todo");
+            if directory_exists {
+                fs::create_dir(&home).unwrap();
+            }
+            t.rt.env
+                .lock()
+                .unwrap()
+                .insert("CC_TODO_HOME".into(), home.to_string_lossy().into_owned());
+            let store = home.join("todo.json");
+            let mut candidate = waiting(&t, "initial", "orch-todo-1139");
+            candidate["todo_id"] = json!(1139);
+            t.ctx.save(&candidate).unwrap();
+            let attempts = Arc::new(Mutex::new(Vec::new()));
+            let observed = attempts.clone();
+            let path = t.ctx.job_dir("initial").join("job.json");
+            let lock = home.join("todo.lock");
+            let store_at_save = store.clone();
+            *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+                if file == path {
+                    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+                    match FileLock::try_acquire(&lock) {
+                        Ok(_writer) => {
+                            observed.lock().unwrap().push(false);
+                            fs::write(&store_at_save, json!({"items":[{"id":1139,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]}).to_string()).unwrap();
+                        }
+                        Err(_) => observed.lock().unwrap().push(true),
+                    }
+                }
+            }));
+            assert!(t.ctx.admit("initial").unwrap().is_some());
+            *t.rt.save_hook.lock().unwrap() = None;
+            assert_eq!(
+                *attempts.lock().unwrap(),
+                vec![true],
+                "directory exists: {directory_exists}"
+            );
+            assert!(!store.exists());
+            // The writer can register a wait once publication has released the same lock.
+            let _writer = FileLock::try_acquire(&home.join("todo.lock")).unwrap();
+            fs::write(&store, json!({"items":[{"id":1139,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]}).to_string()).unwrap();
+        }
+    }
+    #[test]
     fn wait_registration_cannot_race_running_publication_after_queue_snapshot() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
@@ -5806,6 +5853,11 @@ impl Test {
             root,
             rt: rt.clone(),
         };
+        // Every fixture owns its future ToDo lock, even before its store exists.
+        rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            ctx.root.to_string_lossy().into_owned(),
+        );
         fs::write(&ctx.gto, b"").unwrap();
         fs::write(&ctx.executable, b"fake supervisor executable").unwrap();
         Self { _tmp: tmp, ctx, rt }

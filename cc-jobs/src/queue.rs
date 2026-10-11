@@ -1186,7 +1186,11 @@ impl Context {
         // Lock order remains queue -> job state -> ToDo, and the slow preparation
         // above does not hold the shared ToDo lock for ordinary jobs.
         let store = self.todo_store();
-        let _ready_store_lock = if _subwork_store_lock.is_none() && store.exists() {
+        let _ready_store_lock = if _subwork_store_lock.is_none() {
+            // The lock also serializes first creation of the store with running publication.
+            if let Some(parent) = store.parent() {
+                fs::create_dir_all(parent)?;
+            }
             match FileLock::try_acquire(&store.with_file_name("todo.lock")) {
                 Ok(lock) => Some(lock),
                 Err(e) if matches!(e.raw_os_error(), Some(32 | 33)) || e.kind() == std::io::ErrorKind::WouldBlock => return Ok(None),

@@ -398,7 +398,9 @@ pub(crate) fn recover(ctx: &mut Context, cwd: &str, raw_title: &str) -> Result<(
         .flat_map(|m| m.iter())
         .filter(|(_, r)| {
             similar(s(&r["question"]["ask_title"]), raw_title)
-                && s(&r["question"]["cwd_key"]) == folder_key(cwd)
+                && (s(&r["question"]["cwd_key"]) == folder_key(cwd)
+                    || (!s(&r["question"]["cwd"]).is_empty()
+                        && folder_key(s(&r["question"]["cwd"])) == folder_key(cwd)))
         })
         .map(|(id, r)| (id.clone(), r.clone()))
         .collect();

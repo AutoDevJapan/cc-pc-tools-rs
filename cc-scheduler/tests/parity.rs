@@ -3203,7 +3203,15 @@ impl cc_ask::core::Effects for AskFake {
             return Ok(json!({"threads":[]}));
         }
         if m == "POST" {
-            return Ok(json!({"id":"THREAD","last_message_id":"MESSAGE"}));
+            let count = self
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|c| c["method"] == "POST")
+                .count();
+            let id = (299 + count).to_string();
+            return Ok(json!({"id":id,"last_message_id":id}));
         }
         Err("RuntimeError: secret-shaped mock error".into())
     }
@@ -3274,7 +3282,17 @@ fn test_owner_question_records_original_worktree_for_continuation() {
             .iter()
             .find(|call| call["method"] == "POST")
             .unwrap()["body"]["message"]["allowed_mentions"],
-        json!({"parse":[],"users":["OWNER"]})
+        json!({"parse":[],"users":["OWNER"],"replied_user":false})
+    );
+    assert_eq!(q["thread_id"], "300");
+    assert_eq!(q["progress_thread_id"], "301");
+    let guard = calls.lock().unwrap();
+    let posts: Vec<_> = guard.iter().filter(|c| c["method"] == "POST").collect();
+    assert_eq!(posts.len(), 2);
+    assert_eq!(posts[1]["body"]["message"]["flags"], cc_ask::SILENT | 4);
+    assert_eq!(
+        posts[1]["body"]["message"]["allowed_mentions"],
+        json!({"parse":[],"users":[],"replied_user":false})
     );
 }
 #[test]

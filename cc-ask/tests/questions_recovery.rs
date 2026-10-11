@@ -57,7 +57,7 @@ fn notified_question_first_line_is_tracked_but_reports_and_quoted_questions_are_
         if expected == 1 {
             assert_eq!(
                 h.state()["questions"][0]["question_message"],
-                out["message_ids"][0]
+                out["after"]
             );
             let before = h.state();
             let result = questions::recover(&mut h.ctx, &args(true)).unwrap();
@@ -237,8 +237,14 @@ fn failed_second_post_chunk_leaves_first_question_registered() {
     .unwrap();
     assert!(cmd_post(&mut h.ctx, "200", &path, &[], true).is_err());
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
-    assert_eq!(h.state()["questions"][0]["after"], "1001");
-    assert_eq!(h.state()["questions"][0]["message_ids"], json!(["1001"]));
+    assert_eq!(h.state()["questions"][0]["after"], "300");
+    assert_eq!(h.state()["questions"][0]["question_message"], "300");
+    assert_eq!(h.state()["questions"][0]["work_thread_id"], "200");
+    assert_ne!(h.state()["questions"][0]["posting_complete"], true);
+    let records: Vec<_> = std::fs::read_dir(h.ctx.here.join("question-progress"))
+        .unwrap().map(|e| read_json(&e.unwrap().path()).unwrap()).collect();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0]["question"]["starter"], "300");
 }
 
 #[test]

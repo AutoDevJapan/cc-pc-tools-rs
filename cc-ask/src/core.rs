@@ -906,7 +906,9 @@ fn run_hidden_captured<T>(
         std::thread::sleep(std::time::Duration::from_millis(20));
     };
     if status.success() {
-        group.completed()?;
+        group
+            .completed()
+            .map_err(|e| format!("OSError: release completed child group {}: {e}", argv[0]))?;
     } else {
         group.stop(&mut child);
     }
@@ -1081,6 +1083,9 @@ pub fn error_detail(error: &str) -> String {
 
 pub fn explicit_thread_owner(job: &Value, thread: &str) -> bool {
     s(&job["discord_thread_id"]) == thread
+        || job["question_thread_ids"]
+            .as_array()
+            .is_some_and(|ids| ids.iter().any(|id| s(id) == thread))
         || (s(&job["discord_thread_ids_source"]) != "prompt"
             && job["discord_thread_ids"]
                 .as_array()
@@ -1150,8 +1155,16 @@ pub fn thread_owner(job: &Value, prompt: &str, thread: &str) -> bool {
 }
 
 pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Result<Option<String>> {
+    let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    let separated = destination != thread || crate::question_progress::is_separated(ctx, thread)?;
+    let thread = destination.as_str();
+    let mention = mention && !separated;
     let owner = ctx.owner();
-    let mut text = safe_text(text);
+    let mut text = if separated {
+        crate::question_progress::silent_text(text)
+    } else {
+        safe_text(text)
+    };
     if mention {
         let (first, rest) = text.split_once('\n').unwrap_or((&text, ""));
         text = if text.contains('\n') {
@@ -1171,7 +1184,11 @@ pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Resul
             s(&ctx.call(
                 "POST",
                 &format!("/channels/{thread}/messages"),
-                Some(&json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})),
+                Some(&if separated {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":[],"replied_user":false},"flags":SILENT | 4})
+                } else {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})
+                }),
             )?["id"])
             .to_string(),
         )
@@ -1196,6 +1213,9 @@ pub fn job_info(ctx: &Context, job: &str) -> Value {
     // The supervisor periodically rewrites job.json from its in-memory record.
     // Keep Discord associations in a sidecar owned by this tool as well.
     if let Ok(threads) = read_json(&directory.join("discord-threads.json")) {
+        if threads["question_thread_ids"].is_array() {
+            info["question_thread_ids"] = threads["question_thread_ids"].clone();
+        }
         if threads["discord_thread_id"].is_string() {
             info["discord_thread_id"] = threads["discord_thread_id"].clone();
         }

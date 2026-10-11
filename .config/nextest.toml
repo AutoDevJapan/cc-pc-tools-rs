@@ -4,6 +4,14 @@ test-threads = 10
 [test-groups.process-boundary]
 max-threads = 1
 
+# Real ffmpeg starts several Windows process groups and validates their decoded
+# output. Do not overlap that acceptance check with other child/process tests:
+# the first full run failed with OS error 5, while the isolated run decoded all
+# outputs successfully. Keep every codec/size assertion and the normal deadline.
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & test(real_ffmpeg_image_and_video_outputs_fit_and_decode)'
+threads-required = 'num-test-threads'
+
 [[profile.default.overrides]]
 filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_) | test(end_to_end::) | binary(cargo_admission))'
 test-group = 'process-boundary'

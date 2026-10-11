@@ -15,6 +15,8 @@
 //! Every TUI agent on this PC shares this tool and state.json (Skill: discord-owner-ask), so every
 //! state change runs under one lock file.
 
+// Retain the recovery reader for pre-separation interrupted question creations.
+#[allow(dead_code)]
 mod ask_dedup;
 pub mod ask_gate;
 pub mod attachments;
@@ -36,6 +38,7 @@ mod process_guard;
 pub use process_guard::Group as ProcessGroup;
 pub mod project;
 pub mod prompt_context;
+pub mod question_progress;
 pub mod questions;
 pub mod recovery_failure;
 pub mod reminders;

@@ -19,6 +19,16 @@ enum Commands {
     /// Audit full archived histories with an ID-only checkpoint; never posts or launches.
     AuditHistory(cc_ask::history_audit::Args),
     Ask(AskArgs),
+    /// Bind explicitly reviewed duplicate threads to one scope; never sends or launches.
+    ReconcileDecisions {
+        #[arg(long)]
+        manifest: PathBuf,
+    },
+    /// Inspect an exact decision and its owner evidence without creating a question.
+    LookupDecision {
+        #[arg(long)]
+        decision_file: PathBuf,
+    },
     Replies {
         #[arg(long)]
         thread: Option<String>,
@@ -255,6 +265,18 @@ fn run(command: Commands) -> Result<()> {
         }
         Commands::Ask(args) => {
             cmd_ask(&mut ctx, &args)?;
+        }
+        Commands::ReconcileDecisions { manifest } => {
+            println!(
+                "{}",
+                cc_ask::decision_identity::reconcile(&mut ctx, &read_json(&manifest)?)?
+            );
+        }
+        Commands::LookupDecision { decision_file } => {
+            println!(
+                "{}",
+                cc_ask::decision_identity::lookup(&mut ctx, &read_json(&decision_file)?)?
+            );
         }
         Commands::Replies { thread, read_only } => {
             if read_only {

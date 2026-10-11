@@ -33,7 +33,7 @@ fn directory(ctx: &Context) -> std::path::PathBuf {
     ctx.here.join("question-progress")
 }
 
-fn routes(ctx: &Context) -> Result<Vec<Value>> {
+pub(crate) fn routes(ctx: &Context) -> Result<Vec<Value>> {
     let dir = directory(ctx);
     if !dir.exists() {
         return Ok(vec![]);
@@ -339,13 +339,67 @@ pub fn ask(
     let work = route(ctx, origin)?
         .map(|r| s(&r["work_thread_id"]).to_owned())
         .unwrap_or_else(|| origin.into());
-    let identity = json!({"guild":ctx.cfg["guild_id"],"parent":ctx.cfg["task_channel_id"],"work":work,
-        "cwd":context["cwd"],"title":context["title"],"body":body,"hashes":hashes,
-        "caller":if s(&context["session_id"]).is_empty() {&context["posting_job"]} else {&context["session_id"]},"request_key":context["request_key"]});
+    let mut context = context.clone();
+    let todo = crate::decision_identity::todo(ctx, &context)?;
+    if todo > 0 {
+        context["todo_id"] = json!(todo);
+    }
+    let decision = if context["decision_identity"].is_object() {
+        crate::decision_identity::normalize(ctx, &context["decision_identity"])?
+    } else {
+        Value::Null
+    };
+    // All callers share this lock, including automatic result delivery. A new job,
+    // title or session is never evidence of a new permission scope.
+    let records = routes(ctx)?;
+    let mut previous = None;
+    let mut duplicates = Vec::new();
+    let mut uncertain = None;
+    for record in &records {
+        let attachments_same = record["attachment_hashes"] == json!(hashes)
+            || (record["attachment_hashes"].is_null() && hashes.is_empty());
+        let same = if decision.is_object() && record["decision_identity"].is_object() {
+            decision == record["decision_identity"] && attachments_same
+        } else if decision.is_object() {
+            false
+        } else {
+            crate::decision_identity::same_work(ctx, record, &context, &work)?
+                && s(&record["body"]) == body
+                && attachments_same
+        };
+        if same {
+            previous.get_or_insert_with(|| record.clone());
+            duplicates.push(record.clone());
+        }
+        if (!decision.is_object() || !record["decision_identity"].is_object())
+            && crate::decision_identity::same_work(ctx, record, &context, &work)?
+        {
+            uncertain.get_or_insert(record);
+        }
+    }
+    if let Some(record) = &previous {
+        if truth(&record["complete"]) {
+            // Untyped callers may recover exact text, but can never consume an approval
+            // for a paraphrased/different target merely because the work matches.
+            return crate::decision_identity::reuse(ctx, &duplicates, record, false);
+        }
+    } else if let Some(record) = uncertain {
+        return crate::decision_identity::reuse(ctx, &[], record, true);
+    }
+    let identity = if decision.is_object() {
+        json!({"decision":decision,"hashes":hashes})
+    } else {
+        json!({"guild":ctx.cfg["guild_id"],"parent":ctx.cfg["task_channel_id"],"owner":ctx.owner(),
+            "todo":todo,"work":work,"cwd":context["cwd"],"body":body,"hashes":hashes})
+    };
     let key = format!("{:x}", Sha256::digest(identity.to_string().as_bytes()));
     let dir = directory(ctx);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = dir.join(format!("{key}.json"));
+    let path = if let Some(record) = &previous {
+        crate::decision_identity::path(ctx, record)?
+    } else {
+        dir.join(format!("{key}.json"))
+    };
     let mut record = if path.exists() {
         read_json(&path)?
     } else {
@@ -356,10 +410,13 @@ pub fn ask(
             return Err("question sender unavailable".into());
         }
         let record = json!({"guild":ctx.cfg["guild_id"],"parent":parent,"forum":n(&channel["type"])==15,"sender":me["id"],
-            "context":context,"body":body,"work_thread_id":work,"origin_thread_id":origin,"key":key});
+            "context":context,"body":body,"work_thread_id":work,"origin_thread_id":origin,"key":key,
+            "decision_identity":decision,"attachment_hashes":hashes});
         atomic_json(&path, &record, 2)?;
         record
     };
+    let context = record["context"].clone();
+    let body = s(&record["body"]);
     let batches = prepared
         .as_ref()
         .map(|p| attachments::batches(&p.files))
@@ -614,8 +671,7 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
         context["title"] = json!("作業の判断をお願いします");
     }
     context["posting_job"] = json!(job);
-    // The result job is the durable question generation. A later result in the
-    // same resumed session is a new question even if its text/title are identical.
+    // Worker generation is delivery context, never decision identity.
     context["request_key"] = json!(job);
     context["job"] = json!(job);
     context["job_info"] = info.clone();
@@ -642,5 +698,13 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
         context.as_object_mut().unwrap().remove(key);
     }
     let (body, paths) = crate::result_delivery::extract(text)?;
+    let (body, decision) = crate::decision_identity::extract(&body)?;
+    // A new result must explicitly state its scope; inheriting a prior decision
+    // would apply an old a/b to the new proposal.
+    context.as_object_mut().unwrap().remove("decision_identity");
+    if let Some(value) = decision {
+        context["decision_identity"] = crate::decision_identity::normalize(ctx, &value)?;
+        context["todo_id"] = context["decision_identity"]["todo_id"].clone();
+    }
     ask(ctx, &context, origin, &body, &paths)
 }

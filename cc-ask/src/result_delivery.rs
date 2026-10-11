@@ -286,6 +286,13 @@ pub fn post_with_cursor(
         // The parent API registers a new generation with the original work context.
         // It must reconcile the same origin/job on retry after a lost response.
         let question = crate::question_progress::ask_result(ctx, thread, text, job)?;
+        if question["suppressed"] == "decision_scope_required" {
+            return Err(format!(
+                "DecisionScopeRequired: {} {}",
+                s(&question["next_action"]),
+                s(&question["url"])
+            ));
+        }
         if s(&question["thread_id"]).is_empty()
             || s(&question["after"]).is_empty()
             || s(&question["progress_thread_id"]).is_empty()
@@ -295,6 +302,11 @@ pub fn post_with_cursor(
         progress["question_thread_id"] = question["thread_id"].clone();
         progress["question_after"] = question["after"].clone();
         progress["destination_thread_id"] = question["progress_thread_id"].clone();
+        progress["decision_reuse"] = if truth(&question["reused"]) {
+            question
+        } else {
+            serde_json::Value::Null
+        };
         atomic_json(&ledger, &progress, 2)?;
     }
     let target = s(&progress["destination_thread_id"]).to_owned();
@@ -302,7 +314,12 @@ pub fn post_with_cursor(
     let mention = mention && target == thread;
     if needs_question {
         body = format!(
-            "判断をお願いする質問を新しい投稿にしました。\nhttps://discord.com/channels/{}/{}",
+            "{}\nhttps://discord.com/channels/{}/{}",
+            if truth(&progress["decision_reuse"]) {
+                "同じ判断の質問と回答を保持しています。"
+            } else {
+                "判断をお願いする質問を新しい投稿にしました。"
+            },
             s(&ctx.cfg["guild_id"]),
             s(&progress["question_thread_id"])
         );

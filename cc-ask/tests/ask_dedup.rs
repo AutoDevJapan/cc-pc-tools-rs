@@ -336,7 +336,9 @@ impl Effects for TextLoss {
                 .unwrap()
                 .last_mut()
                 .unwrap()["author"]["bot"] = json!(true);
-            if self.lose_starter && (!self.progress_only || self.shared.0.borrow().messages["T"].len() == 2) {
+            if self.lose_starter
+                && (!self.progress_only || self.shared.0.borrow().messages["T"].len() == 2)
+            {
                 self.lose_starter = false;
                 return Err("fixture: text starter response lost".into());
             }
@@ -376,15 +378,21 @@ fn creates(h: &Harness) -> usize {
 fn different_body_with_same_title_creates_isolated_question_and_progress() {
     let mut h = Harness::new();
     let mut a = args(&h, "Steam のサインイン", "D:/CC/game");
+    common::decision(&h, &mut a, "original prices");
     a.source = Some("scheduler".into());
     a.scheduler_item = Some(42);
     a.scheduler_job = Some("original".into());
     let first = cmd_ask(&mut h.ctx, &a).unwrap();
     let before = h.state()["questions"][0].clone();
     let mut b = a.clone();
+    common::decision(&h, &mut b, "new prices");
     b.agent = "Claude".into();
     b.scheduler_job = Some("second".into());
-    std::fs::write(&b.body_file, "別の料金を決めてください。\na 月額3000円\nb 月額4000円").unwrap();
+    std::fs::write(
+        &b.body_file,
+        "別の料金を決めてください。\na 月額3000円\nb 月額4000円",
+    )
+    .unwrap();
     let result = cmd_ask(&mut h.ctx, &b).unwrap();
     assert_ne!(result["thread_id"], first["thread_id"]);
     assert_ne!(result["progress_thread_id"], first["progress_thread_id"]);
@@ -404,10 +412,19 @@ fn different_body_with_same_title_creates_isolated_question_and_progress() {
     assert!(f.posts.is_empty());
     for tid in [s(&first["thread_id"]), s(&result["thread_id"])] {
         assert!(s(&f.messages[tid][0]["content"]).starts_with("【game】\n<@OWN> "));
-        assert_eq!(s(&f.messages[tid][0]["content"]).matches("<@OWN>").count(), 1);
-        assert_eq!(f.messages[tid][0]["allowed_mentions"]["users"], json!(["OWN"]));
+        assert_eq!(
+            s(&f.messages[tid][0]["content"]).matches("<@OWN>").count(),
+            1
+        );
+        assert_eq!(
+            f.messages[tid][0]["allowed_mentions"]["users"],
+            json!(["OWN"])
+        );
     }
-    for tid in [s(&first["progress_thread_id"]), s(&result["progress_thread_id"])] {
+    for tid in [
+        s(&first["progress_thread_id"]),
+        s(&result["progress_thread_id"]),
+    ] {
         assert_eq!(f.messages[tid][0]["flags"], SILENT | 4);
         assert_eq!(f.messages[tid][0]["allowed_mentions"]["users"], json!([]));
         assert!(!s(&f.messages[tid][0]["content"]).contains("<@OWN>"));
@@ -430,7 +447,10 @@ fn created_thread_with_lost_response_is_recovered_without_second_creation() {
     assert_eq!(result["thread_id"], "300");
     assert_eq!(creates(&h), 2);
     let state = h.state();
-    assert_eq!(intent_records(&h)[0]["progress_thread_id"], result["progress_thread_id"]);
+    assert_eq!(
+        intent_records(&h)[0]["progress_thread_id"],
+        result["progress_thread_id"]
+    );
     assert_eq!(state["questions"].as_array().unwrap().len(), 1);
 }
 
@@ -451,7 +471,9 @@ fn unknown_creation_outcome_is_not_treated_as_permission_to_resend() {
 
 #[test]
 fn text_starter_and_thread_response_loss_each_recover_without_new_starter() {
-    for (lose_starter, progress_only) in [(true, false), (false, false), (true, true), (false, true)] {
+    for (lose_starter, progress_only) in
+        [(true, false), (false, false), (true, true), (false, true)]
+    {
         let mut h = Harness::new();
         let a = args(&h, "Steamのサインイン", "D:/CC/game");
         h.ctx.effects = Box::new(TextLoss {
@@ -497,7 +519,8 @@ fn text_starter_and_thread_response_loss_each_recover_without_new_starter() {
 #[test]
 fn new_question_preserves_original_generation_and_all_delivery_fields() {
     let mut h = Harness::new();
-    let a = args(&h, "Steamのサインイン", "D:/CC/game");
+    let mut a = args(&h, "Steamのサインイン", "D:/CC/game");
+    common::decision(&h, &mut a, "original scope");
     let first = cmd_ask(&mut h.ctx, &a).unwrap();
     let mut state = h.state();
     let q = &mut state["questions"][0];
@@ -508,8 +531,13 @@ fn new_question_preserves_original_generation_and_all_delivery_fields() {
     q["restart"] = json!({"opaque":true});
     q["continuation"] = json!("kept");
     h.save(&state);
-    let b = args(&h, "Steamログイン", "D:/CC/game");
-    std::fs::write(&b.body_file, "新しい方針を決めてください。\na 先に公開\nb 準備を続ける").unwrap();
+    let mut b = args(&h, "Steamログイン", "D:/CC/game");
+    common::decision(&h, &mut b, "publish scope");
+    std::fs::write(
+        &b.body_file,
+        "新しい方針を決めてください。\na 先に公開\nb 準備を続ける",
+    )
+    .unwrap();
     let next = cmd_ask(&mut h.ctx, &b).unwrap();
     assert_ne!(next["thread_id"], first["thread_id"]);
     assert_ne!(next["progress_thread_id"], first["progress_thread_id"]);
@@ -611,7 +639,11 @@ fn closed_other_folder_and_different_question_create_their_own_threads() {
             },
         );
         cmd_ask(&mut h.ctx, &b).unwrap();
-        assert_eq!(creates(&h), if mode == "folder" || mode == "title" { 4 } else { 2 }, "{mode}");
+        assert_eq!(
+            creates(&h),
+            2,
+            "{mode}: title and folder changes alone do not prove new scope"
+        );
     }
 }
 
@@ -627,7 +659,10 @@ fn history_failure_never_falls_back_to_creating_a_duplicate() {
         .insert("GET /channels/300/messages?after=300&limit=100".into(), 1);
     assert!(cmd_ask(&mut h.ctx, &a).is_err());
     assert_eq!(creates(&h), 2);
-    assert_eq!(h.fake.borrow().http_errors["GET /channels/300/messages?after=300&limit=100"], 0);
+    assert_eq!(
+        h.fake.borrow().http_errors["GET /channels/300/messages?after=300&limit=100"],
+        0
+    );
 }
 
 #[test]
@@ -682,7 +717,7 @@ fn simultaneous_callers_create_only_one_question_progress_pair() {
 }
 
 #[test]
-fn long_titles_with_distinct_prices_are_not_merged_after_display_truncation() {
+fn different_truncated_titles_do_not_create_a_new_permission_for_identical_body() {
     let mut h = Harness::new();
     let prefix = "Steamサインイン後の長い製品名と問い合わせと税と返金の月額料金を";
     let a = args(&h, &format!("{prefix}1000円にする"), "D:/CC/game");
@@ -690,23 +725,37 @@ fn long_titles_with_distinct_prices_are_not_merged_after_display_truncation() {
     ready(&h);
     let b = args(&h, &format!("{prefix}2000円にする"), "D:/CC/game");
     cmd_ask(&mut h.ctx, &b).unwrap();
-    assert_eq!(creates(&h), 4);
+    assert_eq!(creates(&h), 2);
 }
 
 #[test]
 fn new_question_keeps_original_answer_readable_and_isolates_reply_history() {
     let mut h = Harness::new();
-    let a = args(&h, "Steamのサインイン", "D:/CC/game");
+    let mut a = args(&h, "Steamのサインイン", "D:/CC/game");
+    common::decision(&h, &mut a, "original prices");
     let first = cmd_ask(&mut h.ctx, &a).unwrap();
     let original = h.state()["questions"][0].clone();
     h.reply("a 月額1000円", s(&first["thread_id"]));
-    std::fs::write(&a.body_file, "別の料金を決めてください。\na 月額3000円\nb 月額4000円").unwrap();
+    common::decision(&h, &mut a, "new prices");
+    std::fs::write(
+        &a.body_file,
+        "別の料金を決めてください。\na 月額3000円\nb 月額4000円",
+    )
+    .unwrap();
     let second = cmd_ask(&mut h.ctx, &a).unwrap();
     assert_ne!(first["thread_id"], second["thread_id"]);
     let state = h.state();
     assert_eq!(state["questions"][0], original);
-    assert_eq!(owner_replies(&mut h.ctx, &original, "OWN").unwrap().last().unwrap()["content"], "a 月額1000円");
-    assert!(owner_replies(&mut h.ctx, &state["questions"][1], "OWN").unwrap().is_empty());
+    assert_eq!(
+        owner_replies(&mut h.ctx, &original, "OWN")
+            .unwrap()
+            .last()
+            .unwrap()["content"],
+        "a 月額1000円"
+    );
+    assert!(owner_replies(&mut h.ctx, &state["questions"][1], "OWN")
+        .unwrap()
+        .is_empty());
     assert_eq!(creates(&h), 4);
 }
 
@@ -720,13 +769,21 @@ fn intent_records(h: &Harness) -> Vec<serde_json::Value> {
 fn worker_updates_original_cursor_during_new_creation_without_crossing_questions() {
     for close in [false, true] {
         let mut h = Harness::new();
-        let a = args(&h, "Steamのサインイン", "D:/CC/game");
+        let mut a = args(&h, "Steamのサインイン", "D:/CC/game");
+        common::decision(&h, &mut a, "original scope");
         cmd_ask(&mut h.ctx, &a).unwrap();
         let original = h.state()["questions"][0].clone();
         h.ctx.effects = Box::new(RegistrationRace {
-            shared: SharedFake(h.fake.clone()), here: h.ctx.here.clone(), close,
+            shared: SharedFake(h.fake.clone()),
+            here: h.ctx.here.clone(),
+            close,
         });
-        std::fs::write(&a.body_file, "別の方針を決めてください。\na 公開する\nb 続ける").unwrap();
+        common::decision(&h, &mut a, "new scope");
+        std::fs::write(
+            &a.body_file,
+            "別の方針を決めてください。\na 公開する\nb 続ける",
+        )
+        .unwrap();
         let next = cmd_ask(&mut h.ctx, &a).unwrap();
         let state = h.state();
         let mut expected = original;

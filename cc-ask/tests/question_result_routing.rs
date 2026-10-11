@@ -284,7 +284,7 @@ fn concrete_intake_result_registers_new_question_once_and_keeps_work_context() {
 }
 
 #[test]
-fn later_result_in_same_session_is_a_new_question_even_with_identical_truncated_title() {
+fn later_worker_in_same_session_reuses_same_decision_instead_of_new_generation() {
     let mut h = Harness::new();
     let cwd = h.root.path().to_string_lossy().into_owned();
     for job in ["job1", "job2"] {
@@ -304,13 +304,10 @@ fn later_result_in_same_session_is_a_new_question_even_with_identical_truncated_
     let first = question_progress::ask_result(&mut h.ctx, "100", text, "job1").unwrap();
     let second =
         question_progress::ask_result(&mut h.ctx, s(&first["thread_id"]), text, "job2").unwrap();
-    assert_ne!(first["thread_id"], second["thread_id"]);
-    assert_ne!(first["progress_thread_id"], second["progress_thread_id"]);
+    assert_eq!(first["thread_id"], second["thread_id"]);
+    assert_eq!(first["progress_thread_id"], second["progress_thread_id"]);
     assert_eq!(second["work_thread_id"], "100");
-    assert_eq!(
-        h.state()["questions"][0]["session_id"],
-        h.state()["questions"][1]["session_id"]
-    );
+    assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
     let repeated =
         question_progress::ask_result(&mut h.ctx, s(&first["thread_id"]), text, "job2").unwrap();
     assert_eq!(second, repeated);
@@ -321,7 +318,7 @@ fn later_result_in_same_session_is_a_new_question_even_with_identical_truncated_
             .iter()
             .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
             .count(),
-        4
+        2
     );
 }
 

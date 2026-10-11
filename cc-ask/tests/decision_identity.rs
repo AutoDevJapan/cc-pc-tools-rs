@@ -457,3 +457,18 @@ fn post_and_direct_producers_share_identity_and_never_publish_internal_json() {
     assert_ne!(first["thread_id"], second["thread_id"]);
     assert!(second["latest_owner_reply"].is_null());
 }
+
+#[test]
+fn shared_boundary_binds_todo_from_preparsed_identity_and_rejects_conflicting_context() {
+    let mut h = Harness::new();
+    let normalized = decision_identity::normalize(&h.ctx, &identity("D:/models/one")).unwrap();
+    let context =
+        json!({"title":"original","cwd":"D:/cleanup","todo_id":999,"decision_identity":normalized});
+    let body = "公開してよいですか？\na 公開\nb 保持";
+    assert!(cc_ask::question_progress::ask(&mut h.ctx, &context, "", body, &[]).is_err());
+    assert_eq!(creates(&h), 0);
+    let mut context = context;
+    context.as_object_mut().unwrap().remove("todo_id");
+    cc_ask::question_progress::ask(&mut h.ctx, &context, "", body, &[]).unwrap();
+    assert_eq!(h.state()["questions"][0]["todo_id"], 2380);
+}

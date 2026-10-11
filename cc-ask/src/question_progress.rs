@@ -353,15 +353,21 @@ pub fn ask(
     let work = route(ctx, origin)?
         .map(|r| s(&r["work_thread_id"]).to_owned())
         .unwrap_or_else(|| origin.into());
-    let todo = crate::decision_identity::todo(ctx, &context)?;
-    if todo > 0 {
-        context["todo_id"] = json!(todo);
-    }
     let decision = if context["decision_identity"].is_object() {
         crate::decision_identity::normalize(ctx, &context["decision_identity"])?
     } else {
         Value::Null
     };
+    if decision.is_object() {
+        if n(&context["todo_id"]) > 0 && context["todo_id"] != decision["todo_id"] {
+            return Err("decision identity and original context ToDo differ".into());
+        }
+        context["todo_id"] = decision["todo_id"].clone();
+    }
+    let todo = crate::decision_identity::todo(ctx, &context)?;
+    if todo > 0 {
+        context["todo_id"] = json!(todo);
+    }
     // All callers share this lock, including automatic result delivery. A new job,
     // title or session is never evidence of a new permission scope.
     let records = routes(ctx)?;

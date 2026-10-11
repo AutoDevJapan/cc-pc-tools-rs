@@ -300,61 +300,27 @@ fn install(ctx: &Context, record: &Value) -> Result<()> {
     let job = s(&record["context"]["posting_job"]);
     let job_dir = ctx.jobs.join("jobs").join(job);
     if valid_job(job) && job_dir.join("job.json").is_file() {
-        let _job_lock = ByteLock::acquire(&job_dir.join("state.lock"), Duration::from_secs(45))?;
-        let path = job_dir.join("discord-threads.json");
-        let mut association = if path.is_file() {
-            read_json(&path)?
-        } else {
-            json!({"thread_ids":[]})
-        };
-        if !association.is_object() {
-            return Err("invalid Discord question associations".into());
-        }
-        if association.get("thread_ids").is_none() {
-            association["thread_ids"] = json!([]);
-        }
-        let mut ids = std::collections::BTreeSet::new();
-        ids.extend(
-            association["question_thread_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .map(str::to_owned),
-        );
-        ids.insert(tid.to_owned());
-        association["question_thread_ids"] = json!(ids);
-        association["question_routes"][tid] = state["question_routes"][tid].clone();
-        atomic_json(&path, &association, 2)?;
+        let mut store = crate::job_associations::Store::open(ctx, job)?;
+        store.update(|association| {
+            if association.get("thread_ids").is_none() {
+                association["thread_ids"] = json!([]);
+            }
+            let mut ids = std::collections::BTreeSet::new();
+            ids.extend(
+                association["question_thread_ids"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+            ids.insert(tid.to_owned());
+            association["question_thread_ids"] = json!(ids);
+            association["question_routes"][tid] = state["question_routes"][tid].clone();
+            Ok(())
+        })?;
     }
     Ok(())
-}
-
-/// PR108 wrote question-only sidecars without request ownership. Their question
-/// IDs must never be promoted to request IDs or prevent unrelated intake.
-pub(crate) fn request_thread_ids(association: &Value, job: &str) -> Result<Value> {
-    if let Some(ids) = association.get("thread_ids") {
-        if ids.is_array() {
-            return Ok(ids.clone());
-        }
-        return Err("invalid Discord thread associations".into());
-    }
-    let questions = association["question_thread_ids"]
-        .as_array()
-        .ok_or("invalid Discord thread associations")?;
-    if questions.is_empty()
-        || !association["question_routes"].is_object()
-        || questions.iter().any(|id| {
-            let text = s(id);
-            text.is_empty()
-                || !text.bytes().all(|c| c.is_ascii_digit())
-                || association["question_routes"][text]["question_thread_id"] != *id
-                || s(&association["question_routes"][text]["posting_job"]) != job
-        })
-    {
-        return Err("invalid Discord question associations".into());
-    }
-    Ok(json!([]))
 }
 
 pub fn ask(

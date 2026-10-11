@@ -144,7 +144,8 @@ fn question_only_worker_sidecar_has_empty_request_ids_and_preserves_existing_own
         2,
     )
     .unwrap();
-    let context = json!({"title":"料金判断","cwd":"D:/ProductA","posting_job":"worker"});
+    let context = json!({"title":"料金判断","cwd":"D:/ProductA","posting_job":"worker",
+        "decision_identity":cc_ask::decision_identity::normalize(&h.ctx,&json!({"todo_id":1,"resources":[{"kind":"service","id":"ProductA"}],"decision":"money","scope":{"price":1000}})).unwrap()});
     let first = ask(
         &mut h.ctx,
         &context,
@@ -163,30 +164,15 @@ fn question_only_worker_sidecar_has_empty_request_ids_and_preserves_existing_own
     atomic_json(&path, &sidecar, 2).unwrap();
     let mut context = context;
     context["decision_identity"]=cc_ask::decision_identity::normalize(&h.ctx,&json!({"todo_id":1,"resources":[{"kind":"service","id":"ProductB"}],"decision":"money","scope":{"price":3000}})).unwrap();
-    // The first untyped scope is deliberately not inferred. A separate original
-    // work identity allows a new scoped question while preserving request fields.
-    context["cwd"] = json!("D:/ProductB");
-    context["posting_job"] = json!("worker");
-    let mut context2 = context;
-    context2["posting_job"] = json!("worker2");
-    let dir2 = h.ctx.jobs.join("jobs/worker2");
-    std::fs::create_dir_all(&dir2).unwrap();
-    atomic_json(
-        &dir2.join("job.json"),
-        &json!({"id":"worker2","status":"running","todo_id":1}),
-        2,
-    )
-    .unwrap();
-    atomic_json(&dir2.join("discord-threads.json"), &sidecar, 2).unwrap();
     let result = ask(
         &mut h.ctx,
-        &context2,
+        &context,
         "",
         "別製品の料金を決めてください。\na 3000円\nb 4000円",
         &[],
     )
     .unwrap();
-    let next = read_json(&dir2.join("discord-threads.json")).unwrap();
+    let next = read_json(&path).unwrap();
     assert_eq!(next["thread_ids"], json!(["100"]));
     assert_eq!(next["opaque"], json!({"kept":true}));
     assert!(next["question_thread_ids"]

@@ -779,6 +779,24 @@ fn request_launch_registration_keeps_questions_created_before_its_checkpoint() {
     assert_eq!(sidecar["question_thread_ids"], json!(["700"]));
     assert_eq!(sidecar["question_routes"]["700"]["posting_job"], job);
 }
+
+#[test]
+fn legacy_owner_registration_merges_request_fields_and_keeps_question_routes() {
+    let mut h = Harness::new();
+    bot_thread(&h);
+    external_worker(&h, false);
+    let path = h.ctx.jobs.join("jobs/idea-brainstorm/discord-threads.json");
+    let question = json!({"question_thread_id":"700","posting_job":"idea-brainstorm"});
+    atomic_json(&path,&json!({"question_thread_ids":["700"],"question_routes":{"700":question},"opaque":{"kept":true}}),2).unwrap();
+    h.reply("既存の担当へ条件を引き継いでください。", "100");
+    h.tick();
+    assert_eq!(h.fake.borrow().launches.len(), 1);
+    let saved = read_json(&path).unwrap();
+    assert_eq!(saved["thread_ids"], json!(["100", "200"]));
+    assert_eq!(saved["question_thread_ids"], json!(["700"]));
+    assert_eq!(saved["question_routes"]["700"], question);
+    assert_eq!(saved["opaque"], json!({"kept":true}));
+}
 #[test]
 fn website_login_and_screen_check_enable_owner_chrome() {
     for task in [

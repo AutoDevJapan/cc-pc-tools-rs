@@ -1497,36 +1497,26 @@ pub fn launch_job_with_session(
     // Persist the Discord owner separately from Codex's session UUID.
     let directory = ctx.jobs.join("jobs").join(&jid);
     if directory.join("job.json").is_file() {
-        let _lock = ByteLock::acquire(
-            &directory.join("state.lock"),
-            std::time::Duration::from_secs(45),
-        )?;
+        let mut store = crate::job_associations::Store::open(ctx, &jid)?;
         let mut info = read_json(&directory.join("job.json"))?;
         info["discord_thread_id"] = json!(tid);
         info["prompt_limit_bytes"] = json!(crate::prompt_context::limit(selection));
-        let association_path = directory.join("discord-threads.json");
-        let mut associations = if association_path.exists() {
-            read_json(&association_path)?
-        } else {
-            json!({})
-        };
-        if !associations.is_object() {
-            return Err("invalid Discord thread associations".into());
-        }
-        associations["discord_thread_id"] = json!(tid);
-        associations["thread_ids"] = json!([tid]);
-        associations["source"] = json!("declared");
-        associations["prompt_limit_bytes"] = json!(crate::prompt_context::limit(selection));
-        if selection["discord_thread_ids"]
-            .as_array()
-            .is_some_and(|ids| ids.iter().any(|id| s(id) == tid))
-        {
-            info["discord_thread_ids"] = selection["discord_thread_ids"].clone();
-            info["discord_thread_ids_source"] = selection["discord_thread_ids_source"].clone();
-            associations["thread_ids"] = selection["discord_thread_ids"].clone();
-            associations["source"] = selection["discord_thread_ids_source"].clone();
-        }
-        atomic_json(&association_path, &associations, 2)?;
+        store.update(|associations| {
+            associations["discord_thread_id"] = json!(tid);
+            associations["thread_ids"] = json!([tid]);
+            associations["source"] = json!("declared");
+            associations["prompt_limit_bytes"] = json!(crate::prompt_context::limit(selection));
+            if selection["discord_thread_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.iter().any(|id| s(id) == tid))
+            {
+                info["discord_thread_ids"] = selection["discord_thread_ids"].clone();
+                info["discord_thread_ids_source"] = selection["discord_thread_ids_source"].clone();
+                associations["thread_ids"] = selection["discord_thread_ids"].clone();
+                associations["source"] = selection["discord_thread_ids_source"].clone();
+            }
+            Ok(())
+        })?;
         atomic_json(&directory.join("job.json"), &info, 2)?;
     }
     Ok(jid)

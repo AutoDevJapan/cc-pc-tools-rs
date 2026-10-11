@@ -271,6 +271,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "url",
  "uuid",
  "windows-sys 0.61.2",
 ]

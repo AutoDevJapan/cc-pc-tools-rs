@@ -47,6 +47,19 @@ fn process_capture_fixture() {
         println!("capture fixture loaded");
         return;
     }
+    if mode == "warm_tree" {
+        // Preload the same nested process and native lock setup that the
+        // measured tree needs, without creating its ready evidence.
+        let status = fixture_command("warm_holder", &root).status().unwrap();
+        assert!(status.success());
+        println!("capture fixture tree loaded");
+        return;
+    }
+    if mode == "warm_holder" {
+        let _lock = ByteLock::acquire(&root.join("state.lock"), Duration::ZERO).unwrap();
+        println!("capture fixture lock setup loaded");
+        return;
+    }
     if mode == "descendant" {
         let limit = Instant::now() + FIXTURE_HOLD;
         while !root.join("release").exists() && Instant::now() < limit {
@@ -139,7 +152,11 @@ fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
 #[test]
 fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     let root = tempfile::tempdir().unwrap();
-    warm_fixture(root.path());
+    let warm = run_fixture("warm_tree", root.path(), 8).expect("nested fixture preflight failed");
+    assert_eq!(warm.code, 0);
+    assert!(warm.stdout.contains("capture fixture tree loaded"));
+    assert!(warm.stdout.contains("capture fixture lock setup loaded"));
+    assert!(!root.path().join("ready").exists());
     let start = Instant::now();
     let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("tree", root.path(), 0);

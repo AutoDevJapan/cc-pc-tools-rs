@@ -9,6 +9,7 @@ use std::{
 pub mod completion;
 pub mod guard;
 pub mod lifecycle;
+pub mod registrar;
 #[cfg(windows)]
 pub mod native;
 

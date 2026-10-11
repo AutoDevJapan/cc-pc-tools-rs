@@ -32,6 +32,9 @@ pub fn help_text(command: &str) -> &'static str {
         "cleanup-supervisors" => {
             "usage: codex_jobs.exe cleanup-supervisors [--apply]\n\nPreview terminal supervisors; --apply stops only their identified controller.\n"
         }
+        "reload-queue" => {
+            "usage: codex_jobs.exe reload-queue [--job-id <id>]\n\nRefresh queued controllers without execution admission; their successors still check history, capacity and ownership. --job-id keeps every other controller unchanged. Invalid ids exit 2; missing/unreadable records exit 1. Deferred updates appear in the report and do not mean execution has started.\n"
+        }
         _ => include_str!("../tests/fixtures/help-root.txt"),
     }
 }
@@ -185,6 +188,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
+                "reload-queue" => name == "job-id",
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -500,7 +504,11 @@ impl Context {
                 Ok(if deferred { 75 } else { 0 })
             }
             "reload-queue" => {
-                writeln!(out, "{}", pretty(&self.reload_queue()?))?;
+                let report = match a.value("job-id") {
+                    Some(id) => self.reload_queue_job(id)?,
+                    None => self.reload_queue()?,
+                };
+                writeln!(out, "{}", pretty(&report))?;
                 Ok(0)
             }
             "adjust-limit" => {

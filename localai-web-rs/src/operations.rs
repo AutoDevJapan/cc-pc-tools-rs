@@ -363,7 +363,9 @@ fn collect(root: &Path, now: u64) -> Value {
                 used.insert(text(j, "id").to_owned());
             }
             let raw_project = text(item, "project");
-            let project = project_name(&names, raw_project);
+            let owned = &policy["items"][item["id"].as_u64().unwrap_or(0).to_string()];
+            let display_project = owned["project"].as_str().or_else(|| item["owner_project"].as_str()).unwrap_or(raw_project);
+            let project = project_name(&names, display_project);
             let client = project == "クライアント案件"
                 || cc_scheduler::priority::item_rank(item, &policy) == 10
                 || names.project(text(item, "cwd")) == "クライアント案件"

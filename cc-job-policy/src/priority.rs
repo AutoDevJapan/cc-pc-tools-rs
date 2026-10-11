@@ -65,7 +65,7 @@ fn rank(value: &Value) -> Option<u32> {
     value
         .as_u64()
         .and_then(|n| u32::try_from(n).ok())
-        .filter(|n| *n > 0)
+        .filter(|n| matches!(*n, 10 | 20 | 30 | 40 | 50 | 60..=67 | 100))
 }
 pub fn item_rank(item: &Value, policy: &Value) -> u32 {
     let id = item["id"]
@@ -125,13 +125,11 @@ pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
                 .chain(item["work_wait_on"].as_array().into_iter().flatten())
                 .filter_map(Value::as_u64)
             {
-                if items.iter().any(|i| i["id"] == id && i["status"] != "done") {
-                    if let Some(child) = ranks.get_mut(&id) {
-                        if parent < *child {
+                if items.iter().any(|i| i["id"] == id && i["status"] != "done")
+                    && let Some(child) = ranks.get_mut(&id)
+                    && parent < *child {
                             *child = parent;
                             changed = true;
-                        }
-                    }
                 }
             }
         }
@@ -181,15 +179,17 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
             }
             let Some(parent) = job["parent_job_id"]
                 .as_str()
+                .filter(|id| jobs.iter().any(|parent| parent["id"].as_str() == Some(*id)
+                    && ["queued","starting","running"].contains(&parent["status"].as_str().unwrap_or(""))
+                    && parent["cancel_requested"] != true))
                 .and_then(|id| ranks.get(id).copied())
             else {
                 continue;
             };
-            if let Some(child) = job["id"].as_str().and_then(|id| ranks.get_mut(id)) {
-                if parent < *child {
+            if let Some(child) = job["id"].as_str().and_then(|id| ranks.get_mut(id))
+                && parent < *child {
                     *child = parent;
                     changed = true;
-                }
             }
         }
         if !changed {
@@ -229,6 +229,7 @@ mod tests {
             20
         );
         assert_eq!(item_rank(&json!({"project":"x"}), &json!({"x":0})), 100);
+        assert_eq!(item_rank(&json!({"project":"civ6"}),&json!({"civ6":1})),20);
     }
     #[test]
     fn mixed_ownership_transitive_waits_and_completed_edges() {
@@ -256,5 +257,8 @@ mod tests {
         ];
         let ranks = job_ranks(&jobs, &json!({}), &json!({}));
         assert_eq!((ranks["c"], ranks["g"], ranks["s"]), (10, 10, 100));
+        let mut finished = jobs.clone(); finished[0]["status"] = json!("succeeded");
+        let ranks = job_ranks(&finished,&json!({}),&json!({}));
+        assert_eq!((ranks["c"],ranks["g"]),(100,100));
     }
 }

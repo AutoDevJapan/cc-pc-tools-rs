@@ -23,7 +23,7 @@
 `scheduler/priorities.json`の既存のプロジェクトと数値の対応は維持する。
 混在した依頼は`items`にToDo番号をキーとして設定できる。
 例：`{"items":{"2353":{"project":"localai-web-rs"}}}`。
-値には正の整数、または`project`・`department`を持つ所有分類を指定できる。
+値には表にある順位、または`project`・`department`を持つ所有分類を指定できる。
 案件の登録パスや内容を分類結果や画面へ出さない。受託は従来の匿名表示を保つ。
 
 未完了の`wait_on`・`work_wait_on`で指定した必要工程は、依頼元の順位を引き継ぐ。

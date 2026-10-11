@@ -181,6 +181,38 @@ fn original_todo_is_recovered_from_its_recorded_job_not_its_title() {
     );
 }
 #[test]
+fn explicit_original_selects_only_a_recorded_todo_of_a_multi_task_worker() {
+    let h = Harness::new();
+    atomic_json(
+        &h.ctx.todo,
+        &json!({"items":[{"id":1168,"jobs":["product-parent"]},
+            {"id":1230,"jobs":["product-parent"]},{"id":999,"jobs":["other-worker"]}]}),
+        2,
+    )
+    .unwrap();
+    for id in [1168, 1230] {
+        assert_eq!(
+            decision_identity::todo(
+                &h.ctx,
+                &json!({"posting_job":"product-parent","todo_id":id})
+            )
+            .unwrap(),
+            id
+        );
+    }
+    assert!(decision_identity::todo(&h.ctx, &json!({"posting_job":"product-parent"})).is_err());
+    assert!(decision_identity::todo(
+        &h.ctx,
+        &json!({"posting_job":"product-parent","todo_id":999})
+    )
+    .is_err());
+    assert!(decision_identity::todo(
+        &h.ctx,
+        &json!({"posting_job":"product-parent","todo_id":2345})
+    )
+    .is_err());
+}
+#[test]
 fn two_concurrent_workers_with_different_titles_create_one_pair() {
     use std::sync::{Arc, Barrier};
     let shared = Harness::new();

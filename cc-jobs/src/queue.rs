@@ -525,11 +525,10 @@ impl Context {
             {
                 continue;
             }
-            // An unavailable index must leave the current controller alive.
+            // Persist this registered ID before stopping the controller. A missing/corrupt
+            // derived index is initialized as incomplete; execution still requires reconciliation.
             let refresh = self
-                .read_admission_index()
-                .and_then(|index| self.index_ids(&index).map(|_| ()))
-                .and_then(|()| self.track_queued_job(jid))
+                .track_queued_job(jid)
                 .and_then(|()| self.restart_queued_supervisor(&mut job));
             match refresh {
                 Ok(()) => restarted.push(json!(jid)),

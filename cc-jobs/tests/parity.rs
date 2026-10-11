@@ -3719,38 +3719,45 @@ mod queue_regressions {
             let other_path = t.ctx.job_dir("other").join("job.json");
             let untouched = fs::read(&other_path).unwrap();
             let held = (case == "busy").then(|| t.ctx.job_lock("target", "state.lock").unwrap());
+            let updates = ["queued", "missing_index", "broken_index"].contains(&case);
             let (result, out, _) = t.cli(&["reload-queue", "--job-id", requested]);
             if ["wrong_id", "bad_id", "missing"].contains(&case) {
                 assert!(result.is_err(), "{case}");
             } else {
                 assert_eq!(result.unwrap(), 0, "{case}");
                 let report: Value = serde_json::from_str(&out).unwrap();
-                if ["missing_index", "broken_index"].contains(&case) {
-                    assert_eq!(report.as_array().unwrap().len(), 1, "{case}");
-                    assert_eq!(report[0]["id"], "target", "{case}");
-                    assert_eq!(report[0]["action"], "deferred", "{case}");
-                } else {
-                    assert_eq!(
-                        report,
-                        if case == "queued" {
-                            json!(["target"])
-                        } else {
-                            json!([])
-                        },
-                        "{case}"
-                    );
-                }
+                assert_eq!(
+                    report,
+                    if updates {
+                        json!(["target"])
+                    } else {
+                        json!([])
+                    },
+                    "{case}"
+                );
             }
             assert_eq!(fs::read(&other_path).unwrap(), untouched, "{case}");
             assert_eq!(
                 t.rt.supervisors.load(Ordering::Relaxed),
-                usize::from(case == "queued"),
+                usize::from(updates),
                 "{case}"
             );
-            if case == "queued" {
+            if updates {
                 assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
                 assert_eq!(t.ctx.load("target").unwrap()["resume_session"], SESSION_ID);
                 assert!(t.ctx.load("target").unwrap()["started_at"].is_null());
+                if ["missing_index", "broken_index"].contains(&case) {
+                    let index = t
+                        .ctx
+                        .read_json(&t.ctx.jobs.join(".queue-index.json"))
+                        .unwrap();
+                    assert_eq!(index["ids"], json!(["target"]));
+                    assert_eq!(index["scan_complete"], false);
+                    assert_eq!(index["scanned_at"], 0.);
+                    let scan = FileLock::try_acquire(&t.ctx.jobs.join(".queue-scan.lock")).unwrap();
+                    assert_eq!(t.ctx.admit("target").err().unwrap().code, 75);
+                    drop(scan);
+                }
             } else {
                 assert!(t.rt.kills.lock().unwrap().is_empty(), "{case}");
                 assert_eq!(

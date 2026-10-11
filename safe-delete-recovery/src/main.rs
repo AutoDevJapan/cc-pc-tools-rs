@@ -2024,6 +2024,55 @@ mod tests {
             git(&files.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
             c.repos[0].head
         );
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &files.join("repo/.git")
+        ));
+    }
+
+    #[test]
+    fn decision_archive_rejects_content_and_acl_changes_after_planning() {
+        for failure in ["content", "acl"] {
+            let c = fixture_for(DECISION_ID);
+            let old = source(&c);
+            fs::write(old.join("verification.log"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            let files = c.destination().join("files");
+            fs::rename(&old, &files).unwrap();
+            let path = files.join("verification.log");
+            if failure == "content" {
+                let written = fs::metadata(&path).unwrap().modified().unwrap();
+                fs::write(&path, b"modified").unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(&path)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(written))
+                    .unwrap();
+            } else {
+                hidden(
+                    Path::new("icacls.exe"),
+                    &[
+                        path.as_os_str(),
+                        OsStr::new("/grant"),
+                        OsStr::new("*S-1-1-0:(R)"),
+                    ],
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+                panic!()
+            };
+            assert!(same(
+                Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+                &old.join("repo/.git")
+            ));
+        }
     }
     #[test]
     fn chrome_squash_and_full_archive_preserve_hidden_files_hardlinks_acl_and_backlink() {

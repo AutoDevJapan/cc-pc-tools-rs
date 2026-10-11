@@ -22,6 +22,7 @@ mod windows {
     const TODO_DB: &str = r"D:\CC\Tools\todo\todo.json";
     const WORKSPACES: &str = r"D:\CC\Tools\agent-workspaces";
     const DELETE_ROOT: &str = r"D:\削除希望";
+    const C_DELETE_ROOT: &str = r"C:\Users\makhmeto\Downloads\削除希望";
     const C_TEMP: &str = r"C:\Users\makhmeto\AppData\Local\Temp";
     const C_WORKTREES: &str = r"C:\Users\makhmeto\Desktop\dev";
     const SCRUB: &str = r"D:\CC\Tools\client-records\scrub391.exe";
@@ -93,6 +94,9 @@ mod windows {
 
     #[link(name = "kernel32")]
     unsafe extern "system" {
+        fn GetCurrentProcess() -> isize;
+        fn GetLastError() -> u32;
+        fn LocalFree(memory: isize) -> isize;
         fn GetDiskFreeSpaceExW(
             path: *const u16,
             available: *mut u64,
@@ -110,6 +114,30 @@ mod windows {
         ) -> isize;
         fn GetFileInformationByHandle(handle: isize, info: *mut ByHandleFileInfo) -> i32;
         fn CloseHandle(handle: isize) -> i32;
+    }
+
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn OpenProcessToken(process: isize, access: u32, token: *mut isize) -> i32;
+        fn GetTokenInformation(
+            token: isize,
+            information_class: u32,
+            information: *mut u8,
+            information_length: u32,
+            return_length: *mut u32,
+        ) -> i32;
+        fn ConvertSidToStringSidW(sid: *const u8, string_sid: *mut *mut u16) -> i32;
+    }
+
+    #[link(name = "shell32")]
+    unsafe extern "system" {
+        fn SHEmptyRecycleBinW(window: isize, root: *const u16, flags: u32) -> i32;
+    }
+
+    #[repr(C)]
+    struct TokenUser {
+        sid: *mut u8,
+        _attributes: u32,
     }
 
     #[repr(C)]
@@ -143,6 +171,14 @@ mod windows {
         failed: u64,
         logical_bytes: u64,
         errors: Vec<String>,
+        recycle_c: Option<RecycleResult>,
+        recycle_d: Option<RecycleResult>,
+    }
+
+    #[derive(Clone, Copy)]
+    struct RecycleResult {
+        removed_entries: u64,
+        method: &'static str,
     }
 
     pub fn run() -> i32 {
@@ -153,14 +189,23 @@ mod windows {
                 return 1;
             }
         };
-        let legacy_exit = run_legacy();
         let mut stats = RunStats::default();
+        for (drive, result) in [('C', &mut stats.recycle_c), ('D', &mut stats.recycle_d)] {
+            match clear_recycle_bin(drive) {
+                Ok(value) => *result = Some(value),
+                Err(e) => {
+                    stats.failed += 1;
+                    stats.errors.push(error_kind(&e));
+                }
+            }
+        }
         match todo_statuses() {
             Ok(statuses) => {
                 let mut targets = Vec::new();
                 for root in [
                     Path::new(WORKSPACES),
                     Path::new(DELETE_ROOT),
+                    Path::new(C_DELETE_ROOT),
                     Path::new(C_TEMP),
                     Path::new(C_WORKTREES),
                 ] {
@@ -202,9 +247,13 @@ mod windows {
                 before
             }
         };
-        let log_ok = append_log(legacy_exit, before, after, &stats).is_ok();
+        let log_ok = append_log(before, after, &stats).is_ok();
         println!(
-            "legacy_exit={legacy_exit} artifacts_scanned={} artifacts_removed={} logical_GiB={:.2} C_free_GiB={:.2}->{:.2} D_free_GiB={:.2}->{:.2} E_free_GiB={:.2}->{:.2} skipped_active={} skipped_client={} skipped_link={} skipped_uncommitted={} skipped_evidence={} skipped_busy={} skipped_hardlink={} failures={} log_ok={}",
+            "recycle_c={}({}) recycle_d={}({}) artifacts_scanned={} artifacts_removed={} logical_GiB={:.2} C_free_GiB={:.2}->{:.2} D_free_GiB={:.2}->{:.2} E_free_GiB={:.2}->{:.2} skipped_active={} skipped_client={} skipped_link={} skipped_uncommitted={} skipped_evidence={} skipped_busy={} skipped_hardlink={} failures={} log_ok={}",
+            stats.recycle_c.map_or("failed", |x| x.method),
+            stats.recycle_c.map_or(0, |x| x.removed_entries),
+            stats.recycle_d.map_or("failed", |x| x.method),
+            stats.recycle_d.map_or(0, |x| x.removed_entries),
             stats.scanned,
             stats.removed,
             stats.logical_bytes as f64 / 1_073_741_824.0,
@@ -224,24 +273,131 @@ mod windows {
             stats.failed,
             log_ok
         );
-        if legacy_exit != 0 || stats.failed != 0 || !log_ok {
-            1
-        } else {
-            0
-        }
+        if stats.failed != 0 || !log_ok { 1 } else { 0 }
     }
 
-    fn run_legacy() -> i32 {
-        let Some(dir) = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(Path::to_path_buf))
-        else {
-            return 2;
+    fn clear_recycle_bin(drive: char) -> io::Result<RecycleResult> {
+        if !recycle_drive_allowed(drive) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "unsupported cleanup drive",
+            ));
+        }
+        let root = wide(OsStr::new(&format!("{drive}:\\")));
+        let hresult = unsafe { SHEmptyRecycleBinW(0, root.as_ptr(), 0x1 | 0x2 | 0x4) };
+        if hresult >= 0 {
+            return Ok(RecycleResult {
+                removed_entries: 0,
+                method: "shell",
+            });
+        }
+        Ok(RecycleResult {
+            removed_entries: empty_current_user_recycle_store(drive)?,
+            method: "account_store",
+        })
+    }
+
+    fn recycle_drive_allowed(drive: char) -> bool {
+        matches!(drive, 'C' | 'D')
+    }
+
+    fn current_user_sid() -> io::Result<String> {
+        const TOKEN_QUERY: u32 = 0x0008;
+        const TOKEN_USER_CLASS: u32 = 1;
+        let mut token = 0isize;
+        let opened = unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) };
+        if opened == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        let result = (|| {
+            let mut length = 0u32;
+            unsafe {
+                GetTokenInformation(token, TOKEN_USER_CLASS, ptr::null_mut(), 0, &mut length);
+            }
+            if length == 0 {
+                let code = unsafe { GetLastError() };
+                return Err(io::Error::from_raw_os_error(code as i32));
+            }
+            let word_count = (length as usize).div_ceil(std::mem::size_of::<usize>());
+            let mut storage = vec![0usize; word_count];
+            let ok = unsafe {
+                GetTokenInformation(
+                    token,
+                    TOKEN_USER_CLASS,
+                    storage.as_mut_ptr().cast(),
+                    length,
+                    &mut length,
+                )
+            };
+            if ok == 0 {
+                return Err(io::Error::last_os_error());
+            }
+            let user = unsafe { &*(storage.as_ptr().cast::<TokenUser>()) };
+            let mut sid_text = ptr::null_mut();
+            let converted = unsafe { ConvertSidToStringSidW(user.sid, &mut sid_text) };
+            if converted == 0 {
+                return Err(io::Error::last_os_error());
+            }
+            let mut sid_len = 0usize;
+            unsafe {
+                while *sid_text.add(sid_len) != 0 {
+                    sid_len += 1;
+                }
+            }
+            let sid = unsafe { String::from_utf16(std::slice::from_raw_parts(sid_text, sid_len)) }
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "user SID encoding"));
+            unsafe {
+                LocalFree(sid_text as isize);
+            }
+            sid
+        })();
+        unsafe {
+            CloseHandle(token);
+        }
+        result
+    }
+
+    fn empty_current_user_recycle_store(drive: char) -> io::Result<u64> {
+        let sid = current_user_sid()?;
+        let root = PathBuf::from(format!(r"{drive}:\$Recycle.Bin\{sid}"));
+        let metadata = match fs::symlink_metadata(&root) {
+            Ok(value) => value,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(0),
+            Err(e) => return Err(e),
         };
-        Command::new(dir.join("cleanup-8h-legacy.exe"))
-            .status()
-            .map(|s| s.code().unwrap_or(1))
-            .unwrap_or(2)
+        if !safe_directory(&metadata) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "recycle store is linked",
+            ));
+        }
+        verify_safe_ancestors(&root)?;
+        let mut removed = 0u64;
+        for entry in fs::read_dir(&root)? {
+            let entry = entry?;
+            if entry
+                .file_name()
+                .to_string_lossy()
+                .eq_ignore_ascii_case("desktop.ini")
+            {
+                continue;
+            }
+            let path = entry.path();
+            let metadata = fs::symlink_metadata(&path)?;
+            if !safe_entry(&metadata) {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "reparse point in recycle store",
+                ));
+            }
+            if metadata.is_dir() {
+                fs::remove_dir_all(path)?;
+            } else {
+                fs::remove_file(path)?;
+            }
+            removed += 1;
+        }
+        Ok(removed)
     }
 
     fn todo_statuses() -> io::Result<HashMap<u64, String>> {
@@ -396,10 +552,8 @@ mod windows {
     }
 
     fn quarantine_todo_id(path: &Path) -> Option<u64> {
-        let root = Path::new(DELETE_ROOT);
-        if !path.starts_with(root) {
-            return None;
-        }
+        let roots = [Path::new(DELETE_ROOT), Path::new(C_DELETE_ROOT)];
+        let root = roots.iter().copied().find(|root| path.starts_with(root))?;
         for ancestor in path.ancestors() {
             if ancestor == root {
                 break;
@@ -459,7 +613,7 @@ mod windows {
         {
             return false;
         }
-        root == Path::new(DELETE_ROOT)
+        [Path::new(DELETE_ROOT), Path::new(C_DELETE_ROOT)].contains(&root)
             || path.ancestors().any(|ancestor| {
                 ancestor
                     .file_name()
@@ -803,13 +957,17 @@ mod windows {
         Ok((info.volume_serial, index, u64::from(info.links)))
     }
 
-    fn append_log(legacy: i32, before: [u64; 3], after: [u64; 3], s: &RunStats) -> io::Result<()> {
+    fn append_log(before: [u64; 3], after: [u64; 3], s: &RunStats) -> io::Result<()> {
         fs::create_dir_all(Path::new(LOG).parent().expect("log parent"))?;
         let mut f = OpenOptions::new().create(true).append(true).open(LOG)?;
         let row = serde_json::json!({
             "time_unix": SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
-            "legacy_exit": legacy, "free_bytes_before": {"C":before[0],"D":before[1],"E":before[2]},
+            "free_bytes_before": {"C":before[0],"D":before[1],"E":before[2]},
             "free_bytes_after": {"C":after[0],"D":after[1],"E":after[2]},
+            "recycle_c_method": s.recycle_c.map(|x| x.method),
+            "recycle_c_removed_entries": s.recycle_c.map(|x| x.removed_entries),
+            "recycle_d_method": s.recycle_d.map(|x| x.method),
+            "recycle_d_removed_entries": s.recycle_d.map(|x| x.removed_entries),
             "artifacts_scanned": s.scanned, "artifacts_eligible": s.eligible, "artifacts_removed": s.removed,
             "logical_bytes_removed": s.logical_bytes, "skipped_unmapped": s.skipped_unmapped,
             "skipped_active": s.skipped_active, "skipped_client": s.skipped_client, "skipped_link": s.skipped_link,
@@ -841,8 +999,8 @@ mod windows {
     #[cfg(test)]
     mod tests {
         use super::{
-            DELETE_ROOT, is_evidence_name, is_ignored_subtree, is_prunable_dir, todo_id,
-            todo_id_in_reason, todo_id_in_text,
+            DELETE_ROOT, is_evidence_name, is_ignored_subtree, is_prunable_dir,
+            recycle_drive_allowed, todo_id, todo_id_in_reason, todo_id_in_text,
         };
         use std::path::Path;
 
@@ -905,6 +1063,13 @@ mod windows {
             assert!(is_evidence_name("coverage.xml"));
             assert!(is_evidence_name("scan.sarif"));
             assert!(!is_evidence_name("libexample.rlib"));
+        }
+
+        #[test]
+        fn recycle_bin_cleanup_excludes_e() {
+            assert!(recycle_drive_allowed('C'));
+            assert!(recycle_drive_allowed('D'));
+            assert!(!recycle_drive_allowed('E'));
         }
     }
 }

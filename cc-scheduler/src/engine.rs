@@ -232,8 +232,8 @@ impl<B: Backend> Scheduler<B> {
                 let pending = todo_wait::pending_on(&db, i);
                 let mut message: Vec<String> =
                     pending.iter().map(|id| format!("ToDo {id} 待ち")).collect();
-                if i["wait_ready"]["condition"] == "chatgpt-plus" {
-                    message.push("ChatGPT Plusの復旧確認待ち".into());
+                if !i["wait_ready"].is_null() {
+                    message.push(todo_wait::ready_message(&i["wait_ready"]));
                 }
                 json!({"item":i["id"],"wait_on":pending,"message":message.join(", ")})
             })

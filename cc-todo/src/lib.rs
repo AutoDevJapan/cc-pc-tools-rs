@@ -148,6 +148,16 @@ pub enum Command {
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
     },
+    /// Wait until another technical check is due; this does not confirm recovery.
+    WaitRetry {
+        id: i64,
+        #[arg(long, default_value_t=3600, value_parser=clap::value_parser!(u64).range(60..=86400))]
+        after: u64,
+        #[arg(long)]
+        reason: String,
+        #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
+        progress: Option<u8>,
+    },
     /// Release only this recorded wait after a fresh readiness check succeeds.
     ResumeReady {
         id: i64,
@@ -843,7 +853,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
         | Command::Block { progress, .. } => *progress,
-        Command::Wait { progress, .. } | Command::WaitReady { progress, .. } => *progress,
+        Command::Wait { progress, .. }
+        | Command::WaitReady { progress, .. }
+        | Command::WaitRetry { progress, .. } => *progress,
         Command::Progress { percent, .. } => *percent,
         _ => None,
     };
@@ -954,8 +966,11 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 for id in cc_job_policy::todo_wait::pending_on(db, i) {
                     extra.push_str(&format!(" — ToDo {id} 待ち"));
                 }
-                if i["wait_ready"]["condition"] == "chatgpt-plus" {
-                    extra.push_str(" — ChatGPT Plusの復旧確認待ち");
+                if !i["wait_ready"].is_null() {
+                    extra.push_str(&format!(
+                        " — {}",
+                        cc_job_policy::todo_wait::ready_message(&i["wait_ready"])
+                    ));
                 }
                 let note = i["note"].as_str().ok_or("invalid note")?;
                 output.push(format!(
@@ -1056,6 +1071,19 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::ResumeReady { id, condition } => {
             let resumed = ready::resume_production(db, *id, condition)?;
             output.push(json!({"id":id,"resumed":resumed}).to_string());
+        }
+        Command::WaitRetry {
+            id,
+            after,
+            reason,
+            progress,
+        } => {
+            ready::register_retry(db, *id, *after, reason, ready::now_epoch())?;
+            let item = find(db, *id)?;
+            if let Some(percent) = progress {
+                set_progress(item, *percent)?;
+            }
+            output.push(json!({"id":id,"wait_ready":item["wait_ready"]}).to_string());
         }
         Command::Wait { id, on, progress } => {
             cc_job_policy::todo_wait::validate(db, *id, on)?;

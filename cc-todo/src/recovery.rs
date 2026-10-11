@@ -384,6 +384,9 @@ fn plan_with_intake(
     clients: &str,
     accepted: &BTreeSet<i64>,
 ) -> Result<Vec<i64>> {
+    if t.is_finite() && t >= 0. && t < u64::MAX as f64 {
+        crate::ready::release_retries(db, t.floor() as u64)?;
+    }
     cc_job_policy::todo_wait::release_ready(db);
     let owner_projects = db["projects"].clone();
     let mut owner_jobs: Vec<_> = jobs

@@ -734,6 +734,16 @@ impl Context {
             let store = self.todo_store();
             if store.exists() {
                 let db = self.read_json(&store)?;
+                let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &job);
+                if !ready.is_empty() {
+                    return Err(Error::new(
+                        ready
+                            .iter()
+                            .filter_map(|wait| wait["message"].as_str())
+                            .collect::<Vec<_>>()
+                            .join("、"),
+                    ));
+                }
                 let on = cc_job_policy::todo_wait::job_pending_on(&db, &job);
                 if !on.is_empty() {
                     return Err(Error::new(
@@ -1237,8 +1247,14 @@ impl Context {
         ));
         on.sort_unstable();
         on.dedup();
+        let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &identity);
         let outcome = if cc_job_policy::cancellation::owner_stopped(&Value::Null, &job) {
             Some(json!({"outcome":"owner_stopped","job":a.id}))
+        } else if !ready.is_empty()
+            && (job["recovery_cancel"]["key"] != key
+                || !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job))
+        {
+            Some(json!({"outcome":"deferred","job":a.id,"wait_ready":ready}))
         } else if !on.is_empty()
             && (job["recovery_cancel"]["key"] != key
                 || !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job))

@@ -468,3 +468,15 @@ fn plus_restoration_wait_is_visible_without_an_owner_question_or_stall() {
     assert!(!text.contains("・再開待ち 1件"));
     assert!(text.contains("あなたの返事待ち 0件（質問）"));
 }
+
+#[test]
+fn timed_retry_is_shown_as_another_check_without_claiming_recovery_or_owner_wait() {
+    let mut db = json!({"items":[{"id":1139,"project":"demo","title":"曲の取り込みを確かめる","status":"wait","wait_ready":{"condition":"retry-time","since":1791695600u64,"not_before":1791699200u64},"updated":"2026-10-11 18:40"}]});
+    mark_unassigned(&mut db, &[], &json!({"queue":[]}), 1791696000.);
+    assert_eq!(db["items"][0]["board_unassigned"], false);
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791696000.);
+    assert!(text.contains("次の再確認待ち 1件"));
+    assert!(text.contains("次の再確認まで待機"));
+    assert!(text.contains("あなたの返事待ち 0件（質問）"));
+    assert!(!text.contains("復旧確認待ち"));
+}

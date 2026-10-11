@@ -158,3 +158,117 @@ fn malformed_state_is_an_error_and_unknown_conditions_are_rejected() {
     assert!(ready::register(&mut d, 1, "unknown").is_err());
     assert_eq!(d, before);
 }
+
+#[test]
+fn timed_retry_suppresses_repeated_launches_and_wakes_original_task_once() {
+    let mut d = db();
+    ready::register_retry(&mut d, 1, 3600, "画面操作の接続用パイプが見つからない", 100).unwrap();
+    let wait = d["items"][0]["wait_ready"].clone();
+    ready::register_retry(&mut d, 1, 3600, "同じ不足を再確認", 1000).unwrap();
+    assert_eq!(d["items"][0]["wait_ready"], wait);
+    assert!(
+        plan(&mut d, &[], &Processes::new(), 3699., "")
+            .unwrap()
+            .is_empty()
+    );
+    let mut future = db();
+    let actual_now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    ready::register_retry(&mut future, 1, 3600, "接続不足", actual_now).unwrap();
+    assert!(
+        execute(
+            &mut future,
+            &Command::Start {
+                id: 1,
+                job: "new".into(),
+                progress: None
+            },
+            &paths()
+        )
+        .is_err()
+    );
+    assert!(!ready::confirmed(&wait, &state(3700), 3699));
+    // Reaching the deadline makes a new check due even with no external readiness file.
+    assert!(ready::confirmed(&wait, &Value::Null, 3700));
+    assert_eq!(ready::release_retries(&mut d, 3700).unwrap(), vec![1]);
+    assert!(ready::release_retries(&mut d, 3700).unwrap().is_empty());
+    assert_eq!(d["items"][0]["status"], "todo");
+    assert_eq!(d["items"][0]["spec"], "saved.md");
+    assert_eq!(d["items"][0]["note"], "既存メモ");
+    assert_eq!(d["items"][0]["jobs"], json!(["old"]));
+    assert_eq!(d["items"][0]["progress"], 60);
+    assert_eq!(d["items"][0]["scheduler"]["worktree"], "C:/repo-wt/task");
+    assert!(d["items"][0]["wait_ready"].is_null());
+    assert_eq!(
+        plan(&mut d, &[], &Processes::new(), 3700., "").unwrap(),
+        vec![1]
+    );
+}
+
+#[test]
+fn retry_timer_keeps_owner_stop_dependencies_and_plus_wait() {
+    let mut d = db();
+    d["items"][0]["status"] = json!("block");
+    ready::register_retry(&mut d, 1, 3600, "接続不足", 100).unwrap();
+    assert_eq!(d["items"][0]["status"], "block");
+    assert!(ready::release_retries(&mut d, 3700).unwrap().is_empty());
+    d["items"][0]["status"] = json!("wait");
+    d["items"][0]["wait_on"] = json!([2]);
+    d["items"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":2,"status":"todo"}));
+    assert!(ready::release_retries(&mut d, 3700).unwrap().is_empty());
+    d["items"][1]["status"] = json!("done");
+    assert!(cc_job_policy::todo_wait::release_ready(&mut d).is_empty());
+    assert_eq!(ready::release_retries(&mut d, 3700).unwrap(), vec![1]);
+    d["items"][0]["status"] = json!("done");
+    let before = d.clone();
+    assert!(ready::register_retry(&mut d, 1, 3600, "接続不足", 100).is_err());
+    assert_eq!(d, before);
+    d["items"][0]["status"] = json!("wait");
+    d["items"][0]["wait_ready"] = json!({"condition":"chatgpt-plus","since":100});
+    let before = d.clone();
+    assert!(ready::register_retry(&mut d, 1, 3600, "接続不足", 100).is_err());
+    assert!(ready::release_retries(&mut d, u64::MAX).unwrap().is_empty());
+    assert_eq!(d, before);
+}
+
+#[test]
+fn invalid_retry_markers_and_cli_arguments_never_release_work() {
+    for wait in [
+        json!({"condition":"retry-time","since":100}),
+        json!({"condition":"retry-time","since":100,"not_before":99}),
+        json!({"condition":"retry-time","since":100,"not_before":100}),
+        json!({"condition":"retry-time","since":100,"not_before":86501}),
+        json!({"condition":"retry-time","since":-1,"not_before":3700}),
+    ] {
+        assert!(!ready::confirmed(&wait, &Value::Null, u64::MAX));
+    }
+    for (seconds, reason, at) in [
+        (59, "接続不足", 100),
+        (86401, "接続不足", 100),
+        (3600, " ", 100),
+        (3600, "接続不足", u64::MAX),
+    ] {
+        let mut d = db();
+        let before = d.clone();
+        assert!(ready::register_retry(&mut d, 1, seconds, reason, at).is_err());
+        assert_eq!(d, before);
+    }
+    assert!(
+        cc_todo::Cli::try_parse_from(["todo", "wait-retry", "1", "--reason", "接続不足"]).is_ok()
+    );
+    assert!(
+        cc_todo::Cli::try_parse_from([
+            "todo",
+            "wait-retry",
+            "1",
+            "--after",
+            "59",
+            "--reason",
+            "接続不足"
+        ])
+        .is_err()
+    );
+    assert!(cc_todo::Cli::try_parse_from(["todo", "wait-retry", "1"]).is_err());
+}

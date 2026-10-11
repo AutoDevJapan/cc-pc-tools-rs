@@ -1144,6 +1144,36 @@ impl Context {
             }
             return Ok(None);
         }
+        // Preparation/queue status is a snapshot, not admission. Serialize the
+        // final ToDo check and running publication with wait registration.
+        // Lock order remains queue -> job state -> ToDo, and the slow preparation
+        // above does not hold the shared ToDo lock for ordinary jobs.
+        let store = self.todo_store();
+        let _ready_store_lock = if _subwork_store_lock.is_none() && store.exists() {
+            match FileLock::try_acquire(&store.with_file_name("todo.lock")) {
+                Ok(lock) => Some(lock),
+                Err(e) if matches!(e.raw_os_error(), Some(32 | 33)) || e.kind() == std::io::ErrorKind::WouldBlock => return Ok(None),
+                Err(e) => return Err(e.into()),
+            }
+        } else { None };
+        if store.exists() {
+            let db = self.read_json(&store)?;
+            let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &job);
+            let on = cc_job_policy::todo_wait::job_pending_on(&db, &job);
+            let reason = if !ready.is_empty() {
+                Some(json!({"code":"todo_readiness","message":ready.iter()
+                    .filter_map(|wait| wait["message"].as_str()).collect::<Vec<_>>().join("、"),"wait_ready":ready}))
+            } else if !on.is_empty() {
+                Some(json!({"code":"todo_dependency","message":on.iter()
+                    .map(|id| format!("ToDo {id} 待ち")).collect::<Vec<_>>().join("、"),"wait_on":on}))
+            } else { None };
+            if let Some(reason) = reason {
+                job["queue_wait_reason"] = reason;
+                job["queue_wait_checked_at"] = json!(self.rt.now());
+                self.save(&job)?;
+                return Ok(None);
+            }
+        }
         if job["subwork"].is_object() {
             cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
             cc_job_policy::subwork::refresh_job(
@@ -1487,6 +1517,20 @@ impl Context {
                         &evidence_jobs,
                         |item| item["id"] == job["todo_id"],
                     );
+                    let ready = cc_job_policy::todo_wait::job_ready_waits(&db, job);
+                    if !ready.is_empty() {
+                        let message = ready
+                            .iter()
+                            .filter_map(|wait| wait["message"].as_str())
+                            .collect::<Vec<_>>()
+                            .join("、");
+                        waits.insert(
+                            s(job, "id").into(),
+                            json!({"code":"todo_readiness",
+                            "message":message,"wait_ready":ready}),
+                        );
+                        continue;
+                    }
                     let mut on = cc_job_policy::todo_wait::job_pending_on(&db, job);
                     on.extend(cc_job_policy::work_owner::remembered_pending(
                         source_db,

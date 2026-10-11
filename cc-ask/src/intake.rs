@@ -994,18 +994,16 @@ fn request_workers(ctx: &Context) -> Result<Vec<RequestWorker>> {
         }
         if associations.is_file() {
             let threads = read_json(&associations)?;
-            if !threads["thread_ids"].is_array() {
-                return Err("invalid Discord thread associations".into());
-            }
+            let request_ids = crate::question_progress::request_thread_ids(&threads, s(&job["id"]))?;
             if s(&threads["source"]) == "prompt" {
-                legacy_thread_ids = threads["thread_ids"]
+                legacy_thread_ids = request_ids
                     .as_array()
                     .unwrap()
                     .iter()
                     .filter_map(|id| id.as_str().map(str::to_owned))
                     .collect();
             } else {
-                job["discord_thread_ids"] = threads["thread_ids"].clone();
+                job["discord_thread_ids"] = request_ids;
             }
         }
         let id = s(&job["id"]);

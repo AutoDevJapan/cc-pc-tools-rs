@@ -527,7 +527,9 @@ impl Context {
             }
             // An unavailable index must leave the current controller alive.
             let refresh = self
-                .track_queued_job(jid)
+                .read_admission_index()
+                .and_then(|index| self.index_ids(&index).map(|_| ()))
+                .and_then(|()| self.track_queued_job(jid))
                 .and_then(|()| self.restart_queued_supervisor(&mut job));
             match refresh {
                 Ok(()) => restarted.push(json!(jid)),

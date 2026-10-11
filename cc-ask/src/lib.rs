@@ -32,6 +32,7 @@ pub mod history_audit;
 pub mod intake;
 pub mod ja_check;
 pub mod job_titles;
+mod job_associations;
 pub mod owner_wait;
 pub mod patrol;
 mod process_guard;

@@ -24,6 +24,8 @@ const BOARD_ID: &str = "67feb7811b6d0a94c98465c784b64f45";
 const BOARD_CREATED: &str = "2026-10-08T18:04:44.1608254+09:00";
 const CHROME_ID: &str = "e87d9c55880dce0cfd7bb1d3fe3ca85e";
 const CHROME_CREATED: &str = "2026-10-10T21:38:58.2660427+09:00";
+const DECISION_ID: &str = "50189b66c7f196bf436305cb29f91b42";
+const DECISION_CREATED: &str = "2026-10-11T12:02:44.5926082+09:00";
 const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
 const QUEUE_POINTERS: [&str; 2] = [
     "todo-note-tool/.git",
@@ -234,6 +236,31 @@ impl Config {
             kind: RepoKind::Clone,
         };
         match id {
+            DECISION_ID => {
+                c.id = DECISION_ID;
+                c.project = "cc-ask";
+                c.content = "decision-dedup";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 39969446694675659));
+                c.repos = vec![Repo {
+                    name: "repo",
+                    origin: public,
+                    head: "94ab1cbec9a35e131ce1a2f135984cc07dca2505".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/todo2382-question-associations"),
+                    saved_merge: None,
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/repo",
+                        ),
+                        common: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git",
+                        ),
+                    },
+                }];
+            }
             BOARD_ID => {
                 c.id = BOARD_ID;
                 c.project = "cc-board";
@@ -548,6 +575,16 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
+        if self.id == DECISION_ID {
+            return self
+                .quarantine
+                .join(format!("20261011-cc-ask-2382-{DECISION_ID}"));
+        }
+        if self.id == unslop::CC_ASK {
+            return self
+                .quarantine
+                .join(format!("20261011-cc-ask-todo2341-{}", self.id));
+        }
         if self.id == INTERNAL_2184_ID {
             return self
                 .quarantine
@@ -587,10 +624,12 @@ impl Config {
             || r.identity.id != self.id
             || r.identity.project != self.project
             || r.identity.content != self.content
+            || (self.id == unslop::CC_ASK && r.identity.created_at != unslop::CC_ASK_CREATED)
             || (self.id == INTERNAL_2184_ID
                 && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
             || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
             || (self.id == CHROME_ID && r.identity.created_at != CHROME_CREATED)
+            || (self.id == DECISION_ID && r.identity.created_at != DECISION_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -1948,6 +1987,100 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn decision_archive_is_bound_to_one_owned_worktree_and_its_published_head() {
+        let c = Config::production(DECISION_ID).unwrap();
+        assert_eq!(c.pinned_identity, Some((2229119083, 39969446694675659)));
+        assert_eq!((c.project, c.content), ("cc-ask", "decision-dedup"));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].head, "94ab1cbec9a35e131ce1a2f135984cc07dca2505");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/todo2382-question-associations")
+        );
+        assert!(matches!(c.repos[0].kind, RepoKind::Linked { .. }));
+        assert!(c.repos[0].allowed_untracked.is_empty());
+        assert!(
+            c.destination()
+                .ends_with(format!("20261011-cc-ask-2382-{DECISION_ID}"))
+        );
+    }
+
+    #[test]
+    fn decision_archive_preserves_inventory_receipt_and_external_git_backlink() {
+        let c = fixture_for(DECISION_ID);
+        let old = source(&c);
+        let before = scan(&old, &c.repos).unwrap();
+        let plan = c.plan(DECISION_ID).unwrap();
+        let dest = PathBuf::from(plan["destination"].as_str().unwrap());
+        assert!(
+            plan["powershell_command"]
+                .as_str()
+                .unwrap()
+                .contains("Move-Item -LiteralPath")
+        );
+        let files = dest.join("files");
+        fs::rename(&old, &files).unwrap();
+        c.finish(DECISION_ID).unwrap();
+        assert_eq!(scan(&files, &c.repos).unwrap(), before);
+        assert!(!old.exists());
+        let receipt = c.load(DECISION_ID).unwrap();
+        assert_eq!(receipt.state, "quarantined");
+        assert_eq!(receipt.destination.as_deref(), dest.to_str());
+        assert_eq!(
+            git(&files.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &files.join("repo/.git")
+        ));
+    }
+
+    #[test]
+    fn decision_archive_rejects_content_and_acl_changes_after_planning() {
+        for failure in ["content", "acl"] {
+            let c = fixture_for(DECISION_ID);
+            let old = source(&c);
+            fs::write(old.join("verification.log"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            let files = c.destination().join("files");
+            fs::rename(&old, &files).unwrap();
+            let path = files.join("verification.log");
+            if failure == "content" {
+                let written = fs::metadata(&path).unwrap().modified().unwrap();
+                fs::write(&path, b"modified").unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(&path)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(written))
+                    .unwrap();
+            } else {
+                hidden(
+                    Path::new("icacls.exe"),
+                    &[
+                        path.as_os_str(),
+                        OsStr::new("/grant"),
+                        OsStr::new("*S-1-1-0:(R)"),
+                    ],
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+                panic!()
+            };
+            assert!(same(
+                Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+                &old.join("repo/.git")
+            ));
+        }
+    }
+    #[test]
     fn chrome_squash_and_full_archive_preserve_hidden_files_hardlinks_acl_and_backlink() {
         let c = fixture_for(CHROME_ID);
         let old = source(&c);
@@ -2565,6 +2698,111 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
     #[test]
+    fn cc_ask_cleanup_pins_one_receipt_clone_and_preserves_generic_limit() {
+        let c = Config::production(unslop::CC_ASK).unwrap();
+        assert_eq!(LIMIT, 10000);
+        assert_eq!(c.id, "3d50e5d7c49761d809521892cfe84937");
+        assert_eq!(c.project, "cc-ask");
+        assert_eq!(c.content, "todo2341-resume-notes");
+        assert_eq!(c.pinned_identity, Some((2229119083, 9851624198224777)));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].name, "repo");
+        assert_eq!(c.repos[0].head, "d2e2724d9760675a4ec590950804b7ba021d3432");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/todo2341-recovery-probe-queue")
+        );
+        assert!(Config::production("3d50e5d7c49761d809521892cfe84938").is_err());
+    }
+    #[test]
+    fn cc_ask_cleanup_preserves_large_clone_contents_and_owned_receipt() {
+        let c = fixture_for(unslop::CC_ASK);
+        let old = source(&c);
+        let generated = old.join("generated");
+        fs::create_dir(&generated).unwrap();
+        for n in 0..10005 {
+            fs::write(generated.join(format!("file-{n}")), b"saved").unwrap();
+        }
+        assert!(matches!(scan(&old, &c.repos), Err("ENTRY_LIMIT_EXCEEDED")));
+        let plan = c.plan(c.id).unwrap();
+        assert!(plan["entries"].as_u64().unwrap() > 10000);
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        assert_eq!(c.plan(c.id).unwrap(), plan);
+        let ticket = fs::read(unslop::ticket_path(&c)).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(!old.exists());
+        assert_eq!(
+            fs::read(destination.join("generated/file-10004")).unwrap(),
+            b"saved"
+        );
+        assert_eq!(
+            git(&destination.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(fs::read(unslop::ticket_path(&c)).unwrap(), ticket);
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn cc_ask_cleanup_rejects_birth_dirty_missing_ref_extra_git_and_external_alias() {
+        for failure in ["birth", "dirty", "ref", "extra-git", "alias"] {
+            let c = fixture_for(unslop::CC_ASK);
+            let old = source(&c);
+            match failure {
+                "birth" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.created_at = "different creation".into();
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                "dirty" => fs::write(old.join("repo/source.txt"), b"unsaved").unwrap(),
+                "ref" => {
+                    git(
+                        &old.join("repo"),
+                        &["update-ref", "-d", c.repos[0].saved_ref.unwrap()],
+                    )
+                    .unwrap();
+                }
+                "extra-git" => fs::create_dir(old.join(".git")).unwrap(),
+                "alias" => {
+                    let outside = c.temp.join("outside-file");
+                    fs::write(&outside, b"other task").unwrap();
+                    fs::hard_link(&outside, old.join("shared-name")).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(old.exists());
+        }
+    }
+    #[test]
+    fn cc_ask_cleanup_detects_content_change_even_when_size_and_time_are_restored() {
+        let c = fixture_for(unslop::CC_ASK);
+        let old = source(&c);
+        let log = old.join("saved.log");
+        fs::write(&log, b"first").unwrap();
+        let stamp = fs::metadata(&log).unwrap().modified().unwrap();
+        c.plan(c.id).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(old, &destination).unwrap();
+        let log = destination.join("saved.log");
+        fs::write(&log, b"other").unwrap();
+        OpenOptions::new()
+            .write(true)
+            .open(&log)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+        assert!(matches!(c.finish(c.id), Err("CONTENT_CHANGED_AFTER_PLAN")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
     fn unslop_profiles_pin_four_original_identities_and_the_saved_worktree() {
         let expected = [
             (unslop::BUILD, 1215965535, 8162774328342697),
@@ -3164,6 +3402,10 @@ mod tests {
                 BOARD_CREATED
             } else if c.id == CHROME_ID {
                 CHROME_CREATED
+            } else if c.id == DECISION_ID {
+                DECISION_CREATED
+            } else if c.id == unslop::CC_ASK {
+                unslop::CC_ASK_CREATED
             } else {
                 "2026-10-08T15:34:13.325996+09:00"
             }

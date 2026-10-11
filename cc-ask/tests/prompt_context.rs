@@ -146,8 +146,8 @@ fn bounded_history_keeps_registered_question_with_bare_answer_before_chatter() {
         cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(prompt.len() <= 4096);
     assert!(prompt.contains("架空データだけを指定検査先へ送る"));
-    assert!(prompt.contains("投稿 200 / 投稿者 BOT"));
-    assert!(prompt.contains("投稿 300 / 投稿者 OWN"));
+    assert!(prompt.contains("Discord 100/200 / 投稿者 BOT"));
+    assert!(prompt.contains("Discord 100/300 / 投稿者 OWN"));
     assert!(prompt.contains("2026-10-11T09:17:20.599+09:00"));
 }
 

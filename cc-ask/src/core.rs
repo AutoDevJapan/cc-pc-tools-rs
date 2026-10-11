@@ -1252,11 +1252,15 @@ pub fn message_source(message: &Value, thread: &str) -> String {
         thread
     };
     let reply = s(&message["message_reference"]["message_id"]);
+    let reply_source = if reply.is_empty() {
+        String::new()
+    } else {
+        format!(" / 返信先 {reply}")
+    };
     format!(
-        "出所: Discord / スレッド {channel} / 投稿 {} / 投稿者 {} / 返信先 {}",
+        "出所: Discord {channel}/{} / 投稿者 {}{reply_source}",
         s(&message["id"]),
         s(&message["author"]["id"]),
-        if reply.is_empty() { "未指定" } else { reply }
     )
 }
 pub const REQUEST_CWD: &str = "C:/Users/makhmeto/Desktop/dev/ADJ";

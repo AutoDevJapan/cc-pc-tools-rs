@@ -1248,9 +1248,24 @@ impl Console {
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
+        let priorities = fs::read(self.paths.tools.join("scheduler/priorities.json"))
+            .ok().and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok()).unwrap_or(Value::Null);
+        let ranks = cc_scheduler::priority::todo_ranks(&db, &priorities);
+        let job_ranks = cc_scheduler::priority::job_ranks(jobs, &db, &priorities);
+        let prefer_todo = s.patrol_turn.is_multiple_of(2);
+        s.queue.sort_by_cached_key(|trigger| {
+            let id = trigger_todo_id(trigger, jobs, &db);
+            let rank = id.and_then(|id| ranks.get(&id).copied()).or_else(|| {
+                launch_source(trigger, None, jobs).and_then(|j| job_ranks.get(strv(j,"id")).copied())
+            }).unwrap_or_else(|| {
+                let project = db["projects"].as_object().and_then(|projects| projects.iter()
+                    .filter(|(_,path)| path.as_str().is_some_and(|path| path_under(&trigger.cwd,path)))
+                    .max_by_key(|(_,path)| path.as_str().unwrap_or("").len()).map(|(project,_)|project.as_str())).unwrap_or("");
+                cc_scheduler::priority::item_rank(&json!({"project":project}), &priorities)
+            });
+            (rank, id.is_some() != prefer_todo)
+        });
         if cc_ask::tick_runtime::remaining().is_some() {
-            let prefer_todo = s.patrol_turn.is_multiple_of(2);
-            s.queue.sort_by_cached_key(|trigger| trigger_todo_id(trigger, jobs, &db).is_some() != prefer_todo);
             s.patrol_turn = s.patrol_turn.wrapping_add(1);
             self.save(s)?;
         }

@@ -11,3 +11,4 @@ pub mod native;
 pub mod policy;
 pub mod preparation;
 pub use cc_ask::recovery_failure;
+pub use cc_job_policy::priority;

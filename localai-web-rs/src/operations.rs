@@ -16,13 +16,14 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-const DEPARTMENTS: [(&str, &str); 6] = [
+const DEPARTMENTS: [(&str, &str); 7] = [
     ("ゲーム部", "#1E8C93"),
     ("GoDD事業部", "#8E5BB5"),
     ("自社サービス部", "#3B73C4"),
     ("発信部", "#C2508F"),
     ("受託部", "#4E9A4E"),
     ("情報システム部", "#5C7080"),
+    ("Skills", "#5C7080"),
 ];
 const RECENT_MS: u64 = 3 * 60 * 60 * 1000;
 
@@ -163,10 +164,13 @@ fn project_name(names: &cc_ask::task_title::Names, project: &str) -> String {
         _ => clean(names, &cc_ask::task_title::canonical_project(project)),
     }
 }
+#[cfg(test)]
 fn department(project: &str) -> usize {
     let p = project.to_lowercase();
-    if project == "クライアント案件" {
+    if project == "クライアント案件" || matches!(p.as_str(), "arps" | "socialpilot" | "social pilot") {
         4
+    } else if matches!(p.as_str(), "skills" | "skill") {
+        6
     } else if ["civ6", "banseiki", "万世紀", "phosgaea", "colonization"]
         .iter()
         .any(|s| p.contains(s))
@@ -190,7 +194,8 @@ fn department(project: &str) -> usize {
             p.as_str(),
             "tools" | "pcツール" | "pcの道具" | "makhmeto" | "常駐"
         )
-        || p.starts_with("opencodex")
+        || p.starts_with("opencodex") || p.starts_with("cc-")
+        || matches!(p.as_str(), "localai-web-rs" | "chatgpt-web")
     {
         5
     } else {
@@ -198,14 +203,26 @@ fn department(project: &str) -> usize {
     }
 }
 type Tree = BTreeMap<(usize, String), Vec<Value>>;
+fn rank_department(rank: u32) -> usize {
+    match rank { 10 => 4, 20 => 0, 30 => 5, 40 => 3, 50 => 6, 60..=67 => 1, _ => 2 }
+}
+#[cfg(test)]
+#[test]
+fn owner_department_order_and_explicit_projects_match_admission() {
+    for (p,d) in [("ARPS",4),("SocialPilot",4),("localai-web-rs",5),("Skills",6)] {
+        assert_eq!(department(p),d);
+        assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)),d);
+    }
+    let values=departments(Tree::new());
+    assert_eq!(values.iter().map(|d|d["name"].as_str().unwrap()).collect::<Vec<_>>(),["受託部","ゲーム部","情報システム部","発信部","Skills","GoDD事業部","自社サービス部"]);
+}
 fn add(tree: &mut Tree, dept: usize, product: String, worker: Value) {
     tree.entry((dept, product)).or_default().push(worker);
 }
 fn departments(tree: Tree) -> Vec<Value> {
-    DEPARTMENTS
-        .iter()
-        .enumerate()
-        .map(|(i, (name, color))| {
+    [4, 0, 5, 3, 6, 1, 2].into_iter()
+        .map(|i| {
+            let (name, color) = DEPARTMENTS[i];
             let products: Vec<_> = tree
                 .iter()
                 .filter(|((d, _), _)| *d == i)
@@ -259,6 +276,7 @@ fn collect(root: &Path, now: u64) -> Value {
         return out;
     }
     let names = privacy.unwrap();
+    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
     let todo_path = root.join("todo/todo.json");
     let todo = read_json(&todo_path).and_then(|v| {
         if v["items"].is_array() && v["projects"].is_object() {
@@ -345,8 +363,11 @@ fn collect(root: &Path, now: u64) -> Value {
                 used.insert(text(j, "id").to_owned());
             }
             let raw_project = text(item, "project");
-            let project = project_name(&names, raw_project);
+            let owned = &policy["items"][item["id"].as_u64().unwrap_or(0).to_string()];
+            let display_project = owned["project"].as_str().or_else(|| item["owner_project"].as_str()).unwrap_or(raw_project);
+            let project = project_name(&names, display_project);
             let client = project == "クライアント案件"
+                || cc_scheduler::priority::item_rank(item, &policy) == 10
                 || names.project(text(item, "cwd")) == "クライアント案件"
                 || db.is_some_and(|db| {
                     names.project(db["projects"][raw_project].as_str().unwrap_or(""))
@@ -439,7 +460,9 @@ fn collect(root: &Path, now: u64) -> Value {
             };
             add(
                 &mut tree,
-                department(if client { &project } else { raw_project }),
+                if client { 4 } else {
+                    rank_department(cc_scheduler::priority::item_rank(item, &policy))
+                },
                 project,
                 json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
                     "task":task,"summary":summary,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
@@ -459,7 +482,8 @@ fn collect(root: &Path, now: u64) -> Value {
         let inferred = infer_project(j, db);
         let project = project_name(&names, &inferred);
         let client =
-            project == "クライアント案件" || names.project(text(j, "cwd")) == "クライアント案件";
+            project == "クライアント案件" || names.project(text(j, "cwd")) == "クライアント案件"
+                || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
         let project = if client {
             "クライアント案件".into()
         } else {
@@ -484,7 +508,10 @@ fn collect(root: &Path, now: u64) -> Value {
         };
         add(
             &mut tree,
-            department(if client { &project } else { &inferred }),
+            if client { 4 } else {
+                let mut owned = j.clone(); owned["project"] = json!(inferred);
+                rank_department(cc_scheduler::priority::item_rank(&owned, &policy))
+            },
             project,
             json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
@@ -761,6 +788,6 @@ mod tests {
         assert!(!fresh(Some(1), 300_000, 180_000));
         assert!(!fresh(Some(400_001), 300_000, 180_000));
         assert!(fresh(Some(290_000), 300_000, 180_000));
-        assert_eq!(departments(Tree::new()).len(), 6);
+        assert_eq!(departments(Tree::new()).len(), 7);
     }
 }

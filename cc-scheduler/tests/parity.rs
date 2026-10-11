@@ -1585,7 +1585,7 @@ fn test_dispatch_uses_priority_and_marks_doing() {
     assert_eq!(f.e.backend.pick_count, 1);
 }
 #[test]
-fn repeated_priority_work_rotates_between_products() {
+fn rotation_never_overtakes_higher_priority_products() {
     let mut f = Fixture::new();
     for (id, project) in [(1, "civ6"), (2, "civ6"), (3, "GoDD-AO"), (4, "other")] {
         f.put(item(id, project, "todo", &[]));
@@ -1600,7 +1600,25 @@ fn repeated_priority_work_rotates_between_products() {
             .iter()
             .map(|j| j["item"]["id"].as_u64().unwrap())
             .collect();
-    assert_eq!(ids, vec![1, 3, 4]);
+    assert_eq!(ids, vec![1, 2, 3]);
+}
+#[test]
+fn recorded_prerequisite_inherits_rank_and_resource_exclusion_still_applies() {
+    let mut f=Fixture::new(); f.pri=json!({"civ6":20,"GoDD-AO":62,"other":100});
+    let mut parent=item(1,"civ6","wait",&[]); parent["wait_on"]=json!([3]); f.put(parent);
+    f.put(item(2,"GoDD-AO","todo",&[])); f.put(item(3,"other","todo",&[]));
+    f.dispatch(); assert_eq!(f.e.backend.launched[0]["item"]["id"],3);
+}
+#[test]
+fn targeted_recovery_cannot_overtake_a_ready_higher_department() {
+    for blocked in [false,true] {
+        let mut f=Fixture::new(); f.pri=json!({"civ6":20,"other":100});
+        f.put(item(1,"civ6","todo", &["cargo"])); f.put(item(3,"other","todo", &[]));
+        if blocked { f.e.backend.ps.insert(1,proc(1,0,"cargo.exe")); }
+        f.e.dispatch_for(&f.cfg,&f.pri,Some(3)).unwrap();
+        assert_eq!(f.e.backend.launched.len(),usize::from(blocked));
+        if blocked { assert_eq!(f.e.backend.launched[0]["item"]["id"],3); }
+    }
 }
 #[test]
 fn preparation_retains_previous_result_session_and_redesigns_repeated_continuations() {

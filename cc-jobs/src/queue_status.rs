@@ -48,6 +48,8 @@ impl Context {
             .as_ref()
             .map(|cfg| self.queue_decisions(&active, cfg, None))
             .unwrap_or_default();
+        let priorities = cfg.as_ref().map(|cfg| self.queue_priorities(&active, cfg)).unwrap_or_default();
+        let mut department_counts = BTreeMap::<u32, Value>::new();
         let mut running = 0;
         let mut families = HashSet::new();
         let mut provider_families = BTreeMap::<&str, HashSet<String>>::new();
@@ -56,6 +58,11 @@ impl Context {
         let mut counts = BTreeMap::<String, usize>::new();
         for job in jobs {
             let id = s(job, "id");
+            if let Some(rank) = priorities.get(id) {
+                let counts = department_counts.entry(rank / 10).or_insert_with(|| json!({"running":0,"queued":0}));
+                let key = if s(job,"status") == "queued" { "queued" } else { "running" };
+                counts[key] = json!(counts[key].as_u64().unwrap_or(0)+1);
+            }
             if job["queue_unreadable"] == true
                 || s(job, "status") == "starting"
                 || self.running_job(job)
@@ -99,7 +106,7 @@ impl Context {
                 reason = json!({"code":"admission_error","message":job["queue_admission_error"],"policy_reason":reason});
             }
             *counts.entry(s(&reason, "message").into()).or_default() += 1;
-            queued.push(json!({"id":id,"reason":reason,"yield_resume":job["yield_resume"]==true}));
+            queued.push(json!({"id":id,"reason":reason,"department_priority":priorities.get(id).map(|rank|rank/10),"yield_resume":job["yield_resume"]==true}));
         }
         let limit = cfg.as_ref().map(|cfg| self.limit_status(cfg)).transpose()?;
         let limits = cfg.as_ref().map(|cfg| self.provider_limits(cfg));
@@ -108,7 +115,7 @@ impl Context {
             "provider_slots":{"openai":provider_families.get("openai").map_or(0,HashSet::len),"anthropic":provider_families.get("anthropic").map_or(0,HashSet::len)},
             "provider_limits":limits.map(|v|json!({"openai":v.1,"anthropic":v.2})),
             "limit":limit,"limit_label":limit.as_ref().map(|v|v["label"].clone()),
-            "queued_count":queued.len(),"queued":queued,"wait_reason_counts":counts,"resource_waits":resources,"config_error":config_error}),
+            "queued_count":queued.len(),"queued":queued,"department_counts":department_counts,"wait_reason_counts":counts,"resource_waits":resources,"config_error":config_error}),
         )
     }
 

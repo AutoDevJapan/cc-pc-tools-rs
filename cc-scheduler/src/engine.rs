@@ -151,7 +151,7 @@ impl<B: Backend> Scheduler<B> {
         {
             return Err(Error("ValueError"));
         }
-        let mut pri = json!({"civ6":1,"GoDD-AO":2});
+        let mut pri = json!({});
         let configured = read_json(&self.root.join("priorities.json"), json!({}))?;
         if !configured.is_object() {
             return Err(Error("TypeError"));
@@ -161,7 +161,7 @@ impl<B: Backend> Scheduler<B> {
             .as_object()
             .unwrap()
             .values()
-            .any(|v| v.as_u64().is_none_or(|x| x < 1))
+            .any(|v| !v.is_object() && v.as_u64().is_none_or(|x| x < 1))
         {
             return Err(Error("ValueError"));
         }
@@ -1194,7 +1194,6 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 project != "owner"
                     && !todo_wait::waiting(&db, i)
                     && !excluded
-                    && target.is_none_or(|id| i["id"].as_i64() == Some(id))
                     && (target.is_some() || !i["stall_recovery"]["pending"].is_object())
                     && !jobs.iter().any(|j| {
                         live(j)
@@ -1205,11 +1204,17 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             })
             .collect();
         let mut queue = priority_queue(&eligible, pri, self.backend.clock());
-        // Rotate projects after a successful launch; recurring high-priority work
-        // must not indefinitely starve every other product.
+        let ranks = cc_job_policy::priority::todo_ranks(&db, pri);
+        // Rotation is only a tie breaker within the owner's priority class.
         queue.sort_by(|a, b| {
-            n(&self.state["project_last_launch"][s(&a["project"])])
-                .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
+            ranks
+                .get(&a["id"].as_u64().unwrap_or(0))
+                .copied().unwrap_or(cc_job_policy::priority::DEFAULT)
+                .cmp(&ranks.get(&b["id"].as_u64().unwrap_or(0)).copied().unwrap_or(cc_job_policy::priority::DEFAULT))
+                .then_with(|| {
+                    n(&self.state["project_last_launch"][s(&a["project"])])
+                        .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
+                })
         });
         merge(
             &mut self.report,
@@ -1217,6 +1222,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         );
         if !truth(&self.report["allowance_now"]) {
             return Ok(());
+        }
+        if let Some(target) = target {
+            let target_rank = queue.iter().find(|i| i["id"].as_i64() == Some(target))
+                .and_then(|i| ranks.get(&i["id"].as_u64().unwrap_or(0))).copied();
+            if target_rank.is_some_and(|rank| queue.iter().any(|i| {
+                ranks.get(&i["id"].as_u64().unwrap_or(0)).is_some_and(|other| *other < rank)
+                    && !arr(&i["needs"]).iter().any(|v| busy.contains(s(v)))
+            })) {
+                self.report["priority_wait"] = json!(target);
+                return Ok(());
+            }
+            queue.retain(|i| i["id"].as_i64() == Some(target));
         }
         let mut first_failure = None;
         for i in queue

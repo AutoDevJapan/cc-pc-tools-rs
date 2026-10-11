@@ -11,6 +11,77 @@ const T: f64 = 100000.;
 mod subwork_support;
 
 #[test]
+fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
+    for gate in [
+        "open",
+        "cpu",
+        "memory",
+        "deadline",
+        "owner",
+        "active",
+        "unknown_cancel",
+        "waiting",
+    ] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        let child = &mut sub.db["items"][1];
+        child["status"] = json!("doing");
+        child["jobs"] = json!(["previous"]);
+        child["worker_receipt"] = json!({"job":null,"generation":2});
+        child["scheduler"] = json!({"worktree":child["scheduler"]["worktree"],
+            "branch":child["scheduler"]["branch"],"phase":"retry","resume":true,"job":null,"key":null,"last_job":"previous"});
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        sub.jobs
+            .push(json!({"id":"previous","status":"cancelled","todo_id":2,
+            "recovery_cancel":{"key":"repair","committed_at":"2026-10-12T07:00:00+09:00"}}));
+        let mut f = Fixture::new();
+        match gate {
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
+            "owner" => sub.db["items"][1]["stopped"] = json!(true),
+            "active" => sub
+                .jobs
+                .push(json!({"id":"other","status":"running","todo_id":2})),
+            "unknown_cancel" => sub.jobs[1]["recovery_cancel"] = Value::Null,
+            "waiting" => sub.db["items"][1]["wait_on"] = json!([1]),
+            _ => {}
+        }
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:existing-review","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Original fixed review body.","read_only":true,"options":{"model":"gpt-6-luna","effort":"high","sandbox":"read-only"}});
+        let result =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(result.is_some(), gate == "open", "{gate}");
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if let Some(job) = result {
+            assert_eq!(f.get(2)["scheduler"]["console_request"], request);
+            assert_eq!(f.get(2)["subwork"], sub.db["items"][1]["subwork"]);
+            assert!(f.e.backend.launched[0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("最新保存仕様を優先"));
+            assert_eq!(
+                f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                    .unwrap(),
+                Some(job)
+            );
+            assert_eq!(f.e.backend.launched.len(), 1);
+        } else if ["owner", "active", "unknown_cancel", "waiting"].contains(&gate) {
+            assert_eq!(f.get(2)["status"], "doing", "{gate}");
+        }
+    }
+}
+
+#[test]
 fn console_subwork_admission_survives_registered_worker_releasing_reservation() {
     let mut sub = subwork_support::Fixture::new();
     sub.register();
@@ -1660,20 +1731,31 @@ fn rotation_never_overtakes_higher_priority_products() {
 }
 #[test]
 fn recorded_prerequisite_inherits_rank_and_resource_exclusion_still_applies() {
-    let mut f=Fixture::new(); f.pri=json!({"civ6":20,"GoDD-AO":62,"other":100});
-    let mut parent=item(1,"civ6","wait",&[]); parent["wait_on"]=json!([3]); f.put(parent);
-    f.put(item(2,"GoDD-AO","todo",&[])); f.put(item(3,"other","todo",&[]));
-    f.dispatch(); assert_eq!(f.e.backend.launched[0]["item"]["id"],3);
+    let mut f = Fixture::new();
+    f.pri = json!({"civ6":20,"GoDD-AO":62,"other":100});
+    let mut parent = item(1, "civ6", "wait", &[]);
+    parent["wait_on"] = json!([3]);
+    f.put(parent);
+    f.put(item(2, "GoDD-AO", "todo", &[]));
+    f.put(item(3, "other", "todo", &[]));
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
 }
 #[test]
 fn targeted_recovery_cannot_overtake_a_ready_higher_department() {
-    for blocked in [false,true] {
-        let mut f=Fixture::new(); f.pri=json!({"civ6":20,"other":100});
-        f.put(item(1,"civ6","todo", &["cargo"])); f.put(item(3,"other","todo", &[]));
-        if blocked { f.e.backend.ps.insert(1,proc(1,0,"cargo.exe")); }
-        f.e.dispatch_for(&f.cfg,&f.pri,Some(3)).unwrap();
-        assert_eq!(f.e.backend.launched.len(),usize::from(blocked));
-        if blocked { assert_eq!(f.e.backend.launched[0]["item"]["id"],3); }
+    for blocked in [false, true] {
+        let mut f = Fixture::new();
+        f.pri = json!({"civ6":20,"other":100});
+        f.put(item(1, "civ6", "todo", &["cargo"]));
+        f.put(item(3, "other", "todo", &[]));
+        if blocked {
+            f.e.backend.ps.insert(1, proc(1, 0, "cargo.exe"));
+        }
+        f.e.dispatch_for(&f.cfg, &f.pri, Some(3)).unwrap();
+        assert_eq!(f.e.backend.launched.len(), usize::from(blocked));
+        if blocked {
+            assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
+        }
     }
 }
 #[test]
@@ -3873,17 +3955,13 @@ fn retry_deadline_wait_does_not_dispatch_until_watchdog_releases_it() {
     write_json(&f.e.todo_path, &db, 2).unwrap();
     f.dispatch();
     assert!(f.e.backend.launched.is_empty());
-    assert!(
-        f.e.report["waiting"][0]["message"]
-            .as_str()
-            .unwrap()
-            .contains("次の再確認")
-    );
-    assert!(
-        cc_todo::ready::release_retries(&mut db, 3699)
-            .unwrap()
-            .is_empty()
-    );
+    assert!(f.e.report["waiting"][0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("次の再確認"));
+    assert!(cc_todo::ready::release_retries(&mut db, 3699)
+        .unwrap()
+        .is_empty());
     assert_eq!(
         cc_todo::ready::release_retries(&mut db, 3700).unwrap(),
         vec![1]

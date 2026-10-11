@@ -49,3 +49,19 @@ fn oversized_corrupt_or_unreadable_todo_never_changes_admission() {
     );
     assert_eq!(fs::read(f.console.paths.db()).unwrap(), state_before);
 }
+
+#[tokio::test]
+async fn todo_capacity_reply_redaction_keeps_valid_json_and_canonical_identity() {
+    let secret = format!("mfa.{}", "a".repeat(48));
+    let response = reply(Ok(
+        json!({"canonical":"manual:finite-review","note":format!("quoted \\\" value {secret}\nline"),
+        "nested":{"spec":"saved.md","needs":["cargo"],"subwork":{"parent_todo_id":1}}}),
+    ));
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), 4096).await.unwrap();
+    let parsed: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(parsed["data"]["canonical"], "manual:finite-review");
+    assert_eq!(parsed["data"]["nested"]["subwork"]["parent_todo_id"], 1);
+    assert!(parsed["data"]["note"].as_str().unwrap().contains("[秘密]"));
+    assert!(!String::from_utf8(body.to_vec()).unwrap().contains(&secret));
+}

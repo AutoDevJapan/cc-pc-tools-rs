@@ -1,13 +1,13 @@
 //! Incremental, local-only work accounting. Never reads credential files or tool arguments.
 use axum::{
-    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, File},
@@ -402,10 +402,8 @@ impl Sources {
 fn load_exclusions(sources: &Sources) -> std::io::Result<Exclusions> {
     let mut e = Exclusions::load(&sources.exclusion)?;
     // A protected registration remains protected even if its directory has an unrelated name.
-    if let Some(todo) = cc_todo::read_store(&sources.todo)
-        .ok()
-        .filter(|v| v["projects"].is_object())
-    {
+    let todo = cc_todo::read_store(&sources.todo).map_err(std::io::Error::other)?;
+    if todo["projects"].is_object() {
         for (name, path) in todo["projects"].as_object().into_iter().flatten() {
             if e.contains(name) {
                 if let Some(path) = path.as_str() {
@@ -1317,21 +1315,21 @@ fn aggregate_progress(
     report: &dyn Fn(&str),
 ) -> Cache {
     report("除外設定とプロジェクトを確認しています");
-    let Ok(exclusions) = load_exclusions(sources) else {
-        return Cache {
-            version: 1,
-            warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
-            ..Cache::default()
-        };
+    let exclusions = match load_exclusions(sources) {
+        Ok(exclusions) => exclusions,
+        Err(error) => {
+            return Cache {
+                version: 1,
+                warnings: vec![if error.to_string().starts_with("todo_store_too_large:") {
+                    "共有ToDoが上限64MiBを超えています。除外確認と仕事量の集計を停止しています。"
+                } else {
+                    "除外設定または共有ToDoを読み取れないため、仕事量の集計を停止しています。"
+                }
+                .into()],
+                ..Cache::default()
+            };
+        }
     };
-    let exclusion_hash = hash(&exclusions.0.join("\n"));
-    if cache.exclusion_hash != exclusion_hash {
-        cache = Cache::default();
-    }
-    cache.version = 1;
-    cache.exclusion_hash = exclusion_hash;
-    cache.warnings.clear();
-    let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
     let todo = match cc_todo::read_store(&sources.todo) {
         Ok(todo) => todo,
         Err(error) => {
@@ -1352,6 +1350,14 @@ fn aggregate_progress(
             return cache;
         }
     };
+    let exclusion_hash = hash(&exclusions.0.join("\n"));
+    if cache.exclusion_hash != exclusion_hash {
+        cache = Cache::default();
+    }
+    cache.version = 1;
+    cache.exclusion_hash = exclusion_hash;
+    cache.warnings.clear();
+    let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
     let registered: BTreeMap<String, String> = todo["projects"]
         .as_object()
         .into_iter()

@@ -1,5 +1,28 @@
 use super::*;
 #[test]
+fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_hash() {
+    let f = Fixture::new();
+    let mut bytes = b"{\"projects\":{},\"items\":[]}".to_vec();
+    bytes.resize(cc_todo::STORE_MAX_BYTES + 1, b' ');
+    fs::write(&f.sources.todo, &bytes).unwrap();
+    let error = match load_exclusions(&f.sources) {
+        Err(error) => error,
+        Ok(_) => panic!("oversized ToDo cannot certify exclusions"),
+    };
+    assert!(error.to_string().starts_with("todo_store_too_large:"));
+    let before = Cache {
+        exclusion_hash: "old-hash".into(),
+        updated_at: 123,
+        ..Cache::default()
+    };
+    let stopped = aggregate(&f.sources, before, 1791756000);
+    assert_eq!(stopped.updated_at, 0);
+    assert!(stopped.exclusion_hash.is_empty());
+    assert!(stopped.warnings.iter().any(|w| w.contains("64MiB")));
+    fs::write(&f.sources.todo, "{broken").unwrap();
+    assert!(load_exclusions(&f.sources).is_err());
+}
+#[test]
 fn intervals_merge_reverse_order_bridges_and_adjacent_events() {
     let mut intervals = vec![(10, 20), (40, 50), (70, 80)];
     merge_interval(&mut intervals, 25, 30);

@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -964,7 +964,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     == item["scheduler"]["key"]
             })
         {
-            prompt += &format!("\n受付済みの引き継ぎ本文:\n{body}\n");
+            prompt += &format!("\n受付済みの引き継ぎ本文（受付時の履歴です。固定HEADと対象範囲は上の最新保存仕様を優先してください）:\n{body}\n");
         }
         if item["subwork"].is_object() {
             prompt += &format!(
@@ -1103,7 +1103,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("ValueError"));
         }
         let db = self.todo()?;
-        let item = arr(&db["items"])
+        let mut item = arr(&db["items"])
             .into_iter()
             .find(|i| i["id"] == id)
             .ok_or(Error("ValueError"))?;
@@ -1123,6 +1123,36 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             {
                 return Ok(Some(s(&job["id"]).to_string()));
             }
+        }
+        // A legacy Start may leave an unowned review doing after its old worker
+        // was cancelled for recovery. Reconcile only that proven idle retry,
+        // then use the same reservation and every ordinary admission gate.
+        let previous = jobs
+            .iter()
+            .find(|job| job["id"] == item["scheduler"]["last_job"]);
+        let idle_retry = item["status"] == "doing"
+            && item["scheduler"]["phase"] == "retry"
+            && item["scheduler"]["resume"] == true
+            && !truth(&item["scheduler"]["job"])
+            && !truth(&item["scheduler"]["key"])
+            && !truth(&item["worker_receipt"]["job"])
+            && previous.is_some_and(|job| {
+                cancellation::cancelled(job)
+                    && cancellation::recovery_cancel(&item, job)
+                    && arr(&item["jobs"]).contains(&job["id"])
+            })
+            && !jobs.iter().any(|job| {
+                live(job) && (job["todo_id"] == id || arr(&item["jobs"]).contains(&job["id"]))
+            });
+        if idle_retry && !todo_wait::waiting(&db, &item) {
+            cc_job_policy::subwork::resolve(&db, &item, &jobs, true)
+                .map_err(|_| Error("InvalidSubwork"))?;
+            let before = item.clone();
+            item = self.edit(&json!(id), |row| {
+                if *row == before {
+                    row["status"] = json!("todo");
+                }
+            })?;
         }
         if item["status"] != "todo"
             || todo_wait::waiting(&db, &item)

@@ -44,3 +44,10 @@ threads-required = 'num-test-threads'
 [[profile.default.overrides]]
 filter = 'package(cc-ask) & test(busy_notifier_card_lock_returns_within_deadline_without_card_changes)'
 threads-required = 'num-test-threads'
+
+# This test launches 40 real admission threads with the unchanged 60-second
+# queue-lock deadline. Preserve that contention and the six-slot assertions,
+# but prevent unrelated fixture processes from exhausting the runner's I/O.
+[[profile.default.overrides]]
+filter = 'package(cc-jobs) & test(forty_concurrent_admissions_never_exceed_six)'
+threads-required = 'num-test-threads'

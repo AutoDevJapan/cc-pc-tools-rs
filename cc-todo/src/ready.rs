@@ -14,6 +14,9 @@ pub fn read_state(path: &Path) -> Result<Value> {
 }
 
 pub fn confirmed(wait: &Value, state: &Value, at: u64) -> bool {
+    if wait["condition"] == "retry-time" {
+        return cc_job_policy::todo_wait::retry_due(wait, at);
+    }
     let Some(since) = wait["since"].as_u64() else {
         return false;
     };
@@ -28,6 +31,45 @@ pub fn confirmed(wait: &Value, state: &Value, at: u64) -> bool {
         && at - checked <= 26 * 3600
 }
 
+pub fn register_retry(db: &mut Value, id: i64, seconds: u64, reason: &str, at: u64) -> Result<()> {
+    if !(60..=86400).contains(&seconds) || reason.trim().is_empty() || reason.len() > 8000 {
+        return Err(
+            "再確認までの秒数は60〜86400、理由は空でない8000バイト以内で指定してください".into(),
+        );
+    }
+    let until = at.checked_add(seconds).ok_or("再確認の時刻が範囲外です")?;
+    let row = find(db, id)?;
+    if row["status"] == "done" {
+        return Err("完了したToDoには待機を設定できません".into());
+    }
+    if !row["wait_ready"].is_null() && row["wait_ready"]["condition"] != "retry-time" {
+        return Err("別の再開条件が登録されています。その条件を保持してください".into());
+    }
+    // A repeated invocation must not slide the deadline and postpone work indefinitely.
+    if row["wait_ready"].is_null() {
+        row["wait_ready"] =
+            json!({"condition":"retry-time","since":at,"not_before":until,"reason":reason});
+    }
+    park(row)?;
+    Ok(())
+}
+
+fn park(row: &mut Value) -> Result<()> {
+    if row["status"] != "block" {
+        row["status"] = json!("wait");
+    }
+    let fields = row.as_object_mut().ok_or("invalid item")?;
+    for key in ["work_owner_job", "work_owner_wait_on", "dependency_ready"] {
+        fields.remove(key);
+    }
+    if let Some(recovery) = row["stall_recovery"].as_object_mut() {
+        recovery.remove("pending");
+        recovery.remove("report");
+    }
+    row["updated"] = json!(now());
+    Ok(())
+}
+
 pub fn register(db: &mut Value, id: i64, condition: &str) -> Result<()> {
     if condition != "chatgpt-plus" {
         return Err("未対応の再開条件です".into());
@@ -40,24 +82,10 @@ pub fn register(db: &mut Value, id: i64, condition: &str) -> Result<()> {
     if row["wait_ready"]["condition"] != condition {
         row["wait_ready"] = json!({"condition":condition,"since":now_epoch()});
     }
-    if row["status"] != "block" {
-        row["status"] = json!("wait");
-    }
-    row.as_object_mut()
-        .ok_or("invalid item")?
-        .remove("work_owner_job");
-    row.as_object_mut()
-        .ok_or("invalid item")?
-        .remove("work_owner_wait_on");
-    if let Some(recovery) = row["stall_recovery"].as_object_mut() {
-        recovery.remove("pending");
-        recovery.remove("report");
-    }
-    row["updated"] = json!(now());
-    Ok(())
+    park(row)
 }
 
-fn now_epoch() -> u64 {
+pub(crate) fn now_epoch() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -89,5 +117,29 @@ pub fn resume_production(db: &mut Value, id: i64, condition: &str) -> Result<boo
 }
 
 pub fn confirmed_production(wait: &Value) -> Result<bool> {
+    if wait["condition"] == "retry-time" {
+        return Ok(cc_job_policy::todo_wait::retry_due(wait, now_epoch()));
+    }
     Ok(confirmed(wait, &read_state(Path::new(STATE))?, now_epoch()))
+}
+
+/// The existing minute watchdog wakes only the original task after its deadline.
+/// Owner holds and unresolved ToDo dependencies remain authoritative.
+pub fn release_retries(db: &mut Value, at: u64) -> Result<Vec<i64>> {
+    let ids: Vec<_> = db["items"]
+        .as_array()
+        .ok_or("invalid items")?
+        .iter()
+        .filter(|row| {
+            row["status"] == "wait" && cc_job_policy::todo_wait::retry_due(&row["wait_ready"], at)
+        })
+        .filter_map(|row| row["id"].as_i64())
+        .collect();
+    let mut released = Vec::new();
+    for id in ids {
+        if resume(db, id, "retry-time", &Value::Null, at)? {
+            released.push(id);
+        }
+    }
+    Ok(released)
 }

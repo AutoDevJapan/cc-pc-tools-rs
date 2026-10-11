@@ -22,6 +22,55 @@ pub fn waiting(db: &Value, item: &Value) -> bool {
     !pending_on(db, item).is_empty()
 }
 
+/// A retry deadline permits another check, not a claim that a capability recovered.
+pub fn retry_due(wait: &Value, at: u64) -> bool {
+    let (Some(since), Some(until)) = (wait["since"].as_u64(), wait["not_before"].as_u64()) else {
+        return false;
+    };
+    wait["condition"] == "retry-time"
+        && until
+            .checked_sub(since)
+            .is_some_and(|seconds| (60..=86400).contains(&seconds))
+        && since <= at
+        && until <= at
+}
+
+pub fn ready_message(wait: &Value) -> String {
+    match wait["condition"].as_str() {
+        Some("chatgpt-plus") => "ChatGPT Plusの復旧確認待ち".into(),
+        Some("retry-time") => {
+            let deadline = wait["not_before"]
+                .as_i64()
+                .and_then(|at| chrono::DateTime::from_timestamp(at, 0))
+                .map(|at| {
+                    at.with_timezone(&chrono::FixedOffset::east_opt(9 * 3600).unwrap())
+                        .format("%m/%d %H:%M JST")
+                        .to_string()
+                });
+            match deadline {
+                Some(at) => format!("次の再確認まで待機（{at}）"),
+                None => "次の再確認まで待機（時刻未確認）".into(),
+            }
+        }
+        _ => "再開条件の確認待ち".into(),
+    }
+}
+
+/// Use saved numeric/job links only. Keep readiness waits distinct from ToDo edges.
+pub fn job_ready_waits(db: &Value, job: &Value) -> Vec<Value> {
+    db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|item| crate::priority::linked(item, job))
+        .filter(|item| !item["wait_ready"].is_null() && item["status"] != "done")
+        .map(|item| {
+            json!({"item":item["id"],"wait":item["wait_ready"],
+            "message":ready_message(&item["wait_ready"])})
+        })
+        .collect()
+}
+
 /// Validate the entire proposed edge set before mutating the store.
 pub fn validate(db: &Value, id: i64, on: &[i64]) -> Result<(), String> {
     let items = db["items"].as_array().ok_or("invalid items")?;
@@ -176,6 +225,22 @@ pub fn job_pending_on(db: &Value, job: &Value) -> Vec<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn readiness_wait_uses_exact_job_links_and_never_invents_dependency_edges() {
+        let db = json!({"items":[{"id":1,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700},"jobs":["linked"]},
+            {"id":2,"status":"done","wait_ready":{"condition":"chatgpt-plus"}}]});
+        for job in [
+            json!({"todo_id":1}),
+            json!({"related_todo_ids":[1]}),
+            json!({"id":"linked"}),
+        ] {
+            assert_eq!(job_ready_waits(&db, &job).len(), 1);
+            assert!(job_pending_on(&db, &job).is_empty());
+        }
+        assert!(job_ready_waits(&db, &json!({"todo_id":2})).is_empty());
+        assert!(job_ready_waits(&db, &json!({"id":"other","prompt":"ToDo 1"})).is_empty());
+        assert!(ready_message(&db["items"][0]["wait_ready"]).contains("再確認"));
+    }
     #[test]
     fn cycle_and_missing_ids_are_rejected_without_mutation() {
         let db = json!({"items":[{"id":1,"status":"todo"},{"id":2,"wait_on":[3]},{"id":3,"wait_on":[1]}]});

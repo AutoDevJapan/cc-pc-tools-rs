@@ -1819,6 +1819,90 @@ mod queue_regressions {
         assert!(t.ctx.admit("first").unwrap().is_some());
     }
     #[test]
+    fn readiness_wait_added_after_registration_blocks_admission_until_released() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut candidate = waiting(&t, "original", "orch-todo-1139");
+        candidate["todo_id"] = json!(1139);
+        t.ctx.save(&candidate).unwrap();
+        let mut db = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("original").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("original").unwrap()["queue_wait_reason"]["code"],
+            "todo_readiness"
+        );
+        assert_eq!(t.ctx.load("original").unwrap()["status"], "queued");
+        // The queue cannot claim recovery merely because wall time passed. The watchdog releases it.
+        db["items"][0]["status"] = json!("todo");
+        db["items"][0].as_object_mut().unwrap().remove("wait_ready");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("original").unwrap().is_some());
+    }
+    #[test]
+    fn timed_retry_rejects_new_supervisor_registration_without_writing_a_job() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let db = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let before = t.ctx.list_jobs(&HashSet::new());
+        let error = t
+            .run(&["--todo-id", "1139"], b"existing task check")
+            .unwrap_err();
+        assert!(error.message.contains("次の再確認"));
+        assert_eq!(t.ctx.list_jobs(&HashSet::new()), before);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(),
+            db
+        );
+        assert!(t.run(&[], b"unrelated finite work").is_ok());
+    }
+    #[test]
+    fn wait_registration_cannot_race_running_publication_after_queue_snapshot() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env.lock().unwrap().insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into_owned());
+        let store = t.ctx.root.join("todo.json");
+        let db = json!({"items":[{"id":1139,"status":"todo"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let mut candidate = waiting(&t, "original", "orch-todo-1139");
+        candidate["todo_id"] = json!(1139);
+        t.ctx.save(&candidate).unwrap();
+        let attempts = Arc::new(Mutex::new(Vec::new()));
+        let observed = attempts.clone();
+        let path = t.ctx.job_dir("original").join("job.json");
+        let todo_lock = store.with_file_name("todo.lock");
+        let store_at_save = store.clone();
+        *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file == path {
+                match FileLock::try_acquire(&todo_lock) {
+                    Ok(_guard) => {
+                        observed.lock().unwrap().push(false);
+                        // A writer admitted here would install a wait between the snapshot and publication.
+                        let wait = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+                        let _ = fs::write(&store_at_save, wait.to_string());
+                    },
+                    Err(_) => observed.lock().unwrap().push(true),
+                }
+            }
+        }));
+        let admission = t.ctx.admit("original").unwrap();
+        *t.rt.save_hook.lock().unwrap() = None;
+        assert!(admission.is_some());
+        assert_eq!(t.ctx.load("original").unwrap()["status"], "running");
+        assert_eq!(*attempts.lock().unwrap(), vec![true]);
+        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(), db);
+    }
+    #[test]
     fn duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
@@ -6368,6 +6452,23 @@ mod cancel {
             t.ctx.load("successor").unwrap()["queue_wait_reason"]["wait_on"],
             json!([32])
         );
+    }
+    #[test]
+    fn guarded_retry_wait_defers_cancellation_without_changing_source() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
+        db["items"][0]["status"] = json!("wait");
+        db["items"][0]["wait_ready"] = json!({"condition":"retry-time","since":100,"not_before":3700});
+        fs::write(&store, db.to_string()).unwrap();
+        let source = t.put(job(json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123})));
+        let (result, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(result.unwrap(), 0);
+        let response: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(response["outcome"], "deferred");
+        assert!(!response["wait_ready"].as_array().unwrap().is_empty());
+        assert_eq!(t.ctx.load("source").unwrap(), source);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
     }
     #[test]
     fn guarded_commit_is_attempt_specific_and_owner_stop_always_wins() {

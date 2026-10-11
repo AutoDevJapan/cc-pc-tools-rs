@@ -3865,6 +3865,35 @@ fn wait_row(f: &mut Fixture, id: u64, on: Value) {
     .unwrap();
 }
 #[test]
+fn retry_deadline_wait_does_not_dispatch_until_watchdog_releases_it() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let mut db = f.e.todo().unwrap();
+    cc_todo::ready::register_retry(&mut db, 1, 3600, "操作環境の接続不足", 100).unwrap();
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+    assert!(
+        f.e.report["waiting"][0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("次の再確認")
+    );
+    assert!(
+        cc_todo::ready::release_retries(&mut db, 3699)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        cc_todo::ready::release_retries(&mut db, 3700).unwrap(),
+        vec![1]
+    );
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 1);
+}
+#[test]
 fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
     let mut f = Fixture::new();
     f.put(item(1, "civ6", "wait", &[]));

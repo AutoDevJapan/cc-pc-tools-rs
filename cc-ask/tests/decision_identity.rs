@@ -35,6 +35,106 @@ fn creates(h: &Harness) -> usize {
         .count()
 }
 
+fn legacy_multi_todo_route(h: &mut Harness, ids: &[u64]) -> Value {
+    let first = cc_ask::question_progress::ask(
+        &mut h.ctx,
+        &json!({"cwd":"D:/cleanup","project":"fixture","posting_job":"legacy-worker"}),
+        "",
+        "元の対象を削除しますか？\na 削除\nb 保持",
+        &[],
+    )
+    .unwrap();
+    atomic_json(
+        &h.ctx.todo,
+        &json!({"items":ids.iter().map(|id| json!({"id":id,"jobs":["legacy-worker"]})).collect::<Vec<_>>()}),
+        2,
+    )
+    .unwrap();
+    first
+}
+
+#[test]
+fn disjoint_ambiguous_legacy_todos_do_not_block_an_explicit_new_decision() {
+    let mut h = Harness::new();
+    let old = legacy_multi_todo_route(&mut h, &[11, 12]);
+    h.reply("a", s(&old["thread_id"]));
+    let before = creates(&h);
+    let a = args(&h, "新しい対象の判断", "D:/models/new");
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_ne!(result["thread_id"], old["thread_id"]);
+    assert!(result["latest_owner_reply"].is_null());
+    assert_eq!(creates(&h), before + 2);
+    let again = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(again["thread_id"], result["thread_id"]);
+    assert_eq!(again["suppressed"], "same_decision");
+    assert_eq!(creates(&h), before + 2);
+    assert!(decision_identity::todo(&h.ctx, &json!({"posting_job":"legacy-worker"})).is_err());
+}
+
+#[test]
+fn overlapping_or_unknown_legacy_candidates_still_fail_closed() {
+    for ids in [&[11, 2380][..], &[0, 12][..]] {
+        let mut h = Harness::new();
+        legacy_multi_todo_route(&mut h, ids);
+        let before = creates(&h);
+        let state = h.state();
+        let a = args(&h, "新しい対象の判断", "D:/models/new");
+        assert!(cmd_ask(&mut h.ctx, &a).unwrap_err().contains("一意"));
+        assert_eq!(creates(&h), before);
+        assert_eq!(h.state(), state);
+    }
+}
+
+#[test]
+fn disjoint_legacy_evidence_does_not_hide_conflicting_explicit_original() {
+    let mut h = Harness::new();
+    legacy_multi_todo_route(&mut h, &[11, 12]);
+    let file = std::fs::read_dir(h.ctx.here.join("question-progress"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let mut record = read_json(&file).unwrap();
+    record["context"]["todo_id"] = json!(13);
+    atomic_json(&file, &record, 2).unwrap();
+    let before = creates(&h);
+    let a = args(&h, "新しい対象の判断", "D:/models/new");
+    assert!(cmd_ask(&mut h.ctx, &a).unwrap_err().contains("differs"));
+    assert_eq!(creates(&h), before);
+}
+
+#[test]
+fn legacy_without_todo_evidence_still_requires_scope_for_the_same_work() {
+    let mut h = Harness::new();
+    let old = legacy_multi_todo_route(&mut h, &[11]);
+    atomic_json(&h.ctx.todo, &json!({"items":[]}), 2).unwrap();
+    let before = creates(&h);
+    let mut context = json!({"todo_id":2380,"cwd":"D:/cleanup","project":"fixture"});
+    decision_identity::bind(&h.ctx, &mut context, Some(&identity("D:/models/new"))).unwrap();
+    let result = cc_ask::question_progress::ask(&mut h.ctx, &context, "", "別の判断", &[]).unwrap();
+    assert_eq!(result["thread_id"], old["thread_id"]);
+    assert_eq!(result["suppressed"], "decision_scope_required");
+    assert!(result["latest_owner_reply"].is_null());
+    assert_eq!(creates(&h), before);
+}
+
+#[test]
+fn ambiguous_incoming_original_is_never_selected_even_for_disjoint_legacy_work() {
+    let mut h = Harness::new();
+    legacy_multi_todo_route(&mut h, &[11, 12]);
+    let before = creates(&h);
+    let result = cc_ask::question_progress::ask(
+        &mut h.ctx,
+        &json!({"posting_job":"legacy-worker"}),
+        "",
+        "別の判断",
+        &[],
+    );
+    assert!(result.unwrap_err().contains("一意"));
+    assert_eq!(creates(&h), before);
+}
+
 #[test]
 fn title_paraphrase_and_another_worker_reuse_an_unanswered_decision_without_posts() {
     let mut h = Harness::new();

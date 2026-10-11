@@ -359,7 +359,7 @@ pub fn ask(
         let attachments_same = record["attachment_hashes"] == json!(hashes)
             || (record["attachment_hashes"].is_null() && hashes.is_empty());
         let same = if decision.is_object() && record["decision_identity"].is_object() {
-            decision == record["decision_identity"] && attachments_same
+            decision == record["decision_identity"]
         } else if decision.is_object() {
             false
         } else {
@@ -387,7 +387,7 @@ pub fn ask(
         return crate::decision_identity::reuse(ctx, &[], record, true);
     }
     let identity = if decision.is_object() {
-        json!({"decision":decision,"hashes":hashes})
+        json!({"decision":decision})
     } else {
         json!({"guild":ctx.cfg["guild_id"],"parent":ctx.cfg["task_channel_id"],"owner":ctx.owner(),
             "todo":todo,"work":work,"cwd":context["cwd"],"body":body,"hashes":hashes})
@@ -417,10 +417,6 @@ pub fn ask(
     };
     let context = record["context"].clone();
     let body = s(&record["body"]);
-    let batches = prepared
-        .as_ref()
-        .map(|p| attachments::batches(&p.files))
-        .unwrap_or_default();
     let limit = prepared
         .as_ref()
         .map_or(attachments::BASE_LIMIT, |p| p.limit);
@@ -454,6 +450,11 @@ pub fn ask(
         record["files"] = json!(snapshots);
         atomic_json(&path, &record, 2)?;
     }
+    // Retrying the same scope uses the saved original assets, even if this caller
+    // has renamed or re-encoded its files. New asset conditions must change scope.
+    let stored_files = saved_files(&record)?;
+    let batches = attachments::batches(&stored_files);
+    let limit = n(&record["upload_limit"]);
     let tid = create_thread(
         ctx,
         &path,
@@ -478,9 +479,8 @@ pub fn ask(
     )
 }
 
-fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<()> {
-    let parts = record["text_parts"].as_array().cloned().unwrap_or_default();
-    let files = record["files"]
+fn saved_files(record: &Value) -> Result<Vec<attachments::File>> {
+    record["files"]
         .as_array()
         .into_iter()
         .flatten()
@@ -510,7 +510,12 @@ fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<(
                 size: n(&v["size"]),
             })
         })
-        .collect::<Result<Vec<_>>>()?;
+        .collect()
+}
+
+fn deliver_parts(ctx: &mut Context, path: &Path, record: &mut Value) -> Result<()> {
+    let parts = record["text_parts"].as_array().cloned().unwrap_or_default();
+    let files = saved_files(record)?;
     let batches = attachments::batches(&files);
     let tid = s(&record["question_thread_id"]).to_owned();
     for index in 1..parts.len().max(batches.len()) {

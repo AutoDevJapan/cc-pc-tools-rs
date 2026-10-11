@@ -383,3 +383,36 @@ fn reviewed_four_duplicates_keep_all_replies_and_return_latest_owner_identity_wi
             .any(|m| m["author"]["id"] == "OWN"));
     }
 }
+
+#[test]
+fn changed_attachments_alone_do_not_create_new_decision_or_inherit_the_new_asset() {
+    let mut h = Harness::new();
+    let a = args(&h, "削除確認", "D:/models/one");
+    let first = cmd_ask(&mut h.ctx, &a).unwrap();
+    h.reply("a", s(&first["thread_id"]));
+    let dir = h.ctx.here.join("question-progress");
+    let file = std::fs::read_dir(&dir)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let mut record = read_json(&file).unwrap();
+    record["attachment_hashes"] = json!(["old-fingerprint"]);
+    record["files"] = json!([{"name":"original.png","hash":"old-fingerprint"}]);
+    atomic_json(&file, &record, 2).unwrap();
+    // The supplied decision stays exact. Even a re-encoded or omitted asset must
+    // return the original question/asset rather than emit another owner mention.
+    let before = creates(&h);
+    let result = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_eq!(creates(&h), before);
+    assert_eq!(result["thread_id"], first["thread_id"]);
+    assert_eq!(result["latest_owner_reply"]["content"], "a");
+    assert_eq!(result["question_attachments"][0]["name"], "original.png");
+    let mut new = identity("D:/models/one");
+    new["scope"]["asset_hash"] = json!("new-fingerprint");
+    atomic_json(a.decision_file.as_ref().unwrap(), &new, 2).unwrap();
+    let second = cmd_ask(&mut h.ctx, &a).unwrap();
+    assert_ne!(second["thread_id"], first["thread_id"]);
+    assert!(second["latest_owner_reply"].is_null());
+}

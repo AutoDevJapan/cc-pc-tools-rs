@@ -164,7 +164,7 @@ pub(crate) fn reuse(
     let mut out = json!({"thread_id":tid,"after":primary["question"]["starter"],"url":format!("https://discord.com/channels/{}/{tid}",s(&ctx.cfg["guild_id"])),
         "progress_thread_id":primary["progress_thread_id"],"work_thread_id":primary["work_thread_id"],
         "reused":true,"suppressed":if uncertain {"decision_scope_required"} else {"same_decision"},
-        "question_body":primary["body"],"decision_identity":primary["decision_identity"]});
+        "question_body":primary["body"],"question_attachments":primary["files"],"decision_identity":primary["decision_identity"]});
     if uncertain {
         out["next_action"] = json!("元の質問の対象と権限範囲を確認し、同じ判断の記録を使ってください。新しい対象・仕様・危険範囲だけ別の判断として登録できます。審査拒否は再質問の理由になりません。");
         return Ok(out);

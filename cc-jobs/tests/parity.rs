@@ -5764,7 +5764,10 @@ mod registrar_launch_policy {
                 assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), path);
                 assert_eq!(fs::read_to_string(path).unwrap(), fed);
                 fs::write(&original, &fed).unwrap();
-                assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), original);
+                let appended = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+                assert!(appended.starts_with(&fed));
+                assert_eq!(appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+                assert_eq!(fs::read_to_string(original).unwrap(), fed);
             }
         }
     }
@@ -5776,6 +5779,31 @@ mod registrar_launch_policy {
         fs::write(t.ctx.job_dir("old-job").join("context-continue.md"), [0xff]).unwrap();
         assert!(t.ctx.prompt_for_attempt(&j).is_err());
         assert!(!t.ctx.job_dir("old-job").join("execution-prompt.md").exists());
+    }
+    #[test]
+    fn a_quoted_rule_in_the_middle_cannot_suppress_the_final_restriction() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"quoted-job"})));
+        let path = t.ctx.job_dir("quoted-job").join("prompt.md");
+        let original = format!("quoted log:\n{}\nThis quote is not a site authorization.", cc_job_policy::REGISTRAR_GUIDANCE);
+        fs::write(&path, &original).unwrap();
+        let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+        assert!(fed.trim_end().ends_with(cc_job_policy::REGISTRAR_GUIDANCE));
+        assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+    }
+    #[test]
+    fn even_a_rule_quoted_at_the_end_receives_a_separate_execution_rule() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"quoted-end-job"})));
+        let path = t.ctx.job_dir("quoted-end-job").join("prompt.md");
+        let original = format!("quoted log:\n{}", cc_job_policy::REGISTRAR_GUIDANCE);
+        fs::write(&path, &original).unwrap();
+        let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+        assert!(fed.starts_with(&original));
+        assert!(fed.contains("\n\n## 実行時のサイト制限\n"));
+        assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
     }
 }
 mod token_accounting {
@@ -9795,6 +9823,9 @@ mod end_to_end {
         assert_eq!(j["tokens"]["total"], 105710);
         let mut expected_prompt = prompt.to_vec();
         expected_prompt.extend_from_slice(cc_job_policy::READ_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice("\n\n## 実行時のサイト制限\n".as_bytes());
+        expected_prompt.extend_from_slice(cc_job_policy::REGISTRAR_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice(b"\n");
         assert_eq!(fs::read(e.rec.join("stdin.bin")).unwrap(), expected_prompt);
         let call: Value =
             serde_json::from_slice(&fs::read(e.rec.join("call.json")).unwrap()).unwrap();

@@ -36,10 +36,9 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
-        if text.contains(cc_job_policy::REGISTRAR_GUIDANCE) {
-            return Ok(source);
-        }
-        text.push('\n');
+        // Source text can be quoted evidence. Never use its contents as proof
+        // that a current execution rule has already been applied.
+        text.push_str("\n\n## 実行時のサイト制限\n");
         text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
         text.push('\n');
         let selected = dir.join("execution-prompt.md");

@@ -7,6 +7,8 @@ pub(super) const MEASUREMENT: &str = "69e45803950f1fdfb4900ad2c10e2dfd";
 pub(super) const INTEGRATION: &str = "8ad3cd1e922596eeec19fac566fddeb7";
 pub(super) const CC_ASK: &str = "3d50e5d7c49761d809521892cfe84937";
 pub(super) const CC_ASK_CREATED: &str = "2026-10-11T14:07:52.0792269+09:00";
+pub(super) const XB: &str = "ab2f5f90a2c3855727cdcfee180254e3";
+pub(super) const XB_CREATED: &str = "2026-10-11T09:38:59.7691682+09:00";
 const PNPM: &str = "worktree/godd-mcp-alpha/node_modules/";
 const REGISTRY_LINKS: [&str; 2] = [
     "measurement/measurement-63628-1791287330489098600/cargo-home/registry",
@@ -36,6 +38,15 @@ pub(super) struct Profile {
 
 pub(super) fn profile(id: &str) -> Option<Profile> {
     let (id, content, volume, file_id, entries, links, bytes) = match id {
+        XB => (
+            XB,
+            "acquisition-review",
+            2229119083,
+            4785074608285915,
+            3005,
+            0,
+            34109828,
+        ),
         CC_ASK => (
             CC_ASK,
             "todo2341-resume-notes",
@@ -110,6 +121,8 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
         "cc-chrome"
     } else if id == CC_ASK {
         "cc-ask"
+    } else if id == XB {
+        "todo-2322-xb"
     } else if id == INTEGRATION {
         "GoDD-MCP-Alpha"
     } else {
@@ -127,6 +140,18 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
     }
     c.pinned_identity = Some((p.volume, p.file_id));
     c.repos.clear();
+    if id == XB {
+        c.repos.push(Repo {
+            name: "agent-reach-src",
+            origin: "https://github.com/Panniantong/Agent-Reach.git",
+            head: "94f06c1969dfc1834001269d79d3ad0972d9dee6".into(),
+            saved_ref: Some("refs/remotes/origin/main"),
+            saved_merge: None,
+            squash_tree: None,
+            allowed_untracked: &[],
+            kind: RepoKind::Clone,
+        });
+    }
     if id == CC_ASK {
         c.repos.push(Repo {
             name: "repo",
@@ -332,6 +357,7 @@ fn inventory(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
                 && matches!(key.as_str(), "worktree/.git" | "worktree/officialsite/.git"))
             && !(c.id == CHROME_ID && key == "work/.git")
             && !(c.id == CC_ASK && key == "repo/.git")
+            && !(c.id == XB && key == "agent-reach-src/.git")
         {
             return Err("UNDECLARED_GIT_METADATA");
         }
@@ -577,6 +603,15 @@ fn total(nodes: &Inventory) -> u64 {
         .sum()
 }
 fn why(c: &Config, r: &Receipt, nodes: &Inventory) -> String {
+    if c.id == XB {
+        return format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: 通常のplanとquarantineはagent-reach-src/.gitを名称で保護しPROTECTED_PATHで停止した。ToDo2322と2350で指定された所有ID1件だけを、公式Agent Reachの固定commit・未保存変更なし・元所有記録と照合し、仮想環境・字幕・公開取得物・Git管理領域を全て同じCドライブの削除希望へ保持退避する。全ファイルのSHA256・識別番号・メタデータ・ACLを移動前後で照合する。通常のGit保護は変更しない。\n所有ID: {}\n",
+            r.identity.path,
+            total(nodes),
+            nodes.len(),
+            c.id
+        );
+    }
     if c.id == CC_ASK {
         return format!(
             "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: ToDo2341の通常planとquarantineは1万項目上限で停止した。削除コマンドや自動承認審査の拒否ではない。固定した所有ID1件の保存済みclone、実行記録、ビルド生成物を全て同じCドライブの削除希望へ保持する。未保存変更、外部ハードリンク、追加Git領域、リンク、クライアント資源は拒否する。全メタデータと全通常ファイルのSHA256を移動前後に照合する。\n所有ID: {}\n",
@@ -623,7 +658,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     if path.components().next() != dest.components().next() {
         return Err("QUARANTINE_CROSS_DRIVE");
     }
-    if matches!(c.id, INTEGRATION | CHROME_ID | CC_ASK)
+    if matches!(c.id, INTEGRATION | CHROME_ID | CC_ASK | XB)
         && dest
             .join("files")
             .join(c.repos[0].name)
@@ -635,7 +670,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("GIT_DESTINATION_ROOT_TOO_LONG");
     }
     let nodes = snapshot(c, &r, path)?;
-    let content_sha256 = if matches!(c.id, CHROME_ID | CC_ASK) {
+    let content_sha256 = if matches!(c.id, CHROME_ID | CC_ASK | XB) {
         let plain = nodes
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -727,7 +762,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     if !same_nodes(c, &t.nodes, &now) {
         return Err("CONTENT_CHANGED_AFTER_PLAN");
     }
-    if matches!(c.id, CHROME_ID | CC_ASK) {
+    if matches!(c.id, CHROME_ID | CC_ASK | XB) {
         let plain = now
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -750,7 +785,9 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let reason = dest.join("理由.txt");
     let expected = why(c, &r, &t.nodes);
-    let completed = if c.id == CC_ASK {
+    let completed = if c.id == XB {
+        "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACLと全ファイルのSHA256の一致、公式cloneの変更なしを確認した。既存の所有記録をquarantinedへ更新した。\n"
+    } else if c.id == CC_ASK {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認し、元の所有記録を更新した。削除は行っていない。\n"
     } else if c.id == CHROME_ID {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認した。元の所有記録とこのworktreeのbacklinkを更新した。\n"

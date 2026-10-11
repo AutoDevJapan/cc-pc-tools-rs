@@ -642,3 +642,94 @@ fn todo2172_registered_source_repair_unparks_the_same_handoff() {
             .contains(&original)
     );
 }
+
+#[test]
+fn todo2341_waiting_recovery_backlog_preserves_evidence_and_launches_ready_tail() {
+    let f = Fixture::new();
+    f.on();
+    let mut db = f.console.todos().unwrap();
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_on"] = json!([99]);
+    for id in 2..=40 {
+        db["items"].as_array_mut().unwrap().push(json!({
+            "id":id,"project":"demo","status":"wait","wait_on":[99],
+            "title":"依存の完了待ち","jobs":[]
+        }));
+    }
+    db["items"].as_array_mut().unwrap().push(json!({
+        "id":99,"project":"demo","status":"todo","title":"実行可能な検査","jobs":[]
+    }));
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    for id in 1..=40 {
+        let key = format!("manual:waiting-{id}");
+        state.queue.push(Trigger {
+            key: key.clone(),
+            name: format!("orch-todo-{id}"),
+            cwd: f.root.to_string_lossy().into(),
+            prompt: format!("保存済み本文 {id}"),
+            todo_id: Some(id),
+            options: json!({"model":"gpt-6-luna","effort":"high",
+                "sandbox":"read-only","isolate_worktree":false}),
+        });
+        state.preparation_failures.insert(
+            key.clone(),
+            (now() + 300, "source_workspace_unavailable".into()),
+        );
+        state
+            .preparation_recovery
+            .insert(key, json!({"evidence":{"saved":"original"},"attempts":2}));
+    }
+    state.queue.push(Trigger {key:"manual:ready-tail".into(),name:"orch-todo-99".into(),
+        cwd:f.root.to_string_lossy().into(),prompt:"同じ後端の検査".into(),todo_id:Some(99),
+        options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false})});
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &[]).unwrap();
+    }
+    assert_eq!(f.launches(), 1);
+    assert!(state.launches.contains_key("manual:ready-tail"));
+    for id in 1..=40 {
+        let key = format!("manual:waiting-{id}");
+        assert!(state
+            .queue
+            .iter()
+            .any(|q| q.key == key && q.prompt == format!("保存済み本文 {id}")));
+        assert_eq!(
+            state.preparation_failures[&key].1,
+            "source_workspace_unavailable"
+        );
+        assert_eq!(
+            state.preparation_recovery[&key]["evidence"],
+            json!({"saved":"original"})
+        );
+        assert_eq!(state.preparation_recovery[&key]["attempts"], 2);
+    }
+    // Once the dependency finishes, the exact same queued identity is rechecked.
+    let mut current = f.console.todos().unwrap();
+    let parent = current["items"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|r| r["id"] == 99)
+        .unwrap();
+    parent["status"] = json!("done");
+    fs::write(f.console.paths.todo.join("todo.json"), current.to_string()).unwrap();
+    for row in current["items"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .filter(|r| r["id"] != 99)
+    {
+        row["status"] = json!("todo");
+    }
+    fs::write(f.console.paths.todo.join("todo.json"), current.to_string()).unwrap();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console
+            .dispatch(&mut state, &f.console.jobs().unwrap())
+            .unwrap();
+    }
+    assert!(f.launches() > 1);
+    assert!(state.preparation_failures.len() < 40);
+}

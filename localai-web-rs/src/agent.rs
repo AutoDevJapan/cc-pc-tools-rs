@@ -1298,6 +1298,16 @@ impl Console {
                 s.queue.push(waiting);
                 continue;
             }
+            // Known waits cannot launch. Keep their recovery evidence intact;
+            // investigating them again consumes the next ready item's budget.
+            if item.is_some_and(|i| strv(i, "status") == "wait"
+                || cc_ask::job_policy::todo_wait::waiting(db, i)
+                || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))) {
+                self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
             self.patrol_stage("recovery_evidence");
             if !self.recovery_ready(s, &t, db, &candidate_jobs, &mut evidence_cache)? {
                 let waiting = s.queue.remove(0);
@@ -1393,27 +1403,26 @@ impl Console {
                 self.save(s)?;
                 continue;
             }
-            let db = self.todos()?;
             if t.todo_id.is_none() {
                 if let Some(source) = t
                     .key
                     .strip_prefix("decision:")
                     .and_then(|id| fresh_jobs.iter().find(|j| strv(j, "id") == id))
                 {
-                    t.todo_id = source_todo_id(source, &db);
+                    t.todo_id = source_todo_id(source, db);
                     s.queue[0].todo_id = t.todo_id;
                 }
             }
             let item = t
                 .todo_id
                 .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            if item.is_some_and(|i| strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(&db, i) || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
+            if item.is_some_and(|i| strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(db, i) || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
             }
-            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, &db)? || item.is_some_and(|i| matches!(strv(i,"status"),"done"|"block") || strv(i,"project")=="owner") {
+            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, db)? || item.is_some_and(|i| matches!(strv(i,"status"),"done"|"block") || strv(i,"project")=="owner") {
                 suppress_trigger(s, &t, "対象外のプロジェクト、または完了済みの作業です。");
                 continue;
             }
@@ -1445,16 +1454,16 @@ impl Console {
                     let project_cwd = db["projects"][strv(item, "project")]
                         .as_str()
                         .ok_or_else(io_fault)?;
-                    let restored = self.restored_workspace(item, source, &db, project_cwd);
+                    let restored = self.restored_workspace(item, source, db, project_cwd);
                     if let Ok(cwd) = restored {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
                     } else {
-                        self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
                         continue;
                     }
                     let source_owned = source.is_some_and(|job| {
-                        source_todo_id(job, &db) == t.todo_id
+                        source_todo_id(job, db) == t.todo_id
                             && strv(job, "cwd")
                                 .replace('\\', "/")
                                 .eq_ignore_ascii_case(&t.cwd.replace('\\', "/"))
@@ -1483,7 +1492,7 @@ impl Console {
                 }
             }
             if item.is_some_and(|i| {
-                strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(&db, i)
+                strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(db, i)
             }) {
                 s.suppressed.insert(
                     t.key.clone(),
@@ -1495,7 +1504,7 @@ impl Console {
                 continue;
             }
             let project = item.map(|i| strv(i, "project")).unwrap_or("");
-            if self.excluded(project, &t.cwd, &db)?
+            if self.excluded(project, &t.cwd, db)?
                 || item.is_some_and(|i| {
                     matches!(strv(i, "status"), "done" | "block") || strv(i, "project") == "owner"
                 })
@@ -1514,7 +1523,7 @@ impl Console {
                 }) || (item.is_none()
                     && fresh_jobs.iter().any(|j| {
                         active(j)
-                            && same_project(strv(j, "cwd"), &t.cwd, &db)
+                            && same_project(strv(j, "cwd"), &t.cwd, db)
                             && s.launches.iter().any(|(key, id)| {
                                 key.starts_with("manual:stall-") && j["id"] == id.as_str()
                             })
@@ -1526,7 +1535,7 @@ impl Console {
                                     && same_project(
                                         &t.cwd,
                                         db["projects"][strv(i, "project")].as_str().unwrap_or(""),
-                                        &db,
+                                        db,
                                     )
                             })
                         })))
@@ -1568,7 +1577,7 @@ impl Console {
                         self.save(s)?;
                     }
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(s, &t.key, error.code, db, fresh_jobs, &mut evidence_cache)?;
                     }
                 }
                 continue;
@@ -1588,10 +1597,10 @@ impl Console {
                     // Preserve the accepted launch root as history; it is not authority
                     // to copy the whole ancestor as this item's project.
                     s.request_cwds.entry(t.key.clone()).or_insert(t.cwd.clone());
-                    t.cwd = match self.restored_workspace(item, source, &db, base) {
+                    t.cwd = match self.restored_workspace(item, source, db, base) {
                         Ok(cwd) => cwd.into(),
                         Err(_) => {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable", &db, fresh_jobs, &mut evidence_cache)?;
+                            self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
                             continue;
                         }
                     };
@@ -1600,11 +1609,11 @@ impl Console {
                 }
             }
             t.options = match trigger_launch_options(&t, item, &t.options, source)
-                .and_then(|options| self.resolve_launch_workspace(&t, item, source, &db, options))
+                .and_then(|options| self.resolve_launch_workspace(&t, item, source, db, options))
             {
                 Ok(options) => options,
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
+                    self.defer_failure(s, &t.key, error.code, db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1616,7 +1625,7 @@ impl Console {
                 // not authority to copy that whole directory as this project's source.
                 // Continue from the registered project, retaining the old receipt.
                 if !self.checkout_belongs(strv(source, "cwd"), base)
-                    && !self.receipt_artifact_directory(&t.cwd, item, source, &db, base)?
+                    && !self.receipt_artifact_directory(&t.cwd, item, source, db, base)?
                 {
                     let record = s
                         .preparation_recovery
@@ -1635,7 +1644,7 @@ impl Console {
                     cwd
                 }
                 Err(error) => {
-                    self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
+                    self.defer_failure(s, &t.key, error.code, db, fresh_jobs, &mut evidence_cache)?;
                     continue;
                 }
             };
@@ -1684,7 +1693,7 @@ impl Console {
                 .state
                 .join("console-prompts")
                 .join(format!("{launch_key}.md"));
-            let context = delegation_context(&db, fresh_jobs, &t);
+            let context = delegation_context(db, fresh_jobs, &t);
             let requested_session = t.options["resume_session"].as_str().filter(|session| {
                 source.is_some_and(|j| {
                     ["thread_id", "resume_session"]

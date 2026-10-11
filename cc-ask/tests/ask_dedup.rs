@@ -607,10 +607,11 @@ fn existing_answer_is_returned_without_new_post_or_consuming_it() {
 }
 
 #[test]
-fn closed_other_folder_and_different_question_create_their_own_threads() {
+fn closed_or_presentation_changes_reuse_the_same_explicit_scope() {
     for mode in ["closed", "folder", "title", "unknown"] {
         let mut h = Harness::new();
-        let a = args(&h, "Steam のサインイン", "D:/CC/game");
+        let mut a = args(&h, "Steam のサインイン", "D:/CC/game");
+        common::decision(&h, &mut a, "unchanged original target and scope");
         cmd_ask(&mut h.ctx, &a).unwrap();
         ready(&h);
         let mut state = h.state();
@@ -625,7 +626,7 @@ fn closed_other_folder_and_different_question_create_their_own_threads() {
                 .remove("cwd_key");
         }
         h.save(&state);
-        let b = args(
+        let mut b = args(
             &h,
             if mode == "title" {
                 "料金の確認"
@@ -638,6 +639,7 @@ fn closed_other_folder_and_different_question_create_their_own_threads() {
                 "D:/CC/game"
             },
         );
+        common::decision(&h, &mut b, "unchanged original target and scope");
         cmd_ask(&mut h.ctx, &b).unwrap();
         assert_eq!(
             creates(&h),

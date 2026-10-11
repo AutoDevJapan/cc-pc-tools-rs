@@ -6,6 +6,7 @@ default-run = "codex_jobs"
 
 [dev-dependencies]
 tempfile = "3"
+cc-todo = { path = "../cc-todo" }
 
 [dependencies]
 cc-job-policy = { path = "../cc-job-policy" }

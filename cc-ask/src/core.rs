@@ -906,7 +906,9 @@ fn run_hidden_captured<T>(
         std::thread::sleep(std::time::Duration::from_millis(20));
     };
     if status.success() {
-        group.completed()?;
+        group
+            .completed()
+            .map_err(|e| format!("OSError: release completed child group {}: {e}", argv[0]))?;
     } else {
         group.stop(&mut child);
     }

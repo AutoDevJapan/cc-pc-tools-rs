@@ -1,6 +1,6 @@
 //! Create an item and its immutable request identity in the ToDo CLI's atomic
 //! store transaction. A later block/done note change cannot erase that identity.
-use crate::agent::{Paths, Result, fault, invalid, io_fault};
+use crate::agent::{Paths, Result, fault, invalid, io_fault, todo_store_fault, todo_write_fault};
 use axum::http::StatusCode;
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -11,7 +11,7 @@ pub(crate) fn ensure(paths: &Paths, request: &Value) -> Result<Value> {
         cc_todo::Lock::acquire(&store.lock, Duration::from_secs(30)).map_err(|_| io_fault())?;
     // This endpoint never initializes a missing production store.
     std::fs::metadata(&store.store).map_err(|_| io_fault())?;
-    let mut db = cc_todo::load(&store.store).map_err(|_| io_fault())?;
+    let mut db = cc_todo::read_store(&store.store).map_err(todo_store_fault)?;
     let id = request["request_id"].as_str().ok_or_else(invalid)?;
     let project = request["project"].as_str().ok_or_else(invalid)?;
     let title = request["title"].as_str().ok_or_else(invalid)?;
@@ -76,7 +76,7 @@ pub(crate) fn ensure(paths: &Paths, request: &Value) -> Result<Value> {
     let item = cc_todo::find(&mut db, item_id).map_err(|_| io_fault())?;
     item["console_creation_request"] = request.clone();
     let result = json!({"request_id":id,"item":item});
-    cc_todo::save(&store.store, &db).map_err(|_| io_fault())?;
+    cc_todo::save(&store.store, &db).map_err(todo_write_fault)?;
     Ok(result)
 }
 

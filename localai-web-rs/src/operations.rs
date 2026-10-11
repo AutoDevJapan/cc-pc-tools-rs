@@ -167,7 +167,9 @@ fn project_name(names: &cc_ask::task_title::Names, project: &str) -> String {
 #[cfg(test)]
 fn department(project: &str) -> usize {
     let p = project.to_lowercase();
-    if project == "クライアント案件" || matches!(p.as_str(), "arps" | "socialpilot" | "social pilot") {
+    if project == "クライアント案件"
+        || matches!(p.as_str(), "arps" | "socialpilot" | "social pilot")
+    {
         4
     } else if matches!(p.as_str(), "skills" | "skill") {
         6
@@ -194,7 +196,8 @@ fn department(project: &str) -> usize {
             p.as_str(),
             "tools" | "pcツール" | "pcの道具" | "makhmeto" | "常駐"
         )
-        || p.starts_with("opencodex") || p.starts_with("cc-")
+        || p.starts_with("opencodex")
+        || p.starts_with("cc-")
         || matches!(p.as_str(), "localai-web-rs" | "chatgpt-web")
     {
         5
@@ -204,23 +207,51 @@ fn department(project: &str) -> usize {
 }
 type Tree = BTreeMap<(usize, String), Vec<Value>>;
 fn rank_department(rank: u32) -> usize {
-    match rank { 10 => 4, 20 => 0, 30 => 5, 40 => 3, 50 => 6, 60..=67 => 1, _ => 2 }
+    match rank {
+        10 => 4,
+        20 => 0,
+        30 => 5,
+        40 => 3,
+        50 => 6,
+        60..=67 => 1,
+        _ => 2,
+    }
 }
 #[cfg(test)]
 #[test]
 fn owner_department_order_and_explicit_projects_match_admission() {
-    for (p,d) in [("ARPS",4),("SocialPilot",4),("localai-web-rs",5),("Skills",6)] {
-        assert_eq!(department(p),d);
-        assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)),d);
+    for (p, d) in [
+        ("ARPS", 4),
+        ("SocialPilot", 4),
+        ("localai-web-rs", 5),
+        ("Skills", 6),
+    ] {
+        assert_eq!(department(p), d);
+        assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)), d);
     }
-    let values=departments(Tree::new());
-    assert_eq!(values.iter().map(|d|d["name"].as_str().unwrap()).collect::<Vec<_>>(),["受託部","ゲーム部","情報システム部","発信部","Skills","GoDD事業部","自社サービス部"]);
+    let values = departments(Tree::new());
+    assert_eq!(
+        values
+            .iter()
+            .map(|d| d["name"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        [
+            "受託部",
+            "ゲーム部",
+            "情報システム部",
+            "発信部",
+            "Skills",
+            "GoDD事業部",
+            "自社サービス部"
+        ]
+    );
 }
 fn add(tree: &mut Tree, dept: usize, product: String, worker: Value) {
     tree.entry((dept, product)).or_default().push(worker);
 }
 fn departments(tree: Tree) -> Vec<Value> {
-    [4, 0, 5, 3, 6, 1, 2].into_iter()
+    [4, 0, 5, 3, 6, 1, 2]
+        .into_iter()
         .map(|i| {
             let (name, color) = DEPARTMENTS[i];
             let products: Vec<_> = tree
@@ -278,13 +309,15 @@ fn collect(root: &Path, now: u64) -> Value {
     let names = privacy.unwrap();
     let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
     let todo_path = root.join("todo/todo.json");
-    let todo = read_json(&todo_path).and_then(|v| {
-        if v["items"].is_array() && v["projects"].is_object() {
-            Ok(v)
-        } else {
-            Err(())
-        }
-    });
+    let todo = cc_todo::read_store(&todo_path)
+        .map_err(|_| ())
+        .and_then(|v| {
+            if v["items"].is_array() && v["projects"].is_object() {
+                Ok(v)
+            } else {
+                Err(())
+            }
+        });
     sources.push(source(
         "todos",
         "共有ToDo",
@@ -364,7 +397,10 @@ fn collect(root: &Path, now: u64) -> Value {
             }
             let raw_project = text(item, "project");
             let owned = &policy["items"][item["id"].as_u64().unwrap_or(0).to_string()];
-            let display_project = owned["project"].as_str().or_else(|| item["owner_project"].as_str()).unwrap_or(raw_project);
+            let display_project = owned["project"]
+                .as_str()
+                .or_else(|| item["owner_project"].as_str())
+                .unwrap_or(raw_project);
             let project = project_name(&names, display_project);
             let client = project == "クライアント案件"
                 || cc_scheduler::priority::item_rank(item, &policy) == 10
@@ -460,7 +496,9 @@ fn collect(root: &Path, now: u64) -> Value {
             };
             add(
                 &mut tree,
-                if client { 4 } else {
+                if client {
+                    4
+                } else {
                     rank_department(cc_scheduler::priority::item_rank(item, &policy))
                 },
                 project,
@@ -481,9 +519,9 @@ fn collect(root: &Path, now: u64) -> Value {
         }
         let inferred = infer_project(j, db);
         let project = project_name(&names, &inferred);
-        let client =
-            project == "クライアント案件" || names.project(text(j, "cwd")) == "クライアント案件"
-                || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
+        let client = project == "クライアント案件"
+            || names.project(text(j, "cwd")) == "クライアント案件"
+            || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
         let project = if client {
             "クライアント案件".into()
         } else {
@@ -508,8 +546,11 @@ fn collect(root: &Path, now: u64) -> Value {
         };
         add(
             &mut tree,
-            if client { 4 } else {
-                let mut owned = j.clone(); owned["project"] = json!(inferred);
+            if client {
+                4
+            } else {
+                let mut owned = j.clone();
+                owned["project"] = json!(inferred);
                 rank_department(cc_scheduler::priority::item_rank(&owned, &policy))
             },
             project,
@@ -539,7 +580,10 @@ fn collect(root: &Path, now: u64) -> Value {
                     .as_u64()
                     .filter(|v| *v > 0)
                     .and_then(|v| v.checked_mul(1000));
-                observation_only = v["mode"] == "observe_only" && v["stages"]["cmd_todo_watch"] == true && v["stages"]["cmd_scheduler_step"] == true && fresh(at, now, 180_000);
+                observation_only = v["mode"] == "observe_only"
+                    && v["stages"]["cmd_todo_watch"] == true
+                    && v["stages"]["cmd_scheduler_step"] == true
+                    && fresh(at, now, 180_000);
                 (
                     v["error"].is_null()
                         && v["stages"]["startup_recovery"] == true
@@ -557,7 +601,10 @@ fn collect(root: &Path, now: u64) -> Value {
         let unknown = key == "guard"
             || !matches!(key, "relay" | "discord")
             || (key == "discord"
-                && root.join("discord-ask/tick-health.json").try_exists().is_ok_and(|exists| !exists));
+                && root
+                    .join("discord-ask/tick-health.json")
+                    .try_exists()
+                    .is_ok_and(|exists| !exists));
         let label = clean(&names, text(tool, "name"));
         let mut resident_source = source(
             key,

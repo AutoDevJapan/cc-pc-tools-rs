@@ -73,9 +73,43 @@ fn external() -> Fault {
         "連携ツールが失敗しました。状態を確認して再試行してください。",
     )
 }
+fn todo_invalid() -> Fault {
+    fault(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "todo_store_invalid_json",
+        "共有ToDoのJSONまたは構造が不正です。",
+    )
+}
+fn todo_store_fault(error: cc_todo::StoreError) -> Fault {
+    match error {
+        cc_todo::StoreError::TooLarge => fault(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "todo_store_too_large",
+            "共有ToDoが読取・保存の上限64MiB（67,108,864 bytes）を超えています。",
+        ),
+        cc_todo::StoreError::InvalidJson(_) => todo_invalid(),
+        cc_todo::StoreError::Io(_) => io_fault(),
+    }
+}
+fn todo_write_fault(error: String) -> Fault {
+    if error.starts_with("todo_store_too_large:") {
+        todo_store_fault(cc_todo::StoreError::TooLarge)
+    } else {
+        io_fault()
+    }
+}
 fn reply(result: Result<Value>) -> Response {
     match result {
-        Ok(data) => Json(json!({"ok":true,"version":1,"data":data})).into_response(),
+        Ok(data) => {
+            // The store reader preserves canonical bytes; redact only the response.
+            let safe = redact(&json!({"ok":true,"version":1,"data":data}).to_string());
+            (
+                StatusCode::OK,
+                [(axum::http::header::CONTENT_TYPE, "application/json")],
+                safe,
+            )
+                .into_response()
+        }
         Err(e) => (
             e.status,
             Json(json!({"ok":false,"version":1,"error":{"code":e.code,"message":e.message}})),
@@ -196,19 +230,37 @@ impl Runner for RealRunner {
                     .any(|r| busy.contains(common::s(r)))
             });
         let mut safe_report = json!({});
-        for field in ["measured_at", "available_gb", "commit_percent", "cpu_percent", "cpu_rolling_percent",
-            "cpu_slots", "memory_slots", "resource_slots", "allowance_now", "launch_wait_s", "reasons", "expected_job_gb"] {
+        for field in [
+            "measured_at",
+            "available_gb",
+            "commit_percent",
+            "cpu_percent",
+            "cpu_rolling_percent",
+            "cpu_slots",
+            "memory_slots",
+            "resource_slots",
+            "allowance_now",
+            "launch_wait_s",
+            "reasons",
+            "expected_job_gb",
+        ] {
             safe_report[field] = report[field].clone();
         }
-        let requested_busy: Vec<_> = item.into_iter().flat_map(|i| common::arr(&i["needs"]))
-            .filter(|need| busy.contains(common::s(need))).collect();
+        let requested_busy: Vec<_> = item
+            .into_iter()
+            .flat_map(|i| common::arr(&i["needs"]))
+            .filter(|need| busy.contains(common::s(need)))
+            .collect();
         let observation = json!({"at":now(),"at_nanos":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos().to_string(),
             "todo_id":item.map(|i| &i["id"]),"allowed":allowed,
             "dispatch_enabled":cfg["dispatch_enabled"],"busy_resources":requested_busy,
             "needs":item.map(|i| &i["needs"]),"report":safe_report});
         // Admission diagnostics are not authoritative queue state. A failed
         // observation write must not change the measured launch decision.
-        let _ = atomic_write(&paths.state.join("console-capacity.json"), observation.to_string().as_bytes());
+        let _ = atomic_write(
+            &paths.state.join("console-capacity.json"),
+            observation.to_string().as_bytes(),
+        );
         Ok(allowed)
     }
     fn run(&self, program: &Path, args: &[String], cwd: &Path) -> Result<String> {
@@ -326,7 +378,10 @@ impl Console {
             return;
         }
         let path = self.paths.state.join("commander-health.json");
-        if let Ok(mut record) = fs::read(&path).map_err(|_| ()).and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ())) {
+        if let Ok(mut record) = fs::read(&path)
+            .map_err(|_| ())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map_err(|_| ()))
+        {
             if record["pid"] == std::process::id() && record["finished_at"].is_null() {
                 record["stage"] = json!(stage);
                 let _ = atomic_write(&path, record.to_string().as_bytes());
@@ -434,13 +489,10 @@ impl Console {
         }
     }
     fn todos(&self) -> Result<Value> {
-        let v: Value = serde_json::from_str(&read_text(
-            &self.paths.todo.join("todo.json"),
-            16 * 1024 * 1024,
-        )?)
-        .map_err(|_| io_fault())?;
+        let v =
+            cc_todo::read_store(&self.paths.todo.join("todo.json")).map_err(todo_store_fault)?;
         if !v["projects"].is_object() || !v["items"].is_array() {
-            return Err(io_fault());
+            return Err(todo_invalid());
         }
         Ok(v)
     }
@@ -1218,7 +1270,11 @@ impl Console {
         // several Git probes, so plan a small batch and rotate parked work.
         // Ordinary API dispatch keeps its existing full-batch behavior.
         let scan_limit = s.queue.len();
-        let attempt_limit = if cc_ask::tick_runtime::remaining().is_some() { 2 } else { scan_limit };
+        let attempt_limit = if cc_ask::tick_runtime::remaining().is_some() {
+            2
+        } else {
+            scan_limit
+        };
         let mut attempted = 0;
         let mut scanned = 0;
         // Eligibility is a batch plan. Refresh actual ownership again before
@@ -1228,41 +1284,79 @@ impl Console {
         // Resolve ownership and exclusions first; no checkout probes or launches.
         let mut repaired_timeout = false;
         for queued in s.queue.clone() {
-            if s.preparation_failures.get(&queued.key).is_none_or(|(_, code)| code != "command_timeout")
-                || s.preparation_recovery.get(&queued.key).is_some_and(|record| record["timeout_scope"] == "command") { continue; }
+            if s.preparation_failures
+                .get(&queued.key)
+                .is_none_or(|(_, code)| code != "command_timeout")
+                || s.preparation_recovery
+                    .get(&queued.key)
+                    .is_some_and(|record| record["timeout_scope"] == "command")
+            {
+                continue;
+            }
             let mut trigger = queued;
-            let Ok(id) = decision_todo(&trigger, jobs, &db) else { continue; };
+            let Ok(id) = decision_todo(&trigger, jobs, &db) else {
+                continue;
+            };
             trigger.todo_id = id;
             let item = id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            if item.is_some_and(|i| matches!(strv(i, "status"), "done" | "block" | "wait") || strv(i, "project") == "owner") { continue; }
+            if item.is_some_and(|i| {
+                matches!(strv(i, "status"), "done" | "block" | "wait")
+                    || strv(i, "project") == "owner"
+            }) {
+                continue;
+            }
             let project = item.map(|i| strv(i, "project")).unwrap_or("");
             let source = launch_source(&trigger, item, jobs);
             if self.excluded(project, &trigger.cwd, &db)?
-                || source.map(|source| self.excluded(project, strv(source, "cwd"), &db)).transpose()?.unwrap_or(false)
+                || source
+                    .map(|source| self.excluded(project, strv(source, "cwd"), &db))
+                    .transpose()?
+                    .unwrap_or(false)
                 || matches!((item, source), (Some(item), Some(source)) if !(explicit_workspace_receipt(item, source)
-                    || terminal(source) && source_todo_id(source, &db) == item["id"].as_u64() && todo_has_job(item, source))) { continue; }
+                    || terminal(source) && source_todo_id(source, &db) == item["id"].as_u64() && todo_has_job(item, source)))
+            {
+                continue;
+            }
             repaired_timeout |= self.recheck_legacy_timeout(s, &trigger.key);
         }
-        if repaired_timeout { self.save(s)?; }
+        if repaired_timeout {
+            self.save(s)?;
+        }
         self.patrol_stage("capacity");
         if !s.queue.is_empty() && !self.runner.global_capacity(&self.paths)? {
             return Ok(());
         }
         let priorities = fs::read(self.paths.tools.join("scheduler/priorities.json"))
-            .ok().and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok()).unwrap_or(Value::Null);
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
         let ranks = cc_scheduler::priority::todo_ranks(&db, &priorities);
         let job_ranks = cc_scheduler::priority::job_ranks(jobs, &db, &priorities);
         let prefer_todo = s.patrol_turn.is_multiple_of(2);
         s.queue.sort_by_cached_key(|trigger| {
             let id = trigger_todo_id(trigger, jobs, &db);
-            let rank = id.and_then(|id| ranks.get(&id).copied()).or_else(|| {
-                launch_source(trigger, None, jobs).and_then(|j| job_ranks.get(strv(j,"id")).copied())
-            }).unwrap_or_else(|| {
-                let project = db["projects"].as_object().and_then(|projects| projects.iter()
-                    .filter(|(_,path)| path.as_str().is_some_and(|path| path_under(&trigger.cwd,path)))
-                    .max_by_key(|(_,path)| path.as_str().unwrap_or("").len()).map(|(project,_)|project.as_str())).unwrap_or("");
-                cc_scheduler::priority::item_rank(&json!({"project":project}), &priorities)
-            });
+            let rank = id
+                .and_then(|id| ranks.get(&id).copied())
+                .or_else(|| {
+                    launch_source(trigger, None, jobs)
+                        .and_then(|j| job_ranks.get(strv(j, "id")).copied())
+                })
+                .unwrap_or_else(|| {
+                    let project = db["projects"]
+                        .as_object()
+                        .and_then(|projects| {
+                            projects
+                                .iter()
+                                .filter(|(_, path)| {
+                                    path.as_str()
+                                        .is_some_and(|path| path_under(&trigger.cwd, path))
+                                })
+                                .max_by_key(|(_, path)| path.as_str().unwrap_or("").len())
+                                .map(|(project, _)| project.as_str())
+                        })
+                        .unwrap_or("");
+                    cc_scheduler::priority::item_rank(&json!({"project":project}), &priorities)
+                });
             (rank, id.is_some() != prefer_todo)
         });
         if cc_ask::tick_runtime::remaining().is_some() {
@@ -1283,7 +1377,10 @@ impl Console {
             let mut t = s.queue[0].clone();
             let db = &db;
             match decision_todo(&t, &candidate_jobs, db) {
-                Ok(id) => { t.todo_id = id; s.queue[0].todo_id = id; }
+                Ok(id) => {
+                    t.todo_id = id;
+                    s.queue[0].todo_id = id;
+                }
                 Err(reason) => {
                     s.suppressed.insert(t.key.clone(), reason.into());
                     let waiting = s.queue.remove(0);
@@ -1291,9 +1388,18 @@ impl Console {
                     continue;
                 }
             }
-            let project = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id)).map(|item| strv(item, "project")).unwrap_or("");
-            let item = t.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            let source_excluded = launch_source(&t, item, &candidate_jobs).map(|source| self.excluded(project, strv(source,"cwd"), db)).transpose()?.unwrap_or(false);
+            let project = t
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id))
+                .map(|item| strv(item, "project"))
+                .unwrap_or("");
+            let item = t
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            let source_excluded = launch_source(&t, item, &candidate_jobs)
+                .map(|source| self.excluded(project, strv(source, "cwd"), db))
+                .transpose()?
+                .unwrap_or(false);
             if self.excluded(project, &t.cwd, db)? || source_excluded {
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
@@ -1301,9 +1407,11 @@ impl Console {
             }
             // Known waits cannot launch. Keep their recovery evidence intact;
             // investigating them again consumes the next ready item's budget.
-            if item.is_some_and(|i| strv(i, "status") == "wait"
-                || cc_ask::job_policy::todo_wait::waiting(db, i)
-                || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))) {
+            if item.is_some_and(|i| {
+                strv(i, "status") == "wait"
+                    || cc_ask::job_policy::todo_wait::waiting(db, i)
+                    || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))
+            }) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
@@ -1347,8 +1455,13 @@ impl Console {
             }
             if let Some(url) = pr_review_url(&t.key) {
                 let owner_waiting = pr_owner_waiting(url, fresh_jobs);
-                let stale_prs = cc_ask::tick_runtime::remaining().is_some() && now().saturating_sub(s.prs_at) >= 60;
-                if stale_prs || s.prs_error.is_some() || pr_review_busy(url, s, fresh_jobs) || owner_waiting {
+                let stale_prs = cc_ask::tick_runtime::remaining().is_some()
+                    && now().saturating_sub(s.prs_at) >= 60;
+                if stale_prs
+                    || s.prs_error.is_some()
+                    || pr_review_busy(url, s, fresh_jobs)
+                    || owner_waiting
+                {
                     let waiting = s.queue.remove(0);
                     s.queue.push(waiting);
                     continue;
@@ -1428,13 +1541,21 @@ impl Console {
             let item = t
                 .todo_id
                 .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
-            if item.is_some_and(|i| strv(i, "status") == "wait" || cc_ask::job_policy::todo_wait::waiting(db, i) || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))) {
+            if item.is_some_and(|i| {
+                strv(i, "status") == "wait"
+                    || cc_ask::job_policy::todo_wait::waiting(db, i)
+                    || todo_has_active_worker(i, fresh_jobs, &key_hash(&t.key))
+            }) {
                 self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
             }
-            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, db)? || item.is_some_and(|i| matches!(strv(i,"status"),"done"|"block") || strv(i,"project")=="owner") {
+            if self.excluded(item.map(|i| strv(i, "project")).unwrap_or(""), &t.cwd, db)?
+                || item.is_some_and(|i| {
+                    matches!(strv(i, "status"), "done" | "block") || strv(i, "project") == "owner"
+                })
+            {
                 suppress_trigger(s, &t, "対象外のプロジェクト、または完了済みの作業です。");
                 continue;
             }
@@ -1465,7 +1586,14 @@ impl Console {
                         t.cwd = cwd.into();
                         s.queue[0].cwd = t.cwd.clone();
                     } else {
-                        self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            "source_workspace_unavailable",
+                            db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                         continue;
                     }
                     let source_owned = source.is_some_and(|job| {
@@ -1572,10 +1700,17 @@ impl Console {
                 s.queue.push(waiting);
                 continue;
             }
-            if attempted >= attempt_limit { break; }
-            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+            if attempted >= attempt_limit {
+                break;
+            }
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20))
+            {
                 self.defer_patrol(s, &t.key)?;
-                return Err(fault(StatusCode::GATEWAY_TIMEOUT, "patrol_deferred", "起動確認の時間を次の巡回で確保します。"));
+                return Err(fault(
+                    StatusCode::GATEWAY_TIMEOUT,
+                    "patrol_deferred",
+                    "起動確認の時間を次の巡回で確保します。",
+                ));
             }
             attempted += 1;
             if let Some(item) = item.filter(|i| i["subwork"].is_object()) {
@@ -1601,7 +1736,14 @@ impl Console {
                         self.save(s)?;
                     }
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code, db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            error.code,
+                            db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                     }
                 }
                 continue;
@@ -1624,7 +1766,14 @@ impl Console {
                     t.cwd = match self.restored_workspace(item, source, db, base) {
                         Ok(cwd) => cwd.into(),
                         Err(_) => {
-                            self.defer_failure(s, &t.key, "source_workspace_unavailable", db, fresh_jobs, &mut evidence_cache)?;
+                            self.defer_failure(
+                                s,
+                                &t.key,
+                                "source_workspace_unavailable",
+                                db,
+                                fresh_jobs,
+                                &mut evidence_cache,
+                            )?;
                             continue;
                         }
                     };
@@ -1672,9 +1821,13 @@ impl Console {
                     continue;
                 }
             };
-            let capacity_started = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+            let capacity_started = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
             if !self.runner.stall_capacity(&self.paths, item)? {
-                let capacity = fs::read(self.paths.state.join("console-capacity.json")).ok()
+                let capacity = fs::read(self.paths.state.join("console-capacity.json"))
+                    .ok()
                     .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
                     .map(|value| capacity_wait_detail(value, t.todo_id, capacity_started))
                     .unwrap_or(Value::Null);
@@ -1825,7 +1978,14 @@ impl Console {
                     }) {
                     Ok(options) => options,
                     Err(error) => {
-                        self.defer_failure(s, &t.key, error.code, &db, fresh_jobs, &mut evidence_cache)?;
+                        self.defer_failure(
+                            s,
+                            &t.key,
+                            error.code,
+                            &db,
+                            fresh_jobs,
+                            &mut evidence_cache,
+                        )?;
                         continue;
                     }
                 };
@@ -1848,10 +2008,20 @@ impl Console {
                     })
                 })
             {
-                let changed: BTreeSet<_> = latest_options.as_object().into_iter().flat_map(|v| v.keys())
+                let changed: BTreeSet<_> = latest_options
+                    .as_object()
+                    .into_iter()
+                    .flat_map(|v| v.keys())
                     .chain(t.options.as_object().into_iter().flat_map(|v| v.keys()))
-                    .filter(|key| latest_options[*key] != t.options[*key]).cloned().collect();
-                self.note_wait(s, &t.key, "late_scope_or_session", json!({"changed_fields":changed}));
+                    .filter(|key| latest_options[*key] != t.options[*key])
+                    .cloned()
+                    .collect();
+                self.note_wait(
+                    s,
+                    &t.key,
+                    "late_scope_or_session",
+                    json!({"changed_fields":changed}),
+                );
                 let waiting = s.queue.remove(0);
                 s.queue.push(waiting);
                 continue;
@@ -1991,41 +2161,63 @@ impl Console {
         // refreshes eligibility; the next dispatch still applies priority and
         // every current ownership, exclusion, dependency and admission check.
         parked_recovery.sort_by_key(|key| {
-            s.preparation_recovery.get(key)
+            s.preparation_recovery
+                .get(key)
                 .and_then(|r| r["last_recovery_probe_nanos"].as_str())
                 .and_then(|n| n.parse::<u128>().ok())
                 .unwrap_or(0)
         });
         for key in parked_recovery.into_iter().take(2) {
-            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20)) {
+            if cc_ask::tick_runtime::remaining().is_some_and(|left| left < Duration::from_secs(20))
+            {
                 break;
             }
-            let Some(trigger) = s.queue.iter().find(|t| t.key == key).cloned() else { continue; };
-            let item = trigger.todo_id.and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
+            let Some(trigger) = s.queue.iter().find(|t| t.key == key).cloned() else {
+                continue;
+            };
+            let item = trigger
+                .todo_id
+                .and_then(|id| db["items"].as_array()?.iter().find(|i| i["id"] == id));
             if item.is_some_and(|i| todo_has_active_worker(i, &candidate_jobs, &key_hash(&key))) {
                 continue;
             }
-            let at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-            s.preparation_recovery.entry(key.clone()).or_insert(json!({}))["last_recovery_probe_nanos"] = json!(at.to_string());
+            let at = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
+            s.preparation_recovery
+                .entry(key.clone())
+                .or_insert(json!({}))["last_recovery_probe_nanos"] = json!(at.to_string());
             // Persist the cursor before an external probe can exhaust the deadline.
             self.save(s)?;
             self.patrol_stage("recovery_evidence");
             if self.recovery_ready(s, &trigger, &db, &candidate_jobs, &mut evidence_cache)? {
                 s.preparation_failures.remove(&key);
-                s.preparation_recovery.entry(key).or_insert(json!({}))["state"] = json!("recovery_ready_for_launch");
+                s.preparation_recovery.entry(key).or_insert(json!({}))["state"] =
+                    json!("recovery_ready_for_launch");
             }
         }
         self.save(s)?;
         launch_failure.map_or(Ok(()), Err)
     }
     fn note_wait(&self, s: &mut QueueState, key: &str, kind: &str, detail: Value) {
-        let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+        let record = s
+            .preparation_recovery
+            .entry(key.into())
+            .or_insert(json!({}));
         record["last_wait"] = json!({"at":now(),"kind":kind,"detail":detail});
         // Saved with the ordinary dispatch checkpoint, not once per parked item.
     }
     fn defer_patrol(&self, s: &mut QueueState, key: &str) -> Result<()> {
-        let index = s.queue.iter().position(|t| t.key == key).ok_or_else(io_fault)?;
-        let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+        let index = s
+            .queue
+            .iter()
+            .position(|t| t.key == key)
+            .ok_or_else(io_fault)?;
+        let record = s
+            .preparation_recovery
+            .entry(key.into())
+            .or_insert(json!({}));
         record["state"] = json!("waiting_for_patrol_budget");
         record["budget_deferred_at"] = json!(now());
         record["next_action"] = json!("次の巡回で起動確認の時間を確保して同じ受付を続ける。");
@@ -2033,8 +2225,18 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn defer_failure(&self, s: &mut QueueState, key: &str, code: &str, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<()> {
-        if code == "patrol_deferred" || cc_ask::tick_runtime::remaining().is_some_and(|left| left.is_zero()) {
+    fn defer_failure(
+        &self,
+        s: &mut QueueState,
+        key: &str,
+        code: &str,
+        db: &Value,
+        jobs: &[Value],
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Result<()> {
+        if code == "patrol_deferred"
+            || cc_ask::tick_runtime::remaining().is_some_and(|left| left.is_zero())
+        {
             return self.defer_patrol(s, key);
         }
         let trigger = s.queue.iter().find(|t| t.key == key).ok_or_else(io_fault)?;
@@ -2046,7 +2248,9 @@ impl Console {
         let attempts = record["attempts"].as_u64().unwrap_or(0).saturating_add(1);
         record["attempts"] = json!(attempts);
         record["code"] = json!(code);
-        if code == "command_timeout" { record["timeout_scope"] = json!("command"); }
+        if code == "command_timeout" {
+            record["timeout_scope"] = json!("command");
+        }
         record["observed_at"] = json!(now());
         record["evidence"] = evidence;
         record["state"] = json!("waiting_for_repair");
@@ -2066,7 +2270,13 @@ impl Console {
         s.queue.push(waiting);
         self.save(s)
     }
-    fn recovery_evidence_from(&self, t: &Trigger, db: Option<&Value>, jobs: Option<&[Value]>, cache: &mut BTreeMap<(String, String), Value>) -> Value {
+    fn recovery_evidence_from(
+        &self,
+        t: &Trigger,
+        db: Option<&Value>,
+        jobs: Option<&[Value]>,
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Value {
         let metadata = |p: &Path| match fs::metadata(p) {
             Ok(m) => json!({"exists":true,"directory":m.is_dir(),"bytes":m.len(),
                 "modified":m.modified().ok().and_then(|at|at.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string())}),
@@ -2112,11 +2322,20 @@ impl Console {
             "launcher":metadata(&self.paths.jobs.parent().unwrap_or(&self.paths.tools).join("codex_jobs.exe"))})
     }
     fn recheck_legacy_timeout(&self, s: &mut QueueState, key: &str) -> bool {
-        let Some((retry, code)) = s.preparation_failures.get(key).cloned() else { return false; };
-        if code == "command_timeout" && s.preparation_recovery.get(key).is_none_or(|record| record["timeout_scope"] != "command") {
+        let Some((retry, code)) = s.preparation_failures.get(key).cloned() else {
+            return false;
+        };
+        if code == "command_timeout"
+            && s.preparation_recovery
+                .get(key)
+                .is_none_or(|record| record["timeout_scope"] != "command")
+        {
             // Old captures could not distinguish a full command timeout from
             // the patrol's truncated remainder. Recheck once under scoped rules.
-            let record = s.preparation_recovery.entry(key.into()).or_insert(json!({}));
+            let record = s
+                .preparation_recovery
+                .entry(key.into())
+                .or_insert(json!({}));
             record["legacy_timeout"] = json!({"retry_at":retry,"attempts":record["attempts"],"observed_at":record["observed_at"]});
             record["state"] = json!("rechecking_timeout_scope");
             s.preparation_failures.remove(key);
@@ -2124,7 +2343,14 @@ impl Console {
         }
         false
     }
-    fn recovery_ready(&self, s: &mut QueueState, t: &Trigger, db: &Value, jobs: &[Value], cache: &mut BTreeMap<(String, String), Value>) -> Result<bool> {
+    fn recovery_ready(
+        &self,
+        s: &mut QueueState,
+        t: &Trigger,
+        db: &Value,
+        jobs: &[Value],
+        cache: &mut BTreeMap<(String, String), Value>,
+    ) -> Result<bool> {
         if self.recheck_legacy_timeout(s, &t.key) {
             self.save(s)?;
             return Ok(true);
@@ -2133,8 +2359,11 @@ impl Console {
             return Ok(true);
         };
         let current = self.recovery_evidence_from(t, Some(db), Some(jobs), cache);
-        let old = s.preparation_recovery.get(&t.key)
-            .and_then(|r| r.get("evidence")).filter(|e| !e.is_null());
+        let old = s
+            .preparation_recovery
+            .get(&t.key)
+            .and_then(|r| r.get("evidence"))
+            .filter(|e| !e.is_null());
         if old.is_none() {
             return Ok(retry <= now());
         }
@@ -2601,7 +2830,9 @@ impl Console {
             }
         }
         // Refusing additional work must not prevent accepted work from making progress.
-        if cc_ask::tick_runtime::remaining().is_none() { self.dispatch(s, &jobs)?; }
+        if cc_ask::tick_runtime::remaining().is_none() {
+            self.dispatch(s, &jobs)?;
+        }
         intake_error.map_or(Ok(()), Err)
     }
     pub fn tick(&self) -> Result<()> {
@@ -2628,7 +2859,9 @@ impl Console {
         // preparation phase, rather than a second launch with a tiny remainder.
         let dispatch = if result.is_ok() && cc_ask::tick_runtime::remaining().is_none() {
             self.dispatch(&mut s, &jobs)
-        } else { Ok(()) };
+        } else {
+            Ok(())
+        };
         let result = result.and(inbox).and(dispatch);
         s.last_tick = now();
         s.last_error = result.as_ref().err().map(|e| e.code.into());
@@ -2755,14 +2988,24 @@ impl Console {
                 }
                 validate_model_options(item)?;
                 if let Some(cwd) = requested_cwd {
-                    if !Path::new(cwd).is_dir() { return Err(invalid()); }
+                    if !Path::new(cwd).is_dir() {
+                        return Err(invalid());
+                    }
                     if !self.checkout_belongs(cwd, project_cwd) {
-                        let source = v["source_job_id"].as_str()
+                        let source = v["source_job_id"]
+                            .as_str()
                             .and_then(|id| jobs.iter().find(|job| job["id"] == id))
                             .ok_or_else(invalid)?;
                         if matches!(strv(item, "status"), "done" | "block" | "wait")
                             || project == "owner"
-                            || !self.receipt_artifact_directory(cwd, item, source, &db, project_cwd)? {
+                            || !self.receipt_artifact_directory(
+                                cwd,
+                                item,
+                                source,
+                                &db,
+                                project_cwd,
+                            )?
+                        {
                             return Err(invalid());
                         }
                     }
@@ -2872,10 +3115,18 @@ const PREAMBLE: &str = "あなたはこのPCの作業を引き継ぐオーケス
 fn capacity_wait_detail(value: Value, todo_id: Option<u64>, started: u128) -> Value {
     if todo_id.is_some_and(|id| value["todo_id"].as_u64() == Some(id))
         && value["allowed"] == false
-        && value["at_nanos"].as_str().and_then(|at| at.parse::<u128>().ok()).is_some_and(|at| at >= started)
-        && value["at"].as_u64().is_some_and(|at| now().saturating_sub(at) <= 10) {
+        && value["at_nanos"]
+            .as_str()
+            .and_then(|at| at.parse::<u128>().ok())
+            .is_some_and(|at| at >= started)
+        && value["at"]
+            .as_u64()
+            .is_some_and(|at| now().saturating_sub(at) <= 10)
+    {
         value
-    } else { Value::Null }
+    } else {
+        Value::Null
+    }
 }
 fn protected(path: &str) -> bool {
     #[cfg(not(test))]
@@ -4160,6 +4411,7 @@ mod tests {
     include!("delegation_model_tests.rs");
     include!("receipt_workspace_tests.rs");
     include!("resume_recovery_tests.rs");
+    include!("todo_capacity_tests.rs");
     use super::*;
 
     #[cfg(windows)]

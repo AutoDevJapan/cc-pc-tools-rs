@@ -23,6 +23,9 @@ use std::{
 };
 
 pub type Result<T> = std::result::Result<T, String>;
+pub use cc_job_policy::todo_store::{
+    Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
+};
 pub mod ready;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
@@ -260,12 +263,28 @@ impl Drop for Lock {
     }
 }
 pub fn load(path: &Path) -> Result<Value> {
-    if !path.exists() {
-        return Ok(json!({"projects":{},"items":[],"next_id":1,"stalls":{}}));
+    match cc_job_policy::todo_store::read(path) {
+        Ok(db) => Ok(db),
+        Err(cc_job_policy::todo_store::Error::Io(e))
+            if e.kind() == std::io::ErrorKind::NotFound =>
+        {
+            Ok(json!({"projects":{},"items":[],"next_id":1,"stalls":{}}))
+        }
+        Err(e) => Err(err(e)),
     }
-    serde_json::from_str(&fs::read_to_string(path).map_err(err)?).map_err(err)
 }
 pub fn save(path: &Path, db: &Value) -> Result<()> {
+    // Check the exact serialization before touching backups, temp files or the original.
+    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
+    let one_space = pretty
+        .lines()
+        .map(|line| {
+            let n = line.bytes().take_while(|b| *b == b' ').count();
+            format!("{}{}", " ".repeat(n / 2), &line[n..])
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    cc_job_policy::todo_store::check_size(one_space.len()).map_err(err)?;
     let backup = PathBuf::from(format!("{}.bak-20260930d", path.display()));
     if path.exists() && !backup.exists() {
         let mut file = OpenOptions::new()
@@ -282,15 +301,6 @@ pub fn save(path: &Path, db: &Value) -> Result<()> {
     ));
     let mut file = File::create(&tmp).map_err(err)?;
     // Preserve unknown fields, insertion order, Unicode and Python's one-space indent.
-    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
-    let one_space = pretty
-        .lines()
-        .map(|line| {
-            let n = line.bytes().take_while(|b| *b == b' ').count();
-            format!("{}{}", " ".repeat(n / 2), &line[n..])
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
     file.write_all(one_space.as_bytes()).map_err(err)?;
     file.flush().map_err(err)?;
     file.sync_all().map_err(err)?;

@@ -1,11 +1,18 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{safe_text, valid_effort, valid_model, Backend},
+    backend::{Backend, safe_text, valid_effort, valid_model},
     common::*,
     policy::*,
 };
 use cc_job_policy::{cancellation, todo_wait};
-use serde_json::{json, Value};
+fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
+    match error {
+        cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
+        cc_job_policy::todo_store::Error::InvalidJson(_) => Error("todo_store_invalid_json"),
+        cc_job_policy::todo_store::Error::Io(e) => e.into(),
+    }
+}
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -168,10 +175,15 @@ impl<B: Backend> Scheduler<B> {
         Ok((cfg, pri))
     }
     pub fn todo(&self) -> Result<Value> {
-        read_json(
-            &self.todo_path,
-            json!({"projects":{},"items":[],"next_id":1,"stalls":{}}),
-        )
+        match cc_job_policy::todo_store::read(&self.todo_path) {
+            Ok(db) => Ok(db),
+            Err(cc_job_policy::todo_store::Error::Io(e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                Ok(json!({"projects":{},"items":[],"next_id":1,"stalls":{}}))
+            }
+            Err(e) => Err(todo_store_error(e)),
+        }
     }
     pub fn edit(&mut self, id: &Value, action: impl FnOnce(&mut Value)) -> Result<Value> {
         let _lock = ByteLock::acquire(
@@ -193,6 +205,7 @@ impl<B: Backend> Scheduler<B> {
         }
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
         let out = row.clone();
+        cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
         write_json(&self.todo_path, &db, 1)?;
         Ok(out)
     }
@@ -908,7 +921,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 &resources
             }
         );
-        prompt += &format!("\n元の登録作業場所: {repo}\n資料は元の登録範囲内で参照し、原資料を保持してください。専用作業場所の作成は依頼の範囲を広げる許可ではありません。\n");
+        prompt += &format!(
+            "\n元の登録作業場所: {repo}\n資料は元の登録範囲内で参照し、原資料を保持してください。専用作業場所の作成は依頼の範囲を広げる許可ではありません。\n"
+        );
         if truth(&item["scheduler"]["resume"]) {
             prompt += &format!("{RESUME_INSTRUCTION}\n");
         }
@@ -952,7 +967,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             prompt += &format!("\n受付済みの引き継ぎ本文:\n{body}\n");
         }
         if item["subwork"].is_object() {
-            prompt += &format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n", item["subwork"]["parent_todo_id"], s(&item["subwork"]["kind"]));
+            prompt += &format!(
+                "\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n",
+                item["subwork"]["parent_todo_id"],
+                s(&item["subwork"]["kind"])
+            );
         }
         let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
         let mut selection = item["scheduler"]["selection"].clone();
@@ -1209,8 +1228,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         queue.sort_by(|a, b| {
             ranks
                 .get(&a["id"].as_u64().unwrap_or(0))
-                .copied().unwrap_or(cc_job_policy::priority::DEFAULT)
-                .cmp(&ranks.get(&b["id"].as_u64().unwrap_or(0)).copied().unwrap_or(cc_job_policy::priority::DEFAULT))
+                .copied()
+                .unwrap_or(cc_job_policy::priority::DEFAULT)
+                .cmp(
+                    &ranks
+                        .get(&b["id"].as_u64().unwrap_or(0))
+                        .copied()
+                        .unwrap_or(cc_job_policy::priority::DEFAULT),
+                )
                 .then_with(|| {
                     n(&self.state["project_last_launch"][s(&a["project"])])
                         .total_cmp(&n(&self.state["project_last_launch"][s(&b["project"])]))
@@ -1224,12 +1249,19 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Ok(());
         }
         if let Some(target) = target {
-            let target_rank = queue.iter().find(|i| i["id"].as_i64() == Some(target))
-                .and_then(|i| ranks.get(&i["id"].as_u64().unwrap_or(0))).copied();
-            if target_rank.is_some_and(|rank| queue.iter().any(|i| {
-                ranks.get(&i["id"].as_u64().unwrap_or(0)).is_some_and(|other| *other < rank)
-                    && !arr(&i["needs"]).iter().any(|v| busy.contains(s(v)))
-            })) {
+            let target_rank = queue
+                .iter()
+                .find(|i| i["id"].as_i64() == Some(target))
+                .and_then(|i| ranks.get(&i["id"].as_u64().unwrap_or(0)))
+                .copied();
+            if target_rank.is_some_and(|rank| {
+                queue.iter().any(|i| {
+                    ranks
+                        .get(&i["id"].as_u64().unwrap_or(0))
+                        .is_some_and(|other| *other < rank)
+                        && !arr(&i["needs"]).iter().any(|v| busy.contains(s(v)))
+                })
+            }) {
                 self.report["priority_wait"] = json!(target);
                 return Ok(());
             }

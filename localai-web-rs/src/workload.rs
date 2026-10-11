@@ -402,8 +402,9 @@ impl Sources {
 fn load_exclusions(sources: &Sources) -> std::io::Result<Exclusions> {
     let mut e = Exclusions::load(&sources.exclusion)?;
     // A protected registration remains protected even if its directory has an unrelated name.
-    if let Some(todo) =
-        json_file(&sources.todo, 16 * 1024 * 1024).filter(|v| v["projects"].is_object())
+    if let Some(todo) = cc_todo::read_store(&sources.todo)
+        .ok()
+        .filter(|v| v["projects"].is_object())
     {
         for (name, path) in todo["projects"].as_object().into_iter().flatten() {
             if e.contains(name) {
@@ -1331,12 +1332,26 @@ fn aggregate_progress(
     cache.exclusion_hash = exclusion_hash;
     cache.warnings.clear();
     let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
-    let todo = json_file(&sources.todo, 16 * 1024 * 1024).unwrap_or_else(|| {
-        cache
-            .warnings
-            .push("共有ToDoを取得できませんでした。".into());
-        json!({})
-    });
+    let todo = match cc_todo::read_store(&sources.todo) {
+        Ok(todo) => todo,
+        Err(error) => {
+            cache.warnings.push(
+                match error {
+                    cc_todo::StoreError::TooLarge => {
+                        "共有ToDoが上限64MiBを超えています。集計を更新できません。"
+                    }
+                    cc_todo::StoreError::InvalidJson(_) => {
+                        "共有ToDoのJSONが不正です。集計を更新できません。"
+                    }
+                    cc_todo::StoreError::Io(_) => {
+                        "共有ToDoを取得できませんでした。集計を更新できません。"
+                    }
+                }
+                .into(),
+            );
+            return cache;
+        }
+    };
     let registered: BTreeMap<String, String> = todo["projects"]
         .as_object()
         .into_iter()

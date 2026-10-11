@@ -25,6 +25,8 @@ mod windows {
     const C_DELETE_ROOT: &str = r"C:\Users\makhmeto\Downloads\削除希望";
     const C_TEMP: &str = r"C:\Users\makhmeto\AppData\Local\Temp";
     const C_WORKTREES: &str = r"C:\Users\makhmeto\Desktop\dev";
+    const SAFE_DELETE_RECEIPTS: &str = r"D:\CC\Tools\safe-delete\receipts-go";
+    const SAFE_DELETE: &str = r"D:\CC\Tools\safe-delete\safe-delete.exe";
     const SCRUB: &str = r"D:\CC\Tools\client-records\scrub391.exe";
     const LOG: &str = r"D:\CC\Tools\cleanup-8h\owned-target-runs.jsonl";
     const REPARSE_POINT: u32 = 0x400;
@@ -202,11 +204,11 @@ mod windows {
         match todo_statuses() {
             Ok(statuses) => {
                 let mut targets = Vec::new();
+                let mut owner_overrides = HashMap::new();
                 for root in [
                     Path::new(WORKSPACES),
                     Path::new(DELETE_ROOT),
                     Path::new(C_DELETE_ROOT),
-                    Path::new(C_TEMP),
                     Path::new(C_WORKTREES),
                 ] {
                     let mut root_targets = Vec::new();
@@ -214,10 +216,9 @@ mod windows {
                         root,
                         &statuses,
                         &mut root_targets,
-                        &mut stats.skipped_unmapped,
-                        &mut stats.skipped_active,
-                        &mut stats.skipped_link,
-                        &mut stats.skipped_client,
+                        None,
+                        &mut owner_overrides,
+                        &mut stats,
                     ) {
                         Ok(()) => targets.extend(root_targets),
                         Err(e) => {
@@ -226,9 +227,23 @@ mod windows {
                         }
                     }
                 }
+                if let Err(e) = collect_owned_temp_targets(
+                    &statuses,
+                    &mut targets,
+                    &mut owner_overrides,
+                    &mut stats,
+                ) {
+                    stats.failed += 1;
+                    stats.errors.push(error_kind(&e));
+                }
                 stats.scanned = targets.len() as u64;
                 for target in targets {
-                    if let Err(e) = clean_target(&target, &statuses, &mut stats) {
+                    if let Err(e) = clean_target(
+                        &target,
+                        owner_overrides.get(&target).copied(),
+                        &statuses,
+                        &mut stats,
+                    ) {
                         stats.failed += 1;
                         stats.errors.push(error_kind(&e));
                     }
@@ -422,10 +437,9 @@ mod windows {
         root: &Path,
         statuses: &HashMap<u64, String>,
         out: &mut Vec<PathBuf>,
-        skipped_unmapped: &mut u64,
-        skipped_active: &mut u64,
-        skipped_links: &mut u64,
-        skipped_client: &mut u64,
+        inherited_owner: Option<u64>,
+        owner_overrides: &mut HashMap<PathBuf, u64>,
+        stats: &mut RunStats,
     ) -> io::Result<()> {
         let meta = match fs::symlink_metadata(root) {
             Ok(m) => m,
@@ -440,49 +454,58 @@ mod windows {
         }
         verify_safe_ancestors(root)?;
         if is_client_resource(root)? {
-            *skipped_client += 1;
+            stats.skipped_client += 1;
             return Ok(());
         }
-        let mut stack = vec![(root.to_path_buf(), 0usize)];
-        while let Some((dir, depth)) = stack.pop() {
+        let mut stack = vec![(root.to_path_buf(), 0usize, inherited_owner)];
+        while let Some((dir, depth, inherited_owner)) = stack.pop() {
             for entry in fs::read_dir(&dir)? {
                 let entry = entry?;
                 let path = entry.path();
                 let meta = fs::symlink_metadata(&path)?;
                 if !safe_entry(&meta) {
-                    *skipped_links += 1;
+                    stats.skipped_link += 1;
                     continue;
                 }
                 if meta.is_dir() {
+                    let mut descendant_owner = inherited_owner;
                     if depth == 0 {
-                        let quarantined_root = root == Path::new(DELETE_ROOT);
+                        let quarantined_root = is_deletion_request_root(root);
                         let mut guard_checked = false;
                         if quarantined_root {
                             if is_client_resource(&path)? {
-                                *skipped_client += 1;
+                                stats.skipped_client += 1;
                                 continue;
                             }
                             guard_checked = true;
                         }
-                        let Some(owner_id) = owner_id(&path) else {
-                            *skipped_unmapped += 1;
-                            continue;
-                        };
-                        if statuses.get(&owner_id).map(String::as_str) != Some("done") {
-                            *skipped_active += 1;
-                            continue;
+                        if descendant_owner.is_none() {
+                            descendant_owner = owner_id(&path);
+                            if descendant_owner.is_none() {
+                                stats.skipped_unmapped += 1;
+                                continue;
+                            }
+                            if !guard_checked && is_client_resource(&path)? {
+                                stats.skipped_client += 1;
+                                continue;
+                            }
                         }
-                        if !guard_checked && is_client_resource(&path)? {
-                            *skipped_client += 1;
+                        if statuses.get(&descendant_owner.unwrap()).map(String::as_str)
+                            != Some("done")
+                        {
+                            stats.skipped_active += 1;
                             continue;
                         }
                     }
                     if is_prunable_dir(root, &path) {
-                        out.push(path);
+                        out.push(path.clone());
+                        if let Some(id) = descendant_owner {
+                            owner_overrides.insert(path, id);
+                        }
                     } else if is_ignored_subtree(&entry.file_name().to_string_lossy()) {
                         continue;
                     } else {
-                        stack.push((path, depth + 1));
+                        stack.push((path, depth + 1, descendant_owner));
                     }
                 }
             }
@@ -490,8 +513,136 @@ mod windows {
         Ok(())
     }
 
+    fn collect_owned_temp_targets(
+        statuses: &HashMap<u64, String>,
+        targets: &mut Vec<PathBuf>,
+        owner_overrides: &mut HashMap<PathBuf, u64>,
+        stats: &mut RunStats,
+    ) -> io::Result<()> {
+        let receipts_root = Path::new(SAFE_DELETE_RECEIPTS);
+        let root_meta = match fs::symlink_metadata(receipts_root) {
+            Ok(meta) => meta,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(e) => return Err(e),
+        };
+        if !safe_directory(&root_meta) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "safe-delete receipts root is linked",
+            ));
+        }
+        verify_safe_ancestors(receipts_root)?;
+        for entry in fs::read_dir(receipts_root)? {
+            let entry = entry?;
+            let metadata = fs::symlink_metadata(entry.path())?;
+            if !safe_entry(&metadata) {
+                stats.skipped_link += 1;
+                continue;
+            }
+            if !metadata.is_file()
+                || !entry
+                    .path()
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+            {
+                continue;
+            }
+            let receipt: Value = match fs::read(entry.path())
+                .and_then(|bytes| serde_json::from_slice(&bytes).map_err(invalid_data))
+            {
+                Ok(value) => value,
+                Err(_) => {
+                    stats.skipped_unmapped += 1;
+                    continue;
+                }
+            };
+            if receipt.get("state").and_then(Value::as_str) != Some("owned") {
+                continue;
+            }
+            let Some(receipt_id) = receipt.get("id").and_then(Value::as_str) else {
+                stats.skipped_unmapped += 1;
+                continue;
+            };
+            let Some(receipt_path) = receipt.get("path").and_then(Value::as_str) else {
+                stats.skipped_unmapped += 1;
+                continue;
+            };
+            let path = PathBuf::from(receipt_path);
+            if path == Path::new(C_TEMP) || !path.starts_with(C_TEMP) {
+                continue;
+            }
+            let project = receipt.get("project").and_then(Value::as_str).unwrap_or("");
+            let content = receipt.get("content").and_then(Value::as_str).unwrap_or("");
+            let Some(owner) = safe_delete_receipt_owner(project, content) else {
+                stats.skipped_unmapped += 1;
+                continue;
+            };
+            if statuses.get(&owner).map(String::as_str) != Some("done") {
+                stats.skipped_active += 1;
+                continue;
+            }
+            verify_safe_ancestors(&path)?;
+            let path_meta = match fs::symlink_metadata(&path) {
+                Ok(meta) => meta,
+                Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e),
+            };
+            if !safe_directory(&path_meta) {
+                stats.skipped_link += 1;
+                continue;
+            }
+            if is_client_resource(&path)? {
+                stats.skipped_client += 1;
+                continue;
+            }
+            let plan = Command::new(SAFE_DELETE)
+                .args(["plan", "--id", receipt_id])
+                .output()?;
+            if !plan.status.success() {
+                stats.skipped_unmapped += 1;
+                continue;
+            }
+            let plan: Value = match serde_json::from_slice(&plan.stdout) {
+                Ok(value) => value,
+                Err(_) => {
+                    stats.skipped_unmapped += 1;
+                    continue;
+                }
+            };
+            let plan_path_matches = plan
+                .get("path")
+                .and_then(Value::as_str)
+                .is_some_and(|planned| planned.eq_ignore_ascii_case(receipt_path));
+            if plan.get("action").and_then(Value::as_str) != Some("submit_to_exec_tool")
+                || plan.get("id").and_then(Value::as_str) != Some(receipt_id)
+                || !plan_path_matches
+                || plan
+                    .get("powershell_command")
+                    .and_then(Value::as_str)
+                    .is_none_or(str::is_empty)
+            {
+                stats.skipped_unmapped += 1;
+                continue;
+            }
+            let before = targets.len();
+            collect_targets(
+                &path,
+                statuses,
+                targets,
+                Some(owner),
+                owner_overrides,
+                stats,
+            )?;
+            for candidate in &targets[before..] {
+                owner_overrides.insert(candidate.clone(), owner);
+            }
+        }
+        Ok(())
+    }
+
     fn clean_target(
         path: &Path,
+        owner_hint: Option<u64>,
         statuses: &HashMap<u64, String>,
         stats: &mut RunStats,
     ) -> io::Result<()> {
@@ -500,7 +651,7 @@ mod windows {
             stats.skipped_client += 1;
             return Ok(());
         }
-        let Some(id) = owner_id(path) else {
+        let Some(id) = owner_hint.or_else(|| owner_id(path)) else {
             stats.skipped_unmapped += 1;
             return Ok(());
         };
@@ -573,6 +724,10 @@ mod windows {
         None
     }
 
+    fn is_deletion_request_root(root: &Path) -> bool {
+        [Path::new(DELETE_ROOT), Path::new(C_DELETE_ROOT)].contains(&root)
+    }
+
     fn todo_id_in_reason(text: &str) -> Option<u64> {
         for line in text.lines() {
             let lower = line.trim().to_ascii_lowercase();
@@ -600,6 +755,14 @@ mod windows {
         None
     }
 
+    fn safe_delete_receipt_owner(project: &str, content: &str) -> Option<u64> {
+        match (todo_id_in_text(project), todo_id_in_text(content)) {
+            (Some(project_id), Some(content_id)) if project_id != content_id => None,
+            (Some(id), _) | (_, Some(id)) => Some(id),
+            (None, None) => None,
+        }
+    }
+
     fn is_prunable_dir(root: &Path, path: &Path) -> bool {
         let Some(name) = path.file_name().and_then(OsStr::to_str) else {
             return false;
@@ -613,7 +776,7 @@ mod windows {
         {
             return false;
         }
-        [Path::new(DELETE_ROOT), Path::new(C_DELETE_ROOT)].contains(&root)
+        is_deletion_request_root(root)
             || path.ancestors().any(|ancestor| {
                 ancestor
                     .file_name()
@@ -1000,7 +1163,8 @@ mod windows {
     mod tests {
         use super::{
             DELETE_ROOT, is_evidence_name, is_ignored_subtree, is_prunable_dir,
-            recycle_drive_allowed, todo_id, todo_id_in_reason, todo_id_in_text,
+            recycle_drive_allowed, safe_delete_receipt_owner, todo_id, todo_id_in_reason,
+            todo_id_in_text,
         };
         use std::path::Path;
 
@@ -1031,6 +1195,8 @@ mod windows {
                 todo_id_in_reason("理由: todo-2000\r\n元の場所: D:/work/todo-2240/target"),
                 Some(2240)
             );
+            assert_eq!(safe_delete_receipt_owner("todo-2343", "cache"), Some(2343));
+            assert_eq!(safe_delete_receipt_owner("todo-2343", "todo-2301"), None);
         }
 
         #[test]

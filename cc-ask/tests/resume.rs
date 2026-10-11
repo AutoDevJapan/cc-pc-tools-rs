@@ -1136,24 +1136,39 @@ fn test_needs_decision_stays_open_and_next_answer_can_resume() {
         None,
     );
     a.resume();
-    assert_eq!(
-        a.fake.borrow().posts.last().unwrap().1["allowed_mentions"]["users"],
-        json!(["OWN"])
-    );
-    assert_eq!(a.fake.borrow().posts.last().unwrap().1["flags"], 0);
-    assert!(a.text().contains("判断をお願いしたいです"));
-    assert_eq!(a.question()["open"], true);
-    assert_eq!(
-        a.question()["after"],
-        a.fake.borrow().messages["200"].last().unwrap()["id"]
-    );
-    assert!(a.fake.borrow().patches.is_empty());
+
+    let state = a.state();
+    assert_eq!(state["questions"][0]["open"], false);
+    let next = state["questions"][1].clone();
+    let qid = s(&next["thread_id"]).to_owned();
+    assert_ne!(qid, "200");
+    assert_eq!(next["open"], true);
+    assert_eq!(next["work_thread_id"], "200");
+    {
+        let f = a.fake.borrow();
+        let creations: Vec<_> = f.http_calls.iter().filter(|c|
+            c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).collect();
+        assert_eq!(creations.len(), 2);
+        let starter = &creations[0]["body"]["message"];
+        assert_eq!(starter["allowed_mentions"],
+            json!({"parse":[],"users":["OWN"],"replied_user":false}));
+        assert_eq!(starter["flags"], 4);
+        assert_eq!(s(&starter["content"]).matches("<@OWN>").count(), 1);
+        assert_eq!(creations[1]["body"]["message"]["flags"], SILENT | 4);
+    }
+    assert_eq!(next["after"], a.fake.borrow().messages[&qid][0]["id"]);
+    assert!(!a.fake.borrow().patches.iter().any(|(tid, _)| tid == &qid));
+    let previous = a.last();
     a.advance(601.);
-    a.answer(0., "推奨案で進めて", "OWN");
+    let reply = a.h.reply("推奨案で進めて", &qid);
     a.advance(600.);
     a.resume();
     assert_eq!(a.count(), 2);
+    assert_eq!(a.last()["resume_session"], "session-job1");
+    assert_eq!(a.last()["cwd"], previous["cwd"]);
     assert!(s(&a.last()["prompt"]).contains("推奨案で進めて"));
+    assert_eq!(a.state()["answer_receipts"][&reply]["handled_by"], "job2");
+
 }
 #[test]
 fn test_failed_job_resumes_automatically_without_owner_mention() {
@@ -1490,34 +1505,60 @@ fn test_new_owner_reply_is_preserved_when_job_needs_decision() {
     assert_eq!(a.count(), 2);
     assert_eq!(a.question()["seen_reply"], newest);
 }
+struct FailQuestionStateSave {
+    fake: std::rc::Rc<std::cell::RefCell<common::Fake>>,
+    state_path: PathBuf,
+    failed: bool,
+}
+impl Effects for FailQuestionStateSave {
+    fn now(&self) -> f64 { self.fake.borrow().now }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.fake.borrow_mut().run(argv, timeout)
+    }
+    fn http(&mut self, method: &str, url: &str, body: Option<&Value>, discord: bool) -> Result<Value> {
+        let response = self.fake.borrow_mut().http(method, url, body, discord)?;
+        if !self.failed && method == "POST" && url.ends_with("/channels/T/threads") {
+            self.failed = true;
+            // Fail installation after Discord accepted the starter, while its ID is durable.
+            std::fs::write(&self.state_path, "{").unwrap();
+        }
+        Ok(response)
+    }
+}
 #[test]
-fn test_question_registration_retries_after_reply_check_failure_without_reposting() {
+fn test_question_registration_retries_after_state_save_failure_without_reposting() {
     let mut a = AnswerResume::new();
     a.answered();
     a.resume();
-    a.finish(
-        "job1",
-        "succeeded",
-        Some("状態: 要判断\n次の方針を教えてください。"),
-        None,
-    );
-    let after = s(&a.question()["continuation"]["after"]).to_string();
-    a.fake
-        .borrow_mut()
-        .http_errors
-        .insert(format!("/channels/200/messages?after={after}&limit=100"), 1);
+    a.finish("job1", "succeeded",
+        Some("状態: 要判断\n次の方針を教えてください。"), None);
+    let state_path = a.ctx.here.join("state.json");
+    let saved = std::fs::read(&state_path).unwrap();
+    a.ctx.effects = Box::new(FailQuestionStateSave {
+        fake: a.fake.clone(), state_path: state_path.clone(), failed: false,
+    });
+    assert!(cmd_resume(&mut a.ctx, &mut false).is_err());
+    assert_eq!(std::fs::read(&state_path).unwrap(), b"{");
+    let records: Vec<_> = std::fs::read_dir(a.ctx.here.join("question-progress")).unwrap()
+        .map(|e| read_json(&e.unwrap().path()).unwrap()).collect();
+    assert_eq!(records.len(), 1);
+    let qid = s(&records[0]["question"]["starter"]).to_owned();
+    assert!(!qid.is_empty());
+    assert_eq!(a.fake.borrow().http_calls.iter().filter(|c|
+        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 1);
+    std::fs::write(&state_path, saved).unwrap();
     a.resume();
-    assert_eq!(a.question()["continuation"]["question_pending"], true);
+    a.resume();
+    assert_eq!(a.fake.borrow().http_calls.iter().filter(|c|
+        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 2);
+    let state = a.state();
+    assert_eq!(state["questions"].as_array().unwrap().len(), 2);
+    assert_eq!(state["questions"][0]["open"], false);
+    assert_eq!(state["questions"][1]["thread_id"], qid);
+    assert_eq!(state["questions"][1]["open"], true);
     let count = a.posts();
     a.resume();
     assert_eq!(a.posts(), count);
-    assert_eq!(
-        a.question()["after"],
-        a.fake.borrow().messages["200"].last().unwrap()["id"]
-    );
-    assert!(a.question()["continuation"]
-        .get("question_pending")
-        .is_none());
 }
 #[test]
 fn test_result_delivery_failure_retries_and_keeps_question_open() {

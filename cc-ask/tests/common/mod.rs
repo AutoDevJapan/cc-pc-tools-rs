@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cc_ask::core::*;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, VecDeque},
@@ -84,7 +84,7 @@ impl Harness {
             threads: BTreeMap::from([
                 (
                     "100".into(),
-                    json!({"id":"100","type":11,"parent_id":REQUEST_CHANNEL_ID,"owner_id":"OWN","name":"依頼A","thread_metadata":{"archived":false}}),
+                    json!({"id":"100","guild_id":"G","type":11,"parent_id":REQUEST_CHANNEL_ID,"owner_id":"OWN","name":"依頼A","thread_metadata":{"archived":false}}),
                 ),
                 (
                     "200".into(),
@@ -315,12 +315,23 @@ impl Fake {
         }
         if path == "/channels/T/threads" {
             let b = body.unwrap();
-            let thread = json!({"id":"300","type":11,"last_message_id":"300","name":b["name"],"parent_id":"T","owner_id":"BOT","thread_metadata":{"archived":false}});
-            self.threads.insert("300".into(), thread.clone());
-            self.messages.insert(
-                "300".into(),
-                vec![message("300", s(&b["message"]["content"]), "BOT")],
-            );
+            let id = (self
+                .threads
+                .keys()
+                .filter_map(|v| v.parse::<u64>().ok())
+                .max()
+                .unwrap_or(0)
+                .max(299)
+                + 1)
+            .to_string();
+            let thread = json!({"id":id,"guild_id":"G","type":11,"last_message_id":id,"name":b["name"],"parent_id":"T","owner_id":"BOT","thread_metadata":{"archived":false}});
+            self.threads.insert(id.clone(), thread.clone());
+            let mut starter = message(&id, s(&b["message"]["content"]), "BOT");
+            starter["author"]["bot"] = json!(true);
+            starter["flags"] = b["message"]["flags"].clone();
+            starter["mentions"] = b["message"]["allowed_mentions"]["users"].clone();
+            starter["allowed_mentions"] = b["message"]["allowed_mentions"].clone();
+            self.messages.insert(id, vec![starter]);
             return Ok(thread);
         }
         if method == "POST" && path == "/channels/GENERAL/threads" {
@@ -388,6 +399,7 @@ impl Fake {
             let b = body.unwrap();
             let mut msg = message(&self.sequence.to_string(), s(&b["content"]), "BOT");
             msg["author"]["bot"] = json!(true);
+            msg["nonce"] = b["nonce"].clone();
             if b.get("message_reference").is_some() {
                 msg["message_reference"] = b["message_reference"].clone();
             }
@@ -572,11 +584,9 @@ impl Fake {
                         .find(|i| n(&i["id"]).to_string() == args[1])
                         .unwrap();
                     item["status"] = json!("doing");
-                    item["updated"] = json!(
-                        chrono::DateTime::from_timestamp(self.now as i64, 0)
-                            .unwrap()
-                            .to_rfc3339()
-                    );
+                    item["updated"] = json!(chrono::DateTime::from_timestamp(self.now as i64, 0)
+                        .unwrap()
+                        .to_rfc3339());
                     item["jobs"]
                         .as_array_mut()
                         .unwrap()
@@ -675,12 +685,10 @@ impl Fake {
         let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
         record["todo_id"] = json!(arg("--todo-id").parse::<i64>().ok());
-        record["related_todo_ids"] = json!(
-            arg("--related-todo-ids")
-                .split(',')
-                .filter_map(|id| id.parse::<i64>().ok())
-                .collect::<Vec<_>>()
-        );
+        record["related_todo_ids"] = json!(arg("--related-todo-ids")
+            .split(',')
+            .filter_map(|id| id.parse::<i64>().ok())
+            .collect::<Vec<_>>());
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {
             self.launch_error = false;

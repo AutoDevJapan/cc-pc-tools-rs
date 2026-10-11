@@ -390,8 +390,14 @@ pub fn continuation_prompt(
     } else {
         String::new()
     };
+    let links = if truth(&question["separated_question"]) {
+        format!("\n元の作業投稿: {}\n質問投稿: {}\n通知しない進捗投稿: {}\n元ToDo: {}\n質問だけを独立投稿にしています。元の依頼と回答をこの作業へ反映してください。\n",
+            s(&question["work_url"]),s(&question["question_url"]),s(&question["progress_url"]),question["todo_id"])
+    } else {
+        String::new()
+    };
     Ok(safe_text(format!(
-        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}\n元の作業指示:\n{original}\n\n{}",
+        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}{links}\n元の作業指示:\n{original}\n\n{}",
         s(&question["cwd"]),
         s(&thread["id"]),
         crate::prompt_context::conversation(ctx, &thread, history, owner, 32 * 1024)?
@@ -857,8 +863,11 @@ fn resume_at(
             disposition != "状態: 継続中",
             &jid,
             Some(s(&question["continuation"]["after"])),
-        )?;
-        let after = match delivery {
+        );
+        // Routing APIs save new questions/routes. Reload before checkpointing this
+        // origin generation so its snapshot cannot erase the newly registered one.
+        *state = ctx.load()?;
+        let after = match delivery? {
             crate::result_delivery::Delivery::Sent(after) => after,
             crate::result_delivery::Delivery::OwnerMessagesPending => {
                 crate::steering::deliver(
@@ -891,12 +900,18 @@ fn resume_at(
         if disposition == "状態: 完了" {
             crate::restart::finish_todo(ctx, question)?;
         }
+        let separated_question =
+            disposition == "状態: 要判断" && crate::question_progress::is_separated(ctx, tid)?;
+        let is_question_thread = truth(&question["separated_question"])
+            || crate::question_progress::route(ctx, tid)?
+                .is_some_and(|r| s(&r["question_thread_id"]) == tid);
         question["open"] = json!(disposition != "状態: 継続中");
         let entry = &mut question["continuation"];
         entry["reported"] = json!(true);
         entry["result_after"] = json!(after);
-        entry["close_pending"] = json!(disposition == "状態: 完了");
-        entry["question_pending"] = json!(disposition == "状態: 要判断");
+        entry["close_pending"] =
+            json!(disposition == "状態: 完了" || is_question_thread || separated_question);
+        entry["question_pending"] = json!(disposition == "状態: 要判断" && !separated_question);
         checkpoint(ctx, state, index, question)?;
     }
     if truth(&question["continuation"]["question_pending"]) {
@@ -985,15 +1000,26 @@ fn defer_reply(
     handled: &str,
 ) -> Result<()> {
     if question["deferred_reply"] != newest["id"] {
-        let content = safe_text(format!("元の作業は別セッションが担当しています。担当が終わった後に回答の反映を確認します。\n{handled}"));
+        let content = safe_text(format!(
+            "元の作業は別セッションが担当しています。担当が終わった後に回答の反映を確認します。\n{handled}"
+        ));
         let mid = s(&newest["id"]);
-        if !thread_history(ctx, tid)?.iter().any(|m| {
-            s(&m["message_reference"]["message_id"]) == mid
+        let target = crate::question_progress::result_target(ctx, tid, "")?;
+        let nonce = crate::automation::key(&format!("deferred|{tid}|{mid}"));
+        if !thread_history(ctx, &target)?.iter().any(|m| {
+            (s(&m["message_reference"]["message_id"]) == mid || s(&m["nonce"]) == &nonce[..24])
                 && s(&m["content"]) == content
                 && truth(&m["author"]["bot"])
         }) {
-            let nonce = crate::automation::key(&format!("deferred|{tid}|{mid}"));
-            ctx.call("POST",&format!("/channels/{tid}/messages"),Some(&json!({"content":content,"flags":SILENT,"nonce":&nonce[..24],"enforce_nonce":true,"allowed_mentions":{"parse":[],"users":[],"replied_user":false},"message_reference":{"message_id":mid,"channel_id":tid}})))?;
+            let mut payload = json!({"content":crate::question_progress::silent_text(&content),"flags":SILENT|4,"nonce":&nonce[..24],"enforce_nonce":true,"allowed_mentions":{"parse":[],"users":[],"replied_user":false}});
+            if target == tid {
+                payload["message_reference"] = json!({"message_id":mid,"channel_id":tid});
+            }
+            ctx.call(
+                "POST",
+                &format!("/channels/{target}/messages"),
+                Some(&payload),
+            )?;
         }
         question["deferred_reply"] = newest["id"].clone();
     }

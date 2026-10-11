@@ -131,14 +131,20 @@ fn failure(
     progress["error"] = json!(safe_text(error));
     atomic_json(ledger, progress, 2)?;
     if !truth(&progress["error_notice_after"]) {
-        let owner = ctx.owner();
-        let content = format!(
-            "依頼の添付ファイルを送れませんでした。\n<@{owner}>\n理由: {}\n受付が作業を自動で再開して修復します。",
+        let target = if let Some(target) = progress["destination_thread_id"].as_str() {
+            target.to_owned()
+        } else {
+            crate::question_progress::result_target(ctx, thread, job)?
+        };
+        progress["destination_thread_id"] = json!(target);
+        atomic_json(ledger, progress, 2)?;
+        let content = crate::question_progress::silent_text(&format!(
+            "依頼の添付ファイルを送れませんでした。\n理由: {}\n受付が作業を自動で再開して修復します。",
             safe_text(error)
-        );
+        ));
         let notice_nonce = nonce(thread, job, "error");
         // History also prevents duplicates beyond Discord's short nonce retention window.
-        let prior = thread_history(ctx, thread)
+        let prior = thread_history(ctx, &target)
             .unwrap_or_default()
             .into_iter()
             .find(|m| s(&m["nonce"]) == notice_nonce);
@@ -146,9 +152,10 @@ fn failure(
             Some(message) => message,
             None => match ctx.call(
                 "POST",
-                &format!("/channels/{thread}/messages"),
+                &format!("/channels/{target}/messages"),
                 Some(&json!({
-                    "content":content, "allowed_mentions":{"parse":[],"users":[owner]},
+                    "content":content, "allowed_mentions":{"parse":[],"users":[],"replied_user":false},
+                    "flags":SILENT | crate::question_progress::SUPPRESS_EMBEDS,
                     "nonce":notice_nonce,"enforce_nonce":true
                 })),
             ) {
@@ -229,11 +236,16 @@ pub fn post_with_cursor(
                 &ledger,
                 &mut progress,
                 "添付ファイルがありません",
-            )
+            );
         }
         Err(error) => return failure(ctx, thread, job, &ledger, &mut progress, &error),
     };
+    let needs_question = result_state(text) == "状態: 要判断"
+        || (text.starts_with("判断をお願いしたいです！")
+            && (concrete_question_body(&body) || choice_question_body(&body)));
     let owner = ctx.owner();
+    let mention =
+        mention && !needs_question && !crate::question_progress::is_separated(ctx, thread)?;
     let mut body = safe_text(body);
     if mention {
         let (first, rest) = body.split_once('\n').unwrap_or((&body, ""));
@@ -243,14 +255,74 @@ pub fn post_with_cursor(
             format!("{first}\n<@{owner}>")
         };
     }
+    // Bind routing before fingerprinting so retries cannot switch destinations.
+    // The ledger and owner cursor always belong to the origin, not this target.
+    let target = if let Some(target) = progress["destination_thread_id"].as_str() {
+        target.to_owned()
+    } else if needs_question {
+        // ask_result must be allowed to recover a question whose progress bridge
+        // has not yet been created; result_target deliberately rejects that state.
+        thread.to_owned()
+    } else {
+        crate::question_progress::result_target(ctx, thread, job)?
+    };
+    progress["destination_thread_id"] = json!(target);
+    atomic_json(&ledger, &progress, 2)?;
+    if needs_question && !truth(&progress["question_thread_id"]) {
+        if unseen(ctx, thread, job, after)? {
+            return Ok(Delivery::OwnerMessagesPending);
+        }
+        if crate::questions::answered_repost(
+            ctx,
+            thread,
+            text,
+            Some(job),
+            &attachments::fingerprints(prepared.as_ref())?,
+        )?
+        .is_some()
+        {
+            return Ok(Delivery::OwnerMessagesPending);
+        }
+        // The parent API registers a new generation with the original work context.
+        // It must reconcile the same origin/job on retry after a lost response.
+        let question = crate::question_progress::ask_result(ctx, thread, text, job)?;
+        if s(&question["thread_id"]).is_empty()
+            || s(&question["after"]).is_empty()
+            || s(&question["progress_thread_id"]).is_empty()
+        {
+            return Err("新しい質問の配送先がありません".into());
+        }
+        progress["question_thread_id"] = question["thread_id"].clone();
+        progress["question_after"] = question["after"].clone();
+        progress["destination_thread_id"] = question["progress_thread_id"].clone();
+        atomic_json(&ledger, &progress, 2)?;
+    }
+    let target = s(&progress["destination_thread_id"]).to_owned();
+    let separated = target != thread || crate::question_progress::is_separated(ctx, thread)?;
+    let mention = mention && target == thread;
+    if needs_question {
+        body = format!(
+            "判断をお願いする質問を新しい投稿にしました。\nhttps://discord.com/channels/{}/{}",
+            s(&ctx.cfg["guild_id"]),
+            s(&progress["question_thread_id"])
+        );
+    }
+    if target != thread || crate::question_progress::is_separated(ctx, thread)? {
+        body = crate::question_progress::silent_text(&body);
+    }
     let parts = chunks(&body, MAX_CONTENT);
+    // ask_result owns attachments of a concrete question; the progress post links it.
     let batches = prepared
         .as_ref()
+        .filter(|_| !needs_question)
         .map(|p| attachments::batches(&p.files))
         .unwrap_or_default();
     let count = parts.len().max(batches.len());
     let mut digest = Sha256::new();
     digest.update(body.as_bytes());
+    if needs_question {
+        digest.update(text.as_bytes());
+    }
     for file in prepared.as_ref().into_iter().flat_map(|p| &p.files) {
         digest.update(file.name.as_bytes());
         digest.update(file.size.to_le_bytes());
@@ -304,18 +376,21 @@ pub fn post_with_cursor(
         } else {
             vec![]
         };
-        let payload = json!({
+        let mut payload = json!({
             "content": content,
             "allowed_mentions": {"parse": [], "users": users},
-            "flags": if mention && index == 0 { 0 } else { SILENT },
+            "flags": if mention && index == 0 { 0 } else if separated {SILENT | crate::question_progress::SUPPRESS_EMBEDS} else {SILENT},
             "nonce": nonce(thread, job, &index.to_string()),
             "enforce_nonce": true
         });
+        if separated {
+            payload["allowed_mentions"]["replied_user"] = json!(false);
+        }
         // An interrupted save or lost response may already have delivered this
         // part. Match nonce or exact text plus the durable pre-send cursor.
         let part_key = index.to_string();
         let batch = batches.get(index).copied().unwrap_or(&[]);
-        let history = thread_history(ctx, thread)?;
+        let history = thread_history(ctx, &target)?;
         let existing = history
             .iter()
             .find(|m| {
@@ -346,7 +421,7 @@ pub fn post_with_cursor(
         } else {
             match attachments::send(
                 ctx,
-                &format!("/channels/{thread}/messages"),
+                &format!("/channels/{target}/messages"),
                 &payload,
                 batch,
                 prepared

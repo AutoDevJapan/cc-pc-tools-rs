@@ -877,13 +877,19 @@ pub fn recover(
             "同じ作業を再開"
         };
         let content = format!("作業「{}」を再試行しています（{status}）。原因: {}。試した処置: {}。失敗時も1時間ごとに再試行します。", s(&thread["name"]).chars().take(100).collect::<String>(), failure::summary(&evidence), tried);
-        let target = ctx
-            .todo
-            .parent()
-            .and_then(|p| read_text(&p.join("stall_thread.txt")).ok())
-            .map(|id| id.trim().to_owned())
-            .filter(|id| !id.is_empty())
-            .unwrap_or_else(|| s(&thread["id"]).into());
+        let original = s(&thread["id"]);
+        let routed = crate::question_progress::result_target(ctx, original, jid)?;
+        let target = if routed != original {
+            routed
+        } else {
+            ctx.todo
+                .parent()
+                .and_then(|p| read_text(&p.join("stall_thread.txt")).ok())
+                .map(|id| id.trim().to_owned())
+                .filter(|id| !id.is_empty())
+                .unwrap_or_else(|| original.into())
+        };
+        let content = crate::question_progress::silent_text(&content);
         let delivery = (|| -> Result<()> {
             let history = thread_history(ctx, &target)?;
             if !history
@@ -893,7 +899,7 @@ pub fn recover(
                 ctx.call(
                     "POST",
                     &format!("/channels/{target}/messages"),
-                    Some(&json!({"content":safe_text(content),"flags":SILENT,
+                    Some(&json!({"content":content,"flags":SILENT|4,
                         "allowed_mentions":{"parse":[],"users":[],"replied_user":false},
                         "nonce":nonce,"enforce_nonce":true})),
                 )?;

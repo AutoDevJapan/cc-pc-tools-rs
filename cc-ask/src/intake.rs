@@ -1,5 +1,5 @@
 use crate::core::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 
 const MAX_RETRIES: u64 = 2;
@@ -356,7 +356,12 @@ pub fn execute_launch(
                 );
                 // Persist the transition even if its notification fails.
                 checkpoint(ctx, state, thread, entry)?;
-                post(ctx,s(&thread["id"]),"原因の調査を始められませんでした。次の確認（1分後）で、元の依頼をやり直します。",false)?;
+                post(
+                    ctx,
+                    s(&thread["id"]),
+                    "原因の調査を始められませんでした。次の確認（1分後）で、元の依頼をやり直します。",
+                    false,
+                )?;
                 Ok(())
             } else {
                 eprintln!(
@@ -437,9 +442,11 @@ fn intake_thread_with_workers(
                 let mut observed = state["requests"][tid].clone();
                 observed["job"] = q["continuation"]["job"].clone();
                 observed["job_info"] = job_info(ctx, s(&observed["job"]));
-                observed["after"] = json!(n(&observed["after"])
-                    .max(n(&q["continuation"]["after"]))
-                    .to_string());
+                observed["after"] = json!(
+                    n(&observed["after"])
+                        .max(n(&q["continuation"]["after"]))
+                        .to_string()
+                );
                 observed["external_owner"] = json!(true);
                 observed["reported"] = json!(false);
                 for field in [
@@ -586,9 +593,11 @@ fn intake_entry(
                 entry["job_info"] = job_info(ctx, s(&continuation["job"]));
                 entry["external_owner"] = json!(true);
                 entry["reported"] = json!(false);
-                entry["after"] = json!(n(&entry["after"])
-                    .max(n(&continuation["after"]))
-                    .to_string());
+                entry["after"] = json!(
+                    n(&entry["after"])
+                        .max(n(&continuation["after"]))
+                        .to_string()
+                );
                 for field in ["restart", "recovery", "progress_job", "close_pending"] {
                     remove(entry, field);
                 }
@@ -766,11 +775,13 @@ fn intake_entry(
                 }
                 if remaining.len() != original.len() {
                     entry["request_message_ids"] = json!(remaining);
-                    entry["request_messages"] = json!(list(&entry["request_messages"])
-                        .into_iter()
-                        .filter(|m| !original.contains(&m["id"])
-                            || !reply_delivered(state, s(&m["id"])))
-                        .collect::<Vec<_>>());
+                    entry["request_messages"] = json!(
+                        list(&entry["request_messages"])
+                            .into_iter()
+                            .filter(|m| !original.contains(&m["id"])
+                                || !reply_delivered(state, s(&m["id"])))
+                            .collect::<Vec<_>>()
+                    );
                     checkpoint(ctx, state, thread, entry)?;
                 }
             }
@@ -856,8 +867,10 @@ fn intake_entry(
             disposition != "状態: 継続中",
             &jid,
             Some(s(&entry["after"])),
-        )?;
-        let after = match delivery {
+        );
+        // Keep questions/routes persisted by result delivery when saving this request.
+        *state = ctx.load()?;
+        let after = match delivery? {
             crate::result_delivery::Delivery::Sent(after) => after,
             crate::result_delivery::Delivery::OwnerMessagesPending => {
                 crate::steering::deliver(
@@ -894,15 +907,7 @@ fn intake_entry(
         entry["last_job"] = json!(jid);
         entry["result_after"] = json!(after);
         entry["close_pending"] = json!(disposition == "状態: 完了" && owner_messages.is_empty());
-        if disposition == "状態: 要判断" {
-            crate::questions::register_result(
-                ctx,
-                state,
-                thread,
-                after.as_deref().unwrap_or(s(&entry["after"])),
-                &jid,
-            )?;
-        }
+        // Concrete result questions are registered in their own thread by ask_result.
         checkpoint(ctx, state, thread, entry)?;
         if truth(&entry["close_pending"]) {
             archive_completed(ctx, thread, entry, owner)?;
@@ -948,10 +953,12 @@ fn intake_entry(
     let latest = owner_messages.iter().map(|m| n(&m["id"])).max().unwrap();
     let history = clean_history(ctx, tid, latest)?;
     entry["request_after"] = json!(latest.to_string());
-    entry["request_message_ids"] = json!(owner_messages
-        .iter()
-        .map(|m| m["id"].clone())
-        .collect::<Vec<_>>());
+    entry["request_message_ids"] = json!(
+        owner_messages
+            .iter()
+            .map(|m| m["id"].clone())
+            .collect::<Vec<_>>()
+    );
     entry["last_launch_attempt_at"] = json!(ctx.now());
     entry["request_messages"] = json!(history);
     entry["retries"] = json!(0);
@@ -1317,9 +1324,11 @@ fn deliver_reply_inner(
             } else {
                 mid.parse::<u64>().map_err(|e| e.to_string())? - 1
             });
-        entry["after"] = json!(prior
-            .min(mid.parse::<u64>().map_err(|e| e.to_string())? - 1)
-            .to_string());
+        entry["after"] = json!(
+            prior
+                .min(mid.parse::<u64>().map_err(|e| e.to_string())? - 1)
+                .to_string()
+        );
         entry["reported"] = json!(false);
         if question_index.is_none() {
             entry["external_owner"] = json!(true);

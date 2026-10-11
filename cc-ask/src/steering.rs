@@ -38,6 +38,8 @@ pub fn acknowledge(
     messages: &[Value],
 ) -> Result<()> {
     record_owner_answers(state, thread, messages, &ctx.owner());
+    let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    let separated = destination != thread;
     let names = ProjectNames::load(&ctx.client_projects)?;
     let content = format!(
         "【{}】受け取りました。今の作業に反映します。",
@@ -56,8 +58,8 @@ pub fn acknowledge(
             state["answer_receipts"][id]["content"] = json!(content);
             state["answer_receipts"][id]["posted"] = json!(false);
             ctx.save(state)?;
-        } else if thread_history(ctx, thread)?.iter().any(|m| {
-            m["message_reference"]["message_id"] == message["id"]
+        } else if thread_history(ctx, &destination)?.iter().any(|m| {
+            (m["message_reference"]["message_id"] == message["id"] || m["nonce"] == message["id"])
                 && m["content"] == state["answer_receipts"][id]["content"]
                 && truth(&m["author"]["bot"])
         }) {
@@ -65,11 +67,21 @@ pub fn acknowledge(
             ctx.save(state)?;
             continue;
         }
-        let response = ctx.call("POST", &format!("/channels/{thread}/messages"), Some(&json!({
-            "content":state["answer_receipts"][id]["content"],"flags":SILENT,
+        let mut payload = json!({
+            "content":state["answer_receipts"][id]["content"],"flags":if separated {SILENT | 4} else {SILENT},
             "allowed_mentions":{"parse":[],"users":[],"replied_user":false},
             "nonce":id,"enforce_nonce":true,"message_reference":{"message_id":id,"channel_id":thread}
-        })))?;
+        });
+        if separated {
+            payload.as_object_mut().unwrap().remove("message_reference");
+        }
+        state["answer_receipts"][id]["progress_thread_id"] = json!(destination);
+        ctx.save(state)?;
+        let response = ctx.call(
+            "POST",
+            &format!("/channels/{destination}/messages"),
+            Some(&payload),
+        )?;
         if s(&response["id"]).is_empty() {
             return Err("receipt returned no message ID".into());
         }

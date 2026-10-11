@@ -1,6 +1,7 @@
 mod common;
 use cc_ask::{commands::cmd_remind, snooze::*};
 use common::{message, Harness};
+use cc_ask::core::s;
 use serde_json::json;
 
 fn epoch(text: &str) -> f64 {
@@ -180,7 +181,8 @@ fn request_result_is_held_and_question_stays_open_during_postponement() {
     let base = epoch("2026-10-03T21:00:00+09:00");
     h.fake.borrow_mut().now = base;
     h.fake.borrow_mut().sequence = mid(base).parse().unwrap();
-    h.reply("再通知は1時間後にして", "100");
+    let qid = s(&h.state()["questions"][0]["thread_id"]).to_owned();
+    h.reply("再通知は1時間後にして", &qid);
     let posts = h.fake.borrow().posts.len();
     h.tick();
     assert_eq!(h.fake.borrow().posts.len(), posts);
@@ -190,7 +192,8 @@ fn request_result_is_held_and_question_stays_open_during_postponement() {
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 1);
     cmd_remind(&mut h.ctx).unwrap();
-    assert_eq!(h.fake.borrow().posts.len(), posts + 1);
+    assert_eq!(h.fake.borrow().posts.len(), posts);
+    assert!(h.state()["questions"][0].get("last_ping").is_none());
 }
 
 #[test]

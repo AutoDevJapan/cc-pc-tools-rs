@@ -835,24 +835,36 @@ fn test_needs_decision_is_registered_and_closed_on_owner_reply() {
         None,
     );
     h.tick();
-    assert_eq!(
-        h.fake.borrow().posts.last().unwrap().1["allowed_mentions"]["users"],
-        json!(["OWN"])
-    );
-    assert_eq!(h.fake.borrow().posts.last().unwrap().1["flags"], 0);
-    assert!(h.text().contains("判断をお願いしたいです"));
+    {
+        let f = h.fake.borrow();
+        let creations: Vec<_> = f.http_calls.iter().filter(|c|
+            c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).collect();
+        assert_eq!(creations.len(), 2);
+        let starter = &creations[0]["body"]["message"];
+        assert_eq!(starter["allowed_mentions"],
+            json!({"parse":[],"users":["OWN"],"replied_user":false}));
+        assert_eq!(starter["flags"], 4);
+        assert_eq!(s(&starter["content"]).matches("<@OWN>").count(), 1);
+        let progress = &creations[1]["body"]["message"];
+        assert_eq!(progress["flags"], SILENT | 4);
+        assert_eq!(progress["allowed_mentions"]["users"], json!([]));
+        assert_eq!(progress["allowed_mentions"]["replied_user"], false);
+        assert!(f.posts.iter().skip(1).all(|(tid, _)| tid == "301"));
+    }
     let state = h.state();
     let q = &state["questions"][0];
-    assert_eq!(q["thread_id"], "100");
-    assert_eq!(q["agent"], "Codex");
+    assert_eq!(q["thread_id"], "300");
+    assert_eq!(q["work_thread_id"], "100");
+    assert_eq!(q["progress_thread_id"], "301");
+    assert_eq!(q["posting_job"], "job1");
     assert_eq!(q["open"], true);
     assert!(q.get("asked_at").is_some());
     assert_eq!(
         q["after"],
-        h.fake.borrow().messages["100"].last().unwrap()["id"]
+        h.fake.borrow().messages["300"][0]["id"]
     );
     assert!(h.fake.borrow().patches.is_empty());
-    h.reply("Aで進めて", "100");
+    h.reply("Aで進めて", "300");
     h.tick();
     assert_eq!(h.state()["questions"][0]["open"], false);
     assert_eq!(h.fake.borrow().launches.len(), 2);
@@ -868,13 +880,16 @@ fn test_one_hour_reminder_uses_registered_request_question() {
         None,
     );
     h.tick();
-    // The fake's message IDs are from the Discord epoch, well over an hour before its clock.
-    cc_ask::commands::cmd_remind(&mut h.ctx).unwrap();
-    assert!(h.text().contains("1時間たったので再送"));
-    assert_eq!(
-        h.state()["questions"][0]["last_ping"].as_f64(),
-        Some(h.fake.borrow().now)
-    );
+    let posts = h.fake.borrow().posts.len();
+    let creations = h.fake.borrow().http_calls.iter().filter(|c| c["method"] == "POST").count();
+    for elapsed in [3600., 7200.] {
+        h.fake.borrow_mut().now += elapsed;
+        cc_ask::commands::cmd_remind(&mut h.ctx).unwrap();
+    }
+    assert_eq!(h.fake.borrow().posts.len(), posts);
+    assert_eq!(h.fake.borrow().http_calls.iter().filter(|c| c["method"] == "POST").count(), creations);
+    assert!(h.state()["questions"][0].get("last_ping").is_none());
+    assert_eq!(h.state()["questions"][0]["open"], true);
 }
 #[test]
 fn test_failure_resumes_same_session_model_effort_cwd_without_mention() {

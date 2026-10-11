@@ -1150,8 +1150,16 @@ pub fn thread_owner(job: &Value, prompt: &str, thread: &str) -> bool {
 }
 
 pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Result<Option<String>> {
+    let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    let separated = destination != thread || crate::question_progress::is_separated(ctx, thread)?;
+    let thread = destination.as_str();
+    let mention = mention && !separated;
     let owner = ctx.owner();
-    let mut text = safe_text(text);
+    let mut text = if separated {
+        crate::question_progress::silent_text(text)
+    } else {
+        safe_text(text)
+    };
     if mention {
         let (first, rest) = text.split_once('\n').unwrap_or((&text, ""));
         text = if text.contains('\n') {
@@ -1171,7 +1179,11 @@ pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Resul
             s(&ctx.call(
                 "POST",
                 &format!("/channels/{thread}/messages"),
-                Some(&json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})),
+                Some(&if separated {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":[],"replied_user":false},"flags":SILENT | 4})
+                } else {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})
+                }),
             )?["id"])
             .to_string(),
         )

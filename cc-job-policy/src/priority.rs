@@ -156,14 +156,22 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
         .iter()
         .filter_map(|j| {
             j["id"].as_str().map(|id| {
-                let owned = db["items"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .filter(|i| linked(i, j))
-                    .filter_map(|i| i["id"].as_u64().and_then(|id| todos.get(&id).copied()))
-                    .min();
-                (id.to_owned(), owned.unwrap_or_else(|| item_rank(j, policy)))
+                let mut current = j;
+                let mut seen = std::collections::BTreeSet::new();
+                let rank = loop {
+                    let owned = db["items"].as_array().into_iter().flatten()
+                        .filter(|i| linked(i,current))
+                        .filter_map(|i| i["id"].as_u64().and_then(|id| todos.get(&id).copied())).min();
+                    if let Some(rank) = owned { break rank; }
+                    if current["subwork"].is_object() { break item_rank(current,policy); }
+                    if !seen.insert(current["id"].as_str().unwrap_or("")) { break item_rank(j,policy); }
+                    let parent = current["parent_job_id"].as_str().and_then(|id| jobs.iter().find(|parent| parent["id"].as_str() == Some(id)
+                        && ["queued","starting","running"].contains(&parent["status"].as_str().unwrap_or(""))
+                        && parent["cancel_requested"] != true));
+                    let Some(parent) = parent else { break item_rank(current,policy); };
+                    current=parent;
+                };
+                (id.to_owned(),rank)
             })
         })
         .collect();
@@ -260,5 +268,15 @@ mod tests {
         let mut finished = jobs.clone(); finished[0]["status"] = json!("succeeded");
         let ranks = job_ranks(&finished,&json!({}),&json!({}));
         assert_eq!((ranks["c"],ranks["g"]),(100,100));
+    }
+    #[test]
+    fn helper_directory_does_not_promote_a_product_review_to_it() {
+        let jobs=vec![json!({"id":"p","todo_id":1,"project":"tools","status":"running"}),
+            json!({"id":"c","parent_job_id":"p","project":"cc-ask","status":"queued"}),
+            json!({"id":"own","parent_job_id":"p","todo_id":2,"project":"cc-ask","status":"queued"}),
+            json!({"id":"independent","parent_job_id":"p","subwork":{},"project":"cc-ask","status":"queued"})];
+        let db=json!({"items":[{"id":1,"project":"Re:X","status":"doing"},{"id":2,"project":"SocialPilot","status":"todo"}]});
+        let ranks=job_ranks(&jobs,&db,&json!({}));
+        assert_eq!((ranks["p"],ranks["c"],ranks["own"],ranks["independent"]),(100,100,10,30));
     }
 }

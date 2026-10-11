@@ -33,7 +33,7 @@ pub fn help_text(command: &str) -> &'static str {
             "usage: codex_jobs.exe cleanup-supervisors [--apply]\n\nPreview terminal supervisors; --apply stops only their identified controller.\n"
         }
         "reload-queue" => {
-            "usage: codex_jobs.exe reload-queue [--job-id <id>]\n\nRefresh queued controllers without execution admission; their successors still check history, capacity and ownership. --job-id keeps every other controller unchanged.\n"
+            "usage: codex_jobs.exe reload-queue [--job-id <id>]\n\nRefresh queued controllers without execution admission; their successors still check history, capacity and ownership. --job-id keeps every other controller unchanged. Invalid ids exit 2; missing/unreadable records exit 1. Deferred updates appear in the report and do not mean execution has started.\n"
         }
         _ => include_str!("../tests/fixtures/help-root.txt"),
     }

@@ -3980,6 +3980,7 @@ mod queue_regressions {
             let mut j = waiting(&t, id, id);
             j["pid"] = json!(pid);
             j["pid_created"] = json!(55);
+            j["resume_session"] = json!(SESSION_ID);
             t.ctx.save(&j).unwrap();
             t.rt.procs.lock().unwrap().insert(pid, 55);
         }
@@ -3990,6 +3991,21 @@ mod queue_regressions {
         assert_eq!(report[1], "b-good");
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert_eq!(t.ctx.load("a-failing").unwrap()["pid"], 444);
+        assert_eq!(
+            t.ctx.load("a-failing").unwrap()["queue_restart_pending"],
+            true
+        );
+        t.rt.paused_stop_failure.store(false, Ordering::Relaxed);
+        assert_eq!(
+            t.ctx.reload_queue_job("a-failing").unwrap(),
+            json!(["a-failing"])
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(
+            t.ctx.load("a-failing").unwrap()["resume_session"],
+            SESSION_ID
+        );
+        assert_eq!(t.ctx.load("a-failing").unwrap()["status"], "queued");
     }
     #[test]
     fn reload_does_not_wait_for_a_busy_registration_or_hold_the_queue_between_jobs() {

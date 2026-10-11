@@ -3727,7 +3727,7 @@ mod queue_regressions {
                 let report: Value = serde_json::from_str(&out).unwrap();
                 if ["missing_index", "broken_index"].contains(&case) {
                     assert_eq!(report.as_array().unwrap().len(), 1, "{case}");
-                    assert_eq!(report[0]["job"], "target", "{case}");
+                    assert_eq!(report[0]["id"], "target", "{case}");
                     assert_eq!(report[0]["action"], "deferred", "{case}");
                 } else {
                     assert_eq!(

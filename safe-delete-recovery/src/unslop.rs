@@ -50,9 +50,9 @@ pub(super) fn profile(id: &str) -> Option<Profile> {
             "todo2341-resume-notes",
             2229119083,
             9851624198224777,
-            12500,
+            14000,
             0,
-            16 * 1024 * 1024 * 1024,
+            24 * 1024 * 1024 * 1024,
         ),
         CHROME_ID => (
             CHROME_ID,

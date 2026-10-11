@@ -334,12 +334,25 @@ pub fn ask(
         &ctx.here.join("question-progress.lock"),
         Duration::from_secs(60),
     )?;
+    // One boundary for every producer: direct ask, post and automatic result.
+    // Keeping extraction here prevents a new caller from leaking metadata or
+    // falling back to a body/session key instead of permission identity.
+    let (clean_body, embedded) = crate::decision_identity::extract(body)?;
+    let body = clean_body.as_str();
+    let mut context = context.clone();
+    if let Some(value) = embedded {
+        let normalized = crate::decision_identity::normalize(ctx, &value)?;
+        if context["decision_identity"].is_object() && context["decision_identity"] != normalized {
+            return Err("conflicting decision identities".into());
+        }
+        context["todo_id"] = normalized["todo_id"].clone();
+        context["decision_identity"] = normalized;
+    }
     let prepared = attachments::prepare(ctx, paths)?;
     let hashes = attachments::fingerprints(prepared.as_ref())?;
     let work = route(ctx, origin)?
         .map(|r| s(&r["work_thread_id"]).to_owned())
         .unwrap_or_else(|| origin.into());
-    let mut context = context.clone();
     let todo = crate::decision_identity::todo(ctx, &context)?;
     if todo > 0 {
         context["todo_id"] = json!(todo);

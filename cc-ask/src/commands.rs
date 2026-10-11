@@ -716,19 +716,28 @@ fn post_text(
     notify: bool,
     context: Option<&Value>,
 ) -> Result<Value> {
+    let (clean_body, decision) = crate::decision_identity::extract(body)?;
+    let body = clean_body.as_str();
+    if decision.is_some() && !crate::questions::is_question(body) {
+        return Err("判断の記録には具体的な質問本文が必要です".into());
+    }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
     if crate::questions::is_question(body) {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
+        if let Some(value) = decision {
+            metadata["decision_identity"] = crate::decision_identity::normalize(ctx, &value)?;
+            metadata["todo_id"] = metadata["decision_identity"]["todo_id"].clone();
+        }
         let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
         if ![10, 11, 12].contains(&n(&channel["type"]))
             || channel["guild_id"] != ctx.cfg["guild_id"]
         {
             return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
         }
-        {
+        if !metadata["decision_identity"].is_object() {
             // Reconcile only old interrupted message ledgers before deciding
             // whether this is a new question. Recovery never appends a question.
             let prepared = crate::attachments::prepare(ctx, attach)?;
@@ -773,7 +782,9 @@ fn post_text(
                 metadata["posting_job"] = json!(job);
                 metadata["job"] = json!(job);
                 metadata["job_info"] = job_info(ctx, &job);
-                metadata["todo_id"] = metadata["job_info"]["todo_id"].clone();
+                if !metadata["decision_identity"].is_object() {
+                    metadata["todo_id"] = metadata["job_info"]["todo_id"].clone();
+                }
             }
         }
         let result = crate::question_progress::ask(ctx, &metadata, thread, body, attach)?;

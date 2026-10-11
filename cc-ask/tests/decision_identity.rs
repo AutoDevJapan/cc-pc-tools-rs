@@ -416,3 +416,44 @@ fn changed_attachments_alone_do_not_create_new_decision_or_inherit_the_new_asset
     assert_ne!(second["thread_id"], first["thread_id"]);
     assert!(second["latest_owner_reply"].is_null());
 }
+
+#[test]
+fn post_and_direct_producers_share_identity_and_never_publish_internal_json() {
+    let mut h = Harness::new();
+    h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!("G");
+    let a = args(&h, "公開確認", "D:/models/one");
+    let value = identity("D:/models/one");
+    let text = format!("公開してよいですか？\na 公開\nb 待つ\n<!-- cc-decision {value} -->");
+    std::fs::write(&a.body_file, &text).unwrap();
+    let first = cmd_post(&mut h.ctx, "100", &a.body_file, &[], false).unwrap();
+    let before = creates(&h);
+    assert!(h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .filter(|c| c["method"] == "POST")
+        .all(|c| !c["body"].to_string().contains("cc-decision")));
+    h.reply("a", s(&first["thread_id"]));
+    let repeated = cc_ask::question_progress::ask(
+        &mut h.ctx,
+        &json!({"title":"another worker","cwd":"D:/another"}),
+        "100",
+        &text,
+        &[],
+    )
+    .unwrap();
+    assert_eq!(repeated["thread_id"], first["thread_id"]);
+    assert_eq!(repeated["latest_owner_reply"]["content"], "a");
+    assert_eq!(creates(&h), before);
+    let mut new = value;
+    new["scope"]["spec_revision"] = json!(2);
+    std::fs::write(
+        &a.body_file,
+        format!("公開してよいですか？\na 公開\nb 待つ\n<!-- cc-decision {new} -->"),
+    )
+    .unwrap();
+    let second = cmd_post(&mut h.ctx, s(&first["thread_id"]), &a.body_file, &[], false).unwrap();
+    assert_ne!(first["thread_id"], second["thread_id"]);
+    assert!(second["latest_owner_reply"].is_null());
+}

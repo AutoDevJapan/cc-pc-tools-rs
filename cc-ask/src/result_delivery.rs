@@ -224,6 +224,8 @@ pub fn post_with_cursor(
         Ok(selected) => selected,
         Err(error) => return failure(ctx, thread, job, &ledger, &mut progress, &error),
     };
+    let (body, decision) = crate::decision_identity::extract(&body)?;
+    let typed_decision = decision.is_some();
     // Validate every file before posting any part or recording successful delivery.
     let prepared = match attachments::prepare(ctx, &paths) {
         Ok(Some(prepared)) => Some(prepared),
@@ -272,14 +274,15 @@ pub fn post_with_cursor(
         if unseen(ctx, thread, job, after)? {
             return Ok(Delivery::OwnerMessagesPending);
         }
-        if crate::questions::answered_repost(
-            ctx,
-            thread,
-            text,
-            Some(job),
-            &attachments::fingerprints(prepared.as_ref())?,
-        )?
-        .is_some()
+        if !typed_decision
+            && crate::questions::answered_repost(
+                ctx,
+                thread,
+                text,
+                Some(job),
+                &attachments::fingerprints(prepared.as_ref())?,
+            )?
+            .is_some()
         {
             return Ok(Delivery::OwnerMessagesPending);
         }
@@ -374,6 +377,7 @@ pub fn post_with_cursor(
         return Ok(Delivery::OwnerMessagesPending);
     }
     if first == 0
+        && !typed_decision
         && crate::questions::answered_repost(
             ctx,
             thread,

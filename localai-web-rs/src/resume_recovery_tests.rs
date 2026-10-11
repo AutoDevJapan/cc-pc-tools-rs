@@ -1,4 +1,82 @@
 #[test]
+fn todo2341_ready_receipt_precedes_bounded_rotating_failed_checkout_probes() {
+    let f = Fixture::new();
+    f.on();
+    fs::create_dir(f.root.join(".git")).unwrap();
+    let mut state = f.console.read_state().unwrap();
+    let db = f.console.todos().unwrap();
+    for n in 0..40 {
+        let cwd = f.root.join(format!("parked-{n}"));
+        fs::create_dir_all(cwd.join(".git")).unwrap();
+        let trigger = Trigger { key:format!("manual:parked-{n}"), name:format!("parked-{n}"),
+            cwd:cwd.to_string_lossy().into(), prompt:format!("原本文 {n}"), todo_id:None,
+            options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false}) };
+        let evidence = f.console.recovery_evidence_from(&trigger, Some(&db), Some(&[]), &mut BTreeMap::new());
+        state.preparation_failures.insert(trigger.key.clone(), (now()+3600,"source_workspace_unavailable".into()));
+        state.preparation_recovery.insert(trigger.key.clone(), json!({"evidence":evidence,"attempts":3}));
+        state.queue.push(trigger);
+    }
+    state.queue.push(Trigger { key:"manual:ready-audio".into(),name:"ready-audio".into(),
+        cwd:f.root.to_string_lossy().into(),prompt:"元質問と本人回答の全文".into(),todo_id:None,
+        options:json!({"model":"gpt-6-luna","effort":"high","sandbox":"read-only","isolate_worktree":false}) });
+    f.fake.calls.lock().unwrap().clear();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &[]).unwrap();
+    }
+    assert!(state.launches.contains_key("manual:ready-audio"));
+    let calls = f.fake.calls.lock().unwrap();
+    let run = calls.iter().position(|c| c.get(1).is_some_and(|s| s == "run")).unwrap();
+    let probes: Vec<_> = calls.iter().enumerate().filter(|(_,c)| c[0] == "git" && c.get(1).is_some_and(|s| s == "status")).collect();
+    assert_eq!(probes.len(), 2, "forty cached failures must not trigger forty checkout probes");
+    assert!(probes.iter().all(|(index,_)| *index > run));
+    drop(calls);
+    let saved = f.console.read_state().unwrap();
+    assert_eq!(saved.preparation_failures.len(), 40);
+    let checked = |s:&QueueState| s.preparation_recovery.values().filter(|r| r["last_recovery_probe_nanos"].is_string()).count();
+    assert_eq!(checked(&saved), 2);
+    state = saved;
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &f.console.jobs().unwrap()).unwrap();
+    }
+    assert_eq!(checked(&f.console.read_state().unwrap()), 4, "next patrol must advance beyond the first two failures");
+    for trigger in &state.queue {
+        assert!(trigger.prompt.starts_with("原本文 "));
+        assert_eq!(state.preparation_recovery[&trigger.key]["attempts"], 3);
+    }
+}
+
+#[test]
+fn todo2341_repaired_receipt_rechecks_current_wait_before_launch() {
+    let f = Fixture::new(); f.on(); f.delegate("repair-current-wait").unwrap();
+    let mut state = f.console.read_state().unwrap();
+    let key = state.queue[0].key.clone();
+    state.preparation_failures.insert(key.clone(), (now()+3600,"source_workspace_unavailable".into()));
+    state.preparation_recovery.insert(key.clone(), json!({"evidence":{"old":true},"attempts":2}));
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &[]).unwrap();
+    }
+    assert_eq!(f.launches(), 0, "repair probing is not execution");
+    assert!(!state.preparation_failures.contains_key(&key));
+    assert!(f.console.read_state().unwrap().preparation_recovery[&key]["last_recovery_probe_nanos"].is_string());
+    let mut db = f.console.todos().unwrap();
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_on"] = json!([2]);
+    db["items"].as_array_mut().unwrap().push(json!({"id":2,"project":"demo","status":"todo"}));
+    fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &[]).unwrap();
+    }
+    assert_eq!(f.launches(), 0);
+    assert!(state.queue.iter().any(|t| t.key == key));
+    assert_eq!(state.preparation_recovery[&key]["attempts"], 2);
+    assert_eq!(state.preparation_recovery[&key]["last_wait"]["kind"], "dependency_or_worker");
+}
+
+#[test]
 fn todo2299_resolved_receipt_is_todo_class_even_without_stored_id() {
     let f=Fixture::new(); f.on();
     f.job("source","todo-1","succeeded","状態: 継続中","");
@@ -730,6 +808,11 @@ fn todo2341_waiting_recovery_backlog_preserves_evidence_and_launches_ready_tail(
             .dispatch(&mut state, &f.console.jobs().unwrap())
             .unwrap();
     }
-    assert!(f.launches() > 1);
+    assert_eq!(f.launches(), 1, "repair evidence refresh must not launch in the same patrol");
     assert!(state.preparation_failures.len() < 40);
+    {
+        let _deadline = cc_ask::tick_runtime::Deadline::new(Duration::from_secs(30));
+        f.console.dispatch(&mut state, &f.console.jobs().unwrap()).unwrap();
+    }
+    assert!(f.launches() > 1, "same receipts launch after a fresh admission check");
 }

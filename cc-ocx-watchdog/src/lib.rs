@@ -257,7 +257,9 @@ mod tests {
         let bytes = task_xml_bytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Task>監視</Task>");
         assert_eq!(&bytes[..2], &[0xff, 0xfe]);
         let units: Vec<_> = bytes[2..]
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| u16::from_le_bytes([b[0], b[1]]))
             .collect();
         assert_eq!(

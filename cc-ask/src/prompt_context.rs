@@ -62,6 +62,17 @@ fn snapshot(ctx: &Context, name: &str, text: &str) -> Result<String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Never turn a partial question or answer into apparent authorization evidence.
+fn complete_evidence(text: &str, bytes: usize, reference: &str) -> String {
+    if text.len() <= bytes {
+        return text.into();
+    }
+    let notice = format!(
+        "[質問または本人投稿の原文をこの枠に収められないため、引用を省略しました。この短縮文だけで承認を判断しないこと。投稿ID・投稿者・日時と原文の全体を参照先で照合してください: {reference}]\n"
+    );
+    bounded(&notice, bytes, reference)
+}
+
 /// These are console-wide aggregates, not the work assigned by this thread.
 fn scoped(text: &str) -> (String, bool) {
     let mut skip = false;
@@ -176,7 +187,7 @@ pub fn conversation(
     let mut used = 0;
     // Give the opening question some space, but reserve most of it for current replies.
     if let Some(first) = messages.first() {
-        let text = bounded(
+        let text = complete_evidence(
             &crate::core::conversation(thread, std::slice::from_ref(first), owner),
             budget / 5,
             &reference,
@@ -190,8 +201,8 @@ pub fn conversation(
         .rev()
         .find(|(index, m)| *index != 0 && s(&m["author"]["id"]) == owner)
     {
-        let text = bounded(
-            &crate::core::conversation(&json!({}), std::slice::from_ref(message), owner),
+        let text = complete_evidence(
+            &crate::core::conversation(thread, std::slice::from_ref(message), owner),
             budget / 3,
             &reference,
         );
@@ -229,13 +240,15 @@ pub fn conversation(
                 .map(|id| s(&id).to_owned())
         };
         if let Some((question_index, question)) = question_id.and_then(|id| {
-            messages
-                .iter()
-                .enumerate()
-                .find(|(i, m)| *i < index && s(&m["id"]) == id && s(&m["author"]["id"]) != owner)
+            messages.iter().enumerate().find(|(i, m)| {
+                *i < index
+                    && s(&m["id"]) == id
+                    && s(&m["author"]["id"]) != owner
+                    && crate::questions::is_question(s(&m["content"]))
+            })
         }) {
             if !selected.iter().any(|(i, _)| *i == question_index) {
-                let text = bounded(
+                let text = complete_evidence(
                     &crate::core::conversation(thread, std::slice::from_ref(question), owner),
                     (budget - used).min(budget / 3),
                     &reference,
@@ -249,13 +262,20 @@ pub fn conversation(
         if selected.iter().any(|(i, _)| *i == index) {
             continue;
         }
-        let text = crate::core::conversation(&json!({}), std::slice::from_ref(message), owner);
+        let text = crate::core::conversation(thread, std::slice::from_ref(message), owner);
         let text = text.strip_prefix("## スレッド「」\n\n").unwrap_or(&text);
         if used + text.len() <= budget {
             used += text.len();
             selected.push((index, text.to_owned()));
         } else if budget.saturating_sub(used) > notice.len() {
-            let text = bounded(text, (budget - used).min(budget / 3), &reference);
+            let limit = (budget - used).min(budget / 3);
+            let text = if s(&message["author"]["id"]) == owner
+                || crate::questions::is_question(s(&message["content"]))
+            {
+                complete_evidence(text, limit, &reference)
+            } else {
+                bounded(text, limit, &reference)
+            };
             used += text.len();
             selected.push((index, text));
         } else {

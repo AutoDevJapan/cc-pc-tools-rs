@@ -163,7 +163,11 @@ fn explicit_reply_does_not_bind_to_a_newer_or_cross_thread_question() {
     )
     .unwrap();
     let mut messages = vec![message("100", "元の依頼", "BOT")];
-    messages.push(message("150", "指定先への検査だけを確認する質問", "BOT"));
+    messages.push(message(
+        "150",
+        "指定先への検査だけを確認する質問: a/bで教えてください。\na: 送る\nb: 送らない",
+        "BOT",
+    ));
     messages.push(message("200", "別件の恒久連携を確認する質問", "BOT"));
     messages.extend((201..300).map(|id| message(&id.to_string(), &"補足".repeat(1000), "BOT")));
     let mut answer = message("300", "a", "OWN");
@@ -177,6 +181,31 @@ fn explicit_reply_does_not_bind_to_a_newer_or_cross_thread_question() {
     let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
     assert!(!prompt.contains("別件の恒久連携を確認する質問"));
     assert!(!prompt.contains("指定先への検査だけを確認する質問"));
+}
+
+#[test]
+fn oversized_question_is_referenced_without_a_partial_approval_quote() {
+    let h = Harness::new();
+    let thread = json!({"id":"100"});
+    let question = format!("質問: a/bで教えてください。\na: 検査送信を行う\nb: 行わない\n{}\n許可の上限: 指定した架空データ一件だけ", "対象と制約".repeat(5000));
+    let mut answer = message("200", "a", "OWN");
+    answer["message_reference"] = json!({"message_id":"150","channel_id":"100"});
+    let messages = vec![
+        message("100", "元の依頼", "BOT"),
+        message("150", &question, "BOT"),
+        answer,
+    ];
+    let prompt = conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    assert!(prompt.len() <= 4096);
+    assert!(prompt.contains("この短縮文だけで承認を判断しないこと"));
+    assert!(!prompt.contains("a: 検査送信を行う"));
+    let sources: Vec<_> = std::fs::read_dir(h.ctx.here.join("prompt-context"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    assert!(sources
+        .iter()
+        .any(|path| read_json(path).ok() == Some(json!(messages))));
 }
 
 #[test]

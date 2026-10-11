@@ -114,10 +114,28 @@ pub fn bind(ctx: &Context, context: &mut Value, incoming: Option<&Value>) -> Res
 
 /// Resolve the original ToDo even when an older launcher did not stamp job.todo_id.
 pub fn todo(ctx: &Context, context: &Value) -> Result<u64> {
+    original_todo(ctx, context)?.unique()
+}
+
+enum OriginalTodo {
+    Known(u64),
+    Ambiguous(Vec<u64>),
+}
+
+impl OriginalTodo {
+    fn unique(self) -> Result<u64> {
+        match self {
+            Self::Known(id) => Ok(id),
+            Self::Ambiguous(_) => Err("質問の元ToDoが一意に決まりません".into()),
+        }
+    }
+}
+
+fn original_todo(ctx: &Context, context: &Value) -> Result<OriginalTodo> {
     let direct = n(&context["todo_id"]);
     let job = s(&context["posting_job"]);
     if job.is_empty() || !ctx.todo.exists() {
-        return Ok(direct);
+        return Ok(OriginalTodo::Known(direct));
     }
     let state = read_json(&ctx.todo)?;
     let matches: Vec<_> = state["items"]
@@ -131,13 +149,46 @@ pub fn todo(ctx: &Context, context: &Value) -> Result<u64> {
         })
         .collect();
     if matches.len() > 1 {
-        return Err("質問の元ToDoが一意に決まりません".into());
+        // A product parent may legitimately retain multiple original ToDos.
+        // An explicit decision can select only one of this worker's records.
+        if direct > 0 && matches.iter().any(|item| n(&item["id"]) == direct) {
+            return Ok(OriginalTodo::Known(direct));
+        }
+        if direct > 0 {
+            return Err("decision original ToDo differs from recorded worker".into());
+        }
+        let mut candidates: Vec<_> = matches.iter().map(|item| n(&item["id"])).collect();
+        // A saved question can retain original/related task evidence no longer
+        // present in the live jobs index. That evidence must not be discarded
+        // when proving disjointness. Invalid entries keep the set uncertain.
+        for related in [
+            &context["related_todo_ids"],
+            &context["job_info"]["related_todo_ids"],
+        ] {
+            match related {
+                Value::Null => {}
+                Value::Array(ids) => candidates.extend(ids.iter().map(n)),
+                _ => candidates.push(0),
+            }
+        }
+        let saved = &context["job_info"]["todo_id"];
+        if !saved.is_null() {
+            candidates.push(n(saved));
+        }
+        if !context["job_info"].is_null() && !context["job_info"].is_object() {
+            candidates.push(0);
+        }
+        return Ok(OriginalTodo::Ambiguous(candidates));
     }
     let inferred = matches.first().map_or(0, |v| n(&v["id"]));
     if direct > 0 && inferred > 0 && direct != inferred {
         return Err("decision original ToDo differs from recorded worker".into());
     }
-    Ok(if direct > 0 { direct } else { inferred })
+    Ok(OriginalTodo::Known(if direct > 0 {
+        direct
+    } else {
+        inferred
+    }))
 }
 
 pub(crate) fn same_work(
@@ -146,8 +197,16 @@ pub(crate) fn same_work(
     context: &Value,
     work: &str,
 ) -> Result<bool> {
-    let left = todo(ctx, &record["context"])?;
     let right = todo(ctx, context)?;
+    let original = original_todo(ctx, &record["context"])?;
+    if let OriginalTodo::Ambiguous(ids) = &original {
+        // Exclude only a complete, non-overlapping candidate set. Never select
+        // one legacy original, infer an approval or ignore conflicting evidence.
+        if right > 0 && ids.iter().all(|id| *id > 0 && *id != right) {
+            return Ok(false);
+        }
+    }
+    let left = original.unique()?;
     if left > 0 && right > 0 {
         return Ok(left == right);
     }

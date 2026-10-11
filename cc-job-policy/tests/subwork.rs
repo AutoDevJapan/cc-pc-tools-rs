@@ -164,6 +164,108 @@ fn queued_state_allocation_and_workspace_changes_invalidate_admission() {
 }
 
 #[test]
+fn reserved_admission_cannot_be_borrowed_from_a_registered_job() {
+    let mut f = Fixture::new();
+    f.register();
+    let registered = f.child_job();
+    f.jobs.push(registered.clone());
+    let mut original = registered.clone();
+    subwork::refresh_job(&f.db, &f.jobs, &mut original).unwrap();
+    let mut replacement = registered.clone();
+    replacement["id"] = json!("replacement");
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut replacement).is_err());
+    f.jobs.push(replacement);
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut original).is_err());
+    // Changing the other job's ToDo does not make a duplicate global launch key legitimate.
+    f.jobs.last_mut().unwrap()["todo_id"] = json!(99);
+    assert!(subwork::refresh_job(&f.db, &f.jobs, &mut original).is_err());
+}
+
+#[test]
+fn transferred_admission_requires_the_exact_registered_worker_and_launch() {
+    for case in [
+        "valid",
+        "job_id",
+        "scheduler_job",
+        "receipt_job",
+        "generation",
+        "missing_generation",
+        "missing_receipt",
+        "unlinked_job",
+        "phase",
+        "reservation",
+        "launch_key",
+        "receipt_key",
+        "spec",
+        "needs",
+        "subwork",
+        "worktree",
+        "same_tree",
+        "owner_repo",
+        "owner_pr",
+        "origin",
+        "cycle",
+        "parent_repo",
+        "child_pr",
+        "block",
+        "wait",
+        "no_admission",
+    ] {
+        let mut f = Fixture::new();
+        f.register();
+        let mut job = f.child_job();
+        let row = &mut f.db["items"][1];
+        row["status"] = json!("doing");
+        row["jobs"] = json!([job["id"]]);
+        row["resume_generation"] = json!(1);
+        row["worker_receipt"] = json!({"job":job["id"],"generation":1});
+        row["scheduler"]["job"] = job["id"].clone();
+        row["scheduler"]["phase"] = json!("running");
+        row["scheduler"]["key"] = serde_json::Value::Null;
+        match case {
+            "valid" => {}
+            "job_id" => job["id"] = json!("replacement"),
+            "scheduler_job" => row["scheduler"]["job"] = json!("replacement"),
+            "receipt_job" => row["worker_receipt"]["job"] = json!("replacement"),
+            "generation" => row["resume_generation"] = json!(2),
+            "missing_generation" => {
+                row.as_object_mut().unwrap().remove("resume_generation");
+                row["worker_receipt"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("generation");
+            }
+            "missing_receipt" => row["worker_receipt"] = serde_json::Value::Null,
+            "unlinked_job" => row["jobs"] = json!([]),
+            "phase" => row["scheduler"]["phase"] = json!("prepared"),
+            "reservation" => row["scheduler"]["key"] = json!("other"),
+            "launch_key" => job["launch_key"] = json!("other"),
+            "receipt_key" => row["scheduler"]["subwork_admission"]["key"] = json!("other"),
+            "spec" => row["spec"] = json!("changed"),
+            "needs" => row["needs"] = json!(["cargo"]),
+            "subwork" => row["subwork"]["kind"] = json!("research"),
+            "worktree" => row["scheduler"]["worktree"] = json!(f.repo),
+            "same_tree" => job["cwd"] = f.jobs[0]["cwd"].clone(),
+            "owner_repo" => job["work_owner"]["repository"] = json!("elsewhere/project"),
+            "owner_pr" => job["work_owner"]["pr"] = json!(87),
+            "origin" => f.db["items"][0]["jobs"] = json!([]),
+            "cycle" => f.db["items"][0]["subwork"] = json!({"parent_todo_id":2}),
+            "parent_repo" => f.db["projects"]["demo"] = json!(f.dir.path().join("elsewhere")),
+            "child_pr" => row["title"] = json!("PR87 review"),
+            "block" => row["status"] = json!("block"),
+            "wait" => row["wait_on"] = json!([1]),
+            "no_admission" => row["scheduler"]["subwork_admission"] = serde_json::Value::Null,
+            _ => unreachable!(),
+        }
+        assert_eq!(
+            subwork::refresh_job(&f.db, &f.jobs, &mut job).is_ok(),
+            case == "valid",
+            "{case}"
+        );
+    }
+}
+
+#[test]
 fn parent_waits_for_results_but_subwork_cannot_wait_for_parent_even_indirectly() {
     let mut f = Fixture::new();
     f.register();

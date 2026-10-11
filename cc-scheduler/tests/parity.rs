@@ -11,6 +11,44 @@ const T: f64 = 100000.;
 mod subwork_support;
 
 #[test]
+fn console_subwork_admission_survives_registered_worker_releasing_reservation() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    sub.db["items"][1]["scheduler"]
+        .as_object_mut()
+        .unwrap()
+        .remove("subwork_admission");
+    sub.jobs[0]["pid"] = json!(1);
+    sub.jobs[0]["created_at"] = json!(T - 1200.);
+    sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+    let mut f = Fixture::new();
+    f.e.backend.records = sub.jobs.clone();
+    f.e.backend.launch_start = Some(f.e.todo_path.clone());
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let request = json!({"key":"manual:finite-check","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt":"Inspect the same fixed change."});
+    let result =
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap()
+            .unwrap();
+    let row = f.get(2);
+    assert!(row["scheduler"]["key"].is_null());
+    assert_eq!(row["scheduler"]["job"], result);
+    assert_eq!(row["worker_receipt"]["job"], result);
+    assert!(row["jobs"].as_array().unwrap().contains(&json!(result)));
+    let mut candidate = sub.child_job();
+    candidate["id"] = json!(result);
+    cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate).unwrap();
+    assert_eq!(candidate["parent_job_id"], "parent");
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap(),
+        Some(result)
+    );
+    assert_eq!(f.e.backend.launched.len(), 1);
+}
+
+#[test]
 fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
     for gate in [
         "open", "cargo", "cpu", "memory", "interval", "deadline", "owner",
@@ -61,6 +99,7 @@ fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
             sub.db["items"][1]["scheduler"]["key"]
         );
         let mut candidate = sub.child_job();
+        candidate["id"] = row["scheduler"]["job"].clone();
         candidate["subwork_spec"] = row["spec"].clone();
         candidate["assigned_needs"] = row["needs"].clone();
         // This is the admission validator used by cc-jobs, not merely an argv assertion.
@@ -1283,6 +1322,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
     outcome_block_before: bool,
@@ -1315,6 +1355,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
             outcome_block_before: false,
@@ -1396,6 +1437,21 @@ impl Backend for Fake {
         j["launch_key"] = i["scheduler"]["key"].clone();
         j["todo_id"] = i["id"].clone();
         self.records.push(j);
+        if let Some(path) = &self.launch_start {
+            let mut db = read_json(path, json!({}))?;
+            let paths = cc_todo::Paths::at(path.parent().unwrap(), path.parent().unwrap());
+            cc_todo::execute(
+                &mut db,
+                &cc_todo::Command::Start {
+                    id: i["id"].as_i64().unwrap(),
+                    job: jid.clone(),
+                    progress: None,
+                },
+                &paths,
+            )
+            .unwrap();
+            write_json(path, &db, 1)?;
+        }
         if self.crash_after_launch {
             self.crash_after_launch = false;
             return Err(Error("KeyboardInterrupt"));

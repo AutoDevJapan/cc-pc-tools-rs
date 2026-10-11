@@ -302,6 +302,7 @@ dependencies = [
  "cc-job-policy",
  "cc-redact",
  "cc-task-title",
+ "cc-todo",
  "chrono",
  "regex",
  "serde",

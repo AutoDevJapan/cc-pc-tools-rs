@@ -1236,12 +1236,28 @@ pub fn conversation(thread: &Value, messages: &[Value], owner: &str) -> String {
             })
             .unwrap_or_default();
         lines.push(format!(
-            "### {who}（{}）\n{}{files}\n",
-            s(&m["timestamp"]).chars().take(16).collect::<String>(),
+            "### {who}（{}）\n{}\n{}{files}\n",
+            s(&m["timestamp"]),
+            message_source(m, s(&thread["id"])),
             s(&m["content"])
         ))
     }
     safe_text(lines.join("\n"))
+}
+/// Describe the actual Discord source without turning fetched history into direct chat input.
+pub fn message_source(message: &Value, thread: &str) -> String {
+    let channel = if truth(&message["channel_id"]) {
+        s(&message["channel_id"])
+    } else {
+        thread
+    };
+    let reply = s(&message["message_reference"]["message_id"]);
+    format!(
+        "出所: Discord / スレッド {channel} / 投稿 {} / 投稿者 {} / 返信先 {}",
+        s(&message["id"]),
+        s(&message["author"]["id"]),
+        if reply.is_empty() { "未指定" } else { reply }
+    )
 }
 pub const REQUEST_CWD: &str = "C:/Users/makhmeto/Desktop/dev/ADJ";
 pub const REQUEST_PREAMBLE: &str = include_str!("request_preamble.txt");

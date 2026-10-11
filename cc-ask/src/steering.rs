@@ -628,9 +628,10 @@ fn quotes(messages: &[Value]) -> String {
                 .map(|a| format!("\n添付: {}", s(&a["url"])))
                 .collect::<String>();
             format!(
-                "\nオーナー投稿 {}（{}）の原文:\n{}{}\n",
+                "\nオーナー投稿 {}（{}）の原文:\n{}\n{}{}\n",
                 s(&m["id"]),
                 s(&m["timestamp"]),
+                message_source(m, s(&m["channel_id"])),
                 s(&m["content"]),
                 files
             )

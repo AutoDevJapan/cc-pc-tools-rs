@@ -197,6 +197,53 @@ pub fn conversation(
         );
         used += text.len();
         selected.push((index, text));
+        // A short answer such as "a" is meaningless without the exact question.
+        // Prefer an explicit same-thread reply; otherwise retain the latest registered
+        // question before this answer. Selection preserves evidence, never grants access.
+        let explicit = s(&message["message_reference"]["message_id"]);
+        let channel = s(&message["message_reference"]["channel_id"]);
+        let question_id = if !explicit.is_empty() {
+            (channel.is_empty() || channel == tid).then(|| explicit.to_owned())
+        } else {
+            let state = ctx.load()?;
+            state["questions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|q| s(&q["thread_id"]) == tid)
+                .flat_map(|q| {
+                    let mut ids = vec![q["question_message"].clone(), q["after"].clone()];
+                    ids.extend(q["message_ids"].as_array().into_iter().flatten().cloned());
+                    ids
+                })
+                .filter(|id| {
+                    n(id) > 0
+                        && n(id) < n(&message["id"])
+                        && messages.iter().any(|m| {
+                            m["id"] == *id
+                                && s(&m["author"]["id"]) != owner
+                                && crate::questions::is_question(s(&m["content"]))
+                        })
+                })
+                .max_by_key(n)
+                .map(|id| s(&id).to_owned())
+        };
+        if let Some((question_index, question)) = question_id.and_then(|id| {
+            messages
+                .iter()
+                .enumerate()
+                .find(|(i, m)| *i < index && s(&m["id"]) == id && s(&m["author"]["id"]) != owner)
+        }) {
+            if !selected.iter().any(|(i, _)| *i == question_index) {
+                let text = bounded(
+                    &crate::core::conversation(thread, std::slice::from_ref(question), owner),
+                    (budget - used).min(budget / 3),
+                    &reference,
+                );
+                used += text.len();
+                selected.push((question_index, text));
+            }
+        }
     }
     for (index, message) in messages.iter().enumerate().skip(1).rev() {
         if selected.iter().any(|(i, _)| *i == index) {

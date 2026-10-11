@@ -1158,15 +1158,7 @@ impl Context {
         } else { None };
         if store.exists() {
             let db = self.read_json(&store)?;
-            let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &job);
-            let on = cc_job_policy::todo_wait::job_pending_on(&db, &job);
-            let reason = if !ready.is_empty() {
-                Some(json!({"code":"todo_readiness","message":ready.iter()
-                    .filter_map(|wait| wait["message"].as_str()).collect::<Vec<_>>().join("、"),"wait_ready":ready}))
-            } else if !on.is_empty() {
-                Some(json!({"code":"todo_dependency","message":on.iter()
-                    .map(|id| format!("ToDo {id} 待ち")).collect::<Vec<_>>().join("、"),"wait_on":on}))
-            } else { None };
+            let reason = self.dependency_reason(&db, &job, &jobs);
             if let Some(reason) = reason {
                 job["queue_wait_reason"] = reason;
                 job["queue_wait_checked_at"] = json!(self.rt.now());
@@ -1473,6 +1465,44 @@ impl Context {
         job["work_owner"] = cc_job_policy::work_owner::from_job(job);
     }
 
+    // Status snapshots and the final locked admission must use the same owner/dependency policy.
+    // A legacy automatic home-Git claim may be disproved without changing the durable store;
+    // a newly registered manual dependency or readiness wait must still stop admission.
+    fn dependency_reason(&self, source_db: &Value, job: &Value, jobs: &[Value]) -> Option<Value> {
+        let mut db = source_db.clone();
+        let mut evidence_jobs = jobs.to_vec();
+        let ids: Vec<_> = db["items"].as_array().into_iter().flatten()
+            .filter(|i| i["id"] == job["todo_id"]
+                || job["related_todo_ids"].as_array().is_some_and(|ids| ids.contains(&i["id"]))
+                || i["jobs"].as_array().is_some_and(|ids| ids.contains(&job["id"])))
+            .filter_map(|i| i["work_owner_job"].as_str())
+            .chain(job["work_wait_evidence"]["owner_job_id"].as_str())
+            .chain(job["queue_wait_reason"]["owner_job_id"].as_str()).collect();
+        for id in ids {
+            if valid_job_id(id) && !evidence_jobs.iter().any(|j| s(j, "id") == id)
+                && let Ok(mut owner) = self.load(id) {
+                owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
+                evidence_jobs.push(owner);
+            }
+        }
+        cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &evidence_jobs,
+            |item| item["id"] == job["todo_id"]);
+        let ready = cc_job_policy::todo_wait::job_ready_waits(&db, job);
+        if !ready.is_empty() {
+            let message = ready.iter().filter_map(|wait| wait["message"].as_str())
+                .collect::<Vec<_>>().join("、");
+            return Some(json!({"code":"todo_readiness","message":message,"wait_ready":ready}));
+        }
+        let mut on = cc_job_policy::todo_wait::job_pending_on(&db, job);
+        on.extend(cc_job_policy::work_owner::remembered_pending(source_db, job, &evidence_jobs));
+        on.sort_unstable();
+        on.dedup();
+        if on.is_empty() { None } else {
+            let message = on.iter().map(|id| format!("ToDo {id} 待ち")).collect::<Vec<_>>().join("、");
+            Some(json!({"code":"todo_dependency","message":message,"wait_on":on}))
+        }
+    }
+
     fn dependency_waits(&self, jobs: &[Value]) -> HashMap<String, Value> {
         let db = match fs::read(self.todo_store()) {
             Ok(bytes) => serde_json::from_slice::<Value>(&bytes).map_err(Error::from),
@@ -1481,80 +1511,11 @@ impl Context {
         };
         let mut waits = HashMap::new();
         for job in jobs.iter().filter(|j| s(j, "status") == "queued") {
-            match &db {
-                Ok(db) => {
-                    let source_db = db;
-                    let mut db = db.clone();
-                    let mut evidence_jobs = jobs.to_vec();
-                    let ids: Vec<_> = db["items"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .filter(|i| {
-                            i["id"] == job["todo_id"]
-                                || job["related_todo_ids"]
-                                    .as_array()
-                                    .is_some_and(|ids| ids.contains(&i["id"]))
-                                || i["jobs"]
-                                    .as_array()
-                                    .is_some_and(|ids| ids.contains(&job["id"]))
-                        })
-                        .filter_map(|i| i["work_owner_job"].as_str())
-                        .chain(job["work_wait_evidence"]["owner_job_id"].as_str())
-                        .chain(job["queue_wait_reason"]["owner_job_id"].as_str())
-                        .collect();
-                    for id in ids {
-                        if valid_job_id(id)
-                            && !evidence_jobs.iter().any(|j| s(j, "id") == id)
-                            && let Ok(mut owner) = self.load(id)
-                        {
-                            owner["work_owner_live"] = json!(self.is_ours(&owner, "codex_pid"));
-                            evidence_jobs.push(owner);
-                        }
-                    }
-                    cc_job_policy::work_owner::reevaluate_todos_if(
-                        &mut db,
-                        &evidence_jobs,
-                        |item| item["id"] == job["todo_id"],
-                    );
-                    let ready = cc_job_policy::todo_wait::job_ready_waits(&db, job);
-                    if !ready.is_empty() {
-                        let message = ready
-                            .iter()
-                            .filter_map(|wait| wait["message"].as_str())
-                            .collect::<Vec<_>>()
-                            .join("、");
-                        waits.insert(
-                            s(job, "id").into(),
-                            json!({"code":"todo_readiness",
-                            "message":message,"wait_ready":ready}),
-                        );
-                        continue;
-                    }
-                    let mut on = cc_job_policy::todo_wait::job_pending_on(&db, job);
-                    on.extend(cc_job_policy::work_owner::remembered_pending(
-                        source_db,
-                        job,
-                        &evidence_jobs,
-                    ));
-                    on.sort_unstable();
-                    on.dedup();
-                    if !on.is_empty() {
-                        let message = on
-                            .iter()
-                            .map(|id| format!("ToDo {id} 待ち"))
-                            .collect::<Vec<_>>()
-                            .join("、");
-                        waits.insert(
-                            s(job, "id").into(),
-                            json!({"code":"todo_dependency","message":message,"wait_on":on}),
-                        );
-                    }
-                }
-                Err(_) => {
-                    waits.insert(s(job,"id").into(),json!({"code":"todo_store_unavailable","message":"ToDoの完了待ちを確認できないため再確認待ち"}));
-                }
-            }
+            let reason = match &db {
+                Ok(db) => self.dependency_reason(db, job, jobs),
+                Err(_) => Some(json!({"code":"todo_store_unavailable","message":"ToDoの完了待ちを確認できないため再確認待ち"})),
+            };
+            if let Some(reason) = reason { waits.insert(s(job, "id").into(), reason); }
         }
         waits
     }

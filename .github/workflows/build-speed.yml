@@ -40,12 +40,16 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $revision = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $revision -ne $env:GITHUB_SHA) { throw 'Checked-out source differs from the workflow revision' }
+          $tree = git rev-parse 'HEAD^{tree}'
+          if ($LASTEXITCODE -ne 0 -or $tree -notmatch '^[0-9a-f]{40}$') { throw 'Source tree is unavailable' }
           $files = foreach ($name in @('todo.exe', 'codex_jobs.exe', 'scheduler.exe', 'discord_ask.exe')) {
             $path = Join-Path 'target/release' $name
             $file = Get-Item -LiteralPath $path
             @{ name = $name; bytes = $file.Length; sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
           }
-          @{ revision = (git rev-parse HEAD); tree = (git rev-parse 'HEAD^{tree}'); run_id = $env:GITHUB_RUN_ID; files = @($files) } |
+          @{ revision = $revision; tree = $tree; run_id = $env:GITHUB_RUN_ID; files = @($files) } |
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath target/release/tools-manifest.json -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:

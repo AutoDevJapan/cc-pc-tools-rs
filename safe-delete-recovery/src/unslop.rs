@@ -580,7 +580,10 @@ fn why(c: &Config, r: &Receipt, nodes: &Inventory) -> String {
     if c.id == CC_ASK {
         return format!(
             "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: ToDo2341の通常planとquarantineは1万項目上限で停止した。削除コマンドや自動承認審査の拒否ではない。固定した所有ID1件の保存済みclone、実行記録、ビルド生成物を全て同じCドライブの削除希望へ保持する。未保存変更、外部ハードリンク、追加Git領域、リンク、クライアント資源は拒否する。全メタデータと全通常ファイルのSHA256を移動前後に照合する。\n所有ID: {}\n",
-            r.identity.path, total(nodes), nodes.len(), c.id
+            r.identity.path,
+            total(nodes),
+            nodes.len(),
+            c.id
         );
     }
     if c.id == CHROME_ID {

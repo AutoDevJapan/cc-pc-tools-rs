@@ -268,6 +268,7 @@ async fn close_record(r: &Record) -> io::Result<bool> {
         // leaving it open. Reclaim only this positively recorded agent-created ID.
         let all = rpc.call("getUserTabs", r.params()).await?;
         if !has_tab(&all, r.tab)? {
+            verify_close_identity(&mut rpc, r).await?;
             return Ok(false);
         }
         let mut p = r.params();
@@ -276,26 +277,16 @@ async fn close_record(r: &Record) -> io::Result<bool> {
     }
     let mut p = r.params();
     p["tabId"] = json!(r.tab);
-    let info = rpc.call("getInfo", r.params()).await?;
-    if !r.matches_backend(&info) {
-        return Err(io::Error::other("browser identity changed before close"));
-    }
+    verify_close_identity(&mut rpc, r).await?;
     rpc.call("attach", p).await?;
-    let mut p = r.params();
-    p["target"] = json!({"tabId":r.tab});
-    p["method"] = json!("Page.close");
-    p["commandParams"] = json!({});
-    if let Err(error) = rpc.call("executeCdp", p.clone()).await {
+    if let Err(error) = send_recorded_close(&mut rpc, r).await {
         if !debugger_not_attached(&error, r.tab) {
             return Err(error);
         }
         // Chrome may detach while the bridge still caches an attached session.
         // Reset only this positively recorded target, once. Authorization errors
         // and errors for any other tab do not enter this recovery path.
-        let info = rpc.call("getInfo", r.params()).await?;
-        if !r.matches_backend(&info) {
-            return Err(io::Error::other("browser identity changed during close"));
-        }
+        verify_close_identity(&mut rpc, r).await?;
         let mut target = r.params();
         target["tabId"] = json!(r.tab);
         if let Err(error) = rpc.call("detach", target.clone()).await
@@ -303,12 +294,9 @@ async fn close_record(r: &Record) -> io::Result<bool> {
         {
             return Err(error);
         }
-        let info = rpc.call("getInfo", r.params()).await?;
-        if !r.matches_backend(&info) {
-            return Err(io::Error::other("browser identity changed during reconnect"));
-        }
+        verify_close_identity(&mut rpc, r).await?;
         rpc.call("attach", target).await?;
-        rpc.call("executeCdp", p).await?;
+        send_recorded_close(&mut rpc, r).await?;
     }
     let deadline = std::time::Instant::now() + Duration::from_millis(500);
     loop {
@@ -321,17 +309,27 @@ async fn close_record(r: &Record) -> io::Result<bool> {
         }
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
-    let info = rpc.call("getInfo", r.params()).await?;
-    if !r.matches_backend(&info) {
-        return Err(io::Error::other("browser identity changed after close"));
-    }
+    verify_close_identity(&mut rpc, r).await?;
     Ok(true)
 }
+async fn verify_close_identity(rpc: &mut Rpc, r: &Record) -> io::Result<()> {
+    let info = rpc.call("getInfo", r.params()).await?;
+    if !r.matches_backend(&info) {
+        return Err(io::Error::other("browser identity changed during close"));
+    }
+    Ok(())
+}
+async fn send_recorded_close(rpc: &mut Rpc, r: &Record) -> io::Result<Value> {
+    // Every close, including the retry, validates the identity after attach.
+    verify_close_identity(rpc, r).await?;
+    let mut p = r.params();
+    p["target"] = json!({"tabId":r.tab});
+    p["method"] = json!("Page.close");
+    p["commandParams"] = json!({});
+    rpc.call("executeCdp", p).await
+}
 fn debugger_not_attached(error: &io::Error, tab: u64) -> bool {
-    error.to_string()
-        .strip_prefix("Debugger is not attached to the tab with id: ")
-        .and_then(|id| id.trim_end_matches('.').parse::<u64>().ok())
-        == Some(tab)
+    error.to_string() == format!("Debugger is not attached to the tab with id: {tab}.")
 }
 async fn absent_record(r: &Record) -> io::Result<bool> {
     let (pipe, _) = discover_for(Some(r), true).await?;
@@ -959,7 +957,9 @@ mod tests {
                     ("getTabs",json!([])),("getUserTabs",json!([{"id":"11"},{"id":"99"}])),
                     ("claimUserTab",json!({"id":11})),
                     ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
-                    ("attach",json!({})),("executeCdp",json!({})),
+                    ("attach",json!({})),
+                    ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
+                    ("executeCdp",json!({})),
                     ("getUserTabs",json!([{"id":"99"}])),
                     ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
                 ] {
@@ -976,7 +976,8 @@ mod tests {
     fn debugger_recovery_matches_only_the_exact_recorded_tab_error() {
         let matches = |message| debugger_not_attached(&io::Error::other(message), 11);
         assert!(matches("Debugger is not attached to the tab with id: 11."));
-        assert!(matches("Debugger is not attached to the tab with id: 11"));
+        assert!(!matches("Debugger is not attached to the tab with id: 11"));
+        assert!(!matches("Debugger is not attached to the tab with id: 11.."));
         assert!(!matches("Debugger is not attached to the tab with id: 99."));
         assert!(!matches("Permission denied"));
         assert!(!matches("Debugger unattached"));
@@ -994,10 +995,10 @@ mod tests {
                 server.connect().await.unwrap();
                 for (method, result, error) in [
                     ("getInfo",info.clone(),false),("getTabs",json!([{"id":11},{"id":99}]),false),
-                    ("getInfo",info.clone(),false),("attach",json!({}),false),
+                    ("getInfo",info.clone(),false),("attach",json!({}),false),("getInfo",info.clone(),false),
                     ("executeCdp",stale.clone(),true),("getInfo",info.clone(),false),
                     ("detach",stale,true),("getInfo",info.clone(),false),
-                    ("attach",json!({}),false),("executeCdp",json!({}),false),
+                    ("attach",json!({}),false),("getInfo",info.clone(),false),("executeCdp",json!({}),false),
                     ("getUserTabs",json!([{"id":99}]),false),("getInfo",info,false),
                 ] {
                     let v=read_frame(&mut server).await.unwrap();
@@ -1024,7 +1025,7 @@ mod tests {
                 server.connect().await.unwrap();
                 for (method, result, error) in [
                     ("getInfo",info.clone(),false),("getTabs",json!([{"id":11},{"id":99}]),false),
-                    ("getInfo",info,false),("attach",json!({}),false),
+                    ("getInfo",info.clone(),false),("attach",json!({}),false),("getInfo",info,false),
                     ("executeCdp",json!({"code":1,"message":"Debugger is not attached to the tab with id: 11."}),true),
                     ("getInfo",changed,false),
                 ] {
@@ -1036,6 +1037,56 @@ mod tests {
             };
             let (closed,())=tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(close_record(&record),mock)}).await.unwrap();
             assert!(closed.is_err());
+        });
+    }
+    #[test]
+    fn cleanup_never_mutates_after_unsafe_generation_or_command_error() {
+        runtime().unwrap().block_on(async {
+            for scenario in ["absent", "absent-new-generation", "reattached-new-generation", "permission", "other-tab"] {
+                let pipe=format!(r"\\.\pipe\cc-chrome-close-guard-{}",uuid::Uuid::new_v4());
+                let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                let record=Record{job:"j".into(),pipe,instance:"extension".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:11,created:100};
+                let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}});
+                let mut changed=info.clone(); changed["browserTabMentions"]["generation"]=json!("new-generation");
+                let mut steps=vec![("getInfo",info.clone(),false)];
+                if scenario.starts_with("absent") {
+                    steps.extend([
+                        ("getTabs",json!([]),false),("getUserTabs",json!([]),false),
+                        ("getInfo",if scenario=="absent" {info.clone()} else {changed.clone()},false),
+                    ]);
+                } else {
+                    let message=match scenario {
+                        "permission"=>"Permission denied",
+                        "other-tab"=>"Debugger is not attached to the tab with id: 99.",
+                        _=>"Debugger is not attached to the tab with id: 11.",
+                    };
+                    steps.extend([
+                        ("getTabs",json!([{"id":11},{"id":99}]),false),
+                        ("getInfo",info.clone(),false),("attach",json!({}),false),
+                        ("getInfo",info.clone(),false),("executeCdp",json!({"code":1,"message":message}),true),
+                    ]);
+                    if scenario=="reattached-new-generation" {
+                        steps.extend([
+                            ("getInfo",info.clone(),false),("detach",json!({}),false),
+                            ("getInfo",info.clone(),false),("attach",json!({}),false),
+                            ("getInfo",changed,false),
+                        ]);
+                    }
+                }
+                let mock=async move {
+                    server.connect().await.unwrap();
+                    for (method,result,error) in steps {
+                        let v=read_frame(&mut server).await.unwrap(); assert_eq!(v["method"],method);
+                        if ["attach","detach"].contains(&method) {assert_eq!(v["params"]["tabId"],11);}
+                        if method=="executeCdp" {assert_eq!(v["params"]["target"]["tabId"],11);}
+                        let response=if error {json!({"id":v["id"],"error":result})} else {json!({"id":v["id"],"result":result})};
+                        write_frame(&mut server,&response).await.unwrap();
+                    }
+                    assert!(read_frame(&mut server).await.is_err(), "no additional requests after guard result");
+                };
+                let (closed,())=tokio::time::timeout(Duration::from_secs(5),async {tokio::join!(close_record(&record),mock)}).await.unwrap();
+                if scenario=="absent" {assert!(!closed.unwrap());} else {assert!(closed.is_err(), "{scenario}");}
+            }
         });
     }
     #[test]
@@ -1214,7 +1265,7 @@ mod tests {
             };
             let rollback=async {
                 server.connect().await.unwrap();
-                for (method,result) in [("getInfo",info.clone()),("getTabs",json!([{"id":42}])),("getInfo",info.clone()),("attach",json!({})),("executeCdp",json!({})),("getUserTabs",json!([{"id":99}])),("getInfo",info.clone())] {
+                for (method,result) in [("getInfo",info.clone()),("getTabs",json!([{"id":42}])),("getInfo",info.clone()),("attach",json!({})),("getInfo",info.clone()),("executeCdp",json!({})),("getUserTabs",json!([{"id":99}])),("getInfo",info.clone())] {
                     let v=read_frame(&mut server).await.unwrap();assert_eq!(v["method"],method);
                     if method=="executeCdp" {assert_eq!(v["params"]["method"],"Page.close");assert_eq!(v["params"]["target"]["tabId"],42);}
                     write_frame(&mut server,&json!({"id":v["id"],"result":result})).await.unwrap();

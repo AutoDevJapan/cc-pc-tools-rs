@@ -3652,6 +3652,117 @@ mod queue_regressions {
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
     }
     #[test]
+    fn supervisor_refresh_is_not_execution_admission_during_history_reconciliation() {
+        let t = Test::new();
+        waiting(&t, "target", "target");
+        let index_path = t.ctx.jobs.join(".queue-index.json");
+        let mut index = t.ctx.read_json(&index_path).unwrap();
+        index["scan_complete"] = json!(false);
+        t.ctx.write_json(&index_path, &index).unwrap();
+        let scan = FileLock::try_acquire(&t.ctx.jobs.join(".queue-scan.lock")).unwrap();
+        assert_eq!(t.ctx.reload_queue().unwrap(), json!(["target"]));
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        let saved = t.ctx.load("target").unwrap();
+        assert_eq!(saved["status"], "queued");
+        assert!(saved["started_at"].is_null());
+        assert!(saved["queue_restart_pending"] == true);
+        assert_eq!(t.ctx.admit("target").err().unwrap().code, 75);
+        drop(scan);
+    }
+    #[test]
+    fn targeted_supervisor_refresh_preserves_other_workers_and_rejects_unusable_targets() {
+        for case in [
+            "queued",
+            "running",
+            "starting",
+            "surviving",
+            "cancelled",
+            "wrong_id",
+            "bad_id",
+            "missing",
+            "busy",
+            "missing_index",
+            "broken_index",
+        ] {
+            let t = Test::new();
+            let mut target = waiting(&t, "target", "target");
+            target["pid"] = json!(444);
+            target["pid_created"] = json!(55);
+            target["resume_session"] = json!(SESSION_ID);
+            t.ctx.save(&target).unwrap();
+            t.rt.procs.lock().unwrap().insert(444, 55);
+            let mut other = waiting(&t, "other", "other");
+            other["pid"] = json!(445);
+            other["pid_created"] = json!(56);
+            t.ctx.save(&other).unwrap();
+            t.rt.procs.lock().unwrap().insert(445, 56);
+            let mut requested = "target";
+            match case {
+                "running" | "starting" => target["status"] = json!(case),
+                "surviving" => {
+                    target["codex_pid"] = json!(446);
+                    target["codex_pid_created"] = json!(57);
+                    t.rt.procs.lock().unwrap().insert(446, 57);
+                }
+                "cancelled" => target["cancel_requested"] = json!(true),
+                "wrong_id" => target["id"] = json!("other"),
+                "bad_id" => requested = "../other",
+                "missing" => requested = "absent",
+                "missing_index" => fs::remove_file(t.ctx.jobs.join(".queue-index.json")).unwrap(),
+                "broken_index" => {
+                    fs::write(t.ctx.jobs.join(".queue-index.json"), "{broken").unwrap()
+                }
+                _ => {}
+            }
+            let target_path = t.ctx.job_dir("target").join("job.json");
+            fs::write(&target_path, target.to_string()).unwrap();
+            let other_path = t.ctx.job_dir("other").join("job.json");
+            let untouched = fs::read(&other_path).unwrap();
+            let held = (case == "busy").then(|| t.ctx.job_lock("target", "state.lock").unwrap());
+            let (result, out, _) = t.cli(&["reload-queue", "--job-id", requested]);
+            if ["wrong_id", "bad_id", "missing"].contains(&case) {
+                assert!(result.is_err(), "{case}");
+            } else {
+                assert_eq!(result.unwrap(), 0, "{case}");
+                let report: Value = serde_json::from_str(&out).unwrap();
+                if ["missing_index", "broken_index"].contains(&case) {
+                    assert_eq!(report.as_array().unwrap().len(), 1, "{case}");
+                    assert_eq!(report[0]["job"], "target", "{case}");
+                    assert_eq!(report[0]["action"], "deferred", "{case}");
+                } else {
+                    assert_eq!(
+                        report,
+                        if case == "queued" {
+                            json!(["target"])
+                        } else {
+                            json!([])
+                        },
+                        "{case}"
+                    );
+                }
+            }
+            assert_eq!(fs::read(&other_path).unwrap(), untouched, "{case}");
+            assert_eq!(
+                t.rt.supervisors.load(Ordering::Relaxed),
+                usize::from(case == "queued"),
+                "{case}"
+            );
+            if case == "queued" {
+                assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
+                assert_eq!(t.ctx.load("target").unwrap()["resume_session"], SESSION_ID);
+                assert!(t.ctx.load("target").unwrap()["started_at"].is_null());
+            } else {
+                assert!(t.rt.kills.lock().unwrap().is_empty(), "{case}");
+                assert_eq!(
+                    fs::read(&target_path).unwrap(),
+                    target.to_string().as_bytes(),
+                    "{case}"
+                );
+            }
+            drop(held);
+        }
+    }
+    #[test]
     fn reload_queue_only_restarts_waiters_and_preserves_session() {
         let t = Test::new();
         let mut j = waiting(&t, "waiting", "wait");

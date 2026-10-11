@@ -451,16 +451,38 @@ impl Context {
     }
     /// Upgrade waiting supervisors without stopping children or changing sessions.
     pub fn reload_queue(&self) -> Result<Value> {
-        self.reload_queue_older_than(None)
+        self.reload_queue_older_than(None, None)
+    }
+    /// Refresh only this registered controller; execution admission is still checked by its successor.
+    pub fn reload_queue_job(&self, id: &str) -> Result<Value> {
+        if !valid_job_id(id) {
+            return Err(Error {
+                code: 2,
+                message: "invalid --job-id".into(),
+            });
+        }
+        self.reload_queue_older_than(None, Some(id))
     }
     pub(crate) fn reload_legacy_queue(&self) -> Result<Value> {
-        self.reload_queue_older_than(Some(5))
+        self.reload_queue_older_than(Some(5), None)
     }
-    fn reload_queue_older_than(&self, version: Option<u64>) -> Result<Value> {
+    fn reload_queue_older_than(&self, version: Option<u64>, target: Option<&str>) -> Result<Value> {
         let mut restarted = Vec::new();
+        let snapshots = match target {
+            Some(id) => {
+                let job = self.load(id)?;
+                if job["id"] != id {
+                    return Err(Error::new(
+                        "requested supervisor record has a different job id",
+                    ));
+                }
+                vec![job]
+            }
+            None => self.list_jobs(&HashSet::new()),
+        };
         // Snapshot reads need no global gate. Release the gate between jobs so
         // a long reload cannot prevent unrelated registration for a full minute.
-        for snapshot in self.list_jobs(&HashSet::new()) {
+        for snapshot in snapshots {
             if s(&snapshot, "status") != "queued"
                 || version.is_some_and(|v| {
                     snapshot["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
@@ -470,7 +492,9 @@ impl Context {
                 continue;
             }
             let jid = s(&snapshot, "id");
-            let _gate = self.queue_lock()?;
+            // Replacing a controller allocates no execution slot. A concurrent history scan
+            // merges tracked IDs at commit; the new controller must still pass admission.
+            let _gate = self.queue_lock_for("reload_queue", std::time::Duration::from_secs(60))?;
             let path = self.job_dir(jid).join("state.lock");
             let _state = match FileLock::try_acquire(&path) {
                 Ok(state) => state,
@@ -488,6 +512,9 @@ impl Context {
                 }
             };
             let mut job = self.load(jid)?;
+            if job["id"] != snapshot["id"] {
+                return Err(Error::new("supervisor identity changed during refresh"));
+            }
             if s(&job, "status") != "queued"
                 || version.is_some_and(|v| {
                     job["queue_supervisor_version"].as_u64().unwrap_or(0) >= v
@@ -498,7 +525,11 @@ impl Context {
             {
                 continue;
             }
-            match self.restart_queued_supervisor(&mut job) {
+            // An unavailable index must leave the current controller alive.
+            let refresh = self
+                .track_queued_job(jid)
+                .and_then(|()| self.restart_queued_supervisor(&mut job));
+            match refresh {
                 Ok(()) => restarted.push(json!(jid)),
                 Err(error) => {
                     self.rt.diagnostic(&format!(

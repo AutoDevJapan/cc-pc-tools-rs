@@ -5,6 +5,8 @@ pub(super) const BUILD: &str = "ef300280dcb8c0e08fcb9be1318565ef";
 pub(super) const CORE: &str = "efb997169a0948371bd7d6d9507e7068";
 pub(super) const MEASUREMENT: &str = "69e45803950f1fdfb4900ad2c10e2dfd";
 pub(super) const INTEGRATION: &str = "8ad3cd1e922596eeec19fac566fddeb7";
+pub(super) const CC_ASK: &str = "3d50e5d7c49761d809521892cfe84937";
+pub(super) const CC_ASK_CREATED: &str = "2026-10-11T14:07:52.0792269+09:00";
 const PNPM: &str = "worktree/godd-mcp-alpha/node_modules/";
 const REGISTRY_LINKS: [&str; 2] = [
     "measurement/measurement-63628-1791287330489098600/cargo-home/registry",
@@ -14,7 +16,7 @@ const RECORD_LIMIT: u64 = 8 * 1024 * 1024;
 // The preserved real MCP ticket is 9,255,686 bytes. Its filesystem limits
 // stay unchanged; only this pinned tree needs a larger metadata envelope.
 pub(super) fn record_limit(c: &Config) -> u64 {
-    if c.id == INTEGRATION {
+    if matches!(c.id, INTEGRATION | CC_ASK) {
         16 * 1024 * 1024
     } else {
         RECORD_LIMIT
@@ -34,6 +36,15 @@ pub(super) struct Profile {
 
 pub(super) fn profile(id: &str) -> Option<Profile> {
     let (id, content, volume, file_id, entries, links, bytes) = match id {
+        CC_ASK => (
+            CC_ASK,
+            "todo2341-resume-notes",
+            2229119083,
+            9851624198224777,
+            12500,
+            0,
+            16 * 1024 * 1024 * 1024,
+        ),
         CHROME_ID => (
             CHROME_ID,
             "todo2296",
@@ -97,6 +108,8 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
     c.id = p.id;
     c.project = if id == CHROME_ID {
         "cc-chrome"
+    } else if id == CC_ASK {
+        "cc-ask"
     } else if id == INTEGRATION {
         "GoDD-MCP-Alpha"
     } else {
@@ -114,6 +127,18 @@ pub(super) fn configure(c: &mut Config, id: &str) -> Result<()> {
     }
     c.pinned_identity = Some((p.volume, p.file_id));
     c.repos.clear();
+    if id == CC_ASK {
+        c.repos.push(Repo {
+            name: "repo",
+            origin: "https://github.com/AutoDevJapan/cc-pc-tools-rs.git",
+            head: "d2e2724d9760675a4ec590950804b7ba021d3432".into(),
+            saved_ref: Some("refs/remotes/origin/fix/todo2341-recovery-probe-queue"),
+            saved_merge: None,
+            squash_tree: None,
+            allowed_untracked: &[],
+            kind: RepoKind::Clone,
+        });
+    }
     if id == CHROME_ID {
         c.repos.push(Repo {
             name: "work",
@@ -306,6 +331,7 @@ fn inventory(c: &Config, r: &Receipt, root: &Path) -> Result<Inventory> {
             && !(c.id == INTEGRATION
                 && matches!(key.as_str(), "worktree/.git" | "worktree/officialsite/.git"))
             && !(c.id == CHROME_ID && key == "work/.git")
+            && !(c.id == CC_ASK && key == "repo/.git")
         {
             return Err("UNDECLARED_GIT_METADATA");
         }
@@ -537,7 +563,7 @@ fn backlink_security(
     Ok(Some(old_hash))
 }
 
-fn ticket_path(c: &Config) -> PathBuf {
+pub(super) fn ticket_path(c: &Config) -> PathBuf {
     c.ticket_path().with_extension("unslop.json")
 }
 fn proof_path(c: &Config) -> PathBuf {
@@ -551,6 +577,12 @@ fn total(nodes: &Inventory) -> u64 {
         .sum()
 }
 fn why(c: &Config, r: &Receipt, nodes: &Inventory) -> String {
+    if c.id == CC_ASK {
+        return format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: ToDo2341の通常planとquarantineは1万項目上限で停止した。削除コマンドや自動承認審査の拒否ではない。固定した所有ID1件の保存済みclone、実行記録、ビルド生成物を全て同じCドライブの削除希望へ保持する。未保存変更、外部ハードリンク、追加Git領域、リンク、クライアント資源は拒否する。全メタデータと全通常ファイルのSHA256を移動前後に照合する。\n所有ID: {}\n",
+            r.identity.path, total(nodes), nodes.len(), c.id
+        );
+    }
     if c.id == CHROME_ID {
         return format!(
             "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {} byte\n項目数: {}（根を含む）\n理由: 通常のplanとquarantineはwork/.gitを名称で保護しPROTECTED_PATHで停止した。削除コマンドや承認審査の拒否ではない。ToDo2296と2303で許可された所有ID1件を、Git成果・検証ログ・旧実行ファイル・隠し属性・ACL・内部ハードリンクを含め全て保持して同じCドライブの削除希望へ退避する。公開PR98のsquashマージと元HEADのtree一致を確認した。このworktreeのbacklink1件だけを修復する。\n所有ID: {}\n",
@@ -588,7 +620,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
     if path.components().next() != dest.components().next() {
         return Err("QUARANTINE_CROSS_DRIVE");
     }
-    if matches!(c.id, INTEGRATION | CHROME_ID)
+    if matches!(c.id, INTEGRATION | CHROME_ID | CC_ASK)
         && dest
             .join("files")
             .join(c.repos[0].name)
@@ -600,7 +632,7 @@ pub(super) fn plan(c: &Config, id: &str) -> Result<serde_json::Value> {
         return Err("GIT_DESTINATION_ROOT_TOO_LONG");
     }
     let nodes = snapshot(c, &r, path)?;
-    let content_sha256 = if c.id == CHROME_ID {
+    let content_sha256 = if matches!(c.id, CHROME_ID | CC_ASK) {
         let plain = nodes
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -692,7 +724,7 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     if !same_nodes(c, &t.nodes, &now) {
         return Err("CONTENT_CHANGED_AFTER_PLAN");
     }
-    if c.id == CHROME_ID {
+    if matches!(c.id, CHROME_ID | CC_ASK) {
         let plain = now
             .iter()
             .map(|(key, entry)| (key.clone(), entry.node.clone()))
@@ -715,7 +747,9 @@ pub(super) fn finish(c: &Config, id: &str) -> Result<serde_json::Value> {
     }
     let reason = dest.join("理由.txt");
     let expected = why(c, &r, &t.nodes);
-    let completed = if c.id == CHROME_ID {
+    let completed = if c.id == CC_ASK {
+        "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認し、元の所有記録を更新した。削除は行っていない。\n"
+    } else if c.id == CHROME_ID {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・内部別名と全通常ファイルのSHA256の一致を確認した。元の所有記録とこのworktreeのbacklinkを更新した。\n"
     } else {
         "退避状態: 完了。元の場所の不在、全項目の識別番号・名前・容量・時刻・属性・ACL・リンク情報の一致を確認した。ファイル内容は読まず、同じ実体の保持を確認した。\n"

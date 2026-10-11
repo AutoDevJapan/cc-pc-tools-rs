@@ -88,6 +88,30 @@ pub fn extract(body: &str) -> Result<(String, Option<Value>)> {
     Ok((clean.trim().into(), Some(value)))
 }
 
+/// Bind once at every input boundary, before overwriting original task context.
+pub fn bind(ctx: &Context, context: &mut Value, incoming: Option<&Value>) -> Result<Value> {
+    let current = if context["decision_identity"].is_object() {
+        Some(normalize(ctx, &context["decision_identity"])?)
+    } else {
+        None
+    };
+    let incoming = incoming.map(|v| normalize(ctx, v)).transpose()?;
+    if let (Some(left), Some(right)) = (&current, &incoming) {
+        if left != right {
+            return Err("conflicting decision identities".into());
+        }
+    }
+    let decision = incoming.or(current).unwrap_or(Value::Null);
+    if decision.is_object() {
+        if n(&context["todo_id"]) > 0 && n(&context["todo_id"]) != n(&decision["todo_id"]) {
+            return Err("decision identity and original context ToDo differ".into());
+        }
+        context["todo_id"] = decision["todo_id"].clone();
+        context["decision_identity"] = decision.clone();
+    }
+    Ok(decision)
+}
+
 /// Resolve the original ToDo even when an older launcher did not stamp job.todo_id.
 pub fn todo(ctx: &Context, context: &Value) -> Result<u64> {
     let direct = n(&context["todo_id"]);

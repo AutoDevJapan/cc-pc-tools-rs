@@ -340,30 +340,12 @@ pub fn ask(
     let (clean_body, embedded) = crate::decision_identity::extract(body)?;
     let body = clean_body.as_str();
     let mut context = context.clone();
-    if let Some(value) = embedded {
-        let normalized = crate::decision_identity::normalize(ctx, &value)?;
-        if context["decision_identity"].is_object() && context["decision_identity"] != normalized {
-            return Err("conflicting decision identities".into());
-        }
-        context["todo_id"] = normalized["todo_id"].clone();
-        context["decision_identity"] = normalized;
-    }
+    let decision = crate::decision_identity::bind(ctx, &mut context, embedded.as_ref())?;
     let prepared = attachments::prepare(ctx, paths)?;
     let hashes = attachments::fingerprints(prepared.as_ref())?;
     let work = route(ctx, origin)?
         .map(|r| s(&r["work_thread_id"]).to_owned())
         .unwrap_or_else(|| origin.into());
-    let decision = if context["decision_identity"].is_object() {
-        crate::decision_identity::normalize(ctx, &context["decision_identity"])?
-    } else {
-        Value::Null
-    };
-    if decision.is_object() {
-        if n(&context["todo_id"]) > 0 && context["todo_id"] != decision["todo_id"] {
-            return Err("decision identity and original context ToDo differ".into());
-        }
-        context["todo_id"] = decision["todo_id"].clone();
-    }
     let todo = crate::decision_identity::todo(ctx, &context)?;
     if todo > 0 {
         context["todo_id"] = json!(todo);
@@ -726,9 +708,6 @@ pub fn ask_result(ctx: &mut Context, origin: &str, text: &str, job: &str) -> Res
     // A new result must explicitly state its scope; inheriting a prior decision
     // would apply an old a/b to the new proposal.
     context.as_object_mut().unwrap().remove("decision_identity");
-    if let Some(value) = decision {
-        context["decision_identity"] = crate::decision_identity::normalize(ctx, &value)?;
-        context["todo_id"] = context["decision_identity"]["todo_id"].clone();
-    }
+    crate::decision_identity::bind(ctx, &mut context, decision.as_ref())?;
     ask(ctx, &context, origin, &body, &paths)
 }

@@ -168,10 +168,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     }
     let mut context = json!({"title":title,"ask_title":names.redact(&args.title),"project":project,
         "agent":args.agent,"cwd":cwd,"asked_at":timestamp(),"source":"posted"});
-    if let Some(value) = decision {
-        context["decision_identity"] = crate::decision_identity::normalize(ctx, &value)?;
-        context["todo_id"] = context["decision_identity"]["todo_id"].clone();
-    }
+    crate::decision_identity::bind(ctx, &mut context, decision.as_ref())?;
     if let Some(reason) = args.owner_only {
         context["owner_only"] = json!(reason.as_str());
     }
@@ -190,7 +187,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         context["job_info"] = info.clone();
         if !context["decision_identity"].is_object() {
             context["todo_id"] = info["todo_id"].clone();
-        } else if n(&info["todo_id"]) > 0 && info["todo_id"] != context["todo_id"] {
+        } else if n(&info["todo_id"]) > 0 && n(&info["todo_id"]) != n(&context["todo_id"]) {
             return Err("判断の元ToDoと担当のToDoが違います".into());
         }
         context["related_todo_ids"] = info["related_todo_ids"].clone();
@@ -727,10 +724,7 @@ fn post_text(
     if crate::questions::is_question(body) {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
-        if let Some(value) = decision {
-            metadata["decision_identity"] = crate::decision_identity::normalize(ctx, &value)?;
-            metadata["todo_id"] = metadata["decision_identity"]["todo_id"].clone();
-        }
+        crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;
         let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
         if ![10, 11, 12].contains(&n(&channel["type"]))
             || channel["guild_id"] != ctx.cfg["guild_id"]

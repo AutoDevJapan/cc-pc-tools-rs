@@ -472,3 +472,20 @@ fn shared_boundary_binds_todo_from_preparsed_identity_and_rejects_conflicting_co
     cc_ask::question_progress::ask(&mut h.ctx, &context, "", body, &[]).unwrap();
     assert_eq!(h.state()["questions"][0]["todo_id"], 2380);
 }
+
+#[test]
+fn embedded_identity_cannot_overwrite_an_explicit_original_todo() {
+    let mut h = Harness::new();
+    let text = format!(
+        "公開しますか？\na 公開\nb 保持\n<!-- cc-decision {} -->",
+        identity("D:/models/one")
+    );
+    let context = json!({"title":"original","cwd":"D:/cleanup","todo_id":999});
+    assert!(cc_ask::question_progress::ask(&mut h.ctx, &context, "", &text, &[]).is_err());
+    assert_eq!(creates(&h), 0);
+    let mut context = context;
+    assert!(
+        decision_identity::bind(&h.ctx, &mut context, Some(&identity("D:/models/one"))).is_err()
+    );
+    assert_eq!(context["todo_id"], 999);
+}

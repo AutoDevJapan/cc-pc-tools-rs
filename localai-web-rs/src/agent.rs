@@ -1298,6 +1298,16 @@ impl Console {
                 s.queue.push(waiting);
                 continue;
             }
+            // Known waits cannot launch. Keep their recovery evidence intact;
+            // investigating them again consumes the next ready item's budget.
+            if item.is_some_and(|i| strv(i, "status") == "wait"
+                || cc_ask::job_policy::todo_wait::waiting(db, i)
+                || todo_has_active_worker(i, &candidate_jobs, &key_hash(&t.key))) {
+                self.note_wait(s, &t.key, "dependency_or_worker", Value::Null);
+                let waiting = s.queue.remove(0);
+                s.queue.push(waiting);
+                continue;
+            }
             self.patrol_stage("recovery_evidence");
             if !self.recovery_ready(s, &t, db, &candidate_jobs, &mut evidence_cache)? {
                 let waiting = s.queue.remove(0);
@@ -1393,7 +1403,6 @@ impl Console {
                 self.save(s)?;
                 continue;
             }
-            let db = self.todos()?;
             if t.todo_id.is_none() {
                 if let Some(source) = t
                     .key

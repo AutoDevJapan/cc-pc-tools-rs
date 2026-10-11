@@ -514,6 +514,7 @@ fn test_ask_records_cwd_and_agent() {
         agent: "Codex".into(),
         title: "質問".into(),
         body_file: body,
+        decision_file: None,
         cwd: None,
         source: None,
         scheduler_item: None,
@@ -1146,12 +1147,17 @@ fn test_needs_decision_stays_open_and_next_answer_can_resume() {
     assert_eq!(next["work_thread_id"], "200");
     {
         let f = a.fake.borrow();
-        let creations: Vec<_> = f.http_calls.iter().filter(|c|
-            c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).collect();
+        let creations: Vec<_> = f
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .collect();
         assert_eq!(creations.len(), 2);
         let starter = &creations[0]["body"]["message"];
-        assert_eq!(starter["allowed_mentions"],
-            json!({"parse":[],"users":["OWN"],"replied_user":false}));
+        assert_eq!(
+            starter["allowed_mentions"],
+            json!({"parse":[],"users":["OWN"],"replied_user":false})
+        );
         assert_eq!(starter["flags"], 4);
         assert_eq!(s(&starter["content"]).matches("<@OWN>").count(), 1);
         assert_eq!(creations[1]["body"]["message"]["flags"], SILENT | 4);
@@ -1168,7 +1174,6 @@ fn test_needs_decision_stays_open_and_next_answer_can_resume() {
     assert_eq!(a.last()["cwd"], previous["cwd"]);
     assert!(s(&a.last()["prompt"]).contains("推奨案で進めて"));
     assert_eq!(a.state()["answer_receipts"][&reply]["handled_by"], "job2");
-
 }
 #[test]
 fn test_failed_job_resumes_automatically_without_owner_mention() {
@@ -1511,11 +1516,19 @@ struct FailQuestionStateSave {
     failed: bool,
 }
 impl Effects for FailQuestionStateSave {
-    fn now(&self) -> f64 { self.fake.borrow().now }
+    fn now(&self) -> f64 {
+        self.fake.borrow().now
+    }
     fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
         self.fake.borrow_mut().run(argv, timeout)
     }
-    fn http(&mut self, method: &str, url: &str, body: Option<&Value>, discord: bool) -> Result<Value> {
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+        discord: bool,
+    ) -> Result<Value> {
         let response = self.fake.borrow_mut().http(method, url, body, discord)?;
         if !self.failed && method == "POST" && url.ends_with("/channels/T/threads") {
             self.failed = true;
@@ -1530,27 +1543,49 @@ fn test_question_registration_retries_after_state_save_failure_without_reposting
     let mut a = AnswerResume::new();
     a.answered();
     a.resume();
-    a.finish("job1", "succeeded",
-        Some("状態: 要判断\n次の方針を教えてください。"), None);
+    a.finish(
+        "job1",
+        "succeeded",
+        Some("状態: 要判断\n次の方針を教えてください。"),
+        None,
+    );
     let state_path = a.ctx.here.join("state.json");
     let saved = std::fs::read(&state_path).unwrap();
     a.ctx.effects = Box::new(FailQuestionStateSave {
-        fake: a.fake.clone(), state_path: state_path.clone(), failed: false,
+        fake: a.fake.clone(),
+        state_path: state_path.clone(),
+        failed: false,
     });
     assert!(cmd_resume(&mut a.ctx, &mut false).is_err());
     assert_eq!(std::fs::read(&state_path).unwrap(), b"{");
-    let records: Vec<_> = std::fs::read_dir(a.ctx.here.join("question-progress")).unwrap()
-        .map(|e| read_json(&e.unwrap().path()).unwrap()).collect();
+    let records: Vec<_> = std::fs::read_dir(a.ctx.here.join("question-progress"))
+        .unwrap()
+        .map(|e| read_json(&e.unwrap().path()).unwrap())
+        .collect();
     assert_eq!(records.len(), 1);
     let qid = s(&records[0]["question"]["starter"]).to_owned();
     assert!(!qid.is_empty());
-    assert_eq!(a.fake.borrow().http_calls.iter().filter(|c|
-        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 1);
+    assert_eq!(
+        a.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        1
+    );
     std::fs::write(&state_path, saved).unwrap();
     a.resume();
     a.resume();
-    assert_eq!(a.fake.borrow().http_calls.iter().filter(|c|
-        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 2);
+    assert_eq!(
+        a.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        2
+    );
     let state = a.state();
     assert_eq!(state["questions"].as_array().unwrap().len(), 2);
     assert_eq!(state["questions"][0]["open"], false);

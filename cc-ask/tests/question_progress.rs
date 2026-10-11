@@ -6,14 +6,16 @@ use serde_json::{json, Value};
 fn args(h: &Harness, body: &str) -> AskArgs {
     let path = h.root.path().join("question.txt");
     std::fs::write(&path, body).unwrap();
-    AskArgs {
+    let mut args = AskArgs {
         title: "【ProductA】料金を決めてください".into(),
         body_file: path,
         cwd: Some("D:/ProductA".into()),
         thread: Some("100".into()),
         agent: "Codex".into(),
         ..Default::default()
-    }
+    };
+    common::decision(h, &mut args, body);
+    args
 }
 fn thread_creates(h: &Harness) -> Vec<Value> {
     h.fake

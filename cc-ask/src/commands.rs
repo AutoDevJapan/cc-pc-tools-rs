@@ -11,7 +11,7 @@ use std::{
 
 #[derive(Clone, Debug, Default, clap::Args)]
 pub struct AskArgs {
-    /// Link this original work thread; the question always gets a new post.
+    /// Link original work; only a genuinely new decision scope gets a new post.
     #[arg(long)]
     pub thread: Option<String>,
     #[arg(long = "attach")]
@@ -20,6 +20,9 @@ pub struct AskArgs {
     pub title: String,
     #[arg(long, required = true)]
     pub body_file: PathBuf,
+    /// Stable original ToDo, concrete resources, decision action and permission scope (JSON).
+    #[arg(long)]
+    pub decision_file: Option<PathBuf>,
     #[arg(long, default_value = "")]
     pub agent: String,
     #[arg(long)]
@@ -98,7 +101,14 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
-    let raw_body = read_text(&args.body_file)?;
+    let (raw_body, embedded) = crate::decision_identity::extract(&read_text(&args.body_file)?)?;
+    if args.decision_file.is_some() && embedded.is_some() {
+        return Err("判断の記録は1つだけ指定してください".into());
+    }
+    let decision = match &args.decision_file {
+        Some(path) => Some(read_json(path)?),
+        None => embedded,
+    };
     crate::ask_gate::enforce(&args.title, &raw_body, args.owner_only)?;
     let cwd = match args.cwd.as_deref().filter(|v| !v.is_empty()) {
         Some(v) => v.to_owned(),
@@ -137,7 +147,8 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let content = question_body(&project, &owner, &body);
     if args.dry_run {
         let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,
-            "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str())});
+            "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str()),
+            "decision_identity":decision.as_ref().map(|v| crate::decision_identity::normalize(ctx,v)).transpose()?});
         print_json(&value, Some(2))?;
         return Ok(value);
     }
@@ -157,6 +168,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     }
     let mut context = json!({"title":title,"ask_title":names.redact(&args.title),"project":project,
         "agent":args.agent,"cwd":cwd,"asked_at":timestamp(),"source":"posted"});
+    crate::decision_identity::bind(ctx, &mut context, decision.as_ref())?;
     if let Some(reason) = args.owner_only {
         context["owner_only"] = json!(reason.as_str());
     }
@@ -173,7 +185,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         context["posting_job"] = json!(job);
         context["job"] = json!(job);
         context["job_info"] = info.clone();
-        context["todo_id"] = info["todo_id"].clone();
+        if !context["decision_identity"].is_object() {
+            context["todo_id"] = info["todo_id"].clone();
+        } else if n(&info["todo_id"]) > 0 && n(&info["todo_id"]) != n(&context["todo_id"]) {
+            return Err("判断の元ToDoと担当のToDoが違います".into());
+        }
         context["related_todo_ids"] = info["related_todo_ids"].clone();
         if origin.is_empty() {
             origin = s(&info["discord_thread_id"]).into();
@@ -187,7 +203,8 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     // Recover only legacy interrupted creations; do not append a new question to
     // an old title match. New posting is keyed by the complete question intent.
     crate::ask_dedup::recover(ctx, &cwd, &names.redact(&args.title))?;
-    if args.thread.is_none() && args.attach.is_empty() {
+    if args.thread.is_none() && args.attach.is_empty() && !context["decision_identity"].is_object()
+    {
         if let Some(q) =
             crate::ask_dedup::find_open(&ctx.load()?, &cwd, &title, &names.redact(&args.title))
         {
@@ -696,19 +713,25 @@ fn post_text(
     notify: bool,
     context: Option<&Value>,
 ) -> Result<Value> {
+    let (clean_body, decision) = crate::decision_identity::extract(body)?;
+    let body = clean_body.as_str();
+    if decision.is_some() && !crate::questions::is_question(body) {
+        return Err("判断の記録には具体的な質問本文が必要です".into());
+    }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
     if crate::questions::is_question(body) {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
+        crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;
         let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
         if ![10, 11, 12].contains(&n(&channel["type"]))
             || channel["guild_id"] != ctx.cfg["guild_id"]
         {
             return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
         }
-        {
+        if !metadata["decision_identity"].is_object() {
             // Reconcile only old interrupted message ledgers before deciding
             // whether this is a new question. Recovery never appends a question.
             let prepared = crate::attachments::prepare(ctx, attach)?;
@@ -753,7 +776,9 @@ fn post_text(
                 metadata["posting_job"] = json!(job);
                 metadata["job"] = json!(job);
                 metadata["job_info"] = job_info(ctx, &job);
-                metadata["todo_id"] = metadata["job_info"]["todo_id"].clone();
+                if !metadata["decision_identity"].is_object() {
+                    metadata["todo_id"] = metadata["job_info"]["todo_id"].clone();
+                }
             }
         }
         let result = crate::question_progress::ask(ctx, &metadata, thread, body, attach)?;

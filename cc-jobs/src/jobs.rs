@@ -21,7 +21,7 @@ pub struct Context {
     pub rt: SharedRuntime,
 }
 impl Context {
-    /// Enforce the current site restriction on the selected launch input,
+    /// Load saved owner instructions and enforce the current site restriction,
     /// including old saved jobs and both kinds of continuation. Keep the
     /// original input immutable; appending this rule does not elevate scope.
     pub fn prompt_for_attempt(&self, job: &Value) -> Result<PathBuf> {
@@ -36,6 +36,28 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
+        // Read at every attempt, not registration: queued jobs and resumed
+        // sessions must receive changes saved since their original launch.
+        let policy_path = self
+            .rt
+            .env()
+            .get("CC_OWNER_INSTRUCTIONS_PATH")
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                PathBuf::from("D:/CC/AGENTS.md")
+            });
+        let policy = fs::read_to_string(&policy_path)?;
+        if policy.trim().is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "saved owner instructions are empty",
+            )
+            .into());
+        }
+        text.push_str("\n\n## 最新の保存済みオーナー指示\n");
+        text.push_str("以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\n");
+        text.push_str(&policy);
         // Source text can be quoted evidence. Never use its contents as proof
         // that a current execution rule has already been applied.
         text.push_str("\n\n## 実行時のサイト制限\n");

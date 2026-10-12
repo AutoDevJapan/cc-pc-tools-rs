@@ -5860,6 +5860,12 @@ impl Test {
         );
         fs::write(&ctx.gto, b"").unwrap();
         fs::write(&ctx.executable, b"fake supervisor executable").unwrap();
+        let policy = ctx.root.join("owner-instructions.md");
+        fs::write(&policy, "fixture owner instructions v1").unwrap();
+        rt.env.lock().unwrap().insert(
+            "CC_OWNER_INSTRUCTIONS_PATH".into(),
+            policy.to_string_lossy().into_owned(),
+        );
         Self { _tmp: tmp, ctx, rt }
     }
     fn put(&self, j: Value) -> Value {
@@ -6144,6 +6150,61 @@ mod registrar_launch_policy {
         assert!(fed.starts_with(&original));
         assert!(fed.contains("\n\n## 実行時のサイト制限\n"));
         assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+    }
+}
+mod saved_owner_launch_policy {
+    use super::*;
+    #[test]
+    fn every_attempt_loads_latest_policy_and_keeps_source_and_read_only_scope() {
+        for (phase, yielded, source) in [
+            ("", false, "prompt.md"),
+            ("continue", false, "context-continue.md"),
+            ("continue", true, "yield-resume.md"),
+            ("summarize", true, "context-summary-prompt.md"),
+        ] {
+            let t = Test::new();
+            let j = t.put(job(json!({"id":"saved-owner", "sandbox":"read-only", "context_phase":phase,"yield_resume":yielded})));
+            let original = t.ctx.job_dir("saved-owner").join(source);
+            fs::write(&original, "original limited task").unwrap();
+            let policy = t.ctx.root.join("owner-instructions.md");
+            let first = t.ctx.prompt_for_attempt(&j).unwrap();
+            assert!(
+                fs::read_to_string(&first)
+                    .unwrap()
+                    .contains("fixture owner instructions v1")
+            );
+            fs::write(&policy, "updated owner instructions v2").unwrap();
+            let next = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+            assert!(next.contains("updated owner instructions v2"));
+            assert!(!next.contains("fixture owner instructions v1"));
+            assert!(next.starts_with("original limited task"));
+            assert!(next.trim_end().ends_with(cc_job_policy::REGISTRAR_GUIDANCE));
+            assert_eq!(
+                fs::read_to_string(original).unwrap(),
+                "original limited task"
+            );
+            assert_eq!(j["sandbox"], "read-only");
+        }
+    }
+    #[test]
+    fn missing_invalid_or_empty_policy_refuses_attempt_without_overwriting_previous_input() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"saved-owner"})));
+        fs::write(
+            t.ctx.job_dir("saved-owner").join("prompt.md"),
+            "original task",
+        )
+        .unwrap();
+        let selected = t.ctx.prompt_for_attempt(&j).unwrap();
+        let before = fs::read(&selected).unwrap();
+        let policy = t.ctx.root.join("owner-instructions.md");
+        fs::remove_file(&policy).unwrap();
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        for invalid in [b" \n".as_slice(), &[0xff]] {
+            fs::write(&policy, invalid).unwrap();
+            assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        }
+        assert_eq!(fs::read(selected).unwrap(), before);
     }
 }
 mod token_accounting {
@@ -9629,6 +9690,11 @@ mod end_to_end {
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
             )
             .unwrap();
+            fs::write(
+                tmp.0.join("owner-instructions.md"),
+                "fixture owner instructions v1",
+            )
+            .unwrap();
             Self {
                 tmp,
                 exe,
@@ -9651,6 +9717,10 @@ mod end_to_end {
                 )
                 .env("CC_JOBS_FIXTURE_MODE", mode)
                 .env("CC_JOBS_FIXTURE_DIR", &self.rec)
+                .env(
+                    "CC_OWNER_INSTRUCTIONS_PATH",
+                    self.tmp.0.join("owner-instructions.md"),
+                )
                 .env("CODEX_HOME", self.tmp.0.join("codexhome"))
                 .env("GODD_AO_BIN", self.tmp.0.join("missing-ao.exe"))
                 .env("CODEX_JOBS_GTO_BIN", self.tmp.0.join("missing-gto.exe"))
@@ -10190,6 +10260,7 @@ mod end_to_end {
         assert_eq!(j["tokens"]["total"], 105710);
         let mut expected_prompt = prompt.to_vec();
         expected_prompt.extend_from_slice(cc_job_policy::READ_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice("\n\n## 最新の保存済みオーナー指示\n以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\nfixture owner instructions v1".as_bytes());
         expected_prompt.extend_from_slice("\n\n## 実行時のサイト制限\n".as_bytes());
         expected_prompt.extend_from_slice(cc_job_policy::REGISTRAR_GUIDANCE.as_bytes());
         expected_prompt.extend_from_slice(b"\n");

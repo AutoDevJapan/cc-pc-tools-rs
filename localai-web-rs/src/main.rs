@@ -11,6 +11,7 @@ use serde_json::{json, Value};
 use std::{process::Command, time::Duration};
 use tower_http::services::ServeDir;
 mod agent;
+mod health_snapshot;
 mod music_bridge;
 use localai_web_rs::operations;
 mod resident;
@@ -47,6 +48,7 @@ struct AppState {
     agent: std::sync::Arc<agent::Console>,
     workload: std::sync::Arc<workload::Workload>,
     operations: std::sync::Arc<operations::Operations>,
+    health: std::sync::Arc<health_snapshot::HealthSnapshot>,
 }
 
 impl AppState {
@@ -64,6 +66,7 @@ impl AppState {
             agent: std::sync::Arc::new(agent::Console::production()),
             workload: std::sync::Arc::new(workload::Workload::production()),
             operations: std::sync::Arc::new(operations::Operations::production()),
+            health: std::sync::Arc::new(health_snapshot::HealthSnapshot::production()),
         }
     }
 }
@@ -257,32 +260,11 @@ async fn local_request_only(
 }
 
 async fn health_check(State(state): State<AppState>) -> Response {
-    let response = forward(&state, Method::GET, "/api/health", None, None).await;
-    if !response.status().is_success() {
-        return response;
-    }
-    let Ok(bytes) = to_bytes(response.into_body(), JSON_LIMIT).await else {
-        return json_error(
-            StatusCode::BAD_GATEWAY,
-            "Local AI backend returned invalid health data.",
-        );
-    };
-    let Ok(mut health) = serde_json::from_slice::<Value>(&bytes) else {
-        return json_error(
-            StatusCode::BAD_GATEWAY,
-            "Local AI backend returned invalid health JSON.",
-        );
-    };
-    if !health.is_object() {
-        return json_error(
-            StatusCode::BAD_GATEWAY,
-            "Local AI backend health must be an object.",
-        );
-    }
-    health["port"] = json!(state.port);
-    health["status"] = json!("ok");
-    health["backend"] = json!("Rust/Axum");
-    Json(health).into_response()
+    let health = state
+        .health
+        .snapshot(&state.client, &state.backend, state.port)
+        .await;
+    ([(header::CACHE_CONTROL, "no-store")], Json(health)).into_response()
 }
 
 async fn proxy_request(State(state): State<AppState>, request: Request) -> Response {
@@ -483,7 +465,9 @@ mod tests {
 
     async fn test_backend(router: Router) -> (AppState, tokio::task::JoinHandle<()>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let state = AppState::new(10012, listener.local_addr().unwrap().port());
+        let mut state = AppState::new(10012, listener.local_addr().unwrap().port());
+        state.health =
+            std::sync::Arc::new(health_snapshot::HealthSnapshot::for_test(&state.backend));
         let task = tokio::spawn(async move {
             axum::serve(listener, router).await.unwrap();
         });
@@ -670,6 +654,46 @@ mod tests {
         assert!(object.get("OpenCodex").is_none());
         assert!(object.get("Auto").is_none());
         assert!(object["opencodex"].is_object());
+        task.abort();
+    }
+
+    #[tokio::test]
+    async fn health_failure_returns_200_with_real_independent_services_and_null_unknowns() {
+        let backend = Router::new()
+            .route("/api/health", get(|| async {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error":"Path argument is null"})))
+            }))
+            .route("/_godd_ao/healthz", get(|| async {
+                Json(json!({"service":"godd-ao-semantic-proxy","status":"ok","version":"fixture"}))
+            }))
+            .route("/healthz", get(|| async {
+                Json(json!({"service":"opencodex","status":"ok"}))
+            }))
+            .route("/api/tags", get(|| async {
+                Json(json!({"models":[]}))
+            }));
+        let (state, task) = test_backend(backend).await;
+        let response = app(state)
+            .oneshot(request(Method::GET, "/api/health", Body::empty()))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        let value: Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), JSON_LIMIT).await.unwrap())
+                .unwrap();
+        assert_eq!(value["console"]["online"], true);
+        assert_eq!(value["port"], 10012);
+        assert_eq!(value["backend"], "Rust/Axum");
+        assert_eq!(value["partial"], true);
+        assert_eq!(value["legacyBackend"]["httpStatus"], 500);
+        assert_eq!(value["godd"]["online"], true);
+        assert_eq!(value["opencodex"]["online"], true);
+        assert_eq!(value["ollama"]["online"], true);
+        assert_eq!(value["ollama"]["modelCount"], 0);
+        assert!(value["deepseek"]["online"].is_null());
+        assert!(value["docker"]["online"].is_null());
+        assert!(value["error"].is_null());
         task.abort();
     }
 

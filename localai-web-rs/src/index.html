@@ -56,6 +56,7 @@
         <div id="ops-commander" class="ops-command"></div>
         <div id="ops-departments" class="ops-departments"><p class="ops-empty">部署の状況を読み込み中…</p></div>
         <p id="ops-results" class="ops-note" role="status"></p>
+        <details id="ops-unassigned" class="ops-sources" hidden><summary>指定外の登録・所属の判断待ち <span id="ops-unassigned-count"></span></summary><div id="ops-unassigned-list"></div></details>
         <details class="ops-sources"><summary>質問と回答を確認する</summary><section id="ops-questions" aria-label="Discordの質問と回答"><p>質問の送信を確認中です。</p></section></details>
         <details class="ops-sources"><summary>データの接続状況 <span id="ops-source-summary">未取得</span></summary><div id="ops-sources"></div></details>
         <p class="ops-note">進み具合は記録された実測値のみ表示します。未記録は「未記録」と表示します。</p>
@@ -199,15 +200,17 @@
     function opsRestoreBoardFocus(key){const node=$$('[data-op-focus]').find(el=>el.dataset.opFocus===key);if(node)node.focus()}
     function renderOperations(){
       const focused=document.activeElement&&document.activeElement.dataset.opFocus;
-      const data=opsState.snapshot, departments=opsList(data&&data.departments), all=departments.flatMap(opsWorkers);
+      const data=opsState.snapshot, departments=opsList(data&&data.departments), all=departments.flatMap(opsWorkers).concat(opsList(data&&data.unassignedProducts).flatMap(p=>opsList(p.workers)));
       const metric=data&&data.metrics||{};
       const metricCard=(label,value,kind='')=>`<div class="ops-metric ${kind}"><span>${label}</span><strong>${value}</strong></div>`;
       $('#ops-metrics').innerHTML=[
-        metricCard('送信を確認した未回答質問',opsValue(metric.confirmedUnansweredQuestions),'waiting'),
-        metricCard('質問を待つ作業',opsValue(metric.ownerDecisionTasks),'waiting'),
-        metricCard('未送信の質問',opsValue(metric.unsentQuestions),'attention'),
+        ...(data&&data.protectionMode==='masked_metadata'?[]:[
+          metricCard('送信を確認した未回答質問',opsValue(metric.confirmedUnansweredQuestions),'waiting'),
+          metricCard('質問を待つ作業',opsValue(metric.ownerDecisionTasks),'waiting'),
+          metricCard('未送信の質問',opsValue(metric.unsentQuestions),'attention')]),
         metricCard('稼働 / 登録ワーカー',data?`${all.filter(w=>w.status==='working').length} <small>/ ${all.length}</small>`:'—'),
-        metricCard('待機ワーカー',data?all.filter(w=>w.status==='waiting').length:'—','waiting'),
+        metricCard('待機ワーカー',data?all.filter(w=>w.status==='waiting'&&w.recordedStatus!=='recovery_unverified').length:'—','waiting'),
+        ...(data&&data.protectionMode==='masked_metadata'?[metricCard('元記録の復旧確認待ち',opsValue(metric.recoveryUnverified),'waiting')]:[]),
         metricCard('要対応ワーカー',data?all.filter(w=>w.status==='attention').length:'—','attention'),
         metricCard('CPU',opsValue(metric.cpuPercent,'%')),
         metricCard('メモリ',`${opsValue(metric.memoryUsedGb)} <small>/ ${opsValue(metric.memoryTotalGb)} GB</small>`),
@@ -218,8 +221,9 @@
       const error=$('#ops-error');error.hidden=!opsState.error&&(!data||good);
       const protectedView=data&&data.protectionMode==='masked_metadata';
       if(protectedView)error.hidden=false;
-      error.textContent=[opsState.error,protectedView?'保護設定を復旧中です。作業名と本文を伏せて状態を表示しています。Skills以外の部署所属は確認中です。':data&&!good?'一部のデータを取得できません。接続状況と更新時刻を確認してください。':''].filter(Boolean).join(' ');
-      $('#ops-update').innerHTML=`<span class="ops-status ${good?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · 受信 ${esc(opsTime(opsState.receivedAt))} · ${good?'接続中':'接続を確認'}`:'未取得'}</span>`;
+      error.textContent=[opsState.error,protectedView?'部署と製品は指定された一覧で表示しています。作業本文と未確認の名称は、保護設定の復旧まで非表示です。':data&&!good?'一部のデータを取得できません。接続状況と更新時刻を確認してください。':''].filter(Boolean).join(' ');
+      const metadataReady=protectedView&&data.metadataOk===true&&!opsState.error;
+      $('#ops-update').innerHTML=`<span class="ops-status ${good||metadataReady?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · 受信 ${esc(opsTime(opsState.receivedAt))} · ${metadataReady?'状態取得済み・本文は復旧中':good?'接続中':'接続を確認'}`:'未取得'}</span>`;
       $('#ops-source-summary').textContent=data?`${sources.filter(s=>s.ok===true).length} / ${sources.length} 接続 · ToDo完了待ち ${opsValue(metric.todoDependencyWaits)} · 未着手 ${opsValue(metric.todoPendingStarts)} · 停止 ${opsValue(metric.todoBlocked)} · ジョブ起動待ち ${opsValue(metric.jobQueued)} · 受付待ち ${opsValue(metric.consoleQueued)}（準備失敗 ${opsValue(metric.consolePreparationFailures)}） · 容量確認後の起動待ち ${opsValue(metric.waitingJobs)}`:'未取得';
       $('#ops-sources').innerHTML=sources.map(s=>`<div class="ops-source"><strong>${esc(s.label||s.key)}</strong><span class="ops-status ${s.state==='unknown'?'unknown':s.ok===true?'working':'attention'}">${s.state==='unknown'?'状態未取得':s.ok===true?'接続中':'取得できません'}</span><span>更新 ${esc(opsTime(s.updatedAt))}</span>${s.message?`<span class="ops-source-message">${esc(s.message)}</span>`:''}</div>`).join('')||'<p class="ops-empty">接続元の記録はありません。</p>';
       const commander=data&&data.commander;
@@ -229,8 +233,17 @@
       // Do not replace keyboard/text-selection targets during background updates.
       const board=$('#ops-departments'),selection=window.getSelection();
       if(!board.contains(document.activeElement)&&!(selection&&!selection.isCollapsed&&board.contains(selection.anchorNode)))renderOpsDepartments(departments);
+      renderOpsUnassigned(data);
       if($('#ops-dialog').open&&!$('#ops-dialog-body').contains(document.activeElement)&&!(selection&&!selection.isCollapsed&&$('#ops-dialog-body').contains(selection.anchorNode)))renderOpsDetail();
       if(focused)opsRestoreBoardFocus(focused);
+    }
+    function renderOpsUnassigned(data){
+      const host=$('#ops-unassigned'),list=$('#ops-unassigned-list');if(!host||!list)return;
+      const entries=opsList(data&&data.unlistedRegistrations),products=opsList(data&&data.unassignedProducts);
+      host.hidden=!entries.length&&!products.length;
+      $('#ops-unassigned-count').textContent=`${entries.length||products.length}件`;
+      if(list.contains(document.activeElement))return;
+      list.innerHTML=entries.length?entries.map(entry=>`<details class="ops-unlisted-entry"><summary>${esc(entry.name)} · 未完了 ${opsValue(entry.unfinishedTasks)} / 登録 ${opsValue(entry.registeredTasks)}件</summary><p>${esc(opsList(entry.workKinds).join('、')||'作業の種類を確認できません')}</p><p>作業番号: ${esc(opsList(entry.taskIds).map(id=>'#'+id).join('、')||'登録なし')}</p><p>${esc(entry.decision||'所属の判断待ち')}</p></details>`).join(''):products.map(product=>`<details class="ops-unlisted-entry"><summary>${esc(product.name)} · ${opsCount(opsList(product.workers))}</summary>${opsList(product.workers).map(worker=>`<p>${esc(worker.task||worker.name)} · ${esc(worker.status)}</p>`).join('')}</details>`).join('');
     }
     function renderOpsQuestions(data){
       const host=$('#ops-questions'),selection=window.getSelection();
@@ -256,7 +269,7 @@
       host.innerHTML=departments.map((dept,di)=>{
         const color=opsColor(dept),workers=opsWorkers(dept),deptKey=opsKey(dept.id,di);
         total+=workers.length;
-        const products=opsList(dept.products).map((product,pi)=>({product,pi})).sort((a,b)=>Number(opsList(b.product.workers).some(opsIsOpen))-Number(opsList(a.product.workers).some(opsIsOpen))).map(({product,pi})=>{
+        const products=opsList(dept.products).map((product,pi)=>({product,pi})).map(({product,pi})=>{
           const members=opsList(product.workers);
           const visible=members.map((worker,wi)=>({worker,wi})).filter(({worker})=>opsMatchesStatus(worker,status)&&(!query||[dept.name,product.name,worker.name,worker.task,worker.summary,worker.detail,worker.currentStage,worker.stopReason,worker.nextAction,opsDependencies(worker)].some(v=>String(v||'').toLocaleLowerCase('ja-JP').includes(query)))).sort((a,b)=>opsPriority(a.worker)-opsPriority(b.worker)||a.wi-b.wi);
           if(filtering&&!visible.length)return '';
@@ -267,7 +280,7 @@
           const rows=rendered.map(({worker,wi})=>{
             const key=opsKey(dept.id,di,product.id,pi,worker.id,wi);
             opsState.items.set(key,{kind:'worker',worker,department:dept.name,product:product.name,color});
-            return `<button type="button" class="ops-worker" data-op-key="${esc(key)}" data-op-focus="${esc(key)}" ${opsState.selected===key?'aria-current="true"':''}>${opsRobot(color,false,worker.status)}<span class="ops-worker-text"><strong>${esc(opsShort(worker.task||worker.name)||'作業未記録')}</strong><small>${esc(worker.name)}</small></span><span class="ops-worker-meta">${opsStatus(worker.status)}${opsProgress(worker.progress)}</span><span class="ops-worker-facts">${opsFacts(worker)}<span>クリックして全文と履歴を見る</span></span></button>`;
+            return `<button type="button" class="ops-worker" data-op-key="${esc(key)}" data-op-focus="${esc(key)}" ${opsState.selected===key?'aria-current="true"':''}>${opsRobot(color,false,worker.status)}<span class="ops-worker-text"><strong>${esc(opsShort(worker.task||worker.name)||'作業未記録')}</strong><small>${esc(worker.name)}</small></span><span class="ops-worker-meta">${opsStatus(worker.status)}${opsProgress(worker.progress)}</span><span class="ops-worker-facts">${opsFacts(worker)}<span>${worker.detailAvailable?'クリックして全文と履歴を見る':'クリックして状態と停止理由を見る'}</span></span></button>`;
           }).join('');
           const remaining=visible.length-rendered.length,remainingOpen=visible.slice(rendered.length).filter(({worker})=>opsIsOpen(worker)).length;
           return `<details class="ops-product" data-op-product="${esc(productKey)}" ${productOpen?'open':''}><summary class="ops-product-heading" data-op-focus="${esc('product:'+productKey)}">${opsRobot(color)}<h4>${esc(product.name)}</h4><span class="ops-count">${opsCount(members)}</span></summary>${rows||(productOpen?'<p class="ops-empty">登録ワーカーなし</p>':'')}${productOpen&&remaining>0?`<button class="ops-more" type="button" data-op-more="${esc(productKey)}" data-op-focus="${esc('more:'+productKey)}">さらに表示 · 残り ${remaining}件（稼働・要対応・待機 ${remainingOpen}件）</button>`:''}</details>`;
@@ -332,6 +345,7 @@
       if(opsState.detailController)opsState.detailController.abort();
       opsState.details.clear();opsState.items.clear();
       $('#ops-questions').replaceChildren();$('#ops-questions').hidden=true;
+      if($('#ops-unassigned-list'))$('#ops-unassigned-list').replaceChildren();
       $('#ops-departments').replaceChildren();$('#ops-dialog-body').replaceChildren();
       closeOpsDetail();
     }

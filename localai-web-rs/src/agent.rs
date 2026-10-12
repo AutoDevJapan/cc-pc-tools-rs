@@ -608,15 +608,17 @@ impl Console {
     }
     fn display(&self, kind: &str) -> Result<Value> {
         use localai_web_rs::console_ui;
-        // Load first; no partial/raw response when the privacy list is unavailable.
-        let names = cc_ask::task_title::Names::load(&self.paths.tools.join("client-projects.txt"))
-            .map_err(|_| {
-                fault(
+        // Load first; missing privacy records allow only the restricted metadata projection.
+        let names = cc_ask::task_title::Names::load(&self.paths.tools.join("client-projects.txt"));
+        let names=match names {
+            Ok(names)=>names,
+            Err(_)=>return localai_web_rs::operations::metadata_display(&self.paths.tools,&self.paths.todo.join("todo.json"),&self.paths.jobs,kind)
+                .map_err(|_|fault(
                     StatusCode::SERVICE_UNAVAILABLE,
                     "privacy_unavailable",
-                    "表示の秘匿設定を読み取れません。",
-                )
-            })?;
+                    "保護設定と表示用の状態記録を読み取れません。",
+                )),
+        };
         let db = self.todos()?;
         let mut jobs = Vec::new();
         for entry in fs::read_dir(&self.paths.jobs).map_err(|_| io_fault())? {
@@ -7293,11 +7295,12 @@ mod tests {
             }
             for kind in ["todo", "jobs", "handoff"] {
                 let (code, response) = f.http(Method::GET, &format!("display/{kind}"), "").await;
-                assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE);
-                assert_eq!(response["ok"], false);
-                assert_eq!(response["error"]["code"], "privacy_unavailable");
-                assert!(response.get("data").is_none());
+                assert_eq!(code, StatusCode::OK);
+                assert_eq!(response["ok"], true);
+                assert_eq!(response["data"]["metadataOnly"], true);
+                assert_eq!(response["data"]["protectionMode"], "masked_metadata");
                 assert!(!response.to_string().contains("SecretClient"));
+                assert!(!response.to_string().contains("現在のメモ"));
             }
         }
     }

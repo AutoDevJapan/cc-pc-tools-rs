@@ -5,6 +5,26 @@ use std::collections::BTreeMap;
 pub const DEFAULT: u32 = 100;
 pub fn project_rank(project: &str) -> u32 {
     let p = project.to_lowercase();
+    let normalized: String = p
+        .replace('α', "alpha")
+        .chars()
+        .filter(|c| !matches!(c, '-' | '_' | ' ' | ':'))
+        .collect();
+    // Display-name changes must not lower a previously assigned product priority.
+    match normalized.as_str() {
+        "ycchp" | "arps" | "socialpilot" => return 10,
+        "civ6" | "civ6banseiki" | "banseiki" | "万世紀" | "万世記" => return 20,
+        "skills" | "skill" => return 50,
+        "goddmcpalpha" => return 60,
+        "goddpress" => return 61,
+        "goddao" => return 62,
+        "godd13a13e1" | "13a13e1" => return 63,
+        "goddrosetta" | "goddrosseta" => return 64,
+        "goddgenesis" | "genesis" => return 65,
+        "goddvirtualstreamer" | "virtualstreamer" => return 66,
+        "localaiconcole" | "localaiconsole" | "localaiwebrs" | "opencodex" => return 30,
+        _ => {}
+    }
     match p.as_str() {
         "arps" | "socialpilot" | "social pilot" | "クライアント案件" => 10,
         "civ6" | "civ6-banseiki" | "banseiki" | "万世紀" => 20,
@@ -52,7 +72,7 @@ pub fn project_rank(project: &str) -> u32 {
 pub fn department_rank(department: &str) -> Option<u32> {
     match department {
         "受託部" => Some(10),
-        "万世紀" | "ゲーム部" => Some(20),
+        "万世紀" | "万世記" | "ゲーム部" => Some(20),
         "情報システム部" => Some(30),
         "発信部" => Some(40),
         "Skills" => Some(50),
@@ -87,7 +107,12 @@ pub fn item_rank(item: &Value, policy: &Value) -> u32 {
         .and_then(department_rank)
     {
         // Retain the owner's product order within GoDD.
-        return if n == 67 { let rank = project_rank(project); if (60..=67).contains(&rank) {rank} else {67} } else { n };
+        return if n == 67 {
+            let rank = project_rank(project);
+            if (60..=67).contains(&rank) { rank } else { 67 }
+        } else {
+            n
+        };
     }
     policy["projects"]
         .as_object()
@@ -127,9 +152,10 @@ pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
             {
                 if items.iter().any(|i| i["id"] == id && i["status"] != "done")
                     && let Some(child) = ranks.get_mut(&id)
-                    && parent < *child {
-                            *child = parent;
-                            changed = true;
+                    && parent < *child
+                {
+                    *child = parent;
+                    changed = true;
                 }
             }
         }
@@ -179,17 +205,23 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
             }
             let Some(parent) = job["parent_job_id"]
                 .as_str()
-                .filter(|id| jobs.iter().any(|parent| parent["id"].as_str() == Some(*id)
-                    && ["queued","starting","running"].contains(&parent["status"].as_str().unwrap_or(""))
-                    && parent["cancel_requested"] != true))
+                .filter(|id| {
+                    jobs.iter().any(|parent| {
+                        parent["id"].as_str() == Some(*id)
+                            && ["queued", "starting", "running"]
+                                .contains(&parent["status"].as_str().unwrap_or(""))
+                            && parent["cancel_requested"] != true
+                    })
+                })
                 .and_then(|id| ranks.get(id).copied())
             else {
                 continue;
             };
             if let Some(child) = job["id"].as_str().and_then(|id| ranks.get_mut(id))
-                && parent < *child {
-                    *child = parent;
-                    changed = true;
+                && parent < *child
+            {
+                *child = parent;
+                changed = true;
             }
         }
         if !changed {
@@ -224,12 +256,21 @@ mod tests {
             [10, 20, 30, 40, 50, 60, 61, 62, 63, 64, 65, 66, 100]
         );
         assert_eq!(project_rank("SocialPilot"), 10);
+        assert_eq!(project_rank("YCC-HP"), 10);
+        assert_eq!(project_rank("万世記"), 20);
+        assert_eq!(project_rank("local-ai-concole"), 30);
+        assert_eq!(project_rank("GoDD MCP α"), 60);
+        assert_eq!(project_rank("GoDD Rosetta"), 64);
+        assert_eq!(project_rank("GoDD Virtual Streamer"), 66);
         assert_eq!(
             item_rank(&json!({"project":"CIV6"}), &json!({"civ6":20})),
             20
         );
         assert_eq!(item_rank(&json!({"project":"x"}), &json!({"x":0})), 100);
-        assert_eq!(item_rank(&json!({"project":"civ6"}),&json!({"civ6":1})),20);
+        assert_eq!(
+            item_rank(&json!({"project":"civ6"}), &json!({"civ6":1})),
+            20
+        );
     }
     #[test]
     fn mixed_ownership_transitive_waits_and_completed_edges() {
@@ -257,8 +298,9 @@ mod tests {
         ];
         let ranks = job_ranks(&jobs, &json!({}), &json!({}));
         assert_eq!((ranks["c"], ranks["g"], ranks["s"]), (10, 10, 100));
-        let mut finished = jobs.clone(); finished[0]["status"] = json!("succeeded");
-        let ranks = job_ranks(&finished,&json!({}),&json!({}));
-        assert_eq!((ranks["c"],ranks["g"]),(100,100));
+        let mut finished = jobs.clone();
+        finished[0]["status"] = json!("succeeded");
+        let ranks = job_ranks(&finished, &json!({}), &json!({}));
+        assert_eq!((ranks["c"], ranks["g"]), (100, 100));
     }
 }

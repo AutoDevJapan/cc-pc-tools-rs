@@ -18,6 +18,12 @@ enum Commands {
     Check,
     /// Audit full archived histories with an ID-only checkpoint; never posts or launches.
     AuditHistory(cc_ask::history_audit::Args),
+    /// Send a new explicitly requested message using independent append-only receipts.
+    RecoveryLog(cc_ask::recovery_messages::LogArgs),
+    /// Create one new owner decision and its separate silent progress post.
+    RecoveryAsk(cc_ask::recovery_messages::AskArgs),
+    /// Read only an exact new recovery question; never consumes replies or starts work.
+    RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
     Ask(AskArgs),
     /// Bind explicitly reviewed duplicate threads to one scope; never sends or launches.
     ReconcileDecisions {
@@ -257,6 +263,15 @@ fn run(command: Commands) -> Result<()> {
         _ => {}
     }
     match command {
+        Commands::RecoveryLog(args) => {
+            println!("{}", cc_ask::recovery_messages::log(&mut ctx, &args)?)
+        }
+        Commands::RecoveryAsk(args) => {
+            println!("{}", cc_ask::recovery_messages::ask(&mut ctx, &args)?)
+        }
+        Commands::RecoveryReplies(args) => {
+            println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
+        }
         Commands::AuditHistory(args) => {
             println!("{}", cc_ask::history_audit::run(&mut ctx, &args)?)
         }
@@ -391,6 +406,85 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn independent_recovery_cli_requires_exact_inputs_and_reply_thread() {
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-log",
+            "--request-id",
+            "new-notice-2472",
+            "--title",
+            "作業完了",
+            "--body-file",
+            "notice.txt",
+            "--thread",
+            "123",
+            "--attach",
+            "image.png",
+        ])
+        .unwrap();
+        let Commands::RecoveryLog(args) = cli.command else {
+            panic!("wrong recovery command");
+        };
+        assert_eq!(args.request_id, "new-notice-2472");
+        assert_eq!(args.thread.as_deref(), Some("123"));
+        assert!(!args.notify);
+        assert_eq!(args.attach, vec![PathBuf::from("image.png")]);
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-log",
+            "--title",
+            "作業完了",
+            "--body-file",
+            "notice.txt"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-ask",
+            "--request-id",
+            "new-decision-2472",
+            "--todo-id",
+            "2472",
+            "--decision-file",
+            "decision.json",
+            "--body-file",
+            "question.txt"
+        ])
+        .is_ok());
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-ask",
+            "--request-id",
+            "new-decision-2472",
+            "--body-file",
+            "question.txt"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from(["discord_ask", "recovery-replies"]).is_err());
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-replies",
+            "--thread",
+            "123",
+            "--message",
+            "123",
+            "--request-id",
+            "new-decision-2472",
+            "--todo-id",
+            "2472",
+            "--read-only",
+        ])
+        .unwrap();
+        let Commands::RecoveryReplies(args) = cli.command else {
+            panic!("wrong recovery command");
+        };
+        assert_eq!(args.thread, "123");
+        assert_eq!(args.message.as_deref(), Some("123"));
+        assert_eq!(args.todo_id, Some(2472));
+        assert!(args.read_only);
+    }
 
     #[test]
     fn repeated_attachments_parse_for_all_three_commands() {

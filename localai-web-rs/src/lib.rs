@@ -2,5 +2,7 @@
 pub mod console_page;
 pub mod console_ui;
 pub mod operations;
+mod owner_followup;
+mod command_capture;
 pub mod owner_decisions;
 pub mod work_facts;

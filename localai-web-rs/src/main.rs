@@ -15,6 +15,7 @@ mod health_snapshot;
 mod music_bridge;
 use localai_web_rs::operations;
 mod resident;
+mod command_capture;
 mod workload;
 
 const JSON_LIMIT: usize = 2 * 1024 * 1024;

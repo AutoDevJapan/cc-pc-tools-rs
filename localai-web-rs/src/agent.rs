@@ -19,8 +19,7 @@ use std::{
 };
 
 const LIMIT: usize = 128 * 1024;
-#[path = "command_capture.rs"]
-mod command_capture;
+use crate::command_capture;
 #[path = "agent_workspace.rs"]
 mod source_workspace;
 #[path = "todo_receipts.rs"]

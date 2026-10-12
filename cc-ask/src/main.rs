@@ -24,6 +24,11 @@ enum Commands {
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
     /// Read only an exact new recovery question; never consumes replies or starts work.
     RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
+    /// Independent one-question followup; never runs legacy tick or lost questions.
+    RecoveryFollowup {
+        #[command(subcommand)]
+        command: cc_ask::recovery_followup::Command,
+    },
     Ask(AskArgs),
     /// Bind explicitly reviewed duplicate threads to one scope; never sends or launches.
     ReconcileDecisions {
@@ -214,6 +219,17 @@ fn run(command: Commands) -> Result<()> {
             env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask").join("tick.log"),
             cc_ask::tick_runtime::TICK_LIMIT + std::time::Duration::from_secs(5),
         )?)
+    } else if matches!(
+        &command,
+        Commands::RecoveryFollowup {
+            command: cc_ask::recovery_followup::Command::Tick
+        }
+    ) {
+        Some(cc_ask::tick_runtime::HardLimit::for_command(
+            env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask").join("recovery-followup.log"),
+            std::time::Duration::from_secs(40),
+            "recovery-followup",
+        )?)
     } else if matches!(&command, Commands::SyncJobCard { .. }) {
         Some(cc_ask::tick_runtime::HardLimit::for_command(
             env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask").join("tick.log"),
@@ -263,6 +279,22 @@ fn run(command: Commands) -> Result<()> {
         _ => {}
     }
     match command {
+        Commands::RecoveryFollowup { command } => {
+            let _deadline = cc_ask::tick_runtime::Deadline::new(std::time::Duration::from_secs(35));
+            let _pool = cc_ask::ScopedHttpPool::new();
+            use cc_ask::recovery_followup as followup;
+            let value = match command {
+                followup::Command::Register { config } => followup::register(&mut ctx, &config)?,
+                followup::Command::Tick => followup::tick(&mut ctx)?,
+                followup::Command::Inspect => followup::inspect(&ctx)?,
+                followup::Command::Claim{message,handler} => followup::claim(&mut ctx,&message,&handler)?,
+                followup::Command::Applied {
+                    message,
+                    result_file,
+                } => followup::applied(&mut ctx, &message, &result_file)?,
+            };
+            println!("{value}");
+        }
         Commands::RecoveryLog(args) => {
             println!("{}", cc_ask::recovery_messages::log(&mut ctx, &args)?)
         }

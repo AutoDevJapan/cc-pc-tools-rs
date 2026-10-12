@@ -1,0 +1,30 @@
+name: Original record recovery staging
+on:
+  push:
+    branches: [main]
+    paths: ['record-recovery/**', '.github/workflows/record-recovery.yml']
+  pull_request:
+    paths: ['record-recovery/**', '.github/workflows/record-recovery.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: record-recovery
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: record-recovery/go.mod
+          cache: false
+      - run: go test -race -v ./...
+      - run: go vet ./...
+      - run: go build -trimpath .

@@ -4,6 +4,7 @@
 !localai-web-rs/tests/fixtures/operations/localai-web-rs/target/release/console-state.json
 *.log
 *.exe
+*.private.json
 cc-ask/tests/*.json
 **/*.py
 cc-bookmark-queue/extension/config.js

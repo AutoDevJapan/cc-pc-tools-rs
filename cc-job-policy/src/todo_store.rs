@@ -41,15 +41,25 @@ pub fn check_size(bytes: usize) -> Result<(), Error> {
 /// Bound actual reads, including a file which grows after it is opened.
 /// Parsing uses exactly the bytes read; redaction belongs to presentation.
 pub fn read(path: &Path) -> Result<Value, Error> {
-    read_from(File::open(path).map_err(Error::Io)?)
+    read_bounded(path, MAX_BYTES)
 }
+/// Shared byte primitive; each canonical store supplies its own limit and error labels.
+pub fn read_bounded(path: &Path, limit: usize) -> Result<Value, Error> {
+    read_from_limit(File::open(path).map_err(Error::Io)?, limit)
+}
+#[cfg(test)]
 fn read_from(reader: impl Read) -> Result<Value, Error> {
+    read_from_limit(reader, MAX_BYTES)
+}
+fn read_from_limit(reader: impl Read, limit: usize) -> Result<Value, Error> {
     let mut bytes = Vec::new();
     reader
-        .take((MAX_BYTES + 1) as u64)
+        .take(limit.saturating_add(1) as u64)
         .read_to_end(&mut bytes)
         .map_err(Error::Io)?;
-    check_size(bytes.len())?;
+    if bytes.len() > limit {
+        return Err(Error::TooLarge);
+    }
     let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
     serde_json::from_slice(bytes).map_err(Error::InvalidJson)
 }

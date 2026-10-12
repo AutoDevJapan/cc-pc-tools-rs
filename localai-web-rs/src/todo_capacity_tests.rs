@@ -1,4 +1,30 @@
 #[test]
+fn question_capacity_restores_patrol_reader_without_changing_todo_or_queue() {
+    let f = Fixture::new();
+    let p = f.console.paths.discord.join("state.json");
+    let db = json!({"questions":[],"history":"x".repeat(8*1024*1024),"answer_receipts":{"id":{"keep":true}}});
+    fs::write(&p, db.to_string()).unwrap();
+    assert_eq!(f.console.questions().unwrap(), db);
+    let before = fs::read(f.console.paths.db()).unwrap();
+    let mut oversized = b"{}".to_vec();
+    oversized.resize(cc_ask::question_store::MAX_BYTES + 1, b' ');
+    fs::write(&p, oversized).unwrap();
+    assert_eq!(
+        f.console.questions().unwrap_err().code,
+        "question_state_too_large"
+    );
+    assert_eq!(fs::read(f.console.paths.db()).unwrap(), before);
+    fs::write(&p, "{broken").unwrap();
+    assert_eq!(
+        f.console.questions().unwrap_err().code,
+        "question_state_invalid_json"
+    );
+    fs::remove_file(&p).unwrap();
+    fs::create_dir(&p).unwrap();
+    assert_eq!(f.console.questions().unwrap_err().code, "state_unavailable");
+}
+
+#[test]
 fn large_todo_snapshot_and_canonical_admission_are_preserved() {
     let f = Fixture::new();
     f.on();

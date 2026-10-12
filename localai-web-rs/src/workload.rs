@@ -1750,7 +1750,7 @@ fn aggregate_progress(
         }
     }
     // Existing question state records the question title/date, and sometimes an answer body.
-    if let Some(qs) = json_file(&sources.questions, 16 * 1024 * 1024) {
+    if let Ok(qs) = cc_ask::question_store::read(&sources.questions) {
         for q in qs["questions"].as_array().into_iter().flatten() {
             if exclusions.contains(&q.to_string()) {
                 continue;

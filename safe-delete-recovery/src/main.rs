@@ -37,6 +37,7 @@ const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 mod scoopa;
+mod seller2140;
 mod unslop;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -181,6 +182,8 @@ struct Config {
     pinned_identity: Option<(u32, u64)>,
     project_alias_target: Option<PathBuf>,
     project_alias_preservation_enabled: bool,
+    // Fixed repositories of the seller2140 profile; empty for every other ID.
+    seller: Vec<seller2140::RepoSpec>,
 }
 
 impl Config {
@@ -223,6 +226,7 @@ impl Config {
             pinned_identity: None,
             project_alias_target: None,
             project_alias_preservation_enabled: false,
+            seller: Vec::new(),
         };
         let public = "https://github.com/AutoDevJapan/cc-pc-tools-rs.git";
         let clone = |name, origin, head: &str, saved_ref| Repo {
@@ -520,7 +524,10 @@ impl Config {
                     },
                 ];
             }
-            _ => return Err("SCOPE_NOT_AUTHORIZED"),
+            _ => match seller2140::fixed(id) {
+                Some(f) => seller2140::configure(&mut c, f),
+                None => return Err("SCOPE_NOT_AUTHORIZED"),
+            },
         }
         Ok(c)
     }
@@ -701,6 +708,9 @@ impl Config {
         }
         if self.id == scoopa::ID {
             return scoopa::plan(self, id);
+        }
+        if !self.seller.is_empty() {
+            return seller2140::plan(self, id);
         }
         let r = self.load(id)?;
         if r.state != "owned" {
@@ -936,6 +946,9 @@ impl Config {
         }
         if self.id == scoopa::ID {
             return scoopa::finish(self, id);
+        }
+        if !self.seller.is_empty() {
+            return seller2140::finish(self, id);
         }
         let mut r = self.load(id)?;
         let ticket_bytes = read_record(&self.ticket_path(), 8 * 1024 * 1024)?;
@@ -1967,6 +1980,7 @@ fn run() -> Result<serde_json::Value> {
     match args[0].as_str() {
         "inspect" if unslop::profile(c.id).is_some() => unslop::inspect(&c, &args[2]),
         "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
+        "inspect" if !c.seller.is_empty() => seller2140::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
         "renew-plan" if c.id == REBOOT_ID => {
             c.renew_reboot_preflight(&args[2], REBOOT_REPORT_SHA256)
@@ -2408,6 +2422,17 @@ mod tests {
             }
             // The normal isolated comparison really sees a change: this
             // ensures the new profile-specific comparison is exercised.
+            // A fresh worktree can retain an index stat entry matching the
+            // CRLF file, so Git may skip hashing it under the other setting.
+            // Change only fixture metadata to force that comparison on every
+            // runner, without sleeping or changing the bytes being archived.
+            let modified = fs::metadata(&tracked).unwrap().modified().unwrap();
+            fs::File::options()
+                .write(true)
+                .open(&tracked)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(modified + Duration::from_secs(2)))
+                .unwrap();
             assert!(matches!(
                 validate_repo(&old.join("work"), &c.repos[0], true),
                 Err("GIT_TRACKED_CHANGES")
@@ -2866,6 +2891,7 @@ mod tests {
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
+    mod fixed_receipts;
     #[test]
     fn cc_ask_cleanup_pins_one_receipt_clone_and_preserves_generic_limit() {
         let c = Config::production(unslop::CC_ASK).unwrap();

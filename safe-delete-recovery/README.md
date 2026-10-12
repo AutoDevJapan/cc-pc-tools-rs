@@ -246,9 +246,28 @@ Git確認には `git --no-optional-locks` を使い、対象を使う担当や�
 
 ツール内のGit確認は全IDで `--no-optional-locks` と `-c core.longpaths=true` を指定する。退避先の前置きが長くなりGit内部のオブジェクトのパスが260文字を超えても確認できる。ただしGitが起動時に移るリポジトリーの根は、長いパスの設定が有効になる前に処理される。移動先の根が240 UTF-16単位を超える場合は、票や退避先を作る前に `GIT_DESTINATION_ROOT_TOO_LONG` で停止する。この上限は固定の2050実物の退避先には達しない。所有範囲・リンク・保護対象の確認条件は変わらない。
 
+## ToDo2140の固定3所有ID
+
+親ToDo2129の専用clone後片付け用。`src/seller2140.rs`は内部のファイル名で、製品名ではない。下の3つだけを受理し、他のIDは`SCOPE_NOT_AUTHORIZED`で拒否する。所有記録のproject/content、作成時刻、チェックサム、volume `2229119083`、file ID、Cドライブの固定Tempパスがすべて一致した場合だけ進む。ignoreされた生成物も全内容保持する。既存プロファイルの許可、一般のscanner、10,000項目の上限、権限、Git保護は変更しない。
+
+| 所有ID | project / content | 構成（HEAD） |
+|---|---|---|
+| `ae1a4f84fda55d86d22dcd0d64717148` | `seller-contact-2129-godd` / `matrix-clone` | GoDD-Matrix。根自体がrepo。ignore対象外の未追跡は不可。HEAD `83b8ccf6…` |
+| `74bcf67bb31b289485bf40ede5988a46` | `seller-contact-2129-godd` / `genesis-clone` | GoDD-Genesis。根自体がrepo。未追跡は`target-seller-contact-2132/`と`.cursor/state/`だけ。HEAD `09cf3468…` |
+| `02a5ca348b742317fd5b907efad337e8` | `ADJ` / `seller-contact-audit-20261009` | QaJaRuEn・oss-mcp・alt-lineの3つのlinked worktree（固定の外部管理領域とcommon）。未追跡は`.cursor/state/`だけ |
+
+- **コマンド**: `inspect --id <ID>`は項目数・バイト数・リンク数・repo数だけを返す（ファイル名・ref名・内容は出さず、票も移動命令も作らない）。`plan` → 返った`Move-Item`を別呼び出しで1回提出 → `finish`。削除・移動のAPIは内部で呼ばない。
+- **上限**: 根を含む実測値で固定する。Matrixは6,468項目・367リンク・131,984,276 byte、Genesisは93,276項目・3,487リンク・1,273,627,619 byte、親の監査用rootは72,884項目・604リンク・1,934,935,656 byte。一般の上限は変えない。
+- **リンク**: `node_modules`配下のシンボリックリンクとジャンクションだけ受理する。`OPEN_REPARSE_POINT`と`FSCTL_GET_REPARSE_POINT`でリンク自身の生データ・識別番号・メタデータを取得し、ターゲットは開かない。生データのSubstituteNameを構文確認し、文字列だけで相対パスやNT形式の絶対パスを解釈する。内部・外部の参照数を記録し、外部参照はscrub391で判定する。リンクの中へは入らない。それ以外の場所のリンク、他種の再解析ポイントは拒否する。
+- **hardlink**: 固定root内の依存ファイルだけは、共有ストアなどroot外にも名前がある同一ファイルを保持する。同一volumeでroot全体をrenameし、通常ファイルのデータや別名は変更しない。全項目の識別番号・リンク数とroot内の別名の数は移動前後で一致させ、外の別名は開かず列挙しない。依存以外の外部ハードリンクは`HARD_LINK`で拒否する。
+- **Git**: 宣言した`.git`（根直下のディレクトリー1つ、またはworktreeの`.git`ファイル3つ）以外のGit管理領域は、依存の入れ子repoを含め`UNDECLARED_GIT_METADATA`で拒否する。固定のorigin・HEAD・追跡ファイルの変更なし・`status --untracked-files=normal`を宣言した未追跡の名前と照合する。cloneではstash、他のref、origin/HEADのどちらにも無い履歴も拒否する。PRのhead・merge SHAは親がGitHubで直接確認した証拠であり、ここでは照合しない。ローカルのbranchが消えていてもよい。外部のalternates・modules・grafts・共有metadataは拒否する。
+- **退避票**: 全項目のメタデータと生のリンクデータの指紋、件数、worktreeごとの元・交換用backlinkの識別番号を保存し、上書きしない。finishは元パス不在・根の同一識別番号・指紋の一致を確認する。内容は読まないため、これはメタデータによる保持確認で、更新時刻まで戻した改変の検知は主張しない。
+- **backlink修復**（ADJのみ）: 3つのworktreeのbacklinkだけを、移動先を指す交換用ファイルとの`MoveFileExW`（置換+WRITE_THROUGH）で1つずつ原子的に交換する。他のworktree・ref・objectは変更しない。途中で止まっても、交換済み／未交換を票の識別番号で判定して再開でき、全件が済むまで成功と理由.txt・所有記録の更新は行わない。共有refの一致はfinishで要求しない。
+- **テスト**: `src/tests/fixed_receipts.rs`。隔離した試験用データだけを使い、実物の所有記録は作らない。
 ## Scoopaの所有フォルダーの退避（2072による統合）
 所有ID80b350ade8bb05cd61ab94f7485d09ccだけは、元担当のfrontendを指す固定の参照1件を文字列も参照先も変えず保存する。参照先を開いたり削除したりしない。既存の所有ID・根の識別番号・固定リンク名/値・移動前後の同じ参照・全メタデータ照合を維持する。ほかの所有IDはこの扱いを有効にしない。通常のsafe-deleteの保護も変更しない。これは所有一時データの退避を完了するための実装上の選択であり、オーナーのa/b回答を受領したことにはしない。確認できない参照や移動前後の差は引き続き拒否する。
 
+リンクは実行しない退避データとして保存する。元rootを指す絶対リンクは移動後に参照先が不在になる場合もあるが、リンク自身の文字列と識別番号を保持する。内部・外部の分類は移動前と予定移動先の両方で確認し、いずれも外部参照先へ入らない。
 ## ToDo2128の再起動復旧の検証データ
 
 所有ID `464577ad28cdf40461bb04a301f7e8e7`、project `cc-jobs`、content `reboot-recovery` だけを追加する。元の所有記録のvolume `2229119083`、file ID `13229323920896790`、固定のTempパスを照合し、公開取得元 `AutoDevJapan/cc-pc-tools-rs`、HEAD `fa80a74f15b50c0ba0cf3865a19da53e2c23a00b` と保存済み `origin/fix/reboot-job-recovery` を確認する。

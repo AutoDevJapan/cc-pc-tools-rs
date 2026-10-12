@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type obj = map[string]any
@@ -46,7 +47,27 @@ func array(v any) []any {
 func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 
 var numeric = regexp.MustCompile(`^[0-9]{17,20}$`)
-var links = regexp.MustCompile(`https://discord\.com/channels/([0-9]{17,20})/([0-9]{17,20})(?:/([0-9]{17,20}))?`)
+
+func discordLinks(text string) [][]string {
+	result := [][]string{}
+	tokens := strings.FieldsFunc(text, func(r rune) bool { return unicode.IsSpace(r) || strings.ContainsRune(`<>"'()[]{}「」『』,`, r) })
+	for _, token := range tokens {
+		u, e := url.Parse(token)
+		if e != nil || u.Scheme != "https" || u.Host != "discord.com" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+			continue
+		}
+		p := strings.Split(u.EscapedPath(), "/")
+		if (len(p) != 4 && len(p) != 5) || p[0] != "" || p[1] != "channels" || !numeric.MatchString(p[2]) || !numeric.MatchString(p[3]) || (len(p) == 5 && !numeric.MatchString(p[4])) {
+			continue
+		}
+		row := []string{token, p[2], p[3], ""}
+		if len(p) == 5 {
+			row[3] = p[4]
+		}
+		result = append(result, row)
+	}
+	return result
+}
 
 func readJSON(path string) (obj, []byte, error) {
 	f, e := os.Open(path)
@@ -192,7 +213,7 @@ func seeds(home, todo, output string) (obj, error) {
 				texts = append(texts, str(object(n)["note"]))
 			}
 			for _, text := range texts {
-				for _, m := range links.FindAllStringSubmatch(text, -1) {
+				for _, m := range discordLinks(text) {
 					if m[1] == "1552944707464597524" {
 						add(m[2], "todo2467_note")
 					}
@@ -211,7 +232,7 @@ func seeds(home, todo, output string) (obj, error) {
 						r["status"] = "read"
 						r["bytes"] = len(data)
 						r["sha256"] = digest(data)
-						for _, m := range links.FindAllStringSubmatch(string(data), -1) {
+						for _, m := range discordLinks(string(data)) {
 							if m[1] == "1552944707464597524" {
 								add(m[2], "todo2467_spec")
 							}
@@ -589,7 +610,7 @@ func reindex(source, output string) (obj, error) {
 			seen[id] = true
 			m := obj{"id": id, "channel_id": tid, "content": r["content"], "author": obj{"id": aid, "bot": aid == str(old["bot_id"])}, "timestamp": r["timestamp"], "edited_timestamp": r["edited_timestamp"], "message_reference": r["message_reference"], "embeds": r["embeds"], "attachments": r["attachments"], "components": r["components"]}
 			messages = append(messages, m)
-			for _, link := range links.FindAllStringSubmatch(str(r["content"]), -1) {
+			for _, link := range discordLinks(str(r["content"])) {
 				if link[1] == "1552944707464597524" {
 					references[link[2]] = append(references[link[2]], obj{"origin_thread_id": tid, "origin_message_id": id, "source_message_sha256": r["content_sha256"]})
 				}

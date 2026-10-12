@@ -91,6 +91,18 @@ func TestWideNumericOrder(t *testing.T) {
 	}
 }
 
+func TestDiscordLinkHostAndPathAreExact(t *testing.T) {
+	const good = "https://discord.com/channels/1552944707464597524/1554792868974039150"
+	for _, bad := range []string{"https://discord.com.evil.test/channels/1552944707464597524/1554792868974039150", "https://evil.test/" + good, "prefix" + good, "https://discord.com:443/channels/1552944707464597524/1554792868974039150", good + "/extra", "https://person@discord.com/channels/1552944707464597524/1554792868974039150", good + "?next=evil"} {
+		if len(discordLinks(bad)) != 0 {
+			t.Fatal("untrusted URL accepted")
+		}
+	}
+	if r := discordLinks("参照 <" + good + "> および " + good + "/1554792868974039151"); len(r) != 2 || r[0][2] != "1554792868974039150" || r[1][3] != "1554792868974039151" {
+		t.Fatal("valid references missing")
+	}
+}
+
 func TestHistoryUsesGETAndAdvancingCursor(t *testing.T) {
 	const tid = "1554792868974039150"
 	calls := 0

@@ -521,7 +521,8 @@ fn process(
     }
     let mut prompt = if s(&entry["kind"]) == "question" {
         let history = thread_history(ctx, &tid)?;
-        continuation_prompt(ctx, &entry["original"], &history, &ctx.owner())?
+        let owner = ctx.owner();
+        continuation_prompt(ctx, &entry["original"], &history, &owner)?
     } else {
         REQUEST_PREAMBLE.to_string()
     };

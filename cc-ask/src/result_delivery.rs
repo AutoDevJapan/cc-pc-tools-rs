@@ -289,11 +289,14 @@ pub fn post_with_cursor(
         // The parent API registers a new generation with the original work context.
         // It must reconcile the same origin/job on retry after a lost response.
         let question = crate::question_progress::ask_result(ctx, thread, text, job)?;
-        if question["suppressed"] == "decision_scope_required" {
+        if ["decision_scope_required", "owner_context_required"]
+            .contains(&s(&question["suppressed"]))
+        {
             return Err(format!(
-                "DecisionScopeRequired: {} {}",
+                "DecisionScopeRequired: {} {} evidence={}",
                 s(&question["next_action"]),
-                s(&question["url"])
+                s(&question["url"]),
+                question
             ));
         }
         if s(&question["thread_id"]).is_empty()

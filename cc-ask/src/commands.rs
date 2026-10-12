@@ -220,14 +220,15 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
                 let replies = owner_replies(ctx, &q, &owner)?;
                 let mut result = json!({"thread_id":q["thread_id"],"reused":true,"tracked":true,
                     "url":format!("https://discord.com/channels/{}/{}",s(&ctx.cfg["guild_id"]),s(&q["thread_id"])),
-                    "progress_thread_id":q["progress_thread_id"],"suppressed":"same_question"});
+                    "progress_thread_id":q["progress_thread_id"],"suppressed":"same_question",
+                    "question_body":q["question_body"],"todo_id":q["todo_id"],"delivery":"inspection_only"});
                 if let Some(answer) = replies
                     .iter()
                     .rev()
                     .find(|m| !crate::snooze::control_only(m))
                 {
                     result["suppressed"] = json!("already_answered");
-                    result["latest_owner_reply"] = json!({"id":answer["id"],"timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))});
+                    result["latest_owner_reply"] = json!({"id":answer["id"],"thread_id":q["thread_id"],"author_id":answer["author"]["id"],"acquisition_source":"discord-api-v10","timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))});
                 }
                 print_json(&result, None)?;
                 return Ok(result);

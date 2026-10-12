@@ -365,7 +365,7 @@ pub fn already_handled(
 }
 
 pub fn continuation_prompt(
-    ctx: &Context,
+    ctx: &mut Context,
     question: &Value,
     history: &[Value],
     owner: &str,
@@ -396,8 +396,9 @@ pub fn continuation_prompt(
     } else {
         String::new()
     };
+    let owner_context = crate::decision_identity::task_handoff(ctx, question)?;
     Ok(safe_text(format!(
-        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}{links}\n元の作業指示:\n{original}\n\n{}",
+        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}{links}\n{owner_context}\n元の作業指示:\n{original}\n\n{}",
         s(&question["cwd"]),
         s(&thread["id"]),
         crate::prompt_context::conversation(ctx, &thread, history, owner, 32 * 1024)?

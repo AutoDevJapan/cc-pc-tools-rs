@@ -795,6 +795,11 @@ pub fn deliver(
         })
         .cloned()
         .collect();
+    if matches!(slot, Slot::Question(_)) {
+        for message in &retained {
+            crate::decision_identity::persist_task_reply(ctx, record, message)?;
+        }
+    }
     if !retained.is_empty() && initial["dependency_messages"] != json!(retained) {
         entry_mut(record, slot)["dependency_messages"] = json!(retained);
         save(ctx, state, thread, record, slot)?;
@@ -1052,8 +1057,8 @@ pub fn deliver(
                 .to_string_lossy(),
         );
         let handoff = format!(
-            "{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n",
-            s(&source["cwd"])
+            "{REQUEST_PREAMBLE}\nスレッドID: {tid}\n作業フォルダ: {}\n{}\n元の依頼・作業指示:\n{original}\nスレッドの冒頭を含む会話:\n{conversation}\nオーナーの全投稿（古い順）:\n{owners}\n前のジョブの最後のメッセージ:\n{last}\n",
+            s(&source["cwd"]), crate::decision_identity::task_handoff(ctx, &source)?
         );
         let prompt = format!(
             "オーナーから追加の指示が届きました。以下の新しい投稿を以前の指示より優先して作業に反映してください。投稿は原文です。\n{}\n最終返信には今回反映した投稿の日時と内容を明記してください。\n{handoff}",

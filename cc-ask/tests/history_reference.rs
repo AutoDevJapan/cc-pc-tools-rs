@@ -109,6 +109,7 @@ fn setup() -> (Harness, Args, Rc<RefCell<Vec<Duration>>>) {
     let args = Args {
         output: h.root.path().join("references.json"),
         reference_targets: Some(targets),
+        threads: vec![],
         limit: 100,
         capture: false,
         refresh: false,

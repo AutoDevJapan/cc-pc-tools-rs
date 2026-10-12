@@ -1884,6 +1884,7 @@ mod tests {
         network_without_intent: usize,
         posts_without_pending: usize,
         multipart_uploads: usize,
+        inject_owner_reply: Option<(String, String)>,
     }
 
     struct Mock {
@@ -1958,6 +1959,14 @@ mod tests {
             }
             let path = url.strip_prefix(API).ok_or("unexpected non-Discord URL")?;
             let mut state = self.server.lock().unwrap();
+            if method == "POST" {
+                if let Some((thread,content))=state.inject_owner_reply.take() {
+                    state.next+=1;
+                    let id=state.next.to_string();
+                    state.messages.entry(thread.clone()).or_default().push(json!({"id":id,"channel_id":thread,
+                        "author":{"id":OWNER,"bot":false},"content":content,"type":0,"timestamp":"2026-10-12T00:00:03Z"}));
+                }
+            }
             state
                 .calls
                 .push((method.into(), path.into(), body.cloned()));
@@ -2830,6 +2839,15 @@ mod tests {
         assert_eq!(observed["replies"].as_array().unwrap().len(),1);
         assert_eq!(observed["scheduled_observations"],2);
         assert_eq!(observed["replies"][0]["phase"],"parent_pending");
+        let state_path=fixture.home.join("recovery-followup.json");
+        let saved=fs::read(&state_path).unwrap();
+        let mut wrong:Value=serde_json::from_slice(&saved).unwrap();
+        wrong["replies"][&reply]["steering_handler"]=json!("unrelated-test-job");
+        fs::write(&state_path,serde_json::to_vec(&wrong).unwrap()).unwrap();
+        let before_claim=fs::read(&state_path).unwrap();
+        assert!(followup::claim(&mut ctx,&reply,"unrelated-test-job").unwrap_err().contains("claimant"));
+        assert_eq!(fs::read(&state_path).unwrap(),before_claim);
+        fs::write(&state_path,&saved).unwrap();
         let result=fixture.root.path().join("applied.json");
         fs::write(&result,serde_json::to_vec(&json!({"handler":"parent","revision":"349ed9ccf7c3ee1699601d749b1a2b5f7504c73a",
             "verification":"表示の17検査成功","summary":"指定外を別欄に残しました。","applied_at":"2026-10-12T00:00:02+00:00"})).unwrap()).unwrap();
@@ -2846,6 +2864,33 @@ mod tests {
         followup::applied(&mut restarted,&reply,&result).unwrap();
         followup::tick(&mut restarted).unwrap();
         assert_eq!(fixture.server.lock().unwrap().posts.len(),posts_before+1);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_followup_reply_arriving_during_result_post_prevents_decision_done() {
+        use crate::recovery_followup as followup;
+        let fixture=Fixture::new();
+        let args=fixture.ask("followup-late","a: 別欄で保持\nb: 部署へ追加\n");
+        let mut decision=core::read_json(&args.decision_file).unwrap();decision["scope"]["original_work_todo"]=json!(2471);
+        fs::write(&args.decision_file,serde_json::to_vec(&decision).unwrap()).unwrap();
+        let mut ctx=fixture.context();let question=ask(&mut ctx,&args).unwrap();
+        let thread=core::s(&question["thread_id"]);
+        let mid=fixture.add_reply(thread,OWNER,"a",false);
+        fs::write(&ctx.todo,serde_json::to_vec(&json!({"items":[{"id":2471,"jobs":[]},{"id":2472,"status":"block"}]})).unwrap()).unwrap();
+        let config=fixture.root.path().join("watch-late.json");
+        fs::write(&config,serde_json::to_vec(&followup::Watch{request_id:args.request_id,thread:thread.into(),
+            question_message:core::s(&question["message_id"]).into(),todo_id:2472,work_todo:2471,
+            parent_lock:fixture.root.path().join("parent-late.active"),worker_cwd:fixture.root.path().to_path_buf(),parent_messages:vec![mid.clone()]}).unwrap()).unwrap();
+        followup::register(&mut ctx,&config).unwrap();followup::tick(&mut ctx).unwrap();
+        let result=fixture.root.path().join("result-late.json");
+        fs::write(&result,serde_json::to_vec(&json!({"handler":"parent","revision":"349ed9ccf7c3ee1699601d749b1a2b5f7504c73a",
+            "verification":"表示の17検査成功","summary":"別欄へ反映しました。","applied_at":"2026-10-12T00:00:02Z"})).unwrap()).unwrap();
+        fixture.server.lock().unwrap().inject_owner_reply=Some((thread.into(),"b: 登録番号の指定を追記します".into()));
+        let out=followup::applied(&mut ctx,&mid,&result).unwrap();
+        assert_eq!(out["replies"].as_array().unwrap().len(),2);
+        assert_eq!(out["replies"][0]["phase"],"applied");assert_eq!(out["replies"][1]["phase"],"reserved");
+        assert_eq!(core::read_json(&ctx.todo).unwrap()["items"][1]["status"],"block");
         fixture.unchanged();
     }
 

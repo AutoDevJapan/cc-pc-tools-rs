@@ -568,17 +568,27 @@ pub fn claim(ctx: &mut Context, mid: &str, handler: &str) -> Result<Value> {
     if record.steering_handler.as_deref() != Some(handler) || record.phase != "parent_pending" {
         return Err("followup steering receiver differs".into());
     }
-    record.steering_received = true;
-    if handler != "parent" {
-        record.job = Some(handler.into());
-        record.phase = "launched".into();
+    if handler != "parent" && std::env::var("CC_JOB_ID").ok().as_deref() != Some(handler) {
+        return Err("followup steering claimant is not the assigned job".into());
     }
+    record_claim(record, handler);
     let envelope = json!({"original_question":state.original_question,"original_decision":state.original_decision,
         "reply":record.reply,"acquired_at":record.acquired_at,"acquisition_source":record.acquisition_source,
         "handler":handler,"receipt":"claimed_not_applied"});
     publish(&ctx.here.join(FILE), &state)?;
     annotate(ctx, &state, mid)?;
     Ok(envelope)
+}
+fn record_claim(record: &mut Record, handler: &str) {
+    record.steering_received = true;
+    if handler == "parent" {
+        // A parent claim transfers ownership durably, even after its active
+        // marker disappears. Only that handler's actual result can complete it.
+        record.parent_managed = true;
+    } else {
+        record.job = Some(handler.into());
+        record.phase = "launched".into();
+    }
 }
 fn finish(ctx: &mut Context, state: &mut State, mid: &str) -> Result<()> {
     let record = &state.replies[mid];
@@ -944,6 +954,23 @@ mod tests {
         .unwrap();
         assert_eq!(steering["reply"], state.replies["104"].reply);
         assert_eq!(steering["original_question"], state.original_question);
+    }
+    #[test]
+    fn parent_claim_is_permanent_ownership_after_active_marker_disappears() {
+        let (_temp, mut ctx, mut state, calls) = fixture();
+        observed(&mut state, "104");
+        fs::write(&state.watch.parent_lock, "parent active").unwrap();
+        publish(&ctx.here.join(FILE), &state).unwrap();
+        deliver(&mut ctx, &mut state, "104").unwrap();
+        assert!(!state.replies["104"].parent_managed);
+        record_claim(state.replies.get_mut("104").unwrap(), "parent");
+        publish(&ctx.here.join(FILE), &state).unwrap();
+        fs::remove_file(&state.watch.parent_lock).unwrap();
+        let mut restarted = load(&ctx.here).unwrap().unwrap();
+        deliver(&mut ctx, &mut restarted, "104").unwrap();
+        assert!(calls.lock().unwrap().accepted.is_empty());
+        assert!(restarted.replies["104"].steering_received);
+        assert_eq!(restarted.replies["104"].phase, "parent_pending");
     }
     #[test]
     fn lost_launch_response_restart_and_repeated_ticks_keep_one_key_and_one_job() {

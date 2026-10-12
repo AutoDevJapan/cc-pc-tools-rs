@@ -20,7 +20,14 @@ pub fn poll(root: &Path) {
 }
 fn observation(result: Result<String, &'static str>, at: String) -> Value {
     match result {
-        Ok(output) => match serde_json::from_str::<Value>(&output) {
+        // The finite CLI emits deadline/HTTP spans before its final JSON line.
+        // Only that final line can be evidence; never promote a quoted log row.
+        Ok(output) => match serde_json::from_str::<Value>(
+            output
+                .lines()
+                .rfind(|line| !line.trim().is_empty())
+                .unwrap_or(""),
+        ) {
             Ok(report) if report["domain"] == "new-owner-recovery-followup" => {
                 json!({"source":"resident-120s","observed_at":at,"ok":true,"report":report})
             }
@@ -52,6 +59,13 @@ mod tests {
         );
         assert_eq!(ok["source"], "resident-120s");
         assert_eq!(ok["ok"], true);
+        let with_spans=observation(Ok("2026-10-13 tick span start network GET\n{\"domain\":\"new-owner-recovery-followup\",\"scheduled_observations\":1}\n".into()),at.clone());
+        assert_eq!(with_spans["ok"], true);
+        let misleading = observation(
+            Ok("{\"domain\":\"new-owner-recovery-followup\"}\ncommand failed\n".into()),
+            at.clone(),
+        );
+        assert_eq!(misleading["ok"], false);
         assert_eq!(observation(Err("command_timeout"), at.clone())["ok"], false);
         assert_eq!(
             observation(Ok(json!({"domain":"lost-old-questions"}).to_string()), at)["ok"],

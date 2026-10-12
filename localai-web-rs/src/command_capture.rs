@@ -77,7 +77,7 @@ mod tests {
     fn stops_large_output_before_waiting_for_process_exit() {
         let args = vec![
             "--exact".into(),
-            "agent::command_capture::tests::fixture_large_output".into(),
+            format!("{}::fixture_large_output", module_path!().split_once("::").unwrap().1),
             "--ignored".into(),
             "--nocapture".into(),
         ];

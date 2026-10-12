@@ -121,6 +121,7 @@ pub async fn resident(board: Arc<Operations>) {
             tick.tick().await;
             let board = inspection.clone();
             let _ = tokio::task::spawn_blocking(move || {
+                crate::owner_followup::poll(&board.root);
                 let previous = board
                     .questions
                     .read()

@@ -16,14 +16,13 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-const DEPARTMENTS: [(&str, &str); 7] = [
+const DEPARTMENTS: [(&str, &str); 6] = [
     ("ゲーム部", "#1E8C93"),
     ("GoDD事業部", "#8E5BB5"),
     ("自社サービス部", "#3B73C4"),
     ("発信部", "#C2508F"),
     ("受託部", "#4E9A4E"),
     ("情報システム部", "#5C7080"),
-    ("Skills", "#5C7080"),
 ];
 const RECENT_MS: u64 = 3 * 60 * 60 * 1000;
 
@@ -279,7 +278,7 @@ fn department(project: &str) -> usize {
     {
         4
     } else if matches!(p.as_str(), "skills" | "skill") {
-        6
+        5
     } else if ["civ6", "banseiki", "万世紀", "phosgaea", "colonization"]
         .iter()
         .any(|s| p.contains(s))
@@ -319,7 +318,7 @@ fn rank_department(rank: u32) -> usize {
         20 => 0,
         30 => 5,
         40 => 3,
-        50 => 6,
+        50 => 5,
         60..=67 => 1,
         _ => 2,
     }
@@ -331,7 +330,7 @@ fn owner_department_order_and_explicit_projects_match_admission() {
         ("ARPS", 4),
         ("SocialPilot", 4),
         ("localai-web-rs", 5),
-        ("Skills", 6),
+        ("Skills", 5),
     ] {
         assert_eq!(department(p), d);
         assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)), d);
@@ -347,7 +346,6 @@ fn owner_department_order_and_explicit_projects_match_admission() {
             "ゲーム部",
             "情報システム部",
             "発信部",
-            "Skills",
             "GoDD事業部",
             "自社サービス部"
         ]
@@ -366,7 +364,7 @@ fn add(tree: &mut Tree, dept: usize, product: String, worker: Value) {
     tree.entry((dept, product)).or_default().push(worker);
 }
 fn departments(tree: Tree) -> Vec<Value> {
-    [4, 0, 5, 3, 6, 1, 2]
+    [4, 0, 5, 3, 1, 2]
         .into_iter()
         .map(|i| {
             let (name, color) = DEPARTMENTS[i];
@@ -1122,6 +1120,6 @@ mod tests {
         assert!(!fresh(Some(1), 300_000, 180_000));
         assert!(!fresh(Some(400_001), 300_000, 180_000));
         assert!(fresh(Some(290_000), 300_000, 180_000));
-        assert_eq!(departments(Tree::new()).len(), 7);
+        assert_eq!(departments(Tree::new()).len(), 6);
     }
 }

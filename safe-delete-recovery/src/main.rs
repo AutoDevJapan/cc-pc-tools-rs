@@ -2422,6 +2422,17 @@ mod tests {
             }
             // The normal isolated comparison really sees a change: this
             // ensures the new profile-specific comparison is exercised.
+            // A fresh worktree can retain an index stat entry matching the
+            // CRLF file, so Git may skip hashing it under the other setting.
+            // Change only fixture metadata to force that comparison on every
+            // runner, without sleeping or changing the bytes being archived.
+            let modified = fs::metadata(&tracked).unwrap().modified().unwrap();
+            fs::File::options()
+                .write(true)
+                .open(&tracked)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(modified + Duration::from_secs(2)))
+                .unwrap();
             assert!(matches!(
                 validate_repo(&old.join("work"), &c.repos[0], true),
                 Err("GIT_TRACKED_CHANGES")

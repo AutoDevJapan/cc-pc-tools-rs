@@ -1,6 +1,8 @@
 //! A session-independent, read-only projection of the shared operational records.
 //! Never read job prompts, credentials, client workspaces or session transcripts.
 use chrono::DateTime;
+#[path = "operations_catalog.rs"]
+mod catalog;
 #[path = "commander_health.rs"]
 mod commander_health;
 #[path = "waiting_state.rs"]
@@ -140,6 +142,62 @@ pub async fn resident(board: Arc<Operations>) {
         let _ = tokio::task::spawn_blocking(move || board.refresh()).await;
     }
 }
+/// Restricted read-only display for the existing shared records panel.
+/// Missing privacy records never grant access to text, paths or job actions.
+pub fn metadata_display(
+    root: &Path,
+    todo_path: &Path,
+    jobs_path: &Path,
+    kind: &str,
+) -> Result<Value, &'static str> {
+    if !matches!(kind, "todo" | "jobs" | "handoff") {
+        return Err("invalid display");
+    }
+    let board = protected_metadata_at(root, todo_path, jobs_path, now_ms());
+    if board["metadataOk"] != true {
+        return Err("metadata unavailable");
+    }
+    let mut rows = Vec::new();
+    for department in board["departments"].as_array().into_iter().flatten() {
+        for product in department["products"].as_array().into_iter().flatten() {
+            for worker in product["workers"].as_array().into_iter().flatten() {
+                rows.push((product, worker));
+            }
+        }
+    }
+    for product in board["unassignedProducts"].as_array().into_iter().flatten() {
+        for worker in product["workers"].as_array().into_iter().flatten() {
+            rows.push((product, worker));
+        }
+    }
+    let items:Vec<_>=rows.iter().filter_map(|(product,worker)| {
+        let id=worker["id"].as_str()?.strip_prefix("todo-")?.parse::<u64>().ok()?;
+        Some(json!({"id":id,"project":product["name"],"title":worker["task"],"status":worker["recordedStatus"],
+            "progress":worker["progress"],"updated_at":worker["updatedAt"],"note":"作業本文は保護設定の復旧まで非表示です。",
+            "summary":worker["summary"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
+            "dependencies":worker["dependencies"],"history":[],"historyAvailable":false,"actionsAvailable":false}))
+    }).collect();
+    let mut used = BTreeSet::new();
+    let jobs:Vec<_>=rows.iter().filter_map(|(product,worker)| {
+        let id=worker["primaryJob"].as_str()?;
+        if !used.insert(id.to_owned()) { return None; }
+        Some(json!({"id":id,"project":product["name"],"task_title":worker["task"],"status":worker["jobStatus"],
+            "summary":worker["summary"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
+            "updated_at":worker["updatedAt"],"started_at":null,"actionsAvailable":false,"contentAvailable":false}))
+    }).collect();
+    let mut result = match kind {
+        "todo" => json!({"items":items}),
+        "jobs" => json!({"jobs":jobs}),
+        _ => {
+            json!({"text":"製品名・状態・作業の種類を共有記録から取得しました。本文、履歴、質問と回答は保護設定と原記録を復旧中です。空欄は未確認であり、未回答の質問が0件とは確認できていません。",
+            "todos":items,"running_jobs":jobs,"decisions":[],"decisionsAvailable":false})
+        }
+    };
+    result["protectionMode"] = json!("masked_metadata");
+    result["metadataOnly"] = json!(true);
+    result["fetchedAt"] = board["fetchedAt"].clone();
+    Ok(result)
+}
 fn empty() -> Value {
     json!({"fetchedAt":null,"sourceOk":false,"sources":[],
         "commander":{"id":"commander","name":"司令塔","status":"unknown","detail":"共有データを取得中"},
@@ -259,12 +317,15 @@ fn clean(names: &cc_ask::task_title::Names, value: &str) -> String {
         .collect()
 }
 fn project_name(names: &cc_ask::task_title::Names, project: &str) -> String {
+    if let Some(product) = catalog::find(project) {
+        return product.name.into();
+    }
     let masked = names.project(project);
     if masked == "クライアント案件" {
         return masked;
     }
     match project {
-        "civ6" | "civ6-banseiki" => "万世紀".into(),
+        "civ6" | "civ6-banseiki" => "万世記".into(),
         "tools" | "PCツール" => "PCの道具".into(),
         "" => "その他".into(),
         _ => clean(names, &cc_ask::task_title::canonical_project(project)),
@@ -361,6 +422,9 @@ fn add(tree: &mut Tree, dept: usize, product: String, worker: Value) {
             .entry(key.clone())
             .or_insert(value.clone());
     }
+    let (dept, product) = catalog::find(&product)
+        .map(|p| (p.department, p.name.to_owned()))
+        .unwrap_or((dept, product));
     tree.entry((dept, product)).or_default().push(worker);
 }
 fn departments(tree: Tree) -> Vec<Value> {
@@ -368,21 +432,178 @@ fn departments(tree: Tree) -> Vec<Value> {
         .into_iter()
         .map(|i| {
             let (name, color) = DEPARTMENTS[i];
-            let products: Vec<_> = tree
+            let products: Vec<_> = catalog::PRODUCTS
                 .iter()
-                .filter(|((d, _), _)| *d == i)
-                .map(|((_, p), w)| json!({"id":safe_id("product",p),"name":p,"workers":w}))
+                .filter(|p| p.department == i)
+                .map(|p| {
+                    json!({"id":safe_id("product",p.name),"name":p.name,
+                    "workers":tree.get(&(i,p.name.to_owned())).cloned().unwrap_or_default()})
+                })
                 .collect();
             json!({"id":format!("department-{i}"),"name":name,"color":color,"products":products})
         })
         .collect()
 }
+fn unassigned_products(tree: &Tree) -> Vec<Value> {
+    let mut entries = BTreeMap::<String, Vec<Value>>::new();
+    for ((_, name), workers) in tree {
+        if catalog::find(name).is_none() {
+            entries
+                .entry(name.clone())
+                .or_default()
+                .extend(workers.clone());
+        }
+    }
+    entries
+        .into_iter()
+        .map(|(name, workers)| json!({"id":safe_id("product",&name),"name":name,"workers":workers}))
+        .collect()
+}
+
+/// A finite vocabulary describes observed work without releasing source prose.
+fn registered_work_kinds(items: &[&Value]) -> Vec<&'static str> {
+    let kinds = [
+        (
+            "Discordの受付・回答・通知",
+            &["discord", "質問", "回答", "通知"][..],
+        ),
+        (
+            "開発・修正・検査",
+            &["実装", "修正", "検証", "テスト", "ci", "レビュー"][..],
+        ),
+        (
+            "サイト・画面・表示",
+            &["サイト", "画面", "表示", "ui", "ux"][..],
+        ),
+        (
+            "PCの容量・メモリ・後片付け",
+            &["容量", "メモリ", "削除", "清掃", "ドライブ", "キャッシュ"][..],
+        ),
+        (
+            "AIの実行・接続・利用枠",
+            &["モデル", "llm", "codex", "claude", "利用枠", "oauth"][..],
+        ),
+        (
+            "監視・担当の再開・定期実行",
+            &["監視", "再開", "常駐", "定期", "スケジュール", "担当"][..],
+        ),
+        (
+            "動画・音楽・音声の制作",
+            &["動画", "音楽", "音声", "楽曲", "tts", "suno", "youtube"][..],
+        ),
+        (
+            "サービスの設定・配備・料金",
+            &[
+                "配備",
+                "デプロイ",
+                "設定",
+                "料金",
+                "課金",
+                "railway",
+                "vercel",
+            ][..],
+        ),
+        (
+            "ゲームの制作・検査",
+            &["ゲーム", "civ6", "godot", "unity", "戦闘", "武器"][..],
+        ),
+    ];
+    kinds
+        .into_iter()
+        .filter_map(|(label, words)| {
+            items
+                .iter()
+                .any(|item| {
+                    let title = text(item, "title").to_lowercase();
+                    words.iter().any(|word| title.contains(word))
+                })
+                .then_some(label)
+        })
+        .collect()
+}
+
+// A recorded owner choice changes presentation only, never privacy or admission.
+// Match the independent, verified question generation and owner before using it.
+fn membership_choice(root: &Path, now: u64) -> Option<(BTreeSet<String>, Value)> {
+    let choice =
+        read_json(&root.join("localai-web-rs/target/release/operations-membership-choice.json"))
+            .ok()?;
+    if choice["selection"] != "separate" || choice["source"] != "discord-owner-reply" {
+        return None;
+    }
+    let answered = stamp(&choice["answered_at"])?;
+    if answered > now + 60_000 {
+        return None;
+    }
+    let ledger = read_json(&root.join("discord-ask/recovery-messages.json")).ok()?;
+    if ledger["domain"] != "new-owner-recovery-messages" {
+        return None;
+    }
+    let events = ledger["events"].as_array()?;
+    for event in events.iter().filter(|e| e["event"] == "intent") {
+        let request = &event["request"];
+        if request["operation"]["kind"] != "ask"
+            || request["operation"]["todo_id"] != choice["todo_id"]
+            || request["destination"]["owner"] != choice["author_id"]
+        {
+            continue;
+        }
+        let verified = events.iter().find(|e| {
+            e["event"] == "verified"
+                && e["request_id"] == request["request_id"]
+                && e["phase"] == "question:0"
+                && e["receipt"]["thread_id"] == choice["question_thread_id"]
+                && e["receipt"]["message_id"] == choice["question_message_id"]
+        })?;
+        let question = choice["question_message_id"]
+            .as_str()?
+            .parse::<u64>()
+            .ok()?;
+        if choice["message_id"].as_str()?.parse::<u64>().ok()? <= question {
+            return None;
+        }
+        let ids: BTreeSet<_> = choice["registration_ids"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+            .filter(|id| {
+                id.strip_prefix("registration-").is_some_and(|tail| {
+                    tail.len() == 16 && tail.bytes().all(|b| b.is_ascii_hexdigit())
+                })
+            })
+            .map(str::to_owned)
+            .collect();
+        let resources: BTreeSet<_> = request["operation"]["decision_original"]["resources"]
+            .as_array()?
+            .iter()
+            .filter_map(|r| r["id"].as_str())
+            .map(str::to_owned)
+            .collect();
+        if ids.is_empty() || ids != resources {
+            return None;
+        }
+        let guild = request["destination"]["guild"].as_str()?;
+        if !guild.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        let url = format!(
+            "https://discord.com/channels/{guild}/{}",
+            text(&verified["receipt"], "thread_id")
+        );
+        let info = json!({"selection":"separate","answeredAt":answered,"acceptedRegistrations":ids.len(),"questionUrl":url});
+        return Some((ids, info));
+    }
+    None
+}
 fn source(key: &str, label: &str, ok: bool, at: Option<u64>, message: &str) -> Value {
     json!({"key":key,"label":label,"ok":ok,"updatedAt":at,"message":message})
 }
 fn jobs(root: &Path) -> Result<Vec<Value>, ()> {
+    jobs_at(&root.join("codex-jobs/jobs"))
+}
+fn jobs_at(path: &Path) -> Result<Vec<Value>, ()> {
     let mut out = Vec::new();
-    for entry in fs::read_dir(root.join("codex-jobs/jobs")).map_err(|_| ())? {
+    for entry in fs::read_dir(path).map_err(|_| ())? {
         let entry = entry.map_err(|_| ())?;
         if !entry.file_type().map_err(|_| ())?.is_dir() {
             continue;
@@ -411,36 +632,108 @@ fn collect(root: &Path, now: u64) -> Value {
 // A missing name registry must not expose any free text or erase the available
 // activity metadata. This projection does not create or substitute a registry.
 fn protected_metadata(root: &Path, now: u64) -> Value {
-    let todo_path = root.join("todo/todo.json");
-    let todo = cc_todo::read_store(&todo_path)
+    protected_metadata_at(
+        root,
+        &root.join("todo/todo.json"),
+        &root.join("codex-jobs/jobs"),
+        now,
+    )
+}
+fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u64) -> Value {
+    let todo = cc_todo::read_store(todo_path)
         .ok()
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
-    let job_result = jobs(root);
+    let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
-    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
     let mut tree = Tree::new();
-    if todo.as_ref().is_some_and(|db| {
-        db["projects"].as_object().is_some_and(|projects| {
-            projects
-                .keys()
-                .any(|project| matches!(project.to_ascii_lowercase().as_str(), "skills" | "skill"))
-        })
-    }) {
-        tree.entry((5, "Skills".into())).or_default();
-    }
     let mut used = BTreeSet::new();
-    let mut unnamed = BTreeMap::<String, String>::new();
-    let mut project_label = |raw: &str| {
-        if matches!(raw.to_ascii_lowercase().as_str(), "skills" | "skill") {
-            "Skills".to_owned()
-        } else {
-            let ordinal = unnamed.len() + 1;
-            unnamed
-                .entry(raw.to_owned())
-                .or_insert_with(|| format!("作業名の確認待ち {ordinal}"))
-                .clone()
-        }
+    let public_product = |raw: &str| {
+        catalog::find(raw).or_else(|| {
+            todo.as_ref().and_then(|db| {
+                db["projects"][raw]
+                    .as_str()
+                    .and_then(catalog::registered_root)
+            })
+        })
     };
+    let project_label = |raw: &str| {
+        public_product(raw)
+            .map(|p| p.name.to_owned())
+            .or_else(|| catalog::previously_named(raw).map(str::to_owned))
+            .or_else(|| {
+                todo.as_ref()
+                    .and_then(|db| db["items"].as_array())
+                    .and_then(|items| {
+                        items
+                            .iter()
+                            .find(|item| text(item, "project") == raw)
+                            .and_then(|item| item["id"].as_u64())
+                    })
+                    .map(|id| format!("未指定の登録（作業 #{id}）"))
+            })
+            .unwrap_or_else(|| {
+                format!(
+                    "登録 {}",
+                    safe_id("project", raw).trim_start_matches("project-")
+                )
+            })
+    };
+    let mut registrations = Vec::new();
+    if let Some(db) = &todo {
+        let mut projects = BTreeSet::new();
+        projects.extend(
+            db["projects"]
+                .as_object()
+                .into_iter()
+                .flat_map(|p| p.keys())
+                .cloned(),
+        );
+        projects.extend(
+            db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|i| text(i, "project").to_owned()),
+        );
+        projects.extend(
+            js.iter()
+                .filter(|job| active(job))
+                .map(|job| infer_project(job, Some(db))),
+        );
+        for raw in projects {
+            if raw.eq_ignore_ascii_case("owner") {
+                continue;
+            }
+            let items: Vec<_> = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|item| text(item, "project") == raw)
+                .collect();
+            let public = public_product(&raw);
+            let label = project_label(&raw);
+            tree.entry((public.map_or(usize::MAX, |p| p.department), label.clone()))
+                .or_default();
+            if public.is_none() || public.is_some_and(|p| p.name == "Skills") {
+                registrations.push(json!({"id":safe_id("registration",&raw),"name":label,
+                    "nameConfirmed":public.is_some()||catalog::previously_named(&raw).is_some(),
+                    "previouslyAssignedDepartment":if public.is_some_and(|p|p.name=="Skills") {Some("情報システム部")} else {None},
+                    "registeredTasks":items.len(),"unfinishedTasks":items.iter().filter(|i|i["status"]!="done").count(),
+                    "taskIds":items.iter().filter_map(|i|i["id"].as_u64()).collect::<Vec<_>>(),
+                    "workKinds":registered_work_kinds(&items),"decision":if public.is_some_and(|p|p.name=="Skills") {"以前の指示に従い情報システム部内に配置済み"} else {"所属と一覧への残し方の判断待ち"}}));
+            }
+        }
+    }
+    let membership = membership_choice(root, now);
+    if let Some((ids, _)) = &membership {
+        for row in &mut registrations {
+            if row["id"].as_str().is_some_and(|id| ids.contains(id)) {
+                row["decision"] =
+                    json!("本人の回答に従い、製品一覧とは別欄の作業として保持しています。");
+                row["decisionResolved"] = json!(true);
+            }
+        }
+    }
     if let Some(items) = todo.as_ref().and_then(|db| db["items"].as_array()) {
         for item in items {
             let Some(id) = item["id"].as_u64() else {
@@ -476,24 +769,48 @@ fn protected_metadata(root: &Path, now: u64) -> Value {
                 "idle"
             };
             let raw_project = text(item, "project");
-            let skills = matches!(
-                raw_project.to_ascii_lowercase().as_str(),
-                "skills" | "skill"
-            );
-            let detail = if text(item, "status") == "recovery_unverified" {
-                "復元した作業記録を確認中です。作業名と本文は表示を保留しています。"
+            if raw_project.eq_ignore_ascii_case("owner") {
+                continue;
+            }
+            let kinds = registered_work_kinds(&[item]);
+            let task = if kinds.is_empty() {
+                "作業の種類を確認中".to_owned()
             } else {
-                "保護設定を復旧中のため、作業名と本文は表示を保留しています。Skills以外の部署所属は確認中です。"
+                kinds.join("、")
+            };
+            let dependencies: Vec<_> = item["wait_on"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_u64)
+                .filter(|id| *id > 0)
+                .collect();
+            let stop_reason = if text(item, "status") == "recovery_unverified" {
+                "元の作業記録が消失したため、成果の確認と再開準備を行っています。"
+            } else if text(item, "status") == "wait" {
+                "記録された別のToDoの完了を待っています。"
+            } else if status == "attention" {
+                "前回の担当が失敗または停止しました。再開状況を確認しています。"
+            } else if status == "waiting" {
+                "実行中の担当と停止理由を確認しています。"
+            } else {
+                ""
+            };
+            let detail = if text(item, "status") == "recovery_unverified" {
+                "復元した作業記録を確認中です。製品名は本人の指定に合わせ、作業本文は表示を保留しています。"
+            } else {
+                "作業本文の保護設定を復旧中です。部署と製品名は本人が指定した一覧から表示しています。"
             };
             add(
                 &mut tree,
-                if skills {
-                    5
-                } else {
-                    rank_department(cc_scheduler::priority::item_rank(item, &policy))
-                },
+                public_product(raw_project).map_or(usize::MAX, |p| p.department),
                 project_label(raw_project),
-                json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":"作業内容の表示を保留中", "status":status,
+                json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
+                    "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
+                    "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
+                    "summary":task,"stopReason":stop_reason,"dependencies":dependencies,
+                    "nextAction":if status=="waiting"||status=="attention" {"元の依頼・成果・担当の状態を照合して続行します。"} else {""},
+                    "factsSource":format!("共有ToDo #{id} の状態と作業種別（本文は非表示）"),
                     "progress":item["progress"].as_u64().filter(|n|*n<=100),
                     "updatedAt":todo_stamp(item).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
                     "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|associated.iter().filter(|job|failed(job)).count()),
@@ -506,22 +823,18 @@ fn protected_metadata(root: &Path, now: u64) -> Value {
             && !used.contains(text(job, "id"))
     }) {
         let raw_project = infer_project(job, todo.as_ref());
-        let skills = matches!(
-            raw_project.to_ascii_lowercase().as_str(),
-            "skills" | "skill"
-        );
+        if raw_project.eq_ignore_ascii_case("owner") {
+            continue;
+        }
         add(
             &mut tree,
-            if skills {
-                5
-            } else {
-                rank_department(cc_scheduler::priority::project_rank(&raw_project))
-            },
+            public_product(&raw_project).map_or(usize::MAX, |p| p.department),
             project_label(&raw_project),
             json!({"id":safe_id("job",text(job,"id")),"name":"名称を確認中の担当","task":"作業内容の表示を保留中",
+                "primaryJob":safe_id("job",text(job,"id")),"jobStatus":text(job,"status"),
                 "status":if failed(job) {"attention"} else if text(job,"status")=="queued" {"waiting"} else {"working"},"progress":null,
                 "updatedAt":stamp(&job["finished_at"]).or_else(||stamp(&job["started_at"])).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
-                "detail":"保護設定を復旧中です。作業名・本文・部署所属は確認中です。","detailAvailable":false,"historyFailures":if failed(job){Some(1u64)}else{None},"waitingKind":"unverified"}),
+                "detail":"作業本文の保護設定を復旧中です。指定外の登録は所属の判断待ちに表示しています。","detailAvailable":false,"historyFailures":if failed(job){Some(1u64)}else{None},"waitingKind":"unverified"}),
         );
     }
     let count = |status| {
@@ -539,14 +852,56 @@ fn protected_metadata(root: &Path, now: u64) -> Value {
     out["protectionMode"] = json!("masked_metadata");
     out["sourceOk"] = json!(false);
     out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
+    out["unassignedProducts"] = json!(unassigned_products(&tree));
+    out["unlistedRegistrations"] = json!(registrations);
+    out["membershipDecision"] = membership.map(|(_, info)| info).unwrap_or(Value::Null);
     out["departments"] = json!(departments(tree));
     out["metrics"] = json!({"activeJobs":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|matches!(text(job,"status"),"running"|"starting"|"pending")).count()),
         "jobQueued":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|text(job,"status")=="queued").count()),
         "todoDependencyWaits":count("wait"),"todoPendingStarts":count("todo"),"todoBlocked":count("block"),"recoveryUnverified":count("recovery_unverified")});
+    let scheduler_path = root.join("scheduler/status.json");
+    let scheduler = read_json(&scheduler_path).unwrap_or(Value::Null);
+    let scheduler_at = stamp(&scheduler["measured_at"]);
+    let scheduler_ok = fresh(scheduler_at, now, 180_000);
+    for (key, value) in [
+        ("cpuPercent", scheduler["cpu_percent"].clone()),
+        (
+            "memoryUsedGb",
+            json!(scheduler["ram_total_gb"]
+                .as_f64()
+                .zip(scheduler["available_gb"].as_f64())
+                .map(|(total, free)| total - free)),
+        ),
+        ("memoryTotalGb", scheduler["ram_total_gb"].clone()),
+        ("jobLimit", scheduler["hard_cap"].clone()),
+        ("waitingJobs", scheduler["queue_length"].clone()),
+    ] {
+        out["metrics"][key] = if scheduler_ok { value } else { Value::Null };
+    }
+    let queue_path = root.join("localai-web-rs/target/release/console-state.json");
+    let queue_read = read_json(&queue_path);
+    let queue = queue_read.as_ref().cloned().unwrap_or(Value::Null);
+    let health_path = queue_path.with_file_name("commander-health.json");
+    let health = read_json(&health_path);
+    out["commander"] = commander_health::project(
+        health.as_ref().ok(),
+        &queue,
+        now,
+        (queue_read.is_err() && queue_path.try_exists().unwrap_or(true))
+            || (health.is_err() && health_path.try_exists().unwrap_or(true)),
+    );
+    out["metrics"]["consoleQueued"] = json!(queue["queue"].as_array().map(Vec::len));
+    out["metrics"]["consolePreparationFailures"] =
+        json!(queue["queue"].as_array().map(|items| items
+            .iter()
+            .filter(|t| queue["preparation_failures"][text(t, "key")].is_array())
+            .count()));
     out["sources"] = json!([
-        source("privacy","作業名の保護",false,None,"保護設定の原本を取得できません。作業名・本文は伏せています。Skills以外の部署所属は確認中です。"),
-        source("todos","共有ToDo",todo.is_some(),modified(&todo_path),"記録された状態と実測進捗だけを取得"),
-        source("jobs","ジョブ",job_result.is_ok(),Some(now),"記録された実行状態だけを取得")]);
+        source("privacy","作業本文の保護",false,None,"保護設定の原本を取得できません。本人指定の製品名と実測状態を表示し、作業本文と未確認の名称は伏せています。"),
+        source("todos","共有ToDo",todo.is_some(),modified(todo_path),"記録された状態と実測進捗だけを取得"),
+        source("jobs","ジョブ",job_result.is_ok(),Some(now),"記録された実行状態だけを取得"),
+        source("scheduler","CPU・メモリ・ジョブ枠",scheduler_ok,scheduler_at,if scheduler_ok {"常駐監視から取得"} else {"監視記録が古いか取得できません"}),
+        source("commander","司令塔の巡回",out["commander"]["status"]=="working",modified(&health_path),"巡回完了の記録から取得")]);
     out
 }
 fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
@@ -696,7 +1051,9 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                         == "クライアント案件"
                 });
             let project = if client {
-                "クライアント案件".into()
+                catalog::find(display_project)
+                    .map(|p| p.name.to_owned())
+                    .unwrap_or_else(|| "クライアント案件".into())
             } else {
                 project
             };
@@ -854,7 +1211,9 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             || names.project(text(j, "cwd")) == "クライアント案件"
             || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
         let project = if client {
-            "クライアント案件".into()
+            catalog::find(&inferred)
+                .map(|p| p.name.to_owned())
+                .unwrap_or_else(|| "クライアント案件".into())
         } else {
             project
         };
@@ -1026,7 +1385,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     };
     json!({"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
-        "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],"departments":departments(tree)})
+        "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
+        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
     let cwd = text(job, "cwd").replace('\\', "/").to_lowercase();
@@ -1087,6 +1447,7 @@ mod tests {
             .unwrap()
             .iter()
             .flat_map(|dept| dept["products"].as_array().unwrap())
+            .chain(snapshot["unassignedProducts"].as_array().unwrap())
             .flat_map(|p| p["workers"].as_array().unwrap())
             .collect();
         let worker = workers.iter().find(|w| w["id"] == "todo-1").unwrap();
@@ -1147,6 +1508,7 @@ mod tests {
             .unwrap()
             .iter()
             .flat_map(|d| d["products"].as_array().unwrap())
+            .chain(output["unassignedProducts"].as_array().unwrap())
             .flat_map(|p| p["workers"].as_array().unwrap())
             .collect();
         let find = |id: &str| *workers.iter().find(|w| w["id"] == id).unwrap();
@@ -1298,6 +1660,7 @@ mod tests {
             .unwrap()
             .iter()
             .flat_map(|d| d["products"].as_array().unwrap())
+            .chain(board["unassignedProducts"].as_array().unwrap())
             .flat_map(|p| p["workers"].as_array().unwrap())
             .any(|w| w["status"] == "attention"));
         let encoded = board.to_string();
@@ -1327,8 +1690,165 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .all(|d| d["products"].as_array().unwrap().is_empty()));
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .all(|p| p["workers"].as_array().unwrap().is_empty()));
         assert!(!temp.path().join("client-projects.txt").exists());
+    }
+    #[test]
+    fn owner_catalogue_keeps_exact_lists_alias_workers_and_every_unlisted_registration() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("todo")).unwrap();
+        fs::create_dir_all(root.join("codex-jobs/jobs")).unwrap();
+        fs::write(root.join("todo/todo.json"),json!({"projects":{
+            "GoDD-Rosseta":"D:/public/a","GoDD Rosetta":"D:/public/b",
+            "civ6-banseiki":"D:/public/game","ARPS":"D:/private",
+            "Skills":"D:/public/skills","SecretClient":"D:/private/old",
+            "SocialPilot":"D:/public/social"},"items":[
+            {"id":1,"project":"GoDD-Rosseta","title":"サイトを修正する","status":"doing","progress":35},
+            {"id":2,"project":"GoDD Rosetta","title":"secret free prose","status":"todo"},
+            {"id":3,"project":"civ6-banseiki","status":"todo"},
+            {"id":4,"project":"ARPS","title":"private customer data","status":"doing"},
+            {"id":5,"project":"SecretClient","title":"履歴を検証する SecretClient","status":"done","updated_at":"2020-01-01T00:00:00Z"},
+            {"id":6,"project":"SocialPilot","title":"サイトを修正する","status":"wait","wait_on":[1]}
+        ]}).to_string()).unwrap();
+        let snapshot = collect(root, 1_000_000);
+        let list = |department| {
+            snapshot["departments"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["name"] == department)
+                .unwrap()["products"]
+                .as_array()
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(
+            list("GoDD事業部")
+                .iter()
+                .map(|p| p["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            [
+                "GoDD 13a13e1",
+                "GoDD AO",
+                "GoDD Agent",
+                "GoDD Creators",
+                "GoDD Genesis",
+                "GoDD MCP α",
+                "GoDD Press",
+                "GoDD Rosetta",
+                "GoDD Virtual Streamer"
+            ]
+        );
+        assert_eq!(
+            list("自社サービス部")
+                .iter()
+                .map(|p| p["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            [
+                "ALT-LINE",
+                "cashcow",
+                "CoChara",
+                "Geonaut",
+                "Git道",
+                "KaraokeMaker",
+                "OmegaPortal",
+                "PassShare",
+                "QaJaRuEn",
+                "Re:X",
+                "Scoopa",
+                "no-a"
+            ]
+        );
+        assert_eq!(
+            list("情報システム部")
+                .iter()
+                .map(|p| p["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            ["PCの道具", "local-ai-concole", "OpenCodex", "Skills"]
+        );
+        assert_eq!(
+            list("ゲーム部")
+                .iter()
+                .map(|p| p["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            ["万世記", "PhosGaea"]
+        );
+        assert_eq!(
+            list("受託部")
+                .iter()
+                .map(|p| p["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            ["YCC-HP", "ARPS"]
+        );
+        let rosetta = list("GoDD事業部")
+            .into_iter()
+            .find(|p| p["name"] == "GoDD Rosetta")
+            .unwrap();
+        assert_eq!(rosetta["workers"].as_array().unwrap().len(), 2);
+        assert_eq!(rosetta["workers"][0]["progress"], 35);
+        assert!(list("自社サービス部")
+            .iter()
+            .all(|p| p["name"] != "Social Pilot"));
+        let extras = snapshot["unlistedRegistrations"].as_array().unwrap();
+        assert_eq!(extras.len(), 3);
+        assert!(extras.iter().any(
+            |p| p["name"] == "Skills" && p["previouslyAssignedDepartment"] == "情報システム部"
+        ));
+        assert!(extras
+            .iter()
+            .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1));
+        assert!(extras.iter().any(|p| p["registeredTasks"] == 1
+            && p["unfinishedTasks"] == 0
+            && p["taskIds"] == json!([5])));
+        for hidden in [
+            "SecretClient",
+            "secret free prose",
+            "private customer data",
+            "D:/private",
+        ] {
+            assert!(!snapshot.to_string().contains(hidden));
+        }
+        assert!(!root.join("client-projects.txt").exists());
+        assert_eq!(snapshot["metadataOk"], true);
+        assert_eq!(snapshot["sourceOk"], false);
+    }
+    #[test]
+    fn membership_choice_is_scoped_to_the_verified_owner_question_and_resource_set() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("localai-web-rs/target/release")).unwrap();
+        fs::create_dir_all(root.join("discord-ask")).unwrap();
+        let id = "registration-0123456789abcdef";
+        let path = root.join("localai-web-rs/target/release/operations-membership-choice.json");
+        let mut choice = json!({"selection":"separate","source":"discord-owner-reply","todo_id":2473,
+            "author_id":"100","question_thread_id":"300","question_message_id":"300","message_id":"301",
+            "answered_at":"2026-10-12T14:00:00Z","registration_ids":[id]});
+        fs::write(root.join("discord-ask/recovery-messages.json"),json!({"domain":"new-owner-recovery-messages","events":[
+            {"event":"intent","request":{"request_id":"fixture","destination":{"owner":"100","guild":"200"},
+                "operation":{"kind":"ask","todo_id":2473,"decision_original":{"resources":[{"id":id}]}}}},
+            {"event":"verified","request_id":"fixture","phase":"question:0","receipt":{"thread_id":"300","message_id":"300"}}
+        ]}).to_string()).unwrap();
+        fs::write(&path, choice.to_string()).unwrap();
+        let now = stamp(&json!("2026-10-12T14:10:00Z")).unwrap();
+        let (ids, info) = membership_choice(root, now).unwrap();
+        assert!(ids.contains(id));
+        assert_eq!(info["selection"], "separate");
+        assert_eq!(info["questionUrl"], "https://discord.com/channels/200/300");
+        for (key, value) in [
+            ("author_id", json!("other")),
+            ("question_message_id", json!("299")),
+            ("message_id", json!("299")),
+            ("registration_ids", json!(["registration-ffffffffffffffff"])),
+        ] {
+            let original = choice[key].clone();
+            choice[key] = value;
+            fs::write(&path, choice.to_string()).unwrap();
+            assert!(membership_choice(root, now).is_none());
+            choice[key] = original;
+        }
+        assert!(!root.join("client-projects.txt").exists());
     }
     #[test]
     fn stale_and_future_monitor_records_cannot_report_current_capacity() {

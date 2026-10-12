@@ -44,6 +44,8 @@ pub mod question_progress;
 pub mod question_store;
 pub mod questions;
 pub mod recovery_failure;
+/// Independent new owner messages; never restores or unlocks the lost question state.
+pub mod recovery_messages;
 pub mod reminders;
 pub mod reply_recovery;
 pub mod restart;

@@ -6,6 +6,14 @@ use std::{
 pub type Result<T> = std::result::Result<T, String>;
 pub const SILENT: u64 = 1 << 12;
 pub const MAX_CONTENT: usize = 2000;
+// Discord requires an honest client URL/version in this format. An invalid
+// identifier can be rejected by Cloudflare before reaching a channel endpoint.
+// https://docs.discord.com/developers/reference#user-agent
+pub const DISCORD_USER_AGENT: &str = concat!(
+    "DiscordBot (https://github.com/AutoDevJapan/cc-pc-tools-rs, ",
+    env!("CARGO_PKG_VERSION"),
+    ")"
+);
 pub const REQUEST_CHANNEL_ID: &str = "1554771264298819675";
 pub const RUNNING: [&str; 3] = ["queued", "starting", "running"];
 pub const RESUME_AFTER_S: f64 = 600.;
@@ -659,7 +667,7 @@ impl Effects for RealEffects {
                 .post(url)
                 .timeout(left)
                 .set("Authorization", &format!("Bot {}", token()?))
-                .set("User-Agent", "DiscordBot (https://discord.com, 1.0)")
+                .set("User-Agent", DISCORD_USER_AGENT)
                 .set("Content-Type", content_type)
                 .send_bytes(body);
             match response {
@@ -767,7 +775,7 @@ impl Effects for RealEffects {
             if discord {
                 req = req
                     .set("Authorization", &format!("Bot {}", token()?))
-                    .set("User-Agent", "discord-ask (local, 1.0)");
+                    .set("User-Agent", DISCORD_USER_AGENT);
             }
             let response = if let Some(value) = body {
                 req.send_string(&value.to_string())

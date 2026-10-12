@@ -185,7 +185,7 @@ const ctx={AbortController,console,Date:{now:()=>now},window:{addEventListener:(
 vm.createContext(ctx);
 const line=prefix=>html.split('\n').find(line=>line.trim().startsWith(prefix));
 const between=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
-vm.runInContext(line('const opsState=')+'\n'+line('async function api(')+'\n'+between('    async function refreshOperations(', '    function publishConsoleSource(')+'\n'+between('    async function loadOpsDetail(', '    function openOpsDetail(')+'\n globalThis.ops=opsState;',ctx);
+vm.runInContext(line('const opsState=')+'\n'+line('async function api(')+'\n'+between('    function applyOpsProtection(', '    async function refreshOperations(')+'\n'+between('    async function refreshOperations(', '    function publishConsoleSource(')+'\n'+between('    async function loadOpsDetail(', '    function openOpsDetail(')+'\n globalThis.ops=opsState;',ctx);
 const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
 const advance=async(ms)=>{now+=ms;for(const [id,t]of [...timers])if(t.at<=now){timers.delete(id);t.f()}await tick()};
 (async()=>{

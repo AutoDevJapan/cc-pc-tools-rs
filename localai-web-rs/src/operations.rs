@@ -408,6 +408,147 @@ fn collect(root: &Path, now: u64) -> Value {
         &read_json(&root.join("discord-ask/operations-history.json")).unwrap_or(Value::Null),
     )
 }
+// A missing name registry must not expose any free text or erase the available
+// activity metadata. This projection does not create or substitute a registry.
+fn protected_metadata(root: &Path, now: u64) -> Value {
+    let todo_path = root.join("todo/todo.json");
+    let todo = cc_todo::read_store(&todo_path)
+        .ok()
+        .filter(|db| db["items"].is_array() && db["projects"].is_object());
+    let job_result = jobs(root);
+    let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
+    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
+    let mut tree = Tree::new();
+    if todo.as_ref().is_some_and(|db| {
+        db["projects"].as_object().is_some_and(|projects| {
+            projects
+                .keys()
+                .any(|project| matches!(project.to_ascii_lowercase().as_str(), "skills" | "skill"))
+        })
+    }) {
+        tree.entry((5, "Skills".into())).or_default();
+    }
+    let mut used = BTreeSet::new();
+    let mut unnamed = BTreeMap::<String, String>::new();
+    let mut project_label = |raw: &str| {
+        if matches!(raw.to_ascii_lowercase().as_str(), "skills" | "skill") {
+            "Skills".to_owned()
+        } else {
+            let ordinal = unnamed.len() + 1;
+            unnamed
+                .entry(raw.to_owned())
+                .or_insert_with(|| format!("作業名の確認待ち {ordinal}"))
+                .clone()
+        }
+    };
+    if let Some(items) = todo.as_ref().and_then(|db| db["items"].as_array()) {
+        for item in items {
+            let Some(id) = item["id"].as_u64() else {
+                continue;
+            };
+            let done = text(item, "status") == "done";
+            if done && !fresh(todo_stamp(item), now, RECENT_MS) {
+                continue;
+            }
+            let associated: Vec<_> = js.iter().filter(|job| linked(item, job)).collect();
+            for job in &associated {
+                used.insert(text(job, "id").to_owned());
+            }
+            let current = associated.iter().copied().find(|job| active(job));
+            let status = if done {
+                "done"
+            } else if current.is_some_and(|job| text(job, "status") != "queued") {
+                "working"
+            } else if text(item, "status") == "doing"
+                && job_result.is_ok()
+                && associated.first().is_some_and(|job| {
+                    failed(job) && fresh(stamp(&job["finished_at"]), now, RECENT_MS)
+                })
+            {
+                "attention"
+            } else if matches!(
+                text(item, "status"),
+                "doing" | "block" | "wait" | "recovery_unverified"
+            ) || current.is_some()
+            {
+                "waiting"
+            } else {
+                "idle"
+            };
+            let raw_project = text(item, "project");
+            let skills = matches!(
+                raw_project.to_ascii_lowercase().as_str(),
+                "skills" | "skill"
+            );
+            let detail = if text(item, "status") == "recovery_unverified" {
+                "復元した作業記録を確認中です。作業名と本文は表示を保留しています。"
+            } else {
+                "保護設定を復旧中のため、作業名と本文は表示を保留しています。Skills以外の部署所属は確認中です。"
+            };
+            add(
+                &mut tree,
+                if skills {
+                    5
+                } else {
+                    rank_department(cc_scheduler::priority::item_rank(item, &policy))
+                },
+                project_label(raw_project),
+                json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":"作業内容の表示を保留中", "status":status,
+                    "progress":item["progress"].as_u64().filter(|n|*n<=100),
+                    "updatedAt":todo_stamp(item).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
+                    "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|associated.iter().filter(|job|failed(job)).count()),
+                    "waitingKind":if text(item,"status")=="wait" {"dependency"} else if text(item,"status")=="recovery_unverified" {"technical"} else {"unverified"}}),
+            );
+        }
+    }
+    for job in js.iter().filter(|job| {
+        (active(job) || (failed(job) && fresh(stamp(&job["finished_at"]), now, RECENT_MS)))
+            && !used.contains(text(job, "id"))
+    }) {
+        let raw_project = infer_project(job, todo.as_ref());
+        let skills = matches!(
+            raw_project.to_ascii_lowercase().as_str(),
+            "skills" | "skill"
+        );
+        add(
+            &mut tree,
+            if skills {
+                5
+            } else {
+                rank_department(cc_scheduler::priority::project_rank(&raw_project))
+            },
+            project_label(&raw_project),
+            json!({"id":safe_id("job",text(job,"id")),"name":"名称を確認中の担当","task":"作業内容の表示を保留中",
+                "status":if failed(job) {"attention"} else if text(job,"status")=="queued" {"waiting"} else {"working"},"progress":null,
+                "updatedAt":stamp(&job["finished_at"]).or_else(||stamp(&job["started_at"])).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
+                "detail":"保護設定を復旧中です。作業名・本文・部署所属は確認中です。","detailAvailable":false,"historyFailures":if failed(job){Some(1u64)}else{None},"waitingKind":"unverified"}),
+        );
+    }
+    let count = |status| {
+        todo.as_ref()
+            .and_then(|db| db["items"].as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter(|item| text(item, "status") == status)
+                    .count()
+            })
+    };
+    let mut out = empty();
+    out["fetchedAt"] = json!(now);
+    out["protectionMode"] = json!("masked_metadata");
+    out["sourceOk"] = json!(false);
+    out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
+    out["departments"] = json!(departments(tree));
+    out["metrics"] = json!({"activeJobs":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|matches!(text(job,"status"),"running"|"starting"|"pending")).count()),
+        "jobQueued":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|text(job,"status")=="queued").count()),
+        "todoDependencyWaits":count("wait"),"todoPendingStarts":count("todo"),"todoBlocked":count("block"),"recoveryUnverified":count("recovery_unverified")});
+    out["sources"] = json!([
+        source("privacy","作業名の保護",false,None,"保護設定の原本を取得できません。作業名・本文は伏せています。Skills以外の部署所属は確認中です。"),
+        source("todos","共有ToDo",todo.is_some(),modified(&todo_path),"記録された状態と実測進捗だけを取得"),
+        source("jobs","ジョブ",job_result.is_ok(),Some(now),"記録された実行状態だけを取得")]);
+    out
+}
 fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     static QUESTION_URL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let question_pattern = QUESTION_URL.get_or_init(|| {
@@ -417,16 +558,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let mut sources = Vec::new();
     let privacy = cc_ask::task_title::Names::load(&root.join("client-projects.txt"));
     if privacy.is_err() {
-        let mut out = empty();
-        out["fetchedAt"] = json!(now);
-        out["sources"] = json!([source(
-            "privacy",
-            "表示の保護",
-            false,
-            None,
-            "保護対象を確認できないため作業名を表示できません"
-        )]);
-        return out;
+        return protected_metadata(root, now);
     }
     let names = privacy.unwrap();
     let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
@@ -1114,6 +1246,89 @@ mod tests {
             infer_project(&json!({"cwd":"D:/dev/abcd"}), Some(&db)),
             "ab"
         );
+    }
+    #[test]
+    fn missing_registry_keeps_safe_activity_and_skills_without_free_text() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("todo")).unwrap();
+        fs::create_dir_all(root.join("codex-jobs/jobs/demo")).unwrap();
+        fs::write(root.join("todo/todo.json"), json!({
+            "projects":{"Skills":"D:/CC/Skills","SecretClient":"D:/private"},
+            "items":[
+                {"id":1,"project":"Skills","title":"SecretClient password=hidden-value","note":"private prose","status":"doing","progress":37,"jobs":["private-job-id"]},
+                {"id":2,"project":"SecretClient","title":"do not expose","status":"recovery_unverified","cwd":"D:/private/SecretClient","spec":"D:/private/SecretClient/spec.md"}
+            ]
+        }).to_string()).unwrap();
+        fs::write(root.join("codex-jobs/jobs/demo/job.json"), json!({
+            "id":"private-job-id","status":"running","todo_id":1,
+            "name":"SecretClient","last_message":"hidden-value private prose","cwd":"D:/private/SecretClient"
+        }).to_string()).unwrap();
+        fs::create_dir_all(root.join("codex-jobs/jobs/failed")).unwrap();
+        fs::write(root.join("codex-jobs/jobs/failed/job.json"),json!({"id":"private-failed-id","status":"failed","finished_at":"1970-01-01T00:16:40Z","name":"SecretClient","last_message":"hidden-value"}).to_string()).unwrap();
+        let board = collect_with_questions(
+            root,
+            1_000_000,
+            &json!({"question":"SecretClient hidden-value"}),
+        );
+        assert_eq!(board["sourceOk"], false);
+        assert_eq!(board["metadataOk"], true);
+        assert_eq!(board["protectionMode"], "masked_metadata");
+        assert_eq!(board["metrics"]["activeJobs"], 1);
+        assert_eq!(board["metrics"]["recoveryUnverified"], 1);
+        assert_eq!(board["departments"].as_array().unwrap().len(), 6);
+        let info = board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["name"] == "情報システム部")
+            .unwrap();
+        let skills = info["products"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["name"] == "Skills")
+            .unwrap();
+        assert_eq!(skills["workers"][0]["progress"], 37);
+        assert_eq!(skills["workers"][0]["status"], "working");
+        assert_eq!(skills["workers"][0]["detailAvailable"], false);
+        assert_eq!(skills["workers"][0]["historyFailures"], 0);
+        assert!(board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
+            .any(|w| w["status"] == "attention"));
+        let encoded = board.to_string();
+        for protected in [
+            "SecretClient",
+            "hidden-value",
+            "private prose",
+            "D:/private",
+            "private-job-id",
+            "do not expose",
+        ] {
+            assert!(!encoded.contains(protected), "protected value leaked");
+        }
+        assert!(board["ownerQuestions"].is_null());
+        assert!(!root.join("client-projects.txt").exists());
+    }
+    #[test]
+    fn missing_registry_and_unreadable_activity_do_not_invent_zero_counts() {
+        let temp = tempfile::tempdir().unwrap();
+        let board = collect(temp.path(), 1_000_000);
+        assert_eq!(board["sourceOk"], false);
+        assert_eq!(board["metadataOk"], false);
+        assert!(board["metrics"]["activeJobs"].is_null());
+        assert!(board["metrics"]["todoDependencyWaits"].is_null());
+        assert_eq!(board["departments"].as_array().unwrap().len(), 6);
+        assert!(board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|d| d["products"].as_array().unwrap().is_empty()));
+        assert!(!temp.path().join("client-projects.txt").exists());
     }
     #[test]
     fn stale_and_future_monitor_records_cannot_report_current_capacity() {

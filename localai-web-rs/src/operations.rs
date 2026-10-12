@@ -521,6 +521,80 @@ fn registered_work_kinds(items: &[&Value]) -> Vec<&'static str> {
         })
         .collect()
 }
+
+// A recorded owner choice changes presentation only, never privacy or admission.
+// Match the independent, verified question generation and owner before using it.
+fn membership_choice(root: &Path, now: u64) -> Option<(BTreeSet<String>, Value)> {
+    let choice =
+        read_json(&root.join("localai-web-rs/target/release/operations-membership-choice.json"))
+            .ok()?;
+    if choice["selection"] != "separate" || choice["source"] != "discord-owner-reply" {
+        return None;
+    }
+    let answered = stamp(&choice["answered_at"])?;
+    if answered > now + 60_000 {
+        return None;
+    }
+    let ledger = read_json(&root.join("discord-ask/recovery-messages.json")).ok()?;
+    if ledger["domain"] != "new-owner-recovery-messages" {
+        return None;
+    }
+    let events = ledger["events"].as_array()?;
+    for event in events.iter().filter(|e| e["event"] == "intent") {
+        let request = &event["request"];
+        if request["operation"]["kind"] != "ask"
+            || request["operation"]["todo_id"] != choice["todo_id"]
+            || request["destination"]["owner"] != choice["author_id"]
+        {
+            continue;
+        }
+        let verified = events.iter().find(|e| {
+            e["event"] == "verified"
+                && e["request_id"] == request["request_id"]
+                && e["phase"] == "question:0"
+                && e["receipt"]["thread_id"] == choice["question_thread_id"]
+                && e["receipt"]["message_id"] == choice["question_message_id"]
+        })?;
+        let question = choice["question_message_id"]
+            .as_str()?
+            .parse::<u64>()
+            .ok()?;
+        if choice["message_id"].as_str()?.parse::<u64>().ok()? <= question {
+            return None;
+        }
+        let ids: BTreeSet<_> = choice["registration_ids"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+            .filter(|id| {
+                id.strip_prefix("registration-").is_some_and(|tail| {
+                    tail.len() == 16 && tail.bytes().all(|b| b.is_ascii_hexdigit())
+                })
+            })
+            .map(str::to_owned)
+            .collect();
+        let resources: BTreeSet<_> = request["operation"]["decision_original"]["resources"]
+            .as_array()?
+            .iter()
+            .filter_map(|r| r["id"].as_str())
+            .map(str::to_owned)
+            .collect();
+        if ids.is_empty() || ids != resources {
+            return None;
+        }
+        let guild = request["destination"]["guild"].as_str()?;
+        if !guild.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        let url = format!(
+            "https://discord.com/channels/{guild}/{}",
+            text(&verified["receipt"], "thread_id")
+        );
+        let info = json!({"selection":"separate","answeredAt":answered,"acceptedRegistrations":ids.len(),"questionUrl":url});
+        return Some((ids, info));
+    }
+    None
+}
 fn source(key: &str, label: &str, ok: bool, at: Option<u64>, message: &str) -> Value {
     json!({"key":key,"label":label,"ok":ok,"updatedAt":at,"message":message})
 }
@@ -650,6 +724,16 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             }
         }
     }
+    let membership = membership_choice(root, now);
+    if let Some((ids, _)) = &membership {
+        for row in &mut registrations {
+            if row["id"].as_str().is_some_and(|id| ids.contains(id)) {
+                row["decision"] =
+                    json!("本人の回答に従い、製品一覧とは別欄の作業として保持しています。");
+                row["decisionResolved"] = json!(true);
+            }
+        }
+    }
     if let Some(items) = todo.as_ref().and_then(|db| db["items"].as_array()) {
         for item in items {
             let Some(id) = item["id"].as_u64() else {
@@ -770,6 +854,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
     out["unassignedProducts"] = json!(unassigned_products(&tree));
     out["unlistedRegistrations"] = json!(registrations);
+    out["membershipDecision"] = membership.map(|(_, info)| info).unwrap_or(Value::Null);
     out["departments"] = json!(departments(tree));
     out["metrics"] = json!({"activeJobs":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|matches!(text(job,"status"),"running"|"starting"|"pending")).count()),
         "jobQueued":job_result.as_ref().ok().map(|jobs|jobs.iter().filter(|job|text(job,"status")=="queued").count()),
@@ -1728,6 +1813,42 @@ mod tests {
         assert!(!root.join("client-projects.txt").exists());
         assert_eq!(snapshot["metadataOk"], true);
         assert_eq!(snapshot["sourceOk"], false);
+    }
+    #[test]
+    fn membership_choice_is_scoped_to_the_verified_owner_question_and_resource_set() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("localai-web-rs/target/release")).unwrap();
+        fs::create_dir_all(root.join("discord-ask")).unwrap();
+        let id = "registration-0123456789abcdef";
+        let path = root.join("localai-web-rs/target/release/operations-membership-choice.json");
+        let mut choice = json!({"selection":"separate","source":"discord-owner-reply","todo_id":2473,
+            "author_id":"100","question_thread_id":"300","question_message_id":"300","message_id":"301",
+            "answered_at":"2026-10-12T14:00:00Z","registration_ids":[id]});
+        fs::write(root.join("discord-ask/recovery-messages.json"),json!({"domain":"new-owner-recovery-messages","events":[
+            {"event":"intent","request":{"request_id":"fixture","destination":{"owner":"100","guild":"200"},
+                "operation":{"kind":"ask","todo_id":2473,"decision_original":{"resources":[{"id":id}]}}}},
+            {"event":"verified","request_id":"fixture","phase":"question:0","receipt":{"thread_id":"300","message_id":"300"}}
+        ]}).to_string()).unwrap();
+        fs::write(&path, choice.to_string()).unwrap();
+        let now = stamp(&json!("2026-10-12T14:10:00Z")).unwrap();
+        let (ids, info) = membership_choice(root, now).unwrap();
+        assert!(ids.contains(id));
+        assert_eq!(info["selection"], "separate");
+        assert_eq!(info["questionUrl"], "https://discord.com/channels/200/300");
+        for (key, value) in [
+            ("author_id", json!("other")),
+            ("question_message_id", json!("299")),
+            ("message_id", json!("299")),
+            ("registration_ids", json!(["registration-ffffffffffffffff"])),
+        ] {
+            let original = choice[key].clone();
+            choice[key] = value;
+            fs::write(&path, choice.to_string()).unwrap();
+            assert!(membership_choice(root, now).is_none());
+            choice[key] = original;
+        }
+        assert!(!root.join("client-projects.txt").exists());
     }
     #[test]
     fn stale_and_future_monitor_records_cannot_report_current_capacity() {

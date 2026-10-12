@@ -56,7 +56,7 @@
         <div id="ops-commander" class="ops-command"></div>
         <div id="ops-departments" class="ops-departments"><p class="ops-empty">部署の状況を読み込み中…</p></div>
         <p id="ops-results" class="ops-note" role="status"></p>
-        <details id="ops-unassigned" class="ops-sources" hidden><summary>指定外の登録・所属の判断待ち <span id="ops-unassigned-count"></span></summary><div id="ops-unassigned-list"></div></details>
+        <details id="ops-unassigned" class="ops-sources" hidden><summary><span id="ops-unassigned-label">指定外の登録・所属の判断待ち</span> <span id="ops-unassigned-count"></span></summary><div id="ops-unassigned-list"></div></details>
         <details class="ops-sources"><summary>質問と回答を確認する</summary><section id="ops-questions" aria-label="Discordの質問と回答"><p>質問の送信を確認中です。</p></section></details>
         <details class="ops-sources"><summary>データの接続状況 <span id="ops-source-summary">未取得</span></summary><div id="ops-sources"></div></details>
         <p class="ops-note">進み具合は記録された実測値のみ表示します。未記録は「未記録」と表示します。</p>
@@ -242,6 +242,7 @@
       const entries=opsList(data&&data.unlistedRegistrations),products=opsList(data&&data.unassignedProducts);
       host.hidden=!entries.length&&!products.length;
       $('#ops-unassigned-count').textContent=`${entries.length||products.length}件`;
+      if($('#ops-unassigned-label'))$('#ops-unassigned-label').textContent=entries.length&&entries.every(entry=>entry.decisionResolved)?'指定外の登録（本人の回答に従い別欄で保持）':'指定外の登録・所属の判断待ち';
       if(list.contains(document.activeElement))return;
       list.innerHTML=entries.length?entries.map(entry=>`<details class="ops-unlisted-entry"><summary>${esc(entry.name)} · 未完了 ${opsValue(entry.unfinishedTasks)} / 登録 ${opsValue(entry.registeredTasks)}件</summary><p>${esc(opsList(entry.workKinds).join('、')||'作業の種類を確認できません')}</p><p>作業番号: ${esc(opsList(entry.taskIds).map(id=>'#'+id).join('、')||'登録なし')}</p><p>${esc(entry.decision||'所属の判断待ち')}</p></details>`).join(''):products.map(product=>`<details class="ops-unlisted-entry"><summary>${esc(product.name)} · ${opsCount(opsList(product.workers))}</summary>${opsList(product.workers).map(worker=>`<p>${esc(worker.task||worker.name)} · ${esc(worker.status)}</p>`).join('')}</details>`).join('');
     }

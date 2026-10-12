@@ -670,6 +670,8 @@ fn history_failure_never_falls_back_to_creating_a_duplicate() {
 #[test]
 fn dry_run_never_locks_posts_or_changes_state() {
     let mut h = Harness::new();
+    // Preview still works without a ledger; it must not implicitly initialize one.
+    std::fs::remove_file(h.ctx.here.join("state.json")).unwrap();
     let mut a = args(&h, "Steam のサインイン", "D:/CC/game");
     a.dry_run = true;
     cmd_ask(&mut h.ctx, &a).unwrap();

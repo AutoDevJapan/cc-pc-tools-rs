@@ -16,6 +16,7 @@ impl StateWork {
         Self::begin_on(ctx, "state-work.lock")
     }
     pub(crate) fn begin_on(ctx: &Context, lock_name: &str) -> Result<Self> {
+        recovery_guard(ctx)?;
         if ACTIVE.with(|a| a.borrow().is_some()) {
             return Err("nested state worker is not supported".into());
         }
@@ -76,6 +77,7 @@ pub(crate) fn owns_reader(ctx: &Context) -> bool {
 /// Refuse effects from a superseded question or reply receipt. Fresh appended
 /// questions for other threads do not invalidate the worker's current decision.
 pub fn check(ctx: &Context) -> Result<()> {
+    recovery_guard(ctx)?;
     ACTIVE.with(|a| {
         let active = a.borrow();
         let Some((here, base, _)) = active.as_ref().filter(|(h, _, _)| *h == ctx.here) else {
@@ -100,6 +102,13 @@ pub fn check(ctx: &Context) -> Result<()> {
         }
         Ok(())
     })
+}
+
+pub fn recovery_guard(ctx: &Context) -> Result<()> {
+    if ctx.here.join("question-recovery-required.json").exists() {
+        return Err("QuestionStateRecoveryRequired: 質問台帳と本人回答の記録が失われています。原記録の復旧を待ち、再質問・担当起動・投稿を行わないでください。本人の判断待ちではありません。".into());
+    }
+    Ok(())
 }
 
 fn conflict() -> String {

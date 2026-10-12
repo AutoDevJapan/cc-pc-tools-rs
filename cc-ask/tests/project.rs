@@ -156,6 +156,7 @@ fn reminder_migrates_legacy_cwd_and_redacts_saved_project_and_title() {
 #[test]
 fn dry_run_uses_live_formatting_without_http_or_state_writes() {
     let mut h = Harness::new();
+    std::fs::remove_file(h.ctx.here.join("state.json")).unwrap();
     let body = h.root.path().join("body.md");
     std::fs::write(&body, "【alpha】\n確認").unwrap();
     let result = cmd_ask(

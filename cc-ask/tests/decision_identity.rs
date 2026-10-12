@@ -541,6 +541,11 @@ impl Effects for FailAfterPost {
         let value = self.inner.http(m, u, b, d)?;
         if !self.fired && m == "POST" && u.ends_with("/channels/T/threads") {
             self.fired = true;
+            std::fs::rename(
+                self.root.join("state.json"),
+                self.root.join("state-before-failure.json"),
+            )
+            .unwrap();
             std::fs::create_dir(self.root.join("state.json")).unwrap();
         }
         Ok(value)
@@ -561,6 +566,11 @@ fn failed_registration_then_paraphrased_retry_keeps_the_original_question_and_on
     assert!(cmd_ask(&mut h.ctx, &a).is_err());
     assert_eq!(creates(&h), 1);
     std::fs::remove_dir(h.ctx.here.join("state.json")).unwrap();
+    std::fs::rename(
+        h.ctx.here.join("state-before-failure.json"),
+        h.ctx.here.join("state.json"),
+    )
+    .unwrap();
     let mut b = a;
     b.title = "言い換えた題名".into();
     std::fs::write(&b.body_file, "別の言い方\na 削除\nb 保持").unwrap();

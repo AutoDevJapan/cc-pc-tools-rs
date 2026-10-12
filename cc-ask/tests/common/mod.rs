@@ -210,6 +210,8 @@ impl Harness {
             shepherd_command: path.join("shepherd.py"),
             todo_command: path.join("todo.py"),
         };
+        // A real ledger must be explicitly initialized; missing is never empty.
+        atomic_json(&ctx.here.join("state.json"), &json!({"questions":[]}), 2).unwrap();
         Self { root, ctx, fake }
     }
     pub fn state(&self) -> Value {

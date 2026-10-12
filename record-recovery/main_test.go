@@ -205,3 +205,22 @@ func TestReindexRejectsTamperedPrivateEvidence(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestReindexRejectsIdentityMismatchBeforeOutput(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "source")
+	os.Mkdir(source, 0700)
+	const tid = "1554792868974039150"
+	stage := obj{"source": "authenticated Discord API GET", "thread_id": tid, "guild_id": "1552944707464597524", "bot_id": "1554269962229649478", "owner_id": "730822776147148836"}
+	writeNew(filepath.Join(source, tid+".private.json"), stage)
+	b, _ := os.ReadFile(filepath.Join(source, tid+".private.json"))
+	report := obj{"kind": "original-record-report", "guild_id": "1552944707464597524", "bot_id": "1554269962229649478", "owner_id": "730822776147148835", "threads": []any{obj{"thread_id": tid, "stage_sha256": digest(b)}}}
+	writeNew(filepath.Join(source, "report.json"), report)
+	_, e := reindex(source, filepath.Join(root, "output"))
+	if e == nil || e.Error() != "acquisition_identity_mismatch" {
+		t.Fatal(e)
+	}
+	if _, e := os.Stat(filepath.Join(root, "output")); !os.IsNotExist(e) {
+		t.Fatal("created output before identity validation")
+	}
+}

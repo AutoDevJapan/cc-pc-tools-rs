@@ -545,6 +545,9 @@ const requestForum = "1554771264298819675"
 // Reindex collected evidence offline, preserving the acquisition receipt/hash.
 // Also collect same-guild references as bounded future GET candidates, not authority.
 func reindex(source, output string) (obj, error) {
+	if source == "" {
+		return nil, errors.New("explicit_acquisition_source_required")
+	}
 	report, reportBytes, e := readJSON(filepath.Join(source, "report.json"))
 	if e != nil {
 		return nil, e
@@ -554,7 +557,7 @@ func reindex(source, output string) (obj, error) {
 	}
 	created := false
 	rows := []any{}
-	references := map[string]bool{}
+	references := map[string][]any{}
 	for _, x := range array(report["threads"]) {
 		acquired := object(x)
 		tid := str(acquired["thread_id"])
@@ -571,6 +574,9 @@ func reindex(source, output string) (obj, error) {
 		if digest(b) != str(acquired["stage_sha256"]) || old["thread_id"] != tid || old["source"] != "authenticated Discord API GET" {
 			return nil, errors.New("acquisition_hash_or_identity_mismatch")
 		}
+		if old["bot_id"] != report["bot_id"] || old["owner_id"] != report["owner_id"] || old["guild_id"] != report["guild_id"] {
+			return nil, errors.New("acquisition_identity_mismatch")
+		}
 		messages := []obj{}
 		seen := map[string]bool{}
 		for _, entry := range array(old["messages"]) {
@@ -585,7 +591,7 @@ func reindex(source, output string) (obj, error) {
 			messages = append(messages, m)
 			for _, link := range links.FindAllStringSubmatch(str(r["content"]), -1) {
 				if link[1] == "1552944707464597524" {
-					references[link[2]] = true
+					references[link[2]] = append(references[link[2]], obj{"origin_thread_id": tid, "origin_message_id": id, "source_message_sha256": r["content_sha256"]})
 				}
 			}
 		}
@@ -618,7 +624,7 @@ func reindex(source, output string) (obj, error) {
 	}
 	sort.Strings(keys)
 	for _, id := range keys {
-		refrows = append(refrows, obj{"thread_id": id, "sources": []string{"authenticated_original_history_reference"}})
+		refrows = append(refrows, obj{"thread_id": id, "sources": []string{"authenticated_original_history_reference"}, "reference_evidence": references[id]})
 	}
 	seeds := obj{"kind": "original-record-seeds", "version": 1, "threads": refrows, "source_acquisition_report_sha256": digest(reportBytes), "authority": "historical references only; no executable instructions"}
 	if !created {

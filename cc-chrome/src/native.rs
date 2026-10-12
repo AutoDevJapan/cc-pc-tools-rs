@@ -1121,7 +1121,10 @@ mod tests {
             tokio::pin!(proxy);
             tokio::select! {
                 result = &mut proxy => panic!("proxy ended before checks: {result:?}"),
-                result = tokio::time::timeout(Duration::from_secs(3), check) => { result.expect("registrar checks timed out"); },
+                // This is a deadlock watchdog for the complete fixture, not a
+                // production request deadline. Parallel Windows CI can spend
+                // several seconds scheduling the otherwise immediate frames.
+                result = tokio::time::timeout(Duration::from_secs(30), check) => { result.expect("registrar checks timed out"); },
             }
         });
     }

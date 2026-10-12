@@ -10,6 +10,6 @@ Rustの検査は[ビルドとテストの規則](docs/build-speed.md)に従う�
 
 実際のGitHub所有者がAutoDevJapan・BM1314・mashfrombandのレポジトリは、人が要件を決め、AIが設計・実装・検査・修正・別モデルレビュー・マージ・既存Prd反映・後片付けまで担当する（2026-10-12 オーナー直接指示）。通常の操作や古い人のレビュー待ちを理由に止めない。既存Discord指示・回答は元の対象と範囲を保って実行し、同じ判断を再質問しない。未指定の要件・新費用・権利・顧客との新約束など本人だけが決めることだけ具体的にDiscordへ1回質問する。
 
-Vercel/Railwayのオーナー保有アカウント内の全プロジェクトはソロ開発として進め、他メンバーの存在だけを理由に承認待ちにしない。他OrgのGitHub環境と顧客固有の契約は変更しない。既存Prd限定・Rakko限定・秘密保護を維持する。パスの保護判定はscrub391 --guard-pathを使い、保護対象の名前・パスを報告しない。最新指示はD:/CC/Policies/owner-operating-instructions-20261012.mdを起動ごとに読む。詳細と確認範囲はdocs/owner-autonomy.mdに記録する。
+Vercel/Railwayのオーナー保有アカウント内の全プロジェクトはソロ開発として進め、他メンバーの存在だけを理由に承認待ちにしない。他OrgのGitHub環境と顧客固有の契約は変更しない。既存Prd限定・Rakko限定・秘密保護を維持する。パスの保護判定はscrub391 --guard-pathを使い、保護対象の名前・パスを報告しない。最新指示はD:/CC/AGENTS.mdを起動ごとに読む。詳細と確認範囲はdocs/owner-autonomy.mdに記録する。
 
 `queue-config.json` は全体を書き直さず、`codex_jobs.exe update-queue-config --patch-file <JSON>` で必要な項目だけ更新する。既存の `fixed_max_running` はオーナー・司令塔の指定なので、省略やnullを含む配備用パッチでも保持する。解除は健康な自動計算値16以上を連続3回実測してから `update-queue-config --clear-fixed` を使い、CPUが目標70〜85%へ近づく測定記録も確認する。このコマンドが `queue-config.CHANGES.txt` に1行記録する。

@@ -45,7 +45,7 @@ impl Context {
             .filter(|path| !path.is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(|| {
-                PathBuf::from("D:/CC/Policies/owner-operating-instructions-20261012.md")
+                PathBuf::from("D:/CC/AGENTS.md")
             });
         let policy = fs::read_to_string(&policy_path)?;
         if policy.trim().is_empty() {

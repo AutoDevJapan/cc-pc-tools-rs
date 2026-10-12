@@ -29,7 +29,7 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
   package-tools:
     # Only this finite repair needs downloadable PC binaries; do not grow storage on every PR.
-    if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460') && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460' || github.event.pull_request.head.ref == 'fix/question-state-capacity-2444') && github.event.pull_request.head.repo.full_name == github.repository
     needs: cc-jobs
     runs-on: windows-latest
     timeout-minutes: 30

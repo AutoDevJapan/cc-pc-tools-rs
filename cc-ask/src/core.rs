@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
@@ -123,10 +123,14 @@ impl Context {
     }
     pub fn load_fresh(&self) -> Result<Value> {
         let p = self.here.join("state.json");
-        if p.exists() {
-            read_json(&p)
-        } else {
-            Ok(json!({"questions":[]}))
+        match crate::question_store::read(&p) {
+            Ok(v) => Ok(v),
+            Err(crate::question_store::Error::Io(e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                Ok(json!({"questions":[]}))
+            }
+            Err(e) => Err(e.to_string()),
         }
     }
     pub fn save(&self, v: &Value) -> Result<()> {
@@ -158,6 +162,9 @@ pub fn truth(v: &Value) -> bool {
 pub fn read_json(p: &std::path::Path) -> Result<Value> {
     if p.file_name().is_some_and(|name| name == "todo.json") {
         return cc_job_policy::todo_store::read(p).map_err(|e| e.to_string());
+    }
+    if p.file_name().is_some_and(|name| name == "state.json") {
+        return crate::question_store::read(p).map_err(|e| e.to_string());
     }
     let text =
         std::fs::read_to_string(p).map_err(|e| format!("OSError: read {}: {e}", p.display()))?;
@@ -193,8 +200,16 @@ pub fn update_json_exclusive_with_writer(
         .map_err(|_| format!("record is busy or unavailable: {}", path.display()))?;
     file.try_lock().map_err(|_| "record is busy")?;
     let mut raw = Vec::new();
-    file.read_to_end(&mut raw)
-        .map_err(|_| "cannot read record")?;
+    if path.file_name().is_some_and(|name| name == "state.json") {
+        std::io::Read::by_ref(&mut file)
+            .take((crate::question_store::MAX_BYTES + 1) as u64)
+            .read_to_end(&mut raw)
+            .map_err(|_| "cannot read record")?;
+        crate::question_store::check_size(raw.len()).map_err(|e| e.to_string())?;
+    } else {
+        file.read_to_end(&mut raw)
+            .map_err(|_| "cannot read record")?;
+    }
     // A process can stop in the middle of a Japanese UTF-8 character. Such
     // bytes still reach journal recovery; decoding must not abort before it.
     let mut text = String::from_utf8(raw).unwrap_or_default();
@@ -245,6 +260,9 @@ pub fn update_json_exclusive_with_writer(
     let before = record.clone();
     update(&mut record)?;
     let bytes = serde_json::to_vec_pretty(&record).map_err(|_| "cannot serialize record")?;
+    if path.file_name().is_some_and(|name| name == "state.json") {
+        crate::question_store::check_size(bytes.len()).map_err(|e| e.to_string())?;
+    }
     atomic_json(
         &journal_path,
         &json!({"target":path,"before":before,"after":record,"before_text":text,
@@ -304,6 +322,9 @@ pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> 
     let fmt = serde_json::ser::PrettyFormatter::with_indent(&spaces);
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, fmt);
     serde::Serialize::serialize(v, &mut ser).map_err(|_| "ValueError".to_string())?;
+    if p.file_name().is_some_and(|name| name == "state.json") {
+        crate::question_store::check_size(buf.len()).map_err(|e| e.to_string())?;
+    }
     if p.file_name().is_some_and(|name| name == "todo.json") {
         cc_job_policy::todo_store::check_size(buf.len()).map_err(|e| e.to_string())?;
     }
@@ -460,7 +481,7 @@ pub fn token() -> Result<String> {
     let value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     #[cfg(windows)]
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         if let Ok(key) = RegKey::predef(HKEY_CURRENT_USER).open_subkey("Environment") {
             value = key.get_value("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
         }
@@ -1613,11 +1634,9 @@ pub fn owner_replies(ctx: &mut Context, question: &Value, owner: &str) -> Result
     owner_messages_after(ctx, s(&question["thread_id"]), s(&question["after"]), owner)
 }
 pub fn acknowledge_reply(question: &mut Value, message_id: &str) {
-    question["seen_reply"] = json!(
-        n(&question["seen_reply"])
-            .max(message_id.parse().unwrap_or(0))
-            .to_string()
-    );
+    question["seen_reply"] = json!(n(&question["seen_reply"])
+        .max(message_id.parse().unwrap_or(0))
+        .to_string());
 }
 
 /// Open question replies belong to resume. A delayed inbox must also skip answers
@@ -1889,14 +1908,12 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
             }
             if let Some(first) = replies.keys().next() {
                 let old = n(&q["first_owner_reply"]);
-                q["first_owner_reply"] = json!(
-                    if old > n(&q["after"]) {
-                        old.min(*first)
-                    } else {
-                        *first
-                    }
-                    .to_string()
-                );
+                q["first_owner_reply"] = json!(if old > n(&q["after"]) {
+                    old.min(*first)
+                } else {
+                    *first
+                }
+                .to_string());
             }
             q["owner_replies"] = json!(replies.into_values().collect::<Vec<_>>());
             if latest >= n(&q["answered_reply"]) {
@@ -1970,7 +1987,7 @@ pub fn receive_answers(
     index: usize,
     messages: &[Value],
 ) -> Result<()> {
-    use crate::project::{ProjectNames, question_project};
+    use crate::project::{question_project, ProjectNames};
     let owner = ctx.owner();
     let tid = s(&state["questions"][index]["thread_id"]).to_owned();
     record_owner_answers(state, &tid, messages, &owner);

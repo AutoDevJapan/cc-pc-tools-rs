@@ -2755,11 +2755,19 @@ impl Console {
         Ok(())
     }
     fn questions(&self) -> Result<Value> {
-        serde_json::from_str(&read_text(
-            &self.paths.discord.join("state.json"),
-            8 * 1024 * 1024,
-        )?)
-        .map_err(|_| io_fault())
+        cc_ask::question_store::read(&self.paths.discord.join("state.json")).map_err(|e| match e {
+            cc_ask::question_store::Error::TooLarge => fault(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "question_state_too_large",
+                "質問状態が読取・保存の上限32MiBを超えています。",
+            ),
+            cc_ask::question_store::Error::InvalidJson(_) => fault(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "question_state_invalid_json",
+                "質問状態のJSONが不正です。",
+            ),
+            cc_ask::question_store::Error::Io(_) => io_fault(),
+        })
     }
     fn inbox(&self) -> Result<()> {
         self.patrol_stage("inbox");

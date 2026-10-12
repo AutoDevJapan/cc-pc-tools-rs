@@ -510,7 +510,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let js = jobs.as_ref().map(Vec::as_slice).unwrap_or(&[]);
     let db = todo.as_ref().ok();
     let empty_db = Value::Null;
-    let mut question_state = read_json(&root.join("discord-ask/state.json")).unwrap_or(Value::Null);
+    let mut question_state =
+        cc_ask::question_store::read(&root.join("discord-ask/state.json")).unwrap_or(Value::Null);
     if question_state.is_object() {
         question_state["operations_jobs"] = json!(crate::owner_decisions::job_metadata(
             js,

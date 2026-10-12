@@ -65,6 +65,69 @@ pub fn decision(h: &Harness, args: &mut cc_ask::commands::AskArgs, scope: &str) 
     .unwrap();
     args.decision_file = Some(path);
 }
+
+pub fn review_owner_context(h: &mut Harness, args: &cc_ask::commands::AskArgs) {
+    let review = cc_ask::commands::cmd_ask(&mut h.ctx, args).unwrap();
+    assert_eq!(review["suppressed"], "owner_context_required");
+    assert_eq!(review["approval_matches_requested_scope"], false);
+    let path = args.decision_file.as_ref().unwrap();
+    let mut identity = read_json(path).unwrap();
+    identity["reviewed_owner_context"] = review["owner_context_digest"].clone();
+    atomic_json(path, &identity, 2).unwrap();
+}
+
+/// Independent concurrent clients see the same durable fake server's question,
+/// rather than an empty unrelated HTTP inventory in the second client.
+pub struct RouteServer(pub SharedFake, pub PathBuf);
+impl Effects for RouteServer {
+    fn now(&self) -> f64 {
+        self.0.now()
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.0.run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+        discord: bool,
+    ) -> Result<Value> {
+        let path = url.trim_start_matches("https://discord.com/api/v10");
+        let tid = path.split('/').nth(2).unwrap_or("");
+        if method == "GET"
+            && path.starts_with("/channels/")
+            && !self.0 .0.borrow().threads.contains_key(tid)
+        {
+            if let Ok(entries) = std::fs::read_dir(self.1.join("question-progress")) {
+                for entry in entries.flatten() {
+                    let r = read_json(&entry.path())?;
+                    if s(&r["question_thread_id"]) != tid {
+                        continue;
+                    }
+                    self.0
+                         .0
+                        .borrow_mut()
+                        .http_calls
+                        .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
+                    if path.contains("/messages") {
+                        let mut starter = message(
+                            s(&r["question"]["starter"]),
+                            s(&r["question"]["payload"]["content"]),
+                            s(&r["sender"]),
+                        );
+                        starter["author"]["bot"] = json!(true);
+                        return Ok(json!([starter]));
+                    }
+                    return Ok(
+                        json!({"id":tid,"guild_id":r["guild"],"parent_id":r["parent"],"owner_id":r["sender"],"type":11}),
+                    );
+                }
+            }
+        }
+        self.0.http(method, url, body, discord)
+    }
+}
 impl Harness {
     pub fn new() -> Self {
         // The user's home may itself be a repository. Python keeps fixtures under

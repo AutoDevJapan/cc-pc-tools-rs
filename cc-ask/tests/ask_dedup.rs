@@ -690,7 +690,8 @@ fn simultaneous_callers_create_only_one_question_progress_pair() {
             // Build non-Send effects inside each thread; only the real state and
             // native lock paths are shared between these independent callers.
             let mut h = Harness::new();
-            h.ctx.here = here;
+            h.ctx.here = here.clone();
+            h.ctx.effects = Box::new(common::RouteServer(SharedFake(h.fake.clone()), here));
             let a = args(&h, "Steamのサインイン", "D:/CC/game");
             {
                 let mut f = h.fake.borrow_mut();
@@ -744,6 +745,7 @@ fn new_question_keeps_original_answer_readable_and_isolates_reply_history() {
         "別の料金を決めてください。\na 月額3000円\nb 月額4000円",
     )
     .unwrap();
+    common::review_owner_context(&mut h, &a);
     let second = cmd_ask(&mut h.ctx, &a).unwrap();
     assert_ne!(first["thread_id"], second["thread_id"]);
     let state = h.state();

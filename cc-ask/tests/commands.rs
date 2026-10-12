@@ -131,6 +131,7 @@ fn new_caller_question_preserves_answered_question_assignment() {
     args.cwd = Some("another/bookmarks".into());
     args.agent = "Claude".into();
     common::decision(&h, &mut args, "other resource");
+    common::review_owner_context(&mut h, &args);
     let result = cmd_ask(&mut h.ctx, &args).unwrap();
     assert_ne!(result["thread_id"], first["thread_id"]);
     assert_ne!(result["progress_thread_id"], first["progress_thread_id"]);

@@ -385,7 +385,13 @@ pub fn ask(
             return crate::decision_identity::reuse(ctx, &duplicates, record, false);
         }
     } else if let Some(record) = uncertain {
-        return crate::decision_identity::reuse(ctx, &[], record, true);
+        return crate::decision_identity::reuse(ctx, std::slice::from_ref(record), record, true);
+    }
+    if previous.is_none() {
+        if let Some(evidence) = crate::decision_identity::preflight(ctx, &records, &context, &work)?
+        {
+            return Ok(evidence);
+        }
     }
     let identity = if decision.is_object() {
         json!({"decision":decision})

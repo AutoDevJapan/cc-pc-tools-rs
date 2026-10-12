@@ -12,6 +12,9 @@ mod reference;
 pub struct Args {
     #[arg(long)]
     pub output: PathBuf,
+    /// Inspect at most ten explicit threads, without discovering or reading other histories.
+    #[arg(long = "thread", conflicts_with_all = ["reference_targets", "partition", "partitions"])]
+    pub threads: Vec<String>,
     /// Privately select candidate ToDo IDs for explicit historical owner messages.
     #[arg(long, conflicts_with_all = ["capture", "refresh", "partition", "partitions"])]
     pub reference_targets: Option<PathBuf>,
@@ -469,7 +472,47 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
     }
     report["partition"] = json!(args.partition);
     report["partitions"] = json!(args.partitions);
-    if args.refresh || !report["inventory"].is_object() || report["inventory"]["complete"] != true {
+    if !args.threads.is_empty() {
+        if args.threads.len() > 10
+            || args
+                .threads
+                .iter()
+                .any(|id| n(&json!(id)) == 0 || !id.bytes().all(|b| b.is_ascii_digit()))
+        {
+            return Err("at most ten explicit numeric threads required".into());
+        }
+        let mut threads = serde_json::Map::new();
+        let mut excluded_clients = 0;
+        for id in &args.threads {
+            // Guard recorded work before fetching even the channel metadata.
+            if excluded(ctx, &state, &json!({"id":id}), &names, &mut cache)? {
+                excluded_clients += 1;
+                continue;
+            }
+            let channel = ctx.call("GET", &format!("/channels/{id}"), None)?;
+            if channel["guild_id"] != ctx.cfg["guild_id"]
+                || ![10, 11, 12].contains(&n(&channel["type"]))
+                || !(s(&channel["parent_id"]) == REQUEST_CHANNEL_ID
+                    || channel["parent_id"] == ctx.cfg["task_channel_id"])
+            {
+                return Err("explicit audit thread outside configured forums".into());
+            }
+            if excluded(ctx, &state, &channel, &names, &mut cache)? {
+                excluded_clients += 1;
+                continue;
+            }
+            threads.insert(
+                id.clone(),
+                json!({"last_message_id":channel["last_message_id"]}),
+            );
+        }
+        report["inventory"] = json!({"complete":true,"threads":threads,"excluded_clients":excluded_clients,"unavailable":[],"scope":"explicit-threads"});
+        report["snapshot_at"] = json!(ctx.now());
+        atomic_json(&args.output, &report, 2)?;
+    } else if args.refresh
+        || !report["inventory"].is_object()
+        || report["inventory"]["complete"] != true
+    {
         report["inventory"] = inventory(ctx, &state, &names, &mut cache)?;
         report["snapshot_at"] = json!(ctx.now());
         atomic_json(&args.output, &report, 2)?;
@@ -528,7 +571,11 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
         let owner = ctx.owner();
         let messages: Vec<_> = history
             .iter()
-            .filter(|m| s(&m["author"]["id"]) == owner && !crate::snooze::control_only(m))
+            .filter(|m| {
+                s(&m["author"]["id"]) == owner
+                    && !truth(&m["author"]["bot"])
+                    && !crate::snooze::control_only(m)
+            })
             .filter(|m| {
                 let attachments = m["attachments"].to_string();
                 names.redact(s(&m["content"])) == s(&m["content"])
@@ -574,7 +621,7 @@ pub fn run(ctx: &mut Context, args: &Args) -> Result<Value> {
                         fresh["answer_receipts"] = json!({});
                     }
                     // Acquisition only: do not set handled_by, read_by, posted, or advance delivery cursors.
-                    fresh["answer_receipts"][mid] = json!({"thread":tid,"received_at":ctx.now(),"received_via":"history-audit","owner_reply":{"id":message["id"],"timestamp":message["timestamp"],"content":safe_text(s(&message["content"])),"attachments":message["attachments"]}});
+                    fresh["answer_receipts"][mid] = json!({"thread":tid,"received_at":ctx.now(),"received_via":"history-audit","owner_reply":{"id":message["id"],"timestamp":message["timestamp"],"author_id":message["author"]["id"],"thread_id":tid,"acquisition_source":"discord-api-v10","content":safe_text(s(&message["content"])),"attachments":message["attachments"]}});
                 }
                 row["recovered"] = json!(
                     row["recovered"] == true

@@ -1204,11 +1204,17 @@ fn deliver_reply_inner(
     let owner = ctx.owner();
     if s(&message["id"]) != mid
         || s(&message["author"]["id"]) != owner
+        || truth(&message["author"]["bot"])
         || crate::snooze::control_only(&message)
     {
         return Err("owner work reply required".into());
     }
+    let mut original_todo_saved = false;
     if let Some(question) = &known {
+        if n(&message["id"]) <= n(&question["after"]) {
+            return Err("owner reply precedes question generation".into());
+        }
+        original_todo_saved = crate::decision_identity::persist_task_reply(ctx, question, &message)?;
         crate::steering::confirm_recorded_reads(
             ctx,
             &mut state,
@@ -1218,16 +1224,16 @@ fn deliver_reply_inner(
     }
     if truth(&state["answer_receipts"][mid]["handled_by"]) {
         return Ok(
-            json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":"confirmed"}),
+            json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":"confirmed", "original_todo_saved":original_todo_saved,"application":"unverified"}),
         );
     }
     if confirmed.is_none() && truth(&state["answer_receipts"][mid]["read_by"]) {
         return Ok(
-            json!({"thread":tid,"message":mid,"read_by":state["answer_receipts"][mid]["read_by"],"delivery":"confirmed"}),
+            json!({"thread":tid,"message":mid,"read_by":state["answer_receipts"][mid]["read_by"],"delivery":"confirmed", "original_todo_saved":original_todo_saved,"application":"unverified"}),
         );
     }
     if confirmed.is_none() && reply_reserved(&state, mid) {
-        return Ok(json!({"thread":tid,"message":mid,"delivery":"pending"}));
+        return Ok(json!({"thread":tid,"message":mid,"delivery":"pending", "original_todo_saved":original_todo_saved,"application":"unverified"}));
     }
     if let Some(jid) = confirmed {
         if !valid_job(jid) || s(&job_info(ctx, jid)["status"]) == "missing" {
@@ -1365,6 +1371,6 @@ fn deliver_reply_inner(
     ctx.save(&state)?;
     result?;
     Ok(
-        json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":if truth(&state["answer_receipts"][mid]["handled_by"]) {"delivered"} else {"pending"}}),
+        json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":if truth(&state["answer_receipts"][mid]["handled_by"]) {"delivered"} else {"pending"},"original_todo_saved":original_todo_saved,"application":"unverified"}),
     )
 }

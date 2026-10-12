@@ -90,6 +90,9 @@ pub fn extract(body: &str) -> Result<(String, Option<Value>)> {
 
 /// Bind once at every input boundary, before overwriting original task context.
 pub fn bind(ctx: &Context, context: &mut Value, incoming: Option<&Value>) -> Result<Value> {
+    if let Some(reviewed) = incoming.and_then(|v| v.get("reviewed_owner_context")) {
+        context["reviewed_owner_context"] = reviewed.clone();
+    }
     let current = if context["decision_identity"].is_object() {
         Some(normalize(ctx, &context["decision_identity"])?)
     } else {
@@ -248,17 +251,26 @@ pub(crate) fn reuse(
         "progress_thread_id":primary["progress_thread_id"],"work_thread_id":primary["work_thread_id"],
         "reused":true,"suppressed":if uncertain {"decision_scope_required"} else {"same_decision"},
         "question_body":primary["body"],"question_attachments":primary["files"],"decision_identity":primary["decision_identity"]});
+    out["approval_matches_requested_scope"] = json!(!uncertain);
+    out["delivery"] = json!("inspection_only");
     if uncertain {
-        out["next_action"] = json!("元の質問の対象と権限範囲を確認し、同じ判断の記録を使ってください。新しい対象・仕様・危険範囲だけ別の判断として登録できます。審査拒否は再質問の理由になりません。");
-        return Ok(out);
+        out["next_action"] = json!("元の質問と本人回答を読み、元ToDoの指示を反映してください。この回答を別の対象の承認に読み替えないでください。AIが選べる技術的詳細は自分で決めて進めてください。審査拒否は再質問の理由になりません。");
     }
     let owner = ctx.owner();
     let mut all = BTreeMap::new();
     let mut snapshots = Vec::new();
+    let mut questions = Vec::new();
     for original in records {
         let id = s(&original["question_thread_id"]);
         if id.is_empty() {
             continue;
+        }
+        let channel = ctx.call("GET", &format!("/channels/{id}"), None)?;
+        if channel["guild_id"] != ctx.cfg["guild_id"]
+            || channel["parent_id"] != ctx.cfg["task_channel_id"]
+            || channel["owner_id"] != original["sender"]
+        {
+            return Err("decision source outside configured bot forum".into());
         }
         // Malformed/failed history is an error, never an empty "unanswered" snapshot.
         let mut history = Vec::new();
@@ -286,10 +298,38 @@ pub(crate) fn reuse(
             before = oldest.to_string();
         }
         let mut record = original.clone();
+        let starter = if truth(&record["forum"]) {
+            history
+                .iter()
+                .find(|m| m["id"] == record["question"]["starter"])
+                .cloned()
+                .ok_or("original decision message unavailable")?
+        } else {
+            ctx.call(
+                "GET",
+                &format!(
+                    "/channels/{}/messages/{}",
+                    s(&record["parent"]),
+                    s(&record["question"]["starter"])
+                ),
+                None,
+            )?
+        };
+        if starter["author"]["id"] != record["sender"]
+            || starter["content"] != record["question"]["payload"]["content"]
+        {
+            return Err("original decision changed".into());
+        }
         let answers: Vec<_> = history.iter().filter(|m| s(&m["author"]["id"])==owner
             && !truth(&m["author"]["bot"]) && n(&m["id"])>n(&record["question"]["starter"])
             && !crate::snooze::control_only(m)).map(|m|json!({"id":m["id"],"thread_id":id,
-                "author_id":m["author"]["id"],"timestamp":m["timestamp"],"content":m["content"],"attachments":m["attachments"]})).collect();
+                "author_id":m["author"]["id"],"timestamp":m["timestamp"],"edited_timestamp":m["edited_timestamp"],
+                "acquisition_source":"discord-api-v10","content":m["content"],"attachments":m["attachments"]})).collect();
+        questions.push(
+            json!({"thread_id":id,"question_message_id":record["question"]["starter"],
+            "todo_id":record["context"]["todo_id"],"question_body":record["body"],
+            "decision_identity":record["decision_identity"],"owner_answers":answers}),
+        );
         for answer in &answers {
             all.insert(n(&answer["id"]), answer.clone());
         }
@@ -316,11 +356,207 @@ pub(crate) fn reuse(
         atomic_json(&path(ctx, &record)?, &record, 2)?;
     }
     out["owner_answers"] = json!(all.values().collect::<Vec<_>>());
+    out["prior_questions"] = json!(questions);
     if let Some((_, latest)) = all.last_key_value() {
-        out["suppressed"] = json!("already_answered");
+        if !uncertain {
+            out["suppressed"] = json!("already_answered");
+        }
         out["latest_owner_reply"] = latest.clone();
     }
-    Ok(out)
+    // Preserve original evidence privately, but never emit credentials or client names.
+    redact(ctx, &out)
+}
+
+fn redact(ctx: &Context, out: &Value) -> Result<Value> {
+    let names = crate::project::ProjectNames::load(&ctx.client_projects)?;
+    serde_json::from_str(&names.redact(&safe_text(out.to_string())))
+        .map_err(|_| "invalid redacted decision output".into())
+}
+
+/// Keep task instructions and independently verified sibling answers across sessions.
+/// Old receipt flags are deliberately absent: this is context, not completion evidence.
+pub fn task_handoff(ctx: &mut Context, context: &Value) -> Result<String> {
+    let mut context = context.clone();
+    if s(&context["posting_job"]).is_empty() && valid_job(s(&context["id"])) {
+        context["posting_job"] = context["id"].clone();
+    }
+    let id = todo(ctx, &context)?;
+    if id == 0 {
+        return Ok(String::new());
+    }
+    let db = if ctx.todo.exists() {
+        read_json(&ctx.todo)?
+    } else {
+        Value::Null
+    };
+    let item = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|v| n(&v["id"]) == id);
+    let _guard = ByteLock::acquire(
+        &ctx.here.join("question-progress.lock"),
+        Duration::from_secs(5),
+    )?;
+    let mut records: Vec<_> = crate::question_progress::routes(ctx)?
+        .into_iter()
+        .filter(|r| n(&r["context"]["todo_id"]) == id && truth(&r["complete"]))
+        .filter(|r| {
+            r["decision_identity"]["owner"]
+                .as_str()
+                .is_none_or(|owner| owner == ctx.owner())
+        })
+        .collect();
+    records.reverse();
+    let older_question_ids: Vec<_> = records
+        .iter()
+        .skip(10)
+        .map(|r| r["question_thread_id"].clone())
+        .collect();
+    records.truncate(10);
+    let questions = if let Some(first) = records.first() {
+        // Cached provenance is an index, never evidence of the current message text.
+        // reuse validates the guild, parent, bot starter and fetches actual owner replies.
+        reuse(ctx, &records, first, true)?["prior_questions"].clone()
+    } else {
+        json!([])
+    };
+    let evidence = redact(
+        ctx,
+        &json!({"todo_id":id,"saved_instruction":item.map(|v|json!({"spec":v["spec"],"note":v["note"]})),
+        "questions":questions,"older_question_ids_require_lookup":older_question_ids,"delivery":"context_only"}),
+    )?;
+    let full = format!("元ToDoの保存済み指示と本人回答（回答は対応する元質問の範囲で読む。AIが選べる技術的詳細は自分で決め、同じ判断を再質問しない。受領や配送だけで実反映済みにしない）:\n{evidence}\n");
+    crate::prompt_context::owner_context(ctx, &format!("todo-{id}"), &full, 8 * 1024)
+}
+
+/// Append verified input to the original ToDo's existing spec before any worker wait.
+/// Keep the ToDo state, ownership, dependencies and progress unchanged.
+pub fn persist_task_reply(ctx: &Context, question: &Value, message: &Value) -> Result<bool> {
+    if n(&question["todo_id"]) == 0
+        || s(&message["author"]["id"]) != ctx.owner()
+        || truth(&message["author"]["bot"])
+        || n(&message["id"]) <= n(&question["after"])
+    {
+        return Ok(false);
+    }
+    let home = ctx.todo.parent().ok_or("ToDo home unavailable")?;
+    let _guard = ByteLock::acquire(&home.join("todo.lock"), Duration::from_secs(5))?;
+    let db = read_json(&ctx.todo)?;
+    let Some(item) = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|v| v["id"] == question["todo_id"])
+    else {
+        return Ok(false);
+    };
+    let path = std::path::PathBuf::from(s(&item["spec"]));
+    if path.as_os_str().is_empty() {
+        return Ok(false);
+    }
+    let path = path
+        .canonicalize()
+        .map_err(|_| "original ToDo spec unavailable")?;
+    if path.parent()
+        != Some(
+            home.join("specs")
+                .canonicalize()
+                .map_err(|_| "ToDo specs unavailable")?
+                .as_path(),
+        )
+    {
+        return Err("original ToDo spec outside managed specs".into());
+    }
+    let evidence = redact(
+        ctx,
+        &json!({"todo_id":question["todo_id"],"thread_id":question["thread_id"],
+        "question_message_id":question["after"],"question_body":question["question_body"],
+        "decision_identity":question["decision_identity"],"author_id":message["author"]["id"],
+        "message_id":message["id"],"timestamp":message["timestamp"],"edited_timestamp":message["edited_timestamp"],
+        "acquisition_source":"discord-api-v10","content":message["content"],"attachments":message["attachments"],
+        "delivery":"saved_to_original_todo_spec","application":"unverified"}),
+    )?;
+    let marker = format!(
+        "<!-- cc-owner-answer {} -->",
+        crate::automation::key(&evidence.to_string())
+    );
+    let original = read_text(&path)?;
+    if original.contains(&marker) {
+        return Ok(true);
+    }
+    let text = format!("{original}\n\n{marker}\n元ToDoへ届いた本人のDiscord回答です。対応する元質問の範囲で反映し、AIが選べる技術的詳細は自分で決めてください。同じ判断を再質問しないでください。配送は実操作の成功を証明しません。\n{evidence}\n");
+    let temp = path.with_file_name(format!(
+        "owner-answer-{}.tmp",
+        uuid::Uuid::new_v4().simple()
+    ));
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)
+        .map_err(|_| "cannot stage owner task context")?;
+    file.write_all(text.as_bytes())
+        .and_then(|_| file.sync_all())
+        .map_err(|_| "cannot stage owner task context")?;
+    drop(file);
+    replace_file(&temp, &path)?;
+    Ok(true)
+}
+
+/// A different scope still needs the original task's answers before asking again.
+/// The digest acknowledges inspection, never grants approval for the new scope.
+pub(crate) fn preflight(
+    ctx: &mut Context,
+    records: &[Value],
+    context: &Value,
+    work: &str,
+) -> Result<Option<Value>> {
+    let mut prior = Vec::new();
+    for record in records.iter().filter(|r| truth(&r["complete"])) {
+        if record["decision_identity"]["owner"]
+            .as_str()
+            .is_some_and(|id| id != ctx.owner())
+        {
+            continue;
+        }
+        if same_work(ctx, record, context, work)? {
+            prior.push(record.clone());
+        }
+    }
+    if prior.is_empty() {
+        return Ok(None);
+    }
+    let mut out = reuse(ctx, &prior, &prior[0], true)?;
+    if out["owner_answers"].as_array().is_none_or(|a| a.is_empty()) {
+        return Ok(None);
+    }
+    let id = todo(ctx, context)?;
+    let db = if ctx.todo.exists() {
+        read_json(&ctx.todo)?
+    } else {
+        Value::Null
+    };
+    let item = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|v| n(&v["id"]) == id);
+    out["original_todo"] = item
+        .map(|v| json!({"id":id,"note":v["note"],"spec":v["spec"]}))
+        .unwrap_or(json!({"id":id}));
+    let digest = crate::automation::key(
+        &json!({"todo":out["original_todo"],"questions":out["prior_questions"],
+        "requested_scope":context["decision_identity"]})
+        .to_string(),
+    );
+    if s(&context["reviewed_owner_context"]) == digest {
+        return Ok(None);
+    }
+    out["suppressed"] = json!("owner_context_required");
+    out["owner_context_digest"] = json!(digest);
+    out["next_action"] = json!("元ToDoの指示・元の質問・本人回答を読み、回答に沿って進めてください。技術的な詳細はAIが選びます。本当に新しい対象・仕様・危険範囲の判断が必要な場合だけ、同じdecision JSONにreviewed_owner_contextとしてこのdigestを添えて再実行してください。本人への確認は不要です。");
+    redact(ctx, &out).map(Some)
 }
 
 /// Explicit bounded repair of reviewed duplicate threads. Never posts, launches or deletes replies.

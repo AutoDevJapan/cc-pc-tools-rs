@@ -29,11 +29,64 @@ fn partitions_are_disjoint_and_exhaustive() {
 }
 
 #[test]
+fn explicit_read_only_audit_reads_only_selected_threads_and_keeps_receipts_unchanged() {
+    let mut h = harness();
+    let before = h.state();
+    let args = Args {
+        output: h.root.path().join("explicit.json"),
+        threads: vec!["100".into()],
+        reference_targets: None,
+        limit: 10,
+        capture: false,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    let result = history_audit::run(&mut h.ctx, &args).unwrap();
+    assert_eq!(result["inspected_threads"], 1);
+    assert_eq!(h.state(), before);
+    let calls = &h.fake.borrow().http_calls;
+    assert!(calls.iter().all(|c| c["method"] == "GET"));
+    assert!(!calls.iter().any(
+        |c| s(&c["url"]).contains("threads/active") || s(&c["url"]).contains("archived/public")
+    ));
+    assert!(!calls.iter().any(|c| s(&c["url"]).contains("/channels/200")));
+}
+
+#[test]
+fn explicit_audit_rejects_foreign_forum_before_reading_messages() {
+    let mut h = harness();
+    h.fake.borrow_mut().threads.get_mut("100").unwrap()["parent_id"] = json!("FOREIGN");
+    let args = Args {
+        output: h.root.path().join("explicit.json"),
+        threads: vec!["100".into()],
+        reference_targets: None,
+        limit: 10,
+        capture: true,
+        refresh: false,
+        partition: 0,
+        partitions: 1,
+    };
+    let before = h.state();
+    assert!(history_audit::run(&mut h.ctx, &args)
+        .unwrap_err()
+        .contains("outside"));
+    assert_eq!(h.state(), before);
+    assert!(!h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .any(|c| s(&c["url"]).contains("/messages")));
+}
+
+#[test]
 fn recovery_measurement_survives_new_message_and_repeat_audit() {
     let mut h = harness();
     let mut args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: true,
         refresh: false,
@@ -73,6 +126,7 @@ fn bot_only_history_does_not_rewrite_shared_state() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: true,
         refresh: false,
@@ -138,6 +192,7 @@ fn reader_session_resolves_to_own_job_with_successful_receipt_event() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -178,6 +233,7 @@ fn legacy_minute_and_text_do_not_prove_an_exact_reply_id() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -205,6 +261,7 @@ fn operator_confirmed_read_still_requires_exact_successful_event() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -263,6 +320,7 @@ fn command_shaped_started_event_and_other_completed_message_do_not_prove_read() 
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -316,6 +374,7 @@ fn audits_more_than_one_hundred_messages_without_consuming_or_posting() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -356,6 +415,7 @@ fn captures_archived_closed_question_without_claiming_delivery() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: true,
         refresh: false,
@@ -378,6 +438,7 @@ fn client_thread_is_excluded_before_history_read() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: true,
         refresh: false,
@@ -403,6 +464,7 @@ fn failure_is_recorded_and_never_counted_as_audited() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -425,6 +487,7 @@ fn incomplete_inventory_is_rediscovered_without_refresh_flag() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: false,
         refresh: false,
@@ -489,6 +552,7 @@ fn protection_changed_during_network_read_prevents_capture() {
     let args = Args {
         output: h.root.path().join("audit.json"),
         reference_targets: None,
+        threads: vec![],
         limit: 10,
         capture: true,
         refresh: false,

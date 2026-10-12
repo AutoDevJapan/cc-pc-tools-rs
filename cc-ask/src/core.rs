@@ -1877,7 +1877,11 @@ pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
 pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value], owner: &str) {
     let answer = messages
         .iter()
-        .filter(|m| s(&m["author"]["id"]) == owner && !crate::snooze::control_only(m))
+        .filter(|m| {
+            s(&m["author"]["id"]) == owner
+                && !truth(&m["author"]["bot"])
+                && !crate::snooze::control_only(m)
+        })
         .max_by_key(|m| n(&m["id"]));
     let latest = answer.map(|m| n(&m["id"])).unwrap_or(0);
     if latest > n(&state["owner_answers"][thread]).max(n(&state["owner_answers"][thread]["id"])) {
@@ -1903,7 +1907,10 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
                     && !crate::snooze::control_only(message)
                 {
                     replies.insert(id, json!({"id":message["id"],"timestamp":message["timestamp"],
-                        "content":safe_text(s(&message["content"])),"attachments":message["attachments"]}));
+                        "content":safe_text(s(&message["content"])),"attachments":message["attachments"],
+                        "thread_id":thread,"author_id":message.get("author").map(|a|a["id"].clone()).unwrap_or(message["author_id"].clone()),
+                        "acquisition_source":if message.get("author").is_some(){json!("discord-api-v10")}else{message["acquisition_source"].clone()},
+                        "question_message_id":q["after"],"todo_id":q["todo_id"]}));
                 }
             }
             if let Some(first) = replies.keys().next() {
@@ -1919,7 +1926,9 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
             if latest >= n(&q["answered_reply"]) {
                 if let Some(answer) = answer {
                     q["owner_reply"] = json!({"id":answer["id"],"timestamp":answer["timestamp"],
-                        "content":safe_text(s(&answer["content"])),"attachments":answer["attachments"]});
+                        "content":safe_text(s(&answer["content"])),"attachments":answer["attachments"],
+                        "author_id":answer["author"]["id"],"thread_id":thread,"acquisition_source":"discord-api-v10",
+                        "question_message_id":q["after"],"todo_id":q["todo_id"]});
                 }
             }
             q["answered_reply"] = json!(latest.max(n(&q["answered_reply"])).to_string());

@@ -73,6 +73,11 @@ fn complete_evidence(text: &str, bytes: usize, reference: &str) -> String {
     bounded(&notice, bytes, reference)
 }
 
+pub(crate) fn owner_context(ctx: &Context, key: &str, text: &str, bytes: usize) -> Result<String> {
+    let reference = snapshot(ctx, &format!("owner-context-{key}.md"), text)?;
+    Ok(complete_evidence(text, bytes, &reference))
+}
+
 /// These are console-wide aggregates, not the work assigned by this thread.
 fn scoped(text: &str) -> (String, bool) {
     let mut skip = false;

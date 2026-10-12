@@ -185,6 +185,7 @@ pub fn update_json_exclusive_with_writer(
     writer: impl FnOnce(&mut std::fs::File, &[u8]) -> std::io::Result<()>,
 ) -> Result<()> {
     use std::io::{Read, Seek, SeekFrom, Write};
+    question_recovery_guard_path(path)?;
     let mut options = std::fs::OpenOptions::new();
     options.read(true).write(true);
     #[cfg(windows)]
@@ -313,8 +314,9 @@ pub fn read_text_detail(p: &std::path::Path) -> Result<String> {
         .map(|text| text.replace("\r\n", "\n").replace('\r', "\n"))
         .map_err(|e| format!("OSError: read {}: {e}", p.display()))
 }
-pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> {
-    if p.file_name().is_some_and(|name| name == "state.json")
+fn question_recovery_guard_path(p: &std::path::Path) -> Result<()> {
+    if p.file_name()
+        .is_some_and(|name| name.eq_ignore_ascii_case("state.json"))
         && p.parent()
             .is_some_and(|parent| parent.join("question-recovery-required.json").exists())
     {
@@ -322,6 +324,11 @@ pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> 
             "QuestionStateRecoveryRequired: original question ledger recovery pending".into(),
         );
     }
+    Ok(())
+}
+
+pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> {
+    question_recovery_guard_path(p)?;
     let mut buf = Vec::new();
     let spaces = vec![b' '; indent];
     let fmt = serde_json::ser::PrettyFormatter::with_indent(&spaces);

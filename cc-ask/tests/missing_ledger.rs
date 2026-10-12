@@ -68,6 +68,18 @@ fn explicit_recovery_latch_allows_get_but_blocks_post_launch_and_state_reset() {
             .unwrap_err()
             .contains("RecoveryRequired")
     );
+    assert!(
+        atomic_json(&h.ctx.here.join("STATE.JSON"), &json!({"questions":[]}), 2)
+            .unwrap_err()
+            .contains("RecoveryRequired")
+    );
+    assert!(update_json_exclusive_with_writer(
+        &h.ctx.here.join("STATE.JSON"),
+        |_| Ok(()),
+        |_, _| panic!("latched writer must not run")
+    )
+    .unwrap_err()
+    .contains("RecoveryRequired"));
     assert!(cc_ask::question_progress::ask(
         &mut h.ctx,
         &json!({"todo_id":1}),

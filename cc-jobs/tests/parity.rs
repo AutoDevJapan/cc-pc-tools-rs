@@ -1,5 +1,197 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
+
+mod independent_subwork {
+    use super::*;
+    fn setup(cap: usize) -> (Test, subwork_support::Fixture) {
+        let t = Test::new();
+        let mut f = subwork_support::Fixture::new();
+        f.register();
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":cap}).to_string(),
+        )
+        .unwrap();
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), f.dir.path().to_string_lossy().into());
+        fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+        f.jobs[0]["pid"] = json!(std::process::id());
+        f.jobs[0]["pid_created"] = json!(123);
+        t.put(f.jobs[0].clone());
+        (t, f)
+    }
+    fn register(t: &Test, f: &subwork_support::Fixture, extra: &[&str]) -> Result<i32> {
+        let row = &f.db["items"][1];
+        let mut args = vec![
+            "--todo-id",
+            "2",
+            "--subwork-of",
+            "1",
+            "--parent-job-id",
+            "parent",
+            "--assigned-needs",
+            "",
+            "--launch-key",
+            s(&row["scheduler"], "key"),
+            "--cwd",
+            s(&row["scheduler"], "worktree"),
+            "--sandbox",
+            "danger-full-access",
+        ];
+        args.extend(extra);
+        t.run(&args, b"finite check")
+    }
+    fn child(t: &Test) -> Value {
+        t.ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|j| j["todo_id"] == 2)
+            .unwrap()
+    }
+    #[test]
+    fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
+        let (t, f) = setup(1);
+        register(&t, &f, &[]).unwrap();
+        let registered = child(&t);
+        let paths = cc_todo::Paths::at(f.dir.path(), &t.ctx.jobs);
+        let mut db = cc_todo::load(&paths.store).unwrap();
+        cc_todo::execute(
+            &mut db,
+            &cc_todo::Command::Start {
+                id: 2,
+                job: s(&registered, "id").into(),
+                progress: None,
+            },
+            &paths,
+        )
+        .unwrap();
+        fs::write(&paths.store, db.to_string()).unwrap();
+        assert!(db["items"][1]["scheduler"]["key"].is_null());
+        assert_eq!(db["items"][1]["scheduler"]["job"], registered["id"]);
+        assert!(t.ctx.admit(s(&registered, "id")).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(s(&registered, "id")).unwrap()["queue_wait_reason"]["code"],
+            "running_limit"
+        );
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":2}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit(s(&registered, "id")).unwrap().is_some());
+        let started = t.ctx.load(s(&registered, "id")).unwrap();
+        assert_eq!(started["status"], "running");
+        assert!(started["started_at"].is_string());
+        assert!(started["queue_wait_reason"].is_null());
+        assert_eq!(started["launch_key"], registered["launch_key"]);
+        assert_eq!(started["parent_job_id"], "parent");
+    }
+    #[test]
+    fn registration_keeps_cross_todo_parent_but_does_not_exempt_hardware_capacity() {
+        let (t, f) = setup(1);
+        register(&t, &f, &[]).unwrap();
+        let child = child(&t);
+        assert_eq!(child["parent_job_id"], "parent");
+        assert!(t.ctx.admit(s(&child, "id")).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(s(&child, "id")).unwrap()["queue_wait_reason"]["code"],
+            "running_limit"
+        );
+        fs::write(
+            t.ctx.root.join("queue-config.json"),
+            json!({"max_running":2}).to_string(),
+        )
+        .unwrap();
+        assert!(t.ctx.admit(s(&child, "id")).unwrap().is_some());
+    }
+    #[test]
+    fn registration_validates_allocation_parent_and_queued_duplicates() {
+        let (t, f) = setup(8);
+        assert!(register(&t, &f, &["--assigned-needs", "cargo"]).is_err());
+        assert!(register(&t, &f, &["--parent-job-id", "fake"]).is_err());
+        assert!(register(&t, &f, &["--subwork-of", "9"]).is_err());
+        register(&t, &f, &[]).unwrap();
+        assert!(
+            register(
+                &t,
+                &f,
+                &["--launch-key", "33333333333333333333333333333333"]
+            )
+            .is_err()
+        );
+        assert_eq!(
+            t.ctx
+                .list_jobs(&HashSet::new())
+                .iter()
+                .filter(|j| j["todo_id"] == 2)
+                .count(),
+            1
+        );
+    }
+    #[test]
+    fn queued_job_revalidates_parent_exit_and_changed_todo() {
+        for changed in [false, true] {
+            let (t, mut f) = setup(8);
+            register(&t, &f, &[]).unwrap();
+            let child = child(&t);
+            let mut parent = t.ctx.load("parent").unwrap();
+            parent["status"] = json!("succeeded");
+            parent["pid"] = Value::Null;
+            t.ctx.save(&parent).unwrap();
+            if changed {
+                f.db["items"][1]["needs"] = json!(["cargo"]);
+                fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            }
+            assert_eq!(t.ctx.admit(s(&child, "id")).unwrap().is_some(), !changed);
+            let saved = t.ctx.load(s(&child, "id")).unwrap();
+            if changed {
+                assert_eq!(saved["queue_wait_reason"]["code"], "subwork_invalid");
+            } else {
+                assert!(saved["parent_job_id"].is_null());
+            }
+        }
+    }
+    #[test]
+    fn invalid_queued_subwork_does_not_block_a_normal_root_but_running_subwork_does() {
+        for running in [false, true] {
+            let (t, mut f) = setup(8);
+            register(&t, &f, &[]).unwrap();
+            let mut child = child(&t);
+            let mut parent = t.ctx.load("parent").unwrap();
+            parent["status"] = json!("succeeded");
+            parent["pid"] = Value::Null;
+            t.ctx.save(&parent).unwrap();
+            f.db["items"][1]["needs"] = json!(["cargo"]);
+            fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            if running {
+                child["status"] = json!("running");
+                child["pid"] = json!(std::process::id());
+                child["pid_created"] = json!(123);
+                t.ctx.save(&child).unwrap();
+            }
+            t.put(job(
+                json!({"id":"normal","name":"normal","status":"queued","todo_id":3,
+                "cwd":f.repo,"pid":std::process::id(),"pid_created":123,"queue_sequence":500,
+                "created_at":"2026-10-10T03:00:00+09:00","work_owner":child["work_owner"]}),
+            ));
+            {
+                let _lock = t.ctx.queue_lock().unwrap();
+                t.ctx.track_queued_job("normal").unwrap();
+            }
+            assert_eq!(t.ctx.admit("normal").unwrap().is_some(), !running);
+            if running {
+                assert_eq!(
+                    t.ctx.load("normal").unwrap()["queue_wait_reason"]["code"],
+                    "work_owner"
+                );
+            }
+        }
+    }
+}
 
 mod reboot_recovery {
     use super::*;
@@ -1336,6 +1528,258 @@ mod queue_regressions {
     use super::*;
     use cc_jobs::queue::*;
     #[test]
+    fn unreconciled_legacy_identity_is_checked_before_execution_and_on_pid_reuse() {
+        for identity in ["todo", "session", "related-todo"] {
+            let t = Test::new();
+            config(&t, json!({"max_running":10}));
+            let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+            let mut old = job(
+                json!({"id":"legacy","name":"old","status":"succeeded","codex_pid":888,"codex_pid_created":77}),
+            );
+            let args = match identity {
+                "todo" => {
+                    old["todo_id"] = json!(77);
+                    vec!["--todo-id", "77"]
+                }
+                "related-todo" => {
+                    old["related_todo_ids"] = json!([77]);
+                    vec!["--todo-id", "77"]
+                }
+                _ => {
+                    old["thread_id"] = json!(session);
+                    vec!["--resume-session", session]
+                }
+            };
+            t.put(old);
+            t.rt.procs.lock().unwrap().insert(888, 77);
+            // Intake must not scan this terminal-looking legacy record. Its
+            // surviving writer is discovered by reconciliation before admit.
+            assert_eq!(t.run(&args, b"new receipt").unwrap(), 0);
+            let new = t
+                .ctx
+                .list_jobs(&HashSet::new())
+                .into_iter()
+                .find(|job| job["id"] != "legacy")
+                .unwrap();
+            let id = s(&new, "id");
+            assert!(t.ctx.admit(id).unwrap().is_none(), "{identity}");
+            assert_eq!(
+                t.ctx.load(id).unwrap()["queue_wait_reason"]["code"],
+                "intake_owner"
+            );
+            // A PID with another creation time must not keep the old claim.
+            t.rt.procs.lock().unwrap().insert(888, 78);
+            assert!(t.ctx.admit(id).unwrap().is_some(), "{identity}");
+        }
+    }
+    #[test]
+    fn unreadable_indexed_session_keeps_its_identity_with_spare_capacity() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+        t.put(job(
+            json!({"id":"legacy","status":"running","queue_unreadable":true,"thread_id":session}),
+        ));
+        drop(t.ctx.queue_lock().unwrap());
+        fs::write(t.ctx.job_dir("legacy").join("job.json"), "broken").unwrap();
+        t.put(job(
+            json!({"id":"next","name":"different","resume_session":session}),
+        ));
+        {
+            let _gate = t.ctx.queue_lock().unwrap();
+            t.ctx.track_queued_job("next").unwrap();
+        }
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("next").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+    }
+    #[test]
+    fn same_todo_children_share_family_but_a_shared_session_still_waits() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+        t.rt.procs.lock().unwrap().insert(888, 77);
+        t.put(job(json!({"id":"parent","name":"parent","todo_id":77,"status":"running","codex_pid":888,"codex_pid_created":77,"thread_id":session})));
+        t.put(job(
+            json!({"id":"child","name":"review","todo_id":77,"parent_job_id":"parent"}),
+        ));
+        assert!(t.ctx.admit("child").unwrap().is_some());
+        t.put(job(json!({"id":"same-session-child","name":"resume","todo_id":77,"parent_job_id":"parent","resume_session":session})));
+        assert!(t.ctx.admit("same-session-child").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("same-session-child").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+        t.put(job(
+            json!({"id":"other-root","name":"unrelated","todo_id":77}),
+        ));
+        assert!(t.ctx.admit("other-root").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("other-root").unwrap()["queue_wait_reason"]["code"],
+            "intake_owner"
+        );
+    }
+    #[test]
+    fn registration_owns_state_before_publishing_a_queued_job() {
+        let t = Test::new();
+        let reads = Arc::new(AtomicUsize::new(0));
+        let observed = reads.clone();
+        *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                assert!(
+                    FileLock::try_acquire(&file.with_file_name("state.lock")).is_err(),
+                    "registration must reserve state before first publication"
+                );
+                reads.fetch_add(1, Ordering::Relaxed);
+            }
+        }));
+        assert_eq!(t.run(&[], b"fixture registration").unwrap(), 0);
+        assert!(observed.load(Ordering::Relaxed) > 0);
+    }
+    #[test]
+    fn history_bootstrap_and_refresh_do_not_hold_the_queue_gate() {
+        let t = Test::new();
+        for n in 0..32 {
+            t.put(job(
+                json!({"id":format!("history-{n}"),"status":"succeeded"}),
+            ));
+        }
+        let path = t.ctx.jobs.join(".queue.lock");
+        let reads = Arc::new(AtomicUsize::new(0));
+        let count = reads.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                let gate = FileLock::try_acquire(&path)
+                    .expect("terminal history must be read outside the queue gate");
+                drop(gate);
+                count.fetch_add(1, Ordering::Relaxed);
+            }
+        }));
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(reads.load(Ordering::Relaxed), 32);
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(
+            reads.load(Ordering::Relaxed),
+            32,
+            "bootstrap must be shared"
+        );
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        t.rt.tick(31.);
+        drop(t.ctx.queue_lock().unwrap());
+        assert_eq!(reads.load(Ordering::Relaxed), 64);
+    }
+    #[test]
+    fn scan_commit_merges_a_registration_published_after_history_was_read() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history-first","status":"succeeded"})));
+        let jobs = t.ctx.jobs.clone();
+        let writer = Context {
+            rt: Arc::new(Fake::new()),
+            ..t.ctx.clone()
+        };
+        let once = Arc::new(AtomicBool::new(false));
+        let observed = once.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json")
+                && !once.swap(true, Ordering::Relaxed)
+            {
+                let _gate = FileLock::try_acquire(&jobs.join(".queue.lock")).unwrap();
+                let dir = jobs.join("late-registration");
+                fs::create_dir(&dir).unwrap();
+                fs::write(
+                    dir.join("job.json"),
+                    pretty(&job(json!({"id":"late-registration"}))),
+                )
+                .unwrap();
+                writer.track_queued_job("late-registration").unwrap();
+            }
+        }));
+        drop(t.ctx.queue_lock().unwrap());
+        assert!(observed.load(Ordering::Relaxed));
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["ids"], json!(["late-registration"]));
+    }
+    #[test]
+    fn partial_index_replaced_after_preparation_cannot_admit_a_job() {
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        t.rt.procs.lock().unwrap().insert(888, 77);
+        t.put(job(
+            json!({"id":"orphan","status":"running","codex_pid":888,"codex_pid_created":77}),
+        ));
+        waiting(&t, "waiting", "ordinary");
+        let gate = t.ctx.jobs.join(".queue.lock");
+        let once = Arc::new(AtomicBool::new(false));
+        let changed = once.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file
+                .file_name()
+                .is_some_and(|name| name == ".queue-index.json")
+                && FileLock::try_acquire(&gate).is_err()
+                && !once.swap(true, Ordering::Relaxed)
+            {
+                fs::write(
+                    file,
+                    r#"{"scan_complete":false,"scanned_at":0,"ids":["waiting"]}"#,
+                )
+                .unwrap();
+            }
+        }));
+        let error = t
+            .ctx
+            .admit("waiting")
+            .err()
+            .expect("partial index must defer admission");
+        assert_eq!(error.code, 75);
+        assert!(changed.load(Ordering::Relaxed));
+        *t.rt.load_hook.lock().unwrap() = None;
+        assert_eq!(t.ctx.load("waiting").unwrap()["status"], "queued");
+        assert!(t.ctx.admit("waiting").unwrap().is_none());
+    }
+    #[test]
+    fn scan_commit_read_failure_preserves_concurrent_registration() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history-first","status":"succeeded"})));
+        let writer = Context {
+            rt: Arc::new(Fake::new()),
+            ..t.ctx.clone()
+        };
+        let jobs = t.ctx.jobs.clone();
+        let failed_path = t.rt.load_error_path.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file.file_name().is_some_and(|name| name == "job.json") {
+                let _gate = FileLock::try_acquire(&jobs.join(".queue.lock")).unwrap();
+                let dir = jobs.join("late-registration");
+                fs::create_dir(&dir).unwrap();
+                fs::write(
+                    dir.join("job.json"),
+                    pretty(&job(json!({"id":"late-registration"}))),
+                )
+                .unwrap();
+                writer.track_queued_job("late-registration").unwrap();
+                *failed_path.lock().unwrap() = Some(jobs.join(".queue-index.json"));
+            }
+        }));
+        assert!(t.ctx.queue_lock().is_err());
+        *t.rt.load_hook.lock().unwrap() = None;
+        *t.rt.load_error_path.lock().unwrap() = None;
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["scan_complete"], false);
+        assert_eq!(index["ids"], json!(["late-registration"]));
+        drop(t.ctx.queue_lock().unwrap());
+        let index: Value =
+            serde_json::from_slice(&fs::read(t.ctx.jobs.join(".queue-index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index["scan_complete"], true);
+        assert_eq!(index["ids"], json!(["late-registration"]));
+    }
+    #[test]
     fn unreadable_owner_record_keeps_cached_pr_claim_without_blocking_other_prs() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
@@ -1375,6 +1819,137 @@ mod queue_regressions {
         assert!(t.ctx.admit("first").unwrap().is_some());
     }
     #[test]
+    fn readiness_wait_added_after_registration_blocks_admission_until_released() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut candidate = waiting(&t, "original", "orch-todo-1139");
+        candidate["todo_id"] = json!(1139);
+        t.ctx.save(&candidate).unwrap();
+        let mut db = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("original").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("original").unwrap()["queue_wait_reason"]["code"],
+            "todo_readiness"
+        );
+        assert_eq!(t.ctx.load("original").unwrap()["status"], "queued");
+        // The queue cannot claim recovery merely because wall time passed. The watchdog releases it.
+        db["items"][0]["status"] = json!("todo");
+        db["items"][0].as_object_mut().unwrap().remove("wait_ready");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit("original").unwrap().is_some());
+    }
+    #[test]
+    fn timed_retry_rejects_new_supervisor_registration_without_writing_a_job() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let db = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let before = t.ctx.list_jobs(&HashSet::new());
+        let error = t
+            .run(&["--todo-id", "1139"], b"existing task check")
+            .unwrap_err();
+        assert!(error.message.contains("次の再確認"));
+        assert_eq!(t.ctx.list_jobs(&HashSet::new()), before);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(),
+            db
+        );
+        assert!(t.run(&[], b"unrelated finite work").is_ok());
+    }
+    #[test]
+    fn initial_todo_creation_cannot_race_running_publication() {
+        for directory_exists in [false, true] {
+            let t = Test::new();
+            config(&t, json!({"max_running":10}));
+            let home = t.ctx.root.join("initial-todo");
+            if directory_exists {
+                fs::create_dir(&home).unwrap();
+            }
+            t.rt.env
+                .lock()
+                .unwrap()
+                .insert("CC_TODO_HOME".into(), home.to_string_lossy().into_owned());
+            let store = home.join("todo.json");
+            let mut candidate = waiting(&t, "initial", "orch-todo-1139");
+            candidate["todo_id"] = json!(1139);
+            t.ctx.save(&candidate).unwrap();
+            let attempts = Arc::new(Mutex::new(Vec::new()));
+            let observed = attempts.clone();
+            let path = t.ctx.job_dir("initial").join("job.json");
+            let lock = home.join("todo.lock");
+            let store_at_save = store.clone();
+            *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+                if file == path {
+                    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+                    match FileLock::try_acquire(&lock) {
+                        Ok(_writer) => {
+                            observed.lock().unwrap().push(false);
+                            fs::write(&store_at_save, json!({"items":[{"id":1139,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]}).to_string()).unwrap();
+                        }
+                        Err(_) => observed.lock().unwrap().push(true),
+                    }
+                }
+            }));
+            assert!(t.ctx.admit("initial").unwrap().is_some());
+            *t.rt.save_hook.lock().unwrap() = None;
+            assert_eq!(
+                *attempts.lock().unwrap(),
+                vec![true],
+                "directory exists: {directory_exists}"
+            );
+            assert!(!store.exists());
+            // The writer can register a wait once publication has released the same lock.
+            let _writer = FileLock::try_acquire(&home.join("todo.lock")).unwrap();
+            fs::write(&store, json!({"items":[{"id":1139,"status":"wait","wait_on":[2]},{"id":2,"status":"doing"}]}).to_string()).unwrap();
+        }
+    }
+    #[test]
+    fn wait_registration_cannot_race_running_publication_after_queue_snapshot() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env.lock().unwrap().insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into_owned());
+        let store = t.ctx.root.join("todo.json");
+        let db = json!({"items":[{"id":1139,"status":"todo"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        let mut candidate = waiting(&t, "original", "orch-todo-1139");
+        candidate["todo_id"] = json!(1139);
+        t.ctx.save(&candidate).unwrap();
+        let attempts = Arc::new(Mutex::new(Vec::new()));
+        let observed = attempts.clone();
+        let path = t.ctx.job_dir("original").join("job.json");
+        let todo_lock = store.with_file_name("todo.lock");
+        let store_at_save = store.clone();
+        *t.rt.save_hook.lock().unwrap() = Some(Box::new(move |file, _| {
+            if file == path {
+                match FileLock::try_acquire(&todo_lock) {
+                    Ok(_guard) => {
+                        observed.lock().unwrap().push(false);
+                        // A writer admitted here would install a wait between the snapshot and publication.
+                        let wait = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
+                        let _ = fs::write(&store_at_save, wait.to_string());
+                    },
+                    Err(_) => observed.lock().unwrap().push(true),
+                }
+            }
+        }));
+        let admission = t.ctx.admit("original").unwrap();
+        *t.rt.save_hook.lock().unwrap() = None;
+        assert!(admission.is_some());
+        assert_eq!(t.ctx.load("original").unwrap()["status"], "running");
+        assert_eq!(*attempts.lock().unwrap(), vec![true]);
+        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(), db);
+    }
+    #[test]
     fn duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
@@ -1407,6 +1982,90 @@ mod queue_regressions {
         db["items"][0]["status"] = json!("done");
         fs::write(&store, db.to_string()).unwrap();
         assert!(t.ctx.admit("later").unwrap().is_some());
+    }
+    #[test]
+    fn legacy_home_git_wait_is_reevaluated_and_archived_without_rewaiting() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into());
+        assert!(
+            std::process::Command::new("git")
+                .arg("init")
+                .arg(&t.ctx.root)
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
+        let a = t.ctx.root.join("a");
+        let b = t.ctx.root.join("b");
+        fs::create_dir(&a).unwrap();
+        fs::create_dir(&b).unwrap();
+        let db = json!({"projects":{"a":a,"b":b},"items":[{"id":880,"status":"todo"},{"id":1595,"status":"wait","wait_on":[880],"work_owner_job":"first","work_owner_wait_on":880,"jobs":["later"]}]});
+        fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+        let identity = json!({"worktree":cc_job_policy::work_owner::norm(&t.ctx.root),"git_common":cc_job_policy::work_owner::norm(&t.ctx.root.join(".git")),"root_kind":"user_home","branch":"fix/other"});
+        let mut first = waiting(&t, "first", "orch-first");
+        first["todo_id"] = json!(880);
+        first["cwd"] = json!(a);
+        first["project"] = json!("a");
+        first["work_owner"] = identity.clone();
+        first["status"] = json!("succeeded");
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "orch-later");
+        later["todo_id"] = json!(1595);
+        later["cwd"] = json!(b);
+        later["project"] = json!("b");
+        later["work_owner"] = identity;
+        later["work_wait_on"] = json!([880]);
+        later["queue_wait_reason"] = json!({"code":"todo_dependency"});
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_some());
+        let saved = t.ctx.load("later").unwrap();
+        assert_eq!(saved["work_wait_on"], json!([]));
+        assert_eq!(saved["work_wait_history"][0]["wait_on"], json!([880]));
+        assert_eq!(saved["work_owner"]["scope"], "registered_folder");
+        assert!(saved["queue_wait_reason"].is_null());
+        // Admission reads the current ToDo store but never rewrites it outside its lock.
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(t.ctx.root.join("todo.json")).unwrap())
+                .unwrap(),
+            db
+        );
+    }
+    #[test]
+    fn manual_db_wait_survives_disproved_automatic_queue_wait() {
+        let t = Test::new();
+        config(&t, json!({"max_running":10}));
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into());
+        let db = json!({"items":[{"id":880,"status":"todo"},{"id":1595,"status":"wait","wait_on":[880],"work_owner_job":"first","jobs":["later"]}]});
+        fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+        let mut first = waiting(&t, "first", "orch-first");
+        first["todo_id"] = json!(880);
+        first["work_owner"] = json!({"worktree":"/a"});
+        first["status"] = json!("succeeded");
+        t.ctx.save(&first).unwrap();
+        let mut later = waiting(&t, "later", "orch-later");
+        later["todo_id"] = json!(1595);
+        later["work_owner"] = json!({"worktree":"/b"});
+        later["work_wait_on"] = json!([880]);
+        later["queue_wait_reason"] = json!({"code":"work_owner","owner_job_id":"first"});
+        t.ctx.save(&later).unwrap();
+        assert!(t.ctx.admit("later").unwrap().is_none());
+        let saved = t.ctx.load("later").unwrap();
+        assert_eq!(saved["work_wait_on"], json!([]));
+        assert_eq!(saved["queue_wait_reason"]["code"], "todo_dependency");
+        assert_eq!(saved["queue_wait_reason"]["wait_on"], json!([880]));
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(t.ctx.root.join("todo.json")).unwrap())
+                .unwrap(),
+            db
+        );
     }
     #[test]
     fn git_metadata_recognizes_subdirectories_and_linked_worktrees_without_shells() {
@@ -1862,6 +2521,48 @@ mod queue_regressions {
         fs::write(&store, db.to_string()).unwrap();
         assert!(t.ctx.admit("shared").unwrap().is_some());
         assert!(t.run(&["--todo-id", "2"], b"duplicate").is_err());
+    }
+    #[test]
+    fn reply_metadata_rechecks_dependencies_added_after_registration() {
+        let t = Test::new();
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        let store = t.ctx.root.join("todo.json");
+        let mut db = json!({"items":[{"id":2073,"status":"todo"},
+            {"id":2074,"status":"todo"},{"id":32,"status":"todo"}]});
+        fs::write(&store, db.to_string()).unwrap();
+        assert_eq!(
+            t.run(
+                &["--todo-id", "2073", "--related-todo-ids", "2073,2074"],
+                b"reply continuation"
+            )
+            .unwrap(),
+            0
+        );
+        let path = fs::read_dir(&t.ctx.jobs)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| p.join("job.json").is_file())
+            .unwrap();
+        let id = path.file_name().unwrap().to_str().unwrap();
+        assert_eq!(
+            t.ctx.load(id).unwrap()["related_todo_ids"],
+            json!([2073, 2074])
+        );
+        db["items"][1]["status"] = json!("wait");
+        db["items"][1]["wait_on"] = json!([32]);
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit(id).unwrap().is_none());
+        assert_eq!(
+            t.ctx.load(id).unwrap()["queue_wait_reason"]["wait_on"],
+            json!([32])
+        );
+        db["items"][2]["status"] = json!("done");
+        fs::write(&store, db.to_string()).unwrap();
+        assert!(t.ctx.admit(id).unwrap().is_some());
     }
     const SESSION_ID: &str = "01a11052-a537-74f3-9611-deb742778fc5";
     fn long_parent(t: &Test, id: &str) -> Value {
@@ -3082,6 +3783,156 @@ mod queue_regressions {
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
     }
     #[test]
+    fn supervisor_refresh_is_not_execution_admission_during_history_reconciliation() {
+        let t = Test::new();
+        waiting(&t, "target", "target");
+        let index_path = t.ctx.jobs.join(".queue-index.json");
+        let mut index = t.ctx.read_json(&index_path).unwrap();
+        index["scan_complete"] = json!(false);
+        t.ctx.write_json(&index_path, &index).unwrap();
+        let scan = FileLock::try_acquire(&t.ctx.jobs.join(".queue-scan.lock")).unwrap();
+        assert_eq!(t.ctx.reload_queue().unwrap(), json!(["target"]));
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        let saved = t.ctx.load("target").unwrap();
+        assert_eq!(saved["status"], "queued");
+        assert!(saved["started_at"].is_null());
+        assert!(saved["queue_restart_pending"] == true);
+        assert_eq!(t.ctx.admit("target").err().unwrap().code, 75);
+        drop(scan);
+    }
+    #[test]
+    fn targeted_supervisor_refresh_preserves_other_workers_and_rejects_unusable_targets() {
+        for case in [
+            "queued",
+            "running",
+            "starting",
+            "surviving",
+            "cancelled",
+            "wrong_id",
+            "bad_id",
+            "missing",
+            "busy",
+            "missing_index",
+            "broken_index",
+            "missing_scan_flag",
+            "wrong_scan_flag",
+            "wrong_scan_time",
+        ] {
+            let t = Test::new();
+            let mut target = waiting(&t, "target", "target");
+            target["pid"] = json!(444);
+            target["pid_created"] = json!(55);
+            target["resume_session"] = json!(SESSION_ID);
+            t.ctx.save(&target).unwrap();
+            t.rt.procs.lock().unwrap().insert(444, 55);
+            let mut other = waiting(&t, "other", "other");
+            other["pid"] = json!(445);
+            other["pid_created"] = json!(56);
+            t.ctx.save(&other).unwrap();
+            t.rt.procs.lock().unwrap().insert(445, 56);
+            let mut requested = "target";
+            match case {
+                "running" | "starting" => target["status"] = json!(case),
+                "surviving" => {
+                    target["codex_pid"] = json!(446);
+                    target["codex_pid_created"] = json!(57);
+                    t.rt.procs.lock().unwrap().insert(446, 57);
+                }
+                "cancelled" => target["cancel_requested"] = json!(true),
+                "wrong_id" => target["id"] = json!("other"),
+                "bad_id" => requested = "../other",
+                "missing" => requested = "absent",
+                "missing_index" => fs::remove_file(t.ctx.jobs.join(".queue-index.json")).unwrap(),
+                "broken_index" => {
+                    fs::write(t.ctx.jobs.join(".queue-index.json"), "{broken").unwrap()
+                }
+                "missing_scan_flag" | "wrong_scan_flag" | "wrong_scan_time" => {
+                    let path = t.ctx.jobs.join(".queue-index.json");
+                    let mut index = t.ctx.read_json(&path).unwrap();
+                    index["scanned_at"] = json!(t.rt.epoch());
+                    index["scan_complete"] = json!(true);
+                    match case {
+                        "missing_scan_flag" => {
+                            index.as_object_mut().unwrap().remove("scan_complete");
+                        }
+                        "wrong_scan_flag" => index["scan_complete"] = json!("complete"),
+                        _ => index["scanned_at"] = json!("recent"),
+                    }
+                    t.ctx.write_json(&path, &index).unwrap();
+                }
+                _ => {}
+            }
+            let target_path = t.ctx.job_dir("target").join("job.json");
+            fs::write(&target_path, target.to_string()).unwrap();
+            let other_path = t.ctx.job_dir("other").join("job.json");
+            let untouched = fs::read(&other_path).unwrap();
+            let held = (case == "busy").then(|| t.ctx.job_lock("target", "state.lock").unwrap());
+            let updates = [
+                "queued",
+                "missing_index",
+                "broken_index",
+                "missing_scan_flag",
+                "wrong_scan_flag",
+                "wrong_scan_time",
+            ]
+            .contains(&case);
+            let (result, out, _) = t.cli(&["reload-queue", "--job-id", requested]);
+            if ["wrong_id", "bad_id", "missing"].contains(&case) {
+                assert!(result.is_err(), "{case}");
+            } else {
+                assert_eq!(result.unwrap(), 0, "{case}");
+                let report: Value = serde_json::from_str(&out).unwrap();
+                assert_eq!(
+                    report,
+                    if updates {
+                        json!(["target"])
+                    } else {
+                        json!([])
+                    },
+                    "{case}"
+                );
+            }
+            assert_eq!(fs::read(&other_path).unwrap(), untouched, "{case}");
+            assert_eq!(
+                t.rt.supervisors.load(Ordering::Relaxed),
+                usize::from(updates),
+                "{case}"
+            );
+            if updates {
+                assert_eq!(*t.rt.kills.lock().unwrap(), [444]);
+                assert_eq!(t.ctx.load("target").unwrap()["resume_session"], SESSION_ID);
+                assert!(t.ctx.load("target").unwrap()["started_at"].is_null());
+                if case.contains("index") || case.contains("scan_") {
+                    let index = t
+                        .ctx
+                        .read_json(&t.ctx.jobs.join(".queue-index.json"))
+                        .unwrap();
+                    assert_eq!(
+                        index["ids"],
+                        if case.contains("scan_") {
+                            json!(["target", "other"])
+                        } else {
+                            json!(["target"])
+                        }
+                    );
+                    assert_eq!(index["scan_complete"], false);
+                    assert_eq!(index["scanned_at"], 0.);
+                    let scan = FileLock::try_acquire(&t.ctx.jobs.join(".queue-scan.lock")).unwrap();
+                    assert_eq!(t.ctx.admit("target").err().unwrap().code, 75);
+                    drop(scan);
+                }
+            } else {
+                assert!(t.rt.kills.lock().unwrap().is_empty(), "{case}");
+                assert_eq!(
+                    fs::read(&target_path).unwrap(),
+                    target.to_string().as_bytes(),
+                    "{case}"
+                );
+            }
+            drop(held);
+        }
+    }
+    #[test]
     fn reload_queue_only_restarts_waiters_and_preserves_session() {
         let t = Test::new();
         let mut j = waiting(&t, "waiting", "wait");
@@ -3143,7 +3994,7 @@ mod queue_regressions {
     #[test]
     fn wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs() {
         let t = Test::new();
-        config(&t, json!({"max_running":8,"max_children_per_parent":1}));
+        config(&t, json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}));
         let mut normal = waiting(&t, "normal", "normal");
         normal["retry_not_before"] = json!(t.rt.epoch() + 60.);
         t.ctx.save(&normal).unwrap();
@@ -3299,6 +4150,7 @@ mod queue_regressions {
             let mut j = waiting(&t, id, id);
             j["pid"] = json!(pid);
             j["pid_created"] = json!(55);
+            j["resume_session"] = json!(SESSION_ID);
             t.ctx.save(&j).unwrap();
             t.rt.procs.lock().unwrap().insert(pid, 55);
         }
@@ -3309,6 +4161,21 @@ mod queue_regressions {
         assert_eq!(report[1], "b-good");
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
         assert_eq!(t.ctx.load("a-failing").unwrap()["pid"], 444);
+        assert_eq!(
+            t.ctx.load("a-failing").unwrap()["queue_restart_pending"],
+            true
+        );
+        t.rt.paused_stop_failure.store(false, Ordering::Relaxed);
+        assert_eq!(
+            t.ctx.reload_queue_job("a-failing").unwrap(),
+            json!(["a-failing"])
+        );
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 2);
+        assert_eq!(
+            t.ctx.load("a-failing").unwrap()["resume_session"],
+            SESSION_ID
+        );
+        assert_eq!(t.ctx.load("a-failing").unwrap()["status"], "queued");
     }
     #[test]
     fn reload_does_not_wait_for_a_busy_registration_or_hold_the_queue_between_jobs() {
@@ -3611,10 +4478,42 @@ mod queue_regressions {
         fs::write(t.ctx.root.join("queue-config.json"), value.to_string()).unwrap();
     }
     fn loop_job(t: &Test, id: &str, todo: u64) -> Value {
+        fs::create_dir_all(&t.ctx.root).unwrap();
+        // These regression cases exercise an explicitly configured legacy tier.
+        if !t.ctx.root.join("queue-config.json").exists() {
+            config(t, json!({"lowest_priority_todo_ids":[18,23]}));
+        }
         let mut j = waiting(t, id, "req-loop");
         j["todo_id"] = json!(todo);
         t.ctx.save(&j).unwrap();
         j
+    }
+    #[test]
+    fn department_order_wins_over_request_prefix_and_children() {
+        let t=Test::new();
+        config(&t,json!({"max_running":1}));
+        let mut low=waiting(&t,"low","req-low"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); t.ctx.save(&high).unwrap();
+        assert!(t.ctx.admit("low").unwrap().is_none());
+        assert!(t.ctx.admit("high").unwrap().is_some());
+        assert!(t.ctx.admit("low").unwrap().is_none());
+    }
+    #[test]
+    fn configured_legacy_lowest_cannot_demote_contract_below_own_products() {
+        let t=Test::new();
+        config(&t,json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
+        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); high["todo_id"]=json!(18); t.ctx.save(&high).unwrap();
+        let mut low=waiting(&t,"low","req-own"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        assert!(t.ctx.admit("high").unwrap().is_some());
+    }
+    #[test]
+    fn running_own_product_yields_to_a_ready_higher_department_at_tool_boundary() {
+        let t=Test::new(); config(&t,json!({"max_running":1}));
+        let mut parent=live_tool_parent(&t); parent["project"]=json!("unknown"); parent["started_at"]=json!(t.rt.now()); t.ctx.save(&parent).unwrap();
+        let mut other=t.ctx.load("other").unwrap(); other["project"]=json!("SocialPilot"); t.ctx.save(&other).unwrap();
+        tool_events(&t,&[("item.started","work"),("item.completed","work")]);
+        assert!(t.ctx.admit("other").unwrap().is_some());
+        let saved=t.ctx.load("long").unwrap(); assert_eq!(saved["status"],"queued"); assert_eq!(saved["resume_session"],SESSION_ID);
     }
     #[test]
     fn loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown() {
@@ -3709,7 +4608,7 @@ mod queue_regressions {
     #[test]
     fn shared_prompt_guidance_keeps_req_first_and_loops_last() {
         let t = Test::new();
-        config(&t, json!({"max_running":1}));
+        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}));
         let guidance = cc_job_policy::WRITE_GUIDANCE;
         assert!(guidance.contains("繰り返す"));
         let mut lowest = loop_job(&t, "loop-18", 18);
@@ -3742,7 +4641,10 @@ mod queue_regressions {
     #[test]
     fn running_loop_yields_to_normal_waiter_before_two_hours() {
         let t = Test::new();
-        config(&t, json!({"max_running":1}));
+        config(
+            &t,
+            json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let mut parent = live_tool_parent(&t);
         parent["todo_id"] = json!(18);
         parent["started_at"] = json!(t.rt.now());
@@ -3766,7 +4668,10 @@ mod queue_regressions {
     fn fairness_uses_the_new_tier_in_both_directions() {
         for low_parent in [false, true] {
             let t = Test::new();
-            config(&t, json!({"max_running":1}));
+            config(
+                &t,
+                json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+            );
             let mut parent = live_tool_parent(&t);
             if low_parent {
                 parent["todo_id"] = json!(18);
@@ -4111,9 +5016,11 @@ mod queue_regressions {
     fn orphan_child_consumes_slot_and_reused_pid_does_not() {
         let t = Test::new();
         config(&t, json!({"max_running":1}));
-        waiting(&t, "waiting", "ordinary");
         t.rt.procs.lock().unwrap().insert(888, 77);
         t.put(job(json!({"id":"orphan","status":"running","pid":999,"pid_created":22,"codex_pid":888,"codex_pid_created":77})));
+        // This is pre-existing history, present when the queue bootstraps.
+        // Late legacy writes are covered by the 30-second reconciliation test.
+        waiting(&t, "waiting", "ordinary");
         assert!(t.ctx.admit("waiting").unwrap().is_none());
         t.rt.procs.lock().unwrap().insert(888, 78);
         assert!(t.ctx.admit("waiting").unwrap().is_some());
@@ -4302,6 +5209,9 @@ mod queue_regressions {
         let mut j = t.ctx.load("existing").unwrap();
         j["todo_id"] = json!(77);
         t.ctx.save(&j).unwrap();
+        // Reconciled legacy owners are rejected during intake. Owners not yet
+        // discovered are checked again before any actual execution admission.
+        drop(t.ctx.queue_lock().unwrap());
         fs::write(t.ctx.root.join("p.md"), "work").unwrap();
         let p = t.ctx.root.join("p.md").to_string_lossy().into_owned();
         let (result, _, _) = t.cli(&[
@@ -4398,32 +5308,56 @@ fn patch(mut j: Value, p: Value) -> Value {
 fn job(p: Value) -> Value {
     patch(new_job(), p)
 }
-struct Temp(PathBuf);
+// The second field owns the directory even though callers only use the normalized path.
+struct Temp(PathBuf, #[allow(dead_code)] tempfile::TempDir);
 impl Temp {
     fn new() -> Self {
-        static SEQ: AtomicUsize = AtomicUsize::new(0);
-        let p = std::env::temp_dir().join(format!(
-            "cc-jobs-rust-{}-{}",
-            std::process::id(),
-            SEQ.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&p).unwrap();
+        Self::in_dir(&std::env::temp_dir())
+    }
+    fn in_dir(parent: &Path) -> Self {
+        // PIDs are reused, and an interrupted test can leave its old directory.
+        // Atomically create a fresh random directory instead of reusing that fixture.
+        let owner = tempfile::Builder::new()
+            .prefix("cc-jobs-rust-")
+            .tempdir_in(parent)
+            .unwrap();
         // Windows temp_dir may contain an 8.3 username. Child processes report
         // the long spelling; normalize the shared fixture before making paths.
-        Self(cc_jobs::cli::normalize_windows_path(
-            &p.canonicalize().unwrap(),
-        ))
+        let path = cc_jobs::cli::normalize_windows_path(&owner.path().canonicalize().unwrap());
+        Self(path, owner)
     }
 }
-impl Drop for Temp {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
-    }
+
+#[test]
+fn temporary_fixture_never_reuses_a_stale_pid_directory() {
+    let root = tempfile::tempdir().unwrap();
+    let stale = root
+        .path()
+        .join(format!("cc-jobs-rust-{}-0", std::process::id()));
+    fs::create_dir_all(stale.join("title-tools")).unwrap();
+    fs::write(stale.join("sentinel"), b"previous fixture").unwrap();
+    let first = Temp::in_dir(root.path());
+    let second = Temp::in_dir(root.path());
+    assert_ne!(first.0, second.0);
+    assert_ne!(
+        first.0,
+        cc_jobs::cli::normalize_windows_path(&stale.canonicalize().unwrap())
+    );
+    assert_eq!(fs::read_dir(&first.0).unwrap().count(), 0);
+    let first_path = first.0.clone();
+    drop(first);
+    assert!(!first_path.exists());
+    assert!(second.0.is_dir());
+    assert_eq!(
+        fs::read(stale.join("sentinel")).unwrap(),
+        b"previous fixture"
+    );
 }
 type CallFn = Box<dyn Fn(&Call) -> io::Result<Reply> + Send + Sync>;
 type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;
 type SpawnHook = Box<dyn Fn() -> Box<dyn Running> + Send + Sync>;
 type SleepHook = Box<dyn Fn(f64) + Send + Sync>;
+type KillHook = Box<dyn Fn(u32) + Send + Sync>;
 
 #[test]
 fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win() {
@@ -4474,6 +5408,7 @@ struct Fake {
     sleeps: Mutex<Vec<f64>>,
     procs: Arc<Mutex<HashMap<u32, u64>>>,
     kill_works: AtomicBool,
+    kill_hook: Mutex<Option<KillHook>>,
     kills: Arc<Mutex<Vec<u32>>>,
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
@@ -4488,6 +5423,8 @@ struct Fake {
     child_alive: Arc<AtomicBool>,
     load_count: AtomicUsize,
     load_hook: Mutex<Option<LoadFn>>,
+    save_hook: Mutex<Option<LoadFn>>,
+    load_error_path: Arc<Mutex<Option<PathBuf>>>,
     save_failure: AtomicBool,
     replace_failures: AtomicUsize,
     replace_count: AtomicUsize,
@@ -4527,6 +5464,7 @@ impl Fake {
             sleeps: Mutex::new(vec![]),
             procs: Arc::new(Mutex::new(HashMap::from([(std::process::id(), 123)]))),
             kill_works: AtomicBool::new(true),
+            kill_hook: Mutex::new(None),
             kills: Arc::new(Mutex::new(vec![])),
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
@@ -4541,6 +5479,8 @@ impl Fake {
             child_alive: Arc::new(AtomicBool::new(false)),
             load_count: AtomicUsize::new(0),
             load_hook: Mutex::new(None),
+            save_hook: Mutex::new(None),
+            load_error_path: Arc::new(Mutex::new(None)),
             save_failure: AtomicBool::new(false),
             replace_failures: AtomicUsize::new(0),
             replace_count: AtomicUsize::new(0),
@@ -4616,8 +5556,8 @@ impl Runtime for Fake {
             None => Ok(false),
         }
     }
-    fn work_checkout(&self, _cwd: &str) -> Value {
-        json!({})
+    fn work_checkout(&self, cwd: &str) -> Value {
+        cc_job_policy::work_owner::checkout(cwd)
     }
     fn queue_machine_sample(
         &self,
@@ -4829,6 +5769,9 @@ impl Runtime for Fake {
         Ok((detached, (pid != 0).then_some(pid)))
     }
     fn kill_tree(&self, pid: u32) -> io::Result<()> {
+        if let Some(hook) = self.kill_hook.lock().unwrap().as_ref() {
+            hook(pid);
+        }
         self.kills.lock().unwrap().push(pid);
         if self.kill_works.load(Ordering::Relaxed) {
             self.procs.lock().unwrap().remove(&pid);
@@ -4839,6 +5782,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_load(&self, path: &Path) -> io::Result<()> {
+        if self.load_error_path.lock().unwrap().as_deref() == Some(path) {
+            return Err(io::Error::from_raw_os_error(32));
+        }
         let n = self.load_count.fetch_add(1, Ordering::Relaxed);
         if self.load_failures.load(Ordering::Relaxed) > 0 {
             self.load_failures.fetch_sub(1, Ordering::Relaxed);
@@ -4850,6 +5796,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_save(&self, _path: &Path, j: &Value) -> io::Result<()> {
+        if let Some(h) = self.save_hook.lock().unwrap().as_ref() {
+            h(_path, 0);
+        }
         if s(j, "status") == "queued"
             && truth(&j["yield_count"])
             && self.fail_queued_save.swap(false, Ordering::Relaxed)
@@ -4904,12 +5853,27 @@ impl Test {
             root,
             rt: rt.clone(),
         };
+        // Every fixture owns its future ToDo lock, even before its store exists.
+        rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            ctx.root.to_string_lossy().into_owned(),
+        );
         fs::write(&ctx.gto, b"").unwrap();
         fs::write(&ctx.executable, b"fake supervisor executable").unwrap();
+        let policy = ctx.root.join("owner-instructions.md");
+        fs::write(&policy, "fixture owner instructions v1").unwrap();
+        rt.env.lock().unwrap().insert(
+            "CC_OWNER_INSTRUCTIONS_PATH".into(),
+            policy.to_string_lossy().into_owned(),
+        );
         Self { _tmp: tmp, ctx, rt }
     }
     fn put(&self, j: Value) -> Value {
         fs::create_dir_all(self.ctx.job_dir(s(&j, "id"))).unwrap();
+        let prompt = self.ctx.job_dir(s(&j, "id")).join("prompt.md");
+        if !prompt.exists() {
+            fs::write(prompt, "fixture task").unwrap();
+        }
         self.ctx.save(&j).unwrap();
         j
     }
@@ -5120,6 +6084,129 @@ mod event_parsing {
         assert_eq!(clean_cmd("ls -la"), "ls -la");
     }
 }
+
+mod registrar_launch_policy {
+    use super::*;
+    #[test]
+    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope() {
+        for sandbox in ["read-only", "danger-full-access"] {
+            for (phase, yielded, source) in [
+                ("", false, "prompt.md"),
+                ("continue", false, "context-continue.md"),
+                ("continue", true, "yield-resume.md"),
+                ("summarize", true, "context-summary-prompt.md"),
+            ] {
+                let t = Test::new();
+                let j = t.put(job(json!({"id":"old-job","sandbox":sandbox,"context_phase":phase,"yield_resume":yielded})));
+                let original = t.ctx.job_dir("old-job").join(source);
+                fs::write(&original, "old task\r\noriginal scope").unwrap();
+                let path = t.ctx.prompt_for_attempt(&j).unwrap();
+                let fed = fs::read_to_string(&path).unwrap();
+                assert!(fed.starts_with("old task\r\noriginal scope"));
+                assert!(fed.contains(cc_job_policy::REGISTRAR_GUIDANCE));
+                assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 1);
+                assert_eq!(fs::read_to_string(&original).unwrap(), "old task\r\noriginal scope");
+                assert_eq!(j["sandbox"], sandbox);
+                assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), path);
+                assert_eq!(fs::read_to_string(path).unwrap(), fed);
+                fs::write(&original, &fed).unwrap();
+                let appended = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+                assert!(appended.starts_with(&fed));
+                assert_eq!(appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+                assert_eq!(fs::read_to_string(original).unwrap(), fed);
+            }
+        }
+    }
+    #[test]
+    fn missing_or_invalid_input_cannot_be_replaced_with_a_policy_only_launch() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"old-job","context_phase":"continue"})));
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        fs::write(t.ctx.job_dir("old-job").join("context-continue.md"), [0xff]).unwrap();
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        assert!(!t.ctx.job_dir("old-job").join("execution-prompt.md").exists());
+    }
+    #[test]
+    fn a_quoted_rule_in_the_middle_cannot_suppress_the_final_restriction() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"quoted-job"})));
+        let path = t.ctx.job_dir("quoted-job").join("prompt.md");
+        let original = format!("quoted log:\n{}\nThis quote is not a site authorization.", cc_job_policy::REGISTRAR_GUIDANCE);
+        fs::write(&path, &original).unwrap();
+        let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+        assert!(fed.trim_end().ends_with(cc_job_policy::REGISTRAR_GUIDANCE));
+        assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+    }
+    #[test]
+    fn even_a_rule_quoted_at_the_end_receives_a_separate_execution_rule() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"quoted-end-job"})));
+        let path = t.ctx.job_dir("quoted-end-job").join("prompt.md");
+        let original = format!("quoted log:\n{}", cc_job_policy::REGISTRAR_GUIDANCE);
+        fs::write(&path, &original).unwrap();
+        let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+        assert!(fed.starts_with(&original));
+        assert!(fed.contains("\n\n## 実行時のサイト制限\n"));
+        assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+    }
+}
+mod saved_owner_launch_policy {
+    use super::*;
+    #[test]
+    fn every_attempt_loads_latest_policy_and_keeps_source_and_read_only_scope() {
+        for (phase, yielded, source) in [
+            ("", false, "prompt.md"),
+            ("continue", false, "context-continue.md"),
+            ("continue", true, "yield-resume.md"),
+            ("summarize", true, "context-summary-prompt.md"),
+        ] {
+            let t = Test::new();
+            let j = t.put(job(json!({"id":"saved-owner", "sandbox":"read-only", "context_phase":phase,"yield_resume":yielded})));
+            let original = t.ctx.job_dir("saved-owner").join(source);
+            fs::write(&original, "original limited task").unwrap();
+            let policy = t.ctx.root.join("owner-instructions.md");
+            let first = t.ctx.prompt_for_attempt(&j).unwrap();
+            assert!(
+                fs::read_to_string(&first)
+                    .unwrap()
+                    .contains("fixture owner instructions v1")
+            );
+            fs::write(&policy, "updated owner instructions v2").unwrap();
+            let next = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
+            assert!(next.contains("updated owner instructions v2"));
+            assert!(!next.contains("fixture owner instructions v1"));
+            assert!(next.starts_with("original limited task"));
+            assert!(next.trim_end().ends_with(cc_job_policy::REGISTRAR_GUIDANCE));
+            assert_eq!(
+                fs::read_to_string(original).unwrap(),
+                "original limited task"
+            );
+            assert_eq!(j["sandbox"], "read-only");
+        }
+    }
+    #[test]
+    fn missing_invalid_or_empty_policy_refuses_attempt_without_overwriting_previous_input() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"saved-owner"})));
+        fs::write(
+            t.ctx.job_dir("saved-owner").join("prompt.md"),
+            "original task",
+        )
+        .unwrap();
+        let selected = t.ctx.prompt_for_attempt(&j).unwrap();
+        let before = fs::read(&selected).unwrap();
+        let policy = t.ctx.root.join("owner-instructions.md");
+        fs::remove_file(&policy).unwrap();
+        assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        for invalid in [b" \n".as_slice(), &[0xff]] {
+            fs::write(&policy, invalid).unwrap();
+            assert!(t.ctx.prompt_for_attempt(&j).is_err());
+        }
+        assert_eq!(fs::read(selected).unwrap(), before);
+    }
+}
 mod token_accounting {
     use super::*;
     #[test]
@@ -5225,7 +6312,10 @@ mod atomic_updates {
     #[test]
     fn test_roundtrip_leaves_no_temp_files() {
         let t = Test::new();
-        let mut j = t.put(new_job());
+        // This checks only atomic state storage, not a runnable job fixture.
+        let mut j = new_job();
+        fs::create_dir_all(t.ctx.job_dir(s(&j, "id"))).unwrap();
+        t.ctx.save(&j).unwrap();
         j["status"] = json!("running");
         t.ctx.save(&j).unwrap();
         assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
@@ -5462,12 +6552,401 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    fn guard_store(t: &Test) -> PathBuf {
+        let store = t.ctx.root.join("todo.json");
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
+        fs::write(&store,json!({"items":[{"id":2073,"status":"todo","jobs":[]},{"id":2074,"status":"todo"},{"id":32,"status":"todo"}]}).to_string()).unwrap();
+        store
+    }
+    fn add_wait(store: &Path) {
+        let mut db: Value = serde_json::from_slice(&fs::read(store).unwrap()).unwrap();
+        db["items"][1]["wait_on"] = json!([32]);
+        fs::write(store, db.to_string()).unwrap();
+    }
+    fn guarded(t: &Test, jid: &str, store: &Path, key: &str) -> (Result<i32>, String, String) {
+        t.cli(&[
+            "cancel",
+            jid,
+            "--recovery",
+            "--if-todo-ready",
+            "--cancel-key",
+            key,
+            "--todo-file",
+            store.to_str().unwrap(),
+            "--todo-id",
+            "2073",
+            "--related-todo-ids",
+            "2073,2074",
+        ])
+    }
+    #[test]
+    #[cfg(windows)]
+    fn guarded_wait_registration_wins_before_cancellation_and_refresh() {
+        for status in ["queued", "running", "succeeded"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            let j = t.put(job(
+                json!({"id":"source","status":status,"pid":std::process::id(),"pid_created":123}),
+            ));
+            let original = fs::read(t.ctx.job_dir("source").join("job.json")).unwrap();
+            let todo = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
+            let (ready, arrived) = std::sync::mpsc::channel();
+            let job_path = t.ctx.job_dir("source").join("job.json");
+            let queue_path = t.ctx.jobs.join(".queue.lock");
+            let state_path = t.ctx.job_dir("source").join("state.lock");
+            t.rt.load_count.store(0, Ordering::Relaxed);
+            *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, n| {
+                if path == job_path && n == 1 {
+                    assert!(FileLock::try_acquire(&queue_path).is_err());
+                    assert!(FileLock::try_acquire(&state_path).is_err());
+                    ready.send(()).unwrap();
+                }
+            }));
+            let ctx = t.ctx.clone();
+            let path = store.clone();
+            let cancel = std::thread::spawn(move || {
+                let mut out = vec![];
+                let mut err = vec![];
+                let result = ctx.dispatch(
+                    &[
+                        "cancel",
+                        "source",
+                        "--recovery",
+                        "--if-todo-ready",
+                        "--cancel-key",
+                        "attempt",
+                        "--todo-file",
+                        path.to_str().unwrap(),
+                        "--todo-id",
+                        "2073",
+                        "--related-todo-ids",
+                        "2074",
+                    ]
+                    .map(String::from),
+                    &mut out,
+                    &mut err,
+                );
+                (result, out, err)
+            });
+            arrived
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap();
+            add_wait(&store);
+            drop(todo);
+            let (result, out, err) = cancel.join().unwrap();
+            assert_eq!(result.unwrap(), 0, "{}", String::from_utf8_lossy(&err));
+            let response: Value = serde_json::from_slice(&out).unwrap();
+            assert_eq!(response["outcome"], "deferred");
+            assert_eq!(response["wait_on"], json!([32]));
+            assert_eq!(
+                fs::read(t.ctx.job_dir("source").join("job.json")).unwrap(),
+                original
+            );
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            assert!(t.rt.calls.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn guarded_cancel_commits_before_later_wait_and_releases_locks_before_killing() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        t.put(job(
+            json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123}),
+        ));
+        let todo_path = store.with_file_name("todo.lock");
+        let queue_path = t.ctx.jobs.join(".queue.lock");
+        let state_path = t.ctx.job_dir("source").join("state.lock");
+        let job_path = t.ctx.job_dir("source").join("job.json");
+        let (ready, arrived) = std::sync::mpsc::channel();
+        let (release, resume) = std::sync::mpsc::channel();
+        let resume = Mutex::new(resume);
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |_| {
+            let todo = FileLock::try_acquire(&todo_path).expect("kill retained todo.lock");
+            drop(FileLock::try_acquire(&queue_path).expect("kill retained queue lock"));
+            assert!(FileLock::try_acquire(&state_path).is_err());
+            let j: Value = serde_json::from_slice(&fs::read(&job_path).unwrap()).unwrap();
+            assert_eq!(j["recovery_cancel"]["key"], "attempt");
+            ready.send(()).unwrap();
+            resume
+                .lock()
+                .unwrap()
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap();
+            drop(todo);
+        }));
+        let ctx = t.ctx.clone();
+        let path = store.clone();
+        let cancel = std::thread::spawn(move || {
+            let mut out = vec![];
+            let mut err = vec![];
+            let result = ctx.dispatch(
+                &[
+                    "cancel",
+                    "source",
+                    "--recovery",
+                    "--if-todo-ready",
+                    "--cancel-key",
+                    "attempt",
+                    "--todo-file",
+                    path.to_str().unwrap(),
+                    "--related-todo-ids",
+                    "2073,2074",
+                ]
+                .map(String::from),
+                &mut out,
+                &mut err,
+            );
+            (result, out)
+        });
+        arrived
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .unwrap();
+        // The hook owns the real shared lock on behalf of this wait writer.
+        add_wait(&store);
+        release.send(()).unwrap();
+        let (result, out) = cancel.join().unwrap();
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out).unwrap()["outcome"],
+            "cancelled"
+        );
+        assert_eq!(t.ctx.load("source").unwrap()["status"], "cancelled");
+        assert_eq!(
+            t.ctx.load("source").unwrap()["related_todo_ids"],
+            json!([2073, 2074])
+        );
+        assert_ne!(t.ctx.load("source").unwrap()["cancel_requested"], true);
+        assert_eq!(t.rt.kills.lock().unwrap().len(), 1);
+        t.rt.procs.lock().unwrap().insert(777, 777);
+        t.put(job(
+            json!({"id":"successor","status":"queued","pid":777,"pid_created":777,
+            "related_todo_ids":[2073,2074],"cwd":t.ctx.root}),
+        ));
+        assert!(t.ctx.admit("successor").unwrap().is_none());
+        assert_eq!(
+            t.ctx.load("successor").unwrap()["queue_wait_reason"]["wait_on"],
+            json!([32])
+        );
+    }
+    #[test]
+    fn guarded_retry_wait_defers_cancellation_without_changing_source() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
+        db["items"][0]["status"] = json!("wait");
+        db["items"][0]["wait_ready"] = json!({"condition":"retry-time","since":100,"not_before":3700});
+        fs::write(&store, db.to_string()).unwrap();
+        let source = t.put(job(json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123})));
+        let (result, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(result.unwrap(), 0);
+        let response: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(response["outcome"], "deferred");
+        assert!(!response["wait_ready"].as_array().unwrap().is_empty());
+        assert_eq!(t.ctx.load("source").unwrap(), source);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn guarded_commit_is_attempt_specific_and_owner_stop_always_wins() {
+        for key in ["old", "attempt"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            add_wait(&store);
+            t.put(job(
+                json!({"id":"source","status":"queued","pid":std::process::id(),"pid_created":123,
+                "recovery_cancel":{"key":key,"committed_at":"2026-10-11T02:01:36+09:00"}}),
+            ));
+            let (result, out, _) = guarded(&t, "source", &store, "attempt");
+            assert_eq!(result.unwrap(), 0);
+            assert_eq!(
+                serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+                if key == "old" {
+                    "deferred"
+                } else {
+                    "cancelled"
+                }
+            );
+        }
+        for stop in [
+            json!({"status":"running","cancel_requested":true}),
+            json!({"status":"cancelled","cancel_reason":"manual"}),
+            json!({"status":"running","cancel_reason":"person"}),
+            json!({"status":"running","stopped":true}),
+        ] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            let j = t.put(patch(
+                job(json!({"id":"source","recovery_cancel":{"key":"attempt"}})),
+                stop,
+            ));
+            let (result, out, _) = guarded(&t, "source", &store, "attempt");
+            assert_eq!(result.unwrap(), 0);
+            assert_eq!(
+                serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+                "owner_stopped"
+            );
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn guarded_terminal_scope_validation_and_missing_dependency_remain_explicit() {
+        let t = Test::new();
+        let store = guard_store(&t);
+        let j = t.put(job(json!({"id":"source","status":"succeeded"})));
+        let (result, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["outcome"],
+            "already_terminal"
+        );
+        assert_eq!(t.ctx.load("source").unwrap(), j);
+        for args in [
+            vec!["cancel", "source", "--if-todo-ready"],
+            vec!["cancel", "source", "--related-todo-ids", "2073"],
+            vec![
+                "cancel",
+                "source",
+                "--recovery",
+                "--if-todo-ready",
+                "--cancel-key",
+                "attempt",
+                "--related-todo-ids",
+                "bad",
+            ],
+        ] {
+            assert!(t.cli(&args).0.is_err());
+            assert_eq!(t.ctx.load("source").unwrap(), j);
+        }
+        let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
+        db["items"][1]["wait_on"] = json!([99]);
+        fs::write(&store, db.to_string()).unwrap();
+        let (_, out, _) = guarded(&t, "source", &store, "attempt");
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["wait_on"],
+            json!([99])
+        );
+        fs::write(&store, "{broken").unwrap();
+        assert!(guarded(&t, "source", &store, "attempt").0.is_err());
+        assert_eq!(t.ctx.load("source").unwrap(), j);
+    }
+    #[test]
+    fn guarded_missing_todo_store_never_commits_cancellation() {
+        for status in ["queued", "running", "succeeded"] {
+            let t = Test::new();
+            let store = guard_store(&t);
+            fs::remove_file(&store).unwrap();
+            t.put(job(json!({"id":"source","status":status,"todo_id":2073})));
+            let file = t.ctx.job_dir("source").join("job.json");
+            let before = fs::read(&file).unwrap();
+            assert!(guarded(&t, "source", &store, "attempt").0.is_err());
+            assert_eq!(fs::read(&file).unwrap(), before);
+            assert!(t.ctx.load("source").unwrap()["recovery_cancel"].is_null());
+            assert!(!store.exists());
+        }
+    }
+    #[test]
+    fn native_guarded_cancellation_defers_without_refreshing_or_rewriting_source() {
+        let tmp = Temp::new();
+        let exe = tmp
+            .0
+            .join(format!("codex_jobs{}", std::env::consts::EXE_SUFFIX));
+        fs::copy(env!("CARGO_BIN_EXE_codex_jobs"), &exe).unwrap();
+        let dir = tmp.0.join("jobs/source");
+        fs::create_dir_all(&dir).unwrap();
+        let store = tmp.0.join("todo.json");
+        fs::write(
+            &store,
+            json!({"items":[{"id":2074,"status":"wait","wait_on":[32]},{"id":32,"status":"todo"}]})
+                .to_string(),
+        )
+        .unwrap();
+        for status in ["queued", "succeeded"] {
+            let original=json!({"id":"source","status":status,"steps":0,"model":"gpt-6-luna","effort":"max","pid":null}).to_string();
+            fs::write(dir.join("job.json"), &original).unwrap();
+            let mut cmd = hidden_command(&exe.to_string_lossy());
+            cmd.env_clear()
+                .env("USERPROFILE", &tmp.0)
+                .env("HOME", &tmp.0)
+                .env("TMP", &tmp.0)
+                .env("TEMP", &tmp.0);
+            if let Some(root) = std::env::var_os("SystemRoot") {
+                cmd.env("SystemRoot", root);
+            }
+            let output = cmd
+                .args([
+                    "cancel",
+                    "source",
+                    "--recovery",
+                    "--if-todo-ready",
+                    "--cancel-key",
+                    "attempt",
+                    "--related-todo-ids",
+                    "2074",
+                    "--todo-file",
+                    store.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(result["outcome"], "deferred");
+            assert_eq!(result["wait_on"], json!([32]));
+            assert_eq!(fs::read_to_string(dir.join("job.json")).unwrap(), original);
+        }
+    }
     #[test]
     fn recovery_cleanup_does_not_record_a_deliberate_cancel() {
         let t = Test::new();
         let j = t.put(t.running());
         assert_eq!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.unwrap(), 0);
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["cancel_requested"], true);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert!(cc_job_policy::cancellation::recovery_cancel(
+            &Value::Null,
+            &saved
+        ));
+        assert!(!cc_job_policy::cancellation::blocks_recovery(
+            &json!({}),
+            &saved
+        ));
+    }
+    #[test]
+    fn plain_recovery_preserves_guarded_intent_and_never_overrides_explicit_stops() {
+        let t = Test::new();
+        let mut j = t.running();
+        j["recovery_cancel"] =
+            json!({"key":"guarded-original","committed_at":"2026-10-11T02:01:36+09:00"});
+        t.put(j.clone());
+        assert_eq!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.unwrap(), 0);
+        assert_eq!(
+            t.ctx.load(s(&j, "id")).unwrap()["recovery_cancel"],
+            j["recovery_cancel"]
+        );
+        for stop in [
+            json!({"cancel_requested":true}),
+            json!({"stopped":true}),
+            json!({"cancel_reason":"manual"}),
+            json!({"cancel_reason":"person"}),
+        ] {
+            let t = Test::new();
+            let mut j = t.running();
+            j["recovery_cancel"] = json!({"key":"old","committed_at":"2026-10-11T02:01:36+09:00"});
+            let j = t.put(patch(j, stop));
+            assert!(t.cli(&["cancel", s(&j, "id"), "--recovery"]).0.is_err());
+            assert_eq!(
+                t.ctx.load(s(&j, "id")).unwrap()["recovery_cancel"],
+                j["recovery_cancel"]
+            );
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
     }
     #[test]
     fn test_cancel_queued_before_supervisor_starts_never_launches_codex() {
@@ -6198,6 +7677,74 @@ mod run_validation {
         assert_eq!(first["launch_key"], key);
     }
     #[test]
+    fn new_launch_key_and_terminal_receipt_never_read_terminal_history() {
+        let t = Test::new();
+        t.put(job(json!({"id":"history","status":"succeeded"})));
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(|path, _| {
+            assert!(
+                !path.ends_with("history/job.json"),
+                "receipt must not scan history"
+            );
+        }));
+        let key = "ab".repeat(16);
+        t.run(&["--launch-key", &key], b"hi").unwrap();
+        let receipt = t
+            .ctx
+            .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+            .unwrap();
+        let id = s(&receipt, "id");
+        let mut existing = t.ctx.load(id).unwrap();
+        existing["status"] = json!("succeeded");
+        t.ctx.save(&existing).unwrap();
+        t.run(&["--launch-key", &key], b"hi").unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    }
+    #[test]
+    fn legacy_launch_lock_without_receipt_adopts_completed_job() {
+        let t = Test::new();
+        let key = "ab".repeat(16);
+        t.put(job(
+            json!({"id":"legacy-key","status":"succeeded","launch_key":key}),
+        ));
+        fs::write(t.ctx.jobs.join(format!(".launch-{key}.lock")), "").unwrap();
+        fs::write(
+            t.ctx.jobs.join(format!(".launch-{key}.pending")),
+            "interrupted receipt",
+        )
+        .unwrap();
+        t.run(&["--launch-key", &key], b"retry").unwrap();
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+                .unwrap()["id"],
+            "legacy-key"
+        );
+    }
+    #[test]
+    fn concurrent_same_launch_key_returns_one_receipt_and_one_supervisor() {
+        let t = Test::new();
+        let key = "ab".repeat(16);
+        let barrier = std::sync::Barrier::new(8);
+        std::thread::scope(|scope| {
+            for _ in 0..8 {
+                scope.spawn(|| {
+                    barrier.wait();
+                    assert_eq!(t.run(&["--launch-key", &key], b"once").unwrap(), 0);
+                });
+            }
+        });
+        assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(
+            t.ctx
+                .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+                .unwrap()["id"],
+            jobs[0]["id"]
+        );
+    }
+    #[test]
     fn test_launch_key_stays_idempotent_after_the_original_job_finishes() {
         let t = Test::new();
         let key = "cd".repeat(16);
@@ -6234,6 +7781,7 @@ mod run_validation {
                 let mut active = json!({"id":"active-writer","status":status});
                 active[field] = json!(session);
                 t.put(active);
+                drop(t.ctx.queue_lock().unwrap());
                 for key in [None, Some("abcdabcdabcdabcdabcdabcdabcdabcd")] {
                     let mut args = vec!["--resume-session", session];
                     if let Some(key) = key {
@@ -6715,6 +8263,38 @@ mod cargo_gate_tests {
 #[cfg(windows)]
 mod process_boundary_tests {
     use super::*;
+    use std::process::Child;
+    struct FixtureChild {
+        child: Child,
+        created: u64,
+    }
+    impl FixtureChild {
+        fn new(child: Child) -> Self {
+            let created = proc_created(child.id()).unwrap();
+            Self { child, created }
+        }
+    }
+    impl std::ops::Deref for FixtureChild {
+        type Target = Child;
+        fn deref(&self) -> &Child {
+            &self.child
+        }
+    }
+    impl std::ops::DerefMut for FixtureChild {
+        fn deref_mut(&mut self) -> &mut Child {
+            &mut self.child
+        }
+    }
+    impl Drop for FixtureChild {
+        fn drop(&mut self) {
+            if self.child.try_wait().ok().flatten().is_none()
+                && proc_created(self.child.id()) == Some(self.created)
+            {
+                let _ = System::default().kill_tree(self.child.id());
+            }
+            let _ = self.child.wait();
+        }
+    }
     fn wait_file(path: &Path) {
         let until = Instant::now() + Duration::from_secs(30);
         while !path.exists() {
@@ -6728,11 +8308,14 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe", "mcp.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller-mcp")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller-mcp")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .env("CC_JOBS_FIXTURE_RESOURCE_BARRIER", "1")
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("worker.ready"));
         let baseline = fs::read_to_string(tmp.0.join("first-tool.filetime"))
             .unwrap()
@@ -6745,6 +8328,7 @@ mod process_boundary_tests {
                 .unwrap()
                 .is_none()
         );
+        fs::write(tmp.0.join("worker.release"), "release").unwrap();
         wait_file(&tmp.0.join("worker.done"));
         wait_file(&tmp.0.join("heartbeat"));
         assert!(
@@ -6773,23 +8357,27 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("worker.done"));
         wait_file(&tmp.0.join("heartbeat"));
         let created = proc_created(child.id()).unwrap();
-        let mut holder = hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
-            .args([
-                "--freeze-controller",
-                &child.id().to_string(),
-                &created.to_string(),
-            ])
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut holder = FixtureChild::new(
+            hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
+                .args([
+                    "--freeze-controller",
+                    &child.id().to_string(),
+                    &created.to_string(),
+                ])
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .spawn()
+                .unwrap(),
+        );
         wait_file(&tmp.0.join("freeze.ready"));
         let heartbeat = fs::read(tmp.0.join("heartbeat")).unwrap();
         holder.kill().unwrap();
@@ -6813,11 +8401,14 @@ mod process_boundary_tests {
         for name in ["codex.exe", "worker.exe"] {
             fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), tmp.0.join(name)).unwrap();
         }
-        let mut child = hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
-            .arg("--controller")
-            .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
-            .spawn()
-            .unwrap();
+        let mut child = FixtureChild::new(
+            hidden_command(&tmp.0.join("codex.exe").to_string_lossy())
+                .arg("--controller")
+                .env("CC_JOBS_FIXTURE_DIR", &tmp.0)
+                .env("CC_JOBS_FIXTURE_RESOURCE_BARRIER", "1")
+                .spawn()
+                .unwrap(),
+        );
         let wait_for = |path: &Path| {
             let deadline = Instant::now() + Duration::from_secs(30);
             while !path.exists() {
@@ -6835,6 +8426,7 @@ mod process_boundary_tests {
         );
         assert!(FileLock::try_acquire(&tmp.0.join("cargo-build.lock.0")).is_err());
         assert!(tmp.0.join("civ6.lock").exists());
+        fs::write(tmp.0.join("worker.release"), "release").unwrap();
         wait_for(&tmp.0.join("worker.done"));
         wait_for(&tmp.0.join("heartbeat"));
         let paused = rt
@@ -7405,7 +8997,19 @@ mod task_notifier {
         wait_entered(&e);
         assert!(!n.close());
         r.store(true, Ordering::Release);
+        // The 20ms cap was tested while finish was held. Draining after release
+        // is an eventual-completion assertion, not a 20ms CI scheduling promise.
+        n.shutdown_cap = 30.;
         assert!(n.close());
+        assert_eq!(
+            t.rt.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|c| c.argv[3].clone())
+                .collect::<Vec<_>>(),
+            ["start", "finish", "start", "finish"]
+        );
         assert_eq!(NOTIFY_SHUTDOWN_CAP_S, 300.);
     }
     #[test]
@@ -7769,6 +9373,13 @@ mod end_to_end {
     }
     #[test]
     fn thirty_parallel_run_processes_share_the_real_queue_files() {
+        parallel_intake(false);
+    }
+    #[test]
+    fn thirty_parallel_run_processes_are_durable_while_history_scan_is_held() {
+        parallel_intake(true);
+    }
+    fn parallel_intake(hold_scan: bool) {
         let t = E2e::new();
         let prompt = t.tmp.0.join("parallel-prompt.md");
         fs::write(&prompt, "fixture parallel launch").unwrap();
@@ -7794,6 +9405,12 @@ mod end_to_end {
             fs::create_dir(&dir).unwrap();
             fs::write(dir.join("job.json"), pretty(&json!({"id":format!("history-{n}"),"status":"succeeded","created_at":"2026-10-06T00:00:00+09:00"}))).unwrap();
         }
+        let scan_path = jobs.join(".queue-scan.lock");
+        let mut held_scan = hold_scan.then(|| FileLock::try_acquire(&scan_path).unwrap());
+        if let Some(lock) = &mut held_scan {
+            lock.set_owner(&scan_path, "fixture:history_scan:blocked");
+        }
+        let started = Instant::now();
         let barrier = Arc::new(std::sync::Barrier::new(30));
         let outputs = std::thread::scope(|scope| {
             let handles: Vec<_> = (0..30)
@@ -7803,24 +9420,28 @@ mod end_to_end {
                     let barrier = barrier.clone();
                     scope.spawn(move || {
                         barrier.wait();
-                        t.cli(
-                            &[
-                                "run",
-                                "--name",
-                                &format!("parallel-{n}"),
-                                "--model",
-                                "fixture",
-                                "--todo-id",
-                                &(10000 + n).to_string(),
-                                "--cwd",
-                                t.tmp.0.to_str().unwrap(),
-                                "--prompt-file",
-                                prompt.to_str().unwrap(),
-                                "--mcp-profile",
-                                "minimal",
-                            ],
-                            "ok",
-                        )
+                        let name = format!("parallel-{n}");
+                        let todo = (10000 + n).to_string();
+                        let key = format!("{n:032x}");
+                        let mut args = vec![
+                            "run",
+                            "--name",
+                            &name,
+                            "--model",
+                            "fixture",
+                            "--todo-id",
+                            &todo,
+                            "--cwd",
+                            t.tmp.0.to_str().unwrap(),
+                            "--prompt-file",
+                            prompt.to_str().unwrap(),
+                            "--mcp-profile",
+                            "minimal",
+                        ];
+                        if hold_scan {
+                            args.extend(["--launch-key", &key]);
+                        }
+                        t.cli(&args, "ok")
                     })
                 })
                 .collect();
@@ -7848,25 +9469,78 @@ mod end_to_end {
             ids.len(),
             failures.len()
         );
+        eprintln!(
+            "intake elapsed {:?}; held history scan={hold_scan}",
+            started.elapsed()
+        );
+        if hold_scan && !ids.is_empty() {
+            // The test-owned scan handle has remained held throughout intake.
+            // No supervisor can have established a complete admission index.
+            let index: Value =
+                serde_json::from_slice(&fs::read(jobs.join(".queue-index.json")).unwrap()).unwrap();
+            assert_eq!(index["scan_complete"], false);
+            assert!(FileLock::try_acquire(&scan_path).is_err());
+            assert!(
+                !t.rec.join("call.json").exists(),
+                "no fixture agent may start before reconciliation"
+            );
+        }
+        drop(held_scan);
+        // Observe reconciliation separately from receipt. The running legacy
+        // parent must be discovered before execution, while all new IDs survive.
+        let reconciled = if failures.is_empty() {
+            let until = Instant::now() + Duration::from_secs(120);
+            loop {
+                let complete = fs::read(jobs.join(".queue-index.json"))
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                    .is_some_and(|index| {
+                        index["scan_complete"] == true
+                            && index["ids"]
+                                .as_array()
+                                .is_some_and(|ids| ids.contains(&json!("parallel-parent")))
+                    });
+                if complete || Instant::now() >= until {
+                    break complete;
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        } else {
+            false
+        };
+        if let Ok(metrics) = fs::read_to_string(jobs.join(".queue-scan-metrics.json")) {
+            eprintln!("history scan phase metrics: {metrics}");
+        }
         // These jobs are queued and have no child processes. Retain an OS handle
         // while stopping each supervisor; taskkill /T can follow reused parent IDs.
+        let mut owners = FixtureOwners {
+            handles: Vec::new(),
+            shutdown_started: false,
+        };
         for id in &ids {
             let job = t.job(id);
             assert_eq!(job["status"], "queued");
             let pid = job["pid"].as_u64().unwrap() as u32;
             assert_ne!(pid, std::process::id());
             assert_eq!(proc_created(pid), job["pid_created"].as_u64());
-            unsafe {
-                use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
-                let handle = OpenProcess(PROCESS_TERMINATE | PROCESS_SYNCHRONIZE, 0, pid);
-                assert!(!handle.is_null());
-                assert_ne!(TerminateProcess(handle, 0), 0);
-                assert_eq!(WaitForSingleObject(handle, 5000), 0);
-                CloseHandle(handle);
-            }
+            owners
+                .handles
+                .push(FixtureProcess::retain(pid, job["pid_created"].as_u64().unwrap()).unwrap());
         }
+        // Cancel every owner first: waiting for one scanner while the other
+        // 29 owners keep issuing I/O delays the scanner's kernel cancellation.
+        let all_exited = owners.shutdown();
+        assert!(all_exited, "parallel fixture shutdown did not confirm exit");
         assert!(failures.is_empty(), "parallel run failures: {failures:#?}");
         assert_eq!(ids.len(), 30);
+        assert!(
+            reconciled,
+            "legacy running owner must be discovered after intake"
+        );
+        assert!(
+            !t.rec.join("call.json").exists(),
+            "the discovered legacy owner still occupies the slot"
+        );
         let sequence: Value =
             serde_json::from_slice(&fs::read(jobs.join(".queue-sequence.json")).unwrap()).unwrap();
         assert_eq!(sequence["sequence"], 30);
@@ -7880,6 +9554,120 @@ mod end_to_end {
         tmp: Temp,
         exe: PathBuf,
         rec: PathBuf,
+        diagnostic: std::sync::atomic::AtomicBool,
+        handles: Mutex<Vec<FixtureProcess>>,
+        inherited_home: Option<PathBuf>,
+    }
+    struct FixtureProcess {
+        handle: windows_sys::Win32::Foundation::HANDLE,
+        pid: u32,
+        created: u64,
+    }
+    struct FixtureOwners {
+        handles: Vec<FixtureProcess>,
+        shutdown_started: bool,
+    }
+    impl FixtureOwners {
+        fn shutdown(&mut self) -> bool {
+            self.shutdown_started = true;
+            for owner in &self.handles {
+                owner.request_stop();
+            }
+            let mut all = true;
+            for owner in &self.handles {
+                all &= owner.wait_exit();
+            }
+            all
+        }
+    }
+    impl Drop for FixtureOwners {
+        fn drop(&mut self) {
+            // A retention/identity assertion can fail before normal shutdown.
+            if !self.shutdown_started {
+                let _ = self.shutdown();
+            }
+        }
+    }
+    // The test owns these handles; the mutex serializes retention and cleanup.
+    unsafe impl Send for FixtureProcess {}
+    impl FixtureProcess {
+        fn retain(pid: u32, created: u64) -> Option<Self> {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                let handle = OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SYNCHRONIZE,
+                    0,
+                    pid,
+                );
+                if handle.is_null() {
+                    return None;
+                }
+                let mut times = [std::mem::zeroed::<FILETIME>(); 4];
+                let valid = GetProcessTimes(
+                    handle,
+                    &mut times[0],
+                    &mut times[1],
+                    &mut times[2],
+                    &mut times[3],
+                ) != 0
+                    && (((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64)
+                        == created;
+                if !valid {
+                    CloseHandle(handle);
+                    return None;
+                }
+                Some(Self {
+                    handle,
+                    pid,
+                    created,
+                })
+            }
+        }
+        fn live(&self) -> bool {
+            unsafe {
+                windows_sys::Win32::System::Threading::WaitForSingleObject(self.handle, 0)
+                    == windows_sys::Win32::Foundation::WAIT_TIMEOUT
+            }
+        }
+        fn request_stop(&self) {
+            use windows_sys::Win32::System::Threading::*;
+            unsafe {
+                if !self.live() || TerminateProcess(self.handle, 0) != 0 {
+                    return;
+                }
+                let error = io::Error::last_os_error();
+                if self.live() {
+                    eprintln!(
+                        "fixture termination request failed: pid={} created={} error={error}",
+                        self.pid, self.created
+                    );
+                }
+            }
+        }
+        fn wait_exit(&self) -> bool {
+            use windows_sys::Win32::{Foundation::*, System::Threading::*};
+            unsafe {
+                let result = WaitForSingleObject(self.handle, 5000);
+                if result != WAIT_OBJECT_0 {
+                    eprintln!(
+                        "fixture cleanup failed: pid={} created={} wait={result}",
+                        self.pid, self.created
+                    );
+                }
+                result == WAIT_OBJECT_0
+            }
+        }
+        fn stop(&self) -> bool {
+            self.request_stop();
+            self.wait_exit()
+        }
+    }
+    impl Drop for FixtureProcess {
+        fn drop(&mut self) {
+            unsafe {
+                windows_sys::Win32::Foundation::CloseHandle(self.handle);
+            }
+        }
     }
     impl E2e {
         fn new() -> Self {
@@ -7902,7 +9690,19 @@ mod end_to_end {
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
             )
             .unwrap();
-            Self { tmp, exe, rec }
+            fs::write(
+                tmp.0.join("owner-instructions.md"),
+                "fixture owner instructions v1",
+            )
+            .unwrap();
+            Self {
+                tmp,
+                exe,
+                rec,
+                diagnostic: std::sync::atomic::AtomicBool::new(false),
+                handles: Mutex::new(Vec::new()),
+                inherited_home: None,
+            }
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
@@ -7917,12 +9717,23 @@ mod end_to_end {
                 )
                 .env("CC_JOBS_FIXTURE_MODE", mode)
                 .env("CC_JOBS_FIXTURE_DIR", &self.rec)
+                .env(
+                    "CC_OWNER_INSTRUCTIONS_PATH",
+                    self.tmp.0.join("owner-instructions.md"),
+                )
                 .env("CODEX_HOME", self.tmp.0.join("codexhome"))
                 .env("GODD_AO_BIN", self.tmp.0.join("missing-ao.exe"))
                 .env("CODEX_JOBS_GTO_BIN", self.tmp.0.join("missing-gto.exe"))
                 .env_remove("GODD_DISCORD_BOT_TOKEN")
                 .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
+            if let Some(home) = &self.inherited_home {
+                c.env("USERPROFILE", home).env("HOME", home);
+            }
+            // CODEX_HOME alone does not isolate native plugin initialization:
+            // Context::installed also resolves USERPROFILE/HOME independently.
+            c.env("USERPROFILE", self.tmp.0.join("home"))
+                .env("HOME", self.tmp.0.join("home"));
             c.output().unwrap()
         }
         fn start(&self, mode: &str, cwd: &Path, prompt: &[u8]) -> String {
@@ -7948,21 +9759,168 @@ mod end_to_end {
             String::from_utf8(r.stdout).unwrap().trim().into()
         }
         fn job(&self, jid: &str) -> Value {
-            serde_json::from_slice(
-                &fs::read(self.tmp.0.join("tool/jobs").join(jid).join("job.json")).unwrap(),
-            )
-            .unwrap()
+            let root = self.tmp.0.join("tool");
+            let reader = Context {
+                jobs: root.join("jobs"),
+                root,
+                home: self.tmp.0.join("home"),
+                codex_home: self.tmp.0.join("codexhome"),
+                gto: self.tmp.0.join("missing-gto.exe"),
+                executable: self.exe.clone(),
+                rt: Arc::new(System::default()),
+            };
+            reader.read_json(&reader.job_dir(jid).join("job.json")).unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
+            self.until_phase("unspecified", &mut condition);
+        }
+        fn retain_fixture_processes(&self) {
+            let mut identities = Vec::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        for key in ["pid", "codex_pid"] {
+                            if let (Some(pid), Some(created)) =
+                                (job[key].as_u64(), job[format!("{key}_created")].as_u64())
+                            {
+                                identities.push((pid as u32, created));
+                            }
+                        }
+                    }
+                }
+            }
+            // The marker belongs to this unique fixture directory; verify its
+            // process image before retaining the creation-time-bound OS handle.
+            for name in ["sleep.pid", "hold.pid"] {
+                if let Ok(bytes) = fs::read_to_string(self.rec.join(name))
+                    && let Ok(pid) = bytes.trim().parse::<u32>()
+                    && let Ok(bytes) =
+                        fs::read(self.rec.join(name.replace(".pid", ".identity.json")))
+                    && let Ok(identity) = serde_json::from_slice::<Value>(&bytes)
+                    && identity["pid"].as_u64() == Some(pid as u64)
+                    && let Some(created) = identity["created"].as_u64()
+                {
+                    use windows_sys::Win32::{Foundation::*, System::Threading::*};
+                    unsafe {
+                        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+                        if !handle.is_null() {
+                            let mut path = [0u16; 32768];
+                            let mut size = path.len() as u32;
+                            let own =
+                                QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut size)
+                                    != 0
+                                    && String::from_utf16_lossy(&path[..size as usize])
+                                        .replace('\\', "/")
+                                        .eq_ignore_ascii_case(
+                                            &self
+                                                .tmp
+                                                .0
+                                                .join("bin/fixture.exe")
+                                                .to_string_lossy()
+                                                .replace('\\', "/"),
+                                        );
+                            CloseHandle(handle);
+                            if own {
+                                identities.push((pid, created));
+                            }
+                        }
+                    }
+                }
+            }
+            let mut handles = self.handles.lock().unwrap();
+            for (pid, created) in identities {
+                if !handles.iter().any(|h| h.pid == pid && h.created == created)
+                    && let Some(handle) = FixtureProcess::retain(pid, created)
+                {
+                    handles.push(handle);
+                }
+            }
+        }
+        fn phase_snapshot(&self, phase: &str, elapsed: Duration) -> Value {
+            let mut jobs = Vec::new();
+            let mut names = HashMap::new();
+            if let Ok(entries) = fs::read_dir(self.tmp.0.join("tool/jobs")) {
+                for entry in entries.flatten() {
+                    if let Ok(bytes) = fs::read(entry.path().join("job.json"))
+                        && let Ok(job) = serde_json::from_slice::<Value>(&bytes)
+                    {
+                        let role = if s(&job, "name") == "dependency"
+                            || !s(&job, "parent_job_id").is_empty()
+                        {
+                            "child"
+                        } else if jobs.is_empty() {
+                            "parent"
+                        } else {
+                            "other"
+                        };
+                        names.insert(s(&job, "id").to_owned(), role);
+                        jobs.push(job);
+                    }
+                }
+            }
+            jobs.sort_by(|a, b| {
+                s(a, "created_at")
+                    .cmp(s(b, "created_at"))
+                    .then_with(|| s(a, "id").cmp(s(b, "id")))
+            });
+            for (n, job) in jobs
+                .iter()
+                .filter(|j| s(j, "parent_job_id").is_empty())
+                .enumerate()
+            {
+                names.insert(
+                    s(job, "id").to_owned(),
+                    if n == 0 { "parent" } else { "other" },
+                );
+            }
+            let alias = |id: &str| names.get(id).copied().unwrap_or("unknown");
+            let rows: Vec<_> = jobs.iter().map(|job| {
+                let process = |key| { let pid = job[key].as_u64().unwrap_or(0) as u32; let current = proc_created(pid);
+                    let handles = self.handles.lock().unwrap();
+                    let retained_live = handles.iter().find(|handle| handle.pid == pid && Some(handle.created) == job[format!("{key}_created")].as_u64()).map(FixtureProcess::live);
+                    json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"retained_handle_live":retained_live,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
+                let error_kind = if s(job,"last_error").contains("plugin env_vars") { "plugin_metadata" } else if job["last_error"].is_null() { "none" } else { "other" };
+                json!({"role":alias(s(job,"id")),"status":job["status"],"error_kind":error_kind,"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
+                    "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
+                    "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
+            }).collect();
+            let index: Value = fs::read(self.tmp.0.join("tool/jobs/.queue-index.json"))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+                .unwrap_or(Value::Null);
+            json!({"phase":phase,"elapsed_ms":elapsed.as_millis() as u64,"jobs":rows,"sleep_marker":self.rec.join("sleep.pid").exists(),
+                "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
+        }
+        fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
+            let started = Instant::now();
             let end = Instant::now() + Duration::from_secs(20);
             while !condition() {
-                assert!(Instant::now() < end, "timed out");
+                if self.diagnostic.load(Ordering::Relaxed) {
+                    self.retain_fixture_processes();
+                }
+                if Instant::now() >= end {
+                    let snapshot = self.phase_snapshot(phase, started.elapsed());
+                    eprintln!("dependency fixture timeout: {snapshot}");
+                    panic!("timed out in {phase}");
+                }
                 std::thread::sleep(Duration::from_millis(100));
+            }
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                eprintln!(
+                    "dependency fixture completed: {}",
+                    self.phase_snapshot(phase, started.elapsed())
+                );
             }
         }
         fn slow(&self) -> (String, Vec<u32>) {
-            let jid = self.start("slow", &self.tmp.0, b"hi");
-            self.until(|| {
+            self.slow_at("slow", &self.tmp.0)
+        }
+        fn slow_at(&self, mode: &str, cwd: &Path) -> (String, Vec<u32>) {
+            let jid = self.start(mode, cwd, b"hi");
+            self.until_phase("parent_fixture_start", || {
                 self.rec.join("sleep.pid").exists() && truth(&self.job(&jid)["codex_pid"])
             });
             let j = self.job(&jid);
@@ -7982,6 +9940,22 @@ mod end_to_end {
     }
     impl Drop for E2e {
         fn drop(&mut self) {
+            if self.diagnostic.load(Ordering::Relaxed) {
+                self.retain_fixture_processes();
+                let mut handles = self.handles.lock().unwrap();
+                for handle in handles.iter() {
+                    handle.request_stop();
+                }
+                let mut stopped = true;
+                for handle in handles.iter() {
+                    stopped &= handle.wait_exit();
+                }
+                handles.clear();
+                if !std::thread::panicking() {
+                    assert!(stopped, "fixture cleanup did not confirm exit");
+                }
+                return;
+            }
             let rt = System::default();
             for f in ["hold.pid", "sleep.pid"] {
                 if let Ok(s) = fs::read_to_string(self.rec.join(f))
@@ -8109,14 +10083,117 @@ mod end_to_end {
     #[test]
     fn real_supervisors_start_a_dependency_while_the_root_limit_is_full() {
         let e = E2e::new();
+        dependency_contract(&e);
+    }
+    #[test]
+    fn dependency_fixture_does_not_read_its_callers_plugin_configuration() {
+        let mut e = E2e::new();
+        let home = e.tmp.0.join("caller-home");
+        let plugin = home.join(".codex/plugins/cache/openai-bundled/unified-computer-use/v1");
+        fs::create_dir_all(&plugin).unwrap();
+        let file = plugin.join(".mcp.json");
+        let sentinel = r#"{"mcpServers":{"cua_repl":{"env_vars":"caller-owned-invalid-type"}}}"#;
+        fs::write(&file, sentinel).unwrap();
+        e.inherited_home = Some(home);
+        dependency_contract(&e);
+        assert_eq!(fs::read_to_string(file).unwrap(), sentinel);
+    }
+    #[test]
+    fn fixture_process_handle_rejects_a_mismatched_creation_time() {
+        let pid = std::process::id();
+        let created = proc_created(pid).unwrap();
+        assert!(FixtureProcess::retain(pid, created + 1).is_none());
+        let retained = FixtureProcess::retain(pid, created).unwrap();
+        assert!(retained.live());
+        // Dropping the reference closes the handle; it never terminates a PID.
+        drop(retained);
+        assert_eq!(proc_created(pid), Some(created));
+    }
+    #[test]
+    fn fixture_marker_must_match_its_saved_process_creation_time() {
+        struct ChildGuard {
+            child: std::process::Child,
+            process: FixtureProcess,
+        }
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = self.process.stop();
+                let _ = self.child.wait();
+            }
+        }
+        let e = E2e::new();
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let child = hidden_command(&e.tmp.0.join("bin/fixture.exe").to_string_lossy())
+            .env("CC_JOBS_FIXTURE_MODE", "dependency-parent")
+            .env("CC_JOBS_FIXTURE_DIR", &e.rec)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        let created = proc_created(pid).unwrap();
+        let _guard = ChildGuard {
+            child,
+            process: FixtureProcess::retain(pid, created).unwrap(),
+        };
+        e.until_phase("fixture_identity_published", || {
+            e.rec.join("sleep.pid").exists()
+        });
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created + 1})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles.lock().unwrap().is_empty(),
+            "a reused marker must not bind to the current PID"
+        );
+        fs::write(
+            e.rec.join("sleep.identity.json"),
+            pretty(&json!({"pid":pid,"created":created})),
+        )
+        .unwrap();
+        e.retain_fixture_processes();
+        assert!(
+            e.handles
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|handle| handle.pid == pid && handle.created == created && handle.live())
+        );
+        e.diagnostic.store(true, Ordering::Relaxed);
+    }
+    fn dependency_contract(e: &E2e) {
+        e.diagnostic.store(true, Ordering::Relaxed);
         fs::write(
             e.tmp.0.join("tool/queue-config.json"),
             r#"{"max_running":1}"#,
         )
         .unwrap();
-        let (parent, _) = e.slow();
-        let other = e.start("", &e.tmp.0, b"other root");
+        // Distinct worktrees prevent an inherited home Git checkout from
+        // making work_owner, rather than capacity 1, block the other root.
+        let workspace = |name| {
+            let path = e.tmp.0.join(name);
+            fs::create_dir_all(path.join(".git")).unwrap();
+            fs::write(path.join(".git/HEAD"), "ref: refs/heads/fixture\n").unwrap();
+            fs::write(
+                path.join(".git/config"),
+                "[core]\nrepositoryformatversion = 0\n",
+            )
+            .unwrap();
+            path
+        };
+        let parent_work = workspace("parent-work");
+        let other_work = workspace("other-work");
+        fs::write(e.rec.join("fixture-owner.json"), pretty(&json!({"pid":std::process::id(),"created":proc_created(std::process::id()).unwrap(),"receipt_done":true}))).unwrap();
+        let (parent, parent_pids) = e.slow_at("dependency-parent", &parent_work);
+        let other = e.start("", &other_work, b"other root");
         assert_eq!(e.job(&other)["status"], "queued");
+        e.until_phase("other_root_waits_for_capacity", || {
+            e.job(&other)["queue_wait_reason"]["code"] == "running_limit"
+        });
         let prompt = e.tmp.0.join("child-prompt.md");
         fs::write(&prompt, "dependency").unwrap();
         let result = e.cli(
@@ -8129,7 +10206,7 @@ mod end_to_end {
                 "--effort",
                 "max",
                 "--cwd",
-                e.tmp.0.to_str().unwrap(),
+                parent_work.to_str().unwrap(),
                 "--prompt-file",
                 prompt.to_str().unwrap(),
                 "--parent-job-id",
@@ -8143,12 +10220,24 @@ mod end_to_end {
             String::from_utf8_lossy(&result.stderr)
         );
         let child = String::from_utf8(result.stdout).unwrap().trim().to_string();
-        e.until(|| e.job(&child)["status"] == "succeeded");
+        e.until_phase("child_success_with_full_root", || {
+            e.job(&child)["status"] == "succeeded"
+        });
         assert_eq!(e.job(&child)["parent_job_id"], parent);
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
         assert!(e.cli(&["cancel", &parent], "").status.success());
-        e.until(|| e.job(&other)["status"] == "succeeded");
+        e.until_phase("parent_processes_exited", || {
+            let handles = e.handles.lock().unwrap();
+            parent_pids.iter().all(|pid| {
+                handles
+                    .iter()
+                    .any(|handle| handle.pid == *pid && !handle.live())
+            })
+        });
+        e.until_phase("other_success_after_parent_cancel", || {
+            e.job(&other)["status"] == "succeeded"
+        });
     }
     #[test]
     fn test_run_survives_its_caller_and_passes_prompt_and_cwd_verbatim() {
@@ -8171,6 +10260,10 @@ mod end_to_end {
         assert_eq!(j["tokens"]["total"], 105710);
         let mut expected_prompt = prompt.to_vec();
         expected_prompt.extend_from_slice(cc_job_policy::READ_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice("\n\n## 最新の保存済みオーナー指示\n以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\nfixture owner instructions v1".as_bytes());
+        expected_prompt.extend_from_slice("\n\n## 実行時のサイト制限\n".as_bytes());
+        expected_prompt.extend_from_slice(cc_job_policy::REGISTRAR_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice(b"\n");
         assert_eq!(fs::read(e.rec.join("stdin.bin")).unwrap(), expected_prompt);
         let call: Value =
             serde_json::from_slice(&fs::read(e.rec.join("call.json")).unwrap()).unwrap();
@@ -8230,6 +10323,90 @@ mod end_to_end {
                 && e.job(&jid)["status"] == "cancelled"
         });
         assert_eq!(e.job(&jid)["status"], "cancelled");
+    }
+    #[test]
+    fn test_native_recovery_cancel_preserves_intent_after_process_tree_stops() {
+        let e = E2e::new();
+        let key = "fa8563e2a26943a8aa8e9c1af8b8d284";
+        let prompt = e.tmp.0.join("prompt.md");
+        fs::write(&prompt, "saved acceptance").unwrap();
+        let started = e.cli(
+            &[
+                "run",
+                "--name",
+                "native-recovery",
+                "--model",
+                "gpt-6-luna",
+                "--effort",
+                "max",
+                "--cwd",
+                e.tmp.0.to_str().unwrap(),
+                "--prompt-file",
+                prompt.to_str().unwrap(),
+                "--launch-key",
+                key,
+            ],
+            "slow",
+        );
+        assert!(
+            started.status.success(),
+            "{}",
+            String::from_utf8_lossy(&started.stderr)
+        );
+        let jid = String::from_utf8(started.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
+        e.until_phase("recovery_fixture_start", || {
+            e.rec.join("sleep.pid").exists() && truth(&e.job(&jid)["codex_pid"])
+        });
+        let before = e.job(&jid);
+        assert_eq!(before["launch_key"], key);
+        let child: u32 = fs::read_to_string(e.rec.join("sleep.pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let pids = [
+            before["pid"].as_u64().unwrap() as u32,
+            before["codex_pid"].as_u64().unwrap() as u32,
+            child,
+        ];
+        let identities: Vec<_> = pids
+            .iter()
+            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
+            .collect();
+        let result = e.cli(&["cancel", &jid, "--recovery"], "");
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        e.until(|| {
+            identities
+                .iter()
+                .all(|(pid, born)| proc_created(*pid) != Some(*born))
+        });
+        let saved = e.job(&jid);
+        assert_eq!(saved["status"], "cancelled");
+        assert_ne!(saved["cancel_requested"], true);
+        assert!(cc_job_policy::cancellation::recovery_cancel(
+            &Value::Null,
+            &saved
+        ));
+        for field in [
+            "cwd",
+            "model",
+            "effort",
+            "sandbox",
+            "thread_id",
+            "launch_key",
+        ] {
+            assert_eq!(saved[field], before[field], "{field}");
+        }
+        assert!(!cc_job_policy::cancellation::blocks_recovery(
+            &json!({}),
+            &saved
+        ));
     }
     #[test]
     fn test_cancel_of_a_lost_job_kills_the_leftover_codex() {

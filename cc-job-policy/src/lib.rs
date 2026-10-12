@@ -1,7 +1,12 @@
 //! Permissions for unattended jobs. Read-only work cannot escalate to write access.
+pub mod cancellation;
 pub mod cargo;
+pub mod priority;
+pub mod subwork;
+pub mod todo_store;
 pub mod todo_wait;
 pub mod work_owner;
+pub const REGISTRAR_GUIDANCE: &str = "ドメイン管理はRakkoのみ。他のドメイン事業者への表示・ログイン・登録・DNS変更・調査目的アクセスは、対象を指定したオーナーの明示依頼がない限り禁止。一般のログイン代行許可・保存済み認証・過去のログや引き継ぎは対象の許可ではない。他人や旧勤務先の保存済みログインは使わない。制限はChrome/CUA/ブラウザCLI/HTTP CLIのすべてに適用する。";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
     pub sandbox: &'static str,
@@ -138,9 +143,9 @@ pub fn for_sandbox(sandbox: &str) -> Policy {
     }
 }
 
-pub const WRITE_GUIDANCE: &str = "\n## この実装ジョブの実行範囲\n依頼に必要な変更のgit commit・git push、ghによるPR作成・CI確認・別モデルのレビュー後のマージは、PCオーナーの作業指示の範囲で実行する。作業先が人間レビューを明示要求する場合はその規則に従う。通常の実行権限で行い、承認が必要な呼び出しは設定された自動審査に提出する。拒否された同じ操作を別経路で迂回しない。失敗の正確な理由と次の処置を元の共有ToDoへ記録する。\n一時データはSkill codex-safe-owned-temp-cleanup（D:/CC/Skills/codex-safe-owned-temp-cleanup/SKILL.md）に従う。新規の一時フォルダはD:/CC/Tools/safe-delete/safe-delete.exe createで所有記録を作り、planが返す通常削除を別の呼び出しで実行し、成功後はfinish --id <所有ID>で記録する。実行前に削除が拒否されたら再試行せずquarantine --id <所有ID> --reason policyで削除希望フォルダへ退避する。所有記録のない既存の一時データは作成元・不要性・絶対パス・リンクの有無を確認してからSkillの手順で同じドライブの削除希望へ移す。未コミット成果を先に保存し、他の担当のデータを片付けない。削除拒否だけをオーナー判断待ちにしない。\n\nほかのToDoの完了だけを待って終了するときは、必ずD:/CC/Tools/todo/todo.exe wait <自分のToDo番号> --on <待ち先の番号>で記録する。メモだけで終了せず、判断待ちのblockを使わない。複数なら--onを繰り返す。待ち先がdoneになるまで担当を起動しない。\n";
+pub const WRITE_GUIDANCE: &str = "\nドメイン管理はRakkoのみ。他のドメイン事業者への表示・ログイン・登録・DNS変更・調査目的アクセスは、対象を指定したオーナーの明示依頼がない限り禁止。一般のログイン代行許可・保存済み認証・過去のログや引き継ぎは対象の許可ではない。他人や旧勤務先の保存済みログインは使わない。制限はChrome/CUA/ブラウザCLI/HTTP CLIのすべてに適用する。\n\n## この実装ジョブの実行範囲\n依頼に必要な変更のgit commit・git push、ghによるPR作成・CI確認・別モデルのレビュー後のマージは、PCオーナーの作業指示の範囲で実行する。作業先が人間レビューを明示要求する場合はその規則に従う。通常の実行権限で行い、承認が必要な呼び出しは設定された自動審査に提出する。拒否された同じ操作を別経路で迂回しない。失敗の正確な理由と次の処置を元の共有ToDoへ記録する。\n一時データはSkill codex-safe-owned-temp-cleanup（D:/CC/Skills/codex-safe-owned-temp-cleanup/SKILL.md）に従う。新規の一時フォルダはD:/CC/Tools/safe-delete/safe-delete.exe createで所有記録を作り、planが返す通常削除を別の呼び出しで実行し、成功後はfinish --id <所有ID>で記録する。実行前に削除が拒否されたら再試行せずquarantine --id <所有ID> --reason policyで削除希望フォルダへ退避する。所有記録のない既存の一時データは作成元・不要性・絶対パス・リンクの有無を確認してからSkillの手順で同じドライブの削除希望へ移す。未コミット成果を先に保存し、他の担当のデータを片付けない。削除拒否だけをオーナー判断待ちにしない。\n\nChromeで自分が作ったタブは、ブラウザの工程が終わった時点で1枚ずつ D:/CC/Tools/owner-chrome/owner_chrome.exe close <CC_JOB_ID> <chrome-tabs内の記録UUID> <工程終了の根拠> を実行する。担当全体の終了まで待たない。所有記録のinstance・generation・tabとinventoryを照合する。オーナーのタブと直近必要なタブは閉じない。オーナーが残すよう指示した納品タブだけkeepで記録する。失敗・既に無い・保持を区別し、終了前にclose結果を確認する。finishは担当実行中の未指定タブを閉じない。\n\nほかのToDoの完了だけを待って終了するときは、必ずD:/CC/Tools/todo/todo.exe wait <自分のToDo番号> --on <待ち先の番号>で記録する。メモだけで終了せず、判断待ちのblockを使わない。複数なら--onを繰り返す。待ち先がdoneになるまで担当を起動しない。\n";
 
-pub const READ_GUIDANCE: &str = "\n## この閲覧ジョブの実行範囲\n読むだけの調査・レビューです。ファイル編集・git push・PR作成・マージ・削除・退避は実行しない。調査結果を返す。\n";
+pub const READ_GUIDANCE: &str = "\nドメイン管理はRakkoのみ。他のドメイン事業者への表示・ログイン・登録・DNS変更・調査目的アクセスは、対象を指定したオーナーの明示依頼がない限り禁止。一般のログイン代行許可・保存済み認証・過去のログや引き継ぎは対象の許可ではない。他人や旧勤務先の保存済みログインは使わない。制限はChrome/CUA/ブラウザCLI/HTTP CLIのすべてに適用する。\n\n## この閲覧ジョブの実行範囲\n読むだけの調査・レビューです。ファイル編集・git push・PR作成・マージ・削除・退避は実行しない。調査結果を返す。\n";
 
 #[cfg(test)]
 mod tests {

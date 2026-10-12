@@ -972,7 +972,11 @@ fn deliver_question(
         } else {
             json!({"parse":[]})
         };
-        let mut payload = json!({"content":parts.get(i).map(String::as_str).unwrap_or(""),"flags":if notify {0} else {SILENT},"allowed_mentions":mentions});
+        let separated = crate::question_progress::is_separated(ctx, thread)?;
+        let mut payload = json!({"content":parts.get(i).map(String::as_str).unwrap_or(""),"flags":if notify {0} else if separated {SILENT | 4} else {SILENT},"allowed_mentions":mentions});
+        if separated {
+            payload["allowed_mentions"]["replied_user"] = json!(false);
+        }
         let part = i.to_string();
         let response = if let Some(path) = &ledger_path {
             if !ledger["parts"][&part].is_object() {

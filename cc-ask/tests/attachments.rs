@@ -212,7 +212,7 @@ fn forum_ask_nests_metadata_and_saves_last_attachment_message() {
     );
     assert_eq!(
         first["message"]["allowed_mentions"],
-        json!({"parse":[],"users":["OWN"]})
+        json!({"parse":[],"users":["OWN"],"replied_user":false})
     );
     assert_eq!(
         payload(&c.uploads[1].2)["attachments"]
@@ -221,7 +221,10 @@ fn forum_ask_nests_metadata_and_saves_last_attachment_message() {
             .len(),
         1
     );
-    assert_eq!(h.state()["questions"][0]["after"], "1001");
+    assert_eq!(h.state()["questions"][0]["after"], "300");
+    assert_eq!(h.state()["questions"][0]["progress_thread_id"], "301");
+    assert_eq!(first["message"]["flags"], 4);
+    assert_eq!(s(&first["message"]["content"]).matches("<@OWN>").count(), 1);
 }
 
 #[test]
@@ -427,7 +430,7 @@ fn total_request_size_splits_even_below_ten_attachments() {
 }
 
 #[test]
-fn failed_followup_keeps_question_registered_with_last_successful_message() {
+fn failed_followup_keeps_question_registered_with_starter_cursor() {
     let (mut h, c) = fixture();
     c.borrow_mut().fail_upload = Some(1);
     let files: Vec<_> = (0..11)
@@ -444,6 +447,19 @@ fn failed_followup_keeps_question_registered_with_last_successful_message() {
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
     assert_eq!(h.state()["questions"][0]["after"], "300");
     assert_eq!(h.state()["questions"][0]["open"], true);
+    let records: Vec<_> = std::fs::read_dir(h.ctx.here.join("question-progress"))
+        .unwrap()
+        .filter_map(|e| {
+            let p = e.unwrap().path();
+            p.extension()
+                .is_some_and(|x| x == "json")
+                .then(|| read_json(&p).unwrap())
+        })
+        .collect();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0]["question"]["starter"], "300");
+    assert_ne!(records[0]["complete"], true);
+    assert_eq!(c.borrow().uploads.len(), 1);
 }
 
 #[cfg(windows)]

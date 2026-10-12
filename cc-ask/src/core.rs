@@ -51,6 +51,14 @@ pub trait Effects {
         discord: bool,
     ) -> Result<Value>;
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output>;
+    /// Structured output must be complete; diagnostic text capture may be capped.
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        let out = self.run(argv, timeout_s)?;
+        if out.code != 0 {
+            return Err("structured command failed".into());
+        }
+        serde_json::from_str(&out.stdout).map_err(|_| "invalid structured command output".into())
+    }
     // Fake effects never inspect or terminate real processes.
     fn reap_helpers(&mut self, _jobs: &std::path::Path) -> Result<String> {
         Ok(String::new())
@@ -115,10 +123,14 @@ impl Context {
     }
     pub fn load_fresh(&self) -> Result<Value> {
         let p = self.here.join("state.json");
-        if p.exists() {
-            read_json(&p)
-        } else {
-            Ok(json!({"questions":[]}))
+        match crate::question_store::read(&p) {
+            Ok(v) => Ok(v),
+            Err(crate::question_store::Error::Io(e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                Ok(json!({"questions":[]}))
+            }
+            Err(e) => Err(e.to_string()),
         }
     }
     pub fn save(&self, v: &Value) -> Result<()> {
@@ -148,6 +160,12 @@ pub fn truth(v: &Value) -> bool {
     }
 }
 pub fn read_json(p: &std::path::Path) -> Result<Value> {
+    if p.file_name().is_some_and(|name| name == "todo.json") {
+        return cc_job_policy::todo_store::read(p).map_err(|e| e.to_string());
+    }
+    if p.file_name().is_some_and(|name| name == "state.json") {
+        return crate::question_store::read(p).map_err(|e| e.to_string());
+    }
     let text =
         std::fs::read_to_string(p).map_err(|e| format!("OSError: read {}: {e}", p.display()))?;
     serde_json::from_str(&text).map_err(|e| format!("ValueError: parse {}: {e}", p.display()))
@@ -182,8 +200,16 @@ pub fn update_json_exclusive_with_writer(
         .map_err(|_| format!("record is busy or unavailable: {}", path.display()))?;
     file.try_lock().map_err(|_| "record is busy")?;
     let mut raw = Vec::new();
-    file.read_to_end(&mut raw)
-        .map_err(|_| "cannot read record")?;
+    if path.file_name().is_some_and(|name| name == "state.json") {
+        std::io::Read::by_ref(&mut file)
+            .take((crate::question_store::MAX_BYTES + 1) as u64)
+            .read_to_end(&mut raw)
+            .map_err(|_| "cannot read record")?;
+        crate::question_store::check_size(raw.len()).map_err(|e| e.to_string())?;
+    } else {
+        file.read_to_end(&mut raw)
+            .map_err(|_| "cannot read record")?;
+    }
     // A process can stop in the middle of a Japanese UTF-8 character. Such
     // bytes still reach journal recovery; decoding must not abort before it.
     let mut text = String::from_utf8(raw).unwrap_or_default();
@@ -234,6 +260,9 @@ pub fn update_json_exclusive_with_writer(
     let before = record.clone();
     update(&mut record)?;
     let bytes = serde_json::to_vec_pretty(&record).map_err(|_| "cannot serialize record")?;
+    if path.file_name().is_some_and(|name| name == "state.json") {
+        crate::question_store::check_size(bytes.len()).map_err(|e| e.to_string())?;
+    }
     atomic_json(
         &journal_path,
         &json!({"target":path,"before":before,"after":record,"before_text":text,
@@ -293,6 +322,12 @@ pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> 
     let fmt = serde_json::ser::PrettyFormatter::with_indent(&spaces);
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, fmt);
     serde::Serialize::serialize(v, &mut ser).map_err(|_| "ValueError".to_string())?;
+    if p.file_name().is_some_and(|name| name == "state.json") {
+        crate::question_store::check_size(buf.len()).map_err(|e| e.to_string())?;
+    }
+    if p.file_name().is_some_and(|name| name == "todo.json") {
+        cc_job_policy::todo_store::check_size(buf.len()).map_err(|e| e.to_string())?;
+    }
     let temp = p.with_file_name(format!(
         "{}.{}.tmp",
         p.file_name().unwrap().to_string_lossy(),
@@ -458,6 +493,31 @@ pub fn token() -> Result<String> {
     }
 }
 pub struct RealEffects;
+
+thread_local! {
+    static HTTP_POOL: std::cell::RefCell<Option<Option<ureq::Agent>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Connection reuse for an explicit bulk read. Normal tick/board calls retain
+/// their existing independent transport and dynamically computed time limits.
+pub struct ScopedHttpPool(Option<Option<ureq::Agent>>);
+impl ScopedHttpPool {
+    pub fn new() -> Self {
+        Self(HTTP_POOL.with(|slot| slot.replace(Some(None))))
+    }
+}
+impl Default for ScopedHttpPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Drop for ScopedHttpPool {
+    fn drop(&mut self) {
+        HTTP_POOL.with(|slot| {
+            slot.replace(self.0.take());
+        });
+    }
+}
 static DNS_IN_FLIGHT: std::sync::LazyLock<std::sync::Arc<std::sync::atomic::AtomicBool>> =
     std::sync::LazyLock::new(|| std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)));
 
@@ -665,13 +725,23 @@ impl Effects for RealEffects {
             url.split('?').next().unwrap_or(url)
         ));
         let deadline = std::time::Instant::now() + timeout;
-        let agent = ureq::AgentBuilder::new()
-            .resolver(bounded_dns)
-            .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
-            .timeout_read(timeout)
-            .timeout_write(timeout)
-            .timeout(timeout)
-            .build();
+        let make_agent = || {
+            ureq::AgentBuilder::new()
+                .resolver(bounded_dns)
+                .timeout_connect(timeout.min(std::time::Duration::from_secs(3)))
+                .timeout_read(timeout)
+                .timeout_write(timeout)
+                .timeout(timeout)
+                .build()
+        };
+        let agent = HTTP_POOL.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            if let Some(agent) = slot.as_mut() {
+                agent.get_or_insert_with(make_agent).clone()
+            } else {
+                make_agent()
+            }
+        });
         for attempt in 0..3 {
             crate::tick_runtime::check()?;
             let left = deadline.saturating_duration_since(std::time::Instant::now());
@@ -753,6 +823,9 @@ impl Effects for RealEffects {
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
         run_hidden(argv, timeout_s)
     }
+    fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
+        run_hidden_json(argv, timeout_s)
+    }
 }
 /// Every child uses CREATE_NO_WINDOW (0x08000000), including Git and Python fallbacks.
 pub fn run_hidden(argv: &[String], timeout_s: u64) -> Result<Output> {
@@ -763,10 +836,45 @@ pub fn run_hidden_with_env(
     timeout_s: u64,
     environment: &[(String, String)],
 ) -> Result<Output> {
-    use std::{
-        io::{Read, Seek},
-        process::{Command, Stdio},
-    };
+    run_hidden_captured(argv, timeout_s, environment, |code, stdout, stderr| {
+        use std::io::{Read, Seek};
+        let read = |file: &mut std::fs::File| -> Result<String> {
+            file.rewind().map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            file.take(8 * 1024 * 1024)
+                .read_to_end(&mut bytes)
+                .map_err(|e| e.to_string())?;
+            Ok(String::from_utf8_lossy(&bytes).into_owned())
+        };
+        Ok(Output {
+            code,
+            stdout: read(stdout)?,
+            stderr: read(stderr)?,
+        })
+    })
+}
+/// Parse the entire captured stream, including its end, without the text log cap.
+/// No output or parser excerpt is included in errors because it can be private.
+pub fn run_hidden_json(argv: &[String], timeout_s: u64) -> Result<Value> {
+    run_hidden_captured(argv, timeout_s, &[], |code, stdout, _stderr| {
+        use std::io::Seek;
+        if code != 0 {
+            return Err("structured command failed".into());
+        }
+        stdout
+            .rewind()
+            .map_err(|_| "structured output unavailable")?;
+        serde_json::from_reader(std::io::BufReader::new(stdout))
+            .map_err(|_| "invalid structured command output".into())
+    })
+}
+fn run_hidden_captured<T>(
+    argv: &[String],
+    timeout_s: u64,
+    environment: &[(String, String)],
+    consume: impl FnOnce(i32, &mut std::fs::File, &mut std::fs::File) -> Result<T>,
+) -> Result<T> {
+    use std::process::{Command, Stdio};
     let timeout =
         crate::tick_runtime::timeout(std::time::Duration::from_secs(if timeout_s == 0 {
             20
@@ -825,23 +933,13 @@ pub fn run_hidden_with_env(
         std::thread::sleep(std::time::Duration::from_millis(20));
     };
     if status.success() {
-        group.completed()?;
+        group
+            .completed()
+            .map_err(|e| format!("OSError: release completed child group {}: {e}", argv[0]))?;
     } else {
         group.stop(&mut child);
     }
-    let read = |file: &mut std::fs::File| -> Result<String> {
-        file.rewind().map_err(|e| e.to_string())?;
-        let mut bytes = Vec::new();
-        file.take(8 * 1024 * 1024)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
-        Ok(String::from_utf8_lossy(&bytes).into_owned())
-    };
-    Ok(Output {
-        code: status.code().unwrap_or(1),
-        stdout: read(&mut stdout)?,
-        stderr: read(&mut stderr)?,
-    })
+    consume(status.code().unwrap_or(1), &mut stdout, &mut stderr)
 }
 pub fn chunks(text: &str, limit: usize) -> Vec<String> {
     let mut parts = Vec::new();
@@ -1012,6 +1110,9 @@ pub fn error_detail(error: &str) -> String {
 
 pub fn explicit_thread_owner(job: &Value, thread: &str) -> bool {
     s(&job["discord_thread_id"]) == thread
+        || job["question_thread_ids"]
+            .as_array()
+            .is_some_and(|ids| ids.iter().any(|id| s(id) == thread))
         || (s(&job["discord_thread_ids_source"]) != "prompt"
             && job["discord_thread_ids"]
                 .as_array()
@@ -1081,8 +1182,16 @@ pub fn thread_owner(job: &Value, prompt: &str, thread: &str) -> bool {
 }
 
 pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Result<Option<String>> {
+    let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    let separated = destination != thread || crate::question_progress::is_separated(ctx, thread)?;
+    let thread = destination.as_str();
+    let mention = mention && !separated;
     let owner = ctx.owner();
-    let mut text = safe_text(text);
+    let mut text = if separated {
+        crate::question_progress::silent_text(text)
+    } else {
+        safe_text(text)
+    };
     if mention {
         let (first, rest) = text.split_once('\n').unwrap_or((&text, ""));
         text = if text.contains('\n') {
@@ -1102,7 +1211,11 @@ pub fn post(ctx: &mut Context, thread: &str, text: &str, mention: bool) -> Resul
             s(&ctx.call(
                 "POST",
                 &format!("/channels/{thread}/messages"),
-                Some(&json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})),
+                Some(&if separated {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":[],"replied_user":false},"flags":SILENT | 4})
+                } else {
+                    json!({"content":part,"allowed_mentions":{"parse":[],"users":users},"flags":if mention {0} else {SILENT}})
+                }),
             )?["id"])
             .to_string(),
         )
@@ -1127,6 +1240,9 @@ pub fn job_info(ctx: &Context, job: &str) -> Value {
     // The supervisor periodically rewrites job.json from its in-memory record.
     // Keep Discord associations in a sidecar owned by this tool as well.
     if let Ok(threads) = read_json(&directory.join("discord-threads.json")) {
+        if threads["question_thread_ids"].is_array() {
+            info["question_thread_ids"] = threads["question_thread_ids"].clone();
+        }
         if threads["discord_thread_id"].is_string() {
             info["discord_thread_id"] = threads["discord_thread_id"].clone();
         }
@@ -1167,12 +1283,32 @@ pub fn conversation(thread: &Value, messages: &[Value], owner: &str) -> String {
             })
             .unwrap_or_default();
         lines.push(format!(
-            "### {who}（{}）\n{}{files}\n",
-            s(&m["timestamp"]).chars().take(16).collect::<String>(),
+            "### {who}（{}）\n{}\n{}{files}\n",
+            s(&m["timestamp"]),
+            message_source(m, s(&thread["id"])),
             s(&m["content"])
         ))
     }
     safe_text(lines.join("\n"))
+}
+/// Describe the actual Discord source without turning fetched history into direct chat input.
+pub fn message_source(message: &Value, thread: &str) -> String {
+    let channel = if truth(&message["channel_id"]) {
+        s(&message["channel_id"])
+    } else {
+        thread
+    };
+    let reply = s(&message["message_reference"]["message_id"]);
+    let reply_source = if reply.is_empty() {
+        String::new()
+    } else {
+        format!(" / 返信先 {reply}")
+    };
+    format!(
+        "出所: Discord {channel}/{} / 投稿者 {}{reply_source}",
+        s(&message["id"]),
+        s(&message["author"]["id"]),
+    )
 }
 pub const REQUEST_CWD: &str = "C:/Users/makhmeto/Desktop/dev/ADJ";
 pub const REQUEST_PREAMBLE: &str = include_str!("request_preamble.txt");
@@ -1341,6 +1477,26 @@ pub fn launch_job_with_session(
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);
+    if let Some(id) = selection["todo_id"].as_i64().filter(|id| *id > 0) {
+        args.extend(["--todo-id".into(), id.to_string()]);
+    }
+    let ids: std::collections::BTreeSet<_> = selection["related_todo_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_i64)
+        .filter(|id| *id > 0)
+        .chain(selection["todo_id"].as_i64().filter(|id| *id > 0))
+        .collect();
+    if !ids.is_empty() {
+        args.extend([
+            "--related-todo-ids".into(),
+            ids.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        ]);
+    }
     if let Some(dirs) = selection["add_dirs"].as_array() {
         for dir in dirs.iter().filter_map(Value::as_str) {
             args.extend(["--add-dir".into(), dir.into()]);
@@ -1368,25 +1524,26 @@ pub fn launch_job_with_session(
     // Persist the Discord owner separately from Codex's session UUID.
     let directory = ctx.jobs.join("jobs").join(&jid);
     if directory.join("job.json").is_file() {
-        let _lock = ByteLock::acquire(
-            &directory.join("state.lock"),
-            std::time::Duration::from_secs(45),
-        )?;
+        let mut store = crate::job_associations::Store::open(ctx, &jid)?;
         let mut info = read_json(&directory.join("job.json"))?;
         info["discord_thread_id"] = json!(tid);
         info["prompt_limit_bytes"] = json!(crate::prompt_context::limit(selection));
-        let mut associations = json!({"discord_thread_id":tid,"thread_ids":[tid],"source":"declared",
-            "prompt_limit_bytes":crate::prompt_context::limit(selection)});
-        if selection["discord_thread_ids"]
-            .as_array()
-            .is_some_and(|ids| ids.iter().any(|id| s(id) == tid))
-        {
-            info["discord_thread_ids"] = selection["discord_thread_ids"].clone();
-            info["discord_thread_ids_source"] = selection["discord_thread_ids_source"].clone();
-            associations["thread_ids"] = selection["discord_thread_ids"].clone();
-            associations["source"] = selection["discord_thread_ids_source"].clone();
-        }
-        atomic_json(&directory.join("discord-threads.json"), &associations, 2)?;
+        store.update(|associations| {
+            associations["discord_thread_id"] = json!(tid);
+            associations["thread_ids"] = json!([tid]);
+            associations["source"] = json!("declared");
+            associations["prompt_limit_bytes"] = json!(crate::prompt_context::limit(selection));
+            if selection["discord_thread_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.iter().any(|id| s(id) == tid))
+            {
+                info["discord_thread_ids"] = selection["discord_thread_ids"].clone();
+                info["discord_thread_ids_source"] = selection["discord_thread_ids_source"].clone();
+                associations["thread_ids"] = selection["discord_thread_ids"].clone();
+                associations["source"] = selection["discord_thread_ids_source"].clone();
+            }
+            Ok(())
+        })?;
         atomic_json(&directory.join("job.json"), &info, 2)?;
     }
     Ok(jid)
@@ -1491,6 +1648,176 @@ pub fn reply_delivered(state: &Value, message: &str) -> bool {
 
 pub fn reply_reserved(state: &Value, message: &str) -> bool {
     state["answer_receipts"][message]["read_reservation"].is_object()
+        || truth(&state["answer_receipts"][message]["launch_job"])
+}
+
+/// A supervisor accepting a job does not mean Codex accepted its input.
+pub fn job_started(ctx: &Context, jid: &str) -> bool {
+    job_start_evidence(ctx, jid).unwrap_or(false)
+}
+
+pub(crate) fn job_start_evidence(ctx: &Context, jid: &str) -> Result<bool> {
+    let job = job_info(ctx, jid);
+    if n(&job["steps"]) > 0
+        || truth(&job["turn_completed"])
+        || (s(&job["status"]) == "succeeded" && !final_message(ctx, jid).trim().is_empty())
+    {
+        return Ok(true);
+    }
+    use std::io::{BufRead, BufReader};
+    let file = match std::fs::File::open(ctx.jobs.join("jobs").join(jid).join("events.jsonl")) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(_) => return Err("worker events unavailable".into()),
+    };
+    for line in BufReader::new(file).lines() {
+        let line = line.map_err(|_| "worker events unavailable")?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let event: Value = serde_json::from_str(&line).map_err(|_| "invalid worker events")?;
+        // Local turn.started does not prove API input acceptance. Scan to the
+        // end so a large earlier record cannot hide a dispatched side effect.
+        if event["type"] == "turn.completed"
+            || (event["type"] == "item.completed"
+                && [
+                    "agent_message",
+                    "command_execution",
+                    "mcp_tool_call",
+                    "file_change",
+                    "reasoning",
+                ]
+                .contains(&s(&event["item"]["type"])))
+            || (event["type"] == "item.started"
+                && ["command_execution", "mcp_tool_call", "file_change"]
+                    .contains(&s(&event["item"]["type"])))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn restore_unstarted_reply(state: &mut Value, id: &str, tid: &str, jid: &str, job: &Value) {
+    let Some(message) = id.parse::<u64>().ok().filter(|id| *id > 0) else {
+        return;
+    };
+    if let Some(questions) = state["questions"].as_array_mut() {
+        for question in questions {
+            let baseline = n(&question["after"]);
+            if s(&question["thread_id"]) != tid
+                || s(&question["continuation"]["job"]) != jid
+                || message <= baseline
+            {
+                continue;
+            }
+            let cursor = message.saturating_sub(1).max(baseline);
+            if n(&question["continuation"]["after"]) >= message {
+                question["continuation"]["after"] = json!(cursor.to_string());
+            }
+            if n(&question["seen_reply"]) >= message {
+                question["seen_reply"] = json!(cursor.to_string());
+            }
+            question["continuation"]["job_info"] = job.clone();
+            // Do not reopen a stopped/completed question or change its generation.
+        }
+    }
+    if let Some(request) = state
+        .get_mut("requests")
+        .and_then(Value::as_object_mut)
+        .and_then(|requests| requests.get_mut(tid))
+        .filter(|request| s(&request["job"]) == jid && message > n(&json!(tid)))
+    {
+        if n(&request["after"]) >= message {
+            request["after"] = json!(message.saturating_sub(1).to_string());
+        }
+        request["job_info"] = job.clone();
+    }
+}
+
+pub fn record_launch_delivery(ctx: &Context, state: &mut Value, id: &str, tid: &str, jid: &str) {
+    state["answer_receipts"][id]["thread"] = json!(tid);
+    if job_started(ctx, jid) {
+        state["answer_receipts"][id]["handled_by"] = json!(jid);
+        state["answer_receipts"][id]["launch_confirmed"] = json!(true);
+        state["answer_receipts"][id]
+            .as_object_mut()
+            .unwrap()
+            .remove("launch_job");
+    } else {
+        state["answer_receipts"][id]["launch_job"] = json!(jid);
+        let receipt = state["answer_receipts"][id].as_object_mut().unwrap();
+        receipt.remove("handled_by");
+        receipt.remove("launch_confirmed");
+    }
+}
+
+fn recover_launch_deliveries(ctx: &Context, state: &mut Value) -> Result<()> {
+    let mut changed = false;
+    let receipts = state["answer_receipts"]
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
+    for (id, receipt) in receipts {
+        let jid = if truth(&receipt["launch_job"]) {
+            s(&receipt["launch_job"])
+        } else {
+            s(&receipt["handled_by"])
+        };
+        if !valid_job(jid)
+            || truth(&receipt["read_by"])
+            || ["replies-event", "manual-confirmation"].contains(&s(&receipt["handled_via"]))
+        {
+            continue;
+        }
+        let path = ctx.jobs.join("jobs").join(jid).join("job.json");
+        if !path.exists() && !truth(&receipt["launch_job"]) {
+            // A retired legacy job has unknown input history. Do not replay it.
+            continue;
+        }
+        // An unreadable record is not evidence that the supervisor stopped.
+        read_json(&path)?;
+        let job = job_info(ctx, jid);
+        let Ok(started) = job_start_evidence(ctx, jid) else {
+            // Unknown evidence preserves this reservation; one incomplete
+            // stream must not prevent recovery of other independent replies.
+            continue;
+        };
+        if started {
+            if receipt["launch_confirmed"] != true {
+                changed = true;
+                state["answer_receipts"][&id]["launch_confirmed"] = json!(true);
+            }
+            if truth(&receipt["launch_job"]) {
+                changed = true;
+                state["answer_receipts"][&id]["handled_by"] = json!(jid);
+                state["answer_receipts"][&id]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("launch_job");
+            }
+        } else if RUNNING.contains(&s(&job["status"])) && truth(&receipt["handled_by"]) {
+            changed = true;
+            state["answer_receipts"][&id]["launch_job"] = json!(jid);
+            state["answer_receipts"][&id]
+                .as_object_mut()
+                .unwrap()
+                .remove("handled_by");
+        } else if ["failed", "cancelled", "lost", "succeeded"].contains(&s(&job["status"])) {
+            changed = true;
+            // No input-start evidence: any pre-start failure is recoverable.
+            let entry = state["answer_receipts"][&id].as_object_mut().unwrap();
+            entry.remove("launch_job");
+            entry.remove("handled_by");
+            entry.remove("launch_confirmed");
+            entry.insert("failed_launch_job".into(), json!(jid));
+            restore_unstarted_reply(state, &id, s(&receipt["thread"]), jid, &job);
+        }
+    }
+    if changed {
+        ctx.save(state)?;
+    }
+    Ok(())
 }
 
 pub fn reply_unavailable(state: &Value, message: &str) -> bool {
@@ -1501,6 +1828,7 @@ pub fn reply_unavailable(state: &Value, message: &str) -> bool {
 /// A successful command event proves delivery; otherwise the reservation expires
 /// and the original owner message remains available to the next consumer.
 pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
+    recover_launch_deliveries(ctx, state)?;
     // A stalled output pipe is still a live consumer. Expiration alone cannot
     // transfer its answer. The OS releases this dedicated lock after a crash.
     let _reader = if crate::state_work::owns_reader(ctx) {
@@ -1549,7 +1877,11 @@ pub fn recover_reply_reads(ctx: &Context, state: &mut Value) -> Result<()> {
 pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value], owner: &str) {
     let answer = messages
         .iter()
-        .filter(|m| s(&m["author"]["id"]) == owner && !crate::snooze::control_only(m))
+        .filter(|m| {
+            s(&m["author"]["id"]) == owner
+                && !truth(&m["author"]["bot"])
+                && !crate::snooze::control_only(m)
+        })
         .max_by_key(|m| n(&m["id"]));
     let latest = answer.map(|m| n(&m["id"])).unwrap_or(0);
     if latest > n(&state["owner_answers"][thread]).max(n(&state["owner_answers"][thread]["id"])) {
@@ -1575,7 +1907,10 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
                     && !crate::snooze::control_only(message)
                 {
                     replies.insert(id, json!({"id":message["id"],"timestamp":message["timestamp"],
-                        "content":safe_text(s(&message["content"])),"attachments":message["attachments"]}));
+                        "content":safe_text(s(&message["content"])),"attachments":message["attachments"],
+                        "thread_id":thread,"author_id":message.get("author").map(|a|a["id"].clone()).unwrap_or(message["author_id"].clone()),
+                        "acquisition_source":if message.get("author").is_some(){json!("discord-api-v10")}else{message["acquisition_source"].clone()},
+                        "question_message_id":q["after"],"todo_id":q["todo_id"]}));
                 }
             }
             if let Some(first) = replies.keys().next() {
@@ -1591,7 +1926,9 @@ pub fn record_owner_answers(state: &mut Value, thread: &str, messages: &[Value],
             if latest >= n(&q["answered_reply"]) {
                 if let Some(answer) = answer {
                     q["owner_reply"] = json!({"id":answer["id"],"timestamp":answer["timestamp"],
-                        "content":safe_text(s(&answer["content"])),"attachments":answer["attachments"]});
+                        "content":safe_text(s(&answer["content"])),"attachments":answer["attachments"],
+                        "author_id":answer["author"]["id"],"thread_id":thread,"acquisition_source":"discord-api-v10",
+                        "question_message_id":q["after"],"todo_id":q["todo_id"]});
                 }
             }
             q["answered_reply"] = json!(latest.max(n(&q["answered_reply"])).to_string());

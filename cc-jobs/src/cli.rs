@@ -32,6 +32,9 @@ pub fn help_text(command: &str) -> &'static str {
         "cleanup-supervisors" => {
             "usage: codex_jobs.exe cleanup-supervisors [--apply]\n\nPreview terminal supervisors; --apply stops only their identified controller.\n"
         }
+        "reload-queue" => {
+            "usage: codex_jobs.exe reload-queue [--job-id <id>]\n\nRefresh queued controllers without execution admission; their successors still check history, capacity and ownership. --job-id keeps every other controller unchanged. Invalid ids exit 2; missing/unreadable records exit 1. Deferred updates appear in the report and do not mean execution has started.\n"
+        }
         _ => include_str!("../tests/fixtures/help-root.txt"),
     }
 }
@@ -132,7 +135,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "status" => ["all", "json", "summary"].contains(&name.as_str()),
                 "tail" => name == "follow",
                 "rate" => name == "force",
-                "cancel" => name == "recovery",
+                "cancel" => ["recovery", "if-todo-ready"].contains(&name.as_str()),
                 "update-queue-config" => name == "clear-fixed",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
@@ -161,6 +164,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "launch-key",
                     "resume-session",
                     "parent-job-id",
+                    "subwork-of",
+                    "assigned-needs",
                     "pr-url",
                 ]
                 .contains(&name.as_str()),
@@ -170,11 +175,20 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "watch" => name == "interval",
                 "rate" => ["quality", "task-type", "notes", "force"].contains(&name.as_str()),
                 "backfill" => name == "days",
-                "cancel" => name == "recovery",
+                "cancel" => [
+                    "recovery",
+                    "if-todo-ready",
+                    "todo-id",
+                    "related-todo-ids",
+                    "todo-file",
+                    "cancel-key",
+                ]
+                .contains(&name.as_str()),
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
                 "recover-children" => ["since", "apply"].contains(&name.as_str()),
                 "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
+                "reload-queue" => name == "job-id",
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -449,7 +463,20 @@ impl Context {
                     }
                 }
             }
-            "cancel" => self.cmd_cancel_mode(&a.id, a.flag("recovery"), out, err),
+            "cancel" => {
+                if a.flag("if-todo-ready") {
+                    self.cmd_cancel_if_todo_ready(&a, out, err)
+                } else if ["todo-id", "related-todo-ids", "todo-file", "cancel-key"]
+                    .iter()
+                    .any(|key| a.value(key).is_some())
+                {
+                    Err(Error::new(
+                        "cancel ToDo metadata requires --if-todo-ready --recovery",
+                    ))
+                } else {
+                    self.cmd_cancel_mode(&a.id, a.flag("recovery"), out, err)
+                }
+            }
             "rate" => self.cmd_rate(&a, out),
             "backfill" => self.cmd_backfill(a.required("days")?.parse().unwrap(), out),
             "recover-429" => {
@@ -477,7 +504,11 @@ impl Context {
                 Ok(if deferred { 75 } else { 0 })
             }
             "reload-queue" => {
-                writeln!(out, "{}", pretty(&self.reload_queue()?))?;
+                let report = match a.value("job-id") {
+                    Some(id) => self.reload_queue_job(id)?,
+                    None => self.reload_queue()?,
+                };
+                writeln!(out, "{}", pretty(&report))?;
                 Ok(0)
             }
             "adjust-limit" => {
@@ -530,17 +561,62 @@ impl Context {
             }
             fs::create_dir_all(&self.jobs)?;
             let path = self.jobs.join(format!(".launch-{key}.lock"));
+            // Legacy launchers created this permanent per-key lock before any
+            // record. Only its first creator can skip legacy-key reconciliation.
+            let first_key = match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(file) => {
+                    drop(file);
+                    true
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
+                Err(error) => return Err(Error::file_io("create launch key lock", &path, error)),
+            };
             let _lock = FileLock::acquire(&path).map_err(|e| {
                 Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e)
             })?;
-            if let Some(job) = self
-                .list_jobs(&HashSet::new())
-                .into_iter()
-                .find(|j| s(j, "launch_key") == key)
+            // Never read the lock's byte zero on Windows. The receipt uses an
+            // atomic sidecar, and its claimed record must match this exact key.
+            let receipt_path = self.jobs.join(format!(".launch-{key}.json"));
+            match self.read_file(&receipt_path) {
+                Ok(bytes) => {
+                    let receipt: Value = serde_json::from_slice(&bytes)?;
+                    let id = s(&receipt, "id");
+                    if !valid_job_id(id) || s(&self.load(id)?, "launch_key") != key {
+                        return Err(Error::new("invalid launch key receipt"));
+                    }
+                    writeln!(out, "{id}")?;
+                    return Ok(0);
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => {
+                    return Err(Error::file_io(
+                        "read launch key receipt",
+                        &receipt_path,
+                        error,
+                    ));
+                }
+            }
+            // Another caller may acquire the lock between create_new and our
+            // acquisition. Its in-progress receipt makes that crash window
+            // recover through history rather than issuing a second record.
+            let pending_path = self.jobs.join(format!(".launch-{key}.pending"));
+            if (!first_key || pending_path.exists())
+                && let Some(job) = self
+                    .list_jobs(&HashSet::new())
+                    .into_iter()
+                    .find(|j| s(j, "launch_key") == key)
             {
+                self.write_json(&receipt_path, &json!({"id":job["id"]}))?;
                 writeln!(out, "{}", s(&job, "id"))?;
                 return Ok(0);
             }
+            fs::write(&pending_path, b"receipt pending").map_err(|error| {
+                Error::file_io("reserve launch key receipt", &pending_path, error)
+            })?;
             self.run_new_job(a, out, err)
         } else {
             self.run_new_job(a, out, err)
@@ -632,9 +708,15 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
-        // Registration shares admission's gate. This also serializes different
-        // launch keys targeting the same ToDo.
-        let _queue = self.queue_lock()?;
+        // Intake uses the short publication gate; history reconciliation remains outside it.
+        let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
+        // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
+        let _subwork_store_lock = (self.todo_store().exists()
+            && (a.value("todo-id").is_some() || a.value("related-todo-ids").is_some()))
+        .then(|| {
+            FileLock::acquire(&self.todo_store().with_file_name("todo.lock")).map_err(Error::from)
+        })
+        .transpose()?;
         let related: Vec<u64> = a
             .value("related-todo-ids")
             .map(|ids| {
@@ -660,6 +742,16 @@ impl Context {
             let store = self.todo_store();
             if store.exists() {
                 let db = self.read_json(&store)?;
+                let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &job);
+                if !ready.is_empty() {
+                    return Err(Error::new(
+                        ready
+                            .iter()
+                            .filter_map(|wait| wait["message"].as_str())
+                            .collect::<Vec<_>>()
+                            .join("、"),
+                    ));
+                }
                 let on = cc_job_policy::todo_wait::job_pending_on(&db, &job);
                 if !on.is_empty() {
                     return Err(Error::new(
@@ -672,7 +764,9 @@ impl Context {
             }
         }
         let env = self.rt.env();
-        let parent = if let Some(id) = a.value("parent-job-id") {
+        let parent = if a.value("subwork-of").is_some() {
+            None // The saved relation below, not the invoking process, chooses this parent.
+        } else if let Some(id) = a.value("parent-job-id") {
             if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
                 return Err(Error::new("parent job must be a running job in this queue"));
             }
@@ -694,6 +788,12 @@ impl Context {
         };
         // The child exemption is for a running job's own sub-work. A job for a
         // different ToDo is top-level work and must wait in the shared queue.
+        let mut registrations = self.registration_jobs()?;
+        if let Some(parent) = parent.and_then(|id| self.try_load(id))
+            && !registrations.iter().any(|job| job["id"] == parent["id"])
+        {
+            registrations.push(parent);
+        }
         let parent = parent.filter(|id| {
             let own = job["todo_id"].as_u64().is_none_or(|todo| {
                 self.try_load(id)
@@ -711,7 +811,7 @@ impl Context {
             .into_iter()
             .chain(related.iter().copied())
         {
-            if let Some(job) = self.admission_jobs()?.into_iter().find(|j| {
+            if let Some(job) = registrations.iter().find(|j| {
                 (j["todo_id"].as_u64() == Some(todo)
                     || j["related_todo_ids"]
                         .as_array()
@@ -720,12 +820,12 @@ impl Context {
             }) {
                 return Err(Error::new(format!(
                     "ToDo {todo} already has active job {}",
-                    s(&job, "id")
+                    s(job, "id")
                 )));
             }
         }
         if let Some(session) = &resume
-            && let Some(job) = self.admission_jobs()?.into_iter().find(|job| {
+            && let Some(job) = registrations.iter().find(|job| {
                 (["queued", "starting", "running"].contains(&s(job, "status"))
                     || self.is_ours(job, "codex_pid"))
                     && ["thread_id", "resume_session"]
@@ -735,7 +835,7 @@ impl Context {
         {
             return Err(Error::new(format!(
                 "resume session {session} already has active job {}",
-                s(&job, "id")
+                s(job, "id")
             )));
         }
         job["parent_job_id"] = json!(parent);
@@ -778,6 +878,61 @@ impl Context {
                 .ok_or_else(|| Error::new("invalid --pr-url"))?;
             job["work_owner"]["repository"] = target["repository"].clone();
             job["work_owner"]["pr"] = target["pr"].clone();
+            job["work_owner"]["explicit_pr"] = target;
+        }
+        let store = self.todo_store();
+        if store.exists() {
+            let db = self.read_json(&store)?;
+            let item = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|i| i["id"] == job["todo_id"]);
+            if a.value("subwork-of").is_some() || item.is_some_and(|i| i["subwork"].is_object()) {
+                let item = item.ok_or_else(|| Error::new("subwork ToDo is missing"))?;
+                let parent = a
+                    .required("subwork-of")?
+                    .parse::<i64>()
+                    .map_err(|_| Error::new("invalid --subwork-of"))?;
+                if item["subwork"]["parent_todo_id"] != parent {
+                    return Err(Error::new(
+                        "subwork parent does not match the saved relation",
+                    ));
+                }
+                let needs = a
+                    .required("assigned-needs")?
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>();
+                job["assigned_needs"] = json!(needs);
+                job["subwork"] = item["subwork"].clone();
+                job["subwork_spec"] = item["spec"].clone();
+                if ["research", "review"].contains(&s(&job["subwork"], "kind"))
+                    && s(&job, "sandbox") != "read-only"
+                {
+                    return Err(Error::new(
+                        "independent research/review requires read-only scope",
+                    ));
+                }
+                let mut jobs = registrations.clone();
+                if let Some(requested) = a.value("parent-job-id") {
+                    let p = self.load(requested)?;
+                    if p["todo_id"] != parent
+                        || !s(&p, "parent_job_id").is_empty()
+                        || self.rt.work_checkout(s(&p, "cwd"))["worktree"]
+                            != job["subwork"]["owner"]["worktree"]
+                    {
+                        return Err(Error::new("requested parent is not this subwork's owner"));
+                    }
+                    if !jobs.iter().any(|job| job["id"] == p["id"]) {
+                        jobs.push(p);
+                    }
+                }
+                cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
+                cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
+            }
+        } else if a.value("subwork-of").is_some() {
+            return Err(Error::new("subwork ToDo store is missing"));
         }
         let bad = codex_args(&job)
             .into_iter()
@@ -802,6 +957,10 @@ impl Context {
                 Err(e) => return Err(e.into()),
             }
         }
+        // The directory is private until job.json/index publication. Reserve
+        // its state now so a supervisor cannot win it and make registration
+        // wait under the global gate. Never wait for a private lock here.
+        let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
         let guidance = if policy.sandbox == "read-only" {
@@ -825,7 +984,14 @@ impl Context {
         stored["queue_sequence"] = json!(self.next_queue_sequence()?);
         self.save(&stored)?;
         self.track_queued_job(&jid)?;
-        let state = self.job_lock(&jid, "state.lock")?;
+        if let Some(key) = a.value("launch-key") {
+            // Publication precedes spawn and response. A failed spawn or lost
+            // response still has exactly one durable receipt for this key.
+            self.write_json(
+                &self.jobs.join(format!(".launch-{key}.json")),
+                &json!({"id":jid}),
+            )?;
+        }
         drop(_queue);
         let mut stored = self.load(&jid)?;
         let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {
@@ -1022,6 +1188,121 @@ impl Context {
     ) -> Result<i32> {
         self.load(jid)?;
         let lock = self.job_lock(jid, "state.lock")?;
+        self.cancel_locked(jid, recovery, lock, out, err)
+    }
+
+    /// Linearize recovery cancellation with wait registration. Never run a
+    /// subprocess or refresh/notify while holding the shared ToDo lock.
+    fn cmd_cancel_if_todo_ready(
+        &self,
+        a: &Args,
+        out: &mut dyn Write,
+        err: &mut dyn Write,
+    ) -> Result<i32> {
+        if !a.flag("recovery") {
+            return Err(Error::new("--if-todo-ready requires --recovery"));
+        }
+        let key = a.required("cancel-key")?;
+        if !valid_job_id(key) {
+            return Err(Error::new("invalid guarded cancellation key"));
+        }
+        let id = |text: &str| {
+            text.parse::<i64>()
+                .ok()
+                .filter(|id| *id > 0)
+                .ok_or_else(|| Error::new("cancel ToDo metadata requires positive ToDo IDs"))
+        };
+        let primary = a.value("todo-id").map(id).transpose()?;
+        let related = a
+            .value("related-todo-ids")
+            .map(|text| text.split(',').map(id).collect::<Result<Vec<_>>>())
+            .transpose()?
+            .unwrap_or_default();
+        let store = a
+            .value("todo-file")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| self.todo_store());
+        self.load(&a.id)?;
+        // Same ordering as registration/admission: queue -> job state -> ToDo.
+        let queue = self.queue_lock_for(
+            "dependency guarded cancellation",
+            std::time::Duration::from_secs(60),
+        )?;
+        let lock = self.job_lock(&a.id, "state.lock")?;
+        let mut job = self.load(&a.id)?;
+        let todo = FileLock::acquire(&store.with_file_name("todo.lock"))?;
+        // An unavailable managed store cannot prove that the source is ready.
+        // Keep the source unchanged until its dependencies can be checked.
+        let db = cc_job_policy::todo_store::read(&store).map_err(|e| Error::new(e.to_string()))?;
+        if !db["items"].is_array() {
+            return Err(Error::new("invalid ToDo store items"));
+        }
+        let mut identity = job.clone();
+        let mut ids: std::collections::BTreeSet<i64> = identity["related_todo_ids"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_i64)
+            .collect();
+        ids.extend(identity["todo_id"].as_i64());
+        ids.extend(primary);
+        ids.extend(related);
+        identity["related_todo_ids"] = json!(ids);
+        let mut on = cc_job_policy::todo_wait::job_pending_on(&db, &identity);
+        on.extend(cc_job_policy::todo_wait::pending_on(
+            &db,
+            &json!({"wait_on":job["work_wait_on"]}),
+        ));
+        on.sort_unstable();
+        on.dedup();
+        let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &identity);
+        let outcome = if cc_job_policy::cancellation::owner_stopped(&Value::Null, &job) {
+            Some(json!({"outcome":"owner_stopped","job":a.id}))
+        } else if !ready.is_empty()
+            && (job["recovery_cancel"]["key"] != key
+                || !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job))
+        {
+            Some(json!({"outcome":"deferred","job":a.id,"wait_ready":ready}))
+        } else if !on.is_empty()
+            && (job["recovery_cancel"]["key"] != key
+                || !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job))
+        {
+            Some(json!({"outcome":"deferred","job":a.id,"wait_on":on}))
+        } else if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
+            Some(json!({"outcome":"already_terminal","job":a.id}))
+        } else {
+            None
+        };
+        if let Some(result) = outcome {
+            writeln!(out, "{result}")?;
+            return Ok(0);
+        }
+        // This durable intent is the ordering point, not process termination.
+        // A wait registered afterwards may block the successor, but cannot undo
+        // this admitted cancellation. Keep deliberate owner stops distinct.
+        job["related_todo_ids"] = identity["related_todo_ids"].clone();
+        if job["todo_id"].as_i64().is_none() {
+            job["todo_id"] = json!(primary);
+        }
+        job["recovery_cancel"] = json!({"key":key,"committed_at":self.rt.now()});
+        self.save(&job)?;
+        drop(todo);
+        drop(queue);
+        let code = self.cancel_locked(&a.id, true, lock, &mut Vec::new(), err)?;
+        if code == 0 {
+            writeln!(out, "{}", json!({"outcome":"cancelled","job":a.id}))?;
+        }
+        Ok(code)
+    }
+
+    fn cancel_locked(
+        &self,
+        jid: &str,
+        recovery: bool,
+        lock: FileLock,
+        out: &mut dyn Write,
+        err: &mut dyn Write,
+    ) -> Result<i32> {
         let mut job = self.refresh_locked(self.load(jid)?, false)?;
         if !LIVE.contains(&s(&job, "status")) && s(&job, "status") != "lost" {
             return Err(Error::new(format!(
@@ -1029,8 +1310,15 @@ impl Context {
                 s(&job, "status")
             )));
         }
-        if recovery && job["cancel_requested"] == true {
+        if recovery && cc_job_policy::cancellation::owner_stopped(&Value::Null, &job) {
             return Err(Error::new("job was explicitly cancelled"));
+        }
+        if recovery && !cc_job_policy::cancellation::recovery_cancel(&Value::Null, &job) {
+            // Plain scheduler/watchdog recovery uses this path as well as the
+            // guarded console path. Save intent before killing, under state.lock.
+            job["recovery_cancel"] =
+                json!({"key":format!("recovery-{jid}"),"committed_at":self.rt.now()});
+            self.save(&job)?;
         }
         if !recovery {
             // Save cancellation intent before killing; restart uses the same job lock.

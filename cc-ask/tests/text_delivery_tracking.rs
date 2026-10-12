@@ -43,7 +43,7 @@ fn plain_result_survives_lost_post_response_and_repeated_delivery_without_duplic
         fake: h.fake.clone(),
         lose: true,
     });
-    let text = "判断をお願いしたいです！\n公開してよいですか？\na 公開する\nb 準備を続ける";
+    let text = "状態: 完了\n公開準備を終えました。";
     assert!(result_delivery::post(&mut h.ctx, "200", text, true, job).is_err());
     assert_eq!(h.fake.borrow().posts.len(), 1);
     h.fake.borrow_mut().now += 900.;
@@ -86,13 +86,19 @@ fn intake_registers_plain_decision_result_after_response_loss_without_reposting(
     assert!(h.state()["questions"].as_array().unwrap().is_empty());
     let count = h.fake.borrow().posts.len();
     h.tick();
-    assert_eq!(h.fake.borrow().posts.len(), count);
+    assert_eq!(h.fake.borrow().posts.len(), count + 1);
+    assert_eq!(h.fake.borrow().http_calls.iter().filter(|c|
+        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 2);
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
-    assert_eq!(h.state()["questions"][0]["source"], "request");
+    assert_eq!(h.state()["questions"][0]["source"], "posted");
+    assert_eq!(h.state()["questions"][0]["work_thread_id"], "100");
+    assert_eq!(h.state()["questions"][0]["posting_job"], job);
     assert_eq!(h.state()["questions"][0]["open"], true);
     assert!(h.state()["requests"]["100"]["job"].is_null());
     h.tick();
-    assert_eq!(h.fake.borrow().posts.len(), count);
+    assert_eq!(h.fake.borrow().posts.len(), count + 1);
+    assert_eq!(h.fake.borrow().http_calls.iter().filter(|c|
+        c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads")).count(), 2);
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
 }
 
@@ -101,7 +107,7 @@ fn each_plain_text_chunk_has_a_durable_cursor_and_only_first_chunk_mentions() {
     let mut h = Harness::new();
     std::fs::create_dir_all(h.ctx.jobs.join("jobs/text-parts")).unwrap();
     let text = format!(
-        "判断をお願いしたいです！\n公開してよいですか？\n{}",
+        "状態: 完了\n公開準備を終えました。\n{}",
         "根拠".repeat(1800)
     );
     let first = match result_delivery::post(&mut h.ctx, "200", &text, true, "text-parts").unwrap() {

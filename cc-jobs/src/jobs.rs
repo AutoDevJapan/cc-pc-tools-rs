@@ -21,6 +21,52 @@ pub struct Context {
     pub rt: SharedRuntime,
 }
 impl Context {
+    /// Load saved owner instructions and enforce the current site restriction,
+    /// including old saved jobs and both kinds of continuation. Keep the
+    /// original input immutable; appending this rule does not elevate scope.
+    pub fn prompt_for_attempt(&self, job: &Value) -> Result<PathBuf> {
+        let dir = self.job_dir(s(job, "id"));
+        let source = dir.join(if s(job, "context_phase") == "summarize" {
+            "context-summary-prompt.md"
+        } else if s(job, "context_phase") == "continue" && job["yield_resume"] != true {
+            "context-continue.md"
+        } else if job["yield_resume"] == true {
+            "yield-resume.md"
+        } else {
+            "prompt.md"
+        });
+        let mut text = fs::read_to_string(&source)?;
+        // Read at every attempt, not registration: queued jobs and resumed
+        // sessions must receive changes saved since their original launch.
+        let policy_path = self
+            .rt
+            .env()
+            .get("CC_OWNER_INSTRUCTIONS_PATH")
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                PathBuf::from("D:/CC/AGENTS.md")
+            });
+        let policy = fs::read_to_string(&policy_path)?;
+        if policy.trim().is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "saved owner instructions are empty",
+            )
+            .into());
+        }
+        text.push_str("\n\n## 最新の保存済みオーナー指示\n");
+        text.push_str("以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\n");
+        text.push_str(&policy);
+        // Source text can be quoted evidence. Never use its contents as proof
+        // that a current execution rule has already been applied.
+        text.push_str("\n\n## 実行時のサイト制限\n");
+        text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
+        text.push('\n');
+        let selected = dir.join("execution-prompt.md");
+        fs::write(&selected, text)?;
+        Ok(selected)
+    }
     pub fn installed() -> std::io::Result<Self> {
         let exe = std::env::current_exe()?;
         let rt: SharedRuntime = Arc::new(System::default());
@@ -122,6 +168,9 @@ impl Context {
         unreachable!()
     }
     pub fn read_json(&self, path: &Path) -> Result<Value> {
+        if path == self.todo_store() {
+            return cc_job_policy::todo_store::read(path).map_err(|e| Error::new(e.to_string()));
+        }
         let bytes = self
             .read_file(path)
             .map_err(|e| Error::file_io("read entire file", path, e))?;
@@ -743,6 +792,12 @@ impl Context {
             crate::gate::jobs_limit(self.rt.cores(), 1).to_string(),
         );
         if let Some(real) = self.rt.which("cargo.exe") {
+            // Every new gate reads the current policy here, including gates
+            // launched by supervisors that predate a queue config edit.
+            env.insert(
+                "CODEX_JOBS_CARGO_LOCK_DIR".into(),
+                self.root.to_string_lossy().into(),
+            );
             env.insert("CODEX_JOBS_REAL_CARGO".into(), real);
             env.insert(
                 "CODEX_JOBS_CARGO_GATE".into(),
@@ -1004,15 +1059,7 @@ impl Context {
             });
             proc = Some(self.rt.spawn(&Spawn {
                 argv: codex_args(&job),
-                prompt: dir.join(if s(&job, "context_phase") == "summarize" {
-                    "context-summary-prompt.md"
-                } else if s(&job, "context_phase") == "continue" && job["yield_resume"] != true {
-                    "context-continue.md"
-                } else if job["yield_resume"] == true {
-                    "yield-resume.md"
-                } else {
-                    "prompt.md"
-                }),
+                prompt: self.prompt_for_attempt(&job)?,
                 cwd: PathBuf::from(s(&job, "cwd")),
                 env: environment,
                 flags: NO_WINDOW,

@@ -1,0 +1,243 @@
+<style id="console-shell-style">
+/* Shared frame only. The Operations hierarchy, robots and department colors stay intact. */
+html:has(.console-shell){color-scheme:dark}
+body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6 "Segoe UI","Yu Gothic UI",sans-serif;line-break:strict;overflow-wrap:anywhere;--bg:#101418;--panel:#1a2026;--panel2:#151b21;--line:#343e48;--text:#edf0f2;--muted:#b1bdc8;--blue:#325f50;--blue2:#8cc8b0;--green:#8cc8b0}
+.console-shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100dvh;width:100%;max-width:none;margin:0}
+.console-shell>.sidebar{background:#171d23;border-color:#343e48;padding:22px 16px;min-width:0;gap:20px}
+.console-shell>main{min-width:0;width:auto;max-width:none;margin:0;padding:24px 28px}
+.console-shell .brand{flex-wrap:wrap;gap:10px}.console-shell .brand h1{font-size:18px}.console-shell .brand p{font-size:13px;color:#b1bdc8}
+.console-shell .mark{background:#243c32;color:#a4d1ba;border-color:#466657}
+.console-shell .nav{display:grid;grid-template-columns:1fr;gap:6px}
+.console-shell .nav :is(button,a){display:block;min-height:44px;padding:10px 12px;border:1px solid transparent;border-radius:6px;color:#d7e0e7;text-decoration:none;text-align:left;background:transparent;font:inherit}
+.console-shell .nav :is(button,a):hover{background:#252d34}.console-shell .nav :is(button,a).active{background:#264137;border-color:#4e7664;color:#eef8f3}
+.console-nav-heading{color:#b1bdc8;margin:12px 0 4px;padding:0 12px;font-size:14px;font-weight:500}
+.console-menu-toggle{background:#20282f;color:#edf0f2;border:1px solid #52606c;border-radius:6px;min-height:44px;padding:8px 12px;font:inherit;cursor:pointer}
+.console-shell.console-menu-closed{grid-template-columns:minmax(0,1fr)}
+.console-shell.console-menu-closed>.sidebar{border-right:0;border-bottom:1px solid #343e48;padding:10px 16px}
+.console-menu-closed .nav,.console-menu-closed .sidebar>.side-card,.console-menu-closed .sidebar-footer{display:none}
+.console-shell .sidebar-footer{font-size:13px;color:#b1bdc8}.console-shell .side-card{background:#1a2026;border-color:#343e48}.console-shell .side-card h2,.console-shell .service-mini{font-size:14px;color:#c1ccd5}
+.console-status{background:#1b2b25;border:1px solid #3b584a;border-radius:6px;padding:12px;margin:0 0 20px;min-width:0}
+.console-status-heading{display:flex;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:8px}.console-status-heading strong{font-size:16px}.console-status-heading small{font-size:13px;color:#c3d1c9}
+.console-status-counts{display:flex;gap:8px;flex-wrap:wrap}.console-count{min-height:44px;border:1px solid #53685c;background:#20382d;color:#e2f0e8;font:inherit;padding:8px 12px;border-radius:5px;text-decoration:none;cursor:pointer}.console-count:hover{background:#2a4939}.console-count strong{margin-left:8px;font-variant-numeric:tabular-nums}
+.console-source-list{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px}.console-source-row{min-width:0;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;color:#c3d1c9}.console-source-row[data-error=true]{color:#ffd49b}.console-source-row button{font:inherit;min-height:44px;background:transparent;border:1px solid #607369;color:inherit;border-radius:5px;padding:6px 10px;cursor:pointer}.console-source-row span{white-space:pre-wrap}
+.console-status-note{margin:8px 0 0;font-size:13px;color:#c3d1c9}
+.console-shell .topbar{flex-wrap:wrap;gap:12px}.console-shell .topbar p{font-size:14px;color:#b1bdc8}.console-shell .top-actions{flex-wrap:wrap}.console-shell .top-actions .pill{display:inline-block;background:#1d3027;border-color:#476451;color:#c6e4d2;white-space:normal}
+.console-shell :is(button,input,select,summary){min-height:44px}.console-shell :is(input,select,textarea){max-width:100%;min-width:0}.console-shell :is(button,a,input,select,textarea,summary):focus-visible{outline:2px solid #b1e1c5;outline-offset:3px}
+.console-shell>main :is(.toolbar,.toolbar-left,.composer-foot,.mini-actions,.card-heading,.character-actions,.scene-board-head,.scene-board-actions,.hero,.mini-footer,.mini-footer .actions,.history-actions){flex-wrap:wrap;min-width:0}
+.console-shell>main :is(.field select,.shorts-bar select){width:100%;min-width:0}
+.console-shell>main :is(.hero,.form-card,.field,.composer,.messages,.details,.history,.system-card,.scene-card,.scene-media,.character-board){background:#1a2026;border-color:#3b4752}
+.console-shell>main :is(input,select,textarea){background:#13191f;border-color:#485663;color:#edf0f2}
+.console-shell>main .primary{background:#315c49;border-color:#58806a;color:#f3faf5}.console-shell>main .primary:hover{background:#3d7159}
+.console-shell>main :is(.hint,.field small,.card-heading small,.scene-board-head small,.scene-media small,.scene-ref-hint,.mini-footer,.character-actions,.scene-board-actions){font-size:13px;color:#b1bdc8}
+.console-shell>main :is(.hero p,.job small){color:#bed1c6}.console-shell>main .route-badge{background:#233a2f;border-color:#527360;color:#d0e5d7;white-space:normal}.console-shell>main .scene-number{background:#315448;color:#e3f2e8}
+.console-shell .chat{min-height:0;grid-template-rows:minmax(260px,1fr) auto auto}.console-shell .messages{min-height:35dvh;max-height:60dvh}.console-shell .chip{font-size:14px}.console-shell .composer-head{font-size:14px}
+.console-shell .systems{grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}.console-shell .system-card p,.console-shell .system-card .status{font-size:15px}.console-shell .system-card p{min-height:0}
+.console-shell #systems-grid[data-stale=true]:before{content:'Systemsの取得に失敗しました。前回の状態を表示しています。';grid-column:1/-1;color:#ffd49b}
+.console-shell .ops-worker-text strong{white-space:normal;overflow:visible;font-size:14px}.console-shell .ops-worker-text small{font-size:12px}.console-shell .ops-worker-summary{display:block;font-size:13px;color:#c8d7e8;margin:4px 0;white-space:normal;overflow-wrap:anywhere}
+.console-shared{margin-top:24px;border:1px solid #43515d;background:#1a2026;border-radius:6px;padding:12px}.console-shared>summary{cursor:pointer;color:#e1e9ee;font-weight:600}.console-shared-body{margin-top:12px}.console-shared-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.console-shared-filters label{display:grid;gap:4px;flex:1;min-width:min(180px,100%);font-size:14px}.console-shared-filters :is(input,select){width:100%;min-width:0}.console-todo-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:12px}
+.console-todo-card{border:1px solid #43515d;padding:14px;background:#151b21;border-radius:6px;min-width:0}.console-todo-card h4{margin:4px 0 8px;font-size:16px}.console-todo-card p{margin:6px 0;white-space:pre-wrap}.console-todo-card small{font-size:13px;color:#bfccd6}.console-todo-card details{margin-top:8px}.console-todo-card summary{cursor:pointer}.console-todo-card pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}.console-todo-card a,.ops-dialog a{color:#b3dec8;display:inline-block;min-height:44px;padding:8px 0}
+.console-todo-card,.console-todo-card :is(strong,h4,small,dt,dd){overflow-wrap:anywhere;white-space:normal}.console-task-facts{display:grid;gap:2px;margin:10px 0;min-width:0;font-size:14px}.console-task-facts dt{color:#bfccd6;font-weight:600;margin-top:4px}.console-task-facts dd{margin:0;min-width:0;white-space:pre-wrap}.console-jobs-search{display:grid;gap:4px;margin-bottom:12px}.console-jobs-search input{width:100%}.console-shell .ops-worker-text small{white-space:normal;overflow-wrap:anywhere}.console-shell .ops-worker-meta{min-width:0}.console-shell .ops-status{white-space:normal;overflow-wrap:anywhere}
+.console-shared-empty{color:#c5d0d8}.console-error{color:#ffd49b}.console-shared-section{margin-top:18px;border-top:1px solid #43515d;padding-top:12px}.console-shared-section h3{font-size:18px;margin:0 0 8px}.console-shared-section details{margin:8px 0}.console-shared-section pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+.console-music-body{min-width:0;max-width:1200px}.console-music-body>main{padding:0;margin:0;min-width:0;width:100%;max-width:none}.console-music-body :is(form,.card,section){max-width:100%;min-width:0}.console-music-body :is(button,input,select,textarea){font:inherit}.console-music-body :is(input:not([type=checkbox]):not([type=radio]),select,textarea){max-width:100%;min-width:0}.console-music-body textarea{width:100%}.console-music-body :is(img,video,audio){max-width:100%}.console-music-body :is(h1,h2,h3){color:#edf0f2}.console-music-body :is(.card,.panel,section,form){border-color:#46535f}.console-music-body :is(pre,code){white-space:pre-wrap;overflow-wrap:anywhere}.console-music-note{color:#c5d0d8;border:1px solid #46535f;border-radius:6px;padding:12px;margin-bottom:18px}
+.console-music-body :is(.panel,.card,section,form){background:#1a2026;color:#edf0f2}
+.console-music-body :is(.hint,.tag,.lead,footer,.history span){color:#bdc9d2}
+.console-music-body :is(a,.brand){color:#b3dec8}
+.console-music-body :is(header,.history){border-color:#46535f}
+.console-music-body .error{background:#392b22;color:#ffd8ad;border-color:#d6a36b}
+.console-music-body .secondary{background:#263c31;color:#e3f0e8;border:1px solid #61816d}
+.console-music-body>main>header:has(a.brand[href="/"]){display:none}
+@media(max-width:1199px){.console-shell{grid-template-columns:minmax(0,1fr)}.console-shell>.sidebar{border-right:0;border-bottom:1px solid #343e48;padding:12px 16px}.console-shell .nav{grid-template-columns:repeat(3,minmax(0,1fr))}.console-nav-heading{grid-column:1/-1}.console-shell .sidebar>.side-card,.console-shell .sidebar-footer{display:none}.console-shell>main{padding:20px}.console-shell .ops-departments{grid-template-columns:repeat(2,minmax(0,1fr))}.console-shell .ops-departments:before{left:25%;right:25%}}
+@media(max-width:767px){.console-shell>main{padding:14px}.console-shell .nav{grid-template-columns:1fr}.console-shell .ops-departments{grid-template-columns:minmax(0,1fr)}.console-shell .ops-departments:before{display:none}.console-shell .ops-worker{grid-template-columns:32px minmax(0,1fr)}.console-shell .ops-worker-meta{grid-column:2;display:flex;flex-wrap:wrap;justify-content:space-between;justify-items:start}.console-shell .row,.console-shell .shorts-bar,.console-shell .scene-grid{grid-template-columns:minmax(0,1fr)}.console-shell .details-grid{grid-template-columns:minmax(0,1fr)}.console-shell .resolution-line{grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr)}.console-shell .resolution-line small,.console-shell .resolution-line span:last-child{grid-column:1/-1}.console-shell .ops-filters{width:100%}.console-shell .ops-search{min-width:0;flex-basis:100%}.console-shell .ops-filters select{width:auto;flex:1;min-width:0}.console-shell .toolbar-left{width:100%}.console-shell #model-select{flex:1;min-width:0}.console-shell .mini-actions>*{max-width:100%}.console-shell .mini-actions select{width:100%}.console-shell .top-actions .pill{width:100%}.console-music-body :is(table,.table){display:block;max-width:100%;overflow-x:auto}.console-music-body :is(.grid,.row,.columns){display:flex;flex-direction:column;min-width:0}.console-shell .ops-metric{min-width:0}.console-status{padding:10px}.console-count{flex:1;min-width:min(125px,100%)}.console-source-row{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.console-shell *{scroll-behavior:auto!important;transition:none!important}}
+</style>
+<script>
+(() => {
+  'use strict';
+  function bootConsoleShell(){
+    if(document.querySelector('[data-console-shell-ready]'))return;
+    const music=!document.querySelector('#view-kanban')&&(location.pathname==='/music'||location.pathname.startsWith('/music/'));
+    const q=s=>document.querySelector(s), make=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
+    let musicLoading;
+    window.loadConsoleMusic=()=>{
+      const host=q('#view-music');
+      if(!host||host.dataset.musicLoaded==='true')return Promise.resolve();
+      if(musicLoading)return musicLoading;
+      host.textContent='音楽制作を読み込み中…';
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+      musicLoading=fetch('/music',{signal:controller.signal,headers:{Accept:'text/html'}}).then(async response=>{
+        const page=new DOMParser().parseFromString(await response.text(),'text/html'),content=page.querySelector('#view-music');
+        if(!content)throw new Error('音楽制作の画面を確認できませんでした。');
+        host.replaceChildren(...Array.from(content.childNodes).map(node=>document.importNode(node,true)));
+        // Broker forms and scoped styles are native DOM; no iframe or document
+        // navigation. Scripts parsed from broker HTML remain inert, as the
+        // direct page's CSP authorizes only compiled Console scripts.
+        host.dataset.musicLoaded=String(response.ok);
+        if(!response.ok){const retry=make('button','','音楽制作を再読込');retry.type='button';retry.onclick=window.loadConsoleMusic;host.append(retry)}
+      }).catch(error=>{
+        const message=make('p','console-music-note',error.name==='AbortError'?'音楽制作の接続が時間切れになりました。':error.message),retry=make('button','','音楽制作を再読込');
+        retry.type='button';retry.onclick=window.loadConsoleMusic;host.replaceChildren(message,retry);
+      }).finally(()=>{clearTimeout(timeout);musicLoading=null});
+      return musicLoading;
+    };
+    const names=[['kanban','Operations'],['workload','仕事量'],['systems','Systems'],['chat','Chat'],['music','音楽制作 · Suno'],['minimax','MiniMax-H3']];
+    let frame=q('.shell'),main=frame&&frame.querySelector(':scope > main'),sidebar=frame&&frame.querySelector(':scope > .sidebar');
+    if(music||!frame||!main){
+      const existingMain=q('main'),content=make('div','console-music-body');
+      if(existingMain)content.append(existingMain);else Array.from(document.body.children).filter(node=>!['SCRIPT','STYLE'].includes(node.tagName)&&!node.matches('meta[name="local-ai-console-shell"]')).forEach(node=>content.append(node));
+      frame=make('div','shell');sidebar=make('aside','sidebar');main=make('main');frame.append(sidebar,main);document.body.append(frame);
+      const brand=make('div','brand');brand.append(make('h1','','Local AI Console'));sidebar.append(brand,make('nav','nav'));
+      const header=make('header','topbar'),heading=make('div');heading.append(make('h2','','音楽制作 · Suno'),make('p','','曲の下書きと生成候補を選ぶ'));header.append(heading);main.append(header);
+      main.append(make('p','console-music-note','下書き・曲候補の選択を扱います。MVと投稿は未接続です。'),content);
+    }
+    frame.classList.add('console-shell');frame.dataset.consoleShellReady='true';
+    if(q('#view-music.active'))window.loadConsoleMusic();
+    const nav=sidebar.querySelector('.nav');nav.id='console-navigation';nav.setAttribute('aria-label','機能');
+    const existing=Array.from(nav.querySelectorAll('[data-view],a[href="/music"]'));
+    const links=names.map(([view,label])=>{let link=existing.find(node=>node.dataset.view===view||(view==='music'&&node.tagName==='A'));if(!link){link=make('a','',label);link.href=view==='music'?'/music':'/?view='+view;link.dataset.view=view}link.removeAttribute('style');return link});
+    nav.replaceChildren(make('h2','console-nav-heading','運用'),...links.slice(0,3),make('h2','console-nav-heading','会話・制作'),...links.slice(3));
+    const toggle=make('button','console-menu-toggle','☰ メニュー');toggle.type='button';toggle.setAttribute('aria-controls',nav.id);sidebar.querySelector('.brand').prepend(toggle);
+    function menu(open){frame.classList.toggle('console-menu-closed',!open);toggle.setAttribute('aria-expanded',String(open))}
+    menu(!matchMedia('(max-width:1199px)').matches);toggle.onclick=()=>menu(frame.classList.contains('console-menu-closed'));
+    nav.addEventListener('keydown',event=>{const targets=links.filter(node=>!node.hidden),index=targets.indexOf(document.activeElement);if(event.key==='Escape'){event.preventDefault();menu(false);toggle.focus()}else if(index>=0&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();targets[event.key==='Home'?0:event.key==='End'?targets.length-1:(index+(event.key==='ArrowDown'?1:-1)+targets.length)%targets.length].focus()}});
+    links.forEach((link,index)=>{const view=names[index][0];if(!music&&(view!=='music'||q('#view-music')))link.onclick=event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();if(typeof switchView==='function')switchView(view,{focus:true});if(matchMedia('(max-width:1199px)').matches)menu(false)};if(music&&view==='music'){link.classList.add('active');link.setAttribute('aria-current','page')}});
+    if(q('#stop-btn')){q('#stop-btn').textContent='Local AI全体を停止';q('#stop-btn').title='既存の停止操作の対象はLocal AI全体です。サービス個別の停止ではありません。'}
+    if(q('#mini-stop')){q('#mini-stop').textContent='Local AI全体を停止';q('#mini-stop').title=q('#stop-btn').title}
+    if(q('#view-systems'))q('#view-systems').prepend(make('p','hint','起動はサービスごとの操作です。停止は上部の「Local AI全体を停止」から行います。'));
+    const status=make('section','console-status');status.setAttribute('aria-label','PC全体の共有状態');
+    const statusHeading=make('div','console-status-heading');statusHeading.append(make('strong','','PC全体の状態'),make('small','','セッション共通 · 15秒ごとに確認'));status.append(statusHeading);
+    const counts=make('div','console-status-counts'),sourceList=make('div','console-source-list'),note=make('p','console-status-note');status.append(counts,sourceList,note);
+    const header=main.querySelector(':scope > .topbar');if(header)header.after(status);else main.prepend(status);
+    const sources=new Map(),rows=new Map(),musicBusy=new Set();
+    const array=value=>Array.isArray(value)?value:[],num=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
+    function stamp(value){if(value==null||value==='')return null;const date=new Date(value);return Number.isFinite(date.getTime())?date:null}
+    function time(value){const date=stamp(value);return date?date.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' JST':'—'}
+    const waiting=worker=>{const reason=worker.waitKind||worker.waitingReason||worker.waitReason;return ['owner','decision','owner_decision'].includes(reason)?'decision':['resource','capacity','build'].includes(reason)?'resource':['dependency','todo'].includes(reason)||worker.todoStatus==='wait'?'dependency':''};
+    const countSpecs=[['decision','送信を確認した未回答質問'],['resource','資源待ち'],['attention','要対応'],['working','実行中ジョブ']];
+    const countNodes=new Map();countSpecs.forEach(([key,label])=>{const button=make('a','console-count',label),number=make('strong','','—');button.href='/?view=kanban&opsStatus='+key;button.append(number);button.onclick=event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;if(!music){event.preventDefault();openOperations(key)}};counts.append(button);countNodes.set(key,number)});
+    function drawSources(){
+      for(const [key,source] of sources){
+        let row=rows.get(key);if(!row){const holder=make('div','console-source-row'),label=make('strong','',({operations:'Operations',health:'Systems',models:'Chatモデル',characters:'制作の人物',minimax:'MiniMax-H3',history:'生成履歴',todo:'共有ToDo',jobs:'ジョブ',handoff:'引き継ぎ'})[key]||key),text=make('span'),retry=make('button','','再試行');retry.type='button';retry.onclick=()=>retrySource(key);holder.append(label,text,retry);sourceList.append(holder);row={holder,text,retry};rows.set(key,row)}
+        const aged=source.receivedAt&&Date.now()-source.receivedAt>45000,old=stamp(source.data&&source.data.fetchedAt),originOld=old&&Date.now()-old.getTime()>45000;
+        const partial=key==='operations'&&source.data&&source.data.sourceOk!==true;
+        row.holder.dataset.error=String(Boolean(source.error||partial));row.retry.hidden=!source.error&&!partial;row.retry.disabled=Boolean(source.loading);
+        row.text.textContent=`取得 ${time(source.receivedAt)} · ${source.loading?'更新中 · ':''}${source.error?(source.receivedAt?'取得失敗・前回保持（古い情報）':'取得失敗・未取得')+' · '+source.error:source.receivedAt?(aged?'古い情報':partial?'一部の原本が未取得':'確認済み'):'未取得 —'}${old?' · 原本 '+time(old)+(originOld?'（古い情報）':''):''}`;
+      }
+      const operations=sources.get('operations'),data=operations&&operations.data,workers=array(data&&data.departments).flatMap(dept=>array(dept.products).flatMap(product=>array(product.workers))),metrics=data&&data.metrics||{};
+      const originalSources=array(data&&data.sources),sourceOk=key=>originalSources.some(source=>source.key===key&&source.ok===true),workerCountsKnown=sourceOk('todos')&&sourceOk('jobs')&&stamp(data&&data.fetchedAt)!==null;
+      const values={decision:num(metrics.confirmedUnansweredQuestions),resource:workerCountsKnown?workers.filter(worker=>worker.status==='waiting'&&waiting(worker)==='resource').length:null,attention:workerCountsKnown?workers.filter(worker=>worker.status==='attention').length:null,working:num(metrics.activeJobs)};
+      for(const [key,node] of countNodes)node.textContent=values[key]==null?'—':String(values[key]);
+      const unknown=workers.filter(worker=>worker.status==='waiting'&&!waiting(worker)).length;
+      const sourceIssues=array(data&&data.sources).filter(source=>source.ok!==true&&source.state!=='unknown');
+      note.textContent=unknown?`待機 ${unknown}担当は理由未確認です。判断待ちには含めません。`:data?'件数はOperationsの原本から取得。要対応は担当の状態です。':'件数は未取得です。';
+      if(data)note.textContent+=` 質問を待つ作業 ${num(metrics.ownerDecisionTasks)===null?'—':metrics.ownerDecisionTasks}件 · 未送信の質問 ${num(metrics.unsentQuestions)===null?'—':metrics.unsentQuestions}件 · 送信確認不能 ${num(metrics.unverifiedQuestions)===null?'—':metrics.unverifiedQuestions}件 · 履歴未確認 ${num(metrics.historyInspectionPendingThreads)===null?'—':metrics.historyInspectionPendingThreads}スレッド。`;
+      if(data&&!workerCountsKnown)note.textContent+=' 資源待ち・要対応の全件数は未確認（—）です。';
+      const health=sources.get('health'),services=health&&health.data?['godd','opencodex','ollama','deepseek','docker'].map(key=>health.data[key]):[];
+      if(services.length){const failed=services.filter(service=>service&&(service.status==='failed'||service.status==='error'||service.error)).length,stopped=services.filter(service=>service&&service.online===false&&!service.error&&!['failed','error'].includes(service.status)).length,missing=services.filter(service=>!service||typeof service.online!=='boolean').length;note.textContent+=` Systems: 障害の記録 ${failed} / 起動していない ${stopped} / 状態不明 ${missing}。${health.error?'前回の記録です。':''}`}
+      if(sourceIssues.length)note.textContent+=' 一部の原本を取得できません: '+sourceIssues.map(source=>source.label||source.key).join('、');
+      if(data&&data.fetchedAt==null)note.textContent+=' 原本の取得時刻は未記録です。';
+    }
+    function receive(key,patch){sources.set(key,{...(sources.get(key)||{}),...patch});drawSources()}
+    window.addEventListener('console-source',event=>{const {key,...patch}=event.detail;receive(key,patch)});
+    Object.entries(window.consoleStatusSources||{}).forEach(([key,source])=>receive(key,source));
+    for(const key of ['operations','health'])if(!sources.has(key))receive(key,{loading:!music,error:''});
+    function sharedResponse(key,value){
+      if(!value||value.ok!==true||value.version!==1||!value.data||typeof value.data!=='object'||Array.isArray(value.data))throw new Error('共有表示APIの成功と形式を確認してください');
+      const data=value.data,records=key==='todo'?data.items:key==='jobs'?data.jobs:data.decisions;
+      if(!Array.isArray(records)||records.some(record=>!record||typeof record!=='object'||Array.isArray(record)||(key==='todo'?typeof record.id!=='number'||!Number.isFinite(record.id)||typeof record.title!=='string'||typeof record.status!=='string':key==='jobs'?typeof record.id!=='string'||typeof record.task_title!=='string'||typeof record.status!=='string':typeof record.id!=='string'||typeof record.summary!=='string'))||(key==='handoff'&&typeof data.text!=='string'))throw new Error('共有表示データの形式を確認してください');
+      return data;
+    }
+    function request(key,path,render){if(musicBusy.has(key))return Promise.resolve();musicBusy.add(key);receive(key,{loading:true});const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);return fetch(path,{signal:controller.signal,headers:{Accept:'application/json'}}).then(async response=>{if(!response.ok)throw new Error('HTTP '+response.status);const value=await response.json(),data=['todo','jobs','handoff'].includes(key)?sharedResponse(key,value):value;if(render)render(data);receive(key,{data,receivedAt:Date.now(),error:''})}).catch(error=>receive(key,{error:error.name==='AbortError'?'接続がタイムアウトしました。':error.message})).finally(()=>{clearTimeout(timeout);musicBusy.delete(key);receive(key,{loading:false})})}
+    function retrySource(key){if(key==='operations'){if(!music&&typeof refreshOperations==='function')refreshOperations();else request('operations','/api/operations',data=>{if(!data||!Array.isArray(data.departments))throw new Error('データの形式を確認してください')})}else if(key==='health'){if(!music&&typeof refresh==='function')refresh();else request('health','/api/health',data=>{if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('状態の形式を確認してください')})}else if(['todo','jobs','handoff'].includes(key)){loadShared(key)}else if(typeof refresh==='function')refresh()}
+    function setFilter(key,search=''){const select=q('#ops-status');if(select){select.value=Array.from(select.options).some(option=>option.value===key)?key:'';select.dispatchEvent(new Event('change'))}if(q('#ops-search')){q('#ops-search').value=search;q('#ops-search').dispatchEvent(new Event('input'))}}
+    const operationsView=q('#view-kanban');let shared,sharedBody,todoList,todoProject,todoStatus,todoSearch,jobsHost,jobsSearch,handoffHost;
+    let sharedData={},sharedSignature={},pendingShared={},sharedComposing=false;
+    const short=value=>{const text=String(value||'').trim().replace(/\s+/g,' ');return text.length>180?text.slice(0,180)+'…':text};
+    function dependencies(record){return record.dependencySummary||array(record.dependencies).map(id=>'ToDo #'+id).join('、')||'未記録'}
+    function taskFacts(record,full=false){
+      const facts=make('dl','console-task-facts'),resultTime=stamp(record.lastResultAt)?time(record.lastResultAt):'未記録';
+      for(const [label,value] of [['作業要約',record.summary||'未記録'],['最終成果の時刻',resultTime],['成果内容',record.lastResult||'未記録'],['現在の工程',record.currentStage||'未記録'],['停止理由',record.stopReason||'未記録'],['次の行動',record.nextAction||'未記録'],['依存先',dependencies(record)]])facts.append(make('dt','',label),make('dd','',full?value:short(value)));
+      if(record.factsSource)facts.append(make('dt','','記録元'),make('dd','',short(record.factsSource)));
+      return facts;
+    }
+    function matchesTask(record,query,values=[]){return !query||[...values,record.summary,record.currentStage,record.stopReason,record.nextAction,dependencies(record)].some(value=>String(value||'').toLocaleLowerCase('ja-JP').includes(query))}
+    function taskHistory(record){
+      const entries=array(record.history),history=make('ul');
+      for(const entry of entries){if(typeof entry==='string'){history.append(make('li','',entry));continue}if(!entry||typeof entry!=='object'){history.append(make('li','','内容未記録'));continue}history.append(make('li','',`${time(entry.at||entry.updated_at||entry.timestamp||entry.updated)} · ${entry.note||entry.message||entry.summary||entry.status||'内容未記録'}`))}
+      return entries.length?history:make('p','','履歴は未記録です。');
+    }
+    const questionUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'&&['discord.com','www.discord.com'].includes(url.hostname)&&/^\/channels\/\d+\/\d+(?:\/\d+)?\/?$/.test(url.pathname)&&!url.username&&!url.password?url.href:null}catch{return null}};
+    function selectedInside(host){const selection=window.getSelection();return host.contains(document.activeElement)||(selection&&!selection.isCollapsed&&host.contains(selection.anchorNode))||sharedComposing}
+    function preserveDetails(host,render){if(selectedInside(host))return false;const opened=new Set(Array.from(host.querySelectorAll('details[open][data-record]')).map(node=>node.dataset.record));render();host.querySelectorAll('details[data-record]').forEach(node=>{node.open=opened.has(node.dataset.record)});return true}
+    function renderTodos(){
+      if(!todoList||!sharedData.todo)return;
+      if(selectedInside(todoList))return;
+      const data=sharedData.todo,items=array(data.items);const query=todoSearch.value.trim().toLocaleLowerCase('ja-JP'),project=todoProject.value,filter=todoStatus.value;
+      const shown=items.filter(item=>(!project||item.project===project)&&(!filter||(filter==='open'?item.status!=='done':item.status===filter))&&matchesTask(item,query,[item.title,item.project,item.note,item.id]));
+      preserveDetails(todoList,()=>{todoList.replaceChildren();for(const item of shown){const card=make('article','console-todo-card');card.append(make('small','',`#${item.id} · ${item.project||'プロジェクト未記録'} · ${({todo:'未着手',doing:'作業中',block:'停止理由を確認',wait:'別ToDoの完了待ち',done:'完了'})[item.status]||'状態未確認'}`),make('h4','',short(item.title)||'題名未記録'),taskFacts(item));
+        const progress=num(item.progress);card.append(make('small','',`進み具合 ${progress!==null&&progress<=100?progress+'%':'未記録'} · 担当 ${item.agent||item.assignee||'未記録'}`));
+        const details=make('details');details.dataset.record='todo:'+item.id;details.append(make('summary','','全文と履歴を見る'),make('h4','',item.title||'題名未記録'),taskFacts(item,true),make('p','',item.note||'記録なし'));
+        const url=questionUrl(item.questionUrl||item.question_url);if(url){const link=make('a','','Discordで原本の質問を見る（別タブ）');link.href=url;link.target='_blank';link.rel='noopener noreferrer';details.append(link)}
+        const linked=array(item.linked_jobs||item.jobs);details.append(make('p','',linked.length?'関連ジョブ: '+linked.map(job=>typeof job==='string'?job:`${job.name||job.id||'担当'} · ${job.status||'状態未記録'}`).join('、'):'関連ジョブは未記録です。'));
+        const waits=array(item.wait_on||item.waiting_on);if(waits.length)details.append(make('p','','完了を待つToDo: '+waits.map(id=>'#'+id).join('、')));
+        if(item.spec)details.append(make('p','','指示書の保存先: '+item.spec));details.append(make('p','','更新 '+time(item.updated_at||item.updatedAt||item.updated)));const history=make('ul');for(const entry of array(item.history)){const message=typeof entry==='string'?entry:entry.note||entry.message||entry.summary||entry.status||'内容未記録';history.append(make('li','',typeof entry==='string'?message:`${time(entry.at||entry.updated_at||entry.timestamp||entry.updated)} · ${message}`))}if(history.childNodes.length)details.append(history);else details.append(make('p','','履歴は未記録です。'));card.append(details);todoList.append(card)}if(!shown.length)todoList.append(make('p','console-shared-empty',items.length?'条件に一致する共有ToDoはありません。条件を解除してください。':'登録された共有ToDoはありません。'))});
+    }
+    function renderJobs(){
+      if(!jobsHost||!sharedData.jobs||selectedInside(jobsHost))return;
+      const query=jobsSearch.value.trim().toLocaleLowerCase('ja-JP'),jobs=array(sharedData.jobs.jobs).filter(job=>['queued','starting','running','thinking','waiting'].includes(job.status));
+      const shown=jobs.filter(job=>matchesTask(job,query,[job.task_title,job.name,job.id]));
+      preserveDetails(jobsHost,()=>{
+        jobsHost.replaceChildren();
+        for(const job of shown){
+          const card=make('article','console-todo-card'),details=make('details');details.dataset.record='job:'+job.id;
+          card.append(make('strong','',`${short(job.task_title||job.name||job.id)} · ${({queued:'起動待ち',starting:'起動中',running:'実行中',thinking:'思考中',waiting:'待機'})[job.status]}`),taskFacts(job));
+          details.append(make('summary','','ジョブの全文と履歴を見る'),make('h4','',job.task_title||job.name||job.id),taskFacts(job,true),make('p','',`開始 ${time(job.started_at)} · 終了 ${time(job.finished_at)}`),make('h4','','最終報告'),make('p','',job.report||'未記録'),make('h4','','直近のメッセージ'),make('p','',job.last_message||'未記録'),make('h4','','履歴'),taskHistory(job));
+          card.append(details);jobsHost.append(card);
+        }
+        if(!shown.length)jobsHost.append(make('p','',jobs.length?'検索に一致するジョブはありません。検索条件を解除してください。':'実行中・起動待ちのジョブはありません。'));
+      });
+    }
+    function applyShared(key,data){
+      const host=key==='todo'?todoList:key==='jobs'?jobsHost:handoffHost;if(!host)return;
+      if(key==='todo'&&!Array.isArray(data.items))throw new Error('共有ToDoの形式を確認してください');if(key==='jobs'&&!Array.isArray(data.jobs))throw new Error('ジョブの形式を確認してください');
+      if(selectedInside(host)){pendingShared[key]=data;return}pendingShared[key]=null;sharedData[key]=data;
+      const signature=JSON.stringify(data);if(sharedSignature[key]===signature)return;sharedSignature[key]=signature;
+      if(key==='todo'){const current=todoProject.value,projects=[...new Set(array(data.items).map(item=>item.project).filter(Boolean))];if(document.activeElement!==todoProject){todoProject.replaceChildren(make('option','','すべて'));todoProject.firstChild.value='';projects.forEach(project=>{const option=make('option','',project);option.value=project;todoProject.append(option)});if(current&&!projects.includes(current)){const option=make('option','',current+'（前回の条件）');option.value=current;todoProject.append(option)}todoProject.value=current}renderTodos();return}
+      if(key==='jobs'){renderJobs();return}
+      preserveDetails(host,()=>{host.replaceChildren();const overview=make('details');overview.dataset.record='handoff:overview';overview.append(make('summary','','引き継ぎの全文'),make('pre','',data.text||'引き継ぎの記録はありません。'));host.append(make('p','',short(data.text)||'引き継ぎの記録はありません。'),overview);for(const decision of array(data.decisions)){const details=make('details');details.dataset.record='decision:'+decision.id;details.append(make('summary','',short(decision.summary)||decision.id),make('pre','',decision.summary||''));host.append(details)}if(data.prs_error)host.append(make('p','console-error','PR取得失敗: '+data.prs_error));if(data.delegation)host.append(make('p','',`自動委譲 ${data.delegation.enabled?'有効':'停止中'} · 最終確認 ${time(data.delegation.last_tick)}`))});
+    }
+    function loadShared(only){if(!shared||!shared.open||!operationsView.classList.contains('active'))return;for(const key of only?[only]:['todo','jobs','handoff'])request(key,'/api/agent/display/'+key,data=>applyShared(key,data))}
+    if(operationsView){
+      ['decision','resource','dependency'].forEach(key=>{const option=make('option','',({decision:'送信済みの質問待ち',resource:'資源待ち',dependency:'別ToDoの完了待ち'})[key]);option.value=key;q('#ops-status').append(option)});
+      shared=make('details','console-shared');shared.id='console-shared';shared.append(make('summary','','共有ToDo・実行中ジョブ・引き継ぎ'));sharedBody=make('div','console-shared-body');shared.append(sharedBody);operationsView.append(shared);
+      // Move an existing shared overview if another decorator provided it; retain its handlers.
+      const old=q('#agent-overview')||q('#agent-panel')||q('#shared-todo-panel');if(old&&!shared.contains(old))sharedBody.append(old);
+      const filters=make('div','console-shared-filters');todoProject=make('select');todoStatus=make('select');todoSearch=make('input');todoSearch.type='search';todoSearch.placeholder='作業・要約・工程・停止・次・依存・番号で検索';
+      for(const [value,label] of [['open','未完了'],['','すべて'],['block','停止理由を確認'],['wait','別ToDoの完了待ち'],['doing','作業中'],['todo','未着手'],['done','完了']]){const option=make('option','',label);option.value=value;todoStatus.append(option)}
+      todoProject.append(make('option','','すべて'));todoProject.firstChild.value='';for(const [text,input] of [['プロジェクト',todoProject],['状態',todoStatus],['検索',todoSearch]]){const label=make('label','',text);label.append(input);filters.append(label)}sharedBody.append(filters);todoList=make('div','console-todo-list');todoList.append(make('p','','共有ToDoは未取得です。'));sharedBody.append(todoList);
+      const clear=make('button','','条件を解除');clear.type='button';clear.onclick=()=>{todoSearch.value='';todoProject.value='';todoStatus.value='open';renderTodos()};sharedBody.append(clear);
+      for(const [key,label] of [['jobs','実行中・起動待ちのジョブ'],['handoff','引き継ぎ・最近の判断']]){const section=make('section','console-shared-section');section.id='console-shared-'+key;section.append(make('h3','',label));if(key==='jobs'){const searchLabel=make('label','console-jobs-search','ジョブを検索');jobsSearch=make('input');jobsSearch.type='search';jobsSearch.placeholder='作業・要約・工程・停止・次・依存で検索';searchLabel.append(jobsSearch);section.append(searchLabel);jobsSearch.addEventListener('input',()=>{if(!sharedComposing)renderJobs()});jobsSearch.addEventListener('compositionstart',()=>{sharedComposing=true});jobsSearch.addEventListener('compositionend',()=>{sharedComposing=false;renderJobs()})}const host=make('div');host.append(make('p','','未取得です。'));section.append(host);sharedBody.append(section);if(key==='jobs')jobsHost=host;else handoffHost=host}
+      shared.addEventListener('toggle',()=>{if(shared.open)loadShared()});todoSearch.addEventListener('input',()=>{if(!sharedComposing)renderTodos()});todoSearch.addEventListener('compositionstart',()=>{sharedComposing=true});todoSearch.addEventListener('compositionend',()=>{sharedComposing=false;renderTodos()});[todoProject,todoStatus].forEach(select=>select.addEventListener('change',renderTodos));
+      shared.addEventListener('focusout',()=>queueMicrotask(()=>{for(const [key,data] of Object.entries(pendingShared))if(data)applyShared(key,data)}));
+    }
+    function openOperations(key){
+      if(typeof switchView!=='function')return;
+      switchView('kanban',{historyMode:'none'});restoring=true;try{setFilter(key)}finally{restoring=false}const url=new URL(location.href);url.searchParams.set('view','kanban');url.searchParams.set('opsStatus',key);url.searchParams.delete('opsSearch');
+      if(key==='working'&&shared){shared.open=true;url.searchParams.set('opsPanel','jobs');loadShared()}else url.searchParams.delete('opsPanel');history.pushState({},'',url);
+      const target=key==='working'?jobsHost:q('#ops-search');if(target){target.tabIndex=-1;target.focus();target.scrollIntoView({block:'nearest'})}
+    }
+    let restoring=false;
+    function restoreConditions(){if(music)return;const previous=restoring;restoring=true;try{const params=new URL(location.href).searchParams;setFilter(params.get('opsStatus')||'',params.get('opsSearch')||'');if(shared){shared.open=params.get('opsPanel')==='jobs';if(shared.open)loadShared()}}finally{restoring=previous}}
+    window.addEventListener('popstate',restoreConditions);
+    window.addEventListener('console-view',()=>{restoreConditions();if(shared&&shared.open)loadShared()});
+    if(q('#ops-status'))q('#ops-status').addEventListener('change',()=>{if(restoring)return;const url=new URL(location.href);url.searchParams.set('view','kanban');if(q('#ops-status').value)url.searchParams.set('opsStatus',q('#ops-status').value);else url.searchParams.delete('opsStatus');history.replaceState({},'',url)});
+    if(q('#ops-search'))q('#ops-search').addEventListener('input',event=>{if(restoring||event.isComposing)return;const url=new URL(location.href);if(q('#ops-search').value)url.searchParams.set('opsSearch',q('#ops-search').value);else url.searchParams.delete('opsSearch');history.replaceState({},'',url)});
+    restoreConditions();
+    // Both source requests have their own timeout, data, error and last-success timestamp.
+    function tick(){if(document.hidden)return;if(music){retrySource('operations');retrySource('health')}else{loadShared();if(state.pendingCharacters)applyCharacterRefresh(state.pendingCharacters)}drawSources()}
+    if(music){retrySource('operations');retrySource('health')}setInterval(tick,15000);
+    setInterval(drawSources,5000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootConsoleShell,{once:true});else bootConsoleShell();
+})();
+</script>

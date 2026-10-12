@@ -456,3 +456,27 @@ fn completion_wait_does_not_turn_into_unassigned_work() {
     assert!(text.starts_with("作業中 0件・止まっている 1件・完了待ち 2件"));
     assert_eq!(text.matches("止まっている（担当なし）").count(), 1);
 }
+
+#[test]
+fn plus_restoration_wait_is_visible_without_an_owner_question_or_stall() {
+    let mut db = json!({"items":[{"id":1974,"project":"chatgpt-web","title":"実送受信を確かめる","status":"wait","wait_ready":{"condition":"chatgpt-plus","since":100},"updated":"2026-10-10 19:00"}]});
+    mark_unassigned(&mut db, &[], &json!({"queue":[]}), 1791270000.);
+    assert_eq!(db["items"][0]["board_unassigned"], false);
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791270000.);
+    assert!(text.contains("Plusの復旧確認待ち 1件"));
+    assert!(text.contains("ChatGPT Plusの復旧確認待ち"));
+    assert!(!text.contains("・再開待ち 1件"));
+    assert!(text.contains("あなたの返事待ち 0件（質問）"));
+}
+
+#[test]
+fn timed_retry_is_shown_as_another_check_without_claiming_recovery_or_owner_wait() {
+    let mut db = json!({"items":[{"id":1139,"project":"demo","title":"曲の取り込みを確かめる","status":"wait","wait_ready":{"condition":"retry-time","since":1791695600u64,"not_before":1791699200u64},"updated":"2026-10-11 18:40"}]});
+    mark_unassigned(&mut db, &[], &json!({"queue":[]}), 1791696000.);
+    assert_eq!(db["items"][0]["board_unassigned"], false);
+    let text = render(&db, &[], &json!({}), &Names::parse(""), 1791696000.);
+    assert!(text.contains("次の再確認待ち 1件"));
+    assert!(text.contains("次の再確認まで待機"));
+    assert!(text.contains("あなたの返事待ち 0件（質問）"));
+    assert!(!text.contains("復旧確認待ち"));
+}

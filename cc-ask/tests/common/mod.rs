@@ -14,6 +14,7 @@ pub struct Harness {
     pub fake: Rc<RefCell<Fake>>,
 }
 pub struct Fake {
+    pub chronology: Vec<String>,
     pub recover_fail: bool,
     pub reboot_recover_fail: bool,
     pub codex_directories: Vec<String>,
@@ -37,6 +38,7 @@ pub struct Fake {
     pub pick_down: bool,
     pub remove_session_on_pick: Option<PathBuf>,
     pub launch_error: bool,
+    pub launch_queued: bool,
     pub launch_error_message: String,
     pub launch_transport_fail: bool,
     pub crash_after_todo_add: bool,
@@ -52,6 +54,80 @@ pub struct Fake {
 pub fn message(mid: &str, text: &str, owner: &str) -> Value {
     json!({"id":mid,"author":{"id":owner},"content":text,"timestamp":"2026-09-30T10:00:00+00:00","attachments":[]})
 }
+pub fn decision(h: &Harness, args: &mut cc_ask::commands::AskArgs, scope: &str) {
+    let path = h.root.path().join("decision.json");
+    atomic_json(
+        &path,
+        &json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],
+        "decision":"direction","scope":{"specification":scope}}),
+        2,
+    )
+    .unwrap();
+    args.decision_file = Some(path);
+}
+
+pub fn review_owner_context(h: &mut Harness, args: &cc_ask::commands::AskArgs) {
+    let review = cc_ask::commands::cmd_ask(&mut h.ctx, args).unwrap();
+    assert_eq!(review["suppressed"], "owner_context_required");
+    assert_eq!(review["approval_matches_requested_scope"], false);
+    let path = args.decision_file.as_ref().unwrap();
+    let mut identity = read_json(path).unwrap();
+    identity["reviewed_owner_context"] = review["owner_context_digest"].clone();
+    atomic_json(path, &identity, 2).unwrap();
+}
+
+/// Independent concurrent clients see the same durable fake server's question,
+/// rather than an empty unrelated HTTP inventory in the second client.
+pub struct RouteServer(pub SharedFake, pub PathBuf);
+impl Effects for RouteServer {
+    fn now(&self) -> f64 {
+        self.0.now()
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.0.run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+        discord: bool,
+    ) -> Result<Value> {
+        let path = url.trim_start_matches("https://discord.com/api/v10");
+        let tid = path.split('/').nth(2).unwrap_or("");
+        if method == "GET"
+            && path.starts_with("/channels/")
+            && !self.0 .0.borrow().threads.contains_key(tid)
+        {
+            if let Ok(entries) = std::fs::read_dir(self.1.join("question-progress")) {
+                for entry in entries.flatten() {
+                    let r = read_json(&entry.path())?;
+                    if s(&r["question_thread_id"]) != tid {
+                        continue;
+                    }
+                    self.0
+                         .0
+                        .borrow_mut()
+                        .http_calls
+                        .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
+                    if path.contains("/messages") {
+                        let mut starter = message(
+                            s(&r["question"]["starter"]),
+                            s(&r["question"]["payload"]["content"]),
+                            s(&r["sender"]),
+                        );
+                        starter["author"]["bot"] = json!(true);
+                        return Ok(json!([starter]));
+                    }
+                    return Ok(
+                        json!({"id":tid,"guild_id":r["guild"],"parent_id":r["parent"],"owner_id":r["sender"],"type":11}),
+                    );
+                }
+            }
+        }
+        self.0.http(method, url, body, discord)
+    }
+}
 impl Harness {
     pub fn new() -> Self {
         // The user's home may itself be a repository. Python keeps fixtures under
@@ -63,8 +139,15 @@ impl Harness {
         };
         let path = root.path().to_path_buf();
         std::fs::write(path.join("client-projects.txt"), "").unwrap();
+        atomic_json(
+            &path.join("todo.json"),
+            &json!({"items":[],"projects":{}}),
+            2,
+        )
+        .unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
+            chronology: vec![],
             recover_fail: false,
             reboot_recover_fail: false,
             codex_directories: vec![],
@@ -75,7 +158,7 @@ impl Harness {
             threads: BTreeMap::from([
                 (
                     "100".into(),
-                    json!({"id":"100","type":11,"parent_id":REQUEST_CHANNEL_ID,"owner_id":"OWN","name":"依頼A","thread_metadata":{"archived":false}}),
+                    json!({"id":"100","guild_id":"G","type":11,"parent_id":REQUEST_CHANNEL_ID,"owner_id":"OWN","name":"依頼A","thread_metadata":{"archived":false}}),
                 ),
                 (
                     "200".into(),
@@ -100,6 +183,7 @@ impl Harness {
             pick_down: false,
             remove_session_on_pick: None,
             launch_error: false,
+            launch_queued: false,
             launch_error_message: "mock failure".into(),
             launch_transport_fail: false,
             crash_after_todo_add: false,
@@ -238,6 +322,7 @@ impl Fake {
         body: Option<&Value>,
         discord: bool,
     ) -> Result<Value> {
+        self.chronology.push(format!("http:{method}:{url}"));
         if method == "GET" && url.contains("/messages?limit=100") {
             if let Some((remaining, _, _)) = &mut self.history_injection {
                 *remaining -= 1;
@@ -304,12 +389,23 @@ impl Fake {
         }
         if path == "/channels/T/threads" {
             let b = body.unwrap();
-            let thread = json!({"id":"300","type":11,"last_message_id":"300","name":b["name"],"parent_id":"T","owner_id":"BOT","thread_metadata":{"archived":false}});
-            self.threads.insert("300".into(), thread.clone());
-            self.messages.insert(
-                "300".into(),
-                vec![message("300", s(&b["message"]["content"]), "BOT")],
-            );
+            let id = (self
+                .threads
+                .keys()
+                .filter_map(|v| v.parse::<u64>().ok())
+                .max()
+                .unwrap_or(0)
+                .max(299)
+                + 1)
+            .to_string();
+            let thread = json!({"id":id,"guild_id":"G","type":11,"last_message_id":id,"name":b["name"],"parent_id":"T","owner_id":"BOT","thread_metadata":{"archived":false}});
+            self.threads.insert(id.clone(), thread.clone());
+            let mut starter = message(&id, s(&b["message"]["content"]), "BOT");
+            starter["author"]["bot"] = json!(true);
+            starter["flags"] = b["message"]["flags"].clone();
+            starter["mentions"] = b["message"]["allowed_mentions"]["users"].clone();
+            starter["allowed_mentions"] = b["message"]["allowed_mentions"].clone();
+            self.messages.insert(id, vec![starter]);
             return Ok(thread);
         }
         if method == "POST" && path == "/channels/GENERAL/threads" {
@@ -377,6 +473,7 @@ impl Fake {
             let b = body.unwrap();
             let mut msg = message(&self.sequence.to_string(), s(&b["content"]), "BOT");
             msg["author"]["bot"] = json!(true);
+            msg["nonce"] = b["nonce"].clone();
             if b.get("message_reference").is_some() {
                 msg["message_reference"] = b["message_reference"].clone();
             }
@@ -417,6 +514,11 @@ impl Fake {
             .ok_or("unknown thread".into())
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.chronology.push(format!(
+            "run:{}:{}",
+            argv.join("|"),
+            argv.last().map(String::as_str).unwrap_or("")
+        ));
         self.runs.push((argv.to_vec(), timeout));
         if argv.iter().any(|a| a == "recover-reboot") {
             return Ok(Output {
@@ -588,6 +690,60 @@ impl Fake {
                 let i = argv.iter().position(|a| a == "cancel").unwrap();
                 let file = self.root.join("jobs").join(&argv[i + 1]).join("job.json");
                 let mut job = read_json(&file)?;
+                if argv.iter().any(|a| a == "--if-todo-ready") {
+                    let store = PathBuf::from(arg("--todo-file"));
+                    let _todo = ByteLock::acquire(
+                        &store.with_file_name("todo.lock"),
+                        std::time::Duration::ZERO,
+                    )?;
+                    let db = if store.is_file() {
+                        read_json(&store)?
+                    } else {
+                        json!({"items":[]})
+                    };
+                    let mut identity = job.clone();
+                    identity["id"] = json!(&argv[i + 1]);
+                    let mut ids: std::collections::BTreeSet<_> = job["related_todo_ids"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_i64)
+                        .collect();
+                    ids.extend(job["todo_id"].as_i64());
+                    ids.extend(arg("--todo-id").parse::<i64>().ok());
+                    ids.extend(
+                        arg("--related-todo-ids")
+                            .split(',')
+                            .filter_map(|id| id.parse::<i64>().ok()),
+                    );
+                    identity["related_todo_ids"] = json!(ids);
+                    let on = cc_job_policy::todo_wait::job_pending_on(&db, &identity);
+                    let outcome = if job["cancel_requested"] == true
+                        || (["cancelled", "lost"].contains(&s(&job["status"]))
+                            && ["manual", "person"].contains(&s(&job["cancel_reason"])))
+                    {
+                        "owner_stopped"
+                    } else if !on.is_empty()
+                        && s(&job["recovery_cancel"]["key"]) != arg("--cancel-key")
+                    {
+                        "deferred"
+                    } else if !RUNNING.contains(&s(&job["status"])) {
+                        "already_terminal"
+                    } else {
+                        "cancelled"
+                    };
+                    if outcome == "cancelled" {
+                        job["status"] = json!("cancelled");
+                        job["related_todo_ids"] = identity["related_todo_ids"].clone();
+                        job["recovery_cancel"] =
+                            json!({"committed_at":self.now,"key":arg("--cancel-key")});
+                        atomic_json(&file, &job, 2)?;
+                    }
+                    return Ok(Output {
+                        stdout: json!({"outcome":outcome,"job":argv[i+1],"wait_on":on}).to_string(),
+                        ..Default::default()
+                    });
+                }
                 job["status"] = json!("cancelled");
                 atomic_json(&file, &job, 2)?;
             }
@@ -602,6 +758,11 @@ impl Fake {
         let name = arg("--name");
         let mut record = json!({"model":arg("--auto-model"),"effort":arg("--effort"),"sandbox":arg("--sandbox"),"task_type":arg("--task-type"),"launch_key":arg("--launch-key"),"cwd":arg("--cwd"),"name":name,"prompt":prompt,"prompt_path":prompt_path,"resume_session":arg("--resume-session"),"diagnosis":name.starts_with("diag-")});
         record["mcp_profile"] = json!(arg("--mcp-profile"));
+        record["todo_id"] = json!(arg("--todo-id").parse::<i64>().ok());
+        record["related_todo_ids"] = json!(arg("--related-todo-ids")
+            .split(',')
+            .filter_map(|id| id.parse::<i64>().ok())
+            .collect::<Vec<_>>());
         record["scope_source"] = json!(arg("--scope-source"));
         if self.launch_error {
             self.launch_error = false;
@@ -618,6 +779,14 @@ impl Fake {
         std::fs::create_dir_all(&dir).unwrap();
         atomic_json(&dir.join("job.json"),&json!({"id":jid,"status":"running","model":record["model"],"effort":record["effort"],"task_type":record["task_type"],"sandbox":record["sandbox"],"scope_source":record["scope_source"],"thread_id":format!("session-{jid}"),"launch_key":record["launch_key"],"cwd":record["cwd"]}),2).unwrap();
         std::fs::write(dir.join("prompt.md"), s(&record["prompt"])).unwrap();
+        let mut job = read_json(&dir.join("job.json"))?;
+        job["todo_id"] = record["todo_id"].clone();
+        job["related_todo_ids"] = record["related_todo_ids"].clone();
+        job["steps"] = json!(if self.launch_queued { 0 } else { 1 });
+        if self.launch_queued {
+            job["status"] = json!("queued");
+        }
+        atomic_json(&dir.join("job.json"), &job, 2)?;
         self.launches.push(record);
         if self.lose_launch_response {
             self.lose_launch_response = false;

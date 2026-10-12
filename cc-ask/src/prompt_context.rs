@@ -62,6 +62,22 @@ fn snapshot(ctx: &Context, name: &str, text: &str) -> Result<String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Never turn a partial question or answer into apparent authorization evidence.
+fn complete_evidence(text: &str, bytes: usize, reference: &str) -> String {
+    if text.len() <= bytes {
+        return text.into();
+    }
+    let notice = format!(
+        "[質問または本人投稿の原文をこの枠に収められないため、引用を省略しました。この短縮文だけで承認を判断しないこと。投稿ID・投稿者・日時と原文の全体を参照先で照合してください: {reference}]\n"
+    );
+    bounded(&notice, bytes, reference)
+}
+
+pub(crate) fn owner_context(ctx: &Context, key: &str, text: &str, bytes: usize) -> Result<String> {
+    let reference = snapshot(ctx, &format!("owner-context-{key}.md"), text)?;
+    Ok(complete_evidence(text, bytes, &reference))
+}
+
 /// These are console-wide aggregates, not the work assigned by this thread.
 fn scoped(text: &str) -> (String, bool) {
     let mut skip = false;
@@ -176,7 +192,7 @@ pub fn conversation(
     let mut used = 0;
     // Give the opening question some space, but reserve most of it for current replies.
     if let Some(first) = messages.first() {
-        let text = bounded(
+        let text = complete_evidence(
             &crate::core::conversation(thread, std::slice::from_ref(first), owner),
             budget / 5,
             &reference,
@@ -190,25 +206,81 @@ pub fn conversation(
         .rev()
         .find(|(index, m)| *index != 0 && s(&m["author"]["id"]) == owner)
     {
-        let text = bounded(
-            &crate::core::conversation(&json!({}), std::slice::from_ref(message), owner),
+        let text = complete_evidence(
+            &crate::core::conversation(thread, std::slice::from_ref(message), owner),
             budget / 3,
             &reference,
         );
         used += text.len();
         selected.push((index, text));
+        // A short answer such as "a" is meaningless without the exact question.
+        // Prefer an explicit same-thread reply; otherwise retain the latest registered
+        // question before this answer. Selection preserves evidence, never grants access.
+        let explicit = s(&message["message_reference"]["message_id"]);
+        let channel = s(&message["message_reference"]["channel_id"]);
+        let question_id = if !explicit.is_empty() {
+            (channel.is_empty() || channel == tid).then(|| explicit.to_owned())
+        } else {
+            let state = ctx.load()?;
+            state["questions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|q| s(&q["thread_id"]) == tid)
+                .flat_map(|q| {
+                    let mut ids = vec![q["question_message"].clone(), q["after"].clone()];
+                    ids.extend(q["message_ids"].as_array().into_iter().flatten().cloned());
+                    ids
+                })
+                .filter(|id| {
+                    n(id) > 0
+                        && n(id) < n(&message["id"])
+                        && messages.iter().any(|m| {
+                            m["id"] == *id
+                                && s(&m["author"]["id"]) != owner
+                                && crate::questions::is_question(s(&m["content"]))
+                        })
+                })
+                .max_by_key(n)
+                .map(|id| s(&id).to_owned())
+        };
+        if let Some((question_index, question)) = question_id.and_then(|id| {
+            messages.iter().enumerate().find(|(i, m)| {
+                *i < index
+                    && s(&m["id"]) == id
+                    && s(&m["author"]["id"]) != owner
+                    && crate::questions::is_question(s(&m["content"]))
+            })
+        }) {
+            if !selected.iter().any(|(i, _)| *i == question_index) {
+                let text = complete_evidence(
+                    &crate::core::conversation(thread, std::slice::from_ref(question), owner),
+                    (budget - used).min(budget / 3),
+                    &reference,
+                );
+                used += text.len();
+                selected.push((question_index, text));
+            }
+        }
     }
     for (index, message) in messages.iter().enumerate().skip(1).rev() {
         if selected.iter().any(|(i, _)| *i == index) {
             continue;
         }
-        let text = crate::core::conversation(&json!({}), std::slice::from_ref(message), owner);
+        let text = crate::core::conversation(thread, std::slice::from_ref(message), owner);
         let text = text.strip_prefix("## スレッド「」\n\n").unwrap_or(&text);
         if used + text.len() <= budget {
             used += text.len();
             selected.push((index, text.to_owned()));
         } else if budget.saturating_sub(used) > notice.len() {
-            let text = bounded(text, (budget - used).min(budget / 3), &reference);
+            let limit = (budget - used).min(budget / 3);
+            let text = if s(&message["author"]["id"]) == owner
+                || crate::questions::is_question(s(&message["content"]))
+            {
+                complete_evidence(text, limit, &reference)
+            } else {
+                bounded(text, limit, &reference)
+            };
             used += text.len();
             selected.push((index, text));
         } else {

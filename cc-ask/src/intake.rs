@@ -1,5 +1,5 @@
 use crate::core::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 
 const MAX_RETRIES: u64 = 2;
@@ -272,8 +272,7 @@ pub fn adopt_launch(
         .into_iter()
         .flatten()
     {
-        state["answer_receipts"][s(id)]["thread"] = thread["id"].clone();
-        state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
+        record_launch_delivery(ctx, state, s(id), s(&thread["id"]), jid);
     }
     crate::reply_recovery::close_delivered_questions(state, s(&thread["id"]));
     remove(entry, "recovery");
@@ -357,7 +356,12 @@ pub fn execute_launch(
                 );
                 // Persist the transition even if its notification fails.
                 checkpoint(ctx, state, thread, entry)?;
-                post(ctx,s(&thread["id"]),"原因の調査を始められませんでした。次の確認（1分後）で、元の依頼をやり直します。",false)?;
+                post(
+                    ctx,
+                    s(&thread["id"]),
+                    "原因の調査を始められませんでした。次の確認（1分後）で、元の依頼をやり直します。",
+                    false,
+                )?;
                 Ok(())
             } else {
                 eprintln!(
@@ -438,9 +442,11 @@ fn intake_thread_with_workers(
                 let mut observed = state["requests"][tid].clone();
                 observed["job"] = q["continuation"]["job"].clone();
                 observed["job_info"] = job_info(ctx, s(&observed["job"]));
-                observed["after"] = json!(n(&observed["after"])
-                    .max(n(&q["continuation"]["after"]))
-                    .to_string());
+                observed["after"] = json!(
+                    n(&observed["after"])
+                        .max(n(&q["continuation"]["after"]))
+                        .to_string()
+                );
                 observed["external_owner"] = json!(true);
                 observed["reported"] = json!(false);
                 for field in [
@@ -587,9 +593,11 @@ fn intake_entry(
                 entry["job_info"] = job_info(ctx, s(&continuation["job"]));
                 entry["external_owner"] = json!(true);
                 entry["reported"] = json!(false);
-                entry["after"] = json!(n(&entry["after"])
-                    .max(n(&continuation["after"]))
-                    .to_string());
+                entry["after"] = json!(
+                    n(&entry["after"])
+                        .max(n(&continuation["after"]))
+                        .to_string()
+                );
                 for field in ["restart", "recovery", "progress_job", "close_pending"] {
                     remove(entry, field);
                 }
@@ -622,11 +630,12 @@ fn intake_entry(
             // Fill missing legacy metadata even when this worker was adopted
             // before the fix and its ID has not changed.
             if !worker.legacy_thread_ids.is_empty() {
-                let sidecar = ctx.jobs.join("jobs").join(jid).join("discord-threads.json");
-                let associations = json!({"thread_ids":worker.legacy_thread_ids,"source":"prompt"});
-                if !sidecar.is_file() || read_json(&sidecar)? != associations {
-                    atomic_json(&sidecar, &associations, 2)?;
-                }
+                let mut store=crate::job_associations::Store::open(ctx,jid)?;
+                store.update(|associations|{
+                    associations["thread_ids"]=json!(worker.legacy_thread_ids);
+                    associations["source"]=json!("prompt");
+                    Ok(())
+                })?;
                 info["discord_thread_ids"] = json!(worker.legacy_thread_ids);
                 info["discord_thread_ids_source"] = json!("prompt");
             }
@@ -767,11 +776,13 @@ fn intake_entry(
                 }
                 if remaining.len() != original.len() {
                     entry["request_message_ids"] = json!(remaining);
-                    entry["request_messages"] = json!(list(&entry["request_messages"])
-                        .into_iter()
-                        .filter(|m| !original.contains(&m["id"])
-                            || !reply_delivered(state, s(&m["id"])))
-                        .collect::<Vec<_>>());
+                    entry["request_messages"] = json!(
+                        list(&entry["request_messages"])
+                            .into_iter()
+                            .filter(|m| !original.contains(&m["id"])
+                                || !reply_delivered(state, s(&m["id"])))
+                            .collect::<Vec<_>>()
+                    );
                     checkpoint(ctx, state, thread, entry)?;
                 }
             }
@@ -857,8 +868,10 @@ fn intake_entry(
             disposition != "状態: 継続中",
             &jid,
             Some(s(&entry["after"])),
-        )?;
-        let after = match delivery {
+        );
+        // Keep questions/routes persisted by result delivery when saving this request.
+        *state = ctx.load()?;
+        let after = match delivery? {
             crate::result_delivery::Delivery::Sent(after) => after,
             crate::result_delivery::Delivery::OwnerMessagesPending => {
                 crate::steering::deliver(
@@ -895,15 +908,7 @@ fn intake_entry(
         entry["last_job"] = json!(jid);
         entry["result_after"] = json!(after);
         entry["close_pending"] = json!(disposition == "状態: 完了" && owner_messages.is_empty());
-        if disposition == "状態: 要判断" {
-            crate::questions::register_result(
-                ctx,
-                state,
-                thread,
-                after.as_deref().unwrap_or(s(&entry["after"])),
-                &jid,
-            )?;
-        }
+        // Concrete result questions are registered in their own thread by ask_result.
         checkpoint(ctx, state, thread, entry)?;
         if truth(&entry["close_pending"]) {
             archive_completed(ctx, thread, entry, owner)?;
@@ -949,10 +954,12 @@ fn intake_entry(
     let latest = owner_messages.iter().map(|m| n(&m["id"])).max().unwrap();
     let history = clean_history(ctx, tid, latest)?;
     entry["request_after"] = json!(latest.to_string());
-    entry["request_message_ids"] = json!(owner_messages
-        .iter()
-        .map(|m| m["id"].clone())
-        .collect::<Vec<_>>());
+    entry["request_message_ids"] = json!(
+        owner_messages
+            .iter()
+            .map(|m| m["id"].clone())
+            .collect::<Vec<_>>()
+    );
     entry["last_launch_attempt_at"] = json!(ctx.now());
     entry["request_messages"] = json!(history);
     entry["retries"] = json!(0);
@@ -988,18 +995,16 @@ fn request_workers(ctx: &Context) -> Result<Vec<RequestWorker>> {
         }
         if associations.is_file() {
             let threads = read_json(&associations)?;
-            if !threads["thread_ids"].is_array() {
-                return Err("invalid Discord thread associations".into());
-            }
+            let request_ids = crate::job_associations::request_ids(&threads, s(&job["id"]))?;
             if s(&threads["source"]) == "prompt" {
-                legacy_thread_ids = threads["thread_ids"]
+                legacy_thread_ids = request_ids
                     .as_array()
                     .unwrap()
                     .iter()
                     .filter_map(|id| id.as_str().map(str::to_owned))
                     .collect();
             } else {
-                job["discord_thread_ids"] = threads["thread_ids"].clone();
+                job["discord_thread_ids"] = request_ids;
             }
         }
         let id = s(&job["id"]);
@@ -1199,11 +1204,17 @@ fn deliver_reply_inner(
     let owner = ctx.owner();
     if s(&message["id"]) != mid
         || s(&message["author"]["id"]) != owner
+        || truth(&message["author"]["bot"])
         || crate::snooze::control_only(&message)
     {
         return Err("owner work reply required".into());
     }
+    let mut original_todo_saved = false;
     if let Some(question) = &known {
+        if n(&message["id"]) <= n(&question["after"]) {
+            return Err("owner reply precedes question generation".into());
+        }
+        original_todo_saved = crate::decision_identity::persist_task_reply(ctx, question, &message)?;
         crate::steering::confirm_recorded_reads(
             ctx,
             &mut state,
@@ -1213,16 +1224,16 @@ fn deliver_reply_inner(
     }
     if truth(&state["answer_receipts"][mid]["handled_by"]) {
         return Ok(
-            json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":"confirmed"}),
+            json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":"confirmed", "original_todo_saved":original_todo_saved,"application":"unverified"}),
         );
     }
     if confirmed.is_none() && truth(&state["answer_receipts"][mid]["read_by"]) {
         return Ok(
-            json!({"thread":tid,"message":mid,"read_by":state["answer_receipts"][mid]["read_by"],"delivery":"confirmed"}),
+            json!({"thread":tid,"message":mid,"read_by":state["answer_receipts"][mid]["read_by"],"delivery":"confirmed", "original_todo_saved":original_todo_saved,"application":"unverified"}),
         );
     }
     if confirmed.is_none() && reply_reserved(&state, mid) {
-        return Ok(json!({"thread":tid,"message":mid,"delivery":"pending"}));
+        return Ok(json!({"thread":tid,"message":mid,"delivery":"pending", "original_todo_saved":original_todo_saved,"application":"unverified"}));
     }
     if let Some(jid) = confirmed {
         if !valid_job(jid) || s(&job_info(ctx, jid)["status"]) == "missing" {
@@ -1318,9 +1329,11 @@ fn deliver_reply_inner(
             } else {
                 mid.parse::<u64>().map_err(|e| e.to_string())? - 1
             });
-        entry["after"] = json!(prior
-            .min(mid.parse::<u64>().map_err(|e| e.to_string())? - 1)
-            .to_string());
+        entry["after"] = json!(
+            prior
+                .min(mid.parse::<u64>().map_err(|e| e.to_string())? - 1)
+                .to_string()
+        );
         entry["reported"] = json!(false);
         if question_index.is_none() {
             entry["external_owner"] = json!(true);
@@ -1358,6 +1371,6 @@ fn deliver_reply_inner(
     ctx.save(&state)?;
     result?;
     Ok(
-        json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":if truth(&state["answer_receipts"][mid]["handled_by"]) {"delivered"} else {"pending"}}),
+        json!({"thread":tid,"message":mid,"job":state["answer_receipts"][mid]["handled_by"],"delivery":if truth(&state["answer_receipts"][mid]["handled_by"]) {"delivered"} else {"pending"},"original_todo_saved":original_todo_saved,"application":"unverified"}),
     )
 }

@@ -34,7 +34,8 @@ impl Effects for PartialAsk {
         body: Option<&Value>,
         discord: bool,
     ) -> Result<Value> {
-        if method == "POST" && url.ends_with("/messages") {
+        if method == "POST" && (url.ends_with("/messages") || url.ends_with("/channels/T/threads"))
+        {
             self.posts += 1;
             if !self.lost_first && self.posts == 2 {
                 return Err("URLError: transport failed".into());
@@ -82,10 +83,12 @@ fn first_registered_chunk_has_main_routing_even_if_the_second_chunk_fails() {
         .last()
         .unwrap()
         .clone();
+    assert_eq!(q["thread_id"], "300");
+    assert_eq!(q["work_thread_id"], "200");
     assert_eq!(q["agent"], "claude-main");
     assert_eq!(q["owner_only"], "publish");
     assert_eq!(q["cwd"], h.root.path().to_string_lossy().as_ref());
-    let reply = h.reply("aで公開して", "200");
+    let reply = h.reply("aで公開して", "300");
     resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     intake::cmd_intake(&mut h.ctx, &mut false).unwrap();
     assert!(h.fake.borrow().launches.is_empty());
@@ -94,7 +97,7 @@ fn first_registered_chunk_has_main_routing_even_if_the_second_chunk_fails() {
 }
 
 #[test]
-fn lost_first_response_recovers_original_context_before_suppressing_a_new_callers_retry() {
+fn lost_first_response_recovers_original_context_without_reposting_question() {
     let _session = SESSION_ENV.lock().unwrap();
     let mut h = Harness::new();
     h.fake.borrow_mut().messages.get_mut("100").unwrap().clear();
@@ -116,7 +119,7 @@ fn lost_first_response_recovers_original_context_before_suppressing_a_new_caller
     };
     assert!(cmd_ask(&mut h.ctx, &args).is_err());
     assert!(h.state()["questions"].as_array().unwrap().is_empty());
-    let reply = h.reply("aで公開して", "200");
+    let reply = h.reply("aで公開して", "300");
     resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     intake::cmd_intake(&mut h.ctx, &mut false).unwrap();
     assert!(h.fake.borrow().launches.is_empty());
@@ -127,10 +130,19 @@ fn lost_first_response_recovers_original_context_before_suppressing_a_new_caller
     assert!(inbox.iter().any(|row| row["id"] == reply));
     args.agent = "Codex".into();
     let result = cmd_ask(&mut h.ctx, &args).unwrap();
-    assert_eq!(result["suppressed"], "already_answered");
+    assert_eq!(result["thread_id"], "300");
+    assert_ne!(result["progress_thread_id"], result["thread_id"]);
     assert_eq!(h.state()["questions"][0]["agent"], "claude-main");
     assert_eq!(h.state()["questions"][0]["owner_only"], "publish");
-    assert_eq!(h.fake.borrow().posts.len(), 1);
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && cc_ask::core::s(&c["url"]).ends_with("/threads"))
+            .count(),
+        2
+    );
     resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
     intake::cmd_intake(&mut h.ctx, &mut false).unwrap();
     assert!(h.fake.borrow().launches.is_empty());
@@ -138,64 +150,73 @@ fn lost_first_response_recovers_original_context_before_suppressing_a_new_caller
 }
 
 #[test]
-fn a_recovery_process_never_becomes_the_original_posting_job_or_session() {
+fn new_posting_session_reuses_same_question_without_overwriting_original_context() {
     let _session = SESSION_ENV.lock().unwrap();
     let _restore = RestoreSession(std::env::var_os("CODEX_THREAD_ID"));
-    for known_origin in [true, false] {
-        let mut h = Harness::new();
-        h.fake.borrow_mut().messages.get_mut("100").unwrap().clear();
-        h.fake.borrow_mut().threads.get_mut("200").unwrap()["guild_id"] = json!("G");
-        for (job, session) in [
-            ("author", "session-author"),
-            ("recoverer", "session-recoverer"),
-        ] {
-            let dir = h.ctx.jobs.join("jobs").join(job);
-            std::fs::create_dir_all(&dir).unwrap();
-            std::fs::write(
-                dir.join("job.json"),
-                json!({"status":"succeeded","thread_id":session,
-                "created_at":"2026-09-30T00:00:00Z","model":"gpt-6.1-sol","effort":"high",
-                "cwd":h.root.path(),"sandbox":"danger-full-access"})
-                .to_string(),
-            )
-            .unwrap();
-        }
-        if known_origin {
-            std::env::set_var("CODEX_THREAD_ID", "session-author");
-        } else {
-            std::env::remove_var("CODEX_THREAD_ID");
-        }
-        h.ctx.effects = Box::new(PartialAsk {
-            shared: SharedFake(h.fake.clone()),
-            posts: 0,
-            lost_first: true,
-        });
-        let body = h.root.path().join("post.txt");
-        std::fs::write(&body, "a/bで返信してください").unwrap();
-        assert!(cmd_post(&mut h.ctx, "200", &body, &[], false).is_err());
-        assert!(h.state()["questions"].as_array().unwrap().is_empty());
-        let reply = h.reply("aで進めて", "200");
-        std::env::set_var("CODEX_THREAD_ID", "session-recoverer");
-        let recovered = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
-        assert_eq!(recovered["suppressed"], "already_answered");
-        let q = h.state()["questions"][0].clone();
-        if known_origin {
-            assert_eq!(q["posting_job"], "author");
-            assert_eq!(q["session_id"], "session-author");
-        } else {
-            assert!(q["posting_job"].is_null());
-            assert!(q["session_id"].is_null());
-        }
-        resume::cmd_resume(&mut h.ctx, &mut false).unwrap();
-        assert_eq!(h.fake.borrow().launches.len(), usize::from(known_origin));
-        if known_origin {
-            assert_eq!(
-                h.fake.borrow().launches[0]["resume_session"],
-                "session-author"
-            );
-            assert_eq!(h.state()["answer_receipts"][reply]["handled_by"], "job1");
-        } else {
-            assert_eq!(h.state()["questions"][0]["resume_status"], "再開先なし");
+    let _restore_job = RestoreJob(std::env::var_os("CC_JOB_ID"));
+    let mut h = Harness::new();
+    h.fake.borrow_mut().threads.get_mut("200").unwrap()["guild_id"] = json!("G");
+    for (job, session) in [
+        ("author", "session-author"),
+        ("recoverer", "session-recoverer"),
+    ] {
+        let dir = h.ctx.jobs.join("jobs").join(job);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("job.json"),
+            json!({
+                "status":"succeeded","thread_id":session,
+                "created_at":"2026-09-30T00:00:00Z","model":"gpt-6.1-sol",
+                "effort":"high","cwd":h.root.path(),"sandbox":"danger-full-access"
+            })
+            .to_string(),
+        )
+        .unwrap();
+    }
+    std::env::set_var("CODEX_THREAD_ID", "session-author");
+    std::env::set_var("CC_JOB_ID", "author");
+    h.ctx.effects = Box::new(PartialAsk {
+        shared: SharedFake(h.fake.clone()),
+        posts: 0,
+        lost_first: true,
+    });
+    let body = h.root.path().join("post.txt");
+    std::fs::write(&body, "a/bで返信してください").unwrap();
+    assert!(cmd_post(&mut h.ctx, "200", &body, &[], false).is_err());
+    assert!(h.state()["questions"].as_array().unwrap().is_empty());
+    // Recover using the original intent first. The failed response must not
+    // produce another question or lose the original author/session.
+    let original = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
+    let before = h.state()["questions"][0].clone();
+    assert_eq!(before["posting_job"], "author");
+    assert_eq!(before["session_id"], "session-author");
+    std::env::set_var("CODEX_THREAD_ID", "session-recoverer");
+    std::env::set_var("CC_JOB_ID", "recoverer");
+    let next = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
+    assert_eq!(next["thread_id"], original["thread_id"]);
+    assert_eq!(next["progress_thread_id"], original["progress_thread_id"]);
+    let state = h.state();
+    assert_eq!(state["questions"][0], before);
+    assert_eq!(state["questions"].as_array().unwrap().len(), 1);
+    let retry = cmd_post(&mut h.ctx, "200", &body, &[], false).unwrap();
+    assert_eq!(retry["thread_id"], next["thread_id"]);
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/threads"))
+            .count(),
+        2
+    );
+}
+
+struct RestoreJob(Option<OsString>);
+impl Drop for RestoreJob {
+    fn drop(&mut self) {
+        match &self.0 {
+            Some(value) => std::env::set_var("CC_JOB_ID", value),
+            None => std::env::remove_var("CC_JOB_ID"),
         }
     }
 }

@@ -514,6 +514,7 @@ fn test_ask_records_cwd_and_agent() {
         agent: "Codex".into(),
         title: "質問".into(),
         body_file: body,
+        decision_file: None,
         cwd: None,
         source: None,
         scheduler_item: None,
@@ -1136,24 +1137,43 @@ fn test_needs_decision_stays_open_and_next_answer_can_resume() {
         None,
     );
     a.resume();
-    assert_eq!(
-        a.fake.borrow().posts.last().unwrap().1["allowed_mentions"]["users"],
-        json!(["OWN"])
-    );
-    assert_eq!(a.fake.borrow().posts.last().unwrap().1["flags"], 0);
-    assert!(a.text().contains("判断をお願いしたいです"));
-    assert_eq!(a.question()["open"], true);
-    assert_eq!(
-        a.question()["after"],
-        a.fake.borrow().messages["200"].last().unwrap()["id"]
-    );
-    assert!(a.fake.borrow().patches.is_empty());
+
+    let state = a.state();
+    assert_eq!(state["questions"][0]["open"], false);
+    let next = state["questions"][1].clone();
+    let qid = s(&next["thread_id"]).to_owned();
+    assert_ne!(qid, "200");
+    assert_eq!(next["open"], true);
+    assert_eq!(next["work_thread_id"], "200");
+    {
+        let f = a.fake.borrow();
+        let creations: Vec<_> = f
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .collect();
+        assert_eq!(creations.len(), 2);
+        let starter = &creations[0]["body"]["message"];
+        assert_eq!(
+            starter["allowed_mentions"],
+            json!({"parse":[],"users":["OWN"],"replied_user":false})
+        );
+        assert_eq!(starter["flags"], 4);
+        assert_eq!(s(&starter["content"]).matches("<@OWN>").count(), 1);
+        assert_eq!(creations[1]["body"]["message"]["flags"], SILENT | 4);
+    }
+    assert_eq!(next["after"], a.fake.borrow().messages[&qid][0]["id"]);
+    assert!(!a.fake.borrow().patches.iter().any(|(tid, _)| tid == &qid));
+    let previous = a.last();
     a.advance(601.);
-    a.answer(0., "推奨案で進めて", "OWN");
+    let reply = a.h.reply("推奨案で進めて", &qid);
     a.advance(600.);
     a.resume();
     assert_eq!(a.count(), 2);
+    assert_eq!(a.last()["resume_session"], "session-job1");
+    assert_eq!(a.last()["cwd"], previous["cwd"]);
     assert!(s(&a.last()["prompt"]).contains("推奨案で進めて"));
+    assert_eq!(a.state()["answer_receipts"][&reply]["handled_by"], "job2");
 }
 #[test]
 fn test_failed_job_resumes_automatically_without_owner_mention() {
@@ -1191,7 +1211,7 @@ fn failed_writer_conflict_waits_without_consuming_answer_then_recovers_fresh() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1231,15 +1251,25 @@ fn successful_manual_writer_is_not_restarted_or_reported_twice() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
     a.resume();
     assert_eq!(a.question()["restart"]["waiting_for"], "manual-writer");
+    std::fs::copy(
+        a.ctx.jobs.join("jobs/job1/prompt.md"),
+        dir.join("prompt.md"),
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("prompt.md"),
+        format!("オーナー投稿 {answer}\n調査して最適案を選んで実装"),
+    )
+    .unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"succeeded","resume_session":"session-job1"}),
+        &json!({"status":"succeeded","steps":1,"resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1258,7 +1288,7 @@ fn successful_manual_writer_is_not_restarted_or_reported_twice() {
 #[test]
 fn reply_arriving_during_manual_writer_is_followed_up_after_success() {
     let mut a = AnswerResume::new();
-    a.answered();
+    let first = a.answered();
     a.resume();
     a.finish(
         "job1",
@@ -1273,16 +1303,26 @@ fn reply_arriving_during_manual_writer_is_followed_up_after_success() {
         .to_rfc3339();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1","started_at":started}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1","started_at":started}),
         2,
     )
     .unwrap();
     a.resume();
     a.advance(60.);
+    std::fs::copy(
+        a.ctx.jobs.join("jobs/job1/prompt.md"),
+        dir.join("prompt.md"),
+    )
+    .unwrap();
     let pending = a.answer(0., "実行中に届いた新しい回答を反映する", "OWN");
+    std::fs::write(
+        dir.join("prompt.md"),
+        format!("オーナー投稿 {first}\n調査して最適案を選んで実装"),
+    )
+    .unwrap();
     a.resume();
     assert_eq!(a.count(), 1);
-    atomic_json(&dir.join("job.json"), &json!({"status":"succeeded","resume_session":"session-job1","started_at":started,
+    atomic_json(&dir.join("job.json"), &json!({"status":"succeeded","steps":1,"resume_session":"session-job1","started_at":started,
         "finished_at":chrono::DateTime::from_timestamp(a.ctx.now() as i64 + 60, 0).unwrap().to_rfc3339()}), 2).unwrap();
     a.resume();
     assert!(!truth(
@@ -1317,7 +1357,7 @@ fn duplicate_or_superseded_writer_keeps_a_failed_jobs_answer_dispatchable() {
             .to_rfc3339();
         atomic_json(
             &dir.join("job.json"),
-            &json!({"status":"running","resume_session":"session-job1","started_at":started}),
+            &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1","started_at":started}),
             2,
         )
         .unwrap();
@@ -1370,7 +1410,7 @@ fn test_continuation_backoff_and_intentional_duplicate_cancel_are_silent() {
     std::fs::create_dir_all(&dir).unwrap();
     atomic_json(
         &dir.join("job.json"),
-        &json!({"status":"running","resume_session":"session-job1"}),
+        &json!({"status":"running","discord_thread_id":"200","resume_session":"session-job1"}),
         2,
     )
     .unwrap();
@@ -1470,8 +1510,36 @@ fn test_new_owner_reply_is_preserved_when_job_needs_decision() {
     assert_eq!(a.count(), 2);
     assert_eq!(a.question()["seen_reply"], newest);
 }
+struct FailQuestionStateSave {
+    fake: std::rc::Rc<std::cell::RefCell<common::Fake>>,
+    state_path: PathBuf,
+    failed: bool,
+}
+impl Effects for FailQuestionStateSave {
+    fn now(&self) -> f64 {
+        self.fake.borrow().now
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.fake.borrow_mut().run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+        discord: bool,
+    ) -> Result<Value> {
+        let response = self.fake.borrow_mut().http(method, url, body, discord)?;
+        if !self.failed && method == "POST" && url.ends_with("/channels/T/threads") {
+            self.failed = true;
+            // Fail installation after Discord accepted the starter, while its ID is durable.
+            std::fs::write(&self.state_path, "{").unwrap();
+        }
+        Ok(response)
+    }
+}
 #[test]
-fn test_question_registration_retries_after_reply_check_failure_without_reposting() {
+fn test_question_registration_retries_after_state_save_failure_without_reposting() {
     let mut a = AnswerResume::new();
     a.answered();
     a.resume();
@@ -1481,23 +1549,51 @@ fn test_question_registration_retries_after_reply_check_failure_without_repostin
         Some("状態: 要判断\n次の方針を教えてください。"),
         None,
     );
-    let after = s(&a.question()["continuation"]["after"]).to_string();
-    a.fake
-        .borrow_mut()
-        .http_errors
-        .insert(format!("/channels/200/messages?after={after}&limit=100"), 1);
+    let state_path = a.ctx.here.join("state.json");
+    let saved = std::fs::read(&state_path).unwrap();
+    a.ctx.effects = Box::new(FailQuestionStateSave {
+        fake: a.fake.clone(),
+        state_path: state_path.clone(),
+        failed: false,
+    });
+    assert!(cmd_resume(&mut a.ctx, &mut false).is_err());
+    assert_eq!(std::fs::read(&state_path).unwrap(), b"{");
+    let records: Vec<_> = std::fs::read_dir(a.ctx.here.join("question-progress"))
+        .unwrap()
+        .map(|e| read_json(&e.unwrap().path()).unwrap())
+        .collect();
+    assert_eq!(records.len(), 1);
+    let qid = s(&records[0]["question"]["starter"]).to_owned();
+    assert!(!qid.is_empty());
+    assert_eq!(
+        a.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        1
+    );
+    std::fs::write(&state_path, saved).unwrap();
     a.resume();
-    assert_eq!(a.question()["continuation"]["question_pending"], true);
+    a.resume();
+    assert_eq!(
+        a.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        2
+    );
+    let state = a.state();
+    assert_eq!(state["questions"].as_array().unwrap().len(), 2);
+    assert_eq!(state["questions"][0]["open"], false);
+    assert_eq!(state["questions"][1]["thread_id"], qid);
+    assert_eq!(state["questions"][1]["open"], true);
     let count = a.posts();
     a.resume();
     assert_eq!(a.posts(), count);
-    assert_eq!(
-        a.question()["after"],
-        a.fake.borrow().messages["200"].last().unwrap()["id"]
-    );
-    assert!(a.question()["continuation"]
-        .get("question_pending")
-        .is_none());
 }
 #[test]
 fn test_result_delivery_failure_retries_and_keeps_question_open() {
@@ -1798,4 +1894,414 @@ fn test_git_worktree_setup_and_recovery_with_real_local_repository() {
         "main"
     );
     assert_eq!(a.question()["continuation"]["job"], "job2");
+}
+
+#[test]
+fn occupied_unrelated_session_uses_fresh_answer_worker_once() {
+    let mut a = AnswerResume::new();
+    a.change(json!({"session_id":"original-session","job_info":{"model":"gpt-6.1-sol","effort":"high","thread_id":"original-session","sandbox":"read-only","scope_source":"launcher"}}));
+    let dir = a.ctx.jobs.join("jobs/unrelated-writer");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"), &json!({"status":"running","thread_id":"original-session","discord_thread_id":"300","cwd":a.cwd}), 2).unwrap();
+    let answer = a.answered();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.last()["resume_session"], "");
+    assert_eq!(a.last()["sandbox"], "read-only");
+    assert!(s(&a.last()["prompt"]).contains("調査して最適案を選んで実装"));
+    assert_eq!(job_info(&a.ctx, "unrelated-writer")["status"], "running");
+    assert_eq!(a.state()["answer_receipts"][&answer]["handled_by"], "job1");
+    a.resume();
+    assert_eq!(a.count(), 1);
+}
+
+#[test]
+fn queued_answer_is_reserved_until_start_then_unblocks_existing_todo() {
+    let mut a = AnswerResume::new();
+    a.change(json!({"job":"original","session_id":"original-session"}));
+    let dir = a.ctx.jobs.join("jobs/original");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"), &json!({"id":"original","status":"succeeded","model":"gpt-6.1-sol","effort":"high","thread_id":"original-session","cwd":a.cwd}),2).unwrap();
+    a.todo(800., "block", "承認待ち", None);
+    let mut db = read_json(&a.ctx.todo).unwrap();
+    db["items"][0]["jobs"] = json!(["original"]);
+    atomic_json(&a.ctx.todo, &db, 2).unwrap();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert!(reply_reserved(&a.state(), &answer));
+    assert!(n(&a.question()["seen_reply"]) < answer.parse::<u64>().unwrap());
+    a.resume();
+    assert_eq!(a.count(), 1);
+    assert_eq!(
+        read_json(&a.ctx.todo).unwrap()["items"][0]["status"],
+        "block"
+    );
+    let path = a.ctx.jobs.join("jobs/job1/job.json");
+    let mut job = read_json(&path).unwrap();
+    job["status"] = json!("running");
+    job["activity"] = json!("thinking");
+    atomic_json(&path, &job, 2).unwrap();
+    a.resume();
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert!(reply_reserved(&a.state(), &answer));
+    assert_eq!(
+        read_json(&a.ctx.todo).unwrap()["items"][0]["status"],
+        "block"
+    );
+    std::fs::write(path.with_file_name("events.jsonl"), "{\"type\":\"item.started\",\"item\":{\"type\":\"command_execution\",\"command\":\"work\"}}\n").unwrap();
+    a.resume();
+    assert!(reply_delivered(&a.state(), &answer));
+    assert!(!reply_reserved(&a.state(), &answer));
+    assert_eq!(a.question()["seen_reply"], answer);
+    let db = read_json(&a.ctx.todo).unwrap();
+    assert_eq!(db["items"].as_array().unwrap().len(), 1);
+    assert_eq!(db["items"][0]["status"], "doing");
+    assert!(db["items"][0]["jobs"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("job1")));
+}
+
+#[test]
+fn zero_step_writer_failure_does_not_consume_answer_or_wait_for_unrelated_writer() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    a.finish(
+        "job1",
+        "failed",
+        None,
+        Some("thread-store conflict: already has an active writer"),
+    );
+    // Reproduce the previous version's premature delivery receipt.
+    let mut state = a.state();
+    state["answer_receipts"][&answer]
+        .as_object_mut()
+        .unwrap()
+        .remove("launch_job");
+    state["answer_receipts"][&answer]["handled_by"] = json!("job1");
+    a.save(&state);
+    let dir = a.ctx.jobs.join("jobs/unrelated");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"running","resume_session":"session-job1","discord_thread_id":"300"}),
+        2,
+    )
+    .unwrap();
+    a.resume();
+    assert_eq!(a.count(), 2);
+    assert_eq!(a.last()["resume_session"], "");
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job2");
+    assert_eq!(job_info(&a.ctx, "unrelated")["status"], "running");
+    a.resume();
+    assert_eq!(a.count(), 2);
+}
+
+#[test]
+fn legacy_queued_receipt_is_reserved_and_unreadable_job_cannot_release_it() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    let mut state = a.state();
+    state["answer_receipts"][&answer]
+        .as_object_mut()
+        .unwrap()
+        .remove("launch_job");
+    state["answer_receipts"][&answer]["handled_by"] = json!("job1");
+    a.save(&state);
+    a.resume();
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job1");
+    std::fs::write(a.ctx.jobs.join("jobs/job1/job.json"), "{").unwrap();
+    assert!(cmd_resume(&mut a.ctx, &mut false).is_err());
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.state()["answer_receipts"][&answer]["launch_job"], "job1");
+}
+
+#[test]
+fn same_task_writer_success_without_answer_input_does_not_consume_it() {
+    let mut a = AnswerResume::new();
+    a.fake.borrow_mut().launch_queued = true;
+    let answer = a.answered();
+    a.resume();
+    a.finish("job1", "failed", None, Some("already has an active writer"));
+    let dir = a.ctx.jobs.join("jobs/manual-writer");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"),&json!({"status":"running","discord_thread_id":"200","thread_id":"session-job1","model":"gpt-6.1-sol","effort":"high","cwd":a.cwd}),2).unwrap();
+    a.resume();
+    assert_eq!(a.count(), 1);
+    atomic_json(&dir.join("job.json"),&json!({"status":"succeeded","steps":1,"thread_id":"session-job1","model":"gpt-6.1-sol","effort":"high","cwd":a.cwd}),2).unwrap();
+    a.resume();
+    assert!(!reply_delivered(&a.state(), &answer));
+    assert_eq!(a.question()["open"], true);
+    a.resume();
+    assert_eq!(a.count(), 2);
+    assert!(reply_reserved(&a.state(), &answer));
+    a.resume();
+    assert_eq!(a.count(), 2);
+}
+
+#[test]
+fn local_start_events_do_not_prove_input_but_dispatched_work_does() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/queued");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(&dir.join("job.json"),&json!({"status":"running","steps":0,"thread_id":"some-session","activity":"running command"}),2).unwrap();
+    std::fs::write(
+        dir.join("events.jsonl"),
+        "{\"type\":\"thread.started\",\"thread_id\":\"some-session\"}\n",
+    )
+    .unwrap();
+    assert!(!job_started(&a.ctx, "queued"));
+    std::fs::write(dir.join("events.jsonl"),"{\"type\":\"thread.started\",\"thread_id\":\"some-session\"}\n{\"type\":\"turn.started\"}\n{unfinished").unwrap();
+    assert!(!job_started(&a.ctx, "queued"));
+    std::fs::write(dir.join("events.jsonl"), "{\"type\":\"turn.started\"}\n{\"type\":\"item.started\",\"item\":{\"type\":\"command_execution\",\"command\":\"work\"}}\n").unwrap();
+    assert!(job_started(&a.ctx, "queued"));
+}
+
+#[test]
+fn prestart_failure_releases_legacy_receipt_but_explicit_delivery_is_monotonic() {
+    for (reason, via, confirmed, expected) in [
+        ("app-server init failed", "", false, false),
+        ("model not found", "", false, false),
+        ("app-server init failed", "replies-event", false, true),
+        (
+            "exceeded retry limit, last status: 429 Too Many Requests",
+            "",
+            true,
+            false,
+        ),
+        ("app-server init failed", "manual-confirmation", true, true),
+    ] {
+        let a = AnswerResume::new();
+        let dir = a.ctx.jobs.join("jobs/legacy");
+        std::fs::create_dir_all(&dir).unwrap();
+        atomic_json(
+            &dir.join("job.json"),
+            &json!({"status":"failed","steps":0,"last_error":reason}),
+            2,
+        )
+        .unwrap();
+        let mut state = a.state();
+        state["answer_receipts"]["501"] = json!({"handled_by":"legacy","thread":"200","handled_via":via,"launch_confirmed":confirmed});
+        a.save(&state);
+        recover_reply_reads(&a.ctx, &mut state).unwrap();
+        assert_eq!(
+            reply_delivered(&state, "501"),
+            expected,
+            "{reason}/{via}/{confirmed}"
+        );
+        assert_eq!(reply_delivered(&a.state(), "501"), expected, "persisted");
+    }
+}
+
+#[test]
+fn meaningful_event_before_split_utf8_boundary_keeps_legacy_delivery_confirmed() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/legacy");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0,"activity":"failed"}),
+        2,
+    )
+    .unwrap();
+    let mut events = b"{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"working\"}}\n".to_vec();
+    events.resize(65535, b' ');
+    events.extend_from_slice("あ\n".as_bytes());
+    std::fs::write(dir.join("events.jsonl"), events).unwrap();
+    assert!(job_started(&a.ctx, "legacy"));
+    let mut state = a.state();
+    state["answer_receipts"]["502"] = json!({"handled_by":"legacy","thread":"200"});
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert!(reply_delivered(&state, "502"));
+    assert_eq!(state["answer_receipts"]["502"]["launch_confirmed"], true);
+}
+
+#[test]
+fn zero_step_429_releases_false_confirmation_without_reposting_or_changing_waits() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/failed-launch");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0,
+        "last_error":"exceeded retry limit, last status: 429 Too Many Requests"}),
+        2,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("events.jsonl"),
+        "{\"type\":\"thread.started\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"turn.failed\"}\n",
+    )
+    .unwrap();
+    let todo = json!({"items":[{"id":2073,"status":"wait","wait_on":[32]}]});
+    atomic_json(&a.ctx.todo, &todo, 2).unwrap();
+    let todo_bytes = std::fs::read(&a.ctx.todo).unwrap();
+    let mut state = a.state();
+    state["questions"] = json!([
+        {"thread_id":"200","after":"200","seen_reply":"502","open":true,
+            "continuation":{"job":"failed-launch","after":"502","job_info":{"status":"queued"},
+                "steering_messages":[{"id":"501","content":"first"},{"id":"502","content":"second"}]}},
+        {"thread_id":"200","after":"600","seen_reply":"700","open":true,
+            "continuation":{"job":"failed-launch","after":"700"}},
+        {"thread_id":"200","after":"200","seen_reply":"502","open":false,"owner_stopped":true,
+            "continuation":{"job":"failed-launch","after":"502"}}
+    ]);
+    state["answer_receipts"] = json!({
+        "501":{"thread":"200","posted":true,"handled_by":"failed-launch","launch_confirmed":true},
+        "502":{"thread":"200","posted":true,"handled_by":"failed-launch","launch_confirmed":true},
+        "503":{"thread":"200","read_by":"reader","posted":true,"handled_by":"failed-launch"}
+    });
+    let generation = state["questions"][1].clone();
+    let messages = state["questions"][0]["continuation"]["steering_messages"].clone();
+    a.save(&state);
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    for id in ["501", "502"] {
+        assert!(!reply_delivered(&state, id));
+        assert!(!reply_reserved(&state, id));
+        assert_eq!(state["answer_receipts"][id]["posted"], true);
+        assert_eq!(
+            state["answer_receipts"][id]["failed_launch_job"],
+            "failed-launch"
+        );
+        assert!(state["answer_receipts"][id]["launch_confirmed"].is_null());
+    }
+    assert!(reply_delivered(&state, "503"));
+    assert_eq!(state["questions"][0]["after"], "200");
+    assert_eq!(state["questions"][0]["seen_reply"], "500");
+    assert_eq!(state["questions"][0]["continuation"]["after"], "500");
+    assert_eq!(
+        state["questions"][0]["continuation"]["job_info"]["status"],
+        "failed"
+    );
+    assert_eq!(
+        state["questions"][0]["continuation"]["steering_messages"],
+        messages
+    );
+    assert_eq!(state["questions"][1], generation);
+    assert_eq!(state["questions"][2]["open"], false);
+    assert_eq!(state["questions"][2]["owner_stopped"], true);
+    assert_eq!(std::fs::read(&a.ctx.todo).unwrap(), todo_bytes);
+    assert!(a.fake.borrow().posts.is_empty());
+    assert!(a.fake.borrow().launches.is_empty());
+    assert_eq!(a.state(), state);
+}
+
+#[test]
+fn failed_request_cursor_is_restored_only_for_its_own_dispatch() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/failed-request");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0}),
+        2,
+    )
+    .unwrap();
+    let mut state = a.state();
+    state["requests"] = json!({"200":{"job":"failed-request","after":"502","job_info":{"status":"queued"}},
+        "300":{"job":"different-worker","after":"900"}});
+    state["answer_receipts"] = json!({"501":{"thread":"200","posted":true,"handled_by":"failed-request","launch_confirmed":true}});
+    let other = state["requests"]["300"].clone();
+    a.save(&state);
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert_eq!(state["requests"]["200"]["after"], "500");
+    assert_eq!(state["requests"]["200"]["job_info"]["status"], "failed");
+    assert_eq!(state["requests"]["300"], other);
+    assert_eq!(state["answer_receipts"]["501"]["posted"], true);
+    assert!(!reply_delivered(&state, "501"));
+    assert!(a.fake.borrow().posts.is_empty());
+    assert!(a.fake.borrow().launches.is_empty());
+}
+
+#[test]
+fn late_dispatched_work_after_a_large_record_is_never_replayed() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/late-work");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0}),
+        2,
+    )
+    .unwrap();
+    let large = json!({"type":"thread.started","padding":"x".repeat(120000)}).to_string();
+    std::fs::write(dir.join("events.jsonl"), format!("{large}\n{{\"type\":\"item.started\",\"item\":{{\"type\":\"command_execution\",\"command\":\"work\"}}}}\n")).unwrap();
+    let mut state = a.state();
+    state["answer_receipts"]["501"] =
+        json!({"handled_by":"late-work","thread":"200","posted":true,"launch_confirmed":true});
+    a.save(&state);
+    assert!(job_started(&a.ctx, "late-work"));
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert!(reply_delivered(&state, "501"));
+    assert_eq!(state["answer_receipts"]["501"]["handled_by"], "late-work");
+    assert!(a.fake.borrow().posts.is_empty());
+    assert!(a.fake.borrow().launches.is_empty());
+}
+
+#[test]
+fn unreadable_start_evidence_does_not_release_a_delivery_or_its_cursors() {
+    let a = AnswerResume::new();
+    let dir = a.ctx.jobs.join("jobs/unknown-work");
+    std::fs::create_dir_all(&dir).unwrap();
+    atomic_json(
+        &dir.join("job.json"),
+        &json!({"status":"failed","steps":0}),
+        2,
+    )
+    .unwrap();
+    std::fs::write(dir.join("events.jsonl"), "{incomplete\n").unwrap();
+    let mut state = a.state();
+    state["answer_receipts"]["501"] =
+        json!({"handled_by":"unknown-work","thread":"200","posted":true,"launch_confirmed":true});
+    state["questions"] = json!([{"thread_id":"200","after":"200","seen_reply":"501","open":true,
+        "continuation":{"job":"unknown-work","after":"501"}}]);
+    a.save(&state);
+    let before = state.clone();
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert_eq!(state, before);
+    assert_eq!(a.state(), before);
+    assert!(a.fake.borrow().posts.is_empty());
+    assert!(a.fake.borrow().launches.is_empty());
+}
+
+#[test]
+fn one_incomplete_stream_does_not_block_an_independent_failed_reply() {
+    let a = AnswerResume::new();
+    for (job, events) in [
+        ("incomplete-work", "{incomplete\n"),
+        ("empty-work", "{\"type\":\"turn.started\"}\n"),
+    ] {
+        let dir = a.ctx.jobs.join("jobs").join(job);
+        std::fs::create_dir_all(&dir).unwrap();
+        atomic_json(
+            &dir.join("job.json"),
+            &json!({"status":"failed","steps":0}),
+            2,
+        )
+        .unwrap();
+        std::fs::write(dir.join("events.jsonl"), events).unwrap();
+    }
+    let mut state = a.state();
+    state["answer_receipts"] = json!({
+        "501":{"handled_by":"incomplete-work","thread":"200","posted":true,"launch_confirmed":true},
+        "502":{"handled_by":"empty-work","thread":"300","posted":true,"launch_confirmed":true}
+    });
+    let unknown = state["answer_receipts"]["501"].clone();
+    a.save(&state);
+    recover_reply_reads(&a.ctx, &mut state).unwrap();
+    assert_eq!(state["answer_receipts"]["501"], unknown);
+    assert!(!reply_delivered(&state, "502"));
+    assert_eq!(state["answer_receipts"]["502"]["posted"], true);
+    assert_eq!(a.state(), state);
+    assert!(a.fake.borrow().posts.is_empty());
+    assert!(a.fake.borrow().launches.is_empty());
 }

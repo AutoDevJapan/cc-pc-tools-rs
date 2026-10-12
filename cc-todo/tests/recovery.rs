@@ -1,6 +1,18 @@
 use cc_scheduler::policy::Processes;
 use cc_todo::{recovery::*, *};
 use serde_json::{Value, json};
+
+#[test]
+fn todo1842_recovery_keeps_explicit_todo_model_and_source_defaults() {
+    let pending = json!({"job":{"model":"gpt-6.1-sol","effort":"max"}});
+    let explicit = json!({"id":1804,"model":"gpt-6-astra","effort":"high"});
+    let request = delegation_request(&explicit, &pending);
+    assert_eq!(request["model"], "gpt-6-astra");
+    assert_eq!(request["effort"], "high");
+    let request = delegation_request(&json!({"id":1805}), &pending);
+    assert_eq!(request["model"], "gpt-6.1-sol");
+    assert_eq!(request["effort"], "max");
+}
 use std::{fs, path::PathBuf};
 
 fn db(status: &str) -> Value {
@@ -1315,6 +1327,73 @@ fn recovery_stop_is_distinct_from_a_later_explicit_cancel() {
         assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_null());
         fs::remove_dir_all(root).unwrap();
     }
+}
+
+#[test]
+fn durable_auto_cancel_survives_pending_removal_and_preserves_the_saved_request() {
+    for status in ["cancelled", "canceled"] {
+        let (root, p, mut f, mut notices) = fixture();
+        let mut d = load(&p.store).unwrap();
+        d["items"][0]["jobs"] = json!(["old"]);
+        d["items"][0]["stall_recovery"] = json!({"pending":null});
+        let mut source = job(status);
+        source["sandbox"] = json!("read-only");
+        source["recovery_cancel"] =
+            json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        source["recovery_prompt"] = json!("Preserve original acceptance and completed actions.");
+        f.jobs.push(source.clone());
+        f.allow = false;
+        save(&p.store, &d).unwrap();
+        run_watch(&p, &mut notices, &mut f).unwrap();
+        let reserved = load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].clone();
+        assert!(reserved.is_object());
+        assert_eq!(reserved["job"]["cwd"], source["cwd"]);
+        assert_eq!(reserved["job"]["sandbox"], "read-only");
+        assert_eq!(reserved["resume_session"], source["thread_id"]);
+        assert_eq!(reserved["job"]["model"], source["model"]);
+        assert_eq!(reserved["job"]["effort"], source["effort"]);
+        assert_eq!(
+            reserved["job"]["recovery_cancel"],
+            source["recovery_cancel"]
+        );
+        assert!(
+            reserved["prompt"]
+                .as_str()
+                .unwrap()
+                .contains("Preserve original acceptance")
+        );
+        f.allow = true;
+        run_watch(&p, &mut notices, &mut f).unwrap();
+        assert_eq!(f.calls, vec![reserved["request"].as_str().unwrap()]);
+        assert!(load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"].is_null());
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[test]
+fn auto_cancel_pending_is_not_sent_before_an_explicit_scheduler_deadline() {
+    let (root, p, mut f, mut notices) = fixture();
+    let mut d = load(&p.store).unwrap();
+    d["items"][0]["jobs"] = json!(["old"]);
+    let mut source = job("cancelled");
+    source["recovery_cancel"] = json!({"key":"intent","committed_at":"2026-10-11T02:01:36+09:00"});
+    plan(&mut d, &[source.clone()], &Processes::new(), f.t, "").unwrap();
+    let pending = d["items"][0]["stall_recovery"]["pending"].clone();
+    assert!(pending.is_object());
+    d["items"][0]["scheduler"] = json!({"not_before":11000.});
+    save(&p.store, &d).unwrap();
+    f.jobs.push(source);
+    run_watch(&p, &mut notices, &mut f).unwrap();
+    assert!(f.calls.is_empty());
+    assert!(notices.lines.is_empty());
+    assert_eq!(
+        load(&p.store).unwrap()["items"][0]["stall_recovery"]["pending"],
+        pending
+    );
+    f.t = 11000.;
+    run_watch(&p, &mut notices, &mut f).unwrap();
+    assert_eq!(f.calls.len(), 1);
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

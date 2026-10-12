@@ -1,22 +1,21 @@
-//! ChatGPT のブラウザ版（専用プロフィールの Chrome）に質問を送り、回答の本文を返す CLI。
+//! オーナーの Chrome で ChatGPT のブラウザ版に質問を送り、回答の本文を返す CLI。
 
 mod cdp;
 
-use cdp::{Browser, Tab};
+mod browser;
+use browser::{Browser, Tab};
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode, Stdio};
+use std::process::ExitCode;
 use std::thread::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const PAGE_JS: &str = include_str!("page.js");
 const DEFAULT_HOME: &str = "D:/CC/Apps/chatgpt-web";
 const DEFAULT_URL: &str = "https://chatgpt.com/";
-const DEFAULT_DISCORD: &str = "D:/CC/Tools/discord-ask/discord_ask.exe";
-const DISCORD_TOPIC: &str = "後片付けの記録";
 
 /// 終了コード。エージェントはこれで次の行動を決める。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +45,14 @@ fn fail(code: Code, msg: impl Into<String>) -> Fail {
 
 impl From<io::Error> for Fail {
     fn from(e: io::Error) -> Self {
-        fail(Code::Failed, e.to_string())
+        fail(
+            if e.kind() == io::ErrorKind::TimedOut {
+                Code::Timeout
+            } else {
+                Code::Failed
+            },
+            e.to_string(),
+        )
     }
 }
 
@@ -84,9 +90,9 @@ enum Cmd {
     Check,
     /// 最後に確かめたログイン状態を表示する（ブラウザは起動しない）
     Status,
-    /// 専用プロフィールの Chrome を見える窓でログイン画面に開く
+    /// オーナーの Chrome でログイン状態を再確認する
     Login,
-    /// 専用プロフィールの Chrome を閉じる
+    /// 自分が開いたタブだけを片付ける
     Stop,
     /// 画面の作りを調べる保守用：URL を開き、JS のファイルか「page:式」を順に評価して結果を表示する（「wait:秒」で待つ）
     #[command(hide = true)]
@@ -100,31 +106,22 @@ enum Cmd {
 struct Env {
     home: PathBuf,
     url: String,
-    discord: Option<PathBuf>,
 }
 
 impl Env {
     fn load() -> Self {
         let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
-        let discord = match var("CHATGPT_WEB_DISCORD").as_deref() {
-            Some("off") => None,
-            Some(p) => Some(PathBuf::from(p)),
-            None => Some(PathBuf::from(DEFAULT_DISCORD)),
-        };
         Self {
             home: PathBuf::from(var("CHATGPT_WEB_HOME").unwrap_or_else(|| DEFAULT_HOME.into())),
             url: var("CHATGPT_WEB_URL").unwrap_or_else(|| DEFAULT_URL.into()),
-            discord,
         }
-    }
-    fn profile(&self) -> PathBuf {
-        self.home.join("profile")
     }
 }
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let env = Env::load();
+    let checks_readiness = matches!(&cli.cmd, Cmd::Ask { .. } | Cmd::Check | Cmd::Login);
     let result = match cli.cmd {
         Cmd::Ask {
             prompt_file,
@@ -147,6 +144,12 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(f) => {
+            if checks_readiness
+                && matches!(f.code, Code::Failed | Code::Timeout)
+                && let Err(error) = record_login(&env, Login::Unknown)
+            {
+                eprintln!("chatgpt_web: {}", error.msg);
+            }
             eprintln!("chatgpt_web: {}", f.msg);
             ExitCode::from(f.code as u8)
         }
@@ -229,6 +232,8 @@ enum Login {
     LoggedIn,
     LoggedOut,
     Blocked,
+    Unknown,
+    PendingPlus,
 }
 
 impl Login {
@@ -237,12 +242,20 @@ impl Login {
             Login::LoggedIn => "logged_in",
             Login::LoggedOut => "logged_out",
             Login::Blocked => "blocked",
+            Login::Unknown => "unknown",
+            Login::PendingPlus => "pending_plus",
         }
     }
     fn from_key(k: &str) -> Option<Self> {
-        [Login::LoggedIn, Login::LoggedOut, Login::Blocked]
-            .into_iter()
-            .find(|l| l.key() == k)
+        [
+            Login::LoggedIn,
+            Login::LoggedOut,
+            Login::Blocked,
+            Login::Unknown,
+            Login::PendingPlus,
+        ]
+        .into_iter()
+        .find(|l| l.key() == k)
     }
     fn fail(self) -> Fail {
         match self {
@@ -254,6 +267,14 @@ impl Login {
             Login::Blocked => fail(
                 Code::Blocked,
                 "ChatGPT のアカウントが止められている表示が出ました。対処はオーナーが決めます",
+            ),
+            Login::Unknown => fail(
+                Code::LoginRequired,
+                "直近の確認が成功していません。check で確かめます",
+            ),
+            Login::PendingPlus => fail(
+                Code::LoginRequired,
+                "目的の Plus プランの復旧を画面で確認できていません",
             ),
         }
     }
@@ -274,6 +295,8 @@ fn transition_message(prev: Option<Login>, new: Login) -> Option<&'static str> {
         Login::Blocked => {
             "ChatGPT ブラウザ版（chatgpt_web）でアカウントが止められている表示が出ました。ask は終了コード4で止まります。対処はオーナーが決めます。"
         }
+        Login::Unknown => "ChatGPT ブラウザ版の確認に失敗しました。準備済みとして扱いません。",
+        Login::PendingPlus => "ChatGPT ブラウザ版は Plus の復旧確認待ちです。",
     })
 }
 
@@ -281,55 +304,33 @@ fn read_state(home: &Path) -> Option<Value> {
     serde_json::from_str(&fs::read_to_string(home.join("state.json")).ok()?).ok()
 }
 
-fn record_login(env: &Env, new: Login) {
+fn record_login(env: &Env, new: Login) -> Res<()> {
     let prev = read_state(&env.home).and_then(|v| v["login"].as_str().and_then(Login::from_key));
     let changed = prev != Some(new);
     let mut st = read_state(&env.home).unwrap_or_else(|| json!({}));
     st["login"] = json!(new.key());
     st["checked_at"] = json!(now());
+    st["backend"] = json!(if browser::fixture_url(&env.url) {
+        "fixture"
+    } else {
+        "owner_chrome"
+    });
     if changed {
         st["since"] = json!(now());
     }
-    let tmp = env.home.join("state.json.tmp");
-    if fs::create_dir_all(&env.home).is_ok()
-        && fs::write(&tmp, serde_json::to_vec_pretty(&st).unwrap_or_default()).is_ok()
-    {
-        let _ = fs::rename(&tmp, env.home.join("state.json"));
-    }
+    cc_chrome::lifecycle::atomic_json(&env.home.join("state.json"), &st)
+        .map_err(|e| fail(Code::Failed, format!("状態の保存に失敗しました: {e}")))?;
     if let Some(msg) = transition_message(prev, new) {
         discord_log(env, msg);
     }
+    Ok(())
 }
 
 /// 「後片付けの記録」スレッドへ通知なしで残す。失敗しても本処理は止めない。
-fn discord_log(env: &Env, text: &str) {
-    let Some(exe) = &env.discord else { return };
-    let mut cmd = Command::new(exe);
-    cmd.args(["log", "--topic", DISCORD_TOPIC, "--text", text])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    }
-    let Ok(mut child) = cmd.spawn() else {
-        eprintln!("chatgpt_web: Discord へ記録できませんでした");
-        return;
-    };
-    let deadline = Instant::now() + Duration::from_secs(60);
-    while Instant::now() < deadline {
-        if let Ok(Some(_)) = child.try_wait() {
-            return;
-        }
-        sleep(Duration::from_millis(200));
-    }
-    let _ = child.kill();
-    let _ = child.wait();
-    eprintln!("chatgpt_web: Discord への記録が時間内に終わりませんでした");
+fn discord_log(_env: &Env, text: &str) {
+    // Reception owns Discord delivery. CLI state transitions are recorded on disk.
+    eprintln!("chatgpt_web: {text}");
 }
-
 // ---------- 画面の操作 ----------
 
 fn js(tab: &mut Tab, call: &str) -> Res<Value> {
@@ -344,7 +345,10 @@ fn wait_login(tab: &mut Tab, deadline: Instant) -> Res<Login> {
     let mut last = String::new();
     loop {
         // 読み込み中の評価失敗（遷移中など）は待って再試行する
-        if let Ok(v) = js(tab, "state()") {
+        if let Ok(v) = js(
+            tab,
+            "document.readyState === 'complete' ? state() : 'loading'",
+        ) {
             last = v.as_str().unwrap_or_default().to_string();
             match last.as_str() {
                 "logged_in" => return Ok(Login::LoggedIn),
@@ -380,12 +384,22 @@ fn open_chat(
     anon: bool,
 ) -> Res<Tab> {
     let mut tab = browser.new_tab(url, false)?;
-    let login = wait_login(&mut tab, deadline);
-    if let Ok(l) = login
-        && !anon
-    {
-        record_login(env, l);
-    }
+    let login = wait_login(&mut tab, deadline).and_then(|l| {
+        if l != Login::LoggedIn || browser::fixture_url(url) {
+            return Ok(l);
+        }
+        if confirm_plus(&mut tab, url, deadline)? {
+            Ok(Login::LoggedIn)
+        } else {
+            Ok(Login::PendingPlus)
+        }
+    });
+    let login = login.and_then(|l| {
+        if !anon {
+            record_login(env, l)?;
+        }
+        Ok(l)
+    });
     match login {
         Ok(Login::LoggedIn) => Ok(tab),
         Ok(Login::LoggedOut) if anon => Ok(tab),
@@ -400,7 +414,58 @@ fn open_chat(
     }
 }
 
-fn send_prompt(tab: &mut Tab, prompt: &str) -> Res<()> {
+/// 自作タブの設定画面で現在のプランだけを確認する。Plus以外では送信しない。
+fn confirm_plus(tab: &mut Tab, url: &str, deadline: Instant) -> Res<bool> {
+    let pending = || {
+        if Instant::now() >= deadline {
+            Err(fail(Code::Timeout, "プラン確認が制限時間を超えました"))
+        } else {
+            Ok(false)
+        }
+    };
+    let direct = js(tab, "accountPlan()")?;
+    if let Some(plan) = direct.as_str().filter(|s| !s.is_empty()) {
+        if plan != "plus" {
+            eprintln!("chatgpt_web: 現在のプランは {plan} です。目的のPlusは未確認です");
+        }
+        return Ok(plan == "plus");
+    }
+    let until = deadline.min(Instant::now() + Duration::from_secs(30));
+    if !js(tab, "openProfileMenu()")?.as_bool().unwrap_or(false) {
+        return Ok(false);
+    }
+    // 各クリックは表示された要素に1回だけ行い、次の画面の描画を待つ。
+    for action in ["openSettings()", "openBilling()"] {
+        loop {
+            if Instant::now() >= until {
+                return pending();
+            }
+            if js(tab, action)?.as_bool().unwrap_or(false) {
+                break;
+            }
+            sleep(Duration::from_millis(200));
+        }
+    }
+    let plan = loop {
+        if Instant::now() >= until {
+            return pending();
+        }
+        let value = js(tab, "accountPlan()")?;
+        if let Some(plan) = value.as_str().filter(|s| !s.is_empty()) {
+            break plan.to_string();
+        }
+        sleep(Duration::from_millis(200));
+    };
+    if plan != "plus" {
+        eprintln!("chatgpt_web: 現在のプランは {plan} です。目的のPlusは未確認です");
+        return Ok(false);
+    }
+    // 設定を表示した同じ所有タブを新しいチャットに戻してから入力する。
+    tab.cdp.call("Page.navigate", json!({"url": url}))?;
+    Ok(wait_login(tab, deadline)? == Login::LoggedIn)
+}
+
+fn send_prompt(tab: &mut Tab, prompt: &str, deadline: Instant) -> Res<()> {
     let lit = serde_json::to_string(prompt).map_err(io::Error::other)?;
     let pasted = js(tab, &format!("paste({lit})"))?.as_i64().unwrap_or(-1);
     if pasted <= 0 {
@@ -411,7 +476,7 @@ fn send_prompt(tab: &mut Tab, prompt: &str) -> Res<()> {
             return Err(fail(Code::Failed, "入力欄に質問を入れられませんでした"));
         }
     }
-    let until = Instant::now() + Duration::from_secs(30);
+    let until = deadline.min(Instant::now() + Duration::from_secs(30));
     while !js(tab, "clickSend()")?.as_bool().unwrap_or(false) {
         if Instant::now() >= until {
             return Err(fail(
@@ -421,7 +486,7 @@ fn send_prompt(tab: &mut Tab, prompt: &str) -> Res<()> {
         }
         sleep(Duration::from_millis(300));
     }
-    let until = Instant::now() + Duration::from_secs(30);
+    let until = deadline.min(Instant::now() + Duration::from_secs(30));
     loop {
         if js(tab, "poll()")?["users"].as_u64().unwrap_or(0) > 0 {
             return Ok(());
@@ -452,7 +517,9 @@ fn wait_answer(env: &Env, tab: &mut Tab, deadline: Instant, anon: bool) -> Res<S
             && l != Login::LoggedIn
             && !(anon && l == Login::LoggedOut)
         {
-            record_login(env, l);
+            if let Err(error) = record_login(env, l) {
+                eprintln!("chatgpt_web: {}", error.msg);
+            }
             return Err(l.fail());
         }
         let streaming = p["streaming"].as_bool().unwrap_or(true);
@@ -491,11 +558,18 @@ fn ask(env: &Env, prompt_file: &Path, model: Option<&str>, timeout: u64, anon: b
     let deadline = Instant::now() + Duration::from_secs(timeout);
     let prompt = read_prompt(prompt_file)?;
     let url = chat_url(&env.url, model)?;
+    if anon && !browser::fixture_url(&env.url) {
+        return Err(fail(
+            Code::Usage,
+            "未ログインでの送信はHTML試験だけに使えます",
+        ));
+    }
     let _lock = lock(&env.home, deadline)?;
-    let mut browser = Browser::open(&env.profile(), false)?;
+    browser::cleanup(&env.home)?;
+    let mut browser = Browser::open(&env.home, &env.url, deadline)?;
     let mut tab = open_chat(env, &mut browser, &url, deadline, anon)?;
-    let result =
-        send_prompt(&mut tab, &prompt).and_then(|()| wait_answer(env, &mut tab, deadline, anon));
+    let result = send_prompt(&mut tab, &prompt, deadline)
+        .and_then(|()| wait_answer(env, &mut tab, deadline, anon));
     browser.close_tab(tab);
     let text = result?;
     println!("{text}");
@@ -505,7 +579,8 @@ fn ask(env: &Env, prompt_file: &Path, model: Option<&str>, timeout: u64, anon: b
 fn check(env: &Env) -> Res<()> {
     let deadline = Instant::now() + Duration::from_secs(600);
     let _lock = lock(&env.home, deadline)?;
-    let mut browser = Browser::open(&env.profile(), false)?;
+    browser::cleanup(&env.home)?;
+    let mut browser = Browser::open(&env.home, &env.url, deadline)?;
     let tab = open_chat(env, &mut browser, &env.url, deadline, false)?;
     browser.close_tab(tab);
     println!("ChatGPT にログインできています");
@@ -523,55 +598,39 @@ fn status(env: &Env) -> Res<()> {
     if login != Login::LoggedIn {
         return Err(login.fail());
     }
+    let backend = if browser::fixture_url(&env.url) {
+        "fixture"
+    } else {
+        "owner_chrome"
+    };
+    if st["backend"].as_str() != Some(backend)
+        || now().saturating_sub(st["checked_at"].as_u64().unwrap_or(0)) > 26 * 3600
+    {
+        return Err(fail(
+            Code::LoginRequired,
+            "オーナーのChromeでの新しい確認が必要です",
+        ));
+    }
     let ago = now().saturating_sub(st["checked_at"].as_u64().unwrap_or(0)) / 3600;
     println!("ログインできています（{ago} 時間前に確認）");
     Ok(())
 }
 
 fn login(env: &Env) -> Res<()> {
-    let mut browser = Browser::open(&env.profile(), true)?;
-    let login_url = format!(
-        "{}/auth/login",
-        env.url
-            .split('?')
-            .next()
-            .unwrap_or(DEFAULT_URL)
-            .trim_end_matches('/')
-    );
-    let launched = browser.launched();
-    browser.new_tab(&login_url, !launched)?;
-    // 自分で起動した Chrome もログイン作業のため開いたままにする（閉じるのは `chatgpt_web stop`）
-    std::mem::forget(browser);
-    println!(
-        "専用プロフィールの Chrome でログイン画面を開きました。ログイン後に `chatgpt_web check` を実行してください"
-    );
-    Ok(())
+    // Use the already logged-in owner browser, without switching accounts.
+    check(env)
 }
 
 fn stop(env: &Env) -> Res<()> {
     let _lock = lock(&env.home, Instant::now() + Duration::from_secs(30))?;
-    let port_file = env.profile().join("DevToolsActivePort");
-    let Some((port, path)) = fs::read_to_string(&port_file)
-        .ok()
-        .as_deref()
-        .and_then(cdp::parse_active_port)
-    else {
-        println!("起動していません");
-        return Ok(());
-    };
-    match cdp::Cdp::connect(port, &path) {
-        Ok(mut c) => {
-            let _ = c.call("Browser.close", json!({}));
-            println!("専用プロフィールの Chrome を閉じました");
-        }
-        Err(_) => println!("起動していません"),
-    }
+    browser::cleanup(&env.home)?;
+    println!("自分が開いたタブの後片付けを確認しました");
     Ok(())
 }
-
 fn probe(env: &Env, url: Option<&str>, steps: &[String]) -> Res<()> {
+    let deadline = Instant::now() + Duration::from_secs(120);
     let _lock = lock(&env.home, Instant::now() + Duration::from_secs(30))?;
-    let mut browser = Browser::open(&env.profile(), false)?;
+    let mut browser = Browser::open(&env.home, &env.url, deadline)?;
     let target_url = url.unwrap_or(&env.url);
     let mut tab = browser.new_tab(target_url, false)?;
     // createTarget can attach while the initial about:blank document is still
@@ -680,19 +739,32 @@ mod tests {
     }
 
     #[test]
+    fn failed_readiness_persistence_is_not_reported_as_a_successful_check() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("state.json")).unwrap();
+        let env = Env {
+            home: dir.path().into(),
+            url: DEFAULT_URL.into(),
+        };
+        let error = record_login(&env, Login::LoggedIn).unwrap_err();
+        assert_eq!(error.code, Code::Failed);
+        assert!(status(&env).is_err());
+        assert!(env.home.join("state.json").is_dir());
+    }
+
+    #[test]
     fn state_file_records_since_only_on_change() {
         let dir = tempfile::tempdir().unwrap();
         let env = Env {
             home: dir.path().into(),
             url: DEFAULT_URL.into(),
-            discord: None,
         };
-        record_login(&env, Login::LoggedOut);
+        record_login(&env, Login::LoggedOut).unwrap();
         let first = read_state(&env.home).unwrap();
         assert_eq!(first["login"], "logged_out");
-        record_login(&env, Login::LoggedOut);
+        record_login(&env, Login::LoggedOut).unwrap();
         assert_eq!(read_state(&env.home).unwrap()["since"], first["since"]);
-        record_login(&env, Login::LoggedIn);
+        record_login(&env, Login::LoggedIn).unwrap();
         assert_eq!(read_state(&env.home).unwrap()["login"], "logged_in");
     }
 
@@ -706,5 +778,49 @@ mod tests {
         assert!(started.elapsed() >= Duration::from_millis(800));
         drop(held);
         lock(dir.path(), Instant::now()).unwrap();
+    }
+
+    #[test]
+    fn readiness_rejects_old_profile_cache_and_expired_checks() {
+        let dir = tempfile::tempdir().unwrap();
+        let env = Env {
+            home: dir.path().into(),
+            url: DEFAULT_URL.into(),
+        };
+        cc_chrome::lifecycle::atomic_json(
+            &env.home.join("state.json"),
+            &json!({"login":"logged_in","checked_at":now()}),
+        )
+        .unwrap();
+        assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
+        record_login(&env, Login::LoggedIn).unwrap();
+        assert!(status(&env).is_ok());
+        cc_chrome::lifecycle::atomic_json(
+            &env.home.join("state.json"),
+            &json!({"login":"logged_in","backend":"owner_chrome","checked_at":now()-27*3600}),
+        )
+        .unwrap();
+        assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
+        record_login(&env, Login::Unknown).unwrap();
+        assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
+        record_login(&env, Login::PendingPlus).unwrap();
+        assert_eq!(status(&env).unwrap_err().code, Code::LoginRequired);
+    }
+
+    #[test]
+    fn live_anonymous_send_is_rejected_before_creating_browser_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("new-state");
+        let prompt = dir.path().join("prompt.txt");
+        fs::write(&prompt, "q").unwrap();
+        let env = Env {
+            home: home.clone(),
+            url: DEFAULT_URL.into(),
+        };
+        assert_eq!(
+            ask(&env, &prompt, None, 5, true).unwrap_err().code,
+            Code::Usage
+        );
+        assert!(!home.exists());
     }
 }

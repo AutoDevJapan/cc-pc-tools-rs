@@ -22,5 +22,9 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --locked -p cc-channel-watch
+      - run: cargo test --locked -p cc-chrome -p cc-job-policy
+      # cc-jobs uses Win32 handles and is validated on its supported platform.
+      - if: runner.os == 'Windows'
+        run: cargo test --locked -p cc-jobs --test parity registrar_launch_policy
       - run: cargo test --locked -p cc-ask --test channel_reports --test commands --test ask_dedup
-      - run: cargo clippy --locked -p cc-ask -p cc-channel-watch --all-targets -- -D warnings
+      - run: cargo clippy --locked -p cc-ask -p cc-channel-watch -p cc-chrome -p cc-job-policy --all-targets -- -D warnings

@@ -1,3 +1,3 @@
 [workspace]
 resolver = "3"
-members = ["cc-ask", "cc-redact", "cc-gh-gate", "cc-channel-watch", "chatgpt-web", "cc-chrome", "cc-bookmark-queue", "cc-job-policy", "cc-jobs", "cc-live", "cc-local-llm", "cc-ocx-watchdog", "cc-scheduler", "cc-shepherd", "cc-task-title", "cc-todo"]
+members = ["localai-web-rs", "cc-ask", "cc-redact", "cc-gh-gate", "cc-channel-watch", "chatgpt-web", "cc-chrome", "cc-bookmark-queue", "cc-job-policy", "cc-jobs", "cc-live", "cc-local-llm", "cc-ocx-watchdog", "cc-scheduler", "cc-shepherd", "cc-task-title", "cc-todo", "cleanup-8h"]

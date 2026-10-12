@@ -61,6 +61,97 @@ fn healthy_machine_grows_beyond_three_and_shares_jobs_by_active_builds() {
     assert_eq!(t.admit(50., 32.).unwrap().unwrap().jobs, 10);
 }
 #[test]
+fn queue_overrides_reload_slots_build_jobs_and_test_threads() {
+    let t = Temp::new();
+    t.policy(8);
+    let file = t.0.join("queue-config.json");
+    fs::write(
+        &file,
+        r#"{"cargo_slots":2,"cargo_jobs_per_build":8,"test_threads":3,"fixed_max_running":100}"#,
+    )
+    .unwrap();
+    let first = t.admit(50., 32.).unwrap().unwrap();
+    assert_eq!((first.jobs, first.test_threads), (8, 3));
+    let second = t.admit(50., 32.).unwrap().unwrap();
+    assert_eq!((second.jobs, second.test_threads), (8, 3));
+    assert!(t.admit(50., 32.).unwrap().is_none());
+    fs::write(
+        &file,
+        r#"{"cargo_slots":3,"cargo_jobs_per_build":2,"test_threads":7}"#,
+    )
+    .unwrap();
+    let third = t.admit(50., 32.).unwrap().unwrap();
+    assert_eq!((third.jobs, third.test_threads), (2, 7));
+    fs::write(&file, r#"{"cargo_slots":1}"#).unwrap();
+    assert!(t.admit(50., 32.).unwrap().is_none());
+    drop((first, second, third));
+    assert_eq!(t.admit(50., 32.).unwrap().unwrap().jobs, 10);
+    fs::write(&file, r#"{"test_threads":0}"#).unwrap();
+    assert_eq!(
+        t.admit(50., 32.).err().unwrap().kind(),
+        io::ErrorKind::InvalidData
+    );
+}
+#[test]
+fn cargo_gate_applies_separate_test_limits_to_the_real_child_boundary() {
+    let t = Temp::new();
+    fs::write(t.0.join(CONFIG_FILE), r#"{"min_free_memory_gib":0,"grow_below_cpu_percent":100,"pause_at_cpu_percent":100,"settle_seconds":0}"#).unwrap();
+    fs::write(
+        t.0.join("queue-config.json"),
+        r#"{"cargo_jobs_per_build":8,"test_threads":3}"#,
+    )
+    .unwrap();
+    let cores = std::thread::available_parallelism().unwrap().get();
+    let build = cores.min(8);
+    let tests = cores.min(3);
+    for (input, expected, rust_tests, nextest_tests) in [
+        (
+            vec!["nextest", "run", "--build-jobs=32", "--test-threads=32"],
+            format!("nextest run --build-jobs={build} --test-threads={tests}"),
+            tests,
+            tests,
+        ),
+        (
+            vec!["test", "--", "--test-threads", "32"],
+            format!("test -- --test-threads {tests}"),
+            tests,
+            32,
+        ),
+        (vec!["test"], "test".into(), tests, 32),
+        (
+            vec!["test", "--", "--test-threads=1"],
+            "test -- --test-threads=1".into(),
+            1,
+            32,
+        ),
+    ] {
+        let output = cc_jobs::hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+            .arg("--echo-test-limits")
+            .args(input)
+            .env(
+                "CODEX_JOBS_REAL_CARGO",
+                env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            )
+            .env("CODEX_JOBS_CARGO_LOCK_DIR", &t.0)
+            .env("CARGO_TARGET_DIR", t.0.join("target"))
+            .env("CARGO_BUILD_JOBS", "32")
+            .env("RUST_TEST_THREADS", "32")
+            .env("NEXTEST_TEST_THREADS", "32")
+            .env_remove("CODEX_JOBS_CARGO_LOCK_HELD")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap().trim(),
+            format!("{build}|{rust_tests}|{nextest_tests}|{expected}")
+        );
+    }
+}
+#[test]
 fn exact_thresholds_pause_new_builds_and_middle_band_keeps_capacity() {
     let cfg = Config::default();
     let sample = |cpu_percent, free_memory_gib| Sample {
@@ -287,8 +378,14 @@ fn waiting_process_rereads_config_despite_its_inherited_one_slot_setting() {
     fs::write(job_dir.join("job.json"), "{}").unwrap();
     let lock = FileLock::try_acquire(&t.0.join("cargo-build.lock.0")).unwrap();
     let mut child = OwnedChild(Some(
-        hidden_command(env!("CARGO_BIN_EXE_cargo_gate"))
+        // The contract is configuration reload on a healthy machine. Sampling
+        // the busy CI host can legitimately pause admission at 100% CPU even
+        // after the new ceiling is read. Keep the full real gate protocol and
+        // child environment, but supply health only through the fixture binary.
+        hidden_command(env!("CARGO_BIN_EXE_cc_jobs_fixture"))
+            .arg("--healthy-cargo-gate")
             .arg("--echo-env")
+            .env("CC_JOBS_FIXTURE_DIR", &t.0)
             .env(
                 "CODEX_JOBS_REAL_CARGO",
                 env!("CARGO_BIN_EXE_cc_jobs_fixture"),

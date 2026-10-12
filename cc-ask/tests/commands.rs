@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[test]
-fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
+fn ask_existing_thread_creates_separate_question_and_progress_with_work_link() {
     let mut h = Harness::new();
     h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!("G");
     let body = h.root.path().join("install.md");
@@ -22,22 +22,35 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
         },
     )
     .unwrap();
-    assert_eq!(result["thread_id"], "100");
+    assert_eq!(result["thread_id"], "300");
+    assert_eq!(result["progress_thread_id"], "301");
+    assert_eq!(result["work_thread_id"], "100");
     let fake = h.fake.borrow();
-    assert!(fake
-        .http_calls
-        .iter()
-        .all(|r| !s(&r["url"]).ends_with("/threads")));
-    let posted = &fake.posts.last().unwrap().1;
-    assert!(s(&posted["content"]).contains("<@OWN>"));
+    assert!(
+        fake.http_calls
+            .iter()
+            .filter(|r| r["method"] == "POST" && s(&r["url"]).ends_with("/threads"))
+            .count()
+            == 2
+    );
+    assert!(fake.posts.is_empty());
+    let posted = &fake.messages["300"][0];
+    assert!(s(&posted["content"]).starts_with("【bookmarks】\n<@OWN> "));
+    assert_eq!(s(&posted["content"]).matches("<@OWN>").count(), 1);
+    assert!(s(&posted["content"]).contains("【bookmarks】"));
     assert_eq!(posted["allowed_mentions"]["users"], json!(["OWN"]));
+    let progress = &fake.messages["301"][0];
+    assert_eq!(progress["flags"], SILENT | 4);
+    assert_eq!(progress["allowed_mentions"]["users"], json!([]));
+    assert!(s(&progress["content"]).contains("https://discord.com/channels/G/100"));
+    assert!(s(&progress["content"]).contains("https://discord.com/channels/G/300"));
     let state = h.state();
     let recorded = state["questions"]
         .as_array()
         .unwrap()
         .iter()
         .rev()
-        .find(|q| q["thread_id"] == "100")
+        .find(|q| q["thread_id"] == "300")
         .unwrap();
     assert_eq!(recorded["cwd"], "fixture/bookmarks");
     assert_eq!(recorded["agent"], "Codex");
@@ -45,7 +58,7 @@ fn ask_existing_thread_mentions_owner_and_tracks_reply_without_new_thread() {
         .as_array()
         .unwrap()
         .iter()
-        .any(|q| q["thread_id"] == "100" && q["open"] == true));
+        .any(|q| q["thread_id"] == "300" && q["open"] == true));
 }
 
 #[test]
@@ -93,7 +106,7 @@ fn ask_existing_thread_dry_run_sends_nothing() {
 }
 
 #[test]
-fn answered_thread_ask_preserves_original_assignment() {
+fn new_caller_question_preserves_answered_question_assignment() {
     let mut h = Harness::new();
     h.fake.borrow_mut().threads.get_mut("100").unwrap()["guild_id"] = json!("G");
     let body = h.root.path().join("question.md");
@@ -106,27 +119,38 @@ fn answered_thread_ask_preserves_original_assignment() {
         cwd: Some("fixture/bookmarks".into()),
         ..Default::default()
     };
-    cmd_ask(&mut h.ctx, &args).unwrap();
+    common::decision(&h, &mut args, "first resource");
+    let first = cmd_ask(&mut h.ctx, &args).unwrap();
     {
         let mut fake = h.fake.borrow_mut();
-        let history = fake.messages.get_mut("100").unwrap();
+        let history = fake.messages.get_mut(s(&first["thread_id"])).unwrap();
         history.last_mut().unwrap()["author"]["bot"] = json!(true);
         history.push(message("2000", "入れた", "OWN"));
     }
+    let before = h.state()["questions"][0].clone();
     args.cwd = Some("another/bookmarks".into());
     args.agent = "Claude".into();
+    common::decision(&h, &mut args, "other resource");
+    common::review_owner_context(&mut h, &args);
     let result = cmd_ask(&mut h.ctx, &args).unwrap();
-    assert_eq!(result["suppressed"], "already_answered");
+    assert_ne!(result["thread_id"], first["thread_id"]);
+    assert_ne!(result["progress_thread_id"], first["progress_thread_id"]);
     let state = h.state();
     let q = state["questions"]
         .as_array()
         .unwrap()
         .iter()
         .rev()
-        .find(|q| q["thread_id"] == "100")
+        .find(|q| q["thread_id"] == first["thread_id"])
         .unwrap();
     assert_eq!(q["cwd"], "fixture/bookmarks");
     assert_eq!(q["agent"], "Codex");
+    assert_eq!(*q, before);
+    let new = state["questions"].as_array().unwrap().last().unwrap();
+    assert_eq!(new["cwd"], "another/bookmarks");
+    assert_eq!(new["agent"], "Claude");
+    assert_eq!(new["work_thread_id"], "100");
+    assert!(owner_replies(&mut h.ctx, new, "OWN").unwrap().is_empty());
 }
 
 /// Override only selected effects; all Discord and child process work stays fake.
@@ -236,7 +260,7 @@ fn test_archives_quiet_threads_regardless_of_long_jobs() {
 }
 
 #[test]
-fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
+fn ask_records_context_and_starter_cursor_across_silent_continuations() {
     let mut h = Harness::new();
     let body = h.root.path().join("question.md");
     std::fs::write(&body, format!("  {}  ", "質問".repeat(2200))).unwrap();
@@ -245,6 +269,7 @@ fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
         attach: vec![],
         title: "質問".repeat(100),
         body_file: body,
+        decision_file: None,
         agent: "Codex".into(),
         cwd: Some("fixture/worktree".into()),
         source: Some("scheduler".into()),
@@ -253,11 +278,14 @@ fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
         owner_only: None,
         dry_run: false,
     };
+    h.fake.borrow_mut().history_injection = Some((1, "300".into(), "a 先に公開".into()));
     let out = cmd_ask(&mut h.ctx, &args).unwrap();
-    assert_eq!(
-        out,
-        json!({"thread_id":"300","url":"https://discord.com/channels/G/300"})
-    );
+    assert_eq!(out["thread_id"], "300");
+    assert_eq!(out["after"], "300");
+    assert_eq!(out["url"], "https://discord.com/channels/G/300");
+    assert_eq!(out["progress_thread_id"], "301");
+    assert_eq!(out["progress_url"], "https://discord.com/channels/G/301");
+    assert_eq!(out["work_thread_id"], "");
     let state = h.state();
     let q = &state["questions"][0];
     assert_eq!(q["cwd"], "fixture/worktree");
@@ -268,7 +296,11 @@ fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
     assert_eq!(q["source"], "scheduler");
     assert_eq!(q["scheduler_item"], 12);
     assert_eq!(q["scheduler_job"], "job1");
-    assert_eq!(
+    assert_eq!(q["after"], out["after"]);
+    assert_eq!(q["question_message"], out["after"]);
+    assert_eq!(q["progress_thread_id"], out["progress_thread_id"]);
+    assert_eq!(q["separated_question"], true);
+    assert_ne!(
         q["after"],
         h.fake.borrow().messages["300"].last().unwrap()["id"]
     );
@@ -281,12 +313,24 @@ fn ask_records_agent_cwd_scheduler_metadata_and_last_chunk() {
         .unwrap()["body"]["message"];
     assert_eq!(
         starter["allowed_mentions"],
-        json!({"parse":[],"users":["OWN"]})
+        json!({"parse":[],"users":["OWN"],"replied_user":false})
     );
+    assert!(s(&starter["content"]).starts_with(&format!("【{}】\n<@OWN> ", s(&q["project"]))));
+    assert_eq!(s(&starter["content"]).matches("<@OWN>").count(), 1);
     for (_, post) in &fake.posts {
         assert!(s(&post["content"]).chars().count() <= 2000);
-        assert_eq!(post["allowed_mentions"], json!({"parse":[]}));
+        assert_eq!(
+            post["allowed_mentions"],
+            json!({"parse":[],"users":[],"replied_user":false})
+        );
+        assert_eq!(post["flags"], SILENT | 4);
+        assert!(!s(&post["content"]).contains("<@OWN>"));
     }
+    drop(fake);
+    // An answer sent between the starter and the final bot chunk remains visible.
+    let replies = owner_replies(&mut h.ctx, q, "OWN").unwrap();
+    assert_eq!(replies.len(), 1);
+    assert_eq!(replies[0]["content"], "a 先に公開");
 }
 
 #[test]
@@ -294,15 +338,7 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
     let mut h = Harness::new();
     let body = h.root.path().join("body.md");
     std::fs::write(&body, "  方針を教えてください  ").unwrap();
-    overrides(
-        &mut h,
-        vec![
-            ("GET /channels/T", json!({"type":0})),
-            ("POST /channels/T/messages", json!({"id":"500"})),
-            ("POST /channels/T/messages/500/threads", json!({"id":"600"})),
-        ],
-        false,
-    );
+    h.ctx.effects = Box::new(TextChannel(SharedFake(h.fake.clone())));
     let result = cmd_ask(
         &mut h.ctx,
         &AskArgs {
@@ -312,10 +348,12 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
         },
     )
     .unwrap();
-    assert_eq!(result["thread_id"], "600");
+    assert_eq!(result["thread_id"], "1001");
+    assert_eq!(result["progress_thread_id"], "1002");
     let state = h.state();
     let q = &state["questions"][0];
-    assert_eq!(q["after"], "500");
+    assert_eq!(q["after"], "1001");
+    assert_eq!(q["question_message"], "1001");
     assert_eq!(
         q["cwd"],
         std::env::current_dir().unwrap().to_string_lossy().as_ref()
@@ -328,7 +366,7 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
         format!("【{}】質問", project.chars().take(22).collect::<String>())
     );
     assert_eq!(q["project"], project);
-    assert!(q.get("source").is_none());
+    assert_eq!(q["source"], "posted");
     let fake = h.fake.borrow();
     let first = &fake
         .http_calls
@@ -341,6 +379,25 @@ fn text_channel_ask_creates_thread_from_starter_and_defaults_to_current_director
             "【{project}】\n<@OWN> 方針を教えてください\n\n-# このスレッドに返信してください。"
         )
     );
+    let starters = &fake.messages["T"];
+    assert_eq!(starters.len(), 2);
+    assert_eq!(starters[0]["id"], result["thread_id"]);
+    assert_eq!(starters[1]["id"], result["progress_thread_id"]);
+    for id in ["1001", "1002"] {
+        assert!(fake
+            .http_calls
+            .iter()
+            .any(|c| c["method"] == "GET" && s(&c["url"]).ends_with(&format!("/channels/{id}"))));
+        assert_eq!(
+            fake.http_calls
+                .iter()
+                .filter(|c| c["method"] == "POST"
+                    && s(&c["url"]).ends_with(&format!("/channels/T/messages/{id}/threads")))
+                .count(),
+            1
+        );
+    }
+    assert!(s(&starters[1]["content"]).contains("https://discord.com/channels/G/1001"));
 }
 
 #[test]
@@ -798,6 +855,14 @@ fn scheduler_error_report_matches_swallowed_inprocess_error_but_other_failures_p
     let mut h = Harness::new();
     overrides(
         &mut h,
+        vec![("RUN", json!({"code":0,"stdout":"{\"busy\":true}\n"}))],
+        false,
+    );
+    cmd_scheduler_step(&mut h.ctx).unwrap();
+    assert_eq!(h.ctx.cfg["__scheduler_step_failed"], true);
+    h.fake.borrow_mut().runs.clear();
+    overrides(
+        &mut h,
         vec![(
             "RUN",
             json!({"code":1,"stdout":"scheduler progress\n{\n  \"error\": \"RuntimeError\"\n}\n","stderr":"scheduler tick failed RuntimeError\n"}),
@@ -805,6 +870,7 @@ fn scheduler_error_report_matches_swallowed_inprocess_error_but_other_failures_p
         false,
     );
     cmd_scheduler_step(&mut h.ctx).unwrap();
+    assert_eq!(h.ctx.cfg["__scheduler_step_failed"], true);
     assert_eq!(h.fake.borrow().runs[0].1, 20);
     assert!(cmd_shepherd_step(&mut h.ctx).is_err());
     assert!(cmd_todo_watch(&mut h.ctx).is_err());
@@ -901,6 +967,37 @@ fn tick_ignores_old_enabled_scanners_and_preserves_ledgers_while_running_watch()
             .count(),
         2
     );
+}
+
+#[test]
+fn patrol_observes_work_before_discord_history_and_records_real_core_results() {
+    let mut h = Harness::new();
+    h.save(&json!({"questions":[question("200")]}));
+    cmd_tick(&mut h.ctx).unwrap();
+    let f = h.fake.borrow();
+    let history = f
+        .chronology
+        .iter()
+        .position(|event| event.starts_with("http:GET:") && event.contains("/messages?limit="))
+        .unwrap();
+    let watch = f
+        .chronology
+        .iter()
+        .position(|event| event.starts_with("run:") && event.ends_with(":watch"))
+        .unwrap();
+    let scheduler = f
+        .chronology
+        .iter()
+        .position(|event| {
+            event.starts_with("run:") && event.contains("scheduler") && event.ends_with(":step")
+        })
+        .unwrap();
+    assert!(watch < history && scheduler < history, "{:?}", f.chronology);
+    let health = read_json(&h.ctx.here.join("tick-health.json")).unwrap();
+    assert_eq!(health["stages"]["cmd_todo_watch"], true);
+    assert_eq!(health["stages"]["cmd_scheduler_step"], true);
+    assert!(health["finished_at"].is_u64());
+    assert!(health["error"].is_null());
 }
 
 #[test]
@@ -1051,9 +1148,27 @@ fn deferred_reboot_recovery_suppresses_replacement_watch_and_dispatch_for_one_ti
         .runs
         .iter()
         .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch")));
-    assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| argv
-        .first()
-        .is_some_and(|arg| arg.ends_with("scheduler.py"))));
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "watch-preview")));
+    assert!(h
+        .fake
+        .borrow()
+        .runs
+        .iter()
+        .any(|(argv, _)| argv.last().is_some_and(|arg| arg == "status")));
+    assert!(!h.fake.borrow().runs.iter().any(|(argv, _)| {
+        argv.iter().any(|arg| arg.ends_with("scheduler.py"))
+            && argv.last().is_some_and(|arg| arg == "step")
+    }));
+    let health = read_json(&h.ctx.here.join("tick-health.json")).unwrap();
+    assert_eq!(health["mode"], "observe_only");
+    assert_eq!(health["stages"]["cmd_todo_watch"], true);
+    assert_eq!(health["stages"]["cmd_scheduler_step"], true);
+    assert_eq!(health["error"], "core_stage_failed");
     h.fake.borrow_mut().runs.clear();
     h.fake.borrow_mut().reboot_recover_fail = false;
     cmd_tick(&mut h.ctx).unwrap();
@@ -1094,4 +1209,115 @@ fn ask_and_log_normalize_file_line_endings_like_python_read_text() {
     assert_eq!(h.text(), "第一行\n第二行\n第三行");
     cmd_log(&mut h.ctx, "記録", "--text keeps\r\nverbatim", None, false).unwrap();
     assert_eq!(h.text(), "--text keeps\r\nverbatim");
+}
+
+#[test]
+fn separated_question_never_reminds_owner_after_one_hour() {
+    let mut h = Harness::new();
+    let body = h.root.path().join("question.md");
+    std::fs::write(&body, "料金を決めてください。\na 月額1000円\nb 月額2000円").unwrap();
+    let result = cmd_ask(
+        &mut h.ctx,
+        &AskArgs {
+            title: "料金".into(),
+            body_file: body,
+            cwd: Some("fixture/work".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let before = h.state()["questions"][0].clone();
+    let calls = h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .filter(|c| c["method"] == "POST")
+        .count();
+    h.fake.borrow_mut().now += 7200.;
+    cmd_remind(&mut h.ctx).unwrap();
+    assert_eq!(h.state()["questions"][0], before);
+    assert!(h.fake.borrow().posts.is_empty());
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST")
+            .count(),
+        calls
+    );
+    assert_eq!(h.fake.borrow().messages[s(&result["thread_id"])].len(), 1);
+}
+/// Text channels create a thread from a real starter message; Discord uses the
+/// starter snowflake as the thread ID, independently for question and progress.
+struct TextChannel(SharedFake);
+impl Effects for TextChannel {
+    fn now(&self) -> f64 {
+        self.0.now()
+    }
+    fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        self.0.run(argv, timeout)
+    }
+    fn http(
+        &mut self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+        discord: bool,
+    ) -> Result<Value> {
+        let path = url.trim_start_matches("https://discord.com/api/v10");
+        if method == "GET" && path == "/channels/T" {
+            self.0
+                 .0
+                .borrow_mut()
+                .http_calls
+                .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
+            return Ok(json!({"type":0,"id":"T","guild_id":"G"}));
+        }
+        if method == "GET"
+            && path.starts_with("/channels/")
+            && path.split('/').count() == 3
+            && !self
+                .0
+                 .0
+                .borrow()
+                .threads
+                .contains_key(path.split('/').nth(2).unwrap())
+        {
+            self.0
+                 .0
+                .borrow_mut()
+                .http_calls
+                .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
+            return Err(format!(
+                "Discord API GET {path} failed: 404 Unknown Channel"
+            ));
+        }
+        if method == "POST"
+            && path.starts_with("/channels/T/messages/")
+            && path.ends_with("/threads")
+        {
+            let mut f = self.0 .0.borrow_mut();
+            f.http_calls
+                .push(json!({"method":method,"url":url,"body":body,"discord":discord}));
+            let mid = path.split('/').nth(4).unwrap();
+            let mut starter = f.messages["T"]
+                .iter()
+                .find(|m| m["id"] == mid)
+                .unwrap()
+                .clone();
+            let thread = json!({"id":mid,"guild_id":"G","type":11,"parent_id":"T",
+                "owner_id":"BOT","name":body.unwrap()["name"],"thread_metadata":{"archived":false}});
+            starter["type"] = json!(21);
+            starter["content"] = json!("");
+            starter["message_reference"] = json!({"message_id":mid,"channel_id":"T"});
+            f.threads.insert(mid.into(), thread.clone());
+            f.messages.insert(mid.into(), vec![starter]);
+            return Ok(thread);
+        }
+        // SharedFake assigns a fresh ID and saves each message, rather than
+        // returning the same fixed ID for both independent parent posts.
+        self.0.http(method, url, body, discord)
+    }
 }

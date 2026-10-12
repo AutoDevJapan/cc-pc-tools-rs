@@ -27,6 +27,8 @@ struct State {
     active_at_admission: usize,
     #[serde(default)]
     jobs_at_admission: usize,
+    #[serde(default)]
+    test_threads_at_admission: usize,
 }
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct Sample {
@@ -112,6 +114,7 @@ fn save_state(path: &Path, state: &State) -> io::Result<()> {
 pub struct Permit {
     _slot: FileLock,
     pub jobs: usize,
+    pub test_threads: usize,
 }
 /// One admission attempt, with injectable counters for deterministic tests.
 /// No environmental slot setting is consulted, including inherited old values.
@@ -214,19 +217,35 @@ fn attempt(
     state.capacity = capacity;
     state.last_admitted = now();
     let jobs = super::jobs_limit(cores, active + 1).min(cfg.jobs_per_build);
+    let test_threads = super::jobs_limit(cores, active + 1).min(cfg.test_threads);
     state.measurement = Some(measured);
     state.active_at_admission = active + 1;
     state.jobs_at_admission = jobs;
+    state.test_threads_at_admission = test_threads;
     record_state(&state_path, &state);
-    Ok(Some(Permit { _slot: slot, jobs }))
+    Ok(Some(Permit {
+        _slot: slot,
+        jobs,
+        test_threads,
+    }))
 }
 pub fn wait(dir: &Path, env: &BTreeMap<String, String>, cores: usize) -> io::Result<Permit> {
+    wait_with_sample(dir, env, cores, native_sample)
+}
+
+/// Share the real retry/config/lock protocol with deterministic process fixtures.
+pub fn wait_with_sample(
+    dir: &Path,
+    env: &BTreeMap<String, String>,
+    cores: usize,
+    mut sample: impl FnMut() -> io::Result<Sample>,
+) -> io::Result<Permit> {
     let mut marker = None;
     let mut marked_reason = "";
     let mut reported_error = String::new();
     loop {
         let mut reason = SLOT_WAIT;
-        match attempt(dir, cores, native_sample, &mut reason) {
+        match attempt(dir, cores, &mut sample, &mut reason) {
             Ok(Some(permit)) => return Ok(permit),
             Ok(None) => reported_error.clear(),
             Err(e)

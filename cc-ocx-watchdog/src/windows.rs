@@ -5,7 +5,7 @@ use std::mem::{size_of, zeroed};
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, FILETIME, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0,
+    CloseHandle, FILETIME, HANDLE, WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::NetworkManagement::IpHelper::{
     GetExtendedTcpTable, MIB_TCPROW_OWNER_PID, TCP_TABLE_OWNER_PID_LISTENER,
@@ -13,9 +13,9 @@ use windows_sys::Win32::NetworkManagement::IpHelper::{
 use windows_sys::Win32::Networking::WinSock::AF_INET;
 use windows_sys::Win32::System::ProcessStatus::{GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS_EX};
 use windows_sys::Win32::System::Threading::{
-    CreateMutexW, GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
-    PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, QueryFullProcessImageNameW, ReleaseMutex,
-    TerminateProcess, WaitForSingleObject,
+    CreateMutexW, GetProcessTimes, OpenProcess, PROCESS_QUERY_INFORMATION,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, PROCESS_VM_READ,
+    QueryFullProcessImageNameW, ReleaseMutex, TerminateProcess, WaitForSingleObject,
 };
 
 pub fn wide(value: impl AsRef<OsStr>) -> Vec<u16> {
@@ -23,12 +23,15 @@ pub fn wide(value: impl AsRef<OsStr>) -> Vec<u16> {
 }
 
 pub fn current_user_sid() -> Result<String, String> {
+    process_user_sid(unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() })
+}
+pub(crate) fn process_user_sid(process: HANDLE) -> Result<String, String> {
     use windows_sys::Win32::Foundation::LocalFree;
     use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
     use windows_sys::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenUser};
-    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    use windows_sys::Win32::System::Threading::OpenProcessToken;
     let mut token = std::ptr::null_mut();
-    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
+    if unsafe { OpenProcessToken(process, TOKEN_QUERY, &mut token) } == 0 {
         return Err("process_token".into());
     }
     let result = (|| {
@@ -204,9 +207,19 @@ fn same_path(a: &Path, b: &Path) -> bool {
 
 impl Process {
     pub fn open(pid: u32, expected_exe: &Path) -> Result<Self, String> {
+        Self::open_with_access(pid, expected_exe, false)
+    }
+    fn open_with_access(pid: u32, expected_exe: &Path, inspect: bool) -> Result<Self, String> {
         let handle = unsafe {
             OpenProcess(
-                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SYNCHRONIZE,
+                PROCESS_QUERY_LIMITED_INFORMATION
+                    | PROCESS_TERMINATE
+                    | PROCESS_SYNCHRONIZE
+                    | if inspect {
+                        PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
+                    } else {
+                        0
+                    },
                 0,
                 pid,
             )
@@ -280,13 +293,15 @@ impl Process {
         })
     }
     pub fn terminate_if_still_owner(&self, config: &Config) -> Result<TerminationOutcome, String> {
-        crate::ownership::verify(&config.home, self.identity.pid, config.port)?;
+        self.verify_owner(config)?;
         if listener_pid(config.port)? != Some(self.identity.pid) {
             return Err("listener_changed".into());
         }
         // This is the handle held across all failed probes, not a newly opened PID.
-        if unsafe { WaitForSingleObject(self.handle, 0) } == WAIT_OBJECT_0 {
-            return Err("already_exited".into());
+        match unsafe { WaitForSingleObject(self.handle, 0) } {
+            WAIT_TIMEOUT => {}
+            WAIT_OBJECT_0 => return Err("already_exited".into()),
+            _ => return Err("process_wait_failed".into()),
         }
         if unsafe { TerminateProcess(self.handle, 1) } == 0 {
             return Err("terminate_process".into());
@@ -296,14 +311,25 @@ impl Process {
         }
         Ok(TerminationOutcome::Confirmed)
     }
+    fn verify_owner(&self, config: &Config) -> Result<(), String> {
+        crate::ownership::verify_or_else(&config.home, self.identity.pid, config.port, || {
+            crate::process_owner::verify(self.handle, self.identity, config)
+        })
+    }
 }
 
 pub fn discover(config: &Config) -> Result<Option<Process>, String> {
     let Some(pid) = listener_pid(config.port)? else {
         return Ok(None);
     };
-    crate::ownership::verify(&config.home, pid, config.port)?;
-    Process::open(pid, &config.expected_exe).map(Some)
+    // Open first: every proof and the eventual termination refer to this incarnation.
+    let process =
+        Process::open_with_access(pid, &config.expected_exe, config.expected_cli.is_some())?;
+    process.verify_owner(config)?;
+    if listener_pid(config.port)? != Some(pid) {
+        return Err("listener_changed".into());
+    }
+    Ok(Some(process))
 }
 
 #[cfg(test)]

@@ -23,11 +23,25 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// A caller explicitly assigning a new worker supersedes the old worker's result.
 /// Keep the saved specification, worktree, answers and job history intact.
 pub fn assign_worker(item: &mut Value, job: &str) {
+    let same_receipt = item["worker_receipt"]["job"] == job
+        && item["worker_receipt"]["generation"] == item["resume_generation"]
+        && item["scheduler"]["job"] == job
+        && item["status"] == "doing";
+    if !same_receipt {
+        advance_resume(item, Some(job));
+    }
     // A worker now owns the released item, so the one-shot "prerequisite finished" marker ends.
     if let Some(fields) = item.as_object_mut() {
         fields.remove("dependency_ready");
     }
-    if !item["scheduler"].is_object() || item["scheduler"]["job"] == job {
+    let old_job = item["scheduler"]["job"].clone();
+    if truth(&old_job) && (old_job != job || item["scheduler"]["phase"] == "finished") {
+        record_result(item, &old_job, "superseded");
+    }
+    if !item["scheduler"].is_object() {
+        item["scheduler"] = json!({});
+    }
+    if item["scheduler"]["job"] == job {
         return;
     }
     let m = &mut item["scheduler"];
@@ -44,6 +58,47 @@ pub fn assign_worker(item: &mut Value, job: &str) {
         "not_before",
     ] {
         m.as_object_mut().unwrap().remove(field);
+    }
+}
+
+/// A durable per-ToDo ledger: the same job result cannot be applied in a later generation.
+pub fn result_received(item: &Value, job: &Value) -> bool {
+    !s(job).is_empty() && item["processed_results"].get(s(job)).is_some()
+}
+
+pub fn record_result(item: &mut Value, job: &Value, reason: &str) {
+    if s(job).is_empty() || result_received(item, job) {
+        return;
+    }
+    if !item["processed_results"].is_object() {
+        item["processed_results"] = json!({});
+    }
+    item["processed_results"][s(job)] = json!({
+        "generation": item["resume_generation"].as_u64().unwrap_or(0),
+        "reason": reason,
+    });
+}
+
+fn advance_resume(item: &mut Value, job: Option<&str>) {
+    item["resume_generation"] = add_count(&item["resume_generation"], 1);
+    item["worker_receipt"] = json!({"job":job,"generation":item["resume_generation"]});
+}
+
+/// Start without --job still invalidates a result being read by the scheduler.
+/// Retain live ownership, but retire an already finished legacy job.
+pub fn resume_without_worker(item: &mut Value) {
+    advance_resume(item, None);
+    let job = item["scheduler"]["job"].clone();
+    if item["scheduler"]["phase"] == "finished" || result_received(item, &job) {
+        record_result(item, &job, "superseded");
+        merge(
+            &mut item["scheduler"],
+            json!({
+                "last_job":job,"job":null,"key":null,"phase":"resumed","resume":true
+            }),
+        );
+        remove(&mut item["scheduler"], "pending_cancel");
+        remove(&mut item["scheduler"], "notice_pending");
     }
 }
 impl From<std::io::Error> for Error {

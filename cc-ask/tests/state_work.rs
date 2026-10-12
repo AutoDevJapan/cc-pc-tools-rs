@@ -2,12 +2,7 @@ mod common;
 use cc_ask::{attachments, core::*, state_work::StateWork};
 use common::{Fake, Harness, SharedFake};
 use serde_json::{json, Value};
-use std::{
-    cell::RefCell,
-    path::PathBuf,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, time::Duration};
 
 struct DuringWait {
     fake: SharedFake,
@@ -27,7 +22,6 @@ impl DuringWait {
             Duration::ZERO,
         )?);
         let home = self.home.clone();
-        let started = Instant::now();
         std::thread::spawn(move || {
             let mut sender = Harness::new();
             sender.ctx.here = home;
@@ -49,7 +43,8 @@ impl DuringWait {
         })
         .join()
         .unwrap();
-        assert!(started.elapsed() < Duration::from_secs(1));
+        // The ZERO acquisition above proves no state writer lock spans HTTP.
+        // Wall-clock speed of fixture setup is unrelated to this invariant.
         // The background operation is still waiting when the sender finishes.
         std::thread::sleep(Duration::from_millis(40));
         Ok(())
@@ -430,12 +425,29 @@ fn cmd_post_recovers_untracked_delivery_before_suppressing_answered_retry() {
     let path = h.root.path().join("question.md");
     std::fs::write(&path, "どちらにしますか？\na 見本\nb 完成版").unwrap();
     assert!(cc_ask::commands::cmd_post(&mut h.ctx, "200", &path, &[], true).is_err());
-    h.reply("a", "200");
+    // The successful but response-lost creation is the independent question.
+    // Its answer must remain attached there, not to the original work thread.
+    h.reply("a", "300");
     h.fake.borrow_mut().now += 900.;
     let result = cc_ask::commands::cmd_post(&mut h.ctx, "200", &path, &[], true).unwrap();
-    assert_eq!(result["suppressed"], "already_answered");
-    assert_eq!(result["message_ids"], json!(["1001"]));
-    assert_eq!(h.fake.borrow().posts.len(), 1);
+    assert_eq!(result["thread_id"], "300");
+    assert_ne!(result["progress_thread_id"], "300");
+    assert!(h.fake.borrow().posts.is_empty());
+    assert_eq!(
+        h.fake
+            .borrow()
+            .http_calls
+            .iter()
+            .filter(|c| c["method"] == "POST" && s(&c["url"]).ends_with("/channels/T/threads"))
+            .count(),
+        2
+    );
+    assert_eq!(
+        owner_replies(&mut h.ctx, &json!({"thread_id":"300","after":"300"}), "OWN")
+            .unwrap()
+            .len(),
+        1
+    );
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
 }
 

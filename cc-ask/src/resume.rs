@@ -365,7 +365,7 @@ pub fn already_handled(
 }
 
 pub fn continuation_prompt(
-    ctx: &Context,
+    ctx: &mut Context,
     question: &Value,
     history: &[Value],
     owner: &str,
@@ -376,8 +376,29 @@ pub fn continuation_prompt(
     } else {
         s(&question["agent"])
     };
+    let original_path = ctx
+        .jobs
+        .join("jobs")
+        .join(s(&question["job"]))
+        .join("prompt.md");
+    let original = if valid_job(s(&question["job"])) && original_path.is_file() {
+        crate::prompt_context::bounded(
+            &read_text(&original_path)?,
+            12 * 1024,
+            &original_path.to_string_lossy(),
+        )
+    } else {
+        String::new()
+    };
+    let links = if truth(&question["separated_question"]) {
+        format!("\n元の作業投稿: {}\n質問投稿: {}\n通知しない進捗投稿: {}\n元ToDo: {}\n質問だけを独立投稿にしています。元の依頼と回答をこの作業へ反映してください。\n",
+            s(&question["work_url"]),s(&question["question_url"]),s(&question["progress_url"]),question["todo_id"])
+    } else {
+        String::new()
+    };
+    let owner_context = crate::decision_identity::task_handoff(ctx, question)?;
     Ok(safe_text(format!(
-        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}\n\n{}",
+        "{RESUME_PREAMBLE}\n元の質問者: {agent}\n質問時の作業フォルダ: {}\nスレッドID: {}{links}\n{owner_context}\n元の作業指示:\n{original}\n\n{}",
         s(&question["cwd"]),
         s(&thread["id"]),
         crate::prompt_context::conversation(ctx, &thread, history, owner, 32 * 1024)?
@@ -423,12 +444,13 @@ fn adopt_continuation(
     // once the question's child exists, independently of the receipt cursor.
     if let Some(ids) = question["continuation"]["owner_message_ids"].as_array() {
         for id in ids {
-            state["answer_receipts"][s(id)]["thread"] = question["thread_id"].clone();
-            state["answer_receipts"][s(id)]["handled_by"] = json!(jid);
+            record_launch_delivery(ctx, state, s(id), s(&question["thread_id"]), jid);
         }
     }
-    acknowledge_reply(question, &after);
-    crate::reply_recovery::delivered(question);
+    if job_started(ctx, jid) {
+        acknowledge_reply(question, &after);
+        crate::reply_recovery::delivered(question);
+    }
     checkpoint(ctx, state, index, question)?;
     Ok(())
 }
@@ -449,6 +471,10 @@ fn continuation_selection(
         if let Some(job) = crate::automation::jobs(ctx)?
             .into_iter()
             .filter(|job| [s(&job["thread_id"]), s(&job["resume_session"])].contains(&session))
+            .filter(|job| {
+                s(&job["discord_thread_id"]).is_empty()
+                    || explicit_thread_owner(job, s(&question["thread_id"]))
+            })
             .max_by(|a, b| {
                 crate::automation::epoch(&a["created_at"])
                     .total_cmp(&crate::automation::epoch(&b["created_at"]))
@@ -484,6 +510,7 @@ fn continuation_selection(
             .join("\n")
     );
     let mut selection = pick_model(ctx, &task, &[], kind)?;
+    selection["source_job_id"] = source_job["id"].clone();
     for field in ["model", "effort"] {
         if let Some(saved) = sources
             .iter()
@@ -516,6 +543,9 @@ fn continuation_selection(
         })
         .map(|id| json!(id))
         .unwrap_or(Value::Null);
+    if crate::restart::session_busy(ctx, s(&selection["resume_session"]), "")? {
+        selection["resume_session"] = Value::Null;
+    }
     Ok(selection)
 }
 
@@ -533,6 +563,14 @@ fn resume_at(
     }
     if !crate::routing::question_allowed(ctx, question)? {
         return Ok(());
+    }
+    let jid = s(&question["continuation"]["job"]).to_owned();
+    if !jid.is_empty() && job_started(ctx, &jid) {
+        let after = s(&question["continuation"]["after"]).to_owned();
+        acknowledge_reply(question, &after);
+        crate::restart::link_answer_todo(ctx, question, &jid)?;
+        crate::reply_recovery::delivered(question);
+        checkpoint(ctx, state, index, question)?;
     }
     crate::reply_recovery::refresh(state, question, s(&thread["id"]));
     if !crate::reply_recovery::due(question, ctx.now()) {
@@ -716,6 +754,14 @@ fn resume_at(
             &key
         )?);
         checkpoint(ctx, state, index, question)?;
+        if crate::restart::session_busy(
+            ctx,
+            s(&question["continuation"]["launch"]["selection"]["resume_session"]),
+            "",
+        )? {
+            question["continuation"]["launch"]["selection"]["resume_session"] = Value::Null;
+            checkpoint(ctx, state, index, question)?;
+        }
         let entry = &question["continuation"];
         let launched = launch_job_with_session(
             ctx,
@@ -818,8 +864,11 @@ fn resume_at(
             disposition != "状態: 継続中",
             &jid,
             Some(s(&question["continuation"]["after"])),
-        )?;
-        let after = match delivery {
+        );
+        // Routing APIs save new questions/routes. Reload before checkpointing this
+        // origin generation so its snapshot cannot erase the newly registered one.
+        *state = ctx.load()?;
+        let after = match delivery? {
             crate::result_delivery::Delivery::Sent(after) => after,
             crate::result_delivery::Delivery::OwnerMessagesPending => {
                 crate::steering::deliver(
@@ -852,12 +901,18 @@ fn resume_at(
         if disposition == "状態: 完了" {
             crate::restart::finish_todo(ctx, question)?;
         }
+        let separated_question =
+            disposition == "状態: 要判断" && crate::question_progress::is_separated(ctx, tid)?;
+        let is_question_thread = truth(&question["separated_question"])
+            || crate::question_progress::route(ctx, tid)?
+                .is_some_and(|r| s(&r["question_thread_id"]) == tid);
         question["open"] = json!(disposition != "状態: 継続中");
         let entry = &mut question["continuation"];
         entry["reported"] = json!(true);
         entry["result_after"] = json!(after);
-        entry["close_pending"] = json!(disposition == "状態: 完了");
-        entry["question_pending"] = json!(disposition == "状態: 要判断");
+        entry["close_pending"] =
+            json!(disposition == "状態: 完了" || is_question_thread || separated_question);
+        entry["question_pending"] = json!(disposition == "状態: 要判断" && !separated_question);
         checkpoint(ctx, state, index, question)?;
     }
     if truth(&question["continuation"]["question_pending"]) {
@@ -946,15 +1001,26 @@ fn defer_reply(
     handled: &str,
 ) -> Result<()> {
     if question["deferred_reply"] != newest["id"] {
-        let content = safe_text(format!("元の作業は別セッションが担当しています。担当が終わった後に回答の反映を確認します。\n{handled}"));
+        let content = safe_text(format!(
+            "元の作業は別セッションが担当しています。担当が終わった後に回答の反映を確認します。\n{handled}"
+        ));
         let mid = s(&newest["id"]);
-        if !thread_history(ctx, tid)?.iter().any(|m| {
-            s(&m["message_reference"]["message_id"]) == mid
+        let target = crate::question_progress::result_target(ctx, tid, "")?;
+        let nonce = crate::automation::key(&format!("deferred|{tid}|{mid}"));
+        if !thread_history(ctx, &target)?.iter().any(|m| {
+            (s(&m["message_reference"]["message_id"]) == mid || s(&m["nonce"]) == &nonce[..24])
                 && s(&m["content"]) == content
                 && truth(&m["author"]["bot"])
         }) {
-            let nonce = crate::automation::key(&format!("deferred|{tid}|{mid}"));
-            ctx.call("POST",&format!("/channels/{tid}/messages"),Some(&json!({"content":content,"flags":SILENT,"nonce":&nonce[..24],"enforce_nonce":true,"allowed_mentions":{"parse":[],"users":[],"replied_user":false},"message_reference":{"message_id":mid,"channel_id":tid}})))?;
+            let mut payload = json!({"content":crate::question_progress::silent_text(&content),"flags":SILENT|4,"nonce":&nonce[..24],"enforce_nonce":true,"allowed_mentions":{"parse":[],"users":[],"replied_user":false}});
+            if target == tid {
+                payload["message_reference"] = json!({"message_id":mid,"channel_id":tid});
+            }
+            ctx.call(
+                "POST",
+                &format!("/channels/{target}/messages"),
+                Some(&payload),
+            )?;
         }
         question["deferred_reply"] = newest["id"].clone();
     }

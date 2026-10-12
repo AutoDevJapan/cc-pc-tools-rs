@@ -191,7 +191,7 @@ pub fn p90(values: &[f64]) -> f64 {
     }
 }
 pub fn priority(item: &Value, priorities: &Value) -> f64 {
-    priorities.get(s(&item["project"])).map(n).unwrap_or(3.)
+    f64::from(cc_job_policy::priority::item_rank(item, priorities))
 }
 pub fn priority_queue(items: &[Value], priorities: &Value, now: f64) -> Vec<Value> {
     let mut q: Vec<Value> = items

@@ -1,0 +1,10 @@
+/target
+/delegation.on
+/console-state.json*
+/console-inbox*
+/console-prompts/
+/console-decisions/
+/console-state.lock
+__pycache__/
+/workload-cache.json*
+!tests/fixtures/operations/localai-web-rs/target/release/console-state.json

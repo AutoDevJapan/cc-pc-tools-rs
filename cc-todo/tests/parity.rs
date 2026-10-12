@@ -11,6 +11,20 @@ use std::{
 };
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[test]
+fn explicit_wait_replaces_automatic_owner_provenance() {
+    let temp = Temp::new();
+    let mut db = json!({"items":[{"id":1,"status":"wait","wait_on":[2],"work_owner_job":"owner","work_owner_wait_on":2,"spec":"saved","work_owner_wait_history":[{"reason":"old"}]},{"id":2,"status":"todo"}]});
+    execute(&mut db, &cli(&["wait", "1", "--on", "2"]), &temp.paths()).unwrap();
+    assert!(db["items"][0]["work_owner_job"].is_null());
+    assert!(db["items"][0]["work_owner_wait_on"].is_null());
+    assert_eq!(db["items"][0]["wait_on"], json!([2]));
+    assert_eq!(db["items"][0]["spec"], "saved");
+    assert_eq!(
+        db["items"][0]["work_owner_wait_history"][0]["reason"],
+        "old"
+    );
+}
 fn rename_fixture() -> Value {
     json!({"projects":{"old":{"path":"C:/old","unknown":[1,2]},"other":"C:/other"},
     "items":[{"id":1,"project":"old","title":"【old】Re-Xの画面を直す","note":"oldの記録 https://host/old old_API C:/old/a","notes":"oldを確認","status":"doing","jobs":["active"],"progress":50,"wait_on":[7],"updated":"unchanged","spec":"C:/old/spec.md","scheduler":{"key":"old-key","unknown":true},"unknown":[1]},
@@ -730,6 +744,234 @@ fn rust_command(home: &Path, args: &[&str]) -> std::process::Output {
         .args(args)
         .output()
         .unwrap()
+}
+
+#[test]
+fn resume2172_cli_note_edit_only_changes_note_history_and_updated() {
+    for status in ["todo", "doing", "block", "wait", "done"] {
+        let t = Temp::new();
+        let p = t.paths();
+        let mut original = rename_fixture();
+        original["items"][0]["status"] = json!(status);
+        save(&p.store, &original).unwrap();
+        let note = t.0.join("note.txt");
+        fs::write(&note, "復旧の説明を更新しました。").unwrap();
+        let out = rust_command(&t.0, &["edit", "1", "--note-file", note.to_str().unwrap()]);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let edited = load(&p.store).unwrap();
+        assert_eq!(edited["items"][0]["note"], "復旧の説明を更新しました。");
+        assert_ne!(
+            edited["items"][0]["updated"],
+            original["items"][0]["updated"]
+        );
+        assert_eq!(
+            edited["items"][0]["note_history"][0]["note"],
+            original["items"][0]["note"]
+        );
+        let mut expected = original;
+        for field in ["note", "note_history", "updated"] {
+            expected["items"][0][field] = edited["items"][0][field].clone();
+        }
+        assert_eq!(
+            edited, expected,
+            "no status, ownership, dependencies, progress or unrelated edits"
+        );
+        let bytes = fs::read(&p.store).unwrap();
+        assert!(
+            rust_command(&t.0, &["edit", "1", "--note-file", note.to_str().unwrap()])
+                .status
+                .success()
+        );
+        assert_eq!(
+            fs::read(&p.store).unwrap(),
+            bytes,
+            "retry must not duplicate history or touch updated"
+        );
+    }
+}
+
+#[test]
+fn resume2172_cli_edit_copies_spec_and_keeps_old_file_and_history() {
+    let t = Temp::new();
+    let p = t.paths();
+    let old = t.0.join("old.md");
+    let source = t.0.join("source.md");
+    fs::write(&old, "以前の指示書").unwrap();
+    fs::write(&source, "新しい指示書\n").unwrap();
+    let mut original = rename_fixture();
+    original["items"][0]["spec"] = json!(old);
+    save(&p.store, &original).unwrap();
+    let args = ["edit", "1", "--spec", source.to_str().unwrap()];
+    let out = rust_command(&t.0, &args);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let edited = load(&p.store).unwrap();
+    let dest = Path::new(edited["items"][0]["spec"].as_str().unwrap());
+    assert_ne!(dest, old);
+    assert_ne!(dest, source);
+    assert_eq!(fs::read_to_string(dest).unwrap(), "新しい指示書\n");
+    assert_eq!(fs::read_to_string(&old).unwrap(), "以前の指示書");
+    assert_eq!(
+        edited["items"][0]["spec_history"][0]["spec"],
+        original["items"][0]["spec"]
+    );
+    let mut expected = original;
+    for field in ["spec", "spec_history", "updated"] {
+        expected["items"][0][field] = edited["items"][0][field].clone();
+    }
+    assert_eq!(edited, expected);
+    let bytes = fs::read(&p.store).unwrap();
+    assert!(rust_command(&t.0, &args).status.success());
+    assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    fs::write(source, "編集元を後から変更").unwrap();
+    assert_eq!(fs::read_to_string(dest).unwrap(), "新しい指示書\n");
+}
+
+#[test]
+fn resume2172_cli_edit_invalid_inputs_never_partially_write_store() {
+    let t = Temp::new();
+    let p = t.paths();
+    let note = t.0.join("note.txt");
+    let spec = t.0.join("spec.md");
+    fs::write(&note, "new note").unwrap();
+    save(&p.store, &rename_fixture()).unwrap();
+    let bytes = fs::read(&p.store).unwrap();
+    for bad in [
+        vec![],
+        vec![0xff],
+        b" \r\n".to_vec(),
+        vec![b'x'; 1024 * 1024 + 1],
+    ] {
+        fs::write(&spec, bad).unwrap();
+        assert!(
+            !rust_command(
+                &t.0,
+                &[
+                    "edit",
+                    "1",
+                    "--note-file",
+                    note.to_str().unwrap(),
+                    "--spec",
+                    spec.to_str().unwrap()
+                ]
+            )
+            .status
+            .success()
+        );
+        assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    }
+    assert!(
+        !rust_command(
+            &t.0,
+            &[
+                "edit",
+                "1",
+                "--note-file",
+                note.to_str().unwrap(),
+                "--spec",
+                t.0.join("missing").to_str().unwrap()
+            ]
+        )
+        .status
+        .success()
+    );
+    assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    for bad in [vec![], vec![0xff], b" \n".to_vec()] {
+        fs::write(&note, bad).unwrap();
+        assert!(
+            !rust_command(&t.0, &["edit", "1", "--note-file", note.to_str().unwrap()])
+                .status
+                .success()
+        );
+        assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    }
+    assert!(!rust_command(&t.0, &["edit", "1"]).status.success());
+    assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    assert!(
+        !t.0.join("specs").exists(),
+        "input validation must precede spec copy"
+    );
+}
+
+#[test]
+fn resume2172_cli_edit_uses_same_os_lock_as_scheduler() {
+    let t = Temp::new();
+    let p = t.paths();
+    save(&p.store, &rename_fixture()).unwrap();
+    let note = t.0.join("note.txt");
+    fs::write(&note, "ロック解放後に更新").unwrap();
+    let held = cc_scheduler::common::ByteLock::acquire(&p.lock, Duration::ZERO)
+        .unwrap()
+        .unwrap();
+    let bytes = fs::read(&p.store).unwrap();
+    let mut child = Process::new(env!("CARGO_BIN_EXE_todo"))
+        .creation_flags(CREATE_NO_WINDOW)
+        .env("CC_TODO_HOME", &t.0)
+        .env("CC_TODO_JOBS", t.0.join("jobs"))
+        .args(["edit", "1", "--note-file", note.to_str().unwrap()])
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(child.try_wait().unwrap().is_none());
+    assert_eq!(fs::read(&p.store).unwrap(), bytes);
+    drop(held);
+    assert!(child.wait().unwrap().success());
+    assert_eq!(
+        load(&p.store).unwrap()["items"][0]["note"],
+        "ロック解放後に更新"
+    );
+}
+
+#[test]
+fn resume2172_combined_edit_failure_leaves_in_memory_snapshot_unchanged() {
+    let t = Temp::new();
+    let mut d = rename_fixture();
+    let original = d.clone();
+    let note = t.0.join("note.txt");
+    let spec = t.0.join("spec.md");
+    fs::write(&note, "new note").unwrap();
+    fs::write(&spec, [0xff]).unwrap();
+    assert!(
+        execute(
+            &mut d,
+            &Command::Edit {
+                id: 1,
+                note_file: Some(note.clone()),
+                spec: Some(spec.clone())
+            },
+            &t.paths()
+        )
+        .is_err()
+    );
+    assert_eq!(d, original);
+    fs::write(&spec, "new spec").unwrap();
+    let old_spec = t.0.join("invalid-old.md");
+    fs::write(&old_spec, [0xff]).unwrap();
+    d["items"][0]["spec"] = json!(old_spec);
+    let original = d.clone();
+    assert!(
+        execute(
+            &mut d,
+            &Command::Edit {
+                id: 1,
+                note_file: Some(note),
+                spec: Some(spec)
+            },
+            &t.paths()
+        )
+        .is_err()
+    );
+    assert_eq!(d, original);
+    assert!(!t.0.join("specs").exists());
 }
 #[test]
 fn list_never_rewrites_or_creates_state_backup() {

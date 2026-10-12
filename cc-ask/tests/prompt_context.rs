@@ -118,6 +118,101 @@ fn long_thread_keeps_opening_question_latest_answer_and_its_choices() {
 }
 
 #[test]
+fn bounded_history_keeps_registered_question_with_bare_answer_before_chatter() {
+    let h = Harness::new();
+    let thread = json!({"id":"100","name":"検査送信"});
+    atomic_json(
+        &h.ctx.here.join("state.json"),
+        &json!({"questions":[
+            {"thread_id":"100","question_message":"200","after":"290"},
+            {"thread_id":"999","question_message":"295"}
+        ]}),
+        2,
+    )
+    .unwrap();
+    let mut messages = vec![message("100", "古い質問: a 本番を変更する", "BOT")];
+    messages.push(message(
+        "200",
+        "新しい質問: a/bで教えてください。\na: 架空データだけを指定検査先へ送る\nb: 送らない",
+        "BOT",
+    ));
+    messages
+        .extend((201..300).map(|id| message(&id.to_string(), &"無関係な説明".repeat(200), "BOT")));
+    let mut answer = message("300", "a", "OWN");
+    answer["channel_id"] = json!("100");
+    answer["timestamp"] = json!("2026-10-11T09:17:20.599+09:00");
+    messages.push(answer);
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    assert!(prompt.len() <= 4096);
+    assert!(prompt.contains("架空データだけを指定検査先へ送る"));
+    assert!(prompt.contains("Discord 100/200 / 投稿者 BOT"));
+    assert!(prompt.contains("Discord 100/300 / 投稿者 OWN"));
+    assert!(prompt.contains("2026-10-11T09:17:20.599+09:00"));
+}
+
+#[test]
+fn explicit_reply_does_not_bind_to_a_newer_or_cross_thread_question() {
+    let h = Harness::new();
+    let thread = json!({"id":"100"});
+    atomic_json(
+        &h.ctx.here.join("state.json"),
+        &json!({"questions":[
+            {"thread_id":"100","question_message":"200"}
+        ]}),
+        2,
+    )
+    .unwrap();
+    let mut messages = vec![message("100", "元の依頼", "BOT")];
+    messages.push(message(
+        "150",
+        "指定先への検査だけを確認する質問: a/bで教えてください。\na: 送る\nb: 送らない",
+        "BOT",
+    ));
+    messages.push(message("200", "別件の恒久連携を確認する質問", "BOT"));
+    messages.extend((201..300).map(|id| message(&id.to_string(), &"補足".repeat(1000), "BOT")));
+    let mut answer = message("300", "a", "OWN");
+    answer["message_reference"] = json!({"message_id":"150","channel_id":"100"});
+    messages.push(answer);
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    assert!(prompt.contains("指定先への検査だけを確認する質問"));
+    assert!(!prompt.contains("別件の恒久連携を確認する質問"));
+    assert!(prompt.contains("返信先 150"));
+    messages.last_mut().unwrap()["message_reference"]["channel_id"] = json!("999");
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    assert!(!prompt.contains("別件の恒久連携を確認する質問"));
+    assert!(!prompt.contains("指定先への検査だけを確認する質問"));
+}
+
+#[test]
+fn oversized_question_is_referenced_without_a_partial_approval_quote() {
+    let h = Harness::new();
+    let thread = json!({"id":"100"});
+    let question = format!("質問: a/bで教えてください。\na: 検査送信を行う\nb: 行わない\n{}\n許可の上限: 指定した架空データ一件だけ", "対象と制約".repeat(5000));
+    let mut answer = message("200", "a", "OWN");
+    answer["message_reference"] = json!({"message_id":"150","channel_id":"100"});
+    let messages = vec![
+        message("100", "元の依頼", "BOT"),
+        message("150", &question, "BOT"),
+        answer,
+    ];
+    let prompt =
+        cc_ask::prompt_context::conversation(&h.ctx, &thread, &messages, "OWN", 4096).unwrap();
+    assert!(prompt.len() <= 4096);
+    assert!(prompt.contains("この短縮文だけで承認を判断しないこと"));
+    assert!(!prompt.contains("a: 検査送信を行う"));
+    let sources: Vec<_> = std::fs::read_dir(h.ctx.here.join("prompt-context"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    assert!(sources
+        .iter()
+        .any(|path| read_json(path).ok() == Some(json!(messages))));
+}
+
+#[test]
 fn context_failure_retries_with_smaller_prompt_and_keeps_the_owner_answer() {
     let mut h = Harness::new();
     h.tick();

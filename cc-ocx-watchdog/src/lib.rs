@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 pub mod ownership;
 #[cfg(windows)]
+mod process_owner;
+#[cfg(windows)]
 pub mod windows;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -14,6 +16,9 @@ pub mod windows;
 pub struct Config {
     pub home: PathBuf,
     pub expected_exe: PathBuf,
+    /// Opt-in missing-record proof for a pinned Bun CLI invocation. Never a census path.
+    #[serde(default)]
+    pub expected_cli: Option<PathBuf>,
     pub port: u16,
     pub task: String,
     pub log_dir: PathBuf,
@@ -36,6 +41,9 @@ impl Config {
         }
         if self.discord_exe.as_ref().is_some_and(|p| !p.is_absolute()) {
             return Err("discord path must be absolute".into());
+        }
+        if self.expected_cli.as_ref().is_some_and(|p| !p.is_absolute()) {
+            return Err("CLI path must be absolute".into());
         }
         if self.task.is_empty() {
             return Err("task must be supplied".into());
@@ -249,7 +257,9 @@ mod tests {
         let bytes = task_xml_bytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Task>監視</Task>");
         assert_eq!(&bytes[..2], &[0xff, 0xfe]);
         let units: Vec<_> = bytes[2..]
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| u16::from_le_bytes([b[0], b[1]]))
             .collect();
         assert_eq!(

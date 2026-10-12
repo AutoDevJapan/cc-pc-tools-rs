@@ -228,7 +228,7 @@ fn choice_requests_are_recognized_but_reports_quotes_and_code_are_not() {
 }
 
 #[test]
-fn posted_choice_question_is_registered_with_posting_session_not_previous_caller() {
+fn posted_choice_question_has_isolated_context_and_preserves_previous_caller() {
     let mut h = Harness::new();
     h.fake.borrow_mut().threads.get_mut("200").unwrap()["guild_id"] = json!("G");
     h.save(&json!({"questions":[{"thread_id":"200","after":"10","question_message":"10","open":false,"session_id":"stale","project":"P"}]}));
@@ -237,8 +237,16 @@ fn posted_choice_question_is_registered_with_posting_session_not_previous_caller
     let out = cmd_post(&mut h.ctx, "200", &path, &[], true).unwrap();
     let state = h.state();
     let q = state["questions"].as_array().unwrap().last().unwrap();
-    assert_eq!(q["question_message"], out["message_ids"][0]);
-    assert_eq!(q["project"], "P");
+    assert_eq!(q["question_message"], out["after"]);
+    assert_ne!(q["thread_id"], "200");
+    assert_eq!(q["work_thread_id"], "200");
+    assert_eq!(q["progress_thread_id"], out["progress_thread_id"]);
+    assert_ne!(q["progress_thread_id"], q["thread_id"]);
+    assert_ne!(q["project"], "P");
+    assert_eq!(state["questions"][0], json!({"thread_id":"200","after":"10",
+        "question_message":"10","open":false,"session_id":"stale","project":"P"}));
+    assert!(h.fake.borrow().posts.is_empty());
+    assert!(cc_ask::core::s(&q["question_body"]).contains("a. 公開する"));
     assert_ne!(q["session_id"], "stale");
 }
 

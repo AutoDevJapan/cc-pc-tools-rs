@@ -23,6 +23,10 @@ use std::{
 };
 
 pub type Result<T> = std::result::Result<T, String>;
+pub use cc_job_policy::todo_store::{
+    Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
+};
+pub mod ready;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
 
@@ -35,6 +39,15 @@ pub const REMENTION_S: f64 = 3600.;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
+}
+#[derive(clap::Args, Debug, Default)]
+pub struct SubworkOptions {
+    #[arg(long, requires_all=["parent_job_id", "subwork_kind"], value_parser=clap::value_parser!(i64).range(1..))]
+    pub subwork_of: Option<i64>,
+    #[arg(long, requires = "subwork_of")]
+    pub parent_job_id: Option<String>,
+    #[arg(long, requires = "subwork_of", value_parser=["research", "check", "review"])]
+    pub subwork_kind: Option<String>,
 }
 #[derive(Subcommand, Debug)]
 pub enum Command {
@@ -73,6 +86,16 @@ pub enum Command {
         needs: Vec<String>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+        #[command(flatten)]
+        subwork: SubworkOptions,
+    },
+    /// Register finite independent work; only repair the explicitly recorded owner wait.
+    Subwork {
+        id: i64,
+        #[command(flatten)]
+        relation: SubworkOptions,
+        #[arg(long)]
+        repair_owner_wait: bool,
     },
     #[command(args_override_self = true, infer_long_args = true)]
     List {
@@ -88,6 +111,14 @@ pub enum Command {
         job: String,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+    },
+    /// Update the note or saved specification without changing task state or ownership.
+    Edit {
+        id: i64,
+        #[arg(long, required_unless_present = "spec")]
+        note_file: Option<PathBuf>,
+        #[arg(long, required_unless_present = "note_file")]
+        spec: Option<PathBuf>,
     },
     #[command(args_override_self = true, infer_long_args = true)]
     Block {
@@ -112,6 +143,30 @@ pub enum Command {
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
     },
+    /// Wait for a scheduled readiness check without repeatedly launching a worker.
+    WaitReady {
+        id: i64,
+        #[arg(long, value_parser=["chatgpt-plus"])]
+        condition: String,
+        #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
+        progress: Option<u8>,
+    },
+    /// Wait until another technical check is due; this does not confirm recovery.
+    WaitRetry {
+        id: i64,
+        #[arg(long, default_value_t=3600, value_parser=clap::value_parser!(u64).range(60..=86400))]
+        after: u64,
+        #[arg(long)]
+        reason: String,
+        #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
+        progress: Option<u8>,
+    },
+    /// Release only this recorded wait after a fresh readiness check succeeds.
+    ResumeReady {
+        id: i64,
+        #[arg(long, value_parser=["chatgpt-plus"])]
+        condition: String,
+    },
     /// Record measured completion without changing status, job ownership or the task note.
     Progress {
         #[arg(allow_negative_numbers = true)]
@@ -125,6 +180,8 @@ pub enum Command {
     Watch,
     /// Reconcile stale unlaunched stall reservations with accepted intake; never launch jobs.
     ReconcileIntake,
+    /// Recheck this item's automatic owner wait; retain explicit prerequisites.
+    ReevaluateOwnerWait { id: i64 },
     /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
     WatchPreview {
         #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
@@ -206,12 +263,28 @@ impl Drop for Lock {
     }
 }
 pub fn load(path: &Path) -> Result<Value> {
-    if !path.exists() {
-        return Ok(json!({"projects":{},"items":[],"next_id":1,"stalls":{}}));
+    match cc_job_policy::todo_store::read(path) {
+        Ok(db) => Ok(db),
+        Err(cc_job_policy::todo_store::Error::Io(e))
+            if e.kind() == std::io::ErrorKind::NotFound =>
+        {
+            Ok(json!({"projects":{},"items":[],"next_id":1,"stalls":{}}))
+        }
+        Err(e) => Err(err(e)),
     }
-    serde_json::from_str(&fs::read_to_string(path).map_err(err)?).map_err(err)
 }
 pub fn save(path: &Path, db: &Value) -> Result<()> {
+    // Check the exact serialization before touching backups, temp files or the original.
+    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
+    let one_space = pretty
+        .lines()
+        .map(|line| {
+            let n = line.bytes().take_while(|b| *b == b' ').count();
+            format!("{}{}", " ".repeat(n / 2), &line[n..])
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    cc_job_policy::todo_store::check_size(one_space.len()).map_err(err)?;
     let backup = PathBuf::from(format!("{}.bak-20260930d", path.display()));
     if path.exists() && !backup.exists() {
         let mut file = OpenOptions::new()
@@ -228,15 +301,6 @@ pub fn save(path: &Path, db: &Value) -> Result<()> {
     ));
     let mut file = File::create(&tmp).map_err(err)?;
     // Preserve unknown fields, insertion order, Unicode and Python's one-space indent.
-    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
-    let one_space = pretty
-        .lines()
-        .map(|line| {
-            let n = line.bytes().take_while(|b| *b == b' ').count();
-            format!("{}{}", " ".repeat(n / 2), &line[n..])
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
     file.write_all(one_space.as_bytes()).map_err(err)?;
     file.flush().map_err(err)?;
     file.sync_all().map_err(err)?;
@@ -257,6 +321,40 @@ pub fn save(path: &Path, db: &Value) -> Result<()> {
     unreachable!()
 }
 
+fn subwork_relation(
+    db: &Value,
+    item: &Value,
+    options: &SubworkOptions,
+    paths: &Paths,
+    repair: bool,
+) -> Result<Value> {
+    let mut jobs =
+        cc_scheduler::common::jobs_from(&paths.jobs, true).map_err(|e| e.0.to_owned())?;
+    cc_job_policy::subwork::mark_live(&mut jobs, |j| {
+        ["pid", "codex_pid"].iter().any(|key| {
+            j[*key].as_u64().is_some_and(|pid| {
+                cc_scheduler::native::process_birth(pid as u32)
+                    .is_some_and(|birth| j[format!("{key}_created")].as_u64() == Some(birth))
+            })
+        })
+    });
+    cc_job_policy::subwork::register(
+        db,
+        item,
+        options.subwork_of.ok_or("--subwork-of is required")?,
+        options
+            .parent_job_id
+            .as_deref()
+            .ok_or("--parent-job-id is required")?,
+        options
+            .subwork_kind
+            .as_deref()
+            .ok_or("--subwork-kind is required")?,
+        &jobs,
+        repair,
+    )
+}
+
 /// Freeze a supplied UTF-8 prompt in the store; titles alone never authorize dispatch.
 pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     let Command::Add {
@@ -268,6 +366,7 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         effort,
         needs,
         progress,
+        subwork,
     } = args
     else {
         unreachable!()
@@ -300,6 +399,14 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         }
     };
     let mut item = json!({"id":id,"project":project,"title":display(title),"note":display(note),"status":"todo","jobs":[],"created":now(),"created_s":time_s(),"updated":now()});
+    if subwork.subwork_of.is_some() {
+        if spec.is_none() {
+            return Err("独立作業には --spec が必要です".into());
+        }
+        item["spec"] = json!(spec.unwrap());
+        item["dispatchable"] = json!(true);
+        item["subwork"] = subwork_relation(db, &item, subwork, paths, false)?;
+    }
     if let Some(percent) = progress {
         set_progress(&mut item, *percent)?;
     }
@@ -366,6 +473,101 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     db["next_id"] = json!(id + 1);
     Ok(id)
 }
+fn edit_text(source: &Path) -> Result<String> {
+    if source.as_os_str().is_empty() || fs::metadata(source).map_err(err)?.len() > 1024 * 1024 {
+        return Err("編集するファイルは1 MiB以内で指定してください".into());
+    }
+    let text = fs::read_to_string(source).map_err(err)?;
+    let text = text
+        .strip_prefix('\u{feff}')
+        .unwrap_or(&text)
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    if text.trim_matches(python_whitespace).is_empty() {
+        return Err("編集するファイルの本文は空にできません".into());
+    }
+    Ok(text)
+}
+
+/// Validate every input before changing the caller's snapshot. run() holds todo.lock
+/// across this operation and the atomic store replacement.
+pub fn edit_item(
+    db: &mut Value,
+    id: i64,
+    note_file: Option<&Path>,
+    spec: Option<&Path>,
+    paths: &Paths,
+) -> Result<()> {
+    if note_file.is_none() && spec.is_none() {
+        return Err("--note-file か --spec を指定してください".into());
+    }
+    let mut item = find(db, id)?.clone();
+    let previous_updated = item["updated"].clone();
+    let note = note_file.map(edit_text).transpose()?;
+    let spec_text = spec.map(edit_text).transpose()?;
+    // Malformed histories must not be silently discarded.
+    for field in ["note_history", "spec_history"] {
+        if item.get(field).is_some_and(|v| !v.is_array()) {
+            return Err(format!("invalid {field}"));
+        }
+    }
+    let mut changed = false;
+    if let Some(note) = note
+        && item["note"] != note
+    {
+        if let Some(old) = item.get("note").cloned() {
+            cc_scheduler::common::push(
+                &mut item["note_history"],
+                json!({"note":old,"updated":previous_updated}),
+            );
+        }
+        item["note"] = json!(note);
+        changed = true;
+    }
+    if let Some(text) = spec_text {
+        // Repeating an identical recovery edit must not add another copy or history entry.
+        let identical = match item["spec"].as_str().filter(|p| !p.is_empty()) {
+            Some(path) => match fs::read_to_string(path) {
+                Ok(old) => old == text,
+                // A missing old file can be repaired; its path remains in history.
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+                Err(e) => return Err(err(e)),
+            },
+            None => false,
+        };
+        if !identical {
+            let folder = paths
+                .store
+                .parent()
+                .ok_or("invalid store path")?
+                .join("specs");
+            fs::create_dir_all(&folder).map_err(err)?;
+            let target = folder.join(format!("{id}-{}.md", uuid::Uuid::new_v4().simple()));
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&target)
+                .map_err(err)?;
+            file.write_all(text.as_bytes()).map_err(err)?;
+            file.sync_all().map_err(err)?;
+            let target = cc_scheduler::common::resolve(&target).map_err(|e| e.0.to_owned())?;
+            if let Some(old) = item.get("spec").cloned() {
+                cc_scheduler::common::push(
+                    &mut item["spec_history"],
+                    json!({"spec":old,"updated":previous_updated}),
+                );
+            }
+            item["spec"] = json!(target.to_string_lossy());
+            changed = true;
+        }
+    }
+    if changed {
+        item["updated"] = json!(now());
+        *find(db, id)? = item;
+    }
+    Ok(())
+}
+
 pub fn find(db: &mut Value, id: i64) -> Result<&mut Value> {
     db["items"]
         .as_array_mut()
@@ -661,7 +863,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
         | Command::Block { progress, .. } => *progress,
-        Command::Wait { progress, .. } => *progress,
+        Command::Wait { progress, .. }
+        | Command::WaitReady { progress, .. }
+        | Command::WaitRetry { progress, .. } => *progress,
         Command::Progress { percent, .. } => *percent,
         _ => None,
     };
@@ -698,6 +902,44 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             );
         }
         Command::Add { .. } => output.push(format!("added {}", add_item(db, cmd, paths)?)),
+        Command::Subwork {
+            id,
+            relation,
+            repair_owner_wait,
+        } => {
+            let current = db["items"]
+                .as_array()
+                .and_then(|items| items.iter().find(|i| i["id"] == *id))
+                .ok_or_else(|| format!("no item {id}"))?;
+            let registered = subwork_relation(db, current, relation, paths, *repair_owner_wait)?;
+            let row = find(db, *id)?;
+            row["subwork"] = registered;
+            if *repair_owner_wait {
+                let parent = row["subwork"]["parent_todo_id"].clone();
+                row["wait_on"] = json!(
+                    row["wait_on"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter(|id| **id != parent)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                );
+                row.as_object_mut().unwrap().remove("work_owner_job");
+                if row["wait_on"].as_array().is_some_and(Vec::is_empty) {
+                    row.as_object_mut().unwrap().remove("wait_on");
+                    if row["status"] == "wait" {
+                        row["status"] = json!("todo");
+                        row["dependency_ready"] = json!(true);
+                        if let Some(scheduler) = row["scheduler"].as_object_mut() {
+                            scheduler.insert("not_before".into(), json!(0));
+                        }
+                    }
+                }
+            }
+            row["updated"] = json!(now());
+            output.push(format!("registered subwork {id}"));
+        }
         Command::List { project, all } => {
             for i in db["items"].as_array().ok_or("invalid items")? {
                 if project
@@ -734,6 +976,12 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 for id in cc_job_policy::todo_wait::pending_on(db, i) {
                     extra.push_str(&format!(" — ToDo {id} 待ち"));
                 }
+                if !i["wait_ready"].is_null() {
+                    extra.push_str(&format!(
+                        " — {}",
+                        cc_job_policy::todo_wait::ready_message(&i["wait_ready"])
+                    ));
+                }
                 let note = i["note"].as_str().ok_or("invalid note")?;
                 output.push(format!(
                     "{:>3} {:<5} {:<8} {}{extra}{}",
@@ -757,10 +1005,21 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             if cc_job_policy::todo_wait::waiting(db, item) {
                 return Err("待っているToDoが未完了です。完了すると自動で再開します".into());
             }
+            if !item["wait_ready"].is_null() && !ready::confirmed_production(&item["wait_ready"])? {
+                return Err("再開条件をまだ確認できていません。定期確認後に再開します".into());
+            }
             cc_job_policy::todo_wait::release_ready(db);
             let i = find(db, *id)?;
+            i.as_object_mut()
+                .ok_or("invalid item")?
+                .remove("wait_ready");
             if i["status"] == "done" && progress.is_none() {
                 i.as_object_mut().ok_or("invalid item")?.remove("progress");
+            }
+            if job.is_empty() {
+                cc_scheduler::common::resume_without_worker(i);
+            } else {
+                cc_scheduler::common::assign_worker(i, job);
             }
             i["status"] = json!("doing");
             if let Some(percent) = progress {
@@ -771,10 +1030,14 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 if !jobs.contains(&json!(job)) {
                     jobs.push(json!(job));
                 }
-                cc_scheduler::common::assign_worker(i, job);
             }
             i["updated"] = json!(now());
         }
+        Command::Edit {
+            id,
+            note_file,
+            spec,
+        } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
         Command::Block {
             id,
             reason,
@@ -800,11 +1063,44 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             i["updated"] = json!(now());
             i.as_object_mut().ok_or("invalid item")?.remove("wait_on");
+            i.as_object_mut()
+                .ok_or("invalid item")?
+                .remove("wait_ready");
             cc_job_policy::todo_wait::release_ready(db);
+        }
+        Command::WaitReady {
+            id,
+            condition,
+            progress,
+        } => {
+            ready::register(db, *id, condition)?;
+            if let Some(percent) = progress {
+                set_progress(find(db, *id)?, *percent)?;
+            }
+        }
+        Command::ResumeReady { id, condition } => {
+            let resumed = ready::resume_production(db, *id, condition)?;
+            output.push(json!({"id":id,"resumed":resumed}).to_string());
+        }
+        Command::WaitRetry {
+            id,
+            after,
+            reason,
+            progress,
+        } => {
+            ready::register_retry(db, *id, *after, reason, ready::now_epoch())?;
+            let item = find(db, *id)?;
+            if let Some(percent) = progress {
+                set_progress(item, *percent)?;
+            }
+            output.push(json!({"id":id,"wait_ready":item["wait_ready"]}).to_string());
         }
         Command::Wait { id, on, progress } => {
             cc_job_policy::todo_wait::validate(db, *id, on)?;
             let i = find(db, *id)?;
+            // An explicit prerequisite replaces automatic owner provenance.
+            i.as_object_mut().unwrap().remove("work_owner_job");
+            i.as_object_mut().unwrap().remove("work_owner_wait_on");
             let on: std::collections::BTreeSet<_> = on.iter().copied().collect();
             i["wait_on"] = json!(on);
             if i["status"] != "block" {
@@ -839,11 +1135,19 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             item["updated"] = json!(now());
         }
-        Command::Watch | Command::ReconcileIntake | Command::WatchPreview { .. } => unreachable!(),
+        Command::Watch
+        | Command::ReconcileIntake
+        | Command::WatchPreview { .. }
+        | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ReevaluateOwnerWait { id } = &cli.command {
+        let changed = recovery::reevaluate_owner_wait_files(paths, *id)?;
+        println!("{}", json!({"reevaluated":id,"released":changed}));
+        return Ok(());
+    }
     if let Command::WatchPreview { id } = &cli.command {
         let report = recovery::preview_files(paths, id)?;
         println!("{report}");
@@ -898,8 +1202,10 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     // Notify the ordinary watchdog immediately after committing a completed
     // prerequisite. The production path uses the same existing admission gates.
     // Isolated CLI stores never launch the PC's production workers.
-    if matches!(cli.command, Command::Done { .. } | Command::Wait { .. })
-        && paths.store == Paths::production().store
+    if matches!(
+        cli.command,
+        Command::Done { .. } | Command::Wait { .. } | Command::ResumeReady { .. }
+    ) && paths.store == Paths::production().store
         && db["items"]
             .as_array()
             .is_some_and(|items| items.iter().any(|i| i["dependency_ready"] == true))

@@ -11,7 +11,7 @@ use std::{
 
 #[derive(Clone, Debug, Default, clap::Args)]
 pub struct AskArgs {
-    /// Ask in this existing Discord thread, using the tracked question post path.
+    /// Link original work; only a genuinely new decision scope gets a new post.
     #[arg(long)]
     pub thread: Option<String>,
     #[arg(long = "attach")]
@@ -20,6 +20,9 @@ pub struct AskArgs {
     pub title: String,
     #[arg(long, required = true)]
     pub body_file: PathBuf,
+    /// Stable original ToDo, concrete resources, decision action and permission scope (JSON).
+    #[arg(long)]
+    pub decision_file: Option<PathBuf>,
     #[arg(long, default_value = "")]
     pub agent: String,
     #[arg(long)]
@@ -98,7 +101,14 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
-    let raw_body = read_text(&args.body_file)?;
+    let (raw_body, embedded) = crate::decision_identity::extract(&read_text(&args.body_file)?)?;
+    if args.decision_file.is_some() && embedded.is_some() {
+        return Err("判断の記録は1つだけ指定してください".into());
+    }
+    let decision = match &args.decision_file {
+        Some(path) => Some(read_json(path)?),
+        None => embedded,
+    };
     crate::ask_gate::enforce(&args.title, &raw_body, args.owner_only)?;
     let cwd = match args.cwd.as_deref().filter(|v| !v.is_empty()) {
         Some(v) => v.to_owned(),
@@ -137,205 +147,98 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let content = question_body(&project, &owner, &body);
     if args.dry_run {
         let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,
-            "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str())});
+            "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str()),
+            "decision_identity":decision.as_ref().map(|v| crate::decision_identity::normalize(ctx,v)).transpose()?});
         print_json(&value, Some(2))?;
         return Ok(value);
     }
-    // Serialize automatic lookup and new-thread registration across processes.
-    // Network work never holds state.lock, which background workers also need.
-    let _creation = if args.thread.is_none() {
-        Some(crate::ask_dedup::creation_lock(ctx)?)
-    } else {
-        None
-    };
-    let existing = if args.thread.is_none() {
-        crate::ask_dedup::recover(ctx, &cwd, &names.redact(&args.title))?;
-        crate::ask_dedup::find_open(&ctx.load_fresh()?, &cwd, &title, &names.redact(&args.title))
-    } else {
-        None
-    };
-    if let Some(thread) = args
-        .thread
-        .as_deref()
-        .or_else(|| existing.as_ref().map(|q| s(&q["thread_id"])))
+    if let Some(origin) = &args.thread {
+        if origin.is_empty() || !origin.bytes().all(|c| c.is_ascii_digit()) {
+            return Err("元の作業投稿にはDiscordの数値IDを指定してください".into());
+        }
+        let channel = ctx.call("GET", &format!("/channels/{origin}"), None)?;
+        if ![10, 11, 12].contains(&n(&channel["type"]))
+            || channel["guild_id"] != ctx.cfg["guild_id"]
+        {
+            return Err("元の作業投稿は設定されたサーバーのスレッドではありません".into());
+        }
+        if !crate::questions::is_question(&body) {
+            return Err("ask本文には具体的な質問を書いてください".into());
+        }
+    }
+    let mut context = json!({"title":title,"ask_title":names.redact(&args.title),"project":project,
+        "agent":args.agent,"cwd":cwd,"asked_at":timestamp(),"source":"posted"});
+    crate::decision_identity::bind(ctx, &mut context, decision.as_ref())?;
+    if let Some(reason) = args.owner_only {
+        context["owner_only"] = json!(reason.as_str());
+    }
+    if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
+        context["session_id"] = json!(session);
+    }
+    let caller = std::env::var("CC_JOB_ID")
+        .ok()
+        .filter(|j| valid_job(j))
+        .or(crate::questions::posting_job(ctx)?);
+    let mut origin = args.thread.clone().unwrap_or_default();
+    if let Some(job) = caller {
+        let info = job_info(ctx, &job);
+        context["posting_job"] = json!(job);
+        context["job"] = json!(job);
+        context["job_info"] = info.clone();
+        if !context["decision_identity"].is_object() {
+            context["todo_id"] = info["todo_id"].clone();
+        } else if n(&info["todo_id"]) > 0 && n(&info["todo_id"]) != n(&context["todo_id"]) {
+            return Err("判断の元ToDoと担当のToDoが違います".into());
+        }
+        context["related_todo_ids"] = info["related_todo_ids"].clone();
+        if origin.is_empty() {
+            origin = s(&info["discord_thread_id"]).into();
+        }
+    }
+    if args.source.as_deref() == Some("scheduler") {
+        context["source"] = json!("scheduler");
+        context["scheduler_item"] = json!(args.scheduler_item);
+        context["scheduler_job"] = json!(args.scheduler_job);
+    }
+    // Recover only legacy interrupted creations; do not append a new question to
+    // an old title match. New posting is keyed by the complete question intent.
+    crate::ask_dedup::recover(ctx, &cwd, &names.redact(&args.title))?;
+    if args.thread.is_none() && args.attach.is_empty() && !context["decision_identity"].is_object()
     {
-        if !crate::questions::is_question(&body) || !crate::questions::is_question(&content) {
-            return Err("既存スレッドへのask本文には具体的な質問を書いてください".into());
-        }
-        let mut context = json!({"cwd":cwd,"agent":args.agent,"project":project,"title":title});
-        if let Some(reason) = args.owner_only {
-            context["owner_only"] = json!(reason.as_str());
-        }
-        if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
-            context["session_id"] = json!(session);
-        }
-        if args.source.as_deref() == Some("scheduler") {
-            context["source"] = json!("scheduler");
-            context["scheduler_item"] = json!(args.scheduler_item);
-            context["scheduler_job"] = json!(args.scheduler_job);
-        }
-        if let Some(original) = &existing {
-            // Do not ask a second caller to obtain an answer the owner already gave.
-            let replies = owner_replies(ctx, original, &owner)?;
-            if let Some(answer) = replies
-                .iter()
-                .rev()
-                .find(|m| !crate::snooze::control_only(m))
-            {
-                let result = json!({"thread_id":thread,"reused":true,"suppressed":"already_answered",
-                    "latest_owner_reply":{"id":answer["id"],"timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))}});
+        if let Some(q) =
+            crate::ask_dedup::find_open(&ctx.load()?, &cwd, &title, &names.redact(&args.title))
+        {
+            let exact = if let Some(prior) = q["question_body"].as_str() {
+                prior == body
+            } else {
+                let history = thread_history(ctx, s(&q["thread_id"]))?;
+                history
+                    .iter()
+                    .any(|m| m["id"] == q["after"] && s(&m["content"]).trim() == body.trim())
+            };
+            if exact && (!truth(&q["separated_question"]) || truth(&q["posting_complete"])) {
+                let replies = owner_replies(ctx, &q, &owner)?;
+                let mut result = json!({"thread_id":q["thread_id"],"reused":true,"tracked":true,
+                    "url":format!("https://discord.com/channels/{}/{}",s(&ctx.cfg["guild_id"]),s(&q["thread_id"])),
+                    "progress_thread_id":q["progress_thread_id"],"suppressed":"same_question",
+                    "question_body":q["question_body"],"todo_id":q["todo_id"],"delivery":"inspection_only"});
+                if let Some(answer) = replies
+                    .iter()
+                    .rev()
+                    .find(|m| !crate::snooze::control_only(m))
+                {
+                    result["suppressed"] = json!("already_answered");
+                    result["latest_owner_reply"] = json!({"id":answer["id"],"thread_id":q["thread_id"],"author_id":answer["author"]["id"],"acquisition_source":"discord-api-v10","timestamp":answer["timestamp"],"content":safe_text(s(&answer["content"]))});
+                }
                 print_json(&result, None)?;
                 return Ok(result);
             }
-            // Keep the first caller's resume/scheduler assignment on this question.
-            for key in [
-                "cwd",
-                "agent",
-                "project",
-                "title",
-                "ask_title",
-                "session_id",
-                "posting_job",
-                "source",
-                "scheduler_item",
-                "scheduler_job",
-                "owner_only",
-            ] {
-                context.as_object_mut().unwrap().remove(key);
-                if let Some(value) = original.get(key) {
-                    context[key] = value.clone();
-                }
-            }
-            // Append to the original generation instead of replacing its owner,
-            // answer cursor, reminders or snooze/restart state.
-            context["reuse_question"] = json!({"thread_id":original["thread_id"],"after":original["after"],
-                "asked_at":original["asked_at"],"question_message":original["question_message"]});
-            context["reuse_assignment"] = json!(true);
         }
-        let result = post_text(
-            ctx,
-            thread,
-            &content,
-            &args.attach,
-            existing.is_none(),
-            Some(&context),
-        )?;
-        return Ok(result);
     }
-    let prepared = crate::attachments::prepare(ctx, &args.attach)?;
-    let file_parts = prepared
-        .as_ref()
-        .map(|p| crate::attachments::batches(&p.files))
-        .unwrap_or_default();
-    let first_files = file_parts.first().copied().unwrap_or(&[]);
-    let limit = prepared
-        .as_ref()
-        .map(|p| p.limit)
-        .unwrap_or(crate::attachments::BASE_LIMIT);
-    let parts = chunks(&content, MAX_CONTENT);
-    let channel_id = s(&ctx.cfg["task_channel_id"]).to_owned();
-    let channel = ctx.call("GET", &format!("/channels/{channel_id}"), None)?;
-    let mut question = json!({"title":title,"ask_title":names.redact(&args.title),"project":project,"agent":args.agent,"cwd":cwd,"cwd_key":crate::ask_dedup::folder_key(&cwd),"asked_at":timestamp(),"open":true});
-    if let Some(reason) = args.owner_only {
-        question["owner_only"] = json!(reason.as_str());
-    }
-    if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
-        question["session_id"] = json!(session);
-    }
-    if args.source.as_deref() == Some("scheduler") {
-        question["source"] = json!("scheduler");
-        question["scheduler_item"] = json!(args.scheduler_item);
-        question["scheduler_job"] = json!(args.scheduler_job);
-    }
-    let mentions = json!({"parse":[],"users":[owner]});
-    let first_payload = if n(&channel["type"]) == 15 {
-        json!({"name":title,"message":{"content":parts[0],"allowed_mentions":mentions}})
-    } else {
-        json!({"content":parts[0],"allowed_mentions":mentions})
-    };
-    let outgoing = crate::attachments::prepare_send(&first_payload, first_files, limit)?;
-    let creation_id = crate::ask_dedup::reserve(
-        ctx,
-        &question,
-        &parts[0],
-        first_files,
-        n(&channel["type"]) == 15,
-    )?;
-    let (thread_id, mut message_id) = if n(&channel["type"]) == 15 {
-        let response = crate::attachments::send_prepared(
-            ctx,
-            &format!("/channels/{channel_id}/threads"),
-            &outgoing,
-        );
-        let thread = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
-        let tid = s(&thread["id"]).to_owned();
-        let mid = if truth(&thread["last_message_id"]) {
-            s(&thread["last_message_id"]).to_owned()
-        } else {
-            tid.clone()
-        };
-        (tid, mid)
-    } else {
-        let response = crate::attachments::send_prepared(
-            ctx,
-            &format!("/channels/{channel_id}/messages"),
-            &outgoing,
-        );
-        let message = crate::ask_dedup::creation_result(ctx, &creation_id, response)?;
-        let mid = s(&message["id"]).to_owned();
-        if mid.is_empty() {
-            return Err("text question returned no message ID".into());
-        }
-        crate::ask_dedup::text_starter(ctx, &creation_id, &mid)?;
-        let thread = ctx.call(
-            "POST",
-            &format!("/channels/{channel_id}/messages/{mid}/threads"),
-            Some(&json!({"name":title})),
-        )?;
-        (s(&thread["id"]).to_owned(), mid)
-    };
-    if thread_id.is_empty() || message_id.is_empty() {
-        return Err("question creation returned no Discord ID".into());
-    }
-    crate::ask_dedup::checkpoint(ctx, &creation_id, &thread_id, &message_id)?;
-    {
-        let _guard = lock(ctx)?;
-        let mut state = ctx.load()?;
-        question["thread_id"] = json!(thread_id);
-        question["after"] = json!(message_id);
-        state["questions"]
-            .as_array_mut()
-            .ok_or("ValueError")?
-            .push(question);
-        crate::ask_dedup::clear(&mut state, &creation_id);
-        ctx.save(&state)?;
-    }
-    // Register the question before continuation uploads: a failed later batch must not
-    // leave a live owner question outside reminder/reply tracking.
-    for i in 1..parts.len().max(file_parts.len()) {
-        message_id = s(&crate::attachments::send(
-            ctx,
-            &format!("/channels/{thread_id}/messages"),
-            &json!({"content":parts.get(i).map(String::as_str).unwrap_or(""),"flags":SILENT,"allowed_mentions":{"parse":[]}}),
-            file_parts.get(i).copied().unwrap_or(&[]), limit,
-        )?["id"]).to_owned();
-        let _guard = lock(ctx)?;
-        let mut state = ctx.load()?;
-        if let Some(question) = state["questions"]
-            .as_array_mut()
-            .ok_or("ValueError")?
-            .iter_mut()
-            .find(|q| s(&q["thread_id"]) == thread_id)
-        {
-            question["after"] = json!(message_id);
-        }
-        ctx.save(&state)?;
-    }
-    let value = json!({"thread_id":thread_id,"url":format!("https://discord.com/channels/{}/{thread_id}",s(&ctx.cfg["guild_id"]))});
-    print_json(&value, None)?;
-    Ok(value)
+    let result = crate::question_progress::ask(ctx, &context, &origin, &body, &args.attach)?;
+    print_json(&result, None)?;
+    Ok(result)
 }
-
 /// Fetch without the writer lock; claim and return only undelivered replies under
 /// that lock. Inspection of previously consumed replies uses --read-only.
 pub fn cmd_replies(ctx: &mut Context, thread: Option<&str>) -> Result<Value> {
@@ -772,6 +675,9 @@ pub fn cmd_log_attached(
             atomic_json(&path, &known, 1)?;
         }
     }
+    if notify && crate::questions::is_question(&body) {
+        return post_text(ctx, &thread_id, &body, attach, true, None);
+    }
     let question = if notify && crate::questions::is_question(&body) {
         Some(ctx.call("GET", &format!("/channels/{thread_id}"), None)?)
     } else {
@@ -808,9 +714,88 @@ fn post_text(
     notify: bool,
     context: Option<&Value>,
 ) -> Result<Value> {
+    let (clean_body, decision) = crate::decision_identity::extract(body)?;
+    let body = clean_body.as_str();
+    if decision.is_some() && !crate::questions::is_question(body) {
+        return Err("判断の記録には具体的な質問本文が必要です".into());
+    }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
+    if crate::questions::is_question(body) {
+        crate::ask_gate::enforce("", body, None)?;
+        let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
+        crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;
+        let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
+        if ![10, 11, 12].contains(&n(&channel["type"]))
+            || channel["guild_id"] != ctx.cfg["guild_id"]
+        {
+            return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
+        }
+        if !metadata["decision_identity"].is_object() {
+            // Reconcile only old interrupted message ledgers before deciding
+            // whether this is a new question. Recovery never appends a question.
+            let prepared = crate::attachments::prepare(ctx, attach)?;
+            let _guard = crate::attachments::question_lock(ctx, thread)?;
+            let ids = crate::attachments::recover_posted(
+                ctx,
+                thread,
+                body,
+                prepared.as_ref(),
+                notify,
+                &channel,
+                context,
+            )?;
+            let caller = crate::questions::posting_job(ctx)?;
+            if let Some(answer) = crate::questions::answered_repost(
+                ctx,
+                thread,
+                body,
+                caller.as_deref(),
+                &crate::attachments::fingerprints(prepared.as_ref())?,
+            )? {
+                let value = json!({"thread_id":thread,"message_ids":ids,"suppressed":"already_answered","latest_owner_reply":answer});
+                print_json(&value, None)?;
+                return Ok(value);
+            }
+        }
+        if s(&metadata["title"]).is_empty() {
+            metadata["title"] = channel["name"].clone();
+        }
+        if s(&metadata["cwd"]).is_empty() {
+            metadata["cwd"] = json!(std::env::current_dir()
+                .map_err(|e| e.to_string())?
+                .to_string_lossy());
+        }
+        metadata["asked_at"] = json!(timestamp());
+        metadata["source"] = json!("posted");
+        if let Ok(session) = std::env::var("CODEX_THREAD_ID") {
+            metadata["session_id"] = json!(session);
+        }
+        if let Ok(job) = std::env::var("CC_JOB_ID") {
+            if valid_job(&job) {
+                metadata["posting_job"] = json!(job);
+                metadata["job"] = json!(job);
+                metadata["job_info"] = job_info(ctx, &job);
+                if !metadata["decision_identity"].is_object() {
+                    metadata["todo_id"] = metadata["job_info"]["todo_id"].clone();
+                }
+            }
+        }
+        let result = crate::question_progress::ask(ctx, &metadata, thread, body, attach)?;
+        print_json(&result, None)?;
+        return Ok(result);
+    }
+    let destination = crate::question_progress::result_target(ctx, thread, "")?;
+    let separated = destination != thread || crate::question_progress::is_separated(ctx, thread)?;
+    let thread = destination.as_str();
+    let silent_body = crate::question_progress::silent_text(body);
+    let body = if separated {
+        silent_body.as_str()
+    } else {
+        body
+    };
+    let notify = notify && !separated;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
     if ![10, 11, 12].contains(&n(&channel["type"]))
@@ -1135,6 +1120,11 @@ fn external_step(ctx: &mut Context, path: PathBuf, verb: &str, report_json: bool
         && output.code == 1
         && trailing_report(&output.stdout)
             .is_some_and(|(_, report)| report.is_object() && report.get("error").is_some());
+    let scheduler_busy = report_json
+        && trailing_report(&output.stdout).is_some_and(|(_, report)| report["busy"] == true);
+    if swallowed_scheduler_error || scheduler_busy {
+        ctx.cfg["__scheduler_step_failed"] = json!(true);
+    }
     if output.code != 0 && !swallowed_scheduler_error {
         return Err(format!("{verb} exited {}", output.code));
     }
@@ -1147,7 +1137,24 @@ pub fn cmd_todo_watch(ctx: &mut Context) -> Result<()> {
 }
 /// Capacity, dispatch and recovery; scheduler.step isolates and logs its own failures.
 pub fn cmd_scheduler_step(ctx: &mut Context) -> Result<()> {
+    ctx.cfg["__scheduler_step_failed"] = json!(false);
     external_step(ctx, ctx.scheduler_command.clone(), "step", true)
+}
+// Observation must continue even while boot ownership prevents new launches.
+// Discard the report: watch-preview can contain private work metadata.
+fn observe_only(ctx: &mut Context, path: PathBuf, verb: &str) -> Result<()> {
+    let output = ctx.run(&command_argv(&path, &[verb.to_owned()]), 20)?;
+    if verb == "status"
+        && trailing_report(&output.stdout)
+            .is_some_and(|(_, report)| report["busy"] == true || !report["error"].is_null())
+    {
+        return Err("observation unavailable".into());
+    }
+    if output.code == 0 {
+        Ok(())
+    } else {
+        Err("observation failed".into())
+    }
 }
 /// PR shepherds (D:/CC/Tools/shepherd): one Codex job per idle open PR drives it to merge (2026-10-01).
 pub fn cmd_shepherd_step(ctx: &mut Context) -> Result<()> {
@@ -1183,6 +1190,8 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
         return Ok(());
     };
     let _deadline = crate::tick_runtime::Deadline::new(crate::tick_runtime::TICK_LIMIT);
+    let mut health = json!({"started_at":ctx.now() as u64,"stages":{}});
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     let _finish = crate::tick_runtime::Span::new("tick total");
     println!(
         "{} tick start; prompt_limit_bytes={}; writer_guard=enabled; pid={}; limit_ms={}",
@@ -1208,14 +1217,77 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
     }
     // Recovery is required for direct CLI ticks as well as the scheduled VBS caller.
     // A failed inventory recovery permits receipts but blocks new children this pass.
-    if !crate::tick_runtime::stage("startup-recovery", Duration::from_secs(20), || {
+    let recovered = crate::tick_runtime::stage("startup-recovery", Duration::from_secs(20), || {
         Ok(crate::automation::recover_before_launch(ctx))
     })
-    .unwrap_or(false)
+    .unwrap_or(false);
+    health["stages"]["startup_recovery"] = json!(recovered);
+    if let Err(error) =
+        crate::tick_runtime::stage("question-progress-recovery", Duration::from_secs(5), || {
+            crate::question_progress::recover_pending(ctx)
+        })
     {
+        eprintln!(
+            "question progress recovery failed: {}",
+            error_detail(&error)
+        );
+    }
+    if !recovered {
         budget = true;
         eprintln!("startup recovery failed; launches deferred");
     }
+    // Observe/recover work before Discord scans can consume the whole deadline.
+    // Reuse this tick and its launch gates; never add another polling loop.
+    for (name, step) in [
+        (
+            "cmd_todo_watch",
+            cmd_todo_watch as fn(&mut Context) -> Result<()>,
+        ),
+        (
+            "cmd_scheduler_step",
+            cmd_scheduler_step as fn(&mut Context) -> Result<()>,
+        ),
+    ] {
+        let deferred = truth(&ctx.cfg["__reboot_recovery_deferred"]);
+        // The metadata inventory spans thousands of receipts; retain its
+        // normal 20s ceiling within the existing whole-tick deadline.
+        let limit = if name == "cmd_todo_watch" { 20 } else { 8 };
+        let result = crate::tick_runtime::stage(name, Duration::from_secs(limit), || {
+            if deferred {
+                if name == "cmd_todo_watch" {
+                    observe_only(ctx, ctx.todo_command.clone(), "watch-preview")
+                } else {
+                    observe_only(ctx, ctx.scheduler_command.clone(), "status")
+                }
+            } else {
+                step(ctx)
+            }
+        });
+        health["stages"][name] = json!(
+            result.is_ok()
+                && !(name == "cmd_scheduler_step" && truth(&ctx.cfg["__scheduler_step_failed"]))
+        );
+        if let Err(error) = result {
+            eprintln!("{name} failed: {}", error_detail(&error));
+        }
+    }
+    health["observed_at"] = json!(ctx.now() as u64);
+    health["mode"] = json!(if truth(&ctx.cfg["__reboot_recovery_deferred"]) {
+        "observe_only"
+    } else {
+        "recovery"
+    });
+    health["error"] = if health["stages"]
+        .as_object()
+        .unwrap()
+        .values()
+        .all(|v| v == true)
+    {
+        Value::Null
+    } else {
+        json!("core_stage_failed")
+    };
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     let config_error = ctx.cfg["__cc_ask_config_error"].as_str().map(str::to_owned);
     let intake_first = if config_error.is_none() {
         let _state_lock = lock(ctx)?;
@@ -1250,21 +1322,11 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
             "cmd_civ6_fairness",
             crate::civ6_idle::cmd_civ6_fairness as fn(&mut Context) -> Result<()>,
         ),
-        ("cmd_todo_watch", cmd_todo_watch),
-        (
-            "cmd_scheduler_step",
-            cmd_scheduler_step as fn(&mut Context) -> Result<()>,
-        ),
         ("cmd_shepherd_step", cmd_shepherd_step),
         ("cmd_remind", cmd_remind),
         ("cmd_sweep", cmd_sweep),
         ("cmd_civ6_idle", crate::civ6_idle::cmd_civ6_idle),
     ] {
-        if truth(&ctx.cfg["__reboot_recovery_deferred"])
-            && ["cmd_todo_watch", "cmd_scheduler_step"].contains(&name)
-        {
-            continue; // Do not replace jobs whose boot recovery will retry.
-        }
         let result = crate::tick_runtime::stage(name, Duration::from_secs(5), || {
             if ["cmd_remind", "cmd_sweep"].contains(&name) {
                 match &config_error {
@@ -1279,6 +1341,8 @@ pub fn cmd_tick(ctx: &mut Context) -> Result<()> {
             eprintln!("{name} failed: {}", error_detail(&error));
         }
     }
+    health["finished_at"] = json!(ctx.now() as u64);
+    atomic_json(&ctx.here.join("tick-health.json"), &health, 2)?;
     Ok(())
 }
 

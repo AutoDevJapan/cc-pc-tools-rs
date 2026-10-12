@@ -126,7 +126,8 @@ fn deliver(ctx: &mut Context, state: &mut Value, pending: &Value) -> Result<bool
         };
         let question = state["questions"][index].clone();
         let member = s(&question["thread_id"]);
-        if !truth(&question["open"])
+        if truth(&question["separated_question"])
+            || !truth(&question["open"])
             || crate::questions::stopped(ctx, state, member)
             || crate::snooze::paused(&question, ctx.now())
             || n(&question["seen_reply"]) > n(&question["after"])
@@ -240,7 +241,8 @@ pub fn run_locked(ctx: &mut Context, args: &RemindArgs) -> Result<Value> {
         crate::tick_runtime::check()?;
         let q = state["questions"][index].clone();
         let tid = s(&q["thread_id"]);
-        if !truth(&q["open"])
+        if truth(&q["separated_question"])
+            || !truth(&q["open"])
             || (!args.thread.is_empty() && !args.thread.iter().any(|t| t == tid))
             || state["questions"]
                 .as_array()

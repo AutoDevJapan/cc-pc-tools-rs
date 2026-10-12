@@ -13,7 +13,9 @@ struct Task {
 }
 
 fn tasks(ctx: &Context) -> Result<Vec<(PathBuf, Task)>> {
+    crate::tick_runtime::check()?;
     let _span = crate::tick_runtime::Span::new("notifier task inventory");
+    crate::tick_runtime::check()?;
     let entries = fs::read_dir(&ctx.discord_tasks)
         .map_err(|_| "Discord task state unavailable; cleanup skipped")?;
     let mut tasks = vec![];

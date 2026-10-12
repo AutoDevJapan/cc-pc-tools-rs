@@ -7,6 +7,462 @@ use std::{
     time::Duration,
 };
 const T: f64 = 100000.;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
+
+#[test]
+fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
+    for gate in [
+        "open",
+        "cpu",
+        "memory",
+        "deadline",
+        "owner",
+        "active",
+        "unknown_cancel",
+        "waiting",
+        "unprepared_cpu",
+    ] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        let child = &mut sub.db["items"][1];
+        child["status"] = json!("doing");
+        child["jobs"] = json!(["previous"]);
+        child["worker_receipt"] = json!({"job":null,"generation":2});
+        child["scheduler"] = json!({"worktree":child["scheduler"]["worktree"],
+            "branch":child["scheduler"]["branch"],"phase":"retry","resume":true,"job":null,"key":null,"last_job":"previous"});
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        sub.jobs
+            .push(json!({"id":"previous","status":"cancelled","todo_id":2,
+            "recovery_cancel":{"key":"repair","committed_at":"2026-10-12T07:00:00+09:00"}}));
+        let mut f = Fixture::new();
+        match gate {
+            "unprepared_cpu" => {
+                sub.db["items"][1]["scheduler"]["worktree"] = Value::Null;
+                sub.db["items"][1]["scheduler"]["branch"] = Value::Null;
+                f.e.backend.m["cpu_percent"] = json!(99);
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
+            "owner" => sub.db["items"][1]["stopped"] = json!(true),
+            "active" => sub
+                .jobs
+                .push(json!({"id":"other","status":"running","todo_id":2})),
+            "unknown_cancel" => sub.jobs[1]["recovery_cancel"] = Value::Null,
+            "waiting" => sub.db["items"][1]["wait_on"] = json!([1]),
+            _ => {}
+        }
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:existing-review","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Original fixed review body.","read_only":true,"options":{"model":"gpt-6-luna","effort":"high","sandbox":"read-only"}});
+        let result =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(result.is_some(), gate == "open", "{gate}");
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if let Some(job) = result {
+            assert_eq!(f.get(2)["scheduler"]["console_request"], request);
+            assert_eq!(f.get(2)["subwork"], sub.db["items"][1]["subwork"]);
+            assert!(f.e.backend.launched[0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("最新保存仕様を優先"));
+            assert_eq!(
+                f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                    .unwrap(),
+                Some(job)
+            );
+            assert_eq!(f.e.backend.launched.len(), 1);
+        } else if ["owner", "active", "unknown_cancel", "waiting"].contains(&gate) {
+            assert_eq!(f.get(2)["status"], "doing", "{gate}");
+        } else if gate == "unprepared_cpu" {
+            assert_eq!(f.get(2)["status"], "todo");
+            assert!(f.get(2)["scheduler"]["worktree"].is_null());
+        }
+    }
+}
+
+#[test]
+fn console_subwork_admission_survives_registered_worker_releasing_reservation() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    sub.db["items"][1]["scheduler"]
+        .as_object_mut()
+        .unwrap()
+        .remove("subwork_admission");
+    sub.jobs[0]["pid"] = json!(1);
+    sub.jobs[0]["created_at"] = json!(T - 1200.);
+    sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+    let mut f = Fixture::new();
+    f.e.backend.records = sub.jobs.clone();
+    f.e.backend.launch_start = Some(f.e.todo_path.clone());
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let request = json!({"key":"manual:finite-check","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt":"Inspect the same fixed change."});
+    let result =
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap()
+            .unwrap();
+    let row = f.get(2);
+    assert!(row["scheduler"]["key"].is_null());
+    assert_eq!(row["scheduler"]["job"], result);
+    assert_eq!(row["worker_receipt"]["job"], result);
+    assert!(row["jobs"].as_array().unwrap().contains(&json!(result)));
+    let mut candidate = sub.child_job();
+    candidate["id"] = json!(result);
+    cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate).unwrap();
+    assert_eq!(candidate["parent_job_id"], "parent");
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap(),
+        Some(result)
+    );
+    assert_eq!(f.e.backend.launched.len(), 1);
+}
+
+#[test]
+fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
+    for gate in [
+        "open", "cargo", "cpu", "memory", "interval", "deadline", "owner",
+    ] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("subwork_admission");
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "cargo" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "interval" => f.e.state["last_launch"] = json!(T),
+            "deadline" => sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.),
+            "owner" => sub.db["items"][1]["status"] = json!("block"),
+            _ => {}
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:finite-check","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Keep the fixed input and the saved acceptance criteria."});
+        let result =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(result.is_some(), gate == "open", "{gate}");
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if gate != "open" {
+            continue;
+        }
+        let row = f.get(2);
+        assert_eq!(row["spec"], sub.db["items"][1]["spec"]);
+        assert_eq!(row["scheduler"]["console_request"], request);
+        assert_eq!(
+            row["scheduler"]["key"],
+            sub.db["items"][1]["scheduler"]["key"]
+        );
+        let mut candidate = sub.child_job();
+        candidate["id"] = row["scheduler"]["job"].clone();
+        candidate["subwork_spec"] = row["spec"].clone();
+        candidate["assigned_needs"] = row["needs"].clone();
+        // This is the admission validator used by cc-jobs, not merely an argv assertion.
+        cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate)
+            .unwrap();
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains(request["prompt"].as_str().unwrap()));
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Inspect the fixed change"));
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            &row,
+            Path::new(row["scheduler"]["prompt"].as_str().unwrap()),
+            &row["scheduler"]["selection"],
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--assigned-needs", "cargo"]));
+        let again =
+            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+                .unwrap();
+        assert_eq!(again, result);
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let mut changed = request.clone();
+        changed["prompt"] = json!("Different accepted body");
+        assert!(f
+            .e
+            .dispatch_console_subwork(&f.cfg, &f.pri, 2, &changed)
+            .is_err());
+    }
+}
+
+#[test]
+fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    sub.jobs[0]["pid"] = json!(1);
+    sub.jobs[0]["created_at"] = json!(T - 1200.);
+    sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+    let mut f = Fixture::new();
+    f.e.backend.records = sub.jobs.clone();
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let first = json!({"key":"manual:first","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prompt":"First body",
+        "options":{"model":"gpt-6-luna","effort":"medium"}});
+    let second = json!({"key":"manual:second","launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prompt":"Second body"});
+    f.e.backend.m["cpu_percent"] = json!(99);
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    assert_eq!(f.get(2)["scheduler"]["console_request"], first);
+    f.e.backend.m = measurement();
+    f.e.backend.clock += n(&f.cfg["cpu_window_s"]) + 1.;
+    f.e.backend.crash_after_launch = true;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+        .is_err());
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let recovered =
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap()
+            .unwrap();
+    let key = f.get(2)["scheduler"]["key"].clone();
+    let job =
+        f.e.backend
+            .records
+            .iter()
+            .find(|j| j["id"] == recovered)
+            .unwrap()
+            .clone();
+    f.e.link(&json!(2), &job, &key).unwrap();
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+            .unwrap(),
+        None
+    );
+    f.e.backend
+        .records
+        .iter_mut()
+        .find(|j| j["id"] == recovered)
+        .unwrap()["status"] = json!("succeeded");
+    let previous_cwd = f.get(2)["scheduler"]["worktree"].clone();
+    let previous =
+        f.e.backend
+            .records
+            .iter_mut()
+            .find(|j| j["id"] == recovered)
+            .unwrap();
+    previous["cwd"] = previous_cwd;
+    previous["thread_id"] = json!("11111111-1111-4111-8111-111111111111");
+    previous["last_message"] = json!("状態: 継続中\nFirst body");
+    f.e.requeue(&json!(2), &json!(recovered), "failed").unwrap();
+    f.e.backend.clock += 3600.;
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+        .unwrap()
+        .is_some());
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.e.backend.launched[1]["item"]["scheduler"]["selection"]["model"],
+        "mock-model"
+    );
+    assert!(f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Second body"));
+    assert!(!f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("First body"));
+    assert!(f.e.backend.launched[1]["item"]["scheduler"]["resume_session"].is_null());
+    // Replaying the first receipt still identifies its own job after later work.
+    assert_eq!(
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+            .unwrap(),
+        Some(recovered)
+    );
+    assert_eq!(f.e.backend.launched.len(), 2);
+    assert_eq!(
+        f.get(2)["scheduler"]["console_receipts"]
+            .as_object()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[test]
+fn console_subwork_preserves_read_only_and_model_preferences_without_widening_todo_scope() {
+    for explicit_todo in [false, true] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        if explicit_todo {
+            sub.db["items"][1]["model"] = json!("gpt-6.1-sol");
+            sub.db["items"][1]["effort"] = json!("high");
+        }
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let request = json!({"key":"manual:restricted","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "prompt":"Read only the fixed change.","read_only":true,
+            "options":{"model":"gpt-6-luna","effort":"medium","sandbox":"read-only"}});
+        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
+            .unwrap()
+            .unwrap();
+        let prepared = &f.e.backend.launched[0]["item"];
+        let selection = &prepared["scheduler"]["selection"];
+        assert_eq!(
+            selection["model"],
+            if explicit_todo {
+                "gpt-6.1-sol"
+            } else {
+                "gpt-6-luna"
+            }
+        );
+        assert_eq!(
+            selection["effort"],
+            if explicit_todo { "high" } else { "medium" }
+        );
+        let invocation = RealBackend::new(f.e.root.clone()).launch_command(
+            prepared,
+            Path::new(prepared["scheduler"]["prompt"].as_str().unwrap()),
+            selection,
+        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--sandbox", "read-only"]));
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--model", selection["model"].as_str().unwrap()]));
+        assert!(!invocation.args.iter().any(|arg| arg == "--auto-model"));
+        assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
+    }
+}
+
+#[test]
+fn subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates() {
+    for gate in ["open", "cargo", "cpu", "memory", "interval"] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("subwork_admission");
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "cargo" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
+            }
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "interval" => f.e.state["last_launch"] = json!(T),
+            _ => {}
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        f.e.dispatch(&f.cfg, &f.pri).unwrap();
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}: {:?}",
+            f.e.report
+        );
+        assert!(f.get(2)["wait_on"].is_null());
+        assert_eq!(
+            f.get(2)["scheduler"]["subwork_admission"].is_object(),
+            gate == "open"
+        );
+        if gate == "open" {
+            assert_eq!(
+                f.e.backend.launched[0]["item"]["scheduler"]["subwork_parent_job"],
+                "parent"
+            );
+        }
+    }
+}
+
+#[test]
+fn subwork_launch_arguments_carry_relation_and_resource_allocation() {
+    let mut sub = subwork_support::Fixture::new();
+    sub.register();
+    let mut item = sub.db["items"][1].clone();
+    item["needs"] = json!(["cargo"]);
+    item["scheduler"]["subwork_parent_job"] = json!("parent");
+    let backend = RealBackend::new(sub.dir.path().to_path_buf());
+    let c = backend.launch_command(
+        &item,
+        Path::new("prompt.md"),
+        &json!({"task_type":"check","model":"gpt-6-luna","effort":"high"}),
+    );
+    for pair in [
+        ["--subwork-of", "1"],
+        ["--parent-job-id", "parent"],
+        ["--assigned-needs", "cargo"],
+    ] {
+        assert!(c.args.windows(2).any(|w| w == pair));
+    }
+}
+
+#[test]
+fn subwork_prepare_does_not_launch_stale_spec_needs_relation_or_owner_stop() {
+    for field in ["spec", "needs", "subwork", "status"] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.register();
+        let mut changed = sub.db.clone();
+        changed["items"][1][field] = match field {
+            "spec" => json!("another-spec.md"),
+            "needs" => json!(["cargo"]),
+            "subwork" => {
+                let mut rel = changed["items"][1]["subwork"].clone();
+                rel["kind"] = json!("research");
+                rel
+            }
+            _ => json!("block"),
+        };
+        let mut f = Fixture::new();
+        f.e.backend.prepare_edit = Some((f.e.todo_path.clone(), changed));
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        f.e.dispatch(&f.cfg, &f.pri).unwrap();
+        assert!(f.e.backend.launched.is_empty(), "{field}");
+    }
+}
 
 #[test]
 fn reboot_deployment_preserves_installed_subscription_model_validation() {
@@ -291,6 +747,184 @@ fn explicit_resume_supersedes_cancelled_and_old_owner_result() {
             );
         }
     }
+}
+
+fn start_fixture(f: &mut Fixture, worker: &str) {
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(2)).unwrap();
+    let mut db = f.e.todo().unwrap();
+    cc_todo::execute(
+        &mut db,
+        &cc_todo::Command::Start {
+            id: 1,
+            job: worker.into(),
+            progress: None,
+        },
+        &paths,
+    )
+    .unwrap();
+    cc_todo::save(&f.e.todo_path, &db).unwrap();
+}
+
+#[test]
+fn resume2172_finished_result_is_durable_and_never_replayed_by_same_worker_start() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.records[0]["last_message"] =
+        json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "block");
+    assert!(f.get(1)["processed_results"]["j1"].is_object());
+    start_fixture(&mut f, "j1");
+    let resumed = f.get(1);
+    start_fixture(&mut f, "j1");
+    assert_eq!(f.get(1)["resume_generation"], resumed["resume_generation"]);
+    // The ledger lives in todo.json, not the scheduler's in-memory state.
+    f.e.state = json!({});
+    f.reconcile();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.backend.outcome_count, 1);
+}
+
+#[test]
+fn resume2172_legacy_finished_result_can_resume_without_job_or_same_job() {
+    for worker in ["", "j1", "new-worker"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.e.edit(&json!(1), |row| {
+            row["status"] = json!("block");
+            row["progress"] = json!(63);
+            row["scheduler"]["phase"] = json!("finished");
+            row["scheduler"]["answer"] = json!("keep answer");
+        })
+        .unwrap();
+        let before = f.get(1);
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] =
+            json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+        start_fixture(&mut f, worker);
+        if worker == "new-worker" {
+            f.e.backend.records.push(job(worker, 2, "running"));
+            f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
+        }
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "doing", "worker={worker}");
+        assert_eq!(f.e.backend.outcome_count, 0);
+        for field in ["spec", "progress"] {
+            assert_eq!(f.get(1)[field], before[field]);
+        }
+        for field in ["answer", "worktree", "branch"] {
+            assert_eq!(f.get(1)["scheduler"][field], before["scheduler"][field]);
+        }
+        assert!(arr(&f.get(1)["jobs"]).contains(&json!("j1")));
+        assert!(f.get(1)["processed_results"]["j1"].is_object());
+    }
+}
+
+#[test]
+fn resume2172_outcome_read_race_preserves_start_block_wait_and_aba_resume() {
+    for action in ["start", "block", "wait", "aba"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.put(item(2, "civ6", "todo", &[]));
+        if action == "aba" {
+            start_fixture(&mut f, "j1");
+        }
+        let snapshot = f.get(1);
+        let command = match action {
+            "start" => cc_todo::Command::Start {
+                id: 1,
+                job: "".into(),
+                progress: None,
+            },
+            "aba" => cc_todo::Command::Start {
+                id: 1,
+                job: "j1".into(),
+                progress: None,
+            },
+            "block" => cc_todo::Command::Block {
+                id: 1,
+                reason: "owner stop".into(),
+                progress: None,
+            },
+            _ => cc_todo::Command::Wait {
+                id: 1,
+                on: vec![2],
+                progress: None,
+            },
+        };
+        // ABA is performed within outcome(): doing -> block -> doing must also be detected.
+        f.e.backend.outcome_block_before = action == "aba";
+        f.e.backend.outcome_edit = Some((f.e.todo_path.clone(), command));
+        let mut records = vec![job("j1", 1, "succeeded")];
+        f.e.reconcile_item(&snapshot, &mut records, &Processes::new(), &f.cfg)
+            .unwrap();
+        let row = f.get(1);
+        assert_eq!(
+            row["status"],
+            match action {
+                "block" => "block",
+                "wait" => "wait",
+                _ => "doing",
+            },
+            "action={action}"
+        );
+        assert!(
+            row["processed_results"]["j1"].is_null(),
+            "stale result was committed: {action}"
+        );
+        assert_ne!(row["scheduler"]["phase"], "finished");
+        assert_eq!(
+            f.e.todo().unwrap(),
+            f.e.backend.outcome_saved.clone().unwrap(),
+            "stale snapshot must not even touch updated"
+        );
+    }
+}
+
+#[test]
+fn resume2172_start_creates_explicit_receipt_without_prior_scheduler() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "block", &[]);
+    row["jobs"] = json!(["old"]);
+    row["progress"] = json!(42);
+    f.put(row);
+    start_fixture(&mut f, "new-worker");
+    let started = f.get(1);
+    assert_eq!(started["scheduler"]["job"], "new-worker");
+    assert_eq!(started["worker_receipt"]["job"], "new-worker");
+    assert_eq!(
+        started["worker_receipt"]["generation"],
+        started["resume_generation"]
+    );
+    assert_eq!(started["jobs"], json!(["old", "new-worker"]));
+    assert_eq!(started["progress"], 42);
+    start_fixture(&mut f, "new-worker");
+    assert_eq!(f.get(1)["resume_generation"], started["resume_generation"]);
+}
+
+#[test]
+fn resume2172_each_shared_job_result_is_received_per_item_and_repeated_tick_is_noop() {
+    let mut f = Fixture::new();
+    for id in [1, 2] {
+        let mut row = item(id, "civ6", "doing", &[]);
+        row["scheduler"] = json!({"job":"shared","phase":"running"});
+        row["jobs"] = json!(["shared"]);
+        f.put(row);
+    }
+    f.e.backend.records = vec![job("shared", 1, "succeeded")];
+    f.e.backend.records[0]["last_message"] = json!("状態: 完了\n終了しました。");
+    f.reconcile();
+    for id in [1, 2] {
+        assert_eq!(f.get(id)["status"], "todo");
+        assert_eq!(f.get(id)["processed_results"]["shared"]["reason"], "todo");
+    }
+    let before = fs::read(&f.e.todo_path).unwrap();
+    f.reconcile();
+    assert_eq!(fs::read(&f.e.todo_path).unwrap(), before);
+    assert_eq!(f.e.backend.outcome_count, 2);
 }
 
 #[test]
@@ -768,6 +1402,12 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    launch_start: Option<PathBuf>,
+    prepare_edit: Option<(PathBuf, Value)>,
+    outcome_edit: Option<(PathBuf, cc_todo::Command)>,
+    outcome_block_before: bool,
+    outcome_count: usize,
+    outcome_saved: Option<Value>,
     records: Vec<Value>,
     launched: Vec<Value>,
     cancelled: Vec<Value>,
@@ -787,10 +1427,20 @@ struct Fake {
     fail_lost: bool,
     close_fails: bool,
     reply_count: usize,
+    settings_change: Option<(PathBuf, Value)>,
+    measure_count: usize,
+    change_during_prepare: bool,
+    worktree_failure: Option<u64>,
 }
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            launch_start: None,
+            prepare_edit: None,
+            outcome_edit: None,
+            outcome_block_before: false,
+            outcome_count: 0,
+            outcome_saved: None,
             records: vec![],
             launched: vec![],
             cancelled: vec![],
@@ -810,6 +1460,10 @@ impl Default for Fake {
             fail_lost: false,
             close_fails: false,
             reply_count: 0,
+            settings_change: None,
+            measure_count: 0,
+            change_during_prepare: false,
+            worktree_failure: None,
         }
     }
 }
@@ -818,6 +1472,14 @@ impl Backend for Fake {
         self.clock
     }
     fn measure(&mut self, _: &mut Value) -> Result<(Value, Processes)> {
+        self.measure_count += 1;
+        if self.measure_count == 2 {
+            if let Some((path, settings)) = self.settings_change.take() {
+                let mut db = read_json(&path, json!({}))?;
+                merge(&mut db["items"][0], settings);
+                write_json(&path, &db, 2)?;
+            }
+        }
         Ok((self.m.clone(), self.ps.clone()))
     }
     fn snapshot(&mut self) -> Result<Processes> {
@@ -853,7 +1515,23 @@ impl Backend for Fake {
         let mut j = job(&jid, 99, "running");
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
+        j["todo_id"] = i["id"].clone();
         self.records.push(j);
+        if let Some(path) = &self.launch_start {
+            let mut db = read_json(path, json!({}))?;
+            let paths = cc_todo::Paths::at(path.parent().unwrap(), path.parent().unwrap());
+            cc_todo::execute(
+                &mut db,
+                &cc_todo::Command::Start {
+                    id: i["id"].as_i64().unwrap(),
+                    job: jid.clone(),
+                    progress: None,
+                },
+                &paths,
+            )
+            .unwrap();
+            write_json(path, &db, 1)?;
+        }
         if self.crash_after_launch {
             self.crash_after_launch = false;
             return Err(Error("KeyboardInterrupt"));
@@ -869,6 +1547,11 @@ impl Backend for Fake {
             }
         }
         Ok(self.cancel_ok)
+    }
+    fn cancel_for_recovery(&mut self, j: &mut Value) -> Result<bool> {
+        j["recovery_cancel"] =
+            json!({"key":"scheduler-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        self.cancel(j)
     }
     fn kill_orphan(&mut self, c: &Value) -> Result<bool> {
         self.killed.push(c["pid"].clone());
@@ -897,6 +1580,27 @@ impl Backend for Fake {
         Ok(())
     }
     fn outcome(&mut self, j: &Value) -> Result<String> {
+        self.outcome_count += 1;
+        if let Some((store, command)) = self.outcome_edit.take() {
+            let paths = cc_todo::Paths::at(store.parent().unwrap(), &store.with_file_name("jobs"));
+            let _lock = cc_todo::Lock::acquire(&paths.lock, Duration::from_secs(2)).unwrap();
+            let mut db = cc_todo::load(&store).unwrap();
+            if self.outcome_block_before {
+                cc_todo::execute(
+                    &mut db,
+                    &cc_todo::Command::Block {
+                        id: 1,
+                        reason: "owner stop".into(),
+                        progress: None,
+                    },
+                    &paths,
+                )
+                .unwrap();
+            }
+            cc_todo::execute(&mut db, &command, &paths).unwrap();
+            cc_todo::save(&store, &db).unwrap();
+            self.outcome_saved = Some(db);
+        }
         Ok(j["last_message"]
             .as_str()
             .map(cc_scheduler::backend::result_outcome)
@@ -904,6 +1608,19 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if i["id"].as_u64() == self.worktree_failure && self.worktree_failure.is_some() {
+            return Err(Error("OriginMissing"));
+        }
+        if let Some((path, db)) = self.prepare_edit.take() {
+            write_json(&path, &db, 1)?;
+        }
+        if self.change_during_prepare {
+            if let Some((path, settings)) = self.settings_change.take() {
+                let mut db = read_json(&path, json!({}))?;
+                merge(&mut db["items"][0], settings);
+                write_json(&path, &db, 2)?;
+            }
+        }
         if self.prepare_pressure {
             self.m["available_gb"] = json!(3);
         }
@@ -1004,7 +1721,7 @@ fn test_dispatch_uses_priority_and_marks_doing() {
     assert_eq!(f.e.backend.pick_count, 1);
 }
 #[test]
-fn repeated_priority_work_rotates_between_products() {
+fn rotation_never_overtakes_higher_priority_products() {
     let mut f = Fixture::new();
     for (id, project) in [(1, "civ6"), (2, "civ6"), (3, "GoDD-AO"), (4, "other")] {
         f.put(item(id, project, "todo", &[]));
@@ -1019,7 +1736,36 @@ fn repeated_priority_work_rotates_between_products() {
             .iter()
             .map(|j| j["item"]["id"].as_u64().unwrap())
             .collect();
-    assert_eq!(ids, vec![1, 3, 4]);
+    assert_eq!(ids, vec![1, 2, 3]);
+}
+#[test]
+fn recorded_prerequisite_inherits_rank_and_resource_exclusion_still_applies() {
+    let mut f = Fixture::new();
+    f.pri = json!({"civ6":20,"GoDD-AO":62,"other":100});
+    let mut parent = item(1, "civ6", "wait", &[]);
+    parent["wait_on"] = json!([3]);
+    f.put(parent);
+    f.put(item(2, "GoDD-AO", "todo", &[]));
+    f.put(item(3, "other", "todo", &[]));
+    f.dispatch();
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
+}
+#[test]
+fn targeted_recovery_cannot_overtake_a_ready_higher_department() {
+    for blocked in [false, true] {
+        let mut f = Fixture::new();
+        f.pri = json!({"civ6":20,"other":100});
+        f.put(item(1, "civ6", "todo", &["cargo"]));
+        f.put(item(3, "other", "todo", &[]));
+        if blocked {
+            f.e.backend.ps.insert(1, proc(1, 0, "cargo.exe"));
+        }
+        f.e.dispatch_for(&f.cfg, &f.pri, Some(3)).unwrap();
+        assert_eq!(f.e.backend.launched.len(), usize::from(blocked));
+        if blocked {
+            assert_eq!(f.e.backend.launched[0]["item"]["id"], 3);
+        }
+    }
 }
 #[test]
 fn preparation_retains_previous_result_session_and_redesigns_repeated_continuations() {
@@ -1572,6 +2318,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
     let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
     let mut db = f.e.todo().unwrap();
     let args = cc_todo::Command::Add {
+        subwork: Default::default(),
         project: "civ6".into(),
         title: "指示つきの作業".into(),
         note: "".into(),
@@ -1587,6 +2334,7 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
     assert_eq!(fs::read_to_string(s(&copied["spec"])).unwrap(), "元の指示");
     assert_eq!(copied["needs"], json!(["civ6", "cargo"]));
     let args = cc_todo::Command::Add {
+        subwork: Default::default(),
         project: "civ6".into(),
         title: "指示なし".into(),
         note: "".into(),
@@ -1610,21 +2358,741 @@ fn test_explicit_model_effort_skip_picker() {
     assert_eq!(f.e.backend.pick_count, 0);
     assert_eq!(f.e.backend.launched.len(), 1);
 }
+#[test]
+fn todo1842_explicit_model_overrides_saved_selection() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6-astra");
+    row["effort"] = json!("high");
+    row["scheduler"] = json!({"selection":{"model":"gpt-6.1-sol","effort":"max"}});
+    f.put(row);
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let selection = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6-astra");
+    assert_eq!(selection["effort"], "high");
+    assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn durable_automatic_cancel_reconciles_and_prepares_original_work_without_pending() {
+    for status in ["cancelled", "canceled"] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let original = f.get(1);
+        let cwd = s(&original["scheduler"]["worktree"]).to_owned();
+        fs::create_dir_all(&cwd).unwrap();
+        let uncommitted = Path::new(&cwd).join("uncommitted.txt");
+        fs::write(&uncommitted, "saved work").unwrap();
+        let source = &mut f.e.backend.records[0];
+        source["status"] = json!(status);
+        source["recovery_cancel"] =
+            json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        source["cwd"] = json!(cwd);
+        source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        source["model"] = json!("gpt-6.1-sol");
+        source["effort"] = json!("high");
+        source["sandbox"] = json!("read-only");
+        let saved_source = source.clone();
+        f.e.backend.ps.clear();
+        // The same job is eligible in the watchdog after item-side intent vanished.
+        let mut copy = f.e.todo().unwrap();
+        cc_todo::recovery::plan(
+            &mut copy,
+            std::slice::from_ref(&saved_source),
+            &Processes::new(),
+            T + 2000.,
+            "",
+        )
+        .unwrap();
+        assert!(copy["items"][0]["stall_recovery"]["pending"].is_object());
+        f.reconcile();
+        let row = f.get(1);
+        assert_eq!(row["status"], "todo");
+        assert_eq!(row["scheduler"]["last_job"], "j1");
+        assert_eq!(
+            row["scheduler"]["worktree"],
+            original["scheduler"]["worktree"]
+        );
+        assert_eq!(row["spec"], original["spec"]);
+        assert_eq!(f.e.backend.records[0], saved_source);
+        f.e.backend.clock += 301.;
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            prepared["scheduler"]["resume_session"],
+            saved_source["thread_id"]
+        );
+        assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+        assert_eq!(prepared["scheduler"]["selection"]["effort"], "high");
+        assert_eq!(prepared["scheduler"]["selection"]["sandbox"], "read-only");
+        assert_eq!(fs::read_to_string(&uncommitted).unwrap(), "saved work");
+    }
+}
+
+#[test]
+fn automatic_cancel_never_overrides_explicit_stop_unknown_cancel_or_question() {
+    for hold in [
+        "manual",
+        "person",
+        "cancel_requested",
+        "item_stopped",
+        "question",
+        "unknown",
+        "owner_result",
+    ] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let source = &mut f.e.backend.records[0];
+        source["status"] = json!("cancelled");
+        if hold != "unknown" {
+            source["recovery_cancel"] =
+                json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        }
+        match hold {
+            "manual" | "person" => source["cancel_reason"] = json!(hold),
+            "cancel_requested" => source["cancel_requested"] = json!(true),
+            "owner_result" => {
+                source["last_message"] =
+                    json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 停止")
+            }
+            _ => {}
+        }
+        f.e.edit(&json!(1), |row| {
+            if hold == "item_stopped" {
+                row["stopped"] = json!(true);
+            }
+            if hold == "question" {
+                row["scheduler"]["question"] = json!("saved-question");
+                row["note"] = json!("公開先の回答を待っています");
+            }
+        })
+        .unwrap();
+        let mut copy = f.e.todo().unwrap();
+        assert!(
+            cc_todo::recovery::plan(
+                &mut copy,
+                &f.e.backend.records,
+                &Processes::new(),
+                T + 2000.,
+                ""
+            )
+            .unwrap()
+            .is_empty(),
+            "{hold}"
+        );
+        f.e.backend.ps.clear();
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "block", "{hold}");
+        f.e.backend.clock += 3601.;
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty(), "{hold}");
+        if hold == "question" {
+            assert_eq!(f.get(1)["scheduler"]["question"], "saved-question");
+            assert_eq!(f.get(1)["note"], "公開先の回答を待っています");
+        }
+    }
+}
+
+#[test]
+fn automatic_cancel_keeps_dependency_and_explicit_launch_deadline() {
+    for dependency in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        f.put(item(2, "other", "todo", &[]));
+        f.e.backend.records[0]["status"] = json!("cancelled");
+        f.e.backend.records[0]["recovery_cancel"] =
+            json!({"key":"intent","committed_at":"2026-10-11T02:01:36+09:00"});
+        f.e.edit(&json!(1), |row| {
+            row["scheduler"]["not_before"] = json!(T + 10000.);
+            if dependency {
+                row["wait_on"] = json!([2]);
+            }
+        })
+        .unwrap();
+        let mut copy = f.e.todo().unwrap();
+        let selected = cc_todo::recovery::plan(
+            &mut copy,
+            &f.e.backend.records,
+            &Processes::new(),
+            T + 2000.,
+            "",
+        )
+        .unwrap();
+        assert!(!selected.contains(&1));
+        f.e.backend.ps.clear();
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], if dependency { "wait" } else { "todo" });
+        assert_eq!(f.get(1)["scheduler"]["not_before"], T + 10000.);
+        if dependency {
+            assert_eq!(f.get(1)["wait_on"], json!([2]));
+        }
+    }
+}
+
+#[test]
+fn scheduler_automatic_stop_uses_recovery_cancellation_and_persists_its_intent() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let mut source = f.e.backend.records[0].clone();
+    f.e.cancel_for(&f.get(1), &mut source, "memory", &f.cfg)
+        .unwrap();
+    assert_eq!(source["status"], "cancelled");
+    assert_ne!(source["cancel_requested"], true);
+    assert!(cc_job_policy::cancellation::recovery_cancel(
+        &json!({}),
+        &source
+    ));
+    assert_eq!(f.get(1)["status"], "todo");
+    assert!(f.get(1)["scheduler"].get("pending_cancel").is_none());
+}
+
+#[test]
+fn todo1842_changed_model_does_not_resume_previous_conversation() {
+    for (requested, retained) in [("gpt-6-astra", false), ("gpt-6.1-sol", true)] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n指定モデルで再開する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.backend.clock += 61.;
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!(requested);
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            prepared["scheduler"]["resume_session"].is_string(),
+            retained
+        );
+        assert_eq!(prepared["scheduler"]["selection"]["model"], requested);
+    }
+}
+
+#[test]
+fn todo1842_setting_change_during_last_sample_defers_and_reprepares() {
+    for during_prepare in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "civ6", 0);
+        let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.records[0]["last_message"] = json!("状態: 継続中\n検証する");
+        f.e.backend.records[0]["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+        f.e.backend.records[0]["cwd"] = json!(cwd);
+        f.e.backend.records[0]["model"] = json!("gpt-6.1-sol");
+        f.e.backend.records[0]["effort"] = json!("high");
+        f.e.backend.ps.clear();
+        f.reconcile();
+        f.e.edit(&json!(1), |row| {
+            row["model"] = json!("gpt-6.1-sol");
+            row["effort"] = json!("high");
+        })
+        .unwrap();
+        f.e.backend.measure_count = 0;
+        f.e.backend.change_during_prepare = during_prepare;
+        f.e.backend.clock += 61.;
+        f.e.backend.settings_change = Some((
+            f.e.todo_path.clone(),
+            json!({"model":"gpt-6-astra","effort":"max"}),
+        ));
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty());
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let launched = &f.e.backend.launched[0]["item"]["scheduler"];
+        assert_eq!(launched["selection"]["model"], "gpt-6-astra");
+        assert_eq!(launched["selection"]["effort"], "max");
+        assert!(launched["resume_session"].is_null());
+    }
+}
+
+#[test]
+fn todo1842_unavailable_explicit_model_is_retained_without_launch() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "civ6", "todo", &[]);
+    row["model"] = json!("gpt-6.1-luna");
+    row["effort"] = json!("high");
+    f.put(row);
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
+    );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
+    assert_eq!(f.get(1)["status"], "todo");
+}
 struct GitFake {
     calls: Vec<Invocation>,
     existing: Option<(PathBuf, String, PathBuf)>,
 }
+
+#[test]
+fn preparation2164_non_git_documents_keep_source_and_dedicated_workspace() {
+    let mut f = Fixture::new();
+    f.put(item(1, "other", "todo", &[]));
+    fs::write(f.repo.join("reference.txt"), "original").unwrap();
+    let row =
+        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let target = PathBuf::from(s(&row["scheduler"]["worktree"]));
+    fs::remove_dir(&target).unwrap();
+    ensure_worktree(&mut SystemRunner, f.repo.to_str().unwrap(), &row).unwrap();
+    assert!(target.is_dir());
+    assert!(!target.join(".git").exists());
+    assert_eq!(
+        fs::read_to_string(f.repo.join("reference.txt")).unwrap(),
+        "original"
+    );
+}
+
+#[test]
+fn preparation2164_explicit_resume_retains_resource_deadline() {
+    let mut row = json!({"status":"todo","scheduler":{"job":"cancelled","phase":"finished","not_before":1791820800.},"processed_results":{"cancelled":{"reason":"superseded"}}});
+    resume_without_worker(&mut row);
+    assert_eq!(row["scheduler"]["not_before"], 1791820800.);
+    assert_eq!(
+        row["processed_results"]["cancelled"]["reason"],
+        "superseded"
+    );
+}
+
+#[test]
+fn preparation2164_owner_answer_keeps_known_resource_wait_deadline() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "block", &[]);
+    row["scheduler"] =
+        json!({"question":{"thread_id":"saved-question"},"phase":"blocked","not_before":T+86400.});
+    f.put(row);
+    f.e.backend.owner_reply = Some(json!({"id":"answer","text":"原因を直して再開","stop":false}));
+    f.e.answers().unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 86400.);
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn preparation2164_prepare_respects_wait_even_after_selection_change() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "todo", &[]);
+    row["model"] = json!("anthropic/claude-haiku-5-5");
+    row["scheduler"] = json!({"not_before":T+3600.,"selection_input":{"model":"claude-haiku-5-5"}});
+    f.put(row);
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 3600.);
+    assert_eq!(f.e.backend.pick_count, 0);
+}
+
+#[test]
+fn preparation2164_failure_does_not_stop_independent_dispatch() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    f.put(item(2, "other", "todo", &[]));
+    f.e.backend.worktree_failure = Some(1);
+    f.e.dispatch(&f.cfg, &f.pri).unwrap();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(
+        f.get(1)["scheduler"]["preparation_failure"]["reason"],
+        "origin_missing"
+    );
+}
+
+#[test]
+fn preparation2164_http429_parks_worker_despite_supervisor_cpu_and_replays_once() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    f.e.backend.records[0]["last_error"] =
+        json!("HTTP 429 Too Many Requests private/path TOKEN=secret");
+    f.e.backend.records[0]["retry_not_before"] = json!(T + 86400.);
+    f.e.backend.ps.get_mut(&1).unwrap()["cpu"] = json!(0.01);
+    f.reconcile();
+    let saved = f.get(1);
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+    assert_eq!(saved["status"], "todo");
+    assert_eq!(saved["scheduler"]["not_before"], T + 86400.);
+    assert_eq!(saved["scheduler"]["retry_count"], 0);
+    assert_eq!(saved["processed_results"]["j1"]["reason"], "resource_wait");
+    assert!(!saved["note"].as_str().unwrap().contains("secret"));
+    f.e.edit(&json!(1), |row| {
+        row["status"] = json!("doing");
+        row["scheduler"]["job"] = json!("j1");
+    })
+    .unwrap();
+    f.reconcile();
+    assert_eq!(f.get(1)["scheduler"]["not_before"], T + 86400.);
+    assert_ne!(f.get(1)["status"], "block");
+    assert_eq!(f.e.backend.cancelled.len(), 1);
+}
+
+#[test]
+fn preparation2164_quota_evidence_waits_until_reset_without_model_substitution() {
+    use cc_scheduler::preparation::*;
+    let quota = json!({"anthropic":{"complete":true,"accounts":[{"used_percent":100.,"reset_at":1791820800.}]}});
+    assert_eq!(
+        cached_exhausted(&quota, "anthropic/claude-haiku-5-5", T),
+        Some(1791820800.)
+    );
+    assert_eq!(
+        cached_exhausted(&quota, "anthropic/claude-haiku-5-5", 1791820800.),
+        None
+    );
+    assert_eq!(cached_exhausted(&quota, "mock-model", T), None);
+    let several = json!({"anthropic":{"complete":true,"accounts":[{"used_percent":100.,"reset_at":T+3600.},{"used_percent":100.,"reset_at":T+7200.}]}});
+    assert_eq!(
+        cached_exhausted(&several, "anthropic/claude-haiku-5-5", T),
+        Some(T + 3600.)
+    );
+    assert_eq!(
+        cached_exhausted(&several, "anthropic/claude-haiku-5-5", T + 3600.),
+        None
+    );
+    for (stderr, code, reason) in [
+        ("not a git repository private/path", 1, "NonGit"),
+        ("No such remote 'origin'", 1, "OriginMissing"),
+        ("HTTP 429 private-token", 1, "ResourceWait"),
+        ("secret command arguments", 2, "InputRejected"),
+    ] {
+        assert_eq!(
+            classify_output(&Output {
+                code,
+                stdout: String::new(),
+                stderr: stderr.into()
+            })
+            .0,
+            reason
+        );
+    }
+}
+
+#[test]
+fn preparation2164_exact_ownership_excludes_prompt_and_pid_matches() {
+    use cc_scheduler::preparation::*;
+    let row = json!({"id":1,"jobs":["other","owned"]});
+    let jobs = vec![
+        json!({"id":"other","cwd":"elsewhere","prompt":"todo 1","pid":1}),
+        json!({"id":"owned","cwd":"original","related_todo_ids":[1]}),
+    ];
+    assert_eq!(workspace_source(&row, &jobs).unwrap()["id"], "owned");
+    assert!(!owns_workspace(&row, &jobs[0]));
+    assert!(workspace_source(&row, &jobs[..1]).is_none());
+}
+
+#[test]
+fn preparation2164_reuses_owned_terminal_session_only_without_other_worker() {
+    use cc_scheduler::preparation::*;
+    let row = json!({"id":1,"scheduler":{"resume":true}});
+    let job = json!({"id":"original","todo_id":1,"status":"lost","cwd":"D:/fixture-original","thread_id":"12345678-1234-4321-9234-123456789abc"});
+    assert_eq!(
+        recovery_session(&row, &job, "D:/fixture-original", &[]),
+        job["thread_id"].as_str()
+    );
+    let mut wrong = job.clone();
+    wrong["todo_id"] = json!(2);
+    assert!(recovery_session(&row, &wrong, "D:/fixture-original", &[]).is_none());
+    assert!(recovery_session(&row, &job, "D:/elsewhere", &[]).is_none());
+    let concurrent = json!({"status":"running","resume_session":job["thread_id"]});
+    assert!(recovery_session(&row, &job, "D:/fixture-original", &[concurrent]).is_none());
+}
+
+#[test]
+fn preparation2164_bare_claude_routes_to_subscription_provider_with_original_scope() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "todo", &[]);
+    row["model"] = json!("claude-haiku-5-5");
+    row["effort"] = json!("high");
+    f.put(row);
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
+        "anthropic/claude-haiku-5-5"
+    );
+    assert!(f.e.backend.launched[0]["text"]
+        .as_str()
+        .unwrap()
+        .contains(f.repo.to_str().unwrap()));
+    assert_eq!(f.get(1)["model"], "claude-haiku-5-5");
+}
+
+#[test]
+fn preparation2164_preserves_dirty_original_git_workspace_and_intermediate_commit() {
+    use cc_scheduler::preparation::*;
+    let f = Fixture::new();
+    let mut runner = SystemRunner;
+    run_git(&mut runner, &f.repo, &["init", "--quiet"]).unwrap();
+    fs::write(f.repo.join("original.txt"), "committed").unwrap();
+    run_git(&mut runner, &f.repo, &["add", "original.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "original",
+        ],
+    )
+    .unwrap();
+    let original = f.temp.path().join("agent-workspaces").join("agent-todo-1");
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            "-b",
+            "agent/original",
+            original.to_str().unwrap(),
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("original.txt"), "intermediate").unwrap();
+    run_git(&mut runner, &original, &["add", "original.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &original,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "intermediate",
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("unfinished.txt"), "dirty").unwrap();
+    let head = run_git(&mut runner, &original, &["rev-parse", "HEAD"]).unwrap();
+    let status = run_git(&mut runner, &original, &["status", "--porcelain"]).unwrap();
+    let mut row = json!({"id":1,"jobs":["owned"],"scheduler":{"worktree":f.temp.path().join("missing"),"branch":"scheduler/todo-1-stale"}});
+    let jobs = vec![json!({"id":"owned","todo_id":1,"cwd":original})];
+    let recovered = recover_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs)
+        .unwrap()
+        .unwrap();
+    merge(&mut row["scheduler"], recovered);
+    ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs).unwrap();
+    assert_eq!(
+        run_git(&mut runner, &original, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+    assert_eq!(
+        run_git(&mut runner, &original, &["status", "--porcelain"]).unwrap(),
+        status
+    );
+    assert_eq!(
+        fs::read_to_string(original.join("unfinished.txt")).unwrap(),
+        "dirty"
+    );
+    let mut wrong = jobs.clone();
+    wrong[0]["todo_id"] = json!(2);
+    assert!(ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &wrong).is_err());
+    row["scheduler"]["branch"] = json!("wrong");
+    assert_eq!(
+        ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &jobs)
+            .unwrap_err()
+            .0,
+        "BranchMismatch"
+    );
+}
+fn reserved_branch_fixture() -> (Fixture, Value, String) {
+    let f = Fixture::new();
+    let mut runner = SystemRunner;
+    run_git(&mut runner, &f.repo, &["init", "--quiet"]).unwrap();
+    fs::write(f.repo.join("source.txt"), "reserved input").unwrap();
+    run_git(&mut runner, &f.repo, &["add", "source.txt"]).unwrap();
+    let commit = |runner: &mut SystemRunner, args: &[&str]| {
+        let mut command = vec![
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+        ];
+        command.extend_from_slice(args);
+        run_git(runner, &f.repo, &command).unwrap();
+    };
+    commit(&mut runner, &["-m", "reserved input"]);
+    let head = run_git(&mut runner, &f.repo, &["rev-parse", "HEAD"]).unwrap();
+    let branch = "scheduler/todo-1-reserved";
+    run_git(&mut runner, &f.repo, &["branch", branch]).unwrap();
+    fs::write(f.repo.join("source.txt"), "main advanced").unwrap();
+    commit(&mut runner, &["-am", "advance base"]);
+    let target = PathBuf::from(format!("{}-wt", f.repo.display())).join("todo-1-reserved");
+    let row = json!({"id":1,"scheduler":{"worktree":target,"branch":branch}});
+    (f, row, head)
+}
+
+#[test]
+fn preparation2164_restores_reserved_branch_without_replacing_its_commit() {
+    let (f, row, head) = reserved_branch_fixture();
+    let target = Path::new(s(&row["scheduler"]["worktree"]));
+    let mut runner = SystemRunner;
+    cc_scheduler::preparation::ensure_workspace(&mut runner, f.repo.to_str().unwrap(), &row, &[])
+        .unwrap();
+    assert_eq!(
+        run_git(&mut runner, target, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("source.txt")).unwrap(),
+        "reserved input"
+    );
+    assert_eq!(
+        fs::read_to_string(f.repo.join("source.txt")).unwrap(),
+        "main advanced"
+    );
+    assert_ne!(
+        run_git(&mut runner, &f.repo, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_missing_worker_receipt_never_reconstructs_only_committed_bytes() {
+    let (f, mut row, head) = reserved_branch_fixture();
+    let target = row["scheduler"]["worktree"].clone();
+    row["scheduler"]["workspace_receipt"] = json!({"job":"source","todo_id":1,"cwd":target});
+    let jobs = [json!({"id":"source","todo_id":1,"cwd":target})];
+    let mut runner = SystemRunner;
+    let error = cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &jobs,
+    )
+    .unwrap_err();
+    assert_eq!(error.0, "CwdMissing");
+    assert!(!Path::new(target.as_str().unwrap()).exists());
+    assert_eq!(
+        run_git(
+            &mut runner,
+            &f.repo,
+            &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+        )
+        .unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_reserved_ref_lookup_failure_is_not_a_new_branch() {
+    struct RefFailure {
+        observed: bool,
+    }
+    impl Runner for RefFailure {
+        fn run(&mut self, command: &Invocation) -> Result<Output> {
+            if command.args.iter().any(|arg| arg == "show-ref") {
+                self.observed = true;
+                return Ok(Output {
+                    code: 1,
+                    stdout: String::new(),
+                    stderr: "ref lookup failed".into(),
+                });
+            }
+            SystemRunner.run(command)
+        }
+    }
+    let (f, row, head) = reserved_branch_fixture();
+    let mut runner = RefFailure { observed: false };
+    let error = cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &[],
+    )
+    .unwrap_err();
+    assert!(runner.observed);
+    assert_eq!(error.0, "ToolFailed");
+    assert!(!Path::new(s(&row["scheduler"]["worktree"])).exists());
+    assert_eq!(
+        run_git(
+            &mut SystemRunner,
+            &f.repo,
+            &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+        )
+        .unwrap(),
+        head
+    );
+}
+
+#[test]
+fn preparation2164_reserved_branch_in_another_checkout_keeps_its_dirty_files() {
+    let (f, row, _) = reserved_branch_fixture();
+    let original = f.temp.path().join("existing-reservation");
+    let mut runner = SystemRunner;
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            original.to_str().unwrap(),
+            "scheduler/todo-1-reserved",
+        ],
+    )
+    .unwrap();
+    fs::write(original.join("pending.txt"), "uncommitted work").unwrap();
+    assert!(cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &[]
+    )
+    .is_err());
+    assert!(!Path::new(s(&row["scheduler"]["worktree"])).exists());
+    assert_eq!(
+        fs::read_to_string(original.join("pending.txt")).unwrap(),
+        "uncommitted work"
+    );
+}
+
 impl Runner for GitFake {
     fn run(&mut self, c: &Invocation) -> Result<Output> {
         self.calls.push(c.clone());
-        let output = if let Some((target, branch, git)) = &self.existing {
+        if c.args.iter().any(|arg| arg == "show-ref") {
+            return Ok(Output {
+                code: 2,
+                stdout: String::new(),
+                stderr: String::new(),
+            });
+        }
+        let output = if let Some((_target, branch, git)) = &self.existing {
             match c.args.last().map(String::as_str) {
-                Some("--show-toplevel") => target.to_string_lossy().into_owned(),
+                Some("--show-toplevel") => c.args[1].clone(),
                 Some("--show-current") => branch.clone(),
                 _ => git.to_string_lossy().into_owned(),
             }
-        } else if c.args.last().map(String::as_str) == Some("--is-inside-work-tree") {
-            "true".into()
+        } else if c.args.last().map(String::as_str) == Some("--show-toplevel") {
+            c.args[1].clone()
         } else {
             "".into()
         };
@@ -1650,19 +3118,19 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
         existing: None,
     };
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
-    assert_eq!(git.calls.len(), 4);
+    assert_eq!(git.calls.len(), 6);
     assert_eq!(
-        &git.calls[1].args[2..],
+        &git.calls[3].args[2..],
         ["fetch", "--quiet", "origin", "main"]
     );
     assert_eq!(
-        &git.calls[2].args[2..],
+        &git.calls[4].args[2..],
         ["rev-parse", "--verify", "refs/remotes/origin/main"]
     );
-    assert_eq!(git.calls[3].args[2], "worktree");
-    assert_eq!(git.calls[3].args[3], "add");
-    assert_eq!(git.calls[3].args[5], row["scheduler"]["branch"]);
-    assert_eq!(git.calls[3].args.last().unwrap(), "origin/main");
+    assert_eq!(git.calls[5].args[2], "worktree");
+    assert_eq!(git.calls[5].args[3], "add");
+    assert_eq!(git.calls[5].args[5], row["scheduler"]["branch"]);
+    assert_eq!(git.calls[5].args.last().unwrap(), "origin/main");
     fs::create_dir(&target).unwrap();
     git.existing = Some((
         target,
@@ -1671,7 +3139,7 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     ));
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
-    assert_eq!(git.calls.len(), 4);
+    assert_eq!(git.calls.len(), 5);
     assert!(git
         .calls
         .iter()
@@ -1882,7 +3350,15 @@ impl cc_ask::core::Effects for AskFake {
             return Ok(json!({"threads":[]}));
         }
         if m == "POST" {
-            return Ok(json!({"id":"THREAD","last_message_id":"MESSAGE"}));
+            let count = self
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|c| c["method"] == "POST")
+                .count();
+            let id = (299 + count).to_string();
+            return Ok(json!({"id":id,"last_message_id":id}));
         }
         Err("RuntimeError: secret-shaped mock error".into())
     }
@@ -1953,7 +3429,17 @@ fn test_owner_question_records_original_worktree_for_continuation() {
             .iter()
             .find(|call| call["method"] == "POST")
             .unwrap()["body"]["message"]["allowed_mentions"],
-        json!({"parse":[],"users":["OWNER"]})
+        json!({"parse":[],"users":["OWNER"],"replied_user":false})
+    );
+    assert_eq!(q["thread_id"], "300");
+    assert_eq!(q["progress_thread_id"], "301");
+    let guard = calls.lock().unwrap();
+    let posts: Vec<_> = guard.iter().filter(|c| c["method"] == "POST").collect();
+    assert_eq!(posts.len(), 2);
+    assert_eq!(posts[1]["body"]["message"]["flags"], cc_ask::SILENT | 4);
+    assert_eq!(
+        posts[1]["body"]["message"]["allowed_mentions"],
+        json!({"parse":[],"users":[],"replied_user":false})
     );
 }
 #[test]
@@ -1973,7 +3459,7 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .any(|call| call["argv"].is_array()));
 }
 #[test]
-fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
+fn test_discord_tick_calls_scheduler_before_intake_even_if_intake_fails() {
     let temp = tempfile::tempdir().unwrap();
     let fake = AskFake::default();
     let calls = fake.calls.clone();
@@ -1990,7 +3476,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
                 && arr(&v["argv"]).last().is_some_and(|v| s(v) == "step")
         })
         .unwrap();
-    assert!(scheduler > api);
+    assert!(scheduler < api);
     let launched: Vec<_> = calls
         .iter()
         .filter(|v| truth(&v["argv"]))
@@ -2014,7 +3500,7 @@ fn test_discord_tick_calls_scheduler_after_intake_even_if_intake_fails() {
     assert_eq!(launched[6][0], "tasklist");
 }
 #[test]
-fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
+fn test_hidden_wrapper_runs_rust_tick_with_window_style_zero() {
     let text = include_str!("../deployment/discord-ask-tick-hidden.vbs");
     let lines: Vec<_> = text
         .lines()
@@ -2029,6 +3515,35 @@ fn test_hidden_wrapper_recovers_before_discord_and_uses_window_style_zero() {
 }
 struct Capture {
     calls: std::sync::Arc<std::sync::Mutex<Vec<Invocation>>>,
+}
+#[test]
+fn real_backend_automatic_cancel_passes_the_recovery_flag_to_jobs_cli() {
+    let f = Fixture::new();
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+    let mut backend = RealBackend::new(f.temp.path().join("scheduler"));
+    backend.runner = Box::new(Capture {
+        calls: calls.clone(),
+    });
+    let source = json!({"id":"source","status":"cancelled","pid":null,"codex_pid":null,
+        "recovery_cancel":{"key":"persisted-cli-intent","committed_at":"2026-10-11T02:01:36+09:00"}});
+    let dir = f.temp.path().join("codex-jobs/jobs/source");
+    fs::create_dir_all(&dir).unwrap();
+    write_json(&dir.join("job.json"), &source, 0).unwrap();
+    let mut observed = json!({"id":"source","status":"running"});
+    assert!(backend.cancel_for_recovery(&mut observed).unwrap());
+    let calls = calls.lock().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert!(calls[0]
+        .args
+        .ends_with(&["cancel".into(), "source".into(), "--recovery".into()]));
+    assert_eq!(
+        observed, source,
+        "backend re-reads the CLI's durable job receipt"
+    );
+    assert!(!cc_job_policy::cancellation::blocks_recovery(
+        &json!({}),
+        &observed
+    ));
 }
 impl Runner for Capture {
     fn run(&mut self, c: &Invocation) -> Result<Output> {
@@ -2087,7 +3602,7 @@ fn test_worker_launch_uses_windowless_existing_launcher() {
     assert_eq!(NO_WINDOW, 0x08000000);
 }
 #[test]
-fn test_unknown_model_is_not_launched() {
+fn test_unknown_explicit_model_is_not_launched() {
     let mut f = Fixture::new();
     assert!(!f.e.backend.model_exists("gpt-6.1-luna"));
     assert!(f.e.backend.model_exists("gpt-6-luna"));
@@ -2095,12 +3610,13 @@ fn test_unknown_model_is_not_launched() {
     row["model"] = json!("gpt-6.1-luna");
     row["effort"] = json!("high");
     f.put(row);
-    f.dispatch();
-    assert_eq!(f.e.backend.launched.len(), 1);
     assert_eq!(
-        f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
-        "mock-model"
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ModelUnavailable"
     );
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.e.backend.pick_count, 0);
+    assert_eq!(f.get(1)["model"], "gpt-6.1-luna");
 }
 
 #[test]
@@ -2328,6 +3844,7 @@ fn attempts_and_retries_remain_json_integers() {
     .unwrap();
     f.e.requeue(&json!(1), &json!("j1"), "lost").unwrap();
     assert_eq!(f.get(1)["scheduler"]["retry_count"].as_u64(), Some(1));
+    f.e.backend.clock += 61.;
     let row =
         f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
             .unwrap()
@@ -2437,6 +3954,61 @@ fn wait_row(f: &mut Fixture, id: u64, on: Value) {
         row["wait_on"] = on;
     })
     .unwrap();
+}
+#[test]
+fn retry_deadline_wait_does_not_dispatch_until_watchdog_releases_it() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "todo", &[]));
+    let mut db = f.e.todo().unwrap();
+    cc_todo::ready::register_retry(&mut db, 1, 3600, "操作環境の接続不足", 100).unwrap();
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+    assert!(f.e.report["waiting"][0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("次の再確認"));
+    assert!(cc_todo::ready::release_retries(&mut db, 3699)
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        cc_todo::ready::release_retries(&mut db, 3700).unwrap(),
+        vec![1]
+    );
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 1);
+}
+#[test]
+fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
+    let mut f = Fixture::new();
+    f.put(item(1, "civ6", "wait", &[]));
+    f.put(item(2, "civ6", "todo", &[]));
+    f.e.edit(&json!(1), |row| {
+        row["wait_ready"] = json!({"condition":"chatgpt-plus","since":100})
+    })
+    .unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+    assert_eq!(
+        f.e.report["waiting"][0]["message"],
+        "ChatGPT Plusの復旧確認待ち"
+    );
+    let mut db = f.e.todo().unwrap();
+    let state = json!({"backend":"owner_chrome","login":"logged_in","checked_at":100});
+    assert!(cc_todo::ready::resume(&mut db, 1, "chatgpt-plus", &state, 100).unwrap());
+    write_json(&f.e.todo_path, &db, 2).unwrap();
+    // Normal admission still honours the launch interval after another task started.
+    f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+    f.dispatch();
+    assert!(f
+        .e
+        .backend
+        .launched
+        .iter()
+        .any(|launch| launch["item"]["id"] == 1));
 }
 #[test]
 fn waiting_item_is_never_dispatched_and_launches_after_target_done() {

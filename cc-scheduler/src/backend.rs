@@ -8,6 +8,9 @@ use std::{
 
 pub trait Backend {
     fn clock(&self) -> f64;
+    fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
+        Ok(crate::preparation::resource_deadline(job, self.clock()))
+    }
     fn measure(&mut self, state: &mut Value) -> Result<(Value, Processes)>;
     fn snapshot(&mut self) -> Result<Processes>;
     fn jobs(&mut self) -> Result<Vec<Value>>;
@@ -26,6 +29,14 @@ pub trait Backend {
     fn close_question(&mut self, receipt: &Value) -> Result<()>;
     fn outcome(&mut self, job: &Value) -> Result<String>;
     fn worktree(&mut self, repo: &str, item: &Value) -> Result<()>;
+    fn workspace_recovery(
+        &mut self,
+        _repo: &str,
+        _item: &Value,
+        _jobs: &[Value],
+    ) -> Result<Option<Value>> {
+        Ok(None)
+    }
 }
 pub trait Http {
     fn request(
@@ -238,6 +249,32 @@ pub struct RealBackend {
     pub config_path: PathBuf,
 }
 impl RealBackend {
+    fn guard_workspace_path(&mut self, path: &str) -> Result<()> {
+        if path.is_empty() {
+            return Err(Error("InputRejected"));
+        }
+        let guard = self.tools.join("client-records/scrub391.exe");
+        let out = self
+            .runner
+            .run(&invocation(
+                &[
+                    guard.to_str().ok_or(Error("InputRejected"))?,
+                    "--guard-path",
+                    path,
+                ],
+                Some(40),
+            ))
+            .map_err(crate::preparation::tool_error)?;
+        if out.code != 0 {
+            return Err(crate::preparation::classify_output(&out));
+        }
+        let result: Value = serde_json::from_str(&out.stdout)?;
+        match result["client_resource"].as_bool() {
+            Some(false) => Ok(()),
+            Some(true) => Err(Error("ClientResource")),
+            None => Err(Error("InputRejected")),
+        }
+    }
     fn cancel_job(&mut self, j: &mut Value, recovery: bool) -> Result<bool> {
         backup(&self.job_dir(j).join("job.json"))?;
         let mut args = vec!["cancel", s(&j["id"])];
@@ -274,14 +311,17 @@ impl RealBackend {
     fn call_tool(&mut self, tool: &str, args: &[&str], timeout: Option<u64>) -> Result<String> {
         let output = self
             .runner
-            .run(&tool_command(&self.tools.join(tool), args, timeout))?;
+            .run(&tool_command(&self.tools.join(tool), args, timeout))
+            .map_err(crate::preparation::tool_error)?;
         if output.code != 0 {
-            return Err(Error("RuntimeError"));
+            return Err(crate::preparation::classify_output(&output));
         }
         Ok(output.stdout)
     }
     pub fn launch_command(&self, item: &Value, prompt: &Path, selection: &Value) -> Invocation {
-        let sandbox = if cc_ask::job_policy::explicit_read_only(s(&item["title"])) {
+        let sandbox = if ["research", "review"].contains(&s(&item["subwork"]["kind"]))
+            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
+        {
             "read-only"
         } else {
             selection["sandbox"]
@@ -302,7 +342,9 @@ impl RealBackend {
                 s(&item["project"]),
                 "--todo-id",
                 &item["id"].to_string(),
-                if truth(&item["model"]) {
+                if truth(&item["model"])
+                    || truth(&item["scheduler"]["console_request"]["options"]["model"])
+                {
                     "--model"
                 } else {
                     "--auto-model"
@@ -333,12 +375,46 @@ impl RealBackend {
                 .args
                 .extend(["--resume-session".into(), session.into()]);
         }
+        if item["subwork"].is_object() {
+            invocation.args.extend([
+                "--subwork-of".into(),
+                item["subwork"]["parent_todo_id"].to_string(),
+                "--assigned-needs".into(),
+                arr(&item["needs"])
+                    .iter()
+                    .map(s)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]);
+            if let Some(parent) = item["scheduler"]["subwork_parent_job"].as_str() {
+                invocation
+                    .args
+                    .extend(["--parent-job-id".into(), parent.into()]);
+            }
+        }
         invocation
     }
 }
 impl Backend for RealBackend {
     fn clock(&self) -> f64 {
         now()
+    }
+    fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
+        if job["status"] == "succeeded" {
+            return Ok(None);
+        }
+        let now = self.clock();
+        let cached = read_json(
+            &self.tools.join("codex-jobs/queue-limit-state.json"),
+            Value::Null,
+        )?;
+        let quota = crate::preparation::cached_exhausted(&cached, s(&job["model"]), now);
+        Ok(
+            match (quota, crate::preparation::resource_deadline(job, now)) {
+                (Some(a), Some(b)) => Some(a.max(b)),
+                (a, b) => a.or(b),
+            },
+        )
     }
     fn measure(&mut self, state: &mut Value) -> Result<(Value, Processes)> {
         native::measure(state)
@@ -390,9 +466,12 @@ impl Backend for RealBackend {
     }
     fn launch(&mut self, i: &Value, p: &Path, sel: &Value) -> Result<String> {
         let c = self.launch_command(i, p, sel);
-        let output = self.runner.run(&c)?;
+        let output = self
+            .runner
+            .run(&c)
+            .map_err(crate::preparation::tool_error)?;
         if output.code != 0 {
-            return Err(Error("RuntimeError"));
+            return Err(crate::preparation::classify_output(&output));
         }
         let jid = output
             .stdout
@@ -546,7 +625,22 @@ impl Backend for RealBackend {
         Ok(result_outcome(&result).into())
     }
     fn worktree(&mut self, repo: &str, i: &Value) -> Result<()> {
-        ensure_worktree(self.runner.as_mut(), repo, i)
+        self.guard_workspace_path(repo)?;
+        self.guard_workspace_path(s(&i["scheduler"]["worktree"]))?;
+        let jobs = self.jobs()?;
+        crate::preparation::ensure_workspace(self.runner.as_mut(), repo, i, &jobs)
+    }
+    fn workspace_recovery(
+        &mut self,
+        repo: &str,
+        item: &Value,
+        jobs: &[Value],
+    ) -> Result<Option<Value>> {
+        self.guard_workspace_path(repo)?;
+        if let Some(job) = crate::preparation::workspace_source(item, jobs) {
+            self.guard_workspace_path(s(&job["cwd"]))?;
+        }
+        crate::preparation::recover_workspace(self.runner.as_mut(), repo, item, jobs)
     }
 }
 pub fn result_outcome(result: &str) -> &'static str {
@@ -569,65 +663,12 @@ pub fn run_git(runner: &mut dyn Runner, repo: &Path, args: &[&str]) -> Result<St
     let mut c = invocation(&["git", "-C", repo.to_str().unwrap()], Some(40));
     c.args.extend(args.iter().map(|x| x.to_string()));
     c.git_prompt_off = true;
-    let out = runner.run(&c)?;
+    let out = runner.run(&c).map_err(crate::preparation::tool_error)?;
     if out.code != 0 {
-        return Err(Error("RuntimeError"));
+        return Err(crate::preparation::classify_output(&out));
     }
     Ok(out.stdout.trim().to_string())
 }
 pub fn ensure_worktree(runner: &mut dyn Runner, repo: &str, i: &Value) -> Result<()> {
-    let base = resolve(Path::new(repo))?;
-    let target = resolve(Path::new(s(&i["scheduler"]["worktree"])))?;
-    let container = PathBuf::from(format!("{}-wt", base.display()));
-    let branch = s(&i["scheduler"]["branch"]);
-    if target.parent() != Some(container.as_path())
-        || !branch.starts_with(&format!("scheduler/todo-{}-", i["id"]))
-    {
-        return Err(Error("ValueError"));
-    }
-    if target.exists() {
-        if norm(&run_git(
-            runner,
-            &target,
-            &["rev-parse", "--show-toplevel"],
-        )?) != norm(target.to_str().unwrap())
-            || run_git(runner, &target, &["branch", "--show-current"])? != branch
-        {
-            return Err(Error("ValueError"));
-        }
-        let left = resolve(&target.join(run_git(
-            runner,
-            &target,
-            &["rev-parse", "--git-common-dir"],
-        )?))?;
-        let right =
-            resolve(&base.join(run_git(runner, &base, &["rev-parse", "--git-common-dir"])?))?;
-        if norm(left.to_str().unwrap()) != norm(right.to_str().unwrap()) {
-            return Err(Error("ValueError"));
-        }
-        return Ok(());
-    }
-    if run_git(runner, &base, &["rev-parse", "--is-inside-work-tree"])? != "true" {
-        return Err(Error("ValueError"));
-    }
-    run_git(runner, &base, &["fetch", "--quiet", "origin", "main"])?;
-    run_git(
-        runner,
-        &base,
-        &["rev-parse", "--verify", "refs/remotes/origin/main"],
-    )?;
-    fs::create_dir_all(container)?;
-    run_git(
-        runner,
-        &base,
-        &[
-            "worktree",
-            "add",
-            "-b",
-            branch,
-            target.to_str().unwrap(),
-            "origin/main",
-        ],
-    )?;
-    Ok(())
+    crate::preparation::ensure_workspace(runner, repo, i, &[])
 }

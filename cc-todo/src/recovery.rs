@@ -14,6 +14,62 @@ pub const HANG_S: f64 = 1800.;
 pub const RETRY_WINDOW_S: f64 = 21600.;
 const CLAIM_S: f64 = 300.;
 
+/// Finite repair under todo.lock. It neither launches nor cancels any worker.
+/// Only the selected item's recorded receipts are read; secret names stay internal.
+pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
+    let clients = fs::read_to_string("D:/CC/Tools/client-projects.txt")
+        .map_err(|_| "client guard unavailable")?;
+    let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
+    let ps = backend
+        .snapshot()
+        .map_err(|_| "process identity unavailable")?;
+    let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
+    let mut db = load(&paths.store)?;
+    let item = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|i| i["id"] == id)
+        .ok_or("no item")?;
+    if excluded(
+        s(&item["project"]),
+        s(&db["projects"][s(&item["project"])]),
+        &clients,
+    ) {
+        return Err("requested item excluded".into());
+    }
+    let ids: BTreeSet<_> = item["jobs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .chain(item["work_owner_job"].as_str())
+        .chain(item["scheduler"]["job"].as_str())
+        .collect();
+    let mut jobs = vec![];
+    for jid in ids {
+        if jid.is_empty()
+            || !jid
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            return Err("invalid receipt identifier".into());
+        }
+        let job = load(&paths.jobs.join(jid).join("job.json"))?;
+        if job["id"] != jid || excluded(s(&job["project"]), s(&job["cwd"]), &clients) {
+            return Err("receipt unavailable or excluded".into());
+        }
+        let mut job = job;
+        job["work_owner_live"] = json!(policy::matches(&job, "codex_pid", &ps));
+        jobs.push(job);
+    }
+    let changed = cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &jobs, |i| i["id"] == id);
+    if !changed.is_empty() {
+        save(&paths.store, &db)?;
+    }
+    Ok(changed)
+}
+
 /// Run the SAME admission planner against a copy. Return identifiers and decisions
 /// only; never expose project names, saved prompts or recovery credentials.
 pub fn preview(
@@ -179,12 +235,7 @@ fn linked(item: &Value, j: &Value) -> bool {
 }
 
 fn stopped(item: &Value, job: &Value) -> bool {
-    item["cancel_requested"] == true
-        || item["stopped"] == true
-        || job["cancel_requested"] == true
-        || (matches!(s(&job["status"]), "cancelled" | "canceled")
-            && !(job["id"].is_string()
-                && item["stall_recovery"]["pending"]["recovery_cancel"] == job["id"]))
+    cc_job_policy::cancellation::blocks_recovery(item, job)
         || (common::truth(&item["scheduler"]["question"])
             && !common::truth(&item["scheduler"]["answer"]))
         || (common::truth(&item["scheduler"]["answer"])
@@ -333,13 +384,24 @@ fn plan_with_intake(
     clients: &str,
     accepted: &BTreeSet<i64>,
 ) -> Result<Vec<i64>> {
+    if t.is_finite() && t >= 0. && t < u64::MAX as f64 {
+        crate::ready::release_retries(db, t.floor() as u64)?;
+    }
     cc_job_policy::todo_wait::release_ready(db);
     let owner_projects = db["projects"].clone();
-    let owner_jobs: Vec<_> = jobs
+    let mut owner_jobs: Vec<_> = jobs
         .iter()
         .filter(|j| !excluded(s(&j["project"]), s(&j["cwd"]), clients))
         .cloned()
         .collect();
+    cc_job_policy::subwork::mark_live(&mut owner_jobs, |j| {
+        ["pid", "codex_pid"]
+            .iter()
+            .any(|key| cc_scheduler::policy::matches(j, key, ps))
+    });
+    for job in &mut owner_jobs {
+        job["work_owner_live"] = json!(cc_scheduler::policy::matches(job, "codex_pid", ps));
+    }
     cc_job_policy::work_owner::reconcile_todos_if(db, &owner_jobs, |item| {
         !excluded(
             s(&item["project"]),
@@ -405,6 +467,9 @@ fn plan_with_intake(
                 i["project"] == project
                     && matches!(s(&i["status"]), "todo" | "doing")
                     && !cc_job_policy::todo_wait::waiting(db, i)
+                    && n(&i["scheduler"]["not_before"]) <= t
+                    // Finite independent work uses scheduler's resource-aware launch contract.
+                    && !i["subwork"].is_object()
             })
             .cloned()
             .collect();
@@ -838,11 +903,17 @@ pub fn run_watch(
         };
         let project = s(&item["project"]);
         let path = s(&db["projects"][project]);
+        if item["subwork"].is_object() {
+            continue;
+        }
         if excluded(project, path, &clients) {
             continue;
         }
         if cc_job_policy::todo_wait::waiting(&db, &item) {
             suppress_report(paths, id, &item)?;
+            continue;
+        }
+        if n(&item["scheduler"]["not_before"]) > backend.clock() {
             continue;
         }
         if !matches!(s(&item["status"]), "todo" | "doing") {
@@ -959,6 +1030,9 @@ pub fn run_watch(
                 if cc_job_policy::todo_wait::waiting(db, &current) {
                     return Ok(false);
                 }
+                if n(&current["scheduler"]["not_before"]) > backend.clock() {
+                    return Ok(false);
+                }
                 let row = find(db, id)?;
                 if row["stall_recovery"]["pending"]["request"] != p["request"]
                     || !matches!(s(&row["status"]), "todo" | "doing")
@@ -1065,6 +1139,7 @@ pub fn run_watch(
                 .is_none_or(|i| {
                     !matches!(s(&i["status"]), "todo" | "doing")
                         || cc_job_policy::todo_wait::waiting(&latest, i)
+                        || n(&i["scheduler"]["not_before"]) > backend.clock()
                 })
             {
                 release_claim(paths, id, &token)?;
@@ -1299,19 +1374,9 @@ fn suppress_report(paths: &Paths, id: i64, item: &Value) -> Result<()> {
     })
 }
 /// Durable queue input: console owns capacity, session exclusivity and checkout creation.
-pub fn delegation_request(item: &Value, pending: &Value) -> Value {
-    json!({
-        "id":item["id"],
-        "request_id":pending["request"],
-        "prompt":pending["prompt"],
-        "source_job_id":pending["job"]["id"],
-        "resume_session":if pending["workspace"]["isolate_worktree"] == true { None } else { session(&pending["job"]) },
-        "cwd":pending["workspace"]["cwd"],
-        "isolate_worktree":pending["workspace"]["isolate_worktree"] != false,
-        "model":pending["job"]["model"],
-        "effort":pending["job"]["effort"]
-    })
-}
+#[path = "delegation_request.rs"]
+mod delegation_contract;
+pub use delegation_contract::{delegation_request, freeze_delegation_request};
 /// A dead parent doesn't erase ownership; a reused PID or another live owner does.
 pub fn owned_helpers(job: &Value, jobs: &[Value], ps: &Processes, observed: &Value) -> Vec<Value> {
     if !job["id"].is_string() {
@@ -1498,6 +1563,7 @@ impl RecoveryBackend for RealRecovery {
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
             || cc_job_policy::todo_wait::waiting(&fresh, &row)
+            || n(&row["scheduler"]["not_before"]) > time_s()
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);
@@ -1584,11 +1650,27 @@ impl RecoveryBackend for RealRecovery {
         if row["stall_recovery"]["pending"]["request"] != p["request"]
             || !matches!(s(&row["status"]), "todo" | "doing")
             || cc_job_policy::todo_wait::waiting(&latest, &row)
+            || n(&row["scheduler"]["not_before"]) > time_s()
             || stopped(&row, &latest_linked(&row, &jobs))
         {
             return Ok(Outcome::Obsolete);
         }
-        let payload = delegation_request(&row, p);
+        // Freeze the complete request before sending, including a lost HTTP response.
+        // Console rechecks current model settings immediately before launch.
+        let payload = edit(&self.paths, |db| {
+            let id = item["id"].as_i64().ok_or("invalid todo id")?;
+            let row = db["items"]
+                .as_array()
+                .and_then(|rows| rows.iter().find(|r| r["id"] == id));
+            if row.is_none_or(|row| cc_job_policy::todo_wait::waiting(db, row)) {
+                return Ok(None);
+            }
+            let current = find(db, id)?;
+            freeze_delegation_request(current, &p["request"])
+        })?;
+        let Some(payload) = payload else {
+            return Ok(Outcome::Obsolete);
+        };
         let result = self
             .scheduler
             .backend

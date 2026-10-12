@@ -47,6 +47,19 @@ fn process_capture_fixture() {
         println!("capture fixture loaded");
         return;
     }
+    if mode == "warm_tree" {
+        // Preload the same nested process and native lock setup that the
+        // measured tree needs, without creating its ready evidence.
+        let status = fixture_command("warm_holder", &root).status().unwrap();
+        assert!(status.success());
+        println!("capture fixture tree loaded");
+        return;
+    }
+    if mode == "warm_holder" {
+        let _lock = ByteLock::acquire(&root.join("state.lock"), Duration::ZERO).unwrap();
+        println!("capture fixture lock setup loaded");
+        return;
+    }
     if mode == "descendant" {
         let limit = Instant::now() + FIXTURE_HOLD;
         while !root.join("release").exists() && Instant::now() < limit {
@@ -139,7 +152,11 @@ fn zero_child_timeout_is_bounded_by_tick_and_terminates_lock_holder() {
 #[test]
 fn deadline_terminates_temporary_grandchild_holding_a_lock() {
     let root = tempfile::tempdir().unwrap();
-    warm_fixture(root.path());
+    let warm = run_fixture("warm_tree", root.path(), 8).expect("nested fixture preflight failed");
+    assert_eq!(warm.code, 0);
+    assert!(warm.stdout.contains("capture fixture tree loaded"));
+    assert!(warm.stdout.contains("capture fixture lock setup loaded"));
+    assert!(!root.path().join("ready").exists());
     let start = Instant::now();
     let deadline = Deadline::new(PROCESS_DEADLINE);
     let result = run_fixture("tree", root.path(), 0);
@@ -201,19 +218,28 @@ fn inherited_grandchild_output_cannot_block_capture_after_parent_exit() {
 #[test]
 fn hard_tick_ceiling_releases_native_locks_and_records_deferral() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
+    // The independent killer gives the logger 100ms, not a first-load budget
+    // for scanning a new executable/file. Prepare only those cold resources;
+    // keep the measured deadline, termination bound and complete-log assertion.
+    std::fs::write(root.path().join("tick.log"), b"").unwrap();
     let start = Instant::now();
     let output = run_fixture("hard", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);
     assert!(start.elapsed() < PROCESS_BOUND);
     assert!(ByteLock::acquire(&root.path().join("state.lock"), Duration::from_secs(1)).is_ok());
-    assert!(std::fs::read_to_string(root.path().join("tick.log"))
-        .unwrap()
-        .contains("remaining work deferred; releasing locks"));
+    assert!(
+        std::fs::read_to_string(root.path().join("tick.log"))
+            .unwrap()
+            .contains("remaining work deferred; releasing locks")
+    );
 }
 
 #[test]
 fn hard_ceiling_does_not_wait_for_stuck_stderr_logger() {
     let root = tempfile::tempdir().unwrap();
+    warm_fixture(root.path());
+    std::fs::write(root.path().join("tick.log"), b"").unwrap();
     let start = Instant::now();
     let output = run_fixture("hard_stderr", root.path(), 8).unwrap();
     assert_eq!(output.code, 0);

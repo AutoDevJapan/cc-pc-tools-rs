@@ -17,11 +17,28 @@ use std::{
 type Result<T> = std::result::Result<T, &'static str>;
 const ID: &str = "dee85bb67fa66449ba0330f0fbe049f1";
 const CARGO_ID: &str = "c058c98f1288073adbd10236900199d1";
+const ADAPTIVE_ID: &str = "b6ef1394c70c4f11ee5ac370ad82886e";
+const QUEUE_ID: &str = "9f836113c154d11da358e0cef15db869";
+const REBOOT_ID: &str = "464577ad28cdf40461bb04a301f7e8e7";
+const BOARD_ID: &str = "67feb7811b6d0a94c98465c784b64f45";
+const BOARD_CREATED: &str = "2026-10-08T18:04:44.1608254+09:00";
+const CHROME_ID: &str = "e87d9c55880dce0cfd7bb1d3fe3ca85e";
+const CHROME_CREATED: &str = "2026-10-10T21:38:58.2660427+09:00";
+const DECISION_ID: &str = "50189b66c7f196bf436305cb29f91b42";
+const DECISION_CREATED: &str = "2026-10-11T12:02:44.5926082+09:00";
+const INTERNAL_2184_ID: &str = "4b043a897799a7d7df9a0134cc464c7a";
+const QUEUE_POINTERS: [&str; 2] = [
+    "todo-note-tool/.git",
+    "repo/.git/worktrees/todo-note-tool/gitdir",
+];
+const REBOOT_REPORT_SHA256: &str =
+    "5b87f8926728c7e692e0ca14d8e02655a2f25474d85fee998eb9c756afd5a5e1";
 const RESUME_ID: &str = "438ee7d343a6c84558201e2778d2c890";
 const LIMIT: usize = 10000;
 const REPARSE: u32 = 0x400;
 mod scoopa;
 mod seller2140;
+mod unslop;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -81,6 +98,21 @@ struct ResumeProof {
     files: BTreeMap<String, String>,
 }
 
+// Only the two pointers belonging to the fixed, entirely owned ToDo2184
+// clone/worktree pair can be repaired. Original bytes remain in this record.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InternalPointer {
+    original: Vec<u8>,
+    replacement: Node,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InternalRepair {
+    ticket_sha256: String,
+    pointers: [InternalPointer; 2],
+}
+
 // Only the explicitly authorized 2050 receipt may accept directory write-time
 // drift. Every name and every other Win32 metadata field remains exact.
 fn same_inventory(id: &str, old: &BTreeMap<String, Node>, now: &BTreeMap<String, Node>) -> bool {
@@ -134,6 +166,7 @@ struct Repo {
     head: String,
     saved_ref: Option<&'static str>,
     saved_merge: Option<String>,
+    squash_tree: Option<String>,
     allowed_untracked: &'static [&'static str],
     kind: RepoKind,
 }
@@ -172,6 +205,7 @@ impl Config {
                     head: "e4a3ebd701a86d23fadfde4ae8be27d9bb6ec77c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
@@ -181,6 +215,7 @@ impl Config {
                     head: "1c5078295bc8a33966d0b22ee77cd0194f49e1dc".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Clone,
                 },
@@ -200,10 +235,76 @@ impl Config {
             head: head.into(),
             saved_ref,
             saved_merge: None,
+            squash_tree: None,
             allowed_untracked: &[],
             kind: RepoKind::Clone,
         };
         match id {
+            DECISION_ID => {
+                c.id = DECISION_ID;
+                c.project = "cc-ask";
+                c.content = "decision-dedup";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 39969446694675659));
+                c.repos = vec![Repo {
+                    name: "repo",
+                    origin: public,
+                    head: "94ab1cbec9a35e131ce1a2f135984cc07dca2505".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/todo2382-question-associations"),
+                    saved_merge: None,
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git/worktrees/repo",
+                        ),
+                        common: PathBuf::from(
+                            "C:/Users/makhmeto/Desktop/dev/ADJ/cc-pc-tools-rs/.git",
+                        ),
+                    },
+                }];
+            }
+            BOARD_ID => {
+                c.id = BOARD_ID;
+                c.project = "cc-board";
+                c.content = "parent-post";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 2251799828682344));
+                let head = "759f74fb8a1db87308feac491d982b18cde62382";
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: head.into(),
+                    saved_ref: Some("refs/remotes/origin/main"),
+                    // This deployed integration commit is already in main.
+                    saved_merge: Some(head.into()),
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work8",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            QUEUE_ID => {
+                c.id = QUEUE_ID;
+                c.project = "cc-pc-tools-rs";
+                c.content = "queue-loop-tier";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 23362423072822789));
+                c.repos = vec![clone(
+                    "repo",
+                    public,
+                    "80c4bb370fce4e7645fafd8ac3eda1422168626b",
+                    Some("refs/remotes/origin/feat/queue-loop-tier-1967"),
+                )];
+            }
+            id if unslop::profile(id).is_some() => unslop::configure(&mut c, id)?,
             scoopa::ID => {
                 c.id = scoopa::ID;
                 c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
@@ -234,6 +335,7 @@ impl Config {
                         head: String::new(),
                         saved_ref: None,
                         saved_merge: None,
+                        squash_tree: None,
                         allowed_untracked: &[],
                         kind: RepoKind::OpaqueBare,
                     },
@@ -249,6 +351,7 @@ impl Config {
                     head: "7f103193a439f84f40f41f986aa864ef8a60f56f".into(),
                     saved_ref: Some("refs/remotes/origin/fix/chrome-retired-records-2021"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -283,9 +386,56 @@ impl Config {
                     saved_ref: Some("refs/remotes/origin/fix/dynamic-cargo-gate-2064"),
                     allowed_untracked: &[],
                     saved_merge: Some("2a676778c27f9225060dfaf5758b0cdfe8ef94c9".into()),
+                    squash_tree: None,
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
                             "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work9",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            ADAPTIVE_ID => {
+                c.id = ADAPTIVE_ID;
+                c.project = "cc-jobs";
+                c.content = "adaptive-concurrency";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 6473924479268101));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "0ac365ab478efa36206c968400e48ac5150abf1b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/adaptive-account-windows"),
+                    saved_merge: None,
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7",
+                        ),
+                        common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
+                    },
+                }];
+            }
+            REBOOT_ID => {
+                c.id = REBOOT_ID;
+                c.project = "cc-jobs";
+                c.content = "reboot-recovery";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 13229323920896790));
+                c.repos = vec![Repo {
+                    name: "work",
+                    origin: public,
+                    head: "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b".into(),
+                    saved_ref: Some("refs/remotes/origin/fix/reboot-job-recovery"),
+                    saved_merge: None,
+                    squash_tree: None,
+                    allowed_untracked: &[],
+                    kind: RepoKind::Linked {
+                        admin: PathBuf::from(
+                            "D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work10",
                         ),
                         common: PathBuf::from("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git"),
                     },
@@ -301,6 +451,7 @@ impl Config {
                     head: "70a48f412331b232c3cebac99bd36bb34f9cc41f".into(),
                     saved_ref: Some("refs/remotes/origin/archive/claude-routing-2063"),
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[
                         ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
                         ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
@@ -326,6 +477,7 @@ impl Config {
                     head: "0f01ed0a36dcc5baea61bf1f689267a362f8784c".into(),
                     saved_ref: None,
                     saved_merge: None,
+                    squash_tree: None,
                     allowed_untracked: &[],
                     kind: RepoKind::Linked {
                         admin: PathBuf::from(
@@ -336,6 +488,41 @@ impl Config {
                         ),
                     },
                 }];
+            }
+            INTERNAL_2184_ID => {
+                c.id = INTERNAL_2184_ID;
+                c.project = "cc-jobs-2184";
+                c.content = "git-fix-and-verification";
+                c.store = PathBuf::from("D:/CC/Tools/safe-delete/receipts-go");
+                c.temp = PathBuf::from("C:/Users/makhmeto/AppData/Local/Temp");
+                c.pinned_identity = Some((2229119083, 5348024573249873));
+                let root = c.temp.join(format!("codex-owned-{INTERNAL_2184_ID}"));
+                c.repos = vec![
+                    Repo {
+                        allowed_untracked: &[
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json",
+                            ".godd/state/registry/314190d2cf653c778c45b8d8e50f829f.json.flock",
+                        ],
+                        ..clone(
+                            "repo",
+                            public,
+                            "5b10ae4f0c0a55ee234813fc01e8aae8b6f7b025",
+                            Some("refs/remotes/origin/fix/todo2184-queue-bootstrap"),
+                        )
+                    },
+                    Repo {
+                        kind: RepoKind::Linked {
+                            admin: root.join("repo/.git/worktrees/todo-note-tool"),
+                            common: root.join("repo/.git"),
+                        },
+                        ..clone(
+                            "todo-note-tool",
+                            public,
+                            "fb62c76e74ac782b1b01a0539b332a8535c4907e",
+                            Some("refs/remotes/origin/fix/todo-2172-resume"),
+                        )
+                    },
+                ];
             }
             _ => match seller2140::fixed(id) {
                 Some(f) => seller2140::configure(&mut c, f),
@@ -362,7 +549,7 @@ impl Config {
         ticket: &[u8],
         create: bool,
     ) -> Result<()> {
-        if self.id != RESUME_ID {
+        if self.id != RESUME_ID && self.id != INTERNAL_2184_ID && self.id != BOARD_ID {
             return Err("SCOPE_NOT_AUTHORIZED");
         }
         let existing_proof = if !create {
@@ -395,6 +582,27 @@ impl Config {
         publish_proof(&self.proof_path(), &bytes)
     }
     fn destination(&self) -> PathBuf {
+        if self.id == DECISION_ID {
+            return self
+                .quarantine
+                .join(format!("20261011-cc-ask-2382-{DECISION_ID}"));
+        }
+        if self.id == unslop::CC_ASK {
+            return self
+                .quarantine
+                .join(format!("20261011-cc-ask-todo2341-{}", self.id));
+        }
+        if self.id == INTERNAL_2184_ID {
+            return self
+                .quarantine
+                .join(format!("20261010-cc-jobs-2184-{INTERNAL_2184_ID}"));
+        }
+        if unslop::profile(self.id).is_some() {
+            return self.quarantine.join(format!(
+                "20261010-{}-{}-{}",
+                self.project, self.content, self.id
+            ));
+        }
         if self.id == ID {
             return self
                 .quarantine
@@ -423,6 +631,13 @@ impl Config {
             || r.identity.id != self.id
             || r.identity.project != self.project
             || r.identity.content != self.content
+            || (self.id == unslop::CC_ASK && r.identity.created_at != unslop::CC_ASK_CREATED)
+            || (self.id == INTERNAL_2184_ID
+                && r.identity.created_at != "2026-10-10T00:39:58.8390892+09:00")
+            || (self.id == BOARD_ID && r.identity.created_at != BOARD_CREATED)
+            || (self.id == CHROME_ID && r.identity.created_at != CHROME_CREATED)
+            || (self.id == unslop::XB && r.identity.created_at != unslop::XB_CREATED)
+            || (self.id == DECISION_ID && r.identity.created_at != DECISION_CREATED)
             || !same(Path::new(&r.identity.root), &self.temp)
             || !same(Path::new(&r.identity.path), &expected)
             || self.pinned_identity.is_some_and(|(volume, file_id)| {
@@ -466,17 +681,31 @@ impl Config {
             return Err("TARGET_IDENTITY_CHANGED");
         }
         let nodes = scan(path, &self.repos)?;
+        if self.id == INTERNAL_2184_ID {
+            self.validate_internal_repos(path, before_move)?;
+            return Ok(nodes);
+        }
         for repo in &self.repos {
             self.client_guard(&path.join(repo.name))?;
             if let RepoKind::Linked { admin, common } = &repo.kind {
                 self.client_guard(admin)?;
                 self.client_guard(common)?;
             }
-            validate_repo(&path.join(repo.name), repo, before_move)?;
+            validate_repo_scoped(
+                &path.join(repo.name),
+                repo,
+                before_move,
+                false,
+                false,
+                self.id == BOARD_ID,
+            )?;
         }
         Ok(nodes)
     }
     fn plan(&self, id: &str) -> Result<serde_json::Value> {
+        if unslop::profile(self.id).is_some() {
+            return unslop::plan(self, id);
+        }
         if self.id == scoopa::ID {
             return scoopa::plan(self, id);
         }
@@ -535,7 +764,11 @@ impl Config {
             source: r.identity.path.clone(),
             destination: dest.to_string_lossy().into_owned(),
             nodes: nodes.clone(),
-            backlink: self.prepare_backlink(path, &dest.join("files"))?,
+            backlink: if self.id == INTERNAL_2184_ID {
+                None
+            } else {
+                self.prepare_backlink(path, &dest.join("files"))?
+            },
         };
         let mut original_bytes = None;
         if self.id == RESUME_ID && prepared {
@@ -567,14 +800,20 @@ impl Config {
             fs::create_dir(&dest).map_err(|_| "QUARANTINE_DESTINATION_CREATE")?;
         }
         for entry in fs::read_dir(&dest).map_err(|_| "QUARANTINE_METADATA_FAILED")? {
-            if entry.map_err(|_| "QUARANTINE_METADATA_FAILED")?.file_name()
-                != OsStr::new("理由.txt")
+            let name = entry.map_err(|_| "QUARANTINE_METADATA_FAILED")?.file_name();
+            if name != OsStr::new("理由.txt")
+                && !(self.id == INTERNAL_2184_ID
+                    && (name == OsStr::new("git-pointer-0.replacement")
+                        || name == OsStr::new("git-pointer-1.replacement")))
             {
                 return Err("QUARANTINE_DESTINATION_NOT_EMPTY");
             }
         }
         write_or_verify(&dest.join("理由.txt"), why.as_bytes(), 8192)?;
-        if self.id == RESUME_ID {
+        if self.id == INTERNAL_2184_ID {
+            self.prepare_internal_repair(path, &ticket_bytes)?;
+        }
+        if self.id == RESUME_ID || self.id == INTERNAL_2184_ID || self.id == BOARD_ID {
             self.content_proof(path, &nodes, &ticket_bytes, true)?;
         }
         Ok(
@@ -583,7 +822,128 @@ impl Config {
             "powershell_command": format!("Move-Item -LiteralPath {} -Destination {} -ErrorAction Stop", quote(path), quote(&dest.join("files"))) }),
         )
     }
+    /// The task wrote its final public PR description after a read-only
+    /// preflight. Permit only that fixed addition before any source movement;
+    /// archive the old intent rather than replacing or discarding its evidence.
+    fn renew_reboot_preflight(&self, id: &str, report_hash: &str) -> Result<serde_json::Value> {
+        if self.id != REBOOT_ID || id != REBOOT_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let r = self.load(id)?;
+        let destination = self.destination();
+        if r.state != "owned" || present(&destination.join("files"))? {
+            return Err("MOVEMENT_ALREADY_STARTED");
+        }
+        let archived = self.ticket_path().with_extension("pre-final-report.json");
+        let ticket_archived = present(&archived)?;
+        let ticket_path = self.ticket_path();
+        let saved = read_record(
+            if ticket_archived {
+                &archived
+            } else {
+                &ticket_path
+            },
+            8 * 1024 * 1024,
+        )?;
+        let old: Ticket = serde_json::from_slice(&saved).map_err(|_| "INVALID_TICKET")?;
+        if old.id != id
+            || old.source != r.identity.path
+            || old.destination != destination.to_string_lossy()
+        {
+            return Err("INVALID_TICKET");
+        }
+        let source = Path::new(&r.identity.path);
+        let nodes = self.validate(&r, source, true)?;
+        let mut comparable = nodes.clone();
+        if old.nodes.contains_key("pr-body-final.txt")
+            || comparable.remove("pr-body-final.txt").is_none()
+        {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let report = read_record(&source.join("pr-body-final.txt"), 64 * 1024)?;
+        if format!("{:x}", Sha256::digest(&report)) != report_hash {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        // Adding the one file changes only the containing root's write time.
+        // Every original file, directory, alias and identity remains exact.
+        comparable.get_mut("").ok_or("INVALID_TICKET")?.written =
+            old.nodes.get("").ok_or("INVALID_TICKET")?.written;
+        if comparable != old.nodes {
+            return Err("UNEXPECTED_PREFLIGHT_CHANGE");
+        }
+        let current_backlink = self.prepare_backlink(source, &destination.join("files"))?;
+        match (&old.backlink, &current_backlink) {
+            (None, None) => {}
+            (Some(old), Some(now))
+                if old.original == now.original
+                    && old.replacement == now.replacement
+                    && old.admin.volume == now.admin.volume
+                    && old.admin.file_id == now.admin.file_id
+                    && old.common.volume == now.common.volume
+                    && old.common.file_id == now.common.file_id => {}
+            _ => return Err("INVALID_TICKET"),
+        }
+        let replacement = Ticket {
+            id: id.into(),
+            source: r.identity.path.clone(),
+            destination: old.destination,
+            nodes,
+            backlink: old.backlink,
+        };
+        let replacement_bytes =
+            serde_json::to_vec_pretty(&replacement).map_err(|_| "TICKET_JSON")?;
+        let replacement_published = ticket_archived && present(&self.ticket_path())?;
+        if replacement_published {
+            write_or_verify(&self.ticket_path(), &replacement_bytes, 8 * 1024 * 1024)?;
+        }
+        let reason = destination.join("理由.txt");
+        let archived_reason = destination.with_extension("pre-final-report.reason.txt");
+        let reason_archived = present(&archived_reason)?;
+        if reason_archived && !ticket_archived {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_reason = if reason_archived {
+            &archived_reason
+        } else {
+            &reason
+        };
+        checked(old_reason)?;
+        let reason_node = node(old_reason)?;
+        if reason_node.attributes & (REPARSE | 0x10) != 0 || reason_node.links != 1 {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        let old_bytes: u64 = old
+            .nodes
+            .values()
+            .filter(|n| n.attributes & 0x10 == 0)
+            .map(|n| n.size)
+            .sum();
+        let expected_reason = format!(
+            "退避状態: 未完了（移動前）。\n元の場所: {}\n大きさ: {old_bytes} byte\n理由: 所有一時データのGit保護による退避停止。\n仕様に固定した取得物・成果保存・リンクを確認し、Gitを含む全内容を保持する。\n所有ID: {}\n",
+            r.identity.path, self.id
+        );
+        if read_record(old_reason, 64 * 1024)? != expected_reason.as_bytes() {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if reason_archived && present(&reason)? && !replacement_published {
+            return Err("INVALID_PREFLIGHT_REASON");
+        }
+        if self.validate(&r, source, true)? != replacement.nodes {
+            return Err("SOURCE_CHANGED_DURING_PREFLIGHT");
+        }
+        if !ticket_archived {
+            fs::rename(self.ticket_path(), &archived).map_err(|_| "PREFLIGHT_ARCHIVE_FAILED")?;
+        }
+        if !reason_archived {
+            fs::rename(&reason, &archived_reason).map_err(|_| "PREFLIGHT_REASON_ARCHIVE_FAILED")?;
+        }
+        publish_proof(&self.ticket_path(), &replacement_bytes)?;
+        self.plan(id)
+    }
     fn finish(&self, id: &str) -> Result<serde_json::Value> {
+        if unslop::profile(self.id).is_some() {
+            return unslop::finish(self, id);
+        }
         if self.id == scoopa::ID {
             return scoopa::finish(self, id);
         }
@@ -605,8 +965,12 @@ impl Config {
             return Err("TARGET_STILL_EXISTS");
         }
         let files = dest.join("files");
-        let nodes = self.validate(&r, &files, false)?;
-        let has_proof = self.id == RESUME_ID;
+        let nodes = if self.id == INTERNAL_2184_ID {
+            self.finish_internal_repair(&r, &files, &t, &ticket_bytes)?
+        } else {
+            self.validate(&r, &files, false)?
+        };
+        let has_proof = self.id == RESUME_ID || self.id == BOARD_ID;
         if (has_proof && !same_inventory(self.id, &t.nodes, &nodes))
             || (!has_proof && nodes != t.nodes)
         {
@@ -615,7 +979,9 @@ impl Config {
         if has_proof {
             self.content_proof(&files, &nodes, &ticket_bytes, false)?;
         }
-        self.repair_backlink(&r, &files, t.backlink.as_ref())?;
+        if self.id != INTERNAL_2184_ID {
+            self.repair_backlink(&r, &files, t.backlink.as_ref())?;
+        }
         let why = dest.join("理由.txt");
         checked(&why)?;
         if node(&why)?.links != 1 {
@@ -655,6 +1021,237 @@ impl Config {
             "destination":dest, "bytes": nodes.values().filter(|x| x.attributes & 0x10 == 0).map(|x| x.size).sum::<u64>(),
             "entries":nodes.len(), "inventory_verified":true}),
         )
+    }
+    fn validate_internal_repos(&self, root: &Path, before: bool) -> Result<()> {
+        if self.id != INTERNAL_2184_ID || self.repos.len() != 2 {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let common = root.join("repo/.git");
+        let admin = common.join("worktrees/todo-note-tool");
+        for p in [&common, &admin, &root.join("todo-note-tool")] {
+            self.client_guard(p)?;
+        }
+        // A fixed single worktree, entirely inside the owned tree; no extra
+        // worktree, graft, submodule or object store may be referenced.
+        let names = fs::read_dir(common.join("worktrees"))
+            .map_err(|_| "INVALID_GIT_ADMIN_PATH")?
+            .map(|entry| {
+                entry
+                    .map(|e| e.file_name())
+                    .map_err(|_| "INVALID_GIT_ADMIN_PATH")
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if names != vec![OsStr::new("todo-note-tool").to_owned()]
+            || present(&common.join("info/grafts"))?
+            || !same(
+                Path::new(&bounded_text(&admin.join("gitdir"))?),
+                &root.join(QUEUE_POINTERS[0]),
+            )
+        {
+            return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+        }
+        validate_repo_scoped(
+            &root.join("repo"),
+            &self.repos[0],
+            before,
+            false,
+            true,
+            false,
+        )?;
+        let linked = Repo {
+            name: self.repos[1].name,
+            origin: self.repos[1].origin,
+            head: self.repos[1].head.clone(),
+            saved_ref: self.repos[1].saved_ref,
+            saved_merge: None,
+            squash_tree: None,
+            allowed_untracked: &[],
+            kind: RepoKind::Linked { admin, common },
+        };
+        validate_repo(&root.join(linked.name), &linked, true)
+    }
+
+    fn internal_record_path(&self) -> PathBuf {
+        self.store.join(format!("{}.internal-repair.json", self.id))
+    }
+    fn internal_stage(&self, index: usize) -> PathBuf {
+        self.destination()
+            .join(format!("git-pointer-{index}.replacement"))
+    }
+    fn internal_text(root: &Path, index: usize) -> Vec<u8> {
+        if index == 0 {
+            format!(
+                "gitdir: {}\n",
+                root.join("repo/.git/worktrees/todo-note-tool").display()
+            )
+            .into_bytes()
+        } else {
+            format!("{}\n", root.join(QUEUE_POINTERS[0]).display()).into_bytes()
+        }
+    }
+    fn internal_pointer_bytes(&self, root: &Path, index: usize) -> Result<Vec<u8>> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let path = root.join(QUEUE_POINTERS[index]);
+        checked_admin(path.parent().ok_or("INVALID_PATH")?)?;
+        let before = node(&path)?;
+        if before.links != 1 || before.size > 8192 || before.attributes & 0x10 != 0 {
+            return Err("INVALID_INTERNAL_REPAIR");
+        }
+        let bytes = fs::read(&path).map_err(|_| "RECOVERY_RECORD_READ")?;
+        if node(&path)? != before {
+            return Err("CONTENT_CHANGED_DURING_PROOF");
+        }
+        Ok(bytes)
+    }
+    fn prepare_internal_repair(&self, source: &Path, ticket: &[u8]) -> Result<()> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let mut pointers = Vec::new();
+        for index in 0..QUEUE_POINTERS.len() {
+            let original = self.internal_pointer_bytes(source, index)?;
+            let expected = Self::internal_text(source, index);
+            // Git uses '/' in its pointers on this PC; compare their meaning,
+            // retaining the original byte sequence without newline conversion.
+            let text = std::str::from_utf8(&original)
+                .map_err(|_| "EXTERNAL_GITDIR")?
+                .trim();
+            let expected = std::str::from_utf8(&expected)
+                .map_err(|_| "EXTERNAL_GITDIR")?
+                .trim();
+            let (text, expected) = if index == 0 {
+                (
+                    text.strip_prefix("gitdir: ").ok_or("EXTERNAL_GITDIR")?,
+                    expected.strip_prefix("gitdir: ").ok_or("EXTERNAL_GITDIR")?,
+                )
+            } else {
+                (text, expected)
+            };
+            if !same(Path::new(text), Path::new(expected)) {
+                return Err("EXTERNAL_GITDIR");
+            }
+            let stage = self.internal_stage(index);
+            write_or_verify(
+                &stage,
+                &Self::internal_text(&self.destination().join("files"), index),
+                8192,
+            )?;
+            pointers.push(InternalPointer {
+                original,
+                replacement: node(&stage)?,
+            });
+        }
+        let record = InternalRepair {
+            ticket_sha256: format!("{:x}", Sha256::digest(ticket)),
+            pointers: pointers.try_into().map_err(|_| "INVALID_INTERNAL_REPAIR")?,
+        };
+        let bytes = serde_json::to_vec_pretty(&record).map_err(|_| "PROOF_JSON")?;
+        write_or_verify(&self.internal_record_path(), &bytes, 32768)
+    }
+    fn verify_internal_inventory(
+        &self,
+        root: &Path,
+        t: &Ticket,
+        ticket: &[u8],
+        record: &InternalRepair,
+    ) -> Result<BTreeMap<String, Node>> {
+        checked(root)?;
+        self.client_guard(root)?;
+        if record.ticket_sha256 != format!("{:x}", Sha256::digest(ticket)) || t.backlink.is_some() {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        let current = scan(root, &self.repos)?;
+        let mut expected = t.nodes.clone();
+        let proof_bytes = read_record(&self.proof_path(), 8 * 1024 * 1024)?;
+        let proof: ResumeProof =
+            serde_json::from_slice(&proof_bytes).map_err(|_| "INVALID_INTERNAL_REPAIR")?;
+        if proof.ticket_sha256 != record.ticket_sha256 {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        let mut digests = file_digests(root, &current)?;
+        for (i, name) in QUEUE_POINTERS.iter().enumerate() {
+            let original_node = t.nodes.get(*name).ok_or("INVALID_INTERNAL_REPAIR")?;
+            let actual_node = current.get(*name).ok_or("INVALID_INTERNAL_REPAIR")?;
+            let pointer = &record.pointers[i];
+            let original_hash = format!("{:x}", Sha256::digest(&pointer.original));
+            if proof.files.get(*name) != Some(&original_hash) {
+                return Err("RECOVERY_RECORD_CHANGED");
+            }
+            let bytes = self.internal_pointer_bytes(root, i)?;
+            if actual_node == original_node && bytes == pointer.original {
+                // Still waiting for this pointer's atomic replacement.
+            } else if actual_node == &pointer.replacement && bytes == Self::internal_text(root, i) {
+                expected.insert(name.to_string(), pointer.replacement.clone());
+                let parent = Path::new(name)
+                    .parent()
+                    .ok_or("INVALID_PATH")?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                let actual_parent = current.get(&parent).ok_or("INVALID_INTERNAL_REPAIR")?;
+                expected
+                    .get_mut(&parent)
+                    .ok_or("INVALID_INTERNAL_REPAIR")?
+                    .written = actual_parent.written;
+                digests.insert(name.to_string(), original_hash);
+            } else {
+                return Err("WORKTREE_BACKLINK_CHANGED");
+            }
+        }
+        if expected != current
+            || digests != proof.files
+            || scan(root, &self.repos)? != current
+            || read_record(&self.proof_path(), 8 * 1024 * 1024)? != proof_bytes
+        {
+            return Err("CONTENT_CHANGED_AFTER_PLAN");
+        }
+        Ok(current)
+    }
+    fn finish_internal_repair(
+        &self,
+        r: &Receipt,
+        root: &Path,
+        t: &Ticket,
+        ticket: &[u8],
+    ) -> Result<BTreeMap<String, Node>> {
+        if self.id != INTERNAL_2184_ID {
+            return Err("SCOPE_NOT_AUTHORIZED");
+        }
+        let identity = node(root)?;
+        if identity.volume != r.identity.volume || identity.file_id != r.identity.file_id {
+            return Err("TARGET_IDENTITY_CHANGED");
+        }
+        let bytes = read_record(&self.internal_record_path(), 32768)?;
+        let record: InternalRepair =
+            serde_json::from_slice(&bytes).map_err(|_| "INVALID_INTERNAL_REPAIR")?;
+        self.verify_internal_inventory(root, t, ticket, &record)?;
+        for (i, name) in QUEUE_POINTERS.iter().enumerate() {
+            let target = root.join(name);
+            if node(&target)? == record.pointers[i].replacement {
+                continue;
+            }
+            if r.state != "owned" {
+                return Err("RECEIPT_NOT_OWNED");
+            }
+            let stage = self.internal_stage(i);
+            if node(&stage)? != record.pointers[i].replacement
+                || read_record(&stage, 8192)? != Self::internal_text(root, i)
+            {
+                return Err("WORKTREE_REPAIR_FILE_CHANGED");
+            }
+            // Both the stage and target are on C:. Only these fixed pointer
+            // files change; no Git repair command traverses the old paths.
+            fs::rename(&stage, &target).map_err(|_| "WORKTREE_REPAIR_FAILED")?;
+        }
+        self.verify_internal_inventory(root, t, ticket, &record)?;
+        self.validate(r, root, false)?;
+        if read_record(&self.internal_record_path(), 32768)? != bytes {
+            return Err("RECOVERY_RECORD_CHANGED");
+        }
+        // Normal finish commits the existing receipt only after every original
+        // byte is accounted for (including the archived original pointers).
+        Ok(t.nodes.clone())
     }
     fn prepare_backlink(&self, root: &Path, destination: &Path) -> Result<Option<BacklinkTicket>> {
         for repo in &self.repos {
@@ -731,7 +1328,14 @@ impl Config {
                 {
                     return Err("WORKTREE_REPAIR_FAILED");
                 }
-                validate_repo(&root.join(repo.name), repo, false)?;
+                validate_repo_scoped(
+                    &root.join(repo.name),
+                    repo,
+                    false,
+                    self.id == unslop::INTEGRATION,
+                    false,
+                    self.id == BOARD_ID,
+                )?;
                 return Ok(());
             }
         }
@@ -1028,6 +1632,26 @@ fn checked_admin(path: &Path) -> Result<()> {
     Ok(())
 }
 fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
+    validate_repo_options(path, repo, before_move, false)
+}
+
+// ToDo1940 separately verifies its fixed submodule before archival.
+fn validate_repo_options(
+    path: &Path,
+    repo: &Repo,
+    before_move: bool,
+    archived_submodule: bool,
+) -> Result<()> {
+    validate_repo_scoped(path, repo, before_move, archived_submodule, false, false)
+}
+fn validate_repo_scoped(
+    path: &Path,
+    repo: &Repo,
+    before_move: bool,
+    archived_submodule: bool,
+    owned_worktree: bool,
+    board_checkout_crlf: bool,
+) -> Result<()> {
     let gitdir = match &repo.kind {
         RepoKind::OpaqueBare => {
             // Inspect only names and metadata of the fixed audit acquisition.
@@ -1078,7 +1702,10 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
                 "objects/info/alternates",
                 "objects/info/http-alternates",
             ] {
-                if (before_move || special != "modules") && present(&common.join(special))? {
+                if special == "modules" && (!before_move || archived_submodule) {
+                    continue;
+                }
+                if present(&common.join(special))? {
                     return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
                 }
             }
@@ -1093,6 +1720,12 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
         "objects/info/alternates",
         "objects/info/http-alternates",
     ] {
+        if owned_worktree && special == "worktrees" {
+            continue;
+        }
+        if archived_submodule && special == "modules" {
+            continue;
+        }
         if matches!(repo.kind, RepoKind::Linked { .. }) && matches!(special, "commondir" | "gitdir")
         {
             continue;
@@ -1130,7 +1763,17 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
     } else {
         "--untracked-files=no"
     };
-    let status = git(path, &["status", "--porcelain=v1", untracked])?;
+    let mut status_args = Vec::new();
+    if board_checkout_crlf {
+        // This fixed worktree was checked out with Windows CRLF conversion.
+        // Normalize only Git's comparison; archival hashes cover actual bytes.
+        status_args.extend(["-c", "core.autocrlf=true"]);
+    }
+    status_args.extend(["status", "--porcelain=v1", untracked]);
+    if archived_submodule {
+        status_args.push("--ignore-submodules=all");
+    }
+    let status = git(path, &status_args)?;
     if !status.lines().all(|line| {
         repo.allowed_untracked
             .iter()
@@ -1159,6 +1802,35 @@ fn validate_repo(path: &Path, repo: &Repo, before_move: bool) -> Result<()> {
 }
 
 fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
+    if let Some(tree) = &repo.squash_tree {
+        let merge = repo.saved_merge.as_deref().ok_or("GIT_UNPUSHED_COMMITS")?;
+        if saved != "refs/remotes/origin/main" {
+            return Err("GIT_UNPUSHED_COMMITS");
+        }
+        if let RepoKind::Linked { common, .. } = &repo.kind
+            && present(&common.join("info/grafts"))?
+        {
+            return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+        }
+        // PR98 was squash-merged: preserve the original HEAD and prove its
+        // exact tree was published, without claiming HEAD is an ancestor.
+        for revision in [
+            format!("{}^{{tree}}", repo.head),
+            format!("{merge}^{{tree}}"),
+        ] {
+            if git(path, &["rev-parse", "--verify", &revision])? != *tree {
+                return Err("GIT_PUBLISHED_TREE_MISMATCH");
+            }
+        }
+        git(
+            path,
+            &["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        )
+        .map_err(|_| "GIT_UNPUSHED_COMMITS")?;
+        return git(path, &["merge-base", "--is-ancestor", merge, saved])
+            .map(|_| ())
+            .map_err(|_| "GIT_UNPUSHED_COMMITS");
+    }
     if repo.saved_merge.is_none() {
         return if git(path, &["rev-parse", saved])? == repo.head {
             Ok(())
@@ -1171,6 +1843,20 @@ fn validate_saved_commit(path: &Path, repo: &Repo, saved: &str) -> Result<()> {
         && present(&common.join("info/grafts"))?
     {
         return Err("EXTERNAL_OR_SHARED_GIT_METADATA");
+    }
+    if saved == "refs/remotes/origin/main"
+        && repo.saved_merge.as_deref() == Some(repo.head.as_str())
+    {
+        // Only the board profile pins its published integration commit as
+        // both HEAD and saved merge. Main may advance, but cannot lose HEAD.
+        git(
+            path,
+            &["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+        )
+        .map_err(|_| "GIT_UNPUSHED_COMMITS")?;
+        return git(path, &["merge-base", "--is-ancestor", &repo.head, saved])
+            .map(|_| ())
+            .map_err(|_| "GIT_UNPUSHED_COMMITS");
     }
     match git_status(path, &["show-ref", "--exists", saved])?.1.code() {
         Some(0) => {
@@ -1292,9 +1978,13 @@ fn run() -> Result<serde_json::Value> {
     }
     let c = Config::production(&args[2])?;
     match args[0].as_str() {
+        "inspect" if unslop::profile(c.id).is_some() => unslop::inspect(&c, &args[2]),
         "inspect" if c.id == scoopa::ID => scoopa::inspect(&c, &args[2]),
         "inspect" if !c.seller.is_empty() => seller2140::inspect(&c, &args[2]),
         "plan" => c.plan(&args[2]),
+        "renew-plan" if c.id == REBOOT_ID => {
+            c.renew_reboot_preflight(&args[2], REBOOT_REPORT_SHA256)
+        }
         "finish" => c.finish(&args[2]),
         _ => Err("INVALID_ACTION"),
     }
@@ -1311,11 +2001,1381 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn xb_archive_preserves_clone_environment_and_inputs_and_finishes_idempotently() {
+        let c = fixture_for(unslop::XB);
+        let old = source(&c);
+        fs::create_dir(old.join("agent-reach-env")).unwrap();
+        fs::write(
+            old.join("agent-reach-env/package.txt"),
+            b"distributed package",
+        )
+        .unwrap();
+        fs::write(old.join("subtitle.json3"), b"public input").unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        assert!(old.exists());
+        let dest = c.destination().join("files");
+        fs::rename(&old, &dest).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["source_absent"], true);
+        assert_eq!(result["inventory_verified"], true);
+        assert_eq!(
+            fs::read(dest.join("subtitle.json3")).unwrap(),
+            b"public input"
+        );
+        assert_eq!(
+            fs::read(dest.join("agent-reach-env/package.txt")).unwrap(),
+            b"distributed package"
+        );
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        c.finish(c.id).unwrap();
+    }
+
+    #[test]
+    fn xb_rejects_unowned_git_unsaved_work_and_receipt_substitutions_before_planning() {
+        for failure in [
+            "origin",
+            "head",
+            "saved-ref",
+            "dirty",
+            "untracked",
+            "extra-git",
+            "external-hardlink",
+            "created",
+            "identity",
+            "project",
+            "bytes",
+        ] {
+            let c = fixture_for(unslop::XB);
+            let old = source(&c);
+            let repo = old.join("agent-reach-src");
+            match failure {
+                "origin" => {
+                    git(
+                        &repo,
+                        &[
+                            "remote",
+                            "set-url",
+                            "origin",
+                            "https://example.invalid/unowned",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "head" => {
+                    git(
+                        &repo,
+                        &[
+                            "-c",
+                            "user.name=fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit",
+                            "--allow-empty",
+                            "-m",
+                            "unsaved",
+                        ],
+                    )
+                    .unwrap();
+                }
+                "saved-ref" => {
+                    git(&repo, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "dirty" => fs::write(repo.join("source.txt"), b"unsaved").unwrap(),
+                "untracked" => fs::write(repo.join("new.rs"), b"unsaved").unwrap(),
+                "extra-git" => {
+                    fs::create_dir(old.join("other")).unwrap();
+                    fs::write(old.join("other/.git"), b"unowned").unwrap();
+                }
+                "external-hardlink" => {
+                    fs::write(old.join("input"), b"input").unwrap();
+                    fs::hard_link(old.join("input"), c.temp.join("outside")).unwrap();
+                }
+                "bytes" => {
+                    fs::File::create(old.join("oversize"))
+                        .unwrap()
+                        .set_len(34109829)
+                        .unwrap();
+                }
+                "created" | "identity" | "project" => {
+                    let mut r = c.load(c.id).unwrap();
+                    match failure {
+                        "created" => r.identity.created_at = BOARD_CREATED.into(),
+                        "identity" => r.identity.file_id += 1,
+                        "project" => r.identity.project = "other".into(),
+                        _ => unreachable!(),
+                    }
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists(), "{failure}");
+            assert!(old.exists());
+        }
+    }
+
+    #[test]
+    fn xb_finish_rejects_same_metadata_content_changes_and_missing_proof() {
+        for failure in ["content", "proof"] {
+            let c = fixture_for(unslop::XB);
+            let old = source(&c);
+            fs::write(old.join("input"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            fs::rename(&old, c.destination().join("files")).unwrap();
+            if failure == "content" {
+                let file = c.destination().join("files/input");
+                let time = fs::metadata(&file).unwrap().modified().unwrap();
+                fs::write(&file, b"modified").unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(file)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(time))
+                    .unwrap();
+            } else {
+                fs::remove_file(
+                    c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256"),
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+
+    #[test]
+    fn xb_production_scope_is_fixed_to_the_original_public_acquisition() {
+        let c = Config::production(unslop::XB).unwrap();
+        assert_eq!(c.project, "todo-2322-xb");
+        assert_eq!(c.content, "acquisition-review");
+        assert_eq!(c.pinned_identity, Some((2229119083, 4785074608285915)));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].name, "agent-reach-src");
+        assert_eq!(
+            c.repos[0].origin,
+            "https://github.com/Panniantong/Agent-Reach.git"
+        );
+        assert_eq!(c.repos[0].head, "94f06c1969dfc1834001269d79d3ad0972d9dee6");
+        assert!(matches!(c.repos[0].kind, RepoKind::Clone));
+        assert!(Config::production("ab2f5f90a2c3855727cdcfee180254e4").is_err());
+    }
+
+    #[test]
+    fn decision_archive_is_bound_to_one_owned_worktree_and_its_published_head() {
+        let c = Config::production(DECISION_ID).unwrap();
+        assert_eq!(c.pinned_identity, Some((2229119083, 39969446694675659)));
+        assert_eq!((c.project, c.content), ("cc-ask", "decision-dedup"));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].head, "94ab1cbec9a35e131ce1a2f135984cc07dca2505");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/todo2382-question-associations")
+        );
+        assert!(matches!(c.repos[0].kind, RepoKind::Linked { .. }));
+        assert!(c.repos[0].allowed_untracked.is_empty());
+        assert!(
+            c.destination()
+                .ends_with(format!("20261011-cc-ask-2382-{DECISION_ID}"))
+        );
+    }
+
+    #[test]
+    fn decision_archive_preserves_inventory_receipt_and_external_git_backlink() {
+        let c = fixture_for(DECISION_ID);
+        let old = source(&c);
+        let before = scan(&old, &c.repos).unwrap();
+        let plan = c.plan(DECISION_ID).unwrap();
+        let dest = PathBuf::from(plan["destination"].as_str().unwrap());
+        assert!(
+            plan["powershell_command"]
+                .as_str()
+                .unwrap()
+                .contains("Move-Item -LiteralPath")
+        );
+        let files = dest.join("files");
+        fs::rename(&old, &files).unwrap();
+        c.finish(DECISION_ID).unwrap();
+        assert_eq!(scan(&files, &c.repos).unwrap(), before);
+        assert!(!old.exists());
+        let receipt = c.load(DECISION_ID).unwrap();
+        assert_eq!(receipt.state, "quarantined");
+        assert_eq!(receipt.destination.as_deref(), dest.to_str());
+        assert_eq!(
+            git(&files.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &files.join("repo/.git")
+        ));
+    }
+
+    #[test]
+    fn decision_archive_rejects_content_and_acl_changes_after_planning() {
+        for failure in ["content", "acl"] {
+            let c = fixture_for(DECISION_ID);
+            let old = source(&c);
+            fs::write(old.join("verification.log"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            let files = c.destination().join("files");
+            fs::rename(&old, &files).unwrap();
+            let path = files.join("verification.log");
+            if failure == "content" {
+                let written = fs::metadata(&path).unwrap().modified().unwrap();
+                fs::write(&path, b"modified").unwrap();
+                fs::File::options()
+                    .write(true)
+                    .open(&path)
+                    .unwrap()
+                    .set_times(fs::FileTimes::new().set_modified(written))
+                    .unwrap();
+            } else {
+                hidden(
+                    Path::new("icacls.exe"),
+                    &[
+                        path.as_os_str(),
+                        OsStr::new("/grant"),
+                        OsStr::new("*S-1-1-0:(R)"),
+                    ],
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+                panic!()
+            };
+            assert!(same(
+                Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+                &old.join("repo/.git")
+            ));
+        }
+    }
+    #[test]
+    fn chrome_squash_and_full_archive_preserve_hidden_files_hardlinks_acl_and_backlink() {
+        let c = fixture_for(CHROME_ID);
+        let old = source(&c);
+        let work = old.join("work");
+        assert_eq!(
+            git_status(
+                &work,
+                &[
+                    "merge-base",
+                    "--is-ancestor",
+                    &c.repos[0].head,
+                    c.repos[0].saved_merge.as_ref().unwrap()
+                ]
+            )
+            .unwrap()
+            .1
+            .code(),
+            Some(1)
+        );
+        fs::write(old.join("verification.log"), b"preserved verification\n").unwrap();
+        fs::hard_link(
+            old.join("verification.log"),
+            old.join("verification-alias.log"),
+        )
+        .unwrap();
+        fs::write(old.join("old.exe"), b"preserved old binary\n").unwrap();
+        hidden(
+            Path::new("attrib.exe"),
+            &[OsStr::new("+H"), old.join("old.exe").as_os_str()],
+        )
+        .unwrap();
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        fs::rename(&old, c.destination().join("files")).unwrap();
+        let result = c.finish(c.id).unwrap();
+        assert_eq!(result["inventory_verified"], true);
+        let files = c.destination().join("files");
+        assert_eq!(
+            fs::read(files.join("verification.log")).unwrap(),
+            b"preserved verification\n"
+        );
+        assert_eq!(node(&files.join("verification.log")).unwrap().links, 2);
+        assert_ne!(node(&files.join("old.exe")).unwrap().attributes & 2, 0);
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &files.join("work/.git")
+        ));
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        c.finish(c.id).unwrap();
+    }
+
+    #[test]
+    fn chrome_ref_tree_git_scope_and_receipt_substitutions_do_not_prepare_moves() {
+        for failure in [
+            "missing-main",
+            "unrelated-main",
+            "different-tree",
+            "dirty",
+            "untracked",
+            "additional-git",
+            "external-hardlink",
+            "identity",
+            "created",
+        ] {
+            let mut c = fixture_for(CHROME_ID);
+            let old = source(&c);
+            let work = old.join("work");
+            match failure {
+                "missing-main" => {
+                    git(&work, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "unrelated-main" => {
+                    git(
+                        &work,
+                        &["update-ref", "refs/remotes/origin/main", &c.repos[0].head],
+                    )
+                    .unwrap();
+                }
+                "different-tree" => {
+                    c.repos[0].squash_tree = Some("0".repeat(40));
+                }
+                "dirty" => fs::write(work.join("source.txt"), b"changed").unwrap(),
+                "untracked" => fs::write(work.join("unpublished.txt"), b"changed").unwrap(),
+                "additional-git" => {
+                    fs::create_dir(old.join("extra")).unwrap();
+                    fs::write(old.join("extra/.git"), b"unapproved").unwrap();
+                }
+                "external-hardlink" => {
+                    fs::write(old.join("record"), b"record").unwrap();
+                    fs::hard_link(old.join("record"), c.temp.join("outside-alias")).unwrap();
+                }
+                "identity" | "created" => {
+                    let mut r = c.load(c.id).unwrap();
+                    if failure == "identity" {
+                        r.identity.file_id += 1;
+                    } else {
+                        r.identity.created_at = BOARD_CREATED.into();
+                    }
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists(), "{failure}");
+            assert!(old.exists());
+        }
+    }
+
+    #[test]
+    fn chrome_finish_rejects_same_size_and_timestamp_restored_content_change() {
+        let c = fixture_for(CHROME_ID);
+        let old = source(&c);
+        fs::write(old.join("verification.log"), b"original").unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(&old, c.destination().join("files")).unwrap();
+        let p = c.destination().join("files/verification.log");
+        let old_time = fs::metadata(&p).unwrap().modified().unwrap();
+        fs::write(&p, b"modified").unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&p)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(old_time))
+            .unwrap();
+        assert_eq!(c.finish(c.id).unwrap_err(), "CONTENT_CHANGED_AFTER_PLAN");
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+
+    #[test]
+    fn board_crlf_checkout_is_archived_verbatim_but_real_edits_are_rejected() {
+        for changed in [false, true] {
+            let c = fixture_for(BOARD_ID);
+            let old = source(&c);
+            let tracked = old.join("work/source.txt");
+            let content = if changed {
+                b"edited fixture\r\n".as_slice()
+            } else {
+                b"public fixture\r\n".as_slice()
+            };
+            assert_eq!(fs::read(&tracked).unwrap(), b"public fixture\r\n");
+            if changed {
+                fs::write(&tracked, content).unwrap();
+            }
+            if changed {
+                assert!(matches!(c.plan(c.id), Err("GIT_TRACKED_CHANGES")));
+                assert!(!c.destination().exists());
+                continue;
+            }
+            // The normal isolated comparison really sees a change: this
+            // ensures the new profile-specific comparison is exercised.
+            assert!(matches!(
+                validate_repo(&old.join("work"), &c.repos[0], true),
+                Err("GIT_TRACKED_CHANGES")
+            ));
+            c.plan(c.id).unwrap();
+            let dest = c.destination().join("files");
+            fs::rename(old, &dest).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(fs::read(dest.join("work/source.txt")).unwrap(), content);
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn board_receipt_pins_original_identity_and_rejects_recomputed_tampering() {
+        let production = Config::production(BOARD_ID).unwrap();
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 2251799828682344))
+        );
+        assert_eq!(
+            production.repos[0].head,
+            "759f74fb8a1db87308feac491d982b18cde62382"
+        );
+        assert_eq!(
+            production.repos[0].saved_ref,
+            Some("refs/remotes/origin/main")
+        );
+        assert_eq!(
+            production.repos[0].saved_merge.as_deref(),
+            Some(production.repos[0].head.as_str())
+        );
+        assert!(Config::production("67feb7811b6d0a94c98465c784b64f46").is_err());
+        for field in [
+            "project",
+            "content",
+            "path",
+            "volume",
+            "file_id",
+            "created_at",
+        ] {
+            let c = fixture_for(BOARD_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "other-task".into(),
+                "content" => r.identity.content = "other-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                "created_at" => r.identity.created_at = "2026-10-09T18:04:44.1608254+09:00".into(),
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
+    }
+    #[test]
+    fn board_published_integration_can_precede_main_and_preserves_all_bytes() {
+        let c = fixture_for(BOARD_ID);
+        let old = source(&c);
+        let work = old.join("work");
+        let refs = git(&work, &["show-ref"]).unwrap();
+        assert_ne!(
+            git(&work, &["rev-parse", "refs/remotes/origin/main"]).unwrap(),
+            c.repos[0].head
+        );
+        fs::write(old.join("verification.log"), b"saved board evidence\n").unwrap();
+        c.plan(c.id).unwrap();
+        let ticket = fs::read(c.ticket_path()).unwrap();
+        let nodes = scan(&old, &c.repos).unwrap();
+        let hashes = file_digests(&old, &nodes).unwrap();
+        let dest = c.destination().join("files");
+        fs::rename(&old, &dest).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(!old.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert_eq!(
+            file_digests(&dest, &scan(&dest, &c.repos).unwrap()).unwrap(),
+            hashes
+        );
+        assert_eq!(fs::read(c.ticket_path()).unwrap(), ticket);
+        assert_eq!(git(&dest.join("work"), &["show-ref"]).unwrap(), refs);
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            unreachable!()
+        };
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &dest.join("work/.git")
+        ));
+    }
+    #[test]
+    fn board_rejects_missing_or_unrelated_main_dirty_worktree_and_grafts() {
+        for failure in ["missing-main", "unrelated-main", "dirty", "grafts"] {
+            let c = fixture_for(BOARD_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "missing-main" => {
+                    git(&work, &["update-ref", "-d", "refs/remotes/origin/main"]).unwrap();
+                }
+                "unrelated-main" => {
+                    let tree = format!("{}^{{tree}}", c.repos[0].head);
+                    let unrelated = git(
+                        &work,
+                        &[
+                            "-c",
+                            "user.name=Fixture",
+                            "-c",
+                            "user.email=fixture@example.invalid",
+                            "commit-tree",
+                            &tree,
+                            "-m",
+                            "unrelated main",
+                        ],
+                    )
+                    .unwrap();
+                    git(
+                        &work,
+                        &["update-ref", "refs/remotes/origin/main", &unrelated],
+                    )
+                    .unwrap();
+                }
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "grafts" => {
+                    let RepoKind::Linked { common, .. } = &c.repos[0].kind else {
+                        unreachable!()
+                    };
+                    fs::write(common.join("info/grafts"), format!("{}\n", c.repos[0].head))
+                        .unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn board_content_proof_rejects_changes_that_restore_size_and_time() {
+        let c = fixture_for(BOARD_ID);
+        let old = source(&c);
+        let log = old.join("verification.log");
+        fs::write(&log, b"first evidence").unwrap();
+        let stamp = fs::metadata(&log).unwrap().modified().unwrap();
+        c.plan(c.id).unwrap();
+        let dest = c.destination().join("files");
+        fs::rename(old, &dest).unwrap();
+        let log = dest.join("verification.log");
+        fs::write(&log, b"other evidence").unwrap();
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&log)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+        assert!(matches!(c.finish(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn reboot_renewal_resumes_every_publication_boundary_and_preserves_archives() {
+        for stage in ["ticket", "reason", "staging", "published", "complete"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            let reason = c.destination().join("理由.txt");
+            let old_reason = fs::read(&reason).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            let mut replacement: Ticket = serde_json::from_slice(&old).unwrap();
+            replacement.nodes = c
+                .validate(&c.load(c.id).unwrap(), &source(&c), true)
+                .unwrap();
+            let bytes = serde_json::to_vec_pretty(&replacement).unwrap();
+            fs::rename(c.ticket_path(), &archived).unwrap();
+            if stage != "ticket" {
+                fs::rename(&reason, &archived_reason).unwrap();
+            }
+            let unpublished = c.ticket_path().with_extension("proof-writing-interrupted");
+            if stage == "staging" {
+                write_new(&unpublished, b"partial unpublished record").unwrap();
+            }
+            if matches!(stage, "published" | "complete") {
+                publish_proof(&c.ticket_path(), &bytes).unwrap();
+            }
+            if stage == "complete" {
+                c.plan(c.id).unwrap();
+            }
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            assert_eq!(fs::read(&archived).unwrap(), old, "{stage}");
+            assert_eq!(fs::read(&archived_reason).unwrap(), old_reason, "{stage}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), bytes, "{stage}");
+            if stage == "staging" {
+                assert_eq!(
+                    fs::read(unpublished).unwrap(),
+                    b"partial unpublished record"
+                );
+            }
+            fs::rename(source(&c), c.destination().join("files")).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn reboot_renewal_rejects_changed_archives_and_published_replacement() {
+        for change in ["archive", "reason", "new-ticket", "reason-link"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            c.renew_reboot_preflight(c.id, &hash).unwrap();
+            let archived = c.ticket_path().with_extension("pre-final-report.json");
+            let archived_reason = c
+                .destination()
+                .with_extension("pre-final-report.reason.txt");
+            match change {
+                "archive" => fs::write(&archived, b"{}").unwrap(),
+                "reason" => fs::write(&archived_reason, b"changed").unwrap(),
+                "new-ticket" => fs::write(c.ticket_path(), b"{}").unwrap(),
+                "reason-link" => {
+                    fs::hard_link(&archived_reason, c.destination().join("alias")).unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let before = fs::read(&archived).unwrap();
+            let reason_before = fs::read(&archived_reason).unwrap();
+            let ticket_before = fs::read(c.ticket_path()).unwrap();
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(&archived).unwrap(), before);
+            assert_eq!(fs::read(&archived_reason).unwrap(), reason_before);
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), ticket_before);
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_final_report_renewal_preserves_old_intent_and_moves_only_after_validation() {
+        let c = fixture_for(REBOOT_ID);
+        c.plan(c.id).unwrap();
+        let old = fs::read(c.ticket_path()).unwrap();
+        fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+        assert!(matches!(c.plan(c.id), Err("RECOVERY_RECORD_CHANGED")));
+        let hash = format!("{:x}", Sha256::digest(b"final public report"));
+        c.renew_reboot_preflight(c.id, &hash).unwrap();
+        assert_eq!(
+            fs::read(c.ticket_path().with_extension("pre-final-report.json")).unwrap(),
+            old
+        );
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        assert!(matches!(
+            c.renew_reboot_preflight(c.id, &hash),
+            Err("MOVEMENT_ALREADY_STARTED")
+        ));
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn reboot_renewal_rejects_any_other_artifact_or_modified_original() {
+        for change in ["wrong-report", "extra-artifact", "modified-original"] {
+            let c = fixture_for(REBOOT_ID);
+            c.plan(c.id).unwrap();
+            let old = fs::read(c.ticket_path()).unwrap();
+            fs::write(source(&c).join("pr-body-final.txt"), b"final public report").unwrap();
+            match change {
+                "wrong-report" => {
+                    fs::write(source(&c).join("pr-body-final.txt"), b"unexpected").unwrap()
+                }
+                "extra-artifact" => {
+                    fs::write(source(&c).join("unrelated.txt"), b"different").unwrap()
+                }
+                "modified-original" => {
+                    fs::write(source(&c).join("work/source.txt"), b"changed").unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let hash = format!("{:x}", Sha256::digest(b"final public report"));
+            assert!(c.renew_reboot_preflight(c.id, &hash).is_err(), "{change}");
+            assert_eq!(fs::read(c.ticket_path()).unwrap(), old);
+            assert!(
+                !c.ticket_path()
+                    .with_extension("pre-final-report.json")
+                    .exists()
+            );
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn adaptive_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = Config::production(ADAPTIVE_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "adaptive-concurrency");
+        assert_eq!(config.pinned_identity, Some((2229119083, 6473924479268101)));
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "0ac365ab478efa36206c968400e48ac5150abf1b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/adaptive-account-windows")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(config.repos[0].saved_merge.is_none());
+        match &config.repos[0].kind {
+            RepoKind::Linked { admin, common } => {
+                assert_eq!(
+                    admin,
+                    Path::new("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git/worktrees/work7")
+                );
+                assert_eq!(
+                    common,
+                    Path::new("D:/CC/Worktrees/cc-pc-tools-rs-chatgpt-web/.git")
+                );
+            }
+            _ => panic!("expected linked worktree"),
+        }
+        assert!(Config::production("b6ef1394c70c4f11ee5ac370ad82886f").is_err());
+    }
+    #[test]
+    fn adaptive_profile_preserves_build_hardlinks_refs_and_repairs_its_backlink() {
+        let c = fixture_for(ADAPTIVE_ID);
+        let source_root = source(&c);
+        fs::create_dir(source_root.join("target")).unwrap();
+        let artifact = source_root.join("target/test.exe");
+        fs::write(&artifact, b"preserved adaptive build").unwrap();
+        fs::hard_link(&artifact, source_root.join("target/test-copy.exe")).unwrap();
+        let (admin, common) = match &c.repos[0].kind {
+            RepoKind::Linked { admin, common } => (admin, common),
+            _ => unreachable!(),
+        };
+        let refs = git(common.parent().unwrap(), &["show-ref"]).unwrap();
+        c.plan(c.id).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(&source_root, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!source_root.exists());
+        assert_eq!(
+            fs::read(destination.join("target/test.exe")).unwrap(),
+            b"preserved adaptive build"
+        );
+        assert_eq!(node(&destination.join("target/test.exe")).unwrap().links, 2);
+        assert_eq!(git(common.parent().unwrap(), &["show-ref"]).unwrap(), refs);
+        assert!(same(
+            Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+            &destination.join("work/.git")
+        ));
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+    }
+    #[test]
+    fn adaptive_profile_rejects_dirty_unpushed_and_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(ADAPTIVE_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut receipt = c.load(c.id).unwrap();
+                    receipt.identity.file_id += 1;
+                    receipt.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&receipt.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&receipt).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
+    #[test]
+    fn reboot_quarantine_is_bound_to_its_original_receipt_and_pushed_worktree() {
+        let config = super::Config::production(super::REBOOT_ID).unwrap();
+        assert_eq!(config.project, "cc-jobs");
+        assert_eq!(config.content, "reboot-recovery");
+        assert_eq!(
+            config.pinned_identity,
+            Some((2229119083, 13229323920896790))
+        );
+        assert_eq!(config.repos.len(), 1);
+        assert_eq!(config.repos[0].name, "work");
+        assert_eq!(
+            config.repos[0].head,
+            "fa80a74f15b50c0ba0cf3865a19da53e2c23a00b"
+        );
+        assert_eq!(
+            config.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/reboot-job-recovery")
+        );
+        assert!(config.repos[0].allowed_untracked.is_empty());
+        assert!(super::Config::production("464577ad28cdf40461bb04a301f7e8e8").is_err());
+    }
+    #[test]
+    fn reboot_profile_moves_its_worktree_without_losing_git_or_receipt_identity() {
+        let c = fixture_for(REBOOT_ID);
+        let plan = c.plan(c.id).unwrap();
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        let old = source(&c);
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            git(&destination.join("work"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        assert!(!old.exists());
+    }
+    #[test]
+    fn reboot_profile_rejects_dirty_unpushed_or_substituted_receipts() {
+        for failure in ["dirty", "missing-pushed-ref", "wrong-file-id"] {
+            let c = fixture_for(REBOOT_ID);
+            let work = source(&c).join("work");
+            match failure {
+                "dirty" => fs::write(work.join("source.txt"), b"unsaved change").unwrap(),
+                "missing-pushed-ref" => {
+                    git(&work, &["update-ref", "-d", c.repos[0].saved_ref.unwrap()]).unwrap();
+                }
+                "wrong-file-id" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.file_id += 1;
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(source(&c).exists());
+        }
+    }
     use super::*;
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
     mod fixed_receipts;
+    #[test]
+    fn cc_ask_cleanup_pins_one_receipt_clone_and_preserves_generic_limit() {
+        let c = Config::production(unslop::CC_ASK).unwrap();
+        assert_eq!(LIMIT, 10000);
+        assert_eq!(c.id, "3d50e5d7c49761d809521892cfe84937");
+        assert_eq!(c.project, "cc-ask");
+        assert_eq!(c.content, "todo2341-resume-notes");
+        assert_eq!(c.pinned_identity, Some((2229119083, 9851624198224777)));
+        assert_eq!(c.repos.len(), 1);
+        assert_eq!(c.repos[0].name, "repo");
+        assert_eq!(c.repos[0].head, "d2e2724d9760675a4ec590950804b7ba021d3432");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/fix/todo2341-recovery-probe-queue")
+        );
+        assert!(Config::production("3d50e5d7c49761d809521892cfe84938").is_err());
+    }
+    #[test]
+    fn cc_ask_cleanup_preserves_large_clone_contents_and_owned_receipt() {
+        let c = fixture_for(unslop::CC_ASK);
+        let old = source(&c);
+        let generated = old.join("generated");
+        fs::create_dir(&generated).unwrap();
+        for n in 0..10005 {
+            fs::write(generated.join(format!("file-{n}")), b"saved").unwrap();
+        }
+        assert!(matches!(scan(&old, &c.repos), Err("ENTRY_LIMIT_EXCEEDED")));
+        let plan = c.plan(c.id).unwrap();
+        assert!(plan["entries"].as_u64().unwrap() > 10000);
+        assert_eq!(plan["action"], "submit_quarantine_to_exec_tool");
+        assert_eq!(c.plan(c.id).unwrap(), plan);
+        let ticket = fs::read(unslop::ticket_path(&c)).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(&old, &destination).unwrap();
+        c.finish(c.id).unwrap();
+        c.finish(c.id).unwrap();
+        assert!(!old.exists());
+        assert_eq!(
+            fs::read(destination.join("generated/file-10004")).unwrap(),
+            b"saved"
+        );
+        assert_eq!(
+            git(&destination.join("repo"), &["rev-parse", "HEAD"]).unwrap(),
+            c.repos[0].head
+        );
+        assert_eq!(fs::read(unslop::ticket_path(&c)).unwrap(), ticket);
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+    }
+    #[test]
+    fn cc_ask_cleanup_rejects_birth_dirty_missing_ref_extra_git_and_external_alias() {
+        for failure in ["birth", "dirty", "ref", "extra-git", "alias"] {
+            let c = fixture_for(unslop::CC_ASK);
+            let old = source(&c);
+            match failure {
+                "birth" => {
+                    let mut r = c.load(c.id).unwrap();
+                    r.identity.created_at = "different creation".into();
+                    r.integrity = format!(
+                        "{:x}",
+                        Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+                    );
+                    fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+                }
+                "dirty" => fs::write(old.join("repo/source.txt"), b"unsaved").unwrap(),
+                "ref" => {
+                    git(
+                        &old.join("repo"),
+                        &["update-ref", "-d", c.repos[0].saved_ref.unwrap()],
+                    )
+                    .unwrap();
+                }
+                "extra-git" => fs::create_dir(old.join(".git")).unwrap(),
+                "alias" => {
+                    let outside = c.temp.join("outside-file");
+                    fs::write(&outside, b"other task").unwrap();
+                    fs::hard_link(&outside, old.join("shared-name")).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(c.plan(c.id).is_err(), "{failure}");
+            assert!(!c.destination().exists());
+            assert!(old.exists());
+        }
+    }
+    #[test]
+    fn cc_ask_cleanup_detects_content_change_even_when_size_and_time_are_restored() {
+        let c = fixture_for(unslop::CC_ASK);
+        let old = source(&c);
+        let log = old.join("saved.log");
+        fs::write(&log, b"first").unwrap();
+        let stamp = fs::metadata(&log).unwrap().modified().unwrap();
+        c.plan(c.id).unwrap();
+        let destination = c.destination().join("files");
+        fs::rename(old, &destination).unwrap();
+        let log = destination.join("saved.log");
+        fs::write(&log, b"other").unwrap();
+        OpenOptions::new()
+            .write(true)
+            .open(&log)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(stamp))
+            .unwrap();
+        assert!(matches!(c.finish(c.id), Err("CONTENT_CHANGED_AFTER_PLAN")));
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn unslop_profiles_pin_four_original_identities_and_the_saved_worktree() {
+        let expected = [
+            (unslop::BUILD, 1215965535, 8162774328342697),
+            (unslop::CORE, 2229119083, 3377699730734494),
+            (unslop::MEASUREMENT, 2229119083, 25895697868367764),
+            (unslop::INTEGRATION, 2229119083, 2533274803590816),
+        ];
+        for (id, volume, file_id) in expected {
+            let c = Config::production(id).unwrap();
+            assert_eq!(c.pinned_identity, Some((volume, file_id)));
+            assert!(!c.project_alias_preservation_enabled);
+        }
+        let c = Config::production(unslop::BUILD).unwrap();
+        assert_eq!(c.temp, PathBuf::from("D:/CC/Apps/GoDD-Unslop"));
+        assert_eq!(c.quarantine, PathBuf::from("D:/削除希望"));
+        let c = Config::production(unslop::INTEGRATION).unwrap();
+        assert_eq!(c.repos[0].head, "0621aac55a3035ab473cb2f7b49887a5a0925d6c");
+        assert_eq!(
+            c.repos[0].saved_ref,
+            Some("refs/remotes/origin/codex/todo1931-unslop-20261006")
+        );
+        assert!(Config::production("ef300280dcb8c0e08fcb9be1318565ee").is_err());
+    }
+    #[test]
+    fn unslop_large_metadata_envelope_is_readable_only_for_the_fixed_integration() {
+        let c = fixture_for(unslop::INTEGRATION);
+        let large = c.temp.join("metadata-envelope.json");
+        let bytes = vec![b' '; 9 * 1024 * 1024];
+        fs::write(&large, &bytes).unwrap();
+        assert_eq!(
+            read_record(&large, unslop::record_limit(&c)).unwrap(),
+            bytes
+        );
+        for id in [unslop::BUILD, unslop::CORE, unslop::MEASUREMENT] {
+            let other = Config::production(id).unwrap();
+            assert!(read_record(&large, unslop::record_limit(&other)).is_err());
+        }
+        let too_large = c.temp.join("oversize-envelope.json");
+        fs::write(&too_large, vec![b' '; 16 * 1024 * 1024 + 1]).unwrap();
+        assert!(read_record(&too_large, unslop::record_limit(&c)).is_err());
+    }
+    fn unslop_move(c: &Config) {
+        fs::rename(source(c), c.destination().join("files")).unwrap();
+    }
+    fn unslop_registry_fixture() -> Fixture {
+        let c = fixture_for(unslop::MEASUREMENT);
+        let registry = c.temp.join("registry-target");
+        fs::create_dir(&registry).unwrap();
+        fs::write(registry.join("sentinel"), b"owned fixture target").unwrap();
+        for name in [
+            "measurement-63628-1791287330489098600",
+            "measurement-80712-1791286803451627800",
+        ] {
+            let parent = source(&c).join("measurement").join(name).join("cargo-home");
+            fs::create_dir_all(&parent).unwrap();
+            std::os::windows::fs::symlink_dir(&registry, parent.join("registry")).unwrap();
+        }
+        c
+    }
+    #[test]
+    fn unslop_build_internal_hardlinks_and_repeat_finish_preserve_the_same_files() {
+        for id in [unslop::BUILD, unslop::CORE] {
+            let c = fixture_for(id);
+            let target = source(&c).join("target");
+            fs::create_dir(&target).unwrap();
+            fs::write(target.join("binary"), b"retired build").unwrap();
+            fs::hard_link(target.join("binary"), target.join("alias")).unwrap();
+            let before = node(&target.join("binary")).unwrap();
+            let plan = c.plan(id).unwrap();
+            assert_eq!(plan, c.plan(id).unwrap());
+            unslop_move(&c);
+            let done = c.finish(id).unwrap();
+            assert_eq!(done, c.finish(id).unwrap());
+            assert_eq!(
+                before,
+                node(&c.destination().join("files/target/binary")).unwrap()
+            );
+            assert_eq!(c.load(id).unwrap().state, "quarantined");
+        }
+    }
+    #[test]
+    fn unslop_external_build_alias_is_rejected_before_preparing_any_destination() {
+        let c = fixture_for(unslop::CORE);
+        fs::write(source(&c).join("binary"), b"fixture").unwrap();
+        fs::hard_link(source(&c).join("binary"), c.temp.join("external-alias")).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "EXTERNAL_HARD_LINK");
+        assert!(!c.destination().exists());
+        assert!(source(&c).exists());
+    }
+    #[test]
+    fn unslop_registry_links_are_preserved_without_mutating_the_owned_mock_target() {
+        let c = unslop_registry_fixture();
+        let sentinel = c.temp.join("registry-target/sentinel");
+        let before = node(&sentinel).unwrap();
+        assert_eq!(unslop::inspect(&c, c.id).unwrap()["links"], 2);
+        assert!(!c.ticket_path().with_extension("unslop.json").exists());
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(node(&sentinel).unwrap(), before);
+        assert_eq!(fs::read(&sentinel).unwrap(), b"owned fixture target");
+    }
+    #[test]
+    fn unslop_registry_link_retargeting_is_rejected_before_move() {
+        let c = unslop_registry_fixture();
+        let link = source(&c)
+            .join("measurement/measurement-63628-1791287330489098600/cargo-home/registry");
+        fs::remove_dir(&link).unwrap();
+        std::os::windows::fs::symlink_dir(&c.temp, &link).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "REGISTRY_LINK_CHANGED");
+        assert!(!c.destination().exists());
+    }
+    fn unslop_junction_fixture() -> Fixture {
+        let c = fixture_for(unslop::INTEGRATION);
+        // Match the real repository's ignored installed dependencies. The
+        // fixture still rejects untracked sources outside node_modules.
+        if let RepoKind::Linked { common, .. } = &c.repos[0].kind {
+            fs::write(
+                common.join("info/exclude"),
+                b"godd-mcp-alpha/node_modules/\n",
+            )
+            .unwrap();
+        }
+        let target =
+            source(&c).join("worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("index.js"), b"owned fixture package").unwrap();
+        fs::hard_link(target.join("index.js"), c.temp.join("package-store-alias")).unwrap();
+        let junction = source(&c).join("worktree/godd-mcp-alpha/node_modules/pkg");
+        let junction_arg = junction.to_string_lossy().replace('/', "\\");
+        let target_arg = target.to_string_lossy().replace('/', "\\");
+        hidden(
+            Path::new("cmd.exe"),
+            &[
+                OsStr::new("/C"),
+                OsStr::new("mklink"),
+                OsStr::new("/J"),
+                OsStr::new(&junction_arg),
+                OsStr::new(&target_arg),
+            ],
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn unslop_pnpm_junction_shared_files_and_git_backlink_survive_archival() {
+        let c = unslop_junction_fixture();
+        let link = source(&c).join("worktree/godd-mcp-alpha/node_modules/pkg");
+        let raw = scoopa::raw_reparse(&link).unwrap();
+        let outside = c.temp.join("package-store-alias");
+        let outside_node = node(&outside).unwrap();
+        assert_eq!(unslop::inspect(&c, c.id).unwrap()["links"], 1);
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            raw,
+            scoopa::raw_reparse(
+                &c.destination()
+                    .join("files/worktree/godd-mcp-alpha/node_modules/pkg")
+            )
+            .unwrap()
+        );
+        assert_eq!(outside_node, node(&outside).unwrap());
+        assert_eq!(
+            git(
+                &c.destination().join("files/worktree"),
+                &["rev-parse", "HEAD"]
+            )
+            .unwrap(),
+            c.repos[0].head
+        );
+        if let RepoKind::Linked { admin, .. } = &c.repos[0].kind {
+            assert!(same(
+                Path::new(&bounded_text(&admin.join("gitdir")).unwrap()),
+                &c.destination().join("files/worktree/.git")
+            ));
+        }
+    }
+    #[test]
+    fn unslop_external_pnpm_alias_count_can_change_without_losing_owned_names() {
+        let c = unslop_junction_fixture();
+        c.plan(c.id).unwrap();
+        let package = source(&c)
+            .join("worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg/index.js");
+        fs::hard_link(&package, c.temp.join("another-external-alias")).unwrap();
+        let before = node(&package).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            before,
+            node(&c.destination().join(
+                "files/worktree/godd-mcp-alpha/node_modules/.pnpm/pkg/node_modules/pkg/index.js"
+            ))
+            .unwrap()
+        );
+        assert!(c.temp.join("another-external-alias").exists());
+    }
+    #[test]
+    fn unslop_dirty_worktree_and_additional_git_are_rejected() {
+        let c = fixture_for(unslop::INTEGRATION);
+        fs::write(source(&c).join("worktree/source.txt"), b"unsaved change").unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "GIT_TRACKED_CHANGES");
+        let c = fixture_for(unslop::BUILD);
+        fs::create_dir(source(&c).join(".git")).unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "UNDECLARED_GIT_METADATA");
+    }
+    fn unslop_submodule_fixture() -> Fixture {
+        let mut c = fixture_for(unslop::INTEGRATION);
+        let seed = c.temp.join("site-seed");
+        fs::create_dir(&seed).unwrap();
+        git(&seed, &["init", "-b", "main"]).unwrap();
+        git(&seed, &["config", "user.name", "fixture"]).unwrap();
+        git(&seed, &["config", "user.email", "fixture@example.invalid"]).unwrap();
+        fs::write(seed.join("source.txt"), b"owned submodule fixture").unwrap();
+        git(&seed, &["add", "source.txt"]).unwrap();
+        git(&seed, &["commit", "-m", "fixture"]).unwrap();
+        let work = source(&c).join("worktree");
+        // Build the same independent module metadata layout as the archived
+        // source. Modern `submodule add` in a linked fixture may instead share
+        // objects through an extra commondir, which is intentionally rejected.
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let module = admin.join("modules/officialsite");
+        fs::create_dir_all(module.parent().unwrap()).unwrap();
+        let site = work.join("officialsite");
+        git(
+            &work,
+            &[
+                "clone",
+                "--no-hardlinks",
+                "--separate-git-dir",
+                module.to_str().unwrap(),
+                seed.to_str().unwrap(),
+                site.to_str().unwrap(),
+            ],
+        )
+        .unwrap();
+        let pointer = format!(
+            "gitdir: {}{}\n",
+            "../".repeat(site.strip_prefix(&c.temp).unwrap().components().count()),
+            module.strip_prefix(&c.temp).unwrap().display()
+        );
+        fs::write(site.join(".git"), pointer).unwrap();
+        git(
+            &work,
+            &[
+                "config",
+                "--file",
+                ".gitmodules",
+                "submodule.officialsite.path",
+                "officialsite",
+            ],
+        )
+        .unwrap();
+        git(
+            &work,
+            &[
+                "config",
+                "--file",
+                ".gitmodules",
+                "submodule.officialsite.url",
+                seed.to_str().unwrap(),
+            ],
+        )
+        .unwrap();
+        git(&work, &["add", ".gitmodules", "officialsite"]).unwrap();
+        git(
+            &work,
+            &[
+                "-c",
+                "user.name=fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "-m",
+                "owned submodule fixture",
+            ],
+        )
+        .unwrap();
+        c.repos[0].head = git(&work, &["rev-parse", "HEAD"]).unwrap();
+        git(
+            &work,
+            &[
+                "update-ref",
+                c.repos[0].saved_ref.unwrap(),
+                &c.repos[0].head,
+            ],
+        )
+        .unwrap();
+        c
+    }
+    #[test]
+    fn unslop_fixed_submodule_is_archived_verbatim_and_unsaved_changes_are_rejected() {
+        let c = unslop_submodule_fixture();
+        let pointer = fs::read(source(&c).join("worktree/officialsite/.git")).unwrap();
+        let before = node(&source(&c).join("worktree/officialsite/source.txt")).unwrap();
+        c.plan(c.id).unwrap();
+        unslop_move(&c);
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            pointer,
+            fs::read(c.destination().join("files/worktree/officialsite/.git")).unwrap()
+        );
+        assert_eq!(
+            before,
+            node(
+                &c.destination()
+                    .join("files/worktree/officialsite/source.txt")
+            )
+            .unwrap()
+        );
+        let c = unslop_submodule_fixture();
+        fs::write(
+            source(&c).join("worktree/officialsite/source.txt"),
+            b"unsaved submodule",
+        )
+        .unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "SUBMODULE_UNSAVED_CHANGES");
+        assert!(!c.destination().exists());
+    }
+    #[test]
+    fn unslop_backlink_acl_difference_is_rejected_before_movement() {
+        let c = fixture_for(unslop::INTEGRATION);
+        c.prepare_backlink(&source(&c), &c.destination().join("files"))
+            .unwrap();
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let replacement = admin.join("gitdir.todo2052-repair");
+        hidden(
+            Path::new("icacls.exe"),
+            &[replacement.as_os_str(), OsStr::new("/inheritance:d")],
+        )
+        .unwrap();
+        assert_eq!(c.plan(c.id).unwrap_err(), "BACKLINK_SECURITY_MISMATCH");
+        assert!(source(&c).exists());
+        assert!(!c.destination().exists());
+    }
+    #[test]
+    fn unslop_late_replacement_acl_change_cannot_commit_the_git_backlink() {
+        let c = fixture_for(unslop::INTEGRATION);
+        c.plan(c.id).unwrap();
+        let RepoKind::Linked { admin, .. } = &c.repos[0].kind else {
+            panic!("fixture kind");
+        };
+        let old = bounded_text(&admin.join("gitdir")).unwrap();
+        let replacement = admin.join("gitdir.todo2052-repair");
+        hidden(
+            Path::new("icacls.exe"),
+            &[replacement.as_os_str(), OsStr::new("/inheritance:d")],
+        )
+        .unwrap();
+        unslop_move(&c);
+        assert_eq!(c.finish(c.id).unwrap_err(), "BACKLINK_SECURITY_MISMATCH");
+        assert_eq!(old, bounded_text(&admin.join("gitdir")).unwrap());
+        assert!(replacement.exists());
+        assert_eq!(c.load(c.id).unwrap().state, "owned");
+    }
+    #[test]
+    fn unslop_changed_file_and_missing_proof_never_mark_the_receipt_complete() {
+        for failure in ["file", "proof"] {
+            let c = fixture_for(unslop::CORE);
+            fs::write(source(&c).join("binary"), b"original").unwrap();
+            c.plan(c.id).unwrap();
+            unslop_move(&c);
+            if failure == "file" {
+                fs::write(c.destination().join("files/binary"), b"changed bytes").unwrap();
+            } else {
+                fs::remove_file(
+                    c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256"),
+                )
+                .unwrap();
+            }
+            assert!(c.finish(c.id).is_err(), "{failure}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+            if failure == "proof" {
+                assert!(
+                    !c.ticket_path()
+                        .with_extension("unslop.json")
+                        .with_extension("sha256")
+                        .exists()
+                );
+            }
+        }
+    }
     struct Fixture {
         config: Config,
         base: PathBuf,
@@ -1472,29 +3532,41 @@ mod tests {
                 fs::write(path.join("refs/fixture-private-name"), b"opaque fixture\n").unwrap();
                 continue;
             }
-            let seed = if matches!(repo.kind, RepoKind::Linked { .. }) {
+            let internal = c.id == INTERNAL_2184_ID && matches!(repo.kind, RepoKind::Linked { .. });
+            let seed = if internal {
+                target.join("repo")
+            } else if matches!(repo.kind, RepoKind::Linked { .. }) {
                 base.join("common")
             } else {
                 path.clone()
             };
-            fs::create_dir(&seed).unwrap();
-            seed_repo(&seed, repo);
+            if internal {
+                repo.head = git(&seed, &["rev-parse", "HEAD"]).unwrap();
+                git(&seed, &["update-ref", repo.saved_ref.unwrap(), &repo.head]).unwrap();
+            } else {
+                fs::create_dir(&seed).unwrap();
+                seed_repo(&seed, repo);
+            }
             if matches!(repo.kind, RepoKind::Linked { .. }) {
-                git(
-                    &seed,
-                    &[
-                        "worktree",
-                        "add",
-                        "-b",
-                        "fixture-linked",
-                        path.to_str().unwrap(),
-                    ],
-                )
-                .unwrap();
+                let mut add = Vec::new();
+                if c.id == BOARD_ID {
+                    add.extend(["-c", "core.autocrlf=true"]);
+                }
+                add.extend([
+                    "worktree",
+                    "add",
+                    "-b",
+                    "fixture-linked",
+                    path.to_str().unwrap(),
+                ]);
+                git(&seed, &add).unwrap();
                 repo.kind = RepoKind::Linked {
                     admin: seed.join(".git/worktrees").join(repo.name),
                     common: seed.join(".git"),
                 };
+            }
+            if c.id == BOARD_ID {
+                repo.saved_merge = Some(repo.head.clone());
             }
         }
         let n = node(&target).unwrap();
@@ -1508,7 +3580,22 @@ mod tests {
             path: target.to_string_lossy().into_owned(),
             volume: n.volume,
             file_id: n.file_id,
-            created_at: "2026-10-08T15:34:13.325996+09:00".into(),
+            created_at: if c.id == INTERNAL_2184_ID {
+                "2026-10-10T00:39:58.8390892+09:00"
+            } else if c.id == BOARD_ID {
+                BOARD_CREATED
+            } else if c.id == CHROME_ID {
+                CHROME_CREATED
+            } else if c.id == DECISION_ID {
+                DECISION_CREATED
+            } else if c.id == unslop::CC_ASK {
+                unslop::CC_ASK_CREATED
+            } else if c.id == unslop::XB {
+                unslop::XB_CREATED
+            } else {
+                "2026-10-08T15:34:13.325996+09:00"
+            }
+            .into(),
             project: c.project.into(),
             content: c.content.into(),
         };
@@ -1557,6 +3644,27 @@ mod tests {
         }
         if repo.saved_merge.is_some() {
             let tree = format!("{}^{{tree}}", repo.head);
+            if repo.squash_tree.is_some() {
+                let tree_id = git(path, &["rev-parse", &tree]).unwrap();
+                let squash = git(
+                    path,
+                    &[
+                        "-c",
+                        "user.name=Fixture",
+                        "-c",
+                        "user.email=fixture@example.invalid",
+                        "commit-tree",
+                        &tree_id,
+                        "-m",
+                        "published squash fixture",
+                    ],
+                )
+                .unwrap();
+                git(path, &["update-ref", "refs/remotes/origin/main", &squash]).unwrap();
+                repo.saved_merge = Some(squash);
+                repo.squash_tree = Some(tree_id);
+                return;
+            }
             let merge = git(
                 path,
                 &[
@@ -1575,6 +3683,120 @@ mod tests {
             .unwrap();
             git(path, &["update-ref", "refs/remotes/origin/main", &merge]).unwrap();
             repo.saved_merge = Some(merge);
+        }
+    }
+    #[test]
+    fn queue_owned_internal_pair_moves_and_resumes_after_each_pointer_replacement() {
+        for replaced in 0..=2 {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            fs::write(root.join("verification.log"), b"saved evidence\n").unwrap();
+            for name in c.repos[0].allowed_untracked {
+                let path = root.join("repo").join(name);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, b"runtime evidence\n").unwrap();
+            }
+            let original = QUEUE_POINTERS.map(|name| fs::read(root.join(name)).unwrap());
+            c.plan(c.id).unwrap();
+            c.plan(c.id).unwrap();
+            let t: Ticket = serde_json::from_slice(&fs::read(c.ticket_path()).unwrap()).unwrap();
+            let record: InternalRepair =
+                serde_json::from_slice(&fs::read(c.internal_record_path()).unwrap()).unwrap();
+            for (i, bytes) in original.iter().enumerate() {
+                assert_eq!(record.pointers[i].original, *bytes);
+            }
+            let moved = c.destination().join("files");
+            fs::rename(&root, &moved).unwrap();
+            for (i, name) in QUEUE_POINTERS.iter().enumerate().take(replaced) {
+                fs::rename(c.internal_stage(i), moved.join(name)).unwrap();
+            }
+            c.finish(c.id).unwrap();
+            c.finish(c.id).unwrap();
+            assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+            assert_eq!(
+                fs::read(moved.join("verification.log")).unwrap(),
+                b"saved evidence\n"
+            );
+            for repo in &c.repos {
+                assert_eq!(
+                    git(&moved.join(repo.name), &["rev-parse", "HEAD"]).unwrap(),
+                    repo.head
+                );
+            }
+            assert_eq!(t.nodes.len(), scan(&moved, &c.repos).unwrap().len());
+        }
+    }
+    #[test]
+    fn queue_profile_rejects_other_worktrees_unsaved_and_unpushed_changes() {
+        for kind in [
+            "extra-worktree",
+            "tracked",
+            "untracked",
+            "ref",
+            "pointer",
+            "grafts",
+        ] {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            match kind {
+                "extra-worktree" => {
+                    fs::create_dir(root.join("repo/.git/worktrees/other")).unwrap();
+                }
+                "tracked" => fs::write(root.join("todo-note-tool/source.txt"), b"unsaved").unwrap(),
+                "untracked" => fs::write(root.join("repo/unpublished.rs"), b"unsaved").unwrap(),
+                "ref" => {
+                    git(
+                        &root.join("repo"),
+                        &["update-ref", "-d", c.repos[1].saved_ref.unwrap()],
+                    )
+                    .unwrap();
+                }
+                "pointer" => {
+                    fs::write(root.join(QUEUE_POINTERS[0]), b"gitdir: C:/outside\n").unwrap()
+                }
+                _ => fs::write(root.join("repo/.git/info/grafts"), b"replacement").unwrap(),
+            }
+            assert!(c.plan(c.id).is_err(), "{kind}");
+            assert!(!c.ticket_path().exists());
+            assert!(!c.destination().exists());
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
+        }
+    }
+    #[test]
+    fn queue_internal_finish_rejects_changed_content_pointer_and_record() {
+        for kind in ["content", "pointer", "stage", "record", "proof", "root"] {
+            let c = fixture_for(INTERNAL_2184_ID);
+            let root = source(&c);
+            let file = root.join("verification.log");
+            fs::write(&file, b"aaaa").unwrap();
+            c.plan(c.id).unwrap();
+            let moved = c.destination().join("files");
+            fs::rename(&root, &moved).unwrap();
+            match kind {
+                "content" => {
+                    let file = moved.join("verification.log");
+                    let stamp = fs::metadata(&file).unwrap().modified().unwrap();
+                    fs::write(&file, b"bbbb").unwrap();
+                    fs::File::options()
+                        .write(true)
+                        .open(file)
+                        .unwrap()
+                        .set_times(fs::FileTimes::new().set_modified(stamp))
+                        .unwrap();
+                }
+                "pointer" => {
+                    fs::write(moved.join(QUEUE_POINTERS[0]), b"gitdir: C:/outside\n").unwrap()
+                }
+                "stage" => fs::write(c.internal_stage(1), b"replacement").unwrap(),
+                "record" => fs::write(c.internal_record_path(), b"{}").unwrap(),
+                "proof" => fs::write(c.proof_path(), b"{}").unwrap(),
+                _ => {
+                    fs::rename(&moved, c.destination().join("kept")).unwrap();
+                    fs::create_dir(&moved).unwrap();
+                }
+            }
+            assert!(c.finish(c.id).is_err(), "{kind}");
+            assert_eq!(c.load(c.id).unwrap().state, "owned");
         }
     }
     fn source(c: &Config) -> PathBuf {
@@ -2175,6 +4397,57 @@ mod tests {
         );
         fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
         assert!(matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")));
+    }
+    #[test]
+    fn queue_cleanup_pins_original_identity_and_preserves_owned_clone() {
+        let production = Config::production(QUEUE_ID).unwrap();
+        assert_eq!(production.project, "cc-pc-tools-rs");
+        assert_eq!(production.content, "queue-loop-tier");
+        assert_eq!(
+            production.pinned_identity,
+            Some((2229119083, 23362423072822789))
+        );
+        assert_eq!(
+            production.repos[0].head,
+            "80c4bb370fce4e7645fafd8ac3eda1422168626b"
+        );
+        assert_eq!(
+            production.repos[0].saved_ref,
+            Some("refs/remotes/origin/feat/queue-loop-tier-1967")
+        );
+        let c = fixture_for(QUEUE_ID);
+        let before = scan(&source(&c), &c.repos).unwrap();
+        c.plan(c.id).unwrap();
+        fs::rename(source(&c), c.destination().join("files")).unwrap();
+        c.finish(c.id).unwrap();
+        assert_eq!(
+            before,
+            scan(&c.destination().join("files"), &c.repos).unwrap()
+        );
+        assert!(!source(&c).exists());
+        assert_eq!(c.load(c.id).unwrap().state, "quarantined");
+        for field in ["project", "content", "path", "volume", "file_id"] {
+            let c = fixture_for(QUEUE_ID);
+            let mut r = c.load(c.id).unwrap();
+            match field {
+                "project" => r.identity.project = "another-task".into(),
+                "content" => r.identity.content = "another-content".into(),
+                "path" => r.identity.path.push_str("-other"),
+                "volume" => r.identity.volume += 1,
+                "file_id" => r.identity.file_id += 1,
+                _ => unreachable!(),
+            }
+            r.integrity = format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&r.identity).unwrap())
+            );
+            fs::write(c.receipt_path(), serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(
+                matches!(c.plan(c.id), Err("RECEIPT_SCOPE_MISMATCH")),
+                "{field}"
+            );
+            assert!(!c.destination().exists());
+        }
     }
     #[test]
     fn cargo_receipt_scope_and_fixed_identity_reject_recomputed_tampering() {

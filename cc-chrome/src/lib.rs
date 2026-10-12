@@ -6,8 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub mod completion;
 pub mod guard;
 pub mod lifecycle;
+pub mod registrar;
 #[cfg(windows)]
 pub mod native;
 
@@ -173,15 +175,29 @@ pub struct Sweep {
     pub eligible: usize,
 }
 pub trait Closer {
+    /// Read-only proof; never claim or close a running worker's live tab.
+    fn absent(&mut self, _record: &Record) -> io::Result<bool> {
+        Ok(false)
+    }
     fn owner_running(&mut self, _job: &Value) -> Option<bool> {
         None
     }
-    /// True means closed, false means already gone or backend identity changed.
+    /// True means closed; false means absence was verified in the recorded browser.
     fn close(&mut self, record: &Record) -> io::Result<bool>;
 }
 pub fn sweep_with(
     jobs: &Path,
     only: Option<&str>,
+    now: i64,
+    dry_run: bool,
+    closer: &mut dyn Closer,
+) -> io::Result<Sweep> {
+    sweep_selected(jobs, only, None, now, dry_run, closer)
+}
+fn sweep_selected(
+    jobs: &Path,
+    only: Option<&str>,
+    selected: Option<&str>,
     now: i64,
     dry_run: bool,
     closer: &mut dyn Closer,
@@ -225,6 +241,11 @@ pub fn sweep_with(
                 if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
                     continue;
                 }
+                if selected
+                    .is_some_and(|id| entry.path().file_stem().and_then(|s| s.to_str()) != Some(id))
+                {
+                    continue;
+                }
                 let last = lifecycle::retry(&entry.path())
                     .map(|r| r.last_attempt)
                     .unwrap_or(0);
@@ -246,6 +267,18 @@ pub fn sweep_with(
         {
             Ok(v) if v.job == name => v,
             _ => {
+                result.failed += 1;
+                continue;
+            }
+        };
+        let (completed, completion_reason) = match completion::requested(&dir, &path, &record) {
+            Ok(Some((false, _))) => {
+                result.kept += 1;
+                continue;
+            }
+            Ok(Some((true, reason))) => (true, Some(reason)),
+            Ok(None) => (false, None),
+            Err(_) => {
                 result.failed += 1;
                 continue;
             }
@@ -282,7 +315,24 @@ pub fn sweep_with(
             .and_then(|j| j["started_at"].as_str())
             .and_then(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
             .is_some_and(|at| record.created < at.timestamp());
-        if !eligible(job.as_ref(), &record, now) && !abandoned && !idle && !previous_attempt {
+        let protected = !completed
+            && !eligible(job.as_ref(), &record, now)
+            && !abandoned
+            && !idle
+            && !previous_attempt;
+        let absent = if protected {
+            match closer.absent(&record) {
+                Ok(absent) => absent,
+                Err(e) => {
+                    result.failed += 1;
+                    lifecycle::failed(&path, now, &e);
+                    continue;
+                }
+            }
+        } else {
+            false
+        };
+        if protected && !absent {
             result.kept += 1;
             continue;
         }
@@ -290,7 +340,11 @@ pub fn sweep_with(
         if dry_run {
             continue;
         }
-        match closer.close(&record) {
+        match if absent {
+            Ok(false)
+        } else {
+            closer.close(&record)
+        } {
             Ok(closed) => {
                 if closed {
                     result.closed += 1;
@@ -300,7 +354,7 @@ pub fn sweep_with(
                 if lifecycle::atomic_json(
                     &dir.join("chrome-tab-history")
                         .join(path.file_name().unwrap()),
-                    &json!({"record":record,"at":now,"closed":closed}),
+                    &json!({"record":record,"at":now,"closed":closed,"completion_reason":completion_reason}),
                 )
                 .is_err()
                 {
@@ -324,14 +378,13 @@ pub fn sweep_with(
                         continue;
                     }
                 };
+                if completion::remove_request(&dir, &path).is_err() {
+                    result.failed += 1;
+                }
             }
             Err(e) => {
                 result.failed += 1;
-                let mut retry = lifecycle::retry(&path).unwrap_or_default();
-                retry.attempts = retry.attempts.saturating_add(1);
-                retry.last_attempt = now;
-                retry.kind = format!("{:?}", e.kind());
-                let _ = lifecycle::atomic_json(&lifecycle::retry_path(&path), &retry);
+                lifecycle::failed(&path, now, &e);
             }
         }
     }

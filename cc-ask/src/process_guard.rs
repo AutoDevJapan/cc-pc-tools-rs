@@ -39,7 +39,7 @@ mod platform {
                 )
             } == 0
             {
-                Err(error())
+                Err(format!("SetInformationJobObject: {}", error()))
             } else {
                 Ok(())
             }
@@ -47,14 +47,14 @@ mod platform {
         pub fn spawn(command: &mut Command) -> Result<(Child, Self)> {
             let handle = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
             if handle.is_null() {
-                return Err(error());
+                return Err(format!("CreateJobObjectW: {}", error()));
             }
             let group = Self(handle);
             group.limits(true)?;
             command.creation_flags(CREATE_NO_WINDOW | CREATE_SUSPENDED);
-            let mut child = command.spawn().map_err(|e| e.to_string())?;
+            let mut child = command.spawn().map_err(|e| format!("spawn suspended child: {e}"))?;
             if unsafe { AssignProcessToJobObject(handle, child.as_raw_handle() as _) } == 0 {
-                let reason = error();
+                let reason = format!("AssignProcessToJobObject: {}", error());
                 let _ = child.kill();
                 return Err(reason);
             }
@@ -80,7 +80,7 @@ mod platform {
     fn resume(pid: u32) -> Result<()> {
         let handle = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
         if handle == INVALID_HANDLE_VALUE {
-            return Err(error());
+            return Err(format!("CreateToolhelp32Snapshot: {}", error()));
         }
         struct Snapshot(HANDLE);
         impl Drop for Snapshot {
@@ -98,11 +98,11 @@ mod platform {
             if entry.th32OwnerProcessID == pid {
                 let thread = unsafe { OpenThread(THREAD_SUSPEND_RESUME, 0, entry.th32ThreadID) };
                 if thread.is_null() {
-                    return Err(error());
+                    return Err(format!("OpenThread for suspended child: {}", error()));
                 }
                 let count = unsafe { ResumeThread(thread) };
                 let result = if count == u32::MAX {
-                    Err(error())
+                    Err(format!("ResumeThread for suspended child: {}", error()))
                 } else {
                     Ok(())
                 };

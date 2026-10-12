@@ -3375,6 +3375,8 @@ impl cc_ask::core::Effects for AskFake {
     }
 }
 fn ask_context(root: &Path, fake: AskFake) -> cc_ask::core::Context {
+    // cc-ask no longer converts a missing ledger into a new empty store.
+    cc_ask::core::atomic_json(&root.join("state.json"), &json!({"questions":[]}), 2).unwrap();
     fs::write(root.join("client-projects.txt"), "").unwrap();
     cc_ask::core::Context {
         client_projects: root.join("client-projects.txt"),

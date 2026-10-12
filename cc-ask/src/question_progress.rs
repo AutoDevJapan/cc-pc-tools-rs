@@ -330,6 +330,7 @@ pub fn ask(
     body: &str,
     paths: &[std::path::PathBuf],
 ) -> Result<Value> {
+    crate::state_work::recovery_guard(ctx)?;
     let _guard = ByteLock::acquire(
         &ctx.here.join("question-progress.lock"),
         Duration::from_secs(60),

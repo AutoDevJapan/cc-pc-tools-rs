@@ -59,11 +59,21 @@ fn retry_after_state_save_failure_does_not_repeat_the_question_or_mention() {
     let mut h = Harness::new();
     let a = args(&h, "月額料金を決めてください。\na 1000円\nb 2000円");
     // state save fails after a real successful fake POST; creation ledger survives.
+    std::fs::rename(
+        h.root.path().join("state.json"),
+        h.root.path().join("state-before-failure.json"),
+    )
+    .unwrap();
     std::fs::create_dir(h.root.path().join("state.json")).unwrap();
     assert!(cmd_ask(&mut h.ctx, &a).is_err());
     // Initial legacy recovery reads state before POST, so remove this obstruction
     // and inject the failure precisely after posting via Effects below.
     std::fs::remove_dir(h.root.path().join("state.json")).unwrap();
+    std::fs::rename(
+        h.root.path().join("state-before-failure.json"),
+        h.root.path().join("state.json"),
+    )
+    .unwrap();
     h.ctx.effects = Box::new(FailAfterCreate {
         inner: SharedFake(h.fake.clone()),
         root: h.root.path().to_path_buf(),
@@ -73,6 +83,11 @@ fn retry_after_state_save_failure_does_not_repeat_the_question_or_mention() {
     assert!(cmd_ask(&mut h.ctx, &a).is_err());
     assert_eq!(thread_creates(&h).len(), 1);
     std::fs::remove_dir(h.root.path().join("state.json")).unwrap();
+    std::fs::rename(
+        h.root.path().join("state-before-failure.json"),
+        h.root.path().join("state.json"),
+    )
+    .unwrap();
     let result = cmd_ask(&mut h.ctx, &a).unwrap();
     assert_eq!(thread_creates(&h).len(), 2);
     assert_ne!(result["thread_id"], result["progress_thread_id"]);
@@ -197,6 +212,11 @@ fn periodic_recovery_finishes_a_saved_question_without_asking_again() {
     });
     assert!(cmd_ask(&mut h.ctx, &a).is_err());
     std::fs::remove_dir(h.root.path().join("state.json")).unwrap();
+    std::fs::rename(
+        h.root.path().join("state-before-failure.json"),
+        h.root.path().join("state.json"),
+    )
+    .unwrap();
     recover_pending(&mut h.ctx).unwrap();
     assert_eq!(thread_creates(&h).len(), 2);
     assert_eq!(h.state()["questions"].as_array().unwrap().len(), 1);
@@ -218,6 +238,11 @@ impl Effects for FailAfterCreate {
             self.done = true;
             match self.failure {
                 Failure::State => {
+                    std::fs::rename(
+                        self.root.join("state.json"),
+                        self.root.join("state-before-failure.json"),
+                    )
+                    .unwrap();
                     std::fs::create_dir(self.root.join("state.json")).unwrap();
                 }
                 Failure::Response => return Err("lost response".into()),

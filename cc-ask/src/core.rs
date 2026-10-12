@@ -124,16 +124,13 @@ impl Context {
     pub fn load_fresh(&self) -> Result<Value> {
         let p = self.here.join("state.json");
         match crate::question_store::read(&p) {
-            Ok(v) => Ok(v),
-            Err(crate::question_store::Error::Io(e))
-                if e.kind() == std::io::ErrorKind::NotFound =>
-            {
-                Ok(json!({"questions":[]}))
-            }
+            Ok(v) if v.is_object() && v["questions"].is_array() => Ok(v),
+            Ok(_) => Err("question_state_invalid_schema: original question ledger required".into()),
             Err(e) => Err(e.to_string()),
         }
     }
     pub fn save(&self, v: &Value) -> Result<()> {
+        crate::state_work::recovery_guard(self)?;
         if let Some(result) = crate::state_work::save(self, v) {
             return result;
         }
@@ -317,6 +314,14 @@ pub fn read_text_detail(p: &std::path::Path) -> Result<String> {
         .map_err(|e| format!("OSError: read {}: {e}", p.display()))
 }
 pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> {
+    if p.file_name().is_some_and(|name| name == "state.json")
+        && p.parent()
+            .is_some_and(|parent| parent.join("question-recovery-required.json").exists())
+    {
+        return Err(
+            "QuestionStateRecoveryRequired: original question ledger recovery pending".into(),
+        );
+    }
     let mut buf = Vec::new();
     let spaces = vec![b' '; indent];
     let fmt = serde_json::ser::PrettyFormatter::with_indent(&spaces);

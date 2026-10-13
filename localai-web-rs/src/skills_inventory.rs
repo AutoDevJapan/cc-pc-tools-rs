@@ -76,6 +76,23 @@ fn reparse(metadata: &fs::Metadata) -> bool {
     }
 }
 
+fn fingerprint(path: &Path) -> Option<Vec<u8>> {
+    let file = fs::File::open(path).ok()?;
+    let before = file.metadata().ok()?;
+    let mut bytes = Vec::new();
+    let mut reader = (&file).take(MAX_DEFINITION_BYTES + 1);
+    reader.read_to_end(&mut bytes).ok()?;
+    let after = file.metadata().ok()?;
+    if bytes.len() as u64 > MAX_DEFINITION_BYTES
+        || before.len() != bytes.len() as u64
+        || before.len() != after.len()
+        || before.modified().ok()? != after.modified().ok()?
+    {
+        return None;
+    }
+    Some(digest(&SHA256, &bytes).as_ref().to_vec())
+}
+
 fn scan(root: &Path, now: u64, budget: Duration) -> Value {
     let started = Instant::now();
     let mut hashes = HashSet::new();
@@ -86,6 +103,7 @@ fn scan(root: &Path, now: u64, budget: Duration) -> Value {
     let mut timed_out = false;
     let mut entry_limit = false;
     let mut root_read = false;
+    let canonical_root = fs::canonicalize(root).ok();
     let mut stack = vec![root.to_path_buf()];
     while let Some(directory) = stack.pop() {
         if started.elapsed() >= budget {
@@ -135,32 +153,69 @@ fn scan(root: &Path, now: u64, budget: Duration) -> Value {
                     continue;
                 }
             };
-            // Central definitions live here physically. Profile aliases and junctions
-            // are never another inventory root, including loops and outside targets.
-            if reparse(&metadata) {
-                excluded_entries += 1;
+            let definition = if reparse(&metadata) {
+                // A registered link to one definition is available too. Read only
+                // that SKILL.md; never recurse into linked profiles or outside trees.
+                let target = match fs::canonicalize(&path) {
+                    Ok(target) => target,
+                    Err(_) => {
+                        failures += 1;
+                        continue;
+                    }
+                };
+                if canonical_root
+                    .as_ref()
+                    .and_then(|root| target.strip_prefix(root).ok())
+                    .is_some_and(|relative| {
+                        relative
+                            .components()
+                            .any(|part| excluded(&part.as_os_str().to_string_lossy()))
+                    })
+                {
+                    excluded_entries += 1;
+                    continue;
+                }
+                let linked = match fs::metadata(&path) {
+                    Ok(metadata) if metadata.is_dir() => path.join("SKILL.md"),
+                    Ok(metadata) if metadata.is_file() && name.eq_ignore_ascii_case("SKILL.md") => {
+                        path
+                    }
+                    Ok(_) => {
+                        excluded_entries += 1;
+                        continue;
+                    }
+                    Err(_) => {
+                        failures += 1;
+                        continue;
+                    }
+                };
+                match fs::metadata(&linked) {
+                    Ok(metadata) if metadata.is_file() => Some(linked),
+                    Ok(_) => {
+                        excluded_entries += 1;
+                        None
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        excluded_entries += 1;
+                        None
+                    }
+                    Err(_) => {
+                        failures += 1;
+                        None
+                    }
+                }
             } else if metadata.is_dir() {
                 stack.push(path);
+                None
             } else if metadata.is_file() && name.eq_ignore_ascii_case("SKILL.md") {
-                let hash = (|| {
-                    let file = fs::File::open(&path).ok()?;
-                    let before = file.metadata().ok()?;
-                    let mut bytes = Vec::new();
-                    let mut reader = (&file).take(MAX_DEFINITION_BYTES + 1);
-                    reader.read_to_end(&mut bytes).ok()?;
-                    let after = file.metadata().ok()?;
-                    if bytes.len() as u64 > MAX_DEFINITION_BYTES
-                        || before.len() != bytes.len() as u64
-                        || before.len() != after.len()
-                        || before.modified().ok()? != after.modified().ok()?
-                    {
-                        return None;
-                    }
-                    // Content fingerprints also collapse independent copies/hardlinks.
-                    // Only aggregate numbers leave this module.
-                    Some(digest(&SHA256, &bytes).as_ref().to_vec())
-                })();
-                match hash {
+                Some(path)
+            } else {
+                None
+            };
+            if let Some(path) = definition {
+                // Content fingerprints collapse copies, hardlinks and linked aliases.
+                // Only aggregate numbers leave this module.
+                match fingerprint(&path) {
                     Some(hash) => {
                         if !hashes.insert(hash) {
                             duplicates += 1;
@@ -302,20 +357,39 @@ mod tests {
     fn junction_cycle_and_profile_aliases_do_not_duplicate_definitions() {
         use std::os::windows::process::CommandExt;
         let root = tempfile::tempdir().unwrap();
+        let imported = tempfile::tempdir().unwrap();
         definition(root.path(), "first", "first definition");
-        let junction = root.path().join("profile");
-        let output = std::process::Command::new("cmd.exe")
-            .args(["/d", "/c", "mklink", "/J"])
-            .arg(&junction)
-            .arg(root.path())
-            .creation_flags(0x08000000)
-            .output()
-            .unwrap();
-        assert!(output.status.success());
+        definition(root.path(), ".trash/old", "archived definition");
+        fs::write(imported.path().join("SKILL.md"), "imported definition").unwrap();
+        let mut junctions = Vec::new();
+        for (name, target) in [
+            ("profile", root.path().to_path_buf()),
+            ("alias", root.path().join("first")),
+            ("archive-alias", root.path().join(".trash").join("old")),
+            ("imported", imported.path().to_path_buf()),
+        ] {
+            let junction = root.path().join(name);
+            let output = std::process::Command::new("cmd.exe")
+                .args(["/d", "/c", "mklink", "/J"])
+                .arg(&junction)
+                .arg(target)
+                .creation_flags(0x08000000)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "junction {name}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            junctions.push(junction);
+        }
         let value = scan(root.path(), 6, SCAN_BUDGET);
+        for junction in junctions {
+            fs::remove_dir(junction).unwrap();
+        }
         assert_eq!(value["state"], "complete");
-        assert_eq!(value["count"], 1);
-        assert_eq!(value["excludedEntries"], 1);
-        fs::remove_dir(junction).unwrap();
+        assert_eq!(value["count"], 2);
+        assert_eq!(value["duplicates"], 1);
+        assert_eq!(value["excludedEntries"], 3);
     }
 }

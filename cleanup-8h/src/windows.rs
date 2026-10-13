@@ -62,6 +62,9 @@ unsafe extern "system" {
     ) -> isize;
     fn GetFileInformationByHandle(handle: isize, info: *mut FileInfo) -> i32;
     fn GetFinalPathNameByHandleW(handle: isize, path: *mut u16, length: u32, flags: u32) -> u32;
+    fn GetLongPathNameW(path: *const u16, expanded: *mut u16, length: u32) -> u32;
+    #[cfg(test)]
+    fn GetShortPathNameW(path: *const u16, short: *mut u16, length: u32) -> u32;
     fn SetFileInformationByHandle(
         handle: isize,
         class: u32,
@@ -146,8 +149,23 @@ impl Pinned {
             return Err(invalid());
         }
         let physical = String::from_utf16(&final_name[..length]).map_err(|_| invalid())?;
-        let expected = path.to_str().ok_or_else(invalid)?;
-        if !normalized(&physical).eq_ignore_ascii_case(&normalized(expected)) {
+        // Expand only the spelling of existing input components. This API
+        // retains junction names; the handle's final path must still match,
+        // and every ancestor is separately pinned without following reparse points.
+        let mut expanded_name = vec![0u16; 32_768];
+        let expanded_length = unsafe {
+            GetLongPathNameW(
+                name.as_ptr(),
+                expanded_name.as_mut_ptr(),
+                expanded_name.len() as u32,
+            )
+        } as usize;
+        if expanded_length == 0 || expanded_length >= expanded_name.len() {
+            return Err(invalid());
+        }
+        let expected =
+            String::from_utf16(&expanded_name[..expanded_length]).map_err(|_| invalid())?;
+        if !normalized(&physical).eq_ignore_ascii_case(&normalized(&expected)) {
             return Err(invalid());
         }
         Ok(Self { handle, info })
@@ -690,6 +708,35 @@ mod tests {
             until: Instant::now() + Duration::from_secs(10),
             max_entries: 1000,
         }
+    }
+    #[test]
+    fn short_name_retains_the_same_pinned_cleanup_boundary() {
+        let root = fixture();
+        let name = wide(root.as_os_str());
+        let mut short_name = vec![0u16; 32_768];
+        let length = unsafe {
+            GetShortPathNameW(
+                name.as_ptr(),
+                short_name.as_mut_ptr(),
+                short_name.len() as u32,
+            )
+        } as usize;
+        assert!(length > 0 && length < short_name.len());
+        let short_root = PathBuf::from(String::from_utf16(&short_name[..length]).unwrap());
+        let child = short_root.join("finished");
+        fs::create_dir(&child).unwrap();
+        fs::write(child.join("cache.bin"), [7; 4096]).unwrap();
+        fs::write(root.join("sibling.bin"), [8; 16]).unwrap();
+        let pins = pin_ancestors(&short_root).unwrap();
+        let mut stats = Stats::default();
+        delete_tree(&short_root, &child, true, &budget(), &mut stats, 0).unwrap();
+        assert!(!child.exists());
+        assert!(root.join("sibling.bin").exists());
+        assert_eq!(stats.logical_bytes, 4096);
+        assert_eq!(stats.removed_files, 1);
+        assert!(delete_tree(&short_root, &short_root, true, &budget(), &mut stats, 0).is_err());
+        drop(pins);
+        fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn pinned_deletion_removes_only_children_and_preserves_sibling() {

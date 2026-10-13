@@ -368,6 +368,7 @@ func TestPullRequestLinksRequireCompleteOwnedGitHubURL(t *testing.T) {
 		"https://github.com.example.invalid/AutoDevJapan/repo/pull/1",
 		"https://github.com@evil.invalid/AutoDevJapan/repo/pull/1",
 		"https://evil.invalid/?target=" + valid,
+		"https://evil.invalid/(" + valid + ")",
 		valid + "suffix", valid + "/extra", valid + "?token=private", valid + "#fragment",
 		"http://github.com/AutoDevJapan/repo/pull/1",
 		"https://github.com/other-owner/repo/pull/1",

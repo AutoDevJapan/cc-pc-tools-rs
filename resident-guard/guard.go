@@ -310,7 +310,7 @@ func validateStateDirectory(directory string) error {
 	// input component, rather than mistaking a spelling change for a link.
 	for component := filepath.Clean(directory); ; component = filepath.Dir(component) {
 		entry, err := os.Lstat(component)
-		if err != nil || !entry.IsDir() || entry.Mode()&os.ModeSymlink != 0 {
+		if err != nil || entry.Mode().Type() != os.ModeDir {
 			return errors.New("state_directory_indirection_rejected")
 		}
 		if filepath.Dir(component) == component {

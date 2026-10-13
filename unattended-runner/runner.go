@@ -87,6 +87,7 @@ type State struct {
 	Destination  Destination         `json:"destination"`
 	Cursor       string              `json:"scan_cursor"`
 	IntakeCursor string              `json:"intake_cursor,omitempty"`
+	RetryCursor  uint64              `json:"retry_cursor,omitempty"`
 	Threads      map[string]Thread   `json:"threads"`
 	Scans        map[string]*Scan    `json:"scans"`
 	Requests     map[string]*Request `json:"requests"`
@@ -99,6 +100,7 @@ type Health struct {
 	Scanned    int      `json:"threads_scanned"`
 	Captured   int      `json:"owner_messages_captured"`
 	Registered int      `json:"todos_registered"`
+	Retried    int      `json:"technical_waits_released"`
 	Pending    int      `json:"pending_requests"`
 	Scheduler  bool     `json:"scheduler_ok"`
 	Errors     []string `json:"errors"`
@@ -557,6 +559,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 			health.Pending++
 		}
 	}
+	r.releaseRetries(ctx, &health)
 	schedulerReport, err := r.Run(ctx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
 	health.Scheduler = err == nil && schedulerOK(schedulerReport)
 	if !health.Scheduler {

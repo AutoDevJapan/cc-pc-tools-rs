@@ -244,7 +244,13 @@ func pullRequestLinks(body string, limit int) []string {
 	var links []string
 	seen := make(map[string]bool)
 	for _, field := range strings.Fields(body) {
-		for _, candidate := range strings.Split(field, "(") {
+		candidates := []string{field}
+		if strings.HasPrefix(field, "[") {
+			if open := strings.Index(field, "]("); open >= 0 {
+				candidates = []string{field[open+2:]}
+			}
+		}
+		for _, candidate := range candidates {
 			candidate = strings.Trim(candidate, "<>[]),.;`\"")
 			u, err := url.Parse(candidate)
 			if err != nil || u.Scheme != "https" || !strings.EqualFold(u.Host, "github.com") || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.RawPath != "" {

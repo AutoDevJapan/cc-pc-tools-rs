@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,6 +15,29 @@ import (
 	"time"
 	"unsafe"
 )
+
+func TestStateDirectoryRejectsWindowsJunctionAncestor(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "physical")
+	if err := os.Mkdir(target, 0700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "junction")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, systemFile("cmd.exe"), "/c", "mklink", "/J", link, target)
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("could not create an owned junction fixture: %v, %s", err, output)
+	}
+	defer os.Remove(link)
+	if err := validateStateDirectory(filepath.Join(link, "state")); err == nil {
+		t.Fatal("a junction ancestor was accepted")
+	}
+	if err := validateStateDirectory(filepath.Join(target, "state")); err != nil {
+		t.Fatal("physical state directory was rejected", err)
+	}
+}
 
 func TestStateDirectoryAcceptsWindowsShortName(t *testing.T) {
 	directory := filepath.Join(t.TempDir(), "state directory with long name")

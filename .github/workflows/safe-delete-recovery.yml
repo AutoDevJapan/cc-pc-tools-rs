@@ -11,8 +11,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
-env:
-  CI_JOB_TOKEN: ${{ github.token }}
 jobs:
   recovery:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -23,22 +21,30 @@ jobs:
         working-directory: safe-delete-recovery
     steps:
       - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - name: Create isolated CI fixtures
         shell: pwsh
         run: |
-          $fixtures = Join-Path $env:RUNNER_TEMP 'safe-delete-recovery-fixtures'
+          # Keep the fixture roots short without relaxing the production
+          # 240-character Git startup guard. R: maps only this job's owned temp.
+          if (Test-Path -LiteralPath 'R:/') { throw 'Fixture drive is already in use' }
+          subst.exe R: $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { throw 'Could not map the owned fixture drive' }
+          'PC_CI_FIXTURE_DRIVE_OWNED=1' >> $env:GITHUB_ENV
+          $fixtures = 'R:/f'
           New-Item -ItemType Directory -Path $fixtures | Out-Null
           $guard = Join-Path $fixtures 'client-guard-fixture.exe'
           rustc tests/support/client_guard.rs -o $guard
@@ -49,8 +55,8 @@ jobs:
       - run: cargo nextest run --locked --workspace --test-threads 10
       - run: cargo test --locked --workspace --doc
       - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo build --locked --release
-      - uses: actions/upload-artifact@v4
+      - run: cargo build --locked --release --target-dir target
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: safe-delete-recovery-windows
           retention-days: 3
@@ -58,3 +64,9 @@ jobs:
           path: |
             safe-delete-recovery/target/release/safe-delete-recovery.exe
             safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe
+      - name: Release this job's fixture drive
+        if: always() && env.PC_CI_FIXTURE_DRIVE_OWNED == '1'
+        shell: pwsh
+        run: |
+          subst.exe R: /d
+          if ($LASTEXITCODE -ne 0) { throw 'Could not release the owned fixture drive' }

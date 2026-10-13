@@ -11,8 +11,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
-env:
-  CI_JOB_TOKEN: ${{ github.token }}
 jobs:
   cc-jobs:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -21,17 +19,19 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - run: cargo nextest run --locked --workspace --no-fail-fast --test-threads 10
       - run: cargo test --locked --workspace --doc -- --test-threads=10
@@ -44,19 +44,21 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
-      - run: cargo build --locked --release -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask -p localai-web-rs --bins
+      - run: cargo build --locked --release --target-dir target -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask -p localai-web-rs --bins
       - name: Record the exact checked-out source and binary hashes
         shell: pwsh
         run: |
@@ -72,7 +74,7 @@ jobs:
           }
           @{ revision = $revision; tree = $tree; run_id = $env:GITHUB_RUN_ID; files = @($files) } |
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath target/release/tools-manifest.json -Encoding utf8
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-tools-${{ github.sha }}
           retention-days: 1

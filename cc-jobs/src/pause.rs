@@ -127,12 +127,7 @@ mod native {
         }
         fn stop(&mut self) -> io::Result<()> {
             for h in self.handles.iter().rev() {
-                unsafe {
-                    if WaitForSingleObject(h.0, 0) != WAIT_OBJECT_0 && TerminateProcess(h.0, 0) == 0
-                    {
-                        return Err(at("stop/TerminateProcess", io::Error::last_os_error()));
-                    }
-                }
+                terminate_running(h.0, || Ok(()))?;
             }
             for h in &self.handles {
                 if unsafe { WaitForSingleObject(h.0, 2000) } != WAIT_OBJECT_0 {
@@ -141,6 +136,35 @@ mod native {
             }
             Ok(())
         }
+    }
+    // The hook is private and has no environment/CLI control. Tests use it to
+    // complete a real process exit precisely between the wait and termination.
+    fn terminate_running(
+        handle: HANDLE,
+        before_terminate: impl FnOnce() -> io::Result<()>,
+    ) -> io::Result<()> {
+        match unsafe { WaitForSingleObject(handle, 0) } {
+            WAIT_OBJECT_0 => return Ok(()),
+            WAIT_TIMEOUT => (),
+            _ => return Err(at("stop/WaitForSingleObject", io::Error::last_os_error())),
+        }
+        before_terminate()?;
+        if unsafe { TerminateProcess(handle, 0) } == 0 {
+            // Capture first: the wait can overwrite the thread's last error.
+            let error = io::Error::last_os_error();
+            // Windows also returns ACCESS_DENIED when a process exits between
+            // the initial wait and TerminateProcess. Only the SAME retained,
+            // creation-checked handle's signal proves this is an exit race.
+            // Termination can still be draining I/O; use the existing bounded
+            // exit wait, never retry termination or reopen a PID here.
+            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
+                && unsafe { WaitForSingleObject(handle, 2000) } == WAIT_OBJECT_0
+            {
+                return Ok(());
+            }
+            return Err(at("stop/TerminateProcess", error));
+        }
+        Ok(())
     }
     fn freeze(pid: u32, created: u64, frozen: &mut Frozen) -> io::Result<()> {
         if !freeze_running(pid, created, frozen)? {
@@ -354,7 +378,12 @@ mod native {
             let live = match WaitForSingleObject(h.0, 0) {
                 WAIT_OBJECT_0 => false,
                 WAIT_TIMEOUT => true,
-                _ => return Err(at("inspect/WaitForSingleObject", io::Error::last_os_error())),
+                _ => {
+                    return Err(at(
+                        "inspect/WaitForSingleObject",
+                        io::Error::last_os_error(),
+                    ));
+                }
             };
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
@@ -669,6 +698,95 @@ mod native {
     #[cfg(test)]
     mod tests {
         use super::*;
+        struct OwnedChild(std::process::Child);
+        impl OwnedChild {
+            fn sleeping() -> Self {
+                use std::os::windows::process::CommandExt;
+                Self(
+                    std::process::Command::new("powershell.exe")
+                        .args([
+                            "-NoProfile",
+                            "-NonInteractive",
+                            "-Command",
+                            "Start-Sleep -Seconds 60",
+                        ])
+                        .creation_flags(0x08000000)
+                        .spawn()
+                        .unwrap(),
+                )
+            }
+        }
+        impl Drop for OwnedChild {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        #[test]
+        fn cancellation_exit_between_wait_and_terminate_is_not_a_permission_failure() {
+            let child = OwnedChild::sleeping();
+            let created = crate::proc_created(child.0.id()).unwrap();
+            let mut frozen = Frozen {
+                handles: Vec::new(),
+                marker: None,
+                armed: Vec::new(),
+                resume_on_drop: true,
+            };
+            freeze(child.0.id(), created, &mut frozen).unwrap();
+            let handle = frozen.handles[0].0;
+            let mut exited_in_gap = false;
+            let result = terminate_running(handle, || {
+                if unsafe { TerminateProcess(handle, 0) } == 0 {
+                    return Err(io::Error::last_os_error());
+                }
+                exited_in_gap = unsafe { WaitForSingleObject(handle, 2000) } == WAIT_OBJECT_0;
+                if !exited_in_gap {
+                    return Err(io::Error::other("fixture exit did not complete"));
+                }
+                Ok(())
+            });
+            assert!(
+                exited_in_gap,
+                "the real exit must occur after the initial unsignaled wait"
+            );
+            assert!(
+                result.is_ok(),
+                "signaled same-identity handle rejected: {result:?}"
+            );
+        }
+        #[test]
+        fn cancellation_denied_for_a_live_handle_keeps_the_original_error() {
+            let mut child = OwnedChild::sleeping();
+            let (_, handle) = inspect_retained(child.0.id(), "").unwrap().unwrap();
+            // Query/synchronize access deliberately excludes PROCESS_TERMINATE.
+            let result = terminate_running(handle.0, || Ok(()));
+            let still_alive = child.0.try_wait().unwrap().is_none();
+            let error = result.unwrap_err();
+            let original = &error
+                .get_ref()
+                .unwrap()
+                .downcast_ref::<NativeError>()
+                .unwrap()
+                .source;
+            assert_eq!(original.raw_os_error(), Some(ERROR_ACCESS_DENIED as i32));
+            assert!(still_alive);
+            assert!(error.to_string().starts_with("stop/TerminateProcess:"));
+        }
+        #[test]
+        fn cancellation_unknown_handle_never_attempts_termination() {
+            let mut attempted = false;
+            let result = terminate_running(INVALID_HANDLE_VALUE, || {
+                attempted = true;
+                Ok(())
+            });
+            assert!(!attempted);
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .starts_with("stop/WaitForSingleObject:")
+            );
+        }
         #[test]
         fn cancellation_rejects_its_caller_without_suspending_it() {
             let pid = std::process::id();

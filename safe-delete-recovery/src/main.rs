@@ -3519,7 +3519,10 @@ mod tests {
         }
         c.temp = base.clone();
         c.store = base.join("receipts");
-        c.quarantine = base.join("quarantine");
+        // The CI fixture has two owned temp levels so PowerShell can enumerate
+        // its deletion parent. Keep the fake archive root short; production's
+        // destination names and 240-character startup limit are unchanged.
+        c.quarantine = base.join("q");
         let mut fixture = Fixture {
             config: c,
             identity: node(&base).unwrap(),

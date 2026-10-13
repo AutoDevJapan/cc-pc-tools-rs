@@ -1,27 +1,57 @@
 name: Original record recovery staging
+env:
+  CC_LINUX_RUNNER_MODE: normal
 on:
   push:
     branches: [main]
     paths: ['record-recovery/**', '.github/workflows/record-recovery.yml']
   pull_request:
     paths: ['record-recovery/**', '.github/workflows/record-recovery.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
 jobs:
   test:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: Windows
+            labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
+          - os: Linux
+            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    runs-on: ${{ matrix.labels }}
     timeout-minutes: 10
     defaults:
       run:
         working-directory: record-recovery
     steps:
-      - uses: actions/checkout@v4
+      - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - name: Use the Linux job work directory for Go compilation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/go-tmp" "$RUNNER_TEMP/go-cache"
+          df -h "$RUNNER_TEMP" /tmp
+          df -i "$RUNNER_TEMP" /tmp
+          printf 'TMPDIR=%s/go-tmp\nGOTMPDIR=%s/go-tmp\nGOCACHE=%s/go-cache\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: record-recovery/go.mod
           cache: false

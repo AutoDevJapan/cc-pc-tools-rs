@@ -380,6 +380,13 @@ pub trait Runtime: Send + Sync {
         ))
         .map(|_| ())
     }
+    fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
+        if self.proc_created(pid) == Some(created) {
+            self.kill_tree(pid)
+        } else {
+            Ok(())
+        }
+    }
     fn before_load(&self, _path: &Path) -> io::Result<()> {
         Ok(())
     }
@@ -469,6 +476,17 @@ impl Running for Child {
 impl Runtime for System {
     fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
         proc_created_checked(pid)
+    }
+    #[cfg(windows)]
+    fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
+        crate::pause::stop_tree(pid, created)
+    }
+    #[cfg(windows)]
+    fn kill_tree(&self, pid: u32) -> io::Result<()> {
+        let created = proc_created(pid).ok_or_else(|| {
+            io::Error::other("owned process identity unavailable before cancellation")
+        })?;
+        crate::pause::stop_tree(pid, created)
     }
     fn boot_epoch(&self) -> Option<f64> {
         #[cfg(windows)]

@@ -5,6 +5,10 @@ on:
     paths: ['cc-bookmark-queue/**', 'cc-ask/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/bookmark-queue.yml']
   pull_request:
     paths: ['cc-bookmark-queue/**', 'cc-ask/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/bookmark-queue.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

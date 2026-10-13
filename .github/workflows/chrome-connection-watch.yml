@@ -5,6 +5,10 @@ on:
     paths: ['chrome-connection-watch/**', '.github/workflows/chrome-connection-watch.yml']
   pull_request:
     paths: ['chrome-connection-watch/**', '.github/workflows/chrome-connection-watch.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

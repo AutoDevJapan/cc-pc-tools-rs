@@ -5,6 +5,10 @@ on:
     paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
   pull_request:
     paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

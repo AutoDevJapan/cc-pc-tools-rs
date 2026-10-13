@@ -5,6 +5,10 @@ on:
     paths: ['cc-ask/**', 'cc-channel-watch/**', 'cc-chrome/**', 'cc-live/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-local-llm/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/channel-reports.yml']
   pull_request:
     paths: ['cc-ask/**', 'cc-channel-watch/**', 'cc-chrome/**', 'cc-live/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-local-llm/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/channel-reports.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

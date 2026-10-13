@@ -446,6 +446,13 @@ fn close_application(home: &Path, binding: &CloseBinding) -> Result<Value> {
     Ok(value)
 }
 
+#[derive(Clone, Copy)]
+struct CloseEnv<'a> {
+    home: &'a Path,
+    /// Explicit (or retained) earlier text of the reviewed reply timestamp.
+    legacy: Option<&'a str>,
+}
+
 fn close_replies(
     api: &mut RecoveryApi<'_>,
     ledger: &Ledger,
@@ -453,9 +460,9 @@ fn close_replies(
     binding: &CloseBinding,
     applied: &Value,
     state: &mut CloseLedger,
-    home: &Path,
-    legacy: Option<&str>,
+    env: CloseEnv<'_>,
 ) -> Result<bool> {
+    let CloseEnv { home, legacy } = env;
     let replies = owner_replies(api, ledger, request)?;
     let raw = api.get(&format!(
         "/channels/{}/messages/{}",
@@ -592,8 +599,8 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         return Err("close configured forum differs".into());
     }
     let mut equivalent = close_replies(
-        &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
-        legacy.as_deref(),
+        &mut api, &ledger, request, &binding, &applied, &mut state,
+        CloseEnv { home: &ctx.here, legacy: legacy.as_deref() },
     )?;
     let channel = api.channel(&binding.thread_id)?;
     let archived = channel["thread_metadata"]["archived"]
@@ -641,8 +648,8 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         );
     }
     equivalent |= close_replies(
-        &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
-        legacy.as_deref(),
+        &mut api, &ledger, request, &binding, &applied, &mut state,
+        CloseEnv { home: &ctx.here, legacy: legacy.as_deref() },
     )?;
     // Check the same bytes were applied throughout this attempt.
     close_application(&ctx.here, &binding)?;
@@ -4847,6 +4854,11 @@ mod tests {
         close(&mut ctx, &with_legacy(&args, LEGACY_SAME_INSTANT)).unwrap();
         let before = fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap();
         assert!(close(&mut ctx, &with_legacy(&args, "2026-10-12T00:00:01.000Z")).is_err());
+        assert_eq!(fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(), before);
+        // The retained-record guard itself: evidence that differs in any field is refused.
+        let mut other = EquivalenceLedger::load(&fixture.home).unwrap().records[&binding.thread_id].clone();
+        other.api_reply_sha256 = "0".repeat(64);
+        assert!(EquivalenceLedger::load(&fixture.home).unwrap().record(&fixture.home, &other).is_err());
         assert_eq!(fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(), before);
     }
 

@@ -415,57 +415,76 @@ func verifyNormalContainerWith(name string, run dockerOutput) error {
 	return validateNormalContainerRuntime(name, run, time.Sleep)
 }
 
-func configuredRunnerListenerCount(containerName string, run dockerOutput) (int, error) {
-	const probe = `n=0; for pid in $(pgrep -f '[/]runner/bin/Runner.Listener run' || true); do state=$(ps -o stat= -p "$pid" | tr -d ' '); case "$state" in Z*) ;; *) n=$((n+1));; esac; done; printf '%s' "$n"`
+func configuredRunnerProcessCount(containerName string, run dockerOutput, pattern string) (int, error) {
+	probe := `n=0; for pid in $(pgrep -f '` + pattern + `' || true); do state=$(ps -o stat= -p "$pid" | tr -d ' '); case "$state" in Z*) ;; *) n=$((n+1));; esac; done; printf '%s' "$n"`
 	result, err := run("exec", containerName, "/bin/sh", "-c", probe)
 	if err != nil {
-		return 0, errors.New("configured runner listener probe failed")
+		return 0, errors.New("configured runner process probe failed")
 	}
 	count, err := strconv.Atoi(strings.TrimSpace(result))
 	if err != nil || count < 0 {
-		return 0, errors.New("configured runner listener count is invalid")
+		return 0, errors.New("configured runner process count is invalid")
 	}
 	return count, nil
 }
 
-// Wait briefly before recovery so the official run.sh retry loop can restore a
-// listener that exited during a normal runner update. Never add another
-// run.sh tree if a listener has already returned.
+func configuredRunnerListenerCount(containerName string, run dockerOutput) (int, error) {
+	return configuredRunnerProcessCount(containerName, run, `[/]runner/bin/Runner.Listener run`)
+}
+
+func configuredRunnerSupervisorCount(containerName string, run dockerOutput) (int, error) {
+	// The registered bridge process owns run.sh and waits 30 seconds before
+	// restarting it. Count it, run.sh, and run-helper.sh as existing supervisors.
+	const pattern = `[/]opt/bridge/bridge register|[/]bin/bash /runner/run[.-]helper.sh|[/]bin/bash /runner/run.sh`
+	return configuredRunnerProcessCount(containerName, run, pattern)
+}
+
+// Let the registered bridge/run.sh retry loop finish before adding a new
+// supervisor. The single host task owns recovery; an existing supervisor is
+// never raced with another detached run.sh tree.
 func ensureConfiguredRunnerListener(containerName string, run dockerOutput, pause func(time.Duration)) (bool, error) {
-	count, err := configuredRunnerListenerCount(containerName, run)
-	if err != nil {
-		return false, err
+	emptyProbes := 0
+	for attempt := 0; attempt < 12; attempt++ {
+		listeners, err := configuredRunnerListenerCount(containerName, run)
+		if err != nil {
+			return false, err
+		}
+		if listeners > 1 {
+			return false, errors.New("multiple configured runner listeners are already running")
+		}
+		if listeners == 1 {
+			return false, nil
+		}
+		supervisors, err := configuredRunnerSupervisorCount(containerName, run)
+		if err != nil {
+			return false, err
+		}
+		if supervisors > 0 {
+			emptyProbes = 0
+		} else {
+			emptyProbes++
+			if emptyProbes >= 2 {
+				break
+			}
+		}
+		pause(5 * time.Second)
 	}
-	if count > 1 {
-		return false, errors.New("multiple configured runner listeners are already running")
+	if emptyProbes < 2 {
+		return false, errors.New("existing runner supervisor did not recover within 60 seconds")
 	}
-	if count == 1 {
-		return false, nil
-	}
-	pause(5 * time.Second)
-	count, err = configuredRunnerListenerCount(containerName, run)
-	if err != nil {
-		return false, err
-	}
-	if count > 1 {
-		return false, errors.New("multiple configured runner listeners are already running")
-	}
-	if count == 1 {
-		return false, nil
-	}
-	if _, err = run("exec", "-d", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
+	if _, err := run("exec", "-d", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
 		return false, errors.New("configured runner listener restart failed")
 	}
 	for attempt := 0; attempt < 15; attempt++ {
 		pause(2 * time.Second)
-		count, err = configuredRunnerListenerCount(containerName, run)
+		listeners, err := configuredRunnerListenerCount(containerName, run)
 		if err != nil {
 			return true, err
 		}
-		if count > 1 {
+		if listeners > 1 {
 			return true, errors.New("configured runner listener restart created multiple listeners")
 		}
-		if count == 1 {
+		if listeners == 1 {
 			return true, nil
 		}
 	}

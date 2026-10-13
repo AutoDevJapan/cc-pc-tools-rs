@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{safe_text, valid_effort, valid_model, Backend},
+    backend::{Backend, safe_text, valid_effort, valid_model},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -633,6 +633,20 @@ impl<B: Backend> Scheduler<B> {
             })?;
             return Ok(());
         }
+        // Capacity cooldown belongs to the same saved job/controller. Quota
+        // pressure must not cancel it and launch a new job with a fresh budget.
+        if j["capacity_wait_pending"] == true && live(j) {
+            return Ok(());
+        }
+        if j["capacity_exhausted"] == true && s(&j["status"]) == "failed" {
+            self.edit(&i["id"],|row| {
+                if row["scheduler"]["job"]==j["id"] && row["status"]=="doing" {
+                    row["scheduler"]["phase"]=json!("capacity_exhausted");
+                    row["note"]=json!("モデルの混雑による有限の再試行を終了しました。元担当と作業内容を保持しています。");
+                }
+            })?;
+            return Ok(());
+        }
         let saved_until = (i["scheduler"]["resource_wait"]["job"] == j["id"])
             .then(|| i["scheduler"]["resource_wait"]["until"].as_f64())
             .flatten();
@@ -993,7 +1007,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     == item["scheduler"]["key"]
             })
         {
-            prompt += &format!("\n受付済みの引き継ぎ本文（受付時の履歴です。固定HEADと対象範囲は上の最新保存仕様を優先してください）:\n{body}\n");
+            prompt += &format!(
+                "\n受付済みの引き継ぎ本文（受付時の履歴です。固定HEADと対象範囲は上の最新保存仕様を優先してください）:\n{body}\n"
+            );
         }
         if item["subwork"].is_object() {
             prompt += &format!(

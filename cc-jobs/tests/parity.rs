@@ -1362,11 +1362,14 @@ mod capacity_regressions {
             json!({"sandbox":"read-only","effort":"high","todo_id":1793}),
         );
         assert_eq!(saved["status"], "succeeded");
-        assert_eq!(saved["model"], "gpt-6-astra");
+        assert_eq!(saved["model"], "anthropic/claude-sonnet-5-5");
         assert_eq!(saved["capacity_retry_count"], 1);
         assert_eq!(saved["capacity_history"][0]["session"], SESSION_ID);
         assert_eq!(saved["capacity_history"][0]["from_model"], "gpt-6.1-sol");
-        assert_eq!(saved["capacity_history"][0]["to_model"], "gpt-6-astra");
+        assert_eq!(
+            saved["capacity_history"][0]["to_model"],
+            "anthropic/claude-sonnet-5-5"
+        );
         assert_eq!(
             saved["capacity_history"][0]["error"],
             "Selected model is at capacity"
@@ -1376,7 +1379,11 @@ mod capacity_regressions {
         assert_eq!(args.len(), 2);
         assert!(!args[0].iter().any(|a| a == "resume"));
         assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
-        assert!(args[1].windows(2).any(|w| w == ["-m", "gpt-6-astra"]));
+        assert!(
+            args[1]
+                .windows(2)
+                .any(|w| w == ["-m", "anthropic/claude-sonnet-5-5"])
+        );
         assert!(args[1].windows(2).any(|w| w == ["-s", "read-only"]));
         assert!(args[1].iter().any(|a| a == "model_reasoning_effort=high"));
         assert!(t.rt.kills.lock().unwrap().is_empty());
@@ -1386,7 +1393,7 @@ mod capacity_regressions {
                 .lock()
                 .unwrap()
                 .iter()
-                .any(|line| line.contains("gpt-6-astraで再開"))
+                .any(|line| line.contains("anthropic/claude-sonnet-5-5で再開"))
         );
     }
 
@@ -1406,10 +1413,12 @@ mod capacity_regressions {
         );
         let args = t.rt.spawn_args.lock().unwrap();
         assert_eq!(args.len(), 4);
-        for (arg, model) in
-            args.iter()
-                .zip(["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol"])
-        {
+        for (arg, model) in args.iter().zip([
+            "gpt-6.1-sol",
+            "anthropic/claude-sonnet-5-5",
+            "gpt-6-astra",
+            "gpt-6-luna",
+        ]) {
             assert!(arg.windows(2).any(|w| w == ["-m", model]));
         }
     }
@@ -1418,12 +1427,12 @@ mod capacity_regressions {
     fn capacity_switch_order_starts_from_each_selected_model() {
         let t = Test::new();
         for (from, to) in [
-            ("gpt-6.1-sol", "gpt-6-astra"),
-            ("gpt-6-astra", "gpt-6-luna"),
-            ("gpt-6-luna", "gpt-6.1-sol"),
+            ("gpt-6.1-sol", "anthropic/claude-sonnet-5-5"),
+            ("anthropic/claude-sonnet-5-5", "gpt-6.1-sol"),
+            ("gpt-6-luna", "anthropic/claude-sonnet-5-5"),
         ] {
             let mut j = job(
-                json!({"status":"failed","model":from,"last_error":"Selected model is at capacity","thread_id":SESSION_ID,"retry_count":4,"retry_not_before":9999999999.,"context_phase":"continue","yield_resume":true,"turn_completed":true}),
+                json!({"status":"failed","last_failure_kind":"capacity","model":from,"last_error":"Selected model is at capacity","thread_id":SESSION_ID,"retry_count":4,"retry_not_before":9999999999.,"context_phase":"continue","yield_resume":true,"turn_completed":true}),
             );
             assert!(t.ctx.retry_capacity(&mut j));
             assert_eq!(j["model"], to);
@@ -1444,18 +1453,15 @@ mod capacity_regressions {
             json!({"status":"succeeded"}),
             json!({"status":"cancelled"}),
             json!({"cancel_requested":true}),
-            json!({"model":"anthropic/claude-sonnet-5-5"}),
-            json!({"thread_id":null,"resume_session":null}),
+            json!({"model":"unknown-model"}),
             json!({"thread_id":"invalid","resume_session":"invalid"}),
             json!({"last_error":"429 Too Many Requests"}),
             json!({"last_error":"model not found"}),
-            json!({"capacity_retry_count":3}),
-            json!({"capacity_retry_count":u64::MAX}),
             json!({"capacity_history":{}}),
         ] {
             let mut j = patch(
                 job(
-                    json!({"status":"failed","model":"gpt-6.1-sol","last_error":"Selected model is at capacity","thread_id":SESSION_ID}),
+                    json!({"status":"failed","last_failure_kind":"capacity","model":"gpt-6.1-sol","last_error":"Selected model is at capacity","thread_id":SESSION_ID}),
                 ),
                 p,
             );
@@ -1474,7 +1480,7 @@ mod capacity_regressions {
             .unwrap()
             .insert("OPENAI_API_KEY".into(), secret.clone());
         let mut j = job(
-            json!({"status":"failed","model":"gpt-6-astra","last_error":format!("Selected model is at capacity; key={secret}"),"thread_id":null,"resume_session":SESSION_ID}),
+            json!({"status":"failed","last_failure_kind":"capacity","model":"anthropic/claude-sonnet-5-5","last_error":format!("Selected model is at capacity; key={secret}"),"thread_id":null,"resume_session":SESSION_ID}),
         );
         assert!(t.ctx.retry_capacity(&mut j));
         assert_eq!(j["resume_session"], SESSION_ID);
@@ -1522,6 +1528,247 @@ mod capacity_regressions {
         t.ctx.supervise("limit").unwrap();
         assert_eq!(t.ctx.load("limit").unwrap()["status"], "failed");
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    }
+
+    fn failed() -> Value {
+        job(
+            json!({"status":"failed","model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol","last_error":"Selected model is at capacity","last_failure_kind":"capacity","thread_id":SESSION_ID}),
+        )
+    }
+
+    #[test]
+    fn quoted_capacity_text_never_establishes_failure_evidence() {
+        let t = Test::new();
+        for kind in [
+            "agent_message",
+            "reasoning",
+            "command_execution",
+            "mcp_tool_call",
+            "web_search",
+            "error",
+        ] {
+            let mut j = failed();
+            j["last_failure_kind"] = Value::Null;
+            apply_event(
+                &mut j,
+                &json!({"type":"item.completed","item":{"type":kind,"text":"Selected model is at capacity","message":"Selected model is at capacity","aggregated_output":"Selected model is at capacity"}}),
+            );
+            assert!(!t.ctx.retry_capacity(&mut j));
+        }
+        for (ev, kind) in [
+            (
+                json!({"type":"turn.failed","error":{"message":"429 Too Many Requests: Selected model is at capacity"}}),
+                "capacity",
+            ),
+            (
+                json!({"type":"error","message":"429 Too Many Requests"}),
+                "quota",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"request_failed","message":"connection closed"}}),
+                "request_failed",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"auth_failed","message":"Selected model is at capacity"}}),
+                "auth",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"cancelled","message":"Selected model is at capacity"}}),
+                "cancel",
+            ),
+        ] {
+            assert_eq!(cc_jobs::capacity::failure_kind(&ev), Some(kind));
+        }
+    }
+
+    #[test]
+    fn capacity_preserves_scope_wait_and_review_constraints() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"todo_id":2528,"depends_on":[2510],"scope_source":"owner_request","read_only":true,"parent_job_id":"original","chrome_tabs":[{"id":"owned"}],"context_phase":"continue","yield_resume":true}),
+        );
+        let before = j.clone();
+        assert!(t.ctx.retry_capacity(&mut j));
+        for key in [
+            "todo_id",
+            "depends_on",
+            "scope_source",
+            "read_only",
+            "parent_job_id",
+            "chrome_tabs",
+            "context_phase",
+            "yield_resume",
+        ] {
+            assert_eq!(j[key], before[key], "{key}");
+        }
+        assert_eq!(j["model"], "anthropic/claude-sonnet-5-5");
+        let again = j.clone();
+        assert!(!t.ctx.retry_capacity(&mut j));
+        assert_eq!(j, again);
+        t.put(job(
+            json!({"id":"single-file-author","model":"gpt-6.1-sol"}),
+        ));
+        let mut haiku = patch(
+            failed(),
+            json!({"requested_model":"anthropic/claude-haiku-5-5","model":"anthropic/claude-haiku-5-5","task_type":"single_file_review","parent_job_id":"single-file-author"}),
+        );
+        assert!(t.ctx.retry_capacity(&mut haiku));
+        assert_eq!(haiku["model"], "gpt-6-luna");
+        assert_eq!(haiku["task_type"], "single_file_review");
+        assert_eq!(haiku["requested_model"], "anthropic/claude-haiku-5-5");
+        let review = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","task_type":"review"}),
+        );
+        assert!(cc_jobs::capacity::candidates(&review).is_empty());
+    }
+
+    #[test]
+    fn capacity_cooldown_is_finite_and_does_not_create_owner_block() {
+        let t = Test::new();
+        for provider in ["openai", "anthropic"] {
+            t.rt.quota_samples
+                .lock()
+                .unwrap()
+                .insert(provider.into(), Default::default());
+        }
+        let mut j = failed();
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["status"], "queued");
+        assert_eq!(j["capacity_wait_pending"], true);
+        assert_eq!(j["retry_not_before"], t.rt.epoch() + 900.);
+        assert!(j["capacity_retry_count"].is_null());
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        for expected in [2, 3] {
+            t.rt.tick(900.);
+            t.put(j.clone());
+            j = t.ctx.load(s(&j, "id")).unwrap();
+            assert!(t.ctx.recheck_capacity_wait(&mut j));
+            assert_eq!(j["capacity_wait_count"], expected);
+            assert_eq!(j["resume_session"], SESSION_ID);
+        }
+        t.rt.tick(900.);
+        assert!(!t.ctx.recheck_capacity_wait(&mut j));
+        assert_eq!(j["status"], "failed");
+        assert_eq!(j["capacity_exhausted"], true);
+        assert_eq!(j["capacity_wait_count"], 3);
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn capacity_access_denied_or_live_worker_never_restarts() {
+        let t = Test::new();
+        for denied in [true, false] {
+            let mut j = patch(failed(), json!({"codex_pid":123,"codex_pid_created":45}));
+            if denied {
+                t.rt.proc_probe_errors.lock().unwrap().insert(123, 5);
+            } else {
+                t.rt.proc_probe_errors.lock().unwrap().clear();
+                t.rt.procs.lock().unwrap().insert(123, 45);
+            }
+            let before = j.clone();
+            assert!(!t.ctx.retry_capacity(&mut j));
+            assert_eq!(j, before);
+        }
+    }
+
+    #[test]
+    fn generic_terminal_failure_preserves_protocol_capacity_but_auth_and_cancel_win() {
+        for terminal in ["request_failed", "auth_failed", "cancelled"] {
+            let mut j = failed();
+            apply_event(
+                &mut j,
+                &json!({"type":"error","message":"Selected model is at capacity"}),
+            );
+            apply_event(
+                &mut j,
+                &json!({"type":"turn.failed","error":{"code":terminal,"message":"Request failed"}}),
+            );
+            let t = Test::new();
+            assert_eq!(t.ctx.retry_capacity(&mut j), terminal == "request_failed");
+        }
+    }
+
+    #[test]
+    fn explicit_review_never_returns_to_the_source_authors_model() {
+        let t = Test::new();
+        t.put(job(
+            json!({"id":"author","model":"gpt-6-luna","requested_model":"gpt-6.1-sol"}),
+        ));
+        let mut review = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5","model_explicit":true,"parent_job_id":"author","task_type":"code_review"}),
+        );
+        assert!(!t.ctx.retry_capacity(&mut review));
+        assert_eq!(review["model"], "anthropic/claude-sonnet-5-5");
+        assert_eq!(review["capacity_exhausted"], true);
+    }
+
+    #[test]
+    fn depleted_claude_switches_to_verified_codex_oauth_and_single_file_summary_stays_light() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5"}),
+        );
+        t.rt.quota_samples
+            .lock()
+            .unwrap()
+            .insert("anthropic".into(), Default::default());
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["model"], "gpt-6.1-sol");
+        assert_eq!(j["capacity_history"][0]["to_provider"], "openai");
+        let mut summary = patch(
+            failed(),
+            json!({"model":"anthropic/claude-haiku-5-5","requested_model":"anthropic/claude-haiku-5-5","task_type":"single_file_summary"}),
+        );
+        assert!(t.ctx.retry_capacity(&mut summary));
+        assert_eq!(summary["model"], "gpt-6-luna");
+        assert_eq!(summary["task_type"], "single_file_summary");
+    }
+
+    #[test]
+    fn due_capacity_wait_rechecks_quota_and_preserves_the_same_job_after_restart() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        for provider in ["openai", "anthropic"] {
+            t.rt.quota_samples
+                .lock()
+                .unwrap()
+                .insert(provider.into(), Default::default());
+        }
+        let mut j = failed();
+        assert!(t.ctx.retry_capacity(&mut j));
+        let id = s(&j, "id").to_owned();
+        t.put(j);
+        let mut restarted = t.ctx.load(&id).unwrap();
+        assert!(!t.ctx.recheck_capacity_wait(&mut restarted));
+        t.rt.tick(900.);
+        t.rt.quota_samples.lock().unwrap().clear();
+        assert!(t.ctx.recheck_capacity_wait(&mut restarted));
+        assert_eq!(restarted["id"], id);
+        assert_eq!(restarted["resume_session"], SESSION_ID);
+        assert_eq!(restarted["capacity_retry_count"], 1);
+        assert_eq!(restarted["capacity_wait_count"], 1);
+        assert_eq!(restarted["capacity_wait_pending"], false);
+    }
+
+    #[test]
+    fn capacity_before_session_creation_preserves_job_and_original_prompt_scope() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"thread_id":null,"resume_session":null,"todo_id":2528,"prompt":"original.md"}),
+        );
+        let id = j["id"].clone();
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["id"], id);
+        assert_eq!(j["prompt"], "original.md");
+        assert_eq!(j["todo_id"], 2528);
+        assert_eq!(j["resume_session"], "");
+        assert!(!codex_args(&j).iter().any(|a| a == "resume"));
     }
 }
 mod queue_regressions {
@@ -5422,6 +5669,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    quota_samples: Mutex<HashMap<String, cc_jobs::adaptive::QuotaSnapshot>>,
     boot: Mutex<Option<f64>>,
     recovery_guards: Mutex<HashMap<String, Option<bool>>>,
     summary_calls: AtomicUsize,
@@ -5472,6 +5720,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            quota_samples: Mutex::new(HashMap::new()),
             boot: Mutex::new(None),
             recovery_guards: Mutex::new(HashMap::new()),
             summary_calls: AtomicUsize::new(0),
@@ -5597,7 +5846,15 @@ impl Runtime for Fake {
         self.queue_samples.fetch_add(1, Ordering::Relaxed);
         self.queue_sample.lock().unwrap().clone()
     }
-    fn queue_quota_sample(&self, _: &str, at: f64, _: u64) -> cc_jobs::adaptive::QuotaSnapshot {
+    fn queue_quota_sample(
+        &self,
+        provider: &str,
+        at: f64,
+        _: u64,
+    ) -> cc_jobs::adaptive::QuotaSnapshot {
+        if let Some(q) = self.quota_samples.lock().unwrap().get(provider) {
+            return q.clone();
+        }
         cc_jobs::adaptive::parse_quotas(
             &json!({"accounts":[{"id":"a","quota":{"weeklyPercent":20.,"weeklyResetAt":at+86400.}}]}),
             at,
@@ -9458,7 +9715,12 @@ mod end_to_end {
                 assert!(args.windows(2).any(|w| w
                     == [
                         "-m",
-                        ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"][index]
+                        [
+                            "gpt-6-luna",
+                            "anthropic/claude-sonnet-5-5",
+                            "gpt-6.1-sol",
+                            "gpt-6-astra"
+                        ][index]
                     ]));
                 if index > 0 {
                     assert!(
@@ -9783,6 +10045,11 @@ mod end_to_end {
                 bin.join("fixture.exe"),
             )
             .unwrap();
+            let bun = tmp
+                .0
+                .join("appdata/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin");
+            fs::create_dir_all(&bun).unwrap();
+            fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), bun.join("bun.exe")).unwrap();
             fs::write(
                 bin.join("codex.cmd"),
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
@@ -9814,6 +10081,7 @@ mod end_to_end {
                     ),
                 )
                 .env("CC_JOBS_FIXTURE_MODE", mode)
+                .env("APPDATA", self.tmp.0.join("appdata"))
                 .env("CC_JOBS_FIXTURE_DIR", &self.rec)
                 .env(
                     "CC_OWNER_INSTRUCTIONS_PATH",

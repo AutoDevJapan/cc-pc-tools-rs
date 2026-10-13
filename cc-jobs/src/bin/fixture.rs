@@ -7,6 +7,14 @@ use std::{
 };
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.iter().any(|a| a == "account") {
+        let at = chrono::Local::now().timestamp() as f64;
+        println!(
+            "{}",
+            json!({"accounts":[{"id":"fixture-oauth","type":"oauth","health":"healthy","quota":{"weeklyPercent":10.,"weeklyResetAt":at+86400.}}]})
+        );
+        return;
+    }
     if args.first().is_some_and(|s| s == "--healthy-cargo-gate") {
         let dir = std::path::PathBuf::from(
             std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),

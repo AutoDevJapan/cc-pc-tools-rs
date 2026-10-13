@@ -142,3 +142,11 @@ GitHubの個人画面ではなく、組織切替でAutoDevJapanを選び、組�
 指定管理表の既存GitHub (AutoDevJapan) 行だけを更新し、確認元に組織のBilling Overview・Payment history、確認状況に10月請求額/発行日未確定と最新支払日を記載した。Saved to Driveを確認した。金額はこのGit記録に含めていない。契約・支払い・予算設定は変更していない。CUAで今回作成した請求確認タブを閉じ、既存Chromeタブ一覧にそれが残っていないことを確認した。
 
 残りはGoogle Workspace/Cloud請求先と対象の照合、ほかの未確認請求、9/30 ChatGPT増額の本人回答、ToDo2498による購入操作/承認照合。保護判定済み証拠へのアクセスは継続して止めている。
+
+### 2026-10-13 Google Cloudと請求メールの照合
+
+主Gmail（本人確認済みのmail/u/1）で過去30日のGoogle Cloud/Google Workspaceの請求・請求書メールを検索したが、一致するメールはなかった。検索操作による既読変更はなく、請求や契約にも触れていない。
+
+同じGoogleアカウントのCloud Consoleでは、現在有効な請求口座が1件表示され、3つのCloudプロジェクトが紐づいていた。10月1〜13日のCost summaryと月末予測はいずれも0で、直近30日の支出も0。請求書一覧に10月分はなく、過去の請求書だけが表示された。今月の請求はまだ確定・発行されていないため、指定管理表へ既存行を重ねず、Google Cloudの行を追加し、10月額は「未確定」、請求日は空欄、請求書未発行と記録した。Saved to Driveを確認した。
+
+Google Workspace Admin Consoleは以前の確認で管理者権限を要求し、請求画面へ進めなかった。Workspaceの10月請求は未確認のまま残す。今回作成したGoogle Cloud/Gmailタブは閉じ、owner-chrome inventoryで消失を確認した。請求口座ID・プロジェクト名・金額はGit記録へ含めていない。

@@ -40,6 +40,24 @@ mod native {
         ) -> i32;
     }
     struct Handle(HANDLE);
+    #[derive(Debug)]
+    struct NativeError {
+        stage: &'static str,
+        source: io::Error,
+    }
+    impl std::fmt::Display for NativeError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}: {}", self.stage, self.source)
+        }
+    }
+    impl std::error::Error for NativeError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.source)
+        }
+    }
+    fn at(stage: &'static str, source: io::Error) -> io::Error {
+        io::Error::new(source.kind(), NativeError { stage, source })
+    }
     unsafe impl Send for Handle {}
     impl Drop for Handle {
         fn drop(&mut self) {
@@ -112,7 +130,7 @@ mod native {
                 unsafe {
                     if WaitForSingleObject(h.0, 0) != WAIT_OBJECT_0 && TerminateProcess(h.0, 0) == 0
                     {
-                        return Err(io::Error::last_os_error());
+                        return Err(at("stop/TerminateProcess", io::Error::last_os_error()));
                     }
                 }
             }
@@ -148,7 +166,7 @@ mod native {
                 return if err.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
                     Ok(false)
                 } else {
-                    Err(err)
+                    Err(at("freeze/OpenProcess", err))
                 };
             }
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
@@ -330,17 +348,17 @@ mod native {
                 return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
                     Ok(None)
                 } else {
-                    Err(error)
+                    Err(at("inspect/OpenProcess", error))
                 };
             }
             let live = match WaitForSingleObject(h.0, 0) {
                 WAIT_OBJECT_0 => false,
                 WAIT_TIMEOUT => true,
-                _ => return Err(io::Error::last_os_error()),
+                _ => return Err(at("inspect/WaitForSingleObject", io::Error::last_os_error())),
             };
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
-                return Err(io::Error::last_os_error());
+                return Err(at("inspect/GetProcessTimes", io::Error::last_os_error()));
             }
             Ok(Some((
                 (

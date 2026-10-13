@@ -42,6 +42,8 @@ type jobMeta struct {
 	Status          string          `json:"status"`
 	TaskType        json.RawMessage `json:"task_type"`
 	Project         string          `json:"project"`
+	OwnerProject    json.RawMessage `json:"owner_project"`
+	Department      string          `json:"department"`
 	TodoID          int64           `json:"todo_id"`
 	RelatedTodoIDs  []int64         `json:"related_todo_ids"`
 	WorkWaitOn      []int64         `json:"work_wait_on"`
@@ -90,6 +92,7 @@ type Source struct {
 
 type WaitReason struct {
 	Kind      string  `json:"kind"`
+	Label     string  `json:"label,omitempty"`
 	TodoIDs   []int64 `json:"todo_ids"`
 	NotBefore *Clock  `json:"not_before,omitempty"`
 }
@@ -114,6 +117,7 @@ type Job struct {
 	rawID              string
 	parentID           string
 	independent        bool
+	cancelRequested    bool
 	created            time.Time
 }
 

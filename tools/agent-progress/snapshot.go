@@ -64,7 +64,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		}
 	}
 	s.Sources["priority"] = ps
-	loaded, js := loadJobs(ctx, opts, now)
+	loaded, js := loadJobs(ctx, opts, now, taskReferences(items, true))
 	s.Sources["jobs"] = js
 	if !js.Complete {
 		s.Issues = append(s.Issues, "jobs_"+js.Status)
@@ -92,36 +92,28 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	}
 	// Link only canonical numeric relations or saved job references, never text,
 	// worktree names, paths, prompts, parent titles, or matching project names.
-	references := map[string][]int64{}
-	for id, item := range items {
-		var refs []json.RawMessage
-		_ = json.Unmarshal(item.Jobs, &refs)
-		for _, raw := range refs {
-			var jid string
-			if json.Unmarshal(raw, &jid) == nil && validJobID(jid) {
-				references[jid] = append(references[jid], id)
-			}
-		}
-		if validJobID(item.Scheduler.Job) {
-			references[item.Scheduler.Job] = append(references[item.Scheduler.Job], id)
-		}
-	}
+	references := taskReferences(items, false)
 	allJobs := map[string]*Job{}
 	for _, loaded := range loaded {
 		j := loaded.meta
 		ids := append(append([]int64{}, j.RelatedTodoIDs...), references[j.ID]...)
 		ids = positiveIDs(append(ids, j.TodoID))
-		l := publicLabel(j.Project)
+		l := policyLabel(todoItem{Project: j.Project, OwnerProject: j.OwnerProject, Department: j.Department}, policy, "")
+		ownedRank := 0
 		for _, id := range ids {
-			if own, ok := labels[id]; ok && (own.rank < l.rank || own.rank == l.rank && l.kind == "generic" && own.kind == "public" && l.rank != 10) {
-				l = own
+			if own, ok := labels[id]; ok {
+				if ownedRank == 0 || ranks[id] < ownedRank {
+					ownedRank = ranks[id]
+					l = own
+				}
 			}
 		}
 		rank := l.rank
-		for _, id := range ids {
-			if r, ok := ranks[id]; ok && r < rank {
-				rank = r
-			}
+		if ownedRank != 0 {
+			rank = ownedRank
+		}
+		if rank == 10 {
+			l.name, l.kind = "受託案件", "generic"
 		}
 		worker := presence(j.CodexPID, j.CodexPIDCreated, probe)
 		supervisor := presence(j.PID, j.PIDCreated, probe)
@@ -135,11 +127,11 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		created, _ := time.Parse(time.RFC3339Nano, j.CreatedAt)
 		row := &Job{
 			Key: jobKey(j.ID), TodoIDs: ids, PublicLabel: l.name, LabelKind: l.kind,
-			Department: l.department, Priority: rank, RecordedStatus: knownStatus(j.Status, false),
+			Department: rankDepartment(rank), Priority: rank, RecordedStatus: knownStatus(j.Status, false),
 			Execution: execution(j, worker, supervisor), WorkerPresence: worker, SupervisorPresence: supervisor,
 			Phase: phase(j), TaskType: safeTaskType(j.TaskType), WaitReasons: jobWaits(j, now, opts.StaleAfter),
 			LastActivity: activity, LastHeartbeat: heartbeat, Source: loaded.source,
-			rawID: j.ID, parentID: j.ParentJobID, independent: len(j.Subwork) != 0 && string(j.Subwork) != "null", created: created,
+			rawID: j.ID, parentID: j.ParentJobID, independent: objectValue(j.Subwork), cancelRequested: j.CancelRequested, created: created,
 		}
 		allJobs[j.ID] = row
 	}
@@ -149,8 +141,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		changed = false
 		for _, j := range allJobs {
 			p, ok := allJobs[j.parentID]
-			if ok && !j.independent && liveStatus(j.RecordedStatus) && liveStatus(p.RecordedStatus) && p.Priority < j.Priority {
+			if ok && !j.independent && liveStatus(j.RecordedStatus) && liveStatus(p.RecordedStatus) && !p.cancelRequested && p.Priority < j.Priority {
 				j.Priority, changed = p.Priority, true
+				j.Department = rankDepartment(j.Priority)
 			}
 		}
 	}
@@ -172,7 +165,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		percent, progressState := measuredProgress(item)
 		t := Task{
 			ID: id, DisplayName: fmt.Sprintf("%s / ToDo %d", l.name, id), PublicLabel: l.name,
-			LabelKind: l.kind, Department: l.department, Priority: ranks[id], RecordedStatus: knownStatus(item.Status, true),
+			LabelKind: l.kind, Department: rankDepartment(ranks[id]), Priority: ranks[id], RecordedStatus: knownStatus(item.Status, true),
 			Percent: percent, ProgressState: progressState, Execution: "not_observed", Phase: "unknown",
 			TaskType: safeTaskType(item.TaskType), TaskTypeSource: "unknown", Detail: DetailRef{Kind: "todo", TaskID: id},
 			JobKeys: []string{}, WaitReasons: taskWaits(item, items, now, opts.StaleAfter),
@@ -279,6 +272,11 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	}
 	s.HeartbeatAt = time.Now().UTC().Format(time.RFC3339Nano)
 	return s
+}
+
+func objectValue(raw json.RawMessage) bool {
+	var value map[string]json.RawMessage
+	return json.Unmarshal(raw, &value) == nil && value != nil
 }
 
 func relevantJob(j *Job) bool {

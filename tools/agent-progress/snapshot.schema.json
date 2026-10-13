@@ -71,7 +71,8 @@
       "additionalProperties": false,
       "required": ["kind", "todo_ids"],
       "properties": {
-        "kind": {"enum": ["dependency", "readiness", "subscription_readiness", "technical_retry", "owner_reply", "blocked_unspecified", "unknown", "rate_limit", "execution_slot", "other_worker", "supervisor_restart", "cancellation", "source_unavailable", "model_capacity"]},
+        "kind": {"enum": ["dependency", "readiness", "subscription_readiness", "technical_retry", "owner_reply", "blocked_unspecified", "unknown", "rate_limit", "execution_slot", "other_worker", "supervisor_restart", "cancellation", "source_unavailable", "model_capacity", "recovery_unverified"]},
+        "label": {"const": "復旧状況が未確認"},
         "todo_ids": {"$ref": "#/$defs/ids"},
         "not_before": {"$ref": "#/$defs/clock"}
       }
@@ -87,7 +88,7 @@
         "label_kind": {"enum": ["public", "generic"]},
         "department": {"$ref": "#/$defs/department"},
         "priority": {"$ref": "#/$defs/priority"},
-        "recorded_status": {"enum": ["todo", "doing", "done", "block", "wait", "retired", "archived", "cancelled", "unknown"]},
+        "recorded_status": {"enum": ["todo", "doing", "done", "block", "wait", "recovery_unverified", "retired", "archived", "cancelled", "unknown"]},
         "percent": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
         "progress_state": {"enum": ["measured", "not_measured", "invalid", "done"]},
         "execution": {"$ref": "#/$defs/execution"},

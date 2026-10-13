@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"container/heap"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -39,6 +41,9 @@ func timeClock(s string, now time.Time, stale time.Duration) Clock {
 		return Clock{State: "unknown"}
 	}
 	at, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		at, err = time.Parse("2006-01-02T15:04:05.999999999-0700", s)
+	}
 	if err != nil {
 		at, err = time.ParseInLocation("2006-01-02 15:04", s, jst)
 	}
@@ -168,7 +173,45 @@ type loadedJob struct {
 	source Source
 }
 
-func loadJobs(ctx context.Context, opts Options, now time.Time) ([]loadedJob, Source) {
+// Canonical IDs begin with YYYYMMDD-HHMMSS. Keep only the newest MaxJobs
+// names in memory, but enumerate the entire directory (bounded by the deadline)
+// instead of stopping on its oldest entries. Pinned references are read first
+// and are exempt from the recent-history count, not the byte/deadline bounds.
+type recentJobNames []string
+
+func (h recentJobNames) Len() int           { return len(h) }
+func (h recentJobNames) Less(i, j int) bool { return h[i] < h[j] }
+func (h recentJobNames) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *recentJobNames) Push(v any)        { *h = append(*h, v.(string)) }
+func (h *recentJobNames) Pop() any {
+	last := len(*h) - 1
+	v := (*h)[last]
+	*h = (*h)[:last]
+	return v
+}
+
+func taskReferences(items map[int64]todoItem, unfinishedOnly bool) map[string][]int64 {
+	references := map[string][]int64{}
+	for id, item := range items {
+		if unfinishedOnly && (item.Status == "done" || item.Status == "retired" || item.Status == "archived" || item.Status == "cancelled") {
+			continue
+		}
+		var refs []json.RawMessage
+		_ = json.Unmarshal(item.Jobs, &refs)
+		for _, raw := range refs {
+			var jid string
+			if json.Unmarshal(raw, &jid) == nil && validJobID(jid) {
+				references[jid] = append(references[jid], id)
+			}
+		}
+		if validJobID(item.Scheduler.Job) {
+			references[item.Scheduler.Job] = append(references[item.Scheduler.Job], id)
+		}
+	}
+	return references
+}
+
+func loadJobs(ctx context.Context, opts Options, now time.Time, pinned map[string][]int64) ([]loadedJob, Source) {
 	total := newSource(now)
 	dir, err := os.Open(opts.JobsDir)
 	if err != nil {
@@ -177,7 +220,66 @@ func loadJobs(ctx context.Context, opts Options, now time.Time) ([]loadedJob, So
 	}
 	defer dir.Close()
 	var jobs []loadedJob
-	entries, directories := 0, 0
+	read := map[string]bool{}
+	load := func(id string) bool {
+		if read[id] {
+			return true
+		}
+		if ctx.Err() != nil {
+			total.Status = "deadline"
+			return false
+		}
+		max := opts.JobBytes
+		remaining := opts.JobsBytes - total.BytesRead
+		if remaining <= 0 {
+			total.Status = "byte_limit"
+			return false
+		}
+		if max > remaining {
+			max = remaining
+		}
+		var j jobMeta
+		s := newSource(now)
+		// Direct references must obey the same no-directory-symlink rule as
+		// discovered entries; checking only job.json would follow its parent.
+		info, statErr := os.Lstat(filepath.Join(opts.JobsDir, id))
+		if statErr != nil {
+			s.Status = ioCode(statErr)
+		} else if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			s.Status = "not_regular"
+		} else {
+			s = readProjection(filepath.Join(opts.JobsDir, id, "job.json"), max, &j, now, opts.StaleAfter)
+		}
+		if s.Status == "ok" && (j.ID != id || j.Status == "") {
+			s.Status, s.Complete = "invalid_record", false
+		}
+		if s.Status != "ok" {
+			j = jobMeta{ID: id}
+			total.FailedReads++
+		} else {
+			total.RecordsRead++
+			s.RecordsRead = 1
+		}
+		total.BytesRead += s.BytesRead
+		jobs = append(jobs, loadedJob{j, s})
+		read[id] = true
+		return true
+	}
+	ids := make([]string, 0, len(pinned))
+	for id := range pinned {
+		if validJobID(id) {
+			ids = append(ids, id)
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(ids)))
+	for _, id := range ids {
+		if !load(id) {
+			return jobs, total
+		}
+	}
+	newest := &recentJobNames{}
+	directories, pinnedDirectories := 0, 0
+	scanComplete := false
 	for {
 		if ctx.Err() != nil {
 			total.Status = "deadline"
@@ -185,18 +287,8 @@ func loadJobs(ctx context.Context, opts Options, now time.Time) ([]loadedJob, So
 		}
 		batch, readErr := dir.ReadDir(128)
 		for _, entry := range batch {
-			entries++
-			if entries > opts.MaxJobs*4 {
-				total.Status = "entry_limit"
-				return jobs, total
-			}
 			if entry.Type()&os.ModeSymlink != 0 || !entry.IsDir() {
 				continue
-			}
-			directories++
-			if directories > opts.MaxJobs {
-				total.Status = "directory_limit"
-				return jobs, total
 			}
 			if ctx.Err() != nil {
 				total.Status = "deadline"
@@ -208,42 +300,45 @@ func loadJobs(ctx context.Context, opts Options, now time.Time) ([]loadedJob, So
 				total.FailedReads++
 				continue
 			}
-			max := opts.JobBytes
-			remaining := opts.JobsBytes - total.BytesRead
-			if remaining <= 0 {
-				total.Status = "byte_limit"
-				return jobs, total
+			directories++
+			if read[id] {
+				pinnedDirectories++
 			}
-			if max > remaining {
-				max = remaining
+			if newest.Len() < opts.MaxJobs {
+				heap.Push(newest, id)
+			} else if id > (*newest)[0] {
+				(*newest)[0] = id
+				heap.Fix(newest, 0)
 			}
-			var j jobMeta
-			s := readProjection(filepath.Join(opts.JobsDir, id, "job.json"), max, &j, now, opts.StaleAfter)
-			if s.Status == "ok" && (j.ID != id || j.Status == "") {
-				s.Status, s.Complete = "invalid_record", false
-			}
-			if s.Status != "ok" {
-				// Retain an unknown row; never convert an unreadable record to a
-				// successful absence or leak a partial decode into the snapshot.
-				j = jobMeta{ID: id}
-				total.FailedReads++
-			} else {
-				total.RecordsRead++
-				s.RecordsRead = 1
-			}
-			total.BytesRead += s.BytesRead
-			jobs = append(jobs, loadedJob{j, s})
 		}
 		if readErr == io.EOF {
-			total.Complete = total.FailedReads == 0
-			if total.FailedReads > 0 {
-				total.Status = "partial"
-			}
+			scanComplete = true
 			break
 		}
 		if readErr != nil {
 			total.Status = ioCode(readErr)
 			break
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(*newest)))
+	retainedDirectories := newest.Len() + pinnedDirectories
+	for _, id := range *newest {
+		if read[id] {
+			retainedDirectories--
+		}
+	}
+	for _, id := range *newest {
+		if !load(id) {
+			return jobs, total
+		}
+	}
+	if scanComplete {
+		if directories > retainedDirectories {
+			total.Status = "directory_limit"
+		} else if total.FailedReads > 0 {
+			total.Status = "partial"
+		} else {
+			total.Complete = true
 		}
 	}
 	return jobs, total
@@ -252,7 +347,7 @@ func loadJobs(ctx context.Context, opts Options, now time.Time) ([]loadedJob, So
 func knownStatus(raw string, task bool) string {
 	allowed := "|queued|starting|running|succeeded|failed|cancelled|lost|"
 	if task {
-		allowed = "|todo|doing|done|block|wait|retired|archived|cancelled|"
+		allowed = "|todo|doing|done|block|wait|recovery_unverified|retired|archived|cancelled|"
 	}
 	if raw != "" && !strings.ContainsAny(raw, "|\r\n\x1b") && strings.Contains(allowed, "|"+raw+"|") {
 		return raw

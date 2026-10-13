@@ -24,40 +24,42 @@ type label struct {
 func publicLabel(project string) label {
 	p := strings.ToLower(project)
 	p = strings.NewReplacer("-", "", "_", "", " ", "", ":", "", "α", "alpha").Replace(p)
-	l := label{kind: "public", department: "自社サービス部", rank: 100}
-	switch p {
-	case "arps", "socialpilot", "クライアント案件":
+	rank := projectRank(project)
+	l := label{kind: "public", department: rankDepartment(rank), rank: rank}
+	if rank == 10 {
 		return label{"受託案件", "generic", "受託部", 10}
+	}
+	switch p {
 	case "civ6", "civ6banseiki", "banseiki", "万世紀", "万世記":
-		l.name, l.department, l.rank = "万世紀", "万世紀", 20
+		l.name = "万世紀"
 	case "tools", "pctools", "pcツール", "pcの道具", "cctools", "ccpctoolsrs", "makhmeto":
-		l.name, l.department, l.rank = "PCの道具", "情報システム部", 30
+		l.name = "PCの道具"
 	case "localaiwebrs", "localaiconsole", "localaiconcole":
-		l.name, l.department, l.rank = "localai-web-rs", "情報システム部", 30
+		l.name = "localai-web-rs"
 	case "opencodex":
-		l.name, l.department, l.rank = "OpenCodex", "情報システム部", 30
+		l.name = "OpenCodex"
 	case "youtube", "発信部":
-		l.name, l.department, l.rank = "発信部", "発信部", 40
+		l.name = "発信部"
 	case "skills", "skill":
-		l.name, l.department, l.rank = "Skills", "情報システム部", 50
+		l.name = "Skills"
 	case "goddmcpalpha":
-		l.name, l.department, l.rank = "GoDD-MCP-Alpha", "GoDD事業部", 60
+		l.name = "GoDD-MCP-Alpha"
 	case "goddpress":
-		l.name, l.department, l.rank = "GoDD-Press", "GoDD事業部", 61
+		l.name = "GoDD-Press"
 	case "goddao":
-		l.name, l.department, l.rank = "GoDD-AO", "GoDD事業部", 62
+		l.name = "GoDD-AO"
 	case "godd13a13e1", "13a13e1":
-		l.name, l.department, l.rank = "13a13e1", "GoDD事業部", 63
+		l.name = "13a13e1"
 	case "goddrosetta", "goddrosseta":
-		l.name, l.department, l.rank = "GoDD-Rosetta", "GoDD事業部", 64
+		l.name = "GoDD-Rosetta"
 	case "goddgenesis", "genesis":
-		l.name, l.department, l.rank = "GoDD-Genesis", "GoDD事業部", 65
+		l.name = "GoDD-Genesis"
 	case "goddvirtualstreamer", "virtualstreamer":
-		l.name, l.department, l.rank = "GoDD-VirtualStreamer", "GoDD事業部", 66
+		l.name = "GoDD-VirtualStreamer"
 	case "rex":
 		l.name = "Re:X"
 	default:
-		return label{"名称未確認", "generic", "未分類", 100}
+		l.name, l.kind = "名称未確認", "generic"
 	}
 	return l
 }
@@ -108,19 +110,23 @@ func policyRank(raw json.RawMessage) int {
 }
 
 func itemLabel(item todoItem, policy priorityPolicy) label {
+	return policyLabel(item, policy, fmt.Sprint(item.ID))
+}
+
+func policyLabel(item todoItem, policy priorityPolicy, policyID string) label {
 	project, department := item.Project, item.Department
-	raw := policy.Items[fmt.Sprint(item.ID)]
+	raw := policy.Items[policyID]
 	var owner struct {
-		Project, Department string
+		Project, Department *string
 	}
 	_ = json.Unmarshal(raw, &owner)
-	if owner.Project != "" {
-		project = owner.Project
-	} else if name := rawString(item.OwnerProject); name != "" {
+	if owner.Project != nil {
+		project = *owner.Project
+	} else if name, ok := optionalString(item.OwnerProject); ok {
 		project = name
 	}
-	if owner.Department != "" {
-		department = owner.Department
+	if owner.Department != nil {
+		department = *owner.Department
 	}
 	l := publicLabel(project)
 	rank := policyRank(raw)
@@ -142,7 +148,7 @@ func itemLabel(item todoItem, policy priorityPolicy) label {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
-			if strings.EqualFold(key, project) {
+			if asciiEqualFold(key, project) {
 				rank = policyRank(projects[key])
 				break
 			}
@@ -155,6 +161,27 @@ func itemLabel(item todoItem, policy priorityPolicy) label {
 		l.name, l.kind = "受託案件", "generic"
 	}
 	return l
+}
+
+func optionalString(raw json.RawMessage) (string, bool) {
+	var s *string
+	err := json.Unmarshal(raw, &s)
+	if err != nil || s == nil {
+		return "", false
+	}
+	return *s, true
+}
+
+func asciiEqualFold(a, b string) bool {
+	lower := func(s string) string {
+		return strings.Map(func(r rune) rune {
+			if r >= 'A' && r <= 'Z' {
+				return r + ('a' - 'A')
+			}
+			return r
+		}, s)
+	}
+	return lower(a) == lower(b)
 }
 
 func measuredProgress(item todoItem) (*int, string) {
@@ -227,7 +254,11 @@ func pending(ids []int64, items map[int64]todoItem) []int64 {
 }
 
 func wait(kind string, ids []int64) WaitReason {
-	return WaitReason{Kind: kind, TodoIDs: positiveIDs(ids)}
+	w := WaitReason{Kind: kind, TodoIDs: positiveIDs(ids)}
+	if kind == "recovery_unverified" {
+		w.Label = "復旧状況が未確認"
+	}
+	return w
 }
 
 func readyReason(r *readyWait, now time.Time, stale time.Duration) WaitReason {
@@ -246,6 +277,9 @@ func taskWaits(item todoItem, all map[int64]todoItem, now time.Time, stale time.
 	out := []WaitReason{}
 	if item.Status == "done" {
 		return out
+	}
+	if item.Status == "recovery_unverified" {
+		out = append(out, wait("recovery_unverified", nil))
 	}
 	ids := pending(append(append([]int64{}, item.WaitOn...), item.WorkWaitOn...), all)
 	if len(ids) > 0 {
@@ -319,7 +353,7 @@ func jobWaits(j jobMeta, now time.Time, stale time.Duration) []WaitReason {
 		out = append(out, wait("cancellation", nil))
 	}
 	if len(out) == 0 {
-		out = append(out, wait("execution_slot", nil))
+		out = append(out, wait("unknown", nil))
 	}
 	return out
 }
@@ -327,6 +361,7 @@ func jobWaits(j jobMeta, now time.Time, stale time.Duration) []WaitReason {
 type processObservation struct {
 	alive, known bool
 	created      *uint64
+	session      uint32
 }
 
 type processProbe func(uint32) processObservation
@@ -359,6 +394,12 @@ func terminalStatus(s string) bool {
 func execution(j jobMeta, worker, supervisor string) string {
 	if worker == "verified_alive" {
 		return "running"
+	}
+	// A reused or inaccessible PID cannot resurrect a finalized record. Keep
+	// its presence evidence, but require an exact live worker identity to
+	// promote a terminal job back to running.
+	if terminalStatus(j.Status) {
+		return "finished"
 	}
 	if worker == "alive_identity_unknown" || supervisor == "alive_identity_unknown" {
 		return "alive_identity_unknown"

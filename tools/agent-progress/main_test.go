@@ -74,9 +74,11 @@ func TestAtomicPublicationAndFailedReplacement(t *testing.T) {
 	}
 	// Readers run across real replacements and may only see complete generations.
 	result := make(chan string, 1)
+	ready := make(chan struct{})
 	go func() {
+		close(ready)
 		for i := 0; i < 200; i++ {
-			data, err := os.ReadFile(path)
+			data, err := readPublishedSnapshot(path)
 			if err != nil {
 				result <- "published file could not be read"
 				return
@@ -88,16 +90,25 @@ func TestAtomicPublicationAndFailedReplacement(t *testing.T) {
 		}
 		result <- ""
 	}()
+	// Schedule the reader before issuing replacements; drain it before any
+	// failure assertion or fixture cleanup.
+	<-ready
+	var publishErr error
 	for i := 0; i < 20; i++ {
 		data := a
 		if i%2 == 0 {
 			data = b
 		}
 		if err := publish(path, data, f.opts); err != nil {
-			t.Fatal(err)
+			publishErr = err
+			break
 		}
 	}
-	if message := <-result; message != "" {
+	message := <-result
+	if publishErr != nil {
+		t.Fatal(publishErr)
+	}
+	if message != "" {
 		t.Fatal(message)
 	}
 	old, _ := os.ReadFile(path)

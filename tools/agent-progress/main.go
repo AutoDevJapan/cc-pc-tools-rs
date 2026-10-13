@@ -67,17 +67,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), opts.Deadline)
 	defer cancel()
-	// Cache observed PID identities during this finite acquisition. No process
-	// name, command line, account identity, or environment is collected.
-	observed := map[uint32]processObservation{}
-	probe := func(pid uint32) processObservation {
-		if p, ok := observed[pid]; ok {
-			return p
-		}
-		p := nativeProbe(pid)
-		observed[pid] = p
-		return p
-	}
+	// Cache handles and one validated system-snapshot fallback per acquisition.
+	probe := newNativeProbe(ctx)
 	snapshot := collect(ctx, opts, time.Now(), probe)
 	data, err := json.Marshal(snapshot)
 	if err != nil {

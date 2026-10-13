@@ -3,6 +3,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"syscall"
 	"time"
 	"unsafe"
@@ -14,6 +16,45 @@ var waitForSingleObject = kernel.NewProc("WaitForSingleObject")
 var getProcessTimes = kernel.NewProc("GetProcessTimes")
 var closeHandle = kernel.NewProc("CloseHandle")
 var moveFileEx = kernel.NewProc("MoveFileExW")
+
+func newNativeProbe(ctx context.Context) processProbe {
+	return snapshotFallbackProbe(ctx, nativeProbe, validatedProcessSnapshot)
+}
+
+// One handle observation per PID and at most one fallback acquisition per run.
+// Query failure is unknown, never a successful empty/absent snapshot.
+func snapshotFallbackProbe(ctx context.Context, handles processProbe, query func(context.Context) (map[uint32]processObservation, error)) processProbe {
+	cache := map[uint32]processObservation{}
+	var snapshot map[uint32]processObservation
+	attempted := false
+	return func(pid uint32) processObservation {
+		if p, ok := cache[pid]; ok {
+			return p
+		}
+		p := handles(pid)
+		if !p.known || p.alive && p.created == nil {
+			if !attempted {
+				attempted = true
+				if observed, err := query(ctx); err == nil {
+					snapshot = observed
+				}
+			}
+			if snapshot != nil {
+				if observed, ok := snapshot[pid]; ok {
+					p = observed
+				} else {
+					p = processObservation{known: true}
+				}
+			}
+		}
+		cache[pid] = p
+		return p
+	}
+}
+
+func transientSnapshotRead(err error) bool {
+	return errors.Is(err, syscall.Errno(5)) || errors.Is(err, syscall.Errno(32))
+}
 
 // Read-only handle inspection, using the raw FILETIME creation identity used by
 // cc-jobs/src/platform.rs. A denied inspection never becomes a dead process.

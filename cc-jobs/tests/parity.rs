@@ -5058,6 +5058,19 @@ mod queue_regressions {
         fs::write(&active, marker.to_string()).unwrap();
         assert_eq!(report()["occupied_slots"], 1);
         assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["pid"] = json!(321);
+        marker["pid_created"] = json!(456);
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        t.rt.proc_probe_errors.lock().unwrap().insert(321, 5);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        t.rt.proc_probe_errors.lock().unwrap().remove(&321);
+        marker["pid_created"] = Value::Null;
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        fs::write(&active, "{incomplete").unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
         fs::remove_file(active).unwrap();
         // Cargo admitted: the marker is gone and the job occupies its slot again.
         fs::remove_file(&live).unwrap();

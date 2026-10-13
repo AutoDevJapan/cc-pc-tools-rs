@@ -195,16 +195,41 @@ impl Context {
     /// A job blocked in the Cargo gate is idle, so it does not occupy a queue
     /// slot; it counts again as soon as Cargo is admitted and the marker is gone.
     pub(crate) fn cargo_waiting(&self, job: &Value) -> bool {
-        let markers = self.live_wait_markers(job);
-        !markers.iter().any(|wait| s(wait, "kind") == "cargo-active")
-            && markers.iter().any(|wait| {
-                s(wait, "kind") == "cargo"
-                    || (s(wait, "kind").is_empty()
-                        && matches!(
-                            s(wait, "reason"),
-                            "cargoの共有ビルド枠待ち" | "cargoの共有キャッシュ枠待ち"
-                        ))
-            })
+        let Ok(entries) = fs::read_dir(self.job_dir(s(job, "id")).join("resource-waits")) else {
+            return false;
+        };
+        let mut waiting = false;
+        for entry in entries {
+            let Ok(entry) = entry else {
+                return false;
+            };
+            let Ok(marker) = self.read_json(&entry.path()) else {
+                return false;
+            };
+            if s(&marker, "job_id") != s(job, "id") {
+                continue;
+            }
+            // A positive waiting marker cannot erase an inaccessible active
+            // sibling or an incomplete observation of this whole job's flight.
+            match self.is_ours_checked(&marker, "pid") {
+                Err(_) => return false,
+                Ok(false) => continue,
+                Ok(true) => (),
+            }
+            match s(&marker, "kind") {
+                "cargo-active" => return false,
+                "cargo" => waiting = true,
+                "" if matches!(
+                    s(&marker, "reason"),
+                    "cargoの共有ビルド枠待ち" | "cargoの共有キャッシュ枠待ち"
+                ) =>
+                {
+                    waiting = true
+                }
+                _ => return false,
+            }
+        }
+        waiting
     }
 
     pub fn resource_waits(&self, job: &Value) -> Vec<String> {

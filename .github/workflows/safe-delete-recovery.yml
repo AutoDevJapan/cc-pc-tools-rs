@@ -60,11 +60,17 @@ jobs:
               $expectedParent = Join-Path $env:TEMP "codex-owned-$($parent.id)"
               if ($parent.id -notmatch '^[a-f0-9]{32}$' -or $parent.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
               $checkedParent = & $helper plan --id $parent.id | ConvertFrom-Json
-              if ($LASTEXITCODE -ne 0 -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 0) { throw 'Fixture parent is not owned and empty' }
+              if ($LASTEXITCODE -ne 0) { throw 'Fixture parent ownership check failed; inspect the helper error above' }
+              if ($checkedParent.action -ne 'submit_to_exec_tool' -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 0) { throw 'Fixture parent is not owned, empty and eligible for normal cleanup' }
             } else {
               $parent = & $helper create --project pc-ci --content recovery-parent | ConvertFrom-Json
               if ($LASTEXITCODE -ne 0) { throw 'Could not create owned fixture parent' }
-              @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $parentRecord -Encoding utf8
+              try {
+                @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $parentRecord -Encoding utf8 -ErrorAction Stop
+              } catch {
+                Write-Output "Owned parent retained in helper receipts: id=$($parent.id); path=$($parent.path)"
+                throw
+              }
             }
             $created = & $helper create --root $parent.path --project pc-ci --content recovery-fixtures | ConvertFrom-Json
             if ($LASTEXITCODE -ne 0) { throw 'Could not create owned physical fixtures' }

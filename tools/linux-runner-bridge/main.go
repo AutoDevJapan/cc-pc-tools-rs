@@ -231,6 +231,19 @@ func gatedChild(args []string) int {
 		return exitCode(c.Run())
 	}
 	jobs, e := strconv.Atoi(os.Getenv("CARGO_BUILD_JOBS"))
+	// Read-only commands (metadata/fmt/version) intentionally bypass admission.
+	// Their compiler cap is irrelevant; use one rather than pretending a slot
+	// was admitted. Build-like commands must have the gate's published caps.
+	if os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" {
+		switch args[0] {
+		case "metadata", "fmt":
+			c := command(docker, append([]string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", container, "/opt/bridge/bridge", "execute", "1", "1"}, args...)...)
+			c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
+			return exitCode(c.Run())
+		default:
+			return 1
+		}
+	}
 	if e != nil || jobs < 1 || jobs > 10 {
 		return 1
 	}

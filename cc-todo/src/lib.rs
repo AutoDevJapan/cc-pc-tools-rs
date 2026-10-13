@@ -27,6 +27,7 @@ pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
 pub mod ready;
+pub mod verified_resume;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
 
@@ -111,6 +112,18 @@ pub enum Command {
         job: String,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+    },
+    /// Resume one recovered item after checking its original state and receipts.
+    ResumeVerified {
+        id: i64,
+        #[arg(long, value_parser = ["todo", "doing"])]
+        expected_status: String,
+        #[arg(long)]
+        request_sha256: String,
+        #[arg(long)]
+        source_job_sha256: String,
+        #[arg(long)]
+        job: String,
     },
     /// Update the note or saved specification without changing task state or ownership.
     Edit {
@@ -1002,6 +1015,11 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 .as_array()
                 .and_then(|items| items.iter().find(|i| i["id"] == *id))
                 .ok_or_else(|| format!("no item {id}"))?;
+            if item["status"] == "recovery_unverified" {
+                return Err(
+                    "復旧したToDoはresume-verifiedで元の状態と保存記録を照合してください".into(),
+                );
+            }
             if cc_job_policy::todo_wait::waiting(db, item) {
                 return Err("待っているToDoが未完了です。完了すると自動で再開します".into());
             }
@@ -1032,6 +1050,39 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 }
             }
             i["updated"] = json!(now());
+        }
+        Command::ResumeVerified {
+            id,
+            expected_status,
+            request_sha256,
+            source_job_sha256,
+            job,
+        } => {
+            let receipt = verified_resume::verify(
+                db,
+                paths,
+                *id,
+                expected_status,
+                request_sha256,
+                source_job_sha256,
+                job,
+            )?;
+            // Validate Start against a copy: dependency or readiness failures must
+            // not change the recovered state, receipt, ownership or generation.
+            let mut proposed = db.clone();
+            find(&mut proposed, *id)?["status"] = json!(expected_status);
+            execute(
+                &mut proposed,
+                &Command::Start {
+                    id: *id,
+                    job: job.clone(),
+                    progress: None,
+                },
+                paths,
+            )?;
+            find(&mut proposed, *id)?["recovery_resume_receipt"] = receipt;
+            *db = proposed;
+            output.push(json!({"id":id,"matching":true}).to_string());
         }
         Command::Edit {
             id,

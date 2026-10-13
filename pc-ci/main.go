@@ -56,7 +56,7 @@ func source(e event, kind, sha, ref string) (string, string, error) {
 	}
 }
 
-func hook() error {
+func hook(checkCurrent bool) error {
 	if os.Getenv("GITHUB_REPOSITORY") != repository {
 		return fmt.Errorf("wrong repository")
 	}
@@ -73,18 +73,30 @@ func hook() error {
 	if err != nil {
 		return err
 	}
+	if !checkCurrent {
+		fmt.Println("Repository and event admitted; current head must be checked before checkout")
+		return nil
+	}
 	token := os.Getenv("CI_JOB_TOKEN")
 	if token == "" {
 		return fmt.Errorf("job-scoped read token is required")
 	}
-	request, err := http.NewRequest("GET", "https://api.github.com/repos/"+repository+"/git/ref/heads/"+url.PathEscape(branch), nil)
+	if err := currentHead(&http.Client{Timeout: 20 * time.Second}, "https://api.github.com/repos/"+repository+"/git/ref/heads/"+url.PathEscape(branch), token, sha); err != nil {
+		return err
+	}
+	fmt.Printf("Accepted current repository revision %s\n", sha)
+	return nil
+}
+
+func currentHead(client *http.Client, endpoint, token, sha string) error {
+	request, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
 	request.Header.Set("Authorization", "Bearer "+token)
 	request.Header.Set("Accept", "application/vnd.github+json")
 	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	response, err := (&http.Client{Timeout: 20 * time.Second}).Do(request)
+	response, err := client.Do(request)
 	if err != nil {
 		return fmt.Errorf("branch head check unavailable")
 	}
@@ -103,13 +115,12 @@ func hook() error {
 	if sha == "" || head.Object.SHA != sha {
 		return fmt.Errorf("obsolete branch revision rejected")
 	}
-	fmt.Printf("Accepted current repository revision %s\n", sha)
 	return nil
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "hook" {
-		if err := hook(); err != nil {
+	if len(os.Args) > 1 && (os.Args[1] == "hook" || os.Args[1] == "admit") {
+		if err := hook(os.Args[1] == "admit"); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}

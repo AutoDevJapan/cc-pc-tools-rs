@@ -17,6 +17,11 @@ jobs:
     env:
       CI_JOB_TOKEN: ${{ github.token }}
     steps:
+      - name: Reject obsolete source before checkout
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

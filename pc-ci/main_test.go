@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestSourceAdmission(t *testing.T) {
 	tests := []struct {
@@ -24,5 +29,52 @@ func TestSourceAdmission(t *testing.T) {
 				t.Fatalf("accepted=%v error=%v", err == nil, err)
 			}
 		})
+	}
+}
+
+func TestCurrentHeadRejectsStaleOrUnavailable(t *testing.T) {
+	for _, tt := range []struct {
+		name, response, sha string
+		status              int
+		accept              bool
+	}{
+		{"current", `{"object":{"sha":"current"}}`, "current", 200, true},
+		{"obsolete", `{"object":{"sha":"current"}}`, "obsolete", 200, false},
+		{"missing", `{"object":{}}`, "", 200, false},
+		{"unavailable", `{}`, "current", 403, false},
+		{"invalid response", `{`, "current", 200, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var auth string
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				auth = r.Header.Get("Authorization")
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.response))
+			}))
+			defer s.Close()
+			err := currentHead(s.Client(), s.URL, "test-only-token", tt.sha)
+			if auth != "Bearer test-only-token" {
+				t.Fatal("missing job-scoped authorization")
+			}
+			if (err == nil) != tt.accept {
+				t.Fatalf("accepted=%v error=%v", err == nil, err)
+			}
+		})
+	}
+}
+
+func TestPullRequestRejectsFork(t *testing.T) {
+	var e event
+	// The checkout SHA is permitted only when the head repository is exactly this repo.
+	if err := json.Unmarshal([]byte(`{"repository":{"full_name":"AutoDevJapan/cc-pc-tools-rs"},"pull_request":{"head":{"repo":{"full_name":"fork/cc-pc-tools-rs"},"ref":"main","sha":"abc"}}}`), &e); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := source(e, "pull_request", "merge", ""); err == nil {
+		t.Fatal("fork accepted")
+	}
+	e.PullRequest.Head.Repo.FullName = repository
+	branch, sha, err := source(e, "pull_request", "merge", "")
+	if err != nil || branch != "main" || sha != "abc" {
+		t.Fatalf("wrong pinned PR source: %q %q %v", branch, sha, err)
 	}
 }

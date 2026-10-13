@@ -3543,6 +3543,7 @@ mod tests {
             let mut server = fixture.server.lock().unwrap();
             server.blocked = false;
             server.block_reads_after_post = false;
+            server.drop_response = false;
         }
         let out = resume_ask(&mut ctx, &resume).unwrap();
         assert_eq!(out["delivery"], "verified");
@@ -3880,7 +3881,12 @@ mod tests {
                 }
                 _ => unreachable!(),
             }
-            assert!(candidate.validate().is_err(), "mutation={mutation}");
+            let error = candidate.validate().unwrap_err();
+            assert_eq!(
+                error,
+                "origin repair does not match the exact unsent request",
+                "mutation={mutation}"
+            );
         }
     }
 

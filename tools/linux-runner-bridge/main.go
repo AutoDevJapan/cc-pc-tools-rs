@@ -162,22 +162,40 @@ func runnerConfigFailureClass(output []byte) int {
 func reportRunnerConfigSummary(output []byte) {
 	text := strings.ToLower(string(output))
 	summary := struct {
-		Bytes        int  `json:"bytes"`
-		Has401       bool `json:"has_401"`
-		Has403       bool `json:"has_403"`
-		HasTokenWord bool `json:"has_token_word"`
-		HasURLWord   bool `json:"has_url_word"`
-		HasAuthWord  bool `json:"has_auth_word"`
-		HasExistWord bool `json:"has_exist_word"`
-		HasConnect   bool `json:"has_connect_word"`
-		HasErrorWord bool `json:"has_error_word"`
-		HasFailWord  bool `json:"has_fail_word"`
+		Bytes              int  `json:"bytes"`
+		Lines              int  `json:"lines"`
+		Has401             bool `json:"has_401"`
+		Has403             bool `json:"has_403"`
+		HasTokenWord       bool `json:"has_token_word"`
+		HasURLWord         bool `json:"has_url_word"`
+		HasAuthWord        bool `json:"has_auth_word"`
+		HasExistWord       bool `json:"has_exist_word"`
+		HasConnect         bool `json:"has_connect_word"`
+		HasErrorWord       bool `json:"has_error_word"`
+		HasFailWord        bool `json:"has_fail_word"`
+		HasRepoWord        bool `json:"has_repo_word"`
+		HasEnterWord       bool `json:"has_enter_word"`
+		HasConfigWord      bool `json:"has_config_word"`
+		HasRetryWord       bool `json:"has_retry_word"`
+		HasSessionWord     bool `json:"has_session_word"`
+		HasCredentialWord  bool `json:"has_credential_word"`
+		HasPermissionWord  bool `json:"has_permission_word"`
+		HasInvalidWord     bool `json:"has_invalid_word"`
+		HasExpiredWord     bool `json:"has_expired_word"`
+		HasAlreadyWord     bool `json:"has_already_word"`
+		HasInteractiveWord bool `json:"has_interactive_word"`
 	}{
-		Bytes: len(output), Has401: strings.Contains(text, "401"), Has403: strings.Contains(text, "403"),
+		Bytes: len(output), Lines: strings.Count(string(output), "\n"), Has401: strings.Contains(text, "401"), Has403: strings.Contains(text, "403"),
 		HasTokenWord: strings.Contains(text, "token"), HasURLWord: strings.Contains(text, "url"),
 		HasAuthWord: strings.Contains(text, "auth"), HasExistWord: strings.Contains(text, "exist"),
 		HasConnect: strings.Contains(text, "connect"), HasErrorWord: strings.Contains(text, "error"),
 		HasFailWord: strings.Contains(text, "fail"),
+		HasRepoWord: strings.Contains(text, "repo"), HasEnterWord: strings.Contains(text, "enter"),
+		HasConfigWord: strings.Contains(text, "config"), HasRetryWord: strings.Contains(text, "retry"),
+		HasSessionWord: strings.Contains(text, "session"), HasCredentialWord: strings.Contains(text, "credential"),
+		HasPermissionWord: strings.Contains(text, "permission"), HasInvalidWord: strings.Contains(text, "invalid"),
+		HasExpiredWord: strings.Contains(text, "expired"), HasAlreadyWord: strings.Contains(text, "already"),
+		HasInteractiveWord: strings.Contains(text, "what is the url"),
 	}
 	data, e := json.Marshal(summary)
 	if e == nil {
@@ -712,7 +730,7 @@ func hostMain(args []string) int {
 	reportStage("oauth-repository-permission-verified")
 	if mode == "normal" {
 		if verifyErr := verifyNormalContainer(); verifyErr != nil {
-			reportStage("normal-container-verification-failed")
+			reportStage("normal-container-verification-failed: " + verifyErr.Error())
 			fmt.Fprintln(os.Stderr, verifyErr)
 			return 1
 		}
@@ -729,14 +747,26 @@ func hostMain(args []string) int {
 	// The random bridge key and runner token stay in RAM and the official config
 	// process. Neither appears in command arguments, Docker config or host files.
 	for {
-		reportStage("runner-token-request")
-		token, tokenErr := output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
-		if tokenErr != nil || token == "" {
-			reportStage("runner-token-request-failed")
+		configured, checkErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "test -f /runner/.runner && printf configured || printf unconfigured"))
+		if checkErr != nil {
+			reportStage("runner-container-check-failed")
 			_ = s.Close()
 			return 1
 		}
-		reportStage("runner-token-received")
+		token := ""
+		if configured != "configured" {
+			reportStage("runner-token-request")
+			var tokenErr error
+			token, tokenErr = output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
+			if tokenErr != nil || token == "" {
+				reportStage("runner-token-request-failed")
+				_ = s.Close()
+				return 1
+			}
+		}
+		if token != "" {
+			reportStage("runner-token-received")
+		}
 		c := command(docker, "exec", "-i", runnerContainer, "/opt/bridge/bridge", "register")
 		c.Stdin = strings.NewReader(h.key + "\n" + token + "\n" + runnerName + "\n" + labels + "\n" + strconv.FormatBool(ephemeral) + "\n")
 		c.Stdout = os.Stdout
@@ -744,7 +774,22 @@ func hostMain(args []string) int {
 		reportStage("runner-registration-started")
 		code := exitCode(c.Run())
 		token = ""
-		if ephemeral || code == 0 {
+		if ephemeral {
+			_ = s.Shutdown(context.Background())
+			return code
+		}
+		if code == 96 {
+			reportStage("existing-runner-bridge-key-refreshed")
+			for {
+				time.Sleep(15 * time.Second)
+				running, probeErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "pgrep -f '[/]runner/bin/Runner.Listener run' >/dev/null && printf running || printf stopped"))
+				if probeErr != nil || running != "running" {
+					break
+				}
+			}
+			continue
+		}
+		if code == 0 {
 			_ = s.Shutdown(context.Background())
 			return code
 		}
@@ -752,7 +797,7 @@ func hostMain(args []string) int {
 			if summary, summaryErr := output(command(docker, "exec", runnerContainer, "cat", "/tmp/runner-config-summary.json")); summaryErr == nil {
 				var check map[string]json.RawMessage
 				root, rootErr := os.Getwd()
-				if json.Unmarshal([]byte(summary), &check) == nil && len(check) == 10 && rootErr == nil {
+				if json.Unmarshal([]byte(summary), &check) == nil && len(check) == 22 && rootErr == nil {
 					_ = os.WriteFile(filepath.Join(root, ".ci-runtime", "runner-config-summary.json"), []byte(summary), 0600)
 				}
 			}
@@ -791,8 +836,18 @@ func register() int {
 	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
 		return 16
 	}
-	if e = os.WriteFile("/tmp/bridge-key", []byte(strings.TrimSpace(key)), 0600); e != nil {
+	keyPath := filepath.Join(os.TempDir(), "bridge-key")
+	keyTmp := keyPath + ".new"
+	if e = os.WriteFile(keyTmp, []byte(strings.TrimSpace(key)), 0600); e != nil {
 		return 17
+	}
+	if e = os.Rename(keyTmp, keyPath); e != nil {
+		_ = os.Remove(keyTmp)
+		return 18
+	}
+	if _, configuredErr := os.Stat("/runner/.runner"); configuredErr == nil {
+		token = ""
+		return 96
 	}
 	cargs := []string{"--unattended", "--url", "https://github.com/" + repo, "--name", strings.TrimSpace(runnerName), "--labels", strings.TrimSpace(labels), "--work", "/work"}
 	if strings.TrimSpace(ephemeral) == "true" {

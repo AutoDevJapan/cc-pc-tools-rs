@@ -3,9 +3,22 @@ package main
 import (
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("host Docker container is only available on the Windows host")
+	}
+	if _, err := output(command(docker, "inspect", normalContainer)); err != nil {
+		t.Skip("dedicated normal runner container is not provisioned")
+	}
+	if err := verifyNormalContainer(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestCargoBoundary(t *testing.T) {
 	for _, args := range [][]string{{"test", "--locked", "-p", "cc-task-title", "-j64"}, {"nextest", "run", "--locked", "--test-threads=32"}, {"--version"}, {"fmt", "--manifest-path", "cc-bookmark-queue/Cargo.toml", "--check"}, {"fmt", "--manifest-path=cc-bookmark-queue/Cargo.toml", "--check"}} {

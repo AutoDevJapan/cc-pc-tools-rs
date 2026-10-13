@@ -641,6 +641,8 @@ struct Reply {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 enum Event {
+    /// Compatibility with an already recorded, strictly unsent origin correction.
+    OriginCorrected { request: Box<Request> },
     Intent {
         request: Box<Request>,
     },
@@ -758,8 +760,8 @@ impl Ledger {
                 _ => None,
             })
             .unwrap_or(id);
-        self.events.iter().find_map(|event| match event {
-            Event::Intent { request } if request.request_id == canonical => Some(request.as_ref()),
+        self.events.iter().rev().find_map(|event| match event {
+            Event::Intent { request } | Event::OriginCorrected { request } if request.request_id == canonical => Some(request.as_ref()),
             _ => None,
         })
     }
@@ -859,6 +861,43 @@ impl Ledger {
                     {
                         return Err("invalid or duplicate recovery intent".into());
                     }
+                }
+                Event::OriginCorrected { request } => {
+                    let prior = requests
+                        .get(&request.request_id)
+                        .ok_or("origin correction has no original intent")?;
+                    if !only_origin_changed(prior, request)?
+                        || phases.keys().any(|(id, _)| id == &request.request_id)
+                        || complete.contains_key(&request.request_id)
+                        || origin_repairs.contains_key(&request.request_id)
+                    {
+                        return Err(
+                            "origin correction changed scope or follows a possible POST".into()
+                        );
+                    }
+                    let (old_origin, new_origin) = ask_origins(prior, request)?;
+                    let linked = verified.iter().any(|((question_id, phase), receipt)| {
+                        phase == "question:0"
+                            && receipt.thread_id == old_origin
+                            && requests
+                                .get(question_id)
+                                .is_some_and(|original| original.destination == request.destination)
+                            && bots.get(question_id) == Some(&receipt.author_id)
+                            && verified
+                                .get(&(question_id.clone(), "progress".into()))
+                                .is_some_and(|progress| {
+                                    progress.thread_id == new_origin
+                                        && progress.author_id == receipt.author_id
+                                        && progress.flags & SILENT != 0
+                                        && progress.owner_mentions == 0
+                                })
+                    });
+                    if !linked {
+                        return Err(
+                            "origin correction lacks the exact question/progress receipts".into(),
+                        );
+                    }
+                    requests.insert(request.request_id.clone(), request);
                 }
                 Event::Alias {
                     request_id,
@@ -1297,6 +1336,43 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
         });
     }
     Ok(result)
+}
+
+fn ask_origins<'a>(prior: &'a Request, incoming: &'a Request) -> Result<(&'a str, &'a str)> {
+    match (&prior.operation, &incoming.operation) {
+        (
+            Kind::Ask {
+                origin_thread: old, ..
+            },
+            Kind::Ask {
+                origin_thread: new, ..
+            },
+        ) if old != new => Ok((old, new)),
+        _ => Err("origin correction requires two distinct question origins".into()),
+    }
+}
+
+fn only_origin_changed(prior: &Request, incoming: &Request) -> Result<bool> {
+    let (_, new_origin) = ask_origins(prior, incoming)?;
+    let mut allowed = prior.clone();
+    let Kind::Ask {
+        origin_thread,
+        decision_original,
+        ..
+    } = &mut allowed.operation
+    else {
+        return Ok(false);
+    };
+    *origin_thread = new_origin.into();
+    // Preserve all original decision data except its explicit origin metadata.
+    if decision_original.get("origin_thread_id").is_some() {
+        decision_original["origin_thread_id"] = json!(new_origin);
+    }
+    if decision_original["scope"].get("origin_thread_id").is_some() {
+        decision_original["scope"]["origin_thread_id"] = json!(new_origin);
+    }
+    allowed.fingerprint = allowed.fingerprint()?;
+    Ok(allowed == *incoming)
 }
 
 fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Request> {
@@ -4724,6 +4800,43 @@ mod tests {
             fs::write(&args.manifest,serde_json::to_vec(&binding).unwrap()).unwrap();
             assert!(close(&mut ctx,&args).is_err(),"missing {key}");
             assert_eq!(patch_count(&fixture),0);fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_close_reads_existing_origin_corrected_without_changing_ledger_or_scope() {
+        for scenario in ["valid", "body_changed", "unrelated_progress", "post_reserved"] {
+            let fixture=Fixture::new();let mut ctx=fixture.context();
+            let (args,binding,_)=close_fixture(&fixture,&mut ctx);
+            let mut ledger=Ledger::load(&fixture.home).unwrap();
+            let progress=ledger.receipt(&binding.request_id,"progress").unwrap().thread_id.clone();
+            let mut original=prepare_ask(&ctx,&fixture.ask("old-runtime-unsent","別の未送信の質問です。\na 保持\nb 保留")).unwrap();
+            let Kind::Ask {origin_thread,decision_original,..}=&mut original.operation else {unreachable!()};
+            *origin_thread=binding.thread_id.clone();decision_original["origin_thread_id"]=json!(binding.thread_id);
+            original.fingerprint=original.fingerprint().unwrap();
+            ledger.append(&fixture.home,Event::Intent{request:Box::new(original.clone())}).unwrap();
+            ledger.append(&fixture.home,Event::Bot{request_id:original.request_id.clone(),author_id:BOT.into()}).unwrap();
+            if scenario=="post_reserved" {
+                ledger.append(&fixture.home,Event::Pending{request_id:original.request_id.clone(),phase:"question:0".into(),
+                    effect:Effect{target:Target::Forum{title:original.title.clone()},content:original.body.clone(),notify:true,images:vec![]}}).unwrap();
+            }
+            let mut corrected=original;
+            let Kind::Ask{origin_thread,decision_original,..}=&mut corrected.operation else {unreachable!()};
+            *origin_thread=if scenario=="unrelated_progress"{"106".into()}else{progress};
+            decision_original["origin_thread_id"]=json!(origin_thread);
+            if scenario=="body_changed"{corrected.body="changed scope".into();}
+            corrected.fingerprint=corrected.fingerprint().unwrap();
+            if scenario=="valid" {
+                ledger.append(&fixture.home,Event::OriginCorrected{request:Box::new(corrected)}).unwrap();
+                let before=fs::read(fixture.home.join(LEDGER)).unwrap();
+                assert_eq!(close(&mut ctx,&args).unwrap()["archived"],true);
+                assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(),before);
+            } else {
+                ledger.events.push(Event::OriginCorrected{request:Box::new(corrected)});
+                fs::write(fixture.home.join(LEDGER),serde_json::to_vec(&ledger).unwrap()).unwrap();
+                assert!(close(&mut ctx,&args).is_err());assert_eq!(patch_count(&fixture),0);
+            }
+            fixture.unchanged();
         }
     }
 }

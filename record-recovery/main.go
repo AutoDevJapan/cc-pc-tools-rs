@@ -69,10 +69,16 @@ func discordLinks(text string) [][]string {
 	return result
 }
 
+// Keep OS error identity for callers without exposing private source paths.
+type sourceOpenError struct{ cause error }
+
+func (e sourceOpenError) Error() string { return "source_unavailable" }
+func (e sourceOpenError) Unwrap() error { return e.cause }
+
 func readJSON(path string) (obj, []byte, error) {
 	f, e := os.Open(path)
 	if e != nil {
-		return nil, nil, errors.New("source_unavailable")
+		return nil, nil, sourceOpenError{e}
 	}
 	defer f.Close()
 	b, e := io.ReadAll(io.LimitReader(f, 40<<20+1))
@@ -875,6 +881,8 @@ func main() {
 		v, e = correlate(*source, *home, *todo, *jobs, *out)
 	case "checkpoint":
 		v, e = checkpoint(*source, *todo, *spec, *out)
+	case "trace-deliveries":
+		v, e = traceDeliveries(*source, *todo, *jobs, *out)
 	case "collect":
 		token := os.Getenv("GODD_DISCORD_BOT_TOKEN")
 		if token == "" {

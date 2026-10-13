@@ -8,6 +8,7 @@
 - `discord_ask recovery-log --request-id ... --title ... --body-file ... [--notify]`
 - `discord_ask recovery-ask --request-id ... --todo-id ... --decision-file ... --body-file ... --origin-thread ...`
 - `discord_ask recovery-replies --thread ... [--request-id ... --todo-id ... --message ...] --read-only`
+- `discord_ask recovery-close --manifest <JSON>`
 
 投稿先は既存設定のサーバー・フォーラム・本人IDに限定する。
 新しい作業投稿を元投稿として使う場合は、過去の投稿を復元したものではないことを本文で明記する。
@@ -24,6 +25,41 @@ Intent は取得処理より前に、Pending は取得成功後・投稿直前�
 返信は新しく確認した質問のスレッドだけ読む。本人IDと質問以降の時刻・メッセージIDを照合し、元ToDo・質問原文・判断範囲と一緒に返す。
 `recovery-replies` は読み取り専用であり、担当への配送や回答の実反映を完了扱いにしない。
 担当は返信を元の依頼に反映し、反映した内容と成果を別に記録する。
+
+反映済みの新方式の質問1件は、`recovery-close` で終了する。
+この操作は、元ToDoの残作業の完了や契約変更を意味しない。
+元の質問台帳や復旧保留票を読み書きせず、既存のBot認証を内部で使用する。
+
+manifestは、確認済みの質問と実反映記録を固定するJSONである。
+以下の項目をすべて指定し、不明な値や推測した成功を入れない。
+
+| 項目 | 確認元 |
+|---|---|
+| request_id / thread_id / question_message_id | 新方式の質問の正規受付。スレッドと先頭メッセージは同じID |
+| origin_todo_id | 元の質問のToDo |
+| todo_id / job_id / revision | 実操作を反映した既存受付と担当、40桁のソース版 |
+| message_id / author_id | 設定済み本人の正規API返信 |
+| question_fingerprint | recovery-messages.jsonの元質問Intentのfingerprint |
+| reply_sha256 | 保存済みrecovery-repliesの該当owner_replies要素の正規化JSONのSHA256 |
+| receipt_sha256 | 既存unattended/applied/<message_id>.jsonの生バイトのSHA256 |
+| verification_sha256 | その反映記録のverificationオブジェクトの正規化JSONのSHA256 |
+| completion | その反映記録の実反映済み内容を示す文。残作業の記述も保持 |
+
+正規化JSONでは、オブジェクトのキーを再帰的に並べ、配列順を保持する。
+UTF-8の圧縮JSONを使用する。本文・メール・金額はmanifestや終了結果へ転記しない。
+manifestは新しい承認ではなく、担当が実操作と読み返しを終えた既存記録の照合入力である。
+CLIは、反映記録の取得元、全対象ID、担当、版、実反映記述、検証記録と反映日時を照合する。
+設定サーバー・フォーラム・Bot・本人と、正規GETした元質問本文・世代・範囲・返信も照合する。
+返信が編集されていたり、ほかの本人返信があったりする場合はPATCHせず、返信IDを独立記録へ残す。
+親担当は`recovery-replies`で原文と範囲を再確認する。勝手に別の回答を反映済み扱いにしない。
+
+専用recovery-close.lockと質問領域のロックの下で、recovery-close.jsonへ原子的に保存する。
+PATCH直前にpatch_pendingを保存し、対象スレッドだけに`{"archived":true}`を送る。
+成功はGETのarchived=trueと再照合で確認する。
+終了結果のoutcomeは、通常のarchived、PATCH結果消失後のrecovered_after_patch、既に閉じたalready_archivedを区別する。
+GETが失敗した場合は同一manifestで再試行し、再送やメンションをしない。
+GETが未終了を返す場合も成功としない。検証済みの質問が再び開かれた場合は自動で閉じ直さない。
+未反映の返信の記録や終了結果には原文を入れず、元ToDoを完了にせず、担当を起動しない。
 
 HTTPクライアントはDiscord公式の `DiscordBot (URL, version)` 形式で正確な識別情報を送る。
 アーカイブの開始位置はISO8601を保持し、タイムゾーンの `+` もURLのクエリー値としてエンコードする。

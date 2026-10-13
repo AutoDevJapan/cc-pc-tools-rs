@@ -3,7 +3,8 @@
 //! This is a separate message domain, not a recovery of state.json. It never loads,
 //! changes, unlocks or dispatches that ledger. HTTP writes are limited to a newly
 //! reserved forum post, its verified recovery threads and an explicitly supplied
-//! owner request thread. No scheduler, model, subprocess, PATCH or DELETE is used.
+//! owner request thread. Close uses one exact verified question PATCH only.
+//! No scheduler, model, subprocess or DELETE is used.
 //!
 //! Storage consists only of recovery-messages.json, recovery-messages.lock and
 //! recovery-messages.*.tmp beside them. The JSON contains append-only events;
@@ -86,6 +87,384 @@ pub struct RepliesArgs {
     /// This command is always read-only, including its local ledger.
     #[arg(long)]
     pub read_only: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct CloseArgs {
+    /// Reviewed ID/hash-only binding to an existing applied receipt and reply.
+    #[arg(long)]
+    pub manifest: PathBuf,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CloseBinding {
+    request_id: String,
+    thread_id: String,
+    question_message_id: String,
+    origin_todo_id: u64,
+    todo_id: u64,
+    message_id: String,
+    author_id: String,
+    job_id: String,
+    revision: String,
+    question_fingerprint: String,
+    reply_sha256: String,
+    receipt_sha256: String,
+    verification_sha256: String,
+    /// Exact completion statement: no inference from mere receipt existence.
+    completion: String,
+}
+
+const CLOSE_LEDGER: &str = "recovery-close.json";
+const CLOSE_LOCK: &str = "recovery-close.lock";
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CloseRecord {
+    binding: CloseBinding,
+    phase: String,
+    outcome: Option<String>,
+    pending_reply_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CloseLedger {
+    domain: String,
+    version: u32,
+    records: BTreeMap<String, CloseRecord>,
+}
+
+impl CloseLedger {
+    fn load(home: &Path) -> Result<Self> {
+        for name in [CLOSE_LEDGER, CLOSE_LOCK] {
+            match fs::symlink_metadata(home.join(name)) {
+                Ok(m) if !m.is_file() || m.file_type().is_symlink() => {
+                    return Err("close storage must be an independent regular file".into());
+                }
+                Ok(_) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(_) => return Err("cannot inspect close storage".into()),
+            }
+        }
+        match fs::File::open(home.join(CLOSE_LEDGER)) {
+            Ok(file) => {
+                let value: Self = serde_json::from_slice(&read_bounded(file, LEDGER_BYTES)?)
+                    .map_err(|_| "close ledger malformed; never treated as empty")?;
+                if value.domain != DOMAIN
+                    || value.version != 1
+                    || value.records.iter().any(|(id, r)| {
+                        id != &r.binding.thread_id
+                            || !matches!(
+                                r.phase.as_str(),
+                                "patch_pending" | "verified" | "reply_pending"
+                            )
+                    })
+                {
+                    return Err("close ledger domain/version/record differs".into());
+                }
+                Ok(value)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self {
+                domain: DOMAIN.into(),
+                version: 1,
+                records: BTreeMap::new(),
+            }),
+            Err(_) => Err("cannot read close ledger".into()),
+        }
+    }
+
+    fn save(&mut self, home: &Path, record: CloseRecord) -> Result<()> {
+        self.records
+            .insert(record.binding.thread_id.clone(), record);
+        let bytes = serde_json::to_vec_pretty(self).map_err(|_| "cannot encode close record")?;
+        if bytes.len() > LEDGER_BYTES {
+            return Err("close ledger capacity exceeded".into());
+        }
+        let mut temp = tempfile::Builder::new()
+            .prefix("recovery-close.")
+            .suffix(".tmp")
+            .tempfile_in(home)
+            .map_err(|_| "cannot stage close record")?;
+        temp.write_all(&bytes)
+            .map_err(|_| "cannot write close record")?;
+        temp.as_file()
+            .sync_all()
+            .map_err(|_| "cannot flush close record")?;
+        core::replace_file(temp.path(), &home.join(CLOSE_LEDGER))
+            .map_err(|_| "cannot publish close record")?;
+        #[cfg(not(windows))]
+        fs::File::open(home)
+            .and_then(|dir| dir.sync_all())
+            .map_err(|_| "cannot flush close directory")?;
+        Ok(())
+    }
+}
+
+fn close_application(home: &Path, binding: &CloseBinding) -> Result<Value> {
+    request_key(&binding.request_id)?;
+    request_key(&binding.job_id)?;
+    for id in [
+        &binding.thread_id,
+        &binding.question_message_id,
+        &binding.message_id,
+        &binding.author_id,
+    ] {
+        snowflake(id)?;
+    }
+    if binding.thread_id != binding.question_message_id
+        || binding.todo_id == 0
+        || binding.origin_todo_id == 0
+        || binding.revision.len() != 40
+        || !binding.revision.bytes().all(|c| c.is_ascii_hexdigit())
+        || binding.completion.trim().is_empty()
+    {
+        return Err("close binding is incomplete".into());
+    }
+    for hash in [
+        &binding.question_fingerprint,
+        &binding.reply_sha256,
+        &binding.receipt_sha256,
+        &binding.verification_sha256,
+    ] {
+        if hash.len() != 64 || !hash.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return Err("close binding requires exact SHA256 evidence".into());
+        }
+    }
+    // Never accept an arbitrary receipt file, nor create one when absent.
+    let file = fs::File::open(
+        home.join("unattended/applied")
+            .join(format!("{}.json", binding.message_id)),
+    )
+    .map_err(|_| "existing applied receipt is unavailable")?;
+    let bytes = read_bounded(file, TEXT_BYTES)?;
+    if format!("{:x}", Sha256::digest(&bytes)) != binding.receipt_sha256 {
+        return Err("applied receipt bytes differ from reviewed evidence".into());
+    }
+    let value: Value = serde_json::from_slice(&bytes).map_err(|_| "applied receipt malformed")?;
+    if value["source"] != "discord-api-v10"
+        || value["request_id"] != binding.request_id
+        || value["thread_id"] != binding.thread_id
+        || value["question_message_id"] != binding.question_message_id
+        || value["todo_id"] != binding.todo_id
+        || value["origin_todo_id"] != binding.origin_todo_id
+        || value["message_id"] != binding.message_id
+        || value["author_id"] != binding.author_id
+        || value["job_id"] != binding.job_id
+        || value["revision"] != binding.revision
+        || value["completion"] != binding.completion
+        || !value["verification"]
+            .as_object()
+            .is_some_and(|v| !v.is_empty())
+        || digest(&value["verification"])? != binding.verification_sha256
+    {
+        return Err("applied receipt association or execution verification differs".into());
+    }
+    chrono::DateTime::parse_from_rfc3339(core::s(&value["applied_at"]))
+        .map_err(|_| "applied receipt timestamp missing")?;
+    Ok(value)
+}
+
+fn close_replies(
+    api: &mut RecoveryApi<'_>,
+    ledger: &Ledger,
+    request: &Request,
+    binding: &CloseBinding,
+    applied: &Value,
+    state: &mut CloseLedger,
+    home: &Path,
+) -> Result<()> {
+    let replies = owner_replies(api, ledger, request)?;
+    let raw = api.get(&format!(
+        "/channels/{}/messages/{}",
+        binding.thread_id, binding.message_id
+    ))?;
+    let selected = replies.iter().find(|r| r.message_id == binding.message_id);
+    let exact = selected.is_some_and(|r| {
+        r.author_id == binding.author_id
+            && serde_json::to_value(r)
+                .ok()
+                .and_then(|v| digest(&v).ok())
+                .as_deref()
+                == Some(binding.reply_sha256.as_str())
+    });
+    let raw_matches = selected.is_some_and(|r| {
+        raw["id"] == r.message_id
+            && raw["channel_id"] == r.question_thread_id
+            && raw["author"]["id"] == r.author_id
+            && raw["author"]["bot"] != true
+            && raw["content"] == r.body
+            && raw["timestamp"] == r.timestamp
+            && matches!(raw["type"].as_u64(), Some(0 | 19))
+            && raw.get("webhook_id").is_none_or(Value::is_null)
+    });
+    let edited = raw.get("edited_timestamp").is_some_and(|v| !v.is_null());
+    // The reviewed receipt covers exactly one reply. A later reply is not implied applied.
+    let mut pending: Vec<_> = replies
+        .iter()
+        .filter(|r| r.message_id != binding.message_id)
+        .map(|r| r.message_id.clone())
+        .collect();
+    if !exact || !raw_matches || edited {
+        pending.push(binding.message_id.clone());
+    }
+    if !pending.is_empty() {
+        state.save(
+            home,
+            CloseRecord {
+                binding: binding.clone(),
+                phase: "reply_pending".into(),
+                outcome: None,
+                pending_reply_ids: pending,
+            },
+        )?;
+        return Err("RecoveryCloseReplyPending: unapplied or edited owner reply retained; parent must inspect recovery-replies".into());
+    }
+    let applied_at = chrono::DateTime::parse_from_rfc3339(core::s(&applied["applied_at"]))
+        .map_err(|_| "invalid application time")?;
+    let reply_at =
+        chrono::DateTime::parse_from_rfc3339(&selected.ok_or("applied reply missing")?.timestamp)
+            .map_err(|_| "invalid reply time")?;
+    if applied_at < reply_at {
+        return Err("application predates owner reply".into());
+    }
+    Ok(())
+}
+
+/// Close only an applied, exact new-domain question. No old-state load/save or dispatch.
+pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
+    let binding: CloseBinding = serde_json::from_slice(&read_bounded(
+        fs::File::open(&args.manifest).map_err(|_| "close manifest unavailable")?,
+        TEXT_BYTES,
+    )?)
+    .map_err(|_| "close manifest malformed")?;
+    ensure_storage(&ctx.here)?;
+    let _ = CloseLedger::load(&ctx.here)?; // inspect files before acquiring their locks
+    let _close_lock = ByteLock::acquire(&ctx.here.join(CLOSE_LOCK), Duration::ZERO)?;
+    let mut state = CloseLedger::load(&ctx.here)?;
+    let _messages_lock = ByteLock::acquire(&ctx.here.join(LOCK), Duration::ZERO)?;
+    let ledger = Ledger::load(&ctx.here)?;
+    if state
+        .records
+        .get(&binding.thread_id)
+        .is_some_and(|r| r.binding != binding)
+    {
+        return Err("close retry binding differs; same receipt must be retained".into());
+    }
+    let applied = close_application(&ctx.here, &binding)?;
+    let destination = Destination::from_context(ctx)?;
+    let request = ledger
+        .request(&binding.request_id)
+        .ok_or("new recovery question not found")?;
+    let starter = ledger
+        .receipt(&request.request_id, "question:0")
+        .ok_or("question not GET verified")?;
+    if request.request_id != binding.request_id
+        || request.destination != destination
+        || binding.author_id != destination.owner
+        || request.fingerprint != binding.question_fingerprint
+        || !ledger.complete(&request.request_id)
+        || starter.thread_id != binding.thread_id
+        || starter.message_id != binding.question_message_id
+        || !matches!(&request.operation,Kind::Ask{todo_id,..} if *todo_id == binding.origin_todo_id)
+    {
+        return Err("close question generation/owner/todo/scope differs".into());
+    }
+    let bot = ledger
+        .bot(&request.request_id)
+        .ok_or("question bot missing")?;
+    let me = ctx
+        .effects
+        .http("GET", &format!("{API}/users/@me"), None, true)
+        .map_err(|_| "cannot verify close bot")?;
+    if me["bot"] != true || me["id"] != bot {
+        return Err("close bot differs".into());
+    }
+    let mut api = RecoveryApi {
+        effects: ctx.effects.as_mut(),
+        destination,
+        bot: bot.into(),
+    };
+    let forum = api.get(&format!("/channels/{}", api.destination.forum))?;
+    if forum["id"] != api.destination.forum
+        || forum["guild_id"] != api.destination.guild
+        || forum["type"] != 15
+    {
+        return Err("close configured forum differs".into());
+    }
+    close_replies(
+        &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
+    )?;
+    let channel = api.channel(&binding.thread_id)?;
+    let archived = channel["thread_metadata"]["archived"]
+        .as_bool()
+        .ok_or("archive state missing")?;
+    let prior = state.records.get(&binding.thread_id).cloned();
+    let outcome = if archived {
+        match prior.as_ref().map(|r| r.phase.as_str()) {
+            Some("verified") => prior
+                .as_ref()
+                .and_then(|r| r.outcome.clone())
+                .ok_or("verified outcome missing")?,
+            Some("patch_pending") => "recovered_after_patch".into(),
+            _ => "already_archived".into(),
+        }
+    } else {
+        if prior.as_ref().is_some_and(|r| r.phase == "verified") {
+            return Err(
+                "verified question was reopened; explicit parent inspection required".into(),
+            );
+        }
+        state.save(
+            &ctx.here,
+            CloseRecord {
+                binding: binding.clone(),
+                phase: "patch_pending".into(),
+                outcome: None,
+                pending_reply_ids: vec![],
+            },
+        )?;
+        // An error is an unknown outcome. GET, never the PATCH response, determines success.
+        let response = api.effects.http(
+            "PATCH",
+            &format!("{API}/channels/{}", binding.thread_id),
+            Some(&json!({"archived":true})),
+            true,
+        );
+        if response.is_ok() {
+            "archived".into()
+        } else {
+            "recovered_after_patch".into()
+        }
+    };
+    api.assert_bot_thread(&binding.thread_id)?;
+    if api.channel(&binding.thread_id)?["thread_metadata"]["archived"] != true {
+        return Err(
+            "RecoveryClosePending: GET has not confirmed archived; retry same receipt".into(),
+        );
+    }
+    close_replies(
+        &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
+    )?;
+    // Check the same bytes were applied throughout this attempt.
+    close_application(&ctx.here, &binding)?;
+    state.save(
+        &ctx.here,
+        CloseRecord {
+            binding: binding.clone(),
+            phase: "verified".into(),
+            outcome: Some(outcome.clone()),
+            pending_reply_ids: vec![],
+        },
+    )?;
+    Ok(
+        json!({"domain":DOMAIN,"request_id":binding.request_id,"thread_id":binding.thread_id,
+        "question_message_id":binding.question_message_id,"message_id":binding.message_id,
+        "todo_id":binding.todo_id,"origin_todo_id":binding.origin_todo_id,"job_id":binding.job_id,
+        "revision":binding.revision,"receipt_sha256":binding.receipt_sha256,"source":"discord-api-v10",
+        "archived":true,"verification":"GET","outcome":outcome,"legacy_state":"unchanged","dispatched":false}),
+    )
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -1885,6 +2264,10 @@ mod tests {
         posts_without_pending: usize,
         multipart_uploads: usize,
         inject_owner_reply: Option<(String, String)>,
+        close_drop_response: bool,
+        close_block_reads: bool,
+        close_reject_patch: bool,
+        bot_override: Option<String>,
     }
 
     struct Mock {
@@ -1970,7 +2353,7 @@ mod tests {
             state
                 .calls
                 .push((method.into(), path.into(), body.cloned()));
-            if !discord || !matches!(method, "GET" | "POST") {
+            if !discord || !matches!(method, "GET" | "POST" | "PATCH") {
                 state.forbidden_effects += 1;
                 return Err("unexpected recovery effect".into());
             }
@@ -1983,7 +2366,7 @@ mod tests {
                 return Err("simulated preflight inventory GET failure".into());
             }
             if method == "GET" && path == "/users/@me" {
-                return Ok(json!({"id":BOT,"bot":true}));
+                return Ok(json!({"id":state.bot_override.as_deref().unwrap_or(BOT),"bot":true}));
             }
             if method == "GET" && path == format!("/guilds/{GUILD}/threads/active") {
                 return Ok(json!({"threads":state.channels.values()
@@ -2008,6 +2391,20 @@ mod tests {
                 .split('/')
                 .filter(|segment| !segment.is_empty())
                 .collect();
+            if method == "PATCH" && segments.len() == 2 && segments[0] == "channels"
+                && body == Some(&json!({"archived":true})) {
+                let close: Value = core::read_json(&self.home.join(CLOSE_LEDGER))?;
+                if close["records"][segments[1]]["phase"] != "patch_pending" {
+                    return Err("PATCH without durable close intent".into());
+                }
+                if state.close_reject_patch { return Err("mock rejected PATCH".into()); }
+                let channel = state.channels.get_mut(segments[1]).ok_or("close channel missing")?;
+                channel["thread_metadata"]["archived"] = json!(true);
+                let out = channel.clone();
+                if state.close_block_reads { state.blocked = true; }
+                if state.close_drop_response { return Err("mock accepted PATCH response lost".into()); }
+                return Ok(out);
+            }
             if method == "GET" && segments.len() == 2 && segments[0] == "channels" {
                 return state
                     .channels
@@ -2913,6 +3310,284 @@ mod tests {
         let error = replies(&mut ctx, &reply_args(&out)).unwrap_err();
         assert!(!error.contains("private-fixture-value"));
         assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+        fixture.unchanged();
+    }
+    fn close_fixture(fixture: &Fixture, ctx: &mut Context) -> (CloseArgs, CloseBinding, Value) {
+        let question = ask(
+            ctx,
+            &fixture.ask("close-exact", "指定の閲覧をお願いします。\na 閲覧\nb 保留"),
+        )
+        .unwrap();
+        let mid = fixture.add_reply(core::s(&question["thread_id"]), OWNER, "a", false);
+        let inspection = replies(ctx, &reply_args(&question)).unwrap();
+        let application = json!({"source":"discord-api-v10","todo_id":2544,"origin_todo_id":2472,
+            "job_id":"test-parent-2544","revision":"349ed9ccf7c3ee1699601d749b1a2b5f7504c73a",
+            "request_id":"close-exact","thread_id":question["thread_id"],"question_message_id":question["message_id"],
+            "message_id":mid,"author_id":OWNER,"applied_at":"2026-10-12T00:00:02Z",
+            "completion":"requested read applied; sheet work stays pending",
+            "verification":{"execution":"read verified","origin_saved":"original spec and reply reread"}});
+        let applied_home = fixture.home.join("unattended/applied");
+        fs::create_dir_all(&applied_home).unwrap();
+        let bytes = serde_json::to_vec(&application).unwrap();
+        fs::write(applied_home.join(format!("{mid}.json")), &bytes).unwrap();
+        let ledger = Ledger::load(&fixture.home).unwrap();
+        let binding = CloseBinding {
+            request_id: "close-exact".into(),
+            thread_id: core::s(&question["thread_id"]).into(),
+            question_message_id: core::s(&question["message_id"]).into(),
+            origin_todo_id: 2472,
+            todo_id: 2544,
+            message_id: mid,
+            author_id: OWNER.into(),
+            job_id: "test-parent-2544".into(),
+            revision: core::s(&application["revision"]).into(),
+            question_fingerprint: ledger.request("close-exact").unwrap().fingerprint.clone(),
+            reply_sha256: digest(&inspection["owner_replies"][0]).unwrap(),
+            receipt_sha256: format!("{:x}", Sha256::digest(&bytes)),
+            verification_sha256: digest(&application["verification"]).unwrap(),
+            completion: core::s(&application["completion"]).into(),
+        };
+        let args = CloseArgs {
+            manifest: fixture.root.path().join("close-manifest.json"),
+        };
+        fs::write(&args.manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
+        (args, binding, application)
+    }
+
+    fn patch_count(fixture: &Fixture) -> usize {
+        fixture
+            .server
+            .lock()
+            .unwrap()
+            .calls
+            .iter()
+            .filter(|(method, _, _)| method == "PATCH")
+            .count()
+    }
+
+    #[test]
+    fn recovery_close_archives_one_and_retry_preserves_old_files_and_does_not_post_or_dispatch() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+        let posts = fixture.server.lock().unwrap().posts.len();
+        let before = fs::read(fixture.home.join(LEDGER)).unwrap();
+        let result = close(&mut ctx, &args).unwrap();
+        assert_eq!(result["archived"], true);
+        assert_eq!(result["verification"], "GET");
+        assert_eq!(result["outcome"], "archived");
+        assert_eq!(result["thread_id"], binding.thread_id);
+        assert_eq!(result["revision"], binding.revision);
+        assert_eq!(close(&mut fixture.context(), &args).unwrap(), result);
+        assert_eq!(patch_count(&fixture), 1);
+        let state = fixture.server.lock().unwrap();
+        assert_eq!(state.posts.len(), posts);
+        assert_eq!(state.forbidden_effects, 0);
+        assert_eq!(
+            state.calls.iter().find(|(m, _, _)| m == "PATCH").unwrap().2,
+            Some(json!({"archived":true}))
+        );
+        drop(state);
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_close_lost_response_get_recovery_and_preexisting_archive_are_distinct() {
+        for scenario in ["lost-response", "interrupted-get", "preexisting"] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+            {
+                let mut state = fixture.server.lock().unwrap();
+                if scenario == "preexisting" {
+                    state.channels.get_mut(&binding.thread_id).unwrap()["thread_metadata"]
+                        ["archived"] = json!(true);
+                } else {
+                    state.close_drop_response = true;
+                    state.close_block_reads = scenario == "interrupted-get";
+                }
+            }
+            if scenario == "interrupted-get" {
+                assert!(close(&mut ctx, &args).is_err());
+                assert_eq!(
+                    CloseLedger::load(&fixture.home).unwrap().records[&binding.thread_id].phase,
+                    "patch_pending"
+                );
+                fixture.server.lock().unwrap().blocked = false;
+            }
+            let result = close(&mut fixture.context(), &args).unwrap();
+            assert_eq!(
+                result["outcome"],
+                if scenario == "preexisting" {
+                    "already_archived"
+                } else {
+                    "recovered_after_patch"
+                }
+            );
+            assert_eq!(
+                patch_count(&fixture),
+                usize::from(scenario != "preexisting")
+            );
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_close_wrong_binding_and_unapplied_receipt_are_rejected_before_patch() {
+        for field in [
+            "request_id",
+            "thread_id",
+            "question_message_id",
+            "origin_todo_id",
+            "todo_id",
+            "message_id",
+            "author_id",
+            "job_id",
+            "revision",
+            "question_fingerprint",
+            "reply_sha256",
+            "receipt_sha256",
+            "verification_sha256",
+            "completion",
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+            let mut value = serde_json::to_value(&binding).unwrap();
+            value[field] = match field {
+                "origin_todo_id" | "todo_id" => json!(999),
+                "revision" => json!("0".repeat(40)),
+                "question_fingerprint"
+                | "reply_sha256"
+                | "receipt_sha256"
+                | "verification_sha256" => json!("0".repeat(64)),
+                _ => json!("999"),
+            };
+            fs::write(&args.manifest, serde_json::to_vec(&value).unwrap()).unwrap();
+            assert!(close(&mut ctx, &args).is_err(), "accepted wrong {field}");
+            assert_eq!(patch_count(&fixture), 0);
+            fixture.unchanged();
+        }
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+        fs::remove_file(
+            fixture
+                .home
+                .join("unattended/applied")
+                .join(format!("{}.json", binding.message_id)),
+        )
+        .unwrap();
+        assert!(close(&mut ctx, &args).is_err());
+        assert_eq!(patch_count(&fixture), 0);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_close_remote_owner_bot_forum_generation_changes_prevent_patch() {
+        for scenario in [
+            "owner",
+            "bot",
+            "forum",
+            "guild",
+            "parent",
+            "starter",
+            "reply-body",
+            "edited",
+            "late-reply",
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+            if scenario == "owner" {
+                ctx.cfg["owner_user_id"] = json!("999");
+            } else if scenario == "late-reply" {
+                fixture.add_reply(&binding.thread_id, OWNER, "b", false);
+            } else {
+                let mut state = fixture.server.lock().unwrap();
+                match scenario {
+                    "bot" => state.bot_override = Some("999".into()),
+                    "forum" => state.channels.get_mut(FORUM).unwrap()["type"] = json!(0),
+                    "guild" => {
+                        state.channels.get_mut(&binding.thread_id).unwrap()["guild_id"] =
+                            json!("999")
+                    }
+                    "parent" => {
+                        state.channels.get_mut(&binding.thread_id).unwrap()["parent_id"] =
+                            json!("999")
+                    }
+                    "starter" => {
+                        state.messages.get_mut(&binding.thread_id).unwrap()[0]["content"] =
+                            json!("edited question")
+                    }
+                    "reply-body" | "edited" => {
+                        let reply = state
+                            .messages
+                            .get_mut(&binding.thread_id)
+                            .unwrap()
+                            .iter_mut()
+                            .find(|r| r["id"] == binding.message_id)
+                            .unwrap();
+                        reply[if scenario == "edited" {
+                            "edited_timestamp"
+                        } else {
+                            "content"
+                        }] = json!("2026-10-12T00:00:03Z");
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            assert!(close(&mut ctx, &args).is_err(), "accepted {scenario}");
+            assert_eq!(patch_count(&fixture), 0);
+            fixture.unchanged();
+            if matches!(scenario, "reply-body" | "edited" | "late-reply") {
+                let saved = CloseLedger::load(&fixture.home).unwrap();
+                assert_eq!(saved.records[&binding.thread_id].phase, "reply_pending");
+                assert!(!saved.records[&binding.thread_id]
+                    .pending_reply_ids
+                    .is_empty());
+                assert!(!fs::read_to_string(fixture.home.join(CLOSE_LEDGER))
+                    .unwrap()
+                    .contains("edited question"));
+            }
+        }
+    }
+
+    #[test]
+    fn recovery_close_get_false_never_reports_success_and_absent_legacy_state_stays_absent() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, _, _) = close_fixture(&fixture, &mut ctx);
+        fixture.server.lock().unwrap().close_reject_patch = true;
+        assert!(close(&mut ctx, &args)
+            .unwrap_err()
+            .contains("GET has not confirmed"));
+        assert_eq!(patch_count(&fixture), 1);
+        fixture.unchanged();
+        fs::remove_file(fixture.home.join("state.json")).unwrap();
+        fs::remove_file(fixture.home.join("question-recovery-required.json")).unwrap();
+        fixture.server.lock().unwrap().close_reject_patch = false;
+        assert_eq!(close(&mut ctx, &args).unwrap()["archived"], true);
+        assert!(!fixture.home.join("state.json").exists());
+        assert!(!fixture
+            .home
+            .join("question-recovery-required.json")
+            .exists());
+    }
+
+    #[test]
+    fn recovery_close_live_lock_and_corrupt_record_do_not_allow_patch() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, _, _) = close_fixture(&fixture, &mut ctx);
+        let lock = ByteLock::acquire(&fixture.home.join(CLOSE_LOCK), Duration::ZERO).unwrap();
+        assert!(close(&mut ctx, &args).is_err());
+        assert_eq!(patch_count(&fixture), 0);
+        drop(lock);
+        fs::write(fixture.home.join(CLOSE_LEDGER), b"{broken").unwrap();
+        assert!(close(&mut ctx, &args).is_err());
+        assert_eq!(patch_count(&fixture), 0);
         fixture.unchanged();
     }
 }

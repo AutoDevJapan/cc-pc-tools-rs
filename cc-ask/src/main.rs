@@ -24,6 +24,8 @@ enum Commands {
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
     /// Read only an exact new recovery question; never consumes replies or starts work.
     RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
+    /// Archive one applied new recovery question, then verify it by GET.
+    RecoveryClose(cc_ask::recovery_messages::CloseArgs),
     /// Independent one-question followup; never runs legacy tick or lost questions.
     RecoveryFollowup {
         #[command(subcommand)]
@@ -303,6 +305,9 @@ fn run(command: Commands) -> Result<()> {
         }
         Commands::RecoveryReplies(args) => {
             println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
+        }
+        Commands::RecoveryClose(args) => {
+            println!("{}", cc_ask::recovery_messages::close(&mut ctx, &args)?)
         }
         Commands::AuditHistory(args) => {
             println!("{}", cc_ask::history_audit::run(&mut ctx, &args)?)

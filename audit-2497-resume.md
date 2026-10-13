@@ -44,6 +44,15 @@ Sakana AI Consoleで既存Googleログインを開始した。承認済みの主
 質問を閉じる操作はQuestionStateRecoveryRequired（質問台帳と本人返信記録の欠落）で拒否された。新しい質問や別経路の投稿はしていない。回答済み質問の閉鎖と進捗投稿は、台帳復旧後に続ける。
 
 Google Workspace Admin Consoleでは個人アカウントではなく管理者アカウントを要求され、請求書との照合に進めなかった。Cloud/Workspace支払状態は未確認。ほかの未確認項目と2498の購入操作照合も継続する。
+
 Google Oneの正規API本人返信を照合して反映した。本人は契約を自分のものと示した。指定表の既存行を契約画面・Google Playの月額、次回請求日、購入履歴で更新し、Saved to Driveを確認。購入操作の実行者/初回承認は2498で照合待ち。回答済み質問のcloseは台帳欠落で拒否され、再送なし。
 
 Google Workspace Admin Consoleは管理者アカウントを要求し、請求状態未確認。Sakana AI ConsoleのGoogle選択はUI操作がtimeoutし、アカウント未選択・請求未閲覧。詳細と未完了は指定された非公開evidence-summary.json/handoff.mdに保存した。
+
+## 2026-10-13 新セッションの再開結果
+
+元依頼・指定受入条件・共有ToDo 2497（doing、進捗50%）を確認した。指定された請求証拠フォルダーへのscrub391判定はclient_resource=true、classification_unverified=true、original_registry_recovered=falseだったため、そこへの追加アクセスと変更を止めた。
+
+vidIQを本人Chromeで確認するため、このジョブの所有記録付きタブを1枚作成した。現在のCUAセッションはそのタブを別セッション所属として操作できず、サイト上でアカウントを選ぶ前に中止した。所有記録とChrome inventoryのinstance/generation/tab一致を確認後、タブを閉じた（closed 1、failed 0）。このセッションでは請求情報を新たに閲覧していない。
+
+このため、vidIQとほかのブラウザー依存項目は未確認のまま。質問の再送・別経路操作・契約や支払いの変更は行っていない。再開時はChrome操作をこのジョブのCUAセッションに正規に結び付けてから、指定範囲の未確認項目を続ける。既存の請求表更新、証拠記録、過去のタブ終了は繰り返さない。

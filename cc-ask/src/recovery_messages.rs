@@ -254,9 +254,7 @@ fn close_application(home: &Path, binding: &CloseBinding) -> Result<Value> {
         || value["job_id"] != binding.job_id
         || value["revision"] != binding.revision
         || value["completion"] != binding.completion
-        || !value["verification"]
-            .as_object()
-            .is_some_and(|v| !v.is_empty())
+        || value["verification"].as_object().is_none_or(|v| v.is_empty())
         || digest(&value["verification"])? != binding.verification_sha256
     {
         return Err("applied receipt association or execution verification differs".into());
@@ -416,6 +414,7 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
                 "verified question was reopened; explicit parent inspection required".into(),
             );
         }
+        close_application(&ctx.here, &binding)?;
         state.save(
             &ctx.here,
             CloseRecord {
@@ -2342,7 +2341,7 @@ mod tests {
             }
             let path = url.strip_prefix(API).ok_or("unexpected non-Discord URL")?;
             let mut state = self.server.lock().unwrap();
-            if method == "POST" {
+            if matches!(method, "POST" | "PATCH") {
                 if let Some((thread,content))=state.inject_owner_reply.take() {
                     state.next+=1;
                     let id=state.next.to_string();
@@ -3588,6 +3587,21 @@ mod tests {
         fs::write(fixture.home.join(CLOSE_LEDGER), b"{broken").unwrap();
         assert!(close(&mut ctx, &args).is_err());
         assert_eq!(patch_count(&fixture), 0);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_close_reply_arriving_during_patch_is_retained_without_success_or_reopen() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+        fixture.server.lock().unwrap().inject_owner_reply = Some((binding.thread_id.clone(), "b: 追記".into()));
+        assert!(close(&mut ctx, &args).unwrap_err().contains("ReplyPending"));
+        assert_eq!(patch_count(&fixture), 1);
+        let saved = CloseLedger::load(&fixture.home).unwrap();
+        assert_eq!(saved.records[&binding.thread_id].phase, "reply_pending");
+        assert_eq!(saved.records[&binding.thread_id].pending_reply_ids.len(), 1);
+        assert_eq!(fixture.server.lock().unwrap().channels[&binding.thread_id]["thread_metadata"]["archived"], true);
         fixture.unchanged();
     }
 }

@@ -91,9 +91,6 @@ func boundedSchedulerTree(path string) bool {
 	// This is workspace creation scope, not a substitute private exclusions file.
 	namePattern := regexp.MustCompile(`^todo-([1-9][0-9]*)-[A-Za-z0-9_-]+$`)
 	for _, root := range roots {
-		if !sourceVerified(root) {
-			continue
-		}
 		container := filepath.Clean(root + "-wt")
 		rel, err := filepath.Rel(container, path)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
@@ -102,6 +99,12 @@ func boundedSchedulerTree(path string) bool {
 		parts := strings.Split(rel, string(os.PathSeparator))
 		match := namePattern.FindStringSubmatch(parts[0])
 		if match == nil {
+			continue
+		}
+		// Git is an external process. Check path membership first so one
+		// unrelated root cannot consume every scheduled repair's deadline.
+		// The matching root still needs the same origin and physical checks.
+		if !sourceVerified(root) {
 			continue
 		}
 		if _, err := os.Stat(container); err == nil {

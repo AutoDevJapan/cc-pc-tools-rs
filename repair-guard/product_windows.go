@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -230,7 +231,7 @@ func productPathAllowed(path string) bool {
 	membership := within(gameTree, absolute) || within(gameRoot, absolute) || within(videoTree, absolute)
 	// A regular `todo edit --spec` creates a new saved copy. Only the exact
 	// selected row's copy, with identical verified bytes, can qualify below.
-	membership = membership || within("D:/CC/Tools/todo/specs", absolute)
+	membership = membership || (same(filepath.Dir(absolute), "D:/CC/Tools/todo/specs") && savedSpecName.MatchString(filepath.Base(absolute)))
 	for _, request := range []string{
 		"D:/CC/Work/ledger-recovery-20261012/recovered-specs/1626-worker-request-a600dda0a9dc0f26.md",
 		"D:/CC/Work/ledger-recovery-20261012/recovered-specs/2407-worker-request-45acf355ad003318.md",
@@ -283,7 +284,13 @@ func productPathAllowed(path string) bool {
 		if caller == nil || worker == nil || caller["project"] != "cc-pc-tools-rs" || worker["project"] != "cc-pc-tools-rs" {
 			return false
 		}
-		body, err := readBounded(str(worker["spec"]), 1<<20)
+		// Normal todo edit retains the original spec in spec_history. Bind to
+		// those original bytes rather than a newly edited pointer or output.
+		originalSpec := "D:/CC/Tools/todo/specs/2530-6f464583542140238ae35b600ee07dc3.md"
+		if !specRetained(worker, originalSpec) || !exactPhysical(originalSpec) {
+			return false
+		}
+		body, err := readBounded(originalSpec, 1<<20)
 		if err != nil || hashBytes(body) != "f35ae3704699b3433f8cc9063478f5bf3ec5dd4a534fd358c21446c7d676855f" || !strings.Contains(strings.ReplaceAll(string(body), "\\", "/"), "D:/CC/Work/product-worker-recovery-20261013/non-client-handoff.md") || !strings.Contains(string(body), "safe-status.json") {
 			return false
 		}
@@ -298,6 +305,21 @@ func productPathAllowed(path string) bool {
 			return true
 		}
 		return exactPhysical(output)
+	}
+	return false
+}
+
+var savedSpecName = regexp.MustCompile(`(?i)^(1626|2407|2475)-[0-9a-f]{32}\.md$`)
+
+func specRetained(item object, original string) bool {
+	if same(str(item["spec"]), original) {
+		return true
+	}
+	history, _ := item["spec_history"].([]any)
+	for _, row := range history {
+		if same(str(obj(row)["spec"]), original) {
+			return true
+		}
 	}
 	return false
 }

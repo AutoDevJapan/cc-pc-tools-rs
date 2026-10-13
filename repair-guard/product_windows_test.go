@@ -84,6 +84,36 @@ func TestDuplicateOrFractionalOriginalIdsNeverSelectARecord(t *testing.T) {
 		}
 	}
 }
+
+func TestOnlyNamedOriginalSavedSpecNamesCanReachVerification(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		valid bool
+	}{
+		{"1626-f72998fdd0e74aaa90e628e72f37a12b.md", true},
+		{"2407-00000000000000000000000000000000.md", true},
+		{"2475-9c08c1c10273475f87e003ca75cb4629.md", true},
+		{"17-f72998fdd0e74aaa90e628e72f37a12b.md", false},
+		{"1626-unknown.md", false},
+	} {
+		if savedSpecName.MatchString(c.name) != c.valid {
+			t.Fatal("unrequested spec filename reached verification")
+		}
+	}
+}
+
+func TestOriginalReceiptAuthorizationSurvivesNormalSpecEditOnlyWithHistory(t *testing.T) {
+	original := `D:\CC\Tools\todo\specs\2530-original.md`
+	if !specRetained(object{"spec": original}, original) {
+		t.Fatal("original spec rejected")
+	}
+	if !specRetained(object{"spec": "new", "spec_history": []any{object{"spec": original}}}, original) {
+		t.Fatal("retained original spec rejected")
+	}
+	if specRetained(object{"spec": "new", "spec_history": []any{object{"spec": "unrelated"}}}, original) {
+		t.Fatal("unrelated history authorized outputs")
+	}
+}
 func TestUnknownAndSiblingProductPathsStayProtected(t *testing.T) {
 	for _, path := range []string{gameTree + "-other", filepath.Join(filepath.Dir(videoTree), "2026-10-15"), filepath.Join(t.TempDir(), "unknown")} {
 		if productPathAllowed(path) {

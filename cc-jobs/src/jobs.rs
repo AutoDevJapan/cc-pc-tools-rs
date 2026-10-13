@@ -335,13 +335,23 @@ impl Context {
         jobs.sort_by(|a, b| s(a, "created_at").cmp(s(b, "created_at")));
         jobs
     }
-    /// True if job[key] ('pid' or 'codex_pid') is still the very process we started.
+    /// True for our process or an identity that cannot currently be inspected.
+    /// Callers that mutate a process must use the checked variant below.
     pub fn is_ours(&self, j: &Value, key: &str) -> bool {
+        self.is_ours_checked(j, key).unwrap_or(true)
+    }
+    /// Only a successful identity read can prove ownership or process exit.
+    pub fn is_ours_checked(&self, j: &Value, key: &str) -> std::io::Result<bool> {
         let Some(pid) = j[key].as_u64().and_then(|x| u32::try_from(x).ok()) else {
-            return false;
+            return Ok(false);
         };
-        let created = self.rt.proc_created(pid);
-        created.is_some() && created == j[format!("{key}_created")].as_u64()
+        let Some(created) = self.rt.proc_created_checked(pid)? else {
+            return Ok(false);
+        };
+        let expected = j[format!("{key}_created")]
+            .as_u64()
+            .ok_or_else(|| std::io::Error::other("live process has no recorded creation time"))?;
+        Ok(created == expected)
     }
     pub fn supervisor_alive(&self, j: &Value) -> bool {
         // Keep the execution reservation when this reader cannot inspect its
@@ -1087,7 +1097,11 @@ impl Context {
             })?);
             let p = proc.as_mut().unwrap();
             job["codex_pid"] = json!(p.pid());
-            job["codex_pid_created"] = json!(self.rt.proc_created(p.pid()));
+            let created = self.rt.proc_created_checked(p.pid())?;
+            if created.is_none() && p.poll()?.is_none() {
+                return Err(Error::new("live child process identity is unavailable"));
+            }
+            job["codex_pid_created"] = json!(created);
             self.save(&job)?;
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
@@ -1258,7 +1272,9 @@ impl Context {
             if let Some(p) = proc.as_mut()
                 && p.poll()?.is_none()
             {
-                let _ = self.rt.kill_tree(p.pid());
+                if let Some(created) = job["codex_pid_created"].as_u64() {
+                    let _ = self.rt.kill_owned_tree(p.pid(), created);
+                }
                 let end = self.rt.mono() + 2.;
                 while p.poll()?.is_none() && self.rt.mono() < end {
                     self.rt.sleep(0.05);

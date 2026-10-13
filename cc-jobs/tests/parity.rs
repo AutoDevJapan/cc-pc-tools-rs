@@ -6904,6 +6904,38 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    #[test]
+    fn inaccessible_identity_never_certifies_cancellation_or_releases_ownership() {
+        for key in ["pid", "codex_pid"] {
+            let t = Test::new();
+            t.rt.procs.lock().unwrap().insert(321, 456);
+            let j = t.put(patch(
+                t.running(),
+                json!({"codex_pid":321,"codex_pid_created":456}),
+            ));
+            let pid = j[key].as_u64().unwrap() as u32;
+            t.rt.proc_probe_errors.lock().unwrap().insert(pid, 5);
+            assert!(t.ctx.is_ours_checked(&j, key).is_err());
+            assert!(t.ctx.is_ours(&j, key));
+            assert!(t.cli(&["cancel", s(&j, "id")]).0.is_err());
+            let saved = t.ctx.load(s(&j, "id")).unwrap();
+            assert_eq!(saved["status"], "running");
+            assert_eq!(saved["cancel_requested"], true);
+            assert!(saved["finished_at"].is_null());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn cancellation_cannot_certify_exit_when_post_stop_inspection_fails() {
+        let t = Test::new();
+        let j = t.put(t.running());
+        let rt = t.rt.clone();
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |pid| {
+            rt.proc_probe_errors.lock().unwrap().insert(pid, 5);
+        }));
+        assert!(t.cli(&["cancel", s(&j, "id")]).0.is_err());
+        assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
+    }
     fn guard_store(t: &Test) -> PathBuf {
         let store = t.ctx.root.join("todo.json");
         t.rt.env.lock().unwrap().insert(
@@ -8152,6 +8184,29 @@ mod run_validation {
                 assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
                 assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
             }
+        }
+    }
+
+    #[test]
+    fn resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing() {
+        for missing_created in [false, true] {
+            let t = Test::new();
+            let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+            let active = json!({"id":"active-writer","status":"lost","thread_id":session,
+                "codex_pid":321,"codex_pid_created":if missing_created {None} else {Some(456)}});
+            t.rt.procs.lock().unwrap().insert(321, 456);
+            if !missing_created {
+                t.rt.proc_probe_errors.lock().unwrap().insert(321, 5);
+            }
+            t.put(active.clone());
+            assert!(
+                t.run(&["--resume-session", session], b"duplicate")
+                    .unwrap_err()
+                    .message
+                    .contains("already has active job active-writer")
+            );
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+            assert_eq!(t.ctx.load("active-writer").unwrap(), active);
         }
     }
 
@@ -10594,7 +10649,14 @@ mod end_to_end {
         assert_eq!(e.job(&child)["parent_job_id"], parent);
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
-        assert!(e.cli(&["cancel", &parent], "").status.success());
+        let cancelled = e.cli(&["cancel", &parent], "");
+        assert!(
+            cancelled.status.success(),
+            "parent cancel {:?}: stdout={} stderr={}",
+            cancelled.status.code(),
+            String::from_utf8_lossy(&cancelled.stdout),
+            String::from_utf8_lossy(&cancelled.stderr)
+        );
         e.until_phase("parent_processes_exited", || {
             let handles = e.handles.lock().unwrap();
             parent_pids.iter().all(|pid| {

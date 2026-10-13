@@ -1326,14 +1326,16 @@ impl Context {
             job["cancel_requested_at"] = json!(self.rt.now());
             self.save(&job)?;
         }
-        let targets = ["pid", "codex_pid"]
-            .into_iter()
-            .filter(|k| self.is_ours(&job, k))
-            .collect::<Vec<_>>();
+        let mut targets = Vec::new();
+        for key in ["pid", "codex_pid"] {
+            if self.is_ours_checked(&job, key)? {
+                targets.push(key);
+            }
+        }
         for k in &targets {
             // Stopping the supervisor's tree can already stop codex_pid.
             // Recheck the recorded creation time before opening a second root.
-            if self.is_ours(&job, k) {
+            if self.is_ours_checked(&job, k)? {
                 let created = job[format!("{k}_created")]
                     .as_u64()
                     .ok_or_else(|| Error::new("owned process creation time is missing"))?;
@@ -1342,16 +1344,21 @@ impl Context {
             }
         }
         for _ in 0..50 {
-            if !targets.iter().any(|k| self.is_ours(&job, k)) {
+            let mut any_live = false;
+            for key in &targets {
+                any_live |= self.is_ours_checked(&job, key)?;
+            }
+            if !any_live {
                 break;
             }
             self.rt.sleep(0.1);
         }
-        let alive = targets
-            .iter()
-            .filter(|k| self.is_ours(&job, k))
-            .map(|k| pystr(&job[*k]))
-            .collect::<Vec<_>>();
+        let mut alive = Vec::new();
+        for key in &targets {
+            if self.is_ours_checked(&job, key)? {
+                alive.push(pystr(&job[*key]));
+            }
+        }
         if !alive.is_empty() {
             writeln!(
                 err,

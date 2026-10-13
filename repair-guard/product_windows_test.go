@@ -31,6 +31,14 @@ func TestReviewAllocationCannotAuthorizeAnotherTreeOrReceipt(t *testing.T) {
 	if !reviewBinding(makeItem()) {
 		t.Fatal("original allocation rejected")
 	}
+	for _, invalid := range []any{nil, "", []any{"original-copy"}, object{"path": "original-copy"}} {
+		item := makeItem()
+		item["spec"] = invalid
+		obj(obj(item["product_review_allocation"])["binding"])["spec"] = invalid
+		if reviewBinding(item) {
+			t.Fatal("non-string or empty specification accepted")
+		}
+	}
 	for _, field := range []string{"id", "project", "spec", "needs", "subwork"} {
 		item := makeItem()
 		item[field] = "changed"

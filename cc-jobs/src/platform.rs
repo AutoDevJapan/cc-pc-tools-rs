@@ -381,7 +381,7 @@ pub trait Runtime: Send + Sync {
         .map(|_| ())
     }
     fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
-        if self.proc_created(pid) == Some(created) {
+        if self.proc_created_checked(pid)? == Some(created) {
             self.kill_tree(pid)
         } else {
             Ok(())

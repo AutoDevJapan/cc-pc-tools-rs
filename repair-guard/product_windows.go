@@ -358,7 +358,8 @@ func reviewBinding(item object) bool {
 		num(rel["parent_todo_id"]) == 1626 && rel["origin_job_id"] == gameJob && rel["kind"] == "review" &&
 		b["head"] == reviewHead && b["request_sha256"] == "45acf355ad003318dc6ba4b06c0c1b0825e6805d8cb6427df53e9ae994b92f27" &&
 		b["key"] == "c8809d28af00fce0cad714928b5aa3cf" && same(str(b["worktree"]), reviewTree) &&
-		b["branch"] == scheduler["branch"] && b["spec"] == item["spec"] &&
+		str(b["branch"]) != "" && str(b["branch"]) == str(scheduler["branch"]) &&
+		str(b["spec"]) != "" && str(b["spec"]) == str(item["spec"]) &&
 		jsonEqual(b["subwork"], item["subwork"]) && jsonEqual(b["needs"], item["needs"])
 }
 

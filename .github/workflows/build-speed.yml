@@ -39,6 +39,8 @@ jobs:
         run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree)'
       - name: Verify recovered job references and the explicit resume boundary first
         run: cargo nextest run --locked -p cc-todo --test job_references --test verified_resume
+      - name: Verify dependency and cancellation identity boundaries before the full suite
+        run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(dependency_) | test(cancel::) | test(resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing)' --no-fail-fast
       - run: cargo nextest run --locked --workspace --no-fail-fast --test-threads 10
       - run: cargo test --locked --workspace --doc -- --test-threads=10
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
@@ -82,7 +84,7 @@ jobs:
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath target/release/tools-manifest.json -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: windows-tools-${{ github.sha }}
+          name: windows-tools-${{ github.event.pull_request.head.sha || github.sha }}
           retention-days: 1
           if-no-files-found: error
           path: |

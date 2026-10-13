@@ -364,11 +364,7 @@ impl Context {
             return Ok(true);
         }
         if truth(&j["pid"]) {
-            let Some(pid) = j["pid"].as_u64().and_then(|x| u32::try_from(x).ok()) else {
-                return Ok(false);
-            };
-            let created = self.rt.proc_created_checked(pid)?;
-            Ok(created.is_some() && created == j["pid_created"].as_u64())
+            self.is_ours_checked(j, "pid")
         } else {
             Ok(parse_iso(if s(j, "queued_at").is_empty() {
                 s(j, "created_at")
@@ -1100,6 +1096,11 @@ impl Context {
             let created = self.rt.proc_created_checked(p.pid())?;
             if created.is_none() && p.poll()?.is_none() {
                 return Err(Error::new("live child process identity is unavailable"));
+            }
+            if created.is_none() {
+                // A signalled child is no longer an owner. A reused PID must
+                // not later turn this completed attempt into an unknown owner.
+                job["codex_pid"] = Value::Null;
             }
             job["codex_pid_created"] = json!(created);
             self.save(&job)?;

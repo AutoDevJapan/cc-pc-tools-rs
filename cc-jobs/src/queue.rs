@@ -603,16 +603,23 @@ impl Context {
         Ok(())
     }
     pub(crate) fn stop_supervisor_owner(&self, job: &Value) -> Result<()> {
+        if !self.is_ours_checked(job, "pid")? {
+            return Ok(());
+        }
+        let pid = job["pid"]
+            .as_u64()
+            .and_then(|pid| u32::try_from(pid).ok())
+            .ok_or_else(|| Error::new("supervisor PID is unavailable"))?;
+        let created = job["pid_created"]
+            .as_u64()
+            .ok_or_else(|| Error::new("supervisor creation time is unavailable"))?;
         match self
             .rt
-            .pause_supervisor(
-                job["pid"].as_u64().unwrap() as u32,
-                job["pid_created"].as_u64().unwrap(),
-            )
+            .pause_supervisor(pid, created)
             .and_then(|mut owner| owner.stop())
         {
             Ok(()) => Ok(()),
-            Err(_) if !self.is_ours(job, "pid") => Ok(()),
+            Err(_) if !self.is_ours_checked(job, "pid")? => Ok(()),
             Err(error) => Err(error.into()),
         }
     }

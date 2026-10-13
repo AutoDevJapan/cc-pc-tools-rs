@@ -5035,6 +5035,16 @@ mod queue_regressions {
         assert_eq!(report()["queued"][0]["reason"]["code"], "running_limit");
         fs::remove_file(stale).unwrap();
         let live = cargo_wait(&t, "builder", 123);
+        t.rt.proc_probe_errors
+            .lock()
+            .unwrap()
+            .insert(std::process::id(), 5);
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        t.rt.proc_probe_errors
+            .lock()
+            .unwrap()
+            .remove(&std::process::id());
         // Existing gate processes publish the legacy format without `kind`.
         let mut marker: Value = serde_json::from_slice(&fs::read(&live).unwrap()).unwrap();
         marker.as_object_mut().unwrap().remove("kind");
@@ -6904,6 +6914,33 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    #[test]
+    fn missing_supervisor_creation_time_preserves_reservation_and_skips_cleanup() {
+        let t = Test::new();
+        t.rt.procs.lock().unwrap().insert(500, 777);
+        let j = t.put(patch(t.running(), json!({"pid":500,"pid_created":null})));
+        assert!(t.ctx.supervisor_alive(&j));
+        assert_eq!(
+            t.ctx.refresh(j.clone(), false).unwrap()["status"],
+            "running"
+        );
+        let terminal = t.put(patch(
+            j,
+            json!({"status":"succeeded", "codex_pid":null,
+            "finished_at":"2026-01-01T00:00:00+00:00"}),
+        ));
+        assert!(
+            t.ctx
+                .cleanup_supervisors(true)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(t.ctx.load(s(&terminal, "id")).unwrap(), terminal);
+        assert_eq!(t.rt.pause_calls.load(Ordering::Relaxed), 0);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+    }
     #[test]
     fn inaccessible_identity_never_certifies_cancellation_or_releases_ownership() {
         for key in ["pid", "codex_pid"] {

@@ -189,10 +189,7 @@ impl Context {
                 Ok(Some(at))
                     if job["codex_pid_created"]
                         .as_u64()
-                        .is_some_and(|old| old != at) =>
-                {
-                    ()
-                }
+                        .is_some_and(|old| old != at) => {}
                 _ => return stop("元の子処理の終了を確認できません"),
             }
         }
@@ -200,11 +197,12 @@ impl Context {
         // A review must remain different from the model that wrote the source.
         // Read only its persisted model metadata, never copy the parent's prompt.
         let mut selection = job.clone();
-        if review_job(job) {
-            if s(job, "parent_job_id").is_empty() && !job["review_excluded_models"].is_array() {
-                job["capacity_exhausted"] = json!(true);
-                return stop("別モデルレビューの実装担当を確認できません");
-            }
+        if review_job(job)
+            && s(job, "parent_job_id").is_empty()
+            && !job["review_excluded_models"].is_array()
+        {
+            job["capacity_exhausted"] = json!(true);
+            return stop("別モデルレビューの実装担当を確認できません");
         }
         if review_job(job) && !s(job, "parent_job_id").is_empty() {
             let parent = match self.load(s(job, "parent_job_id")) {

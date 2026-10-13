@@ -172,8 +172,7 @@ fn start_does_not_release_an_unverified_item_or_replace_its_mixed_records() {
     let evidence = json!({"id":"old","result":{"unverified":true}});
     let mut db = database(json!([evidence, "old", null]));
     let before = db.clone();
-    let error = execute(&mut db, &command(&["start", "1", "--job", "new-job"]), &p)
-        .unwrap_err();
+    let error = execute(&mut db, &command(&["start", "1", "--job", "new-job"]), &p).unwrap_err();
     assert!(error.contains("resume-verified"), "{error}");
     assert_eq!(db, before);
 }

@@ -22,6 +22,38 @@ func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
 	}
 }
 
+func TestConfiguredRunnerRecoveryDoesNotAmplifyLiveProcessTrees(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("host Docker container is only available on the Windows host")
+	}
+	if _, err := output(command(docker, "inspect", normalContainer)); err != nil {
+		t.Skip("dedicated normal runner container is not provisioned")
+	}
+	listeners, err := configuredRunnerListenerCount(normalContainer, func(args ...string) (string, error) {
+		return output(command(docker, args...))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if listeners == 0 {
+		t.Skip("production runner has no live Listener; recovery is tested against a disposable container")
+	}
+	dockerRun := func(args ...string) (string, error) {
+		return output(command(docker, args...))
+	}
+	started, recoveryErr := ensureConfiguredRunnerListener(normalContainer, dockerRun, time.Sleep)
+	if listeners == 1 && (recoveryErr != nil || started) {
+		t.Fatalf("already-running listener recovery changed state: started=%v err=%v", started, recoveryErr)
+	}
+	if listeners > 1 && (recoveryErr == nil || started) {
+		t.Fatalf("existing duplicate listeners must not be amplified: started=%v err=%v", started, recoveryErr)
+	}
+	after, err := configuredRunnerListenerCount(normalContainer, dockerRun)
+	if err != nil || after != listeners {
+		t.Fatalf("live Listener count changed during recovery probe: before=%d after=%d err=%v", listeners, after, err)
+	}
+}
+
 const validNormalContainerInspection = `[{"Config":{"Image":"todo2510-normal-linux:local","User":"runner"},"HostConfig":{"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
 
 func fakeDockerForNormalContainer(t *testing.T, initialState string, inspection string) (dockerOutput, *bool, *[][]string) {
@@ -176,14 +208,16 @@ func TestStoppedNormalRunnerContainerCanBeRecoveredWithDocker(t *testing.T) {
 func TestConfiguredRunnerListenerRecoveryDoesNotDuplicateRunningListener(t *testing.T) {
 	tests := []struct {
 		name      string
-		counts    []int
+		counts    [][2]int // live listeners, live supervisors
 		wantStart bool
 		wantErr   bool
 	}{
-		{name: "already running", counts: []int{1}},
-		{name: "runner retry wins grace period", counts: []int{0, 1}},
-		{name: "stopped listener starts once", counts: []int{0, 0, 1}, wantStart: true},
-		{name: "existing duplicates are not amplified", counts: []int{2}, wantErr: true},
+		{name: "already running", counts: [][2]int{{1, 2}}},
+		{name: "existing runner retry owns recovery", counts: [][2]int{{0, 2}, {0, 1}, {1, 1}}},
+		{name: "supervisor starting during grace owns recovery", counts: [][2]int{{0, 0}, {0, 1}, {1, 1}}},
+		{name: "stopped listener starts once after two empty probes", counts: [][2]int{{0, 0}, {0, 0}, {1, 1}}, wantStart: true},
+		{name: "existing duplicates are not amplified", counts: [][2]int{{2, 2}}, wantErr: true},
+		{name: "retrying supervisor is not raced", counts: [][2]int{{0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}}, wantErr: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -193,9 +227,17 @@ func TestConfiguredRunnerListenerRecoveryDoesNotDuplicateRunningListener(t *test
 					starts++
 					return "started", nil
 				}
-				if len(args) >= 4 && args[0] == "exec" && args[2] == "/bin/sh" {
-					value := test.counts[min(probes, len(test.counts)-1)]
-					probes++
+				if len(args) >= 5 && args[0] == "exec" && args[2] == "/bin/sh" {
+					pair := test.counts[min(probes, len(test.counts)-1)]
+					value := pair[0]
+					if strings.Contains(args[4], "Runner.Listener") {
+						if value == 1 {
+							probes++
+						}
+					} else {
+						value = pair[1]
+						probes++
+					}
 					return fmt.Sprint(value), nil
 				}
 				return "", fmt.Errorf("unexpected command: %v", args)

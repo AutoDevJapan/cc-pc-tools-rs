@@ -463,6 +463,13 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    #[cfg(windows)]
+    fn kill_tree(&self, pid: u32) -> io::Result<()> {
+        let created = proc_created(pid).ok_or_else(|| {
+            io::Error::other("owned process identity unavailable before cancellation")
+        })?;
+        crate::pause::stop_tree(pid, created)
+    }
     fn boot_epoch(&self) -> Option<f64> {
         #[cfg(windows)]
         {

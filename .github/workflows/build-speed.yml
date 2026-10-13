@@ -33,6 +33,10 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
+      - name: Verify the repaired isolated worktree fixture first
+        run: cargo nextest run --locked -p cc-ask --test resume -E 'test(real_reply_shapes_after_reask_in_central_worktree)'
+      - name: Verify owned process-tree cancellation before the full suite
+        run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree)'
       - run: cargo nextest run --locked --workspace --no-fail-fast --test-threads 10
       - run: cargo test --locked --workspace --doc -- --test-threads=10
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings

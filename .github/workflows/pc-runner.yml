@@ -60,22 +60,6 @@ jobs:
         working-directory: pc-ci
       - run: go vet ./...
         working-directory: pc-ci
-      - name: Verify own process-tree cancellation under the service identity
-        shell: pwsh
-        run: |
-          $start = [Diagnostics.ProcessStartInfo]::new('C:/Windows/System32/cmd.exe', '/c ping -n 60 127.0.0.1')
-          $start.UseShellExecute = $false
-          $start.CreateNoWindow = $true
-          $start.RedirectStandardOutput = $true
-          $child = [Diagnostics.Process]::Start($start)
-          try {
-            taskkill.exe /T /F /PID $child.Id
-            if ($LASTEXITCODE -ne 0) { throw 'The standard Windows tree cancellation failed for this owned fixture' }
-            if (!$child.WaitForExit(10000)) { throw 'The owned fixture did not finish' }
-          } finally {
-            if (!$child.HasExited) { $child.Kill($true); $child.WaitForExit() }
-            $child.Dispose()
-          }
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       - run: cargo nextest run --locked -p cc-ask --test core -E 'test(structured_child_output_reads_past_text_capture_cap_and_requires_complete_success)'
       - run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree)' --no-fail-fast

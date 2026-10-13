@@ -485,6 +485,39 @@ mod native {
         freeze(pid, created, &mut frozen)?;
         Ok(Box::new(frozen))
     }
+    /// Stop an owned tree using retained native handles. `taskkill /T` needs
+    /// an authentication lookup even for the caller's own children and fails
+    /// under the CI service's filtered token. No other identity is required.
+    pub fn stop_tree(pid: u32, created: u64) -> io::Result<()> {
+        let mut frozen = Frozen {
+            handles: Vec::new(),
+            marker: None,
+            armed: Vec::new(),
+            resume_on_drop: true,
+        };
+        freeze(pid, created, &mut frozen)?;
+        let mut topology = HashMap::from([(pid, created)]);
+        let mut retained = HashSet::from([(pid, created)]);
+        // Freeze parents before re-enumerating so descendants cannot keep
+        // extending the tree. On failure Drop resumes the retained survivors.
+        for _ in 0..32 {
+            let (processes, observed) = tree(pid, created, &topology)?;
+            topology = observed;
+            let mut added = false;
+            for process in processes {
+                if retained.insert((process.pid, process.created)) {
+                    freeze(process.pid, process.created, &mut frozen)?;
+                    added = true;
+                }
+            }
+            if !added {
+                frozen.stop()?;
+                frozen.resume_on_drop = false;
+                return Ok(());
+            }
+        }
+        Err(io::Error::other("owned process tree did not stabilize"))
+    }
     pub fn recover(path: &Path) -> io::Result<()> {
         let bytes = match std::fs::read(path) {
             Ok(b) => b,
@@ -677,4 +710,4 @@ mod native {
     }
 }
 #[cfg(windows)]
-pub use native::{idle_agent, recover, supervisor};
+pub use native::{idle_agent, recover, stop_tree, supervisor};

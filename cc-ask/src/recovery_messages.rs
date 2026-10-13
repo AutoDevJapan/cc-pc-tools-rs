@@ -537,7 +537,7 @@ impl Ledger {
                             .get(progress_request_id)
                             .is_none_or(|source| source.destination != request.destination)
                         || original_fingerprint != &request.fingerprint
-                        || bots.get(request_id).is_none()
+                        || !bots.contains_key(request_id)
                         || phases.keys().any(|(id, _)| id == request_id)
                         || posted.keys().any(|(id, _)| id == request_id)
                         || verified.keys().any(|(id, _)| id == request_id)
@@ -1674,9 +1674,8 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
             _ => None,
         })
         .ok_or("exact original request intent is unavailable")?;
-    if let Some(existing) = ledger.events.iter().find_map(|event| match event {
-        Event::OriginRepair { request_id, .. } if request_id == &args.request_id => Some(event),
-        _ => None,
+    if let Some(existing) = ledger.events.iter().find(|event| {
+        matches!(event, Event::OriginRepair { request_id, .. } if request_id == &args.request_id)
     }) {
         let Event::OriginRepair {
             todo_id,
@@ -3280,13 +3279,12 @@ mod tests {
 
         let out = ask(&mut ctx, &args).unwrap();
         assert_eq!(out["delivery"], "verified");
-        assert_eq!(out["thread_id"].as_str().unwrap().is_empty(), false);
-        assert_eq!(
+        assert!(!out["thread_id"].as_str().unwrap().is_empty());
+        assert!(
             out["url"]
                 .as_str()
                 .unwrap()
-                .contains(core::s(&out["thread_id"])),
-            true
+                .contains(core::s(&out["thread_id"]))
         );
         let state = fixture.server.lock().unwrap();
         let question_posts: Vec<_> = state

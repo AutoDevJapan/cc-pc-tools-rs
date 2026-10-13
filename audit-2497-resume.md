@@ -260,3 +260,11 @@ ChatGPT Billingでは現在の契約が10/30更新予定と確認できた。表
 Google Workspace管理画面が許可済みGmailと異なるGoogleアカウントを求めたため、請求・請求書・支払履歴だけを閲覧する許可質問を、正規recovery-askで一度作成・送信した。request ID `billing-2497-google-workspace-account-scope-20261013-v1`、質問thread `1559556471623262359`、通知なし進捗thread `1559556486261248105`。送信結果はverified、回答未着、承認未確定。既存回答の再質問ではなく、対象の異なるGoogle Workspace管理者アカウントへの限定質問。Google Workspaceの画面は引き続き開いていない。
 
 今回開いたDiscord・vidIQタブを閉じ、Chrome一覧から消えたことを確認した。ToDo2497は50%のまま継続し、10月15日以降のX実請求、ほかの日付到来後の請求、未確認の請求・操作担当照合を残す。
+
+## 2026-10-13 Google Workspace本人回答と認証段階
+
+正規の`recovery-replies --read-only`で質問thread 1559556471623262359の回答を取得し、設定済み本人IDと返信message 1559556914742829109（2026-10-13T13:22:23.641Z）を照合した。本人はWorkspaceに使うアカウントを特定した。アカウント名は記録へ複写せず、回答の正規原本はDiscordの当該threadに残す。この調査で進める範囲は、請求画面の読み取りだけに限定する。
+
+本人指定アカウントをGoogleのアカウント選択画面で選んだ後、Googleはパスワード再入力を要求した。保存済みパスワードの候補は表示されず、Try another wayで復旧用メールに紐づく端末承認を選択した。Googleはその端末へ確認通知を送信し、画面の指示はスマホで承認する手順だった。確認番号は記録していない。認証完了・管理画面到達・請求状況確認は未実施。
+
+一回限りのスマホ承認依頼を回復質問として作ろうとしたが、recovery-askはorigin検証で二度拒否した（最初はoriginがowner request/verified recovery postでない、次はoriginal decisionとの不一致）。質問は送信されていない。別経路で送信せず、拒否されたGoogleログインと端末通知のページをCUAのhandoffとして維持する。承認後は請求書と支払状況だけを読み取り、設定・支払操作をしない。

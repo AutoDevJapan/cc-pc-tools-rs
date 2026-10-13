@@ -278,37 +278,39 @@ func normalContainerFor(mode string) string {
 	}
 	return container
 }
-func verifyNormalContainer() error {
-	state, e := output(command(docker, "inspect", "--format", "{{.State.Running}}", normalContainer))
-	if e != nil {
-		return errors.New("normal runner container is not provisioned")
-	}
-	data, e := output(command(docker, "inspect", normalContainer))
-	if e != nil {
-		return errors.New("normal runner container inspection failed")
-	}
-	var inspected []struct {
-		Config struct {
-			Image string `json:"Image"`
-			User  string `json:"User"`
-		} `json:"Config"`
-		HostConfig struct {
-			Privileged     bool              `json:"Privileged"`
-			CapDrop        []string          `json:"CapDrop"`
-			SecurityOpt    []string          `json:"SecurityOpt"`
-			Devices        []json.RawMessage `json:"Devices"`
-			DeviceRequests []json.RawMessage `json:"DeviceRequests"`
-			Binds          []string          `json:"Binds"`
-			Tmpfs          map[string]string `json:"Tmpfs"`
-		} `json:"HostConfig"`
-		Mounts []struct {
-			Type string `json:"Type"`
-		} `json:"Mounts"`
-	}
+
+type normalContainerInspection struct {
+	Config struct {
+		Image string `json:"Image"`
+		User  string `json:"User"`
+	} `json:"Config"`
+	HostConfig struct {
+		Privileged     bool              `json:"Privileged"`
+		CapDrop        []string          `json:"CapDrop"`
+		SecurityOpt    []string          `json:"SecurityOpt"`
+		Devices        []json.RawMessage `json:"Devices"`
+		DeviceRequests []json.RawMessage `json:"DeviceRequests"`
+		Binds          []string          `json:"Binds"`
+		Tmpfs          map[string]string `json:"Tmpfs"`
+	} `json:"HostConfig"`
+	Mounts []struct {
+		Type string `json:"Type"`
+	} `json:"Mounts"`
+}
+
+type dockerOutput func(...string) (string, error)
+
+func inspectNormalContainer(data string) (normalContainerInspection, error) {
+	var inspected []normalContainerInspection
 	if json.Unmarshal([]byte(data), &inspected) != nil || len(inspected) != 1 {
-		return errors.New("normal runner container inspection is invalid")
+		return normalContainerInspection{}, errors.New("normal runner container inspection is invalid")
 	}
-	c := inspected[0]
+	return inspected[0], nil
+}
+
+// Validate immutable Docker configuration before starting the container.
+// A stopped container cannot answer docker exec checks until after startup.
+func validateNormalContainerConfiguration(c normalContainerInspection) error {
 	allCapabilitiesDropped := false
 	for _, cap := range c.HostConfig.CapDrop {
 		if cap == "ALL" {
@@ -338,35 +340,136 @@ func verifyNormalContainer() error {
 	if !canExecuteRunner {
 		return errors.New("runner tmpfs must allow official runner executables")
 	}
-	tmpTmpfs := strings.Split(c.HostConfig.Tmpfs["/tmp"], ",")
-	for _, option := range tmpTmpfs {
+	for _, option := range strings.Split(c.HostConfig.Tmpfs["/tmp"], ",") {
 		if option == "exec" {
 			return errors.New("credential tmpfs must remain noexec")
 		}
-	}
-	uid, e := output(command(docker, "exec", normalContainer, "id", "-u"))
-	if e != nil || uid != "1001" {
-		return errors.New("normal runner effective user rejected")
-	}
-	preflight, e := output(command(docker, "exec", normalContainer, "/bin/sh", "-c", "test -x /runner/config.sh && test -x /runner/run.sh && test -x /opt/bridge/bridge && test -w /runner && test -w /tmp && test ! -e /var/run/docker.sock && mount | grep -F ' on /runner type tmpfs ' >/dev/null && ! mount | grep -F ' on /runner type tmpfs ' | grep -F noexec >/dev/null && mount | grep -F ' on /tmp type tmpfs ' | grep -F noexec >/dev/null"))
-	if e != nil || preflight != "" {
-		return errors.New("normal runner preflight rejected")
 	}
 	for _, mount := range c.Mounts {
 		if mount.Type != "tmpfs" {
 			return errors.New("normal runner mount rejected")
 		}
 	}
+	return nil
+}
+
+func validateNormalContainerRuntime(name string, run dockerOutput, pause func(time.Duration)) error {
+	uid, e := run("exec", name, "id", "-u")
+	if e != nil || uid != "1001" {
+		return errors.New("normal runner effective user rejected")
+	}
+	for attempt := 0; attempt < 60; attempt++ {
+		preflight, preflightErr := run("exec", name, "/bin/sh", "-c", "test -x /runner/config.sh && test -x /runner/run.sh && test -x /opt/bridge/bridge && test -w /runner && test -w /tmp && test ! -e /var/run/docker.sock && mount | grep -F ' on /runner type tmpfs ' >/dev/null && ! mount | grep -F ' on /runner type tmpfs ' | grep -F noexec >/dev/null && mount | grep -F ' on /tmp type tmpfs ' | grep -F noexec >/dev/null")
+		if preflightErr == nil && preflight == "" {
+			return nil
+		}
+		pause(time.Second)
+	}
+	return errors.New("normal runner runtime preflight did not become ready")
+}
+
+func verifyNormalContainer() error {
+	return verifyNormalContainerWith(normalContainer, func(args ...string) (string, error) {
+		return output(command(docker, args...))
+	})
+}
+
+func verifyNormalContainerWith(name string, run dockerOutput) error {
+	state, e := run("inspect", "--format", "{{.State.Running}}", name)
+	if e != nil {
+		return errors.New("normal runner container is not provisioned")
+	}
+	data, e := run("inspect", name)
+	if e != nil {
+		return errors.New("normal runner container inspection failed")
+	}
+	inspected, e := inspectNormalContainer(data)
+	if e != nil {
+		return e
+	}
+	if e = validateNormalContainerConfiguration(inspected); e != nil {
+		return e
+	}
 	if state != "true" {
-		if _, e = output(command(docker, "start", normalContainer)); e != nil {
+		if _, e = run("start", name); e != nil {
 			return errors.New("normal runner container could not start")
 		}
-		state, e = output(command(docker, "inspect", "--format", "{{.State.Running}}", normalContainer))
+		state, e = run("inspect", "--format", "{{.State.Running}}", name)
 		if e != nil || state != "true" {
 			return errors.New("normal runner container did not remain running after start")
 		}
 	}
-	return nil
+	// Re-read live mounts after startup. The static check above remains the
+	// gate that prevents a disallowed stopped container from being started.
+	data, e = run("inspect", name)
+	if e != nil {
+		return errors.New("normal runner live inspection failed")
+	}
+	inspected, e = inspectNormalContainer(data)
+	if e != nil {
+		return e
+	}
+	if e = validateNormalContainerConfiguration(inspected); e != nil {
+		return e
+	}
+	return validateNormalContainerRuntime(name, run, time.Sleep)
+}
+
+func configuredRunnerListenerCount(containerName string, run dockerOutput) (int, error) {
+	const probe = `n=0; for pid in $(pgrep -f '[/]runner/bin/Runner.Listener run' || true); do state=$(ps -o stat= -p "$pid" | tr -d ' '); case "$state" in Z*) ;; *) n=$((n+1));; esac; done; printf '%s' "$n"`
+	result, err := run("exec", containerName, "/bin/sh", "-c", probe)
+	if err != nil {
+		return 0, errors.New("configured runner listener probe failed")
+	}
+	count, err := strconv.Atoi(strings.TrimSpace(result))
+	if err != nil || count < 0 {
+		return 0, errors.New("configured runner listener count is invalid")
+	}
+	return count, nil
+}
+
+// Wait briefly before recovery so the official run.sh retry loop can restore a
+// listener that exited during a normal runner update. Never add another
+// run.sh tree if a listener has already returned.
+func ensureConfiguredRunnerListener(containerName string, run dockerOutput, pause func(time.Duration)) (bool, error) {
+	count, err := configuredRunnerListenerCount(containerName, run)
+	if err != nil {
+		return false, err
+	}
+	if count > 1 {
+		return false, errors.New("multiple configured runner listeners are already running")
+	}
+	if count == 1 {
+		return false, nil
+	}
+	pause(5 * time.Second)
+	count, err = configuredRunnerListenerCount(containerName, run)
+	if err != nil {
+		return false, err
+	}
+	if count > 1 {
+		return false, errors.New("multiple configured runner listeners are already running")
+	}
+	if count == 1 {
+		return false, nil
+	}
+	if _, err = run("exec", "-d", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
+		return false, errors.New("configured runner listener restart failed")
+	}
+	for attempt := 0; attempt < 15; attempt++ {
+		pause(2 * time.Second)
+		count, err = configuredRunnerListenerCount(containerName, run)
+		if err != nil {
+			return true, err
+		}
+		if count > 1 {
+			return true, errors.New("configured runner listener restart created multiple listeners")
+		}
+		if count == 1 {
+			return true, nil
+		}
+	}
+	return true, errors.New("configured runner listener restart was not observed")
 }
 
 type streamWriter struct {
@@ -786,33 +889,15 @@ func hostMain(args []string) int {
 			reportStage("existing-runner-bridge-key-refreshed")
 			for {
 				time.Sleep(15 * time.Second)
-				running, probeErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "pgrep -f '[/]runner/bin/Runner.Listener run' >/dev/null && printf running || printf stopped"))
-				if probeErr != nil {
+				started, restartErr := ensureConfiguredRunnerListener(runnerContainer, func(args ...string) (string, error) {
+					return output(command(docker, args...))
+				}, time.Sleep)
+				if restartErr != nil {
+					reportStage("configured-runner-listener-restart-failed: " + restartErr.Error())
 					break
 				}
-				if running == "running" {
-					continue
-				}
-				reportStage("configured-runner-listener-restart")
-				if _, restartErr := output(command(docker, "exec", "-d", runnerContainer, "/bin/bash", "/runner/run.sh")); restartErr != nil {
-					reportStage("configured-runner-listener-restart-failed")
-					break
-				}
-				started := false
-				for attempt := 0; attempt < 15; attempt++ {
-					time.Sleep(2 * time.Second)
-					running, probeErr = output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "pgrep -f '[/]runner/bin/Runner.Listener run' >/dev/null && printf running || printf stopped"))
-					if probeErr != nil {
-						break
-					}
-					if running == "running" {
-						started = true
-						break
-					}
-				}
-				if !started {
-					reportStage("configured-runner-listener-restart-not-observed")
-					break
+				if started {
+					reportStage("configured-runner-listener-restart")
 				}
 			}
 			continue

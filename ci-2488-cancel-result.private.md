@@ -1,6 +1,6 @@
 # 固定CIの確認結果（ToDo2600、親2488）
 
-旧指定コミットの8 workflowはすべて終端となった。2成功・1失敗・5取消であり、取消修復の成功は確認できていない。現在の指定cff5c84の先行関連検査は19pass・3fail・317skip。失敗の原全文・診断を親へ配送し、残る未終端CIを同じToDoで確認する。
+有限CI確認は完了した。最新指定cff5c84の8 workflowは7成功・1失敗で全件終端。先行関連検査は19pass・3fail・317skipで、workspace/doc/Clippyは未実行。全実行20jobの原全文と失敗診断を保存し親へ返す。親の修復成功・マージ・配布・運用受入は未達として区別する。
 
 - 対象: PRIVATE AutoDevJapan/cc-pc-tools-rs、PR144。
 - 固定SHA: `9aac8c6f1d976395c799fb8cbfdede7f158e75ce`。
@@ -160,3 +160,36 @@ Channelの両OSもsuccess原全文を取得し、Windowsは157pass・0fail・0ig
 残りはBrowser38470825108（job115549423875、in_progress）とReadiness38470825011（Linux3job success・Windows4job queued）。Readinessの完了3jobは115549140340/115549140366/115549140599。原ログAPIは制御文字の出力制限で取得できないため、workflow終端後の正規run viewログ取得が残る。前回拒否された追加flagを再試行せず、既存ゲートも変更しない。
 
 今回も30分以内の区切りで、同じspec・作業場・8run・保存結果のままwait-retryする。Source失敗3件の修復は親だけが行う。本人判断待ちや独立監視jobを作らず、全8件の終端・原ログと必要結果が揃うまで有限確認を続ける。
+
+## 最終結果: 07:04 JSTの再開で全件終端を確認
+
+途中commit `9f8c5b2` とgit status・最新specを照合して再開した。GitHub APIでPR144のHEADが同じ `cff5c8421bff80ab7a0c65a471429b7279ef4cd9` と再確認。8run/21jobのhead_sha全桁・attempt=1・status=completedを保存API応答で照合した。
+
+| workflow | run | 最終結果 |
+| --- | --- | --- |
+| Build speed | 38470825098 | failure: 先行関連3fail。package-tools jobはskipped |
+| CodeQL PC | 38470825104 | success: 4言語job成功・同SHA解析upload/error空/results_count0 |
+| Readiness | 38470825011 | success: 7jobすべてtest/vet/build成功 |
+| AgentProgress | 38470825052 | success |
+| RecordRecovery | 38470825176 | success: 両OS |
+| Channel | 38470825143 | success: 両OS |
+| Browser | 38470825108 | success: 76pass・0fail・0skip |
+| Bookmark | 38470825145 | success: 両OS |
+
+21jobの結論は **19成功・1失敗・1skip**。実行された20job全ての原全文を `ci-job-<job番号>.private.log` に保存した。skippedはpackage-tools job115550519063であり、試験caseのskip数には含めない。Browserの76pass/0skipはjob115549423875の原ログ424行のnextest Summaryで確認した。
+
+Readinessの最終7jobは次のとおり。repair-guardは通常test、他6jobはrace testで、すべてvet/buildも成功。非verboseのためtest case数は不明として保持し、成功package数をcase数へ変換しない。
+
+| job | 対象 | test出力 | vet/build |
+| --- | --- | --- | --- |
+| 115549140303 | Windows unattended-runner | 1 package ok(cached) | 成功 |
+| 115549140340 | Linux unattended-runner | 1 package ok | 成功 |
+| 115549140366 | Linux capacity-audit-3h | 1 package ok | 成功 |
+| 115549140474 | repair-guard | 1 package ok(cached) | 成功 |
+| 115549140479 | Windows capacity-audit-3h | 1 package ok(cached) | 成功 |
+| 115549140599 | Linux resident-guard | 1 package ok | 成功 |
+| 115549140630 | Windows resident-guard | 1 package ok(cached) | 成功 |
+
+最終的な失敗は前記の固定cff Build3試験のままであり、他の7workflowの成功で覆い隠さない。dependency fixtureの今回passは確認できたが、以前のparent取消OS根因を新しく確定した証拠ではない。workspace/doc/Clippyは先行失敗で実行されなかったため件数null・成功未確認を維持する。旧9aacのコンパイル失敗、2295/787の途中結果、1e9の全件数をcffの成功へ流用しない。
+
+今回の有限工程の完了条件は、同固定HEADの結果・全原全文・根拠行/bytes/SHA256と失敗診断の保存、および既存noteを保持した親2488への正式配送。親に残るのは3失敗の修復・必要な同source検査・別モデルMust対応・merge・配布・運用受入。このcheckの完了を親の成功条件達成としない。自分の項目の状態はスケジューラに更新を任せ、同じ旧CIのwait-retryを追加しない。

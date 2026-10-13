@@ -15,6 +15,14 @@ Docker stdin. It does not put the token in arguments, Docker environment,
 source files, or logs. The runner's working files and credentials live in
 container filesystems; `/runner` and `/tmp` are tmpfs mounts.
 
+Before requesting a registration token, the host inspects the normal-mode
+container's image, effective UID, dropped capabilities, `no-new-privileges`,
+devices, host binds, persistent mounts, and tmpfs options. `/runner` must allow
+execution for the official runner scripts; `/tmp` must remain `noexec`. A
+container-side preflight checks that the scripts are executable, the tmpfs
+mounts are writable, and no Docker socket exists. The Cargo target must be a
+real directory below this worktree's `.ci-work`, without symlink substitution.
+
 The pre-job hook reads the GitHub event JSON. For pushes it accepts only the
 repository's `main` branch and requires the event commit to equal the current
 remote `main` HEAD. For pull requests it requires the event's head SHA, head
@@ -32,9 +40,11 @@ Absolute or parent-relative paths, Cargo configuration and target-directory
 overrides, other manifests, and unsupported Cargo commands are rejected. The
 Windows `cargo_gate.exe` remains the only admission controller and takes the
 shared per-target byte locks. Its CPU/RAM admission and clamped Cargo/test
-parallelism are forwarded to Linux. Cancellation closes the Docker exec stdin;
-the Linux supervisor kills and reaps Cargo before the Windows gate releases its
-lock.
+parallelism are forwarded to Linux. Cancellation closes the Docker exec stdin.
+The Linux supervisor sends SIGTERM, then SIGKILL after three seconds, and
+confirms that the Cargo process group is gone before returning to the Windows
+gate. It continues holding the shared target lock past the force-kill deadline
+if Linux has not yet confirmed process-group exit.
 
 The runner uses non-root UID 1001, drops all Linux capabilities, enables
 `no-new-privileges`, and has no GPU devices, Docker socket, host bind mount,

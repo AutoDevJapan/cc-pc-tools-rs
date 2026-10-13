@@ -325,9 +325,19 @@ func verifyNormalContainer() error {
 	if !canExecuteRunner {
 		return errors.New("runner tmpfs must allow official runner executables")
 	}
+	tmpTmpfs := strings.Split(c.HostConfig.Tmpfs["/tmp"], ",")
+	for _, option := range tmpTmpfs {
+		if option == "exec" {
+			return errors.New("credential tmpfs must remain noexec")
+		}
+	}
 	uid, e := output(command(docker, "exec", normalContainer, "id", "-u"))
 	if e != nil || uid != "1001" {
 		return errors.New("normal runner effective user rejected")
+	}
+	preflight, e := output(command(docker, "exec", normalContainer, "/bin/sh", "-c", "test -x /runner/config.sh && test -x /runner/run.sh && test -x /opt/bridge/bridge && test -w /runner && test -w /tmp && test ! -e /var/run/docker.sock && mount | grep -F ' on /runner type tmpfs ' >/dev/null && ! mount | grep -F ' on /runner type tmpfs ' | grep -F noexec >/dev/null && mount | grep -F ' on /tmp type tmpfs ' | grep -F noexec >/dev/null"))
+	if e != nil || preflight != "" {
+		return errors.New("normal runner preflight rejected")
 	}
 	for _, mount := range c.Mounts {
 		if mount.Type != "tmpfs" {
@@ -684,10 +694,12 @@ func hostMain(args []string) int {
 			fmt.Fprintln(os.Stderr, "normal Cargo target must be this worktree's .ci-work/target")
 			return 1
 		}
-		if _, statErr := os.Lstat(filepath.Join(cwd, ".ci-work")); statErr != nil {
+		workInfo, statErr := os.Lstat(filepath.Join(cwd, ".ci-work"))
+		if statErr != nil || !workInfo.IsDir() || workInfo.Mode()&os.ModeSymlink != 0 {
 			return 1
 		}
-		if _, statErr := os.Lstat(targetAbs); statErr != nil {
+		targetInfo, statErr := os.Lstat(targetAbs)
+		if statErr != nil || !targetInfo.IsDir() || targetInfo.Mode()&os.ModeSymlink != 0 {
 			return 1
 		}
 		reportStage("target-validated")

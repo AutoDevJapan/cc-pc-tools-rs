@@ -15,3 +15,12 @@ Rustの検査は[ビルドとテストの規則](docs/build-speed.md)に従う�
 Vercel/Railwayのオーナー保有アカウント内の全プロジェクトはソロ開発として進め、他メンバーの存在だけを理由に承認待ちにしない。他OrgのGitHub環境と顧客固有の契約は変更しない。既存Prd限定・Rakko限定・秘密保護を維持する。パスの保護判定はscrub391 --guard-pathを使い、保護対象の名前・パスを報告しない。最新指示はD:/CC/AGENTS.mdを起動ごとに読む。詳細と確認範囲はdocs/owner-autonomy.mdに記録する。
 
 `queue-config.json` は全体を書き直さず、`codex_jobs.exe update-queue-config --patch-file <JSON>` で必要な項目だけ更新する。既存の `fixed_max_running` はオーナー・司令塔の指定なので、省略やnullを含む配備用パッチでも保持する。解除は健康な自動計算値16以上を連続3回実測してから `update-queue-config --clear-fixed` を使い、CPUが目標70〜85%へ近づく測定記録も確認する。このコマンドが `queue-config.CHANGES.txt` に1行記録する。
+
+<!-- OwnerPolicy:2026-10-13:ModelCapacitySwitch -->
+## モデルが混雑したときの続行
+本人の直接指示: 「Selected model is at capacity. Please try a different model っていうエラーが出たら、自動で別のサブスク枠に切り替えて作業を続行してほしい。」
+- 正規の実行エラーとしてモデル混雑を受けたら、健康状態と利用枠を確認した別の既存OAuthサブスクのモデルで、同じ依頼・ToDo・許可範囲・作業場所・途中成果を保って続行する。混雑だけで人の回答やPC操作を待たない。
+- 実行中の子処理を保存・排出して二重起動を防ぐ。別モデルレビューと単一ファイルレビューの条件、本人の停止と依存待ちを維持する。
+- AI APIキー、従量課金、追加契約・新費用・新しい認証範囲は使わない。全既存枠が利用不能な場合は有限の技術再試行を保存し、自動で再開する。
+詳細: D:/CC/Policies/owner-model-capacity-fallback-20261013.md 。実装修復ToDo2528。
+<!-- OwnerPolicy:end -->

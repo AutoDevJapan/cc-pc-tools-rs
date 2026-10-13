@@ -26,6 +26,7 @@ pub type Result<T> = std::result::Result<T, String>;
 pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
+pub mod product_resume;
 pub mod ready;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
@@ -182,6 +183,13 @@ pub enum Command {
     ReconcileIntake,
     /// Recheck this item's automatic owner wait; retain explicit prerequisites.
     ReevaluateOwnerWait { id: i64 },
+    /// Verify this finite original product scope; --apply records eligibility, never launches.
+    ProductResume {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        apply: bool,
+    },
     /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
     WatchPreview {
         #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
@@ -1145,11 +1153,17 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Watch
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
+        | Command::ProductResume { .. }
         | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ProductResume { id, apply } = &cli.command {
+        let report = product_resume::run(paths, *id, *apply)?;
+        println!("{report}");
+        return Ok(());
+    }
     if let Command::ReevaluateOwnerWait { id } = &cli.command {
         let changed = recovery::reevaluate_owner_wait_files(paths, *id)?;
         println!("{}", json!({"reevaluated":id,"released":changed}));

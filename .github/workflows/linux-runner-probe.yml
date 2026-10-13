@@ -24,4 +24,5 @@ jobs:
           cargo --version
           cargo test --locked -p cc-task-title -j64 -- --test-threads=32
           cd tools/linux-runner-bridge
+          go version
           go test ./...

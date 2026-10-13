@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,12 +32,21 @@ const gateDir = `D:\CC\Tools\codex-jobs`
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
+const normalContainer = "todo2510-normal-linux"
+const normalImage = "todo2510-normal-linux:local"
+const normalPort = "127.0.0.1:17852"
+const normalRunner = "cc-pc-tools-linux"
+const normalBranch = "main"
 
 var revisionPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+var branchPattern = regexp.MustCompile(`^scheduler/todo-251[01]-[a-z0-9-]+$`)
+var relativeManifest = regexp.MustCompile(`^[A-Za-z0-9._/-]+/Cargo\.toml$`)
 
 type request struct {
 	Args                                  []string
 	Dir, Revision, Ref, Repository, Event string
+	HeadSHA, HeadRef, HeadRepository      string
+	BaseRepository, BaseRef               string
 }
 type packet struct {
 	Stream string
@@ -44,8 +54,9 @@ type packet struct {
 	Exit   *int
 }
 type host struct {
-	key, revision, branch, target string
-	mu                            sync.Mutex
+	key, mode, revision, branch, target string
+	mu                                  sync.Mutex
+	getHead                             func(string) (string, error)
 }
 
 func command(name string, args ...string) *exec.Cmd {
@@ -80,23 +91,52 @@ func validate(r request) error {
 		if len(a) > 2048 || strings.ContainsAny(a, "\x00\r\n") {
 			return errors.New("argument rejected")
 		}
-		for _, p := range []string{"--config", "--target-dir", "--manifest-path", "-C", "+", "@"} {
+		for _, p := range []string{"--config", "--target-dir", "-C", "+", "@"} {
 			if strings.HasPrefix(a, p) {
 				return errors.New("Cargo path/config override rejected")
 			}
 		}
 	}
+	for i, a := range r.Args {
+		if a == "--manifest-path" {
+			if i+1 >= len(r.Args) || !allowedManifest(r.Args[i+1]) {
+				return errors.New("Cargo manifest path rejected")
+			}
+		} else if strings.HasPrefix(a, "--manifest-path=") {
+			if !allowedManifest(strings.TrimPrefix(a, "--manifest-path=")) {
+				return errors.New("Cargo manifest path rejected")
+			}
+		} else if strings.HasPrefix(a, "--manifest-path") {
+			return errors.New("Cargo manifest path rejected")
+		}
+	}
 	return nil
+}
+func allowedManifest(p string) bool {
+	return p == "cc-bookmark-queue/Cargo.toml" && relativeManifest.MatchString(p) && !strings.Contains(p, "..")
+}
+func (h *host) remoteHead(branch string) (string, error) {
+	if h.getHead != nil {
+		return h.getHead(branch)
+	}
+	if branch == "" || strings.ContainsAny(branch, "\x00\r\n") || strings.HasPrefix(branch, "-") {
+		return "", errors.New("branch rejected")
+	}
+	ref := "repos/" + repo + "/git/ref/heads/" + url.PathEscape(branch)
+	return output(command(gh, "api", ref, "--jq", ".object.sha"))
 }
 func (h *host) current() error {
 	// Query only the specified branch, never credentials or an owner's profile.
-	s, e := output(command(gh, "api", "repos/"+repo+"/git/ref/heads/"+h.branch, "--jq", ".object.sha"))
+	s, e := h.remoteHead(h.branch)
 	if e != nil || s != h.revision {
 		return errors.New("current remote branch HEAD differs from fixed revision")
 	}
 	return nil
 }
 func (h *host) authorize(r request) error {
+	if h.mode == "normal" {
+		return h.authorizeNormal(r)
+	}
 	if r.Repository != repo || r.Revision != h.revision || r.Ref != "refs/heads/"+h.branch {
 		return errors.New("job identity rejected")
 	}
@@ -105,16 +145,109 @@ func (h *host) authorize(r request) error {
 	}
 	return h.current()
 }
+func (h *host) authorizeNormal(r request) error {
+	if r.Repository != repo || r.Revision != r.HeadSHA || !revisionPattern.MatchString(r.HeadSHA) || r.HeadRepository != repo || r.BaseRepository != repo {
+		return errors.New("job head identity rejected")
+	}
+	branch := r.HeadRef
+	switch r.Event {
+	case "push":
+		if r.Ref != "refs/heads/"+normalBranch || branch != normalBranch {
+			return errors.New("push branch rejected")
+		}
+	case "pull_request":
+		if r.HeadRef == "" || r.BaseRef != normalBranch || !strings.HasPrefix(r.Ref, "refs/pull/") || !strings.HasSuffix(r.Ref, "/merge") {
+			return errors.New("pull request event rejected")
+		}
+	default:
+		return errors.New("job event rejected")
+	}
+	current, e := h.remoteHead(branch)
+	if e != nil || current != r.HeadSHA {
+		return errors.New("remote head differs from job head")
+	}
+	return nil
+}
 func (h *host) checkout() error {
-	s, e := output(command(docker, "exec", container, "git", "-C", "/work/cc-pc-tools-rs/cc-pc-tools-rs", "rev-parse", "HEAD"))
-	if e != nil || s != h.revision {
+	return h.checkoutRevision(h.revision)
+}
+func (h *host) checkoutRevision(revision string) error {
+	s, e := output(command(docker, "exec", normalContainerFor(h.mode), "git", "-C", "/work/cc-pc-tools-rs/cc-pc-tools-rs", "rev-parse", "HEAD"))
+	if e != nil || s != revision {
 		return errors.New("checked out HEAD differs from fixed revision")
 	}
-	s, e = output(command(docker, "exec", container, "git", "-C", "/work/cc-pc-tools-rs/cc-pc-tools-rs", "remote", "get-url", "origin"))
+	s, e = output(command(docker, "exec", normalContainerFor(h.mode), "git", "-C", "/work/cc-pc-tools-rs/cc-pc-tools-rs", "remote", "get-url", "origin"))
 	if e != nil || s != "https://github.com/"+repo && s != "https://github.com/"+repo+".git" {
 		return errors.New("checkout remote rejected")
 	}
+	if h.mode == "normal" {
+		return nil
+	}
 	return h.current()
+}
+func normalContainerFor(mode string) string {
+	if mode == "normal" {
+		return normalContainer
+	}
+	return container
+}
+func verifyNormalContainer() error {
+	state, e := output(command(docker, "inspect", "--format", "{{.State.Running}}", normalContainer))
+	if e != nil {
+		return errors.New("normal runner container is not provisioned")
+	}
+	if state != "true" {
+		if _, e = output(command(docker, "start", normalContainer)); e != nil {
+			return errors.New("normal runner container could not start")
+		}
+	}
+	data, e := output(command(docker, "inspect", normalContainer))
+	if e != nil {
+		return errors.New("normal runner container inspection failed")
+	}
+	var inspected []struct {
+		Config struct {
+			Image string `json:"Image"`
+			User  string `json:"User"`
+		} `json:"Config"`
+		HostConfig struct {
+			Privileged     bool              `json:"Privileged"`
+			CapDrop        []string          `json:"CapDrop"`
+			SecurityOpt    []string          `json:"SecurityOpt"`
+			Devices        []json.RawMessage `json:"Devices"`
+			DeviceRequests []json.RawMessage `json:"DeviceRequests"`
+			Binds          []string          `json:"Binds"`
+			Tmpfs          map[string]string `json:"Tmpfs"`
+		} `json:"HostConfig"`
+		Mounts []struct {
+			Type string `json:"Type"`
+		} `json:"Mounts"`
+	}
+	if json.Unmarshal([]byte(data), &inspected) != nil || len(inspected) != 1 {
+		return errors.New("normal runner container inspection is invalid")
+	}
+	c := inspected[0]
+	allCapabilitiesDropped := false
+	for _, cap := range c.HostConfig.CapDrop {
+		if cap == "ALL" {
+			allCapabilitiesDropped = true
+		}
+	}
+	noNewPrivileges := false
+	for _, opt := range c.HostConfig.SecurityOpt {
+		if opt == "no-new-privileges:true" {
+			noNewPrivileges = true
+		}
+	}
+	if c.Config.Image != normalImage || c.Config.User != "1001" || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+		return errors.New("normal runner container isolation rejected")
+	}
+	for _, mount := range c.Mounts {
+		if mount.Type != "tmpfs" {
+			return errors.New("normal runner mount rejected")
+		}
+	}
+	return nil
 }
 
 type streamWriter struct {
@@ -165,7 +298,16 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 	// the CPU/RAM measurement and takes the exact cargo-build.lock.N byte locks.
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if e := h.checkout(); e != nil {
+	if h.mode == "normal" {
+		if e := h.authorizeNormal(q); e != nil {
+			http.Error(w, e.Error(), 403)
+			return
+		}
+		if e := h.checkoutRevision(q.HeadSHA); e != nil {
+			http.Error(w, e.Error(), 403)
+			return
+		}
+	} else if e := h.checkout(); e != nil {
 		http.Error(w, e.Error(), 403)
 		return
 	}
@@ -180,7 +322,7 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 	c := command(gate, q.Args...)
 	// A clean environment cannot inherit a parent's LOCK_HELD marker or API key.
 	c.Env = hostEnv()
-	c.Env = append(c.Env, "CODEX_JOBS_REAL_CARGO="+executable, "CODEX_JOBS_CARGO_LOCK_DIR="+gateDir, "CARGO_TARGET_DIR="+h.target, "CC_LINUX_GATED_CHILD=1")
+	c.Env = append(c.Env, "CODEX_JOBS_REAL_CARGO="+executable, "CODEX_JOBS_CARGO_LOCK_DIR="+gateDir, "CARGO_TARGET_DIR="+h.target, "CC_LINUX_GATED_CHILD=1", "CC_LINUX_RUNNER_MODE="+h.mode)
 	c.Stdout = streamWriter{enc, &mu, f, "stdout"}
 	c.Stderr = streamWriter{enc, &mu, f, "stderr"}
 	input, e := c.StdinPipe()
@@ -237,7 +379,7 @@ func gatedChild(args []string) int {
 	if os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" {
 		switch args[0] {
 		case "metadata", "fmt":
-			c := command(docker, append([]string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", container, "/opt/bridge/bridge", "execute", "1", "1"}, args...)...)
+			c := command(docker, append([]string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerForMode(), "/opt/bridge/bridge", "execute", "1", "1"}, args...)...)
 			c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 			return exitCode(c.Run())
 		default:
@@ -254,7 +396,7 @@ func gatedChild(args []string) int {
 	// Only the gate's admitted caps cross the host/container boundary. No host
 	// environment, cache wrapper, path or credential is forwarded.
 	fmt.Fprintf(os.Stderr, "linux-gate-admitted build-jobs=%d test-threads=%d\n", jobs, tests)
-	a := []string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", container, "/opt/bridge/bridge", "execute", strconv.Itoa(jobs), strconv.Itoa(tests)}
+	a := []string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerForMode(), "/opt/bridge/bridge", "execute", strconv.Itoa(jobs), strconv.Itoa(tests)}
 	a = append(a, args...)
 	c := command(docker, a...)
 	c.Stdin = os.Stdin
@@ -338,26 +480,132 @@ func rpc(path string, q request) int {
 	}
 }
 func hook() int {
-	return rpc("/authorize", request{Repository: os.Getenv("GITHUB_REPOSITORY"), Revision: os.Getenv("GITHUB_SHA"), Ref: os.Getenv("GITHUB_REF"), Event: os.Getenv("GITHUB_EVENT_NAME")})
+	r, ok := jobRequestFromEnv()
+	if !ok {
+		return 1
+	}
+	return rpc("/authorize", r)
+}
+func jobRequestFromEnv() (request, bool) {
+	r := request{Repository: os.Getenv("GITHUB_REPOSITORY"), Ref: os.Getenv("GITHUB_REF"), Event: os.Getenv("GITHUB_EVENT_NAME")}
+	if r.Repository != repo {
+		return request{}, false
+	}
+	if os.Getenv("CC_LINUX_RUNNER_MODE") != "normal" {
+		r.Revision = os.Getenv("GITHUB_SHA")
+		return r, r.Revision != ""
+	}
+	eventPath := os.Getenv("GITHUB_EVENT_PATH")
+	if eventPath == "" {
+		return request{}, false
+	}
+	info, e := os.Stat(eventPath)
+	if e != nil || info.Size() < 0 || info.Size() > 1<<20 {
+		return request{}, false
+	}
+	file, e := os.Open(eventPath)
+	if e != nil {
+		return request{}, false
+	}
+	defer file.Close()
+	data, e := io.ReadAll(io.LimitReader(file, (1<<20)+1))
+	if e != nil || len(data) > 1<<20 {
+		return request{}, false
+	}
+	var payload struct {
+		After      string `json:"after"`
+		Ref        string `json:"ref"`
+		Repository struct {
+			FullName string `json:"full_name"`
+		} `json:"repository"`
+		PullRequest struct {
+			Head struct {
+				SHA  string `json:"sha"`
+				Ref  string `json:"ref"`
+				Repo struct {
+					FullName string `json:"full_name"`
+				} `json:"repo"`
+			} `json:"head"`
+			Base struct {
+				Ref  string `json:"ref"`
+				Repo struct {
+					FullName string `json:"full_name"`
+				} `json:"repo"`
+			} `json:"base"`
+		} `json:"pull_request"`
+	}
+	if json.Unmarshal(data, &payload) != nil || payload.Repository.FullName != repo {
+		return request{}, false
+	}
+	switch r.Event {
+	case "push":
+		if payload.Ref != r.Ref || payload.After != os.Getenv("GITHUB_SHA") {
+			return request{}, false
+		}
+		r.Revision, r.HeadSHA = payload.After, payload.After
+		r.HeadRef, r.HeadRepository, r.BaseRepository = normalBranch, repo, repo
+	case "pull_request":
+		r.Revision, r.HeadSHA = payload.PullRequest.Head.SHA, payload.PullRequest.Head.SHA
+		r.HeadRef = payload.PullRequest.Head.Ref
+		r.HeadRepository = payload.PullRequest.Head.Repo.FullName
+		r.BaseRepository = payload.PullRequest.Base.Repo.FullName
+		r.BaseRef = payload.PullRequest.Base.Ref
+	default:
+		return request{}, false
+	}
+	return r, true
+}
+func normalContainerForMode() string {
+	return normalContainerFor(os.Getenv("CC_LINUX_RUNNER_MODE"))
 }
 func hostMain(args []string) int {
-	if len(args) != 3 || !revisionPattern.MatchString(args[0]) || !strings.HasPrefix(args[1], "scheduler/todo-2511-") {
-		fmt.Fprintln(os.Stderr, "fixed revision, task branch, target required")
+	mode := "finite"
+	var revision, branch, target, listen, runnerContainer, runnerName, labels string
+	ephemeral := true
+	if len(args) == 3 && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
+		// Keep the original finite ToDo2511 invocation and its restrictions.
+		revision, branch, target = args[0], args[1], args[2]
+		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", "cc-pc-tools-linux"
+	} else if len(args) == 2 && args[0] == "normal" && args[1] != "" {
+		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalRunner, false
+	} else {
+		fmt.Fprintln(os.Stderr, "expected host REVISION scheduler/todo-251x-branch TARGET or host normal TARGET")
 		return 1
 	}
 	key := make([]byte, 32)
 	if _, e := rand.Read(key); e != nil {
 		return 1
 	}
-	h := host{key: hex.EncodeToString(key), revision: args[0], branch: args[1], target: args[2]}
-	if h.current() != nil {
+	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target}
+	if mode == "finite" && h.current() != nil {
 		return 1
+	}
+	if mode == "normal" {
+		cwd, cwdErr := os.Getwd()
+		targetAbs, targetErr := filepath.Abs(target)
+		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", "target"))
+		if cwdErr != nil || targetErr != nil || expectedErr != nil || !strings.EqualFold(filepath.Clean(targetAbs), filepath.Clean(expected)) {
+			fmt.Fprintln(os.Stderr, "normal Cargo target must be this worktree's .ci-work/target")
+			return 1
+		}
+		if _, statErr := os.Lstat(filepath.Join(cwd, ".ci-work")); statErr != nil {
+			return 1
+		}
+		if _, statErr := os.Lstat(targetAbs); statErr != nil {
+			return 1
+		}
 	}
 	permission, e := output(command(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission"))
 	if e != nil || permission != "ADMIN" {
 		return 1
 	}
-	l, e := net.Listen("tcp", "127.0.0.1:17851")
+	if mode == "normal" {
+		if verifyErr := verifyNormalContainer(); verifyErr != nil {
+			fmt.Fprintln(os.Stderr, verifyErr)
+			return 1
+		}
+	}
+	l, e := net.Listen("tcp", listen)
 	if e != nil {
 		return 1
 	}
@@ -365,19 +613,29 @@ func hostMain(args []string) int {
 	go func() { _ = s.Serve(l) }()
 	// The random bridge key and runner token stay in RAM and the official config
 	// process. Neither appears in command arguments, Docker config or host files.
-	token, e := output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
-	if e != nil || token == "" {
-		_ = s.Close()
-		return 1
+	for {
+		token, tokenErr := output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
+		if tokenErr != nil || token == "" {
+			_ = s.Close()
+			return 1
+		}
+		c := command(docker, "exec", "-i", runnerContainer, "/opt/bridge/bridge", "register")
+		c.Stdin = strings.NewReader(h.key + "\n" + token + "\n" + runnerName + "\n" + labels + "\n" + strconv.FormatBool(ephemeral) + "\n")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		code := exitCode(c.Run())
+		token = ""
+		if ephemeral || code == 0 {
+			_ = s.Shutdown(context.Background())
+			return code
+		}
+		fmt.Printf("linux-runner-exit code=%d; retrying after 30 seconds\n", code)
+		time.Sleep(30 * time.Second)
+		if _, inspectErr := output(command(docker, "inspect", runnerContainer)); inspectErr != nil {
+			_ = s.Close()
+			return 1
+		}
 	}
-	c := command(docker, "exec", "-i", container, "/opt/bridge/bridge", "register")
-	c.Stdin = strings.NewReader(h.key + "\n" + token + "\n")
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	code := exitCode(c.Run())
-	token = ""
-	_ = s.Shutdown(context.Background())
-	return code
 }
 func register() int {
 	reader := bufio.NewReader(os.Stdin)
@@ -392,10 +650,27 @@ func register() int {
 	if len(strings.TrimSpace(key)) != 64 {
 		return 1
 	}
+	runnerName, e := reader.ReadString('\n')
+	if e != nil {
+		return 1
+	}
+	labels, e := reader.ReadString('\n')
+	if e != nil {
+		return 1
+	}
+	ephemeral, e := reader.ReadString('\n')
+	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+		return 1
+	}
 	if e = os.WriteFile("/tmp/bridge-key", []byte(strings.TrimSpace(key)), 0600); e != nil {
 		return 1
 	}
-	c := exec.Command("/runner/config.sh", "--unattended", "--url", "https://github.com/"+repo, "--name", "cc-pc-tools-linux-2511", "--labels", "cc-pc-tools-linux", "--work", "/work", "--ephemeral", "--disableupdate")
+	cargs := []string{"--unattended", "--url", "https://github.com/" + repo, "--name", strings.TrimSpace(runnerName), "--labels", strings.TrimSpace(labels), "--work", "/work"}
+	if strings.TrimSpace(ephemeral) == "true" {
+		cargs = append(cargs, "--ephemeral", "--disableupdate")
+	}
+	cargs = append(cargs, "--replace")
+	c := exec.Command("/runner/config.sh", cargs...)
 	c.Dir = "/runner"
 	c.Env = append(os.Environ(), "ACTIONS_RUNNER_INPUT_TOKEN="+strings.TrimSpace(token))
 	c.Stdout = os.Stdout
@@ -404,12 +679,23 @@ func register() int {
 		return 1
 	}
 	token = ""
-	c = exec.Command("/runner/run.sh")
-	c.Dir = "/runner"
-	c.Env = append(os.Environ(), "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh")
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return exitCode(c.Run())
+	mode := "normal"
+	if strings.TrimSpace(ephemeral) == "true" {
+		mode = "finite"
+	}
+	for {
+		c = exec.Command("/runner/run.sh")
+		c.Dir = "/runner"
+		c.Env = append(os.Environ(), "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh", "CC_LINUX_RUNNER_MODE="+mode)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		code := exitCode(c.Run())
+		if mode == "finite" {
+			return code
+		}
+		fmt.Printf("linux-runner-exit code=%d; retrying after 30 seconds\n", code)
+		time.Sleep(30 * time.Second)
+	}
 }
 func main() {
 	if os.Getenv("CC_LINUX_GATED_CHILD") == "1" {
@@ -418,7 +704,9 @@ func main() {
 	args := os.Args[1:]
 	if filepath.Base(os.Args[0]) == "cargo" {
 		dir, _ := os.Getwd()
-		os.Exit(rpc("/cargo", request{Args: args, Dir: dir}))
+		r, _ := jobRequestFromEnv()
+		r.Args, r.Dir = args, dir
+		os.Exit(rpc("/cargo", r))
 	}
 	if len(args) == 0 {
 		os.Exit(1)

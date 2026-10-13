@@ -153,6 +153,9 @@ fn start_appends_a_valid_reference_without_removing_mixed_recovery_records() {
     let p = paths(temp.path());
     let evidence = json!({"id":"old","result":{"unverified":true}});
     let mut db = database(json!([evidence, "old", null]));
+    // Mixed historical references also survive ordinary, already verified work.
+    // Recovered state now requires the receipt-checked resume command.
+    db["items"][0]["status"] = json!("todo");
     execute(&mut db, &command(&["start", "1", "--job", "new-job"]), &p).unwrap();
     assert_eq!(
         db["items"][0]["jobs"],

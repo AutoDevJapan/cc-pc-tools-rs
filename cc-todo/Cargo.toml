@@ -13,6 +13,7 @@ cc-ask = { path = "../cc-ask" }
 cc-job-policy = { path = "../cc-job-policy" }
 cc-scheduler = { path = "../cc-scheduler" }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+sha2 = "0.10"
 clap = { version = "4", features = ["derive"] }
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }

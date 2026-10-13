@@ -40,6 +40,24 @@ mod native {
         ) -> i32;
     }
     struct Handle(HANDLE);
+    #[derive(Debug)]
+    struct NativeError {
+        stage: &'static str,
+        source: io::Error,
+    }
+    impl std::fmt::Display for NativeError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}: {}", self.stage, self.source)
+        }
+    }
+    impl std::error::Error for NativeError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.source)
+        }
+    }
+    fn at(stage: &'static str, source: io::Error) -> io::Error {
+        io::Error::new(source.kind(), NativeError { stage, source })
+    }
     unsafe impl Send for Handle {}
     impl Drop for Handle {
         fn drop(&mut self) {
@@ -109,12 +127,7 @@ mod native {
         }
         fn stop(&mut self) -> io::Result<()> {
             for h in self.handles.iter().rev() {
-                unsafe {
-                    if WaitForSingleObject(h.0, 0) != WAIT_OBJECT_0 && TerminateProcess(h.0, 0) == 0
-                    {
-                        return Err(io::Error::last_os_error());
-                    }
-                }
+                terminate_running(h.0, || Ok(()))?;
             }
             for h in &self.handles {
                 if unsafe { WaitForSingleObject(h.0, 2000) } != WAIT_OBJECT_0 {
@@ -124,7 +137,45 @@ mod native {
             Ok(())
         }
     }
+    // The hook is private and has no environment/CLI control. Tests use it to
+    // complete a real process exit precisely between the wait and termination.
+    fn terminate_running(
+        handle: HANDLE,
+        before_terminate: impl FnOnce() -> io::Result<()>,
+    ) -> io::Result<()> {
+        match unsafe { WaitForSingleObject(handle, 0) } {
+            WAIT_OBJECT_0 => return Ok(()),
+            WAIT_TIMEOUT => (),
+            _ => return Err(at("stop/WaitForSingleObject", io::Error::last_os_error())),
+        }
+        before_terminate()?;
+        if unsafe { TerminateProcess(handle, 0) } == 0 {
+            // Capture first: the wait can overwrite the thread's last error.
+            let error = io::Error::last_os_error();
+            // Windows also returns ACCESS_DENIED when a process exits between
+            // the initial wait and TerminateProcess. Only the SAME retained,
+            // creation-checked handle's signal proves this is an exit race.
+            // Termination can still be draining I/O; use the existing bounded
+            // exit wait, never retry termination or reopen a PID here.
+            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
+                && unsafe { WaitForSingleObject(handle, 2000) } == WAIT_OBJECT_0
+            {
+                return Ok(());
+            }
+            return Err(at("stop/TerminateProcess", error));
+        }
+        Ok(())
+    }
     fn freeze(pid: u32, created: u64, frozen: &mut Frozen) -> io::Result<()> {
+        if !freeze_running(pid, created, frozen)? {
+            return Err(io::Error::other("process exited before pause"));
+        }
+        Ok(())
+    }
+    fn freeze_running(pid: u32, created: u64, frozen: &mut Frozen) -> io::Result<bool> {
+        if pid == std::process::id() {
+            return Err(io::Error::other("cannot pause the calling process"));
+        }
         unsafe {
             let h = Handle(OpenProcess(
                 PROCESS_SUSPEND_RESUME
@@ -135,7 +186,12 @@ mod native {
                 pid,
             ));
             if h.0.is_null() {
-                return Err(io::Error::last_os_error());
+                let err = io::Error::last_os_error();
+                return if err.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                    Ok(false)
+                } else {
+                    Err(at("freeze/OpenProcess", err))
+                };
             }
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0
@@ -143,11 +199,17 @@ mod native {
             {
                 return Err(io::Error::other("process identity changed before pause"));
             }
+            if WaitForSingleObject(h.0, 0) == WAIT_OBJECT_0 {
+                return Ok(false);
+            }
             if NtSuspendProcess(h.0) < 0 {
+                if WaitForSingleObject(h.0, 0) == WAIT_OBJECT_0 {
+                    return Ok(false);
+                }
                 return Err(io::Error::other("process pause failed"));
             }
             frozen.handles.push(h);
-            Ok(())
+            Ok(true)
         }
     }
     #[derive(Clone)]
@@ -288,6 +350,16 @@ mod native {
         }
     }
     fn inspect(pid: u32, name: &str) -> io::Result<Option<(u64, bool, bool)>> {
+        Ok(
+            inspect_lifetime(pid, name)?
+                .map(|(created, browser, live, _)| (created, browser, live)),
+        )
+    }
+    fn inspect_lifetime(pid: u32, name: &str) -> io::Result<Option<(u64, bool, bool, u64)>> {
+        Ok(inspect_retained(pid, name)?.map(|(info, _)| info))
+    }
+    type Lifetime = (u64, bool, bool, u64);
+    fn inspect_retained(pid: u32, name: &str) -> io::Result<Option<(Lifetime, Handle)>> {
         unsafe {
             let h = Handle(OpenProcess(
                 PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
@@ -300,22 +372,31 @@ mod native {
                 return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
                     Ok(None)
                 } else {
-                    Err(error)
+                    Err(at("inspect/OpenProcess", error))
                 };
             }
             let live = match WaitForSingleObject(h.0, 0) {
                 WAIT_OBJECT_0 => false,
                 WAIT_TIMEOUT => true,
-                _ => return Err(io::Error::last_os_error()),
+                _ => {
+                    return Err(at(
+                        "inspect/WaitForSingleObject",
+                        io::Error::last_os_error(),
+                    ));
+                }
             };
             let mut ts: [FILETIME; 4] = std::mem::zeroed();
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
-                return Err(io::Error::last_os_error());
+                return Err(at("inspect/GetProcessTimes", io::Error::last_os_error()));
             }
             Ok(Some((
-                ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
-                browser_controller(h.0, name),
-                live,
+                (
+                    ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
+                    browser_controller(h.0, name),
+                    live,
+                    ((ts[1].dwHighDateTime as u64) << 32) | ts[1].dwLowDateTime as u64,
+                ),
+                h,
             )))
         }
     }
@@ -323,6 +404,7 @@ mod native {
         root: u32,
         root_created: u64,
         prior: &HashMap<u32, u64>,
+        mut ancestors: Option<&mut Vec<Handle>>,
     ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
         unsafe {
             let snapshot = Handle(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
@@ -350,10 +432,50 @@ mod native {
                     break;
                 }
             }
-            if crate::proc_created(root) != Some(root_created) {
+            if ancestors.is_none() && crate::proc_created(root) != Some(root_created) {
                 return Err(io::Error::other("root process identity changed"));
             }
-            walk(root, root_created, prior, &all, inspect)
+            let Some(ancestors) = ancestors.as_mut() else {
+                return walk(root, root_created, prior, &all, inspect);
+            };
+            // Retained root/descendant handles prevent reuse of their PIDs.
+            // For exited ancestors discovered in this snapshot, bound children
+            // by the actual exit time; a vanished unobserved ancestor is not
+            // enough evidence to authorize terminating its apparent children.
+            let mut lifetimes = HashMap::new();
+            for (&pid, &created) in prior {
+                let Some(((actual, _, _, exited), handle)) = inspect_retained(pid, "")? else {
+                    return Err(io::Error::other(
+                        "cancellation ancestor identity unavailable",
+                    ));
+                };
+                if actual != created {
+                    return Err(io::Error::other("cancellation ancestor identity changed"));
+                }
+                lifetimes.insert(pid, (actual, exited));
+                ancestors.push(handle);
+            }
+            walk(root, root_created, prior, &all, |pid, name| {
+                let Some(((created, browser, live, exited), handle)) = inspect_retained(pid, name)?
+                else {
+                    return Err(io::Error::other(
+                        "cancellation ancestor vanished during inspection",
+                    ));
+                };
+                let parent = all.iter().find(|p| p.0 == pid).map(|p| p.1);
+                if pid != root
+                    && parent
+                        .and_then(|p| lifetimes.get(&p))
+                        .is_some_and(|(_, end)| *end != 0 && created > *end)
+                {
+                    return Err(io::Error::other(
+                        "descendant was created after ancestor exited",
+                    ));
+                }
+                lifetimes.insert(pid, (created, exited));
+                ancestors.push(handle);
+                Ok(Some((created, browser, live)))
+            })
         }
     }
     // Keep exited ancestors in the topology, including during the second
@@ -444,7 +566,7 @@ mod native {
         baseline: Option<u64>,
         marker: Option<&Path>,
     ) -> io::Result<Option<Box<dyn Paused>>> {
-        let (before, topology) = tree(pid, created, &HashMap::new())?;
+        let (before, topology) = tree(pid, created, &HashMap::new(), None)?;
         if !controllers(&before, pid, baseline) {
             return Ok(None);
         }
@@ -463,7 +585,7 @@ mod native {
         }
         // Freezing and enumerating are separate OS operations. Reject new
         // children, including a command that raced the initial snapshot.
-        let (after, _) = tree(pid, created, &topology)?;
+        let (after, _) = tree(pid, created, &topology, None)?;
         if after.len() != before.len()
             || !after.iter().all(|p| {
                 before
@@ -484,6 +606,50 @@ mod native {
         };
         freeze(pid, created, &mut frozen)?;
         Ok(Box::new(frozen))
+    }
+    /// Stop an owned tree using retained native handles. `taskkill /T` needs
+    /// an authentication lookup even for the caller's own children and fails
+    /// under the CI service's filtered token. No other identity is required.
+    pub fn stop_tree(pid: u32, created: u64) -> io::Result<()> {
+        let mut frozen = Frozen {
+            handles: Vec::new(),
+            marker: None,
+            armed: Vec::new(),
+            resume_on_drop: true,
+        };
+        if !freeze_running(pid, created, &mut frozen)? {
+            // An exited root can still have live descendants. Without a
+            // retained root identity, cancellation must not report success.
+            return Err(io::Error::other(
+                "root exited before cancellation could retain its identity",
+            ));
+        }
+        let mut topology = HashMap::from([(pid, created)]);
+        let mut retained = HashSet::from([(pid, created)]);
+        let mut ancestors = Vec::new();
+        // Freeze parents before re-enumerating so descendants cannot keep
+        // extending the tree. On failure Drop resumes the retained survivors.
+        for _ in 0..32 {
+            let (processes, observed) = tree(pid, created, &topology, Some(&mut ancestors))?;
+            topology = observed;
+            let mut added = false;
+            for process in processes {
+                if retained.insert((process.pid, process.created)) {
+                    freeze_running(process.pid, process.created, &mut frozen)?;
+                    added = true;
+                }
+            }
+            if !added {
+                frozen.stop()?;
+                let (survivors, observed) = tree(pid, created, &topology, Some(&mut ancestors))?;
+                topology = observed;
+                if survivors.is_empty() {
+                    frozen.resume_on_drop = false;
+                    return Ok(());
+                }
+            }
+        }
+        Err(io::Error::other("owned process tree did not stabilize"))
     }
     pub fn recover(path: &Path) -> io::Result<()> {
         let bytes = match std::fs::read(path) {
@@ -532,6 +698,137 @@ mod native {
     #[cfg(test)]
     mod tests {
         use super::*;
+        struct OwnedChild(std::process::Child);
+        impl OwnedChild {
+            fn sleeping() -> Self {
+                use std::os::windows::process::CommandExt;
+                Self(
+                    std::process::Command::new("powershell.exe")
+                        .args([
+                            "-NoProfile",
+                            "-NonInteractive",
+                            "-Command",
+                            "Start-Sleep -Seconds 60",
+                        ])
+                        .creation_flags(0x08000000)
+                        .spawn()
+                        .unwrap(),
+                )
+            }
+        }
+        impl Drop for OwnedChild {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        #[test]
+        fn cancellation_exit_between_wait_and_terminate_is_not_a_permission_failure() {
+            let child = OwnedChild::sleeping();
+            let created = crate::proc_created(child.0.id()).unwrap();
+            let mut frozen = Frozen {
+                handles: Vec::new(),
+                marker: None,
+                armed: Vec::new(),
+                resume_on_drop: true,
+            };
+            freeze(child.0.id(), created, &mut frozen).unwrap();
+            let handle = frozen.handles[0].0;
+            let mut exited_in_gap = false;
+            let mut terminated_probe = None;
+            let result = terminate_running(handle, || {
+                if unsafe { TerminateProcess(handle, 0) } == 0 {
+                    return Err(io::Error::last_os_error());
+                }
+                exited_in_gap = unsafe { WaitForSingleObject(handle, 2000) } == WAIT_OBJECT_0;
+                if !exited_in_gap {
+                    return Err(io::Error::other("fixture exit did not complete"));
+                }
+                // Record the real OS result; assert outside the callback so a
+                // failed observation cannot skip the completion assertions.
+                let code = unsafe { TerminateProcess(handle, 0) };
+                let error = (code == 0).then(io::Error::last_os_error);
+                terminated_probe = Some((code, error.and_then(|e| e.raw_os_error())));
+                Ok(())
+            });
+            assert!(
+                exited_in_gap,
+                "the real exit must occur after the initial unsignaled wait"
+            );
+            assert!(
+                result.is_ok(),
+                "signaled same-identity handle rejected: {result:?}"
+            );
+            assert_eq!(
+                terminated_probe,
+                Some((0, Some(ERROR_ACCESS_DENIED as i32)))
+            );
+        }
+        #[test]
+        fn cancellation_denied_for_a_live_handle_keeps_the_original_error() {
+            let mut child = OwnedChild::sleeping();
+            let (_, handle) = inspect_retained(child.0.id(), "").unwrap().unwrap();
+            // Query/synchronize access deliberately excludes PROCESS_TERMINATE.
+            let result = terminate_running(handle.0, || Ok(()));
+            let still_alive = child.0.try_wait().unwrap().is_none();
+            let error = result.unwrap_err();
+            let original = &error
+                .get_ref()
+                .unwrap()
+                .downcast_ref::<NativeError>()
+                .unwrap()
+                .source;
+            assert_eq!(original.raw_os_error(), Some(ERROR_ACCESS_DENIED as i32));
+            assert!(still_alive);
+            assert!(error.to_string().starts_with("stop/TerminateProcess:"));
+        }
+        #[test]
+        fn cancellation_unknown_handle_never_attempts_termination() {
+            let mut attempted = false;
+            // INVALID_HANDLE_VALUE is also the current-process pseudo handle.
+            // Use null, and fail the hook before termination even if wait ever
+            // unexpectedly accepts it. This test must never kill its caller.
+            let result = terminate_running(std::ptr::null_mut(), || {
+                attempted = true;
+                Err(io::Error::other("must not reach termination"))
+            });
+            assert!(!attempted);
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .starts_with("stop/WaitForSingleObject:")
+            );
+        }
+        #[test]
+        fn cancellation_rejects_its_caller_without_suspending_it() {
+            let pid = std::process::id();
+            assert!(stop_tree(pid, crate::proc_created(pid).unwrap()).is_err());
+        }
+        #[test]
+        fn cancellation_uses_the_recorded_creation_time() {
+            use std::os::windows::process::CommandExt;
+            let mut child = std::process::Command::new("powershell.exe")
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "Start-Sleep -Seconds 60",
+                ])
+                .creation_flags(0x08000000)
+                .spawn()
+                .unwrap();
+            let created = crate::proc_created(child.id()).unwrap();
+            let rejected = stop_tree(child.id(), created + 1).is_err();
+            let remained_alive = child.try_wait().unwrap().is_none();
+            let stopped = stop_tree(child.id(), created);
+            // Always drain the owned child even when an assertion would fail.
+            let _ = child.kill();
+            child.wait().unwrap();
+            assert!(rejected && remained_alive);
+            stopped.unwrap();
+            assert!(stop_tree(child.id(), created).is_err());
+        }
         fn process(pid: u32, parent: u32, name: &str, browser_controller: bool) -> Process {
             Process {
                 pid,
@@ -677,4 +974,4 @@ mod native {
     }
 }
 #[cfg(windows)]
-pub use native::{idle_agent, recover, supervisor};
+pub use native::{idle_agent, recover, stop_tree, supervisor};

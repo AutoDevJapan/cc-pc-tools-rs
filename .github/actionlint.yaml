@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - cc-pc-tools-windows
+    - cc-pc-tools-linux

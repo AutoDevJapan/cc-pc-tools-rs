@@ -28,3 +28,9 @@
 - cff正規run: Build38470825098、CodeQL38470825104、Readiness38470825011、AgentProgress38470825052、RecordRecovery38470825176、Channel38470825143、Browser38470825108、Bookmark38470825145。
 - Bookmark/AgentProgress/RecordRecoveryはsuccess原全文保存。CodeQLはRust/Actions/JSの3job successかつ同SHA解析/error空/results0、Go queued。Readiness2job/Channel Linuxはsuccess。残りの終端・未取得job原ログ・同cffの全必要結果を確認する。
 - この再開でも新監視job・CI rerun・手動Cargo・source修正・GPU・Discord送信・merge・配布は0。
+
+06:50の追加確認:同cffのCodeQL4言語すべてsuccess＋同SHA解析upload/error空/results0を原全文/APIで照合。Channel両OS success、Windows157pass/Linux131pass。Browserはin_progress、ReadinessはLinux3success/Windows4queuedで、原全文取得が残る。再開拒否試験はTest::putがjob.jsonしか作らず公開受付indexへ未登録、registration_jobsが空になる経路だと固定ソースから推定した。track_queued_jobを通した負例の実検査は親へ残す。
+
+次回はcffの同8runから再開し、Browser/Readinessの終端と未取得原ログを取得する。既知3failの診断はci-2488-cancel-result.private.md/jsonと原run/jobログに保持。古い失敗を最新成功へ流用せず、親HEAD変更なら正規修復範囲を確認する。今回の有限確認も30分以内で区切る。
+
+06:52 JSTに親2488へcffの追加根拠と5成功/1失敗/2未終端を正式edit配送し、元note保持・全文再読を確認。2600はwait-retry --after 600を実行し、状態waitとspec/note/jobs保持を再読した。実receiptはci-2488-delivery-cff-handoff.private.jsonとci-2488-wait-cff.private.json。今回の確認は06:41〜06:52、30分以内。自分のCLIは終了し、新タブ/Docker/ビルド生成物は0。残るBrowser/Readiness原ログと終端結果を同項目で自動再開する。

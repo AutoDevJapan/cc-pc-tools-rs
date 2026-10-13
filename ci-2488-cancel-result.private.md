@@ -133,6 +133,8 @@ PID再利用試験はpid/codex_pid=555、実probe=99を与える一方、保存�
 
 再開拒否試験はlost active-writerのcodex_pid=321へアクセス拒否または作成時刻欠落を与えるが、runがOk(0)を返した。どちらの反復で失敗したかはログに表示されない。固定CLI827〜837の同session拒否は `registration_jobs` の結果を使い、その入口はqueue.rs793〜803の公開index→admission_record→admission_activeである。公開indexに入る前のfixtureと、実受付までの経路を合わせて確認する必要がある。checked helperの成功だけではこの受付負例の成功を保証できない。失敗がfixtureだけか本体かをこのログだけで断定しない。
 
+固定ソースをさらに追うと、Test::newは受付indexを作らず、Test::putはjob.jsonの保存だけを行う。Context::save/write_jsonもindexを更新しない。一方、通常のCLIはtrack_queued_job（CLI986、queue869〜892）で登録を公開する。今回の負例はtrack_queued_jobを通さず、欠落indexを読んだregistration_jobsが空配列を返す経路に一致する。したがって今回の直接原因は、負例fixtureが実際の公開受付経路を再現していないことだと固定ソースから推定できる。index公開を与えた上で拒否・supervisor0・原record不変の負例を実検証する必要がある。これは静的な経路照合であり、手動Cargoによる修復確認を行ったものではない。
+
 停止補助試験の `disk full` は、parity.rs7420の `save_failure=true` とFake runtimeの6125〜6126行で注入する `io::Error::other("disk full")` に由来する。実ドライブの空き容量不足ではない。superviseの保存失敗後の戻り値・子停止・最終状態を一緒に整合させる必要がある。
 
 `dependency_fixture_does_not_read_its_callers_plugin_configuration` は同cffの原runログ673行でPASS。cancel終了値/stdout/stderrは成功時に出力されないため、前版のOS根因を確定したとはしない。workspace/doc/all-targets Clippyは先行失敗後で未実行、件数nullを維持する。前版の2144pass/1fail/5skipを流用しない。
@@ -148,3 +150,13 @@ PID再利用試験はpid/codex_pid=555、実probe=99を与える一方、保存�
 - CodeQL: Rust解析1947113490、Actions1947123829、JS/TS1947134954は同cff全桁/ref/categoriesが一致し、error空・results_count=0。Actions/JSの原ログはSuccessfully uploaded resultsを確認。Rust jobはAPI上success、原全文取得は未完。Goはqueued、解析なし。前版787のGo hook403を同cffの失敗へ移さない。
 
 GitHubが返した正規API応答・全ての取得原ログ・固定ソース読取結果を保持する。未終端分と原ログ取得が終わるまでこのcheckは未完了であり、必要なら同ToDoをwait-retryで再開する。
+
+### 06:50 JSTの追加確認
+
+CodeQL38470825104とChannel38470825143はsuccessへ進んだ。CodeQLは4言語のjob successと原全文を取得し、Rust/Actions/JS/GoそれぞれのSuccessfully uploaded resultsを確認した。同cff全桁とpull refを照合した解析は順に1947113490/1947123829/1947134954/1947167455で、すべてerror空・results_count=0。原ログのupload行は各jobファイルの971/815/1529/5453行。
+
+Channelの両OSもsuccess原全文を取得し、Windowsは157pass・0fail・0ignored、Linuxは131pass・0fail・0ignoredを確認した。OSごとの対象差があるため、片方の値をもう片方へ流用しない。
+
+残りはBrowser38470825108（job115549423875、in_progress）とReadiness38470825011（Linux3job success・Windows4job queued）。Readinessの完了3jobは115549140340/115549140366/115549140599。原ログAPIは制御文字の出力制限で取得できないため、workflow終端後の正規run viewログ取得が残る。前回拒否された追加flagを再試行せず、既存ゲートも変更しない。
+
+今回も30分以内の区切りで、同じspec・作業場・8run・保存結果のままwait-retryする。Source失敗3件の修復は親だけが行う。本人判断待ちや独立監視jobを作らず、全8件の終端・原ログと必要結果が揃うまで有限確認を続ける。

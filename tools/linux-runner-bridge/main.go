@@ -283,11 +283,6 @@ func verifyNormalContainer() error {
 	if e != nil {
 		return errors.New("normal runner container is not provisioned")
 	}
-	if state != "true" {
-		if _, e = output(command(docker, "start", normalContainer)); e != nil {
-			return errors.New("normal runner container could not start")
-		}
-	}
 	data, e := output(command(docker, "inspect", normalContainer))
 	if e != nil {
 		return errors.New("normal runner container inspection failed")
@@ -360,6 +355,15 @@ func verifyNormalContainer() error {
 	for _, mount := range c.Mounts {
 		if mount.Type != "tmpfs" {
 			return errors.New("normal runner mount rejected")
+		}
+	}
+	if state != "true" {
+		if _, e = output(command(docker, "start", normalContainer)); e != nil {
+			return errors.New("normal runner container could not start")
+		}
+		state, e = output(command(docker, "inspect", "--format", "{{.State.Running}}", normalContainer))
+		if e != nil || state != "true" {
+			return errors.New("normal runner container did not remain running after start")
 		}
 	}
 	return nil
@@ -783,7 +787,31 @@ func hostMain(args []string) int {
 			for {
 				time.Sleep(15 * time.Second)
 				running, probeErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "pgrep -f '[/]runner/bin/Runner.Listener run' >/dev/null && printf running || printf stopped"))
-				if probeErr != nil || running != "running" {
+				if probeErr != nil {
+					break
+				}
+				if running == "running" {
+					continue
+				}
+				reportStage("configured-runner-listener-restart")
+				if _, restartErr := output(command(docker, "exec", "-d", runnerContainer, "/bin/bash", "/runner/run.sh")); restartErr != nil {
+					reportStage("configured-runner-listener-restart-failed")
+					break
+				}
+				started := false
+				for attempt := 0; attempt < 15; attempt++ {
+					time.Sleep(2 * time.Second)
+					running, probeErr = output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "pgrep -f '[/]runner/bin/Runner.Listener run' >/dev/null && printf running || printf stopped"))
+					if probeErr != nil {
+						break
+					}
+					if running == "running" {
+						started = true
+						break
+					}
+				}
+				if !started {
+					reportStage("configured-runner-listener-restart-not-observed")
 					break
 				}
 			}

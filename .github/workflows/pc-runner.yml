@@ -31,7 +31,13 @@ jobs:
         run: |
           if ((git rev-parse HEAD) -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Wrong source revision' }
           whoami
-          if (Test-Path -LiteralPath 'C:/Users/makhmeto/.codex') { throw 'Owner profile must be inaccessible' }
+          try {
+            $accessible = Test-Path -LiteralPath 'C:/Users/makhmeto/.codex' -ErrorAction Stop
+            throw 'Owner authentication directory must return access denied'
+          } catch {
+            if ($_.CategoryInfo.Category -ne 'PermissionDenied') { throw }
+            Write-Output 'Owner authentication directory returned access denied as required'
+          }
           Get-Command cargo | Select-Object Source
           cargo --version
           cargo nextest --version

@@ -202,6 +202,44 @@ fn check_on_logged_in_page_succeeds_and_status_reads_it() {
     assert_browser_closed(dir.path());
 }
 
+/// Exercise fresh profiles and immediate reuse; every launch must succeed.
+/// This is a bounded lifecycle regression, not a retry of a failed operation.
+#[cfg(windows)]
+#[test]
+fn fresh_and_reused_fixture_profiles_release_the_chrome_lock() {
+    use std::os::windows::fs::OpenOptionsExt;
+    if !chrome_available() {
+        return;
+    }
+    for generation in 0..12 {
+        let dir = tempfile::tempdir().unwrap();
+        for launch in 0..2 {
+            let result = run(dir.path(), "chat.html", &["check"]);
+            assert_eq!(
+                result.status.code(),
+                Some(0),
+                "generation={generation} launch={launch}: {}",
+                stderr(&result)
+            );
+            assert_browser_closed(dir.path());
+            // Chrome's singleton holds GENERIC_WRITE with FILE_SHARE_READ and
+            // DELETE_ON_CLOSE. A live singleton rejects this writer even after
+            // the CDP port closes; a removed lock file is also a valid release.
+            let lock = fs::OpenOptions::new()
+                .write(true)
+                .share_mode(7)
+                .open(dir.path().join("profile/lockfile"));
+            if let Err(error) = lock {
+                assert_eq!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound,
+                    "generation={generation} launch={launch}: Chrome profile lock survived closure: {error}"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn observed_owner_composer_is_detected_without_the_old_id() {
     if !chrome_available() {
@@ -379,11 +417,13 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     .output()
     .unwrap();
     drop(idle);
-    assert!(
-        handler.join().unwrap(),
-        "must actually exercise a delayed script"
-    );
+    let script_sent = handler.join().unwrap();
     assert_eq!(result.status.code(), Some(0), "{}", stderr(&result));
+    assert!(
+        script_sent,
+        "must actually exercise a delayed script: {}",
+        stderr(&result)
+    );
     assert!(stdout(&result).contains("delayed script question"));
     assert_browser_closed(dir.path());
 }

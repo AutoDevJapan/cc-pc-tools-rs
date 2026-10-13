@@ -32,6 +32,7 @@ pub struct Operations {
     root: PathBuf,
     snapshot: RwLock<Value>,
     questions: RwLock<Value>,
+    skills: crate::skills_inventory::Inventory,
 }
 impl Operations {
     pub fn production() -> Self {
@@ -39,6 +40,7 @@ impl Operations {
             root: "D:/CC/Tools".into(),
             snapshot: RwLock::new(empty()),
             questions: RwLock::new(Value::Null),
+            skills: crate::skills_inventory::Inventory::new("D:/CC/Skills".into()),
         }
     }
     pub fn snapshot(&self) -> Value {
@@ -53,7 +55,9 @@ impl Operations {
             .read()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
-        let value = collect_with_questions(&self.root, now_ms(), &live);
+        let now = now_ms();
+        let mut value = collect_with_questions(&self.root, now, &live);
+        value["skillsInventory"] = self.skills.snapshot(now);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
     }
     pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
@@ -1420,6 +1424,26 @@ fn infer_project(job: &Value, db: Option<&Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn skills_count_remains_available_when_private_text_is_masked() {
+        let root = tempfile::tempdir().unwrap();
+        let skills_root = root.path().join("Skills");
+        fs::create_dir_all(skills_root.join("example")).unwrap();
+        fs::write(skills_root.join("example/SKILL.md"), "example definition").unwrap();
+        let board = Operations {
+            root: root.path().join("tools"),
+            snapshot: RwLock::new(empty()),
+            questions: RwLock::new(Value::Null),
+            skills: crate::skills_inventory::Inventory::new(skills_root),
+        };
+        board.refresh();
+        let snapshot = board.snapshot();
+        assert_eq!(snapshot["protectionMode"], "masked_metadata");
+        assert_eq!(snapshot["skillsInventory"]["state"], "complete");
+        assert_eq!(snapshot["skillsInventory"]["count"], 1);
+        assert!(!snapshot.to_string().contains("example definition"));
+    }
     #[test]
     fn board_is_bounded_but_paged_detail_keeps_notes_facts_and_privacy() {
         let dir = tempfile::tempdir().unwrap();
@@ -1440,6 +1464,7 @@ mod tests {
             root: root.into(),
             snapshot: RwLock::new(empty()),
             questions: RwLock::new(Value::Null),
+            skills: crate::skills_inventory::Inventory::new(root.join("Skills")),
         };
         board.refresh();
         let snapshot = board.snapshot();

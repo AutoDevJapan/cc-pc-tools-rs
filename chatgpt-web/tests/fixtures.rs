@@ -379,11 +379,13 @@ fn composer_seen_before_its_script_loads_waits_for_page_initialization() {
     .output()
     .unwrap();
     drop(idle);
-    assert!(
-        handler.join().unwrap(),
-        "must actually exercise a delayed script"
-    );
+    let script_sent = handler.join().unwrap();
     assert_eq!(result.status.code(), Some(0), "{}", stderr(&result));
+    assert!(
+        script_sent,
+        "must actually exercise a delayed script: {}",
+        stderr(&result)
+    );
     assert!(stdout(&result).contains("delayed script question"));
     assert_browser_closed(dir.path());
 }

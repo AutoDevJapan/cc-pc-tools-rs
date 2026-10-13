@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -155,6 +155,16 @@ impl Browser {
         let headless =
             std::env::var_os("CHATGPT_WEB_HEADLESS").as_deref() == Some(std::ffi::OsStr::new("1"));
         let mut cmd = chrome_command(&chrome, profile, visible, headless);
+        // Only local, headless fixtures may record Chrome diagnostics. Never
+        // collect stderr from the owner's logged-in browser/profile.
+        let diagnostics = headless
+            && std::env::var_os("CHATGPT_WEB_FIXTURE").as_deref()
+                == Some(std::ffi::OsStr::new("1"));
+        let diagnostic_path = profile.join("chrome-startup.log");
+        if diagnostics {
+            cmd.arg("--enable-logging=stderr")
+                .stderr(fs::File::create(&diagnostic_path)?);
+        }
         let mut child = cmd.spawn()?;
         let deadline = Instant::now() + Duration::from_secs(30);
         while Instant::now() < deadline {
@@ -173,10 +183,13 @@ impl Browser {
             if let Ok(Some(status)) = child.try_wait()
                 && !status.success()
             {
-                return Err(io::Error::other(format!(
-                    "Chrome の起動処理が失敗しました（終了コード {:?}）",
-                    status.code()
-                )));
+                return Err(startup_error(
+                    format!(
+                        "Chrome の起動処理が失敗しました（終了コード {:?}）",
+                        status.code()
+                    ),
+                    diagnostics.then_some(diagnostic_path.as_path()),
+                ));
             }
             // On Windows the Chrome launcher can exit successfully before its
             // replacement browser writes DevToolsActivePort. The owned profile's
@@ -185,7 +198,10 @@ impl Browser {
         }
         let _ = child.kill();
         let _ = child.wait();
-        Err(io::Error::other("Chrome の CDP に接続できませんでした"))
+        Err(startup_error(
+            "Chrome の CDP に接続できませんでした".into(),
+            diagnostics.then_some(diagnostic_path.as_path()),
+        ))
     }
 
     /// 新しいタブを開き、そのページへ接続する。
@@ -207,6 +223,19 @@ impl Browser {
             .cdp
             .call("Target.closeTarget", json!({"targetId": tab.id}));
     }
+}
+
+fn startup_error(mut message: String, diagnostic_path: Option<&Path>) -> io::Error {
+    if let Some(path) = diagnostic_path
+        && let Ok(file) = fs::File::open(path)
+    {
+        let mut bytes = Vec::new();
+        if file.take(8192).read_to_end(&mut bytes).is_ok() && !bytes.is_empty() {
+            message.push_str("\nChrome fixture stderr (first 8192 bytes):\n");
+            message.push_str(&String::from_utf8_lossy(&bytes));
+        }
+    }
+    io::Error::other(message)
 }
 
 impl Drop for Browser {
@@ -247,6 +276,18 @@ pub struct Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fixture_startup_error_keeps_exit_and_bounds_diagnostics() {
+        let dir = tempfile::tempdir().unwrap();
+        let log = dir.path().join("startup.log");
+        fs::write(&log, "x".repeat(9000)).unwrap();
+        let error = startup_error("exit 21".into(), Some(&log)).to_string();
+        assert!(error.starts_with("exit 21\n"));
+        assert!(error.ends_with(&"x".repeat(8192)));
+        assert!(!error.contains(&"x".repeat(8193)));
+        assert_eq!(startup_error("exit 21".into(), None).to_string(), "exit 21");
+    }
 
     #[test]
     fn test_chrome_has_no_window_even_when_visible_is_requested() {

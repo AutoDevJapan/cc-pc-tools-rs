@@ -68,14 +68,8 @@ jobs:
       - run: cargo test --locked --workspace --doc
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo build --locked --release --target-dir target
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: safe-delete-recovery-windows
-          retention-days: 3
-          if-no-files-found: error
-          path: |
-            safe-delete-recovery/target/release/safe-delete-recovery.exe
-            safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe
+      # Keep the verified binaries in this PC job's work directory. Normal CI
+      # does not upload or accumulate repository artifact storage.
       - name: Plan removal of this job's owned physical fixtures
         if: always() && env.PC_CI_FIXTURE_ID != ''
         shell: pwsh

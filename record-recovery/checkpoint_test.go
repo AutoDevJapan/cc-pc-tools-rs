@@ -73,6 +73,12 @@ func TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo(t *testing.T) {
 	if e != nil || len(array(kept["spec_history"])) != 1 {
 		t.Fatal("intermediate original restrictions lost")
 	}
+	wrongSpec := filepath.Join(root, "wrong-original.md")
+	os.WriteFile(wrongSpec, []byte("different source"), 0600)
+	_, e = checkpoint(source, todo, wrongSpec, filepath.Join(root, "wrong-source"))
+	if e == nil || e.Error() != "original_spec_source_mismatch" {
+		t.Fatal("unrelated specification became original")
+	}
 	report["owner_replies_identity_verified"] = 155
 	raw, _ := json.MarshalIndent(report, "", "  ")
 	os.WriteFile(filepath.Join(source, "correlation-report.json"), raw, 0600)

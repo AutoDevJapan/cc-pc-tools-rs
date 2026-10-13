@@ -535,6 +535,35 @@ impl<B: Backend> Scheduler<B> {
         }
         Ok(())
     }
+    /// Isolate new, verified PC repairs from the unavailable private registry and
+    /// old question generations. Unknown records retain their original state.
+    pub fn reconcile_repairs(
+        &mut self,
+        jobs: &mut [Value],
+        ps: &Processes,
+        cfg: &Value,
+    ) -> Result<()> {
+        let db = self.todo()?;
+        for item in arr(&db["items"]) {
+            let project = s(&item["project"]);
+            if s(&item["status"]) != "doing"
+                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                || item["scheduler"]["job"]
+                    .as_str()
+                    .is_none_or(|id| id.is_empty())
+                || (truth(&item["scheduler"]["question"]) && !truth(&item["scheduler"]["answer"]))
+                || !self
+                    .backend
+                    .repair_scope_allowed(s(&db["projects"][project]))
+            {
+                continue;
+            }
+            self.guard(&format!("reconcile repair {}", item["id"]), |e| {
+                e.reconcile_item(&item, jobs, ps, cfg)
+            });
+        }
+        Ok(())
+    }
     pub fn reconcile_item(
         &mut self,
         i: &Value,
@@ -1221,16 +1250,25 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             self.backend.clock(),
             &self.civ6_home(),
         )?;
+        // Read the private exclusions only in memory. A missing original is not
+        // an empty list; only this explicitly verified repair repository can run.
+        let exclusions =
+            std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt"));
         let eligible: Vec<Value> = arr(&db["items"])
             .into_iter()
             .filter(|i| {
                 let project = s(&i["project"]);
                 let path = s(&db["projects"][project]);
-                let excluded = std::fs::read_to_string(
-                    self.root.parent().unwrap().join("client-projects.txt"),
-                )
-                .map(|names| {
-                    names
+                if project == "owner"
+                    || s(&i["status"]) != "todo"
+                    || !truth(&i["dispatchable"])
+                    || !truth(&i["spec"])
+                    || todo_wait::waiting(&db, i)
+                {
+                    return false;
+                }
+                let excluded = match &exclusions {
+                    Ok(names) => names
                         .trim_start_matches('\u{feff}')
                         .lines()
                         .map(str::trim)
@@ -1238,9 +1276,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         .any(|n| {
                             project.to_lowercase().contains(&n.to_lowercase())
                                 || path.to_lowercase().contains(&n.to_lowercase())
-                        })
-                })
-                .unwrap_or(true);
+                        }),
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::NotFound
+                            && ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                                .contains(&project) =>
+                    {
+                        !self.backend.repair_scope_allowed(path)
+                    }
+                    Err(_) => true,
+                };
                 project != "owner"
                     && !todo_wait::waiting(&db, i)
                     && !excluded
@@ -1486,6 +1531,19 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         .any(|prefix| name.starts_with(prefix))
                 }) {
                     self.guard("dispatch", |e| e.dispatch(&cfg, &pri));
+                }
+            }
+            "repair-step" => {
+                // Keep lost question generations and their notification/reply
+                // processing quarantined. Never terminate another worker here.
+                let mut safe = cfg.clone();
+                safe["kill_enabled"] = json!(false);
+                self.report["repair_mode"] = json!(true);
+                self.guard("reconcile repairs", |e| {
+                    e.reconcile_repairs(&mut jobs, &ps, &safe)
+                });
+                if self.failures.is_empty() {
+                    self.guard("dispatch", |e| e.dispatch(&safe, &pri));
                 }
             }
             "orphans" => {

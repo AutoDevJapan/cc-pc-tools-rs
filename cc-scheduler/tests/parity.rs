@@ -1402,6 +1402,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    repair_allowed: bool,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
@@ -1435,6 +1436,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            repair_allowed: false,
             launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
@@ -1468,6 +1470,9 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
+        self.repair_allowed
+    }
     fn clock(&self) -> f64 {
         self.clock
     }
@@ -1627,6 +1632,47 @@ impl Backend for Fake {
         fs::create_dir_all(s(&i["scheduler"]["worktree"]))?;
         Ok(())
     }
+}
+#[test]
+fn missing_private_registry_only_dispatches_verified_explicit_pc_repair() {
+    for project in [
+        "cc-pc-tools-rs",
+        "pc-capacity-audit",
+        "localai-web-rs",
+        "other",
+    ] {
+        for allowed in [false, true] {
+            let mut f = Fixture::new();
+            fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+            let mut db = f.e.todo().unwrap();
+            db["projects"][project] = json!(f.repo);
+            write_json(&f.e.todo_path, &db, 1).unwrap();
+            f.e.backend.repair_allowed = allowed;
+            f.put(item(1, project, "todo", &[]));
+            f.dispatch();
+            assert_eq!(
+                f.e.backend.launched.len(),
+                usize::from(allowed && project != "other")
+            );
+        }
+    }
+}
+#[test]
+fn repair_step_never_replays_legacy_questions_or_unknown_work() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 1);
+    let before = f.get(1);
+    fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+    f.e.backend.repair_allowed = true;
+    let report = f.e.run("repair-step", false).unwrap();
+    assert_eq!(report["repair_mode"], true);
+    assert_eq!(f.get(1), before);
+    assert!(f.e.backend.notices.is_empty());
+    assert!(f.e.backend.cancelled.is_empty());
+    assert!(f.e.backend.closed.is_empty());
+    assert_eq!(f.e.backend.reply_count, 0);
+    assert!(f.e.backend.launched.is_empty());
+    assert_eq!(report["step_failures"], json!([]));
 }
 struct Fixture {
     temp: tempfile::TempDir,

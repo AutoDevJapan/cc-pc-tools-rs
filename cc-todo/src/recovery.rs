@@ -38,21 +38,13 @@ pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
     ) {
         return Err("requested item excluded".into());
     }
-    let ids: BTreeSet<_> = item["jobs"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_str)
+    let ids: BTreeSet<_> = crate::job_refs::ids(&item["jobs"])
         .chain(item["work_owner_job"].as_str())
         .chain(item["scheduler"]["job"].as_str())
         .collect();
     let mut jobs = vec![];
     for jid in ids {
-        if jid.is_empty()
-            || !jid
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-        {
+        if !crate::job_refs::valid_id(jid) {
             return Err("invalid receipt identifier".into());
         }
         let job = load(&paths.jobs.join(jid).join("job.json"))?;
@@ -224,12 +216,12 @@ fn linked(item: &Value, j: &Value) -> bool {
         || (item["id"].is_number()
             && item["id"] == j["todo_id"]
             && (s(&j["project"]).is_empty() || item["project"] == j["project"]))
-        || item["jobs"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .any(|id| id == &j["id"] || (j["thread_id"].is_string() && id == &j["thread_id"]))
-        || (item["scheduler"]["job"].is_string() && item["scheduler"]["job"] == j["id"])
+        || crate::job_refs::ids(&item["jobs"])
+            .any(|id| j["id"].as_str() == Some(id) || j["thread_id"].as_str() == Some(id))
+        || (item["scheduler"]["job"]
+            .as_str()
+            .is_some_and(crate::job_refs::valid_id)
+            && item["scheduler"]["job"] == j["id"])
         || (item["stall_recovery"]["pending"]["key"].is_string()
             && item["stall_recovery"]["pending"]["key"] == j["launch_key"])
 }
@@ -492,7 +484,9 @@ fn plan_with_intake(
             }
             // No saved specification: the board reports missing ownership after
             // 30 minutes. Do not create a second intake request or invent a spec.
-            if cc_ask::unassigned::unspecified(&item) && arr(&item["jobs"]).is_empty() {
+            if cc_ask::unassigned::unspecified(&item)
+                && crate::job_refs::ids(&item["jobs"]).next().is_none()
+            {
                 continue;
             }
             if excluded(&project, s(&item["scheduler"]["worktree"]), clients) {
@@ -574,7 +568,9 @@ fn plan_with_intake(
                         "ジョブのプロセスが消えた"
                     },
                 )
-            } else if s(&item["status"]) == "doing" || !arr(&item["jobs"]).is_empty() {
+            } else if s(&item["status"]) == "doing"
+                || crate::job_refs::ids(&item["jobs"]).next().is_some()
+            {
                 (
                     "delegate",
                     match s(&job["status"]) {
@@ -584,12 +580,12 @@ fn plan_with_intake(
                         _ => "担当ジョブが動いていなかった",
                     },
                 )
-            } else if arr(&item["jobs"]).is_empty()
+            } else if crate::job_refs::ids(&item["jobs"]).next().is_none()
                 && item["dispatchable"] == true
                 && !s(&item["spec"]).is_empty()
             {
                 ("scheduler", "仕様のある未着手の作業が20分以上止まっていた")
-            } else if arr(&item["jobs"]).is_empty() {
+            } else if crate::job_refs::ids(&item["jobs"]).next().is_none() {
                 ("delegate", "未着手の作業が20分以上止まっていた")
             } else {
                 continue;

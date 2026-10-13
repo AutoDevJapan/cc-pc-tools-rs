@@ -582,6 +582,9 @@ fn python_whitespace(c: char) -> bool {
 
 /// Where a job works, shown relative to dev/ADJ so the owner can tell repositories and worktrees apart.
 pub fn job_cwd(jobs: &Path, id: &str) -> String {
+    if !job_refs::valid_id(id) {
+        return String::new();
+    }
     let Ok(job) = load_job(&jobs.join(id).join("job.json")) else {
         return String::new();
     };
@@ -859,6 +862,12 @@ pub fn rename_project(
 }
 
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
+    if let Command::Start { job, .. } = cmd
+        && !job.is_empty()
+        && !job_refs::valid_id(job)
+    {
+        return Err("invalid job identifier".into());
+    }
     let supplied = match cmd {
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
@@ -949,24 +958,22 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 {
                     continue;
                 }
-                let jobs = i["jobs"].as_array().ok_or("invalid jobs")?;
+                let jobs: Vec<_> = job_refs::ids(&i["jobs"]).collect();
                 let project = i["project"].as_str().ok_or("invalid project")?;
                 let where_ = if let Some(j) = jobs.last() {
-                    job_cwd(&paths.jobs, j.as_str().ok_or("invalid job")?)
+                    job_cwd(&paths.jobs, j)
                 } else {
                     db["projects"][project].as_str().unwrap_or("").to_owned()
                 };
                 let mut extra = if jobs.is_empty() {
                     String::new()
                 } else {
-                    format!(
-                        " [{}]",
-                        jobs.iter()
-                            .map(|j| j.as_str().unwrap())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
+                    format!(" [{}]", jobs.join(", "))
                 };
+                let unverified_jobs = job_refs::unverified_count(&i["jobs"]);
+                if unverified_jobs > 0 {
+                    extra.push_str(&format!(" — 未確認のジョブ参照 {unverified_jobs}件"));
+                }
                 if !where_.is_empty() {
                     extra.push_str(&format!(" @ {where_}"));
                 }
@@ -1318,6 +1325,7 @@ pub fn discord_call(
     }
     Err("Discord API rate limited".into())
 }
+mod job_refs;
 mod platform;
 pub mod recovery;
 pub mod summary;

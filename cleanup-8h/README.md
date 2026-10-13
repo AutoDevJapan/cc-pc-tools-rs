@@ -1,14 +1,17 @@
 # cleanup-8h
 
-This binary extends the existing `CC-CleanupDeletionRequests-8h` scheduled task. It empties recycle bins on C and D only, then scans `D:\CC\Tools\agent-workspaces`, `D:\削除希望`, `C:\Users\makhmeto\Downloads\削除希望`, and `C:\Users\makhmeto\Desktop\dev` for directories named `target`, `temp`, `tmp`, `.temp`, `.tmp`, `cache`, or `.cache`. At each root it descends only into first-level directories whose names identify a ToDo in `done` state; for either deletion-request root it can resolve the ToDo ID from the saved original-path line in `理由.txt`. For C's Temp directory it follows only `safe-delete` receipts in `owned` state, confirms each plan with `safe-delete.exe plan`, and requires a ToDo ID in the saved project/content metadata. It never enumerates the whole Temp directory. Unmapped `codex-owned-<uuid>` folders and unrelated project trees are skipped. E is measured but its files and recycle bin are left untouched.
+The historical task name `CC-CleanupDeletionRequests-8h` is retained, but it runs **hourly**. Production roots are compiled in: `C:\Users\makhmeto\Downloads\削除希望` and `D:\削除希望`. No option expands those roots. No arguments and `--dry-run` inspect only; the task passes `--apply`.
 
-An artifact is eligible only when its path identifies a ToDo in `done` state. The cleaner applies the client-resource guard before descending into each owned workspace. Before removal it also checks every path component for reparse points, Git status/upstream/tracked files for an ancestor repository, verification evidence files, external hard links, and open-file owners through Windows Restart Manager. Large trees are registered and checked in batches so a busy process in any batch blocks removal. It skips `.git`, `node_modules`, `.pnpm-store`, `.cargo`, and `vendor` subtrees. A failed check leaves that artifact in place and records a result category. The global sccache path is outside the scanned roots and remains under its configured 30 GB limit. E-drive contents are not scanned or deleted.
+The previous automatic scans of workspaces, desktop development trees and temporary receipt trees were removed after the unexplained source/settings loss. This replacement never scans or deletes those trees, and never prunes Docker or AI models.
 
-The scheduled task keeps its existing name, elevated S4U principal, action path, and 15-minute repetition interval. `StartWhenAvailable` remains enabled so a missed run can start after the system becomes available. Deployment preserves the former executable as `cleanup-8h-legacy.exe` for rollback; the replacement does not run it because its all-drive recycle-bin behavior would touch E. Each run appends C/D/E free-space snapshots, C/D recycle-bin method and counts, removed logical bytes, skip counts, and failure categories to `D:\CC\Tools\cleanup-8h\owned-target-runs.jsonl`.
+Physical ancestors are pinned; reparse points and mismatched physical names are rejected. Source, repository markers, verification records and recovery material including ToDo 2467 are retained. Unknown resources use the real scrub391 guard. Unavailable protection or `classification_unverified` retains a candidate before descending. The original registry is not synthesized or replaced with an empty list.
 
-Build and focused verification:
+The cleaner enumerates a pinned directory, upgrades each object to an exclusive delete handle and checks file identity again. Open files, external hard links and changed identities are retained. Deletion uses `SetFileInformationByHandle`, rather than path-based recursive removal. Counts include only successful deletions. The root cannot be deleted. Limits are 200,000 entries and eight minutes; an OS file lock and `IgnoreNew` prevent overlapping runs.
 
-```powershell
-cargo nextest run --locked -p cleanup-8h
-cargo build --locked -p cleanup-8h --release
-```
+Recycle cleanup covers the current owner's C/D stores. Each $I record is checked in memory. Missing or unsupported metadata, source/recovery origins and unclassified resources are retained. $R data is deleted before its $I record. No whole-bin shell purge is used. E is measured only.
+
+Release binaries use the Windows GUI subsystem. The guard uses CREATE_NO_WINDOW, a ten-second deadline and bounded output capture. Aggregate receipts in `D:\CC\Tools\cleanup-8h\owned-target-runs.jsonl` contain counts, logical removed bytes, actual free-space snapshots and net changes. Private names, original recycle paths, task bodies and secrets are absent. Concurrent writers can affect the net changes.
+
+The existing task uses elevated S4U logon, hourly repetition, StartWhenAvailable, IgnoreNew, a ten-minute limit and two bounded retries. Deployment and prior task XML are in deploy-2491/. The parent integrates source/review/CI/merge.
+
+Focused checks: `cargo nextest run --locked -p cleanup-8h`, `cargo clippy --locked -p cleanup-8h --all-targets -- -D warnings`, and `cargo build --release --locked -p cleanup-8h`. Tests exercise real Windows deletion, open-file failure, junctions, pinned-root rename, hard links, source adjacency, expired deadlines, run locks, root boundaries and recycle metadata.

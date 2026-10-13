@@ -7,6 +7,11 @@ use std::{
 };
 
 pub trait Backend {
+    /// Only the independently verified, explicitly authorized PC repair source.
+    /// Missing private registry data never grants a general project exemption.
+    fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
+        false
+    }
     fn clock(&self) -> f64;
     fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
         Ok(crate::preparation::resource_deadline(job, self.clock()))
@@ -75,7 +80,7 @@ impl Http for Network {
     ) -> Result<Value> {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(timeout))
-            .user_agent("discord-ask (local, 1.0)")
+            .user_agent("DiscordBot (https://github.com/AutoDevJapan/cc-pc-tools-rs, 0.1.0)")
             .build()
             .map_err(|_| Error("OSError"))?;
         for _ in 0..if discord { 3 } else { 1 } {
@@ -396,6 +401,9 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
+    fn repair_scope_allowed(&mut self, repo: &str) -> bool {
+        self.guard_workspace_path(repo).is_ok()
+    }
     fn clock(&self) -> f64 {
         now()
     }

@@ -331,6 +331,13 @@ fn delete_tree(
 
 // A single fixed guard executable is run without a console, with bounded
 // output to a file (no inherited stdout pipe can extend the deadline).
+struct OwnedCapture(PathBuf);
+impl Drop for OwnedCapture {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+
 fn guard_unknown(path: &Path) -> io::Result<bool> {
     let capture = Path::new(RUNTIME).join(format!(
         "guard-{}-{}.tmp",
@@ -344,6 +351,7 @@ fn guard_unknown(path: &Path) -> io::Result<bool> {
         .create_new(true)
         .write(true)
         .open(&capture)?;
+    let _capture_cleanup = OwnedCapture(capture.clone());
     let mut child = Command::new(SCRUB)
         .arg("--guard-path")
         .arg(path)
@@ -371,7 +379,6 @@ fn guard_unknown(path: &Path) -> io::Result<bool> {
     fs::File::open(&capture)?
         .take(4097)
         .read_to_end(&mut bytes)?;
-    let _ = fs::remove_file(&capture);
     if bytes.len() > 4096 {
         return Err(invalid());
     }
@@ -723,6 +730,21 @@ mod tests {
         } as usize;
         assert!(length > 0 && length < short_name.len());
         let short_root = PathBuf::from(String::from_utf16(&short_name[..length]).unwrap());
+        let mut long_name = vec![0u16; 32_768];
+        let long_length = unsafe {
+            GetLongPathNameW(
+                name.as_ptr(),
+                long_name.as_mut_ptr(),
+                long_name.len() as u32,
+            )
+        } as usize;
+        assert!(long_length > 0 && long_length < long_name.len());
+        let long_root = String::from_utf16(&long_name[..long_length]).unwrap();
+        assert_ne!(
+            normalized(&short_root.to_string_lossy()),
+            normalized(&long_root),
+            "regression fixture requires a real short-name alias"
+        );
         let child = short_root.join("finished");
         fs::create_dir(&child).unwrap();
         fs::write(child.join("cache.bin"), [7; 4096]).unwrap();
@@ -817,6 +839,20 @@ mod tests {
         assert!(status.success(), "could not create owned junction fixture");
         assert!(retention_tree(&linked, &budget(), &mut Stats::default(), 0).is_err());
         assert!(delete_tree(&root, &linked, true, &budget(), &mut Stats::default(), 0).is_err());
+        let through_link = linked.join("keep.bin");
+        assert!(Pinned::open(&through_link, false).is_err());
+        assert!(pin_ancestors(&through_link).is_err());
+        assert!(
+            delete_tree(
+                &root,
+                &through_link,
+                true,
+                &budget(),
+                &mut Stats::default(),
+                0
+            )
+            .is_err()
+        );
         assert_eq!(fs::read(outside.join("keep.bin")).unwrap(), b"outside");
         let pins = pin_ancestors(&root).unwrap();
         assert!(fs::rename(&root, root.with_extension("moved")).is_err());
@@ -824,6 +860,29 @@ mod tests {
         fs::remove_dir(&linked).unwrap();
         fs::remove_dir_all(root).unwrap();
         fs::remove_dir_all(outside).unwrap();
+    }
+
+    #[test]
+    fn owned_guard_capture_is_removed_on_error_and_success() {
+        let root = fixture();
+        let capture = root.join("owned-capture.tmp");
+        for fail in [false, true] {
+            let result = (|| -> io::Result<()> {
+                let file = OpenOptions::new()
+                    .create_new(true)
+                    .write(true)
+                    .open(&capture)?;
+                let _cleanup = OwnedCapture(capture.clone());
+                drop(file);
+                if fail {
+                    return Err(invalid());
+                }
+                Ok(())
+            })();
+            assert_eq!(result.is_err(), fail);
+            assert!(!capture.exists());
+        }
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

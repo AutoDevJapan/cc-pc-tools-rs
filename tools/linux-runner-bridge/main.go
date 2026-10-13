@@ -384,7 +384,7 @@ func register() int {
 	}
 	c := exec.Command("/runner/config.sh", "--unattended", "--url", "https://github.com/"+repo, "--name", "cc-pc-tools-linux-2511", "--labels", "cc-pc-tools-linux", "--work", "/work", "--ephemeral", "--disableupdate")
 	c.Dir = "/runner"
-	c.Env = append(os.Environ(), "RUNNER_INPUT_TOKEN="+strings.TrimSpace(token))
+	c.Env = append(os.Environ(), "ACTIONS_RUNNER_INPUT_TOKEN="+strings.TrimSpace(token))
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if c.Run() != nil {
@@ -393,7 +393,7 @@ func register() int {
 	token = ""
 	c = exec.Command("/runner/run.sh")
 	c.Dir = "/runner"
-	c.Env = append(os.Environ(), "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook")
+	c.Env = append(os.Environ(), "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh")
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return exitCode(c.Run())

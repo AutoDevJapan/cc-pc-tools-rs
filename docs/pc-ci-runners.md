@@ -19,3 +19,9 @@ runnerのhook、shim、環境設定はジョブから読み取りだけとする
 運用結果、失敗理由、再開手順は `docs/runner-result.private.json` と `docs/runner-handoff.private.md` に保存する。登録、起動、固定sourceの検査成功、マージ、常駐復帰確認を別の到達点として記録する。資格情報や請求数字はGitへ入れない。
 
 CodeQLはPCのLinux runnerでactions、Go、JavaScript/TypeScript、Rustの解析を維持する。従来のHosted default setupから、Git管理する `codeql.yml` へ切り替える。解析結果のuploadと対象revisionを実検証し、元の失敗statusを上書きしない。週ごとの定期解析はmainの最新SHAだけを実行する。
+
+復旧テストは `safe-delete create` でWindowsのシステムTempに所有記録のある親を作り、その中にジョブ専用の子を作る。Windows Temp全体への列挙権限を追加せず、Gitが展開する仮想ドライブも使わない。再利用する親は所有記録と実体の一致、空であることを毎回確認する。子は検査終了後にplan、別stepで通常削除、finishの順で回収する。削除失敗はCI失敗として残し、所有と内容を照合して同じドライブの削除希望へ退避する。
+
+この親とhelperの所有記録はCI用の継続資源であり、runnerの自動Temp清掃の外へ保管する。CIを廃止するときは稼働中ジョブの終了を確認し、残っている子を先に回収してから、原所有記録に従って空の親も回収する。親の参照記録だけを消して所有情報を失わない。runnerを支えるworktreeと常駐runtimeは、代替の起動元へ切り替えるまで保持する。
+
+LinuxのGoコンパイルはジョブ専用のwork配下で一時ファイルとキャッシュを作る。接続キー用のtmpfsと実行禁止設定は維持する。常駐更新はrunnerがidleのときに行い、host・image・containerのbridgeの一致と、Listenerが1系統だけで接続することを確認する。OSの再起動やログオン後の復帰は、実測するまで保証しない。

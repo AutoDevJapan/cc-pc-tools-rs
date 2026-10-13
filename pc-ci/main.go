@@ -119,6 +119,13 @@ func currentHead(client *http.Client, endpoint, token, sha string) error {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "service" {
+		if err := runnerService(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if strings.EqualFold(filepath.Base(os.Args[0]), "chrome-fixture.exe") {
 		// This launches real Chrome against the fixtures' own temporary profile,
 		// using software rendering while the PC GPU belongs to another workload.

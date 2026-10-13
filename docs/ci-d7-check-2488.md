@@ -16,3 +16,9 @@
 2026-10-14 07:47 JSTの区切り：CodeQL、RecordRecovery、Channel、Browserの4workflowがsuccessで終端。20job中13job終端。CodeQLは同SHA・refs/pull/144/head・同workflowの新解析4件を正規APIで確認した。actions 1947445510（17 rules）、go 1947411189（34 rules）、javascript-typescript 1947449569（87 rules）、rust 1947470713（26 rules）。すべてerror空・results_count=0、対応する4SARIFのprocessing_status=complete。Go/Actions/JavaScriptの原全文は取得できた。Rustの原全文は通常取得の制御文字エラーにより未確認。Goの未処理ファイル診断は保持し、全ファイル解析の証明へ広げない。
 
 詳細manifest/本文は `.ci-work/d7-2488/ci-d7-result-2488.private.json` と同名 `.private.md`。全原取得のpath/bytes/SHA256と、取得不能のstdout/stderr/receiptもmanifestのfile_inventoryに残す。状態だけで全workspace・doctest・Clippyの実コマンド成功を主張しない。
+
+2026-10-14 08:04 JST：当初の約30分の有限checkを終了。最新poll024の8run/20jobは固定d7・attempt1・所属run一致・重複なし・ページ欠落なし。CodeQL/RecordRecovery/Channel/Browserはsuccessで終端。Buildはin_progress、Readiness/AgentProgress/Bookmarkはqueuedで未終端。20job中13job終端、7job未終端。CIのfailure/cancelled/timed_outはこの時点で検出していないが、全件成功を主張しない。
+
+原全文はCodeQL Go/Actions/JavaScriptの3jobを取得し、receiptのbytes/SHA256と現物を照合。その他の終端10jobの原全文は通常ghの端末制御文字制限で未確認。allow-escape-sequencesの正規ghゲート拒否を保持し、別経路・直gh.exe・ゲート改変で迂回していない。全workspaceのpass/fail/skip実数、doctest、全targets Clippyの実コマンドexitはnull/未確認。APIの先行4検査successも原全文の件数やexitへ代用しない。GoのOS別step状態を保存し、nonverbose/cachedの個別件数を推測しない。poll015のBookmark API TLS timeoutは保存し、poll016以降の通常取得成功も別receiptとして保持。
+
+全原取得のstdout/stderr/receiptの絶対path・bytes・SHA256、各job/step状態、同d7のCodeQL4新解析(error空/results0・4SARIF complete)、取得可能な原ログ根拠行は `.ci-work/d7-2488/ci-d7-result-2488.private.json/md`。再開手順は同フォルダの `resume.private.md`。派生manifest以外の原証拠を上書きせず、次回は既存の最大poll番号+1から新しい有限30分窓で確認する。同ToDo2613へ600秒wait-retryを記録し、元spec/同worktree/同source/同runを保持してスケジューラーに再開を任せる。親2488や他ToDoの状態は変更しない。新監視担当・Cargo・GPU・CI再実行・source修復・PR・merge・配布・Discord送信は行っていない。

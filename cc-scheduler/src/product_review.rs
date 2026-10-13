@@ -9,7 +9,7 @@ pub const TREE: &str = "C:/Users/makhmeto/Desktop/dev/ADJ/PhosGaea-Vol1-wt/todo-
 pub const BRANCH: &str = "scheduler/todo-2407-work";
 pub const KEY: &str = "c8809d28af00fce0cad714928b5aa3cf";
 pub fn in_scope(at: f64) -> bool {
-    at >= 1791849600. && at < 1792540800.
+    (1791849600. ..1792540800.).contains(&at)
 }
 pub fn binding(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],

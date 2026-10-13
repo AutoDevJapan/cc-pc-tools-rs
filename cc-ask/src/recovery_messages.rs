@@ -532,9 +532,24 @@ impl Ledger {
                     let source = verified
                         .get(&(progress_request_id.clone(), "progress".to_owned()))
                         .ok_or("origin repair target is not a verified progress post")?;
+                    let source_request = requests
+                        .get(progress_request_id)
+                        .ok_or("origin repair progress request is unavailable")?;
+                    let related_origin = matches!(
+                        (&source_request.operation, &request.operation),
+                        (
+                            Kind::Ask {
+                                todo_id: source_todo,
+                                origin_thread: source_origin,
+                                ..
+                            },
+                            Kind::Ask { todo_id: target_todo, .. }
+                        ) if source_todo == target_todo && source_origin == expected_origin_thread
+                    );
                     if *todo_id == 0
                         || todo_id != original_todo
                         || expected_origin_thread != origin_thread
+                        || !related_origin
                         || owner_reply_message == expected_origin_thread
                         || source.thread_id != *progress_thread
                         || source.message_id != *progress_message
@@ -542,9 +557,7 @@ impl Ledger {
                             != *bots
                                 .get(progress_request_id)
                                 .ok_or("progress author is missing")?
-                        || requests
-                            .get(progress_request_id)
-                            .is_none_or(|source| source.destination != request.destination)
+                        || source_request.destination != request.destination
                         || original_fingerprint != &request.fingerprint
                         || !bots.contains_key(request_id)
                         || phases.keys().any(|(id, _)| id == request_id)
@@ -1766,16 +1779,33 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
     }
     let (progress_request_id, progress_receipt) =
         progress_source.ok_or("exact verified progress receipt is unavailable")?;
-    if progress_receipt.author_id != ledger.bot(&progress_request_id).unwrap_or("")
-        || ledger.request(&progress_request_id).is_none_or(|source| {
-            source.destination != request.destination
-                || RecoveryApi::known_progress(
-                    &ledger,
-                    &request.destination,
-                    ledger.bot(&progress_request_id).unwrap_or(""),
-                    &progress_receipt.thread_id,
-                ) != Some(true)
-        })
+    let source_request = ledger
+        .request(&progress_request_id)
+        .ok_or("verified progress request is unavailable")?;
+    let source_is_related = matches!(
+        (&source_request.operation, &request.operation),
+        (
+            Kind::Ask {
+                todo_id: source_todo,
+                origin_thread: source_origin,
+                ..
+            },
+            Kind::Ask {
+                todo_id: target_todo,
+                origin_thread: target_origin,
+                ..
+            }
+        ) if source_todo == target_todo && source_origin == target_origin
+    );
+    if !source_is_related
+        || source_request.destination != request.destination
+        || progress_receipt.author_id != ledger.bot(&progress_request_id).unwrap_or("")
+        || RecoveryApi::known_progress(
+            &ledger,
+            &request.destination,
+            ledger.bot(&progress_request_id).unwrap_or(""),
+            &progress_receipt.thread_id,
+        ) != Some(true)
     {
         return Err("repair target is not the same bot's verified progress post".into());
     }
@@ -3290,15 +3320,35 @@ mod tests {
         }
     }
 
+    fn verified_progress_source(
+        fixture: &Fixture,
+        ctx: &mut Context,
+        id: &str,
+        origin: &str,
+        todo_id: u64,
+    ) -> Value {
+        let args = fixture.ask(id, "親依頼の進捗");
+        let mut decision: Value =
+            serde_json::from_slice(&fs::read(&args.decision_file).unwrap()).unwrap();
+        decision["origin_thread_id"] = json!(origin);
+        decision["todo_id"] = json!(todo_id);
+        decision["resources"][0]["id"] = json!(id);
+        let mut args = args;
+        args.todo_id = todo_id;
+        fs::write(&args.decision_file, serde_json::to_vec(&decision).unwrap()).unwrap();
+        fixture.server.lock().unwrap().channels.insert(
+            origin.into(),
+            json!({"id":origin,"type":11,"guild_id":GUILD,
+                "parent_id":REQUEST_FORUM,"owner_id":OWNER,"name":"元の依頼"}),
+        );
+        ask(ctx, &args).unwrap()
+    }
+
     #[test]
     fn exact_unsent_origin_repair_posts_once_then_get_verifies_question_and_progress() {
         let fixture = Fixture::new();
         let mut ctx = fixture.context();
-        let source = ask(
-            &mut ctx,
-            &fixture.ask("verified-progress-source", "親依頼の進捗"),
-        )
-        .unwrap();
+        let source = verified_progress_source(&fixture, &mut ctx, "verified-progress-source", "107", 2472);
         let _args = failed_unsent_ask(&fixture, "one-device-approval", "107", OWNER);
         let before: Value =
             serde_json::from_slice(&fs::read(fixture.home.join(LEDGER)).unwrap()).unwrap();
@@ -3411,7 +3461,7 @@ mod tests {
         ] {
             let fixture = Fixture::new();
             let mut ctx = fixture.context();
-            let source = ask(&mut ctx, &fixture.ask(&format!("progress-{case}"), "進捗")).unwrap();
+            let source = verified_progress_source(&fixture,&mut ctx,&format!("progress-{case}"),"107",2472);
             let _args = failed_unsent_ask(&fixture, &format!("repair-{case}"), "107", author);
             let mut repair = repair_args(
                 &format!("repair-{case}"),
@@ -3433,7 +3483,7 @@ mod tests {
 
         let fixture = Fixture::new();
         let mut ctx = fixture.context();
-        let source = ask(&mut ctx, &fixture.ask("progress-target-guard", "進捗")).unwrap();
+        let source = verified_progress_source(&fixture,&mut ctx,"progress-target-guard","107",2472);
         let mut args = failed_unsent_ask(&fixture, "target-guard", "107", OWNER);
         let mut altered = fs::read(&args.body_file).unwrap();
         altered.extend_from_slice("追加".as_bytes());
@@ -3485,10 +3535,44 @@ mod tests {
     }
 
     #[test]
+    fn origin_repair_requires_progress_from_the_same_task_and_original_thread() {
+        for (case, source_origin, source_todo) in [
+            ("different-origin", "109", 2472),
+            ("different-todo", "107", 2498),
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let source = verified_progress_source(
+                &fixture,
+                &mut ctx,
+                &format!("progress-{case}"),
+                source_origin,
+                source_todo,
+            );
+            let _ = failed_unsent_ask(
+                &fixture,
+                &format!("repair-{case}"),
+                "107",
+                OWNER,
+            );
+            let repair = repair_args(
+                &format!("repair-{case}"),
+                "107",
+                core::s(&source["progress_message_id"]),
+            );
+            let before = fs::read(fixture.home.join(LEDGER)).unwrap();
+            let http_before = fixture.server.lock().unwrap().calls.len();
+            assert!(repair_origin(&mut ctx, &repair).is_err());
+            assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+            assert_eq!(fixture.server.lock().unwrap().calls.len(), http_before);
+        }
+    }
+
+    #[test]
     fn repair_event_cannot_be_attached_after_any_send_reservation() {
         let fixture = Fixture::new();
         let mut ctx = fixture.context();
-        let source = ask(&mut ctx, &fixture.ask("progress-posted-guard", "進捗")).unwrap();
+        let source = verified_progress_source(&fixture,&mut ctx,"progress-posted-guard","107",2472);
         let _args = failed_unsent_ask(&fixture, "posted-guard", "107", OWNER);
         let mut ledger = Ledger::load(&fixture.home).unwrap();
         let effect = Effect {

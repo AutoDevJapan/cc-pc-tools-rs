@@ -15,7 +15,7 @@
 identity and no send reservation, POST receipt, verified effect, or completion.
 It requires the unchanged request ID, original ToDo and original origin, fetches
 the exact owner reply by Discord GET, and selects a progress starter already
-verified by this ledger. The original intent and fingerprint remain append-only;
+verified by this ledger for that same ToDo and origin thread. The original intent and fingerprint remain append-only;
 the repair event records the old origin and evidence IDs, and retries apply the
 repaired origin without changing the question body or decision. A different
 request, owner, ToDo, origin, target, or body stops before POST. A Pending or

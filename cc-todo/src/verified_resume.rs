@@ -44,6 +44,7 @@ pub fn verify(
         || !valid_hash(request_hash)
         || !valid_hash(job_hash)
         || recovery["preserved_worker_request_sha256"] != request_hash
+        || recovery["source_job_sha256"] != job_hash
         || !item["decision_wait"].is_null()
         || item["owner_postponement_recorded"] == true
         || item["stop_kind"].as_str().is_some_and(|s| !s.is_empty())

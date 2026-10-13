@@ -5,6 +5,8 @@
 `recovery_unverified` は通常の `start` では再開しない。復旧資料の
 `original_id`、`verified_status`、保存指示書のSHA256、元担当のJSONのSHA256を
 共有ToDoのロック内で照合してから、既存CLIで起動した同じセッションの担当を割り当てる。
+元担当のSHA256は復旧記録の `source_job_sha256` に原記録と照合して固定した値が必要。
+欄が欠落している場合は、現在の担当JSONのハッシュだけで埋めて再開せず、原記録との対応を復元する。
 
 ```text
 todo resume-verified <元ToDo番号> --expected-status todo --request-sha256 <64桁> --source-job-sha256 <64桁> --job <再開した担当ID>

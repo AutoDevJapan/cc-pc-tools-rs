@@ -1081,7 +1081,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 paths,
             )?;
             find(&mut proposed, *id)?["recovery_resume_receipt"] = receipt;
-            *db = proposed;
+            // Start also releases unrelated ready waits. This explicitly scoped
+            // command must commit only the selected item's transition.
+            *find(db, *id)? = find(&mut proposed, *id)?.clone();
             output.push(json!({"id":id,"matching":true}).to_string());
         }
         Command::Edit {

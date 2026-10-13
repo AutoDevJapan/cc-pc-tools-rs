@@ -48,8 +48,10 @@ fn fixture() -> Fixture {
         "spec":"missing-original.md","note":"retain original note","progress":25,
         "scheduler":{"branch":"original-branch","worktree":temp.path()},
         "recovery":{"original_id":1,"verified_status":"todo","preserved_worker_request":request,
-        "preserved_worker_request_sha256":request_hash,"request_source_job_id":"source"}},
-        {"id":2,"status":"todo"}]});
+        "preserved_worker_request_sha256":request_hash,"request_source_job_id":"source",
+        "source_job_sha256":digest(&raw)}},
+        {"id":2,"status":"wait","wait_on":[3],"note":"unrelated ready wait"},
+        {"id":3,"status":"done"}]});
     let paths = Paths::at(temp.path(), &jobs);
     Fixture {
         _temp: temp,
@@ -70,6 +72,7 @@ fn matching_receipts_resume_one_item_and_keep_original_work() {
     }
     assert_eq!(f.db["items"][0]["scheduler"]["branch"], "original-branch");
     assert_eq!(f.db["items"][1], before["items"][1]);
+    assert_eq!(f.db["items"][2], before["items"][2]);
     assert_eq!(
         f.db["items"][0]["recovery_resume_receipt"]["source_job_id"],
         "source"
@@ -152,6 +155,17 @@ fn unrelated_or_running_source_is_rejected_even_with_matching_hash() {
         {
             *source_job_sha256 = digest(&raw);
         }
+        f.db["items"][0]["recovery"]["source_job_sha256"] = json!(digest(&raw));
+        let before = f.db.clone();
+        assert!(execute(&mut f.db, &f.command, &f.paths).is_err());
+        assert_eq!(f.db, before);
+    }
+}
+#[test]
+fn missing_or_changed_pinned_job_hash_cannot_be_replaced_by_callers_current_hash() {
+    for pinned in [Value::Null, json!("0".repeat(64))] {
+        let mut f = fixture();
+        f.db["items"][0]["recovery"]["source_job_sha256"] = pinned;
         let before = f.db.clone();
         assert!(execute(&mut f.db, &f.command, &f.paths).is_err());
         assert_eq!(f.db, before);

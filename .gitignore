@@ -8,3 +8,9 @@
 cc-ask/tests/*.json
 **/*.py
 cc-bookmark-queue/extension/config.js
+
+/.ci-runtime/
+/.ci-work/
+/docs/runner-handoff.private.md
+/docs/runner-*.private.ps1
+/docs/runner-*.private.txt

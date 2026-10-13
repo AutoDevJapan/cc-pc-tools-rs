@@ -22,6 +22,10 @@ execution for the official runner scripts; `/tmp` must remain `noexec`. A
 container-side preflight checks that the scripts are executable, the tmpfs
 mounts are writable, and no Docker socket exists. The Cargo target must be a
 real directory below this worktree's `.ci-work`, without symlink substitution.
+When the same container already has a registered runner, a host-task restart
+atomically refreshes only the bridge key and leaves the runner session intact.
+It obtains a new GitHub registration token only when the container's tmpfs has
+lost its runner configuration.
 
 The pre-job hook reads the GitHub event JSON. For pushes it accepts only the
 repository's `main` branch and requires the event commit to equal the current

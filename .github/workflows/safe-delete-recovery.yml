@@ -38,14 +38,26 @@ jobs:
       - name: Create isolated CI fixtures
         shell: pwsh
         run: |
-          # Keep the fixture roots short without relaxing the production
-          # 240-character Git startup guard. R: maps only this job's owned temp.
-          if (Test-Path -LiteralPath 'R:/') { throw 'Fixture drive is already in use' }
-          subst.exe R: $env:RUNNER_TEMP
-          if ($LASTEXITCODE -ne 0) { throw 'Could not map the owned fixture drive' }
-          'PC_CI_FIXTURE_DRIVE_OWNED=1' >> $env:GITHUB_ENV
-          $fixtures = 'R:/f'
-          New-Item -ItemType Directory -Path $fixtures | Out-Null
+          # Git expands subst drives. Use a real owned directory in the service's
+          # system temp instead, retaining the production 240-character limit.
+          $helper = Join-Path $env:RUNNER_TEMP 'safe-delete-fixtures.exe'
+          go -C ../safe-delete build -trimpath -o $helper .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $originalTemp = $env:TEMP
+          $originalTmp = $env:TMP
+          try {
+            $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+            $env:TMP = $env:TEMP
+            $created = & $helper create --project pc-ci --content recovery-fixtures | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create owned physical fixtures' }
+          } finally {
+            $env:TEMP = $originalTemp
+            $env:TMP = $originalTmp
+          }
+          $fixtures = $created.path
+          "PC_CI_FIXTURE_ID=$($created.id)" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_PATH=$fixtures" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_HELPER=$helper" >> $env:GITHUB_ENV
           $guard = Join-Path $fixtures 'client-guard-fixture.exe'
           rustc tests/support/client_guard.rs -o $guard
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -64,9 +76,23 @@ jobs:
           path: |
             safe-delete-recovery/target/release/safe-delete-recovery.exe
             safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe
-      - name: Release this job's fixture drive
-        if: always() && env.PC_CI_FIXTURE_DRIVE_OWNED == '1'
+      - name: Plan removal of this job's owned physical fixtures
+        if: always() && env.PC_CI_FIXTURE_ID != ''
         shell: pwsh
         run: |
-          subst.exe R: /d
-          if ($LASTEXITCODE -ne 0) { throw 'Could not release the owned fixture drive' }
+          $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+          $env:TMP = $env:TEMP
+          $plan = & $env:PC_CI_FIXTURE_HELPER plan --id $env:PC_CI_FIXTURE_ID | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $plan.action -ne 'submit_to_exec_tool' -or $plan.path -ne $env:PC_CI_FIXTURE_PATH) { throw 'Owned fixture deletion was not planned' }
+          'PC_CI_FIXTURE_REMOVAL_PLANNED=1' >> $env:GITHUB_ENV
+      - name: Remove the planned fixture and finish its ownership record
+        if: always() && env.PC_CI_FIXTURE_REMOVAL_PLANNED == '1'
+        shell: pwsh
+        run: |
+          $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+          $env:TMP = $env:TEMP
+          $expected = Join-Path $env:TEMP "codex-owned-$env:PC_CI_FIXTURE_ID"
+          if ($env:PC_CI_FIXTURE_ID -notmatch '^[a-f0-9]{32}$' -or $env:PC_CI_FIXTURE_PATH -ne $expected) { throw 'Unexpected fixture path' }
+          Remove-Item -LiteralPath $expected -Recurse -ErrorAction Stop
+          & $env:PC_CI_FIXTURE_HELPER finish --id $env:PC_CI_FIXTURE_ID
+          if ($LASTEXITCODE -ne 0) { throw 'Owned fixture removal did not finish' }

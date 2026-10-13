@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -75,9 +76,17 @@ var stopService = make(chan struct{})
 var stopOnce sync.Once
 var statusHandle uintptr
 var launcherToken syscall.Handle
+var serviceExitCode uint32
 
 func status(state uint32) {
 	s := serviceStatus{Type: 0x10, State: state}
+	if state == 1 {
+		s.ExitCode = serviceExitCode
+	}
+	if state == 3 {
+		s.Wait = 35000
+		s.Checkpoint = 1
+	}
 	if state == 4 {
 		s.Accepts = 1 | 4
 	}
@@ -106,6 +115,7 @@ func serviceMain(argc, argv uintptr) uintptr {
 		default:
 		}
 		if err := listenWithNarrowToken(); err != nil {
+			serviceExitCode = 1
 			// Only this launcher's fixed Win32 operation/error text is recorded;
 			// the official runner owns its credential and diagnostic handling.
 			if exe, e := os.Executable(); e == nil {
@@ -115,6 +125,8 @@ func serviceMain(argc, argv uintptr) uintptr {
 					f.Close()
 				}
 			}
+		} else {
+			serviceExitCode = 0
 		}
 		select {
 		case <-stopService:
@@ -129,6 +141,9 @@ func runnerService() error {
 		return err
 	}
 	defer syscall.CloseHandle(launcherToken)
+	if err := os.Setenv("PC_CI_LAUNCHER_PID", strconv.Itoa(os.Getpid())); err != nil {
+		return err
+	}
 	name, _ := syscall.UTF16PtrFromString(serviceName)
 	table := [2]serviceTable{{Name: name, Main: syscall.NewCallback(serviceMain)}, {}}
 	r, _, e := startDispatcher.Call(uintptr(unsafe.Pointer(&table[0])))
@@ -332,8 +347,9 @@ func listenWithNarrowToken() error {
 	}
 	count, _, e := resumeThread.Call(uintptr(process.Thread))
 	if count != 1 {
-		terminateJob.Call(job, 1)
-		syscall.WaitForSingleObject(process.Process, 10000)
+		if err := killRunnerJob(job, process.Process, 1); err != nil {
+			return err
+		}
 		return fmt.Errorf("unexpected initial suspend count %d: %v", count, e)
 	}
 	for {
@@ -368,6 +384,9 @@ func drainRunnerJob(job uintptr, process syscall.Handle, budget time.Duration) e
 			syscall.CloseHandle(h)
 		}
 	}()
+	return waitRunnerJob(job, process, handles, budget)
+}
+func waitRunnerJob(job uintptr, process syscall.Handle, handles []syscall.Handle, budget time.Duration) error {
 	deadline := time.Now().Add(budget)
 	for time.Now().Before(deadline) {
 		var a jobAccounting
@@ -380,16 +399,19 @@ func drainRunnerJob(job uintptr, process syscall.Handle, budget time.Duration) e
 			return err
 		}
 		if a.Active == 0 && w == 0 {
+			allSignaled := true
 			for _, h := range handles {
 				signaled, e := syscall.WaitForSingleObject(h, 0)
 				if e != nil {
 					return e
 				}
 				if signaled != 0 {
-					return fmt.Errorf("retained runner member not signaled")
+					allSignaled = false
 				}
 			}
-			return nil
+			if allSignaled {
+				return nil
+			}
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -451,7 +473,7 @@ func killRunnerJob(job uintptr, root syscall.Handle, code uintptr) error {
 	if r == 0 {
 		return fmt.Errorf("terminate owned runner job: %w", e)
 	}
-	if err := drainRunnerJob(job, root, 30*time.Second); err != nil {
+	if err := waitRunnerJob(job, root, handles, 30*time.Second); err != nil {
 		return err
 	}
 	if snapshotErr != nil {

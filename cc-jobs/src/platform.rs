@@ -376,6 +376,13 @@ pub trait Runtime: Send + Sync {
         ))
         .map(|_| ())
     }
+    fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
+        if self.proc_created(pid) == Some(created) {
+            self.kill_tree(pid)
+        } else {
+            Ok(())
+        }
+    }
     fn before_load(&self, _path: &Path) -> io::Result<()> {
         Ok(())
     }
@@ -463,6 +470,10 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    #[cfg(windows)]
+    fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
+        crate::pause::stop_tree(pid, created)
+    }
     #[cfg(windows)]
     fn kill_tree(&self, pid: u32) -> io::Result<()> {
         let created = proc_created(pid).ok_or_else(|| {

@@ -1334,7 +1334,11 @@ impl Context {
             // Stopping the supervisor's tree can already stop codex_pid.
             // Recheck the recorded creation time before opening a second root.
             if self.is_ours(&job, k) {
-                self.rt.kill_tree(job[*k].as_u64().unwrap() as u32)?;
+                let created = job[format!("{k}_created")]
+                    .as_u64()
+                    .ok_or_else(|| Error::new("owned process creation time is missing"))?;
+                self.rt
+                    .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
             }
         }
         for _ in 0..50 {

@@ -297,9 +297,23 @@ func listenWithNarrowToken() error {
 		return fmt.Errorf("runner tree lifetime: %w", e)
 	}
 	info := syscall.StartupInfo{Cb: uint32(unsafe.Sizeof(syscall.StartupInfo{}))}
+	logPath := filepath.Join(filepath.Dir(root), ".ci-work", "listener.status.log")
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("official listener output unavailable: %w", err)
+	}
+	defer logFile.Close()
+	logHandle := syscall.Handle(logFile.Fd())
+	if err := syscall.SetHandleInformation(logHandle, 1, 1); err != nil {
+		return err
+	}
+	defer syscall.SetHandleInformation(logHandle, 1, 0)
+	info.Flags = 0x100
+	info.StdOutput = logHandle
+	info.StdErr = logHandle
 	var process syscall.ProcessInformation
 	flags := uintptr(0x08000000 | 0x00000004 | 0x00000400) // no window, suspended, Unicode env
-	r, _, e = processAsUser.Call(uintptr(token), uintptr(unsafe.Pointer(app)), uintptr(unsafe.Pointer(args)), 0, 0, 0, flags, 0, uintptr(unsafe.Pointer(cwd)), uintptr(unsafe.Pointer(&info)), uintptr(unsafe.Pointer(&process)))
+	r, _, e = processAsUser.Call(uintptr(token), uintptr(unsafe.Pointer(app)), uintptr(unsafe.Pointer(args)), 0, 0, 1, flags, 0, uintptr(unsafe.Pointer(cwd)), uintptr(unsafe.Pointer(&info)), uintptr(unsafe.Pointer(&process)))
 	if r == 0 {
 		// This uses only the caller's own filtered token, never another user.
 		args, _ = syscall.UTF16PtrFromString(`"` + listener + `" run --startuptype service`)

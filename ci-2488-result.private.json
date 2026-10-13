@@ -8,7 +8,7 @@
   "tree": "ef282f643578d5949b91a7042c97fbef302735a7",
   "started_at": "2026-10-14T01:57:27+09:00",
   "deadline": "2026-10-14T02:27:27+09:00",
-  "observed_at": "2026-10-14T02:07:43.0500246+09:00",
+  "observed_at": "2026-10-14T02:17:33.4493598+09:00",
   "verification_status": "failure_found_other_workflows_pending",
   "workspace_counts": {
     "tests_run": 2145,
@@ -18,7 +18,9 @@
     "slow": 1,
     "duration_seconds": 394.949,
     "source": "Build38433222034 job115420510423 step9 terminal full log Summary",
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222034/job/115420510423#step:9:1"
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222034/job/115420510423#step:9:1",
+    "summary_line": "cc-jobs\tRun cargo nextest run --locked --workspace --no-fail-fast --test-threads 10\t2026-10-13T17:03:21.0423738Z      Summary [ 394.949s] 2145 tests run: 2144 passed (1 slow), 1 failed, 5 skipped",
+    "parsed_and_compared": true
   },
   "doc_counts": null,
   "runs": [
@@ -159,7 +161,13 @@
               "completed_at": "2026-10-13T17:03:22Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222034/job/115420510423"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222034/job/115420510423",
+          "acceptance_evidence": {
+            "file": "build-2488.acceptance.private.log",
+            "sha256": "1B1162C5A0CC1C9A96A596ED4F7349739E3BDB518CEE1798AEEB411AAFFDBA0F",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420510423/logs"
+          }
         },
         {
           "id": 115428469215,
@@ -286,7 +294,13 @@
               "completed_at": "2026-10-13T16:50:44Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500560"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500560",
+          "acceptance_evidence": {
+            "file": "codeql-rust-2488.acceptance.private.log",
+            "sha256": "FE5A1F9A317ACFEB927051FD371E9EC679FCAD450C4D32975607AEB2531619B5",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420500560/logs"
+          }
         },
         {
           "id": 115420500899,
@@ -377,7 +391,13 @@
               "completed_at": "2026-10-13T16:53:15Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500899"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500899",
+          "acceptance_evidence": {
+            "file": "codeql-115420500899-2488.acceptance.private.log",
+            "sha256": "AA4CF87F5AEA31460695BFD6ACF77FDA4C226E80B6975EF7CE16CECC7137AB16",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420500899/logs"
+          }
         },
         {
           "id": 115420500958,
@@ -468,7 +488,13 @@
               "completed_at": "2026-10-13T16:55:43Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500958"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420500958",
+          "acceptance_evidence": {
+            "file": "codeql-115420500958-2488.acceptance.private.log",
+            "sha256": "9B09BCF0E4A86D3E77A228437193E6E66A472E939252B59B4AA68EED949C1759",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420500958/logs"
+          }
         },
         {
           "id": 115420501027,
@@ -559,7 +585,13 @@
               "completed_at": "2026-10-13T16:52:05Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420501027"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222531/job/115420501027",
+          "acceptance_evidence": {
+            "file": "codeql-115420501027-2488.acceptance.private.log",
+            "sha256": "15B99DCE72F41209BDB57293E037CDF8789683BA40E1FAF6436B2E14E77AB88A",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420501027/logs"
+          }
         }
       ]
     },
@@ -570,10 +602,10 @@
       "head_branch": "codex/unattended-readiness-20261013",
       "event": "pull_request",
       "run_attempt": 1,
-      "status": "queued",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "created_at": "2026-10-13T16:46:19Z",
-      "updated_at": "2026-10-13T16:46:20Z",
+      "updated_at": "2026-10-13T17:12:44Z",
       "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500",
       "api_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500",
       "logs_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/logs",
@@ -700,7 +732,13 @@
               "completed_at": "2026-10-13T16:51:10Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503485"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503485",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420503485.acceptance.private.log",
+            "sha256": "F764A4DA8DE03CB8DE932C82FE49F6D7612E061610589CF59A20D7B3C89EC423",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420503485/logs"
+          }
         },
         {
           "id": 115420503835,
@@ -823,61 +861,384 @@
               "completed_at": "2026-10-13T16:53:47Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503835"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503835",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420503835.acceptance.private.log",
+            "sha256": "D8F79C34AC8504D56B58B007BE31CE57AF48ABCDF89E9EEC4C22AFE797CF9FDC",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420503835/logs"
+          }
         },
         {
           "id": 115420503837,
           "name": "repair-guard",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:20Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:06:56Z",
+          "completed_at": "2026-10-13T17:07:15Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503837"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:06:57Z",
+              "completed_at": "2026-10-13T17:06:59Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:06:59Z",
+              "completed_at": "2026-10-13T17:06:59Z"
+            },
+            {
+              "name": "Admit current Windows source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:06:59Z",
+              "completed_at": "2026-10-13T17:07:00Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:07:00Z",
+              "completed_at": "2026-10-13T17:07:04Z"
+            },
+            {
+              "name": "Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-13T17:07:04Z",
+              "completed_at": "2026-10-13T17:07:05Z"
+            },
+            {
+              "name": "Run go test ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:07:05Z",
+              "completed_at": "2026-10-13T17:07:06Z"
+            },
+            {
+              "name": "Run go vet ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:07:06Z",
+              "completed_at": "2026-10-13T17:07:06Z"
+            },
+            {
+              "name": "Run go build -trimpath .",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-10-13T17:07:06Z",
+              "completed_at": "2026-10-13T17:07:07Z"
+            },
+            {
+              "name": "Post Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15,
+              "started_at": "2026-10-13T17:07:07Z",
+              "completed_at": "2026-10-13T17:07:07Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 16,
+              "started_at": "2026-10-13T17:07:07Z",
+              "completed_at": "2026-10-13T17:07:09Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 17,
+              "started_at": "2026-10-13T17:07:09Z",
+              "completed_at": "2026-10-13T17:07:09Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503837",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420503837.acceptance.private.log",
+            "sha256": "CB6EA2B5908EEC80D21DEA0DF07DF7925E42514D6FE50403087956A6979AF594",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420503837/logs"
+          }
         },
         {
           "id": 115420503867,
           "name": "go (Windows, unattended-runner)",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:20Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:06:30Z",
+          "completed_at": "2026-10-13T17:06:53Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503867"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:06:31Z",
+              "completed_at": "2026-10-13T17:06:33Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:06:33Z",
+              "completed_at": "2026-10-13T17:06:34Z"
+            },
+            {
+              "name": "Admit current Windows source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:06:34Z",
+              "completed_at": "2026-10-13T17:06:34Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:06:34Z",
+              "completed_at": "2026-10-13T17:06:40Z"
+            },
+            {
+              "name": "Use the Linux job work directory for Go compilation",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-10-13T17:06:40Z",
+              "completed_at": "2026-10-13T17:06:40Z"
+            },
+            {
+              "name": "Run ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:06:40Z",
+              "completed_at": "2026-10-13T17:06:42Z"
+            },
+            {
+              "name": "Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:06:42Z",
+              "completed_at": "2026-10-13T17:06:42Z"
+            },
+            {
+              "name": "Run go test -race ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-10-13T17:06:42Z",
+              "completed_at": "2026-10-13T17:06:45Z"
+            },
+            {
+              "name": "Run go vet ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-10-13T17:06:45Z",
+              "completed_at": "2026-10-13T17:06:46Z"
+            },
+            {
+              "name": "Run go build -trimpath .",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-10-13T17:06:46Z",
+              "completed_at": "2026-10-13T17:06:47Z"
+            },
+            {
+              "name": "Post Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-10-13T17:06:47Z",
+              "completed_at": "2026-10-13T17:06:47Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20,
+              "started_at": "2026-10-13T17:06:47Z",
+              "completed_at": "2026-10-13T17:06:49Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21,
+              "started_at": "2026-10-13T17:06:49Z",
+              "completed_at": "2026-10-13T17:06:49Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503867",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420503867.acceptance.private.log",
+            "sha256": "50C75C69680A8395800C95CA37A8E2DEBD6984DF553C8CE5DEC256A4C2DF5C4B",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420503867/logs"
+          }
         },
         {
           "id": 115420503987,
           "name": "go (Windows, resident-guard)",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:20Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:11:54Z",
+          "completed_at": "2026-10-13T17:12:17Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503987"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:11:55Z",
+              "completed_at": "2026-10-13T17:11:57Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:11:57Z",
+              "completed_at": "2026-10-13T17:11:58Z"
+            },
+            {
+              "name": "Admit current Windows source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:11:58Z",
+              "completed_at": "2026-10-13T17:11:58Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:11:58Z",
+              "completed_at": "2026-10-13T17:12:04Z"
+            },
+            {
+              "name": "Use the Linux job work directory for Go compilation",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-10-13T17:12:04Z",
+              "completed_at": "2026-10-13T17:12:04Z"
+            },
+            {
+              "name": "Run ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:12:04Z",
+              "completed_at": "2026-10-13T17:12:07Z"
+            },
+            {
+              "name": "Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:12:07Z",
+              "completed_at": "2026-10-13T17:12:08Z"
+            },
+            {
+              "name": "Run go test -race ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-10-13T17:12:08Z",
+              "completed_at": "2026-10-13T17:12:08Z"
+            },
+            {
+              "name": "Run go vet ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-10-13T17:12:08Z",
+              "completed_at": "2026-10-13T17:12:09Z"
+            },
+            {
+              "name": "Run go build -trimpath .",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-10-13T17:12:09Z",
+              "completed_at": "2026-10-13T17:12:10Z"
+            },
+            {
+              "name": "Post Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-10-13T17:12:10Z",
+              "completed_at": "2026-10-13T17:12:11Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20,
+              "started_at": "2026-10-13T17:12:11Z",
+              "completed_at": "2026-10-13T17:12:13Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21,
+              "started_at": "2026-10-13T17:12:13Z",
+              "completed_at": "2026-10-13T17:12:13Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420503987",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420503987.acceptance.private.log",
+            "sha256": "927CA4F064691FCE2E4C41E028E71EEF1B765A759C41DDBA8233C5D1E7F6A68B",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420503987/logs"
+          }
         },
         {
           "id": 115420504096,
@@ -1000,25 +1361,142 @@
               "completed_at": "2026-10-13T16:54:17Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420504096"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420504096",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420504096.acceptance.private.log",
+            "sha256": "0F90CFB397106CF3E6A8ED7EB5A5A95DE0511FF8D7C1B83BADCE5217BB5334C7",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420504096/logs"
+          }
         },
         {
           "id": 115420504123,
           "name": "go (Windows, capacity-audit-3h)",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:20Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:12:20Z",
+          "completed_at": "2026-10-13T17:12:43Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420504123"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:12:21Z",
+              "completed_at": "2026-10-13T17:12:24Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:12:24Z",
+              "completed_at": "2026-10-13T17:12:24Z"
+            },
+            {
+              "name": "Admit current Windows source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:12:24Z",
+              "completed_at": "2026-10-13T17:12:25Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:12:25Z",
+              "completed_at": "2026-10-13T17:12:31Z"
+            },
+            {
+              "name": "Use the Linux job work directory for Go compilation",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 5,
+              "started_at": "2026-10-13T17:12:31Z",
+              "completed_at": "2026-10-13T17:12:31Z"
+            },
+            {
+              "name": "Run ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:12:31Z",
+              "completed_at": "2026-10-13T17:12:33Z"
+            },
+            {
+              "name": "Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:12:33Z",
+              "completed_at": "2026-10-13T17:12:33Z"
+            },
+            {
+              "name": "Run go test -race ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-10-13T17:12:33Z",
+              "completed_at": "2026-10-13T17:12:35Z"
+            },
+            {
+              "name": "Run go vet ./...",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9,
+              "started_at": "2026-10-13T17:12:35Z",
+              "completed_at": "2026-10-13T17:12:36Z"
+            },
+            {
+              "name": "Run go build -trimpath .",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-10-13T17:12:36Z",
+              "completed_at": "2026-10-13T17:12:37Z"
+            },
+            {
+              "name": "Post Run actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 19,
+              "started_at": "2026-10-13T17:12:37Z",
+              "completed_at": "2026-10-13T17:12:37Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 20,
+              "started_at": "2026-10-13T17:12:37Z",
+              "completed_at": "2026-10-13T17:12:39Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 21,
+              "started_at": "2026-10-13T17:12:39Z",
+              "completed_at": "2026-10-13T17:12:39Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222500/job/115420504123",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420504123.acceptance.private.log",
+            "sha256": "DAD565C926F57606FC86636E0444A2D5846B555C1BBF5A58EE3B5AA33D89F223",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420504123/logs"
+          }
         }
       ]
     },
@@ -1029,10 +1507,10 @@
       "head_branch": "codex/unattended-readiness-20261013",
       "event": "pull_request",
       "run_attempt": 1,
-      "status": "queued",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "created_at": "2026-10-13T16:46:19Z",
-      "updated_at": "2026-10-13T16:46:27Z",
+      "updated_at": "2026-10-13T17:11:52Z",
       "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222594",
       "api_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222594",
       "logs_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222594/logs",
@@ -1042,19 +1520,98 @@
           "id": 115420556175,
           "name": "windows",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:27Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:11:22Z",
+          "completed_at": "2026-10-13T17:11:51Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222594/job/115420556175"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:11:23Z",
+              "completed_at": "2026-10-13T17:11:25Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:11:25Z",
+              "completed_at": "2026-10-13T17:11:25Z"
+            },
+            {
+              "name": "Admit current source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:11:25Z",
+              "completed_at": "2026-10-13T17:11:26Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:11:26Z",
+              "completed_at": "2026-10-13T17:11:32Z"
+            },
+            {
+              "name": "Verify the fixed source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-13T17:11:32Z",
+              "completed_at": "2026-10-13T17:11:32Z"
+            },
+            {
+              "name": "Test and build the progress collector",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:11:32Z",
+              "completed_at": "2026-10-13T17:11:43Z"
+            },
+            {
+              "name": "Test and build the interactive launcher",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:11:43Z",
+              "completed_at": "2026-10-13T17:11:45Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14,
+              "started_at": "2026-10-13T17:11:45Z",
+              "completed_at": "2026-10-13T17:11:46Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15,
+              "started_at": "2026-10-13T17:11:46Z",
+              "completed_at": "2026-10-13T17:11:46Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222594/job/115420556175",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420556175.acceptance.private.log",
+            "sha256": "FAB980540400E29902C94E96E742E01F58C3103236B9611E4D266E9949BABD35",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420556175/logs"
+          }
         }
       ]
     },
@@ -1338,7 +1895,13 @@
               "completed_at": "2026-10-13T16:52:38Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222393/job/115420504831"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222393/job/115420504831",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420504831.acceptance.private.log",
+            "sha256": "2A3234A1BCED746BC934E5F581519DF285A295FF0E2BA1B5694691020468E40A",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420504831/logs"
+          }
         },
         {
           "id": 115420505340,
@@ -1453,7 +2016,13 @@
               "completed_at": "2026-10-13T17:05:18Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222393/job/115420505340"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222393/job/115420505340",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420505340.acceptance.private.log",
+            "sha256": "7FABBE33327775F50ABC76EBA7A90E685C1B32D1C70479280963A0FE51C9B571",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420505340/logs"
+          }
         }
       ]
     },
@@ -1464,10 +2033,10 @@
       "head_branch": "codex/unattended-readiness-20261013",
       "event": "pull_request",
       "run_attempt": 1,
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "created_at": "2026-10-13T16:46:19Z",
-      "updated_at": "2026-10-13T17:07:18Z",
+      "updated_at": "2026-10-13T17:11:20Z",
       "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222360",
       "api_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222360",
       "logs_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222360/logs",
@@ -1477,19 +2046,106 @@
           "id": 115420501448,
           "name": "fixtures",
           "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
-          "status": "queued",
-          "conclusion": null,
-          "started_at": "2026-10-13T16:46:20Z",
-          "completed_at": null,
-          "runner_name": "",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-13T17:07:17Z",
+          "completed_at": "2026-10-13T17:11:19Z",
+          "runner_name": "cc-pc-tools-win-2510",
           "labels": [
             "self-hosted",
             "Windows",
             "X64",
             "cc-pc-tools-windows"
           ],
-          "steps": [],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222360/job/115420501448"
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-13T17:07:18Z",
+              "completed_at": "2026-10-13T17:07:20Z"
+            },
+            {
+              "name": "Set up runner",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-13T17:07:20Z",
+              "completed_at": "2026-10-13T17:07:20Z"
+            },
+            {
+              "name": "Admit current Windows source before checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-13T17:07:20Z",
+              "completed_at": "2026-10-13T17:07:21Z"
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-13T17:07:21Z",
+              "completed_at": "2026-10-13T17:07:25Z"
+            },
+            {
+              "name": "Run ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-13T17:07:25Z",
+              "completed_at": "2026-10-13T17:07:27Z"
+            },
+            {
+              "name": "Require real Chrome for the fixtures",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-13T17:07:27Z",
+              "completed_at": "2026-10-13T17:07:28Z"
+            },
+            {
+              "name": "Run cargo nextest run --locked -p chatgpt-web -p cc-chrome",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-13T17:07:28Z",
+              "completed_at": "2026-10-13T17:11:07Z"
+            },
+            {
+              "name": "Run cargo clippy --locked -p chatgpt-web -p cc-chrome --all-targets -- -D warnings",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8,
+              "started_at": "2026-10-13T17:11:07Z",
+              "completed_at": "2026-10-13T17:11:13Z"
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 16,
+              "started_at": "2026-10-13T17:11:13Z",
+              "completed_at": "2026-10-13T17:11:15Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 17,
+              "started_at": "2026-10-13T17:11:15Z",
+              "completed_at": "2026-10-13T17:11:15Z"
+            }
+          ],
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222360/job/115420501448",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420501448.acceptance.private.log",
+            "sha256": "EFA65D3B690AC597E5332D525BF1F6491AFD5E93D75D301F384E6B97A969B71D",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420501448/logs"
+          }
         }
       ]
     },
@@ -1638,7 +2294,13 @@
               "completed_at": "2026-10-13T16:46:37Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222089/job/115420499007"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222089/job/115420499007",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420499007.acceptance.private.log",
+            "sha256": "971EC5C5BA7F9B02D7D2AAB15CEFAA4187E16D67DD9F86C0477A761AFDD44657",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420499007/logs"
+          }
         },
         {
           "id": 115420499433,
@@ -1769,7 +2431,13 @@
               "completed_at": "2026-10-13T17:04:12Z"
             }
           ],
-          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222089/job/115420499433"
+          "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38433222089/job/115420499433",
+          "acceptance_evidence": {
+            "file": "ci-2488-job-115420499433.acceptance.private.log",
+            "sha256": "0A60039DC87EC9A0508CF532A9CC1849A78EE7F276338917431B8C68D91D6769",
+            "checked_out_source_sha_confirmed": true,
+            "job_log_api": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/115420499433/logs"
+          }
         }
       ]
     }
@@ -1897,5 +2565,238 @@
     }
   },
   "doc_status": "skipped after workspace failure",
-  "clippy_status": "skipped after workspace failure"
+  "clippy_status": "skipped after workspace failure",
+  "go_required": [
+    {
+      "job_id": 115420503485,
+      "name": "go (Linux, capacity-audit-3h)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T16:51:00Z",
+          "completed_at": "2026-10-13T16:51:06Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T16:51:06Z",
+          "completed_at": "2026-10-13T16:51:08Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T16:51:08Z",
+          "completed_at": "2026-10-13T16:51:10Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420503835,
+      "name": "go (Linux, resident-guard)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T16:53:30Z",
+          "completed_at": "2026-10-13T16:53:40Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T16:53:40Z",
+          "completed_at": "2026-10-13T16:53:43Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T16:53:43Z",
+          "completed_at": "2026-10-13T16:53:47Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420503837,
+      "name": "repair-guard",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-13T17:07:05Z",
+          "completed_at": "2026-10-13T17:07:06Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-13T17:07:06Z",
+          "completed_at": "2026-10-13T17:07:06Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T17:07:06Z",
+          "completed_at": "2026-10-13T17:07:07Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420503867,
+      "name": "go (Windows, unattended-runner)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T17:06:42Z",
+          "completed_at": "2026-10-13T17:06:45Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T17:06:45Z",
+          "completed_at": "2026-10-13T17:06:46Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T17:06:46Z",
+          "completed_at": "2026-10-13T17:06:47Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420503987,
+      "name": "go (Windows, resident-guard)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T17:12:08Z",
+          "completed_at": "2026-10-13T17:12:08Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T17:12:08Z",
+          "completed_at": "2026-10-13T17:12:09Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T17:12:09Z",
+          "completed_at": "2026-10-13T17:12:10Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420504096,
+      "name": "go (Linux, unattended-runner)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T16:54:00Z",
+          "completed_at": "2026-10-13T16:54:10Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T16:54:10Z",
+          "completed_at": "2026-10-13T16:54:13Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T16:54:13Z",
+          "completed_at": "2026-10-13T16:54:17Z"
+        }
+      ]
+    },
+    {
+      "job_id": 115420504123,
+      "name": "go (Windows, capacity-audit-3h)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "1e9cd8c90deec542d28d671d09fd1b9955d8f2ee",
+      "required_steps": [
+        {
+          "name": "Run go test -race ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-13T17:12:33Z",
+          "completed_at": "2026-10-13T17:12:35Z"
+        },
+        {
+          "name": "Run go vet ./...",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-13T17:12:35Z",
+          "completed_at": "2026-10-13T17:12:36Z"
+        },
+        {
+          "name": "Run go build -trimpath .",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-13T17:12:36Z",
+          "completed_at": "2026-10-13T17:12:37Z"
+        }
+      ]
+    }
+  ]
 }

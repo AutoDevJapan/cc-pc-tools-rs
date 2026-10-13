@@ -1,0 +1,15 @@
+windows	Admit current source before checkout	2026-10-13T17:11:26.7132630Z Accepted current repository revision 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+windows	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:11:26.7733976Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+windows	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:11:29.3301203Z [command]"C:\Program Files\Git\cmd\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+windows	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:11:30.3851170Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+windows	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:11:30.5492268Z [command]"C:\Program Files\Git\cmd\git.exe" checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+windows	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:11:30.6367221Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+windows	Verify the fixed source	2026-10-13T17:11:32.1418109Z ^[[36;1mif ((git rev-parse HEAD) -ne '1e9cd8c90deec542d28d671d09fd1b9955d8f2ee') { throw 'Wrong source revision' }^[[0m
+windows	Test and build the progress collector	2026-10-13T17:11:32.6648076Z ^[[36;1mgo test -count=1 ./...^[[0m
+windows	Test and build the progress collector	2026-10-13T17:11:32.6648777Z ^[[36;1mgo vet ./...^[[0m
+windows	Test and build the progress collector	2026-10-13T17:11:32.6649182Z ^[[36;1mgo build -trimpath -o "$env:RUNNER_TEMP/agent-progress.exe" .^[[0m
+windows	Test and build the progress collector	2026-10-13T17:11:43.3714811Z ok  	github.com/AutoDevJapan/cc-pc-tools-rs/tools/agent-progress	10.149s
+windows	Test and build the interactive launcher	2026-10-13T17:11:43.9594201Z ^[[36;1mgo test -count=1 ./...^[[0m
+windows	Test and build the interactive launcher	2026-10-13T17:11:43.9594577Z ^[[36;1mgo vet ./...^[[0m
+windows	Test and build the interactive launcher	2026-10-13T17:11:43.9595011Z ^[[36;1mgo build -trimpath -o "$env:RUNNER_TEMP/codex-progress-launch.exe" .^[[0m
+windows	Test and build the interactive launcher	2026-10-13T17:11:44.5431089Z ok  	cc-codex-progress-launcher	0.042s

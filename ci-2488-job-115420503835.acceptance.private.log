@@ -1,0 +1,36 @@
+go (Linux, resident-guard)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:29.2063067Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, resident-guard)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:29.3420821Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, resident-guard)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:30.5822210Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+go (Linux, resident-guard)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:30.5888852Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, resident-guard)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:30.5956255Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, resident-guard)	Run go test -race ./...	﻿2026-10-13T16:53:30.8182961Z ##[group]Run go test -race ./...
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8183219Z ^[[36;1mgo test -race ./...^[[0m
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8190935Z shell: /usr/bin/bash -e {0}
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191066Z env:
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191164Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191287Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191421Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191544Z   GOCACHE: /work/_temp/go-cache
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191660Z   GOTOOLCHAIN: local
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:30.8191768Z ##[endgroup]
+go (Linux, resident-guard)	Run go test -race ./...	2026-10-13T16:53:40.1018466Z ok  	autodevjapan/resident-guard	1.164s
+go (Linux, resident-guard)	Run go vet ./...	﻿2026-10-13T16:53:40.1408866Z ##[group]Run go vet ./...
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1409025Z ^[[36;1mgo vet ./...^[[0m
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414224Z shell: /usr/bin/bash -e {0}
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414356Z env:
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414462Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414583Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414700Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414817Z   GOCACHE: /work/_temp/go-cache
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1414930Z   GOTOOLCHAIN: local
+go (Linux, resident-guard)	Run go vet ./...	2026-10-13T16:53:40.1415049Z ##[endgroup]
+go (Linux, resident-guard)	Run go build -trimpath .	﻿2026-10-13T16:53:43.6318204Z ##[group]Run go build -trimpath .
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6318387Z ^[[36;1mgo build -trimpath .^[[0m
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6324572Z shell: /usr/bin/bash -e {0}
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6324721Z env:
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6324825Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6324950Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6325068Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6325186Z   GOCACHE: /work/_temp/go-cache
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6325303Z   GOTOOLCHAIN: local
+go (Linux, resident-guard)	Run go build -trimpath .	2026-10-13T16:53:43.6325404Z ##[endgroup]

@@ -1,0 +1,36 @@
+go (Linux, unattended-runner)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:59.1854674Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, unattended-runner)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:53:59.3395574Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, unattended-runner)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:00.7026214Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+go (Linux, unattended-runner)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:00.7093485Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, unattended-runner)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:00.7158484Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, unattended-runner)	Run go test -race ./...	﻿2026-10-13T16:54:00.9327474Z ##[group]Run go test -race ./...
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9327637Z ^[[36;1mgo test -race ./...^[[0m
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334102Z shell: /usr/bin/bash -e {0}
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334241Z env:
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334459Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334600Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334727Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334848Z   GOCACHE: /work/_temp/go-cache
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9334970Z   GOTOOLCHAIN: local
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:00.9335072Z ##[endgroup]
+go (Linux, unattended-runner)	Run go test -race ./...	2026-10-13T16:54:10.1985329Z ok  	github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner	1.280s
+go (Linux, unattended-runner)	Run go vet ./...	﻿2026-10-13T16:54:10.2390864Z ##[group]Run go vet ./...
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2391027Z ^[[36;1mgo vet ./...^[[0m
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2395915Z shell: /usr/bin/bash -e {0}
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396029Z env:
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396125Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396244Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396362Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396489Z   GOCACHE: /work/_temp/go-cache
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396601Z   GOTOOLCHAIN: local
+go (Linux, unattended-runner)	Run go vet ./...	2026-10-13T16:54:10.2396704Z ##[endgroup]
+go (Linux, unattended-runner)	Run go build -trimpath .	﻿2026-10-13T16:54:13.9334694Z ##[group]Run go build -trimpath .
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9334898Z ^[[36;1mgo build -trimpath .^[[0m
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340124Z shell: /usr/bin/bash -e {0}
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340253Z env:
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340353Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340481Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340602Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340723Z   GOCACHE: /work/_temp/go-cache
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340846Z   GOTOOLCHAIN: local
+go (Linux, unattended-runner)	Run go build -trimpath .	2026-10-13T16:54:13.9340956Z ##[endgroup]

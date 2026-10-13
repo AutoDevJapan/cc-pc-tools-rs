@@ -1,0 +1,36 @@
+go (Linux, capacity-audit-3h)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:50:58.5779112Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, capacity-audit-3h)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:50:58.7548938Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, capacity-audit-3h)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:50:59.9617885Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+go (Linux, capacity-audit-3h)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:50:59.9677924Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, capacity-audit-3h)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:50:59.9742596Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+go (Linux, capacity-audit-3h)	Run go test -race ./...	﻿2026-10-13T16:51:00.2018745Z ##[group]Run go test -race ./...
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2019012Z ^[[36;1mgo test -race ./...^[[0m
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2026590Z shell: /usr/bin/bash -e {0}
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027162Z env:
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027298Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027427Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027546Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027671Z   GOCACHE: /work/_temp/go-cache
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027788Z   GOTOOLCHAIN: local
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:00.2027895Z ##[endgroup]
+go (Linux, capacity-audit-3h)	Run go test -race ./...	2026-10-13T16:51:05.9964544Z ok  	github.com/AutoDevJapan/cc-pc-tools-rs/capacity-audit-3h	1.012s
+go (Linux, capacity-audit-3h)	Run go vet ./...	﻿2026-10-13T16:51:06.0236945Z ##[group]Run go vet ./...
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0237173Z ^[[36;1mgo vet ./...^[[0m
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0243461Z shell: /usr/bin/bash -e {0}
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0243630Z env:
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0243753Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0243895Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0244021Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0244149Z   GOCACHE: /work/_temp/go-cache
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0244309Z   GOTOOLCHAIN: local
+go (Linux, capacity-audit-3h)	Run go vet ./...	2026-10-13T16:51:06.0244429Z ##[endgroup]
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	﻿2026-10-13T16:51:08.2030336Z ##[group]Run go build -trimpath .
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2030525Z ^[[36;1mgo build -trimpath .^[[0m
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2035534Z shell: /usr/bin/bash -e {0}
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2035653Z env:
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2035751Z   CC_LINUX_RUNNER_MODE: normal
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2035869Z   TMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2035987Z   GOTMPDIR: /work/_temp/go-tmp
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2036103Z   GOCACHE: /work/_temp/go-cache
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2036217Z   GOTOOLCHAIN: local
+go (Linux, capacity-audit-3h)	Run go build -trimpath .	2026-10-13T16:51:08.2036318Z ##[endgroup]

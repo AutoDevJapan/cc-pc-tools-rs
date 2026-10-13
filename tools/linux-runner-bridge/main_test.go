@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -224,6 +225,10 @@ func TestConfiguredRunnerListenerRecoveryDoesNotDuplicateRunningListener(t *test
 			probes, starts := 0, 0
 			run := func(args ...string) (string, error) {
 				if len(args) >= 3 && args[0] == "exec" && args[1] == "-d" {
+					joined := strings.Join(args, "\n")
+					if !strings.Contains(joined, "CC_LINUX_RUNNER_MODE=normal") || !strings.Contains(joined, "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh") {
+						return "", errors.New("recovery omitted mode or the pre-job admission hook")
+					}
 					starts++
 					return "started", nil
 				}
@@ -310,6 +315,48 @@ func TestNormalPushRequiresCurrentMainHead(t *testing.T) {
 	valid.Revision = valid.HeadSHA
 	if h.authorizeNormal(valid) == nil {
 		t.Fatal("accepted a non-current main commit")
+	}
+}
+
+func TestScheduledCodeQLRequiresCurrentMainHead(t *testing.T) {
+	head := strings.Repeat("c", 40)
+	path := t.TempDir() + "/event.json"
+	if err := os.WriteFile(path, []byte(`{"repository":{"full_name":"AutoDevJapan/cc-pc-tools-rs"},"schedule":"0 22 * * 0"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CC_LINUX_RUNNER_MODE", "normal")
+	t.Setenv("GITHUB_REPOSITORY", repo)
+	t.Setenv("GITHUB_EVENT_NAME", "schedule")
+	t.Setenv("GITHUB_EVENT_PATH", path)
+	t.Setenv("GITHUB_REF", "refs/heads/main")
+	t.Setenv("GITHUB_SHA", head)
+	r, ok := jobRequestFromEnv()
+	if !ok {
+		t.Fatal("scheduled main identity was rejected")
+	}
+	h := host{mode: "normal", getHead: func(branch string) (string, error) {
+		if branch != "main" {
+			return "", errors.New("unexpected scheduled branch")
+		}
+		return head, nil
+	}}
+	if err := h.authorizeNormal(r); err != nil {
+		t.Fatal(err)
+	}
+	r.HeadSHA, r.Revision = strings.Repeat("d", 40), strings.Repeat("d", 40)
+	if h.authorizeNormal(r) == nil {
+		t.Fatal("scheduled job accepted a stale main SHA")
+	}
+	t.Setenv("GITHUB_REF", "refs/heads/feature/linux-ci")
+	if _, ok := jobRequestFromEnv(); ok {
+		t.Fatal("scheduled job accepted a feature branch")
+	}
+	if err := os.WriteFile(path, []byte(`{"repository":{"full_name":"other/repo"}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GITHUB_REF", "refs/heads/main")
+	if _, ok := jobRequestFromEnv(); ok {
+		t.Fatal("scheduled job accepted another repository")
 	}
 }
 

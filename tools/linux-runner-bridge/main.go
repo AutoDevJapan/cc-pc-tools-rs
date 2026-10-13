@@ -238,7 +238,7 @@ func (h *host) authorizeNormal(r request) error {
 	}
 	branch := r.HeadRef
 	switch r.Event {
-	case "push":
+	case "push", "schedule":
 		if r.Ref != "refs/heads/"+normalBranch || branch != normalBranch {
 			return errors.New("push branch rejected")
 		}
@@ -472,7 +472,7 @@ func ensureConfiguredRunnerListener(containerName string, run dockerOutput, paus
 	if emptyProbes < 2 {
 		return false, errors.New("existing runner supervisor did not recover within 60 seconds")
 	}
-	if _, err := run("exec", "-d", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
+	if _, err := run("exec", "-d", "-e", "CC_LINUX_RUNNER_MODE=normal", "-e", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
 		return false, errors.New("configured runner listener restart failed")
 	}
 	for attempt := 0; attempt < 15; attempt++ {
@@ -791,6 +791,14 @@ func jobRequestFromEnv() (request, bool) {
 			return request{}, false
 		}
 		r.Revision, r.HeadSHA = payload.After, payload.After
+		r.HeadRef, r.HeadRepository, r.BaseRepository = normalBranch, repo, repo
+	case "schedule":
+		// Scheduled payloads have no push `after` field. The host still verifies
+		// this SHA against current main before authorizing the scheduled job.
+		if r.Ref != "refs/heads/"+normalBranch || !revisionPattern.MatchString(os.Getenv("GITHUB_SHA")) {
+			return request{}, false
+		}
+		r.Revision, r.HeadSHA = os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_SHA")
 		r.HeadRef, r.HeadRepository, r.BaseRepository = normalBranch, repo, repo
 	case "pull_request":
 		r.Revision, r.HeadSHA = payload.PullRequest.Head.SHA, payload.PullRequest.Head.SHA

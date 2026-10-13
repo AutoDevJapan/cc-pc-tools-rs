@@ -1,0 +1,3333 @@
+diff --git a/codex-rs/Cargo.lock b/codex-rs/Cargo.lock
+index 1cee117..b30500b 100644
+--- a/codex-rs/Cargo.lock
++++ b/codex-rs/Cargo.lock
+@@ -276,7 +276,7 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
+ 
+ [[package]]
+ name = "app_test_support"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -1895,7 +1895,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-core",
+@@ -1907,7 +1907,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-graph-store"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-state",
+@@ -1922,7 +1922,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-identity"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -1942,7 +1942,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-message-board-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -1965,7 +1965,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-message-board-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "caseless",
+@@ -1988,7 +1988,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-agent-roles"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-config",
+  "codex-file-system",
+@@ -2001,7 +2001,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-analytics"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-app-server-protocol",
+  "codex-git-utils",
+@@ -2024,7 +2024,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-ansi-escape"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "ansi-to-tui",
+  "pretty_assertions",
+@@ -2035,7 +2035,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-api"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "assert_matches",
+@@ -2073,7 +2073,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "app_test_support",
+@@ -2187,7 +2187,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-app-server",
+  "codex-app-server-protocol",
+@@ -2214,7 +2214,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server-daemon"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "blake3",
+@@ -2240,7 +2240,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server-protocol"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-app-server-protocol-noop-macros",
+@@ -2274,11 +2274,11 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server-protocol-noop-macros"
+-version = "0.0.0"
++version = "0.162.1"
+ 
+ [[package]]
+ name = "codex-app-server-test-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -2300,7 +2300,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-app-server-transport"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "axum",
+  "base64 0.22.1",
+@@ -2342,7 +2342,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-apply-patch"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "assert_cmd",
+@@ -2362,7 +2362,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-arg0"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-apply-patch",
+@@ -2386,7 +2386,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-async-utils"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "rand 0.9.3",
+@@ -2396,7 +2396,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-attachment-store"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "serde",
+@@ -2406,7 +2406,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-aws-auth"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "aws-config",
+  "aws-credential-types",
+@@ -2432,7 +2432,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-backend-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-api",
+@@ -2452,7 +2452,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-backend-openapi-models"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "serde",
+  "serde_json",
+@@ -2461,7 +2461,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-build-info"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-install-context",
+  "pretty_assertions",
+@@ -2474,7 +2474,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-bwrap"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "cc",
+  "libc",
+@@ -2483,7 +2483,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-chatgpt"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -2505,7 +2505,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cli"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "app_test_support",
+@@ -2607,7 +2607,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-http-client",
+  "eventsource-stream",
+@@ -2621,7 +2621,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cloud-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "async-stream",
+@@ -2645,7 +2645,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cloud-config"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "chrono",
+@@ -2671,7 +2671,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cloud-tasks"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -2704,7 +2704,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cloud-tasks-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -2719,7 +2719,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-cloud-tasks-mock-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "chrono",
+  "codex-cloud-tasks-client",
+@@ -2728,7 +2728,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-code-mode"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-code-mode-protocol",
+  "codex-http-client",
+@@ -2751,7 +2751,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-code-mode-host"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "axum",
+@@ -2780,7 +2780,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-code-mode-protocol"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "glob",
+@@ -2798,7 +2798,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-code-mode-runtime"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-code-mode-protocol",
+@@ -2816,11 +2816,11 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-collaboration-mode-templates"
+-version = "0.0.0"
++version = "0.162.1"
+ 
+ [[package]]
+ name = "codex-config"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -2870,7 +2870,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-config-schema"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -2879,7 +2879,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-connectors"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "arc-swap",
+@@ -2901,7 +2901,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-connectors-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-connectors",
+  "codex-core-plugins",
+@@ -2915,7 +2915,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-context-fragments"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-utils-string",
+@@ -2925,7 +2925,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-core"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "arc-swap",
+@@ -3067,7 +3067,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-core-api"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-analytics",
+  "codex-app-server-protocol",
+@@ -3090,7 +3090,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-core-plugin-common"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-utils-absolute-path",
+  "semver",
+@@ -3101,7 +3101,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-core-plugins"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -3158,7 +3158,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-diagnostics"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "libc",
+  "pretty_assertions",
+@@ -3166,7 +3166,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-exec"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "assert_cmd",
+@@ -3218,7 +3218,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-exec-server"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "arc-swap",
+@@ -3287,7 +3287,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-exec-server-protocol"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-file-system",
+@@ -3304,7 +3304,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-exec-server-test-support"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-exec-server",
+@@ -3319,7 +3319,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-execpolicy"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -3337,7 +3337,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-experimental-api-macros"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "proc-macro2",
+  "quote",
+@@ -3346,7 +3346,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-extension-api"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-api",
+  "codex-config",
+@@ -3368,7 +3368,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-extension-items"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-utils-absolute-path",
+  "pretty_assertions",
+@@ -3380,7 +3380,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-external-agent-migration"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "chrono",
+  "codex-analytics",
+@@ -3410,7 +3410,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-features"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-network-proxy",
+  "codex-protocol",
+@@ -3424,7 +3424,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-feedback"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "bytes",
+@@ -3451,7 +3451,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-file-search"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -3467,7 +3467,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-file-system"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "bytes",
+  "codex-protocol",
+@@ -3479,7 +3479,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-file-watcher"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "notify",
+  "pretty_assertions",
+@@ -3490,7 +3490,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-git-attribution"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-backend-client",
+  "codex-extension-api",
+@@ -3503,7 +3503,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-git-utils"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -3531,7 +3531,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-goal-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -3556,7 +3556,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-guardian-context"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-context-fragments",
+  "codex-history",
+@@ -3568,7 +3568,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-guardian-reviewer"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-analytics",
+@@ -3593,7 +3593,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-guardian-v2"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-analytics",
+@@ -3630,7 +3630,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-history"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-protocol",
+@@ -3642,7 +3642,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-history-notes-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-analytics",
+  "codex-client",
+@@ -3667,7 +3667,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-home"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-extension-api",
+  "codex-utils-absolute-path",
+@@ -3679,7 +3679,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-hooks"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "async-channel",
+@@ -3707,7 +3707,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-http-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "bytes",
+  "codex-utils-cargo-bin",
+@@ -3743,7 +3743,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-image-generation-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-api",
+@@ -3771,7 +3771,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-install-context"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-utils-absolute-path",
+  "codex-utils-home-dir",
+@@ -3784,7 +3784,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-keyring-store"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "keyring",
+  "pretty_assertions",
+@@ -3795,7 +3795,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-linux-sandbox"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "clap",
+  "codex-core",
+@@ -3824,7 +3824,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-lmstudio"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-core",
+  "codex-http-client",
+@@ -3838,7 +3838,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-login"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -3884,7 +3884,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-mcp"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "arc-swap",
+@@ -3924,7 +3924,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-mcp-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "axum",
+@@ -3957,7 +3957,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-memories-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-core",
+  "codex-extension-api",
+@@ -3979,7 +3979,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-memories-read"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-shell-command",
+@@ -3989,7 +3989,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-memories-write"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -4026,7 +4026,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-mermaid"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "insta",
+  "pretty_assertions",
+@@ -4035,7 +4035,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-message-history"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-config",
+  "memchr",
+@@ -4049,7 +4049,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-model-provider"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "chrono",
+@@ -4083,7 +4083,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-model-provider-info"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-client",
+  "codex-protocol",
+@@ -4101,7 +4101,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-models-manager"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "chrono",
+  "codex-http-client",
+@@ -4120,7 +4120,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-mxc-sandbox"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "appcontainer_common",
+@@ -4142,7 +4142,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-network-proxy"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -4191,7 +4191,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-ollama"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "assert_matches",
+  "async-stream",
+@@ -4211,7 +4211,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-otel"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "bytes",
+  "chrono",
+@@ -4248,7 +4248,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-otel-trace-websocket"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "axum",
+@@ -4259,7 +4259,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-plugin"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-config",
+  "codex-core-plugin-common",
+@@ -4274,7 +4274,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-process-hardening"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "libc",
+  "pretty_assertions",
+@@ -4282,7 +4282,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-prompts"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-collaboration-mode-templates",
+@@ -4299,7 +4299,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-protocol"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chardetng",
+@@ -4344,7 +4344,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-queue-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-core",
+@@ -4365,7 +4365,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-realtime-webrtc"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-build-info",
+@@ -4384,7 +4384,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-response-debug-context"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-api",
+@@ -4395,7 +4395,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-responses-api-proxy"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -4412,7 +4412,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-rmcp-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "axum",
+@@ -4463,7 +4463,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-rollout"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -4494,7 +4494,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-rollout-trace"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-code-mode",
+@@ -4510,7 +4510,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-sandboxing"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-mxc-sandbox",
+@@ -4538,7 +4538,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-secrets"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "age",
+  "anyhow",
+@@ -4559,7 +4559,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-shell-command"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -4582,7 +4582,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-shell-escalation"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -4602,7 +4602,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-skills"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-shell-command",
+@@ -4619,7 +4619,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-skills-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "assert_matches",
+  "blake3",
+@@ -4657,7 +4657,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-state"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "chrono",
+@@ -4684,7 +4684,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-stdio-to-uds"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-uds",
+@@ -4696,7 +4696,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-tcp-tunnel"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "bytes",
+@@ -4717,7 +4717,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-terminal-detection"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "tracing",
+@@ -4725,7 +4725,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-test-binary-support"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-arg0",
+  "tempfile",
+@@ -4733,7 +4733,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-thread-manager-sample"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "clap",
+@@ -4744,7 +4744,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-thread-store"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "chrono",
+  "codex-app-server-protocol",
+@@ -4775,7 +4775,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-tools"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "bitflags 2.13.1",
+  "codex-code-mode",
+@@ -4801,7 +4801,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-tui"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "app_test_support",
+@@ -4927,7 +4927,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-uds"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "async-io",
+  "libc",
+@@ -4941,7 +4941,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-user-verification"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "core-foundation 0.10.1",
+@@ -4961,7 +4961,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-absolute-path"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "dirs",
+  "dunce",
+@@ -4975,14 +4975,14 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-approval-presets"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+ ]
+ 
+ [[package]]
+ name = "codex-utils-audio"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-protocol",
+@@ -4996,7 +4996,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-cache"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "lru",
+  "sha1 0.10.6",
+@@ -5005,7 +5005,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-cargo-bin"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "assert_cmd",
+  "runfiles",
+@@ -5014,7 +5014,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-cli"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "clap",
+  "codex-protocol",
+@@ -5026,15 +5026,15 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-elapsed"
+-version = "0.0.0"
++version = "0.162.1"
+ 
+ [[package]]
+ name = "codex-utils-fuzzy-match"
+-version = "0.0.0"
++version = "0.162.1"
+ 
+ [[package]]
+ name = "codex-utils-git-discovery"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-git-utils",
+  "codex-utils-absolute-path",
+@@ -5047,7 +5047,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-home-dir"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-utils-absolute-path",
+  "dirs",
+@@ -5057,7 +5057,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-image"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-utils-cache",
+@@ -5071,7 +5071,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-json-to-toml"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "serde_json",
+@@ -5080,7 +5080,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-oss"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-core",
+  "codex-lmstudio",
+@@ -5090,7 +5090,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-output-truncation"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-utils-string",
+@@ -5100,7 +5100,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-path"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-utils-absolute-path",
+  "dunce",
+@@ -5111,7 +5111,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-path-uri"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "base64 0.22.1",
+  "codex-utils-absolute-path",
+@@ -5127,7 +5127,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-plugins"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-exec-server",
+  "codex-exec-server-protocol",
+@@ -5141,7 +5141,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-process"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "tokio",
+@@ -5149,7 +5149,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-pty"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-utils-cargo-bin",
+@@ -5168,7 +5168,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-readiness"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "assert_matches",
+  "thiserror 2.0.18",
+@@ -5178,7 +5178,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-redacted-string"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "schemars 0.8.22",
+  "serde",
+@@ -5186,14 +5186,14 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-rustls-provider"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "rustls",
+ ]
+ 
+ [[package]]
+ name = "codex-utils-sandbox-summary"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-protocol",
+  "codex-utils-absolute-path",
+@@ -5203,7 +5203,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-sleep-inhibitor"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "core-foundation 0.9.4",
+  "libc",
+@@ -5213,14 +5213,14 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-stream-parser"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+ ]
+ 
+ [[package]]
+ name = "codex-utils-string"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "regex-lite",
+@@ -5230,14 +5230,14 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-utils-template"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+ ]
+ 
+ [[package]]
+ name = "codex-v8-poc"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "pretty_assertions",
+  "v8",
+@@ -5245,7 +5245,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-voice-host"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-install-context",
+@@ -5272,7 +5272,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-web-search-extension"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-api",
+  "codex-core",
+@@ -5294,7 +5294,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-websocket-auth"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -5313,7 +5313,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-websocket-client"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-http-client",
+  "codex-utils-rustls-provider",
+@@ -5329,7 +5329,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-windows-sandbox"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "base64 0.22.1",
+@@ -5359,7 +5359,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-windows-sandbox-service"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-cloud-config",
+@@ -5376,14 +5376,14 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-windows-sandbox-test-support"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "dirs",
+ ]
+ 
+ [[package]]
+ name = "codex-workload-identity"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "codex-http-client",
+  "pretty_assertions",
+@@ -5398,7 +5398,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "codex-worktree"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "codex-git-utils",
+@@ -5639,7 +5639,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "core_test_support"
+-version = "0.0.0"
++version = "0.162.1"
+ dependencies = [
+  "anyhow",
+  "assert_cmd",
+diff --git a/codex-rs/app-server/src/lib.rs b/codex-rs/app-server/src/lib.rs
+index 896aa66..c09c777 100644
+--- a/codex-rs/app-server/src/lib.rs
++++ b/codex-rs/app-server/src/lib.rs
+@@ -1509,9 +1509,11 @@ fn test_user_config_file_from_env() -> Option<std::path::PathBuf> {
+ }
+ 
+ fn loader_overrides_with_test_user_config_file(
+-    mut loader_overrides: LoaderOverrides,
++    loader_overrides: LoaderOverrides,
+     test_user_config_file: Option<std::path::PathBuf>,
+ ) -> IoResult<LoaderOverrides> {
++    #[cfg(debug_assertions)]
++    let mut loader_overrides = loader_overrides;
+     #[cfg(debug_assertions)]
+     if let Some(path) = test_user_config_file {
+         let path = AbsolutePathBuf::from_absolute_path(path).map_err(|err| {
+diff --git a/codex-rs/app-server/src/message_processor.rs b/codex-rs/app-server/src/message_processor.rs
+index 6b705c5..0c7649b 100644
+--- a/codex-rs/app-server/src/message_processor.rs
++++ b/codex-rs/app-server/src/message_processor.rs
+@@ -366,11 +366,10 @@ impl MessageProcessor {
+                     outgoing.clone(),
+                     thread_state_manager.clone(),
+                 )),
+-                Some({
+-                    let time_provider =
+-                        app_server_time_provider(outgoing.clone(), thread_state_manager.clone());
+-                    time_provider
+-                }),
++                Some(app_server_time_provider(
++                    outgoing.clone(),
++                    thread_state_manager.clone(),
++                )),
+             );
+             match code_mode_session_provider {
+                 Some(provider) => manager.with_code_mode_session_provider(provider),
+diff --git a/codex-rs/cloud-tasks/src/lib.rs b/codex-rs/cloud-tasks/src/lib.rs
+index 6643684..1c3dea7 100644
+--- a/codex-rs/cloud-tasks/src/lib.rs
++++ b/codex-rs/cloud-tasks/src/lib.rs
+@@ -13,7 +13,9 @@ use codex_cloud_tasks_client::TaskStatus;
+ use codex_git_utils::current_branch_name;
+ use codex_git_utils::default_branch_name;
+ use codex_http_client::ClientRouteClass;
++#[cfg(debug_assertions)]
+ use codex_http_client::HttpClientFactory;
++#[cfg(debug_assertions)]
+ use codex_http_client::OutboundProxyPolicy;
+ use codex_http_client::RouteAwareClientPool;
+ use codex_login::default_client::get_codex_user_agent;
+diff --git a/codex-rs/tui/src/app.rs b/codex-rs/tui/src/app.rs
+index 5dfc3ad..501d4fd 100644
+--- a/codex-rs/tui/src/app.rs
++++ b/codex-rs/tui/src/app.rs
+@@ -1102,6 +1102,21 @@ impl App {
+                     if let Some(owner) = self.background_voice.as_mut() {
+                         owner.refresh_realtime_microphone_level();
+                     }
++                    let native = self
++                        .agent_navigation
++                        .visible_threads()
++                        .into_iter()
++                        .filter(|(id, _)| Some(*id) != self.primary_thread_id)
++                        .map(|(_, entry)| crate::parallel_progress::NativeProgress {
++                            label: entry
++                                .agent_nickname
++                                .clone()
++                                .unwrap_or_else(|| "担当".into()),
++                            running: entry.is_running,
++                            closed: entry.is_closed,
++                        })
++                        .collect();
++                    self.chat_widget.set_native_progress(native);
+                     self.chat_widget.pre_draw_tick();
+                     self.refresh_agents_overview_usage(app_server, tui.frame_requester());
+                     let rendered_area = self.render_chat_widget_frame(tui, screen_size)?;
+diff --git a/codex-rs/tui/src/app/agents_overview_tests.rs b/codex-rs/tui/src/app/agents_overview_tests.rs
+index f5313a2..62fe4cd 100644
+--- a/codex-rs/tui/src/app/agents_overview_tests.rs
++++ b/codex-rs/tui/src/app/agents_overview_tests.rs
+@@ -1645,8 +1645,12 @@ async fn root_switch_preserves_vim_line_yank() -> Result<()> {
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn root_switch_loads_local_preferences_from_disk() -> Result<()> {
++#[test]
++fn root_switch_loads_local_preferences_from_disk() -> Result<()> {
++    crate::test_support::run_on_large_stack(root_switch_loads_local_preferences_from_disk_body)
++}
++
++async fn root_switch_loads_local_preferences_from_disk_body() -> Result<()> {
+     // Keep the large setup and root-switch futures off the test thread's stack.
+     let mut app = Box::pin(make_test_app()).await;
+     trust_fixture_folders(&mut app);
+@@ -1686,8 +1690,14 @@ async fn root_switch_loads_local_preferences_from_disk() -> Result<()> {
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn root_switch_preserves_idle_root_with_running_subagent() -> Result<()> {
++#[test]
++fn root_switch_preserves_idle_root_with_running_subagent() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        root_switch_preserves_idle_root_with_running_subagent_body,
++    )
++}
++
++async fn root_switch_preserves_idle_root_with_running_subagent_body() -> Result<()> {
+     let mut app = make_test_app().await;
+     trust_fixture_folders(&mut app);
+     let mut app_server = Box::pin(crate::start_embedded_app_server_for_picker(
+@@ -1760,8 +1770,14 @@ async fn root_switch_preserves_idle_root_with_running_subagent() -> Result<()> {
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn overview_selection_applies_user_permissions_only_to_unloaded_threads() -> Result<()> {
++#[test]
++fn overview_selection_applies_user_permissions_only_to_unloaded_threads() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        overview_selection_applies_user_permissions_only_to_unloaded_threads_body,
++    )
++}
++
++async fn overview_selection_applies_user_permissions_only_to_unloaded_threads_body() -> Result<()> {
+     let mut app = Box::pin(make_test_app()).await;
+     trust_fixture_folders(&mut app);
+     std::fs::write(
+@@ -2477,8 +2493,14 @@ async fn command_center_handles_resume_failure_and_success() -> Result<()> {
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn command_center_attach_conflict_opens_read_only_and_retries() -> Result<()> {
++#[test]
++fn command_center_attach_conflict_opens_read_only_and_retries() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        command_center_attach_conflict_opens_read_only_and_retries_body,
++    )
++}
++
++async fn command_center_attach_conflict_opens_read_only_and_retries_body() -> Result<()> {
+     let mut app = Box::pin(make_test_app()).await;
+     trust_fixture_folders(&mut app);
+     std::fs::write(
+diff --git a/codex-rs/tui/src/app/snapshots/codex_tui__app__daemon_menu__tests__daemon_cli_confirmation.snap b/codex-rs/tui/src/app/snapshots/codex_tui__app__daemon_menu__tests__daemon_cli_confirmation.snap
+index 4a94611..6a1ecef 100644
+--- a/codex-rs/tui/src/app/snapshots/codex_tui__app__daemon_menu__tests__daemon_cli_confirmation.snap
++++ b/codex-rs/tui/src/app/snapshots/codex_tui__app__daemon_menu__tests__daemon_cli_confirmation.snap
+@@ -11,7 +11,7 @@ expression: "render_bottom_popup(&app.chat_widget,\nwidth).replace(r\"C:\\cli-bu
+                                                           │
+ 
+                 Update daemon and exit Codex?
+-                Use this CLI package v0.0.0 from /x/cli-build/bin/codex. Copy the
++                Use this CLI package v0.162.1 from /x/cli-build/bin/codex. Copy the
+                 complete package and pin it against automatic updates.
+                 This may restart the daemon and interrupt active or queued work.
+                 Codex exits to update in this terminal. Relaunch it afterward.
+diff --git a/codex-rs/tui/src/app/snapshots/codex_tui__app__owned_transcript__empty_state_animation_tests__fresh_thread_header.snap b/codex-rs/tui/src/app/snapshots/codex_tui__app__owned_transcript__empty_state_animation_tests__fresh_thread_header.snap
+index 789d6e4..ab305bd 100644
+--- a/codex-rs/tui/src/app/snapshots/codex_tui__app__owned_transcript__empty_state_animation_tests__fresh_thread_header.snap
++++ b/codex-rs/tui/src/app/snapshots/codex_tui__app__owned_transcript__empty_state_animation_tests__fresh_thread_header.snap
+@@ -4,7 +4,7 @@ expression: "format!(\"enabled:\\n{}\\n---\\ndisabled:\\n{}\", text(after), text
+ ---
+ enabled:
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+ 
+@@ -50,7 +50,7 @@ enabled:
+ ---
+ disabled:
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+ 
+diff --git a/codex-rs/tui/src/app/snapshots/codex_tui__app__tests__app_server_thread_replacement_clears_previous_transcript_before_replay-2.snap b/codex-rs/tui/src/app/snapshots/codex_tui__app__tests__app_server_thread_replacement_clears_previous_transcript_before_replay-2.snap
+index 8aa1bca..371b5b8 100644
+--- a/codex-rs/tui/src/app/snapshots/codex_tui__app__tests__app_server_thread_replacement_clears_previous_transcript_before_replay-2.snap
++++ b/codex-rs/tui/src/app/snapshots/codex_tui__app__tests__app_server_thread_replacement_clears_previous_transcript_before_replay-2.snap
+@@ -4,7 +4,7 @@ assertion_line: 6513
+ expression: rendered
+ ---
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      <thread cwd>
+ 
+ 
+diff --git a/codex-rs/tui/src/app/tests/active_reconnect_tests.rs b/codex-rs/tui/src/app/tests/active_reconnect_tests.rs
+index 18fbde7..4569ac8 100644
+--- a/codex-rs/tui/src/app/tests/active_reconnect_tests.rs
++++ b/codex-rs/tui/src/app/tests/active_reconnect_tests.rs
+@@ -723,7 +723,9 @@ async fn reconnect_allows_slow_hydration_but_bounds_a_stalled_server() -> Result
+                 &mut session,
+                 &mut events,
+                 result?,
+-                CODEX_CLI_VERSION,
++                // A stable CLI compares newer service versions differently from a local build;
++                // keep this snapshot independent of the release this crate is built as.
++                "0.0.0",
+             )
+             .await?;
+             assert!(app.thread_unavailable(id));
+diff --git a/codex-rs/tui/src/app/tests/history_hydration_tests.rs b/codex-rs/tui/src/app/tests/history_hydration_tests.rs
+index 5a65adb..8a71dda 100644
+--- a/codex-rs/tui/src/app/tests/history_hydration_tests.rs
++++ b/codex-rs/tui/src/app/tests/history_hydration_tests.rs
+@@ -111,8 +111,15 @@ async fn history_fixture(
+     Ok((app, codex_home, target))
+ }
+ 
+-#[tokio::test]
+-async fn history_hydration_metadata_tracks_missing_turns_and_stale_completions_keep_new_request()
++#[test]
++fn history_hydration_metadata_tracks_missing_turns_and_stale_completions_keep_new_request()
++-> Result<()> {
++    crate::test_support::run_on_large_stack(
++        history_hydration_metadata_tracks_missing_turns_and_stale_completions_keep_new_request_body,
++    )
++}
++
++async fn history_hydration_metadata_tracks_missing_turns_and_stale_completions_keep_new_request_body()
+ -> Result<()> {
+     let (mut app, _codex_home, target) =
+         history_fixture(&[1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1]).await?;
+diff --git a/codex-rs/tui/src/app/tests/permission_selection_tests.rs b/codex-rs/tui/src/app/tests/permission_selection_tests.rs
+index d24946f..6e74a14 100644
+--- a/codex-rs/tui/src/app/tests/permission_selection_tests.rs
++++ b/codex-rs/tui/src/app/tests/permission_selection_tests.rs
+@@ -134,8 +134,15 @@ async fn matching_builtin_permission_selection_submits_pending_prompt() -> Resul
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn custom_permission_selection_uses_server_definition_and_preserves_state_on_rejection()
++#[test]
++fn custom_permission_selection_uses_server_definition_and_preserves_state_on_rejection()
++-> Result<()> {
++    crate::test_support::run_on_large_stack(
++        custom_permission_selection_uses_server_definition_and_preserves_state_on_rejection_body,
++    )
++}
++
++async fn custom_permission_selection_uses_server_definition_and_preserves_state_on_rejection_body()
+ -> Result<()> {
+     let (mut app, mut events, _ops) = make_test_app_with_channels().await;
+     app.config.ephemeral = false;
+diff --git a/codex-rs/tui/src/app/tests/session_lifecycle_requests.rs b/codex-rs/tui/src/app/tests/session_lifecycle_requests.rs
+index b408094..1e60da2 100644
+--- a/codex-rs/tui/src/app/tests/session_lifecycle_requests.rs
++++ b/codex-rs/tui/src/app/tests/session_lifecycle_requests.rs
+@@ -4091,8 +4091,15 @@ terminal_visualization_instructions = true
+     Ok(())
+ }
+ 
+-#[tokio::test]
+-async fn changing_directory_preserves_project_trust_permissions_history_and_hooks() -> Result<()> {
++#[test]
++fn changing_directory_preserves_project_trust_permissions_history_and_hooks() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        changing_directory_preserves_project_trust_permissions_history_and_hooks_body,
++    )
++}
++
++async fn changing_directory_preserves_project_trust_permissions_history_and_hooks_body()
++-> Result<()> {
+     use codex_protocol::config_types::TrustLevel as T;
+     use serde_json::json;
+     use std::fs;
+diff --git a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_buffered_replay_reconciles_captions.snap b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_buffered_replay_reconciles_captions.snap
+index ab3a8c8..4aba69b 100644
+--- a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_buffered_replay_reconciles_captions.snap
++++ b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_buffered_replay_reconciles_captions.snap
+@@ -4,7 +4,7 @@ assertion_line: 889
+ expression: "normalize_voice_snapshot_directory(&rendered, &app.config.cwd)"
+ ---
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+   To get started, describe a task or try one of these commands:
+diff --git a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_completed_after_thread_switch.snap b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_completed_after_thread_switch.snap
+index 2ecde20..f4799fd 100644
+--- a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_completed_after_thread_switch.snap
++++ b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_completed_after_thread_switch.snap
+@@ -4,7 +4,7 @@ assertion_line: 1093
+ expression: "normalize_voice_snapshot_directory(&rendered, &app.config.cwd)"
+ ---
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+   To get started, describe a task or try one of these commands:
+diff --git a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_partial_completed_after_thread_switch.snap b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_partial_completed_after_thread_switch.snap
+index 95d7bc6..bb739af 100644
+--- a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_partial_completed_after_thread_switch.snap
++++ b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_partial_completed_after_thread_switch.snap
+@@ -14,7 +14,7 @@ Restored owner:
+ 
+   gpt-test default · /tmp/project
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+   To get started, describe a task or try one of these commands:
+diff --git a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_replay_reconciles_matching_captions.snap b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_replay_reconciles_matching_captions.snap
+index 0dfd733..bdaaa67 100644
+--- a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_replay_reconciles_matching_captions.snap
++++ b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__realtime_requests__voice_replay_reconciles_matching_captions.snap
+@@ -4,7 +4,7 @@ assertion_line: 716
+ expression: "normalize_voice_snapshot_directory(&rendered, &app.config.cwd)"
+ ---
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+   To get started, describe a task or try one of these commands:
+diff --git a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__startup_frame_tests__startup_tip_in_transcript.snap b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__startup_frame_tests__startup_tip_in_transcript.snap
+index d45000e..86f5dfe 100644
+--- a/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__startup_frame_tests__startup_tip_in_transcript.snap
++++ b/codex-rs/tui/src/app/tests/snapshots/codex_tui__app__tests__startup_frame_tests__startup_tip_in_transcript.snap
+@@ -4,7 +4,7 @@ expression: "normalize_snapshot_paths(normalize_agent_center_snapshot(snapshots.
+ ---
+ 80 columns
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+ • Conversation continues here.
+@@ -26,7 +26,7 @@ expression: "normalize_snapshot_paths(normalize_agent_center_snapshot(snapshots.
+ 
+ 32 columns
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+      /tmp/project
+ 
+ • Conversation continues here.
+diff --git a/codex-rs/tui/src/app_server_session.rs b/codex-rs/tui/src/app_server_session.rs
+index 6d15c85..b671ac6 100644
+--- a/codex-rs/tui/src/app_server_session.rs
++++ b/codex-rs/tui/src/app_server_session.rs
+@@ -3733,9 +3733,15 @@ mod tests {
+         Ok(())
+     }
+ 
+-    #[tokio::test]
+-    async fn side_fork_skips_parent_title_lookup_but_normal_ephemeral_fork_keeps_it() -> Result<()>
+-    {
++    #[test]
++    fn side_fork_skips_parent_title_lookup_but_normal_ephemeral_fork_keeps_it() -> Result<()> {
++        crate::test_support::run_on_large_stack(
++            side_fork_skips_parent_title_lookup_but_normal_ephemeral_fork_keeps_it_body,
++        )
++    }
++
++    async fn side_fork_skips_parent_title_lookup_but_normal_ephemeral_fork_keeps_it_body()
++    -> Result<()> {
+         let codex_home = tempfile::tempdir().expect("tempdir");
+         let config = build_config(&codex_home).await;
+         let source_thread_id = ThreadId::from_string(
+diff --git a/codex-rs/tui/src/app_server_session/prompt_history_tests.rs b/codex-rs/tui/src/app_server_session/prompt_history_tests.rs
+index 6743f85..e3fde90 100644
+--- a/codex-rs/tui/src/app_server_session/prompt_history_tests.rs
++++ b/codex-rs/tui/src/app_server_session/prompt_history_tests.rs
+@@ -7,8 +7,12 @@ use codex_config::types::HistoryPersistence;
+ use codex_message_history::HistoryConfig;
+ use pretty_assertions::assert_eq;
+ 
+-#[tokio::test]
+-async fn lifecycle_metadata_uses_local_prompt_history() -> Result<()> {
++#[test]
++fn lifecycle_metadata_uses_local_prompt_history() -> Result<()> {
++    crate::test_support::run_on_large_stack(lifecycle_metadata_uses_local_prompt_history_body)
++}
++
++async fn lifecycle_metadata_uses_local_prompt_history_body() -> Result<()> {
+     let local_home = tempfile::tempdir()?;
+     let local_config = ConfigBuilder::default()
+         .codex_home(local_home.path().to_path_buf())
+diff --git a/codex-rs/tui/src/app_server_session/provider_selection_tests.rs b/codex-rs/tui/src/app_server_session/provider_selection_tests.rs
+index 5cd0235..97a9287 100644
+--- a/codex-rs/tui/src/app_server_session/provider_selection_tests.rs
++++ b/codex-rs/tui/src/app_server_session/provider_selection_tests.rs
+@@ -5,8 +5,14 @@ use crate::legacy_core::config::ConfigBuilder;
+ use crate::legacy_core::config::ConfigOverrides;
+ use pretty_assertions::assert_eq;
+ 
+-#[tokio::test]
+-async fn starts_and_forks_use_server_provider_unless_explicitly_selected() -> Result<()> {
++#[test]
++fn starts_and_forks_use_server_provider_unless_explicitly_selected() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        starts_and_forks_use_server_provider_unless_explicitly_selected_body,
++    )
++}
++
++async fn starts_and_forks_use_server_provider_unless_explicitly_selected_body() -> Result<()> {
+     let home = tempfile::tempdir()?;
+     std::fs::write(
+         home.path().join("config.toml"),
+diff --git a/codex-rs/tui/src/app_server_session/rollout_history_tests.rs b/codex-rs/tui/src/app_server_session/rollout_history_tests.rs
+index ecce710..7e6c2f5 100644
+--- a/codex-rs/tui/src/app_server_session/rollout_history_tests.rs
++++ b/codex-rs/tui/src/app_server_session/rollout_history_tests.rs
+@@ -22,8 +22,15 @@ async fn build_config(temp_dir: &TempDir) -> Config {
+         .expect("config should build")
+ }
+ 
+-#[tokio::test]
+-async fn remote_resume_restores_saved_server_profile_without_permission_overrides() -> Result<()> {
++#[test]
++fn remote_resume_restores_saved_server_profile_without_permission_overrides() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        remote_resume_restores_saved_server_profile_without_permission_overrides_body,
++    )
++}
++
++async fn remote_resume_restores_saved_server_profile_without_permission_overrides_body()
++-> Result<()> {
+     let home = tempfile::tempdir()?;
+     std::fs::write(
+         home.path().join("config.toml"),
+diff --git a/codex-rs/tui/src/app_server_session/workspace_roots_tests.rs b/codex-rs/tui/src/app_server_session/workspace_roots_tests.rs
+index ed23a46..f70e5e1 100644
+--- a/codex-rs/tui/src/app_server_session/workspace_roots_tests.rs
++++ b/codex-rs/tui/src/app_server_session/workspace_roots_tests.rs
+@@ -7,8 +7,14 @@ use codex_app_server_protocol::ServerNotification;
+ use core_test_support::responses;
+ use pretty_assertions::assert_eq;
+ 
+-#[tokio::test]
+-async fn remote_workspace_roots_survive_start_turn_resume_and_fork() -> Result<()> {
++#[test]
++fn remote_workspace_roots_survive_start_turn_resume_and_fork() -> Result<()> {
++    crate::test_support::run_on_large_stack(
++        remote_workspace_roots_survive_start_turn_resume_and_fork_body,
++    )
++}
++
++async fn remote_workspace_roots_survive_start_turn_resume_and_fork_body() -> Result<()> {
+     let model_server = responses::start_mock_server().await;
+     let response = responses::mount_sse_once(
+         &model_server,
+diff --git a/codex-rs/tui/src/bottom_pane/mod.rs b/codex-rs/tui/src/bottom_pane/mod.rs
+index c0e3902..4650f45 100644
+--- a/codex-rs/tui/src/bottom_pane/mod.rs
++++ b/codex-rs/tui/src/bottom_pane/mod.rs
+@@ -297,6 +297,7 @@ pub(crate) struct BottomPane {
+ 
+     app_event_tx: AppEventSender,
+     frame_requester: FrameRequester,
++    parallel_progress: crate::parallel_progress::ParallelProgress,
+     thread_id: Option<ThreadId>,
+ 
+     has_input_focus: bool,
+@@ -383,6 +384,7 @@ impl BottomPane {
+             last_composer_activity_at: None,
+             app_event_tx,
+             frame_requester,
++            parallel_progress: crate::parallel_progress::ParallelProgress::from_environment(),
+             thread_id: None,
+             has_input_focus,
+             enhanced_keys_supported,
+@@ -1040,6 +1042,7 @@ impl BottomPane {
+     }
+ 
+     pub(crate) fn pre_draw_tick(&mut self) {
++        self.parallel_progress.tick(&self.frame_requester);
+         self.pre_draw_tick_at(Instant::now());
+     }
+ 
+@@ -2326,6 +2329,13 @@ impl BottomPane {
+                     RenderableItem::Owned(Box::new(Paragraph::new(summary))),
+                 );
+             }
++            if question_editor.is_none()
++                && let Some(progress) = self.parallel_progress.panel()
++            {
++                // This flexible section yields space to the fixed-height input
++                // and approval/question UI when the terminal becomes short.
++                flex.push(/*flex*/ 1, RenderableItem::Owned(Box::new(progress)));
++            }
+             let mut flex2 = FlexRenderable::new();
+             // Clip spacing and hints before activity and previews when the composer is tall.
+             let above_composer = if let Some(gap) = options.composer_gap {
+@@ -2405,6 +2415,19 @@ impl BottomPane {
+         }
+     }
+ 
++    pub(crate) fn set_native_progress(
++        &mut self,
++        native: Vec<crate::parallel_progress::NativeProgress>,
++    ) {
++        self.parallel_progress.set_native(native);
++    }
++
++    pub(crate) fn open_parallel_progress(&mut self) {
++        if let Some(panel) = self.parallel_progress.panel() {
++            self.show_selection_view(panel.selection());
++        }
++    }
++
+     pub(crate) fn set_side_conversation_context_label(&mut self, label: Option<String>) {
+         if self.composer.set_side_conversation_context_label(label) {
+             self.request_redraw();
+@@ -2513,6 +2536,34 @@ mod tests {
+         test_pane_with_disable_paste_burst(app_event_tx, /*disable_paste_burst*/ false)
+     }
+ 
++    #[tokio::test]
++    async fn parallel_progress_resize_preserves_input_cursor_and_full_list() {
++        let (tx, _rx) = unbounded_channel();
++        let mut pane = test_pane(AppEventSender::new(tx));
++        pane.parallel_progress = crate::parallel_progress::ParallelProgress::ready_fixture();
++        pane.insert_str("draft survives");
++        for width in [36, 80, 120] {
++            for height in [4, 8, 16, 24] {
++                let area = Rect::new(0, 0, width, height);
++                let cursor = pane.cursor_pos(area).expect("composer remains visible");
++                assert!(cursor.0 < width && cursor.1 < height);
++                let rendered = render_snapshot(&pane, area);
++                assert!(rendered.contains("draft survives"));
++                if height >= 16 {
++                    assert!(
++                        rendered.replace(' ', "").contains("テスト中"),
++                        "{width}x{height}: {rendered}"
++                    );
++                }
++            }
++        }
++        pane.open_parallel_progress();
++        let rendered = render_snapshot(&pane, Rect::new(0, 0, 80, 24));
++        assert!(rendered.replace(' ', "").contains("並列担当の進捗"));
++        assert!(rendered.contains("70%"));
++        assert!(rendered.replace(' ', "").contains("テスト中"));
++    }
++
+     fn test_pane_with_disable_paste_burst(
+         app_event_tx: AppEventSender,
+         disable_paste_burst: bool,
+diff --git a/codex-rs/tui/src/chatwidget/slash_dispatch.rs b/codex-rs/tui/src/chatwidget/slash_dispatch.rs
+index 182a696..29337ff 100644
+--- a/codex-rs/tui/src/chatwidget/slash_dispatch.rs
++++ b/codex-rs/tui/src/chatwidget/slash_dispatch.rs
+@@ -408,6 +408,9 @@ impl ChatWidget {
+             SlashCommand::Agents => {
+                 self.app_event_tx.send(AppEvent::OpenAgentsOverview);
+             }
++            SlashCommand::Progress => {
++                self.bottom_pane.open_parallel_progress();
++            }
+             SlashCommand::MultiAgents => {
+                 self.app_event_tx.send(AppEvent::OpenAgentPicker);
+             }
+@@ -1319,6 +1322,7 @@ impl ChatWidget {
+             | SlashCommand::Keymap
+             | SlashCommand::Agents
+             | SlashCommand::MultiAgents
++            | SlashCommand::Progress
+             | SlashCommand::Permissions
+             | SlashCommand::ElevateSandbox
+             | SlashCommand::Experimental
+diff --git a/codex-rs/tui/src/chatwidget/status_controls.rs b/codex-rs/tui/src/chatwidget/status_controls.rs
+index 6dc0ab9..b7f7cab 100644
+--- a/codex-rs/tui/src/chatwidget/status_controls.rs
++++ b/codex-rs/tui/src/chatwidget/status_controls.rs
+@@ -99,6 +99,13 @@ impl ChatWidget {
+         self.bottom_pane.set_active_agent_label(active_agent_label);
+     }
+ 
++    pub(crate) fn set_native_progress(
++        &mut self,
++        native: Vec<crate::parallel_progress::NativeProgress>,
++    ) {
++        self.bottom_pane.set_native_progress(native);
++    }
++
+     /// Recomputes footer status-line content from config and current runtime state.
+     ///
+     /// This method is the status-line orchestrator: it parses configured item identifiers,
+diff --git a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__pnpm_update_available_history_cell_snapshot.snap b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__pnpm_update_available_history_cell_snapshot.snap
+index a9dd9ca..4c27d14 100644
+--- a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__pnpm_update_available_history_cell_snapshot.snap
++++ b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__pnpm_update_available_history_cell_snapshot.snap
+@@ -3,7 +3,7 @@ source: tui/src/history_cell/tests.rs
+ expression: rendered
+ ---
+ ╭─────────────────────────────────────────────────╮
+-│ ✨ Update available! 0.0.0 -> 9.9.9             │
++│ ✨ Update available! 0.162.1 -> 9.9.9           │
+ │ Run pnpm add -g @openai/codex to update.        │
+ │                                                 │
+ │ See full release notes:                         │
+diff --git a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_unix_update_available_history_cell_snapshot.snap b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_unix_update_available_history_cell_snapshot.snap
+index c8f352d..79dc2b1 100644
+--- a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_unix_update_available_history_cell_snapshot.snap
++++ b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_unix_update_available_history_cell_snapshot.snap
+@@ -3,7 +3,7 @@ source: tui/src/history_cell/tests.rs
+ expression: rendered
+ ---
+ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+-│ ✨ Update available! 0.0.0 -> 9.9.9                                                                 │
++│ ✨ Update available! 0.162.1 -> 9.9.9                                                               │
+ │ Run sh -c 'curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh' to update. │
+ │                                                                                                     │
+ │ See full release notes:                                                                             │
+diff --git a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_windows_update_available_history_cell_snapshot.snap b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_windows_update_available_history_cell_snapshot.snap
+index fb15a05..0f2e260 100644
+--- a/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_windows_update_available_history_cell_snapshot.snap
++++ b/codex-rs/tui/src/history_cell/snapshots/codex_tui__history_cell__tests__standalone_windows_update_available_history_cell_snapshot.snap
+@@ -3,7 +3,7 @@ source: tui/src/history_cell/tests.rs
+ expression: rendered
+ ---
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+-│ ✨ Update available! 0.0.0 -> 9.9.9                                                                        │
++│ ✨ Update available! 0.162.1 -> 9.9.9                                                                      │
+ │ Run powershell -ExecutionPolicy Bypass -c '$env:CODEX_NON_INTERACTIVE=1; irm                               │
+ │ https://chatgpt.com/codex/install.ps1 | iex' to update.                                                    │
+ │                                                                                                            │
+diff --git a/codex-rs/tui/src/lib.rs b/codex-rs/tui/src/lib.rs
+index dc0fbd0..78c4e03 100644
+--- a/codex-rs/tui/src/lib.rs
++++ b/codex-rs/tui/src/lib.rs
+@@ -188,6 +188,7 @@ mod npm_registry;
+ pub(crate) mod onboarding;
+ mod oss_selection;
+ mod pager_overlay;
++mod parallel_progress;
+ mod projectless;
+ pub(crate) mod public_widgets;
+ mod render;
+@@ -2696,8 +2697,15 @@ requires_openai_auth = {requires_openai_auth}
+         .await
+     }
+ 
+-    #[tokio::test]
+-    async fn startup_resume_and_fork_use_configured_or_explicit_cwd() -> color_eyre::Result<()> {
++    #[test]
++    fn startup_resume_and_fork_use_configured_or_explicit_cwd() -> color_eyre::Result<()> {
++        crate::test_support::run_on_large_stack(
++            startup_resume_and_fork_use_configured_or_explicit_cwd_body,
++        )
++    }
++
++    async fn startup_resume_and_fork_use_configured_or_explicit_cwd_body() -> color_eyre::Result<()>
++    {
+         for (action, configured_mode, has_explicit_cwd, expected_directory) in [
+             (CwdPromptAction::Resume, "current", false, "launch"),
+             (CwdPromptAction::Resume, "session", false, "session"),
+diff --git a/codex-rs/tui/src/parallel_progress.rs b/codex-rs/tui/src/parallel_progress.rs
+new file mode 100644
+index 0000000..43e301d
+--- /dev/null
++++ b/codex-rs/tui/src/parallel_progress.rs
+@@ -0,0 +1,799 @@
++//! Persistent, read-only progress for native agents and separately launched jobs.
++//!
++//! The Go collector emits a public-label projection of recorded measurements.
++//! Acquisition runs off the draw thread, uses a process-wide cache and an OS
++//! file lock, and retains the last readable snapshot after acquisition failure.
++//! No task state, model selection, account or service setting is changed here.
++
++use crate::render::renderable::Renderable;
++use crate::tui::FrameRequester;
++use chrono::DateTime;
++use chrono::Utc;
++use ratatui::buffer::Buffer;
++use ratatui::layout::Rect;
++use ratatui::style::Color;
++use ratatui::style::Stylize;
++use ratatui::text::Line;
++use ratatui::text::Span;
++use ratatui::widgets::Paragraph;
++use ratatui::widgets::Widget;
++use serde::Deserialize;
++use std::collections::HashSet;
++use std::fs::File;
++use std::fs::OpenOptions;
++use std::io::Read;
++use std::path::Path;
++use std::path::PathBuf;
++use std::process::Command;
++use std::process::Stdio;
++use std::sync::Arc;
++use std::sync::Mutex;
++use std::sync::OnceLock;
++use std::time::Duration;
++use std::time::Instant;
++use unicode_width::UnicodeWidthChar;
++use unicode_width::UnicodeWidthStr;
++
++const REFRESH: Duration = Duration::from_secs(2);
++const SHARED_CACHE_FRESH: Duration = Duration::from_secs(4);
++const STALE_SECONDS: i64 = 12;
++const SNAPSHOT_BYTES: u64 = 8 * 1024 * 1024;
++const CACHE_ROOT: &str = "D:/CC/Work/parallel-agent-progress-runtime";
++const COLLECTOR: &str = "D:/CC/Tools/agent-progress/agent-progress.exe";
++
++#[derive(Clone, Default, Deserialize)]
++pub(crate) struct ProgressSnapshot {
++    schema_version: u32,
++    heartbeat_at: String,
++    status: String,
++    #[serde(default)]
++    tasks: Vec<ProgressTask>,
++    #[serde(default)]
++    jobs: Vec<ProgressJob>,
++    #[serde(default)]
++    truncated: bool,
++}
++
++#[derive(Clone, Default, Deserialize)]
++struct ProgressTask {
++    task_id: u64,
++    display_name: String,
++    recorded_status: String,
++    percent: Option<u8>,
++    execution: String,
++    phase: String,
++    #[serde(default)]
++    task_type: String,
++    #[serde(default)]
++    wait_reasons: Vec<ProgressWait>,
++}
++
++#[derive(Clone, Default, Deserialize)]
++struct ProgressJob {
++    #[serde(default)]
++    todo_ids: Vec<u64>,
++    public_label: String,
++    execution: String,
++    phase: String,
++}
++
++#[derive(Clone, Default, Deserialize)]
++struct ProgressWait {
++    kind: String,
++    #[serde(default)]
++    todo_ids: Vec<u64>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub(crate) struct NativeProgress {
++    pub(crate) label: String,
++    pub(crate) running: bool,
++    pub(crate) closed: bool,
++}
++
++#[derive(Clone)]
++pub(crate) struct ProgressRow {
++    label: String,
++    percent: Option<u8>,
++    state: String,
++    running: bool,
++    waiting: bool,
++}
++
++#[derive(Default)]
++struct Cache {
++    snapshot: Option<Arc<ProgressSnapshot>>,
++    refreshing: bool,
++    attempted: Option<Instant>,
++    failed: bool,
++}
++
++static CACHE: OnceLock<Arc<Mutex<Cache>>> = OnceLock::new();
++
++#[derive(Default)]
++pub(crate) struct ParallelProgress {
++    enabled: bool,
++    native: Vec<NativeProgress>,
++    #[cfg(test)]
++    test_snapshot: Option<ProgressSnapshot>,
++}
++
++impl ParallelProgress {
++    pub(crate) fn from_environment() -> Self {
++        Self {
++            // Disabled unless the validated interactive launcher opts in.
++            enabled: std::env::var("CC_AGENT_PROGRESS").is_ok_and(|value| value == "1"),
++            native: Vec::new(),
++            #[cfg(test)]
++            test_snapshot: None,
++        }
++    }
++
++    pub(crate) fn set_native(&mut self, native: Vec<NativeProgress>) {
++        self.native = native;
++    }
++
++    pub(crate) fn tick(&self, frame: &FrameRequester) {
++        if !self.enabled {
++            return;
++        }
++        #[cfg(test)]
++        if self.test_snapshot.is_some() {
++            return;
++        }
++        frame.schedule_frame_in(REFRESH);
++        let cache = CACHE
++            .get_or_init(|| Arc::new(Mutex::new(Cache::default())))
++            .clone();
++        let refresh = cache.lock().ok().is_some_and(|mut state| {
++            if state.refreshing || state.attempted.is_some_and(|at| at.elapsed() < REFRESH) {
++                return false;
++            }
++            state.refreshing = true;
++            state.attempted = Some(Instant::now());
++            true
++        });
++        if refresh {
++            let frame = frame.clone();
++            tokio::task::spawn_blocking(move || {
++                let observed = acquire_snapshot();
++                if let Ok(mut state) = cache.lock() {
++                    match observed {
++                        Ok(snapshot) => {
++                            // Partial observations still contain newly verified
++                            // work. Only total unavailability retains a previous
++                            // generation unchanged.
++                            state.failed = snapshot.status == "unavailable";
++                            if snapshot.status != "unavailable" || state.snapshot.is_none() {
++                                state.snapshot = Some(Arc::new(snapshot));
++                            }
++                        }
++                        Err(_) => state.failed = true,
++                    }
++                    state.refreshing = false;
++                }
++                frame.schedule_frame();
++            });
++        }
++    }
++
++    pub(crate) fn panel(&self) -> Option<ProgressPanel> {
++        if !self.enabled {
++            return None;
++        }
++        #[cfg(test)]
++        if let Some(snapshot) = &self.test_snapshot {
++            return Some(ProgressPanel::new(Some(snapshot), &self.native, false));
++        }
++        let (snapshot, failed) = CACHE
++            .get()
++            .and_then(|cache| cache.lock().ok())
++            .map(|cache| (cache.snapshot.clone(), cache.failed))
++            .unwrap_or((None, false));
++        Some(ProgressPanel::new(
++            snapshot.as_deref(),
++            &self.native,
++            failed,
++        ))
++    }
++    #[cfg(test)]
++    pub(crate) fn ready_fixture() -> Self {
++        let snapshot: ProgressSnapshot = serde_json::from_value(serde_json::json!({
++            "schema_version":1,"heartbeat_at":Utc::now().to_rfc3339(),"status":"ok",
++            "tasks":[{"task_id":7,"display_name":"万世記","recorded_status":"doing","percent":70,
++                "execution":"running","phase":"testing","task_type":"check"}],"jobs":[]
++        }))
++        .unwrap();
++        Self {
++            enabled: true,
++            native: Vec::new(),
++            test_snapshot: Some(snapshot),
++        }
++    }
++}
++
++fn read_snapshot(path: &Path) -> std::io::Result<ProgressSnapshot> {
++    let mut attempts = 0;
++    let file = loop {
++        match File::open(path) {
++            Ok(file) => break file,
++            Err(error)
++                if cfg!(windows)
++                    && matches!(error.raw_os_error(), Some(5 | 32))
++                    && attempts < 3 =>
++            {
++                attempts += 1;
++                std::thread::sleep(Duration::from_millis(40));
++            }
++            Err(error) => return Err(error),
++        }
++    };
++    let mut bytes = Vec::new();
++    file.take(SNAPSHOT_BYTES + 1).read_to_end(&mut bytes)?;
++    if bytes.len() as u64 > SNAPSHOT_BYTES {
++        return Err(std::io::ErrorKind::InvalidData.into());
++    }
++    let parsed: ProgressSnapshot = serde_json::from_slice(&bytes)
++        .map_err(|_| std::io::Error::from(std::io::ErrorKind::InvalidData))?;
++    if parsed.schema_version != 1 || parsed.tasks.len() > 10_000 || parsed.jobs.len() > 10_000 {
++        return Err(std::io::ErrorKind::InvalidData.into());
++    }
++    Ok(parsed)
++}
++
++fn snapshot_recent(snapshot: &ProgressSnapshot) -> bool {
++    DateTime::parse_from_rfc3339(&snapshot.heartbeat_at).is_ok_and(|at| {
++        let age = Utc::now().signed_duration_since(at).num_milliseconds();
++        (0..SHARED_CACHE_FRESH.as_millis() as i64).contains(&age)
++    })
++}
++
++fn acquire_snapshot() -> std::io::Result<ProgressSnapshot> {
++    let root = PathBuf::from(CACHE_ROOT);
++    std::fs::create_dir_all(&root)?;
++    let path = root.join("snapshot-v1.json");
++    if let Ok(snapshot) = read_snapshot(&path)
++        && snapshot_recent(&snapshot)
++    {
++        return Ok(snapshot);
++    }
++    let lock = OpenOptions::new()
++        .create(true)
++        .read(true)
++        .write(true)
++        .truncate(false)
++        .open(root.join("acquisition.lock"))?;
++    if lock.try_lock().is_err() {
++        // Another terminal owns collection. Reading the previous atomic file
++        // never certifies its freshness: the renderer shows its actual age.
++        return read_snapshot(&path);
++    }
++    if let Ok(snapshot) = read_snapshot(&path)
++        && snapshot_recent(&snapshot)
++    {
++        return Ok(snapshot);
++    }
++    let mut command = Command::new(COLLECTOR);
++    command
++        .args([
++            "--once",
++            "--deadline",
++            "4s",
++            "--max-rows",
++            "1000",
++            "--output",
++        ])
++        .arg(&path)
++        .stdin(Stdio::null())
++        .stdout(Stdio::null())
++        .stderr(Stdio::null());
++    #[cfg(windows)]
++    {
++        use std::os::windows::process::CommandExt;
++        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
++    }
++    let mut child = command.spawn()?;
++    let deadline = Instant::now() + Duration::from_secs(6);
++    loop {
++        let observed = match child.try_wait() {
++            Ok(observed) => observed,
++            Err(error) => {
++                let _ = child.kill();
++                let _ = child.wait();
++                return Err(error);
++            }
++        };
++        match observed {
++            Some(status) => {
++                // Exit 1 intentionally publishes a degraded snapshot.
++                if !status.success() && status.code() != Some(1) {
++                    return Err(std::io::ErrorKind::Other.into());
++                }
++                return read_snapshot(&path);
++            }
++            None if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(50)),
++            None => {
++                let _ = child.kill();
++                let _ = child.wait();
++                return Err(std::io::ErrorKind::TimedOut.into());
++            }
++        }
++    }
++}
++
++fn safe_text(text: &str, width: usize) -> String {
++    let mut out = String::new();
++    let mut used = 0;
++    for ch in text.chars() {
++        if ch.is_control()
++            || matches!(ch, '\u{00ad}' | '\u{061c}' | '\u{200b}'..='\u{200f}' |
++            '\u{202a}'..='\u{202e}' | '\u{2060}'..='\u{206f}' | '\u{feff}')
++        {
++            continue;
++        }
++        let cells = ch.width().unwrap_or(0);
++        if used + cells > width {
++            break;
++        }
++        out.push(ch);
++        used += cells;
++    }
++    out
++}
++
++fn task_state(task: &ProgressTask) -> String {
++    if task.recorded_status == "done" {
++        return "完了".into();
++    }
++    if let Some(reason) = task.wait_reasons.first() {
++        return match reason.kind.as_str() {
++            "owner_decision" | "owner_reply" => "本人の回答待ち".into(),
++            "dependency" | "todo_dependency" => {
++                let ids = reason
++                    .todo_ids
++                    .iter()
++                    .take(2)
++                    .map(|id| format!("#{id}"))
++                    .collect::<Vec<_>>()
++                    .join("・");
++                if ids.is_empty() {
++                    "別の作業待ち".into()
++                } else {
++                    format!("別の作業待ち {ids}")
++                }
++            }
++            "model_capacity" | "provider_capacity" => "モデルの空き待ち".into(),
++            "quota" | "provider_quota" | "subscription_readiness" => "利用枠の回復待ち".into(),
++            "resource" | "resource_wait" | "execution_slot" => "実行枠の空き待ち".into(),
++            "other_worker" => "別の担当が作業中".into(),
++            "rate_limit" | "technical_retry" => "再試行待ち".into(),
++            "blocked_unspecified" | "unknown" => "待機理由を確認中".into(),
++            "recovery_unverified" => "元の作業記録を確認中".into(),
++            "owner_stop" => "本人の指示で停止中".into(),
++            _ => "待機中".into(),
++        };
++    }
++    let phase = if task.execution == "running" {
++        task.phase.as_str()
++    } else {
++        ""
++    };
++    match phase {
++        "testing" | "test" => "テスト中".into(),
++        "implementation" | "editing" | "file_change" => "実装中".into(),
++        "review" | "reviewing" => "レビュー中".into(),
++        "research" | "searching" => "調査中".into(),
++        "thinking" | "reasoning" => "考え中".into(),
++        "planning" => "手順を整理中".into(),
++        "summarizing" => "作業を引き継ぎ中".into(),
++        "reporting" => "結果を記録中".into(),
++        "delegating" => "担当へ依頼中".into(),
++        _ => match task.execution.as_str() {
++            "running" => match task.task_type.as_str() {
++                "check" | "test" | "testing" => "テスト中".into(),
++                "review" => "レビュー中".into(),
++                "research" => "調査中".into(),
++                "implementation" => "実装中".into(),
++                "ci_fix" => "テストを修正中".into(),
++                "cleanup" => "後片付け中".into(),
++                _ => "作業中".into(),
++            },
++            "queued" | "starting" => "起動待ち".into(),
++            "finished" => "続きの作業あり".into(),
++            "alive_identity_unknown" | "unknown" => "状態を確認中".into(),
++            _ if task.recorded_status == "wait" => "別の作業待ち".into(),
++            _ if task.recorded_status == "block" => "待機理由を確認中".into(),
++            _ => "待機中".into(),
++        },
++    }
++}
++
++#[derive(Clone)]
++pub(crate) struct ProgressPanel {
++    rows: Vec<ProgressRow>,
++    header: String,
++    warning: Option<String>,
++}
++
++impl ProgressPanel {
++    fn new(snapshot: Option<&ProgressSnapshot>, native: &[NativeProgress], failed: bool) -> Self {
++        let mut rows = Vec::new();
++        for agent in native.iter().filter(|agent| !agent.closed).take(1_000) {
++            if agent.closed {
++                continue;
++            }
++            rows.push(ProgressRow {
++                label: format!("この会話 {}", safe_text(&agent.label, 36)),
++                percent: None,
++                state: if agent.running {
++                    "作業中"
++                } else {
++                    "待機中"
++                }
++                .into(),
++                running: agent.running,
++                waiting: !agent.running,
++            });
++        }
++        let native_count = rows.len();
++        let mut warning = failed.then(|| {
++            if snapshot.is_some() {
++                "取得失敗・前回の状態を表示".to_owned()
++            } else {
++                "状態を取得できません".to_owned()
++            }
++        });
++        let mut displayed_tasks = HashSet::new();
++        if let Some(snapshot) = snapshot {
++            for task in &snapshot.tasks {
++                if task.recorded_status == "done" {
++                    continue;
++                }
++                displayed_tasks.insert(task.task_id);
++                rows.push(ProgressRow {
++                    label: if task.display_name.trim().is_empty() {
++                        format!("作業 #{}", task.task_id)
++                    } else {
++                        safe_text(&task.display_name, 70)
++                    },
++                    percent: task.percent.filter(|percent| *percent <= 100),
++                    state: task_state(task),
++                    running: task.execution == "running",
++                    waiting: task.execution == "queued"
++                        || task.execution == "starting"
++                        || task.wait_reasons.iter().any(|reason| {
++                            !matches!(
++                                reason.kind.as_str(),
++                                "unknown" | "blocked_unspecified" | "recovery_unverified"
++                            )
++                        }),
++                });
++            }
++            for job in &snapshot.jobs {
++                if job.todo_ids.iter().any(|id| displayed_tasks.contains(id))
++                    || job.execution == "finished"
++                {
++                    continue;
++                }
++                rows.push(ProgressRow {
++                    label: format!("担当 {}", safe_text(&job.public_label, 50)),
++                    percent: None,
++                    state: match if job.execution == "running" {
++                        job.phase.as_str()
++                    } else {
++                        ""
++                    } {
++                        "testing" => "テスト中",
++                        "thinking" => "考え中",
++                        _ if job.execution == "running" => "作業中",
++                        _ if matches!(job.execution.as_str(), "queued" | "starting") => "起動待ち",
++                        _ => "状態を確認中",
++                    }
++                    .into(),
++                    running: job.execution == "running",
++                    waiting: matches!(job.execution.as_str(), "queued" | "starting"),
++                });
++            }
++            let age = DateTime::parse_from_rfc3339(&snapshot.heartbeat_at)
++                .ok()
++                .map(|at| Utc::now().signed_duration_since(at).num_seconds());
++            if snapshot.status != "ok" {
++                warning = Some("一部の状態を取得できません".into());
++            }
++            match age {
++                Some(seconds) if seconds < 0 => warning = Some("取得時刻を確認中".into()),
++                Some(seconds) if seconds > STALE_SECONDS => {
++                    warning = Some(format!("前回の状態・{seconds}秒前"))
++                }
++                None => warning = Some("取得時刻が不明".into()),
++                _ => {}
++            }
++            if snapshot.truncated {
++                warning = Some("表示件数の上限あり".into());
++            }
++        } else {
++            warning.get_or_insert_with(|| "共有担当の状態を取得中".into());
++        }
++        // Active work remains visible even when many higher-priority tasks wait.
++        // Stable sorting preserves the collector's department order per group.
++        rows[native_count..].sort_by_key(|row| !row.running);
++        let running = rows.iter().filter(|row| row.running).count();
++        let waiting = rows
++            .iter()
++            .filter(|row| !row.running && row.waiting)
++            .count();
++        let unconfirmed = rows.len() - running - waiting;
++        let header = if snapshot.is_none() && native_count == 0 {
++            if failed {
++                "並列担当  状態を取得できません".into()
++            } else {
++                "並列担当  状態を取得中".into()
++            }
++        } else if failed
++            || snapshot.is_some_and(|snapshot| {
++                DateTime::parse_from_rfc3339(&snapshot.heartbeat_at).map_or(true, |at| {
++                    let seconds = Utc::now().signed_duration_since(at).num_seconds();
++                    !(0..=STALE_SECONDS).contains(&seconds)
++                })
++            })
++        {
++            format!("並列担当  前回：作業中 {running}・待機 {waiting}・確認中 {unconfirmed}")
++        } else {
++            format!("並列担当  作業中 {running}・待機 {waiting}・確認中 {unconfirmed}")
++        };
++        Self {
++            rows,
++            header,
++            warning,
++        }
++    }
++
++    fn lines(&self, width: u16, height: u16) -> Vec<Line<'static>> {
++        if width == 0 || height == 0 {
++            return Vec::new();
++        }
++        let mut lines = vec![
++            Line::from(safe_text(&self.header, width as usize))
++                .cyan()
++                .bold(),
++        ];
++        if let Some(warning) = &self.warning
++            && height > 1
++        {
++            lines.push(Line::from(safe_text(warning, width as usize)).light_red());
++        }
++        let mut shown = 0;
++        if width < 24 {
++            return lines;
++        }
++        let wide = width >= 78;
++        for row in &self.rows {
++            let row_height = if wide {
++                1
++            } else if width >= 62 {
++                2
++            } else {
++                3
++            };
++            if lines.len() + row_height + 1 > height as usize {
++                break;
++            }
++            let bar_cells = if wide {
++                12
++            } else {
++                usize::from(width).saturating_sub(26).clamp(4, 12)
++            };
++            let (bar, percent) = if let Some(percent) = row.percent {
++                let fill = bar_cells * usize::from(percent) / 100;
++                (
++                    format!("{}{}", "█".repeat(fill), "░".repeat(bar_cells - fill)),
++                    format!("{percent:3}%"),
++                )
++            } else {
++                ("·".repeat(bar_cells), "未計測".into())
++            };
++            let status = safe_text(&row.state, if wide { 24 } else { 30 });
++            let meter = vec![
++                Span::from(bar.clone()).fg(Color::Green),
++                " ".into(),
++                percent.clone().dim(),
++                "  ".into(),
++                status.into(),
++            ];
++            if wide {
++                let label_width = usize::from(width).saturating_sub(48);
++                let label = safe_text(&row.label, label_width);
++                let padding = label_width.saturating_sub(label.width());
++                let mut spans = vec![format!("{label}{}  ", " ".repeat(padding)).into()];
++                spans.extend(meter);
++                lines.push(Line::from(spans));
++            } else {
++                lines.push(Line::from(safe_text(&row.label, usize::from(width))));
++                if width >= 62 {
++                    lines.push(Line::from(meter));
++                } else {
++                    lines.push(Line::from(vec![
++                        Span::from(bar).green(),
++                        " ".into(),
++                        percent.dim(),
++                    ]));
++                    lines.push(Line::from(safe_text(&row.state, usize::from(width))));
++                }
++            }
++            shown += 1;
++        }
++        if shown < self.rows.len() && lines.len() < height as usize {
++            lines.push(
++                Line::from(safe_text(
++                    &format!("ほか {} 件  /progress で一覧", self.rows.len() - shown),
++                    width as usize,
++                ))
++                .dim(),
++            );
++        }
++        lines
++    }
++
++    pub(crate) fn selection(&self) -> crate::bottom_pane::SelectionViewParams {
++        let items = self
++            .rows
++            .iter()
++            .map(|row| crate::bottom_pane::SelectionItem {
++                name: row.label.clone(),
++                description: Some(format!(
++                    "{}  {}",
++                    row.percent
++                        .map(|p| format!("{p}%"))
++                        .unwrap_or_else(|| "未計測".into()),
++                    row.state
++                )),
++                dismiss_on_select: false,
++                ..Default::default()
++            })
++            .collect();
++        crate::bottom_pane::SelectionViewParams {
++            title: Some("並列担当の進捗".into()),
++            subtitle: Some("一覧を開いた時点の状態。常設欄は自動更新します。".into()),
++            footer_note: self
++                .warning
++                .as_ref()
++                .map(|text| Line::from(text.clone()).light_red()),
++            items,
++            is_searchable: true,
++            search_placeholder: Some("担当・作業を絞り込む".into()),
++            max_visible_rows: 15,
++            view_id: Some("parallel-progress"),
++            ..Default::default()
++        }
++    }
++}
++
++impl Renderable for ProgressPanel {
++    fn render(&self, area: Rect, buf: &mut Buffer) {
++        Paragraph::new(self.lines(area.width, area.height)).render(area, buf);
++    }
++
++    fn desired_height(&self, width: u16) -> u16 {
++        if width < 24 {
++            return 1 + u16::from(self.warning.is_some());
++        }
++        let row_height = if width >= 78 {
++            1
++        } else if width >= 62 {
++            2
++        } else {
++            3
++        };
++        (1 + u16::from(self.warning.is_some()) + (self.rows.len().min(5) as u16) * row_height + 1)
++            .min(12)
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn previous_phase_does_not_claim_running_for_finished_unknown_or_queued_work() {
++        for execution in ["finished", "unknown", "alive_identity_unknown", "queued"] {
++            let task = ProgressTask {
++                phase: "testing".into(),
++                execution: execution.into(),
++                ..Default::default()
++            };
++            assert_ne!(task_state(&task), "テスト中");
++        }
++        let task = ProgressTask {
++            phase: "testing".into(),
++            execution: "running".into(),
++            ..Default::default()
++        };
++        assert_eq!(task_state(&task), "テスト中");
++    }
++
++    #[test]
++    fn measured_progress_is_preserved_unknown_is_not_zero_and_test_copy_is_natural() {
++        let task = ProgressTask {
++            task_id: 7,
++            display_name: "万世記".into(),
++            percent: Some(70),
++            execution: "running".into(),
++            phase: "testing".into(),
++            ..Default::default()
++        };
++        let snapshot = ProgressSnapshot {
++            schema_version: 1,
++            heartbeat_at: Utc::now().to_rfc3339(),
++            status: "ok".into(),
++            tasks: vec![
++                task.clone(),
++                ProgressTask {
++                    task_id: 8,
++                    percent: None,
++                    ..task
++                },
++            ],
++            ..Default::default()
++        };
++        let panel = ProgressPanel::new(Some(&snapshot), &[], false);
++        let text = panel
++            .lines(100, 12)
++            .iter()
++            .map(ToString::to_string)
++            .collect::<Vec<_>>()
++            .join("\n");
++        assert!(text.contains("70%"));
++        assert!(text.contains("未計測"));
++        assert!(text.contains("テスト中"));
++        assert!(!text.contains("検査中"));
++    }
++
++    #[test]
++    fn stale_or_failed_snapshot_keeps_rows_and_native_agents_without_job_metadata() {
++        let snapshot = ProgressSnapshot {
++            heartbeat_at: (Utc::now() - chrono::Duration::seconds(40)).to_rfc3339(),
++            status: "ok".into(),
++            tasks: vec![ProgressTask {
++                task_id: 3,
++                display_name: "PCの道具".into(),
++                percent: Some(50),
++                ..Default::default()
++            }],
++            ..Default::default()
++        };
++        let native = [NativeProgress {
++            label: "Aquinas".into(),
++            running: true,
++            closed: false,
++        }];
++        let panel = ProgressPanel::new(Some(&snapshot), &native, true);
++        assert_eq!(panel.rows.len(), 2);
++        assert!(panel.header.contains("作業中 1"));
++        assert!(panel.warning.as_deref().unwrap().contains("前回の状態"));
++        assert_eq!(panel.rows[1].percent, Some(50));
++    }
++
++    #[test]
++    fn terminal_controls_and_bidi_are_not_rendered_and_small_dimensions_are_bounded() {
++        assert_eq!(safe_text("万\u{001b}\u{202e}世記", 6), "万世記");
++        let panel = ProgressPanel {
++            header: "並列担当".into(),
++            warning: None,
++            rows: vec![ProgressRow {
++                label: "万世記のとても長い作業名".into(),
++                percent: Some(50),
++                state: "テスト中".into(),
++                running: true,
++                waiting: false,
++            }],
++        };
++        for width in [0, 1, 12, 40, 78, 120] {
++            for height in [0, 1, 3, 8] {
++                let area = Rect::new(0, 0, width, height);
++                let mut buffer = Buffer::empty(area);
++                panel.render(area, &mut buffer);
++                assert!(panel.lines(width, height).len() <= usize::from(height));
++            }
++        }
++    }
++}
+diff --git a/codex-rs/tui/src/slash_command.rs b/codex-rs/tui/src/slash_command.rs
+index d9ba053..58d17ac 100644
+--- a/codex-rs/tui/src/slash_command.rs
++++ b/codex-rs/tui/src/slash_command.rs
+@@ -43,6 +43,7 @@ pub enum SlashCommand {
+     Voice,
+     Goal,
+     Agents,
++    Progress,
+     Side,
+     Btw,
+     Copy,
+@@ -138,6 +139,7 @@ impl SlashCommand {
+             SlashCommand::Voice => "start or stop voice; use /voice settings to choose a voice",
+             SlashCommand::Goal => "set or view the goal for a long-running task",
+             SlashCommand::Agents => "open the agent command center",
++            SlashCommand::Progress => "並列担当の実測進捗と待機理由を表示",
+             SlashCommand::MultiAgents => "switch between this session's subagents",
+             SlashCommand::Side | SlashCommand::Btw => {
+                 "start a side conversation in an ephemeral fork"
+@@ -225,6 +227,7 @@ impl SlashCommand {
+                 | SlashCommand::Resume
+                 | SlashCommand::Agents
+                 | SlashCommand::MultiAgents
++                | SlashCommand::Progress
+                 | SlashCommand::Quit
+                 | SlashCommand::Exit
+                 | SlashCommand::Status
+@@ -299,13 +302,16 @@ impl SlashCommand {
+             | SlashCommand::Btw => true,
+             SlashCommand::Rollout => true,
+             SlashCommand::TestApproval => true,
+-            SlashCommand::Agents | SlashCommand::MultiAgents => true,
++            SlashCommand::Agents | SlashCommand::MultiAgents | SlashCommand::Progress => true,
+             SlashCommand::Theme | SlashCommand::Pets => false,
+         }
+     }
+ 
+     fn is_visible(self) -> bool {
+         match self {
++            SlashCommand::Progress => {
++                std::env::var("CC_AGENT_PROGRESS").is_ok_and(|value| value == "1")
++            }
+             SlashCommand::Copy => !cfg!(target_os = "android"),
+             SlashCommand::App => cfg!(any(target_os = "macos", target_os = "windows")),
+             SlashCommand::Voice => true,
+diff --git a/codex-rs/tui/src/snapshots/codex_tui__startup_draft__layout__tests__owned_startup_layout.snap b/codex-rs/tui/src/snapshots/codex_tui__startup_draft__layout__tests__owned_startup_layout.snap
+index 6065eb8..bae38c7 100644
+--- a/codex-rs/tui/src/snapshots/codex_tui__startup_draft__layout__tests__owned_startup_layout.snap
++++ b/codex-rs/tui/src/snapshots/codex_tui__startup_draft__layout__tests__owned_startup_layout.snap
+@@ -4,7 +4,7 @@ expression: "format!(\"cursor={:?}\\n{frame}\",\nlayout.cursor_pos(area)).replac
+ ---
+ cursor=Some((13, 12))
+                                                 
+-  >_ OpenAI Codex (v<VERSION>)                      
++  >_ OpenAI Codex (v<VERSION>)                    
+      loading                                    
+                                                 
+                                                 
+diff --git a/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_picker_selected_28x12.snap b/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_picker_selected_28x12.snap
+index 53c8053..7392a62 100644
+--- a/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_picker_selected_28x12.snap
++++ b/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_picker_selected_28x12.snap
+@@ -3,8 +3,8 @@ source: tui/src/update_prompt.rs
+ expression: rendered
+ ---
+ 
+-  Update available · 0.0.0
+-  → 9.9.9
++  Update available ·
++  0.162.1 → 9.9.9
+   Release notes:
+   https://github.com/opena
+   i/codex/releases/latest
+diff --git a/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_prompt_modal.snap b/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_prompt_modal.snap
+index b547642..3d7c161 100644
+--- a/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_prompt_modal.snap
++++ b/codex-rs/tui/src/snapshots/codex_tui__update_prompt__tests__update_prompt_modal.snap
+@@ -3,7 +3,7 @@ source: tui/src/update_prompt.rs
+ expression: terminal.backend()
+ ---
+ 
+-  Update available · 0.0.0 → 9.9.9
++  Update available · 0.162.1 → 9.9.9
+   Release notes: https://github.com/openai/codex/releases/latest
+ 
+ › 1. Update now (runs `npm install -g @openai/codex`)                           
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_not_required.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_not_required.snap
+index a00c3ae..2685d1c 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_not_required.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_not_required.snap
+@@ -4,7 +4,7 @@ expression: rendered
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Model:           gpt-5.6-sol (reasoning none, summaries auto)
+   Model provider:  server-ollama
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_required.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_required.snap
+index f7be0da..84fb109 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_required.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_server_auth_required.snap
+@@ -4,7 +4,7 @@ expression: rendered
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_cached_limits_hide_credits_without_flag.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_cached_limits_hide_credits_without_flag.snap
+index 0f7605b..31d187f 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_cached_limits_hide_credits_without_flag.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_cached_limits_hide_credits_without_flag.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_credits_and_limits.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_credits_and_limits.snap
+index 6783811..ce63f94 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_credits_and_limits.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_credits_and_limits.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_enterprise_monthly_credit_limit.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_enterprise_monthly_credit_limit.snap
+index 92686ae..52c475f 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_enterprise_monthly_credit_limit.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_enterprise_monthly_credit_limit.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_forked_from.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_forked_from.snap
+index 9e2dde9..d62b1fb 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_forked_from.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_forked_from.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_monthly_limit.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_monthly_limit.snap
+index bdf79ab..b108025 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_monthly_limit.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_monthly_limit.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_reasoning_details.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_reasoning_details.snap
+index db8ba4c..93e7d87 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_reasoning_details.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_includes_reasoning_details.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_local_background_server.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_local_background_server.snap
+index c20a532..a5e6a1c 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_local_background_server.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_local_background_server.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_remote_server.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_remote_server.snap
+index 57c0482..2766f10 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_remote_server.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_remote_server.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_active_user_defined_profile.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_active_user_defined_profile.snap
+index e21309d..872ec28 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_active_user_defined_profile.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_active_user_defined_profile.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_auto_review_permissions.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_auto_review_permissions.snap
+index a5c7c21..7bb47f6 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_auto_review_permissions.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_auto_review_permissions.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_chatgpt_plan_without_email.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_chatgpt_plan_without_email.snap
+index 51b58ec..3532099 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_chatgpt_plan_without_email.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_chatgpt_plan_without_email.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_missing_limits_message.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_missing_limits_message.snap
+index 8899e4e..46a981e 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_missing_limits_message.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_missing_limits_message.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_refreshing_limits_notice.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_refreshing_limits_notice.snap
+index af4953d..dcd3018 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_refreshing_limits_notice.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_refreshing_limits_notice.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_stale_limits_message.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_stale_limits_message.snap
+index 2ec2677..90b6714 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_stale_limits_message.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_stale_limits_message.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_unavailable_limits_message.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_unavailable_limits_message.snap
+index d83ee6f..1dff7fd 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_unavailable_limits_message.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_shows_unavailable_limits_message.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_halfwidth_kana_in_narrow_terminal.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_halfwidth_kana_in_narrow_terminal.snap
+index 593ffd2..e2e5393 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_halfwidth_kana_in_narrow_terminal.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_halfwidth_kana_in_narrow_terminal.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage
+   for up-to-date
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_in_narrow_terminal.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_in_narrow_terminal.snap
+index be5c100..700cf98 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_in_narrow_terminal.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_truncates_in_narrow_terminal.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_default_reasoning_when_config_empty.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_default_reasoning_when_config_empty.snap
+index 8661643..3bc8afe 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_default_reasoning_when_config_empty.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_default_reasoning_when_config_empty.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_generic_limit_labels_for_unsupported_windows.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_generic_limit_labels_for_unsupported_windows.snap
+index 1ba1146..3831d17 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_generic_limit_labels_for_unsupported_windows.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_uses_generic_limit_labels_for_unsupported_windows.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_wraps_enterprise_monthly_credit_details_in_narrow_terminal.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_wraps_enterprise_monthly_credit_details_in_narrow_terminal.snap
+index 29cf797..3720783 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_wraps_enterprise_monthly_credit_details_in_narrow_terminal.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__status_snapshot_wraps_enterprise_monthly_credit_details_in_narrow_terminal.snap
+@@ -4,7 +4,7 @@ expression: sanitized
+ ---
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for
+   up-to-date
+diff --git a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__transcript_overlay_status_rate_limit_refresh.snap b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__transcript_overlay_status_rate_limit_refresh.snap
+index 51fbff6..752f39a 100644
+--- a/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__transcript_overlay_status_rate_limit_refresh.snap
++++ b/codex-rs/tui/src/status/snapshots/codex_tui__status__tests__transcript_overlay_status_rate_limit_refresh.snap
+@@ -6,7 +6,7 @@ before:
+ / T R A N S C R I P T / / / / / / / / / / / / / / / / / / / / / / / / / / / / /
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+@@ -38,7 +38,7 @@ after:
+ / T R A N S C R I P T / / / / / / / / / / / / / / / / / / / / / / / / / / / / /
+ /status
+ 
+-  >_ OpenAI Codex (v0.0.0)
++  >_ OpenAI Codex (v0.162.1)
+ 
+   Visit https://chatgpt.com/settings/usage for up-to-date
+   information on rate limits and credits
+diff --git a/codex-rs/tui/src/test_support.rs b/codex-rs/tui/src/test_support.rs
+index 44e9899..e6de045 100644
+--- a/codex-rs/tui/src/test_support.rs
++++ b/codex-rs/tui/src/test_support.rs
+@@ -53,3 +53,34 @@ where
+             panic!("app-server wire value should map to legacy helper type: {err}")
+         })
+ }
++
++/// Stack size for tests whose async setup and embedded app-server startup do not fit in the
++/// 8 MiB `RUST_MIN_STACK` that the repository's test runners request on Windows debug builds.
++const LARGE_STACK_TEST_BYTES: usize = 32 * 1024 * 1024;
++
++/// Runs an async test body on a dedicated large-stack thread with its own current-thread runtime.
++///
++/// The future is created inside the new thread, so it does not need to be `Send`. Panics from
++/// the test body are re-raised on the calling test thread to keep the original failure message.
++pub(crate) fn run_on_large_stack<F, Fut, T>(make_future: F) -> T
++where
++    F: FnOnce() -> Fut + Send + 'static,
++    Fut: std::future::Future<Output = T>,
++    T: Send + 'static,
++{
++    let handle = std::thread::Builder::new()
++        .name("tui-large-stack-test".to_string())
++        .stack_size(LARGE_STACK_TEST_BYTES)
++        .spawn(move || {
++            let runtime = tokio::runtime::Builder::new_current_thread()
++                .enable_all()
++                .build()
++                .expect("test runtime");
++            runtime.block_on(make_future())
++        })
++        .expect("spawn large-stack test thread");
++    match handle.join() {
++        Ok(output) => output,
++        Err(panic) => std::panic::resume_unwind(panic),
++    }
++}

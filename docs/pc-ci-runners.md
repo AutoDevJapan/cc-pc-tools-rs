@@ -1,0 +1,27 @@
+# PC専用CIの運用
+
+このリポジトリのWindows検査とLinux検査は、リポジトリ専用のself-hosted runnerへ送る。GitHubの予算上限や契約は変更しない。runnerが停止した場合はジョブを待機させ、Hosted runnerへ自動で切り替えない。
+
+Windowsのラベルは `cc-pc-tools-windows`、Linuxは `cc-pc-tools-linux`。repoが `AutoDevJapan/cc-pc-tools-rs` であり、PRのheadも同じrepoである場合だけ実行する。runner開始hookは別repo、fork、未対応イベントを拒否する。Windowsはcheckout前の最初のstepでジョブ専用の読み取りtokenを使ってbranchの最新SHAを照合する。PRのmerge用SHAではなくhead SHAを固定して取得する。過去のHosted検査の失敗を手動statusで成功へ変更しない。
+
+Windowsの `pc-ci` は事前に検査して専用runtimeへ配備するGo製のCargo shimと入場確認を提供する。Cargoは既存の `D:/CC/Tools/codex-jobs/cargo_gate.exe` を呼び、生成先ごとの排他とPC共通のCPU/RAM受付、Cargo/nextestの並列上限を維持する。Rustは既存の共有toolchainを読み取りで利用し、registryはrunner専用のCargo homeへ置く。workflowからtoolchainや共有ゲート設定を書き換えない。
+
+runnerのruntimeとworkは担当専用worktree配下の `.ci-runtime` と `.ci-work` に置く。作成前不在と担当所有を私的な運用記録へ残し、Gitから除外する。登録tokenは既存OAuthのrepo管理権限で取得し、RAMから公式runnerの `ACTIONS_RUNNER_INPUT_TOKEN` へ渡す。tokenを引数、ソース、報告、標準出力へ書かず、公式runnerが作る認証ファイルを人やAIの調査対象にしない。Org runner権限を増やさない。
+
+Windowsサービスは専用仮想アカウントを使い、本人profileを読み取れないことを実サービスの検査で確かめる。`pc-ci service` が同じ専用IDのtokenから広いAuthenticated Usersの許可と追加の特権を外し、公式runnerと子プロセスを起動する。共有exe、設定、toolchainは変更を拒否する。必要な共有ロックファイルだけに読み書きの許可を与える。権限を外していない起動入口は、ジョブからプロセスやthreadを開けないよう保護する。WindowsのRestricted SIDは.NETのTLS接続と両立しないため使わない。本人のtokenを使わない。
+
+runnerのhook、shim、環境設定はジョブから読み取りだけとする。RustのコンパイラーキャッシュはCI専用の保存先とポートを使い、共有ゲートの排他と負荷制限を保つ。Chromeの実検査は専用の起動器を全ジョブへ設定し、実ChromeをCPU描画で起動する。Windows Goのrace検査には、専用runtimeへ導入したCコンパイラとCGOを使う。必要な操作は管理者窓口を使い、コンソール/UACの窓を出さない。
+
+公式runnerは起動停止の入口が保持するWin32 Jobへ、実行開始前に所属させる。停止ではそのJobだけを終了し、停止前に開いたメンバーのハンドル、rootの終了、Jobの実行中件数0を確かめる。接続失敗は公式runnerの通常の再試行へ任せる。権限変更中や稼働中の検査を不用意に再起動しない。検証済みの常駐runtimeを誤って検査生成物として削除しない。
+
+既存の全workspace nextest、doctest、全target Clippy、Chrome/ffmpegの実検査、Windows/Linuxの個別検査、Goのrace/vet/buildを維持する。外部資源の直列設定は `.config/nextest.toml` のままとする。マージ前に固定headの必要CIと別モデルのMust解消を確認する。重い検査は同じ生成先で順に行い、同じ最終ソースの全件検査を重複させない。
+
+運用結果、失敗理由、再開手順は `docs/runner-result.private.json` と `docs/runner-handoff.private.md` に保存する。登録、起動、固定sourceの検査成功、マージ、常駐復帰確認を別の到達点として記録する。資格情報や請求数字はGitへ入れない。
+
+CodeQLはPCのLinux runnerでactions、Go、JavaScript/TypeScript、Rustの解析を維持する。従来のHosted default setupから、Git管理する `codeql.yml` へ切り替える。解析結果のuploadと対象revisionを実検証し、元の失敗statusを上書きしない。週ごとの定期解析はmainの最新SHAだけを実行する。
+
+復旧テストは `safe-delete create` でWindowsのシステムTempに所有記録のある親を作り、その中にジョブ専用の子を作る。Windows Temp全体への列挙権限を追加せず、Gitが展開する仮想ドライブも使わない。再利用する親は所有記録と実体の一致、空であることを毎回確認する。子は検査終了後にplan、別stepで通常削除、finishの順で回収する。削除失敗はCI失敗として残し、所有と内容を照合して同じドライブの削除希望へ退避する。
+
+この親とhelperの所有記録はCI用の継続資源であり、runnerの自動Temp清掃の外へ保管する。CIを廃止するときは稼働中ジョブの終了を確認し、残っている子を先に回収してから、原所有記録に従って空の親も回収する。親の参照記録だけを消して所有情報を失わない。runnerを支えるworktreeと常駐runtimeは、代替の起動元へ切り替えるまで保持する。
+
+LinuxのGoコンパイルはジョブ専用のwork配下で一時ファイルとキャッシュを作る。接続キー用のtmpfsと実行禁止設定は維持する。常駐更新はrunnerがidleのときに行い、host・image・containerのbridgeの一致と、Listenerが1系統だけで接続することを確認する。OSの再起動やログオン後の復帰は、実測するまで保証しない。

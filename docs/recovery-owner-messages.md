@@ -7,8 +7,24 @@
 
 - `discord_ask recovery-log --request-id ... --title ... --body-file ... [--notify]`
 - `discord_ask recovery-ask --request-id ... --todo-id ... --decision-file ... --body-file ... --origin-thread ...`
+- `discord_ask recovery-repair-origin --request-id ... --todo-id ... --expected-origin-thread ... --owner-reply-message ... --progress-message ...`
+- `discord_ask recovery-resume-ask --request-id ... --todo-id ...`
 - `discord_ask recovery-replies --thread ... [--request-id ... --todo-id ... --message ...] --read-only`
 - `discord_ask recovery-close --manifest <JSON>`
+
+`recovery-repair-origin` repairs only an exact ask intent that has its saved bot
+identity and no send reservation, POST receipt, verified effect, or completion.
+It requires the unchanged request ID, original ToDo and original origin, fetches
+the exact owner reply by Discord GET, and selects a progress starter already
+verified by this ledger for that same ToDo and origin thread. The original intent and fingerprint remain append-only;
+the repair event records the old origin and evidence IDs, and retries apply the
+repaired origin without changing the question body or decision. A different
+request, owner, ToDo, origin, target, or body stops before POST. A Pending or
+posted request is never rebound because its delivery result may be uncertain.
+After a repair, `recovery-resume-ask` runs the unchanged saved intent through the
+same reserve, POST and GET-verification path. It takes no body or decision file,
+so a retry cannot silently substitute new question text or scope. It requires
+the exact original request ID, ToDo and a recorded origin repair.
 
 投稿先は既存設定のサーバー・フォーラム・本人IDに限定する。
 新しい作業投稿を元投稿として使う場合は、過去の投稿を復元したものではないことを本文で明記する。
@@ -49,6 +65,7 @@ manifestは、確認済みの質問と実反映記録を固定するJSONであ�
 UTF-8の圧縮JSONを使用する。本文・メール・金額はmanifestや終了結果へ転記しない。
 manifestは新しい承認ではなく、担当が実操作と読み返しを終えた既存記録の照合入力である。
 CLIは、反映記録の取得元、全対象ID、担当、版、実反映記述、検証記録と反映日時を照合する。
+検証記録にはexecution・origin_saved・identityの確認結果を必須とする。
 設定サーバー・フォーラム・Bot・本人と、正規GETした元質問本文・世代・範囲・返信も照合する。
 返信が編集されていたり、ほかの本人返信があったりする場合はPATCHせず、返信IDを独立記録へ残す。
 親担当は`recovery-replies`で原文と範囲を再確認する。勝手に別の回答を反映済み扱いにしない。
@@ -60,6 +77,9 @@ PATCH直前にpatch_pendingを保存し、対象スレッドだけに`{"archived
 GETが失敗した場合は同一manifestで再試行し、再送やメンションをしない。
 GETが未終了を返す場合も成功としない。検証済みの質問が再び開かれた場合は自動で閉じ直さない。
 未反映の返信の記録や終了結果には原文を入れず、元ToDoを完了にせず、担当を起動しない。
+返信保留を記録してもPATCHの試行と検証済みの結果を保持する。reusedは同じ受付の再実行を示す。
+1つのmanifestは本人返信1件だけを覆う。本人返信が複数ある質問は、このCLIで反映済みと推定して閉じない。
+中断時のrecovery-close.*.tmpは旧台帳の代わりにせず、当該コマンドの終了と所有を確認して片付ける。
 
 HTTPクライアントはDiscord公式の `DiscordBot (URL, version)` 形式で正確な識別情報を送る。
 アーカイブの開始位置はISO8601を保持し、タイムゾーンの `+` もURLのクエリー値としてエンコードする。

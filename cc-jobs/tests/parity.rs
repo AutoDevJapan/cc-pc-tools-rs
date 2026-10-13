@@ -10416,12 +10416,14 @@ mod end_to_end {
             .iter()
             .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
             .collect();
-        let mut c = hidden_command("taskkill");
-        let r = c
-            .args(["/F", "/PID", &pids[0].to_string()])
-            .output()
-            .unwrap();
-        assert!(r.status.success());
+        // Stop only the retained supervisor. Its children deliberately stay
+        // alive, so this still exercises cancellation of a genuinely lost job.
+        let supervisor = FixtureProcess::retain(
+            pids[0],
+            proc_created(pids[0]).expect("fixture supervisor is live"),
+        )
+        .expect("retain the owned fixture supervisor");
+        assert!(supervisor.stop());
         e.until(|| {
             serde_json::from_slice::<Vec<Value>>(&e.cli(&["status", "--json"], "").stdout).unwrap()
                 [0]["status"]

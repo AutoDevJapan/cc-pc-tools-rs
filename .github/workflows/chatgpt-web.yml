@@ -41,7 +41,8 @@ jobs:
             Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
             Select-Object -First 1
           if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
-          "CHATGPT_WEB_CHROME=$chrome" >> $env:GITHUB_ENV
+          if (!(Test-Path -LiteralPath $env:PC_CI_CHROME -PathType Leaf)) { throw 'The real-Chrome CPU launcher is required.' }
+          "CHATGPT_WEB_CHROME=$env:PC_CI_CHROME" >> $env:GITHUB_ENV
       - run: cargo nextest run --locked -p chatgpt-web -p cc-chrome
       # This package has only a binary target; Cargo cannot run --doc for it.
       - run: cargo clippy --locked -p chatgpt-web -p cc-chrome --all-targets -- -D warnings

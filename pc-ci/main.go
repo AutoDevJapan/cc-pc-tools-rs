@@ -119,6 +119,21 @@ func currentHead(client *http.Client, endpoint, token, sha string) error {
 }
 
 func main() {
+	if strings.EqualFold(filepath.Base(os.Args[0]), "chrome-fixture.exe") {
+		// This launches real Chrome against the fixtures' own temporary profile,
+		// using software rendering while the PC GPU belongs to another workload.
+		c := exec.Command(`C:\Program Files\Google\Chrome\Application\chrome.exe`, append(os.Args[1:], "--disable-gpu", "--disable-gpu-compositing", "--use-angle=swiftshader")...)
+		hideConsole(c)
+		c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := c.Run(); err != nil {
+			if e, ok := err.(*exec.ExitError); ok {
+				os.Exit(e.ExitCode())
+			}
+			fmt.Fprintln(os.Stderr, "CPU Chrome fixture launch unavailable")
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && (os.Args[1] == "hook" || os.Args[1] == "admit") {
 		if err := hook(os.Args[1] == "admit"); err != nil {
 			fmt.Fprintln(os.Stderr, err)

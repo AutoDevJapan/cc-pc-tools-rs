@@ -104,7 +104,9 @@ func boundedSchedulerTree(path string) bool {
 		if match == nil {
 			continue
 		}
-		// Preserve ToDo2532's deployed fix: membership precedes external Git.
+		// Git is an external process. Check path membership first so one
+		// unrelated root cannot consume every scheduled repair's deadline.
+		// The matching root still needs the same origin and physical checks.
 		if !sourceVerified(root) {
 			continue
 		}

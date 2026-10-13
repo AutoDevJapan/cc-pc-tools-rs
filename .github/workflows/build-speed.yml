@@ -7,7 +7,7 @@ on:
     paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
 # Superseded PR heads need no second verification; preserve every main run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read

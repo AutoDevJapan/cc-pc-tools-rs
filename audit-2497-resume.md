@@ -128,3 +128,9 @@ Claudeの契約画面には10月28日の自動更新日が表示された。請�
 ### 未完了
 
 ChatGPTのほかのアカウントは本人との対応が未確認なので閲覧しない。Google Workspace/Cloudの請求先照合、GitHubの10月請求額、ChatGPTの10月金額と既存の9/30承認回答待ち、ToDo2498の購入操作・承認照合は継続する。請求証拠フォルダーはclient_resource=true判定のため開かない。
+
+### 2026-10-13 再開時のGitHub請求確認
+
+未確認のGitHub請求額を確認するため、専用ジョブIDでowner-chrome経由のタブを作成した。inventoryとジョブの記録でinstance・generation・tabの所有一致を確認したが、CUAから当該ブラウザーpipeに接続できずページ内容は読めなかった。直接CUAのChromeタブ作成もvisibility capability unavailableで失敗した。作成タブをowner-chrome closeで閉じ、inventoryで消失を確認済み。オーナーの既存タブには触れていない。
+
+GitHubの10月請求・支払い、Google Workspace/Cloudの請求先照合、残る契約請求確認、ChatGPTの9/30承認待ち、ToDo2498との購入操作照合は未完了。請求表・支払い・契約の変更はしていない。接続可能なCUA経路が復旧したらGitHubの請求画面など未確認項目を続ける。

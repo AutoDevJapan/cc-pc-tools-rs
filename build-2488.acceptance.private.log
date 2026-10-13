@@ -1,0 +1,22 @@
+cc-jobs	Admit current Windows source before checkout	2026-10-13T16:55:05.6012110Z Accepted current repository revision 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+cc-jobs	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:05.6566202Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+cc-jobs	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:10.0206991Z [command]"C:\Program Files\Git\cmd\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+cc-jobs	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:11.2520293Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+cc-jobs	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:11.3809621Z [command]"C:\Program Files\Git\cmd\git.exe" checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+cc-jobs	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:11.4697620Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+cc-jobs	Verify the repaired isolated worktree fixture first	2026-10-13T16:55:28.6835041Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 10.32s
+cc-jobs	Verify the repaired isolated worktree fixture first	2026-10-13T16:55:29.2377555Z      Summary [   0.340s] 1 test run: 1 passed, 80 skipped
+cc-jobs	Verify owned process-tree cancellation before the full suite	2026-10-13T16:55:39.6296780Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 8.86s
+cc-jobs	Verify owned process-tree cancellation before the full suite	2026-10-13T16:55:40.9231961Z      Summary [   0.786s] 1 test run: 1 passed, 334 skipped
+cc-jobs	Verify recovered job references and the explicit resume boundary first	2026-10-13T16:55:55.0517556Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 13.13s
+cc-jobs	Verify recovered job references and the explicit resume boundary first	2026-10-13T16:55:55.3543112Z     Starting 18 tests across 2 binaries
+cc-jobs	Verify recovered job references and the explicit resume boundary first	2026-10-13T16:55:55.7843888Z      Summary [   0.430s] 18 tests run: 18 passed, 0 skipped
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:56:32.4182838Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 35.50s
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:56:46.0934895Z     Starting 2145 tests across 116 binaries (5 tests skipped)
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:58:41.2930730Z         FAIL [   2.511s] (1097/2145) cc-jobs::parity end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:58:41.2932248Z     test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 334 filtered out; finished in 2.50s
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:58:41.2944183Z     thread 'end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration' (18928) panicked at cc-jobs\tests\parity.rs:10597:9:
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T16:58:41.2944510Z     assertion failed: e.cli(&["cancel", &parent], "").status.success()
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T17:03:21.0423738Z      Summary [ 394.949s] 2145 tests run: 2144 passed (1 slow), 1 failed, 5 skipped
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T17:03:21.0424531Z         FAIL [   2.511s] (1097/2145) cc-jobs::parity end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration
+cc-jobs	Run cargo nextest run --locked --workspace --no-fail-fast --test-threads 10	2026-10-13T17:03:21.0454336Z error: test run failed

@@ -1,0 +1,55 @@
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:30.8106739Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:30.9650638Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:32.6461212Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:32.6508630Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:32.6579738Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	﻿2026-10-13T16:46:33.7409650Z ##[group]Run cargo test --locked -p cc-bookmark-queue
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:33.7409882Z ^[[36;1mcargo test --locked -p cc-bookmark-queue^[[0m
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:33.7417742Z shell: /usr/bin/bash -e {0}
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:33.7417882Z env:
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:33.7417990Z   CC_LINUX_RUNNER_MODE: normal
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:33.7418111Z ##[endgroup]
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.7214162Z linux-gate-admitted build-jobs=8 test-threads=8
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9554121Z     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9653993Z      Running unittests src/lib.rs (/work/target/debug/deps/cc_bookmark_queue-b0db68c2a9bcc1d4)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9671542Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9672247Z running 10 tests
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9683854Z test tests::canonical_repositories_only ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9685026Z test tests::add_deduplicates_and_receipt_is_replayable ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9686140Z test tests::authenticated_http_flow_and_rejections ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9686563Z test tests::invalid_result_keeps_pending_and_cannot_escape ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9687161Z test tests::task_is_interactive_hidden_and_not_time_limited ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9690307Z test tests::validates_names_categories_and_ids ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9692178Z test tests::init_preserves_token_and_generates_minimal_extension ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9692712Z test tests::partial_or_corrupt_json_does_not_block_valid_entries ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9700858Z test tests::concurrent_producers_create_one_complete_json ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9707514Z test tests::http_parser_accepts_json_and_rejects_bad_framing ... ok
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9708181Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9709180Z test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9709378Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9713259Z      Running unittests src/main.rs (/work/target/debug/deps/bookmark_queue-689630f8b292e7a7)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9723812Z    Doc-tests cc_bookmark_queue
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9723989Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9724118Z running 0 tests
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9724237Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9724531Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:34.9725149Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:35.0117709Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:35.0119606Z running 0 tests
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:35.0119911Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:35.0123684Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run cargo test --locked -p cc-bookmark-queue	2026-10-13T16:46:35.0123897Z 
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1044817Z ok 1 - worker starts immediately and heartbeat continues while a poll is blocked
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1056630Z ok 2 - server outage releases polling guard and next tick retries
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1126500Z ok 3 - creates category and bookmark only within side folder; replay returns exists
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1127627Z ok 4 - reuses category and leaves unrelated folders untouched
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1131531Z ok 5 - same repository URL with case, git suffix, slash or query is not duplicated anywhere
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1133150Z ok 6 - missing or ambiguous side path never writes
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1134505Z ok 7 - ambiguous and managed categories never receive writes
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1149634Z ok 8 - moved category is rejected just before bookmark creation
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1163610Z ok 9 - tampered queue ID, unsafe URL, invalid folder or title never writes
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1176785Z ok 10 - bookmark API failure sends no success receipt and next poll retries
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1202975Z ok 11 - lost acknowledgement is replayed as exists without another bookmark
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1205272Z ok 12 - unauthorized server and malformed batch never writes
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1219164Z ok 13 - permissions and CSP restrict network to fixed loopback port
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run node --test cc-bookmark-queue/tests/*.test.js	2026-10-13T16:46:37.1221088Z ok 14 - URL canonicalization rejects non-repository destinations

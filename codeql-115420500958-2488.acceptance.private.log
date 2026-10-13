@@ -1,0 +1,7 @@
+analyze (javascript-typescript, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:01.4103499Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (javascript-typescript, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:01.5574866Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (javascript-typescript, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:02.6679182Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+analyze (javascript-typescript, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:02.6743725Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (javascript-typescript, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:55:02.6809245Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (javascript-typescript, none)	Run github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d	2026-10-13T16:55:36.3936503Z Successfully uploaded results
+analyze (javascript-typescript, none)	Run github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d	2026-10-13T16:55:41.8132533Z Analysis upload status is complete.

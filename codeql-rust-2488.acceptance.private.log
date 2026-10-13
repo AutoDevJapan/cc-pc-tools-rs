@@ -1,0 +1,7 @@
+analyze (rust, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:51.3886813Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (rust, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:51.6796323Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (rust, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:53.1340536Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+analyze (rust, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:53.1482100Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (rust, none)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:46:53.1618192Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+analyze (rust, none)	Run github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d	2026-10-13T16:50:37.4857715Z Successfully uploaded results
+analyze (rust, none)	Run github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d	2026-10-13T16:50:42.9937640Z Analysis upload status is complete.

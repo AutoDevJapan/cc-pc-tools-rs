@@ -1,0 +1,57 @@
+name: Agent progress tools
+on:
+  push:
+    branches: [main]
+    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', '.github/workflows/agent-progress.yml']
+  pull_request:
+    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', '.github/workflows/agent-progress.yml']
+permissions:
+  contents: read
+concurrency:
+  group: agent-progress-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 10
+    steps:
+      - name: Admit current source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify the fixed source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD) -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Wrong source revision' }
+      - name: Test and build the progress collector
+        shell: pwsh
+        working-directory: tools/agent-progress
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go test -count=1 ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath -o "$env:RUNNER_TEMP/agent-progress.exe" .
+          exit $LASTEXITCODE
+      - name: Test and build the interactive launcher
+        shell: pwsh
+        working-directory: tools/codex-progress-tui/launcher
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go test -count=1 ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath -o "$env:RUNNER_TEMP/codex-progress-launch.exe" .
+          exit $LASTEXITCODE

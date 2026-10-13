@@ -14,3 +14,4 @@ cc-bookmark-queue/extension/config.js
 /docs/runner-handoff.private.md
 /docs/runner-*.private.ps1
 /docs/runner-*.private.txt
+/docs/runner-*.private.md

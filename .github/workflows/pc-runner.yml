@@ -1,7 +1,8 @@
 name: PC runner acceptance
 on:
   push:
-    branches: ['scheduler/todo-2510-github-pc-ci-pc']
+    branches: [main]
+    paths: ['pc-ci/**', '.github/workflows/pc-runner.yml']
   pull_request:
     paths: ['pc-ci/**', '.github/workflows/pc-runner.yml']
 permissions:

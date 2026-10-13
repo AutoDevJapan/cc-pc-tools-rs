@@ -279,6 +279,17 @@ fn admitted_launch(child: &Value, jobs: &[Value], job: &Value) -> bool {
 /// A launch key created by preparation alone is not evidence of resource admission.
 pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), String> {
     let child = item(db, &job["todo_id"])?;
+    // The finite recovery permission also expires while an admitted job waits
+    // in the ordinary OAuth queue. A new key cannot repeat this same review.
+    if child["product_review_allocation"].is_object() {
+        let at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|_| "finite review clock is unavailable")?
+            .as_secs();
+        if !finite_review_launch(child, job, at) {
+            return Err("finite review permission has expired or changed".into());
+        }
+    }
     let ownership = from_job(job);
     if !child["subwork"].is_object()
         || child["subwork"] != job["subwork"]
@@ -301,4 +312,21 @@ pub fn refresh_job(db: &Value, jobs: &[Value], job: &mut Value) -> Result<(), St
         );
     }
     apply(db, child, jobs, job, true)
+}
+
+pub fn finite_review_launch(child: &Value, job: &Value, at: u64) -> bool {
+    let binding = &child["product_review_allocation"]["binding"];
+    (1791849600..1792540800).contains(&at)
+        && child["id"] == 2407
+        && job["todo_id"] == 2407
+        && binding["key"] == "c8809d28af00fce0cad714928b5aa3cf"
+        && job["launch_key"] == binding["key"]
+        && binding["head"] == "3b14dd1f43ef5a19e1f09b0959819f3e24f151c3"
+        && binding["request_sha256"]
+            == "45acf355ad003318dc6ba4b06c0c1b0825e6805d8cb6427df53e9ae994b92f27"
+        && binding["spec"] == child["spec"]
+        && binding["needs"] == child["needs"]
+        && binding["subwork"] == child["subwork"]
+        && binding["worktree"] == child["scheduler"]["worktree"]
+        && binding["branch"] == child["scheduler"]["branch"]
 }

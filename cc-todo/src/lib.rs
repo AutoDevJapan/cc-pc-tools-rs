@@ -190,6 +190,11 @@ pub enum Command {
         #[arg(long)]
         apply: bool,
     },
+    /// Admit only the original fixed-head review through normal scheduler allocation.
+    ProductReviewAllocate {
+        #[arg(long)]
+        apply: bool,
+    },
     /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
     WatchPreview {
         #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
@@ -1154,11 +1159,16 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
         | Command::ProductResume { .. }
+        | Command::ProductReviewAllocate { .. }
         | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ProductReviewAllocate { apply } = &cli.command {
+        println!("{}", product_resume::allocate_review(paths, *apply)?);
+        return Ok(());
+    }
     if let Command::ProductResume { id, apply } = &cli.command {
         let report = product_resume::run(paths, *id, *apply)?;
         println!("{report}");

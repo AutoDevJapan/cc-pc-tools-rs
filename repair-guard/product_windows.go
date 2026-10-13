@@ -19,6 +19,8 @@ import (
 const productStore = "D:/CC/Tools/todo/todo.json"
 const gameRoot = "C:/Users/makhmeto/Desktop/dev/ADJ/PhosGaea-Vol1"
 const gameTree = "C:/Users/makhmeto/Desktop/dev/ADJ/PhosGaea-Vol1-wt/todo-1626-1"
+const reviewTree = "C:/Users/makhmeto/Desktop/dev/ADJ/PhosGaea-Vol1-wt/todo-2407-work"
+const reviewHead = "3b14dd1f43ef5a19e1f09b0959819f3e24f151c3"
 const videoTree = "D:/CC/Work/youtube-daily/beats/2026-10-14"
 const gameJob = "20261011-234558-orch-9a5f7b7c6fb45eb2815aa60ea8a5df95"
 const videoJob = "20261013-060349-Copyright-Free-Beat-Maker---AI-Beats-10-"
@@ -228,7 +230,7 @@ func productPathAllowed(path string) bool {
 		return false
 	}
 	// Unknown resources do not cause even metadata reads or Git invocations.
-	membership := within(gameTree, absolute) || within(gameRoot, absolute) || within(videoTree, absolute)
+	membership := within(gameTree, absolute) || within(gameRoot, absolute) || within(videoTree, absolute) || within(reviewTree, absolute)
 	// A regular `todo edit --spec` creates a new saved copy. Only the exact
 	// selected row's copy, with identical verified bytes, can qualify below.
 	membership = membership || (same(filepath.Dir(absolute), "D:/CC/Tools/todo/specs") && savedSpecName.MatchString(filepath.Base(absolute)))
@@ -238,6 +240,7 @@ func productPathAllowed(path string) bool {
 		"D:/CC/Tools/todo/specs/2475-9c08c1c10273475f87e003ca75cb4629.md",
 		"D:/CC/Work/product-worker-recovery-20261013/non-client-handoff.md",
 		"D:/CC/Work/product-worker-recovery-20261013/safe-status.json",
+		"D:/CC/Work/product-worker-recovery-20261013/game-allocation-handoff.md",
 	} {
 		membership = membership || same(absolute, request)
 	}
@@ -247,6 +250,18 @@ func productPathAllowed(path string) bool {
 	db, e := readObject(productStore, 64<<20)
 	if e != nil {
 		return false
+	}
+	if same(absolute, "D:/CC/Work/product-worker-recovery-20261013/game-allocation-handoff.md") {
+		worker := itemAt(db, 2539)
+		spec := "D:/CC/Tools/todo/specs/2539-fa72675c1abb4eeb955f41d4dcefa8f0.md"
+		if worker == nil || worker["project"] != "cc-pc-tools-rs" || !specRetained(worker, spec) || !exactPhysical(spec) {
+			return false
+		}
+		body, err := readBounded(spec, 1<<20)
+		if err != nil || hashBytes(body) != "375cc857a2ac53b1fdb8a1b37c30604614785bbd1b29290a3dfc99807746c567" || !sourceVerified(base) {
+			return false
+		}
+		return exactPhysical(filepath.Dir(absolute)) && physicalOrPlannedWithin(filepath.Dir(absolute), absolute)
 	}
 	for _, id := range []int{1626, 2407, 2475} {
 		r := verifyProduct(db, id)
@@ -261,6 +276,12 @@ func productPathAllowed(path string) bool {
 			return true
 		}
 		item := itemAt(db, id)
+		if id == 2407 && within(reviewTree, absolute) && reviewBinding(item) {
+			container := filepath.Dir(reviewTree)
+			if reviewPhysical(absolute, container) {
+				return true
+			}
+		}
 		if same(absolute, str(item["spec"])) && within("D:/CC/Tools/todo/specs", absolute) && exactPhysical(absolute) {
 			body, err := readBounded(absolute, 1<<20)
 			if err == nil && hashBytes(body) == r["request_sha256"] {
@@ -307,6 +328,38 @@ func productPathAllowed(path string) bool {
 		return exactPhysical(output)
 	}
 	return false
+}
+
+func reviewPhysical(target, container string) bool {
+	if !exactPhysical(container) {
+		return false
+	}
+	if _, err := os.Lstat(reviewTree); err == nil {
+		return exactPhysical(reviewTree) && physicalOrPlannedWithin(reviewTree, target)
+	} else if !os.IsNotExist(err) {
+		return false
+	}
+	// A missing root has no descendants; only the precise planned tree is allowed.
+	return within(reviewTree, target) && physicalOrPlannedWithin(container, target)
+}
+
+func reviewBinding(item object) bool {
+	scheduler, rel := obj(item["scheduler"]), obj(item["subwork"])
+	b := obj(obj(item["product_review_allocation"])["binding"])
+	needs, ok := item["needs"].([]any)
+	return num(item["id"]) == 2407 && item["project"] == "PhosGaea-Vol1" && ok && len(needs) == 0 &&
+		same(str(scheduler["worktree"]), reviewTree) && scheduler["branch"] == "scheduler/todo-2407-work" &&
+		num(rel["parent_todo_id"]) == 1626 && rel["origin_job_id"] == gameJob && rel["kind"] == "review" &&
+		b["head"] == reviewHead && b["request_sha256"] == "45acf355ad003318dc6ba4b06c0c1b0825e6805d8cb6427df53e9ae994b92f27" &&
+		b["key"] == "c8809d28af00fce0cad714928b5aa3cf" && same(str(b["worktree"]), reviewTree) &&
+		b["branch"] == scheduler["branch"] && b["spec"] == item["spec"] &&
+		jsonEqual(b["subwork"], item["subwork"]) && jsonEqual(b["needs"], item["needs"])
+}
+
+func jsonEqual(a, b any) bool {
+	x, e := json.Marshal(a)
+	y, f := json.Marshal(b)
+	return e == nil && f == nil && string(x) == string(y)
 }
 
 var savedSpecName = regexp.MustCompile(`(?i)^(1626|2407|2475)-[0-9a-f]{32}\.md$`)

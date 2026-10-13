@@ -11,24 +11,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
+env:
+  CI_JOB_TOKEN: ${{ github.token }}
 jobs:
   recovery:
-    runs-on: windows-latest
-    timeout-minutes: 20
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: safe-delete-recovery
     steps:
+      - name: Admit current Windows source before checkout
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: safe-delete-recovery
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - name: Create isolated CI fixtures
         shell: pwsh
         run: |

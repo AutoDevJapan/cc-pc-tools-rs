@@ -11,19 +11,34 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
+env:
+  CI_JOB_TOKEN: ${{ github.token }}
 jobs:
   test:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: Windows
+            labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
+          - os: Linux
+            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    runs-on: ${{ matrix.labels }}
     timeout-minutes: 10
     defaults:
       run:
         working-directory: record-recovery
     steps:
+      - name: Admit current Windows source before checkout
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-go@v6
         with:

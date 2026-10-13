@@ -11,23 +11,28 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
+env:
+  CI_JOB_TOKEN: ${{ github.token }}
 jobs:
   cc-jobs:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     # The cargo gate, its locks and the process tests are Windows only.
-    runs-on: windows-latest
-    timeout-minutes: 30
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 90
     steps:
+      - name: Admit current Windows source before checkout
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
-      - uses: FedericoCarboni/setup-ffmpeg@v3
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - run: cargo nextest run --locked --workspace --no-fail-fast --test-threads 10
       - run: cargo test --locked --workspace --doc -- --test-threads=10
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
@@ -35,14 +40,22 @@ jobs:
     # Only this finite repair needs downloadable PC binaries; do not grow storage on every PR.
     if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460' || github.event.pull_request.head.ref == 'fix/question-state-capacity-2444') && github.event.pull_request.head.repo.full_name == github.repository
     needs: cc-jobs
-    runs-on: windows-latest
-    timeout-minutes: 30
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 90
     steps:
+      - name: Admit current Windows source before checkout
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - run: cargo build --locked --release -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask -p localai-web-rs --bins
       - name: Record the exact checked-out source and binary hashes
         shell: pwsh

@@ -4,6 +4,70 @@ use clap::Parser;
 use serde_json::{Value, json};
 use std::path::Path;
 
+#[test]
+fn actual_cli_releases_only_due_technical_waits() {
+    let folder = tempfile::tempdir().unwrap();
+    let paths = Paths::at(folder.path(), &folder.path().join("jobs"));
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    for (status, until, dependency, expected) in [
+        ("wait", at - 60, false, true),
+        ("wait", at + 3600, false, false),
+        ("block", at - 60, false, false),
+        ("wait", at - 60, true, false),
+    ] {
+        let mut before = db();
+        before["items"][0]["status"] = json!(status);
+        before["items"][0]["wait_ready"] =
+            json!({"condition":"retry-time","since":at-120,"not_before":until});
+        if dependency {
+            before["items"][0]["wait_on"] = json!([2]);
+            before["items"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"id":2,"status":"todo"}));
+        }
+        std::fs::write(&paths.store, serde_json::to_vec(&before).unwrap()).unwrap();
+        let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_todo"));
+        child
+            .args(["resume-ready", "1", "--condition", "retry-time"])
+            .env("CC_TODO_HOME", folder.path())
+            .env("CC_TODO_JOBS", folder.path().join("jobs"));
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            child.creation_flags(0x08000000);
+        }
+        let output = child.output().unwrap();
+        assert!(
+            output.status.success(),
+            "CLI rejected the technical condition: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let receipt: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(receipt["id"], 1);
+        assert_eq!(receipt["resumed"], expected);
+        let after = cc_todo::read_store(&paths.store).unwrap();
+        if expected {
+            assert_eq!(after["items"][0]["status"], "todo");
+            assert_eq!(after["items"][0]["jobs"], before["items"][0]["jobs"]);
+            assert_eq!(
+                after["items"][0]["scheduler"]["worktree"],
+                before["items"][0]["scheduler"]["worktree"]
+            );
+            assert!(after["items"][0]["wait_ready"].is_null());
+        } else {
+            assert_eq!(after, before);
+        }
+    }
+    assert!(
+        cc_todo::Cli::try_parse_from(["todo", "resume-ready", "1", "--condition", "unknown"])
+            .is_err()
+    );
+}
+
 fn db() -> Value {
     json!({"projects":{"demo":"C:/repo"},"items":[
         {"id":1,"project":"demo","title":"Plusで実送受信する","status":"doing","jobs":["old"],"note":"既存メモ","progress":60,"spec":"saved.md","dispatchable":true,
@@ -172,7 +236,10 @@ fn timed_retry_suppresses_repeated_launches_and_wakes_original_task_once() {
             .is_empty()
     );
     let mut future = db();
-    let actual_now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let actual_now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     ready::register_retry(&mut future, 1, 3600, "接続不足", actual_now).unwrap();
     assert!(
         execute(

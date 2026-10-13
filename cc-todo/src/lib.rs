@@ -164,7 +164,7 @@ pub enum Command {
     /// Release only this recorded wait after a fresh readiness check succeeds.
     ResumeReady {
         id: i64,
-        #[arg(long, value_parser=["chatgpt-plus"])]
+        #[arg(long, value_parser=["chatgpt-plus", "retry-time"])]
         condition: String,
     },
     /// Record measured completion without changing status, job ownership or the task note.

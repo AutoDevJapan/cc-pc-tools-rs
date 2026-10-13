@@ -1,4 +1,6 @@
 name: CodeQL PC
+env:
+  CC_LINUX_RUNNER_MODE: normal
 on:
   push:
     branches: [main]

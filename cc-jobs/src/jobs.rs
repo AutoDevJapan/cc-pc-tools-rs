@@ -935,6 +935,20 @@ impl Context {
                 self.rt.sleep(3.);
                 continue;
             }
+            if job["capacity_wait_pending"] == true {
+                let inventory = self.capacity_inventory();
+                let _state = self.job_lock(jid, "state.lock")?;
+                let mut fresh = self.load(jid)?;
+                if s(&fresh, "status") == "queued"
+                    && fresh["capacity_wait_pending"] == true
+                    && fresh["cancel_requested"] != true
+                {
+                    fresh["capacity_inventory"] = inventory;
+                    self.recheck_capacity_wait(&mut fresh);
+                    self.save(&fresh)?;
+                }
+                continue;
+            }
             // Most polls end in "keep waiting". Decide that from a lock-free
             // snapshot and take the global gate only when this job may start,
             // its wait reason changed, or the periodic gated pass is due (that
@@ -1277,6 +1291,9 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !setup_failed {
+            job["capacity_inventory"] = self.capacity_inventory();
+        }
         let gate = match self.queue_lock() {
             Ok(gate) => Some(gate),
             Err(error) => {
@@ -1293,8 +1310,10 @@ impl Context {
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
             && !setup_failed
-            && if crate::capacity::is_capacity(s(&job, "last_error")) {
+            && if s(&job, "last_failure_kind") == "capacity" {
                 self.retry_capacity(&mut job)
+            } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind")) {
+                false
             } else {
                 self.retry_429(&mut job, cfg)
             };

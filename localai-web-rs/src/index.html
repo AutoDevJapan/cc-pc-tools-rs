@@ -80,6 +80,8 @@
 .ops-filters button{padding:8px 12px}
 .ops-error{padding:12px;border:1px solid #935c37;background:#2c201a;color:#ffcf9c;border-radius:6px}
 .ops-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.ops-metric-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-column:span 2;gap:10px;min-width:0}
+.ops-metric .ops-skills-meta{display:block;margin-top:3px;font-size:11px;color:var(--ops-muted)}
 .ops-metric{padding:11px 16px;border:1px solid var(--ops-line);border-radius:6px;background:linear-gradient(145deg,#102137,#0b1829)}
 .ops-metric span{display:block;font-size:12px;color:var(--ops-muted)}
 .ops-metric strong{display:block;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:3px}
@@ -198,11 +200,20 @@
     function opsCount(workers){return `稼働 ${workers.filter(w=>w.status==='working').length} / ${workers.length}`}
     function opsKey(...parts){return JSON.stringify(parts)}
     function opsRestoreBoardFocus(key){const node=$$('[data-op-focus]').find(el=>el.dataset.opFocus===key);if(node)node.focus()}
+    function opsSkillsSummary(inventory){
+      const state=inventory&&inventory.state,count=inventory&&inventory.count;
+      const complete=state==='complete'&&typeof count==='number'&&Number.isSafeInteger(count)&&count>=0;
+      const label=complete?`${count.toLocaleString('ja-JP')} <small>件</small>`:state==='partial'?'一部未取得':state==='unavailable'?'取得失敗':'未取得';
+      const at=inventory&&inventory.checkedAt;
+      const checked=typeof at==='number'&&Number.isFinite(at)&&at>0?opsTime(at):'未確認';
+      return {value:label,caption:`確認 ${checked}`};
+    }
     function renderOperations(){
       const focused=document.activeElement&&document.activeElement.dataset.opFocus;
       const data=opsState.snapshot, departments=opsList(data&&data.departments), all=departments.flatMap(opsWorkers).concat(opsList(data&&data.unassignedProducts).flatMap(p=>opsList(p.workers)));
       const metric=data&&data.metrics||{};
-      const metricCard=(label,value,kind='')=>`<div class="ops-metric ${kind}"><span>${label}</span><strong>${value}</strong></div>`;
+      const skills=opsSkillsSummary(data&&data.skillsInventory);
+      const metricCard=(label,value,kind='',caption='')=>`<div class="ops-metric ${kind}"><span>${label}</span><strong>${value}</strong>${caption?`<small class="ops-skills-meta">${esc(caption)}</small>`:''}</div>`;
       $('#ops-metrics').innerHTML=[
         ...(data&&data.protectionMode==='masked_metadata'?[]:[
           metricCard('送信を確認した未回答質問',opsValue(metric.confirmedUnansweredQuestions),'waiting'),
@@ -214,7 +225,7 @@
         metricCard('要対応ワーカー',data?all.filter(w=>w.status==='attention').length:'—','attention'),
         metricCard('CPU',opsValue(metric.cpuPercent,'%')),
         metricCard('メモリ',`${opsValue(metric.memoryUsedGb)} <small>/ ${opsValue(metric.memoryTotalGb)} GB</small>`),
-        metricCard('実行ジョブ / 起動枠',`${opsValue(metric.activeJobs)} <small>/ ${opsValue(metric.jobLimit)}</small>`)
+        `<div class="ops-metric-pair">${metricCard('実行ジョブ / 起動枠',`${opsValue(metric.activeJobs)} <small>/ ${opsValue(metric.jobLimit)}</small>`)}${metricCard('Skills',skills.value,'',skills.caption)}</div>`
       ].join('');
       renderOpsQuestions(data);
       const sources=opsList(data&&data.sources), good=data&&data.sourceOk===true&&sources.every(s=>s.ok===true||s.state==='unknown')&&!opsState.error;

@@ -9,10 +9,10 @@
 //! recovery-messages.*.tmp beside them. The JSON contains append-only events;
 //! each snapshot is flushed and atomically replaced under the dedicated byte lock.
 //! Token/config contents and attachment paths/bytes are never receipt fields.
-use crate::core::{self, ByteLock, Context, MAX_CONTENT, Result, SILENT};
+use crate::core::{self, ByteLock, Context, Result, MAX_CONTENT, SILENT};
 use clap::Args;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -260,6 +260,11 @@ enum Event {
     Intent {
         request: Box<Request>,
     },
+    /// Only an unsent question's mistaken question-thread origin can be moved
+    /// to that exact question's already verified silent progress thread.
+    OriginCorrected {
+        request: Box<Request>,
+    },
     Alias {
         request_id: String,
         canonical_request_id: String,
@@ -374,8 +379,12 @@ impl Ledger {
                 _ => None,
             })
             .unwrap_or(id);
-        self.events.iter().find_map(|event| match event {
-            Event::Intent { request } if request.request_id == canonical => Some(request.as_ref()),
+        self.events.iter().rev().find_map(|event| match event {
+            Event::Intent { request } | Event::OriginCorrected { request }
+                if request.request_id == canonical =>
+            {
+                Some(request.as_ref())
+            }
             _ => None,
         })
     }
@@ -475,6 +484,42 @@ impl Ledger {
                     {
                         return Err("invalid or duplicate recovery intent".into());
                     }
+                }
+                Event::OriginCorrected { request } => {
+                    let prior = requests
+                        .get(&request.request_id)
+                        .ok_or("origin correction has no original intent")?;
+                    if !only_origin_changed(prior, request)?
+                        || phases.keys().any(|(id, _)| id == &request.request_id)
+                        || complete.contains_key(&request.request_id)
+                    {
+                        return Err(
+                            "origin correction changed scope or follows a possible POST".into()
+                        );
+                    }
+                    let (old_origin, new_origin) = ask_origins(prior, request)?;
+                    let linked = verified.iter().any(|((question_id, phase), receipt)| {
+                        phase == "question:0"
+                            && receipt.thread_id == old_origin
+                            && requests
+                                .get(question_id)
+                                .is_some_and(|original| original.destination == request.destination)
+                            && bots.get(question_id) == Some(&receipt.author_id)
+                            && verified
+                                .get(&(question_id.clone(), "progress".into()))
+                                .is_some_and(|progress| {
+                                    progress.thread_id == new_origin
+                                        && progress.author_id == receipt.author_id
+                                        && progress.flags & SILENT != 0
+                                        && progress.owner_mentions == 0
+                                })
+                    });
+                    if !linked {
+                        return Err(
+                            "origin correction lacks the exact question/progress receipts".into(),
+                        );
+                    }
+                    requests.insert(request.request_id.clone(), request);
                 }
                 Event::Alias {
                     request_id,
@@ -828,7 +873,83 @@ fn title_input(text: &str, secrets: &SecretCheck) -> Result<String> {
     Ok(text.into())
 }
 
-fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec<Image>> {
+// One newly generated, visually inspected owner UI proposal has independent
+// provenance even while the original exclusion file is missing. This bounded
+// receipt is not a replacement deny list and never qualifies another image.
+const UI_PROPOSAL_REQUEST: &str = "parallel-agent-progress-tui-2543-proposal-v1-20261013";
+const UI_PROPOSAL_SOURCE: &str = "C:/Users/makhmeto/.codex/generated_images/01a120c7-be21-7b52-810d-d24af607e71e/exec-05d94163-1125-44e2-8920-91123f5c5825.png";
+const UI_PROPOSAL_COPY: &str = "D:/CC/Work/parallel-agent-progress-tui-20261013/ui-proposal-v1.png";
+const UI_PROPOSAL_SHA256: &str = "b4f333116dae118b3c9ca8d51892849d5552b48c009729256ebecfd76944a5d8";
+
+fn image_path_key(path: &Path) -> String {
+    path.to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .replace('\\', "/")
+        .to_lowercase()
+}
+
+fn proposal_receipt_matches(
+    request: &str,
+    requested: &str,
+    resolved: &str,
+    source_resolved: &str,
+    sha256: &str,
+    now: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    let starts = chrono::DateTime::parse_from_rfc3339("2026-10-13T00:00:00Z").unwrap();
+    let expires = chrono::DateTime::parse_from_rfc3339("2026-10-21T00:00:00Z").unwrap();
+    request == UI_PROPOSAL_REQUEST
+        && now >= starts
+        && now < expires
+        && [
+            UI_PROPOSAL_SOURCE.to_lowercase(),
+            UI_PROPOSAL_COPY.to_lowercase(),
+        ]
+        .contains(&requested.to_owned())
+        && requested == resolved
+        && source_resolved == UI_PROPOSAL_SOURCE.to_lowercase()
+        && sha256 == UI_PROPOSAL_SHA256
+}
+
+fn verify_generated_proposal(
+    request: &str,
+    path: &Path,
+    resolved: &Path,
+    bytes: &[u8],
+) -> Result<()> {
+    if request != UI_PROPOSAL_REQUEST || !path.is_absolute() {
+        return Err("image protection list is unavailable; no image is sent".into());
+    }
+    let source = Path::new(UI_PROPOSAL_SOURCE);
+    let source_resolved =
+        fs::canonicalize(source).map_err(|_| "cannot verify original generated proposal")?;
+    let source_bytes = read_bounded(
+        fs::File::open(&source_resolved).map_err(|_| "cannot read original generated proposal")?,
+        IMAGE_BYTES,
+    )?;
+    if bytes != source_bytes
+        || !proposal_receipt_matches(
+            request,
+            &image_path_key(path),
+            &image_path_key(resolved),
+            &image_path_key(&source_resolved),
+            &format!("{:x}", Sha256::digest(bytes)),
+            chrono::Utc::now(),
+        )
+    {
+        return Err(
+            "generated proposal does not match its creation receipt; no image is sent".into(),
+        );
+    }
+    Ok(())
+}
+
+fn images(
+    ctx: &Context,
+    request: &str,
+    paths: &[PathBuf],
+    secrets: &SecretCheck,
+) -> Result<Vec<Image>> {
     if paths.is_empty() {
         return Ok(vec![]);
     }
@@ -836,10 +957,21 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
         return Err("at most ten recovery images are supported".into());
     }
     // This deny list is read only into memory; never returned or copied to receipts.
-    let clients = fs::read_to_string(&ctx.client_projects)
-        .map_err(|_| "image protection list is unavailable; no image is sent")?;
+    let clients = match fs::read_to_string(&ctx.client_projects) {
+        Ok(clients) => Some(clients),
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound
+                && request == UI_PROPOSAL_REQUEST
+                && paths.len() == 1 =>
+        {
+            None
+        }
+        Err(_) => return Err("image protection list is unavailable; no image is sent".into()),
+    };
     let denied: Vec<_> = clients
-        .lines()
+        .as_deref()
+        .into_iter()
+        .flat_map(str::lines)
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| line.replace('\\', "/").to_lowercase())
@@ -848,6 +980,21 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
     let mut total = 0;
     for path in paths {
         let resolved = fs::canonicalize(path).map_err(|_| "cannot resolve recovery image")?;
+        // This is a path/time preflight only. The original source and the
+        // actual candidate bytes are independently verified below before HTTP.
+        if clients.is_none()
+            && (!path.is_absolute()
+                || !proposal_receipt_matches(
+                    request,
+                    &image_path_key(path),
+                    &image_path_key(&resolved),
+                    &UI_PROPOSAL_SOURCE.to_lowercase(),
+                    UI_PROPOSAL_SHA256,
+                    chrono::Utc::now(),
+                ))
+        {
+            return Err("image is outside the generated proposal receipt; no image is sent".into());
+        }
         for checked in [path, &resolved] {
             let key = checked.to_string_lossy().replace('\\', "/").to_lowercase();
             if denied.iter().any(|entry| key.contains(entry))
@@ -872,7 +1019,7 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
                 return Err("protected files cannot be recovery attachments".into());
             }
         }
-        let file = fs::File::open(resolved).map_err(|_| "cannot read recovery image")?;
+        let file = fs::File::open(&resolved).map_err(|_| "cannot read recovery image")?;
         if !file
             .metadata()
             .map_err(|_| "cannot inspect recovery image")?
@@ -881,6 +1028,9 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
             return Err("a recovery attachment must be a regular image file".into());
         }
         let bytes = read_bounded(file, IMAGE_BYTES)?;
+        if clients.is_none() {
+            verify_generated_proposal(request, path, &resolved, &bytes)?;
+        }
         let (mime, extension) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
             ("image/png", "png")
         } else if bytes.starts_with(b"\xff\xd8\xff") {
@@ -913,6 +1063,81 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
         });
     }
     Ok(result)
+}
+
+fn ask_origins<'a>(prior: &'a Request, incoming: &'a Request) -> Result<(&'a str, &'a str)> {
+    match (&prior.operation, &incoming.operation) {
+        (
+            Kind::Ask {
+                origin_thread: old, ..
+            },
+            Kind::Ask {
+                origin_thread: new, ..
+            },
+        ) if old != new => Ok((old, new)),
+        _ => Err("origin correction requires two distinct question origins".into()),
+    }
+}
+
+fn only_origin_changed(prior: &Request, incoming: &Request) -> Result<bool> {
+    let (_, new_origin) = ask_origins(prior, incoming)?;
+    let mut allowed = prior.clone();
+    let Kind::Ask {
+        origin_thread,
+        decision_original,
+        ..
+    } = &mut allowed.operation
+    else {
+        return Ok(false);
+    };
+    *origin_thread = new_origin.into();
+    // Preserve all original decision data except its explicit origin metadata.
+    if decision_original.get("origin_thread_id").is_some() {
+        decision_original["origin_thread_id"] = json!(new_origin);
+    }
+    if decision_original["scope"].get("origin_thread_id").is_some() {
+        decision_original["scope"]["origin_thread_id"] = json!(new_origin);
+    }
+    allowed.fingerprint = allowed.fingerprint()?;
+    Ok(allowed == *incoming)
+}
+
+fn correct_unposted_origin(
+    ctx: &mut Context,
+    ledger: &mut Ledger,
+    incoming: &Request,
+) -> Result<()> {
+    let Some(prior) = ledger.request(&incoming.request_id).cloned() else {
+        return Ok(());
+    };
+    // A semantic alias keeps its original canonical input. Normal reserve
+    // checks its own bound fingerprint; aliases cannot correct that origin.
+    if prior.request_id != incoming.request_id {
+        return Ok(());
+    }
+    if prior.fingerprint == incoming.fingerprint {
+        return Ok(());
+    }
+    // Aliases and already reserved effects remain immutable. This is a linkage
+    // correction before any submit, never a new question generation or scope.
+    if !only_origin_changed(&prior, incoming)? {
+        return Err("request-id is already bound to different recovery input".into());
+    }
+    let correction = Event::OriginCorrected {
+        request: Box::new(incoming.clone()),
+    };
+    let mut checked = Ledger {
+        domain: ledger.domain.clone(),
+        version: ledger.version,
+        events: ledger.events.clone(),
+    };
+    checked.events.push(correction.clone());
+    checked.validate()?;
+    let (old_origin, new_origin) = ask_origins(&prior, incoming)?;
+    let mut api = RecoveryApi::bind(ctx, ledger, &prior)?;
+    api.assert_bot_thread(old_origin)?;
+    api.assert_origin(ledger, new_origin)?;
+    ledger.append(&ctx.here, correction)
 }
 
 fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Request> {
@@ -952,7 +1177,8 @@ fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Reque
             (Kind::Log { .. }, Kind::Log { .. }) => incoming.fingerprint == request.fingerprint,
             _ => false,
         };
-        same.then(|| request.as_ref().clone())
+        same.then(|| ledger.request(&request.request_id).cloned())
+            .flatten()
     });
     if let Some(request) = duplicate {
         ledger.append(
@@ -1114,7 +1340,7 @@ impl<'a> RecoveryApi<'a> {
             let suffix = if before.is_empty() {
                 String::new()
             } else {
-                format!("&before={}",crate::history_audit::query_component(&before))
+                format!("&before={}", crate::history_audit::query_component(&before))
             };
             let page = self.get(&format!("/channels/{thread}/messages?limit=100{suffix}"))?;
             let rows = page.as_array().ok_or("invalid recovery message history")?;
@@ -1163,7 +1389,7 @@ impl<'a> RecoveryApi<'a> {
             let suffix = if before.is_empty() {
                 String::new()
             } else {
-                format!("&before={}",crate::history_audit::query_component(&before))
+                format!("&before={}", crate::history_audit::query_component(&before))
             };
             let page = self.get(&format!(
                 "/channels/{}/threads/archived/public?limit=100{suffix}",
@@ -1490,17 +1716,30 @@ fn ensure(
         return Ok(receipt);
     }
     let recovering = ledger.effect(id, phase).is_some();
-    // A failed preflight GET cannot have posted anything. Intent/Bot are already
-    // durable; reserve an uncertain delivery only after GET succeeds, before POST.
-    let candidates = api.candidates(&effect)?;
-    let selected = match candidates.as_slice() {
-        [one] => Some(one.clone()),
-        [] if recovering => return Err(PENDING.into()),
-        [] => None,
-        _ => return Err("RecoveryMessagePending: duplicate matching bot messages require inspection; no POST is retried".into()),
+    // Every submit requires a flushed Pending event under this same byte lock.
+    // Without it this phase has never submitted: bind/origin/thread GETs already
+    // verified its target, and scanning all archived posts cannot add evidence.
+    // An uncertain prior submit still requires the complete exact GET search;
+    // it must never become permission to POST again.
+    let selected = if recovering {
+        let candidates = api.candidates(&effect)?;
+        match candidates.as_slice() {
+            [one] => Some(one.clone()),
+            [] => return Err(PENDING.into()),
+            _ => return Err("RecoveryMessagePending: duplicate matching bot messages require inspection; no POST is retried".into()),
+        }
+    } else {
+        None
     };
     if !recovering {
-        ledger.append(home,Event::Pending {request_id:id.clone(),phase:phase.into(),effect:effect.clone()})?;
+        ledger.append(
+            home,
+            Event::Pending {
+                request_id: id.clone(),
+                phase: phase.into(),
+                effect: effect.clone(),
+            },
+        )?;
     }
     let (thread, message) = if let Some(ids) = selected {
         ids
@@ -1557,7 +1796,7 @@ fn prepare_log(ctx: &Context, args: &LogArgs) -> Result<(Request, Vec<Image>)> {
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
     no_mentions(&body)?;
-    let images = images(ctx, &args.attach, &secrets)?;
+    let images = images(ctx, &args.request_id, &args.attach, &secrets)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
         title: title_input(&args.title, &secrets)?,
@@ -1884,6 +2123,7 @@ fn execute_inner(
         }
         _ => return Err("exact recovery ask input is required".into()),
     };
+    correct_unposted_origin(ctx, &mut ledger, &incoming)?;
     let reused = ledger.request(&incoming.request_id).is_some()
         || ledger.events.iter().any(|event| {
             matches!(event, Event::Intent {request} if
@@ -2222,7 +2462,7 @@ pub(crate) fn validate_followup_text(text: &str) -> Result<()> {
 mod tests {
     use super::*;
     use crate::core::{Effects, Output};
-    use std::sync::{Arc, Mutex, mpsc};
+    use std::sync::{mpsc, Arc, Mutex};
 
     const GUILD: &str = "102";
     const FORUM: &str = "103";
@@ -2230,6 +2470,158 @@ mod tests {
     const BOT: &str = "101";
     const REQUEST_FORUM: &str = "104";
     const ORIGIN: &str = "105";
+
+    #[test]
+    fn generated_proposal_receipt_binds_request_both_paths_hash_and_expiry() {
+        let now = chrono::DateTime::parse_from_rfc3339("2026-10-13T09:40:00Z")
+            .unwrap()
+            .to_utc();
+        let source = UI_PROPOSAL_SOURCE.to_lowercase();
+        let copy = UI_PROPOSAL_COPY.to_lowercase();
+        let allowed = |request, path, resolved, original, hash, at| {
+            proposal_receipt_matches(request, path, resolved, original, hash, at)
+        };
+        assert!(allowed(
+            UI_PROPOSAL_REQUEST,
+            &copy,
+            &copy,
+            &source,
+            UI_PROPOSAL_SHA256,
+            now
+        ));
+        assert!(allowed(
+            UI_PROPOSAL_REQUEST,
+            &source,
+            &source,
+            &source,
+            UI_PROPOSAL_SHA256,
+            now
+        ));
+        for (request, path, resolved, original, hash, at) in [
+            (
+                "another-request",
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                "d:/other.png",
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                "d:/linked.png",
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                "d:/other-source.png",
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                "changed-content",
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                chrono::DateTime::parse_from_rfc3339("2026-10-12T23:59:59Z")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                chrono::DateTime::parse_from_rfc3339("2026-10-21T00:00:00Z")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ] {
+            assert!(!allowed(request, path, resolved, original, hash, at));
+        }
+    }
+
+    #[test]
+    fn generated_proposal_missing_registry_still_rejects_other_images_before_http() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("other.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nother generated image").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("missing-exclusions.txt");
+        for request in [UI_PROPOSAL_REQUEST, "ordinary-image-request"] {
+            let args = LogArgs {
+                attach: vec![image.clone()],
+                ..fixture.log(request, "確認用画像です。", false)
+            };
+            assert!(log(&mut ctx, &args).is_err());
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            assert!(!fixture.home.join(LEDGER).exists());
+        }
+        assert!(!ctx.client_projects.exists());
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn generated_proposal_missing_registry_rejects_multiple_attachments_before_http() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("other.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nimage").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("missing-exclusions.txt");
+        let args = LogArgs {
+            attach: vec![image.clone(), image],
+            ..fixture.log(UI_PROPOSAL_REQUEST, "確認用画像です。", false)
+        };
+        assert!(log(&mut ctx, &args).is_err());
+        assert!(fixture.server.lock().unwrap().calls.is_empty());
+        assert!(!fixture.home.join(LEDGER).exists());
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn generated_proposal_request_does_not_override_an_available_denial() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("denied.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nimage").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("specific-exclusions.txt");
+        let exclusions = image.to_string_lossy().to_string();
+        fs::write(&ctx.client_projects, &exclusions).unwrap();
+        let args = LogArgs {
+            attach: vec![image],
+            ..fixture.log(UI_PROPOSAL_REQUEST, "確認用画像です。", false)
+        };
+        assert_eq!(
+            log(&mut ctx, &args).unwrap_err(),
+            "protected files cannot be recovery attachments"
+        );
+        assert!(fixture.server.lock().unwrap().calls.is_empty());
+        assert!(!fixture.home.join(LEDGER).exists());
+        assert_eq!(fs::read_to_string(&ctx.client_projects).unwrap(), exclusions);
+        fixture.unchanged();
+    }
 
     #[derive(Default)]
     struct Server {
@@ -2241,7 +2633,7 @@ mod tests {
         drop_response: bool,
         reject_post: bool,
         block_reads_after_post: bool,
-        fail_inventory_once: bool,
+        fail_forum_once: bool,
         archive_cursor_page: bool,
         blocked: bool,
         wrong_flags: bool,
@@ -2326,9 +2718,9 @@ mod tests {
             let path = url.strip_prefix(API).ok_or("unexpected non-Discord URL")?;
             let mut state = self.server.lock().unwrap();
             if method == "POST" {
-                if let Some((thread,content))=state.inject_owner_reply.take() {
-                    state.next+=1;
-                    let id=state.next.to_string();
+                if let Some((thread, content)) = state.inject_owner_reply.take() {
+                    state.next += 1;
+                    let id = state.next.to_string();
                     state.messages.entry(thread.clone()).or_default().push(json!({"id":id,"channel_id":thread,
                         "author":{"id":OWNER,"bot":false},"content":content,"type":0,"timestamp":"2026-10-12T00:00:03Z"}));
                 }
@@ -2344,9 +2736,9 @@ mod tests {
             if method == "GET" && state.blocked {
                 return Err("simulated interrupted GET".into());
             }
-            if method=="GET"&&path.ends_with("/threads/active")&&state.fail_inventory_once {
-                state.fail_inventory_once=false;
-                return Err("simulated preflight inventory GET failure".into());
+            if method == "GET" && path == format!("/channels/{FORUM}") && state.fail_forum_once {
+                state.fail_forum_once = false;
+                return Err("simulated preflight forum GET failure".into());
             }
             if method == "GET" && path == "/users/@me" {
                 return Ok(json!({"id":BOT,"bot":true}));
@@ -2363,7 +2755,7 @@ mod tests {
                         return Ok(json!({"threads":[{"id":"444","name":"older fixture",
                             "parent_id":FORUM,"owner_id":BOT,"thread_metadata":{"archive_timestamp":"2026-10-09T12:00:00.000000+00:00"}}],"has_more":true}));
                     }
-                    if !path.contains("%2B00%3A00")||path.contains("+00:00") {
+                    if !path.contains("%2B00%3A00") || path.contains("+00:00") {
                         return Err("archive timestamp is not a query component".into());
                     }
                 }
@@ -2674,14 +3066,13 @@ mod tests {
         drop(state);
         // The normal context remains blocked after the new isolated send.
         let calls = fixture.server.lock().unwrap().calls.len();
-        assert!(
-            ctx.call(
+        assert!(ctx
+            .call(
                 "POST",
                 "/channels/106/messages",
                 Some(&json!({"content":"legacy"}))
             )
-            .is_err()
-        );
+            .is_err());
         assert_eq!(fixture.server.lock().unwrap().calls.len(), calls);
         fixture.unchanged();
     }
@@ -2724,31 +3115,198 @@ mod tests {
 
     #[test]
     fn recovery_messages_failed_preflight_is_resumable_and_reserves_only_before_post() {
-        let fixture=Fixture::new();
-        fixture.server.lock().unwrap().fail_inventory_once=true;
-        let args=fixture.log("preflight-failure","管理画面の修復を再開しています。",false);
-        let mut ctx=fixture.context();
-        assert!(log(&mut ctx,&args).is_err());
+        let fixture = Fixture::new();
+        fixture.server.lock().unwrap().fail_forum_once = true;
+        let args = fixture.log(
+            "preflight-failure",
+            "管理画面の修復を再開しています。",
+            false,
+        );
+        let mut ctx = fixture.context();
+        assert!(log(&mut ctx, &args).is_err());
         assert!(fixture.server.lock().unwrap().posts.is_empty());
-        assert!(Ledger::load(&fixture.home).unwrap().effect(&args.request_id,"log:0").is_none());
-        assert_eq!(log(&mut ctx,&args).unwrap()["delivery"],"verified");
-        assert_eq!(fixture.server.lock().unwrap().posts.len(),1);
-        assert_eq!(log(&mut ctx,&args).unwrap()["delivery"],"verified");
-        assert_eq!(fixture.server.lock().unwrap().posts.len(),1);
+        assert!(Ledger::load(&fixture.home)
+            .unwrap()
+            .effect(&args.request_id, "log:0")
+            .is_none());
+        assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
+        assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
         fixture.unchanged();
     }
 
     #[test]
     fn recovery_messages_archive_cursor_encodes_timezone_plus() {
-        let fixture=Fixture::new();
-        fixture.server.lock().unwrap().archive_cursor_page=true;
-        let args=fixture.log("archive-cursor","指定一覧を反映しました。",false);
-        let mut ctx=fixture.context();
-        assert_eq!(log(&mut ctx,&args).unwrap()["delivery"],"verified");
-        let state=fixture.server.lock().unwrap();
-        assert!(state.calls.iter().any(|(_,path,_)|path.contains("before=")&&path.contains("%2B00%3A00")));
-        assert_eq!(state.posts.len(),1);
+        let fixture = Fixture::new();
+        {
+            let mut state = fixture.server.lock().unwrap();
+            state.archive_cursor_page = true;
+            state.drop_response = true;
+        }
+        let args = fixture.log("archive-cursor", "指定一覧を反映しました。", false);
+        let mut ctx = fixture.context();
+        assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
+        let state = fixture.server.lock().unwrap();
+        assert!(state
+            .calls
+            .iter()
+            .any(|(_, path, _)| path.contains("before=") && path.contains("%2B00%3A00")));
+        assert_eq!(state.posts.len(), 1);
         drop(state);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_first_delivery_does_not_scan_unrelated_archived_history() {
+        let fixture = Fixture::new();
+        let args = fixture.log(
+            "fresh-no-history",
+            "新しい依頼を担当へ反映しました。",
+            false,
+        );
+        let mut ctx = fixture.context();
+        assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
+        let state = fixture.server.lock().unwrap();
+        assert_eq!(state.posts.len(), 1);
+        assert_eq!(state.posts_without_pending, 0);
+        assert!(state
+            .calls
+            .iter()
+            .any(|(method, path, _)| method == "GET" && path == &format!("/channels/{FORUM}")));
+        assert!(!state
+            .calls
+            .iter()
+            .any(|(_, path, _)| path.ends_with("/threads/active")
+                || path.contains("/threads/archived/")
+                || path.contains("/messages?")));
+        drop(state);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_unsent_question_origin_moves_only_to_its_paired_progress() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let source = ask(
+            &mut ctx,
+            &fixture.ask("source-question", "元の質問です。\na 保持\nb 変更"),
+        )
+        .unwrap();
+        let mut next = fixture.ask(
+            "unsent-question",
+            "別の具体的な質問です。\na はい\nb いいえ",
+        );
+        let mut decision: Value =
+            serde_json::from_slice(&fs::read(&next.decision_file).unwrap()).unwrap();
+        decision["resources"][0]["id"] = json!("different-specific-target");
+        decision["origin_thread_id"] = source["thread_id"].clone();
+        fs::write(&next.decision_file, decision.to_string()).unwrap();
+        next.origin_thread = Some(core::s(&source["thread_id"]).into());
+        assert!(ask(&mut ctx, &next).unwrap_err().contains("origin"));
+        let before_posts = fixture.server.lock().unwrap().posts.len();
+        let original = Ledger::load(&fixture.home)
+            .unwrap()
+            .request(&next.request_id)
+            .unwrap()
+            .clone();
+        assert!(Ledger::load(&fixture.home)
+            .unwrap()
+            .effect(&next.request_id, "question:0")
+            .is_none());
+
+        let unrelated = log(
+            &mut ctx,
+            &fixture.log("other-topic", "別の作業の進捗です。", false),
+        )
+        .unwrap();
+        let before = fs::read(fixture.home.join(LEDGER)).unwrap();
+        next.origin_thread = Some(core::s(&unrelated["thread_id"]).into());
+        decision["origin_thread_id"] = unrelated["thread_id"].clone();
+        fs::write(&next.decision_file, decision.to_string()).unwrap();
+        assert!(ask(&mut ctx, &next).is_err());
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+
+        next.origin_thread = Some(core::s(&source["progress_thread_id"]).into());
+        decision["origin_thread_id"] = source["progress_thread_id"].clone();
+        fs::write(&next.decision_file, decision.to_string()).unwrap();
+        let original_body_path = next.body_file.clone();
+        next.body_file = fixture.home.join("changed-question.txt");
+        fs::write(
+            &next.body_file,
+            "異なる意味の質問です。\na 別の条件\nb 取消",
+        )
+        .unwrap();
+        assert!(ask(&mut ctx, &next).is_err());
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+        next.body_file = original_body_path;
+
+        let delivered = ask(&mut ctx, &next).unwrap();
+        assert_eq!(delivered["delivery"], "verified");
+        assert_eq!(delivered["original_question"], original.body);
+        let posts = fixture.server.lock().unwrap().posts.len();
+        assert!(posts > before_posts);
+        assert_eq!(
+            ask(&mut ctx, &next).unwrap()["thread_id"],
+            delivered["thread_id"]
+        );
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
+        let ledger = Ledger::load(&fixture.home).unwrap();
+        assert!(ledger
+            .events
+            .iter()
+            .any(|event| matches!(event, Event::Intent { request } if **request == original)));
+        assert_eq!(ledger.events.iter().filter(|event| matches!(event, Event::OriginCorrected { request } if request.request_id == next.request_id)).count(), 1);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_possible_prior_post_prevents_origin_correction() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let source = ask(
+            &mut ctx,
+            &fixture.ask("prior-source", "元の質問です。\na 保持\nb 変更"),
+        )
+        .unwrap();
+        let mut next = fixture.ask("prior-uncertain", "新しい質問です。\na はい\nb いいえ");
+        let mut decision: Value =
+            serde_json::from_slice(&fs::read(&next.decision_file).unwrap()).unwrap();
+        decision["resources"][0]["id"] = json!("different-uncertain-target");
+        decision["origin_thread_id"] = source["thread_id"].clone();
+        fs::write(&next.decision_file, decision.to_string()).unwrap();
+        next.origin_thread = Some(core::s(&source["thread_id"]).into());
+        assert!(ask(&mut ctx, &next).is_err());
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        let request = ledger.request(&next.request_id).unwrap().clone();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Pending {
+                    request_id: request.request_id.clone(),
+                    phase: "question:0".into(),
+                    effect: effect(
+                        &request,
+                        "question:0",
+                        Target::Forum {
+                            title: request.title.clone(),
+                        },
+                        &request.body,
+                        true,
+                        false,
+                    )
+                    .unwrap(),
+                },
+            )
+            .unwrap();
+        let before = fs::read(fixture.home.join(LEDGER)).unwrap();
+        let posts = fixture.server.lock().unwrap().posts.len();
+        next.origin_thread = Some(core::s(&source["progress_thread_id"]).into());
+        decision["origin_thread_id"] = source["progress_thread_id"].clone();
+        fs::write(&next.decision_file, decision.to_string()).unwrap();
+        assert!(ask(&mut ctx, &next).is_err());
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
         fixture.unchanged();
     }
 
@@ -3170,11 +3728,9 @@ mod tests {
         let result = log(&mut ctx, &args);
         assert!(result.unwrap_err().contains("duplicate"));
         assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
-        assert!(
-            !Ledger::load(&fixture.home)
-                .unwrap()
-                .complete(&args.request_id)
-        );
+        assert!(!Ledger::load(&fixture.home)
+            .unwrap()
+            .complete(&args.request_id));
         fixture.unchanged();
     }
 
@@ -3191,72 +3747,126 @@ mod tests {
         let thread = core::s(&question["thread_id"]);
         fixture.add_reply(thread, "999", "b", false);
         let reply = fixture.add_reply(thread, OWNER, "a", false);
-        fs::write(&ctx.todo,serde_json::to_vec(&json!({"items":[{"id":2471,"jobs":[],"note":"元の作業本文"},
-            {"id":2472,"status":"done","progress":100}]})).unwrap()).unwrap();
+        fs::write(
+            &ctx.todo,
+            serde_json::to_vec(
+                &json!({"items":[{"id":2471,"jobs":[],"note":"元の作業本文"},
+            {"id":2472,"status":"done","progress":100}]}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         let config = fixture.root.path().join("followup.json");
-        fs::write(&config, serde_json::to_vec(&followup::Watch { request_id:args.request_id,
-            thread:thread.into(),question_message:core::s(&question["message_id"]).into(),todo_id:2472,work_todo:2471,
-            parent_lock:fixture.root.path().join("parent.active"),worker_cwd:fixture.root.path().to_path_buf(),
-            parent_messages:vec![reply.clone()] }).unwrap()).unwrap();
-        let registered=followup::register(&mut ctx,&config).unwrap();
-        assert_eq!(registered["scheduled_observations"],0);
-        for _ in 0..2 { followup::tick(&mut ctx).unwrap(); }
-        let observed=followup::inspect(&ctx).unwrap();
-        assert_eq!(observed["replies"].as_array().unwrap().len(),1);
-        assert_eq!(observed["scheduled_observations"],2);
-        assert_eq!(observed["replies"][0]["phase"],"parent_pending");
-        let state_path=fixture.home.join("recovery-followup.json");
-        let saved=fs::read(&state_path).unwrap();
-        let mut wrong:Value=serde_json::from_slice(&saved).unwrap();
-        wrong["replies"][&reply]["steering_handler"]=json!("unrelated-test-job");
-        fs::write(&state_path,serde_json::to_vec(&wrong).unwrap()).unwrap();
-        let before_claim=fs::read(&state_path).unwrap();
-        assert!(followup::claim(&mut ctx,&reply,"unrelated-test-job").unwrap_err().contains("claimant"));
-        assert_eq!(fs::read(&state_path).unwrap(),before_claim);
-        fs::write(&state_path,&saved).unwrap();
-        let result=fixture.root.path().join("applied.json");
+        fs::write(
+            &config,
+            serde_json::to_vec(&followup::Watch {
+                request_id: args.request_id,
+                thread: thread.into(),
+                question_message: core::s(&question["message_id"]).into(),
+                todo_id: 2472,
+                work_todo: 2471,
+                parent_lock: fixture.root.path().join("parent.active"),
+                worker_cwd: fixture.root.path().to_path_buf(),
+                parent_messages: vec![reply.clone()],
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let registered = followup::register(&mut ctx, &config).unwrap();
+        assert_eq!(registered["scheduled_observations"], 0);
+        for _ in 0..2 {
+            followup::tick(&mut ctx).unwrap();
+        }
+        let observed = followup::inspect(&ctx).unwrap();
+        assert_eq!(observed["replies"].as_array().unwrap().len(), 1);
+        assert_eq!(observed["scheduled_observations"], 2);
+        assert_eq!(observed["replies"][0]["phase"], "parent_pending");
+        let state_path = fixture.home.join("recovery-followup.json");
+        let saved = fs::read(&state_path).unwrap();
+        let mut wrong: Value = serde_json::from_slice(&saved).unwrap();
+        wrong["replies"][&reply]["steering_handler"] = json!("unrelated-test-job");
+        fs::write(&state_path, serde_json::to_vec(&wrong).unwrap()).unwrap();
+        let before_claim = fs::read(&state_path).unwrap();
+        assert!(followup::claim(&mut ctx, &reply, "unrelated-test-job")
+            .unwrap_err()
+            .contains("claimant"));
+        assert_eq!(fs::read(&state_path).unwrap(), before_claim);
+        fs::write(&state_path, &saved).unwrap();
+        let result = fixture.root.path().join("applied.json");
         fs::write(&result,serde_json::to_vec(&json!({"handler":"parent","revision":"349ed9ccf7c3ee1699601d749b1a2b5f7504c73a",
             "verification":"表示の17検査成功","summary":"指定外を別欄に残しました。","applied_at":"2026-10-12T00:00:02+00:00"})).unwrap()).unwrap();
-        fixture.server.lock().unwrap().block_reads_after_post=true;
-        let posts_before=fixture.server.lock().unwrap().posts.len();
-        assert!(followup::applied(&mut ctx,&reply,&result).is_err());
-        assert_eq!(followup::inspect(&ctx).unwrap()["replies"][0]["phase"],"result_pending");
+        fixture.server.lock().unwrap().block_reads_after_post = true;
+        let posts_before = fixture.server.lock().unwrap().posts.len();
+        assert!(followup::applied(&mut ctx, &reply, &result).is_err());
+        assert_eq!(
+            followup::inspect(&ctx).unwrap()["replies"][0]["phase"],
+            "result_pending"
+        );
         {
-            let mut server=fixture.server.lock().unwrap(); server.blocked=false;server.block_reads_after_post=false;
+            let mut server = fixture.server.lock().unwrap();
+            server.blocked = false;
+            server.block_reads_after_post = false;
         }
-        let mut restarted=fixture.context();
-        let finished=followup::applied(&mut restarted,&reply,&result).unwrap();
-        assert_eq!(finished["replies"][0]["phase"],"applied");
-        followup::applied(&mut restarted,&reply,&result).unwrap();
+        let mut restarted = fixture.context();
+        let finished = followup::applied(&mut restarted, &reply, &result).unwrap();
+        assert_eq!(finished["replies"][0]["phase"], "applied");
+        followup::applied(&mut restarted, &reply, &result).unwrap();
         followup::tick(&mut restarted).unwrap();
-        assert_eq!(fixture.server.lock().unwrap().posts.len(),posts_before+1);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_before + 1);
         fixture.unchanged();
     }
 
     #[test]
     fn recovery_followup_reply_arriving_during_result_post_prevents_decision_done() {
         use crate::recovery_followup as followup;
-        let fixture=Fixture::new();
-        let args=fixture.ask("followup-late","a: 別欄で保持\nb: 部署へ追加\n");
-        let mut decision=core::read_json(&args.decision_file).unwrap();decision["scope"]["original_work_todo"]=json!(2471);
-        fs::write(&args.decision_file,serde_json::to_vec(&decision).unwrap()).unwrap();
-        let mut ctx=fixture.context();let question=ask(&mut ctx,&args).unwrap();
-        let thread=core::s(&question["thread_id"]);
-        let mid=fixture.add_reply(thread,OWNER,"a",false);
-        fs::write(&ctx.todo,serde_json::to_vec(&json!({"items":[{"id":2471,"jobs":[]},{"id":2472,"status":"block"}]})).unwrap()).unwrap();
-        let config=fixture.root.path().join("watch-late.json");
-        fs::write(&config,serde_json::to_vec(&followup::Watch{request_id:args.request_id,thread:thread.into(),
-            question_message:core::s(&question["message_id"]).into(),todo_id:2472,work_todo:2471,
-            parent_lock:fixture.root.path().join("parent-late.active"),worker_cwd:fixture.root.path().to_path_buf(),parent_messages:vec![mid.clone()]}).unwrap()).unwrap();
-        followup::register(&mut ctx,&config).unwrap();followup::tick(&mut ctx).unwrap();
-        let result=fixture.root.path().join("result-late.json");
+        let fixture = Fixture::new();
+        let args = fixture.ask("followup-late", "a: 別欄で保持\nb: 部署へ追加\n");
+        let mut decision = core::read_json(&args.decision_file).unwrap();
+        decision["scope"]["original_work_todo"] = json!(2471);
+        fs::write(&args.decision_file, serde_json::to_vec(&decision).unwrap()).unwrap();
+        let mut ctx = fixture.context();
+        let question = ask(&mut ctx, &args).unwrap();
+        let thread = core::s(&question["thread_id"]);
+        let mid = fixture.add_reply(thread, OWNER, "a", false);
+        fs::write(
+            &ctx.todo,
+            serde_json::to_vec(
+                &json!({"items":[{"id":2471,"jobs":[]},{"id":2472,"status":"block"}]}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let config = fixture.root.path().join("watch-late.json");
+        fs::write(
+            &config,
+            serde_json::to_vec(&followup::Watch {
+                request_id: args.request_id,
+                thread: thread.into(),
+                question_message: core::s(&question["message_id"]).into(),
+                todo_id: 2472,
+                work_todo: 2471,
+                parent_lock: fixture.root.path().join("parent-late.active"),
+                worker_cwd: fixture.root.path().to_path_buf(),
+                parent_messages: vec![mid.clone()],
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        followup::register(&mut ctx, &config).unwrap();
+        followup::tick(&mut ctx).unwrap();
+        let result = fixture.root.path().join("result-late.json");
         fs::write(&result,serde_json::to_vec(&json!({"handler":"parent","revision":"349ed9ccf7c3ee1699601d749b1a2b5f7504c73a",
             "verification":"表示の17検査成功","summary":"別欄へ反映しました。","applied_at":"2026-10-12T00:00:02Z"})).unwrap()).unwrap();
-        fixture.server.lock().unwrap().inject_owner_reply=Some((thread.into(),"b: 登録番号の指定を追記します".into()));
-        let out=followup::applied(&mut ctx,&mid,&result).unwrap();
-        assert_eq!(out["replies"].as_array().unwrap().len(),2);
-        assert_eq!(out["replies"][0]["phase"],"applied");assert_eq!(out["replies"][1]["phase"],"reserved");
-        assert_eq!(core::read_json(&ctx.todo).unwrap()["items"][1]["status"],"block");
+        fixture.server.lock().unwrap().inject_owner_reply =
+            Some((thread.into(), "b: 登録番号の指定を追記します".into()));
+        let out = followup::applied(&mut ctx, &mid, &result).unwrap();
+        assert_eq!(out["replies"].as_array().unwrap().len(), 2);
+        assert_eq!(out["replies"][0]["phase"], "applied");
+        assert_eq!(out["replies"][1]["phase"], "reserved");
+        assert_eq!(
+            core::read_json(&ctx.todo).unwrap()["items"][1]["status"],
+            "block"
+        );
         fixture.unchanged();
     }
 

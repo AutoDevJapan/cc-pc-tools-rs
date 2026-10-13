@@ -39,6 +39,7 @@ go run . snapshot --shadow-root <VSS一覧のデバイス> --output <別の新�
 go run . reindex --source <取得済み保存先> --output <別の新規保存先>
 go run . survey --spec <元2467の原仕様> --output <別の新規保存先>
 go run . correlate --source <surveyの保存先> --output <別の新規保存先>
+go run . trace-deliveries --source <correlateの保存先> --output <別の新規保存先>
 go run . checkpoint --source <correlateの保存先> --spec <原仕様> --output <別の新規保存先>
 go test -race ./...
 go vet ./...
@@ -99,3 +100,12 @@ messageリンクの出現も、資料を引用しただけの可能性を残す�
 変更があれば再生成を止める。単なる8依頼/34履歴の一致で他の数値を補わない。
 このコマンド自体はToDoを更新せず、登録・担当起動・完了も行わない。担当が
 元2467へ正規editを実行し、標準受付の保存結果と再開状態を確認する。
+
+`trace-deliveries` は取得原文とハッシュを再検証し、質問末尾の正規担当表記を
+既存job.jsonへ結ぶ。引用・コード・引用段落の継続行は担当表記にしない。
+担当のスレッド別配送記録を優先し、そのファイルがない場合だけ旧配送記録を使う。
+読取拒否・破損・読取失敗を不存在として扱わない。
+添付なしの完了した単一投稿について、スレッド・最初のmessage・投稿数・全文SHA256が
+一致した場合だけ投稿世代を確認する。添付や複数断片はこの確認方法の対象外。
+元ToDo候補と実対象・許可範囲・担当配送・実反映は別々に保持する。
+公開reportには件数と不足条件だけを出し、原本文・担当記録・配送記録は私的に保存する。

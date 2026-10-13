@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -7,6 +7,9 @@ use std::{
 };
 
 pub trait Backend {
+    fn product_review_allowed(&mut self, _item: &Value) -> bool {
+        false
+    }
     /// Only the independently verified, explicitly authorized PC repair source.
     /// Missing private registry data never grants a general project exemption.
     fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
@@ -57,7 +60,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -335,8 +338,15 @@ impl RealBackend {
                 .unwrap_or("")
         };
         let policy = cc_ask::job_policy::for_task(s(&selection["task_type"]), sandbox);
+        // Keep concurrent deployments of the shared launcher intact. This is
+        // the same CLI/store/locks, with the finite permission check compiled in.
+        let launcher = if item["product_review_allocation"].is_object() {
+            "codex-jobs/codex_jobs-review-allocation-2539.exe"
+        } else {
+            "codex-jobs/codex_jobs.py"
+        };
         let mut invocation = tool_command(
-            &self.tools.join("codex-jobs/codex_jobs.py"),
+            &self.tools.join(launcher),
             &[
                 "run",
                 "--name",
@@ -401,6 +411,30 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
+    fn product_review_allowed(&mut self, item: &Value) -> bool {
+        if !crate::product_review::eligible(item, self.clock()) {
+            return false;
+        }
+        let Ok(text) = self.call_tool(
+            "client-records/scrub391.exe",
+            &["--verify-product-resume", "2407"],
+            Some(40),
+        ) else {
+            return false;
+        };
+        let Ok(receipt) = serde_json::from_str::<Value>(&text) else {
+            return false;
+        };
+        receipt["verified"] == true
+            && receipt["request_sha256"] == crate::product_review::HASH
+            && self.guard_workspace_path(s(&item["spec"])).is_ok()
+            && run_git(
+                self.runner.as_mut(),
+                Path::new(crate::product_review::SOURCE),
+                &["rev-parse", "HEAD"],
+            )
+            .is_ok_and(|h| h == crate::product_review::HEAD)
+    }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.guard_workspace_path(repo).is_ok()
     }

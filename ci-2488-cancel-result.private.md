@@ -1,11 +1,11 @@
 # 固定CIの確認結果（ToDo2600、親2488）
 
-指定コミットの8 workflowはすべて終端となった。2成功・1失敗・5取消であり、取消修復の成功は確認できていない。この有限な確認工程と、親の修復・マージ・配布・運用受入を区別する。
+旧指定コミットの8 workflowはすべて終端となった。2成功・1失敗・5取消であり、取消修復の成功は確認できていない。親の更新仕様に従って後続コミットも確認しており、最新CIの未終端分は同じToDoで自動再開する。
 
 - 対象: PRIVATE AutoDevJapan/cc-pc-tools-rs、PR144。
 - 固定SHA: `9aac8c6f1d976395c799fb8cbfdede7f158e75ce`。
 - GitHubのrepo APIで実所有者AutoDevJapanとprivate=true、PR APIで開始時の同HEADを確認した。
-- 確認中にHEADが `2295bdc710a410c0c637efcd5f77af40066e9d1b` へ進んだ。compare APIはahead=1、behind=0、変更は `cc-ask/src/recovery_messages.rs` の4行削除だけ。新HEADのCIはこの工程の対象外であり、旧結果をその成功に流用しない。
+- 確認中にHEADが `2295bdc710a410c0c637efcd5f77af40066e9d1b` へ進んだ。compare APIはahead=1、behind=0、変更は `cc-ask/src/recovery_messages.rs` の4行削除だけ。旧結果を新HEADの成功に流用しない。後段に親の更新仕様による後続確認を記録する。
 - 正規gh OAuthと既存ゲートを使用。CI再実行・手動Cargo・source編集・merge・配布・Discord送信・GPU利用を行っていない。
 
 | workflow | run | 結論 | job内訳 |
@@ -28,7 +28,7 @@
 1. Bookmark Windows job115539608359: `cargo test --locked -p cc-ask --test commands --test resume` で `error[E0428]: the name OriginCorrected is defined multiple times`。662行が前の定義、670行が再定義。終了値1。原ログ `ci-job-115539608359.private.log` の778行以降に診断を保存。
 2. Channel Linux job115539608716: `cargo test --locked -p cc-ask --test channel_reports --test commands --test ask_dedup` で同じE0428と、derive由来のE0004を4件出して終了値101。原ログ `ci-job-115539608716.private.log` に全文を保存。
 
-親の最新変更は重複部分の削除だけである。新HEADのコンパイル成功や取消試験の成功は、この工程では未検証。必要な関連検査の範囲は上記cc-askのcommands/resume/channel_reports/ask_dedup、取消修復のcc-jobs parityフィルタ、cc-todoのjob_references/verified_resumeであり、親が新固定HEADの正規CI結果で確認する。
+最初の後続変更は重複部分の削除だけである。取消試験の成功は未検証。必要な関連検査の範囲は上記cc-askのcommands/resume/channel_reports/ask_dedup、取消修復のcc-jobs parityフィルタ、cc-todoのjob_references/verified_resumeであり、新固定HEADの正規CI結果で確認する。
 
 ## 取消・全workspace・doc・Clippy
 
@@ -78,3 +78,28 @@ Readinessの7 jobは以下のとおり。
 jobログAPIは制御文字の出力制限、追加オプションは既存ゲートの未知flag拒否で利用できなかった。ゲートを変更せず通常 `gh run view --job --log` で完了runのログを取得した。HTTP502/504、TLS timeoutは有限に再取得し、取消jobのログ不在は正規CLIの `log not found` 原文を保持する。これを試験失敗や成功へ読み替えない。
 
 この有限工程の受入は結果・原因・未検証範囲の保存と親2488への正式配送。親のMust対応・新HEADの必要CI・merge・稼働版反映・運用受入は未完了として保持する。
+
+旧指定SHAの報告を作業ブランチの159e52bで保存pushし、remote一致を確認した。親2488へ正式todo editで配送し、最新の既存noteが全て保持され配送本文も一致することを再読した。配送の時刻・前後の本文SHA256は `ci-2488-delivery.private.json` に保存。旧SHAの確認は完了したが、親が保存仕様を更新したため、このToDo全体は継続する。
+
+## 親の更新仕様に従う後続確認（06:23〜06:27 JST）
+
+自分の保存仕様に親2488が追記した「最新版HEADと自動新CIをAPIで実取得し、関連先行/新全件/docClippyを確認する」を読んで反映した。自分のspec・状態を変更せず、旧結果と後続結果を分けて保持する。
+
+重複削除版 `2295bdc710a410c0c637efcd5f77af40066e9d1b` の8 workflowは1成功・7取消。Bookmark38469265099の両OSは成功し、Windowsのcc-ask commandsは34pass・resumeは81pass、前段Rust10pass・Node14passでfail/skip=0。Channel38469265392のLinux job115543782512は成功し、前段72passにcc-askのchannel_reports22・ask_dedup3・commands34が加わり131pass・0fail・0ignored。原全文ログで重複定義によるコンパイル失敗の解消を確認した。この版でもBuild38469265347は取消で、取消fixture・workspace/doc/Clippy成功の証拠にはならない。CodeQL38469265414は4言語とも取消、同SHA解析なし。
+
+さらにPRの正規HEADは `787eb4df7c01b5f774c2064ff6b238b8fb8a96ff` へ進んだ。2295から1commit、変更はcc-jobsのjobs.rs/queue.rs/queue_status.rs/parity.rsだけ。API compareとGit diffを保存。取消識別の確認・作成時刻欠落時の占有保持を対象とする通常の親修復範囲である。
+
+| 最新workflow | run | 最後に取得した状態 |
+| --- | --- | --- |
+| Build speed | 38470144152 | queued |
+| CodeQL PC | 38470143944 | queued。ただしGo job115546812461はfailure |
+| Readiness | 38470144033 | queued |
+| AgentProgress | 38470144030 | success、同SHAのtest/vet/build原ログ保存 |
+| RecordRecovery | 38470144025 | queued |
+| Channel | 38470144110 | queued |
+| Browser | 38470144083 | queued |
+| Bookmark | 38470143953 | queued、Linux jobはin_progress |
+
+最新CodeQLのGo失敗は、checkoutやautobuildより前のLinux runner開始hook `/opt/bridge/job-hook.sh` が `bridge rejected (403)` を返したもの。`ci-job-115546812461.private.log` 23行がHTTP拒否、24行がexit1。正規job logs APIで原全文1690文字を取得し、check annotationもexit1を確認。Goソースのコンパイル失敗とは数えない。403を出した内部の判定理由はこの原ログに無く、親のPC CI bridge受付・当該job admissionの確認が必要。新SHAの解析APIに4言語いずれのupload/解析も未登録。自分はCI再実行やbridge変更を行わない。
+
+有限の今回確認は30分以内で区切り、最新8run・同spec・同worktree・既存成果を保持してToDo2600のwait-retryで再開する。最新SHAの関連/workspace/doc/Clippy、4言語CodeQL、残るGo検査は未終端または未確認。親のMust対応/merge/配布/運用受入は引き続き親へ残す。

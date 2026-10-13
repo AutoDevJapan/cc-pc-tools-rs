@@ -22,8 +22,14 @@ enum Commands {
     RecoveryLog(cc_ask::recovery_messages::LogArgs),
     /// Create one new owner decision and its separate silent progress post.
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
+    /// Repair one exact unsent recovery ask to a previously verified progress post.
+    RecoveryRepairOrigin(cc_ask::recovery_messages::RepairOriginArgs),
+    /// Resume one repaired ask from its unchanged saved intent.
+    RecoveryResumeAsk(cc_ask::recovery_messages::ResumeAskArgs),
     /// Read only an exact new recovery question; never consumes replies or starts work.
     RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
+    /// Archive one applied new recovery question, then verify it by GET.
+    RecoveryClose(cc_ask::recovery_messages::CloseArgs),
     /// Independent one-question followup; never runs legacy tick or lost questions.
     RecoveryFollowup {
         #[command(subcommand)]
@@ -301,8 +307,17 @@ fn run(command: Commands) -> Result<()> {
         Commands::RecoveryAsk(args) => {
             println!("{}", cc_ask::recovery_messages::ask(&mut ctx, &args)?)
         }
+        Commands::RecoveryRepairOrigin(args) => {
+            println!("{}", cc_ask::recovery_messages::repair_origin(&mut ctx, &args)?)
+        }
+        Commands::RecoveryResumeAsk(args) => {
+            println!("{}", cc_ask::recovery_messages::resume_ask(&mut ctx, &args)?)
+        }
         Commands::RecoveryReplies(args) => {
             println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
+        }
+        Commands::RecoveryClose(args) => {
+            println!("{}", cc_ask::recovery_messages::close(&mut ctx, &args)?)
         }
         Commands::AuditHistory(args) => {
             println!("{}", cc_ask::history_audit::run(&mut ctx, &args)?)
@@ -485,6 +500,46 @@ mod tests {
             "question.txt"
         ])
         .is_ok());
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-repair-origin",
+            "--request-id",
+            "exact-device-approval",
+            "--todo-id",
+            "2497",
+            "--expected-origin-thread",
+            "123",
+            "--owner-reply-message",
+            "124",
+            "--progress-message",
+            "125",
+        ])
+        .unwrap();
+        assert!(matches!(cli.command, Commands::RecoveryRepairOrigin(_)));
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-repair-origin",
+            "--request-id",
+            "exact-device-approval",
+        ])
+        .is_err());
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-resume-ask",
+            "--request-id",
+            "exact-device-approval",
+            "--todo-id",
+            "2497",
+        ])
+        .unwrap();
+        assert!(matches!(cli.command, Commands::RecoveryResumeAsk(_)));
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-resume-ask",
+            "--request-id",
+            "exact-device-approval",
+        ])
+        .is_err());
         assert!(Cli::try_parse_from([
             "discord_ask",
             "recovery-ask",
@@ -495,6 +550,11 @@ mod tests {
         ])
         .is_err());
         assert!(Cli::try_parse_from(["discord_ask", "recovery-replies"]).is_err());
+        assert!(Cli::try_parse_from(["discord_ask", "recovery-close"]).is_err());
+        let close = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json"]).unwrap();
+        assert!(matches!(close.command, Commands::RecoveryClose(args) if args.manifest.to_str() == Some("exact.json")));
+        let legacy = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json", "--legacy-reply-timestamp", "2026-10-13T19:14:10.114+09:00"]).unwrap();
+        assert!(matches!(legacy.command, Commands::RecoveryClose(args) if args.legacy_reply_timestamp.as_deref() == Some("2026-10-13T19:14:10.114+09:00")));
         let cli = Cli::try_parse_from([
             "discord_ask",
             "recovery-replies",

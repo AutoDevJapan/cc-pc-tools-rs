@@ -35,6 +35,9 @@ threads-required = 'num-test-threads'
 
 [[profile.default.overrides]]
 filter = 'package(chatgpt-web) & binary(fixtures)'
+# Includes fresh-profile/immediate-reuse checks of Chrome's Windows singleton
+# lock. Keep the real CPU-rendered browser lifecycle isolated from other tests.
+# Every launch and lock release is asserted; a failed launch is never retried.
 threads-required = 'num-test-threads'
 
 [[profile.default.overrides]]

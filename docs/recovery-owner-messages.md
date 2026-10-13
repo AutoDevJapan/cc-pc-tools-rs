@@ -7,7 +7,24 @@
 
 - `discord_ask recovery-log --request-id ... --title ... --body-file ... [--notify]`
 - `discord_ask recovery-ask --request-id ... --todo-id ... --decision-file ... --body-file ... --origin-thread ...`
+- `discord_ask recovery-repair-origin --request-id ... --todo-id ... --expected-origin-thread ... --owner-reply-message ... --progress-message ...`
+- `discord_ask recovery-resume-ask --request-id ... --todo-id ...`
 - `discord_ask recovery-replies --thread ... [--request-id ... --todo-id ... --message ...] --read-only`
+- `discord_ask recovery-close --manifest <JSON>`
+
+`recovery-repair-origin` repairs only an exact ask intent that has its saved bot
+identity and no send reservation, POST receipt, verified effect, or completion.
+It requires the unchanged request ID, original ToDo and original origin, fetches
+the exact owner reply by Discord GET, and selects a progress starter already
+verified by this ledger for that same ToDo and origin thread. The original intent and fingerprint remain append-only;
+the repair event records the old origin and evidence IDs, and retries apply the
+repaired origin without changing the question body or decision. A different
+request, owner, ToDo, origin, target, or body stops before POST. A Pending or
+posted request is never rebound because its delivery result may be uncertain.
+After a repair, `recovery-resume-ask` runs the unchanged saved intent through the
+same reserve, POST and GET-verification path. It takes no body or decision file,
+so a retry cannot silently substitute new question text or scope. It requires
+the exact original request ID, ToDo and a recorded origin repair.
 
 投稿先は既存設定のサーバー・フォーラム・本人IDに限定する。
 新しい作業投稿を元投稿として使う場合は、過去の投稿を復元したものではないことを本文で明記する。
@@ -24,6 +41,65 @@ Intent は取得処理より前に、Pending は取得成功後・投稿直前�
 返信は新しく確認した質問のスレッドだけ読む。本人IDと質問以降の時刻・メッセージIDを照合し、元ToDo・質問原文・判断範囲と一緒に返す。
 `recovery-replies` は読み取り専用であり、担当への配送や回答の実反映を完了扱いにしない。
 担当は返信を元の依頼に反映し、反映した内容と成果を別に記録する。
+
+反映済みの新方式の質問1件は、`recovery-close` で終了する。
+この操作は、元ToDoの残作業の完了や契約変更を意味しない。
+元の質問台帳や復旧保留票を読み書きせず、既存のBot認証を内部で使用する。
+
+manifestは、確認済みの質問と実反映記録を固定するJSONである。
+以下の項目をすべて指定し、不明な値や推測した成功を入れない。
+
+| 項目 | 確認元 |
+|---|---|
+| request_id / thread_id / question_message_id | 新方式の質問の正規受付。スレッドと先頭メッセージは同じID |
+| origin_todo_id | 元の質問のToDo |
+| todo_id / job_id / revision | 実操作を反映した既存受付と担当、40桁のソース版 |
+| message_id / author_id | 設定済み本人の正規API返信 |
+| question_fingerprint | recovery-messages.jsonの元質問Intentのfingerprint |
+| reply_sha256 | 保存済みrecovery-repliesの該当owner_replies要素の正規化JSONのSHA256 |
+| receipt_sha256 | 既存unattended/applied/<message_id>.jsonの生バイトのSHA256 |
+| verification_sha256 | その反映記録のverificationオブジェクトの正規化JSONのSHA256 |
+| completion | その反映記録の実反映済み内容を示す文。残作業の記述も保持 |
+
+正規化JSONでは、オブジェクトのキーを再帰的に並べ、配列順を保持する。
+UTF-8の圧縮JSONを使用する。本文・メール・金額はmanifestや終了結果へ転記しない。
+manifestは新しい承認ではなく、担当が実操作と読み返しを終えた既存記録の照合入力である。
+CLIは、反映記録の取得元、全対象ID、担当、版、実反映記述、検証記録と反映日時を照合する。
+検証記録にはexecution・origin_saved・identityの確認結果を必須とする。
+設定サーバー・フォーラム・Bot・本人と、正規GETした元質問本文・世代・範囲・返信も照合する。
+返信が編集されていたり、ほかの本人返信があったりする場合はPATCHせず、返信IDを独立記録へ残す。
+この拒否はPATCH前に確認できた返信に適用する。PATCH中・後の返信は成功扱いにせず保留を記録し、勝手に再開しない。
+親担当は`recovery-replies`で原文と範囲を再確認する。勝手に別の回答を反映済み扱いにしない。
+
+専用recovery-close.lockと質問領域のロックの下で、recovery-close.jsonへ原子的に保存する。
+PATCH直前にpatch_pendingを保存し、対象スレッドだけに`{"archived":true}`を送る。
+成功はGETのarchived=trueと再照合で確認する。
+終了結果のoutcomeは、通常のarchived、PATCH結果消失後のrecovered_after_patch、既に閉じたalready_archivedを区別する。
+GETが失敗した場合は同一manifestで再試行し、再送やメンションをしない。
+GETが未終了を返す場合も成功としない。検証済みの質問が再び開かれた場合は自動で閉じ直さない。
+未反映の返信の記録や終了結果には原文を入れず、元ToDoを完了にせず、担当を起動しない。
+返信保留を記録してもPATCHの試行と検証済みの結果を保持する。reusedは同じ受付の再実行を示す。
+1つのmanifestは本人返信1件だけを覆う。本人返信が複数ある質問は、このCLIで反映済みと推定して閉じない。
+同じスレッドに記録したmanifestは変更できない。返信保留後も再bindingは許可せず、親が原文と範囲を確認する。
+recovered_after_patchは「PATCHを試みた後、GETでアーカイブ済みを確認した」という意味であり、PATCHだけを終了原因と断定しない。
+中断時のrecovery-close.*.tmpは旧台帳の代わりにせず、当該コマンドの終了と所有を確認して片付ける。
+
+### 返信の日時の文字列だけが違うとき
+
+manifestのreply_sha256を、日時の書式が変わった返信JSON（例：PowerShellのConvertFrom-Jsonで再保存した結果）から計算してしまうと、Discord APIの現在の返信と一致しない。
+このときだけ、`recovery-close --manifest <JSON> --legacy-reply-timestamp <保存時の日時文字列>` で続行できる。
+CLIは次をすべて満たす場合に限り、その返信を一致とみなす。
+
+- 指定した文字列がRFC3339で、API返信のtimestampと同じ時点（オフセット表記や小数桁の違いだけ）である。
+- API返信のtimestampだけを指定した文字列に置き換えたJSONのSHA256が、manifestのreply_sha256と一致する。つまり本文・本人ID・質問・範囲・ToDoなど、ほかの項目は完全に一致する。
+- 通常の照合（反映記録のバイト列、本人、Bot、フォーラム、質問の世代、編集なし、追加の本人返信なし）をすべて通過する。
+
+manifestと反映記録は書き換えない。使用時は独立した `recovery-close-equivalence.json` に、ID・両方の日時文字列・同一時点・両方のハッシュ・反映記録のハッシュだけを、PATCHより前に追記する。本文は入れない。
+同じスレッドの記録は変更できない。同じmanifestの再実行では、この記録を使うため `--legacy-reply-timestamp` を再指定しなくてよい。異なる日時・項目の差・編集済み返信・追加の本人返信は従来どおりPATCHせず、返信保留になる。
+
+既存実行版が保存したorigin_correctedも読み取る。元の未送信Intentから投稿元だけを変え、
+元質問に紐づく同一Botの通知なし進捗へ移した記録だけを認める。本文・判断範囲の変更やPOST予約後の修正は拒否する。
+この互換読取のために台帳を書き換えたり、未知のイベントを捨てたりしない。
 
 HTTPクライアントはDiscord公式の `DiscordBot (URL, version)` 形式で正確な識別情報を送る。
 アーカイブの開始位置はISO8601を保持し、タイムゾーンの `+` もURLのクエリー値としてエンコードする。

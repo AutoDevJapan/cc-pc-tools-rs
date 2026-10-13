@@ -333,10 +333,9 @@ fn new_answer_invalidates_review_digest_and_handoff_preserves_original_task_evid
     assert!(handoff.contains("discord-api-v10"));
     assert!(handoff.contains("元の対象だけ削除"));
     assert!(
-        decision_identity::task_handoff(&mut h.ctx, &json!({"todo_id":999}))
+        !decision_identity::task_handoff(&mut h.ctx, &json!({"todo_id":999}))
             .unwrap()
-            .find("稼働中のものは保持")
-            .is_none()
+            .contains("稼働中のものは保持")
     );
 }
 

@@ -2,9 +2,9 @@ name: Owned download quarantine
 on:
   push:
     branches: [main]
-    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+    paths: ['safe-delete-recovery/**', 'safe-delete/**', '.github/workflows/safe-delete-recovery.yml']
   pull_request:
-    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+    paths: ['safe-delete-recovery/**', 'safe-delete/**', '.github/workflows/safe-delete-recovery.yml']
 # Superseded PR heads need no second verification; preserve every main run.
 concurrency:
   group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}

@@ -571,7 +571,11 @@ mod native {
             resume_on_drop: true,
         };
         if !freeze_running(pid, created, &mut frozen)? {
-            return Ok(());
+            // An exited root can still have live descendants. Without a
+            // retained root identity, cancellation must not report success.
+            return Err(io::Error::other(
+                "root exited before cancellation could retain its identity",
+            ));
         }
         let mut topology = HashMap::from([(pid, created)]);
         let mut retained = HashSet::from([(pid, created)]);
@@ -674,6 +678,7 @@ mod native {
             child.wait().unwrap();
             assert!(rejected && remained_alive);
             stopped.unwrap();
+            assert!(stop_tree(child.id(), created).is_err());
         }
         fn process(pid: u32, parent: u32, name: &str, browser_controller: bool) -> Process {
             Process {

@@ -110,12 +110,22 @@ func serviceMain(argc, argv uintptr) uintptr {
 	for {
 		select {
 		case <-stopService:
+			// No listener is active between launch attempts.
+			serviceExitCode = 0
 			status(1)
 			return 0
 		default:
 		}
 		if err := listenWithNarrowToken(); err != nil {
-			serviceExitCode = 1
+			// Only a failure during this stop is a service shutdown failure.
+			// Earlier launch failures remain logged without turning a later
+			// normal stop during the retry delay into an SCM failure.
+			select {
+			case <-stopService:
+				serviceExitCode = 1
+			default:
+				serviceExitCode = 0
+			}
 			// Only this launcher's fixed Win32 operation/error text is recorded;
 			// the official runner owns its credential and diagnostic handling.
 			if exe, e := os.Executable(); e == nil {

@@ -735,6 +735,7 @@ mod native {
             freeze(child.0.id(), created, &mut frozen).unwrap();
             let handle = frozen.handles[0].0;
             let mut exited_in_gap = false;
+            let mut terminated_probe = None;
             let result = terminate_running(handle, || {
                 if unsafe { TerminateProcess(handle, 0) } == 0 {
                     return Err(io::Error::last_os_error());
@@ -743,6 +744,11 @@ mod native {
                 if !exited_in_gap {
                     return Err(io::Error::other("fixture exit did not complete"));
                 }
+                // Record the real OS result; assert outside the callback so a
+                // failed observation cannot skip the completion assertions.
+                let code = unsafe { TerminateProcess(handle, 0) };
+                let error = (code == 0).then(io::Error::last_os_error);
+                terminated_probe = Some((code, error.and_then(|e| e.raw_os_error())));
                 Ok(())
             });
             assert!(
@@ -752,6 +758,10 @@ mod native {
             assert!(
                 result.is_ok(),
                 "signaled same-identity handle rejected: {result:?}"
+            );
+            assert_eq!(
+                terminated_probe,
+                Some((0, Some(ERROR_ACCESS_DENIED as i32)))
             );
         }
         #[test]
@@ -775,9 +785,12 @@ mod native {
         #[test]
         fn cancellation_unknown_handle_never_attempts_termination() {
             let mut attempted = false;
-            let result = terminate_running(INVALID_HANDLE_VALUE, || {
+            // INVALID_HANDLE_VALUE is also the current-process pseudo handle.
+            // Use null, and fail the hook before termination even if wait ever
+            // unexpectedly accepts it. This test must never kill its caller.
+            let result = terminate_running(std::ptr::null_mut(), || {
                 attempted = true;
-                Ok(())
+                Err(io::Error::other("must not reach termination"))
             });
             assert!(!attempted);
             assert!(

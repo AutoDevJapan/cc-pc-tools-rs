@@ -1742,10 +1742,12 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
         {
             return Err("a different origin repair is already recorded for this request".into());
         }
+        let effective = ledger.effective_request(&request)?;
         return Ok(json!({"request_id":args.request_id,"todo_id":args.todo_id,
             "repair":"already_recorded","origin_thread":progress_thread,
             "owner_reply_message":owner_reply,"progress_message":progress_message,
-            "original_fingerprint":request.fingerprint}));
+            "original_fingerprint":request.fingerprint,
+            "repaired_fingerprint":effective.fingerprint}));
     }
     let Kind::Ask {
         todo_id,
@@ -1834,10 +1836,11 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
             original_fingerprint: request.fingerprint.clone(),
         },
     )?;
+    let effective = ledger.effective_request(&request)?;
     Ok(json!({"request_id":args.request_id,"todo_id":args.todo_id,
         "repair":"recorded","origin_thread":progress_receipt.thread_id,
         "owner_reply_message":args.owner_reply_message,"progress_message":args.progress_message,
-        "original_fingerprint":request.fingerprint}))
+        "original_fingerprint":request.fingerprint,"repaired_fingerprint":effective.fingerprint}))
 }
 
 fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Value> {
@@ -3405,10 +3408,13 @@ mod tests {
         );
         let repaired = repair_origin(&mut ctx, &repair).unwrap();
         assert_eq!(repaired["repair"], "recorded");
+        assert_ne!(repaired["original_fingerprint"], repaired["repaired_fingerprint"]);
         assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_before);
         let repaired_bytes = fs::read(fixture.home.join(LEDGER)).unwrap();
         let calls_after_repair = fixture.server.lock().unwrap().calls.len();
-        assert_eq!(repair_origin(&mut ctx, &repair).unwrap()["repair"], "already_recorded");
+        let repeated = repair_origin(&mut ctx, &repair).unwrap();
+        assert_eq!(repeated["repair"], "already_recorded");
+        assert_eq!(repeated["repaired_fingerprint"], repaired["repaired_fingerprint"]);
         assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), repaired_bytes);
         let different_repair = repair_args("one-device-approval", "107", "9999");
         assert!(repair_origin(&mut ctx, &different_repair).is_err());
@@ -3457,6 +3463,7 @@ mod tests {
         assert_eq!(out["delivery"], "verified");
         assert_eq!(out["original_fingerprint"], original["request"]["fingerprint"]);
         assert_ne!(out["fingerprint"], out["original_fingerprint"]);
+        assert_eq!(out["fingerprint"], repaired["repaired_fingerprint"]);
         assert!(!out["thread_id"].as_str().unwrap().is_empty());
         assert!(
             out["url"]
@@ -3504,6 +3511,50 @@ mod tests {
                 .any(|(method, path, _)| method == "GET"
                     && path.ends_with(core::s(&out["message_id"])))
         );
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn resumed_repaired_ask_recovers_lost_post_response_without_duplicate_notification() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let source = verified_progress_source(&fixture,&mut ctx,"progress-lost-post","107",2472);
+        let _ = failed_unsent_ask(&fixture,"lost-post-target","107",OWNER);
+        let repair = repair_args(
+            "lost-post-target",
+            "107",
+            core::s(&source["progress_message_id"]),
+        );
+        repair_origin(&mut ctx, &repair).unwrap();
+        let posts_before = fixture.server.lock().unwrap().posts.len();
+        {
+            let mut server = fixture.server.lock().unwrap();
+            server.drop_response = true;
+            server.block_reads_after_post = true;
+        }
+        let resume = ResumeAskArgs { request_id:"lost-post-target".into(), todo_id:2472 };
+        assert!(resume_ask(&mut ctx, &resume).is_err());
+        let pending: Value = serde_json::from_slice(&fs::read(fixture.home.join(LEDGER)).unwrap()).unwrap();
+        assert!(pending["events"].as_array().unwrap().iter().any(|event|
+            event["event"] == "pending" && event["request_id"] == "lost-post-target"
+                && event["phase"] == "question:0"));
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_before + 1);
+        {
+            let mut server = fixture.server.lock().unwrap();
+            server.blocked = false;
+            server.block_reads_after_post = false;
+        }
+        let out = resume_ask(&mut ctx, &resume).unwrap();
+        assert_eq!(out["delivery"], "verified");
+        let state = fixture.server.lock().unwrap();
+        let question_posts: Vec<_> = state.posts.iter().filter(|(_, body)|
+            body["message"]["content"].as_str().is_some_and(|content|
+                content.contains("端末の承認をお願いします。"))).collect();
+        assert_eq!(question_posts.len(), 1);
+        let posts_after = state.posts.len();
+        drop(state);
+        resume_ask(&mut ctx, &resume).unwrap();
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_after);
         fixture.unchanged();
     }
 
@@ -3786,6 +3837,51 @@ mod tests {
         assert!(repair_origin(&mut ctx, &repair).is_err());
         assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
         assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_before);
+    }
+
+    #[test]
+    fn ledger_validation_rejects_directly_appended_repair_that_changes_or_repeats_evidence() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let source = verified_progress_source(&fixture,&mut ctx,"progress-validation","107",2472);
+        let _ = failed_unsent_ask(&fixture,"validation-target","107",OWNER);
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        let original = ledger.request("validation-target").unwrap();
+        let source_id = core::s(&source["request_id"]);
+        let source_receipt = ledger.receipt(source_id,"progress").unwrap();
+        let event = Event::OriginRepair {
+            request_id: "validation-target".into(),
+            todo_id: 2472,
+            expected_origin_thread: "107".into(),
+            owner_reply_message: "108".into(),
+            progress_request_id: source_id.into(),
+            progress_thread: source_receipt.thread_id.clone(),
+            progress_message: source_receipt.message_id.clone(),
+            original_fingerprint: original.fingerprint.clone(),
+        };
+        ledger.events.push(event.clone());
+        assert!(ledger.validate().is_ok());
+
+        for mutation in ["todo", "origin", "fingerprint", "duplicate", "after-pending"] {
+            let bytes = serde_json::to_vec(&ledger).unwrap();
+            let mut candidate: Ledger = serde_json::from_slice(&bytes).unwrap();
+            match mutation {
+                "duplicate" => candidate.events.push(event.clone()),
+                "todo" => if let Some(Event::OriginRepair { todo_id, .. }) = candidate.events.last_mut() { *todo_id = 2498; },
+                "origin" => if let Some(Event::OriginRepair { expected_origin_thread, .. }) = candidate.events.last_mut() { *expected_origin_thread = "109".into(); },
+                "fingerprint" => if let Some(Event::OriginRepair { original_fingerprint, .. }) = candidate.events.last_mut() { *original_fingerprint = "f".repeat(64); },
+                "after-pending" => {
+                    let event_index = candidate.events.len() - 1;
+                    candidate.events.insert(event_index, Event::Pending {
+                        request_id: "validation-target".into(), phase: "question:0".into(),
+                        effect: Effect { target: Target::Forum { title: "pending".into() },
+                            content: "pending".into(), notify: true, images: vec![] },
+                    });
+                }
+                _ => unreachable!(),
+            }
+            assert!(candidate.validate().is_err(), "mutation={mutation}");
+        }
     }
 
     #[test]

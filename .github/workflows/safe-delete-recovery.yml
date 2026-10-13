@@ -59,8 +59,9 @@ jobs:
               $parent = Get-Content -LiteralPath $parentRecord -Raw | ConvertFrom-Json
               $expectedParent = Join-Path $env:TEMP "codex-owned-$($parent.id)"
               if ($parent.id -notmatch '^[a-f0-9]{32}$' -or $parent.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
-              $checkedParent = & $helper plan --id $parent.id | ConvertFrom-Json
+              $parentPlan = & $helper plan --id $parent.id
               if ($LASTEXITCODE -ne 0) { throw 'Fixture parent ownership check failed; inspect the helper error above' }
+              $checkedParent = $parentPlan | ConvertFrom-Json
               if ($checkedParent.action -ne 'submit_to_exec_tool' -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 0) { throw 'Fixture parent is not owned, empty and eligible for normal cleanup' }
             } else {
               $parent = & $helper create --project pc-ci --content recovery-parent | ConvertFrom-Json
@@ -110,6 +111,7 @@ jobs:
         run: |
           $env:TEMP = Join-Path $env:SystemRoot 'Temp'
           $env:TMP = $env:TEMP
+          if ([string]::IsNullOrWhiteSpace($env:PC_CI_FIXTURE_PARENT)) { throw 'Owned fixture parent is missing' }
           $expected = Join-Path $env:PC_CI_FIXTURE_PARENT "codex-owned-$env:PC_CI_FIXTURE_ID"
           if ($env:PC_CI_FIXTURE_ID -notmatch '^[a-f0-9]{32}$' -or $env:PC_CI_FIXTURE_PATH -ne $expected) { throw 'Unexpected fixture path' }
           Remove-Item -LiteralPath $expected -Recurse -ErrorAction Stop

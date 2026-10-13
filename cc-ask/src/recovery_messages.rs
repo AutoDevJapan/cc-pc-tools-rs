@@ -658,10 +658,6 @@ struct Reply {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 enum Event {
-    /// Compatibility with an already recorded, strictly unsent origin correction.
-    OriginCorrected {
-        request: Box<Request>,
-    },
     Intent {
         request: Box<Request>,
     },

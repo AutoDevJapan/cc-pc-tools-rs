@@ -1,6 +1,6 @@
 # 固定CIの確認結果（ToDo2600、親2488）
 
-旧指定コミットの8 workflowはすべて終端となった。2成功・1失敗・5取消であり、取消修復の成功は確認できていない。親の更新仕様に従って後続コミットも確認しており、最新CIの未終端分は同じToDoで自動再開する。
+旧指定コミットの8 workflowはすべて終端となった。2成功・1失敗・5取消であり、取消修復の成功は確認できていない。現在の指定cff5c84の先行関連検査は19pass・3fail・317skip。失敗の原全文・診断を親へ配送し、残る未終端CIを同じToDoで確認する。
 
 - 対象: PRIVATE AutoDevJapan/cc-pc-tools-rs、PR144。
 - 固定SHA: `9aac8c6f1d976395c799fb8cbfdede7f158e75ce`。
@@ -103,3 +103,48 @@ jobログAPIは制御文字の出力制限、追加オプションは既存ゲ�
 最新CodeQLのGo失敗は、checkoutやautobuildより前のLinux runner開始hook `/opt/bridge/job-hook.sh` が `bridge rejected (403)` を返したもの。`ci-job-115546812461.private.log` 23行がHTTP拒否、24行がexit1。正規job logs APIで原全文1690文字を取得し、check annotationもexit1を確認。Goソースのコンパイル失敗とは数えない。403を出した内部の判定理由はこの原ログに無く、親のPC CI bridge受付・当該job admissionの確認が必要。新SHAの解析APIに4言語いずれのupload/解析も未登録。自分はCI再実行やbridge変更を行わない。
 
 有限の今回確認は30分以内で区切り、最新8run・同spec・同worktree・既存成果を保持してToDo2600のwait-retryで再開する。最新SHAの関連/workspace/doc/Clippy、4言語CodeQL、残るGo検査は未終端または未確認。親のMust対応/merge/配布/運用受入は引き続き親へ残す。
+
+## 06:41 JSTからの再開: cff5c84の実結果
+
+途中commit `ea8200d` とgit statusを照合して再開した。未コミットの変更は前回の証拠だけで、ソース変更はなかった。最新の保存specと親の再開記録を読み、PR APIのHEADが `cff5c8421bff80ab7a0c65a471429b7279ef4cd9` と一致することを確認。787から1commit・queue_status.rs/parity.rsの2ファイル（+35/-10、+13/-0）だけの修正をcompare APIと固定Git diffで照合した。
+
+| workflow | 同cffのrun | 06:42〜06:44取得時 |
+| --- | --- | --- |
+| Build speed | 38470825098 | failure、cc-jobs job115549141105失敗・package-tools skipped |
+| CodeQL PC | 38470825104 | queued、Rust/Actions/JSの3job success・Go queued |
+| Readiness | 38470825011 | queued、Linux unattended-runner/capacity-auditの2job success・5job queued |
+| AgentProgress | 38470825052 | success、job115549134833原全文保存 |
+| RecordRecovery | 38470825176 | success、両OSの原全文保存 |
+| Channel | 38470825143 | queued、Linux job115549140146 success・Windows queued |
+| Browser | 38470825108 | queued |
+| Bookmark | 38470825145 | success、両OSの原全文保存 |
+
+### Buildの先行関連と3件の根拠
+
+Build run原全文 `ci-run-38470825098.private.log` とjob原全文 `ci-job-115549141105.private.log` を別々に取得した。先行は順にfixture resume **1pass/0fail/80skip**、tree取消 **1pass/0fail/338skip**、cc-todo job_references/verified_resume **18pass/0fail/0skip**。続くdependency_/cancel::/resume拒否フィルタは **22実行・19pass・3fail・317skip** で終了値1。skipは各フィルタによる除外数であり、全workspaceの集計に足さない。
+
+| 失敗した試験（cc-jobs parity） | 固定ソース位置 | 原runログの診断 |
+| --- | --- | --- |
+| cancel::test_never_kills_a_process_that_reused_the_pid | parity.rs7431 | 623〜624行: unwrapがErr("live process has no recorded creation time") |
+| run_validation::resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing | parity.rs8254 | 648〜649行: unwrap_errがOk(0) |
+| cancel::test_spawned_child_is_stopped_if_supervisor_setup_fails | parity.rs7421 | 667〜668行: supervise().unwrapがprepare write job.json: disk fullのErr |
+
+PID再利用試験はpid/codex_pid=555、実probe=99を与える一方、保存作成時刻を与えず成功/lostを期待している。固定jobs.rs344〜354のchecked仕様は、生存PIDの保存時刻欠落を明示的なErrにする。このfixture/期待の不整合を直す必要があり、時刻欠落を終了と見なすように本体の拒否を緩めてはならない。
+
+再開拒否試験はlost active-writerのcodex_pid=321へアクセス拒否または作成時刻欠落を与えるが、runがOk(0)を返した。どちらの反復で失敗したかはログに表示されない。固定CLI827〜837の同session拒否は `registration_jobs` の結果を使い、その入口はqueue.rs793〜803の公開index→admission_record→admission_activeである。公開indexに入る前のfixtureと、実受付までの経路を合わせて確認する必要がある。checked helperの成功だけではこの受付負例の成功を保証できない。失敗がfixtureだけか本体かをこのログだけで断定しない。
+
+停止補助試験の `disk full` は、parity.rs7420の `save_failure=true` とFake runtimeの6125〜6126行で注入する `io::Error::other("disk full")` に由来する。実ドライブの空き容量不足ではない。superviseの保存失敗後の戻り値・子停止・最終状態を一緒に整合させる必要がある。
+
+`dependency_fixture_does_not_read_its_callers_plugin_configuration` は同cffの原runログ673行でPASS。cancel終了値/stdout/stderrは成功時に出力されないため、前版のOS根因を確定したとはしない。workspace/doc/all-targets Clippyは先行失敗後で未実行、件数nullを維持する。前版の2144pass/1fail/5skipを流用しない。
+
+3件の具体診断・関連検査範囲は親2488へ正式todo editで配送済み。既存note全体の保持と配送本文を再読し `ci-2488-delivery-cff-triage.private.json` に照合記録を保存した。修正・CI rerun・Cargo・レビュー・merge・配布は本checkで行わない。
+
+### 同cffのその他の実結果
+
+- Bookmark: 両OSともRust10pass・Node14pass・fail/skip=0。Windowsのcc-ask commands34pass・resume81passも成功。原全文job115549139002/115549139573を保存。
+- RecordRecovery: job115549135151（Windows）と115549135653（Linux）は各30個のPASS表示（親試験28＋subtest2）、FAIL/SKIP表示0、race test/vet/buildがsuccess。WindowsはGoのcached結果なので新規の全ケース再実行と数えない。
+- AgentProgress: job115549134833は2Go toolのtest/vet/build成功。非verboseのため個別test件数は不明。
+- ReadinessのLinux unattended-runner/capacity-auditはAPI上success。他の5jobはqueued。完了したjobも原全文取得とコマンドの実結果確認が残る。
+- CodeQL: Rust解析1947113490、Actions1947123829、JS/TS1947134954は同cff全桁/ref/categoriesが一致し、error空・results_count=0。Actions/JSの原ログはSuccessfully uploaded resultsを確認。Rust jobはAPI上success、原全文取得は未完。Goはqueued、解析なし。前版787のGo hook403を同cffの失敗へ移さない。
+
+GitHubが返した正規API応答・全ての取得原ログ・固定ソース読取結果を保持する。未終端分と原ログ取得が終わるまでこのcheckは未完了であり、必要なら同ToDoをwait-retryで再開する。

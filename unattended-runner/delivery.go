@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -200,7 +201,7 @@ func (r *Runner) sendStatus(ctx context.Context, request *Request, phase string)
 		if validJob(job) {
 			last, err := os.ReadFile(filepath.Join("D:/CC/Tools/codex-jobs/jobs", job, "last_message.md"))
 			if err == nil {
-				links := regexp.MustCompile(`https://github\.com/(?:AutoDevJapan|BM1314|mashfromband)/[A-Za-z0-9_.-]+/pull/[0-9]+`).FindAllString(string(last), 5)
+				links := pullRequestLinks(string(last), 5)
 				if len(links) > 0 {
 					body += "\n成果: " + strings.Join(links, "\n")
 				}
@@ -237,6 +238,42 @@ func (r *Runner) sendStatus(ctx context.Context, request *Request, phase string)
 		request.Phase = "reported"
 	}
 	return r.save()
+}
+
+func pullRequestLinks(body string, limit int) []string {
+	var links []string
+	seen := make(map[string]bool)
+	for _, field := range strings.Fields(body) {
+		for _, candidate := range strings.Split(field, "(") {
+			candidate = strings.Trim(candidate, "<>[]),.;`\"")
+			u, err := url.Parse(candidate)
+			if err != nil || u.Scheme != "https" || !strings.EqualFold(u.Host, "github.com") || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.RawPath != "" {
+				continue
+			}
+			parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+			if len(parts) != 4 || parts[2] != "pull" || (parts[0] != "AutoDevJapan" && parts[0] != "BM1314" && parts[0] != "mashfromband") {
+				continue
+			}
+			if parts[1] == "" || parts[1] == "." || parts[1] == ".." {
+				continue
+			}
+			validRepository := true
+			for _, c := range parts[1] {
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '-') {
+					validRepository = false
+				}
+			}
+			if _, validID := number(parts[3]); !validRepository || !validID || seen[candidate] {
+				continue
+			}
+			if len(links) >= limit {
+				return links
+			}
+			seen[candidate] = true
+			links = append(links, candidate)
+		}
+	}
+	return links
 }
 
 // A sender may finish POST/GET verification before its pipe deadline expires.

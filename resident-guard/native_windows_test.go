@@ -6,11 +6,38 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 )
+
+func TestStateDirectoryAcceptsWindowsShortName(t *testing.T) {
+	directory := filepath.Join(t.TempDir(), "state directory with long name")
+	if err := os.Mkdir(directory, 0700); err != nil {
+		t.Fatal(err)
+	}
+	wide, err := syscall.UTF16PtrFromString(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]uint16, 32768)
+	length, _, callErr := kernel32.NewProc("GetShortPathNameW").Call(
+		uintptr(unsafe.Pointer(wide)), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
+	if length == 0 || length >= uintptr(len(buffer)) {
+		t.Fatal("could not inspect the owned directory's short name", callErr)
+	}
+	shortName := syscall.UTF16ToString(buffer[:length])
+	if strings.EqualFold(shortName, directory) {
+		t.Skip("this volume does not generate short names")
+	}
+	if err := validateStateDirectory(shortName); err != nil {
+		t.Fatal("the same physical directory's short name was rejected", err)
+	}
+}
 
 func TestNamedMutexRejectsConcurrentTickAndReleases(t *testing.T) {
 	name := `Local\CC-ResidentGuard-test-` + strconv.Itoa(os.Getpid())

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -303,7 +302,24 @@ func validateStateDirectory(directory string) error {
 		return errors.New("state_directory_unavailable")
 	}
 	resolved, err := filepath.EvalSymlinks(directory)
-	if err != nil || !strings.EqualFold(filepath.Clean(resolved), filepath.Clean(directory)) {
+	if err != nil {
+		return errors.New("state_directory_indirection_rejected")
+	}
+	// Windows expands 8.3 names (including the runner's temporary directory)
+	// when resolving a path. Compare file identity, and reject links in every
+	// input component, rather than mistaking a spelling change for a link.
+	for component := filepath.Clean(directory); ; component = filepath.Dir(component) {
+		entry, err := os.Lstat(component)
+		if err != nil || !entry.IsDir() || entry.Mode()&os.ModeSymlink != 0 {
+			return errors.New("state_directory_indirection_rejected")
+		}
+		if filepath.Dir(component) == component {
+			break
+		}
+	}
+	inputInfo, inputErr := os.Stat(directory)
+	resolvedInfo, resolvedErr := os.Stat(resolved)
+	if inputErr != nil || resolvedErr != nil || !os.SameFile(inputInfo, resolvedInfo) {
 		return errors.New("state_directory_indirection_rejected")
 	}
 	for _, name := range []string{"state.json", "status.json", "events.jsonl", "events.jsonl.1"} {

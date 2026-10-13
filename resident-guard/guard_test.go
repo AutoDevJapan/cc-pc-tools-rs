@@ -285,11 +285,29 @@ func TestCorruptAndOversizedStatePreservedWithoutLaunching(t *testing.T) {
 		out, err := runCheck(context.Background(), directory, definitions(), fake, defaultPolicy())
 		remaining, readErr := os.ReadFile(path)
 		if err == nil || out.StateError != "state_invalid_or_unreadable" || len(fake.starts) != 0 || readErr != nil || string(remaining) != data {
-			t.Fatalf("invalid state was changed or used: %+v", out)
+			t.Fatalf("invalid state was changed or used: %+v, error=%v", out, err)
 		}
 		if _, err := os.Stat(filepath.Join(directory, "status.json")); err != nil {
 			t.Fatal("failure heartbeat missing")
 		}
+	}
+}
+
+func TestStateDirectoryRejectsSymlinkAncestor(t *testing.T) {
+	directory := t.TempDir()
+	target := filepath.Join(directory, "target")
+	if err := os.Mkdir(target, 0700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(directory, "linked")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symbolic links unavailable: %v", err)
+	}
+	if err := validateStateDirectory(filepath.Join(link, "state")); err == nil {
+		t.Fatal("linked ancestor was accepted")
+	}
+	if err := validateStateDirectory(filepath.Join(target, "state")); err != nil {
+		t.Fatal("physical state directory was rejected", err)
 	}
 }
 

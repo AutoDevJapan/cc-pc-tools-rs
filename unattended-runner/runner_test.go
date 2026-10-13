@@ -360,3 +360,29 @@ func TestLostSenderResponseRequiresExactSilentReceipt(t *testing.T) {
 		}
 	}
 }
+
+func TestPullRequestLinksRequireCompleteOwnedGitHubURL(t *testing.T) {
+	valid := "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/144"
+	for _, candidate := range []string{
+		"https://example.invalid/" + valid,
+		"https://github.com.example.invalid/AutoDevJapan/repo/pull/1",
+		"https://github.com@evil.invalid/AutoDevJapan/repo/pull/1",
+		"https://evil.invalid/?target=" + valid,
+		valid + "suffix", valid + "/extra", valid + "?token=private", valid + "#fragment",
+		"http://github.com/AutoDevJapan/repo/pull/1",
+		"https://github.com/other-owner/repo/pull/1",
+		"https://github.com/AutoDevJapan/../pull/1",
+		"https://github.com/AutoDevJapan/%72epo/pull/1",
+	} {
+		if got := pullRequestLinks(candidate, 5); len(got) != 0 {
+			t.Fatalf("untrusted URL was extracted: %q", candidate)
+		}
+	}
+	body := "成果: [PR](" + valid + "). " + valid + " https://github.com/BM1314/another/pull/2"
+	if got := pullRequestLinks(body, 5); len(got) != 2 || got[0] != valid {
+		t.Fatalf("legitimate result links were lost or duplicated: %v", got)
+	}
+	if got := pullRequestLinks(body, 1); len(got) != 1 {
+		t.Fatal("result link limit was not respected")
+	}
+}

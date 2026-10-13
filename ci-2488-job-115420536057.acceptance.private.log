@@ -1,0 +1,97 @@
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:29.4139486Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:29.5821089Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:30.7300490Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:30.7372045Z [command]/usr/bin/git checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T16:54:30.7451433Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	﻿2026-10-13T16:54:30.9865322Z ##[group]Run go test -race -v ./...
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9865533Z ^[[36;1mgo test -race -v ./...^[[0m
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9873177Z shell: /usr/bin/bash -e {0}
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9873341Z env:
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9873668Z   CC_LINUX_RUNNER_MODE: normal
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9873851Z   TMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9874002Z   GOTMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9874150Z   GOCACHE: /work/_temp/go-cache
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9874302Z   GOTOOLCHAIN: local
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:30.9874433Z ##[endgroup]
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.4642849Z === RUN   TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.4856196Z --- PASS: TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo (0.02s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.4856982Z === RUN   TestCorrelationPreservesPrivateBodiesAndDoesNotApply
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5016102Z --- PASS: TestCorrelationPreservesPrivateBodiesAndDoesNotApply (0.02s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5016443Z === RUN   TestAcquisitionTamperFailsBeforeOutput
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5061455Z --- PASS: TestAcquisitionTamperFailsBeforeOutput (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5061956Z === RUN   TestOriginalRequestAndQuestionRecordsStaySeparate
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5200565Z --- PASS: TestOriginalRequestAndQuestionRecordsStaySeparate (0.01s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5204915Z === RUN   TestAcquisitionRequiresPrivateOwnershipAndPermissions
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5205246Z --- PASS: TestAcquisitionRequiresPrivateOwnershipAndPermissions (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5205530Z === RUN   TestConflictingAcquisitionsDoNotVerifyOrBundleReplies
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5388309Z --- PASS: TestConflictingAcquisitionsDoNotVerifyOrBundleReplies (0.02s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5389905Z === RUN   TestReferencesDifferEvenIfBodiesMatch
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5390658Z --- PASS: TestReferencesDifferEvenIfBodiesMatch (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5391503Z === RUN   TestPromptAssociationsAndQuestionRoutesNeverBecomeRequestOwners
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5392276Z --- PASS: TestPromptAssociationsAndQuestionRoutesNeverBecomeRequestOwners (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5392662Z === RUN   TestTodoCandidatesKeepAmbiguity
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5392977Z --- PASS: TestTodoCandidatesKeepAmbiguity (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5393303Z === RUN   TestMultiPartQuestionIsNotVerifiedFromStarterOnly
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5415292Z --- PASS: TestMultiPartQuestionIsNotVerifiedFromStarterOnly (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5415668Z === RUN   TestLocationHintsDoNotExpandOperationalScope
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5417628Z --- PASS: TestLocationHintsDoNotExpandOperationalScope (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5418889Z === RUN   TestOriginalDeliveryVerifiesOnlyExactSinglePartGeneration
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5419448Z --- PASS: TestOriginalDeliveryVerifiesOnlyExactSinglePartGeneration (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5419877Z === RUN   TestPostingFooterMustBeTerminalOutsideQuotesAndCode
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5421048Z --- PASS: TestPostingFooterMustBeTerminalOutsideQuotesAndCode (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5421482Z === RUN   TestDeliveryRecordFallbackOnlyForMissingScopedFile
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5462724Z --- PASS: TestDeliveryRecordFallbackOnlyForMissingScopedFile (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5463054Z === RUN   TestTraceDeliveryKeepsGenerationSeparateFromPermission
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5683724Z --- PASS: TestTraceDeliveryKeepsGenerationSeparateFromPermission (0.02s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5684342Z === RUN   TestPrivateTextNeverAppearsInMetadata
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5685073Z --- PASS: TestPrivateTextNeverAppearsInMetadata (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5685403Z === RUN   TestAmbiguousSequenceDoesNotVerifyScope
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5689215Z --- PASS: TestAmbiguousSequenceDoesNotVerifyScope (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5690260Z === RUN   TestPartialHistorySortedBeforeAssociating
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5690557Z --- PASS: TestPartialHistorySortedBeforeAssociating (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5690823Z === RUN   TestPrivateOutputRefusedInsideGit
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5735227Z --- PASS: TestPrivateOutputRefusedInsideGit (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5735840Z === RUN   TestWideNumericOrder
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5736074Z --- PASS: TestWideNumericOrder (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5736614Z === RUN   TestDiscordLinkHostAndPathAreExact
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5738181Z --- PASS: TestDiscordLinkHostAndPathAreExact (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5738541Z === RUN   TestHistoryUsesGETAndAdvancingCursor
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5826246Z --- PASS: TestHistoryUsesGETAndAdvancingCursor (0.01s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5826538Z === RUN   TestTruncatedAndWrongChannelAreNotComplete
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5827624Z === RUN   TestTruncatedAndWrongChannelAreNotComplete/false
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5888027Z === RUN   TestTruncatedAndWrongChannelAreNotComplete/true
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5936666Z --- PASS: TestTruncatedAndWrongChannelAreNotComplete (0.01s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5937499Z     --- PASS: TestTruncatedAndWrongChannelAreNotComplete/false (0.01s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5938426Z     --- PASS: TestTruncatedAndWrongChannelAreNotComplete/true (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5938696Z === RUN   TestNoOverwrite
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5965227Z --- PASS: TestNoOverwrite (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.5966713Z === RUN   TestUntrustedSeedRejectedBeforeNetwork
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6010820Z --- PASS: TestUntrustedSeedRejectedBeforeNetwork (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6011270Z === RUN   TestErrorBodyIsNotReturned
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6021788Z --- PASS: TestErrorBodyIsNotReturned (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6022049Z === RUN   TestReindexRejectsTamperedPrivateEvidence
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6060387Z --- PASS: TestReindexRejectsTamperedPrivateEvidence (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6060689Z === RUN   TestReindexRejectsIdentityMismatchBeforeOutput
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6101307Z --- PASS: TestReindexRejectsIdentityMismatchBeforeOutput (0.00s)
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:39.6101611Z PASS
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go test -race -v ./...	2026-10-13T16:54:40.6135180Z ok  	github.com/AutoDevJapan/cc-pc-tools-rs/record-recovery	1.158s
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	﻿2026-10-13T16:54:40.6759231Z ##[group]Run go vet ./...
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6759410Z ^[[36;1mgo vet ./...^[[0m
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765195Z shell: /usr/bin/bash -e {0}
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765318Z env:
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765432Z   CC_LINUX_RUNNER_MODE: normal
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765571Z   TMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765699Z   GOTMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765825Z   GOCACHE: /work/_temp/go-cache
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6765946Z   GOTOOLCHAIN: local
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go vet ./...	2026-10-13T16:54:40.6766059Z ##[endgroup]
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	﻿2026-10-13T16:54:45.5829644Z ##[group]Run go build -trimpath .
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5829844Z ^[[36;1mgo build -trimpath .^[[0m
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5837354Z shell: /usr/bin/bash -e {0}
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5837511Z env:
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5837623Z   CC_LINUX_RUNNER_MODE: normal
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5837777Z   TMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5837921Z   GOTMPDIR: /work/_temp/go-tmp
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5838048Z   GOCACHE: /work/_temp/go-cache
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5838175Z   GOTOOLCHAIN: local
+test (Linux, self-hosted, Linux, X64, cc-pc-tools-linux)	Run go build -trimpath .	2026-10-13T16:54:45.5838296Z ##[endgroup]

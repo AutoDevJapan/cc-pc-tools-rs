@@ -1,0 +1,89 @@
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Admit current Windows source before checkout	2026-10-13T17:21:44.4011401Z Accepted current repository revision 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:21:44.4480943Z   ref: 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:21:48.5720365Z [command]"C:\Program Files\Git\cmd\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:21:49.5861875Z  * branch            1e9cd8c90deec542d28d671d09fd1b9955d8f2ee -> FETCH_HEAD
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:21:49.7179286Z [command]"C:\Program Files\Git\cmd\git.exe" checkout --progress --force 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262	2026-10-13T17:21:49.8216786Z 1e9cd8c90deec542d28d671d09fd1b9955d8f2ee
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	﻿2026-10-13T17:21:51.3331823Z ##[group]Run go test -race -v ./...
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3332059Z ^[[36;1mgo test -race -v ./...^[[0m
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3338834Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3339036Z env:
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3339166Z   CC_LINUX_RUNNER_MODE: normal
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3339326Z   GOTOOLCHAIN: local
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:51.3339465Z ##[endgroup]
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.5011684Z === RUN   TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.6170578Z --- PASS: TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo (0.12s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.6171829Z === RUN   TestCorrelationPreservesPrivateBodiesAndDoesNotApply
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.7398618Z --- PASS: TestCorrelationPreservesPrivateBodiesAndDoesNotApply (0.12s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.7398990Z === RUN   TestAcquisitionTamperFailsBeforeOutput
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.7753789Z --- PASS: TestAcquisitionTamperFailsBeforeOutput (0.04s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.7754194Z === RUN   TestOriginalRequestAndQuestionRecordsStaySeparate
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.8799581Z --- PASS: TestOriginalRequestAndQuestionRecordsStaySeparate (0.10s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.8800031Z === RUN   TestAcquisitionRequiresPrivateOwnershipAndPermissions
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.9363010Z --- PASS: TestAcquisitionRequiresPrivateOwnershipAndPermissions (0.06s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:53.9363415Z === RUN   TestConflictingAcquisitionsDoNotVerifyOrBundleReplies
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0743879Z --- PASS: TestConflictingAcquisitionsDoNotVerifyOrBundleReplies (0.14s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0744294Z === RUN   TestReferencesDifferEvenIfBodiesMatch
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0744552Z --- PASS: TestReferencesDifferEvenIfBodiesMatch (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0744835Z === RUN   TestPromptAssociationsAndQuestionRoutesNeverBecomeRequestOwners
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0745197Z --- PASS: TestPromptAssociationsAndQuestionRoutesNeverBecomeRequestOwners (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0745745Z === RUN   TestTodoCandidatesKeepAmbiguity
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0745970Z --- PASS: TestTodoCandidatesKeepAmbiguity (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0746215Z === RUN   TestMultiPartQuestionIsNotVerifiedFromStarterOnly
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0793010Z --- PASS: TestMultiPartQuestionIsNotVerifiedFromStarterOnly (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0793359Z === RUN   TestLocationHintsDoNotExpandOperationalScope
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0795247Z --- PASS: TestLocationHintsDoNotExpandOperationalScope (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0795922Z === RUN   TestOriginalDeliveryVerifiesOnlyExactSinglePartGeneration
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0796537Z --- PASS: TestOriginalDeliveryVerifiesOnlyExactSinglePartGeneration (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0797104Z === RUN   TestPostingFooterMustBeTerminalOutsideQuotesAndCode
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0797680Z --- PASS: TestPostingFooterMustBeTerminalOutsideQuotesAndCode (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0798003Z === RUN   TestDeliveryRecordFallbackOnlyForMissingScopedFile
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0893667Z --- PASS: TestDeliveryRecordFallbackOnlyForMissingScopedFile (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.0894036Z === RUN   TestTraceDeliveryKeepsGenerationSeparateFromPermission
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2343782Z --- PASS: TestTraceDeliveryKeepsGenerationSeparateFromPermission (0.14s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2344157Z === RUN   TestPrivateTextNeverAppearsInMetadata
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2344866Z --- PASS: TestPrivateTextNeverAppearsInMetadata (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2345107Z === RUN   TestAmbiguousSequenceDoesNotVerifyScope
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2345581Z --- PASS: TestAmbiguousSequenceDoesNotVerifyScope (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2345824Z === RUN   TestPartialHistorySortedBeforeAssociating
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2346110Z --- PASS: TestPartialHistorySortedBeforeAssociating (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2346377Z === RUN   TestPrivateOutputRefusedInsideGit
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2355886Z --- PASS: TestPrivateOutputRefusedInsideGit (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2356171Z === RUN   TestWideNumericOrder
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2356399Z --- PASS: TestWideNumericOrder (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2356612Z === RUN   TestDiscordLinkHostAndPathAreExact
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2357374Z --- PASS: TestDiscordLinkHostAndPathAreExact (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2358618Z === RUN   TestHistoryUsesGETAndAdvancingCursor
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2410594Z --- PASS: TestHistoryUsesGETAndAdvancingCursor (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2410875Z === RUN   TestTruncatedAndWrongChannelAreNotComplete
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2411122Z === RUN   TestTruncatedAndWrongChannelAreNotComplete/false
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2448614Z === RUN   TestTruncatedAndWrongChannelAreNotComplete/true
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2483941Z --- PASS: TestTruncatedAndWrongChannelAreNotComplete (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2484745Z     --- PASS: TestTruncatedAndWrongChannelAreNotComplete/false (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2485349Z     --- PASS: TestTruncatedAndWrongChannelAreNotComplete/true (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2485772Z === RUN   TestNoOverwrite
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2541300Z --- PASS: TestNoOverwrite (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2541566Z === RUN   TestUntrustedSeedRejectedBeforeNetwork
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2597364Z --- PASS: TestUntrustedSeedRejectedBeforeNetwork (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2597645Z === RUN   TestErrorBodyIsNotReturned
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2607826Z --- PASS: TestErrorBodyIsNotReturned (0.00s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2608124Z === RUN   TestReindexRejectsTamperedPrivateEvidence
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2663256Z --- PASS: TestReindexRejectsTamperedPrivateEvidence (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2663576Z === RUN   TestReindexRejectsIdentityMismatchBeforeOutput
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2754781Z --- PASS: TestReindexRejectsIdentityMismatchBeforeOutput (0.01s)
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:54.2755250Z PASS
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go test -race -v ./...	2026-10-13T17:21:55.3140799Z ok  	github.com/AutoDevJapan/cc-pc-tools-rs/record-recovery	2.044s
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	﻿2026-10-13T17:21:56.3152918Z ##[group]Run go vet ./...
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3153121Z ^[[36;1mgo vet ./...^[[0m
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3157210Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3157933Z env:
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3158070Z   CC_LINUX_RUNNER_MODE: normal
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3158241Z   GOTOOLCHAIN: local
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go vet ./...	2026-10-13T17:21:56.3158386Z ##[endgroup]
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	﻿2026-10-13T17:21:57.0019843Z ##[group]Run go build -trimpath .
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0020085Z ^[[36;1mgo build -trimpath .^[[0m
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0024528Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0024730Z env:
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0024892Z   CC_LINUX_RUNNER_MODE: normal
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0025042Z   GOTOOLCHAIN: local
+test (Windows, self-hosted, Windows, X64, cc-pc-tools-windows)	Run go build -trimpath .	2026-10-13T17:21:57.0025189Z ##[endgroup]

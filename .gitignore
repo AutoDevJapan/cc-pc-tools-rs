@@ -15,3 +15,9 @@ cc-bookmark-queue/extension/config.js
 /docs/runner-*.private.ps1
 /docs/runner-*.private.txt
 /docs/runner-*.private.md
+/.ci-runtime/
+/.ci-work/
+/codex-owned-f1e920c7cd3e3adda394cf2c68a16769/
+/codex-owned-f350977e8ec393bff757d7284536725a/
+/docs/linux-runner-*.private.md
+/docs/linux-runner-*.private.ps1

@@ -1,0 +1,27 @@
+name: Linux runner finite probe
+on:
+  push:
+    branches: [scheduler/todo-2511-pc-linux-runner-cargo-2510]
+    paths: [.github/workflows/linux-runner-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify fixed revision and the shared Cargo admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(id -u)" = 1001
+          test ! -e /var/run/docker.sock
+          cargo --version
+          cargo test --locked -p cc-task-title -j64 -- --test-threads=32
+          cd tools/linux-runner-bridge
+          go test ./...

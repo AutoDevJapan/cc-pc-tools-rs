@@ -22,3 +22,7 @@
 原全文はCodeQL Go/Actions/JavaScriptの3jobを取得し、receiptのbytes/SHA256と現物を照合。その他の終端10jobの原全文は通常ghの端末制御文字制限で未確認。allow-escape-sequencesの正規ghゲート拒否を保持し、別経路・直gh.exe・ゲート改変で迂回していない。全workspaceのpass/fail/skip実数、doctest、全targets Clippyの実コマンドexitはnull/未確認。APIの先行4検査successも原全文の件数やexitへ代用しない。GoのOS別step状態を保存し、nonverbose/cachedの個別件数を推測しない。poll015のBookmark API TLS timeoutは保存し、poll016以降の通常取得成功も別receiptとして保持。
 
 全原取得のstdout/stderr/receiptの絶対path・bytes・SHA256、各job/step状態、同d7のCodeQL4新解析(error空/results0・4SARIF complete)、取得可能な原ログ根拠行は `.ci-work/d7-2488/ci-d7-result-2488.private.json/md`。再開手順は同フォルダの `resume.private.md`。派生manifest以外の原証拠を上書きせず、次回は既存の最大poll番号+1から新しい有限30分窓で確認する。同ToDo2613へ600秒wait-retryを記録し、元spec/同worktree/同source/同runを保持してスケジューラーに再開を任せる。親2488や他ToDoの状態は変更しない。新監視担当・Cargo・GPU・CI再実行・source修復・PR・merge・配布・Discord送信は行っていない。
+
+2026-10-14 08:18 JSTに同ToDo2613・同worktreeから再開。gitは865483dでclean、本人所有PRIVATEとPR144 HEAD d7・固定treeを新しい通常gh APIで再照合した。原報告をcheckpoint-20261013-231835-result.private.json/mdへコピーし、原API/原ログ/拒否receiptを保持。今回はpoll025から保存し、確認期限は08:48:09 JST。新担当・Cargo・GPU・CI再実行は作らない。
+
+再開直後は4workflow成功/4workflow未終端、13/20job終端のまま。Buildのcheck-run115574911494も同d7でin_progress・annotations_count=0（通常APIの新しい原JSONを保存）。注記0を検査成功や実コマンドexitへ代用しない。原全文の許可flag拒否は再試行せず、既存の未確認を保持する。

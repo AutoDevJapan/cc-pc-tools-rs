@@ -104,3 +104,9 @@ Vercelのチーム請求画面と10月のUpcoming Invoiceを読み取り専用�
 ### 残り
 
 ChatGPT、Claude、Railway、GitHubの未確認請求が残る。XとVercelは見込み額を記録したが、実請求と支払いは未確認。Google Workspace/Cloudの請求先照合、ChatGPTの承認回答待ち、ToDo2498との購入操作・承認照合も続ける。
+
+### 2026-10-13 Railwayの10月請求見込み
+
+RailwayのBillingとUsageを読み取り専用で確認した。現在の請求周期は10月21日までで、10月のEstimated Billが表示されている。利用に応じて期間末まで変わる見込みで、実請求額と支払日は未確認。
+
+指定表の既存Railway行へ見込み額・請求周期・確認元・未確定状態を保存し、CSV出力で再読込した。支払額欄は空欄。契約・請求設定の変更なし。プロジェクト別の利用者名や個別利用額は記録していない。

@@ -19,6 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "fixed-revision=$GITHUB_SHA"
           test "$(id -u)" = 1001
           test ! -e /var/run/docker.sock
           if GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook; then

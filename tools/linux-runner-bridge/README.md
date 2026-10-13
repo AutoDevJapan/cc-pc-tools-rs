@@ -33,5 +33,6 @@ runner archive. The Dockerfile is deliberately outside the Rust workspace and
 does not change the parent's Windows code or existing CI/CodeQL workflows.
 
 Start: `bridge.exe host REVISION scheduler/todo-2511-... ABSOLUTE_HOST_TARGET`.
+The parent2510 task branch is also accepted; unrelated task branches are rejected.
 The remote branch must already point to REVISION. Stop the dedicated container
 after the ephemeral job finishes, and retain private results for parent2510.

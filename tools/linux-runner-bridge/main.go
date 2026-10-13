@@ -33,6 +33,7 @@ const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
 
 var revisionPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+var branchPattern = regexp.MustCompile(`^scheduler/todo-251[01]-[a-z0-9-]+$`)
 
 type request struct {
 	Args                                  []string
@@ -341,7 +342,7 @@ func hook() int {
 	return rpc("/authorize", request{Repository: os.Getenv("GITHUB_REPOSITORY"), Revision: os.Getenv("GITHUB_SHA"), Ref: os.Getenv("GITHUB_REF"), Event: os.Getenv("GITHUB_EVENT_NAME")})
 }
 func hostMain(args []string) int {
-	if len(args) != 3 || !revisionPattern.MatchString(args[0]) || !strings.HasPrefix(args[1], "scheduler/todo-2511-") {
+	if len(args) != 3 || !revisionPattern.MatchString(args[0]) || !branchPattern.MatchString(args[1]) {
 		fmt.Fprintln(os.Stderr, "fixed revision, task branch, target required")
 		return 1
 	}

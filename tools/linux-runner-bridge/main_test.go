@@ -42,3 +42,16 @@ func TestJobIdentity(t *testing.T) {
 		}
 	}
 }
+
+func TestFiniteParentAndCheckBranches(t *testing.T) {
+	for _, branch := range []string{"scheduler/todo-2510-github-pc-ci-pc", "scheduler/todo-2511-pc-linux-runner-cargo-2510"} {
+		if !branchPattern.MatchString(branch) {
+			t.Fatal(branch)
+		}
+	}
+	for _, branch := range []string{"main", "scheduler/todo-2512-review", "scheduler/todo-2510-x/../../other", "foreign"} {
+		if branchPattern.MatchString(branch) {
+			t.Fatal(branch)
+		}
+	}
+}

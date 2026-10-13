@@ -5069,8 +5069,35 @@ mod queue_regressions {
         marker["pid_created"] = Value::Null;
         fs::write(&active, marker.to_string()).unwrap();
         assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["pid_created"] = json!(456);
+        for pid in [Value::Null, json!("321"), json!(0), json!(u64::MAX)] {
+            marker["pid"] = pid;
+            fs::write(&active, marker.to_string()).unwrap();
+            assert_eq!(report()["occupied_slots"], 1);
+            assert!(t.ctx.admit("next").unwrap().is_none());
+        }
+        marker["pid"] = json!(321);
+        marker["kind"] = json!("unknown");
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["kind"] = json!("cargo-active");
+        // A positively mismatched or absent sibling cannot occupy this job.
+        marker["pid_created"] = json!(455);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
+        t.rt.procs.lock().unwrap().remove(&321);
+        marker["pid_created"] = json!(456);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        marker["job_id"] = json!("different-job");
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
         fs::write(&active, "{incomplete").unwrap();
         assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
         fs::remove_file(active).unwrap();
         // Cargo admitted: the marker is gone and the job occupies its slot again.
         fs::remove_file(&live).unwrap();
@@ -7417,16 +7444,25 @@ mod cancel {
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), "hello").unwrap();
         t.rt.spawn_live.store(true, Ordering::Relaxed);
+        // A live fake child must expose its identity so the injected failure
+        // occurs on the first post-spawn save, rather than during cleanup.
+        t.rt.procs.lock().unwrap().insert(321, 456);
         t.rt.save_failure.store(true, Ordering::Relaxed);
         t.ctx.supervise(s(&j, "id")).unwrap();
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
         assert_eq!(*t.rt.kills.lock().unwrap(), [321]);
-        assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "failed");
+        assert!(!t.rt.child_alive.load(Ordering::Relaxed));
+        assert_eq!(t.rt.proc_created(321), None);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "failed");
+        assert!(s(&saved, "last_error").contains("disk full"));
     }
     #[test]
     fn test_never_kills_a_process_that_reused_the_pid() {
         let t = Test::new();
         t.rt.procs.lock().unwrap().insert(555, 99);
-        let j = t.put(job(json!({"status":"running","pid":555,"codex_pid":555})));
+        let j = t.put(job(json!({"status":"running","pid":555,"pid_created":98,
+            "codex_pid":555,"codex_pid_created":98})));
         let (r, out, _) = t.cli(&["cancel", s(&j, "id")]);
         assert_eq!(r.unwrap(), 0);
         assert_eq!(t.rt.proc_created(555), Some(99));
@@ -8249,6 +8285,10 @@ mod run_validation {
                 t.rt.proc_probe_errors.lock().unwrap().insert(321, 5);
             }
             t.put(active.clone());
+            {
+                let _gate = t.ctx.queue_lock().unwrap();
+                t.ctx.track_queued_job("active-writer").unwrap();
+            }
             assert!(
                 t.run(&["--resume-session", session], b"duplicate")
                     .unwrap_err()

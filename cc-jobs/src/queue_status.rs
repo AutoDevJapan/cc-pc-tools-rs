@@ -209,6 +209,15 @@ impl Context {
             if s(&marker, "job_id") != s(job, "id") {
                 continue;
             }
+            // Missing or malformed identity is not proof that this sibling
+            // has exited. Only a valid PID can be positively checked below.
+            if marker["pid"]
+                .as_u64()
+                .and_then(|pid| u32::try_from(pid).ok())
+                .is_none_or(|pid| pid == 0)
+            {
+                return false;
+            }
             // A positive waiting marker cannot erase an inaccessible active
             // sibling or an incomplete observation of this whole job's flight.
             match self.is_ours_checked(&marker, "pid") {

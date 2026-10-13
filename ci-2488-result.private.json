@@ -2918,5 +2918,23 @@
     "job_total": 21,
     "checked_out_source_sha_confirmed": 20
   },
-  "completion_scope": "CI result verification complete; parent repair/merge/deployment not complete; scheduler owns own-ToDo lifecycle"
+  "completion_scope": "CI result verification complete; parent repair/merge/deployment not complete; scheduler owns own-ToDo lifecycle",
+  "parent_delivery": {
+    "todo_id": 2488,
+    "via": "todo.exe edit --note-file",
+    "prior_note_preserved": true,
+    "readback_confirmed": true,
+    "result_commit": "9bec38762299af5b0054713079212cb0f25d3a20",
+    "delivered_at": "2026-10-14T02:25:33+09:00"
+  },
+  "cleanup": {
+    "owner_id": "ef6f1961b9e1d5a47f62fda5712c8d83",
+    "content": "own note delivery copies only",
+    "files": 2,
+    "bytes": 19340,
+    "plan": "submit_to_exec_tool",
+    "finish_state": "source_absent",
+    "original_parent_note_retained": true,
+    "worktree_clean": true
+  }
 }

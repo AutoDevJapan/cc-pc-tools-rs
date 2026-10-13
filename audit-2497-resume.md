@@ -44,3 +44,6 @@ Sakana AI Consoleで既存Googleログインを開始した。承認済みの主
 質問を閉じる操作はQuestionStateRecoveryRequired（質問台帳と本人返信記録の欠落）で拒否された。新しい質問や別経路の投稿はしていない。回答済み質問の閉鎖と進捗投稿は、台帳復旧後に続ける。
 
 Google Workspace Admin Consoleでは個人アカウントではなく管理者アカウントを要求され、請求書との照合に進めなかった。Cloud/Workspace支払状態は未確認。ほかの未確認項目と2498の購入操作照合も継続する。
+Google Oneの正規API本人返信を照合して反映した。本人は契約を自分のものと示した。指定表の既存行を契約画面・Google Playの月額、次回請求日、購入履歴で更新し、Saved to Driveを確認。購入操作の実行者/初回承認は2498で照合待ち。回答済み質問のcloseは台帳欠落で拒否され、再送なし。
+
+Google Workspace Admin Consoleは管理者アカウントを要求し、請求状態未確認。Sakana AI ConsoleのGoogle選択はUI操作がtimeoutし、アカウント未選択・請求未閲覧。詳細と未完了は指定された非公開evidence-summary.json/handoff.mdに保存した。

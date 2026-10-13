@@ -129,8 +129,14 @@ func privateDir(path string) error {
 			return errors.New("evidence_acl_failed")
 		}
 		cmd := exec.Command("icacls.exe", path, "/inheritance:r", "/grant:r", u.Username+":(OI)(CI)F", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F")
+		hideCommand(cmd)
 		if cmd.Run() != nil {
 			return errors.New("evidence_acl_failed")
+		}
+		cmd = exec.Command("icacls.exe", path, "/setowner", u.Username)
+		hideCommand(cmd)
+		if cmd.Run() != nil {
+			return errors.New("evidence_owner_failed")
 		}
 	}
 	return nil
@@ -149,6 +155,21 @@ func writeNew(path string, v any) error {
 		return errors.New("evidence_write_failed")
 	}
 	if f.Sync() != nil {
+		return errors.New("evidence_sync_failed")
+	}
+	return nil
+}
+
+func writeTextNew(path string, b []byte) error {
+	f, e := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return errors.New("evidence_write_failed")
+	}
+	defer f.Close()
+	if _, e = f.Write(b); e != nil {
+		return errors.New("evidence_write_failed")
+	}
+	if e = f.Sync(); e != nil {
 		return errors.New("evidence_sync_failed")
 	}
 	return nil
@@ -829,6 +850,8 @@ func main() {
 	pages := f.Int("max-pages", 20, "")
 	shadow := f.String("shadow-root", "", "")
 	source := f.String("source", "", "")
+	jobs := f.String("jobs", "D:/CC/Tools/codex-jobs/jobs", "")
+	spec := f.String("spec", "D:/CC/Work/operations-original-records-repair-2467.md", "")
 	if f.Parse(os.Args[2:]) != nil || *out == "" {
 		fmt.Println(`{"ok":false,"code":"invalid_arguments"}`)
 		os.Exit(2)
@@ -846,6 +869,12 @@ func main() {
 		v, e = snapshotProbe(*shadow, *out)
 	case "reindex":
 		v, e = reindex(*source, *out)
+	case "survey":
+		v, e = survey(*home, *todo, *jobs, *spec, *out)
+	case "correlate":
+		v, e = correlate(*source, *home, *todo, *jobs, *out)
+	case "checkpoint":
+		v, e = checkpoint(*source, *todo, *spec, *out)
 	case "collect":
 		token := os.Getenv("GODD_DISCORD_BOT_TOKEN")
 		if token == "" {

@@ -64,6 +64,15 @@ func TestNormalPushRequiresCurrentMainHead(t *testing.T) {
 	}
 }
 
+func TestBridgePortPreservesFiniteAndNormalListeners(t *testing.T) {
+	if got := bridgeURL("finite", "/authorize"); got != "http://host.docker.internal:17851/authorize" {
+		t.Fatalf("finite bridge URL: %s", got)
+	}
+	if got := bridgeURL("normal", "/authorize"); got != "http://host.docker.internal:17852/authorize" {
+		t.Fatalf("normal bridge URL: %s", got)
+	}
+}
+
 func TestJobRequestFromEnvUsesPRHeadNotMergeSHA(t *testing.T) {
 	path := t.TempDir() + "/event.json"
 	if err := os.WriteFile(path, []byte(`{"repository":{"full_name":"AutoDevJapan/cc-pc-tools-rs"},"pull_request":{"head":{"sha":"`+strings.Repeat("e", 40)+`","ref":"feature/linux-ci","repo":{"full_name":"AutoDevJapan/cc-pc-tools-rs"}},"base":{"ref":"main","repo":{"full_name":"AutoDevJapan/cc-pc-tools-rs"}}}}`), 0600); err != nil {

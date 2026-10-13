@@ -75,6 +75,35 @@ func exitCode(err error) int {
 	return 1
 }
 func output(c *exec.Cmd) (string, error) { b, e := c.Output(); return strings.TrimSpace(string(b)), e }
+func reportStage(name string) {
+	root, e := os.Getwd()
+	if e != nil {
+		return
+	}
+	record, e := json.Marshal(struct {
+		Stage string    `json:"stage"`
+		At    time.Time `json:"at"`
+	}{Stage: name, At: time.Now().UTC()})
+	if e != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(root, ".ci-runtime", "host-status.json"), record, 0600)
+}
+func reportExit(name string, code int) {
+	reportStage(fmt.Sprintf("%s-%d", name, code))
+	root, e := os.Getwd()
+	if e != nil {
+		return
+	}
+	record, e := json.Marshal(struct {
+		Stage string    `json:"stage"`
+		Code  int       `json:"code"`
+		At    time.Time `json:"at"`
+	}{Stage: name, Code: code, At: time.Now().UTC()})
+	if e == nil {
+		_ = os.WriteFile(filepath.Join(root, ".ci-runtime", "runner-last-failure.json"), record, 0600)
+	}
+}
 func validate(r request) error {
 	if r.Dir != "/work/cc-pc-tools-rs/cc-pc-tools-rs" {
 		return errors.New("workspace rejected")
@@ -114,6 +143,46 @@ func validate(r request) error {
 }
 func allowedManifest(p string) bool {
 	return p == "cc-bookmark-queue/Cargo.toml" && relativeManifest.MatchString(p) && !strings.Contains(p, "..")
+}
+func runnerConfigFailureClass(output []byte) int {
+	text := strings.ToLower(string(output))
+	switch {
+	case strings.Contains(text, "401") || strings.Contains(text, "unauthorized"):
+		return 1
+	case strings.Contains(text, "403") || strings.Contains(text, "forbidden") || strings.Contains(text, "not authorized"):
+		return 2
+	case strings.Contains(text, "already exists") || strings.Contains(text, "same name"):
+		return 3
+	case strings.Contains(text, "connect") || strings.Contains(text, "network"):
+		return 4
+	default:
+		return 9
+	}
+}
+func reportRunnerConfigSummary(output []byte) {
+	text := strings.ToLower(string(output))
+	summary := struct {
+		Bytes        int  `json:"bytes"`
+		Has401       bool `json:"has_401"`
+		Has403       bool `json:"has_403"`
+		HasTokenWord bool `json:"has_token_word"`
+		HasURLWord   bool `json:"has_url_word"`
+		HasAuthWord  bool `json:"has_auth_word"`
+		HasExistWord bool `json:"has_exist_word"`
+		HasConnect   bool `json:"has_connect_word"`
+		HasErrorWord bool `json:"has_error_word"`
+		HasFailWord  bool `json:"has_fail_word"`
+	}{
+		Bytes: len(output), Has401: strings.Contains(text, "401"), Has403: strings.Contains(text, "403"),
+		HasTokenWord: strings.Contains(text, "token"), HasURLWord: strings.Contains(text, "url"),
+		HasAuthWord: strings.Contains(text, "auth"), HasExistWord: strings.Contains(text, "exist"),
+		HasConnect: strings.Contains(text, "connect"), HasErrorWord: strings.Contains(text, "error"),
+		HasFailWord: strings.Contains(text, "fail"),
+	}
+	data, e := json.Marshal(summary)
+	if e == nil {
+		_ = os.WriteFile(filepath.Join(os.TempDir(), "runner-config-summary.json"), data, 0600)
+	}
 }
 func (h *host) remoteHead(branch string) (string, error) {
 	if h.getHead != nil {
@@ -239,8 +308,26 @@ func verifyNormalContainer() error {
 			noNewPrivileges = true
 		}
 	}
-	if c.Config.Image != normalImage || c.Config.User != "1001" || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+	if c.Config.Image != normalImage || c.Config.User != "runner" || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
 		return errors.New("normal runner container isolation rejected")
+	}
+	runnerTmpfs := strings.Split(c.HostConfig.Tmpfs["/runner"], ",")
+	canExecuteRunner := false
+	for _, option := range runnerTmpfs {
+		if option == "exec" {
+			canExecuteRunner = true
+		}
+		if option == "noexec" {
+			canExecuteRunner = false
+			break
+		}
+	}
+	if !canExecuteRunner {
+		return errors.New("runner tmpfs must allow official runner executables")
+	}
+	uid, e := output(command(docker, "exec", normalContainer, "id", "-u"))
+	if e != nil || uid != "1001" {
+		return errors.New("normal runner effective user rejected")
 	}
 	for _, mount := range c.Mounts {
 		if mount.Type != "tmpfs" {
@@ -444,7 +531,7 @@ func rpc(path string, q request) int {
 		return 1
 	}
 	b, _ := json.Marshal(q)
-	req, e := http.NewRequest("POST", "http://host.docker.internal:17851"+path, bytes.NewReader(b))
+	req, e := http.NewRequest("POST", bridgeURL(os.Getenv("CC_LINUX_RUNNER_MODE"), path), bytes.NewReader(b))
 	if e != nil {
 		return 1
 	}
@@ -478,6 +565,13 @@ func rpc(path string, q request) int {
 			_, _ = os.Stdout.Write(p.Data)
 		}
 	}
+}
+func bridgeURL(mode, path string) string {
+	port := "17851"
+	if mode == "normal" {
+		port = "17852"
+	}
+	return "http://host.docker.internal:" + port + path
 }
 func hook() int {
 	r, ok := jobRequestFromEnv()
@@ -559,6 +653,7 @@ func normalContainerForMode() string {
 	return normalContainerFor(os.Getenv("CC_LINUX_RUNNER_MODE"))
 }
 func hostMain(args []string) int {
+	reportStage("host-start")
 	mode := "finite"
 	var revision, branch, target, listen, runnerContainer, runnerName, labels string
 	ephemeral := true
@@ -581,6 +676,7 @@ func hostMain(args []string) int {
 		return 1
 	}
 	if mode == "normal" {
+		reportStage("target-validation-started")
 		cwd, cwdErr := os.Getwd()
 		targetAbs, targetErr := filepath.Abs(target)
 		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", "target"))
@@ -594,41 +690,62 @@ func hostMain(args []string) int {
 		if _, statErr := os.Lstat(targetAbs); statErr != nil {
 			return 1
 		}
+		reportStage("target-validated")
 	}
 	permission, e := output(command(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission"))
 	if e != nil || permission != "ADMIN" {
+		reportStage("oauth-repository-permission-failed")
 		return 1
 	}
+	reportStage("oauth-repository-permission-verified")
 	if mode == "normal" {
 		if verifyErr := verifyNormalContainer(); verifyErr != nil {
+			reportStage("normal-container-verification-failed")
 			fmt.Fprintln(os.Stderr, verifyErr)
 			return 1
 		}
+		reportStage("normal-container-verified")
 	}
 	l, e := net.Listen("tcp", listen)
 	if e != nil {
+		reportStage("bridge-listen-failed")
 		return 1
 	}
+	reportStage("bridge-listening")
 	s := http.Server{Handler: http.HandlerFunc(h.serve), ReadHeaderTimeout: 10 * time.Second}
 	go func() { _ = s.Serve(l) }()
 	// The random bridge key and runner token stay in RAM and the official config
 	// process. Neither appears in command arguments, Docker config or host files.
 	for {
+		reportStage("runner-token-request")
 		token, tokenErr := output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
 		if tokenErr != nil || token == "" {
+			reportStage("runner-token-request-failed")
 			_ = s.Close()
 			return 1
 		}
+		reportStage("runner-token-received")
 		c := command(docker, "exec", "-i", runnerContainer, "/opt/bridge/bridge", "register")
 		c.Stdin = strings.NewReader(h.key + "\n" + token + "\n" + runnerName + "\n" + labels + "\n" + strconv.FormatBool(ephemeral) + "\n")
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
+		reportStage("runner-registration-started")
 		code := exitCode(c.Run())
 		token = ""
 		if ephemeral || code == 0 {
 			_ = s.Shutdown(context.Background())
 			return code
 		}
+		if mode == "normal" {
+			if summary, summaryErr := output(command(docker, "exec", runnerContainer, "cat", "/tmp/runner-config-summary.json")); summaryErr == nil {
+				var check map[string]json.RawMessage
+				root, rootErr := os.Getwd()
+				if json.Unmarshal([]byte(summary), &check) == nil && len(check) == 10 && rootErr == nil {
+					_ = os.WriteFile(filepath.Join(root, ".ci-runtime", "runner-config-summary.json"), []byte(summary), 0600)
+				}
+			}
+		}
+		reportExit("runner-registration-exit", code)
 		fmt.Printf("linux-runner-exit code=%d; retrying after 30 seconds\n", code)
 		time.Sleep(30 * time.Second)
 		if _, inspectErr := output(command(docker, "inspect", runnerContainer)); inspectErr != nil {
@@ -641,43 +758,49 @@ func register() int {
 	reader := bufio.NewReader(os.Stdin)
 	key, e := reader.ReadString('\n')
 	if e != nil {
-		return 1
+		return 11
 	}
 	token, e := reader.ReadString('\n')
 	if e != nil {
-		return 1
+		return 12
 	}
 	if len(strings.TrimSpace(key)) != 64 {
-		return 1
+		return 13
 	}
 	runnerName, e := reader.ReadString('\n')
 	if e != nil {
-		return 1
+		return 14
 	}
 	labels, e := reader.ReadString('\n')
 	if e != nil {
-		return 1
+		return 15
 	}
 	ephemeral, e := reader.ReadString('\n')
 	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
-		return 1
+		return 16
 	}
 	if e = os.WriteFile("/tmp/bridge-key", []byte(strings.TrimSpace(key)), 0600); e != nil {
-		return 1
+		return 17
 	}
 	cargs := []string{"--unattended", "--url", "https://github.com/" + repo, "--name", strings.TrimSpace(runnerName), "--labels", strings.TrimSpace(labels), "--work", "/work"}
 	if strings.TrimSpace(ephemeral) == "true" {
 		cargs = append(cargs, "--ephemeral", "--disableupdate")
 	}
 	cargs = append(cargs, "--replace")
+	_ = os.Remove(filepath.Join(os.TempDir(), "runner-config-summary.json"))
 	c := exec.Command("/runner/config.sh", cargs...)
 	c.Dir = "/runner"
 	c.Env = append(os.Environ(), "ACTIONS_RUNNER_INPUT_TOKEN="+strings.TrimSpace(token))
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	if c.Run() != nil {
-		return 1
+	var configOutput bytes.Buffer
+	c.Stdout = &configOutput
+	c.Stderr = &configOutput
+	if configErr := c.Run(); configErr != nil {
+		failureClass := runnerConfigFailureClass(configOutput.Bytes())
+		reportRunnerConfigSummary(configOutput.Bytes())
+		configOutput.Reset()
+		return 30 + failureClass
 	}
+	configOutput.Reset()
 	token = ""
 	mode := "normal"
 	if strings.TrimSpace(ephemeral) == "true" {

@@ -149,6 +149,10 @@ func survey(home, todo, jobs, spec, output string) (obj, error) {
 		if walkErr != nil {
 			return
 		}
+		resolved, err := filepath.EvalSymlinks(dir)
+		if err != nil || !operationalEvidenceHint(resolved, home) {
+			return
+		}
 		dirsRead++
 		if dirsRead > 256 {
 			walkErr = errors.New("evidence_discovery_directory_limit_exceeded")
@@ -229,6 +233,11 @@ func survey(home, todo, jobs, spec, output string) (obj, error) {
 			}
 			seenHints[p] = true
 			if !operationalEvidenceHint(p, home) {
+				hints = append(hints, obj{"path_sha256": digest([]byte(p)), "excluded": true})
+				continue
+			}
+			resolved, resolveErr := filepath.EvalSymlinks(p)
+			if resolveErr != nil || !operationalEvidenceHint(resolved, home) {
 				hints = append(hints, obj{"path_sha256": digest([]byte(p)), "excluded": true})
 				continue
 			}
@@ -372,5 +381,5 @@ func operationalEvidenceHint(path, home string) bool {
 		return false
 	}
 	container := strings.Split(strings.TrimPrefix(p, work), "/")[0]
-	return strings.Contains(container, "original") && strings.Contains(container, "2467")
+	return strings.Contains(container, "original") && regexp.MustCompile(`(?:^|[^0-9])2467(?:[^0-9]|$)`).MatchString(container)
 }

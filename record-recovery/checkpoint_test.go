@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,8 +32,14 @@ func TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo(t *testing.T) {
 	spec := filepath.Join(root, "original.md")
 	original := "架空の私的指示\n元の完了条件\n記号 \\n\\n## 2026-10-13 はそのまま"
 	os.WriteFile(spec, []byte(original), 0600)
+	survey := filepath.Join(root, "survey")
+	if e := privateDir(survey); e != nil {
+		t.Fatal(e)
+	}
+	writeNew(filepath.Join(survey, "survey.private.json"), obj{"kind": "original-correspondence-survey", "original_spec_sha256": digest([]byte(original))})
+	writeNew(filepath.Join(source, "correlation.private.json"), obj{"kind": "original-correspondence-correlation", "survey_source": survey})
 	todo := filepath.Join(root, "todo.json")
-	writeNew(todo, obj{"items": []any{obj{"id": 2467, "status": "doing", "note": "元の私的メモ", "spec": spec}}})
+	writeNew(todo, obj{"items": []any{obj{"id": 2467, "status": "doing", "note": "元の私的メモ", "spec": spec, "spec_history": []any{obj{"spec": "private-previous-revision"}}}}})
 	before, _ := os.ReadFile(todo)
 	out := filepath.Join(root, "checkpoint")
 	r, e := checkpoint(source, todo, spec, out)
@@ -43,15 +50,34 @@ func TestCheckpointKeepsOriginalSpecNoteAndIncompleteTodo(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if !strings.HasPrefix(string(b), original) || !strings.Contains(string(b), "全復旧は未完了") {
-		t.Fatal("original conditions lost or continuation treated as done")
+	if strings.Contains(string(b), original) || !strings.Contains(string(b), "全復旧は未完了") {
+		t.Fatal("raw original entered model prompt or continuation treated as done")
+	}
+	stored, e := os.ReadFile(filepath.Join(out, "original-spec.private.md"))
+	if e != nil || string(stored) != original {
+		t.Fatal("original instructions changed")
 	}
 	note, e := os.ReadFile(filepath.Join(out, "todo-note.private.md"))
-	if e != nil || !strings.HasPrefix(string(note), "元の私的メモ") {
+	if e != nil || strings.Contains(string(note), "元の私的メモ") {
+		t.Fatal("raw original note entered model-visible todo note")
+	}
+	stored, e = os.ReadFile(filepath.Join(out, "original-note.private.md"))
+	if e != nil || string(stored) != "元の私的メモ" {
 		t.Fatal("original note discarded")
 	}
 	after, _ := os.ReadFile(todo)
 	if string(before) != string(after) || r["complete"] != false || r["queued"] != false {
 		t.Fatal("checkpoint changed original task state")
+	}
+	kept, _, e := readJSON(filepath.Join(out, "original-todo.private.json"))
+	if e != nil || len(array(kept["spec_history"])) != 1 {
+		t.Fatal("intermediate original restrictions lost")
+	}
+	report["owner_replies_identity_verified"] = 155
+	raw, _ := json.MarshalIndent(report, "", "  ")
+	os.WriteFile(filepath.Join(source, "correlation-report.json"), raw, 0600)
+	_, e = checkpoint(source, todo, spec, filepath.Join(root, "changed"))
+	if e == nil || e.Error() != "checkpoint_measurements_changed" {
+		t.Fatal("changed snapshot used frozen continuation facts")
 	}
 }

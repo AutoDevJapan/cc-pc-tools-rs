@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"path/filepath"
-	"strings"
 )
 
 // Preserve the original task when preparing a standard continuation. This
@@ -44,6 +43,9 @@ func checkpoint(source, todo, spec, output string) (obj, error) {
 	if withWorkers != 5 || uniqueTodos != 2 {
 		return nil, errors.New("checkpoint_request_matches_changed")
 	}
+	if len(array(report["requests"])) != 8 || len(object(report["reply_categories"])) != 4 {
+		return nil, errors.New("checkpoint_record_partition_changed")
+	}
 	db, _, e := readJSON(todo)
 	if e != nil {
 		return nil, e
@@ -63,6 +65,17 @@ func checkpoint(source, todo, spec, output string) (obj, error) {
 	if e != nil {
 		return nil, e
 	}
+	correlation, _, e := readJSON(filepath.Join(source, "correlation.private.json"))
+	if e != nil {
+		return nil, e
+	}
+	survey, e := checkedSurvey(str(correlation["survey_source"]))
+	if e != nil {
+		return nil, e
+	}
+	if digest(original) != str(survey["original_spec_sha256"]) {
+		return nil, errors.New("original_spec_source_mismatch")
+	}
 	current := []byte{}
 	if p := str(item["spec"]); p != "" {
 		current, e = boundedText(p)
@@ -70,29 +83,26 @@ func checkpoint(source, todo, spec, output string) (obj, error) {
 			return nil, e
 		}
 	}
-	resume := string(original)
-	if len(current) > 0 && strings.TrimSpace(string(current)) != strings.TrimSpace(resume) {
-		resume += "\n\n## 元2467に現在保存された指示（対象と承認の範囲を維持）\n" + string(current)
-	}
+	// Unknown raw specs/notes stay private for internal Go processing. The next
+	// model receives references and authorized steps, not the raw documents.
+	resume := "# 元2467の原設定・原記録復旧を続行する\n元の対象・本人承認・未完了条件を維持する。原仕様と現在の保存指示は、以下の私的保存先でGo内部だけに読み込み、本文・秘密・案件名/パスをモデルへ表示しない。\n"
+	resume += "内部原仕様: " + filepath.Join(output, "original-spec.private.md") + "\n内部の現指示: " + filepath.Join(output, "current-spec.private.md") + "\n内部の元メモ: " + filepath.Join(output, "original-note.private.md") + "\n途中の仕様・メモ履歴: " + filepath.Join(output, "original-todo.private.json") + "\n"
 	resume += "\n\n" + `## 2026-10-13 内部照合の続行地点
 全復旧は未完了。元2467を完了にせず、受領・保存・配送・実操作・検証を区別する。
 本人は約1週間外泊し、Discordで質疑可能。本人へのPC操作依頼は禁止。
 公開sourceの変更は D:/CC/Work/operations-original-records-2467 のみ。
 親 D:/CC/Work/unattended-operations-20261013 は編集しない。
 作業記録 docs/original-record-recovery-2467.md を読み、元仕様と来歴を維持する。
-旧stateの8依頼は質問票ではない。担当欄は空。6743担当metadataと200関連記録を
-Go内部で照合済み。担当候補がある依頼5、対応なし3、元ToDo一意候補2。
-本人154返信/質問候補40、明示参照6/参照未照合8/先行候補なし58/順序候補82。
-6明示参照を私的bundle化。3返信に担当候補、1返信に元ToDo一意候補。
-質問世代の保存文書0、15担当文書の本文とmessageリンクの同時完全一致0。
-参照未照合8のうち6は候補検出されないBot投稿、2は本人投稿への参照。
-現在の配送0/実反映0/ライブ取込0/guard変更0。原設定は未発見。
+旧依頼と質問票、明示参照/参照未照合/先行候補なし/順序候補を分けて保持する。
+実測件数と候補の対応は保存済みcorrelation-report.jsonを読む。
+原文の束・担当候補・不足条件はcorrelation.private.jsonをGo内部だけで処理する。
+原設定の復旧と全過去台帳の復元を、今回の照合の完了へ置き換えない。
 
 次に実行する工程:
 1. 保存Bot原文の最後の正規footerから投稿担当を内部Goで抽出し、job.jsonのidと
    質問message ID・原本文ハッシュを結ぶ。引用されたidや新しい順で担当を選ばない。
-2. 未照合Bot6投稿を既存のRust質問判定と結果配送の有限な元記録で照合する。
-   元の6/8/58を保持し、質問検出漏れを進捗投稿と区別する。本人参照2は付替えない。
+2. 未照合のBot投稿を既存のRust質問判定と結果配送の有限な元記録で照合する。
+   元の分類を保持し、質問検出漏れを進捗投稿と区別する。本人参照は付替えない。
 3. 対象・世代・元ToDoが証明された非顧客PC修復だけを標準担当へ配送し、元本文・
    本人ID/message/thread ID・日時・対象・許可・残作業を保持して実反映と検証まで追う。
 4. 保護原本は新しい独立候補のメタデータと来歴で絞る。完了したNative全件、Google
@@ -111,10 +121,18 @@ Go内部で照合済み。担当候補がある依頼5、対応なし3、元ToDo
 	if e = privateDir(output); e != nil {
 		return nil, e
 	}
+	for name, body := range map[string][]byte{"original-spec.private.md": original, "current-spec.private.md": current, "original-note.private.md": []byte(str(item["note"]))} {
+		if e = writeTextNew(filepath.Join(output, name), body); e != nil {
+			return nil, e
+		}
+	}
+	if e = writeNew(filepath.Join(output, "original-todo.private.json"), item); e != nil {
+		return nil, e
+	}
 	if e = writeTextNew(filepath.Join(output, "resume-spec.private.md"), []byte(resume)); e != nil {
 		return nil, e
 	}
-	note := str(item["note"]) + "\n\n2026-10-13: 旧台帳8依頼の担当対応を内部照合。5件に候補、3件未対応、2件は元ToDo一意候補。本人154返信と34履歴を保持。対象と世代未証明で配送/実反映は0。次はBot原文の末尾の投稿担当と質問message ID、未照合Bot6投稿の質問判定・元配送記録を内部Goで照合する。原設定未発見、全体未完了。PC操作は本人へ求めない。標準受付へ元2467のまま続行する。照合保存先: " + source
+	note := "2026-10-13: 旧台帳8依頼の担当対応を内部照合。5件に候補、3件未対応、2件は元ToDo一意候補。本人154返信と34履歴を保持。対象と世代未証明で配送/実反映は0。次はBot原文の末尾の投稿担当と質問message ID、未照合のBot投稿の質問判定・元配送記録を内部Goで照合する。原設定の復旧も含め全体未完了。PC操作は本人へ求めない。標準受付へ元2467のまま続行する。元仕様・現指示・元メモは私的原文とToDoの履歴で保持し、Go内部で読む。照合保存先: " + source
 	if e = writeTextNew(filepath.Join(output, "todo-note.private.md"), []byte(note)); e != nil {
 		return nil, e
 	}

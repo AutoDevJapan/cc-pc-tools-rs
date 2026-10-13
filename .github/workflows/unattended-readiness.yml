@@ -1,4 +1,6 @@
 name: Unattended readiness tools
+env:
+  CC_LINUX_RUNNER_MODE: normal
 on:
   push:
     branches: [main]
@@ -7,22 +9,51 @@ on:
     paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 jobs:
   go:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [Windows, Linux]
+        include:
+          - os: Windows
+            labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
+          - os: Linux
+            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
         module: [resident-guard, capacity-audit-3h, unattended-runner]
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.labels }}
     timeout-minutes: 10
     defaults:
       run:
         working-directory: ${{ matrix.module }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Admit current Windows source before checkout
+        if: runner.os == 'Windows'
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - name: Use the Linux job work directory for Go compilation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/go-tmp" "$RUNNER_TEMP/go-cache"
+          printf 'TMPDIR=%s/go-tmp\nGOTMPDIR=%s/go-tmp\nGOCACHE=%s/go-cache\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.27.x'
           cache: false
@@ -30,16 +61,26 @@ jobs:
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:
-    runs-on: windows-latest
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
     timeout-minutes: 5
     defaults:
       run:
         working-directory: repair-guard
     steps:
-      - uses: actions/checkout@v4
+      - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: repair-guard/go.mod
           cache: false

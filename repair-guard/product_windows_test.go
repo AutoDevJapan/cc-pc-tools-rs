@@ -20,6 +20,33 @@ func TestFiniteProductScopeExpiry(t *testing.T) {
 	}
 }
 
+func TestReviewAllocationCannotAuthorizeAnotherTreeOrReceipt(t *testing.T) {
+	makeItem := func() object {
+		rel := object{"parent_todo_id": float64(1626), "origin_job_id": gameJob, "kind": "review"}
+		return object{"id": float64(2407), "project": "PhosGaea-Vol1", "spec": "original-copy", "needs": []any{},
+			"subwork": rel, "scheduler": object{"worktree": reviewTree, "branch": "scheduler/todo-2407-work"},
+			"product_review_allocation": object{"binding": object{"head": reviewHead, "request_sha256": "45acf355ad003318dc6ba4b06c0c1b0825e6805d8cb6427df53e9ae994b92f27",
+				"key": "c8809d28af00fce0cad714928b5aa3cf", "worktree": reviewTree, "branch": "scheduler/todo-2407-work", "spec": "original-copy", "needs": []any{}, "subwork": rel}}}
+	}
+	if !reviewBinding(makeItem()) {
+		t.Fatal("original allocation rejected")
+	}
+	for _, field := range []string{"id", "project", "spec", "needs", "subwork"} {
+		item := makeItem()
+		item[field] = "changed"
+		if reviewBinding(item) {
+			t.Fatalf("changed %s accepted", field)
+		}
+	}
+	for _, field := range []string{"head", "key", "worktree", "branch", "request_sha256"} {
+		item := makeItem()
+		obj(obj(item["product_review_allocation"])["binding"])[field] = "changed"
+		if reviewBinding(item) {
+			t.Fatalf("changed receipt %s accepted", field)
+		}
+	}
+}
+
 func videoFixture() (object, object, productIO) {
 	request := "D:/CC/Tools/todo/specs/2475-9c08c1c10273475f87e003ca75cb4629.md"
 	item := object{"id": float64(2475), "project": "youtube-daily", "status": "doing", "spec": request, "jobs": []any{videoJob}}

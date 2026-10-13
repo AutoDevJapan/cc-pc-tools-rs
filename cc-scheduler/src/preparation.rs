@@ -1,6 +1,6 @@
 //! Bounded workspace preparation. No resets, checkouts, deletion or repository publication.
 use crate::{backend::run_git, common::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{fs, path::Path};
 
 /// Identity comes from exact persisted receipts or job metadata, never prompt text or a PID.
@@ -159,6 +159,16 @@ pub fn ensure_workspace(
         return Err(Error("InputRejected"));
     }
     let base_git = git_root(runner, &base)?;
+    if item["product_review_allocation"].is_object() {
+        if !crate::product_review::eligible(item, crate::common::now()) {
+            return Err(Error("InputRejected"));
+        }
+        if target.exists()
+            && run_git(runner, &target, &["rev-parse", "HEAD"])? != crate::product_review::HEAD
+        {
+            return Err(Error("InputRejected"));
+        }
+    }
     if base_git.is_none() {
         if !bounded {
             return Err(Error("InputRejected"));
@@ -208,6 +218,12 @@ pub fn ensure_workspace(
     let result = runner.run(&check).map_err(tool_error)?;
     match result.code {
         0 => {
+            if item["product_review_allocation"].is_object()
+                && run_git(runner, &base, &["rev-parse", &reference])?
+                    != crate::product_review::HEAD
+            {
+                return Err(Error("InputRejected"));
+            }
             fs::create_dir_all(container)?;
             return run_git(
                 runner,
@@ -220,6 +236,30 @@ pub fn ensure_workspace(
         _ => return Err(classify_output(&result)),
     }
     run_git(runner, &base, &["remote", "get-url", "origin"])?;
+    if item["product_review_allocation"].is_object() {
+        if !crate::product_review::eligible(item, crate::common::now()) {
+            return Err(Error("InputRejected"));
+        }
+        run_git(
+            runner,
+            &base,
+            &["cat-file", "-e", crate::product_review::HEAD],
+        )?;
+        fs::create_dir_all(container)?;
+        return run_git(
+            runner,
+            &base,
+            &[
+                "worktree",
+                "add",
+                "-b",
+                branch,
+                target.to_str().unwrap(),
+                crate::product_review::HEAD,
+            ],
+        )
+        .map(|_| ());
+    }
     run_git(runner, &base, &["fetch", "--quiet", "origin", "main"])?;
     run_git(
         runner,

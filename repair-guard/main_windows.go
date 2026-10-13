@@ -74,6 +74,9 @@ func within(root, target string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && !filepath.IsAbs(rel)
 }
 func sourceVerified(root string) bool {
+	return sourceOriginVerified(root, "autodevjapan/cc-pc-tools-rs")
+}
+func sourceOriginVerified(root, repository string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, "git", "-C", root, "remote", "get-url", "origin")
@@ -84,7 +87,7 @@ func sourceVerified(root string) bool {
 		return false
 	}
 	origin := strings.ToLower(strings.TrimSpace(string(output)))
-	return origin == "https://github.com/autodevjapan/cc-pc-tools-rs.git" || origin == "https://github.com/autodevjapan/cc-pc-tools-rs" || origin == "git@github.com:autodevjapan/cc-pc-tools-rs.git"
+	return origin == "https://github.com/"+repository+".git" || origin == "https://github.com/"+repository || origin == "git@github.com:"+repository+".git"
 }
 func boundedSchedulerTree(path string) bool {
 	// Only standard scheduler children of these already verified PC-tool sources.
@@ -172,6 +175,9 @@ func allowed(path string) bool {
 	if err != nil || legacyMatch(absolute) {
 		return false
 	}
+	if productPathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
 		return true
 	}
@@ -208,7 +214,21 @@ func allowed(path string) bool {
 }
 func main() {
 	path := flag.String("guard-path", "", "resource absolute path")
+	product := flag.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	flag.Parse()
+	if *product != 0 {
+		db, err := readObject(productStore, 64<<20)
+		if err != nil {
+			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false, "reason": "store_unavailable"})
+			os.Exit(1)
+		}
+		r := verifyProduct(db, *product)
+		_ = json.NewEncoder(os.Stdout).Encode(r)
+		if r["verified"] != true {
+			os.Exit(1)
+		}
+		return
+	}
 	ok := *path != "" && filepath.IsAbs(*path)
 	verified := ok && allowed(*path)
 	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}

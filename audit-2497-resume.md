@@ -134,3 +134,11 @@ ChatGPTのほかのアカウントは本人との対応が未確認なので閲�
 未確認のGitHub請求額を確認するため、専用ジョブIDでowner-chrome経由のタブを作成した。inventoryとジョブの記録でinstance・generation・tabの所有一致を確認したが、CUAから当該ブラウザーpipeに接続できずページ内容は読めなかった。直接CUAのChromeタブ作成もvisibility capability unavailableで失敗した。作成タブをowner-chrome closeで閉じ、inventoryで消失を確認済み。オーナーの既存タブには触れていない。
 
 GitHubの10月請求・支払い、Google Workspace/Cloudの請求先照合、残る契約請求確認、ChatGPTの9/30承認待ち、ToDo2498との購入操作照合は未完了。請求表・支払い・契約の変更はしていない。接続可能なCUA経路が復旧したらGitHubの請求画面など未確認項目を続ける。
+
+### 2026-10-13 AutoDevJapan GitHub請求の再確認
+
+GitHubの個人画面ではなく、組織切替でAutoDevJapanを選び、組織のBilling Overviewと支払履歴を読み取り専用で確認した。Billing Overviewの請求期間は2026-10-01〜10-30、次回支払額と請求日は未表示で、GitHub Teamの6ライセンスが表示された。Actions予算は上限まで使用済みで追加利用が停止と表示された。支払履歴の最新は2026-09-19の成功済み支払で、10月の支払は未掲載。10月請求書はまだ発行・確定していないため、管理表の金額は「未確定」、支払欄と請求日は空欄のままにした。
+
+指定管理表の既存GitHub (AutoDevJapan) 行だけを更新し、確認元に組織のBilling Overview・Payment history、確認状況に10月請求額/発行日未確定と最新支払日を記載した。Saved to Driveを確認した。金額はこのGit記録に含めていない。契約・支払い・予算設定は変更していない。CUAで今回作成した請求確認タブを閉じ、既存Chromeタブ一覧にそれが残っていないことを確認した。
+
+残りはGoogle Workspace/Cloud請求先と対象の照合、ほかの未確認請求、9/30 ChatGPT増額の本人回答、ToDo2498による購入操作/承認照合。保護判定済み証拠へのアクセスは継続して止めている。

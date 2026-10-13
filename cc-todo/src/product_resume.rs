@@ -60,6 +60,8 @@ pub fn qualify(db: &mut Value, id: i64, receipt: &Value, apply: bool) -> Result<
     let repeated = item["product_resume_qualification"]["receipt"]["request_sha256"]
         == receipt["request_sha256"]
         && item["product_resume_qualification"]["receipt"]["session"] == receipt["session"]
+        && item["product_resume_qualification"]["receipt"]["source_session"]
+            == receipt["source_session"]
         && item["product_resume_qualification"]["receipt"]["worktree"] == receipt["worktree"]
         && item["product_resume_qualification"]["receipt"]["job"] == receipt["job"]
         && item["product_resume_qualification"]["status_after"] == target_status

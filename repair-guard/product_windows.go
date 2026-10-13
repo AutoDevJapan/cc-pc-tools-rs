@@ -228,6 +228,9 @@ func productPathAllowed(path string) bool {
 	}
 	// Unknown resources do not cause even metadata reads or Git invocations.
 	membership := within(gameTree, absolute) || within(gameRoot, absolute) || within(videoTree, absolute)
+	// A regular `todo edit --spec` creates a new saved copy. Only the exact
+	// selected row's copy, with identical verified bytes, can qualify below.
+	membership = membership || within("D:/CC/Tools/todo/specs", absolute)
 	for _, request := range []string{
 		"D:/CC/Work/ledger-recovery-20261012/recovered-specs/1626-worker-request-a600dda0a9dc0f26.md",
 		"D:/CC/Work/ledger-recovery-20261012/recovered-specs/2407-worker-request-45acf355ad003318.md",
@@ -255,6 +258,13 @@ func productPathAllowed(path string) bool {
 		}
 		if same(absolute, str(r["request"])) && exactPhysical(absolute) {
 			return true
+		}
+		item := itemAt(db, id)
+		if same(absolute, str(item["spec"])) && within("D:/CC/Tools/todo/specs", absolute) && exactPhysical(absolute) {
+			body, err := readBounded(absolute, 1<<20)
+			if err == nil && hashBytes(body) == r["request_sha256"] {
+				return true
+			}
 		}
 		if id == 1626 && within(gameRoot, absolute) && exactPhysical(gameRoot) && sourceOriginVerified(gameRoot, "autodevjapan/phosgaea-vol1") {
 			if physicalOrPlannedWithin(gameRoot, absolute) {

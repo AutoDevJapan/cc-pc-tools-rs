@@ -93,7 +93,10 @@ func TestUnknownAndSiblingProductPathsStayProtected(t *testing.T) {
 }
 
 func TestPlannedFilesRejectAnExistingEscapingOrBrokenLink(t *testing.T) {
-	root := t.TempDir()
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !physicalOrPlannedWithin(root, filepath.Join(root, "new", "receipt.json")) {
 		t.Fatal("bounded new file rejected")
 	}

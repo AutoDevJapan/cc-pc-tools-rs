@@ -1,0 +1,43 @@
+name: Linux runner finite probe
+on:
+  push:
+    branches: [scheduler/todo-2511-pc-linux-runner-cargo-2510]
+    paths: [.github/workflows/linux-runner-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify fixed revision and the shared Cargo admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(id -u)" = 1001
+          test ! -e /var/run/docker.sock
+          if GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook; then
+            echo 'Foreign repository was accepted'; exit 1
+          fi
+          if GITHUB_SHA=0000000000000000000000000000000000000000 /opt/bridge/bridge hook; then
+            echo 'Different revision was accepted'; exit 1
+          fi
+          if cargo test --config=build.jobs=64; then
+            echo 'Cargo config override was accepted'; exit 1
+          fi
+          if (cd /tmp && cargo test --locked); then
+            echo 'Different workspace was accepted'; exit 1
+          fi
+          cargo --version
+          cargo metadata --locked --format-version 1 --no-deps > /work/metadata.json
+          cargo test --locked -p cc-task-title -j64 -- --test-threads=32
+          cd tools/linux-runner-bridge
+          go version
+          mkdir -p /work/go-tmp
+          export GOTMPDIR=/work/go-tmp
+          go test ./...

@@ -5,21 +5,33 @@ on:
     paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
   pull_request:
     paths: ['chatgpt-web/**', 'cc-chrome/**', 'Cargo.toml', 'Cargo.lock', '.config/nextest.toml', '.github/workflows/chatgpt-web.yml']
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
 jobs:
   fixtures:
-    runs-on: windows-latest
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
       - name: Require real Chrome for the fixtures
         shell: pwsh
         run: |
@@ -29,7 +41,8 @@ jobs:
             Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
             Select-Object -First 1
           if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
-          "CHATGPT_WEB_CHROME=$chrome" >> $env:GITHUB_ENV
+          if (!(Test-Path -LiteralPath $env:PC_CI_CHROME -PathType Leaf)) { throw 'The real-Chrome CPU launcher is required.' }
+          "CHATGPT_WEB_CHROME=$env:PC_CI_CHROME" >> $env:GITHUB_ENV
       - run: cargo nextest run --locked -p chatgpt-web -p cc-chrome
       # This package has only a binary target; Cargo cannot run --doc for it.
       - run: cargo clippy --locked -p chatgpt-web -p cc-chrome --all-targets -- -D warnings

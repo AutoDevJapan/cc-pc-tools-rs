@@ -1,0 +1,65 @@
+name: PC runner acceptance
+on:
+  push:
+    branches: [main]
+    paths: ['pc-ci/**', '.github/workflows/pc-runner.yml']
+  pull_request:
+    paths: ['pc-ci/**', '.github/workflows/pc-runner.yml']
+permissions:
+  contents: read
+concurrency:
+  group: pc-runner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 10
+    steps:
+      - name: Reject obsolete source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify fixed source and isolated identity
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Wrong source revision' }
+          whoami
+          try {
+            $accessible = Test-Path -LiteralPath 'C:/Users/makhmeto/.codex' -ErrorAction Stop
+            throw 'Owner authentication directory must return access denied'
+          } catch {
+            if ($_.CategoryInfo.Category -ne 'PermissionDenied') { throw }
+            Write-Output 'Owner authentication directory returned access denied as required'
+          }
+          $resolved = (Get-Command cargo).Source
+          if ($resolved -ne $env:PC_CI_ADMISSION) { throw 'Cargo must resolve to the preinstalled gate shim' }
+          foreach ($file in @('D:/CC/Tools/codex-jobs/cargo_gate.exe', 'D:/CC/Tools/codex-jobs/codex_jobs.exe', 'D:/CC/Tools/codex-jobs/cargo-gate.json', 'D:/CC/Tools/codex-jobs/queue-config.json', 'D:/CC/Tools/rustup/toolchains/stable-x86_64-pc-windows-msvc/bin/cargo.exe', $env:PC_CI_ADMISSION)) {
+            try {
+              $handle = [IO.File]::Open($file, [IO.FileMode]::Open, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
+              $handle.Dispose()
+              throw 'CI must not obtain write access to shared tools or admission policy'
+            } catch {
+              if ($_.Exception -isnot [UnauthorizedAccessException] -and $_.Exception.InnerException -isnot [UnauthorizedAccessException]) { throw }
+            }
+          }
+          Write-Output 'Shared tools and admission policy reject write access'
+          Get-Command ffmpeg, ffprobe, powershell, gcc | Select-Object Name,Source
+          cargo --version
+          cargo nextest --version
+          cargo clippy --version
+          cargo fmt --version
+      - run: go test -v ./...
+        working-directory: pc-ci
+      - run: go vet ./...
+        working-directory: pc-ci
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+      - run: cargo nextest run --locked -p cc-ask --test core -E 'test(structured_child_output_reads_past_text_capture_cap_and_requires_complete_success)'
+      - run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_) | test(end_to_end::test_native_recovery_cancel) | test(end_to_end::records_are_masked_while_codex_runs_and_after_it_is_killed) | test(end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration) | test(end_to_end::real_supervisors_start_a_dependency_while_the_root_limit_is_full)' --no-fail-fast

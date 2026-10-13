@@ -22,6 +22,10 @@ enum Commands {
     RecoveryLog(cc_ask::recovery_messages::LogArgs),
     /// Create one new owner decision and its separate silent progress post.
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
+    /// Repair one exact unsent recovery ask to a previously verified progress post.
+    RecoveryRepairOrigin(cc_ask::recovery_messages::RepairOriginArgs),
+    /// Resume one repaired ask from its unchanged saved intent.
+    RecoveryResumeAsk(cc_ask::recovery_messages::ResumeAskArgs),
     /// Read only an exact new recovery question; never consumes replies or starts work.
     RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
     /// Independent one-question followup; never runs legacy tick or lost questions.
@@ -301,6 +305,12 @@ fn run(command: Commands) -> Result<()> {
         Commands::RecoveryAsk(args) => {
             println!("{}", cc_ask::recovery_messages::ask(&mut ctx, &args)?)
         }
+        Commands::RecoveryRepairOrigin(args) => {
+            println!("{}", cc_ask::recovery_messages::repair_origin(&mut ctx, &args)?)
+        }
+        Commands::RecoveryResumeAsk(args) => {
+            println!("{}", cc_ask::recovery_messages::resume_ask(&mut ctx, &args)?)
+        }
         Commands::RecoveryReplies(args) => {
             println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
         }
@@ -485,6 +495,46 @@ mod tests {
             "question.txt"
         ])
         .is_ok());
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-repair-origin",
+            "--request-id",
+            "exact-device-approval",
+            "--todo-id",
+            "2497",
+            "--expected-origin-thread",
+            "123",
+            "--owner-reply-message",
+            "124",
+            "--progress-message",
+            "125",
+        ])
+        .unwrap();
+        assert!(matches!(cli.command, Commands::RecoveryRepairOrigin(_)));
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-repair-origin",
+            "--request-id",
+            "exact-device-approval",
+        ])
+        .is_err());
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-resume-ask",
+            "--request-id",
+            "exact-device-approval",
+            "--todo-id",
+            "2497",
+        ])
+        .unwrap();
+        assert!(matches!(cli.command, Commands::RecoveryResumeAsk(_)));
+        assert!(Cli::try_parse_from([
+            "discord_ask",
+            "recovery-resume-ask",
+            "--request-id",
+            "exact-device-approval",
+        ])
+        .is_err());
         assert!(Cli::try_parse_from([
             "discord_ask",
             "recovery-ask",

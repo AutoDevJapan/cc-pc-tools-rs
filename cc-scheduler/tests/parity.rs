@@ -4144,3 +4144,26 @@ fn recovery_requeue_keeps_wait_and_owner_block_is_not_converted() {
     g.reconcile();
     assert_eq!(g.get(1)["status"], "block");
 }
+#[test]
+fn capacity_cooldown_preserves_the_existing_job_and_terminal_budget_is_not_reset() {
+    for exhausted in [false, true] {
+        let mut f = Fixture::new();
+        f.managed(1, 1, "other", 0);
+        f.e.backend.records[0]["capacity_wait_pending"] = json!(!exhausted);
+        f.e.backend.records[0]["capacity_exhausted"] = json!(exhausted);
+        f.e.backend.records[0]["last_error"] =
+            json!("429 Too Many Requests: Selected model is at capacity");
+        f.e.backend.records[0]["status"] = json!(if exhausted { "failed" } else { "queued" });
+        f.e.backend.records[0]["retry_not_before"] = json!(T + 900.);
+        f.reconcile();
+        f.reconcile();
+        assert_eq!(f.get(1)["status"], "doing");
+        assert_eq!(f.get(1)["scheduler"]["job"], "j1");
+        assert!(f.e.backend.cancelled.is_empty());
+        assert!(f.e.backend.launched.is_empty());
+        assert!(f.get(1)["scheduler"]["notice_pending"].is_null());
+        if exhausted {
+            assert_eq!(f.get(1)["scheduler"]["phase"], "capacity_exhausted");
+        }
+    }
+}

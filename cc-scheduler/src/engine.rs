@@ -633,6 +633,20 @@ impl<B: Backend> Scheduler<B> {
             })?;
             return Ok(());
         }
+        // Capacity cooldown belongs to the same saved job/controller. Quota
+        // pressure must not cancel it and launch a new job with a fresh budget.
+        if j["capacity_wait_pending"] == true && live(j) {
+            return Ok(());
+        }
+        if j["capacity_exhausted"] == true && s(&j["status"]) == "failed" {
+            self.edit(&i["id"],|row| {
+                if row["scheduler"]["job"]==j["id"] && row["status"]=="doing" {
+                    row["scheduler"]["phase"]=json!("capacity_exhausted");
+                    row["note"]=json!("モデルの混雑による有限の再試行を終了しました。元担当と作業内容を保持しています。");
+                }
+            })?;
+            return Ok(());
+        }
         let saved_until = (i["scheduler"]["resource_wait"]["job"] == j["id"])
             .then(|| i["scheduler"]["resource_wait"]["until"].as_f64())
             .flatten();

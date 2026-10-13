@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shared task and job observation, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "captured_at", "heartbeat_at", "status", "consistency", "sources", "tasks", "jobs", "task_total", "job_total", "truncated", "issues"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "heartbeat_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["ok", "degraded", "unavailable"]},
+    "consistency": {"const": "per_file_observation"},
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["todo", "jobs", "priority"],
+      "properties": {
+        "todo": {"$ref": "#/$defs/source"},
+        "jobs": {"$ref": "#/$defs/source"},
+        "priority": {"$ref": "#/$defs/source"}
+      }
+    },
+    "tasks": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/$defs/task"}},
+    "jobs": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/$defs/job"}},
+    "task_total": {"type": "integer", "minimum": 0},
+    "job_total": {"type": "integer", "minimum": 0},
+    "truncated": {"type": "boolean"},
+    "issues": {"type": "array", "items": {"type": "string", "pattern": "^(todo_|jobs_|priority_)[a-z_]+$|^(row_limit|deadline)$"}}
+  },
+  "$defs": {
+    "clock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "age_seconds", "state"],
+      "properties": {
+        "at": {"type": ["string", "null"], "format": "date-time"},
+        "age_seconds": {"type": ["number", "null"], "minimum": 0},
+        "state": {"enum": ["fresh", "stale", "future", "unknown", "invalid"]}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "acquired_at", "modified", "bytes_read", "records_read", "failed_reads", "complete"],
+      "properties": {
+        "status": {"enum": ["ok", "not_configured", "missing", "access_denied", "read_failed", "not_regular", "changed_during_read", "too_large", "invalid_json", "invalid_record", "partial", "deadline", "entry_limit", "directory_limit", "byte_limit"]},
+        "acquired_at": {"type": "string", "format": "date-time"},
+        "modified": {"$ref": "#/$defs/clock"},
+        "bytes_read": {"type": "integer", "minimum": 0},
+        "records_read": {"type": "integer", "minimum": 0},
+        "failed_reads": {"type": "integer", "minimum": 0},
+        "complete": {"type": "boolean"}
+      }
+    },
+    "ids": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+    "key": {"type": "string", "pattern": "^job-[0-9a-f]{64}$"},
+    "execution": {"enum": ["running", "supervising", "alive_identity_unknown", "queued", "starting", "not_observed", "finished", "unknown"]},
+    "presence": {"enum": ["verified_alive", "alive_identity_unknown", "identity_mismatch", "absent", "unknown", "not_recorded"]},
+    "phase": {"enum": ["waiting", "starting", "finished", "summarizing", "thinking", "tool", "editing", "research", "delegating", "reporting", "planning", "unknown"]},
+    "task_type": {"enum": ["implementation", "review", "research", "debugging", "testing", "refactoring", "maintenance", "deployment", "documentation", "design", "planning", "general", "analysis", "build", "verification", "unknown"]},
+    "detail": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "task_id"],
+      "properties": {"kind": {"const": "todo"}, "task_id": {"type": "integer", "minimum": 1}}
+    },
+    "label": {"enum": ["受託案件", "名称未確認", "万世紀", "PCの道具", "localai-web-rs", "OpenCodex", "発信部", "Skills", "GoDD-MCP-Alpha", "GoDD-Press", "GoDD-AO", "13a13e1", "GoDD-Rosetta", "GoDD-Genesis", "GoDD-VirtualStreamer", "Re:X"]},
+    "department": {"enum": ["受託部", "万世紀", "情報システム部", "発信部", "GoDD事業部", "自社サービス部", "未分類"]},
+    "priority": {"enum": [10, 20, 30, 40, 50, 60, 61, 62, 63, 64, 65, 66, 67, 100]},
+    "wait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "todo_ids"],
+      "properties": {
+        "kind": {"enum": ["dependency", "readiness", "subscription_readiness", "technical_retry", "owner_reply", "blocked_unspecified", "unknown", "rate_limit", "execution_slot", "other_worker", "supervisor_restart", "cancellation", "source_unavailable", "model_capacity", "recovery_unverified"]},
+        "label": {"const": "復旧状況が未確認"},
+        "todo_ids": {"$ref": "#/$defs/ids"},
+        "not_before": {"$ref": "#/$defs/clock"}
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "display_name", "public_label", "label_kind", "department", "priority", "recorded_status", "percent", "progress_state", "execution", "phase", "task_type", "task_type_source", "detail", "job_keys", "wait_reasons", "record_updated", "last_activity", "parent_task_id"],
+      "properties": {
+        "task_id": {"type": "integer", "minimum": 1},
+        "display_name": {"type": "string", "maxLength": 100},
+        "public_label": {"$ref": "#/$defs/label"},
+        "label_kind": {"enum": ["public", "generic"]},
+        "department": {"$ref": "#/$defs/department"},
+        "priority": {"$ref": "#/$defs/priority"},
+        "recorded_status": {"enum": ["todo", "doing", "done", "block", "wait", "recovery_unverified", "retired", "archived", "cancelled", "unknown"]},
+        "percent": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
+        "progress_state": {"enum": ["measured", "not_measured", "invalid", "done"]},
+        "execution": {"$ref": "#/$defs/execution"},
+        "phase": {"$ref": "#/$defs/phase"},
+        "task_type": {"$ref": "#/$defs/task_type"},
+        "task_type_source": {"enum": ["todo", "job", "unknown"]},
+        "detail": {"$ref": "#/$defs/detail"},
+        "job_keys": {"type": "array", "items": {"$ref": "#/$defs/key"}},
+        "wait_reasons": {"type": "array", "items": {"$ref": "#/$defs/wait"}},
+        "record_updated": {"$ref": "#/$defs/clock"},
+        "last_activity": {"$ref": "#/$defs/clock"},
+        "parent_task_id": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_key", "todo_ids", "public_label", "label_kind", "department", "priority", "recorded_status", "execution", "worker_presence", "supervisor_presence", "phase", "task_type", "wait_reasons", "last_activity", "last_heartbeat", "source"],
+      "properties": {
+        "job_key": {"$ref": "#/$defs/key"},
+        "todo_ids": {"$ref": "#/$defs/ids"},
+        "public_label": {"$ref": "#/$defs/label"},
+        "label_kind": {"enum": ["public", "generic"]},
+        "department": {"$ref": "#/$defs/department"},
+        "priority": {"$ref": "#/$defs/priority"},
+        "recorded_status": {"enum": ["queued", "starting", "running", "succeeded", "failed", "cancelled", "lost", "unknown"]},
+        "execution": {"$ref": "#/$defs/execution"},
+        "worker_presence": {"$ref": "#/$defs/presence"},
+        "supervisor_presence": {"$ref": "#/$defs/presence"},
+        "phase": {"$ref": "#/$defs/phase"},
+        "task_type": {"$ref": "#/$defs/task_type"},
+        "wait_reasons": {"type": "array", "items": {"$ref": "#/$defs/wait"}},
+        "last_activity": {"$ref": "#/$defs/clock"},
+        "last_heartbeat": {"$ref": "#/$defs/clock"},
+        "source": {"$ref": "#/$defs/source"}
+      }
+    }
+  }
+}

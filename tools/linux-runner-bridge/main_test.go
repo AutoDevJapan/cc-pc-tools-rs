@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
@@ -17,6 +19,198 @@ func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
 	}
 	if err := verifyNormalContainer(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+const validNormalContainerInspection = `[{"Config":{"Image":"todo2510-normal-linux:local","User":"runner"},"HostConfig":{"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
+
+func fakeDockerForNormalContainer(t *testing.T, initialState string, inspection string) (dockerOutput, *bool, *[][]string) {
+	t.Helper()
+	started := initialState == "true"
+	calls := make([][]string, 0)
+	run := func(args ...string) (string, error) {
+		calls = append(calls, append([]string(nil), args...))
+		if len(args) == 0 {
+			return "", fmt.Errorf("empty docker args")
+		}
+		switch args[0] {
+		case "inspect":
+			if len(args) > 1 && args[1] == "--format" {
+				if started {
+					return "true", nil
+				}
+				return "false", nil
+			}
+			return inspection, nil
+		case "start":
+			started = true
+			return "test-container", nil
+		case "exec":
+			if !started {
+				return "", fmt.Errorf("exec against stopped fake container")
+			}
+			if len(args) > 2 && args[2] == "id" {
+				return "1001", nil
+			}
+			return "", nil
+		default:
+			return "", fmt.Errorf("unexpected docker command: %s", args[0])
+		}
+	}
+	return run, &started, &calls
+}
+
+func TestNormalContainerPreflightStartsOnlyAfterStaticIsolationChecks(t *testing.T) {
+	run, started, calls := fakeDockerForNormalContainer(t, "false", validNormalContainerInspection)
+	if err := verifyNormalContainerWith("test-container", run); err != nil {
+		t.Fatal(err)
+	}
+	if !*started {
+		t.Fatal("stopped container was not started after passing static isolation checks")
+	}
+	startAt, runtimeExecAt := -1, -1
+	for index, args := range *calls {
+		if args[0] == "start" {
+			startAt = index
+		}
+		if args[0] == "exec" && runtimeExecAt == -1 {
+			runtimeExecAt = index
+		}
+	}
+	if startAt < 0 || runtimeExecAt <= startAt {
+		t.Fatalf("runtime checks must follow container start: calls=%v", *calls)
+	}
+}
+
+func TestNormalContainerRejectsStaticIsolationBeforeStarting(t *testing.T) {
+	invalid := strings.Replace(validNormalContainerInspection, `"Privileged":false`, `"Privileged":true`, 1)
+	run, started, calls := fakeDockerForNormalContainer(t, "false", invalid)
+	if err := verifyNormalContainerWith("test-container", run); err == nil {
+		t.Fatal("accepted a privileged stopped container")
+	}
+	if *started {
+		t.Fatal("rejected static configuration was started")
+	}
+	for _, args := range *calls {
+		if args[0] == "start" || args[0] == "exec" {
+			t.Fatalf("runtime operation occurred before static rejection: %v", *calls)
+		}
+	}
+}
+
+func TestNormalContainerAlreadyRunningIsNotStartedAgain(t *testing.T) {
+	run, started, calls := fakeDockerForNormalContainer(t, "true", validNormalContainerInspection)
+	if err := verifyNormalContainerWith("test-container", run); err != nil {
+		t.Fatal(err)
+	}
+	if !*started {
+		t.Fatal("fake running container unexpectedly stopped")
+	}
+	for _, args := range *calls {
+		if args[0] == "start" {
+			t.Fatalf("already-running container received another start: %v", *calls)
+		}
+	}
+}
+
+func TestNormalContainerRuntimeWaitsForRunnerInitToPopulateTmpfs(t *testing.T) {
+	run, _, _ := fakeDockerForNormalContainer(t, "true", validNormalContainerInspection)
+	readyChecks, pauses := 0, 0
+	wrapped := func(args ...string) (string, error) {
+		if len(args) > 2 && args[0] == "exec" && args[2] == "/bin/sh" {
+			readyChecks++
+			if readyChecks < 3 {
+				return "", fmt.Errorf("runner-init has not populated the tmpfs yet")
+			}
+		}
+		return run(args...)
+	}
+	if err := validateNormalContainerRuntime("test-container", wrapped, func(d time.Duration) {
+		if d != time.Second {
+			t.Fatalf("unexpected readiness wait duration: %s", d)
+		}
+		pauses++
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if readyChecks != 3 || pauses != 2 {
+		t.Fatalf("readiness checks=%d pauses=%d, want 3 and 2", readyChecks, pauses)
+	}
+}
+
+func TestStoppedNormalRunnerContainerCanBeRecoveredWithDocker(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("host Docker container is only available on the Windows host")
+	}
+	if _, err := output(command(docker, "image", "inspect", normalImage)); err != nil {
+		t.Skip("dedicated normal runner image is not provisioned")
+	}
+	name := fmt.Sprintf("todo2516-preflight-%d", os.Getpid())
+	if _, err := output(command(docker, "inspect", name)); err == nil {
+		t.Fatalf("test container name already exists: %s", name)
+	}
+	createArgs := []string{"create", "--name", name, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--tmpfs", "/runner:rw,exec,nosuid,size=1g,uid=1001,gid=1001", "--user", "runner", normalImage}
+	if _, err := output(command(docker, createArgs...)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if _, err := output(command(docker, "rm", "--force", name)); err != nil {
+			t.Errorf("remove test-only container: %v", err)
+		}
+	}()
+	state, err := output(command(docker, "inspect", "--format", "{{.State.Running}}", name))
+	if err != nil || state != "false" {
+		t.Fatalf("container must begin stopped: state=%q err=%v", state, err)
+	}
+	if err := verifyNormalContainerWith(name, func(args ...string) (string, error) {
+		return output(command(docker, args...))
+	}); err != nil {
+		t.Fatal(err)
+	}
+	state, err = output(command(docker, "inspect", "--format", "{{.State.Running}}", name))
+	if err != nil || state != "true" {
+		t.Fatalf("container did not recover to running: state=%q err=%v", state, err)
+	}
+}
+
+func TestConfiguredRunnerListenerRecoveryDoesNotDuplicateRunningListener(t *testing.T) {
+	tests := []struct {
+		name      string
+		counts    []int
+		wantStart bool
+		wantErr   bool
+	}{
+		{name: "already running", counts: []int{1}},
+		{name: "runner retry wins grace period", counts: []int{0, 1}},
+		{name: "stopped listener starts once", counts: []int{0, 0, 1}, wantStart: true},
+		{name: "existing duplicates are not amplified", counts: []int{2}, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			probes, starts := 0, 0
+			run := func(args ...string) (string, error) {
+				if len(args) >= 3 && args[0] == "exec" && args[1] == "-d" {
+					starts++
+					return "started", nil
+				}
+				if len(args) >= 4 && args[0] == "exec" && args[2] == "/bin/sh" {
+					value := test.counts[min(probes, len(test.counts)-1)]
+					probes++
+					return fmt.Sprint(value), nil
+				}
+				return "", fmt.Errorf("unexpected command: %v", args)
+			}
+			started, err := ensureConfiguredRunnerListener("test-container", run, func(time.Duration) {})
+			if (err != nil) != test.wantErr {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if started != test.wantStart || (starts == 1) != test.wantStart {
+				t.Fatalf("started=%v starts=%d wantStart=%v", started, starts, test.wantStart)
+			}
+			if starts > 1 {
+				t.Fatalf("duplicate runner launch requested: %d", starts)
+			}
+		})
 	}
 }
 

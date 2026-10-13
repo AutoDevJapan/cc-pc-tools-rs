@@ -121,6 +121,10 @@ pub struct CloseArgs {
     /// Reviewed ID/hash-only binding to an existing applied receipt and reply.
     #[arg(long)]
     pub manifest: PathBuf,
+    /// Earlier RFC3339 text of the reviewed reply timestamp. It is accepted only when it
+    /// is the same instant as the Discord API timestamp and reproduces the manifest hash.
+    #[arg(long)]
+    pub legacy_reply_timestamp: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -145,6 +149,152 @@ struct CloseBinding {
 
 const CLOSE_LEDGER: &str = "recovery-close.json";
 const CLOSE_LOCK: &str = "recovery-close.lock";
+const EQUIVALENCE_LEDGER: &str = "recovery-close-equivalence.json";
+
+/// ID/hash/time-only evidence that one reviewed reply hash was made from an earlier text form
+/// of the same timestamp instant. The close binding and applied receipt bytes are never changed.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct TimestampEquivalence {
+    kind: String,
+    request_id: String,
+    thread_id: String,
+    message_id: String,
+    author_id: String,
+    origin_todo_id: u64,
+    todo_id: u64,
+    api_timestamp: String,
+    legacy_timestamp: String,
+    instant_utc: String,
+    api_reply_sha256: String,
+    binding_reply_sha256: String,
+    receipt_sha256: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EquivalenceLedger {
+    domain: String,
+    version: u32,
+    records: BTreeMap<String, TimestampEquivalence>,
+}
+
+impl EquivalenceLedger {
+    fn load(home: &Path) -> Result<Self> {
+        match fs::symlink_metadata(home.join(EQUIVALENCE_LEDGER)) {
+            Ok(m) if !m.is_file() || m.file_type().is_symlink() => {
+                return Err("equivalence storage must be an independent regular file".into());
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err("cannot inspect equivalence storage".into()),
+        }
+        match fs::File::open(home.join(EQUIVALENCE_LEDGER)) {
+            Ok(file) => {
+                let value: Self = serde_json::from_slice(&read_bounded(file, LEDGER_BYTES)?)
+                    .map_err(|_| "equivalence ledger malformed; never treated as empty")?;
+                if value.domain != DOMAIN
+                    || value.version != 1
+                    || value.records.iter().any(|(id, r)| id != &r.thread_id)
+                {
+                    return Err("equivalence ledger domain/version/record differs".into());
+                }
+                Ok(value)
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self {
+                domain: DOMAIN.into(),
+                version: 1,
+                records: BTreeMap::new(),
+            }),
+            Err(_) => Err("cannot read equivalence ledger".into()),
+        }
+    }
+
+    /// Append-only per thread: an identical record is a no-op; a different one is refused.
+    fn record(&mut self, home: &Path, evidence: &TimestampEquivalence) -> Result<()> {
+        if let Some(saved) = self.records.get(&evidence.thread_id) {
+            return if saved == evidence {
+                Ok(())
+            } else {
+                Err("timestamp equivalence evidence differs from the retained record".into())
+            };
+        }
+        self.records
+            .insert(evidence.thread_id.clone(), evidence.clone());
+        let bytes = serde_json::to_vec_pretty(self).map_err(|_| "cannot encode equivalence")?;
+        let mut temp = tempfile::Builder::new()
+            .prefix("recovery-close-equivalence.")
+            .suffix(".tmp")
+            .tempfile_in(home)
+            .map_err(|_| "cannot stage equivalence record")?;
+        temp.write_all(&bytes)
+            .map_err(|_| "cannot write equivalence record")?;
+        temp.as_file()
+            .sync_all()
+            .map_err(|_| "cannot flush equivalence record")?;
+        core::replace_file(temp.path(), &home.join(EQUIVALENCE_LEDGER))
+            .map_err(|_| "cannot publish equivalence record")?;
+        #[cfg(not(windows))]
+        fs::File::open(home)
+            .and_then(|dir| dir.sync_all())
+            .map_err(|_| "cannot flush equivalence directory")?;
+        Ok(())
+    }
+}
+
+enum ReplyMatch {
+    Exact,
+    Equivalent(Box<TimestampEquivalence>),
+    Different,
+}
+
+/// The reply must equal the reviewed one. The only tolerated difference is the timestamp
+/// text: the explicit earlier text must be the same instant, and the API reply with only that
+/// text swapped in must reproduce the reviewed hash. Any other field difference stays rejected.
+fn match_reply(reply: &Reply, binding: &CloseBinding, legacy: Option<&str>) -> Result<ReplyMatch> {
+    let value = serde_json::to_value(reply).map_err(|_| "cannot encode owner reply")?;
+    let api_hash = digest(&value)?;
+    if api_hash == binding.reply_sha256 {
+        return Ok(ReplyMatch::Exact);
+    }
+    let Some(legacy) = legacy else {
+        return Ok(ReplyMatch::Different);
+    };
+    if legacy == reply.timestamp || legacy.len() > 64 {
+        return Ok(ReplyMatch::Different);
+    }
+    let (Ok(before), Ok(after)) = (
+        chrono::DateTime::parse_from_rfc3339(legacy),
+        chrono::DateTime::parse_from_rfc3339(&reply.timestamp),
+    ) else {
+        return Ok(ReplyMatch::Different);
+    };
+    if before != after {
+        return Ok(ReplyMatch::Different);
+    }
+    let mut earlier = value;
+    earlier["timestamp"] = json!(legacy);
+    if digest(&earlier)? != binding.reply_sha256 {
+        return Ok(ReplyMatch::Different);
+    }
+    Ok(ReplyMatch::Equivalent(Box::new(TimestampEquivalence {
+        kind: "reply_timestamp_text_same_instant".into(),
+        request_id: binding.request_id.clone(),
+        thread_id: binding.thread_id.clone(),
+        message_id: binding.message_id.clone(),
+        author_id: binding.author_id.clone(),
+        origin_todo_id: binding.origin_todo_id,
+        todo_id: binding.todo_id,
+        api_timestamp: reply.timestamp.clone(),
+        legacy_timestamp: legacy.into(),
+        instant_utc: after
+            .with_timezone(&chrono::Utc)
+            .to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
+        api_reply_sha256: api_hash,
+        binding_reply_sha256: binding.reply_sha256.clone(),
+        receipt_sha256: binding.receipt_sha256.clone(),
+    })))
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -304,21 +454,19 @@ fn close_replies(
     applied: &Value,
     state: &mut CloseLedger,
     home: &Path,
-) -> Result<()> {
+    legacy: Option<&str>,
+) -> Result<bool> {
     let replies = owner_replies(api, ledger, request)?;
     let raw = api.get(&format!(
         "/channels/{}/messages/{}",
         binding.thread_id, binding.message_id
     ))?;
     let selected = replies.iter().find(|r| r.message_id == binding.message_id);
-    let exact = selected.is_some_and(|r| {
-        r.author_id == binding.author_id
-            && serde_json::to_value(r)
-                .ok()
-                .and_then(|v| digest(&v).ok())
-                .as_deref()
-                == Some(binding.reply_sha256.as_str())
-    });
+    let matched = match selected {
+        Some(r) if r.author_id == binding.author_id => match_reply(r, binding, legacy)?,
+        _ => ReplyMatch::Different,
+    };
+    let exact = !matches!(matched, ReplyMatch::Different);
     let raw_matches = selected.is_some_and(|r| {
         raw["id"] == r.message_id
             && raw["channel_id"] == r.question_thread_id
@@ -353,6 +501,10 @@ fn close_replies(
         )?;
         return Err("RecoveryCloseReplyPending: unapplied or edited owner reply retained; parent must inspect recovery-replies".into());
     }
+    if let ReplyMatch::Equivalent(evidence) = &matched {
+        // Retained before any PATCH, so the audit trail exists even if later steps fail.
+        EquivalenceLedger::load(home)?.record(home, evidence)?;
+    }
     let applied_at = chrono::DateTime::parse_from_rfc3339(core::s(&applied["applied_at"]))
         .map_err(|_| "invalid application time")?;
     let reply_at =
@@ -361,7 +513,7 @@ fn close_replies(
     if applied_at < reply_at {
         return Err("application predates owner reply".into());
     }
-    Ok(())
+    Ok(matches!(matched, ReplyMatch::Equivalent(_)))
 }
 
 /// Close only an applied, exact new-domain question. No old-state load/save or dispatch.
@@ -386,6 +538,19 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         return Err("close retry binding differs; same receipt must be retained".into());
     }
     let applied = close_application(&ctx.here, &binding)?;
+    // An explicit earlier timestamp text, or the one already retained for this exact reply.
+    let legacy = match &args.legacy_reply_timestamp {
+        Some(text) => Some(text.clone()),
+        None => EquivalenceLedger::load(&ctx.here)?
+            .records
+            .get(&binding.thread_id)
+            .filter(|r| {
+                r.message_id == binding.message_id
+                    && r.binding_reply_sha256 == binding.reply_sha256
+                    && r.receipt_sha256 == binding.receipt_sha256
+            })
+            .map(|r| r.legacy_timestamp.clone()),
+    };
     let destination = Destination::from_context(ctx)?;
     let request = ledger
         .request(&binding.request_id)
@@ -426,8 +591,9 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
     {
         return Err("close configured forum differs".into());
     }
-    close_replies(
+    let mut equivalent = close_replies(
         &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
+        legacy.as_deref(),
     )?;
     let channel = api.channel(&binding.thread_id)?;
     let archived = channel["thread_metadata"]["archived"]
@@ -474,8 +640,9 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
             "RecoveryClosePending: GET has not confirmed archived; retry same receipt".into(),
         );
     }
-    close_replies(
+    equivalent |= close_replies(
         &mut api, &ledger, request, &binding, &applied, &mut state, &ctx.here,
+        legacy.as_deref(),
     )?;
     // Check the same bytes were applied throughout this attempt.
     close_application(&ctx.here, &binding)?;
@@ -494,7 +661,8 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         "question_message_id":binding.question_message_id,"message_id":binding.message_id,
         "todo_id":binding.todo_id,"origin_todo_id":binding.origin_todo_id,"job_id":binding.job_id,
         "revision":binding.revision,"receipt_sha256":binding.receipt_sha256,"source":"discord-api-v10",
-        "archived":true,"verification":"GET","outcome":outcome,"reused":reused,"legacy_state":"unchanged","dispatched":false}),
+        "archived":true,"verification":"GET","outcome":outcome,"reused":reused,"legacy_state":"unchanged","dispatched":false,
+        "reply_timestamp":if equivalent {"same_instant_text_equivalent"} else {"exact"}}),
     )
 }
 
@@ -4490,6 +4658,7 @@ mod tests {
         };
         let args = CloseArgs {
             manifest: fixture.root.path().join("close-manifest.json"),
+            legacy_reply_timestamp: None,
         };
         fs::write(&args.manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
         (args, binding, application)
@@ -4504,6 +4673,181 @@ mod tests {
             .iter()
             .filter(|(method, _, _)| method == "PATCH")
             .count()
+    }
+
+    const LEGACY_SAME_INSTANT: &str = "2026-10-12T09:00:01+09:00";
+
+    /// Rewrites the manifest hash as if the reviewed reply had been serialized with another
+    /// timestamp text (and optionally another field), as the PowerShell round trip did.
+    fn rehash_reply(
+        ctx: &mut Context,
+        args: &CloseArgs,
+        binding: &CloseBinding,
+        legacy: &str,
+        mutate: impl FnOnce(&mut Value),
+    ) -> CloseBinding {
+        let inspection = replies(
+            ctx,
+            &RepliesArgs {
+                thread: binding.thread_id.clone(),
+                message: Some(binding.question_message_id.clone()),
+                request_id: Some(binding.request_id.clone()),
+                todo_id: Some(binding.origin_todo_id),
+                read_only: true,
+            },
+        )
+        .unwrap();
+        let mut reply = inspection["owner_replies"][0].clone();
+        assert_ne!(reply["timestamp"], legacy);
+        reply["timestamp"] = json!(legacy);
+        mutate(&mut reply);
+        let mut changed = binding.clone();
+        changed.reply_sha256 = digest(&reply).unwrap();
+        fs::write(&args.manifest, serde_json::to_vec(&changed).unwrap()).unwrap();
+        changed
+    }
+
+    fn with_legacy(args: &CloseArgs, text: &str) -> CloseArgs {
+        CloseArgs {
+            manifest: args.manifest.clone(),
+            legacy_reply_timestamp: Some(text.into()),
+        }
+    }
+
+    #[test]
+    fn recovery_close_accepts_only_explicit_same_instant_timestamp_text_with_audit_and_unchanged_receipt() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+        let changed = rehash_reply(&mut ctx, &args, &binding, LEGACY_SAME_INSTANT, |_| {});
+        let manifest = fs::read(&args.manifest).unwrap();
+        let posts = fixture.server.lock().unwrap().posts.len();
+        let receipt_path = fixture
+            .home
+            .join("unattended/applied")
+            .join(format!("{}.json", binding.message_id));
+        let receipt = fs::read(&receipt_path).unwrap();
+        // Without the explicit earlier text the retained behavior is unchanged.
+        assert!(close(&mut ctx, &args).unwrap_err().contains("ReplyPending"));
+        assert_eq!(patch_count(&fixture), 0);
+        assert!(!fixture.home.join(EQUIVALENCE_LEDGER).exists());
+        let flagged = with_legacy(&args, LEGACY_SAME_INSTANT);
+        let result = close(&mut ctx, &flagged).unwrap();
+        assert_eq!(result["archived"], true);
+        assert_eq!(result["outcome"], "archived");
+        assert_eq!(result["reply_timestamp"], "same_instant_text_equivalent");
+        assert_eq!(patch_count(&fixture), 1);
+        assert_eq!(fs::read(&args.manifest).unwrap(), manifest);
+        assert_eq!(fs::read(&receipt_path).unwrap(), receipt);
+        let saved = CloseLedger::load(&fixture.home).unwrap();
+        assert_eq!(saved.records[&binding.thread_id].binding, changed);
+        assert_eq!(saved.records[&binding.thread_id].phase, "verified");
+        let audit = EquivalenceLedger::load(&fixture.home).unwrap();
+        let evidence = &audit.records[&binding.thread_id];
+        assert_eq!(evidence.legacy_timestamp, LEGACY_SAME_INSTANT);
+        assert_eq!(evidence.api_timestamp, "2026-10-12T00:00:01+00:00");
+        assert_eq!(evidence.instant_utc, "2026-10-12T00:00:01.000000000Z");
+        assert_eq!(evidence.binding_reply_sha256, changed.reply_sha256);
+        assert_ne!(evidence.api_reply_sha256, changed.reply_sha256);
+        assert_eq!(evidence.message_id, binding.message_id);
+        let text = fs::read_to_string(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap();
+        assert!(!text.contains("content") && !text.contains("\"body\""));
+        // A later run of the same manifest reuses the retained evidence without the flag.
+        let retry = close(&mut ctx, &args).unwrap();
+        assert_eq!(retry["reused"], true);
+        assert_eq!(retry["reply_timestamp"], "same_instant_text_equivalent");
+        assert_eq!(patch_count(&fixture), 1);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_close_timestamp_text_exception_rejects_any_other_difference() {
+        for scenario in [
+            "different-instant",
+            "different-fraction",
+            "not-rfc3339",
+            "body-differs",
+            "author-differs",
+            "todo-differs",
+            "edited",
+            "late-reply",
+            "same-text-wrong-hash",
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+            let legacy = match scenario {
+                "different-instant" => "2026-10-12T09:00:02+09:00",
+                "different-fraction" => "2026-10-12T09:00:01.001+09:00",
+                "not-rfc3339" => "2026-10-12 09:00:01",
+                _ => LEGACY_SAME_INSTANT,
+            };
+            if scenario == "same-text-wrong-hash" {
+                // The API text itself as "earlier text" is not an exception.
+                fs::write(&args.manifest, {
+                    let mut value = serde_json::to_value(&binding).unwrap();
+                    value["reply_sha256"] = json!("0".repeat(64));
+                    serde_json::to_vec(&value).unwrap()
+                })
+                .unwrap();
+            } else {
+                rehash_reply(&mut ctx, &args, &binding, legacy, |reply| match scenario {
+                    "body-differs" => reply["body"] = json!("b"),
+                    "author-differs" => reply["author_id"] = json!("999"),
+                    "todo-differs" => reply["todo_id"] = json!(999),
+                    _ => {}
+                });
+            }
+            let legacy_arg = if scenario == "same-text-wrong-hash" {
+                "2026-10-12T00:00:01+00:00"
+            } else {
+                legacy
+            };
+            if scenario == "edited" {
+                let mut state = fixture.server.lock().unwrap();
+                let reply = state
+                    .messages
+                    .get_mut(&binding.thread_id)
+                    .unwrap()
+                    .iter_mut()
+                    .find(|r| r["id"] == binding.message_id)
+                    .unwrap();
+                reply["edited_timestamp"] = json!("2026-10-12T00:00:05Z");
+            } else if scenario == "late-reply" {
+                fixture.add_reply(&binding.thread_id, OWNER, "b", false);
+            }
+            assert!(
+                close(&mut ctx, &with_legacy(&args, legacy_arg)).is_err(),
+                "accepted {scenario}"
+            );
+            assert_eq!(patch_count(&fixture), 0, "{scenario}");
+            assert!(!fixture.home.join(EQUIVALENCE_LEDGER).exists(), "{scenario}");
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_close_exact_hash_ignores_the_timestamp_text_option_and_writes_no_audit() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, _, _) = close_fixture(&fixture, &mut ctx);
+        let result = close(&mut ctx, &with_legacy(&args, LEGACY_SAME_INSTANT)).unwrap();
+        assert_eq!(result["reply_timestamp"], "exact");
+        assert!(!fixture.home.join(EQUIVALENCE_LEDGER).exists());
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_close_retained_equivalence_cannot_be_replaced_by_a_different_text() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let (args, binding, _) = close_fixture(&fixture, &mut ctx);
+        rehash_reply(&mut ctx, &args, &binding, LEGACY_SAME_INSTANT, |_| {});
+        close(&mut ctx, &with_legacy(&args, LEGACY_SAME_INSTANT)).unwrap();
+        let before = fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap();
+        assert!(close(&mut ctx, &with_legacy(&args, "2026-10-12T00:00:01.000Z")).is_err());
+        assert_eq!(fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(), before);
     }
 
     #[test]

@@ -553,6 +553,8 @@ mod tests {
         assert!(Cli::try_parse_from(["discord_ask", "recovery-close"]).is_err());
         let close = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json"]).unwrap();
         assert!(matches!(close.command, Commands::RecoveryClose(args) if args.manifest.to_str() == Some("exact.json")));
+        let legacy = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json", "--legacy-reply-timestamp", "2026-10-13T19:14:10.114+09:00"]).unwrap();
+        assert!(matches!(legacy.command, Commands::RecoveryClose(args) if args.legacy_reply_timestamp.as_deref() == Some("2026-10-13T19:14:10.114+09:00")));
         let cli = Cli::try_parse_from([
             "discord_ask",
             "recovery-replies",

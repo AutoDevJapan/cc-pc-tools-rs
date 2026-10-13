@@ -22,6 +22,9 @@ jobs:
         working-directory: ${{ runner.temp }}
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:PC_CI_ADMISSION)) { throw 'The admission executable is required' }
+          Get-Command -Name $env:PC_CI_ADMISSION -CommandType Application -ErrorAction Stop | Out-Null
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -35,6 +38,8 @@ jobs:
           if ((git rev-parse HEAD) -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Wrong source revision' }
       - name: Test and build the progress collector
         shell: pwsh
+        env:
+          AGENT_PROGRESS_NATIVE_SAMPLE: ''
         working-directory: tools/agent-progress
         run: |
           $ErrorActionPreference = 'Stop'

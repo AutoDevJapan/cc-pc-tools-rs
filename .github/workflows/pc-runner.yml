@@ -62,4 +62,4 @@ jobs:
         working-directory: pc-ci
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       - run: cargo nextest run --locked -p cc-ask --test core -E 'test(structured_child_output_reads_past_text_capture_cap_and_requires_complete_success)'
-      - run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree)' --no-fail-fast
+      - run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_) | test(end_to_end::test_native_recovery_cancel) | test(end_to_end::records_are_masked_while_codex_runs_and_after_it_is_killed) | test(end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration) | test(end_to_end::real_supervisors_start_a_dependency_while_the_root_limit_is_full)' --no-fail-fast

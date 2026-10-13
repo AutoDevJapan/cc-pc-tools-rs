@@ -1331,7 +1331,11 @@ impl Context {
             .filter(|k| self.is_ours(&job, k))
             .collect::<Vec<_>>();
         for k in &targets {
-            self.rt.kill_tree(job[*k].as_u64().unwrap() as u32)?;
+            // Stopping the supervisor's tree can already stop codex_pid.
+            // Recheck the recorded creation time before opening a second root.
+            if self.is_ours(&job, k) {
+                self.rt.kill_tree(job[*k].as_u64().unwrap() as u32)?;
+            }
         }
         for _ in 0..50 {
             if !targets.iter().any(|k| self.is_ours(&job, k)) {

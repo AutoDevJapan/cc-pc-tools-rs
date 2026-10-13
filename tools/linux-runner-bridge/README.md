@@ -12,7 +12,7 @@ The HTTP interface accepts finite Cargo commands and checks the exact checkout
 and remote branch HEAD. A job-start hook rejects foreign repositories, branches,
 revisions and PR events before workflow steps. The registration token is obtained
 by the existing OAuth gh gate and passed to the official runner via stdin and
-`RUNNER_INPUT_TOKEN`; it is never a command argument or a Docker environment value.
+`ACTIONS_RUNNER_INPUT_TOKEN`; it is never a command argument or a Docker environment value.
 
 No Docker socket, host directory, user profile, email or host authentication
 file is mounted. Run Docker with `--cap-drop ALL --security-opt no-new-privileges`,

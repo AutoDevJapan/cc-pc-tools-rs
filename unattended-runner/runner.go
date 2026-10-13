@@ -559,12 +559,15 @@ func (r *Runner) tick(ctx context.Context) Health {
 			health.Pending++
 		}
 	}
-	r.releaseRetries(ctx, &health)
 	schedulerReport, err := r.Run(ctx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
 	health.Scheduler = err == nil && schedulerOK(schedulerReport)
 	if !health.Scheduler {
 		health.Errors = append(health.Errors, "scheduler_deferred")
 	}
+	// A slow technical-wait check cannot consume the scheduler's launch budget.
+	retryContext, cancelRetries := context.WithTimeout(ctx, 10*time.Second)
+	r.releaseRetries(retryContext, &health)
+	cancelRetries()
 	health.Finished = r.Now().UTC().Format(time.RFC3339Nano)
 	return health
 }

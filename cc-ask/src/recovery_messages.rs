@@ -88,6 +88,15 @@ pub struct RepairOriginArgs {
     pub progress_message: String,
 }
 
+/// Resume exactly the saved ask after its origin repair; no body/decision input.
+#[derive(Args, Debug)]
+pub struct ResumeAskArgs {
+    #[arg(long)]
+    pub request_id: String,
+    #[arg(long)]
+    pub todo_id: u64,
+}
+
 #[derive(Args, Debug)]
 pub struct RepliesArgs {
     #[arg(long)]
@@ -1649,6 +1658,14 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     execute(ctx, incoming, &[])
 }
 
+pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
+    request_key(&args.request_id)?;
+    if args.todo_id == 0 {
+        return Err("original ToDo ID is required".into());
+    }
+    execute_saved(ctx, &args.request_id, args.todo_id)
+}
+
 /// Repair only the origin of an exact, unsent recovery ask. The original intent
 /// remains immutable; the corrected source must be a prior verified progress
 /// post in this ledger, and the owner reply is rechecked by exact Discord GET.
@@ -1785,10 +1802,46 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
 }
 
 fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Value> {
+    execute_inner(ctx, Some(incoming), None, images)
+}
+
+fn execute_saved(ctx: &mut Context, request_id: &str, todo_id: u64) -> Result<Value> {
+    execute_inner(ctx, None, Some((request_id, todo_id)), &[])
+}
+
+fn execute_inner(
+    ctx: &mut Context,
+    incoming: Option<Request>,
+    saved: Option<(&str, u64)>,
+    images: &[Image],
+) -> Result<Value> {
     let home = ctx.here.clone();
     ensure_storage(&home)?;
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
+    let incoming = match (incoming, saved) {
+        (Some(request), None) => request,
+        (None, Some((request_id, todo_id))) => {
+            let request = ledger
+                .events
+                .iter()
+                .find_map(|event| match event {
+                    Event::Intent { request } if request.request_id == request_id => {
+                        Some(request.as_ref().clone())
+                    }
+                    _ => None,
+                })
+                .ok_or("exact saved recovery ask is unavailable")?;
+            if !matches!(&request.operation, Kind::Ask { todo_id: saved_todo, .. }
+                if *saved_todo == todo_id)
+                || ledger.repaired_origin(request_id).is_none()
+            {
+                return Err("saved ask, original ToDo or origin repair differs".into());
+            }
+            request
+        }
+        _ => return Err("exact recovery ask input is required".into()),
+    };
     let reused = ledger.request(&incoming.request_id).is_some()
         || ledger.events.iter().any(|event| {
             matches!(event, Event::Intent {request} if
@@ -3246,7 +3299,7 @@ mod tests {
             &fixture.ask("verified-progress-source", "親依頼の進捗"),
         )
         .unwrap();
-        let args = failed_unsent_ask(&fixture, "one-device-approval", "107", OWNER);
+        let _args = failed_unsent_ask(&fixture, "one-device-approval", "107", OWNER);
         let before: Value =
             serde_json::from_slice(&fs::read(fixture.home.join(LEDGER)).unwrap()).unwrap();
         let posts_before = fixture.server.lock().unwrap().posts.len();
@@ -3277,7 +3330,27 @@ mod tests {
             "the immutable original intent is retained"
         );
 
-        let out = ask(&mut ctx, &args).unwrap();
+        let before_resume = fs::read(fixture.home.join(LEDGER)).unwrap();
+        let posts_before_resume = fixture.server.lock().unwrap().posts.len();
+        assert!(resume_ask(
+            &mut ctx,
+            &ResumeAskArgs {
+                request_id: "one-device-approval".into(),
+                todo_id: 2498,
+            },
+        )
+        .is_err());
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before_resume);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_before_resume);
+
+        let out = resume_ask(
+            &mut ctx,
+            &ResumeAskArgs {
+                request_id: "one-device-approval".into(),
+                todo_id: 2472,
+            },
+        )
+        .unwrap();
         assert_eq!(out["delivery"], "verified");
         assert!(!out["thread_id"].as_str().unwrap().is_empty());
         assert!(
@@ -3307,7 +3380,14 @@ mod tests {
         );
         let posts_after = state.posts.len();
         drop(state);
-        ask(&mut ctx, &args).unwrap();
+        resume_ask(
+            &mut ctx,
+            &ResumeAskArgs {
+                request_id: "one-device-approval".into(),
+                todo_id: 2472,
+            },
+        )
+        .unwrap();
         assert_eq!(fixture.server.lock().unwrap().posts.len(), posts_after);
         assert!(
             fixture

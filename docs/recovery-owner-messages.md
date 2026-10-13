@@ -8,6 +8,7 @@
 - `discord_ask recovery-log --request-id ... --title ... --body-file ... [--notify]`
 - `discord_ask recovery-ask --request-id ... --todo-id ... --decision-file ... --body-file ... --origin-thread ...`
 - `discord_ask recovery-repair-origin --request-id ... --todo-id ... --expected-origin-thread ... --owner-reply-message ... --progress-message ...`
+- `discord_ask recovery-resume-ask --request-id ... --todo-id ...`
 - `discord_ask recovery-replies --thread ... [--request-id ... --todo-id ... --message ...] --read-only`
 
 `recovery-repair-origin` repairs only an exact ask intent that has its saved bot
@@ -19,6 +20,10 @@ the repair event records the old origin and evidence IDs, and retries apply the
 repaired origin without changing the question body or decision. A different
 request, owner, ToDo, origin, target, or body stops before POST. A Pending or
 posted request is never rebound because its delivery result may be uncertain.
+After a repair, `recovery-resume-ask` runs the unchanged saved intent through the
+same reserve, POST and GET-verification path. It takes no body or decision file,
+so a retry cannot silently substitute new question text or scope. It requires
+the exact original request ID, ToDo and a recorded origin repair.
 
 投稿先は既存設定のサーバー・フォーラム・本人IDに限定する。
 新しい作業投稿を元投稿として使う場合は、過去の投稿を復元したものではないことを本文で明記する。

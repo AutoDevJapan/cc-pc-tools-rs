@@ -29,3 +29,18 @@
 - 次は全workspaceの実runner検査。`.config/nextest.toml`には新しい排他検査も既存の全thread隔離を維持する理由を明記。対象の変更により既存Build speedのPR検査が起動する。
 
 成功した診断検査を根拠ある原因修正として扱わない。新sourceで起動失敗が発生すればfixture stderrを限定して読む。診断だけのPR161はdraftのまま保持。
+
+## 原因の再現と修正
+
+- 36f5ce8の実Build speed38402534580は2058pass/5fail/5skip。全件で再現し、doc/Clippyは後続のため未実行。
+- 22:19:29〜22:19:34 JST、担当の別profile/別アカウントによるCPU Chromeのロック保持実験と重なって、runnerのfresh profile generation4 launch0と後続4件が0.2秒程度でexit21。fixture stderrはProcessSingleton作成失敗を報告し、profile lockfile自体の共有違反は報告しない。
+- 保持実験のChrome自身はlockfile共有違反0x20を報告し、約5秒後exit21。起動器が実Chromeの21をそのまま返すことを確認。
+- 担当の実験入口と専用runnerサービスは双方Windows Session0。Chromeの起動用mutexはprofile共通の `Local\ChromeProcessSingletonStartup!`。既存mutexをCreateMutexWで開く際はMUTEX_ALL_ACCESSが必要で、作成元のtokenのdefault DACLが使われる。別アカウントの起動が重なれば、profileが別でもaccess deniedとなる。
+- 修正はheadless Chromeをspawnする前に同じ名前のmutexのhandleを取得し、CDP準備まで保持する。所有権は取得せず、Chrome自身のロック取得を妨げない。別アカウントが作成したmutexを開けない場合はspawn前に待つ。DACL/token/権限を変えず、Chromeの非zero終了は依然として失敗。待機とCDP準備に既存の30秒を共有し、失敗後のChrome再起動はしない。
+- 新しいnative Windows検査は固有名の検査用mutexだけにdeny DACLを設定し、実access deniedの観測後に解放して受付成功を確認。受付がmutex所有権を保持しないこと、継続したaccess denialが同じ起動期限で失敗することも確認。Chromeの実mutexや既存資源のDACLはテストで変更しない。
+- 手元CDP/native関連6件が6pass。実runnerでの修正HEAD検証と新差分の別モデルレビューが残る。
+
+Windows API: https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw
+名前空間: https://learn.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
+
+別モデル原因調査2572はモデル枠待ち。通常コンソールのdelegateもdelegation_disabledを返すため、停止設定は不変更。実行済みレビューとして扱わない。

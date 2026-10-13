@@ -12,6 +12,171 @@ use tungstenite::{Message, WebSocket};
 
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 
+#[cfg(windows)]
+mod startup {
+    use super::*;
+    use std::ffi::c_void;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn CreateMutexW(attributes: *const c_void, owned: i32, name: *const u16) -> *mut c_void;
+        fn CloseHandle(handle: *mut c_void) -> i32;
+    }
+
+    pub(super) struct Admission(*mut c_void);
+    impl Drop for Admission {
+        fn drop(&mut self) {
+            // Each successful CreateMutexW returns one owned kernel handle.
+            unsafe { CloseHandle(self.0) };
+        }
+    }
+
+    pub(super) fn admit(deadline: Instant) -> io::Result<Admission> {
+        let name: Vec<u16> = "Local\\ChromeProcessSingletonStartup!\0"
+            .encode_utf16()
+            .collect();
+        admit_named(&name, deadline, || {})
+    }
+
+    fn admit_named(
+        name: &[u16],
+        deadline: Instant,
+        mut denied: impl FnMut(),
+    ) -> io::Result<Admission> {
+        loop {
+            if Instant::now() >= deadline {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "Chrome の起動用mutexの受付期限を過ぎました",
+                ));
+            }
+            // Do not acquire ownership: Chrome itself must acquire this mutex.
+            // Holding a handle reserves its default, same-user DACL until CDP
+            // is ready. A different service/user waits BEFORE launching Chrome,
+            // rather than receiving Chrome exit21 from its global startup lock.
+            // Neither the existing DACL nor the caller's token is changed.
+            let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
+            if !handle.is_null() {
+                return Ok(Admission(handle));
+            }
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() != Some(5) {
+                return Err(error);
+            }
+            denied();
+            sleep(
+                Duration::from_millis(20).min(deadline.saturating_duration_since(Instant::now())),
+            );
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::sync::atomic::{AtomicU64, Ordering};
+
+        #[repr(C)]
+        struct SecurityAttributes {
+            length: u32,
+            descriptor: *mut c_void,
+            inherit: i32,
+        }
+        #[link(name = "advapi32")]
+        unsafe extern "system" {
+            fn ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                text: *const u16,
+                revision: u32,
+                descriptor: *mut *mut c_void,
+                size: *mut u32,
+            ) -> i32;
+        }
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn LocalFree(memory: *mut c_void) -> *mut c_void;
+            fn WaitForSingleObject(handle: *mut c_void, milliseconds: u32) -> u32;
+            fn ReleaseMutex(handle: *mut c_void) -> i32;
+        }
+
+        fn denied_holder() -> (Vec<u16>, Admission) {
+            static NEXT: AtomicU64 = AtomicU64::new(0);
+            let name: Vec<u16> = format!(
+                "Local\\CC-Chrome-2571-Test-{}-{}\0",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            )
+            .encode_utf16()
+            .collect();
+            // Only this newly created test object gets a restrictive DACL. It
+            // reproduces access denial without changing Chrome's real mutex,
+            // the owner's token, the service, or any pre-existing resource.
+            let sddl: Vec<u16> = "D:(D;;GA;;;WD)\0".encode_utf16().collect();
+            let mut descriptor = std::ptr::null_mut();
+            assert_ne!(
+                unsafe {
+                    ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                        sddl.as_ptr(),
+                        1,
+                        &mut descriptor,
+                        std::ptr::null_mut(),
+                    )
+                },
+                0
+            );
+            let attributes = SecurityAttributes {
+                length: std::mem::size_of::<SecurityAttributes>() as u32,
+                descriptor,
+                inherit: 0,
+            };
+            let handle = unsafe {
+                CreateMutexW(
+                    (&attributes as *const SecurityAttributes).cast(),
+                    0,
+                    name.as_ptr(),
+                )
+            };
+            unsafe { LocalFree(descriptor) };
+            assert!(!handle.is_null());
+            (name, Admission(handle))
+        }
+
+        #[test]
+        fn different_identity_access_denial_waits_before_chrome_is_launched() {
+            let (name, holder) = denied_holder();
+            let (tx, rx) = std::sync::mpsc::channel();
+            let waiter = std::thread::spawn(move || {
+                let mut signalled = false;
+                let admission = admit_named(&name, Instant::now() + Duration::from_secs(5), || {
+                    if !signalled {
+                        tx.send(()).unwrap();
+                        signalled = true;
+                    }
+                })
+                .unwrap();
+                // Admission holds only a handle; Chrome can acquire ownership.
+                assert_eq!(unsafe { WaitForSingleObject(admission.0, 0) }, 0);
+                assert_ne!(unsafe { ReleaseMutex(admission.0) }, 0);
+                signalled
+            });
+            let observed = rx.recv_timeout(Duration::from_secs(5));
+            drop(holder);
+            let waited = waiter.join().unwrap();
+            assert!(observed.is_ok(), "must exercise real Windows access denial");
+            assert!(waited);
+        }
+
+        #[test]
+        fn persistent_access_denial_does_not_extend_the_startup_deadline() {
+            let (name, _holder) = denied_holder();
+            let mut denials = 0;
+            let result = admit_named(&name, Instant::now() + Duration::from_millis(50), || {
+                denials += 1
+            });
+            assert!(denials > 0);
+            assert_eq!(result.err().unwrap().kind(), io::ErrorKind::TimedOut);
+        }
+    }
+}
+
 pub struct Cdp {
     ws: WebSocket<TcpStream>,
     next: u64,
@@ -165,8 +330,14 @@ impl Browser {
             cmd.arg("--enable-logging=stderr")
                 .stderr(fs::File::create(&diagnostic_path)?);
         }
-        let mut child = cmd.spawn()?;
         let deadline = Instant::now() + Duration::from_secs(30);
+        #[cfg(windows)]
+        let _startup_admission = if headless {
+            Some(startup::admit(deadline)?)
+        } else {
+            None
+        };
+        let mut child = cmd.spawn()?;
         while Instant::now() < deadline {
             if let Some((port, path)) = fs::read_to_string(&port_file)
                 .ok()

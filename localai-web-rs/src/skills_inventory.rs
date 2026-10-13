@@ -76,6 +76,23 @@ fn reparse(metadata: &fs::Metadata) -> bool {
     }
 }
 
+fn profile_alias(target: &Path) -> bool {
+    let target = target
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
+    let target = target.trim_end_matches('/');
+    [
+        "/.claude/skills",
+        "/.codex/skills",
+        "/.agents/skills",
+        "/.cursor/skills",
+        "/.config/opencode/skills",
+    ]
+    .iter()
+    .any(|suffix| target.ends_with(suffix) || target.contains(&format!("{suffix}/")))
+}
+
 fn fingerprint(path: &Path) -> Option<Vec<u8>> {
     let file = fs::File::open(path).ok()?;
     let before = file.metadata().ok()?;
@@ -154,6 +171,12 @@ fn scan(root: &Path, now: u64, budget: Duration) -> Value {
                 }
             };
             let definition = if reparse(&metadata) {
+                // References through agent profiles are duplicate views of this root.
+                // Exclude them before resolving a potentially recursive junction chain.
+                if fs::read_link(&path).is_ok_and(|target| profile_alias(&target)) {
+                    excluded_entries += 1;
+                    continue;
+                }
                 // A registered link to one definition is available too. Read only
                 // that SKILL.md; never recurse into linked profiles or outside trees.
                 let target = match fs::canonicalize(&path) {
@@ -287,6 +310,18 @@ mod tests {
     }
 
     #[test]
+    fn profile_aliases_are_distinct_from_authoritative_definition_links() {
+        assert!(profile_alias(Path::new("C:/user/.codex/skills")));
+        assert!(profile_alias(Path::new("C:\\user\\.claude\\skills\\")));
+        assert!(profile_alias(Path::new("C:/user/.config/opencode/skills")));
+        assert!(profile_alias(Path::new("C:/user/.codex/skills/example")));
+        assert!(!profile_alias(Path::new(
+            "C:/user/.codex/skills-other/example"
+        )));
+        assert!(!profile_alias(Path::new("D:/CC/Skills")));
+    }
+
+    #[test]
     fn empty_directory_is_zero_but_missing_directory_is_unavailable() {
         let root = tempfile::tempdir().unwrap();
         assert_eq!(scan(root.path(), 1, SCAN_BUDGET)["count"], 0);
@@ -367,6 +402,14 @@ mod tests {
             ("alias", root.path().join("first")),
             ("archive-alias", root.path().join(".trash").join("old")),
             ("imported", imported.path().to_path_buf()),
+            (
+                "unresolved-profile",
+                root.path()
+                    .join(".profiles")
+                    .join(".codex")
+                    .join("skills")
+                    .join("example"),
+            ),
         ] {
             let junction = root.path().join(name);
             let output = std::process::Command::new("cmd.exe")
@@ -390,6 +433,6 @@ mod tests {
         assert_eq!(value["state"], "complete");
         assert_eq!(value["count"], 2);
         assert_eq!(value["duplicates"], 1);
-        assert_eq!(value["excludedEntries"], 3);
+        assert_eq!(value["excludedEntries"], 4);
     }
 }

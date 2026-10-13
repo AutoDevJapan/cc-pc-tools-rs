@@ -261,7 +261,13 @@ func productPathAllowed(path string) bool {
 		if err != nil || hashBytes(body) != "375cc857a2ac53b1fdb8a1b37c30604614785bbd1b29290a3dfc99807746c567" || !sourceVerified(base) {
 			return false
 		}
-		return exactPhysical(filepath.Dir(absolute)) && physicalOrPlannedWithin(filepath.Dir(absolute), absolute)
+		if !exactPhysical(filepath.Dir(absolute)) {
+			return false
+		}
+		if _, err = os.Lstat(absolute); os.IsNotExist(err) {
+			return true
+		}
+		return exactPhysical(absolute)
 	}
 	for _, id := range []int{1626, 2407, 2475} {
 		r := verifyProduct(db, id)

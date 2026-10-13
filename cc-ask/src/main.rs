@@ -502,7 +502,7 @@ mod tests {
         assert!(Cli::try_parse_from(["discord_ask", "recovery-replies"]).is_err());
         assert!(Cli::try_parse_from(["discord_ask", "recovery-close"]).is_err());
         let close = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json"]).unwrap();
-        assert!(matches!(close.command, Commands::RecoveryClose(args) if args.manifest == PathBuf::from("exact.json")));
+        assert!(matches!(close.command, Commands::RecoveryClose(args) if args.manifest.to_str() == Some("exact.json")));
         let cli = Cli::try_parse_from([
             "discord_ask",
             "recovery-replies",

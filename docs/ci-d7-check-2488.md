@@ -26,3 +26,9 @@
 2026-10-14 08:18 JSTに同ToDo2613・同worktreeから再開。gitは865483dでclean、本人所有PRIVATEとPR144 HEAD d7・固定treeを新しい通常gh APIで再照合した。原報告をcheckpoint-20261013-231835-result.private.json/mdへコピーし、原API/原ログ/拒否receiptを保持。今回はpoll025から保存し、確認期限は08:48:09 JST。新担当・Cargo・GPU・CI再実行は作らない。
 
 再開直後は4workflow成功/4workflow未終端、13/20job終端のまま。Buildのcheck-run115574911494も同d7でin_progress・annotations_count=0（通常APIの新しい原JSONを保存）。注記0を検査成功や実コマンドexitへ代用しない。原全文の許可flag拒否は再試行せず、既存の未確認を保持する。
+
+2026-10-14 08:48 JST：再開後の約30分確認を終了。今回poll025〜poll050の新しい通常APIは8run/20jobの同d7・attempt1・run所属・ページ欠落なしを維持し、最新API取得欠落0。CodeQL/RecordRecovery/Channel/Browserはsuccess、Buildはin_progress、Readiness/AgentProgress/Bookmarkはqueuedのまま。終端13job/未終端7jobで、新たなfailure/cancelled/timed_outを検出しなかった。全件成功とは判定しない。
+
+固定sourceのCodeQL4新解析は今回末尾のpoll050-codeql-analyses-final.jsonで再照合した。前source解析を流用していない。取得済み原全文3jobのbytes/SHA256と現物を再照合。原全文未確認10終端job、全workspaceの実pass/fail/skip・doctest・全targets Clippyのexit未確認を保持。拒否flagの再試行・別ログ経路・ゲート改変・source修復・Cargo・GPU・CI再実行・PR・merge・配布・Discord送信・新担当作成なし。
+
+今回の詳細は同 `.ci-work/d7-2488/ci-d7-result-2488.private.json/md` へ保存。前回末尾のmanifest/mdはcheckpoint-20261013-231835-result.private.json/mdに保持。原API/ログ/取得エラー/各receiptの絶対path・bytes・SHA256・根拠行は現manifestのfile_inventory/evidenceに保存。親2488の全修復完了は宣言しない。同ToDo2613の600秒wait-retryで元spec/同worktree/同固定runを保持して自動再開する。

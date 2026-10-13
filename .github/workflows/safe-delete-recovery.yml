@@ -40,7 +40,10 @@ jobs:
         run: |
           # Git expands subst drives. Use a real owned directory in the service's
           # system temp instead, retaining the production 240-character limit.
-          $helper = Join-Path $env:RUNNER_TEMP 'safe-delete-fixtures.exe'
+          # The helper's receipts must survive the runner's automatic temp purge.
+          $helperRoot = Join-Path (Split-Path -Parent $env:RUNNER_TEMP) 'recovery-fixture-helper'
+          New-Item -ItemType Directory -Path $helperRoot -Force | Out-Null
+          $helper = Join-Path $helperRoot 'safe-delete-fixtures.exe'
           go -C ../safe-delete build -trimpath -o $helper .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $originalTemp = $env:TEMP
@@ -48,7 +51,22 @@ jobs:
           try {
             $env:TEMP = Join-Path $env:SystemRoot 'Temp'
             $env:TMP = $env:TEMP
-            $created = & $helper create --project pc-ci --content recovery-fixtures | ConvertFrom-Json
+            # Windows Temp permits creation but not parent enumeration. PowerShell
+            # Remove-Item requires a readable parent, even with LiteralPath.
+            # Retain one ownership-checked empty parent for this runner's fixtures.
+            $parentRecord = Join-Path $helperRoot 'fixture-parent.json'
+            if (Test-Path -LiteralPath $parentRecord) {
+              $parent = Get-Content -LiteralPath $parentRecord -Raw | ConvertFrom-Json
+              $expectedParent = Join-Path $env:TEMP "codex-owned-$($parent.id)"
+              if ($parent.id -notmatch '^[a-f0-9]{32}$' -or $parent.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
+              $checkedParent = & $helper plan --id $parent.id | ConvertFrom-Json
+              if ($LASTEXITCODE -ne 0 -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 1) { throw 'Fixture parent is not owned and empty' }
+            } else {
+              $parent = & $helper create --project pc-ci --content recovery-parent | ConvertFrom-Json
+              if ($LASTEXITCODE -ne 0) { throw 'Could not create owned fixture parent' }
+              @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $parentRecord -Encoding utf8
+            }
+            $created = & $helper create --root $parent.path --project pc-ci --content recovery-fixtures | ConvertFrom-Json
             if ($LASTEXITCODE -ne 0) { throw 'Could not create owned physical fixtures' }
           } finally {
             $env:TEMP = $originalTemp
@@ -58,6 +76,7 @@ jobs:
           "PC_CI_FIXTURE_ID=$($created.id)" >> $env:GITHUB_ENV
           "PC_CI_FIXTURE_PATH=$fixtures" >> $env:GITHUB_ENV
           "PC_CI_FIXTURE_HELPER=$helper" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_PARENT=$($parent.path)" >> $env:GITHUB_ENV
           $guard = Join-Path $fixtures 'client-guard-fixture.exe'
           rustc tests/support/client_guard.rs -o $guard
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -85,7 +104,7 @@ jobs:
         run: |
           $env:TEMP = Join-Path $env:SystemRoot 'Temp'
           $env:TMP = $env:TEMP
-          $expected = Join-Path $env:TEMP "codex-owned-$env:PC_CI_FIXTURE_ID"
+          $expected = Join-Path $env:PC_CI_FIXTURE_PARENT "codex-owned-$env:PC_CI_FIXTURE_ID"
           if ($env:PC_CI_FIXTURE_ID -notmatch '^[a-f0-9]{32}$' -or $env:PC_CI_FIXTURE_PATH -ne $expected) { throw 'Unexpected fixture path' }
           Remove-Item -LiteralPath $expected -Recurse -ErrorAction Stop
           & $env:PC_CI_FIXTURE_HELPER finish --id $env:PC_CI_FIXTURE_ID

@@ -1,0 +1,38 @@
+name: PC runner acceptance
+on:
+  push:
+    branches: ['scheduler/todo-2510-github-pc-ci-pc']
+  pull_request:
+    paths: ['pc-ci/**', '.github/workflows/pc-runner.yml']
+permissions:
+  contents: read
+concurrency:
+  group: pc-runner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 10
+    env:
+      CI_JOB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify fixed source and isolated identity
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Wrong source revision' }
+          whoami
+          if (Test-Path -LiteralPath 'C:/Users/makhmeto/.codex') { throw 'Owner profile must be inaccessible' }
+          Get-Command cargo | Select-Object Source
+          cargo --version
+          cargo nextest --version
+      - run: go test -v ./...
+        working-directory: pc-ci
+      - run: go vet ./...
+        working-directory: pc-ci
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cargo nextest run --locked -p cc-task-title

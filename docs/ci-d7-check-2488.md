@@ -12,3 +12,7 @@
 取得制限：3先行jobの通常ログ取得が端末制御文字でexit1。許可オプションは正規ghゲートのunknown flag拒否でexit2。制限を迂回せず、原全文は未確認として保持する。cmd wrapperの最初の3APIは構文エラーだった。wrapperが呼ぶ同一gh_gate.exeをCREATE_NO_WINDOWで起動し、通常APIのexit0を確認した（ゲートの無効化や直gh.exeは使っていない）。
 
 再開時は `.ci-work/d7-2488/check-state.json` と最新pollのAPI、呼出receiptを読み、同じHEAD/run/attemptだけを確認する。有限checkの上限は2026-10-14 08:04:30 JST。未終端が残れば同ToDo2613のwait-retryへ保存し、別監視担当を作らない。修復・Cargo・再実行・merge・配布・Discord送信・GPUはこのcheckの範囲外。自分の状態はスケジューラーが更新する。親2488の全修復完了を主張しない。
+
+2026-10-14 07:47 JSTの区切り：CodeQL、RecordRecovery、Channel、Browserの4workflowがsuccessで終端。20job中13job終端。CodeQLは同SHA・refs/pull/144/head・同workflowの新解析4件を正規APIで確認した。actions 1947445510（17 rules）、go 1947411189（34 rules）、javascript-typescript 1947449569（87 rules）、rust 1947470713（26 rules）。すべてerror空・results_count=0、対応する4SARIFのprocessing_status=complete。Go/Actions/JavaScriptの原全文は取得できた。Rustの原全文は通常取得の制御文字エラーにより未確認。Goの未処理ファイル診断は保持し、全ファイル解析の証明へ広げない。
+
+詳細manifest/本文は `.ci-work/d7-2488/ci-d7-result-2488.private.json` と同名 `.private.md`。全原取得のpath/bytes/SHA256と、取得不能のstdout/stderr/receiptもmanifestのfile_inventoryに残す。状態だけで全workspace・doctest・Clippyの実コマンド成功を主張しない。

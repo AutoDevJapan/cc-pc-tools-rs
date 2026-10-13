@@ -8,8 +8,14 @@ Windowsの `pc-ci` は事前に検査して専用runtimeへ配備するGo製のC
 
 runnerのruntimeとworkは担当専用worktree配下の `.ci-runtime` と `.ci-work` に置く。作成前不在と担当所有を私的な運用記録へ残し、Gitから除外する。登録tokenは既存OAuthのrepo管理権限で取得し、RAMから公式runnerの `ACTIONS_RUNNER_INPUT_TOKEN` へ渡す。tokenを引数、ソース、報告、標準出力へ書かず、公式runnerが作る認証ファイルを人やAIの調査対象にしない。Org runner権限を増やさない。
 
-Windowsサービスは専用仮想アカウントを使い、本人profileを読み取れないことを実サービスの検査で確かめる。hook、shim、runner環境設定はサービスから読み取りだけとし、ジョブから書き換えさせない。必要な操作は管理者窓口を使い、コンソール/UACの窓を出さない。検証済みの常駐runtimeを誤って検査生成物として削除しない。
+Windowsサービスは専用仮想アカウントを使い、本人profileを読み取れないことを実サービスの検査で確かめる。`pc-ci service` が同じ専用IDのtokenから広いAuthenticated Usersの許可と追加の特権を外し、公式runnerと子プロセスを起動する。共有exe、設定、toolchainは変更を拒否する。必要な共有ロックファイルだけに読み書きの許可を与える。権限を外していない起動入口は、ジョブからプロセスやthreadを開けないよう保護する。WindowsのRestricted SIDは.NETのTLS接続と両立しないため使わない。本人のtokenを使わない。
+
+runnerのhook、shim、環境設定はジョブから読み取りだけとする。RustのコンパイラーキャッシュはCI専用の保存先とポートを使い、共有ゲートの排他と負荷制限を保つ。Chromeの実検査は専用の起動器を全ジョブへ設定し、実ChromeをCPU描画で起動する。Windows Goのrace検査には、専用runtimeへ導入したCコンパイラとCGOを使う。必要な操作は管理者窓口を使い、コンソール/UACの窓を出さない。
+
+公式runnerは起動停止の入口が保持するWin32 Jobへ、実行開始前に所属させる。停止ではそのJobだけを終了し、停止前に開いたメンバーのハンドル、rootの終了、Jobの実行中件数0を確かめる。接続失敗は公式runnerの通常の再試行へ任せる。権限変更中や稼働中の検査を不用意に再起動しない。検証済みの常駐runtimeを誤って検査生成物として削除しない。
 
 既存の全workspace nextest、doctest、全target Clippy、Chrome/ffmpegの実検査、Windows/Linuxの個別検査、Goのrace/vet/buildを維持する。外部資源の直列設定は `.config/nextest.toml` のままとする。マージ前に固定headの必要CIと別モデルのMust解消を確認する。重い検査は同じ生成先で順に行い、同じ最終ソースの全件検査を重複させない。
 
 運用結果、失敗理由、再開手順は `docs/runner-result.private.json` と `docs/runner-handoff.private.md` に保存する。登録、起動、固定sourceの検査成功、マージ、常駐復帰確認を別の到達点として記録する。資格情報や請求数字はGitへ入れない。
+
+CodeQLはPCのLinux runnerでactions、Go、JavaScript/TypeScript、Rustの解析を維持する。従来のHosted default setupから、Git管理する `codeql.yml` へ切り替える。解析結果のuploadと対象revisionを実検証し、元の失敗statusを上書きしない。週ごとの定期解析はmainの最新SHAだけを実行する。

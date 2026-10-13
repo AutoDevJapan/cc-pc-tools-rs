@@ -9,10 +9,10 @@
 //! recovery-messages.*.tmp beside them. The JSON contains append-only events;
 //! each snapshot is flushed and atomically replaced under the dedicated byte lock.
 //! Token/config contents and attachment paths/bytes are never receipt fields.
-use crate::core::{self, ByteLock, Context, MAX_CONTENT, Result, SILENT};
+use crate::core::{self, ByteLock, Context, Result, MAX_CONTENT, SILENT};
 use clap::Args;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -734,7 +734,83 @@ fn title_input(text: &str, secrets: &SecretCheck) -> Result<String> {
     Ok(text.into())
 }
 
-fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec<Image>> {
+// One newly generated, visually inspected owner UI proposal has independent
+// provenance even while the original exclusion file is missing. This bounded
+// receipt is not a replacement deny list and never qualifies another image.
+const UI_PROPOSAL_REQUEST: &str = "parallel-agent-progress-tui-2543-proposal-v1-20261013";
+const UI_PROPOSAL_SOURCE: &str = "C:/Users/makhmeto/.codex/generated_images/01a120c7-be21-7b52-810d-d24af607e71e/exec-05d94163-1125-44e2-8920-91123f5c5825.png";
+const UI_PROPOSAL_COPY: &str = "D:/CC/Work/parallel-agent-progress-tui-20261013/ui-proposal-v1.png";
+const UI_PROPOSAL_SHA256: &str = "b4f333116dae118b3c9ca8d51892849d5552b48c009729256ebecfd76944a5d8";
+
+fn image_path_key(path: &Path) -> String {
+    path.to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .replace('\\', "/")
+        .to_lowercase()
+}
+
+fn proposal_receipt_matches(
+    request: &str,
+    requested: &str,
+    resolved: &str,
+    source_resolved: &str,
+    sha256: &str,
+    now: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    let starts = chrono::DateTime::parse_from_rfc3339("2026-10-13T00:00:00Z").unwrap();
+    let expires = chrono::DateTime::parse_from_rfc3339("2026-10-21T00:00:00Z").unwrap();
+    request == UI_PROPOSAL_REQUEST
+        && now >= starts
+        && now < expires
+        && [
+            UI_PROPOSAL_SOURCE.to_lowercase(),
+            UI_PROPOSAL_COPY.to_lowercase(),
+        ]
+        .contains(&requested.to_owned())
+        && requested == resolved
+        && source_resolved == UI_PROPOSAL_SOURCE.to_lowercase()
+        && sha256 == UI_PROPOSAL_SHA256
+}
+
+fn verify_generated_proposal(
+    request: &str,
+    path: &Path,
+    resolved: &Path,
+    bytes: &[u8],
+) -> Result<()> {
+    if request != UI_PROPOSAL_REQUEST || !path.is_absolute() {
+        return Err("image protection list is unavailable; no image is sent".into());
+    }
+    let source = Path::new(UI_PROPOSAL_SOURCE);
+    let source_resolved =
+        fs::canonicalize(source).map_err(|_| "cannot verify original generated proposal")?;
+    let source_bytes = read_bounded(
+        fs::File::open(&source_resolved).map_err(|_| "cannot read original generated proposal")?,
+        IMAGE_BYTES,
+    )?;
+    if bytes != source_bytes
+        || !proposal_receipt_matches(
+            request,
+            &image_path_key(path),
+            &image_path_key(resolved),
+            &image_path_key(&source_resolved),
+            &format!("{:x}", Sha256::digest(bytes)),
+            chrono::Utc::now(),
+        )
+    {
+        return Err(
+            "generated proposal does not match its creation receipt; no image is sent".into(),
+        );
+    }
+    Ok(())
+}
+
+fn images(
+    ctx: &Context,
+    request: &str,
+    paths: &[PathBuf],
+    secrets: &SecretCheck,
+) -> Result<Vec<Image>> {
     if paths.is_empty() {
         return Ok(vec![]);
     }
@@ -742,10 +818,21 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
         return Err("at most ten recovery images are supported".into());
     }
     // This deny list is read only into memory; never returned or copied to receipts.
-    let clients = fs::read_to_string(&ctx.client_projects)
-        .map_err(|_| "image protection list is unavailable; no image is sent")?;
+    let clients = match fs::read_to_string(&ctx.client_projects) {
+        Ok(clients) => Some(clients),
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound
+                && request == UI_PROPOSAL_REQUEST
+                && paths.len() == 1 =>
+        {
+            None
+        }
+        Err(_) => return Err("image protection list is unavailable; no image is sent".into()),
+    };
     let denied: Vec<_> = clients
-        .lines()
+        .as_deref()
+        .into_iter()
+        .flat_map(str::lines)
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| line.replace('\\', "/").to_lowercase())
@@ -754,6 +841,21 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
     let mut total = 0;
     for path in paths {
         let resolved = fs::canonicalize(path).map_err(|_| "cannot resolve recovery image")?;
+        // This is a path/time preflight only. The original source and the
+        // actual candidate bytes are independently verified below before HTTP.
+        if clients.is_none()
+            && (!path.is_absolute()
+                || !proposal_receipt_matches(
+                    request,
+                    &image_path_key(path),
+                    &image_path_key(&resolved),
+                    &UI_PROPOSAL_SOURCE.to_lowercase(),
+                    UI_PROPOSAL_SHA256,
+                    chrono::Utc::now(),
+                ))
+        {
+            return Err("image is outside the generated proposal receipt; no image is sent".into());
+        }
         for checked in [path, &resolved] {
             let key = checked.to_string_lossy().replace('\\', "/").to_lowercase();
             if denied.iter().any(|entry| key.contains(entry))
@@ -778,7 +880,7 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
                 return Err("protected files cannot be recovery attachments".into());
             }
         }
-        let file = fs::File::open(resolved).map_err(|_| "cannot read recovery image")?;
+        let file = fs::File::open(&resolved).map_err(|_| "cannot read recovery image")?;
         if !file
             .metadata()
             .map_err(|_| "cannot inspect recovery image")?
@@ -787,6 +889,9 @@ fn images(ctx: &Context, paths: &[PathBuf], secrets: &SecretCheck) -> Result<Vec
             return Err("a recovery attachment must be a regular image file".into());
         }
         let bytes = read_bounded(file, IMAGE_BYTES)?;
+        if clients.is_none() {
+            verify_generated_proposal(request, path, &resolved, &bytes)?;
+        }
         let (mime, extension) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
             ("image/png", "png")
         } else if bytes.starts_with(b"\xff\xd8\xff") {
@@ -1534,7 +1639,7 @@ fn prepare_log(ctx: &Context, args: &LogArgs) -> Result<(Request, Vec<Image>)> {
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
     no_mentions(&body)?;
-    let images = images(ctx, &args.attach, &secrets)?;
+    let images = images(ctx, &args.request_id, &args.attach, &secrets)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
         title: title_input(&args.title, &secrets)?,
@@ -1991,7 +2096,7 @@ pub(crate) fn validate_followup_text(text: &str) -> Result<()> {
 mod tests {
     use super::*;
     use crate::core::{Effects, Output};
-    use std::sync::{Arc, Mutex, mpsc};
+    use std::sync::{mpsc, Arc, Mutex};
 
     const GUILD: &str = "102";
     const FORUM: &str = "103";
@@ -1999,6 +2104,158 @@ mod tests {
     const BOT: &str = "101";
     const REQUEST_FORUM: &str = "104";
     const ORIGIN: &str = "105";
+
+    #[test]
+    fn generated_proposal_receipt_binds_request_both_paths_hash_and_expiry() {
+        let now = chrono::DateTime::parse_from_rfc3339("2026-10-13T09:40:00Z")
+            .unwrap()
+            .to_utc();
+        let source = UI_PROPOSAL_SOURCE.to_lowercase();
+        let copy = UI_PROPOSAL_COPY.to_lowercase();
+        let allowed = |request, path, resolved, original, hash, at| {
+            proposal_receipt_matches(request, path, resolved, original, hash, at)
+        };
+        assert!(allowed(
+            UI_PROPOSAL_REQUEST,
+            &copy,
+            &copy,
+            &source,
+            UI_PROPOSAL_SHA256,
+            now
+        ));
+        assert!(allowed(
+            UI_PROPOSAL_REQUEST,
+            &source,
+            &source,
+            &source,
+            UI_PROPOSAL_SHA256,
+            now
+        ));
+        for (request, path, resolved, original, hash, at) in [
+            (
+                "another-request",
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                "d:/other.png",
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                "d:/linked.png",
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                "d:/other-source.png",
+                UI_PROPOSAL_SHA256,
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                "changed-content",
+                now,
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                chrono::DateTime::parse_from_rfc3339("2026-10-12T23:59:59Z")
+                    .unwrap()
+                    .to_utc(),
+            ),
+            (
+                UI_PROPOSAL_REQUEST,
+                copy.as_str(),
+                copy.as_str(),
+                source.as_str(),
+                UI_PROPOSAL_SHA256,
+                chrono::DateTime::parse_from_rfc3339("2026-10-21T00:00:00Z")
+                    .unwrap()
+                    .to_utc(),
+            ),
+        ] {
+            assert!(!allowed(request, path, resolved, original, hash, at));
+        }
+    }
+
+    #[test]
+    fn generated_proposal_missing_registry_still_rejects_other_images_before_http() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("other.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nother generated image").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("missing-exclusions.txt");
+        for request in [UI_PROPOSAL_REQUEST, "ordinary-image-request"] {
+            let args = LogArgs {
+                attach: vec![image.clone()],
+                ..fixture.log(request, "確認用画像です。", false)
+            };
+            assert!(log(&mut ctx, &args).is_err());
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            assert!(!fixture.home.join(LEDGER).exists());
+        }
+        assert!(!ctx.client_projects.exists());
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn generated_proposal_missing_registry_rejects_multiple_attachments_before_http() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("other.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nimage").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("missing-exclusions.txt");
+        let args = LogArgs {
+            attach: vec![image.clone(), image],
+            ..fixture.log(UI_PROPOSAL_REQUEST, "確認用画像です。", false)
+        };
+        assert!(log(&mut ctx, &args).is_err());
+        assert!(fixture.server.lock().unwrap().calls.is_empty());
+        assert!(!fixture.home.join(LEDGER).exists());
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn generated_proposal_request_does_not_override_an_available_denial() {
+        let fixture = Fixture::new();
+        let image = fixture.root.path().join("denied.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\nimage").unwrap();
+        let mut ctx = fixture.context();
+        ctx.client_projects = fixture.root.path().join("specific-exclusions.txt");
+        let exclusions = image.to_string_lossy().to_string();
+        fs::write(&ctx.client_projects, &exclusions).unwrap();
+        let args = LogArgs {
+            attach: vec![image],
+            ..fixture.log(UI_PROPOSAL_REQUEST, "確認用画像です。", false)
+        };
+        assert_eq!(
+            log(&mut ctx, &args).unwrap_err(),
+            "protected files cannot be recovery attachments"
+        );
+        assert!(fixture.server.lock().unwrap().calls.is_empty());
+        assert!(!fixture.home.join(LEDGER).exists());
+        assert_eq!(fs::read_to_string(&ctx.client_projects).unwrap(), exclusions);
+        fixture.unchanged();
+    }
 
     #[derive(Default)]
     struct Server {
@@ -2443,14 +2700,13 @@ mod tests {
         drop(state);
         // The normal context remains blocked after the new isolated send.
         let calls = fixture.server.lock().unwrap().calls.len();
-        assert!(
-            ctx.call(
+        assert!(ctx
+            .call(
                 "POST",
                 "/channels/106/messages",
                 Some(&json!({"content":"legacy"}))
             )
-            .is_err()
-        );
+            .is_err());
         assert_eq!(fixture.server.lock().unwrap().calls.len(), calls);
         fixture.unchanged();
     }
@@ -2503,12 +2759,10 @@ mod tests {
         let mut ctx = fixture.context();
         assert!(log(&mut ctx, &args).is_err());
         assert!(fixture.server.lock().unwrap().posts.is_empty());
-        assert!(
-            Ledger::load(&fixture.home)
-                .unwrap()
-                .effect(&args.request_id, "log:0")
-                .is_none()
-        );
+        assert!(Ledger::load(&fixture.home)
+            .unwrap()
+            .effect(&args.request_id, "log:0")
+            .is_none());
         assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
         assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
         assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
@@ -2528,12 +2782,10 @@ mod tests {
         let mut ctx = fixture.context();
         assert_eq!(log(&mut ctx, &args).unwrap()["delivery"], "verified");
         let state = fixture.server.lock().unwrap();
-        assert!(
-            state
-                .calls
-                .iter()
-                .any(|(_, path, _)| path.contains("before=") && path.contains("%2B00%3A00"))
-        );
+        assert!(state
+            .calls
+            .iter()
+            .any(|(_, path, _)| path.contains("before=") && path.contains("%2B00%3A00")));
         assert_eq!(state.posts.len(), 1);
         drop(state);
         fixture.unchanged();
@@ -2552,20 +2804,16 @@ mod tests {
         let state = fixture.server.lock().unwrap();
         assert_eq!(state.posts.len(), 1);
         assert_eq!(state.posts_without_pending, 0);
-        assert!(
-            state
-                .calls
-                .iter()
-                .any(|(method, path, _)| method == "GET" && path == &format!("/channels/{FORUM}"))
-        );
-        assert!(
-            !state
-                .calls
-                .iter()
-                .any(|(_, path, _)| path.ends_with("/threads/active")
-                    || path.contains("/threads/archived/")
-                    || path.contains("/messages?"))
-        );
+        assert!(state
+            .calls
+            .iter()
+            .any(|(method, path, _)| method == "GET" && path == &format!("/channels/{FORUM}")));
+        assert!(!state
+            .calls
+            .iter()
+            .any(|(_, path, _)| path.ends_with("/threads/active")
+                || path.contains("/threads/archived/")
+                || path.contains("/messages?")));
         drop(state);
         fixture.unchanged();
     }
@@ -2596,12 +2844,10 @@ mod tests {
             .request(&next.request_id)
             .unwrap()
             .clone();
-        assert!(
-            Ledger::load(&fixture.home)
-                .unwrap()
-                .effect(&next.request_id, "question:0")
-                .is_none()
-        );
+        assert!(Ledger::load(&fixture.home)
+            .unwrap()
+            .effect(&next.request_id, "question:0")
+            .is_none());
 
         let unrelated = log(
             &mut ctx,
@@ -2640,12 +2886,10 @@ mod tests {
         );
         assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
         let ledger = Ledger::load(&fixture.home).unwrap();
-        assert!(
-            ledger
-                .events
-                .iter()
-                .any(|event| matches!(event, Event::Intent { request } if **request == original))
-        );
+        assert!(ledger
+            .events
+            .iter()
+            .any(|event| matches!(event, Event::Intent { request } if **request == original)));
         assert_eq!(ledger.events.iter().filter(|event| matches!(event, Event::OriginCorrected { request } if request.request_id == next.request_id)).count(), 1);
         fixture.unchanged();
     }
@@ -3118,11 +3362,9 @@ mod tests {
         let result = log(&mut ctx, &args);
         assert!(result.unwrap_err().contains("duplicate"));
         assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
-        assert!(
-            !Ledger::load(&fixture.home)
-                .unwrap()
-                .complete(&args.request_id)
-        );
+        assert!(!Ledger::load(&fixture.home)
+            .unwrap()
+            .complete(&args.request_id));
         fixture.unchanged();
     }
 
@@ -3179,11 +3421,9 @@ mod tests {
         wrong["replies"][&reply]["steering_handler"] = json!("unrelated-test-job");
         fs::write(&state_path, serde_json::to_vec(&wrong).unwrap()).unwrap();
         let before_claim = fs::read(&state_path).unwrap();
-        assert!(
-            followup::claim(&mut ctx, &reply, "unrelated-test-job")
-                .unwrap_err()
-                .contains("claimant")
-        );
+        assert!(followup::claim(&mut ctx, &reply, "unrelated-test-job")
+            .unwrap_err()
+            .contains("claimant"));
         assert_eq!(fs::read(&state_path).unwrap(), before_claim);
         fs::write(&state_path, &saved).unwrap();
         let result = fixture.root.path().join("applied.json");

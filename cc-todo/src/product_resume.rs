@@ -59,6 +59,9 @@ pub fn qualify(db: &mut Value, id: i64, receipt: &Value, apply: bool) -> Result<
         "dispatchable_after":item["dispatchable"],"pending_on":pending});
     let repeated = item["product_resume_qualification"]["receipt"]["request_sha256"]
         == receipt["request_sha256"]
+        && item["product_resume_qualification"]["receipt"]["session"] == receipt["session"]
+        && item["product_resume_qualification"]["receipt"]["worktree"] == receipt["worktree"]
+        && item["product_resume_qualification"]["receipt"]["job"] == receipt["job"]
         && item["product_resume_qualification"]["status_after"] == target_status
         && item["product_resume_qualification"]["pending_on"] == json!(pending);
     if apply && !repeated {
@@ -111,11 +114,11 @@ pub fn run(paths: &Paths, id: i64, apply: bool) -> Result<Value> {
         return Ok(json!({"id":id,"qualified":false,"saved":false,"launched":0,
             "reason":receipt["reason"].as_str().unwrap_or("guard_unavailable")}));
     }
+    let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
     let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
     let ps = backend
         .snapshot()
         .map_err(|_| "プロセスの識別を確認できません")?;
-    let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
     let mut db = load(&paths.store)?;
     let row = db["items"]
         .as_array()

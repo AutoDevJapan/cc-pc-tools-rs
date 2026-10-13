@@ -1162,6 +1162,9 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if let Command::ProductResume { id, apply } = &cli.command {
         let report = product_resume::run(paths, *id, *apply)?;
         println!("{report}");
+        if report["qualified"] != true {
+            return Err("元の対象をまだ再開できません。上の検証結果を確認してください".into());
+        }
         return Ok(());
     }
     if let Command::ReevaluateOwnerWait { id } = &cli.command {

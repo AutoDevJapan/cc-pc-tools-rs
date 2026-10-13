@@ -250,15 +250,14 @@ func productPathAllowed(path string) bool {
 			continue
 		}
 		root := str(r["worktree"])
-		target, err := physical(absolute)
-		if err == nil && within(root, absolute) && within(root, target) && !legacyMatch(target) {
+		if physicalOrPlannedWithin(root, absolute) {
 			return true
 		}
 		if same(absolute, str(r["request"])) && exactPhysical(absolute) {
 			return true
 		}
 		if id == 1626 && within(gameRoot, absolute) && exactPhysical(gameRoot) && sourceOriginVerified(gameRoot, "autodevjapan/phosgaea-vol1") {
-			if err == nil && within(gameRoot, target) && !legacyMatch(target) {
+			if physicalOrPlannedWithin(gameRoot, absolute) {
 				return true
 			}
 		}
@@ -275,7 +274,7 @@ func productPathAllowed(path string) bool {
 			return false
 		}
 		body, err := readBounded(str(worker["spec"]), 1<<20)
-		if err != nil || !strings.Contains(strings.ReplaceAll(string(body), "\\", "/"), "D:/CC/Work/product-worker-recovery-20261013/non-client-handoff.md") || !strings.Contains(string(body), "safe-status.json") {
+		if err != nil || hashBytes(body) != "f35ae3704699b3433f8cc9063478f5bf3ec5dd4a534fd358c21446c7d676855f" || !strings.Contains(strings.ReplaceAll(string(body), "\\", "/"), "D:/CC/Work/product-worker-recovery-20261013/non-client-handoff.md") || !strings.Contains(string(body), "safe-status.json") {
 			return false
 		}
 		if !sourceVerified(base) {
@@ -289,6 +288,30 @@ func productPathAllowed(path string) bool {
 			return true
 		}
 		return exactPhysical(output)
+	}
+	return false
+}
+
+// Resolve the closest existing ancestor for new files. A broken or escaping
+// link is never interpreted as a missing directory that may be created.
+func physicalOrPlannedWithin(root, target string) bool {
+	if !within(root, target) {
+		return false
+	}
+	for path := target; within(root, path); path = filepath.Dir(path) {
+		resolved, err := physical(path)
+		if err == nil {
+			return within(root, resolved) && !legacyMatch(resolved)
+		}
+		if !os.IsNotExist(err) {
+			return false
+		}
+		if _, err = os.Lstat(path); !os.IsNotExist(err) {
+			return false
+		}
+		if same(path, root) {
+			return false
+		}
 	}
 	return false
 }

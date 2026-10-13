@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -88,5 +89,30 @@ func TestUnknownAndSiblingProductPathsStayProtected(t *testing.T) {
 		if productPathAllowed(path) {
 			t.Fatal("unrequested product path accepted")
 		}
+	}
+}
+
+func TestPlannedFilesRejectAnExistingEscapingOrBrokenLink(t *testing.T) {
+	root := t.TempDir()
+	if !physicalOrPlannedWithin(root, filepath.Join(root, "new", "receipt.json")) {
+		t.Fatal("bounded new file rejected")
+	}
+	if physicalOrPlannedWithin(root, root+"-sibling") {
+		t.Fatal("sibling accepted")
+	}
+	outside := t.TempDir()
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skip("symlink privilege unavailable")
+	}
+	if physicalOrPlannedWithin(root, filepath.Join(link, "new-file")) {
+		t.Fatal("escaping link accepted")
+	}
+	broken := filepath.Join(root, "broken")
+	if err := os.Symlink(filepath.Join(outside, "missing"), broken); err != nil {
+		t.Fatal(err)
+	}
+	if physicalOrPlannedWithin(root, filepath.Join(broken, "new-file")) {
+		t.Fatal("broken link accepted")
 	}
 }

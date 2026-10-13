@@ -153,6 +153,9 @@ fn start_appends_a_valid_reference_without_removing_mixed_recovery_records() {
     let p = paths(temp.path());
     let evidence = json!({"id":"old","result":{"unverified":true}});
     let mut db = database(json!([evidence, "old", null]));
+    // Ordinary dispatch may append a worker while preserving recovered evidence.
+    // An item still awaiting recovery must use the verified-resume entry point.
+    db["items"][0]["status"] = json!("todo");
     execute(&mut db, &command(&["start", "1", "--job", "new-job"]), &p).unwrap();
     assert_eq!(
         db["items"][0]["jobs"],
@@ -160,6 +163,19 @@ fn start_appends_a_valid_reference_without_removing_mixed_recovery_records() {
     );
     assert_eq!(db["items"][0]["status"], "doing");
     assert_eq!(db["items"][0]["recovery_evidence"]["approved"], false);
+}
+
+#[test]
+fn start_does_not_release_an_unverified_item_or_replace_its_mixed_records() {
+    let temp = tempfile::tempdir().unwrap();
+    let p = paths(temp.path());
+    let evidence = json!({"id":"old","result":{"unverified":true}});
+    let mut db = database(json!([evidence, "old", null]));
+    let before = db.clone();
+    let error = execute(&mut db, &command(&["start", "1", "--job", "new-job"]), &p)
+        .unwrap_err();
+    assert!(error.contains("resume-verified"), "{error}");
+    assert_eq!(db, before);
 }
 
 #[test]

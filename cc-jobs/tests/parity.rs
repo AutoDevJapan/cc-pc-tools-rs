@@ -1917,7 +1917,10 @@ mod queue_regressions {
     fn wait_registration_cannot_race_running_publication_after_queue_snapshot() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
-        t.rt.env.lock().unwrap().insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into_owned());
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
         let store = t.ctx.root.join("todo.json");
         let db = json!({"items":[{"id":1139,"status":"todo"}]});
         fs::write(&store, db.to_string()).unwrap();
@@ -1937,7 +1940,7 @@ mod queue_regressions {
                         // A writer admitted here would install a wait between the snapshot and publication.
                         let wait = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
                         let _ = fs::write(&store_at_save, wait.to_string());
-                    },
+                    }
                     Err(_) => observed.lock().unwrap().push(true),
                 }
             }
@@ -1947,7 +1950,10 @@ mod queue_regressions {
         assert!(admission.is_some());
         assert_eq!(t.ctx.load("original").unwrap()["status"], "running");
         assert_eq!(*attempts.lock().unwrap(), vec![true]);
-        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(), db);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(),
+            db
+        );
     }
     #[test]
     fn duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done() {
@@ -3994,7 +4000,10 @@ mod queue_regressions {
     #[test]
     fn wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs() {
         let t = Test::new();
-        config(&t, json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}));
+        config(
+            &t,
+            json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let mut normal = waiting(&t, "normal", "normal");
         normal["retry_not_before"] = json!(t.rt.epoch() + 60.);
         t.ctx.save(&normal).unwrap();
@@ -4490,30 +4499,47 @@ mod queue_regressions {
     }
     #[test]
     fn department_order_wins_over_request_prefix_and_children() {
-        let t=Test::new();
-        config(&t,json!({"max_running":1}));
-        let mut low=waiting(&t,"low","req-low"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
-        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); t.ctx.save(&high).unwrap();
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut low = waiting(&t, "low", "req-low");
+        low["project"] = json!("unknown");
+        t.ctx.save(&low).unwrap();
+        let mut high = waiting(&t, "high", "orch-client");
+        high["project"] = json!("SocialPilot");
+        t.ctx.save(&high).unwrap();
         assert!(t.ctx.admit("low").unwrap().is_none());
         assert!(t.ctx.admit("high").unwrap().is_some());
         assert!(t.ctx.admit("low").unwrap().is_none());
     }
     #[test]
     fn configured_legacy_lowest_cannot_demote_contract_below_own_products() {
-        let t=Test::new();
-        config(&t,json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
-        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); high["todo_id"]=json!(18); t.ctx.save(&high).unwrap();
-        let mut low=waiting(&t,"low","req-own"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        let t = Test::new();
+        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
+        let mut high = waiting(&t, "high", "orch-client");
+        high["project"] = json!("SocialPilot");
+        high["todo_id"] = json!(18);
+        t.ctx.save(&high).unwrap();
+        let mut low = waiting(&t, "low", "req-own");
+        low["project"] = json!("unknown");
+        t.ctx.save(&low).unwrap();
         assert!(t.ctx.admit("high").unwrap().is_some());
     }
     #[test]
     fn running_own_product_yields_to_a_ready_higher_department_at_tool_boundary() {
-        let t=Test::new(); config(&t,json!({"max_running":1}));
-        let mut parent=live_tool_parent(&t); parent["project"]=json!("unknown"); parent["started_at"]=json!(t.rt.now()); t.ctx.save(&parent).unwrap();
-        let mut other=t.ctx.load("other").unwrap(); other["project"]=json!("SocialPilot"); t.ctx.save(&other).unwrap();
-        tool_events(&t,&[("item.started","work"),("item.completed","work")]);
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = live_tool_parent(&t);
+        parent["project"] = json!("unknown");
+        parent["started_at"] = json!(t.rt.now());
+        t.ctx.save(&parent).unwrap();
+        let mut other = t.ctx.load("other").unwrap();
+        other["project"] = json!("SocialPilot");
+        t.ctx.save(&other).unwrap();
+        tool_events(&t, &[("item.started", "work"), ("item.completed", "work")]);
         assert!(t.ctx.admit("other").unwrap().is_some());
-        let saved=t.ctx.load("long").unwrap(); assert_eq!(saved["status"],"queued"); assert_eq!(saved["resume_session"],SESSION_ID);
+        let saved = t.ctx.load("long").unwrap();
+        assert_eq!(saved["status"], "queued");
+        assert_eq!(saved["resume_session"], SESSION_ID);
     }
     #[test]
     fn loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown() {
@@ -4608,7 +4634,10 @@ mod queue_regressions {
     #[test]
     fn shared_prompt_guidance_keeps_req_first_and_loops_last() {
         let t = Test::new();
-        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}));
+        config(
+            &t,
+            json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let guidance = cc_job_policy::WRITE_GUIDANCE;
         assert!(guidance.contains("繰り返す"));
         let mut lowest = loop_job(&t, "loop-18", 18);
@@ -5407,6 +5436,7 @@ struct Fake {
     handler: Mutex<Option<CallFn>>,
     sleeps: Mutex<Vec<f64>>,
     procs: Arc<Mutex<HashMap<u32, u64>>>,
+    proc_probe_errors: Mutex<HashMap<u32, i32>>,
     kill_works: AtomicBool,
     kill_hook: Mutex<Option<KillHook>>,
     kills: Arc<Mutex<Vec<u32>>>,
@@ -5463,6 +5493,7 @@ impl Fake {
             handler: Mutex::new(None),
             sleeps: Mutex::new(vec![]),
             procs: Arc::new(Mutex::new(HashMap::from([(std::process::id(), 123)]))),
+            proc_probe_errors: Mutex::new(HashMap::new()),
             kill_works: AtomicBool::new(true),
             kill_hook: Mutex::new(None),
             kills: Arc::new(Mutex::new(vec![])),
@@ -5698,6 +5729,12 @@ impl Runtime for Fake {
     }
     fn proc_created(&self, pid: u32) -> Option<u64> {
         self.procs.lock().unwrap().get(&pid).copied()
+    }
+    fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
+        if let Some(code) = self.proc_probe_errors.lock().unwrap().get(&pid) {
+            return Err(io::Error::from_raw_os_error(*code));
+        }
+        Ok(self.proc_created(pid))
     }
     fn which(&self, name: &str) -> Option<String> {
         match name {
@@ -6088,7 +6125,8 @@ mod event_parsing {
 mod registrar_launch_policy {
     use super::*;
     #[test]
-    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope() {
+    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope()
+    {
         for sandbox in ["read-only", "danger-full-access"] {
             for (phase, yielded, source) in [
                 ("", false, "prompt.md"),
@@ -6105,14 +6143,20 @@ mod registrar_launch_policy {
                 assert!(fed.starts_with("old task\r\noriginal scope"));
                 assert!(fed.contains(cc_job_policy::REGISTRAR_GUIDANCE));
                 assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 1);
-                assert_eq!(fs::read_to_string(&original).unwrap(), "old task\r\noriginal scope");
+                assert_eq!(
+                    fs::read_to_string(&original).unwrap(),
+                    "old task\r\noriginal scope"
+                );
                 assert_eq!(j["sandbox"], sandbox);
                 assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), path);
                 assert_eq!(fs::read_to_string(path).unwrap(), fed);
                 fs::write(&original, &fed).unwrap();
                 let appended = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
                 assert!(appended.starts_with(&fed));
-                assert_eq!(appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+                assert_eq!(
+                    appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(),
+                    2
+                );
                 assert_eq!(fs::read_to_string(original).unwrap(), fed);
             }
         }
@@ -6124,14 +6168,22 @@ mod registrar_launch_policy {
         assert!(t.ctx.prompt_for_attempt(&j).is_err());
         fs::write(t.ctx.job_dir("old-job").join("context-continue.md"), [0xff]).unwrap();
         assert!(t.ctx.prompt_for_attempt(&j).is_err());
-        assert!(!t.ctx.job_dir("old-job").join("execution-prompt.md").exists());
+        assert!(
+            !t.ctx
+                .job_dir("old-job")
+                .join("execution-prompt.md")
+                .exists()
+        );
     }
     #[test]
     fn a_quoted_rule_in_the_middle_cannot_suppress_the_final_restriction() {
         let t = Test::new();
         let j = t.put(job(json!({"id":"quoted-job"})));
         let path = t.ctx.job_dir("quoted-job").join("prompt.md");
-        let original = format!("quoted log:\n{}\nThis quote is not a site authorization.", cc_job_policy::REGISTRAR_GUIDANCE);
+        let original = format!(
+            "quoted log:\n{}\nThis quote is not a site authorization.",
+            cc_job_policy::REGISTRAR_GUIDANCE
+        );
         fs::write(&path, &original).unwrap();
         let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
         assert_eq!(fs::read_to_string(path).unwrap(), original);
@@ -6529,6 +6581,49 @@ mod lost_detection {
         assert!(proc_created(0).is_none());
     }
     #[test]
+    fn unavailable_supervisor_identity_keeps_execution_and_does_not_close_tabs() {
+        for code in [5, 6, 299] {
+            let t = Test::new();
+            let j = t.put(t.running());
+            let pid = j["pid"].as_u64().unwrap() as u32;
+            t.rt.proc_probe_errors.lock().unwrap().insert(pid, code);
+            assert!(t.ctx.supervisor_alive(&j));
+            assert_eq!(t.ctx.refresh(j.clone(), false).unwrap(), j);
+            assert_eq!(t.ctx.load(s(&j, "id")).unwrap(), j);
+            assert!(t.rt.calls.lock().unwrap().is_empty());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        }
+    }
+    #[test]
+    fn known_absence_and_reused_pid_still_mark_the_job_lost() {
+        for reused in [false, true] {
+            let t = Test::new();
+            let j = t.put(t.running());
+            let pid = j["pid"].as_u64().unwrap() as u32;
+            if reused {
+                t.rt.procs.lock().unwrap().insert(pid, 124);
+            } else {
+                t.rt.procs.lock().unwrap().remove(&pid);
+            }
+            assert!(!t.ctx.supervisor_alive(&j));
+            assert_eq!(t.ctx.refresh(j, false).unwrap()["status"], "lost");
+        }
+    }
+    #[cfg(windows)]
+    #[test]
+    fn exited_process_with_still_active_exit_code_is_not_live() {
+        use std::os::windows::process::CommandExt;
+        let mut child = std::process::Command::new("cmd.exe")
+            .args(["/d", "/c", "exit", "259"])
+            .creation_flags(NO_WINDOW)
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        assert_eq!(child.wait().unwrap().code(), Some(259));
+        assert_eq!(proc_created_checked(pid).unwrap(), None);
+    }
+    #[test]
     fn test_watch_reports_changes_once_and_skips_finished_jobs() {
         let t = Test::new();
         let j = t.put(t.running());
@@ -6738,9 +6833,12 @@ mod cancel {
         let store = guard_store(&t);
         let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
         db["items"][0]["status"] = json!("wait");
-        db["items"][0]["wait_ready"] = json!({"condition":"retry-time","since":100,"not_before":3700});
+        db["items"][0]["wait_ready"] =
+            json!({"condition":"retry-time","since":100,"not_before":3700});
         fs::write(&store, db.to_string()).unwrap();
-        let source = t.put(job(json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123})));
+        let source = t.put(job(
+            json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123}),
+        ));
         let (result, out, _) = guarded(&t, "source", &store, "attempt");
         assert_eq!(result.unwrap(), 0);
         let response: Value = serde_json::from_str(&out).unwrap();
@@ -9769,7 +9867,9 @@ mod end_to_end {
                 executable: self.exe.clone(),
                 rt: Arc::new(System::default()),
             };
-            reader.read_json(&reader.job_dir(jid).join("job.json")).unwrap()
+            reader
+                .read_json(&reader.job_dir(jid).join("job.json"))
+                .unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
             self.until_phase("unspecified", &mut condition);

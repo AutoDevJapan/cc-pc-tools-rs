@@ -44,9 +44,7 @@ impl Context {
             .get("CC_OWNER_INSTRUCTIONS_PATH")
             .filter(|path| !path.is_empty())
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from("D:/CC/AGENTS.md")
-            });
+            .unwrap_or_else(|| PathBuf::from("D:/CC/AGENTS.md"));
         let policy = fs::read_to_string(&policy_path)?;
         if policy.trim().is_empty() {
             return Err(std::io::Error::new(
@@ -346,19 +344,28 @@ impl Context {
         created.is_some() && created == j[format!("{key}_created")].as_u64()
     }
     pub fn supervisor_alive(&self, j: &Value) -> bool {
+        // Keep the execution reservation when this reader cannot inspect its
+        // owner. It must not mark the job lost, close tabs or start a duplicate.
+        self.supervisor_presence(j).unwrap_or(true)
+    }
+    fn supervisor_presence(&self, j: &Value) -> std::io::Result<bool> {
         // An intentional replacement is durable queue work, not an orphan.
         if s(j, "status") == "queued" && j["queue_restart_pending"] == true {
-            return true;
+            return Ok(true);
         }
         if truth(&j["pid"]) {
-            self.is_ours(j, "pid")
+            let Some(pid) = j["pid"].as_u64().and_then(|x| u32::try_from(x).ok()) else {
+                return Ok(false);
+            };
+            let created = self.rt.proc_created_checked(pid)?;
+            Ok(created.is_some() && created == j["pid_created"].as_u64())
         } else {
-            parse_iso(if s(j, "queued_at").is_empty() {
+            Ok(parse_iso(if s(j, "queued_at").is_empty() {
                 s(j, "created_at")
             } else {
                 s(j, "queued_at")
             })
-            .is_some_and(|created| self.rt.epoch() - created <= QUEUED_GRACE_S)
+            .is_some_and(|created| self.rt.epoch() - created <= QUEUED_GRACE_S))
         }
     }
     /// Mark a live job whose supervisor is gone as 'lost' (persisted, so it can never come back).

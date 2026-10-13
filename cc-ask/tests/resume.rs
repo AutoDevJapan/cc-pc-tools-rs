@@ -26,11 +26,9 @@ fn real_reply_shapes_after_reask_in_central_worktree() {
     for open in [false, true] {
         let mut a = AnswerResume::new();
         let repo = a.repository();
-        let central = if Path::new("D:/CC/Worktrees").is_dir() {
-            PathBuf::from("D:/CC/Worktrees")
-        } else {
-            a.root.path().to_path_buf()
-        };
+        // This regression owns its fake Git roots. Do not write to a real
+        // machine-wide worktree folder just because it exists on the runner.
+        let central = a.root.path().to_path_buf();
         let worktree_fixture = tempfile::Builder::new()
             .prefix("cc-ask-resume-regression-")
             .tempdir_in(central)

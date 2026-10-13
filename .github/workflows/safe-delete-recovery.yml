@@ -2,9 +2,9 @@ name: Owned download quarantine
 on:
   push:
     branches: [main]
-    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+    paths: ['safe-delete-recovery/**', 'safe-delete/**', '.github/workflows/safe-delete-recovery.yml']
   pull_request:
-    paths: ['safe-delete-recovery/**', '.github/workflows/safe-delete-recovery.yml']
+    paths: ['safe-delete-recovery/**', 'safe-delete/**', '.github/workflows/safe-delete-recovery.yml']
 # Superseded PR heads need no second verification; preserve every main run.
 concurrency:
   group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
@@ -13,27 +13,77 @@ permissions:
   contents: read
 jobs:
   recovery:
-    runs-on: windows-latest
-    timeout-minutes: 20
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: safe-delete-recovery
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: safe-delete-recovery
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
       - name: Create isolated CI fixtures
         shell: pwsh
         run: |
-          $fixtures = Join-Path $env:RUNNER_TEMP 'safe-delete-recovery-fixtures'
-          New-Item -ItemType Directory -Path $fixtures | Out-Null
+          # Git expands subst drives. Use a real owned directory in the service's
+          # system temp instead, retaining the production 240-character limit.
+          # The helper's receipts must survive the runner's automatic temp purge.
+          $helperRoot = Join-Path (Split-Path -Parent $env:RUNNER_TEMP) 'recovery-fixture-helper'
+          New-Item -ItemType Directory -Path $helperRoot -Force | Out-Null
+          $helper = Join-Path $helperRoot 'safe-delete-fixtures.exe'
+          go -C ../safe-delete build -trimpath -o $helper .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $originalTemp = $env:TEMP
+          $originalTmp = $env:TMP
+          try {
+            $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+            $env:TMP = $env:TEMP
+            # Windows Temp permits creation but not parent enumeration. PowerShell
+            # Remove-Item requires a readable parent, even with LiteralPath.
+            # Retain one ownership-checked empty parent for this runner's fixtures.
+            $parentRecord = Join-Path $helperRoot 'fixture-parent.json'
+            if (Test-Path -LiteralPath $parentRecord) {
+              $parent = Get-Content -LiteralPath $parentRecord -Raw | ConvertFrom-Json
+              $expectedParent = Join-Path $env:TEMP "codex-owned-$($parent.id)"
+              if ($parent.id -notmatch '^[a-f0-9]{32}$' -or $parent.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
+              $parentPlan = & $helper plan --id $parent.id
+              if ($LASTEXITCODE -ne 0) { throw 'Fixture parent ownership check failed; inspect the helper error above' }
+              $checkedParent = $parentPlan | ConvertFrom-Json
+              if ($checkedParent.action -ne 'submit_to_exec_tool' -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 0) { throw 'Fixture parent is not owned, empty and eligible for normal cleanup' }
+            } else {
+              $parent = & $helper create --project pc-ci --content recovery-parent | ConvertFrom-Json
+              if ($LASTEXITCODE -ne 0) { throw 'Could not create owned fixture parent' }
+              try {
+                @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $parentRecord -Encoding utf8 -ErrorAction Stop
+              } catch {
+                Write-Output "Owned parent retained in helper receipts: id=$($parent.id); path=$($parent.path)"
+                throw
+              }
+            }
+            $created = & $helper create --root $parent.path --project pc-ci --content recovery-fixtures | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create owned physical fixtures' }
+          } finally {
+            $env:TEMP = $originalTemp
+            $env:TMP = $originalTmp
+          }
+          $fixtures = $created.path
+          "PC_CI_FIXTURE_ID=$($created.id)" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_PATH=$fixtures" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_HELPER=$helper" >> $env:GITHUB_ENV
+          "PC_CI_FIXTURE_PARENT=$($parent.path)" >> $env:GITHUB_ENV
           $guard = Join-Path $fixtures 'client-guard-fixture.exe'
           rustc tests/support/client_guard.rs -o $guard
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -43,12 +93,27 @@ jobs:
       - run: cargo nextest run --locked --workspace --test-threads 10
       - run: cargo test --locked --workspace --doc
       - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo build --locked --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: safe-delete-recovery-windows
-          retention-days: 3
-          if-no-files-found: error
-          path: |
-            safe-delete-recovery/target/release/safe-delete-recovery.exe
-            safe-delete-recovery/target/debug/deps/safe_delete_recovery-*.exe
+      - run: cargo build --locked --release --target-dir target
+      # Keep the verified binaries in this PC job's work directory. Normal CI
+      # does not upload or accumulate repository artifact storage.
+      - name: Plan removal of this job's owned physical fixtures
+        if: always() && env.PC_CI_FIXTURE_ID != ''
+        shell: pwsh
+        run: |
+          $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+          $env:TMP = $env:TEMP
+          $plan = & $env:PC_CI_FIXTURE_HELPER plan --id $env:PC_CI_FIXTURE_ID | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $plan.action -ne 'submit_to_exec_tool' -or $plan.path -ne $env:PC_CI_FIXTURE_PATH) { throw 'Owned fixture deletion was not planned' }
+          'PC_CI_FIXTURE_REMOVAL_PLANNED=1' >> $env:GITHUB_ENV
+      - name: Remove the planned fixture and finish its ownership record
+        if: always() && env.PC_CI_FIXTURE_REMOVAL_PLANNED == '1'
+        shell: pwsh
+        run: |
+          $env:TEMP = Join-Path $env:SystemRoot 'Temp'
+          $env:TMP = $env:TEMP
+          if ([string]::IsNullOrWhiteSpace($env:PC_CI_FIXTURE_PARENT)) { throw 'Owned fixture parent is missing' }
+          $expected = Join-Path $env:PC_CI_FIXTURE_PARENT "codex-owned-$env:PC_CI_FIXTURE_ID"
+          if ($env:PC_CI_FIXTURE_ID -notmatch '^[a-f0-9]{32}$' -or $env:PC_CI_FIXTURE_PATH -ne $expected) { throw 'Unexpected fixture path' }
+          Remove-Item -LiteralPath $expected -Recurse -ErrorAction Stop
+          & $env:PC_CI_FIXTURE_HELPER finish --id $env:PC_CI_FIXTURE_ID
+          if ($LASTEXITCODE -ne 0) { throw 'Owned fixture removal did not finish' }

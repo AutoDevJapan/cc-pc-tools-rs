@@ -178,6 +178,9 @@ func allowed(path string) bool {
 	if productPathAllowed(absolute) {
 		return true
 	}
+	if nextWorkPathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
 		return true
 	}

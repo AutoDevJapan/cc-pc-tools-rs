@@ -38,7 +38,8 @@ jobs:
           (cd /tmp && assert_rejected 'bridge rejected (403)' cargo test --locked)
           cargo --version
           cargo metadata --locked --format-version 1 --no-deps > /work/metadata.json
-          cargo test --locked -p cc-task-title -j64 -- --test-threads=32
+          cargo nextest run --locked -p cc-task-title --build-jobs 64 --test-threads 32
+          cargo test --locked -p cc-task-title --doc
           cd tools/linux-runner-bridge
           go version
           mkdir -p /work/go-tmp /work/go-cache

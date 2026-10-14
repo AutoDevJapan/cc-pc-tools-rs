@@ -284,8 +284,9 @@ func normalContainerFor(mode string) string {
 type normalContainerInspection struct {
 	Image  string `json:"Image"`
 	Config struct {
-		Image string `json:"Image"`
-		User  string `json:"User"`
+		Image string   `json:"Image"`
+		User  string   `json:"User"`
+		Env   []string `json:"Env"`
 	} `json:"Config"`
 	HostConfig struct {
 		Memory         int64             `json:"Memory"`
@@ -294,6 +295,12 @@ type normalContainerInspection struct {
 		CapAdd         []string          `json:"CapAdd"`
 		PidMode        string            `json:"PidMode"`
 		NetworkMode    string            `json:"NetworkMode"`
+		Runtime        string            `json:"Runtime"`
+		MemorySwap     int64             `json:"MemorySwap"`
+		IpcMode        string            `json:"IpcMode"`
+		UTSMode        string            `json:"UTSMode"`
+		UsernsMode     string            `json:"UsernsMode"`
+		CgroupnsMode   string            `json:"CgroupnsMode"`
 		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
@@ -328,6 +335,14 @@ func verifyFiniteContainerWith(name string, run dockerOutput) error {
 	if c.HostConfig.Memory <= 0 || c.HostConfig.Memory > 6<<30 || c.HostConfig.NanoCpus <= 0 || c.HostConfig.NanoCpus > 2_000_000_000 || c.HostConfig.PidsLimit <= 0 || c.HostConfig.PidsLimit > 512 || len(c.HostConfig.CapAdd) != 0 || c.HostConfig.PidMode == "host" || c.HostConfig.NetworkMode == "host" {
 		return errors.New("finite runner resource limits rejected")
 	}
+	if (c.HostConfig.Runtime != "" && c.HostConfig.Runtime != "runc") || c.HostConfig.MemorySwap != c.HostConfig.Memory || c.HostConfig.PidMode != "" || (c.HostConfig.NetworkMode != "" && c.HostConfig.NetworkMode != "default" && c.HostConfig.NetworkMode != "bridge") || (c.HostConfig.IpcMode != "" && c.HostConfig.IpcMode != "private" && c.HostConfig.IpcMode != "none") || c.HostConfig.UTSMode != "" || c.HostConfig.UsernsMode != "" || (c.HostConfig.CgroupnsMode != "" && c.HostConfig.CgroupnsMode != "private") || len(c.HostConfig.SecurityOpt) != 1 || c.HostConfig.SecurityOpt[0] != "no-new-privileges:true" {
+		return errors.New("finite runner runtime or namespace policy rejected")
+	}
+	for _, entry := range c.Config.Env {
+		if strings.HasPrefix(strings.ToUpper(entry), "NVIDIA_") {
+			return errors.New("finite runner GPU environment rejected")
+		}
+	}
 	credentialNoExec := false
 	for _, option := range strings.Split(c.HostConfig.Tmpfs["/tmp"], ",") {
 		credentialNoExec = credentialNoExec || option == "noexec"
@@ -341,7 +356,10 @@ func verifyFiniteContainerWith(name string, run dockerOutput) error {
 	if err = validateNormalContainerConfiguration(c); err != nil {
 		return err
 	}
-	return validateNormalContainerRuntime(name, run, time.Sleep)
+	if err := validateNormalContainerRuntime(name, run, time.Sleep); err != nil {
+		return fmt.Errorf("finite runner preflight rejected: %w", err)
+	}
+	return nil
 }
 
 func validFiniteImageID(value string) bool {

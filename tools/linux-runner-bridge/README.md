@@ -5,11 +5,19 @@ ordinary `AutoDevJapan/cc-pc-tools-rs` CI. The finite invocation still requires
 one fixed revision and its approved task branch, uses port 17851 and the
 `todo2511-cc-pc-tools-linux` container, and accepts only its original event set.
 Create that container from `todo2511-cc-pc-tools-linux:proof`. Finite startup
-checks that tag's immutable image ID, the common non-root/mount/device/privilege
+checks the immutable ID currently referenced by that local tag, the common non-root/mount/device/privilege
 and tmpfs policy, and nonzero limits of at most 2 CPUs, 6 GiB and 512 PIDs before
 requesting a registration token. Host PID/network namespaces and added
 capabilities are rejected. Its initial labels include
 `cc-pc-tools-linux-2511-proof`, so its probe does not route to resident runners.
+Finite containers also reject alternate GPU runtimes/environment, shared PID,
+network, IPC, UTS, user or cgroup namespaces, extra security overrides, and swap
+beyond the memory limit. Use `--memory-swap 6g` together with `--memory 6g`.
+Docker's default private IPC/cgroup namespaces remain accepted. The local tag
+comparison is not source provenance; separately record source and binary hashes
+when building the proof image. The required shared `cc-pc-tools-linux` label is
+retained, so destroy finite containers after the queued proof; do not leave an
+idle finite runner available to ordinary CI.
 
 ## Resident mode
 

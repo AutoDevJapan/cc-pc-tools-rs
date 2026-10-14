@@ -20,6 +20,7 @@ func TestFiniteContainerRegistrationBoundary(t *testing.T) {
 	expected := "sha256:" + strings.Repeat("a", 64)
 	base.Image, base.Config.Image = expected, finiteImage
 	base.HostConfig.Memory, base.HostConfig.NanoCpus, base.HostConfig.PidsLimit = 6<<30, 2_000_000_000, 512
+	base.HostConfig.MemorySwap = base.HostConfig.Memory
 	cases := []struct {
 		name     string
 		change   func(*normalContainerInspection)
@@ -48,6 +49,27 @@ func TestFiniteContainerRegistrationBoundary(t *testing.T) {
 		{"pid-unbounded", func(c *normalContainerInspection) { c.HostConfig.PidsLimit = -1 }, false},
 		{"host-pid", func(c *normalContainerInspection) { c.HostConfig.PidMode = "host" }, false},
 		{"host-network", func(c *normalContainerInspection) { c.HostConfig.NetworkMode = "host" }, false},
+		{"shared-pid", func(c *normalContainerInspection) { c.HostConfig.PidMode = "container:other" }, false},
+		{"shared-network", func(c *normalContainerInspection) { c.HostConfig.NetworkMode = "container:other" }, false},
+		{"gpu-runtime", func(c *normalContainerInspection) { c.HostConfig.Runtime = "nvidia" }, false},
+		{"gpu-env", func(c *normalContainerInspection) { c.Config.Env = []string{"NVIDIA_VISIBLE_DEVICES=all"} }, false},
+		{"swap-unbounded", func(c *normalContainerInspection) { c.HostConfig.MemorySwap = -1 }, false},
+		{"shared-ipc", func(c *normalContainerInspection) { c.HostConfig.IpcMode = "host" }, false},
+		{"shared-uts", func(c *normalContainerInspection) { c.HostConfig.UTSMode = "host" }, false},
+		{"shared-userns", func(c *normalContainerInspection) { c.HostConfig.UsernsMode = "host" }, false},
+		{"shared-cgroupns", func(c *normalContainerInspection) { c.HostConfig.CgroupnsMode = "host" }, false},
+		{"extra-security-opt", func(c *normalContainerInspection) {
+			c.HostConfig.SecurityOpt = []string{"no-new-privileges:true", "seccomp=unconfined"}
+		}, false},
+		{"private-defaults", func(c *normalContainerInspection) {
+			c.HostConfig.Runtime = "runc"
+			c.HostConfig.IpcMode = "private"
+			c.HostConfig.CgroupnsMode = "private"
+			c.HostConfig.NetworkMode = "default"
+		}, true},
+		{"credential-no-noexec", func(c *normalContainerInspection) {
+			c.HostConfig.Tmpfs = map[string]string{"/tmp": "rw", "/runner": "exec"}
+		}, false},
 		{"credential-tmpfs", func(c *normalContainerInspection) { c.HostConfig.Tmpfs = map[string]string{"/runner": "exec"} }, false},
 		{"credential-exec", func(c *normalContainerInspection) {
 			c.HostConfig.Tmpfs = map[string]string{"/tmp": "rw,exec", "/runner": "exec"}
@@ -92,6 +114,37 @@ func TestFiniteContainerRegistrationBoundary(t *testing.T) {
 	}
 	if err := verifyFiniteContainerWith("fixture", func(...string) (string, error) { return "", errors.New("unavailable") }); err == nil {
 		t.Fatal("accepted failed inspect")
+	}
+	data, _ := json.Marshal([]normalContainerInspection{base})
+	for _, image := range []string{"", "sha256:bad", "unavailable"} {
+		calls := 0
+		err := verifyFiniteContainerWith("fixture", func(args ...string) (string, error) {
+			if args[0] == "inspect" {
+				return string(data), nil
+			}
+			if args[0] == "image" {
+				if image == "unavailable" {
+					return "", errors.New("unavailable")
+				}
+				return image, nil
+			}
+			calls++
+			return "", nil
+		})
+		if err == nil || calls != 0 {
+			t.Fatal("image inspection failure reached runtime")
+		}
+	}
+	if err := verifyFiniteContainerWith("fixture", func(args ...string) (string, error) {
+		if args[0] == "inspect" {
+			return string(data), nil
+		}
+		if args[0] == "image" {
+			return expected, nil
+		}
+		return "0", nil
+	}); err == nil {
+		t.Fatal("accepted a root runtime")
 	}
 }
 

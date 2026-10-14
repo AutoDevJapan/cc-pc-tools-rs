@@ -32,3 +32,5 @@
 固定sourceのCodeQL4新解析は今回末尾のpoll050-codeql-analyses-final.jsonで再照合した。前source解析を流用していない。取得済み原全文3jobのbytes/SHA256と現物を再照合。原全文未確認10終端job、全workspaceの実pass/fail/skip・doctest・全targets Clippyのexit未確認を保持。拒否flagの再試行・別ログ経路・ゲート改変・source修復・Cargo・GPU・CI再実行・PR・merge・配布・Discord送信・新担当作成なし。
 
 今回の詳細は同 `.ci-work/d7-2488/ci-d7-result-2488.private.json/md` へ保存。前回末尾のmanifest/mdはcheckpoint-20261013-231835-result.private.json/mdに保持。原API/ログ/取得エラー/各receiptの絶対path・bytes・SHA256・根拠行は現manifestのfile_inventory/evidenceに保存。親2488の全修復完了は宣言しない。同ToDo2613の600秒wait-retryで元spec/同worktree/同固定runを保持して自動再開する。
+
+2026-10-14 09:01 JSTに同2613・同worktreeから再開。git dc2cd77/clean、本人所有PRIVATE、PR144 HEAD d7、固定treeを新しい通常gh APIで再照合。前回末尾manifest/mdはresume-20261014-000110-checkpoint.private.json/mdに保持。今回poll051から原APIを追記し、有限確認期限は09:31:14 JST。状態は4workflow成功/4未終端、13/20job終端のまま。拒否flag・別経路ログ・source修復・Cargo・GPU・CI再実行・PR・merge・配布・Discord・子jobの追加なし。

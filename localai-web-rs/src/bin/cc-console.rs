@@ -253,6 +253,14 @@ async fn read_response(
     mut response: reqwest::Response,
     method: &str,
 ) -> Result<(String, bool), String> {
+    let requested = if method == "LIST" {
+        Some(
+            localai_web_rs::todo_listing::Query::parse(response.url().query().unwrap_or(""))
+                .map_err(str::to_owned)?,
+        )
+    } else {
+        None
+    };
     let status = response.status();
     let success = status.is_success();
     let limit = if method == "LIST" {
@@ -282,7 +290,12 @@ async fn read_response(
             };
             return Ok((json!({"ok":false,"version":1,"error":{"code":code,"httpStatus":status.as_u16(),"message":"共有ToDoの有限一覧を取得できませんでした。listing_changedの場合は先頭から取得し直してください。"}}).to_string(), false));
         }
-        return Ok((validate_listing(value)?.to_string(), true));
+        return Ok((
+            localai_web_rs::todo_listing::validate(value, requested.as_ref().unwrap())
+                .map_err(str::to_owned)?
+                .to_string(),
+            true,
+        ));
     }
     if method == "WORKLOAD" {
         return Ok((render_workload(&value)?, success));
@@ -290,98 +303,14 @@ async fn read_response(
     Ok((value.to_string(), success))
 }
 
+#[cfg(test)]
 fn validate_listing(value: Value) -> Result<Value, String> {
-    fn hash(v: &Value) -> bool {
-        v.as_str()
-            .is_some_and(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
-    }
-    fn positive(v: &Value) -> bool {
-        v.as_u64().is_some_and(|n| n > 0)
-    }
-    let invalid = || "console returned invalid or unprotected listing".to_owned();
-    let d = &value["data"];
-    let limit = d["limit"]
-        .as_u64()
-        .filter(|n| *n > 0 && *n <= 100)
-        .ok_or_else(invalid)?;
-    let items = d["items"]
-        .as_array()
-        .filter(|rows| rows.len() <= limit as usize)
-        .ok_or_else(invalid)?;
-    if value["ok"] != true
-        || value["version"] != 1
-        || d["metadataOnly"] != true
-        || d["protectionMode"] != "masked_metadata"
-        || !hash(&d["revision"])
-        || !d["total"].is_u64()
-        || !d["linkOffset"].is_u64()
-        || !(d["nextAfter"].is_null() || positive(&d["nextAfter"]))
-    {
-        return Err(invalid());
-    }
-    let mut previous = 0;
-    let mut rows = Vec::new();
-    for row in items {
-        let id = row["id"]
-            .as_u64()
-            .filter(|n| *n > previous)
-            .ok_or_else(invalid)?;
-        previous = id;
-        if !row["status"]
-            .as_str()
-            .is_some_and(|s| matches!(s, "todo" | "doing" | "block" | "wait" | "done" | "unknown"))
-            || !(row["agent"].is_null() || hash(&row["agent"]))
-            || !(row["progress"].is_null() || row["progress"].as_u64().is_some_and(|n| n <= 100))
-        {
-            return Err(invalid());
-        }
-        for (key, total, next, numeric) in [
-            ("jobs", "jobsTotal", "jobsNextOffset", false),
-            ("wait_on", "waitOnTotal", "waitOnNextOffset", true),
-        ] {
-            if !row[key].as_array().is_some_and(|a| {
-                a.len() <= localai_web_rs::todo_listing::LINK_LIMIT
-                    && a.iter()
-                        .all(|v| if numeric { positive(v) } else { hash(v) })
-            }) || !row[total].is_u64()
-                || !(row[next].is_null() || row[next].is_u64())
-            {
-                return Err(invalid());
-            }
-        }
-        // Output allowlist protects against an older/misconfigured server adding raw text.
-        let mut safe = json!({});
-        for key in [
-            "id",
-            "status",
-            "progress",
-            "agent",
-            "jobs",
-            "jobsTotal",
-            "jobsNextOffset",
-            "wait_on",
-            "waitOnTotal",
-            "waitOnNextOffset",
-        ] {
-            safe[key] = row[key].clone();
-        }
-        rows.push(safe);
-    }
-    let mut safe = json!({"items":rows});
-    for key in [
-        "total",
-        "nextAfter",
-        "revision",
-        "limit",
-        "linkOffset",
-        "protectionMode",
-        "metadataOnly",
-    ] {
-        safe[key] = d[key].clone();
-    }
-    Ok(json!({"ok":true,"version":1,"data":safe}))
+    localai_web_rs::todo_listing::validate(
+        value,
+        &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+    )
+    .map_err(str::to_owned)
 }
-
 fn render_workload(value: &Value) -> Result<String, String> {
     if value["ok"] != true || value["version"] != 1 {
         let message = value["error"]["message"]
@@ -546,6 +475,34 @@ mod tests {
             assert!(!good);
             assert!(!out.contains("secret-response"));
         }
+        for (code, status) in [
+            ("listing_changed", "409 Conflict"),
+            ("todo_not_found", "404 Not Found"),
+            ("invalid_request", "400 Bad Request"),
+            ("state_unavailable", "503 Service Unavailable"),
+        ] {
+            let error = json!({"ok":false,"error":{"code":code,"message":"hidden"}})
+                .to_string()
+                .into_bytes();
+            let (out, good) = wire_response(
+                format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\n\r\n",
+                    error.len()
+                ),
+                error,
+                "LIST",
+            )
+            .await
+            .unwrap();
+            assert!(!good);
+            let response: Value = serde_json::from_str(&out).unwrap();
+            assert_eq!(response["error"]["code"], code);
+            assert_eq!(
+                response["error"]["httpStatus"],
+                status[..3].parse::<u64>().unwrap()
+            );
+            assert!(!out.contains("hidden"));
+        }
         assert_eq!(
             wire_response(
                 "HTTP/1.1 200 OK\r\nContent-Length: 200\r\n\r\n".into(),
@@ -566,6 +523,25 @@ mod tests {
     }
     #[tokio::test]
     async fn response_caps_include_chunked_transfer_and_keep_legacy_16mib_bound() {
+        let data = localai_web_rs::todo_listing::project(
+            &json!({"items":[]}),
+            &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+        )
+        .unwrap();
+        let mut exact = json!({"ok":true,"version":1,"data":data})
+            .to_string()
+            .into_bytes();
+        exact.resize(localai_web_rs::todo_listing::RESPONSE_LIMIT, b' ');
+        assert!(
+            wire_response(
+                format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", exact.len()),
+                exact,
+                "LIST"
+            )
+            .await
+            .unwrap()
+            .1
+        );
         for (method, size) in [
             ("GET", 16 * 1024 * 1024 + 1),
             ("LIST", localai_web_rs::todo_listing::RESPONSE_LIMIT + 1),

@@ -4533,7 +4533,9 @@ pub async fn handle(State(state): State<crate::AppState>, request: Request) -> R
         }
     } else if path == "todo/list" {
         let query = request.uri().query().unwrap_or("");
-        if query.len() > 256 { return reply(Err(invalid())); }
+        if query.len() > 256 {
+            return reply(Err(invalid()));
+        }
         json!({"query":query})
     } else {
         json!({})
@@ -4991,10 +4993,13 @@ mod tests {
         let mut db: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         db["items"][0]["history"] = json!(["original-evidence".repeat(1024 * 1024)]);
         db["items"][0]["wait_on"] = json!([2467]);
-        db["items"][0]["agent"] = json!("private-actor");
+        db["items"][0]["scheduler"] = json!({"job":"original-job","phase":"running"});
         db["items"][0]["jobs"] = json!(["original-job",{"evidence":"keep"}]);
         let bytes = db.to_string().into_bytes();
         fs::write(&path, &bytes).unwrap();
+        let state_before = fs::read(f.console.paths.db()).unwrap();
+        let mark_before = fs::read(f.console.paths.mark()).unwrap();
+        let files_before = fs::read_dir(&f.console.paths.state).unwrap().count();
         for missing_privacy in [false, true] {
             if missing_privacy {
                 fs::remove_file(f.console.paths.tools.join("client-projects.txt")).unwrap();
@@ -5004,6 +5009,9 @@ mod tests {
             assert_eq!(response["data"]["metadataOnly"], true);
             assert_eq!(response["data"]["items"][0]["wait_on"], json!([2467]));
             assert_eq!(response["data"]["items"][0]["jobsTotal"], 1);
+            assert_eq!(response["data"]["items"][0]["jobsUnverified"], 1);
+            let query = localai_web_rs::todo_listing::Query::parse("id=1").unwrap();
+            assert!(localai_web_rs::todo_listing::validate(response.clone(), &query).is_ok());
             for secret in [
                 "original-evidence",
                 "private-actor",
@@ -5014,6 +5022,12 @@ mod tests {
                 assert!(!response.to_string().contains(secret));
             }
             assert_eq!(fs::read(&path).unwrap(), bytes);
+            assert_eq!(fs::read(f.console.paths.db()).unwrap(), state_before);
+            assert_eq!(fs::read(f.console.paths.mark()).unwrap(), mark_before);
+            assert_eq!(
+                fs::read_dir(&f.console.paths.state).unwrap().count(),
+                files_before
+            );
             assert!(!f.console.paths.on().exists());
             assert!(f.fake.calls.lock().unwrap().is_empty());
         }

@@ -1,5 +1,28 @@
 # ToDo2628の再開記録
 
+## 2026-10-15の再開と指摘修正
+
+元worktreeとsessionから再開した。開始HEADはd06d7f40f741cc5b3c8bba46116a1c04aa82cc29。
+最新main5010498531449fa81640e3f2570be5e2c5c623ccをe37ad30の通常mergeで統合し、SourceCore2488の変更を保持した。製品CI2648のsource/runtimeは変更していない。
+
+受領した原レビューはreview-2633-received-original.md。正規source job20261015-003819-todo-2633のlast_messageをメモリ内で照合し、5774文字、anthropic/claude-sonnet-5-5、SHA256 9da18c3a8cf7a61a4f04834efdb45f4218c8420080ac9803a9f3d4d26b16fb78一致を確認した。
+そのMust0は080bf6ccの静的レビューだけであり、修正後HEADのレビューと偽装しない。readonly担当に保存やtodo更新を要求しない。
+
+- S1: 実担当をscheduler.job/worker_receipt.job/単一jobから取得し、activeJob/phaseと互換agentを揃えた。
+- S2: 共通pending_onの未完依存、wait_readyの固定condition/数値期限、recovery_unverifiedを保持するmetadataを追加。
+- S3: todo.exeの同じjob_refs関数を公開して再利用し、object形/不正文字列をjobsUnverifiedに数えた。cc-todoの変更は読取関数の公開とpending_onの再公開だけで、保存・起動動作は変更していない。
+- S4/S5: completeと要求照合を追加。revisionは出力metadataだけを対象にして履歴を再直列化しない。最大3回の有限再試行を文書化。
+- S6/S7: 実reply/redact応答のCLI共通validator受入、state/mark/backup不変、秘匿検査両ページ、HTTP分類、ちょうど1MiB、job種類を前置したハンドルを検査した。
+
+最新の関連nextestはe1e8645f-f5c7-49c8-a705-d6425c6b0ed0で8/8成功。
+共通job_references/wait/readyは25/25成功。完全ログはtodo-2628-followup-final-related.logとtodo-2628-shared-rules-corrected.log。
+初回の共通検査は存在しないtodo_waitというtest target指定でcompile前に失敗。正しいwaitへ直した。元失敗ログを保持した。
+
+旧PR171 CI38589625129の失敗は既存dependency fixture取消のinspect/OpenProcessアクセス拒否。main501のCI38601682945は別のnative recovery取消で同じアクセス拒否を記録している。未知を終了扱いすることで緩めず、新固定HEADの正規CIを確認し、再現した場合は既存core担当と原因を照合する。
+CLI正式guardは現在もclient_resource=true/classification_unverified=true。原guard/拒否済みscopeは変更しない。配布と実CLI取得は未確認。
+
+次工程: 追加diffだけを本文付き静的レビューへ登録して原応答を実装側で保存する。最新固定HEADの正規CI成功/Must解消→merge→対象確認済みの既存経路で配布→実CLI/番号/全ページ/API取得と原bytes保持。元31MB台帳の全件取得は未確認であり、テスト成功で代用しない。
+
 ## 完了した調査
 
 - 起動時のD:/CC/AGENTS.md、専用sourceのAGENTS.mdを読み直した。CLAUDE.mdはsource内にない。

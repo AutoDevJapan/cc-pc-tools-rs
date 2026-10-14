@@ -26,6 +26,7 @@ pub type Result<T> = std::result::Result<T, String>;
 pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
+pub use cc_job_policy::todo_wait::pending_on;
 pub mod product_resume;
 pub mod ready;
 pub mod verified_resume;
@@ -1405,7 +1406,7 @@ pub fn discord_call(
     }
     Err("Discord API rate limited".into())
 }
-mod job_refs;
+pub mod job_refs;
 mod platform;
 pub mod recovery;
 pub mod summary;

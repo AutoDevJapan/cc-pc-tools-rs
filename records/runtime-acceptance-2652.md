@@ -31,3 +31,15 @@ GitHub APIの有限一覧では同checkoutのPR CIが進行中。Build speed run
 所有ID `eec49a469ac294440b59520ef14d06ba` のDドライブ専用フォルダにstdout/stderrの原byte、各コマンドの引数、実exit、開始終了、caller PID/作成時刻、bytes SHA256、ロック測定、guard応答を保持。`capture.private.ps1` は使い捨ての記録補助で、すべての子プロセスをCreateNoWindowで起動した。Gitへ入れるのはこのrecordsのみ。
 
 親向けの全文結果は作業rootの `runtime-acceptance-2488.private.json` と `runtime-acceptance-2488.private.md`。秘密・profile・credentialは読んでいない。常駐runnerと旧保持コンテナ2件は変更していない。今回の受入caller/group/container/fixtureは存在しない。誤ってCドライブへ作成した空の所有付きフォルダはplan、別呼出しの通常削除、finishで処理済み。
+
+## 03:04からの同ToDo再確認（第2回）
+
+前回コミット `ac8b0579bebb61997baba728a867edb485ca485a` と原ログを保持して再開した。最新の保存済み指示とAGENTSを読み直した。現在mainは `183ac4fc7f0348021f9544cd8ac232669a3b8620` / tree `ba968c27ec66382bd1db87fbf0d46c53e78384e9`。正規GitHub APIとgit ls-remoteが一致。コンテナcheckoutもこのmainと一致する。Go module treeは現在mainとcheckout双方で指定の `2074a16ba0d45e80a8733f813f911f613c0ffca9` と一致。
+
+source/runtime/targetのguardを再測定しfalse/unverified=false。hostのhash/11,223,040 byte、Linux bridge hash、container/image ID、Init=true/PID1docker-init、UID1001、capsALL、no-new-privileges、devices/binds無し、loopback17852/Listener1は前回と一致する。runner27のonlineと正規labelsも一致。03:04:54のAPIはbusy=true、Linux Worker PID82723（開始03:03:40）が存在した。03:05:43と03:06:39のprocess原応答ではWorker0となった。
+
+開始を止めている条件はWindows側の既存Cargo検査。gate PID44372、作成03:04:58.02345、Cargo PID48440、nextest PID19280（作成03:04:58.363825）を正規OS照会で確認した。mainのBuild speed run38610554267 / job116012473478 / Windows runner28は03:05、03:07、03:08、03:10時点でin_progress。03:10:16にも同gateが存在する。対象target byte lockは03:04:55と03:10:17の両測定で空き。これらは別時点の有限観測であり、CIやgateの停止・失敗とは主張しない。
+
+同じDの所有付きフォルダに `r2-*` の原byte応答、実exit/時刻/PID/作成時刻/bytesSHAとreadinessを追加して保持した。既存adapterを使う受入の使い捨て手順 `accept-r2.private.ps1` を準備したが、開始条件が未達のため実行していない。新CI/rerun/全件検査の反復、fixture作成、通常Cargo・中止検査は未実行。準備済み手順も次回の最新main・checkout・module treeと空き条件を再検証してから使う。正常実行が一度成功したら、保存結果を読んで繰り返さず未完の中止確認へ進む。
+
+所有付き原ログ、前回と第2回のprivate結果、常駐runner、旧停止コンテナを保持する。本人の操作・判断は不要。同2652の正規wait-retryで続行する。

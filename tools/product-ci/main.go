@@ -365,12 +365,18 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	name := fmt.Sprintf("todo2648-repo-%d-node-%d", c.ID, time.Now().UnixNano())
 	rec.ContainerName = name
 	rec.CreationUncertain = true
+	if e = writeReceipt(dir, rec); e != nil {
+		return errors.New("container creation intent preservation failed")
+	}
 	defer func() {
 		if rec.ContainerID == "" {
 			return
 		}
 		var e error
 		rec.TreeGone, rec.ContainerRemoved, e = disposeOwned(rec.ContainerID)
+		if rec.ContainerRemoved {
+			rec.CreationUncertain = false
+		}
 		ret = errors.Join(ret, e)
 	}()
 	id, e := createIsolated(ctx, name, image)

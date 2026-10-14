@@ -15,9 +15,12 @@ Docker stdin. It does not put the token in arguments, Docker environment,
 source files, or logs. The runner's working files and credentials live in
 container filesystems; `/runner` and `/tmp` are tmpfs mounts.
 
+Create both finite and normal containers with Docker's `--init` so orphaned
+descendants are reaped. Hosts reject missing, null or false init settings before
+registration. Existing containers must be recreated with `--init` while idle.
 Before requesting a registration token, the host inspects the normal-mode
 container's image, effective UID, dropped capabilities, `no-new-privileges`,
-devices, host binds, persistent mounts, and tmpfs options. `/runner` must allow
+init/reaper setting, devices, host binds, persistent mounts, and tmpfs options. `/runner` must allow
 execution for the official runner scripts; `/tmp` must remain `noexec`. A
 container-side preflight checks that the scripts are executable, the tmpfs
 mounts are writable, and no Docker socket exists. The Cargo target must be a
@@ -41,14 +44,21 @@ for pull requests; a merge-ref checkout is rejected at the first Cargo call.
 Only Cargo subcommands used for checks are accepted. The only explicit manifest
 path allowed is the repository-relative `cc-bookmark-queue/Cargo.toml`.
 Absolute or parent-relative paths, Cargo configuration and target-directory
-overrides, other manifests, and unsupported Cargo commands are rejected. The
-Windows `cargo_gate.exe` remains the only admission controller and takes the
+overrides, other manifests, and unsupported Cargo commands are rejected.
+This is a cooperative gate for trusted repository jobs using bridge-mediated
+Cargo. It is not a kernel boundary against arbitrary native commands. These
+builds use Windows `cargo_gate.exe` for admission and the
 shared per-target byte locks. Its CPU/RAM admission and clamped Cargo/test
 parallelism are forwarded to Linux. Cancellation closes the Docker exec stdin.
 The Linux supervisor sends SIGTERM, then SIGKILL after three seconds, and
-confirms that the Cargo process group is gone before returning to the Windows
-gate. It continues holding the shared target lock past the force-kill deadline
-if Linux has not yet confirmed process-group exit.
+confirms kernel process-group absence before returning to the Windows gate.
+Successful leader exits also drain any background descendants before returning
+the original exit result. If force-kill exceeds its deadline, one diagnostic
+reports that the target remains occupied.
+The direct child is waited concurrently, and init reaps orphaned descendants.
+Unreaped zombies and unknown states retain the lock past the force-kill deadline;
+a process-list snapshot is never authority to release it. Descendants deliberately
+escaping the group with `setsid` are outside this process-group contract.
 
 The runner uses non-root UID 1001, drops all Linux capabilities, enables
 `no-new-privileges`, and has no GPU devices, Docker socket, host bind mount,

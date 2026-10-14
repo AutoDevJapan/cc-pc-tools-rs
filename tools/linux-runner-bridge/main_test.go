@@ -55,7 +55,39 @@ func TestConfiguredRunnerRecoveryDoesNotAmplifyLiveProcessTrees(t *testing.T) {
 	}
 }
 
-const validNormalContainerInspection = `[{"Config":{"Image":"todo2510-normal-linux:local","User":"runner"},"HostConfig":{"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
+const validNormalContainerInspection = `[{"Config":{"Image":"todo2510-normal-linux:local","User":"runner"},"HostConfig":{"Init":true,"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
+
+func TestNormalContainerRejectsMissingReaperBeforeStart(t *testing.T) {
+	for _, setting := range []string{`"Init":false,`, `"Init":null,`, ""} {
+		inspection := strings.Replace(validNormalContainerInspection, `"Init":true,`, setting, 1)
+		run, started, _ := fakeDockerForNormalContainer(t, "false", inspection)
+		if err := verifyNormalContainerWith("fixture", run); err == nil {
+			t.Fatal("container without an init reaper was accepted")
+		}
+		if *started {
+			t.Fatal("container started before its reaper was checked")
+		}
+	}
+}
+
+func TestFiniteContainerRequiresExplicitReaper(t *testing.T) {
+	for _, value := range []string{"false", "null", "", "malformed", "true"} {
+		err := verifyContainerReaper("fixture", func(args ...string) (string, error) {
+			if strings.Join(args, " ") != "inspect --format {{json .HostConfig.Init}} fixture" {
+				t.Fatalf("unexpected reaper probe: %v", args)
+			}
+			return value, nil
+		})
+		if (err == nil) != (value == "true") {
+			t.Fatalf("reaper setting %q: %v", value, err)
+		}
+	}
+	if err := verifyContainerReaper("fixture", func(...string) (string, error) {
+		return "true", errors.New("inspection unavailable")
+	}); err == nil {
+		t.Fatal("unconfirmed reaper was accepted")
+	}
+}
 
 func fakeDockerForNormalContainer(t *testing.T, initialState string, inspection string) (dockerOutput, *bool, *[][]string) {
 	t.Helper()
@@ -182,7 +214,7 @@ func TestStoppedNormalRunnerContainerCanBeRecoveredWithDocker(t *testing.T) {
 	if _, err := output(command(docker, "inspect", name)); err == nil {
 		t.Fatalf("test container name already exists: %s", name)
 	}
-	createArgs := []string{"create", "--name", name, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--tmpfs", "/runner:rw,exec,nosuid,size=1g,uid=1001,gid=1001", "--user", "runner", normalImage}
+	createArgs := []string{"create", "--init", "--name", name, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--tmpfs", "/runner:rw,exec,nosuid,size=1g,uid=1001,gid=1001", "--user", "runner", normalImage}
 	if _, err := output(command(docker, createArgs...)); err != nil {
 		t.Fatal(err)
 	}

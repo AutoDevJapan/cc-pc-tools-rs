@@ -6834,12 +6834,24 @@ mod lost_detection {
     #[test]
     fn test_reused_pid_is_not_our_supervisor() {
         let t = Test::new();
-        for p in [
-            json!({"status":"running","pid":std::process::id(),"pid_created":12345}),
-            json!({"id":"legacy","status":"running","pid":std::process::id()}),
+        for (p, expected) in [
+            (
+                json!({"status":"running","pid":std::process::id(),"pid_created":12345}),
+                "lost",
+            ),
+            (
+                json!({"id":"legacy","status":"running","pid":std::process::id()}),
+                "running",
+            ),
         ] {
             let j = t.put(job(p));
-            assert_eq!(t.ctx.refresh(j, false).unwrap()["status"], "lost");
+            let refreshed = t.ctx.refresh(j.clone(), false).unwrap();
+            assert_eq!(refreshed["status"], expected);
+            if expected == "running" {
+                // Unknown creation time is occupied, not proof of PID reuse.
+                assert_eq!(refreshed["pid"], j["pid"]);
+                assert_eq!(t.ctx.load(s(&j, "id")).unwrap(), j);
+            }
         }
     }
     #[test]
@@ -11117,7 +11129,14 @@ mod additional_compatibility {
         }
         impl Read for LateReader {
             fn read(&mut self, b: &mut [u8]) -> io::Result<usize> {
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
                 while !self.release.load(Ordering::Acquire) {
+                    if std::time::Instant::now() >= deadline {
+                        return Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "late reader was not released",
+                        ));
+                    }
                     std::thread::sleep(Duration::from_millis(1));
                 }
                 let n = self.bytes.read(b)?;
@@ -11147,16 +11166,26 @@ mod additional_compatibility {
             }
             fn poll(&mut self) -> io::Result<Option<i64>> {
                 self.release.store(true, Ordering::Release);
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
                 while !self.eof.load(Ordering::Acquire) {
+                    if std::time::Instant::now() >= deadline {
+                        return Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "late reader did not reach EOF",
+                        ));
+                    }
                     std::thread::sleep(Duration::from_millis(1));
                 }
-                std::thread::sleep(Duration::from_millis(20));
                 Ok(Some(0))
             }
         }
         let t = Test::new();
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), b"hi").unwrap();
+        // Startup can probe a child without an identity before starting its
+        // reader. This fixture represents a known child, so defer poll to the
+        // final drain boundary it is intended to exercise.
+        t.rt.procs.lock().unwrap().insert(321, 456);
         *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(|| {
             let release = Arc::new(AtomicBool::new(false));
             let eof = Arc::new(AtomicBool::new(false));

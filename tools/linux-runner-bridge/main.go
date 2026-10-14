@@ -285,6 +285,7 @@ type normalContainerInspection struct {
 		User  string `json:"User"`
 	} `json:"Config"`
 	HostConfig struct {
+		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
 		SecurityOpt    []string          `json:"SecurityOpt"`
@@ -299,6 +300,15 @@ type normalContainerInspection struct {
 }
 
 type dockerOutput func(...string) (string, error)
+
+func verifyContainerReaper(name string, run dockerOutput) error {
+	value, err := run("inspect", "--format", "{{json .HostConfig.Init}}", name)
+	var enabled bool
+	if err != nil || json.Unmarshal([]byte(value), &enabled) != nil || !enabled {
+		return errors.New("runner container requires an init reaper")
+	}
+	return nil
+}
 
 func inspectNormalContainer(data string) (normalContainerInspection, error) {
 	var inspected []normalContainerInspection
@@ -323,7 +333,7 @@ func validateNormalContainerConfiguration(c normalContainerInspection) error {
 			noNewPrivileges = true
 		}
 	}
-	if c.Config.Image != normalImage || c.Config.User != "runner" || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+	if c.Config.Image != normalImage || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
 		return errors.New("normal runner container isolation rejected")
 	}
 	runnerTmpfs := strings.Split(c.HostConfig.Tmpfs["/runner"], ",")
@@ -608,7 +618,7 @@ func hostEnv() []string {
 }
 func gatedChild(args []string) int {
 	if len(args) == 1 && args[0] == "--version" {
-		c := command(docker, "exec", container, "/opt/rust/bin/cargo", "--version")
+		c := command(docker, "exec", normalContainerForMode(), "/opt/rust/bin/cargo", "--version")
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		return exitCode(c.Run())
@@ -672,13 +682,21 @@ func execute(args []string) int {
 	go func() { _, _ = io.Copy(io.Discard, os.Stdin); close(disconnected) }()
 	select {
 	case e := <-done:
-		return exitCode(e)
+		return finishGroup(c, e)
 	case <-disconnected:
 		killGroup(c)
 		<-done
 		return 125
 	}
 }
+
+func finishGroup(c *exec.Cmd, result error) int {
+	// Successful Cargo can also leave a background descendant. Every exit,
+	// not just cancellation, must drain it before releasing the host target.
+	killGroup(c)
+	return exitCode(result)
+}
+
 func rpc(path string, q request) int {
 	key, e := os.ReadFile("/tmp/bridge-key")
 	if e != nil {
@@ -836,6 +854,14 @@ func hostMain(args []string) int {
 	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target}
 	if mode == "finite" && h.current() != nil {
 		return 1
+	}
+	if mode == "finite" {
+		if err := verifyContainerReaper(runnerContainer, func(args ...string) (string, error) {
+			return output(command(docker, args...))
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
 	}
 	if mode == "normal" {
 		reportStage("target-validation-started")

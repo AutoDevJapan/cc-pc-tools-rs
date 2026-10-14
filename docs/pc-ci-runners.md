@@ -1,5 +1,7 @@
 # PC専用CIの運用
 
+Linux検査のコンテナは `--init` を明示して作成する。中止時も正常終了時も、OSがプロセス群の消滅を確認するまで生成先を保持する。未回収の終了済みプロセスも回収完了まで保持の対象となる。自分でプロセス群を離れる `setsid` などの呼び出しは、この終了確認の対象外であり、信頼する検査からの利用を前提とする。
+
 このリポジトリのWindows検査とLinux検査は、リポジトリ専用のself-hosted runnerへ送る。GitHubの予算上限や契約は変更しない。runnerが停止した場合はジョブを待機させ、Hosted runnerへ自動で切り替えない。
 
 Windowsのラベルは `cc-pc-tools-windows`、Linuxは `cc-pc-tools-linux`。repoが `AutoDevJapan/cc-pc-tools-rs` であり、PRのheadも同じrepoである場合だけ実行する。runner開始hookは別repo、fork、未対応イベントを拒否する。Windowsはcheckout前の最初のstepでジョブ専用の読み取りtokenを使ってbranchの最新SHAを照合する。PRのmerge用SHAではなくhead SHAを固定して取得する。過去のHosted検査の失敗を手動statusで成功へ変更しない。

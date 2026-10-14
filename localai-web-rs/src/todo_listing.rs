@@ -164,8 +164,9 @@ fn metadata(db: &Value, item: &Value) -> Value {
     ];
     let active = extra
         .iter()
-        .filter_map(|v| v.as_str())
-        .find(|id| cc_todo::job_refs::valid_id(id));
+        .find(|v| !v.is_null())
+        .and_then(|v| v.as_str())
+        .filter(|id| cc_todo::job_refs::valid_id(id));
     let jobs = cc_todo::job_refs::ids(&item["jobs"])
         .chain(
             extra
@@ -176,10 +177,7 @@ fn metadata(db: &Value, item: &Value) -> Value {
         .map(opaque)
         .collect::<BTreeSet<_>>();
     for v in extra {
-        if !v.is_null()
-            && v.as_str() != Some("")
-            && !v.as_str().is_some_and(cc_todo::job_refs::valid_id)
-        {
+        if !v.is_null() && !v.as_str().is_some_and(cc_todo::job_refs::valid_id) {
             unverified += 1;
         }
     }
@@ -431,7 +429,7 @@ mod tests {
     #[test]
     fn listing_omits_large_history_and_private_text_without_changing_source() {
         let db = json!({"projects":{"private":"C:/private"},"items":[
-            {"id":2,"status":"wait","scheduler":{"job":"job-secret","phase":"running"},"wait_on":[1],"jobs":["job-secret",{"evidence":"preserve"}],"history":["x".repeat(17*1024*1024)]},
+            {"id":2,"status":"wait","agent":"secret-agent","scheduler":{"job":"job-secret","phase":"running"},"wait_on":[1],"jobs":["job-secret",{"evidence":"preserve"}],"history":["x".repeat(17*1024*1024)]},
             {"id":1,"status":"doing","title":"private","spec":"private","note":"private"}]});
         let before = db.to_string();
         let first = project(&db, &Query::parse("limit=1").unwrap()).unwrap();
@@ -497,6 +495,11 @@ mod tests {
         assert_eq!(page["items"][0]["waitOnNextOffset"], LINK_LIMIT);
         let next = project(&db, &Query::parse("id=1&link_offset=64").unwrap()).unwrap();
         assert_eq!(next["items"][0]["wait_on"][0], 66);
+        assert!(validate(
+            json!({"ok":true,"version":1,"data":next}),
+            &Query::parse("id=1&link_offset=64").unwrap()
+        )
+        .is_ok());
         for raw in [
             "limit=101",
             "id=0",
@@ -565,5 +568,26 @@ mod tests {
             assert!(validate(broken, &q).is_err(), "{key}");
         }
         assert!(validate(envelope, &Query::parse("id=1").unwrap()).is_err());
+    }
+    #[test]
+    fn invalid_primary_assignment_stays_unverified_instead_of_using_a_receipt() {
+        for primary in [json!("bad secret"), json!(""), json!({"evidence":"keep"})] {
+            let db = json!({"items":[{"id":1,"status":"doing","jobs":[],"scheduler":{"job":primary},"worker_receipt":{"job":"receipt-1"},"agent":"private-actor","wait_on":"unverified"}]});
+            let q = Query::parse("").unwrap();
+            let data = project(&db, &q).unwrap();
+            let row = &data["items"][0];
+            assert!(row["activeJob"].is_null());
+            assert_eq!(row["jobsTotal"], 1);
+            assert_eq!(row["jobsUnverified"], 1);
+            assert_eq!(row["waitUnverified"], 1);
+            assert!(!data.to_string().contains("private-actor"));
+            assert!(validate(json!({"ok":true,"version":1,"data":data}), &q).is_ok());
+        }
+        let mut db = json!({"items":[{"id":1,"status":"wait","jobs":[],"wait_on":[2]},{"id":2,"status":"todo","jobs":[]}]});
+        let first = project(&db, &Query::parse("").unwrap()).unwrap();
+        db["items"][1]["status"] = json!("done");
+        let second = project(&db, &Query::parse("").unwrap()).unwrap();
+        assert_ne!(first["revision"], second["revision"]);
+        assert_eq!(second["items"][0]["waitPending"], json!([]));
     }
 }

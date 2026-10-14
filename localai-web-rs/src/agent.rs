@@ -4994,6 +4994,7 @@ mod tests {
         db["items"][0]["history"] = json!(["original-evidence".repeat(1024 * 1024)]);
         db["items"][0]["wait_on"] = json!([2467]);
         db["items"][0]["scheduler"] = json!({"job":"original-job","phase":"running"});
+        db["items"][0]["agent"] = json!("private-actor");
         db["items"][0]["jobs"] = json!(["original-job",{"evidence":"keep"}]);
         let bytes = db.to_string().into_bytes();
         fs::write(&path, &bytes).unwrap();

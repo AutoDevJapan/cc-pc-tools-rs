@@ -16,10 +16,12 @@ CLIの16MiB上限を撤廃せず、原記録の削除・圧縮・状態変更で
 - 一覧は番号の昇順で最大100件、既定100件。続きは `--after <nextAfter>`。
 - `--id <番号>` はその原ToDoを取得する。存在しなければ404。idとafterの併用は拒否する。
 - 担当は正規`scheduler.job`、続いて`worker_receipt.job`、単一`job`を参照する。`activeJob`と互換欄`agent`は同じjobハンドルを返す。`schedulerPhase`は固定許可リストとnull/unknownのみ。
+- 最初に存在する担当欄が不正ならactiveJobはnullとして未確認数へ記録し、他のreceiptで担当を推測しない。旧agentだけの行も担当未確認としてnullを返す。activeJobは保存参照であり、終端や復旧待ちを含むphase/statusと必ず組で読む。
 - ハンドルはjob用の種類を前置したSHA256で、同一性の照合用である。暗号化や推測耐性を保証しない。名前や本文を返さず、参照だけで担当の稼働成功を主張しない。
 - ジョブidの抽出と未確認参照数はtodo.exeの共通`job_refs`を再利用する。正規idだけをハンドル化し、object形や不正な文字列は`jobsUnverified`に数え、原本を変更しない。cc-todo側の変更はこの共通読取関数の公開と`pending_on`の再公開だけであり、保存・起動の動作は変更しない。
 - 状態には`recovery_unverified`を含め、進捗、原依存の番号と共通`pending_on`が判定した未完依存`waitPending`を区別する。不正な依存参照は`waitUnverified`に数える。`waitReady`はchatgpt-plus/retry-time/unknownと数値のnotBeforeのみを返す。
 - ジョブ、原依存、未完依存は各64件。件数と次のオフセットを必ず返す。続きは `--id <番号> --link-offset <nextOffset>`。各配列の終端はそれぞれのnextOffsetがnullであることを確認する。
+- 依存先が原台帳に見つからない番号も共通pending_onと同じ未完扱いとし、自動解除しない。
 - `--revision <前ページのrevision>` は返すmetadataを照合する。状態・担当・依存の変更があれば409。本文や履歴だけの更新では変更しない。最初のページからの技術的再試行は最大3回とし、尽きたら不完全として次回へ残す。照合値は原bytesの保存証跡ではない。
 - `data.items` を返し、`metadataOnly=true / protectionMode=masked_metadata` を明示する。保護設定の有無にかかわらず、このAPIには原本文・履歴・パス・製品名を含めない。本文が必要な既存表示機能は従来の保護条件を維持する。
 - サーバーとCLIの封筒込み応答上限は1MiB。その他CLIコマンドの16MiB上限も維持する。CLIは保護モード、型、要求番号/offset/revision、件数と継続値を検証し、明示した項目だけを出力する。HTTP失敗やアプリケーション失敗は成功にしない。

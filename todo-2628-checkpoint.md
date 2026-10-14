@@ -23,6 +23,16 @@ CLI正式guardは現在もclient_resource=true/classification_unverified=true。
 
 次工程: 追加diffだけを本文付き静的レビューへ登録して原応答を実装側で保存する。最新固定HEADの正規CI成功/Must解消→merge→対象確認済みの既存経路で配布→実CLI/番号/全ページ/API取得と原bytes保持。元31MB台帳の全件取得は未確認であり、テスト成功で代用しない。
 
+## 追加レビュー受領後の保存
+
+レビュー2656は正規job20261015-023022-todo-2656、Sonnet5.5、e4421c378ea0bd65e982bb21406c8049eaaf0c75の追加diffにMust0を返した。原応答3837文字をreview-2656-received-original.mdへ主担当が保存し、2656だけをdoneにした。readonly担当へ書込を要求せず、1回の報告で終了した。
+
+採用した追加指摘: 最初に存在する担当参照が不正なら別receiptを担当へ繰り上げずnull/未確認として表示する。空文字も共通valid_idに従い未確認に数える。旧agent文字列をfixtureに実在させ、漏れないことを検査。依存先doneでrevision更新、id+link_offsetのvalidator受入、非配列依存も検査した。phaseと参照は組で読むこと、未存在依存も未完扱いであることを文書化した。
+不採用の指摘: reqwestのリダイレクト追従は実際のCLIでPolicy::none()を明示済み。全件のcoherentなmetadata照合は保持し、未実測の性能や揮発性だけを理由に状態照合を省略しない。
+
+枠を譲る直前のitem_35はイベント原記録でcompleted/exit0。関連9/9実成功、run4f33a6d6-81ab-4285-bcdb-41e4787ac258。原ログtodo-2628-canonical-assignment.logから同じ結果を確認した。再開後にこの検査やレビュー2656完了を再実行していない。
+e442のCodeQL4言語は成功した。Build speed38606581660はcheckout前のbranch head check unavailableで終了1、検査は開始されていない。旧検査成功へ書き換えずtodo-2628-e442-ci-failure.logへ保存した。正規GitHubの現HEAD照会は成功している。次の変更HEADで通常のCIを確認し、古いe442の全件を再実行しない。
+
 ## 完了した調査
 
 - 起動時のD:/CC/AGENTS.md、専用sourceのAGENTS.mdを読み直した。CLAUDE.mdはsource内にない。

@@ -24,3 +24,9 @@
 固定cbfのBuildが成功。原ログでは全workspace2,164成功・5skip・422.761秒、doc16群の実0件、Clippy成功。Readinessは4job成功・5job取消。取消は同PRの後続要求優先と公式注記で確認した。CodeQLは3言語取消・rust未終端で、全件成功ではない。
 
 6実jobの原ログをbytes・SHA256・取得exit・根拠行とともに非公開保存した。PRのheadは進んでいるが、この依頼は元の同3runを保つ。残るCodeQL終端と原結果の確認は、元2632の正規wait-retryから自動再開する。本体編集・再検査・再実行・マージ・配布は行っていない。
+
+### ToDo2632: 903版のCI確認（2026-10-15T00:51:42.7842171+09:00）
+
+親の仕様更新に従い、固定source 903fa283f1970cc629416bff7aa87af63239704aと新3runを別フォルダ .ci-work/todo-2632-903/ に保存した。旧cbf/e380/b920の記録は保持した。
+
+新Buildは原ログ3035行で2,164成功・5skip・417.281秒。docは16群で実0件、Clippy成功。ReadinessはWindows側5jobがAPI上で成功、Linux側4jobとCodeQL4jobは待機中。通常ghの原byteログと取得exitを保存し、未終端を成功にしていない。残る同runの終端・全実job原全文・CodeQL同SHA解析を有限確認する。

@@ -609,14 +609,23 @@ impl Console {
         use localai_web_rs::console_ui;
         // Load first; missing privacy records allow only the restricted metadata projection.
         let names = cc_ask::task_title::Names::load(&self.paths.tools.join("client-projects.txt"));
-        let names=match names {
-            Ok(names)=>names,
-            Err(_)=>return localai_web_rs::operations::metadata_display(&self.paths.tools,&self.paths.todo.join("todo.json"),&self.paths.jobs,kind)
-                .map_err(|_|fault(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "privacy_unavailable",
-                    "保護設定と表示用の状態記録を読み取れません。",
-                )),
+        let names = match names {
+            Ok(names) => names,
+            Err(_) => {
+                return localai_web_rs::operations::metadata_display(
+                    &self.paths.tools,
+                    &self.paths.todo.join("todo.json"),
+                    &self.paths.jobs,
+                    kind,
+                )
+                .map_err(|_| {
+                    fault(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "privacy_unavailable",
+                        "保護設定と表示用の状態記録を読み取れません。",
+                    )
+                })
+            }
         };
         let db = self.todos()?;
         let mut jobs = Vec::new();
@@ -2921,6 +2930,16 @@ impl Console {
         result
     }
     fn api(&self, method: &Method, path: &str, v: Value) -> Result<Value> {
+        if *method == Method::GET && path == "todo/list" {
+            let query =
+                localai_web_rs::todo_listing::Query::parse(v["query"].as_str().unwrap_or(""))
+                    .map_err(|_| invalid())?;
+            return localai_web_rs::todo_listing::project(&self.todos()?, &query).map_err(|code| match code {
+                "listing_changed" => fault(StatusCode::CONFLICT, "listing_changed", "一覧取得中に原記録が更新されました。最初のページから取得し直してください。"),
+                "todo_not_found" => fault(StatusCode::NOT_FOUND, "todo_not_found", "指定したToDoはありません。"),
+                _ => todo_invalid(),
+            });
+        }
         if *method == Method::GET {
             if let Some(kind @ ("todo" | "jobs" | "handoff")) = path.strip_prefix("display/") {
                 return self.display(kind);
@@ -4512,6 +4531,10 @@ pub async fn handle(State(state): State<crate::AppState>, request: Request) -> R
             }
             _ => return reply(Err(invalid())),
         }
+    } else if path == "todo/list" {
+        let query = request.uri().query().unwrap_or("");
+        if query.len() > 256 { return reply(Err(invalid())); }
+        json!({"query":query})
     } else {
         json!({})
     };
@@ -4961,6 +4984,58 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn finite_todo_listing_keeps_large_original_bytes_and_protection() {
+        let f = Fixture::new();
+        let path = f.console.paths.todo.join("todo.json");
+        let mut db: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        db["items"][0]["history"] = json!(["original-evidence".repeat(1024 * 1024)]);
+        db["items"][0]["wait_on"] = json!([2467]);
+        db["items"][0]["agent"] = json!("private-actor");
+        db["items"][0]["jobs"] = json!(["original-job",{"evidence":"keep"}]);
+        let bytes = db.to_string().into_bytes();
+        fs::write(&path, &bytes).unwrap();
+        for missing_privacy in [false, true] {
+            if missing_privacy {
+                fs::remove_file(f.console.paths.tools.join("client-projects.txt")).unwrap();
+            }
+            let (code, response) = f.http(Method::GET, "todo/list?id=1", "").await;
+            assert_eq!(code, StatusCode::OK);
+            assert_eq!(response["data"]["metadataOnly"], true);
+            assert_eq!(response["data"]["items"][0]["wait_on"], json!([2467]));
+            assert_eq!(response["data"]["items"][0]["jobsTotal"], 1);
+            for secret in [
+                "original-evidence",
+                "private-actor",
+                "original-job",
+                "history",
+                "spec",
+            ] {
+                assert!(!response.to_string().contains(secret));
+            }
+            assert_eq!(fs::read(&path).unwrap(), bytes);
+            assert!(!f.console.paths.on().exists());
+            assert!(f.fake.calls.lock().unwrap().is_empty());
+        }
+        assert_eq!(
+            f.http(Method::GET, "todo/list?limit=101", "").await.0,
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            f.http(Method::GET, "todo/list?id=999", "").await.0,
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            f.http(
+                Method::GET,
+                &format!("todo/list?revision={}", "0".repeat(64)),
+                ""
+            )
+            .await
+            .0,
+            StatusCode::CONFLICT
+        );
+    }
     #[test]
     fn detects_decision_and_three_handoffs_without_cross_repo_collisions() {
         let f = Fixture::new();

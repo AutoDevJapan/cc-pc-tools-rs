@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http/httptest"
@@ -10,6 +11,108 @@ import (
 	"testing"
 	"time"
 )
+
+func TestFiniteContainerRegistrationBoundary(t *testing.T) {
+	base, err := inspectNormalContainer(validNormalContainerInspection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "sha256:" + strings.Repeat("a", 64)
+	base.Image, base.Config.Image = expected, finiteImage
+	base.HostConfig.Memory, base.HostConfig.NanoCpus, base.HostConfig.PidsLimit = 6<<30, 2_000_000_000, 512
+	cases := []struct {
+		name     string
+		change   func(*normalContainerInspection)
+		accepted bool
+	}{
+		{"valid", func(*normalContainerInspection) {}, true},
+		{"image-id", func(c *normalContainerInspection) { c.Image = "sha256:" + strings.Repeat("b", 64) }, false},
+		{"image-tag", func(c *normalContainerInspection) { c.Config.Image = "other:latest" }, false},
+		{"privileged", func(c *normalContainerInspection) { c.HostConfig.Privileged = true }, false},
+		{"user", func(c *normalContainerInspection) { c.Config.User = "root" }, false},
+		{"init", func(c *normalContainerInspection) { c.HostConfig.Init = false }, false},
+		{"bind", func(c *normalContainerInspection) { c.HostConfig.Binds = []string{"/owner:/owner"} }, false},
+		{"gpu", func(c *normalContainerInspection) {
+			c.HostConfig.DeviceRequests = []json.RawMessage{json.RawMessage(`{"Count":1}`)}
+		}, false},
+		{"device", func(c *normalContainerInspection) {
+			c.HostConfig.Devices = []json.RawMessage{json.RawMessage(`{"PathOnHost":"/dev/gpu"}`)}
+		}, false},
+		{"cap-drop", func(c *normalContainerInspection) { c.HostConfig.CapDrop = nil }, false},
+		{"cap-add", func(c *normalContainerInspection) { c.HostConfig.CapAdd = []string{"SYS_ADMIN"} }, false},
+		{"privilege-escalation", func(c *normalContainerInspection) { c.HostConfig.SecurityOpt = nil }, false},
+		{"memory-unbounded", func(c *normalContainerInspection) { c.HostConfig.Memory = 0 }, false},
+		{"memory-high", func(c *normalContainerInspection) { c.HostConfig.Memory = 7 << 30 }, false},
+		{"cpu-unbounded", func(c *normalContainerInspection) { c.HostConfig.NanoCpus = 0 }, false},
+		{"cpu-high", func(c *normalContainerInspection) { c.HostConfig.NanoCpus = 3_000_000_000 }, false},
+		{"pid-unbounded", func(c *normalContainerInspection) { c.HostConfig.PidsLimit = -1 }, false},
+		{"host-pid", func(c *normalContainerInspection) { c.HostConfig.PidMode = "host" }, false},
+		{"host-network", func(c *normalContainerInspection) { c.HostConfig.NetworkMode = "host" }, false},
+		{"credential-tmpfs", func(c *normalContainerInspection) { c.HostConfig.Tmpfs = map[string]string{"/runner": "exec"} }, false},
+		{"credential-exec", func(c *normalContainerInspection) {
+			c.HostConfig.Tmpfs = map[string]string{"/tmp": "rw,exec", "/runner": "exec"}
+		}, false},
+		{"runner-noexec", func(c *normalContainerInspection) {
+			c.HostConfig.Tmpfs = map[string]string{"/tmp": "noexec", "/runner": "noexec"}
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := base
+			tc.change(&c)
+			data, _ := json.Marshal([]normalContainerInspection{c})
+			runtimeCalls := 0
+			run := func(args ...string) (string, error) {
+				switch args[0] {
+				case "inspect":
+					return string(data), nil
+				case "image":
+					return expected, nil
+				case "exec":
+					runtimeCalls++
+					if args[2] == "id" {
+						return "1001", nil
+					}
+					return "", nil
+				default:
+					return "", fmt.Errorf("unexpected operation %v", args)
+				}
+			}
+			err := verifyFiniteContainerWith("fixture", run)
+			if (err == nil) != tc.accepted {
+				t.Fatalf("accepted=%v error=%v", tc.accepted, err)
+			}
+			if !tc.accepted && runtimeCalls != 0 {
+				t.Fatal("runtime reached before isolation rejection")
+			}
+			if tc.accepted && runtimeCalls != 2 {
+				t.Fatalf("runtime checks=%d", runtimeCalls)
+			}
+		})
+	}
+	if err := verifyFiniteContainerWith("fixture", func(...string) (string, error) { return "", errors.New("unavailable") }); err == nil {
+		t.Fatal("accepted failed inspect")
+	}
+}
+
+func TestRegistrationIdentitySeparatesFiniteAndResidentLabels(t *testing.T) {
+	for _, c := range []struct {
+		name, labels, ephemeral string
+		accepted                bool
+	}{
+		{normalRunner, normalRunner, "false", true},
+		{"cc-pc-tools-linux-2511", finiteLabels, "true", true},
+		{"cc-pc-tools-linux-2511", normalRunner, "true", true},
+		{normalRunner, finiteLabels, "false", false},
+		{normalRunner, normalRunner, "true", false},
+		{"cc-pc-tools-linux-2511", finiteLabels, "false", false},
+		{"other", finiteLabels, "true", false},
+	} {
+		if validRegistrationIdentity(c.name, c.labels, c.ephemeral) != c.accepted {
+			t.Fatalf("identity %+v", c)
+		}
+	}
+}
 
 func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
 	if runtime.GOOS != "windows" {

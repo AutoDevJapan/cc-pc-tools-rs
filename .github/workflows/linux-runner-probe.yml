@@ -22,18 +22,19 @@ jobs:
           echo "fixed-revision=$GITHUB_SHA"
           test "$(id -u)" = 1001
           test ! -e /var/run/docker.sock
-          if GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook; then
-            echo 'Foreign repository was accepted'; exit 1
-          fi
-          if GITHUB_SHA=0000000000000000000000000000000000000000 /opt/bridge/bridge hook; then
-            echo 'Different revision was accepted'; exit 1
-          fi
-          if cargo test --config=build.jobs=64; then
-            echo 'Cargo config override was accepted'; exit 1
-          fi
-          if (cd /tmp && cargo test --locked); then
-            echo 'Different workspace was accepted'; exit 1
-          fi
+          grep -E '^CapEff:[[:space:]]+0+$' /proc/self/status
+          grep -E '^NoNewPrivs:[[:space:]]+1$' /proc/self/status
+          test ! -e /dev/nvidiactl
+          test ! -e /dev/dri
+          assert_rejected() {
+            local output
+            if output=$("$@" 2>&1); then echo 'Forbidden request was accepted'; exit 1; fi
+            printf '%s\n' "$output" | grep -F 'bridge rejected (403)'
+          }
+          assert_rejected env GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook
+          assert_rejected env GITHUB_SHA=0000000000000000000000000000000000000000 /opt/bridge/bridge hook
+          assert_rejected cargo test --config=build.jobs=64
+          (cd /tmp && assert_rejected cargo test --locked)
           cargo --version
           cargo metadata --locked --format-version 1 --no-deps > /work/metadata.json
           cargo test --locked -p cc-task-title -j64 -- --test-threads=32

@@ -32,6 +32,8 @@ const gateDir = `D:\CC\Tools\codex-jobs`
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
+const finiteImage = "todo2511-cc-pc-tools-linux:proof"
+const finiteLabels = "cc-pc-tools-linux,cc-pc-tools-linux-2511-proof"
 const normalContainer = "todo2510-normal-linux"
 const normalImage = "todo2510-normal-linux:local"
 const normalPort = "127.0.0.1:17852"
@@ -280,11 +282,18 @@ func normalContainerFor(mode string) string {
 }
 
 type normalContainerInspection struct {
+	Image  string `json:"Image"`
 	Config struct {
 		Image string `json:"Image"`
 		User  string `json:"User"`
 	} `json:"Config"`
 	HostConfig struct {
+		Memory         int64             `json:"Memory"`
+		NanoCpus       int64             `json:"NanoCpus"`
+		PidsLimit      int64             `json:"PidsLimit"`
+		CapAdd         []string          `json:"CapAdd"`
+		PidMode        string            `json:"PidMode"`
+		NetworkMode    string            `json:"NetworkMode"`
 		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
@@ -300,6 +309,48 @@ type normalContainerInspection struct {
 }
 
 type dockerOutput func(...string) (string, error)
+
+// The finite proof uses a dedicated local image tag. Check its immutable ID
+// and isolation before any registration token is requested or delivered.
+func verifyFiniteContainerWith(name string, run dockerOutput) error {
+	data, err := run("inspect", name)
+	if err != nil {
+		return errors.New("finite container inspection unavailable")
+	}
+	c, err := inspectNormalContainer(data)
+	if err != nil {
+		return err
+	}
+	expected, err := run("image", "inspect", "--format", "{{.Id}}", finiteImage)
+	if err != nil || !validFiniteImageID(expected) || c.Image != expected || c.Config.Image != finiteImage {
+		return errors.New("finite runner image rejected")
+	}
+	if c.HostConfig.Memory <= 0 || c.HostConfig.Memory > 6<<30 || c.HostConfig.NanoCpus <= 0 || c.HostConfig.NanoCpus > 2_000_000_000 || c.HostConfig.PidsLimit <= 0 || c.HostConfig.PidsLimit > 512 || len(c.HostConfig.CapAdd) != 0 || c.HostConfig.PidMode == "host" || c.HostConfig.NetworkMode == "host" {
+		return errors.New("finite runner resource limits rejected")
+	}
+	credentialNoExec := false
+	for _, option := range strings.Split(c.HostConfig.Tmpfs["/tmp"], ",") {
+		credentialNoExec = credentialNoExec || option == "noexec"
+	}
+	if !credentialNoExec {
+		return errors.New("finite credential tmpfs requires noexec")
+	}
+	// The common validator checks UID declaration, init, mounts, devices,
+	// privileges and credential tmpfs. Only its normal-mode image name differs.
+	c.Config.Image = normalImage
+	if err = validateNormalContainerConfiguration(c); err != nil {
+		return err
+	}
+	return validateNormalContainerRuntime(name, run, time.Sleep)
+}
+
+func validFiniteImageID(value string) bool {
+	if !strings.HasPrefix(value, "sha256:") || len(value) != 71 {
+		return false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil
+}
 
 func verifyContainerReaper(name string, run dockerOutput) error {
 	value, err := run("inspect", "--format", "{{json .HostConfig.Init}}", name)
@@ -840,7 +891,7 @@ func hostMain(args []string) int {
 	if len(args) == 3 && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
 		// Keep the original finite ToDo2511 invocation and its restrictions.
 		revision, branch, target = args[0], args[1], args[2]
-		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", "cc-pc-tools-linux"
+		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", finiteLabels
 	} else if len(args) == 2 && args[0] == "normal" && args[1] != "" {
 		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalRunner, false
 	} else {
@@ -856,7 +907,7 @@ func hostMain(args []string) int {
 		return 1
 	}
 	if mode == "finite" {
-		if err := verifyContainerReaper(runnerContainer, func(args ...string) (string, error) {
+		if err := verifyFiniteContainerWith(runnerContainer, func(args ...string) (string, error) {
 			return output(command(docker, args...))
 		}); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -977,6 +1028,13 @@ func hostMain(args []string) int {
 		}
 	}
 }
+func validRegistrationIdentity(name, labels, ephemeral string) bool {
+	if name == normalRunner {
+		return labels == normalRunner && ephemeral == "false"
+	}
+	return name == "cc-pc-tools-linux-2511" && (labels == finiteLabels || labels == normalRunner) && ephemeral == "true"
+}
+
 func register() int {
 	reader := bufio.NewReader(os.Stdin)
 	key, e := reader.ReadString('\n')
@@ -999,7 +1057,7 @@ func register() int {
 		return 15
 	}
 	ephemeral, e := reader.ReadString('\n')
-	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+	if e != nil || !validRegistrationIdentity(strings.TrimSpace(runnerName), strings.TrimSpace(labels), strings.TrimSpace(ephemeral)) {
 		return 16
 	}
 	keyPath := filepath.Join(os.TempDir(), "bridge-key")

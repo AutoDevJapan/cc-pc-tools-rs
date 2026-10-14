@@ -4,6 +4,12 @@ The bridge keeps ToDo2511's finite mode available and adds a resident mode for
 ordinary `AutoDevJapan/cc-pc-tools-rs` CI. The finite invocation still requires
 one fixed revision and its approved task branch, uses port 17851 and the
 `todo2511-cc-pc-tools-linux` container, and accepts only its original event set.
+Create that container from `todo2511-cc-pc-tools-linux:proof`. Finite startup
+checks that tag's immutable image ID, the common non-root/mount/device/privilege
+and tmpfs policy, and nonzero limits of at most 2 CPUs, 6 GiB and 512 PIDs before
+requesting a registration token. Host PID/network namespaces and added
+capabilities are rejected. Its initial labels include
+`cc-pc-tools-linux-2511-proof`, so its probe does not route to resident runners.
 
 ## Resident mode
 

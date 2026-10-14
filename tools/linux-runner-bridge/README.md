@@ -16,8 +16,11 @@ beyond the memory limit. Use `--memory-swap 6g` together with `--memory 6g`.
 Docker's default private IPC/cgroup namespaces remain accepted. The local tag
 comparison is not source provenance; separately record source and binary hashes
 when building the proof image. The required shared `cc-pc-tools-linux` label is
-retained, so destroy finite containers after the queued proof; do not leave an
-idle finite runner available to ordinary CI.
+assigned only after the authenticated pre-job hook confirms the fixed revision
+and GitHub confirms that this exact runner is already busy with its proof.
+Initial registration advertises only the proof label, which prevents it from
+stealing ordinary CI jobs. The required `cc-pc-tools-linux` label is present
+during execution, and the ephemeral runner is removed after that single job.
 
 ## Resident mode
 

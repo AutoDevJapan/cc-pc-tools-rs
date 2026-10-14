@@ -155,7 +155,7 @@ func TestRegistrationIdentitySeparatesFiniteAndResidentLabels(t *testing.T) {
 	}{
 		{normalRunner, normalRunner, "false", true},
 		{"cc-pc-tools-linux-2511", finiteLabels, "true", true},
-		{"cc-pc-tools-linux-2511", normalRunner, "true", true},
+		{"cc-pc-tools-linux-2511", normalRunner, "true", false},
 		{normalRunner, finiteLabels, "false", false},
 		{normalRunner, normalRunner, "true", false},
 		{"cc-pc-tools-linux-2511", finiteLabels, "false", false},
@@ -163,6 +163,46 @@ func TestRegistrationIdentitySeparatesFiniteAndResidentLabels(t *testing.T) {
 	} {
 		if validRegistrationIdentity(c.name, c.labels, c.ephemeral) != c.accepted {
 			t.Fatalf("identity %+v", c)
+		}
+	}
+}
+
+func TestFiniteSharedLabelRequiresAnAssignedProof(t *testing.T) {
+	valid := `[{"id":31,"name":"cc-pc-tools-linux-2511","busy":true,"status":"online"}]`
+	if id, err := busyFiniteRunnerID(valid); err != nil || id != 31 {
+		t.Fatal(id, err)
+	}
+	for _, data := range []string{"", "[]", strings.Replace(valid, `"busy":true`, `"busy":false`, 1), strings.Replace(valid, `"online"`, `"offline"`, 1), strings.Replace(valid, `"id":31`, `"id":0`, 1), strings.Replace(valid, "cc-pc-tools-linux-2511", "cc-pc-tools-linux", 1)} {
+		if _, err := busyFiniteRunnerID(data); err == nil {
+			t.Fatal("accepted unassigned runner")
+		}
+	}
+	for _, accepted := range []bool{false, true} {
+		h := host{mode: "finite", key: "key", branch: "scheduler/todo-2511-test", revision: strings.Repeat("a", 40), getHead: func(string) (string, error) { return strings.Repeat("a", 40), nil }}
+		calls := 0
+		h.addFiniteLabel = func() error { calls++; return nil }
+		q := request{Repository: repo, Revision: h.revision, Ref: "refs/heads/" + h.branch, Event: "push"}
+		if !accepted {
+			q.Revision = strings.Repeat("b", 40)
+		}
+		body, _ := json.Marshal(q)
+		for range 2 {
+			r := httptest.NewRequest("POST", "/authorize", strings.NewReader(string(body)))
+			r.Header.Set("Authorization", "Bearer key")
+			w := httptest.NewRecorder()
+			h.serve(w, r)
+			if accepted && w.Code != 204 {
+				t.Fatal(w.Code)
+			}
+			if !accepted && w.Code != 403 {
+				t.Fatal(w.Code)
+			}
+		}
+		if accepted && calls != 1 {
+			t.Fatalf("label assignments %d", calls)
+		}
+		if !accepted && calls != 0 {
+			t.Fatal("label assigned before job authorization")
 		}
 	}
 }

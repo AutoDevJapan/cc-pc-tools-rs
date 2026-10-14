@@ -33,7 +33,7 @@ const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
 const finiteImage = "todo2511-cc-pc-tools-linux:proof"
-const finiteLabels = "cc-pc-tools-linux,cc-pc-tools-linux-2511-proof"
+const finiteLabels = "cc-pc-tools-linux-2511-proof"
 const normalContainer = "todo2510-normal-linux"
 const normalImage = "todo2510-normal-linux:local"
 const normalPort = "127.0.0.1:17852"
@@ -59,6 +59,9 @@ type host struct {
 	key, mode, revision, branch, target string
 	mu                                  sync.Mutex
 	getHead                             func(string) (string, error)
+	addFiniteLabel                      func() error
+	labelOnce                           sync.Once
+	labelError                          error
 }
 
 func command(name string, args ...string) *exec.Cmd {
@@ -603,6 +606,19 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), 403)
 			return
 		}
+		if h.mode == "finite" {
+			h.labelOnce.Do(func() {
+				if h.addFiniteLabel != nil {
+					h.labelError = h.addFiniteLabel()
+				} else {
+					h.labelError = addSharedLabelToBusyFiniteRunner()
+				}
+			})
+			if h.labelError != nil {
+				http.Error(w, "finite runner routing label unavailable", 503)
+				return
+			}
+		}
 		w.WriteHeader(204)
 		return
 	}
@@ -1047,11 +1063,60 @@ func hostMain(args []string) int {
 		}
 	}
 }
+
+type finiteRunnerIdentity struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Busy   bool   `json:"busy"`
+	Status string `json:"status"`
+}
+
+func busyFiniteRunnerID(data string) (int, error) {
+	var runners []finiteRunnerIdentity
+	if json.Unmarshal([]byte(data), &runners) != nil || len(runners) != 1 || runners[0].ID <= 0 || runners[0].Name != "cc-pc-tools-linux-2511" || !runners[0].Busy || runners[0].Status != "online" {
+		return 0, errors.New("finite runner is not exclusively executing its proof")
+	}
+	return runners[0].ID, nil
+}
+
+// Do not advertise the shared label while idle. The authorized job is already
+// assigned via its proof-only label, and the runner is ephemeral (one job).
+func addSharedLabelToBusyFiniteRunner() error {
+	data, err := output(command(gh, "api", "repos/"+repo+"/actions/runners", "--jq", `[.runners[]|select(.name=="cc-pc-tools-linux-2511")|{id,name,busy,status}]`))
+	if err != nil {
+		return err
+	}
+	id, err := busyFiniteRunnerID(data)
+	if err != nil {
+		return err
+	}
+	c := command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/"+strconv.Itoa(id)+"/labels", "--input", "-")
+	c.Stdin = strings.NewReader(`{"labels":["cc-pc-tools-linux"]}`)
+	response, err := output(c)
+	if err != nil {
+		return err
+	}
+	var labels struct {
+		Labels []struct {
+			Name string `json:"name"`
+		} `json:"labels"`
+	}
+	if json.Unmarshal([]byte(response), &labels) != nil {
+		return errors.New("finite label response is invalid")
+	}
+	for _, label := range labels.Labels {
+		if label.Name == normalRunner {
+			return nil
+		}
+	}
+	return errors.New("shared finite label was not assigned")
+}
+
 func validRegistrationIdentity(name, labels, ephemeral string) bool {
 	if name == normalRunner {
 		return labels == normalRunner && ephemeral == "false"
 	}
-	return name == "cc-pc-tools-linux-2511" && (labels == finiteLabels || labels == normalRunner) && ephemeral == "true"
+	return name == "cc-pc-tools-linux-2511" && labels == finiteLabels && ephemeral == "true"
 }
 
 func register() int {

@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   probe:
-    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux, cc-pc-tools-linux-2511-proof]
+    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux-2511-proof]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

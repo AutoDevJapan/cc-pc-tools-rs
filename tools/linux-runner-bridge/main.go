@@ -285,6 +285,7 @@ type normalContainerInspection struct {
 		User  string `json:"User"`
 	} `json:"Config"`
 	HostConfig struct {
+		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
 		SecurityOpt    []string          `json:"SecurityOpt"`
@@ -323,7 +324,7 @@ func validateNormalContainerConfiguration(c normalContainerInspection) error {
 			noNewPrivileges = true
 		}
 	}
-	if c.Config.Image != normalImage || c.Config.User != "runner" || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+	if c.Config.Image != normalImage || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
 		return errors.New("normal runner container isolation rejected")
 	}
 	runnerTmpfs := strings.Split(c.HostConfig.Tmpfs["/runner"], ",")
@@ -608,7 +609,7 @@ func hostEnv() []string {
 }
 func gatedChild(args []string) int {
 	if len(args) == 1 && args[0] == "--version" {
-		c := command(docker, "exec", container, "/opt/rust/bin/cargo", "--version")
+		c := command(docker, "exec", normalContainerForMode(), "/opt/rust/bin/cargo", "--version")
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		return exitCode(c.Run())

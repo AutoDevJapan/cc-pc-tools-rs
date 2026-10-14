@@ -22,4 +22,6 @@
 |新担当2637の有限指示|9fb375dcc3a8cbbf34e679e6d31f661b2bb9271d9a6ca6127d173f0b1a5d3024|
 |元880の保持指示|8954d32a53a9f91a7fead3d2dd83c49b17d88666cc80e12477750c819cd80776|
 
-実装はrepair-guard/nextwork_windows.go、通常判定への接続はmain_windows.go。Go検査とvetは成功。変更された指示・登録・重複番号・期限・origin・物理脱出・作業枝・未知範囲・原依存の保持を検査した。別モデルの確認、必要CI、マージ、正規scrub391配備、新2637の実jobとツール/commit/PR/実反映の確認はまだ残る。
+実装はrepair-guard/nextwork_windows.go、通常判定への接続はmain_windows.go。共有スケジューラにも原名簿不在時の新2637/civ6-banseikiだけの入口を接続した。正規guardが拒否すれば起動せず、原名簿が存在する場合は従来の除外を先に適用する。ほかの番号と製品を許可しない。
+
+Go検査とvetは成功。変更された指示・登録・重複番号・期限・origin・物理脱出・作業枝・未知範囲・原依存の保持を検査した。Rust関連検査と配備用ビルドはCargo資源を宣言した独立検査へ渡す。別モデルの確認、必要CI、マージ、正規scrub391/scheduler配備、新2637の実jobとツール/commit/PR/実反映の確認はまだ残る。

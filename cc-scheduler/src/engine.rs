@@ -1306,8 +1306,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     }
                     Err(error)
                         if error.kind() == std::io::ErrorKind::NotFound
-                            && ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
-                                .contains(&project) =>
+                            && (["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                                .contains(&project)
+                                || (i["id"] == 2637 && project == "civ6-banseiki")) =>
                     {
                         !self.backend.repair_scope_allowed(path)
                     }

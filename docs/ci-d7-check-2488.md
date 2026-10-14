@@ -34,3 +34,7 @@
 今回の詳細は同 `.ci-work/d7-2488/ci-d7-result-2488.private.json/md` へ保存。前回末尾のmanifest/mdはcheckpoint-20261013-231835-result.private.json/mdに保持。原API/ログ/取得エラー/各receiptの絶対path・bytes・SHA256・根拠行は現manifestのfile_inventory/evidenceに保存。親2488の全修復完了は宣言しない。同ToDo2613の600秒wait-retryで元spec/同worktree/同固定runを保持して自動再開する。
 
 2026-10-14 09:01 JSTに同2613・同worktreeから再開。git dc2cd77/clean、本人所有PRIVATE、PR144 HEAD d7、固定treeを新しい通常gh APIで再照合。前回末尾manifest/mdはresume-20261014-000110-checkpoint.private.json/mdに保持。今回poll051から原APIを追記し、有限確認期限は09:31:14 JST。状態は4workflow成功/4未終端、13/20job終端のまま。拒否flag・別経路ログ・source修復・Cargo・GPU・CI再実行・PR・merge・配布・Discord・子jobの追加なし。
+
+2026-10-14 09:09 JST：Build run38478465876/job115574911494/attempt1がcancelledで終端。通常ghのcheck-run/annotations原APIで「The job has exceeded the maximum execution time of 1h30m0s」を確認した。全workspace nextest工程がcancelled、doctest/全targets Clippyはskipped、後続package-toolsもskipped。これらを成功と扱わない。原全文の通常gh取得は端末制御文字でexit1/0bytes、拒否flagは再試行せず迂回しない。最小確定原因は90分上限超過で、そこに至った個別test/function・原ログ行・実exit・実pass/fail/skipは未確認。annotation start_line1412はAPIの参照であり、原ログ1412行を読んだという主張ではない。
+
+新しい原注記/チェックAPIのpath/bytes/SHA256と取消工程をbuild-cancelled-evidence.private.json、および主manifest/mdへ保存。修復は親2488へ返し、自分はsourceやCIを変更しない。今回のAPIに後続package-toolsのskipped jobが出たので全job数は20から21へ更新し、各HEAD/attempt/run所属を照合する。その他必要workflowの終端確認は当初の09:31 JST期限内で続ける。

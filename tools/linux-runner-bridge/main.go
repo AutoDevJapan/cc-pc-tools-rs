@@ -682,13 +682,21 @@ func execute(args []string) int {
 	go func() { _, _ = io.Copy(io.Discard, os.Stdin); close(disconnected) }()
 	select {
 	case e := <-done:
-		return exitCode(e)
+		return finishGroup(c, e)
 	case <-disconnected:
 		killGroup(c)
 		<-done
 		return 125
 	}
 }
+
+func finishGroup(c *exec.Cmd, result error) int {
+	// Successful Cargo can also leave a background descendant. Every exit,
+	// not just cancellation, must drain it before releasing the host target.
+	killGroup(c)
+	return exitCode(result)
+}
+
 func rpc(path string, q request) int {
 	key, e := os.ReadFile("/tmp/bridge-key")
 	if e != nil {

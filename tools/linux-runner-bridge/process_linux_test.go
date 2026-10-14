@@ -79,6 +79,29 @@ func TestLiveTermIgnoringGroupRequiresForceKill(t *testing.T) {
 		t.Fatal("force-killed child was not reaped")
 	}
 }
+
+func TestSuccessfulLeaderDrainsBackgroundGroup(t *testing.T) {
+	file := t.TempDir() + "/late-write"
+	cmd := exec.Command("/bin/sh", "-c", `(sleep 30; printf unexpected > "$1") </dev/null >/dev/null 2>&1 & printf '%s\n' "$!"`, "sh", file)
+	group(cmd)
+	if _, err := cmd.Output(); err != nil {
+		t.Fatal(err)
+	}
+	defer killGroup(cmd)
+	if !processGroupExists(cmd.Process.Pid) {
+		t.Fatal("fixture did not retain its background writer after a successful leader exit")
+	}
+	if code := finishGroup(cmd, nil); code != 0 {
+		t.Fatalf("successful leader result changed: %d", code)
+	}
+	if processGroupExists(cmd.Process.Pid) {
+		t.Fatal("successful exit released the target while a background group remained")
+	}
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Fatal("background writer changed the target after leader completion")
+	}
+}
+
 func TestKillGroupDrainsBeforeReturning(t *testing.T) {
 	cmd := exec.Command("/bin/sh", "-c", "sleep 30 & wait")
 	group(cmd)

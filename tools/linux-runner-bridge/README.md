@@ -44,7 +44,7 @@ for pull requests; a merge-ref checkout is rejected at the first Cargo call.
 Only Cargo subcommands used for checks are accepted. The only explicit manifest
 path allowed is the repository-relative `cc-bookmark-queue/Cargo.toml`.
 Absolute or parent-relative paths, Cargo configuration and target-directory
-overrides, other manifests, and unsupported Cargo commands are rejected. The
+overrides, other manifests, and unsupported Cargo commands are rejected.
 This is a cooperative gate for trusted repository jobs using bridge-mediated
 Cargo. It is not a kernel boundary against arbitrary native commands. These
 builds use Windows `cargo_gate.exe` for admission and the
@@ -52,6 +52,9 @@ shared per-target byte locks. Its CPU/RAM admission and clamped Cargo/test
 parallelism are forwarded to Linux. Cancellation closes the Docker exec stdin.
 The Linux supervisor sends SIGTERM, then SIGKILL after three seconds, and
 confirms kernel process-group absence before returning to the Windows gate.
+Successful leader exits also drain any background descendants before returning
+the original exit result. If force-kill exceeds its deadline, one diagnostic
+reports that the target remains occupied.
 The direct child is waited concurrently, and init reaps orphaned descendants.
 Unreaped zombies and unknown states retain the lock past the force-kill deadline;
 a process-list snapshot is never authority to release it. Descendants deliberately

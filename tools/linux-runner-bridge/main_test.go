@@ -70,6 +70,25 @@ func TestNormalContainerRejectsMissingReaperBeforeStart(t *testing.T) {
 	}
 }
 
+func TestFiniteContainerRequiresExplicitReaper(t *testing.T) {
+	for _, value := range []string{"false", "null", "", "malformed", "true"} {
+		err := verifyContainerReaper("fixture", func(args ...string) (string, error) {
+			if strings.Join(args, " ") != "inspect --format {{json .HostConfig.Init}} fixture" {
+				t.Fatalf("unexpected reaper probe: %v", args)
+			}
+			return value, nil
+		})
+		if (err == nil) != (value == "true") {
+			t.Fatalf("reaper setting %q: %v", value, err)
+		}
+	}
+	if err := verifyContainerReaper("fixture", func(...string) (string, error) {
+		return "true", errors.New("inspection unavailable")
+	}); err == nil {
+		t.Fatal("unconfirmed reaper was accepted")
+	}
+}
+
 func fakeDockerForNormalContainer(t *testing.T, initialState string, inspection string) (dockerOutput, *bool, *[][]string) {
 	t.Helper()
 	started := initialState == "true"

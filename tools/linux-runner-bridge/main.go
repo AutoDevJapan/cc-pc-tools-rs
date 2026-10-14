@@ -301,6 +301,15 @@ type normalContainerInspection struct {
 
 type dockerOutput func(...string) (string, error)
 
+func verifyContainerReaper(name string, run dockerOutput) error {
+	value, err := run("inspect", "--format", "{{json .HostConfig.Init}}", name)
+	var enabled bool
+	if err != nil || json.Unmarshal([]byte(value), &enabled) != nil || !enabled {
+		return errors.New("runner container requires an init reaper")
+	}
+	return nil
+}
+
 func inspectNormalContainer(data string) (normalContainerInspection, error) {
 	var inspected []normalContainerInspection
 	if json.Unmarshal([]byte(data), &inspected) != nil || len(inspected) != 1 {
@@ -837,6 +846,14 @@ func hostMain(args []string) int {
 	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target}
 	if mode == "finite" && h.current() != nil {
 		return 1
+	}
+	if mode == "finite" {
+		if err := verifyContainerReaper(runnerContainer, func(args ...string) (string, error) {
+			return output(command(docker, args...))
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
 	}
 	if mode == "normal" {
 		reportStage("target-validation-started")

@@ -15,8 +15,10 @@ Docker stdin. It does not put the token in arguments, Docker environment,
 source files, or logs. The runner's working files and credentials live in
 container filesystems; `/runner` and `/tmp` are tmpfs mounts.
 
-Create the normal container with Docker's `--init` so orphaned descendants are
-reaped. Before requesting a registration token, the host inspects the normal-mode
+Create both finite and normal containers with Docker's `--init` so orphaned
+descendants are reaped. Hosts reject missing, null or false init settings before
+registration. Existing containers must be recreated with `--init` while idle.
+Before requesting a registration token, the host inspects the normal-mode
 container's image, effective UID, dropped capabilities, `no-new-privileges`,
 init/reaper setting, devices, host binds, persistent mounts, and tmpfs options. `/runner` must allow
 execution for the official runner scripts; `/tmp` must remain `noexec`. A
@@ -43,14 +45,17 @@ Only Cargo subcommands used for checks are accepted. The only explicit manifest
 path allowed is the repository-relative `cc-bookmark-queue/Cargo.toml`.
 Absolute or parent-relative paths, Cargo configuration and target-directory
 overrides, other manifests, and unsupported Cargo commands are rejected. The
-Bridge-mediated Cargo builds use Windows `cargo_gate.exe` for admission and the
+This is a cooperative gate for trusted repository jobs using bridge-mediated
+Cargo. It is not a kernel boundary against arbitrary native commands. These
+builds use Windows `cargo_gate.exe` for admission and the
 shared per-target byte locks. Its CPU/RAM admission and clamped Cargo/test
 parallelism are forwarded to Linux. Cancellation closes the Docker exec stdin.
 The Linux supervisor sends SIGTERM, then SIGKILL after three seconds, and
-confirms that no task in the Cargo process group can execute before returning to the Windows
-gate. Zombies awaiting reaping cannot write to the target and do not retain the
-lock. A zombie leader with live threads still retains it. Unknown process state
-and live tasks retain the lock past the force-kill deadline.
+confirms kernel process-group absence before returning to the Windows gate.
+The direct child is waited concurrently, and init reaps orphaned descendants.
+Unreaped zombies and unknown states retain the lock past the force-kill deadline;
+a process-list snapshot is never authority to release it. Descendants deliberately
+escaping the group with `setsid` are outside this process-group contract.
 
 The runner uses non-root UID 1001, drops all Linux capabilities, enables
 `no-new-privileges`, and has no GPU devices, Docker socket, host bind mount,

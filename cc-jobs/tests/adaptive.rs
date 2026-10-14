@@ -6,6 +6,21 @@ use std::{
 };
 
 #[test]
+fn capacity_eligibility_accepts_cli_healthy_label_and_excludes_paid_keys_and_auth_failure() {
+    for (kind, health, expected) in [
+        ("oauth", "Healthy", 1),
+        ("api_key", "Healthy", 0),
+        ("oauth", "reauth_required", 0),
+    ] {
+        let q = parse_quotas(
+            &json!({"accounts":[{"id":"existing","type":kind,"health":health,"quota":{"weeklyPercent":2.,"weeklyResetAt":2000.}}]}),
+            1000.,
+        );
+        assert_eq!(q.accounts.len(), expected);
+    }
+}
+
+#[test]
 fn cargo_limit_patch_retains_owner_job_limit_and_rejects_invalid_values() {
     let current = json!({"fixed_max_running":100,"max_running":100});
     let merged = queue::merge_queue_config(

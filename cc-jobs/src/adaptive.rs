@@ -144,7 +144,17 @@ pub fn parse_quotas(value: &Value, at: f64) -> QuotaSnapshot {
     snapshot.complete = true;
     let mut seen = HashSet::new();
     for row in rows {
-        if row["paused"] == true
+        // OpenCodex labels ChatGPT OAuth accounts "codex", Claude "oauth".
+        if row["type"]
+            .as_str()
+            .is_some_and(|t| !["oauth", "codex"].contains(&t))
+            || row["health"].as_str().is_some_and(|h| {
+                !h.eq_ignore_ascii_case("healthy") && !h.eq_ignore_ascii_case("ok")
+            })
+            || row["health"]["status"]
+                .as_str()
+                .is_some_and(|h| !h.eq_ignore_ascii_case("healthy"))
+            || row["paused"] == true
             || row["needsReauth"] == true
             || row["validationPending"] == true
             || row["selectionExcludedReason"].as_str().is_some()

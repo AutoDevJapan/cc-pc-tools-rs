@@ -48,7 +48,10 @@ impl Context {
             .as_ref()
             .map(|cfg| self.queue_decisions(&active, cfg, None))
             .unwrap_or_default();
-        let priorities = cfg.as_ref().map(|cfg| self.queue_priorities(&active, cfg)).unwrap_or_default();
+        let priorities = cfg
+            .as_ref()
+            .map(|cfg| self.queue_priorities(&active, cfg))
+            .unwrap_or_default();
         let mut department_counts = BTreeMap::<u32, Value>::new();
         let mut running = 0;
         let mut families = HashSet::new();
@@ -59,9 +62,15 @@ impl Context {
         for job in jobs {
             let id = s(job, "id");
             if let Some(rank) = priorities.get(id) {
-                let counts = department_counts.entry(rank / 10).or_insert_with(|| json!({"running":0,"queued":0}));
-                let key = if s(job,"status") == "queued" { "queued" } else { "running" };
-                counts[key] = json!(counts[key].as_u64().unwrap_or(0)+1);
+                let counts = department_counts
+                    .entry(rank / 10)
+                    .or_insert_with(|| json!({"running":0,"queued":0}));
+                let key = if s(job, "status") == "queued" {
+                    "queued"
+                } else {
+                    "running"
+                };
+                counts[key] = json!(counts[key].as_u64().unwrap_or(0) + 1);
             }
             if job["queue_unreadable"] == true
                 || s(job, "status") == "starting"
@@ -176,23 +185,60 @@ impl Context {
         entries
             .flatten()
             .filter_map(|entry| self.read_json(&entry.path()).ok())
-            .filter(|wait| s(wait, "job_id") == s(job, "id") && self.is_ours(wait, "pid"))
+            .filter(|wait| {
+                s(wait, "job_id") == s(job, "id")
+                    && self.is_ours_checked(wait, "pid").unwrap_or(false)
+            })
             .collect()
     }
 
     /// A job blocked in the Cargo gate is idle, so it does not occupy a queue
     /// slot; it counts again as soon as Cargo is admitted and the marker is gone.
     pub(crate) fn cargo_waiting(&self, job: &Value) -> bool {
-        let markers = self.live_wait_markers(job);
-        !markers.iter().any(|wait| s(wait, "kind") == "cargo-active")
-            && markers.iter().any(|wait| {
-                s(wait, "kind") == "cargo"
-                    || (s(wait, "kind").is_empty()
-                        && matches!(
-                            s(wait, "reason"),
-                            "cargoの共有ビルド枠待ち" | "cargoの共有キャッシュ枠待ち"
-                        ))
-            })
+        let Ok(entries) = fs::read_dir(self.job_dir(s(job, "id")).join("resource-waits")) else {
+            return false;
+        };
+        let mut waiting = false;
+        for entry in entries {
+            let Ok(entry) = entry else {
+                return false;
+            };
+            let Ok(marker) = self.read_json(&entry.path()) else {
+                return false;
+            };
+            if s(&marker, "job_id") != s(job, "id") {
+                continue;
+            }
+            // Missing or malformed identity is not proof that this sibling
+            // has exited. Only a valid PID can be positively checked below.
+            if marker["pid"]
+                .as_u64()
+                .and_then(|pid| u32::try_from(pid).ok())
+                .is_none_or(|pid| pid == 0)
+            {
+                return false;
+            }
+            // A positive waiting marker cannot erase an inaccessible active
+            // sibling or an incomplete observation of this whole job's flight.
+            match self.is_ours_checked(&marker, "pid") {
+                Err(_) => return false,
+                Ok(false) => continue,
+                Ok(true) => (),
+            }
+            match s(&marker, "kind") {
+                "cargo-active" => return false,
+                "cargo" => waiting = true,
+                "" if matches!(
+                    s(&marker, "reason"),
+                    "cargoの共有ビルド枠待ち" | "cargoの共有キャッシュ枠待ち"
+                ) =>
+                {
+                    waiting = true
+                }
+                _ => return false,
+            }
+        }
+        waiting
     }
 
     pub fn resource_waits(&self, job: &Value) -> Vec<String> {
@@ -228,14 +274,16 @@ impl Context {
     pub fn cleanup_supervisors(&self, apply: bool) -> Result<Value> {
         let mut cleaned = Vec::new();
         for snapshot in self.list_jobs(&HashSet::new()) {
-            if !TERMINAL.contains(&s(&snapshot, "status")) || !self.is_ours(&snapshot, "pid") {
+            if !TERMINAL.contains(&s(&snapshot, "status"))
+                || !self.is_ours_checked(&snapshot, "pid").unwrap_or(false)
+            {
                 continue;
             }
             let _gate = self.queue_lock()?;
             let _state = self.job_lock(s(&snapshot, "id"), "state.lock")?;
             let mut job = self.load(s(&snapshot, "id"))?;
             if !TERMINAL.contains(&s(&job, "status"))
-                || !self.is_ours(&job, "pid")
+                || !self.is_ours_checked(&job, "pid").unwrap_or(false)
                 || self.is_ours(&job, "codex_pid")
                 || self.tool_handoff_pending(&job)
                 || job["pid"].as_u64() == Some(self.rt.pid() as u64)

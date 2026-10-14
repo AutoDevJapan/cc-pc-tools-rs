@@ -112,7 +112,11 @@ pub fn resume(db: &mut Value, id: i64, condition: &str, state: &Value, at: u64) 
 }
 
 pub fn resume_production(db: &mut Value, id: i64, condition: &str) -> Result<bool> {
-    let state = read_state(Path::new(STATE))?;
+    let state = if condition == "retry-time" {
+        Value::Null
+    } else {
+        read_state(Path::new(STATE))?
+    };
     resume(db, id, condition, &state, now_epoch())
 }
 

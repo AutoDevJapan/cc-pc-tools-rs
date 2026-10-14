@@ -349,6 +349,10 @@ pub trait Runtime: Send + Sync {
     fn proc_created(&self, pid: u32) -> Option<u64> {
         proc_created(pid)
     }
+    /// An unavailable identity is not proof that the process exited.
+    fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
+        Ok(self.proc_created(pid))
+    }
     fn call(&self, call: Call) -> io::Result<Reply>;
     fn spawn(&self, spec: &Spawn) -> io::Result<Box<dyn Running>>;
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool>;
@@ -377,7 +381,7 @@ pub trait Runtime: Send + Sync {
         .map(|_| ())
     }
     fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
-        if self.proc_created(pid) == Some(created) {
+        if self.proc_created_checked(pid)? == Some(created) {
             self.kill_tree(pid)
         } else {
             Ok(())
@@ -470,6 +474,9 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
+        proc_created_checked(pid)
+    }
     #[cfg(windows)]
     fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
         crate::pause::stop_tree(pid, created)
@@ -670,34 +677,70 @@ impl Runtime for System {
         }
     }
 }
-/// Creation time (FILETIME) of a live process, else None. Compared with the value recorded at start,
-/// so a reused PID is never mistaken for our process (and never killed).
+/// Creation time of a positively identified live process. An unavailable
+/// identity must not be used as proof of exit by recovery or status readers.
 #[cfg(windows)]
 pub fn proc_created(pid: u32) -> Option<u64> {
+    proc_created_checked(pid).ok().flatten()
+}
+#[cfg(windows)]
+pub fn proc_created_checked(pid: u32) -> io::Result<Option<u64>> {
     use windows_sys::Win32::{Foundation::*, System::Threading::*};
     if pid == 0 {
-        return None;
+        return Ok(None);
     }
     unsafe {
-        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        let h = OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+            0,
+            pid,
+        );
         if h.is_null() {
-            return None;
+            let error = io::Error::last_os_error();
+            return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                Ok(None)
+            } else {
+                Err(error)
+            };
         }
-        let mut code = 0;
+        struct Handle(HANDLE);
+        impl Drop for Handle {
+            fn drop(&mut self) {
+                unsafe { CloseHandle(self.0) };
+            }
+        }
+        let handle = Handle(h);
+        match WaitForSingleObject(handle.0, 0) {
+            WAIT_OBJECT_0 => return Ok(None),
+            WAIT_TIMEOUT => {}
+            WAIT_FAILED => return Err(io::Error::last_os_error()),
+            _ => return Err(io::Error::other("unexpected process wait result")),
+        }
         let mut ts = [FILETIME {
             dwLowDateTime: 0,
             dwHighDateTime: 0,
         }; 4];
-        let ok = GetExitCodeProcess(h, &mut code) != 0
-            && code == 259
-            && GetProcessTimes(h, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) != 0;
-        CloseHandle(h);
-        ok.then_some(((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64)
+        if GetProcessTimes(handle.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        // The process may have exited while its creation time was being read.
+        match WaitForSingleObject(handle.0, 0) {
+            WAIT_OBJECT_0 => Ok(None),
+            WAIT_TIMEOUT => Ok(Some(
+                ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
+            )),
+            WAIT_FAILED => Err(io::Error::last_os_error()),
+            _ => Err(io::Error::other("unexpected process wait result")),
+        }
     }
 }
 #[cfg(not(windows))]
 pub fn proc_created(_pid: u32) -> Option<u64> {
     None
+}
+#[cfg(not(windows))]
+pub fn proc_created_checked(_pid: u32) -> io::Result<Option<u64>> {
+    Ok(None)
 }
 
 /// Serialize starting codex and cancellation across the two processes.

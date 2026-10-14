@@ -309,6 +309,28 @@ pub fn usage_tokens(u: &Value) -> Value {
 /// Fold one codex JSONL event into job.json fields.
 pub fn apply_event(job: &mut Value, ev: &Value) {
     let t = s(ev, "type");
+    if let Some(kind) = crate::capacity::failure_kind(ev) {
+        if kind == "capacity" {
+            job["capacity_error"] = json!(short(
+                &if t == "error" {
+                    s(ev, "message").to_owned()
+                } else {
+                    err_text(&ev["error"])
+                },
+                1000
+            ));
+        }
+        // OpenCodex may emit a specific error then a generic terminal failure.
+        // Keep that protocol evidence, while cancellation/auth/quota supersede it.
+        if !(matches!(kind, "transient" | "request_failed")
+            && s(job, "last_failure_kind") == "capacity")
+        {
+            job["last_failure_kind"] = json!(kind);
+        }
+    } else if matches!(t, "turn.started" | "turn.completed") {
+        job["last_failure_kind"] = Value::Null;
+        job["capacity_error"] = Value::Null;
+    }
     if matches!(t, "error" | "turn.failed")
         && crate::queue::is_429(&if t == "error" {
             s(ev, "message").to_owned()
@@ -398,6 +420,9 @@ pub fn apply_event(job: &mut Value, ev: &Value) {
             }
         }
         _ => (),
+    }
+    if matches!(t, "error" | "turn.failed") && s(job, "last_failure_kind") == "capacity" {
+        job["last_error"] = job["capacity_error"].clone();
     }
 }
 /// Fold a `token_count` entry of codex's session log (live usage, context and rate-limit use).

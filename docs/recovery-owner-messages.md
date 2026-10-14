@@ -5,6 +5,8 @@
 今回本人が直接指定した新しい通知・新しい具体判断だけを独立した領域で扱う。
 これは失われた台帳の復元成功や、停止している全巡回の復旧ではない。
 
+同じ要求の `OriginCorrected` と `OriginRepair` は併用しない。既に元投稿を訂正した要求は訂正済みの入力で再開し、別の訂正方式を重ねない。拒否時は既存記録と送信結果を保持する。
+
 - `discord_ask recovery-log --request-id ... --title ... --body-file ... [--notify]`
 - `discord_ask recovery-ask --request-id ... --todo-id ... --decision-file ... --body-file ... --origin-thread ...`
 - `discord_ask recovery-repair-origin --request-id ... --todo-id ... --expected-origin-thread ... --owner-reply-message ... --progress-message ...`

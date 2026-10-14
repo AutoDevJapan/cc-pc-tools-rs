@@ -1,0 +1,7 @@
+*.json
+*.xml
+fixture-state-2490/
+fixture-first-recovery-2490/
+*.exe
+boot-probe-state-2492/
+boot-tasks-before-2492/

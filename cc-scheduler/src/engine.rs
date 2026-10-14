@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{safe_text, valid_effort, valid_model, Backend},
+    backend::{Backend, safe_text, valid_effort, valid_model},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -535,6 +535,35 @@ impl<B: Backend> Scheduler<B> {
         }
         Ok(())
     }
+    /// Isolate new, verified PC repairs from the unavailable private registry and
+    /// old question generations. Unknown records retain their original state.
+    pub fn reconcile_repairs(
+        &mut self,
+        jobs: &mut [Value],
+        ps: &Processes,
+        cfg: &Value,
+    ) -> Result<()> {
+        let db = self.todo()?;
+        for item in arr(&db["items"]) {
+            let project = s(&item["project"]);
+            if s(&item["status"]) != "doing"
+                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                || item["scheduler"]["job"]
+                    .as_str()
+                    .is_none_or(|id| id.is_empty())
+                || (truth(&item["scheduler"]["question"]) && !truth(&item["scheduler"]["answer"]))
+                || !self
+                    .backend
+                    .repair_scope_allowed(s(&db["projects"][project]))
+            {
+                continue;
+            }
+            self.guard(&format!("reconcile repair {}", item["id"]), |e| {
+                e.reconcile_item(&item, jobs, ps, cfg)
+            });
+        }
+        Ok(())
+    }
     pub fn reconcile_item(
         &mut self,
         i: &Value,
@@ -601,6 +630,20 @@ impl<B: Backend> Scheduler<B> {
                     );
                 }
                 row["scheduler"]["phase"] = json!("cancelled");
+            })?;
+            return Ok(());
+        }
+        // Capacity cooldown belongs to the same saved job/controller. Quota
+        // pressure must not cancel it and launch a new job with a fresh budget.
+        if j["capacity_wait_pending"] == true && live(j) {
+            return Ok(());
+        }
+        if j["capacity_exhausted"] == true && s(&j["status"]) == "failed" {
+            self.edit(&i["id"],|row| {
+                if row["scheduler"]["job"]==j["id"] && row["status"]=="doing" {
+                    row["scheduler"]["phase"]=json!("capacity_exhausted");
+                    row["note"]=json!("モデルの混雑による有限の再試行を終了しました。元担当と作業内容を保持しています。");
+                }
             })?;
             return Ok(());
         }
@@ -851,6 +894,9 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         Ok(())
     }
     pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
+        if i["product_review_allocation"].is_object() && !self.backend.product_review_allowed(i) {
+            return Err(Error("InputRejected"));
+        }
         if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
             return Ok(None);
         }
@@ -964,7 +1010,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     == item["scheduler"]["key"]
             })
         {
-            prompt += &format!("\n受付済みの引き継ぎ本文（受付時の履歴です。固定HEADと対象範囲は上の最新保存仕様を優先してください）:\n{body}\n");
+            prompt += &format!(
+                "\n受付済みの引き継ぎ本文（受付時の履歴です。固定HEADと対象範囲は上の最新保存仕様を優先してください）:\n{body}\n"
+            );
         }
         if item["subwork"].is_object() {
             prompt += &format!(
@@ -972,6 +1020,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 item["subwork"]["parent_todo_id"],
                 s(&item["subwork"]["kind"])
             );
+        }
+        if item["product_review_allocation"].is_object() {
+            prompt += "\n2026-10-13の元2407の起動修復に伴う最新の出力指示: 固定HEADのレビューは読み取り専用です。結果は通常の最後の応答だけで主担当へ返してください。原仕様にある結果ファイルへの保存と共有ToDo更新は主担当が正規の応答から行います。ファイル保存・コード編集・ビルド・テスト・子ジョブ・Discord投稿は行わず、具体的なMust/Suggestion/Nitと未測定事項を返してこの有限レビューを終了してください。元1626の担当は起動しません。\n";
         }
         let task = format!("{text}\n{}", s(&item["scheduler"]["owner_instruction"]));
         let mut selection = item["scheduler"]["selection"].clone();
@@ -1221,16 +1272,25 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             self.backend.clock(),
             &self.civ6_home(),
         )?;
+        // Read the private exclusions only in memory. A missing original is not
+        // an empty list; only this explicitly verified repair repository can run.
+        let exclusions =
+            std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt"));
         let eligible: Vec<Value> = arr(&db["items"])
             .into_iter()
             .filter(|i| {
                 let project = s(&i["project"]);
                 let path = s(&db["projects"][project]);
-                let excluded = std::fs::read_to_string(
-                    self.root.parent().unwrap().join("client-projects.txt"),
-                )
-                .map(|names| {
-                    names
+                if project == "owner"
+                    || s(&i["status"]) != "todo"
+                    || !truth(&i["dispatchable"])
+                    || !truth(&i["spec"])
+                    || todo_wait::waiting(&db, i)
+                {
+                    return false;
+                }
+                let excluded = match &exclusions {
+                    Ok(names) => names
                         .trim_start_matches('\u{feff}')
                         .lines()
                         .map(str::trim)
@@ -1238,9 +1298,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         .any(|n| {
                             project.to_lowercase().contains(&n.to_lowercase())
                                 || path.to_lowercase().contains(&n.to_lowercase())
-                        })
-                })
-                .unwrap_or(true);
+                        }),
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::NotFound && i["id"] == 2407 =>
+                    {
+                        !self.backend.product_review_allowed(i)
+                    }
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::NotFound
+                            && ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                                .contains(&project) =>
+                    {
+                        !self.backend.repair_scope_allowed(path)
+                    }
+                    Err(_) => true,
+                };
                 project != "owner"
                     && !todo_wait::waiting(&db, i)
                     && !excluded
@@ -1339,6 +1411,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     return Ok(());
                 }
                 if current["subwork"].is_object() {
+                    if current["product_review_allocation"].is_object()
+                        && !self.backend.product_review_allowed(&current)
+                    {
+                        return Err(Error("InputRejected"));
+                    }
                     let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
                         .map_err(|_| Error("InvalidSubwork"))?;
                     // Publish proof of this resource/capacity check, not just preparation's launch key.
@@ -1486,6 +1563,19 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         .any(|prefix| name.starts_with(prefix))
                 }) {
                     self.guard("dispatch", |e| e.dispatch(&cfg, &pri));
+                }
+            }
+            "repair-step" => {
+                // Keep lost question generations and their notification/reply
+                // processing quarantined. Never terminate another worker here.
+                let mut safe = cfg.clone();
+                safe["kill_enabled"] = json!(false);
+                self.report["repair_mode"] = json!(true);
+                self.guard("reconcile repairs", |e| {
+                    e.reconcile_repairs(&mut jobs, &ps, &safe)
+                });
+                if self.failures.is_empty() {
+                    self.guard("dispatch", |e| e.dispatch(&safe, &pri));
                 }
             }
             "orphans" => {

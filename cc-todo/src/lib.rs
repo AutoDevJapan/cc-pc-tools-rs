@@ -26,7 +26,9 @@ pub type Result<T> = std::result::Result<T, String>;
 pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
+pub mod product_resume;
 pub mod ready;
+pub mod verified_resume;
 pub const STALL_S: f64 = 1200.;
 pub const REMENTION_S: f64 = 3600.;
 
@@ -112,6 +114,18 @@ pub enum Command {
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
     },
+    /// Resume one recovered item after checking its original state and receipts.
+    ResumeVerified {
+        id: i64,
+        #[arg(long, value_parser = ["todo", "doing"])]
+        expected_status: String,
+        #[arg(long)]
+        request_sha256: String,
+        #[arg(long)]
+        source_job_sha256: String,
+        #[arg(long)]
+        job: String,
+    },
     /// Update the note or saved specification without changing task state or ownership.
     Edit {
         id: i64,
@@ -164,7 +178,7 @@ pub enum Command {
     /// Release only this recorded wait after a fresh readiness check succeeds.
     ResumeReady {
         id: i64,
-        #[arg(long, value_parser=["chatgpt-plus"])]
+        #[arg(long, value_parser=["chatgpt-plus", "retry-time"])]
         condition: String,
     },
     /// Record measured completion without changing status, job ownership or the task note.
@@ -182,6 +196,18 @@ pub enum Command {
     ReconcileIntake,
     /// Recheck this item's automatic owner wait; retain explicit prerequisites.
     ReevaluateOwnerWait { id: i64 },
+    /// Verify this finite original product scope; --apply records eligibility, never launches.
+    ProductResume {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        apply: bool,
+    },
+    /// Admit only the original fixed-head review through normal scheduler allocation.
+    ProductReviewAllocate {
+        #[arg(long)]
+        apply: bool,
+    },
     /// Read-only recovery inspection; never reserve, enqueue, launch or send messages.
     WatchPreview {
         #[arg(long, value_parser=clap::value_parser!(i64).range(1..))]
@@ -582,6 +608,9 @@ fn python_whitespace(c: char) -> bool {
 
 /// Where a job works, shown relative to dev/ADJ so the owner can tell repositories and worktrees apart.
 pub fn job_cwd(jobs: &Path, id: &str) -> String {
+    if !job_refs::valid_id(id) {
+        return String::new();
+    }
     let Ok(job) = load_job(&jobs.join(id).join("job.json")) else {
         return String::new();
     };
@@ -859,6 +888,12 @@ pub fn rename_project(
 }
 
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
+    if let Command::Start { job, .. } = cmd
+        && !job.is_empty()
+        && !job_refs::valid_id(job)
+    {
+        return Err("invalid job identifier".into());
+    }
     let supplied = match cmd {
         Command::Add { progress, .. }
         | Command::Start { progress, .. }
@@ -949,24 +984,22 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 {
                     continue;
                 }
-                let jobs = i["jobs"].as_array().ok_or("invalid jobs")?;
+                let jobs: Vec<_> = job_refs::ids(&i["jobs"]).collect();
                 let project = i["project"].as_str().ok_or("invalid project")?;
                 let where_ = if let Some(j) = jobs.last() {
-                    job_cwd(&paths.jobs, j.as_str().ok_or("invalid job")?)
+                    job_cwd(&paths.jobs, j)
                 } else {
                     db["projects"][project].as_str().unwrap_or("").to_owned()
                 };
                 let mut extra = if jobs.is_empty() {
                     String::new()
                 } else {
-                    format!(
-                        " [{}]",
-                        jobs.iter()
-                            .map(|j| j.as_str().unwrap())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
+                    format!(" [{}]", jobs.join(", "))
                 };
+                let unverified_jobs = job_refs::unverified_count(&i["jobs"]);
+                if unverified_jobs > 0 {
+                    extra.push_str(&format!(" — 未確認のジョブ参照 {unverified_jobs}件"));
+                }
                 if !where_.is_empty() {
                     extra.push_str(&format!(" @ {where_}"));
                 }
@@ -1002,6 +1035,11 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 .as_array()
                 .and_then(|items| items.iter().find(|i| i["id"] == *id))
                 .ok_or_else(|| format!("no item {id}"))?;
+            if item["status"] == "recovery_unverified" {
+                return Err(
+                    "復旧したToDoはresume-verifiedで元の状態と保存記録を照合してください".into(),
+                );
+            }
             if cc_job_policy::todo_wait::waiting(db, item) {
                 return Err("待っているToDoが未完了です。完了すると自動で再開します".into());
             }
@@ -1032,6 +1070,41 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 }
             }
             i["updated"] = json!(now());
+        }
+        Command::ResumeVerified {
+            id,
+            expected_status,
+            request_sha256,
+            source_job_sha256,
+            job,
+        } => {
+            let receipt = verified_resume::verify(
+                db,
+                paths,
+                *id,
+                expected_status,
+                request_sha256,
+                source_job_sha256,
+                job,
+            )?;
+            // Validate Start against a copy: dependency or readiness failures must
+            // not change the recovered state, receipt, ownership or generation.
+            let mut proposed = db.clone();
+            find(&mut proposed, *id)?["status"] = json!(expected_status);
+            execute(
+                &mut proposed,
+                &Command::Start {
+                    id: *id,
+                    job: job.clone(),
+                    progress: None,
+                },
+                paths,
+            )?;
+            find(&mut proposed, *id)?["recovery_resume_receipt"] = receipt;
+            // Start also releases unrelated ready waits. This explicitly scoped
+            // command must commit only the selected item's transition.
+            *find(db, *id)? = find(&mut proposed, *id)?.clone();
+            output.push(json!({"id":id,"matching":true}).to_string());
         }
         Command::Edit {
             id,
@@ -1138,11 +1211,25 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::Watch
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
+        | Command::ProductResume { .. }
+        | Command::ProductReviewAllocate { .. }
         | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ProductReviewAllocate { apply } = &cli.command {
+        println!("{}", product_resume::allocate_review(paths, *apply)?);
+        return Ok(());
+    }
+    if let Command::ProductResume { id, apply } = &cli.command {
+        let report = product_resume::run(paths, *id, *apply)?;
+        println!("{report}");
+        if report["qualified"] != true {
+            return Err("元の対象をまだ再開できません。上の検証結果を確認してください".into());
+        }
+        return Ok(());
+    }
     if let Command::ReevaluateOwnerWait { id } = &cli.command {
         let changed = recovery::reevaluate_owner_wait_files(paths, *id)?;
         println!("{}", json!({"reevaluated":id,"released":changed}));
@@ -1318,6 +1405,7 @@ pub fn discord_call(
     }
     Err("Discord API rate limited".into())
 }
+mod job_refs;
 mod platform;
 pub mod recovery;
 pub mod summary;

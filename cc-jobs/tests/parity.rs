@@ -1362,11 +1362,14 @@ mod capacity_regressions {
             json!({"sandbox":"read-only","effort":"high","todo_id":1793}),
         );
         assert_eq!(saved["status"], "succeeded");
-        assert_eq!(saved["model"], "gpt-6-astra");
+        assert_eq!(saved["model"], "anthropic/claude-sonnet-5-5");
         assert_eq!(saved["capacity_retry_count"], 1);
         assert_eq!(saved["capacity_history"][0]["session"], SESSION_ID);
         assert_eq!(saved["capacity_history"][0]["from_model"], "gpt-6.1-sol");
-        assert_eq!(saved["capacity_history"][0]["to_model"], "gpt-6-astra");
+        assert_eq!(
+            saved["capacity_history"][0]["to_model"],
+            "anthropic/claude-sonnet-5-5"
+        );
         assert_eq!(
             saved["capacity_history"][0]["error"],
             "Selected model is at capacity"
@@ -1376,7 +1379,11 @@ mod capacity_regressions {
         assert_eq!(args.len(), 2);
         assert!(!args[0].iter().any(|a| a == "resume"));
         assert!(args[1].windows(2).any(|w| w == ["resume", SESSION_ID]));
-        assert!(args[1].windows(2).any(|w| w == ["-m", "gpt-6-astra"]));
+        assert!(
+            args[1]
+                .windows(2)
+                .any(|w| w == ["-m", "anthropic/claude-sonnet-5-5"])
+        );
         assert!(args[1].windows(2).any(|w| w == ["-s", "read-only"]));
         assert!(args[1].iter().any(|a| a == "model_reasoning_effort=high"));
         assert!(t.rt.kills.lock().unwrap().is_empty());
@@ -1386,7 +1393,7 @@ mod capacity_regressions {
                 .lock()
                 .unwrap()
                 .iter()
-                .any(|line| line.contains("gpt-6-astraで再開"))
+                .any(|line| line.contains("anthropic/claude-sonnet-5-5で再開"))
         );
     }
 
@@ -1406,10 +1413,12 @@ mod capacity_regressions {
         );
         let args = t.rt.spawn_args.lock().unwrap();
         assert_eq!(args.len(), 4);
-        for (arg, model) in
-            args.iter()
-                .zip(["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol"])
-        {
+        for (arg, model) in args.iter().zip([
+            "gpt-6.1-sol",
+            "anthropic/claude-sonnet-5-5",
+            "gpt-6-astra",
+            "gpt-6-luna",
+        ]) {
             assert!(arg.windows(2).any(|w| w == ["-m", model]));
         }
     }
@@ -1418,12 +1427,12 @@ mod capacity_regressions {
     fn capacity_switch_order_starts_from_each_selected_model() {
         let t = Test::new();
         for (from, to) in [
-            ("gpt-6.1-sol", "gpt-6-astra"),
-            ("gpt-6-astra", "gpt-6-luna"),
-            ("gpt-6-luna", "gpt-6.1-sol"),
+            ("gpt-6.1-sol", "anthropic/claude-sonnet-5-5"),
+            ("anthropic/claude-sonnet-5-5", "gpt-6.1-sol"),
+            ("gpt-6-luna", "anthropic/claude-sonnet-5-5"),
         ] {
             let mut j = job(
-                json!({"status":"failed","model":from,"last_error":"Selected model is at capacity","thread_id":SESSION_ID,"retry_count":4,"retry_not_before":9999999999.,"context_phase":"continue","yield_resume":true,"turn_completed":true}),
+                json!({"status":"failed","last_failure_kind":"capacity","model":from,"last_error":"Selected model is at capacity","thread_id":SESSION_ID,"retry_count":4,"retry_not_before":9999999999.,"context_phase":"continue","yield_resume":true,"turn_completed":true}),
             );
             assert!(t.ctx.retry_capacity(&mut j));
             assert_eq!(j["model"], to);
@@ -1444,18 +1453,15 @@ mod capacity_regressions {
             json!({"status":"succeeded"}),
             json!({"status":"cancelled"}),
             json!({"cancel_requested":true}),
-            json!({"model":"anthropic/claude-sonnet-5-5"}),
-            json!({"thread_id":null,"resume_session":null}),
+            json!({"model":"unknown-model"}),
             json!({"thread_id":"invalid","resume_session":"invalid"}),
             json!({"last_error":"429 Too Many Requests"}),
             json!({"last_error":"model not found"}),
-            json!({"capacity_retry_count":3}),
-            json!({"capacity_retry_count":u64::MAX}),
             json!({"capacity_history":{}}),
         ] {
             let mut j = patch(
                 job(
-                    json!({"status":"failed","model":"gpt-6.1-sol","last_error":"Selected model is at capacity","thread_id":SESSION_ID}),
+                    json!({"status":"failed","last_failure_kind":"capacity","model":"gpt-6.1-sol","last_error":"Selected model is at capacity","thread_id":SESSION_ID}),
                 ),
                 p,
             );
@@ -1474,7 +1480,7 @@ mod capacity_regressions {
             .unwrap()
             .insert("OPENAI_API_KEY".into(), secret.clone());
         let mut j = job(
-            json!({"status":"failed","model":"gpt-6-astra","last_error":format!("Selected model is at capacity; key={secret}"),"thread_id":null,"resume_session":SESSION_ID}),
+            json!({"status":"failed","last_failure_kind":"capacity","model":"anthropic/claude-sonnet-5-5","last_error":format!("Selected model is at capacity; key={secret}"),"thread_id":null,"resume_session":SESSION_ID}),
         );
         assert!(t.ctx.retry_capacity(&mut j));
         assert_eq!(j["resume_session"], SESSION_ID);
@@ -1522,6 +1528,247 @@ mod capacity_regressions {
         t.ctx.supervise("limit").unwrap();
         assert_eq!(t.ctx.load("limit").unwrap()["status"], "failed");
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    }
+
+    fn failed() -> Value {
+        job(
+            json!({"status":"failed","model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol","last_error":"Selected model is at capacity","last_failure_kind":"capacity","thread_id":SESSION_ID}),
+        )
+    }
+
+    #[test]
+    fn quoted_capacity_text_never_establishes_failure_evidence() {
+        let t = Test::new();
+        for kind in [
+            "agent_message",
+            "reasoning",
+            "command_execution",
+            "mcp_tool_call",
+            "web_search",
+            "error",
+        ] {
+            let mut j = failed();
+            j["last_failure_kind"] = Value::Null;
+            apply_event(
+                &mut j,
+                &json!({"type":"item.completed","item":{"type":kind,"text":"Selected model is at capacity","message":"Selected model is at capacity","aggregated_output":"Selected model is at capacity"}}),
+            );
+            assert!(!t.ctx.retry_capacity(&mut j));
+        }
+        for (ev, kind) in [
+            (
+                json!({"type":"turn.failed","error":{"message":"429 Too Many Requests: Selected model is at capacity"}}),
+                "capacity",
+            ),
+            (
+                json!({"type":"error","message":"429 Too Many Requests"}),
+                "quota",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"request_failed","message":"connection closed"}}),
+                "request_failed",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"auth_failed","message":"Selected model is at capacity"}}),
+                "auth",
+            ),
+            (
+                json!({"type":"turn.failed","error":{"code":"cancelled","message":"Selected model is at capacity"}}),
+                "cancel",
+            ),
+        ] {
+            assert_eq!(cc_jobs::capacity::failure_kind(&ev), Some(kind));
+        }
+    }
+
+    #[test]
+    fn capacity_preserves_scope_wait_and_review_constraints() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"todo_id":2528,"depends_on":[2510],"scope_source":"owner_request","read_only":true,"parent_job_id":"original","chrome_tabs":[{"id":"owned"}],"context_phase":"continue","yield_resume":true}),
+        );
+        let before = j.clone();
+        assert!(t.ctx.retry_capacity(&mut j));
+        for key in [
+            "todo_id",
+            "depends_on",
+            "scope_source",
+            "read_only",
+            "parent_job_id",
+            "chrome_tabs",
+            "context_phase",
+            "yield_resume",
+        ] {
+            assert_eq!(j[key], before[key], "{key}");
+        }
+        assert_eq!(j["model"], "anthropic/claude-sonnet-5-5");
+        let again = j.clone();
+        assert!(!t.ctx.retry_capacity(&mut j));
+        assert_eq!(j, again);
+        t.put(job(
+            json!({"id":"single-file-author","model":"gpt-6.1-sol"}),
+        ));
+        let mut haiku = patch(
+            failed(),
+            json!({"requested_model":"anthropic/claude-haiku-5-5","model":"anthropic/claude-haiku-5-5","task_type":"single_file_review","parent_job_id":"single-file-author"}),
+        );
+        assert!(t.ctx.retry_capacity(&mut haiku));
+        assert_eq!(haiku["model"], "gpt-6-luna");
+        assert_eq!(haiku["task_type"], "single_file_review");
+        assert_eq!(haiku["requested_model"], "anthropic/claude-haiku-5-5");
+        let review = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","task_type":"review"}),
+        );
+        assert!(cc_jobs::capacity::candidates(&review).is_empty());
+    }
+
+    #[test]
+    fn capacity_cooldown_is_finite_and_does_not_create_owner_block() {
+        let t = Test::new();
+        for provider in ["openai", "anthropic"] {
+            t.rt.quota_samples
+                .lock()
+                .unwrap()
+                .insert(provider.into(), Default::default());
+        }
+        let mut j = failed();
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["status"], "queued");
+        assert_eq!(j["capacity_wait_pending"], true);
+        assert_eq!(j["retry_not_before"], t.rt.epoch() + 900.);
+        assert!(j["capacity_retry_count"].is_null());
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        for expected in [2, 3] {
+            t.rt.tick(900.);
+            t.put(j.clone());
+            j = t.ctx.load(s(&j, "id")).unwrap();
+            assert!(t.ctx.recheck_capacity_wait(&mut j));
+            assert_eq!(j["capacity_wait_count"], expected);
+            assert_eq!(j["resume_session"], SESSION_ID);
+        }
+        t.rt.tick(900.);
+        assert!(!t.ctx.recheck_capacity_wait(&mut j));
+        assert_eq!(j["status"], "failed");
+        assert_eq!(j["capacity_exhausted"], true);
+        assert_eq!(j["capacity_wait_count"], 3);
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn capacity_access_denied_or_live_worker_never_restarts() {
+        let t = Test::new();
+        for denied in [true, false] {
+            let mut j = patch(failed(), json!({"codex_pid":123,"codex_pid_created":45}));
+            if denied {
+                t.rt.proc_probe_errors.lock().unwrap().insert(123, 5);
+            } else {
+                t.rt.proc_probe_errors.lock().unwrap().clear();
+                t.rt.procs.lock().unwrap().insert(123, 45);
+            }
+            let before = j.clone();
+            assert!(!t.ctx.retry_capacity(&mut j));
+            assert_eq!(j, before);
+        }
+    }
+
+    #[test]
+    fn generic_terminal_failure_preserves_protocol_capacity_but_auth_and_cancel_win() {
+        for terminal in ["request_failed", "auth_failed", "cancelled"] {
+            let mut j = failed();
+            apply_event(
+                &mut j,
+                &json!({"type":"error","message":"Selected model is at capacity"}),
+            );
+            apply_event(
+                &mut j,
+                &json!({"type":"turn.failed","error":{"code":terminal,"message":"Request failed"}}),
+            );
+            let t = Test::new();
+            assert_eq!(t.ctx.retry_capacity(&mut j), terminal == "request_failed");
+        }
+    }
+
+    #[test]
+    fn explicit_review_never_returns_to_the_source_authors_model() {
+        let t = Test::new();
+        t.put(job(
+            json!({"id":"author","model":"gpt-6-luna","requested_model":"gpt-6.1-sol"}),
+        ));
+        let mut review = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5","model_explicit":true,"parent_job_id":"author","task_type":"code_review"}),
+        );
+        assert!(!t.ctx.retry_capacity(&mut review));
+        assert_eq!(review["model"], "anthropic/claude-sonnet-5-5");
+        assert_eq!(review["capacity_exhausted"], true);
+    }
+
+    #[test]
+    fn depleted_claude_switches_to_verified_codex_oauth_and_single_file_summary_stays_light() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5"}),
+        );
+        t.rt.quota_samples
+            .lock()
+            .unwrap()
+            .insert("anthropic".into(), Default::default());
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["model"], "gpt-6.1-sol");
+        assert_eq!(j["capacity_history"][0]["to_provider"], "openai");
+        let mut summary = patch(
+            failed(),
+            json!({"model":"anthropic/claude-haiku-5-5","requested_model":"anthropic/claude-haiku-5-5","task_type":"single_file_summary"}),
+        );
+        assert!(t.ctx.retry_capacity(&mut summary));
+        assert_eq!(summary["model"], "gpt-6-luna");
+        assert_eq!(summary["task_type"], "single_file_summary");
+    }
+
+    #[test]
+    fn due_capacity_wait_rechecks_quota_and_preserves_the_same_job_after_restart() {
+        let t = Test::new();
+        t.rt.advance_epoch.store(true, Ordering::Relaxed);
+        for provider in ["openai", "anthropic"] {
+            t.rt.quota_samples
+                .lock()
+                .unwrap()
+                .insert(provider.into(), Default::default());
+        }
+        let mut j = failed();
+        assert!(t.ctx.retry_capacity(&mut j));
+        let id = s(&j, "id").to_owned();
+        t.put(j);
+        let mut restarted = t.ctx.load(&id).unwrap();
+        assert!(!t.ctx.recheck_capacity_wait(&mut restarted));
+        t.rt.tick(900.);
+        t.rt.quota_samples.lock().unwrap().clear();
+        assert!(t.ctx.recheck_capacity_wait(&mut restarted));
+        assert_eq!(restarted["id"], id);
+        assert_eq!(restarted["resume_session"], SESSION_ID);
+        assert_eq!(restarted["capacity_retry_count"], 1);
+        assert_eq!(restarted["capacity_wait_count"], 1);
+        assert_eq!(restarted["capacity_wait_pending"], false);
+    }
+
+    #[test]
+    fn capacity_before_session_creation_preserves_job_and_original_prompt_scope() {
+        let t = Test::new();
+        let mut j = patch(
+            failed(),
+            json!({"thread_id":null,"resume_session":null,"todo_id":2528,"prompt":"original.md"}),
+        );
+        let id = j["id"].clone();
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["id"], id);
+        assert_eq!(j["prompt"], "original.md");
+        assert_eq!(j["todo_id"], 2528);
+        assert_eq!(j["resume_session"], "");
+        assert!(!codex_args(&j).iter().any(|a| a == "resume"));
     }
 }
 mod queue_regressions {
@@ -1917,7 +2164,10 @@ mod queue_regressions {
     fn wait_registration_cannot_race_running_publication_after_queue_snapshot() {
         let t = Test::new();
         config(&t, json!({"max_running":10}));
-        t.rt.env.lock().unwrap().insert("CC_TODO_HOME".into(), t.ctx.root.to_string_lossy().into_owned());
+        t.rt.env.lock().unwrap().insert(
+            "CC_TODO_HOME".into(),
+            t.ctx.root.to_string_lossy().into_owned(),
+        );
         let store = t.ctx.root.join("todo.json");
         let db = json!({"items":[{"id":1139,"status":"todo"}]});
         fs::write(&store, db.to_string()).unwrap();
@@ -1937,7 +2187,7 @@ mod queue_regressions {
                         // A writer admitted here would install a wait between the snapshot and publication.
                         let wait = json!({"items":[{"id":1139,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700}}]});
                         let _ = fs::write(&store_at_save, wait.to_string());
-                    },
+                    }
                     Err(_) => observed.lock().unwrap().push(true),
                 }
             }
@@ -1947,7 +2197,10 @@ mod queue_regressions {
         assert!(admission.is_some());
         assert_eq!(t.ctx.load("original").unwrap()["status"], "running");
         assert_eq!(*attempts.lock().unwrap(), vec![true]);
-        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(), db);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(&store).unwrap()).unwrap(),
+            db
+        );
     }
     #[test]
     fn duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done() {
@@ -3994,7 +4247,10 @@ mod queue_regressions {
     #[test]
     fn wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs() {
         let t = Test::new();
-        config(&t, json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}));
+        config(
+            &t,
+            json!({"max_running":8,"max_children_per_parent":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let mut normal = waiting(&t, "normal", "normal");
         normal["retry_not_before"] = json!(t.rt.epoch() + 60.);
         t.ctx.save(&normal).unwrap();
@@ -4490,30 +4746,47 @@ mod queue_regressions {
     }
     #[test]
     fn department_order_wins_over_request_prefix_and_children() {
-        let t=Test::new();
-        config(&t,json!({"max_running":1}));
-        let mut low=waiting(&t,"low","req-low"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
-        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); t.ctx.save(&high).unwrap();
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut low = waiting(&t, "low", "req-low");
+        low["project"] = json!("unknown");
+        t.ctx.save(&low).unwrap();
+        let mut high = waiting(&t, "high", "orch-client");
+        high["project"] = json!("SocialPilot");
+        t.ctx.save(&high).unwrap();
         assert!(t.ctx.admit("low").unwrap().is_none());
         assert!(t.ctx.admit("high").unwrap().is_some());
         assert!(t.ctx.admit("low").unwrap().is_none());
     }
     #[test]
     fn configured_legacy_lowest_cannot_demote_contract_below_own_products() {
-        let t=Test::new();
-        config(&t,json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
-        let mut high=waiting(&t,"high","orch-client"); high["project"]=json!("SocialPilot"); high["todo_id"]=json!(18); t.ctx.save(&high).unwrap();
-        let mut low=waiting(&t,"low","req-own"); low["project"]=json!("unknown"); t.ctx.save(&low).unwrap();
+        let t = Test::new();
+        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18]}));
+        let mut high = waiting(&t, "high", "orch-client");
+        high["project"] = json!("SocialPilot");
+        high["todo_id"] = json!(18);
+        t.ctx.save(&high).unwrap();
+        let mut low = waiting(&t, "low", "req-own");
+        low["project"] = json!("unknown");
+        t.ctx.save(&low).unwrap();
         assert!(t.ctx.admit("high").unwrap().is_some());
     }
     #[test]
     fn running_own_product_yields_to_a_ready_higher_department_at_tool_boundary() {
-        let t=Test::new(); config(&t,json!({"max_running":1}));
-        let mut parent=live_tool_parent(&t); parent["project"]=json!("unknown"); parent["started_at"]=json!(t.rt.now()); t.ctx.save(&parent).unwrap();
-        let mut other=t.ctx.load("other").unwrap(); other["project"]=json!("SocialPilot"); t.ctx.save(&other).unwrap();
-        tool_events(&t,&[("item.started","work"),("item.completed","work")]);
+        let t = Test::new();
+        config(&t, json!({"max_running":1}));
+        let mut parent = live_tool_parent(&t);
+        parent["project"] = json!("unknown");
+        parent["started_at"] = json!(t.rt.now());
+        t.ctx.save(&parent).unwrap();
+        let mut other = t.ctx.load("other").unwrap();
+        other["project"] = json!("SocialPilot");
+        t.ctx.save(&other).unwrap();
+        tool_events(&t, &[("item.started", "work"), ("item.completed", "work")]);
         assert!(t.ctx.admit("other").unwrap().is_some());
-        let saved=t.ctx.load("long").unwrap(); assert_eq!(saved["status"],"queued"); assert_eq!(saved["resume_session"],SESSION_ID);
+        let saved = t.ctx.load("long").unwrap();
+        assert_eq!(saved["status"], "queued");
+        assert_eq!(saved["resume_session"], SESSION_ID);
     }
     #[test]
     fn loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown() {
@@ -4608,7 +4881,10 @@ mod queue_regressions {
     #[test]
     fn shared_prompt_guidance_keeps_req_first_and_loops_last() {
         let t = Test::new();
-        config(&t, json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}));
+        config(
+            &t,
+            json!({"max_running":1,"lowest_priority_todo_ids":[18,23]}),
+        );
         let guidance = cc_job_policy::WRITE_GUIDANCE;
         assert!(guidance.contains("繰り返す"));
         let mut lowest = loop_job(&t, "loop-18", 18);
@@ -4759,6 +5035,16 @@ mod queue_regressions {
         assert_eq!(report()["queued"][0]["reason"]["code"], "running_limit");
         fs::remove_file(stale).unwrap();
         let live = cargo_wait(&t, "builder", 123);
+        t.rt.proc_probe_errors
+            .lock()
+            .unwrap()
+            .insert(std::process::id(), 5);
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        t.rt.proc_probe_errors
+            .lock()
+            .unwrap()
+            .remove(&std::process::id());
         // Existing gate processes publish the legacy format without `kind`.
         let mut marker: Value = serde_json::from_slice(&fs::read(&live).unwrap()).unwrap();
         marker.as_object_mut().unwrap().remove("kind");
@@ -4770,6 +5056,46 @@ mod queue_regressions {
         let active = live.with_file_name("active.json");
         marker["kind"] = json!("cargo-active");
         fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["pid"] = json!(321);
+        marker["pid_created"] = json!(456);
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        t.rt.proc_probe_errors.lock().unwrap().insert(321, 5);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        t.rt.proc_probe_errors.lock().unwrap().remove(&321);
+        marker["pid_created"] = Value::Null;
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["pid_created"] = json!(456);
+        for pid in [Value::Null, json!("321"), json!(0), json!(u64::MAX)] {
+            marker["pid"] = pid;
+            fs::write(&active, marker.to_string()).unwrap();
+            assert_eq!(report()["occupied_slots"], 1);
+            assert!(t.ctx.admit("next").unwrap().is_none());
+        }
+        marker["pid"] = json!(321);
+        marker["kind"] = json!("unknown");
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 1);
+        assert!(t.ctx.admit("next").unwrap().is_none());
+        marker["kind"] = json!("cargo-active");
+        // A positively mismatched or absent sibling cannot occupy this job.
+        marker["pid_created"] = json!(455);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
+        t.rt.procs.lock().unwrap().remove(&321);
+        marker["pid_created"] = json!(456);
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        marker["job_id"] = json!("different-job");
+        fs::write(&active, marker.to_string()).unwrap();
+        assert_eq!(report()["occupied_slots"], 0);
+        fs::write(&active, "{incomplete").unwrap();
         assert_eq!(report()["occupied_slots"], 1);
         assert!(t.ctx.admit("next").unwrap().is_none());
         fs::remove_file(active).unwrap();
@@ -5393,6 +5719,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    quota_samples: Mutex<HashMap<String, cc_jobs::adaptive::QuotaSnapshot>>,
     boot: Mutex<Option<f64>>,
     recovery_guards: Mutex<HashMap<String, Option<bool>>>,
     summary_calls: AtomicUsize,
@@ -5407,6 +5734,7 @@ struct Fake {
     handler: Mutex<Option<CallFn>>,
     sleeps: Mutex<Vec<f64>>,
     procs: Arc<Mutex<HashMap<u32, u64>>>,
+    proc_probe_errors: Mutex<HashMap<u32, i32>>,
     kill_works: AtomicBool,
     kill_hook: Mutex<Option<KillHook>>,
     kills: Arc<Mutex<Vec<u32>>>,
@@ -5442,6 +5770,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            quota_samples: Mutex::new(HashMap::new()),
             boot: Mutex::new(None),
             recovery_guards: Mutex::new(HashMap::new()),
             summary_calls: AtomicUsize::new(0),
@@ -5463,6 +5792,7 @@ impl Fake {
             handler: Mutex::new(None),
             sleeps: Mutex::new(vec![]),
             procs: Arc::new(Mutex::new(HashMap::from([(std::process::id(), 123)]))),
+            proc_probe_errors: Mutex::new(HashMap::new()),
             kill_works: AtomicBool::new(true),
             kill_hook: Mutex::new(None),
             kills: Arc::new(Mutex::new(vec![])),
@@ -5566,7 +5896,15 @@ impl Runtime for Fake {
         self.queue_samples.fetch_add(1, Ordering::Relaxed);
         self.queue_sample.lock().unwrap().clone()
     }
-    fn queue_quota_sample(&self, _: &str, at: f64, _: u64) -> cc_jobs::adaptive::QuotaSnapshot {
+    fn queue_quota_sample(
+        &self,
+        provider: &str,
+        at: f64,
+        _: u64,
+    ) -> cc_jobs::adaptive::QuotaSnapshot {
+        if let Some(q) = self.quota_samples.lock().unwrap().get(provider) {
+            return q.clone();
+        }
         cc_jobs::adaptive::parse_quotas(
             &json!({"accounts":[{"id":"a","quota":{"weeklyPercent":20.,"weeklyResetAt":at+86400.}}]}),
             at,
@@ -5698,6 +6036,12 @@ impl Runtime for Fake {
     }
     fn proc_created(&self, pid: u32) -> Option<u64> {
         self.procs.lock().unwrap().get(&pid).copied()
+    }
+    fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
+        if let Some(code) = self.proc_probe_errors.lock().unwrap().get(&pid) {
+            return Err(io::Error::from_raw_os_error(*code));
+        }
+        Ok(self.proc_created(pid))
     }
     fn which(&self, name: &str) -> Option<String> {
         match name {
@@ -6088,7 +6432,8 @@ mod event_parsing {
 mod registrar_launch_policy {
     use super::*;
     #[test]
-    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope() {
+    fn old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope()
+    {
         for sandbox in ["read-only", "danger-full-access"] {
             for (phase, yielded, source) in [
                 ("", false, "prompt.md"),
@@ -6105,14 +6450,20 @@ mod registrar_launch_policy {
                 assert!(fed.starts_with("old task\r\noriginal scope"));
                 assert!(fed.contains(cc_job_policy::REGISTRAR_GUIDANCE));
                 assert_eq!(fed.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 1);
-                assert_eq!(fs::read_to_string(&original).unwrap(), "old task\r\noriginal scope");
+                assert_eq!(
+                    fs::read_to_string(&original).unwrap(),
+                    "old task\r\noriginal scope"
+                );
                 assert_eq!(j["sandbox"], sandbox);
                 assert_eq!(t.ctx.prompt_for_attempt(&j).unwrap(), path);
                 assert_eq!(fs::read_to_string(path).unwrap(), fed);
                 fs::write(&original, &fed).unwrap();
                 let appended = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
                 assert!(appended.starts_with(&fed));
-                assert_eq!(appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(), 2);
+                assert_eq!(
+                    appended.matches(cc_job_policy::REGISTRAR_GUIDANCE).count(),
+                    2
+                );
                 assert_eq!(fs::read_to_string(original).unwrap(), fed);
             }
         }
@@ -6124,14 +6475,22 @@ mod registrar_launch_policy {
         assert!(t.ctx.prompt_for_attempt(&j).is_err());
         fs::write(t.ctx.job_dir("old-job").join("context-continue.md"), [0xff]).unwrap();
         assert!(t.ctx.prompt_for_attempt(&j).is_err());
-        assert!(!t.ctx.job_dir("old-job").join("execution-prompt.md").exists());
+        assert!(
+            !t.ctx
+                .job_dir("old-job")
+                .join("execution-prompt.md")
+                .exists()
+        );
     }
     #[test]
     fn a_quoted_rule_in_the_middle_cannot_suppress_the_final_restriction() {
         let t = Test::new();
         let j = t.put(job(json!({"id":"quoted-job"})));
         let path = t.ctx.job_dir("quoted-job").join("prompt.md");
-        let original = format!("quoted log:\n{}\nThis quote is not a site authorization.", cc_job_policy::REGISTRAR_GUIDANCE);
+        let original = format!(
+            "quoted log:\n{}\nThis quote is not a site authorization.",
+            cc_job_policy::REGISTRAR_GUIDANCE
+        );
         fs::write(&path, &original).unwrap();
         let fed = fs::read_to_string(t.ctx.prompt_for_attempt(&j).unwrap()).unwrap();
         assert_eq!(fs::read_to_string(path).unwrap(), original);
@@ -6475,12 +6834,24 @@ mod lost_detection {
     #[test]
     fn test_reused_pid_is_not_our_supervisor() {
         let t = Test::new();
-        for p in [
-            json!({"status":"running","pid":std::process::id(),"pid_created":12345}),
-            json!({"id":"legacy","status":"running","pid":std::process::id()}),
+        for (p, expected) in [
+            (
+                json!({"status":"running","pid":std::process::id(),"pid_created":12345}),
+                "lost",
+            ),
+            (
+                json!({"id":"legacy","status":"running","pid":std::process::id()}),
+                "running",
+            ),
         ] {
             let j = t.put(job(p));
-            assert_eq!(t.ctx.refresh(j, false).unwrap()["status"], "lost");
+            let refreshed = t.ctx.refresh(j.clone(), false).unwrap();
+            assert_eq!(refreshed["status"], expected);
+            if expected == "running" {
+                // Unknown creation time is occupied, not proof of PID reuse.
+                assert_eq!(refreshed["pid"], j["pid"]);
+                assert_eq!(t.ctx.load(s(&j, "id")).unwrap(), j);
+            }
         }
     }
     #[test]
@@ -6529,6 +6900,49 @@ mod lost_detection {
         assert!(proc_created(0).is_none());
     }
     #[test]
+    fn unavailable_supervisor_identity_keeps_execution_and_does_not_close_tabs() {
+        for code in [5, 6, 299] {
+            let t = Test::new();
+            let j = t.put(t.running());
+            let pid = j["pid"].as_u64().unwrap() as u32;
+            t.rt.proc_probe_errors.lock().unwrap().insert(pid, code);
+            assert!(t.ctx.supervisor_alive(&j));
+            assert_eq!(t.ctx.refresh(j.clone(), false).unwrap(), j);
+            assert_eq!(t.ctx.load(s(&j, "id")).unwrap(), j);
+            assert!(t.rt.calls.lock().unwrap().is_empty());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+        }
+    }
+    #[test]
+    fn known_absence_and_reused_pid_still_mark_the_job_lost() {
+        for reused in [false, true] {
+            let t = Test::new();
+            let j = t.put(t.running());
+            let pid = j["pid"].as_u64().unwrap() as u32;
+            if reused {
+                t.rt.procs.lock().unwrap().insert(pid, 124);
+            } else {
+                t.rt.procs.lock().unwrap().remove(&pid);
+            }
+            assert!(!t.ctx.supervisor_alive(&j));
+            assert_eq!(t.ctx.refresh(j, false).unwrap()["status"], "lost");
+        }
+    }
+    #[cfg(windows)]
+    #[test]
+    fn exited_process_with_still_active_exit_code_is_not_live() {
+        use std::os::windows::process::CommandExt;
+        let mut child = std::process::Command::new("cmd.exe")
+            .args(["/d", "/c", "exit", "259"])
+            .creation_flags(NO_WINDOW)
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        assert_eq!(child.wait().unwrap().code(), Some(259));
+        assert_eq!(proc_created_checked(pid).unwrap(), None);
+    }
+    #[test]
     fn test_watch_reports_changes_once_and_skips_finished_jobs() {
         let t = Test::new();
         let j = t.put(t.running());
@@ -6552,6 +6966,65 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    #[test]
+    fn missing_supervisor_creation_time_preserves_reservation_and_skips_cleanup() {
+        let t = Test::new();
+        t.rt.procs.lock().unwrap().insert(500, 777);
+        let j = t.put(patch(t.running(), json!({"pid":500,"pid_created":null})));
+        assert!(t.ctx.supervisor_alive(&j));
+        assert_eq!(
+            t.ctx.refresh(j.clone(), false).unwrap()["status"],
+            "running"
+        );
+        let terminal = t.put(patch(
+            j,
+            json!({"status":"succeeded", "codex_pid":null,
+            "finished_at":"2026-01-01T00:00:00+00:00"}),
+        ));
+        assert!(
+            t.ctx
+                .cleanup_supervisors(true)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(t.ctx.load(s(&terminal, "id")).unwrap(), terminal);
+        assert_eq!(t.rt.pause_calls.load(Ordering::Relaxed), 0);
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+    }
+    #[test]
+    fn inaccessible_identity_never_certifies_cancellation_or_releases_ownership() {
+        for key in ["pid", "codex_pid"] {
+            let t = Test::new();
+            t.rt.procs.lock().unwrap().insert(321, 456);
+            let j = t.put(patch(
+                t.running(),
+                json!({"codex_pid":321,"codex_pid_created":456}),
+            ));
+            let pid = j[key].as_u64().unwrap() as u32;
+            t.rt.proc_probe_errors.lock().unwrap().insert(pid, 5);
+            assert!(t.ctx.is_ours_checked(&j, key).is_err());
+            assert!(t.ctx.is_ours(&j, key));
+            assert!(t.cli(&["cancel", s(&j, "id")]).0.is_err());
+            let saved = t.ctx.load(s(&j, "id")).unwrap();
+            assert_eq!(saved["status"], "running");
+            assert_eq!(saved["cancel_requested"], true);
+            assert!(saved["finished_at"].is_null());
+            assert!(t.rt.kills.lock().unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn cancellation_cannot_certify_exit_when_post_stop_inspection_fails() {
+        let t = Test::new();
+        let j = t.put(t.running());
+        let rt = t.rt.clone();
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |pid| {
+            rt.proc_probe_errors.lock().unwrap().insert(pid, 5);
+        }));
+        assert!(t.cli(&["cancel", s(&j, "id")]).0.is_err());
+        assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
+    }
     fn guard_store(t: &Test) -> PathBuf {
         let store = t.ctx.root.join("todo.json");
         t.rt.env.lock().unwrap().insert(
@@ -6738,9 +7211,12 @@ mod cancel {
         let store = guard_store(&t);
         let mut db: Value = serde_json::from_slice(&fs::read(&store).unwrap()).unwrap();
         db["items"][0]["status"] = json!("wait");
-        db["items"][0]["wait_ready"] = json!({"condition":"retry-time","since":100,"not_before":3700});
+        db["items"][0]["wait_ready"] =
+            json!({"condition":"retry-time","since":100,"not_before":3700});
         fs::write(&store, db.to_string()).unwrap();
-        let source = t.put(job(json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123})));
+        let source = t.put(job(
+            json!({"id":"source","status":"running","pid":std::process::id(),"pid_created":123}),
+        ));
         let (result, out, _) = guarded(&t, "source", &store, "attempt");
         assert_eq!(result.unwrap(), 0);
         let response: Value = serde_json::from_str(&out).unwrap();
@@ -6980,16 +7456,25 @@ mod cancel {
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), "hello").unwrap();
         t.rt.spawn_live.store(true, Ordering::Relaxed);
+        // A live fake child must expose its identity so the injected failure
+        // occurs on the first post-spawn save, rather than during cleanup.
+        t.rt.procs.lock().unwrap().insert(321, 456);
         t.rt.save_failure.store(true, Ordering::Relaxed);
         t.ctx.supervise(s(&j, "id")).unwrap();
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
         assert_eq!(*t.rt.kills.lock().unwrap(), [321]);
-        assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "failed");
+        assert!(!t.rt.child_alive.load(Ordering::Relaxed));
+        assert_eq!(t.rt.proc_created(321), None);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "failed");
+        assert!(s(&saved, "last_error").contains("disk full"));
     }
     #[test]
     fn test_never_kills_a_process_that_reused_the_pid() {
         let t = Test::new();
         t.rt.procs.lock().unwrap().insert(555, 99);
-        let j = t.put(job(json!({"status":"running","pid":555,"codex_pid":555})));
+        let j = t.put(job(json!({"status":"running","pid":555,"pid_created":98,
+            "codex_pid":555,"codex_pid_created":98})));
         let (r, out, _) = t.cli(&["cancel", s(&j, "id")]);
         assert_eq!(r.unwrap(), 0);
         assert_eq!(t.rt.proc_created(555), Some(99));
@@ -7797,6 +8282,33 @@ mod run_validation {
                 assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
                 assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
             }
+        }
+    }
+
+    #[test]
+    fn resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing() {
+        for missing_created in [false, true] {
+            let t = Test::new();
+            let session = "01a0f188-0c24-7860-ab46-6c424b1def08";
+            let active = json!({"id":"active-writer","status":"lost","thread_id":session,
+                "codex_pid":321,"codex_pid_created":if missing_created {None} else {Some(456)}});
+            t.rt.procs.lock().unwrap().insert(321, 456);
+            if !missing_created {
+                t.rt.proc_probe_errors.lock().unwrap().insert(321, 5);
+            }
+            t.put(active.clone());
+            {
+                let _gate = t.ctx.queue_lock().unwrap();
+                t.ctx.track_queued_job("active-writer").unwrap();
+            }
+            assert!(
+                t.run(&["--resume-session", session], b"duplicate")
+                    .unwrap_err()
+                    .message
+                    .contains("already has active job active-writer")
+            );
+            assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+            assert_eq!(t.ctx.load("active-writer").unwrap(), active);
         }
     }
 
@@ -9360,7 +9872,12 @@ mod end_to_end {
                 assert!(args.windows(2).any(|w| w
                     == [
                         "-m",
-                        ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"][index]
+                        [
+                            "gpt-6-luna",
+                            "anthropic/claude-sonnet-5-5",
+                            "gpt-6.1-sol",
+                            "gpt-6-astra"
+                        ][index]
                     ]));
                 if index > 0 {
                     assert!(
@@ -9685,6 +10202,11 @@ mod end_to_end {
                 bin.join("fixture.exe"),
             )
             .unwrap();
+            let bun = tmp
+                .0
+                .join("appdata/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin");
+            fs::create_dir_all(&bun).unwrap();
+            fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), bun.join("bun.exe")).unwrap();
             fs::write(
                 bin.join("codex.cmd"),
                 b"@echo off\r\n\"%~dp0fixture.exe\" %*\r\n",
@@ -9716,6 +10238,7 @@ mod end_to_end {
                     ),
                 )
                 .env("CC_JOBS_FIXTURE_MODE", mode)
+                .env("APPDATA", self.tmp.0.join("appdata"))
                 .env("CC_JOBS_FIXTURE_DIR", &self.rec)
                 .env(
                     "CC_OWNER_INSTRUCTIONS_PATH",
@@ -9769,7 +10292,9 @@ mod end_to_end {
                 executable: self.exe.clone(),
                 rt: Arc::new(System::default()),
             };
-            reader.read_json(&reader.job_dir(jid).join("job.json")).unwrap()
+            reader
+                .read_json(&reader.job_dir(jid).join("job.json"))
+                .unwrap()
         }
         fn until(&self, mut condition: impl FnMut() -> bool) {
             self.until_phase("unspecified", &mut condition);
@@ -10226,7 +10751,14 @@ mod end_to_end {
         assert_eq!(e.job(&child)["parent_job_id"], parent);
         assert_eq!(e.job(&parent)["status"], "running");
         assert_eq!(e.job(&other)["status"], "queued");
-        assert!(e.cli(&["cancel", &parent], "").status.success());
+        let cancelled = e.cli(&["cancel", &parent], "");
+        assert!(
+            cancelled.status.success(),
+            "parent cancel {:?}: stdout={} stderr={}",
+            cancelled.status.code(),
+            String::from_utf8_lossy(&cancelled.stdout),
+            String::from_utf8_lossy(&cancelled.stderr)
+        );
         e.until_phase("parent_processes_exited", || {
             let handles = e.handles.lock().unwrap();
             parent_pids.iter().all(|pid| {
@@ -10597,7 +11129,14 @@ mod additional_compatibility {
         }
         impl Read for LateReader {
             fn read(&mut self, b: &mut [u8]) -> io::Result<usize> {
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
                 while !self.release.load(Ordering::Acquire) {
+                    if std::time::Instant::now() >= deadline {
+                        return Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "late reader was not released",
+                        ));
+                    }
                     std::thread::sleep(Duration::from_millis(1));
                 }
                 let n = self.bytes.read(b)?;
@@ -10627,16 +11166,26 @@ mod additional_compatibility {
             }
             fn poll(&mut self) -> io::Result<Option<i64>> {
                 self.release.store(true, Ordering::Release);
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
                 while !self.eof.load(Ordering::Acquire) {
+                    if std::time::Instant::now() >= deadline {
+                        return Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "late reader did not reach EOF",
+                        ));
+                    }
                     std::thread::sleep(Duration::from_millis(1));
                 }
-                std::thread::sleep(Duration::from_millis(20));
                 Ok(Some(0))
             }
         }
         let t = Test::new();
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), b"hi").unwrap();
+        // Startup can probe a child without an identity before starting its
+        // reader. This fixture represents a known child, so defer poll to the
+        // final drain boundary it is intended to exercise.
+        t.rt.procs.lock().unwrap().insert(321, 456);
         *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(|| {
             let release = Arc::new(AtomicBool::new(false));
             let eof = Arc::new(AtomicBool::new(false));

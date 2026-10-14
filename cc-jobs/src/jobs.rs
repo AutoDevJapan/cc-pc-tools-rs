@@ -44,9 +44,7 @@ impl Context {
             .get("CC_OWNER_INSTRUCTIONS_PATH")
             .filter(|path| !path.is_empty())
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from("D:/CC/AGENTS.md")
-            });
+            .unwrap_or_else(|| PathBuf::from("D:/CC/AGENTS.md"));
         let policy = fs::read_to_string(&policy_path)?;
         if policy.trim().is_empty() {
             return Err(std::io::Error::new(
@@ -337,28 +335,43 @@ impl Context {
         jobs.sort_by(|a, b| s(a, "created_at").cmp(s(b, "created_at")));
         jobs
     }
-    /// True if job[key] ('pid' or 'codex_pid') is still the very process we started.
+    /// True for our process or an identity that cannot currently be inspected.
+    /// Callers that mutate a process must use the checked variant below.
     pub fn is_ours(&self, j: &Value, key: &str) -> bool {
+        self.is_ours_checked(j, key).unwrap_or(true)
+    }
+    /// Only a successful identity read can prove ownership or process exit.
+    pub fn is_ours_checked(&self, j: &Value, key: &str) -> std::io::Result<bool> {
         let Some(pid) = j[key].as_u64().and_then(|x| u32::try_from(x).ok()) else {
-            return false;
+            return Ok(false);
         };
-        let created = self.rt.proc_created(pid);
-        created.is_some() && created == j[format!("{key}_created")].as_u64()
+        let Some(created) = self.rt.proc_created_checked(pid)? else {
+            return Ok(false);
+        };
+        let expected = j[format!("{key}_created")]
+            .as_u64()
+            .ok_or_else(|| std::io::Error::other("live process has no recorded creation time"))?;
+        Ok(created == expected)
     }
     pub fn supervisor_alive(&self, j: &Value) -> bool {
+        // Keep the execution reservation when this reader cannot inspect its
+        // owner. It must not mark the job lost, close tabs or start a duplicate.
+        self.supervisor_presence(j).unwrap_or(true)
+    }
+    fn supervisor_presence(&self, j: &Value) -> std::io::Result<bool> {
         // An intentional replacement is durable queue work, not an orphan.
         if s(j, "status") == "queued" && j["queue_restart_pending"] == true {
-            return true;
+            return Ok(true);
         }
         if truth(&j["pid"]) {
-            self.is_ours(j, "pid")
+            self.is_ours_checked(j, "pid")
         } else {
-            parse_iso(if s(j, "queued_at").is_empty() {
+            Ok(parse_iso(if s(j, "queued_at").is_empty() {
                 s(j, "created_at")
             } else {
                 s(j, "queued_at")
             })
-            .is_some_and(|created| self.rt.epoch() - created <= QUEUED_GRACE_S)
+            .is_some_and(|created| self.rt.epoch() - created <= QUEUED_GRACE_S))
         }
     }
     /// Mark a live job whose supervisor is gone as 'lost' (persisted, so it can never come back).
@@ -928,6 +941,20 @@ impl Context {
                 self.rt.sleep(3.);
                 continue;
             }
+            if job["capacity_wait_pending"] == true {
+                let inventory = self.capacity_inventory();
+                let _state = self.job_lock(jid, "state.lock")?;
+                let mut fresh = self.load(jid)?;
+                if s(&fresh, "status") == "queued"
+                    && fresh["capacity_wait_pending"] == true
+                    && fresh["cancel_requested"] != true
+                {
+                    fresh["capacity_inventory"] = inventory;
+                    self.recheck_capacity_wait(&mut fresh);
+                    self.save(&fresh)?;
+                }
+                continue;
+            }
             // Most polls end in "keep waiting". Decide that from a lock-free
             // snapshot and take the global gate only when this job may start,
             // its wait reason changed, or the periodic gated pass is due (that
@@ -1066,7 +1093,16 @@ impl Context {
             })?);
             let p = proc.as_mut().unwrap();
             job["codex_pid"] = json!(p.pid());
-            job["codex_pid_created"] = json!(self.rt.proc_created(p.pid()));
+            let created = self.rt.proc_created_checked(p.pid())?;
+            if created.is_none() && p.poll()?.is_none() {
+                return Err(Error::new("live child process identity is unavailable"));
+            }
+            if created.is_none() {
+                // A signalled child is no longer an owner. A reused PID must
+                // not later turn this completed attempt into an unknown owner.
+                job["codex_pid"] = Value::Null;
+            }
+            job["codex_pid_created"] = json!(created);
             self.save(&job)?;
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
@@ -1237,7 +1273,9 @@ impl Context {
             if let Some(p) = proc.as_mut()
                 && p.poll()?.is_none()
             {
-                let _ = self.rt.kill_tree(p.pid());
+                if let Some(created) = job["codex_pid_created"].as_u64() {
+                    let _ = self.rt.kill_owned_tree(p.pid(), created);
+                }
                 let end = self.rt.mono() + 2.;
                 while p.poll()?.is_none() && self.rt.mono() < end {
                     self.rt.sleep(0.05);
@@ -1270,6 +1308,9 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !setup_failed {
+            job["capacity_inventory"] = self.capacity_inventory();
+        }
         let gate = match self.queue_lock() {
             Ok(gate) => Some(gate),
             Err(error) => {
@@ -1286,8 +1327,10 @@ impl Context {
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
             && !setup_failed
-            && if crate::capacity::is_capacity(s(&job, "last_error")) {
+            && if s(&job, "last_failure_kind") == "capacity" {
                 self.retry_capacity(&mut job)
+            } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind")) {
+                false
             } else {
                 self.retry_429(&mut job, cfg)
             };

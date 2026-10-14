@@ -110,3 +110,26 @@ Sonnet2605は787の4file/body-only最終レビューMust0を実報告。Suggesti
 生成物所有ID: 2611元d7=8236a3071a7b7d84a4af38a4e4e9f0c6、2619old9fc=f3005ae52c8cffdf3a6103450c838198、最新2621は実manifestで取得。既存2606/2599成果も保持、使用不要性と所有終了を確認できた検査資源だけsafe-delete create/plan→通常削除→finishまたは正規quarantineで回収。稼働CI runner/container/worktree/未完sourceは消さない。scopedstashはmain同blobの原docを保持するもの、明示のstash記録を照合して将来片付ける。自分の新Chrome tab/Docker/GPU/Discord追加送信なし。
 原2467はwait2505/dispatchablefalse、2505はwait2488/2528。親修復後、依存と元spec/元場/元session/原成果を照合して正規same-sessionmanualresumeを一度だけ実起動する。原registry全復旧/請求2497/製品全完了を親修復へ拡大しない。本人の指定完成速報「【速報】作業完了のお知らせ」は親修復のmerge/実配布/受入/所有資源回収が揃ったときだけ本人Discordメンション付きで一度送る。前verified進捗request-id todo2488-integration-20261014-v1は再送しない。
 本人判断待ちなし。2619/2621/2623完了だけを待つ間は親2488へ正式waitを記録し、scheduler自動再開で同じ原依頼の残りを続ける。再開後「引き継ぎだけ」では終わらない。
+
+## 2026-10-14 23時台のマージ・配布と再開診断
+
+PR144は通常の固定HEAD b9201e3a8bfd52bf90e17e2ae7a788aafcdabf48指定でマージ済み。merge commitは0b703782a81e5c262f771caa849e766872591b2e、treeは966bff6509ca39ba3f7f8a5de08467c4c2e17cc0。本体HEADはb920のままtracked clean。必要8workflow全成功、全workspace2164成功/5skip、docコマンド/Clippy成功、実Sonnet2620/2622 Must0の証拠は保存済み。同ソース検査・マージを繰り返さない。
+
+2621の5本を旧版バックアップ付きで既存Toolsへ配置済み。deploy-2488-0b70378.private.jsonのstateはverified-runtime-active、23:24:44 JSTに確認。Operationsは既存taskとCC-AdminBrokerで新PID23240/作成時刻23:05:54へ復帰済み。health ok/partial=true。配布・再起動を繰り返さない。
+
+2625は原ログ262ファイルを恒久保管・照合し、初回は削除0/退避0/保持7/回収0。親はその後、所有a5262704b6ff24bfe922a8c9ba9d8a7fの終了済み旧検査生成物1537882923 bytesを同Dドライブの削除希望へ1件退避した。容量回収0。残る6保護候補を保持。scoped stash a426039e6269510e203ff50e6c29c574f7f7e9feは同blobとprivate copyを確認してdrop済み。再実行しない。
+
+GitHub最終検査コメントは送信済み。以前のDiscord進捗request-id todo2488-integration-20261014-v1もverified送信済み。旧後片付けlogはQuestionStateRecoveryRequiredでHTTP前停止・未送信のまま保持。完成速報は未送信。
+
+新セッションで延期の根因を照合。23:44/50/56のscheduler.logにはModelUnavailable、preparation item2512 reason=resource_wait、dispatch failedを記録。元2512はLinux runner/共有Cargo橋渡しの別モデル確認で、未提供のclaude-sonnet-4-6を明示指定。schedulerは元指定を保持し、300秒の有限再試行を正式保存している。23:55/57の定期実行はscheduler_ok=trueだが、23:56の再試行時はfalse/step_failures[dispatch]。一時復旧を恒久解消とはしない。元2511はこのレビューだけを正式waitしている。
+
+利用可能モデルanthropic/claude-sonnet-5-5を既存OAuthモデル一覧で確認。原レビューと同じLinux橋渡しの有限確認を実行して元2512へ成果を返す。原仕様・途中成果・対象を保持し、レビュー完了前に元2512/親2488をdoneにしない。本人判断待ちなし。
+
+1分Discord/5分Resident/1時間清掃/3時間容量調査の実実行と次回を確認。Resident3healthy/失敗0。容量は部分走査/回収0/E untouchedを維持。GUI入力・OS再起動/電源断・ログオン前OAuth復帰は未実測。原2467/2497/製品・原registry全復旧を完了へ拡大しない。
+
+## 2026-10-15 00時の再開指示（マージ・配布完了、再実行禁止）
+PR144は固定b920/tree966bffで通常マージ済み。merge0b703782、5本配布verified-runtime-active、Operations既存task復帰PID23240、所有旧生成物1件同D退避、stash drop、GitHubコメント、以前の無通知進捗送信は完了。再実行しない。詳しくは元worktree PROGRESS-2488.mdとprivate receipts。必要8CI全success、全workspace2164pass/5skip、docコマンドとClippy成功、Sonnet2620/2622実Must0。同ソースの再検査・旧artifact配布をしない。
+未解決scheduler_deferredの実根因は元2512の未提供claude-sonnet-4-6。scheduler.logは23:44/50/56にModelUnavailable/dispatch failure。元2512の原対象はLinux bridge別モデル確認、元2511wait2512。原指定を改変せず、提供確認済みclaude-sonnet-5-5の有限レビュー2627を同対象・固定b920で登録。元2512は正式wait2627として保持。登録だけで実完了としない。
+次は2627の原応答・実モデル・実exitを照合し、Mustがあれば本体のみで修正→必要関連検査/別モデル/新CI/配布。Mustが無ければ同対象を実完了した根拠を元2512へ記録してdoneにし、元2511の残受入は担当へ戻す。親の定期scheduler repair-stepでstep_failures[]/scheduler_ok trueを実確認。今回の旧モデル単独待ちを無条件正常へ書き換えない。
+23時台の受入・保持候補6・未実測GUI/OS復帰・原registry喪失/請求/製品未完を保持。2505/2528/2530にはマージ配布と元2467の依存成立後same-session manual resume指示を正式配送済み。依存や元仕様を解除しない。
+完成速報は未送信、request-id未登録。旧cleanup logはQuestionStateRecoveryRequiredでHTTP前停止した未送信原投稿を保持し、同内容を別経路へ強制しない。実受入が揃ったら明示の新completion request-idを登録し、「【速報】作業完了のお知らせ」で始まる本人メンション1件を送信・GET/receipt verified確認。その後だけ親2488を完了。本人判断待ちなし。

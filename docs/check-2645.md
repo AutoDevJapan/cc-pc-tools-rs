@@ -30,7 +30,7 @@
 - Unattended readiness tools: https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38593696374
 - CodeQL PC: https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/38593696275
 
-## 検査結果（途中保存）
+## 独立検査の結果
 
 実行はCREATE_NO_WINDOWで子プロセスを起動する専用の一時PowerShellから直列に行う。Cargoは通常のcargo.cmdが使うcargo_gate.exeを経由し、専用targetとsccache（42259、30G）を指定した。
 
@@ -42,7 +42,7 @@
 |go test -v ./...（repair-guard）|0|16件成功|
 |go vet ./...（repair-guard）|0|成功|
 |go build -trimpath '-ldflags=-s -w' -o <成果保存先>/scrub391.exe .|0|実行ファイル作成済み|
-|cargo build --locked --release -p cc-scheduler --bin scheduler|未確認|実行中|
+|cargo build --locked --release -p cc-scheduler --bin scheduler|0|実行ファイル作成済み|
 
 検査記録の追加による差分だけを除外すると、git diff --exit-code c0a47e8 -- . ':!docs/check-2645.md'は0。別の一時indexから検査記録だけを除いて作ったtreeは固定treeと一致した。変更6ファイルとCargo.toml/Cargo.lockのSHA256はsource-sha256.jsonへ保持した。親ソースのHEAD/treeはこの時点でも一致し、親のgit statusは空だった。
 
@@ -52,7 +52,7 @@
 
 fmt失敗を成功として扱わない。固定ソースは変更しないため、親が修正する。
 
-- cc-scheduler/tests/parity.rs:1680: 今回追加したfs::writeの引数を複数行へ展開する。rustfmtの差分では1683までの呼出しが対象。
+- cc-scheduler/tests/parity.rs:1683: 今回追加したfs::writeの引数を複数行へ展開する。
 - cc-scheduler/src/backend.rs:2,63: use項目の順序。
 - cc-scheduler/src/engine.rs:3,15: use項目の順序。
 - cc-scheduler/src/preparation.rs:3: use項目の順序。
@@ -61,6 +61,15 @@ fmt失敗を成功として扱わない。固定ソースは変更しないた�
 
 全差分はscheduler-fmt.stdout.logに保持した。通常のcargo fmt -p cc-schedulerで書式を直し、同じcheckを確認する。固定ソースのテスト・Clippy・GitHub CIは成功しており、この指摘は書式検査についてのもの。
 
-## 未完了
+## 配備用成果
 
-scheduler release完了・ビルド後のソース照合・2実行ファイルの絶対パスとSHA256記録が残る。失敗したfmt以外の検査を繰り返さない。完了後に独立検査結果を親へ返し、成果は配布確認まで保持する。
+2026-10-15 01:30:37 JSTに2実行ファイルの作成とビルド後の照合が完了した。source-afterの差分検査はexit 0。全stdout/stderrと実コマンド・cwd・開始終了日時・exitはcommands.jsonと各log、GitHub CIのstep結果はgithub-build-speed.json/github-readiness.jsonへ保存した。判定はmanifest.jsonのindependent_check_complete=true / all_checks_passed=false / deployed=falseに分けて記録した。
+
+|成果|絶対パス|bytes|SHA256|
+|---|---|---:|---|
+|guard|C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5652fc6344fede6c9c6b12646b513e6f/scrub391.exe|3529728|c0d9650f803df8c533e9c8d0735330302c4d455ef659013583d0435e1d8e4865|
+|scheduler|C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5652fc6344fede6c9c6b12646b513e6f/scheduler.exe|5612544|90317492d6e3e4b5b330d667efcf98957bb7b319c803183929b844a60eb3706e|
+
+独立checkの担当作業は完了。親の製品作業は完了としていない。親へ上記fmt失敗の修正を返す。書式修正後の新ソースをこの固定ソースと同じものとして配布しない。親が使う実行ファイルは、実際に配布するソースと照合し、配布後の確認を済ませるまでこの成果を保持する。
+
+正規のscrub391/schedulerは置換していない。原192項目・本人停止・原依存・履歴・原資料は変更していない。親側の別モデルレビュー、書式修正、マージ、配備、新担当2637の実処理は親の工程として残る。自分のビルドと子プロセスは完了し、ブラウザ・Docker・Civ6・GPU処理は作成していない。

@@ -30,3 +30,9 @@
 親の仕様更新に従い、固定source 903fa283f1970cc629416bff7aa87af63239704aと新3runを別フォルダ .ci-work/todo-2632-903/ に保存した。旧cbf/e380/b920の記録は保持した。
 
 新Buildは原ログ3035行で2,164成功・5skip・417.281秒。docは16群で実0件、Clippy成功。ReadinessはWindows側5jobがAPI上で成功、Linux側4jobとCodeQL4jobは待機中。通常ghの原byteログと取得exitを保存し、未終端を成功にしていない。残る同runの終端・全実job原全文・CodeQL同SHA解析を有限確認する。
+
+### 2026-10-15 00:56の有限確認完了（903版）
+
+指定903の3runは全件終端。Build成功、ReadinessはWindows5job成功・Linux4job取消、CodeQL4言語は全取消。取消8件はstep0で、同PRの後続要求優先を公式注記で確認した。必要CI全成功は成立していない。
+
+実行6jobの原全文・bytes・SHA256・取得exit・根拠行を非公開保存して再照合した。取消8jobの取得exit1/not foundとpackage-tools1skipを分けた。最終結果は .ci-work/todo-2632-903/result.final.private.json などに保持。旧原資料は維持し、親へ不足条件を返した。指定3runは終端済みのため、この版の新wait-retryは不要。親の全作業・新sourceのCI成功・マージ・配布は完了扱いにしない。

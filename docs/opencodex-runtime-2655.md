@@ -2,6 +2,14 @@
 
 ## 結論と対象
 
+2026-10-15 08:49 JSTの再開確認でも、稼働反映と切替受入は未完了。
+正規updaterのlatestは2.86.0へ変わったが、公開パッケージの実bytesとソースを
+照合しても今回の混雑記録の修正は含まれなかった。稼働版は2.83.0のまま。
+配置先のguardも未確認のままなので、更新を実行していない。
+新候補の実hashと再開時の観測は末尾「08:49の再開確認」に記録した。
+
+以下の02:33からの記述は初回調査時点の記録として保持する。
+
 2026-10-15 02:33 JST現在、修正の稼働版への反映と切替受入は未完了。
 既存proxyは2.83.0。正規updaterのlatest候補2.84.0にも今回の修正は
 含まれていないことを公開Gitの該当ソースで確認した。候補の更新を実行しても
@@ -161,8 +169,105 @@ anthropic/claude-haiku-5-5、succeeded、exit0と最終回答を受領した。
   本人の主TUI停止禁止と元の更新後復帰受入の範囲を維持し、OS復帰未検証を明記した。
 - Suggestion（稼働2.83.0とfork 2.47.0の差）は、正規status/system healthで稼働版を照合済み。
   追加の同じ照合をせず、上流パッケージとforkソースを混同しない説明を維持した。
-- 再質問を提案するNitは採用せず、元依頼・元ToDo・元回答の範囲を保持して読む。
+- Nit（再開時の確認対象を一覧にする提案）は、元2646の最新note、本記録、
+  正規CLIの稼働状態、updater候補、guard読取を確認する順序として扱う。
+  前の記録にあった「再質問を提案するNit」は原回答と異なる表現だったため訂正した。
+  本人回答の再質問を提案されたわけではない。
 
 文書をレビュー済みとして保存したことと、稼働製品を完成させたことを区別する。
 完了条件5件のうち結果配送だけ達成した（1/5）。残る4条件は未達。
 未解決の配布経路と保護判定を有限の技術再確認として保持し、owner判断blockは使わない。
+
+## 08:49の再開確認
+
+同じworktreeとブランチのcleanな状態から再開し、直前の2コミット
+`3d29fddc62267f0a3dee71109a2342ece1cb3b6f`、
+`f68a6d94c7b6d7747de6742b19d5085c2b100446`を保持した。
+元ToDo2655は前回wait-retryの時刻経過後、スケジューラーによってdoingへ戻り、
+担当 `20261015-084524-todo-2655` が割り当てられている。進捗は20%のまま。
+前回停止は成果消失ではなく、保存済みの技術再確認待ちからの再開だった。
+
+GitHub APIで所有者mashfromband/repo1358770414、PR3のhead/merge、現在devを再照合した。
+head、merge、devは初回記録と同じ。マージ後CI38603135829も同merge SHAでsuccess、
+artifactsは0のまま。初回commitへ戻したり、同ソースのCIを再実行したりしていない。
+元2646の最新noteと、子2658がdoneであることも共有ToDoから確認した。
+
+### 公開2.86.0候補の実bytes
+
+正規 `system update check --json` はcurrentVersion=2.83.0、latestVersion=2.86.0、
+channel=latest、installer=npm、canUpdate=trueを返した。
+公開registryの2.86.0 metadataはgitHead=`409026b1bcb184e523ccc4f22930dc0a5a6ffa01`、
+repository=lidge-jun/opencodexであり、所有forkのmergeではない。
+
+指定された公開registryのtarballをHTTPS・redirect拒否でメモリへ取得した。
+これは独立した公開更新候補の検査であり、保護された稼働インストールからの読取や複製ではない。
+ファイルへ展開せず、候補のスクリプトも実行していない。
+
+- 取得先: `https://registry.npmjs.org/@bitkyc08/opencodex/-/opencodex-2.86.0.tgz`
+- 実取得サイズ: 14,343,874 bytes
+- 実SHA256: `a866613df22132067779389aa0e219d04d49171fdf556619433886681e7b1254`
+- 実SHA1: `f5cc601a9778aa319f08a469c9f8b1becb455d8c`
+- 実SRI: `sha512-MfN/TVFe/McShDrnZ0n5lPu3GxTc5SwksDdYg+BVgLg58z/2R3ChL/ahNewQ9B5pk1RQNI+IBijY9WBH8BGHww==`
+- SHA1とSRIはmetadataのshasum/integrityに一致した。
+  metadataの署名検証や全packageのGit対応を確認したという意味ではない。
+
+GZipStream/TarReaderで必要な3項目だけをメモリ内で読み、実SHA256を計算した。
+package.jsonのname/versionも@bitkyc08/opencodex / 2.86.0と一致した。
+
+| package内の項目 | bytes | 実SHA256 |
+|---|---|---|
+| package.json | 4441 | a74aac1c6dd367d3e407afb9b93d73d1718f10df9d0190d86af0ce598d67a7c7 |
+| src/lib/errors.ts | 33306 | a2b0b3bd4924bd881d329012048b2fa645f388ceb25ed2e5ded2c3eaaa6160fd |
+| src/codex/subagent-model-fallback.ts | 42287 | 1e776de821e7f0cf2121f57b5d2f1b604bc81eb39571c68f722107d518461602 |
+
+GitHub contents APIで同gitHeadの公開ソースの実bytesも照合した。
+errors.tsはblob=`9de95942dfef6f86e7bb6046deb58401411f1197`で上のSHA256と一致。
+fallbackはblob=`7f9e22648dd149087eefefa6aa6d0191a18a30be`で、
+上のSHA256と一致し、2.83.0/2.84.0の同ファイルとも同一である。
+
+2.86.0のerrors.tsには明示capacityの正規表現がなく、混雑分類は503または
+overloaded/server is busy/temporarily unavailableを条件としていた。
+`noteSubagentModelFailure`は引き続きisRateLimitOrQuotaFailureMessageだけを通過条件にしている。
+そのhelperはrate_limit/insufficient_quota/usage limitを扱い、overloadを扱わない。
+したがってPR3の「正規capacityを混雑へ分類しモデル停止へ記録する」修正の配布候補ではない。
+これはソースとpackageの静的照合で、稼働proxyの切替受入を実行した結果ではない。
+
+### 稼働側と保護境界
+
+正規status/system healthは両方2.83.0、現在PID15508、10100、health正常、
+spendLedger degraded=false。readyは引き続きfailedで非0。
+startupもat-risk/service stale/viable=false/rebootSafe=falseのまま。
+前回PID47256から変わった原因や、その途中の復帰成功はこの読取だけでは確定しない。
+今回の担当はサービスを停止・更新・再起動していない。
+
+既存タスクの読取ではopencodex-proxy最終実行03:48:36、結果0、
+CC-ResidentGuard最終実行08:45:50、結果0、次回08:50:49。
+タスク結果0を更新成功やready成功へ読み替えない。
+
+元のパッケージ配置先そのものに対するguardも再確認し、
+client_resource=true/classification_unverified=true/original_registry_recovered=falseのままだった。
+guard/manifest/scope登録を変更せず、元資源の実hash取得・書換え・別経路の操作はしていない。
+今回の具体操作が実行policyや自動審査で拒否されたわけではない。
+GitHubの追加読取1回のTLS handshake timeoutは同じ読取の有限再試行で成功した。
+これを権限拒否・モデル混雑・CI失敗と誤分類しない。
+
+新候補の実hashと2ソースの対応は確認できたが、稼働実体との対応・復帰health・
+制御された切替実受入・更新失敗時維持は未達。進捗は20%を維持する。
+正規候補へ修正が入ることと、稼働先の保護範囲が正規に確認されることの両方が必要。
+6時間後の有限再確認を同じ元ToDoへ記録する。元1936や原台帳は変更しない。
+この再開確認で新しい一時フォルダ、検証プロセス、Chromeタブ、Docker資源は作っていない。
+
+### 調査記録のGitHub配送
+
+新しい記録を作業ブランチにcommitした後、通常git pushは認証入力先の
+`/dev/tty`不在とUsername読取失敗で終了した。既存gh credential helperの利用と
+正規 `gh auth setup-git --hostname github.com` でもpushは復旧しなかった。
+`gh auth status`の終了1と認証失敗の有無だけを確認し、秘密値は表示していない。
+CLIの保存先repo照会も404となった。これらは実行policyの拒否とは区別する。
+
+既存GitHub連携の正規get_repoでは、同じ保存先の実所有者AutoDevJapan、
+repo1406818713、admin/maintain/push=trueを確認できた。
+正規連携で同じ作業ブランチの旧head f68a6d9も照合した。
+追加ログイン・新権限・認証ファイルの読取をせず、この既存連携で記録の保存を進める。
+GitHub上の実commit/treeと作業コピーの対応は配送後のToDoへ記録する。
+CLI push失敗を成功へ書き換えず、製品稼働反映と調査記録の配送も区別する。

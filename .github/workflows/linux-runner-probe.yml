@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   probe:
-    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux, cc-pc-tools-linux-2511-proof]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +39,6 @@ jobs:
           cargo test --locked -p cc-task-title -j64 -- --test-threads=32
           cd tools/linux-runner-bridge
           go version
-          mkdir -p /work/go-tmp
-          export GOTMPDIR=/work/go-tmp
-          go test ./...
+          mkdir -p /work/go-tmp /work/go-cache
+          export GOTMPDIR=/work/go-tmp GOCACHE=/work/go-cache TMPDIR=/work/go-tmp GOMAXPROCS=2
+          go test -p 2 -timeout 60s ./...

@@ -133,3 +133,12 @@ PR144は固定b920/tree966bffで通常マージ済み。merge0b703782、5本配�
 次は2627の原応答・実モデル・実exitを照合し、Mustがあれば本体のみで修正→必要関連検査/別モデル/新CI/配布。Mustが無ければ同対象を実完了した根拠を元2512へ記録してdoneにし、元2511の残受入は担当へ戻す。親の定期scheduler repair-stepでstep_failures[]/scheduler_ok trueを実確認。今回の旧モデル単独待ちを無条件正常へ書き換えない。
 23時台の受入・保持候補6・未実測GUI/OS復帰・原registry喪失/請求/製品未完を保持。2505/2528/2530にはマージ配布と元2467の依存成立後same-session manual resume指示を正式配送済み。依存や元仕様を解除しない。
 完成速報は未送信、request-id未登録。旧cleanup logはQuestionStateRecoveryRequiredでHTTP前停止した未送信原投稿を保持し、同内容を別経路へ強制しない。実受入が揃ったら明示の新completion request-idを登録し、「【速報】作業完了のお知らせ」で始まる本人メンション1件を送信・GET/receipt verified確認。その後だけ親2488を完了。本人判断待ちなし。
+
+## 2026-10-15 00:20の追加修復（完成通知は未送信）
+元2512の代替レビュー2627は実Sonnet/exit0/succeeded、Must1（Linux中止後のzombieでtarget占有）を返した。原応答review-2627-linux-b920.private.md保持。正規docker inspect/topで既存normalcontainerのInit=null/PID1sleep、当時Worker0を確認し、指摘の前提は成立した。未実測のキャンセルを成功へ書き換えない。
+本体Aのみで新branch codex/unattended-linux-drain-20261015を作り、main0b70378へffして修正。e380431で/procによる実行可能member/thread判定、unknown保持、zombie除外、TERM全終了時SIGKILL省略、normalcontainerInit必須、normalmodeversion修正、READMEの協調gate説明を追加。Windows関連Go4.467秒exit0。次のcbf0a7468182c466d5e5286793346c1f2b999c9d/treeはgitで再取得する。cbfは通常CIにbridge Windows/Linux回帰と120秒timeout、Rust全workspaceのbridgeパスtriggerを追加した。両版のGo module treeは80538669d624a3a7b196c8f63071157c6998be07で同一。
+PR169 https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/169 を作成済み。PR144のマージ/5本配布を繰り返さない。新source未マージ・新Linux bridge未配布。
+子2629は固定e380のGo実検査/WindowsとLinuxの生成/担当stage image/稼働更新の準備だけ。実job20261015-001628-todo-2629がdoing。子2630は最終cbfの7file差分をSonnet確認、実job20261015-001921-todo-2630がdoing。新CI有限保存check2632も登録。Build38588221612/Readiness38588221597/CodeQL38588221702はcbfの未終端。元e380CodeQL38587843168は旧sourceなので取消/未完を保持し成功へ流用しない。手動Cargo全件やCIrerunなし。
+元2512は正式wait2629/2630として原model/specを保持し、レビュー実Must解消までdoneにしない。旧未提供モデルを原scope不明のまま勝手に別指定へ書換えず、同原橋渡しを実確認で完了する。元2511の待ちも保持。
+次は2629の実Linux回帰・artifact/sourcebytes・stageimage/更新計画、2630の原応答Must、2632の最新source必要3CI原全文を確認。Must修正が必要ならAのみで限定修正し、関連検査から最新sourceレビュー/CIへ進む。必要CIとMust解消後、PR169を通常fixedHEADでマージ。既存CC-LinuxRunner-todo2510がidle/Worker0/target未使用時のみ、同範囲の--init構成と最新bridgeへ更新し、同既存taskとCC-AdminBrokerでOAuthメモリ復帰/Listener1/hash/health/実中止を確認。稼働CIを途中で落とさない。新runtime/imageはまだ配布しない。
+1時間清掃は23:58実完了、失敗0/削除0。3時間容量は00:06の実結果、部分走査/回収0/E untouched。新完成request-idはまだ未登録・本人メンションなし。原旧cleanup logは未送信のまま保持。他製品/原registry/支出監査・未実測OS/GUI復帰を完了へ広げない。本人判断待ちなし。

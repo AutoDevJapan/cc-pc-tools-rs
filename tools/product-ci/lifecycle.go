@@ -12,10 +12,29 @@ import (
 )
 
 func createIsolated(ctx context.Context, name, image string) (string, error) {
-	c := cmd(ctx, docker, "create", "--name", name, "--label", "cc.todo=2648", "--init", "--user", "1001:1001", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only", "--network", "none", "--cpus", "2", "--memory", "2g", "--pids-limit", "256", "--tmpfs", "/work:rw,nosuid,size=1g,uid=1001,gid=1001", "--tmpfs", "/tmp:rw,nosuid,noexec,size=256m,uid=1001,gid=1001", "--workdir", "/work", image, "sleep", "infinity")
+	if e := nodeImage(image); e != nil {
+		return "", e
+	}
+	c := cmd(ctx, docker, "create", "--name", name, "--label", "cc.todo=2648", "--label", "cc.instance="+name, "--init", "--user", "1001:1001", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only", "--network", "none", "--cpus", "2", "--memory", "2g", "--pids-limit", "256", "--tmpfs", "/work:rw,nosuid,size=1g,uid=1001,gid=1001", "--tmpfs", "/tmp:rw,nosuid,noexec,size=256m,uid=1001,gid=1001", "--workdir", "/work", image, "sleep", "infinity")
 	b, e := c.Output()
 	if e != nil {
-		return "", errors.New("isolated container creation failed")
+		// The daemon may have created the resource before the CLI was cancelled.
+		// Recover only our exact nonce/name/image; otherwise leave admission held.
+		probe, stop := context.WithTimeout(context.Background(), 10*time.Second)
+		defer stop()
+		var found []struct {
+			ID     string
+			Name   string
+			Config struct {
+				Image  string
+				Labels map[string]string
+			}
+		}
+		b, probeErr := cmd(probe, docker, "inspect", name).Output()
+		if probeErr == nil && json.Unmarshal(b, &found) == nil && len(found) == 1 && found[0].Name == "/"+name && found[0].Config.Image == image && found[0].Config.Labels["cc.instance"] == name && found[0].Config.Labels["cc.todo"] == "2648" {
+			return found[0].ID, errors.New("container created but CLI completion uncertain")
+		}
+		return "", errors.New("container creation uncertain; preserve admission and recover recorded instance")
 	}
 	id := strings.TrimSpace(string(b))
 	if len(id) != 64 {
@@ -61,10 +80,17 @@ func disposeOwned(id string) (gone, removed bool, err error) {
 // No repository or credential is involved in these real normal/cancel fixtures.
 // A child remains alive until the owned Docker PID namespace is stopped.
 func lifecycleSmoke(ctx context.Context, dir, image string) (ret error) {
+	if e := nodeImage(image); e != nil {
+		return e
+	}
 	for _, cancelCase := range []bool{false, true} {
 		name := fmt.Sprintf("todo2648-lifecycle-%t-%d", cancelCase, time.Now().UnixNano())
 		id, e := createIsolated(ctx, name, image)
 		if e != nil {
+			if id != "" {
+				_, _, cleanupErr := disposeOwned(id)
+				return errors.Join(e, cleanupErr)
+			}
 			return e
 		}
 		func() {

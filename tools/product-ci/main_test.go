@@ -129,6 +129,29 @@ func TestOutputLimit(t *testing.T) {
 	}
 }
 
+func TestDockerEndpointCannotInheritRemoteContext(t *testing.T) {
+	t.Setenv("DOCKER_HOST", "tcp://untrusted.invalid:2375")
+	t.Setenv("DOCKER_CONTEXT", "remote")
+	t.Setenv("DOCKER_CONFIG", "untrusted-config")
+	c := cmd(context.Background(), docker, "inspect", "owned")
+	if len(c.Args) < 4 || c.Args[1] != "--host" || c.Args[2] != "npipe:////./pipe/dockerDesktopLinuxEngine" {
+		t.Fatal("Docker endpoint is not pinned")
+	}
+	for _, v := range c.Env {
+		key, _, _ := strings.Cut(v, "=")
+		if strings.HasPrefix(strings.ToUpper(key), "DOCKER_") {
+			t.Fatal("Docker routing override inherited")
+		}
+	}
+}
+func TestMutableImageRejectedBeforeFixtureLaunch(t *testing.T) {
+	for _, s := range []string{"node:latest", "unknown@sha256:" + strings.Repeat("a", 64), "node@sha256:bad"} {
+		if e := nodeImage(s); e == nil {
+			t.Fatal("mutable or unapproved image admitted")
+		}
+	}
+}
+
 func TestVerifyFixedIdentity(t *testing.T) {
 	c := candidates[0]
 	validRepo := `{"id":1285649124,"full_name":"AutoDevJapan/opaque","private":true,"fork":false,"owner":{"login":"AutoDevJapan"},"permissions":{"admin":true}}`

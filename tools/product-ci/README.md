@@ -6,6 +6,9 @@ numeric repository IDs, PR numbers and source revisions are explicit. Before
 source retrieval, before execution and after execution, GitHub must confirm the
 real permitted owner, private non-fork repository, administration access, same
 head/base repository and unchanged open PR and branch SHA. Names stay in RAM.
+The Docker client always uses the verified local Windows Docker Desktop Linux
+named pipe and strips all inherited Docker routing/configuration environment
+variables. A profile's current context cannot redirect source transfer.
 
 `product-ci inspect` reports only opaque identities. The initial finite
 `node-contracts` command runs the first candidate's existing Node script tests;
@@ -27,6 +30,8 @@ creating a replacement commit or claiming that an archive has a commit HEAD.
 The single public YAML dependency is pinned to the original lockfile's version
 and SHA512, retrieved without authentication and verified before transfer.
 `node-retry` selects only failed scripts from the original TAP evidence.
+It first binds that log to its original receipt's repo/PR/SHA, failure exit,
+SHA256 and byte count. Receipts distinguish all-scripts from failed-subset.
 
 The new finite container has an ownership label and unique name, non-root UID,
 `--init`, dropped capabilities, no-new-privileges, a read-only image, bounded
@@ -36,7 +41,11 @@ supply any credential to the test command. This step executes no Cargo; future
 Cargo acceptance must use the shared host Cargo gate and distinct target locks.
 
 An exclusive per-candidate lock prevents duplicate execution. A failed cleanup
-retains the lock. Normal return and deadline cancellation stop this owned Docker
+or uncertain create retains the lock and records the exact new instance name.
+If a create command loses its result, only that instance's name/nonce/image may
+recover its ID for disposal. Receipt paths are reserved exclusively and updated
+through a synced temporary file and rename; reusing an execution directory is
+rejected. Normal return and deadline cancellation stop this owned Docker
 PID namespace, inspect its stopped state/PID zero and ownership, and remove only
 that container and its volumes. Original test logs and their SHA256, source
 revision/tree, archive digest, exit and cleanup results remain in the owned

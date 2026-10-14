@@ -62,10 +62,27 @@ type pull struct {
 type api func(context.Context, string, any) error
 
 func cmd(ctx context.Context, name string, args ...string) *exec.Cmd {
+	if name == docker {
+		args = append([]string{"--host", "npipe:////./pipe/dockerDesktopLinuxEngine"}, args...)
+	}
 	c := exec.CommandContext(ctx, name, args...)
 	hidden(c)
 	c.WaitDelay = 5 * time.Second
+	if name == docker {
+		c.Env = localDockerEnv(os.Environ())
+	}
 	return c
+}
+
+func localDockerEnv(env []string) []string {
+	var out []string
+	for _, s := range env {
+		key, _, _ := strings.Cut(s, "=")
+		if !strings.HasPrefix(strings.ToUpper(key), "DOCKER_") {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 type boundedBuffer struct {
@@ -150,6 +167,9 @@ type receipt struct {
 	SelectedFailedScripts    int       `json:"selected_failed_scripts,omitempty"`
 	LockReleased             bool      `json:"lock_released"`
 	Failure                  string    `json:"failure,omitempty"`
+	Scope                    string    `json:"scope"`
+	ContainerName            string    `json:"container_name,omitempty"`
+	CreationUncertain        bool      `json:"creation_uncertain"`
 }
 
 func writeReceipt(dir string, r receipt) error {
@@ -157,7 +177,22 @@ func writeReceipt(dir string, r receipt) error {
 	if e != nil {
 		return e
 	}
-	return os.WriteFile(filepath.Join(dir, fmt.Sprintf("repo-%d-result.private.json", r.RepoID)), b, 0600)
+	f, e := os.CreateTemp(dir, "receipt-*.private.tmp")
+	if e != nil {
+		return e
+	}
+	temp := f.Name()
+	if _, e = f.Write(b); e == nil {
+		e = f.Sync()
+	}
+	closeErr := f.Close()
+	if e != nil {
+		return e
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return os.Rename(temp, filepath.Join(dir, fmt.Sprintf("repo-%d-result.private.json", r.RepoID)))
 }
 
 // Convert GitHub's fixed archive into an opaque-root archive before Docker stdin.
@@ -246,11 +281,8 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	if c.ID != 1285649124 {
 		return errors.New("this acceptance step is only approved for the first candidate")
 	}
-	if !strings.HasPrefix(image, "node@sha256:") || len(strings.TrimPrefix(image, "node@sha256:")) != 64 {
-		return errors.New("immutable official Node image required")
-	}
-	if _, e := hex.DecodeString(strings.TrimPrefix(image, "node@sha256:")); e != nil {
-		return errors.New("image digest invalid")
+	if e := nodeImage(image); e != nil {
+		return e
 	}
 	r, e := verify(ctx, c, get)
 	if e != nil {
@@ -258,6 +290,14 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	}
 	rec := receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: "identity-verified", At: time.Now().UTC()}
 	rec.Image = image
+	rec.Scope = "all-scripts"
+	reservation, e := os.OpenFile(filepath.Join(dir, fmt.Sprintf("repo-%d-result.private.json", c.ID)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return errors.New("receipt destination already used or unavailable")
+	}
+	if e = reservation.Close(); e != nil {
+		return errors.New("receipt reservation failed")
+	}
 	defer func() {
 		if ret != nil {
 			rec.Failure = ret.Error()
@@ -268,7 +308,8 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	}()
 	var selected []string
 	if previousLog != "" {
-		b, e := os.ReadFile(previousLog)
+		rec.Scope = "failed-subset"
+		b, e := previousFailure(previousLog, c)
 		if e != nil {
 			return errors.New("previous failure evidence unavailable")
 		}
@@ -292,6 +333,9 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	if e != nil {
 		return e
 	}
+	if e = verifyLockedYaml(archive); e != nil {
+		return e
+	}
 	if _, e = verify(ctx, c, get); e != nil {
 		return e
 	}
@@ -307,7 +351,7 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 			ret = errors.Join(ret, errors.New("candidate lock close failed"))
 			return
 		}
-		if rec.ContainerID == "" || rec.ContainerRemoved {
+		if (!rec.CreationUncertain && rec.ContainerID == "") || rec.ContainerRemoved {
 			if e := os.Remove(lockPath); e != nil {
 				ret = errors.Join(ret, errors.New("candidate lock release failed"))
 			} else {
@@ -319,17 +363,23 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 		return e
 	}
 	name := fmt.Sprintf("todo2648-repo-%d-node-%d", c.ID, time.Now().UnixNano())
-	id, e := createIsolated(ctx, name, image)
-	if e != nil {
-		return errors.New("isolated container creation failed")
-	}
-	rec.ContainerID = id
-	rec.Stage = "container-created"
+	rec.ContainerName = name
+	rec.CreationUncertain = true
 	defer func() {
+		if rec.ContainerID == "" {
+			return
+		}
 		var e error
 		rec.TreeGone, rec.ContainerRemoved, e = disposeOwned(rec.ContainerID)
 		ret = errors.Join(ret, e)
 	}()
+	id, e := createIsolated(ctx, name, image)
+	rec.ContainerID = id
+	if e != nil {
+		return e
+	}
+	rec.CreationUncertain = false
+	rec.Stage = "container-created"
 	if e = cmd(ctx, docker, "start", rec.ContainerID).Run(); e != nil {
 		return errors.New("container start failed")
 	}
@@ -415,6 +465,66 @@ func nodeContracts(ctx context.Context, c candidate, dir, image, previousLog str
 	}
 	if code != 0 {
 		return errors.New("node contract tests failed; consult private original log")
+	}
+	return nil
+}
+
+func nodeImage(image string) error {
+	if !strings.HasPrefix(image, "node@sha256:") || len(strings.TrimPrefix(image, "node@sha256:")) != 64 {
+		return errors.New("immutable official Node image required")
+	}
+	if _, e := hex.DecodeString(strings.TrimPrefix(image, "node@sha256:")); e != nil {
+		return errors.New("image digest invalid")
+	}
+	return nil
+}
+func previousFailure(file string, c candidate) ([]byte, error) {
+	if filepath.Base(file) != fmt.Sprintf("repo-%d-node-contracts.private.log", c.ID) {
+		return nil, errors.New("previous log identity rejected")
+	}
+	meta, e := os.ReadFile(filepath.Join(filepath.Dir(file), fmt.Sprintf("repo-%d-result.private.json", c.ID)))
+	if e != nil {
+		return nil, errors.New("previous receipt unavailable")
+	}
+	var previous receipt
+	if json.Unmarshal(meta, &previous) != nil || previous.RepoID != c.ID || previous.PR != c.PR || previous.SourceSHA != c.SHA || previous.Stage != "node-contracts-finished" || previous.Exit == nil || *previous.Exit == 0 {
+		return nil, errors.New("previous failure identity rejected")
+	}
+	b, e := os.ReadFile(file)
+	if e != nil || digest(b) != previous.LogSHA || int64(len(b)) != previous.LogBytes {
+		return nil, errors.New("previous failure log digest rejected")
+	}
+	return b, nil
+}
+func verifyLockedYaml(archive []byte) error {
+	tr := tar.NewReader(bytes.NewReader(archive))
+	havePackage, haveLock := false, false
+	for {
+		h, e := tr.Next()
+		if e == io.EOF {
+			break
+		}
+		if e != nil {
+			return errors.New("dependency source archive invalid")
+		}
+		if h.Name != "package.json" && h.Name != "pnpm-lock.yaml" {
+			continue
+		}
+		b, e := io.ReadAll(io.LimitReader(tr, 16<<20))
+		if e != nil {
+			return errors.New("dependency source unavailable")
+		}
+		if h.Name == "package.json" {
+			var p struct {
+				DevDependencies map[string]string `json:"devDependencies"`
+			}
+			havePackage = json.Unmarshal(b, &p) == nil && p.DevDependencies["yaml"] == "2.9.0"
+		} else {
+			haveLock = regexp.MustCompile(`(?m)^  yaml@2\.9\.0:\r?\n    resolution: \{integrity: ` + regexp.QuoteMeta(yamlIntegrity) + `\}`).Match(b)
+		}
+	}
+	if !havePackage || !haveLock {
+		return errors.New("fixed source YAML lock binding rejected")
 	}
 	return nil
 }
@@ -552,7 +662,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | node-contracts <opaque-id> <owned-receipt-dir> <node@sha256:digest>")
+		e = errors.New("usage: product-ci inspect | node-contracts <id> <new-owned-dir> <node@sha256:digest> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

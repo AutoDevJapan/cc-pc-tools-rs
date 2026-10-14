@@ -18,3 +18,9 @@
 原メタデータ、通常gh run view --logの取得終了値1、個別jobのログ取得終了値1と原stdout bytes・SHA256を、このworktreeの .ci-work/todo-2632-cbf/ に非公開保存した。原ログ本文はまだ取得できていない。旧b920/e380の結果を流用していない。
 
 残りは同3runの終端、全実jobの原ログとBuild件数/doc/Clippy、Readiness全9job、CodeQL4言語の同SHA解析/upload/results/errors確認。再開は同ToDo・同固定runで行う。Cargo・CI再実行・dispatch・取消・merge・配布・Discord・本体編集は行わない。親2488と原2512の完了を変更しない。
+
+### 2026-10-15 00:35の保存確認
+
+固定cbfのBuildが成功。原ログでは全workspace2,164成功・5skip・422.761秒、doc16群の実0件、Clippy成功。Readinessは4job成功・5job取消。取消は同PRの後続要求優先と公式注記で確認した。CodeQLは3言語取消・rust未終端で、全件成功ではない。
+
+6実jobの原ログをbytes・SHA256・取得exit・根拠行とともに非公開保存した。PRのheadは進んでいるが、この依頼は元の同3runを保つ。残るCodeQL終端と原結果の確認は、元2632の正規wait-retryから自動再開する。本体編集・再検査・再実行・マージ・配布は行っていない。

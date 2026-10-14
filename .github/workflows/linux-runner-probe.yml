@@ -27,14 +27,15 @@ jobs:
           test ! -e /dev/nvidiactl
           test ! -e /dev/dri
           assert_rejected() {
-            local output
+            local expected="$1" output
+            shift
             if output=$("$@" 2>&1); then echo 'Forbidden request was accepted'; exit 1; fi
-            printf '%s\n' "$output" | grep -F 'bridge rejected (403)'
+            printf '%s\n' "$output" | grep -F "$expected"
           }
-          assert_rejected env GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook
-          assert_rejected env GITHUB_SHA=0000000000000000000000000000000000000000 /opt/bridge/bridge hook
-          assert_rejected cargo test --config=build.jobs=64
-          (cd /tmp && assert_rejected cargo test --locked)
+          assert_rejected 'runner event rejected' env GITHUB_REPOSITORY=other/repo /opt/bridge/bridge hook
+          assert_rejected 'bridge rejected (403)' env GITHUB_SHA=0000000000000000000000000000000000000000 /opt/bridge/bridge hook
+          assert_rejected 'bridge rejected (403)' cargo test --config=build.jobs=64
+          (cd /tmp && assert_rejected 'bridge rejected (403)' cargo test --locked)
           cargo --version
           cargo metadata --locked --format-version 1 --no-deps > /work/metadata.json
           cargo test --locked -p cc-task-title -j64 -- --test-threads=32

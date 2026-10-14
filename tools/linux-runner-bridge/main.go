@@ -799,6 +799,7 @@ func bridgeURL(mode, path string) string {
 func hook() int {
 	r, ok := jobRequestFromEnv()
 	if !ok {
+		fmt.Fprintln(os.Stderr, "runner event rejected")
 		return 1
 	}
 	return rpc("/authorize", r)

@@ -61,3 +61,45 @@ removal. It does not claim recovery after host termination, logout or power loss
 
 GitHub's fixed archive endpoint is documented at
 https://docs.github.com/en/rest/repos/repos#download-a-repository-archive-tar.
+
+## Finite default-setup CodeQL jobs
+
+`codeql-route <repo-id> <new-owned-dir>` changes only the already-configured
+default setup's runner type/label. It records the previous configuration and
+mutation intent first. Languages, queries and threat model must remain equal.
+Advanced workflows (the other two candidates) are rejected by this mode.
+No hosted budget, org access or original candidate source changes.
+
+`codeql-job <repo-id> <run-id> <new-owned-dir> <Linux-helper-binary>` serves one
+official dynamic CodeQL job using a new non-root, read-only, init-enabled
+container of the verified credential-free SDK image. It has bounded CPU/RAM,
+tmpfs-only storage and no host bind, profile, GPU or socket. The immutable base
+is shared; it is neither modified nor removed. Only the newly built Go helper
+crosses Docker stdin. Registration uses RAM and the official runner's token
+input environment. Configuration output is suppressed. Credentials and runner
+diagnostics remain in disposable guest tmpfs. No resident bridge is invoked.
+
+Registration is repo-scoped, has a unique name, no default labels, one dedicated
+label, and `--ephemeral --disableupdate`. Both hooks bind the exact repo, run,
+attempt and source. The completed hook verifies actual Git HEAD/tree and absence
+of checkout credentials. The host checks the live original candidate before
+registration and after execution. Default-branch setup validation is explicitly
+separate from candidate evidence. A runner exit never certifies the workflow:
+official jobs, logs and CodeQL uploads still require verification. Receipts
+retain `all_required_checks_success=false`.
+
+This mode performs CodeQL's no-build analysis only; Rust and the resident Cargo
+adapter are excluded from its PATH. Native Cargo, Windows, Lua and other
+acceptance still need their separate gated resources. Normal return and deadline
+cancellation stop and inspect the actual namespace before removal and before
+releasing per-candidate admission. Any residual remote registration is removed
+only by its unique name in the same repo and absence is checked again. Uncertain
+creation, cleanup or registration absence retains admission for recovery.
+
+Run `TestCodeQLRealLifecycle` with `CC_PRODUCT_LIFECYCLE_DIR` pointing at a new
+safe-delete-owned directory for real normal/cancel process tests, without tokens
+or GitHub registration. Preserve those receipts before cleanup.
+
+Official API and runner contracts:
+https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
+https://docs.github.com/en/actions/reference/runners/self-hosted-runners

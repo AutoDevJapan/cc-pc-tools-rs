@@ -1,5 +1,28 @@
 # ToDo2628の再開記録
 
+## 現在の結論: sourceはマージ済み、配布と実取得は未完了
+
+PR171を固定191b17f6ab01a865dd3e7e10786a8fead8d04753/Must0/必要CI成功後に自己mergeした。
+merge:183ac4fc7f0348021f9544cd8ac232669a3b8620、2026-10-14T17:53:52Z。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/171
+並行の製品CI2648/PR173が入ったmainを保持した。mergeとbuild191のRust入力はCargo.toml/lock、依存6crateとlocalai-web-rs、nextest設定でdiff0を確認した。並行sourceを戻していない。元の登録sourceはcb47db4、localai-web-rs/cc-todoのtracked変更0だった。
+
+最終CI38608792869は全workspace2173成功/5skip、doctest成功、全targetClippy成功。CodeQL38608792819は4言語成功。原全文はtodo-2628-final-ci.private.log。
+最終レビュー2659はSonnet5.5/sourcejob20261015-024427-todo-2659/固定191b17f/Must0、原応答1678文字をreview-2659-received-original.private.mdへ保存し、レビューだけdone。2656/e442と2633/080の結果はそれぞれ別の原報告として保持した。
+
+配布用2本のreleaseビルドは終了0。cc-console:4,249,088bytes/SHA256 da61c8a7f5d6791776a00ab1d4b7529ba9e59662f48da2368aa33f7e03fc1e73。
+server:13,633,024bytes/SHA256 e176ab9726f4b19f5334604fbdd93b31dc9debe20ea73e3f6f23a30772386588。
+必要な2本は同じworktreeの所有stage codex-owned-4cfc39ee99fb34e3fc8b575b1b2b3afcへcopyし、bytes/hash一致を再確認した。所有ID:4cfc39ee99fb34e3fc8b575b1b2b3afc。元コードをclone/helperへ移していない。詳細はtodo-2628-release-receipt.private.json。
+
+正規guardは稼働CLIとport10012の既存serverの両方にclient_resource=true/classification_unverified=trueを返した。serverは期待するprogramでPID23240だが対象を確認できない。未知資源には触らないという依頼の制限を保持し、実行版のhash読取・copy・再起動・CLI実行を行っていない。これは自動審査の拒否ではなく原保護設定未復旧の判定である。
+GET /api/agent/todo/list?id=2628の実HTTPは404、ok/metadataOnly/masked=false。新API稼働成功、元31MBの全ページ、実CLI終了0/ok:true、実台帳bytes不変を検証済みとは言わない。
+
+原復旧2467は2505待ち、2505は2488/2528待ち。2628から2467への依存は循環しないことを数値graphで確認した。正式な対象確認を原復旧へ接続し、その後に配布・実取得を続行する。元guard/旧192/原記録/保護/委譲/拒否済みscope10/Sunoは変更・迂回していない。本人のPC操作と追加技術判断を求めない。
+
+不要になった所有ビルド領域f49c14cb（4,616,763,653bytes/5118entries）はplanがsizeでquarantineを指定したため正規quarantineを実行し、quarantinedを確認した。item_27はこの完了を原eventsで確認済み。再実行しない。移動は同じCドライブの削除希望で、空き容量回収とは主張しない。配布用stage18MBは未完工程に必要なので保持する。
+
+次に再開する際は、マージと検査を繰り返さず、まず正規guardと並行runtime/sourceを照合する。正式に対象を確認できた後だけ既存task/管理者窓口でserver→API/新PID/health→CLIの順に配布する。実CLI一覧/番号指定/全ページ、原bytes保持と配布receiptが揃うまで2628はdoneにしない。stageの回収は配布実成功後に所有記録のplan/通常削除/finishで行う。
+
 ## 2026-10-15の再開と指摘修正
 
 元worktreeとsessionから再開した。開始HEADはd06d7f40f741cc5b3c8bba46116a1c04aa82cc29。

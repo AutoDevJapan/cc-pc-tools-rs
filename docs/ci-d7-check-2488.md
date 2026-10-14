@@ -38,3 +38,11 @@
 2026-10-14 09:09 JST：Build run38478465876/job115574911494/attempt1がcancelledで終端。通常ghのcheck-run/annotations原APIで「The job has exceeded the maximum execution time of 1h30m0s」を確認した。全workspace nextest工程がcancelled、doctest/全targets Clippyはskipped、後続package-toolsもskipped。これらを成功と扱わない。原全文の通常gh取得は端末制御文字でexit1/0bytes、拒否flagは再試行せず迂回しない。最小確定原因は90分上限超過で、そこに至った個別test/function・原ログ行・実exit・実pass/fail/skipは未確認。annotation start_line1412はAPIの参照であり、原ログ1412行を読んだという主張ではない。
 
 新しい原注記/チェックAPIのpath/bytes/SHA256と取消工程をbuild-cancelled-evidence.private.json、および主manifest/mdへ保存。修復は親2488へ返し、自分はsourceやCIを変更しない。今回のAPIに後続package-toolsのskipped jobが出たので全job数は20から21へ更新し、各HEAD/attempt/run所属を照合する。その他必要workflowの終端確認は当初の09:31 JST期限内で続ける。
+
+2026-10-14 09:12 JST：poll060で必要8workflowと全21jobが終端したので、本有限checkを完了。workflowのAPI結果は7success/1cancelled、jobは19success/1cancelled/1skipped。全8runのd7 HEAD/attempt1、全21jobのHEAD/attempt/run所属、重複なし・ページ欠落なし・最新API欠落0を最終照合。CodeQLはpoll060の同SHA4言語新解析でerror空/results0、対応4SARIF completeを確認（Rust原全文は未確認、Go未処理ファイル診断を保持）。
+
+原全文はCodeQL Go/Actions/JavaScriptの3jobを取得し、現bytes/SHA256とreceiptを照合。実行された残り17jobの全文取得は通常ghが端末制御文字でexit1/0bytes。これを原ログの内容や指紋と偽らず、stdout/stderr/receiptの実path・bytes・SHA256を保持。過去の許可flagのゲートunknown flag拒否を再試行せず、迂回していない。API上successのGo test/vet/buildとOS別工程を記録したが、非verbose/cached個別件数は不明、全工程の実exitも未確認。Browser/Channel/Bookmark/RecordRecoveryも原全文未確認を明記。
+
+親へ返す実害：Build38478465876/job115574911494は90分上限超過の原GitHub注記でcancelled。全workspace工程cancelled、doctest/全targets Clippy/package-tools skipped。個別test/function・原ログ行・実exit・全workspace実pass/fail/skipと、90分へ至った詳細根因は原全文を取得できず未確認。annotation start_line1412は原ログ行の実確認ではない。先行検査成功や親提供23pass/316skip/静的Must0を、新CIの全件結果へ流用しない。親2488はこの取消と未確認を踏まえて修復・必要CI・merge・配布・運用受入を続ける必要がある。
+
+最終manifest/md: D:/CC/Work/unattended-operations-20261013-wt/todo-2613-2488-ci/.ci-work/d7-2488/ci-d7-result-2488.private.json / ci-d7-result-2488.private.md。全原API/取得できたログ/取得拒否・stderr/receiptを同フォルダに保持。取消原注記はbuild-cancelled-evidence.private.json、取得失敗一覧はfailed-log-fetches.private.json、確定/未知の区別はfinal-check-summary.private.json。PRIVATE原証拠はGitへ追加せず、安全な記録だけを同作業ブランチに保存する。この独立check完了は親2488の全修復/配布/原registry復旧完了を意味しない。自分の状態更新はスケジューラーに任せ、親や他ToDoの状態は変更しない。

@@ -10894,6 +10894,7 @@ mod end_to_end {
         });
         let before = e.job(&jid);
         assert_eq!(before["launch_key"], key);
+        assert_eq!(before["process_tree_version"], 1);
         let child: u32 = fs::read_to_string(e.rec.join("sleep.pid"))
             .unwrap()
             .parse()
@@ -10958,6 +10959,7 @@ mod end_to_end {
     fn test_cancel_of_a_lost_job_kills_the_leftover_codex() {
         let e = E2e::new();
         let (jid, pids) = e.slow();
+        assert_eq!(e.job(&jid)["process_tree_version"], 1);
         let identities: Vec<_> = pids[1..]
             .iter()
             .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))

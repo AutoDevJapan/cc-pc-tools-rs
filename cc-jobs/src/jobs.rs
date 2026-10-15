@@ -869,11 +869,25 @@ impl Context {
         Ok(())
     }
     fn supervise_owned(&self, jid: &str) -> Result<()> {
+        let process_tree: Option<crate::pause::ProcessTreeScope> =
+            if self.rt.supports_process_tree_job() {
+                let pid = self.rt.pid();
+                let created = self
+                    .rt
+                    .proc_created_checked(pid)?
+                    .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
+                Some(crate::pause::contain_current_process(pid, created)?)
+            } else {
+                None
+            };
         {
             let _state = self.job_lock(jid, "state.lock")?;
             let mut job = self.load(jid)?;
             if s(&job, "status") != "queued" || job["cancel_requested"] == true {
                 return Ok(());
+            }
+            if process_tree.is_some() {
+                job["process_tree_version"] = json!(1);
             }
             job["pid"] = json!(self.rt.pid());
             job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));

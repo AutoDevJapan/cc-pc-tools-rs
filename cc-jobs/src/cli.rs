@@ -1332,15 +1332,39 @@ impl Context {
                 targets.push(key);
             }
         }
-        for k in &targets {
-            // Stopping the supervisor's tree can already stop codex_pid.
-            // Recheck the recorded creation time before opening a second root.
-            if self.is_ours_checked(&job, k)? {
-                let created = job[format!("{k}_created")]
-                    .as_u64()
-                    .ok_or_else(|| Error::new("owned process creation time is missing"))?;
-                self.rt
-                    .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+        if job["process_tree_version"] == 1 {
+            let pid = job["pid"]
+                .as_u64()
+                .ok_or_else(|| Error::new("managed process tree root PID is missing"))?
+                as u32;
+            let created = job["pid_created"]
+                .as_u64()
+                .ok_or_else(|| Error::new("managed process tree root identity is missing"))?;
+            if !self.rt.kill_process_tree_job(pid, created)? {
+                // A supervisor that exited releases its named Job Object
+                // handle. Its surviving descendants remain recoverable via
+                // the retained-handle process walk below.
+                for k in &targets {
+                    if self.is_ours_checked(&job, k)? {
+                        let created = job[format!("{k}_created")]
+                            .as_u64()
+                            .ok_or_else(|| Error::new("owned process creation time is missing"))?;
+                        self.rt
+                            .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+                    }
+                }
+            }
+        } else {
+            for k in &targets {
+                // Stopping the supervisor's tree can already stop codex_pid.
+                // Recheck the recorded creation time before opening a second root.
+                if self.is_ours_checked(&job, k)? {
+                    let created = job[format!("{k}_created")]
+                        .as_u64()
+                        .ok_or_else(|| Error::new("owned process creation time is missing"))?;
+                    self.rt
+                        .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+                }
             }
         }
         for _ in 0..50 {

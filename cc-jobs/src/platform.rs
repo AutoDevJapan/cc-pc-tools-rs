@@ -173,6 +173,12 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    fn supports_process_tree_job(&self) -> bool {
+        false
+    }
+    fn kill_process_tree_job(&self, _pid: u32, _created: u64) -> io::Result<bool> {
+        Ok(false)
+    }
     /// None on unsupported platforms and fixture runtimes.
     fn boot_epoch(&self) -> Option<f64> {
         None
@@ -480,6 +486,14 @@ impl Runtime for System {
     #[cfg(windows)]
     fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {
         crate::pause::stop_tree(pid, created)
+    }
+    #[cfg(windows)]
+    fn supports_process_tree_job(&self) -> bool {
+        true
+    }
+    #[cfg(windows)]
+    fn kill_process_tree_job(&self, pid: u32, created: u64) -> io::Result<bool> {
+        crate::pause::stop_tree_in_job(pid, created)
     }
     #[cfg(windows)]
     fn kill_tree(&self, pid: u32) -> io::Result<()> {

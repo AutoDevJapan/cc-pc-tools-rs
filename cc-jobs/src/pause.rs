@@ -25,6 +25,8 @@ mod native {
     use std::collections::{HashMap, HashSet};
     use windows_sys::Win32::{
         Foundation::*,
+        System::JobObjects::*,
+        System::SystemServices::{JOB_OBJECT_QUERY, JOB_OBJECT_TERMINATE},
         System::{Diagnostics::ToolHelp::*, Threading::*},
     };
     #[link(name = "ntdll")]
@@ -79,6 +81,107 @@ mod native {
             unsafe {
                 CloseHandle(self.0);
             }
+        }
+    }
+    pub struct ProcessTreeScope {
+        _job: Handle,
+    }
+    fn job_name(pid: u32, created: u64) -> Vec<u16> {
+        format!("Local\\cc-jobs-tree-{pid}-{created}\0")
+            .encode_utf16()
+            .collect()
+    }
+    pub fn contain_current_process(pid: u32, created: u64) -> io::Result<ProcessTreeScope> {
+        if pid != unsafe { GetCurrentProcessId() } {
+            return Err(io::Error::other("process tree root is not the caller"));
+        }
+        let mut times: [FILETIME; 4] = unsafe { std::mem::zeroed() };
+        if unsafe {
+            GetProcessTimes(
+                GetCurrentProcess(),
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            )
+        } == 0
+        {
+            return Err(at("tree/GetProcessTimes", io::Error::last_os_error()));
+        }
+        let actual = ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64;
+        if actual != created {
+            return Err(io::Error::other("process tree root identity changed"));
+        }
+        let name = job_name(pid, created);
+        let job = Handle(unsafe { CreateJobObjectW(std::ptr::null(), name.as_ptr()) });
+        if job.0.is_null() {
+            return Err(at("tree/CreateJobObject", io::Error::last_os_error()));
+        }
+        if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+            return Err(io::Error::other("process tree job object already exists"));
+        }
+        if unsafe { AssignProcessToJobObject(job.0, GetCurrentProcess()) } == 0 {
+            return Err(at(
+                "tree/AssignProcessToJobObject",
+                io::Error::last_os_error(),
+            ));
+        }
+        Ok(ProcessTreeScope { _job: job })
+    }
+    fn active_job_processes(job: HANDLE) -> io::Result<u32> {
+        let mut accounting: JOBOBJECT_BASIC_ACCOUNTING_INFORMATION = unsafe { std::mem::zeroed() };
+        if unsafe {
+            QueryInformationJobObject(
+                job,
+                JobObjectBasicAccountingInformation,
+                (&mut accounting as *mut JOBOBJECT_BASIC_ACCOUNTING_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32,
+                std::ptr::null_mut(),
+            )
+        } == 0
+        {
+            return Err(at(
+                "tree/QueryInformationJobObject",
+                io::Error::last_os_error(),
+            ));
+        }
+        Ok(accounting.ActiveProcesses)
+    }
+    pub fn stop_tree_in_job(pid: u32, created: u64) -> io::Result<bool> {
+        let name = job_name(pid, created);
+        let job = Handle(unsafe {
+            OpenJobObjectW(JOB_OBJECT_QUERY | JOB_OBJECT_TERMINATE, 0, name.as_ptr())
+        });
+        if job.0.is_null() {
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() == Some(ERROR_FILE_NOT_FOUND as i32) {
+                return Ok(false);
+            }
+            return Err(at("tree/OpenJobObject", error));
+        }
+        if unsafe { TerminateJobObject(job.0, 0) } == 0 {
+            let error = io::Error::last_os_error();
+            // ACCESS_DENIED can race with the final member exiting. The same
+            // retained Job Object handle proves completion only at active=0.
+            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
+                && active_job_processes(job.0)? == 0
+            {
+                return Ok(true);
+            }
+            return Err(at("tree/TerminateJobObject", error));
+        }
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            let active = active_job_processes(job.0)?;
+            if active == 0 {
+                return Ok(true);
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(io::Error::other(format!(
+                    "process tree job still has {active} active process(es)"
+                )));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
     struct Frozen {
@@ -1039,4 +1142,20 @@ mod native {
     }
 }
 #[cfg(windows)]
-pub use native::{idle_agent, recover, stop_tree, supervisor};
+pub use native::{
+    ProcessTreeScope, contain_current_process, idle_agent, recover, stop_tree, stop_tree_in_job,
+    supervisor,
+};
+
+#[cfg(not(windows))]
+pub struct ProcessTreeScope;
+
+#[cfg(not(windows))]
+pub fn contain_current_process(_: u32, _: u64) -> io::Result<ProcessTreeScope> {
+    Ok(ProcessTreeScope)
+}
+
+#[cfg(not(windows))]
+pub fn stop_tree_in_job(_: u32, _: u64) -> io::Result<bool> {
+    Ok(false)
+}

@@ -1,9 +1,11 @@
 # ToDo 2688 checkpoint
 
-- Base: main `5090345eecd94a0b464621a4e9a09c42005e3689`, tree fetched clean; branch `fix/native-recovery-cancel-openprocess-race`.
-- Ownership guard: verified this worktree is not a protected client resource.
-- Confirmed failure: Windows CI run `38687135081`, job `116264465894`; recovery-cancel E2E failed at `parity.rs:10911` with `inspect/OpenProcess: ACCESS_DENIED` (OS error 5). The full run had 2179/2180 pass, 5 skip.
-- Focused E2E: one initial run plus 20 serial repetitions passed on this PC; not evidence that the race is fixed.
-- Current uncommitted implementation adds PID/parent/image/prior-retention context to snapshot-candidate inspection errors and emits owned fixture identity/liveness details only when the recovery E2E fails.
-- Next: run `cc-jobs` parity tests with configured parallelism and investigate process ownership/enumeration races from any diagnostics. Do not treat access denied as absence/success. Then fix and add a deterministic regression test that preserves cancellation intent, timeout, and real process-exit assertions.
-- Not yet done: broad workspace tests, doctests, Clippy, independent model review, PR/CI/merge, requested result JSON, owned temporary/process cleanup.
+- Base: main `5090345eecd94a0b464621a4e9a09c42005e3689`, clean; branch `fix/native-recovery-cancel-openprocess-race`.
+- Ownership guard: this worktree was verified outside protected client resources.
+- Original CI failure: Windows run `38687135081`, job `116264465894`; `test_native_recovery_cancel_preserves_intent_after_process_tree_stops` failed at `parity.rs:10911` with `inspect/OpenProcess: ACCESS_DENIED` (OS error 5). The old CI log contains no PID or image for the denied open.
+- Reproduction attempts before design change: focused E2E passed 20 serial repetitions; all 411 `cc-jobs` tests passed; full workspace passed 2180/2180 (5 configured skips). Therefore the exact failed PID/process was not identified, and those passes are not claimed as a fix.
+- Design change in progress: each new Windows supervisor is assigned at startup to a named Job Object keyed by its PID and creation time. Descendants inherit membership. Recovery cancellation uses the same Job Object and waits for its active-member count to reach zero; `ACCESS_DENIED` is accepted only if querying that same object proves active=0. Job assignment/query/termination failures remain errors.
+- Measured limitation: after the supervisor itself exits, Windows removes the named-object lookup while surviving children remain. Lost-supervisor recovery therefore falls back to the retained-handle tree walk, preserving the existing lost-job scenario. The active-supervisor recurrence uses the Job Object path.
+- Tests after the design change: the native recovery-cancel and lost-job E2Es passed together; full `cc-jobs` nextest passed 411/411 with 0 skipped. The modified recovery E2Es also passed during that run.
+- Next: complete final-source full-workspace nextest, doctest and Clippy; review the process ownership design; commit/push; request a read-only review through shared ToDo `--spec`; resolve Must findings; open PR, verify all required CI, merge and confirm main; write the requested result JSON and cleanup record.
+- Exact original Windows CI PID and image remain unavailable. Do not claim a proven instance-level cause; report that the redesign removes snapshot-PID lookup from the active-supervisor cancellation path.

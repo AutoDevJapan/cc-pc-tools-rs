@@ -1,0 +1,32 @@
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-2683-work\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-2683-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.46s
+────────────
+ Nextest run ID d75e497f-7dee-42c1-a236-37ad7566abcb with nextest profile: default
+    Starting 1 test across 1 binary (152 tests skipped)
+        FAIL [   0.369s] (1/1) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+  stdout ───
+
+    running 1 test
+    test repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch ... FAILED
+
+    failures:
+
+    failures:
+        repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.36s
+
+  stderr ───
+
+    thread 'repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch' (43412) panicked at cc-scheduler\tests\parity.rs:1717:9:
+    assertion `left == right` failed
+      left: Null
+     right: Array [Number(1)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.869s] 1 test run: 0 passed, 1 failed, 152 skipped
+        FAIL [   0.369s] (1/1) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+error: test run failed

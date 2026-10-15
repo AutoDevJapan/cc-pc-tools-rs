@@ -1,0 +1,12 @@
+{
+  "head": "a722fea2e28ff0a9081ce3e5701da414d4882f9d",
+  "tree": "2d598998342712049fd2eea4d0923ee01b8c5b4d",
+  "tracked_diff_vs_fixed_exit": 0,
+  "engine_sha256": "FEE6ECB96406A3CF16E5CDE86009D4D911B96AFCDDC7B7E8994D7BA0B97EB147",
+  "engine_git_blob": "414bb977acee35e980bc6b57670c9422bfe360bf",
+  "exe": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2683-work\\target\\release\\scheduler.exe",
+  "exe_sha256": "4D48DE17A1D9D8172357BFDE4F1A213BD07BE20B31B04967F3B514A70919BC09",
+  "exe_bytes": 5646848,
+  "verified_at": "2026-10-15T12:12:43.9334786+09:00",
+  "deployment_executed": false
+}

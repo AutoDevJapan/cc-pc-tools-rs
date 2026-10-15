@@ -1,0 +1,9 @@
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-2683-work\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-2683-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.01s
+────────────
+ Nextest run ID b6e7b9bc-0eab-4a38-9734-1d2c7adbf11c with nextest profile: default
+    Starting 1 test across 1 binary (152 tests skipped)
+        PASS [   3.587s] (1/1) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+────────────
+     Summary [   4.672s] 1 test run: 1 passed, 152 skipped

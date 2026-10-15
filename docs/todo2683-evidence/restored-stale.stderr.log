@@ -1,0 +1,30 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+────────────
+ Nextest run ID c5307175-5ee4-41fa-8707-4e9fdb5febda with nextest profile: default
+    Starting 1 test across 1 binary (152 tests skipped)
+        FAIL [   1.524s] (1/1) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+  stdout ───
+
+    running 1 test
+    test repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch ... FAILED
+
+    failures:
+
+    failures:
+        repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 152 filtered out; finished in 1.51s
+
+  stderr ───
+
+    thread 'repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch' (45732) panicked at cc-scheduler\tests\parity.rs:1717:9:
+    assertion `left == right` failed
+      left: Null
+     right: Array [Number(1)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   1.526s] 1 test run: 0 passed, 1 failed, 152 skipped
+        FAIL [   1.524s] (1/1) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+error: test run failed

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="nextest-run" tests="1" skipped="0" failures="0" errors="0" uuid="b6e7b9bc-0eab-4a38-9734-1d2c7adbf11c" timestamp="2026-10-15T12:10:43.150+09:00" time="4.672">
+    <testsuite name="cc-scheduler::parity" tests="1" skipped="0" errors="0" failures="0">
+        <testcase name="repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch" classname="cc-scheduler::parity" timestamp="2026-10-15T12:10:43.423+09:00" time="3.587"/>
+    </testsuite>
+</testsuites>

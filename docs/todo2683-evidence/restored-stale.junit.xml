@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="nextest-run" tests="1" skipped="0" failures="1" errors="0" uuid="c5307175-5ee4-41fa-8707-4e9fdb5febda" timestamp="2026-10-15T12:10:03.856+09:00" time="1.526">
+    <testsuite name="cc-scheduler::parity" tests="1" skipped="0" errors="0" failures="1">
+        <testcase name="repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch" classname="cc-scheduler::parity" timestamp="2026-10-15T12:10:03.857+09:00" time="1.524">
+            <failure message="thread &apos;repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch&apos; (45732) panicked at cc-scheduler\tests\parity.rs:1717:9" type="test failure with exit code 101">thread &apos;repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch&apos; (45732) panicked at cc-scheduler\tests\parity.rs:1717:9:
+assertion `left == right` failed
+  left: Null
+ right: Array [Number(1)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</failure>
+            <system-out>
+running 1 test
+test repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch ... FAILED
+
+failures:
+
+failures:
+    repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 152 filtered out; finished in 1.51s
+
+</system-out>
+            <system-err>
+thread &apos;repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch&apos; (45732) panicked at cc-scheduler\tests\parity.rs:1717:9:
+assertion `left == right` failed
+  left: Null
+ right: Array [Number(1)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+</system-err>
+        </testcase>
+    </testsuite>
+</testsuites>

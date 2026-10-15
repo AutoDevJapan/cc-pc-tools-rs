@@ -1,0 +1,13 @@
+diff --git a/cc-scheduler/src/engine.rs b/cc-scheduler/src/engine.rs
+index 414bb97..f698047 100644
+--- a/cc-scheduler/src/engine.rs
++++ b/cc-scheduler/src/engine.rs
+@@ -562,7 +562,7 @@ impl<B: Backend> Scheduler<B> {
+                 e.reconcile_item(&item, jobs, ps, cfg)
+             });
+         }
+-        self.release_repair_waits()
++        Ok(())
+     }
+     /// The repair tick does not run the general watchdog (its private registry
+     /// may be unavailable). Catch both newly completed and previously stranded

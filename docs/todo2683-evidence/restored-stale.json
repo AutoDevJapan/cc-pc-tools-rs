@@ -1,0 +1,11 @@
+{
+  "stage": "restored",
+  "command": "cargo nextest run --locked -p cc-scheduler --test parity -E test(=repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch) --config-file docs/runner-nextest-todo2683.private.txt",
+  "gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2683-work\\target",
+  "head": "a722fea2e28ff0a9081ce3e5701da414d4882f9d",
+  "tree": "2d598998342712049fd2eea4d0923ee01b8c5b4d",
+  "start": "2026-10-15T12:10:00.4810373+09:00",
+  "finish": "2026-10-15T12:10:05.4041191+09:00",
+  "exit": 100
+}

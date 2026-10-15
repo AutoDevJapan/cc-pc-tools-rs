@@ -1,0 +1,10 @@
+{
+  "original_sha256": "FEE6ECB96406A3CF16E5CDE86009D4D911B96AFCDDC7B7E8994D7BA0B97EB147",
+  "original_blob": "414bb977acee35e980bc6b57670c9422bfe360bf",
+  "backup": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-6d0a79eb0559721af0b8cfa2f2b9fbdf/engine.rs.original",
+  "mutation_active": false,
+  "mutated_sha256": "1914F94886E652AED9FC34EC4F4A95F77314590B9CE2572B9CCC4ABF2A1B0D1F",
+  "restored_sha256": "FEE6ECB96406A3CF16E5CDE86009D4D911B96AFCDDC7B7E8994D7BA0B97EB147",
+  "restored_blob": "414bb977acee35e980bc6b57670c9422bfe360bf",
+  "exact_bytes_restored": true
+}

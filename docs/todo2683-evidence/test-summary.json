@@ -1,0 +1,37 @@
+{
+  "tests": 345,
+  "passed": 345,
+  "skipped": 0,
+  "additional": [
+    {
+      "name": "todo_wait::tests::scoped_release_preserves_unverified_rows_and_missing_edges",
+      "classname": "cc-job-policy",
+      "failed": false
+    },
+    {
+      "name": "repair_dependency_release_keeps_normal_capacity_gate",
+      "classname": "cc-scheduler::parity",
+      "failed": false
+    },
+    {
+      "name": "repair_dependency_release_admits_unstarted_waits_and_caches_paths_per_tick",
+      "classname": "cc-scheduler::parity",
+      "failed": false
+    },
+    {
+      "name": "repair_dependency_release_rechecks_concurrent_stop_dependency_and_project_changes",
+      "classname": "cc-scheduler::parity",
+      "failed": false
+    },
+    {
+      "name": "repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch",
+      "classname": "cc-scheduler::parity",
+      "failed": false
+    },
+    {
+      "name": "repair_dependency_release_preserves_prerequisites_scope_and_ownership",
+      "classname": "cc-scheduler::parity",
+      "failed": false
+    }
+  ]
+}

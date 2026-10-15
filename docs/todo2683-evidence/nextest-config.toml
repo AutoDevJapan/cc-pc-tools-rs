@@ -1,0 +1,60 @@
+[profile.default]
+test-threads = 10
+
+[test-groups.process-boundary]
+max-threads = 1
+
+# Real ffmpeg starts several Windows process groups and validates their decoded
+# output. Do not overlap that acceptance check with other child/process tests:
+# the first full run failed with OS error 5, while the isolated run decoded all
+# outputs successfully. Keep every codec/size assertion and the normal deadline.
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & test(real_ffmpeg_image_and_video_outputs_fit_and_decode)'
+threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(cc-jobs) & (test(process_boundary_tests::) | test(cargo_) | test(end_to_end::) | binary(cargo_admission))'
+test-group = 'process-boundary'
+
+# These real Windows child-process tests assert short wall-clock lease deadlines.
+# Share the existing process slot so unrelated process-boundary tests cannot
+# delay their startup/cleanup past the command budget on a busy PC.
+[[profile.default.overrides]]
+filter = 'package(cc-live) & (test(running_child_yields_to_a_waiter_arriving_after_it_started) | test(quiet_running_child_is_not_cut_off_at_the_contention_lease) | test(departed_waiter_cancels_the_competition_deadline_during_a_running_child))'
+test-group = 'process-boundary'
+
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & binary(tick_bounds)'
+threads-required = 'num-test-threads'
+
+# A 200ms loopback deadline is measured against an unchanged 800ms bound.
+# Keep VM scheduling and other process/network tests out of that measurement.
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & binary(connect_timeout)'
+threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(chatgpt-web) & binary(fixtures)'
+# Includes fresh-profile/immediate-reuse checks of Chrome's Windows singleton
+# lock. Keep the real CPU-rendered browser lifecycle isolated from other tests.
+# Every launch and lock release is asserted; a failed launch is never retried.
+threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(cc-scheduler) & test(real_child_process_has_no_console_window)'
+threads-required = 'num-test-threads'
+
+[[profile.default.overrides]]
+filter = 'package(cc-ask) & test(busy_notifier_card_lock_returns_within_deadline_without_card_changes)'
+threads-required = 'num-test-threads'
+
+# This test launches 40 real admission threads with the unchanged 60-second
+# queue-lock deadline. Preserve that contention and the six-slot assertions,
+# but prevent unrelated fixture processes from exhausting the runner's I/O.
+[[profile.default.overrides]]
+filter = 'package(cc-jobs) & test(forty_concurrent_admissions_never_exceed_six)'
+threads-required = 'num-test-threads'
+
+[profile.default.junit]
+path = 'todo2683-junit.xml'
+

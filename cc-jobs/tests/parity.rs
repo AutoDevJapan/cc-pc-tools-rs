@@ -10908,6 +10908,20 @@ mod end_to_end {
             .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
             .collect();
         let result = e.cli(&["cancel", &jid, "--recovery"], "");
+        if !result.status.success() {
+            e.diagnostic.store(true, Ordering::Relaxed);
+            e.retain_fixture_processes();
+            let retained: Vec<_> = e
+                .handles
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|handle| (handle.pid, handle.created, handle.live()))
+                .collect();
+            eprintln!(
+                "recovery cancellation fixture identities: expected={identities:?} retained={retained:?}"
+            );
+        }
         assert!(
             result.status.success(),
             "{}",

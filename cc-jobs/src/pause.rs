@@ -42,7 +42,7 @@ mod native {
     struct Handle(HANDLE);
     #[derive(Debug)]
     struct NativeError {
-        stage: &'static str,
+        stage: String,
         source: io::Error,
     }
     impl std::fmt::Display for NativeError {
@@ -56,7 +56,22 @@ mod native {
         }
     }
     fn at(stage: &'static str, source: io::Error) -> io::Error {
-        io::Error::new(source.kind(), NativeError { stage, source })
+        io::Error::new(
+            source.kind(),
+            NativeError {
+                stage: stage.to_owned(),
+                source,
+            },
+        )
+    }
+    fn with_context(error: io::Error, context: String) -> io::Error {
+        io::Error::new(
+            error.kind(),
+            NativeError {
+                stage: context,
+                source: error,
+            },
+        )
     }
     unsafe impl Send for Handle {}
     impl Drop for Handle {
@@ -477,8 +492,17 @@ mod native {
                 lifetimes.insert(pid, (actual, exited));
             }
             walk(root, root_created, prior, &all, |pid, name| {
-                let Some((created, browser, live, exited)) =
-                    retained_lifetime(pid, name, ancestors)?
+                let Some((created, browser, live, exited)) = retained_lifetime(pid, name, ancestors)
+                    .map_err(|error| {
+                        let parent = all.iter().find(|p| p.0 == pid).map(|p| p.1);
+                        with_context(
+                            error,
+                            format!(
+                                "snapshot candidate pid={pid} parent={parent:?} image={name:?} prior={}",
+                                prior.contains_key(&pid)
+                            ),
+                        )
+                    })?
                 else {
                     return Err(io::Error::other(
                         "cancellation ancestor vanished during inspection",

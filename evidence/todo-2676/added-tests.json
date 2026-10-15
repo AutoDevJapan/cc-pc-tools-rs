@@ -1,0 +1,27 @@
+[
+  {
+    "classname": "cc-job-policy",
+    "name": "todo_wait::tests::scoped_release_preserves_unverified_rows_and_requires_numeric_done_edges",
+    "time": "0.054"
+  },
+  {
+    "classname": "cc-scheduler::parity",
+    "name": "repair_dependency_release_keeps_normal_capacity_gate",
+    "time": "0.273"
+  },
+  {
+    "classname": "cc-scheduler::parity",
+    "name": "repair_dependency_release_rechecks_concurrent_stop_dependency_and_project_changes",
+    "time": "0.625"
+  },
+  {
+    "classname": "cc-scheduler::parity",
+    "name": "repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch",
+    "time": "1.245"
+  },
+  {
+    "classname": "cc-scheduler::parity",
+    "name": "repair_dependency_release_preserves_prerequisites_scope_and_ownership",
+    "time": "2.423"
+  }
+]

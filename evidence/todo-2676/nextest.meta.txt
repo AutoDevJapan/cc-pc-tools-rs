@@ -1,0 +1,7 @@
+command=cargo nextest run --locked -p cc-job-policy -p cc-scheduler -p cc-todo --no-fail-fast --tool-config-file todo2676:<evidence>/nextest-junit.toml
+started=2026-10-15T02:24:45.5778683Z
+head=31cbf3dbfd5417f6d478b476a5bfc35edc65f11b
+tree=c399b55d1bde5d058d1a6ec4566056cfecd3f158
+target=D:\CC\Work\unattended-operations-20261013-wt\todo-2676-work\codex-owned-7b703bcea6a055640215cd2394075d24\target
+exit=0
+finished=2026-10-15T02:25:52.3078617Z

@@ -1,0 +1,11 @@
+{
+  "exe": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2676-work\\codex-owned-7b703bcea6a055640215cd2394075d24\\target\\release\\scheduler.exe",
+  "sha256": "A20710406C68D21AE3A4173972AEE76E101A48C7CEE8BDC2BBF9F6D07370D20D",
+  "head": "31cbf3dbfd5417f6d478b476a5bfc35edc65f11b",
+  "tree": "c399b55d1bde5d058d1a6ec4566056cfecd3f158",
+  "source_diff_exit": 0,
+  "deployed": false,
+  "started": false,
+  "retained_exe": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2676-work\\evidence\\todo-2676\\scheduler.exe",
+  "retained_sha256": "A20710406C68D21AE3A4173972AEE76E101A48C7CEE8BDC2BBF9F6D07370D20D"
+}

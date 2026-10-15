@@ -1,0 +1,11 @@
+{
+  "state": "quarantined_same_drive",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2676-work\\codex-owned-7b703bcea6a055640215cd2394075d24",
+  "destination": "D:\\削除希望\\20261015-cc-pc-tools-rs-todo-2676-cargo-target-7b703bce\\cargo-output",
+  "bytes": 3975865116,
+  "deleted": false,
+  "helper_exit": 2,
+  "helper_reason": "QUARANTINE_CROSS_DRIVE",
+  "manual_move_exit": 0,
+  "owner_input_required": false
+}

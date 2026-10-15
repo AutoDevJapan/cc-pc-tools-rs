@@ -1,0 +1,9 @@
+command=cargo nextest run --locked -p cc-scheduler --test parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+started=2026-10-15T02:27:07.2029964Z
+base_head=31cbf3dbfd5417f6d478b476a5bfc35edc65f11b
+original_file_sha256=C299BCCAF908B3D1E737907EEE6E5337267C9F789B0F2CF1C174AD2CD2FDFF43
+mutation=reconcile_repairs final self.release_repair_waits() replaced only once by Ok(())
+exit=100
+finished=2026-10-15T02:27:15.6669494Z
+restored_file_sha256=C299BCCAF908B3D1E737907EEE6E5337267C9F789B0F2CF1C174AD2CD2FDFF43
+byte_exact_restoration=True

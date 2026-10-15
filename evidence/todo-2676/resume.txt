@@ -1,0 +1,13 @@
+state=complete; independent finite check only
+fixed_head=31cbf3dbfd5417f6d478b476a5bfc35edc65f11b
+fixed_tree=c399b55d1bde5d058d1a6ec4566056cfecd3f158
+nextest=exit0;344 passed;0 skipped;added5 all passed
+clippy=exit0;specified3 crates all-targets;0 warnings
+mutation=exit100(expected);1 failed;151 filtered
+restored=byte exact;git source diff0;test exit0;1 passed;151 filtered
+release=exit0;1 exe;retained at evidence/todo-2676/scheduler.exe
+cleanup=3,975,865,116 bytes quarantined same D drive;not deleted;see cleanup.json
+cleanup_discord=exit1;QuestionStateRecoveryRequired;not posted;no retry
+remaining_for_2676=none
+remaining_for_parent_2675=2677 review;full workspace CI and doctests;merge;deploy;real automatic resume acceptance
+report=docs/independent-check-2676.md; no independent PR or main merge

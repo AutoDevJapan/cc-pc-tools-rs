@@ -1,0 +1,14 @@
+[
+  {
+    "crate": "cc-job-policy",
+    "tests": 43.0
+  },
+  {
+    "crate": "cc-scheduler",
+    "tests": 152.0
+  },
+  {
+    "crate": "cc-todo",
+    "tests": 149.0
+  }
+]

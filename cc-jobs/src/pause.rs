@@ -1038,8 +1038,14 @@ mod native {
             let dir = temp.path().join("supervisor");
             std::fs::create_dir(&dir).unwrap();
             let mut in_outer_job = 0;
-            unsafe {
-                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job);
+            if unsafe {
+                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job)
+            } == 0
+            {
+                panic!(
+                    "outer Job membership query failed: {}",
+                    io::Error::last_os_error()
+                );
             }
             let pid = std::process::id();
             let created = crate::proc_created(pid).unwrap();

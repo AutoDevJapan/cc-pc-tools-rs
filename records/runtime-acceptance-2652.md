@@ -43,3 +43,19 @@ source/runtime/targetのguardを再測定しfalse/unverified=false。hostのhash
 同じDの所有付きフォルダに `r2-*` の原byte応答、実exit/時刻/PID/作成時刻/bytesSHAとreadinessを追加して保持した。既存adapterを使う受入の使い捨て手順 `accept-r2.private.ps1` を準備したが、開始条件が未達のため実行していない。新CI/rerun/全件検査の反復、fixture作成、通常Cargo・中止検査は未実行。準備済み手順も次回の最新main・checkout・module treeと空き条件を再検証してから使う。正常実行が一度成功したら、保存結果を読んで繰り返さず未完の中止確認へ進む。
 
 所有付き原ログ、前回と第2回のprivate結果、常駐runner、旧停止コンテナを保持する。本人の操作・判断は不要。同2652の正規wait-retryで続行する。
+
+## 09:11からの同ToDo再確認（第3回）
+
+第2回の記録コミット `8020d6c71fb86ffcb6379fd26a8cfe0f297c1542` と原ログを保持して再開した。起動時に最新の保存済み指示とAGENTSを再読した。09:11のsource/runtime/targetのguardはいずれもfalse/unverified=false。Windows hostのSHA256と11,223,040 byteは指定値のまま。Gitのremoteは引き続き対象のPrivate repo URL。
+
+現在の開始条件は未達。09:12:02のOS照会では127.0.0.1:17852のListener0、指定パスのhostプロセス0。既存タスクCC-LinuxRunner-todo2510の直近実行は03:48:36、LastTaskResult=1。対象target byte lockは09:12:05の測定で空き。taskの登録があることをhostの稼働成功と扱わない。
+
+Docker経由の読み取り専用process照会は09:11:09から45秒で応答せず、stdout/stderrとも0 byte。これはDocker CLIの応答期限超過であり、LinuxのWorker0、group不在、container/image/PID1/UID/capsの現在値を証明しない。自分が起動した照会CLI PID42940、作成00:11:09.7091431Zを保存した。09:12:38の後始末照会ではそのPIDは既に不在で、終了コードは取得不能。killは実行しておらず、このCLI不在をCargoの中止成功とは扱わない。
+
+既存OAuth経由の正規gh_gateでmain APIはHTTP404/exit1、runner APIはHTTP401/exit1。現在main SHA/checkout/Go module treeとrunner27 online/labelsは未再確認。前回のSHAやonline結果を現在の確認へ流用しない。トークン・key・credential・profileは読まず、認証の再設定もしない。
+
+この受入では禁止されている常駐再起動・再配布・認証/guard変更・source/checkout変更による復旧を行っていない。正常adapter、fixture、通常Cargo、中止検査はいずれも未実行。通常実行と占有中caller中止、group排出、init回収、Windows gate exit/target解放、後続コマンドの実成功はすべて未確認のまま保持する。
+
+原応答全文、開始終了、実exit（取得不能はその旨）、PID/作成時刻、raw bytesSHAを同じ所有付きフォルダの `r3-*` に保存する。前回private結果は上書き前に保存し、現在の結果を親の指定場所へ返す。同2652・同cwd・同specで正規wait-retryを記録し、次回はhost待受、Docker照会、正常API取得から再確認する。親2488や他ToDoをdone/blockにせず、本人のPC操作・判断を求めない。
+
+第3回の記録は作業ブランチへコミットした。既存Git認証によるpushはexit128で失敗し、Usernameを取得できないとの応答だった。認証画面が出ないよう対話を無効にして通常のpushを1回だけ行った。前回のpush成功を今回へ流用せず、今回の記録はPC内のコミットと親へのprivate結果に保持する。認証値取得や別経路のpushは行わず、次回同じToDoの通常経路で確認する。

@@ -75,3 +75,15 @@ Windows hostの指定SHA256/11,223,040 byte、Linux bridgeの指定SHA256、同c
 2つの模擬event用/tmpフォルダは、自分のevent.jsonだけを削除し、空のフォルダをrmdirし、不在まで実exit0で確認した。hook用eventは非秘密の送信byteもDの所有付き原ログへ保存した。metadata、通常package cargo test、占有中caller中止、Linux group排出/孤児回収、Windows gate exit/解放、後続Cargo成功は未確認。通常package検査はまだ一度も実行していない。
 
 前3回と第4回の原byte/実exit/コマンド/時刻/PID/作成時刻/bytesSHAは同じDの所有付きフォルダへ保持する。既存runnerと旧停止コンテナを変更していない。通常Cargoと中止の受入を完了扱いせず、同2652の正規wait-retryで現在main/checkout一致を再確認する。前回未pushの記録も今回の通常pushに含め、成否はprivate結果とToDoへ記録する。
+
+## 10:49からの同ToDo再確認（第5回）
+
+コミット `91c0b5f1e1e2e8b6bb78e5e9ad0d9dac379e5aec` と前4回の原ログを保持して再開した。最新の保存済み指示、AGENTSと親の既存PROGRESSを再読した。元の「限定受入のみ、ソース編集/新CI/rerun/merge/再配布/常駐再起動禁止」の範囲を保つ。
+
+10:49のsource/runtime/targetのguardはfalse/unverified=false。hostの指定hash/11,223,040 byte、Linux bridgeの指定hash、同container/image、Init/PID1docker-init、実UID1001、capsALL、no-new-privileges、GPU/device/bind無し、17852 Listener1（host PID11768）とLinux Listener1、runner27 online/busy=false/正規labelsを再確認した。Worker0、他gate0、target lock空きを実測した。
+
+現在mainは正規APIとgit ls-remoteで引き続き `183ac4fc7f0348021f9544cd8ac232669a3b8620` / tree `ba968c27ec66382bd1db87fbf0d46c53e78384e9`。checkoutは新しい別PRの `255117adbdd7104c30c1d660c8300b570f321dfd` へ変わり、mainとの不一致が継続している。remoteは対象repo。Go module treeは両方で指定の `2074a16ba0d45e80a8733f813f911f613c0ffca9` と一致。有限API一覧でこのcheckoutのCodeQL/readiness CI2件がsuccess/completed、branchはscheduler/todo-2671-workと確認した。登録された原範囲をこの別PRへ広げない。
+
+前回の既存adapter403/exit1と事前認証hook0の原応答を保持する。今もmain/checkout照合条件が未達なので、同じ403の再取得、fixture再作成、metadata/通常test/中止実験は繰り返していない。source/root/workflow、認証/key、guardやcheckoutを変更せず、未実行のpackage testと占有中caller中止を成功扱いしない。新CI/rerun/mergeを発生させてcheckoutを作る操作もしない。
+
+第5回原byte/コマンド/実exit/時刻/PID/bytesSHAを同じDの所有付きフォルダのr5記録へ保存した。常駐runner・旧停止コンテナ・前4回結果を保持し、この担当のcaller/group/tempは新規作成していない。現在mainとcheckoutの一致および全開始条件を同2652・同cwd・同specの正規wait-retryで再確認する。親2488/他ToDo/原登録一覧/製品全体をdone/blockにしない。本人のPC操作や判断は不要。

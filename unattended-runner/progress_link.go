@@ -75,6 +75,9 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		_, messageOK := number(link.Message)
 		if !threadOK || !messageOK || link.Guild != r.State.Destination.Guild || link.Author != r.State.Destination.Bot || link.Todo == 0 || link.Job == "" || link.RequestID == "" || link.Created == "" || used[link.Thread] {
 			r.invalidateProgressLinkRegistry(known)
+			if threadOK {
+				r.BlockProgressThread(link.Thread)
+			}
 			continue
 		}
 		used[link.Thread] = true
@@ -89,6 +92,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		verified, ok := r.verifyProgressLink(ctx, link)
 		if !ok {
 			r.invalidateProgressLinkRegistry(known)
+			r.BlockProgressThread(link.Thread)
 			continue
 		}
 		r.State.ProgressLinks[link.Thread] = verified

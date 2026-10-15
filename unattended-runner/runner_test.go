@@ -560,8 +560,13 @@ func TestMismatchedProgressLinkBlocksKnownThreadNotNamedByBadEntry(t *testing.T)
 	bad := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "wrong-origin", Guild: "999", Thread: "501", Message: "501", Todo: 10, Job: "wrong-job"}, Author: "400", Created: "2026-10-15T00:00:00Z"}
 	_ = publish(filepath.Join(r.Config.Home, "progress-links.json"), progressLinkFile{Domain: progressLinksDomain, Links: []ProgressLink{bad}})
 	r.loadProgressLinks(context.Background(), map[string]bool{"500": true})
-	if _, ok := r.linkOrigin(&Request{Thread: "500"}); ok || !r.ProgressLinkRegistryInvalid {
-		t.Fatal("mismatched link left another known bot thread open for unrelated intake")
+	for _, thread := range []string{"500", "501"} {
+		if _, ok := r.linkOrigin(&Request{Thread: thread}); ok {
+			t.Fatalf("mismatched link left thread %s open for unrelated intake", thread)
+		}
+	}
+	if !r.ProgressLinkRegistryInvalid {
+		t.Fatal("mismatched progress registry was not surfaced")
 	}
 }
 

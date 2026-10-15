@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -81,6 +83,22 @@ func TestShortAnswerDoesNotUsePrecedingProgressAsQuestion(t *testing.T) {
 	}
 	if r.State.Requests[m.ID].Phase != "context_pending" || r.State.Requests[m.ID].Context != "" {
 		t.Fatal("guessed answer context")
+	}
+}
+func TestForeignReplyReferenceIsNotRoutedAsAnOwnerInstruction(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "reply")
+	m.Reference.Channel = "999"
+	m.Reference.Message = "700"
+	m.Reference.Guild = "999"
+	server(t, r, func(w http.ResponseWriter, q *http.Request) { respond(w, []Message{m}) })
+	n, err := r.scan(context.Background(), Thread{ID: "500"})
+	if err != nil || n != 1 {
+		t.Fatalf("owner reply receipt not saved: %d %v", n, err)
+	}
+	request := r.State.Requests[m.ID]
+	if request.Phase != "reference_mismatch" || request.ReplyTo != "700" || request.Thread != "500" {
+		t.Fatal("foreign reply target was lost or promoted")
 	}
 }
 func TestForeignChannelDoesNotAdvanceCursor(t *testing.T) {
@@ -301,6 +319,201 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 	a := r.State.Requests[first.ID]
 	if a.Text != "edited" || len(a.PriorVersions) != 1 || a.PriorVersions[0] != "old" {
 		t.Fatal("owner edit/evidence lost")
+	}
+}
+
+func TestVerifiedProgressReplyCreatesNewGenerationForCompletedOrigin(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "次の指示")
+	link := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "owner-discord-progress-2665-20261015-initial", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: c.Format(time.RFC3339Nano)}
+	r.ProgressLinks = map[string]ProgressLink{"500": link}
+	r.BlockedProgressThreads = map[string]bool{}
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"],"title":"original"}]}`), 0600)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	adds := 0
+	r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+		adds++
+		if len(args) == 0 || args[0] != "add" {
+			t.Fatalf("unexpected command: %v", args)
+		}
+		note := "unattended-owner-receipt:" + requestKey("500", m.ID)
+		_ = os.WriteFile(r.TodoPath, []byte(fmt.Sprintf(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]},{"id":11,"project":"cc-pc-tools-rs","status":"todo","note":%q}]}`, note)), 0600)
+		return "added 11", nil
+	}
+	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	if err := r.register(context.Background(), request); err != nil || request.Todo != 11 || request.Phase != "registered" || request.Origin == nil || request.Origin.Todo != 10 {
+		t.Fatalf("new generation not registered: todo=%d phase=%s err=%v", request.Todo, request.Phase, err)
+	}
+	if adds != 1 {
+		t.Fatal("new instruction did not create exactly one generation")
+	}
+	spec, err := os.ReadFile(filepath.Join(r.Config.Home, "requests", m.ID+".md"))
+	if err != nil || !strings.Contains(string(spec), "元ToDo 10") || !strings.Contains(string(spec), "original-job") || !strings.Contains(string(spec), "新しい作業世代") {
+		t.Fatal("new generation lost the exact original task context")
+	}
+	if err := r.register(context.Background(), request); err != nil || request.Todo != 11 || adds != 1 {
+		t.Fatal("retry duplicated the new task generation")
+	}
+}
+
+func TestVerifiedProgressReplySteersOnlyItsActiveOrigin(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "追加指示")
+	r.ProgressLinks = map[string]ProgressLink{"500": {ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: c.Format(time.RFC3339Nano)}}
+	r.BlockedProgressThreads = map[string]bool{}
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"doing","jobs":["original-job"]}]}`), 0600)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	r.Run = func(context.Context, string, ...string) (string, error) {
+		t.Fatal("active task must not be started a second time")
+		return "", nil
+	}
+	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	if err := r.register(context.Background(), request); err != nil || request.Todo != 10 || request.Phase != "steering_saved" {
+		t.Fatalf("active task was not steered: todo=%d phase=%s err=%v", request.Todo, request.Phase, err)
+	}
+	if _, err := os.Stat(filepath.Join(r.Config.Home, "steering", "10-"+m.ID+".json")); err != nil {
+		t.Fatal("durable steering record missing")
+	}
+}
+
+func TestLinkedShortProgressReplyIsLiteralNotAQuestionAnswer(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "a")
+	r.ProgressLinks = map[string]ProgressLink{"500": {ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: c.Format(time.RFC3339Nano)}}
+	r.BlockedProgressThreads = map[string]bool{}
+	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: "a", Key: requestKey("500", m.ID), Phase: "context_pending"}
+	r.State.Requests[m.ID] = request
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]}]}`), 0600)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	added := false
+	r.Run = func(context.Context, string, ...string) (string, error) { added = true; return "added 11", nil }
+	var health Health
+	r.admit(context.Background(), &health)
+	if !added || request.Phase != "registered" || request.Todo != 11 || !strings.Contains(request.Context, "non-question progress thread") {
+		t.Fatal("short reply on progress thread was misclassified or stranded")
+	}
+}
+
+func TestProgressLinkScopeMustMatchConfiguredServerAndExactReceipt(t *testing.T) {
+	for _, change := range []func(*ProgressLink){
+		func(link *ProgressLink) { link.Guild = "999" },
+		func(link *ProgressLink) { link.Message = "601" },
+		func(link *ProgressLink) { link.RequestID = "other" },
+	} {
+		r, c := fixture(t)
+		r.Config.Home = filepath.Join(t.TempDir(), "unattended")
+		_ = os.MkdirAll(r.Config.Home, 0700)
+		_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","scheduler":{"job":"original-job"}}]}`), 0600)
+		link := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: c.Format(time.RFC3339Nano)}
+		change(&link)
+		if link.Guild == "100" {
+			ledger := map[string]any{"domain": "new-owner-recovery-messages", "events": []any{map[string]any{"event": "verified", "request_id": "exact", "phase": "log:0", "receipt": map[string]any{"thread_id": "500", "message_id": "600", "author_id": "400", "timestamp": c.Format(time.RFC3339Nano), "flags": 4096}}}}
+			_ = publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), ledger)
+		} else {
+			_ = publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), map[string]any{"domain": "new-owner-recovery-messages", "events": []any{}})
+		}
+		server(t, r, func(w http.ResponseWriter, q *http.Request) {
+			if strings.Contains(q.URL.Path, "/messages/") {
+				m := Message{ID: "600", Channel: "500", Timestamp: c.Format(time.RFC3339Nano)}
+				m.Author.ID, m.Author.Bot = "400", true
+				respond(w, m)
+			} else {
+				respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+			}
+		})
+		if _, accepted := r.verifyProgressLink(context.Background(), link); accepted {
+			t.Fatal("mismatched progress association accepted")
+		}
+	}
+}
+
+func TestProgressSourceEditTimeAndPreviousVersionArePreserved(t *testing.T) {
+	r, c := fixture(t)
+	r.Config.Home = filepath.Join(t.TempDir(), "unattended")
+	_ = os.MkdirAll(r.Config.Home, 0700)
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","scheduler":{"job":"original-job"}}]}`), 0600)
+	created := c.Format(time.RFC3339Nano)
+	ledger := map[string]any{"domain": "new-owner-recovery-messages", "events": []any{map[string]any{"event": "verified", "request_id": "exact", "phase": "log:0", "receipt": map[string]any{"thread_id": "500", "message_id": "600", "author_id": "400", "timestamp": created, "flags": 4096}}}}
+	_ = publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), ledger)
+	link := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: created, ContentHash: "old-hash"}
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			m := Message{ID: "600", Channel: "500", Timestamp: created, Edited: c.Add(time.Minute).Format(time.RFC3339Nano), Content: "edited progress"}
+			m.Author.ID, m.Author.Bot = "400", true
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	updated, accepted := r.verifyProgressLink(context.Background(), link)
+	if !accepted || updated.Edited == "" || len(updated.PriorEdits) != 1 {
+		t.Fatal("edited source post was rejected or its previous version was lost")
+	}
+	sum := sha256.Sum256([]byte("edited progress"))
+	if updated.ContentHash != hex.EncodeToString(sum[:]) || updated.PriorEdits[0].SHA256 != "old-hash" {
+		t.Fatal("source content hash history differs")
+	}
+}
+
+func TestProgressLinkLoadsOnlyAfterReceiptAndLiveDiscordVerification(t *testing.T) {
+	r, c := fixture(t)
+	r.Config.Home = filepath.Join(t.TempDir(), "unattended")
+	_ = os.MkdirAll(r.Config.Home, 0700)
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]}]}`), 0600)
+	created := c.Format(time.RFC3339Nano)
+	link := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: created}
+	if err := publish(filepath.Join(r.Config.Home, "progress-links.json"), progressLinkFile{Domain: progressLinksDomain, Links: []ProgressLink{link}}); err != nil {
+		t.Fatal(err)
+	}
+	ledger := map[string]any{"domain": "new-owner-recovery-messages", "events": []any{map[string]any{"event": "verified", "request_id": "exact", "phase": "log:0", "receipt": map[string]any{"thread_id": "500", "message_id": "600", "author_id": "400", "timestamp": created, "flags": 4096}}}}
+	_ = publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), ledger)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			m := Message{ID: "600", Channel: "500", Timestamp: created, Content: "progress"}
+			m.Author.ID, m.Author.Bot = "400", true
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	r.loadProgressLinks(context.Background())
+	if r.ProgressLinks["500"].Todo != 10 || r.State.ProgressLinks["500"].Message != "600" || r.BlockedProgressThreads["500"] {
+		t.Fatal("verified progress relation was not loaded into receiver state")
+	}
+}
+
+func TestOwnerEditTimestampChangeIsSavedWithOriginalIdentity(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "same text")
+	m.Edited = c.Add(2 * time.Second).Format(time.RFC3339Nano)
+	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
+		}
+	})
+	if err := r.validateRequest(context.Background(), request); err == nil || request.Edited != m.Edited || len(request.PriorEdits) != 1 || request.PriorEdits[0].Edited != "" {
+		t.Fatal("owner edit timestamp was not preserved as a deferred update")
 	}
 }
 func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {

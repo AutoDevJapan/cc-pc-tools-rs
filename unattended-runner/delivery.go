@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,12 +45,15 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 		}
 		return err
 	}
-	if live.ID != request.Message || live.Channel != request.Thread || live.Author.ID != request.Author || live.Author.Bot || live.Timestamp != request.Created {
+	if live.ID != request.Message || live.Channel != request.Thread || live.Author.ID != request.Author || live.Author.Bot || live.Timestamp != request.Created || request.Guild != "" && request.Guild != r.State.Destination.Guild || live.Reference.Message != request.ReplyTo || live.Reference.Channel != request.ReplyChannel || live.Reference.Guild != request.ReplyGuild {
 		return errors.New("owner message changed; receipt retained")
 	}
-	if edited := safeText(live.Content, r.Token); edited != request.Text {
+	if edited := safeText(live.Content, r.Token); edited != request.Text || live.Edited != request.Edited {
 		request.PriorVersions = append(request.PriorVersions, request.Text)
+		sum := sha256.Sum256([]byte(request.Text))
+		request.PriorEdits = append(request.PriorEdits, EditVersion{Edited: request.Edited, SHA256: fmt.Sprintf("%x", sum[:])})
 		request.Text = edited
+		request.Edited = live.Edited
 		request.Acquired = r.Now().UTC().Format(time.RFC3339Nano)
 		if err := r.save(); err != nil {
 			return err

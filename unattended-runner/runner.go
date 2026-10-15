@@ -51,8 +51,14 @@ type Message struct {
 	Channel   string `json:"channel_id"`
 	Content   string `json:"content"`
 	Timestamp string `json:"timestamp"`
-	Flags     uint64 `json:"flags"`
-	Mentions  []struct {
+	Edited    string `json:"edited_timestamp"`
+	Reference struct {
+		Message string `json:"message_id"`
+		Channel string `json:"channel_id"`
+		Guild   string `json:"guild_id"`
+	} `json:"message_reference"`
+	Flags    uint64 `json:"flags"`
+	Mentions []struct {
 		ID string `json:"id"`
 	} `json:"mentions"`
 	Author struct {
@@ -66,31 +72,39 @@ type Scan struct {
 	High   string `json:"high,omitempty"`
 }
 type Request struct {
-	Thread         string   `json:"thread_id"`
-	Message        string   `json:"message_id"`
-	Author         string   `json:"author_id"`
-	Created        string   `json:"created_at"`
-	Acquired       string   `json:"acquired_at"`
-	Source         string   `json:"source"`
-	Text           string   `json:"text"`
-	Context        string   `json:"question_context,omitempty"`
-	Key            string   `json:"key"`
-	Todo           uint64   `json:"todo,omitempty"`
-	Phase          string   `json:"phase"`
-	Reported       string   `json:"reported,omitempty"`
-	ProgressThread string   `json:"progress_thread_id,omitempty"`
-	PriorVersions  []string `json:"prior_versions,omitempty"`
+	Thread         string          `json:"thread_id"`
+	Guild          string          `json:"guild_id,omitempty"`
+	Message        string          `json:"message_id"`
+	Author         string          `json:"author_id"`
+	Created        string          `json:"created_at"`
+	Edited         string          `json:"edited_at,omitempty"`
+	ReplyTo        string          `json:"reply_to_message_id,omitempty"`
+	ReplyChannel   string          `json:"reply_to_channel_id,omitempty"`
+	ReplyGuild     string          `json:"reply_to_guild_id,omitempty"`
+	Acquired       string          `json:"acquired_at"`
+	Source         string          `json:"source"`
+	Text           string          `json:"text"`
+	Context        string          `json:"question_context,omitempty"`
+	Key            string          `json:"key"`
+	Todo           uint64          `json:"todo,omitempty"`
+	Phase          string          `json:"phase"`
+	Reported       string          `json:"reported,omitempty"`
+	ProgressThread string          `json:"progress_thread_id,omitempty"`
+	PriorVersions  []string        `json:"prior_versions,omitempty"`
+	PriorEdits     []EditVersion   `json:"prior_edits,omitempty"`
+	Origin         *ProgressOrigin `json:"origin,omitempty"`
 }
 type State struct {
-	Domain       string              `json:"domain"`
-	Since        string              `json:"since"`
-	Destination  Destination         `json:"destination"`
-	Cursor       string              `json:"scan_cursor"`
-	IntakeCursor string              `json:"intake_cursor,omitempty"`
-	RetryCursor  uint64              `json:"retry_cursor,omitempty"`
-	Threads      map[string]Thread   `json:"threads"`
-	Scans        map[string]*Scan    `json:"scans"`
-	Requests     map[string]*Request `json:"requests"`
+	Domain        string                  `json:"domain"`
+	Since         string                  `json:"since"`
+	Destination   Destination             `json:"destination"`
+	Cursor        string                  `json:"scan_cursor"`
+	IntakeCursor  string                  `json:"intake_cursor,omitempty"`
+	RetryCursor   uint64                  `json:"retry_cursor,omitempty"`
+	Threads       map[string]Thread       `json:"threads"`
+	Scans         map[string]*Scan        `json:"scans"`
+	Requests      map[string]*Request     `json:"requests"`
+	ProgressLinks map[string]ProgressLink `json:"progress_links,omitempty"`
 }
 type Health struct {
 	Mode       string   `json:"mode"`
@@ -106,14 +120,16 @@ type Health struct {
 	Errors     []string `json:"errors"`
 }
 type Runner struct {
-	Config   Config
-	State    *State
-	Client   *http.Client
-	Token    string
-	Base     string
-	Run      func(context.Context, string, ...string) (string, error)
-	Now      func() time.Time
-	TodoPath string
+	Config                 Config
+	State                  *State
+	Client                 *http.Client
+	Token                  string
+	Base                   string
+	Run                    func(context.Context, string, ...string) (string, error)
+	Now                    func() time.Time
+	TodoPath               string
+	ProgressLinks          map[string]ProgressLink
+	BlockedProgressThreads map[string]bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -266,6 +282,7 @@ func (r *Runner) discover(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	r.loadProgressLinks(ctx)
 	paths := []string{"/guilds/" + r.State.Destination.Guild + "/threads/active", "/channels/" + requestForum + "/threads/archived/public?limit=25", "/channels/" + r.State.Destination.Forum + "/threads/archived/public?limit=25"}
 	for _, path := range paths {
 		var page struct {
@@ -373,7 +390,14 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		if regexp.MustCompile(`(?i)^\s*(?:[0-9]*[abcd][\s,、]*)+$`).MatchString(answer) {
 			phase = "context_pending"
 		}
-		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
+		if message.Reference.Channel != "" && (message.Reference.Channel != thread.ID || (message.Reference.Guild != "" && message.Reference.Guild != r.State.Destination.Guild)) {
+			phase = "reference_mismatch"
+		}
+		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
+		if link, ok := r.ProgressLinks[thread.ID]; ok {
+			r.State.Requests[message.ID].Origin = &ProgressOrigin{RequestID: link.RequestID, Guild: link.Guild, Thread: link.Thread, Message: link.Message, Todo: link.Todo, Job: link.Job}
+			r.State.Requests[message.ID].ProgressThread = link.Thread
+		}
 		captured++
 	}
 	if finished {
@@ -416,6 +440,13 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 	}
 	if err := r.validateRequest(ctx, request); err != nil {
 		return err
+	}
+	origin, routeOK := r.linkOrigin(request)
+	if !routeOK {
+		return errors.New("progress origin receipt deferred")
+	}
+	if origin != nil {
+		return r.registerOrigin(ctx, request, *origin)
 	}
 	if previous, err := r.threadActive(request); err != nil {
 		return err
@@ -589,8 +620,18 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 		}
 		mid := mids[(start+i)%len(mids)]
 		req := r.State.Requests[mid]
+		if _, ok := r.linkOrigin(req); !ok {
+			continue
+		}
 		r.State.IntakeCursor = mid
-		if req.Phase == "context_pending" {
+		if req.Phase == "context_pending" && req.Origin != nil {
+			req.Context = "This is a non-question progress thread. Preserve a short reply literally; do not infer an answer or decision."
+			req.Phase = "captured"
+			if err := r.save(); err != nil {
+				health.Errors = append(health.Errors, "owner_reply_context_deferred")
+				continue
+			}
+		} else if req.Phase == "context_pending" {
 			if err := r.questionContext(ctx, req); err != nil {
 				_ = r.save()
 				continue
@@ -649,7 +690,7 @@ func main() {
 		fmt.Println("Discord credential unavailable")
 		os.Exit(1)
 	}
-	state := &State{Domain: "unattended-owner-v1", Since: cfg.Since, Destination: destination, Threads: map[string]Thread{}, Scans: map[string]*Scan{}, Requests: map[string]*Request{}}
+	state := &State{Domain: "unattended-owner-v1", Since: cfg.Since, Destination: destination, Threads: map[string]Thread{}, Scans: map[string]*Scan{}, Requests: map[string]*Request{}, ProgressLinks: map[string]ProgressLink{}}
 	err = readJSON(filepath.Join(cfg.Home, "unattended-state.json"), maxState, state)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Println("independent state unavailable")
@@ -658,6 +699,9 @@ func main() {
 	if state.Domain != "unattended-owner-v1" || state.Since != cfg.Since || state.Destination != destination || state.Threads == nil || state.Scans == nil || state.Requests == nil {
 		fmt.Println("independent state scope differs")
 		os.Exit(1)
+	}
+	if state.ProgressLinks == nil {
+		state.ProgressLinks = make(map[string]ProgressLink)
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)

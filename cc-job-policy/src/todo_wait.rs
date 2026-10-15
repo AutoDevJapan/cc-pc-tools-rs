@@ -152,12 +152,7 @@ pub fn release_ready_if(db: &mut Value, mut eligible: impl FnMut(&Value) -> bool
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|i| {
-            i["wait_on"]
-                .as_array()
-                .is_some_and(|a| !a.is_empty() && a.iter().all(|id| id.as_i64().is_some()))
-                && !waiting(db, i)
-        })
+        .filter(|i| i["wait_on"].as_array().is_some_and(|a| !a.is_empty()) && !waiting(db, i))
         .filter(|i| i["wait_ready"].is_null())
         .filter(|i| eligible(i))
         .filter_map(|i| i["id"].as_i64())
@@ -238,18 +233,18 @@ pub fn job_pending_on(db: &Value, job: &Value) -> Vec<i64> {
 mod tests {
     use super::*;
     #[test]
-    fn scoped_release_preserves_unverified_rows_and_requires_numeric_done_edges() {
+    fn scoped_release_preserves_unverified_rows_and_missing_edges() {
         let mut db = json!({"items":[
             {"id":1,"status":"wait","wait_on":[4],"spec":"saved"},
             {"id":2,"status":"wait","wait_on":[4]},
-            {"id":3,"status":"wait","wait_on":[4,"unknown"]},
+            {"id":3,"status":"wait","wait_on":[4,99]},
             {"id":4,"status":"done"}
         ]});
         let unverified = db["items"][1].clone();
-        let malformed = db["items"][2].clone();
+        let missing = db["items"][2].clone();
         assert_eq!(release_ready_if(&mut db, |i| i["id"] != 2), vec![1]);
         assert_eq!(db["items"][1], unverified);
-        assert_eq!(db["items"][2], malformed);
+        assert_eq!(db["items"][2], missing);
         assert_eq!(db["items"][0]["spec"], "saved");
         assert_eq!(db["items"][0]["dependency_generation"], 1);
         assert!(release_ready_if(&mut db, |i| i["id"] != 2).is_empty());

@@ -569,7 +569,7 @@ impl<B: Backend> Scheduler<B> {
     /// edges here, without admitting unknown records or replaying old questions.
     pub fn release_repair_waits(&mut self) -> Result<()> {
         let snapshot = self.todo()?;
-        let mut verified = Vec::new();
+        let mut candidates = Vec::new();
         for item in arr(&snapshot["items"]) {
             let project = s(&item["project"]);
             if item["status"] != "wait"
@@ -578,6 +578,9 @@ impl<B: Backend> Scheduler<B> {
                 || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
                 || !item["wait_ready"].is_null()
                 || item["wait_on"].as_array().is_none_or(Vec::is_empty)
+                || item["wait_on"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|id| id.as_i64().is_none()))
                 || todo_wait::waiting(&snapshot, &item)
                 || truth(&item["scheduler"]["owner_stop_job"])
                 || truth(&item["scheduler"]["question"])
@@ -586,13 +589,42 @@ impl<B: Backend> Scheduler<B> {
             {
                 continue;
             }
-            let paths = [
-                s(&snapshot["projects"][project]),
-                s(&item["scheduler"]["worktree"]),
-            ];
-            if paths
-                .iter()
-                .all(|path| !path.is_empty() && self.backend.repair_scope_allowed(path))
+            candidates.push(item);
+        }
+        if candidates.is_empty() {
+            return Ok(());
+        }
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        let owned = |item: &Value, jobs: &[Value], ps: &Processes| {
+            jobs.iter().any(|job| {
+                cc_job_policy::priority::linked(item, job)
+                    && (live(job) || ["pid", "codex_pid"].iter().any(|key| matches(job, key, ps)))
+            })
+        };
+        // Skip live owners before invoking external guards, and reuse each
+        // path's result only within this tick. No original guard policy changes.
+        let mut checked = std::collections::BTreeMap::new();
+        let mut verified = Vec::new();
+        for item in candidates
+            .into_iter()
+            .filter(|item| !owned(item, &jobs, &ps))
+        {
+            let repo = s(&snapshot["projects"][s(&item["project"])]);
+            let worktree = &item["scheduler"]["worktree"];
+            if repo.is_empty() || (!worktree.is_null() && !worktree.is_string()) {
+                continue;
+            }
+            // An unstarted task has no worktree yet. Normal preparation will
+            // create and verify it; an existing worktree must still pass guard.
+            if [repo, s(worktree)]
+                .into_iter()
+                .filter(|p| !p.is_empty())
+                .all(|path| {
+                    *checked
+                        .entry(path.to_string())
+                        .or_insert_with(|| self.backend.repair_scope_allowed(path))
+                })
             {
                 verified.push(item);
             }
@@ -604,15 +636,7 @@ impl<B: Backend> Scheduler<B> {
         // then compare the complete row so a concurrent stop/handoff wins.
         let jobs = self.backend.jobs()?;
         let ps = self.backend.snapshot()?;
-        verified.retain(|item| {
-            !jobs.iter().any(|job| {
-                cc_job_policy::priority::linked(item, job)
-                    && (live(job)
-                        || ["pid", "codex_pid"]
-                            .iter()
-                            .any(|key| matches(job, key, &ps)))
-            })
-        });
+        verified.retain(|item| !owned(item, &jobs, &ps));
         let _lock = ByteLock::acquire(
             &self.todo_path.with_file_name("todo.lock"),
             Duration::from_secs(2),

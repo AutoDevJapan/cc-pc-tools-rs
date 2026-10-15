@@ -1403,6 +1403,8 @@ fn test_orphan_minimum_age_and_missing_job() {
 
 struct Fake {
     repair_allowed: bool,
+    repair_denied: Option<String>,
+    repair_calls: Vec<String>,
     repair_edit: Option<(PathBuf, Value)>,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
@@ -1438,6 +1440,8 @@ impl Default for Fake {
     fn default() -> Self {
         Self {
             repair_allowed: false,
+            repair_denied: None,
+            repair_calls: vec![],
             repair_edit: None,
             launch_start: None,
             prepare_edit: None,
@@ -1472,11 +1476,12 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
-    fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
+    fn repair_scope_allowed(&mut self, repo: &str) -> bool {
+        self.repair_calls.push(repo.into());
         if let Some((path, db)) = self.repair_edit.take() {
             write_json(&path, &db, 1).unwrap();
         }
-        self.repair_allowed
+        self.repair_allowed && self.repair_denied.as_deref() != Some(repo)
     }
     fn clock(&self) -> f64 {
         self.clock
@@ -1740,7 +1745,8 @@ fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
         "dispatch",
         "scope",
         "unknown",
-        "worktree",
+        "protected_worktree",
+        "invalid_worktree",
         "pending",
         "running",
         "terminal_live",
@@ -1756,6 +1762,11 @@ fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
             "missing" => wait_row(&mut f, 1, json!([2, 99])),
             "malformed" => wait_row(&mut f, 1, json!([2, "unknown"])),
             "scope" => f.e.backend.repair_allowed = false,
+            "protected_worktree" => {
+                f.e.backend.repair_denied = f.get(1)["scheduler"]["worktree"]
+                    .as_str()
+                    .map(str::to_string);
+            }
             "running" => f.e.backend.records[0]["status"] = json!("running"),
             "terminal_live" => {
                 f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
@@ -1767,7 +1778,7 @@ fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
                     "question" => row["scheduler"]["question"] = json!({"thread_id":"old"}),
                     "dispatch" => row["dispatchable"] = json!(false),
                     "unknown" => row["project"] = json!("other"),
-                    "worktree" => row["scheduler"]["worktree"] = Value::Null,
+                    "invalid_worktree" => row["scheduler"]["worktree"] = json!({"invalid":true}),
                     "pending" => row["stall_recovery"] = json!({"pending":{"key":"reserved"}}),
                     _ => unreachable!(),
                 })
@@ -1793,6 +1804,35 @@ fn repair_dependency_release_keeps_normal_capacity_gate() {
     assert_eq!(f.get(1)["status"], "todo");
     assert_eq!(f.get(1)["dependency_ready"], true);
     assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn repair_dependency_release_admits_unstarted_waits_and_caches_paths_per_tick() {
+    let mut f = completed_dependency_repair();
+    f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+        .unwrap();
+    f.e.edit(&json!(1), |row| {
+        row["scheduler"] = json!({});
+        row["jobs"] = json!([]);
+    })
+    .unwrap();
+    let mut second = item(3, "cc-pc-tools-rs", "wait", &[]);
+    second["wait_on"] = json!([2]);
+    f.put(second);
+    let before = f.get(1);
+    f.e.release_repair_waits().unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(3)["status"], "todo");
+    assert_eq!(f.get(1)["spec"], before["spec"]);
+    assert!(f.get(1)["scheduler"]["worktree"].is_null());
+    assert_eq!(f.e.backend.repair_calls.len(), 1);
+    f.dispatch();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.backend.launched.len(), 1);
+    // Rechecking an already assigned task never creates a second worker.
+    f.e.release_repair_waits().unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
 }
 
 #[test]

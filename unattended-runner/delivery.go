@@ -45,8 +45,28 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 		}
 		return err
 	}
-	if live.ID != request.Message || live.Channel != request.Thread || live.Author.ID != request.Author || live.Author.Bot || live.Timestamp != request.Created || request.Guild != "" && request.Guild != r.State.Destination.Guild || live.Reference.Message != request.ReplyTo || live.Reference.Channel != request.ReplyChannel || live.Reference.Guild != request.ReplyGuild {
+	if live.ID != request.Message || live.Channel != request.Thread || live.Author.ID != request.Author || live.Author.Bot || live.Timestamp != request.Created {
 		return errors.New("owner message changed; receipt retained")
+	}
+	if request.Guild != "" && request.Guild != r.State.Destination.Guild {
+		return errors.New("owner message guild changed; receipt retained")
+	}
+	if (request.ReplyTo != "" && request.ReplyTo != live.Reference.Message) || (request.ReplyChannel != "" && request.ReplyChannel != live.Reference.Channel) || (request.ReplyGuild != "" && request.ReplyGuild != live.Reference.Guild) {
+		return errors.New("owner message reference changed; receipt retained")
+	}
+	if request.RecordVersion < 2 {
+		request.Guild = r.State.Destination.Guild
+		request.ReplyTo = live.Reference.Message
+		request.ReplyChannel = live.Reference.Channel
+		request.ReplyGuild = live.Reference.Guild
+		request.RecordVersion = 2
+		if err := r.save(); err != nil {
+			return err
+		}
+		return errors.New("owner message metadata migration saved; validation deferred")
+	}
+	if request.RecordVersion > 2 || request.Guild != r.State.Destination.Guild || live.Reference.Message != request.ReplyTo || live.Reference.Channel != request.ReplyChannel || live.Reference.Guild != request.ReplyGuild {
+		return errors.New("owner message metadata differs; receipt retained")
 	}
 	if edited := safeText(live.Content, r.Token); edited != request.Text || live.Edited != request.Edited {
 		request.PriorVersions = append(request.PriorVersions, request.Text)
@@ -132,6 +152,7 @@ type TodoRow struct {
 	ID        uint64            `json:"id"`
 	Project   string            `json:"project"`
 	Status    string            `json:"status"`
+	Note      string            `json:"note"`
 	Spec      json.RawMessage   `json:"spec"`
 	Jobs      []json.RawMessage `json:"jobs"`
 	Scheduler struct {
@@ -339,7 +360,7 @@ func (r *Runner) recoverStatusReceipt(ctx context.Context, id, body string) (str
 func validJob(s string) bool { return regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(s) }
 func (r *Runner) results(ctx context.Context) error {
 	for _, request := range r.State.Requests {
-		if request.Todo == 0 || request.Phase == "reported" {
+		if request.Todo == 0 || request.Phase == "reported" || request.Phase == "origin_blocked" {
 			continue
 		}
 		row, err := r.todo(request.Todo)

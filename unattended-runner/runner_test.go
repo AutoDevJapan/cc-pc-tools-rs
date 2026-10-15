@@ -160,7 +160,7 @@ func TestCredentialIsNotPersisted(t *testing.T) {
 func TestRejectModifiedOwnerMessageBeforeRegistration(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c.Add(time.Second), "500", "300", "original")
-	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: "original", Key: requestKey("500", m.ID)}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: "original", Key: requestKey("500", m.ID)}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			m.Content = "edited"
@@ -184,7 +184,7 @@ func TestRejectForgedStoredOwner(t *testing.T) {
 func TestCrashAfterRegistrationRecoversSameTodo(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c.Add(time.Second), "500", "300", "fix")
-	req := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
+	req := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			respond(w, m)
@@ -264,7 +264,7 @@ func TestQuestionUsesExactCanonicalPhaseAndReply(t *testing.T) {
 	for _, match := range []bool{true, false} {
 		r, c := fixture(t)
 		m := msg(c.Add(time.Second), "500", "300", "a")
-		req := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "context_pending"}
+		req := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "context_pending"}
 		ledger := map[string]any{"domain": "new-owner-recovery-messages", "events": []any{map[string]any{"event": "verified", "request_id": "fixture-q", "phase": "question:0", "receipt": map[string]any{"thread_id": "500", "message_id": "600", "author_id": "400"}}}}
 		if e := publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), ledger); e != nil {
 			t.Fatal(e)
@@ -291,7 +291,7 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 	first := msg(c.Add(time.Second), "500", "300", "old")
 	second := msg(c.Add(2*time.Second), "501", "300", "new")
 	for _, m := range []Message{first, second} {
-		r.State.Requests[m.ID] = &Request{Thread: m.Channel, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: "captured"}
+		r.State.Requests[m.ID] = &Request{Thread: m.Channel, Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: "captured"}
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
@@ -342,11 +342,20 @@ func TestVerifiedProgressReplyCreatesNewGenerationForCompletedOrigin(t *testing.
 		if len(args) == 0 || args[0] != "add" {
 			t.Fatalf("unexpected command: %v", args)
 		}
-		note := "unattended-owner-receipt:" + requestKey("500", m.ID)
+		note := "unattended-owner-receipt:" + requestKey("500", m.ID) + "\n" + originGenerationMarker(link.ProgressOrigin)
+		var noteArg string
+		for i := 0; i+1 < len(args); i++ {
+			if args[i] == "--note" {
+				noteArg = args[i+1]
+			}
+		}
+		if noteArg != note {
+			t.Fatal("new generation receipt did not retain its source identity")
+		}
 		_ = os.WriteFile(r.TodoPath, []byte(fmt.Sprintf(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]},{"id":11,"project":"cc-pc-tools-rs","status":"todo","note":%q}]}`, note)), 0600)
 		return "added 11", nil
 	}
-	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
 	if err := r.register(context.Background(), request); err != nil || request.Todo != 11 || request.Phase != "registered" || request.Origin == nil || request.Origin.Todo != 10 {
 		t.Fatalf("new generation not registered: todo=%d phase=%s err=%v", request.Todo, request.Phase, err)
 	}
@@ -379,7 +388,7 @@ func TestVerifiedProgressReplySteersOnlyItsActiveOrigin(t *testing.T) {
 		t.Fatal("active task must not be started a second time")
 		return "", nil
 	}
-	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
 	if err := r.register(context.Background(), request); err != nil || request.Todo != 10 || request.Phase != "steering_saved" {
 		t.Fatalf("active task was not steered: todo=%d phase=%s err=%v", request.Todo, request.Phase, err)
 	}
@@ -388,12 +397,40 @@ func TestVerifiedProgressReplySteersOnlyItsActiveOrigin(t *testing.T) {
 	}
 }
 
+func TestLaterReplyReusesTheActiveGenerationForTheSameOrigin(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "さらに補足")
+	origin := ProgressOrigin{RequestID: "exact-origin", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}
+	r.ProgressLinks = map[string]ProgressLink{"500": {ProgressOrigin: origin, Author: "400", Created: c.Format(time.RFC3339Nano)}}
+	r.BlockedProgressThreads = map[string]bool{}
+	note := originGenerationMarker(origin)
+	_ = os.WriteFile(r.TodoPath, []byte(fmt.Sprintf(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]},{"id":11,"project":"cc-pc-tools-rs","status":"doing","jobs":["generation-job"],"note":%q}]}`, note)), 0600)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	r.Run = func(context.Context, string, ...string) (string, error) {
+		t.Fatal("a second task generation was launched for the same source")
+		return "", nil
+	}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	if err := r.register(context.Background(), request); err != nil || request.Todo != 11 || request.Phase != "steering_saved" || request.Origin == nil || request.Origin.Todo != 10 {
+		t.Fatalf("later reply did not reuse the active generation: todo=%d phase=%s err=%v", request.Todo, request.Phase, err)
+	}
+	if _, err := os.Stat(filepath.Join(r.Config.Home, "steering", "11-"+m.ID+".json")); err != nil {
+		t.Fatal("later reply was not durably routed to the existing generation")
+	}
+}
+
 func TestLinkedShortProgressReplyIsLiteralNotAQuestionAnswer(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c.Add(time.Second), "500", "300", "a")
 	r.ProgressLinks = map[string]ProgressLink{"500": {ProgressOrigin: ProgressOrigin{RequestID: "exact", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}, Author: "400", Created: c.Format(time.RFC3339Nano)}}
 	r.BlockedProgressThreads = map[string]bool{}
-	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: "a", Key: requestKey("500", m.ID), Phase: "context_pending"}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: "a", Key: requestKey("500", m.ID), Phase: "context_pending"}
 	r.State.Requests[m.ID] = request
 	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]}]}`), 0600)
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
@@ -494,9 +531,110 @@ func TestProgressLinkLoadsOnlyAfterReceiptAndLiveDiscordVerification(t *testing.
 			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
 		}
 	})
-	r.loadProgressLinks(context.Background())
+	r.loadProgressLinks(context.Background(), map[string]bool{"500": true})
 	if r.ProgressLinks["500"].Todo != 10 || r.State.ProgressLinks["500"].Message != "600" || r.BlockedProgressThreads["500"] {
 		t.Fatal("verified progress relation was not loaded into receiver state")
+	}
+}
+
+func TestCorruptProgressLinkRegistryBlocksKnownBotThreads(t *testing.T) {
+	r, _ := fixture(t)
+	r.Config.Home = filepath.Join(t.TempDir(), "unattended")
+	_ = os.MkdirAll(r.Config.Home, 0700)
+	_ = os.WriteFile(filepath.Join(r.Config.Home, "progress-links.json"), []byte("{"), 0600)
+	r.loadProgressLinks(context.Background(), map[string]bool{"500": true, "501": true})
+	for _, thread := range []string{"500", "501"} {
+		if _, ok := r.linkOrigin(&Request{Thread: thread}); ok {
+			t.Fatalf("corrupt registry allowed unrelated intake from thread %s", thread)
+		}
+	}
+	if !r.ProgressLinkRegistryInvalid {
+		t.Fatal("corrupt registry was not surfaced")
+	}
+}
+
+func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
+	r, c := fixture(t)
+	messages := make([]Message, 5)
+	for i := range messages {
+		thread := fmt.Sprintf("blocked-%d", i+1)
+		if i == 4 {
+			thread = "500"
+		}
+		messages[i] = msg(c.Add(time.Duration(i+1)*time.Second), thread, "300", fmt.Sprintf("request %d", i+1))
+		r.State.Requests[messages[i].ID] = &Request{Thread: thread, Guild: "100", RecordVersion: 2, Message: messages[i].ID, Author: "300", Created: messages[i].Timestamp, Source: "discord-api-v10", Text: messages[i].Content, Key: requestKey(thread, messages[i].ID), Phase: "captured"}
+		if i < 4 {
+			if r.BlockedProgressThreads == nil {
+				r.BlockedProgressThreads = map[string]bool{}
+			}
+			r.BlockedProgressThreads[thread] = true
+		}
+	}
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, messages[4])
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
+		}
+	})
+	adds := 0
+	r.Run = func(context.Context, string, ...string) (string, error) { adds++; return "added 99", nil }
+	var health Health
+	r.admit(context.Background(), &health)
+	if adds != 0 || r.State.IntakeCursor != messages[3].ID {
+		t.Fatal("blocked messages did not advance and persist the intake cursor")
+	}
+	r.admit(context.Background(), &health)
+	if adds != 1 || r.State.Requests[messages[4].ID].Todo != 99 {
+		t.Fatal("later valid request remained starved behind blocked origins")
+	}
+}
+
+func TestBlockedOriginReplyIsReevaluatedAfterTaskUnblocks(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "解除後に届ける指示")
+	origin := ProgressOrigin{RequestID: "exact-origin", Guild: "100", Thread: "500", Message: "600", Todo: 10, Job: "original-job"}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured", ProgressThread: "500", Origin: &origin}
+	r.State.Requests[m.ID] = request
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"block","jobs":["original-job"]}]}`), 0600)
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: "200", Owner: "400"})
+		}
+	})
+	r.Run = func(context.Context, string, ...string) (string, error) { return "added 11", nil }
+	if err := r.registerOrigin(context.Background(), request, origin); err != nil || request.Phase != "origin_blocked" || request.Todo != 10 {
+		t.Fatalf("blocked origin was not retained: phase=%s todo=%d err=%v", request.Phase, request.Todo, err)
+	}
+	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]}]}`), 0600)
+	var health Health
+	r.recheckOriginBlocked(context.Background(), &health)
+	r.admit(context.Background(), &health)
+	if request.Phase != "registered" || request.Todo != 11 {
+		t.Fatalf("saved owner reply was not re-evaluated after the block cleared: phase=%s todo=%d", request.Phase, request.Todo)
+	}
+}
+
+func TestLegacyOwnerReplyMetadataMigratesOnlyAfterCanonicalAPIIdentity(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "legacy receipt")
+	m.Reference.Message, m.Reference.Channel, m.Reference.Guild = "600", "500", "100"
+	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
+	r.State.Requests[m.ID] = request
+	server(t, r, func(w http.ResponseWriter, q *http.Request) {
+		if strings.Contains(q.URL.Path, "/messages/") {
+			respond(w, m)
+		} else {
+			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
+		}
+	})
+	if err := r.validateRequest(context.Background(), request); err == nil || request.RecordVersion != 2 || request.Guild != "100" || request.ReplyTo != "600" || request.ReplyChannel != "500" || request.ReplyGuild != "100" {
+		t.Fatal("legacy metadata was not filled from the authenticated API message")
+	}
+	if err := r.validateRequest(context.Background(), request); err != nil {
+		t.Fatalf("migrated owner reply could not be re-evaluated: %v", err)
 	}
 }
 
@@ -504,7 +642,7 @@ func TestOwnerEditTimestampChangeIsSavedWithOriginalIdentity(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c.Add(time.Second), "500", "300", "same text")
 	m.Edited = c.Add(2 * time.Second).Format(time.RFC3339Nano)
-	request := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
+	request := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID)}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			respond(w, m)
@@ -522,7 +660,7 @@ func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {
 	r.State.Requests[old.Message] = old
 	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"block","jobs":[],"spec":false}]}`), 0600)
 	m := msg(c.Add(time.Second), "500", "300", "new direction")
-	req := &Request{Thread: "500", Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
+	req := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey("500", m.ID), Phase: "captured"}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			respond(w, m)

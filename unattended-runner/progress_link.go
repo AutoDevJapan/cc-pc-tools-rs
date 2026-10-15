@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -44,7 +44,7 @@ type progressLinkFile struct {
 	Links  []ProgressLink `json:"links"`
 }
 
-func (r *Runner) loadProgressLinks(ctx context.Context) {
+func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 	r.ProgressLinks = make(map[string]ProgressLink, len(r.State.ProgressLinks))
 	if r.State.ProgressLinks == nil {
 		r.State.ProgressLinks = make(map[string]ProgressLink)
@@ -53,18 +53,19 @@ func (r *Runner) loadProgressLinks(ctx context.Context) {
 		r.ProgressLinks[thread] = link
 	}
 	r.BlockedProgressThreads = make(map[string]bool)
+	r.ProgressLinkRegistryInvalid = false
 	path := filepath.Join(r.Config.Home, "progress-links.json")
 	var file progressLinkFile
 	if err := readJSON(path, maxState, &file); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			r.BlockProgressThread("")
-		}
+		r.invalidateProgressLinkRegistry(known)
 		return
 	}
 	if file.Domain != progressLinksDomain {
+		r.invalidateProgressLinkRegistry(known)
 		return
 	}
 	if len(file.Links) > 10 {
+		r.invalidateProgressLinkRegistry(known)
 		return
 	}
 	used := make(map[string]bool)
@@ -73,7 +74,12 @@ func (r *Runner) loadProgressLinks(ctx context.Context) {
 		_, threadOK := number(link.Thread)
 		_, messageOK := number(link.Message)
 		if !threadOK || !messageOK || link.Guild != r.State.Destination.Guild || link.Author != r.State.Destination.Bot || link.Todo == 0 || link.Job == "" || link.RequestID == "" || link.Created == "" || used[link.Thread] {
-			r.BlockProgressThread(link.Thread)
+			r.ProgressLinkRegistryInvalid = true
+			if threadOK {
+				r.BlockProgressThread(link.Thread)
+			} else {
+				r.invalidateProgressLinkRegistry(known)
+			}
 			continue
 		}
 		used[link.Thread] = true
@@ -88,6 +94,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context) {
 		verified, ok := r.verifyProgressLink(ctx, link)
 		if !ok {
 			r.BlockProgressThread(link.Thread)
+			r.ProgressLinkRegistryInvalid = true
 			continue
 		}
 		r.State.ProgressLinks[link.Thread] = verified
@@ -98,6 +105,13 @@ func (r *Runner) loadProgressLinks(ctx context.Context) {
 	}
 	if changed {
 		_ = r.save()
+	}
+}
+
+func (r *Runner) invalidateProgressLinkRegistry(known map[string]bool) {
+	r.ProgressLinkRegistryInvalid = true
+	for thread := range known {
+		r.BlockProgressThread(thread)
 	}
 }
 
@@ -196,20 +210,73 @@ func (r *Runner) linkOrigin(request *Request) (*ProgressOrigin, bool) {
 }
 
 func (r *Runner) registerOrigin(ctx context.Context, request *Request, origin ProgressOrigin) error {
+	generation, err := r.activeOriginGeneration(origin)
+	if err != nil {
+		return err
+	}
+	if generation != nil {
+		if generation.Status == "block" {
+			return r.parkOriginReply(request, origin, generation.ID)
+		}
+		return r.deliverSteering(ctx, request, &Request{Thread: request.Thread, Message: origin.Message, Todo: generation.ID})
+	}
 	row, err := r.todo(origin.Todo)
 	if err != nil || row.Project != r.Config.Project {
 		return errors.New("progress origin task unavailable")
 	}
+	if row.Status == "block" {
+		return r.parkOriginReply(request, origin, row.ID)
+	}
 	if row.Status == "done" {
 		return r.registerNewGeneration(ctx, request, origin)
 	}
-	if row.Status == "block" {
-		request.Phase = "origin_blocked"
-		request.Origin = &origin
-		return r.save()
-	}
 	prior := &Request{Thread: request.Thread, Message: origin.Message, Todo: origin.Todo}
 	return r.deliverSteering(ctx, request, prior)
+}
+
+func (r *Runner) parkOriginReply(request *Request, origin ProgressOrigin, blockedTodo uint64) error {
+	request.Todo = blockedTodo
+	request.Phase = "origin_blocked"
+	request.Origin = &origin
+	request.ProgressThread = origin.Thread
+	return r.save()
+}
+
+func originGenerationMarker(origin ProgressOrigin) string {
+	identity := strings.Join([]string{origin.RequestID, origin.Guild, origin.Thread, origin.Message, strconv.FormatUint(origin.Todo, 10), origin.Job}, "\x00")
+	sum := sha256.Sum256([]byte("unattended-owner-generation-v1\x00" + identity))
+	return "unattended-owner-generation:" + hex.EncodeToString(sum[:16])
+}
+
+func hasNoteMarker(note, marker string) bool {
+	for _, line := range strings.Split(note, "\n") {
+		if strings.TrimSpace(line) == marker {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Runner) activeOriginGeneration(origin ProgressOrigin) (*TodoRow, error) {
+	var db struct {
+		Items []TodoRow `json:"items"`
+	}
+	if err := readJSON(r.TodoPath, maxTodo, &db); err != nil {
+		return nil, err
+	}
+	marker := originGenerationMarker(origin)
+	var active *TodoRow
+	for i := range db.Items {
+		row := &db.Items[i]
+		if row.Project != r.Config.Project || !hasNoteMarker(row.Note, marker) || row.Status == "done" {
+			continue
+		}
+		if active != nil {
+			return nil, errors.New("multiple active generations share one progress origin")
+		}
+		active = row
+	}
+	return active, nil
 }
 
 func (r *Runner) registerNewGeneration(ctx context.Context, request *Request, origin ProgressOrigin) error {
@@ -232,7 +299,8 @@ func (r *Runner) registerNewGeneration(ctx context.Context, request *Request, or
 		return err
 	}
 	marker := "unattended-owner-receipt:" + request.Key
-	output, err := r.Run(ctx, "D:/CC/Tools/todo/todo.exe", "add", r.Config.Project, fmt.Sprintf("ToDo %dへの新しい本人指示を反映する", origin.Todo), "--spec", spec, "--note", marker, "--model", "gpt-6.1-sol", "--effort", "max")
+	note := marker + "\n" + originGenerationMarker(origin)
+	output, err := r.Run(ctx, "D:/CC/Tools/todo/todo.exe", "add", r.Config.Project, fmt.Sprintf("ToDo %dへの新しい本人指示を反映する", origin.Todo), "--spec", spec, "--note", note, "--model", "gpt-6.1-sol", "--effort", "max")
 	if err != nil {
 		return errors.New("new task generation registration deferred")
 	}

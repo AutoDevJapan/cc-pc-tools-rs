@@ -74,6 +74,7 @@ type Scan struct {
 type Request struct {
 	Thread         string          `json:"thread_id"`
 	Guild          string          `json:"guild_id,omitempty"`
+	RecordVersion  uint8           `json:"record_version,omitempty"`
 	Message        string          `json:"message_id"`
 	Author         string          `json:"author_id"`
 	Created        string          `json:"created_at"`
@@ -120,16 +121,17 @@ type Health struct {
 	Errors     []string `json:"errors"`
 }
 type Runner struct {
-	Config                 Config
-	State                  *State
-	Client                 *http.Client
-	Token                  string
-	Base                   string
-	Run                    func(context.Context, string, ...string) (string, error)
-	Now                    func() time.Time
-	TodoPath               string
-	ProgressLinks          map[string]ProgressLink
-	BlockedProgressThreads map[string]bool
+	Config                      Config
+	State                       *State
+	Client                      *http.Client
+	Token                       string
+	Base                        string
+	Run                         func(context.Context, string, ...string) (string, error)
+	Now                         func() time.Time
+	TodoPath                    string
+	ProgressLinks               map[string]ProgressLink
+	BlockedProgressThreads      map[string]bool
+	ProgressLinkRegistryInvalid bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -282,7 +284,7 @@ func (r *Runner) discover(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.loadProgressLinks(ctx)
+	r.loadProgressLinks(ctx, known)
 	paths := []string{"/guilds/" + r.State.Destination.Guild + "/threads/active", "/channels/" + requestForum + "/threads/archived/public?limit=25", "/channels/" + r.State.Destination.Forum + "/threads/archived/public?limit=25"}
 	for _, path := range paths {
 		var page struct {
@@ -393,7 +395,7 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		if message.Reference.Channel != "" && (message.Reference.Channel != thread.ID || (message.Reference.Guild != "" && message.Reference.Guild != r.State.Destination.Guild)) {
 			phase = "reference_mismatch"
 		}
-		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
+		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
 		if link, ok := r.ProgressLinks[thread.ID]; ok {
 			r.State.Requests[message.ID].Origin = &ProgressOrigin{RequestID: link.RequestID, Guild: link.Guild, Thread: link.Thread, Message: link.Message, Todo: link.Todo, Job: link.Job}
 			r.State.Requests[message.ID].ProgressThread = link.Thread
@@ -425,7 +427,7 @@ func (r *Runner) existingTodo(key string) (uint64, error) {
 	marker := "unattended-owner-receipt:" + key
 	var found uint64
 	for _, item := range db.Items {
-		if item.Note == marker && item.Project == r.Config.Project {
+		if hasNoteMarker(item.Note, marker) && item.Project == r.Config.Project {
 			if found != 0 {
 				return 0, errors.New("duplicate intake receipt")
 			}
@@ -548,6 +550,9 @@ func (r *Runner) tick(ctx context.Context) Health {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
 		health.API = true
+		if r.ProgressLinkRegistryInvalid {
+			health.Errors = append(health.Errors, "progress_link_registry_unverified")
+		}
 		ids := make([]string, 0, len(r.State.Threads))
 		for id := range r.State.Threads {
 			ids = append(ids, id)
@@ -581,6 +586,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 			health.Scanned++
 		}
 	}
+	r.recheckOriginBlocked(ctx, &health)
 	r.admit(ctx, &health)
 	if err := r.results(ctx); err != nil {
 		health.Errors = append(health.Errors, "result_delivery_deferred")
@@ -616,14 +622,15 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 	}
 	for i := 0; i < min(4, len(mids)); i++ {
 		if ctx.Err() != nil {
+			_ = r.save()
 			return
 		}
 		mid := mids[(start+i)%len(mids)]
 		req := r.State.Requests[mid]
+		r.State.IntakeCursor = mid
 		if _, ok := r.linkOrigin(req); !ok {
 			continue
 		}
-		r.State.IntakeCursor = mid
 		if req.Phase == "context_pending" && req.Origin != nil {
 			req.Context = "This is a non-question progress thread. Preserve a short reply literally; do not infer an answer or decision."
 			req.Phase = "captured"
@@ -644,6 +651,39 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 		}
 		health.Registered++
 		return
+	}
+	if len(mids) != 0 {
+		_ = r.save()
+	}
+}
+
+func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
+	ids := make([]string, 0)
+	for id, request := range r.State.Requests {
+		if request != nil && request.Phase == "origin_blocked" && request.Origin != nil && request.Todo != 0 {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			return
+		}
+		request := r.State.Requests[id]
+		row, err := r.todo(request.Todo)
+		if err != nil || row.Project != r.Config.Project {
+			health.Errors = append(health.Errors, "blocked_origin_recheck_deferred")
+			continue
+		}
+		if row.Status == "block" {
+			continue
+		}
+		request.Todo = 0
+		request.Phase = "captured"
+		if err := r.save(); err != nil {
+			health.Errors = append(health.Errors, "blocked_origin_recheck_deferred")
+			continue
+		}
 	}
 }
 

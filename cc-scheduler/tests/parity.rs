@@ -1725,6 +1725,8 @@ fn repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_la
         );
         assert_eq!(f.e.backend.launched.len(), 1);
         assert_eq!(f.e.backend.launched[0]["item"]["id"], 1);
+        f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+        f.e.backend.ps.insert(99, proc(99, 0, "codex.exe"));
         f.e.run("repair-step", false).unwrap();
         assert_eq!(f.e.backend.launched.len(), 1);
         assert!(f.e.backend.notices.is_empty());
@@ -1792,6 +1794,9 @@ fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
         assert!(f.e.backend.notices.is_empty(), "{gate}");
         assert!(f.e.backend.cancelled.is_empty(), "{gate}");
         assert_eq!(f.e.backend.reply_count, 0, "{gate}");
+        if matches!(gate, "running" | "terminal_live") {
+            assert!(f.e.backend.repair_calls.is_empty(), "{gate}");
+        }
     }
 }
 
@@ -1830,9 +1835,20 @@ fn repair_dependency_release_admits_unstarted_waits_and_caches_paths_per_tick() 
     assert_eq!(f.get(1)["status"], "doing");
     assert_eq!(f.e.backend.launched.len(), 1);
     // Rechecking an already assigned task never creates a second worker.
+    f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+    f.e.backend.ps.insert(99, proc(99, 0, "codex.exe"));
     f.e.release_repair_waits().unwrap();
     f.dispatch();
-    assert_eq!(f.e.backend.launched.len(), 1);
+    for id in [1, 3] {
+        assert_eq!(
+            f.e.backend
+                .launched
+                .iter()
+                .filter(|launch| launch["item"]["id"] == id)
+                .count(),
+            1
+        );
+    }
 }
 
 #[test]

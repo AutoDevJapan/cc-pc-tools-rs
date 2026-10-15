@@ -92,6 +92,9 @@ func TestRejectQuotedEvents(t *testing.T) {
 			t.Fatal("quoted or unidentified event promoted")
 		}
 	}
+	if _, ok := unwrapEvent([]byte(`{"type":"response_item","call_id":"forged-carrier","payload":{"type":"function_call"}}`)); ok {
+		t.Fatal("carrier identity inherited")
+	}
 	b := []byte(`{"type":"response_item","payload":{"type":"custom_tool_call","call_id":"fixture","input":"data"}}`)
 	e, ok := unwrapEvent(b)
 	if !ok || eventCommand(e) != "data" {

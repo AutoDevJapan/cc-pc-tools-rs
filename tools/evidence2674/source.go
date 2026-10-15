@@ -26,6 +26,19 @@ func allowedSource(path string) bool {
 	return false
 }
 
+func noLinkAncestors(path string) bool {
+	for p := filepath.Clean(path); ; p = filepath.Dir(p) {
+		fi, e := os.Lstat(p)
+		if e != nil || fi.Mode()&os.ModeSymlink != 0 {
+			return false
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return true
+		}
+	}
+}
+
 type Event struct {
 	Type      string          `json:"type"`
 	Name      string          `json:"name"`
@@ -42,9 +55,11 @@ func unwrapEvent(b []byte) (Event, bool) {
 		return v, false
 	}
 	if v.Type == "response_item" && len(v.Payload) > 0 {
-		if json.Unmarshal(v.Payload, &v) != nil {
+		var inner Event
+		if json.Unmarshal(v.Payload, &inner) != nil {
 			return v, false
 		}
+		v = inner
 	}
 	switch v.Type {
 	case "function_call", "custom_tool_call", "function_call_output", "custom_tool_call_output":
@@ -122,7 +137,7 @@ func sourceProofMode(private string, large bool) {
 	}
 	for n, path := range order {
 		groups := targets[path]
-		if !allowedSource(path) {
+		if !allowedSource(path) || !noLinkAncestors(path) {
 			counts["source_outside_allowlist"]++
 			continue
 		}

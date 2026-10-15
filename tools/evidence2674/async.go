@@ -78,7 +78,7 @@ func followAsync(private string) {
 	defer raw.Close()
 	counts := map[string]int{"pending": len(ps)}
 	for _, p := range ps {
-		if !allowedSource(p.Source) {
+		if !allowedSource(p.Source) || !noLinkAncestors(p.Source) {
 			counts["unproven"]++
 			continue
 		}

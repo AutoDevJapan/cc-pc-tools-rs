@@ -358,6 +358,11 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	if e != nil || p2 != p {
 		return errors.New("CodeQL plan changed before registration")
 	}
+	callback, key, closeAdmission, e := startCodeQLAdmission(ctx, p, c)
+	if e != nil {
+		return e
+	}
+	defer func() { ret = errors.Join(ret, closeAdmission()) }()
 	var token struct{ Token string }
 	if e = mutateJSON(ctx, "POST", "repos/"+p.Repo+"/actions/runners/registration-token", struct{}{}, &token); e != nil {
 		return e
@@ -403,9 +408,9 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 		registrationGone = true
 	}()
 	packet := struct {
-		Plan              codeQLPlan
-		Repo, Token, Name string
-	}{p, p.Repo, token.Token, name}
+		Plan                             codeQLPlan
+		Repo, Token, Name, Callback, Key string
+	}{p, p.Repo, token.Token, name, callback, key}
 	input, e := json.Marshal(packet)
 	token.Token = ""
 	packet.Token = ""
@@ -463,8 +468,8 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 
 func codeQLGuest() error {
 	var packet struct {
-		Plan              codeQLPlan
-		Repo, Token, Name string
+		Plan                             codeQLPlan
+		Repo, Token, Name, Callback, Key string
 	}
 	if e := json.NewDecoder(io.LimitReader(os.Stdin, 64<<10)).Decode(&packet); e != nil {
 		return errors.New("guest input invalid")
@@ -478,14 +483,14 @@ func codeQLGuest() error {
 		return e
 	}
 	private, _ := json.Marshal(struct {
-		Plan codeQLPlan
-		Repo string
-	}{p, p.Repo})
-	if e := os.WriteFile("/runner/plan.json", private, 0600); e != nil {
+		Plan                codeQLPlan
+		Repo, Callback, Key string
+	}{p, p.Repo, packet.Callback, packet.Key})
+	if e := os.WriteFile("/home/runner/product-plan.json", private, 0600); e != nil {
 		return e
 	}
 	for _, stage := range []string{"start", "complete"} {
-		if e := os.WriteFile("/runner/hook-"+stage+".sh", []byte("#!/bin/sh\nexec /runner/product-ci codeql-hook-"+stage+"\n"), 0700); e != nil {
+		if e := os.WriteFile("/home/runner/product-hook-"+stage+".sh", []byte("#!/bin/sh\nexec /runner/product-ci codeql-hook-"+stage+"\n"), 0700); e != nil {
 			return e
 		}
 	}
@@ -505,7 +510,7 @@ func codeQLGuest() error {
 	run.Dir = "/runner"
 	// Exclude /opt/bridge and Rust from PATH: this no-build mode has no Cargo
 	// admission. A native build is outside its scope, never an ungated fallback.
-	run.Env = append(os.Environ(), "PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/home/runner", "CODEQL_THREADS=2", "CODEQL_RAM=6144", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/runner/hook-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/runner/hook-complete.sh")
+	run.Env = append(os.Environ(), "PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/home/runner", "CODEQL_THREADS=2", "CODEQL_RAM=6144", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/runner/product-hook-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/runner/product-hook-complete.sh")
 	run.Stdout = os.Stdout
 	run.Stderr = os.Stderr
 	return run.Run()
@@ -519,13 +524,13 @@ func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
 }
 
 func codeQLHook(complete bool) error {
-	b, e := os.ReadFile("/runner/plan.json")
+	b, e := os.ReadFile("/home/runner/product-plan.json")
 	if e != nil {
 		return errors.New("private plan unavailable")
 	}
 	var packet struct {
-		Plan codeQLPlan
-		Repo string
+		Plan                codeQLPlan
+		Repo, Callback, Key string
 	}
 	if json.Unmarshal(b, &packet) != nil {
 		return errors.New("private plan invalid")
@@ -533,6 +538,11 @@ func codeQLHook(complete bool) error {
 	p := packet.Plan
 	p.Repo = packet.Repo
 	if e = checkCodeQLHook(p, os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_RUN_ID"), os.Getenv("GITHUB_RUN_ATTEMPT")); e != nil {
+		return e
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	if e = requestCodeQLAdmission(ctx, p, packet.Callback, packet.Key); e != nil {
 		return e
 	}
 	if !complete {

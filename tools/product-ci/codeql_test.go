@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -36,6 +39,47 @@ func codeQLFixture(t *testing.T, change func(map[string]any)) api {
 			return e
 		}
 		return json.Unmarshal(b, out)
+	}
+}
+
+func TestCodeQLLiveAdmission(t *testing.T) {
+	p := codeQLPlan{RunID: 7, Attempt: 2, SHA: strings.Repeat("a", 40)}
+	reads := 0
+	stale := false
+	h := codeQLAdmissionHandler(p, "test-key", func(context.Context) error {
+		reads++
+		if stale {
+			return errors.New("head advanced")
+		}
+		return nil
+	})
+	call := func(method, path, key, body string) int {
+		r := httptest.NewRequest(method, path, strings.NewReader(body))
+		r.Header.Set("X-Product-Admission", key)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	valid := `{"run_id":7,"attempt":2,"sha":"` + p.SHA + `"}`
+	if call("POST", "/admit", "test-key", valid) != http.StatusNoContent || reads != 1 {
+		t.Fatal("valid live admission did not reach the current-source check")
+	}
+	for _, v := range [][4]string{{"GET", "/admit", "test-key", valid}, {"POST", "/other", "test-key", valid}, {"POST", "/admit", "bad-key", valid}, {"POST", "/admit", "test-key", `{"run_id":8}`}, {"POST", "/admit", "test-key", valid + ` {}`}, {"POST", "/admit", "test-key", `{"run_id":7,"attempt":2,"sha":"` + p.SHA + `","command":"run"}`}} {
+		if call(v[0], v[1], v[2], v[3]) != 403 {
+			t.Fatal("unbound request admitted")
+		}
+	}
+	if reads != 1 {
+		t.Fatal("rejected request reached GitHub")
+	}
+	stale = true
+	if call("POST", "/admit", "test-key", valid) != 403 || reads != 2 {
+		t.Fatal("advanced head admitted")
+	}
+	for _, endpoint := range []string{"https://example.com/admit", "http://host.docker.internal:80/other", "http://user@host.docker.internal:80/admit", "http://host.docker.internal:80/admit?q=1"} {
+		if requestCodeQLAdmission(context.Background(), p, endpoint, strings.Repeat("a", 64)) == nil {
+			t.Fatal("unapproved admission destination admitted")
+		}
 	}
 }
 

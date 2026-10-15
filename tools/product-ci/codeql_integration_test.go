@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -19,7 +24,7 @@ func TestCodeQLRealLifecycle(t *testing.T) {
 		t.Skip("explicit owned lifecycle evidence directory required")
 	}
 	for _, cancelCase := range []bool{false, true} {
-		t.Run(fmt.Sprintf("cancel-%t", cancelCase), func(t *testing.T) {
+		ok := t.Run(fmt.Sprintf("cancel-%t", cancelCase), func(t *testing.T) {
 			ctx, stop := context.WithTimeout(context.Background(), 60*time.Second)
 			defer stop()
 			name := fmt.Sprintf("todo2648-codeql-smoke-%t-%d", cancelCase, time.Now().UnixNano())
@@ -76,6 +81,9 @@ func TestCodeQLRealLifecycle(t *testing.T) {
 			if e = cmd(ctx, docker, "start", result.ContainerID).Run(); e != nil {
 				t.Fatal(e)
 			}
+			if !cancelCase && os.Getenv("CC_PRODUCT_GUEST_BINARY") != "" {
+				testRealCodeQLAdmission(t, ctx, result.ContainerID, dir)
+			}
 			script := "sleep 600 & echo $! > /work/child.pid; exit 0"
 			if cancelCase {
 				script = "sleep 600 & echo $! > /work/child.pid; wait"
@@ -109,6 +117,59 @@ func TestCodeQLRealLifecycle(t *testing.T) {
 				t.Fatal(e)
 			}
 		})
+		if !ok {
+			break
+		} // Never create a second namespace after uncertain recovery.
+	}
+}
+
+func testRealCodeQLAdmission(t *testing.T, ctx context.Context, id, dir string) {
+	t.Helper()
+	guest, e := os.ReadFile(os.Getenv("CC_PRODUCT_GUEST_BINARY"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	transfer := cmd(ctx, docker, "exec", "-i", id, "sh", "-c", "cat > /runner/product-ci && chmod 755 /runner/product-ci")
+	transfer.Stdin = bytes.NewReader(guest)
+	if e = transfer.Run(); e != nil {
+		t.Fatal(e)
+	}
+	p := codeQLPlan{RepoID: candidates[0].ID, RunID: 7, Attempt: 2, SHA: strings.Repeat("a", 40), Repo: "AutoDevJapan/opaque-fixture"}
+	var stale atomic.Bool
+	var calls atomic.Int32
+	key := strings.Repeat("c", 64)
+	server := httptest.NewServer(codeQLAdmissionHandler(p, key, func(context.Context) error {
+		calls.Add(1)
+		if stale.Load() {
+			return errors.New("head advanced")
+		}
+		return nil
+	}))
+	defer server.Close()
+	endpoint := "http://host.docker.internal:" + fmt.Sprint(server.Listener.Addr().(*net.TCPAddr).Port) + "/admit"
+	packet, _ := json.Marshal(struct {
+		Plan                codeQLPlan
+		Repo, Callback, Key string
+	}{p, p.Repo, endpoint, key})
+	put := cmd(ctx, docker, "exec", "-i", id, "sh", "-c", "umask 077; cat > /home/runner/product-plan.json")
+	put.Stdin = bytes.NewReader(packet)
+	if e = put.Run(); e != nil {
+		t.Fatal(e)
+	}
+	args := []string{"exec", "-e", "GITHUB_REPOSITORY=" + p.Repo, "-e", "GITHUB_SHA=" + p.SHA, "-e", "GITHUB_RUN_ID=7", "-e", "GITHUB_RUN_ATTEMPT=2", id, "/runner/product-ci", "codeql-hook-start"}
+	accepted := cmd(ctx, docker, args...).Run() == nil
+	stale.Store(true)
+	rejected := cmd(ctx, docker, args...).Run() != nil
+	proof := struct {
+		Accepted, AdvancedHeadRejected bool
+		LiveChecks                     int32
+	}{accepted, rejected, calls.Load()}
+	b, _ := json.MarshalIndent(proof, "", "  ")
+	if e = os.WriteFile(filepath.Join(dir, "codeql-live-admission.private.json"), b, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if !accepted || !rejected || proof.LiveChecks != 2 {
+		t.Fatal("real guest live admission did not enforce the changed head")
 	}
 }
 

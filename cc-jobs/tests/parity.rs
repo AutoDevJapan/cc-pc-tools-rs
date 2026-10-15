@@ -10620,6 +10620,10 @@ mod end_to_end {
         );
         let jid = e.start("secret-events", &e.tmp.0, prompt.as_bytes());
         e.until(|| s(&e.job(&jid), "status") == "succeeded");
+        let saved = e.job(&jid);
+        let supervisor = saved["pid"].as_u64().unwrap() as u32;
+        let supervisor_created = saved["pid_created"].as_u64().unwrap();
+        e.until(|| proc_created(supervisor) != Some(supervisor_created));
         let dir = e.tmp.0.join("tool/jobs").join(&jid);
         assert_records_masked(&dir);
         let stderr = fs::read_to_string(dir.join("stderr.log")).unwrap();

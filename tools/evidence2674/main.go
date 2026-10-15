@@ -82,6 +82,11 @@ func main() {
 	switch os.Args[1] {
 	case "todo":
 		todo()
+	case "source-check":
+		if len(os.Args) != 3 {
+			fail()
+		}
+		sourceCheck(os.Args[2])
 	case "assess":
 		if len(os.Args) != 3 {
 			fail()

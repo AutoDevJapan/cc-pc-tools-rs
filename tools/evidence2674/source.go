@@ -39,6 +39,44 @@ func noLinkAncestors(path string) bool {
 	}
 }
 
+func sourceCheck(private string) {
+	f, e := os.Open(filepath.Join(private, "joined.private.jsonl"))
+	if e != nil {
+		fail()
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 65536), 64*1024*1024)
+	seen := map[string]bool{}
+	counts := map[string]int{}
+	for s.Scan() {
+		var g Joined
+		if json.Unmarshal(s.Bytes(), &g) != nil {
+			fail()
+		}
+		for _, r := range g.Receipts {
+			if !directWrite.MatchString(r.Command) || seen[r.Source] {
+				continue
+			}
+			seen[r.Source] = true
+			if allowedSource(r.Source) && noLinkAncestors(r.Source) {
+				counts["ordinary_ancestry"]++
+			} else {
+				counts["unproven_ancestry"]++
+			}
+		}
+	}
+	if s.Err() != nil {
+		fail()
+	}
+	out := newPrivate(filepath.Join(private, "source-ancestry.json"))
+	defer out.Close()
+	if json.NewEncoder(out).Encode(counts) != nil {
+		fail()
+	}
+	emit(counts)
+}
+
 type Event struct {
 	Type      string          `json:"type"`
 	Name      string          `json:"name"`

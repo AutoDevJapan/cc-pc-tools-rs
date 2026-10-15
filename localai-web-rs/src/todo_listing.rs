@@ -1,5 +1,5 @@
 //! Finite machine listing. No free text, paths, history or job files are returned.
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const PAGE_LIMIT: usize = 100;
@@ -261,7 +261,7 @@ pub fn validate(value: Value, q: &Query) -> Result<Value, &'static str> {
         || d["metadataOnly"] != true
         || d["protectionMode"] != "masked_metadata"
         || !hash(&d["revision"])
-        || !d["total"].as_u64().is_some_and(|n| n >= items.len() as u64)
+        || d["total"].as_u64().is_none_or(|n| n < items.len() as u64)
         || d["after"] != q.after
         || d["requestedId"] != json!(q.id)
         || d["limit"] != q.limit
@@ -495,11 +495,13 @@ mod tests {
         assert_eq!(page["items"][0]["waitOnNextOffset"], LINK_LIMIT);
         let next = project(&db, &Query::parse("id=1&link_offset=64").unwrap()).unwrap();
         assert_eq!(next["items"][0]["wait_on"][0], 66);
-        assert!(validate(
-            json!({"ok":true,"version":1,"data":next}),
-            &Query::parse("id=1&link_offset=64").unwrap()
-        )
-        .is_ok());
+        assert!(
+            validate(
+                json!({"ok":true,"version":1,"data":next}),
+                &Query::parse("id=1&link_offset=64").unwrap()
+            )
+            .is_ok()
+        );
         for raw in [
             "limit=101",
             "id=0",
@@ -516,11 +518,13 @@ mod tests {
             project(&db, &Query::parse("id=9").unwrap()).unwrap_err(),
             "todo_not_found"
         );
-        assert!(project(
-            &json!({"items":[{"id":1},{"id":1}]}),
-            &Query::parse("").unwrap()
-        )
-        .is_err());
+        assert!(
+            project(
+                &json!({"items":[{"id":1},{"id":1}]}),
+                &Query::parse("").unwrap()
+            )
+            .is_err()
+        );
     }
     #[test]
     fn real_scheduler_fields_waits_and_unverified_references_match_shared_rules() {

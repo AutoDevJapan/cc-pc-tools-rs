@@ -9,3 +9,10 @@
 - Tests after the design change: the native recovery-cancel and lost-job E2Es passed together; full `cc-jobs` nextest passed 411/411 with 0 skipped. The modified recovery E2Es also passed during that run.
 - Next: complete final-source full-workspace nextest, doctest and Clippy; review the process ownership design; commit/push; request a read-only review through shared ToDo `--spec`; resolve Must findings; open PR, verify all required CI, merge and confirm main; write the requested result JSON and cleanup record.
 - Exact original Windows CI PID and image remain unavailable. Do not claim a proven instance-level cause; report that the redesign removes snapshot-PID lookup from the active-supervisor cancellation path.
+
+## Current final validation checkpoint
+
+- Added the Windows Job Object path for active supervisor cancellation. The active recovery-cancel E2E and lost-supervisor fallback E2E both passed; `cc-jobs` passed 411/411.
+- Full workspace on this source passed 2179/2180 with 5 configured skips; the one failure was `cc-ask::resume::no_origin_repository_creates_and_reuses_worktree_from_committed_head`. It passed alone, and all 769 `cc-ask` tests passed with 1 configured skip. No source change was made for it because it did not reproduce and the test uses a unique temporary local Git repository.
+- Doctests passed. Workspace Clippy exposed an existing `nonminimal_bool` warning in `localai-web-rs/src/todo_listing.rs`; the expression was simplified. After this edit, `localai-web-rs` passed 337 tests with 3 configured skips.
+- Next: rerun workspace Clippy after the fix; then perform the single final workspace nextest for this exact source. If the cc-ask test fails again, capture and resolve the concrete failure before proceeding. Then finish the independent review, PR/CI/merge, report JSON, and cleanup.

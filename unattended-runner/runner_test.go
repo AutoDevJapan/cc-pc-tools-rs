@@ -553,6 +553,18 @@ func TestCorruptProgressLinkRegistryBlocksKnownBotThreads(t *testing.T) {
 	}
 }
 
+func TestMismatchedProgressLinkBlocksKnownThreadNotNamedByBadEntry(t *testing.T) {
+	r, _ := fixture(t)
+	r.Config.Home = filepath.Join(t.TempDir(), "unattended")
+	_ = os.MkdirAll(r.Config.Home, 0700)
+	bad := ProgressLink{ProgressOrigin: ProgressOrigin{RequestID: "wrong-origin", Guild: "999", Thread: "501", Message: "501", Todo: 10, Job: "wrong-job"}, Author: "400", Created: "2026-10-15T00:00:00Z"}
+	_ = publish(filepath.Join(r.Config.Home, "progress-links.json"), progressLinkFile{Domain: progressLinksDomain, Links: []ProgressLink{bad}})
+	r.loadProgressLinks(context.Background(), map[string]bool{"500": true})
+	if _, ok := r.linkOrigin(&Request{Thread: "500"}); ok || !r.ProgressLinkRegistryInvalid {
+		t.Fatal("mismatched link left another known bot thread open for unrelated intake")
+	}
+}
+
 func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 	r, c := fixture(t)
 	messages := make([]Message, 5)

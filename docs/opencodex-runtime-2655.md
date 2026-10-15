@@ -2,6 +2,14 @@
 
 ## 結論と対象
 
+2026-10-15 15:00 JSTの確認でも稼働版は2.83.0、元資源の保護判定は未確認。
+公開latestの版・gitHead・配布digestは検査済み2.86.0から変わっていない。
+独立して実行できる候補照合は終えているため、6時間おきの同じ再確認を続けず、
+原保護設定の復旧を保持する元2467への正式な完了待ちへ切り替える。
+2467完了だけで変更を許可せず、再開時のguardと配布経路の再確認は必要。
+
+以下はこれまでの観測記録であり、現在の再開方式は末尾の15:00の記録を使う。
+
 2026-10-15 08:49 JSTの再開確認でも、稼働反映と切替受入は未完了。
 正規updaterのlatestは2.86.0へ変わったが、公開パッケージの実bytesとソースを
 照合しても今回の混雑記録の修正は含まれなかった。稼働版は2.83.0のまま。
@@ -271,3 +279,48 @@ repo1406818713、admin/maintain/push=trueを確認できた。
 追加ログイン・新権限・認証ファイルの読取をせず、この既存連携で記録の保存を進める。
 GitHub上の実commit/treeと作業コピーの対応は配送後のToDoへ記録する。
 CLI push失敗を成功へ書き換えず、製品稼働反映と調査記録の配送も区別する。
+
+## 15:00の再確認と依存待ちへの切替
+
+担当 `20261015-145721-todo-2655` は同じ作業ブランチのcleanな状態から再開した。
+このPCの開始commitは1edc560、GitHubの同ブランチはdeb0c5dで、
+前回記録どおりtreeは同一。通常CLIの認証失敗を無意味に再試行していない。
+
+正規status/system healthはstandalone10100、CLI/proxyとも2.83.0、PID1548、
+health正常、spendLedger degraded=false。readyはfailedで非0。
+startupはat-risk、service stale=true/viable=false/rebootSafe=false。
+PIDが前回15508から変わっているが、この担当は停止・再起動しておらず、
+PIDの変化だけで更新・復帰受入の成功を主張しない。
+既存opencodex-proxyタスクの最終実行は03:48:36、結果0。
+CC-ResidentGuardは14:55:50、結果0、次回15:00:49。
+
+今回の `system update check --json` はlatestVersion=null、canUpdate=false、
+reason=latest_unavailableだった。これは更新候補の取得失敗であり、
+最新版が存在しない、既に更新済み、更新不要という意味にはしない。
+独立した公開registryのlatest照会は成功し、2.86.0/gitHead409026b1のまま。
+shasumとSRIも08:49の実測時のmetadataと一致した。
+候補の内容に変化を示す情報がないため、同tarballの再ダウンロード・再検査はしていない。
+08:49の実hashは過去の取得bytesの測定として保持し、新しい実測値として再記録しない。
+
+GitHub正規連携でmashfromband/opencodexのID1358770414と、
+現在devが2dd27f61851944e191375436f31a3a1272dae911であることを再確認した。
+元2646の最新noteは同PR3/同mergeと配布未完了を保持している。
+ソース不変なので完了済みの関連検査・CI・別モデルレビューは重ねて起動しない。
+
+稼働パッケージ配置先そのもののguardは再びclient_resource=true、
+classification_unverified=true、original_registry_recovered=false。
+操作範囲の追加登録、manifest/guard変更、元資源の読取/hash/複製/書換えはしていない。
+
+元2467の共有ToDoと本リポジトリのdocs/original-record-recovery-2467.mdを確認した。
+原保護設定を来歴の確認できた原本から戻す工程は元2467に保持され、未完了。
+Discord履歴の取得・照合が進んだことは原設定復旧とは別に記録されていた。
+元2467の現在状態はtodoで、別の未完了ToDoへのwait_onはない。
+私的保存先や原文へアクセスせず、この公開可能な復旧記録と共有ToDoだけを根拠とした。
+
+独立確認を終えた本2655は `todo wait 2655 --on 2467 --progress 20` で
+この必要工程の完了を待つ。時刻wait-retryや本人判断blockには戻さない。
+2467がdoneになってもguardが未確認なら、元資源を操作せず結果を保持する。
+正規の保護判定と、修正ソースに対応する配布経路の両方を確認してから更新工程へ戻る。
+候補2.86.0へ無条件に更新する許可や、修正収録済みという証明には使わない。
+切替実受入と残る4条件は未達。進捗は20%を維持し、原1936を完了へ変えない。
+本確認でもGPU/Cargo/AI APIキー/新費用/Chrome/Docker/新サービスを使っていない。

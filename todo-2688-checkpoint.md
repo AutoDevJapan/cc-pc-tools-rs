@@ -16,3 +16,12 @@
 - Full workspace on this source passed 2179/2180 with 5 configured skips; the one failure was `cc-ask::resume::no_origin_repository_creates_and_reuses_worktree_from_committed_head`. It passed alone, and all 769 `cc-ask` tests passed with 1 configured skip. No source change was made for it because it did not reproduce and the test uses a unique temporary local Git repository.
 - Doctests passed. Workspace Clippy exposed an existing `nonminimal_bool` warning in `localai-web-rs/src/todo_listing.rs`; the expression was simplified. After this edit, `localai-web-rs` passed 337 tests with 3 configured skips.
 - Next: rerun workspace Clippy after the fix; then perform the single final workspace nextest for this exact source. If the cc-ask test fails again, capture and resolve the concrete failure before proceeding. Then finish the independent review, PR/CI/merge, report JSON, and cleanup.
+
+## Final local verification and review handoff
+
+- Commit `50747454c2a80dfdafe0ce00488825a009bc1f81` is the final code source for local verification.
+- Final Windows workspace nextest: 2180/2180 passed, 5 configured skips. This includes the previously non-reproduced `cc-ask::resume::no_origin_repository_creates_and_reuses_worktree_from_committed_head` and the native recovery cancellation regression.
+- Final workspace doctests passed. Workspace Clippy with `--all-targets -- -D warnings` passed after the `localai-web-rs` simplification.
+- Independent review ToDo 2690 is registered with a read-only spec and Claude Sonnet 5.5 at high effort. It is queued for normal scheduler dispatch; no child Codex process was started directly. Do not merge before its result is received and any Must is resolved.
+- Next: push this branch, create the repair PR, inspect required CI and the review receipt; then merge only after review and CI pass. Record main HEAD/tree and merge outcome in `D:/CC/Work/billing-audit-20261013/github-cost-cancel-second-repair.json`.
+- Original instance-level denied PID/image remains unavailable. The active-supervisor path no longer opens snapshot PIDs; lost-supervisor cancellation retains the previous checked-handle walk. Keep this limitation explicit.

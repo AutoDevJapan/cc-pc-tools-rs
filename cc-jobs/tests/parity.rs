@@ -5878,7 +5878,7 @@ impl Runtime for Fake {
     fn supports_process_tree_job(&self) -> bool {
         self.process_tree_job_supported.load(Ordering::Relaxed)
     }
-    fn kill_process_tree_job(&self, pid: u32, _: u64) -> io::Result<bool> {
+    fn kill_process_tree_job(&self, pid: u32, _: u64, _: Option<(u32, u64)>) -> io::Result<bool> {
         if !self.supports_process_tree_job() {
             return Ok(false);
         }

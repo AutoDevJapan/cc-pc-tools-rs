@@ -176,7 +176,12 @@ pub trait Runtime: Send + Sync {
     fn supports_process_tree_job(&self) -> bool {
         false
     }
-    fn kill_process_tree_job(&self, _pid: u32, _created: u64) -> io::Result<bool> {
+    fn kill_process_tree_job(
+        &self,
+        _pid: u32,
+        _created: u64,
+        _recorded_child: Option<(u32, u64)>,
+    ) -> io::Result<bool> {
         Ok(false)
     }
     /// None on unsupported platforms and fixture runtimes.
@@ -492,8 +497,13 @@ impl Runtime for System {
         true
     }
     #[cfg(windows)]
-    fn kill_process_tree_job(&self, pid: u32, created: u64) -> io::Result<bool> {
-        let stopped = crate::pause::stop_tree_in_job(pid, created)?;
+    fn kill_process_tree_job(
+        &self,
+        pid: u32,
+        created: u64,
+        recorded_child: Option<(u32, u64)>,
+    ) -> io::Result<bool> {
+        let stopped = crate::pause::stop_tree_in_job(pid, created, recorded_child)?;
         if !stopped && proc_created_checked(pid)?.is_some() {
             self.diagnostic(
                 "named process tree Job Object was unavailable while the recorded supervisor remained live; using retained-handle cancellation",

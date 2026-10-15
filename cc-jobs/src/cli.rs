@@ -1326,24 +1326,24 @@ impl Context {
             job["cancel_requested_at"] = json!(self.rt.now());
             self.save(&job)?;
         }
-        let managed_root = (job["process_tree_version"] == 1)
-            .then(|| {
-                Some((
-                    u32::try_from(job["pid"].as_u64()?).ok()?,
-                    job["pid_created"].as_u64()?,
-                ))
-            })
-            .flatten();
-        let managed_root_is_ours = if managed_root.is_some() {
-            self.is_ours_checked(&job, "pid")?
+        let managed_root = if job["process_tree_version"] == 1 {
+            job["pid"]
+                .as_u64()
+                .and_then(|pid| u32::try_from(pid).ok())
+                .zip(job["pid_created"].as_u64())
         } else {
-            false
+            None
         };
+        let recorded_child = job["codex_pid"]
+            .as_u64()
+            .and_then(|pid| u32::try_from(pid).ok())
+            .zip(job["codex_pid_created"].as_u64());
         let mut targets = Vec::new();
-        let managed_tree_stopped = if let Some((pid, created)) = managed_root
-            && managed_root_is_ours
-        {
-            if self.rt.kill_process_tree_job(pid, created)? {
+        let managed_tree_stopped = if let Some((pid, created)) = managed_root {
+            if self
+                .rt
+                .kill_process_tree_job(pid, created, recorded_child)?
+            {
                 // The same Job Object's active=0 result is the completion
                 // evidence. Do not reopen PIDs after their identities can be reused.
                 targets.extend(["pid", "codex_pid"].into_iter().filter(|key| {

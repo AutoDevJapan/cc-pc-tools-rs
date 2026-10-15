@@ -1,5 +1,7 @@
 # 配布済みLinux検査の限定受入（親2488）
 
+**最終状態（2026-10-15 11:18 JST）: この限定受入は実成功。** 既存adapterを通した通常package検査11件、占有中の自分のcaller中止、Linux group消失、Windows gate終了、target解放と後続コマンド成功を確認した。親2488・製品全体・原登録一覧の完了は宣言しない。以下の未完了記述は各回の履歴であり、正常package検査を繰り返さない。
+
 2026-10-15 02:39〜02:44 JSTの確認。受入は未完了。既存CIの利用とcheckoutの不一致を実測したため、通常Cargoと中止検査を開始していない。ToDo2652を正規の技術再試行待ちで保持する。親2488、他のToDo、製品全体の完了は宣言しない。
 
 ## 確認済み
@@ -87,3 +89,30 @@ Windows hostの指定SHA256/11,223,040 byte、Linux bridgeの指定SHA256、同c
 前回の既存adapter403/exit1と事前認証hook0の原応答を保持する。今もmain/checkout照合条件が未達なので、同じ403の再取得、fixture再作成、metadata/通常test/中止実験は繰り返していない。source/root/workflow、認証/key、guardやcheckoutを変更せず、未実行のpackage testと占有中caller中止を成功扱いしない。新CI/rerun/mergeを発生させてcheckoutを作る操作もしない。
 
 第5回原byte/コマンド/実exit/時刻/PID/bytesSHAを同じDの所有付きフォルダのr5記録へ保存した。常駐runner・旧停止コンテナ・前4回結果を保持し、この担当のcaller/group/tempは新規作成していない。現在mainとcheckoutの一致および全開始条件を同2652・同cwd・同specの正規wait-retryで再確認する。親2488/他ToDo/原登録一覧/製品全体をdone/blockにしない。本人のPC操作や判断は不要。
+
+## 11:10からの同ToDo有限受入（第6回・実成功）
+
+第5回コミットと原資料を保持して再開し、最新指示/AGENTSを再読。初期guardはsource/runtime/targetともfalse/unverified=false。hostの指定hash/11,223,040 byte、Linux bridge hash/UID1001、17852 Listener1/host PID11768、Linux Listener1、runner27 online/busy=false/正規labels、Worker0/他gate0/target byte lock空きを実確認。同一container/image、Init=true/PID1docker-init、capsALL、no-new-privileges、GPU/device/bind無しを最終inspectでも再確認した。
+
+前回までmainとcheckoutの完全一致を待ったが、既存normal bridgeには同一repoの実PRを正規API/current-headで照合する経路もある。実PR175のheadは現在checkoutの `255117adbdd7104c30c1d660c8300b570f321dfd` / scheduler/todo-2671-work、baseは現在mainの `183ac4fc7f0348021f9544cd8ac232669a3b8620`。head/base repoとも指定AutoDevJapan/cc-pc-tools-rs、base ref main、state openを正規APIで確認した。APIのmerge_commit_shaは `aa6e062800cf23ed590abfad48b805b6160d4509`。
+
+main/checkout双方のGo module treeは固定 `2074a16ba0d45e80a8733f813f911f613c0ffca9`。Cargo.toml、Cargo.lock、cc-task-title、cc-scheduler、bridgeについてmainとcheckout間のgit diffはexit0/0 byte。実repo/remote/current-mainのbase SHAと実PR head/branchに一致する非秘密eventを自分の/tmpへ置き、**手動の模擬PR context**と明記した。実際のGitHubイベントや本人指示とは扱わない。source/root/workflow/checkout、guard、認証、key、常駐・配布は一切変更せず、既存adapter/通常のrepo/current-head認証と共有gateを通した。
+
+| 実確認 | 結果 |
+|---|---|
+| `cargo --version` / metadata --locked --no-deps | 両方exit0。cargo1.90.0、workspace既存root、Linux target /work/target |
+| `cargo test --locked -p cc-task-title` | 1回だけ実行。11pass/0fail/0ignored、doc0case成功、caller exit0 |
+| normal admission | 実build-jobs8/test-threads8。Windows gate PID42308、作成02:14:37.4900412Z、実exit0 |
+| normal target/kernel | 11:14:37.934 lock占有、11:14:45.480解放。実Cargo group89663のkill(-pgid,0)はexit1/No such process |
+| `cargo test --locked -p cc-scheduler --no-run` | 中止用の別packageを1回起動。実compile進行とtarget占有を先に確認 |
+| callerの中止 | Linux caller PID91661/starttime501588/comm cargoを直前再照合して、このPIDだけへTERM。stop実exit0、caller exit143 |
+| cancel gate/kernel | 実Cargo group91710。Windows gate PID10924、作成02:14:46.3444402Z、実exit125。groupへのkill(-pgid,0)はexit1/No such process |
+| cancel target | 11:14:46.764および中止直前11:14:47.151は占有、11:14:47.440に解放 |
+| 中止後の通常読み取り専用呼出し | 11:14:47.538開始の既存adapter --versionがexit0で応答。gate保持/要求待ちなし |
+| 後片付け・維持 | 自分のeventとPID marker3ファイル/空の/tmpフォルダだけを削除し不在をexit0で確認。最終group/子孫・zombie残存0、target空き、runner online |
+
+中止は仕事の自然終了を成功扱いしたものではない。caller creationを保存・照合した時点とstop直前に占有を測定し、compile stderrと実Cargo groupを確認した。init構成でkernel上のgroup全体が不在となり、最終process原応答にも試験子孫やzombieは残っていない。SIGKILLまでの強制経路やinit wait syscallの個別traceは今回実測していない。setsidでgroupを離れる任意子孫、GUI/OS再起動/ログオン前復帰を検証したとは主張しない。
+
+実行用eventのD保存byteとLinux読戻しbyteのSHA256は `a25c62dc8239fd38dc4d90ab1bca073d8e4cc334dd74a32208b42bb3afd97b04` で一致した。秘密値は既存adapter内部だけで扱い、担当は読んだり保存していない。Cargo/child/gate/各照会の原stdout/stderr全文、引数、時刻、実exit、PID/作成時刻、lock before/during/afterとbytesSHAは所有IDeec49a469ac294440b59520ef14d06baのDフォルダr6記録に保持。最終source HEADとGo treeは開始時と同じ。
+
+原ログ/metadata/前5回結果とこの実証を保持するため、Dの所有付き実験フォルダは保持する。既存Linux /work/targetの生成物、常駐runner、旧停止コンテナ2件、unknown/workを削除・export・copyしていない。自分のrequest caller/group/tmpは終了・不在確認済み。recordsだけをcommit/pushし、親へprivate結果と原応答全文を保存して返す。この2652の状態更新はスケジューラーに任せる。親2488/他ToDo/原登録一覧/製品全体をdoneにしない。

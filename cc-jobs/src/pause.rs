@@ -1033,9 +1033,14 @@ mod native {
         #[test]
         fn managed_job_object_preserves_explicit_supervisor_breakaway() {
             use crate::platform::{Runtime, System};
+            use std::path::PathBuf;
             let temp = tempfile::tempdir().unwrap();
             let dir = temp.path().join("supervisor");
             std::fs::create_dir(&dir).unwrap();
+            let mut in_outer_job = 0;
+            unsafe {
+                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job);
+            }
             let pid = std::process::id();
             let created = crate::proc_created(pid).unwrap();
             let scope = contain_current_process(pid, created).unwrap();
@@ -1056,45 +1061,79 @@ mod native {
                 limits.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK,
                 0
             );
-            let mut in_outer_job = 0;
-            unsafe {
-                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job);
+            let ordinary_child = OwnedChild::sleeping();
+            let ordinary_handle = Handle(unsafe {
+                OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                    0,
+                    ordinary_child.0.id(),
+                )
+            });
+            assert!(!ordinary_handle.0.is_null());
+            let mut ordinary_member = 0;
+            assert_ne!(
+                unsafe { IsProcessInJob(ordinary_handle.0, scope._job.0, &mut ordinary_member) },
+                0
+            );
+            assert_eq!(ordinary_member, 1, "ordinary children remain contained");
+            let executable = std::env::current_exe()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("cc_jobs_fixture.exe");
+            assert!(executable.is_file(), "fixture binary must be built");
+            let ready = temp.path().join("breakaway.ready");
+            let release = temp.path().join("breakaway.release");
+            struct ReleaseProbe(PathBuf);
+            impl Drop for ReleaseProbe {
+                fn drop(&mut self) {
+                    let _ = std::fs::write(&self.0, "release");
+                }
             }
-            let executable = std::env::current_exe().unwrap();
+            let _release_probe = ReleaseProbe(release.clone());
             let (detached, child) = System::default()
                 .spawn_supervisor_identified(&executable, temp.path(), &dir, "breakaway-probe")
                 .unwrap();
             let child = child.expect("Windows reports the spawned supervisor PID");
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !ready.exists() && std::time::Instant::now() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            assert!(
+                ready.exists(),
+                "the child stays alive for membership checks"
+            );
             if in_outer_job == 0 {
                 assert!(
                     detached,
                     "an explicitly breakaway-capable job must allow the supervisor spawn"
                 );
             }
-            if detached {
-                let child_handle = Handle(unsafe {
-                    OpenProcess(
-                        PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
-                        0,
-                        child,
-                    )
-                });
-                if !child_handle.0.is_null() {
-                    let mut in_tree_job = 1;
-                    assert_ne!(
-                        unsafe { IsProcessInJob(child_handle.0, scope._job.0, &mut in_tree_job) },
-                        0
-                    );
-                    assert_eq!(in_tree_job, 0);
-                }
-            }
-            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-            while crate::proc_created_checked(child).unwrap().is_some()
-                && std::time::Instant::now() < deadline
-            {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            }
-            assert_eq!(crate::proc_created_checked(child).unwrap(), None);
+            let child_handle = Handle(unsafe {
+                OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                    0,
+                    child,
+                )
+            });
+            assert!(
+                !child_handle.0.is_null(),
+                "the child must stay live while its membership is checked"
+            );
+            let mut child_member = 1;
+            assert_ne!(
+                unsafe { IsProcessInJob(child_handle.0, scope._job.0, &mut child_member) },
+                0
+            );
+            assert_eq!(child_member == 0, detached);
+            std::fs::write(&release, "release").unwrap();
+            assert_eq!(
+                unsafe { WaitForSingleObject(child_handle.0, 5000) },
+                WAIT_OBJECT_0,
+                "probe child exits after release"
+            );
         }
         #[test]
         fn job_cancellation_refuses_to_terminate_its_caller() {

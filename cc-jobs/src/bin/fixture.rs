@@ -7,6 +7,15 @@ use std::{
 };
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.as_slice() == ["_supervise", "breakaway-probe"] {
+        let root = std::env::current_dir().unwrap();
+        fs::write(root.join("breakaway.ready"), std::process::id().to_string()).unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(15);
+        while !root.join("breakaway.release").exists() && std::time::Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        return;
+    }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
         println!(

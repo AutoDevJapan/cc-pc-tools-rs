@@ -375,6 +375,12 @@ mod native {
                     Err(at("inspect/OpenProcess", error))
                 };
             }
+            let info = inspect_handle(&h, name)?;
+            Ok(Some((info, h)))
+        }
+    }
+    fn inspect_handle(h: &Handle, name: &str) -> io::Result<Lifetime> {
+        unsafe {
             let live = match WaitForSingleObject(h.0, 0) {
                 WAIT_OBJECT_0 => false,
                 WAIT_TIMEOUT => true,
@@ -389,16 +395,32 @@ mod native {
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
                 return Err(at("inspect/GetProcessTimes", io::Error::last_os_error()));
             }
-            Ok(Some((
-                (
-                    ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
-                    browser_controller(h.0, name),
-                    live,
-                    ((ts[1].dwHighDateTime as u64) << 32) | ts[1].dwLowDateTime as u64,
-                ),
-                h,
-            )))
+            Ok((
+                ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
+                browser_controller(h.0, name),
+                live,
+                ((ts[1].dwHighDateTime as u64) << 32) | ts[1].dwLowDateTime as u64,
+            ))
         }
+    }
+    fn retained_lifetime(
+        pid: u32,
+        name: &str,
+        ancestors: &mut Vec<Handle>,
+    ) -> io::Result<Option<Lifetime>> {
+        // The retained object pins this PID even after exit. Reopening it can
+        // fail with ACCESS_DENIED during teardown; query the same object instead.
+        if let Some(handle) = ancestors
+            .iter()
+            .find(|handle| unsafe { GetProcessId(handle.0) } == pid)
+        {
+            return inspect_handle(handle, name).map(Some);
+        }
+        let Some((info, handle)) = inspect_retained(pid, name)? else {
+            return Ok(None);
+        };
+        ancestors.push(handle);
+        Ok(Some(info))
     }
     fn tree(
         root: u32,
@@ -444,7 +466,7 @@ mod native {
             // enough evidence to authorize terminating its apparent children.
             let mut lifetimes = HashMap::new();
             for (&pid, &created) in prior {
-                let Some(((actual, _, _, exited), handle)) = inspect_retained(pid, "")? else {
+                let Some((actual, _, _, exited)) = retained_lifetime(pid, "", ancestors)? else {
                     return Err(io::Error::other(
                         "cancellation ancestor identity unavailable",
                     ));
@@ -453,10 +475,10 @@ mod native {
                     return Err(io::Error::other("cancellation ancestor identity changed"));
                 }
                 lifetimes.insert(pid, (actual, exited));
-                ancestors.push(handle);
             }
             walk(root, root_created, prior, &all, |pid, name| {
-                let Some(((created, browser, live, exited), handle)) = inspect_retained(pid, name)?
+                let Some((created, browser, live, exited)) =
+                    retained_lifetime(pid, name, ancestors)?
                 else {
                     return Err(io::Error::other(
                         "cancellation ancestor vanished during inspection",
@@ -473,7 +495,6 @@ mod native {
                     ));
                 }
                 lifetimes.insert(pid, (created, exited));
-                ancestors.push(handle);
                 Ok(Some((created, browser, live)))
             })
         }
@@ -763,6 +784,26 @@ mod native {
                 terminated_probe,
                 Some((0, Some(ERROR_ACCESS_DENIED as i32)))
             );
+        }
+        #[test]
+        fn cancellation_reuses_the_retained_identity_after_exit() {
+            let mut child = OwnedChild::sleeping();
+            let pid = child.0.id();
+            let created = crate::proc_created(pid).unwrap();
+            let mut ancestors = Vec::new();
+            let before = retained_lifetime(pid, "", &mut ancestors).unwrap().unwrap();
+            assert_eq!(before.0, created);
+            assert!(before.2);
+            assert_eq!(ancestors.len(), 1);
+            let handle = ancestors[0].0;
+            child.0.kill().unwrap();
+            child.0.wait().unwrap();
+            let after = retained_lifetime(pid, "", &mut ancestors).unwrap().unwrap();
+            assert_eq!(after.0, created);
+            assert!(!after.2, "the retained object must confirm the real exit");
+            assert!(after.3 >= created);
+            assert_eq!(ancestors.len(), 1, "an exited PID must not be reopened");
+            assert_eq!(ancestors[0].0, handle);
         }
         #[test]
         fn cancellation_denied_for_a_live_handle_keeps_the_original_error() {

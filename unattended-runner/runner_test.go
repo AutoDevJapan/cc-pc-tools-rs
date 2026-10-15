@@ -605,11 +605,16 @@ func TestBlockedOriginReplyIsReevaluatedAfterTaskUnblocks(t *testing.T) {
 		}
 	})
 	r.Run = func(context.Context, string, ...string) (string, error) { return "added 11", nil }
+	var health Health
 	if err := r.registerOrigin(context.Background(), request, origin); err != nil || request.Phase != "origin_blocked" || request.Todo != 10 {
 		t.Fatalf("blocked origin was not retained: phase=%s todo=%d err=%v", request.Phase, request.Todo, err)
 	}
+	request.Todo = 0 // legacy origin_blocked receipts had no destination ToDo.
+	r.recheckOriginBlocked(context.Background(), &health)
+	if request.Phase != "origin_blocked" || request.Todo != 10 {
+		t.Fatal("legacy blocked reply bypassed the still-active owner stop")
+	}
 	_ = os.WriteFile(r.TodoPath, []byte(`{"items":[{"id":10,"project":"cc-pc-tools-rs","status":"done","jobs":["original-job"]}]}`), 0600)
-	var health Health
 	r.recheckOriginBlocked(context.Background(), &health)
 	r.admit(context.Background(), &health)
 	if request.Phase != "registered" || request.Todo != 11 {

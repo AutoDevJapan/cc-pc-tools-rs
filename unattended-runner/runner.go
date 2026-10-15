@@ -660,7 +660,7 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 	ids := make([]string, 0)
 	for id, request := range r.State.Requests {
-		if request != nil && request.Phase == "origin_blocked" && request.Origin != nil && request.Todo != 0 {
+		if request != nil && request.Phase == "origin_blocked" && request.Origin != nil {
 			ids = append(ids, id)
 		}
 	}
@@ -670,12 +670,24 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 			return
 		}
 		request := r.State.Requests[id]
-		row, err := r.todo(request.Todo)
-		if err != nil || row.Project != r.Config.Project {
+		generation, err := r.activeOriginGeneration(*request.Origin)
+		if err != nil {
 			health.Errors = append(health.Errors, "blocked_origin_recheck_deferred")
 			continue
 		}
-		if row.Status == "block" {
+		source, err := r.todo(request.Origin.Todo)
+		if err != nil || source.Project != r.Config.Project {
+			health.Errors = append(health.Errors, "blocked_origin_recheck_deferred")
+			continue
+		}
+		blockedTodo := uint64(0)
+		if source.Status == "block" {
+			blockedTodo = source.ID
+		} else if generation != nil && generation.Status == "block" {
+			blockedTodo = generation.ID
+		}
+		if blockedTodo != 0 {
+			request.Todo = blockedTodo
 			continue
 		}
 		request.Todo = 0

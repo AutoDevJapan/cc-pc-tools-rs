@@ -59,3 +59,19 @@ Docker経由の読み取り専用process照会は09:11:09から45秒で応答せ
 原応答全文、開始終了、実exit（取得不能はその旨）、PID/作成時刻、raw bytesSHAを同じ所有付きフォルダの `r3-*` に保存する。前回private結果は上書き前に保存し、現在の結果を親の指定場所へ返す。同2652・同cwd・同specで正規wait-retryを記録し、次回はhost待受、Docker照会、正常API取得から再確認する。親2488や他ToDoをdone/blockにせず、本人のPC操作・判断を求めない。
 
 第3回の記録は作業ブランチへコミットした。既存Git認証によるpushはexit128で失敗し、Usernameを取得できないとの応答だった。認証画面が出ないよう対話を無効にして通常のpushを1回だけ行った。前回のpush成功を今回へ流用せず、今回の記録はPC内のコミットと親へのprivate結果に保持する。認証値取得や別経路のpushは行わず、次回同じToDoの通常経路で確認する。
+
+## 10:26からの同ToDo再確認（第4回）
+
+第3回コミット `e623773269f0adf96e44ca1aa910c56881137042` と全原ログを保持して再開。最新の保存済み指示とAGENTSを再読した。source/runtime/targetのguardはfalse/unverified=false。既存runtimeの待受、Docker、正常GitHub APIが復帰したことを実測した。今回の担当は再起動・再配布・認証変更を行っていない。
+
+Windows hostの指定SHA256/11,223,040 byte、Linux bridgeの指定SHA256、同container/image ID、Init=true/PID1docker-init、UID1001、capsALL、no-new-privileges、GPU/devices/binds無しは再確認。17852のListener1（host PID11768）、既存task Running、runner27 online/busy=falseと正規labelsを確認した。Worker0、他gate0、target byte lock空きを呼出し前と後で確認した。
+
+現在mainはAPIとgit ls-remoteで `183ac4fc7f0348021f9544cd8ac232669a3b8620` / tree `ba968c27ec66382bd1db87fbf0d46c53e78384e9`。checkoutは `f3a5feeb6fef2c8230ce8831d660cdf289f6b0fa`、remoteは指定repoであり、現在mainと一致しない。Go module treeはmainとcheckout双方で指定の `2074a16ba0d45e80a8733f813f911f613c0ffca9` と一致。有限API一覧ではこのcheckoutのPR CI3件はsuccess/completedだった。新CIやrerunは実行していない。
+
+実repo/remote/main SHAと一致する非秘密push eventを自分専用/tmpへ置き、**手動の模擬context**として既存 `/opt/bridge/cargo --version` を10:27:45に1回呼んだ。実exit1、stdout0 byte、stderr `bridge rejected (403)`。元のadapterとkey処理をそのまま使い、秘密値を担当が取得していない。target lockは呼出し前後とも空きで、占有中のCargo実行とは扱わない。
+
+拒否条件の切り分けとして同じmainの模擬contextを使った既存事前認証hookを10:29:23に1回だけ呼び、exit0を確認した。元ソースの処理順は認証/引数検査、current-head認証、checkout SHA照合、Cargo gate起動。正常hookとSHAの実照合から、少なくともmain/checkout不一致が既存のcheckout照合条件を満たさないことを確認した。CLIは一般403だけを出すため、HTTP error bodyの原文を取得したと主張しない。guard/認証/ソース/root/workflow/checkoutを変更して成功を作っていない。
+
+2つの模擬event用/tmpフォルダは、自分のevent.jsonだけを削除し、空のフォルダをrmdirし、不在まで実exit0で確認した。hook用eventは非秘密の送信byteもDの所有付き原ログへ保存した。metadata、通常package cargo test、占有中caller中止、Linux group排出/孤児回収、Windows gate exit/解放、後続Cargo成功は未確認。通常package検査はまだ一度も実行していない。
+
+前3回と第4回の原byte/実exit/コマンド/時刻/PID/作成時刻/bytesSHAは同じDの所有付きフォルダへ保持する。既存runnerと旧停止コンテナを変更していない。通常Cargoと中止の受入を完了扱いせず、同2652の正規wait-retryで現在main/checkout一致を再確認する。前回未pushの記録も今回の通常pushに含め、成否はprivate結果とToDoへ記録する。

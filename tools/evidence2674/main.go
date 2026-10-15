@@ -111,7 +111,12 @@ func main() {
 		if len(os.Args) != 3 {
 			fail()
 		}
-		sourceProofMode(os.Args[2], true)
+		sourceProofMode(os.Args[2], "large")
+	case "source-remainder":
+		if len(os.Args) != 3 {
+			fail()
+		}
+		sourceProofMode(os.Args[2], "remainder")
 	case "witness":
 		if len(os.Args) != 3 {
 			fail()

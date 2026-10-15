@@ -58,10 +58,15 @@ func inspectOutputs(private string) {
 		fail()
 	}
 	defer f2.Close()
-	s := bufio.NewScanner(io.MultiReader(f, f2))
+	f3, e := os.Open(filepath.Join(private, "source-remainder-witnesses.private.jsonl"))
+	if e != nil {
+		fail()
+	}
+	defer f3.Close()
+	s := bufio.NewScanner(io.MultiReader(f, f2, f3))
 	s.Buffer(make([]byte, 65536), 32*1024*1024)
 	counts := map[string]int{}
-	out := newPrivate(filepath.Join(private, "output-final.json"))
+	out := newPrivate(filepath.Join(private, "output-complete.json"))
 	defer out.Close()
 	for s.Scan() {
 		var record struct {

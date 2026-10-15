@@ -123,8 +123,8 @@ func eventCommand(e Event) string {
 	}
 	return e.Arguments
 }
-func sourceProof(private string) { sourceProofMode(private, false) }
-func sourceProofMode(private string, large bool) {
+func sourceProof(private string) { sourceProofMode(private, "normal") }
+func sourceProofMode(private string, mode string) {
 	f, e := os.Open(filepath.Join(private, "joined.private.jsonl"))
 	if e != nil {
 		fail()
@@ -160,8 +160,37 @@ func sourceProofMode(private string, large bool) {
 	}
 	f.Close()
 	prefix := "source"
-	if large {
+	if mode == "large" {
 		prefix = "source-large"
+	}
+	if mode == "remainder" {
+		prefix = "source-remainder"
+	}
+	done := map[int]bool{}
+	if mode == "remainder" {
+		for _, name := range []string{"source-safe.jsonl", "source-large-safe.jsonl"} {
+			previous, e := os.Open(filepath.Join(private, name))
+			if e != nil {
+				fail()
+			}
+			ps := bufio.NewScanner(previous)
+			for ps.Scan() {
+				var v struct {
+					Source  int  `json:"source_record"`
+					Success bool `json:"success"`
+				}
+				if json.Unmarshal(ps.Bytes(), &v) != nil {
+					fail()
+				}
+				if v.Success {
+					done[v.Source] = true
+				}
+			}
+			if ps.Err() != nil {
+				fail()
+			}
+			previous.Close()
+		}
 	}
 	raw := newPrivate(filepath.Join(private, prefix+"-witnesses.private.jsonl"))
 	defer raw.Close()
@@ -169,11 +198,14 @@ func sourceProofMode(private string, large bool) {
 	defer safe.Close()
 	var budget int64 = 512 * 1024 * 1024
 	maxFile := int64(64 * 1024 * 1024)
-	if large {
+	if mode == "large" {
 		budget = 1024 * 1024 * 1024
 		maxFile = 512 * 1024 * 1024
 	}
 	for n, path := range order {
+		if mode == "remainder" && done[n+1] {
+			continue
+		}
 		groups := targets[path]
 		if !allowedSource(path) || !noLinkAncestors(path) {
 			counts["source_outside_allowlist"]++
@@ -184,7 +216,7 @@ func sourceProofMode(private string, large bool) {
 			counts["source_unavailable"]++
 			continue
 		}
-		if large && fi.Size() <= 64*1024*1024 {
+		if mode == "large" && fi.Size() <= 64*1024*1024 {
 			continue
 		}
 		if !fi.Mode().IsRegular() || fi.Size() > maxFile || fi.Size() > budget {

@@ -493,7 +493,13 @@ impl Runtime for System {
     }
     #[cfg(windows)]
     fn kill_process_tree_job(&self, pid: u32, created: u64) -> io::Result<bool> {
-        crate::pause::stop_tree_in_job(pid, created)
+        let stopped = crate::pause::stop_tree_in_job(pid, created)?;
+        if !stopped && proc_created_checked(pid)?.is_some() {
+            self.diagnostic(
+                "named process tree Job Object was unavailable while the recorded supervisor remained live; using retained-handle cancellation",
+            );
+        }
+        Ok(stopped)
     }
     #[cfg(windows)]
     fn kill_tree(&self, pid: u32) -> io::Result<()> {

@@ -869,17 +869,28 @@ impl Context {
         Ok(())
     }
     fn supervise_owned(&self, jid: &str) -> Result<()> {
-        let process_tree: Option<crate::pause::ProcessTreeScope> =
-            if self.rt.supports_process_tree_job() {
-                let pid = self.rt.pid();
-                let created = self
-                    .rt
-                    .proc_created_checked(pid)?
-                    .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
-                Some(crate::pause::contain_current_process(pid, created)?)
-            } else {
-                None
-            };
+        let pid = self.rt.pid();
+        let (process_tree, process_tree_root_created): (
+            Option<crate::pause::ProcessTreeScope>,
+            Option<u64>,
+        ) = if self.rt.supports_process_tree_job() {
+            let created = self
+                .rt
+                .proc_created_checked(pid)?
+                .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
+            match crate::pause::contain_current_process(pid, created) {
+                Ok(scope) => (Some(scope), Some(created)),
+                Err(error) => {
+                    self.rt.diagnostic(&format!(
+                        "Windows process tree containment unavailable; using retained-handle cancellation: {}",
+                        redact_local_log_secrets(&error.to_string(), &self.rt.env())
+                    ));
+                    (None, Some(created))
+                }
+            }
+        } else {
+            (None, None)
+        };
         {
             let _state = self.job_lock(jid, "state.lock")?;
             let mut job = self.load(jid)?;
@@ -888,9 +899,12 @@ impl Context {
             }
             if process_tree.is_some() {
                 job["process_tree_version"] = json!(1);
+            } else if let Some(fields) = job.as_object_mut() {
+                fields.remove("process_tree_version");
             }
-            job["pid"] = json!(self.rt.pid());
-            job["pid_created"] = json!(self.rt.proc_created(self.rt.pid()));
+            job["pid"] = json!(pid);
+            job["pid_created"] =
+                json!(process_tree_root_created.or_else(|| self.rt.proc_created(pid)));
             job["queue_supervisor_version"] = json!(5);
             job["queue_restart_pending"] = json!(false);
             job["reboot_launch_pending"] = json!(false);

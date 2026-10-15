@@ -5766,6 +5766,7 @@ struct Fake {
     sleep_hook: Mutex<Option<SleepHook>>,
     supervisor_pid: AtomicU32,
     supervisor_fail: AtomicBool,
+    process_tree_job_supported: AtomicBool,
 }
 impl Fake {
     fn new() -> Self {
@@ -5824,6 +5825,7 @@ impl Fake {
             sleep_hook: Mutex::new(None),
             supervisor_pid: AtomicU32::new(0),
             supervisor_fail: AtomicBool::new(false),
+            process_tree_job_supported: AtomicBool::new(false),
         }
     }
     fn tick(&self, n: f64) {
@@ -5873,6 +5875,19 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn supports_process_tree_job(&self) -> bool {
+        self.process_tree_job_supported.load(Ordering::Relaxed)
+    }
+    fn kill_process_tree_job(&self, pid: u32, _: u64) -> io::Result<bool> {
+        if !self.supports_process_tree_job() {
+            return Ok(false);
+        }
+        if let Some(hook) = self.kill_hook.lock().unwrap().as_ref() {
+            hook(pid);
+        }
+        self.kills.lock().unwrap().push(pid);
+        Ok(true)
+    }
     fn boot_epoch(&self) -> Option<f64> {
         *self.boot.lock().unwrap()
     }
@@ -6966,6 +6981,42 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    #[test]
+    fn stale_managed_tree_marker_with_no_recorded_process_uses_empty_legacy_targets() {
+        let t = Test::new();
+        let j = t.put(patch(
+            t.running(),
+            json!({"pid":null,"pid_created":null,"codex_pid":null,
+                "codex_pid_created":null,"process_tree_version":1}),
+        ));
+        assert_eq!(t.cli(&["cancel", s(&j, "id")]).0.unwrap(), 0);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "retained_handle_walk");
+    }
+    #[test]
+    fn managed_job_completion_does_not_reopen_recorded_pids() {
+        let t = Test::new();
+        let pid = std::process::id();
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        t.rt.process_tree_job_supported
+            .store(true, Ordering::Relaxed);
+        let j = t.put(patch(
+            t.running(),
+            json!({"process_tree_version":1,"codex_pid":321,"codex_pid_created":456}),
+        ));
+        let rt = t.rt.clone();
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |_| {
+            let mut errors = rt.proc_probe_errors.lock().unwrap();
+            errors.insert(pid, 5);
+            errors.insert(321, 5);
+        }));
+        assert_eq!(t.cli(&["cancel", s(&j, "id")]).0.unwrap(), 0);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "job_object");
+        assert_eq!(*t.rt.kills.lock().unwrap(), [pid]);
+    }
     #[test]
     fn missing_supervisor_creation_time_preserves_reservation_and_skips_cleanup() {
         let t = Test::new();
@@ -10935,6 +10986,7 @@ mod end_to_end {
         });
         let saved = e.job(&jid);
         assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "job_object");
         assert_ne!(saved["cancel_requested"], true);
         assert!(cc_job_policy::cancellation::recovery_cancel(
             &Value::Null,
@@ -10981,6 +11033,10 @@ mod end_to_end {
         let r = e.cli(&["cancel", &jid], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
         assert!(String::from_utf8_lossy(&r.stdout).contains("killed the leftover"));
+        assert_eq!(
+            e.job(&jid)["process_tree_cancel_method"],
+            "retained_handle_walk"
+        );
         e.until(|| {
             identities
                 .iter()

@@ -87,7 +87,7 @@ mod native {
         _job: Handle,
     }
     fn job_name(pid: u32, created: u64) -> Vec<u16> {
-        format!("Local\\cc-jobs-tree-{pid}-{created}\0")
+        format!("Global\\cc-jobs-tree-{pid}-{created}\0")
             .encode_utf16()
             .collect()
     }
@@ -113,12 +113,31 @@ mod native {
             return Err(io::Error::other("process tree root identity changed"));
         }
         let name = job_name(pid, created);
+        unsafe { SetLastError(ERROR_SUCCESS) };
         let job = Handle(unsafe { CreateJobObjectW(std::ptr::null(), name.as_ptr()) });
         if job.0.is_null() {
             return Err(at("tree/CreateJobObject", io::Error::last_os_error()));
         }
         if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
             return Err(io::Error::other("process tree job object already exists"));
+        }
+        // Keep ordinary descendants contained while allowing explicit nested
+        // `codex_jobs run` launches to retain their existing breakaway behavior.
+        let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+        if unsafe {
+            SetInformationJobObject(
+                job.0,
+                JobObjectExtendedLimitInformation,
+                (&limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            )
+        } == 0
+        {
+            return Err(at(
+                "tree/SetInformationJobObject",
+                io::Error::last_os_error(),
+            ));
         }
         if unsafe { AssignProcessToJobObject(job.0, GetCurrentProcess()) } == 0 {
             return Err(at(
@@ -147,6 +166,72 @@ mod native {
         }
         Ok(accounting.ActiveProcesses)
     }
+    fn verify_job_root_and_caller(job: HANDLE, pid: u32, created: u64) -> io::Result<()> {
+        let mut caller_member = 0;
+        if unsafe { IsProcessInJob(GetCurrentProcess(), job, &mut caller_member) } == 0 {
+            return Err(at(
+                "tree/IsProcessInJob(caller)",
+                io::Error::last_os_error(),
+            ));
+        }
+        if caller_member != 0 {
+            return Err(io::Error::other(
+                "cancellation caller belongs to the target process tree job",
+            ));
+        }
+        let root = Handle(unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                pid,
+            )
+        });
+        if root.0.is_null() {
+            let error = io::Error::last_os_error();
+            return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                Ok(())
+            } else {
+                Err(at("tree/OpenProcess(root)", error))
+            };
+        }
+        match unsafe { WaitForSingleObject(root.0, 0) } {
+            WAIT_OBJECT_0 => return Ok(()),
+            WAIT_TIMEOUT => {}
+            _ => {
+                return Err(at(
+                    "tree/WaitForSingleObject(root)",
+                    io::Error::last_os_error(),
+                ));
+            }
+        }
+        let mut times: [FILETIME; 4] = unsafe { std::mem::zeroed() };
+        if unsafe {
+            GetProcessTimes(
+                root.0,
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            )
+        } == 0
+        {
+            return Err(at("tree/GetProcessTimes(root)", io::Error::last_os_error()));
+        }
+        let actual = ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64;
+        if actual != created {
+            return Err(io::Error::other("process tree root identity changed"));
+        }
+        let mut root_member = 0;
+        if unsafe { IsProcessInJob(root.0, job, &mut root_member) } == 0 {
+            return Err(at("tree/IsProcessInJob(root)", io::Error::last_os_error()));
+        }
+        if root_member == 0 {
+            return Err(io::Error::other(
+                "recorded process tree root is not a member of its Job Object",
+            ));
+        }
+        Ok(())
+    }
     pub fn stop_tree_in_job(pid: u32, created: u64) -> io::Result<bool> {
         let name = job_name(pid, created);
         let job = Handle(unsafe {
@@ -159,27 +244,44 @@ mod native {
             }
             return Err(at("tree/OpenJobObject", error));
         }
+        verify_job_root_and_caller(job.0, pid, created)?;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut last_terminate_error = None;
         if unsafe { TerminateJobObject(job.0, 0) } == 0 {
             let error = io::Error::last_os_error();
             // ACCESS_DENIED can race with the final member exiting. The same
             // retained Job Object handle proves completion only at active=0.
-            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32)
-                && active_job_processes(job.0)? == 0
-            {
-                return Ok(true);
+            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32) {
+                if active_job_processes(job.0)? == 0 {
+                    return Ok(true);
+                }
+                last_terminate_error = Some(error);
+            } else {
+                return Err(at("tree/TerminateJobObject", error));
             }
-            return Err(at("tree/TerminateJobObject", error));
         }
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let active = active_job_processes(job.0)?;
             if active == 0 {
                 return Ok(true);
             }
             if std::time::Instant::now() >= deadline {
+                if let Some(error) = last_terminate_error {
+                    return Err(at("tree/TerminateJobObject", error));
+                }
                 return Err(io::Error::other(format!(
                     "process tree job still has {active} active process(es)"
                 )));
+            }
+            if unsafe { TerminateJobObject(job.0, 0) } == 0 {
+                let error = io::Error::last_os_error();
+                if error.raw_os_error() != Some(ERROR_ACCESS_DENIED as i32) {
+                    return Err(at("tree/TerminateJobObject", error));
+                }
+                if active_job_processes(job.0)? == 0 {
+                    return Ok(true);
+                }
+                last_terminate_error = Some(error);
             }
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
@@ -584,7 +686,11 @@ mod native {
             // enough evidence to authorize terminating its apparent children.
             let mut lifetimes = HashMap::new();
             for (&pid, &created) in prior {
-                let Some((actual, _, _, exited)) = retained_lifetime(pid, "", ancestors)? else {
+                let Some((actual, _, _, exited)) =
+                    retained_lifetime(pid, "", ancestors).map_err(|error| {
+                        with_context(error, format!("prior cancellation ancestor pid={pid}"))
+                    })?
+                else {
                     return Err(io::Error::other(
                         "cancellation ancestor identity unavailable",
                     ));
@@ -846,6 +952,81 @@ mod native {
     #[cfg(test)]
     mod tests {
         use super::*;
+        #[test]
+        fn managed_job_object_preserves_explicit_supervisor_breakaway() {
+            use crate::platform::{Runtime, System};
+            let temp = tempfile::tempdir().unwrap();
+            let dir = temp.path().join("supervisor");
+            std::fs::create_dir(&dir).unwrap();
+            let pid = std::process::id();
+            let created = crate::proc_created(pid).unwrap();
+            let scope = contain_current_process(pid, created).unwrap();
+            let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+            assert_ne!(
+                unsafe {
+                    QueryInformationJobObject(
+                        scope._job.0,
+                        JobObjectExtendedLimitInformation,
+                        (&mut limits as *mut JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                        std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                        std::ptr::null_mut(),
+                    )
+                },
+                0
+            );
+            assert_ne!(
+                limits.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK,
+                0
+            );
+            let mut in_outer_job = 0;
+            unsafe {
+                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job);
+            }
+            let executable = std::env::current_exe().unwrap();
+            let (detached, child) = System::default()
+                .spawn_supervisor_identified(&executable, temp.path(), &dir, "breakaway-probe")
+                .unwrap();
+            let child = child.expect("Windows reports the spawned supervisor PID");
+            if in_outer_job == 0 {
+                assert!(
+                    detached,
+                    "an explicitly breakaway-capable job must allow the supervisor spawn"
+                );
+            }
+            if detached {
+                let child_handle = Handle(unsafe {
+                    OpenProcess(
+                        PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                        0,
+                        child,
+                    )
+                });
+                if !child_handle.0.is_null() {
+                    let mut in_tree_job = 1;
+                    assert_ne!(
+                        unsafe { IsProcessInJob(child_handle.0, scope._job.0, &mut in_tree_job) },
+                        0
+                    );
+                    assert_eq!(in_tree_job, 0);
+                }
+            }
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while crate::proc_created_checked(child).unwrap().is_some()
+                && std::time::Instant::now() < deadline
+            {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            assert_eq!(crate::proc_created_checked(child).unwrap(), None);
+        }
+        #[test]
+        fn job_cancellation_refuses_to_terminate_its_caller() {
+            let pid = std::process::id();
+            let created = crate::proc_created(pid).unwrap();
+            let scope = contain_current_process(pid, created).unwrap();
+            let error = stop_tree_in_job(pid, created).unwrap_err();
+            assert!(error.to_string().contains("caller belongs"));
+            assert!(active_job_processes(scope._job.0).unwrap() > 0);
+        }
         struct OwnedChild(std::process::Child);
         impl OwnedChild {
             fn sleeping() -> Self {

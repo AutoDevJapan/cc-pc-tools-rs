@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -561,6 +561,74 @@ impl<B: Backend> Scheduler<B> {
             self.guard(&format!("reconcile repair {}", item["id"]), |e| {
                 e.reconcile_item(&item, jobs, ps, cfg)
             });
+        }
+        self.release_repair_waits()
+    }
+    /// The repair tick does not run the general watchdog (its private registry
+    /// may be unavailable). Catch both newly completed and previously stranded
+    /// edges here, without admitting unknown records or replaying old questions.
+    pub fn release_repair_waits(&mut self) -> Result<()> {
+        let snapshot = self.todo()?;
+        let mut verified = Vec::new();
+        for item in arr(&snapshot["items"]) {
+            let project = s(&item["project"]);
+            if item["status"] != "wait"
+                || item["dispatchable"] != true
+                || !truth(&item["spec"])
+                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                || !item["wait_ready"].is_null()
+                || item["wait_on"].as_array().is_none_or(Vec::is_empty)
+                || todo_wait::waiting(&snapshot, &item)
+                || truth(&item["scheduler"]["owner_stop_job"])
+                || truth(&item["scheduler"]["question"])
+                || truth(&item["scheduler"]["question_close_pending"])
+                || item["stall_recovery"]["pending"].is_object()
+            {
+                continue;
+            }
+            let paths = [
+                s(&snapshot["projects"][project]),
+                s(&item["scheduler"]["worktree"]),
+            ];
+            if paths
+                .iter()
+                .all(|path| !path.is_empty() && self.backend.repair_scope_allowed(path))
+            {
+                verified.push(item);
+            }
+        }
+        if verified.is_empty() {
+            return Ok(());
+        }
+        // Scope checks can be slow. Refresh ownership before the locked commit,
+        // then compare the complete row so a concurrent stop/handoff wins.
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        verified.retain(|item| {
+            !jobs.iter().any(|job| {
+                cc_job_policy::priority::linked(item, job)
+                    && (live(job)
+                        || ["pid", "codex_pid"]
+                            .iter()
+                            .any(|key| matches(job, key, &ps)))
+            })
+        });
+        let _lock = ByteLock::acquire(
+            &self.todo_path.with_file_name("todo.lock"),
+            Duration::from_secs(2),
+        )?
+        .ok_or(Error("TimeoutError"))?;
+        let mut db = self.todo()?;
+        let projects = db["projects"].clone();
+        let released = todo_wait::release_ready_if(&mut db, |item| {
+            verified.contains(item)
+                && projects[s(&item["project"])] == snapshot["projects"][s(&item["project"])]
+        });
+        if !released.is_empty() {
+            cc_job_policy::todo_store::check_size(encode(&db, 1).len())
+                .map_err(todo_store_error)?;
+            write_json(&self.todo_path, &db, 1)?;
+            self.report["dependencies_released"] = json!(released);
         }
         Ok(())
     }

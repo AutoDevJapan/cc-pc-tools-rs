@@ -1403,6 +1403,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 
 struct Fake {
     repair_allowed: bool,
+    repair_edit: Option<(PathBuf, Value)>,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
@@ -1437,6 +1438,7 @@ impl Default for Fake {
     fn default() -> Self {
         Self {
             repair_allowed: false,
+            repair_edit: None,
             launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
@@ -1471,6 +1473,9 @@ impl Default for Fake {
 }
 impl Backend for Fake {
     fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
+        if let Some((path, db)) = self.repair_edit.take() {
+            write_json(&path, &db, 1).unwrap();
+        }
         self.repair_allowed
     }
     fn clock(&self) -> f64 {
@@ -1673,6 +1678,141 @@ fn repair_step_never_replays_legacy_questions_or_unknown_work() {
     assert_eq!(f.e.backend.reply_count, 0);
     assert!(f.e.backend.launched.is_empty());
     assert_eq!(report["step_failures"], json!([]));
+}
+
+fn completed_dependency_repair() -> Fixture {
+    let mut f = Fixture::new();
+    fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+    let mut db = f.e.todo().unwrap();
+    db["projects"]["cc-pc-tools-rs"] = json!(f.repo);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.e.backend.repair_allowed = true;
+    f.managed(1, 2, "cc-pc-tools-rs", 0);
+    f.managed(2, 3, "cc-pc-tools-rs", 0);
+    wait_row(&mut f, 1, json!([2]));
+    for record in &mut f.e.backend.records {
+        record["status"] = json!("succeeded");
+    }
+    f.e.backend.ps.clear();
+    f
+}
+
+#[test]
+fn repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch() {
+    for already_done in [false, true] {
+        let mut f = completed_dependency_repair();
+        if already_done {
+            // A previous tick recorded completion but died before releasing its parent.
+            f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+                .unwrap();
+        }
+        let before = f.get(1);
+        let report = f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.get(2)["status"], "done");
+        assert_eq!(report["dependencies_released"], json!([1]));
+        assert_eq!(f.get(1)["status"], "doing");
+        assert!(f.get(1)["wait_on"].is_null());
+        assert_eq!(f.get(1)["dependency_generation"], 1);
+        assert_eq!(f.get(1)["spec"], before["spec"]);
+        assert_eq!(
+            f.get(1)["scheduler"]["worktree"],
+            before["scheduler"]["worktree"]
+        );
+        assert_eq!(f.e.backend.launched.len(), 1);
+        assert_eq!(f.e.backend.launched[0]["item"]["id"], 1);
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        assert!(f.e.backend.notices.is_empty());
+        assert!(f.e.backend.cancelled.is_empty());
+        assert_eq!(f.e.backend.reply_count, 0);
+    }
+}
+
+#[test]
+fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
+    for gate in [
+        "unfinished",
+        "missing",
+        "malformed",
+        "owner",
+        "external",
+        "question",
+        "dispatch",
+        "scope",
+        "unknown",
+        "worktree",
+        "pending",
+        "running",
+        "terminal_live",
+    ] {
+        let mut f = completed_dependency_repair();
+        f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+            .unwrap();
+        match gate {
+            "unfinished" => {
+                f.e.edit(&json!(2), |row| row["status"] = json!("block"))
+                    .unwrap();
+            }
+            "missing" => wait_row(&mut f, 1, json!([2, 99])),
+            "malformed" => wait_row(&mut f, 1, json!([2, "unknown"])),
+            "scope" => f.e.backend.repair_allowed = false,
+            "running" => f.e.backend.records[0]["status"] = json!("running"),
+            "terminal_live" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
+            }
+            _ => {
+                f.e.edit(&json!(1), |row| match gate {
+                    "owner" => row["status"] = json!("block"),
+                    "external" => row["wait_ready"] = json!({"condition":"chatgpt-plus"}),
+                    "question" => row["scheduler"]["question"] = json!({"thread_id":"old"}),
+                    "dispatch" => row["dispatchable"] = json!(false),
+                    "unknown" => row["project"] = json!("other"),
+                    "worktree" => row["scheduler"]["worktree"] = Value::Null,
+                    "pending" => row["stall_recovery"] = json!({"pending":{"key":"reserved"}}),
+                    _ => unreachable!(),
+                })
+                .unwrap();
+            }
+        }
+        let before = f.get(1);
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.get(1), before, "{gate}");
+        assert!(f.e.backend.launched.is_empty(), "{gate}");
+        assert!(f.e.backend.notices.is_empty(), "{gate}");
+        assert!(f.e.backend.cancelled.is_empty(), "{gate}");
+        assert_eq!(f.e.backend.reply_count, 0, "{gate}");
+    }
+}
+
+#[test]
+fn repair_dependency_release_keeps_normal_capacity_gate() {
+    let mut f = completed_dependency_repair();
+    f.e.backend.m["cpu_percent"] = json!(95);
+    let report = f.e.run("repair-step", false).unwrap();
+    assert_eq!(report["dependencies_released"], json!([1]));
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["dependency_ready"], true);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn repair_dependency_release_rechecks_concurrent_stop_dependency_and_project_changes() {
+    for change in ["stop", "dependency", "project"] {
+        let mut f = completed_dependency_repair();
+        f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+            .unwrap();
+        let mut updated = f.e.todo().unwrap();
+        match change {
+            "stop" => updated["items"][0]["status"] = json!("block"),
+            "dependency" => updated["items"][1]["status"] = json!("block"),
+            "project" => updated["projects"]["cc-pc-tools-rs"] = json!("unverified-source"),
+            _ => unreachable!(),
+        }
+        f.e.backend.repair_edit = Some((f.e.todo_path.clone(), updated.clone()));
+        f.e.release_repair_waits().unwrap();
+        assert_eq!(f.e.todo().unwrap(), updated, "{change}");
+        assert!(f.e.backend.launched.is_empty());
+    }
 }
 struct Fixture {
     temp: tempfile::TempDir,

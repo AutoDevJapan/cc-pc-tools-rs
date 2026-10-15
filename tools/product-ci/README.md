@@ -81,7 +81,10 @@ diagnostics remain in disposable guest tmpfs. No resident bridge is invoked.
 
 Registration is repo-scoped, has a unique name, no default labels, one dedicated
 label, and `--ephemeral --disableupdate`. Both hooks bind the exact repo, run,
-attempt and source. The completed hook verifies actual Git HEAD/tree and absence
+attempt and source. A separate loopback-only, nonce-authenticated callback
+rechecks GitHub's current source when each hook actually runs. It exposes no
+request-selected commands or Cargo operations. Hooks live outside the official
+runner application directory. The completed hook verifies actual Git HEAD/tree and absence
 of checkout credentials. The host checks the live original candidate before
 registration and after execution. Default-branch setup validation is explicitly
 separate from candidate evidence. A runner exit never certifies the workflow:
@@ -99,6 +102,12 @@ creation, cleanup or registration absence retains admission for recovery.
 Run `TestCodeQLRealLifecycle` with `CC_PRODUCT_LIFECYCLE_DIR` pointing at a new
 safe-delete-owned directory for real normal/cancel process tests, without tokens
 or GitHub registration. Preserve those receipts before cleanup.
+
+Also set `CC_PRODUCT_GUEST_BINARY` to the freshly built Linux helper to exercise
+the actual guest-to-host admission connection with a fixture whose head advances.
+This is a token-free fixture and cannot certify product CodeQL. After uncertain
+creation the smoke sequence stops; resolve the recorded instance before another
+attempt. See `docs/product-ci-codeql-2648.md` for the saved recovery checkpoint.
 
 Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration

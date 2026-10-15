@@ -1667,6 +1667,38 @@ fn missing_private_registry_only_dispatches_verified_explicit_pc_repair() {
         }
     }
 }
+
+#[test]
+fn new_owner_engineering_scope_only_admits_exact_item_with_verified_guard() {
+    for project in ["civ6-banseiki", "civ6", "other"] {
+        for id in [2636, 2637, 2638, 880] {
+            for allowed in [false, true] {
+                let mut f = Fixture::new();
+                fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+                let mut db = f.e.todo().unwrap();
+                db["projects"][project] = json!(f.repo);
+                write_json(&f.e.todo_path, &db, 1).unwrap();
+                f.e.backend.repair_allowed = allowed;
+                f.put(item(id, project, "todo", &[]));
+                f.dispatch();
+                assert_eq!(
+                    f.e.backend.launched.len(),
+                    usize::from(allowed && id == 2637 && project == "civ6-banseiki")
+                );
+            }
+        }
+    }
+    // Presence of the original registry overrides the new finite admission.
+    let mut f = Fixture::new();
+    fs::write(f.e.root.parent().unwrap().join("client-projects.txt"), "civ6-banseiki").unwrap();
+    let mut db = f.e.todo().unwrap();
+    db["projects"]["civ6-banseiki"] = json!(f.repo);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.e.backend.repair_allowed = true;
+    f.put(item(2637, "civ6-banseiki", "todo", &[]));
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
+}
 #[test]
 fn repair_step_never_replays_legacy_questions_or_unknown_work() {
     let mut f = Fixture::new();

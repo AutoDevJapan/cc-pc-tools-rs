@@ -36,7 +36,7 @@ Native全件、Google20圧縮目次、Editor、VSSの既存走査を繰り返し
 
 ## 元2467への私的な引継ぎ
 
-この作業場所の `.evidence2674-private/handoff-2467.json` に参照先を保存した。
+この作業場所の `.evidence2674-private/handoff-2467-v2.json` に最新の参照先を保存した。
 フォルダーの継承を止め、本人・SYSTEM・Administratorsだけにアクセスを付与した。
 原文と既存記録のコピーはこの私的な場所だけにあり、Gitやレビューへ含めない。
 元の設定、採取記録、元項目の本文と仕様、ほかの担当の成果は保持している。

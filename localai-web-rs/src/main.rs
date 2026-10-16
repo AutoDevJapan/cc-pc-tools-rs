@@ -14,8 +14,8 @@ mod agent;
 mod health_snapshot;
 mod music_bridge;
 use localai_web_rs::operations;
-mod resident;
 mod command_capture;
+mod resident;
 mod workload;
 
 const JSON_LIMIT: usize = 2 * 1024 * 1024;
@@ -155,8 +155,16 @@ fn app(state: AppState) -> Router {
     .with_state(state)
 }
 
-async fn index_html() -> Html<String> {
-    Html(localai_web_rs::console_page::index())
+async fn index_html() -> impl IntoResponse {
+    (
+        [
+            (header::CACHE_CONTROL, "no-store"),
+            (header::CONTENT_SECURITY_POLICY, "frame-ancestors 'none'"),
+            (header::X_FRAME_OPTIONS, "DENY"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        Html(localai_web_rs::console_page::index()),
+    )
 }
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
@@ -220,7 +228,14 @@ fn json_error(status: StatusCode, message: &str) -> Response {
     (status, Json(json!({"error": message}))).into_response()
 }
 
-fn local_headers(headers: &HeaderMap, port: u16) -> bool {
+fn local_headers(headers: &HeaderMap, port: u16, shell_navigation: bool) -> bool {
+    // Reject ambiguous authorities/origins before considering the static shell.
+    if headers.get_all(header::HOST).iter().count() != 1
+        || headers.get_all(header::ORIGIN).iter().count() > 1
+        || headers.get_all("sec-fetch-site").iter().count() > 1
+    {
+        return false;
+    }
     let Some(host) = headers
         .get(header::HOST)
         .and_then(|value| value.to_str().ok())
@@ -236,11 +251,32 @@ fn local_headers(headers: &HeaderMap, port: u16) -> bool {
         }
     }
     if let Some(site) = headers.get("sec-fetch-site") {
-        if !matches!(site.to_str().ok(), Some("same-origin" | "none")) {
+        if !(matches!(site.to_str().ok(), Some("same-origin" | "none"))
+            || (shell_navigation && matches!(site.to_str().ok(), Some("same-site" | "cross-site"))))
+        {
             return false;
         }
     }
     true
+}
+
+fn static_shell_navigation(request: &Request) -> bool {
+    // Only the compiled, data-free shell can be entered from another site.
+    // APIs, frames, fetch/XHR and WebSocket handshakes retain the strict policy.
+    let headers = request.headers();
+    request.method() == Method::GET
+        && request.uri().path() == "/"
+        && !headers.contains_key(header::ORIGIN)
+        && !headers.contains_key(header::UPGRADE)
+        && [
+            ("sec-fetch-mode", "navigate"),
+            ("sec-fetch-dest", "document"),
+        ]
+        .into_iter()
+        .all(|(name, expected)| {
+            headers.get_all(name).iter().count() == 1
+                && headers.get(name).and_then(|value| value.to_str().ok()) == Some(expected)
+        })
 }
 
 async fn local_request_only(
@@ -248,7 +284,11 @@ async fn local_request_only(
     request: Request,
     next: Next,
 ) -> Response {
-    if !local_headers(request.headers(), state.port) {
+    if !local_headers(
+        request.headers(),
+        state.port,
+        static_shell_navigation(&request),
+    ) {
         if request.uri().path().starts_with("/api/agent/") {
             return agent::local_forbidden();
         }
@@ -523,6 +563,176 @@ mod tests {
                     .status(),
                 StatusCode::NOT_FOUND
             );
+        }
+    }
+
+    fn navigation(method: Method, path: &str, site: &str) -> Request {
+        let mut req = request(method, path, Body::empty());
+        for (name, value) in [
+            ("sec-fetch-mode", "navigate"),
+            ("sec-fetch-dest", "document"),
+            ("sec-fetch-site", site),
+        ] {
+            req.headers_mut().insert(name, value.parse().unwrap());
+        }
+        req
+    }
+
+    #[tokio::test]
+    async fn top_level_navigation_serves_only_the_compiled_shell() {
+        let app = app(AppState::new(10012, 10013));
+        for host in ["localhost:10012", "127.0.0.1:10012"] {
+            for site in ["none", "same-origin", "same-site", "cross-site"] {
+                let mut req = navigation(Method::GET, "/", site);
+                req.headers_mut()
+                    .insert(header::HOST, host.parse().unwrap());
+                let res = app.clone().oneshot(req).await.unwrap();
+                assert_eq!(res.status(), StatusCode::OK, "{host} {site}");
+                assert_eq!(res.headers()[header::CACHE_CONTROL], "no-store");
+                assert_eq!(res.headers()[header::X_FRAME_OPTIONS], "DENY");
+                assert_eq!(
+                    res.headers()[header::CONTENT_SECURITY_POLICY],
+                    "frame-ancestors 'none'"
+                );
+                assert!(res
+                    .headers()
+                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .is_none());
+                let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
+                // No operational records are read or interpolated into this document.
+                assert_eq!(
+                    body.as_ref(),
+                    localai_web_rs::console_page::index().as_bytes()
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn shell_exception_never_authorizes_apis_frames_xhr_or_websockets() {
+        let app = app(AppState::new(10012, 10013));
+        for method in [Method::GET, Method::POST, Method::HEAD, Method::OPTIONS] {
+            for path in [
+                "/api/operations",
+                "/api/agent/todo/list",
+                "/api/resident/restart",
+                "/music",
+                "/api/attachments/test",
+            ] {
+                let res = app
+                    .clone()
+                    .oneshot(navigation(method.clone(), path, "cross-site"))
+                    .await
+                    .unwrap();
+                assert_eq!(res.status(), StatusCode::FORBIDDEN, "{method} {path}");
+                assert!(res
+                    .headers()
+                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .is_none());
+            }
+        }
+        for (name, value) in [
+            ("host", "attacker.example:10012"),
+            ("host", "localhost.attacker.example:10012"),
+            ("host", "localhost:10013"),
+            ("origin", "https://attacker.example"),
+            ("origin", "http://127.0.0.1:10012"),
+            ("origin", "null"),
+            ("sec-fetch-dest", "iframe"),
+            ("sec-fetch-dest", "frame"),
+            ("sec-fetch-dest", "empty"),
+            ("sec-fetch-mode", "cors"),
+            ("sec-fetch-mode", "no-cors"),
+            ("sec-fetch-mode", "websocket"),
+            ("sec-fetch-site", "invalid"),
+            ("upgrade", "websocket"),
+        ] {
+            let mut req = navigation(Method::GET, "/", "cross-site");
+            req.headers_mut()
+                .insert(header::HOST, "localhost:10012".parse().unwrap());
+            req.headers_mut().insert(name, value.parse().unwrap());
+            assert_eq!(
+                app.clone().oneshot(req).await.unwrap().status(),
+                StatusCode::FORBIDDEN,
+                "{name} {value}"
+            );
+        }
+        for missing in ["host", "sec-fetch-mode", "sec-fetch-dest"] {
+            let mut req = navigation(Method::GET, "/", "cross-site");
+            req.headers_mut().remove(missing);
+            assert_eq!(
+                app.clone().oneshot(req).await.unwrap().status(),
+                StatusCode::FORBIDDEN,
+                "missing {missing}"
+            );
+        }
+        for duplicate in [
+            "host",
+            "origin",
+            "sec-fetch-mode",
+            "sec-fetch-dest",
+            "sec-fetch-site",
+        ] {
+            let mut req = navigation(Method::GET, "/", "cross-site");
+            req.headers_mut()
+                .append(duplicate, "invalid".parse().unwrap());
+            assert_eq!(
+                app.clone().oneshot(req).await.unwrap().status(),
+                StatusCode::FORBIDDEN,
+                "duplicate {duplicate}"
+            );
+        }
+        for method in [Method::POST, Method::HEAD, Method::OPTIONS] {
+            assert_eq!(
+                app.clone()
+                    .oneshot(navigation(method, "/", "cross-site"))
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::FORBIDDEN
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn api_origin_host_and_cli_contracts_remain_strict() {
+        let app = app(AppState::new(10012, 10013));
+        for method in [Method::GET, Method::POST] {
+            for (name, value) in [
+                ("host", "attacker.example:10012"),
+                ("origin", "https://attacker.example"),
+                ("origin", "http://localhost:10012"),
+                ("origin", "null"),
+                ("sec-fetch-site", "cross-site"),
+                ("sec-fetch-site", "same-site"),
+            ] {
+                let mut req = request(method.clone(), "/api/operations", Body::empty());
+                req.headers_mut().insert(name, value.parse().unwrap());
+                assert_eq!(
+                    app.clone().oneshot(req).await.unwrap().status(),
+                    StatusCode::FORBIDDEN,
+                    "{method} {name} {value}"
+                );
+            }
+        }
+        // CLI requests have no Fetch Metadata or Origin; same-origin browser GETs do.
+        for browser in [false, true] {
+            let mut req = request(Method::GET, "/api/operations", Body::empty());
+            if browser {
+                req.headers_mut()
+                    .insert(header::ORIGIN, "http://127.0.0.1:10012".parse().unwrap());
+                req.headers_mut()
+                    .insert("sec-fetch-site", "same-origin".parse().unwrap());
+            }
+            let res = app.clone().oneshot(req).await.unwrap();
+            assert_eq!(res.status(), StatusCode::OK);
+            assert!(res
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none());
+            let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
+            let value: Value = serde_json::from_slice(&body).unwrap();
+            assert!(value.is_object());
         }
     }
 

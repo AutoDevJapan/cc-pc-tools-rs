@@ -2,9 +2,10 @@
 use serde_json::Value;
 use std::{
     fmt,
-    fs::File,
-    io::{self, Read},
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Write},
     path::Path,
+    time::Duration,
 };
 
 /// Four times the former console ceiling; history remains in the canonical store.
@@ -36,6 +37,75 @@ pub fn check_size(bytes: usize) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+/// Save the complete canonical store without presentation redaction.
+/// Callers hold the shared ToDo lock across their read, mutation and this write.
+pub fn write(path: &Path, db: &Value) -> Result<(), Error> {
+    // Match todo.exe's UTF-8, LF, one-space indent and lack of a final newline.
+    // Check the actual saved bytes before touching the original, backup or temp.
+    let mut bytes = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b" ");
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
+    serde::Serialize::serialize(db, &mut serializer).map_err(Error::InvalidJson)?;
+    check_size(bytes.len())?;
+
+    let mut backup = path.as_os_str().to_os_string();
+    backup.push(".bak-20260930d");
+    let backup = Path::new(&backup);
+    if path.exists() && !backup.exists() {
+        // Do not leave an empty backup if the original cannot be read.
+        let original = fs::read(path).map_err(Error::Io)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(backup)
+            .map_err(Error::Io)?;
+        file.write_all(&original).map_err(Error::Io)?;
+    }
+    let tmp = path.with_file_name(format!(
+        "{}.{}.tmp",
+        path.file_name().unwrap().to_string_lossy(),
+        std::process::id()
+    ));
+    let mut file = File::create(&tmp).map_err(Error::Io)?;
+    file.write_all(&bytes).map_err(Error::Io)?;
+    file.flush().map_err(Error::Io)?;
+    file.sync_all().map_err(Error::Io)?;
+    drop(file);
+    for attempt in 0..50 {
+        match replace(&tmp, path) {
+            Ok(()) => return Ok(()),
+            Err(e)
+                if (e.kind() == io::ErrorKind::PermissionDenied
+                    || matches!(e.raw_os_error(), Some(5 | 32 | 33)))
+                    && attempt < 49 =>
+            {
+                std::thread::sleep(Duration::from_millis(20))
+            }
+            Err(e) => return Err(Error::Io(e)),
+        }
+    }
+    unreachable!()
+}
+
+#[cfg(windows)]
+fn replace(from: &Path, to: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_REPLACE_EXISTING, MoveFileExW};
+
+    let from: Vec<u16> = from.as_os_str().encode_wide().chain(Some(0)).collect();
+    let to: Vec<u16> = to.as_os_str().encode_wide().chain(Some(0)).collect();
+    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_REPLACE_EXISTING) } == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+fn replace(from: &Path, to: &Path) -> io::Result<()> {
+    fs::rename(from, to)
 }
 
 /// Bound actual reads, including a file which grows after it is opened.

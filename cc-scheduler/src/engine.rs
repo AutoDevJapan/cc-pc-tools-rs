@@ -186,12 +186,30 @@ impl<B: Backend> Scheduler<B> {
         }
     }
     pub fn edit(&mut self, id: &Value, action: impl FnOnce(&mut Value)) -> Result<Value> {
+        self.edit_in_project(id, None, action)
+    }
+    /// Bind an explicit workspace receipt to its registered project under the store lock.
+    pub fn edit_in_project(
+        &mut self,
+        id: &Value,
+        expected_path: Option<&str>,
+        action: impl FnOnce(&mut Value),
+    ) -> Result<Value> {
         let _lock = ByteLock::acquire(
             &self.todo_path.with_file_name("todo.lock"),
             Duration::from_secs(2),
         )?
         .ok_or(Error("TimeoutError"))?;
         let mut db = self.todo()?;
+        if let Some(path) = expected_path {
+            let current = arr(&db["items"])
+                .into_iter()
+                .find(|row| row["id"] == *id)
+                .ok_or(Error("ValueError"))?;
+            if db["projects"][s(&current["project"])] != path {
+                return Err(Error("InputRejected"));
+            }
+        }
         let row = db["items"]
             .as_array_mut()
             .ok_or(Error("ValueError"))?

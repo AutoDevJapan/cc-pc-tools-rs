@@ -1076,7 +1076,11 @@ try {
     $oldOSAccess=$oldOSRoot
     $osAccessPath=$oldOSAccess
     $oldContents=@(Get-ChildItem -LiteralPath $oldOSRoot -Force|Where-Object Name -NotIn @('System Volume Information','$RECYCLE.BIN'))
-    if((Test-Path -LiteralPath (Join-Path $oldOSRoot 'Windows')) -or $oldContents.Count -ne 0){throw 'OWNED_RETRY_VHD_OS_PARTITION_NOT_EMPTY'}
+    $oldStages=@($oldContents|Where-Object {$_.PSIsContainer -and $_.Name -match '^cc2746-image-stage-[0-9a-f]{32}$'})
+    $stageNames=@($oldStages|ForEach-Object Name)
+    $unexpected=@($oldContents|Where-Object {$_.Name -notin $stageNames})
+    $nonemptyStages=@($oldStages|Where-Object {($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @(Get-ChildItem -LiteralPath $_.FullName -Force).Count -ne 0})
+    if((Test-Path -LiteralPath (Join-Path $oldOSRoot 'Windows')) -or $oldStages.Count -gt 1 -or $unexpected.Count -ne 0 -or $nonemptyStages.Count -ne 0){throw 'OWNED_RETRY_VHD_OS_PARTITION_NOT_EMPTY'}
     Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOS.PartitionNumber -AccessPath $oldOSAccess
     $oldOSAccess=$null
     $osAccessPath=$null

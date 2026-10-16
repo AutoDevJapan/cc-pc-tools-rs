@@ -92,43 +92,30 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   about 196 MiB. A read-only probe found four partitions (EFI, OS, and two
   MSRs) with task-specific filesystem labels. Whether the OS partition has a
   Windows directory is not yet confirmed.
-- The current helper now uses temporary drive letters for DISM ApplyDir and
-  BCDBoot's ESP target. Before resetting this exact VHDX, the elevated script
-  checks the previous cleanup receipt, verifies the old VM GUID is absent and
-  the VHDX is not attached to any VM, validates its expected partition types,
-  labels, and sizes, and checks that the OS partition contains no Windows
-  directory or unexpected files. Only then does it clear that owned partial
-  layout, handle a single initialization-created MSR if present, and create
-  EFI, one MSR, and OS partitions in boot order. The answer file remains in
-  Panther and on the seed DVD; first boot should run `specialize` and leave
-  normal OOBE intact. A bounded read-only AdminBroker probe later confirmed
-  `Test-Path` succeeds for the target, a 4-byte write/remove probe succeeded
-  there, and DISM `/Get-WimInfo` read the source WIM successfully; both VHD and
-  ISO were detached afterward. Native DISM and Microsoft's Dism module
-  `Expand-WindowsImage` both failed with `DirectoryNotFoundException` and
-  `0x80070003`, even though the source WIM and target root exist and the target
-  accepts a small write. `Expand-WindowsImage` with `NoRpFix` to a unique stage
-  directory on the guest OS partition also returned the same path error; its
-  stage remained empty, the OS has no Windows directory, and the VHD detached.
-  The current helper now addresses that same stage by the volume GUID path
-  rather than the temporary drive letter, then plans to move successful image
-  entries into the OS root on the same volume. This path adjustment is
-  untried. Go checks passed before the latest change.
-- The next helper invocation stopped before CC-AdminBroker because the prior
-  attempt receipts had already been archived by the preceding run. It made no
-  VM/VHD mutation. The retry now accepts an existing archive only when its
-  regular-file bytes exactly match the receipt being preserved; mismatches and
-  links still stop. The idempotence fix is committed and pushed through
-  `ad23b68`; the current PowerShell Dism cmdlet change is uncommitted. The next
-  real guest fixture run remains outstanding.
+- Offline provisioning via native DISM, the PowerShell Dism cmdlet, and a
+  guest-volume stage directory all returned `0x80070003`. The AdminBroker
+  read-only probe confirmed the WIM can be queried, the target volume accepts
+  a small write/remove, and source/target checks pass. The failed WIM applies
+  left the OS partition without a Windows directory, and VHD/ISO mounts were
+  detached afterward. The current helper addresses an empty stage folder by
+  the VHD volume GUID, then moves a successful applied image into the OS root
+  on the same volume. This has not been run yet.
+- The last retry stopped before AdminBroker because it rejected the empty
+  stage folder left by the previous attempt. No VM or VHD write occurred in
+  that invocation. The helper now accepts at most one regular, empty stage
+  folder whose name matches its fixed prefix and 32-hex nonce; any contents,
+  reparse point, Windows tree, or other OS-root entry still blocks a reset.
+  The previous VM/cleanup/failure attempt records are preserved idempotently
+  only when the existing bytes match. These recovery changes are uncommitted.
 
 ## Remaining
 
-1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` on the
-   Dism cmdlet change; commit and push it.
+1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
+   and push the volume-GUID stage path and empty-stage recovery changes.
 2. Build the helper into the owned root and run `vm-smoke` against the already
-   downloaded ISO. Receipt-bound recovery must confirm the prior VM is absent
-   and the owned OS partition is empty before resetting the partial layout.
+   downloaded ISO. Receipt-bound recovery must confirm the previous VM is
+   absent and the owned partial OS partition is empty except for allowed
+   system metadata and the one verified empty stage directory.
 3. Confirm guest readiness, the normal and cancellation child-process
    receipts, then separately verify VM Off, assigned memory zero, and removal.
 4. Copy sanitized evidence into the worktree, update ToDo2737's note

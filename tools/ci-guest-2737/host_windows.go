@@ -71,6 +71,9 @@ func record(root, name string, v any) error {
 }
 func psQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 func admin(ctx context.Context, root, name, body string) error {
+	if e := ctx.Err(); e != nil {
+		return e
+	}
 	p := filepath.Join(root, name+".private.ps1")
 	if e := writeNew(p, []byte("$ErrorActionPreference='Stop'\n"+body)); e != nil {
 		return e
@@ -80,7 +83,11 @@ func admin(ctx context.Context, root, name, body string) error {
 		return e
 	}
 	defer f.Close()
-	c := command(ctx, `C:\Program Files\PowerShell\7\pwsh.exe`, "-NoProfile", "-File", broker, "-Script", p, "-TimeoutSec", "300")
+	// The broker owns the admitted script; cancelling its client does not cancel
+	// the elevated work. Drain that flight before reading receipts or cleanup.
+	flight, stop := context.WithTimeout(context.Background(), 330*time.Second)
+	defer stop()
+	c := command(flight, `C:\Program Files\PowerShell\7\pwsh.exe`, "-NoProfile", "-File", broker, "-Script", p, "-TimeoutSec", "300")
 	c.Stdout = f
 	c.Stderr = f
 	if e = c.Run(); e != nil {
@@ -245,7 +252,7 @@ func linuxTests(ctx context.Context, root, binary string) error {
 	if copy.Run() != nil {
 		return errors.New("Linux test stdin transfer failed")
 	}
-	f, e := os.OpenFile(filepath.Join(root, "linux-unit-v3.private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	f, e := os.OpenFile(filepath.Join(root, "linux-unit-"+hash(b)[:16]+".private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return e
 	}
@@ -324,35 +331,6 @@ func prepareSeed(ctx context.Context, root, toolRoot, helper, instance string, i
 	return writeNew(filepath.Join(root, "seed.iso"), b)
 }
 
-type vmState struct{ Instance, ID, Name, Root, Pipe string }
-
-func createVM(ctx context.Context, root, instance, image string) (vmState, error) {
-	s := vmState{Instance: instance, Name: "cc-ci-2737-" + instance, Root: root, Pipe: `\\.\pipe\cc-ci-2737-` + instance}
-	if e := record(root, "vm-intent.private.json", s); e != nil {
-		return s, e
-	}
-	body := "Import-Module Hyper-V\n$root=" + psQuote(root) + "\n$name=" + psQuote(s.Name) + "\nif(Get-VM -Name $name -ErrorAction SilentlyContinue){throw 'OWNED_NAME_ALREADY_EXISTS'}\n$disk=Join-Path $root 'guest.vhdx'\nif(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}\nConvert-VHD -Path (Join-Path $root 'linux-public.vhd') -DestinationPath $disk -VHDType Dynamic\nResize-VHD -Path $disk -SizeBytes 64GB\n$vm=New-VM -Name $name -Generation 1 -MemoryStartupBytes 2GB -VHDPath $disk -Path (Join-Path $root 'vm') -SwitchName 'Default Switch'\nSet-VM -VM $vm -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -Notes " + psQuote("cc.todo=2737;cc.instance="+instance) + "\nSet-VMProcessor -VM $vm -Count 2\nSet-VMComPort -VM $vm -Number 1 -Path " + psQuote(s.Pipe) + "\n$dvd=Get-VMDvdDrive -VM $vm\nif($dvd){$dvd | Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}\n@{Instance=" + psQuote(instance) + ";ID=$vm.Id.ToString();Name=$vm.Name;Root=$root;Pipe=" + psQuote(s.Pipe) + "}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8\nStart-VM -VM $vm\n"
-	// All image files are our own public SDK conversion; source checkout is
-	// absent. Do not rely on New-VM's inherited dynamic-memory configuration.
-	body = strings.Replace(body, "(Join-Path $root 'linux-public.vhd')", psQuote(image), 1)
-	body = strings.Replace(body, "Set-VMComPort -VM $vm", "Set-VMMemory -VM $vm -DynamicMemoryEnabled $false -StartupBytes 2GB\nSet-VMComPort -VM $vm", 1)
-	if e := admin(ctx, root, "vm-create", body); e != nil {
-		return s, e
-	}
-	b, e := os.ReadFile(filepath.Join(root, "vm-created.private.json"))
-	b = bytes.TrimPrefix(b, []byte{239, 187, 191})
-	if e != nil || json.Unmarshal(b, &s) != nil || !validInstance(s.Instance) || s.Instance != instance || s.ID == "" || s.Name != "cc-ci-2737-"+instance || s.Root != root {
-		return s, errors.New("created VM identity unavailable")
-	}
-	return s, nil
-}
-func cleanupVM(ctx context.Context, s vmState) error {
-	if !validInstance(s.Instance) || s.Name != "cc-ci-2737-"+s.Instance || s.ID == "" {
-		return errors.New("owned VM cleanup identity unavailable")
-	}
-	body := "Import-Module Hyper-V\n$v=Get-VM -Id " + psQuote(s.ID) + " -ErrorAction Stop\nif($v.Name -cne " + psQuote(s.Name) + " -or $v.Notes -cne " + psQuote("cc.todo=2737;cc.instance="+s.Instance) + "){throw 'VM_OWNERSHIP_MISMATCH'}\n$root=[IO.Path]::GetFullPath(" + psQuote(s.Root) + ").TrimEnd('\\')+'\\'\n$location=[IO.Path]::GetFullPath($v.ConfigurationLocation)\nif(-not $location.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){throw 'VM_LOCATION_MISMATCH'}\nif($v.State -ne 'Off'){Stop-VM -VM $v -TurnOff -Force}\n$v=Get-VM -Id " + psQuote(s.ID) + "\nif($v.State -ne 'Off' -or $v.MemoryAssigned -ne 0){throw 'VM_STOP_UNCONFIRMED'}\nRemove-VM -VM $v -Force\nif(Get-VM -Id " + psQuote(s.ID) + " -ErrorAction SilentlyContinue){throw 'VM_REMOVAL_UNCONFIRMED'}\n@{vm_id=" + psQuote(s.ID) + ";stopped=$true;memory_assigned=0;removed=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-cleanup.private.json') -Encoding utf8\n"
-	return admin(ctx, s.Root, "vm-cleanup", body)
-}
 func readSerial(ctx context.Context, pipe, instance, dest string) error {
 	if !validInstance(instance) || pipe != `\\.\pipe\cc-ci-2737-`+instance {
 		return errors.New("serial identity rejected")
@@ -496,12 +474,18 @@ func main() {
 		e = readSerial(sub, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 3 && os.Args[1] == "extract" {
 		e = extractImage(os.Args[2])
+	} else if len(os.Args) == 3 && os.Args[1] == "test-constructor-failure" {
+		e = constructorFailure(ctx, os.Args[2], "after-receipt")
+	} else if len(os.Args) == 3 && os.Args[1] == "test-constructor-receipt-failure" {
+		e = constructorFailure(ctx, os.Args[2], "receipt-write")
 	} else if len(os.Args) == 3 && os.Args[1] == "tools" {
 		e = prepareTools(ctx, os.Args[2])
 	} else if len(os.Args) == 3 && os.Args[1] == "cleanup-tools" {
 		e = cleanupTools(ctx, os.Args[2])
 	} else if len(os.Args) == 4 && os.Args[1] == "test-linux" {
 		e = linuxTests(ctx, os.Args[2], os.Args[3])
+	} else if len(os.Args) == 3 && os.Args[1] == "test-public-sdk" {
+		e = testPublicSDK(ctx, os.Args[2])
 	} else if len(os.Args) == 4 && os.Args[1] == "smoke" {
 		e = smoke(ctx, os.Args[2], os.Args[2], os.Args[3], filepath.Join(os.Args[2], "linux-public.vhd"))
 	} else if len(os.Args) == 4 && os.Args[1] == "smoke-generic" {
@@ -512,6 +496,10 @@ func main() {
 		}
 	} else if len(os.Args) == 3 && os.Args[1] == "prepare-generic" {
 		e = prepareGeneric(ctx, os.Args[2])
+	} else if len(os.Args) == 3 && os.Args[1] == "capture-sdk" {
+		e = captureSDK(ctx, os.Args[2])
+	} else if len(os.Args) == 4 && os.Args[1] == "sdk-smoke" {
+		e = sdkSmoke(ctx, os.Args[2], os.Args[3])
 	} else {
 		e = errors.New("usage: ci2737-host extract/tools <owned-root> | smoke <owned-root> <Linux-helper>")
 	}
@@ -519,6 +507,169 @@ func main() {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(1)
 	}
+}
+
+func testPublicSDK(ctx context.Context, root string) error {
+	s, e := readTools(root)
+	if e != nil {
+		return e
+	}
+	if e = toolInspect(ctx, s); e != nil {
+		return e
+	}
+	if command(ctx, dockerExe, "exec", s.ID, "mkdir", "-p", "/opt/ci2737-public-tests").Run() != nil {
+		return errors.New("owned SDK test directory unavailable")
+	}
+	f, e := os.Open(filepath.Join(root, "public-runner-sdk.tar.gz"))
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	out, e := os.OpenFile(filepath.Join(root, "public-sdk-test-"+newID()+".private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	defer out.Close()
+	c := command(ctx, dockerExe, "exec", "-i", "-e", "CC2737_PUBLIC_SDK_STDIN=1", "-e", "TMPDIR=/opt/ci2737-public-tests", s.ID, "/usr/local/bin/ci2737-tests", "-test.v", "-test.run", "^TestPublicRunnerSDKArchive$")
+	c.Stdin = f
+	c.Stdout = out
+	c.Stderr = out
+	if c.Run() != nil {
+		return errors.New("pinned public SDK extraction test failed; preserve log")
+	}
+	return nil
+}
+
+func captureSDK(ctx context.Context, root string) error {
+	s, e := readTools(root)
+	if e != nil {
+		return e
+	}
+	if e = toolInspect(ctx, s); e != nil {
+		return e
+	}
+	if command(ctx, dockerExe, "exec", s.ID, "sh", "-c", "test ! -e /opt/actions-runner/.runner && test ! -e /opt/actions-runner/.credentials && test ! -e /opt/actions-runner/.credentials_rsaparams").Run() != nil {
+		return errors.New("configured SDK rejected without reading credentials")
+	}
+	f, e := os.OpenFile(filepath.Join(root, "public-runner-sdk.tar.gz"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	c := command(ctx, dockerExe, "exec", s.ID, "tar", "-czf", "-", "-C", "/opt/actions-runner", ".")
+	c.Stdout = f
+	e = c.Run()
+	if e == nil {
+		e = f.Sync()
+	}
+	e = errors.Join(e, f.Close())
+	if e != nil {
+		return errors.New("public runner SDK capture failed")
+	}
+	runner, e := os.ReadFile(filepath.Join(root, "public-runner-sdk.tar.gz"))
+	if e != nil || len(runner) > 768<<20 {
+		return errors.New("public runner SDK capture size rejected")
+	}
+	rustup, e := command(ctx, dockerExe, "exec", s.ID, "cat", "/opt/rust/bin/rustup").Output()
+	if e != nil || !bytes.HasPrefix(rustup, []byte{0x7f, 'E', 'L', 'F'}) || len(rustup) > 64<<20 {
+		return errors.New("public rustup SDK capture rejected")
+	}
+	if e = writeNew(filepath.Join(root, "public-rustup"), rustup); e != nil {
+		return e
+	}
+	sccache, e := os.ReadFile(filepath.Join(root, "sccache-linux-verified.tar.gz"))
+	if e != nil || hash(sccache) != publicSccacheSHA {
+		return errors.New("public sccache SDK capture rejected")
+	}
+	return record(root, "public-sdk-manifest.private.json", sdkManifest{publicRunnerImage, hash(runner), hash(rustup), publicSccacheSHA})
+}
+
+func sdkSmoke(ctx context.Context, root, helper string) (ret error) {
+	i, e := newIdentity()
+	if e != nil {
+		return e
+	}
+	instance := newID()
+	attempt := filepath.Join(root, "sdk-attempt-"+instance)
+	if e = os.Mkdir(attempt, 0700); e != nil {
+		return e
+	}
+	if e = prepareSeed(ctx, attempt, root, helper, instance, i); e != nil {
+		return e
+	}
+	s, e := createVM(ctx, attempt, instance, filepath.Join(root, "linux-generic.vhdx"))
+	if s.ID != "" {
+		defer func() {
+			clean, stop := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer stop()
+			ret = errors.Join(ret, cleanupVM(clean, s))
+		}()
+	}
+	if e != nil {
+		return e
+	}
+	exe, e := os.Executable()
+	if e != nil {
+		return e
+	}
+	body := "& " + psQuote(exe) + " serial " + psQuote(s.Pipe) + " " + psQuote(instance) + " " + psQuote(filepath.Join(attempt, "guest-ready.private.json")) + "\nif($LASTEXITCODE -ne 0){throw 'SERIAL_PROBE_FAILED'}\n"
+	if e = admin(ctx, attempt, "vm-readiness", body); e != nil {
+		return e
+	}
+	b, e := os.ReadFile(filepath.Join(attempt, "guest-ready.private.json"))
+	var r ready
+	if e != nil || json.Unmarshal(b, &r) != nil || validateReady(r, instance) != nil {
+		return errors.New("SDK guest readiness unavailable")
+	}
+	c, e := guestDial(i, r)
+	if e != nil {
+		return e
+	}
+	defer c.Close()
+	_ = c.SetDeadline(time.Now().Add(13 * time.Minute))
+	if e = json.NewEncoder(c).Encode(request{"prepare-sdk", instance}); e != nil {
+		return e
+	}
+	// Read the typed response concurrently: a rejected SDK may return before
+	// all blobs were sent. Do not discard its reason behind a write/reset error.
+	upload := make(chan error, 1)
+	go func() {
+		for _, name := range []string{"public-sdk-manifest.private.json", "public-runner-sdk.tar.gz", "public-rustup", "sccache-linux-verified.tar.gz"} {
+			data, err := os.ReadFile(filepath.Join(root, name))
+			if err == nil {
+				err = writeBlob(c, data)
+			}
+			if err != nil {
+				upload <- err
+				return
+			}
+		}
+		upload <- nil
+	}()
+	var result sdkResult
+	e = json.NewDecoder(io.LimitReader(c, 24<<20)).Decode(&result)
+	_ = c.Close()
+	uploadErr := <-upload
+	if e != nil {
+		return errors.Join(errors.New("SDK guest result unavailable"), uploadErr)
+	}
+	if result.ID != instance || result.ProductSource || result.RunnerRegistered {
+		return errors.New("SDK guest result identity rejected")
+	}
+	if e = writeNew(filepath.Join(attempt, "sdk-bootstrap.private.log"), result.Log); e != nil {
+		return e
+	}
+	logSHA := hash(result.Log)
+	result.Log = nil
+	if e = record(attempt, "sdk-result.private.json", result); e != nil {
+		return e
+	}
+	if e = record(attempt, "sdk-log-hash.private.json", map[string]any{"sha256": logSHA, "official_ci_success": false}); e != nil {
+		return e
+	}
+	if result.Failure != "" {
+		return errors.New("public SDK bootstrap failed; see typed result and private log")
+	}
+	return uploadErr
 }
 
 func prepareGeneric(ctx context.Context, root string) error {

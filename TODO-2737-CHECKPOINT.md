@@ -143,3 +143,43 @@ Linux共用labelが3回あるのに1回としたassertと、branch中のslashの
   2740だけを待つ区切りはwait --on 2740で記録し、レビュー実応答後にMustを修正する。
   続く実行基盤と通常CIは未完了のまま保持する。レビュー完了をCI成功や製品完了と呼ばない。
 - 回収はsafe-delete plan、別呼び出し通常削除、finish。拒否時は正規quarantineのみ。
+
+## 2026-10-17 ToDo2748 Linux guest 補助の別モデルレビュー
+
+対象は固定commit `8439d62850b7e9cc5b1632ca90183c40514a8923` の `tools/ci-guest-2737/` のみ。レビュー応答はcc-pc-tools-rsの担当ブランチへcommit `4b602b5e9e42000b646381a2a7a84f03320af23c` として保存・push済み。
+
+### Must（1）
+
+- `tools/ci-guest-2737/host_windows.go:334-345, 456-465` — `New-VM` 後、作成receiptの書込み前に設定処理が失敗すると、作成済みVMのIDを読み戻さず、`smoke` のID条件により後始末が登録されない。`Start-VM` 失敗でもreceiptを読み戻さないため、VMが残り得る。Hyper-V資源を占有し、停止確認前のVMが残る可能性がある。`New-VM` 直後にID・name・notes・rootを記録し、失敗時もreceiptを読み、厳密な所有照合後に停止・メモリ0・除去を行う。照合不能時は要照合状態を保持する。
+
+### Suggestion（0）
+なし。
+
+### Nit（0）
+なし。
+
+README/checkpointは、この補助の実測を原製品source・公式runner登録・workflow・Cargo・通常CIの成功から明確に分離している。TLS pin/readiness、fixture要求境界、実Linux子プロセスとgroup回収、通常成功時のVM回収、窓非表示とAdminBroker利用にMustはない。元2737のToDo状態は変更していない。
+
+## 2026-10-17 再開時点の最新状態（上の旧job/root記述を更新）
+
+- jobは20261017-012131-todo-2737、branchはscheduler/todo-2737-godd-mcp-ci。
+- 所有rootは C:/Users/makhmeto/AppData/Local/Temp/codex-owned-9389b3ad45abf8cb9bafdfe93159097c。
+  safe-delete所有ID9389b3ad45abf8cb9bafdfe93159097c。未完了SDK資産と原失敗証拠を保持中。
+- レビュー2748のMust1を実装で修正した。VMの返却IDをNew-VM直後に記録し、エラー時も読む。
+  設定前失敗とCreateNewによるreceipt保存失敗を別々の新規VMで実測し、Off/メモリ0/除去/CIM不在まで成功。
+  前者VM 0f3eeffd-6b1a-4bd3-8ef3-33f427d138c7、後者f06fd48a-522c-4e20-bf31-5d4d76f73144。
+- 公開SDK転送の2つの旧attemptは切断失敗、双方VM回収済み。最初の失敗を保持して再実行成功と混同しない。
+  公開runnerアーカイブ227624222 bytesの展開検査で、通常directory末尾slashと内部symlink拒否が判明し修正。
+  その後の検査containerの/tmp容量不足も原logを保持し、自分のcontainer内の専用領域で公開全SDK展開成功。
+  成功log public-sdk-test-3f724acbffff3b253a0a2349d2545cd2.private.log SHA256
+  307AECD7CAF14A080FDA54115BAED71F6E1D043F7886CB4AB513F8B74DE1C544。
+- 最新Linux unit log linux-unit-452a387604659f8a.private.log SHA256
+  FE06A7773B63F31C2FEFC2FB238E73D8AD670DE52D161691C1D4A2E3781A6712。Windows Go test/vet/build成功。
+- 実行中の新SDK smokeはhost-v14.exe/ci2737-guest-v7、sdk-v14.stdout/stderr.logに結果。
+  eventsの完了を確認してから結果を回収し、同じコマンドを重複実行しない。typed sdk-resultとcleanupを別々に確認する。
+- 工具containerはtools-ready.private.jsonの自分のIDだけが稼働中。原SDK imageは不変更。
+- 原PR3613/b194、公式CI失敗は未変更。製品source/runner登録/Cargo/公式CIは未接続で未実行。
+  旧2740 Must0はnormal-ci-planだけ、2748は旧guestだけ。SDKと今回の修正は追加有限レビューが必要。
+- Windows実guest準備は既存2746で続行中。別の同じ作業を登録しない。
+- 残り: SDK guest実bootstrap→source物理HEAD/tree→単一公式job受付と共有Cargoゲート→公式4jobのroute/dispatchと13工程/Docker parity→原log hash/cleanupを親2641へ返す。
+  親の原PRmerge/Prd、CodeQL37件の別確認、旧資源の回収はこのcheckで重複しない。

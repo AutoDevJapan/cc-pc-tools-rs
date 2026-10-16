@@ -8,15 +8,58 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"math/big"
 	"net"
 	"time"
 )
 
 const guestPort = 27373
+const publicRunnerImage = "sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011"
+const publicSccacheSHA = "45f1447fbe231e3037bde351ef70677dd212216c8d62ae7ca409fecc4d6acc89"
+
+type sdkManifest struct {
+	Image      string `json:"image"`
+	RunnerSHA  string `json:"runner_sha256"`
+	RustupSHA  string `json:"rustup_sha256"`
+	SccacheSHA string `json:"sccache_sha256"`
+}
+type sdkResult struct {
+	ID               string `json:"id"`
+	RunnerVersion    string `json:"runner_version,omitempty"`
+	CargoVersion     string `json:"cargo_version,omitempty"`
+	DockerVersion    string `json:"docker_version,omitempty"`
+	BuildxVersion    string `json:"buildx_version,omitempty"`
+	SccacheVersion   string `json:"sccache_version,omitempty"`
+	Failure          string `json:"failure,omitempty"`
+	ProductSource    bool   `json:"product_source"`
+	RunnerRegistered bool   `json:"runner_registered"`
+	Log              []byte `json:"log,omitempty"`
+}
+
+func writeBlob(w io.Writer, b []byte) error {
+	if e := binary.Write(w, binary.BigEndian, uint64(len(b))); e != nil {
+		return e
+	}
+	_, e := w.Write(b)
+	return e
+}
+func readBlob(r io.Reader, limit uint64) ([]byte, error) {
+	var n uint64
+	if e := binary.Read(r, binary.BigEndian, &n); e != nil {
+		return nil, e
+	}
+	if n == 0 || n > limit {
+		return nil, errors.New("SDK frame size rejected")
+	}
+	b := make([]byte, int(n))
+	_, e := io.ReadFull(r, b)
+	return b, e
+}
 
 type publicConfig struct {
 	Instance          string `json:"instance"`
@@ -102,7 +145,7 @@ func decodeRequest(d *json.Decoder) (request, error) {
 	if e := d.Decode(&q); e != nil {
 		return q, e
 	}
-	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue") || !validInstance(q.ID) {
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk") || !validInstance(q.ID) {
 		return q, errors.New("fixture request rejected")
 	}
 	return q, nil

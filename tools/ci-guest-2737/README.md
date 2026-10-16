@@ -64,6 +64,25 @@ the first failure and correction evidence, then use safe-delete plan, a separate
 normal delete call, and finish for the owned root. Do not remove active guests
 or another task's data. An uncertain VM must be reconciled before root cleanup.
 
+The constructor now persists the returned VM ID immediately after New-VM,
+reads receipts even after errors, and rolls back that exact VM on configuration
+or receipt-write failure. Both injected post-creation failure and real exclusive
+receipt-write failure passed on Hyper-V, including authoritative CIM absence.
+Broker flights are drained before interpreting results. No helper can turn a
+missing receipt into proof of absence. Crash/power-loss recovery is still pending.
+
+`capture-sdk` saves only the credential-free public runner/rustup SDK from the
+fixed image. `sdk-smoke` sends bounded hash-checked SDK frames over mutual TLS
+to a new owned guest. The guest installs public dependencies and Rust, then
+probes runner/Cargo/Docker/buildx/sccache as the fresh guest user. It cannot
+register a runner or receive product source. The public archive extraction
+test passed against the exact SDK digest, after preserving initial directory,
+internal symlink and tmpfs-capacity failures. Relative links may point only to
+regular files inside that SDK and are created after regular extraction. A typed
+guest failure is read concurrently with upload so a reset cannot hide it.
+SDK VM bootstrap is a separate result; successful archive extraction is not
+successful bootstrap or official CI. Command output is bounded and private.
+
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).

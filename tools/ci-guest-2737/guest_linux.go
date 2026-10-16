@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -30,11 +31,31 @@ func groupGone(p int) bool              { return p > 1 && errors.Is(syscall.Kill
 func (g *guest) serve(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(time.Minute))
-	d := json.NewDecoder(io.LimitReader(conn, 4096))
-	q, e := decodeRequest(d)
+	reader := bufio.NewReaderSize(conn, 4096)
+	header, e := reader.ReadSlice('\n')
 	if e != nil {
 		return
 	}
+	d := json.NewDecoder(bytes.NewReader(header))
+	q, e := decodeRequest(d)
+	if e != nil || d.Decode(new(any)) != io.EOF {
+		return
+	}
+	if q.Kind == "prepare-sdk" {
+		g.mu.Lock()
+		if g.active {
+			g.mu.Unlock()
+			return
+		}
+		g.active = true
+		g.mu.Unlock()
+		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		_ = conn.SetDeadline(time.Now().Add(15 * time.Minute))
+		result := prepareSDK(conn, reader, q.ID)
+		_ = json.NewEncoder(conn).Encode(result)
+		return
+	}
+	d = json.NewDecoder(io.LimitReader(reader, 4096))
 	if q.Kind == "status" {
 		g.mu.Lock()
 		r, ok := g.results[q.ID]

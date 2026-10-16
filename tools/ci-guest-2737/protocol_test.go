@@ -1,14 +1,39 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/json"
 	"net"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestSDKFramesKeepBinaryBytesAndRejectOversizeAndTruncation(t *testing.T) {
+	want := []byte{0, 10, 13, 255, 1, 2}
+	var b bytes.Buffer
+	if e := writeBlob(&b, want); e != nil {
+		t.Fatal(e)
+	}
+	got, e := readBlob(&b, 32)
+	if e != nil || !bytes.Equal(want, got) {
+		t.Fatal("SDK binary frame changed")
+	}
+	var oversized bytes.Buffer
+	_ = binary.Write(&oversized, binary.BigEndian, uint64(33))
+	if _, e = readBlob(&oversized, 32); e == nil {
+		t.Fatal("SDK oversized frame accepted")
+	}
+	var truncated bytes.Buffer
+	_ = binary.Write(&truncated, binary.BigEndian, uint64(4))
+	truncated.WriteByte(1)
+	if _, e = readBlob(&truncated, 32); e == nil {
+		t.Fatal("SDK truncated frame accepted")
+	}
+}
 
 func TestPinnedMutualTLSRejectsAnUnrelatedClientAndServer(t *testing.T) {
 	server, e := newIdentity()

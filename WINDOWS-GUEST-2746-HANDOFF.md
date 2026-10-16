@@ -66,10 +66,16 @@ last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
   boolean; the helper now compares the string value explicitly and has a
   receipt-bound resume path that replaces the unconsumed seed DVD with a fresh
   in-memory host identity before starting this same Off VM. Go compilation,
-  vet, and diff checks passed; this recovery change and the live resume path
-  are not yet committed or run. Inspection also confirmed the Windows
+  vet, and diff checks passed. Inspection also confirmed the Windows
   PowerShell receipt has a UTF-8 BOM; Go receipt readers now strip that marker
   before JSON decoding.
+- The first resume attempt stopped at its identity check before changing VM
+  state. A read-only query by the same receipt GUID confirmed name and notes
+  match, the VM is Off, and its actual ConfigurationLocation is a child folder
+  under the owned `vm` directory rather than exactly that parent. The helper
+  now requires the configuration path to remain inside that owned directory.
+  This containment fix is uncommitted and untried; the same VM/VHDX and receipt
+  remain in the safe-delete-owned root.
 
 ## Remaining
 

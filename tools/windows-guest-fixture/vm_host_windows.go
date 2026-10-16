@@ -303,7 +303,10 @@ $newSeedISO=` + q(seedISO) + `
 $pipe=` + q(vm.Pipe) + `
 if(-not (Test-Path -LiteralPath $newSeedISO)){throw 'OWNED_NEW_SEED_ISO_MISSING'}
 $v=Get-VM -Id $id -ErrorAction Stop
-if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not [String]::Equals([IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\'),[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_RECOVERY_IDENTITY_MISMATCH'}
+$configRoot=[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\')
+$configPath=[IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\')
+$configInside=[String]::Equals($configPath,$configRoot,[StringComparison]::OrdinalIgnoreCase) -or $configPath.StartsWith($configRoot+'\',[StringComparison]::OrdinalIgnoreCase)
+if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not $configInside){throw 'OWNED_VM_RECOVERY_IDENTITY_MISMATCH'}
 $cp=$v|Get-VMComPort|Where-Object Number -EQ 1
 $dvds=@($v|Get-VMDvdDrive)
 $vhds=@($v|Get-VMHardDiskDrive)
@@ -974,7 +977,10 @@ $seedISO=` + q(vm.SeedISO) + `
 $pipe=` + q(vm.Pipe) + `
 $v=Get-VM -Id $id -ErrorAction SilentlyContinue
 if($v){
-  if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not [String]::Equals([IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\'),[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_CLEANUP_IDENTITY_MISMATCH'}
+  $configRoot=[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\')
+  $configPath=[IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\')
+  $configInside=[String]::Equals($configPath,$configRoot,[StringComparison]::OrdinalIgnoreCase) -or $configPath.StartsWith($configRoot+'\',[StringComparison]::OrdinalIgnoreCase)
+  if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not $configInside){throw 'OWNED_VM_CLEANUP_IDENTITY_MISMATCH'}
   $cp=$v | Get-VMComPort | Where-Object Number -EQ 1
   if(-not $cp -or $cp.Path -cne $pipe){throw 'OWNED_VM_COM_PORT_MISMATCH'}
   $dvds=@($v | Get-VMDvdDrive)

@@ -80,6 +80,14 @@ func main() {
 		fail()
 	}
 	switch os.Args[1] {
+	case "refine-saved":
+		if len(os.Args) != 4 {
+			fail()
+		}
+		if e := refineSaved(os.Args[2], os.Args[3]); e != nil {
+			emit(map[string]any{"success": false, "code": e.Error()})
+			os.Exit(1)
+		}
 	case "todo":
 		todo()
 	case "source-check":

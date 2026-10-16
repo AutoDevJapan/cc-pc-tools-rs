@@ -105,11 +105,12 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   `Test-Path` succeeds for the target, a 4-byte write/remove probe succeeded
   there, and DISM `/Get-WimInfo` read the source WIM successfully; both VHD and
   ISO were detached afterward. Apply still fails with `0x80070003` using
-  `H:\.` and an owned scratch folder. The helper now switches from the native
-  `dism.exe` CLI to Microsoft's Dism module `Expand-WindowsImage` cmdlet,
-  passing the mounted OS volume and safe-root scratch directory as structured
-  parameters. This avoids native argument parsing and remains untried. The
-  exact cause is still unproven. Go checks passed before this source change.
+  `H:\.` and an owned scratch folder. Microsoft's Dism module
+  `Expand-WindowsImage` also failed with `DirectoryNotFoundException` and the
+  same HRESULT. The exact cause is still unproven. The helper now adds the
+  documented `NoRpFix` option to avoid reparse-point path correction while
+  applying this image; this is an evidence-based candidate, not yet tested.
+  Go checks passed before this source change.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its

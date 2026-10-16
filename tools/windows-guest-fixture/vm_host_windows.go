@@ -1113,7 +1113,7 @@ try {
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
   $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
   if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
-  Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
+  Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -NoRpFix -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
   $windowsRoot=Join-Path $osRoot 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
   $panther=Join-Path $windowsRoot 'Panther'

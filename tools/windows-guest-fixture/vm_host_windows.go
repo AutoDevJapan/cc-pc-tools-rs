@@ -764,9 +764,12 @@ $mountedIso=$false;$mountedSeed=$false
 try {
   $image=Mount-DiskImage -ImagePath $iso -PassThru
   $mountedIso=$true
-  $volume=$image | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -First 1
+  $image=Get-DiskImage -ImagePath $iso -StorageType ISO -ErrorAction Stop
+  if(-not $image.Attached -or -not $image.DevicePath){throw 'EVAL_ISO_NOT_ATTACHED'}
+  $volume=@($image | Get-Volume -ErrorAction Stop | Where-Object DriveLetter | Select-Object -First 1)
   if(-not $volume){throw 'EVAL_ISO_VOLUME_NOT_FOUND'}
-  $isoRoot=([string]$volume.DriveLetter)+':\'
+  $isoRoot=([string]$volume[0].DriveLetter)+':\'
+  if(-not (Test-Path -LiteralPath (Join-Path $isoRoot 'setup.exe')) -or -not (Test-Path -LiteralPath (Join-Path $isoRoot 'sources\install.wim'))){throw 'EVAL_ISO_SETUP_FILES_NOT_FOUND'}
   $signature=Get-AuthenticodeSignature -LiteralPath (Join-Path $isoRoot 'setup.exe')
   if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft'){throw 'EVAL_SETUP_SIGNATURE_INVALID'}
   $wim=Join-Path $isoRoot 'sources\install.wim'
@@ -774,11 +777,13 @@ try {
   if(-not $edition){throw 'EVAL_STANDARD_CORE_IMAGE_NOT_FOUND'}
   Dismount-DiskImage -ImagePath $iso
   $mountedIso=$false
-  $seedImage=Mount-DiskImage -ImagePath $seedISO -PassThru
+  $seedImage=Mount-DiskImage -ImagePath $seedISO -StorageType ISO -PassThru
   $mountedSeed=$true
-  $seedVolume=$seedImage | Get-Disk | Get-Partition | Get-Volume | Where-Object DriveLetter | Select-Object -First 1
-  if(-not $seedVolume -or $seedVolume.FileSystemLabel -cne 'CC2746SEED'){throw 'OWNED_SEED_VOLUME_REJECTED'}
-  $seedRoot=([string]$seedVolume.DriveLetter)+':\'
+  $seedImage=Get-DiskImage -ImagePath $seedISO -StorageType ISO -ErrorAction Stop
+  if(-not $seedImage.Attached -or -not $seedImage.DevicePath){throw 'OWNED_SEED_IMAGE_NOT_ATTACHED'}
+  $seedVolume=@($seedImage | Get-Volume -ErrorAction Stop | Where-Object DriveLetter | Select-Object -First 1)
+  if(-not $seedVolume -or $seedVolume[0].FileSystemLabel -cne 'CC2746SEED'){throw 'OWNED_SEED_VOLUME_REJECTED'}
+  $seedRoot=([string]$seedVolume[0].DriveLetter)+':\'
   foreach($file in @('Autounattend.xml','stage.ps1','cc2746-guest.exe','cc2746-seed.json')){if(-not (Test-Path -LiteralPath (Join-Path $seedRoot $file))){throw 'OWNED_SEED_FILE_MISSING'}}
   $answer=[xml](Get-Content -Raw -LiteralPath (Join-Path $seedRoot 'Autounattend.xml'))
   if($answer.unattend.settings | Where-Object pass -EQ 'oobeSystem'){throw 'OOBE_SETTINGS_UNEXPECTED'}
@@ -813,8 +818,8 @@ $receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   @{phase='provision';failure='owned standard Windows Setup or VM provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
   throw
 } finally {
-  if($mountedIso){Dismount-DiskImage -ImagePath $iso -ErrorAction SilentlyContinue}
-  if($mountedSeed){Dismount-DiskImage -ImagePath $seedISO -ErrorAction SilentlyContinue}
+  if($mountedIso){Dismount-DiskImage -ImagePath $iso -ErrorAction SilentlyContinue | Out-Null}
+  if($mountedSeed){Dismount-DiskImage -ImagePath $seedISO -ErrorAction SilentlyContinue | Out-Null}
 }
 `
 }

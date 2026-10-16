@@ -40,7 +40,7 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
   diagnostic replaced the earlier one at the same owned path; the latest
   helper now queries the documented `IStream` interface and copies its stream
   via the COM vtable. A read-only in-memory probe confirmed that interface
-  returns bytes; full seed ISO creation remains unverified.
+  returns bytes; a later full run created an 8.3 MiB seed ISO successfully.
 - With seed ISO creation fixed, the next run created an 8.3 MiB seed image but
   CC-AdminBroker's PowerShell 7 invocation failed before any VM/VHDX receipt:
   `run-as-admin.ps1` reported that `admin_broker.exe` could not run in a
@@ -49,7 +49,15 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
   environment. Adding only `PATHEXT` to the minimized child environment fixed
   the harmless probe. The helper now uses Windows PowerShell 5.1 and an
   explicit standard `PATHEXT`; the VM provisioning attempt with that change is
-  still pending.
+  recorded below.
+
+- With the minimized-environment broker probe fixed, the latest provisioning
+  attempt reached the official ISO mount but looked for `C:\setup.exe`; no
+  VM receipt/VHDX was created. A targeted, read-only broker probe confirmed
+  that the ISO can be mounted and dismounted by the broker. The helper now
+  re-queries that exact ISO with `Get-DiskImage -ImagePath` and gets its volume
+  using the documented `Get-DiskImage | Get-Volume` route, then checks for the
+  expected setup files before proceeding. This correction remains untried.
 
 ## Remaining
 

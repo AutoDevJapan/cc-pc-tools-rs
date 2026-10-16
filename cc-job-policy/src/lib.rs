@@ -2,6 +2,7 @@
 pub mod cancellation;
 pub mod cargo;
 pub mod priority;
+pub mod product_retry;
 pub mod subwork;
 pub mod todo_store;
 pub mod todo_wait;

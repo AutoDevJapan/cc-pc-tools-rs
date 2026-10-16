@@ -459,21 +459,36 @@ func cleanupOwnedVM(root string, vm vmReceipt) (cleanupReceipt, error) {
 
 func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResult, error) {
 	deadline := time.Now().Add(30 * time.Minute)
-	conn, err := openOwnedPipe(vm.Pipe, time.Until(deadline))
-	if err != nil {
-		return fixtureResult{}, fixtureResult{}, errors.New("owned guest serial pipe did not become ready")
+	var ready vmReady
+	var conn *os.File
+	var serial *serialConn
+	for time.Now().Before(deadline) {
+		pipe, openErr := openOwnedPipe(vm.Pipe, time.Until(deadline))
+		if openErr != nil {
+			return fixtureResult{}, fixtureResult{}, errors.New("guest service readiness was not observed")
+		}
+		conn = pipe
+		candidate := &serialConn{file: conn}
+		readyLine, readErr := readLineWithTimeout(candidate, time.Until(deadline))
+		if readErr != nil {
+			_ = conn.Close()
+			if time.Until(deadline) <= 0 {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+			continue
+		}
+		if err := json.Unmarshal(readyLine, &ready); err != nil || ready.Instance != vm.Instance || !validHash(ready.ServerSHA256) {
+			_ = conn.Close()
+			return fixtureResult{}, fixtureResult{}, errors.New("guest serial identity rejected")
+		}
+		serial = candidate
+		break
 	}
-	defer conn.Close()
-	serial := &serialConn{file: conn}
-
-	readyLine, err := readLineWithTimeout(serial, time.Until(deadline))
-	if err != nil {
+	if serial == nil {
 		return fixtureResult{}, fixtureResult{}, errors.New("guest service readiness was not observed")
 	}
-	var ready vmReady
-	if err := json.Unmarshal(readyLine, &ready); err != nil || ready.Instance != vm.Instance || !validHash(ready.ServerSHA256) {
-		return fixtureResult{}, fixtureResult{}, errors.New("guest serial identity rejected")
-	}
+	defer conn.Close()
 	secure := tlsClientConn(serial, client, ready.ServerSHA256)
 	if err := tlsHandshakeWithTimeout(secure, 30*time.Second); err != nil {
 		return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest mutual TLS handshake failed: %w", err)

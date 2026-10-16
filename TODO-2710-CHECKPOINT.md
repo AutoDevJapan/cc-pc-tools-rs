@@ -1,5 +1,65 @@
 # ToDo2710 固定3ソースの実検査
 
+## 最新の保存点（2026-10-16 20時。以下の旧保存点より優先）
+
+独立検査は全対象の実行を終了。証拠配送と所有root回収を仕上げる。元2640/2641/2642と親2648は完了へ変更しない。製品のPR変更・merge・配布・status投稿はしていない。
+
+永続証拠root: D:/CC/Work/unattended-operations-20261013-wt/todo-2710-3-rust-lua-ci/codex-owned-090e90a35ea495cf253d075bc656d861。所有ID090e90a35ea495cf253d075bc656d861。このrootを消さない。原logとmanifestはopaque record名で保存し、元と保存後のSHA256を照合。原文はstdoutへ表示しない。
+
+### repo1392152644 / 元2640
+
+固定head 74f023c0ee4b460f05f87dc3db5ceaf75e999a8a。Linuxは元alltargets、全workspace nextest1850件、doctest、Clippy、release全bins、138scenario、native fmt/test/Clippy/4 Lua checkが成功。Windows専用live-chainを補助的にLinuxで動かした失敗は別記録とし、元受入の成功へ置き換えない。
+
+Windowsはfmt/doctest/Clippy/release全bins、native検査、138scenario/4 Lua check、live-chain関連と全件が成功。全workspace nextestは1854件をno-fail-fastで実行し、driver_safetyの既存出力拒否テスト1件が失敗。OSの局所化されたAlreadyExists文へ英語existsを要求するテストで、既存出力を拒否する動作は実際に正しい。固定ソースを変更せず修正案を保存。git apply --check成功、修正後のRust実行は未検証。patch SHA256: C95493DF7EE6AE79A9B29E038A83899D4FAAF006AFC4C2971A05545619825143。
+
+### repo1154066087 / 元2641
+
+固定head c53dc14f1b49f3d7d16a604f29b120de3ce8163d。HTTP2/3関連回帰、native fmt/Clippy/全workspace nextest/doctest/原test、report/diagnostics、元helper crate、Nodeのdocs/typecheck/全件が成功。元release helper3件を元の出力位置へbuildし、Node22 SDKと明示RELEASE_STAGE_TEST_NODEを使用。env_clear子の/tmp祖先検査は所有/tmpを0700にして解消。
+
+Windowsは元CI profile writerの最適化と直列条件を保持。HTTP関連、Clippy allfeatures、credential/helper群、17件の独立CI出力契約回帰、最後のnative allfeatures全件が成功。長いSDKパスによるlink.exeのLNK1104は短い専用SDK rootで解消。bin-onlyの2crateへ余分に試した--docはno library targetsで実行不能。元workflowのworkspace doctest成功とは区別し、合格へ書き換えない。
+
+### repo1386702183 / 元2642
+
+固定head a39a2b1833b3c24125a7b48d5a036376d94c662a。親版4dc5c332d54d19325f122df1f0e4a52e9dd3a629へ追加回帰だけを別source/targetに適用したREDでoverflow panicと回帰失敗を確認。固定版publication_schedules48件は成功。
+
+RED log SHA256: 4F36818EA678E168487BB36F26367F6B9A8B5AD936E48C976351E7E2BABA8A4B。固定版48件 log SHA256: 7218D65DEDFB79D84365AD791E01156271AEA69AC5891EEBC1188FAC8DFDF3A1。
+
+Linuxの全workspace nextest/doc/Clippy/fmt、統合4shard、署名/TLS等helper、frontend shard、packaging、native/browserのignored受入を実行して成功。CPU専用launcher経由の実Chromeでvirtual HTTPS、購入編集、authored contact、customer output、native V3 source linksまで確認。fixture指定のowned Chrome代替がある箇所は元workflowどおりで、実Chromeと混同しない。
+
+Windows41検査の初回3失敗を原因ごとに解消。owned Chrome launcherは元workflowのtargetへbuildしてNode受入2件が成功。書式検査はWindowsのコマンド長エラー206で、同じ固定ソースを新規GitHub取得して短いowned sourceへ置き、元cargo fmt --all -- --checkが成功。全workspace nextest/doc/Clippy、hidden ACL/lock/startup/junction、native/TLS/Chrome/virtual HTTPS受入も成功。
+
+旧保存点の「packaging2失敗をHEADだけで解消」は不正確。原HEAD bytesのSHA照合で一部を解消し、残りは新規CIへ公開PowerShell SDKを追加してpackaging全件成功。原GitHub commitは実SHA一致時だけ新CIへ配置し、shallowであることを保持。
+
+### 実行・回収
+
+- GitHub APIで実owner/private/admin/repo ID/nonfork/同head+base repo/current branch SHAを取得前・実行前後・最後に照合。Windowsは最後に実ファイルMerkle treeも照合。Linuxはraw blobとtree照合後に回収。
+- 新規Linux CIはinit/nonroot/capdropALL/no-new-privileges/read-only/noGPU。host source/profile/authfiles/socketを渡していない。
+- 共通cargo_gateのCPU/RAM admission・Windows byte lockを使用。専用targetと共有sccache条件を保持。Linuxは終了済み専用CIのcompiler cacheだけを引き渡した。
+- normalとEOF cancelは実kernel process groupの消滅/reapを確認してgateを解放。Windowsも専用有限サービスとkill-on-close Jobでnormal/cancelを確認。
+- 全4個の今回Linux containerとanonymous volumeは回収済み。既存SDK imageを保持。
+- CC-CI2710-Finiteは停止/PID0確認後に削除済み。今回SIDへ追加した共有SDK/cache7箇所のACEだけを除去済み。profile登録/hiveはいずれも存在なし。
+- ChromeのGPU/ソフトGPUを無効化し専用fixture profileを使用。本人Chrome/profile/tabは操作していない。Civ6ゲーム未起動。
+
+### 証拠回収の不備と補完
+
+Linux2原回収がtar末尾8704 byteのzero paddingで待っていた際、回収完了の前に原containerを破棄した。70ファイルは個別の元/保存SHA照合を終えているが、原回収は異常終了し最終manifestがない。このcohortを認証済み回収とは扱わず、私的な部分証拠として保持。
+
+collectorをtar末尾も排出してからWaitするよう修正。新しい同SHAのisolated CIでcommon-entry/release-stage/元3release helper/全Nodeを有限に再検査し、8検査成功。14ファイル/83078 bytesの再回収は最終manifestまで成功。元検査のhost保存baseline全文41ファイル/941621 bytesとNode初回8ファイル/73328 bytesも元/保存SHA照合して補完。新cohortと原baselineを区別して配送。
+
+### 残る処理と一時root
+
+次は原log/manifest保存済み。safe-delete plan→別呼出し通常削除→finishを使う。planの拒否は同じ削除を再試行せずquarantine --reason policy。
+
+- C Temp primary: 06d9fa30f2a60e4dbf33ddcefa715618（制御exe v18）
+- Windows source/target: f63ee9e9c1833708c3220fe91bbf7736（planはENTRY_LIMIT_EXCEEDED。quarantine待ち）
+- 短いSDK: 17cca2921b3fcb84d3bf35bf0f5037a3（planはENTRY_LIMIT_EXCEEDED。quarantine待ち）
+- C Temp再検査: fba4fd3144f6acaa6b3a74d664de4113
+- 短いfmt source: 5a57ba8b44ae245525d29873d6c48cdf
+
+残りは最終証拠indexと元2640/2641/2642/親2648へのnote配送、上記root回収、今回branchの最終commit/push。共有ToDo状態はschedulerに任せる。Discord送信・新担当・独立PRは行わない。
+
+## 以下は過去の保存点（未完了表記を最新状態として使わない）
+
 2026-10-16。共有スケジューラのcargo割当を受けた有限の独立検査。主担当2648のsource・PR174・配布済みruntimeは変更しない。製品sourceはGitHub APIから新規隔離containerにのみ取得し、このCCブランチへcommitしない。
 
 ## 再開情報

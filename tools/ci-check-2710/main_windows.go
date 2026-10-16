@@ -23,6 +23,7 @@ type state struct {
 	PR                                           int
 	SHA, Tree, ArchiveSHA, Name, Container, Root string
 	Retrieved, TreeVerified, BeforeRun, AfterRun bool
+	SourceUnchanged, TreeGone, ContainerRemoved  bool
 }
 
 func save(s state) error {
@@ -331,6 +332,32 @@ func main() {
 	var e error
 	a := os.Args[1:]
 	switch {
+	case len(a) == 2 && a[0] == "win-audit-source":
+		var v winPlan
+		v, e = readWin(a[1])
+		if e == nil {
+			e = winSourceTree(v)
+		}
+	case len(a) == 2 && a[0] == "audit-source":
+		e = auditLinux(ctx, a[1])
+	case len(a) == 2 && a[0] == "dispose-linux":
+		e = disposeLinux(ctx, a[1])
+	case len(a) == 4 && a[0] == "capture-host":
+		id, _ := strconv.ParseInt(a[1], 10, 64)
+		if _, err := pick(id); err != nil {
+			e = err
+		} else {
+			e = captureHost(a[2], id, a[3])
+		}
+	case len(a) == 3 && a[0] == "capture-linux":
+		e = captureLinux(ctx, a[1], a[2])
+	case len(a) == 4 && a[0] == "capture-windows":
+		id, _ := strconv.ParseInt(a[1], 10, 64)
+		if _, err := pick(id); err != nil {
+			e = err
+		} else {
+			e = captureWindows(a[2], id, a[3])
+		}
 	case len(a) == 3 && a[0] == "win-install-head":
 		e = installWindowsHead(ctx, a[1], a[2])
 	case len(a) == 3 && a[0] == "win-sdk-toolchain":

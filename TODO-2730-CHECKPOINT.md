@@ -1,5 +1,24 @@
 # ToDo2730 固定修正の独立検査
 
+## 再開監査（2026-10-16 20:55 JST）
+
+d239b8f5ddafd5cc71017a3b88396119860d8d1dから再開し、作業ツリーに未保存の変更なし。
+成功済みRust/RED/fixtureは再実行していない。永続証拠115ファイル、3974801 bytesを再SHA/サイズ照合して一致。
+新しい管理者側の読み取り監査で、今回SIDの実プロセス0、明示追加ACE0、サービス不在を再確認。
+専用profile登録・hive・SID_Classes・Loadedはtrueのまま。拒否済みunload/削除/quarantineは再試行していない。
+新Windows source/targetとSDKの2rootは現存。候補lockは不在。
+監査JSONは永続証拠rootのresume-audit.private.jsonとresume-admin-audit.private.json。
+
+既存PC整理2381は、2710の同種回収拒否を既に保持し、状態はrecovery_unverified。
+今回の2rootと専用profileの記録を同2381へ追加し、noteの保持とspec/状態の不変を読み返して確認済み。
+仕様・権限・保護・上限は変えず、担当や監視は作っていない。同じ拒否を別手段で回避する依頼ではない。
+`todo.exe wait 2730 --on 2381`を実行し、status=wait / wait_on=[2381]を読み返して確認済み。
+親2648と元2640へ今回の監査結果と未完条件も配送済み。resume-wait-receipt.private.jsonに保存。
+2381完了後の再開では、保存した自分の資源が適法に回収済みか確認し、未回収なら完了へ変えない。
+製品Rust検査は既に終了した有限checkの結果のまま返し、主担当2648の完了は前提にしない。
+今回の読み取り監査専用temp409ea2...はplan→別呼出し通常削除→finish=source_absentを確認済み。
+未完了は既存の2root/専用profileだけ。今回新たに実行中の検査・サービス・containerは残していない。
+
 対象はrepo1392152644のPR148だけ。製品sourceの編集・独立PR・merge・配布・Discord投稿はしない。
 固定headは75a4051305b6f47c70ddb59a8d2bf9015666f12c、treeはcecb9cd535d135a1eb4407882db532c325f42860。
 親74f023c0ee4b460f05f87dc3db5ceaf75e999a8aからrunner.rsだけが変わり、提案blobと一致する。

@@ -3,16 +3,20 @@
 This Windows amd64 Go helper provisions one new Hyper-V guest from official
 Windows Server 2025 Evaluation media. It uses only a safe-delete-owned work
 root and CC-AdminBroker. It does not inspect existing VM names, disks, or guest
-contents. Each created VM has 2 vCPU, fixed 2 GiB RAM, Secure Boot, no virtual
-NIC, and no GPU adapter. No product source, owner profile, credentials,
-network, or external runner registration is supplied.
+contents. Each created VM has 2 vCPU, fixed 2 GiB RAM, no virtual NIC, and no
+GPU adapter. The ISO route is Generation 1 BIOS with Secure Boot unavailable;
+the prebuilt evaluation VHD route remains Generation 2 with Secure Boot. No
+product source, owner profile, credentials, network, or external runner
+registration is supplied.
 
 The helper verifies the Microsoft-signed setup image and the selected
 evaluation edition, then boots the guest from the official ISO with a second,
-small seed DVD containing the standard `Autounattend.xml`. Windows Setup
-partitions the new VHDX, installs the evaluation image, and runs the service
-staging command as LocalSystem during `specialize`. The helper explicitly
-checks that the optical installer is first in the UEFI boot order. The answer
+small seed DVD containing the standard `Autounattend.xml`. The ISO route uses
+a Generation 1 VM because Hyper-V exposes the application COM-port device to
+the guest there. Windows Setup creates an active MBR system partition and a
+Windows partition, installs the evaluation image, and runs the service
+staging command as LocalSystem during `specialize`. The helper checks that the
+optical installer is first in the BIOS boot order. The answer
 file has no `oobeSystem` settings, user account, password, or OOBE skip. OOBE
 is not hidden or completed by this helper. The service speaks only on the VM's
 COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in

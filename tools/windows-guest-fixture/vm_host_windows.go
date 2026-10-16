@@ -332,7 +332,7 @@ func resumeVMProvision(root, isoPath string) error {
 }
 
 func validatePartialVMReceipt(vm vmReceipt, root, isoPath string) error {
-	if !validVMID(vm.ID) || !validInstance(vm.Instance) || vm.Name != "cc-2746-"+vm.Instance || vm.Generation != 2 ||
+	if !validVMID(vm.ID) || !validInstance(vm.Instance) || vm.Name != "cc-2746-"+vm.Instance || vm.Generation != 1 ||
 		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || vm.VHD != filepath.Join(root, "guest.vhdx") ||
 		vm.WindowsISO != isoPath || !validSeedISOPath(root, vm.SeedISO) || vm.Pipe != `\\.\pipe\cc-2746-`+vm.Instance {
 		return errors.New("partial Hyper-V receipt does not identify this owned VM")
@@ -384,18 +384,16 @@ $cp=@($v|Get-VMComPort|Where-Object Path -CEQ $pipe)
 $dvds=@($v|Get-VMDvdDrive)
 $vhds=@($v|Get-VMHardDiskDrive)
 $memory=Get-VMMemory -VM $v
-$firmware=Get-VMFirmware -VM $v
 $nics=@($v|Get-VMNetworkAdapter).Count
 $gpus=@($v|Get-VMGpuPartitionAdapter -ErrorAction SilentlyContinue).Count
-if($v.State -ne 'Off' -or $v.Generation -ne 2 -or $v.ProcessorCount -ne 2 -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd -or $cp.Count -ne 1 -or @($dvds|Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds|Where-Object Path -CEQ $oldSeedISO).Count -ne 1){throw 'OWNED_VM_RECOVERY_RESOURCE_MISMATCH'}
-if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'OWNED_VM_RECOVERY_SECURE_BOOT_MISMATCH'}
+if($v.State -ne 'Off' -or $v.Generation -ne 1 -or $v.ProcessorCount -ne 2 -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd -or $cp.Count -ne 1 -or @($dvds|Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds|Where-Object Path -CEQ $oldSeedISO).Count -ne 1){throw 'OWNED_VM_RECOVERY_RESOURCE_MISMATCH'}
 $winDvd=$dvds|Where-Object Path -CEQ $windowsISO|Select-Object -First 1
 $seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
 Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
-Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
-$firmware=Get-VMFirmware -VM $v
-if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows' -or @($firmware.BootOrder).Count -lt 1 -or -not [String]::Equals([string]$firmware.BootOrder[0].Device.Path,$windowsISO,[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;image_deployment_method='windows-setup-autounattend';dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
+Set-VMBios -VM $v -StartupOrder @('CD','IDE','LegacyNetworkAdapter','Floppy')
+$bios=Get-VMBios -VM $v
+if($bios.StartupOrder[0] -cne 'CD' -or $bios.StartupOrder[1] -cne 'IDE'){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
+$receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;image_deployment_method='windows-setup-autounattend';dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$false;network_adapters=$nics;gpu_adapters=$gpus}
 $receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 Start-VM -VM $v|Out-Null
 `
@@ -721,14 +719,13 @@ func seedAnswerFile() string {
       <DiskConfiguration>
         <Disk wcm:action="add">
           <DiskID>0</DiskID><WillWipeDisk>true</WillWipeDisk>
-          <CreatePartitions>
-            <CreatePartition wcm:action="add"><Order>1</Order><Size>200</Size><Type>EFI</Type></CreatePartition>
-            <CreatePartition wcm:action="add"><Order>2</Order><Size>16</Size><Type>MSR</Type></CreatePartition>
-            <CreatePartition wcm:action="add"><Order>3</Order><Extend>true</Extend><Type>Primary</Type></CreatePartition>
+<CreatePartitions>
+            <CreatePartition wcm:action="add"><Order>1</Order><Size>500</Size><Type>Primary</Type></CreatePartition>
+            <CreatePartition wcm:action="add"><Order>2</Order><Extend>true</Extend><Type>Primary</Type></CreatePartition>
           </CreatePartitions>
           <ModifyPartitions>
-            <ModifyPartition wcm:action="add"><Order>1</Order><PartitionID>1</PartitionID><Format>FAT32</Format><Label>System</Label></ModifyPartition>
-            <ModifyPartition wcm:action="add"><Order>2</Order><PartitionID>3</PartitionID><Format>NTFS</Format><Label>Windows</Label><Letter>C</Letter></ModifyPartition>
+            <ModifyPartition wcm:action="add"><Order>1</Order><PartitionID>1</PartitionID><Format>NTFS</Format><Label>System</Label><Active>true</Active></ModifyPartition>
+            <ModifyPartition wcm:action="add"><Order>2</Order><PartitionID>2</PartitionID><Format>NTFS</Format><Label>Windows</Label><Letter>C</Letter></ModifyPartition>
           </ModifyPartitions>
         </Disk>
         <WillShowUI>OnError</WillShowUI>
@@ -736,7 +733,7 @@ func seedAnswerFile() string {
       <ImageInstall>
         <OSImage>
           <InstallFrom><MetaData wcm:action="add"><Key>/IMAGE/NAME</Key><Value>Windows Server 2025 Standard Evaluation</Value></MetaData></InstallFrom>
-          <InstallTo><DiskID>0</DiskID><PartitionID>3</PartitionID></InstallTo>
+          <InstallTo><DiskID>0</DiskID><PartitionID>2</PartitionID></InstallTo>
           <WillShowUI>OnError</WillShowUI>
         </OSImage>
       </ImageInstall>
@@ -953,11 +950,18 @@ func validateVMReceipt(vm vmReceipt, root, instance string) error {
 	if vm.Instance != instance || !validInstance(vm.Instance) || vm.ID == "" || vm.Name != "cc-2746-"+instance ||
 		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || !vhdValid ||
 		!imageValid || vm.VHDCount != 1 ||
-		vm.Generation != 2 || vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || !vm.SecureBoot ||
+		vm.Generation != expectedGeneration(vm.ImageDeploymentMethod) || vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || vm.SecureBoot != (vm.ImageDeploymentMethod == "microsoft-evaluation-vhd-offline-service") ||
 		vm.NetworkAdapters != 0 || vm.GPUAdapters != 0 {
 		return errors.New("Hyper-V VM ownership or resource configuration rejected")
 	}
 	return nil
+}
+
+func expectedGeneration(method string) int {
+	if method == "windows-setup-autounattend" {
+		return 1
+	}
+	return 2
 }
 
 func runAdminBroker(script string, timeoutSec int) error {
@@ -1100,7 +1104,7 @@ try {
   $mountedIso=$false
   Dismount-DiskImage -ImagePath $seedISO -ErrorAction Stop|Out-Null
   $mountedSeed=$false
-  $vm=New-VM -Name $name -Generation 2 -MemoryStartupBytes 2GB -VHDPath $vhd -Path (Join-Path $root 'vm')
+  $vm=New-VM -Name $name -Generation 1 -MemoryStartupBytes 2GB -VHDPath $vhd -Path (Join-Path $root 'vm')
 $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=0;vhd_count=1;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}
   $initial | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Set-VM -VM $vm -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -CheckpointType Disabled -Notes ('cc.todo=2746;cc.instance='+$instance)
@@ -1111,7 +1115,6 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   if($existingDVD.Count -gt 0){$winDvd=Set-VMDvdDrive -VMDvdDrive $existingDVD[0] -Path $iso -Passthru}else{$winDvd=Add-VMDvdDrive -VM $vm -Path $iso -Passthru}
   $seedDvd=Add-VMDvdDrive -VM $vm -Path $seedISO -Passthru
   Set-VMComPort -VM $vm -Number 1 -Path $pipe
-  Set-VMFirmware -VM $vm -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows
   $vm=Get-VM -Id $vm.Id
   $memory=Get-VMMemory -VM $vm
   $nics=@($vm | Get-VMNetworkAdapter).Count
@@ -1119,12 +1122,10 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $dvds=@($vm | Get-VMDvdDrive)
   $vhds=@($vm | Get-VMHardDiskDrive)
   if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
-  Set-VMFirmware -VM $vm -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
-  $firmware=Get-VMFirmware -VM $vm
-  if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
-  $boot=@($firmware.BootOrder)
-  if($boot.Count -lt 1 -or -not [String]::Equals([string]$boot[0].Device.Path,$iso,[StringComparison]::OrdinalIgnoreCase)){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
+  Set-VMBios -VM $vm -StartupOrder @('CD','IDE','LegacyNetworkAdapter','Floppy')
+  $bios=Get-VMBios -VM $vm
+  if($bios.StartupOrder[0] -cne 'CD' -or $bios.StartupOrder[1] -cne 'IDE'){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
+$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=$dvds.Count;vhd_count=1;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$false;network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
 } catch {

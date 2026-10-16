@@ -1,4 +1,5 @@
 **/target/
+/codex-owned-ac8143dbbc50a8cf65b2987dfb99ee96/
 /.evidence2674-private/
 !localai-web-rs/tests/fixtures/operations/localai-web-rs/target/
 !localai-web-rs/tests/fixtures/operations/localai-web-rs/target/release/
@@ -22,3 +23,4 @@ cc-bookmark-queue/extension/config.js
 /codex-owned-f350977e8ec393bff757d7284536725a/
 /docs/linux-runner-*.private.md
 /docs/linux-runner-*.private.ps1
+/codex-owned-b0a6f0387481904db8c15d432cc4a7fb/

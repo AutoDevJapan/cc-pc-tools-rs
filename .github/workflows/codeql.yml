@@ -43,6 +43,9 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           dependency-caching: false
+          # Keep query execution within the isolated runner's resource budget.
+          threads: 2
+          ram: 6144
       - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           category: '/language:${{ matrix.language }}'

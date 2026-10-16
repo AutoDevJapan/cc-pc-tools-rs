@@ -41,3 +41,7 @@ PR148の通常CI4件が開始前のHosted予算制限で失敗している。Dra
 - PR148のタイトルと本文を現在の2file差分・実検査・レビュー・残CIへ書き換え、同head/open/draftと本文の完全一致をAPIで読み返した。
 - レビュー指摘の扱いをコメント6219044451へ1件だけ記録した。URL: https://github.com/AutoDevJapan/civ6-banseiki/pull/148#issuecomment-6219044451 。レビュー実応答は正規job.jsonに保持し、実行成功や製品全体完了へ拡大していない。
 - 元2640はToDo2736の正式完了待ちにする。2736は元2640の完了を待たない。2710/2730のcleanup待ちとの循環を作らない。
+- 実登録を読み返し、2736の通常担当20261017-004026-todo-2736がqueuedで受付済みだった。2736のToDoはdoing、実テスト開始は未確認。元2640はstatus=wait/wait_on=[2736]/progress=67、元job所有・specを保持している。
+- 保存commit4b88876c7706a628d6c2b8504ab54bd43e1eacf1をremoteで照合した。scheduler checkpointも同branch/実HEAD/元jobでlaunched=0の保存を読戻し確認した。最終追記後も新しい実HEADを通常checkpointで保存する。
+- 初回checkpointはInputRejectedだった。GUI subsystemのscheduler.exeをPowerShellから直接呼ぶと完了前に後続のnote/wait操作へ進み、行全体の照合と競合し得ることを実装から確認した。同じ内容の正規呼出しはその後に保存済み。以後は非表示Start-Processの-Wait/-PassThruで終了とexitを受け取り、状態変更を並行させない。guard変更や拒否操作の別経路は使っていない。
+- 恒久CodeQL原logを再計測し、353569bytesと前記SHA256の一致を確認した。原log本文は表示していない。

@@ -206,3 +206,35 @@ attempt. See `docs/product-ci-codeql-2648.md` for the saved recovery checkpoint.
 Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
 https://docs.github.com/en/actions/reference/runners/self-hosted-runners
+
+## Fixed normal CI route proposal (ToDo2737)
+
+`normal-ci-plan <new-owned-dir>` is a read-only preparation step for the fixed
+repo1154066087/PR3613/head `b194d66524ef86330bb73ca3f22f9e5dd6ae0a07`.
+It rechecks repository/PR/ref identity before and after reading, the exact source
+tree, the original CI workflow digest, and the original run38893656960 attempt1.
+All four original jobs must still be unstarted (zero steps and no runner);
+both failed checks must contain the original Actions-budget refusal.
+Only numeric IDs, JSON-value hashes and public route metadata enter the new
+receipt. Workflow bytes stay in RAM and are never written on the host.
+
+The YAML parser rejects aliases, duplicate keys and extra documents/jobs.
+The proposal substitutes exactly four plain `runs-on` tokens, leaving every
+other byte intact, including Docker parity, Windows's thirteen Cargo commands,
+profile writer, serial arguments, permissions, conditions and timeouts.
+The original and proposed workflow SHA256 values are recorded separately.
+
+This command does **not** update the source branch, create a PR, dispatch CI,
+register a runner, borrow resident CC runners, or produce a success status.
+The existing CodeQL guest excludes Cargo and has no Docker daemon, and cannot
+execute the full normal workflow. Before any route update, separate disposable
+Linux and Windows execution must provide shared Cargo admission, isolated
+targets/cache, physical source proof, no checkout credentials, and verified
+normal/cancel cleanup of processes, registration and locks. Linux also needs
+isolated Docker parity without exposing the host Docker socket. Windows source
+must stay in RAM or a dedicated guest; the earlier host-source native acceptance
+is neither a reusable execution resource nor same-SHA official CI evidence.
+
+The independent check delivers the proposal and limitations to parent2641.
+The parent owns the product branch, PR merge and Prd reflection; the proposal
+never certifies those steps or the product's completion.

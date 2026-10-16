@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `e86c004`.
+last pushed commit `79a7c03` (current working changes still need commit/push).
 
 ## Completed
 
@@ -9,9 +9,10 @@ last pushed commit `e86c004`.
   `a218d5e`; its actual normal/cancel results are in
   `tools/windows-guest-fixture/evidence/todo-2746-20261017.json`.
 - The standard Windows Server 2025 unattended installer and LocalSystem
-  COM/mTLS fixture are committed through `e86c004`. `go test ./...` and
-  `go vet ./...` passed after the latest code changes. They only compile the
-  module; the Hyper-V guest path has not yet run.
+  COM/mTLS fixture are committed through `e86c004`; subsequent recovery and
+  handoff updates are pushed through `79a7c03`. `go test ./...`, `go vet
+  ./...`, and `git diff --check` passed on the current working changes. They
+  only compile/check the module; the Hyper-V guest path has not yet run.
 - The answer file accepts EULA, selects the Standard Evaluation image, and
   runs the service installer during `specialize`. It contains no account or
   password settings and no `oobeSystem` pass. The guest keeps normal OOBE.
@@ -28,12 +29,19 @@ last pushed commit `e86c004`.
   8,152,356,864 bytes, matching the CDN response. A SHA-256 read completed but
   its output was truncated; the helper calculates and stores the complete hash
   in the final evidence after the run.
+- The first seed ISO attempt failed before any VM/VHDX creation because IMAPI
+  rejected media type `4`; its bounded diagnostic is retained as
+  `seed-iso-failure.private.json`. The helper now uses the documented DVD-R
+  media enum `9`, gives each seed ISO its own instance-scoped name, and refuses
+  to reprovision if a VHDX or VM receipt exists. The VM receipt validator was
+  aligned with that instance-scoped ISO name.
 
 ## Remaining
 
-1. Build the helper into the owned root and run its `vm-smoke` command with
-   the downloaded ISO. It verifies Microsoft's Authenticode signature and
-   the evaluation image name before creating the VM.
+1. Commit/push the current helper changes, then build it into the owned root
+   and run its `vm-smoke` command with the already-downloaded ISO. It verifies
+   Microsoft's Authenticode signature and the evaluation image name before
+   creating the VM.
 2. Confirm the answer file is discovered from the separate seed DVD, the
    LocalSystem service starts through normal Setup, and both real fixtures
    report process and namespace cleanup.

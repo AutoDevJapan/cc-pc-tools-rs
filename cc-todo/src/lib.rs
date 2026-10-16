@@ -28,6 +28,7 @@ pub use cc_job_policy::todo_store::{
 };
 pub use cc_job_policy::todo_wait::pending_on;
 pub mod product_resume;
+pub mod product_retry;
 pub mod ready;
 pub mod verified_resume;
 pub const STALL_S: f64 = 1200.;
@@ -203,6 +204,24 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         apply: bool,
+    },
+    /// Reserve the existing finite original product retry without releasing its wait.
+    ProductRetryReserve {
+        #[arg(value_parser=clap::value_parser!(u64).range(1626..=1626))]
+        id: u64,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        expected_worker: String,
+    },
+    /// Bind only the exact normally queued job to the reserved original retry.
+    ProductRetryBind {
+        #[arg(value_parser=clap::value_parser!(u64).range(1626..=1626))]
+        id: u64,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        job: String,
     },
     /// Admit only the original fixed-head review through normal scheduler allocation.
     ProductReviewAllocate {
@@ -1213,12 +1232,22 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
         | Command::ProductResume { .. }
+        | Command::ProductRetryReserve { .. }
+        | Command::ProductRetryBind { .. }
         | Command::ProductReviewAllocate { .. }
         | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ProductRetryReserve { key, expected_worker, .. } = &cli.command {
+        println!("{}", product_retry::run(paths, key, Some(expected_worker), None)?);
+        return Ok(());
+    }
+    if let Command::ProductRetryBind { key, job, .. } = &cli.command {
+        println!("{}", product_retry::run(paths, key, None, Some(job))?);
+        return Ok(());
+    }
     if let Command::ProductReviewAllocate { apply } = &cli.command {
         println!("{}", product_resume::allocate_review(paths, *apply)?);
         return Ok(());

@@ -601,8 +601,10 @@ func (r *Runner) tick(ctx context.Context) Health {
 	if !health.Scheduler {
 		health.Errors = append(health.Errors, "scheduler_deferred")
 	}
-	// A slow technical-wait check cannot consume the scheduler's launch budget.
-	retryContext, cancelRetries := context.WithTimeout(ctx, 10*time.Second)
+	// Reservation and binding each perform a bounded fresh guard check. Keep
+	// their combined budget separate from the legacy repair checks' 10 seconds.
+	// Both remain after scheduling and inside the original 50-second tick.
+	retryContext, cancelRetries := context.WithTimeout(ctx, 30*time.Second)
 	r.releaseRetries(retryContext, &health)
 	cancelRetries()
 	health.Finished = r.Now().UTC().Format(time.RFC3339Nano)

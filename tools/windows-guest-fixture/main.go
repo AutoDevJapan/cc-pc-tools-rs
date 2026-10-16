@@ -104,6 +104,20 @@ type fixtureResult struct {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--service" {
+		if err := runGuestService(); err != nil {
+			fmt.Fprintln(os.Stderr, "guest service stopped")
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) == 4 && os.Args[1] == "vm-smoke" {
+		if err := runVMProvision(os.Args[2], os.Args[3]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--leaf-normal" {
 		time.Sleep(1200 * time.Millisecond)
 		return
@@ -114,7 +128,7 @@ func main() {
 		}
 	}
 	if len(os.Args) != 2 || (os.Args[1] != "normal" && os.Args[1] != "cancel") {
-		fmt.Fprintln(os.Stderr, "usage: windows-guest-fixture normal|cancel")
+		fmt.Fprintln(os.Stderr, "usage: windows-guest-fixture normal|cancel | vm-smoke <owned-root> <official-eval-iso>")
 		os.Exit(2)
 	}
 	result, err := run(os.Args[1])

@@ -42,6 +42,14 @@ fn setup() -> (Test, subwork_support::Fixture, Value) {
 #[test]
 fn finite_repair_cli_previews_then_removes_only_job_edge_and_normal_admission_checks_capacity() {
     let (t, f, r) = setup();
+    // Publish before the admission index is bootstrapped, as normal registration does.
+    let mut writer = f.jobs[0].clone();
+    writer["id"] = json!("other-author");
+    writer["todo_id"] = json!(77);
+    writer["status"] = json!("running");
+    writer["pid"] = json!(std::process::id());
+    writer["pid_created"] = json!(123);
+    t.put(writer);
     let request = t.ctx.root.join("repair.json");
     fs::write(&request, r.to_string()).unwrap();
     let before = t.ctx.load("child").unwrap();
@@ -74,13 +82,6 @@ fn finite_repair_cli_previews_then_removes_only_job_edge_and_normal_admission_ch
     assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
     assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
     // A separate live writer still owns the PR, with no exemption from this repair.
-    let mut writer = f.jobs[0].clone();
-    writer["id"] = json!("other-author");
-    writer["todo_id"] = json!(77);
-    writer["status"] = json!("running");
-    writer["pid"] = json!(std::process::id());
-    writer["pid_created"] = json!(123);
-    t.put(writer);
     assert!(t.ctx.admit("child").unwrap().is_none());
     assert_eq!(
         t.ctx.load("child").unwrap()["queue_wait_reason"]["code"],

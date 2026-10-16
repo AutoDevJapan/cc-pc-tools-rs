@@ -44,9 +44,12 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
 - With seed ISO creation fixed, the next run created an 8.3 MiB seed image but
   CC-AdminBroker's PowerShell 7 invocation failed before any VM/VHDX receipt:
   `run-as-admin.ps1` reported that `admin_broker.exe` could not run in a
-  pipeline. The standard admin-broker Skill example uses Windows PowerShell;
-  the helper now invokes that same existing `run-as-admin.ps1` through
-  Windows PowerShell 5.1. This interpreter adjustment has not yet been tried.
+  pipeline. Invoking the same script with a harmless, owned no-op probe failed
+  in the helper's minimized environment but succeeded with the inherited
+  environment. Adding only `PATHEXT` to the minimized child environment fixed
+  the harmless probe. The helper now uses Windows PowerShell 5.1 and an
+  explicit standard `PATHEXT`; the VM provisioning attempt with that change is
+  still pending.
 
 ## Remaining
 
@@ -54,8 +57,8 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
    and run its `vm-smoke` command once with the already-downloaded ISO. It
    verifies Microsoft's Authenticode signature and the evaluation image name
    before creating the VM. The prior run left no VM/VHDX; if the broker still
-   rejects the request, preserve the exact diagnostic and do not try a different
-   admin path.
+   rejects the request, preserve the exact diagnostic and keep using the
+   approved broker path.
 2. Confirm the answer file is discovered from the separate seed DVD, the
    LocalSystem service starts through normal Setup, and both real fixtures
    report process and namespace cleanup.

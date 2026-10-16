@@ -723,6 +723,7 @@ func runAdminBroker(script string, timeoutSec int) error {
 	cmd.Env = []string{
 		"SystemRoot=" + systemRoot,
 		"PATH=" + systemRoot + `\System32;` + systemRoot + `\System32\WindowsPowerShell\v1.0;C:\Program Files\PowerShell\7`,
+		"PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC",
 		"TEMP=" + systemRoot + `\Temp`,
 		"TMP=" + systemRoot + `\Temp`,
 		`PSModulePath=C:\Program Files\PowerShell\Modules;` + systemRoot + `\System32\WindowsPowerShell\v1.0\Modules`,

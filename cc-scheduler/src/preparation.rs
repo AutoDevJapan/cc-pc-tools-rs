@@ -1,6 +1,6 @@
 //! Bounded workspace preparation. No resets, checkouts, deletion or repository publication.
 use crate::{backend::run_git, common::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{fs, path::Path};
 
 /// Identity comes from exact persisted receipts or job metadata, never prompt text or a PID.
@@ -59,7 +59,7 @@ pub fn recovery_session<'a>(
     })
 }
 
-fn git_root(runner: &mut dyn Runner, path: &Path) -> Result<Option<String>> {
+pub(crate) fn git_root(runner: &mut dyn Runner, path: &Path) -> Result<Option<String>> {
     if !path.is_dir() {
         return Err(Error("CwdMissing"));
     }
@@ -86,7 +86,7 @@ fn git_root(runner: &mut dyn Runner, path: &Path) -> Result<Option<String>> {
     Err(classify_output(&out))
 }
 
-fn same_common(runner: &mut dyn Runner, base: &Path, target: &Path) -> Result<()> {
+pub(crate) fn same_common(runner: &mut dyn Runner, base: &Path, target: &Path) -> Result<()> {
     let left = resolve(&target.join(run_git(runner, target, &["rev-parse", "--git-common-dir"])?))?;
     let right = resolve(&base.join(run_git(runner, base, &["rev-parse", "--git-common-dir"])?))?;
     if norm(left.to_str().unwrap()) != norm(right.to_str().unwrap()) {

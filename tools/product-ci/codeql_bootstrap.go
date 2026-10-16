@@ -260,9 +260,12 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 	var response struct {
 		RunID int64 `json:"run_id"`
 	}
-	if e != nil || json.Unmarshal(b, &response) != nil || response.RunID < 1 {
-		return errors.New("setup validation run identity unavailable")
+	if e != nil || json.Unmarshal(b, &response) != nil || response.RunID < 0 {
+		return errors.New("setup update response unavailable")
 	}
+	// A runner-only update can complete synchronously (HTTP 200) without
+	// creating a validation run. routeCodeQL already read back every setting.
+	// Keep zero as "no run created"; never invent a workflow identity.
 	rec.RunID = response.RunID
 	rec.Stage = "route-submitted-no-job"
 	return nil

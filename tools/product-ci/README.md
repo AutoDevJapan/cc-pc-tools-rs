@@ -64,11 +64,22 @@ https://docs.github.com/en/rest/repos/repos#download-a-repository-archive-tar.
 
 ## Finite default-setup CodeQL jobs
 
+For a repository without this label, first use
+`codeql-bootstrap <repo-id> <new-owned-dir> <Linux-helper-binary>`. It configures
+one official ephemeral runner offline, changes only the default-setup routing,
+records the setup-validation run ID, and removes the offline container and
+registration. It starts no listener and executes no product job. Then serve the
+validation run's matrix jobs sequentially with `codeql-job`, before serving the
+original candidate. A label reservation alone is never acceptance.
+
 `codeql-route <repo-id> <new-owned-dir>` changes only the already-configured
 default setup's runner type/label. It records the previous configuration and
 mutation intent first. Languages, queries and threat model must remain equal.
 Advanced workflows (the other two candidates) are rejected by this mode.
 No hosted budget, org access or original candidate source changes.
+This lower-level routing command requires that its dedicated label already
+exists. Mutation failures retain only HTTP/exit classification and a stderr
+fingerprint; tokens, response bodies and identifying diagnostics are not logged.
 
 `codeql-job <repo-id> <run-id> <new-owned-dir> <Linux-helper-binary>` serves one
 official dynamic CodeQL job using a new non-root, read-only, init-enabled

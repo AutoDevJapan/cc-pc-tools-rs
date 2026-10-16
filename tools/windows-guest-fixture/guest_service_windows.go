@@ -39,6 +39,7 @@ var (
 	registerServiceCtrlHandlerExW = advapi32.NewProc("RegisterServiceCtrlHandlerExW")
 	setServiceStatus              = advapi32.NewProc("SetServiceStatus")
 	createSerialHandle            = syscall.NewLazyDLL("kernel32.dll").NewProc("CreateFileW")
+	queryDosDeviceW               = syscall.NewLazyDLL("kernel32.dll").NewProc("QueryDosDeviceW")
 	serviceStop                   = make(chan struct{})
 	serviceStopOnce               = make(chan struct{}, 1)
 	serviceStatusHandle           uintptr
@@ -135,10 +136,11 @@ func serveSerial() error {
 	}
 	recordGuestServiceStage(1)
 	recordGuestServiceStage(2)
+	recordGuestCOMPortInventory()
 	serial, err := openSerialPort()
 	if err != nil {
 		recordGuestServiceStage(7)
-		recordGuestServiceFailure(err)
+		recordGuestServiceFailure(fmt.Errorf("COM1 open failed: %w; guest serial ports: %v", err, guestCOMPortNames()))
 		return errors.New("guest COM1 unavailable")
 	}
 	defer serial.Close()
@@ -234,6 +236,31 @@ func recordGuestServiceFailure(err error) {
 	}
 	path := filepath.Join(systemRoot, `System32\cc2746-service-failure.txt`)
 	_ = os.WriteFile(path, []byte(err.Error()), 0600)
+}
+
+func guestCOMPortNames() []string {
+	var names []string
+	for number := 1; number <= 16; number++ {
+		name, err := syscall.UTF16PtrFromString(fmt.Sprintf("COM%d", number))
+		if err != nil {
+			continue
+		}
+		buffer := make([]uint16, 1024)
+		count, _, _ := queryDosDeviceW.Call(uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
+		if count != 0 {
+			names = append(names, fmt.Sprintf("COM%d", number))
+		}
+	}
+	return names
+}
+
+func recordGuestCOMPortInventory() {
+	systemRoot := os.Getenv("SystemRoot")
+	if systemRoot == "" {
+		return
+	}
+	path := filepath.Join(systemRoot, `System32\cc2746-com-ports.txt`)
+	_ = os.WriteFile(path, []byte(fmt.Sprint(guestCOMPortNames())), 0600)
 }
 
 func openSerialPort() (*os.File, error) {

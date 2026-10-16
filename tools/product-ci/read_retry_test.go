@@ -16,6 +16,7 @@ func TestReadRetryIsFiniteAndNeverRetriesRefusals(t *testing.T) {
 		{"transport exhausted", "TLS handshake timeout", 3, false},
 		{"authorization", "HTTP 403", 1, false},
 		{"not found is terminal", "HTTP 404", 1, false},
+		{"not found takes precedence over transport text", "HTTP 404 unexpected EOF", 1, false},
 		{"policy takes precedence", "gh-gate: refused: TLS handshake timeout", 1, false},
 		{"unknown failure", "exit status 1", 1, false},
 	} {

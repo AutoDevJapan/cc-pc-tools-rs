@@ -32,7 +32,7 @@ func classifyGitHubRead(stderr string) *gitHubReadError {
 // Only idempotent reads with explicit transport/temporary-server failures may
 // be retried. Credentials, policy refusals and mutations never use this path.
 func transientGitHubRead(stderr string) bool {
-	for _, refused := range []string{"gh-gate: refused", "blocked by policy", "HTTP 401", "HTTP 403", "permission denied"} {
+	for _, refused := range []string{"gh-gate: refused", "blocked by policy", "HTTP 401", "HTTP 403", "HTTP 404", "permission denied"} {
 		if strings.Contains(stderr, refused) {
 			return false
 		}

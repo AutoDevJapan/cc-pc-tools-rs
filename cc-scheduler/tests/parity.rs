@@ -3193,6 +3193,216 @@ fn reserved_branch_fixture() -> (Fixture, Value, String) {
     (f, row, head)
 }
 
+fn checkpoint_fixture() -> (
+    Fixture,
+    cc_scheduler::workspace_checkpoint::Request,
+    PathBuf,
+) {
+    let (mut f, workspace, _) = reserved_branch_fixture();
+    let mut runner = SystemRunner;
+    cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &workspace,
+        &[],
+    )
+    .unwrap();
+    let target = PathBuf::from(s(&workspace["scheduler"]["worktree"]));
+    run_git(
+        &mut runner,
+        &target,
+        &["switch", "-c", "scheduler/todo-1-followup"],
+    )
+    .unwrap();
+    fs::write(target.join("source.txt"), "checkpointed work").unwrap();
+    run_git(&mut runner, &target, &["add", "source.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &target,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "followup",
+        ],
+    )
+    .unwrap();
+    fs::write(target.join("unfinished.txt"), "keep this pending work").unwrap();
+    let head = run_git(&mut runner, &target, &["rev-parse", "HEAD"]).unwrap();
+    let mut row = item(1, "other", "wait", &["cargo"]);
+    row["scheduler"] = workspace["scheduler"].clone();
+    row["scheduler"]["last_job"] = json!("owned");
+    row["scheduler"]["resume_session"] = json!("12345678-1234-4321-9234-123456789abc");
+    row["scheduler"]["not_before"] = json!(T + 3600.);
+    row["jobs"] = json!(["owned"]);
+    row["wait_on"] = json!([2]);
+    row["wait_ready"] = json!({"condition":"retry-time","not_before":T+7200.});
+    row["note"] = json!("Keep previous implementation and answers.");
+    row["progress"] = json!(40);
+    f.put(row);
+    f.e.backend.repair_allowed = true;
+    f.e.backend.records = vec![json!({"id":"owned","todo_id":1,"status":"succeeded","cwd":target})];
+    let request = cc_scheduler::workspace_checkpoint::Request {
+        id: 1,
+        job: "owned".into(),
+        expected_branch: "scheduler/todo-1-reserved".into(),
+        branch: "scheduler/todo-1-followup".into(),
+        head,
+    };
+    (f, request, target)
+}
+
+#[test]
+fn workspace_checkpoint_restores_resume_without_changing_work_or_waits() {
+    use cc_scheduler::{preparation::*, workspace_checkpoint::checkpoint};
+    let (mut f, request, target) = checkpoint_fixture();
+    let mut runner = SystemRunner;
+    let before = f.get(1);
+    let status = run_git(&mut runner, &target, &["status", "--porcelain"]).unwrap();
+    assert_eq!(
+        recover_workspace(
+            &mut runner,
+            f.repo.to_str().unwrap(),
+            &before,
+            &f.e.backend.records
+        )
+        .unwrap_err()
+        .0,
+        "BranchMismatch"
+    );
+    let report = checkpoint(&mut f.e, &mut runner, &request).unwrap();
+    assert_eq!(report["saved"], true);
+    assert_eq!(report["launched"], 0);
+    let mut after = f.get(1);
+    ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &after,
+        &f.e.backend.records,
+    )
+    .unwrap();
+    assert_eq!(
+        run_git(&mut runner, &target, &["rev-parse", "HEAD"]).unwrap(),
+        request.head
+    );
+    assert_eq!(
+        run_git(&mut runner, &target, &["status", "--porcelain"]).unwrap(),
+        status
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("unfinished.txt")).unwrap(),
+        "keep this pending work"
+    );
+    assert!(!run_git(
+        &mut runner,
+        &target,
+        &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+    )
+    .unwrap()
+    .is_empty());
+    after["scheduler"]["branch"] = before["scheduler"]["branch"].clone();
+    remove(&mut after["scheduler"], "workspace_checkpoint");
+    remove(&mut after, "updated");
+    assert_eq!(after, before);
+    let saved = f.get(1);
+    assert_eq!(
+        checkpoint(&mut f.e, &mut runner, &request).unwrap()["saved"],
+        false
+    );
+    assert_eq!(f.get(1), saved);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn workspace_checkpoint_rejects_unverified_identity_scope_or_git_state() {
+    for gate in [
+        "job",
+        "ownership",
+        "cwd",
+        "scope",
+        "worktree_scope",
+        "head",
+        "branch",
+        "expected",
+        "other_task_branch",
+        "detached",
+        "other_worker",
+        "terminal_but_alive",
+        "done",
+        "unknown_state",
+    ] {
+        let (mut f, mut request, target) = checkpoint_fixture();
+        match gate {
+            "job" => request.job = "missing".into(),
+            "ownership" => f.e.backend.records[0]["todo_id"] = json!(2),
+            "cwd" => f.e.backend.records[0]["cwd"] = json!(f.repo),
+            "scope" => f.e.backend.repair_allowed = false,
+            "worktree_scope" => f.e.backend.repair_denied = Some(target.to_str().unwrap().into()),
+            "head" => request.head = "f".repeat(40),
+            "branch" => request.branch = "scheduler/todo-1-missing".into(),
+            "expected" => request.expected_branch = "scheduler/todo-1-stale".into(),
+            "other_task_branch" => request.branch = "scheduler/todo-2-followup".into(),
+            "detached" => {
+                run_git(&mut SystemRunner, &target, &["checkout", "--detach"]).unwrap();
+            }
+            "other_worker" | "terminal_but_alive" => {
+                let mut other = job(
+                    "other",
+                    9,
+                    if gate == "other_worker" {
+                        "running"
+                    } else {
+                        "succeeded"
+                    },
+                );
+                other["todo_id"] = json!(1);
+                f.e.backend.records.push(other);
+                f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
+            }
+            _ => {
+                f.e.edit(&json!(1), |row| {
+                    row["status"] = json!(if gate == "done" {
+                        "done"
+                    } else {
+                        "recovery_unverified"
+                    })
+                })
+                .unwrap();
+            }
+        }
+        let before = f.get(1);
+        assert!(
+            cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request)
+                .is_err(),
+            "{gate}"
+        );
+        assert_eq!(f.get(1), before, "{gate}");
+        assert!(f.e.backend.launched.is_empty(), "{gate}");
+    }
+}
+
+#[test]
+fn workspace_checkpoint_preserves_intervening_owner_stop() {
+    for project_change in [false, true] {
+        let (mut f, request, _) = checkpoint_fixture();
+        let mut changed = f.e.todo().unwrap();
+        if project_change {
+            changed["projects"]["other"] = json!(f.temp.path().join("another-project"));
+        } else {
+            changed["items"][0]["status"] = json!("block");
+            changed["items"][0]["stopped"] = json!(true);
+        }
+        f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
+        assert!(cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request).is_err());
+        assert_eq!(f.e.todo().unwrap(), changed);
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
 #[test]
 fn preparation2164_restores_reserved_branch_without_replacing_its_commit() {
     let (f, row, head) = reserved_branch_fixture();

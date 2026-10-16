@@ -183,3 +183,33 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - Windows実guest準備は既存2746で続行中。別の同じ作業を登録しない。
 - 残り: SDK guest実bootstrap→source物理HEAD/tree→単一公式job受付と共有Cargoゲート→公式4jobのroute/dispatchと13工程/Docker parity→原log hash/cleanupを親2641へ返す。
   親の原PRmerge/Prd、CodeQL37件の別確認、旧資源の回収はこのcheckで重複しない。
+
+## 2026-10-17 公開SDK guest実行の結果と次回の入口
+
+- SDK smokeはexit0。attemptはsdk-attempt-6bb6e61d104863319f64aad3c81a9c52。
+  VM e106ca52-e833-47cf-9488-a89ad6fd1fa3はOff/メモリ0/除去済み。
+  同guestの新規userでrunner2.338.0、Cargo1.97.1、Docker29.1.3、buildx0.30.1、sccache0.18.0の版確認が成功。
+  Cargo build/test、原source、runner登録、原CIは実行していない。
+  SDK原log SHA256 648ac2ac87b55aee2c1ec6b0bc3c9e823b7bc3205f9bf739d3428d6afb9c7208。
+- 新SDK準備とMust修正のsource保存commit7e6f8b9551cead6bb5b388dc26db904e9599bb69はpush先一致。
+  同commitのscheduler checkpointもexit0/saved=true。
+- 原失敗/修正後のreceiptとlog等94fileを全SHA一致で永続化した。
+  D:/CC/Tools/product-ci/evidence/todo-2737-20261017/phase-sdk-7e6f8b9/evidence-hashes.private.json
+  manifest SHA256 3F8F5E544D5986615039AFCC61B346D26DA03AFD76C57A20A1CE44742862942E。
+- SDK用VHDXは上記SDK attempt/guest.vhdx（製品sourceなし、runner未登録）。再生成せず既存SDK資産として使える。
+  SDK template receiptは所有root/sdk-template-ready.private.json。使用前に記録SHAと実file、元VM不在を再照合する。
+  private TLS keyはRAMのみでguest停止時に失われ、seedには公開pinだけ。host所有rootを製品checkoutへ流用しない。
+- 自分の工具containerは停止してPID0を確認済み。削除はしていない。tools-paused.private.jsonを参照。
+  続行時はtools-ready.private.jsonのexact ID/name/cc.todo/cc.instance/image/mount/devicesを確認し、そのIDだけstartする。
+  /workと/tmpのtmpfsは停止で消失したため古いseed/test executableを利用しない。public生成資産はhost所有rootにある。
+- 追加レビューは2753へ保存spec付き通常受付済み。base8439d62→head7e6f8b9、read-only、原応答はjob last_message.mdへ返す。
+  登録時点でtodoで、実応答はまだない。2748のMustが追加レビュー済みと誤認しない。
+- 独立したsourcepacket/materializerの実装は2754へ保存spec付きで通常受付済み。
+  tools/ci-source-2737独立Go moduleのみ、原製品を取得せず合成fixtureで実装/検査する。既存source_materializationの再利用を指示。
+  統合側2737は実応答とcommitを照合し、自分のbranchへ必要差分だけ取り込み、実Linux合成Git検査と別モデルレビューを行う。
+  2754は原PR/CI/runner/VMを変更しない。子Codex直接起動はない。
+- Windows専用guestは既存2746の実結果を待つ。2753/2754/2746へ重複依頼・同一コマンドを送らない。
+- 残る自分の処理は、各成果を統合して同PR/head/refを固定した公式runner単一job受付とCargo共有ゲートを接続し、原CIを完走すること。
+  Docker parity、Windows13工程/profile/直列/20分、workspace/関連crate/doctest、checkout認証除去を維持する。
+  route更新は原PR同branch expected旧SHA/force=falseだけ。新head/tree・CodeQL再解析要否を親2641へ配送する。
+  原PRmerge/Prdは親2641のみ、37件の静的確認を再登録しない。追加費用・本人PC操作は不要。

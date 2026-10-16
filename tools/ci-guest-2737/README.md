@@ -83,6 +83,15 @@ guest failure is read concurrently with upload so a reset cannot hide it.
 SDK VM bootstrap is a separate result; successful archive extraction is not
 successful bootstrap or official CI. Command output is bounded and private.
 
+The corrected SDK bootstrap subsequently passed in a new Hyper-V guest: runner
+2.338.0, Cargo 1.97.1, Docker 29.1.3, buildx 0.30.1, sccache 0.18.0. These are
+version probes, with Docker accessible to the fresh guest user, not Cargo tests
+or official CI. The guest VM was stopped and removed with memory zero. Its
+source-free, unregistered SDK VHDX remains an owned asset; verify its receipt/hash
+and absence of the original VM before cloning it. The tool container is paused
+at PID zero, preserving genisoimage in its writable layer. Validate its exact
+recorded identity before restarting; stopped tmpfs seed/test data does not survive.
+
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).

@@ -242,6 +242,11 @@ func bootstrapCodeQLMode(ctx context.Context, c candidate, dir, binary string, r
 			recoverRoute()
 		}
 	}()
+	// Install cleanup before the first durable-ID write can fail, and persist
+	// the verified ID before starting the container or requesting any token.
+	if e = save(); e != nil {
+		return e
+	}
 	if createErr != nil || strings.TrimSpace(string(b)) != rec.ContainerID {
 		return errors.New("bootstrap create completion uncertain")
 	}

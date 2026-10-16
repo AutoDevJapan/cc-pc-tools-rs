@@ -93,7 +93,8 @@ dynamic run ID recorded before mutation, rather than the host's wall clock.
 The recorded default source remains fixed; an advancing default branch requires
 a new inspected plan and cannot silently replace the validation source.
 
-If the host crashes, `codeql-recover <repo-id> <revalidation-dir>` resumes only
+If the host crashes after persisting its revalidation intent,
+`codeql-recover <repo-id> <revalidation-dir>` resumes only
 the persisted bootstrap nonce. New bootstraps hold a kernel byte lock and save
 their identity in the admission file: recovery refuses a live owner or another
 operation's lock. It checks/removes the exact owned container, re-enables the
@@ -104,6 +105,11 @@ require an audited ownership reconciliation; this command never clears them.
 An ambiguous pending API response is resolved only by a unique newer same-source
 generated run with the full dedicated matrix. No registration or job success
 is inferred from recovery alone.
+The recovery handle explicitly permits Windows delete sharing, so the owned
+admission file can be removed while the kernel lock still prevents a competing
+recovery. A native Windows test exercises this exact final removal. Crashes in
+the earlier offline-only phase have not changed setup; their nonce/verified
+container ID must be reconciled before another bootstrap is admitted.
 
 `codeql-route <repo-id> <new-owned-dir>` changes only the already-configured
 default setup's runner type/label. It records the previous configuration and
@@ -134,6 +140,28 @@ registration and after execution. Default-branch setup validation is explicitly
 separate from candidate evidence. A runner exit never certifies the workflow:
 official jobs, logs and CodeQL uploads still require verification. Receipts
 retain `all_required_checks_success=false`.
+
+## Fixed native secret-scan workflow
+
+`secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`
+serves the first candidate's original PR secret gate. Its workflow path and
+bytes are fixed by digest. It rejects another repo, fork, PR, source head,
+`pull_request_target`, changed executable workflow, or unknown job kind before
+registration. The official scanner ELF from the pinned public image has its
+own fixed digest; the host verifies it, transfers it through stdin into tmpfs,
+and the source workflow verifies that same digest before running it. No Docker
+socket or product-source bind is exposed.
+
+A normal PR job has GitHub's merge SHA in `GITHUB_SHA`. This mode binds that
+context to the same PR's API merge SHA, separately from the fixed analyzed
+source. The reviewed workflow explicitly checks out the original PR head;
+the completed hook still requires that actual Git HEAD/tree and removal of
+checkout authentication. Dynamic CodeQL never accepts this merge-context
+exception. Both modes share queue/live admission and real namespace cleanup.
+The source workflow retains its entire PR Git range, policy-file rejection,
+read-only repository permissions, redaction, failure exit code and timeouts.
+An official completed/success job and original logs must be checked after the
+ephemeral runner ends; its exit alone never produces a success status.
 
 This mode performs CodeQL's no-build analysis only; Rust and the resident Cargo
 adapter are excluded from its PATH. Native Cargo, Windows, Lua and other

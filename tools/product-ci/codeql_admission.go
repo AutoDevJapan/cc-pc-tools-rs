@@ -61,7 +61,7 @@ func startCodeQLAdmission(ctx context.Context, p codeQLPlan, c candidate) (endpo
 	childCtx, cancel := context.WithCancel(ctx)
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 40 * time.Second, BaseContext: func(net.Listener) context.Context { return childCtx }}
 	server.Handler = codeQLAdmissionHandler(p, key, func(callCtx context.Context) error {
-		now, e := planCodeQL(callCtx, c, p.RunID, get)
+		now, e := productPlan(callCtx, c, p.RunID, p.Kind, get)
 		if e != nil {
 			return e
 		}

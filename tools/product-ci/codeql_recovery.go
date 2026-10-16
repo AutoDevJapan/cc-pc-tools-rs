@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Recovery is bounded to the persisted bootstrap nonce. Its OS byte lock makes
@@ -27,7 +28,7 @@ func recoverCodeQLBootstrap(ctx context.Context, c candidate, dir string) (ret e
 	if e != nil || !entry.Mode().IsRegular() {
 		return errors.New("owned admission path unavailable")
 	}
-	f, e := os.OpenFile(lockPath, os.O_RDWR, 0600)
+	f, e := openAdmissionForRecovery(lockPath)
 	if e != nil {
 		return errors.New("owned admission unavailable")
 	}
@@ -61,7 +62,7 @@ func recoverCodeQLBootstrap(ctx context.Context, c candidate, dir string) (ret e
 			proof["failure"] = ret.Error()
 		}
 		data, _ := json.MarshalIndent(proof, "", "  ")
-		ret = errors.Join(ret, os.WriteFile(filepath.Join(dir, "codeql-recovery.private.json"), data, 0600))
+		ret = errors.Join(ret, os.WriteFile(filepath.Join(dir, fmt.Sprintf("codeql-recovery-%d.private.json", time.Now().UnixNano())), data, 0600))
 	}()
 	runners, e := repoRunners(ctx, r.FullName)
 	if e != nil {

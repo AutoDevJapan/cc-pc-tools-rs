@@ -6,6 +6,8 @@ mod subwork_support;
 mod original_product_retry;
 #[path = "support/owner_wait_repair.rs"]
 mod finite_owner_wait_repair;
+#[path = "support/finished_review.rs"]
+mod finished_review;
 
 mod independent_subwork {
     use super::*;

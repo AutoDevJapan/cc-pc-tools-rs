@@ -1,7 +1,7 @@
 use super::*;
 use cc_job_policy::{product_retry::digest, work_owner};
 
-fn setup() -> (Test, subwork_support::Fixture, Value) {
+pub(super) fn setup() -> (Test, subwork_support::Fixture, Value) {
     let t = Test::new();
     let mut f = subwork_support::Fixture::new();
     let p = subwork_support::tree(&f.repo, "todo-1-parent", "scheduler/todo-1-parent");

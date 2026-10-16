@@ -6,16 +6,19 @@ and CC-AdminBroker. It does not inspect existing VM names, disks, or guest
 contents. The created VM has 2 vCPU, fixed 2 GiB RAM, Secure Boot, no virtual
 NIC, and no GPU adapter. It receives only this helper executable and a public
 certificate pin; no product source, owner profile, credentials, network, or
-external runner registration is supplied.
+external runner registration is supplied. Its second DVD contains only the
+standard answer file, the staging script, the helper executable, and the
+public seed JSON.
 
-The helper applies the Windows image to a new VHDX while it is mounted
-offline, adds one LocalSystem automatic service to that image's own SYSTEM
-hive, creates its boot files, then unmounts the new VHDX and ISO before making
-the VM. It does not create an answer file, skip OOBE, create an account, or
-change a password. The Windows service starts through SCM and speaks only on
-the VM's COM1 named pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities
-are generated in memory. The guest receives only the host certificate SHA256;
-the host pins the server certificate reported by its exact VM COM pipe.
+The helper creates a second, small seed ISO with Windows' standard
+`Autounattend.xml` flow. Windows Setup accepts the license terms, selects the
+evaluation edition, partitions the new VHDX, and runs the service staging
+command as LocalSystem during `specialize`. The answer file has no
+`oobeSystem` settings, user account, password, or OOBE skip. OOBE is not hidden
+or completed by this helper. The service speaks only on the VM's COM1 named
+pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in
+memory. The guest receives only the host certificate SHA256; the host pins the
+server certificate reported by its exact VM COM pipe.
 
 The `vm-smoke <owned-root> <official-evaluation-iso>` command runs two
 credential-free fixtures inside the guest. The normal case observes two live
@@ -44,3 +47,8 @@ The result demonstrates only this finite Windows guest and its live
 normal/cancel cleanup. It does not execute the GoDD product workflow, the 13
 original CI steps, Cargo, or an official runner. It does not guarantee
 recovery after host shutdown, logout, or reboot.
+
+Microsoft references: [Windows Server 2025 Evaluation](https://www.microsoft.com/en-us/evalcenter/download-windows-server-2025),
+[Answer file discovery](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview?view=windows-11),
+[EULA acceptance](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-setup-userdata-accepteula),
+and [specialize RunSynchronous](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-deployment-runsynchronous-runsynchronouscommand-path).

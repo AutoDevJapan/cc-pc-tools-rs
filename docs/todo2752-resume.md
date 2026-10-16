@@ -26,3 +26,7 @@ ToDo2752は継続中。親2639はこのcheckを正式waitしている。元1636/
 この担当はcontainer、runner登録、排他lock、Chromeタブ、Cargo、GPU、Prd変更を作成/実行していない。自分の一時検査script2件（11,715 bytes）はsafe-delete owner08a2b69463e4c04a08ff44f1a0fe386aで管理し、確認記録の保存後にplan→別呼出し通常削除→finish source_absentまで確認した。後片付けの実結果も実確認JSONへ保存した。
 
 作業branchは最初からscheduler/todo-2752-ci-prd。branch変更なし。自分の記録だけをこのbranchへcommitし、scheduler checkpoint-workspaceで実HEADを保存する。親の元証拠・他担当の一時資源は保持する。本人PC操作や技術的な再承認は求めていない。
+
+引継ぎ・checkpoint用の2件（28,650 bytes）もowner3ce72d689a191353930f1eb59e312526のplan→別通常削除→finish source_absentを確認した。計4件40,365 bytesを回収した。元2639のnoteへ実結果と2757の仕様保存を配送済み。2752はwait[2757]、2639はwait[2752]を読戻した。初回保存commit3ce1d57e5b113f8b504a3b090392a757d8a595a3はGitHubの同branch refと一致し、独立PRは作成していない。
+
+後片付け記録の無通知Discord logは `QuestionStateRecoveryRequired` を返して未投稿。正確な理由は質問台帳と本人回答の記録が失われ原記録復旧が必要というもの。本人判断待ちではなく、投稿や質問を別経路で再試行していない。元の台帳復旧工程・他担当の状態は変更しない。復旧後に必要ならこの同じ無通知記録だけを扱い、同じ実装修復や質問を再登録しない。この投稿失敗を自動承認レビューの拒否とは表現しない。

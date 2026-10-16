@@ -561,7 +561,27 @@
       "plan_entries": 2,
       "plan_bytes": 11715,
       "separate_delete_exit": 0
+    },
+    "delivery_temp_cleanup": {
+      "plan_bytes": 28650,
+      "owner_id": "3ce72d689a191353930f1eb59e312526",
+      "separate_delete_exit": 0,
+      "finish_state": "source_absent",
+      "plan_entries": 2
     }
   },
-  "dependency_todo": 2757
+  "dependency_todo": 2757,
+  "cleanup_discord_log": {
+    "reason": "Question and owner-answer ledger recovery required; not an owner decision",
+    "repeated": false,
+    "alternate_route_attempted": false,
+    "error": "QuestionStateRecoveryRequired",
+    "posted": false
+  },
+  "dependency_recorded": {
+    "wait_on": 2757,
+    "self": 2752,
+    "parent": 2639,
+    "parent_wait_on": 2752
+  }
 }

@@ -93,6 +93,39 @@ fn report_reason(t: &Test, job: &Value) -> Value {
 }
 
 #[test]
+fn reserve_receipt_arguments_pass_the_real_jobs_parser() {
+    let (t, mut db, base) = fixture();
+    db["items"][0].as_object_mut().unwrap().remove("product_retry_intent");
+    let source = json!({"id":"source-old","todo_id":1626,"status":"succeeded",
+        "retry_live":false,"cwd":policy::TREE,"thread_id":SOURCE_SESSION,
+        "model":"m","effort":"e","sandbox":"read-only","mcp_profile":"minimal",
+        "network":false,"add_dirs":[],"scope_source":"launcher"});
+    let proof = json!({"id":1626,"verified":true,"session_receipt_verified":true,
+        "session":policy::QUALIFICATION_SESSION,"job":policy::QUALIFICATION_JOB,
+        "request_sha256":policy::REQUEST_HASH,"worktree":policy::TREE,
+        "expires_at":"2026-10-21T00:00:00Z",
+        "snapshot":cc_todo::product_resume::snapshot(&db,&db["items"][0])});
+    let receipt = cc_todo::product_retry::stage(
+        &mut db, &proof, &source, &base, t.ctx.root.join("prompt.md").to_str().unwrap(),
+        &policy::digest(BODY), t.rt.epoch() as u64,
+    ).unwrap();
+    let args: Vec<String> = receipt["run_args"].as_array().unwrap().iter()
+        .map(|value| value.as_str().unwrap().to_owned()).collect();
+    let parsed = cc_jobs::cli::parse(&args).unwrap();
+    assert_eq!(parsed.cmd, "run");
+    assert_eq!(parsed.value("todo-id"), Some("1626"));
+    assert_eq!(parsed.value("launch-key"), receipt["key"].as_str());
+    assert_eq!(parsed.value("original-product-retry-key"), receipt["key"].as_str());
+    assert_eq!(parsed.value("resume-session"), Some(SOURCE_SESSION));
+    assert_eq!(parsed.value("cwd"), Some(policy::TREE));
+    assert_eq!(parsed.value("sandbox"), Some("read-only"));
+    assert_eq!(parsed.value("scope-source"), Some("launcher"));
+    assert_eq!(receipt["launched"], 0);
+    assert!(db["items"][0]["wait_ready"].is_object());
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+}
+
+#[test]
 fn markerless_jobs_keep_the_ordinary_wait_and_admission_behavior() {
     let (t, original, _) = fixture();
     assert!(t.run(&["--todo-id", "1626"], BODY).is_err());

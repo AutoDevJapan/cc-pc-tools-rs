@@ -654,6 +654,28 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
+	if len(os.Args) == 2 && os.Args[1] == "merged-inspect" {
+		p, err := planMergedCodeQL(ctx, mergedCandidate(), mergedCodeQLRun, get)
+		if err == nil {
+			err = checkCodeQLQueue(ctx, p, get)
+		}
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(p)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) == 4 && os.Args[1] == "merged-codeql-job" {
+		e = executeProductJob(ctx, mergedCandidate(), mergedCodeQLRun, os.Args[2], os.Args[3], "merged-codeql", "")
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
 			_, err := verify(ctx, c, get)

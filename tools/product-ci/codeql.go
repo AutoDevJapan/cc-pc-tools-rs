@@ -506,7 +506,7 @@ func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guest
 	if e = os.WriteFile(filepath.Join(dir, "codeql-checkout.private.json"), b, 0600); e != nil {
 		return e
 	}
-	if _, e = verify(ctx, c, get); e != nil {
+	if _, e = verifyExecutionSource(ctx, c, get); e != nil {
 		return e
 	}
 	rec.Stage = "ephemeral-job-ended-official-results-still-required"
@@ -574,7 +574,7 @@ func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
 	want := p.SHA
 	if p.Kind == "secret" && validGuestPlan(p) {
 		want = p.ContextSHA
-	} else if p.Kind == "advanced" && validGuestPlan(p) {
+	} else if (p.Kind == "advanced" || p.Kind == "merged-codeql") && validGuestPlan(p) {
 		want = p.SHA
 	} else if p.Kind != "" || p.ContextSHA != "" {
 		return errors.New("unknown job context kind")

@@ -1,5 +1,17 @@
 # ToDo2710 固定3ソースの実検査
 
+## 再開監査（job 20261016-200527-todo-2710）
+
+前回のf7acf6dから再開。worktreeは変更なしで、branchも保存値のまま。原検査・Cargo・source取得・削除/退避を重複実行していない。保存済み3indexと2209レコードコピーのSHA256一致を再確認した。repo1154066087の70部分レコードは最終manifestがないという区別を保持。専用Windowsサービスは不在。未回収4rootは現存。
+
+safe-deleteの実装を読み取りで照合した。Git管理領域等が配下にあるとPROTECTED_PATH、走査件数の上限を超えるとENTRY_LIMIT_EXCEEDEDを返す。planとquarantineは同じ走査を要求する。配布exeは前回から未更新。これは実行審査の拒否ではなく補助ツール自身の保護であり、同じ操作の再試行・分割削除・.gitの除去/移動・別API・保護/上限変更を行わない。
+
+既存のPC整理ToDo2381へ今回所有root4件だけの未回収記録、絶対pathのある私的manifest、hash、保持対象、禁止事項をnote配送した。新しい担当・修復・monitorは作っていない。2381はrecovery_unverifiedであり、起動や復旧成功とは扱わない。親2648と自分2710へも再開監査の結果を配送済み。
+
+次の終了前にscheduler checkpoint-workspaceでこのjob/branch/実HEADを保存し、todo wait 2710 --on 2381で正式な依存待ちを登録する。2381終了後も、実際のroot不在または正規の退避証拠を確認するまでは回収成功としない。元2640/2641/2642と親2648は完了へ変更しない。これは本人判断待ちではない。資源割当が戻っても原検査を繰り返さない。
+
+今回の私的記録は永続証拠rootにあるrepo1392152644-repo1154066087-repo1386702183-resume-audit.private.json、同-cleanup-handoff.private.txt、同-resume-note.private.txt。原logや機密値をstdoutへ出さない。
+
 ## 最新の保存点（2026-10-16 20時。以下の旧保存点より優先）
 
 追記: 各元ToDo2640/2641/2642、親2648と自分2710へ結果noteを配送済み。元ToDoの状態や所有は変更していない。検査補助と証拠回収のコードは74a25a6でcommit/push済み。今回Go module3件のtest/vetと、修正したWindows Chrome版数取得の実行確認が成功。

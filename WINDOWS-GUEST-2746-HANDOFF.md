@@ -181,11 +181,20 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   Win32 service. Microsoft examples use `%SystemRoot%` in expandable service
   paths; the helper now writes `%SystemRoot%\System32\cc2746-guest.exe
   --service` as REG_EXPAND_SZ. This correction is uncommitted and untried.
+- After that path correction was pushed as `c9bcaef`, a fresh guest again
+  started the service but emitted no readiness line. Its System log records
+  the service entering Running, then event 7023 “Incorrect function”. The VM
+  was stopped/removed, assigned memory 0, and the clone/source VHDs detached.
+  The current service opens COM1 with `os.OpenFile`; Microsoft documents that
+  serial communications handles require `CreateFile` with share mode zero and
+  `OPEN_EXISTING`. The next change uses that documented exclusive-open
+  contract through `CreateFileW`. This is a cause hypothesis, not yet verified.
+  The current correction is uncommitted and untried.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the expandable service ImagePath correction; commit and push it.
+   the Win32 COM1 open correction; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

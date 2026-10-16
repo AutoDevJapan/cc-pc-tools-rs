@@ -38,6 +38,7 @@ var (
 	startServiceCtrlDispatcherW   = advapi32.NewProc("StartServiceCtrlDispatcherW")
 	registerServiceCtrlHandlerExW = advapi32.NewProc("RegisterServiceCtrlHandlerExW")
 	setServiceStatus              = advapi32.NewProc("SetServiceStatus")
+	createSerialHandle            = syscall.NewLazyDLL("kernel32.dll").NewProc("CreateFileW")
 	serviceStop                   = make(chan struct{})
 	serviceStopOnce               = make(chan struct{}, 1)
 	serviceStatusHandle           uintptr
@@ -131,7 +132,7 @@ func serveSerial() error {
 	if err := dec.Decode(&seed); err != nil || !validInstance(seed.Instance) || !validHash(seed.ClientSHA256) {
 		return errors.New("guest seed rejected")
 	}
-	serial, err := os.OpenFile(`\\.\COM1`, os.O_RDWR, 0)
+	serial, err := openSerialPort()
 	if err != nil {
 		return errors.New("guest COM1 unavailable")
 	}
@@ -194,6 +195,31 @@ func serveSerial() error {
 			return nil
 		}
 	}
+}
+
+func openSerialPort() (*os.File, error) {
+	path, err := syscall.UTF16PtrFromString(`\\.\COM1`)
+	if err != nil {
+		return nil, err
+	}
+	handle, _, callErr := createSerialHandle.Call(
+		uintptr(unsafe.Pointer(path)),
+		0x80000000|0x40000000, // GENERIC_READ | GENERIC_WRITE
+		0,                     // Communications resources require exclusive access.
+		0,
+		3, // OPEN_EXISTING
+		0x80,
+		0,
+	)
+	if syscall.Handle(handle) == syscall.InvalidHandle {
+		return nil, callErr
+	}
+	file := os.NewFile(handle, `\\.\COM1`)
+	if file == nil {
+		_ = syscall.CloseHandle(syscall.Handle(handle))
+		return nil, errors.New("COM1 handle could not be wrapped")
+	}
+	return file, nil
 }
 
 func runGuestNormal() (fixtureResult, error) {

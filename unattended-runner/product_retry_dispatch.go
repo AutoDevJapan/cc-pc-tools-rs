@@ -18,15 +18,18 @@ var productRetryJobPattern = regexp.MustCompile(`^[0-9]{8}-[0-9]{6}-[A-Za-z0-9_-
 // This is an observation, never a second launch ledger. The normal API owns
 // the durable intent, snapshots, actual session, attempt limit and job binding.
 type productRetryObservation struct {
-	ID       uint64 `json:"id"`
-	At       string `json:"checked_at"`
-	BaseKey  string `json:"base_key"`
-	Key      string `json:"key,omitempty"`
-	Worker   string `json:"observed_worker"`
-	Job      string `json:"job,omitempty"`
-	Phase    string `json:"phase"`
-	Saved    bool   `json:"saved"`
-	Deferred bool   `json:"deferred"`
+	ID             uint64 `json:"id"`
+	At             string `json:"checked_at"`
+	BaseKey        string `json:"base_key"`
+	Key            string `json:"key,omitempty"`
+	Worker         string `json:"observed_worker"`
+	Job            string `json:"job,omitempty"`
+	Phase          string `json:"phase"`
+	Saved          bool   `json:"saved"`
+	Deferred       bool   `json:"deferred"`
+	ReserveMS      int64  `json:"reserve_ms"`
+	RegistrationMS int64  `json:"registration_ms"`
+	BindingMS      int64  `json:"binding_ms"`
 }
 
 func (r *Runner) productRetryObservation(h *Health, o productRetryObservation) {
@@ -49,7 +52,9 @@ func (r *Runner) resumeProductRetry(ctx context.Context, h *Health, candidate *p
 	// Reserve invokes the existing verify-product-resume guard and qualification
 	// checks under the normal locks, including real PID/session metadata. Never
 	// release-ready or Start here: both would introduce a destructive crash gap.
+	started := time.Now()
 	raw, err := r.Run(ctx, productRetryTodoCLI, "product-retry-reserve", "1626", "--key", candidate.Key, "--expected-worker", candidate.ObservedWorker)
+	o.ReserveMS = time.Since(started).Milliseconds()
 	var reserved struct {
 		ID            uint64   `json:"id"`
 		Reserved      bool     `json:"reserved"`
@@ -92,7 +97,9 @@ func (r *Runner) resumeProductRetry(ctx context.Context, h *Health, candidate *p
 	}
 	// A lost response is recovered next tick by Reserve and the SAME launch key.
 	// Never concatenate the returned argument array into a shell command.
+	started = time.Now()
 	raw, err = r.Run(ctx, reserved.Executable, reserved.Args...)
+	o.RegistrationMS = time.Since(started).Milliseconds()
 	job := strings.TrimSpace(raw)
 	if err != nil || !productRetryJobPattern.MatchString(job) {
 		fail("registration_deferred")
@@ -103,7 +110,9 @@ func (r *Runner) resumeProductRetry(ctx context.Context, h *Health, candidate *p
 		fail("binding_deferred")
 		return
 	}
+	started = time.Now()
 	raw, err = r.Run(ctx, productRetryTodoCLI, "product-retry-bind", "1626", "--key", reserved.Key, "--job", job)
+	o.BindingMS = time.Since(started).Milliseconds()
 	var bound struct {
 		ID       uint64  `json:"id"`
 		Bound    bool    `json:"bound"`

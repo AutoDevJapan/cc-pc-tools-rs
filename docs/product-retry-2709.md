@@ -4,7 +4,7 @@
 
 ## 接続
 
-`retry.go` は元1626の期限内候補を、従来の修復候補と同じ保存カーソル・1回4件の巡回へ入れる。既存の10秒の再試行処理枠を使い、別loopやtaskを作らない。元1626を一般のresume-readyへ渡さない。
+`retry.go` は元1626の期限内候補を、従来の修復候補と同じ保存カーソル・1回4件の巡回へ入れる。正式reserve/bindはそれぞれguardを再実行するため、製品再開の処理枠は30秒とする。従来の修復項目は10秒のまま、全体50秒の既存tick内で実行し、別loopやtaskを作らない。元1626を一般のresume-readyへ渡さない。
 
 `product_retry.go` の副作用なし候補判定は、期限・停止・判断待ち・未完依存・保存資格・元担当の一致を確認する。同じwaitのsince/not_before・元spec SHA・元worktreeからBASEキーを固定する。候補は実行の許可ではない。
 
@@ -18,7 +18,7 @@ continued_existing:trueなら、その同じqueued担当を通常queueへ任せ�
 
 応答喪失・busy・期限到来は既存巡回の次回へ戻る。同じBASEで正式APIが同じ意図と実jobを回収する。終端した未結合試行を更新するかはAPIが決め、試行0/1/2の上限もAPIが維持する。Goは別キーを作って再起動しない。
 
-元の正式意図が、原snapshot・hash・actualsession・jobを保持する。Goの`product-retry-observation.json`は最終の受付/結合/保留の観測だけであり、起動権限や第二の台帳として使わない。
+元の正式意図が、原snapshot・hash・actualsession・jobを保持する。Goの`product-retry-observation.json`は最終の受付/結合/保留の観測だけであり、起動権限や第二の台帳として使わない。各実コマンドの経過時間も記録し、自然due受入で3コマンドの実合計時間とstdoutが実jobIDの1行だけであることを確認する。
 
 ## 範囲
 
@@ -36,7 +36,7 @@ Goの架空DBと偽CLIで以下を確認する。実Rust APIのロック・PID�
 - 受付後の本人stop・新依存・段階間の失効で、元waitを維持し未結合モデル起動は0。
 - EFFECTIVEキーのrotateとcontinued_existingを扱い、別exe・別ToDo・壊れた応答は実行しない。
 
-WindowsのGo race/vet成功。親APIのPR186では固定b08fcd0の全workspace2248PASS/5skip・doctest・Clippy・CodeQL・関連検査成功。ここで同じRust全件検査は重ねない。
+6秒のguardをreserve/bindで各1回待つ回帰検査を実行し、従来10秒を超える合計でも結合できることと、呼出し取消後の同job再開を確認する。失効後はGoが登録済みジョブを強制終了せず、通常queueが正式期限を再照合する。WindowsのGo race/vet成功。親APIのPR186では固定b08fcd0の全workspace2248PASS/5skip・doctest・Clippy・CodeQL・関連検査成功。ここで同じRust全件検査は重ねない。
 
 ## 稼働版の来歴
 

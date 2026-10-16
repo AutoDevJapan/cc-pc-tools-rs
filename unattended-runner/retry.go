@@ -6,12 +6,15 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"time"
 )
 
 // The legacy watchdog released technical waits. The new receiver must retain
 // that capability for the explicitly verified PC repairs, without touching
 // owner holds, private projects or other readiness conditions.
 func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
+	repairContext, cancelRepairs := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelRepairs()
 	var body json.RawMessage
 	if err := readJSON(r.TodoPath, maxTodo, &body); err != nil {
 		health.Errors = append(health.Errors, "technical_retry_metadata_deferred")
@@ -71,6 +74,9 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 			return
 		}
 		item := due[(start+i)%len(due)]
+		if item.product == nil && repairContext.Err() != nil {
+			continue
+		}
 		r.State.RetryCursor = item.id
 		if err := r.save(); err != nil {
 			health.Errors = append(health.Errors, "technical_retry_cursor_deferred")
@@ -82,7 +88,7 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		}
 		allowed, known := verified[item.root]
 		if !known {
-			raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", item.root)
+			raw, err := r.Run(repairContext, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", item.root)
 			var proof struct {
 				ClientResource *bool `json:"client_resource"`
 			}
@@ -92,7 +98,7 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		if !allowed {
 			continue
 		}
-		raw, err := r.Run(ctx, "D:/CC/Tools/todo/todo.exe", "resume-ready", strconv.FormatUint(item.id, 10), "--condition", "retry-time")
+		raw, err := r.Run(repairContext, "D:/CC/Tools/todo/todo.exe", "resume-ready", strconv.FormatUint(item.id, 10), "--condition", "retry-time")
 		var receipt struct {
 			ID      uint64 `json:"id"`
 			Resumed bool   `json:"resumed"`

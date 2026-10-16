@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -366,6 +367,10 @@ func TestProductRetrySharesCursorAndFailureDoesNotStarveRepairs(t *testing.T) {
 	var repairs []string
 	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
 		if args[0] == "--guard-path" {
+			deadline, ok := ctx.Deadline()
+			if !ok || time.Until(deadline) > 10*time.Second {
+				t.Fatal("legacy repair exceeded its original budget")
+			}
 			return `{"client_resource":false}`, nil
 		}
 		if args[0] == "resume-ready" {
@@ -378,5 +383,54 @@ func TestProductRetrySharesCursorAndFailureDoesNotStarveRepairs(t *testing.T) {
 	f.r.releaseRetries(context.Background(), &h)
 	if !reflect.DeepEqual(repairs, []string{"5", "6", "1"}) || !reflect.DeepEqual(f.calls, []string{"product-retry-reserve"}) || h.Retried != 3 || len(h.Errors) != 1 || f.r.State.RetryCursor != 1 {
 		t.Fatal("product retry broke bounded cursor or starved repairs", repairs, f.calls, h)
+	}
+}
+
+func TestTickProductRetryCanCompleteTwoGuardChecksBeyondLegacyTenSeconds(t *testing.T) {
+	f := retryDispatchFixture(t)
+	server(t, f.r, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) })
+	actual := f.r.Run
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if args[0] == "repair-step" {
+			return `{"repair_mode":true,"error":null}`, nil
+		}
+		if args[0] == "product-retry-reserve" || args[0] == "product-retry-bind" {
+			// Both real APIs run a fresh guard (bounded at eight seconds).
+			// Two legal six-second checks must not starve binding every minute.
+			timer := time.NewTimer(6 * time.Second)
+			defer timer.Stop()
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-timer.C:
+			}
+		}
+		return actual(ctx, exe, args...)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+	h := f.r.tick(ctx)
+	if f.binds != 1 || f.models != 1 || h.Retried != 1 || !h.Scheduler {
+		t.Fatal("slow valid guards starved binding", h)
+	}
+	var observation productRetryObservation
+	if err := readJSON(filepath.Join(f.r.Config.Home, "product-retry-observation.json"), maxState, &observation); err != nil || observation.ReserveMS < 6000 || observation.BindingMS < 6000 {
+		t.Fatal("missing real elapsed measurements", err)
+	}
+}
+
+func TestProductRetryCancellationAfterAcceptanceKeepsWaitAndResumesSameJob(t *testing.T) {
+	f := retryDispatchFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	f.onRun = cancel
+	var h Health
+	f.r.releaseRetries(ctx, &h)
+	if len(f.jobs) != 1 || f.binds != 0 || f.models != 0 || candidateRow(f.db)["wait_ready"] == nil {
+		t.Fatal("cancelled caller started or lost a worker")
+	}
+	f.onRun = nil
+	f.r.releaseRetries(context.Background(), &h)
+	if len(f.jobs) != 1 || f.binds != 1 || f.models != 1 {
+		t.Fatal("cancellation replay duplicated worker")
 	}
 }

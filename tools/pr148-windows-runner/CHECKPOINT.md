@@ -1,3 +1,20 @@
+## 2026-10-17 最後の小差分を配送（この節を優先）
+
+code3ba895fのレビュー2763はMust0で受領済み。追加Suggestionの小差分はda2b45eへ
+commit/pushした。最新Go12pass/2opt-in skip、vet/Windows build成功。
+この小差分の有限レビューはToDo2764へ--specで登録した。2764の原応答は未受領なので、
+da2b45e全体をレビュー済みとは呼ばない。前2763のMust0の対象は3ba895fに限る。
+
+今回は新service/account/profile/実Cargo/製品source/正式runnerを作っていない。
+新build root f2590b9747900085d9ed16af40309dc7はbinary SHA/bytes記録後、
+safe-delete plan→別通常削除→finish=source_absentを確認した。
+原レビューと実build指紋はevidence-private/20261017/review-2763配下を保持。
+前5profile/hive/classesは既存2381へ配送済みで、再試行や新しい削除は行っていない。
+
+次の再開は2764の固定base/headと実応答を受領し、Mustがあればその差分だけ修正する。
+親2736へ原応答/候補hash/未達を渡す。親完了は待たない。レビューだけを待つ間は
+2749を2764への正規waitへ記録する。回収だけが残る段階なら2381への正規waitにする。
+強制controller終了や不確定stop時のgate保持は未保証で、親統合の監督/隔離条件を保持する。
 ## 2026-10-17 04時台・レビュー2763受領（この節を優先）
 
 Claude Sonnet5.5の原応答を受領し、SHA/bytes一致でreview-2763/original.mdへ保管した。

@@ -392,7 +392,7 @@ $seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
 Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
 Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
 $firmware=Get-VMFirmware -VM $v
-if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows' -or @($firmware.BootOrder).Count -lt 1 -or -not [String]::Equals([string]$firmware.BootOrder[0].Path,$windowsISO,[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
+if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows' -or @($firmware.BootOrder).Count -lt 1 -or -not [String]::Equals([string]$firmware.BootOrder[0].Device.Path,$windowsISO,[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
 $receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 Start-VM -VM $v|Out-Null
@@ -1104,7 +1104,7 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $firmware=Get-VMFirmware -VM $vm
   if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
   $boot=@($firmware.BootOrder)
-  if($boot.Count -lt 1 -or -not [String]::Equals([string]$boot[0].Path,$iso,[StringComparison]::OrdinalIgnoreCase)){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
+  if($boot.Count -lt 1 -or -not [String]::Equals([string]$boot[0].Device.Path,$iso,[StringComparison]::OrdinalIgnoreCase)){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null

@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `7173220` (current Windows Setup boot-order changes still need commit/push).
+last pushed commit `7aac50c` (the boot-order verification correction is currently uncommitted).
 
 ## Completed
 
@@ -103,17 +103,26 @@ last pushed commit `7173220` (current Windows Setup boot-order changes still nee
   On retry the helper checks the prior cleanup receipt, GUID absence, VHD
   attachment, partition labels/types, and empty OS contents before clearing
   only its own partial VHD. It allows one empty nonce-named image-stage folder
-  and preserves prior receipts byte-for-byte. These Windows Setup changes are
-  uncommitted and untried.
+  and preserves prior receipts byte-for-byte. The change was committed and
+  pushed as `7aac50c`.
+- The `7aac50c` attempt created its own Off VM and recorded the exact UEFI
+  order, but stopped before `Start-VM`: the verification read `BootSource.Path`
+  even though Hyper-V returns the selected component under `BootSource.Device`
+  (an actual `DvdDrive`). A read-only query confirmed the VM is Off with 2 vCPU,
+  fixed 2 GiB, Secure Boot On/MicrosoftWindows, no NIC/GPU, two DVD drives
+  including the official ISO, and a detached task-owned VHDX. The failure is
+  in our verification expression, not a demonstrated Windows Setup boot
+  failure. Both initial-create and recovery checks now compare
+  `BootOrder[0].Device.Path` to the exact official ISO. This correction is
+  uncommitted. Resume the receipt-bound Off VM; do not create another VM.
 
 ## Remaining
 
 1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push the Windows Setup boot-order change.
-2. Build the helper into the owned root and run `vm-smoke` against the already
-   downloaded ISO. Receipt-bound recovery must confirm the previous VM is
-   absent and the owned partial OS partition is empty except for allowed
-   system metadata and the one verified empty stage directory.
+   and push the `BootSource.Device.Path` verification correction.
+2. Rebuild the helper into the owned root and run `vm-smoke` once. It should
+   recover the exact recorded Off VM, replace only its seed DVD with a fresh
+   in-memory identity, verify DVD-first boot order, and start that VM.
 3. Confirm guest readiness, the normal and cancellation child-process
    receipts, then separately verify VM Off, assigned memory zero, and removal.
 4. Copy sanitized evidence into the worktree, update ToDo2737's note

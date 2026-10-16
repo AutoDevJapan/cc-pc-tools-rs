@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `79a7c03` (current working changes still need commit/push).
+last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
 
 ## Completed
 
@@ -10,7 +10,7 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
   `tools/windows-guest-fixture/evidence/todo-2746-20261017.json`.
 - The standard Windows Server 2025 unattended installer and LocalSystem
   COM/mTLS fixture are committed through `e86c004`; subsequent recovery and
-  handoff updates are pushed through `79a7c03`. `go test ./...`, `go vet
+  handoff updates are pushed through `f0dbdb5`. `go test ./...`, `go vet
   ./...`, and `git diff --check` passed on the current working changes. They
   only compile/check the module; the Hyper-V guest path has not yet run.
 - The answer file accepts EULA, selects the Standard Evaluation image, and
@@ -52,21 +52,32 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
   recorded below.
 
 - With the minimized-environment broker probe fixed, the latest provisioning
-  attempt reached the official ISO mount but looked for `C:\setup.exe`; no
-  VM receipt/VHDX was created. A targeted, read-only broker probe confirmed
-  that the ISO can be mounted and dismounted by the broker. The helper now
-  re-queries that exact ISO with `Get-DiskImage -ImagePath` and gets its volume
-  using the documented `Get-DiskImage | Get-Volume` route, then checks for the
-  expected setup files before proceeding. This correction remains untried.
+  attempt reached the official ISO mount but incorrectly looked for
+  `C:\setup.exe`; no VM was created in that attempt. A targeted, read-only
+  broker probe confirmed the ISO mount/unmount path. The helper now re-queries
+  the exact ISO with `Get-DiskImage -ImagePath`, gets its volume with the
+  documented `Get-DiskImage | Get-Volume` route, and checks the expected setup
+  files. The next attempt passed ISO validation and created the VM/VHDX, then
+  stopped at a false-negative Secure Boot check. The VM is Off, 2 vCPU, fixed
+  2 GiB, Secure Boot On/MicrosoftWindows, 0 NICs, 0 GPU adapters, 2 DVDs, and
+  1 VHD. Its receipt and VHDX remain in the safe-delete-owned root. A targeted
+  read-only broker query verified those settings by the receipt's exact VM
+  GUID. The cause was treating PowerShell's enum-like `SecureBoot` value as a
+  boolean; the helper now compares the string value explicitly and has a
+  receipt-bound resume path that replaces the unconsumed seed DVD with a fresh
+  in-memory host identity before starting this same Off VM. Go compilation,
+  vet, and diff checks passed; this recovery change and the live resume path
+  are not yet committed or run. Inspection also confirmed the Windows
+  PowerShell receipt has a UTF-8 BOM; Go receipt readers now strip that marker
+  before JSON decoding.
 
 ## Remaining
 
-1. Commit/push the current helper changes, then build it into the owned root
-   and run its `vm-smoke` command once with the already-downloaded ISO. It
-   verifies Microsoft's Authenticode signature and the evaluation image name
-   before creating the VM. The prior run left no VM/VHDX; if the broker still
-   rejects the request, preserve the exact diagnostic and keep using the
-   approved broker path.
+1. Commit/push the current recovery changes. Build into the owned root and run
+   `vm-smoke` with the already-downloaded ISO. Since both VHDX and receipt exist,
+   it must resume the single receipt-identified VM and reject any identity or
+   configuration mismatch. Do not rerun the fresh-provision path or create a
+   second VM.
 2. Confirm the answer file is discovered from the separate seed DVD, the
    LocalSystem service starts through normal Setup, and both real fixtures
    report process and namespace cleanup.

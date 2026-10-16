@@ -116,12 +116,19 @@ func runVMProvision(root, isoPath string) error {
 	if !info.Mode().IsRegular() || info.Size() != evalISOBytes {
 		return fmt.Errorf("evaluation ISO size mismatch: got %d bytes", info.Size())
 	}
-	for _, rel := range []string{"guest.vhdx", "vm-created.private.json"} {
-		if _, err := os.Lstat(filepath.Join(root, rel)); err == nil {
-			return errors.New("owned root already contains a VM resource; use its saved receipt for recovery")
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return errors.New("owned VM resource state could not be inspected")
+	hasVHD, err := ownedPathExists(root, "guest.vhdx")
+	if err != nil {
+		return errors.New("owned VHD state could not be inspected")
+	}
+	hasReceipt, err := ownedPathExists(root, "vm-created.private.json")
+	if err != nil {
+		return errors.New("owned VM receipt state could not be inspected")
+	}
+	if hasVHD || hasReceipt {
+		if hasVHD && hasReceipt {
+			return resumeVMProvision(root, isoPath)
 		}
+		return errors.New("owned root contains incomplete VM state without a matching VHD and receipt")
 	}
 
 	var entropy [32]byte
@@ -137,43 +144,7 @@ func runVMProvision(root, isoPath string) error {
 	}
 	defer clearIdentity(&client)
 
-	seedRoot := filepath.Join(root, "seed")
-	if err := os.Mkdir(seedRoot, 0700); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		seedInfo, statErr := os.Lstat(seedRoot)
-		if statErr != nil || !seedInfo.IsDir() || seedInfo.Mode()&os.ModeSymlink != 0 {
-			return errors.New("owned seed directory is not a real directory")
-		}
-	}
-	seed := vmSeed{Instance: instance, ClientSHA256: client.SHA256}
-	seedBytes, err := json.MarshalIndent(seed, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := writeOwnedFile(filepath.Join(seedRoot, "cc2746-seed.json"), append(seedBytes, '\n')); err != nil {
-		return err
-	}
-	answer := seedAnswerFile()
-	if err := validateSeedAnswerFile(answer); err != nil {
-		return err
-	}
-	if err := writeOwnedFile(filepath.Join(seedRoot, "Autounattend.xml"), []byte(answer)); err != nil {
-		return err
-	}
-	if err := writeOwnedFile(filepath.Join(seedRoot, "stage.ps1"), []byte(seedStageScript())); err != nil {
-		return err
-	}
-	currentExe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	guestExe := filepath.Join(seedRoot, "cc2746-guest.exe")
-	if err := copyReplacingOwned(currentExe, guestExe); err != nil {
-		return err
-	}
-	seedISO, err := createSeedISO(root, seedRoot, instance)
+	seedISO, err := createGuestSeed(root, instance, client, instance)
 	if err != nil {
 		return err
 	}
@@ -189,13 +160,177 @@ func runVMProvision(root, isoPath string) error {
 	if err != nil {
 		return err
 	}
-	if err := validateVMReceipt(vm, root, instance); err != nil {
+	return runVMFixturesAndRecord(root, isoPath, info.Size(), vm, client)
+}
+
+func ownedPathExists(root, rel string) (bool, error) {
+	info, err := os.Lstat(filepath.Join(root, rel))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return false, errors.New("owned state path is not a regular file")
+	}
+	return true, nil
+}
+
+func createGuestSeed(root, instance string, client vmIdentity, seedID string) (string, error) {
+	seedRoot := filepath.Join(root, "seed")
+	if err := os.Mkdir(seedRoot, 0700); err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return "", err
+		}
+		seedInfo, statErr := os.Lstat(seedRoot)
+		if statErr != nil || !seedInfo.IsDir() || seedInfo.Mode()&os.ModeSymlink != 0 {
+			return "", errors.New("owned seed directory is not a real directory")
+		}
+	}
+	seed := vmSeed{Instance: instance, ClientSHA256: client.SHA256}
+	seedBytes, err := json.MarshalIndent(seed, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if err := writeOwnedFile(filepath.Join(seedRoot, "cc2746-seed.json"), append(seedBytes, '\n')); err != nil {
+		return "", err
+	}
+	answer := seedAnswerFile()
+	if err := validateSeedAnswerFile(answer); err != nil {
+		return "", err
+	}
+	if err := writeOwnedFile(filepath.Join(seedRoot, "Autounattend.xml"), []byte(answer)); err != nil {
+		return "", err
+	}
+	if err := writeOwnedFile(filepath.Join(seedRoot, "stage.ps1"), []byte(seedStageScript())); err != nil {
+		return "", err
+	}
+	currentExe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if err := copyReplacingOwned(currentExe, filepath.Join(seedRoot, "cc2746-guest.exe")); err != nil {
+		return "", err
+	}
+	return createSeedISO(root, seedRoot, seedID)
+}
+
+func resumeVMProvision(root, isoPath string) error {
+	vm, err := readVMReceipt(root)
+	if err != nil {
+		return errors.New("owned VM recovery receipt could not be read")
+	}
+	if err := validatePartialVMReceipt(vm, root, isoPath); err != nil {
+		return err
+	}
+	client, err := newVMIdentity()
+	if err != nil {
+		return err
+	}
+	defer clearIdentity(&client)
+	var entropy [32]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return err
+	}
+	seedHash := sha256.Sum256(entropy[:])
+	seedID := hex.EncodeToString(seedHash[:16])
+	clear(entropy[:])
+	seedISO, err := createGuestSeed(root, vm.Instance, client, seedID)
+	if err != nil {
+		return err
+	}
+	script := filepath.Join(root, "vm-resume.ps1")
+	if err := os.WriteFile(script, []byte(resumeVMPS(root, vm, seedISO)), 0600); err != nil {
+		return err
+	}
+	if err := runAdminBroker(script, 300); err != nil {
+		return errors.New("owned Hyper-V guest resume failed; retain its receipt and VHDX for recovery")
+	}
+	vm, err = readVMReceipt(root)
+	if err != nil {
+		return errors.New("resumed VM receipt could not be read")
+	}
+	info, err := os.Stat(isoPath)
+	if err != nil {
+		return errors.New("official evaluation ISO is unavailable during recovery")
+	}
+	return runVMFixturesAndRecord(root, isoPath, info.Size(), vm, client)
+}
+
+func validatePartialVMReceipt(vm vmReceipt, root, isoPath string) error {
+	if !validVMID(vm.ID) || !validInstance(vm.Instance) || vm.Name != "cc-2746-"+vm.Instance || vm.Generation != 2 ||
+		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || vm.VHD != filepath.Join(root, "guest.vhdx") ||
+		vm.WindowsISO != isoPath || !validSeedISOPath(root, vm.SeedISO) || vm.Pipe != `\\.\pipe\cc-2746-`+vm.Instance {
+		return errors.New("partial Hyper-V receipt does not identify this owned VM")
+	}
+	return nil
+}
+
+func validVMID(value string) bool {
+	parts := strings.Split(value, "-")
+	if len(parts) != 5 || len(parts[0]) != 8 || len(parts[1]) != 4 || len(parts[2]) != 4 || len(parts[3]) != 4 || len(parts[4]) != 12 {
+		return false
+	}
+	_, err := hex.DecodeString(strings.Join(parts, ""))
+	return err == nil
+}
+
+func validSeedISOPath(root, path string) bool {
+	cleaned := filepath.Clean(path)
+	if !strings.EqualFold(filepath.Dir(cleaned), filepath.Clean(root)) {
+		return false
+	}
+	name := filepath.Base(cleaned)
+	if !strings.HasPrefix(name, "cc2746-seed-") || !strings.HasSuffix(name, ".iso") {
+		return false
+	}
+	return validInstance(strings.TrimSuffix(strings.TrimPrefix(name, "cc2746-seed-"), ".iso"))
+}
+
+func resumeVMPS(root string, vm vmReceipt, seedISO string) string {
+	q := psQuote
+	return `$ErrorActionPreference='Stop'
+Import-Module Hyper-V
+$id=[guid]` + q(vm.ID) + `
+$name=` + q(vm.Name) + `
+$root=` + q(root) + `
+$instance=` + q(vm.Instance) + `
+$vhd=` + q(vm.VHD) + `
+$windowsISO=` + q(vm.WindowsISO) + `
+$oldSeedISO=` + q(vm.SeedISO) + `
+$newSeedISO=` + q(seedISO) + `
+$pipe=` + q(vm.Pipe) + `
+if(-not (Test-Path -LiteralPath $newSeedISO)){throw 'OWNED_NEW_SEED_ISO_MISSING'}
+$v=Get-VM -Id $id -ErrorAction Stop
+if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not [String]::Equals([IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\'),[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_RECOVERY_IDENTITY_MISMATCH'}
+$cp=$v|Get-VMComPort|Where-Object Number -EQ 1
+$dvds=@($v|Get-VMDvdDrive)
+$vhds=@($v|Get-VMHardDiskDrive)
+$memory=Get-VMMemory -VM $v
+$firmware=Get-VMFirmware -VM $v
+$nics=@($v|Get-VMNetworkAdapter).Count
+$gpus=@($v|Get-VMGpuPartitionAdapter -ErrorAction SilentlyContinue).Count
+if($v.State -ne 'Off' -or $v.Generation -ne 2 -or $v.ProcessorCount -ne 2 -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd -or -not $cp -or $cp.Path -cne $pipe -or @($dvds|Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds|Where-Object Path -CEQ $oldSeedISO).Count -ne 1){throw 'OWNED_VM_RECOVERY_RESOURCE_MISMATCH'}
+if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'OWNED_VM_RECOVERY_SECURE_BOOT_MISMATCH'}
+$winDvd=$dvds|Where-Object Path -CEQ $windowsISO|Select-Object -First 1
+$seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
+Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
+Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -FirstBootDevice $winDvd
+$receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
+$receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
+Start-VM -VM $v|Out-Null
+`
+}
+
+func runVMFixturesAndRecord(root, isoPath string, imageBytes int64, vm vmReceipt, client vmIdentity) error {
+	if err := validateVMReceipt(vm, root, vm.Instance); err != nil {
 		return err
 	}
 	normal, cancel, fixtureErr := runVMFixtures(vm, client)
 	cleanup, cleanupErr := cleanupOwnedVM(root, vm)
 	if fixtureErr != nil {
-		failure := map[string]any{"schema": "windows-hyperv-guest-fixture-failure-v1", "observed_at": time.Now().UTC(), "instance": instance, "fixture_error": "guest fixture did not complete", "cleanup": cleanup, "cleanup_error": cleanupErr != nil}
+		failure := map[string]any{"schema": "windows-hyperv-guest-fixture-failure-v1", "observed_at": time.Now().UTC(), "instance": vm.Instance, "fixture_error": "guest fixture did not complete", "cleanup": cleanup, "cleanup_error": cleanupErr != nil}
 		_ = writeJSONAtomic(filepath.Join(root, "vm-fixture-failure.private.json"), failure)
 		if cleanupErr != nil {
 			return errors.New("Windows guest fixture failed and owned VM cleanup also failed; preserve the recorded VM and root for recovery")
@@ -205,14 +340,13 @@ func runVMProvision(root, isoPath string) error {
 	if cleanupErr != nil {
 		return errors.New("owned VM cleanup failed; retain the VM and safe-delete root for recovery")
 	}
-
 	isoHash, err := hashFile(isoPath)
 	if err != nil {
 		return err
 	}
 	evidence := vmEvidence{
-		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: instance,
-		ImageBytes: info.Size(), ImageSHA256: isoHash,
+		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: vm.Instance,
+		ImageBytes: imageBytes, ImageSHA256: isoHash,
 		VM:     vmPublicReceipt{VMID: vm.ID, Generation: vm.Generation, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, DVDCount: vm.DVDCount, VHDCount: vm.VHDCount, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
 		CredentialFree: true, UnattendEULAConfigured: true, OOBESkipConfigured: false, LocalUserCreated: false,
@@ -685,6 +819,7 @@ func readVMReceipt(root string) (vmReceipt, error) {
 	if err != nil {
 		return receipt, err
 	}
+	data = bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf})
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&receipt)
@@ -697,6 +832,7 @@ func readCleanupReceipt(root string) (cleanupReceipt, error) {
 	if err != nil {
 		return receipt, err
 	}
+	data = bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf})
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&receipt)
@@ -706,7 +842,7 @@ func readCleanupReceipt(root string) (cleanupReceipt, error) {
 func validateVMReceipt(vm vmReceipt, root, instance string) error {
 	if vm.Instance != instance || !validInstance(vm.Instance) || vm.ID == "" || vm.Name != "cc-2746-"+instance ||
 		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || vm.VHD != filepath.Join(root, "guest.vhdx") ||
-		vm.WindowsISO != filepath.Join(root, "windows-server-2025-eval.iso") || vm.SeedISO != filepath.Join(root, "cc2746-seed-"+instance+".iso") || vm.DVDCount != 2 || vm.VHDCount != 1 ||
+		vm.WindowsISO != filepath.Join(root, "windows-server-2025-eval.iso") || !validSeedISOPath(root, vm.SeedISO) || vm.DVDCount != 2 || vm.VHDCount != 1 ||
 		vm.Generation != 2 || vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || !vm.SecureBoot ||
 		vm.NetworkAdapters != 0 || vm.GPUAdapters != 0 {
 		return errors.New("Hyper-V VM ownership or resource configuration rejected")
@@ -810,8 +946,8 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $vhds=@($vm | Get-VMHardDiskDrive)
   if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
   $firmware=Get-VMFirmware -VM $vm
-  if(-not $firmware.SecureBoot -or $firmware.SecureBootTemplate -ne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$firmware.SecureBoot;network_adapters=$nics;gpu_adapters=$gpus}
+  if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
+$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
 } catch {

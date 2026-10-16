@@ -43,6 +43,15 @@ receipt for recovery. After a verified VM removal, preserve the private
 evidence JSON outside the owned root before using `safe-delete plan`, a
 separate normal deletion call, and `safe-delete finish`.
 
+If the owned root contains both `guest.vhdx` and `vm-created.private.json`, a
+subsequent `vm-smoke` invocation follows the receipt's exact VM GUID and may
+resume only while that VM is Off and its notes, configuration path, VHD, DVDs,
+COM port, CPU, memory, NIC, GPU, and Secure Boot settings match. It generates a
+fresh host identity in memory, replaces the still-unconsumed seed DVD, writes
+the complete receipt, and starts that same VM. If only one of the VHD or
+receipt exists, or any identity/configuration check fails, it stops without
+creating or changing another VM.
+
 The result demonstrates only this finite Windows guest and its live
 normal/cancel cleanup. It does not execute the GoDD product workflow, the 13
 original CI steps, Cargo, or an official runner. It does not guarantee

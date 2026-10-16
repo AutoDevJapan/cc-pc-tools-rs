@@ -1,0 +1,41 @@
+{
+  "schema": "windows-job-object-fixture-v1",
+  "observed_at": "2026-10-17T01:51:41+09:00",
+  "host": "Windows 11 Pro x64",
+  "guest_created": false,
+  "ramdisk_created": false,
+  "process_namespace": "Windows Job Object with KILL_ON_JOB_CLOSE",
+  "credential_free": true,
+  "product_ci_executed": false,
+  "fixtures": [
+    {
+      "case": "normal",
+      "namespace_created": true,
+      "child_pids": [9952, 5432],
+      "both_observed_alive": true,
+      "children_exited": true,
+      "namespace_removed": true,
+      "cancellation_fired": false,
+      "nonce_sha256": "7da9f33cf01115b878a962c4f93fa5dc1c7442cebffd987fc1143aa1f7d29a0b",
+      "elapsed_milliseconds": 1402
+    },
+    {
+      "case": "cancel",
+      "namespace_created": true,
+      "child_pids": [23556, 40344],
+      "both_observed_alive": true,
+      "children_exited": true,
+      "namespace_removed": true,
+      "cancellation_fired": true,
+      "nonce_sha256": "e2800183936b964a31b38fdb2fec1046670ac0c77f57a1fc98ed4c1eb02a4fc4",
+      "elapsed_milliseconds": 343
+    }
+  ],
+  "vm_provisioning_limit": "The public Windows Server 2025 evaluation page requires registration. Hyper-V PowerShell Direct requires valid guest credentials. No credential-free unattended guest setup was available without placing a secret in a file or interactive VM UI.",
+  "sources": [
+    "https://www.microsoft.com/en-us/evalcenter/download-windows-server-2025",
+    "https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/powershell-direct"
+  ],
+  "host_shutdown_recovery_tested": false,
+  "original_windows_ci_claimed": false
+}

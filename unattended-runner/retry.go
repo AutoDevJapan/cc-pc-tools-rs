@@ -12,6 +12,11 @@ import (
 // that capability for the explicitly verified PC repairs, without touching
 // owner holds, private projects or other readiness conditions.
 func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
+	var body json.RawMessage
+	if err := readJSON(r.TodoPath, maxTodo, &body); err != nil {
+		health.Errors = append(health.Errors, "technical_retry_metadata_deferred")
+		return
+	}
 	var db struct {
 		Projects map[string]string `json:"projects"`
 		Items    []struct {
@@ -21,7 +26,7 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 			Ready   json.RawMessage `json:"wait_ready"`
 		} `json:"items"`
 	}
-	if err := readJSON(r.TodoPath, maxTodo, &db); err != nil {
+	if err := json.Unmarshal(body, &db); err != nil {
 		health.Errors = append(health.Errors, "technical_retry_metadata_deferred")
 		return
 	}
@@ -30,12 +35,19 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		return
 	}
 	type candidate struct {
-		id   uint64
-		root string
+		id      uint64
+		root    string
+		product *productRetryCandidate
 	}
 	var due []candidate
+	product, err := selectProductRetry(body, r.Now())
+	if err != nil {
+		health.Errors = append(health.Errors, "product_retry_metadata_deferred")
+	} else if product != nil {
+		due = append(due, candidate{id: productRetryID, product: product})
+	}
 	for _, row := range db.Items {
-		if row.ID == 0 || row.Status != "wait" || (row.Project != "cc-pc-tools-rs" && row.Project != "pc-capacity-audit" && row.Project != "localai-web-rs") {
+		if row.ID == 0 || row.ID == productRetryID || row.Status != "wait" || (row.Project != "cc-pc-tools-rs" && row.Project != "pc-capacity-audit" && row.Project != "localai-web-rs") {
 			continue
 		}
 		var wait struct {
@@ -48,7 +60,7 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		}
 		root := db.Projects[row.Project]
 		if filepath.IsAbs(root) {
-			due = append(due, candidate{row.ID, root})
+			due = append(due, candidate{id: row.ID, root: root})
 		}
 	}
 	sort.Slice(due, func(i, j int) bool { return due[i].id < due[j].id })
@@ -63,6 +75,10 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		if err := r.save(); err != nil {
 			health.Errors = append(health.Errors, "technical_retry_cursor_deferred")
 			return
+		}
+		if item.product != nil {
+			r.resumeProductRetry(ctx, health, item.product)
+			continue
 		}
 		allowed, known := verified[item.root]
 		if !known {

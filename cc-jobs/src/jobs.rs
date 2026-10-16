@@ -25,6 +25,12 @@ impl Context {
     /// including old saved jobs and both kinds of continuation. Keep the
     /// original input immutable; appending this rule does not elevate scope.
     pub fn prompt_for_attempt(&self, job: &Value) -> Result<PathBuf> {
+        if !job["fixed_review_requalification"].is_null() && job["fixed_read_only_review"].is_null()
+        {
+            return Err(Error::new(
+                "fixed review continuation needs fresh qualification",
+            ));
+        }
         let dir = self.job_dir(s(job, "id"));
         let source = dir.join(if s(job, "context_phase") == "summarize" {
             "context-summary-prompt.md"

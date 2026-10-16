@@ -62,6 +62,54 @@ fn plan(f: &Fixture, j: &Value, w: &Value, r: &Request) -> Result<Value, String>
 }
 
 #[test]
+fn continuation_needs_the_same_finished_qualification_and_no_other_wait() {
+    for case in [
+        "valid",
+        "other_wait",
+        "manual_dependency",
+        "model",
+        "fixed_head",
+        "identity",
+        "live_source",
+    ] {
+        let (mut f, j, w, mut r) = setup();
+        let mut source = plan(&f, &j, &w, &r).unwrap();
+        source["status"] = json!("succeeded");
+        source["exit_code"] = json!(0);
+        source["finished_at"] = json!("2026-10-17T01:00:00+09:00");
+        let mut next = j.clone();
+        next["id"] = json!("continuation");
+        next["work_wait_on"] = json!([]);
+        next["work_wait_evidence"] = Value::Null;
+        next["fixed_review_requalification"] = json!({"source_job_id":"child"});
+        f.db["items"][1]["jobs"] = json!(["child", "continuation"]);
+        f.db["items"][1]["scheduler"]["job"] = json!("continuation");
+        r.job_id = "continuation".into();
+        match case {
+            "other_wait" => next["work_wait_on"] = json!([77]),
+            "manual_dependency" => f.db["items"][1]["wait_on"] = json!([77]),
+            "model" => next["model"] = json!("changed"),
+            "fixed_head" => r.fixed_head = "c".repeat(40),
+            "identity" => source["fixed_read_only_review"]["identity"] = json!({}),
+            "live_source" => source["status"] = json!("running"),
+            _ => (),
+        }
+        let before = next.clone();
+        let result = finished_review::plan_continuation(
+            &f.db,
+            &next,
+            &f.jobs[0],
+            &w,
+            &r,
+            [b"child", b"parent", b"prompt"],
+            Some(&source),
+        );
+        assert_eq!(result.is_ok(), case == "valid", "{case}: {result:?}");
+        assert_eq!(next, before);
+    }
+}
+
+#[test]
 fn finished_writer_does_not_make_its_cleanup_a_fixed_readers_prerequisite() {
     let (f, j, w, r) = setup();
     let before = f.db.clone();

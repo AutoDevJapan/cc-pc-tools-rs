@@ -4,8 +4,8 @@ use crate::{product_retry::digest, todo_wait, work_owner};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-/// Version 2 enforces external-tool isolation in the actual spawn builder.
-pub const EXECUTION_PROTOCOL: u64 = 2;
+/// Version 3 also gates a normally registered continuation on fresh qualification.
+pub const EXECUTION_PROTOCOL: u64 = 3;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -76,6 +76,22 @@ pub fn plan(
     owner: &Value,
     r: &Request,
     inputs: [&[u8]; 3],
+) -> Result<Value, String> {
+    plan_continuation(db, job, parent, owner, r, inputs, None)
+}
+
+/// The caller additionally checks the original qualification's immutable prompt
+/// bytes and terminal process identity. A continuation never inherits authority
+/// just from matching a PR, session, or ToDo number.
+#[allow(clippy::too_many_arguments)] // Same plan inputs plus the separately verified old job.
+pub fn plan_continuation(
+    db: &Value,
+    job: &Value,
+    parent: &Value,
+    owner: &Value,
+    r: &Request,
+    inputs: [&[u8]; 3],
+    source: Option<&Value>,
 ) -> Result<Value, String> {
     let child = row(db, r.todo_id)?;
     let root = row(db, r.parent_todo_id)?;
@@ -162,12 +178,40 @@ pub fn plan(
     {
         return Err("fixed review source and writer do not share verified ownership".into());
     }
-    if job["work_wait_on"] != json!([r.owner_todo_id])
-        || job["work_wait_evidence"]["owner_job_id"] != owner["id"]
-        || job["work_wait_evidence"]["owner"] != work_owner::owner_evidence(owner)
-        || job["work_wait_evidence"]["candidate_identity"] != job["work_owner"]
-    {
-        return Err("fixed review requires the exact automatic writer edge".into());
+    let automatic_edge = job["work_wait_on"] == json!([r.owner_todo_id])
+        && job["work_wait_evidence"]["owner_job_id"] == owner["id"]
+        && job["work_wait_evidence"]["owner"] == work_owner::owner_evidence(owner)
+        && job["work_wait_evidence"]["candidate_identity"] == job["work_owner"];
+    let continuation = source.is_some_and(|source| {
+        let old = &source["fixed_read_only_review"]["request"];
+        stopped(source)
+            && job["fixed_review_requalification"]["source_job_id"] == source["id"]
+            && source["todo_id"] == job["todo_id"]
+            && source["work_owner"] == job["work_owner"]
+            && source["fixed_read_only_review"]["identity"] == source["work_owner"]
+            && source["model"] == job["model"]
+            && source["effort"] == job["effort"]
+            && source["sandbox"] == "read-only"
+            && source["approval_policy"] == "never"
+            && source["approvals_reviewer"] == "user"
+            && source["network"] == false
+            && old["job_id"] == source["id"]
+            && old["todo_id"] == r.todo_id
+            && old["parent_job_id"] == r.parent_job_id
+            && old["parent_todo_id"] == r.parent_todo_id
+            && old["owner_job_id"] == r.owner_job_id
+            && old["owner_todo_id"] == r.owner_todo_id
+            && old["fixed_base"] == r.fixed_base
+            && old["fixed_head"] == r.fixed_head
+            && old["read_only"] == true
+            && (automatic_edge
+                || ((job["work_wait_on"].is_null() || job["work_wait_on"] == json!([]))
+                    && job["work_wait_evidence"].is_null()))
+    });
+    if !continuation && (!automatic_edge || !job["fixed_review_requalification"].is_null()) {
+        return Err(
+            "fixed review requires the exact automatic writer edge or verified continuation".into(),
+        );
     }
     let mut result = job.clone();
     if !result["work_wait_history"].is_array() {

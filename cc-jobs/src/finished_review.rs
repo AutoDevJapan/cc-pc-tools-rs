@@ -3,6 +3,48 @@ use cc_job_policy::finished_review::{self, Request};
 use std::{fs, path::Path};
 
 impl Context {
+    /// A normal scheduler continuation has a new prompt and job ID. It cannot
+    /// reuse the old qualification, nor silently return to launcher privileges.
+    /// Read only this ToDo's recorded history while registration holds its lock.
+    pub(crate) fn inherit_fixed_review_requirement(
+        &self,
+        db: &Value,
+        job: &mut Value,
+    ) -> Result<()> {
+        let Some(row) = db["items"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|row| job["todo_id"].is_u64() && row["id"] == job["todo_id"])
+        else {
+            return Ok(());
+        };
+        for id in row["jobs"].as_array().into_iter().flatten().rev() {
+            let id = id
+                .as_str()
+                .ok_or_else(|| Error::new("invalid fixed review history ID"))?;
+            if !queue::valid_job_id(id) {
+                return Err(Error::new("invalid fixed review history ID"));
+            }
+            let source = self.load(id)?;
+            if !source["fixed_read_only_review"].is_null()
+                || !source["fixed_review_requalification"].is_null()
+            {
+                let source_id = if source["fixed_read_only_review"].is_null() {
+                    &source["fixed_review_requalification"]["source_job_id"]
+                } else {
+                    &source["id"]
+                };
+                if !source_id.as_str().is_some_and(queue::valid_job_id) {
+                    return Err(Error::new("invalid fixed review continuation source"));
+                }
+                job["fixed_review_requalification"] = json!({"source_job_id":source_id});
+                break;
+            }
+        }
+        Ok(())
+    }
+
     pub fn qualify_finished_review(&self, r: &Request, apply: bool) -> Result<Value> {
         let ids = [&r.job_id, &r.parent_job_id, &r.owner_job_id];
         if ids.iter().any(|id| !queue::valid_job_id(id))
@@ -23,6 +65,43 @@ impl Context {
         let job = self.load(&r.job_id)?;
         let parent = self.load(&r.parent_job_id)?;
         let owner = self.load(&r.owner_job_id)?;
+        let _source_state = if !job["fixed_review_requalification"].is_null() {
+            let id = s(&job["fixed_review_requalification"], "source_job_id");
+            if !queue::valid_job_id(id) || ids.iter().any(|other| other.as_str() == id) {
+                return Err(Error::new("invalid fixed review continuation source"));
+            }
+            Some(FileLock::try_acquire(&self.job_dir(id).join("state.lock"))?)
+        } else {
+            None
+        };
+        let source = if !job["fixed_review_requalification"].is_null() {
+            let id = s(&job["fixed_review_requalification"], "source_job_id");
+            if !queue::valid_job_id(id) || ids.iter().any(|other| other.as_str() == id) {
+                return Err(Error::new("invalid fixed review continuation source"));
+            }
+            let source = self.load(id)?;
+            if self.is_ours_checked(&source, "pid")?
+                || self.is_ours_checked(&source, "codex_pid")?
+            {
+                return Err(Error::new("fixed review continuation source is still live"));
+            }
+            let old = &source["fixed_read_only_review"];
+            if finished_review::hex(s(&old["request"], "prompt_sha256"), 64)
+                && cc_job_policy::product_retry::digest(&fs::read(
+                    self.job_dir(id).join("prompt.md"),
+                )?) == old["request"]["prompt_sha256"]
+                && cc_job_policy::product_retry::digest(&fs::read(Path::new(s(old, "spec")))?)
+                    == old["request"]["child_spec_sha256"]
+            {
+                Some(source)
+            } else {
+                return Err(Error::new(
+                    "fixed review continuation original inputs changed",
+                ));
+            }
+        } else {
+            None
+        };
         if !self.is_ours_checked(&job, "pid")?
             || self.is_ours_checked(&job, "codex_pid")?
             || [&parent, &owner]
@@ -62,7 +141,7 @@ impl Context {
             }
             Ok(fs::read(Path::new(s(row, "spec")))?)
         };
-        let mut next = finished_review::plan(
+        let mut next = finished_review::plan_continuation(
             &db,
             &job,
             &parent,
@@ -73,6 +152,7 @@ impl Context {
                 &spec(r.parent_todo_id)?,
                 &fs::read(self.job_dir(&r.job_id).join("prompt.md"))?,
             ],
+            source.as_ref(),
         )
         .map_err(Error::new)?;
         let git = |args: &[&str]| -> Result<Reply> {
@@ -110,7 +190,8 @@ impl Context {
             self.save(&next)?;
         }
         Ok(
-            json!({"job_id":r.job_id,"applied":apply,"proposed_removed_wait":r.owner_todo_id,
+            json!({"job_id":r.job_id,"applied":apply,"proposed_removed_wait":
+                if job["work_wait_on"] == json!([r.owner_todo_id]) {Some(r.owner_todo_id)} else {None},
             "launched":0,"todo_changed":false,"sandbox":"read-only","fixed_head":r.fixed_head}),
         )
     }

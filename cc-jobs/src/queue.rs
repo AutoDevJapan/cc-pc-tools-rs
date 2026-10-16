@@ -1570,6 +1570,11 @@ impl Context {
     // A legacy automatic home-Git claim may be disproved without changing the durable store;
     // a newly registered manual dependency or readiness wait must still stop admission.
     fn dependency_reason(&self, source_db: &Value, job: &Value, jobs: &[Value]) -> Option<Value> {
+        if !job["fixed_review_requalification"].is_null() && job["fixed_read_only_review"].is_null()
+        {
+            return Some(json!({"code":"fixed_review_requalification",
+                "message":"固定レビューの継続には新しい本文と元記録の資格確認が必要です"}));
+        }
         if let Some(reason) =
             cc_job_policy::product_retry::admission_reason(source_db, job, self.rt.epoch() as u64)
         {

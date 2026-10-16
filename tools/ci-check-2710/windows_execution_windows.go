@@ -72,6 +72,7 @@ func winRun(ctx context.Context, file string) error {
 func winTree(v winPlan, env []string) error {
 	source := filepath.Join(v.Root, "source")
 	run := func(args []string, input string) ([]byte, error) {
+		args = append([]string{"-c", "safe.directory=" + source}, args...)
 		c := exec.Command(`C:\Program Files\Git\cmd\git.exe`, args...)
 		hidden(c)
 		c.Env = env
@@ -130,6 +131,10 @@ func winTree(v winPlan, env []string) error {
 }
 
 func winSDKEnvironment(v winPlan, env []string) ([]string, error) {
+	sdkRoot := v.SDKRoot
+	if sdkRoot == "" {
+		sdkRoot = v.Root
+	}
 	vc := exec.Command(`C:\Windows\System32\cmd.exe`, "/d", "/s", "/c", `""C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul && set PATH && set INCLUDE && set LIB && set LIBPATH"`)
 	hidden(vc)
 	vc.SysProcAttr.CmdLine = `C:\Windows\System32\cmd.exe /d /s /c ""C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul && set PATH && set INCLUDE && set LIB && set LIBPATH"`
@@ -156,9 +161,15 @@ func winSDKEnvironment(v winPlan, env []string) ([]string, error) {
 	}
 	sdkBin := filepath.Dir(os.Args[0])
 	env = append(env, "RUSTUP_TOOLCHAIN="+v.Version, "SCCACHE_DIR=D:\\CC\\BuildCache\\sccache", "SCCACHE_CACHE_SIZE=30G", "SCCACHE_SERVER_PORT=42310", "RUSTC_WRAPPER=D:\\CC\\Tools\\sccache\\sccache.exe")
+	core := filepath.Join(sdkRoot, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "bin")
+	linkTools := filepath.Join(sdkRoot, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "lib", "rustlib", "x86_64-pc-windows-msvc", "bin")
+	env = append(env, "RUSTC="+filepath.Join(core, "rustc.exe"), "RUSTDOC="+filepath.Join(core, "rustdoc.exe"))
 	for i, entry := range env {
 		if strings.HasPrefix(strings.ToUpper(entry), "PATH=") {
-			env[i] = "PATH=" + sdkBin + ";" + filepath.Join(v.Root, "cargo", "bin") + ";" + filepath.Join(v.Root, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "bin") + ";" + entry[5:]
+			env[i] = "PATH=" + filepath.Join(v.Root, "ci-tools") + ";" + sdkBin + ";" + core + ";" + linkTools + ";" + filepath.Join(sdkRoot, "cargo", "bin") + `;C:\Program Files\PowerShell\7;C:\Windows\System32\WindowsPowerShell\v1.0;` + entry[5:]
+			if v.NodeRoot != "" {
+				env[i] = "PATH=" + v.NodeRoot + ";" + env[i][5:]
+			}
 		}
 	}
 	return env, nil

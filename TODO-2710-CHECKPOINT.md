@@ -44,3 +44,19 @@
 - Windows製品テスト前のGit initはexit1で停止し、製品テスト0。raw stderrは私的ログだけへ保存。専用accountから同じ場所での実mkdirとWin32 canonicalizeは成功。sourceを専用account所有へ直してもGit失敗が残るため、profile/canonicalizeが原因とは断定しない。System Tempへのsafe-delete createは非0で失敗し、新rootは作れていない。同じ作成の再試行や設定変更で回避しない。この失敗は自動承認レビューの拒否とは報告しない。
 - WindowsSDKのread-only共有とcompiler cacheだけに、今回新設したSIDの一時ACLを追加。所有記録はowned root/windows/.ci-work/service-ownership.private.json。完了後は自分のサービス停止/削除と、新SIDの追加ACEだけの回収を行う。元SDK/runtime設定を戻す一括上書きはしない。
 - 追加Go sourceは実検査を行うための有限の補助であり、独立PR/merge/配布はしない。全件成功のstatusを書かない。元2640/2641/2642をdoneにしない。
+
+## 2026-10-16 後半の保存点
+
+- 追加所有root（Windows source・target）: D:/CC/Work/unattended-operations-20261013-wt/todo-2710-3-rust-lua-ci/codex-owned-f63ee9e9c1833708c3220fe91bbf7736。所有ID f63ee9e9c1833708c3220fe91bbf7736。このrootは.gitignoreへ追加。製品sourceをcommitしない。
+- 個人profile配下を通らない上記rootへWindows sourceをGitHubから再取得。SDKの取得/必要Git index作成は制御側だけで行い、実行account側は実ファイルのGit Merkle treeをGoで独立照合する。合成Git fixtureとの一致・改変拒否・gitlinkの単体検査成功。原headはAPIで固定。
+- Linux repo1154066087: Node22.21.0と元workflowのrelease helper3件を正式位置へbuild後、docs-contract/typecheck/全Nodeテスト成功。元CIのRELEASE_STAGE_TEST_NODEとprofileを保持。原GitHub commitをbyte再構成し、commit SHAが元c53...に一致した場合だけ新CIのHEADへ配置。shallowであり全履歴とは主張しない。
+- repo1392152644 Windows: fmt/doctest/Clippy/release全bins、native test/Clippy、138scenario/4native Lua check成功。live-chainはpwsh7/Windows PowerShell5のSDKパス、COMSPEC/PATHEXTを補って関連→全件成功。全workspace nextestはno-fail-fastで未実行分も含め全件実行。残る失敗はdriver_safetyの既存出力拒否テストがOSの局所化された183エラーへ英語existsを要求する1件。固定sourceを変更せず、安定したAlreadyExists文脈を加える私的patchを保存。patchの適用可能性は確認済み、修正後のRust実行は未検証。
+- Windows補助はCiRoot内のCLI作業用HOME/APPDATA/TEMPを渡すだけで、OS user profileをロード/登録しない。source作成にWindows Tempを使おうとした失敗は再試行せず、safe-deleteが認める現在worktreeの所有rootを使用した。
+- Windows repo1154066087: source tree/gitlink6件を照合。Rust1.97.1 SDK、元CI profile writerの最適化/直列条件を保持。profile writerのbare rust-lld解決は専用accountで失敗した。同じSDKリンカーをDのCI領域へSHA一致コピーし、絶対パス解決したところwriter build/実行とHTTP関連回帰が成功。残り元Windows native/all-features/credential/helper crate検査を実行中。共有SDK/旧runnerの書換えではない。
+- Linux repo1386702183: 親版+回帰のみのREDはoverflow panic/対象回帰FAILを実測。固定版publication_schedules48件成功。全workspace nextest/doc/Clippy、統合4shard、署名/TLS helper、frontend各shard等を実行。packaging2失敗は原HEADを欠いたarchive metadataが原因で、元GitHub commit bytesのSHA確認後に補い、失敗2件の再検査成功。
+- Chrome SDKはLinuxの新CI内の/workへだけ配布。公式配布のChromeとDebian公開SDK libsを取得し、base image89988faは変更しない。CPU専用Go SDK launcherが実ChromeのSHAを検査し、GPU/ソフトGPUの使用を禁止し、追加SDK libsだけを設定して実Chromeへexecする。DOM実描画/owned Chrome退役/ブラウザーcold start成功。GPU device要求なし。
+- 元ブラウザーfixtureはLinux CIの互換フラグGITHUB_ACTIONS=trueと、worktree内target・厳密なevidence名を要求する。これは検査用入力だけで、GitHub Actionsの実run/status成功ではない。Root3の既存targetを同じowned volume内のsource/ci-target-2710へ移し、/work/targetから内部aliasを作り、絶対ビルド参照を維持。tracked source/原headは不変。TLS helperもそのtarget配下へbuildして関連virtual HTTPSを再検査中。
+- Primary C owned root内のci2710-v*.exeは制御側、windows/.ci-runtime/service/ci2710.exeとwindows/bin/Runner.Listener.exeは今回専用の有限サービスだけ。既存runnerとは無関係。実行中のexeを上書きせず、制御側は世代別出力を使う。
+- 一時SDK read ACEは初期7パスに加え、C:/Program Files/PowerShell/7 と C:/Program Files/Google/Chrome/Application に今回SIDだけ追加済み。終了時にこのSIDのACEだけ除去する。永久設定/他SIDを上書きしない。
+
+残り: Windows2結果と失敗対応、Windows3のroot/native/hidden/browser、Linux3の追加browser受入、patchと原log/manifest SHAの配送、元ToDoごとのnote保存、今回のservice/container/volume/SDK rootだけの回収。原2640/2641/2642/親2648はdoneにしない。新規PR/merge/配布/Discord投稿/新担当は追加しない。

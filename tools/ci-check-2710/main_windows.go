@@ -331,6 +331,52 @@ func main() {
 	var e error
 	a := os.Args[1:]
 	switch {
+	case len(a) == 3 && a[0] == "win-install-head":
+		e = installWindowsHead(ctx, a[1], a[2])
+	case len(a) == 3 && a[0] == "win-sdk-toolchain":
+		root, version := a[1], a[2]
+		if version != "1.97.1" && version != "1.95.0" {
+			e = errors.New("SDK version rejected")
+			break
+		}
+		var f *os.File
+		f, e = os.Create(filepath.Join(root, "sdk-"+version+".log"))
+		if e != nil {
+			break
+		}
+		x := cmd(ctx, filepath.Join(root, "cargo", "bin", "rustup.exe"), "toolchain", "install", version, "--no-self-update", "--profile", "minimal", "--component", "clippy", "--component", "rustfmt")
+		x.Env = []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, "CARGO_HOME=" + filepath.Join(root, "cargo"), "RUSTUP_HOME=" + filepath.Join(root, "rustup"), "PATH=" + filepath.Join(root, "cargo", "bin") + `;C:\Windows\System32`, "TEMP=" + filepath.Join(root, "tmp"), "TMP=" + filepath.Join(root, "tmp")}
+		x.Stdout = f
+		x.Stderr = f
+		e = x.Run()
+		f.Close()
+	case len(a) == 2 && a[0] == "install-head":
+		e = installHead(ctx, a[1])
+	case len(a) == 2 && a[0] == "win-metadata":
+		var v winPlan
+		v, e = readWin(a[1])
+		if e != nil {
+			break
+		}
+		bin := filepath.Join(v.Root, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "bin")
+		x := cmd(ctx, filepath.Join(bin, "cargo.exe"), "metadata", "--offline", "--locked", "--no-deps", "--format-version", "1", "--manifest-path", "tools/Cargo.toml")
+		x.Dir = filepath.Join(v.Root, "source")
+		x.Env = []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, "CARGO_HOME=" + filepath.Join(v.Root, "cargo"), "RUSTUP_HOME=" + filepath.Join(v.Root, "rustup"), "RUSTUP_TOOLCHAIN=" + v.Version, "PATH=" + bin + `;C:\Windows\System32`, "RUSTC=" + filepath.Join(bin, "rustc.exe")}
+		var f *os.File
+		f, e = os.Create(filepath.Join(v.Root, "coordinator-metadata.log"))
+		if e != nil {
+			break
+		}
+		x.Stdout = f
+		x.Stderr = f
+		e = x.Run()
+		f.Close()
+	case len(a) == 2 && a[0] == "win-control-tree":
+		var v winPlan
+		v, e = readWin(a[1])
+		if e == nil {
+			e = winTree(v, []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `PATH=C:\Windows\System32;C:\Program Files\Git\cmd`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=NUL`, "HOME=" + filepath.Join(v.Root, "cli-home")})
+		}
 	case len(a) == 1 && a[0] == "win-sleep":
 		time.Sleep(10 * time.Minute)
 	case len(a) == 2 && a[0] == "win-cancel-smoke":

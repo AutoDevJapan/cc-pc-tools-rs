@@ -49,6 +49,7 @@ func execute() int {
 		return 124
 	}
 	c.Env = []string{"HOME=/work/home", "TMPDIR=/work/tmp", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/work/cargo", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + os.Args[2], "RUST_TEST_THREADS=" + os.Args[3], "NEXTEST_TEST_THREADS=" + os.Args[3], "CARGO_INCREMENTAL=0", "CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0"}
+	c.Env = append(c.Env, "CI=true")
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if c.Start() != nil {
@@ -73,4 +74,13 @@ func execute() int {
 	fmt.Fprintf(os.Stderr, "kernel_group_absent=true direct_child_reaped=true exit=%d\n", code)
 	return code
 }
-func main() { os.Exit(execute()) }
+func main() {
+	if len(os.Args) == 4 && os.Args[1] == "unzip-sdk" {
+		if e := unzipSDK(os.Args[2], os.Args[3]); e != nil {
+			fmt.Fprintln(os.Stderr, "SDK extraction failed")
+			os.Exit(1)
+		}
+		return
+	}
+	os.Exit(execute())
+}

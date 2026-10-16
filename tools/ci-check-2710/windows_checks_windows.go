@@ -23,6 +23,7 @@ type winEntry struct{ Name, Mode, SHA string }
 type winCheck struct {
 	Name, Dir, Program string
 	Args               []string
+	Env                []string
 }
 type winPlan struct {
 	RepoID                  int64
@@ -32,6 +33,9 @@ type winPlan struct {
 	Jobs, Threads           int
 	Smoke                   string
 	Version                 string
+	RunID                   string
+	SDKRoot                 string
+	NodeRoot                string
 }
 
 func winPlanPath() string {
@@ -125,6 +129,21 @@ func winPrepare(ctx context.Context, id int64, root string) error {
 		}
 		v.Entries = append(v.Entries, winEntry{Name: h.Name, Mode: mode})
 	}
+	var tree struct {
+		Tree      []struct{ Path, Mode, Type, SHA string }
+		Truncated bool
+	}
+	if e = get(ctx, "repos/"+r.FullName+"/git/trees/"+v.Tree+"?recursive=1", &tree); e != nil {
+		return e
+	}
+	if tree.Truncated {
+		return errors.New("Windows tree truncated")
+	}
+	for _, entry := range tree.Tree {
+		if entry.Type == "commit" && entry.Mode == "160000" {
+			v.Entries = append(v.Entries, winEntry{Name: entry.Path, Mode: entry.Mode, SHA: entry.SHA})
+		}
+	}
 	if e = writeJSON(filepath.Join(v.Root, "plan.private.json"), v); e != nil {
 		return e
 	}
@@ -174,6 +193,7 @@ func winGateChild() int {
 	}
 	v.Jobs, _ = strconv.Atoi(os.Getenv("CARGO_BUILD_JOBS"))
 	v.Threads, _ = strconv.Atoi(os.Getenv("RUST_TEST_THREADS"))
+	v.RunID = strconv.FormatInt(time.Now().UnixNano(), 10)
 	if os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || v.Jobs < 1 || v.Jobs > 10 || v.Threads < 1 || v.Threads > 10 {
 		return 121
 	}
@@ -214,7 +234,8 @@ func winGateChild() int {
 		var needed uint32
 		r, _, _ := advapi.NewProc("QueryServiceStatusEx").Call(svc, 0, uintptr(unsafe.Pointer(&status[0])), uintptr(unsafe.Sizeof(status)), uintptr(unsafe.Pointer(&needed)))
 		if r == 0 {
-			return 127
+			time.Sleep(time.Second)
+			continue // retain admission while state is unknown
 		}
 		if status[1] == 1 {
 			if status[3] != 0 {
@@ -248,15 +269,40 @@ func windowsWorker() int {
 	}
 	tmp := filepath.Join(v.Root, "tmp")
 	os.MkdirAll(tmp, 0700)
-	env := []string{"SystemRoot=C:\\Windows", "WINDIR=C:\\Windows", "SystemDrive=C:", "TEMP=" + tmp, "TMP=" + tmp, "CARGO_HOME=" + filepath.Join(v.Root, "cargo"), "RUSTUP_HOME=" + filepath.Join(v.Root, "rustup"), "CARGO_BUILD_JOBS=" + strconv.Itoa(v.Jobs), "RUST_TEST_THREADS=" + strconv.Itoa(v.Threads), "NEXTEST_TEST_THREADS=" + strconv.Itoa(v.Threads), "CARGO_INCREMENTAL=0", "CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=NUL", "PATH=C:\\Windows\\System32;C:\\Program Files\\Git\\cmd"}
+	sdkRoot := v.SDKRoot
+	if sdkRoot == "" {
+		sdkRoot = v.Root
+	}
+	env := []string{"SystemRoot=C:\\Windows", "WINDIR=C:\\Windows", "SystemDrive=C:", "TEMP=" + tmp, "TMP=" + tmp, "CARGO_HOME=" + filepath.Join(sdkRoot, "cargo"), "RUSTUP_HOME=" + filepath.Join(sdkRoot, "rustup"), "CARGO_BUILD_JOBS=" + strconv.Itoa(v.Jobs), "RUST_TEST_THREADS=" + strconv.Itoa(v.Threads), "NEXTEST_TEST_THREADS=" + strconv.Itoa(v.Threads), "CARGO_INCREMENTAL=0", "CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=NUL", "PATH=C:\\Windows\\System32;C:\\Program Files\\Git\\cmd"}
 	home := filepath.Join(v.Root, "cli-home")
 	os.MkdirAll(home, 0700)
 	env = append(env, "HOME="+home)
+	localData := filepath.Join(home, "AppData", "Local")
+	roamingData := filepath.Join(home, "AppData", "Roaming")
+	os.MkdirAll(localData, 0700)
+	os.MkdirAll(roamingData, 0700)
+	env = append(env, "USERPROFILE="+home, "LOCALAPPDATA="+localData, "APPDATA="+roamingData, "HOMEDRIVE="+filepath.VolumeName(home), "HOMEPATH="+strings.TrimPrefix(home, filepath.VolumeName(home)))
+	env = append(env, "CI=true")
+	env = append(env, `COMSPEC=C:\Windows\System32\cmd.exe`, `PATHEXT=.COM;.EXE;.BAT;.CMD`)
 	result := map[string]any{"repo_id": v.RepoID, "source_sha": v.SHA, "virtual_account": true, "profile_loading_requested": false, "all_required_checks_success": false}
-	defer func() { _ = writeJSON(filepath.Join(v.Root, "windows-result.private.json"), result) }()
+	evidence := filepath.Join(v.Root, "evidence-"+v.RunID)
+	if e = os.Mkdir(evidence, 0700); e != nil {
+		return 135
+	}
+	defer func() {
+		_ = writeJSON(filepath.Join(evidence, "windows-result.private.json"), result)
+		_ = writeJSON(filepath.Join(v.Root, "windows-result.private.json"), result)
+	}()
 	if v.Smoke == "fs-probe" {
+		self, err := syscall.OpenProcess(0x1000, false, uint32(os.Getpid()))
+		if err == nil {
+			syscall.CloseHandle(self)
+			result["self_query_win32"] = 0
+		} else {
+			result["self_query_win32"] = uint32(err.(syscall.Errno))
+		}
 		p := filepath.Join(v.Root, "source", ".git", "refs", "_ci2710_probe")
-		err := os.Mkdir(p, 0700)
+		err = os.Mkdir(p, 0700)
 		code := uint32(0)
 		if err != nil {
 			if pe, ok := err.(*os.PathError); ok {
@@ -310,7 +356,7 @@ func windowsWorker() int {
 		}
 		return 0
 	}
-	if e = winTree(v, env); e != nil {
+	if e = winSourceTree(v); e != nil {
 		result["failure"] = e.Error()
 		return 129
 	}
@@ -320,16 +366,36 @@ func windowsWorker() int {
 		result["failure"] = e.Error()
 		return 130
 	}
+	serverLog, e := os.OpenFile(filepath.Join(evidence, "sccache-server.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return 136
+	}
+	defer serverLog.Close()
+	server := exec.Command(`D:\CC\Tools\sccache\sccache.exe`, "--start-server")
+	hidden(server)
+	server.Env = append(append([]string{}, env...), "SCCACHE_NO_DAEMON=1")
+	server.Stdout = serverLog
+	server.Stderr = serverLog
+	if e = server.Start(); e != nil {
+		return 137
+	}
+	defer func() {
+		stop := exec.Command(`D:\CC\Tools\sccache\sccache.exe`, "--stop-server")
+		hidden(stop)
+		stop.Env = env
+		_ = stop.Run()
+		_ = server.Wait()
+	}()
 	var rows []map[string]any
-	for _, q := range v.Checks {
-		file := filepath.Join(v.Root, q.Name+".log")
+	for index, q := range v.Checks {
+		file := filepath.Join(evidence, fmt.Sprintf("repo%d-check%04d.log", v.RepoID, index))
 		log, err := os.OpenFile(file, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if err != nil {
 			return 124
 		}
 		c := exec.Command(q.Program, q.Args...)
 		hidden(c)
-		c.Env = env
+		c.Env = append(append([]string{}, env...), q.Env...)
 		c.Dir = filepath.Join(v.Root, "source", q.Dir)
 		if q.Dir == "@root" {
 			c.Dir = v.Root
@@ -347,7 +413,7 @@ func windowsWorker() int {
 			}
 		}
 		b, _ := os.ReadFile(file)
-		rows = append(rows, map[string]any{"check": q.Name, "exit": code, "log_sha256": digest(b), "log_bytes": len(b), "duration_ms": time.Since(start).Milliseconds()})
+		rows = append(rows, map[string]any{"check": q.Name, "log_file": filepath.Base(file), "exit": code, "log_sha256": digest(b), "log_bytes": len(b), "duration_ms": time.Since(start).Milliseconds()})
 		result["checks"] = rows
 		if err = writeJSON(filepath.Join(v.Root, "windows-result.private.json"), result); err != nil {
 			return 125

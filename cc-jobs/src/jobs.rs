@@ -73,6 +73,7 @@ impl Context {
         text.push_str("\n\n## 実行時のサイト制限\n");
         text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
         text.push('\n');
+        text.push_str(&self.fixed_review_guidance(job)?);
         let selected = dir.join("execution-prompt.md");
         fs::write(&selected, text)?;
         Ok(selected)
@@ -918,6 +919,8 @@ impl Context {
             job["pid_created"] =
                 json!(process_tree_root_created.or_else(|| self.rt.proc_created(pid)));
             job["queue_supervisor_version"] = json!(5);
+            job["fixed_review_protocol"] =
+                json!({"version":1,"pid":job["pid"],"created":job["pid_created"]});
             job["queue_restart_pending"] = json!(false);
             job["reboot_launch_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);

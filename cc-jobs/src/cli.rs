@@ -9,6 +9,9 @@ use std::{
 };
 pub fn help_text(command: &str) -> &'static str {
     match command {
+        "qualify-fixed-review" => {
+            "usage: codex_jobs.exe qualify-fixed-review --request-file <JSON> [--apply]\n\nBind one existing unstarted worker to a fixed read-only review after its exact automatic writer exits. Preview by default. Never changes ToDos, grants write access or launches work. Reload the exact queued supervisor first.\n"
+        }
         "repair-owner-wait" => {
             "usage: codex_jobs.exe repair-owner-wait --request-file <JSON> [--apply]\n\nPreview one exact never-started finite worker's automatic wait cycle. Apply changes only that job under queue, job and ToDo locks; normal admission and all other waits remain required.\n"
         }
@@ -101,6 +104,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-reboot",
         "reload-queue",
         "repair-owner-wait",
+        "qualify-fixed-review",
         "adjust-limit",
         "update-queue-config",
         "recover-children",
@@ -142,6 +146,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "cancel" => ["recovery", "if-todo-ready"].contains(&name.as_str()),
                 "update-queue-config" => name == "clear-fixed",
                 "repair-owner-wait" => name == "apply",
+                "qualify-fixed-review" => name == "apply",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
                 }
@@ -196,6 +201,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "cleanup-supervisors" => name == "apply",
                 "reload-queue" => name == "job-id",
                 "repair-owner-wait" => ["request-file", "apply"].contains(&name.as_str()),
+                "qualify-fixed-review" => ["request-file", "apply"].contains(&name.as_str()),
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -567,6 +573,16 @@ impl Context {
                     out,
                     "{}",
                     pretty(&self.repair_owner_wait(&request, a.flag("apply"))?)
+                )?;
+                Ok(0)
+            }
+            "qualify-fixed-review" => {
+                let bytes = self.read_file(Path::new(a.required("request-file")?))?;
+                let request = serde_json::from_slice(&bytes)?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.qualify_finished_review(&request, a.flag("apply"))?)
                 )?;
                 Ok(0)
             }

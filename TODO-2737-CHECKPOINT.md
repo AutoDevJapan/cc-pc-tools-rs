@@ -62,5 +62,16 @@ Linux共用labelが3回あるのに1回としたassertと、branch中のslashの
 - 所有root: C:/Users/makhmeto/AppData/Local/Temp/codex-owned-334ed87952cf137434cd6214b64e62b3
 - rootには自分のGo実行ファイルと数値/hash主体の私的receiptだけを保存。製品checkoutなし。
 - 原2710/2648/2730の旧資源には一切変更しない。
-- 終了前にcommit/pushとscheduler checkpointを保存。note配送と別モデルreviewは次に記録。
+- Go実装の保存commit: 69627cba7fba563f7e409dd6c9de07d67947d60b。push済み。
+- 別モデルreviewは既存ToDo2740、gpt-6-luna/high、保存specあり。実応答はまだない。
+  最初の登録はmodel名のslashがCLIで不受理、次は親2641の終了後だったためsubwork受付不可。
+  親の資源例外を使わず、通常の共有ToDo枠へ2740を登録した。子Codexの直接起動はない。
+- 上記Temp rootは終了済みのGoバイナリとmetadataだけを含んでいた。
+  receipt等3fileを永続証拠へ全SHA一致で保存後、plan→別呼出し通常削除→finish source_absent。
+- 永続証拠: D:/CC/Tools/product-ci/evidence/todo-2737-20261017/334ed87952cf137434cd6214b64e62b3
+  manifest.private.json SHA256: 50E90D4FC44DC5D157359C1F4874304CDD9C9B4E92A6881177340F0927E87E83
+- 旧Temp rootから再開しない。reviewのspecは共有ToDoの保存済みコピーを使う。
+- 終了前に親2641と自分のnoteへ結果を配送し、実HEADのscheduler checkpointを保存する。
+  2740だけを待つ区切りはwait --on 2740で記録し、レビュー実応答後にMustを修正する。
+  続く実行基盤と通常CIは未完了のまま保持する。レビュー完了をCI成功や製品完了と呼ばない。
 - 回収はsafe-delete plan、別呼び出し通常削除、finish。拒否時は正規quarantineのみ。

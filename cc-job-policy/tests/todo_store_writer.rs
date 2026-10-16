@@ -112,9 +112,10 @@ fn temporary_write_failure_keeps_the_original_backup_and_existing_temporary() {
 fn exact_formatted_limit_is_saved_and_one_more_byte_preserves_every_file() {
     // The Linux runner's /tmp is a 64 MiB credential-only tmpfs. This test
     // writes a complete 64 MiB store, so use the runner's workspace disk.
+    // The isolated Cargo bridge deliberately does not forward RUNNER_TEMP.
     let root = std::env::var_os("RUNNER_TEMP")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
+        .unwrap_or_else(|| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")));
     let dir = tempfile::Builder::new()
         .prefix("todo-store-boundary-")
         .tempdir_in(root)

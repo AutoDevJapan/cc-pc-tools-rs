@@ -35,13 +35,20 @@ last pushed commit `79a7c03` (current working changes still need commit/push).
   media enum `9`, gives each seed ISO its own instance-scoped name, and refuses
   to reprovision if a VHDX or VM receipt exists. The VM receipt validator was
   aligned with that instance-scoped ISO name.
+- The next run again stopped before VM creation: PowerShell's late-bound IMAPI
+  COM wrapper does not expose the returned `IStream.Read` method. The bounded
+  diagnostic replaced the earlier one at the same owned path; the latest
+  helper now queries the documented `IStream` interface and copies its stream
+  via the COM vtable. A read-only in-memory probe confirmed that interface
+  returns bytes; full seed ISO creation remains unverified.
 
 ## Remaining
 
 1. Commit/push the current helper changes, then build it into the owned root
-   and run its `vm-smoke` command with the already-downloaded ISO. It verifies
-   Microsoft's Authenticode signature and the evaluation image name before
-   creating the VM.
+   and run its `vm-smoke` command once with the already-downloaded ISO. It
+   verifies Microsoft's Authenticode signature and the evaluation image name
+   before creating the VM. If seed ISO creation still fails, inspect its latest
+   bounded diagnostic; no VM/VHDX currently exists.
 2. Confirm the answer file is discovered from the separate seed DVD, the
    LocalSystem service starts through normal Setup, and both real fixtures
    report process and namespace cleanup.

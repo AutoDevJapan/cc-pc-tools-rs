@@ -609,6 +609,44 @@ func createSeedISO(root, seedDir, instance string) (string, error) {
 	isoPath := filepath.Join(root, "cc2746-seed-"+instance+".iso")
 	scriptPath := filepath.Join(root, "make-seed-iso-"+instance+".ps1")
 	script := `$ErrorActionPreference='Stop'
+Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+public static class CC2746ImageStreamWriter {
+  [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+  private delegate int ReadDelegate(IntPtr self, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)] byte[] buffer, uint count, IntPtr read);
+  public static void CopyToFile(object streamObject, string destination) {
+    IntPtr unknown=Marshal.GetIUnknownForObject(streamObject);
+    Guid iid=new Guid("0000000c-0000-0000-C000-000000000046");
+    IntPtr stream=IntPtr.Zero;
+    IntPtr readCount=Marshal.AllocHGlobal(4);
+    try {
+      Marshal.ThrowExceptionForHR(Marshal.QueryInterface(unknown, in iid, out stream));
+      IntPtr vtable=Marshal.ReadIntPtr(stream);
+      IntPtr readAddress=Marshal.ReadIntPtr(vtable, 3*IntPtr.Size);
+      var read=(ReadDelegate)Marshal.GetDelegateForFunctionPointer(readAddress, typeof(ReadDelegate));
+      using(var output=new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None)) {
+        byte[] buffer=new byte[1024*1024];
+        while(true) {
+          Marshal.WriteInt32(readCount,0);
+          int hr=read(stream,buffer,(uint)buffer.Length,readCount);
+          if(hr<0) Marshal.ThrowExceptionForHR(hr);
+          int n=Marshal.ReadInt32(readCount);
+          if(n<0 || n>buffer.Length) throw new IOException("IMAPI stream returned an invalid byte count");
+          if(n==0) break;
+          output.Write(buffer,0,n);
+        }
+        output.Flush(true);
+      }
+    } finally {
+      Marshal.FreeHGlobal(readCount);
+      if(stream!=IntPtr.Zero) Marshal.Release(stream);
+      Marshal.Release(unknown);
+    }
+  }
+}
+'@
 $source=` + psQuote(seedDir) + `
 $destination=` + psQuote(isoPath) + `
 $image=New-Object -ComObject IMAPI2FS.MsftFileSystemImage
@@ -617,23 +655,7 @@ $image.FileSystemsToCreate=3
 $image.VolumeName='CC2746SEED'
 $image.Root.AddTree($source,$false)
 $result=$image.CreateResultImage()
-$stream=$result.ImageStream
-$target=[IO.File]::Open($destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
-$buffer=New-Object byte[] (1024*1024)
-$readCount=[Runtime.InteropServices.Marshal]::AllocHGlobal(4)
-try{
-  while($true){
-    [Runtime.InteropServices.Marshal]::WriteInt32($readCount,0)
-    $stream.Read($buffer,$buffer.Length,$readCount)
-    $n=[Runtime.InteropServices.Marshal]::ReadInt32($readCount)
-    if($n -le 0){break}
-    $target.Write($buffer,0,$n)
-  }
-  $target.Flush($true)
-}finally{
-  [Runtime.InteropServices.Marshal]::FreeHGlobal($readCount)
-  $target.Dispose()
-}
+[CC2746ImageStreamWriter]::CopyToFile($result.ImageStream,$destination)
 `
 	if err := os.WriteFile(scriptPath, []byte(script), 0600); err != nil {
 		return "", err

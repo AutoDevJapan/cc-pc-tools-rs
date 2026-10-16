@@ -1,6 +1,13 @@
 //! One kernel snapshot binds ancestry to birth times without opening foreign
 //! processes. Only a later creation-checked retained handle authorizes a stop.
 use std::{collections::HashSet, io};
+use windows_sys::Win32::{
+    Foundation::{CloseHandle, INVALID_HANDLE_VALUE},
+    System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    },
+};
 
 #[derive(Clone, Debug)]
 pub(super) struct Entry {
@@ -42,6 +49,43 @@ unsafe extern "system" {
 
 fn invalid() -> io::Error {
     io::Error::other("invalid process identity snapshot")
+}
+
+fn documented_caller_parent() -> io::Result<u32> {
+    // Parent is reserved in the public native layout. Cross-check this field
+    // against documented ToolHelp before using native ancestry to stop a tree.
+    unsafe {
+        let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if snapshot == INVALID_HANDLE_VALUE {
+            return Err(io::Error::last_os_error());
+        }
+        let mut entry: PROCESSENTRY32W = std::mem::zeroed();
+        entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+        let mut available = Process32FirstW(snapshot, &mut entry);
+        while available != 0 {
+            if entry.th32ProcessID == std::process::id() {
+                let parent = entry.th32ParentProcessID;
+                CloseHandle(snapshot);
+                return Ok(parent);
+            }
+            available = Process32NextW(snapshot, &mut entry);
+        }
+        CloseHandle(snapshot);
+    }
+    Err(io::Error::other("documented caller ancestry unavailable"))
+}
+
+fn validate_caller_parent(all: &[Entry], pid: u32, parent: u32) -> io::Result<()> {
+    if all
+        .iter()
+        .any(|entry| entry.pid == pid && entry.parent == parent)
+    {
+        Ok(())
+    } else {
+        Err(io::Error::other(
+            "native process ancestry layout disagrees with ToolHelp",
+        ))
+    }
 }
 
 fn parse(bytes: &[u8]) -> io::Result<Vec<Entry>> {
@@ -113,7 +157,9 @@ pub(super) fn processes() -> io::Result<Vec<Entry>> {
             let bytes = unsafe {
                 std::slice::from_raw_parts(buffer.as_ptr().cast::<u8>(), returned as usize)
             };
-            return parse(bytes);
+            let all = parse(bytes)?;
+            validate_caller_parent(&all, std::process::id(), documented_caller_parent()?)?;
+            return Ok(all);
         }
         if status != 0xc0000004u32 as i32 {
             // STATUS_INFO_LENGTH_MISMATCH
@@ -150,6 +196,14 @@ mod tests {
         let me = all.iter().find(|p| p.pid == pid).unwrap();
         assert_eq!(me.created, created);
         assert_ne!(me.parent, 0);
+        assert_eq!(me.parent, documented_caller_parent().unwrap());
+        let mut wrong_parent = all.clone();
+        wrong_parent
+            .iter_mut()
+            .find(|entry| entry.pid == pid)
+            .unwrap()
+            .parent ^= 1;
+        assert!(validate_caller_parent(&wrong_parent, pid, me.parent).is_err());
         assert_eq!(
             me.name,
             std::env::current_exe()

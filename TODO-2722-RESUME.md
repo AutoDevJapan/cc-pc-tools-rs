@@ -47,6 +47,6 @@ Nitの不正snapshot全体拒否は維持。テスト専用Dropのassertはclean
 
 ## 後片付けと親への残工程
 
-専用targetは初回の所有記録がないため偽造登録しない。7193file、15135104079 bytes（hardlink名を含む論理量）。132group/264名のhardlinkが全て同target内、外部hardlink0、reparse0、同target imageの稼働0を確認。既存生成物の規則でD:/削除希望/2026-10-16-todo-2722-target-191324/targetへ移す計画を保存済み。移動確認後にtarget-quarantine.jsonと理由.txtの完了を記録する。容量回収済みとは扱わない。
+専用targetは初回の所有記録がないため偽造登録しない。7193file、15135104079 bytes（hardlink名を含む論理量）。132group/264名のhardlinkが全て同target内、外部hardlink0、reparse0、同target imageの稼働0を確認。既存生成物の規則でD:/削除希望/2026-10-16-todo-2722-target-191324/targetへ移動済み。元target不在、移動先7193file/15135104079 bytes一致を確認し、target-quarantine.jsonと理由.txtに完了を記録した。容量回収済みとは扱わない。
 
 元2648へ、固定コード・実検査・review原文hash・後片付けを配送する。親でこの修正を取り込み、同headの必要CIと通常mergeを確認する工程は親の責任範囲に残る。2026-10-16再開時点のPR185はOPEN/head ddc914fc7530f3e9095228d53eaeb914680f8ede、mergeCommitなし。主担当のsourceやPRをこのcheckから編集せず、親完了を待つ依存も登録しない。

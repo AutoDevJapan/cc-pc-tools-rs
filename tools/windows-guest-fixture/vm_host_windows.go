@@ -478,7 +478,7 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 	}
 	secure := tlsClientConn(serial, client, ready.ServerSHA256)
 	if err := tlsHandshakeWithTimeout(secure, 30*time.Second); err != nil {
-		return fixtureResult{}, fixtureResult{}, errors.New("guest mutual TLS handshake failed")
+		return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest mutual TLS handshake failed: %w", err)
 	}
 	defer secure.Close()
 	encoder, decoder := json.NewEncoder(secure), json.NewDecoder(secure)

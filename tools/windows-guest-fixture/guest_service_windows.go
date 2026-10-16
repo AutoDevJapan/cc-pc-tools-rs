@@ -159,6 +159,7 @@ func serveSerial() error {
 	serviceActiveConn = tlsConn
 	serviceControlMu.Unlock()
 	if err := tlsConn.Handshake(); err != nil {
+		recordGuestServiceStage(5)
 		return errors.New("guest TLS client authentication failed")
 	}
 	recordGuestServiceStage(4)

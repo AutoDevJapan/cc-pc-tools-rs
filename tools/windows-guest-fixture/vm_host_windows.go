@@ -717,7 +717,7 @@ func validateVMReceipt(vm vmReceipt, root, instance string) error {
 func runAdminBroker(script string, timeoutSec int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec+30)*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, `C:\Program Files\PowerShell\7\pwsh.exe`, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `D:\CC\Tools\admin-broker\run-as-admin.ps1`, "-Script", script, "-TimeoutSec", fmt.Sprint(timeoutSec))
+	cmd := exec.CommandContext(ctx, `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `D:\CC\Tools\admin-broker\run-as-admin.ps1`, "-Script", script, "-TimeoutSec", fmt.Sprint(timeoutSec))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	systemRoot := os.Getenv("SystemRoot")
 	cmd.Env = []string{

@@ -114,15 +114,15 @@ func planCodeQL(ctx context.Context, c candidate, runID int64, read api) (codeQL
 }
 
 func mutateJSON(ctx context.Context, method, endpoint string, body any, out any) error {
-	b, e := json.Marshal(body)
+	c, e := githubMutationCommand(ctx, method, endpoint, body)
 	if e != nil {
 		return e
 	}
-	c := cmd(ctx, gh, "api", "--method", method, endpoint, "--input", "-")
-	c.Stdin = bytes.NewReader(b)
+	stderr := boundedBuffer{limit: 64 << 10}
+	c.Stderr = &stderr
 	data, e := boundedOutput(c, 1<<20)
 	if e != nil {
-		return errors.New("GitHub mutation failed; do not retry through another route")
+		return classifiedGitHubError(e, stderr.Bytes())
 	}
 	if out != nil && json.Unmarshal(data, out) != nil {
 		return errors.New("GitHub mutation response unverified; preserve recovery record")
@@ -190,6 +190,7 @@ func routeCodeQL(ctx context.Context, c candidate, dir string) error {
 type runnerEntry struct {
 	ID     int64
 	Name   string
+	Status string
 	Busy   bool
 	Labels []struct{ Name string }
 }
@@ -480,7 +481,7 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	return nil
 }
 
-func codeQLGuest() error {
+func codeQLGuest(configureOnly bool) error {
 	var packet struct {
 		Plan                             codeQLPlan
 		Repo, Token, Name, Callback, Key string
@@ -519,6 +520,9 @@ func codeQLGuest() error {
 	config.Env = nil
 	if e != nil {
 		return errors.New("official runner configuration failed")
+	}
+	if configureOnly {
+		return nil
 	}
 	run := cmd(context.Background(), "/runner/run.sh")
 	run.Dir = "/runner"

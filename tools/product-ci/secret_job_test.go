@@ -21,6 +21,7 @@ func TestSecretWorkflowBindsReviewedFileOriginalSourceAndMergeContext(t *testing
 			pr := d["repos/AutoDevJapan/opaque-fixture/pulls/1002"].(map[string]any)
 			pr["merge_commit_sha"] = strings.Repeat("b", 40)
 			d["repos/AutoDevJapan/opaque-fixture/contents/"+path+"?ref="+c.SHA] = map[string]any{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(source)}
+			d["repos/AutoDevJapan/opaque-fixture/contents/"+path+"?ref="+strings.Repeat("b", 40)] = map[string]any{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(source)}
 			switch fault {
 			case "advanced-head":
 				r["head_sha"] = strings.Repeat("d", 40)
@@ -36,6 +37,14 @@ func TestSecretWorkflowBindsReviewedFileOriginalSourceAndMergeContext(t *testing
 				pr["merge_commit_sha"] = ""
 			case "changed-workflow":
 				d["repos/AutoDevJapan/opaque-fixture/contents/"+path+"?ref="+c.SHA] = map[string]any{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString([]byte("changed executable workflow"))}
+			case "changed-merge-workflow":
+				d["repos/AutoDevJapan/opaque-fixture/contents/"+path+"?ref="+strings.Repeat("b", 40)] = map[string]any{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString([]byte("unreviewed base-side workflow change"))}
+			case "multiple-prs":
+				r["pull_requests"] = []map[string]any{{"number": c.PR}, {"number": 999}}
+			case "uppercase-merge":
+				pr["merge_commit_sha"] = strings.Repeat("B", 40)
+			case "completed":
+				r["status"] = "completed"
 			}
 		})
 	}
@@ -55,7 +64,7 @@ func TestSecretWorkflowBindsReviewedFileOriginalSourceAndMergeContext(t *testing
 	if validGuestPlan(dynamic) || checkCodeQLHook(dynamic, dynamic.Repo, dynamic.ContextSHA, "7", "2") == nil {
 		t.Fatal("dynamic CodeQL accepted a merge context")
 	}
-	for _, fault := range []string{"advanced-head", "fork", "wrong-event", "wrong-path", "wrong-pr", "missing-merge", "changed-workflow"} {
+	for _, fault := range []string{"advanced-head", "fork", "wrong-event", "wrong-path", "wrong-pr", "missing-merge", "changed-workflow", "changed-merge-workflow", "multiple-prs", "uppercase-merge", "completed"} {
 		t.Run(fault, func(t *testing.T) {
 			if _, e := planSecretJobWithPolicy(context.Background(), c, 7, fixture(fault), digest([]byte(path)), digest(source)); e == nil {
 				t.Fatal("unreviewed workflow or source accepted")

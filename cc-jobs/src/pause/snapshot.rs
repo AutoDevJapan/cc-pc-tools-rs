@@ -76,9 +76,11 @@ fn documented_caller_parent() -> io::Result<u32> {
 }
 
 fn validate_caller_parent(all: &[Entry], pid: u32, parent: u32) -> io::Result<()> {
+    let created = crate::proc_created(pid)
+        .ok_or_else(|| io::Error::other("documented caller birth time unavailable"))?;
     if all
         .iter()
-        .any(|entry| entry.pid == pid && entry.parent == parent)
+        .any(|entry| entry.pid == pid && entry.parent == parent && entry.created == created)
     {
         Ok(())
     } else {
@@ -117,8 +119,11 @@ fn parse(bytes: &[u8]) -> io::Result<Vec<Entry>> {
             let wide: Vec<_> = bytes
                 .get(start..end)
                 .ok_or_else(invalid)?
-                .chunks_exact(2)
-                .map(|pair| u16::from_ne_bytes([pair[0], pair[1]]))
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .copied()
+                .map(u16::from_ne_bytes)
                 .collect();
             String::from_utf16_lossy(&wide).to_ascii_lowercase()
         };
@@ -204,6 +209,13 @@ mod tests {
             .unwrap()
             .parent ^= 1;
         assert!(validate_caller_parent(&wrong_parent, pid, me.parent).is_err());
+        let mut wrong_birth = all.clone();
+        wrong_birth
+            .iter_mut()
+            .find(|entry| entry.pid == pid)
+            .unwrap()
+            .created ^= 1;
+        assert!(validate_caller_parent(&wrong_birth, pid, me.parent).is_err());
         assert_eq!(
             me.name,
             std::env::current_exe()

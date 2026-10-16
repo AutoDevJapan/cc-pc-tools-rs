@@ -32,7 +32,12 @@ func recoverCodeQLBootstrap(ctx context.Context, c candidate, dir string) (ret e
 	if e != nil {
 		return errors.New("owned admission unavailable")
 	}
-	defer func() { ret = errors.Join(ret, f.Close()) }()
+	closed := false
+	defer func() {
+		if !closed {
+			ret = errors.Join(ret, f.Close())
+		}
+	}()
 	if e = lockAdmission(f); e != nil {
 		return errors.New("bootstrap owner or another recovery is still active")
 	}
@@ -131,6 +136,14 @@ func recoverCodeQLBootstrap(ctx context.Context, c candidate, dir string) (ret e
 	}
 	if e = os.Remove(lockPath); e != nil {
 		return errors.New("completed admission removal failed")
+	}
+	if e = f.Close(); e != nil {
+		closed = true
+		return errors.New("completed admission close failed")
+	}
+	closed = true
+	if _, e = os.Lstat(lockPath); !os.IsNotExist(e) {
+		return errors.New("completed admission absence unconfirmed")
 	}
 	proof["lock_released"] = true
 	return nil

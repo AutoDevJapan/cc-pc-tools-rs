@@ -41,16 +41,8 @@ func planSecretJobWithPolicy(ctx context.Context, c candidate, runID int64, read
 	if run.ID != runID || run.RunAttempt < 1 || run.Repository.ID != c.ID || run.HeadRepo.ID != c.ID || run.HeadRepo.Fork || run.Repository.FullName != r.FullName || run.HeadRepo.FullName != r.FullName || run.HeadSHA != c.SHA || run.Event != "pull_request" || digest([]byte(run.Path)) != pathDigest || (run.Status != "queued" && run.Status != "in_progress" && run.Status != "pending" && run.Status != "waiting") || len(run.PullRequests) != 1 || run.PullRequests[0].Number != c.PR {
 		return codeQLPlan{}, errors.New("fixed secret workflow run rejected")
 	}
-	var source struct {
-		Content, Encoding string
-		Type              string
-	}
-	if e = read(ctx, "repos/"+r.FullName+"/contents/"+run.Path+"?ref="+c.SHA, &source); e != nil {
+	if e = verifyWorkflowBytes(ctx, r.FullName, run.Path, c.SHA, workflowDigest, read); e != nil {
 		return codeQLPlan{}, e
-	}
-	data, e := base64.StdEncoding.DecodeString(strings.ReplaceAll(source.Content, "\n", ""))
-	if e != nil || source.Encoding != "base64" || source.Type != "file" || digest(data) != workflowDigest {
-		return codeQLPlan{}, errors.New("reviewed native scanner workflow differs")
 	}
 	var pr struct {
 		MergeSHA string `json:"merge_commit_sha"`
@@ -61,11 +53,28 @@ func planSecretJobWithPolicy(ctx context.Context, c candidate, runID int64, read
 	if len(pr.MergeSHA) != 40 || strings.Trim(pr.MergeSHA, "0123456789abcdef") != "" {
 		return codeQLPlan{}, errors.New("original pull-request job context unavailable")
 	}
+	// pull_request executes the merge ref's workflow, while checkout is pinned
+	// separately to the original head. Both definitions must be reviewed bytes.
+	if e = verifyWorkflowBytes(ctx, r.FullName, run.Path, pr.MergeSHA, workflowDigest, read); e != nil {
+		return codeQLPlan{}, e
+	}
 	var commit struct{ Tree struct{ SHA string } }
 	if e = read(ctx, "repos/"+r.FullName+"/git/commits/"+c.SHA, &commit); e != nil || len(commit.Tree.SHA) != 40 {
 		return codeQLPlan{}, errors.New("original scanner source tree unavailable")
 	}
 	return codeQLPlan{RepoID: c.ID, PR: c.PR, Candidate: c.SHA, RunID: runID, Attempt: run.RunAttempt, SHA: c.SHA, Tree: commit.Tree.SHA, Role: "candidate-secret-workflow", Label: secretLabel(c.ID), Repo: r.FullName, Kind: "secret", ContextSHA: pr.MergeSHA}, nil
+}
+
+func verifyWorkflowBytes(ctx context.Context, repo, path, ref, expected string, read api) error {
+	var source struct{ Content, Encoding, Type string }
+	if e := read(ctx, "repos/"+repo+"/contents/"+path+"?ref="+ref, &source); e != nil {
+		return e
+	}
+	data, e := base64.StdEncoding.DecodeString(strings.ReplaceAll(source.Content, "\n", ""))
+	if e != nil || source.Encoding != "base64" || source.Type != "file" || digest(data) != expected {
+		return errors.New("reviewed executable workflow differs")
+	}
+	return nil
 }
 
 func validGuestPlan(p codeQLPlan) bool {

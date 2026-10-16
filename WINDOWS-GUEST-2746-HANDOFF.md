@@ -86,24 +86,34 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   partitions and it remains 4 MiB, so Windows Setup never began applying the
   image. The original failure receipt did not preserve which serial substage
   timed out, so only “no readiness within 30 minutes” is confirmed.
-- The helper is being revised to apply the official WIM offline with DISM,
-  create UEFI boot files with BCDBoot, and put the answer file in Panther and
-  on the seed DVD. Its next retry may reuse this VHDX only after checking the
-  exact previous VM removal receipt, confirming that GUID is absent, and
-  mounting the disk read-only to verify it still has no partitions. The retry
-  receives a new instance nonce. This approach preserves first-boot
-  `specialize`, LocalSystem service staging, and normal OOBE. The helper also
-  sets an explicit VM boot order with the VHD first. `gofmt`, `go test ./...`,
-  `go vet ./...`, and `git diff --check` passed; these source/document changes
-  are uncommitted, and the second real fixture run remains outstanding.
+- The first offline image attempt failed at DISM `/Apply-Image` with HRESULT
+  `0x80070003`; the DISM log records the official source WIM and a host folder
+  mount path for ApplyDir. No new VM was created. Its VHDX is detached and
+  about 196 MiB. A read-only probe found four partitions (EFI, OS, and two
+  MSRs) with task-specific filesystem labels. Whether the OS partition has a
+  Windows directory is not yet confirmed.
+- The current helper now uses temporary drive letters for DISM ApplyDir and
+  BCDBoot's ESP target. Before resetting this exact VHDX, the elevated script
+  checks the previous cleanup receipt, verifies the old VM GUID is absent and
+  the VHDX is not attached to any VM, validates its expected partition types,
+  labels, and sizes, and checks that the OS partition contains no Windows
+  directory or unexpected files. Only then does it clear that owned partial
+  layout, handle a single initialization-created MSR if present, and create
+  EFI, one MSR, and OS partitions in boot order. The answer file remains in
+  Panther and on the seed DVD; first boot should run `specialize` and leave
+  normal OOBE intact. `gofmt`, `go test ./...`, `go vet ./...`, and
+  `git diff --check` passed on the current source. The latest drive-letter and
+  partial-layout change is uncommitted; the next real guest fixture run is
+  outstanding.
 
 ## Remaining
 
-1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push the offline-deployment/recovery implementation.
+1. Commit and push the offline-deployment/recovery implementation; the current
+   source has already passed `gofmt`, `go test ./...`, `go vet ./...`, and
+   `git diff --check`.
 2. Build the helper into the owned root and run `vm-smoke` against the already
-   downloaded ISO. The receipt-bound recovery must verify the previous VM is
-   absent and the existing VHDX is blank before reusing it with a new nonce.
+   downloaded ISO. Receipt-bound recovery must confirm the prior VM is absent
+   and the owned OS partition is empty before resetting the partial layout.
 3. Confirm guest readiness, the normal and cancellation child-process
    receipts, then separately verify VM Off, assigned memory zero, and removal.
 4. Copy sanitized evidence into the worktree, update ToDo2737's note

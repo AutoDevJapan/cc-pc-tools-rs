@@ -50,8 +50,10 @@ resume that same VM only while it is Off and its notes, configuration path,
 VHD, DVDs, COM pipe, CPU, memory, NIC, GPU, and Secure Boot settings match. If
 the receipt's VM was already verified removed, the helper preserves that
 attempt's receipts and may reuse the VHDX only after an elevated read-only
-mount confirms it has zero partitions; the retry uses a fresh VM nonce. Any
-identity mismatch or nonblank VHDX stops the retry.
+check matches the expected guest partition layout and confirms that the
+Windows partition contains no installed image. It resets only that exact
+receipt-owned VHDX and uses a fresh VM nonce. Any identity mismatch,
+unexpected partition, filesystem label, or guest file stops the retry.
 
 The result demonstrates only this finite Windows guest and its live
 normal/cancel cleanup. It does not execute the GoDD product workflow, the 13

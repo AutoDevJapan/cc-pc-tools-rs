@@ -33,6 +33,7 @@ const (
 )
 
 var waitNamedPipeW = syscall.NewLazyDLL("kernel32.dll").NewProc("WaitNamedPipeW")
+var errTLSHandshakeTimeout = errors.New("TLS handshake timeout")
 
 type vmReceipt struct {
 	Instance              string `json:"instance"`
@@ -487,7 +488,7 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 		secureCandidate := tlsClientConn(candidate, client, ready.ServerSHA256)
 		if err := tlsHandshakeWithTimeout(secureCandidate, min(30*time.Second, time.Until(deadline))); err != nil {
 			_ = conn.Close()
-			if !isGuestPipeDisconnect(err) {
+			if !isGuestConnectionRetryable(err) {
 				return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest mutual TLS handshake failed: %w", err)
 			}
 			handshakeErr = err
@@ -545,8 +546,8 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 	return *normalReply.Result, *cancelReply.Result, nil
 }
 
-func isGuestPipeDisconnect(err error) bool {
-	return errors.Is(err, syscall.ERROR_BROKEN_PIPE) || errors.Is(err, syscall.Errno(232)) || errors.Is(err, syscall.Errno(233))
+func isGuestConnectionRetryable(err error) bool {
+	return errors.Is(err, errTLSHandshakeTimeout) || errors.Is(err, syscall.ERROR_BROKEN_PIPE) || errors.Is(err, syscall.Errno(232)) || errors.Is(err, syscall.Errno(233))
 }
 
 func validateFixtureResult(result fixtureResult, kind string) error {
@@ -614,7 +615,7 @@ func tlsHandshakeWithTimeout(conn net.Conn, timeout time.Duration) error {
 		return err
 	case <-timer.C:
 		_ = conn.Close()
-		return errors.New("TLS handshake timeout")
+		return errTLSHandshakeTimeout
 	}
 }
 

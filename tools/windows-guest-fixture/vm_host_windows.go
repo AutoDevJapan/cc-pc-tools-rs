@@ -1108,9 +1108,11 @@ try {
   $osAccessPath=$osRoot
   $osVolume=$osPartition|Get-Volume -ErrorAction Stop
   if($osVolume.FileSystemLabel -cne 'CC2746OS' -or $osVolume.FileSystem -cne 'NTFS'){throw 'OWNED_OS_VOLUME_REJECTED'}
+  $applyDir=$osRoot.TrimEnd('\')+'\.'
+  if(-not (Test-Path -LiteralPath $applyDir)){throw 'OWNED_DISM_APPLY_DIRECTORY_MISSING'}
   $dism=Join-Path $env:SystemRoot 'System32\dism.exe'
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
-  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $osRoot)) '/CheckIntegrity' (('/LogPath:{0}' -f $dismLog)) *> $null
+  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $applyDir)) '/CheckIntegrity' (('/LogPath:{0}' -f $dismLog)) *> $null
   if($LASTEXITCODE -ne 0){throw 'OWNED_OFFLINE_WIM_APPLY_FAILED'}
   $windowsRoot=Join-Path $osRoot 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}

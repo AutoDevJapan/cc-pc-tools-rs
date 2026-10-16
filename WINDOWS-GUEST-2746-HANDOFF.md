@@ -86,9 +86,9 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   partitions and it remains 4 MiB, so Windows Setup never began applying the
   image. The original failure receipt did not preserve which serial substage
   timed out, so only “no readiness within 30 minutes” is confirmed.
-- The first offline image attempt failed at DISM `/Apply-Image` with HRESULT
-  `0x80070003`; the DISM log records the official source WIM and a host folder
-  mount path for ApplyDir. No new VM was created. Its VHDX is detached and
+- The offline image attempt failed at DISM `/Apply-Image` with HRESULT
+  `0x80070003`; the DISM log records the official source WIM and ApplyDir
+  ending in a quoted trailing backslash. No new VM was created. Its VHDX is detached and
   about 196 MiB. A read-only probe found four partitions (EFI, OS, and two
   MSRs) with task-specific filesystem labels. Whether the OS partition has a
   Windows directory is not yet confirmed.
@@ -101,8 +101,14 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   layout, handle a single initialization-created MSR if present, and create
   EFI, one MSR, and OS partitions in boot order. The answer file remains in
   Panther and on the seed DVD; first boot should run `specialize` and leave
-  normal OOBE intact. `gofmt`, `go test ./...`, `go vet ./...`, and
-  `git diff --check` passed before the latest archive-idempotence adjustment.
+  normal OOBE intact. A bounded read-only AdminBroker probe later confirmed
+  `Test-Path` succeeds for the target and DISM `/Get-WimInfo` reads the source
+  WIM successfully; both VHD and ISO were detached afterward. The helper now
+  passes the same volume root as `H:\.` to avoid native argument handling of a
+  final backslash and checks this normalized directory before DISM. This
+  diagnosis is an inference from the log and path checks, not yet a proven
+  fix. `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` passed
+  before the latest ApplyDir adjustment.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its

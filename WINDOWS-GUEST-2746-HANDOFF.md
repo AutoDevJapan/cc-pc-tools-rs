@@ -147,19 +147,33 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   the helper executable from the parent root while requiring every input to
   be under the dedicated VHD root. No guest VHDX or VM was created; the exact
   failure was retained. The code now passes the already-created helper copy
-  from the seed directory. This correction is uncommitted and not yet rerun.
+  from the seed directory; this correction was committed/pushed as `c8d8320`.
 - After that fix was pushed as `c8d8320`, the next attempt stopped before
   conversion: the local Hyper-V `Convert-VHD` command does not accept
   `-VHDFormat`. The command's parameter list was checked locally, and the
   official Microsoft Learn reference confirms the destination filename
   extension selects VHD versus VHDX. No clone or VM was created. The helper
   now relies on its `.vhdx` destination suffix and keeps `-VHDType Dynamic`;
-  this correction is uncommitted and untried.
+  the correction was committed/pushed as `629be9e`.
+- The next VHD attempt converted the Microsoft VHD and copied the helper/seed
+  into its task-owned clone, then stopped when the temporary SYSTEM hive could
+  not unload. The failure receipt and AdminBroker output were retained. The
+  SYSTEM hive remained loaded after that child process exited; the exact
+  `CC2746System_*` alias was identified by its task-specific prefix, unloaded
+  through AdminBroker, and the guest VHDX was detached. A read-only check then
+  confirmed the helper, seed and preparation marker in the clone; a separate
+  temporary hive read confirmed `CCGuest2746` has Auto start, LocalSystem, and
+  the expected image path. The old clone has a stale client-certificate pin
+  because its host key was cleared after the failed run, so it will not be
+  reused. The cause was an undisposed RegistryKey handle for the offline
+  `Select` subkey. Source now explicitly disposes it before unloading. This
+  correction is uncommitted and untried; the failed clone remains detached in
+  the safe-delete-owned root for final cleanup.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the Convert-VHD parameter correction; commit and push it.
+   the RegistryKey lifetime correction; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

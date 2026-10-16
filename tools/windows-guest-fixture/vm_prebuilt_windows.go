@@ -168,7 +168,26 @@ try {
   $loadedHives.Add($systemName)
   $registry=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($systemName,$true)
   if(-not $registry){throw 'OWNED_GUEST_SYSTEM_HIVE_OPEN_FAILED'}
-  try{$current=[int]$registry.OpenSubKey('Select',$false).GetValue('Current',0);if($current -lt 1 -or $current -gt 999){throw 'OWNED_GUEST_CURRENT_CONTROL_SET_REJECTED'};$control='ControlSet{0:D3}' -f $current;$services=$registry.OpenSubKey(($control+'\Services'),$true);if(-not $services){throw 'OWNED_GUEST_SERVICES_KEY_MISSING'};try{$existing=$services.OpenSubKey('CCGuest2746',$false);if($existing){$same=([int]$existing.GetValue('Type',0) -eq 16) -and ([int]$existing.GetValue('Start',0) -eq 2) -and ([int]$existing.GetValue('ErrorControl',0) -eq 1) -and ([string]$existing.GetValue('ObjectName','') -ceq 'LocalSystem') -and ([string]$existing.GetValue('ImagePath','') -ceq '\SystemRoot\System32\cc2746-guest.exe --service');$existing.Dispose();if(-not $same){throw 'OWNED_GUEST_SERVICE_COLLISION'}}else{$service=$services.CreateSubKey('CCGuest2746');if(-not $service){throw 'OWNED_GUEST_SERVICE_CREATE_FAILED'};try{$service.SetValue('Type',16,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('Start',2,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ErrorControl',1,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ObjectName','LocalSystem',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('ImagePath','\SystemRoot\System32\cc2746-guest.exe --service',[Microsoft.Win32.RegistryValueKind]::ExpandString);$service.SetValue('DisplayName','ToDo 2746 guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('Description','Credential-free finite Windows guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.Flush()}finally{$service.Dispose()}}}finally{$services.Dispose()}}finally{$registry.Dispose()}
+  try{
+    $selectKey=$registry.OpenSubKey('Select',$false)
+    if(-not $selectKey){throw 'OWNED_GUEST_CURRENT_CONTROL_SET_MISSING'}
+    try{$current=[int]$selectKey.GetValue('Current',0)}finally{$selectKey.Dispose()}
+    if($current -lt 1 -or $current -gt 999){throw 'OWNED_GUEST_CURRENT_CONTROL_SET_REJECTED'}
+    $control='ControlSet{0:D3}' -f $current
+    $services=$registry.OpenSubKey(($control+'\Services'),$true)
+    if(-not $services){throw 'OWNED_GUEST_SERVICES_KEY_MISSING'}
+    try{
+      $existing=$services.OpenSubKey('CCGuest2746',$false)
+      if($existing){
+        try{$same=([int]$existing.GetValue('Type',0) -eq 16) -and ([int]$existing.GetValue('Start',0) -eq 2) -and ([int]$existing.GetValue('ErrorControl',0) -eq 1) -and ([string]$existing.GetValue('ObjectName','') -ceq 'LocalSystem') -and ([string]$existing.GetValue('ImagePath','') -ceq '\SystemRoot\System32\cc2746-guest.exe --service')}finally{$existing.Dispose()}
+        if(-not $same){throw 'OWNED_GUEST_SERVICE_COLLISION'}
+      }else{
+        $service=$services.CreateSubKey('CCGuest2746')
+        if(-not $service){throw 'OWNED_GUEST_SERVICE_CREATE_FAILED'}
+        try{$service.SetValue('Type',16,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('Start',2,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ErrorControl',1,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ObjectName','LocalSystem',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('ImagePath','\SystemRoot\System32\cc2746-guest.exe --service',[Microsoft.Win32.RegistryValueKind]::ExpandString);$service.SetValue('DisplayName','ToDo 2746 guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('Description','Credential-free finite Windows guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.Flush()}finally{$service.Dispose()}
+      }
+    }finally{$services.Dispose()}
+  }finally{$registry.Dispose()}
   $marker=@{schema='cc2746-offline-service-v1';instance=$instance;image_state=[string]$state.ImageState;image_deployment_method=$method}|ConvertTo-Json -Compress
   Set-Content -LiteralPath (Join-Path $system32 'cc2746-fixture-state.json') -Value $marker -Encoding ascii
   $unload=& $reg unload ('HKLM\'+$systemName) 2>&1
@@ -178,12 +197,19 @@ try {
   Dismount-VHD -Path $guestVHD -ErrorAction Stop|Out-Null
   $mounted=$false
 } catch {
-  @{phase='vhd-provision';failure='owned Microsoft evaluation VHD provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
+  $detail=[string]$_.Exception.Message -replace [regex]::Escape($root),'[owned-root]' -replace [regex]::Escape($instance),'[nonce]'
+  @{phase='vhd-provision';failure='owned Microsoft evaluation VHD provisioning failed';detail=$detail}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
   throw
 } finally {
   $reg=Join-Path $env:SystemRoot 'System32\reg.exe'
-  for($i=$loadedHives.Count-1;$i -ge 0;$i--){$null=& $reg unload ('HKLM\'+$loadedHives[$i]) 2>&1}
-  if($mounted){if($accessPartition){$part=Get-Partition -DiskNumber $diskNumber -PartitionNumber $accessPartition -ErrorAction SilentlyContinue;if($part -and $part.DriveLetter){$assigned=([string]$part.DriveLetter)+':\';Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $accessPartition -AccessPath $assigned -ErrorAction SilentlyContinue|Out-Null}};Dismount-VHD -Path $guestVHD -ErrorAction SilentlyContinue|Out-Null}
+  $cleanupFailures=[Collections.Generic.List[string]]::new()
+  for($i=$loadedHives.Count-1;$i -ge 0;$i--){
+    try{$previous=$ErrorActionPreference;$ErrorActionPreference='SilentlyContinue';$null=& $reg unload ('HKLM\'+$loadedHives[$i]) 2>&1;$unloadExit=$LASTEXITCODE;$ErrorActionPreference=$previous;if($unloadExit -ne 0){$cleanupFailures.Add('offline registry hive unload failed')}else{$loadedHives.RemoveAt($i)}}catch{$ErrorActionPreference='Stop';$cleanupFailures.Add('offline registry hive unload raised an error')}
+  }
+  if($mounted){
+    try{if($accessPartition){$part=Get-Partition -DiskNumber $diskNumber -PartitionNumber $accessPartition -ErrorAction SilentlyContinue;if($part -and $part.DriveLetter){$assigned=([string]$part.DriveLetter)+':\';Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $accessPartition -AccessPath $assigned -ErrorAction Stop|Out-Null}};Dismount-VHD -Path $guestVHD -ErrorAction Stop|Out-Null;$mounted=$false}catch{$cleanupFailures.Add('owned guest VHD detach failed')}
+  }
+  if($cleanupFailures.Count -gt 0){@{phase='vhd-resource-cleanup';failures=@($cleanupFailures)}|ConvertTo-Json -Depth 3|Set-Content -LiteralPath (Join-Path $root 'vhd-resource-cleanup-failure.private.json') -Encoding utf8;throw 'owned evaluation VHD registry or mount cleanup was incomplete'}
 }
 $vm=New-VM -Name $name -Generation 2 -MemoryStartupBytes 2GB -VHDPath $guestVHD -Path (Join-Path $root 'vm')
 $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$guestVHD;windows_iso='';seed_iso='';image_source=$source;image_deployment_method=$method;dvd_count=0;vhd_count=1;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}

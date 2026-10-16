@@ -56,18 +56,18 @@ type cleanupReceipt struct {
 }
 
 type vmEvidence struct {
-	Schema                   string         `json:"schema"`
-	ObservedAt               time.Time      `json:"observed_at"`
-	Instance                 string         `json:"instance"`
-	ImageBytes               int64          `json:"image_bytes"`
-	ImageSHA256              string         `json:"image_sha256"`
+	Schema                   string          `json:"schema"`
+	ObservedAt               time.Time       `json:"observed_at"`
+	Instance                 string          `json:"instance"`
+	ImageBytes               int64           `json:"image_bytes"`
+	ImageSHA256              string          `json:"image_sha256"`
 	VM                       vmPublicReceipt `json:"vm"`
-	Normal                   fixtureResult  `json:"normal"`
-	Cancel                   fixtureResult  `json:"cancel"`
-	Cleanup                  cleanupReceipt `json:"cleanup"`
-	CredentialFree           bool           `json:"credential_free"`
-	ProductSourceTransferred bool           `json:"product_source_transferred"`
-	OfficialCIExecuted       bool           `json:"official_ci_executed"`
+	Normal                   fixtureResult   `json:"normal"`
+	Cancel                   fixtureResult   `json:"cancel"`
+	Cleanup                  cleanupReceipt  `json:"cleanup"`
+	CredentialFree           bool            `json:"credential_free"`
+	ProductSourceTransferred bool            `json:"product_source_transferred"`
+	OfficialCIExecuted       bool            `json:"official_ci_executed"`
 }
 
 type vmPublicReceipt struct {
@@ -167,7 +167,7 @@ func runVMProvision(root, isoPath string) error {
 	evidence := vmEvidence{
 		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: instance,
 		ImageBytes: info.Size(), ImageSHA256: isoHash,
-		VM: vmPublicReceipt{VMID: vm.ID, Generation: 2, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
+		VM:     vmPublicReceipt{VMID: vm.ID, Generation: 2, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
 		CredentialFree: true, ProductSourceTransferred: false, OfficialCIExecuted: false,
 	}

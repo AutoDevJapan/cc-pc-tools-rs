@@ -49,7 +49,7 @@ type bootstrapReceipt struct {
 	Stage, Instance, ContainerID        string
 	RunID                               int64 `json:"run_id"`
 	TreeGone, Removed, RegistrationGone bool
-	RouteRestored bool `json:"route_restored_on_failure"`
+	RouteRestored                       bool   `json:"route_restored_on_failure"`
 	Failure                             string `json:"failure,omitempty"`
 	AllRequiredChecksSuccess            bool   `json:"all_required_checks_success"`
 }
@@ -101,10 +101,10 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 	if e != nil {
 		return errors.New("candidate already occupied")
 	}
-	creationUncertain, registrationMayExist,routeAttempted := false, false,false
+	creationUncertain, registrationMayExist, routeAttempted := false, false, false
 	defer func() {
 		ret = errors.Join(ret, lock.Close())
-		if (!creationUncertain || rec.Removed) && (!registrationMayExist || rec.RegistrationGone) && !(ret!=nil&&routeAttempted&&!rec.RouteRestored) {
+		if (!creationUncertain || rec.Removed) && (!registrationMayExist || rec.RegistrationGone) && !(ret != nil && routeAttempted && !rec.RouteRestored) {
 			if e := os.Remove(lockPath); e != nil {
 				ret = errors.Join(ret, e)
 			}
@@ -140,10 +140,15 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 		return errors.New("bootstrap creation unverified; retain admission")
 	}
 	rec.ContainerID = found[0].ID
-	defer func(){
-		if ret!=nil&&routeAttempted{
-			cc,cancel:=context.WithTimeout(context.Background(),45*time.Second);defer cancel()
-			if e:=restoreCodeQL(cc,c,dir);e!=nil{ret=errors.Join(ret,errors.New("route restoration pending; retain admission"),e)}else{rec.RouteRestored=true}
+	defer func() {
+		if ret != nil && routeAttempted {
+			cc, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+			defer cancel()
+			if e := restoreCodeQL(cc, c, dir); e != nil {
+				ret = errors.Join(ret, errors.New("route restoration pending; retain admission"), e)
+			} else {
+				rec.RouteRestored = true
+			}
 		}
 	}()
 	defer func() {
@@ -247,7 +252,7 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 	if e = save(); e != nil {
 		return e
 	}
-	routeAttempted=true
+	routeAttempted = true
 	if e = routeCodeQL(ctx, c, dir); e != nil {
 		return e
 	}

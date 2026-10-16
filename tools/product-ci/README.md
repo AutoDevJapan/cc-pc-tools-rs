@@ -1,5 +1,20 @@
 # Fixed candidate product CI
 
+`pr148-plan <new-owned-dir>` is a read-only plan for the fixed PR148 candidate.
+It independently rechecks its original head/tree/base and branch, three original
+workflow digests, and all four unstarted official jobs and budget annotations.
+The YAML parser rejects aliases, duplicate keys and multiple documents. In RAM
+it proposes changes only to `runs-on`, explicit PR-head checkout and disabled
+checkout credential persistence; parsed acceptance semantics are compared after
+removing those intended edits. All command bytes remain unchanged. The route is
+limited to this same-repository PR or its original branch's manual dispatch;
+main and unrelated PRs retain the original hosted labels. Only metadata/digests
+are saved, never product source. This command performs no mutation, source
+extraction, registration, Cargo or test execution. Its receipt explicitly keeps
+`proposal_only=true` and `all_required_checks_success=false`. The actual Linux
+and Windows runner paths, workflow mutation review and official execution are
+still required; this plan alone cannot restore CI.
+
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four
 numeric repository IDs, PR numbers and source revisions are explicit. Before

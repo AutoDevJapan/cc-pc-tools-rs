@@ -654,7 +654,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
-	if len(os.Args) == 2 && os.Args[1] == "inspect" {
+	if len(os.Args) == 3 && os.Args[1] == "pr148-plan" {
+		e = savePR148Proposal(ctx, os.Args[2])
+	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
 			_, err := verify(ctx, c, get)
 			stage := "fixed-head-verified"

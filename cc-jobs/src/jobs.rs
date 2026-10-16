@@ -36,6 +36,16 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
+        let fixed_guidance = if job["fixed_read_only_review"].is_null() {
+            String::new()
+        } else if source == dir.join("prompt.md") {
+            // Validate precisely the bytes that will be consumed, not a second
+            // read that could observe a replacement of the original prompt.
+            self.fixed_review_guidance(job, text.as_bytes())?
+        } else {
+            let original = fs::read(dir.join("prompt.md"))?;
+            self.fixed_review_guidance(job, &original)?
+        };
         if job.get("original_product_retry").is_some() {
             // Keep prompt.md byte-identical for bind's digest; execution still
             // receives the same sandbox guidance as ordinary registrations.
@@ -73,7 +83,7 @@ impl Context {
         text.push_str("\n\n## 実行時のサイト制限\n");
         text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
         text.push('\n');
-        text.push_str(&self.fixed_review_guidance(job)?);
+        text.push_str(&fixed_guidance);
         let selected = dir.join("execution-prompt.md");
         fs::write(&selected, text)?;
         Ok(selected)
@@ -1520,7 +1530,11 @@ pub fn codex_args(j: &Value) -> Vec<String> {
         args.push("-".into());
         return args;
     }
-    if let Some(dirs) = j["add_dirs"].as_array() {
+    // Keep the original launch record, but never translate its old writable
+    // directory hints into a fixed reader's effective command line.
+    if !j["fixed_read_only_review"].is_object()
+        && let Some(dirs) = j["add_dirs"].as_array()
+    {
         for d in dirs {
             args.extend(["--add-dir".into(), pystr(d)]);
         }

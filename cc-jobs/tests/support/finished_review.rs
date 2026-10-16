@@ -20,6 +20,7 @@ fn setup() -> (Test, subwork_support::Fixture, Request) {
     j["network"] = json!(false);
     j["sandbox"] = json!("danger-full-access");
     j["scope_source"] = json!("launcher");
+    j["add_dirs"] = json!(["original-launch-write-hint"]);
     j["fixed_review_protocol"] = json!({"version":1,"pid":j["pid"],"created":j["pid_created"]});
     j["work_wait_on"] = json!([3]);
     j["work_wait_evidence"] = json!({"owner_job_id":"writer","owner":work_owner::owner_evidence(&w),"candidate_identity":j["work_owner"]});
@@ -109,6 +110,15 @@ fn original_reader_admits_and_receives_fixed_read_only_source_while_cleanup_stay
     assert_eq!(running["status"], "running");
     assert_eq!(running["work_wait_on"], json!([]));
     assert_eq!(running["sandbox"], "read-only");
+    let args = codex_args(&running);
+    assert!(args.windows(2).any(|a| a == ["-s", "read-only"]));
+    assert!(args.iter().any(|a| a == "approval_policy=never"));
+    assert!(args.iter().any(|a| a == "approvals_reviewer=user"));
+    assert!(
+        !args
+            .iter()
+            .any(|a| a == "--add-dir" || a.contains("network_access=true"))
+    );
     let path = t.ctx.prompt_for_attempt(&running).unwrap();
     let text = fs::read_to_string(path).unwrap();
     assert!(text.contains(&r.fixed_head));
@@ -122,6 +132,34 @@ fn original_reader_admits_and_receives_fixed_read_only_source_while_cleanup_stay
     assert_eq!(db["items"][2]["status"], "wait");
     assert_eq!(db["items"][2]["wait_on"], json!([77]));
     assert_eq!(db["items"][3]["status"], "block");
+}
+
+#[test]
+fn execution_checks_the_consumed_prompt_even_if_the_original_path_is_replaced() {
+    let (t, f, r) = setup();
+    t.ctx.qualify_finished_review(&r, true).unwrap();
+    let prompt = t.ctx.job_dir("child").join("prompt.md");
+    fs::write(&prompt, b"unverified input that must never be consumed").unwrap();
+    let spec = std::path::PathBuf::from(f.db["items"][1]["spec"].as_str().unwrap());
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+        if path == spec {
+            fs::write(&prompt, b"fixture task").unwrap();
+        }
+    }));
+    // The second read would match the saved hash, but the input already read
+    // for execution did not. The old two-read implementation accepted it.
+    let job = t.ctx.load("child").unwrap();
+    let error = t.ctx.prompt_for_attempt(&job).unwrap_err();
+    assert!(
+        error.message.contains("changed before execution"),
+        "{}",
+        error.message
+    );
+    assert_eq!(
+        fs::read(t.ctx.job_dir("child").join("prompt.md")).unwrap(),
+        b"fixture task"
+    );
+    assert!(!t.ctx.job_dir("child").join("execution-prompt.md").exists());
 }
 
 #[test]

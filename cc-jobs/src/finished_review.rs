@@ -73,7 +73,12 @@ impl Context {
         )
         .map_err(Error::new)?;
         let git = |args: &[&str]| -> Result<Reply> {
-            let mut argv = vec!["git".into(), "-C".into(), s(&parent, "cwd").into()];
+            let mut argv = vec![
+                "git".into(),
+                "--no-optional-locks".into(),
+                "-C".into(),
+                s(&parent, "cwd").into(),
+            ];
             argv.extend(args.iter().map(|s| s.to_string()));
             let reply = self.rt.call(Call::new(argv, vec![], 10.))?;
             if reply.code != 0 {
@@ -107,7 +112,11 @@ impl Context {
         )
     }
 
-    pub(crate) fn fixed_review_guidance(&self, job: &Value) -> Result<String> {
+    pub(crate) fn fixed_review_guidance(
+        &self,
+        job: &Value,
+        original_prompt: &[u8],
+    ) -> Result<String> {
         let b = &job["fixed_read_only_review"];
         if b.is_null() {
             return Ok(String::new());
@@ -124,9 +133,8 @@ impl Context {
                 "fixed review specification changed before execution",
             ));
         }
-        let spec = fs::read(Path::new(s(current, "spec")))?;
-        let prompt = fs::read(self.job_dir(s(job, "id")).join("prompt.md"))?;
-        let r = finished_review::binding(&db, job, &spec, &prompt).map_err(Error::new)?;
+        let spec = self.read_file(Path::new(s(current, "spec")))?;
+        let r = finished_review::binding(&db, job, &spec, original_prompt).map_err(Error::new)?;
         if self.rt.recovery_protected(s(job, "cwd"))?
             || self.rt.recovery_protected(s(b, "source_cwd"))?
         {

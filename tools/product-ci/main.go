@@ -629,6 +629,24 @@ func checkIsolation(b []byte, image string) error {
 }
 
 func main() {
+	if len(os.Args) == 2 && strings.HasPrefix(os.Args[1], "codeql-") {
+		var e error
+		switch os.Args[1] {
+		case "codeql-guest":
+			e = codeQLGuest()
+		case "codeql-hook-start":
+			e = codeQLHook(false)
+		case "codeql-hook-complete":
+			e = codeQLHook(true)
+		default:
+			e = errors.New("unknown guest mode")
+		}
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
@@ -643,6 +661,28 @@ func main() {
 				e = errors.Join(e, err)
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: stage, At: time.Now().UTC()})
+		}
+	} else if (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
+		id, parse := strconv.ParseInt(os.Args[2], 10, 64)
+		var chosen *candidate
+		for i := range candidates {
+			if candidates[i].ID == id {
+				chosen = &candidates[i]
+			}
+		}
+		if parse != nil || chosen == nil {
+			e = errors.New("unknown candidate")
+		} else if os.Args[1] == "codeql-restore" {
+			e = restoreCodeQL(ctx, *chosen, os.Args[3])
+		} else if os.Args[1] == "codeql-route" {
+			e = routeCodeQL(ctx, *chosen, os.Args[3])
+		} else {
+			runID, parse := strconv.ParseInt(os.Args[3], 10, 64)
+			if parse != nil || runID < 1 {
+				e = errors.New("invalid run ID")
+			} else {
+				e = executeCodeQL(ctx, *chosen, runID, os.Args[4], os.Args[5])
+			}
 		}
 	} else if len(os.Args) == 4 && os.Args[1] == "lifecycle-smoke" {
 		e = lifecycleSmoke(ctx, os.Args[2], os.Args[3])

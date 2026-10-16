@@ -765,7 +765,7 @@ func seedAnswerFile() string {
       <RunSynchronous>
         <RunSynchronousCommand wcm:action="add">
           <Order>1</Order><Description>Install finite credential-free guest service</Description>
-          <Path>%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$d=[IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq [IO.DriveType]::CDRom -and $_.IsReady } | Where-Object { $_.VolumeLabel -eq 'CC2746SEED' } | Select-Object -First 1; if(-not $d){exit 51}; &amp; (Join-Path $d.RootDirectory.FullName 'stage.ps1')&quot;</Path>
+          <Path>powershell.exe -nop -ep Bypass -c &quot;$d=[IO.DriveInfo]::GetDrives()|?{$_.DriveType -eq 'CDRom' -and $_.IsReady -and $_.VolumeLabel -eq 'CC2746SEED'};if(!$d){exit 51};&amp;($d.RootDirectory.FullName+'stage.ps1')&quot;</Path>
           <WillReboot>Never</WillReboot>
         </RunSynchronousCommand>
       </RunSynchronous>
@@ -779,6 +779,8 @@ func validateSeedAnswerFile(answer string) error {
 	decoder := xml.NewDecoder(strings.NewReader(answer))
 	passes := map[string]bool{}
 	rootSeen, eulaAccepted, inAcceptEula := false, false, false
+	inCommandPath := false
+	commandPathLength := 0
 	for {
 		token, err := decoder.Token()
 		if errors.Is(err, io.EOF) {
@@ -810,13 +812,26 @@ func validateSeedAnswerFile(answer string) error {
 			if value.Name.Local == "AcceptEula" {
 				inAcceptEula = true
 			}
+			if value.Name.Local == "Path" {
+				inCommandPath = true
+				commandPathLength = 0
+			}
 		case xml.CharData:
 			if inAcceptEula && strings.TrimSpace(string(value)) == "true" {
 				eulaAccepted = true
 			}
+			if inCommandPath {
+				commandPathLength += len([]rune(string(value)))
+			}
 		case xml.EndElement:
 			if value.Name.Local == "AcceptEula" {
 				inAcceptEula = false
+			}
+			if value.Name.Local == "Path" {
+				if commandPathLength > 240 {
+					return errors.New("unattend staging command exceeds the supported path length")
+				}
+				inCommandPath = false
 			}
 		}
 	}

@@ -22,8 +22,8 @@ check sdk-cargo cargo -V
 check head git rev-parse HEAD 'HEAD^{tree}'
 check regression cargo nextest run --locked --manifest-path tools/Cargo.toml -p civ6-autotest-rs --test driver_safety -E 'test(test_run_creates_missing_output_parents_but_rejects_existing_run)'
 check driver-safety cargo nextest run --locked --manifest-path tools/Cargo.toml -p civ6-autotest-rs --test driver_safety
-check changed-crate cargo nextest run --locked --manifest-path tools/Cargo.toml -p civ6-autotest-rs
-check workspace cargo nextest run --locked --manifest-path tools/Cargo.toml --workspace --no-fail-fast
+check changed-crate cargo nextest run --locked --manifest-path tools/Cargo.toml -p civ6-autotest-rs --all-targets
+check workspace cargo nextest run --locked --manifest-path tools/Cargo.toml --workspace --all-targets --no-fail-fast
 check doctest cargo test --locked --manifest-path tools/Cargo.toml --workspace --doc
 check clippy cargo clippy --locked --manifest-path tools/Cargo.toml --workspace --all-targets -- -D warnings
 check fmt cargo fmt --manifest-path tools/Cargo.toml --all -- --check

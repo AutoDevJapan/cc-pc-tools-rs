@@ -30,6 +30,9 @@ func winRun(ctx context.Context, file string) error {
 	if _, e = verify(ctx, c, get); e != nil {
 		return e
 	}
+	if e = writeJSON(filepath.Join(v.Root, fmt.Sprintf("execution-plan-%d.private.json", time.Now().UnixNano())), v); e != nil {
+		return e
+	}
 	exe, _ := os.Executable()
 	x := cmd(context.Background(), `D:\CC\Tools\codex-jobs\cargo_gate.exe`, "test", "--target-dir", v.Target)
 	x.Env = nil
@@ -160,7 +163,7 @@ func winSDKEnvironment(v winPlan, env []string) ([]string, error) {
 		}
 	}
 	sdkBin := filepath.Dir(os.Args[0])
-	env = append(env, "RUSTUP_TOOLCHAIN="+v.Version, "SCCACHE_DIR=D:\\CC\\BuildCache\\sccache", "SCCACHE_CACHE_SIZE=30G", "SCCACHE_SERVER_PORT=42310", "RUSTC_WRAPPER=D:\\CC\\Tools\\sccache\\sccache.exe")
+	env = append(env, "RUSTUP_TOOLCHAIN="+v.Version, "CARGO_TARGET_DIR="+v.Target, "SCCACHE_DIR=D:\\CC\\BuildCache\\sccache", "SCCACHE_CACHE_SIZE=30G", "SCCACHE_SERVER_PORT=42330", "RUSTC_WRAPPER=D:\\CC\\Tools\\sccache\\sccache.exe")
 	core := filepath.Join(sdkRoot, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "bin")
 	linkTools := filepath.Join(sdkRoot, "rustup", "toolchains", v.Version+"-x86_64-pc-windows-msvc", "lib", "rustlib", "x86_64-pc-windows-msvc", "bin")
 	env = append(env, "RUSTC="+filepath.Join(core, "rustc.exe"), "RUSTDOC="+filepath.Join(core, "rustdoc.exe"))

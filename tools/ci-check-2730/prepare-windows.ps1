@@ -18,7 +18,8 @@ $plan | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $planPath -Encoding 
 if($LASTEXITCODE -ne 0){throw 'Control Git tree failed'}
 & $exe win-install-head $planPath (Join-Path $Control 'repo1392152644.private.json')
 if($LASTEXITCODE -ne 0){throw 'Fixed HEAD transfer failed'}
-Copy-Item -LiteralPath (Join-Path $Sdk 'rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/bin/rust-lld.exe') -Destination (Join-Path $Sdk 'link.exe')
+[IO.Directory]::CreateDirectory((Join-Path $plan.Root 'ci-tools'))|Out-Null
+Copy-Item -LiteralPath (Join-Path $Sdk 'rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/bin/rust-lld.exe') -Destination (Join-Path $plan.Root 'ci-tools/rust-lld.exe')
 $setup=@'
 param()
 $ErrorActionPreference='Stop'

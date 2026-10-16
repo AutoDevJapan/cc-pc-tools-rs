@@ -224,6 +224,14 @@ func run(ctx context.Context, file, supervisor, script string) error {
 	if e = transfer(ctx, s, script, "/work/plan.sh"); e != nil {
 		return e
 	}
+	planBytes, e := os.ReadFile(script)
+	if e != nil {
+		return e
+	}
+	planBytes = bytes.ReplaceAll(planBytes, []byte("\r\n"), []byte("\n"))
+	if e = os.WriteFile(filepath.Join(s.Root, fmt.Sprintf("repo%d-plan-%d.sh", s.RepoID, time.Now().UnixNano())), planBytes, 0600); e != nil {
+		return e
+	}
 	exe, _ := os.Executable()
 	x := cmd(context.Background(), `D:\CC\Tools\codex-jobs\cargo_gate.exe`, "test", "--target-dir", filepath.Join(s.Root, fmt.Sprintf("target-repo%d", s.RepoID)))
 	x.Env = nil

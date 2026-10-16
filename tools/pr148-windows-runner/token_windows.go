@@ -199,6 +199,44 @@ func tokenUserSID(token syscall.Handle) (string, error) {
 	defer kernel.NewProc("LocalFree").Call(uintptr(unsafe.Pointer(text)))
 	return syscall.UTF16ToString(unsafe.Slice(text, 256)), nil
 }
+
+func authenticatedUsersDenyOnly(token syscall.Handle) error {
+	var size uint32
+	getTokenInformation.Call(uintptr(token), 2, 0, 0, uintptr(unsafe.Pointer(&size)))
+	if size < 8 || size > 65536 {
+		return fmt.Errorf("token group buffer bound")
+	}
+	b := make([]byte, size)
+	r, _, e := getTokenInformation.Call(uintptr(token), 2, uintptr(unsafe.Pointer(&b[0])), uintptr(size), uintptr(unsafe.Pointer(&size)))
+	if r == 0 {
+		return e
+	}
+	type groups struct {
+		Count  uint32
+		Groups [1]sidAndAttributes
+	}
+	header := (*groups)(unsafe.Pointer(&b[0]))
+	offset := unsafe.Offsetof(header.Groups)
+	if uint64(header.Count)*uint64(unsafe.Sizeof(sidAndAttributes{}))+uint64(offset) > uint64(size) {
+		return fmt.Errorf("token groups truncated")
+	}
+	var au uintptr
+	r, _, e = convertSID.Call(ptr("S-1-5-11"), uintptr(unsafe.Pointer(&au)))
+	if r == 0 {
+		return e
+	}
+	defer kernel.NewProc("LocalFree").Call(au)
+	for _, g := range unsafe.Slice(&header.Groups[0], int(header.Count)) {
+		equal, _, _ := advapi.NewProc("EqualSid").Call(g.SID, au)
+		if equal != 0 {
+			if g.Attributes&0x10 == 0 || g.Attributes&4 != 0 {
+				return fmt.Errorf("Authenticated Users still enabled")
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("Authenticated Users group verification missing")
+}
 func drainRunnerJob(job uintptr, process syscall.Handle, budget time.Duration) error {
 	handles, err := runnerMembers(job)
 	if err != nil {

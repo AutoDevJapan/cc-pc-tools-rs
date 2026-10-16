@@ -326,6 +326,9 @@ func worker(p Plan) error {
 	if e != nil || lookup != nil || sid != want {
 		return errors.New("worker virtual identity rejected")
 	}
+	if e = authenticatedUsersDenyOnly(t); e != nil {
+		return e
+	}
 	if p.Fixture != "" {
 		return serviceFixture(p)
 	}
@@ -392,7 +395,7 @@ func serviceFixture(p Plan) error {
 	if !errors.Is(err, syscall.ERROR_ACCESS_DENIED) {
 		return errors.New("immutable plan protection not proven")
 	}
-	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "child_observed_alive": true, "case": p.Fixture, "virtual_account": true}); e != nil {
+	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "child_observed_alive": true, "case": p.Fixture, "virtual_account": true, "launcher_reopen_denied": true, "control_write_denied": true, "authenticated_users_deny_only_verified": true}); e != nil {
 		return e
 	}
 	if p.Fixture == "cancel" {

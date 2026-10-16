@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -23,7 +24,15 @@ func dispatch(args []string) error {
 	if e != nil {
 		return e
 	}
-	if e = checkPaths(p.Root); e != nil {
+	if args[0] == "service" || args[0] == "worker" || args[0] == "fixture-child" || args[0] == "hook-start" || args[0] == "verify-source" || args[0] == "hook-completed" {
+		e = checkOwnedTree(p.Root)
+	} else {
+		e = checkPaths(p.Root)
+	}
+	if e != nil {
+		if args[0] == "service" && p.Fixture != "" {
+			_ = saveNew(filepath.Join(p.runtime(), "startup-path-error.json"), map[string]any{"error": e.Error()})
+		}
 		return e
 	}
 	return platform(args[0], p, args[2:])

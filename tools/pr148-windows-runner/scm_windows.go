@@ -5,7 +5,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"syscall"
@@ -220,9 +219,17 @@ func platform(mode string, p Plan, args []string) error {
 		}
 		return prepare(p, archive)
 	case "service":
-		return runService(p)
+		e := runService(p)
+		if e != nil && p.Fixture != "" {
+			_ = saveNew(filepath.Join(p.runtime(), "startup-error.json"), map[string]any{"error": e.Error()})
+		}
+		return e
 	case "worker":
-		return worker(p)
+		e := worker(p)
+		if e != nil && p.Fixture != "" {
+			_ = saveNew(filepath.Join(p.runtime(), "worker-error.json"), map[string]any{"error": e.Error()})
+		}
+		return e
 	case "fixture-child":
 		time.Sleep(10 * time.Minute)
 		return nil
@@ -232,6 +239,8 @@ func platform(mode string, p Plan, args []string) error {
 		return stopFinite(p)
 	case "collect":
 		return collect(p)
+	case "cleanup-profile":
+		return cleanupProfile(p)
 	case "hook-start", "hook-completed", "verify-source":
 		return hook(p, mode)
 	case "audit":
@@ -243,5 +252,3 @@ func platform(mode string, p Plan, args []string) error {
 func envFor(p Plan) []string {
 	return []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `COMSPEC=C:\Windows\System32\cmd.exe`, `PATHEXT=.COM;.EXE;.BAT;.CMD`, `PATH=C:\Windows\System32;C:\Program Files\Git\cmd;C:\Program Files\PowerShell\7`, "TEMP=" + filepath.Join(p.runtime(), "tmp"), "TMP=" + filepath.Join(p.runtime(), "tmp"), "HOME=" + filepath.Join(p.runtime(), "home"), "USERPROFILE=" + filepath.Join(p.runtime(), "home"), "LOCALAPPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Local"), "APPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Roaming"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=NUL", "CI=true", "ACTIONS_RUNNER_HOOK_JOB_STARTED=" + filepath.Join(p.Root, "hook-start.ps1"), "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=" + filepath.Join(p.Root, "hook-completed.ps1"), "CARGO_HOME=" + filepath.Join(p.runtime(), "cargo"), "RUSTUP_HOME=" + filepath.Join(p.runtime(), "rustup"), "CARGO_TARGET_DIR=" + filepath.Join(p.runtime(), "target"), `RUSTC_WRAPPER=D:\CC\Tools\sccache\sccache.exe`, `SCCACHE_DIR=D:\CC\BuildCache\sccache`, `SCCACHE_CACHE_SIZE=30G`}
 }
-
-var _ = os.ErrNotExist

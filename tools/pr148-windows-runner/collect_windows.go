@@ -40,9 +40,18 @@ func collect(p Plan) error {
 		Drained bool `json:"job_drained"`
 	}
 	b, e := os.ReadFile(filepath.Join(p.runtime(), "drain.json"))
-	if e != nil || json.Unmarshal(b, &drain) != nil || !drain.Drained {
+	_, startErr := os.Lstat(filepath.Join(p.runtime(), "started.json"))
+	neverStarted := os.IsNotExist(startErr)
+	if (e != nil || json.Unmarshal(b, &drain) != nil || !drain.Drained) && !neverStarted {
 		closeSC(s)
 		return errors.New("Job Object completion evidence missing; retain resource")
+	}
+	if neverStarted {
+		count, err := ownedProcessCount(sid)
+		if err != nil || count != 0 {
+			closeSC(s)
+			return errors.New("unstarted service process absence not proven")
+		}
 	}
 	if p.Fixture == "" {
 		if e = audit(p); e != nil {

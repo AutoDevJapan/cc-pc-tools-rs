@@ -65,6 +65,14 @@ Use CC-AdminBroker for the administrative phases, with no visible console/UAC.
    Preserve raw evidence + SHA/bytes first. Then safe-delete plan, its normal
    deletion in a separate call, and finish; a rejection is not retried/bypassed.
 
+For a **new credential-free fixture account only**, `cleanup-profile <root>`
+is a separate single-attempt Windows `DeleteProfileW` operation. It requires
+the matching creation receipt, service absence and zero owned processes. A
+durable attempt marker precedes the OS call. Refusal is retained without an
+unload/retry/alternate cleanup path. It does not accept any other SID/profile.
+Real runner profile cleanup belongs to the parent integration. Always check
+fresh profile/hive/classes absence; the delete API return alone is not proof.
+
 `prepare` and `collect` require administrator access. `execute`/`stop` require
 SCM start/stop access; use the same existing broker when needed. Real execution
 must run under the parent's existing OAuth/API context for read-only audits.

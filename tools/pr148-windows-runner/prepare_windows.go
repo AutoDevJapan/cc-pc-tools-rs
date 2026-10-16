@@ -32,6 +32,13 @@ func checkPaths(root string) error {
 			break
 		}
 	}
+	return checkOwnedTree(root)
+}
+
+// The administrative preparation checks every ancestor. The restricted worker
+// checks only its owned tree: traversing an ancestor is allowed by Windows but
+// reading the owner's Temp directory metadata is neither needed nor granted.
+func checkOwnedTree(root string) error {
 	return filepath.Walk(root, func(path string, fi os.FileInfo, e error) error {
 		if e != nil {
 			return e

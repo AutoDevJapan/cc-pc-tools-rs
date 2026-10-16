@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -75,5 +74,3 @@ func workerEnv(p Plan) []string {
 	}
 	return env
 }
-
-var _ = json.Valid

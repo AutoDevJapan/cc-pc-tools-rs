@@ -1,0 +1,26 @@
+# 元ToDo2639・追加4ファイルの別モデルレビュー
+
+複数ファイルをまたぐ読み取り専用レビュー。claude-sonnet-5-5の既存OAuth枠だけを使う。GPU/Cargo/Civ6/APIキーAI/新費用/本人PC操作/Terminal/UACは禁止。元の作業範囲と停止・依存を広げない。
+
+GitHub APIでrepository ID1285649124のAutoDevJapan所有/private/admin/nonforkと同repositoryのPR1002を照合する。名前はメモリ内API経路だけで使い、stdout・会話・報告・ファイル名へ出さない。除外一覧、秘密、PC上の旧製品フォルダ、guard、owner-work登録は読まない・変更しない。ソースは固定GitHub blobだけから取得し、リポジトリ名と派生表記をメモリ内で伏せてから必要部分を読む。生ログとAPI全量を出さない。
+
+固定base=b93e126b172adbb29ad2081af4732f4b42f8bc95、固定head=20c441df545a88f4a839d7e906b5aeb4f1708ae3、tree=007b84082008ea9effd5052f63856273aabbfb17。同PR/同branchの通常子commit1件。他head/merge-refへ追従しない。製品ソース・PR・CI・配備・保護設定は一切変更しない。
+
+今回読む差分は次の4ファイルだけ。必要な既存helper・規則は同じ固定sourceから読む。
+
+- backend/tests/test_observability_postgres.py（新規）
+- docs/runbooks/observability-slo.md
+- docs/runbooks/github-required-check-boundary.md
+- CLAUDE.md（自動生成stackブロックは変更していない）
+
+原App差分と原CI差分の5ファイルは、Sonnet工程2735で固定f3d946cbからb93を実レビューしMust0。原応答はjob20261017-003728-todo-2735のlast_message.md、SHA256 24618823b5e1a8b5617c4643587da4cf95ebe5524d98275155bf7a7394ce0ec6。この追加レビューで元5ファイル全体をやり直さない。
+
+今回の目的は、2735のSuggestion S1〜S3への対応。アラート表を中断していた段落を表の後ろへ移動して復旧手順を追加した。正常heartbeatのPostgreSQL timestamptz→text→fromisoformat経路に、UTC/Asia-Kolkata/America-New-Yorkの3ケースを追加した。実際のrecord_heartbeatで作成した4workerの値を、別のtyped列読取結果と比較し、fresh/age/日時/critical誤報なしを確認する。ランダムschemaで分離し終了時に削除する。CLIの既存仕様に合わせ、required testの実行機と固定gitleaksの更新・復旧手順を文書化した。
+
+確認済み：固定b93のarchiveへ4ファイルだけを重ね、immutableの既存uv imageとPostgreSQL imageを使った隔離containerで、locked依存/Ruff check/Ruff format/mypy/元test_observabilityと新PostgreSQL testの合計50passed・skip0を実行した。pytestの実時間4.82秒。依存取得後の外向通信を切り、同namespaceの独立PostgreSQLへTCP接続した。非root/cap-drop-all/readonly/tmpfs/noGPU/no hostsource・profile・socket bind、CPU/RAM/pids制限。終了後両containerのrunning=false/PID0とrm -v成功を確認。原log2857bytes/SHA256 f3740324680cf9f7bf79e99fb332d34cbd3193f80b21f1cda3e15a958821f570。実検査した4ファイルのSHA256とアップロードblobのGit SHA1を照合してcommitした。正式な新headのCIはまだqueuedで、b93のCI成功を新headの成功とは扱わない。
+
+設定のGET確認：active repository ruleset18884840はrequired test/App15368、approval数0・codeowner必須false・thread解決必須。Actions selected/sha pin必須。private repoのfork workflow実行・write token・secret送付はfalse。保護設定は変更していない。顧客固有規則は維持する。
+
+見る点：テストが本当にPostgreSQLの文字列変換経路を実行するか、timezone設定がsnapshotまで生きるか、assertが既存の不具合/偽criticalを検出するか、schemaとDB接続の後始末、Markdownの表の連続性、文書が実CI/供給元/固定値の検査・復旧の実態と一致するか。既知の未来日時の挙動等、原差分外の仕様は蒸し返さない。
+
+結果は日本語でMust/Suggestion/Nit、file:line、実害と具体修正を示す。MustがなければMust0と明記する。未実行を成功としない。読み取り専用環境での結果ファイル作成やcommitは要求しない。最終応答のレビュー本文と対象head/base/treeを親が原文・hash付きで保存する。元2639・製品全体・CIをdoneにしない。この有限レビューだけを終了する。

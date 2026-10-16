@@ -34,4 +34,42 @@ AGENTS.md/CLAUDE.md/.github/CODEOWNERSを固定GitHub sourceから読んだ。�
 3. Must0・顧客固有規則・必要CI・release gateを確認した後、draft解除と固定headを指定した通常マージへ進む。元PR173/174/183/185/187や完了CIを再実行しない。
 4. マージ後の実source/必要検査と既存Prdへの反映を、実結果と未実行に分けて追う。新費用、別Org、非Prd配備、旧製品フォルダ、保護設定の操作は範囲外。
 
-今の親は他ToDoのレビュー完了だけを待つため、正式な `todo.exe wait 2639 --on 2735` を記録して枠を譲る。オーナーの判断・PC操作は不要。今回新しい検査用コンテナ・ブラウザタブ・一時フォルダは作成していない。重いCargo/GPU処理は開始していない。
+前回は `todo.exe wait 2639 --on 2735` を記録して枠を譲った。以下が再開後の最新状態。
+
+## 最新状態：追加修正を保存済み、レビューと正式CIは未完了
+
+2026-10-17の再開job20261017-005528-todo-2639で、Sonnet2735の原応答を受領した。jobのmodel=anthropic/claude-sonnet-5-5・succeeded/exit0を確認。原応答SHA256は24618823b5e1a8b5617c4643587da4cf95ebe5524d98275155bf7a7394ce0ec6。Must0。readonly担当のファイル保存が失敗していたため、親が原応答をhash付きで保存した。原5ファイルのレビューはやり直さない。
+
+Suggestionの実害と必要性を確認し、次の4ファイルを修正した。
+
+- アラート表の途中に入った説明段落を表の後へ移し、日時破損の復旧手順を加えた。
+- PostgreSQLの実heartbeatを使い、UTC/Asia-Kolkata/America-New-Yorkでtext変換後の正常性・日時・age・critical誤報なしを確認する回帰testを加えた。schemaはランダムに分離し終了時に削除する。
+- required testの専用実行機、gitleaksの版/SHA、固定対象の拒否条件、queued時の復旧と回収をrunbookに記した。
+- CLAUDE.mdの「checkoutしない」という古い記述を実workflowに合わせた。自動生成stackブロックは変更していない。
+
+新固定headは **20c441df545a88f4a839d7e906b5aeb4f1708ae3**、treeは **007b84082008ea9effd5052f63856273aabbfb17**。唯一の親は旧b93。同PR1002・同branchにforce=falseで1回だけref更新した。API即時PR反映は遅れたが、read-only再照合でPRhead/branchheadが両方20cと一致した。refのmutation再試行は0。compare APIでも4ファイル・1commitだけと確認。backend/app・workflow・scriptsのbytesはb93から変更していない。他head/merge-refは追わない。
+
+### 今回実行した検査
+
+固定b93のGitHub archiveへ新4ファイルだけを重ねた検証sourceで、locked依存・Ruff check/format・mypy・元監視testと新PostgreSQL testの **合計50passed/skip0** を確認した。pytest4.82秒。テスト済みの各ファイルSHA256をreceiptへ固定し、GitHubへのupload blobのGit SHA1とも照合した。これは新headの正式CIの成功ではない。
+
+uvとPostgreSQLは元2648と同じimmutable imageを使い、非root・readonly・tmpfs・capdrop・CPU/RAM/pids制限、hostsource/profile/socket/GPUなしで実行した。依存取得後の外向通信を切り、同namespaceの独立PostgreSQLへTCPで接続した。終了後、両containerのrunning=false/PID0とrm -v成功を確認。今回新たにimageやvolumeは作っていない。
+
+原log2857bytes、SHA256 f3740324680cf9f7bf79e99fb332d34cbd3193f80b21f1cda3e15a958821f570。原review、acceptance receipt/log、commit proposal、Go操作補助の5ファイルを、このworktreeの `.ci-work/todo2639-evidence-20261017/` へコピーして全SHA一致を確認。manifest.private.jsonで一覧を保持する。Gitのignore対象であり、製品コードや生ログをこの修復sourceのcommitへ入れていない。
+
+所有tempはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-d84c967c6eb3b9abf993ad85a20fb9b9、所有ID=d84c967c6eb3b9abf993ad85a20fb9b9。まだ後続担当が読むため保持する。後続完了後に必要証拠の保持を確認し、safe-deleteのplan→別呼出し通常削除→finishで片付ける。拒否は正規quarantineへ進め、迂回しない。
+
+### 設定の実読戻し
+
+active repository ruleset18884840はrequired test/App15368、approval0/codeowner必須false/thread解決必須。Actionsはselected/SHA pin必須。fork workflow実行・write token・secret送付はfalse。顧客固有の人間レビュー必須規則を新しく発見していない。保護設定・権限・予算は変更0。
+
+### 次の依存と再開手順
+
+- **ToDo2743**：追加4ファイルのSonnetレビュー。specはdocs/todo-2639-review-followup-spec.md。原5ファイルは再レビューしない。readonly環境でのファイル保存は要求せず、実モデルの原応答とhashを親が受け取る。
+- **ToDo2744**：新20c固定の正式CI。specはdocs/todo-2639-ci-followup-spec.md。旧b93固定のtoolが新20cを拒否するのは正常。正規の修復sourceで候補SHA1行だけを更新し、他候補と拒否条件を保ち、別モデルレビュー・必要CI・通常merge・正式配布後に既存queuedの公式CodeQL4言語/secretを直列で実行する。必要なCargoはこの子へ割当申請し、親は重複実行しない。
+
+新headの公式checkは登録直後の実GETでは5件queued。test=117068929592、Actions=117068906037、Rust=117068905828、Python=117068905768、JS/TS=117068905439。旧b93の6成功を新headの合格にしない。元toolの固定値・guardをこの親では書き換えない。
+
+PR1002の題名と本文を日本語で現在の変更・検査済み範囲・未完了条件へ更新し、API読戻しで本文の完全一致・新head・draft=trueを確認した。同じ説明更新を繰り返さない。新規Discord質問・投稿は0。
+
+親は `todo.exe wait 2639 --on 2743 --on 2744 --progress 50` で正式に依存待ちにする。独立レビューと新正式CIが揃ったら、実head/tree/結果を確認しMustを修正した後に通常PRへの切替と固定headでのマージ・既存Prd反映を進める。本人の判断・PC操作は不要。原1636/2016/2274・他3製品は完了扱いにしていない。

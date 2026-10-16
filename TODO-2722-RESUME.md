@@ -50,3 +50,5 @@ Nitの不正snapshot全体拒否は維持。テスト専用Dropのassertはclean
 専用targetは初回の所有記録がないため偽造登録しない。7193file、15135104079 bytes（hardlink名を含む論理量）。132group/264名のhardlinkが全て同target内、外部hardlink0、reparse0、同target imageの稼働0を確認。既存生成物の規則でD:/削除希望/2026-10-16-todo-2722-target-191324/targetへ移動済み。元target不在、移動先7193file/15135104079 bytes一致を確認し、target-quarantine.jsonと理由.txtに完了を記録した。容量回収済みとは扱わない。
 
 元2648へ、固定コード・実検査・review原文hash・後片付けを配送する。親でこの修正を取り込み、同headの必要CIと通常mergeを確認する工程は親の責任範囲に残る。2026-10-16再開時点のPR185はOPEN/head ddc914fc7530f3e9095228d53eaeb914680f8ede、mergeCommitなし。主担当のsourceやPRをこのcheckから編集せず、親完了を待つ依存も登録しない。
+
+2026-10-16 最終記録: 清掃通知をdiscord_ask log --topic 後片付けの記録で1回実行したが、exit1/QuestionStateRecoveryRequired（質問台帳・本人回答の原記録復旧待ち）により投稿は成立しなかった。自動承認レビューの拒否とは区別する。raw stdout/stderrを証拠領域のcleanup-log.stdout/stderrへ保存。同じ投稿の再試行や別経路での送信、共有台帳の空原本作成・変更は行わない。親2648の記録へこの未送信を明記する。整理自体は上記のとおり実施済み。

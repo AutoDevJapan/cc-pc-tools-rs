@@ -37,6 +37,7 @@ type vmReceipt struct {
 	Instance        string `json:"instance"`
 	ID              string `json:"vm_id"`
 	Name            string `json:"name"`
+	Generation      int    `json:"generation"`
 	Root            string `json:"root"`
 	VHD             string `json:"vhd"`
 	Pipe            string `json:"pipe"`
@@ -167,7 +168,7 @@ func runVMProvision(root, isoPath string) error {
 	evidence := vmEvidence{
 		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: instance,
 		ImageBytes: info.Size(), ImageSHA256: isoHash,
-		VM:     vmPublicReceipt{VMID: vm.ID, Generation: 2, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
+		VM:     vmPublicReceipt{VMID: vm.ID, Generation: vm.Generation, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
 		CredentialFree: true, ProductSourceTransferred: false, OfficialCIExecuted: false,
 	}
@@ -423,7 +424,7 @@ func readCleanupReceipt(root string) (cleanupReceipt, error) {
 func validateVMReceipt(vm vmReceipt, root, instance string) error {
 	if vm.Instance != instance || !validInstance(vm.Instance) || vm.ID == "" || vm.Name != "cc-2746-"+instance ||
 		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || vm.VHD != filepath.Join(root, "guest.vhdx") ||
-		vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || !vm.SecureBoot ||
+		vm.Generation != 2 || vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || !vm.SecureBoot ||
 		vm.NetworkAdapters != 0 || vm.GPUAdapters != 0 {
 		return errors.New("Hyper-V VM ownership or resource configuration rejected")
 	}
@@ -512,7 +513,7 @@ try {
   $mountedIso=$false
   $vm=New-VM -Name $name -Generation 2 -MemoryStartupBytes 2GB -VHDPath $vhd -Path (Join-Path $root 'vm')
   Set-VM -VM $vm -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -CheckpointType Disabled -Notes ('cc.todo=2746;cc.instance='+$instance)
-$initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;root=$root;vhd=$vhd;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;network_adapters=-1;gpu_adapters=-1}
+$initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}
 $initial | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Set-VMProcessor -VM $vm -Count 2
   Set-VMMemory -VM $vm -DynamicMemoryEnabled $false -StartupBytes 2GB -MinimumBytes 2GB -MaximumBytes 2GB
@@ -526,13 +527,18 @@ Set-VMFirmware -VM $vm -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows
 if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $memory.Minimum -ne 2GB -or $memory.Maximum -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
 $firmware=Get-VMFirmware -VM $vm
 if(-not $firmware.SecureBoot -or $firmware.SecureBootTemplate -ne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;root=$root;vhd=$vhd;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$firmware.SecureBoot;network_adapters=$nics;gpu_adapters=$gpus}
+$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$firmware.SecureBoot;network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
+} catch {
+  @{phase='provision';failure='owned image or VM provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
+  throw
 } finally {
-  if($hiveLoaded){& reg.exe unload ('HKLM\'+$hiveName) | Out-Null;if($LASTEXITCODE -ne 0){throw 'OFFLINE_SYSTEM_HIVE_UNLOAD_FAILED'}}
-  if($mountedVhd){Dismount-VHD -Path $vhd -ErrorAction SilentlyContinue}
-  if($mountedIso){Dismount-DiskImage -ImagePath $iso -ErrorAction SilentlyContinue}
+  $cleanupIssues=@()
+  if($hiveLoaded){& reg.exe unload ('HKLM\'+$hiveName) | Out-Null;if($LASTEXITCODE -ne 0){$cleanupIssues+='SYSTEM_HIVE_UNLOAD_FAILED'}}
+  if($mountedVhd){try{Dismount-VHD -Path $vhd -ErrorAction Stop;$mountedVhd=$false}catch{$cleanupIssues+='OWNED_VHD_UNMOUNT_FAILED'}}
+  if($mountedIso){try{Dismount-DiskImage -ImagePath $iso -ErrorAction Stop;$mountedIso=$false}catch{$cleanupIssues+='OWNED_ISO_UNMOUNT_FAILED'}}
+  if($cleanupIssues.Count -gt 0){@{phase='image_cleanup';failures=$cleanupIssues}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8;throw 'OWNED_IMAGE_CLEANUP_FAILED'}
 }
 `
 }

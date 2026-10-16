@@ -2,6 +2,18 @@
 
 ## 最新の保存点（2026-10-16 20時。以下の旧保存点より優先）
 
+追記: 各元ToDo2640/2641/2642、親2648と自分2710へ結果noteを配送済み。元ToDoの状態や所有は変更していない。検査補助と証拠回収のコードは74a25a6でcommit/push済み。今回Go module3件のtest/vetと、修正したWindows Chrome版数取得の実行確認が成功。
+
+最終index（証拠root直下）:
+
+- repo1392152644-evidence.private.json: SHA256 0DF6E77BAB297E4BD839A1235A9F98EB449CCEDE5138E608D68AA25C37290198
+- repo1154066087-evidence.private.json: SHA256 EDB593137707820C5AB6D530858A7D2E8E7DCF956FFE033FD99F525305423F88
+- repo1386702183-evidence.private.json: SHA256 51C24FAC2DC9FCC888B8859446792759A202194B573E1733BCB98CA23EB5150D
+
+回収の最終状態: C再検査root fba4fd3144f6acaa6b3a74d664de4113はplanが返した通常Remove-Itemを別呼出しで実行し、finish=source_absentを確認。残り4rootはplanだけでなく、指定されたquarantineもそれぞれ同じPROTECTED_PATH/ENTRY_LIMIT_EXCEEDEDで拒否された。自動承認レビューの拒否ではない。別経路の移動・削除、上限や保護の変更、再試行はしていない。実行中の検査/サービス/containerはないが、この4rootは未回収で保持している。次回は同じ検査や削除を繰り返さず、この拒否記録と既存の親作業を照合する。
+
+全結果と未回収rootの絶対pathは証拠rootのrepo1392152644-repo1154066087-repo1386702183-cleanup.private.jsonへ保存。配送noteと最終indexのhash一覧は同-delivery.private.json。原文logへ秘密/識別子があり得るため、モデル/標準出力へ全文を出さない。
+
 独立検査は全対象の実行を終了。証拠配送と所有root回収を仕上げる。元2640/2641/2642と親2648は完了へ変更しない。製品のPR変更・merge・配布・status投稿はしていない。
 
 永続証拠root: D:/CC/Work/unattended-operations-20261013-wt/todo-2710-3-rust-lua-ci/codex-owned-090e90a35ea495cf253d075bc656d861。所有ID090e90a35ea495cf253d075bc656d861。このrootを消さない。原logとmanifestはopaque record名で保存し、元と保存後のSHA256を照合。原文はstdoutへ表示しない。

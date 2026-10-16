@@ -1,6 +1,6 @@
 //! Offline transaction checks: never accesses the real original product or launches a model.
 use cc_job_policy::product_retry as p;
-use cc_todo::product_retry::{bind, stage};
+use cc_todo::product_retry::{bind, continue_queued, stage};
 use serde_json::{Value, json};
 const T: u64 = 1792108800;
 fn fixture() -> (Value, Value, Value, String) {
@@ -87,6 +87,118 @@ fn reservation_keeps_wait_and_latest_session_until_exact_queue_binding() {
     assert_eq!(bind(&mut db, &job, &key, T).unwrap()["reused"], true);
     assert_eq!(db, bound);
 }
+#[test]
+fn normal_context_rotation_and_second_readiness_wait_keep_the_bound_job() {
+    let (mut db, proof, source, key) = fixture();
+    reserve(&mut db, &proof, &source, &key).unwrap();
+    let mut job = queued(&db, &key);
+    bind(&mut db, &job, &key, T).unwrap();
+    job["first_started_at"] = json!("2026-10-16T00:00:00Z");
+    job["resume_session"] = Value::Null;
+    job["context_phase"] = json!("continue");
+    job["model"] = json!("anthropic/claude-sonnet-5-5");
+    assert!(p::admission_reason(&db, &job, T).is_none());
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_ready"] = json!({"condition":"retry-time","since":T-60,"not_before":T});
+    let next_key = p::key(&db["items"][0]["wait_ready"]).unwrap();
+    assert_ne!(key, next_key);
+    assert_eq!(
+        p::admission_reason(&db, &job, T).unwrap()["terminal"],
+        false
+    );
+    let before = db.clone();
+    assert!(continue_queued(&mut db, &job, &next_key, T - 1).is_err());
+    assert_eq!(db, before);
+    let generation = db["items"][0]["resume_generation"].clone();
+    assert_eq!(
+        continue_queued(&mut db, &job, &next_key, T).unwrap()["continued_existing"],
+        true
+    );
+    assert_eq!(db["items"][0]["resume_generation"], generation);
+    assert_eq!(db["items"][0]["scheduler"]["job"], job["id"]);
+    assert_eq!(db["items"][0]["product_retry_intent"]["key"], key);
+    assert!(p::admission_reason(&db, &job, T).is_none());
+    assert_eq!(
+        continue_queued(&mut db, &job, &next_key, T).unwrap()["saved"],
+        false
+    );
+    let mut stopped = db.clone();
+    stopped["items"][0]["status"] = json!("block");
+    assert_eq!(
+        p::admission_reason(&stopped, &job, T).unwrap()["terminal"],
+        true
+    );
+}
+
+#[test]
+fn ordinary_dependency_completion_reuses_the_started_worker() {
+    let (mut db, proof, source, key) = fixture();
+    reserve(&mut db, &proof, &source, &key).unwrap();
+    let mut job = queued(&db, &key);
+    bind(&mut db, &job, &key, T).unwrap();
+    job["first_started_at"] = json!("2026-10-16T00:00:00Z");
+    job["resume_session"] = json!("33333333-3333-4333-8333-333333333333");
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_on"] = json!([99]);
+    db["items"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":99,"status":"todo"}));
+    assert_eq!(
+        p::admission_reason(&db, &job, T).unwrap()["terminal"],
+        false
+    );
+    let before = db.clone();
+    assert!(p::mark_continuation_running(&mut db, &job, T).is_err());
+    assert_eq!(db, before);
+    db["items"][1]["status"] = json!("done");
+    assert!(p::admission_reason(&db, &job, T).is_none());
+    assert!(p::mark_continuation_running(&mut db, &job, T).unwrap());
+    assert_eq!(db["items"][0]["status"], "doing");
+    assert_eq!(db["items"][0]["scheduler"]["job"], job["id"]);
+    assert_eq!(db["items"][0]["resume_generation"], 10);
+}
+
+#[test]
+fn a_lost_receipt_cannot_reuse_changed_source_settings() {
+    for field in [
+        "model",
+        "effort",
+        "sandbox",
+        "mcp_profile",
+        "thread_id",
+        "network",
+        "add_dirs",
+    ] {
+        let (mut db, proof, mut source, key) = fixture();
+        reserve(&mut db, &proof, &source, &key).unwrap();
+        match field {
+            "thread_id" => source[field] = json!("33333333-3333-4333-8333-333333333333"),
+            "network" => source[field] = json!(true),
+            "add_dirs" => source[field] = json!(["another-location"]),
+            "sandbox" => source[field] = json!("read-only"),
+            _ => source[field] = json!("different"),
+        }
+        let before = db.clone();
+        assert!(reserve(&mut db, &proof, &source, &key).is_err(), "{field}");
+        assert_eq!(db, before, "{field}");
+    }
+}
+
+#[test]
+fn an_ambiguous_dependency_is_not_a_completed_dependency() {
+    let (mut db, mut proof, source, key) = fixture();
+    db["items"][0]["wait_on"] = json!([99]);
+    db["items"].as_array_mut().unwrap().extend([
+        json!({"id":99,"status":"done"}),
+        json!({"id":99,"status":"todo"}),
+    ]);
+    proof["snapshot"] = cc_todo::product_resume::snapshot(&db, &db["items"][0]);
+    let before = db.clone();
+    assert!(reserve(&mut db, &proof, &source, &key).is_err());
+    assert_eq!(db, before);
+}
+
 #[test]
 fn new_owner_stops_waits_or_spec_changes_survive_a_lost_queue_response() {
     for gate in [

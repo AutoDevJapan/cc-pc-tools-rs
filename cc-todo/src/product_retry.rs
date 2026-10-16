@@ -7,7 +7,12 @@ use cc_scheduler::{
     policy as processes,
 };
 use serde_json::{Value, json};
-use std::{fs, io::Write, path::PathBuf, process::Command, time::Duration};
+use std::{
+    fs,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 pub fn stage(
     db: &mut Value,
@@ -34,7 +39,6 @@ pub fn stage(
     }
     if policy::key(&row["wait_ready"]).as_deref() != Some(key)
         || row["worker_receipt"]["job"] != worker
-        || source["id"] != worker
         || source["todo_id"] != policy::ID
         || !policy::same_path(&source["cwd"], &json!(policy::TREE))
         || cancellation::owner_stopped(row, source)
@@ -46,11 +50,6 @@ pub fn stage(
     {
         return Err("product_retry_source_changed".into());
     }
-    let session = ["thread_id", "resume_session"]
-        .iter()
-        .filter_map(|key| source[*key].as_str())
-        .find(|session| processes::valid_session(session))
-        .ok_or("product_retry_session_missing")?;
     if source["sandbox"] != "danger-full-access"
         && source["sandbox"] != "workspace-write"
         && source["sandbox"] != "read-only"
@@ -75,10 +74,11 @@ pub fn stage(
     {
         return Err("product_retry_explicit_settings_changed".into());
     }
+    let identity = source_identity(source).ok_or("product_retry_source_settings_invalid")?;
     let old = &row["product_retry_intent"];
     if old["key"] == key {
         if old["snapshot"] != policy::snapshot(row)
-            || old["source"]["id"] != worker
+            || old["source"] != identity
             || !old["bound_job"].is_null()
             || !policy::valid_proof(&old["proof"], at)
             || old["proof"]["expires_at"] != proof["expires_at"]
@@ -87,14 +87,8 @@ pub fn stage(
         }
         return Ok(report(old, false));
     }
-    let scope = source["scope_source"].as_str().unwrap_or("launcher");
-    if !["launcher", "owner_marker", "owner_request"].contains(&scope) {
-        return Err("product_retry_source_settings_invalid".into());
-    }
     let intent = json!({"version":1,"key":key,"reserved_at":at,"proof":proof,"snapshot":policy::snapshot(row),
-        "source":{"id":worker,"session":session,"cwd":source["cwd"],"model":source["model"],"effort":source["effort"],
-            "sandbox":source["sandbox"],"mcp_profile":source["mcp_profile"],"scope_source":scope,
-            "network":source["network"],"add_dirs":source["add_dirs"]},
+        "source":identity,
         "prompt_file":prompt_file,"prompt_sha256":prompt_digest,"bound_job":null});
     let row = find(db, policy::ID as i64)?;
     if row["product_retry_intent"].is_object() {
@@ -104,6 +98,18 @@ pub fn stage(
     row["product_retry_intent"] = intent.clone();
     row["updated"] = json!(crate::now());
     Ok(report(&intent, true))
+}
+
+pub fn source_identity(source: &Value) -> Option<Value> {
+    let session = ["thread_id", "resume_session"].iter().find_map(|field| {
+        source[*field]
+            .as_str()
+            .filter(|session| processes::valid_session(session))
+    })?;
+    let scope = source["scope_source"].as_str().unwrap_or("launcher");
+    ["launcher","owner_marker","owner_request"].contains(&scope).then(||json!({"id":source["id"],"session":session,
+        "cwd":source["cwd"],"model":source["model"],"effort":source["effort"],"sandbox":source["sandbox"],"mcp_profile":source["mcp_profile"],
+        "scope_source":scope,"network":source["network"],"add_dirs":source["add_dirs"]}))
 }
 
 fn report(intent: &Value, saved: bool) -> Value {
@@ -156,10 +162,7 @@ pub fn bind(db: &mut Value, job: &Value, key: &str, at: u64) -> Result<Value> {
     if cancellation::owner_stopped(row, job) || job["cancel_requested"] == true {
         return Err("product_retry_job_stopped".into());
     }
-    if intent["key"] != key
-        || !policy::valid_proof(&intent["proof"], at)
-        || !policy::job_matches(job, &intent)
-    {
+    if intent["key"] != key || !policy::valid_proof(&intent["proof"], at) {
         return Err("product_retry_job_differs".into());
     }
     if intent["bound_job"] == job["id"] {
@@ -169,6 +172,9 @@ pub fn bind(db: &mut Value, job: &Value, key: &str, at: u64) -> Result<Value> {
         return Ok(
             json!({"id":policy::ID,"bound":true,"reused":true,"job":job["id"],"launched":0}),
         );
+    }
+    if !policy::job_matches(job, &intent) {
+        return Err("product_retry_job_differs".into());
     }
     let row = policy::candidate(db, at).ok_or("product_retry_original_wait_changed")?;
     if intent["snapshot"] != policy::snapshot(row)
@@ -198,26 +204,130 @@ pub fn bind(db: &mut Value, job: &Value, key: &str, at: u64) -> Result<Value> {
     Ok(json!({"id":policy::ID,"bound":true,"reused":false,"job":job["id"],"launched":0}))
 }
 
-fn guard() -> Result<Value> {
-    let mut command = Command::new("D:/CC/Tools/client-records/scrub391.exe");
-    command.args(["--verify-product-resume", "1626"]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
+pub fn continue_queued(db: &mut Value, job: &Value, key: &str, at: u64) -> Result<Value> {
+    let row = policy::row(db).ok_or("product_retry_item_missing")?;
+    let intent = &row["product_retry_intent"];
+    if intent["bound_job"] != job["id"] || job["todo_id"] != policy::ID {
+        return Err("product_retry_not_a_continuation".into());
     }
-    let output = command
-        .output()
-        .map_err(|_| "product_retry_guard_unavailable")?;
-    let proof: Value =
-        serde_json::from_slice(&output.stdout).map_err(|_| "product_retry_guard_invalid")?;
-    if !output.status.success() || !policy::valid_proof(&proof, crate::time_s() as u64) {
+    if intent["continuation_waits"]
+        .as_array()
+        .is_some_and(|waits| {
+            waits
+                .iter()
+                .any(|wait| wait["key"] == key && wait["job"] == job["id"])
+        })
+        && policy::admission_reason(db, job, at).is_none()
+    {
+        return Ok(
+            json!({"id":policy::ID,"continued_existing":true,"saved":false,"job":job["id"],"launched":0}),
+        );
+    }
+    if policy::candidate(db, at).is_none()
+        || policy::key(&row["wait_ready"]).as_deref() != Some(key)
+        || job["status"] != "queued"
+        || !job["started_at"].is_null()
+        || !job["codex_pid"].is_null()
+        || (intent.get("continuation_waits").is_some() && !intent["continuation_waits"].is_array())
+    {
+        return Err("product_retry_continuation_wait_changed".into());
+    }
+    let wait = row["wait_ready"].clone();
+    let mut proposed = db.clone();
+    let row = find(&mut proposed, policy::ID as i64)?;
+    row["status"] = json!("doing");
+    row.as_object_mut().unwrap().remove("wait_ready");
+    row.as_object_mut().unwrap().remove("wait_on");
+    if policy::admission_reason(&proposed, job, at).is_some() {
+        return Err("product_retry_continuation_scope_changed".into());
+    }
+    let row = find(&mut proposed, policy::ID as i64)?;
+    cc_scheduler::common::push(
+        &mut row["product_retry_intent"]["continuation_waits"],
+        json!({"key":key,"wait":wait,"job":job["id"],"at":at}),
+    );
+    row["updated"] = json!(crate::now());
+    *find(db, policy::ID as i64)? = row.clone();
+    Ok(json!({"id":policy::ID,"continued_existing":true,"saved":true,"job":job["id"],"launched":0}))
+}
+
+fn guard() -> Result<Value> {
+    let proof = cc_ask::core::run_hidden_json(
+        &[
+            "D:/CC/Tools/client-records/scrub391.exe".into(),
+            "--verify-product-resume".into(),
+            "1626".into(),
+        ],
+        8,
+    )
+    .map_err(|_| "product_retry_guard_unavailable")?;
+    if !policy::valid_proof(&proof, crate::time_s() as u64) {
         return Err("product_retry_guard_unverified".into());
     }
     Ok(proof)
 }
 
-const CONTINUATION: &str = "元のToDo1626を、期限に達した通常の技術再試行として、同じセッション・同じ作業場所・同じ許可範囲から続行してください。起動済みの担当や完了した操作を重複させず、共有ToDoの最新記録・以前の成果・本人の既存回答を読み、元の未完工程を実装と検証まで進めてください。原資格や期限を延長せず、新費用・APIキー・本人のPC操作要求・範囲外の資源へ広げないでください。\n";
+fn prompt_bytes(file: &Path) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    fs::File::open(file)
+        .and_then(|file| file.take(65537).read_to_end(&mut bytes))
+        .map_err(|_| "product_retry_prompt_unavailable")?;
+    if bytes.len() > 65536 {
+        return Err("product_retry_prompt_too_large".into());
+    }
+    Ok(bytes)
+}
+
+fn prepare_prompt(
+    folder: &Path,
+    key: &str,
+    intent: &Value,
+    template: &[u8],
+) -> Result<(PathBuf, String)> {
+    let replay = intent["key"] == key;
+    let digest = if replay {
+        intent["prompt_sha256"]
+            .as_str()
+            .filter(|hash| hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit()))
+            .ok_or("product_retry_prompt_changed")?
+            .to_owned()
+    } else {
+        policy::digest(template)
+    };
+    let file = folder.join(format!("{key}-{}.md", &digest[..16]));
+    if replay {
+        if !policy::same_path(&intent["prompt_file"], &json!(file.to_string_lossy()))
+            || policy::digest(&prompt_bytes(&file)?) != digest
+        {
+            return Err("product_retry_prompt_changed".into());
+        }
+    } else {
+        fs::create_dir_all(folder).map_err(|_| "product_retry_prompt_unavailable")?;
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&file)
+        {
+            Ok(mut output) => {
+                output
+                    .write_all(template)
+                    .map_err(|_| "product_retry_prompt_unavailable")?;
+                output
+                    .sync_all()
+                    .map_err(|_| "product_retry_prompt_unavailable")?;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                if policy::digest(&prompt_bytes(&file)?) != digest {
+                    return Err("product_retry_prompt_changed".into());
+                }
+            }
+            Err(_) => return Err("product_retry_prompt_unavailable".into()),
+        }
+    }
+    Ok((file, digest))
+}
+
+const CONTINUATION: &str = "元のToDo1626を、期限に達した通常の技術再試行として、同じセッション・同じ作業場所・同じ許可範囲から続行してください。自身の実jobと元ToDoのproduct_retry_intent・期限付きproduct-resume資格を照合し、正規APIで保存・結合した引継ぎ証拠を保持してください。起動済みの担当や完了した操作を重複させず、共有ToDoの最新記録・以前の成果・本人の既存回答を読み、元の未完工程を実装と検証まで進めてください。原資格や期限を延長せず、新費用・APIキー・本人のPC操作要求・範囲外の資源へ広げないでください。\n";
 
 pub fn run(
     paths: &Paths,
@@ -236,25 +346,10 @@ pub fn run(
     {
         return Err("product_retry_input_invalid".into());
     }
-    if accepted_job.is_none() {
-        let current = load(&paths.store)?;
-        if policy::row(&current).is_none_or(|row| row["product_retry_intent"]["key"] != key) {
-            let qualified = crate::product_resume::run(paths, policy::ID as i64, true)?;
-            if qualified["qualified"] != true {
-                return Err("product_retry_qualification_unavailable".into());
-            }
-        }
-    }
     let proof = guard()?; // Never call an external verifier while holding queue or ToDo locks.
-    let _queue = Lock::acquire(
-        &paths
-            .jobs
-            .parent()
-            .ok_or("product_retry_paths_invalid")?
-            .join("queue.lock"),
-        Duration::from_secs(30),
-    )?;
+    let _queue = Lock::acquire(&paths.jobs.join(".queue.lock"), Duration::from_secs(30))?;
     let _job = accepted_job
+        .or(worker)
         .map(|id| {
             Lock::acquire(
                 &paths.jobs.join(id).join("state.lock"),
@@ -289,6 +384,21 @@ pub fn run(
         .iter()
         .find(|job| job["id"] == source_id)
         .ok_or("product_retry_source_missing")?;
+    if accepted_job.is_none() && row["product_retry_intent"]["bound_job"] == source["id"] {
+        if jobs.iter().any(|other| {
+            other["id"] != source["id"]
+                && other["retry_live"] == true
+                && (other["todo_id"] == policy::ID
+                    || policy::same_path(&other["cwd"], &json!(policy::TREE)))
+        }) {
+            return Err("product_retry_other_worker_active".into());
+        }
+        let result = continue_queued(&mut db, source, key, at)?;
+        if result["saved"] == true {
+            save(&paths.store, &db)?;
+        }
+        return Ok(result);
+    }
     if source["retry_live"] != false || cancellation::owner_stopped(&row, source) {
         return Err("product_retry_source_running_or_stopped".into());
     }
@@ -301,6 +411,9 @@ pub fn run(
         })
         .ok_or("product_retry_session_missing")?;
     let intent = &row["product_retry_intent"];
+    if intent["key"] == key && source_identity(source).as_ref() != Some(&intent["source"]) {
+        return Err("product_retry_source_settings_changed".into());
+    }
     let pending: Vec<_> = jobs
         .iter()
         .filter(|job| {
@@ -330,8 +443,7 @@ pub fn run(
             .iter()
             .find(|job| job["id"] == jid)
             .ok_or("product_retry_accepted_job_missing")?;
-        let bytes = fs::read(paths.jobs.join(jid).join("prompt.md"))
-            .map_err(|_| "product_retry_prompt_unavailable")?;
+        let bytes = prompt_bytes(&paths.jobs.join(jid).join("prompt.md"))?;
         if policy::digest(&bytes) != intent["prompt_sha256"] {
             return Err("product_retry_prompt_changed".into());
         }
@@ -342,27 +454,9 @@ pub fn run(
             .parent()
             .ok_or("product_retry_paths_invalid")?
             .join("product-retry-prompts");
-        fs::create_dir_all(&folder).map_err(|_| "product_retry_prompt_unavailable")?;
-        let file = folder.join(format!("{key}.md"));
-        match fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&file)
-        {
-            Ok(mut file) => {
-                file.write_all(CONTINUATION.as_bytes())
-                    .map_err(|_| "product_retry_prompt_unavailable")?;
-                file.sync_all()
-                    .map_err(|_| "product_retry_prompt_unavailable")?;
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                if fs::read(&file).map_err(|_| "product_retry_prompt_unavailable")?
-                    != CONTINUATION.as_bytes()
-                {
-                    return Err("product_retry_prompt_changed".into());
-                }
-            }
-            Err(_) => return Err("product_retry_prompt_unavailable".into()),
+        let (file, prompt_digest) = prepare_prompt(&folder, key, intent, CONTINUATION.as_bytes())?;
+        if intent["key"] != key {
+            crate::product_resume::qualify(&mut db, policy::ID as i64, &proof, true)?;
         }
         stage(
             &mut db,
@@ -370,7 +464,7 @@ pub fn run(
             source,
             key,
             &file.to_string_lossy(),
-            &policy::digest(CONTINUATION.as_bytes()),
+            &prompt_digest,
             at,
         )?
     };
@@ -378,4 +472,25 @@ pub fn run(
         save(&paths.store, &db)?;
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn a_replayed_intent_keeps_its_committed_prompt_across_tool_updates() {
+        let temp = tempfile::tempdir().unwrap();
+        let key = "a".repeat(32);
+        let (file, digest) =
+            prepare_prompt(temp.path(), &key, &Value::Null, b"old committed version").unwrap();
+        let intent = json!({"key":key,"prompt_file":file,"prompt_sha256":digest});
+        let (same, same_digest) =
+            prepare_prompt(temp.path(), &key, &intent, b"new tool version").unwrap();
+        assert_eq!(same, file);
+        assert_eq!(same_digest, digest);
+        assert_eq!(fs::read(&same).unwrap(), b"old committed version");
+        fs::remove_file(&file).unwrap();
+        assert!(prepare_prompt(temp.path(), &key, &intent, b"new tool version").is_err());
+        assert!(!file.exists());
+    }
 }

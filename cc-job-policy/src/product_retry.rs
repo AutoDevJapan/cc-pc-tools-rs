@@ -117,10 +117,12 @@ pub fn candidate(db: &Value, at: u64) -> Option<&Value> {
         && row["worker_receipt"]["job"] == row["scheduler"]["job"])
         .then_some(row)
 }
-fn matches_source(job: &Value, intent: &Value) -> bool {
+fn matches_source(job: &Value, intent: &Value, continuing: bool) -> bool {
     let source = &intent["source"];
     job["todo_id"] == ID
-        && job["resume_session"] == source["session"]
+        && (job["resume_session"] == source["session"]
+            || (continuing
+                && (job["resume_session"].is_null() || job["resume_session"].is_string())))
         && (job["related_todo_ids"].is_null()
             || job["related_todo_ids"]
                 .as_array()
@@ -149,7 +151,13 @@ pub fn marker(intent: &Value) -> Value {
 pub fn job_matches(job: &Value, intent: &Value) -> bool {
     job["original_product_retry"] == marker(intent)
         && job["launch_key"] == intent["key"]
-        && matches_source(job, intent)
+        && matches_source(job, intent, false)
+}
+pub fn continuing(job: &Value, at: u64) -> bool {
+    job["first_started_at"]
+        .as_str()
+        .and_then(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
+        .is_some_and(|started| started.timestamp() >= 0 && (started.timestamp() as u64) <= at)
 }
 /// Called under queue -> ToDo locks; the API's reservation still holds the original wait.
 pub fn registration(
@@ -167,7 +175,7 @@ pub fn registration(
         || intent["snapshot"] != snapshot(row)
         || intent["prompt_sha256"] != prompt_digest
         || !intent["bound_job"].is_null()
-        || !matches_source(job, intent)
+        || !matches_source(job, intent, false)
     {
         return Err("product_retry_intent_changed".into());
     }
@@ -175,9 +183,7 @@ pub fn registration(
 }
 /// The normal queue consults this again immediately before starting a supervisor's model process.
 pub fn admission_reason(db: &Value, job: &Value, at: u64) -> Option<Value> {
-    if job.get("original_product_retry").is_none() {
-        return None;
-    }
+    job.get("original_product_retry")?;
     let fail = |code: &str, terminal: bool| {
         Some(
             json!({"code":code,"message":"元の作業の再開条件を確認しています","terminal":terminal}),
@@ -193,9 +199,14 @@ pub fn admission_reason(db: &Value, job: &Value, at: u64) -> Option<Value> {
     if !valid_proof(&intent["proof"], at) {
         return fail("product_retry_expired", true);
     }
+    // First entry is pinned to the actual original session. Once this exact
+    // bound job has started, ordinary context rotation/429 retries own its
+    // continuation sessions; the immutable workspace and permissions stay pinned.
+    let continuing = continuing(job, at);
     if !job["original_product_retry"].is_object()
         || job["original_product_retry"] != marker(intent)
-        || !matches_source(job, intent)
+        || job["launch_key"] != intent["key"]
+        || !matches_source(job, intent, continuing)
         || row["dispatchable"] != false
     {
         return fail("product_retry_scope_changed", true);
@@ -210,14 +221,39 @@ pub fn admission_reason(db: &Value, job: &Value, at: u64) -> Option<Value> {
         || row["worker_receipt"]["job"] != job["id"]
         || row["scheduler"]["job"] != job["id"]
         || intent["bound_generation"] != row["resume_generation"]
-        || row["status"] != "doing"
-        || !row["wait_ready"].is_null()
-        || !dependencies_clear(db, row)
         || row["spec"] != intent["snapshot"]["spec"]
         || row["project"] != intent["snapshot"]["project"]
         || row["needs"] != intent["snapshot"]["needs"]
+        || row["model"] != intent["snapshot"]["model"]
+        || row["effort"] != intent["snapshot"]["effort"]
     {
         return fail("product_retry_binding_changed", true);
     }
+    if !row["wait_ready"].is_null() || !dependencies_clear(db, row) {
+        return fail("product_retry_new_wait", false);
+    }
+    if !matches!(row["status"].as_str(), Some("doing" | "wait" | "todo")) {
+        return fail("product_retry_binding_changed", true);
+    }
     None
+}
+
+/// The queue caller owns queue -> job -> ToDo locks. Never creates a worker.
+pub fn mark_continuation_running(db: &mut Value, job: &Value, at: u64) -> Result<bool, String> {
+    if job.get("original_product_retry").is_none() {
+        return Ok(false);
+    }
+    if admission_reason(db, job, at).is_some() {
+        return Err("product_retry_not_admitted".into());
+    }
+    let row = db["items"]
+        .as_array_mut()
+        .and_then(|items| items.iter_mut().find(|row| row["id"] == ID))
+        .ok_or("product_retry_missing")?;
+    if row["status"] == "doing" {
+        return Ok(false);
+    }
+    row["status"] = json!("doing");
+    row.as_object_mut().unwrap().remove("wait_on");
+    Ok(true)
 }

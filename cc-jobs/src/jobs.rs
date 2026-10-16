@@ -36,6 +36,18 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
+        if job.get("original_product_retry").is_some() {
+            // Keep prompt.md byte-identical for bind's digest; execution still
+            // receives the same sandbox guidance as ordinary registrations.
+            let guidance = if s(job, "sandbox") == "read-only" {
+                cc_job_policy::READ_GUIDANCE
+            } else {
+                cc_job_policy::WRITE_GUIDANCE
+            };
+            if !text.contains(guidance.trim()) {
+                text.push_str(guidance);
+            }
+        }
         // Read at every attempt, not registration: queued jobs and resumed
         // sessions must receive changes saved since their original launch.
         let policy_path = self
@@ -1453,11 +1465,15 @@ fn find_session(dir: &Path, id: &str, recursive: bool) -> Option<PathBuf> {
 /// The supervisor writes that file from masked events instead (`record_message`).
 pub fn codex_args(j: &Value) -> Vec<String> {
     let summary = s(j, "context_phase") == "summarize";
-    let policy = cc_job_policy::for_sandbox(if summary {
+    let mut policy = cc_job_policy::for_sandbox(if summary {
         "read-only"
     } else {
         s(j, "sandbox")
     });
+    if !summary && j.get("original_product_retry").is_some() && s(j, "sandbox") == "workspace-write"
+    {
+        policy.sandbox = "workspace-write";
+    }
     let mut args = vec![
         s(j, "codex").into(),
         "exec".into(),

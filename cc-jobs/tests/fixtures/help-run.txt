@@ -4,6 +4,7 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--mcp-profile {minimal,browser,full}] --prompt-file
                          PROMPT_FILE [--task-type TASK_TYPE]
                          [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]
+                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]
                          [--resume-session RESUME_SESSION]
                          [--parent-job-id PARENT_JOB_ID]
 
@@ -29,5 +30,9 @@ options:
   --resume-session RESUME_SESSION
                         continue a recorded Codex session UUID instead of
                         starting a new one
+  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY
+                        reserved retry key for original ToDo 1626 only (32
+                        lowercase hex); requires the same --launch-key and
+                        waits for product-retry-bind before execution
   --parent-job-id PARENT_JOB_ID
                         running parent job (otherwise inherited from CC_JOB_ID)

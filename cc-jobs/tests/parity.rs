@@ -2,6 +2,8 @@ use cc_jobs::notify::*;
 use cc_jobs::*;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
 mod subwork_support;
+#[path = "support/product_retry.rs"]
+mod original_product_retry;
 
 mod independent_subwork {
     use super::*;
@@ -5719,6 +5721,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    epoch_base: Mutex<Option<f64>>,
     quota_samples: Mutex<HashMap<String, cc_jobs::adaptive::QuotaSnapshot>>,
     boot: Mutex<Option<f64>>,
     recovery_guards: Mutex<HashMap<String, Option<bool>>>,
@@ -5771,6 +5774,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            epoch_base: Mutex::new(None),
             quota_samples: Mutex::new(HashMap::new()),
             boot: Mutex::new(None),
             recovery_guards: Mutex::new(HashMap::new()),
@@ -6026,13 +6030,19 @@ impl Runtime for Fake {
         self.env.lock().unwrap().clone()
     }
     fn now(&self) -> String {
+        if let Some(at) = *self.epoch_base.lock().unwrap() {
+            return chrono::DateTime::from_timestamp(at as i64, 0)
+                .unwrap()
+                .to_rfc3339();
+        }
         "2026-10-01T12:00:00+09:00".into()
     }
     fn mono(&self) -> f64 {
         *self.time.lock().unwrap()
     }
     fn epoch(&self) -> f64 {
-        parse_iso(&self.now()).unwrap()
+        let base = *self.epoch_base.lock().unwrap();
+        base.unwrap_or_else(|| parse_iso(&self.now()).unwrap())
             + if self.advance_epoch.load(Ordering::Relaxed) {
                 self.mono() - 100.
             } else {
@@ -11305,8 +11315,20 @@ mod additional_compatibility {
                 }
             };
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
-            assert_eq!(out, s(&case, "stdout"), "{args:?} stdout");
-            assert_eq!(err, s(&case, "stderr"), "{args:?} stderr");
+            // Preserve the historical Python baseline, allowing only the new
+            // explicitly documented finite retry option in run's help.
+            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
+                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(),1);
+                assert_eq!(out.matches(option).count(),1);
+                out.replace(usage,"").replace(option,"")
+            }else{out};
+            assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
+            let legacy_err=if args.first()==Some(&"run"){
+                err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
+            }else{err};
+            assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());
         assert!(t.ctx.list_jobs(&HashSet::new()).is_empty());

@@ -28,15 +28,17 @@ type codeQLSetup struct {
 }
 
 type codeQLPlan struct {
-	RepoID    int64  `json:"repo_id"`
-	PR        int    `json:"pr"`
-	Candidate string `json:"candidate_sha"`
-	RunID     int64  `json:"run_id"`
-	Attempt   int    `json:"attempt"`
-	SHA       string `json:"source_sha"`
-	Tree      string `json:"source_tree"`
-	Role      string `json:"role"`
-	Label     string `json:"label"`
+	RepoID     int64  `json:"repo_id"`
+	PR         int    `json:"pr"`
+	Candidate  string `json:"candidate_sha"`
+	RunID      int64  `json:"run_id"`
+	Attempt    int    `json:"attempt"`
+	SHA        string `json:"source_sha"`
+	Tree       string `json:"source_tree"`
+	Role       string `json:"role"`
+	Label      string `json:"label"`
+	Kind       string `json:"kind,omitempty"`
+	ContextSHA string `json:"job_context_sha,omitempty"`
 	// Repo is only transferred in memory to the guest's private tmpfs. It is
 	// intentionally excluded from every host receipt and diagnostic.
 	Repo string `json:"-"`
@@ -249,8 +251,12 @@ func codeQLCreateArgs(name string) []string {
 
 // Host evidence never claims job success from runner exit: the official run,
 // logs, uploads and completed-hook checkout must all be assessed separately.
-func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBinary string) (ret error) {
-	p, e := planCodeQL(ctx, c, runID, get)
+func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBinary string) error {
+	return executeProductJob(ctx, c, runID, dir, guestBinary, "", "")
+}
+
+func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guestBinary, kind, scannerFile string) (ret error) {
+	p, e := productPlan(ctx, c, runID, kind, get)
 	if e != nil {
 		return e
 	}
@@ -258,7 +264,17 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	if e != nil || len(guest) < 64 || !bytes.Equal(guest[:4], []byte{127, 'E', 'L', 'F'}) {
 		return errors.New("Linux helper binary required")
 	}
+	var scanner []byte
+	if kind == "secret" {
+		scanner, e = os.ReadFile(scannerFile)
+		if e != nil || len(scanner) < 64 || !bytes.Equal(scanner[:4], []byte{127, 'E', 'L', 'F'}) || digest(scanner) != secretBinarySHA {
+			return errors.New("official scanner binary digest rejected")
+		}
+	}
 	rec := receipt{RepoID: c.ID, PR: c.PR, SourceSHA: p.SHA, Stage: "codeql-planned", At: time.Now().UTC(), Scope: p.Role, Image: codeQLSDK}
+	if kind == "secret" {
+		rec.Stage = "secret-workflow-planned"
+	}
 	rec.SourceTree = p.Tree
 	reservation, e := os.OpenFile(filepath.Join(dir, fmt.Sprintf("repo-%d-result.private.json", c.ID)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
@@ -360,7 +376,14 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	if e = transfer.Run(); e != nil {
 		return errors.New("guest helper transfer failed")
 	}
-	p2, e := planCodeQL(ctx, c, runID, get)
+	if kind == "secret" {
+		copyScanner := cmd(ctx, docker, "exec", "-i", rec.ContainerID, "sh", "-c", "mkdir -p /runner/bin && cat > /runner/bin/gitleaks && chmod 755 /runner/bin/gitleaks")
+		copyScanner.Stdin = bytes.NewReader(scanner)
+		if e = copyScanner.Run(); e != nil {
+			return errors.New("official scanner binary transfer failed")
+		}
+	}
+	p2, e := productPlan(ctx, c, runID, kind, get)
 	if e != nil || p2 != p {
 		return errors.New("CodeQL plan changed before registration")
 	}
@@ -491,7 +514,7 @@ func codeQLGuest(configureOnly bool) error {
 	}
 	p := packet.Plan
 	p.Repo = packet.Repo
-	if p.Label != codeQLLabel(p.RepoID) || !strings.HasPrefix(packet.Name, fmt.Sprintf("todo2648-repo-%d-codeql-", p.RepoID)) || strings.Count(p.Repo, "/") != 1 || packet.Token == "" {
+	if !validGuestPlan(p) || !strings.HasPrefix(packet.Name, fmt.Sprintf("todo2648-repo-%d-codeql-", p.RepoID)) || strings.Count(p.Repo, "/") != 1 || packet.Token == "" {
 		return errors.New("guest registration rejected")
 	}
 	if e := cmd(context.Background(), "cp", "-a", "/opt/actions-runner/.", "/runner/").Run(); e != nil {
@@ -528,14 +551,24 @@ func codeQLGuest(configureOnly bool) error {
 	run.Dir = "/runner"
 	// Exclude /opt/bridge and Rust from PATH: this no-build mode has no Cargo
 	// admission. A native build is outside its scope, never an ungated fallback.
-	run.Env = append(os.Environ(), "PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "HOME=/home/runner", "CODEQL_THREADS=2", "CODEQL_RAM=6144", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/runner/product-hook-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/runner/product-hook-complete.sh")
+	runnerPath := "/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin"
+	if p.Kind == "secret" {
+		runnerPath = "/runner/bin:" + runnerPath
+	}
+	run.Env = append(os.Environ(), "PATH="+runnerPath, "HOME=/home/runner", "CODEQL_THREADS=2", "CODEQL_RAM=6144", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/home/runner/product-hook-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/home/runner/product-hook-complete.sh")
 	run.Stdout = os.Stdout
 	run.Stderr = os.Stderr
 	return run.Run()
 }
 
 func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
-	if repo != p.Repo || sha != p.SHA || runID != strconv.FormatInt(p.RunID, 10) || attempt != strconv.Itoa(p.Attempt) {
+	want := p.SHA
+	if p.Kind == "secret" && validGuestPlan(p) {
+		want = p.ContextSHA
+	} else if p.Kind != "" || p.ContextSHA != "" {
+		return errors.New("unknown job context kind")
+	}
+	if repo != p.Repo || sha != want || runID != strconv.FormatInt(p.RunID, 10) || attempt != strconv.Itoa(p.Attempt) {
 		return errors.New("CodeQL job identity rejected")
 	}
 	return nil
@@ -571,7 +604,11 @@ func codeQLHook(complete bool) error {
 		} else if strings.HasPrefix(ref, "refs/heads/") {
 			refKind = "branch"
 		}
-		b, _ := json.Marshal(map[string]any{"repo_id": p.RepoID, "run_id": p.RunID, "attempt": p.Attempt, "expected_sha": p.SHA, "observed_sha": observed, "ref_kind": refKind, "role": p.Role})
+		expectedContext := p.SHA
+		if p.Kind == "secret" {
+			expectedContext = p.ContextSHA
+		}
+		b, _ := json.Marshal(map[string]any{"repo_id": p.RepoID, "run_id": p.RunID, "attempt": p.Attempt, "expected_sha": p.SHA, "expected_job_context_sha": expectedContext, "observed_sha": observed, "ref_kind": refKind, "role": p.Role})
 		if e = os.WriteFile("/runner/job-start-context.json", b, 0600); e != nil {
 			return errors.New("opaque job context not preserved")
 		}

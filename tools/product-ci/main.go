@@ -38,7 +38,7 @@ type candidate struct {
 }
 
 var candidates = []candidate{
-	{1285649124, 1002, "956ac0f4dc81c2b2c2f2542ca4facd5c1e5bd486"},
+	{1285649124, 1002, "b93e126b172adbb29ad2081af4732f4b42f8bc95"},
 	{1392152644, 148, "74f023c0ee4b460f05f87dc3db5ceaf75e999a8a"},
 	{1154066087, 3613, "c53dc14f1b49f3d7d16a604f29b120de3ce8163d"},
 	{1386702183, 175, "a39a2b1833b3c24125a7b48d5a036376d94c662a"},
@@ -664,7 +664,7 @@ func main() {
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: stage, At: time.Now().UTC()})
 		}
-	} else if (len(os.Args) == 5 && os.Args[1] == "codeql-bootstrap") || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
+	} else if (len(os.Args) == 5 && (os.Args[1] == "codeql-bootstrap" || os.Args[1] == "codeql-revalidate")) || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore" || os.Args[1] == "codeql-recover" || os.Args[1] == "codeql-finalize")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") || (len(os.Args) == 7 && os.Args[1] == "secret-job") {
 		id, parse := strconv.ParseInt(os.Args[2], 10, 64)
 		var chosen *candidate
 		for i := range candidates {
@@ -676,6 +676,12 @@ func main() {
 			e = errors.New("unknown candidate")
 		} else if os.Args[1] == "codeql-bootstrap" {
 			e = bootstrapCodeQL(ctx, *chosen, os.Args[3], os.Args[4])
+		} else if os.Args[1] == "codeql-revalidate" {
+			e = bootstrapCodeQLMode(ctx, *chosen, os.Args[3], os.Args[4], true)
+		} else if os.Args[1] == "codeql-recover" {
+			e = recoverCodeQLBootstrap(ctx, *chosen, os.Args[3])
+		} else if os.Args[1] == "codeql-finalize" {
+			e = finalizeCodeQLRevalidation(ctx, *chosen, os.Args[3])
 		} else if os.Args[1] == "codeql-restore" {
 			e = restoreCodeQL(ctx, *chosen, os.Args[3])
 		} else if os.Args[1] == "codeql-route" {
@@ -685,7 +691,11 @@ func main() {
 			if parse != nil || runID < 1 {
 				e = errors.New("invalid run ID")
 			} else {
-				e = executeCodeQL(ctx, *chosen, runID, os.Args[4], os.Args[5])
+				if os.Args[1] == "secret-job" {
+					e = executeProductJob(ctx, *chosen, runID, os.Args[4], os.Args[5], "secret", os.Args[6])
+				} else {
+					e = executeCodeQL(ctx, *chosen, runID, os.Args[4], os.Args[5])
+				}
 			}
 		}
 	} else if len(os.Args) == 4 && os.Args[1] == "lifecycle-smoke" {
@@ -712,7 +722,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | node-contracts <id> <new-owned-dir> <node@sha256:digest> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

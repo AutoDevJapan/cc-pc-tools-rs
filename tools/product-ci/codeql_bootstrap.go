@@ -50,6 +50,7 @@ type bootstrapReceipt struct {
 	RunID                               int64 `json:"run_id"`
 	TreeGone, Removed, RegistrationGone bool
 	RouteRestored                       bool   `json:"route_restored_on_failure"`
+	AdmissionLocked                     bool   `json:"admission_lifetime_locked"`
 	Failure                             string `json:"failure,omitempty"`
 	AllRequiredChecksSuccess            bool   `json:"all_required_checks_success"`
 }
@@ -58,9 +59,18 @@ type bootstrapReceipt struct {
 // runner OFFLINE, submit routing, then dispose/deregister it before any job runner
 // is launched. A label reservation and setup run are never candidate success.
 func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret error) {
+	return bootstrapCodeQLMode(ctx, c, dir, binary, false)
+}
+
+func bootstrapCodeQLMode(ctx context.Context, c candidate, dir, binary string, revalidate bool) (ret error) {
 	r, e := verify(ctx, c, get)
 	if e != nil {
 		return e
+	}
+	if revalidate {
+		if _, _, e = revalidationPreflight(ctx, c, get); e != nil {
+			return e
+		}
 	}
 	guest, e := os.ReadFile(binary)
 	if e != nil || len(guest) < 64 || !bytes.Equal(guest[:4], []byte{127, 'E', 'L', 'F'}) {
@@ -101,6 +111,21 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 	if e != nil {
 		return errors.New("candidate already occupied")
 	}
+	if e = lockAdmission(lock); e != nil {
+		_ = lock.Close()
+		return errors.New("candidate admission lock unavailable")
+	}
+	// The OS releases its byte lock after a crash. The durable nonce still
+	// prevents recovery from confusing this bootstrap with a later product job.
+	admission, _ := json.Marshal(map[string]any{"repo_id": c.ID, "candidate_sha": c.SHA, "instance": rec.Instance})
+	if _, e = lock.WriteAt(admission, 1); e == nil {
+		e = lock.Sync()
+	}
+	if e != nil {
+		_ = lock.Close()
+		return errors.New("candidate admission intent unavailable")
+	}
+	rec.AdmissionLocked = true
 	creationUncertain, registrationMayExist, routeAttempted := false, false, false
 	defer func() {
 		ret = errors.Join(ret, lock.Close())
@@ -140,22 +165,42 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 		return errors.New("bootstrap creation unverified; retain admission")
 	}
 	rec.ContainerID = found[0].ID
-	defer func() {
+	recoveryAttempted := false
+	recoverRoute := func() {
 		if ret != nil && routeAttempted {
+			recoveryAttempted = true
 			cc, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 			defer cancel()
-			if e := restoreCodeQL(cc, c, dir); e != nil {
+			var e error
+			if revalidate {
+				if _, statErr := os.Stat(filepath.Join(dir, "codeql-revalidation-intent.private.json")); os.IsNotExist(statErr) {
+					// Preflight failed before any state-changing request.
+					e = nil
+				} else if statErr != nil {
+					e = statErr
+				} else {
+					e = recoverCodeQLRevalidation(cc, c, dir)
+				}
+			} else {
+				e = restoreCodeQL(cc, c, dir)
+			}
+			if e != nil {
 				ret = errors.Join(ret, errors.New("route restoration pending; retain admission"), e)
 			} else {
 				rec.RouteRestored = true
 			}
 		}
-	}()
-	defer func() {
+	}
+	cleanupRegistration := func() {
 		var ce error
 		rec.TreeGone, rec.Removed, ce = disposeOwned(rec.ContainerID)
 		ret = errors.Join(ret, ce)
 		if !rec.TreeGone || !registrationMayExist {
+			return
+		}
+		if revalidate && ret != nil && routeAttempted && !rec.RouteRestored {
+			// Keep the offline label available for the crash-recovery command.
+			// No container or listener remains, and admission stays occupied.
 			return
 		}
 		cc, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -185,7 +230,23 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 			}
 		}
 		rec.RegistrationGone = true
+	}
+	defer func() {
+		// Re-enable an interrupted setup while its offline label still exists.
+		// Otherwise a cleanup error can trigger one recovery after disposal.
+		if revalidate && ret != nil {
+			recoverRoute()
+		}
+		cleanupRegistration()
+		if !recoveryAttempted {
+			recoverRoute()
+		}
 	}()
+	// Install cleanup before the first durable-ID write can fail, and persist
+	// the verified ID before starting the container or requesting any token.
+	if e = save(); e != nil {
+		return e
+	}
 	if createErr != nil || strings.TrimSpace(string(b)) != rec.ContainerID {
 		return errors.New("bootstrap create completion uncertain")
 	}
@@ -253,16 +314,24 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 		return e
 	}
 	routeAttempted = true
-	if e = routeCodeQL(ctx, c, dir); e != nil {
+	if revalidate {
+		e = revalidateCodeQL(ctx, c, dir)
+	} else {
+		e = routeCodeQL(ctx, c, dir)
+	}
+	if e != nil {
 		return e
 	}
 	b, e = os.ReadFile(filepath.Join(dir, "codeql-route-response.private.json"))
 	var response struct {
 		RunID int64 `json:"run_id"`
 	}
-	if e != nil || json.Unmarshal(b, &response) != nil || response.RunID < 1 {
-		return errors.New("setup validation run identity unavailable")
+	if e != nil || json.Unmarshal(b, &response) != nil || response.RunID < 0 {
+		return errors.New("setup update response unavailable")
 	}
+	// A runner-only update can complete synchronously (HTTP 200) without
+	// creating a validation run. routeCodeQL already read back every setting.
+	// Keep zero as "no run created"; never invent a workflow identity.
 	rec.RunID = response.RunID
 	rec.Stage = "route-submitted-no-job"
 	return nil

@@ -472,6 +472,59 @@ fn normal_continuations_cannot_regain_launcher_capabilities_before_fresh_qualifi
                 t.ctx.read_json(&f.dir.path().join("todo.json")).unwrap(),
                 db
             );
+            if resumed {
+                let mut failed = qualified.clone();
+                failed["status"] = json!("failed");
+                failed["exit_code"] = json!(1);
+                failed["finished_at"] = json!("2026-10-17T02:00:00+09:00");
+                failed["pid"] = Value::Null;
+                failed["codex_pid"] = Value::Null;
+                t.put(failed.clone());
+                let key = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+                t.run(
+                    &[
+                        "--todo-id",
+                        "2",
+                        "--cwd",
+                        cwd,
+                        "--mcp-profile",
+                        profile,
+                        "--launch-key",
+                        key,
+                    ],
+                    b"PR86 Retry the same finite review",
+                )
+                .unwrap();
+                let mut retry = t
+                    .ctx
+                    .list_jobs(&HashSet::new())
+                    .into_iter()
+                    .find(|j| j["launch_key"] == key)
+                    .unwrap();
+                assert_eq!(
+                    retry["fixed_review_requalification"]["source_job_id"],
+                    "child"
+                );
+                assert!(t.ctx.admit(s(&retry, "id")).unwrap().is_none());
+                db["items"][1]["jobs"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(retry["id"].clone());
+                db["items"][1]["scheduler"]["job"] = retry["id"].clone();
+                db["items"][1]["scheduler"]["key"] = json!(key);
+                fs::write(f.dir.path().join("todo.json"), db.to_string()).unwrap();
+                retry["pid"] = json!(std::process::id());
+                retry["pid_created"] = json!(123);
+                retry["fixed_review_protocol"] = json!({"version":cc_job_policy::finished_review::EXECUTION_PROTOCOL,
+                    "pid":retry["pid"],"created":retry["pid_created"]});
+                t.put(retry.clone());
+                request.job_id = s(&retry, "id").into();
+                request.prompt_sha256 =
+                    digest(&fs::read(t.ctx.job_dir(s(&retry, "id")).join("prompt.md")).unwrap());
+                t.ctx.qualify_finished_review(&request, true).unwrap();
+                assert_eq!(t.ctx.load(s(&failed, "id")).unwrap(), failed);
+                assert_eq!(t.ctx.load("child").unwrap(), original);
+            }
         }
     }
 }

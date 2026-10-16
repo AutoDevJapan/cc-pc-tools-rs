@@ -30,7 +30,10 @@ impl Context {
             if !source["fixed_read_only_review"].is_null()
                 || !source["fixed_review_requalification"].is_null()
             {
-                let source_id = if source["fixed_read_only_review"].is_null() {
+                // A qualified continuation can fail after starting. Retain its
+                // original anchor instead of making that failed turn the next
+                // qualification's successful-source prerequisite.
+                let source_id = if !source["fixed_review_requalification"].is_null() {
                     &source["fixed_review_requalification"]["source_job_id"]
                 } else {
                     &source["id"]
@@ -61,24 +64,23 @@ impl Context {
         let _parent = FileLock::try_acquire(&self.job_dir(&r.parent_job_id).join("state.lock"))?;
         let _writer = FileLock::try_acquire(&self.job_dir(&r.owner_job_id).join("state.lock"))?;
         let store = self.todo_store();
-        let _todo = FileLock::try_acquire(&store.with_file_name("todo.lock"))?;
         let job = self.load(&r.job_id)?;
         let parent = self.load(&r.parent_job_id)?;
         let owner = self.load(&r.owner_job_id)?;
-        let _source_state = if !job["fixed_review_requalification"].is_null() {
+        let source_id = if !job["fixed_review_requalification"].is_null() {
             let id = s(&job["fixed_review_requalification"], "source_job_id");
             if !queue::valid_job_id(id) || ids.iter().any(|other| other.as_str() == id) {
                 return Err(Error::new("invalid fixed review continuation source"));
             }
-            Some(FileLock::try_acquire(&self.job_dir(id).join("state.lock"))?)
+            Some(id)
         } else {
             None
         };
-        let source = if !job["fixed_review_requalification"].is_null() {
-            let id = s(&job["fixed_review_requalification"], "source_job_id");
-            if !queue::valid_job_id(id) || ids.iter().any(|other| other.as_str() == id) {
-                return Err(Error::new("invalid fixed review continuation source"));
-            }
+        let _source_state = source_id
+            .map(|id| FileLock::try_acquire(&self.job_dir(id).join("state.lock")))
+            .transpose()?;
+        let _todo = FileLock::try_acquire(&store.with_file_name("todo.lock"))?;
+        let source = if let Some(id) = source_id {
             let source = self.load(id)?;
             if self.is_ours_checked(&source, "pid")?
                 || self.is_ours_checked(&source, "codex_pid")?

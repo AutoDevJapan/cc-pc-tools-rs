@@ -73,3 +73,31 @@ active repository ruleset18884840はrequired test/App15368、approval0/codeowner
 PR1002の題名と本文を日本語で現在の変更・検査済み範囲・未完了条件へ更新し、API読戻しで本文の完全一致・新head・draft=trueを確認した。同じ説明更新を繰り返さない。新規Discord質問・投稿は0。
 
 親は `todo.exe wait 2639 --on 2743 --on 2744 --progress 50` で正式に依存待ちにする。独立レビューと新正式CIが揃ったら、実head/tree/結果を確認しMustを修正した後に通常PRへの切替と固定headでのマージ・既存Prd反映を進める。本人の判断・PC操作は不要。原1636/2016/2274・他3製品は完了扱いにしていない。
+
+## 最新状態：PR1002はマージ済み、Prd反映は開始前のCI失敗で未完了
+
+2026-10-17 02:39 JST、job20261017-023228-todo-2639で元PR1002を通常mergeした。固定PRhead20c441df545a88f4a839d7e906b5aeb4f1708ae3を--match-head-commitで指定し、auto/admin/bypassを使っていない。draft解除・merge各1回。API読戻しでclosed/merged=trueとmerge/main **41090d19329b81dd1bd076f3336d723823be4b82** を確認した。mergeの両親は原basef3d946cbと20c、treeは検査・レビュー対象と同一の **007b84082008ea9effd5052f63856273aabbfb17**。このmergeを再実行しない。
+
+### レビューとマージ前の実確認
+
+Sonnet2743の原応答を受領。model=anthropic/claude-sonnet-5-5、succeeded/exit0、complete_diff_read=true、Must0。原応答SHA256はc4ae16bb34d53b502e085d04644447472b58ab86b9e58630783bc8cc83ff48f1。原文とjob/model/exit/hashを `.ci-work/todo2639-evidence-20261017/review2743-*` に保存した。
+
+Suggestionは実装と照合して仕分けた。snapshotはcommit/rollback/close/beginを呼ばず、同transactionでString castを使い、modelの日時列はDateTime(timezone=True)。今回の接続設定付き受入はskip0であり、opt-in未実行を成功と扱っていない。これらの静的事実から、timezone経路の未読による懸念をMustとは扱わない。Prdの実DDL全体を今回検査したとは主張しない。DB種別ごとの詳しい復旧、実行機の操作例、配布archiveとELFのhashの区別等は文書の改善点として保持し、現時点のruntime不具合や正式CIの失敗原因とは混同しない。正常なPrdデータを推測で修正しない旨をPR本文にも記録した。
+
+元2744の実結果とGitHub APIを照合し、20cの全6check（CodeQL4言語/集約/通常test）completed/successを確認した。Nodeの同source/tree/exit0/原logSHA256 dd194bbda8821df2e80944f87e41f87c1470e1e22c54a0bfb5f28122c77ea256も実ファイルと一致。Node185pass/skip0のcontainer回収・tree消滅をreceiptで確認した。正式toolは修復sourceのPR188/mergefa594cecから配布済みであり、未配布toolの実行ではない。
+
+マージ直前に固定sourceのgithub-required-check-policy.mjsを、既存immutable Node imageの非root/readonly/network-none/CPU-RAM制限containerで実行し、**GitHub security boundary verified** を確認。実APIから取得したruleset/App/check/policyを使い、保護設定の変更は0。検証containerはPID0とrm -vを確認。監査receiptはsecurity-audit.private.json。GraphQLのquery引数はWindowsのcommand-line errorになったため、同じ正式CLIでJSON stdinを使って読取を完了した。これは審査拒否ではない。正しいGraphQL応答で未解決review thread0を確認した。
+
+### マージ後の実失敗と残作業
+
+Prdの自動promotionはrun **38941324877** / workflow306106154でfailure。preconditions check117109404912はsteps0で、実注釈はActions budgetによる開始拒否。verify-backend-integration117109423278、verify側117109423311、promote117109424787はskipped/steps0。実際の業務precondition・release gate・Prd配備はまだ実行されていない。失敗を「無関係」として放置せず、元工程の残作業として追う。
+
+merge41090のCodeQL run **38941323954** / workflow331939928は最初のGETでqueued。Python117109408190、JS117109408508、Rust117109408625、Actions117109408843。20cと同treeでも、この公式runをsuccessと書き換えない。特定repository変数DEPLOY_ENABLEDは実GETでtrue。変更0、他変数/secret値の取得0。最初のGitHub deployment GETは0件であり、Vercel/RailwayのPrd不在とは断定していない。
+
+これを完了させる有限な独立工程を **ToDo2752** に登録した。specはdocs/todo-2639-postmerge-delivery-spec.md。親2639とのsubwork・保存spec・dispatchable・needs cargoを読戻し確認。子Codexジョブを直接起動していない。既存資源で必要な正式CI/release gate/既存Prdの実revisionと非破壊probeを確認する。新費用・予算増額・保護設定変更・秘密値の取得・汎用実行機・手動successは認めない。旧toolのopen-PR固定を直接変更して回避せず、機能が足りなければ有限なmerged receiptに束縛した通常の実装修復・別モデルレビュー・必要CI・merge・正式配布を経る。
+
+### 後片付けと次の再開
+
+終了済み所有temp d84c967c6eb3b9abf993ad85a20fb9b9は、証拠5ファイルの保存先との全SHA一致と製品4ファイルのcommit/mergeを確認後、safe-delete plan→別呼出し通常削除→finish source_absentで回収した。5,437,830bytes/27entries。元CのTempパスを今後の原資料の参照先にしない。`.ci-work/todo2639-evidence-20261017/` と元2744の恒久保管先を使う。後片付けのDiscord logは1回送信を試み、exit1の原応答をcleanup-discord-receipt.private.jsonへ保存。再送ループや新しい質問は作っていない。送信済みとは報告しない。
+
+次回は2752の実結果を読み、現在の固定source/必要検査/Prdのrevisionとprobe/回収を照合する。登録だけでPrd成功・元2639完了としない。2752の完了を待つだけなので、親は正式な `todo.exe wait 2639 --on 2752` を記録して枠を譲る。本人の判断・PC操作は不要。原1636/2016/2274と他製品は未完了のまま保持する。

@@ -1107,13 +1107,28 @@ impl Context {
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
             return Ok(None);
         }
-        let _subwork_store_lock = job["subwork"]
-            .is_object()
-            .then(|| {
-                FileLock::acquire(&self.todo_store().with_file_name("todo.lock"))
-                    .map_err(Error::from)
-            })
-            .transpose()?;
+        let _subwork_store_lock = if job.get("original_product_retry").is_some() {
+            // Retry invalidation and bind share this lock. An unavailable lock
+            // defers only this queued job; never hold the queue waiting for it.
+            match FileLock::try_acquire(&self.todo_store().with_file_name("todo.lock")) {
+                Ok(lock) => Some(lock),
+                Err(e)
+                    if matches!(e.raw_os_error(), Some(32 | 33))
+                        || e.kind() == std::io::ErrorKind::WouldBlock =>
+                {
+                    return Ok(None);
+                }
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            job["subwork"]
+                .is_object()
+                .then(|| {
+                    FileLock::acquire(&self.todo_store().with_file_name("todo.lock"))
+                        .map_err(Error::from)
+                })
+                .transpose()?
+        };
         self.record_work_owner(&mut job);
         let mut jobs = self.admission_jobs()?;
         // Recheck only the exact remembered owner, never scan terminal history
@@ -1182,10 +1197,9 @@ impl Context {
             if job["queue_wait_reason"] != *reason
                 || previous_wait != job["work_wait_on"]
                 || previous_evidence != job["work_wait_evidence"]
+                || reason["terminal"] == true
             {
-                job["queue_wait_reason"] = reason.clone();
-                job["queue_wait_checked_at"] = json!(self.rt.now());
-                self.save(&job)?;
+                self.save_admission_wait(&mut job, reason)?;
             }
             return Ok(None);
         }
@@ -1216,9 +1230,7 @@ impl Context {
             let db = self.read_json(&store)?;
             let reason = self.dependency_reason(&db, &job, &jobs);
             if let Some(reason) = reason {
-                job["queue_wait_reason"] = reason;
-                job["queue_wait_checked_at"] = json!(self.rt.now());
-                self.save(&job)?;
+                self.save_admission_wait(&mut job, &reason)?;
                 return Ok(None);
             }
         }
@@ -1230,6 +1242,14 @@ impl Context {
                 &mut job,
             )
             .map_err(Error::new)?;
+        }
+        if job.get("original_product_retry").is_some() {
+            let store=self.todo_store();
+            let mut db=self.read_json(&store)?;
+            if cc_job_policy::product_retry::mark_continuation_running(&mut db,&job,self.rt.epoch() as u64).map_err(Error::new)? {
+                cc_job_policy::todo_store::write(&store, &db)
+                    .map_err(|e| Error::new(e.to_string()))?;
+            }
         }
         job["queue_wait_reason"] = Value::Null;
         job["queue_admission_error"] = Value::Null;
@@ -1251,6 +1271,27 @@ impl Context {
         job["activity"] = json!("starting");
         self.save(&job)?;
         Ok(Some(state))
+    }
+
+    // Called only with queue -> this job's state -> ToDo locks held for retry
+    // jobs. Invalidation ends a queued attempt without stopping a process or
+    // modifying its ToDo. A surviving model remains owned by its current path.
+    fn save_admission_wait(&self, job: &mut Value, reason: &Value) -> Result<()> {
+        job["queue_wait_reason"] = reason.clone();
+        job["queue_wait_checked_at"] = json!(self.rt.now());
+        if job.get("original_product_retry").is_some()
+            && reason["terminal"] == true
+            && s(job, "status") == "queued"
+            && !self.is_ours_checked(job, "codex_pid")?
+        {
+            job["last_error"] = json!(format!(
+                "original product retry rejected: {}",
+                s(reason, "code")
+            ));
+            job["last_failure_kind"] = json!("product_retry");
+            finish(job, Some(1), 0, &self.rt.now());
+        }
+        self.save(job)
     }
 
     /// Pure admission assessment shared by the launcher and status. Earlier
@@ -1529,6 +1570,30 @@ impl Context {
     // A legacy automatic home-Git claim may be disproved without changing the durable store;
     // a newly registered manual dependency or readiness wait must still stop admission.
     fn dependency_reason(&self, source_db: &Value, job: &Value, jobs: &[Value]) -> Option<Value> {
+        if let Some(reason) =
+            cc_job_policy::product_retry::admission_reason(source_db, job, self.rt.epoch() as u64)
+        {
+            return Some(reason);
+        }
+        if job.get("original_product_retry").is_some() {
+            match self.read_file(&self.job_dir(s(job, "id")).join("prompt.md")) {
+                Ok(bytes)
+                    if job["original_product_retry"]["prompt_sha256"]
+                        == cc_job_policy::product_retry::digest(&bytes) =>
+                {
+                }
+                Ok(_) => {
+                    return Some(
+                        json!({"code":"product_retry_prompt_changed","message":"元の作業の再開本文が変わっています","terminal":true}),
+                    );
+                }
+                Err(_) => {
+                    return Some(
+                        json!({"code":"product_retry_prompt_unavailable","message":"元の作業の再開本文を確認しています","terminal":false}),
+                    );
+                }
+            }
+        }
         let mut db = source_db.clone();
         let mut evidence_jobs = jobs.to_vec();
         let ids: Vec<_> = db["items"]

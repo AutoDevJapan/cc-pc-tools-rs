@@ -107,7 +107,7 @@ func boundedOutput(c *exec.Cmd, limit int) ([]byte, error) {
 
 // Command errors deliberately omit argv and stderr: both can identify a client.
 func get(ctx context.Context, endpoint string, value any) error {
-	b, e := boundedOutput(cmd(ctx, gh, "api", endpoint), 16<<20)
+	b, e := readGitHub(ctx, endpoint)
 	if e != nil {
 		return errors.New("GitHub read failed")
 	}

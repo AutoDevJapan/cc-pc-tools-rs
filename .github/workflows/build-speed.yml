@@ -2,10 +2,11 @@ name: Build speed
 on:
   push:
     branches: [main]
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
   pull_request:
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
 # Superseded PR heads need no second verification; preserve every main run.
+# New PR workflows must also isolate reruns and legacy workflow revisions.
 concurrency:
   group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
@@ -36,7 +37,7 @@ jobs:
       - name: Verify the repaired isolated worktree fixture first
         run: cargo nextest run --locked -p cc-ask --test resume -E 'test(real_reply_shapes_after_reask_in_central_worktree)'
       - name: Verify owned process-tree cancellation before the full suite
-        run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree)'
+        run: cargo nextest run --locked -p cc-jobs --lib --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree) | test(end_to_end::test_cancel_of_a_lost_job_kills_the_leftover_codex) | test(pause::native::tests::cancellation_)'
       - name: Verify recovered job references and the explicit resume boundary first
         run: cargo nextest run --locked -p cc-todo --test job_references --test verified_resume
       - name: Verify dependency and cancellation identity boundaries before the full suite

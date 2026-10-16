@@ -162,6 +162,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "task-type",
                     "notes-hint",
                     "launch-key",
+                    "original-product-retry-key",
                     "resume-session",
                     "parent-job-id",
                     "subwork-of",
@@ -303,6 +304,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 });
             }
         }
+        original_product_retry_key(&a)?;
     }
     if [
         "tail",
@@ -375,6 +377,48 @@ pub fn parse(args: &[String]) -> Result<Args> {
         }
     }
     Ok(a)
+}
+
+fn original_product_retry_key(a: &Args) -> Result<Option<&str>> {
+    let Some(key) = a.value("original-product-retry-key") else {
+        return Ok(None);
+    };
+    if key.len() != 32
+        || !key
+            .bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    {
+        return Err(Error::new(
+            "--original-product-retry-key must be 32 lowercase hex characters",
+        ));
+    }
+    if a.value("todo-id") != Some("1626") || a.value("launch-key") != Some(key) {
+        return Err(Error::new(
+            "--original-product-retry-key requires --todo-id 1626 and the same --launch-key",
+        ));
+    }
+    if [
+        "related-todo-ids",
+        "subwork-of",
+        "parent-job-id",
+        "assigned-needs",
+        "pr-url",
+    ]
+    .iter()
+    .any(|name| a.value(name).is_some())
+    {
+        return Err(Error::new(
+            "original product retry cannot add related ToDos, subwork, a parent or a PR override",
+        ));
+    }
+    if a.value("project")
+        .is_some_and(|project| project != "PhosGaea-Vol1")
+    {
+        return Err(Error::new(
+            "original product retry is limited to PhosGaea-Vol1",
+        ));
+    }
+    Ok(Some(key))
 }
 pub fn normalize_windows_path(p: &Path) -> PathBuf {
     let text = p.to_string_lossy();
@@ -549,6 +593,7 @@ impl Context {
         }
     }
     pub fn cmd_run(&self, a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> Result<i32> {
+        original_product_retry_key(a)?;
         if let Some(key) = a.value("launch-key") {
             if key.len() != 32
                 || !key
@@ -585,9 +630,14 @@ impl Context {
                 Ok(bytes) => {
                     let receipt: Value = serde_json::from_slice(&bytes)?;
                     let id = s(&receipt, "id");
-                    if !valid_job_id(id) || s(&self.load(id)?, "launch_key") != key {
+                    if !valid_job_id(id) {
                         return Err(Error::new("invalid launch key receipt"));
                     }
+                    let job = self.load(id)?;
+                    if s(&job, "launch_key") != key {
+                        return Err(Error::new("invalid launch key receipt"));
+                    }
+                    self.validate_product_retry_replay(a, &job)?;
                     writeln!(out, "{id}")?;
                     return Ok(0);
                 }
@@ -610,6 +660,7 @@ impl Context {
                     .into_iter()
                     .find(|j| s(j, "launch_key") == key)
             {
+                self.validate_product_retry_replay(a, &job)?;
                 self.write_json(&receipt_path, &json!({"id":job["id"]}))?;
                 writeln!(out, "{}", s(&job, "id"))?;
                 return Ok(0);
@@ -622,7 +673,66 @@ impl Context {
             self.run_new_job(a, out, err)
         }
     }
+
+    // A launch receipt is reusable after a crash/bind/expiry, but only for the
+    // identical request. Never create or restart a supervisor during replay.
+    fn validate_product_retry_replay(&self, a: &Args, job: &Value) -> Result<()> {
+        if a.value("original-product-retry-key").is_none()
+            && job.get("original_product_retry").is_none()
+        {
+            return Ok(());
+        }
+        let key = original_product_retry_key(a)?
+            .ok_or_else(|| Error::new("original product retry receipt requires its retry key"))?;
+        let prompt = Path::new(a.required("prompt-file")?);
+        let bytes = self
+            .read_file(prompt)
+            .map_err(|e| Error::file_io("read prompt", prompt, e))?;
+        if job["todo_id"] != 1626
+            || job["original_product_retry"]["key"] != key
+            || job["original_product_retry"]["prompt_sha256"]
+                != cc_job_policy::product_retry::digest(&bytes)
+            || job["original_product_retry_request_sha256"]
+                != self.product_retry_request_digest(a, &bytes)?
+        {
+            return Err(Error::new(
+                "original product retry launch key request changed",
+            ));
+        }
+        Ok(())
+    }
+
+    fn product_retry_request_digest(&self, a: &Args, bytes: &[u8]) -> Result<String> {
+        let mut values = a.values.clone();
+        let cwd = a
+            .value("cwd")
+            .map(PathBuf::from)
+            .unwrap_or(std::env::current_dir()?);
+        values.insert("cwd".into(), abs(&cwd)?.to_string_lossy().into_owned());
+        values.insert(
+            "prompt-file".into(),
+            abs(Path::new(a.required("prompt-file")?))?
+                .to_string_lossy()
+                .into_owned(),
+        );
+        values
+            .entry("scope-source".into())
+            .or_insert("launcher".into());
+        let dirs = a
+            .add_dirs
+            .iter()
+            .map(|p| abs(Path::new(p)))
+            .collect::<std::io::Result<Vec<_>>>()?;
+        let flags: std::collections::BTreeSet<_> = a.flags.iter().collect();
+        let request = json!({"options":values,"add_dirs":dirs,"flags":flags,
+            "model_explicit":a.model_explicit,"prompt_sha256":cc_job_policy::product_retry::digest(bytes)});
+        Ok(cc_job_policy::product_retry::digest(&serde_json::to_vec(
+            &request,
+        )?))
+    }
+
     pub fn run_new_job(&self, a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> Result<i32> {
+        let retry_key = original_product_retry_key(a)?;
         self.queue_config()?;
         let resume = a
             .value("resume-session")
@@ -644,7 +754,10 @@ impl Context {
                 })
             })
             .transpose()?;
-        if a.flag("network") && a.required("sandbox")? != "workspace-write" {
+        if a.flag("network")
+            && a.required("sandbox")? != "workspace-write"
+            && !(retry_key.is_some() && a.required("sandbox")? == "danger-full-access")
+        {
             return Err(Error::new(
                 "--network only has an effect with --sandbox workspace-write",
             ));
@@ -700,7 +813,11 @@ impl Context {
             .map(|p| abs(Path::new(p)).map(|p| p.to_string_lossy().into_owned()))
             .collect::<std::io::Result<Vec<_>>>()?;
         let mut job = json!({"name":name,"model":a.required("model")?,"effort":a.required("effort")?,"sandbox":a.required("sandbox")?,"cwd":cwd.to_string_lossy(),"add_dirs":dirs,"network":a.flag("network"),"mcp_profile":a.required("mcp-profile")?,"task_type":a.value("task-type"),"notes_hint":a.value("notes-hint"),"prompt_source":abs(prompt)?.to_string_lossy(),"codex":codex,"created_at":self.rt.now(),"status":"queued","pid":null,"codex_pid":null,"started_at":null,"finished_at":null,"exit_code":null,"duration_ms":null,"tokens":usage_tokens(&json!({})),"steps":0,"activity":"queued","last_message":null,"last_error":null,"thread_id":null,"launch_key":a.value("launch-key"),"resume_session":resume});
-        let policy = cc_job_policy::for_sandbox(s(&job, "sandbox"));
+        let mut policy = cc_job_policy::for_sandbox(s(&job, "sandbox"));
+        if retry_key.is_some() && s(&job, "sandbox") == "workspace-write" {
+            // The saved source scope, including a restricted writer, is exact.
+            policy.sandbox = "workspace-write";
+        }
         job["model_explicit"] = json!(a.model_explicit);
         job["requested_model"] = job["model"].clone();
         let scope_source = a.value("scope-source").unwrap_or("launcher");
@@ -708,10 +825,19 @@ impl Context {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
+        job["sandbox"] = json!(policy.sandbox);
+        job["approval_policy"] = json!(policy.approval);
+        job["approvals_reviewer"] = json!(policy.reviewer);
+        if retry_key.is_none() {
+            job["mcp_profile"] = json!(cc_chrome::profile(
+                s(&job, "mcp_profile"),
+                std::str::from_utf8(&bytes).unwrap()
+            ));
+        }
         // Intake uses the short publication gate; history reconciliation remains outside it.
         let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
         // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
-        let _subwork_store_lock = (self.todo_store().exists()
+        let _subwork_store_lock = ((self.todo_store().exists() || retry_key.is_some())
             && (a.value("todo-id").is_some() || a.value("related-todo-ids").is_some()))
         .then(|| {
             FileLock::acquire(&self.todo_store().with_file_name("todo.lock")).map_err(Error::from)
@@ -736,13 +862,31 @@ impl Context {
         if !related.is_empty() {
             job["related_todo_ids"] = json!(&related);
         }
+        if let Some(key) = retry_key {
+            let db = self.read_json(&self.todo_store())?;
+            job["original_product_retry"] = cc_job_policy::product_retry::registration(
+                &db,
+                &job,
+                key,
+                &cc_job_policy::product_retry::digest(&bytes),
+                self.rt.epoch() as u64,
+            )
+            .map_err(Error::new)?;
+            job["original_product_retry_request_sha256"] =
+                json!(self.product_retry_request_digest(a, &bytes)?);
+        }
         // Do not create another supervisor for a task already waiting on a
         // prerequisite. Existing queued supervisors are also gated at admission.
         if job["todo_id"].is_number() || !related.is_empty() {
             let store = self.todo_store();
             if store.exists() {
                 let db = self.read_json(&store)?;
-                let ready = cc_job_policy::todo_wait::job_ready_waits(&db, &job);
+                let ready: Vec<_> = cc_job_policy::todo_wait::job_ready_waits(&db, &job)
+                    .into_iter()
+                    // Registration validated this exact saved wait; only bind
+                    // can remove it. Other waits retain the ordinary rejection.
+                    .filter(|wait| retry_key.is_none() || wait["item"] != 1626)
+                    .collect();
                 if !ready.is_empty() {
                     return Err(Error::new(
                         ready
@@ -764,8 +908,8 @@ impl Context {
             }
         }
         let env = self.rt.env();
-        let parent = if a.value("subwork-of").is_some() {
-            None // The saved relation below, not the invoking process, chooses this parent.
+        let parent = if retry_key.is_some() || a.value("subwork-of").is_some() {
+            None // Retry stays a root; only the saved subwork relation below chooses a parent.
         } else if let Some(id) = a.value("parent-job-id") {
             if !valid_job_id(id) || !self.running_job(&self.load(id)?) {
                 return Err(Error::new("parent job must be a running job in this queue"));
@@ -839,15 +983,12 @@ impl Context {
             )));
         }
         job["parent_job_id"] = json!(parent);
-        job["sandbox"] = json!(policy.sandbox);
-        job["approval_policy"] = json!(policy.approval);
-        job["approvals_reviewer"] = json!(policy.reviewer);
-        job["mcp_profile"] = json!(cc_chrome::profile(
-            s(&job, "mcp_profile"),
-            std::str::from_utf8(&bytes).unwrap()
-        ));
         job["task_title"] = json!(a.value("task-title"));
-        job["project"] = json!(a.value("project").map(cc_task_title::canonical_project));
+        job["project"] = json!(
+            a.value("project")
+                .or(retry_key.map(|_| "PhosGaea-Vol1"))
+                .map(cc_task_title::canonical_project)
+        );
         let inferred = cc_task_title::project_from_folder(s(&job, "cwd"));
         if s(&job, "project").is_empty() && inferred == cc_task_title::PRODUCT_NAME {
             job["project"] = json!(inferred);
@@ -968,9 +1109,10 @@ impl Context {
         } else {
             cc_job_policy::WRITE_GUIDANCE
         };
-        if !std::str::from_utf8(&stored_prompt)
-            .unwrap()
-            .contains(guidance.trim())
+        if retry_key.is_none()
+            && !std::str::from_utf8(&stored_prompt)
+                .unwrap()
+                .contains(guidance.trim())
         {
             stored_prompt.extend_from_slice(guidance.as_bytes());
         }
@@ -1326,37 +1468,75 @@ impl Context {
             job["cancel_requested_at"] = json!(self.rt.now());
             self.save(&job)?;
         }
+        let managed_root = if job["process_tree_version"] == 1 {
+            job["pid"]
+                .as_u64()
+                .and_then(|pid| u32::try_from(pid).ok())
+                .zip(job["pid_created"].as_u64())
+        } else {
+            None
+        };
+        let recorded_child = job["codex_pid"]
+            .as_u64()
+            .and_then(|pid| u32::try_from(pid).ok())
+            .zip(job["codex_pid_created"].as_u64());
         let mut targets = Vec::new();
-        for key in ["pid", "codex_pid"] {
-            if self.is_ours_checked(&job, key)? {
-                targets.push(key);
+        let managed_tree_stopped = if let Some((pid, created)) = managed_root {
+            if self
+                .rt
+                .kill_process_tree_job(pid, created, recorded_child)?
+            {
+                // The same Job Object's active=0 result is the completion
+                // evidence. Do not reopen PIDs after their identities can be reused.
+                targets.extend(["pid", "codex_pid"].into_iter().filter(|key| {
+                    job[*key].as_u64().is_some() && job[format!("{key}_created")].as_u64().is_some()
+                }));
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if !managed_tree_stopped {
+            // A supervisor that exited releases its named Job Object handle.
+            // Its surviving descendants remain recoverable through this
+            // retained-handle process walk.
+            for key in ["pid", "codex_pid"] {
+                if self.is_ours_checked(&job, key)? {
+                    targets.push(key);
+                }
+            }
+            for k in &targets {
+                // Stopping the supervisor's tree can already stop codex_pid.
+                // Recheck the recorded creation time before opening a second root.
+                if self.is_ours_checked(&job, k)? {
+                    let created = job[format!("{k}_created")]
+                        .as_u64()
+                        .ok_or_else(|| Error::new("owned process creation time is missing"))?;
+                    self.rt
+                        .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+                }
             }
         }
-        for k in &targets {
-            // Stopping the supervisor's tree can already stop codex_pid.
-            // Recheck the recorded creation time before opening a second root.
-            if self.is_ours_checked(&job, k)? {
-                let created = job[format!("{k}_created")]
-                    .as_u64()
-                    .ok_or_else(|| Error::new("owned process creation time is missing"))?;
-                self.rt
-                    .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+        if !managed_tree_stopped {
+            for _ in 0..50 {
+                let mut any_live = false;
+                for key in &targets {
+                    any_live |= self.is_ours_checked(&job, key)?;
+                }
+                if !any_live {
+                    break;
+                }
+                self.rt.sleep(0.1);
             }
-        }
-        for _ in 0..50 {
-            let mut any_live = false;
-            for key in &targets {
-                any_live |= self.is_ours_checked(&job, key)?;
-            }
-            if !any_live {
-                break;
-            }
-            self.rt.sleep(0.1);
         }
         let mut alive = Vec::new();
-        for key in &targets {
-            if self.is_ours_checked(&job, key)? {
-                alive.push(pystr(&job[*key]));
+        if !managed_tree_stopped {
+            for key in &targets {
+                if self.is_ours_checked(&job, key)? {
+                    alive.push(pystr(&job[*key]));
+                }
             }
         }
         if !alive.is_empty() {
@@ -1370,6 +1550,11 @@ impl Context {
         }
         job = self.load(jid)?;
         let cancelled = LIVE.contains(&s(&job, "status"));
+        job["process_tree_cancel_method"] = json!(if managed_tree_stopped {
+            "job_object"
+        } else {
+            "retained_handle_walk"
+        });
         if cancelled {
             job["status"] = json!("cancelled");
             job["finished_at"] = json!(self.rt.now());
@@ -1377,6 +1562,8 @@ impl Context {
             if let Some(start) = parse_iso(s(&job, "started_at")) {
                 job["duration_ms"] = json!(((self.rt.epoch() - start) * 1000.) as i64);
             }
+            self.save(&job)?;
+        } else if s(&job, "status") == "lost" {
             self.save(&job)?;
         }
         drop(lock);

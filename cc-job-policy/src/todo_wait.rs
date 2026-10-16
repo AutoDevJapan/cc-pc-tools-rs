@@ -142,12 +142,19 @@ pub fn validate(db: &Value, id: i64, on: &[i64]) -> Result<(), String> {
 /// Restore eligibility without removing owner stops, workspaces, specs or history.
 /// The readiness marker lasts until a worker is assigned and bypasses old retry timers.
 pub fn release_ready(db: &mut Value) -> Vec<i64> {
+    release_ready_if(db, |_| true)
+}
+
+/// Reuse normal dependency release within an already verified operational scope.
+/// The caller supplies eligibility; dependencies are always checked against this store.
+pub fn release_ready_if(db: &mut Value, mut eligible: impl FnMut(&Value) -> bool) -> Vec<i64> {
     let ready: BTreeSet<i64> = db["items"]
         .as_array()
         .into_iter()
         .flatten()
         .filter(|i| i["wait_on"].as_array().is_some_and(|a| !a.is_empty()) && !waiting(db, i))
         .filter(|i| i["wait_ready"].is_null())
+        .filter(|i| eligible(i))
         .filter_map(|i| i["id"].as_i64())
         .collect();
     let mut released = Vec::new();
@@ -225,6 +232,23 @@ pub fn job_pending_on(db: &Value, job: &Value) -> Vec<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn scoped_release_preserves_unverified_rows_and_missing_edges() {
+        let mut db = json!({"items":[
+            {"id":1,"status":"wait","wait_on":[4],"spec":"saved"},
+            {"id":2,"status":"wait","wait_on":[4]},
+            {"id":3,"status":"wait","wait_on":[4,99]},
+            {"id":4,"status":"done"}
+        ]});
+        let unverified = db["items"][1].clone();
+        let missing = db["items"][2].clone();
+        assert_eq!(release_ready_if(&mut db, |i| i["id"] != 2), vec![1]);
+        assert_eq!(db["items"][1], unverified);
+        assert_eq!(db["items"][2], missing);
+        assert_eq!(db["items"][0]["spec"], "saved");
+        assert_eq!(db["items"][0]["dependency_generation"], 1);
+        assert!(release_ready_if(&mut db, |i| i["id"] != 2).is_empty());
+    }
     #[test]
     fn readiness_wait_uses_exact_job_links_and_never_invents_dependency_edges() {
         let db = json!({"items":[{"id":1,"status":"wait","wait_ready":{"condition":"retry-time","since":100,"not_before":3700},"jobs":["linked"]},

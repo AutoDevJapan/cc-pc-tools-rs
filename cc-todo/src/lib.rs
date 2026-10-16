@@ -26,7 +26,9 @@ pub type Result<T> = std::result::Result<T, String>;
 pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
+pub use cc_job_policy::todo_wait::pending_on;
 pub mod product_resume;
+pub mod product_retry;
 pub mod ready;
 pub mod verified_resume;
 pub const STALL_S: f64 = 1200.;
@@ -203,6 +205,24 @@ pub enum Command {
         #[arg(long)]
         apply: bool,
     },
+    /// Reserve the existing finite original product retry without releasing its wait.
+    ProductRetryReserve {
+        #[arg(value_parser=clap::value_parser!(u64).range(1626..=1626))]
+        id: u64,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        expected_worker: String,
+    },
+    /// Bind only the exact normally queued job to the reserved original retry.
+    ProductRetryBind {
+        #[arg(value_parser=clap::value_parser!(u64).range(1626..=1626))]
+        id: u64,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        job: String,
+    },
     /// Admit only the original fixed-head review through normal scheduler allocation.
     ProductReviewAllocate {
         #[arg(long)]
@@ -300,51 +320,7 @@ pub fn load(path: &Path) -> Result<Value> {
     }
 }
 pub fn save(path: &Path, db: &Value) -> Result<()> {
-    // Check the exact serialization before touching backups, temp files or the original.
-    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
-    let one_space = pretty
-        .lines()
-        .map(|line| {
-            let n = line.bytes().take_while(|b| *b == b' ').count();
-            format!("{}{}", " ".repeat(n / 2), &line[n..])
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-    cc_job_policy::todo_store::check_size(one_space.len()).map_err(err)?;
-    let backup = PathBuf::from(format!("{}.bak-20260930d", path.display()));
-    if path.exists() && !backup.exists() {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(backup)
-            .map_err(err)?;
-        file.write_all(&fs::read(path).map_err(err)?).map_err(err)?;
-    }
-    let tmp = path.with_file_name(format!(
-        "{}.{}.tmp",
-        path.file_name().unwrap().to_string_lossy(),
-        std::process::id()
-    ));
-    let mut file = File::create(&tmp).map_err(err)?;
-    // Preserve unknown fields, insertion order, Unicode and Python's one-space indent.
-    file.write_all(one_space.as_bytes()).map_err(err)?;
-    file.flush().map_err(err)?;
-    file.sync_all().map_err(err)?;
-    drop(file);
-    for attempt in 0..50 {
-        match platform::replace(&tmp, path) {
-            Ok(()) => return Ok(()),
-            Err(e)
-                if (e.kind() == std::io::ErrorKind::PermissionDenied
-                    || matches!(e.raw_os_error(), Some(5 | 32 | 33)))
-                    && attempt < 49 =>
-            {
-                std::thread::sleep(Duration::from_millis(20))
-            }
-            Err(e) => return Err(err(e)),
-        }
-    }
-    unreachable!()
+    cc_job_policy::todo_store::write(path, db).map_err(err)
 }
 
 fn subwork_relation(
@@ -1212,12 +1188,22 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
         | Command::ProductResume { .. }
+        | Command::ProductRetryReserve { .. }
+        | Command::ProductRetryBind { .. }
         | Command::ProductReviewAllocate { .. }
         | Command::ReevaluateOwnerWait { .. } => unreachable!(),
     }
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::ProductRetryReserve { key, expected_worker, .. } = &cli.command {
+        println!("{}", product_retry::run(paths, key, Some(expected_worker), None)?);
+        return Ok(());
+    }
+    if let Command::ProductRetryBind { key, job, .. } = &cli.command {
+        println!("{}", product_retry::run(paths, key, None, Some(job))?);
+        return Ok(());
+    }
     if let Command::ProductReviewAllocate { apply } = &cli.command {
         println!("{}", product_resume::allocate_review(paths, *apply)?);
         return Ok(());
@@ -1405,7 +1391,7 @@ pub fn discord_call(
     }
     Err("Discord API rate limited".into())
 }
-mod job_refs;
+pub mod job_refs;
 mod platform;
 pub mod recovery;
 pub mod summary;

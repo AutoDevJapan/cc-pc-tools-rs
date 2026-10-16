@@ -2,6 +2,8 @@ use cc_jobs::notify::*;
 use cc_jobs::*;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
 mod subwork_support;
+#[path = "support/product_retry.rs"]
+mod original_product_retry;
 
 mod independent_subwork {
     use super::*;
@@ -5719,6 +5721,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    epoch_base: Mutex<Option<f64>>,
     quota_samples: Mutex<HashMap<String, cc_jobs::adaptive::QuotaSnapshot>>,
     boot: Mutex<Option<f64>>,
     recovery_guards: Mutex<HashMap<String, Option<bool>>>,
@@ -5766,10 +5769,12 @@ struct Fake {
     sleep_hook: Mutex<Option<SleepHook>>,
     supervisor_pid: AtomicU32,
     supervisor_fail: AtomicBool,
+    process_tree_job_supported: AtomicBool,
 }
 impl Fake {
     fn new() -> Self {
         Self {
+            epoch_base: Mutex::new(None),
             quota_samples: Mutex::new(HashMap::new()),
             boot: Mutex::new(None),
             recovery_guards: Mutex::new(HashMap::new()),
@@ -5824,6 +5829,7 @@ impl Fake {
             sleep_hook: Mutex::new(None),
             supervisor_pid: AtomicU32::new(0),
             supervisor_fail: AtomicBool::new(false),
+            process_tree_job_supported: AtomicBool::new(false),
         }
     }
     fn tick(&self, n: f64) {
@@ -5873,6 +5879,19 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn supports_process_tree_job(&self) -> bool {
+        self.process_tree_job_supported.load(Ordering::Relaxed)
+    }
+    fn kill_process_tree_job(&self, pid: u32, _: u64, _: Option<(u32, u64)>) -> io::Result<bool> {
+        if !self.supports_process_tree_job() {
+            return Ok(false);
+        }
+        if let Some(hook) = self.kill_hook.lock().unwrap().as_ref() {
+            hook(pid);
+        }
+        self.kills.lock().unwrap().push(pid);
+        Ok(true)
+    }
     fn boot_epoch(&self) -> Option<f64> {
         *self.boot.lock().unwrap()
     }
@@ -6011,13 +6030,19 @@ impl Runtime for Fake {
         self.env.lock().unwrap().clone()
     }
     fn now(&self) -> String {
+        if let Some(at) = *self.epoch_base.lock().unwrap() {
+            return chrono::DateTime::from_timestamp(at as i64, 0)
+                .unwrap()
+                .to_rfc3339();
+        }
         "2026-10-01T12:00:00+09:00".into()
     }
     fn mono(&self) -> f64 {
         *self.time.lock().unwrap()
     }
     fn epoch(&self) -> f64 {
-        parse_iso(&self.now()).unwrap()
+        let base = *self.epoch_base.lock().unwrap();
+        base.unwrap_or_else(|| parse_iso(&self.now()).unwrap())
             + if self.advance_epoch.load(Ordering::Relaxed) {
                 self.mono() - 100.
             } else {
@@ -6966,6 +6991,42 @@ mod lost_detection {
 }
 mod cancel {
     use super::*;
+    #[test]
+    fn stale_managed_tree_marker_with_no_recorded_process_uses_empty_legacy_targets() {
+        let t = Test::new();
+        let j = t.put(patch(
+            t.running(),
+            json!({"pid":null,"pid_created":null,"codex_pid":null,
+                "codex_pid_created":null,"process_tree_version":1}),
+        ));
+        assert_eq!(t.cli(&["cancel", s(&j, "id")]).0.unwrap(), 0);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "retained_handle_walk");
+    }
+    #[test]
+    fn managed_job_completion_does_not_reopen_recorded_pids() {
+        let t = Test::new();
+        let pid = std::process::id();
+        t.rt.procs.lock().unwrap().insert(321, 456);
+        t.rt.process_tree_job_supported
+            .store(true, Ordering::Relaxed);
+        let j = t.put(patch(
+            t.running(),
+            json!({"process_tree_version":1,"codex_pid":321,"codex_pid_created":456}),
+        ));
+        let rt = t.rt.clone();
+        *t.rt.kill_hook.lock().unwrap() = Some(Box::new(move |_| {
+            let mut errors = rt.proc_probe_errors.lock().unwrap();
+            errors.insert(pid, 5);
+            errors.insert(321, 5);
+        }));
+        assert_eq!(t.cli(&["cancel", s(&j, "id")]).0.unwrap(), 0);
+        let saved = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "job_object");
+        assert_eq!(*t.rt.kills.lock().unwrap(), [pid]);
+    }
     #[test]
     fn missing_supervisor_creation_time_preserves_reservation_and_skips_cleanup() {
         let t = Test::new();
@@ -10569,6 +10630,10 @@ mod end_to_end {
         );
         let jid = e.start("secret-events", &e.tmp.0, prompt.as_bytes());
         e.until(|| s(&e.job(&jid), "status") == "succeeded");
+        let saved = e.job(&jid);
+        let supervisor = saved["pid"].as_u64().unwrap() as u32;
+        let supervisor_created = saved["pid_created"].as_u64().unwrap();
+        e.until(|| proc_created(supervisor) != Some(supervisor_created));
         let dir = e.tmp.0.join("tool/jobs").join(&jid);
         assert_records_masked(&dir);
         let stderr = fs::read_to_string(dir.join("stderr.log")).unwrap();
@@ -10894,6 +10959,7 @@ mod end_to_end {
         });
         let before = e.job(&jid);
         assert_eq!(before["launch_key"], key);
+        assert_eq!(before["process_tree_version"], 1);
         let child: u32 = fs::read_to_string(e.rec.join("sleep.pid"))
             .unwrap()
             .parse()
@@ -10908,6 +10974,20 @@ mod end_to_end {
             .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
             .collect();
         let result = e.cli(&["cancel", &jid, "--recovery"], "");
+        if !result.status.success() {
+            e.diagnostic.store(true, Ordering::Relaxed);
+            e.retain_fixture_processes();
+            let retained: Vec<_> = e
+                .handles
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|handle| (handle.pid, handle.created, handle.live()))
+                .collect();
+            eprintln!(
+                "recovery cancellation fixture identities: expected={identities:?} retained={retained:?}"
+            );
+        }
         assert!(
             result.status.success(),
             "{}",
@@ -10920,6 +11000,7 @@ mod end_to_end {
         });
         let saved = e.job(&jid);
         assert_eq!(saved["status"], "cancelled");
+        assert_eq!(saved["process_tree_cancel_method"], "job_object");
         assert_ne!(saved["cancel_requested"], true);
         assert!(cc_job_policy::cancellation::recovery_cancel(
             &Value::Null,
@@ -10944,32 +11025,40 @@ mod end_to_end {
     fn test_cancel_of_a_lost_job_kills_the_leftover_codex() {
         let e = E2e::new();
         let (jid, pids) = e.slow();
-        let identities: Vec<_> = pids[1..]
-            .iter()
-            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
-            .collect();
+        assert_eq!(e.job(&jid)["process_tree_version"], 1);
+        let mut owners = FixtureOwners {
+            handles: pids
+                .iter()
+                .map(|pid| {
+                    FixtureProcess::retain(
+                        *pid,
+                        proc_created(*pid).expect("fixture process is live"),
+                    )
+                    .expect("retain the owned fixture identity before cancellation")
+                })
+                .collect(),
+            shutdown_started: false,
+        };
         // Stop only the retained supervisor. Its children deliberately stay
         // alive, so this still exercises cancellation of a genuinely lost job.
-        let supervisor = FixtureProcess::retain(
-            pids[0],
-            proc_created(pids[0]).expect("fixture supervisor is live"),
-        )
-        .expect("retain the owned fixture supervisor");
-        assert!(supervisor.stop());
+        assert!(owners.handles[0].stop());
         e.until(|| {
             serde_json::from_slice::<Vec<Value>>(&e.cli(&["status", "--json"], "").stdout).unwrap()
                 [0]["status"]
                 == "lost"
         });
-        assert!(proc_created(pids[2]).is_some());
+        assert!(owners.handles[1..].iter().all(FixtureProcess::live));
         let r = e.cli(&["cancel", &jid], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
         assert!(String::from_utf8_lossy(&r.stdout).contains("killed the leftover"));
-        e.until(|| {
-            identities
-                .iter()
-                .all(|(pid, born)| proc_created(*pid) != Some(*born))
-        });
+        assert_eq!(
+            e.job(&jid)["process_tree_cancel_method"],
+            "retained_handle_walk"
+        );
+        // Wait on the very same creation-checked objects retained before the
+        // lost-supervisor transition; a failed reopen or reused PID proves nothing.
+        assert!(owners.handles.iter().all(FixtureProcess::wait_exit));
+        owners.shutdown_started = true;
     }
 }
 mod additional_compatibility {
@@ -11229,8 +11318,20 @@ mod additional_compatibility {
                 }
             };
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
-            assert_eq!(out, s(&case, "stdout"), "{args:?} stdout");
-            assert_eq!(err, s(&case, "stderr"), "{args:?} stderr");
+            // Preserve the historical Python baseline, allowing only the new
+            // explicitly documented finite retry option in run's help.
+            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
+                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(),1);
+                assert_eq!(out.matches(option).count(),1);
+                out.replace(usage,"").replace(option,"")
+            }else{out};
+            assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
+            let legacy_err=if args.first()==Some(&"run"){
+                err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
+            }else{err};
+            assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());
         assert!(t.ctx.list_jobs(&HashSet::new()).is_empty());

@@ -8,6 +8,41 @@ use std::path::PathBuf;
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("checkpoint-workspace") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            if args.len() != 3 || args[1] != "--request-file" {
+                return Err(Error("InputRejected"));
+            }
+            use std::io::Read;
+            let mut bytes = Vec::new();
+            std::fs::File::open(&args[2])?
+                .take(4097)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() > 4096 {
+                return Err(Error("InputRejected"));
+            }
+            let request = serde_json::from_slice(&bytes)?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::workspace_checkpoint::checkpoint(&mut engine, &mut SystemRunner, &request)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("workspace checkpoint failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if (matches!(
         command,
         Some("status" | "step" | "repair-step" | "recover" | "orphans")

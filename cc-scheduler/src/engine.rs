@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -186,12 +186,30 @@ impl<B: Backend> Scheduler<B> {
         }
     }
     pub fn edit(&mut self, id: &Value, action: impl FnOnce(&mut Value)) -> Result<Value> {
+        self.edit_in_project(id, None, action)
+    }
+    /// Bind an explicit workspace receipt to its registered project under the store lock.
+    pub fn edit_in_project(
+        &mut self,
+        id: &Value,
+        expected_path: Option<&str>,
+        action: impl FnOnce(&mut Value),
+    ) -> Result<Value> {
         let _lock = ByteLock::acquire(
             &self.todo_path.with_file_name("todo.lock"),
             Duration::from_secs(2),
         )?
         .ok_or(Error("TimeoutError"))?;
         let mut db = self.todo()?;
+        if let Some(path) = expected_path {
+            let current = arr(&db["items"])
+                .into_iter()
+                .find(|row| row["id"] == *id)
+                .ok_or(Error("ValueError"))?;
+            if db["projects"][s(&current["project"])] != path {
+                return Err(Error("InputRejected"));
+            }
+        }
         let row = db["items"]
             .as_array_mut()
             .ok_or(Error("ValueError"))?
@@ -561,6 +579,98 @@ impl<B: Backend> Scheduler<B> {
             self.guard(&format!("reconcile repair {}", item["id"]), |e| {
                 e.reconcile_item(&item, jobs, ps, cfg)
             });
+        }
+        self.release_repair_waits()
+    }
+    /// The repair tick does not run the general watchdog (its private registry
+    /// may be unavailable). Catch both newly completed and previously stranded
+    /// edges here, without admitting unknown records or replaying old questions.
+    pub fn release_repair_waits(&mut self) -> Result<()> {
+        let snapshot = self.todo()?;
+        let mut candidates = Vec::new();
+        for item in arr(&snapshot["items"]) {
+            let project = s(&item["project"]);
+            if item["status"] != "wait"
+                || item["dispatchable"] != true
+                || !truth(&item["spec"])
+                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                || !item["wait_ready"].is_null()
+                || item["wait_on"].as_array().is_none_or(Vec::is_empty)
+                || item["wait_on"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|id| id.as_i64().is_none()))
+                || todo_wait::waiting(&snapshot, &item)
+                || truth(&item["scheduler"]["owner_stop_job"])
+                || truth(&item["scheduler"]["question"])
+                || truth(&item["scheduler"]["question_close_pending"])
+                || item["stall_recovery"]["pending"].is_object()
+            {
+                continue;
+            }
+            candidates.push(item);
+        }
+        if candidates.is_empty() {
+            return Ok(());
+        }
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        let owned = |item: &Value, jobs: &[Value], ps: &Processes| {
+            jobs.iter().any(|job| {
+                cc_job_policy::priority::linked(item, job)
+                    && (live(job) || ["pid", "codex_pid"].iter().any(|key| matches(job, key, ps)))
+            })
+        };
+        // Skip live owners before invoking external guards, and reuse each
+        // path's result only within this tick. No original guard policy changes.
+        let mut checked = std::collections::BTreeMap::new();
+        let mut verified = Vec::new();
+        for item in candidates
+            .into_iter()
+            .filter(|item| !owned(item, &jobs, &ps))
+        {
+            let repo = s(&snapshot["projects"][s(&item["project"])]);
+            let worktree = &item["scheduler"]["worktree"];
+            if repo.is_empty() || (!worktree.is_null() && !worktree.is_string()) {
+                continue;
+            }
+            // An unstarted task has no worktree yet. Normal preparation will
+            // create and verify it; an existing worktree must still pass guard.
+            if [repo, s(worktree)]
+                .into_iter()
+                .filter(|p| !p.is_empty())
+                .all(|path| {
+                    *checked
+                        .entry(path.to_string())
+                        .or_insert_with(|| self.backend.repair_scope_allowed(path))
+                })
+            {
+                verified.push(item);
+            }
+        }
+        if verified.is_empty() {
+            return Ok(());
+        }
+        // Scope checks can be slow. Refresh ownership before the locked commit,
+        // then compare the complete row so a concurrent stop/handoff wins.
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        verified.retain(|item| !owned(item, &jobs, &ps));
+        let _lock = ByteLock::acquire(
+            &self.todo_path.with_file_name("todo.lock"),
+            Duration::from_secs(2),
+        )?
+        .ok_or(Error("TimeoutError"))?;
+        let mut db = self.todo()?;
+        let projects = db["projects"].clone();
+        let released = todo_wait::release_ready_if(&mut db, |item| {
+            verified.contains(item)
+                && projects[s(&item["project"])] == snapshot["projects"][s(&item["project"])]
+        });
+        if !released.is_empty() {
+            cc_job_policy::todo_store::check_size(encode(&db, 1).len())
+                .map_err(todo_store_error)?;
+            write_json(&self.todo_path, &db, 1)?;
+            self.report["dependencies_released"] = json!(released);
         }
         Ok(())
     }

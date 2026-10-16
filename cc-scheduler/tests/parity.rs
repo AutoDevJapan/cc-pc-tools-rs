@@ -1403,6 +1403,9 @@ fn test_orphan_minimum_age_and_missing_job() {
 
 struct Fake {
     repair_allowed: bool,
+    repair_denied: Option<String>,
+    repair_calls: Vec<String>,
+    repair_edit: Option<(PathBuf, Value)>,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
@@ -1437,6 +1440,9 @@ impl Default for Fake {
     fn default() -> Self {
         Self {
             repair_allowed: false,
+            repair_denied: None,
+            repair_calls: vec![],
+            repair_edit: None,
             launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
@@ -1470,8 +1476,12 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
-    fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
-        self.repair_allowed
+    fn repair_scope_allowed(&mut self, repo: &str) -> bool {
+        self.repair_calls.push(repo.into());
+        if let Some((path, db)) = self.repair_edit.take() {
+            write_json(&path, &db, 1).unwrap();
+        }
+        self.repair_allowed && self.repair_denied.as_deref() != Some(repo)
     }
     fn clock(&self) -> f64 {
         self.clock
@@ -1673,6 +1683,192 @@ fn repair_step_never_replays_legacy_questions_or_unknown_work() {
     assert_eq!(f.e.backend.reply_count, 0);
     assert!(f.e.backend.launched.is_empty());
     assert_eq!(report["step_failures"], json!([]));
+}
+
+fn completed_dependency_repair() -> Fixture {
+    let mut f = Fixture::new();
+    fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+    let mut db = f.e.todo().unwrap();
+    db["projects"]["cc-pc-tools-rs"] = json!(f.repo);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.e.backend.repair_allowed = true;
+    f.managed(1, 2, "cc-pc-tools-rs", 0);
+    f.managed(2, 3, "cc-pc-tools-rs", 0);
+    wait_row(&mut f, 1, json!([2]));
+    for record in &mut f.e.backend.records {
+        record["status"] = json!("succeeded");
+    }
+    f.e.backend.ps.clear();
+    f
+}
+
+#[test]
+fn repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch() {
+    for already_done in [false, true] {
+        let mut f = completed_dependency_repair();
+        if already_done {
+            // A previous tick recorded completion but died before releasing its parent.
+            f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+                .unwrap();
+        }
+        let before = f.get(1);
+        let report = f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.get(2)["status"], "done");
+        assert_eq!(report["dependencies_released"], json!([1]));
+        assert_eq!(f.get(1)["status"], "doing");
+        assert!(f.get(1)["wait_on"].is_null());
+        assert_eq!(f.get(1)["dependency_generation"], 1);
+        assert_eq!(f.get(1)["spec"], before["spec"]);
+        assert_eq!(
+            f.get(1)["scheduler"]["worktree"],
+            before["scheduler"]["worktree"]
+        );
+        assert_eq!(f.e.backend.launched.len(), 1);
+        assert_eq!(f.e.backend.launched[0]["item"]["id"], 1);
+        f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+        f.e.backend.ps.insert(99, proc(99, 0, "codex.exe"));
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        assert!(f.e.backend.notices.is_empty());
+        assert!(f.e.backend.cancelled.is_empty());
+        assert_eq!(f.e.backend.reply_count, 0);
+    }
+}
+
+#[test]
+fn repair_dependency_release_preserves_prerequisites_scope_and_ownership() {
+    for gate in [
+        "unfinished",
+        "missing",
+        "malformed",
+        "owner",
+        "external",
+        "question",
+        "dispatch",
+        "scope",
+        "unknown",
+        "protected_worktree",
+        "invalid_worktree",
+        "pending",
+        "running",
+        "terminal_live",
+    ] {
+        let mut f = completed_dependency_repair();
+        f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+            .unwrap();
+        match gate {
+            "unfinished" => {
+                f.e.edit(&json!(2), |row| row["status"] = json!("block"))
+                    .unwrap();
+            }
+            "missing" => wait_row(&mut f, 1, json!([2, 99])),
+            "malformed" => wait_row(&mut f, 1, json!([2, "unknown"])),
+            "scope" => f.e.backend.repair_allowed = false,
+            "protected_worktree" => {
+                f.e.backend.repair_denied = f.get(1)["scheduler"]["worktree"]
+                    .as_str()
+                    .map(str::to_string);
+            }
+            "running" => f.e.backend.records[0]["status"] = json!("running"),
+            "terminal_live" => {
+                f.e.backend.ps.insert(2, proc(2, 0, "codex.exe"));
+            }
+            _ => {
+                f.e.edit(&json!(1), |row| match gate {
+                    "owner" => row["status"] = json!("block"),
+                    "external" => row["wait_ready"] = json!({"condition":"chatgpt-plus"}),
+                    "question" => row["scheduler"]["question"] = json!({"thread_id":"old"}),
+                    "dispatch" => row["dispatchable"] = json!(false),
+                    "unknown" => row["project"] = json!("other"),
+                    "invalid_worktree" => row["scheduler"]["worktree"] = json!({"invalid":true}),
+                    "pending" => row["stall_recovery"] = json!({"pending":{"key":"reserved"}}),
+                    _ => unreachable!(),
+                })
+                .unwrap();
+            }
+        }
+        let before = f.get(1);
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.get(1), before, "{gate}");
+        assert!(f.e.backend.launched.is_empty(), "{gate}");
+        assert!(f.e.backend.notices.is_empty(), "{gate}");
+        assert!(f.e.backend.cancelled.is_empty(), "{gate}");
+        assert_eq!(f.e.backend.reply_count, 0, "{gate}");
+        if matches!(gate, "running" | "terminal_live") {
+            assert!(f.e.backend.repair_calls.is_empty(), "{gate}");
+        }
+    }
+}
+
+#[test]
+fn repair_dependency_release_keeps_normal_capacity_gate() {
+    let mut f = completed_dependency_repair();
+    f.e.backend.m["cpu_percent"] = json!(95);
+    let report = f.e.run("repair-step", false).unwrap();
+    assert_eq!(report["dependencies_released"], json!([1]));
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["dependency_ready"], true);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn repair_dependency_release_admits_unstarted_waits_and_caches_paths_per_tick() {
+    let mut f = completed_dependency_repair();
+    f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+        .unwrap();
+    f.e.edit(&json!(1), |row| {
+        row["scheduler"] = json!({});
+        row["jobs"] = json!([]);
+    })
+    .unwrap();
+    let mut second = item(3, "cc-pc-tools-rs", "wait", &[]);
+    second["wait_on"] = json!([2]);
+    f.put(second);
+    let before = f.get(1);
+    f.e.release_repair_waits().unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(3)["status"], "todo");
+    assert_eq!(f.get(1)["spec"], before["spec"]);
+    assert!(f.get(1)["scheduler"]["worktree"].is_null());
+    assert_eq!(f.e.backend.repair_calls.len(), 1);
+    f.dispatch();
+    assert_eq!(f.get(1)["status"], "doing");
+    assert_eq!(f.e.backend.launched.len(), 1);
+    // Rechecking an already assigned task never creates a second worker.
+    f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
+    f.e.backend.ps.insert(99, proc(99, 0, "codex.exe"));
+    f.e.release_repair_waits().unwrap();
+    f.dispatch();
+    for id in [1, 3] {
+        assert_eq!(
+            f.e.backend
+                .launched
+                .iter()
+                .filter(|launch| launch["item"]["id"] == id)
+                .count(),
+            1
+        );
+    }
+}
+
+#[test]
+fn repair_dependency_release_rechecks_concurrent_stop_dependency_and_project_changes() {
+    for change in ["stop", "dependency", "project"] {
+        let mut f = completed_dependency_repair();
+        f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+            .unwrap();
+        let mut updated = f.e.todo().unwrap();
+        match change {
+            "stop" => updated["items"][0]["status"] = json!("block"),
+            "dependency" => updated["items"][1]["status"] = json!("block"),
+            "project" => updated["projects"]["cc-pc-tools-rs"] = json!("unverified-source"),
+            _ => unreachable!(),
+        }
+        f.e.backend.repair_edit = Some((f.e.todo_path.clone(), updated.clone()));
+        f.e.release_repair_waits().unwrap();
+        assert_eq!(f.e.todo().unwrap(), updated, "{change}");
+        assert!(f.e.backend.launched.is_empty());
+    }
 }
 struct Fixture {
     temp: tempfile::TempDir,
@@ -2997,6 +3193,247 @@ fn reserved_branch_fixture() -> (Fixture, Value, String) {
     (f, row, head)
 }
 
+fn checkpoint_fixture() -> (
+    Fixture,
+    cc_scheduler::workspace_checkpoint::Request,
+    PathBuf,
+) {
+    let (mut f, workspace, _) = reserved_branch_fixture();
+    let mut runner = SystemRunner;
+    cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &workspace,
+        &[],
+    )
+    .unwrap();
+    let target = PathBuf::from(s(&workspace["scheduler"]["worktree"]));
+    run_git(
+        &mut runner,
+        &target,
+        &["switch", "-c", "scheduler/todo-1-followup"],
+    )
+    .unwrap();
+    fs::write(target.join("source.txt"), "checkpointed work").unwrap();
+    run_git(&mut runner, &target, &["add", "source.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &target,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "followup",
+        ],
+    )
+    .unwrap();
+    fs::write(target.join("unfinished.txt"), "keep this pending work").unwrap();
+    let head = run_git(&mut runner, &target, &["rev-parse", "HEAD"]).unwrap();
+    let mut row = item(1, "other", "wait", &["cargo"]);
+    row["scheduler"] = workspace["scheduler"].clone();
+    row["scheduler"]["last_job"] = json!("owned");
+    row["scheduler"]["resume_session"] = json!("12345678-1234-4321-9234-123456789abc");
+    row["scheduler"]["not_before"] = json!(T + 3600.);
+    row["jobs"] = json!(["owned"]);
+    row["wait_on"] = json!([2]);
+    row["wait_ready"] = json!({"condition":"retry-time","not_before":T+7200.});
+    row["note"] = json!("Keep previous implementation and answers.");
+    row["progress"] = json!(40);
+    f.put(row);
+    f.e.backend.repair_allowed = true;
+    f.e.backend.records = vec![json!({"id":"owned","todo_id":1,"status":"succeeded","cwd":target})];
+    let request = cc_scheduler::workspace_checkpoint::Request {
+        id: 1,
+        job: "owned".into(),
+        expected_branch: "scheduler/todo-1-reserved".into(),
+        branch: "scheduler/todo-1-followup".into(),
+        head,
+    };
+    (f, request, target)
+}
+
+#[test]
+fn workspace_checkpoint_restores_resume_without_changing_work_or_waits() {
+    use cc_scheduler::{preparation::*, workspace_checkpoint::checkpoint};
+    let (mut f, request, target) = checkpoint_fixture();
+    let mut runner = SystemRunner;
+    let before = f.get(1);
+    let status = run_git(&mut runner, &target, &["status", "--porcelain"]).unwrap();
+    assert_eq!(
+        recover_workspace(
+            &mut runner,
+            f.repo.to_str().unwrap(),
+            &before,
+            &f.e.backend.records
+        )
+        .unwrap_err()
+        .0,
+        "BranchMismatch"
+    );
+    let report = checkpoint(&mut f.e, &mut runner, &request).unwrap();
+    assert_eq!(report["saved"], true);
+    assert_eq!(report["launched"], 0);
+    let mut after = f.get(1);
+    ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &after,
+        &f.e.backend.records,
+    )
+    .unwrap();
+    assert_eq!(
+        run_git(&mut runner, &target, &["rev-parse", "HEAD"]).unwrap(),
+        request.head
+    );
+    assert_eq!(
+        run_git(&mut runner, &target, &["status", "--porcelain"]).unwrap(),
+        status
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("unfinished.txt")).unwrap(),
+        "keep this pending work"
+    );
+    assert!(!run_git(
+        &mut runner,
+        &target,
+        &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+    )
+    .unwrap()
+    .is_empty());
+    after["scheduler"]["branch"] = before["scheduler"]["branch"].clone();
+    remove(&mut after["scheduler"], "workspace_checkpoint");
+    remove(&mut after, "updated");
+    assert_eq!(after, before);
+    let saved = f.get(1);
+    assert_eq!(
+        checkpoint(&mut f.e, &mut runner, &request).unwrap()["saved"],
+        false
+    );
+    assert_eq!(f.get(1), saved);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn workspace_checkpoint_rejects_unverified_identity_scope_or_git_state() {
+    for gate in [
+        "job",
+        "ownership",
+        "cwd",
+        "scope",
+        "worktree_scope",
+        "head",
+        "branch",
+        "expected",
+        "other_task_branch",
+        "detached",
+        "other_worker",
+        "terminal_but_alive",
+        "done",
+        "unknown_state",
+    ] {
+        let (mut f, mut request, target) = checkpoint_fixture();
+        match gate {
+            "job" => request.job = "missing".into(),
+            "ownership" => f.e.backend.records[0]["todo_id"] = json!(2),
+            "cwd" => f.e.backend.records[0]["cwd"] = json!(f.repo),
+            "scope" => f.e.backend.repair_allowed = false,
+            "worktree_scope" => f.e.backend.repair_denied = Some(target.to_str().unwrap().into()),
+            "head" => request.head = "f".repeat(40),
+            "branch" => request.branch = "scheduler/todo-1-missing".into(),
+            "expected" => request.expected_branch = "scheduler/todo-1-stale".into(),
+            "other_task_branch" => request.branch = "scheduler/todo-2-followup".into(),
+            "detached" => {
+                run_git(&mut SystemRunner, &target, &["checkout", "--detach"]).unwrap();
+            }
+            "other_worker" | "terminal_but_alive" => {
+                let mut other = job(
+                    "other",
+                    9,
+                    if gate == "other_worker" {
+                        "running"
+                    } else {
+                        "succeeded"
+                    },
+                );
+                other["todo_id"] = json!(1);
+                f.e.backend.records.push(other);
+                f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
+            }
+            _ => {
+                f.e.edit(&json!(1), |row| {
+                    row["status"] = json!(if gate == "done" {
+                        "done"
+                    } else {
+                        "recovery_unverified"
+                    })
+                })
+                .unwrap();
+            }
+        }
+        let before = f.get(1);
+        assert!(
+            cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request)
+                .is_err(),
+            "{gate}"
+        );
+        assert_eq!(f.get(1), before, "{gate}");
+        assert!(f.e.backend.launched.is_empty(), "{gate}");
+    }
+}
+
+#[test]
+fn workspace_checkpoint_accepts_only_the_current_live_source() {
+    for current in [false, true] {
+        let (mut f, request, _) = checkpoint_fixture();
+        f.e.backend.records[0]["status"] = json!("running");
+        f.e.backend.records[0]["pid"] = json!(9);
+        f.e.backend.records[0]["pid_created"] = proc(9, 0, "codex.exe")["created"].clone();
+        f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
+        if current {
+            f.e.edit(&json!(1), |row| row["scheduler"]["job"] = json!("owned"))
+                .unwrap();
+        }
+        let before = f.get(1);
+        let result =
+            cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request);
+        assert_eq!(result.is_ok(), current);
+        if current {
+            assert_eq!(f.get(1)["scheduler"]["branch"], request.branch);
+            assert_eq!(f.get(1)["scheduler"]["job"], "owned");
+        } else {
+            assert_eq!(f.get(1), before);
+        }
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn workspace_checkpoint_preserves_intervening_owner_stop() {
+    for project_change in [false, true] {
+        let (mut f, request, _) = checkpoint_fixture();
+        let mut changed = f.e.todo().unwrap();
+        if project_change {
+            changed["projects"]["other"] = json!(f.temp.path().join("another-project"));
+        } else {
+            changed["items"][0]["status"] = json!("block");
+            changed["items"][0]["stopped"] = json!(true);
+        }
+        f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
+        assert!(cc_scheduler::workspace_checkpoint::checkpoint(
+            &mut f.e,
+            &mut SystemRunner,
+            &request
+        )
+        .is_err());
+        assert_eq!(f.e.todo().unwrap(), changed);
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
 #[test]
 fn preparation2164_restores_reserved_branch_without_replacing_its_commit() {
     let (f, row, head) = reserved_branch_fixture();
@@ -3908,6 +4345,7 @@ fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
         &["step", "-h"],
         &["recover", "-h"],
         &["orphans", "-h"],
+        &["checkpoint-workspace", "--help"],
     ] {
         let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
         c.args = args.iter().map(|a| a.to_string()).collect();

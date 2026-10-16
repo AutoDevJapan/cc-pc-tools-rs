@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     path::Path,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -59,10 +59,31 @@ fn parse(mut a: Vec<String>) -> Result<(&'static str, String, Value), String> {
             }
             let action = a.remove(0);
             if action == "list" {
-                if !a.is_empty() {
-                    return Err("todo list takes no arguments".into());
+                let mut query = Vec::new();
+                for (flag, key) in [
+                    ("--after", "after"),
+                    ("--id", "id"),
+                    ("--limit", "limit"),
+                    ("--link-offset", "link_offset"),
+                    ("--revision", "revision"),
+                ] {
+                    if let Some(value) = take(&mut a, flag)? {
+                        if (key == "revision"
+                            && (value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit())))
+                            || (key != "revision"
+                                && (value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit())))
+                        {
+                            return Err("invalid listing value".into());
+                        }
+                        query.push(format!("{key}={value}"));
+                    }
                 }
-                return Ok(("GET", "todo".into(), json!({})));
+                if !a.is_empty() {
+                    return Err("unexpected todo list argument".into());
+                }
+                let query = query.join("&");
+                localai_web_rs::todo_listing::Query::parse(&query).map_err(str::to_owned)?;
+                return Ok(("LIST", format!("todo/list?{query}"), json!({})));
             }
             let note = take(&mut a, "--note")?;
             let job = take(&mut a, "--job")?;
@@ -73,16 +94,14 @@ fn parse(mut a: Vec<String>) -> Result<(&'static str, String, Value), String> {
                     v["title"] = json!(a[1]);
                 }
                 "start" | "unblock" | "done" if a.len() == 1 => {
-                    v["id"] = json!(
-                        a[0].parse::<u64>()
-                            .map_err(|_| "id must be a positive integer")?
-                    );
+                    v["id"] = json!(a[0]
+                        .parse::<u64>()
+                        .map_err(|_| "id must be a positive integer")?);
                 }
                 "block" if a.len() == 2 => {
-                    v["id"] = json!(
-                        a[0].parse::<u64>()
-                            .map_err(|_| "id must be a positive integer")?
-                    );
+                    v["id"] = json!(a[0]
+                        .parse::<u64>()
+                        .map_err(|_| "id must be a positive integer")?);
                     v["reason"] = json!(a[1]);
                 }
                 _ => return Err("invalid todo arguments; see --help".into()),
@@ -163,6 +182,8 @@ fn parse(mut a: Vec<String>) -> Result<(&'static str, String, Value), String> {
 const HELP: &str = "cc-console — このPCの共有ToDoと引き継ぎ（出力はJSON）\n\
   cc-console handoff\n  cc-console jobs\n  cc-console todo list\n\
   cc-console workload [--date YYYY-MM-DD]\n\
+  cc-console todo list [--limit 1..100] [--after <id>] [--revision <hash>]\n\
+  cc-console todo list --id <id> [--link-offset <offset>] [--revision <hash>]\n\
   cc-console todo add <project> <title> [--note <text>]\n\
   cc-console todo start <id> [--job <job-id>]\n\
   cc-console todo block <id> <reason>\n\
@@ -211,7 +232,7 @@ async fn run(args: Vec<String>) -> Result<(String, bool), String> {
     );
     let url = format!("http://127.0.0.1:10012{api_path}");
     let mut req = client.request(
-        if method == "GET" || method == "WORKLOAD" {
+        if matches!(method, "GET" | "WORKLOAD" | "LIST") {
             reqwest::Method::GET
         } else {
             reqwest::Method::POST
@@ -223,25 +244,73 @@ async fn run(args: Vec<String>) -> Result<(String, bool), String> {
             .header("content-type", "application/json")
             .body(payload.to_string());
     }
-    let mut response = req.send().await.map_err(
-        |_| "コンソールに接続できません。委譲の再試行には同じrequest-idを使ってください。",
-    )?;
-    let success = response.status().is_success();
+    let response = req.send().await.map_err(|_| {
+        "コンソールに接続できません。委譲の再試行には同じrequest-idを使ってください。"
+    })?;
+    read_response(response, method).await
+}
+async fn read_response(
+    mut response: reqwest::Response,
+    method: &str,
+) -> Result<(String, bool), String> {
+    let requested = if method == "LIST" {
+        Some(
+            localai_web_rs::todo_listing::Query::parse(response.url().query().unwrap_or(""))
+                .map_err(str::to_owned)?,
+        )
+    } else {
+        None
+    };
+    let status = response.status();
+    let success = status.is_success();
+    let limit = if method == "LIST" {
+        localai_web_rs::todo_listing::RESPONSE_LIMIT
+    } else {
+        16 * 1024 * 1024
+    };
     let mut bytes = Vec::new();
     while let Some(chunk) = response.chunk().await.map_err(|_| "response interrupted")? {
-        if bytes.len() + chunk.len() > 16 * 1024 * 1024 {
+        if chunk.len() > limit.saturating_sub(bytes.len()) {
             return Err("response too large".into());
         }
         bytes.extend_from_slice(&chunk);
     }
     let value: Value =
         serde_json::from_slice(&bytes).map_err(|_| "console returned invalid JSON")?;
+    if method == "LIST" {
+        if !success || value["ok"] == false {
+            let code = match value["error"]["code"].as_str() {
+                Some("listing_changed") => "listing_changed",
+                Some("todo_not_found") => "todo_not_found",
+                Some("invalid_request") => "invalid_request",
+                Some("todo_store_too_large") => "todo_store_too_large",
+                Some("todo_store_invalid_json") => "todo_store_invalid_json",
+                Some("state_unavailable") => "state_unavailable",
+                _ => "listing_failed",
+            };
+            return Ok((json!({"ok":false,"version":1,"error":{"code":code,"httpStatus":status.as_u16(),"message":"共有ToDoの有限一覧を取得できませんでした。listing_changedの場合は先頭から取得し直してください。"}}).to_string(), false));
+        }
+        return Ok((
+            localai_web_rs::todo_listing::validate(value, requested.as_ref().unwrap())
+                .map_err(str::to_owned)?
+                .to_string(),
+            true,
+        ));
+    }
     if method == "WORKLOAD" {
         return Ok((render_workload(&value)?, success));
     }
     Ok((value.to_string(), success))
 }
 
+#[cfg(test)]
+fn validate_listing(value: Value) -> Result<Value, String> {
+    localai_web_rs::todo_listing::validate(
+        value,
+        &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+    )
+    .map_err(str::to_owned)
+}
 fn render_workload(value: &Value) -> Result<String, String> {
     if value["ok"] != true || value["version"] != 1 {
         let message = value["error"]["message"]
@@ -300,6 +369,219 @@ fn render_workload(value: &Value) -> Result<String, String> {
 mod tests {
     use super::*;
     #[test]
+    fn listing_flags_and_response_allowlist() {
+        let (method, path, _) = parse(vec![
+            "todo".into(),
+            "list".into(),
+            "--id".into(),
+            "2628".into(),
+        ])
+        .unwrap();
+        assert_eq!(method, "LIST");
+        assert_eq!(path, "todo/list?id=2628");
+        for args in [
+            vec!["--after", "1&limit=2"],
+            vec!["--limit", "101"],
+            vec!["--id", "1", "--after", "2"],
+            vec!["--limit", "1", "--limit", "2"],
+        ] {
+            let mut a = vec!["todo".into(), "list".into()];
+            a.extend(args.into_iter().map(String::from));
+            assert!(parse(a).is_err());
+        }
+        let data = localai_web_rs::todo_listing::project(
+            &json!({"items":[{"id":2628,"status":"doing","wait_on":[2467],"agent":"reviewer"}]}),
+            &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+        )
+        .unwrap();
+        let mut response = json!({"ok":true,"version":1,"data":data,"secret":"omit"});
+        response["data"]["items"][0]["note"] = json!("omit");
+        assert!(!validate_listing(response.clone())
+            .unwrap()
+            .to_string()
+            .contains("omit"));
+        response["data"]["metadataOnly"] = json!(false);
+        assert!(validate_listing(response.clone()).is_err());
+        response["data"]["metadataOnly"] = json!(true);
+        response["data"]["items"][0]["agent"] = json!("secret");
+        assert!(validate_listing(response).is_err());
+    }
+    async fn wire_response(
+        header: String,
+        body: Vec<u8>,
+        method: &str,
+    ) -> Result<(String, bool), String> {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0; 4096];
+            let _ = stream.read(&mut request).await;
+            let _ = stream.write_all(header.as_bytes()).await;
+            let _ = stream.write_all(&body).await;
+            let _ = stream.shutdown().await;
+        });
+        let response = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(10))
+            .build()
+            .unwrap()
+            .get(format!("http://{address}/api/agent/todo/list"))
+            .send()
+            .await
+            .unwrap();
+        let result = read_response(response, method).await;
+        server.await.unwrap();
+        result
+    }
+    #[tokio::test]
+    async fn listing_real_http_shape_success_failure_and_interrupted_body() {
+        let data = localai_web_rs::todo_listing::project(
+            &json!({"items":[{"id":1,"status":"wait","wait_on":[2]}]}),
+            &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+        )
+        .unwrap();
+        let body = json!({"ok":true,"version":1,"data":data})
+            .to_string()
+            .into_bytes();
+        let (out, good) = wire_response(
+            format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            ),
+            body,
+            "LIST",
+        )
+        .await
+        .unwrap();
+        assert!(good);
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["data"]["items"][0]["wait_on"],
+            json!([2])
+        );
+        let error = b"{\"ok\":false,\"error\":{\"message\":\"secret-response\"}}".to_vec();
+        for status in ["503 Service Unavailable", "200 OK"] {
+            let (out, good) = wire_response(
+                format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\n\r\n",
+                    error.len()
+                ),
+                error.clone(),
+                "LIST",
+            )
+            .await
+            .unwrap();
+            assert!(!good);
+            assert!(!out.contains("secret-response"));
+        }
+        for (code, status) in [
+            ("listing_changed", "409 Conflict"),
+            ("todo_not_found", "404 Not Found"),
+            ("invalid_request", "400 Bad Request"),
+            ("state_unavailable", "503 Service Unavailable"),
+        ] {
+            let error = json!({"ok":false,"error":{"code":code,"message":"hidden"}})
+                .to_string()
+                .into_bytes();
+            let (out, good) = wire_response(
+                format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\n\r\n",
+                    error.len()
+                ),
+                error,
+                "LIST",
+            )
+            .await
+            .unwrap();
+            assert!(!good);
+            let response: Value = serde_json::from_str(&out).unwrap();
+            assert_eq!(response["error"]["code"], code);
+            assert_eq!(
+                response["error"]["httpStatus"],
+                status[..3].parse::<u64>().unwrap()
+            );
+            assert!(!out.contains("hidden"));
+        }
+        assert_eq!(
+            wire_response(
+                "HTTP/1.1 200 OK\r\nContent-Length: 200\r\n\r\n".into(),
+                b"{\"ok\":true}".to_vec(),
+                "LIST"
+            )
+            .await
+            .unwrap_err(),
+            "response interrupted"
+        );
+        assert!(wire_response(
+            "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n".into(),
+            b"{}".to_vec(),
+            "LIST"
+        )
+        .await
+        .is_err());
+    }
+    #[tokio::test]
+    async fn response_caps_include_chunked_transfer_and_keep_legacy_16mib_bound() {
+        let data = localai_web_rs::todo_listing::project(
+            &json!({"items":[]}),
+            &localai_web_rs::todo_listing::Query::parse("").unwrap(),
+        )
+        .unwrap();
+        let mut exact = json!({"ok":true,"version":1,"data":data})
+            .to_string()
+            .into_bytes();
+        exact.resize(localai_web_rs::todo_listing::RESPONSE_LIMIT, b' ');
+        assert!(
+            wire_response(
+                format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", exact.len()),
+                exact,
+                "LIST"
+            )
+            .await
+            .unwrap()
+            .1
+        );
+        for (method, size) in [
+            ("GET", 16 * 1024 * 1024 + 1),
+            ("LIST", localai_web_rs::todo_listing::RESPONSE_LIMIT + 1),
+        ] {
+            let body = vec![b' '; size];
+            assert_eq!(
+                wire_response(
+                    format!("HTTP/1.1 200 OK\r\nContent-Length: {size}\r\n\r\n"),
+                    body.clone(),
+                    method
+                )
+                .await
+                .unwrap_err(),
+                "response too large"
+            );
+            let mut chunked = format!("{size:x}\r\n").into_bytes();
+            chunked.extend(body);
+            chunked.extend(b"\r\n0\r\n\r\n");
+            assert_eq!(
+                wire_response(
+                    "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n".into(),
+                    chunked,
+                    method
+                )
+                .await
+                .unwrap_err(),
+                "response too large"
+            );
+        }
+        let (out, good) = wire_response(
+            "HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\n".into(),
+            b"{\"ok\":true}".to_vec(),
+            "GET",
+        )
+        .await
+        .unwrap();
+        assert!(good);
+        assert_eq!(out, "{\"ok\":true}");
+    }
+    #[test]
     fn delegate_model_flags_reach_payload_and_reject_bad_or_duplicate_values() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/workload/git.txt");
         let base = vec![
@@ -353,16 +635,14 @@ mod tests {
     }
     #[test]
     fn invalid_flags_and_ids_fail() {
-        assert!(
-            parse(vec![
-                "todo".into(),
-                "done".into(),
-                "1".into(),
-                "--job".into(),
-                "x".into()
-            ])
-            .is_err()
-        );
+        assert!(parse(vec![
+            "todo".into(),
+            "done".into(),
+            "1".into(),
+            "--job".into(),
+            "x".into()
+        ])
+        .is_err());
         assert!(parse(vec!["todo".into(), "start".into(), "bad".into()]).is_err());
     }
 
@@ -377,30 +657,26 @@ mod tests {
         assert_eq!(method, "WORKLOAD");
         assert_eq!(path, "workload?date=2026-10-01");
         assert_eq!(payload, json!({}));
-        assert!(
-            parse(vec![
-                "workload".into(),
-                "--date".into(),
-                "2026-02-30".into()
-            ])
-            .is_err()
-        );
+        assert!(parse(vec![
+            "workload".into(),
+            "--date".into(),
+            "2026-02-30".into()
+        ])
+        .is_err());
         assert!(parse(vec!["workload".into(), "--date".into(), "2026-1-01".into()]).is_err());
     }
 
     #[test]
     fn workload_rejects_unknown_and_duplicate_arguments() {
         assert!(parse(vec!["workload".into(), "--wat".into()]).is_err());
-        assert!(
-            parse(vec![
-                "workload".into(),
-                "--date".into(),
-                "2026-10-01".into(),
-                "--date".into(),
-                "2026-10-02".into()
-            ])
-            .is_err()
-        );
+        assert!(parse(vec![
+            "workload".into(),
+            "--date".into(),
+            "2026-10-01".into(),
+            "--date".into(),
+            "2026-10-02".into()
+        ])
+        .is_err());
     }
 
     #[test]

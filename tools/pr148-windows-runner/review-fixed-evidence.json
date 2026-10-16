@@ -91,5 +91,13 @@
   ],
   "cancel_observer_caveat": "controller completion observed; PowerShell Process.ExitCode unavailable; actual worker exit 125 and SCM service success separately measured",
   "new_profile_delete_attempts": 0,
-  "go_passed_tests": 11
+  "go_passed_tests": 11,
+  "followup_review_todo": 2763,
+  "followup_review_received": false,
+  "all_three_new_temp_roots_deleted": true,
+  "safe_delete_finish_states": [
+    "source_absent",
+    "source_absent",
+    "source_absent"
+  ]
 }

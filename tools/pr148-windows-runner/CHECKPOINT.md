@@ -1,3 +1,35 @@
+## 2026-10-17 修正後の最終保存（この節を優先）
+
+コードは3ba895f、証拠/文書は9b0f205までpush済み。Goコードは3ba895f以降変更なし。
+レビュー2755のMust6件へ実装修正し、再レビューを通常ToDo2763へ--specで登録した。
+2763の実応答はまだ受領していないのでMust0/統合可能とは書かない。
+原2755応答はSHA/bytes一致で保管し、REVIEW.mdに各指摘の採否/限界を書いた。
+
+修正後binaryで正常worker49284/子32644、取消worker37124/子8672を実測。
+AU DenyOnlyは両方true、保護結果の実worker終了は正常0/取消125、Job保持handle/active0。
+実launcher PIDを明示した再open拒否/制御ファイル書込拒否も両fixtureで確認した。
+非管理者controllerの作成は正規brokerでもCreateProcessWithTokenWがWindows Access denied5。
+別方式の迂回は試していない。非管理者の実動を成功としない。
+取消observerは明示stop0/controller終了を確認したがProcess.ExitCodeはnullでscript1。
+fixtureは繰り返さず、実worker125/SCM success/保護結果とは別の限界として保存した。
+
+今回追加2service不在、queryable process0/unreadable1、管理者追加の2境界ACE0。
+profile/hive/classesは新2件残留。旧3件の共有違反32は再試行しておらず、新2件の
+profile削除も未試行。既存2381のnoteへ新2件だけ追記し、spec/状態/権限は維持した。
+新2root（6192f4b25e5b6a1a5cf4475ec72f5398、62233620ef55db0d7638390a4e15498a）と
+制御root（9bb8054a11c766478f94ee37562f1267）は全bytes/SHA保管後、safe-deleteの
+plan→別通常削除→finish=source_absentを確認した。原profileは別資源で未回収。
+
+原証拠はevidence-private/20261017/review-fixed-fixturesに49レコードを保管した。
+manifest SHA256 C6F0960661D7EE0EE893778D8067A5FA3B8F7091265F5B1B434C2EC62E4EF365。
+original-execution-events.jsonlには当該ジョブの実行原応答5件、remaining-cleanup-v2.jsonに
+今回だけの新SID/専用profile pathがある。review-fixed-evidence.jsonが追跡概要。
+旧evidence.jsonの未実測AU・取消exit初期値は実測と区別して修正し、原本は保持した。
+
+次は2763の原応答の対象head/全対象file/前回未読primary refsを照合してMustを直す。
+親2736の完了は待たない。原製品2640/880の未完/停止/依存は解除しない。
+正式runner/製品source/共有Cargo gate/原CI/SDKは親統合の未達条件であり、この子では未実行。
+レビュー待ちだけで止める場合は2749を2763への正規waitへ記録する。
 ## 2026-10-17 03時台のレビュー対応（この節を優先）
 
 ToDo2755のClaude Sonnet5.5原応答を受領した。固定code6275c09にMust6件、Suggestion12件。

@@ -1055,6 +1055,11 @@ impl Context {
         let store = self.todo_store();
         if store.exists() {
             let db = self.read_json(&store)?;
+            // The separately reserved original-product retry has its own exact
+            // source/permission binding above; do not reinterpret its history.
+            if retry_key.is_none() {
+                self.inherit_fixed_review_requirement(&db, &mut job)?;
+            }
             let item = db["items"]
                 .as_array()
                 .into_iter()
@@ -1135,11 +1140,12 @@ impl Context {
         let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
-        let guidance = if policy.sandbox == "read-only" {
-            cc_job_policy::READ_GUIDANCE
-        } else {
-            cc_job_policy::WRITE_GUIDANCE
-        };
+        let guidance =
+            if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
+                cc_job_policy::READ_GUIDANCE
+            } else {
+                cc_job_policy::WRITE_GUIDANCE
+            };
         if retry_key.is_none()
             && !std::str::from_utf8(&stored_prompt)
                 .unwrap()

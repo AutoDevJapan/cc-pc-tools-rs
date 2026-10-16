@@ -1,0 +1,65 @@
+{
+  "todo_id": 2641,
+  "date": "2026-10-17",
+  "source_of_checks": "GitHub REST API and the completed item_34 event in the current job",
+  "repository_id": 1154066087,
+  "owner": "AutoDevJapan",
+  "pull_request": 3613,
+  "source_sha": "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07",
+  "source_tree": "f7eea82c96449b7749f98dd6c4b0344b64f1d651",
+  "previous_native_test_source": "c53dc14f1b49f3d7d16a604f29b120de3ce8163d",
+  "compare": {
+    "changed_files": 1,
+    "changes_outside_dot_github": 0,
+    "file": ".github/workflows/codeql.yml",
+    "additions": 2,
+    "deletions": 2,
+    "native_tests_rerun_on_current_head": false
+  },
+  "codeql": {
+    "run": 38893804340,
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success",
+    "successful_analysis_languages": 4,
+    "successful_jobs_including_gate": 5,
+    "untriaged_findings": {
+      "actions/cache-poisoning/direct-cache": 2,
+      "actions/cache-poisoning/poisonable-step": 25,
+      "js/incomplete-multi-character-sanitization": 1,
+      "js/incomplete-sanitization": 1,
+      "js/incomplete-url-substring-sanitization": 1,
+      "js/redos": 2,
+      "js/shell-command-injection-from-environment": 1,
+      "rust/hard-coded-cryptographic-value": 4
+    },
+    "total_untriaged": 37,
+    "sarif_content_or_locations_exported": false
+  },
+  "ci": {
+    "run": 38893656960,
+    "conclusion": "failure",
+    "verify_check": 116948883594,
+    "annotation": "The job was not started because an Actions budget is preventing further use.",
+    "windows_native_check": "skipped",
+    "pr_tree_receipt": "skipped",
+    "manual_success_status_written": false,
+    "budget_changed": false
+  },
+  "previous_review": {
+    "id": 5520900843,
+    "source": "c53dc14f1b49f3d7d16a604f29b120de3ce8163d",
+    "model": "gpt-6-luna",
+    "must": 0,
+    "suggestion": 1,
+    "nit": 0,
+    "suggestion_disposition": "Existing successful HTTP/2 and HTTP/3 request regression cases already cover the proposed positive cases."
+  },
+  "independent_work": [
+    {"id": 2737, "kind": "check", "requires": ["cargo"], "launch_observed": true, "job": "20261017-004230-todo-2737", "execution_success_confirmed": false},
+    {"id": 2738, "kind": "review", "model": "claude-sonnet-5-5", "launch_observed": false, "review_result_received": false}
+  ],
+  "original_todos_18_1153_unchanged": true,
+  "product_merged": false,
+  "production_deployed": false
+}

@@ -35,23 +35,25 @@ const (
 var waitNamedPipeW = syscall.NewLazyDLL("kernel32.dll").NewProc("WaitNamedPipeW")
 
 type vmReceipt struct {
-	Instance        string `json:"instance"`
-	ID              string `json:"vm_id"`
-	Name            string `json:"name"`
-	Generation      int    `json:"generation"`
-	Root            string `json:"root"`
-	VHD             string `json:"vhd"`
-	WindowsISO      string `json:"windows_iso"`
-	SeedISO         string `json:"seed_iso"`
-	DVDCount        int    `json:"dvd_count"`
-	VHDCount        int    `json:"vhd_count"`
-	Pipe            string `json:"pipe"`
-	CPUCount        int    `json:"cpu_count"`
-	Memory          int64  `json:"memory_bytes"`
-	Dynamic         bool   `json:"dynamic_memory"`
-	SecureBoot      bool   `json:"secure_boot"`
-	NetworkAdapters int    `json:"network_adapters"`
-	GPUAdapters     int    `json:"gpu_adapters"`
+	Instance              string `json:"instance"`
+	ID                    string `json:"vm_id"`
+	Name                  string `json:"name"`
+	Generation            int    `json:"generation"`
+	Root                  string `json:"root"`
+	VHD                   string `json:"vhd"`
+	WindowsISO            string `json:"windows_iso"`
+	SeedISO               string `json:"seed_iso"`
+	ImageSource           string `json:"image_source,omitempty"`
+	ImageDeploymentMethod string `json:"image_deployment_method,omitempty"`
+	DVDCount              int    `json:"dvd_count"`
+	VHDCount              int    `json:"vhd_count"`
+	Pipe                  string `json:"pipe"`
+	CPUCount              int    `json:"cpu_count"`
+	Memory                int64  `json:"memory_bytes"`
+	Dynamic               bool   `json:"dynamic_memory"`
+	SecureBoot            bool   `json:"secure_boot"`
+	NetworkAdapters       int    `json:"network_adapters"`
+	GPUAdapters           int    `json:"gpu_adapters"`
 }
 
 type cleanupReceipt struct {
@@ -393,7 +395,7 @@ Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
 Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
 $firmware=Get-VMFirmware -VM $v
 if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows' -or @($firmware.BootOrder).Count -lt 1 -or -not [String]::Equals([string]$firmware.BootOrder[0].Device.Path,$windowsISO,[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
+$receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;image_deployment_method='windows-setup-autounattend';dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
 $receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 Start-VM -VM $v|Out-Null
 `
@@ -416,16 +418,24 @@ func runVMFixturesAndRecord(root, isoPath string, imageBytes int64, vm vmReceipt
 	if cleanupErr != nil {
 		return errors.New("owned VM cleanup failed; retain the VM and safe-delete root for recovery")
 	}
-	isoHash, err := hashFile(isoPath)
+	imageSource := isoPath
+	deploymentMethod := vm.ImageDeploymentMethod
+	if vm.ImageSource != "" {
+		imageSource = vm.ImageSource
+	}
+	if deploymentMethod == "" {
+		deploymentMethod = "windows-setup-autounattend"
+	}
+	imageHash, err := hashFile(imageSource)
 	if err != nil {
 		return err
 	}
 	evidence := vmEvidence{
 		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: vm.Instance,
-		ImageDeploymentMethod: "windows-setup-autounattend", ImageBytes: imageBytes, ImageSHA256: isoHash,
+		ImageDeploymentMethod: deploymentMethod, ImageBytes: imageBytes, ImageSHA256: imageHash,
 		VM:     vmPublicReceipt{VMID: vm.ID, Generation: vm.Generation, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, DVDCount: vm.DVDCount, VHDCount: vm.VHDCount, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
-		CredentialFree: true, UnattendEULAConfigured: true, OOBESkipConfigured: false, LocalUserCreated: false,
+		CredentialFree: true, UnattendEULAConfigured: deploymentMethod == "windows-setup-autounattend", OOBESkipConfigured: false, LocalUserCreated: false,
 		ProductSourceTransferred: false, OfficialCIExecuted: false,
 	}
 	return writeJSONAtomic(filepath.Join(root, "vm-fixture-evidence.private.json"), evidence)
@@ -931,9 +941,18 @@ func readCleanupReceipt(root string) (cleanupReceipt, error) {
 }
 
 func validateVMReceipt(vm vmReceipt, root, instance string) error {
+	vhdValid := filepath.Clean(vm.VHD) == filepath.Join(root, "guest.vhdx")
+	imageValid := false
+	switch vm.ImageDeploymentMethod {
+	case "", "windows-setup-autounattend":
+		imageValid = vm.ImageSource == "" && vm.WindowsISO == filepath.Join(root, "windows-server-2025-eval.iso") && validSeedISOPath(root, vm.SeedISO) && vm.DVDCount == 2
+	case "microsoft-evaluation-vhd-offline-service":
+		imageValid = filepath.Clean(vm.ImageSource) == filepath.Join(root, "windows-server-2025-eval.vhdx") && vm.WindowsISO == "" && vm.SeedISO == "" && vm.DVDCount == 0
+		vhdValid = filepath.Clean(vm.VHD) == filepath.Join(root, "guest-"+instance+".vhdx")
+	}
 	if vm.Instance != instance || !validInstance(vm.Instance) || vm.ID == "" || vm.Name != "cc-2746-"+instance ||
-		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || vm.VHD != filepath.Join(root, "guest.vhdx") ||
-		vm.WindowsISO != filepath.Join(root, "windows-server-2025-eval.iso") || !validSeedISOPath(root, vm.SeedISO) || vm.DVDCount != 2 || vm.VHDCount != 1 ||
+		!strings.EqualFold(filepath.Clean(vm.Root), filepath.Clean(root)) || !vhdValid ||
+		!imageValid || vm.VHDCount != 1 ||
 		vm.Generation != 2 || vm.Pipe != `\\.\pipe\cc-2746-`+instance || vm.CPUCount != jobCPUCount || vm.Memory != jobMemoryBytes || vm.Dynamic || !vm.SecureBoot ||
 		vm.NetworkAdapters != 0 || vm.GPUAdapters != 0 {
 		return errors.New("Hyper-V VM ownership or resource configuration rejected")
@@ -1082,7 +1101,7 @@ try {
   Dismount-DiskImage -ImagePath $seedISO -ErrorAction Stop|Out-Null
   $mountedSeed=$false
   $vm=New-VM -Name $name -Generation 2 -MemoryStartupBytes 2GB -VHDPath $vhd -Path (Join-Path $root 'vm')
-$initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=0;vhd_count=1;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}
+$initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=0;vhd_count=1;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}
   $initial | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Set-VM -VM $vm -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -CheckpointType Disabled -Notes ('cc.todo=2746;cc.instance='+$instance)
   Set-VMProcessor -VM $vm -Count 2
@@ -1105,7 +1124,7 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
   $boot=@($firmware.BootOrder)
   if($boot.Count -lt 1 -or -not [String]::Equals([string]$boot[0].Device.Path,$iso,[StringComparison]::OrdinalIgnoreCase)){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
-$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
+$receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
 } catch {
@@ -1134,17 +1153,26 @@ $instance=` + q(vm.Instance) + `
 $path=` + q(vm.VHD) + `
 $windowsISO=` + q(vm.WindowsISO) + `
 $seedISO=` + q(vm.SeedISO) + `
+$imageMethod=` + q(vm.ImageDeploymentMethod) + `
 $pipe=` + q(vm.Pipe) + `
 $v=Get-VM -Id $id -ErrorAction SilentlyContinue
 if($v){
   $configRoot=[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\')
   $configPath=[IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\')
   $configInside=[String]::Equals($configPath,$configRoot,[StringComparison]::OrdinalIgnoreCase) -or $configPath.StartsWith($configRoot+'\',[StringComparison]::OrdinalIgnoreCase)
-  if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not $configInside){throw 'OWNED_VM_CLEANUP_IDENTITY_MISMATCH'}
+  $expectedNotes='cc.todo=2746;cc.instance='+$instance
+  if($imageMethod -ceq 'microsoft-evaluation-vhd-offline-service'){$notesValid=($v.Notes -ceq $expectedNotes -or [string]::IsNullOrEmpty([string]$v.Notes))}else{$notesValid=$v.Notes -ceq $expectedNotes}
+  if($v.Name -cne $name -or -not $notesValid -or -not $configInside){throw 'OWNED_VM_CLEANUP_IDENTITY_MISMATCH'}
   $cp=@($v | Get-VMComPort | Where-Object Path -CEQ $pipe)
-  if($cp.Count -ne 1){throw 'OWNED_VM_COM_PORT_MISMATCH'}
+  if($imageMethod -ceq 'microsoft-evaluation-vhd-offline-service'){
+    $allCP=@($v | Get-VMComPort)
+    $unexpectedCP=@($allCP|Where-Object{-not [string]::IsNullOrEmpty([string]$_.Path) -and $_.Path -cne $pipe})
+    if($cp.Count -gt 1 -or $allCP.Count -gt 2 -or $unexpectedCP.Count -ne 0){throw 'OWNED_VM_COM_PORT_MISMATCH'}
+  }elseif($cp.Count -ne 1){throw 'OWNED_VM_COM_PORT_MISMATCH'}
   $dvds=@($v | Get-VMDvdDrive)
-  if($dvds.Count -ne 2 -or @($dvds | Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds | Where-Object Path -CEQ $seedISO).Count -ne 1){throw 'OWNED_VM_DVD_IDENTITY_MISMATCH'}
+  if($imageMethod -ceq 'microsoft-evaluation-vhd-offline-service'){
+    if($dvds.Count -gt 1 -or @($dvds|Where-Object{-not [string]::IsNullOrEmpty([string]$_.Path)}).Count -ne 0){throw 'OWNED_VM_DVD_IDENTITY_MISMATCH'}
+  }elseif($dvds.Count -ne 2 -or @($dvds | Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds | Where-Object Path -CEQ $seedISO).Count -ne 1){throw 'OWNED_VM_DVD_IDENTITY_MISMATCH'}
   $vhds=@($v | Get-VMHardDiskDrive)
   if($vhds.Count -ne 1 -or $vhds[0].Path -cne $path){throw 'OWNED_VM_VHD_IDENTITY_MISMATCH'}
   if($v.State -ne 'Off'){Stop-VM -VM $v -TurnOff -Force}

@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `7aac50c` (the boot-order verification correction is currently uncommitted).
+last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncommitted).
 
 ## Completed
 
@@ -114,15 +114,44 @@ last pushed commit `7aac50c` (the boot-order verification correction is currentl
   in our verification expression, not a demonstrated Windows Setup boot
   failure. Both initial-create and recovery checks now compare
   `BootOrder[0].Device.Path` to the exact official ISO. This correction is
-  uncommitted. Resume the receipt-bound Off VM; do not create another VM.
+  committed as `ba49db8`.
+- The `ba49db8` ISO-first retry resumed that exact Off VM and did start it. At
+  the 30-minute readiness deadline, the guest service was still absent; the
+  helper stopped and removed the VM, verified memory assignment 0, and
+  detached the VHD and both ISOs. Its failure receipt says
+  `guest service readiness was not observed`. A read-only mount found zero
+  partitions in the task VHDX. Hyper-V's task-GUID-filtered Worker log records
+  event 18603, “failed to boot an operating system”; thus Windows Setup never
+  began partitioning. The ISO's EFI boot files exist and the x64 EFI loader
+  signature is valid, but the precise firmware-level reason remains unknown.
+- The official Microsoft Evaluation Center VHD link
+  `https://aka.ms/WinServ2025vhd-enus` returned an 11,686,379,520-byte VHDX.
+  After identifying its `vhdxfile` signature, it was stored with a `.vhdx`
+  suffix under the safe-delete-owned root's `windows-eval-vhd` directory.
+  `Get-VHD` confirms a detached dynamic 64 GiB image. A read-only mount found
+  the expected EFI/MSR/NTFS layout; reading only the official image's SOFTWARE
+  setup identity confirmed Windows Server 2025 Datacenter Evaluation in
+  `IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE`. No account or password data was
+  read. The source image is left unchanged.
+- A new `vm-smoke-vhd` path is being added. It converts the official VHD into
+  a nonce-specific task VHDX, validates the OOBE reseal state, copies only the
+  helper executable and public seed JSON, and registers the fixture service
+  in the clone's offline SYSTEM hive as an automatic LocalSystem service. It
+  unloads the temporary hive, keeps the source VHD untouched, and leaves
+  normal OOBE enabled. It creates a fixed-memory Gen 2 VM with Secure Boot, no
+  DVD/NIC/GPU, and an explicit VHD-first boot order. This implementation is
+  uncommitted and not yet run against Hyper-V.
 
 ## Remaining
 
-1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push the `BootSource.Device.Path` verification correction.
-2. Rebuild the helper into the owned root and run `vm-smoke` once. It should
-   recover the exact recorded Off VM, replace only its seed DVD with a fresh
-   in-memory identity, verify DVD-first boot order, and start that VM.
+1. Review the new VHD flow and ensure its admin script's registry hive,
+   partition access path, and VHD mount are all released on success/failure.
+   Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
+   and push this implementation and the handoff/README updates.
+2. Build the helper into the safe-delete-owned parent root and run
+   `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
+   command should preserve the Microsoft source VHD and use only its copied
+   nonce-owned guest VHDX.
 3. Confirm guest readiness, the normal and cancellation child-process
    receipts, then separately verify VM Off, assigned memory zero, and removal.
 4. Copy sanitized evidence into the worktree, update ToDo2737's note

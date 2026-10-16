@@ -1,14 +1,11 @@
 # Disposable Windows guest lifecycle fixture
 
-This Windows amd64 Go helper provisions one new Hyper-V guest from the public
-Windows Server 2025 Evaluation ISO. It uses only a safe-delete-owned work root
-and CC-AdminBroker. It does not inspect existing VM names, disks, or guest
-contents. The created VM has 2 vCPU, fixed 2 GiB RAM, Secure Boot, no virtual
-NIC, and no GPU adapter. It receives only this helper executable and a public
-certificate pin; no product source, owner profile, credentials, network, or
-external runner registration is supplied. Its second DVD contains only the
-standard answer file, the staging script, the helper executable, and the
-public seed JSON.
+This Windows amd64 Go helper provisions one new Hyper-V guest from official
+Windows Server 2025 Evaluation media. It uses only a safe-delete-owned work
+root and CC-AdminBroker. It does not inspect existing VM names, disks, or guest
+contents. Each created VM has 2 vCPU, fixed 2 GiB RAM, Secure Boot, no virtual
+NIC, and no GPU adapter. No product source, owner profile, credentials,
+network, or external runner registration is supplied.
 
 The helper verifies the Microsoft-signed setup image and the selected
 evaluation edition, then boots the guest from the official ISO with a second,
@@ -21,6 +18,17 @@ is not hidden or completed by this helper. The service speaks only on the VM's
 COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in
 memory. The guest receives only the host certificate SHA256; the host pins the
 server certificate reported by its exact VM COM pipe.
+
+`vm-smoke-vhd <owned-evaluation-vhd-root>` is an alternate path using the
+Evaluation Center's preinstalled VHD. The helper copies the official VHD into
+a nonce-specific task VHDX, verifies its `IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE`
+state, and places only its own helper binary plus the public seed JSON in that
+copy. It registers `CCGuest2746` as an automatic LocalSystem service in the
+copy's offline SYSTEM hive, unloads the temporary hive, and boots the copy.
+The original Microsoft VHD remains unchanged. The helper does not add an
+OOBE answer file or create a user; normal OOBE remains in place. The service
+starts before the first interactive logon and communicates only over the
+VM's COM pipe.
 
 The `vm-smoke <owned-root> <official-evaluation-iso>` command runs two
 credential-free fixtures inside the guest. The normal case observes two live
@@ -38,7 +46,13 @@ public image URL:
 ```powershell
 go build -o <owned-root>\windows-guest-fixture.exe .
 <owned-root>\windows-guest-fixture.exe vm-smoke <owned-root> <owned-root>\windows-server-2025-eval.iso
+<owned-root>\windows-guest-fixture.exe vm-smoke-vhd <owned-root>\windows-eval-vhd
 ```
+
+For the VHD command, place the official, unmodified evaluation file at
+`<owned-root>\windows-eval-vhd\windows-server-2025-eval.vhdx` and pass that
+`windows-eval-vhd` directory as the command's root. Microsoft's Evaluation
+Center links to the public direct download `https://aka.ms/WinServ2025vhd-enus`.
 
 If provisioning or a fixture is uncertain, keep the owned root and its VM
 receipt for recovery. After a verified VM removal, preserve the private

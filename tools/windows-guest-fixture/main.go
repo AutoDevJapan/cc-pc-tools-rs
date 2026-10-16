@@ -118,6 +118,13 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) == 3 && os.Args[1] == "vm-smoke-vhd" {
+		if err := runVMProvisionFromVHD(os.Args[2]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--leaf-normal" {
 		time.Sleep(1200 * time.Millisecond)
 		return
@@ -128,7 +135,7 @@ func main() {
 		}
 	}
 	if len(os.Args) != 2 || (os.Args[1] != "normal" && os.Args[1] != "cancel") {
-		fmt.Fprintln(os.Stderr, "usage: windows-guest-fixture normal|cancel | vm-smoke <owned-root> <official-eval-iso>")
+		fmt.Fprintln(os.Stderr, "usage: windows-guest-fixture normal|cancel | vm-smoke <owned-root> <official-eval-iso> | vm-smoke-vhd <owned-eval-vhd-root>")
 		os.Exit(2)
 	}
 	result, err := run(os.Args[1])

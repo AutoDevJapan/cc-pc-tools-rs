@@ -12,22 +12,22 @@ import (
 
 // These are the original finite guard scope, not new dispatch permissions.
 const productRetryID = 1626
-const productRetrySession = "01a12690-d332-7140-bc8c-47974cdcd2cb"
+const productRetryQualificationSession = "01a12690-d332-7140-bc8c-47974cdcd2cb"
 const productRetrySourceJob = "20261011-234558-orch-9a5f7b7c6fb45eb2815aa60ea8a5df95"
 const productRetryHash = "a600dda0a9dc0f26a3507e081ef5b938cd7de40bad92e500068f3a191b99ecb8"
 const productRetryTree = "C:/Users/makhmeto/Desktop/dev/ADJ/PhosGaea-Vol1-wt/todo-1626-1"
 
 type productRetryProof struct {
-	ID              uint64          `json:"id"`
-	Verified        bool            `json:"verified"`
-	Expires         string          `json:"expires_at"`
-	SessionVerified bool            `json:"session_receipt_verified"`
-	Session         string          `json:"session"`
-	Worktree        string          `json:"worktree"`
-	SourceJob       string          `json:"job"`
-	Request         string          `json:"request"`
-	RequestHash     string          `json:"request_sha256"`
-	Snapshot        json.RawMessage `json:"snapshot"`
+	ID                   uint64          `json:"id"`
+	Verified             bool            `json:"verified"`
+	Expires              string          `json:"expires_at"`
+	SessionVerified      bool            `json:"session_receipt_verified"`
+	QualificationSession string          `json:"session"`
+	Worktree             string          `json:"worktree"`
+	SourceJob            string          `json:"job"`
+	Request              string          `json:"request"`
+	RequestHash          string          `json:"request_sha256"`
+	Snapshot             json.RawMessage `json:"snapshot"`
 }
 
 type productRetryWait struct {
@@ -40,11 +40,10 @@ type productRetryWait struct {
 // may authorize a launch or change the original item; callers must not edit
 // todo.json from this runner or use Start as an automatic compare-and-set.
 type productRetryCandidate struct {
-	Key       string
-	SourceJob string
-	Snapshot  json.RawMessage
-	Wait      productRetryWait
-	Proof     productRetryProof
+	Key            string
+	ObservedWorker string
+	Snapshot       json.RawMessage
+	Wait           productRetryWait
 }
 
 func finiteProductRetry(at time.Time) bool {
@@ -62,7 +61,7 @@ func validProductRetryProof(p productRetryProof, at time.Time) bool {
 	return err == nil && finiteProductRetry(at) && at.Before(expires) &&
 		!expires.After(time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC)) &&
 		p.ID == productRetryID && p.Verified && p.SessionVerified &&
-		p.Session == productRetrySession && p.SourceJob == productRetrySourceJob &&
+		p.QualificationSession == productRetryQualificationSession && p.SourceJob == productRetrySourceJob &&
 		p.RequestHash == productRetryHash && p.Request != "" &&
 		sameProductPath(p.Worktree, productRetryTree) && len(p.Snapshot) > 0 && string(p.Snapshot) != "null"
 }
@@ -135,9 +134,16 @@ func selectProductRetry(body []byte, at time.Time) (*productRetryCandidate, erro
 	if row.Worker.Job == "" || row.Worker.Job != row.Scheduler.Job {
 		return nil, nil
 	}
+	// This observes an item receipt, not the worker's lineage, live process,
+	// cancellation intent or actual continuation session. The normal atomic
+	// admission API must verify those from the job receipt under its locks.
+	// Likewise, inherited resource/owner waits require the normal queue policy.
 	// The wait generation, not mutable notes or qualification timestamps, fixes
-	// the queue key. Crash recovery must reuse it and never issue a fresh key.
-	identity := fmt.Sprintf("product-retry-2709\x00%d\x00%d\x00%d\x00%s\x00%s\x00%s", productRetryID, w.Since, w.NotBefore, row.Worker.Job, productRetryHash, productRetryTree)
+	// the queue key. Worker assignment can change after registration, so it must
+	// not change this key. An API must persist the first snapshot separately.
+	identity := fmt.Sprintf("product-retry-2709\x00%d\x00%d\x00%d\x00%s\x00%s", productRetryID, w.Since, w.NotBefore, productRetryHash, productRetryTree)
 	sum := sha256.Sum256([]byte(identity))
-	return &productRetryCandidate{Key: hex.EncodeToString(sum[:16]), SourceJob: row.Worker.Job, Snapshot: append(json.RawMessage(nil), original...), Wait: w, Proof: row.Qualification.Receipt}, nil
+	// Do not expose the qualification's old session as a resume-session. Only
+	// the admission API may resolve the latest actual session from the worker.
+	return &productRetryCandidate{Key: hex.EncodeToString(sum[:16]), ObservedWorker: row.Worker.Job, Snapshot: append(json.RawMessage(nil), original...), Wait: w}, nil
 }

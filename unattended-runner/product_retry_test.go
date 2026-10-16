@@ -11,7 +11,7 @@ import (
 func productCandidateFixture(t *testing.T) (map[string]any, time.Time) {
 	t.Helper()
 	at := time.Date(2026, 10, 16, 6, 0, 0, 0, time.UTC)
-	proof := productRetryProof{ID: productRetryID, Verified: true, Expires: "2026-10-21T00:00:00Z", SessionVerified: true, Session: productRetrySession, Worktree: productRetryTree, SourceJob: productRetrySourceJob, Request: "original-request.md", RequestHash: productRetryHash, Snapshot: json.RawMessage(`{"id":1626}`)}
+	proof := productRetryProof{ID: productRetryID, Verified: true, Expires: "2026-10-21T00:00:00Z", SessionVerified: true, QualificationSession: productRetryQualificationSession, Worktree: productRetryTree, SourceJob: productRetrySourceJob, Request: "original-request.md", RequestHash: productRetryHash, Snapshot: json.RawMessage(`{"id":1626}`)}
 	return map[string]any{
 		"items": []any{map[string]any{
 			"id": productRetryID, "status": "wait", "dispatchable": false,
@@ -106,6 +106,14 @@ func TestProductRetryCandidateRetainsOriginalAndStableQueueKey(t *testing.T) {
 	second, err := selectProductRetry(candidateBytes(t, db), at.Add(time.Minute))
 	if err != nil || second == nil || first.Key != second.Key {
 		t.Fatal("mutable note changed queue key")
+	}
+	// Registration may update both receipts before the caller receives its
+	// response. Reconciliation must still find the same single queued job.
+	candidateRow(db)["worker_receipt"].(map[string]any)["job"] = "fixture-accepted-worker"
+	candidateRow(db)["scheduler"].(map[string]any)["job"] = "fixture-accepted-worker"
+	rebound, err := selectProductRetry(candidateBytes(t, db), at)
+	if err != nil || rebound == nil || rebound.Key != first.Key || rebound.ObservedWorker == first.ObservedWorker {
+		t.Fatal("assignment after acceptance changed queue key", err)
 	}
 	var snapshot map[string]any
 	if err := json.Unmarshal(first.Snapshot, &snapshot); err != nil {

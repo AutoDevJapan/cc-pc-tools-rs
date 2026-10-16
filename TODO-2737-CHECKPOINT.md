@@ -2,6 +2,35 @@
 
 ## 2026-10-17 01:21再開後の保存点（こちらを優先）
 
+### 02時台の追加実測
+
+9f4e256へ保存後、最初のAzure VHD guestは作成/起動したがreadinessが4分で未確認となりexit1。
+そのVMはOff/メモリ0/除去が成功した。最初のserial本文は未保存であり原因を推定で確定しない。
+原source/CI/GitHub登録はこの検査に一切入っていない。
+正式な汎用qcow2（625612288 bytes、SHA256 6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2）を別に取得。
+自分の工具containerでpublic qemu-utilsを入れ、同じ検証済みRAM bytesをVHDXへ変換した。
+attempt-79d80772587251249e3fa615122232a2で新規guestを作り、smoke-genericはexit0。
+mTLS、実parent/child PID、normal/EOF cancel、実group消滅、VM Off/メモリ0/除去/不在を確認した。
+guest-smoke.private.jsonもofficial_ci_success=false/product_source=falseのまま。
+新attemptの生boot logは私的保存し、本文や位置をmodel/stdoutに出さずmarker件数だけ確認した。
+New-VMの動的memoryがtrue/最大1TiBだったため、次のconstructorから固定2GiBを明示して修正した。
+CPU2は元どおり。fixtureはpassしたが、この値を本番のCargo受付済み割当とは呼ばない。
+
+作成したVM2件は回収済み。工具containerだけが次のSDK準備用に稼働中。
+初回Go/Linux転送/VM失敗の全記録を保持し、同じデータの上書き・再実行はしない。
+新しいhost helperはci2737-host-v5.exe、Linux側はci2737-guest-v2。公開imageの取得/展開/変換は済んでいる。
+Windows2746はa218d5eのhost Job Object fixtureを保存したがguest未作成。現在は通常枠で自動続行予定。
+同じ2746へ公式Windows imageと無人provisioning/Go serviceの技術手順を追加配送した。新しい同種ToDoはない。
+2748は新Go補助の別モデルreviewを共有ToDoで受付済み、実応答はまだない。
+旧2740 Must0を新guest差分のMust0へ読み替えない。
+親2641と自分2737へ上記結果をnote配送済み。状態や元18/1153の完了は変更していない。
+
+9f4e256のscheduler checkpoint初回はTimeoutErrorだった。保存入力の拒否ではない。
+実装の共有lock取得で出るエラーであり、scheduler.lock/todo.lockがその後利用可能なことを
+非変更のbyte lock probeで確認してから、同じ正規コマンドを1回再試行しexit0/saved=true。
+共有lock削除・scheduler設定変更・無限再試行はしていない。
+次の現HEADでも終了/待機前にcheckpointを保存する。
+
 job20261017-012131-todo-2737。前回のec55875から再開し、2740の実応答を確認した。
 review-2740-received-original.mdは別モデルClaude Sonnet 5.5のMust0、Suggestion4件。
 このreviewは旧69627cbのread-onlyな経路案だけで、後述のguest補助は含まない。

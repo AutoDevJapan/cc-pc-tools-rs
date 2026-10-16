@@ -26,6 +26,7 @@ import (
 const dockerExe = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const sdkImage = "sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011"
 const imageArchiveHash = "3543723afd820d7a8a64ea7399376856a95ce15200439c38447170652a60a5f3"
+const genericImageHash = "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2"
 const broker = `D:\CC\Tools\admin-broker\run-as-admin.ps1`
 
 func command(ctx context.Context, name string, args ...string) *exec.Cmd {
@@ -288,8 +289,8 @@ func cleanupTools(ctx context.Context, root string) error {
 	}
 	return record(root, "tools-cleanup.private.json", map[string]any{"id": s.ID, "pid": 0, "removed": true})
 }
-func prepareSeed(ctx context.Context, root, helper, instance string, i identity) error {
-	s, e := readTools(root)
+func prepareSeed(ctx context.Context, root, toolRoot, helper, instance string, i identity) error {
+	s, e := readTools(toolRoot)
 	if e != nil {
 		return e
 	}
@@ -302,20 +303,21 @@ func prepareSeed(ctx context.Context, root, helper, instance string, i identity)
 	}
 	public, _ := json.Marshal(publicConfig{instance, i.Digest})
 	user := "#cloud-config\nhostname: ci2737-" + instance[:8] + "\nusers: []\ndisable_root: true\nssh_pwauth: false\nwrite_files:\n - path: /usr/local/bin/ci2737-guest\n   permissions: '0755'\n   encoding: b64\n   content: " + base64.StdEncoding.EncodeToString(guest) + "\n - path: /etc/ci2737-public.json\n   permissions: '0644'\n   content: '" + string(public) + "'\nruncmd:\n - [systemctl, stop, serial-getty@ttyS0.service]\n - [/usr/local/bin/ci2737-guest, guest]\n"
-	if e = command(ctx, dockerExe, "exec", s.ID, "mkdir", "/work/seed").Run(); e != nil {
+	seedPath := "/work/seed-" + instance
+	if e = command(ctx, dockerExe, "exec", s.ID, "mkdir", seedPath).Run(); e != nil {
 		return e
 	}
 	for name, data := range map[string]string{"user-data": user, "meta-data": "instance-id: ci2737-" + instance + "\nlocal-hostname: ci2737\n", "network-config": "version: 2\nethernets:\n  primary:\n    match:\n      name: 'eth*'\n    dhcp4: true\n"} {
-		c := command(ctx, dockerExe, "exec", "-i", s.ID, "sh", "-c", "cat > /work/seed/"+name)
+		c := command(ctx, dockerExe, "exec", "-i", s.ID, "sh", "-c", "cat > "+seedPath+"/"+name)
 		c.Stdin = strings.NewReader(data)
 		if c.Run() != nil {
 			return errors.New("public seed transfer failed")
 		}
 	}
-	if command(ctx, dockerExe, "exec", s.ID, "genisoimage", "-quiet", "-output", "/work/seed.iso", "-volid", "cidata", "-joliet", "-rock", "/work/seed").Run() != nil {
+	if command(ctx, dockerExe, "exec", s.ID, "genisoimage", "-quiet", "-output", seedPath+".iso", "-volid", "cidata", "-joliet", "-rock", seedPath).Run() != nil {
 		return errors.New("public seed ISO generation failed")
 	}
-	b, e := command(ctx, dockerExe, "exec", s.ID, "cat", "/work/seed.iso").Output()
+	b, e := command(ctx, dockerExe, "exec", s.ID, "cat", seedPath+".iso").Output()
 	if e != nil || len(b) > 64<<20 {
 		return errors.New("public seed ISO transfer failed")
 	}
@@ -324,12 +326,16 @@ func prepareSeed(ctx context.Context, root, helper, instance string, i identity)
 
 type vmState struct{ Instance, ID, Name, Root, Pipe string }
 
-func createVM(ctx context.Context, root, instance string) (vmState, error) {
+func createVM(ctx context.Context, root, instance, image string) (vmState, error) {
 	s := vmState{Instance: instance, Name: "cc-ci-2737-" + instance, Root: root, Pipe: `\\.\pipe\cc-ci-2737-` + instance}
 	if e := record(root, "vm-intent.private.json", s); e != nil {
 		return s, e
 	}
 	body := "Import-Module Hyper-V\n$root=" + psQuote(root) + "\n$name=" + psQuote(s.Name) + "\nif(Get-VM -Name $name -ErrorAction SilentlyContinue){throw 'OWNED_NAME_ALREADY_EXISTS'}\n$disk=Join-Path $root 'guest.vhdx'\nif(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}\nConvert-VHD -Path (Join-Path $root 'linux-public.vhd') -DestinationPath $disk -VHDType Dynamic\nResize-VHD -Path $disk -SizeBytes 64GB\n$vm=New-VM -Name $name -Generation 1 -MemoryStartupBytes 2GB -VHDPath $disk -Path (Join-Path $root 'vm') -SwitchName 'Default Switch'\nSet-VM -VM $vm -AutomaticStartAction Nothing -AutomaticStopAction TurnOff -Notes " + psQuote("cc.todo=2737;cc.instance="+instance) + "\nSet-VMProcessor -VM $vm -Count 2\nSet-VMComPort -VM $vm -Number 1 -Path " + psQuote(s.Pipe) + "\n$dvd=Get-VMDvdDrive -VM $vm\nif($dvd){$dvd | Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}\n@{Instance=" + psQuote(instance) + ";ID=$vm.Id.ToString();Name=$vm.Name;Root=$root;Pipe=" + psQuote(s.Pipe) + "}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8\nStart-VM -VM $vm\n"
+	// All image files are our own public SDK conversion; source checkout is
+	// absent. Do not rely on New-VM's inherited dynamic-memory configuration.
+	body = strings.Replace(body, "(Join-Path $root 'linux-public.vhd')", psQuote(image), 1)
+	body = strings.Replace(body, "Set-VMComPort -VM $vm", "Set-VMMemory -VM $vm -DynamicMemoryEnabled $false -StartupBytes 2GB\nSet-VMComPort -VM $vm", 1)
 	if e := admin(ctx, root, "vm-create", body); e != nil {
 		return s, e
 	}
@@ -356,9 +362,14 @@ func readSerial(ctx context.Context, pipe, instance, dest string) error {
 		return errors.New("owned serial pipe unavailable")
 	}
 	defer f.Close()
+	console, e := os.OpenFile(dest+".console.private.log", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	defer console.Close()
 	go func() { <-ctx.Done(); _ = f.Close() }()
-	s := bufio.NewScanner(io.LimitReader(f, 4<<20))
-	s.Buffer(make([]byte, 8192), 16384)
+	s := bufio.NewScanner(io.TeeReader(io.LimitReader(f, 4<<20), console))
+	s.Buffer(make([]byte, 8192), 1<<20)
 	for s.Scan() {
 		line := s.Text()
 		idx := strings.Index(line, "CI2737-READY ")
@@ -433,16 +444,16 @@ func runFixture(i identity, r ready, cancel bool) (fixtureResult, error) {
 	}
 	return observed, errors.New("real fixture cleanup deadline exceeded")
 }
-func smoke(ctx context.Context, root, helper string) (ret error) {
+func smoke(ctx context.Context, root, toolRoot, helper, image string) (ret error) {
 	i, e := newIdentity()
 	if e != nil {
 		return e
 	}
 	instance := newID()
-	if e = prepareSeed(ctx, root, helper, instance, i); e != nil {
+	if e = prepareSeed(ctx, root, toolRoot, helper, instance, i); e != nil {
 		return e
 	}
-	s, e := createVM(ctx, root, instance)
+	s, e := createVM(ctx, root, instance, image)
 	if s.ID != "" {
 		defer func() {
 			cleanCtx, stop := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -492,7 +503,15 @@ func main() {
 	} else if len(os.Args) == 4 && os.Args[1] == "test-linux" {
 		e = linuxTests(ctx, os.Args[2], os.Args[3])
 	} else if len(os.Args) == 4 && os.Args[1] == "smoke" {
-		e = smoke(ctx, os.Args[2], os.Args[3])
+		e = smoke(ctx, os.Args[2], os.Args[2], os.Args[3], filepath.Join(os.Args[2], "linux-public.vhd"))
+	} else if len(os.Args) == 4 && os.Args[1] == "smoke-generic" {
+		root := os.Args[2]
+		attempt := filepath.Join(root, "attempt-"+newID())
+		if e = os.Mkdir(attempt, 0700); e == nil {
+			e = smoke(ctx, attempt, root, os.Args[3], filepath.Join(root, "linux-generic.vhdx"))
+		}
+	} else if len(os.Args) == 3 && os.Args[1] == "prepare-generic" {
+		e = prepareGeneric(ctx, os.Args[2])
 	} else {
 		e = errors.New("usage: ci2737-host extract/tools <owned-root> | smoke <owned-root> <Linux-helper>")
 	}
@@ -500,4 +519,59 @@ func main() {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(1)
 	}
+}
+
+func prepareGeneric(ctx context.Context, root string) error {
+	s, e := readTools(root)
+	if e != nil {
+		return e
+	}
+	if e = toolInspect(ctx, s); e != nil {
+		return e
+	}
+	b, e := os.ReadFile(filepath.Join(root, "linux-public.qcow2"))
+	if e != nil || len(b) > 1<<30 || hash(b) != genericImageHash || !bytes.HasPrefix(b, []byte{'Q', 'F', 'I', 0xfb}) {
+		return errors.New("pinned generic public image rejected")
+	}
+	f, e := os.OpenFile(filepath.Join(root, "generic-conversion.private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	c := command(ctx, dockerExe, "exec", s.ID, "sh", "-c", "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-utils && mkdir /opt/ci2737-public")
+	c.Stdout = f
+	c.Stderr = f
+	if c.Run() != nil {
+		return errors.New("public qemu installation failed")
+	}
+	c = command(ctx, dockerExe, "exec", "-i", s.ID, "sh", "-c", "cat > /opt/ci2737-public/noble.qcow2")
+	c.Stdin = bytes.NewReader(b)
+	c.Stdout = f
+	c.Stderr = f
+	if c.Run() != nil {
+		return errors.New("public qcow2 transfer failed")
+	}
+	b = nil
+	c = command(ctx, dockerExe, "exec", s.ID, "qemu-img", "convert", "-f", "qcow2", "-O", "vhdx", "-o", "subformat=dynamic", "/opt/ci2737-public/noble.qcow2", "/opt/ci2737-public/noble.vhdx")
+	c.Stdout = f
+	c.Stderr = f
+	if c.Run() != nil {
+		return errors.New("public generic VHDX conversion failed")
+	}
+	out, e := os.OpenFile(filepath.Join(root, "linux-generic.vhdx"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	c = command(ctx, dockerExe, "exec", s.ID, "cat", "/opt/ci2737-public/noble.vhdx")
+	c.Stdout = out
+	c.Stderr = f
+	e = c.Run()
+	if e == nil {
+		e = out.Sync()
+	}
+	e = errors.Join(e, out.Close())
+	if e != nil {
+		return errors.New("public generic VHDX transfer incomplete")
+	}
+	return record(root, "generic-image-ready.private.json", map[string]any{"source_qcow2_sha256": genericImageHash, "product_source": false})
 }

@@ -12,6 +12,20 @@ It is a GNU sparse tar: Go expands the holes into the logical VHD. The archive
 is checked before parsing the same in-memory bytes; no product source is present.
 The host's public VHD/seed files are SDK assets, not a product checkout.
 
+The first Azure image booted, but its readiness probe expired; that VM was
+stopped and removed with memory zero. This does not establish the cause of its
+missing readiness. A second, separate attempt used the general Canonical
+NoCloud-compatible qcow2, pinned to SHA256
+`6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2`.
+`prepare-generic` converts those same verified bytes with public qemu-utils in
+the owned tool container, then transfers only the SDK VHDX to the host.
+`smoke-generic <root> <Linux-helper>` uses a new attempt directory and VM, without
+overwriting the first attempt. It passed both real fixtures and mutual TLS,
+then verified VM Off, memory zero, removal and absence. This is preparation
+evidence, not product CI. Boot console data stays in private attempt evidence.
+Memory is explicitly fixed; New-VM inherited dynamic memory on this PC, so its
+startup-memory parameter alone did not establish a bound.
+
 `tools <root>` creates one independently labelled container from the already
 verified credential-free SDK image, without host binds, devices, GPU, socket,
 profile, privileged mode, or host PID namespace. It installs public genisoimage
@@ -53,3 +67,7 @@ or another task's data. An uncertain VM must be reconciled before root cleanup.
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).
+GitHub's [current billing reference](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+lists self-hosted runner execution as free (checked 2026-10-17). No budget or
+payment settings are changed; cache/artifact policies of the original workflow
+must still be retained.

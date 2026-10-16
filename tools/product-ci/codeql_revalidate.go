@@ -12,11 +12,12 @@ import (
 )
 
 type codeQLRevalidation struct {
-	RepoID     int64       `json:"repo_id"`
-	Candidate  string      `json:"candidate_sha"`
-	DefaultSHA string      `json:"default_sha"`
-	Started    time.Time   `json:"started"`
-	Prior      codeQLSetup `json:"prior"`
+	RepoID      int64       `json:"repo_id"`
+	Candidate   string      `json:"candidate_sha"`
+	DefaultSHA  string      `json:"default_sha"`
+	Started     time.Time   `json:"started"`
+	Prior       codeQLSetup `json:"prior"`
+	LatestRunID int64       `json:"latest_run_id"`
 }
 
 func revalidationPreflight(ctx context.Context, c candidate, read api) (codeQLRevalidation, string, error) {
@@ -54,7 +55,13 @@ func revalidationPreflight(ctx context.Context, c candidate, read api) (codeQLRe
 	if e = read(ctx, "repos/"+r.FullName+"/git/ref/heads/"+meta.DefaultBranch, &ref); e != nil || len(ref.Object.SHA) != 40 {
 		return codeQLRevalidation{}, "", errors.New("default revision unavailable")
 	}
-	return codeQLRevalidation{c.ID, c.SHA, ref.Object.SHA, time.Now().UTC(), s}, r.FullName, nil
+	var latest struct {
+		Runs []struct{ ID int64 } `json:"workflow_runs"`
+	}
+	if e = read(ctx, "repos/"+r.FullName+"/actions/runs?event=dynamic&per_page=1", &latest); e != nil || len(latest.Runs) != 1 || latest.Runs[0].ID < 1 {
+		return codeQLRevalidation{}, "", errors.New("latest dynamic run baseline unavailable")
+	}
+	return codeQLRevalidation{RepoID: c.ID, Candidate: c.SHA, DefaultSHA: ref.Object.SHA, Started: time.Now().UTC(), Prior: s, LatestRunID: latest.Runs[0].ID}, r.FullName, nil
 }
 
 func revalidationBody(s codeQLSetup) map[string]any {
@@ -67,7 +74,7 @@ func revalidationBody(s codeQLSetup) map[string]any {
 func readRevalidation(c candidate, dir string) (codeQLRevalidation, error) {
 	b, e := os.ReadFile(filepath.Join(dir, "codeql-revalidation-intent.private.json"))
 	var s codeQLRevalidation
-	if e != nil || json.Unmarshal(b, &s) != nil || s.RepoID != c.ID || s.Candidate != c.SHA || s.Prior.State != "configured" || s.Prior.RunnerType != "labeled" || s.Prior.RunnerLabel != codeQLLabel(c.ID) {
+	if e != nil || json.Unmarshal(b, &s) != nil || s.RepoID != c.ID || s.Candidate != c.SHA || len(s.DefaultSHA) != 40 || strings.Trim(s.DefaultSHA, "0123456789abcdef") != "" || s.Started.IsZero() || s.LatestRunID < 1 || len(s.Prior.Languages) < 1 || len(s.Prior.Languages) > 20 || (s.Prior.QuerySuite != "default" && s.Prior.QuerySuite != "extended") || (s.Prior.ThreatModel != "remote" && s.Prior.ThreatModel != "remote_and_local") || s.Prior.State != "configured" || s.Prior.RunnerType != "labeled" || s.Prior.RunnerLabel != codeQLLabel(c.ID) {
 		return s, errors.New("revalidation intent unavailable")
 	}
 	return s, nil
@@ -76,24 +83,41 @@ func readRevalidation(c candidate, dir string) (codeQLRevalidation, error) {
 // Complete only this recorded recovery's interrupted re-enable operation.
 // An independently configured or changed route is never overwritten.
 func recoverCodeQLRevalidation(ctx context.Context, c candidate, dir string) error {
+	return recoverCodeQLRevalidationUsing(ctx, c, dir, get, mutateJSON)
+}
+
+type githubMutator func(context.Context, string, string, any, any) error
+
+func saveRevalidationRun(c candidate, dir string, runID int64) error {
+	b, _ := json.MarshalIndent(map[string]any{"repo_id": c.ID, "run_id": runID, "role": "setup-validation-not-candidate"}, "", "  ")
+	return os.WriteFile(filepath.Join(dir, "codeql-route-response.private.json"), b, 0600)
+}
+
+func recoverCodeQLRevalidationUsing(ctx context.Context, c candidate, dir string, read api, write githubMutator) error {
 	s, e := readRevalidation(c, dir)
 	if e != nil {
 		return e
 	}
-	r, e := verify(ctx, c, get)
+	r, e := verify(ctx, c, read)
 	if e != nil {
 		return e
 	}
 	var now codeQLSetup
 	endpoint := "repos/" + r.FullName + "/code-scanning/default-setup"
-	if e = get(ctx, endpoint, &now); e != nil {
+	if e = read(ctx, endpoint, &now); e != nil {
 		return e
 	}
 	if now.State == "not-configured" {
-		if e = mutateJSON(ctx, "PATCH", endpoint, revalidationBody(s.Prior), nil); e != nil {
+		var response struct {
+			RunID int64 `json:"run_id"`
+		}
+		if e = write(ctx, "PATCH", endpoint, revalidationBody(s.Prior), &response); e != nil {
 			return e
 		}
-		if e = get(ctx, endpoint, &now); e != nil {
+		if e = saveRevalidationRun(c, dir, response.RunID); e != nil {
+			return e
+		}
+		if e = read(ctx, endpoint, &now); e != nil {
 			return e
 		}
 	}
@@ -104,10 +128,34 @@ func recoverCodeQLRevalidation(ctx context.Context, c candidate, dir string) err
 			RunID int64 `json:"run_id"`
 		}
 		b, e := os.ReadFile(filepath.Join(dir, "codeql-route-response.private.json"))
-		if e != nil || json.Unmarshal(b, &response) != nil {
-			return errors.New("pending validation receipt unavailable")
+		if e != nil || json.Unmarshal(b, &response) != nil || response.RunID <= s.LatestRunID {
+			var list struct {
+				Runs []struct {
+					ID  int64
+					SHA string `json:"head_sha"`
+				} `json:"workflow_runs"`
+			}
+			if e = read(ctx, "repos/"+r.FullName+"/actions/runs?event=dynamic&head_sha="+s.DefaultSHA+"&per_page=100", &list); e != nil {
+				return e
+			}
+			var ids []int64
+			for _, run := range list.Runs {
+				if run.ID > s.LatestRunID && run.SHA == s.DefaultSHA {
+					ids = append(ids, run.ID)
+				}
+			}
+			if len(ids) != 1 {
+				return errors.New("pending validation identity absent or ambiguous")
+			}
+			response.RunID = ids[0]
+			if e = verifyRevalidationRun(ctx, c, s, r.FullName, response.RunID, read); e != nil {
+				return e
+			}
+			if e = saveRevalidationRun(c, dir, response.RunID); e != nil {
+				return e
+			}
 		}
-		return verifyRevalidationRun(ctx, c, s, r.FullName, response.RunID, get)
+		return verifyRevalidationRun(ctx, c, s, r.FullName, response.RunID, read)
 	}
 	if !sameCodeQLSettings(now, s.Prior) || now.RunnerType != s.Prior.RunnerType || now.RunnerLabel != s.Prior.RunnerLabel {
 		return errors.New("revalidated settings differ; preserve recovery lock")
@@ -120,26 +168,27 @@ func verifyRevalidationRun(ctx context.Context, c candidate, s codeQLRevalidatio
 		return errors.New("fresh setup validation run absent")
 	}
 	var run struct {
-		ID                  int64
-		Created             time.Time `json:"created_at"`
-		Path, Event, Status string
-		SHA                 string `json:"head_sha"`
-		Repository          repository
-		HeadRepo            repository `json:"head_repository"`
+		ID                              int64
+		Created                         time.Time `json:"created_at"`
+		Path, Event, Status, Conclusion string
+		SHA                             string `json:"head_sha"`
+		Repository                      repository
+		HeadRepo                        repository `json:"head_repository"`
 	}
 	if e := read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", repo, runID), &run); e != nil {
 		return e
 	}
-	if run.ID != runID || run.SHA != s.DefaultSHA || run.Repository.ID != c.ID || run.HeadRepo.ID != c.ID || run.HeadRepo.Fork || run.Path != "dynamic/github-code-scanning/codeql" || run.Event != "dynamic" || (run.Status != "queued" && run.Status != "in_progress" && run.Status != "waiting") || run.Created.Before(s.Started.Add(-2*time.Second)) {
+	if run.ID != runID || runID <= s.LatestRunID || run.SHA != s.DefaultSHA || run.Repository.ID != c.ID || run.HeadRepo.ID != c.ID || run.Repository.FullName != repo || run.HeadRepo.FullName != repo || run.HeadRepo.Fork || run.Path != "dynamic/github-code-scanning/codeql" || run.Event != "dynamic" || (run.Status != "queued" && run.Status != "in_progress" && run.Status != "waiting" && !(run.Status == "completed" && run.Conclusion == "success")) {
 		return errors.New("historical or unexpected validation run rejected")
 	}
 	var jobs struct {
 		Total int `json:"total_count"`
 		Jobs  []struct {
-			ID     int64
-			RunID  int64 `json:"run_id"`
-			Name   string
-			Labels []string
+			ID                 int64
+			RunID              int64 `json:"run_id"`
+			Name               string
+			Labels             []string
+			Status, Conclusion string
 		}
 	}
 	if e := read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d/jobs?per_page=100", repo, runID), &jobs); e != nil {
@@ -147,10 +196,13 @@ func verifyRevalidationRun(ctx context.Context, c candidate, s codeQLRevalidatio
 	}
 	want := codeQLLanguages(s.Prior.Languages)
 	seen := map[string]bool{}
-	if jobs.Total != len(jobs.Jobs) || jobs.Total != len(want) {
+	if len(want) == 0 || jobs.Total != len(jobs.Jobs) || jobs.Total > 100 {
 		return errors.New("full validation matrix unavailable")
 	}
 	for _, j := range jobs.Jobs {
+		if j.Name == "Adjust Configuration" && j.Status == "completed" && j.Conclusion == "skipped" {
+			continue
+		}
 		language, ok := strings.CutPrefix(j.Name, "Analyze (")
 		if !ok || !strings.HasSuffix(language, ")") || j.ID < 1 || j.RunID != runID || len(j.Labels) != 1 || j.Labels[0] != codeQLLabel(c.ID) {
 			return errors.New("dedicated generated validation job rejected")
@@ -160,6 +212,12 @@ func verifyRevalidationRun(ctx context.Context, c candidate, s codeQLRevalidatio
 			return errors.New("duplicate validation language")
 		}
 		seen[language] = true
+		if run.Status == "completed" && (j.Status != "completed" || j.Conclusion != "success") {
+			return errors.New("validation analysis did not succeed")
+		}
+	}
+	if len(seen) != len(want) {
+		return errors.New("validation language count differs")
 	}
 	for _, language := range want {
 		if !seen[language] {
@@ -199,9 +257,11 @@ func revalidateCodeQL(ctx context.Context, c candidate, dir string) error {
 	if e = mutateJSON(ctx, "PATCH", endpoint, revalidationBody(s.Prior), &response); e != nil {
 		return e
 	}
-	b, _ := json.MarshalIndent(map[string]any{"repo_id": c.ID, "run_id": response.RunID, "role": "setup-validation-not-candidate"}, "", "  ")
-	if e = os.WriteFile(filepath.Join(dir, "codeql-route-response.private.json"), b, 0600); e != nil {
+	if e = saveRevalidationRun(c, dir, response.RunID); e != nil {
 		return e
+	}
+	if response.RunID <= s.LatestRunID {
+		return recoverCodeQLRevalidation(ctx, c, dir)
 	}
 	deadline := time.Now().Add(30 * time.Second)
 	for {

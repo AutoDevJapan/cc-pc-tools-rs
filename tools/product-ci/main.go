@@ -664,7 +664,7 @@ func main() {
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: stage, At: time.Now().UTC()})
 		}
-	} else if (len(os.Args) == 5 && (os.Args[1] == "codeql-bootstrap" || os.Args[1] == "codeql-revalidate")) || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
+	} else if (len(os.Args) == 5 && (os.Args[1] == "codeql-bootstrap" || os.Args[1] == "codeql-revalidate")) || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore" || os.Args[1] == "codeql-recover" || os.Args[1] == "codeql-finalize")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
 		id, parse := strconv.ParseInt(os.Args[2], 10, 64)
 		var chosen *candidate
 		for i := range candidates {
@@ -678,6 +678,10 @@ func main() {
 			e = bootstrapCodeQL(ctx, *chosen, os.Args[3], os.Args[4])
 		} else if os.Args[1] == "codeql-revalidate" {
 			e = bootstrapCodeQLMode(ctx, *chosen, os.Args[3], os.Args[4], true)
+		} else if os.Args[1] == "codeql-recover" {
+			e = recoverCodeQLBootstrap(ctx, *chosen, os.Args[3])
+		} else if os.Args[1] == "codeql-finalize" {
+			e = finalizeCodeQLRevalidation(ctx, *chosen, os.Args[3])
 		} else if os.Args[1] == "codeql-restore" {
 			e = restoreCodeQL(ctx, *chosen, os.Args[3])
 		} else if os.Args[1] == "codeql-route" {
@@ -714,7 +718,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | node-contracts <id> <new-owned-dir> <node@sha256:digest> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job <id> <run-id> <new-owned-dir> <Linux-helper> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

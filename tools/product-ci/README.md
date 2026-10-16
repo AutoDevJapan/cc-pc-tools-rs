@@ -85,6 +85,26 @@ dedicated label is admitted. Completion and uploads still need real jobs; a
 historical run, missing Rust or hosted job cannot certify recovery. JS/TS legacy
 language aliases compare as their canonical `javascript-typescript` coverage.
 
+After the validation's official jobs finish, run `codeql-finalize <repo-id>
+<revalidation-dir>` to require successful analysis jobs and the original final
+language/suite/threat settings. GitHub's conditional `Adjust Configuration` job
+may be skipped; no analysis language may be skipped. Freshness uses the latest
+dynamic run ID recorded before mutation, rather than the host's wall clock.
+The recorded default source remains fixed; an advancing default branch requires
+a new inspected plan and cannot silently replace the validation source.
+
+If the host crashes, `codeql-recover <repo-id> <revalidation-dir>` resumes only
+the persisted bootstrap nonce. New bootstraps hold a kernel byte lock and save
+their identity in the admission file: recovery refuses a live owner or another
+operation's lock. It checks/removes the exact owned container, re-enables the
+recorded setup while its offline GitHub label still exists, then deregisters
+that exact name and releases admission. Failed re-enablement keeps the offline
+registration and admission for another bounded recovery. Legacy empty locks
+require an audited ownership reconciliation; this command never clears them.
+An ambiguous pending API response is resolved only by a unique newer same-source
+generated run with the full dedicated matrix. No registration or job success
+is inferred from recovery alone.
+
 `codeql-route <repo-id> <new-owned-dir>` changes only the already-configured
 default setup's runner type/label. It records the previous configuration and
 mutation intent first. Languages, queries and threat model must remain equal.

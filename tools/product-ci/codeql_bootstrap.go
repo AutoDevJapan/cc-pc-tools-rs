@@ -50,6 +50,7 @@ type bootstrapReceipt struct {
 	RunID                               int64 `json:"run_id"`
 	TreeGone, Removed, RegistrationGone bool
 	RouteRestored                       bool   `json:"route_restored_on_failure"`
+	AdmissionLocked                     bool   `json:"admission_lifetime_locked"`
 	Failure                             string `json:"failure,omitempty"`
 	AllRequiredChecksSuccess            bool   `json:"all_required_checks_success"`
 }
@@ -110,6 +111,21 @@ func bootstrapCodeQLMode(ctx context.Context, c candidate, dir, binary string, r
 	if e != nil {
 		return errors.New("candidate already occupied")
 	}
+	if e = lockAdmission(lock); e != nil {
+		_ = lock.Close()
+		return errors.New("candidate admission lock unavailable")
+	}
+	// The OS releases its byte lock after a crash. The durable nonce still
+	// prevents recovery from confusing this bootstrap with a later product job.
+	admission, _ := json.Marshal(map[string]any{"repo_id": c.ID, "candidate_sha": c.SHA, "instance": rec.Instance})
+	if _, e = lock.WriteAt(admission, 1); e == nil {
+		e = lock.Sync()
+	}
+	if e != nil {
+		_ = lock.Close()
+		return errors.New("candidate admission intent unavailable")
+	}
+	rec.AdmissionLocked = true
 	creationUncertain, registrationMayExist, routeAttempted := false, false, false
 	defer func() {
 		ret = errors.Join(ret, lock.Close())
@@ -180,6 +196,11 @@ func bootstrapCodeQLMode(ctx context.Context, c candidate, dir, binary string, r
 		rec.TreeGone, rec.Removed, ce = disposeOwned(rec.ContainerID)
 		ret = errors.Join(ret, ce)
 		if !rec.TreeGone || !registrationMayExist {
+			return
+		}
+		if revalidate && ret != nil && routeAttempted && !rec.RouteRestored {
+			// Keep the offline label available for the crash-recovery command.
+			// No container or listener remains, and admission stays occupied.
 			return
 		}
 		cc, cancel := context.WithTimeout(context.Background(), 30*time.Second)

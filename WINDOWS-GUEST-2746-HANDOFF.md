@@ -111,12 +111,16 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   folder whose name matches its fixed prefix and 32-hex nonce; any contents,
   reparse point, Windows tree, or other OS-root entry still blocks a reset.
   The previous VM/cleanup/failure attempt records are preserved idempotently
-  only when the existing bytes match. These recovery changes are uncommitted.
+  only when the existing bytes match. A subsequent Expand-WindowsImage call
+  through that Volume GUID path again returned `0x80070003`; it left the stage
+  empty and the VHD detached. The current source switches to native
+  `dism.exe /Apply-Image` with `NoRpFix` and the same verified source/target
+  paths. This change is uncommitted and untried.
 
 ## Remaining
 
 1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push the volume-GUID stage path and empty-stage recovery changes.
+   and push the native DISM apply change.
 2. Build the helper into the owned root and run `vm-smoke` against the already
    downloaded ISO. Receipt-bound recovery must confirm the previous VM is
    absent and the owned partial OS partition is empty except for allowed

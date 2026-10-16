@@ -1123,7 +1123,9 @@ try {
   $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
   if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
   if(-not (Test-Path -LiteralPath $stageLetterPath)){throw 'OWNED_DISM_APPLY_STAGE_MISSING'}
-  Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -NoRpFix -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
+  $dism=Join-Path $env:SystemRoot 'System32\dism.exe'
+  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $applyDir)) '/CheckIntegrity' '/NoRpFix' (('/ScratchDir:{0}' -f $dismScratch)) (('/LogPath:{0}' -f $dismLog)) *> $null
+  if($LASTEXITCODE -ne 0){throw 'OWNED_OFFLINE_WIM_APPLY_FAILED'}
   $stagedWindows=Join-Path $stageLetterPath 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $stagedWindows 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
   $imageEntries=@(Get-ChildItem -LiteralPath $stageLetterPath -Force)

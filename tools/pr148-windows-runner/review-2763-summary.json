@@ -36,5 +36,6 @@
   "review_doc_head": "9b0f205",
   "official_ci_success_claimed": false,
   "go_files_read": 18,
-  "new_postreview_delta_approved": false
+  "new_postreview_delta_approved": true,
+  "postreview_delta_approval_scope": "source review only; ToDo2764; code da2b45e; Must0; no official execution or cleanup approval"
 }

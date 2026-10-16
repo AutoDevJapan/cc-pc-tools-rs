@@ -7,7 +7,7 @@ This ledger is an implementation response, not a second model approval.
 
 | Finding | Candidate fix in 3ba895f | Validation / limit |
 |---|---|---|
-| M1 token receiver | Check kernel pipe server PID against running SCM PID, retain SYNCHRONIZE-only process handle, recheck before writing | Kernel PID API unit test; no real token transferred |
+| M1 token receiver | Check kernel pipe server PID against running SCM PID, temporarily pin a SYNCHRONIZE-only process handle during validation, then use the connected pipe | Kernel PID API unit test; no real token transferred |
 | M2 fake admission | execute always calls gate; dedicated callback verifies actual live parent image, LOCK_HELD and bounds; service forwards bounded authenticated-controller allocation rather than inventing flag | Environment-only forgery rejected; actual shared gate run belongs to parent Cargo allocation |
 | M3 permissions | Manager CONNECT only outside prepare; controller gets START/STOP/QUERY on new service only; control preflight never walks runtime | Restricted own-token process creation denied by Windows5 even via broker; no alternate method attempted. Source regression remains opt-in; nonadmin runtime not claimed |
 | M4 unbounded collect | Two bounded inheritance-removal operations, direct boundary DACL queries, per-action immutable attempts/results, no per-file subprocesses | Both final fixture services deleted, installed grants0; profiles remain; mutation refusal never retried |
@@ -78,3 +78,29 @@ S6: public binary fingerprints and the known total5 residues are now explicit.
 The M1 documentation says temporary identity pinning, not a handle retained for
 the whole run. No new credentials, registration, production check or cleanup
 success is inferred from source review or these documentation corrections.
+
+## Final bounded review 2764
+
+Claude Sonnet5.5 reviewed all 11 files of faa535c..da2b45e (7 Go plus four
+records/documents), read the surrounding start/query/stop/gate context and the
+2763 original reply, and found Must0 with no regression of M1-M6. It independently
+ran Go tests (12 pass / 2 opt-in skip), vet and Windows build successfully. The
+current Go files are identical to da2b45e; subsequent changes are record/prose
+corrections. Raw reply, SHA and bytes are in evidence-private/20261017/review-2764.
+
+Its small documentation suggestions are applied: gate retention is conditional
+on a live controller/gate and confirmed orderly stop; handle pinning lasts only
+through peer validation; cleanup budget is a conservative pre-run estimate, with
+2x/4x operation budgets plus overhead for real/fixture collection. This does not
+claim actual large-workspace cleanup timing or actual failure-injection tests.
+The proposed new function-variable seam/table tests are not added to this
+already reviewed control code solely for testing: the source transition analysis
+is explicitly separate from actual SCM error/timeout validation. Those practical
+failure cases remain parent integration checks when the real gate is allocated.
+No fixture, denied operation, account or service was rerun to refresh this prose.
+
+Source implementation/review is complete and ready for parent delivery. Official runner/auth/source,
+SDK/gate behavior, nonadmin runtime, official CI and crash-safe admission remain
+unverified as documented. All owned temporary roots have recorded source_absent;
+five profile/hive/classes residues remain with existing cleanup ToDo2381. They
+are not hidden behind a completed implementation flag or a fake cleanup success.

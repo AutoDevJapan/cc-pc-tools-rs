@@ -18,8 +18,12 @@ of repository, repository ID, PR148, original branch, original source HEAD/tree,
 base and the parent's Windows label are fixed constants. `seconds` is 1..14400.
 `controller_sid` is the parent's current user SID, never another user's token.
 Optional `cleanup_seconds` reserves 60..14400 seconds for each collection ACL
-propagation, with zero/omission selecting 1800 seconds. Parent must choose this
-from the actual artifact scale and allow the corresponding broker timeout;
+propagation, with zero/omission selecting 1800 seconds. The plan is fixed before
+the runtime is populated, so parent chooses a conservative estimated upper bound
+for artifact scale, not a measured future size. Early completion adds no wait.
+Allow at least `2 * cleanup_seconds + overhead` for a real collection and
+`4 * cleanup_seconds + overhead` for a fixture (use 1800 when omitted). At the
+maximum setting this is up to 8/16 hours plus the other collection steps;
 preparation retains its shorter 30-second operation limit. A timed-out or denied
 collection mutation remains uncertain and is not automatically replayed.
 No input accepts an arbitrary command, callback, executable or download URL.
@@ -52,7 +56,8 @@ Use CC-AdminBroker for the administrative phases, with no visible console/UAC.
    elevation or a broker/token-file step. Preparation grants this SID only
    START/STOP/QUERY on this new service; controller preflight reads control files
    and ancestors without descending into the private runtime. Execution holds the existing `cargo_gate.exe` admission
-   for the entire real run, with a dedicated target and limits 1..10. Parent must
+   while controller/gate remain alive and orderly stop is confirmed, with a
+   dedicated target and limits 1..10. Abrupt-stop limits are described below. Parent must
    have a scheduler Cargo allocation. The existing parent helper feeds the
    registration token from RAM to stdin; a private one-message named pipe then
    transfers it only after its kernel server PID matches the running SCM service

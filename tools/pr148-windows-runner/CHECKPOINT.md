@@ -1,3 +1,37 @@
+## 2026-10-17 最終レビュー受領・実装成果の確定（この節を優先）
+
+ToDo2764のClaude Sonnet5.5実応答をSHA/bytes一致で保管した。固定basefaa535c、
+code head da2b45ea76efeb14f24211ed1a156ed051027515の差分11fileを全読了、Must0、
+元M1-M6の後退なし。別モデル自身のGo12pass/2opt-in skip、vet/build成功も照合した。
+2763の全Go18file/指定primary refs4件/2746証拠読了と合わせ、現在Goのレビューが完了。
+この保存点のGoコードはda2b45eと同一で、今回の変更は文書・受領記録だけ。
+
+READMEのgate保持を生存controller/確認済み停止に条件付け、一時process handleの表現を
+そろえた。cleanup予算は準備時点の将来artifact規模の保守的見込みであり、broker timeoutは
+実runの2倍/fixtureの4倍＋他工程余裕、最大8/16時間＋余裕となることを記した。
+追加のsource機能やfixture/新service/account/profile/Cargoは作っていない。
+S3の新function-variable test seamは、既に読解/レビューした制御コードを検査だけのために
+作り変えず、SCM異常・実gate下の故障注入は親統合の未達条件として明示する。
+
+原応答はevidence-private/20261017/review-2764/original.mdとreceipt.json。
+追跡概要はfinal-review-summary.json、コード/検査/採否はREVIEW.mdにまとめた。
+全所有Temp rootはsource_absent済み。未回収は旧3件＋新2件のprofile/hive/classes計5件。
+これらは既存2381へ記録済みで、拒否済み操作の再試行・unload・別APIは行っていない。
+2381はrecovery_unverifiedであり、受領/待機登録だけでは回収成功としない。
+
+実装/レビュー成果を元2736へ先に渡す。配送の正本は2736 noteの
+「2749最終レビュー配送20261017-da2b45e」と、私的review-2764配下のparent-delivery-receipt.json。
+既に記録がある場合は重複配送しない。親の他note・状態・依存と原2640/880の停止/未完を保持する。
+本人へのPC操作/新費用/公開判断は要求しない。
+
+配送後の2749は、実装/レビュー待ちではなく、自分の新資源回収だけを2381へ正規waitする。
+2381が正規doneになってから、自分の5件の不在/適法な回収の実証を照合する。
+親2736/元2640の完了への逆依存を作らない。scheduler checkpoint-workspaceを同期完了まで待ち、
+自分の現job/branch/HEADとwait記録を読み返して終了する。
+
+正式runner/auth/製品source/実hook/SDK/shared gate/非昇格controller/原CIは引き続き未実証。
+強制controller終了・不確定stopのgate保持を保証せず、親の監督/隔離条件を維持する。
+これらをfixtureやMust0で代用せず、製品source取得/検査/登録/workflow/PR変更は親2736が扱う。
 ## 2026-10-17 最後の小差分を配送（この節を優先）
 
 code3ba895fのレビュー2763はMust0で受領済み。追加Suggestionの小差分はda2b45eへ

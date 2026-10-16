@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -325,5 +326,57 @@ func TestProductRetryBadReserveEnvelopeNeverExecutesReturnedCommand(t *testing.T
 				t.Fatal("bad envelope accepted", h)
 			}
 		})
+	}
+}
+
+func TestProductRetryReserveResponseLossKeepsSameWaitAndLaunchKey(t *testing.T) {
+	f := retryDispatchFixture(t)
+	actual := f.r.Run
+	lost := false
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		raw, err := actual(ctx, exe, args...)
+		if args[0] == "product-retry-reserve" && !lost {
+			lost = true // Intent is saved by the API, but its reply was lost.
+			return "", errors.New("reserve response lost")
+		}
+		return raw, err
+	}
+	var h Health
+	f.r.releaseRetries(context.Background(), &h)
+	if candidateRow(f.db)["wait_ready"] == nil || len(f.jobs) != 0 || f.models != 0 {
+		t.Fatal("reserve loss destroyed original wait")
+	}
+	f.r.releaseRetries(context.Background(), &h)
+	if f.jobs[f.base] != retryFixtureJob || f.binds != 1 || f.models != 1 {
+		t.Fatal("reserve replay did not reuse the wait key")
+	}
+}
+
+func TestProductRetrySharesCursorAndFailureDoesNotStarveRepairs(t *testing.T) {
+	f := retryDispatchFixture(t)
+	root := t.TempDir()
+	f.db["projects"] = map[string]any{"cc-pc-tools-rs": root}
+	for id := 1; id <= 6; id++ {
+		f.db["items"] = append(f.db["items"].([]any), map[string]any{"id": id, "project": "cc-pc-tools-rs", "status": "wait", "wait_ready": map[string]any{"condition": "retry-time", "since": f.at.Unix() - 60, "not_before": f.at.Unix()}})
+	}
+	f.save(t)
+	f.reserveError = true
+	f.r.State.RetryCursor = 4
+	actual := f.r.Run
+	var repairs []string
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if args[0] == "--guard-path" {
+			return `{"client_resource":false}`, nil
+		}
+		if args[0] == "resume-ready" {
+			repairs = append(repairs, args[1])
+			return fmt.Sprintf(`{"id":%s,"resumed":true}`, args[1]), nil
+		}
+		return actual(ctx, exe, args...)
+	}
+	var h Health
+	f.r.releaseRetries(context.Background(), &h)
+	if !reflect.DeepEqual(repairs, []string{"5", "6", "1"}) || !reflect.DeepEqual(f.calls, []string{"product-retry-reserve"}) || h.Retried != 3 || len(h.Errors) != 1 || f.r.State.RetryCursor != 1 {
+		t.Fatal("product retry broke bounded cursor or starved repairs", repairs, f.calls, h)
 	}
 }

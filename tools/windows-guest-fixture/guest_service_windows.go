@@ -134,12 +134,15 @@ func serveSerial() error {
 		return errors.New("guest seed rejected")
 	}
 	recordGuestServiceStage(1)
+	recordGuestServiceStage(2)
 	serial, err := openSerialPort()
 	if err != nil {
+		recordGuestServiceStage(7)
+		recordGuestServiceFailure(err)
 		return errors.New("guest COM1 unavailable")
 	}
 	defer serial.Close()
-	recordGuestServiceStage(2)
+	recordGuestServiceStage(3)
 	serviceControlMu.Lock()
 	serviceActiveConn = serial
 	serviceControlMu.Unlock()
@@ -150,19 +153,22 @@ func serveSerial() error {
 	}
 	defer clearIdentity(&identity)
 	if err := writeJSONLine(serial, vmReady{Instance: seed.Instance, ServerSHA256: identity.SHA256}); err != nil {
+		recordGuestServiceStage(8)
+		recordGuestServiceFailure(err)
 		return err
 	}
-	recordGuestServiceStage(3)
+	recordGuestServiceStage(4)
 	tlsConn := tlsServerConn(serial, identity, seed.ClientSHA256)
 	defer tlsConn.Close()
 	serviceControlMu.Lock()
 	serviceActiveConn = tlsConn
 	serviceControlMu.Unlock()
 	if err := tlsConn.Handshake(); err != nil {
-		recordGuestServiceStage(5)
+		recordGuestServiceStage(6)
+		recordGuestServiceFailure(err)
 		return errors.New("guest TLS client authentication failed")
 	}
-	recordGuestServiceStage(4)
+	recordGuestServiceStage(5)
 	decoder := json.NewDecoder(tlsConn)
 	encoder := json.NewEncoder(tlsConn)
 	for {
@@ -216,6 +222,18 @@ func recordGuestServiceStage(stage byte) {
 	_, _ = f.Write([]byte{stage})
 	_ = f.Sync()
 	_ = f.Close()
+}
+
+func recordGuestServiceFailure(err error) {
+	if err == nil {
+		return
+	}
+	systemRoot := os.Getenv("SystemRoot")
+	if systemRoot == "" {
+		return
+	}
+	path := filepath.Join(systemRoot, `System32\cc2746-service-failure.txt`)
+	_ = os.WriteFile(path, []byte(err.Error()), 0600)
 }
 
 func openSerialPort() (*os.File, error) {

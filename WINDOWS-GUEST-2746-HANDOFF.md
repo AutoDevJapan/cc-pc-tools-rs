@@ -182,20 +182,24 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   paths; the helper now writes `%SystemRoot%\System32\cc2746-guest.exe
   --service` as REG_EXPAND_SZ. This correction is uncommitted and untried.
 - After that path correction was pushed as `c9bcaef`, a fresh guest again
-  started the service but the TLS fixture failed. The helper stopped/removed
-  the VM, verified assigned memory zero, and detached clone/source VHDs. The
-  latest clone's offline stage marker was `3`: seed validation, COM open, and
-  readiness line write completed; TLS handshake did not. SCM logged service
-  start but no 7023 failure. Host TLS error detail is currently discarded, so
-  code now preserves the underlying handshake error in the private failure
-  receipt and marks guest stage `5` if the guest handshake itself errors. The
-  earlier COM exclusive-open correction remains in place. This diagnostic
-  change is uncommitted and untried.
+- After that path correction was pushed as `c9bcaef`, successive fresh guests
+  reached serial/TLS startup but did not complete both fixtures. The helper
+  stopped/removed each VM, verified assigned memory zero, and detached clone
+  and source VHDs. The current attempt's `vm-fixture-failure` says readiness
+  was not observed; its System log has no Service Control Manager entries. The
+  offline stage marker is `1` (seed validated) and the current helper binary
+  and seed match the host-generated copies. The earlier guest logged service
+  start/stop; a separate attempt got through readiness and failed mutual TLS.
+  Host now stores the underlying TLS error in the private failure receipt;
+  guest stores only a generic Win32 error message if COM open, readiness
+  write, or TLS fails. The marker now records stage 2 before COM open, 3 after
+  it, 4 after readiness write, and 5 after TLS succeeds (6/7/8 mark TLS, COM,
+  and readiness errors). This diagnostic update is uncommitted and untried.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the TLS handshake diagnostics; commit and push them.
+   the COM-open and TLS stage diagnostics; commit and push them.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

@@ -11026,24 +11026,28 @@ mod end_to_end {
         let e = E2e::new();
         let (jid, pids) = e.slow();
         assert_eq!(e.job(&jid)["process_tree_version"], 1);
-        let identities: Vec<_> = pids[1..]
-            .iter()
-            .map(|pid| (*pid, proc_created(*pid).expect("fixture process is live")))
-            .collect();
+        let mut owners = FixtureOwners {
+            handles: pids
+                .iter()
+                .map(|pid| {
+                    FixtureProcess::retain(
+                        *pid,
+                        proc_created(*pid).expect("fixture process is live"),
+                    )
+                    .expect("retain the owned fixture identity before cancellation")
+                })
+                .collect(),
+            shutdown_started: false,
+        };
         // Stop only the retained supervisor. Its children deliberately stay
         // alive, so this still exercises cancellation of a genuinely lost job.
-        let supervisor = FixtureProcess::retain(
-            pids[0],
-            proc_created(pids[0]).expect("fixture supervisor is live"),
-        )
-        .expect("retain the owned fixture supervisor");
-        assert!(supervisor.stop());
+        assert!(owners.handles[0].stop());
         e.until(|| {
             serde_json::from_slice::<Vec<Value>>(&e.cli(&["status", "--json"], "").stdout).unwrap()
                 [0]["status"]
                 == "lost"
         });
-        assert!(proc_created(pids[2]).is_some());
+        assert!(owners.handles[1..].iter().all(FixtureProcess::live));
         let r = e.cli(&["cancel", &jid], "");
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
         assert!(String::from_utf8_lossy(&r.stdout).contains("killed the leftover"));
@@ -11051,11 +11055,10 @@ mod end_to_end {
             e.job(&jid)["process_tree_cancel_method"],
             "retained_handle_walk"
         );
-        e.until(|| {
-            identities
-                .iter()
-                .all(|(pid, born)| proc_created(*pid) != Some(*born))
-        });
+        // Wait on the very same creation-checked objects retained before the
+        // lost-supervisor transition; a failed reopen or reused PID proves nothing.
+        assert!(owners.handles.iter().all(FixtureProcess::wait_exit));
+        owners.shutdown_started = true;
     }
 }
 mod additional_compatibility {

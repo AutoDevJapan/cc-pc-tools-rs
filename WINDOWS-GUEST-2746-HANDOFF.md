@@ -74,8 +74,12 @@ last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
   match, the VM is Off, and its actual ConfigurationLocation is a child folder
   under the owned `vm` directory rather than exactly that parent. The helper
   now requires the configuration path to remain inside that owned directory.
-  This containment fix is uncommitted and untried; the same VM/VHDX and receipt
-  remain in the safe-delete-owned root.
+  A second resume attempt stopped before changing VM state because
+  `Get-VMComPort` does not expose the `Number` property that the helper used;
+  a read-only query confirmed the receipt's exact unique pipe is configured.
+  Recovery and cleanup now match the COM port by that exact pipe path. These
+  changes are uncommitted and untried; the same VM/VHDX and receipt remain in
+  the safe-delete-owned root.
 
 ## Remaining
 

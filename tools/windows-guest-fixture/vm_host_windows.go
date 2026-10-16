@@ -307,14 +307,14 @@ $configRoot=[IO.Path]::GetFullPath((Join-Path $root 'vm')).TrimEnd('\')
 $configPath=[IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\')
 $configInside=[String]::Equals($configPath,$configRoot,[StringComparison]::OrdinalIgnoreCase) -or $configPath.StartsWith($configRoot+'\',[StringComparison]::OrdinalIgnoreCase)
 if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not $configInside){throw 'OWNED_VM_RECOVERY_IDENTITY_MISMATCH'}
-$cp=$v|Get-VMComPort|Where-Object Number -EQ 1
+$cp=@($v|Get-VMComPort|Where-Object Path -CEQ $pipe)
 $dvds=@($v|Get-VMDvdDrive)
 $vhds=@($v|Get-VMHardDiskDrive)
 $memory=Get-VMMemory -VM $v
 $firmware=Get-VMFirmware -VM $v
 $nics=@($v|Get-VMNetworkAdapter).Count
 $gpus=@($v|Get-VMGpuPartitionAdapter -ErrorAction SilentlyContinue).Count
-if($v.State -ne 'Off' -or $v.Generation -ne 2 -or $v.ProcessorCount -ne 2 -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd -or -not $cp -or $cp.Path -cne $pipe -or @($dvds|Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds|Where-Object Path -CEQ $oldSeedISO).Count -ne 1){throw 'OWNED_VM_RECOVERY_RESOURCE_MISMATCH'}
+if($v.State -ne 'Off' -or $v.Generation -ne 2 -or $v.ProcessorCount -ne 2 -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd -or $cp.Count -ne 1 -or @($dvds|Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds|Where-Object Path -CEQ $oldSeedISO).Count -ne 1){throw 'OWNED_VM_RECOVERY_RESOURCE_MISMATCH'}
 if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'OWNED_VM_RECOVERY_SECURE_BOOT_MISMATCH'}
 $winDvd=$dvds|Where-Object Path -CEQ $windowsISO|Select-Object -First 1
 $seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
@@ -981,8 +981,8 @@ if($v){
   $configPath=[IO.Path]::GetFullPath($v.ConfigurationLocation).TrimEnd('\')
   $configInside=[String]::Equals($configPath,$configRoot,[StringComparison]::OrdinalIgnoreCase) -or $configPath.StartsWith($configRoot+'\',[StringComparison]::OrdinalIgnoreCase)
   if($v.Name -cne $name -or $v.Notes -cne ('cc.todo=2746;cc.instance='+$instance) -or -not $configInside){throw 'OWNED_VM_CLEANUP_IDENTITY_MISMATCH'}
-  $cp=$v | Get-VMComPort | Where-Object Number -EQ 1
-  if(-not $cp -or $cp.Path -cne $pipe){throw 'OWNED_VM_COM_PORT_MISMATCH'}
+  $cp=@($v | Get-VMComPort | Where-Object Path -CEQ $pipe)
+  if($cp.Count -ne 1){throw 'OWNED_VM_COM_PORT_MISMATCH'}
   $dvds=@($v | Get-VMDvdDrive)
   if($dvds.Count -ne 2 -or @($dvds | Where-Object Path -CEQ $windowsISO).Count -ne 1 -or @($dvds | Where-Object Path -CEQ $seedISO).Count -ne 1){throw 'OWNED_VM_DVD_IDENTITY_MISMATCH'}
   $vhds=@($v | Get-VMHardDiskDrive)

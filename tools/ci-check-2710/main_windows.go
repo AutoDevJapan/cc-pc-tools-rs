@@ -171,6 +171,9 @@ func transfer(ctx context.Context, s state, local, remote string) error {
 	return nil
 }
 func gateChild() int {
+	if os.Getenv("CI2710_WINDOWS_PLAN") != "" {
+		return winGateChild()
+	}
 	s, e := load(os.Getenv("CI2710_STATE"))
 	if e != nil {
 		return 120
@@ -262,6 +265,63 @@ func run(ctx context.Context, file, supervisor, script string) error {
 	}
 	return e
 }
+
+// Rebuild the index from unfiltered archive bytes; git add applies attributes.
+func rawTree(ctx context.Context, file string) error {
+	s, e := load(file)
+	if e != nil {
+		return e
+	}
+	c, e := pick(s.RepoID)
+	if e != nil {
+		return e
+	}
+	if _, e = verify(ctx, c, get); e != nil {
+		return e
+	}
+	b, e := output(ctx, "exec", "--workdir", "/work/source", s.Container, "git", "ls-files", "--stage", "-z")
+	if e != nil {
+		return e
+	}
+	var modes, paths []string
+	for _, entry := range strings.Split(string(b), "\x00") {
+		if entry == "" {
+			continue
+		}
+		meta, p, ok := strings.Cut(entry, "\t")
+		if !ok || strings.ContainsAny(p, "\r\n") {
+			return errors.New("index path rejected")
+		}
+		modes = append(modes, strings.Fields(meta)[0])
+		paths = append(paths, p)
+	}
+	x := cmd(ctx, docker, "exec", "-i", "--workdir", "/work/source", s.Container, "git", "hash-object", "--no-filters", "-w", "--stdin-paths")
+	x.Stdin = strings.NewReader(strings.Join(paths, "\n") + "\n")
+	b, e = x.Output()
+	if e != nil {
+		return errors.New("raw blob hashing failed")
+	}
+	hashes := strings.Fields(string(b))
+	if len(hashes) != len(paths) {
+		return errors.New("raw hash count mismatch")
+	}
+	var index strings.Builder
+	for i, p := range paths {
+		fmt.Fprintf(&index, "%s %s\t%s\x00", modes[i], hashes[i], p)
+	}
+	x = cmd(ctx, docker, "exec", "-i", "--workdir", "/work/source", s.Container, "git", "update-index", "-z", "--index-info")
+	x.Stdin = strings.NewReader(index.String())
+	if e = x.Run(); e != nil {
+		return errors.New("raw index failed")
+	}
+	b, e = shell(ctx, s, "git write-tree")
+	if e != nil || strings.TrimSpace(string(b)) != s.Tree {
+		return errors.New("unfiltered source tree still mismatches")
+	}
+	s.TreeVerified = true
+	return save(s)
+}
+
 func main() {
 	if os.Getenv("CI2710_CHILD") == "1" {
 		os.Exit(gateChild())
@@ -271,6 +331,293 @@ func main() {
 	var e error
 	a := os.Args[1:]
 	switch {
+	case len(a) == 1 && a[0] == "win-sleep":
+		time.Sleep(10 * time.Minute)
+	case len(a) == 2 && a[0] == "win-cancel-smoke":
+		short, stop := context.WithTimeout(ctx, 20*time.Second)
+		defer stop()
+		e = winRun(short, a[1])
+	case len(a) == 2 && a[0] == "win-nextest":
+		const expected = "sha256:bef17504bed9d4994cf860c122e84a90d613b92e6d89584fa9e28bd53ad42e15"
+		var asset struct{ Digest string }
+		e = get(ctx, "repos/nextest-rs/nextest/releases/assets/620604883", &asset)
+		if e != nil {
+			break
+		}
+		if asset.Digest != expected {
+			e = errors.New("nextest SDK digest changed")
+			break
+		}
+		var raw []byte
+		raw, e = boundedOutput(cmd(ctx, gh, "api", "repos/nextest-rs/nextest/releases/assets/620604883", "-H", "Accept: application/octet-stream"), 64<<20)
+		if e != nil {
+			break
+		}
+		if "sha256:"+digest(raw) != expected {
+			e = errors.New("nextest SDK checksum mismatch")
+			break
+		}
+		var z *gzip.Reader
+		z, e = gzip.NewReader(bytes.NewReader(raw))
+		if e != nil {
+			break
+		}
+		tr := tar.NewReader(z)
+		found := false
+		for {
+			h, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				e = err
+				break
+			}
+			if h.Typeflag == tar.TypeReg && strings.HasSuffix(h.Name, "cargo-nextest.exe") {
+				var b []byte
+				b, e = io.ReadAll(tr)
+				if e == nil {
+					e = os.WriteFile(filepath.Join(a[1], "cargo-nextest.exe"), b, 0700)
+				}
+				found = true
+				break
+			}
+		}
+		z.Close()
+		if !found && e == nil {
+			e = errors.New("nextest SDK binary absent")
+		}
+	case len(a) == 2 && a[0] == "win-run":
+		e = winRun(ctx, a[1])
+	case len(a) == 3 && a[0] == "cache-copy":
+		var from, to state
+		from, e = load(a[1])
+		if e != nil {
+			break
+		}
+		to, e = load(a[2])
+		if e != nil {
+			break
+		}
+		_, e = output(ctx, "exec", to.Container, "mkdir", "-p", "/work/cache")
+		if e != nil {
+			break
+		}
+		reader, writer := io.Pipe()
+		source := cmd(ctx, docker, "exec", from.Container, "tar", "cf", "-", "-C", "/work/cache", ".")
+		dest := cmd(ctx, docker, "exec", "-i", to.Container, "tar", "xf", "-", "-C", "/work/cache")
+		source.Stdout = writer
+		dest.Stdin = reader
+		if e = dest.Start(); e != nil {
+			break
+		}
+		if e = source.Start(); e != nil {
+			writer.CloseWithError(e)
+			dest.Wait()
+			break
+		}
+		first := source.Wait()
+		writer.CloseWithError(first)
+		second := dest.Wait()
+		reader.Close()
+		if first != nil || second != nil {
+			e = errors.New("compiler cache reuse transfer failed")
+		}
+	case len(a) == 1 && a[0] == "win-service":
+		e = runnerService()
+	case len(a) == 3 && a[0] == "run" && a[1] == "--startuptype" && a[2] == "service":
+		os.Exit(windowsWorker())
+	case len(a) == 2 && a[0] == "win-sdk":
+		e = sdkDownload(ctx, a[1])
+	case len(a) == 3 && a[0] == "win-prepare":
+		id, _ := strconv.ParseInt(a[1], 10, 64)
+		e = winPrepare(ctx, id, a[2])
+	case len(a) == 2 && a[0] == "prepare-red":
+		var s state
+		s, e = load(a[1])
+		if e != nil {
+			break
+		}
+		if s.RepoID != 1386702183 {
+			e = errors.New("RED candidate rejected")
+			break
+		}
+		c, _ := pick(s.RepoID)
+		var r repository
+		r, e = verify(ctx, c, get)
+		if e != nil {
+			break
+		}
+		var commit struct{ Parents []struct{ SHA string } }
+		e = get(ctx, "repos/"+r.FullName+"/git/commits/"+c.SHA, &commit)
+		if e != nil {
+			break
+		}
+		base := "4dc5c332d54d19325f122df1f0e4a52e9dd3a629"
+		if len(commit.Parents) != 1 || commit.Parents[0].SHA != base {
+			e = errors.New("RED parent changed")
+			break
+		}
+		var raw []byte
+		raw, e = boundedOutput(cmd(ctx, gh, "api", "repos/"+r.FullName+"/tarball/"+base), 128<<20)
+		if e != nil {
+			break
+		}
+		archive, err := opaqueArchive(raw)
+		if err != nil {
+			e = err
+			break
+		}
+		_, e = output(ctx, "exec", s.Container, "mkdir", "/work/red-source", "/work/red-target")
+		if e != nil {
+			break
+		}
+		x := cmd(ctx, docker, "exec", "-i", s.Container, "tar", "xf", "-", "-C", "/work/red-source")
+		x.Stdin = bytes.NewReader(archive)
+		if e = x.Run(); e != nil {
+			break
+		}
+		var parent struct{ Tree struct{ SHA string } }
+		e = get(ctx, "repos/"+r.FullName+"/git/commits/"+base, &parent)
+		if e != nil {
+			break
+		}
+		var b []byte
+		b, e = output(ctx, "exec", "--workdir", "/work/red-source", s.Container, "sh", "-c", "git init -q && git config core.autocrlf false && git add -f . && git write-tree")
+		if e != nil || strings.TrimSpace(string(b)) != parent.Tree.SHA {
+			e = errors.New("RED parent tree mismatch")
+			break
+		}
+		_, e = output(ctx, "exec", s.Container, "cp", "/work/source/tests/publication_schedules.rs", "/work/red-source/tests/publication_schedules.rs")
+		if e != nil {
+			break
+		}
+		var patch []byte
+		patch, e = output(ctx, "exec", "--workdir", "/work/red-source", s.Container, "git", "diff", "--no-ext-diff", "--", "tests/publication_schedules.rs")
+		if e != nil {
+			break
+		}
+		e = os.WriteFile(filepath.Join(s.Root, "repo1386702183-red-regression.private.patch"), patch, 0600)
+		if e != nil {
+			break
+		}
+		rec := map[string]any{"repo_id": s.RepoID, "base": base, "base_tree": parent.Tree.SHA, "parent_tree_verified": true, "base_archive_sha256": digest(raw), "fixed": s.SHA, "regression_patch_sha256": digest(patch), "target": "/work/red-target", "only_fixed_test_file_applied": true}
+		b, _ = json.MarshalIndent(rec, "", "  ")
+		e = os.WriteFile(filepath.Join(s.Root, "repo1386702183-red-source.private.json"), b, 0600)
+	case len(a) == 2 && a[0] == "restore-gitlinks":
+		var s state
+		s, e = load(a[1])
+		if e != nil {
+			break
+		}
+		c, err := pick(s.RepoID)
+		if err != nil {
+			e = err
+			break
+		}
+		r, err := verify(ctx, c, get)
+		if err != nil {
+			e = err
+			break
+		}
+		var tree struct {
+			Tree      []struct{ Path, Mode, Type, SHA string }
+			Truncated bool
+		}
+		e = get(ctx, "repos/"+r.FullName+"/git/trees/"+s.Tree+"?recursive=1", &tree)
+		if e != nil {
+			break
+		}
+		if tree.Truncated {
+			e = errors.New("tree truncated")
+			break
+		}
+		var index strings.Builder
+		for _, entry := range tree.Tree {
+			if entry.Type == "commit" && entry.Mode == "160000" && !strings.ContainsAny(entry.Path, "\x00\r\n") {
+				fmt.Fprintf(&index, "160000 %s\t%s\x00", entry.SHA, entry.Path)
+			}
+		}
+		x := cmd(ctx, docker, "exec", "-i", "--workdir", "/work/source", s.Container, "git", "update-index", "-z", "--index-info")
+		x.Stdin = strings.NewReader(index.String())
+		if e = x.Run(); e != nil {
+			break
+		}
+		var b []byte
+		b, e = shell(ctx, s, "git write-tree")
+		if e == nil && strings.TrimSpace(string(b)) != s.Tree {
+			e = errors.New("gitlink tree mismatch")
+		}
+		if e == nil {
+			s.TreeVerified = true
+			e = save(s)
+		}
+	case len(a) == 2 && a[0] == "diagnose-tree":
+		var s state
+		s, e = load(a[1])
+		if e != nil {
+			break
+		}
+		var c candidate
+		c, e = pick(s.RepoID)
+		if e != nil {
+			break
+		}
+		var r repository
+		r, e = verify(ctx, c, get)
+		if e != nil {
+			break
+		}
+		var tree struct {
+			Tree      []struct{ Path, Mode, Type, SHA string }
+			Truncated bool
+		}
+		e = get(ctx, "repos/"+r.FullName+"/git/trees/"+s.Tree+"?recursive=1", &tree)
+		if e != nil {
+			break
+		}
+		if tree.Truncated {
+			e = errors.New("tree truncated")
+			break
+		}
+		var b []byte
+		b, e = output(ctx, "exec", "--workdir", "/work/source", s.Container, "git", "ls-files", "--stage", "-z")
+		if e != nil {
+			break
+		}
+		index := map[string]string{}
+		for _, entry := range strings.Split(string(b), "\x00") {
+			if entry == "" {
+				continue
+			}
+			m, p, ok := strings.Cut(entry, "\t")
+			if !ok {
+				continue
+			}
+			index[p] = strings.Fields(m)[1]
+		}
+		missing, mismatch, gitlinks := 0, 0, 0
+		var differences []map[string]string
+		for _, entry := range tree.Tree {
+			if entry.Type == "tree" {
+				continue
+			}
+			if entry.Type == "commit" {
+				gitlinks++
+			}
+			sha, ok := index[entry.Path]
+			if !ok {
+				missing++
+			} else if sha != entry.SHA {
+				mismatch++
+			} else {
+				continue
+			}
+			differences = append(differences, map[string]string{"path": entry.Path, "type": entry.Type, "sha": entry.SHA, "mode": entry.Mode, "actual": sha})
+		}
+		b, _ = json.MarshalIndent(differences, "", "  ")
+		e = os.WriteFile(filepath.Join(s.Root, fmt.Sprintf("repo%d-tree-differences.private.json", s.RepoID)), b, 0600)
+		fmt.Printf("repo%d missing=%d mismatch=%d gitlinks=%d\n", s.RepoID, missing, mismatch, gitlinks)
 	case len(a) == 2 && a[0] == "sdk-sccache":
 		var asset struct{ Digest string }
 		e = get(ctx, "repos/mozilla/sccache/releases/assets/563130201", &asset)
@@ -328,7 +675,12 @@ func main() {
 		e = run(ctx, a[1], a[2], a[3])
 	case len(a) == 4 && a[0] == "upload":
 		var s state
-		s,e=load(a[1]);if e==nil{e=transfer(ctx,s,a[2],a[3])}
+		s, e = load(a[1])
+		if e == nil {
+			e = transfer(ctx, s, a[2], a[3])
+		}
+	case len(a) == 2 && a[0] == "raw-tree":
+		e = rawTree(ctx, a[1])
 	case len(a) == 4 && a[0] == "cancel-smoke":
 		short, stop := context.WithTimeout(ctx, 20*time.Second)
 		defer stop()

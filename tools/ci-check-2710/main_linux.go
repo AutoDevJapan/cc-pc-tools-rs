@@ -40,7 +40,15 @@ func execute() int {
 	c := exec.Command("/bin/sh", os.Args[1])
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	c.Dir = "/work/source"
-	c.Env = []string{"HOME=/work/home", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/work/cargo", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + os.Args[2], "RUST_TEST_THREADS=" + os.Args[3], "NEXTEST_TEST_THREADS=" + os.Args[3], "CARGO_INCREMENTAL=0", "CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0"}
+	if e = os.MkdirAll("/work/tmp", 0700); e != nil {
+		return 124
+	}
+	// Env-clearing fixtures still use /tmp. It belongs only to this non-root
+	// container user; a private mode satisfies their real ancestor admission.
+	if e = os.Chmod("/tmp", 0700); e != nil {
+		return 124
+	}
+	c.Env = []string{"HOME=/work/home", "TMPDIR=/work/tmp", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/work/cargo", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + os.Args[2], "RUST_TEST_THREADS=" + os.Args[3], "NEXTEST_TEST_THREADS=" + os.Args[3], "CARGO_INCREMENTAL=0", "CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0"}
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if c.Start() != nil {

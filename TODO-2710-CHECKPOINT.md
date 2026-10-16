@@ -33,3 +33,14 @@
 7. 完了した自分のcontainer/volumeだけ回収。原log/manifestを所有付きopaque保管先へhash照合して保存後、safe-delete plan→別呼出し通常削除→finish。未完sourceは保持。
 
 この記録は検査成功・CI全件成功・製品完了を意味しない。
+
+## 2026-10-16 16時台の更新
+
+- Linux repo1392152644: 関連fixture成功、元workflow alltargets成功、全workspace nextestは1850 PASS/0 FAIL。workspace doctest・Clippy・release全binsと138scenarioは初回で成功。native fmt/test/Clippy/4 Lua checkも成功。live-chainの元workflowはWindows専用であり、補助Linux実行のtest/Clippy失敗をWindows成功へ置換しない。
+- Linux repo1154066087: HTTP関連nextest、native fmt/Clippy/全workspace nextest/doc/原test、report-contract、diagnostics-service成功。後続7crateのfmt/Clippy等も実行。common-entryのdescriptor回帰は子がenv_clearして/tmpを使い、UID1001所有1777のancestorをUnsafePathで拒否した。所有する/tmpを0700にして関連/全crate再検査が成功。release-stage testは明示RELEASE_STAGE_TEST_NODEを要求しており、元契約どおり新規Node22 SDKの絶対パスを渡して再実行。初回の失敗を保存。bin-onlyの2crateへ追加した--docはno library targetsで実行不能であり、合格やskipにしない。元workflowの受入とは区別する。
+- Linux repo1386702183: 固定親版の別source/treeと別targetへ回帰testファイルだけを適用済み。旧版RED→fixedのpublication_schedules全件を実行中。original fixed sourceは変更しない。
+- Linux依存cache: upstream sccache0.18.0の正式名sccacheを使用。閉じた先行containerのcacheだけをtar pipeで次の専用containerへ引き渡し、製品source/profile/authfilesは混ぜない。PCのWindows compiler cacheはLinux compilerに転送しない。後続sourceで命中率を実測する。
+- Windows: 新規の有限サービスCC-CI2710-Finiteを専用virtual accountで作成。既存runner27/28・runtime・accountは触っていない。original pc-ci sourceのtoken制限/Win32 Job回収を独立copyし、再起動監視ループを外した。normal/cancel両fixtureで実子PIDの稼働、サービス終了とJob回収を確認。新アカウントのprofile登録/hiveは作成前なし。本人profile読み取りや認証値転送は行わない。
+- Windows製品テスト前のGit initはexit1で停止し、製品テスト0。raw stderrは私的ログだけへ保存。専用accountから同じ場所での実mkdirとWin32 canonicalizeは成功。sourceを専用account所有へ直してもGit失敗が残るため、profile/canonicalizeが原因とは断定しない。System Tempへのsafe-delete createは非0で失敗し、新rootは作れていない。同じ作成の再試行や設定変更で回避しない。この失敗は自動承認レビューの拒否とは報告しない。
+- WindowsSDKのread-only共有とcompiler cacheだけに、今回新設したSIDの一時ACLを追加。所有記録はowned root/windows/.ci-work/service-ownership.private.json。完了後は自分のサービス停止/削除と、新SIDの追加ACEだけの回収を行う。元SDK/runtime設定を戻す一括上書きはしない。
+- 追加Go sourceは実検査を行うための有限の補助であり、独立PR/merge/配布はしない。全件成功のstatusを書かない。元2640/2641/2642をdoneにしない。

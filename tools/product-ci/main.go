@@ -39,9 +39,9 @@ type candidate struct {
 
 var candidates = []candidate{
 	{1285649124, 1002, "b93e126b172adbb29ad2081af4732f4b42f8bc95"},
-	{1392152644, 148, "74f023c0ee4b460f05f87dc3db5ceaf75e999a8a"},
-	{1154066087, 3613, "c53dc14f1b49f3d7d16a604f29b120de3ce8163d"},
-	{1386702183, 175, "a39a2b1833b3c24125a7b48d5a036376d94c662a"},
+	{1392152644, 148, "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
+	{1154066087, 3613, "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
+	{1386702183, 175, "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
 }
 
 type repository struct {
@@ -107,7 +107,7 @@ func boundedOutput(c *exec.Cmd, limit int) ([]byte, error) {
 
 // Command errors deliberately omit argv and stderr: both can identify a client.
 func get(ctx context.Context, endpoint string, value any) error {
-	b, e := boundedOutput(cmd(ctx, gh, "api", endpoint), 16<<20)
+	b, e := readGitHub(ctx, endpoint)
 	if e != nil {
 		return errors.New("GitHub read failed")
 	}
@@ -664,7 +664,7 @@ func main() {
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: stage, At: time.Now().UTC()})
 		}
-	} else if (len(os.Args) == 5 && (os.Args[1] == "codeql-bootstrap" || os.Args[1] == "codeql-revalidate")) || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore" || os.Args[1] == "codeql-recover" || os.Args[1] == "codeql-finalize")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") || (len(os.Args) == 7 && os.Args[1] == "secret-job") {
+	} else if (len(os.Args) == 5 && (os.Args[1] == "codeql-bootstrap" || os.Args[1] == "codeql-revalidate")) || (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore" || os.Args[1] == "codeql-recover" || os.Args[1] == "codeql-finalize")) || (len(os.Args) == 6 && (os.Args[1] == "codeql-job" || os.Args[1] == "advanced-job")) || (len(os.Args) == 7 && os.Args[1] == "secret-job") {
 		id, parse := strconv.ParseInt(os.Args[2], 10, 64)
 		var chosen *candidate
 		for i := range candidates {
@@ -693,6 +693,8 @@ func main() {
 			} else {
 				if os.Args[1] == "secret-job" {
 					e = executeProductJob(ctx, *chosen, runID, os.Args[4], os.Args[5], "secret", os.Args[6])
+				} else if os.Args[1] == "advanced-job" {
+					e = executeProductJob(ctx, *chosen, runID, os.Args[4], os.Args[5], "advanced", "")
 				} else {
 					e = executeCodeQL(ctx, *chosen, runID, os.Args[4], os.Args[5])
 				}
@@ -722,7 +724,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

@@ -275,6 +275,9 @@ func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guest
 	if kind == "secret" {
 		rec.Stage = "secret-workflow-planned"
 	}
+	if kind == "advanced" {
+		rec.Stage = "advanced-workflow-planned"
+	}
 	rec.SourceTree = p.Tree
 	reservation, e := os.OpenFile(filepath.Join(dir, fmt.Sprintf("repo-%d-result.private.json", c.ID)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
@@ -381,6 +384,12 @@ func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guest
 		copyScanner.Stdin = bytes.NewReader(scanner)
 		if e = copyScanner.Run(); e != nil {
 			return errors.New("official scanner binary transfer failed")
+		}
+	}
+	if kind == "advanced" {
+		rec.ArchiveSHA, e = materializeFixedSource(ctx, c, p, rec.ContainerID)
+		if e != nil {
+			return e
 		}
 	}
 	p2, e := productPlan(ctx, c, runID, kind, get)
@@ -565,6 +574,8 @@ func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
 	want := p.SHA
 	if p.Kind == "secret" && validGuestPlan(p) {
 		want = p.ContextSHA
+	} else if p.Kind == "advanced" && validGuestPlan(p) {
+		want = p.SHA
 	} else if p.Kind != "" || p.ContextSHA != "" {
 		return errors.New("unknown job context kind")
 	}

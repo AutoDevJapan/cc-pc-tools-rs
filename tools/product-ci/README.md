@@ -163,6 +163,28 @@ read-only repository permissions, redaction, failure exit code and timeouts.
 An official completed/success job and original logs must be checked after the
 ephemeral runner ends; its exit alone never produces a success status.
 
+## Existing advanced CodeQL workflows
+
+`advanced-job <repo-id> <run-id> <new-owned-dir> <Linux-helper>` supports only
+the two original advanced-setup candidates. Default setup must stay disabled.
+The existing full `workflow_dispatch` must use that same PR branch and fixed
+head, repo and reviewed workflow digest. Original languages, none-build modes,
+queries/custom config, changes policy and final gates are preserved. Only the
+two runner-label scalar values change in the product workflow. A superseded
+automatic policy run is cancelled only when its same fixed head is explicitly
+replaced by the original full dispatch; skipped analyses are never counted.
+
+Before registration, the fresh guest receives the fixed GitHub source through
+stdin. Every actual file is hashed with Git's filters disabled, compared with
+the original API blob IDs, and indexed with the original modes and gitlinks.
+Referenced submodule repositories are not fetched. The real commit bytes must
+hash to the fixed SHA before installing the shallow detached HEAD. This also
+gives policy/aggregation jobs without checkout steps physical source evidence.
+An ordinary `git add` is insufficient: it can omit tracked ignored files or
+apply attributes. Any archive/blob/tree/commit mismatch stops before a token
+or official listener is created. Actions may perform their original checkout;
+the completed hook still requires the actual fixed HEAD/tree and no auth.
+
 This mode performs CodeQL's no-build analysis only; Rust and the resident Cargo
 adapter are excluded from its PATH. Native Cargo, Windows, Lua and other
 acceptance still need their separate gated resources. Normal return and deadline

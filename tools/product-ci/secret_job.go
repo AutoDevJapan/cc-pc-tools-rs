@@ -17,6 +17,9 @@ func productPlan(ctx context.Context, c candidate, runID int64, kind string, rea
 	if kind == "" {
 		return planCodeQL(ctx, c, runID, read)
 	}
+	if kind == "advanced" {
+		return planAdvancedJob(ctx, c, runID, read)
+	}
 	if kind != "secret" || c.ID != 1285649124 {
 		return codeQLPlan{}, errors.New("unsupported product workflow")
 	}
@@ -90,6 +93,9 @@ func validGuestPlan(p codeQLPlan) bool {
 	}
 	if p.Kind == "" {
 		return p.ContextSHA == "" && p.Label == codeQLLabel(p.RepoID)
+	}
+	if p.Kind == "advanced" {
+		return (p.RepoID == 1154066087 || p.RepoID == 1386702183) && p.ContextSHA == "" && p.Label == codeQLLabel(p.RepoID)
 	}
 	return p.Kind == "secret" && p.RepoID == 1285649124 && p.Label == secretLabel(p.RepoID) && len(p.ContextSHA) == 40 && strings.Trim(p.ContextSHA, "0123456789abcdef") == ""
 }

@@ -1,6 +1,6 @@
 //! Offline transaction checks: never accesses the real original product or launches a model.
 use cc_job_policy::product_retry as p;
-use cc_todo::product_retry::{bind, continue_queued, stage};
+use cc_todo::product_retry::{bind, continue_queued, stage,attempt_plan,stage_attempt};
 use serde_json::{Value, json};
 const T: u64 = 1792108800;
 fn fixture() -> (Value, Value, Value, String) {
@@ -87,6 +87,28 @@ fn reservation_keeps_wait_and_latest_session_until_exact_queue_binding() {
     assert_eq!(bind(&mut db, &job, &key, T).unwrap()["reused"], true);
     assert_eq!(db, bound);
 }
+#[test]
+fn terminal_unbound_attempt_can_be_replaced_without_changing_the_wait(){
+    let(mut db,mut proof,source,base)=fixture();reserve(&mut db,&proof,&source,&base).unwrap();
+    let original_wait=db["items"][0]["wait_ready"].clone();
+    db["items"][0]["stopped"]=json!(true);let stopped=queued_unchecked(&db,&base);assert_eq!(p::admission_reason(&db,&stopped,T).unwrap()["terminal"],true);
+    db["items"][0]["stopped"]=json!(false);
+    for ordinal in 1..=2 {
+        proof["snapshot"]=cc_todo::product_resume::snapshot(&db,&db["items"][0]);
+        let plan=attempt_plan(&db["items"][0],&base,true).unwrap();assert_eq!(plan.attempt,ordinal);assert_ne!(plan.key,base);
+        let receipt=stage_attempt(&mut db,&proof,&source,&plan,"fixture-prompt.md",&p::digest(b"continue"),T).unwrap();
+        assert_eq!(receipt["key"],plan.key);assert_eq!(receipt["base_key"],base);assert_eq!(db["items"][0]["wait_ready"],original_wait);
+        let next=queued(&db,&plan.key);assert_eq!(next["original_product_retry"]["key"],plan.key);
+    }
+    let before=db.clone();assert!(attempt_plan(&db["items"][0],&base,true).is_err());assert_eq!(db,before);
+    assert_eq!(db["items"][0]["product_retry_history"].as_array().unwrap().len(),2);
+}
+fn queued_unchecked(db:&Value,key:&str)->Value {
+    let mut job=json!({"id":"old-accepted","todo_id":1626,"launch_key":key,"resume_session":"22222222-2222-4222-8222-222222222222","cwd":p::TREE,
+        "prompt_source":"fixture-prompt.md","requested_model":"gpt-6.1-sol","effort":"high","sandbox":"danger-full-access","mcp_profile":"browser","network":false,"add_dirs":[],"scope_source":"launcher"});
+    job["original_product_retry"]=p::marker(&db["items"][0]["product_retry_intent"]);job
+}
+
 #[test]
 fn normal_context_rotation_and_second_readiness_wait_keep_the_bound_job() {
     let (mut db, proof, source, key) = fixture();

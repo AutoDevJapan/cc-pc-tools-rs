@@ -1247,8 +1247,8 @@ impl Context {
             let store=self.todo_store();
             let mut db=self.read_json(&store)?;
             if cc_job_policy::product_retry::mark_continuation_running(&mut db,&job,self.rt.epoch() as u64).map_err(Error::new)? {
-                cc_job_policy::todo_store::check_size(serde_json::to_vec(&db)?.len()).map_err(|e|Error::new(e.to_string()))?;
-                self.write_json(&store,&db)?;
+                cc_job_policy::todo_store::write(&store, &db)
+                    .map_err(|e| Error::new(e.to_string()))?;
             }
         }
         job["queue_wait_reason"] = Value::Null;

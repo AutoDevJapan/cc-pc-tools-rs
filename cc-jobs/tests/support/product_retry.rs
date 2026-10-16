@@ -178,6 +178,109 @@ fn supervisor_waits_for_bind_then_launches_exactly_one_model() {
 }
 
 #[test]
+fn running_retry_preserves_other_todo_values_and_canonical_snapshot_bytes() {
+    let (t, mut db, key) = fixture();
+    let other: Value = serde_json::from_str(
+        r#"{"id":41,"status":"todo","note":"token: fixture-value","licenseKey":"fixture-value","Key":"first","key":"second","未知":{"z":"日本語🦀","a":true}}"#,
+    )
+    .unwrap();
+    db["items"].as_array_mut().unwrap().push(other.clone());
+    db["unknownRoot"] = json!({"note":"token: fixture-value","licenseKey":"fixture-value"});
+    save_db(&t, &db);
+    submit(&t, &key, &[], BODY).unwrap();
+    let job = bind(&t, &mut db, &key);
+    // Bind already marks the row doing. A completed dependency must cause
+    // admission to save the ToDo again, exercising the actual writer branch.
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_on"] = json!([42]);
+    db["items"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":42,"status":"done"}));
+    save_db(&t, &db);
+    let store = t.ctx.root.join("todo.json");
+    let before = fs::read(&store).unwrap();
+    let backup = store.with_file_name("todo.json.bak-20260930d");
+    assert!(!backup.exists());
+
+    let lease = t.ctx.admit(s(&job, "id")).unwrap();
+    assert!(lease.is_some());
+    drop(lease);
+    assert_eq!(t.ctx.load(s(&job, "id")).unwrap()["status"], "running");
+    let bytes = fs::read(&store).unwrap();
+    let after = cc_job_policy::todo_store::read(&store).unwrap();
+    assert_eq!(after["items"][0]["status"], "doing");
+    assert!(after["items"][0]["wait_on"].is_null());
+    assert_eq!(after["items"][1], other);
+    assert_eq!(after["unknownRoot"], db["unknownRoot"]);
+    let unchanged_row = r#"  {
+   "id": 41,
+   "status": "todo",
+   "note": "token: fixture-value",
+   "licenseKey": "fixture-value",
+   "Key": "first",
+   "key": "second",
+   "未知": {
+    "z": "日本語🦀",
+    "a": true
+   }
+  }"#;
+    assert!(
+        bytes
+            .windows(unchanged_row.len())
+            .any(|window| window == unchanged_row.as_bytes()),
+        "the unrelated row keeps its keys, order, Unicode and literal values"
+    );
+    assert!(
+        std::str::from_utf8(&bytes)
+            .unwrap()
+            .starts_with("{\n \"items\": [\n")
+    );
+    assert!(!bytes.contains(&b'\r'));
+    assert_eq!(fs::read(&backup).unwrap(), before);
+    assert!(
+        !store
+            .with_file_name(format!("todo.json.{}.tmp", std::process::id()))
+            .exists()
+    );
+    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn running_retry_save_failure_keeps_canonical_todo_and_does_not_publish_running() {
+    let (t, mut db, key) = fixture();
+    submit(&t, &key, &[], BODY).unwrap();
+    let job = bind(&t, &mut db, &key);
+    db["items"][0]["status"] = json!("wait");
+    db["items"][0]["wait_on"] = json!([42]);
+    db["items"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":42,"status":"done"}));
+    save_db(&t, &db);
+    let store = t.ctx.root.join("todo.json");
+    let original = fs::read(&store).unwrap();
+    let backup = store.with_file_name("todo.json.bak-20260930d");
+    let tmp = store.with_file_name(format!("todo.json.{}.tmp", std::process::id()));
+    fs::create_dir(&tmp).unwrap();
+    fs::write(tmp.join("pending"), b"pending fixture bytes").unwrap();
+
+    let error = t.ctx.admit(s(&job, "id")).err().expect("save must fail");
+    assert!(error.message.contains("todo_store_io:"), "{error:?}");
+    assert_eq!(fs::read(&store).unwrap(), original);
+    assert_eq!(fs::read(&backup).unwrap(), original);
+    assert_eq!(
+        fs::read(tmp.join("pending")).unwrap(),
+        b"pending fixture bytes"
+    );
+    let saved = t.ctx.load(s(&job, "id")).unwrap();
+    assert_eq!(saved["status"], "queued");
+    assert!(saved["started_at"].is_null());
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+}
+
+#[test]
 fn parser_rejects_other_todos_invalid_keys_and_relation_spoofing() {
     let (t, original, key) = fixture();
     for extra in [

@@ -320,51 +320,7 @@ pub fn load(path: &Path) -> Result<Value> {
     }
 }
 pub fn save(path: &Path, db: &Value) -> Result<()> {
-    // Check the exact serialization before touching backups, temp files or the original.
-    let pretty = serde_json::to_string_pretty(db).map_err(err)?;
-    let one_space = pretty
-        .lines()
-        .map(|line| {
-            let n = line.bytes().take_while(|b| *b == b' ').count();
-            format!("{}{}", " ".repeat(n / 2), &line[n..])
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-    cc_job_policy::todo_store::check_size(one_space.len()).map_err(err)?;
-    let backup = PathBuf::from(format!("{}.bak-20260930d", path.display()));
-    if path.exists() && !backup.exists() {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(backup)
-            .map_err(err)?;
-        file.write_all(&fs::read(path).map_err(err)?).map_err(err)?;
-    }
-    let tmp = path.with_file_name(format!(
-        "{}.{}.tmp",
-        path.file_name().unwrap().to_string_lossy(),
-        std::process::id()
-    ));
-    let mut file = File::create(&tmp).map_err(err)?;
-    // Preserve unknown fields, insertion order, Unicode and Python's one-space indent.
-    file.write_all(one_space.as_bytes()).map_err(err)?;
-    file.flush().map_err(err)?;
-    file.sync_all().map_err(err)?;
-    drop(file);
-    for attempt in 0..50 {
-        match platform::replace(&tmp, path) {
-            Ok(()) => return Ok(()),
-            Err(e)
-                if (e.kind() == std::io::ErrorKind::PermissionDenied
-                    || matches!(e.raw_os_error(), Some(5 | 32 | 33)))
-                    && attempt < 49 =>
-            {
-                std::thread::sleep(Duration::from_millis(20))
-            }
-            Err(e) => return Err(err(e)),
-        }
-    }
-    unreachable!()
+    cc_job_policy::todo_store::write(path, db).map_err(err)
 }
 
 fn subwork_relation(

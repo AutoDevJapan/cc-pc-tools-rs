@@ -1,6 +1,6 @@
 use crate::Result;
-use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
-use std::{fs::File, path::Path};
+use std::os::windows::io::AsRawHandle;
+use std::fs::File;
 use windows_sys::Win32::{
     Foundation::*,
     Networking::WinHttp::*,
@@ -27,15 +27,6 @@ pub fn unlock(file: &File) {
     let mut ov: OVERLAPPED = unsafe { std::mem::zeroed() };
     unsafe {
         UnlockFileEx(file.as_raw_handle(), 0, 1, 0, &mut ov);
-    }
-}
-pub fn replace(from: &Path, to: &Path) -> std::io::Result<()> {
-    let from: Vec<u16> = from.as_os_str().encode_wide().chain(Some(0)).collect();
-    let to: Vec<u16> = to.as_os_str().encode_wide().chain(Some(0)).collect();
-    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_REPLACE_EXISTING) } == 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        Ok(())
     }
 }
 pub fn token() -> Result<String> {

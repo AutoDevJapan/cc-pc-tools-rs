@@ -51,6 +51,11 @@ pub fn key(wait: &Value) -> Option<String> {
             .to_owned(),
     )
 }
+pub fn attempt_key(base:&str,attempt:u64)->Option<String>{
+    if attempt>2 || base.len()!=32 || !base.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)){return None;}
+    Some(if attempt==0 {base.to_owned()}else{digest(format!("product-retry-attempt\0{base}\0{attempt}").as_bytes())[..32].to_owned()})
+}
+pub fn base_key(intent:&Value)->&Value{intent.get("base_key").unwrap_or(&intent["key"])}
 pub fn snapshot(row: &Value) -> Value {
     json!({"id":row["id"],"project":row["project"],"spec":row["spec"],"status":row["status"],
         "dispatchable":row["dispatchable"],"wait_ready":row["wait_ready"],"wait_on":row["wait_on"],"needs":row["needs"],"model":row["model"],"effort":row["effort"],
@@ -171,7 +176,8 @@ pub fn registration(
     let intent = &row["product_retry_intent"];
     if !valid_proof(&intent["proof"], at)
         || intent["key"] != requested_key
-        || key(&row["wait_ready"]).as_deref() != Some(requested_key)
+        || key(&row["wait_ready"]).as_deref() != base_key(intent).as_str()
+        || attempt_key(base_key(intent).as_str().unwrap_or(""),intent["attempt"].as_u64().unwrap_or(0)).as_deref()!=Some(requested_key)
         || intent["snapshot"] != snapshot(row)
         || intent["prompt_sha256"] != prompt_digest
         || !intent["bound_job"].is_null()

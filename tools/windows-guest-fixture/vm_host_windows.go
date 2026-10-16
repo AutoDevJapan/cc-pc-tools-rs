@@ -462,7 +462,9 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 	var ready vmReady
 	var conn *os.File
 	var serial *serialConn
-	for time.Now().Before(deadline) {
+	var secure *tls.Conn
+	var handshakeErr error
+	for attempt := 0; attempt < 8 && time.Now().Before(deadline); attempt++ {
 		pipe, openErr := openOwnedPipe(vm.Pipe, time.Until(deadline))
 		if openErr != nil {
 			return fixtureResult{}, fixtureResult{}, errors.New("guest service readiness was not observed")
@@ -482,17 +484,28 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 			_ = conn.Close()
 			return fixtureResult{}, fixtureResult{}, errors.New("guest serial identity rejected")
 		}
-		serial = candidate
+		secureCandidate := tlsClientConn(candidate, client, ready.ServerSHA256)
+		if err := tlsHandshakeWithTimeout(secureCandidate, min(30*time.Second, time.Until(deadline))); err != nil {
+			_ = conn.Close()
+			if !isGuestPipeDisconnect(err) {
+				return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest mutual TLS handshake failed: %w", err)
+			}
+			handshakeErr = err
+			if time.Until(deadline) > 0 {
+				time.Sleep(200 * time.Millisecond)
+			}
+			continue
+		}
+		serial, secure = candidate, secureCandidate
 		break
 	}
-	if serial == nil {
+	if serial == nil || secure == nil {
+		if handshakeErr != nil {
+			return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest pipe disconnected during all TLS handshake attempts: %w", handshakeErr)
+		}
 		return fixtureResult{}, fixtureResult{}, errors.New("guest service readiness was not observed")
 	}
 	defer conn.Close()
-	secure := tlsClientConn(serial, client, ready.ServerSHA256)
-	if err := tlsHandshakeWithTimeout(secure, 30*time.Second); err != nil {
-		return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest mutual TLS handshake failed: %w", err)
-	}
 	defer secure.Close()
 	encoder, decoder := json.NewEncoder(secure), json.NewDecoder(secure)
 	if err := encoder.Encode(vmRequest{Kind: "normal", Instance: vm.Instance}); err != nil {
@@ -530,6 +543,10 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 		return fixtureResult{}, fixtureResult{}, errors.New("guest service shutdown receipt missing")
 	}
 	return *normalReply.Result, *cancelReply.Result, nil
+}
+
+func isGuestPipeDisconnect(err error) bool {
+	return errors.Is(err, syscall.ERROR_BROKEN_PIPE) || errors.Is(err, syscall.Errno(232)) || errors.Is(err, syscall.Errno(233))
 }
 
 func validateFixtureResult(result fixtureResult, kind string) error {

@@ -1108,14 +1108,22 @@ try {
   $osAccessPath=$osRoot
   $osVolume=$osPartition|Get-Volume -ErrorAction Stop
   if($osVolume.FileSystemLabel -cne 'CC2746OS' -or $osVolume.FileSystem -cne 'NTFS'){throw 'OWNED_OS_VOLUME_REJECTED'}
-  $applyDir=$osRoot
-  if(-not (Test-Path -LiteralPath $applyDir)){throw 'OWNED_DISM_APPLY_DIRECTORY_MISSING'}
+  $applyDir=Join-Path $osRoot ('cc2746-image-stage-'+$instance)
+  if(Test-Path -LiteralPath $applyDir){throw 'OWNED_DISM_APPLY_STAGE_ALREADY_EXISTS'}
+  New-Item -ItemType Directory -Path $applyDir|Out-Null
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
   $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
   if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
   Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -NoRpFix -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
+  $stagedWindows=Join-Path $applyDir 'Windows'
+  if(-not (Test-Path -LiteralPath (Join-Path $stagedWindows 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
+  $imageEntries=@(Get-ChildItem -LiteralPath $applyDir -Force)
+  if($imageEntries.Count -eq 0){throw 'OWNED_APPLIED_WINDOWS_IMAGE_EMPTY'}
+  foreach($entry in $imageEntries){if(Test-Path -LiteralPath (Join-Path $osRoot $entry.Name)){throw 'OWNED_OS_ROOT_COLLISION'}}
+  foreach($entry in $imageEntries){Move-Item -LiteralPath $entry.FullName -Destination $osRoot}
+  [IO.Directory]::Delete($applyDir)
   $windowsRoot=Join-Path $osRoot 'Windows'
-  if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
+  if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_MOVED_WINDOWS_HIVE_MISSING'}
   $panther=Join-Path $windowsRoot 'Panther'
   if(-not (Test-Path -LiteralPath $panther)){New-Item -ItemType Directory -Path $panther|Out-Null}
   Copy-Item -LiteralPath (Join-Path $seedRoot 'Autounattend.xml') -Destination (Join-Path $panther 'Unattend.xml')

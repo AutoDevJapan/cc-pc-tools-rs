@@ -104,13 +104,14 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   normal OOBE intact. A bounded read-only AdminBroker probe later confirmed
   `Test-Path` succeeds for the target, a 4-byte write/remove probe succeeded
   there, and DISM `/Get-WimInfo` read the source WIM successfully; both VHD and
-  ISO were detached afterward. Apply still fails with `0x80070003` using
-  `H:\.` and an owned scratch folder. Microsoft's Dism module
-  `Expand-WindowsImage` also failed with `DirectoryNotFoundException` and the
-  same HRESULT. The exact cause is still unproven. The helper now adds the
-  documented `NoRpFix` option to avoid reparse-point path correction while
-  applying this image; this is an evidence-based candidate, not yet tested.
-  Go checks passed before this source change.
+  ISO were detached afterward. Native DISM and Microsoft's Dism module
+  `Expand-WindowsImage` both failed with `DirectoryNotFoundException` and
+  `0x80070003`, even though the source WIM and target root exist and the target
+  accepts a small write. The helper now applies the WIM to a unique staging
+  directory on the guest OS partition, then moves the completed image entries
+  into the OS root on the same volume before installing the Panther answer file
+  and boot files. This staging approach is untried. Go checks passed before
+  this source change.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its

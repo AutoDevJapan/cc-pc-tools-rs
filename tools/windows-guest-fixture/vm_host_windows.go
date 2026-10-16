@@ -181,22 +181,6 @@ func retryOnVerifiedOwnedVHD(root, isoPath string, oldVM vmReceipt, cleanup clea
 	if err := validatePartialVMReceipt(oldVM, root, isoPath); err != nil || cleanup.VMID != oldVM.ID {
 		return errors.New("prior attempt receipts do not authorize reuse of the owned VHDX")
 	}
-	client, err := newVMIdentity()
-	if err != nil {
-		return err
-	}
-	defer clearIdentity(&client)
-	var entropy [32]byte
-	if _, err := rand.Read(entropy[:]); err != nil {
-		return err
-	}
-	instanceHash := sha256.Sum256(entropy[:])
-	instance := hex.EncodeToString(instanceHash[:16])
-	clear(entropy[:])
-	seedISO, err := createGuestSeed(root, instance, client, instance)
-	if err != nil {
-		return err
-	}
 	for suffix, value := range map[string]any{"vm": oldVM, "cleanup": cleanup} {
 		if err := writeJSONExclusive(filepath.Join(root, "attempt-"+oldVM.Instance+"-"+suffix+".private.json"), value); err != nil {
 			return errors.New("prior VM attempt record could not be preserved")
@@ -215,6 +199,22 @@ func retryOnVerifiedOwnedVHD(root, isoPath string, oldVM vmReceipt, cleanup clea
 		if err := writeExclusiveFile(filepath.Join(root, "attempt-"+oldVM.Instance+"-failure.private.json"), data); err != nil {
 			return errors.New("prior fixture failure record could not be preserved")
 		}
+	}
+	client, err := newVMIdentity()
+	if err != nil {
+		return err
+	}
+	defer clearIdentity(&client)
+	var entropy [32]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return err
+	}
+	instanceHash := sha256.Sum256(entropy[:])
+	instance := hex.EncodeToString(instanceHash[:16])
+	clear(entropy[:])
+	seedISO, err := createGuestSeed(root, instance, client, instance)
+	if err != nil {
+		return err
 	}
 	script := filepath.Join(root, "vm-recreate.ps1")
 	if err := os.WriteFile(script, []byte(createVMPS(root, isoPath, seedISO, instance, true, oldVM.ID)), 0600); err != nil {
@@ -586,21 +586,24 @@ func writeJSONExclusive(path string, value any) error {
 		return err
 	}
 	data = append(data, '\n')
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	if _, err = f.Write(data); err != nil {
-		_ = f.Close()
-		return err
-	}
-	return f.Close()
+	return writeExclusiveFile(path, data)
 }
 
 func writeExclusiveFile(path string, data []byte) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
-		return err
+		if !errors.Is(err, os.ErrExist) {
+			return err
+		}
+		info, statErr := os.Lstat(path)
+		if statErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			return errors.New("existing attempt record is not a regular file")
+		}
+		existing, readErr := os.ReadFile(path)
+		if readErr != nil || !bytes.Equal(existing, data) {
+			return errors.New("existing attempt record differs from the prior receipt")
+		}
+		return nil
 	}
 	if _, err := f.Write(data); err != nil {
 		_ = f.Close()

@@ -102,9 +102,13 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   EFI, one MSR, and OS partitions in boot order. The answer file remains in
   Panther and on the seed DVD; first boot should run `specialize` and leave
   normal OOBE intact. `gofmt`, `go test ./...`, `go vet ./...`, and
-  `git diff --check` passed on the current source. The latest drive-letter and
-  partial-layout change is uncommitted; the next real guest fixture run is
-  outstanding.
+  `git diff --check` passed before the latest archive-idempotence adjustment.
+- The next helper invocation stopped before CC-AdminBroker because the prior
+  attempt receipts had already been archived by the preceding run. It made no
+  VM/VHD mutation. The retry now accepts an existing archive only when its
+  regular-file bytes exactly match the receipt being preserved; mismatches and
+  links still stop. This idempotence change is uncommitted; the next real guest
+  fixture run remains outstanding.
 
 ## Remaining
 

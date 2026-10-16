@@ -155,3 +155,37 @@ func TestMergedGuestRequiresEveryFixedField(t *testing.T) {
 		}
 	}
 }
+
+func TestMergedReadFailureIdentifiesStageAndStopsWithoutFallback(t *testing.T) {
+	for _, tc := range []struct{ endpoint, stage string }{
+		{"repositories/1285649124", "repository metadata"},
+		{mergedFixtureRepo + "pulls/1002", "PR receipt"},
+		{mergedFixtureRepo + "git/ref/heads/main", "current main ref"},
+		{mergedFixtureRepo + "git/ref/heads/original", "original PR branch ref"},
+		{mergedFixtureRepo + "git/commits/" + mergedSHA, "fixed commit"},
+	} {
+		t.Run(tc.stage, func(t *testing.T) {
+			fixture := mergedFixture(nil)
+			failed, afterFailure := false, 0
+			read := func(ctx context.Context, endpoint string, out any) error {
+				if failed {
+					afterFailure++
+				}
+				if endpoint == tc.endpoint {
+					failed = true
+					return &gitHubReadError{class: "not-found"}
+				}
+				return fixture(ctx, endpoint, out)
+			}
+			_, err := planMergedCodeQL(context.Background(), mergedCandidate(), mergedCodeQLRun, read)
+			want := "merged source " + tc.stage + ": GitHub read failed (not-found)"
+			if !failed || err == nil || err.Error() != want || afterFailure != 0 {
+				t.Fatal("failure was misattributed, leaked data, or continued after rejection")
+			}
+		})
+	}
+	unsafe := mergedReadFailure("original PR branch ref", errors.New("opaque-sensitive-response"))
+	if unsafe.Error() != "merged source original PR branch ref: GitHub read failed (unclassified)" {
+		t.Fatal("injected transport error leaked")
+	}
+}

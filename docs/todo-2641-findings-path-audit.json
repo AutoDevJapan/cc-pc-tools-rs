@@ -1,0 +1,53 @@
+{
+  "source_sha": "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07",
+  "total": 37,
+  "groups": [
+    {
+      "rule": "actions/cache-poisoning/direct-cache",
+      "path_type": "workflow",
+      "count": 2
+    },
+    {
+      "rule": "actions/cache-poisoning/poisonable-step",
+      "path_type": "workflow",
+      "count": 25
+    },
+    {
+      "rule": "js/incomplete-multi-character-sanitization",
+      "path_type": "other_source",
+      "count": 1
+    },
+    {
+      "rule": "js/incomplete-sanitization",
+      "path_type": "other_source",
+      "count": 1
+    },
+    {
+      "rule": "js/incomplete-url-substring-sanitization",
+      "path_type": "other_source",
+      "count": 1
+    },
+    {
+      "rule": "js/redos",
+      "path_type": "other_source",
+      "count": 1
+    },
+    {
+      "rule": "js/redos",
+      "path_type": "test_or_fixture_path",
+      "count": 1
+    },
+    {
+      "rule": "js/shell-command-injection-from-environment",
+      "path_type": "test_or_fixture_path",
+      "count": 1
+    },
+    {
+      "rule": "rust/hard-coded-cryptographic-value",
+      "path_type": "other_source",
+      "count": 4
+    }
+  ],
+  "all_findings_still_untriaged": true,
+  "limitation": "Artifact path classification only. This does not prove non-exploitability, production exclusion, or an input bound. No SARIF locations, values, or code were exported."
+}

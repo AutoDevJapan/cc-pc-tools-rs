@@ -1,0 +1,13 @@
+{
+  "repository_id": 1154066087,
+  "pull_request": 3613,
+  "original_branch": "codex/todo2641-http-response-pseudo-20261015",
+  "original_head": "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07",
+  "candidate_branch": "codex/todo2641-codeql-route-fix-20261017",
+  "candidate_head": "012150cb853c1366b79783b25f5d825aef0c9824",
+  "candidate_tree": "99c3a9a454088e4ddb01a02595cfddc3d435192f",
+  "restored_workflow_blob": "d1d593aad61699a96e6d2a131d8c1faea584782d",
+  "spec_blob": "3c7d23664cdba439020df4029fa2a6cda609bac0",
+  "original_pr_head_unchanged": true,
+  "merge_performed": false
+}

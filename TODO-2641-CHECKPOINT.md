@@ -1,5 +1,63 @@
 # GoDD MCP αの再開記録（ToDo2641、2026-10-17）
 
+## 03時台の再開とMust修正候補
+
+最新jobは `20261017-032928-todo-2641`。同branchのHEAD `5219626`、cleanから再開した。
+司令塔から原2738の実Sonnet応答を受領した。Must1は、評価用の一時runner labelをmainへ残すと
+push/PR/週次解析がrunner不在で止まること。原応答を
+[docs/todo-2641-review-2738-original.md](docs/todo-2641-review-2738-original.md) へ保存した。
+SHA256は `CCA14CC6926E33D703FF9ADB54D5E7590D8201CB2E8FBAED95CCD2AE4740B5A3`。
+原2738のdoneを製品Must0と扱わない。37件は同レビューにSARIF未供給のため全件未評価だった。
+
+原GitHubの実owner/id/private/admin/nonfork/PR/head+base/refを再照合し、次の実修正を保存した。
+
+- 修正commit: `012150cb853c1366b79783b25f5d825aef0c9824`
+- tree: `99c3a9a454088e4ddb01a02595cfddc3d435192f`
+- 同repoの保存branch: `codex/todo2641-codeql-route-fix-20261017`
+- 元b194からの追加差分は2file。CodeQLのruns-on2行を元のubuntu-latestへ戻し、Specの異常系42とT17へrequest/response用pseudo-headerを逆にした拒否を追記した。
+- workflowのblobは元mainと完全同一の `d1d593aad61699a96e6d2a131d8c1faea584782d`。
+- 元mainから修正候補までの全差分はnativeとSpecの2fileだけ。`.github`差分0。
+- nativeのblobは元b194と修正候補で一致。Rust/JS/runtimeへ追加変更なし。
+
+原2737は新設guest準備の続行中で、固定b194の原製品CIは未実行のまま。
+2753/2754/2746の実応答を待っている。旧固定の受付を壊さず検査を続けるため、
+原PR3613のbranchはb194のまま保持し、候補を別の通常branchへ先に保存した。
+これは新しいPRやPrd配備ではない。元PRへの適用と同最終headの検査は未完了である。
+元2737の完了を修正開始の前提にせず、上記commitと追加差分レビューを先に進めた。
+
+追加差分だけの有限Sonnetレビューを **2761** に登録した。
+base/headと全2patchをspec本文へ供給し、既済HTTP修正や37件の再監査を求めていない。
+read-only担当には最終返信だけを求め、保存・commit・ToDo操作を完了条件にしない。
+[docs/todo-2641-must-review-spec.md](docs/todo-2641-must-review-spec.md) と
+[docs/todo-2641-must-fix.json](docs/todo-2641-must-fix.json) を参照する。
+
+レビュー指摘の対応: M1は候補で修正し適用・再確認待ち。S1はdispatchの成功をPR経路へ広げない。
+S2は上記Spec2行に反映。N1は一時label自体を除去したため追加の由来コメントは不要。
+N2の既存拒否code差とN3の既存UntilClose記述は今回の実行挙動を変えず、未修正として保持する。
+
+CodeQL37件は保存SARIFのrule/件数とpath種別だけをプログラム内で照合した。
+Actions27件はworkflow、JS2件はtest/fixtureを含むpath、JS4件とRust4件はその他のsource。
+path名・位置・本文・値は出力していない。この区分だけで安全性やproduction除外を証明せず、
+37件とも未評価のまま保持する。記録は [docs/todo-2641-findings-path-audit.json](docs/todo-2641-findings-path-audit.json)。
+
+この未評価部分だけの有限checkを **2762** に `--needs cargo` で登録した。
+原2738/2761の差分レビューや原2737の全件検査を重ねず、必要な固定SARIFと原GitHubの
+RAM対応付け・信頼境界・実行可能性だけを確認する。specは
+[docs/todo-2641-findings-check-spec.md](docs/todo-2641-findings-check-spec.md)。
+登録を実確認済みや37件の評価完了とは扱わない。
+
+原2738のMust1受領と修正候補、S/Nの対応をGitHub review **5552171006** にCOMMENTEDとして
+元b194を指定して保存した。PR本文にも候補branchと未適用・未検査を追記し、GETの本文全一致と
+元b194/draftを確認した。同じreviewや同じ本文を重複投稿しない。
+元2737のnoteへも候補SHA・原PR/ref不変・旧結果保持・親待ちを作らないことを配送した。
+
+再開時はまず2761の実応答を受領し、2737の固定b194結果と変更箇所を照合する。
+2762の実害分類も受領し、必要な修正と追加差分の確認を続ける。
+元PRへの適用は元branchのexpected旧SHAを再照合した通常更新だけとし、forceしない。
+新headの正規CI/CodeQL・必要関連検査・Must0が揃うまでmerge/Prd成功としない。
+この区切りで待つ場合は元2641に `wait --on 2737 --on 2761 --on 2762` を保存する。
+この節より下の旧記録は、その時点の状態として保持する。
+
 ## 結論
 
 PR3613のHTTP修正は保存済み。通常CIの未開始失敗と、CodeQL37件の評価が残る。

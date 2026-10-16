@@ -1,5 +1,44 @@
 # ToDo2737: GoDD MCP αの通常CI
 
+## 2026-10-17 01:21再開後の保存点（こちらを優先）
+
+job20261017-012131-todo-2737。前回のec55875から再開し、2740の実応答を確認した。
+review-2740-received-original.mdは別モデルClaude Sonnet 5.5のMust0、Suggestion4件。
+このreviewは旧69627cbのread-onlyな経路案だけで、後述のguest補助は含まない。
+原PR3613は実APIで旧固定b194のまま、同owner/private/admin/nonfork/同repoを再照合した。
+原製品source・原workflow・原PR/branch・公式CI/登録・予算・共用runnerは変更していない。
+
+Windowsの専用guest準備は重複しない既存ToDo2746へ有限specを保存した。
+job20261017-013926-todo-2746の起動まで確認した。製品検査/公式登録はその依頼に含めない。
+こちらはtools/ci-guest-2737に、独立Linux guest用のGo補助を書いている。
+現時点ではproduct executor、Cargo、公式runner/CI、source転送は未実装。
+
+新しい所有rootはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-9389b3ad45abf8cb9bafdfe93159097c。
+safe-delete ID9389b3ad45abf8cb9bafdfe93159097c。このrootは継続用で消さない。
+公開Ubuntu release-20260926のAzure VHD tarball847957663 bytesを正式配布URLから取得し、
+SHA256 3543723afd820d7a8a64ea7399376856a95ce15200439c38447170652a60a5f3を照合。
+これは公開SDKであって製品sourceではない。host上のVHDも公開SDKだけ。
+初回展開はtar type S（GNU sparse）を拒否してexit1、VHDは未作成だった。
+Go Readerのsparse対応を認めて修正後に展開がexit0。32213303808 bytesとfooter conectixを確認。
+ダウンロード・展開を繰り返さず、linux-image-extracted.private.jsonを使う。
+
+SDK工具containerはtools-created/ready.private.jsonにID/name/所有を保持。
+cc.todo=2737で新設した自分の1個だけで、genisoimage導入済み。既存imageは未変更。
+GoのWindows unit/vet/build、Linux buildが成功した。
+最初のLinux test転送はDocker cpが稼働中tmpfsに届かずchmodで失敗。
+exec stdinへ直した次の実行も/workがnoexecで失敗。mountの実optionsで確認した。
+データ用tmpfsのnoexecを保ち、工具containerの/usr/local/binへ実行ファイルを配置して修正。
+修正後の実Linux単体検査は全て成功し、正常/取消しの実子PID・group消滅を確認した。
+元log linux-unit-v3.private.logのSHA256はE4329D6602AB11F7D2B164C74F830076B37BA409DBC9235075D8ADC5E2505CFB。
+これは工具containerのfixtureで、Hyper-V guestや原CI成功ではない。
+
+次はci2737-host-v4.exe smoke <owned-root> <owned-root>/ci2737-guest-v2を1回実行する。
+VM作成/起動/guest TLS/正常取消し/停止/除去を個別に確かめる。VMはまだ作っていない。
+工具containerは種ISO作成に必要なため継続中。終了後cleanup-toolsで停止/PID0/除去を確認する。
+guest補助の別モデルreviewと、Cargo受付・原source/head/tree・checkout認証除去・公式jobは残る。
+2746だけの完了待ちにする段階では正式wait --on 2746を使い、親2641の完了は待たない。
+終了/待機前にこのjobと実HEADのscheduler checkpointを保存する。
+
 ## 現在の結果
 
 通常CIは未実行であり、成功ではない。元PR3613はopenで、保存された固定headのまま。

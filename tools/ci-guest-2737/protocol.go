@@ -1,0 +1,109 @@
+// This helper prepares a disposable guest. It is not an official CI executor.
+package main
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"math/big"
+	"net"
+	"time"
+)
+
+const guestPort = 27373
+
+type publicConfig struct {
+	Instance          string `json:"instance"`
+	ClientCertificate string `json:"client_certificate_sha256"`
+}
+type ready struct {
+	Instance    string `json:"instance"`
+	IP          string `json:"ip"`
+	Port        int    `json:"port"`
+	Certificate string `json:"server_certificate_sha256"`
+}
+type request struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+}
+type fixtureResult struct {
+	ID        string `json:"id"`
+	Parent    int    `json:"parent_pid"`
+	Child     int    `json:"child_pid"`
+	Group     int    `json:"process_group"`
+	Observed  bool   `json:"child_observed"`
+	Cancelled bool   `json:"cancelled"`
+	Done      bool   `json:"done"`
+	Gone      bool   `json:"group_gone"`
+	Failure   string `json:"failure,omitempty"`
+}
+type identity struct {
+	Certificate tls.Certificate
+	Digest      string
+}
+
+func hash(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func newIdentity() (identity, error) {
+	pub, key, e := ed25519.GenerateKey(rand.Reader)
+	if e != nil {
+		return identity{}, e
+	}
+	serial, e := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 120))
+	if e != nil {
+		return identity{}, e
+	}
+	cert := x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "ci2737-ephemeral"}, NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(2 * time.Hour), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}}
+	der, e := x509.CreateCertificate(rand.Reader, &cert, &cert, pub, key)
+	if e != nil {
+		return identity{}, e
+	}
+	return identity{tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, hash(der)}, nil
+}
+func validHash(s string) bool { return len(s) == 64 && lenFromHex(s) == 32 }
+func lenFromHex(s string) int {
+	b, e := hex.DecodeString(s)
+	if e != nil {
+		return -1
+	}
+	return len(b)
+}
+func validInstance(s string) bool { return len(s) == 32 && lenFromHex(s) == 16 }
+func verifyPeer(expected string) func(tls.ConnectionState) error {
+	return func(cs tls.ConnectionState) error {
+		if !validHash(expected) || len(cs.PeerCertificates) != 1 || hash(cs.PeerCertificates[0].Raw) != expected {
+			return errors.New("guest certificate rejected")
+		}
+		return nil
+	}
+}
+func serverTLS(i identity, client string) *tls.Config {
+	return &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{i.Certificate}, ClientAuth: tls.RequireAnyClientCert, VerifyConnection: verifyPeer(client)}
+}
+func clientTLS(i identity, server string) *tls.Config {
+	// The public certificate pin arrives only through this owned VM's COM pipe.
+	return &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{i.Certificate}, InsecureSkipVerify: true, VerifyConnection: verifyPeer(server)}
+}
+func validateReady(r ready, instance string) error {
+	ip := net.ParseIP(r.IP)
+	if r.Instance != instance || !validInstance(instance) || ip == nil || ip.To4() == nil || !ip.IsPrivate() || ip.IsLoopback() || r.Port != guestPort || !validHash(r.Certificate) {
+		return errors.New("owned guest readiness rejected")
+	}
+	return nil
+}
+func decodeRequest(d *json.Decoder) (request, error) {
+	d.DisallowUnknownFields()
+	var q request
+	if e := d.Decode(&q); e != nil {
+		return q, e
+	}
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue") || !validInstance(q.ID) {
+		return q, errors.New("fixture request rejected")
+	}
+	return q, nil
+}

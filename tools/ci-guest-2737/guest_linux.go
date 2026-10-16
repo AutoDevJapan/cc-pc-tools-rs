@@ -1,0 +1,260 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"os/exec"
+	"os/signal"
+	"strconv"
+	"sync"
+	"syscall"
+	"time"
+)
+
+type guest struct {
+	mu      sync.Mutex
+	active  bool
+	results map[string]fixtureResult
+}
+
+func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
+func groupGone(p int) bool              { return p > 1 && errors.Is(syscall.Kill(-p, 0), syscall.ESRCH) }
+func (g *guest) serve(conn net.Conn) {
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(time.Minute))
+	d := json.NewDecoder(io.LimitReader(conn, 4096))
+	q, e := decodeRequest(d)
+	if e != nil {
+		return
+	}
+	if q.Kind == "status" {
+		g.mu.Lock()
+		r, ok := g.results[q.ID]
+		g.mu.Unlock()
+		if ok {
+			_ = json.NewEncoder(conn).Encode(r)
+		}
+		return
+	}
+	if q.Kind != "normal" && q.Kind != "cancel" {
+		return
+	}
+	g.mu.Lock()
+	_, used := g.results[q.ID]
+	if g.active || used || len(g.results) >= 2 {
+		g.mu.Unlock()
+		return
+	}
+	g.active = true
+	g.results[q.ID] = fixtureResult{ID: q.ID}
+	g.mu.Unlock()
+	defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+	r := fixtureResult{ID: q.ID}
+	defer func() { r.Done = true; g.result(r) }()
+	exe, e := os.Executable()
+	if e != nil {
+		r.Failure = "guest executable unavailable"
+		return
+	}
+	c := exec.Command(exe, "fixture-parent")
+	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	c.WaitDelay = 5 * time.Second
+	out, e := c.StdoutPipe()
+	if e != nil {
+		r.Failure = "fixture output unavailable"
+		return
+	}
+	in, e := c.StdinPipe()
+	if e != nil {
+		r.Failure = "fixture input unavailable"
+		return
+	}
+	if c.Start() != nil {
+		r.Failure = "fixture spawn failed"
+		return
+	}
+	r.Parent = c.Process.Pid
+	r.Group = r.Parent
+	defer func() {
+		_ = in.Close()
+		_ = syscall.Kill(-r.Group, syscall.SIGKILL)
+		_ = c.Wait()
+		deadline := time.Now().Add(5 * time.Second)
+		for !groupGone(r.Group) && time.Now().Before(deadline) {
+			time.Sleep(20 * time.Millisecond)
+		}
+		r.Gone = groupGone(r.Group)
+	}()
+	s := bufio.NewScanner(out)
+	s.Buffer(make([]byte, 128), 256)
+	if !s.Scan() {
+		r.Failure = "fixture child not observed"
+		return
+	}
+	r.Child, e = strconv.Atoi(s.Text())
+	pg, pe := syscall.Getpgid(r.Child)
+	if e != nil || pe != nil || pg != r.Group || r.Child == r.Parent || syscall.Kill(r.Child, 0) != nil {
+		r.Failure = "fixture child identity unverified"
+		return
+	}
+	r.Observed = true
+	g.result(r)
+	if json.NewEncoder(conn).Encode(r) != nil {
+		r.Cancelled = true
+		_ = syscall.Kill(-r.Group, syscall.SIGTERM)
+		return
+	}
+	ack, ae := decodeRequest(d)
+	if ae != nil || ack.Kind != "continue" || ack.ID != q.ID || q.Kind == "cancel" {
+		r.Cancelled = true
+		_ = syscall.Kill(-r.Group, syscall.SIGTERM)
+	} else {
+		_, _ = in.Write([]byte("done\n"))
+	}
+	// Reap the parent after it reaps its child. SIGKILL is a bounded fallback;
+	// group absence is checked independently and is never inferred from Wait.
+	done := make(chan error, 1)
+	go func() { done <- c.Wait() }()
+	select {
+	case e = <-done:
+	case <-time.After(10 * time.Second):
+		_ = syscall.Kill(-r.Group, syscall.SIGKILL)
+		e = <-done
+	}
+	if e != nil {
+		r.Failure = "fixture exit failed"
+	}
+	// The deferred reaping call is harmless after Wait; it still checks group 0.
+}
+func fixtureParent() int {
+	exe, e := os.Executable()
+	if e != nil {
+		return 1
+	}
+	child := exec.Command(exe, "fixture-child")
+	out, e := child.StdoutPipe()
+	if e != nil {
+		return 1
+	}
+	if child.Start() != nil {
+		return 1
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	defer stop()
+	s := bufio.NewScanner(out)
+	if !s.Scan() || s.Text() != "ready" {
+		_ = child.Process.Kill()
+		_ = child.Wait()
+		return 1
+	}
+	fmt.Println(child.Process.Pid)
+	ready := make(chan struct{})
+	go func() {
+		s := bufio.NewScanner(os.Stdin)
+		if s.Scan() && s.Text() == "done" {
+			close(ready)
+		}
+	}()
+	select {
+	case <-ctx.Done():
+	case <-ready:
+	}
+	_ = child.Process.Signal(syscall.SIGTERM)
+	if child.Wait() != nil {
+		return 1
+	}
+	return 0
+}
+
+func fixtureChild() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	defer stop()
+	fmt.Println("ready")
+	<-ctx.Done()
+}
+func runGuest() error {
+	b, e := os.ReadFile("/etc/ci2737-public.json")
+	if e != nil {
+		return errors.New("public guest config missing")
+	}
+	var p publicConfig
+	if json.Unmarshal(b, &p) != nil || !validInstance(p.Instance) || !validHash(p.ClientCertificate) {
+		return errors.New("public guest config rejected")
+	}
+	i, e := newIdentity()
+	if e != nil {
+		return e
+	}
+	l, e := tls.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", guestPort), serverTLS(i, p.ClientCertificate))
+	if e != nil {
+		return e
+	}
+	defer l.Close()
+	var ip string
+	until := time.Now().Add(2 * time.Minute)
+	for ip == "" && time.Now().Before(until) {
+		addrs, _ := net.InterfaceAddrs()
+		for _, a := range addrs {
+			v, _, _ := net.ParseCIDR(a.String())
+			if v != nil && v.To4() != nil && v.IsPrivate() && !v.IsLoopback() {
+				ip = v.String()
+				break
+			}
+		}
+		if ip == "" {
+			time.Sleep(time.Second)
+		}
+	}
+	if ip == "" {
+		return errors.New("private guest network unavailable")
+	}
+	public, _ := json.Marshal(ready{p.Instance, ip, guestPort, i.Digest})
+	serial, e := os.OpenFile("/dev/ttyS0", os.O_WRONLY, 0)
+	if e != nil {
+		return errors.New("owned guest console unavailable")
+	}
+	defer serial.Close()
+	// Only public readiness data is emitted. No key or token is written to disk.
+	announce := func() { _, _ = fmt.Fprintln(serial, "CI2737-READY "+base64.StdEncoding.EncodeToString(public)) }
+	announce()
+	g := guest{results: map[string]fixtureResult{}}
+	deadline := time.AfterFunc(45*time.Minute, func() { _ = l.Close() })
+	defer deadline.Stop()
+	go func() {
+		for n := 0; n < 120; n++ {
+			time.Sleep(5 * time.Second)
+			announce()
+		}
+	}()
+	for {
+		c, e := l.Accept()
+		if e != nil {
+			return e
+		}
+		go g.serve(c)
+	}
+}
+func main() {
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "guest":
+			if runGuest() == nil {
+				return
+			}
+		case "fixture-parent":
+			os.Exit(fixtureParent())
+		case "fixture-child":
+			fixtureChild()
+			return
+		}
+	}
+	os.Exit(1)
+}

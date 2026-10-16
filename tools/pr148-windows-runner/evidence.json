@@ -79,5 +79,7 @@
   "review_todo": 2755,
   "review_received": false,
   "cleanup_handoff_todo": 2381,
-  "all_work_complete": false
+  "all_work_complete": false,
+  "control_temp_root_deleted": true,
+  "control_temp_finish_state": "source_absent"
 }

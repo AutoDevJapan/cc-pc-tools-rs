@@ -40,7 +40,7 @@ TokenGroupsのDenyOnlyビット検査をfixture後に追加しGo検査は成功�
 
 上記3rootは原JSON/script/logの全bytes/SHA一致を確認して恒久保存した後、
 safe-delete plan→別通常削除→finish=source_absentを確認済み。profileは別資源で残る。
-制御用c9d9cca272f24c790d36ca354d71ab27は最後の証拠保存後に同じ手順で回収する。
+制御用c9d9cca272f24c790d36ca354d71ab27も追加原証拠のSHA/bytes保管後、同じ手順で回収し、finish=source_absentを確認した。
 
 原証拠はこのmoduleのevidence-private/20261017に恒久保管し、Gitから除外している。
 manifest.json（SHA256 3DB1CF6C59617E12F088101E64CA551D83F7D6B5371B38D80F3EE80FA54DC7E4）

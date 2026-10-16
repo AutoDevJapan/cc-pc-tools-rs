@@ -206,3 +206,22 @@ attempt. See `docs/product-ci-codeql-2648.md` for the saved recovery checkpoint.
 Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
 https://docs.github.com/en/actions/reference/runners/self-hosted-runners
+
+## One audited post-merge CodeQL run (ToDo2757)
+
+`merged-inspect` performs read-only checks for repository 1285649124, PR1002,
+merge `41090d19329b81dd1bd076f3336d723823be4b82`, tree
+`007b84082008ea9effd5052f63856273aabbfb17`, ordered original parents, original
+PR head and its branch, and current main. No other merge or latest-head mode
+exists. It checks the original default-setup settings and original four jobs
+in run38941323954/workflow331939928/attempt1, and the existing dedicated queue.
+
+After normal source review, CI, merge and official distribution,
+`merged-codeql-job <new-owned-dir> <official-Linux-helper>` serves one job of
+that exact run. It reuses the original candidate lock, container isolation,
+resource limits, live hooks, actual checkout HEAD/tree/authentication proof and
+namespace/registration cleanup. It does not change route configuration or
+accept an arbitrary job, run, revision or label. The other four original
+open-PR candidate entries and their commands are unchanged. Runner exit is
+still not official analysis success. Promotion, full verification, integration
+and production revision/smoke are separate outstanding acceptance conditions.

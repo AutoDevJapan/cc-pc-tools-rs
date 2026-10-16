@@ -56,6 +56,12 @@ SARIF本文・位置・識別名・秘密値をmodel/stdoutへ出さず、rule/c
 過去の失敗runとレビューの範囲を保持し、PATCH後のGETで本文の全一致とdraftを確認した。
 非秘密の監査記録は [docs/todo-2641-audit.json](docs/todo-2641-audit.json) に保存した。
 
+checkpointの保存結果は、最初の直接呼出しでは出力が空で、ToDo原本にも記録が無かった。
+このexeはWindows GUI subsystemのため、PowerShellからの直接呼出しだけで完了判定をしない。
+同じ正規コマンドを `Start-Process -WindowStyle Hidden -Wait -PassThru` と出力リダイレクトで実行し、
+実exit0、saved=true、launched=0、原本のworkspace_checkpoint.requestを確認した。
+以後もこの形式で実完了と同job/branch/HEADの保存を照合する。審査拒否や別経路への迂回ではない。
+
 ## 自分の一時資源
 
 safe-delete所有ID `9315e029733a03edf587aa08e7c56175`。

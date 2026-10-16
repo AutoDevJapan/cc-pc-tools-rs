@@ -9,6 +9,12 @@ use std::{
 };
 pub fn help_text(command: &str) -> &'static str {
     match command {
+        "qualify-fixed-review" => {
+            "usage: codex_jobs.exe qualify-fixed-review --request-file <JSON> [--apply]\n\nBind one existing unstarted worker to a fixed read-only review after its exact automatic writer exits. Preview by default. Never changes ToDos, grants write access or launches work. Reload the exact queued supervisor first.\n"
+        }
+        "repair-owner-wait" => {
+            "usage: codex_jobs.exe repair-owner-wait --request-file <JSON> [--apply]\n\nPreview one exact never-started finite worker's automatic wait cycle. Apply changes only that job under queue, job and ToDo locks; normal admission and all other waits remain required.\n"
+        }
         "rename-project" => {
             "usage: codex_jobs.exe rename-project <id> --from <name> --to <name>\n\nRename only this job's project, name and task_title under state.lock. Execution paths and identifiers are preserved.\n"
         }
@@ -97,6 +103,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-429",
         "recover-reboot",
         "reload-queue",
+        "repair-owner-wait",
+        "qualify-fixed-review",
         "adjust-limit",
         "update-queue-config",
         "recover-children",
@@ -137,6 +145,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "rate" => name == "force",
                 "cancel" => ["recovery", "if-todo-ready"].contains(&name.as_str()),
                 "update-queue-config" => name == "clear-fixed",
+                "repair-owner-wait" => name == "apply",
+                "qualify-fixed-review" => name == "apply",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
                 }
@@ -190,6 +200,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
                 "reload-queue" => name == "job-id",
+                "repair-owner-wait" => ["request-file", "apply"].contains(&name.as_str()),
+                "qualify-fixed-review" => ["request-file", "apply"].contains(&name.as_str()),
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -553,6 +565,25 @@ impl Context {
                     None => self.reload_queue()?,
                 };
                 writeln!(out, "{}", pretty(&report))?;
+                Ok(0)
+            }
+            "repair-owner-wait" => {
+                let request = self.read_json(Path::new(a.required("request-file")?))?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.repair_owner_wait(&request, a.flag("apply"))?)
+                )?;
+                Ok(0)
+            }
+            "qualify-fixed-review" => {
+                let bytes = self.read_file(Path::new(a.required("request-file")?))?;
+                let request = serde_json::from_slice(&bytes)?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.qualify_finished_review(&request, a.flag("apply"))?)
+                )?;
                 Ok(0)
             }
             "adjust-limit" => {
@@ -1024,6 +1055,11 @@ impl Context {
         let store = self.todo_store();
         if store.exists() {
             let db = self.read_json(&store)?;
+            // The separately reserved original-product retry has its own exact
+            // source/permission binding above; do not reinterpret its history.
+            if retry_key.is_none() {
+                self.inherit_fixed_review_requirement(&db, &mut job)?;
+            }
             let item = db["items"]
                 .as_array()
                 .into_iter()
@@ -1104,11 +1140,12 @@ impl Context {
         let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
-        let guidance = if policy.sandbox == "read-only" {
-            cc_job_policy::READ_GUIDANCE
-        } else {
-            cc_job_policy::WRITE_GUIDANCE
-        };
+        let guidance =
+            if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
+                cc_job_policy::READ_GUIDANCE
+            } else {
+                cc_job_policy::WRITE_GUIDANCE
+            };
         if retry_key.is_none()
             && !std::str::from_utf8(&stored_prompt)
                 .unwrap()

@@ -1108,20 +1108,25 @@ try {
   $osAccessPath=$osRoot
   $osVolume=$osPartition|Get-Volume -ErrorAction Stop
   if($osVolume.FileSystemLabel -cne 'CC2746OS' -or $osVolume.FileSystem -cne 'NTFS'){throw 'OWNED_OS_VOLUME_REJECTED'}
-  $applyDir=Join-Path $osRoot ('cc2746-image-stage-'+$instance)
+  $osVolumeRoot=[string]$osVolume.Path
+  if([string]::IsNullOrEmpty($osVolumeRoot) -or -not $osVolumeRoot.StartsWith('\\?\Volume{',[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_OS_VOLUME_GUID_PATH_REJECTED'}
+  $stageName='cc2746-image-stage-'+$instance
+  $stageLetterPath=Join-Path $osRoot $stageName
+  $applyDir=$osVolumeRoot.TrimEnd('\')+'\'+$stageName
   if(Test-Path -LiteralPath $applyDir){throw 'OWNED_DISM_APPLY_STAGE_ALREADY_EXISTS'}
   New-Item -ItemType Directory -Path $applyDir|Out-Null
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
   $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
   if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
+  if(-not (Test-Path -LiteralPath $applyDir)){throw 'OWNED_DISM_APPLY_STAGE_MISSING'}
   Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -NoRpFix -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
-  $stagedWindows=Join-Path $applyDir 'Windows'
+  $stagedWindows=Join-Path $stageLetterPath 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $stagedWindows 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
-  $imageEntries=@(Get-ChildItem -LiteralPath $applyDir -Force)
+  $imageEntries=@(Get-ChildItem -LiteralPath $stageLetterPath -Force)
   if($imageEntries.Count -eq 0){throw 'OWNED_APPLIED_WINDOWS_IMAGE_EMPTY'}
   foreach($entry in $imageEntries){if(Test-Path -LiteralPath (Join-Path $osRoot $entry.Name)){throw 'OWNED_OS_ROOT_COLLISION'}}
   foreach($entry in $imageEntries){Move-Item -LiteralPath $entry.FullName -Destination $osRoot}
-  [IO.Directory]::Delete($applyDir)
+  [IO.Directory]::Delete($stageLetterPath)
   $windowsRoot=Join-Path $osRoot 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_MOVED_WINDOWS_HIVE_MISSING'}
   $panther=Join-Path $windowsRoot 'Panther'

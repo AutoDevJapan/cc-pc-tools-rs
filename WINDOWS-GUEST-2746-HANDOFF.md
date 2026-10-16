@@ -107,11 +107,13 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   ISO were detached afterward. Native DISM and Microsoft's Dism module
   `Expand-WindowsImage` both failed with `DirectoryNotFoundException` and
   `0x80070003`, even though the source WIM and target root exist and the target
-  accepts a small write. The helper now applies the WIM to a unique staging
-  directory on the guest OS partition, then moves the completed image entries
-  into the OS root on the same volume before installing the Panther answer file
-  and boot files. This staging approach is untried. Go checks passed before
-  this source change.
+  accepts a small write. `Expand-WindowsImage` with `NoRpFix` to a unique stage
+  directory on the guest OS partition also returned the same path error; its
+  stage remained empty, the OS has no Windows directory, and the VHD detached.
+  The current helper now addresses that same stage by the volume GUID path
+  rather than the temporary drive letter, then plans to move successful image
+  entries into the OS root on the same volume. This path adjustment is
+  untried. Go checks passed before the latest change.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its

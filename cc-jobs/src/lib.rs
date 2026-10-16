@@ -12,6 +12,7 @@ pub mod context_rotation;
 pub mod events;
 mod execution;
 mod finished_review;
+mod finished_work_handoff;
 pub mod gate;
 pub mod jobs;
 pub mod notify;

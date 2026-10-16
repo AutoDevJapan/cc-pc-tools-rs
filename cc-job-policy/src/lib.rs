@@ -2,6 +2,7 @@
 pub mod cancellation;
 pub mod finished_review;
 pub mod cargo;
+pub mod finished_work_handoff;
 pub mod owner_wait_repair;
 pub mod priority;
 pub mod product_retry;

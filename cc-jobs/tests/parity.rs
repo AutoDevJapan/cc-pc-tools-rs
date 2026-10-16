@@ -8,6 +8,8 @@ mod original_product_retry;
 mod finite_owner_wait_repair;
 #[path = "support/finished_review.rs"]
 mod finished_review;
+#[path = "support/finished_work_handoff.rs"]
+mod finished_work_handoff;
 
 mod independent_subwork {
     use super::*;

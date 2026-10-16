@@ -12,6 +12,9 @@ pub fn help_text(command: &str) -> &'static str {
         "qualify-fixed-review" => {
             "usage: codex_jobs.exe qualify-fixed-review --request-file <JSON> [--apply]\n\nBind one existing unstarted worker to a fixed read-only review after its exact automatic writer exits. Preview by default. Never changes ToDos, grants write access or launches work. Reload the exact queued supervisor first.\n"
         }
+        "handoff-finished-work" => {
+            "usage: codex_jobs.exe handoff-finished-work --request-file <JSON> [--apply]\n\nPreview or record one exact completed-writer handoff after verifying the delivered source receipt. Removes only that queued worker's automatic owner edge; normal admission and all other waits remain required. Does not launch work or change execution permissions.\n"
+        }
         "repair-owner-wait" => {
             "usage: codex_jobs.exe repair-owner-wait --request-file <JSON> [--apply]\n\nPreview one exact never-started finite worker's automatic wait cycle. Apply changes only that job under queue, job and ToDo locks; normal admission and all other waits remain required.\n"
         }
@@ -105,6 +108,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "reload-queue",
         "repair-owner-wait",
         "qualify-fixed-review",
+        "handoff-finished-work",
         "adjust-limit",
         "update-queue-config",
         "recover-children",
@@ -147,6 +151,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "update-queue-config" => name == "clear-fixed",
                 "repair-owner-wait" => name == "apply",
                 "qualify-fixed-review" => name == "apply",
+                "handoff-finished-work" => name == "apply",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
                 }
@@ -202,6 +207,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "reload-queue" => name == "job-id",
                 "repair-owner-wait" => ["request-file", "apply"].contains(&name.as_str()),
                 "qualify-fixed-review" => ["request-file", "apply"].contains(&name.as_str()),
+                "handoff-finished-work" => ["request-file", "apply"].contains(&name.as_str()),
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -583,6 +589,15 @@ impl Context {
                     out,
                     "{}",
                     pretty(&self.qualify_finished_review(&request, a.flag("apply"))?)
+                )?;
+                Ok(0)
+            }
+            "handoff-finished-work" => {
+                let request = self.read_json(Path::new(a.required("request-file")?))?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.handoff_finished_work(&request, a.flag("apply"))?)
                 )?;
                 Ok(0)
             }

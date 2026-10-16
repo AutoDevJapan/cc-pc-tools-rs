@@ -148,11 +148,18 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   be under the dedicated VHD root. No guest VHDX or VM was created; the exact
   failure was retained. The code now passes the already-created helper copy
   from the seed directory. This correction is uncommitted and not yet rerun.
+- After that fix was pushed as `c8d8320`, the next attempt stopped before
+  conversion: the local Hyper-V `Convert-VHD` command does not accept
+  `-VHDFormat`. The command's parameter list was checked locally, and the
+  official Microsoft Learn reference confirms the destination filename
+  extension selects VHD versus VHDX. No clone or VM was created. The helper
+  now relies on its `.vhdx` destination suffix and keeps `-VHDType Dynamic`;
+  this correction is uncommitted and untried.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the helper-path correction; commit and push it.
+   the Convert-VHD parameter correction; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

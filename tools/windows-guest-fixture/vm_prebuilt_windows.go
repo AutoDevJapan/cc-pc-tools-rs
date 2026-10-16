@@ -130,7 +130,7 @@ if(Test-Path -LiteralPath $guestVHD){throw 'OWNED_GUEST_VHD_DESTINATION_EXISTS'}
 if(Test-Path -LiteralPath (Join-Path $root 'vm-created.private.json')){throw 'OWNED_VHD_VM_RECEIPT_ALREADY_EXISTS'}
 $mounted=$false;$diskNumber=$null;$accessPath=$null;$accessPartition=$null;$loadedHives=[Collections.Generic.List[string]]::new()
 try {
-  Convert-VHD -Path $source -DestinationPath $guestVHD -VHDFormat VHDX -VHDType Dynamic -ErrorAction Stop|Out-Null
+  Convert-VHD -Path $source -DestinationPath $guestVHD -VHDType Dynamic -ErrorAction Stop|Out-Null
   $disk=Get-VHD -Path $guestVHD -ErrorAction Stop
   if($disk.Attached -or $disk.VhdType -ne 'Dynamic' -or $disk.Size -ne 64GB){throw 'OWNED_GUEST_VHD_CONVERSION_REJECTED'}
   Mount-VHD -Path $guestVHD -NoDriveLetter|Out-Null

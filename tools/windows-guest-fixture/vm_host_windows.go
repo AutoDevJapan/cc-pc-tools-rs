@@ -390,9 +390,9 @@ if($v.State -ne 'Off' -or $v.Generation -ne 1 -or $v.ProcessorCount -ne 2 -or $m
 $winDvd=$dvds|Where-Object Path -CEQ $windowsISO|Select-Object -First 1
 $seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
 Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
-Set-VMBios -VM $v -StartupOrder @('CD','IDE','LegacyNetworkAdapter','Floppy')
+Set-VMBios -VM $v -StartupOrder @('IDE','CD','LegacyNetworkAdapter','Floppy')
 $bios=Get-VMBios -VM $v
-if($bios.StartupOrder[0] -cne 'CD' -or $bios.StartupOrder[1] -cne 'IDE'){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
+if($bios.StartupOrder[0] -cne 'IDE' -or $bios.StartupOrder[1] -cne 'CD'){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;image_deployment_method='windows-setup-autounattend';dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$false;network_adapters=$nics;gpu_adapters=$gpus}
 $receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 Start-VM -VM $v|Out-Null
@@ -1122,9 +1122,9 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $dvds=@($vm | Get-VMDvdDrive)
   $vhds=@($vm | Get-VMHardDiskDrive)
   if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
-  Set-VMBios -VM $vm -StartupOrder @('CD','IDE','LegacyNetworkAdapter','Floppy')
+  Set-VMBios -VM $vm -StartupOrder @('IDE','CD','LegacyNetworkAdapter','Floppy')
   $bios=Get-VMBios -VM $vm
-  if($bios.StartupOrder[0] -cne 'CD' -or $bios.StartupOrder[1] -cne 'IDE'){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
+  if($bios.StartupOrder[0] -cne 'IDE' -or $bios.StartupOrder[1] -cne 'CD'){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;image_deployment_method='windows-setup-autounattend';dvd_count=$dvds.Count;vhd_count=1;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=$false;network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null

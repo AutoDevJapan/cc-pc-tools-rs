@@ -133,7 +133,7 @@ func runVMProvision(root, isoPath string) error {
 		return err
 	}
 	createScript := filepath.Join(root, "vm-create.ps1")
-	if err := os.WriteFile(createScript, []byte(createVMPS(root, isoPath, guestExe, instance, client.SHA256)), 0600); err != nil {
+	if err := os.WriteFile(createScript, []byte(createVMPS(root, isoPath, guestExe, instance)), 0600); err != nil {
 		return err
 	}
 	if err := runAdminBroker(createScript, 1800); err != nil {
@@ -436,6 +436,14 @@ func runAdminBroker(script string, timeoutSec int) error {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, `C:\Program Files\PowerShell\7\pwsh.exe`, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `D:\CC\Tools\admin-broker\run-as-admin.ps1`, "-Script", script, "-TimeoutSec", fmt.Sprint(timeoutSec))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
+	systemRoot := os.Getenv("SystemRoot")
+	cmd.Env = []string{
+		"SystemRoot=" + systemRoot,
+		"PATH=" + systemRoot + `\System32;` + systemRoot + `\System32\WindowsPowerShell\v1.0;C:\Program Files\PowerShell\7`,
+		"TEMP=" + systemRoot + `\Temp`,
+		"TMP=" + systemRoot + `\Temp`,
+		`PSModulePath=C:\Program Files\PowerShell\Modules;` + systemRoot + `\System32\WindowsPowerShell\v1.0\Modules`,
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -444,7 +452,7 @@ func runAdminBroker(script string, timeoutSec int) error {
 	return nil
 }
 
-func createVMPS(root, iso, guestExe, instance, clientHash string) string {
+func createVMPS(root, iso, guestExe, instance string) string {
 	q := psQuote
 	return `$ErrorActionPreference='Stop'
 Import-Module Hyper-V
@@ -453,7 +461,6 @@ $root=` + q(root) + `
 $iso=` + q(iso) + `
 $guestExe=` + q(guestExe) + `
 $instance=` + q(instance) + `
-$clientHash=` + q(clientHash) + `
 $vhd=Join-Path $root 'guest.vhdx'
 $name='cc-2746-'+$instance
 $pipe='\\.\pipe\cc-2746-'+$instance

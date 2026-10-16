@@ -102,13 +102,13 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   EFI, one MSR, and OS partitions in boot order. The answer file remains in
   Panther and on the seed DVD; first boot should run `specialize` and leave
   normal OOBE intact. A bounded read-only AdminBroker probe later confirmed
-  `Test-Path` succeeds for the target and DISM `/Get-WimInfo` reads the source
-  WIM successfully; both VHD and ISO were detached afterward. The helper now
-  passes the same volume root as `H:\.` to avoid native argument handling of a
-  final backslash and checks this normalized directory before DISM. This
-  diagnosis is an inference from the log and path checks, not yet a proven
-  fix. `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` passed
-  before the latest ApplyDir adjustment.
+  `Test-Path` succeeds for the target, a 4-byte write/remove probe succeeded
+  there, and DISM `/Get-WimInfo` read the source WIM successfully; both VHD and
+  ISO were detached afterward. Apply still fails with `0x80070003` using
+  `H:\.`. The helper now gives DISM an instance-specific scratch folder inside
+  the owned root as another bounded path correction. The exact cause remains
+  unproven. `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`
+  passed before this latest scratch-directory adjustment.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its

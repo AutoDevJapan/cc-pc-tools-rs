@@ -1112,7 +1112,9 @@ try {
   if(-not (Test-Path -LiteralPath $applyDir)){throw 'OWNED_DISM_APPLY_DIRECTORY_MISSING'}
   $dism=Join-Path $env:SystemRoot 'System32\dism.exe'
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
-  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $applyDir)) '/CheckIntegrity' (('/LogPath:{0}' -f $dismLog)) *> $null
+  $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
+  if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
+  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $applyDir)) (('/ScratchDir:{0}' -f $dismScratch)) '/CheckIntegrity' (('/LogPath:{0}' -f $dismLog)) *> $null
   if($LASTEXITCODE -ne 0){throw 'OWNED_OFFLINE_WIM_APPLY_FAILED'}
   $windowsRoot=Join-Path $osRoot 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}

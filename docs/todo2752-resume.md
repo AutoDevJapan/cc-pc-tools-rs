@@ -1,0 +1,28 @@
+# マージ後CIと本番反映の確認状況
+
+ToDo2752は継続中。親2639はこのcheckを正式waitしている。元1636/2016/2274、他3製品、2648/2710等の停止・依存・完了状態は変更していない。
+
+## この担当が確認したこと
+
+- repository ID1285649124の許可された実所有者、private/admin/nonfork、PR1002のmerged状態、merge/main41090d19329b81dd1bd076f3336d723823be4b82、tree007b84082008ea9effd5052f63856273aabbfb17、順序付き両親をAPIで照合した。PRのdraft解除・mergeは繰り返していない。
+- promotion38941324877は予算制限でpreconditionsが開始されずsteps0。後続3jobはskipped。CodeQL38941323954の4言語は既存専用labelでqueued。今回の成功として使える実行ログはまだなく、raw job logは取得していない。
+- 正規product-ciのPR188配布receiptと現物exeのSHA256が一致。固定mergefa594と現HEADのtools/product-ci module treeは同一2eec8c5f2831fe695d5c604c566c675fe9e6cac0。sourceのopen PR限定が今回のclosed/merged PRを受け付けないことを確認した。拒否されるjobや即席runnerは起動していない。
+- promote、full verification、backend integrationのHosted固定と、workflow trust正典、release/deploy文書等の固定blob/hashを保存した。regexによる観測をgate全体のレビューと扱っていない。
+- Vercelの同repository IDと実ownerのproduction一覧に今回mergeは0件。直近は元basef3d946cbでREADY。inspectでdeployment ID dpl_CeBeNkHzKEuaFzJCSftEzpP3PWkTとalias3件を確認した。canonical aliasの現在revisionは未照合。
+- Railwayの既存productionをCLIで確認した。配備メッセージのSHAは旧ソース2件で、runtime revisionは未確認。既存APIの提供domainにGET /readyを送りHTTP200を確認し、bodyのUTF8 bytes/SHA256のみ保存した。この成功を今回mergeの配備成功とは呼ばない。
+
+公開可能な数値・SHA・状態だけを [実確認の記録](evidence-todo2752.json) に保存した。原source/API本文、顧客名、URL、秘密値はこの記録へ保存していない。CLI出力指紋はUTF8へ再符号化したmetadataの指紋であり、原job logのbytesとは明確に分けた。
+
+## 残りと正規の依存先
+
+独立した有限実装をToDo2757へ--spec/needs cargoで登録し、保存されたspecとtodo状態を確認した。[登録した実装仕様](todo2752-implementation-spec.md) に元の完全な保存仕様と今回の確認結果を保持する。
+
+2757は固定merged receiptを検証する正式工程と必要最小限のHosted固定修復を、通常source/PR/別モデルレビュー/CI/merge/正式配布の順で進める。その後、元の業務preconditions/full verification/backend integration/CodeQLを省かず、正規の既存Prd配備とrevision/probeを実行する。2752自身は独立checkなので主担当sourceや独立PRを編集していない。
+
+2752を正式wait --on 2757へ移す。待機解除後は登録やツール実装だけを成功とせず、2757の実source/head/tree、公式run/job、revision/probe、原log bytes/SHA256、PID0/回収/runner不在/lock解放を独立に読み戻す。旧20cの成功を新mergeへ転記しない。完了条件が揃うまで2752/2639/原製品全体をdoneにしない。同じ確認担当や同じ実装修復を重複作成しない。
+
+## 所有資源と再開
+
+この担当はcontainer、runner登録、排他lock、Chromeタブ、Cargo、GPU、Prd変更を作成/実行していない。自分の一時検査script2件（11,715 bytes）はsafe-delete owner08a2b69463e4c04a08ff44f1a0fe386aで管理し、確認記録の保存後にplan→別呼出し通常削除→finish source_absentまで確認した。後片付けの実結果も実確認JSONへ保存した。
+
+作業branchは最初からscheduler/todo-2752-ci-prd。branch変更なし。自分の記録だけをこのbranchへcommitし、scheduler checkpoint-workspaceで実HEADを保存する。親の元証拠・他担当の一時資源は保持する。本人PC操作や技術的な再承認は求めていない。

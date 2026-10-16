@@ -1,0 +1,567 @@
+{
+  "todo": 2752,
+  "parent": 2639,
+  "observed_at_utc": "2026-10-16T17:54:24.2579269Z",
+  "repository": {
+    "owner": "AutoDevJapan",
+    "id": 1285649124,
+    "private": true,
+    "admin": true,
+    "fork": false
+  },
+  "merged_receipt": {
+    "main_tree": "007b84082008ea9effd5052f63856273aabbfb17",
+    "pr_head": "20c441df545a88f4a839d7e906b5aeb4f1708ae3",
+    "tree": "007b84082008ea9effd5052f63856273aabbfb17",
+    "pr": 1002,
+    "merge": "41090d19329b81dd1bd076f3336d723823be4b82",
+    "state": "closed",
+    "parents": [
+      "f3d946cb0f7e33b8cb5cbc0858091e583ca61350",
+      "20c441df545a88f4a839d7e906b5aeb4f1708ae3"
+    ],
+    "merged": true,
+    "main": "41090d19329b81dd1bd076f3336d723823be4b82"
+  },
+  "jobs": [
+    {
+      "workflow_id": 306106154,
+      "run_id": 38941324877,
+      "conclusion": "failure",
+      "status": "completed",
+      "jobs": [
+        {
+          "status": "completed",
+          "conclusion": "failure",
+          "name": "preconditions",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "id": 117109404912,
+          "steps": 0
+        },
+        {
+          "status": "completed",
+          "conclusion": "skipped",
+          "name": "verify-backend-integration",
+          "labels": [],
+          "id": 117109423278,
+          "steps": 0
+        },
+        {
+          "status": "completed",
+          "conclusion": "skipped",
+          "name": "verify-arps",
+          "labels": [],
+          "id": 117109423311,
+          "steps": 0
+        },
+        {
+          "status": "completed",
+          "conclusion": "skipped",
+          "name": "promote",
+          "labels": [
+            "ubuntu-latest"
+          ],
+          "id": 117109424787,
+          "steps": 0
+        }
+      ],
+      "attempt": 1,
+      "event": "push",
+      "head": "41090d19329b81dd1bd076f3336d723823be4b82"
+    },
+    {
+      "workflow_id": 331939928,
+      "run_id": 38941323954,
+      "conclusion": null,
+      "status": "queued",
+      "jobs": [
+        {
+          "status": "queued",
+          "conclusion": null,
+          "name": "Analyze (python)",
+          "labels": [
+            "cc-product-2648-1285649124-codeql"
+          ],
+          "id": 117109408190,
+          "steps": 0
+        },
+        {
+          "status": "queued",
+          "conclusion": null,
+          "name": "Analyze (javascript-typescript)",
+          "labels": [
+            "cc-product-2648-1285649124-codeql"
+          ],
+          "id": 117109408508,
+          "steps": 0
+        },
+        {
+          "status": "queued",
+          "conclusion": null,
+          "name": "Analyze (rust)",
+          "labels": [
+            "cc-product-2648-1285649124-codeql"
+          ],
+          "id": 117109408625,
+          "steps": 0
+        },
+        {
+          "status": "queued",
+          "conclusion": null,
+          "name": "Analyze (actions)",
+          "labels": [
+            "cc-product-2648-1285649124-codeql"
+          ],
+          "id": 117109408843,
+          "steps": 0
+        }
+      ],
+      "attempt": 1,
+      "event": "dynamic",
+      "head": "41090d19329b81dd1bd076f3336d723823be4b82"
+    }
+  ],
+  "workflow_blobs": [
+    {
+      "runner_labels": [
+        "ubuntu-latest"
+      ],
+      "sha256": "f70c622350eabb6d38f124c321ddc90bc6ccde2eb23e32d6331d76949df358b4",
+      "bytes": 15869,
+      "path": ".github/workflows/arps-full-verification.yml",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": false,
+      "blob": "707e19e6a9b2773a2415527c910ab3bcef11e831"
+    },
+    {
+      "runner_labels": [
+        "ubuntu-latest"
+      ],
+      "sha256": "b554cfb12c91db17fff514cde41ba9e56b0a6aa3114a6849863119bf985aede8",
+      "bytes": 5773,
+      "path": ".github/workflows/backend-integration.yml",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": false,
+      "blob": "6236fbd54c52c04bf015b66441c03e3d4d0ae23d"
+    },
+    {
+      "runner_labels": [
+        "ubuntu-latest",
+        "ubuntu-latest"
+      ],
+      "sha256": "143e9ef95539bcdda856a076e7b0eaae85e79bbafef02c9c2bacbd43afb7c22e",
+      "bytes": 12905,
+      "path": ".github/workflows/promote.yml",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": true,
+      "blob": "d7ab459899d19b90ebf5387f9d4ad31bb1ef1076"
+    },
+    {
+      "runner_labels": [],
+      "sha256": "4d35dd2966022ba3edb11206be30f1b2584f076e27813a393da172c187057709",
+      "bytes": 1347,
+      "path": "AGENTS.md",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": false,
+      "blob": "5fd6af223d13886c7d1fd48dc49115788cb473f5"
+    },
+    {
+      "runner_labels": [],
+      "sha256": "d34c3c7fde07a58d286fae8a3490858d072139f07b8642a0d1477235e4b06b46",
+      "bytes": 22883,
+      "path": "CLAUDE.md",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": false,
+      "blob": "3981152968f2f2f227a348239aeaab297f316a96"
+    },
+    {
+      "runner_labels": [],
+      "sha256": "ed70bb9c631abfaa272ae56c8b55bf68d445f937f00e3d90292c776489093f2f",
+      "bytes": 13475,
+      "path": "docs/DEPLOY.md",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": true,
+      "blob": "a54a8f55b2db0bfeb21331018e5145d9fe4ae936"
+    },
+    {
+      "runner_labels": [],
+      "sha256": "b45fece77b125195baf07a667a510c22091e4bcfa6ff0f433f7a14140cf8b38d",
+      "bytes": 12317,
+      "path": "scripts/railway-deploy.mjs",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": true,
+      "blob": "ac9257a089da3c6f58a2e44a759ec1241ac39f84"
+    },
+    {
+      "runner_labels": [],
+      "sha256": "6b2285edc2756d9810b651d874fb6579ab10e788a2f900b3ce326c14e9ac60ef",
+      "bytes": 15233,
+      "path": "scripts/workflow-trust-policy.mjs",
+      "scope": "Inspection only. Regex observations are not a full gate or human-review analysis.",
+      "drain_mentioned": false,
+      "blob": "127dd323392582c4082060e1c1a7b42f13d6085c"
+    }
+  ],
+  "job_logs": {
+    "downloaded": false,
+    "reason": "No job executed: promotion steps zero, CodeQL queued. No successful job logs exist for this merge yet."
+  },
+  "promotion_start_failure": [
+    "The job was not started because an Actions budget is preventing further use."
+  ],
+  "github_deployments_for_merge": 0,
+  "formal_tool": {
+    "pr": 188,
+    "receipt_sha256": "26e07700e61277f4fb93e83a9a6c1cf165a90d75c84afb0a98c463a4d91d1b66",
+    "merged_mode_available": false,
+    "reason": "Formal PR188 source verify requires state open and fixed PR head. No rejected job command was attempted.",
+    "tested_source": "504a547410908046fbea89e4f4b83ca595ca0e43",
+    "merge_source": "fa594cec7bee92bffa3fbd8ab815e3c03a189efc",
+    "module_tree": "2eec8c5f2831fe695d5c604c566c675fe9e6cac0",
+    "hash_matches": true,
+    "installed_sha256": "26e07700e61277f4fb93e83a9a6c1cf165a90d75c84afb0a98c463a4d91d1b66"
+  },
+  "vercel": {
+    "latest": [
+      {
+        "source": "f3d946cb0f7e33b8cb5cbc0858091e583ca61350",
+        "url_saved": false,
+        "state": "READY",
+        "id": "dpl_CeBeNkHzKEuaFzJCSftEzpP3PWkT",
+        "createdAt": 1791573132855,
+        "target": "production"
+      }
+    ],
+    "pagination_remaining": false,
+    "query": "Existing production only, fixed repository ID and owner verified from deployment metadata",
+    "response_fingerprint": {
+      "encoding": "UTF8 from CLI text, LF joined; not original job log bytes",
+      "sha256": "52f466f435f8171eafbbd4bc6480e858dd94deb80aa983677dcc3aa1104c93b5",
+      "bytes": 79079
+    },
+    "merge_deployments": 0,
+    "returned_count": 41,
+    "limitation": "Latest returned production deployment is not proof of the active canonical alias. No deployment performed.",
+    "deployment_inspect": {
+      "ready_state": "READY",
+      "aliased_urls": 3,
+      "id": "dpl_CeBeNkHzKEuaFzJCSftEzpP3PWkT",
+      "source_binding": "Same URL from fixed-repository production deployment metadata with source f3d946cb0f7e33b8cb5cbc0858091e583ca61350",
+      "target": "production"
+    }
+  },
+  "railway": {
+    "revision_verified": false,
+    "services": [
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "0d3c0a05-fe2e-4793-a3b9-3d2ea2c1bb63",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "5f2ef571-5cb5-42e1-ad48-83e7b9df8752",
+        "created_at": "2026-10-09T19:01:56.397Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "0d3c0a05-fe2e-4793-a3b9-3d2ea2c1bb63",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "3b65889f-1b54-45d5-99a6-8f2937553f73",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "41e8e07c-6385-42ab-bd16-f4c7a192f482",
+        "created_at": "2026-10-09T19:03:29.673Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "3b65889f-1b54-45d5-99a6-8f2937553f73",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "b44beb44-7bb7-45ea-ade7-670519473099",
+            "status": "CRASHED",
+            "stopped": true
+          }
+        ],
+        "service_id": "f6042512-6571-40a8-8137-03566ffb6ea5",
+        "created_at": "2026-10-16T00:03:20.195Z",
+        "status": "CRASHED",
+        "latest_deployment_id": "b44beb44-7bb7-45ea-ade7-670519473099",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": true
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "1f852d96-9256-41fe-acb4-39c6d8fe5496",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "990327e6-f50b-4bbe-99cc-49354930cd2e",
+        "created_at": "2026-10-09T19:00:22.554Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "1f852d96-9256-41fe-acb4-39c6d8fe5496",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "b323e245-57ab-47eb-9d33-edf6796cfd4b",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "49ab84aa-af25-4063-b6cd-62cc5af0e94b",
+        "created_at": "2026-10-09T19:07:17.339Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "b323e245-57ab-47eb-9d33-edf6796cfd4b",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "53f7adb0-3ee7-4a53-a55b-deed4b39aa6e",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "7183dd73-9ccd-443f-a06d-15d75d486f52",
+        "created_at": "2026-08-29T16:45:03.736Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "53f7adb0-3ee7-4a53-a55b-deed4b39aa6e",
+        "source_image_present": true,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "88a5a109-b3e1-4c9b-911c-3daa4095a0a4",
+            "status": "SUCCESS",
+            "stopped": true
+          }
+        ],
+        "service_id": "7016948d-9a87-4d91-b2e2-fa604e31d837",
+        "created_at": "2026-10-09T19:08:40.31Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "88a5a109-b3e1-4c9b-911c-3daa4095a0a4",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": true
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "74139ae9-3d6c-4e48-88a0-1bd0867b3ae8",
+            "status": "CRASHED",
+            "stopped": true
+          }
+        ],
+        "service_id": "fae65bf5-aade-4f69-bb8c-e0dce321387d",
+        "created_at": "2026-10-07T05:02:01.2Z",
+        "status": "FAILED",
+        "latest_deployment_id": "cfad911e-5efd-4cf5-af9f-335026f33933",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": true
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "4a8ff986-55f3-46f9-8731-5aa472c8c173",
+            "status": "SUCCESS",
+            "stopped": true
+          }
+        ],
+        "service_id": "6d29f13d-e058-4d91-b37f-4072c28ae316",
+        "created_at": "2026-10-09T19:05:33.976Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "4a8ff986-55f3-46f9-8731-5aa472c8c173",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": true
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "88ee8d1b-7de5-4d05-ab66-92712979c41d",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "21bc0238-f117-42c3-80ec-b016dfdd3674",
+        "created_at": "2026-10-12T05:11:03.575Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "88ee8d1b-7de5-4d05-ab66-92712979c41d",
+        "source_image_present": false,
+        "revision": null,
+        "stopped": false
+      },
+      {
+        "source_repo_present": false,
+        "active_deployments": [
+          {
+            "id": "8f180d62-b79c-424b-ae27-5f59bc375df1",
+            "status": "SUCCESS",
+            "stopped": false
+          }
+        ],
+        "service_id": "edfe2635-cc32-4e77-8b29-d4835c2f9218",
+        "created_at": "2026-09-13T06:58:59.052Z",
+        "status": "SUCCESS",
+        "latest_deployment_id": "8f180d62-b79c-424b-ae27-5f59bc375df1",
+        "source_image_present": true,
+        "revision": null,
+        "stopped": false
+      }
+    ],
+    "environment": "production",
+    "environment_id": "d433d517-a5b8-4c7d-beab-803fddd6df08",
+    "response_fingerprint": {
+      "encoding": "UTF8 from CLI text, LF joined; not original job log bytes",
+      "sha256": "3c1992912cb90f1c8b508111a2f8b51024acf4407011dd89f1fe8b2b3bbedd89",
+      "bytes": 102220
+    },
+    "binding": "Project name matched in memory; service source.repo fields empty. Fixed-source deploy config/service ID binding still required before mutation.",
+    "project_id": "1ee7c9c1-1941-4c8f-b969-eeda9215f36b",
+    "cli_revision_claims": [
+      {
+        "service_id": "5f2ef571-5cb5-42e1-ad48-83e7b9df8752",
+        "latest_deployment_id": "0d3c0a05-fe2e-4793-a3b9-3d2ea2c1bb63",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "41e8e07c-6385-42ab-bd16-f4c7a192f482",
+        "latest_deployment_id": "3b65889f-1b54-45d5-99a6-8f2937553f73",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "f6042512-6571-40a8-8137-03566ffb6ea5",
+        "latest_deployment_id": "b44beb44-7bb7-45ea-ade7-670519473099",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "990327e6-f50b-4bbe-99cc-49354930cd2e",
+        "latest_deployment_id": "1f852d96-9256-41fe-acb4-39c6d8fe5496",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "49ab84aa-af25-4063-b6cd-62cc5af0e94b",
+        "latest_deployment_id": "b323e245-57ab-47eb-9d33-edf6796cfd4b",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "7183dd73-9ccd-443f-a06d-15d75d486f52",
+        "latest_deployment_id": "53f7adb0-3ee7-4a53-a55b-deed4b39aa6e",
+        "sha_mentions": []
+      },
+      {
+        "service_id": "7016948d-9a87-4d91-b2e2-fa604e31d837",
+        "latest_deployment_id": "88a5a109-b3e1-4c9b-911c-3daa4095a0a4",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "fae65bf5-aade-4f69-bb8c-e0dce321387d",
+        "latest_deployment_id": "cfad911e-5efd-4cf5-af9f-335026f33933",
+        "sha_mentions": [
+          "6e1cbabb0e1b9bac5fd2b06644dfa83efdd3f152"
+        ]
+      },
+      {
+        "service_id": "6d29f13d-e058-4d91-b37f-4072c28ae316",
+        "latest_deployment_id": "4a8ff986-55f3-46f9-8731-5aa472c8c173",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "21bc0238-f117-42c3-80ec-b016dfdd3674",
+        "latest_deployment_id": "88ee8d1b-7de5-4d05-ab66-92712979c41d",
+        "sha_mentions": [
+          "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
+        ]
+      },
+      {
+        "service_id": "edfe2635-cc32-4e77-8b29-d4835c2f9218",
+        "latest_deployment_id": "8f180d62-b79c-424b-ae27-5f59bc375df1",
+        "sha_mentions": []
+      }
+    ],
+    "cli_revision_limitation": "SHA mentions in recorded CLI deployment message are claims, not an independently verified runtime revision."
+  },
+  "readiness_probe": {
+    "body_utf8_bytes": 328,
+    "executed": true,
+    "observed_at_utc": "2026-10-16T17:56:44.8578312Z",
+    "service_id": "21bc0238-f117-42c3-80ec-b016dfdd3674",
+    "method": "GET",
+    "body_saved": false,
+    "canonical_domain_matches": 0,
+    "domain_binding": "Unique service domain from existing production service metadata; not asserted canonical alias",
+    "body_sha256": "5e8f188e3cfd9a8e4c6b472cc88c5273d02d166e21489dab374a8258ce5acacd",
+    "fixed_doc_blob": "a54a8f55b2db0bfeb21331018e5145d9fe4ae936",
+    "redirect_followed": false,
+    "status": 200,
+    "path": "/ready",
+    "runtime_revision_verified": false
+  },
+  "owned_resources": {
+    "cargo_executions": 0,
+    "temp_owner_id": "08a2b69463e4c04a08ff44f1a0fe386a",
+    "candidate_locks_acquired": 0,
+    "chrome_tabs_created": 0,
+    "gpu_executions": 0,
+    "containers_started": 0,
+    "runner_registrations_created": 0,
+    "production_mutations": 0,
+    "temp_cleanup": {
+      "source_absent": true,
+      "owner_id": "08a2b69463e4c04a08ff44f1a0fe386a",
+      "finished_at_utc": "2026-10-16T17:57:55.0368488Z",
+      "plan_entries": 2,
+      "plan_bytes": 11715,
+      "separate_delete_exit": 0
+    }
+  },
+  "dependency_todo": 2757
+}

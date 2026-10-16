@@ -97,12 +97,17 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   read-only probe confirmed the WIM can be queried, the target volume accepts
   a small write/remove, and source/target checks pass. The failed WIM applies
   left the OS partition without a Windows directory, and VHD/ISO mounts were
-  detached afterward. The current helper addresses an empty stage folder by
-  the VHD volume GUID, then moves a successful applied image into the OS root
-  on the same volume. This has not been run yet.
-- The last retry stopped before AdminBroker because it rejected the empty
-  stage folder left by the previous attempt. No VM or VHD write occurred in
-  that invocation. The helper now accepts at most one regular, empty stage
+  detached afterward. The next approach applies to a per-instance staging
+  directory on the same guest OS partition, then moves the applied image into
+  the OS root. The Dism cmdlet takes the target by Volume GUID path; PowerShell
+  creates and moves files using the same volume's temporary drive letter.
+- The most recent retry passed old-receipt and partition checks, reset/formatted
+  only the task-owned VHD, then stopped because PowerShell `New-Item` rejected
+  the Volume GUID path for the staging directory. No WIM payload or new VM was
+  created; the VHD is detached and has the expected EFI/MSR/OS layout. The
+  helper now creates the stage directory through the exact OS drive letter,
+  then passes its equivalent Volume GUID path to Dism. The helper accepts at
+  most one regular, empty stage
   folder whose name matches its fixed prefix and 32-hex nonce; any contents,
   reparse point, Windows tree, or other OS-root entry still blocks a reset.
   The previous VM/cleanup/failure attempt records are preserved idempotently

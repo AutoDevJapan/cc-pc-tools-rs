@@ -1117,12 +1117,12 @@ try {
   $stageName='cc2746-image-stage-'+$instance
   $stageLetterPath=Join-Path $osRoot $stageName
   $applyDir=$osVolumeRoot.TrimEnd('\')+'\'+$stageName
-  if(Test-Path -LiteralPath $applyDir){throw 'OWNED_DISM_APPLY_STAGE_ALREADY_EXISTS'}
-  New-Item -ItemType Directory -Path $applyDir|Out-Null
+  if(Test-Path -LiteralPath $stageLetterPath){throw 'OWNED_DISM_APPLY_STAGE_ALREADY_EXISTS'}
+  New-Item -ItemType Directory -Path $stageLetterPath|Out-Null
   $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
   $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
   if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
-  if(-not (Test-Path -LiteralPath $applyDir)){throw 'OWNED_DISM_APPLY_STAGE_MISSING'}
+  if(-not (Test-Path -LiteralPath $stageLetterPath)){throw 'OWNED_DISM_APPLY_STAGE_MISSING'}
   Expand-WindowsImage -ImagePath $wim -Index $edition.ImageIndex -ApplyPath $applyDir -CheckIntegrity -NoRpFix -ScratchDirectory $dismScratch -LogPath $dismLog -ErrorAction Stop|Out-Null
   $stagedWindows=Join-Path $stageLetterPath 'Windows'
   if(-not (Test-Path -LiteralPath (Join-Path $stagedWindows 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}

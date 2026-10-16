@@ -57,9 +57,10 @@ Git所有者拒否1件の限定再検査、doc/Clippy/fmtが成功した。
 
 ## 再開時に残ること
 
-1. merged a83の既存CIを追う。Build38898257026、Go38898256805、
-   CodeQL38898257373。21:09時点では未完了。成功と仮定せず、
-   最新noteでその後の実結果を確認する。同じCIを盲目に再実行しない。
+1. merged a83のBuild38898257026、Go38898256805、CodeQL38898257373は
+   全successを確認済み。Windows全workspace2254件、doc/Clippy、Go両OS、
+   CodeQL全4言語が成功した。全原ログのbytes/hashも保存した。
+   この同じCIを重複実行しない。
 2. 元2710/2730は自身の終了済み資源の回収を既存2381で待っている。
    親がそのroot/profileを重複変更しない。Windows専用profile/hive、
    helperのPROTECTED_PATH/ENTRY_LIMIT_EXCEEDEDを未完として保つ。

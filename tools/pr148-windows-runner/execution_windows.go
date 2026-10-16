@@ -26,7 +26,7 @@ func pipeInput(p Plan) ([]byte, error) {
 		return nil, e
 	}
 	var sd uintptr
-	r, _, e := convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;"+sid+")(A;;GW;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
+	r, _, e := convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;"+sid+")(A;;0x40000080;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
 	if r == 0 {
 		return nil, e
 	}
@@ -72,6 +72,15 @@ func pipeInput(p Plan) ([]byte, error) {
 	if n < 1 || n >= 4096 {
 		return nil, errors.New("registration input size rejected")
 	}
+	var client uint32
+	r, _, e = kernel.NewProc("GetNamedPipeClientProcessId").Call(h, uintptr(unsafe.Pointer(&client)))
+	if r == 0 {
+		return nil, e
+	}
+	var a admission
+	if json.Unmarshal(b[:n], &a) != nil || a.validate() != nil || a.SenderPID != client {
+		return nil, errors.New("registration allocation/client identity mismatch")
+	}
 	return b[:n], nil
 }
 func waitIO(h uintptr, ov *syscall.Overlapped, budget time.Duration) error {
@@ -99,16 +108,22 @@ cancel:
 }
 
 func execute(p Plan) error {
+	if p.Fixture == "" {
+		return executeThroughGate(p)
+	}
+	return executeAdmitted(p)
+}
+func executeAdmitted(p Plan) error {
 	var secret []byte
 	var e error
 	if p.Fixture == "" {
-		if os.Getenv("PR148_GATE_CHILD") != "1" {
-			return executeThroughGate(p)
+		if e = verifyGateAllocation(); e != nil {
+			return e
 		}
 		if e = audit(p); e != nil {
 			return e
 		}
-		secret, e = boundedRead(os.Stdin, 4095)
+		secret, e = boundedRead(os.Stdin, 1024)
 		if e != nil {
 			return e
 		}
@@ -124,10 +139,19 @@ func execute(p Plan) error {
 	if p.Fixture == "" {
 		until := time.Now().Add(30 * time.Second)
 		for {
-			f, err := os.OpenFile(pipeName(p), os.O_WRONLY, 0)
+			f, err := openRegistrationPipe(p)
 			if err == nil {
-				payload, _ := json.Marshal(admission{Token: string(secret), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS")})
-				_, e = f.Write(payload)
+				e = verifyPipeServer(p, f)
+				if e != nil {
+					f.Close()
+					break
+				}
+				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS")})
+				if len(payload) >= 4096 {
+					e = errors.New("registration frame exceeds pipe bound")
+				} else {
+					_, e = f.Write(payload)
+				}
 				clear(payload)
 				e = errors.Join(e, f.Close())
 				break
@@ -162,7 +186,10 @@ func execute(p Plan) error {
 				return errors.New("finite service reported failure; inspect receipts")
 			}
 			if p.Fixture == "" {
-				return audit(p)
+				if e = validateLauncherSuccess(p); e != nil {
+					return e
+				}
+				return auditFinished(p)
 			}
 			return nil
 		}
@@ -193,6 +220,14 @@ func runOwnedWorker(p Plan) error {
 		return err
 	}
 	defer syscall.CloseHandle(token)
+	if err = authenticatedUsersDenyOnly(token); err != nil {
+		return err
+	}
+	launchReport.TokenAUDenyOnlyVerified = true
+	launchReport.AccountSID, err = tokenUserSID(token)
+	if err != nil {
+		return err
+	}
 	job, _, e := createJob.Call(0, 0)
 	if job == 0 {
 		return e
@@ -206,8 +241,9 @@ func runOwnedWorker(p Plan) error {
 	}
 	// Explicit environment excludes all host credentials, owner homes and jobs.
 	env := envFor(p)
+	env = append(env, "PR148_LAUNCHER_PID="+strconv.Itoa(os.Getpid()))
 	if p.Fixture == "" {
-		env = append(env, "ACTIONS_RUNNER_INPUT_TOKEN="+admitted.Token, "CODEX_JOBS_CARGO_LOCK_HELD=1", "CARGO_BUILD_JOBS="+admitted.Jobs, "RUST_TEST_THREADS="+admitted.Threads, "NEXTEST_TEST_THREADS="+admitted.Threads, "PR148_LAUNCHER_PID="+strconv.Itoa(os.Getpid()))
+		env = append(env, "ACTIONS_RUNNER_INPUT_TOKEN="+admitted.Token, "CODEX_JOBS_CARGO_LOCK_HELD="+admitted.Held, "CARGO_BUILD_JOBS="+admitted.Jobs, "RUST_TEST_THREADS="+admitted.Threads, "NEXTEST_TEST_THREADS="+admitted.Threads)
 	}
 	var block []uint16
 	for _, v := range env {
@@ -233,6 +269,7 @@ func runOwnedWorker(p Plan) error {
 	}
 	defer syscall.CloseHandle(process.Process)
 	defer syscall.CloseHandle(process.Thread)
+	launchReport.WorkerPID = process.ProcessId
 	r, _, e = assignJob.Call(job, uintptr(process.Process))
 	if r == 0 {
 		_ = syscall.TerminateProcess(process.Process, 1)
@@ -247,6 +284,19 @@ func runOwnedWorker(p Plan) error {
 	cancelled := false
 	var exit uint32
 	for {
+		if p.Fixture != "" && launchReport.FixtureChildPID == 0 {
+			var ready struct {
+				Worker   uint32 `json:"worker_pid"`
+				Child    uint32 `json:"child_pid"`
+				Observed bool   `json:"child_observed_alive"`
+			}
+			if b, err := os.ReadFile(filepath.Join(p.runtime(), "fixture.json")); err == nil && json.Unmarshal(b, &ready) == nil && ready.Worker == process.ProcessId && ready.Child != 0 && ready.Observed {
+				launchReport.FixtureChildPID = ready.Child
+				if err = publishLauncherReport(); err != nil {
+					return errors.Join(err, killOwned(job, process.Process))
+				}
+			}
+		}
 		w, e := syscall.WaitForSingleObject(process.Process, 50)
 		if e != nil {
 			return errors.Join(e, killOwned(job, process.Process))
@@ -271,7 +321,16 @@ func runOwnedWorker(p Plan) error {
 	// failure, never proof of drain. SCM/controller keeps the residual visible.
 	pids, drainErr := killOwnedReport(job, process.Process)
 	e = drainErr
-	receipt := map[string]any{"root_pid": process.ProcessId, "retained_member_pids": pids, "retained_handles_signalled": e == nil, "root_exit": exit, "cancelled": cancelled, "job_drained": e == nil, "virtual_account": true, "authenticated_users_disabled": true, "profile_loading_requested": false, "official_ci_claimed": false}
+	if e == nil {
+		e = syscall.GetExitCodeProcess(process.Process, &exit)
+		if e == nil {
+			launchReport.WorkerExit = &exit
+		}
+	}
+	launchReport.Cancelled = cancelled
+	launchReport.Drained = e == nil
+	launchReport.MemberPIDs = pids
+	receipt := map[string]any{"root_pid": process.ProcessId, "retained_member_pids": pids, "retained_handles_signalled": e == nil, "root_exit": launchReport.WorkerExit, "cancelled": cancelled, "job_drained": e == nil, "account_sid_observed": launchReport.AccountSID, "token_au_deny_only_verified": launchReport.TokenAUDenyOnlyVerified, "load_user_profile_api_requested": false, "scm_profile_state_not_measured_here": true, "official_ci_claimed": false}
 	writeErr := saveNew(filepath.Join(p.runtime(), "drain.json"), receipt)
 	if e != nil || writeErr != nil {
 		return errors.Join(e, writeErr)
@@ -330,7 +389,7 @@ func worker(p Plan) error {
 		return e
 	}
 	if p.Fixture != "" {
-		return serviceFixture(p)
+		return serviceFixture(p, sid, e == nil)
 	}
 	token := os.Getenv("ACTIONS_RUNNER_INPUT_TOKEN")
 	os.Unsetenv("ACTIONS_RUNNER_INPUT_TOKEN")
@@ -363,7 +422,7 @@ func worker(p Plan) error {
 	}
 	return nil
 }
-func serviceFixture(p Plan) error {
+func serviceFixture(p Plan, sid string, auChecked bool) error {
 	c := exec.Command(filepath.Join(p.Root, "helper.exe"), "fixture-child", p.Root)
 	hidden(c)
 	c.Env = envFor(p)
@@ -379,7 +438,11 @@ func serviceFixture(p Plan) error {
 	if e != nil || w != 258 {
 		return errors.New("fixture child not observed alive")
 	}
-	launcher, err := syscall.OpenProcess(0x1000, false, uint32(os.Getppid()))
+	launcherID, err := strconv.ParseUint(os.Getenv("PR148_LAUNCHER_PID"), 10, 32)
+	if err != nil || launcherID == 0 {
+		return errors.New("explicit launcher PID missing")
+	}
+	launcher, err := syscall.OpenProcess(0x1000, false, uint32(launcherID))
 	if err == nil {
 		syscall.CloseHandle(launcher)
 		return errors.New("filtered child reopened launcher")
@@ -395,11 +458,13 @@ func serviceFixture(p Plan) error {
 	if !errors.Is(err, syscall.ERROR_ACCESS_DENIED) {
 		return errors.New("immutable plan protection not proven")
 	}
-	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "child_observed_alive": true, "case": p.Fixture, "virtual_account": true, "launcher_reopen_denied": true, "control_write_denied": true, "authenticated_users_deny_only_verified": true}); e != nil {
+	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "child_observed_alive": true, "case": p.Fixture, "account_sid_observed": sid, "explicit_launcher_pid": launcherID, "launcher_reopen_denied": true, "control_write_denied": true, "authenticated_users_deny_only_verified": auChecked}); e != nil {
 		return e
 	}
 	if p.Fixture == "cancel" {
 		time.Sleep(time.Duration(p.Seconds+10) * time.Second)
+	} else {
+		time.Sleep(200 * time.Millisecond)
 	}
 	return nil
 }

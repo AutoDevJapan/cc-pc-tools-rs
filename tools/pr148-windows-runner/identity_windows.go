@@ -18,7 +18,10 @@ import (
 )
 
 func api(path string, v any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	return apiWithContext(context.Background(), path, v)
+}
+func apiWithContext(parent context.Context, path string, v any) error {
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	c := exec.CommandContext(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", path)
 	hidden(c)
@@ -42,6 +45,27 @@ func api(path string, v any) error {
 	return json.Unmarshal(b, v)
 }
 func audit(p Plan) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	return auditMode(ctx, p, false)
+}
+func auditFinished(p Plan) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	for {
+		e := auditMode(ctx, p, true)
+		if !errors.Is(e, errPending) {
+			return e
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("official completion/registration deadline")
+		case <-time.After(time.Second):
+		}
+	}
+}
+func auditMode(ctx context.Context, p Plan, finished bool) error {
+	api := func(path string, v any) error { return apiWithContext(ctx, path, v) }
 	if p.Fixture != "" {
 		return errors.New("fixture is not API or runner identity evidence")
 	}
@@ -105,6 +129,16 @@ func audit(p Plan) error {
 	if commit.SHA != sourceHead || commit.Tree.SHA != sourceTree {
 		return errors.New("actual fixed source tree changed")
 	}
+	var merge struct {
+		SHA     string
+		Parents []struct{ SHA string }
+	}
+	if e := api("repos/"+repository+"/git/commits/"+p.WorkflowSHA, &merge); e != nil {
+		return e
+	}
+	if merge.SHA != p.WorkflowSHA || len(merge.Parents) != 2 || merge.Parents[0].SHA != p.Base || merge.Parents[1].SHA != p.PRHead {
+		return errors.New("workflow commit is not this exact PR test merge")
+	}
 	var wf struct{ Content, Encoding string }
 	if e := api("repos/"+repository+"/contents/"+p.Workflow+"?ref="+p.WorkflowSHA, &wf); e != nil {
 		return e
@@ -112,6 +146,13 @@ func audit(p Plan) error {
 	wb, e := base64.StdEncoding.DecodeString(strings.ReplaceAll(wf.Content, "\n", ""))
 	if e != nil || wf.Encoding != "base64" || digest(wb) != p.WorkflowDigest {
 		return errors.New("actual workflow digest mismatch")
+	}
+	if e := api("repos/"+repository+"/contents/"+p.Workflow+"?ref="+p.PRHead, &wf); e != nil {
+		return e
+	}
+	wb, e = base64.StdEncoding.DecodeString(strings.ReplaceAll(wf.Content, "\n", ""))
+	if e != nil || wf.Encoding != "base64" || digest(wb) != p.WorkflowDigest {
+		return errors.New("merge and PR workflow bytes differ")
 	}
 	var run struct {
 		ID             int64
@@ -148,16 +189,15 @@ func audit(p Plan) error {
 	if e = api("repos/"+repository+"/actions/runners?per_page=100", &runners); e != nil {
 		return e
 	}
+	if finished && runners.Total == 1 && len(runners.Runners) == 1 && runners.Runners[0].Name == p.name() {
+		return errPending
+	}
 	if runners.Total != 0 || len(runners.Runners) != 0 {
 		return errors.New("repository runner registration remains; retain runtime credentials")
 	}
 	var jobs struct {
 		Total int `json:"total_count"`
-		Jobs  []struct {
-			Name   string
-			Labels []string
-			Runner string `json:"runner_name"`
-		}
+		Jobs  []apiJob
 	}
 	if e = api(fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d/jobs?per_page=100", repository, p.RunID, p.Attempt), &jobs); e != nil {
 		return e
@@ -172,8 +212,8 @@ func audit(p Plan) error {
 				return errors.New("duplicate target job")
 			}
 			found = true
-			if len(j.Labels) != 1 || j.Labels[0] != p.Label || (j.Runner != "" && j.Runner != p.name()) {
-				return errors.New("actual job route/runner rejected")
+			if e = checkJob(p, j, finished); e != nil {
+				return e
 			}
 		}
 	}
@@ -214,20 +254,38 @@ func hook(p Plan, mode string) error {
 	if os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || jerr != nil || terr != nil || jobs < 1 || jobs > 10 || threads < 1 || threads > 10 || os.Getenv("CARGO_TARGET_DIR") != filepath.Join(p.runtime(), "target") || os.Getenv("RUSTC_WRAPPER") != `D:\CC\Tools\sccache\sccache.exe` {
 		return errors.New("original shared cargo gate admission missing")
 	}
-	if e = verifySource(p, os.Getenv("GITHUB_WORKSPACE")); e != nil {
+	if e = verifySource(p, os.Getenv("GITHUB_WORKSPACE"), mode != "hook-completed"); e != nil {
 		return e
 	}
-	return saveNew(filepath.Join(p.runtime(), mode+".json"), map[string]any{"run_id": p.RunID, "attempt": p.Attempt, "job": p.Job, "workflow_digest": p.WorkflowDigest, "source_verified": true})
+	return saveNew(filepath.Join(p.runtime(), mode+".json"), makeHookReceipt(p, mode, event))
+}
+func validateHookFiles(p Plan) error {
+	var event string
+	for _, stage := range []string{"hook-start", "verify-source", "hook-completed"} {
+		b, e := os.ReadFile(filepath.Join(p.runtime(), stage+".json"))
+		if e != nil {
+			return errors.New("required hook/source-guard evidence missing")
+		}
+		r, e := validateHookData(p, stage, b)
+		if e != nil {
+			return e
+		}
+		if event != "" && r.EventDigest != event {
+			return errors.New("hook event evidence changed")
+		}
+		event = r.EventDigest
+	}
+	return nil
 }
 
-func verifySource(p Plan, source string) error {
-	if e := beneath(p.runner(), source); e != nil {
-		return e
+func verifySource(p Plan, source string, pristine bool) error {
+	if !samePath(source, p.source()) {
+		return errors.New("checkout must occupy the fixed workspace path")
 	}
 	run := func(args ...string) ([]byte, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		c := exec.CommandContext(ctx, `C:\Program Files\Git\cmd\git.exe`, append([]string{"--no-optional-locks", "-c", "safe.directory=" + source, "-C", source}, args...)...)
+		c := exec.CommandContext(ctx, `C:\Program Files\Git\cmd\git.exe`, append([]string{"--no-optional-locks", "-c", "safe.directory=" + source, "-c", "core.fsmonitor=false", "-c", "core.hooksPath=NUL", "-C", source}, args...)...)
 		hidden(c)
 		c.Env = envFor(p)
 		var out bytes.Buffer
@@ -236,6 +294,15 @@ func verifySource(p Plan, source string) error {
 			return nil, errors.New("source Git verification failed")
 		}
 		return out.Bytes(), nil
+	}
+	keys, e := run("config", "--local", "--no-includes", "--name-only", "--list")
+	if e != nil {
+		return e
+	}
+	for _, key := range strings.Fields(strings.ToLower(string(keys))) {
+		if blockedGitKey(key) {
+			return errors.New("checkout credential/execution config key rejected")
+		}
 	}
 	for _, row := range []struct{ arg, want string }{{"HEAD", p.Head}, {"HEAD^{tree}", p.Tree}} {
 		b, e := run("rev-parse", "--verify", row.arg)
@@ -251,13 +318,19 @@ func verifySource(p Plan, source string) error {
 	if e != nil || len(b) != 0 {
 		return errors.New("tracked checkout bytes changed")
 	}
+	if pristine {
+		b, e = run("status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored")
+		if e != nil || len(b) != 0 {
+			return errors.New("pre-execution checkout contains extra or ignored files")
+		}
+	}
 	// Inspect config key names, never their credential values.
 	b, e = run("config", "--local", "--name-only", "--list")
 	if e != nil {
 		return e
 	}
 	for _, key := range strings.Fields(strings.ToLower(string(b))) {
-		if strings.Contains(key, "extraheader") || strings.HasPrefix(key, "credential.") || strings.Contains(key, "insteadof") {
+		if blockedGitKey(key) {
 			return errors.New("checkout credential/config key rejected")
 		}
 	}

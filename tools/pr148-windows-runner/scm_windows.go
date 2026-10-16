@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"syscall"
@@ -27,7 +28,10 @@ func ptr(s string) uintptr {
 }
 func closeSC(h uintptr) { advapi.NewProc("CloseServiceHandle").Call(h) }
 func openSC() (uintptr, error) {
-	r, _, e := advapi.NewProc("OpenSCManagerW").Call(0, 0, 3)
+	return manager(1)
+}
+func manager(access uintptr) (uintptr, error) {
+	r, _, e := advapi.NewProc("OpenSCManagerW").Call(0, 0, access)
 	if r == 0 {
 		return 0, e
 	}
@@ -46,7 +50,7 @@ func openService(p Plan, access uintptr) (uintptr, error) {
 	return r, nil
 }
 func installService(p Plan) error {
-	scm, e := openSC()
+	scm, e := manager(3)
 	if e != nil {
 		return e
 	}
@@ -60,6 +64,16 @@ func installService(p Plan) error {
 	defer closeSC(s)
 	v := uint32(1)
 	r, _, e := advapi.NewProc("ChangeServiceConfig2W").Call(s, 5, uintptr(unsafe.Pointer(&v)))
+	if r == 0 {
+		return e
+	}
+	var sd uintptr
+	r, _, e = convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x34;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
+	if r == 0 {
+		return e
+	}
+	defer kernel.NewProc("LocalFree").Call(sd)
+	r, _, e = advapi.NewProc("SetServiceObjectSecurity").Call(s, 4, sd)
 	if r == 0 {
 		return e
 	}
@@ -120,9 +134,11 @@ func stopFinite(p Plan) error {
 		return nil
 	}
 	var status [7]uint32
-	r, _, e := advapi.NewProc("ControlService").Call(s, 1, uintptr(unsafe.Pointer(&status[0])))
-	if r == 0 {
-		return e
+	if state != 3 {
+		r, _, callErr := advapi.NewProc("ControlService").Call(s, 1, uintptr(unsafe.Pointer(&status[0])))
+		if r == 0 && callErr != syscall.Errno(1061) && callErr != syscall.Errno(1062) {
+			return callErr
+		}
 	}
 	until := time.Now().Add(40 * time.Second)
 	for time.Now().Before(until) {
@@ -148,8 +164,18 @@ var activePlan Plan
 var stopService = make(chan struct{})
 var stopOnce sync.Once
 var statusHandle uintptr
+var statusMu sync.Mutex
+var statusTerminal bool
 
 func status(state, code uint32) {
+	statusMu.Lock()
+	defer statusMu.Unlock()
+	if statusTerminal {
+		return
+	}
+	if state == 1 {
+		statusTerminal = true
+	}
 	s := serviceStatus{Type: 0x10, State: state, ExitCode: code}
 	if state == 4 {
 		s.Accepts = 1 | 4
@@ -174,7 +200,22 @@ func serviceMain(argc, argv uintptr) uintptr {
 	}
 	statusHandle = h
 	status(4, 0)
+	launchReport = launchResult{Instance: activePlan.Instance, ServicePID: os.Getpid()}
+	report, openErr := openLauncherReport(activePlan)
+	if openErr != nil {
+		status(1, 1)
+		return 0
+	}
+	defer report.Close()
+	activeReport = report
 	e := runOwnedWorker(activePlan)
+	if e == nil && activePlan.Fixture == "" {
+		e = validateHookFiles(activePlan)
+		launchReport.HooksVerified = e == nil
+	}
+	launchReport.ServiceSuccess = e == nil
+	jsonErr := publishLauncherReport()
+	e = errors.Join(e, jsonErr)
 	code := uint32(0)
 	if e != nil {
 		code = 1

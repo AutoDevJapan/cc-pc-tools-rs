@@ -70,11 +70,11 @@ type jobAccounting struct {
 func protectLauncher() error {
 	// The same-user child must not reopen the unfiltered launcher token or
 	// inject into the launcher to regain Authenticated Users' shared writes.
-	r, _, e := openToken.Call(^uintptr(0), 0x0002|0x0008|0x0001|0x0080|0x0100, uintptr(unsafe.Pointer(&launcherToken)))
+	r, _, e := openToken.Call(^uintptr(0), 0x0002|0x0008|0x0001|0x0080, uintptr(unsafe.Pointer(&launcherToken)))
 	if r == 0 {
 		return fmt.Errorf("open launcher token: %w", e)
 	}
-	sddl, _ := syscall.UTF16PtrFromString("D:P(D;;GA;;;OW)(A;;GA;;;SY)(A;;GA;;;BA)")
+	sddl, _ := syscall.UTF16PtrFromString("D:P(D;;GA;;;OW)(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x00100000;;;" + activePlan.ControllerSID + ")")
 	var descriptor uintptr
 	r, _, e = convertDescriptor.Call(uintptr(unsafe.Pointer(sddl)), 1, uintptr(unsafe.Pointer(&descriptor)), 0)
 	if r == 0 {

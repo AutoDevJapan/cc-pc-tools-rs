@@ -18,16 +18,20 @@ func dispatch(args []string) error {
 		return gateChild(args)
 	}
 	if len(args) < 2 {
-		return errors.New("usage: pr148-windows-runner <prepare|service|worker|execute|stop|collect|hook-start|verify-source|hook-completed|audit> <owned-root> [official-runner.zip]")
+		return errors.New("usage: pr148-windows-runner <prepare|service|worker|execute|stop|collect|cleanup-profile|hook-start|verify-source|hook-completed|audit> <owned-root> [official-runner.zip]")
 	}
 	p, e := readPlan(args[1])
 	if e != nil {
 		return e
 	}
 	if args[0] == "service" || args[0] == "worker" || args[0] == "fixture-child" || args[0] == "hook-start" || args[0] == "verify-source" || args[0] == "hook-completed" {
-		e = checkOwnedTree(p.Root)
+		e = checkControl(p.Root, false)
 	} else {
-		e = checkPaths(p.Root)
+		if args[0] == "prepare" {
+			e = checkPaths(p.Root)
+		} else {
+			e = checkControl(p.Root, true)
+		}
 	}
 	if e != nil {
 		if args[0] == "service" && p.Fixture != "" {

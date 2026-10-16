@@ -34,7 +34,25 @@ func TestAdmissionBounds(t *testing.T) {
 			t.Fatal("accepted invalid admission")
 		}
 	}
-	if e := (admission{Token: "fixture", Jobs: "10", Threads: "10"}).validate(); e != nil {
+	if e := (admission{Token: "fixture", Jobs: "10", Threads: "10", Held: "1", SenderPID: 1}).validate(); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestAdmissionCannotBeClaimedByEnvironmentMarker(t *testing.T) {
+	t.Setenv("PR148_GATE_CHILD", "1")
+	t.Setenv("CODEX_JOBS_CARGO_LOCK_HELD", "1")
+	t.Setenv("CARGO_BUILD_JOBS", "10")
+	t.Setenv("RUST_TEST_THREADS", "10")
+	if verifyGateAllocation() == nil {
+		t.Fatal("a test process whose parent is not the shared gate forged admission")
+	}
+	base := admission{Token: "fixture", Jobs: "10", Threads: "10", Held: "1", SenderPID: 1}
+	for _, mutate := range []func(*admission){func(a *admission) { a.Held = "" }, func(a *admission) { a.SenderPID = 0 }, func(a *admission) { a.Jobs = "0" }, func(a *admission) { a.Jobs = "11" }, func(a *admission) { a.Threads = "11" }, func(a *admission) { a.Token = "" }} {
+		a := base
+		mutate(&a)
+		if a.validate() == nil {
+			t.Fatal("invalid allocation accepted")
+		}
 	}
 }

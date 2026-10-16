@@ -4,6 +4,7 @@ package main
 
 import (
 	"archive/zip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func hidden(c *exec.Cmd) {
@@ -35,6 +37,30 @@ func checkPaths(root string) error {
 	return checkOwnedTree(root)
 }
 
+// Controller commands never descend into the service-only credential/target
+// subtree. Control files and each accessible ancestor still reject reparse.
+func checkControl(root string, ancestors bool) error {
+	paths := []string{root, filepath.Join(root, "plan.json"), filepath.Join(root, "helper.exe"), filepath.Join(root, "prepared.json")}
+	if ancestors {
+		for cur := filepath.Dir(root); ; cur = filepath.Dir(cur) {
+			paths = append(paths, cur)
+			if filepath.Dir(cur) == cur {
+				break
+			}
+		}
+	}
+	for _, path := range paths {
+		fi, e := os.Lstat(path)
+		if e != nil {
+			return e
+		}
+		if fi.Sys().(*syscall.Win32FileAttributeData).FileAttributes&0x400 != 0 {
+			return errors.New("control reparse rejected")
+		}
+	}
+	return nil
+}
+
 // The administrative preparation checks every ancestor. The restricted worker
 // checks only its owned tree: traversing an ancestor is allowed by Windows but
 // reading the owner's Temp directory metadata is neither needed nor granted.
@@ -51,7 +77,10 @@ func checkOwnedTree(root string) error {
 }
 
 func icacls(path string, args ...string) error {
-	c := exec.Command(`C:\Windows\System32\icacls.exe`, append([]string{path}, args...)...)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	c := exec.CommandContext(ctx, `C:\Windows\System32\icacls.exe`, append([]string{path}, args...)...)
+	c.WaitDelay = time.Second
 	hidden(c)
 	if e := c.Run(); e != nil {
 		return fmt.Errorf("owned ACL operation failed: %w", e)
@@ -70,7 +99,7 @@ func prepare(p Plan, archive string) error {
 	if e != nil {
 		return e
 	}
-	if e = os.WriteFile(filepath.Join(p.Root, "helper.exe"), b, 0700); e != nil {
+	if e = writeNewBytes(filepath.Join(p.Root, "helper.exe"), b); e != nil {
 		return e
 	}
 	if e = os.Mkdir(p.runtime(), 0700); e != nil {
@@ -91,7 +120,7 @@ func prepare(p Plan, archive string) error {
 		for _, stage := range []string{"hook-start", "hook-completed"} {
 			// Hook files and helper are outside the writable runner directory.
 			text := "$ErrorActionPreference = 'Stop'\n& '" + strings.ReplaceAll(filepath.Join(p.Root, "helper.exe"), "'", "''") + "' '" + stage + "' '" + strings.ReplaceAll(p.Root, "'", "''") + "'\nexit $LASTEXITCODE\n"
-			if e = os.WriteFile(filepath.Join(p.Root, stage+".ps1"), []byte(text), 0600); e != nil {
+			if e = writeNewBytes(filepath.Join(p.Root, stage+".ps1"), []byte(text)); e != nil {
 				return e
 			}
 		}
@@ -111,20 +140,73 @@ func prepare(p Plan, archive string) error {
 	if e = icacls(p.runtime(), "/inheritance:r", "/grant:r", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F", "*"+sid+":(OI)(CI)F"); e != nil {
 		return e
 	}
+	if e = prepareLauncherReport(p, sid); e != nil {
+		return e
+	}
 	return saveNew(filepath.Join(p.Root, "prepared.json"), map[string]any{"service": p.name(), "sid": sid, "helper_sha256": digest(b), "credential_free": p.Fixture != "", "official_runner_executed": false})
+}
+func writeNewBytes(path string, b []byte) error {
+	f, e := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	_, e = f.Write(b)
+	return errors.Join(e, f.Close())
 }
 
 func extractRunner(p Plan, path string) error {
 	// The parent obtains the official actions/runner win-x64 release asset and
 	// its SHA256. Validate the same opened bytes before consuming any entry.
-	b, e := os.ReadFile(path)
+	var release struct {
+		Tag    string `json:"tag_name"`
+		Assets []struct {
+			Name, Digest string
+			URL          string `json:"browser_download_url"`
+		}
+	}
+	if e := api("repos/actions/runner/releases/tags/v"+p.RunnerVersion, &release); e != nil {
+		return e
+	}
+	assetName := "actions-runner-win-x64-" + p.RunnerVersion + ".zip"
+	found := false
+	for _, a := range release.Assets {
+		if a.Name == assetName {
+			if found || a.Digest != "sha256:"+p.RunnerDigest || a.URL != "https://github.com/actions/runner/releases/download/v"+p.RunnerVersion+"/"+assetName {
+				return errors.New("official release digest/version/source mismatch")
+			}
+			found = true
+		}
+	}
+	if !found || release.Tag != "v"+p.RunnerVersion {
+		return errors.New("official runner asset absent")
+	}
+	f, e := os.Open(path)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	fi, e := f.Stat()
+	if e != nil {
+		return e
+	}
+	if !fi.Mode().IsRegular() || fi.Size() > 512<<20 {
+		return errors.New("official archive size/type rejected")
+	}
+	b, e := boundedRead(f, 512<<20)
 	if e != nil {
 		return e
 	}
 	if len(b) > 512<<20 || digest(b) != p.RunnerDigest {
 		return errors.New("official runner archive digest mismatch")
 	}
-	return extractZip(p.runner(), b)
+	if e = extractZip(p.runner(), b); e != nil {
+		return e
+	}
+	fi, e = os.Lstat(filepath.Join(p.runner(), "bin", "Runner.Listener.exe"))
+	if e != nil || !fi.Mode().IsRegular() {
+		return errors.New("official listener missing")
+	}
+	return nil
 }
 
 func extractZip(root string, b []byte) error {
@@ -145,6 +227,10 @@ func extractZip(root string, b []byte) error {
 		for _, part := range strings.Split(n, "/") {
 			if part == "" || part == "." || part == ".." || strings.TrimRight(part, " .") != part {
 				return errors.New("runner zip component rejected")
+			}
+			stem := strings.ToUpper(strings.SplitN(part, ".", 2)[0])
+			if stem == "CON" || stem == "PRN" || stem == "AUX" || stem == "NUL" || (len(stem) == 4 && (strings.HasPrefix(stem, "COM") || strings.HasPrefix(stem, "LPT")) && stem[3] >= '1' && stem[3] <= '9') {
+				return errors.New("runner zip device name rejected")
 			}
 		}
 		key := strings.ToLower(n)

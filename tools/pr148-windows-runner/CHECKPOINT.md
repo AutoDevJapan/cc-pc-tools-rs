@@ -1,3 +1,16 @@
+## 2026-10-17 03時台のレビュー対応（この節を優先）
+
+ToDo2755のClaude Sonnet5.5原応答を受領した。固定code6275c09にMust6件、Suggestion12件。
+原応答はevidence-private/20261017/review-2755/original.mdへ全bytes/SHA一致で保存した。
+M1 pipeのSCM PID照合、M2実gate親/配分検査と入口分離、M3controller専用START/STOP/QUERYと
+runtimeを読まない事前検査、M4有限ACL操作と個別の不可逆attempt/result、M5保護されたlauncher
+結果と3hook/実job成功、M6実token/exit測定と旧証拠の誤読防止を実装した。
+Goの通常11件成功・2件opt-in skip、vet/build/test binary作成まで成功。修正したservice処理は
+まだ実機未検証であり、Must解消/再レビュー済みとはしない。
+新しい制御rootはTemp/codex-owned-9bb8054a11c766478f94ee37562f1267（safe-delete所有）。
+修正を実測するため、最終sourceに対応した新しいnormal/cancel各1件だけを作り、管理者権限を
+落とした自分のcontroller tokenで実行する。既存3profileのDeleteProfileW拒否は再試行しない。
+正式runner、製品source、Cargo、GPU/Civ6、旧2730資源は引き続き操作しない。
 # ToDo2749 再開記録（2026-10-17）
 
 作業branchはscheduler/todo-2749-pr148-windows-runner。

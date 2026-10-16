@@ -1326,37 +1326,75 @@ impl Context {
             job["cancel_requested_at"] = json!(self.rt.now());
             self.save(&job)?;
         }
+        let managed_root = if job["process_tree_version"] == 1 {
+            job["pid"]
+                .as_u64()
+                .and_then(|pid| u32::try_from(pid).ok())
+                .zip(job["pid_created"].as_u64())
+        } else {
+            None
+        };
+        let recorded_child = job["codex_pid"]
+            .as_u64()
+            .and_then(|pid| u32::try_from(pid).ok())
+            .zip(job["codex_pid_created"].as_u64());
         let mut targets = Vec::new();
-        for key in ["pid", "codex_pid"] {
-            if self.is_ours_checked(&job, key)? {
-                targets.push(key);
+        let managed_tree_stopped = if let Some((pid, created)) = managed_root {
+            if self
+                .rt
+                .kill_process_tree_job(pid, created, recorded_child)?
+            {
+                // The same Job Object's active=0 result is the completion
+                // evidence. Do not reopen PIDs after their identities can be reused.
+                targets.extend(["pid", "codex_pid"].into_iter().filter(|key| {
+                    job[*key].as_u64().is_some() && job[format!("{key}_created")].as_u64().is_some()
+                }));
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if !managed_tree_stopped {
+            // A supervisor that exited releases its named Job Object handle.
+            // Its surviving descendants remain recoverable through this
+            // retained-handle process walk.
+            for key in ["pid", "codex_pid"] {
+                if self.is_ours_checked(&job, key)? {
+                    targets.push(key);
+                }
+            }
+            for k in &targets {
+                // Stopping the supervisor's tree can already stop codex_pid.
+                // Recheck the recorded creation time before opening a second root.
+                if self.is_ours_checked(&job, k)? {
+                    let created = job[format!("{k}_created")]
+                        .as_u64()
+                        .ok_or_else(|| Error::new("owned process creation time is missing"))?;
+                    self.rt
+                        .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+                }
             }
         }
-        for k in &targets {
-            // Stopping the supervisor's tree can already stop codex_pid.
-            // Recheck the recorded creation time before opening a second root.
-            if self.is_ours_checked(&job, k)? {
-                let created = job[format!("{k}_created")]
-                    .as_u64()
-                    .ok_or_else(|| Error::new("owned process creation time is missing"))?;
-                self.rt
-                    .kill_owned_tree(job[*k].as_u64().unwrap() as u32, created)?;
+        if !managed_tree_stopped {
+            for _ in 0..50 {
+                let mut any_live = false;
+                for key in &targets {
+                    any_live |= self.is_ours_checked(&job, key)?;
+                }
+                if !any_live {
+                    break;
+                }
+                self.rt.sleep(0.1);
             }
-        }
-        for _ in 0..50 {
-            let mut any_live = false;
-            for key in &targets {
-                any_live |= self.is_ours_checked(&job, key)?;
-            }
-            if !any_live {
-                break;
-            }
-            self.rt.sleep(0.1);
         }
         let mut alive = Vec::new();
-        for key in &targets {
-            if self.is_ours_checked(&job, key)? {
-                alive.push(pystr(&job[*key]));
+        if !managed_tree_stopped {
+            for key in &targets {
+                if self.is_ours_checked(&job, key)? {
+                    alive.push(pystr(&job[*key]));
+                }
             }
         }
         if !alive.is_empty() {
@@ -1370,6 +1408,11 @@ impl Context {
         }
         job = self.load(jid)?;
         let cancelled = LIVE.contains(&s(&job, "status"));
+        job["process_tree_cancel_method"] = json!(if managed_tree_stopped {
+            "job_object"
+        } else {
+            "retained_handle_walk"
+        });
         if cancelled {
             job["status"] = json!("cancelled");
             job["finished_at"] = json!(self.rt.now());
@@ -1377,6 +1420,8 @@ impl Context {
             if let Some(start) = parse_iso(s(&job, "started_at")) {
                 job["duration_ms"] = json!(((self.rt.epoch() - start) * 1000.) as i64);
             }
+            self.save(&job)?;
+        } else if s(&job, "status") == "lost" {
             self.save(&job)?;
         }
         drop(lock);

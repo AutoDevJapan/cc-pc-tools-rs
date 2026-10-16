@@ -1,5 +1,28 @@
 # GitHub Actionsの重複実行を抑える（ToDo2501）
 
+## 2026-10-15の確認と追加是正
+
+PR145は2026-10-13にマージ済み。PCへの移行も、別担当のPR147・161・165で完了した。
+2026-10-15のAPI確認で、WindowsとLinuxのrepo専用runnerがonlineかつidleだった。
+最新mainのCodeQL4言語はLinux runner27で成功し、直近の全workspace検査・doctest・
+ClippyはWindows runner28で成功した。親PR144もマージ済みである。
+sourceの重複検査を追加で起動せず、固定SHAと実行機ID・各工程の成功を照合した。
+
+移行後に追加されたCodeQL・Product CI helper・Agent progress tools・PC runner acceptanceには、
+手動rerunを初回PRと同じグループへ入れる設定が残っていた。この4件を既存9件と同じ規則へそろえる。
+初回PRだけをPR番号でまとめ、rerunとPR以外はrun IDへ分ける。旧定義とのグループも分離する。
+新しいPR検査を追加するときはBuild speedの実行制御を参照する。
+fork除外、実行前のsource検証、検査コマンド、OS、CodeQLの言語と権限は維持する。
+追加是正のレビュー・固定HEADのCI・マージは、この段落を作成した時点では未完了。
+
+2026-10-15 04:25 UTCの組織利用額はActions net 2,000 USD、gross 2,043.5115 USD。
+10月14日・15日のnet増分は0 USDだった。Actions予算は2,000 USD・上限後の追加利用停止で、
+今回の担当は変更していない。この停止には予算上限の効果が含まれ、PR145だけの因果効果や
+確定請求額の減少とは扱わない。自社sourceと確認できない資源は匿名の会計metadataだけを扱う。
+OS再起動・ログオン・週次の実時刻でのrunner復帰は、この監査では未検証である。
+
+以下は2026-10-13時点の記録である。
+
 ## 完了した工程と残る工程
 
 2026-10-13、AutoDevJapanの既存OAuthで10月の組織利用額を取得した。

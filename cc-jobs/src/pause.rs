@@ -25,6 +25,8 @@ mod native {
     use std::collections::{HashMap, HashSet};
     use windows_sys::Win32::{
         Foundation::*,
+        System::JobObjects::*,
+        System::SystemServices::{JOB_OBJECT_QUERY, JOB_OBJECT_TERMINATE},
         System::{Diagnostics::ToolHelp::*, Threading::*},
     };
     #[link(name = "ntdll")]
@@ -42,7 +44,7 @@ mod native {
     struct Handle(HANDLE);
     #[derive(Debug)]
     struct NativeError {
-        stage: &'static str,
+        stage: String,
         source: io::Error,
     }
     impl std::fmt::Display for NativeError {
@@ -56,7 +58,22 @@ mod native {
         }
     }
     fn at(stage: &'static str, source: io::Error) -> io::Error {
-        io::Error::new(source.kind(), NativeError { stage, source })
+        io::Error::new(
+            source.kind(),
+            NativeError {
+                stage: stage.to_owned(),
+                source,
+            },
+        )
+    }
+    fn with_context(error: io::Error, context: String) -> io::Error {
+        io::Error::new(
+            error.kind(),
+            NativeError {
+                stage: context,
+                source: error,
+            },
+        )
     }
     unsafe impl Send for Handle {}
     impl Drop for Handle {
@@ -64,6 +81,287 @@ mod native {
             unsafe {
                 CloseHandle(self.0);
             }
+        }
+    }
+    pub struct ProcessTreeScope {
+        _job: Handle,
+    }
+    fn job_name(pid: u32, created: u64) -> Vec<u16> {
+        format!("Global\\cc-jobs-tree-{pid}-{created}\0")
+            .encode_utf16()
+            .collect()
+    }
+    pub fn contain_current_process(pid: u32, created: u64) -> io::Result<ProcessTreeScope> {
+        if pid != unsafe { GetCurrentProcessId() } {
+            return Err(io::Error::other("process tree root is not the caller"));
+        }
+        let mut times: [FILETIME; 4] = unsafe { std::mem::zeroed() };
+        if unsafe {
+            GetProcessTimes(
+                GetCurrentProcess(),
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            )
+        } == 0
+        {
+            return Err(at("tree/GetProcessTimes", io::Error::last_os_error()));
+        }
+        let actual = ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64;
+        if actual != created {
+            return Err(io::Error::other("process tree root identity changed"));
+        }
+        let name = job_name(pid, created);
+        unsafe { SetLastError(ERROR_SUCCESS) };
+        let job = Handle(unsafe { CreateJobObjectW(std::ptr::null(), name.as_ptr()) });
+        if job.0.is_null() {
+            return Err(at("tree/CreateJobObject", io::Error::last_os_error()));
+        }
+        if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+            return Err(io::Error::other("process tree job object already exists"));
+        }
+        // Keep ordinary descendants contained while allowing explicit nested
+        // `codex_jobs run` launches to retain their existing breakaway behavior.
+        let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+        if unsafe {
+            SetInformationJobObject(
+                job.0,
+                JobObjectExtendedLimitInformation,
+                (&limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            )
+        } == 0
+        {
+            return Err(at(
+                "tree/SetInformationJobObject",
+                io::Error::last_os_error(),
+            ));
+        }
+        if unsafe { AssignProcessToJobObject(job.0, GetCurrentProcess()) } == 0 {
+            return Err(at(
+                "tree/AssignProcessToJobObject",
+                io::Error::last_os_error(),
+            ));
+        }
+        Ok(ProcessTreeScope { _job: job })
+    }
+    fn active_job_processes(job: HANDLE) -> io::Result<u32> {
+        let mut accounting: JOBOBJECT_BASIC_ACCOUNTING_INFORMATION = unsafe { std::mem::zeroed() };
+        if unsafe {
+            QueryInformationJobObject(
+                job,
+                JobObjectBasicAccountingInformation,
+                (&mut accounting as *mut JOBOBJECT_BASIC_ACCOUNTING_INFORMATION).cast(),
+                std::mem::size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32,
+                std::ptr::null_mut(),
+            )
+        } == 0
+        {
+            return Err(at(
+                "tree/QueryInformationJobObject",
+                io::Error::last_os_error(),
+            ));
+        }
+        Ok(accounting.ActiveProcesses)
+    }
+    fn verify_job_root_and_caller(job: HANDLE, pid: u32, created: u64) -> io::Result<()> {
+        let mut caller_member = 0;
+        if unsafe { IsProcessInJob(GetCurrentProcess(), job, &mut caller_member) } == 0 {
+            return Err(at(
+                "tree/IsProcessInJob(caller)",
+                io::Error::last_os_error(),
+            ));
+        }
+        if caller_member != 0 {
+            return Err(io::Error::other(
+                "cancellation caller belongs to the target process tree job",
+            ));
+        }
+        let root = Handle(unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                pid,
+            )
+        });
+        if root.0.is_null() {
+            let error = io::Error::last_os_error();
+            return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                Ok(())
+            } else {
+                Err(at("tree/OpenProcess(root)", error))
+            };
+        }
+        match unsafe { WaitForSingleObject(root.0, 0) } {
+            WAIT_OBJECT_0 => return Ok(()),
+            WAIT_TIMEOUT => {}
+            _ => {
+                return Err(at(
+                    "tree/WaitForSingleObject(root)",
+                    io::Error::last_os_error(),
+                ));
+            }
+        }
+        let mut times: [FILETIME; 4] = unsafe { std::mem::zeroed() };
+        if unsafe {
+            GetProcessTimes(
+                root.0,
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            )
+        } == 0
+        {
+            return Err(at("tree/GetProcessTimes(root)", io::Error::last_os_error()));
+        }
+        let actual = ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64;
+        if actual != created {
+            return Err(io::Error::other("process tree root identity changed"));
+        }
+        let mut root_member = 0;
+        if unsafe { IsProcessInJob(root.0, job, &mut root_member) } == 0 {
+            return Err(at("tree/IsProcessInJob(root)", io::Error::last_os_error()));
+        }
+        if root_member == 0 {
+            return Err(io::Error::other(
+                "recorded process tree root is not a member of its Job Object",
+            ));
+        }
+        Ok(())
+    }
+    fn recorded_process_is_job_member(
+        job: HANDLE,
+        pid: u32,
+        created: u64,
+    ) -> io::Result<Option<bool>> {
+        let process = Handle(unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                pid,
+            )
+        });
+        if process.0.is_null() {
+            let error = io::Error::last_os_error();
+            return if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) {
+                Ok(None)
+            } else {
+                Err(at("tree/OpenProcess(recorded child)", error))
+            };
+        }
+        match unsafe { WaitForSingleObject(process.0, 0) } {
+            WAIT_OBJECT_0 => return Ok(None),
+            WAIT_TIMEOUT => {}
+            _ => {
+                return Err(at(
+                    "tree/WaitForSingleObject(recorded child)",
+                    io::Error::last_os_error(),
+                ));
+            }
+        }
+        let mut times: [FILETIME; 4] = unsafe { std::mem::zeroed() };
+        if unsafe {
+            GetProcessTimes(
+                process.0,
+                &mut times[0],
+                &mut times[1],
+                &mut times[2],
+                &mut times[3],
+            )
+        } == 0
+        {
+            return Err(at(
+                "tree/GetProcessTimes(recorded child)",
+                io::Error::last_os_error(),
+            ));
+        }
+        let actual = ((times[0].dwHighDateTime as u64) << 32) | times[0].dwLowDateTime as u64;
+        if actual != created {
+            return Ok(None);
+        }
+        match unsafe { WaitForSingleObject(process.0, 0) } {
+            WAIT_OBJECT_0 => return Ok(None),
+            WAIT_TIMEOUT => {}
+            _ => {
+                return Err(at(
+                    "tree/WaitForSingleObject(recorded child)",
+                    io::Error::last_os_error(),
+                ));
+            }
+        }
+        let mut member = 0;
+        if unsafe { IsProcessInJob(process.0, job, &mut member) } == 0 {
+            return Err(at(
+                "tree/IsProcessInJob(recorded child)",
+                io::Error::last_os_error(),
+            ));
+        }
+        Ok(Some(member != 0))
+    }
+    pub fn stop_tree_in_job(
+        pid: u32,
+        created: u64,
+        recorded_child: Option<(u32, u64)>,
+    ) -> io::Result<bool> {
+        let name = job_name(pid, created);
+        let job = Handle(unsafe {
+            OpenJobObjectW(JOB_OBJECT_QUERY | JOB_OBJECT_TERMINATE, 0, name.as_ptr())
+        });
+        if job.0.is_null() {
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() == Some(ERROR_FILE_NOT_FOUND as i32) {
+                return Ok(false);
+            }
+            return Err(at("tree/OpenJobObject", error));
+        }
+        verify_job_root_and_caller(job.0, pid, created)?;
+        if let Some((child_pid, child_created)) = recorded_child
+            && recorded_process_is_job_member(job.0, child_pid, child_created)? == Some(false)
+        {
+            return Ok(false);
+        }
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut last_terminate_error = None;
+        if unsafe { TerminateJobObject(job.0, 0) } == 0 {
+            let error = io::Error::last_os_error();
+            // ACCESS_DENIED can race with the final member exiting. The same
+            // retained Job Object handle proves completion only at active=0.
+            if error.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32) {
+                if active_job_processes(job.0)? == 0 {
+                    return Ok(true);
+                }
+                last_terminate_error = Some(error);
+            } else {
+                return Err(at("tree/TerminateJobObject", error));
+            }
+        }
+        loop {
+            let active = active_job_processes(job.0)?;
+            if active == 0 {
+                return Ok(true);
+            }
+            if std::time::Instant::now() >= deadline {
+                if let Some(error) = last_terminate_error {
+                    return Err(at("tree/TerminateJobObject", error));
+                }
+                return Err(io::Error::other(format!(
+                    "process tree job still has {active} active process(es)"
+                )));
+            }
+            if unsafe { TerminateJobObject(job.0, 0) } == 0 {
+                let error = io::Error::last_os_error();
+                if error.raw_os_error() != Some(ERROR_ACCESS_DENIED as i32) {
+                    return Err(at("tree/TerminateJobObject", error));
+                }
+                if active_job_processes(job.0)? == 0 {
+                    return Ok(true);
+                }
+                last_terminate_error = Some(error);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
     struct Frozen {
@@ -375,6 +673,12 @@ mod native {
                     Err(at("inspect/OpenProcess", error))
                 };
             }
+            let info = inspect_handle(&h, name)?;
+            Ok(Some((info, h)))
+        }
+    }
+    fn inspect_handle(h: &Handle, name: &str) -> io::Result<Lifetime> {
+        unsafe {
             let live = match WaitForSingleObject(h.0, 0) {
                 WAIT_OBJECT_0 => false,
                 WAIT_TIMEOUT => true,
@@ -389,16 +693,32 @@ mod native {
             if GetProcessTimes(h.0, &mut ts[0], &mut ts[1], &mut ts[2], &mut ts[3]) == 0 {
                 return Err(at("inspect/GetProcessTimes", io::Error::last_os_error()));
             }
-            Ok(Some((
-                (
-                    ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
-                    browser_controller(h.0, name),
-                    live,
-                    ((ts[1].dwHighDateTime as u64) << 32) | ts[1].dwLowDateTime as u64,
-                ),
-                h,
-            )))
+            Ok((
+                ((ts[0].dwHighDateTime as u64) << 32) | ts[0].dwLowDateTime as u64,
+                browser_controller(h.0, name),
+                live,
+                ((ts[1].dwHighDateTime as u64) << 32) | ts[1].dwLowDateTime as u64,
+            ))
         }
+    }
+    fn retained_lifetime(
+        pid: u32,
+        name: &str,
+        ancestors: &mut Vec<Handle>,
+    ) -> io::Result<Option<Lifetime>> {
+        // The retained object pins this PID even after exit. Reopening it can
+        // fail with ACCESS_DENIED during teardown; query the same object instead.
+        if let Some(handle) = ancestors
+            .iter()
+            .find(|handle| unsafe { GetProcessId(handle.0) } == pid)
+        {
+            return inspect_handle(handle, name).map(Some);
+        }
+        let Some((info, handle)) = inspect_retained(pid, name)? else {
+            return Ok(None);
+        };
+        ancestors.push(handle);
+        Ok(Some(info))
     }
     fn tree(
         root: u32,
@@ -444,7 +764,11 @@ mod native {
             // enough evidence to authorize terminating its apparent children.
             let mut lifetimes = HashMap::new();
             for (&pid, &created) in prior {
-                let Some(((actual, _, _, exited), handle)) = inspect_retained(pid, "")? else {
+                let Some((actual, _, _, exited)) =
+                    retained_lifetime(pid, "", ancestors).map_err(|error| {
+                        with_context(error, format!("prior cancellation ancestor pid={pid}"))
+                    })?
+                else {
                     return Err(io::Error::other(
                         "cancellation ancestor identity unavailable",
                     ));
@@ -453,10 +777,19 @@ mod native {
                     return Err(io::Error::other("cancellation ancestor identity changed"));
                 }
                 lifetimes.insert(pid, (actual, exited));
-                ancestors.push(handle);
             }
             walk(root, root_created, prior, &all, |pid, name| {
-                let Some(((created, browser, live, exited), handle)) = inspect_retained(pid, name)?
+                let Some((created, browser, live, exited)) = retained_lifetime(pid, name, ancestors)
+                    .map_err(|error| {
+                        let parent = all.iter().find(|p| p.0 == pid).map(|p| p.1);
+                        with_context(
+                            error,
+                            format!(
+                                "snapshot candidate pid={pid} parent={parent:?} image={name:?} prior={}",
+                                prior.contains_key(&pid)
+                            ),
+                        )
+                    })?
                 else {
                     return Err(io::Error::other(
                         "cancellation ancestor vanished during inspection",
@@ -473,7 +806,6 @@ mod native {
                     ));
                 }
                 lifetimes.insert(pid, (created, exited));
-                ancestors.push(handle);
                 Ok(Some((created, browser, live)))
             })
         }
@@ -698,6 +1030,137 @@ mod native {
     #[cfg(test)]
     mod tests {
         use super::*;
+        #[test]
+        fn managed_job_object_preserves_explicit_supervisor_breakaway() {
+            use crate::platform::{Runtime, System};
+            use std::path::PathBuf;
+            let temp = tempfile::tempdir().unwrap();
+            let dir = temp.path().join("supervisor");
+            std::fs::create_dir(&dir).unwrap();
+            let mut in_outer_job = 0;
+            if unsafe {
+                IsProcessInJob(GetCurrentProcess(), std::ptr::null_mut(), &mut in_outer_job)
+            } == 0
+            {
+                panic!(
+                    "outer Job membership query failed: {}",
+                    io::Error::last_os_error()
+                );
+            }
+            let pid = std::process::id();
+            let created = crate::proc_created(pid).unwrap();
+            let scope = contain_current_process(pid, created).unwrap();
+            let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+            assert_ne!(
+                unsafe {
+                    QueryInformationJobObject(
+                        scope._job.0,
+                        JobObjectExtendedLimitInformation,
+                        (&mut limits as *mut JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
+                        std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                        std::ptr::null_mut(),
+                    )
+                },
+                0
+            );
+            assert_ne!(
+                limits.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK,
+                0
+            );
+            let ordinary_child = OwnedChild::sleeping();
+            let ordinary_handle = Handle(unsafe {
+                OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                    0,
+                    ordinary_child.0.id(),
+                )
+            });
+            assert!(!ordinary_handle.0.is_null());
+            let mut ordinary_member = 0;
+            assert_ne!(
+                unsafe { IsProcessInJob(ordinary_handle.0, scope._job.0, &mut ordinary_member) },
+                0
+            );
+            assert_eq!(ordinary_member, 1, "ordinary children remain contained");
+            let executable = std::env::current_exe()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("cc_jobs_fixture.exe");
+            assert!(executable.is_file(), "fixture binary must be built");
+            let ready = temp.path().join("breakaway.ready");
+            let release = temp.path().join("breakaway.release");
+            struct ReleaseProbe(PathBuf);
+            impl Drop for ReleaseProbe {
+                fn drop(&mut self) {
+                    let _ = std::fs::write(&self.0, "release");
+                }
+            }
+            let _release_probe = ReleaseProbe(release.clone());
+            let (detached, child) = System::default()
+                .spawn_supervisor_identified(&executable, temp.path(), &dir, "breakaway-probe")
+                .unwrap();
+            let child = child.expect("Windows reports the spawned supervisor PID");
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !ready.exists() && std::time::Instant::now() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            assert!(
+                ready.exists(),
+                "the child stays alive for membership checks"
+            );
+            if in_outer_job == 0 {
+                assert!(
+                    detached,
+                    "an explicitly breakaway-capable job must allow the supervisor spawn"
+                );
+            }
+            let child_handle = Handle(unsafe {
+                OpenProcess(
+                    PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                    0,
+                    child,
+                )
+            });
+            assert!(
+                !child_handle.0.is_null(),
+                "the child must stay live while its membership is checked"
+            );
+            let mut child_member = 1;
+            assert_ne!(
+                unsafe { IsProcessInJob(child_handle.0, scope._job.0, &mut child_member) },
+                0
+            );
+            assert_eq!(child_member == 0, detached);
+            std::fs::write(&release, "release").unwrap();
+            assert_eq!(
+                unsafe { WaitForSingleObject(child_handle.0, 5000) },
+                WAIT_OBJECT_0,
+                "probe child exits after release"
+            );
+        }
+        #[test]
+        fn job_cancellation_refuses_to_terminate_its_caller() {
+            let pid = std::process::id();
+            let created = crate::proc_created(pid).unwrap();
+            let scope = contain_current_process(pid, created).unwrap();
+            let error = stop_tree_in_job(pid, created, None).unwrap_err();
+            assert!(error.to_string().contains("caller belongs"));
+            assert!(active_job_processes(scope._job.0).unwrap() > 0);
+        }
+        #[test]
+        fn managed_job_detects_a_live_recorded_child_outside_its_membership() {
+            let child = OwnedChild::sleeping();
+            let created = crate::proc_created(child.0.id()).unwrap();
+            let job = Handle(unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) });
+            assert!(!job.0.is_null());
+            assert_eq!(
+                recorded_process_is_job_member(job.0, child.0.id(), created).unwrap(),
+                Some(false)
+            );
+        }
         struct OwnedChild(std::process::Child);
         impl OwnedChild {
             fn sleeping() -> Self {
@@ -763,6 +1226,26 @@ mod native {
                 terminated_probe,
                 Some((0, Some(ERROR_ACCESS_DENIED as i32)))
             );
+        }
+        #[test]
+        fn cancellation_reuses_the_retained_identity_after_exit() {
+            let mut child = OwnedChild::sleeping();
+            let pid = child.0.id();
+            let created = crate::proc_created(pid).unwrap();
+            let mut ancestors = Vec::new();
+            let before = retained_lifetime(pid, "", &mut ancestors).unwrap().unwrap();
+            assert_eq!(before.0, created);
+            assert!(before.2);
+            assert_eq!(ancestors.len(), 1);
+            let handle = ancestors[0].0;
+            child.0.kill().unwrap();
+            child.0.wait().unwrap();
+            let after = retained_lifetime(pid, "", &mut ancestors).unwrap().unwrap();
+            assert_eq!(after.0, created);
+            assert!(!after.2, "the retained object must confirm the real exit");
+            assert!(after.3 >= created);
+            assert_eq!(ancestors.len(), 1, "an exited PID must not be reopened");
+            assert_eq!(ancestors[0].0, handle);
         }
         #[test]
         fn cancellation_denied_for_a_live_handle_keeps_the_original_error() {
@@ -974,4 +1457,20 @@ mod native {
     }
 }
 #[cfg(windows)]
-pub use native::{idle_agent, recover, stop_tree, supervisor};
+pub use native::{
+    ProcessTreeScope, contain_current_process, idle_agent, recover, stop_tree, stop_tree_in_job,
+    supervisor,
+};
+
+#[cfg(not(windows))]
+pub struct ProcessTreeScope;
+
+#[cfg(not(windows))]
+pub fn contain_current_process(_: u32, _: u64) -> io::Result<ProcessTreeScope> {
+    Ok(ProcessTreeScope)
+}
+
+#[cfg(not(windows))]
+pub fn stop_tree_in_job(_: u32, _: u64, _: Option<(u32, u64)>) -> io::Result<bool> {
+    Ok(false)
+}

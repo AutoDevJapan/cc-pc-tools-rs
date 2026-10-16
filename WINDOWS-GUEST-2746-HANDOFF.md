@@ -190,13 +190,20 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   copies, and the VM receipt configures COM1 to its unique pipe. A separate
   earlier attempt reached stage 3 (readiness sent) but failed mutual TLS; host
   now preserves the underlying handshake error and guest writes stage 6 for
-  TLS failure. New code records which `QueryDosDeviceW` COM names exist inside
-  the guest. This is uncommitted and untried.
+  TLS failure. Commit `bebaa60` adds a guest `QueryDosDeviceW` inventory;
+  this attempt's marker file and inventory were not visible after helper
+  cleanup. A read-only file hash check returned NTFS “file or directory is
+  corrupted” for the guest helper file. This may be an offline view of an
+  uncleanly powered-off Windows volume; the cause is not established. VHD
+  cleanup currently uses TurnOff. The helper now requests guest shutdown for
+  VHD-based VMs, waits at most three minutes, then uses TurnOff if necessary,
+  so the next detached clone can be inspected consistently. This correction
+  is uncommitted and untried.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the COM name inventory; commit and push it.
+   graceful VHD-VM shutdown; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

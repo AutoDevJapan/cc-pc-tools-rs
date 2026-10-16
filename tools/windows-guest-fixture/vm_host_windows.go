@@ -65,6 +65,7 @@ type vmEvidence struct {
 	Schema                   string          `json:"schema"`
 	ObservedAt               time.Time       `json:"observed_at"`
 	Instance                 string          `json:"instance"`
+	ImageDeploymentMethod    string          `json:"image_deployment_method"`
 	ImageBytes               int64           `json:"image_bytes"`
 	ImageSHA256              string          `json:"image_sha256"`
 	VM                       vmPublicReceipt `json:"vm"`
@@ -116,6 +117,11 @@ func runVMProvision(root, isoPath string) error {
 	if !info.Mode().IsRegular() || info.Size() != evalISOBytes {
 		return fmt.Errorf("evaluation ISO size mismatch: got %d bytes", info.Size())
 	}
+	if evidenceExists, err := ownedPathExists(root, "vm-fixture-evidence.private.json"); err != nil {
+		return errors.New("owned VM evidence state could not be inspected")
+	} else if evidenceExists {
+		return errors.New("owned VM fixture evidence already exists; refusing to repeat a completed fixture")
+	}
 	hasVHD, err := ownedPathExists(root, "guest.vhdx")
 	if err != nil {
 		return errors.New("owned VHD state could not be inspected")
@@ -126,6 +132,14 @@ func runVMProvision(root, isoPath string) error {
 	}
 	if hasVHD || hasReceipt {
 		if hasVHD && hasReceipt {
+			oldVM, readErr := readVMReceipt(root)
+			if readErr != nil {
+				return errors.New("owned VM recovery receipt could not be read")
+			}
+			cleanup, cleanupErr := readCleanupReceipt(root)
+			if cleanupErr == nil && cleanup.VMID == oldVM.ID && cleanup.Stopped && cleanup.MemoryAssigned == 0 && cleanup.Removed {
+				return retryOnVerifiedBlankVHD(root, isoPath, oldVM, cleanup)
+			}
 			return resumeVMProvision(root, isoPath)
 		}
 		return errors.New("owned root contains incomplete VM state without a matching VHD and receipt")
@@ -149,7 +163,7 @@ func runVMProvision(root, isoPath string) error {
 		return err
 	}
 	createScript := filepath.Join(root, "vm-create.ps1")
-	if err := os.WriteFile(createScript, []byte(createVMPS(root, isoPath, seedISO, instance)), 0600); err != nil {
+	if err := os.WriteFile(createScript, []byte(createVMPS(root, isoPath, seedISO, instance, false, "")), 0600); err != nil {
 		return err
 	}
 	if err := runAdminBroker(createScript, 1800); err != nil {
@@ -159,6 +173,63 @@ func runVMProvision(root, isoPath string) error {
 	vm, err := readVMReceipt(root)
 	if err != nil {
 		return err
+	}
+	return runVMFixturesAndRecord(root, isoPath, info.Size(), vm, client)
+}
+
+func retryOnVerifiedBlankVHD(root, isoPath string, oldVM vmReceipt, cleanup cleanupReceipt) error {
+	if err := validatePartialVMReceipt(oldVM, root, isoPath); err != nil || cleanup.VMID != oldVM.ID {
+		return errors.New("prior attempt receipts do not authorize reuse of the owned VHDX")
+	}
+	client, err := newVMIdentity()
+	if err != nil {
+		return err
+	}
+	defer clearIdentity(&client)
+	var entropy [32]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return err
+	}
+	instanceHash := sha256.Sum256(entropy[:])
+	instance := hex.EncodeToString(instanceHash[:16])
+	clear(entropy[:])
+	seedISO, err := createGuestSeed(root, instance, client, instance)
+	if err != nil {
+		return err
+	}
+	for suffix, value := range map[string]any{"vm": oldVM, "cleanup": cleanup} {
+		if err := writeJSONExclusive(filepath.Join(root, "attempt-"+oldVM.Instance+"-"+suffix+".private.json"), value); err != nil {
+			return errors.New("prior VM attempt record could not be preserved")
+		}
+	}
+	failurePath := filepath.Join(root, "vm-fixture-failure.private.json")
+	failureExists, err := ownedPathExists(root, "vm-fixture-failure.private.json")
+	if err != nil {
+		return errors.New("prior fixture failure record could not be inspected")
+	}
+	if failureExists {
+		data, err := os.ReadFile(failurePath)
+		if err != nil {
+			return errors.New("prior fixture failure record could not be preserved")
+		}
+		if err := writeExclusiveFile(filepath.Join(root, "attempt-"+oldVM.Instance+"-failure.private.json"), data); err != nil {
+			return errors.New("prior fixture failure record could not be preserved")
+		}
+	}
+	script := filepath.Join(root, "vm-recreate.ps1")
+	if err := os.WriteFile(script, []byte(createVMPS(root, isoPath, seedISO, instance, true, oldVM.ID)), 0600); err != nil {
+		return err
+	}
+	if err := runAdminBroker(script, 1800); err != nil {
+		return errors.New("new owned Windows guest provisioning failed; preserve its receipts and VHDX")
+	}
+	vm, err := readVMReceipt(root)
+	if err != nil {
+		return errors.New("new owned VM receipt could not be read")
+	}
+	info, err := os.Stat(isoPath)
+	if err != nil {
+		return errors.New("official evaluation ISO is unavailable during retry")
 	}
 	return runVMFixturesAndRecord(root, isoPath, info.Size(), vm, client)
 }
@@ -333,7 +404,7 @@ func runVMFixturesAndRecord(root, isoPath string, imageBytes int64, vm vmReceipt
 	normal, cancel, fixtureErr := runVMFixtures(vm, client)
 	cleanup, cleanupErr := cleanupOwnedVM(root, vm)
 	if fixtureErr != nil {
-		failure := map[string]any{"schema": "windows-hyperv-guest-fixture-failure-v1", "observed_at": time.Now().UTC(), "instance": vm.Instance, "fixture_error": "guest fixture did not complete", "cleanup": cleanup, "cleanup_error": cleanupErr != nil}
+		failure := map[string]any{"schema": "windows-hyperv-guest-fixture-failure-v1", "observed_at": time.Now().UTC(), "instance": vm.Instance, "fixture_error": fixtureErr.Error(), "cleanup": cleanup, "cleanup_error": cleanupErr != nil}
 		_ = writeJSONAtomic(filepath.Join(root, "vm-fixture-failure.private.json"), failure)
 		if cleanupErr != nil {
 			return errors.New("Windows guest fixture failed and owned VM cleanup also failed; preserve the recorded VM and root for recovery")
@@ -349,7 +420,7 @@ func runVMFixturesAndRecord(root, isoPath string, imageBytes int64, vm vmReceipt
 	}
 	evidence := vmEvidence{
 		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: vm.Instance,
-		ImageBytes: imageBytes, ImageSHA256: isoHash,
+		ImageDeploymentMethod: "dism-offline-apply+bcdboot", ImageBytes: imageBytes, ImageSHA256: isoHash,
 		VM:     vmPublicReceipt{VMID: vm.ID, Generation: vm.Generation, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, DVDCount: vm.DVDCount, VHDCount: vm.VHDCount, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
 		CredentialFree: true, UnattendEULAConfigured: true, OOBESkipConfigured: false, LocalUserCreated: false,
@@ -520,6 +591,18 @@ func writeJSONExclusive(path string, value any) error {
 		return err
 	}
 	if _, err = f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func writeExclusiveFile(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
 		_ = f.Close()
 		return err
 	}
@@ -884,8 +967,14 @@ func boundedText(value string, limit int) string {
 	return value[:limit] + "...[truncated]"
 }
 
-func createVMPS(root, iso, seedISO, instance string) string {
+func createVMPS(root, iso, seedISO, instance string, reuseBlankVHD bool, previousVMID string) string {
 	q := psQuote
+	reuse := "$false"
+	previousID := "[guid]::Empty"
+	if reuseBlankVHD {
+		reuse = "$true"
+		previousID = "[guid]" + q(previousVMID)
+	}
 	return `$ErrorActionPreference='Stop'
 Import-Module Hyper-V
 Import-Module Storage
@@ -894,12 +983,17 @@ $root=` + q(root) + `
 $iso=` + q(iso) + `
 $seedISO=` + q(seedISO) + `
 $instance=` + q(instance) + `
+$reuseBlankVHD=` + reuse + `
+$previousVMID=` + previousID + `
 $vhd=Join-Path $root 'guest.vhdx'
 $name='cc-2746-'+$instance
 $pipe='\\.\pipe\cc-2746-'+$instance
-if(Test-Path -LiteralPath $vhd){throw 'OWNED_VHD_ALREADY_EXISTS'}
 if(Get-VM -Name $name -ErrorAction SilentlyContinue){throw 'OWNED_VM_NAME_ALREADY_EXISTS'}
-$mountedIso=$false;$mountedSeed=$false
+$mountedIso=$false;$mountedSeed=$false;$mountedVHD=$false;$diskNumber=$null;$espPartition=$null;$osPartition=$null;$efiAccessPath=$null
+$osMount=Join-Path $root 'mount-os'
+foreach($mountPoint in @($osMount)){
+  if(Test-Path -LiteralPath $mountPoint){$item=Get-Item -LiteralPath $mountPoint -Force;if(-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_MOUNT_PATH_REJECTED'}}else{New-Item -ItemType Directory -Path $mountPoint|Out-Null}
+}
 try {
   $image=Mount-DiskImage -ImagePath $iso -PassThru
   $mountedIso=$true
@@ -926,9 +1020,72 @@ try {
   foreach($file in @('Autounattend.xml','stage.ps1','cc2746-guest.exe','cc2746-seed.json')){if(-not (Test-Path -LiteralPath (Join-Path $seedRoot $file))){throw 'OWNED_SEED_FILE_MISSING'}}
   $answer=[xml](Get-Content -Raw -LiteralPath (Join-Path $seedRoot 'Autounattend.xml'))
   if($answer.unattend.settings | Where-Object pass -EQ 'oobeSystem'){throw 'OOBE_SETTINGS_UNEXPECTED'}
-  Dismount-DiskImage -ImagePath $seedISO
+  if(Test-Path -LiteralPath $vhd){
+    if(-not $reuseBlankVHD -or $previousVMID -eq [guid]::Empty){throw 'OWNED_VHD_ALREADY_EXISTS'}
+    if(Get-VM -Id $previousVMID -ErrorAction SilentlyContinue){throw 'PREVIOUS_OWNED_VM_STILL_PRESENT'}
+    $oldCleanup=Get-Content -Raw -LiteralPath (Join-Path $root 'vm-cleanup.private.json')|ConvertFrom-Json
+    if($oldCleanup.vm_id -cne $previousVMID.ToString() -or -not $oldCleanup.stopped -or $oldCleanup.memory_assigned -ne 0 -or -not $oldCleanup.removed){throw 'PREVIOUS_VM_CLEANUP_RECEIPT_REJECTED'}
+    $imageState=Get-DiskImage -ImagePath $vhd -StorageType VHDX -ErrorAction Stop
+    if($imageState.Attached){throw 'OWNED_VHD_STILL_ATTACHED'}
+    $virtualDisk=Get-VHD -Path $vhd -ErrorAction Stop
+    if($virtualDisk.VhdType -ne 'Dynamic' -or $virtualDisk.Size -ne 64GB){throw 'OWNED_VHD_TYPE_OR_SIZE_REJECTED'}
+    $vhdx=Mount-VHD -Path $vhd -ReadOnly -NoDriveLetter -PassThru
+    $mountedVHD=$true
+    $vhdImage=Get-DiskImage -ImagePath $vhd -StorageType VHDX -ErrorAction Stop
+    $vhdDisks=@($vhdImage|Get-Disk -ErrorAction Stop)
+    if($vhdDisks.Count -ne 1){throw 'OWNED_VHD_DISK_IDENTITY_REJECTED'}
+    $diskNumber=$vhdDisks[0].Number
+    $oldPartitions=@(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue)
+    if($oldPartitions.Count -ne 0){throw 'OWNED_RETRY_VHD_IS_NOT_BLANK'}
+    Dismount-VHD -Path $vhd -ErrorAction Stop|Out-Null
+    $mountedVHD=$false
+  }else{
+    if($reuseBlankVHD){throw 'EXPECTED_OWNED_BLANK_VHD_MISSING'}
+    New-VHD -Path $vhd -Dynamic -SizeBytes 64GB | Out-Null
+  }
+  $vhdx=Mount-VHD -Path $vhd -PassThru
+  $mountedVHD=$true
+  $vhdImage=Get-DiskImage -ImagePath $vhd -StorageType VHDX -ErrorAction Stop
+  if(-not $vhdImage.Attached -or -not $vhdImage.DevicePath){throw 'OWNED_VHD_MOUNT_FAILED'}
+  $vhdDisks=@($vhdImage|Get-Disk -ErrorAction Stop)
+  if($vhdDisks.Count -ne 1){throw 'OWNED_VHD_DISK_IDENTITY_REJECTED'}
+  $diskNumber=$vhdDisks[0].Number
+  if(@(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue).Count -ne 0){throw 'OWNED_VHD_NOT_BLANK_BEFORE_DEPLOY'}
+  Initialize-Disk -Number $diskNumber -PartitionStyle GPT -PassThru|Out-Null
+  $espPartition=New-Partition -DiskNumber $diskNumber -Size 100MB -GptType '{C12A7328-F81F-11D2-BA4B-00A0C93EC93B}'
+  $null=Format-Volume -Partition $espPartition -FileSystem FAT32 -NewFileSystemLabel 'CC2746EFI' -Confirm:$false
+  $null=New-Partition -DiskNumber $diskNumber -Size 16MB -GptType '{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}'
+  $osPartition=New-Partition -DiskNumber $diskNumber -UseMaximumSize -GptType '{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}'
+  $null=Format-Volume -Partition $osPartition -FileSystem NTFS -NewFileSystemLabel 'CC2746OS' -Confirm:$false
+  Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AssignDriveLetter
+  $espPartition=Get-Partition -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -ErrorAction Stop
+  if(-not $espPartition.DriveLetter){throw 'OWNED_EFI_VOLUME_LETTER_MISSING'}
+  $efiRoot=([string]$espPartition.DriveLetter)+':\'
+  $efiAccessPath=$efiRoot
+  $espVolume=$espPartition|Get-Volume -ErrorAction Stop
+  Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AccessPath $osMount
+  $dism=Join-Path $env:SystemRoot 'System32\dism.exe'
+  $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
+  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}\' -f $osMount)) '/CheckIntegrity' (('/LogPath:{0}' -f $dismLog)) *> $null
+  if($LASTEXITCODE -ne 0){throw 'OWNED_OFFLINE_WIM_APPLY_FAILED'}
+  $windowsRoot=Join-Path $osMount 'Windows'
+  if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
+  $panther=Join-Path $windowsRoot 'Panther'
+  if(-not (Test-Path -LiteralPath $panther)){New-Item -ItemType Directory -Path $panther|Out-Null}
+  Copy-Item -LiteralPath (Join-Path $seedRoot 'Autounattend.xml') -Destination (Join-Path $panther 'Unattend.xml')
+  $bcdboot=Join-Path $env:SystemRoot 'System32\bcdboot.exe'
+  & $bcdboot $windowsRoot /s ($espVolume.DriveLetter+':') /f UEFI /l en-us *> $null
+  if($LASTEXITCODE -ne 0){throw 'OWNED_UEFI_BCD_BOOT_CREATION_FAILED'}
+  if(-not (Test-Path -LiteralPath (Join-Path $efiRoot 'EFI\Microsoft\Boot\BCD')) -or -not (Test-Path -LiteralPath (Join-Path $efiRoot 'EFI\Boot\bootx64.efi'))){throw 'OWNED_UEFI_BOOT_FILES_MISSING'}
+  Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AccessPath $efiAccessPath
+  $efiAccessPath=$null
+  Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AccessPath $osMount
+  Dismount-VHD -Path $vhd -ErrorAction Stop|Out-Null
+  $mountedVHD=$false
+  Dismount-DiskImage -ImagePath $iso -ErrorAction Stop|Out-Null
+  $mountedIso=$false
+  Dismount-DiskImage -ImagePath $seedISO -ErrorAction Stop|Out-Null
   $mountedSeed=$false
-  New-VHD -Path $vhd -Dynamic -SizeBytes 64GB | Out-Null
   $vm=New-VM -Name $name -Generation 2 -MemoryStartupBytes 2GB -VHDPath $vhd -Path (Join-Path $root 'vm')
 $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=0;vhd_count=1;pipe=$pipe;cpu_count=0;memory_bytes=0;dynamic_memory=$true;secure_boot=$false;network_adapters=-1;gpu_adapters=-1}
   $initial | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
@@ -938,9 +1095,9 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $adapters=@($vm | Get-VMNetworkAdapter);foreach($adapter in $adapters){Remove-VMNetworkAdapter -VMNetworkAdapter $adapter}
   $existingDVD=@($vm | Get-VMDvdDrive)
   if($existingDVD.Count -gt 0){$winDvd=Set-VMDvdDrive -VMDvdDrive $existingDVD[0] -Path $iso -Passthru}else{$winDvd=Add-VMDvdDrive -VM $vm -Path $iso -Passthru}
-  Add-VMDvdDrive -VM $vm -Path $seedISO | Out-Null
+  $seedDvd=Add-VMDvdDrive -VM $vm -Path $seedISO -Passthru
   Set-VMComPort -VM $vm -Number 1 -Path $pipe
-  Set-VMFirmware -VM $vm -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -FirstBootDevice $winDvd
+  Set-VMFirmware -VM $vm -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows
   $vm=Get-VM -Id $vm.Id
   $memory=Get-VMMemory -VM $vm
   $nics=@($vm | Get-VMNetworkAdapter).Count
@@ -948,15 +1105,23 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $dvds=@($vm | Get-VMDvdDrive)
   $vhds=@($vm | Get-VMHardDiskDrive)
   if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
+  Set-VMFirmware -VM $vm -BootOrder @($vhds[0],$winDvd,$seedDvd)
   $firmware=Get-VMFirmware -VM $vm
   if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
+  $boot=@($firmware.BootOrder)
+  if($boot.Count -lt 1 -or $boot[0].Path -cne $vhd){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
 } catch {
-  @{phase='provision';failure='owned standard Windows Setup or VM provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
+  @{phase='provision';failure='owned offline Windows image deployment or VM provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
   throw
 } finally {
+  if($mountedVHD){
+    if($null -ne $espPartition -and $null -ne $diskNumber -and $null -ne $efiAccessPath){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AccessPath $efiAccessPath -ErrorAction SilentlyContinue|Out-Null}
+    if($null -ne $osPartition -and $null -ne $diskNumber){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AccessPath $osMount -ErrorAction SilentlyContinue|Out-Null}
+    Dismount-VHD -Path $vhd -ErrorAction SilentlyContinue|Out-Null
+  }
   if($mountedIso){Dismount-DiskImage -ImagePath $iso -ErrorAction SilentlyContinue | Out-Null}
   if($mountedSeed){Dismount-DiskImage -ImagePath $seedISO -ErrorAction SilentlyContinue | Out-Null}
 }

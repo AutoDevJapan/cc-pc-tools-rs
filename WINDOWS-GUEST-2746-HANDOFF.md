@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
+last pushed commit `68a3668` (current offline-deployment changes still need commit/push).
 
 ## Completed
 
@@ -10,9 +10,10 @@ last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
   `tools/windows-guest-fixture/evidence/todo-2746-20261017.json`.
 - The standard Windows Server 2025 unattended installer and LocalSystem
   COM/mTLS fixture are committed through `e86c004`; subsequent recovery and
-  handoff updates are pushed through `f0dbdb5`. `go test ./...`, `go vet
+  handoff updates are pushed through `68a3668`. `go test ./...`, `go vet
   ./...`, and `git diff --check` passed on the current working changes. They
-  only compile/check the module; the Hyper-V guest path has not yet run.
+  only compile/check the module. The first real guest boot did not reach its
+  COM readiness service; details and the revised image path are below.
 - The answer file accepts EULA, selects the Standard Evaluation image, and
   runs the service installer during `specialize`. It contains no account or
   password settings and no `oobeSystem` pass. The guest keeps normal OOBE.
@@ -77,23 +78,35 @@ last pushed commit `f0dbdb5` (current recovery changes still need commit/push).
   A second resume attempt stopped before changing VM state because
   `Get-VMComPort` does not expose the `Number` property that the helper used;
   a read-only query confirmed the receipt's exact unique pipe is configured.
-  Recovery and cleanup now match the COM port by that exact pipe path. These
-  changes are uncommitted and untried; the same VM/VHDX and receipt remain in
-  the safe-delete-owned root.
+  Recovery and cleanup now match the COM port by that exact pipe path.
+- The corrected same-VM resume ran for the 30-minute readiness deadline but
+  received no guest service readiness. It then used its exact receipt to stop
+  the VM, verify assigned memory 0, and remove it. A read-only Get-VM by that
+  GUID confirmed it is absent. The VHDX is detached; a read-only mount found no
+  partitions and it remains 4 MiB, so Windows Setup never began applying the
+  image. The original failure receipt did not preserve which serial substage
+  timed out, so only “no readiness within 30 minutes” is confirmed.
+- The helper is being revised to apply the official WIM offline with DISM,
+  create UEFI boot files with BCDBoot, and put the answer file in Panther and
+  on the seed DVD. Its next retry may reuse this VHDX only after checking the
+  exact previous VM removal receipt, confirming that GUID is absent, and
+  mounting the disk read-only to verify it still has no partitions. The retry
+  receives a new instance nonce. This approach preserves first-boot
+  `specialize`, LocalSystem service staging, and normal OOBE. The helper also
+  sets an explicit VM boot order with the VHD first. `gofmt`, `go test ./...`,
+  `go vet ./...`, and `git diff --check` passed; these source/document changes
+  are uncommitted, and the second real fixture run remains outstanding.
 
 ## Remaining
 
-1. Commit/push the current recovery changes. Build into the owned root and run
-   `vm-smoke` with the already-downloaded ISO. Since both VHDX and receipt exist,
-   it must resume the single receipt-identified VM and reject any identity or
-   configuration mismatch. Do not rerun the fresh-provision path or create a
-   second VM.
-2. Confirm the answer file is discovered from the separate seed DVD, the
-   LocalSystem service starts through normal Setup, and both real fixtures
-   report process and namespace cleanup.
-3. Confirm the normal and cancellation fixture receipts, then separately
-   confirm VM Off, assigned memory zero, and removal.
-4. Copy the sanitized evidence JSON into the worktree, update ToDo2737's note
+1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
+   and push the offline-deployment/recovery implementation.
+2. Build the helper into the owned root and run `vm-smoke` against the already
+   downloaded ISO. The receipt-bound recovery must verify the previous VM is
+   absent and the existing VHDX is blank before reusing it with a new nonce.
+3. Confirm guest readiness, the normal and cancellation child-process
+   receipts, then separately verify VM Off, assigned memory zero, and removal.
+4. Copy sanitized evidence into the worktree, update ToDo2737's note
    while preserving its existing content, and commit/push the result.
 5. Run safe-delete `plan`, issue its normal deletion in a separate call, then
    `finish`. Do not delete the root if VM ownership or removal is uncertain.

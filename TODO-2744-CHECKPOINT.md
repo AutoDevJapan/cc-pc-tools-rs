@@ -1,6 +1,18 @@
 # ToDo2744の正式CI検査・再開記録
 
-2026-10-17 01:24 JST。状態は継続中。本人判断ではなく、正式ツールの配布更新ToDo2745を待つ。
+2026-10-17 02:14 JST。配布更新ToDo2745が完了し、同branch・前回commit bd84c59から再開。指定headの既存公式CodeQLを直列処理中。
+
+## 今回の進行
+
+- 元2745のsource PR188は通常merge済み。APIで実AutoDevJapan/private/admin/nonfork、merge fa594cec7bee92bffa3fbd8ab815e3c03a189efc、PRhead504a547410908046fbea89e4f4b83ca595ca0e43を確認した。別モデル2747のMust0と必要CI成功の配送を保持。
+- 正式配布receipt D:/CC/Tools/product-ci/install-pr188.private.jsonを読み、Windows実binary SHA25626E07700E61277F4FB93E83A9A6C1CF165A90D75C84AFB0A98C463A4D91D1B66とLinux実helper SHA2561359CD984DBC43E629D400031DFD5ED4CCA824EB2F2C341566E5F596B4987D07を照合した。
+- Linux正式helperはD:/CC/Tools/product-ci/product-ci-linux-fa594ce。配置後inspect成功は元2745の結果であり、製品CI成功ではない。
+- 製品APIを再照合し、固定20c/同branch/PRhead/open/drafttrue/同repo/所有条件を維持。既存CodeQL38929313859の4jobとsecret38929321895の1jobは開始前に全queuedだった。
+- 1件目117068905768は公式success。check供給元github-actions/app15368、同20c。Python analysis1969012602も同20c/error空/results0。公式全文115803bytes/SHA2562608EBB50C5CD2323B73E8B645AF419867C4BE82D9BC618BCC99B92604DB66DEを保持した。
+- 1件目の実checkout20c/tree007b・認証除去・source_tree_verified・tool exit0・kernelPID0/tree_gone・container_removed・登録不在を含むlock_releasedを正規toolで確認。所有54c374ae270e85080665a6eeb095fb1dの原receipt/log/checkout/contextを恒久保管先の同IDへ全SHA照合保存し、plan→別通常削除→finish source_absentで回収済み。
+- 現在2件目の正式codeql-jobをHidden実行中。host tool PID48732、開始02:15台、所有root C:/Users/makhmeto/AppData/Local/Temp/codex-owned-dea5e039d164eb7830e602a16a7afda7。ジョブ117068905439が公式in_progress、runner_id36。コード・正式toolは変更していない。
+- 集約用所有root C:/Users/makhmeto/AppData/Local/Temp/codex-owned-9c9448c8d6dd1c91e0b46f4cc6438d2cに配布receipt/固定sourceとmerge context/解析設定/公式checkと全文logを保存中。Save-OfficialJob.ps1は今回だけの非表示read-only取得用であり、CI実行は正式product-ci以外を使わない。未完のためこのrootを削除しない。
+- クラッシュ再開時は当該PIDの生成時刻と実receipt/container/公式run/jobを確認し、同候補の生存toolを重複起動しない。未完の所有rootを削除しない。今回のjob終了後は実namespace回収と登録不在/lock解放を確認してから次の1件を開始する。
 
 ## 確認済み
 

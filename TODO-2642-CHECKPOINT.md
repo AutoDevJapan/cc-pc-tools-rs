@@ -37,3 +37,17 @@ CodeQL指摘は `rust/hard-coded-cryptographic-value` 5件、`js/functionality-f
 このworktreeは `scheduler/todo-2642-godd-press` を保持し、製品branchと混同しない。共有ToDoのprogress50は元の4条件中2条件の記録を維持し、レビュー依頼だけで上げない。原29/2191の停止・依存・未完と権限を維持する。cargo/GPU/Civ6/本人PC操作/新費用/Discord送信なし。
 
 レビュー完了だけを待つ区切りでは `todo.exe wait 2642 --on 2739` を記録し、状態を読み返す。commit/push後、実branch/HEADと同jobでscheduler checkpoint-workspaceを保存する。次回は元2642の最新note、元仕様、この記録、2739の実結果を読み、更新済みPR本文や成功済み検査を繰り返さない。
+
+## 2026-10-17 04:21以降の再開（上記の待機条件を更新）
+
+元2739はdone。実job20261017-004930-todo-2739はanthropic/claude-sonnet-5-5/succeeded/exit0で、原応答は元jobのlast_message.mdから `REVIEW-2642-ORIGINAL.md` へbyteで保存した。読み取り専用reviewerが保存できなかっただけで再レビューしない。固定head/baseの3差分でMust0を受領した。fork未確認だったレビュー側に対し、親はAPIでfalseを再確認した。
+
+修正前のpanicはdebug/testのoverflow-checks有効時で、releaseではMAX+1がMINに戻り既存のbinding拒否になっていた。checked_addで両設定の拒否を明示化した範囲へPR題名・説明を修正し、返却本文/head不変を確認した。製品sourceは変更していない。
+
+レビューの追加提案（監査列・ACK後の状態・DB拒否理由）は新しい実害の指摘ではないため、この回帰へ追加しない。差分外storeの加算は別経路で、今回へ混ぜない。CodeQL再実行の提案は、親が現APIで公式check116959200210(gate)/116955636194(CodeQL)の同SHA successを取得し、元ephemeral回収証拠も存在するため採用しない。旧PRイベントcancelledは保持する。判断をPR comment6223065886へ投稿成功。最初のconnector引数schemaエラーは送信前で、正常な投稿は1件だけ。重複投稿しない。
+
+共有ToDo2765は9件の実害判定だけを担当する有限check、2766は通常公式CIを既存guest基盤で通す工程。各保存specはこのbranchの `TODO-2642-ALERT-CHECK-SPEC.md` / `TODO-2642-OFFICIAL-CI-SPEC.md`。両方--specで登録し、2766だけ--needs cargo。子ジョブ直接起動なし。2766は原2737のguest基盤を再利用し、未完なら正規wait_on2737で待つ。新しいWindows/Linux/sourcepacket実装を複製しない。親2642を依存先にしない。原2737は2746(実Windowsguest)だけが未完で待機中、2748/2753/2754は既済。原2762は別製品の37件で、今回の9件を担当しない。
+
+2739のreview原文と親判断、PR本文更新、2765/2766の保存済みspecは成果であるが、9件の判定や通常CI成功はまだない。4条件中の検査成功とmerge条件は未達のためprogress50を維持する。次回は2765/2766の実結果を受領し、実害修正・必要な追加差分の別モデルレビュー・最終CI後の通常mergeへ進む。元29/2191の受入全体とPrdに勝手に範囲を広げない。
+
+親の現在の依存は `todo.exe wait 2642 --on 2765 --on 2766 --progress 50` で記録する。元2739を待ち直さない。branchは不変だが、現job/実HEADのcheckpointをHidden/Wait/PassThruで保存し、実exit0と原todo.scheduler.workspace_checkpointを照合する。自分の軽量な再開ファイルだけcommit/push。新しいCargo/GPU/Civ6/guest/runner/本人PC操作/費用/Discord送信はこの親再開では行っていない。

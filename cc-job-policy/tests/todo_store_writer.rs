@@ -110,7 +110,15 @@ fn temporary_write_failure_keeps_the_original_backup_and_existing_temporary() {
 
 #[test]
 fn exact_formatted_limit_is_saved_and_one_more_byte_preserves_every_file() {
-    let dir = tempfile::tempdir().unwrap();
+    // The Linux runner's /tmp is a 64 MiB credential-only tmpfs. This test
+    // writes a complete 64 MiB store, so use the runner's workspace disk.
+    let root = std::env::var_os("RUNNER_TEMP")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir);
+    let dir = tempfile::Builder::new()
+        .prefix("todo-store-boundary-")
+        .tempdir_in(root)
+        .unwrap();
     let path = dir.path().join("todo.json");
     // Count the exact one-space formatted overhead, including the line breaks.
     let db = json!({"note":"x".repeat(MAX_BYTES - b"{\n \"note\": \"\"\n}".len())});

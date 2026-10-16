@@ -20,6 +20,9 @@ pub fn supervisor(_: u32, _: u64) -> io::Result<Box<dyn Paused>> {
 }
 
 #[cfg(windows)]
+mod snapshot;
+
+#[cfg(windows)]
 mod native {
     use super::*;
     use std::collections::{HashMap, HashSet};
@@ -27,7 +30,7 @@ mod native {
         Foundation::*,
         System::JobObjects::*,
         System::SystemServices::{JOB_OBJECT_QUERY, JOB_OBJECT_TERMINATE},
-        System::{Diagnostics::ToolHelp::*, Threading::*},
+        System::Threading::*,
     };
     #[link(name = "ntdll")]
     unsafe extern "system" {
@@ -726,32 +729,8 @@ mod native {
         prior: &HashMap<u32, u64>,
         mut ancestors: Option<&mut Vec<Handle>>,
     ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
-        unsafe {
-            let snapshot = Handle(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
-            if snapshot.0 == INVALID_HANDLE_VALUE {
-                return Err(io::Error::last_os_error());
-            }
-            let mut entry: PROCESSENTRY32W = std::mem::zeroed();
-            entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
-            let mut all = Vec::new();
-            if Process32FirstW(snapshot.0, &mut entry) == 0 {
-                return Err(io::Error::last_os_error());
-            }
-            loop {
-                let n = entry
-                    .szExeFile
-                    .iter()
-                    .position(|v| *v == 0)
-                    .unwrap_or(entry.szExeFile.len());
-                all.push((
-                    entry.th32ProcessID,
-                    entry.th32ParentProcessID,
-                    String::from_utf16_lossy(&entry.szExeFile[..n]).to_ascii_lowercase(),
-                ));
-                if Process32NextW(snapshot.0, &mut entry) == 0 {
-                    break;
-                }
-            }
+        {
+            let all = snapshot::processes()?;
             if ancestors.is_none() && crate::proc_created(root) != Some(root_created) {
                 return Err(io::Error::other("root process identity changed"));
             }
@@ -781,7 +760,7 @@ mod native {
             walk(root, root_created, prior, &all, |pid, name| {
                 let Some((created, browser, live, exited)) = retained_lifetime(pid, name, ancestors)
                     .map_err(|error| {
-                        let parent = all.iter().find(|p| p.0 == pid).map(|p| p.1);
+                        let parent = all.iter().find(|p| p.pid == pid).map(|p| p.parent);
                         with_context(
                             error,
                             format!(
@@ -795,7 +774,7 @@ mod native {
                         "cancellation ancestor vanished during inspection",
                     ));
                 };
-                let parent = all.iter().find(|p| p.0 == pid).map(|p| p.1);
+                let parent = all.iter().find(|p| p.pid == pid).map(|p| p.parent);
                 if pid != root
                     && parent
                         .and_then(|p| lifetimes.get(&p))
@@ -816,7 +795,7 @@ mod native {
         root: u32,
         root_created: u64,
         prior: &HashMap<u32, u64>,
-        all: &[(u32, u32, String)],
+        all: &[snapshot::Entry],
         mut inspect: impl FnMut(u32, &str) -> io::Result<Option<(u64, bool, bool)>>,
     ) -> io::Result<(Vec<Process>, HashMap<u32, u64>)> {
         let mut found = prior.clone();
@@ -825,23 +804,40 @@ mod native {
         let mut result = Vec::new();
         loop {
             let before = checked.len();
-            for (pid, parent, name) in all {
+            for entry in all {
+                let snapshot::Entry {
+                    pid, parent, name, ..
+                } = entry;
                 if (*pid == root || found.contains_key(parent)) && !checked.contains(pid) {
                     checked.insert(*pid);
+                    if entry.created == 0 {
+                        return Err(io::Error::other(
+                            "snapshot candidate birth time unavailable",
+                        ));
+                    }
+                    if found.get(pid).is_some_and(|old| *old != entry.created) {
+                        return Err(io::Error::other(
+                            "descendant identity changed in process snapshot",
+                        ));
+                    }
+                    // Parent PIDs outlive their original parent in Windows
+                    // process metadata. A foreign process older than the owned
+                    // parent cannot be its child, even if their numeric edge
+                    // matches after PID reuse. Exclude it BEFORE OpenProcess;
+                    // an inaccessible plausible descendant still fails closed.
+                    if *pid != root && found.get(parent).is_none_or(|pc| entry.created < *pc) {
+                        continue;
+                    }
                     let Some((created, browser_controller, live)) = inspect(*pid, name)? else {
                         // The snapshot's PID has vanished. Retain the parent
                         // edge conservatively, but never freeze that PID.
-                        let ancestor = found.get(parent).copied().unwrap_or(root_created);
-                        found.entry(*pid).or_insert(ancestor);
+                        found.entry(*pid).or_insert(entry.created);
                         continue;
                     };
-                    if prior.get(pid).is_some_and(|old| *old != created) {
+                    if created != entry.created {
                         return Err(io::Error::other(
-                            "descendant identity changed between snapshots",
+                            "descendant identity changed after process snapshot",
                         ));
-                    }
-                    if *pid != root && found.get(parent).is_none_or(|pc| created < *pc) {
-                        continue;
                     }
                     found.insert(*pid, created);
                     if !live {
@@ -1321,6 +1317,264 @@ mod native {
                 browser_controller,
             }
         }
+        fn entry(pid: u32, parent: u32, name: &str, created: u64) -> snapshot::Entry {
+            snapshot::Entry {
+                pid,
+                parent,
+                name: name.into(),
+                created,
+            }
+        }
+        #[test]
+        fn cancellation_excludes_old_parent_pid_edges_before_opening_protected_processes() {
+            // A long-lived foreign codex_jobs has the numeric parent PID of a
+            // newer owned conhost. Its DACL denies inspection. The old process
+            // and everything below it must never enter the owned tree.
+            let all = vec![
+                entry(5, 3, "codex_jobs.exe", 15),
+                entry(3, 2, "codex_jobs.exe", 5),
+                entry(4, 2, "fixture.exe", 30),
+                entry(2, 1, "conhost.exe", 20),
+                entry(1, 0, "cmd.exe", 10),
+            ];
+            let mut inspected = Vec::new();
+            let walked = walk(1, 10, &HashMap::new(), &all, |pid, _| {
+                inspected.push(pid);
+                if pid == 3 || pid == 5 {
+                    return Err(io::Error::from_raw_os_error(ERROR_ACCESS_DENIED as i32));
+                }
+                Ok(Some((
+                    all.iter().find(|p| p.pid == pid).unwrap().created,
+                    false,
+                    true,
+                )))
+            });
+            assert!(
+                !inspected.contains(&3) && !inspected.contains(&5),
+                "foreign candidates were opened: {inspected:?}"
+            );
+            let (live, topology) = walked.unwrap();
+            assert_eq!(live.len(), 3);
+            assert!(!topology.contains_key(&3) && !topology.contains_key(&5));
+            assert!(topology.contains_key(&4));
+        }
+        #[test]
+        fn cancellation_keeps_uncertain_owned_candidates_fail_closed() {
+            let all = vec![
+                entry(1, 0, "cmd.exe", 10),
+                entry(2, 1, "codex_jobs.exe", 20),
+            ];
+            let mut opened_child = false;
+            let result = walk(1, 10, &HashMap::new(), &all, |pid, _| {
+                if pid == 2 {
+                    opened_child = true;
+                    return Err(io::Error::from_raw_os_error(ERROR_ACCESS_DENIED as i32));
+                }
+                Ok(Some((10, false, true)))
+            });
+            assert!(opened_child);
+            assert_eq!(
+                result.err().unwrap().raw_os_error(),
+                Some(ERROR_ACCESS_DENIED as i32)
+            );
+        }
+        #[test]
+        fn cancellation_snapshot_sees_a_denied_foreign_identity_without_opening_it() {
+            use std::os::windows::io::AsRawHandle;
+            use windows_sys::Win32::Security::*;
+            struct RevertThread;
+            impl Drop for RevertThread {
+                fn drop(&mut self) {
+                    assert_ne!(unsafe { RevertToSelf() }, 0);
+                }
+            }
+            struct RestoreAcl {
+                handle: HANDLE,
+                descriptor: Vec<u64>,
+            }
+            impl Drop for RestoreAcl {
+                fn drop(&mut self) {
+                    unsafe {
+                        assert_ne!(
+                            SetKernelObjectSecurity(
+                                self.handle,
+                                DACL_SECURITY_INFORMATION,
+                                self.descriptor.as_mut_ptr().cast()
+                            ),
+                            0
+                        );
+                    }
+                }
+            }
+            let child = OwnedChild::sleeping();
+            let pid = child.0.id();
+            let created = crate::proc_created(pid).unwrap();
+            let handle = child.0.as_raw_handle();
+            let mut needed = 0;
+            unsafe {
+                GetKernelObjectSecurity(
+                    handle,
+                    DACL_SECURITY_INFORMATION,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut needed,
+                )
+            };
+            assert!(needed > 0);
+            let mut saved = vec![0u64; (needed as usize).div_ceil(8)];
+            assert_ne!(
+                unsafe {
+                    GetKernelObjectSecurity(
+                        handle,
+                        DACL_SECURITY_INFORMATION,
+                        saved.as_mut_ptr().cast(),
+                        needed,
+                        &mut needed,
+                    )
+                },
+                0
+            );
+            let restore = RestoreAcl {
+                handle,
+                descriptor: saved,
+            };
+            let mut acl: ACL = unsafe { std::mem::zeroed() };
+            let mut descriptor: SECURITY_DESCRIPTOR = unsafe { std::mem::zeroed() };
+            unsafe {
+                assert_ne!(
+                    InitializeAcl(&mut acl, std::mem::size_of::<ACL>() as u32, ACL_REVISION),
+                    0
+                );
+                assert_ne!(
+                    InitializeSecurityDescriptor(
+                        (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+                        windows_sys::Win32::System::SystemServices::SECURITY_DESCRIPTOR_REVISION
+                    ),
+                    0
+                );
+                assert_ne!(
+                    SetSecurityDescriptorDacl(
+                        (&mut descriptor as *mut SECURITY_DESCRIPTOR).cast(),
+                        1,
+                        &acl,
+                        0
+                    ),
+                    0
+                );
+                assert_ne!(
+                    SetKernelObjectSecurity(
+                        handle,
+                        DACL_SECURITY_INFORMATION,
+                        (&descriptor as *const SECURITY_DESCRIPTOR)
+                            .cast_mut()
+                            .cast()
+                    ),
+                    0
+                );
+            }
+            // Elevated runners may hold SeDebugPrivilege. Disable it only on
+            // this thread's impersonation token so the fixture's empty DACL is
+            // actually exercised, without changing the runner/process token.
+            assert_ne!(unsafe { ImpersonateSelf(SecurityImpersonation) }, 0);
+            let revert = RevertThread;
+            let mut token = std::ptr::null_mut();
+            assert_ne!(
+                unsafe {
+                    OpenThreadToken(
+                        GetCurrentThread(),
+                        TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                        1,
+                        &mut token,
+                    )
+                },
+                0
+            );
+            let token = Handle(token);
+            let mut luid = unsafe { std::mem::zeroed() };
+            let privilege: Vec<u16> = "SeDebugPrivilege\0".encode_utf16().collect();
+            assert_ne!(
+                unsafe { LookupPrivilegeValueW(std::ptr::null(), privilege.as_ptr(), &mut luid) },
+                0
+            );
+            let disabled = TOKEN_PRIVILEGES {
+                PrivilegeCount: 1,
+                Privileges: [LUID_AND_ATTRIBUTES {
+                    Luid: luid,
+                    Attributes: 0,
+                }],
+            };
+            assert_ne!(
+                unsafe {
+                    AdjustTokenPrivileges(
+                        token.0,
+                        0,
+                        &disabled,
+                        0,
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                    )
+                },
+                0
+            );
+            let denied = inspect_retained(pid, "codex_jobs.exe")
+                .err()
+                .expect("fixture DACL must deny inspection");
+            assert_eq!(denied.kind(), io::ErrorKind::PermissionDenied);
+            let all = snapshot::processes().unwrap();
+            let mut foreign = all.into_iter().find(|p| p.pid == pid).unwrap();
+            assert_eq!(foreign.created, created);
+            // Model parent-PID reuse using the real denied object and its kernel
+            // birth time. No global process is protected, modified or stopped.
+            foreign.parent = 1;
+            let mut opened = false;
+            let result = walk(
+                1,
+                created + 1,
+                &HashMap::new(),
+                &[foreign.clone()],
+                |pid, name| {
+                    opened = true;
+                    inspect(pid, name)
+                },
+            );
+            assert!(!opened);
+            assert!(result.unwrap().0.is_empty());
+            // The identical denied object is fatal when its age is compatible.
+            let error = walk(1, created, &HashMap::new(), &[foreign], inspect)
+                .err()
+                .unwrap();
+            assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+            drop(revert);
+            drop(restore);
+        }
+        #[test]
+        fn cancellation_snapshot_and_retained_generations_must_match() {
+            let all = vec![entry(1, 0, "cmd.exe", 10), entry(2, 1, "fixture.exe", 20)];
+            assert!(
+                walk(1, 10, &HashMap::from([(2, 21)]), &all, |pid, _| Ok(Some((
+                    if pid == 1 { 10 } else { 20 },
+                    false,
+                    true
+                ))))
+                .is_err()
+            );
+            assert!(
+                walk(1, 10, &HashMap::new(), &all, |pid, _| Ok(Some((
+                    if pid == 1 { 10 } else { 21 },
+                    false,
+                    true
+                ))))
+                .is_err()
+            );
+            let mut unknown = all;
+            unknown[1].created = 0;
+            assert!(
+                walk(1, 10, &HashMap::new(), &unknown, |_, _| Ok(Some((
+                    10, false, true
+                ))))
+                .is_err()
+            );
+        }
         #[test]
         fn browser_role_requires_installed_image_and_controller_arguments() {
             let codex = Path::new("C:/Users/owner/AppData/Local/OpenAI/Codex");
@@ -1418,15 +1672,19 @@ mod native {
             // traversal to its worker. The next snapshot lacks the wrapper.
             for vanished in [false, true] {
                 let all = vec![
-                    (3, 2, "cargo.exe".into()),
-                    (2, 1, "cmd.exe".into()),
-                    (1, 0, "codex.exe".into()),
+                    entry(3, 2, "cargo.exe", 13),
+                    entry(2, 1, "cmd.exe", 12),
+                    entry(1, 0, "codex.exe", 10),
                 ];
                 let (live, topology) = walk(1, 10, &HashMap::new(), &all, |pid, _| {
                     Ok(if pid == 2 && vanished {
                         None
                     } else {
-                        Some((10 + u64::from(pid), false, pid != 2))
+                        Some((
+                            if pid == 1 { 10 } else { 10 + u64::from(pid) },
+                            false,
+                            pid != 2,
+                        ))
                     })
                 })
                 .unwrap();
@@ -1439,7 +1697,13 @@ mod native {
                     10,
                     &topology,
                     &[all[0].clone(), all[2].clone()],
-                    |pid, _| Ok(Some((10 + u64::from(pid), false, true))),
+                    |pid, _| {
+                        Ok(Some((
+                            if pid == 1 { 10 } else { 10 + u64::from(pid) },
+                            false,
+                            true,
+                        )))
+                    },
                 )
                 .unwrap();
                 assert!(again.iter().any(|p| p.pid == 3));

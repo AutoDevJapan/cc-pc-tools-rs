@@ -4,6 +4,7 @@ pub const COMMON_INSTRUCTIONS: &str = r###"この PC の共有スケジューラ
 利用は OAuth ログイン経由のサブスク枠だけ。API キーを使わず、秘密情報を読んだり表示したりしない。
 GPU を使う作業や GPU モデルの起動は禁止。この PC の GPU は他の処理で使用中です。
 意味のある区切りで、この worktree の作業ブランチに途中の成果をコミットする。
+作業ブランチを変更したら、終了・待機の前に D:/CC/Tools/scheduler/scheduler.exe checkpoint-workspace --request-file <JSON> で再開情報を保存する。JSONは自分のToDo番号のid、環境変数CC_JOB_IDのjob、保存前のexpected_branch、新しいbranch、実HEADのhead。自分の scheduler/todo-<番号>- 配下だけが対象で、共有ToDoの状態や許可は変わらない。照合失敗時は成果を保持して具体的な原因を調べ、同じ失敗の無限再試行で終えない。
 クラッシュ後に再開できるよう、何を終えて何が残るかも作業フォルダに残す。
 秘密情報や無関係な変更をコミットしない。共有 ToDo の自分の項目はスケジューラが状態を更新する。
 子の Codex ジョブを直接起動せず、必要な独立作業は共有 ToDo に --spec を付けて登録する。

@@ -9,6 +9,9 @@ use std::{
 };
 pub fn help_text(command: &str) -> &'static str {
     match command {
+        "repair-owner-wait" => {
+            "usage: codex_jobs.exe repair-owner-wait --request-file <JSON> [--apply]\n\nPreview one exact never-started finite worker's automatic wait cycle. Apply changes only that job under queue, job and ToDo locks; normal admission and all other waits remain required.\n"
+        }
         "rename-project" => {
             "usage: codex_jobs.exe rename-project <id> --from <name> --to <name>\n\nRename only this job's project, name and task_title under state.lock. Execution paths and identifiers are preserved.\n"
         }
@@ -97,6 +100,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-429",
         "recover-reboot",
         "reload-queue",
+        "repair-owner-wait",
         "adjust-limit",
         "update-queue-config",
         "recover-children",
@@ -137,6 +141,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "rate" => name == "force",
                 "cancel" => ["recovery", "if-todo-ready"].contains(&name.as_str()),
                 "update-queue-config" => name == "clear-fixed",
+                "repair-owner-wait" => name == "apply",
                 "recover-429" | "recover-reboot" | "recover-children" | "cleanup-supervisors" => {
                     name == "apply"
                 }
@@ -190,6 +195,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "recover-reboot" => name == "apply",
                 "cleanup-supervisors" => name == "apply",
                 "reload-queue" => name == "job-id",
+                "repair-owner-wait" => ["request-file", "apply"].contains(&name.as_str()),
                 "rename-project" => ["from", "to"].contains(&name.as_str()),
                 "update-queue-config" => ["patch-file", "clear-fixed"].contains(&name.as_str()),
                 _ => false,
@@ -553,6 +559,15 @@ impl Context {
                     None => self.reload_queue()?,
                 };
                 writeln!(out, "{}", pretty(&report))?;
+                Ok(0)
+            }
+            "repair-owner-wait" => {
+                let request = self.read_json(Path::new(a.required("request-file")?))?;
+                writeln!(
+                    out,
+                    "{}",
+                    pretty(&self.repair_owner_wait(&request, a.flag("apply"))?)
+                )?;
                 Ok(0)
             }
             "adjust-limit" => {

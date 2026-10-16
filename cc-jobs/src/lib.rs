@@ -13,6 +13,7 @@ pub mod events;
 pub mod gate;
 pub mod jobs;
 pub mod notify;
+mod owner_wait_repair;
 mod pause;
 pub mod platform;
 pub mod queue;

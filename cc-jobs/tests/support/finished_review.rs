@@ -21,7 +21,7 @@ fn setup() -> (Test, subwork_support::Fixture, Request) {
     j["sandbox"] = json!("danger-full-access");
     j["scope_source"] = json!("launcher");
     j["add_dirs"] = json!(["original-launch-write-hint"]);
-    j["fixed_review_protocol"] = json!({"version":1,"pid":j["pid"],"created":j["pid_created"]});
+    j["fixed_review_protocol"] = json!({"version":cc_job_policy::finished_review::EXECUTION_PROTOCOL,"pid":j["pid"],"created":j["pid_created"]});
     j["work_wait_on"] = json!([3]);
     j["work_wait_evidence"] = json!({"owner_job_id":"writer","owner":work_owner::owner_evidence(&w),"candidate_identity":j["work_owner"]});
     t.put(j);
@@ -163,9 +163,143 @@ fn execution_checks_the_consumed_prompt_even_if_the_original_path_is_replaced() 
 }
 
 #[test]
+fn fixed_review_spawn_disables_every_external_tool_for_browser_full_and_legacy_pipe() {
+    for profile in ["minimal", "browser", "full"] {
+        for summary in [false, true] {
+            let (t, _f, r) = setup();
+            t.ctx.qualify_finished_review(&r, true).unwrap();
+            let mut job = t.ctx.load("child").unwrap();
+            job["codex"] = json!("codex.cmd");
+            job["mcp_profile"] = json!(profile);
+            job["chrome_pipe"] = json!("legacy-host-browser-pipe");
+            if summary {
+                job["context_phase"] = json!("summarize");
+                fs::write(
+                    t.ctx.job_dir("child").join("context-summary-prompt.md"),
+                    "summarize original read-only work",
+                )
+                .unwrap();
+            }
+            {
+                let mut env = t.rt.env.lock().unwrap();
+                for name in [
+                    "cdp_browser_backend_pipe_path",
+                    "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET",
+                    "BROWSER_USE_AVAILABLE_BACKENDS",
+                ] {
+                    env.insert(name.into(), "inherited-host-browser".into());
+                }
+            }
+            let before = job.clone();
+            let spawn = t.ctx.execution_spawn(&job).unwrap();
+            let configs: Vec<_> = spawn
+                .argv
+                .windows(2)
+                .filter(|a| a[0] == "-c")
+                .map(|a| a[1].as_str())
+                .collect();
+            assert!(spawn.argv.windows(2).any(|a| a == ["-s", "read-only"]));
+            for flag in [
+                "features.plugins=false",
+                "features.apps=false",
+                "web_search=disabled",
+                "approval_policy=never",
+                "approvals_reviewer=user",
+                "mcp_servers.stripe.enabled=false",
+                "mcp_servers.unseen-server.enabled=false",
+                "mcp_servers.node_repl.enabled=false",
+            ] {
+                assert!(
+                    configs.contains(&flag),
+                    "{profile}/{summary}: missing {flag}"
+                );
+            }
+            assert!(!configs.iter().any(|c| (c.starts_with("mcp_servers.")
+                || c.starts_with("plugins.")
+                || c.starts_with("features.apps")
+                || c.starts_with("features.plugins"))
+                && c.ends_with("=true")));
+            assert!(!spawn.argv.iter().any(|a| a == "--add-dir"
+                || a.contains("legacy-host-browser-pipe")
+                || a.contains("CDP_BROWSER_BACKEND")
+                || a.contains("network_access=true")));
+            assert!(!spawn.env.keys().any(|key| {
+                [
+                    "CDP_BROWSER_BACKEND_PIPE_PATH",
+                    "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET",
+                    "BROWSER_USE_AVAILABLE_BACKENDS",
+                ]
+                .iter()
+                .any(|name| key.eq_ignore_ascii_case(name))
+            }));
+            assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 1);
+            assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+            assert_eq!(spawn.flags, NO_WINDOW);
+            assert_eq!(job, before); // Saved profile, source, legacy fields and history stay intact.
+        }
+    }
+}
+
+#[test]
+fn missing_fixed_review_tool_inventory_never_falls_back_to_the_saved_browser_profile() {
+    let (t, _f, r) = setup();
+    t.ctx.qualify_finished_review(&r, true).unwrap();
+    let mut job = t.ctx.load("child").unwrap();
+    job["mcp_profile"] = json!("browser");
+    job["codex"] = json!("codex.cmd");
+    t.rt.summary_fail.store(true, Ordering::Relaxed);
+    assert!(t.ctx.execution_spawn(&job).is_err());
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn supervisor_does_not_install_a_browser_bridge_when_fixed_inventory_is_unavailable() {
+    let (t, _f, r) = setup();
+    t.ctx.qualify_finished_review(&r, true).unwrap();
+    let mut job = t.ctx.load("child").unwrap();
+    job["mcp_profile"] = json!("browser");
+    job["codex"] = json!("codex.cmd");
+    t.put(job);
+    assert!(!t.ctx.home.exists());
+    t.rt.summary_fail.store(true, Ordering::Relaxed);
+    t.ctx.supervise("child").unwrap();
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+    assert!(
+        !t.ctx.home.exists(),
+        "fixed review must not install the host-browser hook before a failed launch"
+    );
+    assert!(t.ctx.load("child").unwrap()["chrome_pipe"].is_null());
+}
+
+#[test]
+fn ordinary_browser_and_full_launches_keep_their_existing_capabilities() {
+    let t = Test::new();
+    for profile in ["browser", "full"] {
+        let j=t.put(job(json!({"id":format!("normal-{profile}"),"mcp_profile":profile,"chrome_pipe":"normal-pipe","sandbox":"read-only","add_dirs":["normal-directory"]})));
+        let spawn = t.ctx.execution_spawn(&j).unwrap();
+        assert!(
+            spawn
+                .argv
+                .iter()
+                .any(|a| a == "mcp_servers.node_repl.enabled=true")
+        );
+        assert!(
+            spawn
+                .argv
+                .iter()
+                .any(|a| a == "plugins.'chrome@openai-bundled'.enabled=true")
+        );
+        assert!(spawn.argv.iter().any(|a| a == "--add-dir"));
+        assert_eq!(spawn.env["CDP_BROWSER_BACKEND_PIPE_PATH"], "normal-pipe");
+    }
+    assert_eq!(t.rt.summary_calls.load(Ordering::Relaxed), 0);
+}
+
+#[test]
 fn qualifying_refuses_old_or_reused_controller_live_writer_protected_source_and_git_changes() {
     for case in [
         "old_protocol",
+        "previous_protocol",
         "reused_controller",
         "writer_alive",
         "writer_probe_denied",
@@ -179,6 +313,11 @@ fn qualifying_refuses_old_or_reused_controller_live_writer_protected_source_and_
             "old_protocol" => {
                 let mut j = t.ctx.load("child").unwrap();
                 j["fixed_review_protocol"] = Value::Null;
+                t.put(j);
+            }
+            "previous_protocol" => {
+                let mut j = t.ctx.load("child").unwrap();
+                j["fixed_review_protocol"]["version"] = json!(1);
                 t.put(j);
             }
             "reused_controller" => {

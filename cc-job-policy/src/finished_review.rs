@@ -4,6 +4,9 @@ use crate::{product_retry::digest, todo_wait, work_owner};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+/// Version 2 enforces external-tool isolation in the actual spawn builder.
+pub const EXECUTION_PROTOCOL: u64 = 2;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Request {

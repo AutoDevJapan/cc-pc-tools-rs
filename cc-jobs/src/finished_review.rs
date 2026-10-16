@@ -36,7 +36,10 @@ impl Context {
         // A standard targeted reload must bring the old queued supervisor onto
         // this protocol BEFORE its wait is removed. Never fake a launch receipt.
         let ack = &job["fixed_review_protocol"];
-        if ack["version"] != 1 || ack["pid"] != job["pid"] || ack["created"] != job["pid_created"] {
+        if ack["version"] != finished_review::EXECUTION_PROTOCOL
+            || ack["pid"] != job["pid"]
+            || ack["created"] != job["pid_created"]
+        {
             return Err(Error::new(
                 "reload the exact queued supervisor before qualifying its fixed review",
             ));

@@ -67,7 +67,10 @@ profileの削除は試していない。同じunloadの再試行や別API/強制
 制御root e495...はplanの通常Remove-Itemを別呼出しで実行し、finish=source_absentを確認済み。
 永続証拠root ac814...は残す。execution-index.private.jsonに全OS/各run/原log/bytes/hash/exitを保持。
 次回はRust全件・RED・同じ回収拒否を繰り返さず、未完の新profileと2rootだけを扱う。
-親2648と元2640へ実結果/未完条件をnoteで配送する。本人判断は必要としていない。
+親2648と元2640、自分2730へ実結果/未完条件をnoteで配送済み。
+delivery.private.jsonでnoteの保持と各ToDoの状態不変を読み返して確認した。
+実装と実結果の保存コミット879a3ad8c36ff78d21efeae05f76332590b3c026はpush先と一致。
+本人判断は必要としていない。未完了は上記の回収だけであり、Rust検査を再実行しない。
 
 ## 以下は準備時の記録（最新の成功/失敗は上記）
 

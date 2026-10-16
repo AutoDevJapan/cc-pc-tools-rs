@@ -3386,6 +3386,32 @@ fn workspace_checkpoint_rejects_unverified_identity_scope_or_git_state() {
 }
 
 #[test]
+fn workspace_checkpoint_accepts_only_the_current_live_source() {
+    for current in [false, true] {
+        let (mut f, request, _) = checkpoint_fixture();
+        f.e.backend.records[0]["status"] = json!("running");
+        f.e.backend.records[0]["pid"] = json!(9);
+        f.e.backend.records[0]["pid_created"] = proc(9, 0, "codex.exe")["created"].clone();
+        f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
+        if current {
+            f.e.edit(&json!(1), |row| row["scheduler"]["job"] = json!("owned"))
+                .unwrap();
+        }
+        let before = f.get(1);
+        let result =
+            cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request);
+        assert_eq!(result.is_ok(), current);
+        if current {
+            assert_eq!(f.get(1)["scheduler"]["branch"], request.branch);
+            assert_eq!(f.get(1)["scheduler"]["job"], "owned");
+        } else {
+            assert_eq!(f.get(1), before);
+        }
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
 fn workspace_checkpoint_preserves_intervening_owner_stop() {
     for project_change in [false, true] {
         let (mut f, request, _) = checkpoint_fixture();
@@ -3397,7 +3423,12 @@ fn workspace_checkpoint_preserves_intervening_owner_stop() {
             changed["items"][0]["stopped"] = json!(true);
         }
         f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
-        assert!(cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request).is_err());
+        assert!(cc_scheduler::workspace_checkpoint::checkpoint(
+            &mut f.e,
+            &mut SystemRunner,
+            &request
+        )
+        .is_err());
         assert_eq!(f.e.todo().unwrap(), changed);
         assert!(f.e.backend.launched.is_empty());
     }
@@ -4314,6 +4345,7 @@ fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
         &["step", "-h"],
         &["recover", "-h"],
         &["orphans", "-h"],
+        &["checkpoint-workspace", "--help"],
     ] {
         let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
         c.args = args.iter().map(|a| a.to_string()).collect();

@@ -10,7 +10,7 @@ fn main() {
     let command = args.first().map(String::as_str);
     if command == Some("checkpoint-workspace") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
-            println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes files.\nJSON: id, job, expected_branch, branch, head");
+            println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit");
             return;
         }
         let result = (|| -> Result<serde_json::Value> {

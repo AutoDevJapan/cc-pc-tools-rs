@@ -179,12 +179,12 @@ try {
     try{
       $existing=$services.OpenSubKey('CCGuest2746',$false)
       if($existing){
-        try{$same=([int]$existing.GetValue('Type',0) -eq 16) -and ([int]$existing.GetValue('Start',0) -eq 2) -and ([int]$existing.GetValue('ErrorControl',0) -eq 1) -and ([string]$existing.GetValue('ObjectName','') -ceq 'LocalSystem') -and ([string]$existing.GetValue('ImagePath','') -ceq '\SystemRoot\System32\cc2746-guest.exe --service')}finally{$existing.Dispose()}
+        try{$same=([int]$existing.GetValue('Type',0) -eq 16) -and ([int]$existing.GetValue('Start',0) -eq 2) -and ([int]$existing.GetValue('ErrorControl',0) -eq 1) -and ([string]$existing.GetValue('ObjectName','') -ceq 'LocalSystem') -and ([string]$existing.GetValue('ImagePath','') -ceq '%SystemRoot%\System32\cc2746-guest.exe --service')}finally{$existing.Dispose()}
         if(-not $same){throw 'OWNED_GUEST_SERVICE_COLLISION'}
       }else{
         $service=$services.CreateSubKey('CCGuest2746')
         if(-not $service){throw 'OWNED_GUEST_SERVICE_CREATE_FAILED'}
-        try{$service.SetValue('Type',16,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('Start',2,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ErrorControl',1,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ObjectName','LocalSystem',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('ImagePath','\SystemRoot\System32\cc2746-guest.exe --service',[Microsoft.Win32.RegistryValueKind]::ExpandString);$service.SetValue('DisplayName','ToDo 2746 guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('Description','Credential-free finite Windows guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.Flush()}finally{$service.Dispose()}
+        try{$service.SetValue('Type',16,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('Start',2,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ErrorControl',1,[Microsoft.Win32.RegistryValueKind]::DWord);$service.SetValue('ObjectName','LocalSystem',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('ImagePath','%SystemRoot%\System32\cc2746-guest.exe --service',[Microsoft.Win32.RegistryValueKind]::ExpandString);$service.SetValue('DisplayName','ToDo 2746 guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.SetValue('Description','Credential-free finite Windows guest fixture',[Microsoft.Win32.RegistryValueKind]::String);$service.Flush()}finally{$service.Dispose()}
       }
     }finally{$services.Dispose()}
   }finally{$registry.Dispose()}

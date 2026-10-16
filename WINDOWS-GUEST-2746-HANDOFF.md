@@ -169,11 +169,23 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   `Select` subkey. Source now explicitly disposes it before unloading. This
   correction is uncommitted and untried; the failed clone remains detached in
   the safe-delete-owned root for final cleanup.
+- After fixing the hive handle and rerunning with a fresh VHD clone, the guest
+  booted but the service did not send its COM readiness line. The fixture
+  helper stopped/removed the VM and verified 0 assigned memory; both guest
+  VHDX copies and the official source are detached. The failed clone's System
+  event log has Service Control Manager event 7000 for `CCGuest2746`: the
+  service executable was not found. The helper and seed files exist in the
+  clone, and a temporary hive read confirmed the service is Auto/LocalSystem
+  with ImagePath `\SystemRoot\System32\cc2746-guest.exe --service`. The
+  working diagnosis is that SCM did not resolve that NT-style prefix for this
+  Win32 service. Microsoft examples use `%SystemRoot%` in expandable service
+  paths; the helper now writes `%SystemRoot%\System32\cc2746-guest.exe
+  --service` as REG_EXPAND_SZ. This correction is uncommitted and untried.
 
 ## Remaining
 
 1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
-   the RegistryKey lifetime correction; commit and push it.
+   the expandable service ImagePath correction; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

@@ -181,7 +181,7 @@ func routeCodeQL(ctx context.Context, c candidate, dir string) error {
 	if e = get(ctx, "repos/"+r.FullName+"/code-scanning/default-setup", &after); e != nil {
 		return e
 	}
-	if after.State != prior.State || after.QuerySuite != prior.QuerySuite || after.ThreatModel != prior.ThreatModel || strings.Join(after.Languages, "\x00") != strings.Join(prior.Languages, "\x00") || after.RunnerType != "labeled" || after.RunnerLabel != codeQLLabel(c.ID) {
+	if !sameCodeQLSettings(after, prior) || after.RunnerType != "labeled" || after.RunnerLabel != codeQLLabel(c.ID) {
 		return errors.New("route update not confirmed without acceptance changes")
 	}
 	return nil
@@ -229,6 +229,11 @@ func codeQLIsolation(b []byte) error {
 			return errors.New("CodeQL scratch owner rejected")
 		}
 	}
+	for _, p := range []string{"/runner", "/work"} {
+		if !strings.Contains(","+h.Tmpfs[p]+",", ",exec,") {
+			return errors.New("CodeQL executable scratch required")
+		}
+	}
 	for _, m := range i.Mounts {
 		if m.Type != "tmpfs" || (m.Destination != "/runner" && m.Destination != "/work" && m.Destination != "/tmp" && m.Destination != "/home/runner") {
 			return errors.New("CodeQL host mount rejected")
@@ -238,7 +243,7 @@ func codeQLIsolation(b []byte) error {
 }
 
 func codeQLCreateArgs(name string) []string {
-	return []string{"create", "--name", name, "--label", "cc.todo=2648", "--label", "cc.instance=" + name, "--init", "--user", "1001:1001", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only", "--network", "bridge", "--cpus", "2", "--memory", "8g", "--pids-limit", "512", "--tmpfs", "/runner:rw,nosuid,size=4g,uid=1001,gid=1001", "--tmpfs", "/work:rw,nosuid,size=16g,uid=1001,gid=1001", "--tmpfs", "/tmp:rw,nosuid,noexec,size=2g,uid=1001,gid=1001", "--tmpfs", "/home/runner:rw,nosuid,size=1g,uid=1001,gid=1001", codeQLSDK, "sleep", "infinity"}
+	return []string{"create", "--name", name, "--label", "cc.todo=2648", "--label", "cc.instance=" + name, "--init", "--user", "1001:1001", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--read-only", "--network", "bridge", "--cpus", "2", "--memory", "8g", "--pids-limit", "512", "--tmpfs", "/runner:rw,exec,nosuid,size=4g,uid=1001,gid=1001", "--tmpfs", "/work:rw,exec,nosuid,size=16g,uid=1001,gid=1001", "--tmpfs", "/tmp:rw,nosuid,noexec,size=2g,uid=1001,gid=1001", "--tmpfs", "/home/runner:rw,nosuid,size=1g,uid=1001,gid=1001", codeQLSDK, "sleep", "infinity"}
 }
 
 // Host evidence never claims job success from runner exit: the official run,
@@ -358,6 +363,9 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	if e != nil || p2 != p {
 		return errors.New("CodeQL plan changed before registration")
 	}
+	if e = checkCodeQLQueue(ctx, p, get); e != nil {
+		return e
+	}
 	callback, key, closeAdmission, e := startCodeQLAdmission(ctx, p, c)
 	if e != nil {
 		return e
@@ -443,6 +451,12 @@ func executeCodeQL(ctx context.Context, c candidate, runID int64, dir, guestBina
 	}
 	rec.LogSHA = digest(logBytes)
 	rec.LogBytes = int64(len(logBytes))
+	// Preserve only opaque context even when a fail-closed hook rejects a job.
+	if contextBytes, contextErr := cmd(ctx, docker, "exec", rec.ContainerID, "cat", "/runner/job-start-context.json").Output(); contextErr == nil {
+		if saveErr := os.WriteFile(filepath.Join(dir, "codeql-context.private.json"), contextBytes, 0600); saveErr != nil {
+			return saveErr
+		}
+	}
 	if e != nil {
 		return errors.New("ephemeral runner failed; inspect private original log")
 	}
@@ -537,6 +551,27 @@ func codeQLHook(complete bool) error {
 	}
 	p := packet.Plan
 	p.Repo = packet.Repo
+	if !complete {
+		observed := os.Getenv("GITHUB_SHA")
+		if len(observed) != 40 || strings.Trim(observed, "0123456789abcdef") != "" {
+			observed = "invalid"
+		}
+		refKind := "other"
+		ref := os.Getenv("GITHUB_REF")
+		if strings.HasPrefix(ref, "refs/pull/") {
+			if strings.HasSuffix(ref, "/head") {
+				refKind = "pull-head"
+			} else if strings.HasSuffix(ref, "/merge") {
+				refKind = "pull-merge"
+			}
+		} else if strings.HasPrefix(ref, "refs/heads/") {
+			refKind = "branch"
+		}
+		b, _ := json.Marshal(map[string]any{"repo_id": p.RepoID, "run_id": p.RunID, "attempt": p.Attempt, "expected_sha": p.SHA, "observed_sha": observed, "ref_kind": refKind, "role": p.Role})
+		if e = os.WriteFile("/runner/job-start-context.json", b, 0600); e != nil {
+			return errors.New("opaque job context not preserved")
+		}
+	}
 	if e = checkCodeQLHook(p, os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_RUN_ID"), os.Getenv("GITHUB_RUN_ATTEMPT")); e != nil {
 		return e
 	}

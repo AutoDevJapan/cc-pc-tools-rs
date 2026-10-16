@@ -662,7 +662,7 @@ func main() {
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(receipt{RepoID: c.ID, PR: c.PR, SourceSHA: c.SHA, Stage: stage, At: time.Now().UTC()})
 		}
-	} else if (len(os.Args) == 4 && os.Args[1] == "codeql-route") || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
+	} else if (len(os.Args) == 4 && (os.Args[1] == "codeql-route" || os.Args[1] == "codeql-restore")) || (len(os.Args) == 6 && os.Args[1] == "codeql-job") {
 		id, parse := strconv.ParseInt(os.Args[2], 10, 64)
 		var chosen *candidate
 		for i := range candidates {
@@ -672,6 +672,8 @@ func main() {
 		}
 		if parse != nil || chosen == nil {
 			e = errors.New("unknown candidate")
+		} else if os.Args[1] == "codeql-restore" {
+			e = restoreCodeQL(ctx, *chosen, os.Args[3])
 		} else if os.Args[1] == "codeql-route" {
 			e = routeCodeQL(ctx, *chosen, os.Args[3])
 		} else {

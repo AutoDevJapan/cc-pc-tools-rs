@@ -170,7 +170,7 @@ func TestCodeQLIsolationRejectsPrivilegeAndMounts(t *testing.T) {
 	h.PidsLimit = &pids
 	h.CapDrop = []string{"ALL"}
 	h.SecurityOpt = []string{"no-new-privileges"}
-	h.Tmpfs = map[string]string{"/runner": "uid=1001", "/work": "uid=1001", "/home/runner": "uid=1001", "/tmp": "noexec,uid=1001"}
+	h.Tmpfs = map[string]string{"/runner": "exec,uid=1001", "/work": "exec,uid=1001", "/home/runner": "uid=1001", "/tmp": "noexec,uid=1001"}
 	encode := func() []byte { b, _ := json.Marshal([]isolation{i}); return b }
 	if e := codeQLIsolation(encode()); e != nil {
 		t.Fatal(e)

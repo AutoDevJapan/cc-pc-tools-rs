@@ -157,9 +157,17 @@ func testRealCodeQLAdmission(t *testing.T, ctx context.Context, id, dir string) 
 		t.Fatal(e)
 	}
 	args := []string{"exec", "-e", "GITHUB_REPOSITORY=" + p.Repo, "-e", "GITHUB_SHA=" + p.SHA, "-e", "GITHUB_RUN_ID=7", "-e", "GITHUB_RUN_ATTEMPT=2", id, "/runner/product-ci", "codeql-hook-start"}
-	accepted := cmd(ctx, docker, args...).Run() == nil
+	first, firstErr := cmd(ctx, docker, args...).CombinedOutput()
+	if e = os.WriteFile(filepath.Join(dir, "codeql-live-first.private.log"), first, 0600); e != nil {
+		t.Fatal(e)
+	}
+	accepted := firstErr == nil
 	stale.Store(true)
-	rejected := cmd(ctx, docker, args...).Run() != nil
+	second, secondErr := cmd(ctx, docker, args...).CombinedOutput()
+	if e = os.WriteFile(filepath.Join(dir, "codeql-live-stale.private.log"), second, 0600); e != nil {
+		t.Fatal(e)
+	}
+	rejected := secondErr != nil
 	proof := struct {
 		Accepted, AdvancedHeadRejected bool
 		LiveChecks                     int32

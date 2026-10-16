@@ -16,6 +16,16 @@
 
 製品ソース・workflow・PR・runnerへ今回の変更はない。Cargo/GPU/Civ6/VM/container/ブラウザ/Discord送信/本人PC操作は行っていない。新しい一時フォルダを作っておらず、回収する一時資源はない。古い回収拒否資源も触っていない。
 
+## 保存結果と再開情報の照合不足
+
+最初の記録をcommit `a2b6d908b19b82028e894fc069b2ba2871ba6686` としてpushし、リモートrefと実HEADの一致を確認した。修復リポジトリは実APIでAutoDevJapan/private/admin/nonfork、ID1406818713を確認した。独立PRの作成やmergeはしていない。
+
+2026-10-17 04:52 JST、実job `20261017-044530-todo-2766` と同じ実branch/HEADの要求で、指定のHidden/Wait/PassThruによりcheckpointを1回実行した。実プロセスは終了済み、exit1、`workspace checkpoint failed InputRejected`。原ToDoのcheckpointはnullであり、保存成功とはしない。これはschedulerの入力・所有照合による拒否で、自動承認レビューの拒否ではない。
+
+有限の読取調査で、原job.jsonはrunning/todo_id2766/cwd一致だが、原ToDo2766はtodo、scheduler.phase=prepared、scheduler.job=null、jobs=[]だった。保存branchと実branchは一致する。`cc-scheduler/src/workspace_checkpoint.rs` のsource選択は当該jobが原ToDoのjobsにあることを要求するため、この欠落で拒否される。詳細な要求・exit・原記録抜粋は本worktreeの `checkpoint-2766-*.private.json` に保存した。
+
+ジョブ紐付けの偽装、原台帳の直接書換え、startによる自己紐付け、ブランチ切替、同一失敗の再試行はしない。変更したのは自分の再開文書だけで、branch自体は切り替えていない。正規waitで2737依存を保持し、次の正規再開時にジョブ紐付けとworkspace checkpointを再照合する。本人判断は不要。元ToDoのnoteにもこの不足と次の処置を残す。
+
 ## 2737完了後の再開
 
 1. 起動入口の運用指示、親2642の最新note/spec、2737の完了記録・レビュー・実guest・source固定・通常CI結果を読む。原GitHubのAGENTS.md/CLAUDE.mdとworkflow全工程は製品操作前に読む（今回は未取得）。

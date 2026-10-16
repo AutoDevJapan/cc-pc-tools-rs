@@ -390,7 +390,9 @@ if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 
 $winDvd=$dvds|Where-Object Path -CEQ $windowsISO|Select-Object -First 1
 $seedDvd=$dvds|Where-Object Path -CEQ $oldSeedISO|Select-Object -First 1
 Set-VMDvdDrive -VMDvdDrive $seedDvd -Path $newSeedISO|Out-Null
-Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -FirstBootDevice $winDvd
+Set-VMFirmware -VM $v -EnableSecureBoot On -SecureBootTemplate MicrosoftWindows -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
+$firmware=Get-VMFirmware -VM $v
+if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows' -or @($firmware.BootOrder).Count -lt 1 -or -not [String]::Equals([string]$firmware.BootOrder[0].Path,$windowsISO,[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_VM_SETUP_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$v.Id.ToString();name=$v.Name;generation=$v.Generation;root=$root;vhd=$vhd;windows_iso=$windowsISO;seed_iso=$newSeedISO;dvd_count=2;vhd_count=1;pipe=$pipe;cpu_count=$v.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
 $receipt|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 Start-VM -VM $v|Out-Null
@@ -420,7 +422,7 @@ func runVMFixturesAndRecord(root, isoPath string, imageBytes int64, vm vmReceipt
 	}
 	evidence := vmEvidence{
 		Schema: "windows-hyperv-guest-fixture-v1", ObservedAt: time.Now().UTC(), Instance: vm.Instance,
-		ImageDeploymentMethod: "dism-offline-apply+bcdboot", ImageBytes: imageBytes, ImageSHA256: isoHash,
+		ImageDeploymentMethod: "windows-setup-autounattend", ImageBytes: imageBytes, ImageSHA256: isoHash,
 		VM:     vmPublicReceipt{VMID: vm.ID, Generation: vm.Generation, CPUCount: vm.CPUCount, MemoryBytes: vm.Memory, DynamicMemory: vm.Dynamic, SecureBoot: vm.SecureBoot, DVDCount: vm.DVDCount, VHDCount: vm.VHDCount, NetworkAdapters: vm.NetworkAdapters, GPUAdapters: vm.GPUAdapters},
 		Normal: normal, Cancel: cancel, Cleanup: cleanup,
 		CredentialFree: true, UnattendEULAConfigured: true, OOBESkipConfigured: false, LocalUserCreated: false,
@@ -992,7 +994,7 @@ $vhd=Join-Path $root 'guest.vhdx'
 $name='cc-2746-'+$instance
 $pipe='\\.\pipe\cc-2746-'+$instance
 if(Get-VM -Name $name -ErrorAction SilentlyContinue){throw 'OWNED_VM_NAME_ALREADY_EXISTS'}
-$mountedIso=$false;$mountedSeed=$false;$mountedVHD=$false;$diskNumber=$null;$espPartition=$null;$osPartition=$null;$efiAccessPath=$null;$osAccessPath=$null
+ $mountedIso=$false;$mountedSeed=$false;$mountedVHD=$false;$diskNumber=$null;$oldESPPartitionNumber=$null;$oldOSPartitionNumber=$null;$efiAccessPath=$null;$osAccessPath=$null
 try {
   $image=Mount-DiskImage -ImagePath $iso -PassThru
   $mountedIso=$true
@@ -1028,126 +1030,53 @@ try {
     if($imageState.Attached){throw 'OWNED_VHD_STILL_ATTACHED'}
     $virtualDisk=Get-VHD -Path $vhd -ErrorAction Stop
     if($virtualDisk.Attached -or $virtualDisk.VhdType -ne 'Dynamic' -or $virtualDisk.Size -ne 64GB){throw 'OWNED_VHD_TYPE_OR_ATTACHMENT_REJECTED'}
-    $vhdx=Mount-VHD -Path $vhd -ReadOnly -NoDriveLetter -PassThru
+  $vhdx=Mount-VHD -Path $vhd -NoDriveLetter -PassThru
     $mountedVHD=$true
     $vhdImage=Get-DiskImage -ImagePath $vhd -StorageType VHDX -ErrorAction Stop
-  $vhdDisks=@($vhdImage|Get-Disk -ErrorAction Stop)
-  if($vhdDisks.Count -ne 1){throw 'OWNED_VHD_DISK_IDENTITY_REJECTED'}
-  $diskNumber=$vhdDisks[0].Number
+    $vhdDisks=@($vhdImage|Get-Disk -ErrorAction Stop)
+    if($vhdDisks.Count -ne 1){throw 'OWNED_VHD_DISK_IDENTITY_REJECTED'}
+    $diskNumber=$vhdDisks[0].Number
     $oldPartitions=@(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue)
     if($oldPartitions.Count -notin @(0,3,4)){throw 'OWNED_RETRY_VHD_PARTITION_LAYOUT_REJECTED'}
+    if($oldPartitions.Count -gt 0){
+      $oldESP=@($oldPartitions|Where-Object { [String]::Equals([string]$_.GptType,'{C12A7328-F81F-11D2-BA4B-00A0C93EC93B}',[StringComparison]::OrdinalIgnoreCase) })
+      $oldMSR=@($oldPartitions|Where-Object { [String]::Equals([string]$_.GptType,'{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}',[StringComparison]::OrdinalIgnoreCase) })
+      $oldOS=@($oldPartitions|Where-Object { [String]::Equals([string]$_.GptType,'{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}',[StringComparison]::OrdinalIgnoreCase) })
+      if($oldESP.Count -ne 1 -or $oldMSR.Count -notin @(1,2) -or $oldOS.Count -ne 1 -or $oldESP[0].Size -ne 100MB -or @($oldMSR|Where-Object {$_.Size -lt 15MB -or $_.Size -gt 16MB}).Count -ne 0 -or $oldOS[0].Size -lt 60GB){throw 'OWNED_RETRY_VHD_PARTITION_LAYOUT_REJECTED'}
+      $oldESPPartitionNumber=$oldESP[0].PartitionNumber;$oldOSPartitionNumber=$oldOS[0].PartitionNumber
+      $oldESPVolume=$oldESP[0]|Get-Volume -ErrorAction Stop
+      $oldOSVolume=$oldOS[0]|Get-Volume -ErrorAction Stop
+      if($oldESPVolume.FileSystemLabel -cne 'CC2746EFI' -or $oldESPVolume.FileSystem -cne 'FAT32' -or $oldOSVolume.FileSystemLabel -cne 'CC2746OS' -or $oldOSVolume.FileSystem -cne 'NTFS'){throw 'OWNED_RETRY_VHD_FILESYSTEM_LABEL_REJECTED'}
+      if(-not $oldESP[0].DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldESP[0].PartitionNumber -AssignDriveLetter}
+      $oldESP=Get-Partition -DiskNumber $diskNumber -PartitionNumber $oldESP[0].PartitionNumber -ErrorAction Stop
+      if(-not $oldESP.DriveLetter){throw 'OWNED_RETRY_EFI_VOLUME_LETTER_MISSING'}
+      $oldESPRoot=([string]$oldESP.DriveLetter)+':\';$efiAccessPath=$oldESPRoot
+      $oldESPContents=@(Get-ChildItem -LiteralPath $oldESPRoot -Force|Where-Object Name -NotIn @('System Volume Information','$RECYCLE.BIN'))
+      if((Test-Path -LiteralPath (Join-Path $oldESPRoot 'EFI')) -or $oldESPContents.Count -ne 0){throw 'OWNED_RETRY_VHD_EFI_PARTITION_NOT_EMPTY'}
+      if(-not $oldOS[0].DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOS[0].PartitionNumber -AssignDriveLetter}
+      $oldOS=Get-Partition -DiskNumber $diskNumber -PartitionNumber $oldOS[0].PartitionNumber -ErrorAction Stop
+      if(-not $oldOS.DriveLetter){throw 'OWNED_RETRY_OS_VOLUME_LETTER_MISSING'}
+      $oldOSRoot=([string]$oldOS.DriveLetter)+':\';$osAccessPath=$oldOSRoot
+      $oldContents=@(Get-ChildItem -LiteralPath $oldOSRoot -Force|Where-Object Name -NotIn @('System Volume Information','$RECYCLE.BIN'))
+      $oldStages=@($oldContents|Where-Object {$_.PSIsContainer -and $_.Name -match '^cc2746-image-stage-[0-9a-f]{32}$'})
+      $stageNames=@($oldStages|ForEach-Object Name)
+      $unexpected=@($oldContents|Where-Object {$_.Name -notin $stageNames})
+      $nonemptyStages=@($oldStages|Where-Object {($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @(Get-ChildItem -LiteralPath $_.FullName -Force).Count -ne 0})
+      if((Test-Path -LiteralPath (Join-Path $oldOSRoot 'Windows')) -or $oldStages.Count -gt 1 -or $unexpected.Count -ne 0 -or $nonemptyStages.Count -ne 0){throw 'OWNED_RETRY_VHD_OS_PARTITION_NOT_EMPTY'}
+      Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldESP.PartitionNumber -AccessPath $efiAccessPath
+      $efiAccessPath=$null
+      Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOS.PartitionNumber -AccessPath $osAccessPath
+      $osAccessPath=$null
+      Clear-Disk -Number $diskNumber -RemoveData -RemoveOEM -Confirm:$false
+    }
+    $disk=Get-Disk -Number $diskNumber -ErrorAction Stop
+    if($disk.PartitionStyle -ne 'RAW' -and @(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue).Count -ne 0){throw 'OWNED_SETUP_VHD_NOT_BLANK'}
     Dismount-VHD -Path $vhd -ErrorAction Stop|Out-Null
     $mountedVHD=$false
   }else{
     if($reuseBlankVHD){throw 'EXPECTED_OWNED_BLANK_VHD_MISSING'}
     New-VHD -Path $vhd -Dynamic -SizeBytes 64GB | Out-Null
   }
-  $vhdx=Mount-VHD -Path $vhd -PassThru
-  $mountedVHD=$true
-  $vhdImage=Get-DiskImage -ImagePath $vhd -StorageType VHDX -ErrorAction Stop
-  if(-not $vhdImage.Attached -or -not $vhdImage.DevicePath){throw 'OWNED_VHD_MOUNT_FAILED'}
-  $vhdDisks=@($vhdImage|Get-Disk -ErrorAction Stop)
-  if($vhdDisks.Count -ne 1){throw 'OWNED_VHD_DISK_IDENTITY_REJECTED'}
-  $diskNumber=$vhdDisks[0].Number
-  $partitions=@(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue)
-  if($partitions.Count -ne 0){
-    if(-not $reuseBlankVHD -or $partitions.Count -notin @(3,4)){throw 'OWNED_RETRY_VHD_PARTITION_LAYOUT_REJECTED'}
-    $oldESP=@($partitions|Where-Object { [String]::Equals([string]$_.GptType,'{C12A7328-F81F-11D2-BA4B-00A0C93EC93B}',[StringComparison]::OrdinalIgnoreCase) })
-    $oldMSR=@($partitions|Where-Object { [String]::Equals([string]$_.GptType,'{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}',[StringComparison]::OrdinalIgnoreCase) })
-    $oldOS=@($partitions|Where-Object { [String]::Equals([string]$_.GptType,'{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}',[StringComparison]::OrdinalIgnoreCase) })
-    if($oldESP.Count -ne 1 -or $oldMSR.Count -notin @(1,2) -or $oldOS.Count -ne 1 -or $oldESP[0].Size -ne 100MB -or @($oldMSR|Where-Object {$_.Size -lt 15MB -or $_.Size -gt 16MB}).Count -ne 0 -or $oldOS[0].Size -lt 60GB){throw 'OWNED_RETRY_VHD_PARTITION_LAYOUT_REJECTED'}
-    $oldESPVolume=$oldESP[0]|Get-Volume -ErrorAction Stop
-    $oldOSVolume=$oldOS[0]|Get-Volume -ErrorAction Stop
-    if($oldESPVolume.FileSystemLabel -cne 'CC2746EFI' -or $oldESPVolume.FileSystem -cne 'FAT32' -or $oldOSVolume.FileSystemLabel -cne 'CC2746OS' -or $oldOSVolume.FileSystem -cne 'NTFS'){throw 'OWNED_RETRY_VHD_FILESYSTEM_LABEL_REJECTED'}
-    if(-not $oldESP[0].DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldESP[0].PartitionNumber -AssignDriveLetter}
-    $oldESP=Get-Partition -DiskNumber $diskNumber -PartitionNumber $oldESP[0].PartitionNumber -ErrorAction Stop
-    if(-not $oldESP.DriveLetter){throw 'OWNED_RETRY_EFI_VOLUME_LETTER_MISSING'}
-    $oldESPRoot=([string]$oldESP.DriveLetter)+':\'
-    $oldESPAccess=$oldESPRoot
-    $efiAccessPath=$oldESPAccess
-    $oldESPContents=@(Get-ChildItem -LiteralPath $oldESPRoot -Force|Where-Object Name -NotIn @('System Volume Information','$RECYCLE.BIN'))
-    if((Test-Path -LiteralPath (Join-Path $oldESPRoot 'EFI')) -or $oldESPContents.Count -ne 0){throw 'OWNED_RETRY_VHD_EFI_PARTITION_NOT_EMPTY'}
-    Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldESP.PartitionNumber -AccessPath $oldESPAccess
-    $efiAccessPath=$null
-    if(-not $oldOS[0].DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOS[0].PartitionNumber -AssignDriveLetter}
-    $oldOS=Get-Partition -DiskNumber $diskNumber -PartitionNumber $oldOS[0].PartitionNumber -ErrorAction Stop
-    if(-not $oldOS.DriveLetter){throw 'OWNED_RETRY_OS_VOLUME_LETTER_MISSING'}
-    $oldOSRoot=([string]$oldOS.DriveLetter)+':\'
-    $oldOSAccess=$oldOSRoot
-    $osAccessPath=$oldOSAccess
-    $oldContents=@(Get-ChildItem -LiteralPath $oldOSRoot -Force|Where-Object Name -NotIn @('System Volume Information','$RECYCLE.BIN'))
-    $oldStages=@($oldContents|Where-Object {$_.PSIsContainer -and $_.Name -match '^cc2746-image-stage-[0-9a-f]{32}$'})
-    $stageNames=@($oldStages|ForEach-Object Name)
-    $unexpected=@($oldContents|Where-Object {$_.Name -notin $stageNames})
-    $nonemptyStages=@($oldStages|Where-Object {($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @(Get-ChildItem -LiteralPath $_.FullName -Force).Count -ne 0})
-    if((Test-Path -LiteralPath (Join-Path $oldOSRoot 'Windows')) -or $oldStages.Count -gt 1 -or $unexpected.Count -ne 0 -or $nonemptyStages.Count -ne 0){throw 'OWNED_RETRY_VHD_OS_PARTITION_NOT_EMPTY'}
-    Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOS.PartitionNumber -AccessPath $oldOSAccess
-    $oldOSAccess=$null
-    $osAccessPath=$null
-    Clear-Disk -Number $diskNumber -RemoveData -RemoveOEM -Confirm:$false
-  }
-  Initialize-Disk -Number $diskNumber -PartitionStyle GPT -PassThru|Out-Null
-  $initialPartitions=@(Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue)
-  if($initialPartitions.Count -eq 1 -and [String]::Equals([string]$initialPartitions[0].GptType,'{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}',[StringComparison]::OrdinalIgnoreCase) -and $initialPartitions[0].Size -ge 15MB -and $initialPartitions[0].Size -le 16MB){
-    Remove-Partition -DiskNumber $diskNumber -PartitionNumber $initialPartitions[0].PartitionNumber -Confirm:$false
-  }elseif($initialPartitions.Count -ne 0){throw 'OWNED_INITIALIZED_GPT_LAYOUT_REJECTED'}
-  $espPartition=New-Partition -DiskNumber $diskNumber -Size 100MB -GptType '{C12A7328-F81F-11D2-BA4B-00A0C93EC93B}'
-  $null=Format-Volume -Partition $espPartition -FileSystem FAT32 -NewFileSystemLabel 'CC2746EFI' -Confirm:$false
-  $null=New-Partition -DiskNumber $diskNumber -Size 16MB -GptType '{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}'
-  $osPartition=New-Partition -DiskNumber $diskNumber -UseMaximumSize -GptType '{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}'
-  $null=Format-Volume -Partition $osPartition -FileSystem NTFS -NewFileSystemLabel 'CC2746OS' -Confirm:$false
-  $createdPartitions=@(Get-Partition -DiskNumber $diskNumber|Sort-Object Offset)
-  if($createdPartitions.Count -ne 3 -or -not [String]::Equals([string]$createdPartitions[0].GptType,'{C12A7328-F81F-11D2-BA4B-00A0C93EC93B}',[StringComparison]::OrdinalIgnoreCase) -or $createdPartitions[0].Size -ne 100MB -or -not [String]::Equals([string]$createdPartitions[1].GptType,'{E3C9E316-0B5C-4DB8-817D-F92DF00215AE}',[StringComparison]::OrdinalIgnoreCase) -or $createdPartitions[1].Size -ne 16MB -or -not [String]::Equals([string]$createdPartitions[2].GptType,'{EBD0A0A2-B9E5-4433-87C0-68B6B72699C7}',[StringComparison]::OrdinalIgnoreCase) -or $createdPartitions[2].Size -lt 60GB){throw 'OWNED_GPT_PARTITION_LAYOUT_REJECTED'}
-  $espPartition=$createdPartitions[0]
-  $osPartition=$createdPartitions[2]
-  if(-not $espPartition.DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AssignDriveLetter}
-  $espPartition=Get-Partition -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -ErrorAction Stop
-  if(-not $espPartition.DriveLetter){throw 'OWNED_EFI_VOLUME_LETTER_MISSING'}
-  $efiRoot=([string]$espPartition.DriveLetter)+':\'
-  $efiAccessPath=$efiRoot
-  if(-not $osPartition.DriveLetter){Add-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AssignDriveLetter}
-  $osPartition=Get-Partition -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -ErrorAction Stop
-  if(-not $osPartition.DriveLetter){throw 'OWNED_OS_VOLUME_LETTER_MISSING'}
-  $osRoot=([string]$osPartition.DriveLetter)+':\'
-  $osAccessPath=$osRoot
-  $osVolume=$osPartition|Get-Volume -ErrorAction Stop
-  if($osVolume.FileSystemLabel -cne 'CC2746OS' -or $osVolume.FileSystem -cne 'NTFS'){throw 'OWNED_OS_VOLUME_REJECTED'}
-  $osVolumeRoot=[string]$osVolume.Path
-  if([string]::IsNullOrEmpty($osVolumeRoot) -or -not $osVolumeRoot.StartsWith('\\?\Volume{',[StringComparison]::OrdinalIgnoreCase)){throw 'OWNED_OS_VOLUME_GUID_PATH_REJECTED'}
-  $stageName='cc2746-image-stage-'+$instance
-  $stageLetterPath=Join-Path $osRoot $stageName
-  $applyDir=$osVolumeRoot.TrimEnd('\')+'\'+$stageName
-  if(Test-Path -LiteralPath $stageLetterPath){throw 'OWNED_DISM_APPLY_STAGE_ALREADY_EXISTS'}
-  New-Item -ItemType Directory -Path $stageLetterPath|Out-Null
-  $dismLog=Join-Path $root ('dism-apply-'+$instance+'.log')
-  $dismScratch=Join-Path $root ('dism-scratch-'+$instance)
-  if(Test-Path -LiteralPath $dismScratch){$scratchInfo=Get-Item -LiteralPath $dismScratch -Force;if(-not $scratchInfo.PSIsContainer -or ($scratchInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'OWNED_DISM_SCRATCH_REJECTED'}}else{New-Item -ItemType Directory -Path $dismScratch|Out-Null}
-  if(-not (Test-Path -LiteralPath $stageLetterPath)){throw 'OWNED_DISM_APPLY_STAGE_MISSING'}
-  $dism=Join-Path $env:SystemRoot 'System32\dism.exe'
-  & $dism '/Apply-Image' (('/ImageFile:{0}' -f $wim)) (('/Index:{0}' -f $edition.ImageIndex)) (('/ApplyDir:{0}' -f $applyDir)) '/CheckIntegrity' '/NoRpFix' (('/ScratchDir:{0}' -f $dismScratch)) (('/LogPath:{0}' -f $dismLog)) *> $null
-  if($LASTEXITCODE -ne 0){throw 'OWNED_OFFLINE_WIM_APPLY_FAILED'}
-  $stagedWindows=Join-Path $stageLetterPath 'Windows'
-  if(-not (Test-Path -LiteralPath (Join-Path $stagedWindows 'System32\Config\SYSTEM'))){throw 'OWNED_APPLIED_WINDOWS_HIVE_MISSING'}
-  $imageEntries=@(Get-ChildItem -LiteralPath $stageLetterPath -Force)
-  if($imageEntries.Count -eq 0){throw 'OWNED_APPLIED_WINDOWS_IMAGE_EMPTY'}
-  foreach($entry in $imageEntries){if(Test-Path -LiteralPath (Join-Path $osRoot $entry.Name)){throw 'OWNED_OS_ROOT_COLLISION'}}
-  foreach($entry in $imageEntries){Move-Item -LiteralPath $entry.FullName -Destination $osRoot}
-  [IO.Directory]::Delete($stageLetterPath)
-  $windowsRoot=Join-Path $osRoot 'Windows'
-  if(-not (Test-Path -LiteralPath (Join-Path $windowsRoot 'System32\Config\SYSTEM'))){throw 'OWNED_MOVED_WINDOWS_HIVE_MISSING'}
-  $panther=Join-Path $windowsRoot 'Panther'
-  if(-not (Test-Path -LiteralPath $panther)){New-Item -ItemType Directory -Path $panther|Out-Null}
-  Copy-Item -LiteralPath (Join-Path $seedRoot 'Autounattend.xml') -Destination (Join-Path $panther 'Unattend.xml')
-  $bcdboot=Join-Path $env:SystemRoot 'System32\bcdboot.exe'
-  & $bcdboot $windowsRoot /s ($espPartition.DriveLetter+':') /f UEFI /l en-us *> $null
-  if($LASTEXITCODE -ne 0){throw 'OWNED_UEFI_BCD_BOOT_CREATION_FAILED'}
-  if(-not (Test-Path -LiteralPath (Join-Path $efiRoot 'EFI\Microsoft\Boot\BCD')) -or -not (Test-Path -LiteralPath (Join-Path $efiRoot 'EFI\Boot\bootx64.efi'))){throw 'OWNED_UEFI_BOOT_FILES_MISSING'}
-  Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AccessPath $efiAccessPath
-  $efiAccessPath=$null
-  Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AccessPath $osAccessPath
-  $osAccessPath=$null
-  Dismount-VHD -Path $vhd -ErrorAction Stop|Out-Null
-  $mountedVHD=$false
   Dismount-DiskImage -ImagePath $iso -ErrorAction Stop|Out-Null
   $mountedIso=$false
   Dismount-DiskImage -ImagePath $seedISO -ErrorAction Stop|Out-Null
@@ -1171,21 +1100,21 @@ $initial=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$
   $dvds=@($vm | Get-VMDvdDrive)
   $vhds=@($vm | Get-VMHardDiskDrive)
   if($vm.State -ne 'Off' -or $memory.DynamicMemoryEnabled -or $memory.Startup -ne 2GB -or $vm.ProcessorCount -ne 2 -or $nics -ne 0 -or $gpus -ne 0 -or $dvds.Count -ne 2 -or $vhds.Count -ne 1 -or $vhds[0].Path -cne $vhd){throw 'NEW_VM_RESOURCE_CONFIGURATION_REJECTED'}
-  Set-VMFirmware -VM $vm -BootOrder @($vhds[0],$winDvd,$seedDvd)
+  Set-VMFirmware -VM $vm -BootOrder @($winDvd,$vhds[0],$seedDvd) -PauseAfterBootFailure On
   $firmware=Get-VMFirmware -VM $vm
   if([string]$firmware.SecureBoot -cne 'On' -or $firmware.SecureBootTemplate -cne 'MicrosoftWindows'){throw 'NEW_VM_SECURE_BOOT_REJECTED'}
   $boot=@($firmware.BootOrder)
-  if($boot.Count -lt 1 -or $boot[0].Path -cne $vhd){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
+  if($boot.Count -lt 1 -or -not [String]::Equals([string]$boot[0].Path,$iso,[StringComparison]::OrdinalIgnoreCase)){throw 'NEW_VM_BOOT_ORDER_REJECTED'}
 $receipt=@{instance=$instance;vm_id=$vm.Id.ToString();name=$vm.Name;generation=$vm.Generation;root=$root;vhd=$vhd;windows_iso=$iso;seed_iso=$seedISO;dvd_count=$dvds.Count;vhd_count=$vhds.Count;pipe=$pipe;cpu_count=$vm.ProcessorCount;memory_bytes=[int64]$memory.Startup;dynamic_memory=$memory.DynamicMemoryEnabled;secure_boot=([string]$firmware.SecureBoot -ceq 'On');network_adapters=$nics;gpu_adapters=$gpus}
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
   Start-VM -VM $vm | Out-Null
 } catch {
-  @{phase='provision';failure='owned offline Windows image deployment or VM provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
+  @{phase='provision';failure='owned standard Windows Setup provisioning failed'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
   throw
 } finally {
   if($mountedVHD){
-    if($null -ne $espPartition -and $null -ne $diskNumber -and $null -ne $efiAccessPath){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $espPartition.PartitionNumber -AccessPath $efiAccessPath -ErrorAction SilentlyContinue|Out-Null}
-    if($null -ne $osPartition -and $null -ne $diskNumber -and $null -ne $osAccessPath){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $osPartition.PartitionNumber -AccessPath $osAccessPath -ErrorAction SilentlyContinue|Out-Null}
+    if($null -ne $oldESPPartitionNumber -and $null -ne $diskNumber -and $null -ne $efiAccessPath){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldESPPartitionNumber -AccessPath $efiAccessPath -ErrorAction SilentlyContinue|Out-Null}
+    if($null -ne $oldOSPartitionNumber -and $null -ne $diskNumber -and $null -ne $osAccessPath){Remove-PartitionAccessPath -DiskNumber $diskNumber -PartitionNumber $oldOSPartitionNumber -AccessPath $osAccessPath -ErrorAction SilentlyContinue|Out-Null}
     Dismount-VHD -Path $vhd -ErrorAction SilentlyContinue|Out-Null
   }
   if($mountedIso){Dismount-DiskImage -ImagePath $iso -ErrorAction SilentlyContinue | Out-Null}

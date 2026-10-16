@@ -1,7 +1,7 @@
 # ToDo2746 Windows guest handoff
 
 Last saved: 2026-10-17. Branch `scheduler/todo-2746-godd-mcp-windows-guest`,
-last pushed commit `68a3668` (current offline-deployment changes still need commit/push).
+last pushed commit `7173220` (current Windows Setup boot-order changes still need commit/push).
 
 ## Completed
 
@@ -86,41 +86,30 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   partitions and it remains 4 MiB, so Windows Setup never began applying the
   image. The original failure receipt did not preserve which serial substage
   timed out, so only “no readiness within 30 minutes” is confirmed.
-- The offline image attempt failed at DISM `/Apply-Image` with HRESULT
-  `0x80070003`; the DISM log records the official source WIM and ApplyDir
-  ending in a quoted trailing backslash. No new VM was created. Its VHDX is detached and
-  about 196 MiB. A read-only probe found four partitions (EFI, OS, and two
-  MSRs) with task-specific filesystem labels. Whether the OS partition has a
-  Windows directory is not yet confirmed.
-- Offline provisioning via native DISM, the PowerShell Dism cmdlet, and a
-  guest-volume stage directory all returned `0x80070003`. The AdminBroker
-  read-only probe confirmed the WIM can be queried, the target volume accepts
-  a small write/remove, and source/target checks pass. The failed WIM applies
-  left the OS partition without a Windows directory, and VHD/ISO mounts were
-  detached afterward. The next approach applies to a per-instance staging
-  directory on the same guest OS partition, then moves the applied image into
-  the OS root. The Dism cmdlet takes the target by Volume GUID path; PowerShell
-  creates and moves files using the same volume's temporary drive letter.
-- The most recent retry passed old-receipt and partition checks, reset/formatted
-  only the task-owned VHD, then stopped because PowerShell `New-Item` rejected
-  the Volume GUID path for the staging directory. No WIM payload or new VM was
-  created; the VHD is detached and has the expected EFI/MSR/OS layout. The
-  helper now creates the stage directory through the exact OS drive letter,
-  then passes its equivalent Volume GUID path to Dism. The helper accepts at
-  most one regular, empty stage
-  folder whose name matches its fixed prefix and 32-hex nonce; any contents,
-  reparse point, Windows tree, or other OS-root entry still blocks a reset.
-  The previous VM/cleanup/failure attempt records are preserved idempotently
-  only when the existing bytes match. A subsequent Expand-WindowsImage call
-  through that Volume GUID path again returned `0x80070003`; it left the stage
-  empty and the VHD detached. The current source switches to native
-  `dism.exe /Apply-Image` with `NoRpFix` and the same verified source/target
-  paths. This change is uncommitted and untried.
+- Offline WIM deployment was stopped after native DISM and the PowerShell Dism
+  cmdlet returned `0x80070003`, including after confirming the WIM is readable,
+  the target volume accepts a small write, and the target is addressable by
+  both a drive letter and Volume GUID. No WIM payload was applied. All VHD and
+  ISO mounts were detached after each attempt. The VHD now holds only the
+  task-created EFI/MSR/OS layout and empty image-stage folder; no Windows hive
+  or new VM exists.
+- The helper is switching back to standard Windows Setup from the official
+  evaluation DVD. The first live guest attempt used `FirstBootDevice` and ran
+  30 minutes without a COM readiness line or disk partitions; its exact VM was
+  stopped, assigned memory 0, removed, and verified absent. The new path will
+  set an explicit DVD-first UEFI boot order and pause the VM after boot failure,
+  then let the answer file partition/install the VHD and stage the LocalSystem
+  service during `specialize`. It preserves normal OOBE and creates no account.
+  On retry the helper checks the prior cleanup receipt, GUID absence, VHD
+  attachment, partition labels/types, and empty OS contents before clearing
+  only its own partial VHD. It allows one empty nonce-named image-stage folder
+  and preserves prior receipts byte-for-byte. These Windows Setup changes are
+  uncommitted and untried.
 
 ## Remaining
 
 1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push the native DISM apply change.
+   and push the Windows Setup boot-order change.
 2. Build the helper into the owned root and run `vm-smoke` against the already
    downloaded ISO. Receipt-bound recovery must confirm the previous VM is
    absent and the owned partial OS partition is empty except for allowed

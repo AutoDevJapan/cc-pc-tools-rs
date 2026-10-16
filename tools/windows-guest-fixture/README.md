@@ -10,16 +10,17 @@ external runner registration is supplied. Its second DVD contains only the
 standard answer file, the staging script, the helper executable, and the
 public seed JSON.
 
-The helper verifies the Microsoft-signed setup image, applies the selected
-evaluation WIM offline to a new GPT VHDX with DISM, and uses BCDBoot to create
-the UEFI boot files. It places the standard `Autounattend.xml` in Windows
-Panther and on a second, small seed ISO. At first boot from the VHDX, Windows
-Setup runs the service staging command as LocalSystem during `specialize`.
-The answer file has no `oobeSystem` settings, user account, password, or OOBE
-skip. OOBE is not hidden or completed by this helper. The service speaks only
-on the VM's COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are
-generated in memory. The guest receives only the host certificate SHA256; the
-host pins the server certificate reported by its exact VM COM pipe.
+The helper verifies the Microsoft-signed setup image and the selected
+evaluation edition, then boots the guest from the official ISO with a second,
+small seed DVD containing the standard `Autounattend.xml`. Windows Setup
+partitions the new VHDX, installs the evaluation image, and runs the service
+staging command as LocalSystem during `specialize`. The helper explicitly
+checks that the optical installer is first in the UEFI boot order. The answer
+file has no `oobeSystem` settings, user account, password, or OOBE skip. OOBE
+is not hidden or completed by this helper. The service speaks only on the VM's
+COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in
+memory. The guest receives only the host certificate SHA256; the host pins the
+server certificate reported by its exact VM COM pipe.
 
 The `vm-smoke <owned-root> <official-evaluation-iso>` command runs two
 credential-free fixtures inside the guest. The normal case observes two live
@@ -61,8 +62,6 @@ original CI steps, Cargo, or an official runner. It does not guarantee
 recovery after host shutdown, logout, or reboot.
 
 Microsoft references: [Windows Server 2025 Evaluation](https://www.microsoft.com/en-us/evalcenter/download-windows-server-2025),
-[DISM image apply](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/capture-and-apply-windows-system-and-recovery-partitions?view=windows-11),
-[BCDBoot](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/bcdboot-command-line-options-techref-di?view=windows-11),
-[Answer file discovery](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview?view=windows-11),
+[Windows Setup answer file discovery](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview?view=windows-11),
 [EULA acceptance](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-setup-userdata-accepteula),
 and [specialize RunSynchronous](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-deployment-runsynchronous-runsynchronouscommand-path).

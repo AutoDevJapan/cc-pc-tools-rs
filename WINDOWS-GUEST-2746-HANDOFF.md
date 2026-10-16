@@ -139,15 +139,20 @@ last pushed commit `ba49db8` (the new preinstalled-evaluation-VHD path is uncomm
   in the clone's offline SYSTEM hive as an automatic LocalSystem service. It
   unloads the temporary hive, keeps the source VHD untouched, and leaves
   normal OOBE enabled. It creates a fixed-memory Gen 2 VM with Secure Boot, no
-  DVD/NIC/GPU, and an explicit VHD-first boot order. This implementation is
-  uncommitted and not yet run against Hyper-V.
+  DVD/NIC/GPU, and an explicit VHD-first boot order. The implementation is
+  committed/pushed as `6dc63dd`; Go compile and vet passed, with no Go test
+  files in the package.
+- The first `vm-smoke-vhd` attempt stopped at the owned-path check before
+  conversion or VM creation. AdminBroker identified that the script passed
+  the helper executable from the parent root while requiring every input to
+  be under the dedicated VHD root. No guest VHDX or VM was created; the exact
+  failure was retained. The code now passes the already-created helper copy
+  from the seed directory. This correction is uncommitted and not yet rerun.
 
 ## Remaining
 
-1. Review the new VHD flow and ensure its admin script's registry hive,
-   partition access path, and VHD mount are all released on success/failure.
-   Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`; commit
-   and push this implementation and the handoff/README updates.
+1. Rerun `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` for
+   the helper-path correction; commit and push it.
 2. Build the helper into the safe-delete-owned parent root and run
    `windows-guest-fixture.exe vm-smoke-vhd <root>\windows-eval-vhd` once. The
    command should preserve the Microsoft source VHD and use only its copied

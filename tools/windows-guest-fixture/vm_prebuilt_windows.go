@@ -70,9 +70,9 @@ func runVMProvisionFromVHD(root string) error {
 		return err
 	}
 	seedJSON := filepath.Join(root, "seed", "cc2746-seed.json")
-	exe, err := os.Executable()
-	if err != nil {
-		return err
+	exe := filepath.Join(root, "seed", "cc2746-guest.exe")
+	if _, err := os.Stat(exe); err != nil {
+		return errors.New("owned seed helper copy is unavailable")
 	}
 	guestVHD := filepath.Join(root, "guest-"+instance+".vhdx")
 	if _, err := os.Lstat(guestVHD); err == nil {

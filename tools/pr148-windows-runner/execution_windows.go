@@ -113,9 +113,17 @@ func execute(p Plan) error {
 	}
 	return executeAdmitted(p)
 }
-func executeAdmitted(p Plan) error {
+func executeAdmitted(p Plan) (result error) {
 	var secret []byte
 	var e error
+	started, observedStopped := false, false
+	defer func() {
+		// Normal error paths retain the gate callback until the one owned stop
+		// request finishes. Do not repeat a refused/uncertain stop operation.
+		if started && !observedStopped && result != nil {
+			result = errors.Join(result, stopFinite(p))
+		}
+	}()
 	if p.Fixture == "" {
 		if e = verifyGateAllocation(); e != nil {
 			return e
@@ -136,6 +144,7 @@ func executeAdmitted(p Plan) error {
 	if e = startFinite(p); e != nil {
 		return e
 	}
+	started = true
 	if p.Fixture == "" {
 		until := time.Now().Add(30 * time.Second)
 		for {
@@ -167,7 +176,7 @@ func executeAdmitted(p Plan) error {
 			time.Sleep(50 * time.Millisecond)
 		}
 		if e != nil {
-			return errors.Join(e, stopFinite(p))
+			return e
 		}
 	}
 	s, e := openService(p, 4)
@@ -182,6 +191,7 @@ func executeAdmitted(p Plan) error {
 			return e
 		}
 		if state == 1 {
+			observedStopped = true
 			if code != 0 {
 				return errors.New("finite service reported failure; inspect receipts")
 			}
@@ -195,7 +205,7 @@ func executeAdmitted(p Plan) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return errors.Join(errors.New("finite execution deadline"), stopFinite(p))
+	return errors.New("finite execution deadline")
 }
 
 func runOwnedWorker(p Plan) error {

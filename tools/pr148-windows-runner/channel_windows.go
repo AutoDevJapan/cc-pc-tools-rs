@@ -13,7 +13,9 @@ import (
 
 func samePath(a, b string) bool { return strings.EqualFold(filepath.Clean(a), filepath.Clean(b)) }
 func openRegistrationPipe(p Plan) (*os.File, error) {
-	h, e := syscall.CreateFile(wide(pipeName(p)), 0x40000080, 0, nil, 3, 0, 0)
+	// SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS prevents a pipe server
+	// impersonating the controller even before peer validation completes.
+	h, e := syscall.CreateFile(wide(pipeName(p)), 0x40000080, 0, nil, 3, 0x100000, 0)
 	if e != nil {
 		return nil, e
 	}

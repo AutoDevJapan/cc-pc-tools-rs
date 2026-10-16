@@ -92,3 +92,20 @@ func TestContainmentAndInputBound(t *testing.T) {
 		t.Fatal("bounded input rejected")
 	}
 }
+
+func TestCleanupDeadlineContract(t *testing.T) {
+	for _, n := range []int{0, 60, 1800, 14400} {
+		p := fixturePlan()
+		p.CleanupSeconds = n
+		if e := p.validate(); e != nil {
+			t.Fatalf("valid cleanup budget %d: %v", n, e)
+		}
+	}
+	for _, n := range []int{-1, 1, 59, 14401} {
+		p := fixturePlan()
+		p.CleanupSeconds = n
+		if p.validate() == nil {
+			t.Fatalf("unbounded or too short cleanup budget %d accepted", n)
+		}
+	}
+}

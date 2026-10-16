@@ -51,6 +51,7 @@ type Plan struct {
 	RunnerDigest   string `json:"runner_digest"`
 	ControllerSID  string `json:"controller_sid"`
 	Seconds        int    `json:"seconds"`
+	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
 }
 
@@ -66,6 +67,9 @@ func (p Plan) validate() error {
 	}
 	if p.Seconds < 1 || p.Seconds > 14400 || !regexp.MustCompile(`^S-1-5-21-[0-9]+-[0-9]+-[0-9]+-[0-9]+$`).MatchString(p.ControllerSID) {
 		return errors.New("finite deadline and controller SID required")
+	}
+	if p.CleanupSeconds != 0 && (p.CleanupSeconds < 60 || p.CleanupSeconds > 14400) {
+		return errors.New("cleanup deadline must be 60..14400 seconds or zero for 1800")
 	}
 	if p.Fixture != "" {
 		if p.Fixture != "normal" && p.Fixture != "cancel" {

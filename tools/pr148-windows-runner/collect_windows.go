@@ -37,6 +37,11 @@ func collectionAction(p Plan, name string, action func() error) error {
 	return errors.Join(e, write)
 }
 func collect(p Plan) error {
+	seconds := p.CleanupSeconds
+	if seconds == 0 {
+		seconds = 1800
+	}
+	aclBudget := time.Duration(seconds) * time.Second
 	sid, e := serviceSID(p)
 	if e != nil {
 		return e
@@ -86,7 +91,7 @@ func collect(p Plan) error {
 	// Only two administrator-installed inheritable grants exist. Remove each
 	// once; Windows propagates inheritance. Do not spawn a process per target file.
 	for _, row := range []struct{ name, path string }{{"root-ace-remove", p.Root}, {"runtime-ace-remove", p.runtime()}} {
-		if e = collectionAction(p, row.name, func() error { return icacls(row.path, "/remove:g", "*"+sid) }); e != nil {
+		if e = collectionAction(p, row.name, func() error { return icaclsWithin(aclBudget, row.path, "/remove:g", "*"+sid) }); e != nil {
 			return e
 		}
 	}
@@ -108,7 +113,7 @@ func collect(p Plan) error {
 	}
 	if p.Fixture != "" {
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
-			if e = collectionAction(p, row.name, func() error { return icacls(row.path, "/grant:r", "*"+p.ControllerSID+":(OI)(CI)F") }); e != nil {
+			if e = collectionAction(p, row.name, func() error { return icaclsWithin(aclBudget, row.path, "/grant:r", "*"+p.ControllerSID+":(OI)(CI)F") }); e != nil {
 				return e
 			}
 		}

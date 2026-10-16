@@ -191,7 +191,9 @@ func restrictedControllerCase(p Plan, out map[string]any) error {
 }
 
 func TestNamedPipeServerPIDIsKernelObserved(t *testing.T) {
-	name := fmt.Sprintf(`\\.\pipe\CC-PR148-unit-%d-%d`, os.Getpid(), time.Now().UnixNano())
+	p := fixturePlan()
+	p.Instance = fmt.Sprintf("unit-%d-%d", os.Getpid(), time.Now().UnixNano())
+	name := pipeName(p)
 	h, _, e := kernel.NewProc("CreateNamedPipeW").Call(ptr(name), 1|0x40000000|0x80000, 4|2|8, 1, 4096, 4096, 0, 0)
 	if h == ^uintptr(0) {
 		t.Fatal(e)
@@ -207,11 +209,12 @@ func TestNamedPipeServerPIDIsKernelObserved(t *testing.T) {
 	if r == 0 && e != syscall.Errno(997) {
 		t.Fatal(e)
 	}
-	client, e := syscall.CreateFile(wide(name), 0x40000080, 0, nil, 3, 0, 0)
+	clientFile, e := openRegistrationPipe(p)
 	if e != nil {
 		t.Fatal(e)
 	}
-	defer syscall.CloseHandle(client)
+	defer clientFile.Close()
+	client := syscall.Handle(clientFile.Fd())
 	var server uint32
 	r, _, e = kernel.NewProc("GetNamedPipeServerProcessId").Call(uintptr(client), uintptr(unsafe.Pointer(&server)))
 	if r == 0 || server != uint32(os.Getpid()) {

@@ -1,3 +1,27 @@
+## 2026-10-17 04時台・レビュー2763受領（この節を優先）
+
+Claude Sonnet5.5の原応答を受領し、SHA/bytes一致でreview-2763/original.mdへ保管した。
+対象code3ba895fの元Must6件はソース上解消、Must0。全Go18fileとf7acf6dの4一次参照、
+前回未読の2746証拠を読了。別モデル自身のgo testは11pass/2opt-in skip、vet/build成功。
+この結論を正式runner/原source/共有gate/非昇格controller/元CI成功へ広げない。
+
+追加Suggestionへ小さい補強を行った。正常に起動したserviceがまだ停止確認前のまま
+controllerがエラーを返す場合は、deferで1回だけstopFiniteを完了させてから戻る。
+拒否/不確定の停止を反復せず、強制終了時のgate保持までは保証しない。親の実統合では
+正常stop/drainの監督と不確定runの隔離が必要。この条件を新daemon/共有gate変更で隠さない。
+collectionのACL期限はcleanup_seconds（省略1800秒、60..14400秒）でartifact規模に合わせる。
+hook receiptの同account改ざん耐性が無い限界と、一時的PID検証handleであることも明記。
+pipeには匿名QoSを追加し、実pipe unitも同じopenRegistrationPipe経路を通す。
+
+最新Goは12pass/2opt-in skip、vet/Windows build成功。この差分では新しいservice/accountを
+作っていない。既存の正常/取消・AU測定・worker0/125証拠はcode3ba895fのまま保持。
+旧3件＋新2件のprofile/hive/classes未回収記録は合計5件。再読/再削除していない。
+レビュー2763の原応答と実binary hash/残件数はreview-2763-summary.jsonにも記録した。
+
+新しい一時rootはTemp/codex-owned-f2590b9747900085d9ed16af40309dc7（safe-delete所有）。
+Go build binaryだけを置いた。原指紋保管後にplan→別通常削除→finishで回収する。
+次はこの小差分の有限な別モデル確認を--specで登録し、親2736へ原応答と未達を配送する。
+製品source取得/正式登録/製品workflow・PR/実Cargo/旧資源の操作は引き続き0。
 ## 2026-10-17 修正後の最終保存（この節を優先）
 
 コードは3ba895f、証拠/文書は9b0f205までpush済み。Goコードは3ba895f以降変更なし。

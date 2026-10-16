@@ -40,3 +40,41 @@ controller launch and the PowerShell cancellation observer's missing controller
 exit code are preserved as failures/limits. The service's measured exit, stop,
 drain and final snapshots remain separate evidence. A follow-up model review is
 required before parent integration; do not infer Must0 from this ledger.
+
+## Follow-up 2763
+
+Claude Sonnet5.5 confirmed original M1-M6 resolved in code3ba895f, Must0. It read
+all 18 Go files, the four pinned f7acf6d primary files and the prior2746 evidence,
+and independently ran Go tests (11 pass / 2 opt-in skip), vet and build. Raw
+reply/SHA/bytes are preserved in evidence-private/20261017/review-2763. The public
+review-2763-summary.json includes the final fixture binary fingerprints and
+separates the previous3 plus subsequent2 profile/hive/classes residues (known
+pending total5; no fresh physical recheck or refused cleanup retry).
+
+The new bounded delta does not inherit that review approval: ordinary controller
+errors now perform one stop attempt before returning; collection has a plan-bound
+cleanup budget rather than always30seconds; pipe open uses anonymous QoS. Unit
+coverage uses that actual pipe-opening path and validates cleanup budget bounds.
+New service/account fixtures were not repeated for these control-only changes.
+
+2763 S1: the normal error-return omission is addressed. Abrupt controller/gate
+termination or an uncertain stop is still an integration risk, not a claimed
+crash-safe shared-gate lease. Parent must supervise/fence that condition before
+live use; this task does not broaden or replace the shared gate/bridge.
+S2: cleanup_seconds defaults to1800 per ACL operation, accepts60..14400, and must
+be selected from actual artifact scale and broker timeout. Failed/uncertain
+attempts stay immutable and cannot be replayed. Large-workspace propagation has
+not been measured here.
+S3: README now states that job-writable hook receipts detect missing/mismatched
+stages, not malicious same-account forgery. Launcher-owned process/drain/exit
+measurements remain separate. S4: the existing fixture already successfully
+opens its same-token grandchild with QUERY_LIMITED_INFORMATION|SYNCHRONIZE before
+the explicit launcher QUERY_LIMITED_INFORMATION attempt returns ACCESS_DENIED;
+that is a positive access control on the unprotected child, not a test that
+removes protection from the real launcher. Do not rerun service fixtures or
+weaken the protected launcher solely to restate it.
+S5: official runner/hook/source/gate/SDK behavior remains parent integration work.
+S6: public binary fingerprints and the known total5 residues are now explicit.
+The M1 documentation says temporary identity pinning, not a handle retained for
+the whole run. No new credentials, registration, production check or cleanup
+success is inferred from source review or these documentation corrections.

@@ -17,6 +17,11 @@ is the tagged `Plan` struct in `contract.go`; unknown fields are rejected. All
 of repository, repository ID, PR148, original branch, original source HEAD/tree,
 base and the parent's Windows label are fixed constants. `seconds` is 1..14400.
 `controller_sid` is the parent's current user SID, never another user's token.
+Optional `cleanup_seconds` reserves 60..14400 seconds for each collection ACL
+propagation, with zero/omission selecting 1800 seconds. Parent must choose this
+from the actual artifact scale and allow the corresponding broker timeout;
+preparation retains its shorter 30-second operation limit. A timed-out or denied
+collection mutation remains uncertain and is not automatically replayed.
 No input accepts an arbitrary command, callback, executable or download URL.
 
 For a real runner supply actual `run_id`, `attempt`, job ID (`test`,
@@ -51,7 +56,9 @@ Use CC-AdminBroker for the administrative phases, with no visible console/UAC.
    have a scheduler Cargo allocation. The existing parent helper feeds the
    registration token from RAM to stdin; a private one-message named pipe then
    transfers it only after its kernel server PID matches the running SCM service
-   and a retained process handle confirms lifetime. Configuration runs with
+   and a temporary process handle confirms lifetime during that validation.
+   The handle closes after validation; the connected pipe remains bound to its
+   server endpoint. Configuration runs with
    `ACTIONS_RUNNER_INPUT_TOKEN` only in the child memory environment (the official
    parser removes it). Token never enters argv, SCM, helper logs or a host token
    file. The new account's official runner necessarily writes authentication to
@@ -110,11 +117,25 @@ flag. Hook env values are propagated allocation claims, not a separate kernel
 admission proof. The trusted controller and installed gate are the boundary;
 this is not protection from a malicious operator who already owns the token.
 
+Ordinary controller errors after a successful start now make one owned stop
+attempt before returning from the gate callback (including SCM open/query
+errors). A refused or uncertain stop is returned, not retried. This does not
+make detached SCM lifetime crash-safe: forced controller/gate termination or
+an unconfirmed stop may leave service work until its finite deadline. Parent
+integration must supervise orderly stop/drain before releasing admission and
+must fence an uncertain run before starting another. Extending/releasing the
+shared gate or using a new resident bridge to conceal this limit is outside
+this helper. Do not claim full-run admission retention after an abrupt kill.
+
 Actual workflow SHA must be the test merge with exactly base/PR-head parents,
 and its workflow digest must match both merge and PR-head bytes. Successful
 execution additionally requires all three context-bound hook/source receipts in
 the launcher's protected result, actual completed/success job on this unique
 runner, and no remaining registration. Terminal observation has a finite budget.
+Hook receipts share the job account's writable runtime. They detect missing or
+mismatched stages, but cannot authenticate execution against malicious code in
+that same account. The launcher protects its own measured drain/exit report;
+it does not turn a job-written receipt into independent host attestation.
 
 Before starting the service, the parent must materialize **the fixed real Git
 checkout** into the runner's exact `_work/civ6-banseiki/civ6-banseiki` path inside

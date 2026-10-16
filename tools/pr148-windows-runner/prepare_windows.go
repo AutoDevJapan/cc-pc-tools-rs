@@ -77,7 +77,10 @@ func checkOwnedTree(root string) error {
 }
 
 func icacls(path string, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	return icaclsWithin(30*time.Second, path, args...)
+}
+func icaclsWithin(budget time.Duration, path string, args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	c := exec.CommandContext(ctx, `C:\Windows\System32\icacls.exe`, append([]string{path}, args...)...)
 	c.WaitDelay = time.Second

@@ -58,9 +58,18 @@ type bootstrapReceipt struct {
 // runner OFFLINE, submit routing, then dispose/deregister it before any job runner
 // is launched. A label reservation and setup run are never candidate success.
 func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret error) {
+	return bootstrapCodeQLMode(ctx, c, dir, binary, false)
+}
+
+func bootstrapCodeQLMode(ctx context.Context, c candidate, dir, binary string, revalidate bool) (ret error) {
 	r, e := verify(ctx, c, get)
 	if e != nil {
 		return e
+	}
+	if revalidate {
+		if _, _, e = revalidationPreflight(ctx, c, get); e != nil {
+			return e
+		}
 	}
 	guest, e := os.ReadFile(binary)
 	if e != nil || len(guest) < 64 || !bytes.Equal(guest[:4], []byte{127, 'E', 'L', 'F'}) {
@@ -140,18 +149,33 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 		return errors.New("bootstrap creation unverified; retain admission")
 	}
 	rec.ContainerID = found[0].ID
-	defer func() {
+	recoveryAttempted := false
+	recoverRoute := func() {
 		if ret != nil && routeAttempted {
+			recoveryAttempted = true
 			cc, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 			defer cancel()
-			if e := restoreCodeQL(cc, c, dir); e != nil {
+			var e error
+			if revalidate {
+				if _, statErr := os.Stat(filepath.Join(dir, "codeql-revalidation-intent.private.json")); os.IsNotExist(statErr) {
+					// Preflight failed before any state-changing request.
+					e = nil
+				} else if statErr != nil {
+					e = statErr
+				} else {
+					e = recoverCodeQLRevalidation(cc, c, dir)
+				}
+			} else {
+				e = restoreCodeQL(cc, c, dir)
+			}
+			if e != nil {
 				ret = errors.Join(ret, errors.New("route restoration pending; retain admission"), e)
 			} else {
 				rec.RouteRestored = true
 			}
 		}
-	}()
-	defer func() {
+	}
+	cleanupRegistration := func() {
 		var ce error
 		rec.TreeGone, rec.Removed, ce = disposeOwned(rec.ContainerID)
 		ret = errors.Join(ret, ce)
@@ -185,6 +209,17 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 			}
 		}
 		rec.RegistrationGone = true
+	}
+	defer func() {
+		// Re-enable an interrupted setup while its offline label still exists.
+		// Otherwise a cleanup error can trigger one recovery after disposal.
+		if revalidate && ret != nil {
+			recoverRoute()
+		}
+		cleanupRegistration()
+		if !recoveryAttempted {
+			recoverRoute()
+		}
 	}()
 	if createErr != nil || strings.TrimSpace(string(b)) != rec.ContainerID {
 		return errors.New("bootstrap create completion uncertain")
@@ -253,7 +288,12 @@ func bootstrapCodeQL(ctx context.Context, c candidate, dir, binary string) (ret 
 		return e
 	}
 	routeAttempted = true
-	if e = routeCodeQL(ctx, c, dir); e != nil {
+	if revalidate {
+		e = revalidateCodeQL(ctx, c, dir)
+	} else {
+		e = routeCodeQL(ctx, c, dir)
+	}
+	if e != nil {
 		return e
 	}
 	b, e = os.ReadFile(filepath.Join(dir, "codeql-route-response.private.json"))

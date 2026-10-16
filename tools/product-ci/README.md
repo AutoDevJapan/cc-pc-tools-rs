@@ -72,6 +72,19 @@ registration. It starts no listener and executes no product job. Then serve the
 validation run's matrix jobs sequentially with `codeql-job`, before serving the
 original candidate. A label reservation alone is never acceptance.
 
+A runner-only update may complete synchronously with no new run ID. Zero means
+no validation run was created. If the previous generated workflow cannot be
+retried, `codeql-revalidate <repo-id> <new-owned-dir> <Linux-helper-binary>` performs
+the documented default-setup restart while the official label is offline. It
+records the original configuration, rejects active dynamic runs, immediately
+re-enables the same suite/threat/route and checks every original language. Rust
+is not sent through the incomplete REST language-write enumeration. During
+validation GitHub can temporarily return an empty language list: only a fresh
+same-repo/default-SHA generated matrix requesting all original languages on the
+dedicated label is admitted. Completion and uploads still need real jobs; a
+historical run, missing Rust or hosted job cannot certify recovery. JS/TS legacy
+language aliases compare as their canonical `javascript-typescript` coverage.
+
 `codeql-route <repo-id> <new-owned-dir>` changes only the already-configured
 default setup's runner type/label. It records the previous configuration and
 mutation intent first. Languages, queries and threat model must remain equal.

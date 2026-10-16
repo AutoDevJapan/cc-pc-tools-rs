@@ -11,10 +11,8 @@ import (
 )
 
 func sameCodeQLSettings(a, b codeQLSetup) bool {
-	x := append([]string(nil), a.Languages...)
-	y := append([]string(nil), b.Languages...)
-	sort.Strings(x)
-	sort.Strings(y)
+	x := codeQLLanguages(a.Languages)
+	y := codeQLLanguages(b.Languages)
 	if a.State != b.State || a.QuerySuite != b.QuerySuite || a.ThreatModel != b.ThreatModel || len(x) != len(y) {
 		return false
 	}
@@ -24,6 +22,24 @@ func sameCodeQLSettings(a, b codeQLSetup) bool {
 		}
 	}
 	return true
+}
+
+// REST uses the canonical javascript-typescript language; older saved setup
+// responses may additionally expose javascript and typescript aliases.
+func codeQLLanguages(languages []string) []string {
+	set := map[string]bool{}
+	for _, language := range languages {
+		if language == "javascript" || language == "typescript" {
+			language = "javascript-typescript"
+		}
+		set[language] = true
+	}
+	result := make([]string, 0, len(set))
+	for language := range set {
+		result = append(result, language)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func restoreCodeQL(ctx context.Context, c candidate, dir string) error {

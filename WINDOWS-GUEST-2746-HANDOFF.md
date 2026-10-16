@@ -105,22 +105,23 @@ last pushed commit `68a3668` (current offline-deployment changes still need comm
   `Test-Path` succeeds for the target, a 4-byte write/remove probe succeeded
   there, and DISM `/Get-WimInfo` read the source WIM successfully; both VHD and
   ISO were detached afterward. Apply still fails with `0x80070003` using
-  `H:\.`. The helper now gives DISM an instance-specific scratch folder inside
-  the owned root as another bounded path correction. The exact cause remains
-  unproven. `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check`
-  passed before this latest scratch-directory adjustment.
+  `H:\.` and an owned scratch folder. The helper now switches from the native
+  `dism.exe` CLI to Microsoft's Dism module `Expand-WindowsImage` cmdlet,
+  passing the mounted OS volume and safe-root scratch directory as structured
+  parameters. This avoids native argument parsing and remains untried. The
+  exact cause is still unproven. Go checks passed before this source change.
 - The next helper invocation stopped before CC-AdminBroker because the prior
   attempt receipts had already been archived by the preceding run. It made no
   VM/VHD mutation. The retry now accepts an existing archive only when its
   regular-file bytes exactly match the receipt being preserved; mismatches and
-  links still stop. This idempotence change is uncommitted; the next real guest
-  fixture run remains outstanding.
+  links still stop. The idempotence fix is committed and pushed through
+  `ad23b68`; the current PowerShell Dism cmdlet change is uncommitted. The next
+  real guest fixture run remains outstanding.
 
 ## Remaining
 
-1. Commit and push the offline-deployment/recovery implementation; the current
-   source has already passed `gofmt`, `go test ./...`, `go vet ./...`, and
-   `git diff --check`.
+1. Run `gofmt`, `go test ./...`, `go vet ./...`, and `git diff --check` on the
+   Dism cmdlet change; commit and push it.
 2. Build the helper into the owned root and run `vm-smoke` against the already
    downloaded ISO. Receipt-bound recovery must confirm the prior VM is absent
    and the owned OS partition is empty before resetting the partial layout.

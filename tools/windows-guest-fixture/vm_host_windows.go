@@ -643,7 +643,7 @@ func tlsHandshakeWithTimeout(conn net.Conn, timeout time.Duration) error {
 }
 
 func tlsClientConn(conn net.Conn, identity vmIdentity, serverPin string) *tls.Conn {
-	return tls.Client(conn, vmClientTLS(identity, serverPin))
+	return tls.Client(newSerialFrameConn(conn), vmClientTLS(identity, serverPin))
 }
 
 func writeJSONExclusive(path string, value any) error {

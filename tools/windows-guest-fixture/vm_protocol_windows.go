@@ -3,12 +3,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,6 +20,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -119,7 +122,7 @@ func vmClientTLS(identity vmIdentity, serverPin string) *tls.Config {
 }
 
 func tlsServerConn(file *os.File, identity vmIdentity, clientPin string) *tls.Conn {
-	return tls.Server(&serialConn{file: file}, vmServerTLS(identity, clientPin))
+	return tls.Server(newSerialFrameConn(&serialConn{file: file}), vmServerTLS(identity, clientPin))
 }
 
 func validHash(value string) bool {
@@ -194,6 +197,82 @@ func (c *serialConn) RemoteAddr() net.Addr             { return vmSerialAddr("gu
 func (c *serialConn) SetDeadline(time.Time) error      { return nil }
 func (c *serialConn) SetReadDeadline(time.Time) error  { return nil }
 func (c *serialConn) SetWriteDeadline(time.Time) error { return nil }
+
+const serialFrameLimit = 1 << 20
+
+type serialFrameConn struct {
+	raw     net.Conn
+	reader  *bufio.Reader
+	writeMu sync.Mutex
+	pending []byte
+}
+
+func newSerialFrameConn(raw net.Conn) *serialFrameConn {
+	return &serialFrameConn{raw: raw, reader: bufio.NewReaderSize(raw, 64*1024)}
+}
+
+func (c *serialFrameConn) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	for len(c.pending) == 0 {
+		line := make([]byte, 0, 64*1024)
+		for {
+			part, err := c.reader.ReadSlice('\n')
+			if len(line)+len(part) > base64.StdEncoding.EncodedLen(serialFrameLimit)+1 {
+				return 0, errors.New("serial TLS frame exceeds limit")
+			}
+			line = append(line, part...)
+			if err == nil {
+				break
+			}
+			if !errors.Is(err, bufio.ErrBufferFull) {
+				return 0, err
+			}
+		}
+		if len(line) == 0 || line[len(line)-1] != '\n' {
+			return 0, errors.New("serial TLS frame delimiter missing")
+		}
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(line)-1))
+		n, err := base64.StdEncoding.Decode(decoded, line[:len(line)-1])
+		if err != nil {
+			return 0, errors.New("serial TLS frame encoding rejected")
+		}
+		c.pending = decoded[:n]
+	}
+	n := copy(p, c.pending)
+	c.pending = c.pending[n:]
+	return n, nil
+}
+
+func (c *serialFrameConn) Write(p []byte) (int, error) {
+	if len(p) > serialFrameLimit {
+		return 0, errors.New("serial TLS frame exceeds limit")
+	}
+	frame := make([]byte, base64.StdEncoding.EncodedLen(len(p))+1)
+	base64.StdEncoding.Encode(frame[:len(frame)-1], p)
+	frame[len(frame)-1] = '\n'
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	for offset := 0; offset < len(frame); {
+		n, err := c.raw.Write(frame[offset:])
+		offset += n
+		if err != nil {
+			return 0, err
+		}
+		if n == 0 {
+			return 0, io.ErrShortWrite
+		}
+	}
+	return len(p), nil
+}
+
+func (c *serialFrameConn) Close() error                       { return c.raw.Close() }
+func (c *serialFrameConn) LocalAddr() net.Addr                { return c.raw.LocalAddr() }
+func (c *serialFrameConn) RemoteAddr() net.Addr               { return c.raw.RemoteAddr() }
+func (c *serialFrameConn) SetDeadline(t time.Time) error      { return c.raw.SetDeadline(t) }
+func (c *serialFrameConn) SetReadDeadline(t time.Time) error  { return c.raw.SetReadDeadline(t) }
+func (c *serialFrameConn) SetWriteDeadline(t time.Time) error { return c.raw.SetWriteDeadline(t) }
 
 type vmSerialAddr string
 

@@ -275,7 +275,12 @@ fn publish(store: &Path, folder: &Path, path: &Path, bytes: &[u8]) -> Result<()>
     })();
     drop(file);
     fs::remove_file(&temp).map_err(fail)?;
-    result
+    result?;
+    #[cfg(unix)]
+    std::fs::File::open(folder)
+        .and_then(|directory| directory.sync_all())
+        .map_err(fail)?;
+    Ok(())
 }
 /// Preview by default. Applying changes only the selected item's note history
 /// and its immutable references. Persist the returned DB under the same lock.

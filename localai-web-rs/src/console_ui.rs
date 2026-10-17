@@ -808,14 +808,14 @@ mod tests {
         }
         assert!(
             response["items"][0]["note"]
-                .as_str()
-                .unwrap()
+            .as_str()
+            .unwrap()
                 .contains("正常な本文")
         );
         assert!(
             response["items"][0]["history"][0]["note"]
-                .as_str()
-                .unwrap()
+            .as_str()
+            .unwrap()
                 .contains("正常な本文")
         );
     }

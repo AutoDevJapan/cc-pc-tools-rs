@@ -881,8 +881,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "memoryUsedGb",
             json!(
                 scheduler["ram_total_gb"]
-                    .as_f64()
-                    .zip(scheduler["available_gb"].as_f64())
+                .as_f64()
+                .zip(scheduler["available_gb"].as_f64())
                     .map(|(total, free)| total - free)
             ),
         ),
@@ -1224,8 +1224,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                     json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));
                 worker["note"] = json!(
                     crate::console_ui::clean(&names, text(item, "note"))
-                        .chars()
-                        .take(360)
+                    .chars()
+                    .take(360)
                         .collect::<String>()
                 );
                 worker["historyCount"] = json!(crate::console_ui::history_count(item));
@@ -1292,8 +1292,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         if !client {
             worker["report"] = json!(
                 crate::console_ui::clean(&names, text(j, "last_message"))
-                    .chars()
-                    .take(360)
+                .chars()
+                .take(360)
                     .collect::<String>()
             );
             worker["detailAvailable"] = json!(true);
@@ -1636,14 +1636,14 @@ mod tests {
         assert_eq!(output["metrics"]["ownerDecisions"], 1);
         assert!(
             find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
+            .as_str()
+            .unwrap()
                 .contains("画像案への回答を待っています")
         );
         assert!(
             !find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
+            .as_str()
+            .unwrap()
                 .contains("hidden-value")
         );
         assert_eq!(
@@ -1662,9 +1662,9 @@ mod tests {
         assert_eq!(output["sourceOk"], true);
         assert!(
             output["sources"]
-                .as_array()
-                .unwrap()
-                .iter()
+            .as_array()
+            .unwrap()
+            .iter()
                 .any(|s| s["state"] == "unknown")
         );
         assert_eq!(output["metrics"]["memoryUsedGb"], 56.0);
@@ -1775,12 +1775,12 @@ mod tests {
         assert_eq!(skills["workers"][0]["historyFailures"], 0);
         assert!(
             board["departments"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .flat_map(|d| d["products"].as_array().unwrap())
-                .chain(board["unassignedProducts"].as_array().unwrap())
-                .flat_map(|p| p["workers"].as_array().unwrap())
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .chain(board["unassignedProducts"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
                 .any(|w| w["status"] == "attention")
         );
         let encoded = board.to_string();
@@ -1808,10 +1808,10 @@ mod tests {
         assert_eq!(board["departments"].as_array().unwrap().len(), 6);
         assert!(
             board["departments"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .flat_map(|d| d["products"].as_array().unwrap())
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
                 .all(|p| p["workers"].as_array().unwrap().is_empty())
         );
         assert!(!temp.path().join("client-projects.txt").exists());
@@ -1912,7 +1912,7 @@ mod tests {
         assert_eq!(rosetta["workers"][0]["progress"], 35);
         assert!(
             list("自社サービス部")
-                .iter()
+            .iter()
                 .all(|p| p["name"] != "Social Pilot")
         );
         let extras = snapshot["unlistedRegistrations"].as_array().unwrap();
@@ -1922,7 +1922,7 @@ mod tests {
         ));
         assert!(
             extras
-                .iter()
+            .iter()
                 .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1)
         );
         assert!(extras.iter().any(|p| p["registeredTasks"] == 1

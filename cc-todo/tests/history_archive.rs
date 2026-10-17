@@ -43,6 +43,14 @@ fn real_cli_previews_archives_reads_edits_and_restores_without_changing_ownershi
         true
     );
     let archived = cc_todo::load(&store).unwrap();
+    // A valid compact snapshot exposes an unnecessary canonical rewrite.
+    fs::write(&store, serde_json::to_vec(&archived).unwrap()).unwrap();
+    let unchanged = fs::read(&store).unwrap();
+    assert_eq!(
+        success(home, &["archive-history", "2626", "--apply"])["saved"],
+        false
+    );
+    assert_eq!(fs::read(&store).unwrap(), unchanged);
     assert_eq!(
         cc_todo::todo_history::materialized(&store, &archived["items"][0]).unwrap(),
         before["items"][0]

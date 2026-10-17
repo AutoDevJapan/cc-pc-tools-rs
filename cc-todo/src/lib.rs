@@ -1285,6 +1285,13 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     let before_rename =
         matches!(cli.command, Command::RenameProject { dry_run: false, .. }).then(|| db.clone());
     let output = execute(&mut db, &cli.command, paths)?;
+    let unchanged_history = matches!(
+        cli.command,
+        Command::ArchiveHistory { apply: true, .. } | Command::RestoreHistory { apply: true, .. }
+    ) && output
+        .first()
+        .and_then(|line| serde_json::from_str::<Value>(line).ok())
+        .is_some_and(|r| r["saved"] == false);
     // Listing is read-only; keep the shared byte lock but do not rewrite or back up state.
     if matches!(
         cli.command,
@@ -1293,7 +1300,8 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }
             | Command::RestoreHistory { apply: false, .. }
-    ) {
+    ) || unchanged_history
+    {
         for line in output {
             println!("{line}");
         }

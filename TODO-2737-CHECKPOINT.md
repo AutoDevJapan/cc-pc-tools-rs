@@ -338,3 +338,24 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   2783は元jobがguest資源再割当待ちで未完。source修正の前提ではないため、この段階で2783だけのwaitへ戻さない。
   次は固定新headの有限deltaレビューを通常ToDoへspec付き登録しMust/未読を処理する。新レビューだけが残る時はそのIDにwaitし、Must0確認後に2783の実SDK受領を確認する。
   SDKが未完なら正規wait2737 --on2783へ戻す。通常CI/製品merge/Prd/cleanupの全完了ではない。
+
+## 2026-10-17 job20261017-185738-todo-2737: 修正差分レビュー受領とSDK待機
+
+- 2800の追加原応答job20261017-170946を受領。SHA256 C5658001F3C927ADFED98C6BB1A8E3BAEE4255CC584EBA5BDA888B52821206D7。
+  base382650300c39cff5891f6227811722c6cd6de9cd→headc0f59e12e7a1cb08fe1fec08cfbebc2c71113c5a/treec5929a97989af8c425d5401991230e8ddea5a796の2Mustを再照合し、Must0/Suggestion0/Nit0。
+  25差分一覧と各Mustに関係するcode/README/局所caller/fixtureを対象とした静的レビューで、実行検査は0。製品source/VM/SDK/正式CIの合格ではない。
+- 最初のjob20261017-165750も保存した。原SHA256 EF8D70644910A386B4198106D22A1962D1A13911FDD23EFF107D53B3E546E19A。
+  静的Must0だがモデル確認と原2795全文照合を未確定としていたため、それ単独では確定しない。追加原応答が原2795全文と同threadの明示model gpt-6-lunaを再照合して補足した。
+  両jobの保存metadataは明示gpt-6-luna/succeeded/exit0。原2795のSHA11C89ACB...も前回独立照合済みで、応答を消したり都合のよい部分だけ置換していない。
+- 2応答とreceiptはD:/CC/Tools/product-ci/evidence/todo-2737-20261017/resume-185738-review。
+  review-receipt.private.json SHA256 B0AA321088EA6E04E29C740EE53A45EF035CE7EC2956F2DB2926AA5C6F65DA66。
+- 原2783はdoing、同job20261017-131423の保存statusはrunning/exit未確定。最新SDK成功receiptは未受領。
+  古いlast_messageは64MiB超過の拒否を述べるが、司令塔15:07のnoteではその制限修復済み。過去の拒否を現在の確定原因へ昇格しない。
+  jobに残る503再接続記録もSDK成功ではない。元job/資源経路を保持し、別担当/別VMの複製や原2737側での資源再割当をしていない。
+  source Must0を先に確認できたため、指示どおり2737を2783だけの正規waitへ戻す。SDK受領後は実template/hash/VM回収/公開SDK版を照合してから公式WindowsCIへ進む。
+- 今回はこの文書と受領記録だけを更新。2026-10-17本人指示TestBuildScopeを適用し、c0f59e1の有効な関連Go/Win/Linux検査を再利用する。
+  文書だけの保存を理由にRust全workspace/Go全件/buildを追加しない。今後も変更処理と利用側、該当library doctestを選び、必須の原workflow/13工程/profile/直列/Docker parityは維持する。
+  古い「毎マージ前に全workspace必須」という記述は当時の履歴で、現行方針はこの本人更新を優先する。
+- 原b194のAGENTS/CLAUDEをRAMで再取得し、235dcf.../70c7de...と一致。前後のrepo/PR/head/ref固定を再確認。
+  製品headb194/tree f7eea82cと、補助code headc0f59e1/tree c5929a9を区別する。原PR/ref/workflow/route変数/予算は変更していない。
+  今回はVM/runner/container/原検査を起動していない。未完SDK資産と旧回収記録を保持し、通常CI/原merge/Prd/cleanupは未完。

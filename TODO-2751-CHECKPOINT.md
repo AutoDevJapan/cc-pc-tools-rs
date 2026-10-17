@@ -1,6 +1,27 @@
 # PR148 Linux helperの再開記録
 
-Linux用helperの実装と、認証情報を使わない検証は終了した。別モデルのレビュー、Mustの修正、親2736への最終配送は未完了。
+初回レビュー2778の5件のMustへ対応し、追加検査を終えた。固定した全差分を再レビュー2781へ通常登録した。再レビューの応答と親2736への最終配送は未完了。正式な製品実行は親に残す。
+
+## 2026-10-17・11時台の再開（こちらを優先）
+
+実jobは`20261017-110029-todo-2751`。前回のcleanなc28ae93から再開した。元2736のspec/checkpointと運用指示を読み直し、同じ検査やレビュー登録を繰り返す前に元2778の完了を確認した。
+
+- 原レビュー2778: 実Sonnet5.5、succeeded/exit0、原応答SHA256 `CDF80D55E329CFE9B1BC33365E6B39C3EDAB648AA94DA346CD20833CC62D0B01`。15ファイルのworktree読解で、固定diffの読了は未達。実装側が旧worktreeと0377dd0のmodule一致を照合した。原応答と受領情報は`.ci-work/review2778`へ保存した。
+- 5Mustの修正は`bdd9a61c30e09601e2dfe77ecc3e8b407d6a9b50`へcommitした。全出力の排出/完全log保存、固定YAMLのenv・作業場所・timeout継承、Landlock ABI3/REFER/TRUNCATE、記録欠落時のnamespace停止とbroken化を実装した。詳細は`docs/todo-2751-review-response.md`。
+- 公式Listener --versionの初回起動では祖先`/`のディレクトリ一覧が拒否された。fileのread/exec/writeを広げず、SDKの一覧だけを許してexit0を確認した。原Rustup commandはreadonlyな設置先のself-updateで一度失敗した。新CARGO_HOME/binへSDKのRustupをコピーし、原commandを変えずに新homeへ1.95.0/rustfmtを導入してexit0を確認した。両失敗も保持する。
+- bdd9a61で、新実HTTPの正常/取消し/33MiB超/記録欠落の4fixtureと原Rustup導入がすべてpass、合計31.325秒。記録欠落はkernel群不在の確認後にmetadataだけを欠落させた安全なfixtureで、任意host強制終了を実証したものではない。制限下のmv/ln、helper/plan書換え拒否も実測した。
+- 最終code headは`c1635c9ce37cb07524335130e5e2b040f549fa92`、module treeは`252685436e69fe57bab8e29a682c82e1719b381c`。追加差分は、数値repo IDをworkflow読取より先に照合する処理とそのunitだけ。fixture経路を変えておらず、既済の実fixtureを重複実行していない。最終Goはsubtest込み126 pass/4 skip/failure0、vet0、Windows/Linux build0。
+- 最新Windows artifact SHA256 `C2119F8737FD728423A7AAAFBC9F183DC1498DF1422EAE64A28EE399F7BCF688`、Linux artifact SHA256 `2BA32E68899F05902DA117D022F3FD43A520E51DFB25B478C498A82E310AB94D`。
+- 固定全diff、18 headファイル、既存7文脈ファイルと有限bridge抜粋を1つの入力へ直接供給した。新レビュー2781は通常subwork/Claude Sonnet指定、登録specは360222 bytes、SHA256 `C48B1898B73CDA39567BB615A2A8E3FD728AA8957F953B822E73E42EE6B3A508`。原specと保存specの一致を確認した。gitが起動できない読取環境でも、固定blobを読める形にした。再登録しない。
+- 自作の追加15 namespaceを停止/PID0/削除し、最終inventoryは当該container0。新一時owner `dfb24dac2f92ec49391fc7251827ae1f`は141 entries / 229279614 bytesのplan→別通常削除→finish source_absentまで確認した。
+- 新しい原証拠は`.ci-work/todo2751-review-fixes-evidence`の111ファイルへ保存した。manifest SHA256 `1266E0BED74B7C7038F0E0C941757E6A3658C70E694BAB71124AE388905A9AE5`。最終追加2ファイルは`.ci-work/todo2751-scope-final-evidence`へ保存し、全113ファイルの参照・bytes・SHAをまとめたmanifestは`F9D39580CE135881EF5DD21D0EF395E9C8C322D1572CA0F5C0D3B56567311388`。既存111ファイルを重複コピーせず参照し、削除後も全113 SHAを再照合した。原証拠を消さない。
+- helper repoの実APIはAutoDevJapan/private/nonfork、ID1406818713を再確認した。最初のTLS timeoutだけを技術再試行し、成功を確認した。製品PR148は元75a/base1100のまま。原Rust runのjob APIで両OSの名前が`test (ubuntu-latest)`/`test (windows-latest)`、runner0、steps0であることも再照合した。これはjob metadataであって原実行logや正式検査成功ではない。
+
+子工程で製品source取得/展開/実テスト、workflow書込、dispatch、runner登録、GPU/Civ6、service、旧bridge/guard/manifest/旧root変更は0。元2736/2640/880の停止・依存・未完を維持する。既知のQuestionStateRecoveryRequiredを迂回してDiscordへ送信せず、今回も後片付けの投稿を再送していない。
+
+次は元2781の実応答のbase/head・全差分/18対象読了・実モデル・原SHAを照合し、Mustが残れば実害を直す。追加レビューを受けるまで正式利用可能とは報告しない。親の完了を待つ逆依存は作らない。レビュー待ちで終える場合は正規`wait 2751 --on 2781`を保存し、最新の実HEADをscheduler checkpointへ残す。
+
+以下は前回までの履歴である。
 
 ## 固定した成果
 

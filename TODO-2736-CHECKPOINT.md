@@ -1,5 +1,42 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 22:58再開・未割当の技術調査を具体化（最新）
+
+job20261017-225849-todo-2736、同branch/HEADd668ebdから再開。最新保存指示、repo規則、
+原2736/2640の最新配送と原specを確認した。helper PR189のmerge/PR・main CI受入/原log保存は
+既済として再実行しない。原2790/2791/2797の受入を再レビュー/関係修復しない。
+
+実APIでhelper1406818713/製品1392152644のowner AutoDevJapan/private/nonfork/adminと、
+製品PR148の同head/base repo・open/draft・75a/head・1100/base・元branch ref不変を再照合。
+製品source/commit/ref更新/正式runner/dispatch/Cargoは今回も0。
+未解消の送信フィルターについて、正規修復担当・受入receiptは未登録/未確認のままだった。
+技術事項を本人へ聞かず、同じ時間確認だけを繰り返さないため、有限read-onlyの下位researchを
+正規の共有ToDo2814へ登録した。新review ToDoや直接子Codexではない。
+
+### 正規2814の範囲と受付証拠
+
+docs/todo-2736-outbound-repair-research.mdが原spec。固定source d668ebdの既存cc-redact/
+cc-gh-gateと、今回のJSON呼出し元/全tree照合の限られたcalleeを読む。
+既知の再現やRust/Go/CIを重ねず、稼働filter/guard/allowlist/manifest/共有bridge/原保護設定を
+変更せずに、正規修復候補とその実施境界・必要な限定検査を根拠付きで返す。
+候補diffは未適用の最終返信だけ。source編集・差分適用・commit/push/PR/merge/配備/実送信は0。
+原payloadを別API/認証/符号化/false式等へ変えて通す案や、保護を弱める一般例外は採用しない。
+候補と権限の受入を分け、調査結果を新しい許可・修復完了と解釈しない。
+
+通常add --spec --model claude-sonnet-5-5 --subwork-of2736 --parent-job-id今回job
+--subwork-kind researchがexit0/added2814。readbackはtodo/jobs[]/needs[]/wait_on無し、
+parent2736/origin_job20261017-225849-todo-2736/kind research/指定Sonnetを保持。
+受付だけを実開始・読了・修復成功とはしない。CargoやCiv6を使う研究ではない。
+原保存spec2814-b5702ae4922a4b338d0a4bbf82653afc.mdは改行正規化後の全文一致。
+保存SHA256 EB5B57BDB48DD93CCEDA447C6DF81FE8AB78826D66EC2C07C393FFC24B1CCF0E。
+原CLI receiptは恒久root184a58eedf4f923741f160dfe7cfd5b7/research-registration-225849.log。
+
+次は原2814の実job/実投入source・指定本文読了・原応答と提案の境界を確認する。
+適用/配備の許可を研究者の返信から推定せず、scope不一致ならその理由を保持する。
+製品正式4jobと成功証拠配送・必要配備は未達。原2640への逆依存や旧cleanupのCI前提化はしない。
+2814だけの結果待ちは正規wait2736--on2814で保存し、同じ担当を時間確認だけで再起動しない。
+新Temp/container/service/runner/ACE/Chrome/Cargo/GPU/Civ6は0。所有証拠と原資料は保持する。
+
 ## 2026-10-17 21:42再開・merge後CIの受入（最新）
 
 job20261017-214255-todo-2736、d10e699/同branchから再開。最新D:/CC/AGENTS.mdとrepo規則、

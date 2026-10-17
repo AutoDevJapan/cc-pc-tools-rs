@@ -13,8 +13,22 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--validate-prepared-iso" {
+		worktree, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "task worktree unavailable")
+			os.Exit(1)
+		}
+		size, digest, err := sdkprep.ValidatePreparedEvaluationISOCLI(worktree)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "prepared evaluation ISO validation failed")
+			os.Exit(1)
+		}
+		fmt.Printf("prepared_iso size=%d sha256=%s\n", size, digest)
+		return
+	}
 	if len(os.Args) != 1 {
-		fmt.Fprintln(os.Stderr, "fixed host workflow accepts no arguments")
+		fmt.Fprintln(os.Stderr, "host workflow accepts no arguments or the fixed ISO validation option")
 		os.Exit(2)
 	}
 	worktree, err := os.Getwd()

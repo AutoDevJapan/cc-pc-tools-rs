@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -66,6 +67,16 @@ type RecoveryReceipt struct {
 	VHDDetached    bool   `json:"vhd_detached"`
 	VHDSize        int64  `json:"vhd_size"`
 	VHDSHA256      string `json:"vhd_sha256"`
+}
+
+type evaluationISOValidationReceipt struct {
+	Source      string `json:"source"`
+	ISOSize     int64  `json:"iso_size"`
+	ISOSHA256   string `json:"iso_sha256"`
+	SetupStatus string `json:"setup_signature"`
+	SetupSigner string `json:"setup_signer"`
+	Edition     string `json:"edition"`
+	ValidatedAt string `json:"validated_at"`
 }
 
 func CreateOwnedRoot(ctx context.Context, worktree string) (OwnedRoot, error) {
@@ -128,6 +139,118 @@ func VerifyOwnedRoot(root OwnedRoot, worktree string) error {
 		return errors.New("owned root is not a real directory")
 	}
 	return verifyUnprotectedPath(path)
+}
+
+func findPreparedOwnedRoot(worktree string) (OwnedRoot, bool, error) {
+	entries, err := os.ReadDir(worktree)
+	if err != nil {
+		return OwnedRoot{}, false, errors.New("worktree entries unavailable")
+	}
+	var found OwnedRoot
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "codex-owned-") {
+			continue
+		}
+		path := filepath.Join(worktree, entry.Name())
+		iso := filepath.Join(path, "windows-server-2025-eval.iso")
+		partial := filepath.Join(path, "windows-server-2025-eval.iso.partial")
+		if _, err := os.Lstat(partial); err == nil {
+			return OwnedRoot{}, false, errors.New("incomplete official ISO in owned root; preserve for diagnosis")
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return OwnedRoot{}, false, errors.New("owned ISO partial status unavailable")
+		}
+		if _, err := os.Lstat(iso); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return OwnedRoot{}, false, errors.New("owned ISO status unavailable")
+		}
+		id := strings.TrimPrefix(entry.Name(), "codex-owned-")
+		candidate := OwnedRoot{ID: id, Path: path}
+		if err := VerifyOwnedRoot(candidate, worktree); err != nil {
+			return OwnedRoot{}, false, err
+		}
+		if _, _, _, prepared, err := loadPreparedEvaluationISO(candidate, worktree); err != nil || !prepared {
+			if err != nil {
+				return OwnedRoot{}, false, err
+			}
+			return OwnedRoot{}, false, errors.New("official ISO lacks completed signature validation")
+		}
+		if found.ID != "" {
+			return OwnedRoot{}, false, errors.New("multiple prepared owned SDK roots found")
+		}
+		found = candidate
+	}
+	if found.ID == "" {
+		return OwnedRoot{}, false, nil
+	}
+	return found, true, nil
+}
+
+func loadPreparedEvaluationISO(root OwnedRoot, worktree string) (string, int64, string, bool, error) {
+	isoPath := filepath.Join(root.Path, "windows-server-2025-eval.iso")
+	measurePath := filepath.Join(root.Path, "windows-server-2025-eval.measure.private.txt")
+	receiptPath := filepath.Join(root.Path, "windows-server-2025-eval-validation.private.json")
+	paths := []string{isoPath, measurePath, receiptPath}
+	present := 0
+	for _, path := range paths {
+		if _, err := os.Lstat(path); err == nil {
+			present++
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", 0, "", false, errors.New("prepared ISO evidence status unavailable")
+		}
+	}
+	if present == 0 {
+		return "", 0, "", false, nil
+	}
+	if present != len(paths) {
+		return "", 0, "", false, errors.New("prepared ISO evidence is incomplete")
+	}
+	if err := VerifyOwnedRoot(root, worktree); err != nil {
+		return "", 0, "", false, err
+	}
+	measure, err := os.ReadFile(measurePath)
+	if err != nil || len(measure) > 256 {
+		return "", 0, "", false, errors.New("prepared ISO measurement unavailable")
+	}
+	info, err := os.Stat(isoPath)
+	if err != nil || !info.Mode().IsRegular() {
+		return "", 0, "", false, errors.New("prepared ISO file unavailable")
+	}
+	receipt, err := os.ReadFile(receiptPath)
+	if err != nil {
+		return "", 0, "", false, errors.New("prepared ISO validation receipt unavailable")
+	}
+	size, digest, err := validatePreparedISOEvidence(measure, receipt, info.Size())
+	if err != nil {
+		return "", 0, "", false, err
+	}
+	return isoPath, size, digest, true, nil
+}
+
+func validatePreparedISOEvidence(measure, receipt []byte, actualSize int64) (int64, string, error) {
+	if len(measure) > 256 {
+		return 0, "", errors.New("prepared ISO measurement exceeds bound")
+	}
+	fields := strings.Fields(string(measure))
+	if len(fields) != 2 || !strings.HasPrefix(fields[0], "size=") || !strings.HasPrefix(fields[1], "sha256=") {
+		return 0, "", errors.New("prepared ISO measurement malformed")
+	}
+	size, err := strconv.ParseInt(strings.TrimPrefix(fields[0], "size="), 10, 64)
+	if err != nil || size <= 0 || size > 8<<30 || size != actualSize {
+		return 0, "", errors.New("prepared ISO size rejected")
+	}
+	digest := strings.ToLower(strings.TrimPrefix(fields[1], "sha256="))
+	if !validDigest(digest) {
+		return 0, "", errors.New("prepared ISO digest rejected")
+	}
+	receipt = bytes.TrimPrefix(receipt, []byte{0xef, 0xbb, 0xbf})
+	decoder := json.NewDecoder(bytes.NewReader(receipt))
+	decoder.DisallowUnknownFields()
+	var validation evaluationISOValidationReceipt
+	if decoder.Decode(&validation) != nil || decoder.Decode(new(json.RawMessage)) != io.EOF || validation.Source != "Microsoft Evaluation Center HTTPS" || validation.ISOSize != size || !strings.EqualFold(validation.ISOSHA256, digest) || validation.SetupStatus != "Valid" || validation.SetupSigner != "Microsoft Corporation" || validation.Edition != "Windows Server 2025 Standard Evaluation" {
+		return 0, "", errors.New("prepared ISO validation receipt rejected")
+	}
+	return size, digest, nil
 }
 
 func verifyUnprotectedPath(path string) error {
@@ -447,12 +570,45 @@ func RunSDKPreparationCLI(ctx context.Context, worktree string) (TaskEvidence, e
 	if err := verifyTaskWorktree(base); err != nil {
 		return TaskEvidence{}, err
 	}
-	root, err := CreateOwnedRoot(ctx, base)
+	root, reusable, err := findPreparedOwnedRoot(base)
 	if err != nil {
 		return TaskEvidence{}, err
 	}
+	if !reusable {
+		root, err = CreateOwnedRoot(ctx, base)
+		if err != nil {
+			return TaskEvidence{}, err
+		}
+	}
 	module := filepath.Join(base, "tools", "windows-ci-sdk-2737")
 	return RunSDKPreparation(ctx, root, base, module, currentSourceCommit(ctx, base))
+}
+
+// ValidatePreparedEvaluationISOCLI verifies only the previously staged public
+// image and its private validation receipt; it never creates a VM.
+func ValidatePreparedEvaluationISOCLI(worktree string) (int64, string, error) {
+	base, err := filepath.Abs(worktree)
+	if err != nil {
+		return 0, "", errors.New("task worktree unavailable")
+	}
+	if err := verifyTaskWorktree(base); err != nil {
+		return 0, "", err
+	}
+	root, found, err := findPreparedOwnedRoot(base)
+	if err != nil {
+		return 0, "", err
+	}
+	if !found {
+		return 0, "", errors.New("prepared official evaluation ISO not found")
+	}
+	_, size, digest, prepared, err := loadPreparedEvaluationISO(root, base)
+	if err != nil {
+		return 0, "", err
+	}
+	if !prepared {
+		return 0, "", errors.New("prepared official evaluation ISO evidence incomplete")
+	}
+	return size, digest, nil
 }
 
 func verifyTaskWorktree(worktree string) error {

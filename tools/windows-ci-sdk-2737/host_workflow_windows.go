@@ -71,10 +71,16 @@ func RunSDKPreparation(ctx context.Context, root OwnedRoot, worktree, modulePath
 	if err != nil {
 		return evidence, errors.New("guest helper build evidence rejected")
 	}
-	stage = "official-evaluation-iso-download"
-	isoPath, isoSize, isoHash, err := DownloadOfficialEvaluationISO(ctx, root, worktree)
+	stage = "official-evaluation-iso-acquire-or-reuse"
+	isoPath, isoSize, isoHash, prepared, err := loadPreparedEvaluationISO(root, worktree)
 	if err != nil {
 		return evidence, err
+	}
+	if !prepared {
+		isoPath, isoSize, isoHash, err = DownloadOfficialEvaluationISO(ctx, root, worktree)
+		if err != nil {
+			return evidence, err
+		}
 	}
 	stage = "public-seed-generation"
 	clientIdentity, err := NewHostIdentity(instance)

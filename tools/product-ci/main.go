@@ -109,6 +109,10 @@ func boundedOutput(c *exec.Cmd, limit int) ([]byte, error) {
 func get(ctx context.Context, endpoint string, value any) error {
 	b, e := readGitHub(ctx, endpoint)
 	if e != nil {
+		var safe *gitHubReadError
+		if errors.As(e, &safe) {
+			return safe
+		}
 		return errors.New("GitHub read failed")
 	}
 	if json.Unmarshal(b, value) != nil {

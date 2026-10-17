@@ -225,3 +225,11 @@ accept an arbitrary job, run, revision or label. The other four original
 open-PR candidate entries and their commands are unchanged. Runner exit is
 still not official analysis success. Promotion, full verification, integration
 and production revision/smoke are separate outstanding acceptance conditions.
+
+Read failures in the merged receipt name their fixed stage (repository, PR,
+current main, original PR branch, or fixed commit). Transport errors use only
+closed categories; raw stderr, response bodies, and endpoint names never enter
+the error. A `not-found` category is not proof that a branch was deleted or
+that permissions changed. It is terminal for that read: no fallback ref, API,
+identity, or runner is tried. In particular, a successful current-main read
+does not override a failed original-branch read or authorize a job.

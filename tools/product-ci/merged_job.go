@@ -35,7 +35,7 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 		DefaultBranch string `json:"default_branch"`
 	}
 	if e := read(ctx, fmt.Sprintf("repositories/%d", c.ID), &r); e != nil {
-		return repository{}, e
+		return repository{}, mergedReadFailure("repository metadata", e)
 	}
 	if r.ID != c.ID || r.Owner.Login != "AutoDevJapan" || !r.Private || r.Fork || !r.Permissions.Admin || r.DefaultBranch != "main" {
 		return repository{}, errors.New("merged repository identity rejected")
@@ -52,20 +52,20 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 		}
 	}
 	if e := read(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, c.PR), &p); e != nil {
-		return repository{}, e
+		return repository{}, mergedReadFailure("PR receipt", e)
 	}
 	if !sameMergedRepo(r.repository, r.repository) || p.State != "closed" || !p.Merged || p.MergeSHA != mergedSHA || p.Head.SHA != mergedPRHead || p.Head.Ref == "" || p.Base.Ref != "main" || !sameMergedRepo(p.Head.Repo, r.repository) || !sameMergedRepo(p.Base.Repo, r.repository) {
 		return repository{}, errors.New("exact merged PR receipt rejected")
 	}
 	var ref struct{ Object struct{ SHA string } }
 	if e := read(ctx, "repos/"+r.FullName+"/git/ref/heads/main", &ref); e != nil {
-		return repository{}, e
+		return repository{}, mergedReadFailure("current main ref", e)
 	}
 	if ref.Object.SHA != mergedSHA {
 		return repository{}, errors.New("current main differs from audited merge")
 	}
 	if e := read(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(p.Head.Ref), &ref); e != nil {
-		return repository{}, e
+		return repository{}, mergedReadFailure("original PR branch ref", e)
 	}
 	if ref.Object.SHA != mergedPRHead {
 		return repository{}, errors.New("original PR branch changed")
@@ -77,7 +77,7 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 			Parents []struct{ SHA string }
 		}
 		if e := read(ctx, "repos/"+r.FullName+"/git/commits/"+sha, &commit); e != nil {
-			return repository{}, e
+			return repository{}, mergedReadFailure("fixed commit", e)
 		}
 		if commit.SHA != sha || commit.Tree.SHA != mergedTree {
 			return repository{}, errors.New("merged commit or PR tree rejected")
@@ -87,6 +87,16 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 		}
 	}
 	return r.repository, nil
+}
+
+func mergedReadFailure(stage string, err error) error {
+	// Even injected API implementations cannot put raw response text in a
+	// receipt. Only the transport's closed error vocabulary is retained.
+	var safe *gitHubReadError
+	if !errors.As(err, &safe) {
+		safe = &gitHubReadError{class: "unclassified"}
+	}
+	return fmt.Errorf("merged source %s: %w", stage, safe)
 }
 
 func sameMergedRepo(got, want repository) bool {

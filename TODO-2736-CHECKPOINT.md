@@ -1,5 +1,55 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 23:29再開・2814原応答の受領（最新）
+
+job20261017-232950-todo-2736、同branch/8e36705から再開。最新保存指示とrepo規則、元ToDoと
+原2814のdoneを確認。研究job20261017-231255-todo-2814は実Sonnet5.5、23:13:18開始→
+23:19:17終端、succeeded/exit0、networkfalse/protocol3、54steps、記録両PID不在。
+保存spec全文がactual投入へ含まれ、spec SHA EB5B57BDB48DD93CCEDA447C6DF81FE8AB78826D66EC2C07C393FFC24B1CCF0E
+を確認。原応答11,239bytes/SHA256 75F703D779E993E0F2D7E8E69AC69A5739DBBCDEC1613D2FB8C6671A970DDA83を
+恒久root184a58eedf4f923741f160dfe7cfd5b7/research2814-original-232950.private.mdへ一致保存した。
+
+研究者はgit起動が0xC0000142で失敗し、固定d668ebdとの同一性を確認できず、実worktreeの
+3af45ee2を読んだと明記した。親がguard falseの当該worktreeでGit比較し、指定した主要10コード
+fileのd668ebd→3af45ee2差分0、同10fileのHEAD→作業コピー差分0を確認した。全対象や過去の
+checkpointまでbyte同一と主張しない。credential_context_edges.rs、配布先/manifest/原product
+source/logは未読。研究者の実テスト/Cargo/Goは0。原応答の例示にはREDACTED markerがあるので、
+完成した実行テスト入力と扱わない。研究完了を実装/修復/正式CI/新しい許可へ転記しない。
+
+### 提案の境界と未採用
+
+原応答はKEY→ASSIGNMENT→assignment、json()/field()の呼出し経路を特定した。
+唯一の候補はexact key persist-credentialsと裸のbooleanへ例外を足す未適用案であり、
+保護仕様の変更になると研究者自身が明記した。Goの元JSON/tree比較に変更は不要という結果。
+この候補は元specの「guard変更…一切しない」「新allowlist/guard/manifestや共有bridgeの許可を
+変えない」という境界を越えるため、適用/新build/PR/merge/配布/送信は0。研究者の
+「原2736が受け入れる」という記述を、許可の付与とは解釈しない。true側を含む候補も採用しない。
+
+### 既存判断照会と質問の受付前拒否
+
+同じ判断の再質問を避けるため、元2736と具体的なsource/既存gate対象、falseだけを元のまま
+保つ限定例外、他のmask/原保護/allowlist/manifest保持を固定したdecision JSONで
+lookup-decisionを実行。exit0/foundfalse。新しい質問/回答の存在を推測しなかった。
+この既存の変更禁止条件の限定解除だけを尋ねるaskを正規CLIで1回実行したが、exit78
+「聞かずに進めること: 作業に当然必要な操作の許可は質問しません」で送信前に拒否された。
+Discord質問/メンション/進捗投稿は0。再lookupもfoundfalse/thread無し。
+これは質問CLIの分類拒否で、自動承認レビューの拒否ではない。
+
+別のowner-only理由名、本文の言い換え、post/別API/最終返信のa/bで再送していない。
+質問CLIの拒否をguard変更の許可とは解釈せず、元の変更禁止を保持する。質問を届けられた
+状態や本人回答待ちのblockにはしない。Skill discord-owner-askの「当然必要な操作の許可は
+聞かない」と元specの変更禁止を双方保持し、具体的な不一致を元工程へ配送する。
+正本: D:/CC/Skills/discord-owner-ask/SKILL.md 。
+
+decisionと原質問本文・lookup/拒否のreceiptは同恒久rootのoutbound-filter-*へ保持した。
+元2640へ原応答の資格・未適用候補・未受付の判断経路を正規noteで返す。
+2814はdoneなのでその完了を再度待つ依存や、2640への逆依存は作らない。
+今回の実APIも製品のowner AutoDevJapan/private/nonfork/admin、同head/base repository、
+PR open/draft・head75a/base1100/元refを確認し、helperのowner/admin/repo1406818713も確認。
+製品source/正式runner/dispatch/Cargo、保護namespaceアクセス、新Temp/Chrome/GPU/Civ6は0。
+未完は正規の範囲整理/修復受入・必要配備・製品正式4jobと成功証拠配送。再開時は新しい
+正規指示/受入の有無を先に確認し、同送信/同質問/同検査を反復しない。
+
 ## 2026-10-17 22:58再開・未割当の技術調査を具体化（最新）
 
 job20261017-225849-todo-2736、同branch/HEADd668ebdから再開。最新保存指示、repo規則、

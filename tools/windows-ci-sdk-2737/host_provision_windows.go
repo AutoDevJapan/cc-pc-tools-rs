@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -151,7 +153,7 @@ func DownloadOfficialEvaluationISO(ctx context.Context, root OwnedRoot, worktree
 	if err := VerifyOwnedRoot(root, worktree); err != nil {
 		return "", 0, "", err
 	}
-	client := &http.Client{Timeout: 2 * time.Hour, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+	client := &http.Client{Timeout: 2 * time.Hour, Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 6 || req.URL.Scheme != "https" || !allowedHost(req.URL.Hostname()) {
 			return errors.New("official ISO redirect rejected")
 		}
@@ -163,7 +165,7 @@ func DownloadOfficialEvaluationISO(ctx context.Context, root OwnedRoot, worktree
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", 0, "", errors.New("official ISO download failed")
+		return "", 0, "", fmt.Errorf("official ISO download failed (%s)", classifyNetworkFailure(err))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || resp.Request == nil || resp.Request.URL.Scheme != "https" || !allowedHost(resp.Request.URL.Hostname()) {
@@ -188,6 +190,38 @@ func DownloadOfficialEvaluationISO(ctx context.Context, root OwnedRoot, worktree
 		return "", n, "", errors.New("official ISO finalize failed")
 	}
 	return destination, n, hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func classifyNetworkFailure(err error) string {
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		return "name-resolution"
+	}
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		var opErr *net.OpError
+		if errors.As(urlErr.Err, &opErr) && opErr.Timeout() {
+			return "timeout"
+		}
+		text := strings.ToLower(urlErr.Err.Error())
+		for _, item := range []struct{ fragment, category string }{
+			{"proxyconnect", "proxy-connect"},
+			{"connection refused", "connection-refused"},
+			{"i/o timeout", "timeout"},
+			{"deadline exceeded", "timeout"},
+			{"x509:", "tls-verification"},
+			{"certificate", "tls-verification"},
+			{"unexpected eof", "truncated-response"},
+		} {
+			if strings.Contains(text, item.fragment) {
+				return item.category
+			}
+		}
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	return "network-or-protocol"
 }
 
 func BuildGuestAgent(root OwnedRoot, worktree, modulePath, revision string) (string, string, error) {

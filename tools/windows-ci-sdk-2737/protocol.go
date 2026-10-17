@@ -289,7 +289,7 @@ func allowedPackage(id PackageID) bool {
 func allowedHost(host string) bool {
 	switch strings.ToLower(host) {
 	case "github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com", "release-assets.githubusercontent.com",
-		"gitforwindows.org", "aka.ms", "go.microsoft.com", "download.microsoft.com", "software-download.microsoft.com",
+		"gitforwindows.org", "aka.ms", "go.microsoft.com", "download.microsoft.com", "software-download.microsoft.com", "software-static.download.prss.microsoft.com",
 		"download.visualstudio.microsoft.com", "static.rust-lang.org", "rustup.rs", "learn.microsoft.com":
 		return true
 	default:

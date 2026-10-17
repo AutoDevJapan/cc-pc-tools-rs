@@ -175,6 +175,15 @@ func TestSetupAssetsPreserveOOBEAndUseLocalSystemStage(t *testing.T) {
 	}
 }
 
+func TestMicrosoftEvaluationImageRedirectHostIsPinned(t *testing.T) {
+	if !allowedHost("software-static.download.prss.microsoft.com") {
+		t.Fatal("official Microsoft Evaluation Center download host was not allowed")
+	}
+	if allowedHost("software-static.download.prss.microsoft.com.attacker.example") {
+		t.Fatal("host suffix lookalike was allowed")
+	}
+}
+
 func TestSingleJSON(t *testing.T) {
 	if !IsSingleJSON([]byte(`{"ok":true}`)) {
 		t.Fatal("single JSON rejected")

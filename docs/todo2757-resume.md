@@ -1,5 +1,24 @@
 # マージ後CIの修復状況
 
+2026-10-17 11:50 JST追記: 読取り専用資料検証のPR197は独立Sonnet2782の
+全9diff/head全文読了・Must0、同headのCI success8/neutral1/skipped1後に
+通常merge ddd566d8b4daa650cb1eaeb57da7cf405a38e29d。検証headとmergeの
+module tree b3453735485b63f9770da7b27a54906f7dcac7a0は一致。
+正式Windows/Linux配布を終え、設置済みrelease-inspectはexit0で固定merge/treeと
+8blobの照合を通過。安全な構造化出力34884bytesのSHA256は
+38EDB261E4E2D7898149B031CAFF022ACB611063146854C2BF3077D283A92EF2。
+原文・名称・秘密は出力していない。ExecutionAuthorized=falseで製品job起動0。
+tree内path所属や動的呼出し、Compose解決、実効token権限、全secret伝播の証明は
+この構文inventoryの範囲外。提案指摘と原応答は.ci-work/todo2782-*へ保持。
+
+次のsourceは固定Git treeを再構成して全fileとarchiveを照合し、検証済み同byteを
+RAM内で保持するbuild入力境界。guest変更可能checkoutを入力にしないための部品で、
+CLI/API/Docker/runnerへの接続はまだない。汎用head/任意job/任意操作の受付は作らない。
+配備CIの実行、実drain、既存Prd revision/probeとRust公式原logは引き続き未完。
+作業branch scheduler/todo-2757-release-contextへの切替はschedulerへ保存済み。
+配布build temp a7f142642cd0820cd5b1239009e53743はplan→別通常削除→finish
+source_absentで17234080bytesを回収した。原資料/旧成果は保持。
+
 最新到達点（2026-10-17 11:10 JST）: PR196の正式配布後、元merge41090の
 公式CodeQL run38941323954/attempt1はPython・JS/TS・Actions・Rustの全4jobで実success。
 全4sessionの実HEAD/tree、PID0、container回収、runner不在、lock解放を確認済み。

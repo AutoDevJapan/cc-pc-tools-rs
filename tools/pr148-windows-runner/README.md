@@ -257,12 +257,12 @@ result or official GitHub run is inferred from these fixtures.
 
 ## Actual checkout connection
 
-Use a new safe-delete root beneath the helper worktree for a real Node-based
-checkout (`safe-delete create --root <helper-worktree> ...`). Its existing
+Use a new safe-delete root beneath a SHORT registered helper worktree for Node and MSVC
+checkout (`safe-delete create --root <short-helper-worktree> ...`). Its existing
 ancestors must allow metadata reads by the service. Node20 resolves each main
 script ancestor: the owner's private Temp path failed on the owner's profile
 metadata in the credential-free probe. That profile ACL was not changed. New
-workspace roots use existing readable ancestor ACLs; only their own source is
+workspace roots use existing readable ancestor ACLs. The long child worktree also exceeded the MSVC standard-library filename limit; the short original registered worktree passed the same checkout and Rust commands without shared changes. Only the new source is
 assigned to the newly created service SID.
 
 Preparation supplies a new HOME/.gitconfig with the exact source safe.directory.
@@ -270,7 +270,7 @@ GIT_CONFIG_GLOBAL points there. No owner configuration or credential is copied.
 The source guard also rejects credential/execution keys in this new global file.
 Checkout's sparse-checkout disable leaves an inactive config.worktree after
 unsetting extensions.worktreeConfig. Only literal disabled sparse-checkout core
-values are accepted in that inert file; the activation key and all other content
+values and disabled index.sparse are accepted in that inert file; the activation key and all other content
 are rejected. SDK initialization rehashes all five guards after installing the
 new toolchains and refuses missing/corrupt environment state. Direct cargo-fmt,
 cargo-clippy and clippy-driver proxies remain outside the entry-guard contract;

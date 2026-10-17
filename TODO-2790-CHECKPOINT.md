@@ -201,6 +201,36 @@ BBC1743D81121E562311EF690C07CACA6E88EAA6DB215444E62E9BF20305A2B2。
 原検査/binaryは恒久rootのsid-final-checksへ全10file/29,521,548byteをSHA一致で保存した。
 新build Temp eedd86ccf57d112b95af6ff0c2085aa9はplan→別通常削除→finishでsource_absent。
 以前の残留13件は配送済みのまま触れていない。新たなSID/profile/サービス残留は0。
+
+## 2026-10-17 20時の最終受入（本独立実装工程の結論）
+
+実job `20261017-195752-todo-2790`。最終2797/new194854のSonnet5.5は成功exit0/Must0。
+保存spec全文とactual投入の一致、event内応答とlast_messageの一致、記録された両PID不在を
+自分で照合した。固定base9b4a529→head25579e6の全追加差分/5本文/原応答/資格JSONを読了、
+実検査0。未読のprepare/collect/共通生成/親製品workflow/原fixture logsまで読了と扱わない。
+原応答SHA256はCBCD1D95FFABD705F77FED7F61F18E064053403107532697C762220CFA841231。
+原応答とreceiptを恒久rootのreview-2797-original-194854.private.md/review-194854-receipt.jsonへ保存。
+
+元184908と最終194854のMustは共に0。今回のGo内容は25579e6のまま。
+最終reviewの文書指摘に従い、prepare途中失敗にはprotected launcher reportがなく通常collectの
+受入を前提にできないことをcollectの実装で確認して訂正した。prepareは失敗のまま、原証拠と
+新資源の状態を担当整理工程へ配送する。safe.directory警告は原logのexit255を確認済み。
+fixture binaryのVCS資格/最新SID差分の実service未再実証もREADMEへ明記した。
+共通生成のaction版は設計条件として書き、実製品の版照合は親が行う。文書だけの追補なので
+buildやfixtureを繰り返していない。直接serviceSID検査のためのaccount lookup分割は、
+標準APIへの置換だけの本差分には不要と判断し採用しない。race/vet/buildと独立静的M0を保持。
+エラーの文脈文字列省略/未使用globalは成功判定や失敗伝播を変えないため追加改変しない。
+
+本2790の独立した実装・合成検査・別モデル確認・commit/push・原応答/資格配送は完了。
+親2736へ最終Go source25579e6と文書を含む最新module/HEADを渡す。親worktreeやPRは編集しない。
+原2736/2640/880は未完のままで、正式製品source/runner/dispatch/CI、実native/pwsh、製品規模、
+製品checkout版とrunner同梱Nodeの資格は親の統合後工程。子のfixture成功へ転記しない。
+
+新資源のservice/PID/追加ACE回収結果と残留13件の原SID/profile/hive/容量/拒否は既に2381へ
+配送し、recovery_unverifiedと原仕様を保持した。これを回収済みとはしない。権限/削除経路を
+広げず再操作しない。未完の整理項目2381に残留を保持し、その完了待ちを本実装の前提へ
+戻さない。最後のbuild Tempは全原SHA保存後source_absent確認済み。恒久証拠rootは保持する。
+本実装の受入を返して親を続行可能にし、親や整理担当の完了を待つ逆依存は作らない。
 ## 2026-10-17 17時台の追補（以前の状態より優先）
 
 実job `20261017-171647-todo-2790`。最新機能sourceはcd7dbd3、文書を含む

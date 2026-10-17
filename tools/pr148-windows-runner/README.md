@@ -295,15 +295,23 @@ No official Actions runner, workflow dispatch or product checkout is inferred.
 The fixture's resolved checkout commit and Node ZIP digest are SDK evidence;
 the Node distribution is not the official runner's bundled Node. Public SHA
 verification detects corrupt bytes but is not an independent signature check.
-The shared workflow transformer preserves the product's checkout action version;
+The shared workflow transformer is designed to preserve the checkout action version;
 the parent must match its resolved version before claiming product acceptance.
 
 The source owner operation has a 30-second limit and prepare is single-use. This
-limit is not measured on the product tree. A timeout is a partial preparation
-failure requiring collection of that new resource, never an invitation to retry
-prepare on it. Synthetic success does not qualify product-scale preparation.
+limit is not measured on the product tree. A timeout makes prepare fail and leaves
+partial preparation, never a successful runtime or an invitation to retry prepare.
+Preserve the failure and report that new resource's service/ACL/files to its cleanup
+task. The normal collect command requires a protected launcher drain report and
+cannot be assumed to accept a resource whose preparation failed before launch.
+Synthetic success does not qualify product-scale preparation.
 SDK guard hashes detect accidental corruption; the same service account can
 write the tool directory, so these checks do not defeat malicious job code.
+
+The archived acceptance helper has VCS 23274f6+modified and Go content correlated
+to cd7dbd3; it is not a clean binary built at 9b4a529. Its SHA matches both prepared
+receipts. The later SID conversion has race/vet/build evidence, but no new service,
+Rust or cancellation fixture run. See TODO-2790-CHECKPOINT.md for exact hashes.
 
 Suggestions S2/S5 from the d5e04c5 review remain evidence limits: the real product
 materializer's eight-minute sequential API budget is not measured by synthetic

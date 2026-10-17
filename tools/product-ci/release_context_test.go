@@ -184,3 +184,44 @@ func TestReleaseContextRejectsGzipDamageAndMultipleStreams(t *testing.T) {
 		t.Fatal("changed source snapshot used for a new archive")
 	}
 }
+
+func TestReleaseTreeUsesGitDirectoryOrdering(t *testing.T) {
+	object := func(mode, name, sha string) []byte {
+		id, _ := hex.DecodeString(sha)
+		return append([]byte(fmt.Sprintf("%s %s%c", mode, name, 0)), id...)
+	}
+	blob := gitBlobHash([]byte("fixture"))
+	child := gitObjectID("tree", object("100644", "c", blob))
+	// Git compares directory a as a/. Thus a-x and a.b precede a/.
+	raw := append(object("100644", "a-x", blob), object("100644", "a.b", blob)...)
+	raw = append(raw, object("40000", "a", child)...)
+	tree := releaseTreeReply{SHA: gitObjectID("tree", raw), Entries: []releaseTreeEntry{
+		{"a", "040000", "tree", child}, {"a/c", "100644", "blob", blob},
+		{"a.b", "100644", "blob", blob}, {"a-x", "100644", "blob", blob},
+	}}
+	if _, err := verifyReleaseTree(tree, tree.SHA); err != nil {
+		t.Fatal("Git directory ordering lost")
+	}
+	if releaseSourcePath("dir/.GIT/config") {
+		t.Fatal("case-folded Git administration path accepted")
+	}
+}
+
+func TestReleaseContextRejectsLinksAndDirectoryFileMismatch(t *testing.T) {
+	tree, _ := contextFixture(t)
+	for _, flag := range []byte{tar.TypeSymlink, tar.TypeLink, tar.TypeDir} {
+		h := tar.Header{Name: "root/opaque-sensitive-file", Typeflag: flag, Mode: 0644}
+		if flag != tar.TypeDir {
+			h.Linkname = "opaque-sensitive-target"
+		}
+		raw := contextFixtureArchive(t, []tar.Header{h}, [][]byte{nil})
+		_, err := sealGitContext(tree, raw, tree.SHA)
+		want := "release context path or mode rejected"
+		if flag == tar.TypeDir {
+			want = "release context directory mismatch"
+		}
+		if err == nil || err.Error() != want {
+			t.Fatalf("wrong special-entry rejection: %v", err)
+		}
+	}
+}

@@ -8,8 +8,11 @@ import (
 	"syscall"
 )
 
-func hide(c *exec.Cmd)              {}
-func replace(from, to string) error { return os.Rename(from, to) }
+func hide(c *exec.Cmd) {}
+
+// Windows FILETIME receipts cannot prove a Unix process identity.
+func processReceiptAlive(uint32, uint64) bool { return false }
+func replace(from, to string) error           { return os.Rename(from, to) }
 func acquire(path string) (func(), error) {
 	f, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 	if e != nil {

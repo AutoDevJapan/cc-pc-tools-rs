@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -22,12 +23,19 @@ type EditVersion struct {
 }
 
 type ProgressOrigin struct {
-	RequestID string `json:"request_id"`
-	Guild     string `json:"guild_id"`
-	Thread    string `json:"thread_id"`
-	Message   string `json:"message_id"`
-	Todo      uint64 `json:"todo_id"`
-	Job       string `json:"job_id"`
+	RequestID      string `json:"request_id"`
+	Guild          string `json:"guild_id"`
+	Thread         string `json:"thread_id"`
+	Message        string `json:"message_id"`
+	Todo           uint64 `json:"todo_id"`
+	Job            string `json:"job_id"`
+	Scope          string `json:"scope,omitempty"`
+	Project        string `json:"project,omitempty"`
+	SourceThread   string `json:"source_thread_id,omitempty"`
+	SourceMessage  string `json:"source_message_id,omitempty"`
+	SourceHash     string `json:"source_sha256,omitempty"`
+	SourceKind     string `json:"source_kind,omitempty"`
+	SourceIdentity string `json:"source_identity,omitempty"`
 }
 
 type ProgressLink struct {
@@ -49,16 +57,18 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 	if r.State.ProgressLinks == nil {
 		r.State.ProgressLinks = make(map[string]ProgressLink)
 	}
-	for thread, link := range r.State.ProgressLinks {
-		r.ProgressLinks[thread] = link
-	}
 	r.BlockedProgressThreads = make(map[string]bool)
 	r.ProgressLinkRegistryInvalid = false
 	path := filepath.Join(r.Config.Home, "progress-links.json")
 	var file progressLinkFile
 	if err := readJSON(path, maxState, &file); err != nil {
-		r.invalidateProgressLinkRegistry(known)
-		return
+		if !os.IsNotExist(err) {
+			r.invalidateProgressLinkRegistry(known)
+			return
+		}
+		// No registry has been deployed yet. Exact, independent sender receipts
+		// and persisted associations can still be verified; absence is not corruption.
+		file.Domain = progressLinksDomain
 	}
 	if file.Domain != progressLinksDomain {
 		r.invalidateProgressLinkRegistry(known)
@@ -68,13 +78,33 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		r.invalidateProgressLinkRegistry(known)
 		return
 	}
+	configured := file.Links
+	file.Links = nil
+	combined := make(map[string]ProgressLink)
+	for thread, link := range r.State.ProgressLinks {
+		combined[thread] = link
+	}
+	for _, link := range r.derivedRequestLinks(ctx) {
+		if _, exists := combined[link.Thread]; !exists {
+			combined[link.Thread] = link
+		}
+	}
+	for _, link := range configured {
+		file.Links = append(file.Links, link)
+		delete(combined, link.Thread)
+	}
+	for _, link := range combined {
+		file.Links = append(file.Links, link)
+	}
 	used := make(map[string]bool)
 	changed := false
 	for _, link := range file.Links {
 		_, threadOK := number(link.Thread)
 		_, messageOK := number(link.Message)
-		if !threadOK || !messageOK || link.Guild != r.State.Destination.Guild || link.Author != r.State.Destination.Bot || link.Todo == 0 || link.Job == "" || link.RequestID == "" || link.Created == "" || used[link.Thread] {
-			r.invalidateProgressLinkRegistry(known)
+		if !threadOK || !messageOK || link.Guild != r.State.Destination.Guild || link.Author != r.State.Destination.Bot || link.Todo == 0 || (link.Job == "" && link.Scope != productReportScope) || link.RequestID == "" || link.Created == "" || used[link.Thread] {
+			if link.Scope != productReportScope {
+				r.invalidateProgressLinkRegistry(known)
+			}
 			if threadOK {
 				r.BlockProgressThread(link.Thread)
 			}
@@ -91,7 +121,9 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		}
 		verified, ok := r.verifyProgressLink(ctx, link)
 		if !ok {
-			r.invalidateProgressLinkRegistry(known)
+			if link.Scope != productReportScope {
+				r.invalidateProgressLinkRegistry(known)
+			}
 			r.BlockProgressThread(link.Thread)
 			continue
 		}
@@ -124,7 +156,14 @@ func (r *Runner) BlockProgressThread(thread string) {
 
 func (r *Runner) verifyProgressLink(ctx context.Context, link ProgressLink) (ProgressLink, bool) {
 	row, err := r.todo(link.Todo)
-	if err != nil || row.Project != r.Config.Project {
+	if err != nil {
+		return link, false
+	}
+	if link.Scope == productReportScope {
+		if !r.verifyProductScope(ctx, link.ProgressOrigin, row) {
+			return link, false
+		}
+	} else if link.Scope != "" || row.Project != r.Config.Project {
 		return link, false
 	}
 	jobFound := row.Scheduler.Job == link.Job
@@ -134,7 +173,7 @@ func (r *Runner) verifyProgressLink(ctx context.Context, link ProgressLink) (Pro
 			jobFound = true
 		}
 	}
-	if !jobFound || !validJob(link.Job) {
+	if link.Scope != productReportScope && (!jobFound || !validJob(link.Job)) {
 		return link, false
 	}
 	var ledger struct {
@@ -166,7 +205,7 @@ func (r *Runner) verifyProgressLink(ctx context.Context, link ProgressLink) (Pro
 		return link, false
 	}
 	var thread Thread
-	if r.get(ctx, "/channels/"+link.Thread, &thread) != nil || thread.ID != link.Thread || thread.Guild != link.Guild || thread.Parent != r.State.Destination.Forum || thread.Owner != link.Author || thread.Type != 11 {
+	if r.get(ctx, "/channels/"+link.Thread, &thread) != nil || thread.ID != link.Thread || thread.Guild != link.Guild || (thread.Parent != r.State.Destination.Forum && thread.Parent != requestForum) || thread.Owner != link.Author || thread.Type != 11 {
 		return link, false
 	}
 	var message Message
@@ -199,6 +238,9 @@ func (r *Runner) linkOrigin(request *Request) (*ProgressOrigin, bool) {
 	}
 	link, ok := r.ProgressLinks[request.Thread]
 	if !ok {
+		if request.Origin != nil && request.Origin.Scope == productReportScope {
+			return nil, false
+		}
 		return request.Origin, true
 	}
 	origin := link.ProgressOrigin
@@ -208,6 +250,25 @@ func (r *Runner) linkOrigin(request *Request) (*ProgressOrigin, bool) {
 }
 
 func (r *Runner) registerOrigin(ctx context.Context, request *Request, origin ProgressOrigin) error {
+	if origin.Scope == productReportScope {
+		row, err := r.todo(origin.Todo)
+		if err != nil || !r.verifyProductScope(ctx, origin, row) {
+			return errors.New("finite product reply scope deferred")
+		}
+		if err := r.validateRequest(ctx, request); err != nil {
+			return err
+		}
+		copy := *request
+		copy.Todo = origin.Todo
+		// Delivery only: never release an owner stop, launch the game, create a
+		// new product generation or mark an instruction applied from this scope.
+		copy.Phase = "product_reply_saved"
+		if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", origin.Todo, request.Message)), &copy); err != nil {
+			return err
+		}
+		*request = copy
+		return r.save()
+	}
 	generation, err := r.activeOriginGeneration(origin)
 	if err != nil {
 		return err

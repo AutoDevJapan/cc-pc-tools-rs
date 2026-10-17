@@ -13,6 +13,8 @@
 //!   todo.exe done <id> [--note "PR #81"]
 //!   todo.exe watch
 
+pub use cc_job_policy::todo_history;
+
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::{
@@ -135,6 +137,26 @@ pub enum Command {
         note_file: Option<PathBuf>,
         #[arg(long, required_unless_present = "note_file")]
         spec: Option<PathBuf>,
+    },
+    /// Preserve selected old notes in immutable segments; preview unless --apply.
+    ArchiveHistory {
+        id: i64,
+        #[arg(long)]
+        apply: bool,
+    },
+    /// Restore preserved notes to the selected row; preview unless --apply.
+    RestoreHistory {
+        id: i64,
+        #[arg(long)]
+        apply: bool,
+    },
+    /// Read original note history, including preserved segments, on demand.
+    History {
+        id: i64,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        #[arg(long, default_value_t=20, value_parser=clap::value_parser!(u32).range(1..=100))]
+        limit: u32,
     },
     #[command(args_override_self = true, infer_long_args = true)]
     Block {
@@ -1087,6 +1109,17 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             note_file,
             spec,
         } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
+        Command::ArchiveHistory { id, apply } => output
+            .push(cc_job_policy::todo_history::archive(&paths.store, db, *id, *apply)?.to_string()),
+        Command::RestoreHistory { id, apply } => output
+            .push(cc_job_policy::todo_history::restore(&paths.store, db, *id, *apply)?.to_string()),
+        Command::History { id, offset, limit } => {
+            let item = find(db, *id)?;
+            output.push(
+                cc_job_policy::todo_history::page(&paths.store, item, *offset, *limit as usize)?
+                    .to_string(),
+            );
+        }
         Command::Block {
             id,
             reason,
@@ -1196,8 +1229,16 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
-    if let Command::ProductRetryReserve { key, expected_worker, .. } = &cli.command {
-        println!("{}", product_retry::run(paths, key, Some(expected_worker), None)?);
+    if let Command::ProductRetryReserve {
+        key,
+        expected_worker,
+        ..
+    } = &cli.command
+    {
+        println!(
+            "{}",
+            product_retry::run(paths, key, Some(expected_worker), None)?
+        );
         return Ok(());
     }
     if let Command::ProductRetryBind { key, job, .. } = &cli.command {
@@ -1244,11 +1285,23 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     let before_rename =
         matches!(cli.command, Command::RenameProject { dry_run: false, .. }).then(|| db.clone());
     let output = execute(&mut db, &cli.command, paths)?;
+    let unchanged_history = matches!(
+        cli.command,
+        Command::ArchiveHistory { apply: true, .. } | Command::RestoreHistory { apply: true, .. }
+    ) && output
+        .first()
+        .and_then(|line| serde_json::from_str::<Value>(line).ok())
+        .is_some_and(|r| r["saved"] == false);
     // Listing is read-only; keep the shared byte lock but do not rewrite or back up state.
     if matches!(
         cli.command,
-        Command::List { .. } | Command::RenameProject { dry_run: true, .. }
-    ) {
+        Command::List { .. }
+            | Command::RenameProject { dry_run: true, .. }
+            | Command::History { .. }
+            | Command::ArchiveHistory { apply: false, .. }
+            | Command::RestoreHistory { apply: false, .. }
+    ) || unchanged_history
+    {
         for line in output {
             println!("{line}");
         }

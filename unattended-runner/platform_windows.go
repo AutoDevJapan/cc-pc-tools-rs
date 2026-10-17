@@ -10,6 +10,28 @@ import (
 func hide(c *exec.Cmd) {
 	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 }
+
+// Read-only liveness with the saved creation FILETIME. A reused PID and an
+// inaccessible process are both insufficient evidence of active product work.
+func processReceiptAlive(pid uint32, created uint64) bool {
+	if pid == 0 || created == 0 {
+		return false
+	}
+	kernel := syscall.NewLazyDLL("kernel32.dll")
+	h, _, _ := kernel.NewProc("OpenProcess").Call(0x1000, 0, uintptr(pid))
+	if h == 0 {
+		return false
+	}
+	defer kernel.NewProc("CloseHandle").Call(h)
+	var start, exit, kernelTime, user syscall.Filetime
+	ok, _, _ := kernel.NewProc("GetProcessTimes").Call(h, uintptr(unsafe.Pointer(&start)), uintptr(unsafe.Pointer(&exit)), uintptr(unsafe.Pointer(&kernelTime)), uintptr(unsafe.Pointer(&user)))
+	if ok == 0 || uint64(start.HighDateTime)<<32|uint64(start.LowDateTime) != created {
+		return false
+	}
+	var code uint32
+	ok, _, _ = kernel.NewProc("GetExitCodeProcess").Call(h, uintptr(unsafe.Pointer(&code)))
+	return ok != 0 && code == 259
+}
 func replace(from, to string) error {
 	a, e := syscall.UTF16PtrFromString(from)
 	if e != nil {

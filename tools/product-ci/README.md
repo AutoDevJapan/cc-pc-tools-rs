@@ -277,3 +277,18 @@ builder receives a copied, verified archive through stdin, rather than reading
 guest checkout paths or trusting guest hashes. Names and bytes have no exported
 JSON fields. This change supplies the input boundary only: it adds no CLI,
 network call, Docker execution, runner registration, or release eligibility.
+
+`release-source-inspect` connects that boundary to the same official GitHub
+gate, for the single original merge only. It verifies the merged receipt,
+reconstructs the fixed recursive tree before fetching the fixed tarball, seals
+all source bytes and the eight audited blobs, then checks the merged receipt
+again. Only after every check succeeds does it publish counts, digests and the
+existing limited workflow inventory parsed from those same sealed bytes. No
+source files are written to the host. Errors and fmt diagnostics redact names
+and content. A partial read, changed main or failed archive check produces no
+success receipt. Transport retries retain the existing finite read-only policy.
+
+This command exercises the eventual builder's input reader without starting a
+builder, product command, runner, or deployment. It never authorizes execution.
+The existing inventory's limits on Compose resolution, token permissions,
+transitive secrets and workflow trust semantics still apply.

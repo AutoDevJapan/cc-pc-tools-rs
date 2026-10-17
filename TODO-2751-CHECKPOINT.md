@@ -70,3 +70,7 @@ source取得/全blob/index tree/実HEADの検証には既存のmaterializerを�
 一時rootは全67証拠ファイルの永続コピーをSHA照合後、safe-delete planが返した通常削除を別呼出しで実行した。planは87 entries / 24600039 bytes。削除exit0、finishは`source_absent`。削除後も永続67ファイルのSHA一致とmanifestのSHA不変を確認した。新しい課金・製品操作・正式registrationは行っていない。
 
 次の再開は元2778の実応答を受領し、固定base/head/全15対象の読了、実モデル、原応答SHAを照合する。Mustを解消するまで親の正式実行へ進めない。同じコードのGo/fixture検査や同じレビュー登録を繰り返さない。製品の未達と元2640/880の依存は維持する。
+
+正規scheduler checkpointはd234b2dの実HEADでsaved=true、launched=0、source_files_changed=falseを確認した。要求と結果は`.ci-work/checkpoint-2751-*`へ保存した。この記録追記後の実HEADも最後に保存する。
+
+通知しない後片付け記録を`discord_ask.exe log --topic 後片付けの記録`で1回試したが、`QuestionStateRecoveryRequired`によりexit1となった。日本語点検でも1行内の識別子数の注意があった。投稿成功とは数えず、原出力は元jobのeventsに保持する。これはDiscord道具の原台帳復旧待ちであり、自動承認レビューの拒否や本人の判断待ちではない。別経路で投稿せず、同じ送信を繰り返さない。実装と独立レビューはこの待ちへ付け替えない。

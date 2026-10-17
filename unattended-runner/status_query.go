@@ -79,19 +79,31 @@ func (r *Runner) answerStatusQuery(ctx context.Context, req *Request) error {
 		req.Phase = "captured"
 		return r.save()
 	}
-	if validateProductReports(r.Config.ProductReports) == nil {
-		for _, c := range r.Config.ProductReports {
-			if c.Source.Kind == stateRequestSource && c.Source.Message == req.Message && c.Source.Purpose == "status_question" {
-				row, err := r.todo(c.Todo)
-				if err != nil || row.Project != c.Project || !r.verifyExistingStatusAnswer(ctx, c, req) {
-					return errors.New("existing status answer verification deferred")
-				}
-				req.Todo = c.Todo
-				req.Reported = "status"
-				req.Phase = "status_answered"
-				return r.save()
+	// An invalid unrelated configuration must never erase knowledge that this
+	// source already has an answer. Invalid matching proof defers, never resends.
+	var prior *ProductReportConfig
+	for i := range r.Config.ProductReports {
+		c := &r.Config.ProductReports[i]
+		if c.Source.Message == req.Message && (c.Source.Purpose == "status_question" || c.Source.AnswerMessage != "" || c.Source.AnswerReceipt != "" || c.Source.AnswerReceiptSHA != "") {
+			if prior != nil {
+				return errors.New("ambiguous existing status answer")
 			}
+			prior = c
 		}
+	}
+	if prior != nil {
+		c := *prior
+		if validateProductReports([]ProductReportConfig{c}) != nil {
+			return errors.New("existing status answer configuration deferred")
+		}
+		row, err := r.todo(c.Todo)
+		if err != nil || row.Project != c.Project || !r.verifyExistingStatusAnswer(ctx, c, req) {
+			return errors.New("existing status answer verification deferred")
+		}
+		req.Todo = c.Todo
+		req.Reported = "status"
+		req.Phase = "status_answered"
+		return r.save()
 	}
 	id := "status-query-" + req.Key
 	path := filepath.Join(r.Config.Home, "notices", id+".json")

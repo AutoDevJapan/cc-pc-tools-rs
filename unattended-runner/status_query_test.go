@@ -87,6 +87,33 @@ func TestAlreadyAnsweredStatusQueryDoesNotDuplicateSourceReplyEvenAfterRecapture
 	}
 }
 
+func TestExistingAnswerIsNotForgottenWhenAnotherReportConfigurationIsInvalid(t *testing.T) {
+	f, req := existingStatusAnswerFixture(t)
+	req.Phase, req.Todo = "status_query", 0
+	f.r.Config.ProductReports = append(f.r.Config.ProductReports, ProductReportConfig{Todo: 0})
+	if err := f.r.answerStatusQuery(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if f.sends != 0 || req.Phase != "status_answered" || req.Todo != 2705 {
+		t.Fatal("unrelated invalid configuration caused duplicate or lost answer")
+	}
+}
+
+func TestInvalidOrAmbiguousExistingAnswerPlanNeverFallsThroughToResend(t *testing.T) {
+	for _, ambiguous := range []bool{false, true} {
+		f, req := existingStatusAnswerFixture(t)
+		req.Phase, req.Todo = "status_query", 0
+		if ambiguous {
+			f.r.Config.ProductReports = append(f.r.Config.ProductReports, f.r.Config.ProductReports[0])
+		} else {
+			f.r.Config.ProductReports[0].Source.Kind = "invalid-source-kind"
+		}
+		if err := f.r.answerStatusQuery(context.Background(), req); err == nil || f.sends != 0 {
+			t.Fatal("invalid existing answer was treated as permission to resend")
+		}
+	}
+}
+
 func TestPureNewStatusQuestionBypassesProductGuardAndUsesSilentIdempotentSender(t *testing.T) {
 	f := progressTestFixture(t)
 	f.mu.Lock()

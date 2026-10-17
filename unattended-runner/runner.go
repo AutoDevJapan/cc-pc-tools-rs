@@ -790,6 +790,9 @@ func main() {
 	unlock, err := acquire(filepath.Join(cfg.Home, "runner.lock"))
 	if err != nil {
 		fmt.Println("busy")
+		if operation != "" {
+			os.Exit(2)
+		}
 		return
 	}
 	defer unlock()

@@ -1,5 +1,36 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 14時台のレビュー対応（以下を優先）
+
+job20261017-141429-todo-2736、4d25771から再開。最新D:/CC/AGENTS.md、repo規則、元2788の実応答を確認した。実APIで製品PR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、75a/head・1100/base・元branch refを再照合。remote helper PR189は6b5c387のまま。source/workflow変更、製品source展開、正式runner登録/dispatch/製品Cargo、GPU/Civ6/再起動/旧資源変更は今回も0。
+
+### 元2788の原応答と修正
+
+2788は実job20261017-135724-todo-2788、anthropic/claude-sonnet-5-5、succeeded/exit0、14:01:01終了。対象base3f15e84→head63ddef6の供給全diff/全文を静的読了、実検査0。供給外の既存product-ciファイルや実gate本体は未読。Must2件を受領した。原応答を自分の恒久rootへbytes/SHA一致で保存した（review2788-original.private.md、SHA256 C494A0A10CB48D0322C1499A64138109C2AE737AED0A57EBB173185F5D1A4AAC）。元2788のdoneはレビュー終了だけでありMust0や製品CIを意味しない。
+
+コード4f47c1258d24a275125cb53490d28cfde14517e8へ次を保存した。GitHubのworkflow scope不足が未解消なので、同じpushを再送せず、このcode headはまだremote未反映。
+
+- M1: 原rust.ymlのtimeout-minutes未指定を拒否していた。GitHubの原360分を保持し、明示された値を維持するよう修正。未指定/20分/0/361/sequenceを回帰検査した。原workflowのcommand/YAML bytesは変更しない。
+- M2: Windows collectionが実行前auditを呼び、completed runで止まっていた。保護されたlocal launcher/SCMの停止・PID0・drain証明は維持し、その後repo/immutable run-attempt-source/workflow/head-repoとrunner0だけを照合する専用処理へ分離した。CI成否や現在PR/refを削除条件にせず、結果をCI成功へ転記しない。残登録・API読取失敗・異なるsourceは拒否する。合成APIでterminal success/failure/cancel/timeoutを含む12組と9拒否条件を確認した。実service削除や旧cleanupは行っていない。
+- Suggestion: ref PATCHが応答失敗なら1回だけrefを読み、intended headで全source検証も成功した場合だけ更新を確認する。観測はprivate receiptへ保存し、PATCH再送や逆更新は行わない。lost-responseの合成fixtureを追加した。
+- Suggestion: SCM startが1053等を返しても実起動している場合に備え、開始呼出し前からdeferred one-shot stop対象とした。stopFiniteの実state照会/停止を終えてからgate callbackを抜ける。強制controller kill時の保証へ拡大せず、新serviceを作る故障注入は未実証として維持する。
+- READMEの原75a checkout/test-mergeという古い記述を実際に除去した。前回の文字列置換はCRLFのため該当していなかった。原pinを単独親とするnew head/dispatch、Linux/Windows listenerの直列条件、collectionとCI成否の分離を明記した。
+
+### 最新コードの実検査
+
+product-ciのGo race198 pass/4 opt-in skip、Windows module50 pass/2 opt-in skip。両moduleのvetとWindows/Linux buildは全exit0。成功済み製品workspace/旧fixtureは再実行していない。実service/profile/namespace/SDK/runnerは作成していない。
+新しいread-only pr148-policyモードで、GitHub APIから元SHAのRust workflowをRAMで読み取り、SHA256 841ca7d8515d4ce9802effecf38dbf30052560bac3ecd8c3b679d25a598933e9の実行policy解析を確認した。timeout360分、Cargo4種類、PolicyOnly=true/ProductTestsExecuted=false/AllRequiredChecksSuccess=false。APIから原source archiveを取得した結果や、正式CI/製品Cargo成功ではない。元の三workflow/四未開始jobと固定sourceも前後照合する。秘密や原YAML本文は保存/表示しない。
+
+### 新しい独立工程と再開
+
+- 2790: Windowsの未達runtimeだけを実装する。固定出発点4f47c12のhelper source、共通package、Go moduleだけを子のworktreeへ供給する。製品source取得/正式登録/dispatchは子では実行せず、合成source materializer、SDK/tool環境とfiltered account/shared gate適合、元command bytesを保つpost-checkout tool-entry guardを実装・有限fixture・別モデル確認する。元2736のWindows moduleを親はこれ以上並行編集しない。元2640/880/旧cleanupを解除せず、親完了を待つ逆依存は作らない。--needs cargoと正規subwork/check付きで受付済み。
+- 2791: 元2788のM1/M2と追加修正だけを固定本文で再レビューする。base63ddef6→4f47c12、全追加diffと25全文・原2788応答・実測事実を供給した。原本文260010bytes、SHA256 A9E5977111DE91AF760E549CA27FB3226CDAF89086713C948F8E18403F2737C5。保存specはSHA256 78A4DF5315D3DC106007E3F82A6D6665A1ACB83460608448D3007A92A81D064F、改行正規化後の全文一致を確認した。実OAuth Sonnetの原応答/Must解消はまだ未受領。
+
+両者ともtodo/jobs=[]を読み返し、受付だけを実開始/実成功と呼ばない。子を直接起動していない。2790 specはdocs/todo-2736-windows-runtime-spec.mdを正式保存し、正規化後一致。保存SHA256 F80E32D57321BA34B23D5391F0C71CF63F1048A0C581681A995503173C5467E3。両ToDoの親2736/kind/needsも確認した。
+終了時は正規wait2736--on2790--on2791を保存し、実HEADをscheduler checkpointへ保存する。次は原応答/実source/Goとfinite fixtureの証拠を受領し、Mustを直す。必要なGitHub workflow権限を正規に扱う前に同じpushやAPIへの迂回をしない。原製品の正式4jobを実run/job/check/原logsで成功確認するまで、元2640へ正式検査完了を返さない。製品PR148のmergeは元2640が行う。
+
+今回のbuild Tempはsafe-delete8164a77c57b8807a7c769a08beec4c14。原binary/Go jsonl/vet/policyの9fileをbytes/SHA一致で自分の恒久root184a58eedf4f923741f160dfe7cfd5b7へ保存した。reviewfix-4f47c12-manifest.private.jsonのSHA256は2CACB787C437E31869F1A392112B6D589AEE29C44F5F2D693255364C37FB433F。plan→別通常削除は成功し、finishと保管SHA再照合を行う。原review/fixtureの証拠と、以前の継続SDKは保持する。
+
 ## 2026-10-17 13時台の実行契約調整（以下を優先）
 
 job20261017-133225-todo-2736、6b5c387から再開。最新D:/CC/AGENTS.md、repo規則、元2640記録・製品規則を読んだ。実GitHub APIでPR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、元head75a/treececb/base1100/原branch、open/draft/mergeableを確認した。製品source/workflow/runner/dispatch/製品Cargo、GPU/Civ6/再起動、旧資源/保護/共有ACL変更は今回も0。

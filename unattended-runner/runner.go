@@ -27,10 +27,11 @@ const maxState = 8 << 20
 const maxTodo = 64 << 20
 
 type Config struct {
-	Since        string `json:"since"`
-	Home         string `json:"home"`
-	NotifyConfig string `json:"notify_config"`
-	Project      string `json:"project"`
+	Since          string                `json:"since"`
+	Home           string                `json:"home"`
+	NotifyConfig   string                `json:"notify_config"`
+	Project        string                `json:"project"`
+	ProductReports []ProductReportConfig `json:"product_reports,omitempty"`
 }
 type Destination struct {
 	Guild string `json:"guild_id"`
@@ -39,12 +40,15 @@ type Destination struct {
 	Bot   string `json:"application_id"`
 }
 type Thread struct {
-	ID     string `json:"id"`
-	Parent string `json:"parent_id"`
-	Guild  string `json:"guild_id"`
-	Owner  string `json:"owner_id"`
-	Type   int    `json:"type"`
-	Last   string `json:"last_message_id"`
+	ID       string `json:"id"`
+	Parent   string `json:"parent_id"`
+	Guild    string `json:"guild_id"`
+	Owner    string `json:"owner_id"`
+	Type     int    `json:"type"`
+	Last     string `json:"last_message_id"`
+	Metadata struct {
+		ArchiveTimestamp string `json:"archive_timestamp"`
+	} `json:"thread_metadata"`
 }
 type Message struct {
 	ID        string `json:"id"`
@@ -57,8 +61,9 @@ type Message struct {
 		Channel string `json:"channel_id"`
 		Guild   string `json:"guild_id"`
 	} `json:"message_reference"`
-	Flags    uint64 `json:"flags"`
-	Mentions []struct {
+	Flags           uint64 `json:"flags"`
+	MentionEveryone bool   `json:"mention_everyone"`
+	Mentions        []struct {
 		ID string `json:"id"`
 	} `json:"mentions"`
 	Author struct {
@@ -96,29 +101,39 @@ type Request struct {
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
 }
 type State struct {
-	Domain        string                  `json:"domain"`
-	Since         string                  `json:"since"`
-	Destination   Destination             `json:"destination"`
-	Cursor        string                  `json:"scan_cursor"`
-	IntakeCursor  string                  `json:"intake_cursor,omitempty"`
-	RetryCursor   uint64                  `json:"retry_cursor,omitempty"`
-	Threads       map[string]Thread       `json:"threads"`
-	Scans         map[string]*Scan        `json:"scans"`
-	Requests      map[string]*Request     `json:"requests"`
-	ProgressLinks map[string]ProgressLink `json:"progress_links,omitempty"`
+	Domain         string                         `json:"domain"`
+	Since          string                         `json:"since"`
+	Destination    Destination                    `json:"destination"`
+	Cursor         string                         `json:"scan_cursor"`
+	IntakeCursor   string                         `json:"intake_cursor,omitempty"`
+	RetryCursor    uint64                         `json:"retry_cursor,omitempty"`
+	Threads        map[string]Thread              `json:"threads"`
+	Scans          map[string]*Scan               `json:"scans"`
+	Requests       map[string]*Request            `json:"requests"`
+	ProgressLinks  map[string]ProgressLink        `json:"progress_links,omitempty"`
+	Discovery      map[string]DiscoveryPage       `json:"discovery,omitempty"`
+	ResultCursor   string                         `json:"result_cursor,omitempty"`
+	ReceiptCursor  string                         `json:"receipt_cursor,omitempty"`
+	OriginCursor   string                         `json:"origin_cursor,omitempty"`
+	ProductReports map[uint64]*ProductReportState `json:"product_reports,omitempty"`
+	ProductCursor  uint64                         `json:"product_cursor,omitempty"`
+	ReportTurn     string                         `json:"report_turn,omitempty"`
 }
 type Health struct {
-	Mode       string   `json:"mode"`
-	Started    string   `json:"started_at"`
-	Finished   string   `json:"finished_at"`
-	API        bool     `json:"api_verified"`
-	Scanned    int      `json:"threads_scanned"`
-	Captured   int      `json:"owner_messages_captured"`
-	Registered int      `json:"todos_registered"`
-	Retried    int      `json:"technical_waits_released"`
-	Pending    int      `json:"pending_requests"`
-	Scheduler  bool     `json:"scheduler_ok"`
-	Errors     []string `json:"errors"`
+	Mode           string                   `json:"mode"`
+	Started        string                   `json:"started_at"`
+	Finished       string                   `json:"finished_at"`
+	API            bool                     `json:"api_verified"`
+	Scanned        int                      `json:"threads_scanned"`
+	Captured       int                      `json:"owner_messages_captured"`
+	Registered     int                      `json:"todos_registered"`
+	Retried        int                      `json:"technical_waits_released"`
+	Pending        int                      `json:"pending_requests"`
+	Scheduler      bool                     `json:"scheduler_ok"`
+	Errors         []string                 `json:"errors"`
+	Discovery      map[string]DiscoveryPage `json:"discovery,omitempty"`
+	ProductReports int                      `json:"product_reports_verified"`
+	SteeringSaved  int                      `json:"steering_saved"`
 }
 type Runner struct {
 	Config                      Config
@@ -132,6 +147,11 @@ type Runner struct {
 	ProgressLinks               map[string]ProgressLink
 	BlockedProgressThreads      map[string]bool
 	ProgressLinkRegistryInvalid bool
+	KnownQuestionThreads        map[string]bool
+	DiscoveryErrors             []string
+	NoticeAttempted             bool
+	JobsPath                    string
+	ProcessAlive                func(uint32, uint64) bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -237,6 +257,7 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 		Domain string `json:"domain"`
 		Events []struct {
 			Event   string `json:"event"`
+			Phase   string `json:"phase"`
 			Receipt *struct {
 				Thread    string `json:"thread_id"`
 				Author    string `json:"author_id"`
@@ -251,12 +272,16 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 		return nil, errors.New("new message receipts invalid")
 	}
 	out := map[string]bool{}
+	r.KnownQuestionThreads = make(map[string]bool)
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 	for _, event := range ledger.Events {
 		if event.Event == "verified" && event.Receipt != nil && event.Receipt.Author == r.State.Destination.Bot {
 			stamp, err := time.Parse(time.RFC3339Nano, event.Receipt.Timestamp)
 			if err == nil && !stamp.Before(cutoff) {
 				out[event.Receipt.Thread] = true
+				if event.Phase == "question:0" {
+					r.KnownQuestionThreads[event.Receipt.Thread] = true
+				}
 			}
 		}
 	}
@@ -285,36 +310,36 @@ func (r *Runner) discover(ctx context.Context) error {
 		return err
 	}
 	r.loadProgressLinks(ctx, known)
-	paths := []string{"/guilds/" + r.State.Destination.Guild + "/threads/active", "/channels/" + requestForum + "/threads/archived/public?limit=25", "/channels/" + r.State.Destination.Forum + "/threads/archived/public?limit=25"}
-	for _, path := range paths {
-		var page struct {
-			Threads []Thread `json:"threads"`
-		}
-		if err := r.get(ctx, path, &page); err != nil {
-			return err
-		}
-		for _, thread := range page.Threads {
-			if _, ok := number(thread.ID); !ok {
-				return errors.New("thread identity invalid")
-			}
-			eligible := thread.Type == 11 && (thread.Guild == "" || thread.Guild == r.State.Destination.Guild) && ((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || (thread.Parent == r.State.Destination.Forum && thread.Owner == bot.ID))
-			if eligible {
-				thread.Guild = r.State.Destination.Guild
-				r.State.Threads[thread.ID] = thread
-			}
+	r.discoverPages(ctx, known)
+	// Explicit new receipt IDs remain discoverable after a thread is archived.
+	ids := make([]string, 0, len(known))
+	for id := range known {
+		if _, exists := r.State.Threads[id]; !exists {
+			ids = append(ids, id)
 		}
 	}
-	// Explicit new receipt IDs remain discoverable after a thread is archived.
-	for id := range known {
+	sort.Strings(ids)
+	start := sort.Search(len(ids), func(i int) bool { return ids[i] > r.State.ReceiptCursor })
+	for i := 0; i < min(4, len(ids)); i++ {
+		if ctx.Err() != nil {
+			break
+		}
+		id := ids[(start+i)%len(ids)]
+		r.State.ReceiptCursor = id
+		if err := r.save(); err != nil {
+			return err
+		}
 		if _, ok := r.State.Threads[id]; ok {
 			continue
 		}
 		var thread Thread
 		if err := r.get(ctx, "/channels/"+id, &thread); err != nil {
-			return err
+			r.DiscoveryErrors = append(r.DiscoveryErrors, "receipt_thread_discovery_deferred")
+			continue
 		}
-		if thread.ID != id || thread.Type != 11 || thread.Guild != r.State.Destination.Guild || thread.Parent != r.State.Destination.Forum || thread.Owner != bot.ID {
-			return errors.New("new receipt destination differs")
+		if thread.ID != id || !r.eligibleThread(thread, known) || thread.Guild != r.State.Destination.Guild || thread.Owner != bot.ID {
+			r.DiscoveryErrors = append(r.DiscoveryErrors, "receipt_thread_scope_deferred")
+			continue
 		}
 		r.State.Threads[id] = thread
 	}
@@ -391,6 +416,15 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		answer := regexp.MustCompile(`<@!?[0-9]+>`).ReplaceAllString(text, "")
 		if regexp.MustCompile(`(?i)^\s*(?:[0-9]*[abcd][\s,、]*)+$`).MatchString(answer) {
 			phase = "context_pending"
+		}
+		if thread.Owner == r.State.Destination.Bot && r.ProgressLinks[thread.ID].Todo == 0 && phase != "empty" {
+			phase = "origin_pending"
+			if r.KnownQuestionThreads[thread.ID] {
+				phase = "context_pending"
+			}
+		}
+		if isPureStatusQuestion(text) {
+			phase = "status_query"
 		}
 		if message.Reference.Channel != "" && (message.Reference.Channel != thread.ID || (message.Reference.Guild != "" && message.Reference.Guild != r.State.Destination.Guild)) {
 			phase = "reference_mismatch"
@@ -545,11 +579,14 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 }
 
 func (r *Runner) tick(ctx context.Context) Health {
+	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
 	if err := r.discover(ctx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
 		health.API = true
+		health.Errors = append(health.Errors, r.DiscoveryErrors...)
+		health.Discovery = r.State.Discovery
 		if r.ProgressLinkRegistryInvalid {
 			health.Errors = append(health.Errors, "progress_link_registry_unverified")
 		}
@@ -565,6 +602,9 @@ func (r *Runner) tick(ctx context.Context) Health {
 		cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 		seen := 0
 		for i := 0; i < len(ids) && seen < 8; i++ {
+			if ctx.Err() != nil {
+				break
+			}
 			id := ids[(start+i)%len(ids)]
 			thread := r.State.Threads[id]
 			after, _ := number(snowflake(cutoff))
@@ -577,6 +617,13 @@ func (r *Runner) tick(ctx context.Context) Health {
 				continue
 			}
 			seen++
+			// Persist attempted coverage even when this thread keeps failing. Its
+			// message watermark is unchanged until the page is saved successfully.
+			r.State.Cursor = id
+			if err := r.save(); err != nil {
+				health.Errors = append(health.Errors, "scan_cursor_deferred")
+				break
+			}
 			captured, err := r.scan(ctx, r.State.Threads[id])
 			if err != nil {
 				health.Errors = append(health.Errors, "discord_history_deferred")
@@ -588,11 +635,21 @@ func (r *Runner) tick(ctx context.Context) Health {
 	}
 	r.recheckOriginBlocked(ctx, &health)
 	r.admit(ctx, &health)
-	if err := r.results(ctx); err != nil {
-		health.Errors = append(health.Errors, "result_delivery_deferred")
+	productsChecked := false
+	if r.State.ReportTurn == "products" {
+		productsChecked = true
+		r.reportProducts(ctx, &health)
+	}
+	if !r.NoticeAttempted {
+		if err := r.results(ctx); err != nil {
+			health.Errors = append(health.Errors, "result_delivery_deferred")
+		}
+	}
+	if !r.NoticeAttempted && !productsChecked {
+		r.reportProducts(ctx, &health)
 	}
 	for _, req := range r.State.Requests {
-		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" {
+		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" && req.Phase != "status_answered" && req.Phase != "product_reply_applied" {
 			health.Pending++
 		}
 	}
@@ -613,7 +670,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 func (r *Runner) admit(ctx context.Context, health *Health) {
 	mids := make([]string, 0, len(r.State.Requests))
 	for id, req := range r.State.Requests {
-		if req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending") {
+		if req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
 			mids = append(mids, id)
 		}
 	}
@@ -633,6 +690,12 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 		if _, ok := r.linkOrigin(req); !ok {
 			continue
 		}
+		if req.Phase == "origin_pending" {
+			if req.Origin == nil {
+				continue
+			}
+			req.Phase = "captured"
+		}
 		if req.Phase == "context_pending" && req.Origin != nil {
 			req.Context = "This is a non-question progress thread. Preserve a short reply literally; do not infer an answer or decision."
 			req.Phase = "captured"
@@ -651,7 +714,11 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 			_ = r.save()
 			continue
 		}
-		health.Registered++
+		if req.Phase == "steering_saved" || req.Phase == "product_reply_saved" {
+			health.SteeringSaved++
+		} else {
+			health.Registered++
+		}
 		return
 	}
 	if len(mids) != 0 {
@@ -702,11 +769,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
-	configPath := "D:/CC/Tools/discord-ask/unattended/config.json"
-	if len(os.Args) == 3 && os.Args[1] == "--config" {
-		configPath = os.Args[2]
-	} else if len(os.Args) != 1 {
-		fmt.Println("usage: unattended-runner [--config <path>]")
+	configPath, operation, message, argumentErr := runnerArguments(os.Args[1:])
+	if argumentErr != nil {
+		fmt.Println("usage: unattended-runner [--config <path>] [--prepare-steering-delivery <message> | --verify-steering-delivery <message>]")
 		os.Exit(2)
 	}
 	var cfg Config
@@ -760,6 +825,21 @@ func main() {
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
+	if operation != "" {
+		var result SteeringDeliveryResult
+		if operation == "--prepare-steering-delivery" {
+			result, err = runner.prepareSteeringDelivery(ctx, message)
+		} else {
+			result, err = runner.verifySteeringDelivery(ctx, message)
+		}
+		if err != nil {
+			fmt.Println("steering delivery deferred")
+			os.Exit(1)
+		}
+		bytes, _ := json.Marshal(result)
+		fmt.Println(string(bytes))
+		return
+	}
 	health := runner.tick(ctx)
 	if publish(filepath.Join(cfg.Home, "health.json"), health) != nil {
 		fmt.Println("health persistence failed")

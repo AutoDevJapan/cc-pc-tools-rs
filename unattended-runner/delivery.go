@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -34,8 +35,16 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 		}
 		return err
 	}
-	if thread.ID != request.Thread || thread.Type != 11 || thread.Guild != r.State.Destination.Guild || !((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || (thread.Parent == r.State.Destination.Forum && thread.Owner == r.State.Destination.Bot)) {
+	botRequest := thread.Parent == requestForum && thread.Owner == r.State.Destination.Bot && (r.ProgressLinks[thread.ID].Todo != 0 || r.KnownQuestionThreads[thread.ID])
+	if thread.ID != request.Thread || thread.Type != 11 || thread.Guild != r.State.Destination.Guild || !((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || botRequest || (thread.Parent == r.State.Destination.Forum && thread.Owner == r.State.Destination.Bot)) {
 		return errors.New("owner thread scope differs")
+	}
+	if thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text)) {
+		request.Phase = "origin_pending"
+		if err := r.save(); err != nil {
+			return err
+		}
+		return errors.New("owner reply original association pending")
 	}
 	var live Message
 	if err := r.get(ctx, "/channels/"+request.Thread+"/messages/"+request.Message, &live); err != nil {
@@ -149,12 +158,21 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 }
 
 type TodoRow struct {
-	ID        uint64            `json:"id"`
-	Project   string            `json:"project"`
-	Status    string            `json:"status"`
-	Note      string            `json:"note"`
-	Spec      json.RawMessage   `json:"spec"`
-	Jobs      []json.RawMessage `json:"jobs"`
+	ID            uint64            `json:"id"`
+	Project       string            `json:"project"`
+	Status        string            `json:"status"`
+	Note          string            `json:"note"`
+	Spec          json.RawMessage   `json:"spec"`
+	Jobs          []json.RawMessage `json:"jobs"`
+	Progress      *uint8            `json:"progress"`
+	WaitOn        []uint64          `json:"wait_on"`
+	WaitReady     json.RawMessage   `json:"wait_ready"`
+	Qualification struct {
+		Receipt productRetryProof `json:"receipt"`
+	} `json:"product_resume_qualification"`
+	Worker struct {
+		Job string `json:"job"`
+	} `json:"worker_receipt"`
 	Scheduler struct {
 		Job string `json:"job"`
 	} `json:"scheduler"`
@@ -167,10 +185,17 @@ func (r *Runner) todo(id uint64) (*TodoRow, error) {
 	if err := readJSON(r.TodoPath, maxTodo, &db); err != nil {
 		return nil, err
 	}
-	for _, row := range db.Items {
-		if row.ID == id {
-			return &row, nil
+	var found *TodoRow
+	for i := range db.Items {
+		if db.Items[i].ID == id {
+			if found != nil {
+				return nil, errors.New("duplicate task receipt")
+			}
+			found = &db.Items[i]
 		}
+	}
+	if found != nil {
+		return found, nil
 	}
 	return nil, errors.New("task receipt missing")
 }
@@ -240,6 +265,9 @@ func (r *Runner) sendStatus(ctx context.Context, request *Request, phase string)
 	args := []string{"recovery-log", "--request-id", "unattended-" + request.Key + "-" + phase, "--title", "【PCの道具】Discordの依頼への対応", "--body-file", path}
 	if request.ProgressThread != "" {
 		args = append(args, "--thread", request.ProgressThread)
+	}
+	if err := r.reserveNotice("requests"); err != nil {
+		return err
 	}
 	raw, err := r.Run(ctx, "D:/CC/Tools/discord-ask/discord_ask.exe", args...)
 	var receipt struct {
@@ -359,9 +387,31 @@ func (r *Runner) recoverStatusReceipt(ctx context.Context, id, body string) (str
 }
 func validJob(s string) bool { return regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(s) }
 func (r *Runner) results(ctx context.Context) error {
-	for _, request := range r.State.Requests {
-		if request.Todo == 0 || request.Phase == "reported" || request.Phase == "origin_blocked" {
+	ids := make([]string, 0, len(r.State.Requests))
+	for id := range r.State.Requests {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	start := sort.Search(len(ids), func(i int) bool { return ids[i] > r.State.ResultCursor })
+	for i := 0; i < len(ids); i++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		id := ids[(start+i)%len(ids)]
+		request := r.State.Requests[id]
+		if request != nil && request.Phase == "status_query" {
+			r.State.ResultCursor = id
+			if err := r.save(); err != nil {
+				return err
+			}
+			return r.answerStatusQuery(ctx, request)
+		}
+		if request == nil || request.Todo == 0 || request.Phase == "reported" || request.Phase == "status_answered" || request.Phase == "origin_blocked" || request.Phase == "product_reply_saved" || request.Phase == "product_reply_delivered" || request.Phase == "product_reply_applied" || r.isConfiguredRequestReport(request.Todo) {
 			continue
+		}
+		r.State.ResultCursor = id
+		if err := r.save(); err != nil {
+			return err
 		}
 		row, err := r.todo(request.Todo)
 		if err != nil {

@@ -24,7 +24,7 @@ type pr148GuestPacket struct {
 }
 
 func pr148ToolEnv(jobs, tests int) []string {
-	return []string{"HOME=/home/runner", "PATH=/toolchain/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "CARGO_BUILD_JOBS=" + strconv.Itoa(jobs), "RUST_TEST_THREADS=" + strconv.Itoa(tests), "NEXTEST_TEST_THREADS=" + strconv.Itoa(tests), "CARGO=/runner/bin/cargo", "RUSTUP_TOOLCHAIN=1.95.0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_REPLACE_OBJECTS=1"}
+	return []string{"CI=true", "GITHUB_ACTIONS=true", "HOME=/home/runner", "PATH=/toolchain/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "CARGO_BUILD_JOBS=" + strconv.Itoa(jobs), "RUST_TEST_THREADS=" + strconv.Itoa(tests), "NEXTEST_TEST_THREADS=" + strconv.Itoa(tests), "CARGO=/runner/bin/cargo", "RUSTUP_TOOLCHAIN=1.95.0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_REPLACE_OBJECTS=1"}
 }
 func pr148ReadGuest() (pr148GuestPacket, error) {
 	var p pr148GuestPacket

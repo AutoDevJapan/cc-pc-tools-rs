@@ -101,7 +101,7 @@ func TestPR148ExecutionPreservesFixedContextAndTimeout(t *testing.T) {
 			t.Fatalf("lost fixed condition %s", s)
 		}
 	}
-	for _, bad := range []string{"expression", "protected", "timeout", "directory"} {
+	for _, bad := range []string{"expression", "protected", "timeout", "directory", "git", "github"} {
 		b := append([]byte(nil), data...)
 		switch bad {
 		case "expression":
@@ -112,6 +112,10 @@ func TestPR148ExecutionPreservesFixedContextAndTimeout(t *testing.T) {
 			b = bytes.Replace(b, []byte("75"), []byte("${{ matrix.minutes }}"), 1)
 		case "directory":
 			b = bytes.Replace(b, []byte("working-directory: ."), []byte("working-directory: ../escape"), 1)
+		case "git":
+			b = bytes.Replace(b, []byte("RUSTFLAGS:"), []byte("GIT_CONFIG_GLOBAL:"), 1)
+		case "github":
+			b = bytes.Replace(b, []byte("RUSTFLAGS:"), []byte("GITHUB_ACTIONS:"), 1)
 		}
 		pr148Workflows[0].OriginalSHA = digest(b)
 		if _, _, e = pr148WorkflowExecution(b); e == nil {
@@ -130,10 +134,16 @@ func TestPR148WorkflowSerialBoundsSurviveGateCaps(t *testing.T) {
 	actual := map[string]string{}
 	for _, s := range env {
 		k, v, _ := strings.Cut(s, "=")
+		if _, ok := actual[k]; ok {
+			t.Fatalf("duplicate raw envp key: %s", k)
+		}
 		actual[k] = v
 	}
 	if actual["RUST_TEST_THREADS"] != "1" || actual["CARGO_BUILD_JOBS"] != "2" {
 		t.Fatal("original serial bound or machine cap lost")
+	}
+	if actual["CI"] != "true" || actual["GITHUB_ACTIONS"] != "true" {
+		t.Fatal("immutable Actions CI defaults missing")
 	}
 }
 func TestPR148NoDispatchAndHookArgumentConfusion(t *testing.T) {
@@ -215,6 +225,7 @@ func TestPR148CredentialFreeRustupInstall(t *testing.T) {
 	execution := pr148ExecutionPolicy{TimeoutMinutes: 5}
 	for i := range execution.Steps {
 		execution.Steps[i].Dir = pr148Workspace
+		execution.Steps[i].Env = []string{"RUST_TEST_THREADS=1"}
 	}
 	p := pr148SyntheticPlan()
 	key := strings.Repeat("c", 64)
@@ -235,6 +246,49 @@ func TestPR148CredentialFreeRustupInstall(t *testing.T) {
 		t.Fatalf("new tmpfs toolchain unavailable: %v %s", e, b)
 	}
 	if e = pr148SaveNew(filepath.Join(caseDir, "rustup-result.private.json"), map[string]any{"exit": r.Exit, "drained": r.Drained, "log_bytes": r.FullLogBytes, "log_sha256": r.FullLogSHA, "version_output_sha256": digest(b), "product_source_supplied": false, "official_checks_success": false}); e != nil {
+		t.Fatal(e)
+	}
+	if e = cmd(ctx, docker, "exec", n.ID, "mkdir", "-p", pr148Workspace+"/tools/src").Run(); e != nil {
+		t.Fatal(e)
+	}
+	put := func(path, content string) {
+		c := cmd(ctx, docker, "exec", "-i", n.ID, "sh", "-c", "cat > "+path)
+		c.Stdin = strings.NewReader(content)
+		if e := c.Run(); e != nil {
+			t.Fatal(e)
+		}
+	}
+	put(pr148Workspace+"/tools/Cargo.toml", "[package]\nname=\"todo2736-credential-free-fixture\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[workspace]\n")
+	put(pr148Workspace+"/tools/Cargo.lock", "version = 4\n\n[[package]]\nname = \"todo2736-credential-free-fixture\"\nversion = \"0.0.0\"\n")
+	put(pr148Workspace+"/tools/src/main.rs", "fn main() {\n    println!(\"credential-free\");\n}\n")
+	put(pr148Workspace+"/tools/src/lib.rs", `/// A credential-free fixture value.
+///
+/// `+"```"+`
+/// assert_eq!(todo2736_credential_free_fixture::value(), 42);
+/// `+"```"+`
+pub fn value() -> usize {
+    42
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn original_serial_environment() {
+        assert_eq!(std::env::var("RUST_TEST_THREADS").unwrap(), "1");
+        assert_eq!(std::env::var("CI").unwrap(), "true");
+        assert_eq!(std::env::var("GITHUB_ACTIONS").unwrap(), "true");
+    }
+}
+`)
+	var commands []map[string]any
+	for index := 0; index < 4; index++ {
+		result, e := h.run(ctx, index)
+		if e != nil || result.Exit != 0 || !result.Drained {
+			t.Fatalf("Rust1.95 original-command fixture index=%d error=%v exit=%d log=%s", index, e, result.Exit, result.Log)
+		}
+		commands = append(commands, map[string]any{"index": index, "args": packet.Policy[index], "exit": result.Exit, "drained": result.Drained, "log_bytes": result.FullLogBytes, "log_sha256": result.FullLogSHA})
+	}
+	if e = pr148SaveNew(filepath.Join(caseDir, "rust195-command-results.private.json"), commands); e != nil {
 		t.Fatal(e)
 	}
 }

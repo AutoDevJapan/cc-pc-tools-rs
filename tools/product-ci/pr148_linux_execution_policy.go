@@ -65,7 +65,10 @@ func pr148MergeEnv(parent []string, n *yaml.Node) ([]string, error) {
 			if !regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString(k) || v.Kind != yaml.ScalarNode || strings.Contains(v.Value, "${{") || strings.ContainsAny(v.Value, "\x00\r\n") {
 				return nil, errors.New("fixed workflow env cannot be reproduced literally")
 			}
-			for _, protected := range []string{"HOME", "PATH", "CARGO_HOME", "RUSTUP_HOME", "CARGO_TARGET_DIR", "RUSTC", "RUSTDOC", "CARGO", "RUSTUP_TOOLCHAIN", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER", "BASH_ENV", "ENV", "LD_PRELOAD", "LD_LIBRARY_PATH"} {
+			if strings.HasPrefix(k, "GITHUB_") || strings.HasPrefix(k, "RUNNER_") {
+				return nil, errors.New("workflow overrides immutable Actions context")
+			}
+			for _, protected := range []string{"HOME", "PATH", "CARGO_HOME", "RUSTUP_HOME", "CARGO_TARGET_DIR", "RUSTC", "RUSTDOC", "CARGO", "RUSTUP_TOOLCHAIN", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER", "BASH_ENV", "ENV", "LD_PRELOAD", "LD_LIBRARY_PATH", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL", "GIT_NO_REPLACE_OBJECTS"} {
 				if k == protected {
 					return nil, fmt.Errorf("fixed workflow overrides isolated tool setting: %s", k)
 				}
@@ -220,5 +223,24 @@ func pr148StepEnvironment(p pr148ExecutionPolicy, index, jobs, tests int) ([]str
 			fixed[i] = key + "=" + strconv.Itoa(n)
 		}
 	}
-	return append(pr148ToolEnv(jobs, tests), fixed...), s.Dir, nil
+	// syscall.Exec does not deduplicate envp. libc and Rust/Cargo otherwise
+	// disagree about first/last duplicate keys, losing original serial bounds.
+	values := map[string]string{}
+	for _, entry := range append(pr148ToolEnv(jobs, tests), fixed...) {
+		key, value, ok := strings.Cut(entry, "=")
+		if !ok {
+			return nil, "", errors.New("invalid fixed process environment")
+		}
+		values[key] = value
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var env []string
+	for _, key := range keys {
+		env = append(env, key+"="+values[key])
+	}
+	return env, s.Dir, nil
 }

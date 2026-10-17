@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -50,6 +51,7 @@ type fakeDaemon struct {
 	startReturned, stoppedBeforeDrain         bool
 	stdin                                     []byte
 	pending                                   *fakeContainer
+	startedIDs                                []string
 	createCalls                               int
 	onStop                                    func()
 }
@@ -58,10 +60,17 @@ type fakeDaemon struct {
 func (d *fakeDaemon) materialize() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.pending != nil {
-		d.containers[d.pending.id] = d.pending
-		d.pending = nil
+	if d.pending == nil {
+		return
 	}
+	for _, o := range d.containers {
+		if o.name == d.pending.name {
+			d.pending = nil // The name is taken: the late request fails with a conflict.
+			return
+		}
+	}
+	d.containers[d.pending.id] = d.pending
+	d.pending = nil
 }
 
 func newFakeDaemon(t *testing.T) *fakeDaemon {
@@ -71,7 +80,7 @@ func newFakeDaemon(t *testing.T) *fakeDaemon {
 type fakeImage struct {
 	proof                                                                      map[string]string
 	dropLayer, dupLayer, dupEntry, wrongDiff, badConfig, noConfig, emptyLayers bool
-	extraDiff, symlink, tamperLayer, garbageLayer                              bool
+	extraDiff, symlink, tamperLayer, garbageLayer, secondLayer                 bool
 }
 
 func fakeImageTar(t *testing.T, proof map[string]string) []byte {
@@ -111,6 +120,21 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 		diff = "sha256:" + digest([]byte("other"))
 	}
 	layers, diffs := []string{layerName}, []string{diff}
+	var extra []byte
+	var extraName string
+	if o.secondLayer {
+		var l2 bytes.Buffer
+		w := tar.NewWriter(&l2)
+		w.WriteHeader(&tar.Header{Name: "file2", Mode: 0600, Size: 6, Typeflag: tar.TypeReg})
+		w.Write([]byte("layer2"))
+		w.Close()
+		var g2 bytes.Buffer
+		z := gzip.NewWriter(&g2)
+		z.Write(l2.Bytes())
+		z.Close()
+		extra, extraName = g2.Bytes(), digest(g2.Bytes())+".tar.gz"
+		layers, diffs = append(layers, extraName), append(diffs, "sha256:"+digest(l2.Bytes()))
+	}
 	if o.dupLayer {
 		layers, diffs = append(layers, layerName), append(diffs, diff)
 	}
@@ -138,6 +162,9 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	}
 	if !o.dropLayer {
 		add(layerName, layer)
+	}
+	if o.secondLayer {
+		add(extraName, extra)
 	}
 	if o.dupEntry {
 		add(layerName, layer)
@@ -295,9 +322,6 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 		if d.createMode == "late" && first {
 			d.pending = c // The daemon will finish this create after the client gave up.
 		} else {
-			if d.pending != nil && d.pending.name == c.name {
-				d.pending = nil // The name is taken: the late request can no longer win it.
-			}
 			d.containers[c.id] = c
 		}
 		d.mu.Unlock()
@@ -328,6 +352,7 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 	case "start":
 		c := d.find(last)
 		d.mu.Lock()
+		d.startedIDs = append(d.startedIDs, last)
 		c.running, c.status = true, "running"
 		d.mu.Unlock()
 		in, _ := io.ReadAll(stdin)
@@ -906,9 +931,20 @@ func TestBuilderUnknownCreateIsResolvedOnlyByTakingTheName(t *testing.T) {
 	if err == nil || rec.Failure != "create-uncertain" || !rec.PhaseMayRelease || !rec.ContainerRemoved || h.d.called("start") {
 		t.Fatalf("late create not resolved in the run: %v", err)
 	}
+	// The late request lands after the release. It can only be an inert,
+	// never-started container; the next phase removes it instead of being blocked.
 	h.d.materialize()
+	if c, _ := h.d.remaining(); c != 1 {
+		t.Fatal("expected the late container to land")
+	}
+	next := newHarness(t)
+	next.d = h.d
+	rec2, err := next.run(ctx)
+	if err != nil || !rec2.Succeeded || !h.d.called("container rm") || len(h.d.startedIDs) != 1 {
+		t.Fatalf("the next phase did not sweep the inert leftover: %v", err)
+	}
 	if c, _ := h.d.remaining(); c != 0 {
-		t.Fatal("a late create left a container behind")
+		t.Fatal("leftover containers remain")
 	}
 
 	// A create that lands just before the name hold is found by its nonce.
@@ -986,11 +1022,26 @@ func TestBuiltImageLayersMustBeBoundedWellFormedTars(t *testing.T) {
 	if _, err := checkBuiltImage(ctx, buildFakeImage(t, fakeImage{}), productBuilderProfile); err == nil {
 		t.Fatal("expansion beyond the total limit accepted")
 	}
+	// Each layer alone fits; together they exceed the shared budget.
+	imageUncompressedTotalLimit = 3000
+	if _, err := checkBuiltImage(ctx, buildFakeImage(t, fakeImage{}), productBuilderProfile); err != nil {
+		t.Fatalf("a single layer under the limit rejected: %v", err)
+	}
+	if _, err := checkBuiltImage(ctx, buildFakeImage(t, fakeImage{secondLayer: true}), productBuilderProfile); err == nil {
+		t.Fatal("two layers over the shared budget accepted")
+	}
 	imageUncompressedTotalLimit = saved
 	cctx, cancel := context.WithCancel(ctx)
 	cancel()
 	if _, err := checkBuiltImage(cctx, buildFakeImage(t, fakeImage{}), productBuilderProfile); err == nil {
 		t.Fatal("validation continued after cancellation")
+	}
+	// Cancellation in the middle of the reads, not only before them.
+	if _, err := checkBuiltImage(&countdownCtx{Context: ctx, n: 3}, buildFakeImage(t, fakeImage{secondLayer: true}), productBuilderProfile); err == nil {
+		t.Fatal("validation continued after a mid-read cancellation")
+	}
+	if _, err := checkBuiltImage(&countdownCtx{Context: ctx, n: 1 << 30}, buildFakeImage(t, fakeImage{secondLayer: true}), productBuilderProfile); err != nil {
+		t.Fatalf("validation failed without cancellation: %v", err)
 	}
 }
 func TestBuilderKeepsTheContainerWhenVolumeNamesCannotBeSaved(t *testing.T) {
@@ -1108,4 +1159,17 @@ func TestProductEntryOnlyAcceptsTheAuditedSnapshot(t *testing.T) {
 	if _, err := releaseBuildSpecFromInput(forged); err == nil {
 		t.Fatal("input of another identity accepted")
 	}
+}
+
+// countdownCtx reports cancellation after n polls.
+type countdownCtx struct {
+	context.Context
+	n int32
+}
+
+func (c *countdownCtx) Err() error {
+	if atomic.AddInt32(&c.n, -1) < 0 {
+		return context.Canceled
+	}
+	return nil
 }

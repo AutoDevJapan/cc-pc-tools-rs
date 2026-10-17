@@ -361,7 +361,11 @@ func (b *builderRun) execute() {
 // A builder left by an earlier run (even one that crashed) means the phase is not
 // free. Nothing is pulled or created until its owner has recovered it.
 func (b *builderRun) phaseClear(ctx context.Context) string {
-	busy, err := b.anyBuilder(ctx)
+	err := b.sweepInertBuilders(ctx)
+	busy := false
+	if err == nil {
+		busy, err = b.anyBuilder(ctx)
+	}
 	if err == nil && !busy {
 		return ""
 	}
@@ -375,6 +379,43 @@ func (b *builderRun) phaseClear(ctx context.Context) string {
 		return b.classify(ctx, "phase-uncertain")
 	}
 	return "phase-busy"
+}
+
+// Only a container whose ID the daemon confirmed to us is ever started. A create
+// whose answer was lost can therefore still land later, but only as an inert
+// "created" container: it holds no CPU, memory or PIDs, and it blocks the next
+// phase (fail closed) until it is removed. sweepInertBuilders removes exactly
+// those leftovers (never started, exact name/label/image pattern, no bind mount);
+// a builder that ever ran, or anything else carrying the label, is never touched
+// and keeps the phase busy.
+var inertBuilderName = regexp.MustCompile("^/cc-release-build-([0-9a-f]{32})$")
+
+func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
+	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel)
+	if err != nil {
+		return err
+	}
+	for _, id := range strings.Fields(out) {
+		if !releaseContainerPattern.MatchString(id) {
+			return errors.New("container listing invalid")
+		}
+		info, err := b.inspect(ctx, id)
+		if err != nil {
+			return err
+		}
+		m := inertBuilderName.FindStringSubmatch(info.Name)
+		inert := m != nil && info.ID == id && info.Config.Labels[releaseBuildLabel] == m[1] && info.Config.Image == releaseBuilderTool && info.State.Status == "created" && !info.State.Running
+		for _, mt := range info.Mounts {
+			inert = inert && mt.Type != "bind"
+		}
+		if !inert {
+			continue // Left for anyBuilder: the phase stays busy.
+		}
+		if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // anyBuilder reports whether any builder container, ours or not, exists.

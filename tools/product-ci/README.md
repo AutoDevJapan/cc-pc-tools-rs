@@ -355,7 +355,13 @@ happen; otherwise an empty search is not proof of absence, and no clock is used.
 Disposal (and any later recovery) takes the name with a second, inert create: it
 either succeeds, so a late arrival of the first request can no longer win the name,
 or conflicts because the first one exists and is found by its nonce. The container
-is never started and is removed. After normal exit, failure, cancellation or
+is never started and is removed. This cannot prove that a request stuck inside the
+daemon will never land; what it guarantees is that nothing but a container whose ID
+the daemon confirmed is ever started, so a late arrival is an inert "created"
+container with no CPU, memory or PIDs. It blocks the next phase (fail closed) until
+removed, and the next run's phase check removes exactly such leftovers (never
+started, exact name/label/image pattern, no bind mount) while anything that ever ran
+keeps the phase busy. After normal exit, failure, cancellation or
 timeout the Docker client has drained all I/O before the container is stopped.
 Disposal records stop and PID 0, removes the container with its anonymous volumes,
 confirms absence by listing, and removes a tool image that this run introduced.

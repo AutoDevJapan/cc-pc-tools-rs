@@ -2,9 +2,9 @@ name: Build speed
 on:
   push:
     branches: [main]
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
   pull_request:
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
 # Superseded PR heads need no second verification; preserve every main run.
 # New PR workflows must also isolate reruns and legacy workflow revisions.
 concurrency:
@@ -31,22 +31,48 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
-      - name: Verify the repaired isolated worktree fixture first
-        run: cargo nextest run --locked -p cc-ask --test resume -E 'test(real_reply_shapes_after_reask_in_central_worktree)'
-      - name: Verify owned process-tree cancellation before the full suite
-        run: cargo nextest run --locked -p cc-jobs --lib --test parity -E 'test(end_to_end::test_cancel_kills_the_whole_tree) | test(end_to_end::test_cancel_of_a_lost_job_kills_the_leftover_codex) | test(pause::native::tests::cancellation_)'
-      - name: Verify recovered job references and the explicit resume boundary first
-        run: cargo nextest run --locked -p cc-todo --test job_references --test verified_resume
-      - name: Verify dependency and cancellation identity boundaries before the full suite
-        run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(dependency_) | test(cancel::) | test(resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing)' --no-fail-fast
-      - name: Verify supervisor identity and final event drain before the full suite
-        run: cargo nextest run --locked -p cc-jobs --test parity -E 'test(lost_detection::) | test(supervisor_drains_events_arriving_during_the_final_process_poll)' --no-fail-fast
-      - run: cargo nextest run --locked --workspace --no-fail-fast --test-threads 10
-      - run: cargo test --locked --workspace --doc -- --test-threads=10
-      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: tools/test-scope/go.mod
+          cache: false
+      - name: Verify the test selection boundary
+        run: go -C tools/test-scope test ./...
+      - name: Select affected packages at the fixed source revision
+        env:
+          SCOPE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SCOPE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $argsForScope = @('-C', 'tools/test-scope', 'run', '.', '-root', $env:GITHUB_WORKSPACE, '-head', $env:SCOPE_HEAD_SHA)
+          if ($env:SCOPE_BASE_SHA) { $argsForScope += @('-base', $env:SCOPE_BASE_SHA) }
+          $scopeJson = & go @argsForScope
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $scopeJson | Set-Content -LiteralPath "$env:RUNNER_TEMP/test-scope.json" -Encoding utf8
+          $scopeJson
+      - name: Test and lint the selected packages once
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scope = Get-Content -LiteralPath "$env:RUNNER_TEMP/test-scope.json" -Raw | ConvertFrom-Json
+          if ($scope.mode -eq 'none') { Write-Output 'No affected Rust packages'; exit 0 }
+          $packageArgs = @()
+          foreach ($name in $scope.packages) { $packageArgs += @('-p', [string]$name) }
+          if ($scope.mode -eq 'full') { $packageArgs = @('--workspace') }
+          & cargo nextest run --locked @packageArgs --no-fail-fast --test-threads 10
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($scope.doc_packages.Count -gt 0) {
+            $docArgs = @()
+            foreach ($name in $scope.doc_packages) { $docArgs += @('-p', [string]$name) }
+            & cargo test --locked @docArgs --doc -- --test-threads=10
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          & cargo clippy --locked @packageArgs --all-targets -- -D warnings
+          exit $LASTEXITCODE
   package-tools:
     # Only this finite repair needs downloadable PC binaries; do not grow storage on every PR.
     if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460' || github.event.pull_request.head.ref == 'fix/question-state-capacity-2444') && github.event.pull_request.head.repo.full_name == github.repository

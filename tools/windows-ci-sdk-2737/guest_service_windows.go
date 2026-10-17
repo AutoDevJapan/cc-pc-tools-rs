@@ -254,23 +254,30 @@ func waitForHostCOM(instance string, ip net.IP, serverHash string) error {
 		return errors.New("guest COM1 unavailable")
 	}
 	defer port.Close()
-	line, err := readCOMLine(port, 10*time.Minute)
-	if err != nil {
-		return errors.New("COM bootstrap timed out")
-	}
-	dec := json.NewDecoder(bytes.NewReader(line))
-	dec.DisallowUnknownFields()
-	var request comRequest
-	if dec.Decode(&request) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || request.Kind != "sdk-hello" || request.Instance != instance || !validDigest(request.Nonce) {
-		return errors.New("COM bootstrap request rejected")
-	}
-	reply, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: instance, Nonce: request.Nonce, IPv4: ip.To4().String(), ServerSHA256: serverHash})
+	reply, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: instance, IPv4: ip.To4().String(), ServerSHA256: serverHash})
 	if err != nil {
 		return errors.New("COM bootstrap response encoding failed")
 	}
 	reply = append(reply, '\n')
 	if _, err := port.Write(reply); err != nil {
 		return errors.New("COM bootstrap response failed")
+	}
+	line, err := readCOMLine(port, 10*time.Minute)
+	if err != nil {
+		return errors.New("COM channel probe timed out")
+	}
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+	var request comRequest
+	if dec.Decode(&request) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || request.Kind != "sdk-probe" || request.Instance != instance || !validDigest(request.Nonce) {
+		return errors.New("COM channel probe rejected")
+	}
+	ack, err := json.Marshal(comRequest{Kind: "sdk-probe-ack", Instance: instance, Nonce: request.Nonce})
+	if err != nil {
+		return errors.New("COM probe acknowledgement encoding failed")
+	}
+	if _, err := port.Write(append(ack, '\n')); err != nil {
+		return errors.New("COM probe acknowledgement failed")
 	}
 	return nil
 }

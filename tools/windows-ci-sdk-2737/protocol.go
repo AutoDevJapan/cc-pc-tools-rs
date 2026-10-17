@@ -68,7 +68,6 @@ type comRequest struct {
 type comReply struct {
 	Kind         string `json:"kind"`
 	Instance     string `json:"instance"`
-	Nonce        string `json:"nonce"`
 	IPv4         string `json:"ipv4"`
 	ServerSHA256 string `json:"serverCertificateSHA256"`
 }
@@ -118,24 +117,11 @@ func PrepareGuestSDK(com io.ReadWriter, instance string, client Identity) (Prepa
 	return receipt, nil
 }
 
-// SendCOMBootstrap exchanges only public identity metadata. The caller must
-// supply the COM stream belonging to the exact newly-created VM.
+// SendCOMBootstrap receives only public identity metadata, then challenges the
+// bidirectional COM channel. The caller supplies the exact new VM's COM stream.
 func SendCOMBootstrap(stream io.ReadWriter, instance string) (BootstrapResult, error) {
 	if stream == nil || !validInstance(instance) {
 		return BootstrapResult{}, errors.New("invalid COM bootstrap context")
-	}
-	var nonce [32]byte
-	if _, err := rand.Read(nonce[:]); err != nil {
-		return BootstrapResult{}, errors.New("COM bootstrap nonce generation failed")
-	}
-	nonceText := hex.EncodeToString(nonce[:])
-	request, err := json.Marshal(comRequest{Kind: "sdk-hello", Instance: instance, Nonce: nonceText})
-	if err != nil {
-		return BootstrapResult{}, errors.New("COM bootstrap request encoding failed")
-	}
-	request = append(request, '\n')
-	if _, err := stream.Write(request); err != nil {
-		return BootstrapResult{}, errors.New("COM bootstrap request failed")
 	}
 	line, err := readBoundedLine(bufio.NewReader(stream), 4096)
 	if err != nil {
@@ -144,12 +130,34 @@ func SendCOMBootstrap(stream io.ReadWriter, instance string) (BootstrapResult, e
 	dec := json.NewDecoder(bytes.NewReader(line))
 	dec.DisallowUnknownFields()
 	var reply comReply
-	if dec.Decode(&reply) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || reply.Kind != "sdk-ready" || reply.Instance != instance || reply.Nonce != nonceText || !validDigest(reply.ServerSHA256) {
+	if dec.Decode(&reply) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || reply.Kind != "sdk-ready" || reply.Instance != instance || !validDigest(reply.ServerSHA256) {
 		return BootstrapResult{}, errors.New("COM bootstrap response rejected")
 	}
 	ip := net.ParseIP(reply.IPv4)
 	if ip == nil || ip.To4() == nil || !ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
 		return BootstrapResult{}, errors.New("COM bootstrap private IPv4 rejected")
+	}
+	var nonce [32]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return BootstrapResult{}, errors.New("COM probe nonce generation failed")
+	}
+	nonceText := hex.EncodeToString(nonce[:])
+	probe, err := json.Marshal(comRequest{Kind: "sdk-probe", Instance: instance, Nonce: nonceText})
+	if err != nil {
+		return BootstrapResult{}, errors.New("COM probe encoding failed")
+	}
+	if _, err := stream.Write(append(probe, '\n')); err != nil {
+		return BootstrapResult{}, errors.New("COM probe write failed")
+	}
+	ackLine, err := readBoundedLine(bufio.NewReader(stream), 4096)
+	if err != nil {
+		return BootstrapResult{}, errors.New("COM probe acknowledgement unavailable")
+	}
+	ackDecoder := json.NewDecoder(bytes.NewReader(ackLine))
+	ackDecoder.DisallowUnknownFields()
+	var ack comRequest
+	if ackDecoder.Decode(&ack) != nil || ackDecoder.Decode(new(json.RawMessage)) != io.EOF || ack.Kind != "sdk-probe-ack" || ack.Instance != instance || ack.Nonce != nonceText {
+		return BootstrapResult{}, errors.New("COM probe acknowledgement rejected")
 	}
 	return BootstrapResult{IPv4: ip.To4(), ServerSHA256: reply.ServerSHA256}, nil
 }

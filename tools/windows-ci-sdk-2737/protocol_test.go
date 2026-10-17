@@ -84,6 +84,15 @@ func TestCOMBootstrapEchoesInstanceNonceAndPinsGuest(t *testing.T) {
 	serverHash := strings.Repeat("a", 64)
 	peerDone := make(chan error, 1)
 	go func() {
+		response, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: "nonce-2783", IPv4: "192.168.30.4", ServerSHA256: serverHash})
+		if err != nil {
+			peerDone <- err
+			return
+		}
+		if _, err := guest.Write(append(response, '\n')); err != nil {
+			peerDone <- err
+			return
+		}
 		line, err := readBoundedLine(bufio.NewReader(guest), 4096)
 		if err != nil {
 			peerDone <- err
@@ -92,20 +101,14 @@ func TestCOMBootstrapEchoesInstanceNonceAndPinsGuest(t *testing.T) {
 		dec := json.NewDecoder(bytes.NewReader(line))
 		dec.DisallowUnknownFields()
 		var request comRequest
-		if err := dec.Decode(&request); err != nil {
-			peerDone <- err
-			return
-		}
-		if request.Kind != "sdk-hello" || request.Instance != "nonce-2783" || !validDigest(request.Nonce) {
+		if dec.Decode(&request) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || request.Kind != "sdk-probe" || request.Instance != "nonce-2783" || !validDigest(request.Nonce) {
 			peerDone <- io.ErrUnexpectedEOF
 			return
 		}
-		response, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: request.Instance, Nonce: request.Nonce, IPv4: "192.168.30.4", ServerSHA256: serverHash})
-		if err != nil {
-			peerDone <- err
-			return
+		ack, err := json.Marshal(comRequest{Kind: "sdk-probe-ack", Instance: request.Instance, Nonce: request.Nonce})
+		if err == nil {
+			_, err = guest.Write(append(ack, '\n'))
 		}
-		_, err = guest.Write(append(response, '\n'))
 		peerDone <- err
 	}()
 	result, err := SendCOMBootstrap(host, "nonce-2783")

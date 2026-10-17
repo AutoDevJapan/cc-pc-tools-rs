@@ -37,18 +37,9 @@ func TestNormalCIProposalChangesOnlyFourRunnerScalars(t *testing.T) {
 	}
 	// Reconstruct input from the output tokens, independently of YAML offsets.
 	restored := append([]byte(nil), output...)
-	for _, r := range []struct {
-		label, previous string
-		count           int
-	}{
-		{"cc-product-2737-1154066087-linux", "ubuntu-latest", 3},
-		{"cc-product-2737-1154066087-windows", "windows-2025", 1},
-	} {
-		want := []byte("runs-on: " + r.label + " # unchanged comment")
-		if bytes.Count(restored, want) != r.count {
-			t.Fatal("missing or repeated proposed route")
-		}
-		restored = bytes.ReplaceAll(restored, want, []byte("runs-on: "+r.previous+" # unchanged comment"))
+	for _, r := range normalCIRoutes() {
+		want := []byte("runs-on: " + normalCIRunnerExpression(r) + " # unchanged comment")
+		restored = bytes.ReplaceAll(restored, want, []byte("runs-on: "+r.Previous+" # unchanged comment"))
 	}
 	if !bytes.Equal(input, restored) || bytes.Count(output, []byte("echo ubuntu-latest")) != 3 {
 		t.Fatal("non-route bytes changed")

@@ -21,10 +21,11 @@ import (
 )
 
 type guest struct {
-	mu       sync.Mutex
-	active   bool
-	results  map[string]fixtureResult
-	instance string
+	mu                   sync.Mutex
+	active               bool
+	results              map[string]fixtureResult
+	instance             string
+	prepared, configured bool
 }
 
 func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
@@ -53,7 +54,26 @@ func (g *guest) serve(conn net.Conn) {
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
 		_ = conn.SetDeadline(time.Now().Add(10 * time.Minute))
 		result := materializeSource(reader, q.ID)
+		if result.Failure == "" {
+			g.mu.Lock()
+			g.prepared = true
+			g.mu.Unlock()
+		}
 		_ = json.NewEncoder(conn).Encode(result)
+		return
+	}
+	if q.Kind == "configure-offline" {
+		g.mu.Lock()
+		if g.active || !g.prepared || g.configured || q.ID != g.instance {
+			g.mu.Unlock()
+			return
+		}
+		g.active = true
+		g.configured = true
+		g.mu.Unlock()
+		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		_ = conn.SetDeadline(time.Now().Add(3 * time.Minute))
+		_ = json.NewEncoder(conn).Encode(configureOffline(conn, reader, q.ID))
 		return
 	}
 	if q.Kind == "prepare-sdk" {

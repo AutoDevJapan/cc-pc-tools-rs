@@ -24,7 +24,7 @@ func normalJobFixture(t *testing.T, fault string) (normalCIJobPin, api) {
 		if route.Job == "windows-native-check" {
 			minutes = 20
 		}
-		prefix := fmt.Sprintf("  %s:\r\n    runs-on: %s # unchanged comment\r\n    timeout-minutes: ", route.Job, route.Proposed)
+		prefix := fmt.Sprintf("  %s:\r\n    runs-on: %s # unchanged comment\r\n    timeout-minutes: ", route.Job, normalCIRunnerExpression(route))
 		data = []byte(strings.Replace(string(data), prefix+"20", prefix+fmt.Sprint(minutes), 1))
 	}
 	p := normalCIJobPin{Source: c, Tree: "f7eea82c96449b7749f98dd6c4b0344b64f1d651", WorkflowSHA: digest(data), RunID: 777, Attempt: 1, Role: "verify"}
@@ -68,6 +68,8 @@ func normalJobFixture(t *testing.T, fault string) (normalCIJobPin, api) {
 		switch key {
 		case "repos/AutoDevJapan/GoDD-MCP-Alpha/actions/runs/777":
 			value = run
+		case "repos/AutoDevJapan/GoDD-MCP-Alpha/actions/variables/" + normalCIRouteVariable:
+			value = map[string]string{"name": normalCIRouteVariable, "value": "enabled"}
 		case "repos/AutoDevJapan/GoDD-MCP-Alpha/actions/runs/777/attempts/1/jobs?per_page=100":
 			value = map[string]any{"total_count": 1, "jobs": []any{job}}
 		case "repos/AutoDevJapan/GoDD-MCP-Alpha/contents/.github/workflows/ci.yml?ref=" + c.SHA:

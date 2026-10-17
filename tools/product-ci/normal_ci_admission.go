@@ -74,6 +74,10 @@ func normalCIJobPlan(ctx context.Context, p normalCIJobPin, read api) (normalCIJ
 	if r.Owner.Login != "AutoDevJapan" || r.FullName != "AutoDevJapan/GoDD-MCP-Alpha" {
 		return bad()
 	}
+	var routeSwitch struct{ Name, Value string }
+	if read(ctx, "repos/"+r.FullName+"/actions/variables/"+normalCIRouteVariable, &routeSwitch) != nil || routeSwitch.Name != normalCIRouteVariable || routeSwitch.Value != "enabled" {
+		return bad()
+	}
 	var pr pull
 	if read(ctx, fmt.Sprintf("repos/%s/pulls/3613", r.FullName), &pr) != nil || pr.Head.Ref != "codex/todo2641-http-response-pseudo-20261015" {
 		return bad()
@@ -111,7 +115,7 @@ func normalCIJobPlan(ctx context.Context, p normalCIJobPin, read api) (normalCIJ
 		job := yamlField(jobs, route.Job)
 		runner := yamlField(job, "runs-on")
 		timeout := yamlField(job, "timeout-minutes")
-		if runner == nil || runner.Value != route.Proposed || timeout == nil {
+		if runner == nil || runner.Value != normalCIRunnerExpression(route) || timeout == nil {
 			return bad()
 		}
 		minutes, e := strconv.Atoi(timeout.Value)

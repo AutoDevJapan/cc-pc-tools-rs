@@ -248,3 +248,28 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   Windows公開SDK2783はjob20261017-114030-todo-2783でdoingを確認。未実行の原13工程を再登録したものではない。
 - Taskの明示例外により、準備/レビュー後のci.yml routeだけは原PR同branchのexpected旧SHA/force=falseで更新可。
   原feature sourceは編集せず、別の原製品PRも作らない。新head/tree/CodeQL再解析要否を親へ返し、親の完了を待たない。
+
+## 2026-10-17 job20261017-135829-todo-2737 の再開結果
+
+- 2784のレビューを受領。basee544990→headedc9c6e、tree6fc812a1b18a719479d178c362659741b73bd58f、19差分file/未読0、Must0/Suggestion0/Nit0。
+  原応答SHA2563C545242C6BCE06C0E22563D494B8A8C060CFF6865F6BDBB8A1B3812579B8A59。検査を再実行したレビューではない。
+- 新owned root C:/Users/makhmeto/AppData/Local/Temp/codex-owned-ab88838863fc707ba9361ba2fb93d1a3。
+  safe-delete create IDab88838863fc707ba9361ba2fb93d1a3。旧9389...のSDK資産を読み、新しい検査資源は新rootへ作成した。
+- canonical shared cargo_gate.exeの実normal/EOF取消しfixtureが成功。生成先byte lockがadmitted中に保持され、child drain後に解放された。
+  Rust compile/原workflowは実行していない。親はstart ack前の失敗だけgateを止め、開始後はstdin EOFを取消しとして送りdrainを待つ。
+- 最初のbootstrapはGHA scope readが失敗。APPDATAをhost child whitelistから落としていたため、既存OAuth設定の参照先が失われた。
+  同じgh_gate APIを最小環境で比較し、APPDATAなしexit4、有りexit0/repo1154066087を確認。秘密値は転送しない。
+- 次は管理者窓口clientのPowerShell native実行が失敗。PATHEXT/ComSpecが無いためexeをdocument扱いしpipelineに置けなかった。
+  無害なgo versionでも同じ失敗を再現し、public実行環境値を渡すと成功。broker承認拒否ではない。標準run-as-admin経路を維持した。
+- 修正後ci2737-host-v4/ci2737-guestのbootstrap-offlineはexit0。原b194の1904blobを専用guestで準備し、公式runnerをoffline/not-busyで登録確認。
+  専用offline-bootstrap labelだけ、ephemeral/no-default-labels/disableupdate、run.sh/listener未起動。原CIやCargoは未実行。
+  新root/bootstrap-9c267524764ef7212917f5c233b1fc44 のproofとcleanupでVM消滅/登録不在を確認。shared target lockも解放。
+  tokenはRAM/TLS/公式runner環境だけ、config stdout/stderrは破棄し、credential fileを読んでいない。
+- normal-ci-outlineで原checkoutのpersist-credentials:falseとrelease_source_sha入力のref選択を確認。
+  live hookではdispatch入力が別sourceを選ばないことと、実checkout後のHEAD/tree/auth不在の追加照合が必要。
+- 直接ephemeral labelをmainへ残すM1を新たに作らないため、4runs-on提案を条件付きexpressionへ改めた。
+  vars.CC_PRODUCT_2737_CI=enabled / workflow_dispatch / 元task refだけが専用label。変数不在と他ref/eventは原OS labelへ戻る。
+  原checks/if/permissions/timeout/Windows13/profile/直列/Docker parityを削らない。未適用。変数の所有/作成/回復、追加delta reviewが必要。
+- 新Go helper gate/runner codeとroute修正は2784のレビュー対象外。新しい有限差分レビューを実行接続後に行う。
+- 残り: actual job hooks/single-use/live API binding、共有gate下での実job、取消し時のprocess/登録/lock回収、Windows SDK2783、原公式CI完走。
+  親2641や2761を待たず自分の範囲を返し、原merge/Prdは親に残す。旧受入/旧回収や37件を複製しない。

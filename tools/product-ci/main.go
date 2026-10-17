@@ -654,7 +654,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
-	if len(os.Args) == 3 && os.Args[1] == "normal-ci-plan" {
+	if len(os.Args) == 2 && os.Args[1] == "normal-ci-outline" {
+		e = outlineNormalCI(ctx)
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-plan" {
 		e = saveNormalCIProposal(ctx, os.Args[2])
 	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {

@@ -20,6 +20,13 @@ import (
 const normalCIWorkflowSHA = "01d3351d4a6bce1faeb7e3b1eaf29555affcc304ea7b91caa979825cc94bc4b0"
 const normalCIFailedRun int64 = 38893656960
 const normalCIRepo int64 = 1154066087
+const normalCIRouteVariable = "CC_PRODUCT_2737_CI"
+
+// An absent switch always restores the original OS route, including after
+// merge. A task's ephemeral runner label must never strand main or future PRs.
+func normalCIRunnerExpression(r normalCIRoute) string {
+	return "${{ vars." + normalCIRouteVariable + " == 'enabled' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/todo2641-http-response-pseudo-20261015' && '" + r.Proposed + "' || '" + r.Previous + "' }}"
+}
 
 type normalCIRoute struct {
 	Job      string `json:"job"`
@@ -175,7 +182,7 @@ func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
 		if offset+len(r.Previous) > len(data) || string(data[offset:offset+len(r.Previous)]) != r.Previous {
 			return nil, errors.New("normal CI runner token position unverified")
 		}
-		edits = append(edits, replacement{offset, offset + len(r.Previous), r.Proposed})
+		edits = append(edits, replacement{offset, offset + len(r.Previous), normalCIRunnerExpression(r)})
 	}
 	sort.Slice(edits, func(i, j int) bool { return edits[i].start < edits[j].start })
 	var out bytes.Buffer
@@ -189,8 +196,14 @@ func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
 		previous = edit.end
 	}
 	out.Write(data[previous:])
-	if _, e = normalCIYAML(out.Bytes()); e != nil {
+	parsed, e := normalCIYAML(out.Bytes())
+	if e != nil {
 		return nil, e
+	}
+	for _, r := range routes {
+		if n := yamlField(yamlField(yamlField(parsed, "jobs"), r.Job), "runs-on"); n == nil || n.Value != normalCIRunnerExpression(r) {
+			return nil, errors.New("normal CI prepared route reparse rejected")
+		}
 	}
 	return out.Bytes(), nil
 }

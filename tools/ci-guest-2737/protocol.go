@@ -34,6 +34,15 @@ type sourceResult struct {
 	OfficialCI bool                 `json:"official_ci_success"`
 }
 
+const offlineLabel = "cc-product-2737-1154066087-offline-bootstrap"
+
+type offlineConfiguration struct{ Name, Token string }
+type offlineResult struct {
+	ID         string `json:"id"`
+	Configured bool   `json:"configured"`
+	Failure    string `json:"failure,omitempty"`
+}
+
 type sdkManifest struct {
 	Image      string `json:"image"`
 	RunnerSHA  string `json:"runner_sha256"`
@@ -162,7 +171,7 @@ func decodeRequest(d *json.Decoder) (request, error) {
 	if e := d.Decode(&q); e != nil {
 		return q, e
 	}
-	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source") || !validInstance(q.ID) {
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source" && q.Kind != "configure-offline") || !validInstance(q.ID) {
 		return q, errors.New("fixture request rejected")
 	}
 	return q, nil

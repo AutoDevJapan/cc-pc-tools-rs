@@ -108,6 +108,26 @@ connected yet. Product source and commit metadata are never logged or written
 on the host. `inspect-source` is only for in-memory guidance inspection; its
 stdout is source data and must never be redirected to a host file.
 
+`test-gate` now exercises the canonical Windows Cargo gate, without compiling
+Rust. Its child receives only the admitted build/test caps, waits for a start
+acknowledgement, and drains on normal completion or stdin EOF. The parent probes
+the actual per-target Windows byte lock before work and after child completion.
+Both real normal/cancel fixtures passed. The minimal host environment forwards
+APPDATA for existing OAuth configuration, plus PATHEXT/ComSpec for native
+PowerShell execution; no credential values or inherited admission markers are
+forwarded. Read-only experiments confirmed both initial context failures.
+
+`bootstrap-offline <owned-root> <SDK-root> <Linux-helper>` reserves that gate,
+starts a fresh SDK guest, materializes the pinned source, then configures the
+official ephemeral runner with a separate offline-only label. It never starts
+run.sh/listener or accepts a workflow job. The registration token crosses only
+RAM/mTLS and the stock runner environment; configuration output is discarded.
+The host verifies offline/not-busy state via the official API, stops/removes the
+exact VM, deletes only its nonce-named registration and confirms absence, then
+drains the child and observes target-lock release. The corrected bootstrap
+passed. The initial missing APPDATA and PATHEXT failures remain separate.
+No actual Cargo build, job hook, workflow dispatch or CI success is certified.
+
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).

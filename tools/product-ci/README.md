@@ -251,3 +251,15 @@ the PR/ref after inspection. Source/run/event/job/label/runner substitutions
 are covered by synthetic API tests. This helper has no CLI execution path,
 registration, single-use state, Cargo gate or runner hook connected yet. It
 does not constitute completed admission or any official CI result.
+
+The current runner-route proposal uses a conditional scalar instead of a bare
+ephemeral label. Only workflow_dispatch on the fixed task branch, with the
+task-specific repository variable CC_PRODUCT_2737_CI set to enabled, selects
+the dedicated label. All other cases fall back to the exact original OS label.
+Removing that variable therefore restores ordinary routing after cleanup and
+on main; no dangling task label is imposed on future PRs/schedules/pushes.
+Only the four runs-on scalar bytes change, with a parsed-expression recheck.
+This revised proposal has not been applied and needs delta review. Variable
+ownership, creation and restoration must be implemented before using it.
+`normal-ci-outline` only reports setup/checkout semantics from the fixed RAM
+workflow; it does not expose source commands, logs, secrets or mutate GitHub.

@@ -465,10 +465,21 @@ func smoke(ctx context.Context, root, toolRoot, helper, image string) (ret error
 	return record(root, "guest-smoke.private.json", map[string]any{"instance": instance, "vm_id": s.ID, "normal": true, "cancel": true, "mutual_tls": true, "official_ci_success": false, "product_source": false})
 }
 func main() {
+	if os.Getenv("CC_CI_2737_GATE_CHILD") == "1" {
+		if e := gateChild(); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	ctx, stop := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer stop()
 	var e error
-	if len(os.Args) == 2 && os.Args[1] == "inspect-source" {
+	if len(os.Args) == 5 && os.Args[1] == "bootstrap-offline" {
+		e = runGatedBootstrap(ctx, os.Args[2], os.Args[3], os.Args[4])
+	} else if len(os.Args) == 3 && os.Args[1] == "test-gate" {
+		e = testGateFixtures(ctx, os.Args[2])
+	} else if len(os.Args) == 2 && os.Args[1] == "inspect-source" {
 		e = inspectSource(ctx)
 	} else if len(os.Args) == 4 && os.Args[1] == "source-smoke" {
 		e = sourceSmoke(ctx, os.Args[2], os.Args[3])

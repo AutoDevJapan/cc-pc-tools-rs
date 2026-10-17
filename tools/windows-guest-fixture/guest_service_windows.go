@@ -353,7 +353,11 @@ func configureSerialPort(handle syscall.Handle) error {
 	if ok, _, err := setCommState.Call(uintptr(handle), uintptr(unsafe.Pointer(&dcb))); ok == 0 {
 		return fmt.Errorf("COM1 SetCommState failed: %w", err)
 	}
-	timeouts := serialTimeouts{}
+	timeouts := serialTimeouts{
+		ReadInterval:        ^uint32(0),
+		ReadTotalMultiplier: ^uint32(0),
+		ReadTotalConstant:   1000,
+	}
 	if ok, _, err := setCommTimeouts.Call(uintptr(handle), uintptr(unsafe.Pointer(&timeouts))); ok == 0 {
 		return fmt.Errorf("COM1 SetCommTimeouts failed: %w", err)
 	}

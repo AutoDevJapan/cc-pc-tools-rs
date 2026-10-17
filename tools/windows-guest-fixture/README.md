@@ -23,7 +23,8 @@ readiness or interrupts the TLS handshake. Before mTLS, the host and guest
 exchange a nonce-bound COM probe so the bidirectional serial channel is
 verified independently. The guest configures COM1 for binary 8N1 at 115200
 baud with flow control disabled. TLS records use bounded base64 line frames
-over COM1 so encrypted bytes survive serial control-character handling. The answer
+over COM1 so encrypted bytes survive serial control-character handling. COM
+reads return when bytes arrive instead of waiting for the TLS buffer size. The answer
 file has no `oobeSystem` settings, user account, password, or OOBE skip. OOBE
 is not hidden or completed by this helper. The service speaks only on the VM's
 COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in

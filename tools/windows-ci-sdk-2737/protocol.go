@@ -94,6 +94,11 @@ func COMPipeName(instance string) (string, error) {
 	return `\\.\pipe\windows-ci-sdk-2737-` + instance, nil
 }
 
+func mustCOMPipe(instance string) string {
+	pipe, _ := COMPipeName(instance)
+	return pipe
+}
+
 func BuildPublicSeed(instance string, client Identity) ([]byte, error) {
 	if !validInstance(instance) || client.Leaf == nil || client.Leaf.Subject.CommonName != "windows-ci-sdk-2737/"+instance || !hasUsage(client.Leaf, x509.ExtKeyUsageClientAuth) {
 		return nil, errors.New("host identity does not match the SDK instance")
@@ -284,8 +289,8 @@ func allowedPackage(id PackageID) bool {
 func allowedHost(host string) bool {
 	switch strings.ToLower(host) {
 	case "github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com", "release-assets.githubusercontent.com",
-		"gitforwindows.org", "aka.ms", "download.visualstudio.microsoft.com",
-		"static.rust-lang.org", "rustup.rs", "learn.microsoft.com":
+		"gitforwindows.org", "aka.ms", "go.microsoft.com", "download.microsoft.com", "software-download.microsoft.com",
+		"download.visualstudio.microsoft.com", "static.rust-lang.org", "rustup.rs", "learn.microsoft.com":
 		return true
 	default:
 		return false

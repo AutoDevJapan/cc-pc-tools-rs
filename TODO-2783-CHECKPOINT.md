@@ -1,6 +1,6 @@
 # ToDo 2783 resume checkpoint
 
-State: Partial source implementation saved. Real SDK installation, version checks, and template evidence remain pending a guest resource allocation.
+State: Host provisioning/recovery source and a fixed CLI entrypoint are implemented and locally verified. Real ISO download, VM provisioning, SDK installation, version checks, and template evidence remain unexecuted because no guest resource is assigned.
 
 Completed:
 - Re-read the startup owner instructions, worktree AGENTS.md (no CLAUDE.md exists here), original 2737 spec, and required skills. Confirmed this worktree is not client-protected and GitHub owner/repository remains AutoDevJapan/cc-pc-tools-rs.
@@ -10,23 +10,29 @@ Completed:
 - Implemented a Windows LocalSystem service entry point, strict public seed, in-memory Ed25519 server identity, nonce-bound COM1 handshake, private IPv4 TLS listener, per-guest firewall rule restricted to the helper executable/TCP 38473/LocalSubnet, and sanitized result codes.
 - Implemented public host identity/seed creation, deterministic instance-scoped Hyper-V COM pipe naming/opening, nonce-bound COM response validation, and a fixed SDK prepare/version-check sequence.
 - Verification passed: `go test -timeout 30s ./...`, `go vet ./...`, Windows amd64 `go build ./...`, and Windows cross-target `go vet ./...`. Two source-level issues found during iteration were fixed: a missing Windows error constant was defined locally, and a net.Pipe TLS rejection test was replaced with a direct pinned-certificate callback test to avoid deadlock while TLS sent its alert.
-- Commits `67f6057`, `c8d1fa4`, and current uncommitted milestone work are on this scheduler branch; push the new milestone before stopping.
+- Added fixed Windows Setup answer/staging assets (EULA only; no OOBE skip, account, or password), a standard specialize-stage LocalSystem service registration, a fixed Gen1 VM provisioner (2 vCPU, fixed 4 GiB, one Default Switch NIC, no GPU), and exact-VM stop/remove/VHD-detach recovery script that retains the SDK VHDX.
+- Added host methods to create and verify a safe-delete-owned root, download the Microsoft Evaluation Center image only over allowlisted HTTPS, build the helper and public seed ISO, provision through CC-AdminBroker, prepare over the instance-bound COM channel, validate the SDK receipt, and capture template/recovery evidence.
+- Added a no-argument Windows host CLI restricted to this scheduler worktree/branch. It does not run automatically; it has not been launched.
+- Verification after the host workflow addition passed: `go test -timeout 30s ./...`, `go vet ./...`, Windows amd64 `go build ./...`, and Windows amd64 `go vet ./...`. `git diff --check` also passed.
+- Current source edits are not yet committed; commit/push this milestone and save the scheduler workspace checkpoint before stopping.
 
 Not done:
-- No guest resource was assigned; no safe-delete-owned host root or fresh VM exists.
-- Host Hyper-V provisioning, official ISO validation, helper/seed media staging, LocalSystem service registration during standard Setup specialize, VM start/stop/remove, memory-zero/VHD-detach proof, SDK-only template export and its path/hash/size evidence remain.
+- No guest resource was assigned; no fresh VM exists. An earlier safe-delete-owned host root and guest helper artifact exist, but they do not prove SDK readiness.
+- Host Hyper-V provisioning code exists but has not executed. The official ISO is not downloaded or independently hash-verified; helper/seed media staging, LocalSystem service registration during standard Setup specialize, VM start/stop/remove, memory-zero/VHD-detach proof, SDK-only template export and its path/hash/size evidence remain.
 - Guest Windows code has only cross-compiled. No installer, Microsoft signature check, guest firewall operation, version probe, or recovery behavior has run in a VM.
 - No product source, Cargo build/test, runner registration, PR, official CI, or Prd operation was accessed or executed.
 
 Resume:
 1. Keep this scheduler branch and module; do not touch the old guest or quarantined data.
-2. Finish host Hyper-V/ISO/setup staging without product source; use the exact fresh instance-named COM pipe and public seed containing only instance/client-certificate SHA-256.
-3. Once guest resources are allocated, create a new safe-delete-owned root and fresh nonce guest capped at 2 vCPU/4 GiB, GPU/device passthrough/host mounts disabled, with only the existing Default Switch NIC.
-4. Run the fixed SDK sequence through the LocalSystem service, verify each pinned version, preserve raw logs privately and sanitized evidence, then stop/remove the VM and confirm memory zero plus VHD detach.
+2. Once guest resources are allocated, run the no-argument host CLI from this worktree's assigned scheduler branch. It creates a new safe-delete-owned root and fresh nonce guest capped at 2 vCPU/4 GiB, with GPU/device passthrough/host mounts disabled and only the existing Default Switch NIC.
+3. The CLI downloads the public Microsoft Evaluation Center ISO, stages a public seed with only the instance and client certificate hash, and starts the VM through CC-AdminBroker. The ordinary Setup specialize flow installs the LocalSystem service without bypassing OOBE or creating an account.
+4. Run the fixed SDK sequence through the LocalSystem service, verify each pinned version, preserve logs privately and sanitized evidence, then stop/remove the VM and confirm memory zero plus VHD detach.
 5. Keep the SDK-only template in the owned root with absolute path, hash, size, and VM recovery receipt. Commit/push/checkpoint and report all out-of-scope CI/source steps as unrun.
 
 Wait registration attempt: todo.exe wait-retry 2783 failed with todo_store_too_large (shared ToDo exceeds 64 MiB). No task state change was made. The same active job is retaining this work and waiting for guest resource allocation; do not repeat the oversized store write without a storage repair.
 
-Additional preparation: created safe-delete-owned template root ff7aab696c82983c97d77980aac3c215 inside this worktree (guard classification client_resource=false). Built the Windows amd64 guest service binary there: 11,643,392 bytes, SHA256 6FEC75F43F9EF132D729E09F12B86E08DA710B9C6665717960CB426B19DB5148. This is a seed helper artifact only; it has not run in a guest. The safe-delete default Temp root was classified client_resource=true and was left untouched.
+Additional preparation: created safe-delete-owned template root `ff7aab696c82983c97d77980aac3c215` inside this worktree (guard classification `client_resource=false`). Built the Windows amd64 guest service binary there: 11,643,392 bytes, SHA256 `6FEC75F43F9EF132D729E09F12B86E08DA710B9C6665717960CB426B19DB5148`. This is a seed helper artifact only; it has not run in a guest. A separate safe-delete default Temp root was classified `client_resource=true` and was left untouched.
+
+Resource check 2026-10-17: scheduler status reported no busy resource and no guest allocation for this task; general job slots were available. This does not authorize VM creation. The earlier `todo.exe wait-retry 2783` attempt failed with `todo_store_too_large` at the 64 MiB shared-store limit. That registration has not been retried. The same active job remains responsible for resuming once a guest resource is assigned.
 
 COM startup refinement: the guest now emits sdk-ready with instance/private-IPv4/server certificate SHA-256 first; the host then sends a fresh nonce probe and validates the echo. This avoids sending host bytes before Windows Setup has started the LocalSystem guest service. Go tests and Windows amd64 cross-build/vet passed after the change.

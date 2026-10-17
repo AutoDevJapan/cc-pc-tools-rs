@@ -160,6 +160,21 @@ func TestCOMPipeNameIsInstanceScoped(t *testing.T) {
 	}
 }
 
+func TestSetupAssetsPreserveOOBEAndUseLocalSystemStage(t *testing.T) {
+	if err := ValidateSetupAssets(); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := guestSeedAsset("Autounattend.xml"); !ok {
+		t.Fatal("answer file missing")
+	}
+	if _, ok := guestSeedAsset("stage.ps1"); !ok {
+		t.Fatal("service stage script missing")
+	}
+	if _, ok := guestSeedAsset("arbitrary.ps1"); ok {
+		t.Fatal("unexpected setup asset exposed")
+	}
+}
+
 func TestSingleJSON(t *testing.T) {
 	if !IsSingleJSON([]byte(`{"ok":true}`)) {
 		t.Fatal("single JSON rejected")

@@ -36,6 +36,20 @@ func TestPR148AssignmentRetryIsNarrowAndFinite(t *testing.T) {
 		t.Fatal("wrong runner rejection weakened")
 	}
 }
+func TestPR148PolicyReadVerifiesRepositoryFirst(t *testing.T) {
+	reads := 0
+	read := func(_ context.Context, ep string, out any) error {
+		reads++
+		if ep != "repositories/1392152644" {
+			t.Fatalf("unverified repository reached %s", ep)
+		}
+		b := []byte(`{"id":1,"private":true,"fork":false,"full_name":"AutoDevJapan/other","owner":{"login":"AutoDevJapan"},"permissions":{"admin":true}}`)
+		return json.Unmarshal(b, out)
+	}
+	if _, _, e := pr148OriginalExecution(context.Background(), pr148SyntheticPlan(), read); e == nil || reads != 1 {
+		t.Fatal("workflow read allowed before numeric repository verification")
+	}
+}
 func TestPR148OverflowAndFailedDestinationDrain(t *testing.T) {
 	data := bytes.Repeat([]byte{'x'}, 1024)
 	var file bytes.Buffer

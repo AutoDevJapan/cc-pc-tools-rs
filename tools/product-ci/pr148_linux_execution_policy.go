@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path"
@@ -21,6 +22,26 @@ type pr148StepPolicy struct {
 type pr148ExecutionPolicy struct {
 	TimeoutMinutes int
 	Steps          [5]pr148StepPolicy
+}
+
+func pr148OriginalExecution(ctx context.Context, p pr148LinuxPlan, read api) (pr148CargoPolicy, pr148ExecutionPolicy, error) {
+	var empty pr148CargoPolicy
+	var exec pr148ExecutionPolicy
+	if !p.valid() {
+		return empty, exec, errors.New("explicit PR148 source pin required")
+	}
+	r, e := verify(ctx, candidate{1392152644, 148, p.Head}, read)
+	if e != nil {
+		return empty, exec, e
+	}
+	if r.FullName != pr148Repo || r.Owner.Login != "AutoDevJapan" {
+		return empty, exec, errors.New("fixed repository must be verified before workflow read")
+	}
+	data, e := pr148Contents(ctx, read, pr148Workflows[0].Path, pr148Head)
+	if e != nil {
+		return empty, exec, e
+	}
+	return pr148WorkflowExecution(data)
 }
 
 func (p pr148ExecutionPolicy) timeout() time.Duration {

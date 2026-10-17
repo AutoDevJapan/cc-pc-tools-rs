@@ -55,12 +55,8 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		return errors.New("explicit new source pin required")
 	}
 	preflight, preflightStop := context.WithTimeout(ctx, 2*time.Minute)
-	workflow, e := pr148Contents(preflight, get, pr148Workflows[0].Path, pr148Head)
+	policy, execution, e := pr148OriginalExecution(preflight, p, get)
 	preflightStop()
-	if e != nil {
-		return e
-	}
-	policy, execution, e := pr148WorkflowExecution(workflow)
 	if e != nil {
 		return e
 	}

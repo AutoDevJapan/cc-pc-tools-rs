@@ -23,9 +23,8 @@ func mergedFixture(change func(map[string]any)) api {
 	}
 	d := map[string]any{
 		"repositories/1285649124":                                                                        r,
-		mergedFixtureRepo + "pulls/1002":                                                                 map[string]any{"state": "closed", "merged": true, "merge_commit_sha": mergedSHA, "head": map[string]any{"sha": mergedPRHead, "ref": "original", "repo": r}, "base": map[string]any{"ref": "main", "repo": r}},
+		mergedFixtureRepo + "pulls/1002":                                                                 map[string]any{"state": "closed", "merged": true, "merge_commit_sha": mergedSHA, "head": map[string]any{"sha": mergedPRHead, "ref": "original", "repo": r}, "base": map[string]any{"ref": "main", "sha": mergedBase, "repo": r}},
 		mergedFixtureRepo + "git/ref/heads/main":                                                         ref(mergedSHA),
-		mergedFixtureRepo + "git/ref/heads/original":                                                     ref(mergedPRHead),
 		mergedFixtureRepo + "git/commits/" + mergedSHA:                                                   commit(mergedSHA, []map[string]string{{"sha": mergedBase}, {"sha": mergedPRHead}}),
 		mergedFixtureRepo + "git/commits/" + mergedPRHead:                                                commit(mergedPRHead, nil),
 		mergedFixtureRepo + "code-scanning/default-setup":                                                map[string]any{"state": "configured", "languages": []string{"actions", "javascript", "javascript-typescript", "python", "rust", "typescript"}, "query_suite": "default", "threat_model": "remote", "runner_type": "labeled", "runner_label": codeQLLabel(1285649124)},
@@ -107,7 +106,7 @@ func TestMergedRejectsChangedReceipt(t *testing.T) {
 			d[pr].(map[string]any)["base"].(map[string]any)["repo"] = map[string]any{"id": 99}
 		}},
 		{"main-advanced", set(mergedFixtureRepo+"git/ref/heads/main", "object", map[string]string{"sha": mergedBase})},
-		{"branch-advanced", set(mergedFixtureRepo+"git/ref/heads/original", "object", map[string]string{"sha": mergedBase})},
+		{"base-sha-changed", func(d map[string]any) { d[pr].(map[string]any)["base"].(map[string]any)["sha"] = mergedPRHead }},
 		{"tree-changed", set(mergedFixtureRepo+"git/commits/"+mergedSHA, "tree", map[string]string{"sha": mergedBase})},
 		{"head-tree-changed", set(mergedFixtureRepo+"git/commits/"+mergedPRHead, "tree", map[string]string{"sha": mergedBase})},
 		{"parents-reordered", set(mergedFixtureRepo+"git/commits/"+mergedSHA, "parents", []map[string]string{{"sha": mergedPRHead}, {"sha": mergedBase}})},
@@ -161,8 +160,8 @@ func TestMergedReadFailureIdentifiesStageAndStopsWithoutFallback(t *testing.T) {
 		{"repositories/1285649124", "repository metadata"},
 		{mergedFixtureRepo + "pulls/1002", "PR receipt"},
 		{mergedFixtureRepo + "git/ref/heads/main", "current main ref"},
-		{mergedFixtureRepo + "git/ref/heads/original", "original PR branch ref"},
-		{mergedFixtureRepo + "git/commits/" + mergedSHA, "fixed commit"},
+		{mergedFixtureRepo + "git/commits/" + mergedSHA, "merge commit"},
+		{mergedFixtureRepo + "git/commits/" + mergedPRHead, "original PR head commit"},
 	} {
 		t.Run(tc.stage, func(t *testing.T) {
 			fixture := mergedFixture(nil)
@@ -187,5 +186,35 @@ func TestMergedReadFailureIdentifiesStageAndStopsWithoutFallback(t *testing.T) {
 	unsafe := mergedReadFailure("original PR branch ref", errors.New("opaque-sensitive-response"))
 	if unsafe.Error() != "merged source original PR branch ref: GitHub read failed (unclassified)" {
 		t.Fatal("injected transport error leaked")
+	}
+}
+
+func TestMergedReceiptUsesImmutableProofAfterBranchCleanup(t *testing.T) {
+	fixture := mergedFixture(nil) // No original-branch ref exists in this fixture.
+	seen := map[string]int{}
+	read := func(ctx context.Context, endpoint string, out any) error {
+		seen[endpoint]++
+		if strings.Contains(endpoint, "git/ref/heads/") && endpoint != mergedFixtureRepo+"git/ref/heads/main" {
+			return &gitHubReadError{class: "not-found"}
+		}
+		return fixture(ctx, endpoint, out)
+	}
+	p, err := planMergedCodeQL(context.Background(), mergedCandidate(), mergedCodeQLRun, read)
+	if err != nil || !validGuestPlan(p) {
+		t.Fatal("exact immutable merged receipt rejected after temporary-branch cleanup")
+	}
+	for _, endpoint := range []string{
+		mergedFixtureRepo + "git/ref/heads/main",
+		mergedFixtureRepo + "git/commits/" + mergedSHA,
+		mergedFixtureRepo + "git/commits/" + mergedPRHead,
+	} {
+		if seen[endpoint] != 1 {
+			t.Fatal("required fixed source proof was not read exactly once")
+		}
+	}
+	for endpoint := range seen {
+		if strings.Contains(endpoint, "git/ref/heads/") && endpoint != mergedFixtureRepo+"git/ref/heads/main" {
+			t.Fatal("mutable temporary branch was consulted")
+		}
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 )
 
 // This is one audited merge, not permission to follow the default branch.
@@ -47,14 +46,14 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 		Merged   bool
 		MergeSHA string `json:"merge_commit_sha"`
 		Base     struct {
-			Ref  string
-			Repo repository
+			Ref, SHA string
+			Repo     repository
 		}
 	}
 	if e := read(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, c.PR), &p); e != nil {
 		return repository{}, mergedReadFailure("PR receipt", e)
 	}
-	if !sameMergedRepo(r.repository, r.repository) || p.State != "closed" || !p.Merged || p.MergeSHA != mergedSHA || p.Head.SHA != mergedPRHead || p.Head.Ref == "" || p.Base.Ref != "main" || !sameMergedRepo(p.Head.Repo, r.repository) || !sameMergedRepo(p.Base.Repo, r.repository) {
+	if !sameMergedRepo(r.repository, r.repository) || p.State != "closed" || !p.Merged || p.MergeSHA != mergedSHA || p.Head.SHA != mergedPRHead || p.Head.Ref == "" || p.Base.Ref != "main" || p.Base.SHA != mergedBase || !sameMergedRepo(p.Head.Repo, r.repository) || !sameMergedRepo(p.Base.Repo, r.repository) {
 		return repository{}, errors.New("exact merged PR receipt rejected")
 	}
 	var ref struct{ Object struct{ SHA string } }
@@ -64,20 +63,22 @@ func verifyMerged(ctx context.Context, c candidate, read api) (repository, error
 	if ref.Object.SHA != mergedSHA {
 		return repository{}, errors.New("current main differs from audited merge")
 	}
-	if e := read(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(p.Head.Ref), &ref); e != nil {
-		return repository{}, mergedReadFailure("original PR branch ref", e)
-	}
-	if ref.Object.SHA != mergedPRHead {
-		return repository{}, errors.New("original PR branch changed")
-	}
+	// A merged PR's temporary branch may be removed by normal repository
+	// cleanup. It is not the execution source. Require the original PR head's
+	// immutable commit and tree below, and bind that head to the exact ordered
+	// merge parents. Never recover by another ref or by ignoring a read error.
 	for _, sha := range []string{mergedSHA, mergedPRHead} {
 		var commit struct {
 			SHA     string
 			Tree    struct{ SHA string }
 			Parents []struct{ SHA string }
 		}
+		stage := "merge commit"
+		if sha == mergedPRHead {
+			stage = "original PR head commit"
+		}
 		if e := read(ctx, "repos/"+r.FullName+"/git/commits/"+sha, &commit); e != nil {
-			return repository{}, mergedReadFailure("fixed commit", e)
+			return repository{}, mergedReadFailure(stage, e)
 		}
 		if commit.SHA != sha || commit.Tree.SHA != mergedTree {
 			return repository{}, errors.New("merged commit or PR tree rejected")

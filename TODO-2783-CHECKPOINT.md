@@ -26,3 +26,5 @@ Resume:
 5. Keep the SDK-only template in the owned root with absolute path, hash, size, and VM recovery receipt. Commit/push/checkpoint and report all out-of-scope CI/source steps as unrun.
 
 Wait registration attempt: todo.exe wait-retry 2783 failed with todo_store_too_large (shared ToDo exceeds 64 MiB). No task state change was made. The same active job is retaining this work and waiting for guest resource allocation; do not repeat the oversized store write without a storage repair.
+
+Additional preparation: created safe-delete-owned template root ff7aab696c82983c97d77980aac3c215 inside this worktree (guard classification client_resource=false). Built the Windows amd64 guest service binary there: 11,643,392 bytes, SHA256 6FEC75F43F9EF132D729E09F12B86E08DA710B9C6665717960CB426B19DB5148. This is a seed helper artifact only; it has not run in a guest. The safe-delete default Temp root was classified client_resource=true and was left untouched.

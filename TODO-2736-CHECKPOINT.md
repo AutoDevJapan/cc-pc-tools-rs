@@ -1,5 +1,57 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 20時台・通常push成功と送信不一致の確定（最新）
+
+helper PR189へ703e5ed9bbfb69e247046954ff0f92bd83f2a74fを非forceでpush成功。
+同sourceの正式run39028662342はWindows job117384571549（34秒）、Linux job117384571410
+（35秒）ともsuccess。CodeQL run39028662284の全4言語もsuccess。
+Build speed run39028662293/job117384571349だけはまだnextest実行中であり、通常merge/配備は
+未実施。後続の文書commitをこのCIの新しい機能sourceだったとは書かない。
+PR本文とレビューcomment6233409603を更新し、原Must修正・静的読了範囲・fixtureの資格と
+未達を明記した。新しいreview ToDoや直接子Codexは作っていない。
+
+### 正規Git API反映が止まった原因
+
+最新版から配布用product-ci Windows/LinuxとWindows runnerをbuild、全exit0。
+同binaryのpr148-planは元source/全3workflow/全4予算failureの再照合でexit0。
+その後のpr148-routeはtree POSTの後、全tree比較でexit1になった。
+原errorは57bytesの「proposal bytes differ: .github/workflows/live-chain.yml」。
+commit POST、ref PATCH、正式runner/dispatch/製品Cargoには到達していない。
+実製品refは前後75a4051305b6f47c70ddb59a8d2bf9015666f12cのままである。
+
+原因は送信に使うgh_gate/cc-redactが、認証値でない設定
+`persist-credentials: false`まで`[REDACTED]`へ置換したこと。
+本工程ではこのguard/フィルターの許可や保護設定を変更していない。
+実gate SHA256=6EBB40B8B580FDAE37C7F611E4FFBBFE1AD1246AB593FE1AA787749E122B7DFE。
+小さい認証値なしのRust診断を既存cc-redactと共有Cargoゲート/専用targetで実行して、
+当該booleanの置換を実測exit0。診断は環境変数/秘密/製品sourceを読まず、保護変更0。
+既存Rust libraryそのものを呼ぶ必要がある一度限りの診断であり、新しい常用Rust道具は作っていない。
+
+さらにread-only Go診断で元全treeのGit IDを再現した。3workflowをRAMで共通生成し、
+この真偽値だけを置換した予測treeを再計算すると、GitHub上の実unreferenced tree
+bb477c675dee11b8a232ceddcb71221c4ac38264が取得でき、全path/mode比較も一致した。
+正規生成案のtreeはa6851bd86e08b0f89eca3c4b30fbf7d4e292244f。
+この観測はtreeの再POSTやsource変更ではない。別API/認証/符号化で送信フィルターを迂回せず、
+同じ失敗送信も繰り返していない。原製品sourceをhostへ保存/clone/checkoutしていない。
+
+### 証拠配送・回収・次の条件
+
+全18file/37,944,658bytesの配布binary、原build log、失敗/intent/proposal、診断source/logを
+恒久root184a58eedf4f923741f160dfe7cfd5b7/resume-201652へ全bytes/SHA一致で保存した。
+manifest.jsonは各元/保存先/SHA対応を保持する。保存後の全再照合も不一致0。
+新Temp39a677ec121d94a343638b24d6513497と543fcb477d1a7b8a85db6d9296ea8d49は
+plan→別通常削除→finish=source_absent。削除拒否や回避は0。旧SDKのf8847d61と子の残留13件は保持。
+
+同じmarker「2736-routing-gate-diagnosis-703e5ed-20261017」で元2736/2640へ正規editで
+配送成功を読戻した。状態/specは不変で、2640は原waitのまま。受付だけの配送報告ではない。
+正常/取消しの旧子証拠を正式製品CI成功へ転記せず、製品PR148のmergeは元2640だけが行う。
+
+再開は、まずPR189の実head703e5edの残CIの終端/失敗原因を確認する。同じ検査を重ねない。
+送信側は上記誤検知の正規修復/適合を示すsource・review・実binaryのreceiptが必要。
+同じgateのままpr148-routeを再実行しない。新allowlist/guard/manifestや共有bridgeの許可を
+本工程で広げる手順へ付け替えない。修復が別に届くまで製品のsource更新/正式CIは未達として保持する。
+技術条件の確認であり、本人の判断やPC操作は求めない。
+
 ## 2026-10-17 20時台の最終Windows受入と統合（以下を優先）
 
 job20261017-201652-todo-2736。原2790と同じreview2797は正規doneになった。

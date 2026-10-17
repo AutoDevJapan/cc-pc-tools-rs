@@ -290,3 +290,24 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   原13工程とDocker parity、最終Rust nextest/workspace/doctestの実行は残る。review2784 Must0はedc9までで、この新差分の合格にしない。
 - 次はこの有限deltaの別モデルレビュー、Windows SDK2783の受領、route変数の所有/回復と4scalar同branch expected SHA更新、実公式CI完走。
   newroot ab888.../ci2737-host-live.exe と ci2737-live-guest-final は検査用buildであり、配布済み工具や公式成功ではない。
+
+### job135829の保存・追加レビューの入口
+
+- live接続差分c304508fdcbcbf961a7cc4ad5218f5fb78c45604、その後のbinding schema修正33294cfeca39ca57c5a22c479a12559e2d4d9ed0をpush済み。
+  product-ciのOS schemaは`Linux`で、GoのGOOS`linux`との取り違えを修正。timeout30/5分もresponse側で照合し、Windows unit/vetを再検査して成功した。
+  これにより古いci2737-host-live.exeは最終sourceと一致しない。再開時は最終commitからhost/product-ci/Linux helperを再buildし、古いexeで実jobを受けない。
+- 追加レビュー2795はgpt-6-lunaを明示して--spec付き通常登録。実装jobはgpt-6.1-solで、別モデルを選択した。
+  登録確認時todo/jobs0。specのbaseはedc9c6e、headは最終保存commitへ更新し、対象は差分25file。実応答を受領してMustと未読を処理するまで実official jobを起動しない。
+  2784のMust0はedc9まで。2795の登録をレビュー成功へ読み替えない。Windows SDK2783は同じ担当のdoingを維持し複製しない。
+- gate/offline bootstrapと新unit/vet/Linux結果の84fileを
+  D:/CC/Tools/product-ci/evidence/todo-2737-20261017/resume-135829-live へ全SHA一致で保存。
+  hashes.private.json SHA2561F9C0CC15A4A9C022E6AB7A10CF98F5D0CA5B056BDB87743775C160AFB686418。
+  binding追加検査の別manifest binding-delta.private.json SHA2560FC24BF17A047597AFE85C5DAFC4EF9B1FA193AD30A978058DA74E4E0067CCEB。
+  元assets/原失敗は保持。製品source packet/credential/VHDXをevidenceへ複製していない。
+- owned工具containerはexactID/name/label/image/no host mount/no device/no GPU/PID modeを照合後に停止、PID0確認済み。
+  最初のPowerShell確認はnull配列を1件と数えて拒否しただけでstopは未実行。null/emptyを正しく分け同じidentity条件を確認して停止した。
+  tools-paused-live.private.jsonを参照。未完SDK layer/所有root9389とab888は保持し、次回のgeniso利用時にexact所有を再照合する。
+- 自分の新live VM/official runner/公式jobはまだ0件。offline bootstrap VM/登録は既存proofどおり全回収済み。
+  原PR3613はb194のまま。残りは2795レビュー対応、2783 Windows SDK、route変数の所有/回復、原4scalarだけのexpected旧SHA通常更新、元CI全工程と必要Rust最終受入。
+  手動eventで原pr-tree-receiptが条件によりskipされることは保持し、全4job successと誤称しない。原Windows条件/13工程/timeout/profile/直列とDocker parityを削らない。
+  待機前に親2641へnote配送、2795と2783をwait --onへ登録し、同job/branch/実HEADでscheduler checkpointを保存する。

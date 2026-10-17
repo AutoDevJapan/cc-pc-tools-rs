@@ -1,5 +1,21 @@
 # レビュー2778への対応
 
+## レビュー2781の残Mustと追加検査
+
+レビュー2781は固定c1635c9までの全差分を読み、M1/M3/M4/M5を解消とした。M2に残ったMustはenvpの同名キー重複だった。原応答SHA256は`07FFB3AC89278054D7C85DEED6570D0AB13F3B9056695FC6014D120089615D39`。レビューは静的読解であり、作者の検査を再現したものではない。
+
+`f2199d3`でtool envの後にクランプした固定YAMLをmapへ畳み、一意のキー順で返した。テストはmapへ変換する前の生スライスの重複を拒否する。3つのGit設定変数とActions contextの上書きも拒否した。SuggestionのCI/GITHUB_ACTIONS欠落を補い、実Rustハーネスから値を確認した。
+
+追加の合成fixtureで原fmt/all-targetsまでは成功したが、原doctestがnoexecな/tmpで実行できなかった。`dd17a4b`でexecな既存/work tmpfs内に専用tool-tmpを作り、TMPDIRをそこへ固定した。原command bytes、guest tools/target、/tmp noexecは維持した。原失敗ログを保持した。
+
+最新code head `dd17a4bdcb7bb007673e831a24a560408b298b59`、module tree `269264365cc6b22c2bb6314722f8021f39b038af`でGo unit/vet、Windows/Linux amd64 buildが成功した。新homeへ原rustupコマンドで1.95.0/rustfmtを導入し、実host共有Cargo gateで原4コマンドを合成Rust lib/bin/doctestへ実行した。全4件がexit0/drained=true、合計25.903秒。製品sourceと原全scenarioは実行していない。
+
+Windows artifact SHA256 `0A3465AD5CB10EB04CBBF3E410B650B230CB26F6508970874B08EF1EF04885F8`、Linux artifact SHA256 `B4D4778828751E43762A3394AD3D67FDE8401F80578F492536B8A4B57266E874`。
+
+追加差分4ファイルを固定本文にした独立Sonnetレビュー2785を通常ToDoへ登録した。今回の残Mustの解消判定はその応答を待つ。正式Runner.Worker/job/hooks、実run.path、製品全件のRAM収容、任意host強制終了時の原子的permit解放、同一UIDに対する万能隔離は実証していない。これらをfixture成功から補わず、親が正式実行時に原因と結果を確認する。
+
+以下は元2778への対応記録である。
+
 固定0377dd0に対するSonnetの原応答を受領し、5件のMustに対応した。修正コードは`bdd9a61c30e09601e2dfe77ecc3e8b407d6a9b50`、module treeは`cc35a1abd029cde20692487783fdda66d5d101a6`。追加レビューの結論はまだ受領していない。
 
 最後に、timeoutを読むためのworkflow取得も、数値repo IDの照合後に限る追加確認を入れた。再レビューの最新固定headは`c1635c9ce37cb07524335130e5e2b040f549fa92`、module treeは`252685436e69fe57bab8e29a682c82e1719b381c`。元5Must修正からの追加差分は、製品実行前のscope照合順とそのunitだけで、実fixtureの実行経路は変えていない。

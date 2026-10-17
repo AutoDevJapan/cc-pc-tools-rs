@@ -1,6 +1,23 @@
 # PR148 Linux helperの再開記録
 
-初回レビュー2778の5件のMustへ対応し、追加検査を終えた。固定した全差分を再レビュー2781へ通常登録した。再レビューの応答と親2736への最終配送は未完了。正式な製品実行は親に残す。
+初回レビュー2778の5件のMustへ対応した。全差分を読んだ再レビュー2781の残Must（環境変数の重複）も修正し、追加差分を再レビュー2785へ通常登録した。2785の応答確認と親2736への最終配送は未完了。正式な製品実行は親に残す。
+
+## 2026-10-17・11時40分以降の再開（こちらを優先）
+
+同じjob `20261017-110029-todo-2751`。停止前のitem_76は完了済みで、原記録を先に照合した。Go検査と成功したfixtureを繰り返していない。原itemは`.ci-work/item76-completed.private.json`に保存した。
+
+- レビュー2781は実Sonnet5.5、succeeded/exit0。原応答SHA256 `07FFB3AC89278054D7C85DEED6570D0AB13F3B9056695FC6014D120089615D39`。固定base/headの全18差分と25ファイルを読了し、元5Mustのうち4件を解消、M2に環境変数重複を1件残した。レビュー側の実検査は0。
+- `f2199d3`でenvpをキーごとのmapへ畳み、固定YAMLの厳しい並列制限を残してキー順にした。生スライスの重複を直接検出するunitへ改めた。Git設定とActions contextの上書きを拒否し、CI/GITHUB_ACTIONSを継承した。
+- 実Rust1.95の原doctestコマンドで最初にnoexecな/tmpのPermission deniedを検出した。`dd17a4bdcb7bb007673e831a24a560408b298b59`で新guestの/work/tool-tmpをTMPDIRに固定し、原Cargo引数と/tmp noexecを保った。失敗ログも保存した。
+- 最新module treeは`269264365cc6b22c2bb6314722f8021f39b038af`。このcode headでGo unit/vet成功、Windows/Linux amd64 build成功。Windows SHA256 `0A3465AD5CB10EB04CBBF3E410B650B230CB26F6508970874B08EF1EF04885F8`、Linux SHA256 `B4D4778828751E43762A3394AD3D67FDE8401F80578F492536B8A4B57266E874`。
+- 新namespace/新homeに原rustupコマンドで1.95.0/rustfmtを導入し、合成lib/bin/doctestだけで原4種のCargoコマンドを実host共有gateへ1本ずつ通した。fmt/all-targets/doc/release binsがすべてexit0/drained=true、25.903秒。Rustのテストから直列値1とCI/GITHUB_ACTIONS=trueも確認した。製品検査や原全scenarioの成功ではない。
+- 差分レビュー2785はc1635c9→dd17a4bの4 Goファイルと既存3文脈ファイルを固定本文で供給した。Sonnet指定の通常subwork、spec 101308 bytes、SHA256 `E302F7A762A48964367406480F72351BD67456812F5A202C38F0D0AC75C6E64D`。保存されたspecとの全SHA一致を確認した。登録を繰り返さない。
+- この追加検査の2 namespaceはTreeGone/Removed=true、当該labelのcontainer inventoryは0。新一時owner `2c9d447e6463c2d4421ca0880fb410dc`はplan（45 entries/24696908 bytes）→別通常削除→finish source_absentを確認した。
+- 原証拠41ファイル/24696908 bytesは`.ci-work/todo2751-env-rust195-evidence`へ全SHA一致で保存。manifest SHA256 `040610C24379FFAF9442D25E1431348B4D7A6CCBF1967FC44BFA339EAD513C8B`。削除後も全41ファイルのbytes/SHAを再照合した。前段の113証拠も保持する。
+
+次は2785の実モデル・固定head・4差分読了・Mustを確認する。Mustが残れば直す。Mustなしなら親2736へ実hash、原応答SHA、fixtureと正式CIの区別、残る制限を最終配送する。製品workflow/source/runner登録/dispatchをこの子から実行しない。親の完了は待たない。レビューだけが残って終了する場合は正規`wait 2751 --on 2785`と最新HEADのscheduler checkpointを保存する。
+
+Discordの後片付け投稿は既知のQuestionStateRecoveryRequiredのため未送信。再送や迂回をせず、元noteに残す。本人の判断待ちではない。
 
 ## 2026-10-17・11時台の再開（こちらを優先）
 

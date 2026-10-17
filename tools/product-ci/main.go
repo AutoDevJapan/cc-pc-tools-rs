@@ -658,6 +658,17 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
+	if len(os.Args) == 2 && os.Args[1] == "release-inspect" {
+		report, err := inspectReleaseInventory(ctx, get)
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(report)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "merged-inspect" {
 		p, err := planMergedCodeQL(ctx, mergedCandidate(), mergedCodeQLRun, get)
 		if err == nil {

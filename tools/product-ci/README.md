@@ -241,3 +241,22 @@ and base SHA, both fixed commit trees, exact ordered merge parents, and fixed
 current main on every before/after verification. It does not try another ref
 after a 404 or accept an unavailable commit. Only the one audited merge can
 use this proof; the generic/open-PR modes retain their original branch check.
+
+## Fixed release-source inventory
+
+`release-inspect` is a read-only preparation command for the original audited
+merge. It verifies the exact merged receipt before and after reading the eight
+fixed source blobs. Both Git blob SHA1 and SHA256 must match. Parsing consumes
+copies of the same verified RAM bytes; source names and content never enter
+the report or error messages.
+
+The report distinguishes workflow-wide and root-environment secret/token
+mentions, explicit inherited secrets, script parsing failures, and literal
+Docker/Compose calls. Shell parsing does not expand host environment values
+or execute substitutions. Argument values, job names, conditions and source
+text are hashes, while public Docker flag names use a closed vocabulary.
+
+This inventory covers literal shell syntax only. It does not resolve Compose
+models, prove all called scripts are secret-free, calculate the canonical trust
+digest, or authorize execution. `ExecutionAuthorized` remains false. It adds no
+runner, mutation endpoint, candidate, ref, label, profile or fallback path.

@@ -1,5 +1,14 @@
 # マージ後CIの修復状況
 
+最新到達点（2026-10-17 11:10 JST）: PR196の正式配布後、元merge41090の
+公式CodeQL run38941323954/attempt1はPython・JS/TS・Actions・Rustの全4jobで実success。
+全4sessionの実HEAD/tree、PID0、container回収、runner不在、lock解放を確認済み。
+構造化原結果は.ci-work/todo2757-original-postmerge-codeql-final.private.json。
+公式job原logは3件保存済み。Rust原logはCLIの端末制御文字保護による拒否で未取得。
+保護解除flagや別経路は使わない。これを解析失敗や原log取得成功と取り違えない。
+次の実装境界はtodo2757-release-executor-plan.md。1文書だけのHaikuレビュー2780を登録。
+配備CIの実装・release/既存Prd revision/probeはまだ未完。以下の旧記録は履歴として保持する。
+
 ToDo2757。元2639/独立確認2752の状態・停止・依存を保持する。
 開始時branchはscheduler/todo-2757-pr-ci、開始HEADはd6a46b0。
 修復source repository1406818713のAutoDevJapan/private/admin/nonforkをAPI確認した。
@@ -44,6 +53,33 @@ retry件数、排他・回収は変えない。404後の別経路実行や成功
 
 ## 残る工程
 
+2026-10-17 10:50 JST追記: PR196はSonnet2777の固定4差分/4全文読了・Must0、
+必要CI success8/neutral1/skipped1後に司令塔が通常merge cdd0537d79fc4e1601c53feba6ed48eccd13f3d5。
+原応答SHA39D5357C181F8DE1B114D5F88C07BFBD27B84E23894383BC0BF14A518914BC51を
+最終eventと照合して受領した。未読の周辺配線は親が元と同じproductPlan/前後照合を
+sourceで確認し、open PRのbranch変更拒否は既存main_test.goでも維持されている。
+module tree11edf6471ecdf766a2d444c3b114dd736d890dfdは検証headとmergeで一致。
+Windows/Linuxの正式配布を完了し、同sourceでmerged-inspectの固定receipt検証を通過。
+
+専用queueには別run38964598433が同41090/同workflow/attempt1の4jobで待機していた。
+同repo/private/admin/nonfork、4jobすべてqueued/steps0/runner0、同専用labelを再照合し、
+この重複だけを通常cancelへ1回送信。元run38941323954は維持し、取消し反映後の
+正式merged-inspectはexit0。queue条件やlabel・runner受付は変更していない。
+
+元公式run38941323954/attempt1のPython job117109408190は実success。
+正式runner sessionもexit0、実HEAD41090/tree007b照合true、isolation確認、
+停止時PID0、container回収、元runner登録不在、lock解放を確認。
+公式原log171163bytes/SHA256 EF7E48CC1FF2F6A553EF31CE0436FF37AD14A2082138E9F0C50CB6EB2BABAF1Dを
+表示せず保存した。原runner receipt/checkout/context/logのcopy全hash一致。
+残3言語はまだ成功扱いにせず、同じ正式toolで次の1jobを実行中。
+
+固定workflow3件のYAML構造をRAM解析し、全blob/bytes/SHA256を再照合した。
+promotionはpreconditions→reusable2本→promotionの4job。full verificationは31step、
+backend integrationは12stepで、後者の6stepにcompose操作がある。
+条件式・環境値はopaque hashで保持しており、意味全文を確認したとは扱わない。
+この実構造を基に隔離と元検査を維持する有限設計をSonnet2779へ登録した。
+同sourceの3言語終了・release実装修復・元業務gate・Prd revision/probeは未完。
+
 2026-10-17 10:04 JST追記: 診断PR194はSonnet2771の全7差分読了・Must0、
 親のPR差分同一照合、CI success8/neutral1/skipped1を経て通常merge5c41e78。
 同一module tree f5b510d39eb58aff51cb7ae53568725d2bba1fcbからWindows/Linuxを
@@ -67,11 +103,11 @@ merged専用からだけ除く。404を捕捉して別refへ進む処理は追�
 全差分の独立レビュー・必要CI・通常merge・正式配布を行う。未配布版は実行しない。
 Go race/unit/vetは最新の専用修復で成功。正式CodeQL・release・Prdは未完。
 
-1. 上記merged専用修復の独立Sonnetレビュー、Must修正、必要CI、通常merge、正式配布。
-   元branch参照404の原結果を保持し、未配布版や診断だけでjobを起動しない。
-2. 正式配布から同CodeQL4ジョブを順次実行し、公式結果・原log指紋・回収を確認。
-3. 固定sourceのrelease safety gate/DEPLOY/smoke/trust正典を調べ、
-   Hosted固定を既存Linux基盤で直す有限経路を確定する。
+1. 配備CIの有限実行計画2780を受領し、実装前の固定operation/compose/build/SDK/
+   token/drain/trust/native/Cargoの未確認データを埋め、正式な4役割の実行経路を実装する。
+2. 元公式CodeQLのRust原log取得拒否を保持する。保護解除や別取得経路へ切り替えない。
+3. 固定sourceのrelease safety gate/DEPLOY/smoke/trust正典を正確に確認し、
+   Hosted固定を既存Linux基盤で直す有限経路を通常review/CI/merge/配布する。
 4. 必要なら41090の子だけを通常PRで修復し、独立レビュー・trust更新・CIを行う。
 5. 元preconditions/full verification/backend integration、既存Prd revision/probeを実証。
 6. 自分の実結果を2752へ配送。原2639/2752/他製品をdoneにしない。

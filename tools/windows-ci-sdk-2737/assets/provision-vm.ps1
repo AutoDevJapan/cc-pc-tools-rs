@@ -2,9 +2,9 @@ $ErrorActionPreference = 'Stop'
 Import-Module Hyper-V
 Import-Module Storage
 Import-Module Dism
-$configPath = Join-Path $PSScriptRoot 'provision.json'
+$root = [IO.Path]::GetFullPath('__CCSDK2737_OWNED_ROOT__')
+$configPath = Join-Path $root 'provision.json'
 $cfg = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
-$root = [IO.Path]::GetFullPath($PSScriptRoot)
 if ([IO.Path]::GetFullPath($cfg.root) -cne $root) { throw 'OWNED_ROOT_MISMATCH' }
 if ($cfg.instance -notmatch '^[A-Za-z0-9_-]{1,128}$') { throw 'INSTANCE_REJECTED' }
 $name = 'cc-sdk-2737-' + $cfg.instance

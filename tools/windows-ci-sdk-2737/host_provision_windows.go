@@ -347,7 +347,11 @@ func ProvisionNewGuest(root OwnedRoot, worktree, iso, seedISO, instance string) 
 		return VMReceipt{}, err
 	}
 	scriptPath := filepath.Join(root.Path, "provision-vm.ps1")
-	if err := writeOwnedFile(scriptPath, provisionVMPS); err != nil {
+	adminScript, err := renderAdminPowerShellScript(provisionVMPS, root.Path)
+	if err != nil {
+		return VMReceipt{}, err
+	}
+	if err := writeOwnedFile(scriptPath, adminScript); err != nil {
 		return VMReceipt{}, err
 	}
 	if err := runAdminBrokerScript(scriptPath, 1800, root.Path); err != nil {
@@ -374,7 +378,11 @@ func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryR
 		return RecoveryReceipt{}, err
 	}
 	script := filepath.Join(root.Path, "remove-vm-"+instance+".ps1")
-	if err := writeOwnedFile(script, removeVMKeepVHDPS); err != nil {
+	adminScript, err := renderAdminPowerShellScript(removeVMKeepVHDPS, root.Path)
+	if err != nil {
+		return RecoveryReceipt{}, err
+	}
+	if err := writeOwnedFile(script, adminScript); err != nil {
 		return RecoveryReceipt{}, err
 	}
 	if err := runAdminBrokerScript(script, 600, root.Path); err != nil {

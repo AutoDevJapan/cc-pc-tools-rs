@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Import-Module Hyper-V
 Import-Module Storage
-$root = [IO.Path]::GetFullPath($PSScriptRoot)
+$root = [IO.Path]::GetFullPath('__CCSDK2737_OWNED_ROOT__')
 $receiptPath = Join-Path $root 'vm-created.private.json'
 $receipt = Get-Content -Raw -LiteralPath $receiptPath | ConvertFrom-Json
 if ($receipt.instance -notmatch '^[A-Za-z0-9_-]{1,128}$' -or $receipt.name -cne ('cc-sdk-2737-' + $receipt.instance) -or $receipt.vhd -cne (Join-Path $root 'guest.vhdx') -or $receipt.root -cne $root) { throw 'OWNED_VM_RECEIPT_REJECTED' }

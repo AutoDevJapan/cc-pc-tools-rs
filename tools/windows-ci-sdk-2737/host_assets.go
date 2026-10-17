@@ -4,8 +4,11 @@ import (
 	_ "embed"
 	"encoding/xml"
 	"errors"
+	"path/filepath"
 	"strings"
 )
+
+const ownedRootPlaceholder = "__CCSDK2737_OWNED_ROOT__"
 
 //go:embed assets/Autounattend.xml
 var setupAnswerFile []byte
@@ -47,6 +50,10 @@ func ValidateSetupAssets() error {
 		}
 	}
 	vmScript := string(provisionVMPS)
+	removeScript := string(removeVMKeepVHDPS)
+	if strings.Count(vmScript, ownedRootPlaceholder) != 1 || strings.Count(removeScript, ownedRootPlaceholder) != 1 || strings.Contains(vmScript, "$PSScriptRoot") || strings.Contains(removeScript, "$PSScriptRoot") {
+		return errors.New("admin broker scripts must use the explicit owned root")
+	}
 	for _, required := range []string{"-Generation 1", "-MemoryStartupBytes 4GB", "-Count 2", "Default Switch", "Set-VMComPort", "Microsoft Corporation", "Remove-VMNetworkAdapter", "Get-VMGpuPartitionAdapter"} {
 		if !strings.Contains(vmScript, required) {
 			return errors.New("Hyper-V provisioning script is missing a required constraint")
@@ -56,6 +63,14 @@ func ValidateSetupAssets() error {
 		return errors.New("Hyper-V provisioning script contains a host switch or GPU operation")
 	}
 	return nil
+}
+
+func renderAdminPowerShellScript(template []byte, root string) ([]byte, error) {
+	if !filepath.IsAbs(root) || strings.ContainsAny(root, "\r\n\x00") || strings.Count(string(template), ownedRootPlaceholder) != 1 {
+		return nil, errors.New("admin script owned-root rendering rejected")
+	}
+	escaped := strings.ReplaceAll(root, "'", "''")
+	return []byte(strings.Replace(string(template), ownedRootPlaceholder, escaped, 1)), nil
 }
 
 func guestSeedAsset(name string) ([]byte, bool) {

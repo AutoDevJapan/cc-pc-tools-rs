@@ -295,6 +295,25 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		}
 		assertGone(rec)
 	})
+	t.Run("uncertain-create-never-landed", func(t *testing.T) {
+		// The real create never reaches the daemon and its outcome is unknown: only
+		// taking the name with an inert container resolves it, and that container
+		// is removed again.
+		silent := func(cfg string) builderDocker {
+			return decoratedDocker{inner: cliBuilderDocker{cfg}, before: func(args []string) error {
+				if args[0] == "create" && strings.Contains(strings.Join(args, " "), " --init ") {
+					return errors.New("response lost before reaching the daemon")
+				}
+				return nil
+			}}
+		}
+		rec, err := runReleaseBuilder(ctx, silent, fixtureBuilderSpec(t, probe, false), newDir("uncertain-never-landed"))
+		reports = append(reports, rec)
+		if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.Started || !rec.ContainerRemoved || !rec.PhaseMayRelease {
+			t.Fatalf("name hold fixture: %v %s", err, rec.Failure)
+		}
+		assertGone(rec)
+	})
 	t.Run("recovery", func(t *testing.T) {
 		dir := newDir("recovery")
 		refuse := func(cfg string) builderDocker {

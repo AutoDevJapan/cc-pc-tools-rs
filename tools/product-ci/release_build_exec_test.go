@@ -50,6 +50,7 @@ type fakeDaemon struct {
 	startReturned, stoppedBeforeDrain         bool
 	stdin                                     []byte
 	pending                                   *fakeContainer
+	createCalls                               int
 	onStop                                    func()
 }
 
@@ -70,7 +71,7 @@ func newFakeDaemon(t *testing.T) *fakeDaemon {
 type fakeImage struct {
 	proof                                                                      map[string]string
 	dropLayer, dupLayer, dupEntry, wrongDiff, badConfig, noConfig, emptyLayers bool
-	extraDiff, symlink, tamperLayer                                            bool
+	extraDiff, symlink, tamperLayer, garbageLayer                              bool
 }
 
 func fakeImageTar(t *testing.T, proof map[string]string) []byte {
@@ -91,6 +92,10 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	ltw.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(body)), Typeflag: tar.TypeReg})
 	ltw.Write(body)
 	ltw.Close()
+	if o.garbageLayer {
+		lt.Reset()
+		lt.Write(bytes.Repeat([]byte("x"), 1024))
+	}
 	var gzb bytes.Buffer
 	gz := gzip.NewWriter(&gzb)
 	gz.Write(lt.Bytes())
@@ -258,6 +263,10 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 		if d.onCreate != nil {
 			d.onCreate(args)
 		}
+		d.mu.Lock()
+		d.createCalls++
+		first := d.createCalls == 1
+		d.mu.Unlock()
 		switch d.createMode {
 		case "refuse":
 			io.WriteString(stderr, "docker: Error response from daemon: Conflict.\n")
@@ -266,6 +275,13 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 			return errors.New("daemon unavailable")
 		}
 		d.mu.Lock()
+		for _, o := range d.containers {
+			if o.name == argValues(args, "--name")[0] {
+				d.mu.Unlock()
+				io.WriteString(stderr, "docker: Error response from daemon: Conflict. The container name is already in use.\n")
+				return errors.New("exit status 125")
+			}
+		}
 		d.seq++
 		c := &fakeContainer{id: fmt.Sprintf("%064x", d.seq), name: argValues(args, "--name")[0], args: args, labels: map[string]string{}, status: "created"}
 		for _, l := range argValues(args, "--label") {
@@ -276,13 +292,16 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 			c.volume = fmt.Sprintf("%064x", d.seq+1000)
 			d.volumes[c.volume] = true
 		}
-		if d.createMode == "late" {
+		if d.createMode == "late" && first {
 			d.pending = c // The daemon will finish this create after the client gave up.
 		} else {
+			if d.pending != nil && d.pending.name == c.name {
+				d.pending = nil // The name is taken: the late request can no longer win it.
+			}
 			d.containers[c.id] = c
 		}
 		d.mu.Unlock()
-		if d.createMode == "lose" || d.createMode == "late" {
+		if first && (d.createMode == "lose" || d.createMode == "late") {
 			return errors.New("response lost")
 		}
 		fmt.Fprintln(stdout, c.id)
@@ -798,7 +817,7 @@ func (u *uncertainImageDocker) run(ctx context.Context, stdin io.Reader, stdout,
 func TestKernelProofIsReadBackFromTheBuiltImage(t *testing.T) {
 	p := fixtureBuilderProfile
 	good := map[string]string{"cpu.max": "50000 100000", "memory.max": "536870912", "pids.max": "128", "CapEff": "0000000000000000", "NoNewPrivs": "1"}
-	if got, err := checkBuiltImage(fakeImageTar(t, good), p); err != nil || got["cpu.max"] != "50000 100000" {
+	if got, err := checkBuiltImage(context.Background(), fakeImageTar(t, good), p); err != nil || got["cpu.max"] != "50000 100000" {
 		t.Fatalf("valid proof rejected: %v", err)
 	}
 	for key, bad := range map[string]string{"cpu.max": "max 100000", "memory.max": "max", "pids.max": "max", "CapEff": "000001ffffffffff", "NoNewPrivs": "0"} {
@@ -807,21 +826,21 @@ func TestKernelProofIsReadBackFromTheBuiltImage(t *testing.T) {
 			wrong[k] = v
 		}
 		wrong[key] = bad
-		if _, err := checkBuiltImage(fakeImageTar(t, wrong), p); !errors.Is(err, errKernelProof) {
+		if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, wrong), p); !errors.Is(err, errKernelProof) {
 			t.Fatalf("%s mismatch accepted", key)
 		}
 	}
-	if _, err := checkBuiltImage(fakeImageTar(t, nil), p); !errors.Is(err, errKernelProof) {
+	if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, nil), p); !errors.Is(err, errKernelProof) {
 		t.Fatal("missing proof accepted")
 	}
-	if _, err := checkBuiltImage(fakeImageTar(t, map[string]string{"cpu.max": "50000 100000"}), p); !errors.Is(err, errKernelProof) {
+	if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, map[string]string{"cpu.max": "50000 100000"}), p); !errors.Is(err, errKernelProof) {
 		t.Fatal("partial proof accepted")
 	}
-	if _, err := checkBuiltImage([]byte("junk"), p); err == nil {
+	if _, err := checkBuiltImage(context.Background(), []byte("junk"), p); err == nil {
 		t.Fatal("junk accepted as an image")
 	}
 	// Product images need a manifest but no probe.
-	if got, err := checkBuiltImage(fakeImageTar(t, nil), productBuilderProfile); err != nil || got != nil {
+	if got, err := checkBuiltImage(context.Background(), fakeImageTar(t, nil), productBuilderProfile); err != nil || got != nil {
 		t.Fatalf("product image shape rejected: %v", err)
 	}
 }
@@ -859,41 +878,121 @@ func TestBuilderRefusesToStartWhileAnotherBuilderExists(t *testing.T) {
 	}
 }
 
-func TestBuilderUnknownCreateIsNotReleasedByAnEmptySearch(t *testing.T) {
-	now := time.Now()
-	releaseNow = func() time.Time { return now }
-	t.Cleanup(func() { releaseNow = time.Now })
-	for _, mode := range []string{"nothing", "late"} {
-		h := newHarness(t)
-		h.d.createMode = mode
-		factory := func(string) builderDocker { return h.d }
-		rec, err := h.run(context.Background())
-		if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.PhaseMayRelease || !rec.RecoveryRequired || h.d.called("start") {
-			t.Fatalf("%s: an unknown create released the phase: %v", mode, err)
+func TestBuilderUnknownCreateIsResolvedOnlyByTakingTheName(t *testing.T) {
+	ctx := context.Background()
+	// The daemon is unreachable for both the create and the name hold.
+	h := newHarness(t)
+	h.d.createMode = "nothing"
+	factory := func(string) builderDocker { return h.d }
+	rec, err := h.run(ctx)
+	if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.PhaseMayRelease || !rec.RecoveryRequired || h.d.called("start") {
+		t.Fatalf("an unknown create released the phase: %v", err)
+	}
+	again, err := recoverReleaseBuilder(ctx, factory, h.dir)
+	if err == nil || again.PhaseMayRelease {
+		t.Fatal("recovery released an unresolved create")
+	}
+	h.d.createMode = "" // The daemon answers again: the name hold succeeds and is removed.
+	again, err = recoverReleaseBuilder(ctx, factory, h.dir)
+	if err != nil || !again.PhaseMayRelease || !again.ContainerRemoved {
+		t.Fatalf("recovery did not resolve the create: %v", err)
+	}
+	h.assertDisposed(again, false)
+
+	// A create the daemon finishes later can no longer win the name.
+	h = newHarness(t)
+	h.d.createMode = "late"
+	rec, err = h.run(ctx)
+	if err == nil || rec.Failure != "create-uncertain" || !rec.PhaseMayRelease || !rec.ContainerRemoved || h.d.called("start") {
+		t.Fatalf("late create not resolved in the run: %v", err)
+	}
+	h.d.materialize()
+	if c, _ := h.d.remaining(); c != 0 {
+		t.Fatal("a late create left a container behind")
+	}
+
+	// A create that lands just before the name hold is found by its nonce.
+	h = newHarness(t)
+	h.d.createMode = "late"
+	calls := 0
+	h.d.onCreate = func([]string) {
+		calls++
+		if calls == 2 {
+			h.d.materialize()
 		}
-		// Still inside the quiet period: nothing found is not proof of absence.
-		again, err := recoverReleaseBuilder(context.Background(), factory, h.dir)
-		if err == nil || again.PhaseMayRelease {
-			t.Fatalf("%s: released before the quiet period", mode)
+	}
+	rec, err = h.run(ctx)
+	if err == nil || !rec.PhaseMayRelease || !rec.ContainerRemoved || h.d.called("start") {
+		t.Fatalf("a create that landed first was not removed: %v", err)
+	}
+	h.assertDisposed(rec, false)
+
+	// A crash before the daemon answered: the saved reservation already says so.
+	h = newHarness(t)
+	h.d.createMode = "nothing"
+	state := filepath.Join(h.dir, releaseBuildStateFile)
+	var snapshot []byte
+	h.d.onCreate = func([]string) { snapshot, _ = os.ReadFile(state) }
+	if _, err := h.run(ctx); err == nil {
+		t.Fatal("unexpected success")
+	}
+	var saved releaseBuildReceipt
+	if json.Unmarshal(snapshot, &saved) != nil || !saved.CreateAttempted || !saved.UncertainCreate || saved.Nonce == "" {
+		t.Fatal("the unconfirmed create was not durable before the request")
+	}
+	for _, landed := range []bool{true, false} {
+		h2 := newHarness(t)
+		if err := os.WriteFile(filepath.Join(h2.dir, releaseBuildStateFile), snapshot, 0o600); err != nil {
+			t.Fatal(err)
 		}
-		if mode == "late" {
-			h.d.materialize() // The daemon finishes the delayed create; the nonce finds and removes it.
-			again, err = recoverReleaseBuilder(context.Background(), factory, h.dir)
-			if err != nil || !again.PhaseMayRelease || !again.ContainerRemoved || h.d.called("start") {
-				t.Fatalf("late container not recovered: %v", err)
-			}
-			h.assertDisposed(again, false)
-			continue
+		if landed {
+			id := strings.Repeat("e", 64)
+			h2.d.containers[id] = &fakeContainer{id: id, name: saved.ContainerName, labels: map[string]string{releaseBuildLabel: saved.Nonce}, status: "created"}
 		}
-		now = now.Add(releaseCreateQuietPeriod + time.Second)
-		again, err = recoverReleaseBuilder(context.Background(), factory, h.dir)
-		if err != nil || !again.PhaseMayRelease {
-			t.Fatalf("not released after the quiet period: %v", err)
+		again, err := recoverReleaseBuilder(ctx, func(string) builderDocker { return h2.d }, h2.dir)
+		if err != nil || !again.PhaseMayRelease || !again.ContainerRemoved {
+			t.Fatalf("landed=%v: recovery after a crash failed: %v", landed, err)
 		}
-		h.assertDisposed(again, false)
+		h2.assertDisposed(again, false)
 	}
 }
 
+func TestBuilderRecoveryChecksTheWholePhaseWhateverTheSavedFlagsSay(t *testing.T) {
+	h := newHarness(t)
+	h.d.toolPresent = true
+	if _, err := h.run(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	id := strings.Repeat("d", 64)
+	h.d.containers[id] = &fakeContainer{id: id, name: "other", labels: map[string]string{releaseBuildLabel: "someone-else"}, status: "exited"}
+	again, err := recoverReleaseBuilder(context.Background(), func(string) builderDocker { return h.d }, h.dir)
+	if err == nil || again.PhaseMayRelease || !again.RecoveryRequired {
+		t.Fatalf("a foreign builder was ignored: %v", err)
+	}
+	delete(h.d.containers, id)
+	if again, err = recoverReleaseBuilder(context.Background(), func(string) builderDocker { return h.d }, h.dir); err != nil || !again.PhaseMayRelease {
+		t.Fatalf("free phase not released: %v", err)
+	}
+}
+
+func TestBuiltImageLayersMustBeBoundedWellFormedTars(t *testing.T) {
+	ctx := context.Background()
+	if _, err := checkBuiltImage(ctx, buildFakeImage(t, fakeImage{garbageLayer: true}), productBuilderProfile); err == nil {
+		t.Fatal("a layer that is not a tar passed with correct digests")
+	}
+	saved := imageUncompressedTotalLimit
+	imageUncompressedTotalLimit = 1024
+	t.Cleanup(func() { imageUncompressedTotalLimit = saved })
+	if _, err := checkBuiltImage(ctx, buildFakeImage(t, fakeImage{}), productBuilderProfile); err == nil {
+		t.Fatal("expansion beyond the total limit accepted")
+	}
+	imageUncompressedTotalLimit = saved
+	cctx, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, err := checkBuiltImage(cctx, buildFakeImage(t, fakeImage{}), productBuilderProfile); err == nil {
+		t.Fatal("validation continued after cancellation")
+	}
+}
 func TestBuilderKeepsTheContainerWhenVolumeNamesCannotBeSaved(t *testing.T) {
 	h := newHarness(t)
 	h.d.withVolume, h.d.startMode = true, "hang"
@@ -955,7 +1054,7 @@ func TestBuilderNeverReportsSuccessWithoutABuiltArtifact(t *testing.T) {
 }
 
 func TestBuiltImageArchiveIsValidatedCompletely(t *testing.T) {
-	if _, err := checkBuiltImage(buildFakeImage(t, fakeImage{}), productBuilderProfile); err != nil {
+	if _, err := checkBuiltImage(context.Background(), buildFakeImage(t, fakeImage{}), productBuilderProfile); err != nil {
 		t.Fatalf("complete image rejected: %v", err)
 	}
 	for name, o := range map[string]fakeImage{
@@ -970,12 +1069,12 @@ func TestBuiltImageArchiveIsValidatedCompletely(t *testing.T) {
 		"link entry":        {symlink: true},
 		"tampered layer":    {tamperLayer: true},
 	} {
-		if _, err := checkBuiltImage(buildFakeImage(t, o), productBuilderProfile); err == nil {
+		if _, err := checkBuiltImage(context.Background(), buildFakeImage(t, o), productBuilderProfile); err == nil {
 			t.Fatalf("%s accepted", name)
 		}
 	}
 	good := buildFakeImage(t, fakeImage{})
-	if _, err := checkBuiltImage(good[:len(good)/2], productBuilderProfile); err == nil {
+	if _, err := checkBuiltImage(context.Background(), good[:len(good)/2], productBuilderProfile); err == nil {
 		t.Fatal("truncated archive accepted")
 	}
 }

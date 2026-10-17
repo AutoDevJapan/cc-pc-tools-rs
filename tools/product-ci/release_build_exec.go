@@ -142,7 +142,6 @@ type releaseBuildReceipt struct {
 	ContextBytes                                                int64
 	ContextFiles, ContextDirs                                   int
 	CreateAttempted, UncertainCreate, PhaseBlocked              bool
-	CreateAttemptedUnix                                         int64
 	ContainerID                                                 string
 	OuterIsolationVerified                                      bool
 	Started                                                     bool
@@ -463,14 +462,16 @@ func (b *builderRun) containersByNonce(ctx context.Context) ([]string, error) {
 }
 
 func (b *builderRun) create(ctx context.Context) string {
-	b.rec.CreateAttempted = true
-	b.rec.CreateAttemptedUnix = releaseNow().Unix()
+	// The outcome is unconfirmed from before the request leaves until the daemon
+	// answers; both facts are durable first, so a crash in between is recoverable.
+	b.rec.CreateAttempted, b.rec.UncertainCreate = true, true
 	if b.persist() != nil { // Reserved before the daemon can know the name.
+		b.rec.UncertainCreate = false // Nothing was sent.
 		return "state-unavailable"
 	}
 	out, stderr, err := dockerText(ctx, b.d, 4096, b.spec.createArgs(b.rec.Nonce, b.rec.ContainerName)...)
 	if err == nil && releaseContainerPattern.MatchString(out) {
-		b.rec.ContainerID = out
+		b.rec.ContainerID, b.rec.UncertainCreate = out, false
 		_ = b.persist()
 		return ""
 	}
@@ -478,13 +479,13 @@ func (b *builderRun) create(ctx context.Context) string {
 	// cancelled or killed client or a dropped connection does not: the daemon may
 	// still finish the request later.
 	if err != nil && ctx.Err() == nil && b.parent.Err() == nil && strings.Contains(strings.ToLower(stderr), "error response from daemon") {
+		b.rec.UncertainCreate = false
+		_ = b.persist()
 		return "create-failed"
 	}
-	// Unknown outcome. Only the exact nonce can be recovered, a recovered
-	// container is never started, and an empty search does not release the phase
-	// until the quiet period has passed (see dispose).
-	b.rec.UncertainCreate = true
-	_ = b.persist()
+	// Unknown outcome. Only the exact nonce can be recovered and a recovered
+	// container is never started. An empty search is not proof of absence: dispose
+	// closes the window by taking the name itself (see holdCreateName).
 	rctx, cancel := context.WithTimeout(context.WithoutCancel(b.parent), time.Minute)
 	defer cancel()
 	for attempt := 0; attempt < 3; attempt++ {
@@ -757,12 +758,15 @@ func (b *builderRun) collect(ctx context.Context) string {
 	if cpErr != nil {
 		return b.classify(ctx, "artifact-missing")
 	}
-	proof, err := checkBuiltImage(data, b.spec.profile)
+	proof, err := checkBuiltImage(ctx, data, b.spec.profile)
 	if err != nil {
 		if b.spec.profile.kernelProof && errors.Is(err, errKernelProof) {
 			return "kernel-proof-mismatch"
 		}
-		return "artifact-invalid"
+		return b.classify(ctx, "artifact-invalid")
+	}
+	if class := b.classify(ctx, ""); class != "" { // Expiry during validation outranks success.
+		return class
 	}
 	b.artifact = data
 	b.rec.ArtifactBytes, b.rec.ArtifactSHA256 = int64(len(data)), digest(data)
@@ -777,32 +781,41 @@ var errKernelProof = errors.New("kernel proof mismatch")
 // Pause between the checks that conclude a lost create did not reach the daemon.
 var releaseCreateRecheckPause = time.Second
 
-// A create whose outcome is unknown is treated as possibly still in flight at the
-// daemon for this long; releaseNow exists so tests can move the clock.
-var (
-	releaseCreateQuietPeriod = 2 * time.Minute
-	releaseNow               = time.Now
-)
-
 var (
 	imageConfigName = regexp.MustCompile("^sha256:[0-9a-f]{64}$")
 	imageLayerName  = regexp.MustCompile("^[0-9a-f]{64}\\.tar(\\.gz)?$")
 )
 
 const (
-	imageMetaLimit         = 1 << 20
-	imageMaxLayers         = 512
-	imageUncompressedLimit = 4 << 30
+	imageMetaLimit = 1 << 20
+	imageMaxLayers = 512
 )
+
+// Total uncompressed bytes all layers together may expand to.
+var imageUncompressedTotalLimit int64 = 4 << 30
+
+// ctxReader makes every read of a long validation observe cancellation.
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (c ctxReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
+}
 
 // checkBuiltImage validates a Docker-archive image completely: one manifest, a
 // config whose bytes match its digest name, and exactly the listed layers, each
-// present once with the compressed SHA-256 in its name and the uncompressed
-// SHA-256 recorded as its diff_id. The fixture profile additionally reads back
-// what the kernel showed to the build step.
-func checkBuiltImage(data []byte, p releaseBuilderProfile) (map[string]string, error) {
+// present once with the compressed SHA-256 in its name, the uncompressed SHA-256
+// recorded as its diff_id, and a well-formed non-empty tar inside. The total
+// expansion is bounded and the work stops when ctx ends. The fixture profile
+// additionally reads back what the kernel showed to the build step.
+func checkBuiltImage(ctx context.Context, data []byte, p releaseBuilderProfile) (map[string]string, error) {
 	invalid := errors.New("image archive invalid")
-	tr := tar.NewReader(bytes.NewReader(data))
+	tr := tar.NewReader(ctxReader{ctx, bytes.NewReader(data)})
 	meta, sizes := map[string][]byte{}, map[string]int64{}
 	for {
 		h, err := tr.Next()
@@ -857,7 +870,8 @@ func checkBuiltImage(data []byte, p releaseBuilderProfile) (map[string]string, e
 	}
 	var proof map[string]string
 	checked := 0
-	tr = tar.NewReader(bytes.NewReader(data))
+	budget := imageUncompressedTotalLimit
+	tr = tar.NewReader(ctxReader{ctx, bytes.NewReader(data)})
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
@@ -870,7 +884,7 @@ func checkBuiltImage(data []byte, p releaseBuilderProfile) (map[string]string, e
 		if !isLayer {
 			continue
 		}
-		compressed, diff, found, err := scanImageLayer(tr, p.kernelProof)
+		compressed, diff, found, err := scanImageLayer(ctx, tr, p.kernelProof, &budget)
 		if err != nil || compressed != strings.SplitN(h.Name, ".", 2)[0] || "sha256:"+diff != conf.Rootfs.Diff_ids[i] {
 			return nil, invalid
 		}
@@ -898,10 +912,11 @@ func checkBuiltImage(data []byte, p releaseBuilderProfile) (map[string]string, e
 }
 
 // scanImageLayer streams one layer entry: its compressed digest (every byte of
-// the entry), its uncompressed digest and, if wanted, the fixture's proof file.
-func scanImageLayer(r io.Reader, wantProof bool) (compressed, diff string, proof map[string]string, err error) {
+// the entry), its uncompressed digest, the walk of the tar inside it to the end
+// and, if wanted, the fixture's proof file. Expansion is charged to budget.
+func scanImageLayer(ctx context.Context, r io.Reader, wantProof bool, budget *int64) (compressed, diff string, proof map[string]string, err error) {
 	ch, dh := sha256.New(), sha256.New()
-	br := bufio.NewReader(io.TeeReader(r, ch))
+	br := bufio.NewReader(io.TeeReader(ctxReader{ctx, r}, ch))
 	var plain io.Reader = br
 	if magic, _ := br.Peek(2); len(magic) == 2 && magic[0] == 0x1f && magic[1] == 0x8b {
 		gz, gerr := gzip.NewReader(br)
@@ -911,33 +926,33 @@ func scanImageLayer(r io.Reader, wantProof bool) (compressed, diff string, proof
 		defer gz.Close()
 		plain = gz
 	}
-	limited := &io.LimitedReader{R: plain, N: imageUncompressedLimit + 1}
+	limited := &io.LimitedReader{R: plain, N: *budget + 1}
 	body := io.TeeReader(limited, dh)
-	if wantProof {
-		lt := tar.NewReader(body)
-		for {
-			e, terr := lt.Next()
-			if terr == io.EOF {
-				break
-			}
-			if terr != nil {
-				return "", "", nil, terr
-			}
-			if strings.TrimPrefix(e.Name, "./") != "proof" || e.Size > 4096 {
-				continue
-			}
-			v, _ := io.ReadAll(io.LimitReader(lt, e.Size))
-			if json.Unmarshal(v, &proof) != nil {
-				return "", "", nil, errKernelProof
-			}
+	lt := tar.NewReader(body)
+	for {
+		e, terr := lt.Next()
+		if terr == io.EOF {
+			break
+		}
+		if terr != nil {
+			return "", "", nil, terr
+		}
+		if !wantProof || strings.TrimPrefix(e.Name, "./") != "proof" || e.Size > 4096 {
+			continue
+		}
+		v, _ := io.ReadAll(io.LimitReader(lt, e.Size))
+		if json.Unmarshal(v, &proof) != nil {
+			return "", "", nil, errKernelProof
 		}
 	}
 	if _, err = io.Copy(io.Discard, body); err != nil {
 		return "", "", nil, err
 	}
-	if limited.N <= 0 {
-		return "", "", nil, errors.New("image layer too large")
+	used := *budget + 1 - limited.N
+	if limited.N <= 0 || used <= 0 {
+		return "", "", nil, errors.New("image layer empty or too large")
 	}
+	*budget -= used
 	if _, err = io.Copy(io.Discard, br); err != nil {
 		return "", "", nil, err
 	}
@@ -954,6 +969,10 @@ func (b *builderRun) dispose() {
 	clean := true
 	if rec.CreateAttempted {
 		ids, err := b.containersByNonce(ctx)
+		if err == nil && len(ids) == 0 && rec.UncertainCreate && !rec.ContainerRemoved {
+			b.holdCreateName(ctx)
+			ids, err = b.containersByNonce(ctx)
+		}
 		switch {
 		case err != nil || len(ids) > 1:
 			clean = false
@@ -970,8 +989,9 @@ func (b *builderRun) dispose() {
 			}
 		}
 		clean = clean && rec.ContainerAbsent && rec.VolumesAbsent
-		// An unknown create that left no trace yet is not proof of absence.
-		if rec.UncertainCreate && !rec.ContainerRemoved && releaseNow().Unix()-rec.CreateAttemptedUnix < int64(releaseCreateQuietPeriod/time.Second) {
+		// An unconfirmed create is resolved only by removing a container of this
+		// nonce: the original, or the one that took its name.
+		if rec.UncertainCreate && !rec.ContainerRemoved {
 			clean = false
 		}
 	} else {
@@ -986,13 +1006,33 @@ func (b *builderRun) dispose() {
 		rec.ToolImageRemoved = err == nil && !present
 		clean = clean && rec.ToolImageRemoved
 	}
-	if rec.PhaseBlocked {
-		busy, err := b.anyBuilder(ctx)
-		if err != nil || busy {
-			clean = false // Another builder may still own the phase.
-		}
+	// Whatever the saved flags say, the phase is free only if no builder of any
+	// nonce exists at the moment of release.
+	if busy, err := b.anyBuilder(ctx); err != nil || busy {
+		clean = false
 	}
 	rec.PhaseMayRelease = clean
+}
+
+// holdCreateName closes the window of a create whose outcome is unknown. A
+// second, inert create of the same name either succeeds, so a late arrival of the
+// first request can no longer win the name, or fails because the first one
+// already exists and is then found by its nonce. The container is never started
+// and dispose removes it. The tool image is marked as introduced first, because
+// a create may pull a missing image.
+func (b *builderRun) holdCreateName(ctx context.Context) {
+	present, err := b.imagePresent(ctx)
+	if err != nil {
+		return
+	}
+	if !present {
+		b.rec.ToolImageIntroduced = true
+		if b.persist() != nil {
+			return
+		}
+	}
+	_, _, _ = dockerText(ctx, b.d, 4096, "create", "--name", b.rec.ContainerName, "--label", releaseBuildLabel+"="+b.rec.Nonce, "--label", "cc.todo=2799",
+		"--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "67108864", "--pids-limit", "16", releaseBuilderTool, "--version")
 }
 
 func (b *builderRun) disposeContainer(ctx context.Context, id string) bool {

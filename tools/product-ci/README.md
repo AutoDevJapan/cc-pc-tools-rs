@@ -332,23 +332,30 @@ Budget. The builder is fixed at 1.5 CPU, 6 GiB, 448 PIDs. With the idle runner
 (0.5 CPU, 1 GiB, 64 PIDs) and 1 GiB of host byte transfer the phase is 2 CPU,
 8 GiB, 512 PIDs. This component takes no exclusion and never raises a limit. A
 container labelled `cc.release-build` left over from an earlier run makes the
-phase busy (`phase-busy`) before anything is pulled or created. That hold is saved
-in the reservation, so recovering the run releases it only when no builder exists.
+phase busy (`phase-busy`) before anything is pulled or created. Whatever the saved
+flags say, a release (including by recovery) also requires that no builder of any
+nonce exists.
 Host RAM holds
 the gzip context, one verified copy for stdin, and one exactly sized artifact
 (256 MiB maximum; 32 MiB for the fixture), all inside the transfer budget. The
 artifact is a complete Docker-archive image (config digest, every listed layer once,
-compressed and uncompressed digests checked) and is never written to the host; the
+compressed and uncompressed digests checked, each layer a well-formed tar, total
+expansion bounded, validation stopped by cancellation). The component never writes it
+to the host (only the opt-in fixture test saves its probe-only image into its owned
+directory for inspection); the
 raw builder log (32 MiB maximum) goes
 to a private file in `ownedDir` and only its size and SHA-256 are reported.
 
 Lifecycle. The nonce, container name, tool image digest and limits are written to
 `release-build-state.json` in the owned directory before the container is
 created. If the create result is lost, only the exact nonce is recovered and the
-recovered container is never started. Only the daemon's own error reply proves that
-a create did not happen; otherwise an empty search does not release the phase until
-a two minute quiet period has passed, and a later recovery repeats the check. After
-normal exit, failure, cancellation or
+recovered container is never started. The unconfirmed state is saved before the
+request is sent. Only the daemon's own error reply proves that a create did not
+happen; otherwise an empty search is not proof of absence, and no clock is used.
+Disposal (and any later recovery) takes the name with a second, inert create: it
+either succeeds, so a late arrival of the first request can no longer win the name,
+or conflicts because the first one exists and is found by its nonce. The container
+is never started and is removed. After normal exit, failure, cancellation or
 timeout the Docker client has drained all I/O before the container is stopped.
 Disposal records stop and PID 0, removes the container with its anonymous volumes,
 confirms absence by listing, and removes a tool image that this run introduced.

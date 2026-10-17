@@ -260,3 +260,20 @@ This inventory covers literal shell syntax only. It does not resolve Compose
 models, prove all called scripts are secret-free, calculate the canonical trust
 digest, or authorize execution. `ExecutionAuthorized` remains false. It adds no
 runner, mutation endpoint, candidate, ref, label, profile or fallback path.
+
+### Sealed release build input
+
+The release context primitive reconstructs every recursive Git tree object
+before accepting its file list, then verifies every archive file against that
+tree. It rejects truncation, missing or extra files, duplicate entries, links,
+gitlinks, special modes, multiple roots, escaping paths and damaged gzip
+trailers. File data stays in RAM; it is never extracted on the host. Empty
+tracked directories are retained. Tar permissions are canonicalized to Git's
+executable bit, without transferring special permission bits.
+
+Only the fixed release wrapper can select the audited product tree; the eight
+audited blob SHA256 values must also occur in the verified snapshot. A future
+builder receives a copied, verified archive through stdin, rather than reading
+guest checkout paths or trusting guest hashes. Names and bytes have no exported
+JSON fields. This change supplies the input boundary only: it adds no CLI,
+network call, Docker execution, runner registration, or release eligibility.

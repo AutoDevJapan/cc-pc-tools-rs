@@ -17,7 +17,7 @@ type hookReceipt struct {
 }
 
 func blockedGitKey(key string) bool {
-	return strings.Contains(key, "extraheader") || strings.HasPrefix(key, "credential.") || strings.Contains(key, "insteadof") || strings.HasPrefix(key, "include") || key == "core.fsmonitor" || key == "core.hookspath" || key == "core.sshcommand" || strings.HasSuffix(key, ".pushurl") || strings.HasPrefix(key, "filter.")
+	return strings.Contains(key, "extraheader") || strings.HasPrefix(key, "credential.") || strings.Contains(key, "insteadof") || strings.HasPrefix(key, "include") || key == "extensions.worktreeconfig" || key == "core.fsmonitor" || key == "core.hookspath" || key == "core.sshcommand" || strings.HasSuffix(key, ".pushurl") || strings.HasPrefix(key, "filter.")
 }
 func (p Plan) source() string {
 	return filepath.Join(p.runner(), "_work", "civ6-banseiki", "civ6-banseiki")

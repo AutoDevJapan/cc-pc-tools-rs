@@ -87,3 +87,28 @@ func TestWindowsSourcePathRejectsAliasesAndDevices(t *testing.T) {
 		}
 	}
 }
+
+func TestSourceMetadataAcceptsOnlyInertCheckoutWorktreeConfig(t *testing.T) {
+	h, tree, data := syntheticSource()
+	s, e := fetchSource(h, tree, syntheticRead(data))
+	if e != nil {
+		t.Fatal(e)
+	}
+	dest := filepath.Join(t.TempDir(), "source")
+	if e = writeSource(dest, s); e != nil {
+		t.Fatal(e)
+	}
+	for _, raw := range []string{"[core]\n\tsparseCheckout = false\n\tsparseCheckoutCone = false\n", "", "[credential]\nhelper = unsafe\n", "[core]\nsparseCheckout = true\n", "[include]\npath = other\n"} {
+		if e = os.WriteFile(filepath.Join(dest, ".git", "config.worktree"), []byte(raw), 0600); e != nil {
+			t.Fatal(e)
+		}
+		err := verifyTrackedBytes(dest, tree)
+		want := raw == "" || strings.Contains(raw, "sparseCheckout = false")
+		if (err == nil) != want {
+			t.Fatal("wrong inert-file acceptance", err)
+		}
+	}
+	if !blockedGitKey("extensions.worktreeconfig") {
+		t.Fatal("active worktree config allowed")
+	}
+}

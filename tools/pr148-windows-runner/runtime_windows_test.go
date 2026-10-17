@@ -52,6 +52,41 @@ func TestOwnerCannotUseServiceToolEntry(t *testing.T) {
 	}
 }
 
+func TestTokenUserSIDMatchesWindowsToken(t *testing.T) {
+	token, err := syscall.OpenCurrentProcessToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer token.Close()
+	user, err := token.GetTokenUser()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := user.User.Sid.String()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := tokenUserSID(syscall.Handle(token))
+	if err != nil || got != want {
+		t.Fatal("token SID differs from Windows", got, want, err)
+	}
+}
+
+func TestOwnedSourceSIDIsValidWindowsSID(t *testing.T) {
+	got, err := ownedSourceSID(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sid, err := syscall.StringToSid(got)
+	if err != nil {
+		t.Fatal("invalid owner SID", got, err)
+	}
+	want, err := sid.String()
+	if err != nil || got != want {
+		t.Fatal("owner SID did not round trip", got, want, err)
+	}
+}
+
 func TestSDKEnvironmentMissingAndCorruptFailClosed(t *testing.T) {
 	p := fixturePlan()
 	p.Root = t.TempDir()

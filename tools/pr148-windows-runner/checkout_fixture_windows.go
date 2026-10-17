@@ -238,17 +238,12 @@ func checkoutStates(raw string) (map[string]string, error) {
 }
 
 func ownedSourceSID(path string) (string, error) {
-	var owner, sd uintptr
+	var owner *syscall.SID
+	var sd uintptr
 	r, _, _ := advapi.NewProc("GetNamedSecurityInfoW").Call(ptr(path), 1, 1, uintptr(unsafe.Pointer(&owner)), 0, 0, 0, uintptr(unsafe.Pointer(&sd)))
 	if r != 0 {
 		return "", fmt.Errorf("owned source owner query %d", r)
 	}
 	defer kernel.NewProc("LocalFree").Call(sd)
-	var text *uint16
-	r, _, e := sidToString.Call(owner, uintptr(unsafe.Pointer(&text)))
-	if r == 0 {
-		return "", e
-	}
-	defer kernel.NewProc("LocalFree").Call(uintptr(unsafe.Pointer(text)))
-	return syscall.UTF16ToString(unsafe.Slice(text, 256)), nil
+	return owner.String()
 }

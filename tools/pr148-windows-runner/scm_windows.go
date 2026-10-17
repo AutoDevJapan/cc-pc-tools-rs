@@ -91,13 +91,7 @@ func serviceSID(p Plan) (string, error) {
 	if r == 0 {
 		return "", e
 	}
-	var txt *uint16
-	r, _, e = sidToString.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&txt)))
-	if r == 0 {
-		return "", e
-	}
-	defer kernel.NewProc("LocalFree").Call(uintptr(unsafe.Pointer(txt)))
-	return syscall.UTF16ToString(unsafe.Slice(txt, 256)), nil
+	return (*syscall.SID)(unsafe.Pointer(&b[0])).String()
 }
 func queryService(s uintptr) (state, pid, code uint32, err error) {
 	var v [9]uint32

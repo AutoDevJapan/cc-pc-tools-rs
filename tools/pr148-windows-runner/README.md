@@ -180,7 +180,8 @@ invocations recheck the source. Raw hashing also catches assume-unchanged index
 entries and bypasses Git filters. Active worktree configuration, Git metadata links, alternates, replacement
 objects and worktree config are refused before ordinary Git object operations.
 The original argv, output and exit code are forwarded to the same new SDK under
-the filtered account, inside the launcher's Job Object. The source tools/target
+the filtered account, inheriting the launcher's Job Object. The entry itself
+checks membership in some Job, not that Job's identity. The source tools/target
 remains the actual target. The entry requires this instance's service SID, AU deny-only token and Job
 Object membership. It forwards the job environment so action-added PATH entries
 and explicit compiler selections survive. Rustup auto self-update is disabled
@@ -285,8 +286,24 @@ transport URL and placeholder auth are isolated from product API/OAuth. After
 checkout and post, raw source/index/HEAD/tree, global/local auth absence, service
 ownership and ordinary Git without a per-command safe.directory are checked
 before adapting the fixture transport URL for the unchanged Rust entry guard.
-The original NUL setting is measured separately without assuming its outcome.
+In the saved acceptance fixtures the NUL observation ran first on the same
+source and returned exit 0, with a safe.directory warning. The subsequent new
+HOME main/post results therefore prove a repeated checkout, not pristine-source
+checkout. Their raw ordering and exit codes must accompany the evidence.
 No official Actions runner, workflow dispatch or product checkout is inferred.
+
+The fixture's resolved checkout commit and Node ZIP digest are SDK evidence;
+the Node distribution is not the official runner's bundled Node. Public SHA
+verification detects corrupt bytes but is not an independent signature check.
+The shared workflow transformer preserves the product's checkout action version;
+the parent must match its resolved version before claiming product acceptance.
+
+The source owner operation has a 30-second limit and prepare is single-use. This
+limit is not measured on the product tree. A timeout is a partial preparation
+failure requiring collection of that new resource, never an invitation to retry
+prepare on it. Synthetic success does not qualify product-scale preparation.
+SDK guard hashes detect accidental corruption; the same service account can
+write the tool directory, so these checks do not defeat malicious job code.
 
 Suggestions S2/S5 from the d5e04c5 review remain evidence limits: the real product
 materializer's eight-minute sequential API budget is not measured by synthetic

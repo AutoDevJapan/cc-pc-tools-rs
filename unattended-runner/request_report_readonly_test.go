@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 )
 
 func oldBotQuestionReportFixture(t *testing.T) (*progressFixture, *Request) {
@@ -21,6 +22,30 @@ func oldBotQuestionReportFixture(t *testing.T) (*progressFixture, *Request) {
 	f.rows[0]["resume_generation"] = 7
 	f.saveRows()
 	return f, req
+}
+
+func TestProgressLinkDiscoveryDoesNotMigrateOrReclassifyOriginalReceipts(t *testing.T) {
+	for _, known := range []bool{false, true} {
+		f, req := oldBotQuestionReportFixture(t)
+		f.r.Config.Project = "fixture-project"
+		req.ProgressThread = "801"
+		if known {
+			f.r.KnownQuestionThreads = map[string]bool{"601": true}
+		}
+		created := f.now.UTC().Format(time.RFC3339Nano)
+		message := Message{ID: "901", Channel: "801", Timestamp: created, Content: "fixed progress", Flags: 4096}
+		message.Author.ID, message.Author.Bot = "400", true
+		f.messages["801/901"] = message
+		f.threads["801"] = Thread{ID: "801", Type: 11, Guild: "100", Parent: "200", Owner: "400"}
+		f.ledger.Events = append(f.ledger.Events, newMessageEvent{Event: "verified", Request: "unattended-" + req.Key + "-accepted", Phase: "log:0", Receipt: &newMessageReceipt{Thread: "801", Message: "901", Author: "400", Timestamp: created, Flags: 4096}})
+		f.saveLedger()
+		before, _ := json.Marshal(req)
+		f.r.loadProgressLinks(context.Background(), map[string]bool{"801": true})
+		after, _ := json.Marshal(req)
+		if string(before) != string(after) || (f.r.ProgressLinks["801"].Todo == 2705) != known {
+			t.Fatal("link discovery mutated an original receipt or expanded old bot context")
+		}
+	}
 }
 
 func TestOldBotQuestionCanReportMetadataWithoutChangingIntakeOrExecutionScope(t *testing.T) {

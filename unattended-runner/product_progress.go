@@ -664,7 +664,7 @@ func (r *Runner) derivedRequestLinks(ctx context.Context) []ProgressLink {
 		if req == nil || req.Todo == 0 || req.ProgressThread == "" || req.Origin != nil || req.Key != requestKey(req.Thread, req.Message) || req.Author != r.State.Destination.Owner || req.Source != "discord-api-v10" {
 			continue
 		}
-		if r.validateRequest(ctx, req) != nil {
+		if !r.verifyLinkedRequest(ctx, req) {
 			continue
 		}
 		row, err := r.todo(req.Todo)

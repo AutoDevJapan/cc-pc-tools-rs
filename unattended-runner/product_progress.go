@@ -234,7 +234,7 @@ func (r *Runner) verifyOwnerSource(ctx context.Context, c ProductReportConfig) b
 			return false
 		}
 		row, err := r.todo(req.Todo)
-		return err == nil && row.Project == c.Project && r.validateRequest(ctx, req) == nil && (c.Source.Purpose != "status_question" || r.verifyExistingStatusAnswer(ctx, c, req))
+		return err == nil && row.Project == c.Project && r.verifyReportRequest(ctx, req) && (c.Source.Purpose != "status_question" || r.verifyExistingStatusAnswer(ctx, c, req))
 	}
 	created, err := time.Parse(time.RFC3339Nano, c.Source.Created)
 	if err != nil || created.After(r.Now().Add(time.Minute)) {
@@ -664,7 +664,7 @@ func (r *Runner) derivedRequestLinks(ctx context.Context) []ProgressLink {
 		if req == nil || req.Todo == 0 || req.ProgressThread == "" || req.Origin != nil || req.Key != requestKey(req.Thread, req.Message) || req.Author != r.State.Destination.Owner || req.Source != "discord-api-v10" {
 			continue
 		}
-		if r.validateRequest(ctx, req) != nil {
+		if !r.verifyLinkedRequest(ctx, req) {
 			continue
 		}
 		row, err := r.todo(req.Todo)

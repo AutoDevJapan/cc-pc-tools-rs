@@ -34,6 +34,7 @@ const (
 
 var waitNamedPipeW = syscall.NewLazyDLL("kernel32.dll").NewProc("WaitNamedPipeW")
 var errTLSHandshakeTimeout = errors.New("TLS handshake timeout")
+var errSerialReadTimeout = errors.New("serial read timeout")
 
 type vmReceipt struct {
 	Instance              string `json:"instance"`
@@ -485,6 +486,28 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 			_ = conn.Close()
 			return fixtureResult{}, fixtureResult{}, errors.New("guest serial identity rejected")
 		}
+		if err := writeJSONLine(candidate, vmProbe{Kind: "probe", Instance: vm.Instance}); err != nil {
+			_ = conn.Close()
+			if !isGuestConnectionRetryable(err) {
+				return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest COM probe write failed: %w", err)
+			}
+			handshakeErr = err
+			continue
+		}
+		probeLine, err := readLineWithTimeout(candidate, min(5*time.Second, time.Until(deadline)))
+		if err != nil {
+			_ = conn.Close()
+			if !isGuestConnectionRetryable(err) {
+				return fixtureResult{}, fixtureResult{}, fmt.Errorf("guest COM round-trip probe failed: %w", err)
+			}
+			handshakeErr = err
+			continue
+		}
+		var probe vmProbe
+		if err := json.Unmarshal(probeLine, &probe); err != nil || probe.Kind != "probe-ack" || probe.Instance != vm.Instance {
+			_ = conn.Close()
+			return fixtureResult{}, fixtureResult{}, errors.New("guest COM round-trip probe was rejected")
+		}
 		secureCandidate := tlsClientConn(candidate, client, ready.ServerSHA256)
 		if err := tlsHandshakeWithTimeout(secureCandidate, min(30*time.Second, time.Until(deadline))); err != nil {
 			_ = conn.Close()
@@ -547,7 +570,7 @@ func runVMFixtures(vm vmReceipt, client vmIdentity) (fixtureResult, fixtureResul
 }
 
 func isGuestConnectionRetryable(err error) bool {
-	return errors.Is(err, errTLSHandshakeTimeout) || errors.Is(err, syscall.ERROR_BROKEN_PIPE) || errors.Is(err, syscall.Errno(232)) || errors.Is(err, syscall.Errno(233))
+	return errors.Is(err, errSerialReadTimeout) || errors.Is(err, errTLSHandshakeTimeout) || errors.Is(err, syscall.ERROR_BROKEN_PIPE) || errors.Is(err, syscall.Errno(232)) || errors.Is(err, syscall.Errno(233))
 }
 
 func validateFixtureResult(result fixtureResult, kind string) error {
@@ -597,7 +620,7 @@ func readLineWithTimeout(conn net.Conn, timeout time.Duration) ([]byte, error) {
 		return line, readErr
 	case <-timer.C:
 		_ = conn.Close()
-		return nil, errors.New("serial readiness timeout")
+		return nil, errSerialReadTimeout
 	}
 }
 

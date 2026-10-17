@@ -33,6 +33,11 @@ type vmReady struct {
 	ServerSHA256 string `json:"server_certificate_sha256"`
 }
 
+type vmProbe struct {
+	Kind     string `json:"kind"`
+	Instance string `json:"instance"`
+}
+
 type vmRequest struct {
 	Kind     string `json:"kind"`
 	Instance string `json:"instance"`

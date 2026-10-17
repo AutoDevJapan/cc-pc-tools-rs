@@ -160,6 +160,25 @@ func serveSerial() error {
 		return err
 	}
 	recordGuestServiceStage(4)
+	recordGuestServiceStage(9)
+	probeLine, err := readJSONLine(serial, 4096)
+	if err != nil {
+		recordGuestServiceStage(11)
+		recordGuestServiceFailure(err)
+		return errors.New("guest COM probe was not received")
+	}
+	var probe vmProbe
+	if err := json.Unmarshal(probeLine, &probe); err != nil || probe.Kind != "probe" || probe.Instance != seed.Instance {
+		recordGuestServiceStage(11)
+		recordGuestServiceFailure(errors.New("guest COM probe rejected"))
+		return errors.New("guest COM probe rejected")
+	}
+	if err := writeJSONLine(serial, vmProbe{Kind: "probe-ack", Instance: seed.Instance}); err != nil {
+		recordGuestServiceStage(11)
+		recordGuestServiceFailure(err)
+		return errors.New("guest COM probe acknowledgement failed")
+	}
+	recordGuestServiceStage(10)
 	tlsConn := tlsServerConn(serial, identity, seed.ClientSHA256)
 	defer tlsConn.Close()
 	serviceControlMu.Lock()

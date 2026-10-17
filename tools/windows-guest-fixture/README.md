@@ -19,7 +19,9 @@ staging command as LocalSystem during `specialize`. The helper checks that
 the blank IDE disk is tried first, so setup falls through to the ISO initially
 and the installed system boots from disk after its first restart. The host
 reopens the exact owned COM pipe if setup restarts the guest before service
-readiness or interrupts the TLS handshake. The answer
+readiness or interrupts the TLS handshake. Before mTLS, the host and guest
+exchange a nonce-bound COM probe so the bidirectional serial channel is
+verified independently. The answer
 file has no `oobeSystem` settings, user account, password, or OOBE skip. OOBE
 is not hidden or completed by this helper. The service speaks only on the VM's
 COM pipe. Ephemeral host and guest Ed25519/TLS 1.3 identities are generated in

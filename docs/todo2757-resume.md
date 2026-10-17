@@ -1,5 +1,21 @@
 # マージ後CIの修復状況
 
+2026-10-17 12:24 JST追記: PR198は実Sonnet2787の固定4diff/head全文と参考2件の
+読了・Must0、同headのCI success8/neutral1/skipped1を受領して通常merge
+3f15e84d8051cd99e59a2bc2b7fcbeab89f0d531。module tree
+27f0dbb09b0a6849bd02b41754ce4fb216d1e43cは検証headとmergeで一致。
+正式配布はWindows SHA58AE8AD52574832D99E0E35A21AB19984A6B42D68D4BAC8DDFDAB02AF8717EDD、
+Linux SHA0D8B35C0435F091AD9E6100A7951AFD50F9B69A467FE06EE8C12D93ACA4A10DE。
+原応答と最終eventは一致し、.ci-work/todo2787-*へ保存。過去の未読/再試行履歴は保持。
+build temp f3023403007224b4b2468029559905f7はplan→別通常削除→finishで回収済み。
+
+次の修復はrelease-source-inspectとして同公式gateの固定tree/archive読取りへ接続。
+前後の固定receipt、tree再構成、全fileと8資料の照合が揃うまで成功出力しない。
+まだ未配布で実製品archiveの受入は未実行。raw sourceはRAMのみ、原文/pathを
+fmt診断へ渡しても伏せる。実行許可/runner/配備へは接続しない。
+配備CI/full/backend/実drain/Prd revision/probeとRust公式原logは引き続き未完。
+新branch scheduler/todo-2757-release-sourceはschedulerへcheckpoint保存済み。
+
 2026-10-17 11:50 JST追記: 読取り専用資料検証のPR197は独立Sonnet2782の
 全9diff/head全文読了・Must0、同headのCI success8/neutral1/skipped1後に
 通常merge ddd566d8b4daa650cb1eaeb57da7cf405a38e29d。検証headとmergeの

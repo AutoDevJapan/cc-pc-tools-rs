@@ -242,4 +242,3 @@ Discord logの既存QuestionStateRecoveryRequiredは再試行せず、ToDoと原
 親2736へ実装と条件を先に配送し、2797完了後のMust解消・最新資格を返す。
 終了前に実job/branch/HEADをscheduler checkpointへ保存し、wait2790--on2797を記録する。
 親2736/2640の完了や2381の回収を技術実装の前提に戻さない。
-

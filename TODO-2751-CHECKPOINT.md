@@ -1,6 +1,22 @@
 # PR148 Linux helperの再開記録
 
-初回レビュー2778の5件のMustへ対応した。全差分を読んだ再レビュー2781の残Must（環境変数の重複）も修正し、追加差分を再レビュー2785へ通常登録した。2785の応答確認と親2736への最終配送は未完了。正式な製品実行は親に残す。
+Linux有限helperの実装・検査・独立レビューを完了した。全差分レビュー2781と追加差分レビュー2785を合わせ、元5件のMustは解消した。正式な製品実行とhelper統合は親2736に残す。
+
+## 2026-10-17・12時台の最終受領（こちらを優先）
+
+通常割当job `20261017-121227-todo-2751`で、cleanな14ff879から再開した。D:/CC/AGENTS.md、repo規則、元2736のspec/checkpoint、元2751と2785の状態を読み直した。製品source/実テスト、workflow書込、dispatch、runner登録はこの子から実行していない。
+
+- レビュー2785: job `20261017-114930-todo-2785`、実モデル `anthropic/claude-sonnet-5-5`、succeeded/exit0。固定base c1635c9→head dd17a4b、module tree `269264365cc6b22c2bb6314722f8021f39b038af`の4差分全行・4ファイル全文と既存3文脈ファイル・2781全文を読了した。M-A（envp重複）解消、新Mustなし。2781が解消とした未変更4Mustを再検査したとは書いていない。レビュー側の実行検査は0。
+- 原応答は`.ci-work/review2785/original-response.private.txt`へbytesを変えず保存した。SHA256 `F5160AE364E0967D58F6ED68D09F67C94DD9DC779AF645F63F2379F6BB0604E3`。受領・照合情報は同folderのreceived.private.json。登録specやレビューの再実行は不要。
+- 現module treeがレビュー対象dd17a4bと一致することを照合した。その後の変更は記録文書だけであり、成功済みのGo/実Cargo fixtureを再実行していない。最新Windows/Linux artifactと実検査は直下の11時台記録を使う。
+- Suggestionの一時領域位置をコードから確認した。checkout先は`/work/civ6-banseiki/civ6-banseiki`、TMPDIRは別の`/work/tool-tmp`。共通create指定も/workがexecなtmpfsで/tmpがnoexecであることを確認した。checkoutによるsource更新の外へ一時領域を置いている。
+- その他のSuggestion（Actions環境変数の一部不継承、固定YAMLの保護キー事前拒否、正式Worker/job/hooks、run.path、製品全件RAM、host強制終了時permit、同一UIDの限界）は親への正式実行条件として渡す。検証済み範囲を広げる説明はしない。NitのTMPDIR直値unit追加は、実doctestでの回帰検出が既にあるため今回の機能変更を追加せず記録する。
+- 追加証拠41ファイルのSHAを今回も照合し、元一時root不在を確認した。これまでの全検査namespaceは回収済みで、今回新しいcontainer/volume/image/Chrome tab/process/runner/service/lockは作成していない。原SDK imageは共有の既存資源であり保持する。
+- 前回checkpoint拒否は担当記録不一致だった。今回の通常割当ではscheduler.jobとCC_JOB_IDが一致し、正規CLIをCREATE_NO_WINDOWで完了まで待って14ff879の保存成功（saved=true/launched=0）と台帳の実head/job一致を確認した。実装や共有権限の変更なしに解決した。最終の記録commit後も同じ正規CLIで実HEADを保存する。
+
+親2736へ最終branch/実HEAD、reviewed module、実検査と原レビュー応答SHA、残る正式実行条件を配送してこの子を終了する。親2736/2640の完了は待たず、製品PRは変更しない。元2640/880の依存・未完・停止を解除しない。自分2751の完了状態はschedulerが更新する。
+
+Discordの後片付け記録は既知のQuestionStateRecoveryRequiredのため未送信のまま。原証拠と配送noteで保持し、再送・迂回・本人への再質問をしない。この未送信を正式CIや資源残留と混同しない。
 
 ## 2026-10-17・11時40分以降の再開（こちらを優先）
 

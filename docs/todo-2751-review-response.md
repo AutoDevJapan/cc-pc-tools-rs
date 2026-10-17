@@ -1,5 +1,15 @@
 # レビュー2778への対応
 
+## 最終判定（レビュー2785、2026-10-17）
+
+独立Sonnet5.5の2785は、c1635c9→dd17a4bの4 Go差分全行と対象4ファイル全文、既存3文脈ファイル、2781全文を読了し、envp重複のM-Aを解消、新Mustなしと判定した。前段2781の未変更4Mustの解消判定と合わせて元5Mustは残らない。実行検査は作者の実測であり、レビュー側は実行していない。
+
+レビューjob `20261017-114930-todo-2785`はsucceeded/exit0、実モデル`anthropic/claude-sonnet-5-5`。原応答SHA256 `F5160AE364E0967D58F6ED68D09F67C94DD9DC779AF645F63F2379F6BB0604E3`。固定code head `dd17a4bdcb7bb007673e831a24a560408b298b59`と現module tree `269264365cc6b22c2bb6314722f8021f39b038af`の一致を確認した。原応答は`.ci-work/review2785`へ保持する。
+
+Suggestion S-2は実装側で追加照合した。`pr148Workspace`は`/work/civ6-banseiki/civ6-banseiki`で、TMPDIRの`/work/tool-tmp`とは別。共通create指定の/workはexecなtmpfs、/tmpはnoexecのまま。追加の製品source取得はしていない。
+
+S-1のActions環境変数の一部不継承と、S-3の固定YAML保護キー拒否は親の正式preflight/失敗分類へ渡す。未検証のWorker/job/hooks、run.path、製品RAM、強制終了時permit、同一UIDに関する限界も引き続き保持する。これらをfixture成功やListener起動から成功扱いにするAPIはない。TMPDIRの直接unit assertionというNitは、既存の実doctest fixtureが修正前の失敗を検出しているため、今回は追加変更をせず記録した。
+
 ## レビュー2781の残Mustと追加検査
 
 レビュー2781は固定c1635c9までの全差分を読み、M1/M3/M4/M5を解消とした。M2に残ったMustはenvpの同名キー重複だった。原応答SHA256は`07FFB3AC89278054D7C85DEED6570D0AB13F3B9056695FC6014D120089615D39`。レビューは静的読解であり、作者の検査を再現したものではない。

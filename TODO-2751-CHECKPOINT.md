@@ -60,3 +60,13 @@ source取得/全blob/index tree/実HEADの検証には既存のmaterializerを�
 4. 所有rootを通常回収し、正規scheduler checkpointを保存する。レビューだけを待って終了するなら`todo.exe wait 2751 --on <review-id>`を必ず記録する。
 
 2026-10-17 10:38台の再開では、元jobのitem_78がexit0で完了し、Go119 pass/3 skip/failure0とcontainer不在を確認した記録を先に読み直した。完了済み検査は再実行していない。
+
+## レビュー受付と回収の追記
+
+コード0377dd0と記録41b5d23は専用branchへpush済み。固定コードの独立レビューをToDo2778へ通常登録した。モデル指定は既存成功例と同じ`claude-sonnet-5-5`。元2751と実jobを結ぶreviewのsubworkで、受付時のstatusはtodo、jobsは空。まだ実レビュー応答は受け取っていない。
+
+保存されたspecのSHA256は`9B7C1FF1FAECFE636EDE1A4B0C206415775999DB522F988EE9AF907CF806A469`で、登録前のファイルと一致した。最初の`anthropic/`付きmodel指定は、ToDo CLIの形式検査がslashを許さずValueErrorで未登録だった。登録済みの重複は0件と確認後、既存の成功例の短い指定で2778を登録した。実行審査の拒否や認証の問題ではない。
+
+一時rootは全67証拠ファイルの永続コピーをSHA照合後、safe-delete planが返した通常削除を別呼出しで実行した。planは87 entries / 24600039 bytes。削除exit0、finishは`source_absent`。削除後も永続67ファイルのSHA一致とmanifestのSHA不変を確認した。新しい課金・製品操作・正式registrationは行っていない。
+
+次の再開は元2778の実応答を受領し、固定base/head/全15対象の読了、実モデル、原応答SHAを照合する。Mustを解消するまで親の正式実行へ進めない。同じコードのGo/fixture検査や同じレビュー登録を繰り返さない。製品の未達と元2640/880の依存は維持する。

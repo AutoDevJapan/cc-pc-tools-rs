@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -175,17 +176,79 @@ func TestWrappedTaskOnlyAcceptsExactCompiledServiceAction(t *testing.T) {
 		body  string
 		valid bool
 	}{
-		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":2,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, true},
-		{`{"state":3,"enabled":true,"executionLimit":"PT72H","multipleInstances":2,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
+		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":1,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, true},
+		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":2,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
+		{`{"state":3,"enabled":true,"executionLimit":"PT72H","multipleInstances":1,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
 		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":0,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
 		{`{"state":3,"enabled":true,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
-		{`{"state":3,"enabled":true,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service chrome"}]}`, false},
-		{`{"state":3,"enabled":true,"actions":[{"execute":"C:\\private\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
-		{`{"state":3,"enabled":true,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations --extra"}]}`, false},
+		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":1,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service chrome"}]}`, false},
+		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":1,"actions":[{"execute":"C:\\private\\resident-guard.exe","arguments":"--launch-service operations"}]}`, false},
+		{`{"state":3,"enabled":true,"executionLimit":"PT0S","multipleInstances":1,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations --extra"}]}`, false},
 	} {
 		out, err := decodeTask([]byte(test.body), definition)
 		if err != nil || out.Valid != test.valid {
 			t.Fatal("wrapper matching did not enforce compiled path and arguments")
 		}
+	}
+}
+
+func TestManagedTaskRequiresServiceSpecificLifetimePolicy(t *testing.T) {
+	for _, id := range []string{"operations", "opencodex", "godd_ao", "opencodex_watchdog"} {
+		for _, policy := range []struct {
+			name, value string
+		}{
+			{"parallel", "0"}, {"queue", "1"}, {"ignore_new", "2"},
+			{"stop_existing", "3"}, {"missing", "null"}, {"unknown", "4"},
+		} {
+			for _, limit := range []string{"PT0S", "PT72H", ""} {
+				t.Run(id+"/"+policy.name+"/"+limit, func(t *testing.T) {
+					body := fmt.Sprintf(`{"state":4,"enabled":true,"executionLimit":%q,"multipleInstances":%s,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":%q}]}`,
+						limit, policy.value, "--launch-service "+id)
+					valid := limit == "PT0S" && ((id == "operations" && policy.value == "1") || (id != "operations" && policy.value == "2"))
+					out, err := decodeTask([]byte(body), service{ID: id})
+					if err != nil || out.Valid != valid || !out.Enabled || !out.Running {
+						t.Fatalf("unexpected managed task validation: %+v, %v", out, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestManagedOperationsQueuePreservesTaskState(t *testing.T) {
+	for _, test := range []struct {
+		state, enabled           string
+		wantEnabled, wantRunning bool
+	}{
+		{"1", "false", false, false}, {"2", "true", true, true},
+		{"3", "true", true, false}, {"4", "true", true, true},
+		{"3", "false", false, false},
+	} {
+		t.Run(test.state+"/"+test.enabled, func(t *testing.T) {
+			body := fmt.Sprintf(`{"state":%s,"enabled":%s,"executionLimit":"PT0S","multipleInstances":1,"actions":[{"execute":"D:\\CC\\Tools\\resident-guard\\resident-guard.exe","arguments":"--launch-service operations"}]}`,
+				test.state, test.enabled)
+			out, err := decodeTask([]byte(body), service{ID: "operations"})
+			if err != nil || !out.Valid || out.Enabled != test.wantEnabled || out.Running != test.wantRunning {
+				t.Fatalf("unexpected operations task state: %+v, %v", out, err)
+			}
+		})
+	}
+}
+
+func TestLegacyTaskActionsRemainValidDuringMigration(t *testing.T) {
+	for _, definition := range productionServices() {
+		t.Run(definition.ID, func(t *testing.T) {
+			body, err := json.Marshal(map[string]any{
+				"state": 3, "enabled": true, "executionLimit": "PT0S", "multipleInstances": 2,
+				"actions": []map[string]string{{"execute": definition.Execute, "arguments": definition.Arguments}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := decodeTask(body, definition)
+			if err != nil || !out.Valid || !out.Enabled || out.Running {
+				t.Fatalf("legacy migration action rejected or treated as a managed running task: %+v, %v", out, err)
+			}
+		})
 	}
 }

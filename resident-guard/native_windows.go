@@ -170,7 +170,14 @@ func decodeTask(data []byte, definition service) (taskResult, error) {
 			response.Actions[0].Arguments == "--launch-service "+definition.ID
 	}
 	if valid && validServiceID(definition.ID) && strings.EqualFold(filepath.Clean(response.Actions[0].Execute), filepath.Clean("D:/CC/Tools/resident-guard/resident-guard.exe")) {
-		valid = response.ExecutionLimit == "PT0S" && response.MultipleInstances != nil && *response.MultipleInstances == 2
+		expectedInstances := 2 // TASK_INSTANCES_IGNORE_NEW
+		if definition.ID == "operations" {
+			// This action waits for the server's whole lifetime. The restart
+			// API requests /Run before exiting, so retain that request until
+			// the current action (including its launch mutex) has finished.
+			expectedInstances = 1 // TASK_INSTANCES_QUEUE
+		}
+		valid = response.ExecutionLimit == "PT0S" && response.MultipleInstances != nil && *response.MultipleInstances == expectedInstances
 	}
 	return taskResult{Valid: valid, Enabled: *response.Enabled && response.State != 1, Running: response.State == 4 || response.State == 2}, nil
 }

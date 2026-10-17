@@ -284,7 +284,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		// exact name/label/image pattern. The next phase removes it and goes on.
 		nonce := strings.Repeat("ab", 16)
 		leftover := "cc-release-build-" + nonce
-		if _, _, err := dockerText(ctx, independent, 1<<16, "create", "--name", leftover, "--label", releaseBuildLabel+"="+nonce, "--network", "none", "--cap-drop", "ALL", "--memory", "67108864", releaseBuilderTool, "--version"); err != nil {
+		if _, _, err := dockerText(ctx, independent, 1<<16, "create", "--name", leftover, "--label", releaseBuildLabel+"="+nonce, "--network", "none", "--cap-drop", "ALL", "--memory", "67108864", "--tmpfs", "/tmp:rw,nosuid,nodev,size=1m", "--tmpfs", "/workspace:rw,nosuid,nodev,size=1m", releaseBuilderTool, "--version"); err != nil {
 			t.Fatal("could not create the leftover")
 		}
 		rec, err := runReleaseBuilder(ctx, factory, fixtureBuilderSpec(t, probe, false), newDir("sweep"))

@@ -1202,6 +1202,7 @@ func TestSweepNeverRemovesWhatItDoesNotExactlyRecognize(t *testing.T) {
 		"other image":      {name: name, labels: label, status: "created", image: "example/other"},
 		"named volume":     {name: name, labels: label, status: "created", volume: strings.Repeat("v", 129)},
 		"short volume":     {name: name, labels: label, status: "created", volume: "data"},
+		"hex named volume": {name: name, labels: label, status: "created", volume: strings.Repeat("e", 64)},
 	}
 	for what, c := range cases {
 		h := newHarness(t)
@@ -1215,78 +1216,26 @@ func TestSweepNeverRemovesWhatItDoesNotExactlyRecognize(t *testing.T) {
 	}
 }
 
-func TestSweepKeepsTheRunUnreleasableWhileALeftoverVolumeRemains(t *testing.T) {
-	h := newHarness(t)
-	h.d.toolPresent = true
-	h.d.withVolume, h.d.rmKeepsVolume = true, true
-	id := strings.Repeat("c", 64)
-	vol := strings.Repeat("9", 64)
-	h.d.containers[id] = &fakeContainer{id: id, name: "cc-release-build-" + strings.Repeat("a", 32), labels: map[string]string{releaseBuildLabel: strings.Repeat("a", 32)}, status: "created", volume: vol}
-	h.d.volumes[vol] = true
-	rec, err := h.run(context.Background())
-	if err == nil || rec.Failure != "phase-uncertain" || rec.PhaseMayRelease || !rec.RecoveryRequired || len(rec.VolumeNames) != 1 || rec.VolumeNames[0] != vol {
-		t.Fatalf("a leftover volume was forgotten: %v", err)
-	}
-	raw, e := os.ReadFile(filepath.Join(h.dir, releaseBuildStateFile))
-	if e != nil || !strings.Contains(string(raw), vol) {
-		t.Fatal("the volume name was not kept in the ownership record")
-	}
-	factory := func(string) builderDocker { return h.d }
-	if again, err := recoverReleaseBuilder(context.Background(), factory, h.dir); err == nil || again.PhaseMayRelease {
-		t.Fatal("recovery released while the volume remained")
-	}
-	delete(h.d.volumes, vol)
-	again, err := recoverReleaseBuilder(context.Background(), factory, h.dir)
-	if err != nil || !again.PhaseMayRelease {
-		t.Fatalf("recovery after the volume was removed: %v", err)
-	}
-}
-
-func TestSweepSavesVolumeNamesBeforeRemovingAndSurvivesFailedRemoval(t *testing.T) {
-	vol := strings.Repeat("7", 64)
+func TestSweepRemovesOnlyTmpfsLeftoversAndAFailedRemovalBlocksTheRelease(t *testing.T) {
 	setup := func() *buildHarness {
 		h := newHarness(t)
 		h.d.toolPresent = true
 		id := strings.Repeat("c", 64)
-		h.d.containers[id] = &fakeContainer{id: id, name: "cc-release-build-" + strings.Repeat("a", 32), labels: map[string]string{releaseBuildLabel: strings.Repeat("a", 32)}, status: "created", volume: vol}
-		h.d.volumes[vol] = true
+		h.d.containers[id] = &fakeContainer{id: id, name: "cc-release-build-" + strings.Repeat("a", 32), labels: map[string]string{releaseBuildLabel: strings.Repeat("a", 32)}, status: "created"}
 		return h
 	}
-	// The ownership record already names the volume when the daemon is asked to remove.
 	h := setup()
-	h.d.onRm = func() {
-		raw, err := os.ReadFile(filepath.Join(h.dir, releaseBuildStateFile))
-		if err != nil || !strings.Contains(string(raw), vol) {
-			t.Error("volume not saved before the removal request")
-		}
+	if rec, err := h.run(context.Background()); err != nil || !rec.Succeeded || !h.d.called("container rm") {
+		t.Fatalf("a tmpfs-only leftover was not swept: %v", err)
 	}
-	if rec, err := h.run(context.Background()); err != nil || !rec.Succeeded {
-		t.Fatalf("sweep with an anonymous volume failed: %v", err)
-	}
-	// A removal whose answer is lost leaves the record and blocks the release.
+	// The removal fails: the leftover stays, the run is not releasable.
 	h = setup()
 	h.d.rmFails = true
 	rec, err := h.run(context.Background())
-	if err == nil || rec.PhaseMayRelease || !rec.RecoveryRequired || len(rec.VolumeNames) != 1 {
+	if err == nil || rec.Failure != "phase-uncertain" || rec.PhaseMayRelease || !rec.RecoveryRequired {
 		t.Fatalf("a failed sweep released the phase: %v", err)
 	}
-	if c, v := h.d.remaining(); c != 1 || v != 1 {
-		t.Fatalf("unexpected resources after a failed removal: %d %d", c, v)
+	if c, _ := h.d.remaining(); c != 1 {
+		t.Fatal("the leftover disappeared although its removal failed")
 	}
-	// A volume listing that fails cannot confirm absence.
-	h = setup()
-	listing := &failingVolumeListing{fakeDaemon: h.d}
-	rec, err = runReleaseBuilder(context.Background(), func(string) builderDocker { return listing }, h.spec, h.dir)
-	if err == nil || rec.PhaseMayRelease {
-		t.Fatalf("a failed volume listing released the phase: %v", err)
-	}
-}
-
-type failingVolumeListing struct{ *fakeDaemon }
-
-func (f *failingVolumeListing) run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
-	if len(args) > 1 && args[0] == "volume" && args[1] == "ls" {
-		return errors.New("exit status 1")
-	}
-	return f.fakeDaemon.run(ctx, stdin, stdout, stderr, args...)
 }

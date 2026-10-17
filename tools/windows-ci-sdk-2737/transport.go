@@ -30,7 +30,7 @@ type Identity struct {
 }
 
 func NewIdentity(instance string, serverIP net.IP, usage x509.ExtKeyUsage) (Identity, error) {
-	if instance == "" || strings.ContainsAny(instance, "\r\n\x00") {
+	if !validInstance(instance) {
 		return Identity{}, errors.New("invalid identity instance")
 	}
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
@@ -80,15 +80,25 @@ func CertificateHash(cert *x509.Certificate) string {
 	return hex.EncodeToString(h[:])
 }
 
-func ServerTLSConfig(server, client Identity) (*tls.Config, error) {
-	if server.Leaf == nil || client.Leaf == nil || len(server.Certificate.Certificate) == 0 || len(client.Certificate.Certificate) == 0 {
+func clearIdentity(identity *Identity) {
+	if identity == nil {
+		return
+	}
+	if key, ok := identity.Certificate.PrivateKey.(ed25519.PrivateKey); ok {
+		clear(key)
+	}
+	identity.Certificate.PrivateKey = nil
+}
+
+func ServerTLSConfig(server Identity, clientHash string) (*tls.Config, error) {
+	if server.Leaf == nil || len(server.Certificate.Certificate) == 0 || len(clientHash) != sha256.Size*2 {
 		return nil, errors.New("ephemeral mTLS identity is incomplete")
 	}
-	if server.Leaf.Subject.CommonName != client.Leaf.Subject.CommonName || !hasUsage(server.Leaf, x509.ExtKeyUsageServerAuth) || !hasUsage(client.Leaf, x509.ExtKeyUsageClientAuth) {
-		return nil, errors.New("ephemeral mTLS identities do not match the instance")
+	if _, err := hex.DecodeString(clientHash); err != nil || !hasUsage(server.Leaf, x509.ExtKeyUsageServerAuth) {
+		return nil, errors.New("mTLS client certificate pin or server identity is invalid")
 	}
-	wantClient := CertificateHash(client.Leaf)
-	instance := client.Leaf.Subject.CommonName
+	wantClient := strings.ToLower(clientHash)
+	instance := server.Leaf.Subject.CommonName
 	return &tls.Config{
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{server.Certificate},
@@ -157,13 +167,16 @@ func SendRequest(ip net.IP, serverHash string, client Identity, req Request) (Re
 	if err := ValidateRequest(req); err != nil {
 		return Result{}, err
 	}
+	if client.Leaf == nil || client.Leaf.Subject.CommonName != "windows-ci-sdk-2737/"+req.Instance || !hasUsage(client.Leaf, x509.ExtKeyUsageClientAuth) {
+		return Result{}, errors.New("guest request identity does not match its instance")
+	}
 	tlsConfig, err := ClientTLSConfig(client, ip, serverHash)
 	if err != nil {
 		return Result{}, err
 	}
 	transport := &http.Transport{TLSClientConfig: tlsConfig, ForceAttemptHTTP2: false, DisableKeepAlives: true, DisableCompression: true, Proxy: nil}
 	defer transport.CloseIdleConnections()
-	clientHTTP := &http.Client{Transport: transport, Timeout: 20 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	clientHTTP := &http.Client{Transport: transport, Timeout: 60 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return Result{}, errors.New("request encoding failed")
@@ -196,6 +209,31 @@ func SendRequest(ip net.IP, serverHash string, client Identity, req Request) (Re
 		return Result{}, errors.New("guest SDK response does not match the request")
 	}
 	return result, nil
+}
+
+func NewHostIdentity(instance string) (Identity, error) {
+	return NewIdentity(instance, nil, x509.ExtKeyUsageClientAuth)
+}
+
+func PrepareSDKSet(ip net.IP, serverHash, instance string, client Identity) ([]Result, error) {
+	installOrder := []PackageID{GitForWindows, PowerShell7, RustToolchain, MSVCBuildTools, Sccache}
+	verifyOrder := []PackageID{GitForWindows, PowerShell7, RustToolchain, MSVCBuildTools, WindowsSDK, Sccache}
+	results := make([]Result, 0, len(installOrder)+len(verifyOrder))
+	for _, id := range installOrder {
+		prepared, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpPrepare, Package: id})
+		if err != nil || !prepared.OK || prepared.Stage != "prepared" {
+			return results, fmt.Errorf("SDK preparation failed for %s", id)
+		}
+		results = append(results, prepared)
+	}
+	for _, id := range verifyOrder {
+		verified, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpVersions, Package: id})
+		if err != nil || !verified.OK || verified.Stage != "version-confirmed" {
+			return results, fmt.Errorf("SDK version check failed for %s", id)
+		}
+		results = append(results, verified)
+	}
+	return results, nil
 }
 
 type Operations interface {
@@ -251,6 +289,6 @@ func ListenPrivateIPv4(ip net.IP, handler http.Handler, tlsConfig *tls.Config) (
 	if err != nil {
 		return nil, nil, errors.New("private guest service bind failed")
 	}
-	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 20 * time.Second, MaxHeaderBytes: 4096, TLSConfig: tlsConfig}
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 60 * time.Minute, IdleTimeout: 20 * time.Second, MaxHeaderBytes: 4096, TLSConfig: tlsConfig}
 	return server, tls.NewListener(listener, tlsConfig), nil
 }

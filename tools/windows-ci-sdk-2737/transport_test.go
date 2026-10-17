@@ -31,7 +31,7 @@ func TestEphemeralMTLSIdentityPins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ServerTLSConfig(server, client); err != nil {
+	if _, err := ServerTLSConfig(server, CertificateHash(client.Leaf)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ClientTLSConfig(client, ip, CertificateHash(server.Leaf)); err != nil {
@@ -40,7 +40,7 @@ func TestEphemeralMTLSIdentityPins(t *testing.T) {
 	if _, err := ClientTLSConfig(client, ip, strings.Repeat("0", 64)); err != nil {
 		t.Fatalf("well-formed pin rejected before handshake: %v", err)
 	}
-	serverTLS, err := ServerTLSConfig(server, client)
+	serverTLS, err := ServerTLSConfig(server, CertificateHash(client.Leaf))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +68,12 @@ func TestEphemeralMTLSIdentityPins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ServerTLSConfig(server, other); err == nil {
-		t.Fatal("cross-instance client certificate accepted")
+	wrongServer, err := ServerTLSConfig(server, CertificateHash(other.Leaf))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := wrongServer.VerifyPeerCertificate(client.Certificate.Certificate, nil); err == nil {
+		t.Fatal("server accepted a mismatched client certificate pin")
 	}
 }
 

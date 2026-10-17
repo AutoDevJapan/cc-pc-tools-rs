@@ -1,13 +1,17 @@
 package sdkprep
 
 import (
+	"bufio"
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -54,6 +58,130 @@ type Artifact struct {
 	Version string    `json:"version"`
 	URL     string    `json:"url"`
 	SHA256  string    `json:"sha256"`
+}
+
+type comRequest struct {
+	Kind     string `json:"kind"`
+	Instance string `json:"instance"`
+	Nonce    string `json:"nonce"`
+}
+type comReply struct {
+	Kind         string `json:"kind"`
+	Instance     string `json:"instance"`
+	Nonce        string `json:"nonce"`
+	IPv4         string `json:"ipv4"`
+	ServerSHA256 string `json:"serverCertificateSHA256"`
+}
+type BootstrapResult struct {
+	IPv4         net.IP
+	ServerSHA256 string
+}
+
+type PublicSeed struct {
+	Instance     string `json:"instance"`
+	ClientSHA256 string `json:"clientCertificateSHA256"`
+}
+type PreparationReceipt struct {
+	Instance     string   `json:"instance"`
+	GuestIPv4    string   `json:"guestIPv4"`
+	ServerSHA256 string   `json:"serverCertificateSHA256"`
+	Results      []Result `json:"results"`
+}
+
+func BuildPublicSeed(instance string, client Identity) ([]byte, error) {
+	if !validInstance(instance) || client.Leaf == nil || client.Leaf.Subject.CommonName != "windows-ci-sdk-2737/"+instance || !hasUsage(client.Leaf, x509.ExtKeyUsageClientAuth) {
+		return nil, errors.New("host identity does not match the SDK instance")
+	}
+	return json.Marshal(PublicSeed{Instance: instance, ClientSHA256: CertificateHash(client.Leaf)})
+}
+
+func PrepareGuestSDK(com io.ReadWriter, instance string, client Identity) (PreparationReceipt, error) {
+	if _, err := BuildPublicSeed(instance, client); err != nil {
+		return PreparationReceipt{}, err
+	}
+	bootstrap, err := SendCOMBootstrap(com, instance)
+	if err != nil {
+		return PreparationReceipt{}, err
+	}
+	results, err := PrepareSDKSet(bootstrap.IPv4, bootstrap.ServerSHA256, instance, client)
+	receipt := PreparationReceipt{Instance: instance, GuestIPv4: bootstrap.IPv4.String(), ServerSHA256: bootstrap.ServerSHA256, Results: results}
+	if err != nil {
+		return receipt, err
+	}
+	return receipt, nil
+}
+
+// SendCOMBootstrap exchanges only public identity metadata. The caller must
+// supply the COM stream belonging to the exact newly-created VM.
+func SendCOMBootstrap(stream io.ReadWriter, instance string) (BootstrapResult, error) {
+	if stream == nil || !validInstance(instance) {
+		return BootstrapResult{}, errors.New("invalid COM bootstrap context")
+	}
+	var nonce [32]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return BootstrapResult{}, errors.New("COM bootstrap nonce generation failed")
+	}
+	nonceText := hex.EncodeToString(nonce[:])
+	request, err := json.Marshal(comRequest{Kind: "sdk-hello", Instance: instance, Nonce: nonceText})
+	if err != nil {
+		return BootstrapResult{}, errors.New("COM bootstrap request encoding failed")
+	}
+	request = append(request, '\n')
+	if _, err := stream.Write(request); err != nil {
+		return BootstrapResult{}, errors.New("COM bootstrap request failed")
+	}
+	line, err := readBoundedLine(bufio.NewReader(stream), 4096)
+	if err != nil {
+		return BootstrapResult{}, errors.New("COM bootstrap response unavailable")
+	}
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+	var reply comReply
+	if dec.Decode(&reply) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || reply.Kind != "sdk-ready" || reply.Instance != instance || reply.Nonce != nonceText || !validDigest(reply.ServerSHA256) {
+		return BootstrapResult{}, errors.New("COM bootstrap response rejected")
+	}
+	ip := net.ParseIP(reply.IPv4)
+	if ip == nil || ip.To4() == nil || !ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+		return BootstrapResult{}, errors.New("COM bootstrap private IPv4 rejected")
+	}
+	return BootstrapResult{IPv4: ip.To4(), ServerSHA256: reply.ServerSHA256}, nil
+}
+
+func readBoundedLine(reader *bufio.Reader, max int) ([]byte, error) {
+	line := make([]byte, 0, 256)
+	for len(line) < max {
+		b, err := reader.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		if b == '\n' {
+			return bytes.TrimSpace(line), nil
+		}
+		if b != '\r' {
+			line = append(line, b)
+		}
+	}
+	return nil, errors.New("line exceeds limit")
+}
+
+func validInstance(value string) bool {
+	if len(value) == 0 || len(value) > 128 || strings.ContainsAny(value, "\r\n\x00") {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+func validDigest(value string) bool {
+	if len(value) != 64 || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
 }
 
 // ValidateArtifact enforces a pinned, public HTTPS artifact and a lowercase

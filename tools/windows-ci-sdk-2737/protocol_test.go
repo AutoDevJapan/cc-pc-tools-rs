@@ -1,8 +1,13 @@
 package sdkprep
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net"
 	"strings"
 	"testing"
 )
@@ -69,6 +74,73 @@ func TestRustManifestPinRejectsChangedMetadata(t *testing.T) {
 	}
 	if err := VerifyRustChannelManifest(make([]byte, 8<<20+1)); err == nil {
 		t.Fatal("oversized Rust channel manifest accepted")
+	}
+}
+
+func TestCOMBootstrapEchoesInstanceNonceAndPinsGuest(t *testing.T) {
+	host, guest := net.Pipe()
+	defer host.Close()
+	defer guest.Close()
+	serverHash := strings.Repeat("a", 64)
+	peerDone := make(chan error, 1)
+	go func() {
+		line, err := readBoundedLine(bufio.NewReader(guest), 4096)
+		if err != nil {
+			peerDone <- err
+			return
+		}
+		dec := json.NewDecoder(bytes.NewReader(line))
+		dec.DisallowUnknownFields()
+		var request comRequest
+		if err := dec.Decode(&request); err != nil {
+			peerDone <- err
+			return
+		}
+		if request.Kind != "sdk-hello" || request.Instance != "nonce-2783" || !validDigest(request.Nonce) {
+			peerDone <- io.ErrUnexpectedEOF
+			return
+		}
+		response, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: request.Instance, Nonce: request.Nonce, IPv4: "192.168.30.4", ServerSHA256: serverHash})
+		if err != nil {
+			peerDone <- err
+			return
+		}
+		_, err = guest.Write(append(response, '\n'))
+		peerDone <- err
+	}()
+	result, err := SendCOMBootstrap(host, "nonce-2783")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IPv4.String() != "192.168.30.4" || result.ServerSHA256 != serverHash {
+		t.Fatalf("unexpected COM result: %+v", result)
+	}
+	if err := <-peerDone; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPublicSeedContainsOnlyBoundInstanceAndCertificateHash(t *testing.T) {
+	client, err := NewHostIdentity("nonce-2783")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clearIdentity(&client)
+	data, err := BuildPublicSeed("nonce-2783", client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seed PublicSeed
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&seed); err != nil {
+		t.Fatal(err)
+	}
+	if seed.Instance != "nonce-2783" || seed.ClientSHA256 != CertificateHash(client.Leaf) || strings.Contains(string(data), "private") {
+		t.Fatalf("public seed fields are wrong: %s", data)
+	}
+	if _, err := BuildPublicSeed("other-instance", client); err == nil {
+		t.Fatal("cross-instance identity accepted")
 	}
 }
 

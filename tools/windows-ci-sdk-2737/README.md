@@ -1,15 +1,18 @@
 # Windows CI SDK guest helper
 
-This isolated Go module is the protocol and artifact-verification foundation
-for the finite Windows SDK preparation task. It is not connected to a VM and
-does not execute an installer or expose a generic command runner.
+This isolated Go module contains the fixed Windows SDK guest agent, operation
+backend, protocol, and artifact verification for the finite SDK preparation
+task. The Windows guest code has not yet been run in a VM.
 
-The protocol accepts only `status`, `prepare-sdk`, and `verify-versions`, with
-SDK IDs from the fixed set in `catalog.go`. Requests have no command, path, URL,
-or environment fields. Artifact URLs must use the public source allowlist and
-match the pinned SHA-256 digest. The transport binds to a private IPv4 address,
-requires TLS 1.3 mutual certificate pins, disables proxy use and redirects, and
-limits request and response sizes.
+The LocalSystem service accepts only `status`, `prepare-sdk`, and
+`verify-versions`, with SDK IDs from the fixed set in `catalog.go`. Requests
+have no command, path, URL, or environment fields. Artifact URLs must use the
+public source allowlist and match the pinned SHA-256 digest. The transport
+binds to a private IPv4 address, requires TLS 1.3 mutual certificate pins,
+disables proxy use and redirects, and limits request and response sizes. A
+nonce-bound COM exchange supplies only the instance, guest IPv4, and server
+certificate hash. The guest firewall rule is limited to this service executable,
+TCP port 38473, and `LocalSubnet`.
 
 The pinned public artifacts are Git for Windows 2.56.0.2, PowerShell 7.6.6,
 Rust 1.97.1 MSVC components (cargo, clippy, rustc, rust-std, rustfmt), and
@@ -21,16 +24,20 @@ dedicated guest.
 ## Remaining implementation and evidence
 
 - Implement the fixed guest `Operations` backend and Windows LocalSystem service
-  lifecycle, including the COM bootstrap exchange for instance, private IPv4,
-  and certificate hash.
+- Install the helper as a LocalSystem service during normal Windows Setup's
+  `specialize` phase. The service binary and public seed staging have not been
+  exercised in a guest.
+- Add the host Hyper-V provisioning and COM named-pipe client for a new
+  safe-delete-owned root and nonce VM.
 - Provision a new safe-delete-owned root and nonce VM only after the scheduler
   assigns guest resources. Install the pinned SDKs and verify versions using the
   guest service account; preserve private logs and sanitized evidence.
 - Stop and remove that VM, verify zero assigned memory and VHD detach, and retain
   the SDK-only template with its SHA-256 and size in the owned root.
 
-No VM, SDK installer, product source, Cargo build, runner registration, or
-official CI was run by the current implementation step.
+No VM or SDK installer was run by the current implementation step. No product
+source, Cargo build, runner registration, or official CI was accessed or
+executed.
 
 ## Pin sources
 

@@ -234,7 +234,7 @@ func (r *Runner) verifyOwnerSource(ctx context.Context, c ProductReportConfig) b
 			return false
 		}
 		row, err := r.todo(req.Todo)
-		return err == nil && row.Project == c.Project && r.validateRequest(ctx, req) == nil && (c.Source.Purpose != "status_question" || r.verifyExistingStatusAnswer(ctx, c, req))
+		return err == nil && row.Project == c.Project && r.verifyReportRequest(ctx, req) && (c.Source.Purpose != "status_question" || r.verifyExistingStatusAnswer(ctx, c, req))
 	}
 	created, err := time.Parse(time.RFC3339Nano, c.Source.Created)
 	if err != nil || created.After(r.Now().Add(time.Minute)) {

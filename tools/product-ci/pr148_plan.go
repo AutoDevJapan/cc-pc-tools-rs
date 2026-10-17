@@ -113,6 +113,12 @@ func pr148Route(w pr148Workflow) string {
 	return "${{ (" + pr148Dedicated + ") && " + label + " || " + fallback + " }}"
 }
 
+// Preserve merge-result checkout for main and every unrelated PR. Only this
+// finite candidate uses its explicitly pinned head rather than a PR merge SHA.
+func pr148CheckoutRef() string {
+	return "${{ (" + pr148Dedicated + ") && (github.event.pull_request.head.sha || github.sha) || github.sha }}"
+}
+
 // Preserve all original bytes except runs-on and the checkout ref/auth options.
 // Main and unrelated PRs keep their original hosted route. No mutation is sent.
 func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
@@ -122,6 +128,9 @@ func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
 	root, e := pr148YAML(data)
 	if e != nil {
 		return nil, e
+	}
+	if pr148Field(pr148Field(root, "on"), "workflow_dispatch") == nil {
+		return nil, errors.New("original full workflow dispatch trigger required")
 	}
 	jobs := pr148Field(root, "jobs")
 	job := pr148Field(jobs, w.Job)
@@ -162,12 +171,15 @@ func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
 		if e != nil {
 			return nil, e
 		}
+		if !bytes.HasPrefix(data[off:], []byte(u.Value)) {
+			return nil, errors.New("checkout span rejected")
+		}
 		end := bytes.IndexByte(data[off:], '\n')
 		if end < 0 {
 			return nil, errors.New("checkout line unavailable")
 		}
 		end += off + 1
-		insert := "        with:\n          persist-credentials: false\n          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+		insert := "        with:\n          persist-credentials: false\n          ref: " + pr148CheckoutRef() + "\n"
 		if with != nil {
 			persist := pr148Field(with, "persist-credentials")
 			if persist == nil || persist.Value != "false" || len(with.Content) != 2 {
@@ -182,7 +194,7 @@ func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
 				return nil, errors.New("checkout option line unavailable")
 			}
 			end += off + 1
-			insert = "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+			insert = "          ref: " + pr148CheckoutRef() + "\n"
 		}
 		edits = append(edits, pr148Edit{end, end, insert})
 	}
@@ -208,15 +220,16 @@ func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
 	// Independently remove the intended changes and compare all parsed values.
 	afterJob := pr148Field(pr148Field(after, "jobs"), w.Job)
 	pr148Field(afterJob, "runs-on").Value = route.Value
-	for _, s := range pr148Field(afterJob, "steps").Content {
+	for stepIndex, s := range pr148Field(afterJob, "steps").Content {
 		u := pr148Field(s, "uses")
 		if u == nil || !strings.HasPrefix(u.Value, "actions/checkout@") {
 			continue
 		}
 		with := pr148Field(s, "with")
+		hadWith := pr148Field(steps.Content[stepIndex], "with") != nil
 		var kept []*yaml.Node
 		for i := 0; i < len(with.Content); i += 2 {
-			if with.Content[i].Value != "ref" && !(w.Job == "test" && with.Content[i].Value == "persist-credentials") {
+			if with.Content[i].Value != "ref" && !(!hadWith && with.Content[i].Value == "persist-credentials") {
 				kept = append(kept, with.Content[i:i+2]...)
 			}
 		}
@@ -338,6 +351,7 @@ func inspectPR148(ctx context.Context, read api) (pr148Proposal, error) {
 			Jobs  []struct {
 				ID                 int64
 				RunID              int64 `json:"run_id"`
+				Name               string
 				Status, Conclusion string
 				RunnerID           int64 `json:"runner_id"`
 				Steps              []json.RawMessage
@@ -350,7 +364,16 @@ func inspectPR148(ctx context.Context, read api) (pr148Proposal, error) {
 			return p, errors.New("original job coverage changed")
 		}
 		rec := pr148PlanWorkflow{Path: w.Path, OriginalSHA: digest(data), ProposedSHA: digest(proposed), RunID: w.RunID}
+		seenNames := map[string]bool{}
 		for _, j := range jobs.Jobs {
+			validName := j.Name == w.Job
+			if w.Job == "test" {
+				validName = j.Name == "test (ubuntu-latest)" || j.Name == "test (windows-latest)"
+			}
+			if !validName || seenNames[j.Name] {
+				return p, errors.New("original job name or OS coverage changed")
+			}
+			seenNames[j.Name] = true
 			if j.ID < 1 || j.RunID != w.RunID || j.Status != "completed" || j.Conclusion != "failure" || j.RunnerID != 0 || len(j.Steps) != 0 {
 				return p, errors.New("job is not an unstarted failure")
 			}
@@ -362,12 +385,15 @@ func inspectPR148(ctx context.Context, read api) (pr148Proposal, error) {
 			for _, annotation := range annotations {
 				var value struct {
 					Message string `json:"message"`
+					Level   string `json:"annotation_level"`
 				}
 				if json.Unmarshal(annotation, &value) != nil {
 					return p, errors.New("invalid annotation")
 				}
 				if strings.TrimSpace(value.Message) == "The job was not started because an Actions budget is preventing further use." {
 					budget++
+				} else if value.Level != "notice" {
+					return p, errors.New("non-budget failure annotation present")
 				}
 			}
 			if budget != 1 || len(annotations) >= 100 {
@@ -386,6 +412,9 @@ func inspectPR148(ctx context.Context, read api) (pr148Proposal, error) {
 	return p, nil
 }
 func savePR148Proposal(ctx context.Context, dir string) error {
+	if e := pr148OwnedReceiptRoot(ctx, dir); e != nil {
+		return e
+	}
 	p, e := inspectPR148(ctx, get)
 	if e != nil {
 		return e

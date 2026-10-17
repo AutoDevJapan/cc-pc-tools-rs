@@ -47,7 +47,7 @@ func TestPR148ProposalPreservesAcceptance(t *testing.T) {
 				t.Fatal("finite route or main fallback missing")
 			}
 			with := pr148Field(pr148Field(job, "steps").Content[0], "with")
-			if pr148Field(with, "ref").Value != "${{ github.event.pull_request.head.sha || github.sha }}" || pr148Field(with, "persist-credentials").Value != "false" {
+			if pr148Field(with, "ref").Value != pr148CheckoutRef() || !strings.HasSuffix(pr148CheckoutRef(), " || github.sha }}") || pr148Field(with, "persist-credentials").Value != "false" {
 				t.Fatal("head or auth binding missing")
 			}
 			if bytes.Contains(out, []byte("success")) {
@@ -91,7 +91,7 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 		pr148Workflows[i].OriginalSHA = digest(data)
 		fixtures[w.Path] = data
 	}
-	for _, bad := range []string{"", "base", "fork", "branch", "tree", "started", "annotation", "head-after"} {
+	for _, bad := range []string{"", "base", "fork", "branch", "tree", "started", "annotation", "head-after", "extra-failure", "wrong-os", "duplicate-os"} {
 		t.Run(bad, func(t *testing.T) {
 			checks := 0
 			read := func(ctx context.Context, ep string, out any) error {
@@ -135,6 +135,9 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 						message = "a test failed"
 					}
 					v = []any{map[string]any{"message": message}, map[string]any{"message": "OS migration notice", "annotation_level": "notice"}}
+					if bad == "extra-failure" {
+						v = append(v.([]any), map[string]any{"message": "unrelated failure", "annotation_level": "failure"})
+					}
 				default:
 					for _, w := range pr148Workflows {
 						prefix := fmt.Sprintf("repos/AutoDevJapan/fixture/actions/runs/%d", w.RunID)
@@ -149,7 +152,17 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 								if bad == "started" {
 									steps = append(steps, map[string]any{"number": 1})
 								}
-								jobs = append(jobs, map[string]any{"id": 100 + i, "run_id": w.RunID, "status": "completed", "conclusion": "failure", "runner_id": 0, "steps": steps})
+								name := w.Job
+								if w.Job == "test" {
+									name = []string{"test (ubuntu-latest)", "test (windows-latest)"}[i]
+									if bad == "wrong-os" {
+										name = "test (macos-latest)"
+									}
+									if bad == "duplicate-os" {
+										name = "test (ubuntu-latest)"
+									}
+								}
+								jobs = append(jobs, map[string]any{"id": 100 + i, "name": name, "run_id": w.RunID, "status": "completed", "conclusion": "failure", "runner_id": 0, "steps": steps})
 							}
 							v = map[string]any{"total_count": w.Jobs, "jobs": jobs}
 						}

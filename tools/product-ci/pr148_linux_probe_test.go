@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-// Official PowerShell/PowerShell release v7.6.7, public release asset digest.
-const pr148PowerShellSHA = "6896f9e3a6b0a354bf470835a96da76d2f801cd50dcf047ad7c4563bf93bf431"
-
 // Explicit CPU-only SDK inspection in a new namespace. No source, registration,
 // Cargo build, GPU, token, host mount or resident bridge is involved.
 func TestPR148LinuxSDK(t *testing.T) {

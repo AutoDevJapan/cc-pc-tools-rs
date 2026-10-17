@@ -629,6 +629,7 @@ func checkIsolation(b []byte, image string) error {
 }
 
 func main() {
+	if handled,code:=pr148Entry();handled{os.Exit(code)}
 	if len(os.Args) == 2 && strings.HasPrefix(os.Args[1], "codeql-") {
 		var e error
 		switch os.Args[1] {

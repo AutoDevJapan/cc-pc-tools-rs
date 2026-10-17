@@ -1,5 +1,35 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 13時台の実行契約調整（以下を優先）
+
+job20261017-133225-todo-2736、6b5c387から再開。最新D:/CC/AGENTS.md、repo規則、元2640記録・製品規則を読んだ。実GitHub APIでPR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、元head75a/treececb/base1100/原branch、open/draft/mergeableを確認した。製品source/workflow/runner/dispatch/製品Cargo、GPU/Civ6/再起動、旧資源/保護/共有ACL変更は今回も0。
+
+### 今回保存したコードと実結果
+
+- helper PR189のremote head6b5c387は、両OS helper、cc-jobs、CodeQL全言語の正式successをAPIで確認した。package-toolsはskipped。これは下記の新コードのCIではない。
+- 2749のレビュー済みWindows moduleだけを親branchへ取り込み、独立工程の登録に依存しない契約調整を親が行った。新保存点63ddef6a15aaf39988c1328483b562dd96532132。workflow生成と全tree比較を単一のGo package tools/product-ci/pr148scopeへ抽出し、両OS helperが共通で使う。新しい共有SDK/受付/runner登録設定を作っていない。
+- Windowsのreal Planは、元75aだけを親に持つ明示new head/tree、PRHead=WorkflowSHA=Head、実JobIDを要求する。三workflowの全bytesは共通生成案と一致し、それ以外の全tree/path/modeは不変でなければ拒否する。原job名と全OS matrix、同branch workflow_dispatch/attempt/source/ref/Windows contextを固定した。fixtureは元75a/cecbだけでofficial hookへ入れない。targetを実source/tools/targetにそろえた。
+- product-ci Go race196 pass/4 opt-in test skip、vet、Windows/Linux buildが全exit0。shared packageには直接のtest fileがなく、package-level skipイベント1件が別にある。Windows module Go race27 pass/2 opt-in skip、vet、Windows/Linux buildも全exit0。新しいservice/account/profile/namespaceや製品検査は行っていない。
+- 初回rootからのgo testはmodule不在のsetup失敗。共通packageのjson import欠落、古いevent fixtureの不適合、外部型aliasの位置指定literalによるvet失敗は修正し、最新検査で確認した。原応答と失敗vet logを保持する。成功した製品全workspaceは重ねていない。
+- 最新binaryのread-only pr148-planはexit0。新しい共通生成案三件のSHA256は、前回f86e32dの実proposal三件とすべて一致した。製品workflowを送信した結果ではない。
+- binary SHA256: product-ci Windows EAB3C0F101605FA2E3D6DA91908E0C0E82CF9F3355BFCC3943C775A3D4492831、Linux 876A0BE6EF940E00A989E224FC1AFCADBF3ECB92A0584989C5913DB98E1B5440。Windows runner Windows 6C371CE485E5E26E977981989BADFAD044680062D9808B73E77C190CF3B7BE0B、Linux 950D97043FF991595D6C301F4182E3BCF6A7BE2BDF76A100A219B8BF67B3E429。
+
+### 正規レビュー受付と担当記録の一時不一致
+
+開始時は実jobがrunning/todo_id2736/rootである一方、ToDoのjobs/scheduler.jobに今回jobが欠けていた。subwork付きaddはlinked root条件で拒否。sourceを調べて不一致を確定し、手書き修復や権限緩和は行っていない。後でスケジューラが今回jobを正規に追記し、doing/現在job/branchを読み返せた。
+通常の独立ToDoとしてadd --spec --model claude-sonnet-5-5が成功し、2788を1件受け付けた。原f86e32d本文は原本保持。2788がtodo/jobs=[]で実開始前であることを確認し、正式edit --specで最新63ddef6の64全文/全差分に更新した。直接子Codexは起動していない。原本文753172bytes/SHA256 604CD047CFC13A8EBEC68DFF9069BD40116086B78E06F313154D68E37CFCF758。CLI保存specのSHA256は0644D4E115A413D7382C2F667062B258A692657056E732DDA315E857DBA9A7DEで、CRLF→LF正規化後の全文一致を確認した。保存先D:/CC/Tools/todo/specs/2788-4ea45f6055c9400d855f03e01b9d7a77.md。
+subwork関係を追加する後続呼出しは容量64MiBエラーで未保存。2788は通常独立ToDoのままであり、特別な同時実行権限はない。容量復旧担当2786はdoingで、復旧完了とはしない。最後のwait 2736 --on2788はexit0。待機記録を読み返して終了する。2788の実job/モデル/応答/Mustはまだ未受領。
+
+### GitHub pushの権限不足と、残る実統合
+
+63ddef6のpushはGitHub側がOAuth Appのworkflow scope不足で拒否した。対象は新Windows moduleを検査する既存.github/workflows/product-ci.ymlの必要最小限path/Go step追加。remote branch/PR189は6b5c387のまま。これは自動承認レビューの拒否ではなくGitHubの権限制限である。API/別token/別push経路/forceへの迂回は行っていない。
+OAuth最小権限・認証出力保護・Computer Useの規則を確認し、ログイン済みChromeのAPIを選択しただけ。タブ、認証CLI、確認コード、新token、OAuth同意やscope更新はまだ開始していない。必要なworkflow権限を正規に扱う工程は未完。ブラウザ側の「機微な権限の拡張は操作時確認」条件を一般のログイン許可と混同しない。レビュー前の権限確認を本人へ先送りせず、まず具体的なコードを別モデルで確認する。
+
+実Windows source materializer、filtered accountからのSDK/gate利用、工具PATH/新home、checkout後・原Rust command前の中間guard、実hook/正式job/原logsは未実装又は未実証。canonical変換は中間guard stepを追加しないため、元command bytesを保つ有限tool-entry guard等が必要。この未達と強制controller終了時のgate保持の限界をREADMEへ明記した。旧2763/2764のMust0やservice fixtureを新sourceの実統合成功に流用しない。
+次は2788の固定head/全読了/原応答を受領し、Mustを修正する。GitHubの必要scopeを正規手順で扱い、push/最新headのCI/必要な別モデル再確認/通常helper merge・配布を行う。その後Windows残条件を実装・有限検証し、製品PR148の正式通常4jobを実行して原証拠を元2640へ返す。製品PR148のmergeは元2640が担当する。2736→2640の逆依存や2381のcleanup依存は作らない。
+
+今回のbuild Tempはsafe-delete ID a3735a03eed74288a5500c89db5b16b6。binary/Go jsonl/vet/実proposal計12fileを、自分の恒久root184a58eedf4f923741f160dfe7cfd5b7へbytes/SHA一致で保管した。manifestはwindows-contract-63ddef6-manifest.private.json、結果は同result.private.json。plan→別通常削除は成功し、finishと保管SHA再照合を行う。継続SDKの以前のTemp f8847d61da9cfac712675b5cc26b4932は引き続き保持する。
+
 ## 2026-10-17 12時台の統合結果（以下を優先）
 
 job20261017-123327-todo-2736。9d57e63から再開し、元2640の記録、当該repo規則、最新D:/CC/AGENTS.md、原2750/2751/2749の実成果を確認した。作業branchはscheduler/todo-2736-pr148-ciのまま。製品PR148のAPIで実owner AutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、head75a/base1100/原refを確認。専用runnerは0。製品workflow変更/source展開/runner登録/dispatch/製品Cargo検査はまだ0。GPU/Civ6/再起動/旧資源操作も0。

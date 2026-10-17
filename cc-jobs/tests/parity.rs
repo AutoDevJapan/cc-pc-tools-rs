@@ -4,6 +4,12 @@ use cc_jobs::*;
 mod subwork_support;
 #[path = "support/product_retry.rs"]
 mod original_product_retry;
+#[path = "support/owner_wait_repair.rs"]
+mod finite_owner_wait_repair;
+#[path = "support/finished_review.rs"]
+mod finished_review;
+#[path = "support/finished_work_handoff.rs"]
+mod finished_work_handoff;
 
 mod independent_subwork {
     use super::*;

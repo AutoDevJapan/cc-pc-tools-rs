@@ -14,6 +14,9 @@ const secretWorkflowPathSHA = "d30b4e6a2bd3c346243a103c773373348c1bf4a80af7bf92f
 
 func secretLabel(id int64) string { return fmt.Sprintf("cc-product-2648-%d-secret", id) }
 func productPlan(ctx context.Context, c candidate, runID int64, kind string, read api) (codeQLPlan, error) {
+	if kind == "merged-codeql" {
+		return planMergedCodeQL(ctx, c, runID, read)
+	}
 	if kind == "" {
 		return planCodeQL(ctx, c, runID, read)
 	}
@@ -81,6 +84,9 @@ func verifyWorkflowBytes(ctx context.Context, repo, path, ref, expected string, 
 }
 
 func validGuestPlan(p codeQLPlan) bool {
+	if p.Kind == "merged-codeql" {
+		return validMergedPlan(p)
+	}
 	known := false
 	for _, c := range candidates {
 		if c.ID == p.RepoID && c.PR == p.PR && c.SHA == p.Candidate {

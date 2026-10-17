@@ -221,3 +221,74 @@ attempt. See `docs/product-ci-codeql-2648.md` for the saved recovery checkpoint.
 Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
 https://docs.github.com/en/actions/reference/runners/self-hosted-runners
+
+## One audited post-merge CodeQL run (ToDo2757)
+
+`merged-inspect` performs read-only checks for repository 1285649124, PR1002,
+merge `41090d19329b81dd1bd076f3336d723823be4b82`, tree
+`007b84082008ea9effd5052f63856273aabbfb17`, ordered original parents, original
+PR head commit and tree, original PR base SHA, and current main. No other merge or latest-head mode
+exists. It checks the original default-setup settings and original four jobs
+in run38941323954/workflow331939928/attempt1, and the existing dedicated queue.
+
+After normal source review, CI, merge and official distribution,
+`merged-codeql-job <new-owned-dir> <official-Linux-helper>` serves one job of
+that exact run. It reuses the original candidate lock, container isolation,
+resource limits, live hooks, actual checkout HEAD/tree/authentication proof and
+namespace/registration cleanup. It does not change route configuration or
+accept an arbitrary job, run, revision or label. The other four original
+open-PR candidate entries and their commands are unchanged. Runner exit is
+still not official analysis success. Promotion, full verification, integration
+and production revision/smoke are separate outstanding acceptance conditions.
+
+Read failures in the merged receipt name their fixed stage (repository, PR,
+current main, merge commit, or original PR head commit). Transport errors use only
+closed categories; raw stderr, response bodies, and endpoint names never enter
+the error. A `not-found` category is not proof that a branch was deleted or
+that permissions changed. It is terminal for that read: no fallback ref, API,
+identity, or runner is tried. In particular, a successful current-main read
+does not override a failed fixed-commit read or authorize a job.
+
+The temporary source branch is used by the unchanged open-PR verifier, but
+is not an execution source for this exact merged receipt. Normal merge cleanup
+may remove it. The merged path requires the original closed PR's fixed head
+and base SHA, both fixed commit trees, exact ordered merge parents, and fixed
+current main on every before/after verification. It does not try another ref
+after a 404 or accept an unavailable commit. Only the one audited merge can
+use this proof; the generic/open-PR modes retain their original branch check.
+
+## Fixed release-source inventory
+
+`release-inspect` is a read-only preparation command for the original audited
+merge. It verifies the exact merged receipt before and after reading the eight
+fixed source blobs. Both Git blob SHA1 and SHA256 must match. Parsing consumes
+copies of the same verified RAM bytes; source names and content never enter
+the report or error messages.
+
+The report distinguishes workflow-wide and root-environment secret/token
+mentions, explicit inherited secrets, script parsing failures, and literal
+Docker/Compose calls. Shell parsing does not expand host environment values
+or execute substitutions. Argument values, job names, conditions and source
+text are hashes, while public Docker flag names use a closed vocabulary.
+
+This inventory covers literal shell syntax only. It does not resolve Compose
+models, prove all called scripts are secret-free, calculate the canonical trust
+digest, or authorize execution. `ExecutionAuthorized` remains false. It adds no
+runner, mutation endpoint, candidate, ref, label, profile or fallback path.
+
+### Sealed release build input
+
+The release context primitive reconstructs every recursive Git tree object
+before accepting its file list, then verifies every archive file against that
+tree. It rejects truncation, missing or extra files, duplicate entries, links,
+gitlinks, special modes, multiple roots, escaping paths and damaged gzip
+trailers. File data stays in RAM; it is never extracted on the host. Empty
+tracked directories are retained. Tar permissions are canonicalized to Git's
+executable bit, without transferring special permission bits.
+
+Only the fixed release wrapper can select the audited product tree; the eight
+audited blob SHA256 values must also occur in the verified snapshot. A future
+builder receives a copied, verified archive through stdin, rather than reading
+guest checkout paths or trusting guest hashes. Names and bytes have no exported
+JSON fields. This change supplies the input boundary only: it adds no CLI,
+network call, Docker execution, runner registration, or release eligibility.

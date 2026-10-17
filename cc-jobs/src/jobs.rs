@@ -25,6 +25,12 @@ impl Context {
     /// including old saved jobs and both kinds of continuation. Keep the
     /// original input immutable; appending this rule does not elevate scope.
     pub fn prompt_for_attempt(&self, job: &Value) -> Result<PathBuf> {
+        if !job["fixed_review_requalification"].is_null() && job["fixed_read_only_review"].is_null()
+        {
+            return Err(Error::new(
+                "fixed review continuation needs fresh qualification",
+            ));
+        }
         let dir = self.job_dir(s(job, "id"));
         let source = dir.join(if s(job, "context_phase") == "summarize" {
             "context-summary-prompt.md"
@@ -36,6 +42,16 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
+        let fixed_guidance = if job["fixed_read_only_review"].is_null() {
+            String::new()
+        } else if source == dir.join("prompt.md") {
+            // Validate precisely the bytes that will be consumed, not a second
+            // read that could observe a replacement of the original prompt.
+            self.fixed_review_guidance(job, text.as_bytes())?
+        } else {
+            let original = fs::read(dir.join("prompt.md"))?;
+            self.fixed_review_guidance(job, &original)?
+        };
         if job.get("original_product_retry").is_some() {
             // Keep prompt.md byte-identical for bind's digest; execution still
             // receives the same sandbox guidance as ordinary registrations.
@@ -73,6 +89,7 @@ impl Context {
         text.push_str("\n\n## 実行時のサイト制限\n");
         text.push_str(cc_job_policy::REGISTRAR_GUIDANCE);
         text.push('\n');
+        text.push_str(&fixed_guidance);
         let selected = dir.join("execution-prompt.md");
         fs::write(&selected, text)?;
         Ok(selected)
@@ -918,6 +935,7 @@ impl Context {
             job["pid_created"] =
                 json!(process_tree_root_created.or_else(|| self.rt.proc_created(pid)));
             job["queue_supervisor_version"] = json!(5);
+            job["fixed_review_protocol"] = json!({"version":cc_job_policy::finished_review::EXECUTION_PROTOCOL,"pid":job["pid"],"created":job["pid_created"]});
             job["queue_restart_pending"] = json!(false);
             job["reboot_launch_pending"] = json!(false);
             job["queue_dependency_version"] = json!(1);
@@ -1099,24 +1117,11 @@ impl Context {
             );
             self.save(&job)?;
             #[cfg(windows)]
-            if s(&job, "context_phase") != "summarize" {
+            if crate::execution::Profile::of(&job).host_tools() {
                 cc_chrome::install_plugin_hook(&self.home)?;
                 let proxy = cc_chrome::native::start(&dir, jid)?;
                 job["chrome_pipe"] = json!(proxy.pipe);
                 chrome_proxy = Some(proxy);
-            }
-            let mut environment = self.job_environment();
-            environment.insert("CC_JOB_ID".into(), jid.into());
-            environment.insert("CODEX_JOB_ID".into(), jid.into());
-            if !s(&job, "chrome_pipe").is_empty() {
-                environment.insert(
-                    "CDP_BROWSER_BACKEND_PIPE_PATH".into(),
-                    s(&job, "chrome_pipe").into(),
-                );
-                environment.insert(
-                    "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET".into(),
-                    "true".into(),
-                );
             }
             // Read by `wait`, handoffs and retries; written only from masked events.
             let output = dir.join(if s(&job, "context_phase") == "summarize" {
@@ -1124,13 +1129,7 @@ impl Context {
             } else {
                 "last_message.md"
             });
-            proc = Some(self.rt.spawn(&Spawn {
-                argv: codex_args(&job),
-                prompt: self.prompt_for_attempt(&job)?,
-                cwd: PathBuf::from(s(&job, "cwd")),
-                env: environment,
-                flags: NO_WINDOW,
-            })?);
+            proc = Some(self.rt.spawn(&self.execution_spawn(&job)?)?);
             let p = proc.as_mut().unwrap();
             job["codex_pid"] = json!(p.pid());
             let created = self.rt.proc_created_checked(p.pid())?;
@@ -1464,16 +1463,8 @@ fn find_session(dir: &Path, id: &str, recursive: bool) -> Option<PathBuf> {
 /// No `-o`: codex would write its raw final message to the job directory.
 /// The supervisor writes that file from masked events instead (`record_message`).
 pub fn codex_args(j: &Value) -> Vec<String> {
-    let summary = s(j, "context_phase") == "summarize";
-    let mut policy = cc_job_policy::for_sandbox(if summary {
-        "read-only"
-    } else {
-        s(j, "sandbox")
-    });
-    if !summary && j.get("original_product_retry").is_some() && s(j, "sandbox") == "workspace-write"
-    {
-        policy.sandbox = "workspace-write";
-    }
+    let profile = crate::execution::Profile::of(j);
+    let policy = profile.policy(j);
     let mut args = vec![
         s(j, "codex").into(),
         "exec".into(),
@@ -1490,7 +1481,7 @@ pub fn codex_args(j: &Value) -> Vec<String> {
         "-s".into(),
         policy.sandbox.into(),
     ];
-    if summary {
+    if profile.isolated() {
         // Disable the whole plugin/app features and every configured server
         // discovered in this job's working directory before the stop.
         args.extend([
@@ -1499,16 +1490,12 @@ pub fn codex_args(j: &Value) -> Vec<String> {
             "-c".into(),
             "features.apps=false".into(),
             "-c".into(),
-            "features.shell_tool=false".into(),
-            "-c".into(),
             "web_search=disabled".into(),
         ]);
-        for server in j["context_disabled_mcp_servers"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-        {
+        if profile.summary() {
+            args.extend(["-c".into(), "features.shell_tool=false".into()]);
+        }
+        for server in profile.disabled_servers(j) {
             args.extend(["-c".into(), format!("mcp_servers.{server}.enabled=false")]);
         }
         if !s(j, "resume_session").is_empty() {
@@ -1517,6 +1504,8 @@ pub fn codex_args(j: &Value) -> Vec<String> {
         args.push("-".into());
         return args;
     }
+    // Keep the original launch record, but never translate its old writable
+    // directory hints into a fixed reader's effective command line.
     if let Some(dirs) = j["add_dirs"].as_array() {
         for d in dirs {
             args.extend(["--add-dir".into(), pystr(d)]);

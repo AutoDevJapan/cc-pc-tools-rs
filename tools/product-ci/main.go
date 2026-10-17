@@ -38,7 +38,7 @@ type candidate struct {
 }
 
 var candidates = []candidate{
-	{1285649124, 1002, "b93e126b172adbb29ad2081af4732f4b42f8bc95"},
+	{1285649124, 1002, "20c441df545a88f4a839d7e906b5aeb4f1708ae3"},
 	{1392152644, 148, "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
 	{1154066087, 3613, "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
 	{1386702183, 175, "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
@@ -109,6 +109,10 @@ func boundedOutput(c *exec.Cmd, limit int) ([]byte, error) {
 func get(ctx context.Context, endpoint string, value any) error {
 	b, e := readGitHub(ctx, endpoint)
 	if e != nil {
+		var safe *gitHubReadError
+		if errors.As(e, &safe) {
+			return safe
+		}
 		return errors.New("GitHub read failed")
 	}
 	if json.Unmarshal(b, value) != nil {
@@ -657,6 +661,39 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
+	if len(os.Args) == 2 && os.Args[1] == "release-inspect" {
+		report, err := inspectReleaseInventory(ctx, get)
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(report)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "merged-inspect" {
+		p, err := planMergedCodeQL(ctx, mergedCandidate(), mergedCodeQLRun, get)
+		if err == nil {
+			err = checkCodeQLQueue(ctx, p, get)
+		}
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(p)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) == 4 && os.Args[1] == "merged-codeql-job" {
+		e = executeProductJob(ctx, mergedCandidate(), mergedCodeQLRun, os.Args[2], os.Args[3], "merged-codeql", "")
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
 			_, err := verify(ctx, c, get)

@@ -7,10 +7,32 @@ import (
 	"time"
 )
 
+// Only fixed categories may leave the transport boundary. Neither GitHub's
+// response body nor stderr (which can contain repository names) is an error.
+type gitHubReadError struct{ class string }
+
+func (e *gitHubReadError) Error() string { return "GitHub read failed (" + e.class + ")" }
+
+func classifyGitHubRead(stderr string) *gitHubReadError {
+	class := "unclassified"
+	switch {
+	case strings.Contains(stderr, "gh-gate: refused"), strings.Contains(stderr, "blocked by policy"):
+		class = "policy-refused"
+	case strings.Contains(stderr, "HTTP 401"), strings.Contains(stderr, "HTTP 403"), strings.Contains(stderr, "permission denied"):
+		class = "authorization-or-permission"
+	case strings.Contains(stderr, "HTTP 404"):
+		// A 404 does not prove either a deleted ref or a permission failure.
+		class = "not-found"
+	case transientGitHubRead(stderr):
+		class = "temporary-transport-or-server"
+	}
+	return &gitHubReadError{class: class}
+}
+
 // Only idempotent reads with explicit transport/temporary-server failures may
 // be retried. Credentials, policy refusals and mutations never use this path.
 func transientGitHubRead(stderr string) bool {
-	for _, refused := range []string{"gh-gate: refused", "blocked by policy", "HTTP 401", "HTTP 403", "permission denied"} {
+	for _, refused := range []string{"gh-gate: refused", "blocked by policy", "HTTP 401", "HTTP 403", "HTTP 404", "permission denied"} {
 		if strings.Contains(stderr, refused) {
 			return false
 		}
@@ -52,7 +74,7 @@ func finiteRead(ctx context.Context, attempt func() ([]byte, string, error), pau
 			return b, nil
 		}
 		if i == 2 || !transientGitHubRead(stderr) {
-			return nil, errors.New("GitHub read failed")
+			return nil, classifyGitHubRead(stderr)
 		}
 		if e = pause(); e != nil {
 			return nil, e

@@ -1,0 +1,49 @@
+{
+  "schema": "todo-2746-windows-guest-evidence-v1",
+  "observed_date": "2026-10-17",
+  "helper_source_commit": "f6d086b58256fdf9d33456c3e79737f1b6c0dc66",
+  "source_image": "Official Windows Server 2025 Evaluation ISO",
+  "source_reference": "https://www.microsoft.com/en-us/evalcenter/download-windows-server-2025",
+  "image_deployment": "standard Windows Setup with a short specialize command",
+  "fixture_transport": "Hyper-V Generation 1 COM1; bidirectional probe; authenticated mutual TLS 1.3 over bounded base64 line frames",
+  "guest": {
+    "generation": 1,
+    "vcpus": 2,
+    "startup_memory_bytes": 2147483648,
+    "dynamic_memory": false,
+    "secure_boot": false,
+    "network_adapters": 0,
+    "gpu_adapters": 0,
+    "credential_free": true,
+    "oobe_skipped": false,
+    "local_user_created": false
+  },
+  "normal": {
+    "two_children_observed_alive": true,
+    "returned_normally": true,
+    "all_children_exited": true,
+    "job_object_removed": true,
+    "credential_free": true
+  },
+  "cancel": {
+    "two_children_observed_alive": true,
+    "cancellation_observed": true,
+    "all_children_exited": true,
+    "job_object_removed": true,
+    "credential_free": true
+  },
+  "cleanup": {
+    "cleanup_error": false,
+    "vm_stopped": true,
+    "assigned_memory_bytes": 0,
+    "vm_removed": true,
+    "guest_vhd_detached": true
+  },
+  "not_run": {
+    "product_source_transferred": false,
+    "official_runner_registered": false,
+    "official_ci_executed": false,
+    "cargo_build_or_test": false
+  },
+  "scope_limit": "This proves only the finite disposable Windows guest fixture and cleanup; it does not prove host shutdown, logout, or reboot recovery."
+}

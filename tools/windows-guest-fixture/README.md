@@ -42,6 +42,9 @@ OOBE answer file or create a user; normal OOBE remains in place. The service
 starts before the first interactive logon and communicates only over the
 VM's COM pipe.
 
+The latest observed guest fixture and cleanup result is recorded in
+[`evidence/todo-2746-20261017-windows-guest.json`](evidence/todo-2746-20261017-windows-guest.json).
+
 The `vm-smoke <owned-root> <official-evaluation-iso>` command runs two
 credential-free fixtures inside the guest. The normal case observes two live
 child processes, waits for one to return normally, closes the owned Job

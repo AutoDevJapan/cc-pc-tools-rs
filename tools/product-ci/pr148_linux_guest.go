@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -19,10 +20,11 @@ type pr148GuestPacket struct {
 	Plan                               pr148LinuxPlan
 	Policy                             pr148CargoPolicy
 	Repo, Name, Token, Callback, Nonce string
+	Execution                          pr148ExecutionPolicy
 }
 
 func pr148ToolEnv(jobs, tests int) []string {
-	return []string{"HOME=/home/runner", "PATH=/toolchain/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "CARGO_BUILD_JOBS=" + strconv.Itoa(jobs), "RUST_TEST_THREADS=" + strconv.Itoa(tests), "NEXTEST_TEST_THREADS=" + strconv.Itoa(tests), "CARGO=/runner/bin/cargo", "RUSTUP_TOOLCHAIN=1.95.0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+	return []string{"HOME=/home/runner", "PATH=/toolchain/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "CARGO_BUILD_JOBS=" + strconv.Itoa(jobs), "RUST_TEST_THREADS=" + strconv.Itoa(tests), "NEXTEST_TEST_THREADS=" + strconv.Itoa(tests), "CARGO=/runner/bin/cargo", "RUSTUP_TOOLCHAIN=1.95.0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_REPLACE_OBJECTS=1"}
 }
 func pr148ReadGuest() (pr148GuestPacket, error) {
 	var p pr148GuestPacket
@@ -64,13 +66,20 @@ func pr148GuestCargo(rustup bool) int {
 	if rustup {
 		endpoint = strings.TrimSuffix(endpoint, "cargo") + "rustup"
 	}
-	ctx, stop := context.WithTimeout(context.Background(), 26*time.Minute)
+	if p.Execution.timeout() == 0 {
+		return 120
+	}
+	ctx, stop := context.WithTimeout(context.Background(), p.Execution.timeout()+time.Minute)
 	defer stop()
 	r, e := pr148RequestCargo(ctx, endpoint, p.Nonce, p.Plan, args)
 	if e != nil {
 		return 124
 	}
 	_, _ = os.Stdout.Write(r.Log)
+	if r.LogTruncated && r.Exit == 0 {
+		fmt.Fprintln(os.Stderr, "Cargo output preview truncated; full original log retained on host")
+		return 126
+	}
 	return r.Exit
 }
 
@@ -95,7 +104,7 @@ func pr148ExecChild(args []string) error {
 	path := "/toolchain/rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo"
 	var command []string
 	if index == 4 {
-		path = "/opt/rust/bin/rustup"
+		path = "/toolchain/cargo/bin/rustup"
 		command = pr148RustupArgs
 	} else {
 		command = strings.Fields(p.Policy[index])
@@ -113,10 +122,14 @@ func pr148ExecChild(args []string) error {
 		}
 		return pr148ExecRestricted(path, command, env, false)
 	}
-	if e = os.Chdir(pr148Workspace); e != nil {
+	env, dir, e := pr148StepEnvironment(p.Execution, index, jobs, tests)
+	if e != nil {
 		return e
 	}
-	return pr148ExecRestricted(path, command, pr148ToolEnv(jobs, tests), false)
+	if e = os.Chdir(dir); e != nil {
+		return e
+	}
+	return pr148ExecRestricted(path, command, env, false)
 }
 
 func pr148Checkout(p pr148LinuxPlan) error {
@@ -213,7 +226,7 @@ func pr148GuestRunner() error {
 	if e = pr148SaveNew("/runner/pr148-plan.json", p); e != nil {
 		return e
 	}
-	env := []string{"HOME=/home/runner", "PATH=/runner/bin:/work/powershell:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/runner/pr148-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/runner/pr148-complete.sh", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+	env := []string{"HOME=/home/runner", "PATH=/runner/bin:/work/powershell:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/toolchain/cargo", "RUSTUP_HOME=/toolchain/rustup", "CARGO_TARGET_DIR=" + pr148Workspace + "/tools/target", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/runner/pr148-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/runner/pr148-complete.sh", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_REPLACE_OBJECTS=1"}
 	if e = os.Chdir("/runner"); e != nil {
 		return e
 	}
@@ -260,6 +273,12 @@ if cat /toolchain/protected >/dev/null 2>&1; then exit 83; fi
 if cat /proc/1/root/opt/rust/bin/cargo >/dev/null 2>&1; then exit 84; fi
 if (printf 'tamper' > /runner/product-ci) 2>/dev/null; then exit 85; fi
 if (printf 'tamper' > /runner/pr148-plan.json) 2>/dev/null; then exit 86; fi
+if truncate -s 0 /runner/product-ci 2>/dev/null; then exit 87; fi
+mkdir -p /work/refer-from /work/refer-to
+printf refer > /work/refer-from/source
+mv /work/refer-from/source /work/refer-to/destination
+ln /work/refer-to/destination /work/refer-from/hardlink
+test "$(cat /work/refer-from/hardlink)" = refer
 printf 'landlock-direct-copy-proc-toolchain-denied\n'
 `}, []string{"PATH=/usr/bin:/bin", "HOME=/home/runner"}, true)
 	case "pr148-fixture-callback":
@@ -274,7 +293,18 @@ printf 'landlock-direct-copy-proc-toolchain-denied\n'
 			return true, 124
 		}
 		_, _ = os.Stdout.Write(r.Log)
+		if r.LogTruncated && r.Exit == 0 {
+			return true, 126
+		}
 		return true, r.Exit
+	case "pr148-listener-probe":
+		if err := cmd(context.Background(), "cp", "-a", "/opt/actions-runner/.", "/runner/").Run(); err != nil {
+			return true, 1
+		}
+		if err := os.MkdirAll("/runner/_diag", 0700); err != nil {
+			return true, 1
+		}
+		e = pr148ExecRestricted("/runner/bin/Runner.Listener", []string{"--version"}, []string{"HOME=/home/runner", "TMPDIR=/tmp", "PATH=/usr/bin:/bin"}, true)
 	case "pr148-linux":
 		if len(os.Args) != 6 {
 			return true, 1
@@ -284,7 +314,7 @@ printf 'landlock-direct-copy-proc-toolchain-denied\n'
 		if err != nil || json.Unmarshal(b, &p) != nil {
 			return true, 1
 		}
-		ctx, stop := context.WithTimeout(context.Background(), 30*time.Minute)
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 		e = executePR148Linux(ctx, p, os.Args[3], os.Args[4], os.Args[5])
 	case "pr148-guest":

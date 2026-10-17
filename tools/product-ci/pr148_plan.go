@@ -123,6 +123,9 @@ func proposePR148(data []byte, w pr148Workflow) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
+	if pr148Field(pr148Field(root, "on"), "workflow_dispatch") == nil {
+		return nil, errors.New("original full workflow dispatch trigger required")
+	}
 	jobs := pr148Field(root, "jobs")
 	job := pr148Field(jobs, w.Job)
 	if jobs == nil || len(jobs.Content) != 2 || job == nil {

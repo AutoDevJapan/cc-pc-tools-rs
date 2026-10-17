@@ -171,8 +171,11 @@ func TestPR148LinuxFiniteNamespaceCargoFixture(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	for _, cancelCase := range []bool{false, true} {
-		t.Run(strconv.FormatBool(cancelCase), func(t *testing.T) {
+	for _, caseName := range []string{"normal", "cancel", "overflow", "receipt-loss"} {
+		t.Run(caseName, func(t *testing.T) {
+			cancelCase := caseName == "cancel"
+			largeCase := caseName == "overflow"
+			lostCase := caseName == "receipt-loss"
 			caseDir := filepath.Join(dir, fmt.Sprintf("namespace-%t-%d", cancelCase, time.Now().UnixNano()))
 			if e = os.Mkdir(caseDir, 0700); e != nil {
 				t.Fatal(e)
@@ -223,6 +226,12 @@ fn child_is_drained() {
     let child = std::process::Command::new("sleep").arg("600").spawn().unwrap();
     std::fs::write("/work/fixture-child.pid", child.id().to_string()).unwrap();
     println!("credential-free Rust Cargo fixture");
+    if std::path::Path::new("/work/fixture-large").exists() {
+        use std::io::Write;
+        let data=vec![b'L'; 65536];
+        let mut stdout=std::io::stdout().lock();
+        for _ in 0..528 { stdout.write_all(&data).unwrap(); }
+    }
     if std::env::var("CC_PR148_CANCEL_FIXTURE").unwrap() == "true" {
         loop { std::thread::sleep(std::time::Duration::from_secs(1)); }
     }
@@ -232,6 +241,16 @@ fn child_is_drained() {
 }
 
 `))
+			if largeCase {
+				transfer("/work/fixture-large", []byte("synthetic-overflow"))
+			}
+			if caseName == "normal" {
+				b, e = cmd(ctx, docker, "exec", n.ID, "/runner/product-ci", "pr148-listener-probe").CombinedOutput()
+				if e != nil {
+					t.Fatalf("offline restricted listener: %v %s", e, b)
+				}
+				_ = os.WriteFile(filepath.Join(caseDir, "listener-version.private.log"), b, 0600)
+			}
 			b, e = cmd(ctx, docker, "exec", n.ID, "/runner/product-ci", "pr148-restriction-fixture").CombinedOutput()
 			if e != nil {
 				t.Fatalf("real kernel boundary: %v %s", e, b)
@@ -241,6 +260,7 @@ fn child_is_drained() {
 			}
 			_ = os.WriteFile(filepath.Join(caseDir, "landlock.private.log"), b, 0600)
 			h := &pr148CargoHost{plan: p, policy: policy, key: key, ns: n, dir: caseDir, target: filepath.Join(caseDir, "cargo-target"), started: true, recheck: func(context.Context) error { return nil }}
+			h.loseReceiptFixture = lostCase
 			flight, cancel := context.WithCancel(ctx)
 			defer cancel()
 			done := make(chan struct {
@@ -313,7 +333,20 @@ fn child_is_drained() {
 			}
 			result := <-done
 			callbackExit := <-callbackDone
-			if !cancelCase && callbackExit != nil {
+			if lostCase {
+				if result.e == nil || !result.r.Drained || !h.broken || !n.TreeGone {
+					t.Fatal("missing-receipt recovery did not disable and stop namespace")
+				}
+				if e = pr148SaveNew(filepath.Join(caseDir, "receipt-loss-recovery.private.json"), map[string]any{"broken": h.broken, "tree_gone": n.TreeGone, "failure": result.e.Error(), "actual_cargo_exit": result.r.Exit}); e != nil {
+					t.Fatal(e)
+				}
+				return
+			}
+			if largeCase {
+				if !result.r.LogTruncated || result.r.FullLogBytes <= 32<<20 || callbackExit == nil {
+					t.Fatal("oversized full log/failed preview not preserved")
+				}
+			} else if !cancelCase && callbackExit != nil {
 				t.Fatalf("guest callback failed: %v", callbackExit)
 			}
 			if result.e != nil || !result.r.Drained {

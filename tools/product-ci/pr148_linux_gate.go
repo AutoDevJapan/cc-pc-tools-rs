@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const pr148CargoGate = `D:\CC\Tools\codex-jobs\cargo_gate.exe`
@@ -51,7 +53,7 @@ func pr148Policy(workflow []byte) (pr148CargoPolicy, error) {
 	}
 	job := pr148Field(pr148Field(root, "jobs"), "test")
 	steps := pr148Field(job, "steps")
-	if steps == nil || steps.Kind != 2 {
+	if steps == nil || steps.Kind != yaml.SequenceNode {
 		return policy, errors.New("original Rust steps missing")
 	}
 	for _, step := range steps.Content {
@@ -98,12 +100,16 @@ type pr148GatePacket struct {
 	Index              int
 	Fixture            bool
 	CancelFixture      bool
+	LostReceiptFixture bool
 }
 type pr148CargoResult struct {
-	Exit    int
-	Log     []byte
-	SHA     string
-	Drained bool
+	Exit         int
+	Log          []byte
+	SHA          string
+	Drained      bool
+	FullLogSHA   string
+	FullLogBytes int64
+	LogTruncated bool
 }
 type pr148CargoHost struct {
 	plan               pr148LinuxPlan
@@ -114,8 +120,30 @@ type pr148CargoHost struct {
 	mu                 sync.Mutex
 	seen               [5]bool
 	started, completed bool
+	broken             bool
+	execution          pr148ExecutionPolicy
+	deadline           time.Time
+	loseReceiptFixture bool
 	recheck            func(context.Context) error
 	execute            func(context.Context, int) (pr148CargoResult, error)
+}
+
+var errPR148AssignmentPending = errors.New("fixed job assignment not yet visible")
+
+func pr148AwaitAssignment(ctx context.Context, check func(context.Context) error, pause func(context.Context) error) error {
+	for attempt := 0; attempt < 5; attempt++ {
+		if e := ctx.Err(); e != nil {
+			return e
+		}
+		e := check(ctx)
+		if !errors.Is(e, errPR148AssignmentPending) || attempt == 4 {
+			return e
+		}
+		if e = pause(ctx); e != nil {
+			return e
+		}
+	}
+	return errPR148AssignmentPending
 }
 
 func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -131,13 +159,34 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	index := -1
-	if (r.URL.Path == "/pr148/start" || r.URL.Path == "/pr148/complete") && len(q.Args) == 0 {
+	if r.URL.Path == "/pr148/start" || r.URL.Path == "/pr148/complete" {
+		if len(q.Args) != 0 {
+			http.Error(w, "hook arguments rejected", 403)
+			return
+		}
 		if !h.mu.TryLock() {
 			http.Error(w, "target occupied", 409)
 			return
 		}
 		defer h.mu.Unlock()
-		if h.recheck(r.Context()) != nil {
+		checkCtx, checkStop := context.WithTimeout(r.Context(), 60*time.Second)
+		defer checkStop()
+		var checkErr error
+		if r.URL.Path == "/pr148/start" {
+			checkErr = pr148AwaitAssignment(checkCtx, h.recheck, func(c context.Context) error {
+				timer := time.NewTimer(time.Second)
+				defer timer.Stop()
+				select {
+				case <-c.Done():
+					return c.Err()
+				case <-timer.C:
+					return nil
+				}
+			})
+		} else {
+			checkErr = h.recheck(checkCtx)
+		}
+		if checkErr != nil {
 			http.Error(w, "live job rejected", 403)
 			return
 		}
@@ -147,6 +196,7 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			h.started = true
+			h.deadline = time.Now().Add(h.execution.timeout())
 		} else {
 			if !h.started || h.completed {
 				http.Error(w, "job stage rejected", 409)
@@ -163,7 +213,7 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				index = i
 			}
 		}
-	} else if reflect.DeepEqual(q.Args, pr148RustupArgs) {
+	} else if r.URL.Path == "/pr148/rustup" && reflect.DeepEqual(q.Args, pr148RustupArgs) {
 		index = 4
 	}
 	if index < 0 {
@@ -176,12 +226,19 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer h.mu.Unlock()
-	if !h.started || h.completed || h.seen[index] {
+	if h.broken || !h.started || h.completed || h.seen[index] {
 		http.Error(w, "job stage/replay rejected", 409)
 		return
 	}
 	h.seen[index] = true
-	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Minute)
+	deadline := h.deadline
+	if deadline.IsZero() {
+		deadline = time.Now().Add(h.execution.timeout())
+		if h.execution.timeout() == 0 {
+			deadline = time.Now().Add(5 * time.Minute)
+		}
+	}
+	ctx, cancel := context.WithDeadline(r.Context(), deadline)
 	defer cancel()
 	if e := h.recheck(ctx); e != nil {
 		http.Error(w, "live source rejected", 403)
@@ -269,7 +326,7 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 	if e != nil {
 		return result, e
 	}
-	p := pr148GatePacket{Plan: h.plan, Namespace: *h.ns, Policy: h.policy, Nonce: h.key, Target: h.target, Dir: h.dir, Index: index, Fixture: fixture, CancelFixture: cancelFixture}
+	p := pr148GatePacket{Plan: h.plan, Namespace: *h.ns, Policy: h.policy, Nonce: h.key, Target: h.target, Dir: h.dir, Index: index, Fixture: fixture, CancelFixture: cancelFixture, LostReceiptFixture: h.loseReceiptFixture}
 	input, e := json.Marshal(p)
 	if e != nil {
 		return result, e
@@ -290,15 +347,28 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 	hidden(c)
 	c.Dir = h.dir
 	c.Env = append(pr148HostEnv(), "CODEX_JOBS_REAL_CARGO="+self, "CODEX_JOBS_CARGO_LOCK_DIR="+pr148GateDir, "CC_PR148_GATE_CHILD=1", "CARGO_TARGET_DIR="+h.target)
-	var output boundedBuffer
-	output.limit = 32 << 20
 	stamp := fmt.Sprintf("cargo-%d-%d", index, time.Now().UnixNano())
 	log, e := os.OpenFile(filepath.Join(h.dir, stamp+".private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return result, e
 	}
 	defer log.Close()
-	writer := io.MultiWriter(log, &output)
+	storageComplete := false
+	defer func() {
+		failure := ""
+		if ret != nil {
+			failure = ret.Error()
+		}
+		e := pr148SaveNew(filepath.Join(h.dir, stamp+".private.json"), struct {
+			Exit                                       int
+			Bytes                                      int64
+			SHA                                        string
+			Drained, PreviewTruncated, StorageComplete bool
+			Failure                                    string
+		}{result.Exit, result.FullLogBytes, result.FullLogSHA, result.Drained, result.LogTruncated, storageComplete, failure})
+		ret = errors.Join(ret, e)
+	}()
+	writer := &pr148LogSink{file: log, limit: 32 << 20}
 	c.Stdout = writer
 	c.Stderr = writer
 	stdin, e := c.StdinPipe()
@@ -325,27 +395,25 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 	waitErr := ret
 	ret = errors.Join(ret, <-written)
 	result.Exit = exitStatus(waitErr)
-	result.Log = append([]byte(nil), output.Bytes()...)
+	result.Log = append([]byte(nil), writer.preview.Bytes()...)
 	result.SHA = digest(result.Log)
-	if e = log.Sync(); e != nil {
-		return result, e
-	}
+	result.FullLogSHA = writer.SHA()
+	result.FullLogBytes = writer.bytes
+	result.LogTruncated = writer.bytes > int64(len(result.Log))
+	storageErr := errors.Join(writer.err, log.Sync())
+	storageComplete = storageErr == nil
 	// A gate-child final record is required even if Cargo failed. A missing
 	// record means no admission or an uncertain Docker exec, never success.
 	var proof pr148CargoResult
 	b, pe := os.ReadFile(filepath.Join(h.dir, "gate-"+h.key+"-"+strconv.Itoa(index)+".private.json"))
 	if pe != nil || json.Unmarshal(b, &proof) != nil || !proof.Drained {
-		return result, errors.New("gate child drain receipt absent")
+		h.broken = true
+		stopErr := h.ns.stop()
+		result.Drained = h.ns.TreeGone
+		return result, errors.Join(errors.New("gate child drain receipt absent; namespace disabled"), stopErr, storageErr)
 	}
 	result.Drained = true
-	if e = pr148SaveNew(filepath.Join(h.dir, stamp+".private.json"), struct {
-		Exit, Bytes int
-		SHA         string
-		Drained     bool
-	}{result.Exit, len(result.Log), result.SHA, true}); e != nil {
-		return result, e
-	}
-	return result, nil // preserve Cargo's exit value; failed tests are not transport errors.
+	return result, storageErr // preserve Cargo exit; log failures are infrastructure failures.
 }
 
 func startPR148Cargo(ctx context.Context, h *pr148CargoHost) (endpoint string, closeServer func() error, ret error) {
@@ -358,7 +426,11 @@ func startPR148Cargo(ctx context.Context, h *pr148CargoHost) (endpoint string, c
 	if e != nil {
 		return "", nil, e
 	}
-	s := &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 26 * time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
+	budget := h.execution.timeout()
+	if budget == 0 {
+		budget = 5 * time.Minute
+	}
+	s := &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: budget + 2*time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
 	done := make(chan struct{})
 	go func() { _ = s.Serve(l); close(done) }()
 	var once sync.Once
@@ -426,8 +498,11 @@ func pr148GatedChild(args []string) int {
 		if re == nil && len(line) < 4096 {
 			_ = json.Unmarshal(line, &handshake)
 		}
-		_, _ = io.Copy(os.Stdout, reader)
+		forwardErr := pr148ForwardAndDrain(os.Stdout, reader)
 		commandErr = c.Wait()
+		if forwardErr != nil && commandErr == nil {
+			commandErr = forwardErr
+		}
 	} else {
 		commandErr = e
 	}
@@ -466,6 +541,9 @@ func pr148GatedChild(args []string) int {
 	if pe != nil && code == 0 {
 		code = 124
 	}
+	if p.Fixture && p.LostReceiptFixture {
+		return 123
+	} // synthetic metadata-loss AFTER independent kernel drain.
 	if e = pr148SaveNew(filepath.Join(p.Dir, "gate-"+p.Nonce+"-"+strconv.Itoa(p.Index)+".private.json"), pr148CargoResult{Exit: code, Drained: true}); e != nil {
 		return 123
 	}
@@ -490,7 +568,7 @@ func pr148RequestCargo(ctx context.Context, endpoint, key string, p pr148LinuxPl
 	r.Header.Set("X-PR148-Nonce", key)
 	t := &http.Transport{Proxy: nil}
 	defer t.CloseIdleConnections()
-	client := http.Client{Transport: t, Timeout: 26 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := http.Client{Transport: t, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, e := client.Do(r)
 	if e != nil {
 		return result, errors.New("finite Cargo callback unavailable")

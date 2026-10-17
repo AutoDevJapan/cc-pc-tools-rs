@@ -24,12 +24,18 @@ func pr148Transfer(ctx context.Context, n *pr148Namespace, binary []byte) error 
 	return c.Run()
 }
 
+func pr148PrepareToolchain(ctx context.Context, n *pr148Namespace) error {
+	// rustup may perform a self-update even during toolchain install. The
+	// immutable SDK executable must first live in the NEW writable CARGO_HOME.
+	return cmd(ctx, docker, "exec", n.ID, "sh", "-c", "mkdir -p /toolchain/cargo/bin /toolchain/rustup && cp /opt/rust/bin/rustup /toolchain/cargo/bin/rustup").Run()
+}
+
 func pr148HostCheckout(ctx context.Context, p pr148LinuxPlan, n *pr148Namespace) error {
 	if _, e := n.inspect(ctx); e != nil {
 		return e
 	}
 	for expr, want := range map[string]string{"HEAD": p.Head, "HEAD^{tree}": p.Tree} {
-		b, e := cmd(ctx, docker, "exec", "-e", "GIT_CONFIG_GLOBAL=/dev/null", "-e", "GIT_CONFIG_NOSYSTEM=1", n.ID, "git", "-C", pr148Workspace, "rev-parse", expr).Output()
+		b, e := cmd(ctx, docker, "exec", "-e", "GIT_CONFIG_GLOBAL=/dev/null", "-e", "GIT_CONFIG_NOSYSTEM=1", "-e", "GIT_NO_REPLACE_OBJECTS=1", n.ID, "git", "-C", pr148Workspace, "rev-parse", expr).Output()
 		if e != nil || strings.TrimSpace(string(b)) != want {
 			return errors.New("host actual Git HEAD/tree pin rejected")
 		}
@@ -45,6 +51,24 @@ func pr148HostCheckout(ctx context.Context, p pr148LinuxPlan, n *pr148Namespace)
 // fixtures, never this function. Tokens and source bytes are delivered by stdin
 // to a new tmpfs namespace; the existing resident bridge is never contacted.
 func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, powerShellFile string) (ret error) {
+	if !p.valid() {
+		return errors.New("explicit new source pin required")
+	}
+	preflight, preflightStop := context.WithTimeout(ctx, 2*time.Minute)
+	workflow, e := pr148Contents(preflight, get, pr148Workflows[0].Path, pr148Head)
+	preflightStop()
+	if e != nil {
+		return e
+	}
+	policy, execution, e := pr148WorkflowExecution(workflow)
+	if e != nil {
+		return e
+	}
+	ctx, cancelBudget := context.WithTimeout(ctx, execution.timeout()+7*time.Minute)
+	defer cancelBudget()
+	if e = pr148OwnedReceiptRoot(ctx, dir); e != nil {
+		return e
+	}
 	if e := verifyPR148LinuxRun(ctx, p, get, false); e != nil {
 		return e
 	}
@@ -59,12 +83,13 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	rec := struct {
 		Plan                                                 pr148LinuxPlan
 		Namespace                                            *pr148Namespace
-		ArchiveSHA, LogSHA, Failure                          string
+		ArchiveSHA, LogSHA, Failure, GuestSHA, PowerShellSHA string
+		Execution                                            pr148ExecutionPolicy
 		LogBytes                                             int
 		ListenerExit                                         int
 		RegistrationMayExist, RegistrationGone, LockReleased bool
 		AllRequiredChecksSuccess                             bool
-	}{Plan: p}
+	}{Plan: p, GuestSHA: digest(guest), PowerShellSHA: digest(pwsh), Execution: execution}
 	if e = pr148SaveNew(filepath.Join(dir, "pr148-intent.private.json"), rec); e != nil {
 		return e
 	}
@@ -110,6 +135,9 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	if e = pr148Transfer(ctx, n, guest); e != nil {
 		return e
 	}
+	if e = pr148PrepareToolchain(ctx, n); e != nil {
+		return e
+	}
 	x := cmd(ctx, docker, "exec", "-i", n.ID, "sh", "-c", "mkdir -p /toolchain/cargo /toolchain/rustup /work/powershell && tar -xz -C /work/powershell && chmod 755 /work/powershell/pwsh")
 	x.Stdin = bytes.NewReader(pwsh)
 	if e = x.Run(); e != nil {
@@ -121,17 +149,12 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	if e != nil {
 		return e
 	}
+	if e = cmd(ctx, docker, "exec", n.ID, "git", "-C", pr148Workspace, "remote", "add", "origin", "https://github.com/"+pr148Repo).Run(); e != nil {
+		return errors.New("credential-free original origin setup failed")
+	}
 	// Reconfirm actual materialized HEAD, complete index tree and absence of
 	// checkout auth before any registration token is requested.
 	if e = pr148HostCheckout(ctx, p, n); e != nil {
-		return e
-	}
-	workflow, e := pr148Contents(ctx, get, pr148Workflows[0].Path, pr148Head)
-	if e != nil {
-		return e
-	}
-	policy, e := pr148Policy(workflow)
-	if e != nil {
 		return e
 	}
 	if e = verifyPR148LinuxRun(ctx, p, get, false); e != nil {
@@ -143,7 +166,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	}
 	flight, cancel := context.WithCancel(ctx)
 	defer cancel()
-	h := &pr148CargoHost{plan: p, policy: policy, ns: n, dir: dir, target: filepath.Join(dir, "cargo-target")}
+	h := &pr148CargoHost{plan: p, policy: policy, execution: execution, ns: n, dir: dir, target: filepath.Join(dir, "cargo-target")}
 	h.recheck = func(c context.Context) error {
 		if e := verifyPR148LinuxRun(c, p, get, false); e != nil {
 			return e
@@ -157,6 +180,9 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		}
 		if e := get(c, fmt.Sprintf("repos/%s/actions/jobs/%d", pr148Repo, p.JobID), &job); e != nil {
 			return e
+		}
+		if job.ID == p.JobID && job.RunID == p.RunID && job.RunAttempt == p.Attempt && job.Status == "queued" && (job.RunnerName == "" || job.RunnerName == n.Name) {
+			return errPR148AssignmentPending
 		}
 		if job.ID != p.JobID || job.RunID != p.RunID || job.RunAttempt != p.Attempt || job.RunnerName != n.Name || job.Status != "in_progress" {
 			return errors.New("fixed Linux job is not assigned to owned runner")
@@ -226,7 +252,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		}
 		rec.RegistrationGone = true
 	}()
-	packet := pr148GuestPacket{p, policy, pr148Repo, n.Name, token.Token, endpoint, h.key}
+	packet := pr148GuestPacket{Plan: p, Policy: policy, Repo: pr148Repo, Name: n.Name, Token: token.Token, Callback: endpoint, Nonce: h.key, Execution: execution}
 	input, e := json.Marshal(packet)
 	token.Token = ""
 	packet.Token = ""

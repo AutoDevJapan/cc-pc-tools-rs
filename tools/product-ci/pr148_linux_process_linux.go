@@ -54,7 +54,13 @@ func pr148Filesystem(runner bool) error {
 	const readFile = uint64(4)
 	const readDir = uint64(8)
 	type ruleset struct{ Handled uint64 }
-	const allFS = uint64(8191) // original ABI filesystem rights, including writes/removes.
+	// REFER is required for cross-directory rename/link; TRUNCATE prevents a
+	// worker from damaging the read-only helper without opening it for writing.
+	abi, _, probeErr := syscall.Syscall(create, 0, 0, 1)
+	if probeErr != 0 || abi < 3 {
+		return errors.New("Landlock ABI >= 3 required for REFER and TRUNCATE")
+	}
+	const allFS = uint64(32767)
 	a := ruleset{allFS}
 	fd, _, errno := syscall.Syscall(create, uintptr(unsafe.Pointer(&a)), unsafe.Sizeof(a), 0)
 	if errno != 0 {
@@ -66,7 +72,7 @@ func pr148Filesystem(runner bool) error {
 		Parent  int32
 		Padding uint32
 	}
-	paths := []string{"/usr", "/bin", "/lib", "/lib64", "/etc", "/dev", "/proc", "/sys", "/runner", "/runner/_diag", "/work", "/tmp", "/home/runner"}
+	paths := []string{"/", "/usr", "/bin", "/lib", "/lib64", "/etc", "/dev", "/proc", "/sys", "/runner", "/runner/_diag", "/work", "/tmp", "/home/runner"}
 	if !runner {
 		paths = append(paths, "/opt/rust", "/opt/rustup", "/toolchain")
 	}
@@ -79,6 +85,11 @@ func pr148Filesystem(runner bool) error {
 			return e
 		}
 		allowed := readFile | readDir
+		// .NET resolves ancestor directories while starting Runner.Listener.
+		// Listing the immutable SDK root grants neither file reads nor exec.
+		if path == "/" {
+			allowed = readDir
+		}
 		if path == "/usr" || path == "/bin" || path == "/lib" || path == "/lib64" || path == "/runner" || path == "/work" || path == "/home/runner" {
 			allowed |= execute
 		}

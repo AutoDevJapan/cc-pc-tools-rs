@@ -16,6 +16,23 @@ type pr148Namespace struct {
 	CreationUncertain, TreeGone, Removed bool
 }
 
+func pr148OwnedReceiptRoot(ctx context.Context, dir string) error {
+	abs, e := filepath.Abs(dir)
+	if e != nil {
+		return e
+	}
+	id := strings.TrimPrefix(filepath.Base(abs), "codex-owned-")
+	if len(id) != 32 || strings.Trim(id, "0123456789abcdef") != "" {
+		return errors.New("safe-delete created receipt root required")
+	}
+	b, e := cmd(ctx, `D:\CC\Tools\safe-delete\safe-delete.exe`, "plan", "--id", id).Output()
+	var r struct{ ID, Path, Action string }
+	if e != nil || json.Unmarshal(b, &r) != nil || r.ID != id || !strings.EqualFold(filepath.Clean(r.Path), filepath.Clean(abs)) || r.Action != "submit_to_exec_tool" {
+		return errors.New("receipt root ownership verification failed")
+	}
+	return nil
+}
+
 func pr148CreateArgs(name string) []string {
 	a := codeQLCreateArgs(name)
 	for i := range a {

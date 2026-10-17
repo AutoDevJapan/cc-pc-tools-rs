@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -98,6 +99,9 @@ func sdkCommand(p Plan, stage, exe string, env []string, args ...string) ([]byte
 	defer cancel()
 	c := exec.CommandContext(ctx, exe, args...)
 	hidden(c)
+	if stage == "msvc" && len(args) == 4 {
+		c.SysProcAttr.CmdLine = syscall.EscapeArg(exe) + " /d /s /c " + args[3]
+	}
 	c.WaitDelay = 2 * time.Second
 	c.Env = env
 	c.Dir = p.runtime()

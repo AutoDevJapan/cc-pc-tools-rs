@@ -43,15 +43,8 @@ func (w *sourceOutput) Write(b []byte) (int, error) {
 // Check the actual bytes independently of diff, filters, fsmonitor and index
 // assume-unchanged/skip-worktree bits. The complete index must match the tree.
 func verifyTrackedBytes(source, tree string) error {
-	git := filepath.Join(source, ".git")
-	fi, e := os.Lstat(git)
-	if e != nil || !fi.IsDir() || sourceReparse(fi) {
-		return errors.New("real private Git directory required")
-	}
-	for _, path := range []string{"objects/info/alternates", "objects/info/http-alternates", "info/grafts", "refs/replace", "commondir", "worktrees"} {
-		if _, e := os.Lstat(filepath.Join(git, filepath.FromSlash(path))); !os.IsNotExist(e) {
-			return errors.New("Git alternate/replacement storage rejected")
-		}
+	if e := sourceMetadata(source); e != nil {
+		return e
 	}
 	b, e := sourceGit(source, "write-tree")
 	if e != nil || strings.TrimSpace(string(b)) != tree {
@@ -86,4 +79,30 @@ func verifyTrackedBytes(source, tree string) error {
 		}
 	}
 	return nil
+}
+
+func sourceMetadata(source string) error {
+	fi, e := os.Lstat(source)
+	if e != nil || !fi.IsDir() || sourceReparse(fi) {
+		return errors.New("real private source directory required")
+	}
+	git := filepath.Join(source, ".git")
+	fi, e = os.Lstat(git)
+	if e != nil || !fi.IsDir() || sourceReparse(fi) {
+		return errors.New("real private Git directory required")
+	}
+	for _, path := range []string{"objects/info/alternates", "objects/info/http-alternates", "info/grafts", "refs/replace", "commondir", "worktrees", "config.worktree"} {
+		if _, e := os.Lstat(filepath.Join(git, filepath.FromSlash(path))); !os.IsNotExist(e) {
+			return errors.New("Git alternate/replacement storage rejected")
+		}
+	}
+	return filepath.Walk(git, func(path string, fi os.FileInfo, e error) error {
+		if e != nil {
+			return e
+		}
+		if sourceReparse(fi) {
+			return errors.New("Git metadata reparse rejected")
+		}
+		return nil
+	})
 }

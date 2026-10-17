@@ -412,6 +412,11 @@ func worker(p Plan) error {
 		if e = initializeSDK(p); e != nil {
 			return e
 		}
+		stopCache, err := startOwnedCache(p)
+		if err != nil {
+			return err
+		}
+		defer stopCache()
 	}
 	if p.Fixture != "" {
 		return serviceFixture(p, sid, e == nil)

@@ -90,7 +90,7 @@ func sourcePathOK(s string) bool {
 		return false
 	}
 	for _, part := range strings.Split(s, "/") {
-		if part == "" || part == "." || part == ".." || strings.TrimRight(part, " .") != part || strings.EqualFold(part, ".git") || strings.EqualFold(part, "git~1") {
+		if part == "" || part == "." || part == ".." || strings.TrimRight(part, " .") != part || strings.EqualFold(part, ".git") || strings.EqualFold(part, "git~1") || strings.EqualFold(part, ".git~1") {
 			return false
 		}
 		x := strings.ToUpper(strings.SplitN(part, ".", 2)[0])

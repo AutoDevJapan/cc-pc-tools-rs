@@ -244,10 +244,10 @@ func verifySource(p Plan, source string, pristine bool) error {
 	if !samePath(source, p.source()) {
 		return errors.New("checkout must occupy the fixed workspace path")
 	}
-	run := func(args ...string) ([]byte, error) { return sourceGit(source, args...) }
-	if e := verifyTrackedBytes(source, p.Tree); e != nil {
+	if e := sourceMetadata(source); e != nil {
 		return e
 	}
+	run := func(args ...string) ([]byte, error) { return sourceGit(source, args...) }
 	keys, e := run("config", "--local", "--no-includes", "--name-only", "--list")
 	if e != nil {
 		return e
@@ -256,6 +256,9 @@ func verifySource(p Plan, source string, pristine bool) error {
 		if blockedGitKey(key) {
 			return errors.New("checkout credential/execution config key rejected")
 		}
+	}
+	if e := verifyTrackedBytes(source, p.Tree); e != nil {
+		return e
 	}
 	for _, row := range []struct{ arg, want string }{{"HEAD", p.Head}, {"HEAD^{tree}", p.Tree}} {
 		b, e := run("rev-parse", "--verify", row.arg)

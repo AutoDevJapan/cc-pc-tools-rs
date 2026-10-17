@@ -16,7 +16,7 @@ func toolEntry(name string, args []string) (int, error) {
 	if e != nil {
 		return 1, e
 	}
-	root := filepath.Dir(filepath.Dir(filepath.Dir(self)))
+	root := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(self))))
 	p, e := readPlan(root)
 	if e != nil {
 		return 1, e

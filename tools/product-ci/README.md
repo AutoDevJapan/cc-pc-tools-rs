@@ -248,9 +248,9 @@ original timeouts and thirteen Windows Cargo commands. The exact workflow
 digest is mandatory. A fresh queued job must be unclaimed; a live hook must
 match the official assigned runner ID and unique task nonce name. It rechecks
 the PR/ref after inspection. Source/run/event/job/label/runner substitutions
-are covered by synthetic API tests. This helper has no CLI execution path,
-registration, single-use state, Cargo gate or runner hook connected yet. It
-does not constitute completed admission or any official CI result.
+are covered by synthetic API tests. This read-only resolver is now shared by
+the CLI and the controller. That connection has not accepted an official job
+or established an official CI result; real runtime acceptance remains pending.
 
 The current runner-route proposal uses a conditional scalar instead of a bare
 ephemeral label. Only workflow_dispatch on the fixed task branch, with the
@@ -263,3 +263,12 @@ This revised proposal has not been applied and needs delta review. Variable
 ownership, creation and restoration must be implemented before using it.
 `normal-ci-outline` only reports setup/checkout semantics from the fixed RAM
 workflow; it does not expose source commands, logs, secrets or mutate GitHub.
+
+Review2795's executable-selection Must is addressed by linking the existing
+read-only resolver in `cc/product-ci/normalci` into both this CLI and the guest
+controller. Identity/types and YAML policy are shared as well; they are moved,
+not parallel implementations. The `normal-ci-job-plan` CLI still calls that
+same policy. The controller no longer accepts a ProductCI path or runs a second
+admission program. The unchanged finite API fixtures cover the shared policy,
+including wrong source/run/attempt/runner and branch advancement. This refactor
+does not dispatch a workflow, register a runner or alter an original ref.

@@ -35,7 +35,7 @@ Materialization hashes each archive blob with `git hash-object --no-filters`,
 restores the API's original index modes, checks `write-tree`, writes only the
 original commit payload, and confirms detached `HEAD` and `HEAD^{tree}`. Git
 system/global configuration is isolated, an empty template is requested, and
-local config key names are inspected without reading values; remote,
+local config key names are inspected without emitting values; remote,
 credential, filter, submodule, and hooks-path keys cause rejection. Source
 commands, filters, hooks, and submodules are not run. Windows builds are for
 host integration only; Linux guest execution supplies POSIX executable-mode
@@ -44,6 +44,24 @@ before materialization.
 
 Integration in ToDo2737 additionally verifies each file after writing it,
 including Unix executable modes, before issuing `physical_blobs_verified`.
+The materializer and completion hook now share `VerifyCheckout`. It opens every
+path component without following links, reads and hashes through that same
+handle, rejects multi-link files and revalidates file/directory identities.
+Linux uses openat/O_NOFOLLOW; Windows rejects reparse points and pins ancestors
+without write/delete sharing. A final-file Lstat or lexical containment is not
+the physical proof. A regular, byte-identical file under a linked parent is
+rejected, including links at the root or above it.
+
+Only the bounded real Git metadata needed for HEAD/tree/index is copied into a
+new private proof directory; Git commands use that snapshot instead of reopening
+the untrusted source. Authentication/filter/hook/include/extension configuration
+is rejected before snapshot persistence. The checked config bytes are reused,
+not read again. Gitdir/common-dir indirection, alternates, replacement refs and
+secondary worktree config are rejected. Directory/file identities and metadata
+stamps are rechecked before returning. Snapshots are local to the isolated
+guest for real product source and removed on return; Windows tests contain only
+synthetic data. No manifest, original guard, permission or external allowlist is
+added to accept a link.
 The original commit payload is reconstructed when GitHub's unsigned commit
 response has null verification payload, and accepted only if the pinned Git
 SHA is reproduced. Signed payload candidates have the same strict SHA check.

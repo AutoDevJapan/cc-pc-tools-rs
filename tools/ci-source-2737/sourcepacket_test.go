@@ -182,7 +182,7 @@ func TestMaterializeReproducesRealGitObjectsAndRawIgnoredBlob(t *testing.T) {
 		t.Fatal("nonfresh root accepted")
 	}
 	if _, err = VerifyCheckout(context.Background(), p.Pin, p.TreeEntries, dest); err != nil {
-		t.Fatal("post-checkout physical proof rejected")
+		t.Fatalf("post-checkout physical proof rejected: %v", err)
 	}
 	if err = os.WriteFile(filepath.Join(dest, "tracked.dat"), []byte("changed after checkout"), 0600); err != nil {
 		t.Fatal(err)

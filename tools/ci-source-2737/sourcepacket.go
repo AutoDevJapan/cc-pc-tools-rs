@@ -506,7 +506,6 @@ func Materialize(ctx context.Context, p Packet, expectedPin Pin, freshGuestRoot 
 			return Receipt{}, fixedErr()
 		}
 	}
-	blobs := map[string]TreeEntry{}
 	var index bytes.Buffer
 	for _, e := range p.TreeEntries {
 		if e.Type == "tree" {
@@ -550,27 +549,10 @@ func Materialize(ctx context.Context, p Packet, expectedPin Pin, freshGuestRoot 
 		if er = os.Chmod(target, mode); er != nil {
 			return Receipt{}, fixedErr()
 		}
-		blobs[e.Path] = e
 		fmt.Fprintf(&index, "%s %s\t%s%c", e.Mode, e.SHA, e.Path, byte(0))
 	}
 	if _, err = git(index.Bytes(), "update-index", "-z", "--index-info"); err != nil {
 		return Receipt{}, err
-	}
-	// Verify the actual saved files, not just the source archive or restored
-	// index. Unix executable modes are checked independently of index modes.
-	for name, entry := range blobs {
-		file := filepath.Join(freshGuestRoot, filepath.FromSlash(name))
-		info, e := os.Lstat(file)
-		if e != nil || !info.Mode().IsRegular() {
-			return Receipt{}, fixedErr()
-		}
-		if runtime.GOOS != "windows" && ((entry.Mode == "100755") != (info.Mode()&0111 != 0)) {
-			return Receipt{}, fixedErr()
-		}
-		actual, e := git([]byte(file+"\n"), "hash-object", "--no-filters", "--stdin-paths")
-		if e != nil || strings.TrimSpace(string(actual)) != entry.SHA {
-			return Receipt{}, fixedErr()
-		}
 	}
 	tree, err := git(nil, "write-tree")
 	if err != nil || strings.TrimSpace(string(tree)) != expectedPin.TreeSHA {
@@ -587,7 +569,12 @@ func Materialize(ctx context.Context, p Packet, expectedPin Pin, freshGuestRoot 
 	if err != nil || strings.TrimSpace(string(head)) != expectedPin.TreeSHA {
 		return Receipt{}, fixedErr()
 	}
-	return Receipt{RepoID: RepoID, PR: PR, HeadSHA: expectedPin.HeadSHA, TreeSHA: expectedPin.TreeSHA, ArchiveSHA256: p.ArchiveSHA256, BlobCount: len(blobs), PhysicalBlobsVerified: true}, nil
+	proof, err := VerifyCheckout(ctx, expectedPin, p.TreeEntries, freshGuestRoot)
+	if err != nil {
+		return Receipt{}, err
+	}
+	proof.ArchiveSHA256 = p.ArchiveSHA256
+	return proof, nil
 }
 func cleanGitEnv(env []string) []string {
 	global := "NUL"

@@ -4,4 +4,10 @@ go 1.25.0
 
 require cc/ci-source-2737 v0.0.0
 
+require cc/product-ci v0.0.0
+
+require gopkg.in/yaml.v3 v3.0.1 // indirect
+
 replace cc/ci-source-2737 => ../ci-source-2737
+
+replace cc/product-ci => ../product-ci

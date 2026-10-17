@@ -311,3 +311,30 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   原PR3613はb194のまま。残りは2795レビュー対応、2783 Windows SDK、route変数の所有/回復、原4scalarだけのexpected旧SHA通常更新、元CI全工程と必要Rust最終受入。
   手動eventで原pr-tree-receiptが条件によりskipされることは保持し、全4job successと誤称しない。原Windows条件/13工程/timeout/profile/直列とDocker parityを削らない。
   待機前に親2641へnote配送、2795と2783をwait --onへ登録し、同job/branch/実HEADでscheduler checkpointを保存する。
+
+## 2026-10-17 job20261017-152246-todo-2737: 2795 Must2の有限修正
+
+- 司令塔の訂正に従い、SDK2783を待つ前に元2795の原結果を受領した。
+  job20261017-145446-todo-2795/last_message.mdのSHA256は11C89ACB143800CB91F0335C5F4E43013433C5BA2EDD3EF894C8A3003D1E6D1Fで一致。
+  gpt-6-luna、baseedc9→head3826503/treef87ec45、25file静的レビュー、Must2/検査0。旧2784のMust0は流用しない。
+- Must1: ProductCI入力を削除し、旧field/case違い/Executor/Commandをunknownとして拒否。
+  既存normal CI admission/identity/YAML policyをtools/product-ci/normalciへ移し、CLI/controllerで同じcodeを静的linkする。照合のため別host exeを実行しない。
+  clean Git build/fixed module/linked coreを確認し、実行中exeのhash、code revision、actual PIDをtraceする。これは署名証明やrequestの自己申告を権限にする仕組みではない。
+  inspect-executorのdirty build拒否（exit1）は確認済み。commit後clean buildの同probeと、固定新headの差分レビューが次に残る。
+- Must2: Linuxはfilesystem rootからopenat/O_NOFOLLOW、WindowsはOPEN_REPARSE_POINTと親handleのwrite/delete共有禁止で全要素を開く。
+  同handleから読んだbytesをGit blob hashへ使い、hardlinkを拒否。読後に各dir/fileの同一性を再照合する。
+  Gitは実metadataのbounded private snapshotだけを読む。検査済みconfig bytesを再読せず使い、auth/filter/hooks/include/extensions、gitdir/common-dir/alternates/replace refs/config.worktreeを拒否する。
+  Materializeの旧Lstat/パス再open checkerも除き、HEAD/index/commit設定後に同VerifyCheckoutを呼ぶ。原sourceは新規private guest rootへ配置し、成功proofの前にjob userへ渡さない。
+- 旧VerifyだけをGit固定3826503からGo overlayで戻したbaselineは、Windowsのexternal-identical .github/.git junctionを受け入れたため期待どおりexit1。
+  Linux baseline最終版はtop-level10pass/3fail、修正版は13pass/0fail。linked parent/root/ancestor、metadata、途中の親差替え、hardlink、secondary worktree configを含む。
+  Linux原log SHA256 baseline C70AA319F34ED91D4C11683CE3D72D08D3AEC8C44746B5719E2FAB0096B5404C / fixed 7E396926384BA01687B9B24D827B3FA494D3389D647BA64C72E430646EBE11DC。
+  Windows source/guest/product-ci testsとvetが成功。新Go共有型のunkeyed vet、unused io、移動時のverify文字列大文字化、snapshot refs空dir不足の初回失敗を修正し、元ログも保持。
+- 実Linux helper buildと合成guest9testsも成功。Go検査だけで、原Rust/Cargo/公式job/VM/runner登録は起動していない。
+  元b194のAGENTS/CLAUDEはRAMで再取得し、前回235dcf.../70c7de...と一致。取得前後のrepo/PR/head/ref guardが成功。host product checkoutは無い。
+- 新owned rootはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-97f56865fe265249ac69160fd68b35be（safe-delete ID97f56865fe265249ac69160fd68b35be）。
+  最新baseline-overlayとGo binaries/失敗/成功logを保持。実Product source/credentialsをrootへ保存していない。
+  SDK工具containerはexact ID/name/labels/image/mount/deviceを再確認してこの2回の合成検査だけに利用し、その都度停止/PID0を確認した。未完SDKlayerは保持。
+- 原product PR3613/headb194/tree f7eea82c/refは維持し、原workflow/route変数/guard/manifest/旧資源を変更していない。
+  2783は元jobがguest資源再割当待ちで未完。source修正の前提ではないため、この段階で2783だけのwaitへ戻さない。
+  次は固定新headの有限deltaレビューを通常ToDoへspec付き登録しMust/未読を処理する。新レビューだけが残る時はそのIDにwaitし、Must0確認後に2783の実SDK受領を確認する。
+  SDKが未完なら正規wait2737 --on2783へ戻す。通常CI/製品merge/Prd/cleanupの全完了ではない。

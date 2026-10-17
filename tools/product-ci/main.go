@@ -5,6 +5,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"cc/product-ci/normalci"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -16,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -31,35 +31,18 @@ import (
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 
-type candidate struct {
-	ID  int64
-	PR  int
-	SHA string
-}
+type candidate = normalci.Candidate
 
 var candidates = []candidate{
-	{1285649124, 1002, "b93e126b172adbb29ad2081af4732f4b42f8bc95"},
-	{1392152644, 148, "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
-	{1154066087, 3613, "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
-	{1386702183, 175, "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
+	{ID: 1285649124, PR: 1002, SHA: "b93e126b172adbb29ad2081af4732f4b42f8bc95"},
+	{ID: 1392152644, PR: 148, SHA: "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
+	{ID: 1154066087, PR: 3613, SHA: "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
+	{ID: 1386702183, PR: 175, SHA: "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
 }
 
-type repository struct {
-	ID            int64  `json:"id"`
-	FullName      string `json:"full_name"`
-	Private, Fork bool
-	Owner         struct{ Login string }
-	Permissions   struct{ Admin bool }
-}
-type pull struct {
-	State string
-	Head  struct {
-		SHA, Ref string
-		Repo     repository
-	}
-	Base struct{ Repo repository }
-}
-type api func(context.Context, string, any) error
+type repository = normalci.Repository
+type pull = normalci.Pull
+type api = normalci.API
 
 func cmd(ctx context.Context, name string, args ...string) *exec.Cmd {
 	if name == docker {
@@ -117,32 +100,7 @@ func get(ctx context.Context, endpoint string, value any) error {
 	return nil
 }
 func verify(ctx context.Context, c candidate, read api) (repository, error) {
-	var r repository
-	if e := read(ctx, fmt.Sprintf("repositories/%d", c.ID), &r); e != nil {
-		return r, e
-	}
-	if r.ID != c.ID || !r.Private || r.Fork || !r.Permissions.Admin ||
-		(r.Owner.Login != "AutoDevJapan" && r.Owner.Login != "BM1314" && r.Owner.Login != "mashfromband") ||
-		!strings.HasPrefix(r.FullName, r.Owner.Login+"/") || strings.Count(r.FullName, "/") != 1 {
-		return repository{}, errors.New("repository identity rejected")
-	}
-	var p pull
-	if e := read(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, c.PR), &p); e != nil {
-		return repository{}, e
-	}
-	if p.State != "open" || p.Head.SHA != c.SHA || p.Head.Repo.ID != c.ID || p.Base.Repo.ID != c.ID ||
-		p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork {
-		return repository{}, errors.New("fixed same-repository PR head rejected")
-	}
-	var ref struct{ Object struct{ SHA string } }
-	// The PR API and branch API must agree; the fixed revision never follows a ref.
-	if e := read(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(p.Head.Ref), &ref); e != nil {
-		return repository{}, e
-	}
-	if ref.Object.SHA != c.SHA {
-		return repository{}, errors.New("branch head changed")
-	}
-	return r, nil
+	return normalci.Verify(ctx, c, read)
 }
 
 type receipt struct {

@@ -2,6 +2,7 @@ package main
 
 import (
 	sourcepacket "cc/ci-source-2737"
+	"cc/product-ci/normalci"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,18 +19,13 @@ import (
 // A caller must explicitly supply the reviewed revision and official run. This
 // command cannot update a ref, enable routes, dispatch a workflow or select HEAD.
 type linuxJobRequest struct {
-	Source    sourcepacket.Pin
-	RunID     int64
-	Attempt   int
-	Role      string
-	ProductCI string
-	Inputs    map[string]string
+	Source  sourcepacket.Pin
+	RunID   int64
+	Attempt int
+	Role    string
+	Inputs  map[string]string
 }
-type jobBinding struct {
-	RepoID, RunID, JobID                             int64
-	PR, Attempt, TimeoutMinutes                      int
-	SHA, Tree, WorkflowSHA, Role, Label, OS, JobName string
-}
+type jobBinding = normalci.Binding
 
 func readJobRequest(path string) (q linuxJobRequest, e error) {
 	f, e := os.Open(path)
@@ -39,7 +35,7 @@ func readJobRequest(path string) (q linuxJobRequest, e error) {
 	defer f.Close()
 	d := json.NewDecoder(io.LimitReader(f, 32769))
 	d.DisallowUnknownFields()
-	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate") || !filepath.IsAbs(q.ProductCI) {
+	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate") {
 		return q, errors.New("live request rejected")
 	}
 	return q, nil
@@ -73,12 +69,13 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 	if e = record(root, file, pin); e != nil {
 		return b, e
 	}
-	c := command(ctx, q.ProductCI, "normal-ci-job-plan", filepath.Join(root, file))
-	c.Stderr = io.Discard
-	var out limitedCapture
-	out.limit = 32768
-	c.Stdout = &out
-	if c.Run() != nil || json.Unmarshal(out.data.Bytes(), &b) != nil {
+	// Both the CLI and this controller link the SAME existing read-only policy.
+	// There is no second executable, request-selected path or process environment.
+	p := normalci.Pin{Source: normalci.Candidate{ID: pin.Source.ID, PR: pin.Source.PR, SHA: pin.Source.SHA}, Tree: pin.Tree, WorkflowSHA: pin.WorkflowSHA, RunID: q.RunID, Attempt: q.Attempt, Role: q.Role, RunnerID: runnerID, RunnerName: name}
+	b, e = normalci.Plan(ctx, p, func(ctx context.Context, endpoint string, out any) error {
+		return runnerAPI(ctx, "GET", endpoint, nil, out)
+	})
+	if e != nil {
 		return b, errors.New("official job admission failed")
 	}
 	if !validOfficialBinding(q, b) {
@@ -141,9 +138,16 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if e != nil {
 		return e
 	}
+	executor, e := linkedExecutorIdentity()
+	if e != nil {
+		return e
+	}
 	instance := newID()
 	attempt := filepath.Join(root, "job-"+instance)
 	if e = os.Mkdir(attempt, 0700); e != nil {
+		return e
+	}
+	if e = record(attempt, "executor-identity.private.json", executor); e != nil {
 		return e
 	}
 	// One dedicated kernel lock, separate from all old product-ci admissions.

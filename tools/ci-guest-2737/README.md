@@ -131,8 +131,8 @@ No actual Cargo build, job hook, workflow dispatch or CI success is certified.
 The next, unexercised `linux-job <owned-root> <SDK-root> <Linux-helper>
 <request.json>` path now connects canonical Cargo admission to a single official
 job. The explicit request contains Source (head/tree/workflow hash), RunID,
-Attempt, Role (`verify` or `ci-gate`), ProductCI (absolute rebuilt helper path),
-and empty Inputs. It cannot advance a ref, enable a route variable, dispatch a
+Attempt, Role (`verify` or `ci-gate`), and empty Inputs. Executable/program paths
+are not accepted. It cannot advance a ref, enable a route variable, dispatch a
 workflow, or prepare Windows. The actual original manual workflow has no inputs;
 its workflow_call release inputs are not accepted as manual job authority.
 
@@ -158,6 +158,29 @@ cleanup and final intent reconciliation remain explicit after such a failure.
 The new controller, hook, lease-fence and log-download path has NOT accepted an
 official job or undergone real end-to-end cancellation yet. Passing unit tests
 and compiled Linux/Windows binaries are not official CI evidence.
+
+Review2795 found two Must issues in the previous head3826503: caller-selected
+ProductCI execution and parent-link escape in physical source verification.
+The former field is now rejected (including its old spelling/case variants).
+The existing product-ci resolver/identity/YAML policy was MOVED into its
+`normalci` package, and both the CLI and controller link that single code. No
+second host executable is launched for admission. The running controller must
+report its fixed module, linked policy and clean Git build revision before a
+live job; `inspect-executor` performs only this read-only check. Its binary hash,
+code revision and actual PID are trace receipts, not signed code attestation or
+request-supplied authority. Build from the committed clean source for live use.
+
+The source module opens every ancestor from the filesystem root without
+following links. Linux uses openat/O_NOFOLLOW and revalidates identities after
+reading; Windows refuses reparse points and holds parent handles without
+write/delete sharing. Both hash bytes read from those handles, reject shared
+hardlinks and validate file modes. Git reads an isolated private snapshot of
+the real metadata bytes, not an untrusted source path; checked config bytes
+are reused without a second read. Links, alternate/common metadata, replacement
+refs and secondary worktree configuration cannot select external state.
+The initial materializer uses this same physical verifier before its receipt.
+These are implementations and synthetic acceptance results pending delta
+review; they do not certify new original-source or official-job execution.
 
 Current validation: Windows tests/vet for sourcepacket, guest and product-ci;
 real Linux sourcepacket (8 top-level tests) and guest helper (9 tests), all pass.

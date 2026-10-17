@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -24,6 +26,45 @@ func TestOfficialBindingConsumesProductCISchema(t *testing.T) {
 		change(&other)
 		if validOfficialBinding(q, other) {
 			t.Fatal("substituted binding accepted")
+		}
+	}
+}
+
+func TestLiveRequestRejectsExecutableSelection(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "request.json")
+	q := linuxJobRequest{Source: fixedSourcePin(), RunID: 17, Attempt: 1, Role: "verify"}
+	raw, e := json.Marshal(q)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = os.WriteFile(file, raw, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = readJobRequest(file); e != nil {
+		t.Fatal("minimal fixed-code request rejected")
+	}
+	// Positive input first, then the exact former attack field. A real absolute
+	// executable exists, but no request field can select it for execution now.
+	exe, e := os.Executable()
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, key := range []string{"ProductCI", "productci", "Executor", "Command"} {
+		var injected map[string]any
+		if json.Unmarshal(raw, &injected) != nil {
+			t.Fatal("fixture invalid")
+		}
+		injected[key] = exe
+		b, e := json.Marshal(injected)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if os.WriteFile(file, b, 0600) != nil {
+			t.Fatal("fixture write failed")
+		}
+		if _, e = readJobRequest(file); e == nil {
+			t.Fatal("request-selected host executable accepted")
 		}
 	}
 }

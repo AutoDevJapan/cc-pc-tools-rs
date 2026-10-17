@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
+	"cc/product-ci/normalci"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,21 +19,14 @@ import (
 
 const normalCIWorkflowSHA = "01d3351d4a6bce1faeb7e3b1eaf29555affcc304ea7b91caa979825cc94bc4b0"
 const normalCIFailedRun int64 = 38893656960
-const normalCIRepo int64 = 1154066087
-const normalCIRouteVariable = "CC_PRODUCT_2737_CI"
+const normalCIRepo int64 = normalci.RepoID
+const normalCIRouteVariable = normalci.RouteVariable
 
 // An absent switch always restores the original OS route, including after
 // merge. A task's ephemeral runner label must never strand main or future PRs.
-func normalCIRunnerExpression(r normalCIRoute) string {
-	return "${{ vars." + normalCIRouteVariable + " == 'enabled' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/todo2641-http-response-pseudo-20261015' && '" + r.Proposed + "' || '" + r.Previous + "' }}"
-}
+func normalCIRunnerExpression(r normalCIRoute) string { return normalci.RunnerExpression(r) }
 
-type normalCIRoute struct {
-	Job      string `json:"job"`
-	OS       string `json:"required_os"`
-	Previous string `json:"previous_label"`
-	Proposed string `json:"proposed_label"`
-}
+type normalCIRoute = normalci.Route
 
 // This is a proposal, not an executor. In particular, a route label is never
 // evidence that a guest, Cargo admission, Docker daemon or Windows job exists.
@@ -75,68 +68,12 @@ type normalCIJob struct {
 	} `json:"steps"`
 }
 
-func normalCIRoutes() []normalCIRoute {
-	return []normalCIRoute{
-		{"verify", "Linux", "ubuntu-latest", "cc-product-2737-1154066087-linux"},
-		{"windows-native-check", "Windows", "windows-2025", "cc-product-2737-1154066087-windows"},
-		{"pr-tree-receipt", "Linux", "ubuntu-latest", "cc-product-2737-1154066087-linux"},
-		{"ci-gate", "Linux", "ubuntu-latest", "cc-product-2737-1154066087-linux"},
-	}
-}
+func normalCIRoutes() []normalCIRoute { return normalci.Routes() }
 
 // Reject aliases, duplicate mapping keys and multiple documents rather than
 // selecting one interpretation of an executable workflow.
-func normalCIYAML(data []byte) (*yaml.Node, error) {
-	if len(data) == 0 || len(data) > 1<<20 {
-		return nil, errors.New("normal CI workflow size rejected")
-	}
-	d := yaml.NewDecoder(bytes.NewReader(data))
-	var root, extra yaml.Node
-	if d.Decode(&root) != nil || len(root.Content) != 1 || root.Content[0].Kind != yaml.MappingNode {
-		return nil, errors.New("normal CI workflow structure rejected")
-	}
-	if d.Decode(&extra) != io.EOF {
-		return nil, errors.New("normal CI multiple documents rejected")
-	}
-	var visit func(*yaml.Node) error
-	visit = func(n *yaml.Node) error {
-		if n.Kind == yaml.AliasNode || n.Anchor != "" {
-			return errors.New("normal CI aliases rejected")
-		}
-		if n.Kind == yaml.MappingNode {
-			seen := map[string]bool{}
-			for i := 0; i < len(n.Content); i += 2 {
-				k := n.Content[i]
-				if k.Kind != yaml.ScalarNode || k.Tag != "!!str" || seen[k.Value] {
-					return errors.New("normal CI mapping key rejected")
-				}
-				seen[k.Value] = true
-			}
-		}
-		for _, c := range n.Content {
-			if e := visit(c); e != nil {
-				return e
-			}
-		}
-		return nil
-	}
-	if e := visit(&root); e != nil {
-		return nil, e
-	}
-	return root.Content[0], nil
-}
-
-func yamlField(n *yaml.Node, key string) *yaml.Node {
-	if n == nil || n.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i < len(n.Content); i += 2 {
-		if n.Content[i].Value == key {
-			return n.Content[i+1]
-		}
-	}
-	return nil
-}
+func normalCIYAML(data []byte) (*yaml.Node, error)  { return normalci.ParseYAML(data) }
+func yamlField(n *yaml.Node, key string) *yaml.Node { return normalci.Field(n, key) }
 
 // Replace only the four original plain scalar tokens. All other bytes,
 // including conditions, OS-specific steps, secrets, permissions, timeouts,
@@ -208,27 +145,7 @@ func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func countWindowsCargo(root *yaml.Node) (int, error) {
-	job := yamlField(yamlField(root, "jobs"), "windows-native-check")
-	steps := yamlField(job, "steps")
-	if steps == nil || steps.Kind != yaml.SequenceNode {
-		return 0, errors.New("normal CI Windows steps unavailable")
-	}
-	count := 0
-	for _, step := range steps.Content {
-		if run := yamlField(step, "run"); run != nil && run.Kind == yaml.ScalarNode {
-			for _, line := range strings.Split(run.Value, "\n") {
-				if strings.HasPrefix(strings.TrimSpace(line), "cargo ") {
-					count++
-				}
-			}
-		}
-	}
-	if count != 13 {
-		return count, errors.New("fixed normal CI Windows thirteen commands changed")
-	}
-	return count, nil
-}
+func countWindowsCargo(root *yaml.Node) (int, error) { return normalci.CountWindowsCargo(root) }
 
 func inspectNormalCI(ctx context.Context, c candidate, read api) (normalCIProposal, error) {
 	return inspectNormalCIWithPolicy(ctx, c, read, normalCIWorkflowSHA)
@@ -344,7 +261,7 @@ func inspectNormalCIWithPolicy(ctx context.Context, c candidate, read api, expec
 
 func saveNormalCIProposal(ctx context.Context, dir string) error {
 	// No workflow mutation, dispatch, registration, checkout or success status.
-	c := candidate{normalCIRepo, 3613, "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"}
+	c := candidate{ID: normalCIRepo, PR: 3613, SHA: "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"}
 	p, e := inspectNormalCI(ctx, c, get)
 	if e != nil {
 		return e

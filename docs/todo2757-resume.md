@@ -1,5 +1,14 @@
 # マージ後CIの修復状況
 
+最新到達点（2026-10-17 11:10 JST）: PR196の正式配布後、元merge41090の
+公式CodeQL run38941323954/attempt1はPython・JS/TS・Actions・Rustの全4jobで実success。
+全4sessionの実HEAD/tree、PID0、container回収、runner不在、lock解放を確認済み。
+構造化原結果は.ci-work/todo2757-original-postmerge-codeql-final.private.json。
+公式job原logは3件保存済み。Rust原logはCLIの端末制御文字保護による拒否で未取得。
+保護解除flagや別経路は使わない。これを解析失敗や原log取得成功と取り違えない。
+次の実装境界はtodo2757-release-executor-plan.md。1文書だけのHaikuレビュー2780を登録。
+配備CIの実装・release/既存Prd revision/probeはまだ未完。以下の旧記録は履歴として保持する。
+
 ToDo2757。元2639/独立確認2752の状態・停止・依存を保持する。
 開始時branchはscheduler/todo-2757-pr-ci、開始HEADはd6a46b0。
 修復source repository1406818713のAutoDevJapan/private/admin/nonforkをAPI確認した。
@@ -94,11 +103,11 @@ merged専用からだけ除く。404を捕捉して別refへ進む処理は追�
 全差分の独立レビュー・必要CI・通常merge・正式配布を行う。未配布版は実行しない。
 Go race/unit/vetは最新の専用修復で成功。正式CodeQL・release・Prdは未完。
 
-1. 上記merged専用修復の独立Sonnetレビュー、Must修正、必要CI、通常merge、正式配布。
-   元branch参照404の原結果を保持し、未配布版や診断だけでjobを起動しない。
-2. 正式配布から同CodeQL4ジョブを順次実行し、公式結果・原log指紋・回収を確認。
-3. 固定sourceのrelease safety gate/DEPLOY/smoke/trust正典を調べ、
-   Hosted固定を既存Linux基盤で直す有限経路を確定する。
+1. 配備CIの有限実行計画2780を受領し、実装前の固定operation/compose/build/SDK/
+   token/drain/trust/native/Cargoの未確認データを埋め、正式な4役割の実行経路を実装する。
+2. 元公式CodeQLのRust原log取得拒否を保持する。保護解除や別取得経路へ切り替えない。
+3. 固定sourceのrelease safety gate/DEPLOY/smoke/trust正典を正確に確認し、
+   Hosted固定を既存Linux基盤で直す有限経路を通常review/CI/merge/配布する。
 4. 必要なら41090の子だけを通常PRで修復し、独立レビュー・trust更新・CIを行う。
 5. 元preconditions/full verification/backend integration、既存Prd revision/probeを実証。
 6. 自分の実結果を2752へ配送。原2639/2752/他製品をdoneにしない。

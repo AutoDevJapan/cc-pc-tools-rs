@@ -1,5 +1,45 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 21:42再開・merge後CIの受入（最新）
+
+job20261017-214255-todo-2736、d10e699/同branchから再開。最新D:/CC/AGENTS.mdとrepo規則、
+元2736/2640の保存済み指示・配送、原2790/2791/2797のdoneを先に確認した。
+終わったreviewの関係修復、レビュー、auth、helper merge、送信は繰り返していない。
+新しいreview ToDo/直接子Codexも作っていない。
+
+実APIでhelper所有者AutoDevJapan/private/nonfork/admin/repo1406818713と、製品の
+同owner/private/nonfork/admin/repo1392152644、同head/base repo、PR148 open/draft/mergeable、
+head75a4051/base1100676/元branch ref、専用runner0を再照合した。製品source変更0。
+
+merge3af45ee2の自然CIは全8check終端、7success/1skipped/失敗0を確認した。
+helperのWindows/Linux、CodeQL全4言語、cc-jobsがsuccess、package-toolsだけskipped。
+run39029403387/39029403332/39029403364の原log ZIPを108,696/127,349/15,253bytesで
+恒久root184a58eedf4f923741f160dfe7cfd5b7/resume-214255へ保存した。各exit0とSHA256は
+merged-logs-manifest.json、実全checkはmerged-checks.json。原本文をモデルへ表示していない。
+同sourceのテスト・CI・ビルドを再実行していない。
+
+並行変更を失わないよう、取得済みorigin/mainを同作業branchへ通常mergeした。
+merge保存点628ca1cb1e3750f0959f60d64bef177c61d3e613で、product-ci/Windows runner/
+cc-redact/cc-gh-gateのsourceはorigin/mainと差分0。上流の既存commitを保持した統合であり、
+他担当の変更を自分の修正・検査成果として数えない。新branchへの切替やforceは0。
+
+### 送信を再開できない条件の保持
+
+cc-redact/gh_gateの上流sourceに修復差分は確認できなかった。元の実送信で真偽値が置換された
+事実と、実unreferenced tree bb477c675dee11b8a232ceddcb71221c4ac38264の証拠を保持する。
+標準のfalse式の仕様を一次資料で調べたが、フィルターで止まった同payloadを別表現で通す
+実装・送信は採用していない。生成器/受入条件/フィルター/guard/allowlist/manifestは未変更。
+対象checkoutの公開実装もRAMで参照しただけで、同値の実動や正規受入の証拠へ拡大しない。
+参照した仕様: https://docs.github.com/en/actions/reference/workflows-and-actions/expressions 。
+
+元のcanonical workflow payloadを正規経路で保持できる修復の受入が未達である。
+現scopeのguard不変更条件を広げず、別API/認証/符号化/表現変更や送信の反復で解消しない。
+その修復担当が実割当済み・修復中である証拠もなく、そう報告しない。
+この具体的な技術停止条件と、今回解消したmerge後CI条件を元2640へ追送する。
+必要配備は前回の保護判定と並行source照合の条件を保持し、当該既存namespaceを今回は
+読取/実行/変更していない。新Temp/container/service/runner/追加ACE/Chrome/Cargo/GPU/Civ6は0。
+製品正式4job/成功証拠配送/必要配備は引き続き未完。本人操作や要件判断の待ちではない。
+
 ## 2026-10-17 20:37 通常helper merge受入（以下を優先）
 
 703e5edの全9正式checkは8success/1skipped、全終端/失敗0。Build speedの残jobも

@@ -91,14 +91,17 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 		pr148Workflows[i].OriginalSHA = digest(data)
 		fixtures[w.Path] = data
 	}
-	for _, bad := range []string{"", "base", "fork", "branch", "tree", "started", "annotation", "head-after", "extra-failure", "wrong-os", "duplicate-os"} {
+	for _, bad := range []string{"", "base", "fork", "branch", "tree", "started", "annotation", "head-after", "extra-failure", "wrong-os", "duplicate-os", "owner"} {
 		t.Run(bad, func(t *testing.T) {
 			checks := 0
 			read := func(ctx context.Context, ep string, out any) error {
 				var v any
 				switch {
 				case ep == "repositories/1392152644":
-					v = map[string]any{"id": 1392152644, "full_name": "AutoDevJapan/fixture", "owner": map[string]any{"login": "AutoDevJapan"}, "private": true, "fork": bad == "fork", "permissions": map[string]any{"admin": true}}
+					v = map[string]any{"id": 1392152644, "full_name": pr148Repo, "owner": map[string]any{"login": "AutoDevJapan"}, "private": true, "fork": bad == "fork", "permissions": map[string]any{"admin": true}}
+					if bad == "owner" {
+						v.(map[string]any)["owner"] = map[string]string{"login": "BM1314"}
+					}
 				case strings.HasSuffix(ep, "/pulls/148"):
 					checks++
 					head := pr148Head
@@ -109,7 +112,7 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 					if bad == "head-after" && checks > 2 {
 						head = strings.Repeat("2", 40)
 					}
-					repo := map[string]any{"id": 1392152644, "full_name": "AutoDevJapan/fixture", "fork": false}
+					repo := map[string]any{"id": 1392152644, "full_name": pr148Repo, "fork": false}
 					v = map[string]any{"state": "open", "draft": true, "head": map[string]any{"sha": head, "ref": pr148Branch, "repo": repo}, "base": map[string]any{"sha": base, "ref": "main", "repo": repo}}
 				case strings.Contains(ep, "/git/ref/heads/"):
 					sha := pr148Head
@@ -140,9 +143,9 @@ func TestPR148InspectionBindsOriginalScope(t *testing.T) {
 					}
 				default:
 					for _, w := range pr148Workflows {
-						prefix := fmt.Sprintf("repos/AutoDevJapan/fixture/actions/runs/%d", w.RunID)
+						prefix := fmt.Sprintf("repos/%s/actions/runs/%d", pr148Repo, w.RunID)
 						if ep == prefix {
-							repo := map[string]any{"id": 1392152644, "full_name": "AutoDevJapan/fixture", "fork": false}
+							repo := map[string]any{"id": 1392152644, "full_name": pr148Repo, "fork": false}
 							v = map[string]any{"id": w.RunID, "run_attempt": 1, "path": w.Path, "head_sha": pr148Head, "event": "pull_request", "status": "completed", "repository": repo, "head_repository": repo}
 						}
 						if ep == prefix+"/attempts/1/jobs?per_page=100" {

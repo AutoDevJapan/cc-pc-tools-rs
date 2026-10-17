@@ -91,6 +91,16 @@ func verifyPR148LinuxSource(ctx context.Context, p pr148LinuxPlan, read api) err
 	if !p.valid() {
 		return errors.New("explicit new source/run/job pin required")
 	}
+	return verifyPR148RoutingSource(ctx, p.Head, p.Tree, p.WorkflowSHA, read)
+}
+
+// Routing validation is also used after the non-force branch update, before
+// any run exists. It never invents run/job IDs to certify a source commit.
+func verifyPR148RoutingSource(ctx context.Context, head, tree, workflowDigest string, read api) error {
+	p := pr148LinuxPlan{Head: head, Tree: tree, WorkflowSHA: workflowDigest}
+	if !pr148SHA(head) || head == pr148Head || !pr148SHA(tree) || tree == pr148Tree || len(workflowDigest) != 64 || strings.Trim(workflowDigest, "0123456789abcdef") != "" {
+		return errors.New("explicit routing-only source pin required")
+	}
 	r, e := verify(ctx, candidate{1392152644, 148, p.Head}, read)
 	if e != nil {
 		return e

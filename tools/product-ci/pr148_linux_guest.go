@@ -317,6 +317,13 @@ printf 'landlock-direct-copy-proc-toolchain-denied\n'
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 		e = executePR148Linux(ctx, p, os.Args[3], os.Args[4], os.Args[5])
+	case "pr148-route":
+		if len(os.Args) != 3 {
+			return true, 1
+		}
+		ctx, stop := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer stop()
+		e = routePR148(ctx, os.Args[2])
 	case "pr148-guest":
 		e = pr148GuestRunner()
 	case "pr148-hook-start":

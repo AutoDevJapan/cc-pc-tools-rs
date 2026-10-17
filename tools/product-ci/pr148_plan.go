@@ -301,6 +301,9 @@ func inspectPR148(ctx context.Context, read api) (pr148Proposal, error) {
 		if e != nil {
 			return r, e
 		}
+		if r.FullName != pr148Repo || r.Owner.Login != "AutoDevJapan" {
+			return r, errors.New("original PR148 repository or owner changed")
+		}
 		var pr struct {
 			State string
 			Draft bool

@@ -8,12 +8,30 @@ it proposes changes only to `runs-on`, explicit PR-head checkout and disabled
 checkout credential persistence; parsed acceptance semantics are compared after
 removing those intended edits. All command bytes remain unchanged. The route is
 limited to this same-repository PR or its original branch's manual dispatch;
-main and unrelated PRs retain the original hosted labels. Only metadata/digests
+main and unrelated PRs retain the original hosted labels and merge-result
+checkout. Only metadata/digests
 are saved, never product source. This command performs no mutation, source
 extraction, registration, Cargo or test execution. Its receipt explicitly keeps
 `proposal_only=true` and `all_required_checks_success=false`. The actual Linux
 and Windows runner paths, workflow mutation review and official execution are
 still required; this plan alone cannot restore CI.
+
+`pr148-route <new-owned-dir>` applies only the generated three workflow blobs
+through GitHub's tree/commit/non-force ref APIs. The original source is its sole
+parent. Complete tree comparison precedes the ref update; its object identities
+and mutation intent are saved first, and the exact new source is verified after
+the update. An uncertain/refused update stops without retrying or reverting.
+The original source is never checked out on the host. This mode creates no run,
+runner or success status; its receipt keeps all-required-checks false.
+
+`pr148-linux <pin-json> <new-owned-dir> <Linux-helper> <official-pwsh-tar>`
+accepts that explicit new head/tree, reviewed workflow SHA256, full same-branch
+workflow_dispatch run/attempt and Linux job ID. It uses the isolated ephemeral
+runner and shared Cargo gate; start/complete hooks and independent host checks
+bind actual Git/source/auth and job identity. Original Cargo arguments, scenario
+commands, execution environments, timeouts and failure exits are retained.
+Registration, listener exit and fixtures never certify an official job. Its
+raw logs/bytes/SHA and real Actions job/check must be verified separately.
 
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four

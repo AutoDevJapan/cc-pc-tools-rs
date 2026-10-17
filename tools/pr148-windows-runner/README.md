@@ -18,6 +18,7 @@ root for the exact source, binary and synthetic fixture evidence. Earlier
 No product source was fetched or materialized by the child, no official runner
 was registered, and no product CI success is claimed. Parent integration and
 independent review remain required before formal use.
+
 Independent Windows amd64 Go module for parent ToDo2736. It never edits the
 product, registers a runner during a fixture, starts Civ6/GPU, changes the shared
 bridge/gate/SDK ACLs, or reads the old 2710/2730 accounts/resources. Implementation
@@ -176,17 +177,18 @@ path toolchain actions normally prepend. The first official Rust invocation
 checks the post-checkout context, actual HEAD/tree/index/raw tracked bytes and
 credential absence, then creates the existing `verify-source` receipt. Subsequent
 invocations recheck the source. Raw hashing also catches assume-unchanged index
-entries and bypasses Git filters. Git metadata links, alternates, replacement
+entries and bypasses Git filters. Active worktree configuration, Git metadata links, alternates, replacement
 objects and worktree config are refused before ordinary Git object operations.
 The original argv, output and exit code are forwarded to the same new SDK under
-the filtered account, inside the launcher's Job Object. The source tools/target
+the filtered account, inheriting the launcher's Job Object. The entry itself
+checks membership in some Job, not that Job's identity. The source tools/target
 remains the actual target. The entry requires this instance's service SID, AU deny-only token and Job
 Object membership. It forwards the job environment so action-added PATH entries
 and explicit compiler selections survive. Rustup auto self-update is disabled
 in this new home so an update does not replace these guards.
 There is deliberately no arbitrary privileged adapter for Rust/C/PowerShell.
 Original Rust/Windows, native-driver and live-chain unit commands stay in the
-reviewed workflow. The shared gate, SDK and sccache must already be usable by the
+reviewed workflow. The shared gate and installed SDK executables must be usable by the
 filtered new service token without new shared grants. Lack of that access is a
 remaining integration condition, not permission to broaden it. No live game.
 The new SDK is initialized by fixed non-administrative commands under the same
@@ -199,7 +201,7 @@ The controller holds the actual shared gate for the full orderly service run;
 the service never manufactures a new gate admission or claims direct lock access.
 The same installed sccache binary runs in a new finite foreground process with
 an owned cache and port. The kernel listener PID and Job membership are checked.
-It cannot use the owner-account cache server to run compilers outside this Job.
+The helper configures its own server for compiler work in this Job. This does not prevent arbitrary job code from opening other loopback ports, including the owner cache server; the account boundary is not a network sandbox.
 Shared cache files/configuration are unchanged; dependency reuse there is not
 claimed. Its lifetime ends with this service's Job Object.
 This account boundary is not a full VM sandbox.
@@ -253,3 +255,66 @@ a real Cargo error must retain exit101. The cancel fixture publishes readiness
 only after a live Rust test writes its PID, then SCM stop must drain Cargo, Rust,
 cache and worker processes together. No product workspace/native/live/scenario
 result or official GitHub run is inferred from these fixtures.
+
+## Actual checkout connection
+
+Use a new safe-delete root beneath a SHORT registered helper worktree for Node and MSVC
+checkout (`safe-delete create --root <short-helper-worktree> ...`). Its existing
+ancestors must allow metadata reads by the service. Node20 resolves each main
+script ancestor: the owner's private Temp path failed on the owner's profile
+metadata in the credential-free probe. That profile ACL was not changed. New
+workspace roots use existing readable ancestor ACLs. The long child worktree also exceeded the MSVC standard-library filename limit; the short original registered worktree passed the same checkout and Rust commands without shared changes. Only the new source is
+assigned to the newly created service SID.
+
+Preparation supplies a new HOME/.gitconfig with the exact source safe.directory.
+GIT_CONFIG_GLOBAL points there. No owner configuration or credential is copied.
+The source guard also rejects credential/execution keys in this new global file.
+Checkout's sparse-checkout disable leaves an inactive config.worktree after
+unsetting extensions.worktreeConfig. Only literal disabled sparse-checkout core
+values and disabled index.sparse are accepted in that inert file; the activation key and all other content
+are rejected. SDK initialization rehashes all five guards after installing the
+new toolchains and refuses missing/corrupt environment state. Direct cargo-fmt,
+cargo-clippy and clippy-driver proxies remain outside the entry-guard contract;
+the original cargo commands enter through the guarded cargo executable.
+
+The runtime fixture uses public actions/checkout v4 resolved to a full commit,
+checks dist/index.js against its Git blob, and uses its declared Node20 engine
+from the official checksum-verified public distribution. Its actual main and
+post programs run against a loopback smart-Git server containing only synthetic
+objects. The local server accepts only the two upload-pack routes. Synthetic
+transport URL and placeholder auth are isolated from product API/OAuth. After
+checkout and post, raw source/index/HEAD/tree, global/local auth absence, service
+ownership and ordinary Git without a per-command safe.directory are checked
+before adapting the fixture transport URL for the unchanged Rust entry guard.
+In the saved acceptance fixtures the NUL observation ran first on the same
+source and returned exit 0, with a safe.directory warning. The subsequent new
+HOME main/post results therefore prove a repeated checkout, not pristine-source
+checkout. Their raw ordering and exit codes must accompany the evidence.
+No official Actions runner, workflow dispatch or product checkout is inferred.
+
+The fixture's resolved checkout commit and Node ZIP digest are SDK evidence;
+the Node distribution is not the official runner's bundled Node. Public SHA
+verification detects corrupt bytes but is not an independent signature check.
+The shared workflow transformer is designed to preserve the checkout action version;
+the parent must match its resolved version before claiming product acceptance.
+
+The source owner operation has a 30-second limit and prepare is single-use. This
+limit is not measured on the product tree. A timeout makes prepare fail and leaves
+partial preparation, never a successful runtime or an invitation to retry prepare.
+Preserve the failure and report that new resource's service/ACL/files to its cleanup
+task. The normal collect command requires a protected launcher drain report and
+cannot be assumed to accept a resource whose preparation failed before launch.
+Synthetic success does not qualify product-scale preparation.
+SDK guard hashes detect accidental corruption; the same service account can
+write the tool directory, so these checks do not defeat malicious job code.
+
+The archived acceptance helper has VCS 23274f6+modified and Go content correlated
+to cd7dbd3; it is not a clean binary built at 9b4a529. Its SHA matches both prepared
+receipts. The later SID conversion has race/vet/build evidence, but no new service,
+Rust or cancellation fixture run. See TODO-2790-CHECKPOINT.md for exact hashes.
+
+Suggestions S2/S5 from the d5e04c5 review remain evidence limits: the real product
+materializer's eight-minute sequential API budget is not measured by synthetic
+fixtures; uncertain original commit bytes fail closed. Each normal/cancel result
+must keep its own exact source and observed controller exit. The latest source
+must obtain its own finite review; the earlier Must0 is not a blanket approval.

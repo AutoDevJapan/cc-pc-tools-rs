@@ -24,7 +24,10 @@ func cachePort(p Plan) int {
 // this Job Object. Use the same installed binary with a new finite foreground
 // process. No shared server, cache configuration or ACL is changed.
 func startOwnedCache(p Plan) (func(), error) {
-	env := runtimeSDKEnv(p, workerEnv(p))
+	env, err := runtimeSDKEnv(p, workerEnv(p))
+	if err != nil {
+		return nil, err
+	}
 	env = append(env, "SCCACHE_START_SERVER=1", "SCCACHE_NO_DAEMON=1")
 	c := exec.Command(`D:\CC\Tools\sccache\sccache.exe`)
 	hidden(c)
@@ -97,8 +100,17 @@ func ownedTCPListener(pid uint32, port int) (bool, error) {
 	if r != 122 || n < 4 || n > 16<<20 {
 		return false, errors.New("kernel listener table size unavailable")
 	}
-	b := make([]byte, n)
-	r, _, _ = proc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&n)), 0, 2, 3, 0)
+	var b []byte
+	for attempt := 0; attempt < 3; attempt++ {
+		if n < 4 || n > 16<<20 {
+			return false, errors.New("kernel listener table size bound")
+		}
+		b = make([]byte, n)
+		r, _, _ = proc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&n)), 0, 2, 3, 0)
+		if r != 122 {
+			break
+		}
+	}
 	if r != 0 {
 		return false, fmt.Errorf("kernel listener table error %d", r)
 	}

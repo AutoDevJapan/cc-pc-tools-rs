@@ -190,14 +190,8 @@ func tokenUserSID(token syscall.Handle) (string, error) {
 	if r == 0 {
 		return "", fmt.Errorf("query own-token user: %w", e)
 	}
-	sid := (*sidAndAttributes)(unsafe.Pointer(&buffer[0])).SID
-	var text *uint16
-	r, _, e = sidToString.Call(sid, uintptr(unsafe.Pointer(&text)))
-	if r == 0 {
-		return "", fmt.Errorf("format own-token SID: %w", e)
-	}
-	defer kernel.NewProc("LocalFree").Call(uintptr(unsafe.Pointer(text)))
-	return syscall.UTF16ToString(unsafe.Slice(text, 256)), nil
+	sid := (*syscall.Tokenuser)(unsafe.Pointer(&buffer[0])).User.Sid
+	return sid.String()
 }
 
 func authenticatedUsersDenyOnly(token syscall.Handle) error {

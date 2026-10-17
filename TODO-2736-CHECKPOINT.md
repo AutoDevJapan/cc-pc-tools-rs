@@ -1,5 +1,46 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 20時台の最終Windows受入と統合（以下を優先）
+
+job20261017-201652-todo-2736。原2790と同じreview2797は正規doneになった。
+2790の最終head e00ce71966a3290747650189dc0db0a321d6801bからWindows moduleだけを
+取り込み、indexのmodule tree=8858bd95f1766036473c92e01fdfd252ded6e082の完全一致を確認した。
+共通pr148scopeは両側cbdb19827cd035d66a527818a8fb2df89705a059で不変。
+最終機能sourceは25579e6、以降の子差分はREADME/受領文書だけでGo差分0である。
+
+同じ2797のSonnet5.5原応答は165727（ca2d6af→d5e04c5の全指定本文）、184908
+（d5→9b4a529の15本文/差分）、194854（9b→25579e6の5本文/差分）を順に確認した。
+各静的Must0であり、モデルによる実検査は0。最終実jobはsucceeded/exit0、保存spec全文の
+実投入一致・eventと最終応答一致を子receiptで確認。最終原応答SHA256は
+CBCD1D95FFABD705F77FED7F61F18E064053403107532697C762220CFA841231。
+原応答/receipt/前回証拠資格を自分の恒久rootへbytes/SHA一致で保管した。
+原2791の4f47c125だけのMust0を新しいWindows差分の代わりには使っていない。
+
+子の最新Go race69pass/2opt-in skip、vet/Windows build成功と、最後のWindows専用変更前の
+Linux build成功を受領した。成功済み同module/commonの検査やSDK fixtureを親で重複実行しない。
+初回uintptr案のcheckptr panic/vet失敗を保持する。親の正式CIは新しいpush後に別途確認する。
+fixtureはbootstrap4（VCS23274f6+modified、cd7相当のGo内容）の正常74file/取消75fileであり、
+最終SID変更後の実service成功とは書かない。NULの先行試行は同sourceでexit0、その後の
+main/postは繰返しcheckoutの成功で、pristine-sourceの独立実証ではない。
+実製品のcheckout版/runner同梱Node、8分materializer予算と製品規模、実工具・全正式jobは
+親の正式受入で確認する。13残留profile/hive/rootは子が2381へ配送済みで再操作しない。
+
+起動時の実APIで製品owner/private/nonfork/admin、同repo1392152644、PR open/draft/mergeable、
+head75a4051/base1100676/元branchを再照合。helperも実owner AutoDevJapan/adminを確認した。
+通常ghのuser応答headerでgist/read:org/repo/workflowを確認できた。新push前のremote PR189は
+まだ6b5c387。この時点の正規auth refreshはexit0で終了し、RAMのcode検出/画面入力は0。
+権限付与の由来やブラウザ認可成功を、この終了コードだけから推定しない。
+
+入力経路はCUA REPL内のchild_processによる非UI CLI出力のRAM captureと、公式locator.fillの
+偽値入力→空欄化で確認した。実コード/秘密をtool引数・ファイル・URL・clipboardへ渡していない。
+資源譲渡後のitem_22完了を先に照合し、偽値確認を繰り返していない。前tab798087384は
+再開時に既に不在。新tab798087392は所有record e7893fe2-13be-41fa-924b-cc3ff59e70f2と
+inventoryのinstance/generationを照合して正規close、closed1/failed0。ブラウザ工程は終了。
+
+次はこの統合を同branchへ通常pushし、実新headのhelper CIを確認する。
+製品source展開/workflow変更/正式runner/dispatch/製品Cargo/GPU/Civ6/再起動は依然0。
+原2640/880の未完・停止と製品PR148を親だけがmergeする条件を保持する。
+
 ## 2026-10-17 15〜16時台の有限受領・循環修復（以下を優先）
 
 job20261017-151845-todo-2736。司令塔の工程分割に従い、原2790の受領/統合と、同じ原2797の正規root関係を確認した。製品の正式CIや原2790最終受入を免除した工程ではない。

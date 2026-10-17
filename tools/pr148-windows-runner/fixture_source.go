@@ -16,7 +16,7 @@ import (
 // directory is used, including by the opt-in restricted-account fixture.
 func syntheticSource() (string, string, map[string]any) {
 	api := map[string]any{}
-	files := map[string]string{".gitignore": "target/\n", "tools/Cargo.toml": "[package]\nname=\"finite-fixture\"\nversion=\"0.1.0\"\nedition=\"2021\"\n", "tools/Cargo.lock": "version = 4\n\n[[package]]\nname = \"finite-fixture\"\nversion = \"0.1.0\"\n", "tools/src/lib.rs": "#[test] fn cpu_only() { if let Ok(p) = std::env::var(\"PR148_FIXTURE_READY\") { std::fs::write(p, std::process::id().to_string()).unwrap(); std::thread::sleep(std::time::Duration::from_secs(600)); } assert_eq!(2 + 2, 4); }\n", "tools/ignored.bin": "\x00\xff\r\n"}
+	files := map[string]string{".gitignore": "target/\n", "tools/Cargo.toml": "[workspace]\n\n[package]\nname=\"finite-fixture\"\nversion=\"0.1.0\"\nedition=\"2021\"\n", "tools/Cargo.lock": "version = 4\n\n[[package]]\nname = \"finite-fixture\"\nversion = \"0.1.0\"\n", "tools/src/lib.rs": "#[test] fn cpu_only() { if let Ok(p) = std::env::var(\"PR148_FIXTURE_READY\") { std::fs::write(p, std::process::id().to_string()).unwrap(); std::thread::sleep(std::time::Duration::from_secs(600)); } assert_eq!(2 + 2, 4); }\n", "tools/ignored.bin": "\x00\xff\r\n"}
 	var entries []pr148scope.TreeEntry
 	for path, body := range files {
 		id := objectID("blob", []byte(body))

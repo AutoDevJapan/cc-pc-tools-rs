@@ -91,13 +91,7 @@ func serviceSID(p Plan) (string, error) {
 	if r == 0 {
 		return "", e
 	}
-	var txt *uint16
-	r, _, e = sidToString.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&txt)))
-	if r == 0 {
-		return "", e
-	}
-	defer kernel.NewProc("LocalFree").Call(uintptr(unsafe.Pointer(txt)))
-	return syscall.UTF16ToString(unsafe.Slice(txt, 256)), nil
+	return (*syscall.SID)(unsafe.Pointer(&b[0])).String()
 }
 func queryService(s uintptr) (state, pid, code uint32, err error) {
 	var v [9]uint32
@@ -291,5 +285,5 @@ func platform(mode string, p Plan, args []string) error {
 }
 
 func envFor(p Plan) []string {
-	return []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `ProgramFiles=C:\Program Files`, `ProgramFiles(x86)=C:\Program Files (x86)`, `ProgramW6432=C:\Program Files`, `COMSPEC=C:\Windows\System32\cmd.exe`, `PATHEXT=.COM;.EXE;.BAT;.CMD`, "PATH=" + filepath.Join(p.runtime(), "cargo", "bin") + ";" + filepath.Join(p.runtime(), "sdk", "bootstrap", "bin") + `;C:\Windows\System32;C:\Program Files\Git\cmd;C:\Program Files\Git\bin;C:\Program Files\PowerShell\7`, "TEMP=" + filepath.Join(p.runtime(), "tmp"), "TMP=" + filepath.Join(p.runtime(), "tmp"), "HOME=" + filepath.Join(p.runtime(), "home"), "USERPROFILE=" + filepath.Join(p.runtime(), "home"), "LOCALAPPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Local"), "APPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Roaming"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=NUL", "CI=true", "ACTIONS_RUNNER_HOOK_JOB_STARTED=" + filepath.Join(p.Root, "hook-start.ps1"), "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=" + filepath.Join(p.Root, "hook-completed.ps1"), "CARGO_HOME=" + filepath.Join(p.runtime(), "cargo"), "RUSTUP_HOME=" + filepath.Join(p.runtime(), "rustup"), "CARGO_TARGET_DIR=" + p.target(), `RUSTC_WRAPPER=D:\CC\Tools\sccache\sccache.exe`, "SCCACHE_DIR=" + filepath.Join(p.runtime(), "sccache"), `SCCACHE_CACHE_SIZE=30G`, fmt.Sprintf("SCCACHE_SERVER_PORT=%d", cachePort(p)), `RUSTUP_NO_UPDATE_CHECK=1`, `GIT_TERMINAL_PROMPT=0`}
+	return []string{`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `ProgramFiles=C:\Program Files`, `ProgramFiles(x86)=C:\Program Files (x86)`, `ProgramW6432=C:\Program Files`, `COMSPEC=C:\Windows\System32\cmd.exe`, `PATHEXT=.COM;.EXE;.BAT;.CMD`, "PATH=" + filepath.Join(p.runtime(), "cargo", "bin") + ";" + filepath.Join(p.runtime(), "sdk", "bootstrap", "bin") + `;C:\Windows\System32;C:\Program Files\Git\cmd;C:\Program Files\Git\bin;C:\Program Files\PowerShell\7`, "TEMP=" + filepath.Join(p.runtime(), "tmp"), "TMP=" + filepath.Join(p.runtime(), "tmp"), "HOME=" + filepath.Join(p.runtime(), "home"), "USERPROFILE=" + filepath.Join(p.runtime(), "home"), "LOCALAPPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Local"), "APPDATA=" + filepath.Join(p.runtime(), "home", "AppData", "Roaming"), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=" + filepath.Join(p.runtime(), "home", ".gitconfig"), "CI=true", "ACTIONS_RUNNER_HOOK_JOB_STARTED=" + filepath.Join(p.Root, "hook-start.ps1"), "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=" + filepath.Join(p.Root, "hook-completed.ps1"), "CARGO_HOME=" + filepath.Join(p.runtime(), "cargo"), "RUSTUP_HOME=" + filepath.Join(p.runtime(), "rustup"), "CARGO_TARGET_DIR=" + p.target(), `RUSTC_WRAPPER=D:\CC\Tools\sccache\sccache.exe`, "SCCACHE_DIR=" + filepath.Join(p.runtime(), "sccache"), `SCCACHE_CACHE_SIZE=30G`, `SCCACHE_IDLE_TIMEOUT=0`, fmt.Sprintf("SCCACHE_SERVER_PORT=%d", cachePort(p)), `RUSTUP_NO_UPDATE_CHECK=1`, `GIT_TERMINAL_PROMPT=0`}
 }

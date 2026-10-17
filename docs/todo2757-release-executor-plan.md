@@ -31,8 +31,13 @@ ToDo2757の次工程。これは実装前の計画であり、runner登録・CI�
    残す案は予算停止を解決しないため採用しない。汎用labelは登録しない。
 3. permissions/environment/secrets/if/needs/env/uses/steps/on/concurrencyは保存する。
    compose検査をプロセス起動へ置き換えない。検査削除・skip・手動successはしない。
-4. trustの既存正典127dd323…/SHA2566b2285ed…は計算アルゴリズムとして固定する。
-   元sourceと候補の実行内容を別モデルが確定してから、同じPRでreviewed digestを更新する。
+4. trustの既存正典blob127dd323392582c4082060e1c1a7b42f13d6085c/
+   SHA2566b2285edc2756d9810b651d874fb6579ab10e788a2f900b3ce326c14e9ac60efは
+   baseの計算アルゴリズムとして固定し、変更候補が自身の基準を書き換えないようにする。
+   元sourceと候補の実行内容を別モデルが確定した原応答を先に保存する。
+   その後に固定baseの同じ関数で独立再計算し、指示どおり同じPRの別コミットで
+   reviewed digestの受領値だけを更新する。旧基準と応答hashを保持する。
+   計算アルゴリズム自体の変更が必要なら、信頼境界の変更として別の独立レビューを行う。
    raw workflow SHA256143e9ef9…をsemantic digestと同一視しない。
 5. アプリ機能/UI、別環境、新費用、Hosted予算、認証範囲は増やさない。
 
@@ -51,6 +56,9 @@ ToDo2757の次工程。これは実装前の計画であり、runner登録・CI�
   公式successになってからだけ登録する。原drain/smoke/release gateを維持する。
 - 検証profileに配備用の秘密情報を渡さない。必要な暗黙tokenの権限は元workflowどおりに限定する。
   registration tokenとcallback鍵は既存と同じRAM/stdin方式で渡し、表示・永続化しない。
+  ただし元の全権限・伝播が未確認の間はprofile登録を拒否する。read-onlyと推測して登録したり、
+  元workflowのpermissionsを便宜的に書き換えたりしない。検証に必要な最小権限と元の明示権限が
+  両立することを確認し、その固定profileだけを受け付ける。
 
 ## Docker/Composeの有限broker
 
@@ -58,6 +66,8 @@ ToDo2757の次工程。これは実装前の計画であり、runner登録・CI�
   外部要求はoperation IDと境界を確認した最小値だけ。任意argv、shell、URL、host pathは禁止。
 - brokerは同source/run/attempt/実job/役割を毎回再照合し、その役割の監査済みoperationだけを実行する。
   親が固定sourceから作るsealed operation tableを使い、guestから新table/digestを選ばせない。
+  実jobはhostが保持する登録nonce/runner IDとGitHubのjobs応答から一意に特定する。
+  guestのjob/run/attempt申告だけで同一性を確定しない。
 - 元のcompose定義とDockerfileをRAMで正規化し、実行内容を独立レビューする。
   image/command/entrypoint/healthcheck/depends_on/env/volume/port/networkを固定modelへ束縛する。
   未知image/tag、privileged、cap_add、host bind、host network、devices、socketは拒否する。
@@ -66,13 +76,30 @@ ToDo2757の次工程。これは実装前の計画であり、runner登録・CI�
 - buildが必要なら固定Dockerfileと固定contextだけを使う。builderも割当資源内で動くことを
   実測・検証する。未検証のprivileged builderや無制限BuildKitを便宜的に有効化しない。
   できなければ該当buildの最小修復を同source範囲で設計し、独立レビューする。
+  contextはhostが固定API tree/blobから検証した全byteをRAM内で封印する。
+  build直前に全context/各blobのhashを再照合し、その同じ封印byteをbuilderへ渡す。
+  guestが書き換えられるcheckout、guest申告hash、再読したpathからcontextを作らない。
 - サービスはnonce付き専用networkとscratchだけを使う。元テストのlocalhost/service-name依存を
   確認し、実通信を維持する。状態/port/healthを実物に照合し、shimが成功を捏造しない。
 - 各container/サービス/builderのCPU・memory・pids上限と、同時合計が割当内であることを確認する。
   Rustビルドが実際に必要なら既存共有Cargoゲートを使う。別repo用bridgeの制限を外して流用しない。
+  新検証profileの同時合計上限は2CPU/8GiB/512pidsとし、guest/サービス/builderへ事前に分配する。
+  各実配分と各phaseの合計を固定operation tableに含め、実測前には有効化しない。
+  元CodeQL profileの実2CPU/8GiB/512pidsは今回の変更対象にしない。
 - 切断/timeout/正常終了ともguestとサービスを排出し、PID0を確認してからcontainer/network/
   volume/作成imageを回収する。実runner登録不在と全所有資源0を確認した後だけ排他を解放する。
   不確かな作成や回収はreceiptを残し、所有nonceだけを正規回復する。新monitorは作らない。
+
+### broker鍵とテスト実行者の分離
+
+- broker鍵はhostが各run/attempt/runner instanceに発行し、host登録記録へ束縛する。
+  product sourceやテスト実行者のenv/argv/読み取れるfileには置かない。
+- guest内の転送agentが必要なら、テスト実行者UID1001とは異なる非root UID1002で動かす。
+  hostからagentのstdinへRAMで渡し、UID1002専用領域とprocessにだけ保持する。
+  同UID化、setuid/cap追加、host socket公開はしない。実kernelで他UIDの/proc/fd/memoryと鍵が
+  UID1001から読めないことを確認するまでは、この案を有効化しない。
+- テスト側shimに渡すのは有限operation IDと検証する最小値だけ。
+  テストがshimを直接呼んでも固定profileを超えないことを負例と実物で確認する。
 
 ## 実装前に埋める有限なデータ
 
@@ -95,4 +122,20 @@ ToDo2757の次工程。これは実装前の計画であり、runner登録・CI�
   steps0/skipped/受付/登録だけを成功に数えない。同sourceの既済検査は重ねない。
 - 実際に必要なdrainを行い、既存Prdだけを正規配備する。実runtime revisionとreadiness/smoke、
   原log bytes/hash、全所有資源の回収を確認する。Rust原logの拒否は未完として別に保持する。
+  この原logの要件も完了条件に残す。拒否の迂回や成功への置換では閉じない。
 - 完了条件が揃った実結果を2752へ配送する。製品全体や親をこの工程でdoneにしない。
+
+## gateに数える実結果の対応
+
+| source | run/attempt | gateへの算入 |
+|---|---|---|
+| 41090 | 38941323954/1 | このsourceのCodeQL4言語だけ。実successを保存済み |
+| 41090 | 38941324877/1 | budget停止/steps0。業務preconditions/release成功には算入しない |
+| 固定したCI child | 実取得して固定する | そのchildのPR/CodeQL/secret検査。未来のrunは未実行 |
+| 固定したchild merge | 実取得して固定する | そのmergeの元業務preconditions/full/backend/release/Prd照合 |
+
+base mainが41090から未知の木へ進んだら登録・配備を止め、原結果を保持する。
+既知childの正確なmergeだけを別の固定receiptで照合し、他headへ追従しない。
+PID0は停止後のDocker inspectでRunning=falseかつState.Pid=0を確認する意味。
+元業務gateはsourceにあるdeployment有効化・drain・必要CIなどの実preconditionsを指し、
+budget停止の注釈をその評価結果とは扱わない。

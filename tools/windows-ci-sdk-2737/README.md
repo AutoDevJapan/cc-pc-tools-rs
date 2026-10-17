@@ -27,17 +27,18 @@ dedicated guest.
 - Install the helper as a LocalSystem service during normal Windows Setup's
   `specialize` phase. The service binary and public seed staging have not been
   exercised in a guest.
-- Add the host Hyper-V provisioning and COM named-pipe client for a new
-  safe-delete-owned root and nonce VM.
+- Add host Hyper-V provisioning, official ISO validation, seed/helper staging,
+  and LocalSystem service registration during normal Windows Setup.
 - Provision a new safe-delete-owned root and nonce VM only after the scheduler
   assigns guest resources. Install the pinned SDKs and verify versions using the
   guest service account; preserve private logs and sanitized evidence.
 - Stop and remove that VM, verify zero assigned memory and VHD detach, and retain
   the SDK-only template with its SHA-256 and size in the owned root.
 
-No VM or SDK installer was run by the current implementation step. No product
-source, Cargo build, runner registration, or official CI was accessed or
-executed.
+No VM or SDK installer was run by the current implementation step. The host
+COM named-pipe adapter only compiles; it has not been connected to Hyper-V. No
+product source, Cargo build, runner registration, or official CI was accessed
+or executed.
 
 ## Pin sources
 

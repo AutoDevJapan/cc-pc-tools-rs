@@ -88,6 +88,13 @@ type PreparationReceipt struct {
 	Results      []Result `json:"results"`
 }
 
+func COMPipeName(instance string) (string, error) {
+	if !validInstance(instance) {
+		return "", errors.New("invalid guest pipe instance")
+	}
+	return `\\.\pipe\windows-ci-sdk-2737-` + instance, nil
+}
+
 func BuildPublicSeed(instance string, client Identity) ([]byte, error) {
 	if !validInstance(instance) || client.Leaf == nil || client.Leaf.Subject.CommonName != "windows-ci-sdk-2737/"+instance || !hasUsage(client.Leaf, x509.ExtKeyUsageClientAuth) {
 		return nil, errors.New("host identity does not match the SDK instance")

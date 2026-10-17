@@ -144,6 +144,19 @@ func TestPublicSeedContainsOnlyBoundInstanceAndCertificateHash(t *testing.T) {
 	}
 }
 
+func TestCOMPipeNameIsInstanceScoped(t *testing.T) {
+	name, err := COMPipeName("fresh-nonce-2783")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != `\\.\pipe\windows-ci-sdk-2737-fresh-nonce-2783` {
+		t.Fatalf("unexpected pipe name: %q", name)
+	}
+	if _, err := COMPipeName(`..\other`); err == nil {
+		t.Fatal("invalid instance accepted")
+	}
+}
+
 func TestSingleJSON(t *testing.T) {
 	if !IsSingleJSON([]byte(`{"ok":true}`)) {
 		t.Fatal("single JSON rejected")

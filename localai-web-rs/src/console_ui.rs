@@ -3,7 +3,7 @@ const SHELL: &str = include_str!("console_shell.html");
 const MARKER: &str = "<meta name=\"local-ai-console-shell\" content=\"1\">";
 
 use cc_ask::task_title::Names;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
@@ -298,7 +298,8 @@ pub(crate) fn history_count(item: &Value) -> usize {
     ["history", "note_history", "spec_history"]
         .iter()
         .map(|key| rows(item, key).len())
-        .sum()
+        .sum::<usize>()
+        .saturating_add(cc_todo::todo_history::archived_count(item).unwrap_or(0))
 }
 pub(crate) fn history_page(names: &Names, item: &Value, offset: usize, limit: usize) -> Vec<Value> {
     // Sort metadata first, then redact only the requested page. Full historical
@@ -611,7 +612,9 @@ mod tests {
         );
         assert_eq!(
             index.job_private,
-            vec![false, false, false, true, true, true, true, true, false, false, false]
+            vec![
+                false, false, false, true, true, true, true, true, false, false, false
+            ]
         );
         assert_matches_legacy(&names, &db, &jobs);
         let mut reusable = PrivacyIndex::new(&names, &db);
@@ -803,14 +806,18 @@ mod tests {
         for forbidden in ["alpha", "beta", "gamma", "delta", "dXNlcjpwYXNzd29yZA=="] {
             assert!(!output.contains(forbidden), "secret residue in display");
         }
-        assert!(response["items"][0]["note"]
-            .as_str()
-            .unwrap()
-            .contains("正常な本文"));
-        assert!(response["items"][0]["history"][0]["note"]
-            .as_str()
-            .unwrap()
-            .contains("正常な本文"));
+        assert!(
+            response["items"][0]["note"]
+                .as_str()
+                .unwrap()
+                .contains("正常な本文")
+        );
+        assert!(
+            response["items"][0]["history"][0]["note"]
+                .as_str()
+                .unwrap()
+                .contains("正常な本文")
+        );
     }
 
     #[test]

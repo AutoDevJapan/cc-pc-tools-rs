@@ -113,6 +113,17 @@ fn replace(from: &Path, to: &Path) -> io::Result<()> {
 pub fn read(path: &Path) -> Result<Value, Error> {
     read_bounded(path, MAX_BYTES)
 }
+/// Preserve immutable history bytes for independent digest validation.
+pub fn read_bytes(path: &Path) -> Result<Vec<u8>, Error> {
+    let mut bytes = Vec::new();
+    File::open(path)
+        .map_err(Error::Io)?
+        .take(MAX_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(Error::Io)?;
+    check_size(bytes.len())?;
+    Ok(bytes)
+}
 /// Shared byte primitive; each canonical store supplies its own limit and error labels.
 pub fn read_bounded(path: &Path, limit: usize) -> Result<Value, Error> {
     read_from_limit(File::open(path).map_err(Error::Io)?, limit)

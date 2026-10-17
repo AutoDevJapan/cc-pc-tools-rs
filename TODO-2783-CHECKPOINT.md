@@ -37,4 +37,6 @@ After source commit `22e826a9f5d5d858e868ae9c15ec31fc7d8d5a8f`, rebuilt the help
 
 Resource check 2026-10-17: scheduler status reported no busy resource and no guest allocation for this task; general job slots were available. This does not authorize VM creation. The earlier `todo.exe wait-retry 2783` attempt failed with `todo_store_too_large` at the 64 MiB shared-store limit. That registration has not been retried. The same active job remains responsible for resuming once a guest resource is assigned.
 
+Checkpoint request attempt: the first temporary request-file path was resolved relative to the worktree's parent instead of the worktree root, so file creation failed and the scheduler call returned nonzero. No request file or workspace checkpoint was created by that attempt. The corrected request path is inside the previously verified safe-delete-owned root.
+
 COM startup refinement: the guest now emits sdk-ready with instance/private-IPv4/server certificate SHA-256 first; the host then sends a fresh nonce probe and validates the echo. This avoids sending host bytes before Windows Setup has started the LocalSystem guest service. Go tests and Windows amd64 cross-build/vet passed after the change.

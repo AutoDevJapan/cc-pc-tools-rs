@@ -157,3 +157,89 @@ unload/再試行/別APIは行わない。元整理担当2381へこの4件のみ�
    拒否を記録する。2381へ限定配送し、親2736へsource/検査hash/レビュー原応答/残条件を渡す。
 3. 自分の実job/branch/HEADを正規scheduler checkpointへ保存してからレビュー完了待ちを記録する。
    親2736/2640の完了を待つ逆依存は作らない。正式製品source/runner/dispatch/原workflow4jobは親工程。
+## 2026-10-17 17時台の追補（以前の状態より優先）
+
+実job `20261017-171647-todo-2790`。最新機能sourceはcd7dbd3、文書を含む
+固定レビューheadは `9b4a529e174bee5902555967158c07d5775027af`。
+Windows module treeは `01e3062d8fda2813e471ed24244626c2af41ae2a`。
+共通package treeは `cbdb19827cd035d66a527818a8fb2df89705a059` のまま。
+自分のbranchへのpushは成功。親branch/worktree、共通workflow生成、製品sourceは変更していない。
+
+### 追加実装と実測
+
+- a525811で新HOMEのGit設定と専用SIDによるsource所有を接続した。元profileのACLは変更しない。
+  SDK環境欠落をerrorへ、toolchain導入後に5工具入口のhashを再照合、sccache idleを0へ変更した。
+- 公式actions/checkout v4の完全commit/blobと公式Node20 ZIPのdigestを照合し、
+  実main/postをfiltered service tokenと元Job内で実行する合成fixtureを追加した。
+  transportはloopbackの合成smart Gitだけ。製品sourceの取得・展開・runner登録・dispatchは0。
+- 実checkoutが残す無効config.worktreeはcoreのsparseCheckout/sparseCheckoutConeとindexの
+  sparseがfalseの場合だけ許可する。activation key、他設定、認証、alternateは引き続き拒否する。
+  checkout後の実HEAD/tree/index/全生bytes/auth不在/plain Git/所有SIDを検証してからRustへ渡す。
+- owner TempではNodeが祖先metadata取得をEPERMで拒否した。長いchild worktreeではMSVCが
+  LNK1104で失敗した。祖先ACLやOSの設定は変えず、元登録範囲の短いhelper worktreeへ
+  safe-delete createした専用rootを置いて解消した。この配置条件をREADMEに明記した。
+- 合成manifestへ[workspace]を加え、host workspaceを誤認する失敗を修正した。
+  原製品manifest/command/OS条件を変更した修正ではない。全失敗の原logsを保存した。
+- 同じGo内容cd7dbd3相当で正常・取消しとも実checkout main/post、Rust1.95.0と+stableの
+  小さいunitが成功した。source改変は理由actual tracked bytes mismatchで入口exit1、
+  実Cargo失敗はexit101。正常worker3060/child31288、保持3PID排出、controller0/worker0。
+  取消しは実Rust readyの後SCM stop、worker43300/Cargo49928を含む保持11PID排出、
+  worker125/controller0/stop0。どちらもactive0と保持handleのsignalledを原記録に保存した。
+  owner tokenから同じ工具入口を呼ぶ負例は専用service identity不一致でexit1。
+- 原NUL設定のsafe.directory警告exit255は別の限定実測。新HOME設定のmain/post成功と区別する。
+  Job所属APIの実測は「何らかのJob」、特定Jobの資格は元Jobからの継承/保持handleに基づく。
+  loopbackは任意job codeのnetwork sandboxではない。直接cargo-clippy等は入口guard契約外。
+- 全追加接続当初のGo raceは66pass/2opt-in skip、vetと両OSbuild成功。その後のmetadataと
+  合成workspace変更はSource/Materialize等の関連race各12pass、新Windows実行物と最終Linux
+  cross buildも成功。既存の有効結果を再利用し、製品workspace/旧fixtureは繰り返していない。
+  最新9bは文書だけなので追加buildなし。製品規模の8分materializer予算/時刻帯は未実証で、
+  子で製品sourceを取って計測しない。正式製品CI成功は未達であり親の統合後工程。
+
+### 原証拠とレビュー
+
+恒久証拠rootは従来の `codex-owned-a92de917e7fd2ae1dd53d6b0b50b9ff0`。
+checkout-short-normal/cancel配下に原JSON/log/SDK指紋/全bytes・SHAのmanifestを保存した。
+checkout-fixture-summary.jsonのSHA256は
+`A6EF6E0CA7B96D6E363AAD1F9681DD8E5DBE503D3C400786FBEB4107BD949E2C`。
+合成HEADはa20d630ca9cfb1bad230cd79c55febba514a8c68、treeは
+73e51de5a32891aedb9e4d05100f11ac93849edc。製品headではない。
+bootstrap4.exeのSHA256は6E517DBC56C14FDAB620038D2437B1A5B641ABE6B39D233D1588B54719666C67。
+埋込みVCSは作成時の旧head+modifiedであり、新commitの埋込みと偽らない。
+
+2797の原Sonnet5.5応答（job165727）は38全文とfixture6を供給してMust0、実検査0。
+原応答SHA256は0A5EE3A5BACE230A9BDC4FFA693D17379100593C4816BC81274176F621146572。
+S1実checkout等の追補は同2797の保存specを更新して有限再レビューする。
+固定specは2797-4a6603d6b5394ea89dfc9dbcefbe8ec9.md、SHA256は
+8760E66E4ED9D01C3AEB7F1AA1BB2C17EB6877C2DA6B8BD7884ED9E12BB7A232。
+start時に旧終端jobが残り、schedulerが旧応答をdoneへ反映したため、新差分の結果とは扱わない。
+その終端反映後に同2797をstartし、正規wait-retry60秒で通常割当へ戻した。
+現在は新追補の原応答待ち。root2736/review関係と既存履歴を保持し、新規レビューToDoや
+直接子Codexを作っていない。旧Must0を最新差分の確認成功へ流用しない。
+
+### 自分の新しい残留8件
+
+全8serviceは回収済みで不在、PID0、追加ACE0。照会可能な当該SID process0。
+照会不能な他process1件は完全censusの成功へ含めない。各profile/hive/classesは
+DeleteProfileWを各1回だけ呼びWin32=32。各rootのplanと正規quarantineも各1回だけ
+LINK_OR_REPARSE_POINTで拒否された。再試行、unload、リンク先走査、別削除APIは行わない。
+checkout-residue-inventory.jsonにroot/SID/容量/リンク数/拒否を個別保存した。
+
+| 所有ID | 配置・結果 |
+|---|---|
+| 4e6b9d1d0ab180ad9ed1b0536c677c86 | owner Temp、Node祖先metadata拒否 |
+| 63a25d868b2cf19c636e6b3fe0f19fe1 | 自分の長いworktree、無効worktree設定の拒否 |
+| 7c76f16a1aa62f080b44aaeb25aff280 | 同上、無効index設定の拒否 |
+| 27b6ee88b6a62c0c78255854c66482c1 | 同上、合成workspace誤認 |
+| f58e52d9e04f0c9f99183b5bbd8fbca9 | 同上、MSVC長いpath失敗 |
+| a8bc311f8a7e6808a1ca1ac891d05249 | 同上、MSVC長いpath失敗 |
+| f90f4faa653d129d2748de35a0e9e1af | 元登録helper worktree、正常成功 |
+| 0b180c837efe14958dce3f7cbb2226fe | 元登録helper worktree、取消し成功 |
+
+build Temp d39753f14e03fbbee0bda6af8c9fa0d1は56file/58,680,720byteを恒久rootへ
+全SHA一致で保存後、既存planの通常削除を別呼出しで実行し、finishでsource_absent確認済み。
+新8件は2381へ具体結果を配送し、旧5件や終了した他担当のSIDには触れない。
+Discord logの既存QuestionStateRecoveryRequiredは再試行せず、ToDoと原証拠へ保持する。
+親2736へ実装と条件を先に配送し、2797完了後のMust解消・最新資格を返す。
+終了前に実job/branch/HEADをscheduler checkpointへ保存し、wait2790--on2797を記録する。
+親2736/2640の完了や2381の回収を技術実装の前提に戻さない。
+

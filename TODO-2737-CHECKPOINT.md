@@ -236,3 +236,15 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   旧2746の隔離物は変更/解除/削除しない。旧2710/2648/2730にも触れない。
 - 親2641の012150候補は受領したが、原PR/headはこの作業のb194のまま。候補の検査成功へ流用しない。親や2761/CodeQLレビューを自分の待ち先にしない。
 - 残りは新差分の別モデルレビュー、単一job/live source受付、共有Cargo gate/専用target/sccache、公式runnerの取消し/登録/lock回収、原通常CI全工程。原PRmerge/Prdは親2641のみ。
+
+### 同jobの公式job照合部（未接続）
+
+- product-ci/normal_ci_admission.goを追加。controllerが明示固定するhead/tree/workflowhash/run/attempt/roleから、実APIのqueued jobまたは自分のrunnerが受けたin_progress jobへ束縛する。
+  repo1154066087/PR3613/ref、workflow_dispatch、ci.yml、準備された4label、原30/20/5/5分、Windows13Cargoを保持する。
+  別source/event/run/attempt/job/label/runnerを拒否する合成API test、Go test/vetとWin/Linux build成功。
+  最初のunit失敗は既存合成fixtureの架空repo名が固定実repo条件と違うため。fixtureを実条件へ合わせ、実repo検査を緩めず成功した。
+- このresolverはread-onlyでCLI起動経路なし。単発所有state、live hook、Cargo gate、runner登録、公式CIはまだ接続していない。
+- 6549a7566afed98dbdb3333af722b3c42fb05778はpush/checkpoint保存済み。新差分の有限レビュー2784はspec保存済みで、登録確認時はtodo。
+  Windows公開SDK2783はjob20261017-114030-todo-2783でdoingを確認。未実行の原13工程を再登録したものではない。
+- Taskの明示例外により、準備/レビュー後のci.yml routeだけは原PR同branchのexpected旧SHA/force=falseで更新可。
+  原feature sourceは編集せず、別の原製品PRも作らない。新head/tree/CodeQL再解析要否を親へ返し、親の完了を待たない。

@@ -236,5 +236,18 @@ must stay in RAM or a dedicated guest; the earlier host-source native acceptance
 is neither a reusable execution resource nor same-SHA official CI evidence.
 
 The independent check delivers the proposal and limitations to parent2641.
-The parent owns the product branch, PR merge and Prd reflection; the proposal
-never certifies those steps or the product's completion.
+Only a reviewed CI runner-route change may update that same product branch,
+with its expected old SHA and force=false, as specifically authorized by the
+task. Product feature source, PR merge and Prd reflection remain with parent2641;
+the proposal never certifies those steps or the product's completion.
+
+`normal_ci_admission.go` adds read-only binding resolution for a controller's
+explicit source/tree/workflow/run/attempt/job role. It accepts only this repo
+and PR, the fixed head ref, full workflow_dispatch, the four prepared routes,
+original timeouts and thirteen Windows Cargo commands. The exact workflow
+digest is mandatory. A fresh queued job must be unclaimed; a live hook must
+match the official assigned runner ID and unique task nonce name. It rechecks
+the PR/ref after inspection. Source/run/event/job/label/runner substitutions
+are covered by synthetic API tests. This helper has no CLI execution path,
+registration, single-use state, Cargo gate or runner hook connected yet. It
+does not constitute completed admission or any official CI result.

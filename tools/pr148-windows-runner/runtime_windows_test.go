@@ -27,3 +27,9 @@ func TestRuntimeFixtureCannotEnterOfficialPlan(t *testing.T) {
 		t.Fatal("runtime fixture authorized an official runner")
 	}
 }
+
+func TestOwnerCannotUseServiceToolEntry(t *testing.T) {
+	if e := checkToolIdentity(fixturePlan()); e == nil {
+		t.Fatal("owner token entered the service SDK")
+	}
+}

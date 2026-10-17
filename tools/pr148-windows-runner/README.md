@@ -180,8 +180,9 @@ entries and bypasses Git filters. Git metadata links, alternates, replacement
 objects and worktree config are refused before ordinary Git object operations.
 The original argv, output and exit code are forwarded to the same new SDK under
 the filtered account, inside the launcher's Job Object. The source tools/target
-remains the actual target. Cargo's compiler descendants use the same rustup-selected
-compiler without a full source scan per crate. Rustup auto self-update is disabled
+remains the actual target. The entry requires this instance's service SID, AU deny-only token and Job
+Object membership. It forwards the job environment so action-added PATH entries
+and explicit compiler selections survive. Rustup auto self-update is disabled
 in this new home so an update does not replace these guards.
 There is deliberately no arbitrary privileged adapter for Rust/C/PowerShell.
 Original Rust/Windows, native-driver and live-chain unit commands stay in the

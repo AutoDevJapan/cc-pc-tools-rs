@@ -8,7 +8,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
 )
 
 func toolEntry(name string, args []string) (int, error) {
@@ -24,6 +26,9 @@ func toolEntry(name string, args []string) (int, error) {
 	if !samePath(self, filepath.Join(p.runtime(), "cargo", "bin", name+".exe")) || !guardTool(name) {
 		return 1, errors.New("fixed tool-entry location required")
 	}
+	if e = checkToolIdentity(p); e != nil {
+		return 1, e
+	}
 	if e = checkControl(root, false); e != nil {
 		return 1, e
 	}
@@ -37,15 +42,10 @@ func toolEntry(name string, args []string) (int, error) {
 	c := exec.Command(filepath.Join(p.runtime(), "sdk", "bootstrap", "bin", name+".exe"), args...)
 	hidden(c)
 	c.WaitDelay = 2 * time.Second
-	c.Env = runtimeSDKEnv(p, os.Environ())
-	if name == "cargo" {
-		// Cargo itself was guarded. Its compiler descendants use the same
-		// rustup-selected toolchain directly, without rescanning the tree once
-		// per crate. A standalone rustc/rustdoc invocation still enters here.
-		for _, k := range []string{"rustc", "rustdoc"} {
-			c.Env = replaceEnv(c.Env, strings.ToUpper(k), filepath.Join(p.runtime(), "sdk", "bootstrap", "bin", k+".exe"))
-		}
-	}
+	// Preserve the job's SDK/action PATH and any explicit compiler selection.
+	// The listener inherited the initialized SDK; resetting it here would drop
+	// tools added by an original workflow action.
+	c.Env = os.Environ()
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -57,6 +57,32 @@ func toolEntry(name string, args []string) (int, error) {
 		return c.ProcessState.ExitCode(), nil
 	}
 	return 0, nil
+}
+
+func checkToolIdentity(p Plan) error {
+	var token syscall.Handle
+	r, _, e := openToken.Call(^uintptr(0), 8, uintptr(unsafe.Pointer(&token)))
+	if r == 0 {
+		return e
+	}
+	defer syscall.CloseHandle(token)
+	want, e := serviceSID(p)
+	if e != nil {
+		return e
+	}
+	got, e := tokenUserSID(token)
+	if e != nil || got != want {
+		return errors.New("tool entry requires its dedicated service identity")
+	}
+	if e = authenticatedUsersDenyOnly(token); e != nil {
+		return e
+	}
+	var member uint32
+	r, _, e = inJob.Call(^uintptr(0), 0, uintptr(unsafe.Pointer(&member)))
+	if r == 0 || member == 0 {
+		return errors.New("tool entry requires the finite service Job Object")
+	}
+	return nil
 }
 
 func checkToolSource(p Plan) error {

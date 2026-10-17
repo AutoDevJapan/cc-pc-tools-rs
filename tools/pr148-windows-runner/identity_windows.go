@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -245,18 +244,9 @@ func verifySource(p Plan, source string, pristine bool) error {
 	if !samePath(source, p.source()) {
 		return errors.New("checkout must occupy the fixed workspace path")
 	}
-	run := func(args ...string) ([]byte, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		c := exec.CommandContext(ctx, `C:\Program Files\Git\cmd\git.exe`, append([]string{"--no-optional-locks", "-c", "safe.directory=" + source, "-c", "core.fsmonitor=false", "-c", "core.hooksPath=NUL", "-C", source}, args...)...)
-		hidden(c)
-		c.Env = envFor(p)
-		var out bytes.Buffer
-		c.Stdout = &out
-		if e := c.Run(); e != nil {
-			return nil, errors.New("source Git verification failed")
-		}
-		return out.Bytes(), nil
+	run := func(args ...string) ([]byte, error) { return sourceGit(source, args...) }
+	if e := verifyTrackedBytes(source, p.Tree); e != nil {
+		return e
 	}
 	keys, e := run("config", "--local", "--no-includes", "--name-only", "--list")
 	if e != nil {

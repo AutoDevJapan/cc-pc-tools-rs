@@ -108,7 +108,7 @@ cancel:
 }
 
 func execute(p Plan) error {
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		return executeThroughGate(p)
 	}
 	return executeAdmitted(p)
@@ -124,14 +124,19 @@ func executeAdmitted(p Plan) (result error) {
 			result = errors.Join(result, stopFinite(p))
 		}
 	}()
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		if e = verifyGateAllocation(); e != nil {
 			return e
 		}
-		if e = audit(p); e != nil {
-			return e
+		if p.Fixture == "" {
+			if e = audit(p); e != nil {
+				return e
+			}
 		}
-		secret, e = boundedRead(os.Stdin, 1024)
+		secret = []byte("credential-free-fixture")
+		if !p.RuntimeFixture {
+			secret, e = boundedRead(os.Stdin, 1024)
+		}
 		if e != nil {
 			return e
 		}
@@ -147,7 +152,7 @@ func executeAdmitted(p Plan) (result error) {
 	if e = startFinite(p); e != nil {
 		return e
 	}
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		until := time.Now().Add(30 * time.Second)
 		for {
 			f, err := openRegistrationPipe(p)
@@ -197,7 +202,10 @@ func executeAdmitted(p Plan) (result error) {
 			if code != 0 {
 				return errors.New("finite service reported failure; inspect receipts")
 			}
-			if p.Fixture == "" {
+			if p.Fixture == "" || p.RuntimeFixture {
+				if p.RuntimeFixture {
+					return nil
+				}
 				if e = validateLauncherSuccess(p); e != nil {
 					return e
 				}
@@ -217,7 +225,7 @@ func runOwnedWorker(p Plan) error {
 	var secret []byte
 	var err error
 	var admitted admission
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		secret, err = pipeInput(p)
 		if err != nil {
 			return err
@@ -254,7 +262,7 @@ func runOwnedWorker(p Plan) error {
 	// Explicit environment excludes all host credentials, owner homes and jobs.
 	env := envFor(p)
 	env = append(env, "PR148_LAUNCHER_PID="+strconv.Itoa(os.Getpid()))
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		env = append(env, "ACTIONS_RUNNER_INPUT_TOKEN="+admitted.Token, "CODEX_JOBS_CARGO_LOCK_HELD="+admitted.Held, "CARGO_BUILD_JOBS="+admitted.Jobs, "RUST_TEST_THREADS="+admitted.Threads, "NEXTEST_TEST_THREADS="+admitted.Threads)
 	}
 	var block []uint16
@@ -400,6 +408,11 @@ func worker(p Plan) error {
 	if e = authenticatedUsersDenyOnly(t); e != nil {
 		return e
 	}
+	if p.Fixture == "" || p.RuntimeFixture {
+		if e = initializeSDK(p); e != nil {
+			return e
+		}
+	}
 	if p.Fixture != "" {
 		return serviceFixture(p, sid, e == nil)
 	}
@@ -426,7 +439,7 @@ func worker(p Plan) error {
 	c = exec.Command(listener, "run", "--startuptype", "service")
 	hidden(c)
 	c.Dir = p.runner()
-	c.Env = workerEnv(p)
+	c.Env = runtimeSDKEnv(p, workerEnv(p))
 	c.Stdout = io.Discard
 	c.Stderr = io.Discard
 	if e = c.Run(); e != nil {
@@ -435,6 +448,11 @@ func worker(p Plan) error {
 	return nil
 }
 func serviceFixture(p Plan, sid string, auChecked bool) error {
+	if p.RuntimeFixture {
+		if e := runtimeFixtureCommands(p); e != nil {
+			return e
+		}
+	}
 	c := exec.Command(filepath.Join(p.Root, "helper.exe"), "fixture-child", p.Root)
 	hidden(c)
 	c.Env = envFor(p)
@@ -477,6 +495,23 @@ func serviceFixture(p Plan, sid string, auChecked bool) error {
 		time.Sleep(time.Duration(p.Seconds+10) * time.Second)
 	} else {
 		time.Sleep(200 * time.Millisecond)
+	}
+	return nil
+}
+
+func runtimeFixtureCommands(p Plan) error {
+	env := runtimeSDKEnv(p, workerEnv(p))
+	for _, v := range []struct {
+		stage, name string
+		args        []string
+	}{
+		{"fixture-rustup", "rustup.exe", []string{"show", "active-toolchain"}},
+		{"fixture-cargo-1.95.0", "cargo.exe", []string{"+1.95.0", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1"}},
+		{"fixture-cargo-stable", "cargo.exe", []string{"+stable", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1"}},
+	} {
+		if _, e := sdkCommand(p, v.stage, filepath.Join(p.runtime(), "cargo", "bin", v.name), env, v.args...); e != nil {
+			return e
+		}
 	}
 	return nil
 }

@@ -30,7 +30,10 @@ func (a admission) validate() error {
 func executeThroughGate(p Plan) error {
 	// This branch is NOT used by credential-free fixtures. Parent must have an
 	// allocated cargo resource before invoking real execution.
-	token, e := boundedRead(os.Stdin, 1024)
+	token, e := []byte("credential-free-fixture"), error(nil)
+	if !p.RuntimeFixture {
+		token, e = boundedRead(os.Stdin, 1024)
+	}
 	if e != nil {
 		return e
 	}
@@ -61,7 +64,7 @@ func gateChild(args []string) error {
 	if e != nil {
 		return e
 	}
-	if len(args) != 3 || args[0] != "test" || args[1] != "--target-dir" || args[2] != p.target() || p.Fixture != "" {
+	if len(args) != 3 || args[0] != "test" || args[1] != "--target-dir" || args[2] != p.target() || (p.Fixture != "" && !p.RuntimeFixture) {
 		return errors.New("gate child invocation rejected")
 	}
 	if e = verifyGateAllocation(); e != nil {

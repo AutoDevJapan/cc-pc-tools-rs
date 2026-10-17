@@ -113,11 +113,19 @@ func prepare(p Plan, archive string) error {
 			return e
 		}
 	}
+	if p.Fixture == "" || p.RuntimeFixture {
+		if e = prepareRuntimeSDK(p); e != nil {
+			return e
+		}
+	}
 	if p.Fixture == "" {
 		if archive == "" {
 			return errors.New("official archive required")
 		}
 		if e = extractRunner(p, archive); e != nil {
+			return e
+		}
+		if e = materializeSource(p, api); e != nil {
 			return e
 		}
 		for _, stage := range []string{"hook-start", "hook-completed"} {
@@ -126,6 +134,16 @@ func prepare(p Plan, archive string) error {
 			if e = writeNewBytes(filepath.Join(p.Root, stage+".ps1"), []byte(text)); e != nil {
 				return e
 			}
+		}
+	}
+	if p.RuntimeFixture {
+		h, tree, data := syntheticSource()
+		s, err := fetchSource(h, tree, syntheticRead(data))
+		if err != nil {
+			return err
+		}
+		if e = writeSource(p.source(), s); e != nil {
+			return e
 		}
 	}
 	if e = installService(p); e != nil {

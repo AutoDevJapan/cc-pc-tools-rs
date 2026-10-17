@@ -55,6 +55,7 @@ type Plan struct {
 	Seconds        int    `json:"seconds"`
 	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
+	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
 }
 
 func (p Plan) name() string    { return "CC-PR148-" + p.Instance }
@@ -81,6 +82,9 @@ func (p Plan) validate() error {
 			return errors.New("credential-free fixture must retain original source pins")
 		}
 		return nil
+	}
+	if p.RuntimeFixture {
+		return errors.New("runtime fixture cannot be official execution")
 	}
 	if !validSHA(p.Head) || p.Head == sourceHead || !validSHA(p.Tree) || p.Tree == sourceTree || p.PRHead != p.Head || p.WorkflowSHA != p.Head {
 		return errors.New("explicit new routing-only dispatch source required")

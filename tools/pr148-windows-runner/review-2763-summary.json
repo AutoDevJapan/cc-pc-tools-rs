@@ -1,0 +1,41 @@
+{
+  "subsequent_profile_hive_classes_unrecovered": 2,
+  "known_unrecovered_total": 5,
+  "review_source_head": "3ba895f",
+  "executed_build_success": true,
+  "official_runner_verified": false,
+  "executed_opt_in_skipped": 2,
+  "review_todo": 2763,
+  "raw_reply_bytes": 9748,
+  "physical_residue_freshly_rechecked": false,
+  "raw_reply_sha256": "1317342F7B49BA3FC6531F9F4854809AA3E2DA3D3A563B06DABA483A070BD312",
+  "controller_nonadmin_verified": false,
+  "real_shared_gate_verified": false,
+  "validated_binaries": [
+    {
+      "sha256": "FBB4C8FDD8A91EE8578E3160690780A273A043AB3209ACF9EF1CF4770F37FDCD",
+      "bytes": 5730816,
+      "instance": "6192f4b25e5b6a1a5cf4475ec72f5398",
+      "source_code": "3ba895f",
+      "source_caveat": "built immediately before commit from identical Go source; build metadata may show preceding revision/dirty"
+    },
+    {
+      "sha256": "FBB4C8FDD8A91EE8578E3160690780A273A043AB3209ACF9EF1CF4770F37FDCD",
+      "bytes": 5730816,
+      "instance": "62233620ef55db0d7638390a4e15498a",
+      "source_code": "3ba895f",
+      "source_caveat": "built immediately before commit from identical Go source; build metadata may show preceding revision/dirty"
+    }
+  ],
+  "executed_vet_success": true,
+  "previous_profile_hive_classes_unrecovered": 3,
+  "prior_2746_evidence_read": true,
+  "must": 0,
+  "primary_reference_files_read": 4,
+  "executed_go_tests_passed": 11,
+  "review_doc_head": "9b0f205",
+  "official_ci_success_claimed": false,
+  "go_files_read": 18,
+  "new_postreview_delta_approved": true,
+  "postreview_delta_approval_scope": "source review only; ToDo2764; code da2b45e; Must0; no official execution or cleanup approval"
+}

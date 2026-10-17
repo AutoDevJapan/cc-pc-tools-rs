@@ -1,5 +1,40 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 20:37 通常helper merge受入（以下を優先）
+
+703e5edの全9正式checkは8success/1skipped、全終端/失敗0。Build speedの残jobも
+9分27秒でsuccessを確認した。3正式runの原log ZIPを値を表示せず保存し、bytes/SHA/exit0を
+resume-201652/official-helper-logs-manifest.jsonへ記録した。helper原ZIPは47,225 / 260,965 /
+229,085bytes。保存先の元manifest18fileも再照合し不一致0。
+PR189を通常readyへ戻し、--match-head-commitで703e5edを固定して通常mergeした。
+実merge=3af45ee2d312fcc8b9b3fe5e9068c9cacdc2dd2b、2026-10-17T11:37:20Z、PR closed/merged。
+製品PR148をmergeした結果ではない。
+
+### 配布前の並行変更と保護判定
+
+mergeの第1親は35685687、第2親は703e5ed。mainで先に通常mergeされたrelease-build関連10fileが
+product-ciへ加わっており、merged module tree80aa1c631e8c505631f4e8fbdd2f0320837c3a8cと
+703e5edでbuildしたtree21ab936d68c60757de9e0db003914e3304cc57a6は一致しない。
+Windows runner moduleは両方8858bd95で一致。旧binaryを配布すると並行変更を失うため配布0。
+次の配布用product-ciは必要なmerged sourceから生成し、並行変更と実hashを再照合する。
+
+既存配置先のscrub391はclassification_unverified=true/client_resource=trueを返した。
+同じ読取batchで判定後のファイル名/サイズ/時刻・実binary hashの取得まで進んだが、
+ファイル本文/秘密/認証情報の読取・実行・変更は0。以降そのnamespaceへ追加アクセスしていない。
+この保護判定を上書き・迂回せず、正式な既存配布担当の受入を必要条件として保持する。
+親branchのsource受入と配布先の保護判定は別であり、helper mergeをPrd配置成功と呼ばない。
+
+mainの自然push CIはrun39029403387（Build speed）、39029403332（CodeQL）、39029403364
+（Product CI helper）が起動受付された。まだ終端ではなく、これらを再実行しない。
+PR head703e5edの成功とmerge headのCIを分けて再開時に確認する。
+
+製品refは75a4051を維持、repo専用runnerはAPIで0。新container/service/runner/追加ACEは0、
+今回の2Tempはsource_absent、所有Chromeは正規close済み、有限watchもexit0で終了した。
+未完は送信フィルターの正規適合、merged helper CI/必要配布、製品の正式4jobと元2640への成功証拠。
+自分の2790待ちは既に満たされたため戻さず、2640への逆依存も作らない。
+通常の技術retryで保存し、次は新しい受入receipt/実source/実binaryを確認する。
+同じgate hashのままroute再送や、別API/符号化/認証/allowlist/guard変更へ進まない。
+
 ## 2026-10-17 20時台・通常push成功と送信不一致の確定（最新）
 
 helper PR189へ703e5ed9bbfb69e247046954ff0f92bd83f2a74fを非forceでpush成功。

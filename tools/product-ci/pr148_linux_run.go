@@ -24,6 +24,23 @@ func pr148Transfer(ctx context.Context, n *pr148Namespace, binary []byte) error 
 	return c.Run()
 }
 
+func pr148HostCheckout(ctx context.Context, p pr148LinuxPlan, n *pr148Namespace) error {
+	if _, e := n.inspect(ctx); e != nil {
+		return e
+	}
+	for expr, want := range map[string]string{"HEAD": p.Head, "HEAD^{tree}": p.Tree} {
+		b, e := cmd(ctx, docker, "exec", "-e", "GIT_CONFIG_GLOBAL=/dev/null", "-e", "GIT_CONFIG_NOSYSTEM=1", n.ID, "git", "-C", pr148Workspace, "rev-parse", expr).Output()
+		if e != nil || strings.TrimSpace(string(b)) != want {
+			return errors.New("host actual Git HEAD/tree pin rejected")
+		}
+	}
+	b, e := cmd(ctx, docker, "exec", n.ID, "git", "-C", pr148Workspace, "config", "--local", "--get-regexp", `http\..*\.extraheader|credential\..*`).Output()
+	if len(b) != 0 || (e != nil && exitStatus(e) != 1) {
+		return errors.New("host observed checkout authentication still present")
+	}
+	return nil
+}
+
 // Integration entry point for parent2736 ONLY. This implementation child runs
 // fixtures, never this function. Tokens and source bytes are delivered by stdin
 // to a new tmpfs namespace; the existing resident bridge is never contacted.
@@ -106,11 +123,8 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	}
 	// Reconfirm actual materialized HEAD, complete index tree and absence of
 	// checkout auth before any registration token is requested.
-	for expr, want := range map[string]string{"HEAD": p.Head, "HEAD^{tree}": p.Tree} {
-		b, e := cmd(ctx, docker, "exec", n.ID, "git", "-C", pr148Workspace, "rev-parse", expr).Output()
-		if e != nil || strings.TrimSpace(string(b)) != want {
-			return errors.New("host preflight actual Git pin rejected")
-		}
+	if e = pr148HostCheckout(ctx, p, n); e != nil {
+		return e
 	}
 	workflow, e := pr148Contents(ctx, get, pr148Workflows[0].Path, pr148Head)
 	if e != nil {
@@ -130,7 +144,25 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	flight, cancel := context.WithCancel(ctx)
 	defer cancel()
 	h := &pr148CargoHost{plan: p, policy: policy, ns: n, dir: dir, target: filepath.Join(dir, "cargo-target")}
-	h.recheck = func(c context.Context) error { return verifyPR148LinuxRun(c, p, get, false) }
+	h.recheck = func(c context.Context) error {
+		if e := verifyPR148LinuxRun(c, p, get, false); e != nil {
+			return e
+		}
+		var job struct {
+			ID         int64
+			RunID      int64  `json:"run_id"`
+			RunAttempt int    `json:"run_attempt"`
+			RunnerName string `json:"runner_name"`
+			Status     string
+		}
+		if e := get(c, fmt.Sprintf("repos/%s/actions/jobs/%d", pr148Repo, p.JobID), &job); e != nil {
+			return e
+		}
+		if job.ID != p.JobID || job.RunID != p.RunID || job.RunAttempt != p.Attempt || job.RunnerName != n.Name || job.Status != "in_progress" {
+			return errors.New("fixed Linux job is not assigned to owned runner")
+		}
+		return pr148HostCheckout(c, p, n)
+	}
 	h.execute = h.run
 	endpoint, closeServer, e := startPR148Cargo(flight, h)
 	if e != nil {
@@ -236,11 +268,8 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 			return e
 		}
 	}
-	for expr, want := range map[string]string{"HEAD": p.Head, "HEAD^{tree}": p.Tree} {
-		b, e := cmd(ctx, docker, "exec", n.ID, "git", "-C", pr148Workspace, "rev-parse", expr).Output()
-		if e != nil || strings.TrimSpace(string(b)) != want {
-			return errors.New("host postflight actual Git pin rejected")
-		}
+	if e = pr148HostCheckout(ctx, p, n); e != nil {
+		return e
 	}
 	if e = verifyPR148LinuxRun(ctx, p, get, true); e != nil {
 		return e

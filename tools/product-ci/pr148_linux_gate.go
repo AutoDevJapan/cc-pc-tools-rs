@@ -13,6 +13,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,6 +42,9 @@ type pr148CargoPolicy [4]string
 
 func pr148Policy(workflow []byte) (pr148CargoPolicy, error) {
 	var policy pr148CargoPolicy
+	if digest(workflow) != pr148Workflows[0].OriginalSHA {
+		return policy, errors.New("original Cargo workflow digest rejected")
+	}
 	root, e := pr148YAML(workflow)
 	if e != nil {
 		return policy, e
@@ -64,7 +68,7 @@ func pr148Policy(workflow []byte) (pr148CargoPolicy, error) {
 			for i, want := range pr148CargoArgs {
 				ok := reflect.DeepEqual(args, want)
 				if i == 0 {
-					ok = ok || reflect.DeepEqual(args, []string{"fmt", "--all", "--manifest-path", "tools/Cargo.toml", "--", "--check"})
+					ok = args[0] == "fmt" && !strings.ContainsAny(strings.Join(args, " "), "'\";$`\\")
 				}
 				if ok {
 					policy[i] = strings.Join(args, " ")
@@ -288,8 +292,15 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 	c.Env = append(pr148HostEnv(), "CODEX_JOBS_REAL_CARGO="+self, "CODEX_JOBS_CARGO_LOCK_DIR="+pr148GateDir, "CC_PR148_GATE_CHILD=1", "CARGO_TARGET_DIR="+h.target)
 	var output boundedBuffer
 	output.limit = 32 << 20
-	c.Stdout = &output
-	c.Stderr = &output
+	stamp := fmt.Sprintf("cargo-%d-%d", index, time.Now().UnixNano())
+	log, e := os.OpenFile(filepath.Join(h.dir, stamp+".private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		return result, e
+	}
+	defer log.Close()
+	writer := io.MultiWriter(log, &output)
+	c.Stdout = writer
+	c.Stderr = writer
 	stdin, e := c.StdinPipe()
 	if e != nil {
 		return result, e
@@ -311,10 +322,14 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 		ret = <-done
 	}
 	_ = stdin.Close()
+	waitErr := ret
 	ret = errors.Join(ret, <-written)
-	result.Exit = exitStatus(ret)
+	result.Exit = exitStatus(waitErr)
 	result.Log = append([]byte(nil), output.Bytes()...)
 	result.SHA = digest(result.Log)
+	if e = log.Sync(); e != nil {
+		return result, e
+	}
 	// A gate-child final record is required even if Cargo failed. A missing
 	// record means no admission or an uncertain Docker exec, never success.
 	var proof pr148CargoResult
@@ -323,10 +338,6 @@ func (h *pr148CargoHost) runWithFixture(ctx context.Context, index int, fixture,
 		return result, errors.New("gate child drain receipt absent")
 	}
 	result.Drained = true
-	stamp := fmt.Sprintf("cargo-%d-%d", index, time.Now().UnixNano())
-	if e = os.WriteFile(filepath.Join(h.dir, stamp+".private.log"), result.Log, 0600); e != nil {
-		return result, e
-	}
 	if e = pr148SaveNew(filepath.Join(h.dir, stamp+".private.json"), struct {
 		Exit, Bytes int
 		SHA         string
@@ -350,19 +361,24 @@ func startPR148Cargo(ctx context.Context, h *pr148CargoHost) (endpoint string, c
 	s := &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 26 * time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
 	done := make(chan struct{})
 	go func() { _ = s.Serve(l); close(done) }()
+	var once sync.Once
+	var closeErr error
 	return "http://host.docker.internal:" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port) + "/pr148/cargo", func() error {
-		// The parent cancels ctx before shutdown. Every handler retains the gate
-		// through guest drain, and Shutdown waits for the complete handler flight.
-		c, stop := context.WithTimeout(context.Background(), 60*time.Second)
-		defer stop()
-		e := s.Shutdown(c)
-		if e != nil {
-			_ = s.Close()
-		}
-		<-done
-		h.mu.Lock()
-		h.mu.Unlock()
-		return e
+		once.Do(func() {
+			// The parent cancels ctx before shutdown. Every handler retains the gate
+			// through guest drain, and Shutdown waits for the complete handler flight.
+			c, stop := context.WithTimeout(context.Background(), 60*time.Second)
+			defer stop()
+			e := s.Shutdown(c)
+			if e != nil {
+				_ = s.Close()
+			}
+			<-done
+			h.mu.Lock()
+			h.mu.Unlock()
+			closeErr = e
+		})
+		return closeErr
 	}, nil
 }
 
@@ -458,8 +474,13 @@ func pr148GatedChild(args []string) int {
 
 func pr148RequestCargo(ctx context.Context, endpoint, key string, p pr148LinuxPlan, args []string) (pr148CargoResult, error) {
 	var result pr148CargoResult
-	if !strings.HasPrefix(endpoint, "http://host.docker.internal:") || (!strings.HasSuffix(endpoint, "/pr148/cargo") && !strings.HasSuffix(endpoint, "/pr148/rustup")) || len(key) != 64 {
+	u, e := url.Parse(endpoint)
+	if e != nil || u.Scheme != "http" || u.Hostname() != "host.docker.internal" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "/pr148/cargo" && u.Path != "/pr148/rustup") || len(key) != 64 {
 		return result, errors.New("Cargo callback endpoint rejected")
+	}
+	port, e := strconv.Atoi(u.Port())
+	if e != nil || port < 1 || port > 65535 {
+		return result, errors.New("Cargo callback port rejected")
 	}
 	b, _ := json.Marshal(pr148CargoRequest{p, 1392152644, key, args})
 	r, e := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(b))

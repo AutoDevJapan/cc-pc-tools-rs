@@ -240,20 +240,48 @@ fn child_is_drained() {
 				t.Fatal("kernel restrictions not confirmed")
 			}
 			_ = os.WriteFile(filepath.Join(caseDir, "landlock.private.log"), b, 0600)
-			h := &pr148CargoHost{plan: p, policy: policy, key: key, ns: n, dir: caseDir, target: filepath.Join(caseDir, "cargo-target")}
+			h := &pr148CargoHost{plan: p, policy: policy, key: key, ns: n, dir: caseDir, target: filepath.Join(caseDir, "cargo-target"), started: true, recheck: func(context.Context) error { return nil }}
 			flight, cancel := context.WithCancel(ctx)
 			defer cancel()
 			done := make(chan struct {
 				r pr148CargoResult
 				e error
 			}, 1)
-			go func() {
-				r, e := h.runWithFixture(flight, 1, true, cancelCase)
+			h.execute = func(callCtx context.Context, index int) (pr148CargoResult, error) {
+				r, e := h.runWithFixture(callCtx, index, true, cancelCase)
 				done <- struct {
 					r pr148CargoResult
 					e error
 				}{r, e}
+				return r, e
+			}
+			endpoint, closeServer, e := startPR148Cargo(flight, h)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer func() {
+				cancel()
+				if e := closeServer(); e != nil {
+					t.Error(e)
+				}
 			}()
+			packet.Callback = endpoint
+			packet.Nonce = h.key
+			b, _ = json.Marshal(packet)
+			transfer("/runner/pr148-plan.json", b)
+			callbackLog, e := os.OpenFile(filepath.Join(caseDir, "guest-callback.private.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer callbackLog.Close()
+			callback := cmd(ctx, docker, "exec", n.ID, "/runner/product-ci", "pr148-fixture-callback")
+			callback.Stdout = callbackLog
+			callback.Stderr = callbackLog
+			if e = callback.Start(); e != nil {
+				t.Fatal(e)
+			}
+			callbackDone := make(chan error, 1)
+			go func() { callbackDone <- callback.Wait() }()
 			ready := false
 			deadline := time.Now().Add(90 * time.Second)
 			for !ready && time.Now().Before(deadline) {
@@ -262,6 +290,8 @@ fn child_is_drained() {
 					break
 				}
 				select {
+				case e := <-callbackDone:
+					t.Fatalf("guest callback ended before real child observation: %v", e)
 				case result := <-done:
 					t.Fatalf("fixture ended before real child observation: %v exit=%d log=%s", result.e, result.r.Exit, result.r.Log)
 				case <-time.After(100 * time.Millisecond):
@@ -282,10 +312,14 @@ fn child_is_drained() {
 				}
 			}
 			result := <-done
+			callbackExit := <-callbackDone
+			if !cancelCase && callbackExit != nil {
+				t.Fatalf("guest callback failed: %v", callbackExit)
+			}
 			if result.e != nil || !result.r.Drained {
 				t.Fatalf("fixture drain: %v %s", result.e, result.r.Log)
 			}
-			if (!cancelCase && result.r.Exit != 0) || (cancelCase && result.r.Exit == 0) {
+			if (!cancelCase && result.r.Exit != 0) || (cancelCase && result.r.Exit != 125) {
 				t.Fatalf("fixture exit=%d cancel=%t %s", result.r.Exit, cancelCase, result.r.Log)
 			}
 			if e = cmd(ctx, docker, "exec", n.ID, "sh", "-c", "! kill -0 $(cat /work/fixture-child.pid) 2>/dev/null").Run(); e != nil {
@@ -299,35 +333,5 @@ fn child_is_drained() {
 				t.Fatal(e)
 			}
 		})
-	}
-}
-
-func TestPR148RecoverOwnFixtureNamespaces(t *testing.T) {
-	dir := os.Getenv("CC_PR148_RECOVER_FIXTURE_DIR")
-	if dir == "" {
-		t.Skip("explicit owned failed-fixture root required")
-	}
-	entries, e := filepath.Glob(filepath.Join(dir, "namespace-*", "namespace-intent.private.json"))
-	if e != nil {
-		t.Fatal(e)
-	}
-	for _, f := range entries {
-		if _, e := os.Stat(filepath.Join(filepath.Dir(f), "namespace-result.private.json")); e == nil {
-			continue
-		}
-		if _, e := os.Stat(filepath.Join(filepath.Dir(f), "namespace-recovered.private.json")); e == nil {
-			continue
-		}
-		b, e := os.ReadFile(f)
-		var n pr148Namespace
-		if e != nil || json.Unmarshal(b, &n) != nil {
-			t.Fatal("own fixture intent unavailable")
-		}
-		if e = n.dispose(); e != nil {
-			t.Fatal(e)
-		}
-		if e = pr148SaveNew(filepath.Join(filepath.Dir(f), "namespace-recovered.private.json"), n); e != nil {
-			t.Fatal(e)
-		}
 	}
 }

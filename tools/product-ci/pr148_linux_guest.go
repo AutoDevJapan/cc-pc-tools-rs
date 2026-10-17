@@ -258,8 +258,23 @@ if /opt/rust/bin/cargo --version >/dev/null 2>&1; then exit 81; fi
 if cp /opt/rust/bin/cargo /work/copied-cargo 2>/dev/null; then exit 82; fi
 if cat /toolchain/protected >/dev/null 2>&1; then exit 83; fi
 if cat /proc/1/root/opt/rust/bin/cargo >/dev/null 2>&1; then exit 84; fi
+if (printf 'tamper' > /runner/product-ci) 2>/dev/null; then exit 85; fi
+if (printf 'tamper' > /runner/pr148-plan.json) 2>/dev/null; then exit 86; fi
 printf 'landlock-direct-copy-proc-toolchain-denied\n'
 `}, []string{"PATH=/usr/bin:/bin", "HOME=/home/runner"}, true)
+	case "pr148-fixture-callback":
+		p, err := pr148ReadGuest()
+		if err != nil || p.Plan.Head != strings.Repeat("1", 40) || p.Plan.Tree != strings.Repeat("2", 40) || p.Plan.RunID != 101 || p.Plan.JobID != 102 {
+			return true, 120
+		}
+		ctx, stop := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer stop()
+		r, err := pr148RequestCargo(ctx, p.Callback, p.Nonce, p.Plan, strings.Fields(p.Policy[1]))
+		if err != nil {
+			return true, 124
+		}
+		_, _ = os.Stdout.Write(r.Log)
+		return true, r.Exit
 	case "pr148-linux":
 		if len(os.Args) != 6 {
 			return true, 1

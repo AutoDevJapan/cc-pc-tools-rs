@@ -14,7 +14,7 @@ func existingStatusAnswerFixture(t *testing.T) (*progressFixture, *Request) {
 	t.Helper()
 	f := progressTestFixture(t)
 	f.mu.Lock()
-	f.source.Content = "今って作業してるの？"
+	f.source.Content = "<@400>\n今って作業してるの？"
 	f.mu.Unlock()
 	configureStateRequestForTest(f, 2705)
 	answer := Message{ID: "1560865966252888147", Channel: f.source.Channel, Content: "PRIVATE_EXISTING_STATUS_ANSWER", Timestamp: f.now.UTC().Format(time.RFC3339Nano), Flags: 4096}
@@ -117,7 +117,7 @@ func TestInvalidOrAmbiguousExistingAnswerPlanNeverFallsThroughToResend(t *testin
 func TestPureNewStatusQuestionBypassesProductGuardAndUsesSilentIdempotentSender(t *testing.T) {
 	f := progressTestFixture(t)
 	f.mu.Lock()
-	f.source.Content = "今って作業してるの？"
+	f.source.Content = "<@!400>\n今って作業してるの？"
 	f.mu.Unlock()
 	f.r.Config.ProductReports = nil
 	s := f.source
@@ -141,8 +141,21 @@ func TestPureNewStatusQuestionBypassesProductGuardAndUsesSilentIdempotentSender(
 
 func TestPureStatusClassifierNeverAcceptsExecutionMoneyOrOldShortAnswer(t *testing.T) {
 	for _, body := range []string{"a", "b", "今って作業してるの？有料プランを購入して", "今って作業してるの？ゲームを起動して", "作業を開始して", "quoted: 今って作業してるの？"} {
-		if isPureStatusQuestion(body) {
+		if isPureStatusQuestion(body, "400") {
 			t.Fatal("status question classification expanded an instruction or approval")
+		}
+	}
+}
+
+func TestStatusQuestionAllowsOnlyOneConfiguredBotMentionPrefix(t *testing.T) {
+	for _, body := range []string{"今って作業してるの？", "<@400>\n今って作業してるの？", "  <@!400> 今って作業してるの？\n"} {
+		if !isPureStatusQuestion(body, "400") {
+			t.Fatal("configured bot status question was not recognized")
+		}
+	}
+	for _, body := range []string{"<@401>\n今って作業してるの？", "<@400><@400>今って作業してるの？", "<@400>今って作業してるの？すべて止めて", "prefix <@400>今って作業してるの？"} {
+		if isPureStatusQuestion(body, "400") {
+			t.Fatal("another recipient or additional instruction became a status question")
 		}
 	}
 }

@@ -39,7 +39,7 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 	if thread.ID != request.Thread || thread.Type != 11 || thread.Guild != r.State.Destination.Guild || !((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || botRequest || (thread.Parent == r.State.Destination.Forum && thread.Owner == r.State.Destination.Bot)) {
 		return errors.New("owner thread scope differs")
 	}
-	if thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text)) {
+	if thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text, r.State.Destination.Bot)) {
 		request.Phase = "origin_pending"
 		if err := r.save(); err != nil {
 			return err

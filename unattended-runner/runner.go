@@ -423,7 +423,7 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 				phase = "context_pending"
 			}
 		}
-		if isPureStatusQuestion(text) {
+		if isPureStatusQuestion(text, r.State.Destination.Bot) {
 			phase = "status_query"
 		}
 		if message.Reference.Channel != "" && (message.Reference.Channel != thread.ID || (message.Reference.Guild != "" && message.Reference.Guild != r.State.Destination.Guild)) {

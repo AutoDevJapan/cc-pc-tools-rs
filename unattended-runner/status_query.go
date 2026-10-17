@@ -14,14 +14,23 @@ import (
 
 var pureStatusQuestion = regexp.MustCompile(`^(?:今(?:って|は)?|いま)(?:作業|仕事)(?:してる|しています)(?:の|か|のか)?[?？]$`)
 
-func isPureStatusQuestion(text string) bool {
-	return pureStatusQuestion.MatchString(strings.TrimSpace(text))
+func isPureStatusQuestion(text, bot string) bool {
+	text = strings.TrimSpace(text)
+	if bot != "" {
+		for _, prefix := range []string{"<@" + bot + ">", "<@!" + bot + ">"} {
+			if strings.HasPrefix(text, prefix) {
+				text = strings.TrimSpace(strings.TrimPrefix(text, prefix))
+				break
+			}
+		}
+	}
+	return pureStatusQuestion.MatchString(text)
 }
 
 // A pinned, already-verified answer is an observation, not a new send request.
 // In particular it cannot authorize any different product or old question.
 func (r *Runner) verifyExistingStatusAnswer(ctx context.Context, c ProductReportConfig, req *Request) bool {
-	if !isPureStatusQuestion(req.Text) {
+	if !isPureStatusQuestion(req.Text, r.State.Destination.Bot) {
 		return false
 	}
 	bytes, err := os.ReadFile(c.Source.AnswerReceipt)
@@ -75,7 +84,7 @@ func (r *Runner) answerStatusQuery(ctx context.Context, req *Request) error {
 	if err := r.validateRequest(ctx, req); err != nil {
 		return err
 	}
-	if !isPureStatusQuestion(req.Text) {
+	if !isPureStatusQuestion(req.Text, r.State.Destination.Bot) {
 		req.Phase = "captured"
 		return r.save()
 	}

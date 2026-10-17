@@ -212,7 +212,7 @@ https://docs.github.com/en/actions/reference/runners/self-hosted-runners
 `merged-inspect` performs read-only checks for repository 1285649124, PR1002,
 merge `41090d19329b81dd1bd076f3336d723823be4b82`, tree
 `007b84082008ea9effd5052f63856273aabbfb17`, ordered original parents, original
-PR head and its branch, and current main. No other merge or latest-head mode
+PR head commit and tree, original PR base SHA, and current main. No other merge or latest-head mode
 exists. It checks the original default-setup settings and original four jobs
 in run38941323954/workflow331939928/attempt1, and the existing dedicated queue.
 
@@ -227,9 +227,17 @@ still not official analysis success. Promotion, full verification, integration
 and production revision/smoke are separate outstanding acceptance conditions.
 
 Read failures in the merged receipt name their fixed stage (repository, PR,
-current main, original PR branch, or fixed commit). Transport errors use only
+current main, merge commit, or original PR head commit). Transport errors use only
 closed categories; raw stderr, response bodies, and endpoint names never enter
 the error. A `not-found` category is not proof that a branch was deleted or
 that permissions changed. It is terminal for that read: no fallback ref, API,
 identity, or runner is tried. In particular, a successful current-main read
-does not override a failed original-branch read or authorize a job.
+does not override a failed fixed-commit read or authorize a job.
+
+The temporary source branch is used by the unchanged open-PR verifier, but
+is not an execution source for this exact merged receipt. Normal merge cleanup
+may remove it. The merged path requires the original closed PR's fixed head
+and base SHA, both fixed commit trees, exact ordered merge parents, and fixed
+current main on every before/after verification. It does not try another ref
+after a 404 or accept an unavailable commit. Only the one audited merge can
+use this proof; the generic/open-PR modes retain their original branch check.

@@ -44,8 +44,31 @@ retry件数、排他・回収は変えない。404後の別経路実行や成功
 
 ## 残る工程
 
-1. 診断修正の独立Sonnetレビュー、Must修正、必要CI、通常PR/merge、正式配布。
-   元branch参照404の未確定原因も保持し、受付条件を緩めて実行しない。
+2026-10-17 10:04 JST追記: 診断PR194はSonnet2771の全7差分読了・Must0、
+親のPR差分同一照合、CI success8/neutral1/skipped1を経て通常merge5c41e78。
+同一module tree f5b510d39eb58aff51cb7ae53568725d2bba1fcbからWindows/Linuxを
+ビルドし正式配布した。Windowsの原子的置換に空のbackup引数を渡した初回だけ
+ArgumentExceptionで失敗。実hashを再照合し、backup先を指定した同じ置換操作で
+復旧して成功した。旧exeとreceiptを保持。審査拒否や別経路の実行ではない。
+配布後のmerged-inspectは元PR branch ref/not-foundで停止。製品jobは未起動。
+
+同じ元branch・同APIのスラッシュ単位符号化による有限な要求形式診断も404。
+別ref/API/認証は使用せず、URIが原因という実証は得られなかった。
+個別のbranch削除や権限の原因は依然未確定。delete_branch_on_merge=trueは
+観測済みだが、その値だけを個別branch削除の証拠とは扱わない。
+
+次の正式修復は、merged専用検証が作業branchの存続に依存する点を直すもの。
+実行sourceは固定mergeであり、作業branchは実行しない。元PR receiptの
+head20c/base f3d/merge41090、両commitの実SHA/tree、順序付きparents、main41090を
+すべて必須とする。元PRのbase SHA照合を追加し、変動しうる元branchのGETは
+merged専用からだけ除く。404を捕捉して別refへ進む処理は追加しない。
+通常open PRのbranch照合、他候補、runner/queue/資源/回収は維持する。
+意図した専用検証の変更なので、診断PR194のレビューを流用せず、別PRで
+全差分の独立レビュー・必要CI・通常merge・正式配布を行う。未配布版は実行しない。
+Go race/unit/vetは最新の専用修復で成功。正式CodeQL・release・Prdは未完。
+
+1. 上記merged専用修復の独立Sonnetレビュー、Must修正、必要CI、通常merge、正式配布。
+   元branch参照404の原結果を保持し、未配布版や診断だけでjobを起動しない。
 2. 正式配布から同CodeQL4ジョブを順次実行し、公式結果・原log指紋・回収を確認。
 3. 固定sourceのrelease safety gate/DEPLOY/smoke/trust正典を調べ、
    Hosted固定を既存Linux基盤で直す有限経路を確定する。

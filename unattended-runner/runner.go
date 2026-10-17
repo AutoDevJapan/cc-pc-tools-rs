@@ -579,9 +579,17 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 }
 
 func (r *Runner) tick(ctx context.Context) Health {
+	// Intake must not consume the whole fifty-second tick before scheduling.
+	// Keep the caller's deadline/cancellation as the outer execution boundary.
+	intakeCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	return r.tickWithIntakeContext(ctx, intakeCtx)
+}
+
+func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
-	if err := r.discover(ctx); err != nil {
+	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
 		health.API = true
@@ -602,7 +610,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 		cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 		seen := 0
 		for i := 0; i < len(ids) && seen < 8; i++ {
-			if ctx.Err() != nil {
+			if intakeCtx.Err() != nil {
 				break
 			}
 			id := ids[(start+i)%len(ids)]
@@ -624,7 +632,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 				health.Errors = append(health.Errors, "scan_cursor_deferred")
 				break
 			}
-			captured, err := r.scan(ctx, r.State.Threads[id])
+			captured, err := r.scan(intakeCtx, r.State.Threads[id])
 			if err != nil {
 				health.Errors = append(health.Errors, "discord_history_deferred")
 				continue
@@ -633,8 +641,22 @@ func (r *Runner) tick(ctx context.Context) Health {
 			health.Scanned++
 		}
 	}
-	r.recheckOriginBlocked(ctx, &health)
-	r.admit(ctx, &health)
+	r.recheckOriginBlocked(intakeCtx, &health)
+	r.admit(intakeCtx, &health)
+	if intakeCtx.Err() != nil && ctx.Err() == nil {
+		health.Errors = append(health.Errors, "intake_budget_exhausted")
+	}
+	// Reports can require further API reads. Give the existing dispatcher its
+	// turn first, without detaching it from the caller's remaining deadline.
+	if ctx.Err() == nil {
+		schedulerCtx, cancelScheduler := context.WithTimeout(ctx, 20*time.Second)
+		schedulerReport, err := r.Run(schedulerCtx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
+		health.Scheduler = ctx.Err() == nil && schedulerCtx.Err() == nil && err == nil && schedulerOK(schedulerReport)
+		cancelScheduler()
+	}
+	if !health.Scheduler {
+		health.Errors = append(health.Errors, "scheduler_deferred")
+	}
 	productsChecked := false
 	if r.State.ReportTurn == "products" {
 		productsChecked = true
@@ -652,11 +674,6 @@ func (r *Runner) tick(ctx context.Context) Health {
 		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" && req.Phase != "status_answered" && req.Phase != "product_reply_applied" {
 			health.Pending++
 		}
-	}
-	schedulerReport, err := r.Run(ctx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
-	health.Scheduler = err == nil && schedulerOK(schedulerReport)
-	if !health.Scheduler {
-		health.Errors = append(health.Errors, "scheduler_deferred")
 	}
 	// Reservation and binding each perform a bounded fresh guard check. Keep
 	// their combined budget separate from the legacy repair checks' 10 seconds.

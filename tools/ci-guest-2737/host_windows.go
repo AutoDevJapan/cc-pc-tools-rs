@@ -468,7 +468,11 @@ func main() {
 	ctx, stop := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer stop()
 	var e error
-	if len(os.Args) == 5 && os.Args[1] == "serial" {
+	if len(os.Args) == 2 && os.Args[1] == "inspect-source" {
+		e = inspectSource(ctx)
+	} else if len(os.Args) == 4 && os.Args[1] == "source-smoke" {
+		e = sourceSmoke(ctx, os.Args[2], os.Args[3])
+	} else if len(os.Args) == 5 && os.Args[1] == "serial" {
 		sub, cancel := context.WithTimeout(ctx, 4*time.Minute)
 		defer cancel()
 		e = readSerial(sub, os.Args[2], os.Args[3], os.Args[4])
@@ -478,6 +482,8 @@ func main() {
 		e = constructorFailure(ctx, os.Args[2], "after-receipt")
 	} else if len(os.Args) == 3 && os.Args[1] == "test-constructor-receipt-failure" {
 		e = constructorFailure(ctx, os.Args[2], "receipt-write")
+	} else if len(os.Args) == 3 && os.Args[1] == "test-constructor-double-failure" {
+		e = constructorFailure(ctx, os.Args[2], "receipt-and-rollback")
 	} else if len(os.Args) == 3 && os.Args[1] == "tools" {
 		e = prepareTools(ctx, os.Args[2])
 	} else if len(os.Args) == 3 && os.Args[1] == "cleanup-tools" {

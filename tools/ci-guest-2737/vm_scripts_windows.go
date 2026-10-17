@@ -55,13 +55,13 @@ func createVM(ctx context.Context, root, instance, image string) (vmState, error
 }
 func createVMStage(ctx context.Context, root, instance, image, fault string) (vmState, error) {
 	s := vmState{Instance: instance, Name: "cc-ci-2737-" + instance, Root: root, Pipe: `\\.\pipe\cc-ci-2737-` + instance}
-	if !validInstance(instance) || (fault != "" && fault != "after-receipt" && fault != "receipt-write") {
+	if !validInstance(instance) || (fault != "" && fault != "after-receipt" && fault != "receipt-write" && fault != "receipt-and-rollback") {
 		return s, errors.New("VM instance rejected")
 	}
 	if e := record(root, "vm-intent.private.json", s); e != nil {
 		return s, e
 	}
-	if fault == "receipt-write" {
+	if fault == "receipt-write" || fault == "receipt-and-rollback" {
 		// Make the actual exclusive receipt write fail. This is a fresh owned
 		// attempt; the constructor must still roll back its returned VM object.
 		if e := writeNew(filepath.Join(root, "vm-created.private.json"), []byte("fixture-blocker")); e != nil {
@@ -75,8 +75,19 @@ if(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}
 ` + "Convert-VHD -Path " + psQuote(image) + " -DestinationPath $disk -VHDType Dynamic\n" + `
 Resize-VHD -Path $disk -SizeBytes 64GB
 $vm=$null
+# Reserve an exclusive, fixed-size journal BEFORE New-VM can have effects.
+# Updating it needs no new file allocation if the ordinary receipt fails.
+$journal=[IO.File]::Open((Join-Path $root 'vm-recovery.private.json'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+function Journal-VM($id,$stage) {
+  $data=@{Instance=$instance;ID=$id;Name=$name;Root=$root;Pipe=$pipe;Stage=$stage}|ConvertTo-Json -Compress
+  if($data.Length -gt 32000){throw 'VM_JOURNAL_TOO_LARGE'}
+  $bytes=[Text.Encoding]::UTF8.GetBytes($data.PadRight(65536,' '))
+  $journal.Position=0;$journal.Write($bytes,0,$bytes.Length);$journal.Flush($true)
+}
 try {
+  Journal-VM '' 'intent'
   $vm=New-VM -Name $name -Generation 1 -MemoryStartupBytes 2GB -VHDPath $disk -Path (Join-Path $root 'vm') -SwitchName 'Default Switch'
+  Journal-VM $vm.Id.ToString() 'created'
   Write-Identity $vm 'created' 'vm-created.private.json'
 `
 	if fault == "after-receipt" {
@@ -93,22 +104,29 @@ try {
 }catch {
   $original=$_
   if($null -ne $vm){
+`
+	if fault == "receipt-and-rollback" {
+		body += "    throw 'EXPECTED_ROLLBACK_FIXTURE_FAILURE'\n"
+	}
+	body += `
     Remove-Owned $vm $true
     Write-Identity $vm 'removed' 'vm-constructor-rollback.private.json'
   }
   throw $original
+}finally {
+  $journal.Dispose()
 }
 `
 	adminErr := admin(ctx, root, "vm-create", body)
 	// Never skip identity recovery because the constructor returned failure.
 	// Prefer the rollback proof when creation receipt itself could not be saved.
-	for _, name := range []string{"vm-constructor-rollback.private.json", "vm-created.private.json"} {
+	for _, name := range []string{"vm-constructor-rollback.private.json", "vm-created.private.json", "vm-recovery.private.json"} {
 		b, e := os.ReadFile(filepath.Join(root, name))
 		if e != nil {
 			continue
 		}
 		var actual vmState
-		if json.Unmarshal(bytes.TrimPrefix(b, []byte{239, 187, 191}), &actual) == nil && validVMID(actual.ID) && actual.Instance == instance && actual.Name == s.Name && actual.Root == root && actual.Pipe == s.Pipe && ((name == "vm-created.private.json" && actual.Stage == "created") || (name != "vm-created.private.json" && actual.Stage == "removed")) {
+		if json.Unmarshal(bytes.TrimPrefix(b, []byte{239, 187, 191}), &actual) == nil && validVMID(actual.ID) && actual.Instance == instance && actual.Name == s.Name && actual.Root == root && actual.Pipe == s.Pipe && ((name != "vm-constructor-rollback.private.json" && actual.Stage == "created") || (name == "vm-constructor-rollback.private.json" && actual.Stage == "removed")) {
 			return actual, adminErr
 		}
 	}
@@ -136,11 +154,15 @@ func constructorFailure(ctx context.Context, root, fault string) error {
 		return e
 	}
 	s, e := createVMStage(ctx, attempt, newID(), filepath.Join(root, "linux-generic.vhdx"), fault)
-	if e == nil || s.Stage != "removed" || !validVMID(s.ID) {
+	expectedStage := "removed"
+	if fault == "receipt-and-rollback" {
+		expectedStage = "created"
+	}
+	if e == nil || s.Stage != expectedStage || !validVMID(s.ID) {
 		return errors.Join(e, errors.New("constructor failure rollback unverified"))
 	}
 	if e = cleanupVM(context.Background(), s); e != nil {
 		return e
 	}
-	return record(attempt, "constructor-fixture.private.json", map[string]any{"failure_injected": fault, "vm_id": s.ID, "removed": true, "official_ci_success": false})
+	return record(attempt, "constructor-fixture.private.json", map[string]any{"failure_injected": fault, "vm_id": s.ID, "recovered_from_journal": fault == "receipt-and-rollback", "removed": true, "official_ci_success": false})
 }

@@ -213,3 +213,26 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   Docker parity、Windows13工程/profile/直列/20分、workspace/関連crate/doctest、checkout認証除去を維持する。
   route更新は原PR同branch expected旧SHA/force=falseだけ。新head/tree・CodeQL再解析要否を親2641へ配送する。
   原PRmerge/Prdは親2641のみ、37件の静的確認を再登録しない。追加費用・本人PC操作は不要。
+
+## 2026-10-17 job 20261017-112125-todo-2737 の再開結果
+
+- 2746/2753/2754はdone。2753原応答SHA2564155DFD2F261AF93258D049F5C343EA33828179307421D1150343CD915CBBBF5を照合。
+  Must1は通常receipt保存とrollbackの両失敗でIDが失われる経路。New-VM前に別の排他的64KiB復旧journalを確保し、IDを通常receipt/回収前にflushする設計へ修正。
+  host-v15.exeの新しいdouble-failure実fixtureはexit0。journalから正確なIDを回復し、そのVMだけを回収した。
+- 2753は固定head7e6のTODO-2737-CHECKPOINT.mdを不存在と申告したが、git cat-file -e同head:pathはexit0。
+  元のbase SHA申告も末尾欠落がある。原応答は保持し、未読を合格にせず、次の新差分レビューで正しいhead/pathを渡す。
+  root CLAUDE.mdはこのcc-pc-tools-rsには無い。原製品のCLAUDE.mdとは区別する。
+- 2754のmodule（原code7221708、docs ee6ecfec）をtools/ci-source-2737へ取り込み、unsigned API commit payload、GitHub global PAX、出力上限、gzip drain上限、実保存file hash/Unix mode照合を修正した。
+  Windows Go test/vetと実Linux合成Git全件が成功。実GitHub Fetchの初回packet拒否はglobal PAX誤認が原因で修正。
+- 原GitHubのAGENTS.md/CLAUDE.mdを同b194のRAM sourceから読み直した。hashは235dcf3b2c3ad55fafa835c8f3d3309fd26ef70451270a381ff65be95e895493 / 70c7de2f3d35091324a75ea72177c061e014f38aeac49bf521d9f3110f8890de。
+  guidance検査の最初の2回は失敗し、hostのstdout fileは空。成功時はpipe/RAMだけで読んだ。原sourceをhostへcheckout/保存していない。
+- source smokeはhost-v19.exe/ci2737-guest-v9、exit0。所有root/source-attempt-6b1737b0aa5a383d24f838e58fe61813に数値/hash proofとVM cleanup。
+  b194d66524ef86330bb73ca3f22f9e5dd6ae0a07 / treef7eea82c96449b7749f98dd6c4b0344b64f1d651、実保存1904blob全件一致。
+  archiveSHA2562d995c2594fe65813907fb8768c8bf4a92f94777a823bfcbf86ebbf9116aee21。取得前後/guest操作後の実owner/id/private/admin/nonfork/PR/ref/headを再照合。
+  sourceは専用guest内のみ。VM Off/メモリ0/remove成功、Cargo/runner/公式CI未実行を維持する。
+- 2746のWindows fixtureは実guestで成功したがSDK/原source/公式runner/13工程は未実行。
+  未実装の公開SDK準備だけを2783へ--spec付きで通常受付した。元fixtureの複製ではない。
+  新しいowned root/nonce VMと公開SDKだけ、重いCargo/原source/runner登録/原PR更新は行わず、成功SDK templateを回収確認後に親へ返す仕様。
+  旧2746の隔離物は変更/解除/削除しない。旧2710/2648/2730にも触れない。
+- 親2641の012150候補は受領したが、原PR/headはこの作業のb194のまま。候補の検査成功へ流用しない。親や2761/CodeQLレビューを自分の待ち先にしない。
+- 残りは新差分の別モデルレビュー、単一job/live source受付、共有Cargo gate/専用target/sccache、公式runnerの取消し/登録/lock回収、原通常CI全工程。原PRmerge/Prdは親2641のみ。

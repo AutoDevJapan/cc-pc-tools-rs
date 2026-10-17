@@ -92,6 +92,22 @@ and absence of the original VM before cloning it. The tool container is paused
 at PID zero, preserving genisoimage in its writable layer. Validate its exact
 recorded identity before restarting; stopped tmpfs seed/test data does not survive.
 
+The follow-up constructor fix reserves a separate exclusive fixed-size recovery
+journal before New-VM and writes the returned ID there before ordinary receipts
+or rollback. A combined ordinary-receipt failure and injected rollback failure
+passed: the host recovered the exact ID from the journal, then removed that VM.
+This does not certify total storage failure or crash/power-loss recovery.
+
+`source-smoke` uses the verified, stopped SDK VHDX, checks the original VM's CIM
+absence and image digest, and transfers the fixed source packet over mTLS. It
+cannot select another repo/ref/head or a host checkout location. The guest
+alone materializes the source. Exact b194 HEAD, tree and all 1,904 saved blobs
+were verified, followed by API revalidation and VM cleanup. The source proof
+explicitly records `official_ci_success=false`. No Cargo/runner/workflow is
+connected yet. Product source and commit metadata are never logged or written
+on the host. `inspect-source` is only for in-memory guidance inspection; its
+stdout is source data and must never be redirected to a host file.
+
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).

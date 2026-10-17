@@ -2,6 +2,7 @@
 package main
 
 import (
+	sourcepacket "cc/ci-source-2737"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -21,6 +22,17 @@ import (
 const guestPort = 27373
 const publicRunnerImage = "sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011"
 const publicSccacheSHA = "45f1447fbe231e3037bde351ef70677dd212216c8d62ae7ca409fecc4d6acc89"
+
+func fixedSourcePin() sourcepacket.Pin {
+	return sourcepacket.Pin{HeadSHA: "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07", TreeSHA: "f7eea82c96449b7749f98dd6c4b0344b64f1d651", WorkflowSHA256: "01d3351d4a6bce1faeb7e3b1eaf29555affcc304ea7b91caa979825cc94bc4b0"}
+}
+
+type sourceResult struct {
+	ID         string               `json:"id"`
+	Proof      sourcepacket.Receipt `json:"proof"`
+	Failure    string               `json:"failure,omitempty"`
+	OfficialCI bool                 `json:"official_ci_success"`
+}
 
 type sdkManifest struct {
 	Image      string `json:"image"`
@@ -92,6 +104,11 @@ type identity struct {
 }
 
 func hash(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func hashReader(r io.Reader) (string, error) {
+	h := sha256.New()
+	_, e := io.Copy(h, r)
+	return hex.EncodeToString(h.Sum(nil)), e
+}
 func newIdentity() (identity, error) {
 	pub, key, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
@@ -145,7 +162,7 @@ func decodeRequest(d *json.Decoder) (request, error) {
 	if e := d.Decode(&q); e != nil {
 		return q, e
 	}
-	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk") || !validInstance(q.ID) {
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source") || !validInstance(q.ID) {
 		return q, errors.New("fixture request rejected")
 	}
 	return q, nil

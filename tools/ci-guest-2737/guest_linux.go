@@ -21,9 +21,10 @@ import (
 )
 
 type guest struct {
-	mu      sync.Mutex
-	active  bool
-	results map[string]fixtureResult
+	mu       sync.Mutex
+	active   bool
+	results  map[string]fixtureResult
+	instance string
 }
 
 func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
@@ -39,6 +40,20 @@ func (g *guest) serve(conn net.Conn) {
 	d := json.NewDecoder(bytes.NewReader(header))
 	q, e := decodeRequest(d)
 	if e != nil || d.Decode(new(any)) != io.EOF {
+		return
+	}
+	if q.Kind == "materialize-source" {
+		g.mu.Lock()
+		if g.active || q.ID != g.instance {
+			g.mu.Unlock()
+			return
+		}
+		g.active = true
+		g.mu.Unlock()
+		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		_ = conn.SetDeadline(time.Now().Add(10 * time.Minute))
+		result := materializeSource(reader, q.ID)
+		_ = json.NewEncoder(conn).Encode(result)
 		return
 	}
 	if q.Kind == "prepare-sdk" {
@@ -246,7 +261,7 @@ func runGuest() error {
 	// Only public readiness data is emitted. No key or token is written to disk.
 	announce := func() { _, _ = fmt.Fprintln(serial, "CI2737-READY "+base64.StdEncoding.EncodeToString(public)) }
 	announce()
-	g := guest{results: map[string]fixtureResult{}}
+	g := guest{results: map[string]fixtureResult{}, instance: p.Instance}
 	deadline := time.AfterFunc(45*time.Minute, func() { _ = l.Close() })
 	defer deadline.Stop()
 	go func() {

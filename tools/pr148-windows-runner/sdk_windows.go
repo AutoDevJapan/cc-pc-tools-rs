@@ -73,7 +73,7 @@ func prepareRuntimeSDK(p Plan) error {
 	}
 	// CARGO_HOME/bin is also the directory toolchain actions prepend via
 	// GITHUB_PATH. Keep the tool-entry guards at that exact conventional path.
-	for _, name := range []string{"rustup.exe", "cargo.exe"} {
+	for _, name := range []string{"rustup.exe", "cargo.exe", "rustc.exe", "rustdoc.exe", "rustfmt.exe"} {
 		if e = writeNewBytes(filepath.Join(p.runtime(), "cargo", "bin", name), helper); e != nil {
 			return e
 		}
@@ -146,6 +146,9 @@ func initializeSDK(p Plan) error {
 		return e
 	}
 	rustup := filepath.Join(bootstrap, "bin", "rustup.exe")
+	if _, e := sdkCommand(p, "no-self-update", rustup, env, "set", "auto-self-update", "disable"); e != nil {
+		return e
+	}
 	for _, toolchain := range []string{"1.95.0", "stable"} {
 		if _, e := sdkCommand(p, "install-"+toolchain, rustup, env, "toolchain", "install", toolchain, "--profile", "minimal", "--component", "rustfmt", "--component", "clippy", "--no-self-update"); e != nil {
 			return e

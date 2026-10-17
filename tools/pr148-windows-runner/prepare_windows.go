@@ -125,7 +125,17 @@ func prepare(p Plan, archive string) error {
 		if e = extractRunner(p, archive); e != nil {
 			return e
 		}
-		if e = materializeSource(p, api); e != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+		read := func(path string, v any) error {
+			limit := int64(4 << 20)
+			if strings.HasPrefix(path, "repos/"+repository+"/git/blobs/") {
+				limit = 24 << 20
+			}
+			return apiReadLimit(ctx, path, v, limit)
+		}
+		e = materializeSource(p, read)
+		cancel()
+		if e != nil {
 			return e
 		}
 		for _, stage := range []string{"hook-start", "hook-completed"} {

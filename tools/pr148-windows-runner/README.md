@@ -10,16 +10,14 @@ full tree comparison. The parent product-ci module must be present beside this
 module when building; no installed shared runner or admission setting is changed.
 The real target is the fixed workspace's `tools/target`, preserving scenario paths.
 
-This integration is unit-tested source work. The earlier service fixture/review
-results below apply to their recorded source only. New service-account SDK access,
-real original-source materialization, registration, tool environment and the
-intermediate post-checkout source guard have NOT been demonstrated for this code.
-The canonical workflow transformation adds no intermediate guard step; a finite
-tool-entry guard before the original Rust commands remains required. No parent
-should register/launch this code as complete CI integration until those conditions
-are implemented, independently reviewed and verified. Profiles left by the earlier
-fixtures remain with their original cleanup task, independently of this work.
-
+ToDo2790 adds a controller-only, bounded GitHub object materializer, new Rustup
+homes, installed MSVC/PowerShell/Git discovery under the filtered service token,
+and fixed Rust tool-entry guards. See TODO-2790-CHECKPOINT.md in the worktree
+root for the exact source, binary and synthetic fixture evidence. Earlier
+2749/2763/2764 results below still apply only to their recorded source.
+No product source was fetched or materialized by the child, no official runner
+was registered, and no product CI success is claimed. Parent integration and
+independent review remain required before formal use.
 Independent Windows amd64 Go module for parent ToDo2736. It never edits the
 product, registers a runner during a fixture, starts Civ6/GPU, changes the shared
 bridge/gate/SDK ACLs, or reads the old 2710/2730 accounts/resources. Implementation
@@ -162,29 +160,48 @@ mismatched stages, but cannot authenticate execution against malicious code in
 that same account. The launcher protects its own measured drain/exit report;
 it does not turn a job-written receipt into independent host attestation.
 
-Before starting the service, the parent must materialize **the fixed real Git
-checkout** into the runner's exact `_work/civ6-banseiki/civ6-banseiki` path inside
-the new runtime, without checkout credentials. Otherwise the start hook fails
-closed before workflow steps. The start hook, `verify-source <root>` workflow
-guard after checkout and completed hook all verify actual Git HEAD/tree/index,
-tracked bytes, same-repo credential-free origin and absence of checkout auth
-keys/files. The parent must retain the original checkout commands with
-persist-credentials false and the canonical conditional ref selecting the new
-pinned HEAD, and install the intermediate guard before product
-commands. A changed/dirty checkout is failure, not an automatic reset.
-Parent materialization into the service-only workspace is a separate privileged
-integration boundary, outside this helper and this child task. Before commands,
-untracked/ignored files and execution-affecting Git config are rejected. After
-commands, tracked bytes/HEAD/tree/auth remain checked; generated untracked build
-output is allowed. Materialize with byte-preserving Git settings (autocrlf off).
+Real `prepare` now materializes the exact explicit dispatch HEAD into the fixed
+workspace, before installing its new virtual service. GitHub OAuth remains in
+the controller. Commit/tree/blob JSON enters bounded RAM; the complete recursive
+tree, every blob and the exact reconstructed commit must reproduce Git object
+IDs. Routing verification first enforces the sole original parent and canonical
+three-workflow delta. Loose objects, detached HEAD, shallow boundary, credential-
+free origin, exact bytes and index are created without clone/checkout or an
+arbitrary host command. Unsupported path/mode is a failure, never an omission.
+The materializer has an eight-minute API budget and finite object/RAM bounds.
 
+The canonical workflow still adds no guard step. `prepare` installs this finite
+helper as rustup/cargo/rustc/rustdoc/rustfmt at the new CARGO_HOME/bin, also the
+path toolchain actions normally prepend. The first official Rust invocation
+checks the post-checkout context, actual HEAD/tree/index/raw tracked bytes and
+credential absence, then creates the existing `verify-source` receipt. Subsequent
+invocations recheck the source. Raw hashing also catches assume-unchanged index
+entries and bypasses Git filters. Git metadata links, alternates, replacement
+objects and worktree config are refused before ordinary Git object operations.
+The original argv, output and exit code are forwarded to the same new SDK under
+the filtered account, inside the launcher's Job Object. The source tools/target
+remains the actual target. Cargo's compiler descendants use the same rustup-selected
+compiler without a full source scan per crate. Rustup auto self-update is disabled
+in this new home so an update does not replace these guards.
 There is deliberately no arbitrary privileged adapter for Rust/C/PowerShell.
 Original Rust/Windows, native-driver and live-chain unit commands stay in the
 reviewed workflow. The shared gate, SDK and sccache must already be usable by the
 filtered new service token without new shared grants. Lack of that access is a
 remaining integration condition, not permission to broaden it. No live game.
-The empty new cargo/rustup homes and SDK PATH preparation still need actual
-integration by the parent. This account boundary is not a full VM sandbox.
+The new SDK is initialized by fixed non-administrative commands under the same
+Job Object. Official rustup-init bytes are verified against the public SHA256;
+Rust1.95.0 and stable with fmt/clippy are installed into new homes. Existing
+MSVC is selected by the fixed installed vswhere/VsDevCmd interface, with only
+SDK environment keys retained. Installed Git, PowerShell, sccache and shared gate
+read access are measured without owner-profile discovery or shared ACL changes.
+The controller holds the actual shared gate for the full orderly service run;
+the service never manufactures a new gate admission or claims direct lock access.
+The same installed sccache binary runs in a new finite foreground process with
+an owned cache and port. The kernel listener PID and Job membership are checked.
+It cannot use the owner-account cache server to run compilers outside this Job.
+Shared cache files/configuration are unchanged; dependency reuse there is not
+claimed. Its lifetime ends with this service's Job Object.
+This account boundary is not a full VM sandbox.
 Runner credentials are accessible to its own job account; the restriction keeps
 them out of the owner profile/host logs, not away from code in that same account.
 Go strings cannot be reliably zeroized; RAM-only token handling is best effort,
@@ -223,3 +240,15 @@ uses immutable repo/run/source identity plus registration absence after protecte
 local drain; it does not require a successful or still-running CI job, or a live
 PR branch, and never certifies CI success. A failed collection API read retains
 the stopped runtime and its original mutation journal without repeating deletes.
+
+## New runtime fixtures (ToDo2790)
+
+`runtime_fixture: true` is valid only with a normal/cancel fixture plan. It
+cannot authorize an official runner. Preparation supplies a compiled-in synthetic
+Git/API source, not the product. Real gate admission is used, then the filtered
+service initializes the new SDK and runs the tiny synthetic unit with both
+1.95.0 and +stable. Changed tracked source must refuse a tool before execution;
+a real Cargo error must retain exit101. The cancel fixture publishes readiness
+only after a live Rust test writes its PID, then SCM stop must drain Cargo, Rust,
+cache and worker processes together. No product workspace/native/live/scenario
+result or official GitHub run is inferred from these fixtures.

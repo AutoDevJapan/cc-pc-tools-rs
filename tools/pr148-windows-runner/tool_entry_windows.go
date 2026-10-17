@@ -21,7 +21,7 @@ func toolEntry(name string, args []string) (int, error) {
 	if e != nil {
 		return 1, e
 	}
-	if !samePath(self, filepath.Join(p.runtime(), "cargo", "bin", name+".exe")) || (name != "cargo" && name != "rustup") {
+	if !samePath(self, filepath.Join(p.runtime(), "cargo", "bin", name+".exe")) || !guardTool(name) {
 		return 1, errors.New("fixed tool-entry location required")
 	}
 	if e = checkControl(root, false); e != nil {
@@ -38,6 +38,14 @@ func toolEntry(name string, args []string) (int, error) {
 	hidden(c)
 	c.WaitDelay = 2 * time.Second
 	c.Env = runtimeSDKEnv(p, os.Environ())
+	if name == "cargo" {
+		// Cargo itself was guarded. Its compiler descendants use the same
+		// rustup-selected toolchain directly, without rescanning the tree once
+		// per crate. A standalone rustc/rustdoc invocation still enters here.
+		for _, k := range []string{"rustc", "rustdoc"} {
+			c.Env = replaceEnv(c.Env, strings.ToUpper(k), filepath.Join(p.runtime(), "sdk", "bootstrap", "bin", k+".exe"))
+		}
+	}
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -96,11 +104,18 @@ func checkToolSource(p Plan) error {
 
 func toolAlias() string {
 	name := strings.ToLower(filepath.Base(os.Args[0]))
-	if name == "cargo.exe" {
-		return "cargo"
-	}
-	if name == "rustup.exe" {
-		return "rustup"
+	name = strings.TrimSuffix(name, ".exe")
+	if guardTool(name) {
+		return name
 	}
 	return ""
+}
+
+func guardTool(name string) bool {
+	for _, s := range []string{"cargo", "rustup", "rustc", "rustdoc", "rustfmt"} {
+		if s == name {
+			return true
+		}
+	}
+	return false
 }

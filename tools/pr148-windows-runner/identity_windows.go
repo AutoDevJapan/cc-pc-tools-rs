@@ -19,6 +19,9 @@ func api(path string, v any) error {
 	return apiWithContext(context.Background(), path, v)
 }
 func apiWithContext(parent context.Context, path string, v any) error {
+	return apiReadLimit(parent, path, v, 4<<20)
+}
+func apiReadLimit(parent context.Context, path string, v any, limit int64) error {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	c := exec.CommandContext(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", path)
@@ -32,7 +35,7 @@ func apiWithContext(parent context.Context, path string, v any) error {
 	if e = c.Start(); e != nil {
 		return errors.New("GitHub read API unavailable")
 	}
-	b, readErr := boundedRead(pipe, 4<<20)
+	b, readErr := boundedRead(pipe, limit)
 	if readErr != nil {
 		_ = c.Process.Kill()
 	}

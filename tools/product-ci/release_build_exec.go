@@ -411,11 +411,31 @@ func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
 		if !inert {
 			continue // Left for anyBuilder: the phase stays busy.
 		}
+		// Anonymous volumes are named durably first, so that a removal that leaves a
+		// volume behind keeps this run unreleasable until the volume is gone.
+		b.recordVolumes(info)
+		if b.persist() != nil {
+			return errors.New("state write failed")
+		}
 		if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
 			return err
 		}
+		if !b.volumesAbsent(ctx) {
+			return errors.New("leftover volume remains")
+		}
 	}
 	return nil
+}
+
+// volumesAbsent confirms that every volume recorded for this run is gone.
+func (b *builderRun) volumesAbsent(ctx context.Context) bool {
+	for _, v := range b.rec.VolumeNames {
+		out, _, err := dockerText(ctx, b.d, 1<<20, "volume", "ls", "--quiet")
+		if err != nil || containsLine(out, v) {
+			return false
+		}
+	}
+	return true
 }
 
 // anyBuilder reports whether any builder container, ours or not, exists.
@@ -1022,13 +1042,7 @@ func (b *builderRun) dispose() {
 		}
 		after, err := b.containersByNonce(ctx)
 		rec.ContainerAbsent = err == nil && len(after) == 0
-		rec.VolumesAbsent = true
-		for _, v := range rec.VolumeNames {
-			out, _, err := dockerText(ctx, b.d, 1<<20, "volume", "ls", "--quiet")
-			if err != nil || containsLine(out, v) {
-				rec.VolumesAbsent = false
-			}
-		}
+		rec.VolumesAbsent = b.volumesAbsent(ctx)
 		clean = clean && rec.ContainerAbsent && rec.VolumesAbsent
 		// An unconfirmed create is resolved only by removing a container of this
 		// nonce: the original, or the one that took its name.
@@ -1036,7 +1050,10 @@ func (b *builderRun) dispose() {
 			clean = false
 		}
 	} else {
-		rec.ContainerAbsent, rec.VolumesAbsent = true, true
+		// Nothing of ours was created, but a leftover swept by the phase check may
+		// have named volumes.
+		rec.ContainerAbsent, rec.VolumesAbsent = true, b.volumesAbsent(ctx)
+		clean = clean && rec.VolumesAbsent
 	}
 	if rec.ToolImageIntroduced {
 		present, err := b.imagePresent(ctx)

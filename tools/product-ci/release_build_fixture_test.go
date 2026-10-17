@@ -279,6 +279,24 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		}
 		assertGone(rec)
 	})
+	t.Run("sweep-inert-leftover", func(t *testing.T) {
+		// What a lost create could leave behind: a never-started container of the
+		// exact name/label/image pattern. The next phase removes it and goes on.
+		nonce := strings.Repeat("ab", 16)
+		leftover := "cc-release-build-" + nonce
+		if _, _, err := dockerText(ctx, independent, 1<<16, "create", "--name", leftover, "--label", releaseBuildLabel+"="+nonce, "--network", "none", "--cap-drop", "ALL", "--memory", "67108864", releaseBuilderTool, "--version"); err != nil {
+			t.Fatal("could not create the leftover")
+		}
+		rec, err := runReleaseBuilder(ctx, factory, fixtureBuilderSpec(t, probe, false), newDir("sweep"))
+		reports = append(reports, rec)
+		if err != nil || !rec.Succeeded {
+			t.Fatalf("the phase was not freed of the inert leftover: %v %s", err, rec.Failure)
+		}
+		if out, e := text("container", "ls", "--all", "--quiet", "--filter", "label="+releaseBuildLabel+"="+nonce); e != nil || out != "" {
+			t.Fatal("the leftover still exists")
+		}
+		assertGone(rec)
+	})
 	t.Run("uncertain-create", func(t *testing.T) {
 		lost := func(cfg string) builderDocker {
 			return decoratedDocker{inner: cliBuilderDocker{cfg}, after: func(args []string, err error) error {

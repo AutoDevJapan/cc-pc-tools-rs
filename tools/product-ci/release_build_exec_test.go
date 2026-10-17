@@ -25,6 +25,8 @@ type fakeContainer struct {
 	labels   map[string]string
 	running  bool
 	status   string
+	bind     bool
+	image    string
 	exit     int
 	output   []byte
 	volume   string
@@ -51,6 +53,7 @@ type fakeDaemon struct {
 	startReturned, stoppedBeforeDrain         bool
 	stdin                                     []byte
 	pending                                   *fakeContainer
+	rmKeepsVolume                             bool
 	startedIDs                                []string
 	createCalls                               int
 	onStop                                    func()
@@ -229,6 +232,13 @@ func (d *fakeDaemon) inspectMap(c *fakeContainer) map[string]any {
 	if c.volume != "" {
 		mounts = append(mounts, map[string]any{"Type": "volume", "Name": c.volume, "Destination": "/anonymous"})
 	}
+	if c.bind {
+		mounts = append(mounts, map[string]any{"Type": "bind", "Destination": "/host"})
+	}
+	image := releaseBuilderTool
+	if c.image != "" {
+		image = c.image
+	}
 	pid := 0
 	if c.running {
 		pid = 4242
@@ -236,7 +246,7 @@ func (d *fakeDaemon) inspectMap(c *fakeContainer) map[string]any {
 	info := map[string]any{
 		"Id": c.id, "Name": "/" + c.name,
 		"State":  map[string]any{"Status": c.status, "Running": c.running, "ExitCode": c.exit, "Pid": pid, "OOMKilled": false},
-		"Config": map[string]any{"Image": releaseBuilderTool, "User": val("--user"), "OpenStdin": true, "Labels": c.labels},
+		"Config": map[string]any{"Image": image, "User": val("--user"), "OpenStdin": true, "Labels": c.labels},
 		"HostConfig": map[string]any{
 			"Privileged": false, "Binds": nil, "CapAdd": nil, "CapDrop": argValues(c.args, "--cap-drop"), "SecurityOpt": argValues(c.args, "--security-opt"),
 			"Devices": nil, "DeviceRequests": nil, "NanoCpus": int64(cpus * 1e9), "Memory": mem, "MemorySwap": swap, "PidsLimit": pids,
@@ -405,7 +415,9 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 		}
 		d.mu.Lock()
 		if c := d.containers[last]; c != nil {
-			delete(d.volumes, c.volume)
+			if !d.rmKeepsVolume {
+				delete(d.volumes, c.volume)
+			}
 			delete(d.containers, last)
 		}
 		d.mu.Unlock()
@@ -1172,4 +1184,54 @@ func (c *countdownCtx) Err() error {
 		return context.Canceled
 	}
 	return nil
+}
+
+func TestSweepNeverRemovesWhatItDoesNotExactlyRecognize(t *testing.T) {
+	name := "cc-release-build-" + strings.Repeat("a", 32)
+	label := map[string]string{releaseBuildLabel: strings.Repeat("a", 32)}
+	cases := map[string]*fakeContainer{
+		"exited builder":   {name: name, labels: label, status: "exited"},
+		"running builder":  {name: name, labels: label, status: "running", running: true},
+		"bind mount":       {name: name, labels: label, status: "created", bind: true},
+		"other name":       {name: "cc-release-build-other", labels: label, status: "created"},
+		"label of another": {name: name, labels: map[string]string{releaseBuildLabel: strings.Repeat("b", 32)}, status: "created"},
+		"other image":      {name: name, labels: label, status: "created", image: "example/other"},
+	}
+	for what, c := range cases {
+		h := newHarness(t)
+		h.d.toolPresent = true
+		c.id = strings.Repeat("c", 64)
+		h.d.containers[c.id] = c
+		rec, err := h.run(context.Background())
+		if err == nil || rec.Failure != "phase-busy" || rec.PhaseMayRelease || h.d.called("container rm") || h.d.called("pull") || h.d.called("create") {
+			t.Fatalf("%s: touched or accepted: %v", what, err)
+		}
+	}
+}
+
+func TestSweepKeepsTheRunUnreleasableWhileALeftoverVolumeRemains(t *testing.T) {
+	h := newHarness(t)
+	h.d.toolPresent = true
+	h.d.withVolume, h.d.rmKeepsVolume = true, true
+	id := strings.Repeat("c", 64)
+	vol := strings.Repeat("9", 64)
+	h.d.containers[id] = &fakeContainer{id: id, name: "cc-release-build-" + strings.Repeat("a", 32), labels: map[string]string{releaseBuildLabel: strings.Repeat("a", 32)}, status: "created", volume: vol}
+	h.d.volumes[vol] = true
+	rec, err := h.run(context.Background())
+	if err == nil || rec.Failure != "phase-uncertain" || rec.PhaseMayRelease || !rec.RecoveryRequired || len(rec.VolumeNames) != 1 || rec.VolumeNames[0] != vol {
+		t.Fatalf("a leftover volume was forgotten: %v", err)
+	}
+	raw, e := os.ReadFile(filepath.Join(h.dir, releaseBuildStateFile))
+	if e != nil || !strings.Contains(string(raw), vol) {
+		t.Fatal("the volume name was not kept in the ownership record")
+	}
+	factory := func(string) builderDocker { return h.d }
+	if again, err := recoverReleaseBuilder(context.Background(), factory, h.dir); err == nil || again.PhaseMayRelease {
+		t.Fatal("recovery released while the volume remained")
+	}
+	delete(h.d.volumes, vol)
+	again, err := recoverReleaseBuilder(context.Background(), factory, h.dir)
+	if err != nil || !again.PhaseMayRelease {
+		t.Fatalf("recovery after the volume was removed: %v", err)
+	}
 }

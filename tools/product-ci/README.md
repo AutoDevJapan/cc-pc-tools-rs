@@ -16,6 +16,11 @@ extraction, registration, Cargo or test execution. Its receipt explicitly keeps
 and Windows runner paths, workflow mutation review and official execution are
 still required; this plan alone cannot restore CI.
 
+`pr148-policy <new-owned-dir>` reads the same original pinned Rust workflow in
+RAM, verifies its actual Cargo/Rustup execution policy and saves metadata only.
+An omitted job timeout retains GitHub's 360-minute default; an explicit bound is
+preserved. It does not materialize product source or start Cargo/runner work.
+
 `pr148-route <new-owned-dir>` applies only the generated three workflow blobs
 through GitHub's tree/commit/non-force ref APIs. The original source is its sole
 parent. Complete tree comparison precedes the ref update; its object identities

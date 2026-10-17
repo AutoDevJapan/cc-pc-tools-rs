@@ -63,7 +63,7 @@ func collect(p Plan) error {
 			return errors.New("protected launcher drain and SCM result required")
 		}
 		if p.Fixture == "" {
-			if err = audit(p); err != nil {
+			if err = auditCollection(p); err != nil {
 				closeSC(s)
 				return err
 			}

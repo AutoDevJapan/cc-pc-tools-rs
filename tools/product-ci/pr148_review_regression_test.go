@@ -124,6 +124,27 @@ func TestPR148ExecutionPreservesFixedContextAndTimeout(t *testing.T) {
 	}
 }
 
+func TestPR148OmittedJobTimeoutPreservesGitHubDefault(t *testing.T) {
+	prior := pr148Workflows[0].OriginalSHA
+	defer func() { pr148Workflows[0].OriginalSHA = prior }()
+	for _, value := range []string{"", "    timeout-minutes: 20\n", "    timeout-minutes: 0\n", "    timeout-minutes: 361\n", "    timeout-minutes: [20]\n"} {
+		data := bytes.Replace(pr148ExecutionFixtureYAML(), []byte("    timeout-minutes: 75\n"), []byte(value), 1)
+		pr148Workflows[0].OriginalSHA = digest(data)
+		_, p, e := pr148WorkflowExecution(data)
+		if value == "" {
+			if e != nil || p.timeout() != 360*time.Minute {
+				t.Fatalf("omitted timeout: %v %v", p.timeout(), e)
+			}
+		} else if value == "    timeout-minutes: 20\n" {
+			if e != nil || p.timeout() != 20*time.Minute {
+				t.Fatalf("explicit timeout: %v %v", p.timeout(), e)
+			}
+		} else if e == nil {
+			t.Fatal("invalid timeout accepted", value)
+		}
+	}
+}
+
 func TestPR148WorkflowSerialBoundsSurviveGateCaps(t *testing.T) {
 	p := pr148ExecutionPolicy{TimeoutMinutes: 75}
 	p.Steps[1] = pr148StepPolicy{Dir: pr148Workspace, Env: []string{"RUST_TEST_THREADS=1", "CARGO_BUILD_JOBS=99"}}

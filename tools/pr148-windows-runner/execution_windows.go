@@ -141,10 +141,12 @@ func executeAdmitted(p Plan) (result error) {
 		}
 		defer clear(secret)
 	}
+	// SCM can start the service yet return an error (e.g. a startup timeout).
+	// The one-shot deferred stop queries actual state even after that error.
+	started = true
 	if e = startFinite(p); e != nil {
 		return e
 	}
-	started = true
 	if p.Fixture == "" {
 		until := time.Now().Add(30 * time.Second)
 		for {

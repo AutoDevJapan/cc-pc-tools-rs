@@ -119,10 +119,15 @@ func pr148WorkflowExecution(data []byte) (pr148CargoPolicy, pr148ExecutionPolicy
 	}
 	job := pr148Field(pr148Field(root, "jobs"), "test")
 	timeout := pr148Field(job, "timeout-minutes")
-	if timeout == nil || timeout.Kind != yaml.ScalarNode {
-		return cargo, out, errors.New("explicit original job timeout required")
+	// GitHub's job default is 360 minutes. The original rust.yml omits this
+	// key; preserve that limit without adding/changing a product workflow.
+	out.TimeoutMinutes = 360
+	if timeout != nil {
+		if timeout.Kind != yaml.ScalarNode {
+			return cargo, out, errors.New("original job timeout rejected")
+		}
+		out.TimeoutMinutes, e = strconv.Atoi(timeout.Value)
 	}
-	out.TimeoutMinutes, e = strconv.Atoi(timeout.Value)
 	if e != nil || out.timeout() == 0 {
 		return cargo, out, errors.New("original job timeout rejected")
 	}

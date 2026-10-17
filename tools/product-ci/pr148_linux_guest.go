@@ -338,6 +338,13 @@ printf 'landlock-direct-copy-proc-toolchain-denied\n'
 			defer stop()
 			e = savePR148Proposal(ctx, os.Args[2])
 		}
+	case "pr148-policy":
+		if len(os.Args) != 3 {
+			return true, 1
+		}
+		ctx, stop := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer stop()
+		e = savePR148Policy(ctx, os.Args[2])
 	default:
 		e = errors.New("unknown PR148 helper mode")
 	}

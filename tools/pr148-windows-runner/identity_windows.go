@@ -48,6 +48,11 @@ func audit(p Plan) error {
 	defer cancel()
 	return auditMode(ctx, p, false)
 }
+func auditCollection(p Plan) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	return checkCollectionRemote(p, func(path string, v any) error { return apiWithContext(ctx, path, v) })
+}
 func auditFinished(p Plan) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

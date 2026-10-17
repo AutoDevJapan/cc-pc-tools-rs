@@ -51,9 +51,9 @@ No input accepts an arbitrary command, callback, executable or download URL.
 For a real runner supply actual `run_id`, `attempt`, job ID (`test`,
 `native-driver`, `live-chain`), exact API job display `job_name`, workflow path,
 `pr_head`, actual `workflow_sha`, SHA256 of actual workflow bytes, official
-win-x64 runner version and archive SHA256. Source HEAD/tree remain the original
-75a4051/cecb9cd even when the parent makes a separately reviewed routing-only PR
-commit. API comparison permits changes only to the three existing workflows.
+win-x64 runner version and archive SHA256. Source HEAD/tree are explicit new pins whose sole parent is original
+75a4051/cecb9cd. API comparison accepts exactly the canonical changes to all
+three workflows, preserving every other tree entry and mode.
 The original command bodies, OS, timeout and failure propagation are reviewed
 by the parent; this helper does not generate or shorten product commands.
 
@@ -152,8 +152,8 @@ must fence an uncertain run before starting another. Extending/releasing the
 shared gate or using a new resident bridge to conceal this limit is outside
 this helper. Do not claim full-run admission retention after an abrupt kill.
 
-Actual workflow SHA must be the test merge with exactly base/PR-head parents,
-and its workflow digest must match both merge and PR-head bytes. Successful
+Actual workflow SHA equals the explicitly pinned dispatch HEAD, and its digest
+must match the canonical proposal and actual source bytes. Successful
 execution additionally requires all three context-bound hook/source receipts in
 the launcher's protected result, actual completed/success job on this unique
 runner, and no remaining registration. Terminal observation has a finite budget.
@@ -216,3 +216,10 @@ gate compatibility, original product tests, or a successful GitHub CI job.
 Official behavior references:
 [runner input handling](https://github.com/actions/runner/blob/main/src/Runner.Listener/CommandSettings.cs)
 and [job hooks](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/run-scripts).
+
+Repository-wide runner-zero checks require Linux and Windows official listeners
+to run serially. The full Rust OS matrix remains in the same dispatch. Collection
+uses immutable repo/run/source identity plus registration absence after protected
+local drain; it does not require a successful or still-running CI job, or a live
+PR branch, and never certifies CI success. A failed collection API read retains
+the stopped runtime and its original mutation journal without repeating deletes.

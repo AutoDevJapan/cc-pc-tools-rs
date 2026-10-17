@@ -43,7 +43,7 @@ func TestPR148NonForceRoutingTransaction(t *testing.T) {
 		}
 		return json.Unmarshal(b, out)
 	}
-	for _, bad := range []string{"", "source-race", "tree-content", "ref-refused"} {
+	for _, bad := range []string{"", "source-race", "tree-content", "ref-refused", "ref-response-lost"} {
 		t.Run(bad, func(t *testing.T) {
 			moved, patches := false, 0
 			methods := []string{}
@@ -158,6 +158,9 @@ func TestPR148NonForceRoutingTransaction(t *testing.T) {
 						return errors.New("ref refused")
 					}
 					moved = true
+					if bad == "ref-response-lost" {
+						return errors.New("synthetic lost response after update")
+					}
 					return nil
 				default:
 					t.Fatalf("unexpected mutation: %s", ep)
@@ -166,7 +169,7 @@ func TestPR148NonForceRoutingTransaction(t *testing.T) {
 			}
 			dir := t.TempDir()
 			e := routePR148Using(context.Background(), dir, read, write)
-			if bad == "" {
+			if bad == "" || bad == "ref-response-lost" {
 				if e != nil {
 					t.Fatal(e)
 				}
@@ -177,6 +180,9 @@ func TestPR148NonForceRoutingTransaction(t *testing.T) {
 				b, _ := os.ReadFile(filepath.Join(dir, "pr148-routing-result.private.json"))
 				if json.Unmarshal(b, &r) != nil || !r.BranchVerified || r.AllRequiredChecksSuccess || r.Head != head {
 					t.Fatal("result evidence")
+				}
+				if bad == "ref-response-lost" && (!r.RefWriteReturnedError || r.RefObservedAfterError != "intended-head") {
+					t.Fatal("lost response observation missing")
 				}
 			} else {
 				if e == nil {

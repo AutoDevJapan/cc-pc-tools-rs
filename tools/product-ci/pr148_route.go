@@ -13,6 +13,8 @@ type pr148RoutingReceipt struct {
 	OriginalHead, OriginalTree, Head, Tree, LinuxWorkflowDigest string
 	Proposal                                                    pr148Proposal
 	BranchUpdateAttempted, BranchVerified                       bool
+	RefWriteReturnedError                                       bool
+	RefObservedAfterError                                       string
 	AllRequiredChecksSuccess                                    bool
 }
 
@@ -106,7 +108,27 @@ func routePR148Using(ctx context.Context, dir string, read api, write githubMuta
 		return e
 	}
 	if e = write(ctx, "PATCH", "repos/"+pr148Repo+"/git/refs/heads/"+pr148Branch, map[string]any{"sha": r.Head, "force": false}, nil); e != nil {
-		return e
+		// Observe once after a possibly lost successful response. Never repeat
+		// the write, revert the ref, or treat an unverified response as success.
+		r.RefWriteReturnedError = true
+		var observed struct{ Object struct{ SHA string } }
+		readErr := read(ctx, "repos/"+pr148Repo+"/git/ref/heads/"+pr148Branch, &observed)
+		r.RefObservedAfterError = "unverified"
+		if readErr == nil {
+			r.RefObservedAfterError = "other-head"
+			if observed.Object.SHA == pr148Head {
+				r.RefObservedAfterError = "original-head"
+			}
+			if observed.Object.SHA == r.Head {
+				r.RefObservedAfterError = "intended-head"
+			}
+		}
+		if saveErr := pr148SaveNew(filepath.Join(dir, "pr148-routing-ref-observation.private.json"), r); saveErr != nil {
+			return errors.Join(e, readErr, saveErr)
+		}
+		if readErr != nil || observed.Object.SHA != r.Head {
+			return errors.Join(e, readErr)
+		}
 	}
 	if e = verifyPR148RoutingSource(ctx, r.Head, r.Tree, r.LinuxWorkflowDigest, read); e != nil {
 		return fmt.Errorf("branch update requires recovery: %w", e)

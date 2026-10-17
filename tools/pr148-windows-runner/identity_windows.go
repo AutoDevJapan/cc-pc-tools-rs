@@ -244,6 +244,9 @@ func validateHookFiles(p Plan) error {
 }
 
 func verifySource(p Plan, source string, pristine bool) error {
+	return verifySourceOrigin(p, source, pristine, "https://github.com/"+repository)
+}
+func verifySourceOrigin(p Plan, source string, pristine bool, origin string) error {
 	if !samePath(source, p.source()) {
 		return errors.New("checkout must occupy the fixed workspace path")
 	}
@@ -294,8 +297,22 @@ func verifySource(p Plan, source string, pristine bool) error {
 		}
 	}
 	b, e = run("remote", "get-url", "origin")
-	if e != nil || strings.TrimSpace(string(b)) != "https://github.com/"+repository {
+	if e != nil || strings.TrimSpace(string(b)) != origin {
 		return errors.New("checkout remote is not credential-free same-repository HTTPS")
+	}
+	global := filepath.Join(p.runtime(), "home", ".gitconfig")
+	if _, err := os.Lstat(global); err == nil {
+		keys, err := run("config", "--file", global, "--no-includes", "--name-only", "--list")
+		if err != nil {
+			return err
+		}
+		for _, key := range strings.Fields(strings.ToLower(string(keys))) {
+			if blockedGitKey(key) {
+				return errors.New("service Git global credential/config key rejected")
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		return err
 	}
 	for _, name := range []string{".git-credentials", ".netrc", "_netrc"} {
 		if _, e = os.Lstat(filepath.Join(source, name)); !os.IsNotExist(e) {

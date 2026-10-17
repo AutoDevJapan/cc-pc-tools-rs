@@ -444,7 +444,10 @@ func worker(p Plan) error {
 	c = exec.Command(listener, "run", "--startuptype", "service")
 	hidden(c)
 	c.Dir = p.runner()
-	c.Env = runtimeSDKEnv(p, workerEnv(p))
+	c.Env, e = runtimeSDKEnv(p, workerEnv(p))
+	if e != nil {
+		return e
+	}
 	c.Stdout = io.Discard
 	c.Stderr = io.Discard
 	if e = c.Run(); e != nil {
@@ -454,6 +457,9 @@ func worker(p Plan) error {
 }
 func serviceFixture(p Plan, sid string, auChecked bool) error {
 	if p.RuntimeFixture {
+		if e := checkoutFixture(p); e != nil {
+			return e
+		}
 		if e := runtimeFixtureCommands(p); e != nil {
 			return e
 		}
@@ -466,7 +472,11 @@ func serviceFixture(p Plan, sid string, auChecked bool) error {
 		ready := filepath.Join(p.runtime(), "tmp", "rust-ready")
 		c = exec.Command(filepath.Join(p.runtime(), "cargo", "bin", "cargo.exe"), "+stable", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1")
 		hidden(c)
-		c.Env = append(runtimeSDKEnv(p, workerEnv(p)), "PR148_FIXTURE_READY="+ready)
+		env, err := runtimeSDKEnv(p, workerEnv(p))
+		if err != nil {
+			return err
+		}
+		c.Env = append(env, "PR148_FIXTURE_READY="+ready)
 		c.Dir = filepath.Join(p.source(), "tools")
 		f, err := os.OpenFile(filepath.Join(p.runtime(), "fixture-cancel-cargo.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if err != nil {
@@ -484,11 +494,10 @@ func serviceFixture(p Plan, sid string, auChecked bool) error {
 		for time.Now().Before(until) {
 			if b, err := os.ReadFile(filepath.Join(p.runtime(), "tmp", "rust-ready")); err == nil {
 				n, err := strconv.ParseUint(string(b), 10, 32)
-				if err != nil || n == 0 {
-					return errors.New("actual Rust fixture PID rejected")
+				if err == nil && n != 0 {
+					rustPID = uint32(n)
+					break
 				}
-				rustPID = uint32(n)
-				break
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
@@ -551,7 +560,10 @@ func serviceFixture(p Plan, sid string, auChecked bool) error {
 }
 
 func runtimeFixtureCommands(p Plan) error {
-	env := runtimeSDKEnv(p, workerEnv(p))
+	env, err := runtimeSDKEnv(p, workerEnv(p))
+	if err != nil {
+		return err
+	}
 	for _, v := range []struct {
 		stage, name string
 		args        []string
@@ -584,6 +596,10 @@ func runtimeFixtureCommands(p Plan) error {
 	b, e := os.ReadFile(filepath.Join(p.runtime(), "sdk-fixture-source-reject.json"))
 	if e != nil || json.Unmarshal(b, &rejection) != nil || rejection.Exit != 1 {
 		return errors.New("source refusal exit was not preserved")
+	}
+	raw, e := os.ReadFile(filepath.Join(p.runtime(), "sdk-fixture-source-reject.log"))
+	if e != nil || strings.TrimSpace(string(raw)) != "actual tracked bytes mismatch" {
+		return errors.New("source refusal reason not measured")
 	}
 	_, failed := sdkCommand(p, "fixture-cargo-failure", filepath.Join(p.runtime(), "cargo", "bin", "cargo.exe"), env, "not-a-real-cargo-subcommand")
 	if failed == nil {

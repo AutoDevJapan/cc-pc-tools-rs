@@ -155,6 +155,14 @@ func prepare(p Plan, archive string) error {
 		if e = writeSource(p.source(), s); e != nil {
 			return e
 		}
+		if e = prepareCheckoutFixture(p); e != nil {
+			return e
+		}
+	}
+	if p.Fixture == "" || p.RuntimeFixture {
+		if _, e = sourceGit(p.source(), "config", "--file", filepath.Join(p.runtime(), "home", ".gitconfig"), "--add", "safe.directory", p.source()); e != nil {
+			return e
+		}
 	}
 	if e = installService(p); e != nil {
 		return e
@@ -162,6 +170,17 @@ func prepare(p Plan, archive string) error {
 	sid, e := serviceSID(p)
 	if e != nil {
 		return e
+	}
+	if p.Fixture == "" || p.RuntimeFixture {
+		if e = checkOwnedTree(p.source()); e != nil {
+			return e
+		}
+		if e = icacls(p.source(), "/setowner", "*"+sid, "/T", "/L"); e != nil {
+			return e
+		}
+		if e = saveNew(filepath.Join(p.Root, "source-owner.json"), map[string]any{"source": p.source(), "sid": sid, "owned_source_only": true}); e != nil {
+			return e
+		}
 	}
 	// Only this newly created resource receives ACEs. No SDK, shared gate,
 	// sccache, old source, profile, bridge or allowlist is modified.

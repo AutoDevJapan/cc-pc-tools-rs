@@ -27,7 +27,7 @@ func publicDistribution(url string, limit int64) ([]byte, error) {
 		return nil, e
 	}
 	c := http.Client{Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(r *http.Request, via []*http.Request) error {
-		if len(via) > 5 || r.URL.Scheme != "https" || (r.URL.Host != "github.com" && r.URL.Host != "release-assets.githubusercontent.com" && r.URL.Host != "static.rust-lang.org") {
+		if len(via) > 5 || r.URL.Scheme != "https" || (r.URL.Host != "github.com" && r.URL.Host != "release-assets.githubusercontent.com" && r.URL.Host != "static.rust-lang.org" && r.URL.Host != "nodejs.org" && r.URL.Host != "raw.githubusercontent.com") {
 			return errors.New("public distribution redirect rejected")
 		}
 		return nil
@@ -193,7 +193,29 @@ func initializeSDK(p Plan) error {
 			return e
 		}
 	}
+	if e = verifySDKGuards(p); e != nil {
+		return e
+	}
 	return saveNew(filepath.Join(p.runtime(), "sdk-ready.json"), map[string]any{"rust_1_95_0": true, "stable": true, "msvc_environment": true, "credential_free": true, "official_ci_claimed": false})
+}
+
+func verifySDKGuards(p Plan) error {
+	helper, e := os.ReadFile(filepath.Join(p.Root, "helper.exe"))
+	if e != nil {
+		return e
+	}
+	for _, name := range []string{"rustup", "cargo", "rustc", "rustdoc", "rustfmt"} {
+		path := filepath.Join(p.runtime(), "cargo", "bin", name+".exe")
+		fi, e := os.Lstat(path)
+		if e != nil || !fi.Mode().IsRegular() || sourceReparse(fi) {
+			return errors.New("SDK guard is unavailable or a link")
+		}
+		b, e := os.ReadFile(path)
+		if e != nil || digest(b) != digest(helper) {
+			return errors.New("SDK guard changed during toolchain installation")
+		}
+	}
+	return saveNew(filepath.Join(p.runtime(), "sdk-guards-verified.json"), map[string]any{"count": 5, "helper_sha256": digest(helper), "after_toolchain_install": true})
 }
 
 func msvcEnvironment(p Plan, env []string) (map[string]string, error) {
@@ -231,14 +253,14 @@ func withMSVC(env []string, values map[string]string) []string {
 	}
 	return env
 }
-func runtimeSDKEnv(p Plan, env []string) []string {
+func runtimeSDKEnv(p Plan, env []string) ([]string, error) {
 	b, e := os.ReadFile(filepath.Join(p.runtime(), "sdk-environment.json"))
 	if e != nil {
-		return env
+		return nil, errors.New("new SDK environment unavailable")
 	}
 	var values map[string]string
-	if json.Unmarshal(b, &values) != nil {
-		return env
+	if json.Unmarshal(b, &values) != nil || values["PATH"] == "" || values["LIB"] == "" || values["INCLUDE"] == "" {
+		return nil, errors.New("new SDK environment invalid")
 	}
-	return withMSVC(env, values)
+	return withMSVC(env, values), nil
 }

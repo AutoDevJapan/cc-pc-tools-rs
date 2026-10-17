@@ -70,9 +70,8 @@ func checkToolIdentity(p Plan) error {
 	if e != nil {
 		return e
 	}
-	got, e := tokenUserSID(token)
-	if e != nil || got != want {
-		return errors.New("tool entry requires its dedicated service identity")
+	if e = toolTokenIdentity(token, want); e != nil {
+		return e
 	}
 	if e = authenticatedUsersDenyOnly(token); e != nil {
 		return e
@@ -81,6 +80,19 @@ func checkToolIdentity(p Plan) error {
 	r, _, e = inJob.Call(^uintptr(0), 0, uintptr(unsafe.Pointer(&member)))
 	if r == 0 || member == 0 {
 		return errors.New("tool entry requires the finite service Job Object")
+	}
+	return nil
+}
+
+var errToolIdentity = errors.New("tool entry requires its dedicated service identity")
+
+func toolTokenIdentity(token syscall.Handle, want string) error {
+	got, e := tokenUserSID(token)
+	if e != nil {
+		return e
+	}
+	if got != want {
+		return errToolIdentity
 	}
 	return nil
 }

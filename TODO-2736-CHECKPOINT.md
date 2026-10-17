@@ -1,5 +1,33 @@
 # ToDo2736 再開記録
 
+## 2026-10-17 15〜16時台の有限受領・循環修復（以下を優先）
+
+job20261017-151845-todo-2736。司令塔の工程分割に従い、原2790の受領/統合と、同じ原2797の正規root関係を確認した。製品の正式CIや原2790最終受入を免除した工程ではない。
+最新D:/CC/AGENTS.md、当該repo規則、原2790のTODO-2790-CHECKPOINT.mdと配送、原2791応答を読んだ。実GitHub APIで製品PR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、head75a/base1100/元branchを確認。helper PR189 remoteは6b5c387。製品source展開/変更/正式runner登録/dispatch/製品Cargo/GPU/Civ6/再起動/旧root・profile・guard変更は0。
+
+### 同じ2797の正規関係
+
+司令塔が先に正規cancelとsubwork関係保存を完了していた。controller-review2797-root-binding-133530.private.jsonとqueue-reload/cancel-recoveryの原receipt（全exit0）を受領し、自分の恒久rootへ全SHA一致で保存した。root-binding原SHA256 C08A577EDE854978DD82BDF52CC21A79B9B549B996C041F638C31D54691AAB55。
+旧job20261017-145950-todo-2797はcancelled、started_at=null、steps0、PID不在。原2790 jobはsucceeded/exit0/両PID不在。新rootは15:18:45作成/15:19:14正常開始、running/todo2736/root、両PIDのOS作成時刻一致を確認した。原2797はparent2736/origin_job今回root/kind review、spec SHA79E63C19241BE6DD2C5DF255BCE97BDEC5CED91970201F4445A8EF76550FA1D5/model claude-sonnet-5-5を保持し、wait_on無しであることを確認。subwork保存を重ねず、標準todo start2797で正常な再開へ戻した。後でschedulerがtodoへ戻したことを確認し、新jobや原応答が出たとは扱わない。新しいレビューToDo・直接子Codex・孫subwork・raw store/所有者手書きは0。
+原2790のwait2797は維持する。rootはこの有限受領の後、正規wait2736--on2790へ戻した。原2797終了後は2790が原応答/Must/新headの最終受入を返す。それまでは正式検査/通常merge/Prdへ進めない。
+
+### 固定d5e04c5の統合
+
+原2790のcode head d5e04c5643abd075b1a2fab763b15e7aa50f695dからWindows moduleだけを取り込み、b62e34fへcommitした。親のstaged module treeが8974edd80634097711e755c8f49efc98c3f2f685と完全一致、共通packageも両者cbdb19827cd035d66a527818a8fb2df89705a059で一致した。product-ci本体や別製品candidateは取り込まなかった。同一sourceの成功済みGo/SDK/合成Rust fixtureは重複実行していない。
+子の実測は、最新正常fixtureにRust1.95.0/+stable合成unit、source改変拒否、Cargo101、worker/service0、保持3PID排出。取消し11PID排出は旧592ef03相当の内容であり、最新identity/PATH差分込みの取消し実証へ拡大しない。正常controller exitは直接未保持。64pass/2skip/vet/両OSbuildは子のWindows moduleであり、親全source/製品CIの成功ではない。新5profile/hive/classes/SDK linkを含む拒否rootは子が2381へ配送済みであり、親から変更/再削除しない。
+原2791は実Sonnet5.5/固定4f47c125で旧M1/M2解消・新Must0、供給25全文/追加diffだけの静的結果。原応答をbytes/SHA一致で保存した。統合後d5e04c5への無条件流用や原2797の代用にはしない。
+
+### 同OAuth更新の到達点と具体的な技術停止条件
+
+同じgh_gateの正規auth refresh --hostname github.com --scopes workflowを、raw stdout/stderrをRAMだけで処理する一時Go補助から試した。別API/token/認証方式でpushを迂回していない。初期補助のregex/改行表現、browser handler、Windows clipboard ownerの不具合を修正し、偽コードのpattern/clipboard self-testは成功。生のCLI認証出力・実コード・token・URL queryをモデル/ファイル/PRへ表示保存しない設計を維持した。
+実CLIは2.101.0。既定clipboardコピーを事前に無効化せず起動した最初の呼出しを認証成功/安全確認済みとはしない。clipboard履歴設定が有効、cloud/sync設定が無効であることを後から確認した。既定コピー成否と履歴格納は未確認。履歴は読まず、一括削除や他内容の変更は行っていない。各呼出しの認証入力/認可は0、未使用コードは再掲しない。
+最後の正規呼出しは--clipboard=falseでCLIの既定コピーを明示的に止めた。確認コードをRAMで受け取り、履歴/cloud除外formatと今回だけの所有markerを持つWindows clipboardへ置けた。しかしCUAのctrl+vはOS側とは別のvirtual clipboardを参照し、データ無しで入力前に失敗した。値をtool引数やファイルへ渡す迂回はしない。CUAのnative窓APIは無く、利用可能なComputer UseのWindows targetも空だったため、実値を記録しない入力経路を完了できていない。PC操作を本人へ要求しない。
+認証CLIは有限期限でexpired/exit1。残った自分のgh childも実pathとOS作成時刻を照合して/Tで終了し、無関係なghは止めない。今回markerのclipboard内容だけを削除し、marker不在を確認した。コード入力/認可クリック0、再照合したscopeはgist/read:org/repoでworkflow無し。したがってOAuth更新/新push/新head CI成功は未達。同じpushを再送しない。
+Chromeの最初の準備tab798086943はCLI所有sessionとCUAが競合し、record b516a145-af85-4866-9d24-987fa02bde56を正規close（closed1/failed0）。次のCUA作成tab798086947は準備画面へ接続できたが上記pasteで停止し、record12a5dc68-606a-4dbd-9adf-fc2bc6f15409を同じ正規close（closed1/failed0）。新profile/ヘッドレス/owner既存tabは使っていない。
+
+一時Go補助のsource/exe（実認証値無し）を恒久root184a58eedf4f923741f160dfe7cfd5b7へbytes/SHA一致で保存し、oauth-prep-151845-manifest.private.jsonを保持した。操作結果はintegration-151845-result.private.json。一時root safe-delete1d9d65da0bf7182fd0e213f81cf511fdはplan→別通常削除済み、finishとSHA照合を行う。これは原2790の検査資源回収やCI成功ではない。
+次は正規2797の実開始/固定spec/d5e04c5読了/原応答と、2790の最終受入を受領する。OAuth側はOS→CUA virtual clipboardの非記録な入力経路を、既存の正式能力の範囲で確認する必要がある。権限不足/承認審査を別認証で迂回しない。原2640/880の未完とscope/cleanup分離を維持する。
+
 ## 2026-10-17 14時台のレビュー対応（以下を優先）
 
 job20261017-141429-todo-2736、4d25771から再開。最新D:/CC/AGENTS.md、repo規則、元2788の実応答を確認した。実APIで製品PR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、75a/head・1100/base・元branch refを再照合。remote helper PR189は6b5c387のまま。source/workflow変更、製品source展開、正式runner登録/dispatch/製品Cargo、GPU/Civ6/再起動/旧資源変更は今回も0。

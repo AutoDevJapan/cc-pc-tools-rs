@@ -40,12 +40,41 @@ var (
 	setServiceStatus              = advapi32.NewProc("SetServiceStatus")
 	createSerialHandle            = syscall.NewLazyDLL("kernel32.dll").NewProc("CreateFileW")
 	queryDosDeviceW               = syscall.NewLazyDLL("kernel32.dll").NewProc("QueryDosDeviceW")
+	getCommState                  = syscall.NewLazyDLL("kernel32.dll").NewProc("GetCommState")
+	setCommState                  = syscall.NewLazyDLL("kernel32.dll").NewProc("SetCommState")
+	setCommTimeouts               = syscall.NewLazyDLL("kernel32.dll").NewProc("SetCommTimeouts")
 	serviceStop                   = make(chan struct{})
 	serviceStopOnce               = make(chan struct{}, 1)
 	serviceStatusHandle           uintptr
 	serviceControlMu              sync.Mutex
 	serviceActiveConn             io.Closer
 )
+
+type serialDCB struct {
+	Length    uint32
+	BaudRate  uint32
+	Flags     uint32
+	Reserved  uint16
+	XonLimit  uint16
+	XoffLimit uint16
+	ByteSize  byte
+	Parity    byte
+	StopBits  byte
+	XonChar   byte
+	XoffChar  byte
+	ErrorChar byte
+	EofChar   byte
+	EvtChar   byte
+	Reserved1 uint16
+}
+
+type serialTimeouts struct {
+	ReadInterval         uint32
+	ReadTotalMultiplier  uint32
+	ReadTotalConstant    uint32
+	WriteTotalMultiplier uint32
+	WriteTotalConstant   uint32
+}
 
 type serviceTableEntry struct {
 	Name *uint16
@@ -304,7 +333,31 @@ func openSerialPort() (*os.File, error) {
 		_ = syscall.CloseHandle(syscall.Handle(handle))
 		return nil, errors.New("COM1 handle could not be wrapped")
 	}
+	if err := configureSerialPort(syscall.Handle(handle)); err != nil {
+		_ = file.Close()
+		return nil, err
+	}
 	return file, nil
+}
+
+func configureSerialPort(handle syscall.Handle) error {
+	dcb := serialDCB{Length: uint32(unsafe.Sizeof(serialDCB{}))}
+	if ok, _, err := getCommState.Call(uintptr(handle), uintptr(unsafe.Pointer(&dcb))); ok == 0 {
+		return fmt.Errorf("COM1 GetCommState failed: %w", err)
+	}
+	dcb.BaudRate = 115200
+	dcb.Flags = 1 // binary mode, with parity and flow control disabled
+	dcb.ByteSize = 8
+	dcb.Parity = 0
+	dcb.StopBits = 0
+	if ok, _, err := setCommState.Call(uintptr(handle), uintptr(unsafe.Pointer(&dcb))); ok == 0 {
+		return fmt.Errorf("COM1 SetCommState failed: %w", err)
+	}
+	timeouts := serialTimeouts{}
+	if ok, _, err := setCommTimeouts.Call(uintptr(handle), uintptr(unsafe.Pointer(&timeouts))); ok == 0 {
+		return fmt.Errorf("COM1 SetCommTimeouts failed: %w", err)
+	}
+	return nil
 }
 
 func runGuestNormal() (fixtureResult, error) {

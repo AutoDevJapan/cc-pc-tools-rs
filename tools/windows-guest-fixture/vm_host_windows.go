@@ -1248,12 +1248,10 @@ if($v){
   $vhds=@($v | Get-VMHardDiskDrive)
   if($vhds.Count -ne 1 -or $vhds[0].Path -cne $path){throw 'OWNED_VM_VHD_IDENTITY_MISMATCH'}
   if($v.State -ne 'Off'){
-    if($imageMethod -ceq 'microsoft-evaluation-vhd-offline-service'){
-      try{Stop-VM -VM $v -ErrorAction Stop}catch{}
-      $gracefulDeadline=(Get-Date).AddMinutes(3)
-      do{$v=Get-VM -Id $id;if($v.State -eq 'Off' -and $v.MemoryAssigned -eq 0){break};Start-Sleep -Milliseconds 250}while((Get-Date) -lt $gracefulDeadline)
-      if($v.State -ne 'Off' -or $v.MemoryAssigned -ne 0){Stop-VM -VM $v -TurnOff -Force}
-    }else{Stop-VM -VM $v -TurnOff -Force}
+    try{Stop-VM -VM $v -ErrorAction Stop}catch{}
+    $gracefulDeadline=(Get-Date).AddMinutes(3)
+    do{$v=Get-VM -Id $id;if($v.State -eq 'Off' -and $v.MemoryAssigned -eq 0){break};Start-Sleep -Milliseconds 250}while((Get-Date) -lt $gracefulDeadline)
+    if($v.State -ne 'Off' -or $v.MemoryAssigned -ne 0){Stop-VM -VM $v -TurnOff -Force}
   }
   $deadline=(Get-Date).AddMinutes(2)
   do{$v=Get-VM -Id $id;if($v.State -eq 'Off' -and $v.MemoryAssigned -eq 0){break};Start-Sleep -Milliseconds 250}while((Get-Date) -lt $deadline)

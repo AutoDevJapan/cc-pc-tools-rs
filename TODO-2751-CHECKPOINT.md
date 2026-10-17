@@ -19,6 +19,14 @@
 
 Discordの後片付け投稿は既知のQuestionStateRecoveryRequiredのため未送信。再送や迂回をせず、元noteに残す。本人の判断待ちではない。
 
+### 配送・保存時の照合（11時台）
+
+`4e7cecc`までpushし、remoteと実HEADの一致を確認した。元2736と自分2751への追加配送も正規CLIで保存した。最初は旧note全文を新noteへ重複コピーしたため、旧noteも履歴に保持するCLIの保存結果が64MiB上限を超えて拒否された。追加分だけを新noteにし、旧原文がnote_historyへ完全保存されたことを照合して解決した。原本全欄と履歴は維持し、上限や共有設定を変えていない。詳細は`.ci-work/todo2751-store-capacity-resolution.private.json`。
+
+最新HEAD用の正規scheduler checkpointは未保存。最初のPowerShellからの直接呼出しはGUI実行形式を待たずに戻り、台帳は旧3d07ec6のままだった。CREATE_NO_WINDOW/明示WaitForExitで同じ正規CLIの結果を回収すると`workspace checkpoint failed InputRejected`だった。共有ToDoはtodo/phase=retryで`scheduler.job`が無い一方、job110029の実記録はrunningで、同じtodo/cwdを持つ。現sourceのworkspace_checkpoint.rsは、running sourceに対してscheduler.jobが一致しない場合に拒否する。branch/HEADの不一致とは区別する。台帳を直接修正せず、同じ失敗を繰り返さない。
+
+成果は専用branchへpushして保持する。次の通常割当で新CC_JOB_IDとscheduler.jobが一致したら、実HEADを取り直して正規checkpointを保存する。旧requestのjobを偽って再利用しない。現在の正規waitは2785だけを待ち、親2736の完了は待たない。
+
 ## 2026-10-17・11時台の再開（こちらを優先）
 
 実jobは`20261017-110029-todo-2751`。前回のcleanなc28ae93から再開した。元2736のspec/checkpointと運用指示を読み直し、同じ検査やレビュー登録を繰り返す前に元2778の完了を確認した。

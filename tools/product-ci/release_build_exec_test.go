@@ -1239,3 +1239,27 @@ func TestSweepRemovesOnlyTmpfsLeftoversAndAFailedRemovalBlocksTheRelease(t *test
 		t.Fatal("the leftover disappeared although its removal failed")
 	}
 }
+
+func TestNameHoldContainerCannotCarryAnImageVolume(t *testing.T) {
+	h := newHarness(t)
+	h.d.createMode = "nothing"
+	factory := func(string) builderDocker { return h.d }
+	if _, err := h.run(context.Background()); err == nil {
+		t.Fatal("unexpected success")
+	}
+	var hold []string
+	h.d.createMode = ""
+	h.d.onCreate = func(args []string) { hold = args }
+	if again, err := recoverReleaseBuilder(context.Background(), factory, h.dir); err != nil || !again.PhaseMayRelease {
+		t.Fatalf("recovery failed: %v", err)
+	}
+	joined := " " + strings.Join(hold, " ") + " "
+	if !strings.Contains(joined, " --tmpfs /tmp:") || !strings.Contains(joined, " --tmpfs /workspace:") {
+		t.Fatal("the name hold container does not override the image's volume paths")
+	}
+	for _, forbidden := range []string{" --privileged ", " --cap-add ", " --volume ", " -v ", " --mount ", " --device ", " --network host "} {
+		if strings.Contains(joined, forbidden) {
+			t.Fatalf("forbidden option %q in the name hold container", forbidden)
+		}
+	}
+}

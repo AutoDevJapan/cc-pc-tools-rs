@@ -414,17 +414,9 @@ func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
 		if !inert {
 			continue // Left for anyBuilder: the phase stays busy.
 		}
-		// Anonymous volumes are named durably first, so that a removal that leaves a
-		// volume behind keeps this run unreleasable until the volume is gone.
-		b.recordVolumes(info)
-		if b.persist() != nil {
-			return errors.New("state write failed")
-		}
+		// No volume of any kind is involved (see the mount condition above).
 		if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
 			return err
-		}
-		if !b.volumesAbsent(ctx) {
-			return errors.New("leftover volume remains")
 		}
 	}
 	return nil
@@ -1093,7 +1085,10 @@ func (b *builderRun) holdCreateName(ctx context.Context) {
 		}
 	}
 	_, _, _ = dockerText(ctx, b.d, 4096, "create", "--name", b.rec.ContainerName, "--label", releaseBuildLabel+"="+b.rec.Nonce, "--label", "cc.todo=2799",
-		"--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "67108864", "--pids-limit", "16", releaseBuilderTool, "--version")
+		"--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "67108864", "--pids-limit", "16",
+		// Same tmpfs overrides as the real create, so the image's VOLUME can never
+		// give a late arrival of this container an anonymous volume.
+		"--tmpfs", "/tmp:rw,nosuid,nodev,size=1m", "--tmpfs", "/workspace:rw,nosuid,nodev,size=1m", releaseBuilderTool, "--version")
 }
 
 func (b *builderRun) disposeContainer(ctx context.Context, id string) bool {

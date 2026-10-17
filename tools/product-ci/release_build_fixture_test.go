@@ -327,7 +327,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		}
 		rec, err := runReleaseBuilder(ctx, silent, fixtureBuilderSpec(t, probe, false), newDir("uncertain-never-landed"))
 		reports = append(reports, rec)
-		if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.Started || !rec.ContainerRemoved || !rec.PhaseMayRelease {
+		if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.Started || !rec.ContainerRemoved || !rec.PhaseMayRelease || len(rec.VolumeNames) != 0 {
 			t.Fatalf("name hold fixture: %v %s", err, rec.Failure)
 		}
 		assertGone(rec)

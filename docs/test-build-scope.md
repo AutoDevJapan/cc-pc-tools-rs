@@ -42,6 +42,7 @@ doctestがあるライブラリは、同じ影響範囲の`cargo test --locked -
 
 Build speedの通常実行は、固定したbase/headの差分とCargo metadataから、
 変更クレートと推移的な逆依存を選ぶ。dev依存とtarget別依存も含める。
+PRはmerge-baseから、pushは直前のtipから比較し、変更を戻すpushも検査対象にする。
 同じ対象でnextest・doctest・Clippyを行い、先行する重複の回帰検査は追加しない。
 
 Cargoの共有設定・ロック・ツールチェーン・nextest設定、共有runner、選択器または

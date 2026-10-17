@@ -45,10 +45,11 @@ jobs:
         env:
           SCOPE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           SCOPE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SCOPE_EVENT_NAME: ${{ github.event_name }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $argsForScope = @('-C', 'tools/test-scope', 'run', '.', '-root', $env:GITHUB_WORKSPACE, '-head', $env:SCOPE_HEAD_SHA)
+          $argsForScope = @('-C', 'tools/test-scope', 'run', '.', '-root', $env:GITHUB_WORKSPACE, '-head', $env:SCOPE_HEAD_SHA, '-event', $env:SCOPE_EVENT_NAME)
           if ($env:SCOPE_BASE_SHA) { $argsForScope += @('-base', $env:SCOPE_BASE_SHA) }
           $scopeJson = & go @argsForScope
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

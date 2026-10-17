@@ -180,8 +180,8 @@ func command(dir, exe string, args ...string) ([]byte, error) {
 	return c.Output() // Never forward metadata, original source or stderr to the log.
 }
 
-func collect(root, base, head string) (plan, error) {
-	if !shaRE.MatchString(head) || (base != "" && !shaRE.MatchString(base)) {
+func collect(root, base, head, event string) (plan, error) {
+	if !shaRE.MatchString(head) || (base != "" && !shaRE.MatchString(base)) || (event != "push" && event != "pull_request") {
 		return plan{}, errors.New("source revisions must be fixed commit hashes")
 	}
 	actual, err := command(root, "git", "rev-parse", "HEAD")
@@ -196,21 +196,9 @@ func collect(root, base, head string) (plan, error) {
 	if json.Unmarshal(raw, &m) != nil || !samePath(m.Root, root) {
 		return plan{}, errors.New("Cargo metadata does not describe the checked-out workspace")
 	}
-	fullReason, comparison := "", ""
-	if base == "" || base == strings.Repeat("0", 40) {
-		fullReason = "comparison_base_unavailable"
-	} else if _, err := command(root, "git", "cat-file", "-e", base+"^{commit}"); err != nil {
-		fullReason = "comparison_base_unavailable"
-	} else {
-		mergeBase, err := command(root, "git", "merge-base", base, head)
-		if err != nil {
-			fullReason = "comparison_ancestry_unavailable"
-		} else {
-			comparison = strings.TrimSpace(string(mergeBase))
-			if !shaRE.MatchString(comparison) {
-				return plan{}, errors.New("comparison revision is invalid")
-			}
-		}
+	comparison, fullReason, err := comparisonBase(root, base, head, event)
+	if err != nil {
+		return plan{}, err
 	}
 	changed := []string{}
 	if comparison != "" {
@@ -230,6 +218,29 @@ func collect(root, base, head string) (plan, error) {
 	return p, err
 }
 
+func comparisonBase(root, base, head, event string) (comparison, fullReason string, err error) {
+	if base == "" || base == strings.Repeat("0", 40) {
+		fullReason = "comparison_base_unavailable"
+	} else if _, err := command(root, "git", "cat-file", "-e", base+"^{commit}"); err != nil {
+		fullReason = "comparison_base_unavailable"
+	} else if event == "push" {
+		// A forced push can remove changes. The previous tip, rather than its
+		// merge-base with the new tip, is the source that must be compared.
+		comparison = base
+	} else {
+		mergeBase, err := command(root, "git", "merge-base", base, head)
+		if err != nil {
+			fullReason = "comparison_ancestry_unavailable"
+		} else {
+			comparison = strings.TrimSpace(string(mergeBase))
+			if !shaRE.MatchString(comparison) {
+				return "", "", errors.New("comparison revision is invalid")
+			}
+		}
+	}
+	return comparison, fullReason, nil
+}
+
 func samePath(a, b string) bool {
 	a, b = filepath.Clean(a), filepath.Clean(b)
 	if runtime.GOOS == "windows" {
@@ -240,13 +251,14 @@ func samePath(a, b string) bool {
 
 func main() {
 	rootFlag := flag.String("root", ".", "checked-out workspace root")
+	event := flag.String("event", "pull_request", "GitHub event: pull_request or push")
 	base := flag.String("base", "", "fixed PR base or previous push revision")
 	head := flag.String("head", "", "fixed checked-out source revision")
 	flag.Parse()
 	root, err := filepath.Abs(*rootFlag)
 	if err == nil {
 		var p plan
-		p, err = collect(root, *base, *head)
+		p, err = collect(root, *base, *head, *event)
 		if err == nil {
 			err = json.NewEncoder(os.Stdout).Encode(p)
 		}

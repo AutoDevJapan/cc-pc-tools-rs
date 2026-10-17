@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -33,6 +35,39 @@ func fixture(t *testing.T) metadata {
 		t.Fatal(err)
 	}
 	return m
+}
+
+func TestForcedPushComparesPreviousTip(t *testing.T) {
+	root := t.TempDir()
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := command(root, "git", args...)
+		if err != nil {
+			t.Fatalf("fixture git %v failed: %v", args, err)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("init", "--initial-branch=main")
+	commit := func(text string) string {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, "input.rs"), []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+		git("add", "input.rs")
+		git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath="+root, "commit", "-m", "fixture")
+		return git("rev-parse", "HEAD")
+	}
+	ancestor := commit("original")
+	previous := commit("change")
+	// The new source after a rollback is exactly the old ancestor.
+	comparison, reason, err := comparisonBase(root, previous, ancestor, "push")
+	if err != nil || reason != "" || comparison != previous || git("diff", "--name-only", comparison, ancestor) != "input.rs" {
+		t.Fatalf("push rollback lost coverage: %s %s %v", comparison, reason, err)
+	}
+	comparison, reason, err = comparisonBase(root, previous, ancestor, "pull_request")
+	if err != nil || reason != "" || comparison != ancestor {
+		t.Fatalf("PR comparison is not its merge-base: %s %s %v", comparison, reason, err)
+	}
 }
 
 func TestAffectedClosure(t *testing.T) {

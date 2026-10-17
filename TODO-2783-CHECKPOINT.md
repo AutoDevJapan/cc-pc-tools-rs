@@ -24,3 +24,5 @@ Resume:
 3. Once guest resources are allocated, create a new safe-delete-owned root and fresh nonce guest capped at 2 vCPU/4 GiB, GPU/device passthrough/host mounts disabled, with only the existing Default Switch NIC.
 4. Run the fixed SDK sequence through the LocalSystem service, verify each pinned version, preserve raw logs privately and sanitized evidence, then stop/remove the VM and confirm memory zero plus VHD detach.
 5. Keep the SDK-only template in the owned root with absolute path, hash, size, and VM recovery receipt. Commit/push/checkpoint and report all out-of-scope CI/source steps as unrun.
+
+Wait registration attempt: todo.exe wait-retry 2783 failed with todo_store_too_large (shared ToDo exceeds 64 MiB). No task state change was made. The same active job is retaining this work and waiting for guest resource allocation; do not repeat the oversized store write without a storage repair.

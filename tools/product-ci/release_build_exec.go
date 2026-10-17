@@ -388,7 +388,10 @@ func (b *builderRun) phaseClear(ctx context.Context) string {
 // those leftovers (never started, exact name/label/image pattern, no bind mount);
 // a builder that ever ran, or anything else carrying the label, is never touched
 // and keeps the phase busy.
-var inertBuilderName = regexp.MustCompile("^/cc-release-build-([0-9a-f]{32})$")
+var (
+	inertBuilderName    = regexp.MustCompile("^/cc-release-build-([0-9a-f]{32})$")
+	anonymousVolumeName = regexp.MustCompile("^[0-9a-f]{64}$")
+)
 
 func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
 	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel)
@@ -405,8 +408,10 @@ func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
 		}
 		m := inertBuilderName.FindStringSubmatch(info.Name)
 		inert := m != nil && info.ID == id && info.Config.Labels[releaseBuildLabel] == m[1] && info.Config.Image == releaseBuilderTool && info.State.Status == "created" && !info.State.Running
+		// Only tmpfs and Docker's anonymous volumes (64 hex digits) qualify: a named
+		// volume, a bind or any other mount is never swept, and the phase stays busy.
 		for _, mt := range info.Mounts {
-			inert = inert && mt.Type != "bind"
+			inert = inert && (mt.Type == "tmpfs" || mt.Type == "volume" && anonymousVolumeName.MatchString(mt.Name))
 		}
 		if !inert {
 			continue // Left for anyBuilder: the phase stays busy.

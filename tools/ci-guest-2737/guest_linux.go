@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	sourcepacket "cc/ci-source-2737"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -26,6 +27,7 @@ type guest struct {
 	results              map[string]fixtureResult
 	instance             string
 	prepared, configured bool
+	source               sourcepacket.Pin
 }
 
 func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
@@ -41,6 +43,21 @@ func (g *guest) serve(conn net.Conn) {
 	d := json.NewDecoder(bytes.NewReader(header))
 	q, e := decodeRequest(d)
 	if e != nil || d.Decode(new(any)) != io.EOF {
+		return
+	}
+	if q.Kind == "live-job" {
+		g.mu.Lock()
+		if g.active || g.prepared || g.configured || q.ID != g.instance {
+			g.mu.Unlock()
+			return
+		}
+		g.active = true
+		g.prepared = true
+		g.configured = true
+		g.mu.Unlock()
+		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		_ = conn.SetDeadline(time.Now().Add(40 * time.Minute))
+		serveLiveJob(conn, reader, q.ID, g.source)
 		return
 	}
 	if q.Kind == "materialize-source" {
@@ -245,6 +262,12 @@ func runGuest() error {
 	if json.Unmarshal(b, &p) != nil || !validInstance(p.Instance) || !validHash(p.ClientCertificate) {
 		return errors.New("public guest config rejected")
 	}
+	if p.Source.HeadSHA == "" {
+		p.Source = fixedSourcePin()
+	}
+	if !validSourcePin(p.Source) {
+		return errors.New("public source expectation rejected")
+	}
 	i, e := newIdentity()
 	if e != nil {
 		return e
@@ -281,7 +304,7 @@ func runGuest() error {
 	// Only public readiness data is emitted. No key or token is written to disk.
 	announce := func() { _, _ = fmt.Fprintln(serial, "CI2737-READY "+base64.StdEncoding.EncodeToString(public)) }
 	announce()
-	g := guest{results: map[string]fixtureResult{}, instance: p.Instance}
+	g := guest{results: map[string]fixtureResult{}, instance: p.Instance, source: p.Source}
 	deadline := time.AfterFunc(45*time.Minute, func() { _ = l.Close() })
 	defer deadline.Stop()
 	go func() {
@@ -299,6 +322,12 @@ func runGuest() error {
 	}
 }
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "job-hook" {
+		if liveJobHook(os.Args[2]) == nil {
+			return
+		}
+		os.Exit(1)
+	}
 	if len(os.Args) == 2 {
 		switch os.Args[1] {
 		case "guest":

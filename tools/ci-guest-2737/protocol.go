@@ -83,8 +83,9 @@ func readBlob(r io.Reader, limit uint64) ([]byte, error) {
 }
 
 type publicConfig struct {
-	Instance          string `json:"instance"`
-	ClientCertificate string `json:"client_certificate_sha256"`
+	Instance          string           `json:"instance"`
+	ClientCertificate string           `json:"client_certificate_sha256"`
+	Source            sourcepacket.Pin `json:"source"`
 }
 type ready struct {
 	Instance    string `json:"instance"`
@@ -171,7 +172,7 @@ func decodeRequest(d *json.Decoder) (request, error) {
 	if e := d.Decode(&q); e != nil {
 		return q, e
 	}
-	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source" && q.Kind != "configure-offline") || !validInstance(q.ID) {
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source" && q.Kind != "configure-offline" && q.Kind != "live-job") || !validInstance(q.ID) {
 		return q, errors.New("fixture request rejected")
 	}
 	return q, nil

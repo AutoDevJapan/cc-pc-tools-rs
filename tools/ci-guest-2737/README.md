@@ -128,6 +128,44 @@ drains the child and observes target-lock release. The corrected bootstrap
 passed. The initial missing APPDATA and PATHEXT failures remain separate.
 No actual Cargo build, job hook, workflow dispatch or CI success is certified.
 
+The next, unexercised `linux-job <owned-root> <SDK-root> <Linux-helper>
+<request.json>` path now connects canonical Cargo admission to a single official
+job. The explicit request contains Source (head/tree/workflow hash), RunID,
+Attempt, Role (`verify` or `ci-gate`), ProductCI (absolute rebuilt helper path),
+and empty Inputs. It cannot advance a ref, enable a route variable, dispatch a
+workflow, or prepare Windows. The actual original manual workflow has no inputs;
+its workflow_call release inputs are not accepted as manual job authority.
+
+The public seed fixes the expected revision. mTLS source transfer precedes the
+in-memory registration token; an exclusive intent precedes registration, and
+the numeric runner ID is saved before starting the listener. The official API
+resolver must verify queued ownership before registration/listening, and the
+same job/runner claim at both hooks. Hooks verify real Git HEAD/tree/index,
+all saved blobs/modes and absence of authentication/filter/hook configuration.
+They bind workflow/run/attempt/ref/job/name/event/inputs and allow one start and
+one completion. Hook failure blocks progress; hook completion is not official
+success. The listener must exit and the official job API must independently
+report the matching SHA/runner/job success. Official job logs are privately
+bounded and hashed, including partial download evidence on failure.
+
+Cancellation closes the TLS stream; process-group cleanup and VM shutdown run
+before Cargo admission is released. A durable exclusive execution intent blocks
+reuse after uncertain cleanup. If VM removal cannot be proved, the gate retains
+its lease until read-only broker observations prove absence or Off/memory-zero;
+it does not repeat a rejected stop/delete. That exceptional fence may require
+an independent technical recovery job, never owner PC operation. Registration
+cleanup and final intent reconciliation remain explicit after such a failure.
+The new controller, hook, lease-fence and log-download path has NOT accepted an
+official job or undergone real end-to-end cancellation yet. Passing unit tests
+and compiled Linux/Windows binaries are not official CI evidence.
+
+Current validation: Windows tests/vet for sourcepacket, guest and product-ci;
+real Linux sourcepacket (8 top-level tests) and guest helper (9 tests), all pass.
+Tests include actual altered-file/config rejection and wire acknowledgement/
+cancellation. A test invocation before Linux test binaries finished compiling
+was rejected before execution; the subsequent actual tests passed. No VM,
+runner registration or original source execution was started by those tests.
+
 Primary references: [Canonical images](https://cloud-images.ubuntu.com/releases/noble/release-20260926/),
 [NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html),
 [Hyper-V cmdlets](https://learn.microsoft.com/en-us/powershell/module/hyper-v/).

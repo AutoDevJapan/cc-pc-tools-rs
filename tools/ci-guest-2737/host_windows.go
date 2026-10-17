@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	sourcepacket "cc/ci-source-2737"
 	"compress/gzip"
 	"context"
 	"crypto/rand"
@@ -297,6 +298,12 @@ func cleanupTools(ctx context.Context, root string) error {
 	return record(root, "tools-cleanup.private.json", map[string]any{"id": s.ID, "pid": 0, "removed": true})
 }
 func prepareSeed(ctx context.Context, root, toolRoot, helper, instance string, i identity) error {
+	return prepareSeedForSource(ctx, root, toolRoot, helper, instance, i, fixedSourcePin())
+}
+func prepareSeedForSource(ctx context.Context, root, toolRoot, helper, instance string, i identity, pin sourcepacket.Pin) error {
+	if !validSourcePin(pin) {
+		return errors.New("seed source expectation rejected")
+	}
 	s, e := readTools(toolRoot)
 	if e != nil {
 		return e
@@ -308,7 +315,7 @@ func prepareSeed(ctx context.Context, root, toolRoot, helper, instance string, i
 	if e != nil || len(guest) > 32<<20 || !bytes.HasPrefix(guest, []byte{0x7f, 'E', 'L', 'F'}) {
 		return errors.New("Linux guest helper rejected")
 	}
-	public, _ := json.Marshal(publicConfig{instance, i.Digest})
+	public, _ := json.Marshal(publicConfig{Instance: instance, ClientCertificate: i.Digest, Source: pin})
 	user := "#cloud-config\nhostname: ci2737-" + instance[:8] + "\nusers: []\ndisable_root: true\nssh_pwauth: false\nwrite_files:\n - path: /usr/local/bin/ci2737-guest\n   permissions: '0755'\n   encoding: b64\n   content: " + base64.StdEncoding.EncodeToString(guest) + "\n - path: /etc/ci2737-public.json\n   permissions: '0644'\n   content: '" + string(public) + "'\nruncmd:\n - [systemctl, stop, serial-getty@ttyS0.service]\n - [/usr/local/bin/ci2737-guest, guest]\n"
 	seedPath := "/work/seed-" + instance
 	if e = command(ctx, dockerExe, "exec", s.ID, "mkdir", seedPath).Run(); e != nil {
@@ -472,10 +479,12 @@ func main() {
 		}
 		return
 	}
-	ctx, stop := context.WithTimeout(context.Background(), 15*time.Minute)
+	ctx, stop := context.WithTimeout(context.Background(), 55*time.Minute)
 	defer stop()
 	var e error
-	if len(os.Args) == 5 && os.Args[1] == "bootstrap-offline" {
+	if len(os.Args) == 6 && os.Args[1] == "linux-job" {
+		e = runGatedLinuxJob(ctx, os.Args[2], os.Args[3], os.Args[4], os.Args[5])
+	} else if len(os.Args) == 5 && os.Args[1] == "bootstrap-offline" {
 		e = runGatedBootstrap(ctx, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 3 && os.Args[1] == "test-gate" {
 		e = testGateFixtures(ctx, os.Args[2])

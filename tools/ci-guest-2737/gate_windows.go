@@ -15,13 +15,14 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
 const sharedCargoGate = `D:\CC\Tools\codex-jobs\cargo_gate.exe`
 const sharedGateDirectory = `D:\CC\Tools\codex-jobs`
 
-type gatedHello struct{ ID, Mode, Root, SDKRoot, Helper string }
+type gatedHello struct{ ID, Mode, Root, SDKRoot, Helper, Request string }
 type gatedControl struct{ ID, Kind string }
 type gateFrame struct {
 	ID, Stage, Target string
@@ -59,7 +60,7 @@ func gateChild() error {
 	}
 	r := bufio.NewReaderSize(os.Stdin, 32769)
 	var q gatedHello
-	if decodeGateLine(r, &q) != nil || !validInstance(q.ID) || (q.Mode != "fixture" && q.Mode != "offline-bootstrap") || !filepath.IsAbs(q.Root) {
+	if decodeGateLine(r, &q) != nil || !validInstance(q.ID) || (q.Mode != "fixture" && q.Mode != "offline-bootstrap" && q.Mode != "linux-job") || !filepath.IsAbs(q.Root) {
 		return errors.New("gate work rejected")
 	}
 	out := json.NewEncoder(os.Stdout)
@@ -70,7 +71,7 @@ func gateChild() error {
 	if decodeGateLine(r, &start) != nil || start.ID != q.ID || start.Kind != "start" {
 		return errors.New("gate start not acknowledged")
 	}
-	if q.Mode == "offline-bootstrap" {
+	if q.Mode == "offline-bootstrap" || q.Mode == "linux-job" {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
@@ -82,8 +83,27 @@ func gateChild() error {
 				}
 			}
 		}()
-		e := bootstrapNormalRunner(ctx, q.Root, q.SDKRoot, q.Helper)
+		var e error
+		if q.Mode == "linux-job" {
+			e = executeLinuxJob(ctx, q.Root, q.SDKRoot, q.Helper, q.Request, jobs, threads)
+		} else {
+			e = bootstrapNormalRunner(ctx, q.Root, q.SDKRoot, q.Helper)
+		}
 		if e != nil {
+			var fence *unsafeVMLease
+			if errors.As(e, &fence) {
+				fmt.Fprintln(os.Stderr, "VM_LEASE_FENCED: retain Cargo admission; inspect durable normal CI intent")
+				for {
+					probe, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+					observed := observeVMQuiescence(probe, fence)
+					cancel()
+					if observed == nil {
+						break
+					}
+					timer := time.NewTimer(30 * time.Second)
+					<-timer.C
+				}
+			}
 			return e
 		}
 		return out.Encode(gateFrame{ID: q.ID, Stage: "drained", Jobs: jobs, Threads: threads})

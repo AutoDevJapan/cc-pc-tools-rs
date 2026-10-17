@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -54,8 +55,11 @@ func createVM(ctx context.Context, root, instance, image string) (vmState, error
 	return createVMStage(ctx, root, instance, image, "")
 }
 func createVMStage(ctx context.Context, root, instance, image, fault string) (vmState, error) {
+	return createVMBudget(ctx, root, instance, image, fault, 2, 2)
+}
+func createVMBudget(ctx context.Context, root, instance, image, fault string, cpus, memoryGiB int) (vmState, error) {
 	s := vmState{Instance: instance, Name: "cc-ci-2737-" + instance, Root: root, Pipe: `\\.\pipe\cc-ci-2737-` + instance}
-	if !validInstance(instance) || (fault != "" && fault != "after-receipt" && fault != "receipt-write" && fault != "receipt-and-rollback") {
+	if !validInstance(instance) || cpus < 1 || cpus > 10 || memoryGiB < 2 || memoryGiB > 16 || (fault != "" && fault != "after-receipt" && fault != "receipt-write" && fault != "receipt-and-rollback") {
 		return s, errors.New("VM instance rejected")
 	}
 	if e := record(root, "vm-intent.private.json", s); e != nil {
@@ -117,6 +121,8 @@ try {
   $journal.Dispose()
 }
 `
+	body = strings.Replace(body, "Set-VMProcessor -VM $vm -Count 2", "Set-VMProcessor -VM $vm -Count "+strconv.Itoa(cpus), 1)
+	body = strings.Replace(body, "-StartupBytes 2GB", "-StartupBytes "+strconv.Itoa(memoryGiB)+"GB", 1)
 	adminErr := admin(ctx, root, "vm-create", body)
 	// Never skip identity recovery because the constructor returned failure.
 	// Prefer the rollback proof when creation receipt itself could not be saved.

@@ -181,6 +181,15 @@ func TestMaterializeReproducesRealGitObjectsAndRawIgnoredBlob(t *testing.T) {
 	if _, err = Materialize(context.Background(), p, p.Pin, dest); err == nil {
 		t.Fatal("nonfresh root accepted")
 	}
+	if _, err = VerifyCheckout(context.Background(), p.Pin, p.TreeEntries, dest); err != nil {
+		t.Fatal("post-checkout physical proof rejected")
+	}
+	if err = os.WriteFile(filepath.Join(dest, "tracked.dat"), []byte("changed after checkout"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = VerifyCheckout(context.Background(), p.Pin, p.TreeEntries, dest); err == nil {
+		t.Fatal("actual worktree alteration accepted")
+	}
 }
 
 func TestMaterializeRejectsAlteredArchiveBlobCommitAndTree(t *testing.T) {
@@ -209,6 +218,24 @@ func TestMaterializeRejectsAlteredArchiveBlobCommitAndTree(t *testing.T) {
 	changed.Pin.TreeSHA = strings.Repeat("b", 40)
 	if _, err := Materialize(context.Background(), changed, base.Pin, filepath.Join(dest, "tree")); err == nil {
 		t.Fatal("altered tree pin accepted")
+	}
+}
+
+func TestPostCheckoutRejectsAuthAndExecutableConfiguration(t *testing.T) {
+	for _, key := range []string{"http.https://github.com/.extraheader", "credential.helper", "core.fsmonitor", "core.hooksPath", "include.path", "filter.inject.clean"} {
+		t.Run(key, func(t *testing.T) {
+			p, root := fixture(t)
+			dest := filepath.Join(root, "guest")
+			if _, e := Materialize(context.Background(), p, p.Pin, dest); e != nil {
+				t.Fatal(e)
+			}
+			// Values are synthetic inert markers. Verification may inspect key names
+			// but must reject before an index/filter/fsmonitor command could run.
+			run(t, dest, nil, "config", key, "synthetic-inert-marker")
+			if _, e := VerifyCheckout(context.Background(), p.Pin, p.TreeEntries, dest); e == nil {
+				t.Fatal("unsafe post-checkout configuration accepted")
+			}
+		})
 	}
 }
 

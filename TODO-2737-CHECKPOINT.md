@@ -273,3 +273,20 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 新Go helper gate/runner codeとroute修正は2784のレビュー対象外。新しい有限差分レビューを実行接続後に行う。
 - 残り: actual job hooks/single-use/live API binding、共有gate下での実job、取消し時のprocess/登録/lock回収、Windows SDK2783、原公式CI完走。
   親2641や2761を待たず自分の範囲を返し、原merge/Prdは親に残す。旧受入/旧回収や37件を複製しない。
+
+### 同jobのlive job接続差分（公式job未実行）
+
+- canonical gate内でLinux単一jobを扱うhost controller、guestのstart/complete hook、post-checkoutの実HEAD/tree/index/blob/mode/auth不在検査を実装。
+  sourceはseedで明示固定、公式run/attempt/job/runner ID/nonce/ref/contextを照合し、登録前intent、listener前numeric runner IDを保存する。
+  原workflowの手動入力は実API/RAM outlineで0項目。workflow_call向けrelease入力を手動実行へ流用せず、Inputsは空のみ許可する。
+- hook完了を成功にせず、runner exitと公式job APIの同SHA/同runner成功を確認する構成。公式logはprivate bounded fileとhashへ保存し、partial取得も区別する。
+- 取消しはTLS EOF、guest process group停止、exact VM停止/回収、exact登録削除の順。専用durable intentで不確定な実行の再受付を止める。
+  VM回収失敗時は共有Cargo leaseを保持し、read-only broker観測で不在またはOff/memory0を確認するまで解放しない。
+  例外fenceは実機未検査。発生時は独立した技術回収を登録し、同じ拒否のstop/deleteを無限再試行しない。
+- Windows Go test/vet（guest/source/product-ci）成功。新Linux test binaryを生成し、既存owned工具containerだけで実行した。
+  source8件/guest9件のtop-level testはすべて成功。log hashes46D7E0C5AFF6B32CA863525918E78B08C2E0E474403E154AE623088DF455C127 / AE2F51A950F6CEA32DAB504E128075DB68390D536007CB367B6B3CEC0EF4EDAD。
+  最初のWindows compileはtime import欠落で失敗し修正。Linux最初の呼出しは生成完了前でbinary拒否、生成終了後の実検査は成功。原失敗を保持する。
+- 新しいlive controllerは実公式job/登録/VMへまだ接続していない。original b194/ref/workflow/Hosted予算は変更していない。
+  原13工程とDocker parity、最終Rust nextest/workspace/doctestの実行は残る。review2784 Must0はedc9までで、この新差分の合格にしない。
+- 次はこの有限deltaの別モデルレビュー、Windows SDK2783の受領、route変数の所有/回復と4scalar同branch expected SHA更新、実公式CI完走。
+  newroot ab888.../ci2737-host-live.exe と ci2737-live-guest-final は検査用buildであり、配布済み工具や公式成功ではない。

@@ -102,6 +102,9 @@ func exactOfflineRunner(r originalRunner, name string) bool {
 }
 
 func bootSDK(ctx context.Context, root, sdkRoot, helper, instance string) (s vmState, i identity, r ready, ret error) {
+	return bootSDKForSource(ctx, root, sdkRoot, helper, instance, fixedSourcePin(), 2, 2)
+}
+func bootSDKForSource(ctx context.Context, root, sdkRoot, helper, instance string, pin sourcepacket.Pin, cpus, memoryGiB int) (s vmState, i identity, r ready, ret error) {
 	var template struct {
 		Path, SHA256, Instance string
 		VMID                   string `json:"source_vm"`
@@ -144,10 +147,10 @@ func bootSDK(ctx context.Context, root, sdkRoot, helper, instance string) (s vmS
 	if command(ctx, dockerExe, "start", tools.ID).Run() != nil {
 		return s, i, r, errors.New("owned SDK tool start failed")
 	}
-	if e = prepareSeed(ctx, root, sdkRoot, helper, instance, i); e != nil {
+	if e = prepareSeedForSource(ctx, root, sdkRoot, helper, instance, i, pin); e != nil {
 		return s, i, r, e
 	}
-	s, e = createVM(ctx, root, instance, template.Path)
+	s, e = createVMBudget(ctx, root, instance, template.Path, "", cpus, memoryGiB)
 	if e != nil {
 		return s, i, r, e
 	}

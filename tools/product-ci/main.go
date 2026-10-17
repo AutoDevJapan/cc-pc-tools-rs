@@ -656,6 +656,8 @@ func main() {
 	var e error
 	if len(os.Args) == 2 && os.Args[1] == "normal-ci-outline" {
 		e = outlineNormalCI(ctx)
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-job-plan" {
+		e = normalCIJobCLI(ctx, os.Args[2])
 	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-plan" {
 		e = saveNormalCIProposal(ctx, os.Args[2])
 	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {

@@ -28,10 +28,10 @@ func TestPR148LinuxNewCommitAndDispatchProof(t *testing.T) {
 		}
 		oldBytes[w.Path] = b
 		newBytes[w.Path] = out
-		oldTree.Entries = append(oldTree.Entries, pr148TreeEntry{w.Path, "100644", "blob", gitObjectID("blob", b)})
-		newTree.Entries = append(newTree.Entries, pr148TreeEntry{w.Path, "100644", "blob", gitObjectID("blob", out)})
+		oldTree.Entries = append(oldTree.Entries, pr148TreeEntry{Path: w.Path, Mode: "100644", Type: "blob", SHA: gitObjectID("blob", b)})
+		newTree.Entries = append(newTree.Entries, pr148TreeEntry{Path: w.Path, Mode: "100644", Type: "blob", SHA: gitObjectID("blob", out)})
 	}
-	oldTree.Entries = append(oldTree.Entries, pr148TreeEntry{"fixture.rs", "100644", "blob", strings.Repeat("8", 40)})
+	oldTree.Entries = append(oldTree.Entries, pr148TreeEntry{Path: "fixture.rs", Mode: "100644", Type: "blob", SHA: strings.Repeat("8", 40)})
 	newTree.Entries = append(newTree.Entries, oldTree.Entries[3])
 	payload := "tree " + newTree.SHA + "\nparent " + pr148Head + "\nauthor fixture <fixture@example.invalid> 1 +0000\ncommitter fixture <fixture@example.invalid> 1 +0000\n\nfixture\n"
 	p := pr148LinuxPlan{gitObjectID("commit", []byte(payload)), newTree.SHA, digest(newBytes[pr148Workflows[0].Path]), 101, 102, 1}

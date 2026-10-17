@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['tools/product-ci/**', '.github/workflows/product-ci.yml']
+    paths: ['tools/product-ci/**', 'tools/pr148-windows-runner/**', '.github/workflows/product-ci.yml']
   pull_request:
-    paths: ['tools/product-ci/**', '.github/workflows/product-ci.yml']
+    paths: ['tools/product-ci/**', 'tools/pr148-windows-runner/**', '.github/workflows/product-ci.yml']
 permissions:
   contents: read
 concurrency:
@@ -58,3 +58,12 @@ jobs:
       - run: go test -race -timeout 120s ./...
       - run: go vet ./...
       - run: go build -trimpath .
+      - name: Test finite Windows runner contracts
+        working-directory: tools/pr148-windows-runner
+        run: go test -race -timeout 120s ./...
+      - name: Vet finite Windows runner contracts
+        working-directory: tools/pr148-windows-runner
+        run: go vet ./...
+      - name: Build finite Windows runner helper
+        working-directory: tools/pr148-windows-runner
+        run: go build -trimpath .

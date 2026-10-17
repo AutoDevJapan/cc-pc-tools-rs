@@ -1,0 +1,103 @@
+{
+  "cancel_observer_process_exit_code": null,
+  "previous_profile_cleanup_refusals_retried": false,
+  "source_commit": "3ba895fac69874540554e6abfbd220d84d7dbdfc",
+  "go_vet_success": true,
+  "go_source_unchanged_after_commit": true,
+  "opt_in_default_skipped": 2,
+  "cargo_executed": false,
+  "official_runner_registered": false,
+  "nonadmin_controller_permissions_runtime_verified": false,
+  "new_profile_hive_classes_remaining": 2,
+  "windows_build_success": true,
+  "raw_manifest_sha256": "C6F0960661D7EE0EE893778D8067A5FA3B8F7091265F5B1B434C2EC62E4EF365",
+  "nonadmin_controller_process_launch": "Windows CreateProcessWithTokenW Access denied 5 through approved broker; no alternate launch attempted",
+  "schema": "pr148-review-fixed-fixtures-v2",
+  "build_timing": "built immediately before commit from identical Go source; original binary SHA preserved",
+  "all_work_complete": false,
+  "product_source_fetched": false,
+  "fixtures": [
+    {
+      "instance": "6192f4b25e5b6a1a5cf4475ec72f5398",
+      "protected_report": {
+        "instance": "6192f4b25e5b6a1a5cf4475ec72f5398",
+        "service_pid": 43208,
+        "service_success": true,
+        "worker_pid": 49284,
+        "worker_exit": 0,
+        "retained_member_pids": [
+          47764,
+          32644,
+          15900
+        ],
+        "job_drained": true,
+        "cancelled": false,
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 32644
+      },
+      "collection_snapshot": {
+        "ace_scope": "administrator-installed root and runtime inheritable grants only",
+        "additional_ace_count": 0,
+        "classes_hive_present": true,
+        "credential_runtime": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-6192f4b25e5b6a1a5cf4475ec72f5398\\runtime\\runner",
+        "hive_present": true,
+        "known_residue": true,
+        "official_ci_claimed": false,
+        "process_census_scope": "queryable processes; owned Job Object independently drained",
+        "profile_present": true,
+        "queryable_account_process_count": 0,
+        "root_retained": true,
+        "service_absent": true,
+        "unreadable_process_count": 1
+      }
+    },
+    {
+      "instance": "62233620ef55db0d7638390a4e15498a",
+      "protected_report": {
+        "instance": "62233620ef55db0d7638390a4e15498a",
+        "service_pid": 36280,
+        "service_success": true,
+        "worker_pid": 37124,
+        "worker_exit": 125,
+        "retained_member_pids": [
+          37124,
+          37644,
+          8672,
+          9976
+        ],
+        "job_drained": true,
+        "cancelled": true,
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 8672
+      },
+      "collection_snapshot": {
+        "ace_scope": "administrator-installed root and runtime inheritable grants only",
+        "additional_ace_count": 0,
+        "classes_hive_present": true,
+        "credential_runtime": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-62233620ef55db0d7638390a4e15498a\\runtime\\runner",
+        "hive_present": true,
+        "known_residue": true,
+        "official_ci_claimed": false,
+        "process_census_scope": "queryable processes; owned Job Object independently drained",
+        "profile_present": true,
+        "queryable_account_process_count": 0,
+        "root_retained": true,
+        "service_absent": true,
+        "unreadable_process_count": 1
+      }
+    }
+  ],
+  "cancel_observer_caveat": "controller completion observed; PowerShell Process.ExitCode unavailable; actual worker exit 125 and SCM service success separately measured",
+  "new_profile_delete_attempts": 0,
+  "go_passed_tests": 11,
+  "followup_review_todo": 2763,
+  "followup_review_received": false,
+  "all_three_new_temp_roots_deleted": true,
+  "safe_delete_finish_states": [
+    "source_absent",
+    "source_absent",
+    "source_absent"
+  ]
+}

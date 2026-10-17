@@ -47,12 +47,12 @@ func TestPR148TreeDelta(t *testing.T) {
 	next := pr148APITree{SHA: strings.Repeat("9", 40)}
 	want := map[string]string{}
 	for i, w := range pr148Workflows {
-		old.Entries = append(old.Entries, pr148TreeEntry{w.Path, "100644", "blob", strings.Repeat(strconv.Itoa(i+1), 40)})
+		old.Entries = append(old.Entries, pr148TreeEntry{Path: w.Path, Mode: "100644", Type: "blob", SHA: strings.Repeat(strconv.Itoa(i+1), 40)})
 		s := strings.Repeat(strconv.Itoa(i+4), 40)
 		want[w.Path] = s
-		next.Entries = append(next.Entries, pr148TreeEntry{w.Path, "100644", "blob", s})
+		next.Entries = append(next.Entries, pr148TreeEntry{Path: w.Path, Mode: "100644", Type: "blob", SHA: s})
 	}
-	old.Entries = append(old.Entries, pr148TreeEntry{"tools/source.rs", "100644", "blob", strings.Repeat("7", 40)})
+	old.Entries = append(old.Entries, pr148TreeEntry{Path: "tools/source.rs", Mode: "100644", Type: "blob", SHA: strings.Repeat("7", 40)})
 	next.Entries = append(next.Entries, old.Entries[3])
 	if e := pr148TreeDelta(old, next, want); e != nil {
 		t.Fatal(e)
@@ -67,7 +67,7 @@ func TestPR148TreeDelta(t *testing.T) {
 			case "mode":
 				n.Entries[3].Mode = "100755"
 			case "extra":
-				n.Entries = append(n.Entries, pr148TreeEntry{"extra", "100644", "blob", strings.Repeat("8", 40)})
+				n.Entries = append(n.Entries, pr148TreeEntry{Path: "extra", Mode: "100644", Type: "blob", SHA: strings.Repeat("8", 40)})
 			case "duplicate":
 				n.Entries[3] = n.Entries[0]
 			case "truncated":

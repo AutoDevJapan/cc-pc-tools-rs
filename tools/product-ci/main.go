@@ -655,9 +655,23 @@ func main() {
 	}
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
+	duration := 30 * time.Minute
+	if len(os.Args) == 3 && (os.Args[1] == "release-build-preflight" || os.Args[1] == "release-build-recover") {
+		duration = 55 * time.Minute // Fixed builder's 45 minutes plus source read and cleanup.
+	}
+	ctx, cancel := context.WithTimeout(stopCtx, duration)
 	defer cancel()
 	var e error
+	if len(os.Args) == 3 && (os.Args[1] == "release-build-preflight" || os.Args[1] == "release-build-recover") {
+		report, err := releaseBuildPreflight(ctx, os.Args[2], os.Args[1] == "release-build-recover")
+		// Include cleanup/recovery facts even on failure, never raw Docker logs.
+		err = errors.Join(err, json.NewEncoder(os.Stdout).Encode(report))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "release-source-inspect" {
 		report, err := inspectReleaseSource(ctx, get, readReleaseSourceArchive)
 		if err == nil {

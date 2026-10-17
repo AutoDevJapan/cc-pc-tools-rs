@@ -129,22 +129,26 @@ func sourceMetadata(source string) error {
 }
 
 func inertWorktreeConfig(raw []byte) bool {
-	core := false
+	section := ""
 	for _, line := range strings.Split(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n") {
 		line = strings.TrimSpace(strings.ToLower(line))
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
 			continue
 		}
 		if line == "[core]" {
-			core = true
+			section = "core"
+			continue
+		}
+		if line == "[index]" {
+			section = "index"
 			continue
 		}
 		key, value, ok := strings.Cut(line, "=")
-		if !core || !ok || strings.TrimSpace(value) != "false" {
+		if !ok || strings.TrimSpace(value) != "false" {
 			return false
 		}
 		key = strings.TrimSpace(key)
-		if key != "sparsecheckout" && key != "sparsecheckoutcone" {
+		if !((section == "core" && (key == "sparsecheckout" || key == "sparsecheckoutcone")) || (section == "index" && key == "sparse")) {
 			return false
 		}
 	}

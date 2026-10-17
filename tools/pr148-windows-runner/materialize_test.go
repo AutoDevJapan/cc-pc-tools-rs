@@ -98,7 +98,7 @@ func TestSourceMetadataAcceptsOnlyInertCheckoutWorktreeConfig(t *testing.T) {
 	if e = writeSource(dest, s); e != nil {
 		t.Fatal(e)
 	}
-	for _, raw := range []string{"[core]\n\tsparseCheckout = false\n\tsparseCheckoutCone = false\n", "", "[credential]\nhelper = unsafe\n", "[core]\nsparseCheckout = true\n", "[include]\npath = other\n"} {
+	for _, raw := range []string{"[core]\n\tsparseCheckout = false\n\tsparseCheckoutCone = false\n", "[core]\n\tsparseCheckout = false\n\tsparseCheckoutCone = false\n[index]\n\tsparse = false\n", "", "[credential]\nhelper = unsafe\n", "[core]\nsparseCheckout = true\n", "[index]\nsparse = true\n", "[include]\npath = other\n"} {
 		if e = os.WriteFile(filepath.Join(dest, ".git", "config.worktree"), []byte(raw), 0600); e != nil {
 			t.Fatal(e)
 		}

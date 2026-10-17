@@ -157,6 +157,50 @@ unload/再試行/別APIは行わない。元整理担当2381へこの4件のみ�
    拒否を記録する。2381へ限定配送し、親2736へsource/検査hash/レビュー原応答/残条件を渡す。
 3. 自分の実job/branch/HEADを正規scheduler checkpointへ保存してからレビュー完了待ちを記録する。
    親2736/2640の完了を待つ逆依存は作らない。正式製品source/runner/dispatch/原workflow4jobは親工程。
+
+## 2026-10-17 19時の追加レビュー受領とSID修正
+
+実job `20261017-185644-todo-2790`。原2797/new184908のSonnet5.5応答はMust0。
+actual投入に保存spec全文が一致することを自分でも照合した。raw SHA256は
+06C216F531130F6A0C1B6A12B614A234812D0A3B09EBC7C44FE93C9A31823B1B。
+固定base d5→head9b4a529の追加差分/指定15本文/原review/summaryだけの静的確認で、実検査0。
+返答中の完全head展開に誤記があるため、投入した完全headを基準にした。原応答は恒久rootの
+review-2797-original-184908.private.md、照合はreview-184908-evidence-qualification.json。
+
+原正常74file/取消し75fileの全manifest bytes/SHAを照合した。preparedのhelper SHAと
+保存bootstrap4 SHAは両方一致する。bootstrap4のVCSは23274f6+modifiedであり、9bから
+clean buildしたbinaryとは呼ばない。原成功build event item10と後のcd7 commit、cd7→9bの
+Go差分0からsource内容を関係付ける。埋込みVCSでclean source資格を証明した結果ではない。
+NUL観測は両方exit0で、新HOMEより先に同じsourceで走った。従って後のmain/post成功は
+繰返しcheckoutであり、pristine-source checkoutの独立実証ではない。READMEを訂正した。
+取消しの原fixture.rust_test_pid=50228が、原drainの保持11PIDに含まれることを確認した。
+checkout完全commit11d5960a326750d5838078e36cf38b85af677262、blob/JS/Node ZIPのdigestは
+原SDK receiptに保存済み。製品のaction指定版一致とofficial runner同梱Nodeは未実証で親工程。
+
+S1のicacls30秒/単発prepareは、製品規模未測定の有限な準備失敗条件として明記した。
+タイムアウトした資源へprepareを再試行せずcollectionする。S6の同accountが書ける工具へ
+同accountで行うhash照合は悪意job codeへの防御ではない。Job APIの測定は何らかのJobへの
+所属で、元Jobへの資格は継承/保持handleによることもREADMEで明確化した。
+gzipを扱わないupload-packは固定された小さい合成source限定のまま。製品serverへ転用しない。
+
+NitのSID出力に対する256要素の仮想sliceは、標準syscall.SID.Stringへ3箇所を置換した。
+初回のuintptrからの変換案はraceのcheckptr panicとvet警告で失敗。Win32出力を型付き
+*syscall.SID、Tokenuserも標準pointer型に直し、両原失敗を保存した。
+修正head `25579e6dd0b02ee488718398902a7b59180af24e`、module tree
+227fe892bd2e24d805f0a898af774ff9ba78934e。自分のbranchへcommit/push済み。
+最新Go race69pass/2既存opt-in skip、vet成功、Windows build成功。Linux buildも成功し、
+その後に変えたGoはWindows専用のみ。新service/SDK/旧fixture/Rust全件は再実行していない。
+この新SID差分で実service/Rust成功を新たに実証した結果とは扱わない。
+
+5fileだけの有限追補を同2797へ保存して通常の技術retryへ戻した。specは
+2797-dd5b5c4760b64981b70a8d93624a2d40.md、SHA256は
+BBC1743D81121E562311EF690C07CACA6E88EAA6DB215444E62E9BF20305A2B2。
+旧root2736/review関係と原履歴は保持。原184908のMust0は25579e6へ無条件に流用しない。
+返答受領後はこの小差分のMustだけを処理し、親2736へ最終資格を返す。
+
+原検査/binaryは恒久rootのsid-final-checksへ全10file/29,521,548byteをSHA一致で保存した。
+新build Temp eedd86ccf57d112b95af6ff0c2085aa9はplan→別通常削除→finishでsource_absent。
+以前の残留13件は配送済みのまま触れていない。新たなSID/profile/サービス残留は0。
 ## 2026-10-17 17時台の追補（以前の状態より優先）
 
 実job `20261017-171647-todo-2790`。最新機能sourceはcd7dbd3、文書を含む

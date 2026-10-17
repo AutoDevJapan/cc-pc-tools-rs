@@ -81,10 +81,17 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 	if c.Run() != nil || json.Unmarshal(out.data.Bytes(), &b) != nil {
 		return b, errors.New("official job admission failed")
 	}
-	if b.RepoID != 1154066087 || b.PR != 3613 || b.RunID != q.RunID || b.Attempt != q.Attempt || b.JobID < 1 || b.SHA != q.Source.HeadSHA || b.Tree != q.Source.TreeSHA || b.WorkflowSHA != q.Source.WorkflowSHA256 || b.Role != q.Role || b.OS != "linux" || b.Label != "cc-product-2737-1154066087-linux" {
+	if !validOfficialBinding(q, b) {
 		return b, errors.New("official binding response rejected")
 	}
 	return b, nil
+}
+func validOfficialBinding(q linuxJobRequest, b jobBinding) bool {
+	timeout := 30
+	if q.Role == "ci-gate" {
+		timeout = 5
+	}
+	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == "Linux" && b.Label == "cc-product-2737-1154066087-linux" && b.TimeoutMinutes == timeout && b.JobName != ""
 }
 func sendLiveFrame(c net.Conn, v any) error {
 	b, e := json.Marshal(v)

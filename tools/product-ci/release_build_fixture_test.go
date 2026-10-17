@@ -23,8 +23,10 @@ const fixtureProbeSource = `package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -36,9 +38,15 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "hold" {
 		// A child that outlives the build step proves the whole PID namespace is stopped.
-		if exec.Command("/probe", "child").Start() != nil {
+		child := exec.Command("/probe", "child")
+		if child.Start() != nil {
 			os.Exit(5)
 		}
+		if _, err := os.Stat("/proc/" + strconv.Itoa(child.Process.Pid)); err != nil {
+			os.Exit(6)
+		}
+		// Printed only once the child exists; the harness waits for this line.
+		fmt.Println("CC-PROBE-READY")
 		time.Sleep(time.Hour)
 		return
 	}
@@ -175,9 +183,16 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		}
 	}
 	var reports []releaseBuildReceipt
+	var isolationOnly []struct {
+		Kind                            string
+		OuterIsolationVerified, Started bool
+		Network                         string
+		CPUNano, MemoryBytes, Pids      int64
+		PhaseMayRelease                 bool
+	}
 	factory := func(cfg string) builderDocker { return cliBuilderDocker{cfg} }
 	save := func() {
-		raw, _ := json.MarshalIndent(reports, "", "  ")
+		raw, _ := json.MarshalIndent(map[string]any{"builds": reports, "isolation_checks": isolationOnly}, "", "  ")
 		_ = os.WriteFile(filepath.Join(root, "fixture-report.json"), raw, 0o600)
 	}
 	defer save()
@@ -189,7 +204,12 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		if err != nil || !rec.Succeeded || !rec.KernelProofVerified || rec.ExitCode != 0 || !rec.OuterIsolationVerified || !rec.PIDZero || !rec.ContainerRemoved || rec.ArtifactBytes == 0 || rec.LogSHA256 == "" {
 			t.Fatalf("normal fixture failed: %v %s", err, rec.Failure)
 		}
-		if _, err := rec.verifiedArtifact(); err != nil {
+		art, err := rec.verifiedArtifact()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// The fixture image holds only the CC-authored probe; keep it for inspection.
+		if err := os.WriteFile(filepath.Join(root, "normal-artifact.tar"), art, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if introduced && (!rec.ToolImageIntroduced || !rec.ToolImageRemoved || !imageAbsent()) {
@@ -208,34 +228,52 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 			}
 		}()
 	}
-	waitRunning := func(stop func()) {
-		deadline := time.Now().Add(2 * time.Minute)
+	// The held probe prints a marker into the builder log once its child exists.
+	// A harness that never sees it fails: nothing is concluded from a cancelled,
+	// expired or never-started build.
+	waitMarker := func(dir string, within time.Duration) bool {
+		deadline := time.Now().Add(within)
 		for time.Now().Before(deadline) {
-			if out, err := text("container", "ls", "--quiet", "--filter", "label="+releaseBuildLabel); err == nil && out != "" {
-				time.Sleep(15 * time.Second) // Let Kaniko reach the held build step with its child.
-				stop()
-				return
+			if b, err := os.ReadFile(filepath.Join(dir, releaseBuildLogFile)); err == nil && strings.Contains(string(b), "CC-PROBE-READY") {
+				return true
 			}
 			time.Sleep(500 * time.Millisecond)
 		}
-		stop()
+		return false
+	}
+	logHasMarker := func(dir string) bool {
+		b, err := os.ReadFile(filepath.Join(dir, releaseBuildLogFile))
+		return err == nil && strings.Contains(string(b), "CC-PROBE-READY")
 	}
 	t.Run("cancel", func(t *testing.T) {
 		cctx, cancel := context.WithCancel(ctx)
 		defer cancel()
-		go waitRunning(cancel)
-		rec, err := runReleaseBuilder(cctx, factory, fixtureBuilderSpec(t, probe, true), newDir("cancel"))
+		dir := newDir("cancel")
+		reached := make(chan bool, 1)
+		go func() {
+			ok := waitMarker(dir, 3*time.Minute)
+			reached <- ok
+			cancel()
+		}()
+		rec, err := runReleaseBuilder(cctx, factory, fixtureBuilderSpec(t, probe, true), dir)
 		reports = append(reports, rec)
+		if !<-reached {
+			t.Fatal("the held probe and its child were never observed")
+		}
 		if err == nil || rec.Failure != "canceled" || !rec.Started || rec.Succeeded {
 			t.Fatalf("cancel fixture: %v %s", err, rec.Failure)
 		}
 		assertGone(rec)
 	})
 	t.Run("timeout", func(t *testing.T) {
-		tctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+		tctx, cancel := context.WithTimeout(ctx, 75*time.Second)
 		defer cancel()
-		rec, err := runReleaseBuilder(tctx, factory, fixtureBuilderSpec(t, probe, true), newDir("timeout"))
+		dir := newDir("timeout")
+		rec, err := runReleaseBuilder(tctx, factory, fixtureBuilderSpec(t, probe, true), dir)
 		reports = append(reports, rec)
+		if !logHasMarker(dir) || !rec.Started {
+			t.Fatal("the deadline expired before the held probe and its child were observed")
+		}
 		if err == nil || rec.Failure != "timeout" || rec.Succeeded {
 			t.Fatalf("timeout fixture: %v %s", err, rec.Failure)
 		}
@@ -290,7 +328,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		spec, err := releaseBuildSpecFromInput(in)
+		spec, err := newReleaseBuilderSpec(productBuilderProfile, in)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,10 +346,21 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		}
 		b.dispose()
 		rec, err := b.finish()
-		reports = append(reports, rec)
-		if err != nil || !rec.OuterIsolationVerified || rec.Started || rec.Network != "bridge" || rec.CPUNano != 1_500_000_000 || rec.MemoryBytes != 6<<30 || rec.Pids != 448 {
-			t.Fatalf("product profile isolation: %v %s", err, rec.Failure)
+		// Not a build: the receipt must say so, and the result is recorded apart
+		// from the real build reports.
+		if err == nil || rec.Succeeded || rec.Failure != "build-incomplete" {
+			t.Fatalf("an unstarted builder was reported as a build: %v %s", err, rec.Failure)
 		}
+		if !rec.OuterIsolationVerified || rec.Started || rec.Network != "bridge" || rec.CPUNano != 1_500_000_000 || rec.MemoryBytes != 6<<30 || rec.Pids != 448 {
+			t.Fatalf("product profile isolation: %s", rec.Failure)
+		}
+		isolationOnly = append(isolationOnly, struct {
+			Kind                            string
+			OuterIsolationVerified, Started bool
+			Network                         string
+			CPUNano, MemoryBytes, Pids      int64
+			PhaseMayRelease                 bool
+		}{"isolation-only (not a build)", rec.OuterIsolationVerified, rec.Started, rec.Network, rec.CPUNano, rec.MemoryBytes, rec.Pids, rec.PhaseMayRelease})
 		assertGone(rec)
 	})
 }

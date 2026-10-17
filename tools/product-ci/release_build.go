@@ -72,6 +72,7 @@ var auditedReleaseBuildPins = releaseBuildPins{
 // sealedReleaseBuildInput is produced only by prepareReleaseBuild. The gzip tar
 // is the single stdin payload; its digest is checked again before every use.
 type sealedReleaseBuildInput struct {
+	audited                   bool // Set only by prepareAuditedReleaseBuild, for the fixed pins.
 	prepared                  bool
 	tree, snapshotSHA256      string
 	dockerfile                string
@@ -98,7 +99,12 @@ func (in sealedReleaseBuildInput) verifiedContext() ([]byte, error) {
 // prepareAuditedReleaseBuild is the only product entry point. There is no way to
 // supply another tree, archive digest, Compose file, Dockerfile or context.
 func prepareAuditedReleaseBuild(snapshot sealedReleaseContext) (sealedReleaseBuildInput, error) {
-	return prepareReleaseBuild(snapshot, auditedReleaseBuildPins)
+	in, err := prepareReleaseBuild(snapshot, auditedReleaseBuildPins)
+	if err != nil {
+		return sealedReleaseBuildInput{}, err
+	}
+	in.audited = true
+	return in, nil
 }
 
 func releaseBuildRejected(reason string) error {

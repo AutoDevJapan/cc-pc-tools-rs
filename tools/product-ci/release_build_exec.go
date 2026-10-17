@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -105,11 +106,22 @@ func (s releaseBuilderSpec) verifiedContext() ([]byte, error) {
 	return b, nil
 }
 
+// The production entry accepts only an input that prepareAuditedReleaseBuild
+// produced for the fixed audited snapshot. An input prepared against any other
+// pins (synthetic fixtures included) is never turned into a product spec, and the
+// fixture profile has no conversion from a sealed input at all.
 func releaseBuildSpecFromInput(in sealedReleaseBuildInput) (releaseBuilderSpec, error) {
+	if !in.audited || in.tree != auditedReleaseBuildPins.tree || in.snapshotSHA256 != auditedReleaseBuildPins.snapshotSHA256 {
+		return releaseBuilderSpec{}, releaseBuildError("input-rejected")
+	}
+	return newReleaseBuilderSpec(productBuilderProfile, in)
+}
+
+func newReleaseBuilderSpec(profile releaseBuilderProfile, in sealedReleaseBuildInput) (releaseBuilderSpec, error) {
 	if _, err := in.verifiedContext(); err != nil || !releaseDockerfileName.MatchString(in.dockerfile) || !releaseObjectSHA(in.tree) {
 		return releaseBuilderSpec{}, releaseBuildError("input-rejected")
 	}
-	return releaseBuilderSpec{profile: productBuilderProfile, context: bytes.Clone(in.context), contextSHA256: in.contextSHA256, dockerfile: in.dockerfile, tree: in.tree, snapshotSHA256: in.snapshotSHA256, contextFiles: in.contextFiles, contextDirs: in.contextDirs, maxDuration: releaseBuildMaxDuration}, nil
+	return releaseBuilderSpec{profile: profile, context: bytes.Clone(in.context), contextSHA256: in.contextSHA256, dockerfile: in.dockerfile, tree: in.tree, snapshotSHA256: in.snapshotSHA256, contextFiles: in.contextFiles, contextDirs: in.contextDirs, maxDuration: releaseBuildMaxDuration}, nil
 }
 
 // Errors carry only a fixed class, never Docker stderr, argv, names or bytes.
@@ -129,7 +141,8 @@ type releaseBuildReceipt struct {
 	ContextSHA256                                               string
 	ContextBytes                                                int64
 	ContextFiles, ContextDirs                                   int
-	CreateAttempted, UncertainCreate                            bool
+	CreateAttempted, UncertainCreate, PhaseBlocked              bool
+	CreateAttemptedUnix                                         int64
 	ContainerID                                                 string
 	OuterIsolationVerified                                      bool
 	Started                                                     bool
@@ -349,14 +362,26 @@ func (b *builderRun) execute() {
 // A builder left by an earlier run (even one that crashed) means the phase is not
 // free. Nothing is pulled or created until its owner has recovered it.
 func (b *builderRun) phaseClear(ctx context.Context) string {
-	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel)
-	switch {
-	case err != nil:
-		return b.classify(ctx, "phase-uncertain")
-	case out != "":
-		return "phase-busy"
+	busy, err := b.anyBuilder(ctx)
+	if err == nil && !busy {
+		return ""
 	}
-	return ""
+	// Remembered in the reservation: recovery of this run must again see the
+	// whole phase free before the caller may release its exclusion.
+	b.rec.PhaseBlocked = true
+	if b.persist() != nil {
+		return "state-unavailable"
+	}
+	if err != nil {
+		return b.classify(ctx, "phase-uncertain")
+	}
+	return "phase-busy"
+}
+
+// anyBuilder reports whether any builder container, ours or not, exists.
+func (b *builderRun) anyBuilder(ctx context.Context) (bool, error) {
+	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel)
+	return out != "", err
 }
 
 // Absent is concluded only from Docker's own "no such image" answer.
@@ -439,33 +464,42 @@ func (b *builderRun) containersByNonce(ctx context.Context) ([]string, error) {
 
 func (b *builderRun) create(ctx context.Context) string {
 	b.rec.CreateAttempted = true
+	b.rec.CreateAttemptedUnix = releaseNow().Unix()
 	if b.persist() != nil { // Reserved before the daemon can know the name.
 		return "state-unavailable"
 	}
-	out, _, err := dockerText(ctx, b.d, 4096, b.spec.createArgs(b.rec.Nonce, b.rec.ContainerName)...)
+	out, stderr, err := dockerText(ctx, b.d, 4096, b.spec.createArgs(b.rec.Nonce, b.rec.ContainerName)...)
 	if err == nil && releaseContainerPattern.MatchString(out) {
 		b.rec.ContainerID = out
 		_ = b.persist()
 		return ""
 	}
-	// The daemon may have created it before the CLI result was lost. Only the
-	// exact nonce can be recovered, and a recovered container is never started.
+	// Only the daemon's own error reply proves that this create did not happen. A
+	// cancelled or killed client or a dropped connection does not: the daemon may
+	// still finish the request later.
+	if err != nil && ctx.Err() == nil && b.parent.Err() == nil && strings.Contains(strings.ToLower(stderr), "error response from daemon") {
+		return "create-failed"
+	}
+	// Unknown outcome. Only the exact nonce can be recovered, a recovered
+	// container is never started, and an empty search does not release the phase
+	// until the quiet period has passed (see dispose).
+	b.rec.UncertainCreate = true
+	_ = b.persist()
 	rctx, cancel := context.WithTimeout(context.WithoutCancel(b.parent), time.Minute)
 	defer cancel()
 	for attempt := 0; attempt < 3; attempt++ {
 		ids, err := b.containersByNonce(rctx)
 		if err != nil || len(ids) > 1 {
-			b.rec.UncertainCreate = true
 			return "create-uncertain"
 		}
 		if len(ids) == 1 {
-			b.rec.UncertainCreate, b.rec.ContainerID = true, ids[0]
+			b.rec.ContainerID = ids[0]
 			_ = b.persist()
 			return "create-uncertain"
 		}
 		time.Sleep(releaseCreateRecheckPause)
 	}
-	return b.classify(ctx, "create-failed")
+	return "create-uncertain"
 }
 
 type builderInspect struct {
@@ -565,8 +599,28 @@ func (b *builderRun) verifyOuter(ctx context.Context) string {
 	if !b.isolationOK(info) {
 		return "isolation-mismatch"
 	}
+	// Anonymous volumes are recorded durably before anything can start.
+	b.recordVolumes(info)
+	if b.persist() != nil {
+		return "state-unavailable"
+	}
 	b.rec.OuterIsolationVerified = true
 	return ""
+}
+
+func (b *builderRun) recordVolumes(info builderInspect) {
+	for _, m := range info.Mounts {
+		if m.Type != "volume" || !releaseVolumePattern.MatchString(m.Name) {
+			continue
+		}
+		seen := false
+		for _, v := range b.rec.VolumeNames {
+			seen = seen || v == m.Name
+		}
+		if !seen {
+			b.rec.VolumeNames = append(b.rec.VolumeNames, m.Name)
+		}
+	}
 }
 
 // builderLog keeps the raw builder output in the owned directory and exposes
@@ -723,83 +777,171 @@ var errKernelProof = errors.New("kernel proof mismatch")
 // Pause between the checks that conclude a lost create did not reach the daemon.
 var releaseCreateRecheckPause = time.Second
 
-// A Docker-archive image has one manifest with at least one layer. The fixture
-// profile additionally reads back what the kernel showed to the build step.
+// A create whose outcome is unknown is treated as possibly still in flight at the
+// daemon for this long; releaseNow exists so tests can move the clock.
+var (
+	releaseCreateQuietPeriod = 2 * time.Minute
+	releaseNow               = time.Now
+)
+
+var (
+	imageConfigName = regexp.MustCompile("^sha256:[0-9a-f]{64}$")
+	imageLayerName  = regexp.MustCompile("^[0-9a-f]{64}\\.tar(\\.gz)?$")
+)
+
+const (
+	imageMetaLimit         = 1 << 20
+	imageMaxLayers         = 512
+	imageUncompressedLimit = 4 << 30
+)
+
+// checkBuiltImage validates a Docker-archive image completely: one manifest, a
+// config whose bytes match its digest name, and exactly the listed layers, each
+// present once with the compressed SHA-256 in its name and the uncompressed
+// SHA-256 recorded as its diff_id. The fixture profile additionally reads back
+// what the kernel showed to the build step.
 func checkBuiltImage(data []byte, p releaseBuilderProfile) (map[string]string, error) {
+	invalid := errors.New("image archive invalid")
 	tr := tar.NewReader(bytes.NewReader(data))
-	var manifest []byte
-	small := map[string][]byte{}
-	total := int64(0)
+	meta, sizes := map[string][]byte{}, map[string]int64{}
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, errors.New("image archive invalid")
+			return nil, invalid
 		}
-		if h.Typeflag != tar.TypeReg {
+		if h.Typeflag == tar.TypeDir {
 			continue
 		}
-		keep := h.Name == "manifest.json" && h.Size <= 1<<20 || p.kernelProof && h.Size <= 32<<20 && total+h.Size <= 64<<20
-		if !keep {
-			continue
+		if _, dup := sizes[h.Name]; dup || h.Typeflag != tar.TypeReg {
+			return nil, invalid
 		}
-		b, err := io.ReadAll(io.LimitReader(tr, h.Size))
-		if err != nil || int64(len(b)) != h.Size {
-			return nil, errors.New("image archive invalid")
-		}
-		if h.Name == "manifest.json" {
-			manifest = b
-		} else {
-			small[h.Name] = b
-			total += h.Size
+		sizes[h.Name] = h.Size
+		if h.Size <= imageMetaLimit {
+			b, err := io.ReadAll(io.LimitReader(tr, h.Size))
+			if err != nil || int64(len(b)) != h.Size {
+				return nil, invalid
+			}
+			meta[h.Name] = b
 		}
 	}
-	var images []struct{ Layers []string }
-	if json.Unmarshal(manifest, &images) != nil || len(images) != 1 || len(images[0].Layers) == 0 {
-		return nil, errors.New("image manifest invalid")
+	var images []struct {
+		Config string
+		Layers []string
+	}
+	if json.Unmarshal(meta["manifest.json"], &images) != nil || len(images) != 1 {
+		return nil, invalid
+	}
+	im := images[0]
+	cfg, ok := meta[im.Config]
+	if !imageConfigName.MatchString(im.Config) || !ok || "sha256:"+digest(cfg) != im.Config || len(im.Layers) == 0 || len(im.Layers) > imageMaxLayers {
+		return nil, invalid
+	}
+	var conf struct {
+		Rootfs struct {
+			Type     string
+			Diff_ids []string
+		}
+	}
+	if json.Unmarshal(cfg, &conf) != nil || conf.Rootfs.Type != "layers" || len(conf.Rootfs.Diff_ids) != len(im.Layers) {
+		return nil, invalid
+	}
+	layerIndex := map[string]int{}
+	for i, name := range im.Layers {
+		if _, dup := layerIndex[name]; dup || !imageLayerName.MatchString(name) || !imageConfigName.MatchString(conf.Rootfs.Diff_ids[i]) || sizes[name] <= 0 {
+			return nil, invalid
+		}
+		layerIndex[name] = i
+	}
+	var proof map[string]string
+	checked := 0
+	tr = tar.NewReader(bytes.NewReader(data))
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, invalid
+		}
+		i, isLayer := layerIndex[h.Name]
+		if !isLayer {
+			continue
+		}
+		compressed, diff, found, err := scanImageLayer(tr, p.kernelProof)
+		if err != nil || compressed != strings.SplitN(h.Name, ".", 2)[0] || "sha256:"+diff != conf.Rootfs.Diff_ids[i] {
+			return nil, invalid
+		}
+		if found != nil {
+			proof = found
+		}
+		checked++
+	}
+	if checked != len(im.Layers) {
+		return nil, invalid
 	}
 	if !p.kernelProof {
 		return nil, nil
 	}
 	want := map[string]string{"cpu.max": fmt.Sprintf("%d 100000", p.nanoCPUs/10000), "memory.max": strconv.FormatInt(p.memory, 10), "pids.max": strconv.FormatInt(p.pids, 10), "CapEff": "0000000000000000", "NoNewPrivs": "1"}
-	for _, name := range images[0].Layers {
-		layer := small[name]
-		if len(layer) > 2 && layer[0] == 0x1f && layer[1] == 0x8b {
-			gz, err := gzip.NewReader(bytes.NewReader(layer))
-			if err != nil {
-				return nil, errors.New("image layer invalid")
-			}
-			layer, err = io.ReadAll(io.LimitReader(gz, 32<<20+1))
-			gz.Close()
-			if err != nil || len(layer) > 32<<20 {
-				return nil, errors.New("image layer invalid")
-			}
+	if len(proof) != len(want) {
+		return nil, errKernelProof
+	}
+	for k, w := range want {
+		if proof[k] != w {
+			return nil, errKernelProof
 		}
-		lt := tar.NewReader(bytes.NewReader(layer))
+	}
+	return proof, nil
+}
+
+// scanImageLayer streams one layer entry: its compressed digest (every byte of
+// the entry), its uncompressed digest and, if wanted, the fixture's proof file.
+func scanImageLayer(r io.Reader, wantProof bool) (compressed, diff string, proof map[string]string, err error) {
+	ch, dh := sha256.New(), sha256.New()
+	br := bufio.NewReader(io.TeeReader(r, ch))
+	var plain io.Reader = br
+	if magic, _ := br.Peek(2); len(magic) == 2 && magic[0] == 0x1f && magic[1] == 0x8b {
+		gz, gerr := gzip.NewReader(br)
+		if gerr != nil {
+			return "", "", nil, gerr
+		}
+		defer gz.Close()
+		plain = gz
+	}
+	limited := &io.LimitedReader{R: plain, N: imageUncompressedLimit + 1}
+	body := io.TeeReader(limited, dh)
+	if wantProof {
+		lt := tar.NewReader(body)
 		for {
-			e, err := lt.Next()
-			if err != nil {
+			e, terr := lt.Next()
+			if terr == io.EOF {
 				break
+			}
+			if terr != nil {
+				return "", "", nil, terr
 			}
 			if strings.TrimPrefix(e.Name, "./") != "proof" || e.Size > 4096 {
 				continue
 			}
 			v, _ := io.ReadAll(io.LimitReader(lt, e.Size))
-			var got map[string]string
-			if json.Unmarshal(v, &got) != nil || len(got) != len(want) {
-				return nil, errKernelProof
+			if json.Unmarshal(v, &proof) != nil {
+				return "", "", nil, errKernelProof
 			}
-			for k, w := range want {
-				if got[k] != w {
-					return nil, errKernelProof
-				}
-			}
-			return got, nil
 		}
 	}
-	return nil, errKernelProof
+	if _, err = io.Copy(io.Discard, body); err != nil {
+		return "", "", nil, err
+	}
+	if limited.N <= 0 {
+		return "", "", nil, errors.New("image layer too large")
+	}
+	if _, err = io.Copy(io.Discard, br); err != nil {
+		return "", "", nil, err
+	}
+	return hex.EncodeToString(ch.Sum(nil)), hex.EncodeToString(dh.Sum(nil)), proof, nil
 }
 
 // dispose runs after every outcome, with a context that survives caller
@@ -828,6 +970,10 @@ func (b *builderRun) dispose() {
 			}
 		}
 		clean = clean && rec.ContainerAbsent && rec.VolumesAbsent
+		// An unknown create that left no trace yet is not proof of absence.
+		if rec.UncertainCreate && !rec.ContainerRemoved && releaseNow().Unix()-rec.CreateAttemptedUnix < int64(releaseCreateQuietPeriod/time.Second) {
+			clean = false
+		}
 	} else {
 		rec.ContainerAbsent, rec.VolumesAbsent = true, true
 	}
@@ -839,6 +985,12 @@ func (b *builderRun) dispose() {
 		}
 		rec.ToolImageRemoved = err == nil && !present
 		clean = clean && rec.ToolImageRemoved
+	}
+	if rec.PhaseBlocked {
+		busy, err := b.anyBuilder(ctx)
+		if err != nil || busy {
+			clean = false // Another builder may still own the phase.
+		}
 	}
 	rec.PhaseMayRelease = clean
 }
@@ -869,18 +1021,11 @@ func (b *builderRun) disposeContainer(ctx context.Context, id string) bool {
 	if info.State.Status == "exited" {
 		rec.ExitCode, rec.OOMKilled = info.State.ExitCode, info.State.OOMKilled
 	}
-	for _, m := range info.Mounts {
-		if m.Type == "volume" && releaseVolumePattern.MatchString(m.Name) {
-			seen := false
-			for _, v := range rec.VolumeNames {
-				seen = seen || v == m.Name
-			}
-			if !seen {
-				rec.VolumeNames = append(rec.VolumeNames, m.Name)
-			}
-		}
+	b.recordVolumes(info)
+	// The volume names must be durable before the only handle to them is removed.
+	if b.persist() != nil {
+		return false
 	}
-	_ = b.persist()
 	if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
 		return false
 	}
@@ -890,10 +1035,13 @@ func (b *builderRun) disposeContainer(ctx context.Context, id string) bool {
 
 func (b *builderRun) finish() (releaseBuildReceipt, error) {
 	rec := b.rec
-	if rec.Failure == "phase-busy" || rec.Failure == "phase-uncertain" {
-		rec.PhaseMayRelease = false // Somebody else's builder may exist; keep the exclusion.
-	}
 	rec.RecoveryRequired = !rec.PhaseMayRelease
+	// Success needs the whole build, not just the absence of an error: it ran,
+	// exited 0 under verified isolation, and produced a validated artifact.
+	complete := rec.Started && rec.OuterIsolationVerified && rec.ExitCode == 0 && len(b.artifact) > 0 && rec.ArtifactSHA256 == digest(b.artifact) && rec.ArtifactBytes == int64(len(b.artifact))
+	if rec.Failure == "" && !complete {
+		rec.Failure = "build-incomplete"
+	}
 	if rec.Failure == "" && rec.RecoveryRequired {
 		rec.Failure = "recovery-required"
 	}

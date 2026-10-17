@@ -49,40 +49,100 @@ type fakeDaemon struct {
 	onCreate                                  func([]string)
 	startReturned, stoppedBeforeDrain         bool
 	stdin                                     []byte
+	pending                                   *fakeContainer
+	onStop                                    func()
+}
+
+// materialize completes a delayed create, as a slow daemon eventually would.
+func (d *fakeDaemon) materialize() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.pending != nil {
+		d.containers[d.pending.id] = d.pending
+		d.pending = nil
+	}
 }
 
 func newFakeDaemon(t *testing.T) *fakeDaemon {
 	return &fakeDaemon{t: t, containers: map[string]*fakeContainer{}, volumes: map[string]bool{}, startMode: "success", logText: "build finished\n", artifact: fakeImageTar(t, nil)}
 }
 
+type fakeImage struct {
+	proof                                                                      map[string]string
+	dropLayer, dupLayer, dupEntry, wrongDiff, badConfig, noConfig, emptyLayers bool
+	extraDiff, symlink, tamperLayer                                            bool
+}
+
 func fakeImageTar(t *testing.T, proof map[string]string) []byte {
+	return buildFakeImage(t, fakeImage{proof: proof})
+}
+
+// A complete Docker-archive image: manifest, config named by its digest, and a
+// gzip layer named by its compressed digest with its diff_id in the config.
+func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	t.Helper()
-	var layer bytes.Buffer
-	gz := gzip.NewWriter(&layer)
-	lt := tar.NewWriter(gz)
+	var lt bytes.Buffer
+	ltw := tar.NewWriter(&lt)
 	name, body := "file", []byte("layer")
-	if proof != nil {
+	if o.proof != nil {
 		name = "proof"
-		body, _ = json.Marshal(proof)
+		body, _ = json.Marshal(o.proof)
 	}
-	lt.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(body)), Typeflag: tar.TypeReg})
-	lt.Write(body)
-	lt.Close()
+	ltw.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(body)), Typeflag: tar.TypeReg})
+	ltw.Write(body)
+	ltw.Close()
+	var gzb bytes.Buffer
+	gz := gzip.NewWriter(&gzb)
+	gz.Write(lt.Bytes())
 	gz.Close()
+	layer := gzb.Bytes()
+	layerName := digest(layer) + ".tar.gz"
+	if o.tamperLayer {
+		layer = bytes.Clone(layer)
+		layer[len(layer)/2] ^= 1
+	}
+	diff := "sha256:" + digest(lt.Bytes())
+	if o.wrongDiff {
+		diff = "sha256:" + digest([]byte("other"))
+	}
+	layers, diffs := []string{layerName}, []string{diff}
+	if o.dupLayer {
+		layers, diffs = append(layers, layerName), append(diffs, diff)
+	}
+	if o.extraDiff {
+		diffs = append(diffs, diff)
+	}
+	if o.emptyLayers {
+		layers, diffs = nil, nil
+	}
+	cfg, _ := json.Marshal(map[string]any{"architecture": "amd64", "os": "linux", "rootfs": map[string]any{"type": "layers", "diff_ids": diffs}})
+	cfgName := "sha256:" + digest(cfg)
+	if o.badConfig {
+		cfgName = "sha256:" + digest([]byte("not the config"))
+	}
+	manifest, _ := json.Marshal([]map[string]any{{"Config": cfgName, "Layers": layers}})
 	var out bytes.Buffer
 	tw := tar.NewWriter(&out)
-	manifest := []byte(`[{"Layers":["layer.tar.gz"]}]`)
-	for _, f := range []struct {
-		n string
-		b []byte
-	}{{"manifest.json", manifest}, {"layer.tar.gz", layer.Bytes()}} {
-		tw.WriteHeader(&tar.Header{Name: f.n, Mode: 0600, Size: int64(len(f.b)), Typeflag: tar.TypeReg})
-		tw.Write(f.b)
+	add := func(n string, b []byte) {
+		tw.WriteHeader(&tar.Header{Name: n, Mode: 0600, Size: int64(len(b)), Typeflag: tar.TypeReg})
+		tw.Write(b)
+	}
+	add("manifest.json", manifest)
+	if !o.noConfig {
+		add(cfgName, cfg)
+	}
+	if !o.dropLayer {
+		add(layerName, layer)
+	}
+	if o.dupEntry {
+		add(layerName, layer)
+	}
+	if o.symlink {
+		tw.WriteHeader(&tar.Header{Name: "link", Typeflag: tar.TypeSymlink, Linkname: "manifest.json"})
 	}
 	tw.Close()
 	return out.Bytes()
 }
-
 func argValues(args []string, flag string) []string {
 	var v []string
 	for i := 0; i+1 < len(args); i++ {
@@ -198,7 +258,11 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 		if d.onCreate != nil {
 			d.onCreate(args)
 		}
-		if d.createMode == "nothing" {
+		switch d.createMode {
+		case "refuse":
+			io.WriteString(stderr, "docker: Error response from daemon: Conflict.\n")
+			return errors.New("exit status 125")
+		case "nothing":
 			return errors.New("daemon unavailable")
 		}
 		d.mu.Lock()
@@ -212,9 +276,13 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 			c.volume = fmt.Sprintf("%064x", d.seq+1000)
 			d.volumes[c.volume] = true
 		}
-		d.containers[c.id] = c
+		if d.createMode == "late" {
+			d.pending = c // The daemon will finish this create after the client gave up.
+		} else {
+			d.containers[c.id] = c
+		}
 		d.mu.Unlock()
-		if d.createMode == "lose" {
+		if d.createMode == "lose" || d.createMode == "late" {
 			return errors.New("response lost")
 		}
 		fmt.Fprintln(stdout, c.id)
@@ -274,6 +342,9 @@ func (d *fakeDaemon) run(ctx context.Context, stdin io.Reader, stdout, stderr io
 		c.output = d.artifact
 		d.finish(c, 0)
 	case "container stop", "container kill":
+		if d.onStop != nil {
+			d.onStop()
+		}
 		c := d.find(last)
 		d.mu.Lock()
 		if !d.startReturned && c.status == "running" {
@@ -350,7 +421,7 @@ func newHarness(t *testing.T) *buildHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	spec, err := releaseBuildSpecFromInput(in)
+	spec, err := newReleaseBuilderSpec(productBuilderProfile, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,7 +613,7 @@ func TestBuilderRecoversAnUncertainCreateByTheExactNonce(t *testing.T) {
 		t.Fatal("recovered container was not removed")
 	}
 	h = newHarness(t)
-	h.d.createMode = "nothing"
+	h.d.createMode = "refuse"
 	rec, err = h.run(context.Background())
 	if err == nil || rec.Failure != "create-failed" || rec.UncertainCreate || h.d.called("start") {
 		t.Fatalf("create failure mishandled: %v", err)
@@ -771,5 +842,171 @@ func TestBuilderRefusesToStartWhileAnotherBuilderExists(t *testing.T) {
 		if c, _ := h.d.remaining(); c != 1 {
 			t.Fatal("another builder was touched")
 		}
+		if lsFails {
+			continue
+		}
+		// Recovering this run does not clear the hold while the other builder remains.
+		factory := func(string) builderDocker { return h.d }
+		again, err := recoverReleaseBuilder(context.Background(), factory, h.dir)
+		if err == nil || again.PhaseMayRelease || !again.RecoveryRequired {
+			t.Fatalf("recovery released a phase held by another builder: %v", err)
+		}
+		delete(h.d.containers, strings.Repeat("f", 64))
+		again, err = recoverReleaseBuilder(context.Background(), factory, h.dir)
+		if err != nil || !again.PhaseMayRelease {
+			t.Fatalf("recovery did not release a free phase: %v", err)
+		}
+	}
+}
+
+func TestBuilderUnknownCreateIsNotReleasedByAnEmptySearch(t *testing.T) {
+	now := time.Now()
+	releaseNow = func() time.Time { return now }
+	t.Cleanup(func() { releaseNow = time.Now })
+	for _, mode := range []string{"nothing", "late"} {
+		h := newHarness(t)
+		h.d.createMode = mode
+		factory := func(string) builderDocker { return h.d }
+		rec, err := h.run(context.Background())
+		if err == nil || rec.Failure != "create-uncertain" || !rec.UncertainCreate || rec.PhaseMayRelease || !rec.RecoveryRequired || h.d.called("start") {
+			t.Fatalf("%s: an unknown create released the phase: %v", mode, err)
+		}
+		// Still inside the quiet period: nothing found is not proof of absence.
+		again, err := recoverReleaseBuilder(context.Background(), factory, h.dir)
+		if err == nil || again.PhaseMayRelease {
+			t.Fatalf("%s: released before the quiet period", mode)
+		}
+		if mode == "late" {
+			h.d.materialize() // The daemon finishes the delayed create; the nonce finds and removes it.
+			again, err = recoverReleaseBuilder(context.Background(), factory, h.dir)
+			if err != nil || !again.PhaseMayRelease || !again.ContainerRemoved || h.d.called("start") {
+				t.Fatalf("late container not recovered: %v", err)
+			}
+			h.assertDisposed(again, false)
+			continue
+		}
+		now = now.Add(releaseCreateQuietPeriod + time.Second)
+		again, err = recoverReleaseBuilder(context.Background(), factory, h.dir)
+		if err != nil || !again.PhaseMayRelease {
+			t.Fatalf("not released after the quiet period: %v", err)
+		}
+		h.assertDisposed(again, false)
+	}
+}
+
+func TestBuilderKeepsTheContainerWhenVolumeNamesCannotBeSaved(t *testing.T) {
+	h := newHarness(t)
+	h.d.withVolume, h.d.startMode = true, "hang"
+	state := filepath.Join(h.dir, releaseBuildStateFile)
+	h.d.onStop = func() { // The ownership record becomes unwritable while the builder is stopped.
+		os.Remove(state)
+		os.Mkdir(state, 0o700)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		for !h.d.called("start") {
+			time.Sleep(time.Millisecond)
+		}
+		cancel()
+	}()
+	rec, err := h.run(ctx)
+	if c, v := h.d.remaining(); err == nil || rec.PhaseMayRelease || !rec.RecoveryRequired || h.d.called("container rm") || c != 1 || v != 1 {
+		t.Fatalf("container removed without a durable volume record: %v", err)
+	}
+	h.d.onStop = nil
+	os.Remove(state)
+	raw, _ := json.Marshal(rec)
+	if err := os.WriteFile(state, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	again, err := recoverReleaseBuilder(context.Background(), func(string) builderDocker { return h.d }, h.dir)
+	if err != nil || !again.PhaseMayRelease {
+		t.Fatalf("recovery failed: %v", err)
+	}
+	h.assertDisposed(again, false)
+}
+
+func TestBuilderNeverReportsSuccessWithoutABuiltArtifact(t *testing.T) {
+	for _, upTo := range []int{4, 5} { // create and inspect only; then also run the build but skip the artifact
+		h := newHarness(t)
+		h.d.toolPresent = true
+		ctx := context.Background()
+		b := &builderRun{parent: ctx, spec: h.spec, dir: h.dir, rec: newBuildReceipt(h.spec)}
+		if class := b.begin(func(string) builderDocker { return h.d }); class != "" {
+			t.Fatal(class)
+		}
+		steps := []func(context.Context) string{b.phaseClear, b.toolImage, b.create, b.verifyOuter, b.build}
+		for _, step := range steps[:upTo] {
+			if class := step(ctx); class != "" {
+				t.Fatal(class)
+			}
+		}
+		b.dispose()
+		rec, err := b.finish()
+		if err == nil || rec.Succeeded || rec.Failure != "build-incomplete" || !rec.OuterIsolationVerified || rec.Started != (upTo == 5) {
+			t.Fatalf("upTo %d: incomplete run reported as %q: %v", upTo, rec.Failure, err)
+		}
+		if _, e := rec.verifiedArtifact(); e == nil {
+			t.Fatal("artifact returned for an incomplete run")
+		}
+		h.assertDisposed(rec, true)
+	}
+}
+
+func TestBuiltImageArchiveIsValidatedCompletely(t *testing.T) {
+	if _, err := checkBuiltImage(buildFakeImage(t, fakeImage{}), productBuilderProfile); err != nil {
+		t.Fatalf("complete image rejected: %v", err)
+	}
+	for name, o := range map[string]fakeImage{
+		"missing layer":     {dropLayer: true},
+		"missing config":    {noConfig: true},
+		"config not digest": {badConfig: true},
+		"wrong diff id":     {wrongDiff: true},
+		"duplicate layer":   {dupLayer: true},
+		"duplicate entry":   {dupEntry: true},
+		"extra diff id":     {extraDiff: true},
+		"no layers":         {emptyLayers: true},
+		"link entry":        {symlink: true},
+		"tampered layer":    {tamperLayer: true},
+	} {
+		if _, err := checkBuiltImage(buildFakeImage(t, o), productBuilderProfile); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+	good := buildFakeImage(t, fakeImage{})
+	if _, err := checkBuiltImage(good[:len(good)/2], productBuilderProfile); err == nil {
+		t.Fatal("truncated archive accepted")
+	}
+}
+
+func TestProductEntryOnlyAcceptsTheAuditedSnapshot(t *testing.T) {
+	c := synthSnapshot(t, synthFiles(synthCompose))
+	in, err := prepareReleaseBuild(c, synthPins(c))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := releaseBuildSpecFromInput(in); err == nil {
+		t.Fatal("synthetic input became a product spec")
+	}
+	if rec, err := executeAuditedReleaseBuild(context.Background(), in, t.TempDir()); err == nil || rec.Failure != "input-rejected" {
+		t.Fatal("synthetic input executed")
+	}
+	saved := auditedReleaseBuildPins
+	auditedReleaseBuildPins = synthPins(c)
+	t.Cleanup(func() { auditedReleaseBuildPins = saved })
+	audited, err := prepareAuditedReleaseBuild(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec, err := releaseBuildSpecFromInput(audited)
+	if err != nil || spec.profile.kind != "audited-product" {
+		t.Fatalf("audited input rejected: %v", err)
+	}
+	auditedReleaseBuildPins = saved
+	forged := in
+	forged.audited = true
+	if _, err := releaseBuildSpecFromInput(forged); err == nil {
+		t.Fatal("input of another identity accepted")
 	}
 }

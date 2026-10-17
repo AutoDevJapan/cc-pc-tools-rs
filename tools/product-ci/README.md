@@ -332,20 +332,32 @@ Budget. The builder is fixed at 1.5 CPU, 6 GiB, 448 PIDs. With the idle runner
 (0.5 CPU, 1 GiB, 64 PIDs) and 1 GiB of host byte transfer the phase is 2 CPU,
 8 GiB, 512 PIDs. This component takes no exclusion and never raises a limit. A
 container labelled `cc.release-build` left over from an earlier run makes the
-phase busy (`phase-busy`) before anything is pulled or created. Host RAM holds
+phase busy (`phase-busy`) before anything is pulled or created. That hold is saved
+in the reservation, so recovering the run releases it only when no builder exists.
+Host RAM holds
 the gzip context, one verified copy for stdin, and one exactly sized artifact
 (256 MiB maximum; 32 MiB for the fixture), all inside the transfer budget. The
-artifact is never written to the host; the raw builder log (32 MiB maximum) goes
+artifact is a complete Docker-archive image (config digest, every listed layer once,
+compressed and uncompressed digests checked) and is never written to the host; the
+raw builder log (32 MiB maximum) goes
 to a private file in `ownedDir` and only its size and SHA-256 are reported.
 
 Lifecycle. The nonce, container name, tool image digest and limits are written to
 `release-build-state.json` in the owned directory before the container is
 created. If the create result is lost, only the exact nonce is recovered and the
-recovered container is never started. After normal exit, failure, cancellation or
+recovered container is never started. Only the daemon's own error reply proves that
+a create did not happen; otherwise an empty search does not release the phase until
+a two minute quiet period has passed, and a later recovery repeats the check. After
+normal exit, failure, cancellation or
 timeout the Docker client has drained all I/O before the container is stopped.
 Disposal records stop and PID 0, removes the container with its anonymous volumes,
 confirms absence by listing, and removes a tool image that this run introduced.
-Failures carry a fixed class only: never Docker stderr, argv, names or bytes.
+A run succeeds only if the build ran, exited 0 under verified isolation and produced a
+validated artifact; otherwise it is `build-incomplete`. Volume names are saved before
+the container is removed. The product entry accepts only the input made by
+`prepareAuditedReleaseBuild` for the fixed pins, and the fixture profile cannot be
+reached from a sealed input. Failures carry a fixed class only: never Docker stderr,
+argv, names or bytes.
 `releaseBuildReceipt.PhaseMayRelease` must be true before the caller releases
 its exclusion. Otherwise `RecoveryRequired` is set, the owned directory must be
 kept, and `recoverAuditedReleaseBuild(ctx, ownedDir)` removes exactly the
@@ -358,9 +370,10 @@ unconfirmed disposal, using an in-memory daemon. The opt-in test
 `TestReleaseBuilderRealFixture` (`CC_RELEASE_BUILD_FIXTURE_ROOT`, a fresh
 safe-delete owned directory) runs the real daemon with the CC-authored probe:
 normal (kernel CPU/memory/PID limits, CapEff 0 and NoNewPrivs read back from the
-built image), cancel and timeout with a child process, a lost create response,
-a refused removal followed by recovery, and the product profile's isolation
-values (created and inspected, never started).
+built image), cancel and timeout after the probe printed a marker proving its child
+exists, a lost create response, a refused removal followed by recovery, and the
+product profile's isolation values (created and inspected, never started; recorded
+as an isolation check, not as a build).
 
 Not established here: whether the product Dockerfile builds with all capabilities
 dropped (base image extraction, apt, uv), its artifact size, and the product

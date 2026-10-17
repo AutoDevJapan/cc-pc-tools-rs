@@ -27,7 +27,7 @@ func pr148Transfer(ctx context.Context, n *pr148Namespace, binary []byte) error 
 func pr148PrepareToolchain(ctx context.Context, n *pr148Namespace) error {
 	// rustup may perform a self-update even during toolchain install. The
 	// immutable SDK executable must first live in the NEW writable CARGO_HOME.
-	return cmd(ctx, docker, "exec", n.ID, "sh", "-c", "mkdir -p /toolchain/cargo/bin /toolchain/rustup && cp /opt/rust/bin/rustup /toolchain/cargo/bin/rustup").Run()
+	return cmd(ctx, docker, "exec", n.ID, "sh", "-c", "mkdir -p /toolchain/cargo/bin /toolchain/rustup /work/tool-tmp && cp /opt/rust/bin/rustup /toolchain/cargo/bin/rustup").Run()
 }
 
 func pr148HostCheckout(ctx context.Context, p pr148LinuxPlan, n *pr148Namespace) error {

@@ -68,7 +68,7 @@ func pr148MergeEnv(parent []string, n *yaml.Node) ([]string, error) {
 			if strings.HasPrefix(k, "GITHUB_") || strings.HasPrefix(k, "RUNNER_") {
 				return nil, errors.New("workflow overrides immutable Actions context")
 			}
-			for _, protected := range []string{"HOME", "PATH", "CARGO_HOME", "RUSTUP_HOME", "CARGO_TARGET_DIR", "RUSTC", "RUSTDOC", "CARGO", "RUSTUP_TOOLCHAIN", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER", "BASH_ENV", "ENV", "LD_PRELOAD", "LD_LIBRARY_PATH", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL", "GIT_NO_REPLACE_OBJECTS"} {
+			for _, protected := range []string{"HOME", "PATH", "CARGO_HOME", "RUSTUP_HOME", "CARGO_TARGET_DIR", "RUSTC", "RUSTDOC", "CARGO", "RUSTUP_TOOLCHAIN", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER", "BASH_ENV", "ENV", "LD_PRELOAD", "LD_LIBRARY_PATH", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL", "GIT_NO_REPLACE_OBJECTS", "TMPDIR", "TEMP", "TMP"} {
 				if k == protected {
 					return nil, fmt.Errorf("fixed workflow overrides isolated tool setting: %s", k)
 				}

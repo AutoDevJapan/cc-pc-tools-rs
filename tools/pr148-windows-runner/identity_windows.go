@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +19,9 @@ func api(path string, v any) error {
 	return apiWithContext(context.Background(), path, v)
 }
 func apiWithContext(parent context.Context, path string, v any) error {
+	return apiReadLimit(parent, path, v, 4<<20)
+}
+func apiReadLimit(parent context.Context, path string, v any, limit int64) error {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	c := exec.CommandContext(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", path)
@@ -33,7 +35,7 @@ func apiWithContext(parent context.Context, path string, v any) error {
 	if e = c.Start(); e != nil {
 		return errors.New("GitHub read API unavailable")
 	}
-	b, readErr := boundedRead(pipe, 4<<20)
+	b, readErr := boundedRead(pipe, limit)
 	if readErr != nil {
 		_ = c.Process.Kill()
 	}
@@ -245,19 +247,10 @@ func verifySource(p Plan, source string, pristine bool) error {
 	if !samePath(source, p.source()) {
 		return errors.New("checkout must occupy the fixed workspace path")
 	}
-	run := func(args ...string) ([]byte, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		c := exec.CommandContext(ctx, `C:\Program Files\Git\cmd\git.exe`, append([]string{"--no-optional-locks", "-c", "safe.directory=" + source, "-c", "core.fsmonitor=false", "-c", "core.hooksPath=NUL", "-C", source}, args...)...)
-		hidden(c)
-		c.Env = envFor(p)
-		var out bytes.Buffer
-		c.Stdout = &out
-		if e := c.Run(); e != nil {
-			return nil, errors.New("source Git verification failed")
-		}
-		return out.Bytes(), nil
+	if e := sourceMetadata(source); e != nil {
+		return e
 	}
+	run := func(args ...string) ([]byte, error) { return sourceGit(source, args...) }
 	keys, e := run("config", "--local", "--no-includes", "--name-only", "--list")
 	if e != nil {
 		return e
@@ -266,6 +259,9 @@ func verifySource(p Plan, source string, pristine bool) error {
 		if blockedGitKey(key) {
 			return errors.New("checkout credential/execution config key rejected")
 		}
+	}
+	if e := verifyTrackedBytes(source, p.Tree); e != nil {
+		return e
 	}
 	for _, row := range []struct{ arg, want string }{{"HEAD", p.Head}, {"HEAD^{tree}", p.Tree}} {
 		b, e := run("rev-parse", "--verify", row.arg)

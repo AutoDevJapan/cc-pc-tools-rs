@@ -108,7 +108,7 @@ cancel:
 }
 
 func execute(p Plan) error {
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		return executeThroughGate(p)
 	}
 	return executeAdmitted(p)
@@ -124,14 +124,19 @@ func executeAdmitted(p Plan) (result error) {
 			result = errors.Join(result, stopFinite(p))
 		}
 	}()
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		if e = verifyGateAllocation(); e != nil {
 			return e
 		}
-		if e = audit(p); e != nil {
-			return e
+		if p.Fixture == "" {
+			if e = audit(p); e != nil {
+				return e
+			}
 		}
-		secret, e = boundedRead(os.Stdin, 1024)
+		secret = []byte("credential-free-fixture")
+		if !p.RuntimeFixture {
+			secret, e = boundedRead(os.Stdin, 1024)
+		}
 		if e != nil {
 			return e
 		}
@@ -147,7 +152,7 @@ func executeAdmitted(p Plan) (result error) {
 	if e = startFinite(p); e != nil {
 		return e
 	}
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		until := time.Now().Add(30 * time.Second)
 		for {
 			f, err := openRegistrationPipe(p)
@@ -197,7 +202,10 @@ func executeAdmitted(p Plan) (result error) {
 			if code != 0 {
 				return errors.New("finite service reported failure; inspect receipts")
 			}
-			if p.Fixture == "" {
+			if p.Fixture == "" || p.RuntimeFixture {
+				if p.RuntimeFixture {
+					return nil
+				}
 				if e = validateLauncherSuccess(p); e != nil {
 					return e
 				}
@@ -217,7 +225,7 @@ func runOwnedWorker(p Plan) error {
 	var secret []byte
 	var err error
 	var admitted admission
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		secret, err = pipeInput(p)
 		if err != nil {
 			return err
@@ -254,7 +262,7 @@ func runOwnedWorker(p Plan) error {
 	// Explicit environment excludes all host credentials, owner homes and jobs.
 	env := envFor(p)
 	env = append(env, "PR148_LAUNCHER_PID="+strconv.Itoa(os.Getpid()))
-	if p.Fixture == "" {
+	if p.Fixture == "" || p.RuntimeFixture {
 		env = append(env, "ACTIONS_RUNNER_INPUT_TOKEN="+admitted.Token, "CODEX_JOBS_CARGO_LOCK_HELD="+admitted.Held, "CARGO_BUILD_JOBS="+admitted.Jobs, "RUST_TEST_THREADS="+admitted.Threads, "NEXTEST_TEST_THREADS="+admitted.Threads)
 	}
 	var block []uint16
@@ -400,6 +408,16 @@ func worker(p Plan) error {
 	if e = authenticatedUsersDenyOnly(t); e != nil {
 		return e
 	}
+	if p.Fixture == "" || p.RuntimeFixture {
+		if e = initializeSDK(p); e != nil {
+			return e
+		}
+		stopCache, err := startOwnedCache(p)
+		if err != nil {
+			return err
+		}
+		defer stopCache()
+	}
 	if p.Fixture != "" {
 		return serviceFixture(p, sid, e == nil)
 	}
@@ -426,7 +444,7 @@ func worker(p Plan) error {
 	c = exec.Command(listener, "run", "--startuptype", "service")
 	hidden(c)
 	c.Dir = p.runner()
-	c.Env = workerEnv(p)
+	c.Env = runtimeSDKEnv(p, workerEnv(p))
 	c.Stdout = io.Discard
 	c.Stderr = io.Discard
 	if e = c.Run(); e != nil {
@@ -435,11 +453,62 @@ func worker(p Plan) error {
 	return nil
 }
 func serviceFixture(p Plan, sid string, auChecked bool) error {
+	if p.RuntimeFixture {
+		if e := runtimeFixtureCommands(p); e != nil {
+			return e
+		}
+	}
 	c := exec.Command(filepath.Join(p.Root, "helper.exe"), "fixture-child", p.Root)
 	hidden(c)
 	c.Env = envFor(p)
+	var rustPID uint32
+	if p.RuntimeFixture && p.Fixture == "cancel" {
+		ready := filepath.Join(p.runtime(), "tmp", "rust-ready")
+		c = exec.Command(filepath.Join(p.runtime(), "cargo", "bin", "cargo.exe"), "+stable", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1")
+		hidden(c)
+		c.Env = append(runtimeSDKEnv(p, workerEnv(p)), "PR148_FIXTURE_READY="+ready)
+		c.Dir = filepath.Join(p.source(), "tools")
+		f, err := os.OpenFile(filepath.Join(p.runtime(), "fixture-cancel-cargo.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		c.Stdout = f
+		c.Stderr = f
+	}
 	if e := c.Start(); e != nil {
 		return e
+	}
+	if p.RuntimeFixture && p.Fixture == "cancel" {
+		until := time.Now().Add(60 * time.Second)
+		for time.Now().Before(until) {
+			if b, err := os.ReadFile(filepath.Join(p.runtime(), "tmp", "rust-ready")); err == nil {
+				n, err := strconv.ParseUint(string(b), 10, 32)
+				if err != nil || n == 0 {
+					return errors.New("actual Rust fixture PID rejected")
+				}
+				rustPID = uint32(n)
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		if rustPID == 0 {
+			return errors.New("actual Rust test readiness deadline")
+		}
+		h, err := syscall.OpenProcess(0x1000|0x100000, false, rustPID)
+		if err != nil {
+			return err
+		}
+		defer syscall.CloseHandle(h)
+		w, err := syscall.WaitForSingleObject(h, 0)
+		if err != nil || w != 258 {
+			return errors.New("actual Rust fixture is not alive")
+		}
+		var member uint32
+		r, _, _ := inJob.Call(uintptr(h), 0, uintptr(unsafe.Pointer(&member)))
+		if r == 0 || member == 0 {
+			return errors.New("actual Rust fixture outside Job Object")
+		}
 	}
 	h, e := syscall.OpenProcess(0x100000|0x1000, false, uint32(c.Process.Pid))
 	if e != nil {
@@ -470,13 +539,59 @@ func serviceFixture(p Plan, sid string, auChecked bool) error {
 	if !errors.Is(err, syscall.ERROR_ACCESS_DENIED) {
 		return errors.New("immutable plan protection not proven")
 	}
-	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "child_observed_alive": true, "case": p.Fixture, "account_sid_observed": sid, "explicit_launcher_pid": launcherID, "launcher_reopen_denied": true, "control_write_denied": true, "authenticated_users_deny_only_verified": auChecked}); e != nil {
+	if e = saveNew(filepath.Join(p.runtime(), "fixture.json"), map[string]any{"worker_pid": os.Getpid(), "child_pid": c.Process.Pid, "rust_test_pid": rustPID, "child_observed_alive": true, "case": p.Fixture, "account_sid_observed": sid, "explicit_launcher_pid": launcherID, "launcher_reopen_denied": true, "control_write_denied": true, "authenticated_users_deny_only_verified": auChecked}); e != nil {
 		return e
 	}
 	if p.Fixture == "cancel" {
 		time.Sleep(time.Duration(p.Seconds+10) * time.Second)
 	} else {
 		time.Sleep(200 * time.Millisecond)
+	}
+	return nil
+}
+
+func runtimeFixtureCommands(p Plan) error {
+	env := runtimeSDKEnv(p, workerEnv(p))
+	for _, v := range []struct {
+		stage, name string
+		args        []string
+	}{
+		{"fixture-rustup", "rustup.exe", []string{"show", "active-toolchain"}},
+		{"fixture-cargo-1.95.0", "cargo.exe", []string{"+1.95.0", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1"}},
+		{"fixture-cargo-stable", "cargo.exe", []string{"+stable", "test", "--locked", "--offline", "--target-dir", p.target(), "--", "--test-threads=1"}},
+	} {
+		if _, e := sdkCommand(p, v.stage, filepath.Join(p.runtime(), "cargo", "bin", v.name), env, v.args...); e != nil {
+			return e
+		}
+	}
+	// The changed source must fail before the underlying tool emits a version.
+	file := filepath.Join(p.source(), "tools", "src", "lib.rs")
+	original, e := os.ReadFile(file)
+	if e != nil {
+		return e
+	}
+	if e = os.WriteFile(file, []byte("synthetic tamper"), 0600); e != nil {
+		return e
+	}
+	_, refused := sdkCommand(p, "fixture-source-reject", filepath.Join(p.runtime(), "cargo", "bin", "rustup.exe"), env, "--version")
+	if e = os.WriteFile(file, original, 0600); e != nil {
+		return e
+	}
+	if refused == nil {
+		return errors.New("tool entry accepted changed source")
+	}
+	var rejection struct{ Exit int }
+	b, e := os.ReadFile(filepath.Join(p.runtime(), "sdk-fixture-source-reject.json"))
+	if e != nil || json.Unmarshal(b, &rejection) != nil || rejection.Exit != 1 {
+		return errors.New("source refusal exit was not preserved")
+	}
+	_, failed := sdkCommand(p, "fixture-cargo-failure", filepath.Join(p.runtime(), "cargo", "bin", "cargo.exe"), env, "not-a-real-cargo-subcommand")
+	if failed == nil {
+		return errors.New("original Cargo failure was hidden")
+	}
+	b, e = os.ReadFile(filepath.Join(p.runtime(), "sdk-fixture-cargo-failure.json"))
+	if e != nil || json.Unmarshal(b, &rejection) != nil || rejection.Exit != 101 {
+		return errors.New("original Cargo exit 101 was not propagated")
 	}
 	return nil
 }

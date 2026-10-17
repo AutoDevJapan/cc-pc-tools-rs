@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -134,9 +135,21 @@ func restrictedControllerCase(p Plan, out map[string]any) error {
 	}
 	out["control_preflight_passed"] = true
 	done := make(chan error, 1)
-	go func() { done <- execute(p) }()
+	go func() {
+		if p.RuntimeFixture {
+			c := exec.Command(filepath.Join(p.Root, "helper.exe"), "execute", p.Root)
+			hidden(c)
+			done <- c.Run()
+		} else {
+			done <- execute(p)
+		}
+	}()
 	if p.Fixture == "cancel" {
-		until := time.Now().Add(20 * time.Second)
+		budget := 20 * time.Second
+		if p.RuntimeFixture {
+			budget = time.Duration(p.Seconds) * time.Second
+		}
+		until := time.Now().Add(budget)
 		ready := false
 		for time.Now().Before(until) {
 			report, err := readLaunchResult(p)

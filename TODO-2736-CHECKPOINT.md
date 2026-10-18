@@ -1,5 +1,55 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 02:36・追加レビュー受入、PR219通常merge、新正式matrix（最新）
+
+job20261019-022634-todo-2736。同branch/bf332faから再開し、最新指示と共有ToDoを確認。
+review2844は実Sonnet5.5、job20261019-020840-todo-2844、02:09:14〜02:14:08、
+succeeded/exit0/63steps/Must0/実検査0。原応答7027bytes/SHA256
+A1C16C45561539FBE82CEAB0FE884718412B3AB09E7AEAA9BC4238D0F27ECFF2を一致保存した。
+git不可の制限を保持。eventsで元2736絶対pathの読取51件を確認し、親が指定9対象の
+固定0625→HEADと作業コピー差分0を照合して受領した。原2790/2797等の固定範囲を変えない。
+分類の表検査、値置換の追加ケース、診断文言、孫プロセス停止等は有益な提案として保持。
+現行の実capture回帰・上限拒否・有限再試行とMust0の判定を確認し、追加の本体変更はしない。
+期限後の孫の自然終了と、再試行が最大3回である限界を、全tree停止済みとは言い換えない。
+
+PR219は実所有AutoDevJapan/repo1406818713/admin/nonforkとbf332faの正式7job成功、
+MERGEABLEを確認し、draft解除→match-head指定の通常mergeを実施した。
+02:35:24 JST、merge88801677d73745780fa309395b2b2ee0e859bd7bをAPIで確認。
+mainのProduct CI helper39150291985、CodeQL PC39150292051、Build speed39150292259は
+開始待ち。shared bridge403の旧原証拠は保持し、新sourceの成功で旧predicateを断定しない。
+必要なhelperはSHA照合済みの専用実行物を新資源で使う。共有配置の一括更新は行わない。
+
+製品PR148の所有/private/nonfork/admin、同repo、open/draft、03c7cc6/head、1100/base、
+原branch refとrunner0を再照合。旧run39141771645のcompleted/cancelledを保持した。
+rust.ymlを同branchで1回だけ通常dispatchし、実run39149803349/attempt1を作成した。
+直後の一覧APIには未反映だったため再dispatchせず、CLIが返した実run URLの直接GETで
+同repo/event/head/branch/attemptを確認。Linux117740936941、Windows117740937169を固定。
+WindowsprepareはCargoを起動せずrunnerを登録しないため、Linux正式実行と並行した。
+独立レビューと両OS Go CIの成功後に開始しており、helperの残るRust解析も上記merge前に成功。
+
+Windowsの最初の新root d08e5cb05ac9fd5df91f2184ad8eb720は、呼出引数のslash表記と
+plan.Rootが異なりreadPlanでroot mismatch。prepare/checkPathsより前の失敗だった。
+同rootのprepareは再実行せず、原4metadataをSHA一致保存、service1060/不存在とruntime無を確認。
+公開SDK/実行物の別保管一致を確認してplan→別削除→finish source_absentまで完了した。
+
+別の新root50515037115a8be86b5a45e35a5d5a63では、root引数とplanを同じcanonical文字列で
+事前照合してprepareを1回実行。02:34:01にexit0。API source取得→1283objects/1292tracked
+entries、実head03c7cc6/treea6851bd、認証不在、専用service/account/source ownerが揃った。
+prepared helper SHA E7D598D29FB10797963F5300151DB341D9E70BCA44CE4533BEE6ECE8D0EDA5B2。
+root直下prepared/source-materialized/source-owner/plan/prepare-processを恒久rootへSHA一致保存。
+このserviceは未起動・runner未登録・正式Windows job未実行。SDK credential fileを読まない。
+
+Linux新rootfa1eccfe74f70006ed487443297241f4は、固定pinとfollowup0625のhost/guestを照合し、
+専用namespace todo2736-linux-1792344790167902300で正式job117740936941を実行中。
+checkout/Rust/fmtはsuccess、02:35時点でRust/Lua testsがin_progress。原ログを一括表示しない。
+controller PID/開始時刻は恒久root/linux-formal-022634-process.jsonに保存。再開時に実寿命を
+確認して、生存中の同job/container/gateを二重起動しない。正常終了までこのrootを保持する。
+
+次はLinuxの実job/両hook/source/原logs・終了/登録不在/lockを受領し、Windowsのexecuteを
+通常controller/shared gateと登録tokenのRAM専用経路で行う。新sourceで正式4job成功は未達。
+同じmatrixのWindowsを完了後、label競合を避けてnative/liveを順番に通常dispatchする。
+製品PR148のmergeは2640。元880等の停止、旧2381整理待ち、原証拠/許可範囲は保持する。
+
 ## 2026-10-19 02時台・レビュー2840受入と出力待ちの追加修復（最新）
 
 停止item_71は関連race10passとPR148関連race67pass/4skipの集計・固定範囲比較・

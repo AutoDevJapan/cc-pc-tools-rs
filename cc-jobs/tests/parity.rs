@@ -10947,7 +10947,7 @@ mod end_to_end {
         let events=t.tmp.0.join("tool/jobs").join(&first).join("events.jsonl");
         t.until(|| fs::read_to_string(&events).is_ok_and(|s|s.lines().count()>=4));
         let source=t.job(&first);
-        let row=json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","jobs":[first],"resume_generation":1,
+        let row=json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":first_prompt,"jobs":[first],"resume_generation":1,
             "worker_receipt":{"job":first,"generation":1},"scheduler":{"job":first,"worktree":repo,"branch":"scheduler/todo-1-fixture"}});
         let mut db=json!({"projects":{"cc-pc-tools-rs":repo},"items":[row]});
         let diagnostic=json!({"id_match":db["items"][0]["scheduler"]["job"]==source["id"],"owner_wait":source["waiting_for_work_owner"],"resource_wait":source["resource_wait"],"capacity_wait":source["capacity_wait_pending"],"sandbox":source["sandbox"],"pid_birth":source["pid_created"],"child_birth":source["codex_pid_created"],"started":source["started_at"],"stop":source["stopped"],"cancel":source["cancel_requested"],"work_on":source["work_wait_on"]});

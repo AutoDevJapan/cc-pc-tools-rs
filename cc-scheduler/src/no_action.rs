@@ -26,7 +26,14 @@ impl<B: Backend> Scheduler<B> {
         let db = self.todo()?;
         let mut rows: Vec<_> = arr(&db["items"])
             .into_iter()
-            .filter(|row| jobs.iter().any(|j| action_progress::eligible(&db, row, j)))
+            .filter(|row| {
+                // Match the existing ordinary dispatch boundary while the
+                // original exclusions are unavailable. Never stop a worker
+                // that this same recovery path cannot subsequently resume.
+                ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                    .contains(&s(&row["project"]))
+                    && jobs.iter().any(|j| action_progress::eligible(&db, row, j))
+            })
             .collect();
         rows.sort_by_key(|r| r["id"].as_u64().unwrap_or(0));
         self.report["no_action_scan"] =

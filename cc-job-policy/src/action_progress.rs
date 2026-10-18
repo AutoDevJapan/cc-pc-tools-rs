@@ -60,7 +60,8 @@ pub fn attempt(job: &Value) -> Value {
 pub fn eligible(db: &Value, row: &Value, job: &Value) -> bool {
     row["status"] == "doing"
         && row["project"] != "owner"
-        && row["dispatchable"] != false
+        && row["dispatchable"] == true
+        && row["spec"].as_str().is_some_and(|path| !path.is_empty())
         && job["status"] == "running"
         // ci_fix is the saved implementation label on the observed ToDo2783 worker.
         && matches!(job["task_type"].as_str(), Some("implementation" | "ci_fix"))

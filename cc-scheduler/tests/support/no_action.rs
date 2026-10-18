@@ -248,9 +248,9 @@ fn unavailable_explicit_source_model_is_retained_without_automatic_rerouting() {
 }
 
 #[test]
-fn verified_source_not_project_name_controls_recovery_and_owner_is_excluded() {
+fn workers_outside_the_existing_resume_boundary_are_never_cancelled() {
     for (project, allowed, recover) in [
-        ("other", true, true),
+        ("other", true, false),
         ("other", false, false),
         ("owner", true, false),
     ] {
@@ -274,7 +274,7 @@ fn new_arrivals_cannot_starve_the_next_scan_of_an_existing_worker() {
     let mut f = setup();
     fn add(f: &mut Fixture, id: u64) {
         let root = (id * 10) as u32;
-        f.managed(id, root, "other", 0);
+        f.managed(id, root, "cc-pc-tools-rs", 0);
         let child = root + 1;
         f.e.backend.ps.insert(child, proc(child, root, "codex.exe"));
         let j = f.e.backend.records.last_mut().unwrap();

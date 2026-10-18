@@ -174,7 +174,7 @@ fn stop_wait_review_and_new_worker_are_not_candidates() {
         j["todo_id"] = json!(1);
         j
     };
-    let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","resume_generation":1,"scheduler":{"job":"source"}});
+    let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":"saved-spec.md","resume_generation":1,"scheduler":{"job":"source"}});
     let db = json!({"items":[row,{"id":2,"status":"todo"}],"projects":{}});
     assert!(eligible(&db, &row, &j));
     let mut observed = j.clone();

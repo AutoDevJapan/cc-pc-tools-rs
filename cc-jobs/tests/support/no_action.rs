@@ -18,7 +18,7 @@ fn setup() -> (Test, Value, Value, PathBuf) {
         "started_at":"2026-10-01T11:00:00+09:00","task_type":"implementation","sandbox":"danger-full-access","cwd":repo,"attempt_events_offset":0})));
     t.rt.procs.lock().unwrap().extend([(41, 11), (42, 22)]);
     t.rt.pause_allowed.store(true, Ordering::Relaxed);
-    let db = json!({"projects":{"cc-pc-tools-rs":repo},"items":[{"id":1,"project":"cc-pc-tools-rs","status":"doing","resume_generation":3,
+    let db = json!({"projects":{"cc-pc-tools-rs":repo},"items":[{"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":"saved-spec.md","resume_generation":3,
         "worker_receipt":{"job":"source","generation":3},"scheduler":{"job":"source","worktree":repo,"branch":"scheduler/todo-1-fixture"}},{"id":2,"status":"todo"}]});
     let store = t.ctx.root.join("todo.json");
     fs::write(&store, db.to_string()).unwrap();
@@ -94,6 +94,8 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
         "readonly",
         "recovery",
         "owner_project",
+        "not_dispatchable",
+        "missing_spec",
     ] {
         let (t, mut db, mut j, path) = setup();
         match case {
@@ -102,6 +104,8 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
             "dependency" => db["items"][0]["wait_on"] = json!([2]),
             "worker" => db["items"][0]["scheduler"]["job"] = json!("new"),
             "owner_project" => db["items"][0]["project"] = json!("owner"),
+            "not_dispatchable" => db["items"][0]["dispatchable"] = json!(false),
+            "missing_spec" => db["items"][0]["spec"] = Value::Null,
             "recovery" => {
                 db["items"][0]["stall_recovery"]["pending"] = json!({"reservation":"other"})
             }

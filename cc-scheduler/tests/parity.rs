@@ -1846,6 +1846,68 @@ fn current_succession_dependency_release_still_requires_current_qualification() 
     }
 }
 #[test]
+fn current_succession_reconciliation_keeps_registry_and_worktree_denials() {
+    for gate in ["deny", "unreadable", "worktree"] {
+        let mut f = current_succession_fixture();
+        f.managed(2840, 1, "GoDD-AO", 0);
+        f.e.backend.current_product = Some((f.get(2840), f.repo.to_str().unwrap().into()));
+        f.e.backend.records[0]["status"] = json!("succeeded");
+        f.e.backend.ps.clear();
+        match gate {
+            "deny" => fs::write(f.e.root.parent().unwrap().join("client-projects.txt"), "GoDD-AO").unwrap(),
+            "unreadable" => fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap(),
+            "worktree" => f.e.backend.repair_denied = f.get(2840)["scheduler"]["worktree"].as_str().map(str::to_string),
+            _ => unreachable!(),
+        }
+        let before = f.get(2840);
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.get(2840), before, "{gate}");
+        assert_eq!(f.e.backend.outcome_count, 0, "{gate}");
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn current_succession_direct_subwork_uses_own_receipt_and_normal_admission() {
+    for gate in ["pass", "unqualified", "relation", "stop", "dependency", "cargo", "cpu"] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.db["projects"]["GoDD-AO"] = json!(sub.repo);
+        sub.db["items"][0]["project"] = json!("GoDD-AO");
+        sub.db["items"][1]["project"] = json!("GoDD-AO");
+        sub.register();
+        sub.db["items"][1]["needs"] = json!(["cargo"]);
+        sub.db["items"][1]["scheduler"].as_object_mut().unwrap().remove("subwork_admission");
+        sub.jobs[0]["pid"] = json!(1);
+        sub.jobs[0]["created_at"] = json!(T - 1200.);
+        sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+        let mut f = Fixture::new();
+        fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+        f.e.backend.current_product = Some((sub.db["items"][1].clone(), sub.repo.to_str().unwrap().into()));
+        f.e.backend.repair_allowed = true;
+        f.e.backend.records = sub.jobs.clone();
+        match gate {
+            "unqualified" => f.e.backend.current_product = None,
+            "relation" => sub.db["items"][1]["subwork"]["kind"] = json!("implementation"),
+            "stop" => sub.db["items"][1]["status"] = json!("block"),
+            "dependency" => sub.db["items"][1]["wait_on"] = json!([1]),
+            "cargo" => { f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe")); },
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            _ => {},
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let result = f.e.dispatch(&f.cfg, &f.pri);
+        if gate == "relation" { assert_eq!(result.unwrap_err().0, "InvalidSubwork"); }
+        else { result.unwrap(); }
+        assert_eq!(f.e.backend.launched.len(), usize::from(gate == "pass"), "{gate}: {:?}", f.e.report);
+        if gate == "pass" {
+            let launched = &f.e.backend.launched[0]["item"];
+            assert_eq!(launched["id"], 2);
+            assert_eq!(launched["scheduler"]["subwork_parent_job"], "parent");
+            assert!(f.get(2)["scheduler"]["subwork_admission"].is_object());
+        }
+    }
+}
+#[test]
 fn repair_step_never_replays_legacy_questions_or_unknown_work() {
     let mut f = Fixture::new();
     f.managed(1, 1, "civ6", 1);

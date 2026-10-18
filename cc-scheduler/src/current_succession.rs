@@ -95,6 +95,10 @@ mod tests {
             self.calls.lock().unwrap().push(c.clone());
             let verify = c.args.iter().any(|a| a == "--verify-current-succession");
             assert!(verify || c.args.iter().any(|a| a == "--guard-path"));
+            assert!(c.program.ends_with("scrub391.exe"));
+            if self.code == -1 {
+                return Err(crate::common::Error("TimeoutExpired"));
+            }
             Ok(Output {
                 code: if verify { self.code } else { 0 },
                 stdout: if verify {
@@ -112,6 +116,7 @@ mod tests {
             "pass",
             "normalized",
             "unsupported",
+            "runner_error",
             "json",
             "domain",
             "verified",
@@ -141,7 +146,7 @@ mod tests {
             };
             let mut receipt = json!({"domain":"current-product-succession-v1","verified":true,
                 "origin_todo_id":2834,"todo_id":2839,"project":"GoDD-AO",
-                "registered_path_sha256":digest(b"d:/work/ao"),
+                "registered_path_sha256":"1782e36ad9ee1d06207809d581efd0e0056745d2c6577a8e4c576bbad3ac78b1",
                 "spec_path_sha256":path_digest(spec.to_str().unwrap()),
                 "spec_sha256":digest(b"exact saved spec\r\n"),"original_registry_recovered":false});
             match gate {
@@ -178,7 +183,11 @@ mod tests {
                 } else {
                     receipt.to_string()
                 },
-                code: if gate == "unsupported" { 1 } else { 0 },
+                code: match gate {
+                    "unsupported" => 1,
+                    "runner_error" => -1,
+                    _ => 0,
+                },
                 root_allowed: gate != "protected_root",
                 calls: calls.clone(),
             });

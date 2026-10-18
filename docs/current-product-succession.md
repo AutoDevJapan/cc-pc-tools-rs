@@ -35,6 +35,11 @@ dispatchのNotFound分岐だけに資格を追加する。既存のPC修復3proj
 完了した待機を通常受付へ返す。既存worktreeもguardで確認する。
 旧質問の送信・返信処理や未知の担当の復旧へ処理を広げない。
 
+現在の主担当が正規登録した直接のreview/check/researchの子も、Go APIが
+その子自身のidとspecのfingerprintを返す場合だけ同じ比較を通る。
+親の資格・停止・同project/root/common・有限な新しい子の検証はGo側で行い、
+Rustは従来のsubwork審査と独立worktree、資源、依存、担当競合の条件を保持する。
+
 ## 検査と正式更新
 
 `cc-scheduler`の回帰検査と、公開Backendを使う`cc-todo`、`cc-shepherd`、

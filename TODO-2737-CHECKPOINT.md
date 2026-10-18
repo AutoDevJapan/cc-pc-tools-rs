@@ -404,3 +404,37 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 次回は2831の原応答をまず受領し、newMust/未読があればWindows待ちの前に直す。source差分Must0後に2828の最終code/2830反映結果を受けて統合・関連検査へ進む。
   したがって現時点のwait先は2831だけ。2828や完了済み2783を同時waitにして、新source指摘の修正を遅らせない。SDK/Windows実acceptanceは正式CIの前提として保持する。
   新route codeはまだ実GitHub mutation0/dispatch0、通常CI未実行。新しいM0を旧2800から流用しない。
+
+## 2026-10-19 job20261019-011740-todo-2737: routeレビュー受領とWindowsホスト接続
+
+- 2831はdone。原3応答を改変せず受領し、最終job20261019-010536のSHA256
+  9A70ADD33629120A4352AEBCCE668AB006BA7F83E140DCF7EBD76894C1FE7512を確認。
+  fixed basec373a18→head899ed68/treebf3526fの16file/局所callerでMust0/Suggestion0/Nit0、検査実行0。
+  原応答のmodel variant未確認という文面は保持したまま、受領側がexact thread
+  01a14fae-92c7-78f3-8e11-e9739c67d875のrollout turn_context.modelとjob.jsonを照合しgpt-6-lunaを確認。
+  実装元job234740はgpt-6.1-sol。再び子レビューを起動していない。実VM/公式CIの合格ではない。
+- 2828はdoneとなった。最終delivery c0732ffbdd867bdc5ce0cfbd803deb4648614b53から
+  tools/windows-ci-runner-2737とSDKを同じcanonical pathへ統合。runtimeはb60e85e7、追加review2833はMust0。
+  2830の23file/2833の6file、raw responses/受領receiptは同module/reviewsに保持。
+  新normalci/sourcepacketを旧baseへ戻さず、既存controllerへ直接linkした。
+- windows-job entryを既存canonical Cargo gate、単一job lock/intentへ接続した。
+  source/run/attempt/nonce/Windows/20分/role-run labelを既存normalci.Planで照合し、Linux経路へWindowsを渡さない。
+  guest helperは正しいmodule/entry・Windows amd64・clean build・hostと同code revisionを、実読取handleのbuildinfoで検査する。
+  requestからhost program/任意exeを選べず、helperをhostで実行しない。実bytesはwrite/delete共有を止めたhandleからclone用へcopyする。
+- 固定SDK source diskはread-only copyし、実cloneの全bytes/固定hashを照合後、cloneだけをoffline mountする。
+  公開seed/固定hashの公式runnerを配置し、元SDKの既存LocalSystem serviceをclone内だけで固定entryへ向ける。
+  元asset、host service、switch/firewall、原guard/manifest/owner-workを変更しない。offline hive解放とdetachは失敗時にも実行する。
+- source proof/queued identity→登録intent→短命token→exact offline numeric ID保存→listen ackの順序を接続。
+  start/completeは同job/numeric runner/physical proofと順序を照合。runner exit/drainを公式successへ読み替えず、既存official completion/log hash確認へ渡す。
+  VM journal/stop-memory0-removal、nonce登録不在、gate/fenceとintent回収を既存経路へ統合。新VMを実際に起動した結果ではない。
+- 初回Go testはSDK BootstrapResultにInstance fieldがないためcompile failure。public COM receiptに自己instanceとBootを包む形へ修正。
+  修正後host tests成功4.093秒、host race成功、host vet成功。統合backendのraceも成功。
+  新回帰はsource ack前token拒否、queue変更/nonce重複、登録duplicate/busy/online/別run label、ID保存失敗、hook順序/再入/他runを確認。
+  offline stagingの実scriptはPowerShell parserで構文だけ確認し、実mount/registry/VMは実行していない。
+- 新owned root aaf5ba5d48e90a772ce5b14b7c15b46bはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-aaf5ba5d48e90a772ce5b14b7c15b46b。
+  raw review receipt/初回failure/修正後検査を保持。元SDK21GBを今回再hash/copyせず、SDK受領の旧有効証拠を再利用。
+  元b194のguidanceをRAM再取得し235dcf.../70c7de...一致、repo/PR/ref/head固定も再確認。cc実repo1406818713の所有/権限もAPI一致。
+- 次はこのWindowsホスト接続差分だけの有限別モデルレビューを受領・Must修正する。
+  その後、同じ最終clean codeからhost/guestをbuildし、既存SDKのfresh nonce cloneを実受入する。
+  新head/route適用/dispatch/公式job/原Cargo/13工程は未実行で、原b194を変更していない。
+  2828や完了済み2831/2783へ再びwaitせず、新レビューだけを正規waitへ記録する。原merge/Prdは親2641。

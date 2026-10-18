@@ -60,7 +60,7 @@ func gateChild() error {
 	}
 	r := bufio.NewReaderSize(os.Stdin, 32769)
 	var q gatedHello
-	if decodeGateLine(r, &q) != nil || !validInstance(q.ID) || (q.Mode != "fixture" && q.Mode != "offline-bootstrap" && q.Mode != "linux-job") || !filepath.IsAbs(q.Root) {
+	if decodeGateLine(r, &q) != nil || !validInstance(q.ID) || (q.Mode != "fixture" && q.Mode != "offline-bootstrap" && q.Mode != "linux-job" && q.Mode != "windows-job") || !filepath.IsAbs(q.Root) {
 		return errors.New("gate work rejected")
 	}
 	out := json.NewEncoder(os.Stdout)
@@ -71,7 +71,7 @@ func gateChild() error {
 	if decodeGateLine(r, &start) != nil || start.ID != q.ID || start.Kind != "start" {
 		return errors.New("gate start not acknowledged")
 	}
-	if q.Mode == "offline-bootstrap" || q.Mode == "linux-job" {
+	if q.Mode == "offline-bootstrap" || q.Mode == "linux-job" || q.Mode == "windows-job" {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
@@ -84,7 +84,9 @@ func gateChild() error {
 			}
 		}()
 		var e error
-		if q.Mode == "linux-job" {
+		if q.Mode == "windows-job" {
+			e = executeWindowsJob(ctx, q.Root, q.Helper, q.Request, jobs, threads)
+		} else if q.Mode == "linux-job" {
 			e = executeLinuxJob(ctx, q.Root, q.SDKRoot, q.Helper, q.Request, jobs, threads)
 		} else {
 			e = bootstrapNormalRunner(ctx, q.Root, q.SDKRoot, q.Helper)

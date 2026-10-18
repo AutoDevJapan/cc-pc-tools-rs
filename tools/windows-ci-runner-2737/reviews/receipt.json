@@ -1,0 +1,36 @@
+{
+  "todo": 2830,
+  "base": "f03eb1f4d8165a9f079a8530957a8901510b8efa",
+  "head": "bec99388b45319bfed7e3db67f1cbd24422883fd",
+  "tree": "6c5c18608b0d7940178baaa97938e6dd0a8fb5cd",
+  "scope_files": 23,
+  "must": 0,
+  "suggestions": 2,
+  "nit": 0,
+  "tests_by_reviewer": 0,
+  "implementation_model": "gpt-6.1-sol",
+  "review_model": "gpt-6-luna",
+  "model_evidence": {
+    "full_session_copied": false,
+    "review_thread": "01a14fa6-3ceb-74f0-ab4a-ff766277023d",
+    "source": "job.json plus exact-thread rollout turn_context.model",
+    "implementation_thread": "01a14f87-fe03-72a3-a8d7-47bb55bb7f8e"
+  },
+  "responses": [
+    {
+      "job": "20261019-002939-todo-2830",
+      "file": "20261019-002939-todo-2830.md",
+      "sha256": "fc6da3188609b85400a032a5e362812a592e545723251d6bdb58d68432674385"
+    },
+    {
+      "job": "20261019-004034-todo-2830",
+      "file": "20261019-004034-todo-2830.md",
+      "sha256": "40dd837c5f7d4b37ee04d514d80dc9e7ccd58bc5e92fa1adf64c9d7e879425d7"
+    },
+    {
+      "job": "20261019-004939-todo-2830",
+      "file": "20261019-004939-todo-2830.md",
+      "sha256": "5f0896a0cef088320c5364e3721f4a47152bea8332314c1ede0ea5fc513dc74d"
+    }
+  ]
+}

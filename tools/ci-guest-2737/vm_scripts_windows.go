@@ -14,6 +14,10 @@ import (
 
 type vmState struct{ Instance, ID, Name, Root, Pipe, Stage string }
 
+func validVMPipe(s vmState) bool {
+	return s.Pipe == `\\.\pipe\cc-ci-2737-`+s.Instance || s.Pipe == `\\.\pipe\windows-ci-sdk-2737-`+s.Instance
+}
+
 func validVMID(id string) bool {
 	if len(id) != 36 || id[8] != '-' || id[13] != '-' || id[18] != '-' || id[23] != '-' {
 		return false
@@ -58,7 +62,13 @@ func createVMStage(ctx context.Context, root, instance, image, fault string) (vm
 	return createVMBudget(ctx, root, instance, image, fault, 2, 2)
 }
 func createVMBudget(ctx context.Context, root, instance, image, fault string, cpus, memoryGiB int) (vmState, error) {
+	return createVMPlatform(ctx, root, instance, image, fault, cpus, memoryGiB, false)
+}
+func createVMPlatform(ctx context.Context, root, instance, image, fault string, cpus, memoryGiB int, windows bool) (vmState, error) {
 	s := vmState{Instance: instance, Name: "cc-ci-2737-" + instance, Root: root, Pipe: `\\.\pipe\cc-ci-2737-` + instance}
+	if windows {
+		s.Pipe = `\\.\pipe\windows-ci-sdk-2737-` + instance
+	}
 	if !validInstance(instance) || cpus < 1 || cpus > 10 || memoryGiB < 2 || memoryGiB > 16 || (fault != "" && fault != "after-receipt" && fault != "receipt-write" && fault != "receipt-and-rollback") {
 		return s, errors.New("VM instance rejected")
 	}
@@ -123,6 +133,15 @@ try {
 `
 	body = strings.Replace(body, "Set-VMProcessor -VM $vm -Count 2", "Set-VMProcessor -VM $vm -Count "+strconv.Itoa(cpus), 1)
 	body = strings.Replace(body, "-StartupBytes 2GB", "-StartupBytes "+strconv.Itoa(memoryGiB)+"GB", 1)
+	if windows {
+		// The clone is already hash-verified and offline-staged. Never mount or
+		// mutate the retained SDK; all VM identity journalling stays unchanged.
+		var e error
+		body, e = windowsPreparedVMBody(body, image)
+		if e != nil {
+			return s, e
+		}
+	}
 	adminErr := admin(ctx, root, "vm-create", body)
 	// Never skip identity recovery because the constructor returned failure.
 	// Prefer the rollback proof when creation receipt itself could not be saved.
@@ -138,8 +157,17 @@ try {
 	}
 	return s, errors.Join(adminErr, errors.New("VM identity unavailable; retain intent for reconciliation"))
 }
+func windowsPreparedVMBody(body, image string) (string, error) {
+	from := "if(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}\nConvert-VHD -Path " + psQuote(image) + " -DestinationPath $disk -VHDType Dynamic\nResize-VHD -Path $disk -SizeBytes 64GB"
+	dvd := "  $dvd=Get-VMDvdDrive -VM $vm\n  if($dvd){$dvd|Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}\n"
+	if strings.Count(body, from) != 1 || strings.Count(body, dvd) != 1 {
+		return "", errors.New("prepared Windows VM template changed")
+	}
+	body = strings.Replace(body, from, "if(-not (Test-Path -LiteralPath $disk)){throw 'PREPARED_CLONE_ABSENT'}\nif((Get-VHD -Path $disk -ErrorAction Stop).Attached){throw 'PREPARED_CLONE_ATTACHED'}", 1)
+	return strings.Replace(body, dvd, "", 1), nil
+}
 func cleanupVM(ctx context.Context, s vmState) error {
-	if !validInstance(s.Instance) || !validVMID(s.ID) || s.Name != "cc-ci-2737-"+s.Instance || s.Pipe != `\\.\pipe\cc-ci-2737-`+s.Instance {
+	if !validInstance(s.Instance) || !validVMID(s.ID) || s.Name != "cc-ci-2737-"+s.Instance || !validVMPipe(s) {
 		return errors.New("owned VM cleanup identity rejected")
 	}
 	body := vmPrelude(s)

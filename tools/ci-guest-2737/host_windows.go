@@ -482,12 +482,16 @@ func main() {
 	ctx, stop := context.WithTimeout(context.Background(), 55*time.Minute)
 	defer stop()
 	var e error
-	if len(os.Args) == 2 && os.Args[1] == "inspect-executor" {
+	if len(os.Args) == 4 && os.Args[1] == "windows-serial" {
+		e = readWindowsSerial(ctx, os.Args[2], os.Args[3])
+	} else if len(os.Args) == 2 && os.Args[1] == "inspect-executor" {
 		var proof map[string]any
 		proof, e = linkedExecutorIdentity()
 		if e == nil {
 			e = json.NewEncoder(os.Stdout).Encode(proof)
 		}
+	} else if len(os.Args) == 5 && os.Args[1] == "windows-job" {
+		e = runGatedWindowsJob(ctx, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 6 && os.Args[1] == "linux-job" {
 		e = runGatedLinuxJob(ctx, os.Args[2], os.Args[3], os.Args[4], os.Args[5])
 	} else if len(os.Args) == 5 && os.Args[1] == "bootstrap-offline" {

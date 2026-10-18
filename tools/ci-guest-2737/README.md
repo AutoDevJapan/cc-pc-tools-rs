@@ -205,3 +205,56 @@ GitHub's [current billing reference](https://docs.github.com/en/billing/concepts
 lists self-hosted runner execution as free (checked 2026-10-17). No budget or
 payment settings are changed; cache/artifact policies of the original workflow
 must still be retained.
+
+## Windows controller integration (2026-10-19)
+
+`windows-job <new-owned-root> <same-revision-guest-helper> <request.json>`
+uses the same canonical Cargo gate, dedicated execution lock and durable intent
+as Linux. Its role is exactly `windows-native-check`; the linked policy binds
+the same explicitly pinned source/run/attempt, nonce route, Windows OS,
+20-minute timeout and role/run label. ProductCI/Command/Executor inputs remain
+invalid. A Windows request cannot go through the Linux backend.
+
+The backend at `../windows-ci-runner-2737` is imported from final delivery
+c0732ffbdd867bdc5ce0cfbd803deb4648614b53 (runtime b60e85e7f66abb3329264bfc74895a3d3c2be10f).
+Its original 23-file review2830 and additional six-file review2833 are Must0;
+their raw replies, exact scope and execution-model receipts remain in that
+module's reviews directory. The SDK is source9622a766 with only its previously
+reviewed SCM backend callback. The sourcepacket and normalci implementations
+remain the parent's canonical paths; old versions are not restored.
+
+The host verifies the guest helper's actual build info from a pinned read
+handle: correct module/entry, Windows amd64, clean VCS build and the SAME code
+revision as the running controller. It copies those bytes with write/delete
+sharing disabled, without executing the helper on the host. The received SDK
+disk has a fixed path/size/hash and is copied read-only to a fresh attempt.
+The actual copy is hashed before modification. Only the clone is offline mounted
+to stage public seeds and the hash-pinned official runner; its existing service
+is redirected to the fixed guest entry. Original SDK assets and host services
+are unchanged. The script unloads its offline hive and detaches its clone even
+on a staging failure. No profile, token, private key or source is staged.
+
+The host adapter saves registration intent before requesting a short-lived
+token. It persists the exact offline/not-busy numeric runner ID before the
+backend can acknowledge listening. Both stock hooks require ordered official
+claims for that ID and matching physical source proof. Runner exit/drain is
+followed by separate official job completion and private log download. Cleanup
+reuses the VM identity journal, verified stop/removal, nonce registration
+absence and Cargo fence. An unknown VM retains the durable intent and admission
+until the existing read-only fence proves quiescence.
+
+The integrated host and backend passed Windows race tests; host vet passed.
+New tests cover refused token before source acknowledgement, queued-source
+changes, occupied nonce, changed/duplicate/busy/online/other-run registrations,
+failed ID persistence, hook order/reentry and another run's claim. The exact
+offline staging script was parsed by PowerShell without executing it. Initial
+BootstrapResult field mismatch caused a compile failure and was corrected;
+the initial failure and subsequent results are retained separately.
+
+These are synthetic integration checks. The host integration still needs its
+own finite delta review and actual clone/COM/TLS/stock-runner/cleanup acceptance.
+No Windows clone, registration, workflow dispatch, original Cargo/13 steps or
+official CI has been run by this integration. Build both clean executables from
+the final reviewed commit before live use; the previous c0f59e1 host is only a
+read-only source-inspection tool now. Original workflow conditions/profiles,
+serial execution, mandatory gates and Docker parity remain authoritative.

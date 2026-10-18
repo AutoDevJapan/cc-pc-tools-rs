@@ -36,7 +36,7 @@ func readJobRequest(path string) (q linuxJobRequest, e error) {
 	defer f.Close()
 	d := json.NewDecoder(io.LimitReader(f, 32769))
 	d.DisallowUnknownFields()
-	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate") || !normalci.ValidLease(q.RouteLease) {
+	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate" && q.Role != "windows-native-check") || !normalci.ValidLease(q.RouteLease) || len(q.Inputs) != 0 {
 		return q, errors.New("live request rejected")
 	}
 	return q, nil
@@ -86,10 +86,15 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 }
 func validOfficialBinding(q linuxJobRequest, b jobBinding) bool {
 	timeout := 30
+	osName := "Linux"
 	if q.Role == "ci-gate" {
 		timeout = 5
+	} else if q.Role == "windows-native-check" {
+		timeout, osName = 20, "Windows"
+	} else if q.Role != "verify" {
+		return false
 	}
-	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == "Linux" && b.Label == normalci.RuntimeLabel(q.Role, q.RunID) && b.TimeoutMinutes == timeout && b.JobName != ""
+	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == osName && b.Label == normalci.RuntimeLabel(q.Role, q.RunID) && b.TimeoutMinutes == timeout && b.JobName != ""
 }
 func sendLiveFrame(c net.Conn, v any) error {
 	b, e := json.Marshal(v)
@@ -138,6 +143,9 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	q, e := readJobRequest(requestFile)
 	if e != nil {
 		return e
+	}
+	if q.Role == "windows-native-check" {
+		return errors.New("Windows job requires Windows guest backend")
 	}
 	executor, e := linkedExecutorIdentity()
 	if e != nil {
@@ -365,7 +373,7 @@ func observeVMQuiescence(ctx context.Context, f *unsafeVMLease) error {
 	if s.Instance == "" {
 		s = vmState{Instance: f.Instance, Name: "cc-ci-2737-" + f.Instance, Root: f.Root, Pipe: `\\.\pipe\cc-ci-2737-` + f.Instance}
 	}
-	if !validInstance(s.Instance) || s.Name != "cc-ci-2737-"+s.Instance || s.Root != f.Root {
+	if !validInstance(s.Instance) || !validVMPipe(s) || s.Name != "cc-ci-2737-"+s.Instance || s.Root != f.Root {
 		return errors.New("VM fence identity rejected")
 	}
 	body := vmPrelude(s) + `$all=@(Get-VM -ErrorAction Stop)
@@ -477,7 +485,13 @@ func preserveOfficialJobLog(ctx context.Context, root string, id int64) error {
 }
 
 func runGatedLinuxJob(ctx context.Context, root, sdkRoot, helper, file string) error {
-	s, e := startGatedWork(ctx, gatedHello{Mode: "linux-job", Root: root, SDKRoot: sdkRoot, Helper: helper, Request: file})
+	return runGatedJob(ctx, gatedHello{Mode: "linux-job", Root: root, SDKRoot: sdkRoot, Helper: helper, Request: file})
+}
+func runGatedWindowsJob(ctx context.Context, root, helper, file string) error {
+	return runGatedJob(ctx, gatedHello{Mode: "windows-job", Root: root, Helper: helper, Request: file})
+}
+func runGatedJob(ctx context.Context, q gatedHello) error {
+	s, e := startGatedWork(ctx, q)
 	if e != nil {
 		return e
 	}

@@ -134,14 +134,14 @@ fn library_gate_precedes_all_effects_and_dry_run() {
 
 #[test]
 fn all_owner_reasons_are_recorded_in_posted_questions() {
-    for reason in [
-        OwnerOnly::Money,
-        OwnerOnly::Publish,
-        OwnerOnly::Rights,
-        OwnerOnly::Customer,
-        OwnerOnly::Direction,
-        OwnerOnly::Irreversible,
-        OwnerOnly::Access,
+    for (reason, expected) in [
+        (OwnerOnly::Money, "money"),
+        (OwnerOnly::Publish, "publish"),
+        (OwnerOnly::Rights, "rights"),
+        (OwnerOnly::Customer, "customer"),
+        (OwnerOnly::Direction, "direction"),
+        (OwnerOnly::Irreversible, "irreversible"),
+        (OwnerOnly::Access, "access"),
     ] {
         let mut h = Harness::new();
         let body = h.root.path().join("q.txt");
@@ -153,7 +153,8 @@ fn all_owner_reasons_are_recorded_in_posted_questions() {
             ..Default::default()
         };
         cmd_ask(&mut h.ctx, &args).unwrap();
-        assert_eq!(h.state()["questions"][0]["owner_only"], reason.as_str());
+        assert_eq!(reason.as_str(), expected);
+        assert_eq!(h.state()["questions"][0]["owner_only"], expected);
         assert!(!h.fake.borrow().posts.is_empty() || !h.fake.borrow().http_calls.is_empty());
     }
 }

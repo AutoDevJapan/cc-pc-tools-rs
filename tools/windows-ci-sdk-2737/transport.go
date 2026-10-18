@@ -222,11 +222,21 @@ func NewHostIdentity(instance string) (Identity, error) {
 }
 
 func PrepareSDKSet(ip net.IP, serverHash, instance string, client Identity) ([]Result, error) {
+	return prepareSDKSetObserved(ip, serverHash, instance, client, nil)
+}
+
+func prepareSDKSetObserved(ip net.IP, serverHash, instance string, client Identity, observe func(Result)) ([]Result, error) {
 	installOrder := []PackageID{GitForWindows, PowerShell7, RustToolchain, MSVCBuildTools, Sccache}
 	verifyOrder := []PackageID{GitForWindows, PowerShell7, RustToolchain, MSVCBuildTools, WindowsSDK, Sccache}
 	results := make([]Result, 0, len(installOrder)+len(verifyOrder))
 	for _, id := range installOrder {
+		if observe != nil {
+			observe(Result{Instance: instance, Operation: OpPrepare, Package: id, Stage: "host-request-started"})
+		}
 		prepared, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpPrepare, Package: id})
+		if observe != nil && err == nil {
+			observe(prepared)
+		}
 		if err == nil {
 			results = append(results, prepared)
 		}
@@ -235,7 +245,13 @@ func PrepareSDKSet(ip net.IP, serverHash, instance string, client Identity) ([]R
 		}
 	}
 	for _, id := range verifyOrder {
+		if observe != nil {
+			observe(Result{Instance: instance, Operation: OpVersions, Package: id, Stage: "host-request-started"})
+		}
 		verified, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpVersions, Package: id})
+		if observe != nil && err == nil {
+			observe(verified)
+		}
 		if err == nil {
 			results = append(results, verified)
 		}

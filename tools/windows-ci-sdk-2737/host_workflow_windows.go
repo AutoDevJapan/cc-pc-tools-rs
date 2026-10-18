@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -112,7 +113,18 @@ func RunSDKPreparation(ctx context.Context, root OwnedRoot, worktree, modulePath
 		return evidence, err
 	}
 	stage = "guest-sdk-install-and-version-check"
-	receipt, err := PrepareProvisionedGuest(ctx, instance, clientIdentity)
+	receipt, err := prepareProvisionedGuestObserved(ctx, instance, clientIdentity, func(result Result) {
+		f, err := os.OpenFile(filepath.Join(root.Path, "host-sdk-progress.private.jsonl"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		_ = json.NewEncoder(f).Encode(struct {
+			ObservedAt string `json:"observed_at"`
+			Result     Result `json:"result"`
+		}{ObservedAt: time.Now().UTC().Format(time.RFC3339), Result: result})
+		_ = f.Sync()
+	})
 	resultRecord, _ := json.Marshal(struct {
 		Receipt PreparationReceipt `json:"receipt"`
 		Failure string             `json:"failure"`

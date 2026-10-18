@@ -497,6 +497,10 @@ func ProvisionNewGuest(root OwnedRoot, worktree, iso, seedISO, instance string) 
 }
 
 func PrepareProvisionedGuest(ctx context.Context, instance string, client Identity) (PreparationReceipt, error) {
+	return prepareProvisionedGuestObserved(ctx, instance, client, nil)
+}
+
+func prepareProvisionedGuestObserved(ctx context.Context, instance string, client Identity, observe func(Result)) (PreparationReceipt, error) {
 	bootCtx, cancel := context.WithTimeout(ctx, 25*time.Minute)
 	defer cancel()
 	for bootCtx.Err() == nil {
@@ -517,7 +521,7 @@ func PrepareProvisionedGuest(ctx context.Context, instance string, client Identi
 			}
 			continue
 		}
-		results, err := PrepareSDKSet(bootstrap.IPv4, bootstrap.ServerSHA256, instance, client)
+		results, err := prepareSDKSetObserved(bootstrap.IPv4, bootstrap.ServerSHA256, instance, client, observe)
 		return PreparationReceipt{Instance: instance, GuestIPv4: bootstrap.IPv4.String(), ServerSHA256: bootstrap.ServerSHA256, Results: results}, err
 	}
 	return PreparationReceipt{}, errors.New("guest Setup readiness deadline exceeded")

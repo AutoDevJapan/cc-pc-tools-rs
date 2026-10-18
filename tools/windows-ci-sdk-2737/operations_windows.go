@@ -414,12 +414,18 @@ func runFixed(executable string, args, env []string) error {
 }
 
 func runCapture(executable string, args, env []string) ([]byte, error) {
-	cmd := exec.Command(executable, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, executable, args...)
+	cmd.WaitDelay = 5 * time.Second
 	cmd.Env, cmd.Stdin = env, nil
 	var output bytes.Buffer
 	writer := &boundedBuffer{buffer: &output, max: 64 << 10}
 	cmd.Stdout, cmd.Stderr = writer, writer
 	err := cmd.Run()
+	if errors.Is(err, exec.ErrWaitDelay) && cmd.ProcessState != nil && cmd.ProcessState.Success() {
+		err = nil
+	}
 	appendPrivateRunLog(filepath.Base(executable), output.Bytes(), err)
 	if err != nil {
 		var exit *exec.ExitError
@@ -479,6 +485,10 @@ func appendPrivateRunLog(executable string, output []byte, runErr error) {
 			_, _ = file.Write([]byte{'\n'})
 		}
 	}
+	if runErr != nil {
+		_, _ = fmt.Fprintf(file, "process-error=%v\n", runErr)
+	}
+	_ = file.Sync()
 }
 
 type boundedBuffer struct {

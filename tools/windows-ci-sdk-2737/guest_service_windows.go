@@ -123,6 +123,9 @@ func serveGuestAgent() error {
 	if err != nil {
 		return err
 	}
+	if err := waitForNormalSetupCompletion(); err != nil {
+		return err
+	}
 	if err := applyGuestFirewallRule(); err != nil {
 		return err
 	}
@@ -178,6 +181,51 @@ func serveGuestAgent() error {
 		return errors.New("guest SDK listener stopped unexpectedly")
 	}
 	return nil
+}
+
+// Normal Setup can reboot after specialize has registered the service. Remain
+// a running LocalSystem service so specialize can finish, but do not announce
+// SDK readiness or create TLS keys until normal Setup and boot have settled.
+func waitForNormalSetupCompletion() error {
+	deadline := time.NewTimer(15 * time.Minute)
+	defer deadline.Stop()
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+	uptime := serviceKernel.NewProc("GetTickCount64")
+	for {
+		inProgress, err1 := setupDWORD("SystemSetupInProgress")
+		setupType, err2 := setupDWORD("SetupType")
+		millis, _, _ := uptime.Call()
+		if err1 == nil && err2 == nil && inProgress == 0 && setupType == 0 && millis >= 120000 {
+			return nil
+		}
+		select {
+		case <-serviceStop:
+			return errors.New("normal Setup readiness interrupted")
+		case <-deadline.C:
+			return errors.New("normal Setup readiness deadline exceeded")
+		case <-tick.C:
+		}
+	}
+}
+
+func setupDWORD(name string) (uint32, error) {
+	path, _ := syscall.UTF16PtrFromString(`SYSTEM\Setup`)
+	var key syscall.Handle
+	if err := syscall.RegOpenKeyEx(syscall.HKEY_LOCAL_MACHINE, path, 0, syscall.KEY_QUERY_VALUE, &key); err != nil {
+		return 0, err
+	}
+	defer syscall.RegCloseKey(key)
+	value, _ := syscall.UTF16PtrFromString(name)
+	var data, kind uint32
+	size := uint32(4)
+	if err := syscall.RegQueryValueEx(key, value, nil, &kind, (*byte)(unsafe.Pointer(&data)), &size); err != nil {
+		return 0, err
+	}
+	if kind != syscall.REG_DWORD || size != 4 {
+		return 0, errors.New("normal Setup state type invalid")
+	}
+	return data, nil
 }
 
 func readPublicSeed() (publicSeed, error) {

@@ -205,3 +205,39 @@ permissions, exact Compose operations, transitive setup requirements, drain and
 trust semantics. It cannot edit parent source or run product jobs. Its saved
 spec preserves the fixed source/API/RAM-only and secret boundaries. This is
 necessary analysis, not another builder repair or a product CI result.
+
+## 2026-10-19: real VM build reached artifact validation but failed
+
+The PR226 installed preflight finished with host exit1 and Docker/guest exit124.
+It verified the fixed product source before and after execution and the original
+four CodeQL successes. The original ownership error did not recur; the log has
+one package-install success and no matched image-build error, OOM or disk-full
+signature. Exit124 from the guest output-checking block still cannot distinguish
+missing/empty output from output larger than the 256MiB cap: its measured size
+was cleared before the only result was emitted. The actual artifact size is
+unobserved. This is neither a timeout diagnosis nor a product CI success.
+
+The raw log is preserved, 474068 bytes, SHA256
+`C85392720F5290E07D0BF1C73F7A58575673237403C5196D1E7DCA15FCC37061`.
+The complete host stdout, host exit, final build state, and safe classifications
+are stored separately in the private evidence area. Container PID0, removal,
+container/volume absence, all three introduced images removed, phase release
+and no recovery required are true. The raw log/state copies matched their hashes;
+owned directory `5d1cfaaf1fe627565ab8ccc05a5b24bf` was planned, normally deleted
+in a separate call and finished as source_absent.
+
+The next CC-only change records `artifact bytes=<number> limit=<number>` before
+the failed result clears the size. It changes no product input, admission,
+resource/output cap, success decision, artifact authentication or lifecycle.
+The real shell fixture executes the actual guest output block with CC-authored
+files: absent, empty, over cap, exactly at cap, below cap and failed build all
+passed. Rejected files are not copied; valid copies match their input. Fixtures
+use an existing image with pull disabled, named containers, network none,
+cap-drop ALL, NNP, 0.25CPU/64MiB/32PIDs and verify container absence.
+Related Go race tests and vet passed before the final fixture cleanup tightening;
+the final six-case real fixture also passed. Exact-head CI/review/distribution
+and the new installed product preflight are still required.
+
+Research2878 is running. Its eventual semantic readback and the remaining
+finite official CI/release/drain/Prd work are not represented by this diagnostic
+change. Do not raise the artifact cap based on an unmeasured guess.

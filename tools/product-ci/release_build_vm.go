@@ -599,6 +599,10 @@ SZ=0
 SHA=$Z
 if [ $rc -eq 0 ]; then
   [ -f /work/out/output.tar ] && SZ=$(wc -c < /work/out/output.tar)
+  # Numeric diagnostics only. Keep the measured size before an invalid output
+  # is cleared from the result channel; exit 124 alone cannot distinguish a
+  # missing artifact from one exceeding the closed profile's limit.
+  echo "cc-guest: artifact bytes=$SZ limit=$OUTMAX"
   if [ "$SZ" -le 0 ] || [ "$SZ" -gt "$OUTMAX" ]; then
     rc=124
     SZ=0

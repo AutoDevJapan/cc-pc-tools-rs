@@ -189,6 +189,14 @@ func pr148Hook(complete bool) error {
 	return pr148SaveNew("/home/runner/pr148-"+stage+".json", p.Plan)
 }
 
+// run.sh creates run-helper.sh in the configured runner root and masks most
+// startup failures as exit zero. That root is intentionally read-only after
+// configuration. Invoke the same official listener command used by its helper
+// directly, retaining both the filesystem boundary and the actual exit code.
+func pr148RunListener(env []string) error {
+	return pr148ExecRestricted("/runner/bin/Runner.Listener", []string{"run"}, env, true)
+}
+
 func pr148GuestRunner() error {
 	var p pr148GuestPacket
 	d := json.NewDecoder(io.LimitReader(os.Stdin, 64<<10))
@@ -231,7 +239,7 @@ func pr148GuestRunner() error {
 		return e
 	}
 	// No tools are exposed if the kernel cannot enforce the filesystem boundary.
-	return pr148ExecRestricted("/runner/run.sh", nil, env, true)
+	return pr148RunListener(env)
 }
 
 func pr148Entry() (bool, int) {
@@ -297,14 +305,21 @@ printf 'landlock-direct-copy-proc-toolchain-denied\n'
 			return true, 126
 		}
 		return true, r.Exit
-	case "pr148-listener-probe":
+	case "pr148-listener-probe", "pr148-listener-startup-probe":
 		if err := cmd(context.Background(), "cp", "-a", "/opt/actions-runner/.", "/runner/").Run(); err != nil {
 			return true, 1
 		}
 		if err := os.MkdirAll("/runner/_diag", 0700); err != nil {
 			return true, 1
 		}
-		e = pr148ExecRestricted("/runner/bin/Runner.Listener", []string{"--version"}, []string{"HOME=/home/runner", "TMPDIR=/tmp", "PATH=/usr/bin:/bin"}, true)
+		env := []string{"HOME=/home/runner", "TMPDIR=/tmp", "PATH=/usr/bin:/bin"}
+		if os.Args[1] == "pr148-listener-startup-probe" {
+			if e = os.Chdir("/runner"); e == nil {
+				e = pr148RunListener(env)
+			}
+		} else {
+			e = pr148ExecRestricted("/runner/bin/Runner.Listener", []string{"--version"}, env, true)
+		}
 	case "pr148-linux":
 		if len(os.Args) != 6 {
 			return true, 1

@@ -1,5 +1,43 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 00:38再開・正規送信復旧とLinux起動修復（最新）
+
+元specに司令塔2825のPR209配布済み指示が追加された。実gh_gateは正式guard false、
+SHA256 1E71AF86BF88CAB48CD9FC86D813F5E305CCC02622820D5FDCDFB758337A8F87に一致。
+指示された外部2receiptはguard未確認のため本文を読まず、原指示と実hash・実API結果を
+分けて保持。PR209はAPIでもmerged/9ba801831e72f7a9858f5985c5c52c5f0e49f5c7を確認。
+旧送信修復待ちは終了し、当工程からguard/allowlist/manifestを変更していない。
+
+検査済み703e時点の保存helper SHA5732D05611363F55717950149E798F48F13AB758AD109B1F8AAE5E058C9B99AAを
+恒久manifestと再照合し、同gateによるpr148-plan/routeが共にexit0。原75aの単独子
+03c7cc65b9ab1c3ac2598dc6b97c9ca0d04c08beを元branchへ非force反映・再検証した。
+全treeは原提案と同じa6851bd86e08b0f89eca3c4b30fbf7d4e292244f。原ソース変更は3workflowだけ。
+元の本体コード・コマンド・両OS・main/他PRの経路を保持。製品PRは未merge。
+
+今回更新から自動生成されたPR run39141676856/39141676963/39141677028は全4jobが
+queued/steps0/runnerなしを確認して正規cancel、後に3run全てcancelledを確認。
+固定branchのworkflow_dispatchでRust run39141771645/attempt1を新規受付。
+Linux job117717494710、Windows job117717494946。旧CodeQLを手動再実行していない。
+自動dynamic CodeQL39141675301の発生は成功や完了として数えない。
+
+Linux有限実行はhelper exit1、official listener exit0、開始/完了hook欠落で不受入。
+実jobは前後queued/steps0/runner0でCargo未開始。原log166bytes/SHA256
+773C8D6B82BD874F7785129C65FC733A9CB52EF1769E142FCDAA25CBB32DCA7Bを保存。
+原原因行はrun.shからrun-helper.shが見つからないという起動失敗。固定SDKの公開scriptを
+別の認証なし有限containerで確認し、run.shの補助script生成がread-only境界で失敗し、
+その非ゼロをshellが0へ置き換えることを特定。公式Runner.Listener runを同じ隔離内で
+直接起動する修正を追加した。保護範囲を広げず、本来の終了コードを保持する。
+実SDKと実Landlock/seccompによる認証なし起動検査では未設定runnerのexit1を観測し、
+run-helper未呼出しを確認。関連Go検査/vet/Windows・Linux build成功。正式jobの再実行前に
+この新差分だけを別モデルへレビューする。原2797の完了・固定spec・受入は変更しない。
+
+Linuxの登録削除・container stopped/PID0/削除・専用lock解放は実helperが確認済み。
+認証なしstartup fixtureもcontainer削除済み。Temp6ff1はroute原証拠5fileを恒久rootの
+resume-20261019-003834へ全SHA一致保存済み。328142は原失敗、e786は修正build、441cは
+startup fixtureで、この3rootは次の保存/回収に必要。秘密・原製品sourceをhostへ保存しない。
+最新main0c20d744を通常mergeした。新しいhelper差分のレビュー/通常PR・CI、正式4job、
+必要配備と元2640への成功証拠配送は未達。現在headを固定してこの修復を継続する。
+
 ## 2026-10-18 19:48再開・受付更新後の境界確認（最新）
 
 job20261018-194836-todo-2736、同branch/e0516b0から再開。保存済みオーナー指示は同SHA、

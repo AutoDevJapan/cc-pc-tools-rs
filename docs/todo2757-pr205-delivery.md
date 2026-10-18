@@ -83,9 +83,16 @@ cancelled. No check remains running. The failures are not treated as success;
 their causes still need to be established and corrected. The structured
 receipt, including check IDs, is in the ignored private evidence area.
 
-The distribution classifier still reports an unverified destination. The
-recorded follow-up refers to ToDo2829, but that ID has no entry in the shared
-ToDo history; ToDo2467 remains unfinished. No distribution write, product
-preflight, container, runner, or production change was made during this
-resume. Continue from the current branch and preserve this dependency until
-the formal repair task is actually registered and completed.
+ToDo2829 is complete. Its saved receipt says the normal distribution was
+applied, the Windows and Linux builds were verified, and the receipt matched.
+The installed Windows executable matches the PR205 build hash. Running the
+formal classifier on that exact executable returned `client_resource=false`
+and `classification_unverified=false`; `original_registry_recovered` remains
+false, so the original records are not treated as restored.
+
+The two failed checks are not source-test results. The ToDo2829 note identifies
+an outdated installed helper rejection on Windows and an HTTP 403 before
+checkout on the Go job; the implementation checks did not start. Both failures
+still need a current-source, fixed-scope recheck and cause resolution. No
+product preflight, container, runner, or production change was made during
+this resume. ToDo2467 remains unfinished; preserve its scope and records.

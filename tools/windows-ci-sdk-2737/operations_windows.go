@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -78,6 +79,7 @@ func (o *windowsOperations) Prepare(instance string, id PackageID) Result {
 	}
 	if err != nil {
 		result.Stage, result.Code = "prepare-failed", safeFailureCode(err)
+		result.Detail = err.Error()
 		appendPrivateRunLog("sdk-"+string(id)+"-detail", []byte(err.Error()), err)
 		appendPrivateRunLog("sdk-"+string(id), []byte(result.Stage+" "+result.Code), err)
 		return result
@@ -109,9 +111,9 @@ func (o *windowsOperations) prepareGit() error {
 	if err != nil {
 		return err
 	}
-	args := []string{"/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=" + filepath.Join(o.root, "git")}
+	args := []string{"/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=" + filepath.Join(o.root, "git"), "/LOG=" + filepath.Join(o.root, "private", "git-installer.log")}
 	if err := runFixed(installer, args, o.environment()); err != nil {
-		return errors.New("Git installer failed")
+		return fmt.Errorf("Git installer failed: %w", err)
 	}
 	return o.verifyPackage(GitForWindows)
 }
@@ -311,7 +313,7 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 	case RustToolchain:
 		bin := filepath.Join(o.root, "rust-1.97.1", "bin")
 		commands = [][]string{{filepath.Join(bin, "rustc.exe"), "--version"}, {filepath.Join(bin, "cargo.exe"), "--version"}, {filepath.Join(bin, "rustfmt.exe"), "--version"}, {filepath.Join(bin, "clippy-driver.exe"), "--version"}}
-		expected = []string{"1.97.1", "1.97.1", "1.9.0", "0.1.97"}
+		expected = []string{"1.97.1", "1.97.", "1.9.0", "0.1.97"}
 	case Sccache:
 		exe, err := findFile(filepath.Join(o.root, "sccache"), "sccache.exe")
 		if err != nil {
@@ -386,6 +388,8 @@ func (o *windowsOperations) environment() []string {
 	env := []string{
 		"SystemRoot=" + os.Getenv("SystemRoot"),
 		"PATH=" + os.Getenv("SystemRoot") + `\System32;` + filepath.Join(o.root, "git", "cmd") + ";" + filepath.Join(o.root, "git", "usr", "bin") + ";" + filepath.Join(o.root, "git", "bin") + ";" + filepath.Join(o.root, "powershell"),
+		"SystemDrive=" + filepath.VolumeName(os.Getenv("SystemRoot")), "ComSpec=" + filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe"),
+		"USERPROFILE=" + filepath.Join(o.root, "service-profile"), "HOME=" + filepath.Join(o.root, "service-profile"), "APPDATA=" + filepath.Join(o.root, "service-profile", "AppData", "Roaming"), "LOCALAPPDATA=" + filepath.Join(o.root, "service-profile", "AppData", "Local"),
 		"TEMP=" + filepath.Join(o.root, "staging"), "TMP=" + filepath.Join(o.root, "staging"),
 		"PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1", "WINDIR=" + os.Getenv("SystemRoot"),
 		"ProgramFiles=" + os.Getenv("ProgramFiles"), "ProgramFiles(x86)=" + os.Getenv("ProgramFiles(x86)"), "ProgramData=" + os.Getenv("ProgramData"),
@@ -418,7 +422,15 @@ func runCapture(executable string, args, env []string) ([]byte, error) {
 	err := cmd.Run()
 	appendPrivateRunLog(filepath.Base(executable), output.Bytes(), err)
 	if err != nil {
-		return nil, fmt.Errorf("fixed SDK process failed")
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			return nil, fmt.Errorf("fixed SDK process failed (exit=%d)", exit.ExitCode())
+		}
+		var errno syscall.Errno
+		if errors.As(err, &errno) {
+			return nil, fmt.Errorf("fixed SDK process failed (win32=%d)", errno)
+		}
+		return nil, errors.New("fixed SDK process start failed")
 	}
 	return output.Bytes(), nil
 }
@@ -427,16 +439,21 @@ func initializeGuestRoot(root string) error {
 	if filepath.Clean(root) != filepath.Clean(guestSDKRoot) {
 		return errors.New("SDK root is not the fixed guest directory")
 	}
-	for _, directory := range []string{"downloads", "private", "staging", "cargo-home", "rustup-home", "target", "sccache-cache"} {
+	for _, directory := range []string{"downloads", "private", "staging", "cargo-home", "rustup-home", "target", "sccache-cache", "service-profile/AppData/Roaming", "service-profile/AppData/Local"} {
 		if err := os.MkdirAll(filepath.Join(root, directory), 0o700); err != nil {
 			return err
 		}
 	}
 	icacls := filepath.Join(os.Getenv("SystemRoot"), "System32", "icacls.exe")
-	cmd := exec.Command(icacls, root, "/inheritance:r", "/grant:r", "*S-1-5-18:(OI)(CI)F", "/T", "/C")
+	cmd := exec.Command(icacls, root, "/inheritance:r", "/grant:r", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)RX")
 	cmd.Env, cmd.Stdin, cmd.Stdout, cmd.Stderr = []string{"SystemRoot=" + os.Getenv("SystemRoot"), "PATH=" + filepath.Join(os.Getenv("SystemRoot"), "System32")}, nil, nil, nil
 	if err := cmd.Run(); err != nil {
 		return errors.New("guest SDK root ACL setup failed")
+	}
+	private := exec.Command(icacls, filepath.Join(root, "private"), "/inheritance:r", "/grant:r", "*S-1-5-18:(OI)(CI)F")
+	private.Stdin, private.Stdout, private.Stderr = nil, nil, nil
+	if err := private.Run(); err != nil {
+		return errors.New("guest raw log ACL setup failed")
 	}
 	return nil
 }

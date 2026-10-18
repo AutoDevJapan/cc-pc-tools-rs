@@ -51,6 +51,7 @@ type Result struct {
 	Stage              string    `json:"stage"`
 	OK                 bool      `json:"ok"`
 	Code               string    `json:"code,omitempty"`
+	Detail             string    `json:"detail,omitempty"`
 	Version            string    `json:"version,omitempty"`
 	VersionProofSHA256 string    `json:"version_proof_sha256,omitempty"`
 }

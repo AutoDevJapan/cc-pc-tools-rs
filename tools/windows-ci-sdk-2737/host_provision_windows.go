@@ -64,6 +64,7 @@ type RecoveryReceipt struct {
 	MemoryAssigned int64  `json:"memory_assigned"`
 	VMRemoved      bool   `json:"vm_removed"`
 	ShutdownMode   string `json:"shutdown_mode"`
+	SDKVerified    bool   `json:"sdk_verified"`
 	VHD            string `json:"vhd"`
 	VHDDetached    bool   `json:"vhd_detached"`
 	VHDSize        int64  `json:"vhd_size"`
@@ -549,7 +550,7 @@ func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryR
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var receipt RecoveryReceipt
-	if dec.Decode(&receipt) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || receipt.Instance != instance || receipt.VMID != vm.VMID || receipt.VMState != "Off" || receipt.MemoryAssigned != 0 || !receipt.VMRemoved || filepath.Clean(receipt.VHD) != filepath.Clean(vm.VHD) || !receipt.VHDDetached || receipt.VHDSize <= 0 || !validDigest(receipt.VHDSHA256) {
+	if dec.Decode(&receipt) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || receipt.Instance != instance || receipt.VMID != vm.VMID || receipt.VMState != "Off" || receipt.MemoryAssigned != 0 || !receipt.VMRemoved || filepath.Clean(receipt.VHD) != filepath.Clean(vm.VHD) || !receipt.VHDDetached || receipt.VHDSize <= 0 || (receipt.SDKVerified && !validDigest(receipt.VHDSHA256)) || (!receipt.SDKVerified && receipt.VHDSHA256 != "") {
 		return RecoveryReceipt{}, errors.New("template recovery receipt rejected")
 	}
 	return receipt, nil

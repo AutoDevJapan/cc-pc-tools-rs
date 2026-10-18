@@ -39,7 +39,7 @@ func NewWindowsOperations() (Operations, error) {
 	client := &http.Client{
 		Timeout: 60 * time.Minute,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 || !allowedHost(req.URL.Hostname()) {
+			if len(via) >= 5 || req.URL.Scheme != "https" || !allowedHost(req.URL.Hostname()) {
 				return errors.New("SDK download redirect rejected")
 			}
 			return nil
@@ -198,9 +198,9 @@ func (o *windowsOperations) fetch(a Artifact) (string, error) {
 	if err := ValidateArtifact(a); err != nil {
 		return "", err
 	}
-	name := path.Base(strings.Split(a.URL, "?")[0])
-	if name == "." || name == "/" || strings.ContainsAny(name, `\\/:\x00`) {
-		return "", errors.New("invalid pinned artifact filename")
+	name, err := artifactFilename(a)
+	if err != nil {
+		return "", err
 	}
 	destination := filepath.Join(o.root, "downloads", name)
 	if info, err := os.Stat(destination); err == nil {
@@ -311,7 +311,7 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		if err != nil {
 			return err
 		}
-		args, err := o.vsDevEnvironment(`echo VCToolsVersion=%VCToolsVersion% & echo WindowsSDKVersion=%WindowsSDKVersion% & "` + cl + `" /Bv & exit /b 0`)
+		args, err := o.vsDevEnvironment(`(set VCToolsVersion & set WindowsSDKVersion & set INCLUDE & set LIB & "` + cl + `" /Bv & exit /b 0)`)
 		if err != nil {
 			return err
 		}
@@ -331,6 +331,9 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		}
 		if i >= len(expected) || !bytes.Contains(output, []byte(expected[i])) {
 			return errors.New("SDK version does not match the pin")
+		}
+		if id == MSVCBuildTools && (!bytes.Contains(output, []byte("VCToolsVersion=14.50.")) || !bytes.Contains(output, []byte("WindowsSDKVersion=10.0.26100.0")) || !bytes.Contains(output, []byte("INCLUDE=")) || !bytes.Contains(output, []byte("LIB="))) {
+			return errors.New("MSVC and Windows SDK environment is incomplete")
 		}
 	}
 	return nil
@@ -367,7 +370,8 @@ func runCapture(executable string, args, env []string) ([]byte, error) {
 	cmd := exec.Command(executable, args...)
 	cmd.Env, cmd.Stdin = env, nil
 	var output bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &boundedBuffer{buffer: &output, max: 64 << 10}, &boundedBuffer{buffer: &output, max: 64 << 10}
+	writer := &boundedBuffer{buffer: &output, max: 64 << 10}
+	cmd.Stdout, cmd.Stderr = writer, writer
 	err := cmd.Run()
 	appendPrivateRunLog(filepath.Base(executable), output.Bytes(), err)
 	if err != nil {
@@ -441,6 +445,14 @@ func artifact(id PackageID) Artifact {
 		}
 	}
 	return Artifact{}
+}
+
+func artifactFilename(a Artifact) (string, error) {
+	name := path.Base(strings.Split(a.URL, "?")[0])
+	if name == "." || name == "/" || strings.ContainsAny(name, "\\/:\x00") {
+		return "", errors.New("invalid pinned artifact filename")
+	}
+	return name, nil
 }
 
 func extractTarGz(archivePath, destination string, maxBytes int64) error {

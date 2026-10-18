@@ -141,6 +141,7 @@ fn all_owner_reasons_are_recorded_in_posted_questions() {
         OwnerOnly::Customer,
         OwnerOnly::Direction,
         OwnerOnly::Irreversible,
+        OwnerOnly::Access,
     ] {
         let mut h = Harness::new();
         let body = h.root.path().join("q.txt");

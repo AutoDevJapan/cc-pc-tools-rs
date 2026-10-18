@@ -9,6 +9,8 @@ use std::{
 
 #[path = "process_birth_fallback.rs"]
 mod process_birth_fallback;
+#[path = "current_succession.rs"]
+mod current_succession;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
@@ -38,6 +40,10 @@ pub trait Backend {
     /// Only the independently verified, explicitly authorized PC repair source.
     /// Missing private registry data never grants a general project exemption.
     fn repair_scope_allowed(&mut self, _repo: &str) -> bool {
+        false
+    }
+    /// A finite current succession receipt, never a general root exemption.
+    fn current_product_allowed(&mut self, _item: &Value, _registered_root: &str) -> bool {
         false
     }
     fn clock(&self) -> f64;
@@ -561,6 +567,9 @@ impl Backend for RealBackend {
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.guard_workspace_path(repo).is_ok()
+    }
+    fn current_product_allowed(&mut self, item: &Value, registered_root: &str) -> bool {
+        self.verify_current_product(item, registered_root)
     }
     fn clock(&self) -> f64 {
         now()

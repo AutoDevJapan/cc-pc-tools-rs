@@ -7,7 +7,7 @@ func healthySDKSeal() sdkResult {
 		DiskSynced: true,
 		RustProbe: []rustProbeResult{
 			{Name: "compiler", CompilerSHA256: sdkCompilerSHA},
-			{Name: "verbose", CommitHash: "8bab26f4f68e0e26f0bb7960be334d5b520ea452", CommitDate: "2026-07-14"},
+			{Name: "verbose", Version: sdkVersion, CommitHash: "8bab26f4f68e0e26f0bb7960be334d5b520ea452", CommitDate: "2026-07-14"},
 			{Name: "cachekey", CacheKey: "202607148bab"},
 		},
 		RustDriver: []sdkArtifactProbe{{Name: sdkDriverName, Bytes: sdkDriverBytes, SHA256: sdkDriverSHA, ReadComplete: true}},
@@ -19,7 +19,7 @@ func TestSDKSealRejectsMeasuredTruncatedDriverAndCompilerSignal(t *testing.T) {
 	if e := validatePublicSDKSeal(good); e != nil {
 		t.Fatal("official component control rejected", e)
 	}
-	for _, failure := range []string{"measured-sdk", "driver-only", "signal-only", "sync-unproved", "timeout", "source", "registration", "missing-probe"} {
+	for _, failure := range []string{"measured-sdk", "driver-only", "signal-only", "sync-unproved", "timeout", "source", "registration", "missing-probe", "missing-version", "wrong-version"} {
 		t.Run(failure, func(t *testing.T) {
 			r := healthySDKSeal()
 			switch failure {
@@ -43,6 +43,10 @@ func TestSDKSealRejectsMeasuredTruncatedDriverAndCompilerSignal(t *testing.T) {
 				r.RunnerRegistered = true
 			case "missing-probe":
 				r.RustProbe = r.RustProbe[:2]
+			case "missing-version":
+				r.RustProbe[1].Version = ""
+			case "wrong-version":
+				r.RustProbe[1].Version = "rustc 1.97.0 (8bab26f4f 2026-07-14)"
 			}
 			if validatePublicSDKSeal(r) == nil {
 				t.Fatal("unusable/unpersisted SDK accepted", failure)

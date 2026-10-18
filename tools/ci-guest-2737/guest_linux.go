@@ -28,6 +28,7 @@ type guest struct {
 	instance             string
 	prepared, configured bool
 	sourceTouched        bool
+	sdkAttempted         bool
 	source               sourcepacket.Pin
 }
 
@@ -113,15 +114,24 @@ func (g *guest) serve(conn net.Conn) {
 	}
 	if q.Kind == "prepare-sdk" {
 		g.mu.Lock()
-		if g.active {
+		// ProductSource includes an attempted source upload: after a failed
+		// upload it is no longer safe to claim the guest is source-free.
+		rejected := sdkResult{ID: g.instance, Failure: "sdk_guest_state_rejected", ProductSource: g.sourceTouched || g.prepared, RunnerRegistered: g.configured}
+		if g.active || q.ID != g.instance || g.prepared || g.configured || g.sourceTouched || g.sdkAttempted {
 			g.mu.Unlock()
+			_ = json.NewEncoder(conn).Encode(rejected)
 			return
 		}
 		g.active = true
+		g.sdkAttempted = true
 		g.mu.Unlock()
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
 		_ = conn.SetDeadline(time.Now().Add(15 * time.Minute))
 		result := prepareSDK(conn, reader, q.ID)
+		g.mu.Lock()
+		result.ProductSource = g.sourceTouched || g.prepared
+		result.RunnerRegistered = g.configured
+		g.mu.Unlock()
 		_ = json.NewEncoder(conn).Encode(result)
 		return
 	}

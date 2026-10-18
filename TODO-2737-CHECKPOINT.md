@@ -711,3 +711,12 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 追加6fileの固定0d1fcb5→be21b263874bca2e0058197e59bccd3d18ab2fe2/tree296193e2225c967ca3a8a54dac16a44710eb4a8bをレビュー2880/modelgpt-6-lunaへ通常add --specで登録。保存spec全文一致/dispatchableを確認。原2880の実結果とMust解消前にSDK生成は進めない。
 - 元2737と親2641へmarker[2737-061939-sdkseal]で実測/修正/検査/未完/証拠/次の工程を1回配送。2873にも原応答受領を記録した。終了前も原repo/id/PR/head085/ref/tree/workflowをAPI再照合しown route不在、原mutation0。SDK共有ライブラリの途切れは確定したが、その発生時点・書込み原因と修正版SDKの冷起動成功は未確定。
 - 待ち先は2880だけ。次はレビューを受領しMust解消後、同clean版のhost/Linuxhelperを生成して新ownedrootで修正版SDKを作る。現d85/旧SDK9389と失敗diskは保持。元SDKを上書きしてmanifestだけ合わせることはしない。原Rust/complete/公式CI/Windows13/Docker parityは未完。現job/実HEADのscheduler checkpointと正規waitを保存して自動再開する。
+## 2026-10-19 job064034: SDK受入レビュー2880のMust2を修正
+
+- 元2880/job20261019-062945/thread01a150ec-7884-7953-9da2-a48904b235c4の原応答SHA2565DADEE0A893A801884AE6AB8A9DCA267DB68D23B68F056533F0C66BF106D637Eを受領。固定0d1fcb5→be21b26/tree296193e2、指定6file/局所callerでMust2/Suggestion0/Nit0・検査0。原文の実model GPT-6/指定Luna未確認という申告は保持し、turn_context実gpt-6-lunaとrequested_modelを別に照合した。
+- Must1はVersion未照合。固定の公式版行rustc 1.97.1 (8bab26f4f 2026-07-14)をcommit/date/cachekey/hashと一緒に照合し、正常対照にも実版行を含め、版が空/異なる拒否対照を加えた。
+- Must2はprepare-sdkのゲスト状態未照合。activeだけでなく要求ID/ゲストID、prepared/configured/sourceTouched/sdkAttemptedを同じmutex内で確認し、不一致/使用済み状態をblob読取前にtyped拒否する。受入後はsdkAttemptedを保持し、途中失敗後の再試行を拒否。receiptのIDと製品source/登録状態はゲスト実状態から取得し、初期値のまま安全を主張しない。失敗したsource uploadもsourceTouchedとして保守的にsourceあり扱いにする。
+- 実socketで6種類のID/状態拒否をblob無しで確認した。正常な未使用guestはmanifestを受け取り、意図的な不正manifestを拒否し、その後同guestのSDK再準備は入力前に拒否した。新stateをテスト用だけの別経路へ実装していない。
+- 関連検査はWindows go test -race ./...、Windows/Linux vet成功、実Linux module20pass/0fail/公開SDK opt-in2skip。原Cargo compile0。新SDK生成/実VM受入/公式rerun/route/runner登録は0で、Must修正の受付や単体成功をSDK実受入としない。
+- 新ownedroot28ebee5bff0c48aa6a25f16eb2665360、証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-064034-sdk-must。原応答/実model metadata/検査/元source API固定を保持。CC実repo1406818713/AutoDevJapan/private/admin/nonfork、原PR3613/head085/ref/tree/workflowをAPI再照合した。
+- 次はこの追加Must修正差分だけの別モデルレビューを受領し、Must0後の同clean版で新SDK生成→停止後のcloneでRust/driver/保存を検証する。元SDK9389/失敗disk/Windows SDK/guard/manifest/owner-work/他担当資源は保持。終了hookと公式通常CI/Windows13/Docker parityは未完。新費用/APIkeyAI/GPU/Civ6/本人操作/Discord送信0。

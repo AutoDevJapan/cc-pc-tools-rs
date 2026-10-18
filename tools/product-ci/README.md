@@ -414,6 +414,48 @@ its exclusion. Otherwise `RecoveryRequired` is set, the owned directory must be
 kept, and `recoverAuditedReleaseBuild(ctx, ownedDir)` removes exactly the
 resources named in the saved reservation.
 
+### Fixed build compatibility preflight
+
+`release-build-preflight <new-safe-delete-owned-dir>` connects the audited
+builder to a bounded host-only compatibility check. It takes no repository,
+ref, image, job, label, environment or deployment parameter. It does not register
+a runner, execute an Actions job, publish a status, load/push the resulting image,
+or deploy. `ExecutionAuthorized` remains false: a successful preflight is not an
+official workflow or release result.
+
+The command first holds the existing per-product exclusion, also blocking the
+older open-PR/CodeQL entry points. Its durable record binds the exact merged
+source/tree, owned-directory hash, random nonce and 2 CPU/8 GiB/512 PID phase.
+A kernel lock prevents a second live owner or recovery from entering. The lease
+nonce identifies this reservation; it is not the builder's separate nonce.
+The directory hash binds recovery to the same builder state directory. The
+original four CodeQL jobs must be successful at the original attempt. No repo
+runner may be registered and no original product runner/container may exist.
+The entire fixed source is read and sealed through the normal gate, and the
+audited build input is prepared from that RAM snapshot. Current main and idle
+conditions are checked again immediately before recording the build intent.
+Current source is verified again after the builder returns.
+
+Only `PhaseMayRelease=true` together with `RecoveryRequired=false` permits
+removing the durable exclusion. Clean build failures release it; uncertain
+cleanup retains it after process exit. `release-build-recover <same-owned-dir>`
+takes the same kernel lock and validates the saved source, budget and directory
+binding before recovering the recorded builder resources. Recovery does not
+rebuild, fetch another source, require main to remain current, or claim build
+success. Missing/corrupt builder state fails closed and keeps the lease.
+Lease persistence is not an atomic journal. An interrupted intent write or a
+crash after intent persistence but before the builder's first state write may
+therefore require a bounded technical investigation; recovery never treats a
+missing/corrupt record as permission to release the exclusion.
+
+The 55 minute CLI deadline includes the builder's fixed 45 minute cap and source
+verification; cleanup retains the component's independent bounded context.
+Capture stdout's safe JSON receipt and stderr's fixed error class even when the
+command exits nonzero. Keep the owned directory for recovery until the receipt
+confirms `LockReleased=true`, and preserve its private log and state evidence
+before the usual safe-delete plan/delete/finish procedure. The artifact stays
+in RAM and is discarded after its digest/size are rechecked.
+
 Verification. Unit tests cover wrong tree/archive/Compose/Dockerfile/context/
 bytes/modes, unexpected Compose shapes, overlimit logs and artifacts, secret-like
 build output, weaker isolation, cancellation, deadlines, uncertain creates and

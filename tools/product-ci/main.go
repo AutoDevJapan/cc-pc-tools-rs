@@ -658,9 +658,23 @@ func main() {
 	}
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
+	duration := 30 * time.Minute
+	if len(os.Args) == 3 && (os.Args[1] == "release-build-preflight" || os.Args[1] == "release-build-recover") {
+		duration = 55 * time.Minute // Fixed builder's 45 minutes plus source read and cleanup.
+	}
+	ctx, cancel := context.WithTimeout(stopCtx, duration)
 	defer cancel()
 	var e error
+	if len(os.Args) == 3 && (os.Args[1] == "release-build-preflight" || os.Args[1] == "release-build-recover") {
+		report, err := releaseBuildPreflight(ctx, os.Args[2], os.Args[1] == "release-build-recover")
+		// Include cleanup/recovery facts even on failure, never raw Docker logs.
+		err = errors.Join(err, json.NewEncoder(os.Stdout).Encode(report))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "release-source-inspect" {
 		report, err := inspectReleaseSource(ctx, get, readReleaseSourceArchive)
 		if err == nil {
@@ -775,7 +789,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | release-build-preflight <new-owned-dir> | release-build-recover <same-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

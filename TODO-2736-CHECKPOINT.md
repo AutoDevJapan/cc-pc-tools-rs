@@ -1,5 +1,61 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03時台・正式失敗の原証拠、新PR224とレビュー2853（最新）
+
+02:36節の新run39149803349/attempt1は、Linux job117740936941がRust/Luaリンクでfailure。
+memory.max/peakは8589934592、memory.eventsはoom=1/oom_kill=1。2並列でも8 GiB不足を実測。
+listener exit2の既知credential unlink拒否は別記したが、実job failureのためCLIもexit1。
+RegistrationGone/LockReleased/Namespace.TreeGone/Removedは全true。原17fileを全SHA一致保存し、
+恒久root/formal-linux-022634-manifest.jsonに対応を記録。元fa1はplan→別削除→finish source_absent。
+公式job logの取得はrun全体が未終端の時点でexit1/0bytes/診断99bytesだった。診断本文は未保存。
+0byteを原log成功とせず、run終端後に通常GETで取得し直す。controllerの原Cargo/SDK logは保存済み。
+
+Windowsのprepare済root50515037115a8be86b5a45e35a5d5a63は、実executeがgate childの
+最初の固定repo GETでexit4。request SHA23973c0f89813b13d86cb2d399b81c01c7f236dd461ea9676dfab66fecc86aff。
+worker/service開始・runner登録前の失敗で、正式Windows job117740937169はqueued/steps0のまま。
+同じcontrollerのsanitized envで同じrepo GETを調べ、APPDATA無しexit4、有りexit0/repo1392152644。
+GH_CONFIG_DIR/GH_HOST/GH_TOKEN/GITHUB_TOKENは元々未設定、APPDATAは存在。設定/credential fileを
+読まず、同じOAuth/CLI/対象のまま環境の欠落を特定した。旧executeは再実行しない。
+
+機能head65592b450de09d0fc2d196e6dfbf7988e3e9e917を保存し、次の修復をPR224へ通常pushした。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/224 。公開head b67e0ff、draft、通常CIは未完。
+- 専用Linux profileだけ10 GiB/MemorySwap同値、CPU2/PID512/readonly/no GPUを維持。
+  中間16 GiB案b0f3は、Docker VM実総容量16764764160bytes（15.61 GiB）に合わず親が実行前に拒否。
+  16 GiBの実namespace/製品検査は0。そのartifactを最新として使用しない。
+- Cargo/検査/guestの上限1。Rustc/Rustdocの元flagsを保ってLLD threads=1だけを追記。
+  元Cargo引数、debug情報、feature、検査対象を減らさない。共通CodeQL profileは8 GiBのまま。
+  正式実行前にVM/hostの新しい空き確認が必要。稼働中の他containerやVM設定を変更しない。
+- host controllerだけ既存AppData/gh/XDG設定場所をgateへ保持し、token環境変数は除外。
+  workerのHOME/AppDataは新rootのまま。元認証方法/権限を切り替えずOAuthを継続する。
+- collect-unstartedを追加。既存collectのdrain条件は保ち、未起動workerだけは停止/PID0、
+  同SIDのqueryable process0、worker/hook/auth file不在、初期report厳密{}、同queued job/steps0/
+  runner無し、既存collection API照合を要求する。auth file本文は読まない。単一試行journalと
+  profile未削除を保持し、この新root/runtimeの元controller grantだけ戻す。実操作はまだ0。
+
+関連PR148 Go race69pass/4skip、Windows module97pass/2skip、両module vet/build成功。
+Windows source/importはb0f3以降不変のため同じ97件を重ねず、最終sourceから両OS artifactを生成。
+恒久root/resourcefix-6559-*と同build-manifest.jsonが最新。旧followup0625と16 GiB b0f3を使わない。
+10 GiBの認証なし実namespace/共有gate正常fixture、Rust1.95元Cargo4command+元rustup fixtureも
+成功。これは小さな合成sourceであり、製品正式CI又は全件成功ではない。両namespaceの
+TreeGone/Removedを確認し、原28fileをSHA一致保存。root42d88386a00dbcd2987af19a00b85a67は
+plan→別削除→finish source_absent。常駐/追加image/volume/GPU/Civ6/新料金は発生させていない。
+
+有限read-only Sonnetレビュー2853をroot job022634の正規subworkで登録し、保存spec全文とSHAを照合。
+docs/todo-2736-resource-auth-review.md、固定basec9ab546/head65592b4、実job20261019-025448-todo-2853。
+原2790/2797/2840/2844の結果・範囲を保持し、新差分のMust0はまだ未受領。既存service5051の
+普通collectは呼ばず、launcher reportを捏造せず、review前に新collect-unstartedも実行しない。
+Linuxの失敗済rootと全fixtureは終了済み。未起動のservice/root5051と、公開SDKを持つ49ff/f884は保持。
+
+次は2853の原応答/MustとPR224の必要CIを受領する。新collector受入後、queued jobを保って5051を
+正規に回収し、原証拠保存とservice/ACE/profile/hive/process不在を確認する。失敗mutationは繰り返さない。
+その後旧runを通常cancelして終端/原job logを回収し、新しい全OS matrix/実jobと新所有rootで正式検査。
+両OSとも本runの成功済み検査は無いので、成功済みWindows全件を重ねる操作ではない。
+製品head03c7cc6/treea6851bdは不変。native/live未dispatch、正式4job成功/2640配送は未達。
+PR219は通常merge8880167済み、mainのhelper39150291985/Build speed39150292259はsuccess、
+CodeQL PC39150292051はqueued。PR224・main CIの残failureも追う。製品mergeは2640、元の停止は保持。
+他のToDoだけを待って終了する場合は、done2844に戻さず正規wait --on2853を保存する。
+この運用メモだけの追加commitは、進行中の同source CIを重ねないためPR224へ即再pushしない。
+
 ## 2026-10-19 02:36・追加レビュー受入、PR219通常merge、新正式matrix（最新）
 
 job20261019-022634-todo-2736。同branch/bf332faから再開し、最新指示と共有ToDoを確認。

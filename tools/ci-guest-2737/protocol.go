@@ -50,16 +50,19 @@ type sdkManifest struct {
 	SccacheSHA string `json:"sccache_sha256"`
 }
 type sdkResult struct {
-	ID               string `json:"id"`
-	RunnerVersion    string `json:"runner_version,omitempty"`
-	CargoVersion     string `json:"cargo_version,omitempty"`
-	DockerVersion    string `json:"docker_version,omitempty"`
-	BuildxVersion    string `json:"buildx_version,omitempty"`
-	SccacheVersion   string `json:"sccache_version,omitempty"`
-	Failure          string `json:"failure,omitempty"`
-	ProductSource    bool   `json:"product_source"`
-	RunnerRegistered bool   `json:"runner_registered"`
-	Log              []byte `json:"log,omitempty"`
+	ID               string             `json:"id"`
+	RunnerVersion    string             `json:"runner_version,omitempty"`
+	CargoVersion     string             `json:"cargo_version,omitempty"`
+	DockerVersion    string             `json:"docker_version,omitempty"`
+	BuildxVersion    string             `json:"buildx_version,omitempty"`
+	SccacheVersion   string             `json:"sccache_version,omitempty"`
+	RustProbe        []rustProbeResult  `json:"rust_probe,omitempty"`
+	RustDriver       []sdkArtifactProbe `json:"rust_driver,omitempty"`
+	DiskSynced       bool               `json:"disk_synced"`
+	Failure          string             `json:"failure,omitempty"`
+	ProductSource    bool               `json:"product_source"`
+	RunnerRegistered bool               `json:"runner_registered"`
+	Log              []byte             `json:"log,omitempty"`
 }
 
 type publicSDKProbe struct {

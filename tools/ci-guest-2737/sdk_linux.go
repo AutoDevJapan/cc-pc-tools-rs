@@ -164,6 +164,18 @@ func prepareSDK(conn net.Conn, incoming io.Reader, id string) (result sdkResult)
 		}
 		*check.dest = strings.TrimSpace(string(b))
 	}
+	// A successful cargo --version does not load librustc_driver. Flush the
+	// installed filesystem before the host can stop this disposable VM, then
+	// verify the compiler and the shared object that the failing SDK truncated.
+	if _, e = command(false, "sync", "--file-system", "/home/ci2737"); e != nil {
+		return fail("sdk_filesystem_sync_failed")
+	}
+	result.DiskSynced = true
+	result.RustProbe = probeRustAt(ctx, "/home/ci2737")
+	result.RustDriver = probeSDKDriver(ctx)
+	if validatePublicSDKSeal(result) != nil {
+		return fail("sdk_rust_runtime_rejected")
+	}
 	return result
 }
 

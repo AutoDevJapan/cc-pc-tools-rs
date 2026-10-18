@@ -707,6 +707,9 @@ func sdkSmoke(ctx context.Context, root, helper string) (ret error) {
 	if result.Failure != "" {
 		return errors.New("public SDK bootstrap failed; see typed result and private log")
 	}
+	if e = validatePublicSDKSeal(result); e != nil {
+		return e
+	}
 	return uploadErr
 }
 

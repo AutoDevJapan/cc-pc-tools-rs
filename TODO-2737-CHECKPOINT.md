@@ -693,3 +693,16 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 元2737と親2641のnoteへmarker[2737-051440-sdk64fb0ef]で今回の実結果/未完/証拠/次の工程を1回配送した。最初のCASは大文字hashでconversation_note_changedとなったが実noteは不変。現noteを再読し小文字SHA256で通常CASに成功した。照合を無効化した更新や直接DB変更はしていない。2871にも原応答受領を記録した。
 - 再開時は2873の実結果と固定head/既読/実modelを照合。Mustを直してからこの同clean版のprobe-sdkを新owned rootで1回実行する。immutable SDK9389/Windows SDKを保持し、製品sourceや公式run4を診断だけのために起動しない。
   実Rust根因/終了hook/通常CI完走は未完で、オーナーの判断やPC操作は不要。レビューだけ待つので2737 wait --on2873と現job/実HEADのscheduler checkpointを保存する。
+## 2026-10-19 job061939: SDK共有ライブラリの途切れを実測し保存・受入を修正
+
+- 2873の原job20261019-061333/同thread01a150c3-7346-7080-9cde-2589757366ccを受領。実turn_context gpt-6-lunaを照合、原応答SHA2564A83897506A6825813C48F818DB6F2AFBBC9D7EF99DCDB38394131916C48BD6E。固定3fff6db→64fb0ef/treeabe45625の指定12file/局所callerがMust0/Suggestion0/Nit0、実行検査0。対象外normalci.Plan内部は未読申告を保持し、新追加差分へ合格を流用しない。
+- 新ownedroot d85dc9cb0daef2dcc13095b6f2667e32で、レビュー済みclean64fb0efのprobe-sdkをcanonical Cargo gate/normal CI lock/intent内で1回実行。新instance ec19e40b6af17d0512f1bf2de8c20a66、VM34feb7df-aa62-4428-8a52-7b169cf9f6bd。製品source/runner登録/公式rerun/route操作は0。原repo/id/private/admin/nonfork/同repo/PR3613/head085/ref/tree/workflow、原AGENTS/CLAUDE既読同hashを新jobでもRAM照合した。
+- 実probeは収集exit0。compiler解決0/hashd3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea、verbose exit-1/Signal7/出力0、cachekey135/出力0、TimedOut=false。公開SDKのRust本体がSIGBUSで異常終了し、製品sourceやworkflow実行前でも再現した。収集exit0をSDK正常/公式CI成功へ読み替えない。
+- SDK内librustc_driver-832cf6cfb1386559.soは130023424bytes/SHA25636e52d4528b072286adb32afb084b7cb6593cfd7defbbf7fa4b81c33668705ab。公式rustc1.97.1 archiveを取得し、公式.sha256と原2869のSHA9819d0a32d56bd339585319c80260e332779f5541fd66838ab7e016d6c814819へ一致した。
+  公式compiler本体は645000bytes/同d3a664で一致。公式driverは157802496bytes/SHA256b0726217c199be52842c1318a340f0fc68a2c2ca0e3fa4886191dbf6ee192a58。
+  公式driverの先頭130023424bytesを独立にhashし、実SDKdriverの36e52dと一致した。したがって同公開driverが途中で途切れていることを確認した。いつどの書込みで途切れたかは未確定で、旧SDK作成に保存完了待ちとrustc実起動検査がなかった点を是正する。
+- 新probe VMは通常cleanupで停止/除去/memory0、SDK probe intent不在、runner登録0。工具containerのID/image/name/cc.todo/非特権/host bindとdeviceなしを照合し、停止した。最初の検査はPowerShell @($null).Count=1による偽の不一致で停止したため、nullを除いた実数0を確認してから通常停止した。承認拒否や別経路の迂回ではない。
+- SDK作成は従来cargo --versionなどだけで、rustcの共有ライブラリを実ロードしていなかった。新差分は公開SDKインストール後にsync --file-system /home/ci2737の成功を待ち、固定3Rust commandの実起動、版/commit/cachekey、公式compiler/driverのhashとdriver全長を確認する。DiskSyncedが未確認、signal/timeout/失敗/欠落probe、製品source/登録ありを拒否。hostも同typed receiptを検査する。公式2artifactの固定が他のOS/toolchain全部や製品受入を保証するとはしない。
+- 関連検査はWindows go test -race ./...、Windows/Linux vet、実Linux module18pass/0fail/公開SDK opt-in2skipが成功。実測した短いdriverとSIGBUSを使う拒否対照、公式component正常対照、保存未確認/timeout/source/registration/欠落probeの拒否を確認した。旧失敗SDKを変更・上書きしていない。新SDK作成・冷起動の受入は未実施で、まずこの追加差分を別モデルレビューへ渡す。
+- 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-061939-sdkseal。原receipt/公開artifact比較/原応答/検査logをcopy/hash照合、原VHD/seed/公開componentはownedrootへ保持し、大きなdiskを証拠フォルダへ複製しない。immutable SDK9389と失敗982/c91/de0、Windows SDK、他担当資源/guard/manifest/owner-workを保持。
+- 次は追加差分レビュー/Must解消後、修正版で新規SDKを作り、停止後のcloneで同probeを成功させる。SDK作成受付や合成検査を実受入成功とせず、終了hook根因と公式通常CI/Windows13/Docker parityは未完。親2641が原製品merge/Prdを担当する。本人の判断/操作・新費用・APIkeyAI・GPU/Civ6・Discord送信0。

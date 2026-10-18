@@ -96,14 +96,15 @@ const (
 )
 
 type Event struct {
-	Instance  string
-	Stage     Stage
-	RunnerID  int64
-	Proof     sourcepacket.Receipt
-	Context   HookContext
-	Exit      *uint32
-	Drained   bool
-	LogSHA256 string
+	Instance    string
+	Stage       Stage
+	RunnerID    int64
+	Proof       sourcepacket.Receipt
+	Context     HookContext
+	Exit        *uint32
+	Drained     bool
+	LogSHA256   string
+	FailureCode string
 }
 type ack struct {
 	Instance string

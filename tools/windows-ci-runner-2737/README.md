@@ -94,6 +94,13 @@ independently poll the official completion, preserve its bounded private log,
 then recover VM/disk/registration and finally release its Cargo lease. Parent
 must fence/retain admission whenever VM/process quiescence remains unknown.
 
+Host channel EOF is `ErrHostEOF`, malformed framing is `ErrProtocol`, and host
+context cancellation/deadline remains a context error. Guest distinguishes
+ErrHostEOF, ErrHostCancel and ErrServiceStop. A process timeout while the channel
+is alive emits Failed/FailureCode=timeout and returns DeadlineExceeded, separate
+from Complete and RunnerExited. Process/drain failures emit process or
+drain-unconfirmed. No failure metadata is an official completion or cleanup ack.
+
 ## Complete offline staging contract for the new clone
 
 Build `go build -trimpath -o <owned-output>/windows-ci-runner-agent.exe

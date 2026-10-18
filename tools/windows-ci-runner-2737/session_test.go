@@ -64,6 +64,7 @@ type fakeOps struct {
 	badContext           bool
 	stages               []Stage
 	configureEntered     chan struct{}
+	processError         error
 	mu                   sync.Mutex
 }
 
@@ -96,6 +97,10 @@ func (o *fakeOps) listen(ctx context.Context, id int64) <-chan processResult {
 	o.mu.Unlock()
 	done := make(chan processResult, 1)
 	go func() {
+		if o.processError != nil {
+			done <- processResult{drained: true, err: o.processError, logHash: strings.Repeat("f", 64)}
+			return
+		}
 		stages := o.stages
 		if stages == nil {
 			stages = []Stage{Start, Complete}

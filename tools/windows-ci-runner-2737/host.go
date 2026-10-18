@@ -5,6 +5,7 @@ import (
 	"cc/product-ci/normalci"
 	"context"
 	"errors"
+	"io"
 	"net"
 	"time"
 )
@@ -65,7 +66,28 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 	var runnerID int64
 	for _, stage := range []Stage{SourceReady, Configured, Start, Complete, RunnerExited} {
 		var ev Event
-		if receive(c, &ev) != nil || ev.Instance != p.Instance || ev.Stage != stage {
+		if e := receive(c, &ev); e != nil {
+			if ctx.Err() != nil {
+				return ev, ctx.Err()
+			}
+			if errors.Is(e, io.EOF) || errors.Is(e, io.ErrUnexpectedEOF) {
+				return ev, ErrHostEOF
+			}
+			return ev, ErrProtocol
+		}
+		if ev.Instance == p.Instance && ev.Stage == Failed {
+			if ev.FailureCode != "process" && ev.FailureCode != "timeout" && ev.FailureCode != "drain-unconfirmed" {
+				return ev, ErrProtocol
+			}
+			if host.Observe(ctx, ev) != nil {
+				return ev, errors.New("failure persistence failed")
+			}
+			if ev.FailureCode == "timeout" {
+				return ev, context.DeadlineExceeded
+			}
+			return ev, errors.New("Windows runner failed or drain unconfirmed")
+		}
+		if ev.Instance != p.Instance || ev.Stage != stage || ev.FailureCode != "" {
 			return ev, errors.New("Windows event order rejected")
 		}
 		if stage == SourceReady || stage == Start || stage == Complete {

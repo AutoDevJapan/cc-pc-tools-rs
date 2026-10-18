@@ -80,6 +80,27 @@ func TestReplayedAndWrongContextHookFailsBeforeOfficialSecondClaim(t *testing.T)
 		cancel()
 	}
 }
+func TestProcessTimeoutIsDistinctFromHookCompletionAndHostEOF(t *testing.T) {
+	packet := fixturePacket()
+	seed := testSeed()
+	seed.Plan.Source = packet.Pin
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	host, guest := net.Pipe()
+	ops := fake(seed.Plan)
+	ops.processError = context.DeadlineExceeded
+	done := make(chan error, 1)
+	go func() { defer guest.Close(); done <- guestSession(ctx, guest, seed, ops) }()
+	h := &fakeHost{seed: seed}
+	ev, e := HostSession(ctx, host, seed, packet, h)
+	if !errors.Is(e, context.DeadlineExceeded) || ev.Stage != Failed || ev.FailureCode != "timeout" || !ev.Drained {
+		t.Fatalf("timeout classified as success/EOF: %+v %v", ev, e)
+	}
+	if e = <-done; !errors.Is(e, context.DeadlineExceeded) {
+		t.Fatal("guest lost timeout cause", e)
+	}
+}
+
 func TestEOFDuringConfigurationCancelsWholeFlight(t *testing.T) {
 	packet := fixturePacket()
 	seed := testSeed()

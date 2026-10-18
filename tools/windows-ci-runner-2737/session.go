@@ -211,7 +211,15 @@ func guestSession(ctx context.Context, c net.Conn, seed Seed, ops guestOps) (ret
 		case result := <-running:
 			running = nil
 			if result.err != nil || !result.drained || stage != RunnerExited {
-				return errors.New("runner ended before complete or drain")
+				code := "process"
+				if errors.Is(result.err, context.DeadlineExceeded) {
+					code = "timeout"
+				}
+				if !result.drained {
+					code = "drain-unconfirmed"
+				}
+				_ = send(c, Event{Instance: p.Instance, Stage: Failed, RunnerID: runnerID, Exit: &result.exit, Drained: result.drained, LogSHA256: result.logHash, FailureCode: code})
+				return errors.Join(errors.New("runner ended before complete or drain"), result.err)
 			}
 			return send(c, Event{Instance: p.Instance, Stage: RunnerExited, RunnerID: runnerID, Exit: &result.exit, Drained: result.drained, LogSHA256: result.logHash})
 		}

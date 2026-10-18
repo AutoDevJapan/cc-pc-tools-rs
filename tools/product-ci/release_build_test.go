@@ -302,8 +302,17 @@ func TestReleasePhaseBudgetsAreFixedAndAdditive(t *testing.T) {
 	if productBuilderProfile.nanoCPUs != 1_500_000_000 || productBuilderProfile.memory != 6<<30 || productBuilderProfile.pids != 448 {
 		t.Fatal("product builder limits changed")
 	}
-	if f := fixtureBuilderProfile; f.nanoCPUs > 500_000_000 || f.memory > 512<<20 || f.pids > 128 || f.network != "none" || !f.kernelProof {
-		t.Fatal("fixture builder exceeds its limits")
+	// The fixture proves the product limits themselves: it may not exceed them,
+	// and it is not allowed to be a weaker stand-in either.
+	if f := fixtureBuilderProfile; f.nanoCPUs != productBuilderProfile.nanoCPUs || f.memory != productBuilderProfile.memory || f.pids != productBuilderProfile.pids || f.network != "bridge" || !f.kernelProof {
+		t.Fatal("fixture builder does not carry the product limits")
+	}
+	for _, g := range []releaseBuilderProfile{productBuilderProfile, fixtureBuilderProfile} {
+		// Guest RAM plus emulator overhead and the 1 GiB of cached disk pages must
+		// stay inside the outer memory limit; the disk file is not RAM.
+		if int64(g.guestMemoryMiB)<<20 > g.memory-(1<<30) || g.guestCPUs < 1 || g.guestCPUs > 2 || g.guestDiskBytes < 1<<30 || g.guestDiskBytes > 16<<30 {
+			t.Fatal("emulated machine does not fit its outer container")
+		}
 	}
 	if productBuilderProfile.artifactMax > 256<<20 || fixtureBuilderProfile.artifactMax > productBuilderProfile.artifactMax {
 		t.Fatal("artifact limit raised")
@@ -319,27 +328,50 @@ func TestBuilderCreateArgumentsAreClosed(t *testing.T) {
 	for _, p := range []releaseBuilderProfile{productBuilderProfile, fixtureBuilderProfile} {
 		spec := releaseBuilderSpec{profile: p, dockerfile: "Dockerfile.ci"}
 		args := spec.createArgs(strings.Repeat("ab", 16), "cc-release-build-"+strings.Repeat("ab", 16))
-		joined := " " + strings.Join(args, " ") + " "
-		for _, forbidden := range []string{" --privileged ", " --cap-add ", " --volume ", " -v ", " --mount ", " --device ", " --pid ", " --ipc ", " --uts ", " --userns ", " --cgroupns ", " --publish ", " -p ", " --add-host ", " --env-file ", " --volumes-from ", " --gpus ", "--force", "--skip-tls", "--insecure", "--push ", "--destination=ghcr", "docker.sock", "host", "seccomp=", "apparmor=", "label=disable"} {
+		// The last argument is the fixed outer script; it is checked below. Nothing
+		// else may name the Dockerfile or any build input.
+		script := args[len(args)-1]
+		if args[len(args)-2] != "-c" || script != p.outerScript() || strings.Contains(script, "Dockerfile") {
+			t.Fatal("the outer program is not the fixed script")
+		}
+		joined := " " + strings.Join(args[:len(args)-1], " ") + " "
+		for _, forbidden := range []string{" --privileged ", " --cap-add ", " --volume ", " -v ", " --mount ", " --device ", " --pid ", " --ipc ", " --uts ", " --userns ", " --cgroupns ", " --publish ", " -p ", " --add-host ", " --env-file ", " --env ", " --volumes-from ", " --gpus ", "--force", "--skip-tls", "--insecure", "--push ", "--destination", "docker.sock", "host", "seccomp=", "apparmor=", "label=disable", " --dockerfile"} {
 			if strings.Contains(joined, forbidden) {
 				t.Fatalf("forbidden create option %q", forbidden)
 			}
 		}
-		for _, required := range []string{" --cap-drop ALL ", " --security-opt no-new-privileges ", " --no-push ", " --no-push-cache ", " --cache=false ", " --context=tar://stdin ", " --tar-path=/kaniko/output.tar ", " --user 0:0 ", " --init ", " --interactive ", " " + releaseBuilderTool + " ", " --dockerfile=Dockerfile.ci ", " --memory-swap " + fmt.Sprint(p.memory) + " ", " --pids-limit " + fmt.Sprint(p.pids) + " "} {
+		for _, required := range []string{" --cap-drop ALL ", " --security-opt no-new-privileges ", " --user 0:0 ", " --init ", " --interactive ", " --entrypoint sh " + releaseBuilderTool + " -c", " --memory-swap " + fmt.Sprint(p.memory) + " ", " --pids-limit " + fmt.Sprint(p.pids) + " ", " --network " + p.network + " "} {
 			if !strings.Contains(joined, required) {
 				t.Fatalf("missing create option %q", required)
 			}
 		}
-		for i, a := range args {
-			if a == "--env" && !strings.HasPrefix(args[i+1], "GOMAXPROCS=") && !strings.HasPrefix(args[i+1], "GOMEMLIMIT=") {
-				t.Fatal("unexpected container environment")
+		// The emulator runs only in pure CPU emulation with a fixed, closed device
+		// set. No KVM, no device pass-through, no host file sharing, no forwarded
+		// port and no extra network, serial or monitor channel to the outside.
+		for _, forbidden := range []string{"kvm", "whpx", "hvf", "-accel hw", "-virtfs", "-fsdev", "-usb", "-device vfio", "-device usb", "-nic", "hostfwd", "guestfwd", "-netdev tap", "-netdev bridge", "-chardev socket", "-chardev pipe", "-monitor tcp", "-monitor unix", "-gdb", "-vnc", "-spice", "-fw_cfg", "-smbios", "docker", "/var/run", "--privileged", "mount "} {
+			if strings.Contains(script, forbidden) {
+				t.Fatalf("forbidden emulator option %q", forbidden)
 			}
 		}
+		for _, required := range []string{"-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny", "-accel tcg,thread=multi", "-nodefaults", "-no-reboot", "-display none", "-monitor none", "-netdev user,id=n0", "-device virtio-blk-pci,drive=d0", "-device virtio-blk-pci,drive=d1", "-device virtio-net-pci,netdev=n0", "-device virtio-rng-pci"} {
+			if !strings.Contains(script, required) {
+				t.Fatalf("missing emulator option %q", required)
+			}
+		}
+		if got := strings.Count(script, " -device "); got != 4 {
+			t.Fatalf("unexpected number of emulated devices: %d", got)
+		}
+		if !strings.Contains(script, fmt.Sprintf("-m %d", p.guestMemoryMiB)) || !strings.Contains(script, fmt.Sprintf("-smp %d", p.guestCPUs)) || !strings.Contains(script, fmt.Sprintf("truncate -s %d ", p.guestDiskBytes)) {
+			t.Fatal("emulated machine does not match its profile")
+		}
 	}
-	if !strings.Contains(strings.Join(productBuilderProfile.tmpfs, " "), "nosuid") || strings.Contains(strings.Join(productBuilderProfile.env, " "), "TOKEN") {
+	if !strings.Contains(strings.Join(productBuilderProfile.tmpfs, " "), "nosuid") {
 		t.Fatal("unexpected profile")
 	}
-	if releaseBuilderTool != "ghcr.io/osscontainertools/kaniko@sha256:2fa20b0a4b40c7db72b479d57e55c2cf79f2178533b2d3bcbd129d6bd3c087ed" {
-		t.Fatal("builder tool digest changed")
+	if releaseBuilderTool != "tianon/qemu@sha256:8b8a194c14322053a9bafba8fdae0d2fffb722dd5d991b9e65970184fe1ead4e" {
+		t.Fatal("outer builder image digest changed")
+	}
+	if releaseGuestKernelImage != "linuxkit/kernel@sha256:3eae204fb152652742f4679da795a3f2848ad70c83bf1db31af0a0039e40ae67" || releaseGuestUserlandImage != "ghcr.io/osscontainertools/kaniko@sha256:7ab44d0131c3051b6dea128067e258c7afb5c4815082a93b9cf6c624f2140bf0" {
+		t.Fatal("guest source image digest changed")
 	}
 }

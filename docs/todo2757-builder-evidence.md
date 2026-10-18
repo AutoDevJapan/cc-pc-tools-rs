@@ -79,6 +79,14 @@ hostpath/image/registry pushを受け付けない。builderはrunnerと分離し
 実製品buildは未配布部品で行わない。ソース、別モデル、CI、通常merge、正式配布の順を守る。
 既存runner/guard/manifest/queueを変えず、実装担当と親の成果・検査を別々に保存する。
 
+## 2026-10-19 追記（ToDo2848）
+
+実製品sourceに対する正式配布済みpreflightは、外側のcap-drop ALLの下でKanikoが
+ベースイメージのchown(operation not permitted)に失敗し、build exit1だった。
+上の最小fixtureはscratchベースだったため、この種の失敗を検出できなかった。
+原因の再現と修復(ソフトウェアエミュレートしたゲスト内でKanikoを実行)、非root所有の
+ベースを使う実fixtureの結果は [todo2848-vm-builder.md](todo2848-vm-builder.md) に記録した。
+
 非公開の原receiptと再現用のGo fixtureはToDo2757 worktreeの.ci-workに保持する。
 build temp7e66c30d07a55d6da5faa9ebb731951cとresearch temp6e94963e29b086a8f2a8b94b8c2e337dは
 safe-deleteのplan→別通常削除→finish source_absentで回収した。

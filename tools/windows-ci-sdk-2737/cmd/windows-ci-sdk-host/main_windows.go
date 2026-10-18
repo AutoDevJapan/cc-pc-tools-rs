@@ -13,6 +13,19 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--finalize-verified-guest" {
+		worktree, err := os.Getwd()
+		if err != nil {
+			os.Exit(1)
+		}
+		evidence, err := sdkprep.FinalizeVerifiedGuestCLI(worktree)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(evidence)
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--validate-prepared-iso" {
 		worktree, err := os.Getwd()
 		if err != nil {

@@ -63,6 +63,7 @@ type RecoveryReceipt struct {
 	VMState        string `json:"vm_state"`
 	MemoryAssigned int64  `json:"memory_assigned"`
 	VMRemoved      bool   `json:"vm_removed"`
+	ShutdownMode   string `json:"shutdown_mode"`
 	VHD            string `json:"vhd"`
 	VHDDetached    bool   `json:"vhd_detached"`
 	VHDSize        int64  `json:"vhd_size"`
@@ -529,7 +530,7 @@ func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryR
 	if err != nil {
 		return RecoveryReceipt{}, err
 	}
-	script := filepath.Join(root.Path, "remove-vm-"+instance+".ps1")
+	script := filepath.Join(root.Path, "remove-vm-graceful-"+instance+".ps1")
 	adminScript, err := renderAdminPowerShellScript(removeVMKeepVHDPS, root.Path)
 	if err != nil {
 		return RecoveryReceipt{}, err

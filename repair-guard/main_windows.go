@@ -181,6 +181,9 @@ func allowed(path string) bool {
 	if productPathAllowed(absolute) {
 		return true
 	}
+	if currentScopePathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
 		return true
 	}

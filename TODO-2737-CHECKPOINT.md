@@ -503,7 +503,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   ownedroot982d807ade8d920300c7e14c4f5dc08cのrequestはsourcepacket.Pinの実JSON schema head_sha/tree_sha/workflow_sha256を使い、新3hash/run/attempt/role/lease/空Inputsを明示した。
   schema修正は実行前に行い、架空job IDや手書きmanifestで条件を埋めていない。
 - 同clean code4c60959のhost/Linux helperを使用し、canonical Cargo gate内で新VM fc9ed8c6aa01c36f767b4d31e444abcbを起動。
-  Linux SDKの元VM不在/全disk hashを確認し、新sourceをRAM転送。source-readyの実proofはrepo1154066087/newHEAD/newtree/1904blob/physical_verified=true。
+  VM instanceは上記nonce、実Hyper-V IDはb9a2d1a6-7623-4e29-bccf-338ee1c47a77。Linux SDKの元VM不在/全disk hashを確認し、新sourceをRAM転送。
+  source-readyの実proofはrepo1154066087/newHEAD/newtree/1904blob/physical_verified=true。
   registered runner27（nonce名todo2737-fc9ed8c6aa01c36f767b4d31e444abcb/同run-role label）のoffline identityを保存し、公式APIの同job割当とstart hook proofまで確認した。
   seed生成用の自分のtools containerはexact ID/name/image/labels/mount/device/privilegedを照合し、seed.iso完成後すぐ停止/PID0を確認。layerは次回に必要なので保持。
 - **初回公式verifyはfailure**。API上の失敗工程はnumber10「Set up pnpm」とnumber68「Complete runner」。start hookは成功したがcomplete proofは未受領。

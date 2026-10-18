@@ -36,9 +36,24 @@ dispatchのNotFound分岐だけに資格を追加する。既存のPC修復3proj
 旧質問の送信・返信処理や未知の担当の復旧へ処理を広げない。
 
 現在の主担当が正規登録した直接のreview/check/researchの子も、Go APIが
-その子自身のidとspecのfingerprintを返す場合だけ同じ比較を通る。
-親の資格・停止・同project/root/common・有限な新しい子の検証はGo側で行い、
-Rustは従来のsubwork審査と独立worktree、資源、依存、担当競合の条件を保持する。
+その子自身のidとspecのfingerprintを返す場合だけ同じ比較を通る。Go guardは
+固定済みの現在製品IDを親として照合し、親の現資格、親の保存jobsにある
+origin_job_id、todo.exeが保存した直接subwork関係、子の新IDと保存spec、同じ
+登録project/root、親worktreeのrepository/common-dir/top-level/branchを検証する。
+origin_job_idは親のjobs履歴に結び付く。親は子を登録した後に依存待ちへ
+入るため、最新jobとの一致は要求しない。子worktreeは親rootの標準`-wt`
+配下で子IDとschedulerのtitleから作る正規名に限定する。schedulerのpathが
+未記録ならこの名前を照合し、記録済みなら記録された同じworktreeだけを許可する。
+titleが変わって予定名と記録済みpathが一致しなくなった場合は不成立にする。
+slugは小文字ASCII英数字だけを残す。Go/Rustで小文字化結果が異なり、予定名が
+一致しない場合は許可せず拒否する。
+親root本体や同IDの別名worktreeは拒否する。予定pathが既に存在する場合も
+guardでrepository/common-dir/branchと実体を確認する。存在するworktreeは
+同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認する。
+子specの保存ファイル名にある乱数はファイル識別子で、本文hashではありません。
+本文hashは読み取った実バイトから作り、Rust側で同じspecバイトと照合します。
+失敗は`{"verified":false}`だけを返す。親の資格・停止・依存・通常の
+subwork審査や独立worktree条件はRust側でも維持する。
 
 ## 検査と正式更新
 

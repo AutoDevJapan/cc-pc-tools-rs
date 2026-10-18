@@ -184,6 +184,10 @@ func allowed(path string) bool {
 	if boundedSchedulerTree(absolute) {
 		return true
 	}
+	// A not-yet-created leaf has no physical path, so this precedes physical().
+	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
+		return true
+	}
 	target, err := physical(absolute)
 	if err != nil {
 		// The one explicitly authorized new worktree may be created empty.

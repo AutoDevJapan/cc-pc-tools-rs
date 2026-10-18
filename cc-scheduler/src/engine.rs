@@ -310,8 +310,19 @@ impl<B: Backend> Scheduler<B> {
         Ok(())
     }
     pub fn requeue(&mut self, id: &Value, jid: &Value, reason: &str) -> Result<()> {
+        self.requeue_if(id, jid, reason, None)
+    }
+    pub fn requeue_if(
+        &mut self,
+        id: &Value,
+        jid: &Value,
+        reason: &str,
+        expected: Option<&Value>,
+    ) -> Result<()> {
         let now = self.backend.clock();
+        let mut applied = false;
         self.edit(id, |i| {
+            if expected.is_some_and(|expected| expected != i) || cancellation::owner_stopped(i, &Value::Null) { return; }
             if s(&i["status"]) != "doing" || i["scheduler"]["job"] != *jid {
                 return;
             }
@@ -324,6 +335,7 @@ impl<B: Backend> Scheduler<B> {
             } else { crate::recovery_failure::FAST_RETRY_S };
             i["status"] = json!("todo");
             let message = match reason {
+                "no_action" => "30分間実操作がなく報告だけが続いたため担当を復旧します",
                 "hung" => "30分間進捗がなかったため停止しました",
                 "lost" => "担当ジョブのプロセスが消失しました",
                 "memory" => "空きメモリ不足で停止しました",
@@ -341,7 +353,11 @@ impl<B: Backend> Scheduler<B> {
             if reason != "memory" && reason != "resource_wait" {
                 m["retry_count"] = add_count(&budget, 1);
             }
+            applied = true;
         })?;
+        if !applied {
+            return Ok(());
+        }
         remove(&mut self.state["progress"], s(jid));
         self.log("INFO", &format!("item {id} recovery {reason}"))?;
         Ok(())
@@ -1147,10 +1163,30 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         // Automatic termination does not authorize routing the saved work to a
         // different model or widening its sandbox. Explicit new inputs still win.
         if let Some(source) = source.filter(|source| cancellation::recovery_cancel(&item, source)) {
-            for field in ["model", "effort", "sandbox"] {
-                if !truth(&item[field]) && !truth(&accepted_options[field]) && truth(&source[field])
+            for field in [
+                "model",
+                "effort",
+                "sandbox",
+                "task_type",
+                "mcp_profile",
+                "network",
+                "add_dirs",
+            ] {
+                if !truth(&item[field])
+                    && !truth(&accepted_options[field])
+                    && !source[field].is_null()
                 {
                     selection[field] = source[field].clone();
+                }
+            }
+            if source["no_action_recovery"].is_object() {
+                selection["model_explicit"] = source["model_explicit"].clone();
+                if source["model_explicit"] == false
+                    && !truth(&item["model"])
+                    && !truth(&accepted_options["model"])
+                {
+                    selection["model"] =
+                        json!(cc_ask::job_policy::model_profile("", "implementation").model);
                 }
             }
         }
@@ -1660,6 +1696,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &safe));
             }
             "step" => {
+                self.guard("no action recovery", |e| {
+                    e.recover_no_action(&mut jobs, &ps)
+                });
                 self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &cfg));
                 self.guard("memory pressure", |e| {
                     e.memory_pressure(&m, &mut jobs, &ps, &pri, &cfg)
@@ -1677,10 +1716,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
             "repair-step" => {
                 // Keep lost question generations and their notification/reply
-                // processing quarantined. Never terminate another worker here.
+                // processing quarantined. General termination remains disabled;
+                // only the separately verified no-action path may cancel.
                 let mut safe = cfg.clone();
                 safe["kill_enabled"] = json!(false);
                 self.report["repair_mode"] = json!(true);
+                self.guard("no action recovery", |e| {
+                    e.recover_no_action(&mut jobs, &ps)
+                });
                 self.guard("reconcile repairs", |e| {
                     e.reconcile_repairs(&mut jobs, &ps, &safe)
                 });

@@ -9,6 +9,8 @@ use std::{
 const T: f64 = 100000.;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
 mod subwork_support;
+#[path = "support/no_action.rs"]
+mod no_action_tests;
 
 #[test]
 fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
@@ -1402,6 +1404,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    action_path: Option<PathBuf>,
     repair_allowed: bool,
     repair_denied: Option<String>,
     repair_calls: Vec<String>,
@@ -1439,6 +1442,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            action_path: None,
             repair_allowed: false,
             repair_denied: None,
             repair_calls: vec![],
@@ -1476,6 +1480,15 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn action_progress(&mut self, job: &Value, previous: &cc_job_policy::action_progress::Progress) -> Result<Option<cc_job_policy::action_progress::Progress>> {
+        Ok(self.action_path.as_ref().and_then(|path| cc_job_policy::action_progress::scan(path, job, previous, self.clock).ok()))
+    }
+    fn no_action_scope(&mut self, repo: &str, _: &Value, _: &Value) -> Result<bool> {
+        Ok(self.repair_scope_allowed(repo))
+    }
+    fn cancel_no_action(&mut self, _: &Value, job: &mut Value, _: &Value, _: &Path) -> Result<bool> {
+        self.cancel_for_recovery(job)
+    }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.repair_calls.push(repo.into());
         if let Some((path, db)) = self.repair_edit.take() {

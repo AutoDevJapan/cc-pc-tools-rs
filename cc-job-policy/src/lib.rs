@@ -1,4 +1,5 @@
 //! Permissions for unattended jobs. Read-only work cannot escalate to write access.
+pub mod action_progress;
 pub mod cancellation;
 pub mod cargo;
 pub mod finished_review;

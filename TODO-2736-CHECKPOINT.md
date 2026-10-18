@@ -1,0 +1,215 @@
+# ToDo2736 再開記録
+
+## 2026-10-17 20時台の最終Windows受入と統合（以下を優先）
+
+job20261017-201652-todo-2736。原2790と同じreview2797は正規doneになった。
+2790の最終head e00ce71966a3290747650189dc0db0a321d6801bからWindows moduleだけを
+取り込み、indexのmodule tree=8858bd95f1766036473c92e01fdfd252ded6e082の完全一致を確認した。
+共通pr148scopeは両側cbdb19827cd035d66a527818a8fb2df89705a059で不変。
+最終機能sourceは25579e6、以降の子差分はREADME/受領文書だけでGo差分0である。
+
+同じ2797のSonnet5.5原応答は165727（ca2d6af→d5e04c5の全指定本文）、184908
+（d5→9b4a529の15本文/差分）、194854（9b→25579e6の5本文/差分）を順に確認した。
+各静的Must0であり、モデルによる実検査は0。最終実jobはsucceeded/exit0、保存spec全文の
+実投入一致・eventと最終応答一致を子receiptで確認。最終原応答SHA256は
+CBCD1D95FFABD705F77FED7F61F18E064053403107532697C762220CFA841231。
+原応答/receipt/前回証拠資格を自分の恒久rootへbytes/SHA一致で保管した。
+原2791の4f47c125だけのMust0を新しいWindows差分の代わりには使っていない。
+
+子の最新Go race69pass/2opt-in skip、vet/Windows build成功と、最後のWindows専用変更前の
+Linux build成功を受領した。成功済み同module/commonの検査やSDK fixtureを親で重複実行しない。
+初回uintptr案のcheckptr panic/vet失敗を保持する。親の正式CIは新しいpush後に別途確認する。
+fixtureはbootstrap4（VCS23274f6+modified、cd7相当のGo内容）の正常74file/取消75fileであり、
+最終SID変更後の実service成功とは書かない。NULの先行試行は同sourceでexit0、その後の
+main/postは繰返しcheckoutの成功で、pristine-sourceの独立実証ではない。
+実製品のcheckout版/runner同梱Node、8分materializer予算と製品規模、実工具・全正式jobは
+親の正式受入で確認する。13残留profile/hive/rootは子が2381へ配送済みで再操作しない。
+
+起動時の実APIで製品owner/private/nonfork/admin、同repo1392152644、PR open/draft/mergeable、
+head75a4051/base1100676/元branchを再照合。helperも実owner AutoDevJapan/adminを確認した。
+通常ghのuser応答headerでgist/read:org/repo/workflowを確認できた。新push前のremote PR189は
+まだ6b5c387。この時点の正規auth refreshはexit0で終了し、RAMのcode検出/画面入力は0。
+権限付与の由来やブラウザ認可成功を、この終了コードだけから推定しない。
+
+入力経路はCUA REPL内のchild_processによる非UI CLI出力のRAM captureと、公式locator.fillの
+偽値入力→空欄化で確認した。実コード/秘密をtool引数・ファイル・URL・clipboardへ渡していない。
+資源譲渡後のitem_22完了を先に照合し、偽値確認を繰り返していない。前tab798087384は
+再開時に既に不在。新tab798087392は所有record e7893fe2-13be-41fa-924b-cc3ff59e70f2と
+inventoryのinstance/generationを照合して正規close、closed1/failed0。ブラウザ工程は終了。
+
+次はこの統合を同branchへ通常pushし、実新headのhelper CIを確認する。
+製品source展開/workflow変更/正式runner/dispatch/製品Cargo/GPU/Civ6/再起動は依然0。
+原2640/880の未完・停止と製品PR148を親だけがmergeする条件を保持する。
+
+## 2026-10-17 15〜16時台の有限受領・循環修復（以下を優先）
+
+job20261017-151845-todo-2736。司令塔の工程分割に従い、原2790の受領/統合と、同じ原2797の正規root関係を確認した。製品の正式CIや原2790最終受入を免除した工程ではない。
+最新D:/CC/AGENTS.md、当該repo規則、原2790のTODO-2790-CHECKPOINT.mdと配送、原2791応答を読んだ。実GitHub APIで製品PR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、head75a/base1100/元branchを確認。helper PR189 remoteは6b5c387。製品source展開/変更/正式runner登録/dispatch/製品Cargo/GPU/Civ6/再起動/旧root・profile・guard変更は0。
+
+### 同じ2797の正規関係
+
+司令塔が先に正規cancelとsubwork関係保存を完了していた。controller-review2797-root-binding-133530.private.jsonとqueue-reload/cancel-recoveryの原receipt（全exit0）を受領し、自分の恒久rootへ全SHA一致で保存した。root-binding原SHA256 C08A577EDE854978DD82BDF52CC21A79B9B549B996C041F638C31D54691AAB55。
+旧job20261017-145950-todo-2797はcancelled、started_at=null、steps0、PID不在。原2790 jobはsucceeded/exit0/両PID不在。新rootは15:18:45作成/15:19:14正常開始、running/todo2736/root、両PIDのOS作成時刻一致を確認した。原2797はparent2736/origin_job今回root/kind review、spec SHA79E63C19241BE6DD2C5DF255BCE97BDEC5CED91970201F4445A8EF76550FA1D5/model claude-sonnet-5-5を保持し、wait_on無しであることを確認。subwork保存を重ねず、標準todo start2797で正常な再開へ戻した。後でschedulerがtodoへ戻したことを確認し、新jobや原応答が出たとは扱わない。新しいレビューToDo・直接子Codex・孫subwork・raw store/所有者手書きは0。
+原2790のwait2797は維持する。rootはこの有限受領の後、正規wait2736--on2790へ戻した。原2797終了後は2790が原応答/Must/新headの最終受入を返す。それまでは正式検査/通常merge/Prdへ進めない。
+
+### 固定d5e04c5の統合
+
+原2790のcode head d5e04c5643abd075b1a2fab763b15e7aa50f695dからWindows moduleだけを取り込み、b62e34fへcommitした。親のstaged module treeが8974edd80634097711e755c8f49efc98c3f2f685と完全一致、共通packageも両者cbdb19827cd035d66a527818a8fb2df89705a059で一致した。product-ci本体や別製品candidateは取り込まなかった。同一sourceの成功済みGo/SDK/合成Rust fixtureは重複実行していない。
+子の実測は、最新正常fixtureにRust1.95.0/+stable合成unit、source改変拒否、Cargo101、worker/service0、保持3PID排出。取消し11PID排出は旧592ef03相当の内容であり、最新identity/PATH差分込みの取消し実証へ拡大しない。正常controller exitは直接未保持。64pass/2skip/vet/両OSbuildは子のWindows moduleであり、親全source/製品CIの成功ではない。新5profile/hive/classes/SDK linkを含む拒否rootは子が2381へ配送済みであり、親から変更/再削除しない。
+原2791は実Sonnet5.5/固定4f47c125で旧M1/M2解消・新Must0、供給25全文/追加diffだけの静的結果。原応答をbytes/SHA一致で保存した。統合後d5e04c5への無条件流用や原2797の代用にはしない。
+
+### 同OAuth更新の到達点と具体的な技術停止条件
+
+同じgh_gateの正規auth refresh --hostname github.com --scopes workflowを、raw stdout/stderrをRAMだけで処理する一時Go補助から試した。別API/token/認証方式でpushを迂回していない。初期補助のregex/改行表現、browser handler、Windows clipboard ownerの不具合を修正し、偽コードのpattern/clipboard self-testは成功。生のCLI認証出力・実コード・token・URL queryをモデル/ファイル/PRへ表示保存しない設計を維持した。
+実CLIは2.101.0。既定clipboardコピーを事前に無効化せず起動した最初の呼出しを認証成功/安全確認済みとはしない。clipboard履歴設定が有効、cloud/sync設定が無効であることを後から確認した。既定コピー成否と履歴格納は未確認。履歴は読まず、一括削除や他内容の変更は行っていない。各呼出しの認証入力/認可は0、未使用コードは再掲しない。
+最後の正規呼出しは--clipboard=falseでCLIの既定コピーを明示的に止めた。確認コードをRAMで受け取り、履歴/cloud除外formatと今回だけの所有markerを持つWindows clipboardへ置けた。しかしCUAのctrl+vはOS側とは別のvirtual clipboardを参照し、データ無しで入力前に失敗した。値をtool引数やファイルへ渡す迂回はしない。CUAのnative窓APIは無く、利用可能なComputer UseのWindows targetも空だったため、実値を記録しない入力経路を完了できていない。PC操作を本人へ要求しない。
+認証CLIは有限期限でexpired/exit1。残った自分のgh childも実pathとOS作成時刻を照合して/Tで終了し、無関係なghは止めない。今回markerのclipboard内容だけを削除し、marker不在を確認した。コード入力/認可クリック0、再照合したscopeはgist/read:org/repoでworkflow無し。したがってOAuth更新/新push/新head CI成功は未達。同じpushを再送しない。
+Chromeの最初の準備tab798086943はCLI所有sessionとCUAが競合し、record b516a145-af85-4866-9d24-987fa02bde56を正規close（closed1/failed0）。次のCUA作成tab798086947は準備画面へ接続できたが上記pasteで停止し、record12a5dc68-606a-4dbd-9adf-fc2bc6f15409を同じ正規close（closed1/failed0）。新profile/ヘッドレス/owner既存tabは使っていない。
+
+一時Go補助のsource/exe（実認証値無し）を恒久root184a58eedf4f923741f160dfe7cfd5b7へbytes/SHA一致で保存し、oauth-prep-151845-manifest.private.jsonを保持した。操作結果はintegration-151845-result.private.json。一時root safe-delete1d9d65da0bf7182fd0e213f81cf511fdはplan→別通常削除済み、finishとSHA照合を行う。これは原2790の検査資源回収やCI成功ではない。
+次は正規2797の実開始/固定spec/d5e04c5読了/原応答と、2790の最終受入を受領する。OAuth側はOS→CUA virtual clipboardの非記録な入力経路を、既存の正式能力の範囲で確認する必要がある。権限不足/承認審査を別認証で迂回しない。原2640/880の未完とscope/cleanup分離を維持する。
+
+## 2026-10-17 14時台のレビュー対応（以下を優先）
+
+job20261017-141429-todo-2736、4d25771から再開。最新D:/CC/AGENTS.md、repo規則、元2788の実応答を確認した。実APIで製品PR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、75a/head・1100/base・元branch refを再照合。remote helper PR189は6b5c387のまま。source/workflow変更、製品source展開、正式runner登録/dispatch/製品Cargo、GPU/Civ6/再起動/旧資源変更は今回も0。
+
+### 元2788の原応答と修正
+
+2788は実job20261017-135724-todo-2788、anthropic/claude-sonnet-5-5、succeeded/exit0、14:01:01終了。対象base3f15e84→head63ddef6の供給全diff/全文を静的読了、実検査0。供給外の既存product-ciファイルや実gate本体は未読。Must2件を受領した。原応答を自分の恒久rootへbytes/SHA一致で保存した（review2788-original.private.md、SHA256 C494A0A10CB48D0322C1499A64138109C2AE737AED0A57EBB173185F5D1A4AAC）。元2788のdoneはレビュー終了だけでありMust0や製品CIを意味しない。
+
+コード4f47c1258d24a275125cb53490d28cfde14517e8へ次を保存した。GitHubのworkflow scope不足が未解消なので、同じpushを再送せず、このcode headはまだremote未反映。
+
+- M1: 原rust.ymlのtimeout-minutes未指定を拒否していた。GitHubの原360分を保持し、明示された値を維持するよう修正。未指定/20分/0/361/sequenceを回帰検査した。原workflowのcommand/YAML bytesは変更しない。
+- M2: Windows collectionが実行前auditを呼び、completed runで止まっていた。保護されたlocal launcher/SCMの停止・PID0・drain証明は維持し、その後repo/immutable run-attempt-source/workflow/head-repoとrunner0だけを照合する専用処理へ分離した。CI成否や現在PR/refを削除条件にせず、結果をCI成功へ転記しない。残登録・API読取失敗・異なるsourceは拒否する。合成APIでterminal success/failure/cancel/timeoutを含む12組と9拒否条件を確認した。実service削除や旧cleanupは行っていない。
+- Suggestion: ref PATCHが応答失敗なら1回だけrefを読み、intended headで全source検証も成功した場合だけ更新を確認する。観測はprivate receiptへ保存し、PATCH再送や逆更新は行わない。lost-responseの合成fixtureを追加した。
+- Suggestion: SCM startが1053等を返しても実起動している場合に備え、開始呼出し前からdeferred one-shot stop対象とした。stopFiniteの実state照会/停止を終えてからgate callbackを抜ける。強制controller kill時の保証へ拡大せず、新serviceを作る故障注入は未実証として維持する。
+- READMEの原75a checkout/test-mergeという古い記述を実際に除去した。前回の文字列置換はCRLFのため該当していなかった。原pinを単独親とするnew head/dispatch、Linux/Windows listenerの直列条件、collectionとCI成否の分離を明記した。
+
+### 最新コードの実検査
+
+product-ciのGo race198 pass/4 opt-in skip、Windows module50 pass/2 opt-in skip。両moduleのvetとWindows/Linux buildは全exit0。成功済み製品workspace/旧fixtureは再実行していない。実service/profile/namespace/SDK/runnerは作成していない。
+新しいread-only pr148-policyモードで、GitHub APIから元SHAのRust workflowをRAMで読み取り、SHA256 841ca7d8515d4ce9802effecf38dbf30052560bac3ecd8c3b679d25a598933e9の実行policy解析を確認した。timeout360分、Cargo4種類、PolicyOnly=true/ProductTestsExecuted=false/AllRequiredChecksSuccess=false。APIから原source archiveを取得した結果や、正式CI/製品Cargo成功ではない。元の三workflow/四未開始jobと固定sourceも前後照合する。秘密や原YAML本文は保存/表示しない。
+
+### 新しい独立工程と再開
+
+- 2790: Windowsの未達runtimeだけを実装する。固定出発点4f47c12のhelper source、共通package、Go moduleだけを子のworktreeへ供給する。製品source取得/正式登録/dispatchは子では実行せず、合成source materializer、SDK/tool環境とfiltered account/shared gate適合、元command bytesを保つpost-checkout tool-entry guardを実装・有限fixture・別モデル確認する。元2736のWindows moduleを親はこれ以上並行編集しない。元2640/880/旧cleanupを解除せず、親完了を待つ逆依存は作らない。--needs cargoと正規subwork/check付きで受付済み。
+- 2791: 元2788のM1/M2と追加修正だけを固定本文で再レビューする。base63ddef6→4f47c12、全追加diffと25全文・原2788応答・実測事実を供給した。原本文260010bytes、SHA256 A9E5977111DE91AF760E549CA27FB3226CDAF89086713C948F8E18403F2737C5。保存specはSHA256 78A4DF5315D3DC106007E3F82A6D6665A1ACB83460608448D3007A92A81D064F、改行正規化後の全文一致を確認した。実OAuth Sonnetの原応答/Must解消はまだ未受領。
+
+両者ともtodo/jobs=[]を読み返し、受付だけを実開始/実成功と呼ばない。子を直接起動していない。2790 specはdocs/todo-2736-windows-runtime-spec.mdを正式保存し、正規化後一致。保存SHA256 F80E32D57321BA34B23D5391F0C71CF63F1048A0C581681A995503173C5467E3。両ToDoの親2736/kind/needsも確認した。
+終了時は正規wait2736--on2790--on2791を保存し、実HEADをscheduler checkpointへ保存する。次は原応答/実source/Goとfinite fixtureの証拠を受領し、Mustを直す。必要なGitHub workflow権限を正規に扱う前に同じpushやAPIへの迂回をしない。原製品の正式4jobを実run/job/check/原logsで成功確認するまで、元2640へ正式検査完了を返さない。製品PR148のmergeは元2640が行う。
+
+今回のbuild Tempはsafe-delete8164a77c57b8807a7c769a08beec4c14。原binary/Go jsonl/vet/policyの9fileをbytes/SHA一致で自分の恒久root184a58eedf4f923741f160dfe7cfd5b7へ保存した。reviewfix-4f47c12-manifest.private.jsonのSHA256は2CACB787C437E31869F1A392112B6D589AEE29C44F5F2D693255364C37FB433F。plan→別通常削除は成功し、finishと保管SHA再照合を行う。原review/fixtureの証拠と、以前の継続SDKは保持する。
+
+## 2026-10-17 13時台の実行契約調整（以下を優先）
+
+job20261017-133225-todo-2736、6b5c387から再開。最新D:/CC/AGENTS.md、repo規則、元2640記録・製品規則を読んだ。実GitHub APIでPR148のAutoDevJapan/private/nonfork/admin、同repo1392152644、元head75a/treececb/base1100/原branch、open/draft/mergeableを確認した。製品source/workflow/runner/dispatch/製品Cargo、GPU/Civ6/再起動、旧資源/保護/共有ACL変更は今回も0。
+
+### 今回保存したコードと実結果
+
+- helper PR189のremote head6b5c387は、両OS helper、cc-jobs、CodeQL全言語の正式successをAPIで確認した。package-toolsはskipped。これは下記の新コードのCIではない。
+- 2749のレビュー済みWindows moduleだけを親branchへ取り込み、独立工程の登録に依存しない契約調整を親が行った。新保存点63ddef6a15aaf39988c1328483b562dd96532132。workflow生成と全tree比較を単一のGo package tools/product-ci/pr148scopeへ抽出し、両OS helperが共通で使う。新しい共有SDK/受付/runner登録設定を作っていない。
+- Windowsのreal Planは、元75aだけを親に持つ明示new head/tree、PRHead=WorkflowSHA=Head、実JobIDを要求する。三workflowの全bytesは共通生成案と一致し、それ以外の全tree/path/modeは不変でなければ拒否する。原job名と全OS matrix、同branch workflow_dispatch/attempt/source/ref/Windows contextを固定した。fixtureは元75a/cecbだけでofficial hookへ入れない。targetを実source/tools/targetにそろえた。
+- product-ci Go race196 pass/4 opt-in test skip、vet、Windows/Linux buildが全exit0。shared packageには直接のtest fileがなく、package-level skipイベント1件が別にある。Windows module Go race27 pass/2 opt-in skip、vet、Windows/Linux buildも全exit0。新しいservice/account/profile/namespaceや製品検査は行っていない。
+- 初回rootからのgo testはmodule不在のsetup失敗。共通packageのjson import欠落、古いevent fixtureの不適合、外部型aliasの位置指定literalによるvet失敗は修正し、最新検査で確認した。原応答と失敗vet logを保持する。成功した製品全workspaceは重ねていない。
+- 最新binaryのread-only pr148-planはexit0。新しい共通生成案三件のSHA256は、前回f86e32dの実proposal三件とすべて一致した。製品workflowを送信した結果ではない。
+- binary SHA256: product-ci Windows EAB3C0F101605FA2E3D6DA91908E0C0E82CF9F3355BFCC3943C775A3D4492831、Linux 876A0BE6EF940E00A989E224FC1AFCADBF3ECB92A0584989C5913DB98E1B5440。Windows runner Windows 6C371CE485E5E26E977981989BADFAD044680062D9808B73E77C190CF3B7BE0B、Linux 950D97043FF991595D6C301F4182E3BCF6A7BE2BDF76A100A219B8BF67B3E429。
+
+### 正規レビュー受付と担当記録の一時不一致
+
+開始時は実jobがrunning/todo_id2736/rootである一方、ToDoのjobs/scheduler.jobに今回jobが欠けていた。subwork付きaddはlinked root条件で拒否。sourceを調べて不一致を確定し、手書き修復や権限緩和は行っていない。後でスケジューラが今回jobを正規に追記し、doing/現在job/branchを読み返せた。
+通常の独立ToDoとしてadd --spec --model claude-sonnet-5-5が成功し、2788を1件受け付けた。原f86e32d本文は原本保持。2788がtodo/jobs=[]で実開始前であることを確認し、正式edit --specで最新63ddef6の64全文/全差分に更新した。直接子Codexは起動していない。原本文753172bytes/SHA256 604CD047CFC13A8EBEC68DFF9069BD40116086B78E06F313154D68E37CFCF758。CLI保存specのSHA256は0644D4E115A413D7382C2F667062B258A692657056E732DDA315E857DBA9A7DEで、CRLF→LF正規化後の全文一致を確認した。保存先D:/CC/Tools/todo/specs/2788-4ea45f6055c9400d855f03e01b9d7a77.md。
+subwork関係を追加する後続呼出しは容量64MiBエラーで未保存。2788は通常独立ToDoのままであり、特別な同時実行権限はない。容量復旧担当2786はdoingで、復旧完了とはしない。最後のwait 2736 --on2788はexit0。待機記録を読み返して終了する。2788の実job/モデル/応答/Mustはまだ未受領。
+
+### GitHub pushの権限不足と、残る実統合
+
+63ddef6のpushはGitHub側がOAuth Appのworkflow scope不足で拒否した。対象は新Windows moduleを検査する既存.github/workflows/product-ci.ymlの必要最小限path/Go step追加。remote branch/PR189は6b5c387のまま。これは自動承認レビューの拒否ではなくGitHubの権限制限である。API/別token/別push経路/forceへの迂回は行っていない。
+OAuth最小権限・認証出力保護・Computer Useの規則を確認し、ログイン済みChromeのAPIを選択しただけ。タブ、認証CLI、確認コード、新token、OAuth同意やscope更新はまだ開始していない。必要なworkflow権限を正規に扱う工程は未完。ブラウザ側の「機微な権限の拡張は操作時確認」条件を一般のログイン許可と混同しない。レビュー前の権限確認を本人へ先送りせず、まず具体的なコードを別モデルで確認する。
+
+実Windows source materializer、filtered accountからのSDK/gate利用、工具PATH/新home、checkout後・原Rust command前の中間guard、実hook/正式job/原logsは未実装又は未実証。canonical変換は中間guard stepを追加しないため、元command bytesを保つ有限tool-entry guard等が必要。この未達と強制controller終了時のgate保持の限界をREADMEへ明記した。旧2763/2764のMust0やservice fixtureを新sourceの実統合成功に流用しない。
+次は2788の固定head/全読了/原応答を受領し、Mustを修正する。GitHubの必要scopeを正規手順で扱い、push/最新headのCI/必要な別モデル再確認/通常helper merge・配布を行う。その後Windows残条件を実装・有限検証し、製品PR148の正式通常4jobを実行して原証拠を元2640へ返す。製品PR148のmergeは元2640が担当する。2736→2640の逆依存や2381のcleanup依存は作らない。
+
+今回のbuild Tempはsafe-delete ID a3735a03eed74288a5500c89db5b16b6。binary/Go jsonl/vet/実proposal計12fileを、自分の恒久root184a58eedf4f923741f160dfe7cfd5b7へbytes/SHA一致で保管した。manifestはwindows-contract-63ddef6-manifest.private.json、結果は同result.private.json。plan→別通常削除は成功し、finishと保管SHA再照合を行う。継続SDKの以前のTemp f8847d61da9cfac712675b5cc26b4932は引き続き保持する。
+
+## 2026-10-17 12時台の統合結果（以下を優先）
+
+job20261017-123327-todo-2736。9d57e63から再開し、元2640の記録、当該repo規則、最新D:/CC/AGENTS.md、原2750/2751/2749の実成果を確認した。作業branchはscheduler/todo-2736-pr148-ciのまま。製品PR148のAPIで実owner AutoDevJapan/private/nonfork/admin、同repo1392152644、open/draft/mergeable、head75a/base1100/原refを確認。専用runnerは0。製品workflow変更/source展開/runner登録/dispatch/製品Cargo検査はまだ0。GPU/Civ6/再起動/旧資源操作も0。
+
+### 保存した実装と実検査
+
+- Linux2751は5a656e4で完了。module tree269264365cc6b22c2bb6314722f8021f39b038afのレビュー2781/2785を受領し、実Sonnet5.5/succeeded/exit0を確認した。元5Mustの解消と実Cargo正常/取消し・Rust1.95の原4command fixtureは子の原記録に保持し、重複実行していない。
+- そのPR148 Goファイルだけを72e82e0へ統合し、他製品のcandidate変更は取り込まなかった。最新mainとのmerge a0475b5でgo.mod/go.sumの競合を解消し、mainの既存依存を保持した。
+- 原2750の実応答は7patch/3全文の有限範囲でMust0だった。main/verify/dispose/原workflow等は未読と明記されていたため、これを最新全コードの承認にしない。原応答と2785応答をbytes/SHA一致で自分の証拠rootに保存した。
+- Suggestionの実害を直した。PR148以外のPR/mainはgithub.shaによるmerge結果のcheckoutを保つ。原job名/両OS・追加annotationがnoticeだけであること・checkout byte span・元withの有無・正確なowner/repo・safe-delete所有を確認する。
+- f86e32dde58428efb4a0d63670362cafca01c5edへGitHub APIによる三workflow限定tree/単独親commit/非force ref更新を実装した。全tree比較と更新前の原候補再検証、変更前の実object/attempt保存、更新後の実new head/tree/proposal全bytes照合を行う。不確かな失敗は再試行しない。このモードはdispatch/runner/status書込をしない。製品にはまだ呼び出していない。
+- 最新sourceのGo raceは196 pass/4 opt-in skip、vet/Windows build/Linux cross buildが全exit0。source race、原実装file改変、ref拒否ではbranch変更・成功receiptを拒否し、正例で原75aだけの親とforce=falseを確認した。新しいfixtureはAPI合成のみで製品を重ねて検査していない。
+- Windows binary SHA256 8CD6AC0E9BFCBC24675252FCFFF4E2360A8039EB7AA4ECE3F14C1527204F0BC0、Linux binary 2032A74084DA2D86182C669BA8F26C7C699016724BD28CE785410164ACE30A26。Go原jsonl SHA256 0BC0252F4EFB0D5E0CBB0BF353DB78FF5B1A946E05FBEA70459750DE49D9EE06。
+- 実read-only pr148-planは三原workflow/四未開始jobと更新案を確認してexit0。最後のowner限定追加前のbinaryによる実API確認であることを保持する。最後のowner限定は上記最新Go検査で確認した。
+- helper PR189を更新しf86e32dをpush、APIのPR head一致を確認。URL https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/189 。タイトル/本文を最終差分と未達条件へ更新した。新headの正式helper CIは実行中/順番待ちであり、成功/merge/配布とはしない。
+
+### Windows契約の未一致と次の登録
+
+2749は497b2f1/コードda2b45eの別モデルMust0を配送済みで、自分の5profile/hive/classes回収だけを2381へ待っている。この整理を親のCI前提には戻さない。
+Windows helperは元75a checkoutとpull_request merge contextだけを受け付ける。一方、レビュー済みLinux経路は三workflowだけの明示new head/treeと同branch全OS workflow_dispatchを受け付けるため、現状では両者が一致しない。共有SDK/gateに対するfiltered service tokenの実適合、原sourceの新runtimeへの有限materializer、停止/排出の実監督もWindows側の未達である。
+独立統合の具体specをdocs/todo-2736-windows-integration-spec.mdへ保存した。旧2749のroot/SID/profileや共有ACL/guard/manifest/bridgeを再利用・拡張しない。新headの原実装不変と元三workflow案bytesを照合し、両OSの同dispatch契約へ合わせる有限工程だけを求める。
+
+### 共有ToDo容量上限による未受付（判断待ちではない）
+
+Windows統合addと最新統合レビューaddはいずれもtodo_store_too_large: shared ToDo exceeds 67108864 bytes (64 MiB)でexit1。受付番号は作られていない。元2750等を新しい成果へ読み替えず、直接子Codexや別経路で登録しない。復旧担当2786が既存doingであることを確認した。
+共有ToDoを正式にwait 2736 --on 2786へ保存する呼出しも同じ容量エラーでexit1となった。waitは未保存であり、元2736のdoing/元2640のwait2736を保持する。元2640へのnote配送も容量復旧後に行う。保存した成果を先に消したり、元2640の未完を解除しない。
+
+新統合レビューの固定本文は自分の証拠rootのreview-integration-f86e32d.private.md。base3f15e84d8051cd99e59a2bc2b7fcbeab89f0d531/headf86e32d、31全文と全差分、409292bytes、SHA256 BA39C1DE4100961FBE49981E08AF867FDA5CA5F28F26752FE573132C08045CC2。受領済みfixture事実と旧レビューの未読範囲も渡している。復旧後はこの同じ固定本文を--model claude-sonnet-5-5/--spec/--subwork-of2736/実parent-job/--subwork-kind reviewで1回登録する。Windows工程は保存spec/--needs cargo付きで1回登録する。未受付を委譲済みとしない。
+
+次の再開は容量復旧の実結果を確認し、上の2工程の通常登録・原spec SHA照合・受付確認を行う。必要なら正規waitを保存してCargo枠を譲る。最新helper CIにfailureがあれば原因を直す。Must解消とCI成功後だけhelperを通常merge/必要配布し、PR148の三workflow非force更新→明示new head/tree→正式run/job/check/原logs→元2640配送を行う。製品PR148のmergeは元2640が担当する。2736から元2640完了への逆依存を作らない。
+
+### 原証拠と自分の後片付け
+
+自分の恒久証拠rootは以前作成したcodex-owned-184a58eedf4f923741f160dfe7cfd5b7。今回原binary/Go jsonl/vet/plan/二レビューの7fileを全bytes/SHA一致で保存し、integration-f86e32d-manifest.private.json（SHA256 F285DDE6795C95621D2E83D6B7891FC8F4E86F204F2734ABCA2C2B43D537C396）を保持する。原証拠と固定review本文をGitへ追加しない。
+今回のbuild Temp dd785cd3a4a58ca26536ba836562d0b9は保存後plan→別通常削除→finish=source_absent。削除後も恒久7fileの全SHA/bytesを照合した。以前の継続SDK Temp f8847d61da9cfac712675b5cc26b4932は公開PowerShell asset等が次の正式統合に必要なため保持する。今回新しいcontainer/volume/service/profile/runner/tab/process/追加ACEは作成していない。
+
+## 2026-10-17 02時台の再開結果（以下を優先）
+
+job20261017-015924-todo-2736。8db9ee1から再開した。以前の「OS再起動後だけ続行する」案は採用しない。Sandbox有効化・PC再起動・旧cleanupを繰り返していない。
+
+実APIでPR148のowner/private/nonfork/admin、同head/base repo、open/draft/mergeable、75a/head、1100/base、原branch refを再確認。製品規則はAPIで取得し、原固定head/tree/3workflow digestと原4jobをGo helperでも前後照合した。原製品folder、旧検査source、保護/manifest、共有bridgeは触っていない。
+
+tools/product-ciにread-onlyなpr148-planを実装。三workflowのYAMLを構造解析し、有限routeとcheckout head/authだけの案をRAMで生成する。他の全bytesとparsed semanticsを保つことを検証。main/別PRは元Hosted経路。実APIの4jobは未開始・runner0・steps0・予算annotationあり。LinuxのOS移行noticeも存在したため「annotationは1件だけ」という初回の誤った制約を直し、全JSON value hashを保持する。原CI logのhashとは呼ばない。製品source/workflowは未変更、登録/dispatch/Cargo/製品テストは0。
+
+Go unit/vet、Windows buildとLinux cross buildは成功。初回実API planはnoticeのため拒否、修正後に成功。proposal_only=true/all_required_checks_success=false。実装第一保存点822b4cb25934b4c0082bdde4a9d5c686158ee607はpush済み。
+
+既存SDK imageから新しい3個の専用containerでCPU-onlyな前提を調べた。公式runner/Rustup/Cargoはあり、PowerShellは無かった。最初の空log失敗と次の診断失敗も保持。公式公開PowerShell7.6.7のasset SHA256 6896f9e3a6b0a354bf470835a96da76d2f801cd50dcf047ad7c4563bf93bf431を照合し、新guest tmpfsへstdin供給して起動成功。imageは変更していない。最終SDK出力は502byte、SHA256 dad9c4af3aeabec8653d6cc89cebc38a0c6fa7cc7828f586325de1a9341f7b1e。全3containerは停止/PID0/除去を確認。これは正式CI・Cargo受付・製品検査成功ではない。
+
+元2730の有限virtual serviceの実検査は既存方式の根拠として読んだ。2737/2746のVM準備とJob Object fixtureだけでは公式CIが未達である点も確認した。原SDKはreadonlyでRust1.90のため、原commandで必要1.95を入れる新tmpfs homeと共有gate接続が必要。再起動を唯一の前提にしない。
+
+### 正式な独立工程と次の再開
+
+- ToDo2749: 今回だけのWindows有限service/専用account/公式runner helperを実装する。先行2710のtoken/Job Object方式を調べ、旧root/SID/profileは再利用しない。製品取得/正式登録/製品実行は親が統合後に行う。
+- ToDo2750: 今回planとSDK probeをClaude Sonnet5.5でread-only reviewする。原応答は未受領。Must解消前に製品workflowへ反映しない。
+- ToDo2751: Linux専用ephemeral runnerと有限host Cargo gate adapterを実装し、credential-free fixtureを確認する。親の原commands/source条件を渡した。旧bridgeの許可拡張や製品検査重複はしない。
+
+三件とも--specを付けて通常登録済み。2751は--needs cargo付き。直接子Codexを起動していない。登録時のjobs=[]を実行済みと呼ばない。親2736は三件の成果を受け、別モデル指摘を修正し、必要なhelper通常PR/CI/配備を確認してから製品同branchへの非force API commit、固定新head/tree、正式run/job/check/原logs、OSと必要全件、後片付けを確認する。製品PR148のmergeは元2640が行う。親2640完了を待つ逆依存は作らない。
+
+今回の継続用一時rootはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-f8847d61da9cfac712675b5cc26b4932、safe-delete ID同名。公開PowerShell SDKと自作binaryを置き、次の統合で再利用する。製品source/秘密は置いていない。
+原receipt/logの恒久保管rootはこのworktreeのcodex-owned-184a58eedf4f923741f160dfe7cfd5b7、safe-delete ID184a58eedf4f923741f160dfe7cfd5b7。原JSON/logを全SHA/bytes一致で保管し、manifest.private.jsonを残す。ここは原証拠として消さない。既存の保護判定で未確認となる証拠rootを開かず、新しい所有記録を作った。
+
+終了時は正規todo wait --on 2749 --on 2750 --on 2751で依存を記録する。元2640のnoteへ結果と残条件を追記配送し、元2640/880の未完を維持する。自分の最新HEADはscheduler checkpoint-workspaceで保存する。成果・待機・公式CIの成功を混同しない。
+
+2026-10-17。PR148の通常CIを追加費用なしで回復するための実行環境調査を行った。CIの再実行、workflow変更、GitHubへの書き込み、runner登録、Cargo実行はまだ行っていない。
+
+## 完了した確認
+
+- `D:/CC/AGENTS.md`、共有ToDo/日本語報告/safe-deleteのSkill、当該pc-tools worktreeの`AGENTS.md`を確認した。
+- 元2640の`docs/todo-2640-checkpoint.md`と`docs/todo-2640-official-ci-spec.md`を確認した。製品repo上にある規則はGitHub APIから取得した`documents/repository-rules.md`で、製品repoのAGENTS.md/CLAUDE.mdは元記録どおり対象headに存在しない。
+- GitHub APIで実所有者AutoDevJapan、repo ID 1392152644、private、non-fork、admin権限、PR148のopen/draft/mergeable、head SHA `75a4051305b6f47c70ddb59a8d2bf9015666f12c`、base SHA `1100676d1ed421794c252fb4b15ed3d954e21a5b`、同一head repo/base repo、実branch refを再照合した。開始時点で指定と一致。
+- 指定された既存証拠rootは`client_resource=true`のため開かず、作業前に与えられた原証拠の要約だけを利用する。
+- 専用runnerの基盤を確認した。`tools/product-ci`にはNode/CodeQL/secret/advanced用の限定runner経路があり、PR148の通常Rust/native/live-chain用実行モードはない。`tools/linux-runner-bridge`の常駐runnerは別repo専用で、今回のrunner用途へ拡張しない。
+- ホストのHyper-Vは有効だがWindows Sandbox機能は当初無効だった。既存CC-AdminBrokerで追加費用なしに機能を有効化し、DISMでState=Enabledを確認した。窓口の結果はexit=0、RestartNeeded=true。再起動はまだ実施していない。Docker DesktopはLinux amd64 engineのみ。
+
+## 未完了と再開手順
+
+必要な通常CI4件（Rust/Linux、Rust/Windows、native-driver/Windows、live-chain/Windows）の正式成功とrun/job/log証拠配送は未達。PR148のsourceやworkflowは変更していない。
+
+次は、PC上の並行作業を中断しない時機を確認してOSを再起動し、Sandboxの起動可能性を確認する。再起動後にSandbox実行環境が確保できた後、Goの独立した有限helperとPR148内の必要最小限workflow変更を設計し、別モデルレビュー、共有Cargo gateを用いた実検査、実runner/run/job/check/log証拠の確認、原2640への結果配送を続ける。成功statusの書き込みや既存resident bridgeの権限拡張は行わない。
+
+管理者スクリプト用の一時フォルダはsafe-delete plan→通常削除→finishでsource_absentを確認した。共有ToDo2736には60分後の技術再確認を`wait-retry`で記録済み。再起動やrunner登録はまだ行っていない。
+
+現worktreeは`cc-pc-tools-rs`の`scheduler/todo-2736-pr148-ci` branchで、製品repoのbranch/headではない。作業treeはこの記録以外clean。再開前にPR148と元2640の状態を再照合する。

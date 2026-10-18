@@ -1,5 +1,43 @@
 # Fixed candidate product CI
 
+`pr148-plan <new-owned-dir>` is a read-only plan for the fixed PR148 candidate.
+It independently rechecks its original head/tree/base and branch, three original
+workflow digests, and all four unstarted official jobs and budget annotations.
+The YAML parser rejects aliases, duplicate keys and multiple documents. In RAM
+it proposes changes only to `runs-on`, explicit PR-head checkout and disabled
+checkout credential persistence; parsed acceptance semantics are compared after
+removing those intended edits. All command bytes remain unchanged. The route is
+limited to this same-repository PR or its original branch's manual dispatch;
+main and unrelated PRs retain the original hosted labels and merge-result
+checkout. Only metadata/digests
+are saved, never product source. This command performs no mutation, source
+extraction, registration, Cargo or test execution. Its receipt explicitly keeps
+`proposal_only=true` and `all_required_checks_success=false`. The actual Linux
+and Windows runner paths, workflow mutation review and official execution are
+still required; this plan alone cannot restore CI.
+
+`pr148-policy <new-owned-dir>` reads the same original pinned Rust workflow in
+RAM, verifies its actual Cargo/Rustup execution policy and saves metadata only.
+An omitted job timeout retains GitHub's 360-minute default; an explicit bound is
+preserved. It does not materialize product source or start Cargo/runner work.
+
+`pr148-route <new-owned-dir>` applies only the generated three workflow blobs
+through GitHub's tree/commit/non-force ref APIs. The original source is its sole
+parent. Complete tree comparison precedes the ref update; its object identities
+and mutation intent are saved first, and the exact new source is verified after
+the update. An uncertain/refused update stops without retrying or reverting.
+The original source is never checked out on the host. This mode creates no run,
+runner or success status; its receipt keeps all-required-checks false.
+
+`pr148-linux <pin-json> <new-owned-dir> <Linux-helper> <official-pwsh-tar>`
+accepts that explicit new head/tree, reviewed workflow SHA256, full same-branch
+workflow_dispatch run/attempt and Linux job ID. It uses the isolated ephemeral
+runner and shared Cargo gate; start/complete hooks and independent host checks
+bind actual Git/source/auth and job identity. Original Cargo arguments, scenario
+commands, execution environments, timeouts and failure exits are retained.
+Registration, listener exit and fixtures never certify an official job. Its
+raw logs/bytes/SHA and real Actions job/check must be verified separately.
+
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four
 numeric repository IDs, PR numbers and source revisions are explicit. Before
@@ -292,3 +330,103 @@ This command exercises the eventual builder's input reader without starting a
 builder, product command, runner, or deployment. It never authorizes execution.
 The existing inventory's limits on Compose resolution, token permissions,
 transitive secrets and workflow trust semantics still apply.
+
+### Bounded release builder (ToDo2799)
+
+`release_build.go` and `release_build_exec.go` add the build component that the
+release orchestration will use later. They add no CLI, no `main.go` wiring, no
+candidate, ref, queue entry, runner label or workflow change, and they do not
+grant execution: the caller must separately hold the job/source/role/queue/budget
+admission and the exclusive phase reservation below.
+
+Input. `prepareAuditedReleaseBuild(sealedReleaseContext)` accepts only the
+sealed snapshot of the fixed merge: tree `007b8408...`, canonical input SHA-256
+`fa0096ec...`, and the audited Compose and Dockerfile pins (path SHA-256, Git
+blob, content SHA-256, Dockerfile size) plus the context directory path SHA-256.
+Missing, unknown or modified entries are rejected. The pinned Compose bytes are
+parsed again: exactly one service builds, its build mapping has only `context` and
+`dockerfile`, and both must resolve to the pinned paths. Only the context
+subtree is copied from the verified RAM bytes into a gzip tar (uid/gid 0, file
+bytes and executable bit kept). The `sealedReleaseBuildInput` has no exported
+field and prints as a fixed placeholder. On the fixed snapshot this yields 301
+files, 17 directories, 3,663,675 file bytes and a 849,233 byte gzip context.
+
+Execution. `executeAuditedReleaseBuild(ctx, input, ownedDir)` runs one Kaniko
+v1.28.6 container (the maintained upstream fork, pinned by digest) through the
+ordinary Docker daemon. The only argv variables are an opaque nonce and the
+validated Dockerfile name. Fixed options: `--context=tar://stdin`,
+`--no-push --no-push-cache --cache=false`, output to `/kaniko/output.tar`,
+`--cap-drop ALL`, `no-new-privileges`, `--init`, root uid 0 inside a
+disposable read-write layer, a pids limit, memory with swap equal to memory, and
+two small tmpfs mounts. There is no Docker socket, bind, device, privilege,
+`--force`, TLS bypass, host PID/IPC/network, published port, credential or host
+environment. The Docker client uses an empty config directory inside `ownedDir`.
+
+Because the product Dockerfile pulls a digest-pinned base image and runs apt and
+uv, the product profile uses Docker's ordinary outbound bridge network. The
+fixture profile (CC-authored Go probe only) uses `--network none`.
+
+Budget. The builder is fixed at 1.5 CPU, 6 GiB, 448 PIDs. With the idle runner
+(0.5 CPU, 1 GiB, 64 PIDs) and 1 GiB of host byte transfer the phase is 2 CPU,
+8 GiB, 512 PIDs. This component takes no exclusion and never raises a limit. A
+container labelled `cc.release-build` left over from an earlier run makes the
+phase busy (`phase-busy`) before anything is pulled or created. Whatever the saved
+flags say, a release (including by recovery) also requires that no builder of any
+nonce exists.
+Host RAM holds
+the gzip context, one verified copy for stdin, and one exactly sized artifact
+(256 MiB maximum; 32 MiB for the fixture), all inside the transfer budget. The
+artifact is a complete Docker-archive image (config digest, every listed layer once,
+compressed and uncompressed digests checked, each layer a well-formed tar, total
+expansion bounded, validation stopped by cancellation). The component never writes it
+to the host (only the opt-in fixture test saves its probe-only image into its owned
+directory for inspection); the
+raw builder log (32 MiB maximum) goes
+to a private file in `ownedDir` and only its size and SHA-256 are reported.
+
+Lifecycle. The nonce, container name, tool image digest and limits are written to
+`release-build-state.json` in the owned directory before the container is
+created. If the create result is lost, only the exact nonce is recovered and the
+recovered container is never started. The unconfirmed state is saved before the
+request is sent. Only the daemon's own error reply proves that a create did not
+happen; otherwise an empty search is not proof of absence, and no clock is used.
+Disposal (and any later recovery) takes the name with a second, inert create: it
+either succeeds, so a late arrival of the first request can no longer win the name,
+or conflicts because the first one exists and is found by its nonce. The container
+is never started and is removed. This cannot prove that a request stuck inside the
+daemon will never land; what it guarantees is that nothing but a container whose ID
+the daemon confirmed is ever started, so a late arrival is an inert "created"
+container with no CPU, memory or PIDs. It blocks the next phase (fail closed) until
+removed, and the next run's phase check removes exactly such leftovers (never
+started, exact name/label/image pattern, no bind mount) while anything that ever ran
+keeps the phase busy. After normal exit, failure, cancellation or
+timeout the Docker client has drained all I/O before the container is stopped.
+Disposal records stop and PID 0, removes the container with its anonymous volumes,
+confirms absence by listing, and removes a tool image that this run introduced.
+A run succeeds only if the build ran, exited 0 under verified isolation and produced a
+validated artifact; otherwise it is `build-incomplete`. Volume names are saved before
+the container is removed. The product entry accepts only the input made by
+`prepareAuditedReleaseBuild` for the fixed pins, and the fixture profile cannot be
+reached from a sealed input. Failures carry a fixed class only: never Docker stderr,
+argv, names or bytes.
+`releaseBuildReceipt.PhaseMayRelease` must be true before the caller releases
+its exclusion. Otherwise `RecoveryRequired` is set, the owned directory must be
+kept, and `recoverAuditedReleaseBuild(ctx, ownedDir)` removes exactly the
+resources named in the saved reservation.
+
+Verification. Unit tests cover wrong tree/archive/Compose/Dockerfile/context/
+bytes/modes, unexpected Compose shapes, overlimit logs and artifacts, secret-like
+build output, weaker isolation, cancellation, deadlines, uncertain creates and
+unconfirmed disposal, using an in-memory daemon. The opt-in test
+`TestReleaseBuilderRealFixture` (`CC_RELEASE_BUILD_FIXTURE_ROOT`, a fresh
+safe-delete owned directory) runs the real daemon with the CC-authored probe:
+normal (kernel CPU/memory/PID limits, CapEff 0 and NoNewPrivs read back from the
+built image), cancel and timeout after the probe printed a marker proving its child
+exists, a lost create response, a refused removal followed by recovery, and the
+product profile's isolation values (created and inspected, never started; recorded
+as an isolation check, not as a build).
+
+Not established here: whether the product Dockerfile builds with all capabilities
+dropped (base image extraction, apt, uv), its artifact size, and the product
+build time. Any needed change must be an audited change to the fixed profile;
+nothing is relaxed at run time. The fixture results are not a product build.

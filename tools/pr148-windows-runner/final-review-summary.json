@@ -1,0 +1,45 @@
+{
+  "code_head": "da2b45ea76efeb14f24211ed1a156ed051027515",
+  "all_cleanup_complete": false,
+  "official_ci_success_claimed": false,
+  "reviewer_checks": {
+    "go_passed": 12,
+    "vet_success": true,
+    "windows_build_success": true,
+    "opt_in_skipped": 2
+  },
+  "known_unrecovered_classes": 5,
+  "nonadmin_controller_execution_verified": false,
+  "cleanup_freshly_rechecked": false,
+  "core_review": {
+    "go_files_read": 18,
+    "code_head": "3ba895f",
+    "todo": 2763,
+    "primary_refs_read": 4,
+    "must": 0,
+    "prior_2746_evidence_read": true
+  },
+  "refused_cleanup_retried": false,
+  "official_runner_registered": false,
+  "fresh_service_runs_after_review": 0,
+  "known_unrecovered_profiles": 5,
+  "delta_review": {
+    "code_head": "da2b45ea76efeb14f24211ed1a156ed051027515",
+    "original_findings_regressed": false,
+    "go_files_read": 7,
+    "reply_bytes": 7440,
+    "all_files_read": 11,
+    "must": 0,
+    "all_diff_files_read": true,
+    "base": "faa535c",
+    "reply_sha256": "7B29A651C2388D7FA6876DF865BA650E91A023B4D60EBFEDA9B06AE4EA13348A",
+    "todo": 2764
+  },
+  "real_cargo_gate_run": false,
+  "known_unrecovered_hives": 5,
+  "cleanup_handoff_todo": 2381,
+  "product_source_fetched": false,
+  "schema": "pr148-windows-helper-final-source-review",
+  "go_source_changed_after_review": false,
+  "implementation_and_review_ready_for_delivery": true
+}

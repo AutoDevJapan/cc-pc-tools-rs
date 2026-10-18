@@ -1,0 +1,93 @@
+{
+  "schema": "pr148-finite-service-fixture-v1",
+  "observed_at": "2026-10-17T02:51:11.3789016+09:00",
+  "implementation_head": "6275c09",
+  "go_tests": 6,
+  "go_vet_success": true,
+  "windows_build_success": true,
+  "official_runner_registered": false,
+  "official_runner_executed": false,
+  "product_source_fetched": false,
+  "product_workflow_changed": false,
+  "product_ci_success_claimed": false,
+  "cargo_executed": false,
+  "normal": {
+    "binary_sha256": "D0836F2875E58334AA5C9BF312EA24A781A02D37A40FC1901B59EE1617651C6E",
+    "child_observed_alive": true,
+    "drain": {
+      "cancelled": false,
+      "job_drained": true,
+      "official_ci_claimed": false,
+      "retained_handles_signalled": true,
+      "retained_member_pids": [
+        44944,
+        29904,
+        10264
+      ],
+      "root_exit": 0,
+      "root_pid": 13852
+    },
+    "worker_pid": 13852,
+    "child_pid": 29904,
+    "legacy_source_claims_not_token_measurements": {
+      "profile_loading_requested": false,
+      "authenticated_users_disabled": true,
+      "virtual_account": true
+    },
+    "token_au_deny_only_measurement_available": false
+  },
+  "cancel": {
+    "child_pid": 46956,
+    "worker_pid": 42136,
+    "child_observed_alive": true,
+    "binary_sha256": "36C031E1D7C24CF7F642BB03E299A1FC40439E3D24B60E4C1939EBE67C9CA94F",
+    "observer_script_failed_after_stop_and_wait": "PowerShell 5 does not support utf8NoBOM; original service drain receipts preserved; fixture not repeated",
+    "drain": {
+      "cancelled": true,
+      "job_drained": true,
+      "official_ci_claimed": false,
+      "retained_handles_signalled": true,
+      "retained_member_pids": [
+        42136,
+        48040,
+        46956,
+        7220
+      ],
+      "root_exit": null,
+      "root_pid": 42136
+    },
+    "legacy_source_claims_not_token_measurements": {
+      "profile_loading_requested": false,
+      "authenticated_users_disabled": true,
+      "virtual_account": true
+    },
+    "token_au_deny_only_measurement_available": false,
+    "legacy_initial_root_exit_not_measured": 0
+  },
+  "final_token_group_check_runtime_tested": false,
+  "new_services_remaining": 0,
+  "new_queryable_account_processes": 0,
+  "additional_aces_remaining": 0,
+  "profiles_hives_classes_remaining": 3,
+  "delete_profile_attempts": 3,
+  "delete_profile_win32_errors": [
+    32,
+    32,
+    32
+  ],
+  "cleanup_refusals_retried": false,
+  "fixture_temp_roots_deleted": 3,
+  "safe_delete_finish_states": [
+    "source_absent",
+    "source_absent",
+    "source_absent"
+  ],
+  "raw_evidence_manifest_sha256": "3DB1CF6C59617E12F088101E64CA551D83F7D6B5371B38D80F3EE80FA54DC7E4",
+  "review_todo": 2755,
+  "review_received": false,
+  "cleanup_handoff_todo": 2381,
+  "all_work_complete": false,
+  "control_temp_root_deleted": true,
+  "control_temp_finish_state": "source_absent",
+  "review_2755_received": true
+}

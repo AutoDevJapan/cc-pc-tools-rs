@@ -99,41 +99,46 @@ type Request struct {
 	PriorVersions  []string        `json:"prior_versions,omitempty"`
 	PriorEdits     []EditVersion   `json:"prior_edits,omitempty"`
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
+	Conversation   string          `json:"conversation_request_id,omitempty"`
 }
 type State struct {
-	Domain         string                         `json:"domain"`
-	Since          string                         `json:"since"`
-	Destination    Destination                    `json:"destination"`
-	Cursor         string                         `json:"scan_cursor"`
-	IntakeCursor   string                         `json:"intake_cursor,omitempty"`
-	RetryCursor    uint64                         `json:"retry_cursor,omitempty"`
-	Threads        map[string]Thread              `json:"threads"`
-	Scans          map[string]*Scan               `json:"scans"`
-	Requests       map[string]*Request            `json:"requests"`
-	ProgressLinks  map[string]ProgressLink        `json:"progress_links,omitempty"`
-	Discovery      map[string]DiscoveryPage       `json:"discovery,omitempty"`
-	ResultCursor   string                         `json:"result_cursor,omitempty"`
-	ReceiptCursor  string                         `json:"receipt_cursor,omitempty"`
-	OriginCursor   string                         `json:"origin_cursor,omitempty"`
-	ProductReports map[uint64]*ProductReportState `json:"product_reports,omitempty"`
-	ProductCursor  uint64                         `json:"product_cursor,omitempty"`
-	ReportTurn     string                         `json:"report_turn,omitempty"`
+	Domain                   string                         `json:"domain"`
+	Since                    string                         `json:"since"`
+	Destination              Destination                    `json:"destination"`
+	Cursor                   string                         `json:"scan_cursor"`
+	IntakeCursor             string                         `json:"intake_cursor,omitempty"`
+	RetryCursor              uint64                         `json:"retry_cursor,omitempty"`
+	Threads                  map[string]Thread              `json:"threads"`
+	Scans                    map[string]*Scan               `json:"scans"`
+	Requests                 map[string]*Request            `json:"requests"`
+	ProgressLinks            map[string]ProgressLink        `json:"progress_links,omitempty"`
+	Discovery                map[string]DiscoveryPage       `json:"discovery,omitempty"`
+	ResultCursor             string                         `json:"result_cursor,omitempty"`
+	ReceiptCursor            string                         `json:"receipt_cursor,omitempty"`
+	OriginCursor             string                         `json:"origin_cursor,omitempty"`
+	ProductReports           map[uint64]*ProductReportState `json:"product_reports,omitempty"`
+	ProductCursor            uint64                         `json:"product_cursor,omitempty"`
+	ReportTurn               string                         `json:"report_turn,omitempty"`
+	ConversationNoticeTurn   bool                           `json:"conversation_notice_turn,omitempty"`
+	ConversationReportCursor string                         `json:"conversation_report_cursor,omitempty"`
+	ProgressLinkCursor       string                         `json:"progress_link_cursor,omitempty"`
 }
 type Health struct {
-	Mode           string                   `json:"mode"`
-	Started        string                   `json:"started_at"`
-	Finished       string                   `json:"finished_at"`
-	API            bool                     `json:"api_verified"`
-	Scanned        int                      `json:"threads_scanned"`
-	Captured       int                      `json:"owner_messages_captured"`
-	Registered     int                      `json:"todos_registered"`
-	Retried        int                      `json:"technical_waits_released"`
-	Pending        int                      `json:"pending_requests"`
-	Scheduler      bool                     `json:"scheduler_ok"`
-	Errors         []string                 `json:"errors"`
-	Discovery      map[string]DiscoveryPage `json:"discovery,omitempty"`
-	ProductReports int                      `json:"product_reports_verified"`
-	SteeringSaved  int                      `json:"steering_saved"`
+	Mode                string                   `json:"mode"`
+	Started             string                   `json:"started_at"`
+	Finished            string                   `json:"finished_at"`
+	API                 bool                     `json:"api_verified"`
+	Scanned             int                      `json:"threads_scanned"`
+	Captured            int                      `json:"owner_messages_captured"`
+	Registered          int                      `json:"todos_registered"`
+	Retried             int                      `json:"technical_waits_released"`
+	Pending             int                      `json:"pending_requests"`
+	Scheduler           bool                     `json:"scheduler_ok"`
+	Errors              []string                 `json:"errors"`
+	Discovery           map[string]DiscoveryPage `json:"discovery,omitempty"`
+	ProductReports      int                      `json:"product_reports_verified"`
+	SteeringSaved       int                      `json:"steering_saved"`
+	ConversationReplies int                      `json:"conversation_replies_processed,omitempty"`
 }
 type Runner struct {
 	Config                      Config
@@ -309,8 +314,20 @@ func (r *Runner) discover(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.loadProgressLinks(ctx, known)
+	// Fetch live discovery before potentially slow historical link validation.
+	// Only links verified in this pass can route an owner reply.
+	r.ProgressLinks = nil
 	r.discoverPages(ctx, known)
+	linkCtx, cancelLinks := context.WithTimeout(ctx, 4*time.Second)
+	r.loadProgressLinks(linkCtx, known)
+	cancelLinks()
+	// A verified explicit link remains a discovery candidate even when its
+	// sender receipt predates this intake's cutover or the prior pass crashed.
+	for thread := range r.ProgressLinks {
+		if !r.BlockedProgressThreads[thread] {
+			known[thread] = true
+		}
+	}
 	// Explicit new receipt IDs remain discoverable after a thread is archived.
 	ids := make([]string, 0, len(known))
 	for id := range known {
@@ -346,6 +363,10 @@ func (r *Runner) discover(ctx context.Context) error {
 	return r.save()
 }
 func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
+	conversation, conversationErr := r.conversationForThread(thread.ID)
+	if conversationErr != nil {
+		return 0, conversationErr
+	}
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 	scan := r.State.Scans[thread.ID]
 	if scan == nil {
@@ -430,7 +451,11 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 			phase = "reference_mismatch"
 		}
 		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
-		if link, ok := r.ProgressLinks[thread.ID]; ok {
+		if conversation != "" {
+			r.State.Requests[message.ID].Conversation = conversation
+			r.State.Requests[message.ID].Phase = "conversation_capture_pending"
+		}
+		if link, ok := r.ProgressLinks[thread.ID]; ok && conversation == "" {
 			r.State.Requests[message.ID].Origin = &ProgressOrigin{RequestID: link.RequestID, Guild: link.Guild, Thread: link.Thread, Message: link.Message, Todo: link.Todo, Job: link.Job}
 			r.State.Requests[message.ID].ProgressThread = link.Thread
 		}
@@ -471,6 +496,9 @@ func (r *Runner) existingTodo(key string) (uint64, error) {
 	return found, nil
 }
 func (r *Runner) register(ctx context.Context, request *Request) error {
+	if request.Conversation != "" {
+		return errors.New("conversation reply is delivered only to its original task")
+	}
 	if request.Todo != 0 {
 		return nil
 	}
@@ -589,6 +617,9 @@ func (r *Runner) tick(ctx context.Context) Health {
 func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
+	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, 12*time.Second)
+	r.processConversations(conversationCtx, &health)
+	cancelConversations()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
@@ -657,19 +688,7 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	if !health.Scheduler {
 		health.Errors = append(health.Errors, "scheduler_deferred")
 	}
-	productsChecked := false
-	if r.State.ReportTurn == "products" {
-		productsChecked = true
-		r.reportProducts(ctx, &health)
-	}
-	if !r.NoticeAttempted {
-		if err := r.results(ctx); err != nil {
-			health.Errors = append(health.Errors, "result_delivery_deferred")
-		}
-	}
-	if !r.NoticeAttempted && !productsChecked {
-		r.reportProducts(ctx, &health)
-	}
+	r.reportUpdates(ctx, &health)
 	for _, req := range r.State.Requests {
 		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" && req.Phase != "status_answered" && req.Phase != "product_reply_applied" {
 			health.Pending++
@@ -687,7 +706,7 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 func (r *Runner) admit(ctx context.Context, health *Health) {
 	mids := make([]string, 0, len(r.State.Requests))
 	for id, req := range r.State.Requests {
-		if req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
+		if req.Conversation == "" && req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
 			mids = append(mids, id)
 		}
 	}
@@ -786,6 +805,12 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--verify-conversation-media" {
+		os.Exit(conversationMediaCLI(os.Args[2:], os.Stdout))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "conversation" {
+		os.Exit(conversationCLI(os.Args[2:], os.Stdout))
+	}
 	configPath, operation, message, argumentErr := runnerArguments(os.Args[1:])
 	if argumentErr != nil {
 		fmt.Println("usage: unattended-runner [--config <path>] [--prepare-steering-delivery <message> | --verify-steering-delivery <message>]")
@@ -829,18 +854,10 @@ func main() {
 		fmt.Println("Discord credential unavailable")
 		os.Exit(1)
 	}
-	state := &State{Domain: "unattended-owner-v1", Since: cfg.Since, Destination: destination, Threads: map[string]Thread{}, Scans: map[string]*Scan{}, Requests: map[string]*Request{}, ProgressLinks: map[string]ProgressLink{}}
-	err = readJSON(filepath.Join(cfg.Home, "unattended-state.json"), maxState, state)
-	if err != nil && !os.IsNotExist(err) {
-		fmt.Println("independent state unavailable")
+	state, err := loadIndependentState(cfg, destination)
+	if err != nil {
+		fmt.Println("independent state unavailable or scope differs")
 		os.Exit(1)
-	}
-	if state.Domain != "unattended-owner-v1" || state.Since != cfg.Since || state.Destination != destination || state.Threads == nil || state.Scans == nil || state.Requests == nil {
-		fmt.Println("independent state scope differs")
-		os.Exit(1)
-	}
-	if state.ProgressLinks == nil {
-		state.ProgressLinks = make(map[string]ProgressLink)
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
@@ -867,4 +884,48 @@ func main() {
 	}
 	data, _ := json.Marshal(health)
 	fmt.Println(string(data))
+}
+
+func (r *Runner) reportUpdates(ctx context.Context, health *Health) {
+	productsChecked := false
+	conversationFirst := r.State.ConversationNoticeTurn
+	r.State.ConversationNoticeTurn = !conversationFirst
+	if conversationFirst {
+		r.reportConversations(ctx, health)
+	}
+	if r.State.ReportTurn == "products" {
+		productsChecked = true
+		r.reportProducts(ctx, health)
+	}
+	if !r.NoticeAttempted {
+		if err := r.results(ctx); err != nil {
+			health.Errors = append(health.Errors, "result_delivery_deferred")
+		}
+	}
+	if !r.NoticeAttempted && !productsChecked {
+		r.reportProducts(ctx, health)
+	}
+	if !r.NoticeAttempted && !conversationFirst {
+		r.reportConversations(ctx, health)
+	}
+}
+
+// One decoder serves the resident and operator entry points. Existing null,
+// missing identity fields and non-files must never inherit a fresh identity.
+func loadIndependentState(cfg Config, destination Destination) (*State, error) {
+	var state State
+	path := filepath.Join(cfg.Home, "unattended-state.json")
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) {
+		state = State{Domain: "unattended-owner-v1", Since: cfg.Since, Destination: destination, Threads: map[string]Thread{}, Scans: map[string]*Scan{}, Requests: map[string]*Request{}}
+	} else if err != nil || !info.Mode().IsRegular() || readJSON(path, maxState, &state) != nil {
+		return nil, errors.New("independent state unavailable")
+	}
+	if state.Domain != "unattended-owner-v1" || state.Since != cfg.Since || state.Destination != destination || state.Threads == nil || state.Scans == nil || state.Requests == nil {
+		return nil, errors.New("independent state scope differs")
+	}
+	if state.ProgressLinks == nil {
+		state.ProgressLinks = map[string]ProgressLink{}
+	}
+	return &state, nil
 }

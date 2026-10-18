@@ -39,9 +39,15 @@ dispatchのNotFound分岐だけに資格を追加する。既存のPC修復3proj
 その子自身のidとspecのfingerprintを返す場合だけ同じ比較を通る。Go guardは
 固定済みの現在製品IDを親として照合し、親の現資格、親の保存jobsにある
 origin_job_id、todo.exeが保存した直接subwork関係、子の新IDと保存spec、同じ
-登録project/root、親worktreeのrepository/common-dir/branchを検証する。
-子worktreeは親rootの標準`-wt`配下で子IDと一致する名前に限定し、存在する場合は
-同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認する。
+登録project/root、親worktreeのrepository/common-dir/top-level/branchを検証する。
+origin_job_idは親のjobs履歴に結び付きます。親は子を登録した後に依存待ちへ
+入るため、最新jobとの一致は要求しません。子worktreeは親rootの標準`-wt`
+配下で子IDとschedulerのtitleから作る正規名に限定します。schedulerのpathが
+未記録ならこの名前を照合し、記録済みなら記録された同じworktreeだけを許可します。
+親root本体や同IDの別名worktreeは拒否します。存在するworktreeは
+同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認します。
+子specの保存ファイル名にある乱数はファイル識別子で、本文hashではありません。
+本文hashは読み取った実バイトから作り、Rust側で同じspecバイトと照合します。
 失敗は`{"verified":false}`だけを返す。親の資格・停止・依存・通常の
 subwork審査や独立worktree条件はRust側でも維持する。
 

@@ -25,11 +25,13 @@ const currentTodoSpecsRoot = "D:/CC/Tools/todo/specs"
 var currentSubworkSpecName = regexp.MustCompile(`^([1-9][0-9]*)-([0-9a-f]{32})\.md$`)
 var currentSubworkJobName = regexp.MustCompile(`^([0-9]{8}-[0-9]{6}-todo-)([1-9][0-9]*)$`)
 var currentSubworkWorkspaceName = regexp.MustCompile(`^todo-([1-9][0-9]*)-[A-Za-z0-9_-]+$`)
+var currentSubworkTitleSeparators = regexp.MustCompile(`[^a-z0-9]+`)
 
 type currentProduct struct {
 	project, root, owner, repository, spec, specSHA string
 	repositoryID                                    int64
-	task                                            int
+	task, parentTask                                int
+	worktree                                        string
 }
 
 // Keep this a finite declaration. Adding a product requires a separately
@@ -189,6 +191,19 @@ func currentSubworkTaskInWorkspace(path, container string) (int, bool) {
 	return task, err == nil && task > 0
 }
 
+// currentSubworkWorkspacePath mirrors scheduler workspace naming so a child
+// without a recorded scheduler path can only claim its one planned workspace.
+func currentSubworkWorkspacePath(root string, task int, title string) string {
+	slug := strings.Trim(currentSubworkTitleSeparators.ReplaceAllString(strings.ToLower(title), "-"), "-")
+	if len(slug) > 32 {
+		slug = slug[:32]
+	}
+	if slug == "" {
+		slug = "work"
+	}
+	return filepath.Join(filepath.Clean(root+"-wt"), "todo-"+strconv.Itoa(task)+"-"+slug)
+}
+
 // currentSubworkScopePathAllowedWith admits a child worktree only when the
 // caller can prove that the child is a direct, currently qualified subwork of
 // one of the finite current product declarations.
@@ -202,9 +217,19 @@ func currentSubworkScopePathAllowedWith(path string, products []currentProduct, 
 		if !ok {
 			return false
 		}
-		qualifiedParent, ok := verify(task)
-		if !ok || qualifiedParent.task != parent.task || qualifiedParent.repository != parent.repository || !same(qualifiedParent.root, parent.root) {
+		qualifiedChild, ok := verify(task)
+		if !ok || qualifiedChild.task != task || qualifiedChild.parentTask != parent.task || qualifiedChild.repository != parent.repository || !same(qualifiedChild.root, parent.root) {
 			return false
+		}
+		if qualifiedChild.worktree != "" {
+			rel, err := filepath.Rel(container, filepath.Clean(path))
+			if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+				return false
+			}
+			workspace := filepath.Join(container, strings.Split(rel, string(os.PathSeparator))[0])
+			if !same(workspace, qualifiedChild.worktree) {
+				return false
+			}
 		}
 		return pathAllowed(path, parent.root, parent.repository, strconv.Itoa(task), protected)
 	}
@@ -212,7 +237,8 @@ func currentSubworkScopePathAllowedWith(path string, products []currentProduct, 
 }
 
 // currentSubworkSpecPath limits child work to the immutable spec copy created
-// by todo.exe for that exact new ID. It never trusts a caller-supplied manifest.
+// by todo.exe for that exact new ID. The filename's random suffix is an opaque
+// saved-file identity; the body hash is computed from the bytes below.
 func currentSubworkSpecPath(path string, task int, specsRoot string, protected func(string) bool, plain func(string, bool) bool) bool {
 	if task <= 0 || !filepath.IsAbs(path) || !same(filepath.Dir(filepath.Clean(path)), specsRoot) || protected(path) || !plain(path, false) {
 		return false
@@ -257,6 +283,9 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 	parentRow := itemAt(db, parent.task)
 	originJob := str(relation["origin_job_id"])
 	kind := str(relation["kind"])
+	// A parent can enter wait after registering children. Keep the original job
+	// provenance from its durable jobs list instead of requiring it to be the
+	// parent's latest scheduler job.
 	if parentRow == nil || (str(parentRow["status"]) != "doing" && str(parentRow["status"]) != "wait") || parentRow["subwork"] != nil ||
 		!hasJob(parentRow, originJob) || !currentSubworkJobName.MatchString(originJob) ||
 		(kind != "research" && kind != "check" && kind != "review") {
@@ -292,20 +321,35 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 		return failure, currentProduct{}, false
 	}
 	commonRoot, ok := common(parent.root)
-	if !ok || commonRoot == "" || !same(str(owner["git_common"]), commonRoot) {
+	ownerCommon, ownerCommonOK := common(ownerWorktree)
+	topLevel, topLevelOK := currentGit(ownerWorktree, "rev-parse", "--show-toplevel")
+	if !ok || !ownerCommonOK || !topLevelOK || commonRoot == "" || !same(str(owner["git_common"]), commonRoot) || !same(ownerCommon, commonRoot) || !same(topLevel, ownerWorktree) {
 		return failure, currentProduct{}, false
 	}
 	branch, ok := currentGit(ownerWorktree, "branch", "--show-current")
 	if !ok || branch == "" || branch != str(owner["branch"]) {
 		return failure, currentProduct{}, false
 	}
-	if childWorktree := str(obj(child["scheduler"])["worktree"]); childWorktree != "" &&
-		!pathAllowed(childWorktree, parent.root, parent.repository, strconv.Itoa(task), protected) {
-		return failure, currentProduct{}, false
+	childWorktree := str(obj(child["scheduler"])["worktree"])
+	expectedChildWorktree := currentSubworkWorkspacePath(parent.root, task, str(child["title"]))
+	if childWorktree != "" {
+		container := filepath.Clean(parent.root + "-wt")
+		workspaceTask, ok := currentSubworkTaskInWorkspace(childWorktree, container)
+		if !ok || workspaceTask != task || !same(childWorktree, expectedChildWorktree) {
+			return failure, currentProduct{}, false
+		}
+		rel, err := filepath.Rel(container, filepath.Clean(childWorktree))
+		if err != nil || strings.Contains(rel, string(os.PathSeparator)) || !pathAllowed(childWorktree, parent.root, parent.repository, strconv.Itoa(task), protected) {
+			return failure, currentProduct{}, false
+		}
+	} else {
+		childWorktree = expectedChildWorktree
 	}
 	childProduct := parent
 	childProduct.project = childProject
 	childProduct.task = task
+	childProduct.parentTask = parent.task
+	childProduct.worktree = childWorktree
 	childProduct.spec = spec
 	childProduct.specSHA = hashBytes(body)
 	// The parent receipt already verified the exact owner/repository ID. The
@@ -317,7 +361,7 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 	if receipt["verified"] != true {
 		return failure, currentProduct{}, false
 	}
-	return receipt, parent, true
+	return receipt, childProduct, true
 }
 
 func currentSubworkReceipt(db object, task int) (object, currentProduct, bool) {
@@ -330,13 +374,26 @@ func currentGitCommonDir(root string) (string, bool) {
 }
 
 func currentSubworkScopePathAllowed(path string) bool {
+	matched := false
+	for _, parent := range currentProducts {
+		container := filepath.Clean(parent.root + "-wt")
+		if within(container, path) {
+			if _, ok := currentSubworkTaskInWorkspace(path, container); ok {
+				matched = true
+				break
+			}
+		}
+	}
+	if !matched {
+		return false
+	}
 	db, err := readObject(productStore, 64<<20)
 	if err != nil {
 		return false
 	}
 	return currentSubworkScopePathAllowedWith(path, currentProducts, func(task int) (currentProduct, bool) {
-		_, parent, ok := currentSubworkReceipt(db, task)
-		return parent, ok
+		_, child, ok := currentSubworkReceipt(db, task)
+		return child, ok
 	}, legacyMatch, currentProductPath)
 }
 

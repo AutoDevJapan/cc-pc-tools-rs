@@ -1,5 +1,26 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03:34・PR224の通常mergeを確認（最新）
+
+前節のPR224 CI未完記述を更新する。同head92226c3の正式7jobは全success、CodeQL集約も
+新規alert無しのsuccess。push専用package-toolsのskipを別扱いで確認。
+review2853/2856の原応答と親source照合、残Suggestionの扱いをコメント6253586827へ1回投稿。
+通常ready→head固定の通常mergeでmerged=trueを確認した。merge commitは
+6d267ff0acb6ef16f9899da53ebac9e4ee62cff0、2026-10-19 03:33:44 JST。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/224#issuecomment-6253586827
+branch削除/force更新/製品mergeなし。ローカルの文書2commitは現branchに保持する。
+
+main新runはBuild speed39154719001、Product CI helper39154719088、CodeQL PC39154719101。
+03:34確認時は全queued、main成功とは主張しない。旧main219の403も原因未確定のまま。
+配布には最新mainの並行変更・実source/hash・正規分類の照合が必要で、未配布。
+
+原Wの未分類のため新collectorは未起動、回収/ACL mutation0、旧run未cancel。
+元2825へ技術照合を配送し、todo wait2736 --on2825を正規保存済み（循環なしをRAM照合）。
+待機保存直後にPR CIが完了したため、独立して許可されたhelper mergeだけを最後に進めた。
+marker【2736-pr224-merged-032547】を2736/2640/2825へCAS追記・readback確認済み。
+レビュー2856の再待機は不要。次は2825の技術結果、新main3run、未配布を確認して元工程へ戻る。
+製品PR148の正式4job成功は依然未達。本人への質問/PC操作依頼なし。
+
 ## 2026-10-19 03:33・追加レビュー受領と回収対象の未分類（以下を優先）
 
 実job20261019-032547-todo-2736、同branch/同worktreeの73c872cから再開。

@@ -46,7 +46,7 @@ func NewIdentity(instance string, serverIP net.IP, usage x509.ExtKeyUsage) (Iden
 	tmpl := &x509.Certificate{
 		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: "windows-ci-sdk-2737/" + instance},
-		NotBefore:    now.Add(-time.Minute), NotAfter: now.Add(20 * time.Minute),
+		NotBefore:    now.Add(-time.Minute), NotAfter: now.Add(8 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{usage},
 		BasicConstraintsValid: true,

@@ -84,6 +84,9 @@ func serviceMain(_ uintptr, _ uintptr) uintptr {
 		return 1
 	} // START_PENDING
 	err := serveGuestAgent()
+	if err != nil {
+		appendPrivateRunLog("guest-service", []byte(err.Error()), err)
+	}
 	code := uint32(0)
 	if err != nil {
 		code = 1
@@ -110,6 +113,9 @@ func reportServiceState(state, exitCode, waitHint uint32) bool {
 }
 
 func serveGuestAgent() error {
+	if !reportServiceState(4, 0, 0) {
+		return errors.New("service running state update failed")
+	}
 	if err := initializeGuestRoot(guestSDKRoot); err != nil {
 		return errors.New("guest SDK root preparation failed")
 	}
@@ -122,6 +128,10 @@ func serveGuestAgent() error {
 	}
 	defer removeGuestFirewallRule()
 	ip, err := firstPrivateIPv4()
+	for deadline := time.Now().Add(2 * time.Minute); err != nil && time.Now().Before(deadline); {
+		time.Sleep(time.Second)
+		ip, err = firstPrivateIPv4()
+	}
 	if err != nil {
 		return err
 	}

@@ -570,14 +570,27 @@ func RunSDKPreparationCLI(ctx context.Context, worktree string) (TaskEvidence, e
 	if err := verifyTaskWorktree(base); err != nil {
 		return TaskEvidence{}, err
 	}
-	root, reusable, err := findPreparedOwnedRoot(base)
+	preparedRoot, reusable, err := findPreparedOwnedRoot(base)
 	if err != nil {
 		return TaskEvidence{}, err
 	}
-	if !reusable {
-		root, err = CreateOwnedRoot(ctx, base)
+	root, err := CreateOwnedRoot(ctx, base)
+	if err != nil {
+		return TaskEvidence{}, err
+	}
+	if reusable {
+		for _, name := range []string{"windows-server-2025-eval.iso", "windows-server-2025-eval.measure.private.txt", "windows-server-2025-eval-validation.private.json"} {
+			if err := copyOwnedFile(filepath.Join(preparedRoot.Path, name), filepath.Join(root.Path, name)); err != nil {
+				return TaskEvidence{}, err
+			}
+		}
+		measurement, err := hashAndSize(filepath.Join(root.Path, "windows-server-2025-eval.iso"))
 		if err != nil {
 			return TaskEvidence{}, err
+		}
+		_, _, expected, _, err := loadPreparedEvaluationISO(preparedRoot, base)
+		if err != nil || !strings.HasSuffix(strings.ToLower(measurement), expected) {
+			return TaskEvidence{}, errors.New("copied public ISO integrity mismatch")
 		}
 	}
 	module := filepath.Join(base, "tools", "windows-ci-sdk-2737")

@@ -14,7 +14,7 @@ public static class SDK2737ImageStreamWriter {
     IntPtr stream = IntPtr.Zero;
     IntPtr readCount = Marshal.AllocHGlobal(4);
     try {
-      Marshal.ThrowExceptionForHR(Marshal.QueryInterface(unknown, in iid, out stream));
+      Marshal.ThrowExceptionForHR(Marshal.QueryInterface(unknown, ref iid, out stream));
       IntPtr vtable = Marshal.ReadIntPtr(stream);
       IntPtr readAddress = Marshal.ReadIntPtr(vtable, 3 * IntPtr.Size);
       var read = (ReadDelegate)Marshal.GetDelegateForFunctionPointer(readAddress, typeof(ReadDelegate));

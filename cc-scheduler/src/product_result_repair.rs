@@ -30,18 +30,79 @@ fn inactive(job: &Value, ps: &Processes) -> bool {
             return false;
         };
         if let Some(process) = ps.get(&pid) {
-            let (Some(birth), Some(expected)) = (
-                process["created"].as_u64(),
-                job[format!("{field}_created")].as_u64(),
-            ) else {
+            let Some(expected) = job[format!("{field}_created")].as_u64() else {
                 return false;
             };
-            if birth == expected {
-                return false;
+            if let Some(birth) = process["created"].as_u64() {
+                if birth == expected {
+                    return false;
+                }
+            } else {
+                let (Some(lower), Some(upper)) = (
+                    process["creation_lower"].as_u64(),
+                    process["creation_upper"].as_u64(),
+                ) else {
+                    return false;
+                };
+                if lower == 0
+                    || lower > upper
+                    || upper - lower > crate::backend::BIRTH_FALLBACK_MAX_SPAN
+                    || (lower..=upper).contains(&expected)
+                {
+                    return false;
+                }
             }
         }
     }
     true
+}
+
+fn supplement_births<B: Backend>(
+    backend: &mut B,
+    row: &Value,
+    jobs: &[Value],
+    ps: &Processes,
+) -> Result<Processes> {
+    let mut wanted = std::collections::BTreeSet::new();
+    for job in jobs
+        .iter()
+        .filter(|j| !live(j) && cc_job_policy::priority::linked(row, j))
+    {
+        for field in ["pid", "codex_pid"] {
+            if let Some(pid) = job[field]
+                .as_u64()
+                .and_then(|p| u32::try_from(p).ok())
+                .filter(|p| *p > 0)
+            {
+                if job[format!("{field}_created")].as_u64().is_some()
+                    && ps
+                        .get(&pid)
+                        .is_some_and(|p| p["created"].as_u64().is_none())
+                {
+                    wanted.insert(pid);
+                }
+            }
+        }
+    }
+    let mut enriched = ps.clone();
+    if !wanted.is_empty() {
+        for (pid, (lower, upper)) in
+            backend.birth_bounds(&wanted.iter().copied().collect::<Vec<_>>())?
+        {
+            if !wanted.contains(&pid)
+                || lower == 0
+                || lower > upper
+                || upper - lower > crate::backend::BIRTH_FALLBACK_MAX_SPAN
+            {
+                return Err(Error("BirthMetadataInvalid"));
+            }
+            if let Some(process) = enriched.get_mut(&pid) {
+                process["creation_lower"] = json!(lower);
+                process["creation_upper"] = json!(upper);
+            }
+        }
+    }
+    Ok(enriched)
 }
 
 fn original_wait(row: &Value, at: u64) -> Option<Value> {
@@ -114,6 +175,19 @@ fn same_owner_elsewhere(row: &Value, current: &Value, jobs: &[Value], ps: &Proce
     })
 }
 
+fn same_job_record(observed: &Value, stored: &Value) -> bool {
+    // sample() adds subwork_live from the current process snapshot. It is an
+    // observation, not a field in job.json or authority to change its owner.
+    let mut observed = observed.clone();
+    let mut stored = stored.clone();
+    for record in [&mut observed, &mut stored] {
+        if let Some(object) = record.as_object_mut() {
+            object.remove("subwork_live");
+        }
+    }
+    observed == stored
+}
+
 impl<B: Backend> Scheduler<B> {
     pub(super) fn reconcile_product_results(
         &mut self,
@@ -134,11 +208,11 @@ impl<B: Backend> Scheduler<B> {
         let Some(job) = selected.next().cloned() else {
             return Ok(());
         };
-        if selected.next().is_some()
-            || !qualified(&before, &job, at as u64)
-            || !inactive(&job, ps)
-            || same_owner_elsewhere(&row, &job, jobs, ps)
-        {
+        if selected.next().is_some() || !qualified(&before, &job, at as u64) {
+            return Ok(());
+        }
+        let ps = supplement_births(&mut self.backend, &row, jobs, ps)?;
+        if !inactive(&job, &ps) || same_owner_elsewhere(&row, &job, jobs, &ps) {
             return Ok(());
         }
         let Some(id) = job["id"].as_str().filter(|id| {
@@ -165,13 +239,16 @@ impl<B: Backend> Scheduler<B> {
         };
         // The ordinary queue and owner cancellation use this same job -> ToDo order.
         let fresh_job = read_json(&folder.join("job.json"), Value::Null)?;
-        if fresh_job != job {
+        if !same_job_record(&job, &fresh_job) {
             return Ok(());
         }
         let fresh_jobs = self.backend.jobs()?;
         let fresh_ps = self.backend.snapshot()?;
+        let fresh_ps = supplement_births(&mut self.backend, &row, &fresh_jobs, &fresh_ps)?;
         if fresh_jobs.iter().filter(|j| j["id"] == job["id"]).count() != 1
-            || !fresh_jobs.contains(&job)
+            || !fresh_jobs
+                .iter()
+                .any(|fresh| fresh["id"] == job["id"] && same_job_record(&job, fresh))
             || !inactive(&job, &fresh_ps)
             || same_owner_elsewhere(&row, &job, &fresh_jobs, &fresh_ps)
         {

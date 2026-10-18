@@ -586,3 +586,19 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 実検査/公開Node probe/受領review/SDK/固定製品identity/clean buildの証拠hashは同resume-041741-node/saved-evidence-hashes.jsonに保存した。
   root bccは同版実行物が次回に必要なため保持。工具containerは停止/PID0、原失敗VHD/SDK/他担当/保護/manifestは不変。
   未完依存は追加レビュー2866だけなので正規waitを保存する。完了済み2860/2861を再待機せず、実HEADと現jobでscheduler checkpointを保存する。
+## 2026-10-19 job043145: 同公式runのattempt2を開始
+
+- 2866のjob20261019-042840/同thread01a1507d-5359-7fa1-a3c2-9f37c66c31caのturn_context.model実gpt-6-lunaを確認。
+  原応答SHA256BD850F2C37B5F0D6E4CEA9A00144F12FAD5295A321DBD724707EB1C291F13909、fixed base ddbe3d8→head58a9579/tree2d7ce4c、追加3file/局所guest callerでMust0/Suggestion0/Nit0、検査0を受領。未読の原製品/旧backendを合格にしない。
+- safe-delete owned root c91bd2e3a7b26bc5473ecacd32c565ebを作成。実repo/id/private/admin/nonfork/同repo/openPR3613/原ref/head085/tree25ae0/workflowba2bccを新jobでも取得前後照合。原AGENTS/CLAUDEの既読同hashをRAM再取得し、host原checkoutなし。
+  元正常CI intentの不在、原run39147155349 attempt1 completed/cancelled、自分のroute変数不在を実確認した。
+- 原route root25ddeの回収記録と同lease0b2414b10418d265c7823a4f87bb5881を維持し、durable reenable intentを保存してからcanonical gh_gateで同変数をPOST Create-onlyした。
+  既存変数のPATCH/上書きなし。bounded変数inventoryでabsence→own exact valueを照合、原sourceも再照合。旧b194前提のroute-applyを再実行せず、原branch/ref/sourceを変更していない。
+- 原run39147155349のrerun intentを保存し、同runへの通常rerun POSTを1回送った。最初のGETはまだattempt1/queuedだったが、再送せず後続GETで実attempt2/newHEAD085を確認した。
+  実verify job117769414885がqueued、専用label cc-product-2737-1154066087-linux-verify-39147155349だけを確認。新workflow_dispatch/架空job/手書きmanifestは作っていない。
+- レビュー済みclean58a9579のhost6a3d6573.../Linux helperf2e7b937...とcanonical gate8baa838b...の実file hashを再照合し、同run/attempt2/verify/原3hash/空Inputsでlinux-jobを開始した。
+  canonical sharedCargo gate内の新instance d22bf95d9e73c0cae77216dfacfcc455、実Hyper-V VM ID cf1d9282-51fb-401c-8fac-71085d5721f4をcreation receiptへ保存。
+  この記載時点はVM準備中で、start hook/原検査成功/回収をまだ確認していない。受付・作成だけを公式成功と扱わない。
+- seed.iso完成後のvm-create scriptを確認し、同自分の工具containerのID/name/image/label/bind/device/privilegedを照合して直ちにstop。Running=false/PID0を確認し、必要SDK layerは保持。
+  実行中のVM/公式jobはhostが単一所有し、終了/取消時の通常回収receiptを待つ。原SDK/失敗VHD/他担当/guard/ownerwork/登録manifestは変更しない。
+  再開にはownedroot c91のoperations.ps1とsource/route/rerun/VM各receipt、runtime bcc、SDK root9389、同run39147155349 attempt2を使う。POST再送や新runの複製はしない。

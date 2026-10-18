@@ -33,17 +33,40 @@ Fixed implementation candidate, already committed/pushed and remote matched:
   unchanged dependency tests remain valid; no unnecessary full/Cargo run.
 
 Review ToDo2830 was registered through ordinary shared-ToDo --spec with
-gpt-6-luna/high, subwork-of2828. It is still queued; no actual review response or
-actual-model identity has been received. It must review the UPDATED fixed
-bec99388 head/tree, not old8858544. Both immutable saved specs were read back:
+gpt-6-luna/high, subwork-of2828. On resume job20261019-005520-todo-2828, its three
+original responses were received. Initial002939 was unread/preparation failure,
+004034 and004939 read all23 fixed bec99388 files using read-only GitHub API and
+returned Must0/Suggestion2/Nit0, tests0. Original text lacked the implementer
+model; job.json AND exact-thread rollout turn_context.model prove distinct actual
+models: implementation gpt-6.1-sol / review gpt-6-luna. Models were not inferred
+from requested names or the generic "GPT-6" response. See reviews/receipt.json
+and TODO-2828-REVIEW-RECEIPT.md. All3 local SHA256s and committed Git blob bytes
+were independently matched. Response files remain byte-identical, including
+intentional Markdown hard-break spaces, through scoped .gitattributes.
+Both immutable original saved specs were read back:
 2830-50e520eda5e9401fbc74831fcb6ac133.md is the updated spec; the older saved
 spec2830-3c0e66055e0245a9ba0bd6290fd7e539.md remains an original receipt.
 The tracked TODO-2828-REVIEW-SPEC.md preserves the updated request.
 
-Next on automatic resume after review2830: verify actual model/base/head/tree,
-all reviewed files and any unread scope; receive original response with hash;
-fix Must and run affected regressions, using the same review ToDo for finite
-follow-up where possible. Then deliver final code pin/HANDOFF to parent2737.
+Both suggestions were implemented at code HEAD
+b60e85e7f66abb3329264bfc74895a3d3c2be10f,
+tree e192d0a34d9c546e146575681d3d9365c6185ee0:
+1. Diagnostic enumeration bounds all entries2048/depth16 with ReadDir64 batches
+   and cancellation, including empty directories. Original1024file/64MiB held.
+2. Failed events must match post-listen stage/numeric RunnerID. Timeout/process
+   needs confirmed drain/exit/hash; drain-unconfirmed is false and not timeout.
+   Invalid failure is rejected BEFORE Observe. Positive results are unchanged.
+Additional regressions passed2.618s; module race passed4.280s and vet passed.
+Unchanged SDK/sourcepacket/normalci results were retained, not rerun.
+
+Finite follow-up review ToDo2833 (gpt-6-luna/high, --spec, subwork-of2828) covers
+only6 new source/test/doc files from base93c0c42 to fixedb60e85e/treee192d0a.
+The saved2833 spec was read back. It is queued at handoff; no response received.
+This is a new delta, not a duplicate of2830. Reviewer must not wait for parents.
+
+Next on automatic resume after review2833: check its actual model/fixed version/
+six read files, receive original response/hash, fix any real Must and run affected
+regressions. Then provide final code pin/HANDOFF to parent2737 and finish2828.
 Do not create an independent PR/merge or wait for parent2737 completion. The
 parent still owns route/normalci run-label integration and all real acceptance.
 Checkpoint request/receipt is TODO-2828-scheduler.private.json (ignored; same
@@ -53,3 +76,9 @@ Owned temporary root: 7f54ee797d015b59599f1686c8ccf8f8 under user's Temp,
 created by safe-delete for synthetic Go tests. After all owned test processes
 ended, plan returned247bytes/1entry (checkpoint request). Separate normal delete
 and finish succeeded with state source_absent. No other temporary data is owned.
+
+Current resume's temporary root:6da4e1425cb1912e591ad6e383648595 under user's
+Temp, created with safe-delete for suggestion regression tests. Tests/vet have
+ended; plan returned0bytes/0entries. Separate normal delete then finish succeeded
+with source_absent. This worktree and committed evidence are retained. No other
+worker or SDK data was cleaned.

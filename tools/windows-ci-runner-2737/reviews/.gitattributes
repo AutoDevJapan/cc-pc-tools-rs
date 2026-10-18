@@ -1,2 +1,3 @@
 # Retain the received response bytes and their recorded SHA256 exactly.
-20261019-*.md -text
+# Two trailing spaces in the original Markdown are intentional hard breaks.
+20261019-*.md -text whitespace=-blank-at-eol

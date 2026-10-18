@@ -722,6 +722,22 @@ mod tests {
         assert_eq!(args.source.as_deref(), Some("scheduler"));
         assert_eq!(args.scheduler_item, Some(12));
         assert_eq!(args.scheduler_job.as_deref(), Some("job1"));
+
+        let cli = Cli::try_parse_from([
+            "discord_ask",
+            "ask",
+            "--title",
+            "アクセス判断",
+            "--body-file",
+            "q.md",
+            "--owner-only",
+            "access",
+        ])
+        .unwrap();
+        let Commands::Ask(args) = cli.command else {
+            panic!("wrong command")
+        };
+        assert_eq!(args.owner_only, Some(cc_ask::ask_gate::OwnerOnly::Access));
     }
 
     #[test]

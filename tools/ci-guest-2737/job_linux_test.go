@@ -1,14 +1,38 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
+
+// Opt-in acceptance in our source-free SDK container, using the same extracted
+// SDK location and user as the live guest. No runner registration or Cargo.
+func TestLiveRunnerSDKNodePath(t *testing.T) {
+	if os.Getenv("CC2737_LIVE_NODE_PROBE") != "1" {
+		t.Skip("public SDK at live guest path not supplied")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c := exec.CommandContext(ctx, "/bin/sh", "-c", "command -v node; node --version; command -v npm; npm --version")
+	c.Env = []string{"HOME=/tmp", "LANG=C.UTF-8", "PATH=" + liveRunnerPath}
+	c.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 1001, Gid: 1001}}
+	b, e := c.CombinedOutput()
+	lines := strings.Fields(string(b))
+	if e != nil || len(lines) != 4 || lines[0] != "/opt/ci2737-runner/externals/node24/bin/node" || !strings.HasPrefix(lines[1], "v24.") || lines[2] != "/opt/ci2737-runner/externals/node24/bin/npm" {
+		t.Fatal("live child selected an unexpected SDK node/npm", e, string(b))
+	}
+	t.Logf("public SDK child: node=%s npm=%s", lines[1], lines[3])
+}
 
 // Advance only the wrapper's clock: a regression must not wait for the real
 // admission timeout, or depend on how fast the runner finishes its job.
@@ -16,13 +40,43 @@ type deadlineClockConn struct {
 	net.Conn
 	mu                 sync.Mutex
 	now, writeDeadline time.Time
+	setErr, clearErr   error
 }
 
 func (c *deadlineClockConn) SetWriteDeadline(d time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if d.IsZero() && c.clearErr != nil {
+		return c.clearErr
+	}
+	if !d.IsZero() && c.setErr != nil {
+		return c.setErr
+	}
 	c.writeDeadline = d
 	return nil
+}
+
+func TestLiveEventRejectsDeadlineSetupAndCleanupErrors(t *testing.T) {
+	for _, setting := range []bool{true, false} {
+		c := &deadlineClockConn{}
+		want := errors.New("injected deadline failure")
+		if setting {
+			c.setErr = want
+		} else {
+			c.clearErr = want
+		}
+		var sent bytes.Buffer
+		err := writeLiveEvent(c, json.NewEncoder(&sent), liveJobEvent{ID: "fixed", Stage: "failed"})
+		if !errors.Is(err, want) {
+			t.Fatal("deadline failure reported as success", err)
+		}
+		if setting && sent.Len() != 0 {
+			t.Fatal("event sent without a bounded deadline")
+		}
+		if !setting && sent.Len() == 0 {
+			t.Fatal("cleanup failure fixture never sent an event")
+		}
+	}
 }
 
 func (c *deadlineClockConn) Write(b []byte) (int, error) {

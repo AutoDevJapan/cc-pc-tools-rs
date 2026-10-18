@@ -45,6 +45,10 @@ type liveWire struct {
 	ctx  context.Context
 }
 
+// The action may spawn node through PATH even when its entry point uses the
+// runner's node24. Keep that bootstrap on the same already extracted SDK.
+const liveRunnerPath = "/opt/ci2737-runner/externals/node24/bin:/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+
 // Each event owns its write timeout. In particular, an admission timeout must
 // not remain on the stream while the runner executes the admitted job.
 func writeLiveEvent(conn net.Conn, out *json.Encoder, event liveJobEvent) (err error) {
@@ -251,7 +255,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		}
 		return nil
 	}
-	cmd.Env = []string{"HOME=/home/ci2737", "LANG=C.UTF-8", "PATH=/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/home/ci2737/.cargo", "RUSTUP_HOME=/home/ci2737/.rustup", "CARGO_TARGET_DIR=/home/ci2737/ci-target", "CARGO_BUILD_JOBS=" + strconv.Itoa(plan.Jobs), "RUST_TEST_THREADS=" + strconv.Itoa(plan.Threads), "NEXTEST_TEST_THREADS=" + strconv.Itoa(plan.Threads), "RUSTC_WRAPPER=/usr/local/bin/sccache", "SCCACHE_DIR=/home/ci2737/.cache/sccache", "SCCACHE_CACHE_SIZE=30G", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/ci2737-control/start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/opt/ci2737-control/complete.sh", "CUDA_VISIBLE_DEVICES="}
+	cmd.Env = []string{"HOME=/home/ci2737", "LANG=C.UTF-8", "PATH=" + liveRunnerPath, "CARGO_HOME=/home/ci2737/.cargo", "RUSTUP_HOME=/home/ci2737/.rustup", "CARGO_TARGET_DIR=/home/ci2737/ci-target", "CARGO_BUILD_JOBS=" + strconv.Itoa(plan.Jobs), "RUST_TEST_THREADS=" + strconv.Itoa(plan.Threads), "NEXTEST_TEST_THREADS=" + strconv.Itoa(plan.Threads), "RUSTC_WRAPPER=/usr/local/bin/sccache", "SCCACHE_DIR=/home/ci2737/.cache/sccache", "SCCACHE_CACHE_SIZE=30G", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/ci2737-control/start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/opt/ci2737-control/complete.sh", "CUDA_VISIBLE_DEVICES="}
 	var log sdkBuffer
 	log.Limit = 16 << 20
 	cmd.Stdout = &log

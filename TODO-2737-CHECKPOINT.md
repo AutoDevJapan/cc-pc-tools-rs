@@ -555,3 +555,23 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 終了前の実GitHub照合でも原repo1154066087/owner/private/nonfork/同repo/openPR3613/head085/ref一致。原sourceを黙って取り替えていない。
   次の実行物はレビュー済みの最終codeから生成する。現在の旧4c60959実行物に新期限修正が入っているとは扱わない。
   残る依存は2860と2861だけなので両方へ正規waitを記録し、実HEAD/currentjobのscheduler checkpointを保存する。
+## 2026-10-19 job041741: 別モデル受領と実SDKのNode選択修正
+
+- 2861の最終job20261019-041137/同thread01a1505c-f6c8-70d1-b73f-d12acfd9d6f4のturn_context.modelは実gpt-6-luna。
+  原応答SHA25623502880FD8DC41C03C52F59A67EF39BB1038DF01B8A2216C0F53B605088EC99。固定base8f6e80a→head56541a6/tree57dbaf0の追加4fileと局所callerでMust0/Suggestion1/Nit0、検査0。
+  Suggestionのdeadline設定/解除失敗注入を採用し、設定失敗なら送信0、解除失敗なら実送信後も失敗を返す対照を追加した。旧reviewを新差分へ流用しない。
+- 2860のjob20261019-034852の原応答SHA25631E19D7364BE3638D29636E774DE9F1CAE36F3A15FA4C2A586E607A50BE60F12を受領。
+  公開調査commit4b0d1148cfc74ccce65e829bbe05337bbb633b60のdocs/investigations/todo-2860/RESULT.mdを固定版から確認した。
+  同public action ea17c68dで、Node18.19.1/18.20.4は@pnpm/exe bootstrapのimport.meta.dirname未対応によりpaths[0] undefinedを再現、Node20/24は成功。npm9固定対照も成功で、npm更新だけが必要という結論ではない。
+  action本体をNode24で起動しても、installerがPATHからNode18を選ぶ経路がある。原ログは固定hashのまま公開package名@pnpm/exeと同エラー分類を確認したがversion11.25.0の文字はなく、原製品で同根因が確定したとは扱わない。
+- 本番guestの既存SDK展開先/opt/ci2737-runnerを確認し、子環境PATHの先頭を同SDKのexternals/node24/binへ変更した。
+  原workflow/action/packageManager/検査工程は変更しない。既存Rust path/target/gate/jobs/threads/sccache/hook/GPU無効化は維持。
+- 新owned root bcc30b02a37fdcd1b5db109f2af03449をsafe-delete createで作成。実Linux module合成検査は11pass/0fail（SDK opt-in2skip）、Linux vet成功。
+  同公開SDK tar hash c2063dcd969ac4cecb76a6fc81e476f78e331e7bed0a7eefc5c4304b56be5578を照合し、所有工具containerへhost bindなしで同展開先へ展開。
+  新opt-in検査は実UID/GID1001と本番同PATHで子を起動し、node/npmが同SDKのbinから選ばれ、node v24.21.0/npm11.19.0を返すことを実確認した（exit0）。HOMEは合成/tmpで、公式action/原製品受入ではない。
+  工具containerは工程後stop成功、Running=false/PID0を再照合。既存SDK image/layerは必要なので保持した。
+- 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-041741-node。原log本文/位置・認証値は表示していない。
+  原repo1154066087/private/admin/nonfork/同repo/openPR3613/head085/原refを取得前後で確認し、原AGENTS/CLAUDEをRAM再取得。235dcf.../70c7de...の既読同hashを確認しhostへ原sourceを保存していない。cc実repo1406818713/AutoDevJapan/private/admin/nonforkもAPI確認。
+  既存初回runのfailure/cancelled、SDK/未回収/他担当/原guard/manifestを維持。新route変数作成/dispatch/実VM起動/原Cargo compileはまだ0。
+- 次は本追加差分だけの別モデルレビューを受領し、Must解消後、同clean codeの実行物で同明示085/ref/tree/workflowの公式CIを再開する。
+  Nodeの合成成功を公式CI成功に読み替えず、complete proof拒否の別原因が残れば実結果から修正する。Windows13/Docker parity/通常gateは未完、原merge/Prdは親2641。

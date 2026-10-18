@@ -1,5 +1,19 @@
 # 元2834の再開手順（2026-10-19）
 
+## 02:40 JST以後の現在地（以下の旧待機記録を更新）
+
+PR221は公式14success/1neutral、失敗0と別モデルSonnetのMust0を確認し、通常mergeした。実mainは `c9f0b26df6014c5473e110996b58cda18dff151e`。並行したPR219の変更もmainからfast-forwardで保持した。guardのmodule treeは固定レビュー版と一致する `357e98d512873776e116ca1217989177f1ceec6e`。最新mainから新しくビルドし、通常実行ファイルへatomic更新した。配布SHA256は `BAE6A3603D47549C506A9FEC6C62E217BD77F593A3EAED45846E17659A8E2F5A`。正式CLIでAO sourceと指定handoffが未分類false、旧1476worktreeは拒否、原台帳の復旧falseを確認した。詳細は `guard221-install.private.json` と `pr221-final.private.json`。
+
+レビュー担当はgitの起動に失敗していたが、読んだ5ファイルの全内容について親が固定46a5ee8のGit blobと全件一致を補完確認した。レビュー担当自身が固定git差分を実行したとは扱わない。原応答・実model/job/exit/hashと一致確認は `review2841-received.private.json`。提案の不採用理由はPR comment6252965667へ1回記録済み、再投稿しない。
+
+2842の原受入は `acceptance2842-received.private.json` に受領。API2回200/各254743bytes、実画面の初期閉鎖・検索解除・対照行の展開保持と保護表示、所有タブclose成功を確認した。runtime版・精密な15秒周期・通信回数の未測定は保持。親の追加API確認と既存catalogにより、本人指定の表示名local-ai-concoleとmodule名localai-web-rsの対応を確認した。情報システム部の同表示行には7担当があり、module名の検索0件だけで欠落とは扱わない。
+
+AO2839の固定specと現在の実GitHub owner/idを再照合し、正式配布済みの現在のメモを通常CLIで配送した。02:44 JSTの技術wait-retryは時刻を変更・偽造しない。AO元rootのstatusには未コミット8行があるため、元rootをreset/checkoutせず、普通のscheduler専用worktreeで続行する。
+
+残る本人指定製品の実装・分類・実担当の実成果確認は新担当2849へ独立して切り分けた。仕様は `docs/todo2834-remaining-current-spec.md`。この親は追加のguard sourceを並行編集しない。2849はAO2839と既存5案件を重複せず、残る一覧を少数ずつ現在の継承として進める。元2475は締切未達による公開中止のdoneであり、完成品や再利用する進行資格にしない。旧2459の音源・未聴取・過去の審査拒否・原2467待ちは明示して保持した。
+
+次はAO2839の自然起動、専用worktreeの正式分類、実操作と成果更新、次の巡回での続行を確認する。2849の実担当・成果も回収し、製品別の無通知進捗へ反映する。まだ元2834は完了ではない。完了済み2841/2842を待ち直さず、残る実依存だけを正常waitへ保存する。追加の新費用・GPU・本人PC操作はない。
+
 ## 保存した成果
 
 - 前提2829は通常CLIでdoneを確認。共通guardとproduct-ciの古い実行物を再配布していない。

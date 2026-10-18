@@ -25,6 +25,11 @@ import (
 
 // Bounded builder phase.
 //
+// The build runs in a software-emulated Linux guest (release_build_vm.go) inside
+// the outer container described here. The outer container keeps every
+// capability dropped; the guest's root holds the guest kernel's capabilities,
+// which the base image unpack and the package tools of the audited build need.
+//
 // Contract with the caller (the future orchestration, not this file): hold the
 // job/source/role/queue/budget admission AND the exclusive phase reservation
 // below before calling. This file takes no exclusion and never raises a limit
@@ -62,28 +67,35 @@ type releaseBuilderProfile struct {
 	nanoCPUs, memory, pids int64
 	network                string
 	artifactMax            int64
-	tmpfs, env             []string
+	tmpfs                  []string
 	kernelProof            bool
+	// Emulated machine: its disk file (sparse, in the outer writable layer),
+	// RAM and virtual CPUs. The RAM stays well below the outer memory limit.
+	guestDiskBytes            int64
+	guestMemoryMiB, guestCPUs int
 }
 
 // The audited product build must fetch its digest-pinned base image and
-// packages, so it has Docker's ordinary outbound bridge network. It never gets
-// host networking, published ports, a socket, a bind, a device or a capability.
+// packages, so the emulated machine reaches Docker's ordinary outbound bridge
+// network through user-mode NAT. The outer container never gets host networking,
+// published ports, a socket, a bind, a device or a capability.
 var productBuilderProfile = releaseBuilderProfile{
 	kind: "audited-product", nanoCPUs: releaseBuilderCPUNano, memory: releaseBuilderMemory, pids: releaseBuilderPids,
 	network: "bridge", artifactMax: releaseBuildArtifactLimit,
-	tmpfs: []string{"/tmp:rw,nosuid,nodev,size=256m", "/workspace:rw,nosuid,nodev,size=64m"},
-	env:   []string{"GOMAXPROCS=2", "GOMEMLIMIT=4GiB"},
+	tmpfs:          []string{"/tmp:rw,nosuid,nodev,size=256m", "/workspace:rw,nosuid,nodev,size=64m"},
+	guestDiskBytes: 8 << 30, guestMemoryMiB: 4096, guestCPUs: 2,
 }
 
-// Only the CC-authored Go probe fixture uses this profile: no network, at most
-// 0.5 CPU, 512 MiB and 128 PIDs, and kernel values are read back from the image.
+// Only the CC-authored fixture uses this profile. It has the product's exact
+// CPU, memory and PID limits so the limits are proven where they matter; it needs
+// the outbound network only to fetch its digest-pinned Debian base image. The
+// outer cgroup and capability values and the ownership facts the build observed
+// are read back and checked.
 var fixtureBuilderProfile = releaseBuilderProfile{
-	kind: "fixture", nanoCPUs: 500_000_000, memory: 512 << 20, pids: 128,
-	network: "none", artifactMax: 32 << 20,
+	kind: "fixture", nanoCPUs: releaseBuilderCPUNano, memory: releaseBuilderMemory, pids: releaseBuilderPids,
+	network: "bridge", artifactMax: 96 << 20,
 	tmpfs:       []string{"/tmp:rw,nosuid,nodev,size=64m", "/workspace:rw,nosuid,nodev,size=32m"},
-	env:         []string{"GOMAXPROCS=2", "GOMEMLIMIT=384MiB"},
-	kernelProof: true,
+	kernelProof: true, guestDiskBytes: 3 << 30, guestMemoryMiB: 4096, guestCPUs: 2,
 }
 
 type releaseBuilderSpec struct {
@@ -94,6 +106,8 @@ type releaseBuilderSpec struct {
 	tree, snapshotSHA256      string
 	contextFiles, contextDirs int
 	maxDuration               time.Duration
+	// guest supplies the pinned guest files. nil means the Docker-based default.
+	guest guestProvider
 }
 
 func (releaseBuilderSpec) Format(s fmt.State, _ rune) { io.WriteString(s, "<release-builder-spec>") }
@@ -135,6 +149,7 @@ type releaseBuildReceipt struct {
 	Nonce, ContainerName, ToolImage                             string
 	ToolImageID                                                 string
 	ToolImagePreexisting, ToolImageIntroduced, ToolImageRemoved bool
+	GuestImages                                                 []guestImageRecord
 	CPUNano, MemoryBytes, Pids                                  int64
 	Network                                                     string
 	SnapshotTree, SnapshotSHA256                                string
@@ -154,6 +169,7 @@ type releaseBuildReceipt struct {
 	ArtifactSHA256                                              string
 	KernelProofVerified                                         bool
 	KernelProof                                                 map[string]string
+	OuterProof                                                  map[string]string
 	PIDZero, ContainerRemoved, ContainerAbsent, VolumesAbsent   bool
 	VolumeNames                                                 []string
 	PhaseMayRelease, RecoveryRequired                           bool
@@ -218,6 +234,14 @@ type builderRun struct {
 	dir      string
 	rec      releaseBuildReceipt
 	artifact []byte
+	guest    guestFiles
+}
+
+func (b *builderRun) provider() guestProvider {
+	if b.spec.guest != nil {
+		return b.spec.guest
+	}
+	return dockerGuestProvider{}
 }
 
 func newBuildReceipt(spec releaseBuilderSpec) releaseBuildReceipt {
@@ -350,7 +374,7 @@ func (b *builderRun) classify(ctx context.Context, fallback string) string {
 func (b *builderRun) execute() {
 	ctx, cancel := context.WithTimeout(b.parent, b.spec.maxDuration)
 	defer cancel()
-	for _, step := range []func(context.Context) string{b.phaseClear, b.toolImage, b.create, b.verifyOuter, b.build, b.collect} {
+	for _, step := range []func(context.Context) string{b.phaseClear, b.toolImage, b.guestSources, b.create, b.verifyOuter, b.build, b.collect} {
 		if class := step(ctx); class != "" {
 			b.rec.Failure = class
 			return
@@ -441,7 +465,11 @@ func (b *builderRun) anyBuilder(ctx context.Context) (bool, error) {
 
 // Absent is concluded only from Docker's own "no such image" answer.
 func (b *builderRun) imagePresent(ctx context.Context) (bool, error) {
-	out, stderr, err := dockerText(ctx, b.d, 1<<16, "image", "inspect", "--format", "{{.Id}}", releaseBuilderTool)
+	return b.imageRefPresent(ctx, releaseBuilderTool)
+}
+
+func (b *builderRun) imageRefPresent(ctx context.Context, ref string) (bool, error) {
+	out, stderr, err := dockerText(ctx, b.d, 1<<16, "image", "inspect", "--format", "{{.Id}}", ref)
 	if err == nil && strings.HasPrefix(out, "sha256:") {
 		return true, nil
 	}
@@ -483,6 +511,20 @@ func (b *builderRun) toolImage(ctx context.Context) string {
 	return "tool-image-mismatch"
 }
 
+// guestSources obtains the pinned bytes of the emulated machine. They are
+// verified against their SHA-256 pins before and again when the payload is made.
+func (b *builderRun) guestSources(ctx context.Context) string {
+	files, class := b.provider().acquire(ctx, b)
+	if class != "" {
+		return class
+	}
+	if !files.verify() {
+		return "guest-source-mismatch"
+	}
+	b.guest = files
+	return ""
+}
+
 func formatCPUs(nano int64) string { return strconv.FormatFloat(float64(nano)/1e9, 'f', -1, 64) }
 
 // The create argv is fixed except for the opaque nonce and the validated
@@ -492,14 +534,12 @@ func (s releaseBuilderSpec) createArgs(nonce, name string) []string {
 	args := []string{"create", "--name", name, "--label", releaseBuildLabel + "=" + nonce, "--label", "cc.todo=2799", "--init", "--user", "0:0",
 		"--network", p.network, "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 		"--cpus", formatCPUs(p.nanoCPUs), "--memory", strconv.FormatInt(p.memory, 10), "--memory-swap", strconv.FormatInt(p.memory, 10), "--pids-limit", strconv.FormatInt(p.pids, 10), "--interactive"}
-	for _, e := range p.env {
-		args = append(args, "--env", e)
-	}
 	for _, t := range p.tmpfs {
 		args = append(args, "--tmpfs", t)
 	}
-	return append(args, releaseBuilderTool, "--context=tar://stdin", "--dockerfile="+s.dockerfile, "--destination=cc-release-build:"+nonce,
-		"--no-push", "--no-push-cache", "--cache=false", "--tar-path="+releaseBuildOutputPath, "--verbosity=warn", "--log-format=json")
+	// The only program is the fixed outer script; the Dockerfile name, nonce and
+	// context travel inside the validated payload, never on this command line.
+	return append(args, "--entrypoint", "sh", releaseBuilderTool, "-c", p.outerScript())
 }
 
 func (b *builderRun) containersByNonce(ctx context.Context) ([]string, error) {
@@ -572,10 +612,12 @@ type builderInspect struct {
 		FinishedAt string
 	}
 	Config struct {
-		Image     string
-		User      string
-		OpenStdin bool
-		Labels    map[string]string
+		Image      string
+		User       string
+		OpenStdin  bool
+		Entrypoint []string
+		Cmd        []string
+		Labels     map[string]string
 	}
 	HostConfig struct {
 		Privileged                          bool
@@ -614,6 +656,10 @@ func (b *builderRun) ownedIdentity(info builderInspect) bool {
 func (b *builderRun) isolationOK(info builderInspect) bool {
 	p, h := b.spec.profile, info.HostConfig
 	if !b.ownedIdentity(info) || info.ID != b.rec.ContainerID || info.Config.User != "0:0" || !info.Config.OpenStdin || info.State.Running {
+		return false
+	}
+	// The daemon must hold exactly the fixed outer program, nothing else.
+	if len(info.Config.Entrypoint) != 1 || info.Config.Entrypoint[0] != "sh" || len(info.Config.Cmd) != 2 || info.Config.Cmd[0] != "-c" || info.Config.Cmd[1] != p.outerScript() {
 		return false
 	}
 	if h.Privileged || len(h.Binds) != 0 || len(h.CapAdd) != 0 || len(h.Devices) != 0 || len(h.DeviceRequests) != 0 || len(h.VolumesFrom) != 0 || len(h.Links) != 0 || len(h.PortBindings) != 0 || h.PublishAllPorts || h.ReadonlyRootfs {
@@ -715,7 +761,8 @@ func (l *builderLog) Write(p []byte) (int, error) {
 }
 
 func (b *builderRun) build(ctx context.Context) string {
-	input, err := b.spec.verifiedContext()
+	payload, err := buildGuestPayload(b.guest, b.spec, b.rec.Nonce)
+	b.guest = guestFiles{}
 	if err != nil {
 		return "input-rejected"
 	}
@@ -729,7 +776,7 @@ func (b *builderRun) build(ctx context.Context) string {
 	b.rec.Started = true
 	_ = b.persist()
 	// Returns only after the Docker client has drained stdin, stdout and stderr.
-	runErr := b.d.run(buildCtx, bytes.NewReader(input), lw, lw, "start", "--attach", "--interactive", b.rec.ContainerID)
+	runErr := b.d.run(buildCtx, bytes.NewReader(payload), lw, lw, "start", "--attach", "--interactive", b.rec.ContainerID)
 	lw.mu.Lock()
 	overflow, failed, written, sum := lw.overflow, lw.failed, lw.written, hex.EncodeToString(lw.h.Sum(nil))
 	lw.mu.Unlock()
@@ -824,6 +871,13 @@ func (b *builderRun) collect(ctx context.Context) string {
 	if class := b.classify(ctx, ""); class != "" { // Expiry during validation outranks success.
 		return class
 	}
+	if b.spec.profile.kernelProof {
+		outer, class := b.readOuterProof(ctx)
+		if class != "" {
+			return class
+		}
+		b.rec.OuterProof = outer
+	}
 	b.artifact = data
 	b.rec.ArtifactBytes, b.rec.ArtifactSHA256 = int64(len(data)), digest(data)
 	if proof != nil {
@@ -833,6 +887,54 @@ func (b *builderRun) collect(ctx context.Context) string {
 }
 
 var errKernelProof = errors.New("kernel proof mismatch")
+
+// readOuterProof reads what the outer container itself saw about its own limits
+// and privileges and requires exactly the values of the closed profile. This is
+// the kernel-side proof that the emulated machine added no capability, no
+// privilege and no resource: the outer cgroup is the only boundary.
+func (b *builderRun) readOuterProof(ctx context.Context) (map[string]string, string) {
+	raw, class := b.copyOut(ctx, b.rec.ContainerID, "/kaniko/outer-proof.json", 4096)
+	if class != "" {
+		return nil, b.classify(ctx, "artifact-invalid")
+	}
+	proof, err := checkOuterProof(raw, b.spec.profile)
+	if err != nil {
+		return nil, "kernel-proof-mismatch"
+	}
+	return proof, ""
+}
+
+var releaseUnsignedNumber = regexp.MustCompile("^[0-9]{1,19}$")
+
+// checkOuterProof compares the outer container's own cgroup and process values
+// with the profile: CPU quota, memory and PID limits, no effective capability,
+// no-new-privileges, and observed peaks that stayed inside the limits.
+func checkOuterProof(raw []byte, p releaseBuilderProfile) (map[string]string, error) {
+	var got map[string]string
+	if json.Unmarshal(raw, &got) != nil {
+		return nil, errKernelProof
+	}
+	want := map[string]string{"cpu.max": fmt.Sprintf("%d 100000", p.nanoCPUs/10000), "memory.max": strconv.FormatInt(p.memory, 10), "pids.max": strconv.FormatInt(p.pids, 10), "CapEff": "0000000000000000", "NoNewPrivs": "1"}
+	for k, v := range want {
+		if got[k] != v {
+			return nil, errKernelProof
+		}
+	}
+	for _, k := range []string{"memory.peak", "pids.peak"} {
+		n, err := strconv.ParseInt(got[k], 10, 64)
+		limit := p.memory
+		if k == "pids.peak" {
+			limit = p.pids
+		}
+		if !releaseUnsignedNumber.MatchString(got[k]) || err != nil || n <= 0 || n > limit {
+			return nil, errKernelProof
+		}
+	}
+	if len(got) != len(want)+2 {
+		return nil, errKernelProof
+	}
+	return got, nil
+}
 
 // Pause between the checks that conclude a lost create did not reach the daemon.
 var releaseCreateRecheckPause = time.Second
@@ -925,6 +1027,7 @@ func checkBuiltImage(ctx context.Context, data []byte, p releaseBuilderProfile) 
 		layerIndex[name] = i
 	}
 	var proof map[string]string
+	perLayer := make([]map[string]string, len(im.Layers)) // Merged in manifest order, not storage order.
 	checked := 0
 	budget := imageUncompressedTotalLimit
 	tr = tar.NewReader(ctxReader{ctx, bytes.NewReader(data)})
@@ -944,18 +1047,27 @@ func checkBuiltImage(ctx context.Context, data []byte, p releaseBuilderProfile) 
 		if err != nil || compressed != strings.SplitN(h.Name, ".", 2)[0] || "sha256:"+diff != conf.Rootfs.Diff_ids[i] {
 			return nil, invalid
 		}
-		if found != nil {
-			proof = found
-		}
+		perLayer[i] = found
 		checked++
 	}
 	if checked != len(im.Layers) {
 		return nil, invalid
 	}
+	for _, found := range perLayer {
+		if found == nil {
+			continue
+		}
+		if proof == nil {
+			proof = map[string]string{}
+		}
+		for k, v := range found {
+			proof[k] = v
+		}
+	}
 	if !p.kernelProof {
 		return nil, nil
 	}
-	want := map[string]string{"cpu.max": fmt.Sprintf("%d 100000", p.nanoCPUs/10000), "memory.max": strconv.FormatInt(p.memory, 10), "pids.max": strconv.FormatInt(p.pids, 10), "CapEff": "0000000000000000", "NoNewPrivs": "1"}
+	want := fixtureImageProof
 	if len(proof) != len(want) {
 		return nil, errKernelProof
 	}
@@ -965,6 +1077,20 @@ func checkBuiltImage(ctx context.Context, data []byte, p releaseBuilderProfile) 
 		}
 	}
 	return proof, nil
+}
+
+// What the CC-authored fixture build observed inside the emulated machine and
+// what the finished image really contains. Base files that belong to non-root
+// groups keep their owner and mode after the unpack, a RUN step may change
+// owners and set the setgid bit, may drop to a non-root user that is then
+// refused root-only data, and the owners and modes are the same in the output
+// image's own layer headers. Values are uid:gid:octal-mode.
+var fixtureImageProof = map[string]string{
+	"base.var_mail": "0:8:2775", "base.etc_shadow": "0:42:640", "base.usr_bin_chage": "0:42:2755",
+	"run.srv_app": "1234:1234:750", "run.setgid_file": "1234:5678:2640",
+	"caps.chown": "1", "caps.setuid": "1", "caps.mknod": "1",
+	"run.drop_privs_write": "ok", "run.drop_privs_shadow": "denied",
+	"img.var_mail": "0:8:2775", "img.srv_app": "1234:1234:750",
 }
 
 // scanImageLayer streams one layer entry: its compressed digest (every byte of
@@ -993,12 +1119,27 @@ func scanImageLayer(ctx context.Context, r io.Reader, wantProof bool, budget *in
 		if terr != nil {
 			return "", "", nil, terr
 		}
-		if !wantProof || strings.TrimPrefix(e.Name, "./") != "proof" || e.Size > 4096 {
+		entry := strings.TrimSuffix(strings.TrimPrefix(e.Name, "./"), "/")
+		if wantProof && (entry == "var/mail" || entry == "srv/app") {
+			if proof == nil {
+				proof = map[string]string{}
+			}
+			proof["img."+strings.ReplaceAll(entry, "/", "_")] = fmt.Sprintf("%d:%d:%o", e.Uid, e.Gid, e.Mode&0o7777)
+			continue
+		}
+		if !wantProof || entry != "proof" || e.Size > 4096 {
 			continue
 		}
 		v, _ := io.ReadAll(io.LimitReader(lt, e.Size))
-		if json.Unmarshal(v, &proof) != nil {
+		var facts map[string]string
+		if json.Unmarshal(v, &facts) != nil {
 			return "", "", nil, errKernelProof
+		}
+		if proof == nil {
+			proof = map[string]string{}
+		}
+		for k, val := range facts {
+			proof[k] = val
 		}
 	}
 	if _, err = io.Copy(io.Discard, body); err != nil {
@@ -1058,6 +1199,11 @@ func (b *builderRun) dispose() {
 		}
 		rec.ToolImageRemoved = err == nil && !present
 		clean = clean && rec.ToolImageRemoved
+	}
+	// Any guest source image this run introduced.
+	// An image that was already there is left alone.
+	if !b.provider().release(ctx, b) {
+		clean = false
 	}
 	// Whatever the saved flags say, the phase is free only if no builder of any
 	// nonce exists at the moment of release.

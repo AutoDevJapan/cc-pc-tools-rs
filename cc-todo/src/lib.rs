@@ -138,6 +138,9 @@ pub enum Command {
         note_file: Option<PathBuf>,
         #[arg(long, required_unless_present = "note_file")]
         spec: Option<PathBuf>,
+        /// Compare the exact current note while holding todo.lock before replacing it.
+        #[arg(long, requires = "note_file")]
+        expected_note_sha256: Option<String>,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -195,6 +198,23 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         answer_file: PathBuf,
+        /// Atomically deliver a reply when the scheduler replaced the question marker.
+        #[arg(long, requires = "expected_state_file")]
+        delivery_note_file: Option<PathBuf>,
+        #[arg(long, requires = "delivery_note_file")]
+        expected_state_file: Option<PathBuf>,
+    },
+    /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
+    QuestionWithdraw {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        question_file: PathBuf,
+        #[arg(long)]
+        reason_file: PathBuf,
+        /// Snapshot of the original row, compared under the canonical lock.
+        #[arg(long)]
+        expected_state_file: PathBuf,
     },
     /// Wait for a scheduled readiness check without repeatedly launching a worker.
     WaitReady {
@@ -1123,7 +1143,26 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             id,
             note_file,
             spec,
-        } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
+            expected_note_sha256,
+        } => {
+            if let Some(expected) = expected_note_sha256 {
+                use sha2::{Digest, Sha256};
+                let note = &find(db, *id)?["note"];
+                if (!note.is_null() && !note.is_string())
+                    || expected.len() != 64
+                    || !expected
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                    || format!(
+                        "{:x}",
+                        Sha256::digest(note.as_str().unwrap_or("").as_bytes())
+                    ) != *expected
+                {
+                    return Err("conversation_note_changed".into());
+                }
+            }
+            edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
+        }
         Command::ArchiveHistory { id, apply } => output
             .push(cc_job_policy::todo_history::archive(&paths.store, db, *id, *apply)?.to_string()),
         Command::RestoreHistory { id, apply } => output
@@ -1178,9 +1217,39 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::QuestionWait { id, question_file } => {
             output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
         }
-        Command::QuestionAnswer { id, answer_file } => {
-            output.push(conversation_wait::answer(db, paths, *id, answer_file)?.to_string())
-        }
+        Command::QuestionAnswer {
+            id,
+            answer_file,
+            delivery_note_file,
+            expected_state_file,
+        } => output.push(
+            conversation_wait::answer(
+                db,
+                paths,
+                *id,
+                answer_file,
+                delivery_note_file
+                    .as_deref()
+                    .zip(expected_state_file.as_deref()),
+            )?
+            .to_string(),
+        ),
+        Command::QuestionWithdraw {
+            id,
+            question_file,
+            reason_file,
+            expected_state_file,
+        } => output.push(
+            conversation_wait::withdraw(
+                db,
+                paths,
+                *id,
+                question_file,
+                reason_file,
+                expected_state_file,
+            )?
+            .to_string(),
+        ),
         Command::ResumeReady { id, condition } => {
             let resumed = ready::resume_production(db, *id, condition)?;
             output.push(json!({"id":id,"resumed":resumed}).to_string());
@@ -1315,7 +1384,9 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
         .is_some_and(|r| r["saved"] == false);
     let unchanged_conversation = matches!(
         cli.command,
-        Command::QuestionWait { .. } | Command::QuestionAnswer { .. }
+        Command::QuestionWait { .. }
+            | Command::QuestionAnswer { .. }
+            | Command::QuestionWithdraw { .. }
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

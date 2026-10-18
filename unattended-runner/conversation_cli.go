@@ -28,6 +28,7 @@ type conversationCLIOptions struct {
 	OriginThread string
 	BodyFile     string
 	DecisionFile string
+	ReasonFile   string
 	Title        string
 	Wait         bool
 	Thread       string
@@ -103,6 +104,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		})
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
+	case "withdraw":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
 	case "status":
 		if global.NArg() != 1 {
 			return opts, errConversationArguments
@@ -134,6 +138,10 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 	case "replies":
 		if opts.RequestID == "" {
+			return opts, errConversationArguments
+		}
+	case "withdraw":
+		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
 			return opts, errConversationArguments
 		}
 	}
@@ -225,6 +233,15 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 			result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
 		case "replies":
 			result, err = runner.conversationReplies(ctx, opts.RequestID)
+		case "withdraw":
+			backend, ok := runner.(interface {
+				conversationWithdraw(context.Context, string, string) (map[string]any, error)
+			})
+			if !ok {
+				err = errConversationArguments
+			} else {
+				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
+			}
 		case "status":
 			result, err = runner.conversationStatus()
 		}

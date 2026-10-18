@@ -111,7 +111,7 @@
    "-h"
   ],
   "code": 0,
-  "stdout": "usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n  --recovery  preserve the distinction from a deliberate owner stop\n  --if-todo-ready  with --recovery, return JSON after checking dependencies under queue -> job state -> ToDo locks\n  --todo-id ID  exact source task association for guarded cancellation\n  --related-todo-ids IDS  comma-separated exact related task IDs\n  --todo-file PATH  shared ToDo store (defaults to the configured store)\n  --cancel-key KEY  durable recovery attempt ID; a previously committed attempt may finish after a later wait\n",
+  "stdout": "usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] [--no-action-check PATH] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n  --recovery  preserve the distinction from a deliberate owner stop\n  --if-todo-ready  with --recovery, return JSON after checking dependencies under queue -> job state -> ToDo locks\n  --todo-id ID  exact source task association for guarded cancellation\n  --related-todo-ids IDS  comma-separated exact related task IDs\n  --todo-file PATH  shared ToDo store (defaults to the configured store)\n  --cancel-key KEY  durable recovery attempt ID; a previously committed attempt may finish after a later wait\n  --no-action-check PATH  verify content-free idle proof, current worker/generation and frozen tool boundary before recovery\n",
   "stderr": ""
  },
  {
@@ -120,7 +120,7 @@
    "--help"
   ],
   "code": 0,
-  "stdout": "usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n  --recovery  preserve the distinction from a deliberate owner stop\n  --if-todo-ready  with --recovery, return JSON after checking dependencies under queue -> job state -> ToDo locks\n  --todo-id ID  exact source task association for guarded cancellation\n  --related-todo-ids IDS  comma-separated exact related task IDs\n  --todo-file PATH  shared ToDo store (defaults to the configured store)\n  --cancel-key KEY  durable recovery attempt ID; a previously committed attempt may finish after a later wait\n",
+  "stdout": "usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] [--no-action-check PATH] id\n\npositional arguments:\n  id\n\noptions:\n  -h, --help  show this help message and exit\n  --recovery  preserve the distinction from a deliberate owner stop\n  --if-todo-ready  with --recovery, return JSON after checking dependencies under queue -> job state -> ToDo locks\n  --todo-id ID  exact source task association for guarded cancellation\n  --related-todo-ids IDS  comma-separated exact related task IDs\n  --todo-file PATH  shared ToDo store (defaults to the configured store)\n  --cancel-key KEY  durable recovery attempt ID; a previously committed attempt may finish after a later wait\n  --no-action-check PATH  verify content-free idle proof, current worker/generation and frozen tool boundary before recovery\n",
   "stderr": ""
  },
  {

@@ -82,9 +82,9 @@ func newFakeDaemon(t *testing.T) *fakeDaemon {
 }
 
 type fakeImage struct {
-	proof                                                                      map[string]string
+	proof, owners, secondOwners                                                map[string]string
 	dropLayer, dupLayer, dupEntry, wrongDiff, badConfig, noConfig, emptyLayers bool
-	extraDiff, symlink, tamperLayer, garbageLayer, secondLayer                 bool
+	extraDiff, symlink, tamperLayer, garbageLayer, secondLayer, swapStore      bool
 }
 
 func fakeImageTar(t *testing.T, proof map[string]string) []byte {
@@ -101,6 +101,21 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	if o.proof != nil {
 		name = "proof"
 		body, _ = json.Marshal(o.proof)
+	}
+	if o.proof != nil {
+		// The image's own layer headers carry the real owners and modes.
+		owners := map[string]string{"var/mail": "0:8:2775", "srv/app": "1234:1234:750"}
+		if o.owners != nil {
+			owners = o.owners
+		}
+		for _, dir := range []string{"var/mail", "srv/app"} {
+			var uid, gid int
+			var mode int64
+			if v, ok := owners[dir]; ok {
+				fmt.Sscanf(v, "%d:%d:%o", &uid, &gid, &mode)
+				ltw.WriteHeader(&tar.Header{Name: dir + "/", Uid: uid, Gid: gid, Mode: mode, Typeflag: tar.TypeDir})
+			}
+		}
 	}
 	ltw.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(body)), Typeflag: tar.TypeReg})
 	ltw.Write(body)
@@ -129,6 +144,12 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	if o.secondLayer {
 		var l2 bytes.Buffer
 		w := tar.NewWriter(&l2)
+		for dir, v := range o.secondOwners {
+			var uid, gid int
+			var mode int64
+			fmt.Sscanf(v, "%d:%d:%o", &uid, &gid, &mode)
+			w.WriteHeader(&tar.Header{Name: dir + "/", Uid: uid, Gid: gid, Mode: mode, Typeflag: tar.TypeDir})
+		}
 		w.WriteHeader(&tar.Header{Name: "file2", Mode: 0600, Size: 6, Typeflag: tar.TypeReg})
 		w.Write([]byte("layer2"))
 		w.Close()
@@ -165,9 +186,12 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 		add(cfgName, cfg)
 	}
 	if !o.dropLayer {
+		if o.secondLayer && o.swapStore {
+			add(extraName, extra) // Stored before the manifest's first layer.
+		}
 		add(layerName, layer)
 	}
-	if o.secondLayer {
+	if o.secondLayer && !(o.swapStore && !o.dropLayer) {
 		add(extraName, extra)
 	}
 	if o.dupEntry {
@@ -247,7 +271,7 @@ func (d *fakeDaemon) inspectMap(c *fakeContainer) map[string]any {
 	info := map[string]any{
 		"Id": c.id, "Name": "/" + c.name,
 		"State":  map[string]any{"Status": c.status, "Running": c.running, "ExitCode": c.exit, "Pid": pid, "OOMKilled": false},
-		"Config": map[string]any{"Image": image, "User": val("--user"), "OpenStdin": true, "Labels": c.labels},
+		"Config": map[string]any{"Image": image, "User": val("--user"), "OpenStdin": true, "Labels": c.labels, "Entrypoint": argValues(c.args, "--entrypoint"), "Cmd": commandAfter(c.args, image)},
 		"HostConfig": map[string]any{
 			"Privileged": false, "Binds": nil, "CapAdd": nil, "CapDrop": argValues(c.args, "--cap-drop"), "SecurityOpt": argValues(c.args, "--security-opt"),
 			"Devices": nil, "DeviceRequests": nil, "NanoCpus": int64(cpus * 1e9), "Memory": mem, "MemorySwap": swap, "PidsLimit": pids,
@@ -485,6 +509,7 @@ func newHarness(t *testing.T) *buildHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	spec.guest = newStubGuest(t)
 	return &buildHarness{t: t, d: newFakeDaemon(t), spec: spec, dir: t.TempDir()}
 }
 
@@ -538,8 +563,11 @@ func TestBuilderSuccessRecoversEverythingAndKeepsArtifactInRAM(t *testing.T) {
 	if !rec.ToolImageIntroduced || !rec.ToolImageRemoved || rec.ToolImagePreexisting || !rec.OuterIsolationVerified || !rec.PIDZero || !rec.ContainerRemoved || rec.ExitCode != 0 || len(rec.VolumeNames) != 1 {
 		t.Fatalf("disposition incomplete: %+v", rec.PIDZero)
 	}
-	if string(h.d.stdin) != string(mustVerified(t, h.spec)) {
-		t.Fatal("stdin is not the verified context")
+	// The only stdin is the guest payload; the sealed context is inside its RAM
+	// filesystem, byte for byte.
+	payload := readPayload(t, h.d.stdin)
+	if !bytes.Equal(readInitrd(t, payload["initrd.gz"])["kaniko/ctx.tgz"], mustVerified(t, h.spec)) || !bytes.Equal(payload["kernel"], stubGuestKernel) {
+		t.Fatal("stdin is not the guest payload with the verified context")
 	}
 	art, err := rec.verifiedArtifact()
 	if err != nil || !bytes.Equal(art, h.d.artifact) || rec.ArtifactSHA256 != digest(art) || rec.ArtifactBytes != int64(len(art)) {
@@ -720,9 +748,11 @@ func TestBuilderRejectsWeakerIsolationBeforeStarting(t *testing.T) {
 		"tmpfs": func(i map[string]any) {
 			i["HostConfig"].(map[string]any)["Tmpfs"] = map[string]string{"/tmp": "size=9g"}
 		},
-		"mount": func(i map[string]any) { i["Mounts"] = []any{map[string]any{"Type": "bind", "Destination": "/h"}} },
-		"image": func(i map[string]any) { i["Config"].(map[string]any)["Image"] = "other" },
-		"user":  func(i map[string]any) { i["Config"].(map[string]any)["User"] = "" },
+		"mount":      func(i map[string]any) { i["Mounts"] = []any{map[string]any{"Type": "bind", "Destination": "/h"}} },
+		"image":      func(i map[string]any) { i["Config"].(map[string]any)["Image"] = "other" },
+		"user":       func(i map[string]any) { i["Config"].(map[string]any)["User"] = "" },
+		"entrypoint": func(i map[string]any) { i["Config"].(map[string]any)["Entrypoint"] = []string{"/bin/other"} },
+		"command":    func(i map[string]any) { i["Config"].(map[string]any)["Cmd"] = []string{"-c", "true"} },
 		"ports": func(i map[string]any) {
 			i["HostConfig"].(map[string]any)["PortBindings"] = map[string]any{"80/tcp": []any{}}
 		},
@@ -855,26 +885,83 @@ func (u *uncertainImageDocker) run(ctx context.Context, stdin io.Reader, stdout,
 	return u.fakeDaemon.run(ctx, stdin, stdout, stderr, args...)
 }
 
+func TestImageProofIsMergedInManifestOrder(t *testing.T) {
+	p := fixtureBuilderProfile
+	good := map[string]string{}
+	for k, v := range fixtureImageProof {
+		if !strings.HasPrefix(k, "img.") {
+			good[k] = v
+		}
+	}
+	// The manifest's first layer carries a wrong owner and its second layer the
+	// right one; the archive stores the second layer first. The manifest order
+	// decides, not the storage order.
+	img := fakeImage{proof: good, owners: map[string]string{"var/mail": "0:8:2775", "srv/app": "0:0:750"}, secondLayer: true, swapStore: true, secondOwners: map[string]string{"srv/app": "1234:1234:750"}}
+	if got, err := checkBuiltImage(context.Background(), buildFakeImage(t, img), p); err != nil || got["img.srv_app"] != "1234:1234:750" {
+		t.Fatalf("the later layer in manifest order was not honoured: %v", err)
+	}
+	img.owners, img.secondOwners = map[string]string{"var/mail": "0:8:2775", "srv/app": "1234:1234:750"}, map[string]string{"srv/app": "0:0:750"}
+	if _, err := checkBuiltImage(context.Background(), buildFakeImage(t, img), p); !errors.Is(err, errKernelProof) {
+		t.Fatal("a later layer that undoes the owner was accepted")
+	}
+}
+
+func commandAfter(args []string, image string) []string {
+	for i, a := range args {
+		if a == image {
+			return args[i+1:]
+		}
+	}
+	return nil
+}
+
 func TestKernelProofIsReadBackFromTheBuiltImage(t *testing.T) {
 	p := fixtureBuilderProfile
-	good := map[string]string{"cpu.max": "50000 100000", "memory.max": "536870912", "pids.max": "128", "CapEff": "0000000000000000", "NoNewPrivs": "1"}
-	if got, err := checkBuiltImage(context.Background(), fakeImageTar(t, good), p); err != nil || got["cpu.max"] != "50000 100000" {
+	good := map[string]string{}
+	for k, v := range fixtureImageProof {
+		if !strings.HasPrefix(k, "img.") {
+			good[k] = v // The img.* facts come from the image's own layer headers.
+		}
+	}
+	if got, err := checkBuiltImage(context.Background(), fakeImageTar(t, good), p); err != nil || got["img.var_mail"] != "0:8:2775" || got["run.srv_app"] != "1234:1234:750" {
 		t.Fatalf("valid proof rejected: %v", err)
 	}
-	for key, bad := range map[string]string{"cpu.max": "max 100000", "memory.max": "max", "pids.max": "max", "CapEff": "000001ffffffffff", "NoNewPrivs": "0"} {
+	// Every observed fact is required and exact: a RUN step that could not change
+	// owners, lacked a capability, or left a root-only file readable fails.
+	for key := range good {
 		wrong := map[string]string{}
 		for k, v := range good {
 			wrong[k] = v
 		}
-		wrong[key] = bad
+		wrong[key] = "x"
 		if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, wrong), p); !errors.Is(err, errKernelProof) {
 			t.Fatalf("%s mismatch accepted", key)
+		}
+		missing := map[string]string{}
+		for k, v := range good {
+			if k != key {
+				missing[k] = v
+			}
+		}
+		if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, missing), p); !errors.Is(err, errKernelProof) {
+			t.Fatalf("missing %s accepted", key)
+		}
+	}
+	// The owners and modes in the image's layer headers are read back too.
+	for _, owners := range []map[string]string{
+		{"var/mail": "0:0:2775", "srv/app": "1234:1234:750"}, // The base group was lost in the unpack.
+		{"var/mail": "0:8:2775", "srv/app": "0:0:750"},       // The RUN chown did not land in the image.
+		{"var/mail": "0:8:775", "srv/app": "1234:1234:750"},  // The setgid bit was lost.
+		{"var/mail": "0:8:2775"},                             // The RUN layer is missing.
+	} {
+		if _, err := checkBuiltImage(context.Background(), buildFakeImage(t, fakeImage{proof: good, owners: owners}), p); !errors.Is(err, errKernelProof) {
+			t.Fatalf("image owners %v accepted", owners)
 		}
 	}
 	if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, nil), p); !errors.Is(err, errKernelProof) {
 		t.Fatal("missing proof accepted")
 	}
-	if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, map[string]string{"cpu.max": "50000 100000"}), p); !errors.Is(err, errKernelProof) {
+	if _, err := checkBuiltImage(context.Background(), fakeImageTar(t, map[string]string{"caps.chown": "1"}), p); !errors.Is(err, errKernelProof) {
 		t.Fatal("partial proof accepted")
 	}
 	if _, err := checkBuiltImage(context.Background(), []byte("junk"), p); err == nil {
@@ -1094,7 +1181,7 @@ func TestBuilderKeepsTheContainerWhenVolumeNamesCannotBeSaved(t *testing.T) {
 }
 
 func TestBuilderNeverReportsSuccessWithoutABuiltArtifact(t *testing.T) {
-	for _, upTo := range []int{4, 5} { // create and inspect only; then also run the build but skip the artifact
+	for _, upTo := range []int{5, 6} { // create and inspect only; then also run the build but skip the artifact
 		h := newHarness(t)
 		h.d.toolPresent = true
 		ctx := context.Background()
@@ -1102,7 +1189,7 @@ func TestBuilderNeverReportsSuccessWithoutABuiltArtifact(t *testing.T) {
 		if class := b.begin(func(string) builderDocker { return h.d }); class != "" {
 			t.Fatal(class)
 		}
-		steps := []func(context.Context) string{b.phaseClear, b.toolImage, b.create, b.verifyOuter, b.build}
+		steps := []func(context.Context) string{b.phaseClear, b.toolImage, b.guestSources, b.create, b.verifyOuter, b.build}
 		for _, step := range steps[:upTo] {
 			if class := step(ctx); class != "" {
 				t.Fatal(class)
@@ -1110,7 +1197,7 @@ func TestBuilderNeverReportsSuccessWithoutABuiltArtifact(t *testing.T) {
 		}
 		b.dispose()
 		rec, err := b.finish()
-		if err == nil || rec.Succeeded || rec.Failure != "build-incomplete" || !rec.OuterIsolationVerified || rec.Started != (upTo == 5) {
+		if err == nil || rec.Succeeded || rec.Failure != "build-incomplete" || !rec.OuterIsolationVerified || rec.Started != (upTo == 6) {
 			t.Fatalf("upTo %d: incomplete run reported as %q: %v", upTo, rec.Failure, err)
 		}
 		if _, e := rec.verifiedArtifact(); e == nil {

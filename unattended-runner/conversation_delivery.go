@@ -102,6 +102,12 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if err != nil {
 		return err
 	}
+	// Never append to an overwritten question hold or manufacture its missing
+	// marker. Only an intact canonical wait or its durable answer can proceed.
+	imported := q.Wait && row.Status == "block" && conversationWaitRecorded(row, q) && row.Note == "ジョブの結果に判断が必要です。"
+	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) && !imported {
+		return errors.New("conversation original question wait differs")
+	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
 	if !hasNoteMarker(row.Note, marker) {
 		instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, q.Todo, filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, q.Todo, q.Todo, q.Thread, q.Message, reply.Message, reply.Author)
@@ -114,26 +120,58 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		if err = writeText(noteFile, note); err != nil {
 			return err
 		}
-		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile); err != nil {
+		if imported {
+			// Rust checks the exact row, original owner/result generation and all
+			// holds under one lock. Never reconstruct a missing question marker
+			// with edit, or expose a runnable task before its reply is durable.
+			origin, err := r.withdrawalRow(q.Todo)
+			if err != nil {
+				return err
+			}
+			expectedFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".expected.json")
+			if err = writeText(expectedFile, string(origin)); err != nil {
+				return err
+			}
+			answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
+			if err != nil {
+				return err
+			}
+			if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-note-file", noteFile, "--expected-state-file", expectedFile); err != nil {
+				return errors.New("conversation imported answer delivery deferred")
+			}
+			row, err = r.todo(q.Todo)
+			if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) || !conversationAnswerRecorded(row, q, answer, b) {
+				return errors.New("conversation imported answer readback deferred")
+			}
+			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+			return r.save()
+		}
+		// Compare under the canonical ToDo lock: a concurrent ordinary block
+		// must not be overwritten with this snapshot's question-wait marker.
+		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note))); err != nil {
 			return errors.New("conversation normal task delivery deferred")
 		}
 		row, err = r.todo(q.Todo)
-		if err != nil || !hasNoteMarker(row.Note, marker) {
+		if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
 	}
-	if q.Wait && row.Status == "block" {
-		answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
-		b, _ := json.MarshalIndent(answer, "", "  ")
-		answerFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
-		if err = writeConversationOnce(answerFile, b); err != nil {
+	// The reply reference must be durable before the task becomes runnable.
+	// Recheck after the edit; question-answer remains the final locked authority.
+	// A lost successful response is reconciled without releasing a later block.
+	if q.Wait && !conversationQuestionAnswered(row, q) {
+		if !conversationWaitUnchanged(row, q) {
+			return errors.New("conversation original question wait differs")
+		}
+		answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
+		if err != nil {
 			return err
 		}
 		if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile); err != nil {
 			return errors.New("conversation exact question wait release deferred")
 		}
 		row, err = r.todo(q.Todo)
-		if err != nil || !conversationAnswerRecorded(row, q, answer, b) {
+		if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) || !conversationAnswerRecorded(row, q, answer, b) {
 			return errors.New("conversation question answer readback deferred")
 		}
 	}
@@ -142,6 +180,29 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	req.Todo = q.Todo
 	req.Phase = "conversation_reply_delivered"
 	return r.save()
+}
+
+func (r *Runner) prepareConversationAnswer(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, error) {
+	answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
+	b, _ := json.MarshalIndent(answer, "", "  ")
+	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
+	return answer, b, path, writeConversationOnce(path, b)
+}
+
+func conversationWaitUnchanged(row *TodoRow, q ConversationQuestion) bool {
+	if row.Status != "block" || !conversationWaitRecorded(row, q) {
+		return false
+	}
+	marker := fmt.Sprintf("[discord-conversation-question-v1 request_id=%s sha256=%s]", q.SenderID, q.ReceiptSHA)
+	if strings.Count(row.Note, marker) != 1 {
+		return false
+	}
+	for _, line := range strings.Split(row.Note, "\n") {
+		if line == marker {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Runner) conversationProgress(ctx context.Context, q ConversationQuestion, req *Request, phase string) error {

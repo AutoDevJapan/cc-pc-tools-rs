@@ -17,6 +17,28 @@ import (
 type pr148FailedWriter struct{}
 
 func (pr148FailedWriter) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
+
+func TestPR148HostRequestsContainerParallelCaps(t *testing.T) {
+	t.Setenv("CARGO_BUILD_JOBS", "99")
+	t.Setenv("RUST_TEST_THREADS", "99")
+	t.Setenv("GITHUB_TOKEN", "credential-free-fixture")
+	env := map[string]string{}
+	for _, item := range pr148HostEnv() {
+		key, value, _ := strings.Cut(item, "=")
+		if _, duplicate := env[key]; duplicate {
+			t.Fatal("duplicate environment key")
+		}
+		env[key] = value
+	}
+	for _, key := range []string{"CARGO_BUILD_JOBS", "RUST_TEST_THREADS", "NEXTEST_TEST_THREADS"} {
+		if env[key] != "1" {
+			t.Fatal("SDK resource cap missing", key)
+		}
+	}
+	if _, found := env["GITHUB_TOKEN"]; found {
+		t.Fatal("owner authentication inherited")
+	}
+}
 func TestPR148AssignmentRetryIsNarrowAndFinite(t *testing.T) {
 	calls := 0
 	check := func(context.Context) error {
@@ -100,6 +122,9 @@ func TestPR148ExecutionPreservesFixedContextAndTimeout(t *testing.T) {
 		if !strings.Contains(joined, s) {
 			t.Fatalf("lost fixed condition %s", s)
 		}
+	}
+	if !strings.Contains(joined, "RUSTFLAGS=-D warnings -C link-arg=-Wl,--threads=1") {
+		t.Fatal("original Rust flags or bounded linker threads lost")
 	}
 	for _, bad := range []string{"expression", "protected", "timeout", "directory", "git", "github"} {
 		b := append([]byte(nil), data...)

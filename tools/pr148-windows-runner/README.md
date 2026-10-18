@@ -62,7 +62,26 @@ metadata through `gh_gate.exe`, binds name/URL/version/SHA256, then hashes the s
 rejects traversal, ADS, links, duplicate paths and bounded-size violations.
 There is no credential in a plan or in a service command line.
 
+Immutable source blobs use at most four controller readers, all drained before
+publication or failure return. The existing preparation deadline, per-blob/hash
+checks and 256 MiB source bound remain in force. GET transport failures explicitly
+reporting TLS handshake timeout, unexpected EOF or connection reset receive at
+most three attempts with bounded backoff inside the parent deadline. Auth/policy
+failures, size violations and invalid JSON are not retried. Error records contain
+request hashes, byte counts, exit codes and status classes, never server text or
+source contents. Cancellation and response-size errors are reported separately.
+Output capture uses named buffers (not embedded ReaderFrom methods) so stdout's
+size limit and stderr's 8 KiB preview cannot be bypassed by io.Copy. Run owns the
+copy goroutines; a two-second WaitDelay bounds inherited-pipe cleanup after exit
+or cancellation. A pipe timeout is rejected without a transport retry. Real
+source-transfer timing still requires formal execution.
+
 ## Four separate phases
+
+The host controller preserves AppData and explicitly configured gh/XDG config
+locations through the Cargo gate so the same existing OAuth store remains in
+use. Token environment variables are excluded. The worker retains its isolated
+HOME/AppData; no owner config path or OAuth file is copied into its environment.
 
 Build this module into the owned root (`go build -trimpath -o <root>/bootstrap.exe .`).
 Use CC-AdminBroker for the administrative phases, with no visible console/UAC.
@@ -115,6 +134,21 @@ durable attempt marker precedes the OS call. Refusal is retained without an
 unload/retry/alternate cleanup path. It does not accept any other SID/profile.
 Real runner profile cleanup belongs to the parent integration. Always check
 fresh profile/hive/classes absence; the delete API return alone is not proof.
+
+`collect-unstarted <root>` is a separate administrative abort path for a real
+prepared resource whose worker never began. It requires stopped service/PID0,
+zero queryable owned processes, no worker/hook/authentication artifacts, the
+unchanged two-byte initial launcher report and the exact queued official job
+with zero steps and no runner. Authentication files are tested for absence only.
+The normal collection API checks and mutation journals still apply, including
+after a prior successful service-delete phase. After verifying absence of
+authentication files, it grants Full Control to the recorded controller on
+this new root and runtime as a cleanup step, following service-grant removal.
+Normal safe-delete can then follow. It does not delete profiles or claim CI success.
+SCM status 1077 (never started) is accepted along with zero only after all
+unstarted-worker checks. Other nonzero exit statuses remain rejected.
+Started resources still require the protected launcher drain report through
+ordinary `collect`. A failed or uncertain mutation is never retried.
 
 `prepare` and `collect` require administrator access through CC-AdminBroker.
 `execute`/`stop` use the preparation's service-specific controller grant. Real execution

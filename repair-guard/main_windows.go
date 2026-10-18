@@ -6,11 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -181,7 +183,14 @@ func allowed(path string) bool {
 	if productPathAllowed(absolute) {
 		return true
 	}
+	if currentScopePathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
+		return true
+	}
+	// A not-yet-created leaf has no physical path, so this precedes physical().
+	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true
 	}
 	target, err := physical(absolute)
@@ -197,6 +206,9 @@ func allowed(path string) bool {
 	}
 	if legacyMatch(target) {
 		return false
+	}
+	if runtimeExecutable(absolute, target, publicationGateRuntime) && sourceVerified(base) {
+		return true
 	}
 	for _, root := range roots {
 		resolved, e := physical(root)
@@ -215,28 +227,135 @@ func allowed(path string) bool {
 	}
 	return false
 }
-func main() {
-	path := flag.String("guard-path", "", "resource absolute path")
-	product := flag.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
-	flag.Parse()
-	if *product != 0 {
+
+type guardArgs struct {
+	path, succession string
+	product          int
+	pathSet          bool
+	productSet       bool
+	successionSet    bool
+	remainingArgs    bool
+}
+
+func parseGuardArgs(args []string) (guardArgs, error) {
+	flags := flag.NewFlagSet("scrub391", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	path := flags.String("guard-path", "", "resource absolute path")
+	product := flags.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
+	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
+	err := flags.Parse(args)
+	parsed := guardArgs{path: *path, succession: *succession, product: *product, remainingArgs: flags.NArg() != 0}
+	flags.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "guard-path":
+			parsed.pathSet = true
+		case "verify-product-resume":
+			parsed.productSet = true
+		case "verify-current-succession":
+			parsed.successionSet = true
+		}
+	})
+	return parsed, err
+}
+
+func currentSuccessionFlagPresent(args []string) bool {
+	for _, arg := range args {
+		arg = strings.TrimLeft(arg, "-")
+		if arg == "verify-current-succession" || strings.HasPrefix(arg, "verify-current-succession=") {
+			return true
+		}
+	}
+	return false
+}
+
+func parseCurrentSuccessionTask(value string) (int, bool) {
+	task, err := strconv.Atoi(value)
+	return task, err == nil && task > 0 && strconv.Itoa(task) == value
+}
+
+func printGuardUsage(output io.Writer) {
+	fmt.Fprintln(output, "Usage of scrub391:")
+	fmt.Fprintln(output, "  -guard-path string")
+	fmt.Fprintln(output, "    \tresource absolute path")
+	fmt.Fprintln(output, "  -verify-product-resume int")
+	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
+	fmt.Fprintln(output, "  -verify-current-succession int")
+	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+}
+
+func verifyCurrentSuccession(taskID int) object {
+	declared, ok := currentProductByTask(taskID)
+	if !ok {
+		return object{"verified": false}
+	}
+	db, err := readObject(productStore, 64<<20)
+	if err != nil {
+		return object{"verified": false}
+	}
+	return currentSuccessionReceipt(db, declared)
+}
+
+func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	parsed, err := parseGuardArgs(args)
+	if err != nil {
+		if currentSuccessionFlagPresent(args) {
+			_ = json.NewEncoder(stdout).Encode(object{"verified": false})
+			return 1
+		}
+		if err == flag.ErrHelp {
+			printGuardUsage(stderr)
+			return 0
+		}
+		fmt.Fprintln(stderr, err)
+		printGuardUsage(stderr)
+		return 2
+	}
+	if currentSuccessionFlagPresent(args) && !parsed.successionSet {
+		_ = json.NewEncoder(stdout).Encode(object{"verified": false})
+		return 1
+	}
+	if parsed.successionSet {
+		if parsed.pathSet || parsed.productSet || parsed.remainingArgs {
+			_ = json.NewEncoder(stdout).Encode(object{"verified": false})
+			return 1
+		}
+		taskID, validTask := parseCurrentSuccessionTask(parsed.succession)
+		if !validTask {
+			_ = json.NewEncoder(stdout).Encode(object{"verified": false})
+			return 1
+		}
+		receipt := currentVerifier(taskID)
+		if receipt["verified"] != true {
+			receipt = object{"verified": false}
+		}
+		if json.NewEncoder(stdout).Encode(receipt) != nil || receipt["verified"] != true {
+			return 1
+		}
+		return 0
+	}
+	if parsed.product != 0 {
 		db, err := readObject(productStore, 64<<20)
 		if err != nil {
-			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false, "reason": "store_unavailable"})
-			os.Exit(1)
+			_ = json.NewEncoder(stdout).Encode(object{"verified": false, "reason": "store_unavailable"})
+			return 1
 		}
-		r := verifyProduct(db, *product)
-		_ = json.NewEncoder(os.Stdout).Encode(r)
+		r := verifyProduct(db, parsed.product)
+		_ = json.NewEncoder(stdout).Encode(r)
 		if r["verified"] != true {
-			os.Exit(1)
+			return 1
 		}
-		return
+		return 0
 	}
-	ok := *path != "" && filepath.IsAbs(*path)
-	verified := ok && allowed(*path)
+	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
+	verified := ok && allowed(parsed.path)
 	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
-	_ = json.NewEncoder(os.Stdout).Encode(result)
+	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
-		os.Exit(2)
+		return 2
 	}
+	return 0
+}
+
+func main() {
+	os.Exit(runGuardCLI(os.Args[1:], os.Stdout, os.Stderr, verifyCurrentSuccession))
 }

@@ -569,7 +569,18 @@ func writeText(path, body string) error {
 	return err
 }
 func runCommand(ctx context.Context, path string, args ...string) (string, error) {
-	child, stop := context.WithTimeout(ctx, 20*time.Second)
+	return runCommandBounded(ctx, commandBudget(path, args), path, args...)
+}
+
+func commandBudget(path string, args []string) time.Duration {
+	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
+		return 35 * time.Second
+	}
+	return 20 * time.Second
+}
+
+func runCommandBounded(ctx context.Context, budget time.Duration, path string, args ...string) (string, error) {
+	child, stop := context.WithTimeout(ctx, budget)
 	defer stop()
 	command := exec.CommandContext(child, path, args...)
 	hide(command)
@@ -680,7 +691,10 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	// Reports can require further API reads. Give the existing dispatcher its
 	// turn first, without detaching it from the caller's remaining deadline.
 	if ctx.Err() == nil {
-		schedulerCtx, cancelScheduler := context.WithTimeout(ctx, 20*time.Second)
+		// Native process inspection plus a fresh pre-commit check can exceed
+		// twenty seconds. Retain a finite stage limit and the caller's original
+		// deadline, while allowing that measured repair to complete.
+		schedulerCtx, cancelScheduler := context.WithTimeout(ctx, 35*time.Second)
 		schedulerReport, err := r.Run(schedulerCtx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
 		health.Scheduler = ctx.Err() == nil && schedulerCtx.Err() == nil && err == nil && schedulerOK(schedulerReport)
 		cancelScheduler()

@@ -45,6 +45,80 @@ func currentProductQualification(product currentProduct) bool {
 	return currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, legacyMatch)
 }
 
+func currentSuccessionReceipt(db object, product currentProduct) object {
+	return currentSuccessionReceiptWith(db, product, legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified)
+}
+
+func currentSuccessionReceiptWith(db object, product currentProduct, protected func(string) bool, plain func(string, bool) bool, origin func(string, string) bool, identity func(currentProduct) bool) object {
+	failure := object{"verified": false}
+	parts := strings.Split(product.repository, "/")
+	if !finiteProductScope(time.Now()) || product.task <= 0 || product.repositoryID <= 0 || product.project == "" || product.root == "" || product.spec == "" || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
+		return failure
+	}
+	if !currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, protected) || !plain(product.root, true) || !origin(product.root, product.repository) || !identity(product) {
+		return failure
+	}
+	registeredHash, ok := currentPathHash(str(obj(db["projects"])[product.project]))
+	if !ok {
+		return failure
+	}
+	specPathHash, ok := currentPathHash(product.spec)
+	if !ok {
+		return failure
+	}
+	return object{
+		"domain":                      "current-product-succession-v1",
+		"verified":                    true,
+		"origin_todo_id":              2834,
+		"todo_id":                     product.task,
+		"project":                     product.project,
+		"registered_path_sha256":      registeredHash,
+		"spec_path_sha256":            specPathHash,
+		"spec_sha256":                 product.specSHA,
+		"original_registry_recovered": false,
+	}
+}
+
+func currentGitHubIdentityVerified(product currentProduct) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "gh", "api", "repos/"+product.repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	cmd.WaitDelay = time.Second
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	fields := strings.Split(strings.TrimSpace(string(output)), "\t")
+	if len(fields) != 3 {
+		return false
+	}
+	id, err := strconv.ParseInt(fields[0], 10, 64)
+	return err == nil && id == product.repositoryID && strings.EqualFold(fields[1], product.repository) && strings.EqualFold(fields[2], product.owner)
+}
+
+func currentProductByTask(task int) (currentProduct, bool) {
+	for _, product := range currentProducts {
+		if product.task == task {
+			return product, true
+		}
+	}
+	return currentProduct{}, false
+}
+
+func currentPathHash(path string) (string, bool) {
+	path, err := portable(path)
+	if err != nil || !filepath.IsAbs(path) {
+		return "", false
+	}
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return "", false
+	}
+	canonical := strings.ToLower(strings.TrimRight(strings.ReplaceAll(filepath.Clean(absolute), `\`, "/"), "/"))
+	return hashBytes([]byte(canonical)), true
+}
+
 func currentQualification(db object, project string, task int, root, spec, expectedHash string, protected func(string) bool) bool {
 	row := itemAt(db, task)
 	if row == nil || row["project"] != project || !same(str(obj(db["projects"])[project]), root) || !same(str(row["spec"]), spec) {

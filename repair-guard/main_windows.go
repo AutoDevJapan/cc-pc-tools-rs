@@ -228,7 +228,32 @@ func allowed(path string) bool {
 func main() {
 	path := flag.String("guard-path", "", "resource absolute path")
 	product := flag.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
+	succession := flag.Int("verify-current-succession", 0, "verify one declared current product successor; no launch or mutation")
 	flag.Parse()
+	successionRequested := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "verify-current-succession" {
+			successionRequested = true
+		}
+	})
+	if successionRequested {
+		declared, ok := currentProductByTask(*succession)
+		if !ok {
+			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false})
+			os.Exit(1)
+		}
+		db, err := readObject(productStore, 64<<20)
+		if err != nil {
+			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false})
+			os.Exit(1)
+		}
+		receipt := currentSuccessionReceipt(db, declared)
+		_ = json.NewEncoder(os.Stdout).Encode(receipt)
+		if receipt["verified"] != true {
+			os.Exit(1)
+		}
+		return
+	}
 	if *product != 0 {
 		db, err := readObject(productStore, 64<<20)
 		if err != nil {

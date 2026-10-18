@@ -4,7 +4,7 @@ use serde_json::json;
 #[test]
 fn checkout_workflow_content_keeps_its_exact_bytes() {
     let r = Redactor::new();
-    for value in ["true", "false", "'false'", "\"false\""] {
+    for value in ["true", "false", "False", "TRUE", "'false'", "\"false\""] {
         let workflow = format!(
             "steps:\n  - uses: actions/checkout@v4\n    with:\n      persist-credentials: {value}\n      fetch-depth: 1\n"
         );
@@ -30,7 +30,7 @@ fn checkout_workflow_content_keeps_its_exact_bytes() {
 #[test]
 fn only_the_named_boolean_setting_is_preserved() {
     let r = Redactor::new();
-    for value in ["false", "true"] {
+    for value in ["false", "true", "False", "TRUE"] {
         assert_eq!(r.field("persist-credentials", value), value);
         for key in [
             "credentials",

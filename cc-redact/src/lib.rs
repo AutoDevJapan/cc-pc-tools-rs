@@ -127,7 +127,8 @@ fn reference(value: &str) -> bool {
 // Keep the exception value-sensitive: other values and credential-named
 // fields (including an outer credentials object) retain normal redaction.
 fn checkout_boolean(name: &str, value: &str) -> bool {
-    name.eq_ignore_ascii_case("persist-credentials") && matches!(value, "true" | "false")
+    name.eq_ignore_ascii_case("persist-credentials")
+        && (value.eq_ignore_ascii_case("true") || value.eq_ignore_ascii_case("false"))
 }
 
 fn has_digit(v: &str) -> bool {

@@ -44,7 +44,11 @@ root becomes read-only. The credential-free startup fixture uses the same
 listener launch and kernel boundary, and requires the real missing-configuration
 failure; it does not register a runner or certify product CI.
 The host requests at most two compiler/test processes through the existing
-Cargo gate, matching this namespace's two CPUs and 8 GiB. The gate can grant
+Cargo gate, matching this namespace's two CPUs and fixed 16 GiB. Swap is disabled.
+The former 8 GiB cgroup recorded an actual OOM kill even with two jobs: toolchain,
+tmpfs artifacts and linker memory share that budget. Only this PR148 namespace
+receives the larger bounded budget; the common CodeQL profile stays unchanged.
+The parent checks available host memory before executing this resource. The gate can grant
 less; its actual allocation is forwarded unchanged. The host-wide ten-process
 ceiling is not requested inside this smaller namespace.
 An SDK refusal to unlink its ephemeral credentials in the read-only runner root

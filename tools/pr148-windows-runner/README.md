@@ -78,6 +78,11 @@ source-transfer timing still requires formal execution.
 
 ## Four separate phases
 
+The host controller preserves AppData and explicitly configured gh/XDG config
+locations through the Cargo gate so the same existing OAuth store remains in
+use. Token environment variables are excluded. The worker retains its isolated
+HOME/AppData; no owner config path or OAuth file is copied into its environment.
+
 Build this module into the owned root (`go build -trimpath -o <root>/bootstrap.exe .`).
 Use CC-AdminBroker for the administrative phases, with no visible console/UAC.
 
@@ -129,6 +134,18 @@ durable attempt marker precedes the OS call. Refusal is retained without an
 unload/retry/alternate cleanup path. It does not accept any other SID/profile.
 Real runner profile cleanup belongs to the parent integration. Always check
 fresh profile/hive/classes absence; the delete API return alone is not proof.
+
+`collect-unstarted <root>` is a separate administrative abort path for a real
+prepared resource whose worker never began. It requires stopped service/PID0,
+zero queryable owned processes, no worker/hook/authentication artifacts, the
+unchanged two-byte initial launcher report and the exact queued official job
+with zero steps and no runner. Authentication files are tested for absence only.
+The normal collection API checks and mutation journals still apply, including
+after a prior successful service-delete phase. It restores only this new root
+and runtime's original controller grant after removing the service grant, so
+normal safe-delete can follow. It does not delete profiles or claim CI success.
+Started resources still require the protected launcher drain report through
+ordinary `collect`. A failed or uncertain mutation is never retried.
 
 `prepare` and `collect` require administrator access through CC-AdminBroker.
 `execute`/`stop` use the preparation's service-specific controller grant. Real execution

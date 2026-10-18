@@ -39,10 +39,13 @@ func pr148CreateArgs(name string) []string {
 		if a[i] == "cc.todo=2648" {
 			a[i] = "cc.todo=2736"
 		}
+		if a[i] == "--memory" {
+			a[i+1] = "16g"
+		}
 	}
 	// The toolchain lives outside the runner's Landlock-visible filesystem.
 	idx := len(a) - 3
-	return append(append(append([]string{}, a[:idx]...), "--tmpfs", "/toolchain:rw,exec,nosuid,size=8g,uid=1001,gid=1001"), a[idx:]...)
+	return append(append(append([]string{}, a[:idx]...), "--memory-swap", "16g", "--tmpfs", "/toolchain:rw,exec,nosuid,size=8g,uid=1001,gid=1001"), a[idx:]...)
 }
 
 func pr148Isolation(data []byte, name, id string) error {
@@ -65,6 +68,17 @@ func pr148Isolation(data []byte, name, id string) error {
 	if json.Unmarshal(data, &i) != nil || len(i) != 1 {
 		return errors.New("Linux isolation parse failed")
 	}
+	var limits []struct {
+		HostConfig struct{ Memory, MemorySwap int64 }
+	}
+	if json.Unmarshal(data, &limits) != nil || len(limits) != 1 || limits[0].HostConfig.Memory != 16<<30 || limits[0].HostConfig.MemorySwap != 16<<30 {
+		return errors.New("fixed Linux memory/no-swap budget rejected")
+	}
+	// The Rust toolchain, tmpfs artifacts and linker shared the old 8 GiB
+	// cgroup; real memory.events recorded oom_kill=1 even at two jobs. Only
+	// this PR148 profile gets 16 GiB, with swap disabled. Validate that exact
+	// budget before adapting the copy for the unchanged legacy validator.
+	i[0].HostConfig.Memory = 8 << 30
 	// Reuse only the established static validator, never its runner or admission.
 	i[0].Config.Labels["cc.todo"] = "2648"
 	options, ok := i[0].HostConfig.Tmpfs["/toolchain"]

@@ -1,5 +1,65 @@
 # ToDo2757: PR205 post-merge delivery boundary
 
+## Latest observation: 2026-10-19, actual compatibility build failed
+
+The older sections below are retained history. Normal distribution through
+ToDo2829 is complete; do not reinstall or return to the original-record wait.
+Current installed Windows and Linux hashes both match the exact PR205 build
+hashes below and both standard receipts. The two receipts have identical bytes
+(SHA256 `976DD58F1145756422A5A613235755727CB17C92995A656D0C9CD61066F8DC40`).
+This direct comparison resolves the previously recorded current-hash discrepancy;
+it does not establish why the earlier observation differed. The current guard
+classifies those four exact executable/receipt leaves as verified, non-client
+resources. A separately supplied receipt elsewhere remains protected and was
+not read. Parent directories/configuration are not generally authorized.
+
+Live repair-source metadata confirmed the allowed owner, private/admin/nonfork,
+and PR205 closed/merged with the exact tested head and merge recorded below.
+The installed preflight was then actually executed. Its only argument after
+`release-build-preflight` is a fresh safe-delete owned directory. On Windows use
+its native absolute path: the current `filepath.Clean(dir) == dir` validation
+rejects forward slashes before acquiring the lease or reading product source.
+The first such input failure and its safe receipt remain preserved separately.
+
+The native-path execution verified the fixed product merge/tree before and
+after the build, the original four CodeQL successes at their fixed attempt,
+zero registered runners, and zero original product containers. It started the
+audited builder with the sealed context (849233 bytes, 301 files, 17 directories).
+The actual builder exited 1, without OOM, while restoring base-image filesystem
+ownership: `chown` returned `operation not permitted`. No artifact was produced.
+The private original log is 125 bytes, SHA256
+`5DF944EF820504F8DF05A65A82F0879D6B85C3C8ECE98ACD1A7629475C24F984`;
+its text and paths were not displayed. The host CLI exit code was not captured;
+the builder exit code comes from Docker's inspected state, not inference.
+
+The receipt confirms outer isolation, 1.5 CPU/6 GiB/448 PIDs for the builder
+within the 2 CPU/8 GiB/512 PID phase, PID0, container and volumes absent,
+introduced tool image removed, and the lease released without recovery needed.
+The host process and lease are also absent. The private raw log and build state
+were copied with matching hashes before safe-delete plan, separate normal
+deletion, and finish `source_absent` for owner
+`85e37d22ae43d68222c3ffec0e7c3e57`.
+
+The upstream pinned builder's [security documentation](https://github.com/osscontainertools/kaniko/blob/v1.28.6/README.md#security)
+states that unpack and RUN permissions depend on the base and instructions.
+The previous scratch fixture therefore did not establish real-base compatibility.
+Do not add capabilities, ignore ownership errors, alter the sealed product input,
+or treat this build failure as official CI success.
+
+Finite implementation ToDo2848 now owns the CC builder compatibility repair,
+real ownership/isolation fixtures, independent review, normal CI/merge, and
+formal Windows/Linux distribution. Its saved specification preserves the outer
+cap-drop ALL/NNP, resource, seal and cleanup constraints. It must not run product
+jobs or modify product code. Parent2757 resumes the same installed preflight
+after that actual distribution; registration alone is not the dependency's
+completion. The first add attempt rejected a provider-prefixed model argument
+under the CLI's model syntax; using its documented short model form succeeded.
+
+Official full/backend/preconditions/release, actual drain, existing Prd revision
+and probes remain unfinished. Historical CC merge failures/cancellations and
+the original Rust official-log refusal remain preserved. Neither task2752 nor
+the original-record recovery is marked complete.
+
 PR205 was normally merged after independent review and successful exact-head CI.
 Formal distribution and product execution have not occurred.
 

@@ -24,6 +24,7 @@ type withdrawalFixture struct {
 	foreignScope, edited                                                                string
 	onProof                                                                             func(int)
 	onCommand, onPatch                                                                  func()
+	allowAnswer                                                                         bool
 }
 
 func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
@@ -46,7 +47,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 	}
 	if native {
 		job := filepath.Join(f.r.Config.Home, "isolated-jobs", "worker-42", "job.json")
-		if publish(job, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "key-42", "status": "succeeded", "created_at": 1700000000}) != nil {
+		if publish(job, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "key-42", "status": "succeeded", "created_at": "2023-11-15T07:13:20+09:00"}) != nil {
 			t.Fatal("job fixture unavailable")
 		}
 	}
@@ -119,7 +120,11 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 				w.failLog = false
 				return "", errors.New("log result lost")
 			}
-		case "question-answer", "recovery-ask", "start", "done":
+		case "question-answer":
+			if !w.allowAnswer {
+				t.Fatal("withdrawal manufactured an answer")
+			}
+		case "recovery-ask", "start", "done":
 			t.Fatal("withdrawal manufactured an answer or launched/completed the task")
 		}
 		return backend(ctx, path, args...)
@@ -435,6 +440,140 @@ func TestConversationWithdrawActualCanonicalSchedulerImportedBlockNote(t *testin
 			row, _ := w.f.r.todo(42)
 			if row.Status != "todo" || row.Note != "以前の作業を保持" || len(row.QuestionAnswers) != 0 || w.logs != 1 || w.patchCount() != 1 {
 				t.Fatal("imported-block withdrawal lost work or created an answer")
+			}
+		})
+	}
+}
+
+func TestConversationWithdrawActualCanonicalRetiredLegacyWorker(t *testing.T) {
+	for _, kind := range []string{"exact", "modern", "foreign-worker", "worker-generation", "missing-result", "running-job", "later-stop", "changed-snapshot"} {
+		t.Run(kind, func(t *testing.T) {
+			w := withdrawalTest(t, true)
+			w.f.mutateTodo(t, func(row map[string]any) {
+				wait := row["owner_question_wait"].(map[string]any)
+				delete(wait, "origin")
+				row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+				row["note"] = "ジョブの結果に判断が必要です。"
+				row["scheduler"].(map[string]any)["phase"] = "finished"
+				row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+				switch kind {
+				case "modern":
+					wait["origin"] = map[string]any{"resume_generation": 7, "worker_receipt": row["worker_receipt"], "job": "worker-42", "key": "key-42"}
+				case "foreign-worker":
+					row["worker_receipt"].(map[string]any)["job"] = "another"
+				case "worker-generation":
+					row["worker_receipt"].(map[string]any)["generation"] = 6
+				case "missing-result":
+					delete(row, "processed_results")
+				case "later-stop":
+					row["owner_stopped"] = true
+				}
+			})
+			if kind == "running-job" {
+				job := filepath.Join(w.f.r.Config.Home, "isolated-jobs", "worker-42", "job.json")
+				if err := publish(job, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "key-42", "status": "running", "created_at": 1700000000}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if kind == "changed-snapshot" {
+				w.onCommand = func() { w.f.mutateTodo(t, func(row map[string]any) { row["note"] = "後から届いた停止" }) }
+			}
+			before, _ := os.ReadFile(w.f.r.TodoPath)
+			result, err := w.run()
+			if kind != "exact" {
+				after, _ := os.ReadFile(w.f.r.TodoPath)
+				if err == nil || (kind != "changed-snapshot" && !bytes.Equal(before, after)) || w.logs != 0 || w.patchCount() != 0 {
+					t.Fatal("unproven null worker was released or reported")
+				}
+				return
+			}
+			if err != nil || result["withdrawn"] != true || w.logs != 1 || w.patchCount() != 1 || w.proofReads < 2 {
+				t.Fatalf("legacy withdrawal, API recheck, progress or archive not verified: %v", err)
+			}
+			row, _ := w.f.r.todo(42)
+			if row.Status != "todo" || row.Note != "以前の作業を保持" || row.Scheduler.Job != "" || len(row.QuestionAnswers) != 0 {
+				t.Fatal("legacy withdrawal lost original work or invented an answer")
+			}
+			if _, err = w.run(); err != nil || w.commands != 1 || w.logs != 1 || w.patchCount() != 1 {
+				t.Fatal("replay duplicated withdrawal, progress or archive")
+			}
+			reply := w.f.reply(t, 8, "既存の依頼を進めて")
+			health := Health{}
+			w.f.r.processConversations(context.Background(), &health)
+			if len(health.Errors) != 0 || w.f.r.State.Requests[reply.Message] == nil || w.f.r.State.Requests[reply.Message].Todo != 42 {
+				t.Fatalf("late owner reply lost after legacy withdrawal: %v", health.Errors)
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalOwnerReplyBeforeRetiredLegacyWithdrawal(t *testing.T) {
+	w := withdrawalTest(t, true)
+	w.allowAnswer = true
+	w.f.mutateTodo(t, func(row map[string]any) {
+		delete(row["owner_question_wait"].(map[string]any), "origin")
+		row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+		row["note"] = "ジョブの結果に判断が必要です。"
+		row["scheduler"].(map[string]any)["phase"] = "finished"
+		row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+	})
+	reply := w.f.reply(t, 8, "既存の依頼を進めて")
+	result, err := w.run()
+	if err != nil || result["owner_reply_pending"] != true || w.commands != 0 || w.logs != 0 || w.patchCount() != 0 {
+		t.Fatal("real owner reply did not stop withdrawal")
+	}
+	health := Health{}
+	w.f.r.NoticeAttempted = true
+	w.f.r.processConversations(context.Background(), &health)
+	row, _ := w.f.r.todo(42)
+	if len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || !hasNoteMarker(row.Note, "conversation-owner-reply:"+w.f.q.SenderID+":"+reply.Message+":"+canonicalHash([]string{reply.Body, ""})[:16]) {
+		t.Fatalf("real owner reply was saved but could not release machine-imported wait: %v", health.Errors)
+	}
+}
+
+func TestConversationActualCanonicalImportedAnswerLostResponseAndNewStop(t *testing.T) {
+	for _, kind := range []string{"lost-response", "new-stop"} {
+		t.Run(kind, func(t *testing.T) {
+			w := withdrawalTest(t, true)
+			w.allowAnswer = true
+			w.f.r.NoticeAttempted = true
+			w.f.mutateTodo(t, func(row map[string]any) {
+				delete(row["owner_question_wait"].(map[string]any), "origin")
+				row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+				row["note"] = "ジョブの結果に判断が必要です。"
+				row["scheduler"].(map[string]any)["phase"] = "finished"
+				row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+			})
+			reply := w.f.reply(t, 8, "既存の依頼を進めて")
+			backend, intercepted := w.f.r.Run, false
+			w.f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if args[0] == "question-answer" && !intercepted {
+					intercepted = true
+					if kind == "new-stop" {
+						w.f.mutateTodo(t, func(row map[string]any) { row["note"] = "後から届いた停止" })
+					} else {
+						if _, err := backend(ctx, path, args...); err != nil {
+							t.Fatal(err)
+						}
+						return "", errors.New("committed response lost")
+					}
+				}
+				return backend(ctx, path, args...)
+			}
+			health := Health{}
+			w.f.r.processConversations(context.Background(), &health)
+			if !intercepted || len(health.Errors) == 0 {
+				t.Fatal("did not exercise uncertain delivery")
+			}
+			health = Health{}
+			w.f.r.processConversations(context.Background(), &health)
+			row, _ := w.f.r.todo(42)
+			if kind == "new-stop" {
+				if row.Status != "block" || row.Note != "後から届いた停止" || len(row.QuestionAnswers) != 0 || w.f.r.State.Requests[reply.Message].Todo != 0 {
+					t.Fatal("a later hold was lost or reported as delivered")
+				}
+			} else if len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || w.f.r.State.Requests[reply.Message].Todo != 42 {
+				t.Fatalf("lost successful response did not reconcile exactly once: %v", health.Errors)
 			}
 		})
 	}

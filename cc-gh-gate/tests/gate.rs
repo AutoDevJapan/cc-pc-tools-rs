@@ -297,6 +297,109 @@ fn api_fields_input_json_and_graphql_variables_are_masked() {
 }
 
 #[test]
+fn api_escape_flag_is_boolean_and_preserves_existing_value_parsing() {
+    let e = Env::new("api-escape");
+    for flag in [
+        "--allow-escape-sequences",
+        "--allow-escape-sequences=true",
+        "--allow-escape-sequences=false",
+    ] {
+        let r = e.ok(
+            &[
+                "api",
+                flag,
+                "repos/o/r/actions/jobs/1/logs",
+                "-XGET",
+                "-H",
+                "Accept: application/vnd.github+json",
+                "--jq",
+                ".message",
+                "-i",
+            ],
+            b"",
+        );
+        assert_eq!(
+            argv(&r),
+            [
+                "api",
+                flag,
+                "repos/o/r/actions/jobs/1/logs",
+                "--method=GET",
+                "--header=Accept: application/vnd.github+json",
+                "--jq=.message",
+                "--include",
+            ]
+        );
+    }
+    let t = token();
+    let r = e.ok(
+        &[
+            "api",
+            "repos/o/r/issues",
+            "--allow-escape-sequences",
+            "-XPOST",
+            "-f",
+            &format!("body={t}"),
+        ],
+        b"",
+    );
+    assert_eq!(
+        argv(&r),
+        [
+            "api",
+            "repos/o/r/issues",
+            "--allow-escape-sequences",
+            "--method=POST",
+            &format!("--raw-field=body={MARK}")
+        ]
+    );
+    e.refused(
+        &[
+            "api",
+            "--allow-escape-sequences",
+            "--unknown-output-flag",
+            "repos/o/r",
+        ],
+        b"",
+    );
+    e.refused(
+        &["pr", "create", "--allow-escape-sequences", "-b", "x"],
+        b"",
+    );
+}
+
+#[test]
+fn api_ansi_response_is_saved_to_a_non_tty_file() {
+    let e = Env::new("api-ansi-file");
+    let endpoint = "repos/o/r/actions/jobs/1/logs";
+    let (out, record) = e.run(&["api", endpoint], b"", &[("FAKE_GH_ANSI", "1")]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(record.is_some());
+    assert!(out.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--allow-escape-sequences"));
+
+    let path = e.dir.join("synthetic.private.log");
+    let out = cc_gh_gate::hidden(env!("CARGO_BIN_EXE_gh_gate"))
+        .args(["api", "--allow-escape-sequences", endpoint])
+        .current_dir(&e.dir)
+        .env(cc_gh_gate::REAL_ENV, &e.real)
+        .env_remove(cc_gh_gate::DEPTH_ENV)
+        .env("FAKE_GH_RECORD", e.record_path())
+        .env("FAKE_GH_ANSI", "1")
+        .stdin(Stdio::null())
+        .stdout(fs::File::create(&path).unwrap())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(out.stdout.is_empty() && out.stderr.is_empty());
+    assert!(fs::read(path).unwrap() == b"\x1b[31msynthetic job log\x1b[0m\n");
+    let r: Value = serde_json::from_slice(&fs::read(e.record_path()).unwrap()).unwrap();
+    assert_eq!(argv(&r), ["api", "--allow-escape-sequences", endpoint]);
+    assert_eq!(r["console_window"], 0);
+}
+
+#[test]
 fn read_only_commands_pass_through_with_stdin_and_exit_code() {
     let e = Env::new("readonly");
     let r = e.ok(

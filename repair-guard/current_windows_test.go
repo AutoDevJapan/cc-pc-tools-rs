@@ -135,35 +135,90 @@ func TestCurrentQualificationBindsNewTaskProjectAndExactSpecification(t *testing
 	row := object{"id": float64(2839), "project": "GoDD-AO", "spec": spec}
 	db := object{"projects": object{"GoDD-AO": base}, "items": []any{row}}
 	allow := func(string) bool { return false }
-	if !currentQualification(db, 2839, base, spec, hashBytes(body), allow) {
+	if !currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(body), allow) {
 		t.Fatal("current fixture rejected")
 	}
-	if currentQualification(db, 2839, base, spec, hashBytes(body), func(string) bool { return true }) {
+	if currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(body), func(string) bool { return true }) {
 		t.Fatal("specification denial ignored")
 	}
 	for _, task := range []int{1476, 2179, 2834, 2840} {
-		if currentQualification(db, task, base, spec, hashBytes(body), allow) {
+		if currentQualification(db, "GoDD-AO", task, base, spec, hashBytes(body), allow) {
 			t.Fatal("another original/current task admitted")
 		}
 	}
 	row["project"] = "other"
-	if currentQualification(db, 2839, base, spec, hashBytes(body), allow) {
+	if currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(body), allow) {
 		t.Fatal("changed project admitted")
 	}
 	row["project"] = "GoDD-AO"
 	db["projects"] = object{"GoDD-AO": base + "-other"}
-	if currentQualification(db, 2839, base, spec, hashBytes(body), allow) {
+	if currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(body), allow) {
 		t.Fatal("changed registration root admitted")
 	}
 	db["projects"] = object{"GoDD-AO": base}
 	if os.WriteFile(spec, append(body, '!'), 0600) != nil {
 		t.Fatal("fixture write failed")
 	}
-	if currentQualification(db, 2839, base, spec, hashBytes(body), allow) {
+	if currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(body), allow) {
 		t.Fatal("changed specification admitted")
 	}
 	db["items"] = []any{row, row}
-	if currentQualification(db, 2839, base, spec, hashBytes(append(body, '!')), allow) {
+	if currentQualification(db, "GoDD-AO", 2839, base, spec, hashBytes(append(body, '!')), allow) {
 		t.Fatal("ambiguous current task admitted")
+	}
+}
+
+func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
+	product := currentProducts[1]
+	if product.project != "GoDD-13a13e1" || product.task != 2850 || product.owner != "AutoDevJapan" || product.repository != "autodevjapan/godd-13a13e1" || product.repositoryID != 1283948432 {
+		t.Fatal("successor declaration changed")
+	}
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := filepath.Join(base, "request.md")
+	body := []byte("fixed current inheritance spec")
+	if os.WriteFile(spec, body, 0600) != nil {
+		t.Fatal("fixture spec write failed")
+	}
+	testRoot := filepath.Join(base, "product")
+	db := object{
+		"projects": object{product.project: testRoot},
+		"items":    []any{object{"id": float64(product.task), "project": product.project, "spec": spec}},
+	}
+	allow := func(string) bool { return false }
+	if !currentQualification(db, product.project, product.task, testRoot, spec, hashBytes(body), allow) {
+		t.Fatal("exact current successor rejected")
+	}
+	for _, altered := range []struct {
+		task int
+		root string
+		spec string
+		hash string
+	}{
+		{product.task + 1, testRoot, spec, hashBytes(body)},
+		{product.task, testRoot + "-other", spec, hashBytes(body)},
+		{product.task, testRoot, spec, hashBytes(append(body, '!'))},
+	} {
+		if currentQualification(db, product.project, altered.task, altered.root, altered.spec, altered.hash, allow) {
+			t.Fatal("altered successor binding accepted")
+		}
+	}
+
+	container := testRoot + "-wt"
+	if os.Mkdir(testRoot, 0700) != nil || os.Mkdir(container, 0700) != nil {
+		t.Fatal("fixture container mkdir failed")
+	}
+	currentFixtureGit(t, testRoot, "init", "-q")
+	currentFixtureGit(t, testRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-13a13e1.git")
+	if !currentProductPath(filepath.Join(container, "todo-2850-issue569"), testRoot, product.repository, "2850", allow) {
+		t.Fatal("exact planned successor worktree rejected")
+	}
+	if currentProductPath(filepath.Join(container, "todo-2851-issue569"), testRoot, product.repository, "2850", allow) {
+		t.Fatal("different task worktree accepted")
+	}
+	if currentProductPath(filepath.Join(container, "todo-2850-issue569"), testRoot, "other/repository", "2850", allow) {
+		t.Fatal("different repository accepted")
 	}
 }

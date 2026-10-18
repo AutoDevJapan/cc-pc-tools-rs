@@ -1,13 +1,14 @@
 package main
 
 // Current, explicitly requested succession is separate from recovery of the
-// original registry and original task IDs. This scope admits one new actor.
+// original registry and original task IDs. Each entry admits one new actor.
 import (
 	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -15,22 +16,38 @@ import (
 
 const currentAORoot = "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-AO"
 const currentAORepository = "autodevjapan/godd-ao"
-const currentAOTask = "2839"
 const currentAOSpec = "D:/CC/Tools/todo/specs/2839-ccac08e67b3b4a4488f3f0241c59b32c.md"
 const currentAOSpecSHA = "b44e6c70614089c50908901e7d60a902f9e2f0793c813f9a0c2595f03714fd33"
 const currentHandoff = "D:/CC/Work/worker-resume-20261018-2103/hand-off.private.md"
 
-func currentAOQualification() bool {
+type currentProduct struct {
+	project, root, owner, repository, spec, specSHA string
+	repositoryID                                    int64
+	task                                            int
+}
+
+// Keep this a finite declaration. Adding a product requires a separately
+// verified registration, owner/repository identity, immutable spec, and path.
+var currentProducts = []currentProduct{
+	{project: "GoDD-AO", root: currentAORoot, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: currentAOSpec, specSHA: currentAOSpecSHA},
+	{project: "GoDD-13a13e1", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1", owner: "AutoDevJapan", repository: "autodevjapan/godd-13a13e1", repositoryID: 1283948432, task: 2850, spec: "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md", specSHA: "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95"},
+}
+
+func currentProductQualification(product currentProduct) bool {
+	parts := strings.Split(product.repository, "/")
+	if product.task <= 0 || product.repositoryID <= 0 || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
+		return false
+	}
 	db, err := readObject(productStore, 64<<20)
 	if err != nil {
 		return false
 	}
-	return currentQualification(db, 2839, currentAORoot, currentAOSpec, currentAOSpecSHA, legacyMatch)
+	return currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, legacyMatch)
 }
 
-func currentQualification(db object, task int, root, spec, expectedHash string, protected func(string) bool) bool {
+func currentQualification(db object, project string, task int, root, spec, expectedHash string, protected func(string) bool) bool {
 	row := itemAt(db, task)
-	if row == nil || row["project"] != "GoDD-AO" || !same(str(obj(db["projects"])["GoDD-AO"]), root) || !same(str(row["spec"]), spec) {
+	if row == nil || row["project"] != project || !same(str(obj(db["projects"])[project]), root) || !same(str(row["spec"]), spec) {
 		return false
 	}
 	p, err := physical(spec)
@@ -124,10 +141,15 @@ func currentScopePathAllowed(path string) bool {
 	if same(path, currentHandoff) {
 		return !legacyMatch(path) && currentPlain(path, false) && sourceVerified(base)
 	}
-	// Only this exact current product and actor qualify. Existing denials
-	// remain authoritative; no lost original row is changed or restored.
-	if !within(currentAORoot, path) && !within(currentAORoot+"-wt", path) {
-		return false
+	// Only an exact current product/actor declaration qualifies. Existing
+	// denials remain authoritative; no lost original row is restored.
+	for _, product := range currentProducts {
+		if !within(product.root, path) && !within(product.root+"-wt", path) {
+			continue
+		}
+		if currentProductQualification(product) && currentProductPath(path, product.root, product.repository, strconv.Itoa(product.task), legacyMatch) {
+			return true
+		}
 	}
-	return currentAOQualification() && currentProductPath(path, currentAORoot, currentAORepository, currentAOTask, legacyMatch)
+	return false
 }

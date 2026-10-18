@@ -260,14 +260,14 @@ func (o *windowsOperations) fetch(a Artifact) (string, error) {
 }
 
 func (o *windowsOperations) downloadMicrosoftBootstrapper(destination string) error {
-	const url = "https://aka.ms/vs/18/release/vs_BuildTools.exe"
+	const url = "https://aka.ms/vs/stable/vs_buildtools.exe"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return errors.New("Microsoft bootstrapper request construction failed")
 	}
 	resp, err := o.client.Do(req)
 	if err != nil {
-		return errors.New("Microsoft bootstrapper download failed")
+		return fmt.Errorf("Microsoft bootstrapper download failed (%s)", classifyNetworkFailure(err))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || resp.Request == nil || resp.Request.URL.Scheme != "https" || !allowedHost(resp.Request.URL.Hostname()) {

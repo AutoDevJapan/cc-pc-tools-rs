@@ -333,9 +333,13 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		commands = [][]string{append([]string{filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")}, args...)}
 		expected = []string{"19.50."}
 	case WindowsSDK:
-		rc := filepath.Join(os.Getenv("ProgramFiles(x86)"), "Windows Kits", "10", "bin", "10.0.26100.0", "x64", "rc.exe")
-		commands = [][]string{{rc, "/?"}}
-		expected = []string{"10.0.26100."}
+		kit := filepath.Join(os.Getenv("ProgramFiles(x86)"), "Windows Kits", "10")
+		rc := filepath.Join(kit, "bin", "10.0.26100.0", "x64", "rc.exe")
+		header := filepath.Join(kit, "Include", "10.0.26100.0", "um", "Windows.h")
+		library := filepath.Join(kit, "Lib", "10.0.26100.0", "um", "x64", "kernel32.lib")
+		metadata := `if(-not (Test-Path -LiteralPath '` + header + `') -or -not (Test-Path -LiteralPath '` + library + `')){exit 74}; (Get-Item -LiteralPath '` + rc + `').VersionInfo.ProductVersion`
+		commands = [][]string{{rc, "/?"}, {filepath.Join(o.root, "powershell", "7", "pwsh.exe"), "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", metadata}}
+		expected = []string{"10.0.10011.", "10.0.26100."}
 	default:
 		return errors.New("unknown SDK package")
 	}
@@ -371,6 +375,9 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		o.proofs = make(map[PackageID]string)
 	}
 	o.versions[id], o.proofs[id] = strings.Join(versions, "; "), hex.EncodeToString(digest[:])
+	if id == WindowsSDK {
+		o.versions[id] = versions[len(versions)-1]
+	}
 	return nil
 }
 

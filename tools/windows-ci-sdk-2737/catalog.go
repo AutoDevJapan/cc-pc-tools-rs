@@ -33,7 +33,7 @@ var packagePins = [...]PackagePin{
 	{ID: PowerShell7, Version: "7.6.6"},
 	{ID: RustToolchain, Version: "1.97.1"},
 	{ID: MSVCBuildTools, Version: "14.50.18"},
-	{ID: WindowsSDK, Version: "10.0.26100.6901"},
+	{ID: WindowsSDK, Version: "10.0.26100"}, // ABI family; signed servicing release measured from rc.exe ProductVersion.
 	{ID: Sccache, Version: "0.18.0"},
 }
 

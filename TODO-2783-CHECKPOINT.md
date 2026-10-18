@@ -1,3 +1,15 @@
+## 2026-10-18 actual execution (supersedes guest-allocation waiting statements)
+
+The owner explicitly instructed this task to allocate its own fresh VM. No guest-allocation notification is required. Shared resource check through CC-AdminBroker measured free memory 57,320,677,376 bytes, CPU 4%, running VMs 0, and the existing Default Switch present.
+
+Current execution: host helper PID 55620, normal tool session 10021, source commit 1071c357db53007195c71161c4550182bcd0e239. Owned root c14881a6f3829c3975a1d52793fc64da, instance todo2783-74f1698d14b1a07e2853e443a2b7d9bf, VM ID 68e2db22-b6f1-4c8c-8284-d525d1be38e0. At the latest own-VM status read it was Running, fixed 4 GiB, uptime 21.826 seconds, VHDX 239,075,328 bytes. Read-only Hyper-V thumbnail showed ordinary Windows Server Setup at 6%. The host helper is waiting on its instance-scoped COM channel. Do not start another helper while this process is running. Current host diagnostics are in codex-owned-e6eb267a360f57182f792007fd3dd9bd/host-run-7.private.*. SDK readiness/template success is not yet established.
+
+Prior actual failures: Go child process scratch directory access, seed-ISO compiler temporary storage access, missing PATHEXT for the broker child process, incorrect switch-object argument, and early COM startup failures. Initial raw logs remain private in each owned root. Corrections and current tests passed (`go test -count=1 -timeout 30s ./...`, `go vet ./...`), including a real Windows named-pipe idle-read deadline regression test. Public Rust rustc component hash was checked against the official Rust 1.97.1 manifest and the combined Rust distribution was replaced with minimal component archives. Changes through 1e85e5f have been pushed; 1071c35 still needs push.
+
+Failed VMs were removed. Roots 7bcc0445c530b8479402512ef3aeae4f, 061545cf8d1cc7e86db07461d24aef8a, and f8ef9087fc02e9bc49546573e42dfa99 have recovery receipts and detached VHDX files. Do not restart these VMs. Keep initial failure records before cleaning only demonstrably unused resources through safe-delete plan/separate ordinary removal/finish or required quarantine. No quarantine input was touched. The original ISO remains in owned root ff7aab696c82983c97d77980aac3c215; new execution roots use copies with verified SHA-256 7b052573ba7894c9924e3e87ba732ccd354d18cb75a883efa9b900ea125bfd51.
+
+Latest shared ToDo 2783 note has been updated with actual execution and failures; no dependency wait or owner decision is required. Parent 2737/2641 unchanged. Product source, Cargo builds/tests, runner registration, official CI, PR updates/dispatch/merge, and Prd remain unexecuted.
+
 # ToDo 2783 resume checkpoint
 
 State: Host provisioning/recovery source and a fixed CLI entrypoint are implemented and locally verified. Real ISO download, VM provisioning, SDK installation, version checks, and template evidence remain unexecuted because no guest resource is assigned.

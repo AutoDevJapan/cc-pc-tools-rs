@@ -44,11 +44,7 @@ func executeThroughGate(p Plan) error {
 	}
 	c := exec.Command(`D:\CC\Tools\codex-jobs\cargo_gate.exe`, "test", "--target-dir", p.target())
 	hidden(c)
-	for _, k := range []string{"SystemRoot", "WINDIR", "SystemDrive", "PATH", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA", "CC_JOB_ID"} {
-		if v := os.Getenv(k); v != "" {
-			c.Env = append(c.Env, k+"="+v)
-		}
-	}
+	c.Env = controllerGateEnv()
 	if !samePath(exe, filepath.Join(p.Root, "helper.exe")) {
 		return errors.New("execute the prepared immutable helper")
 	}
@@ -57,6 +53,18 @@ func executeThroughGate(p Plan) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// Preserve only the existing host controller's non-secret config discovery
+// paths. The worker gets envFor(p)'s isolated HOME/AppData, never these paths.
+func controllerGateEnv() []string {
+	var env []string
+	for _, key := range []string{"SystemRoot", "WINDIR", "SystemDrive", "PATH", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA", "APPDATA", "GH_CONFIG_DIR", "XDG_CONFIG_HOME", "CC_JOB_ID"} {
+		if value := os.Getenv(key); value != "" {
+			env = append(env, key+"="+value)
+		}
+	}
+	return env
 }
 func gateChild(args []string) error {
 	root := os.Getenv("PR148_PLAN_ROOT")

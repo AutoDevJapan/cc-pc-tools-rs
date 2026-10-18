@@ -1,5 +1,111 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03時台・正式失敗の原証拠、新PR224とレビュー2853（最新）
+
+02:36節の新run39149803349/attempt1は、Linux job117740936941がRust/Luaリンクでfailure。
+memory.max/peakは8589934592、memory.eventsはoom=1/oom_kill=1。2並列でも8 GiB不足を実測。
+listener exit2の既知credential unlink拒否は別記したが、実job failureのためCLIもexit1。
+RegistrationGone/LockReleased/Namespace.TreeGone/Removedは全true。原17fileを全SHA一致保存し、
+恒久root/formal-linux-022634-manifest.jsonに対応を記録。元fa1はplan→別削除→finish source_absent。
+公式job logの取得はrun全体が未終端の時点でexit1/0bytes/診断99bytesだった。診断本文は未保存。
+0byteを原log成功とせず、run終端後に通常GETで取得し直す。controllerの原Cargo/SDK logは保存済み。
+
+Windowsのprepare済root50515037115a8be86b5a45e35a5d5a63は、実executeがgate childの
+最初の固定repo GETでexit4。request SHA23973c0f89813b13d86cb2d399b81c01c7f236dd461ea9676dfab66fecc86aff。
+worker/service開始・runner登録前の失敗で、正式Windows job117740937169はqueued/steps0のまま。
+同じcontrollerのsanitized envで同じrepo GETを調べ、APPDATA無しexit4、有りexit0/repo1392152644。
+GH_CONFIG_DIR/GH_HOST/GH_TOKEN/GITHUB_TOKENは元々未設定、APPDATAは存在。設定/credential fileを
+読まず、同じOAuth/CLI/対象のまま環境の欠落を特定した。旧executeは再実行しない。
+
+機能head65592b450de09d0fc2d196e6dfbf7988e3e9e917を保存し、次の修復をPR224へ通常pushした。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/224 。公開head b67e0ff、draft、通常CIは未完。
+- 専用Linux profileだけ10 GiB/MemorySwap同値、CPU2/PID512/readonly/no GPUを維持。
+  中間16 GiB案b0f3は、Docker VM実総容量16764764160bytes（15.61 GiB）に合わず親が実行前に拒否。
+  16 GiBの実namespace/製品検査は0。そのartifactを最新として使用しない。
+- Cargo/検査/guestの上限1。Rustc/Rustdocの元flagsを保ってLLD threads=1だけを追記。
+  元Cargo引数、debug情報、feature、検査対象を減らさない。共通CodeQL profileは8 GiBのまま。
+  正式実行前にVM/hostの新しい空き確認が必要。稼働中の他containerやVM設定を変更しない。
+- host controllerだけ既存AppData/gh/XDG設定場所をgateへ保持し、token環境変数は除外。
+  workerのHOME/AppDataは新rootのまま。元認証方法/権限を切り替えずOAuthを継続する。
+- collect-unstartedを追加。既存collectのdrain条件は保ち、未起動workerだけは停止/PID0、
+  同SIDのqueryable process0、worker/hook/auth file不在、初期report厳密{}、同queued job/steps0/
+  runner無し、既存collection API照合を要求する。auth file本文は読まない。単一試行journalと
+  profile未削除を保持し、この新root/runtimeの元controller grantだけ戻す。実操作はまだ0。
+
+関連PR148 Go race69pass/4skip、Windows module97pass/2skip、両module vet/build成功。
+Windows source/importはb0f3以降不変のため同じ97件を重ねず、最終sourceから両OS artifactを生成。
+恒久root/resourcefix-6559-*と同build-manifest.jsonが最新。旧followup0625と16 GiB b0f3を使わない。
+10 GiBの認証なし実namespace/共有gate正常fixture、Rust1.95元Cargo4command+元rustup fixtureも
+成功。これは小さな合成sourceであり、製品正式CI又は全件成功ではない。両namespaceの
+TreeGone/Removedを確認し、原28fileをSHA一致保存。root42d88386a00dbcd2987af19a00b85a67は
+plan→別削除→finish source_absent。常駐/追加image/volume/GPU/Civ6/新料金は発生させていない。
+
+有限read-only Sonnetレビュー2853をroot job022634の正規subworkで登録し、保存spec全文とSHAを照合。
+docs/todo-2736-resource-auth-review.md、固定basec9ab546/head65592b4、実job20261019-025448-todo-2853。
+原2790/2797/2840/2844の結果・範囲を保持し、新差分のMust0はまだ未受領。既存service5051の
+普通collectは呼ばず、launcher reportを捏造せず、review前に新collect-unstartedも実行しない。
+Linuxの失敗済rootと全fixtureは終了済み。未起動のservice/root5051と、公開SDKを持つ49ff/f884は保持。
+
+次は2853の原応答/MustとPR224の必要CIを受領する。新collector受入後、queued jobを保って5051を
+正規に回収し、原証拠保存とservice/ACE/profile/hive/process不在を確認する。失敗mutationは繰り返さない。
+その後旧runを通常cancelして終端/原job logを回収し、新しい全OS matrix/実jobと新所有rootで正式検査。
+両OSとも本runの成功済み検査は無いので、成功済みWindows全件を重ねる操作ではない。
+製品head03c7cc6/treea6851bdは不変。native/live未dispatch、正式4job成功/2640配送は未達。
+PR219は通常merge8880167済み、mainのhelper39150291985/Build speed39150292259はsuccess、
+CodeQL PC39150292051はqueued。PR224・main CIの残failureも追う。製品mergeは2640、元の停止は保持。
+他のToDoだけを待って終了する場合は、done2844に戻さず正規wait --on2853を保存する。
+この運用メモだけの追加commitは、進行中の同source CIを重ねないためPR224へ即再pushしない。
+
+## 2026-10-19 02:36・追加レビュー受入、PR219通常merge、新正式matrix（最新）
+
+job20261019-022634-todo-2736。同branch/bf332faから再開し、最新指示と共有ToDoを確認。
+review2844は実Sonnet5.5、job20261019-020840-todo-2844、02:09:14〜02:14:08、
+succeeded/exit0/63steps/Must0/実検査0。原応答7027bytes/SHA256
+A1C16C45561539FBE82CEAB0FE884718412B3AB09E7AEAA9BC4238D0F27ECFF2を一致保存した。
+git不可の制限を保持。eventsで元2736絶対pathの読取51件を確認し、親が指定9対象の
+固定0625→HEADと作業コピー差分0を照合して受領した。原2790/2797等の固定範囲を変えない。
+分類の表検査、値置換の追加ケース、診断文言、孫プロセス停止等は有益な提案として保持。
+現行の実capture回帰・上限拒否・有限再試行とMust0の判定を確認し、追加の本体変更はしない。
+期限後の孫の自然終了と、再試行が最大3回である限界を、全tree停止済みとは言い換えない。
+
+PR219は実所有AutoDevJapan/repo1406818713/admin/nonforkとbf332faの正式7job成功、
+MERGEABLEを確認し、draft解除→match-head指定の通常mergeを実施した。
+02:35:24 JST、merge88801677d73745780fa309395b2b2ee0e859bd7bをAPIで確認。
+mainのProduct CI helper39150291985、CodeQL PC39150292051、Build speed39150292259は
+開始待ち。shared bridge403の旧原証拠は保持し、新sourceの成功で旧predicateを断定しない。
+必要なhelperはSHA照合済みの専用実行物を新資源で使う。共有配置の一括更新は行わない。
+
+製品PR148の所有/private/nonfork/admin、同repo、open/draft、03c7cc6/head、1100/base、
+原branch refとrunner0を再照合。旧run39141771645のcompleted/cancelledを保持した。
+rust.ymlを同branchで1回だけ通常dispatchし、実run39149803349/attempt1を作成した。
+直後の一覧APIには未反映だったため再dispatchせず、CLIが返した実run URLの直接GETで
+同repo/event/head/branch/attemptを確認。Linux117740936941、Windows117740937169を固定。
+WindowsprepareはCargoを起動せずrunnerを登録しないため、Linux正式実行と並行した。
+独立レビューと両OS Go CIの成功後に開始しており、helperの残るRust解析も上記merge前に成功。
+
+Windowsの最初の新root d08e5cb05ac9fd5df91f2184ad8eb720は、呼出引数のslash表記と
+plan.Rootが異なりreadPlanでroot mismatch。prepare/checkPathsより前の失敗だった。
+同rootのprepareは再実行せず、原4metadataをSHA一致保存、service1060/不存在とruntime無を確認。
+公開SDK/実行物の別保管一致を確認してplan→別削除→finish source_absentまで完了した。
+
+別の新root50515037115a8be86b5a45e35a5d5a63では、root引数とplanを同じcanonical文字列で
+事前照合してprepareを1回実行。02:34:01にexit0。API source取得→1283objects/1292tracked
+entries、実head03c7cc6/treea6851bd、認証不在、専用service/account/source ownerが揃った。
+prepared helper SHA E7D598D29FB10797963F5300151DB341D9E70BCA44CE4533BEE6ECE8D0EDA5B2。
+root直下prepared/source-materialized/source-owner/plan/prepare-processを恒久rootへSHA一致保存。
+このserviceは未起動・runner未登録・正式Windows job未実行。SDK credential fileを読まない。
+
+Linux新rootfa1eccfe74f70006ed487443297241f4は、固定pinとfollowup0625のhost/guestを照合し、
+専用namespace todo2736-linux-1792344790167902300で正式job117740936941を実行中。
+checkout/Rust/fmtはsuccess、02:35時点でRust/Lua testsがin_progress。原ログを一括表示しない。
+controller PID/開始時刻は恒久root/linux-formal-022634-process.jsonに保存。再開時に実寿命を
+確認して、生存中の同job/container/gateを二重起動しない。正常終了までこのrootを保持する。
+
+次はLinuxの実job/両hook/source/原logs・終了/登録不在/lockを受領し、Windowsのexecuteを
+通常controller/shared gateと登録tokenのRAM専用経路で行う。新sourceで正式4job成功は未達。
+同じmatrixのWindowsを完了後、label競合を避けてnative/liveを順番に通常dispatchする。
+製品PR148のmergeは2640。元880等の停止、旧2381整理待ち、原証拠/許可範囲は保持する。
+
 ## 2026-10-19 02時台・レビュー2840受入と出力待ちの追加修復（最新）
 
 停止item_71は関連race10passとPR148関連race67pass/4skipの集計・固定範囲比較・

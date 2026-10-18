@@ -1,5 +1,19 @@
 # ToDo2736 再開記録
 
+## 2026-10-18 15:44再開・今回の正常な関連付け（最新）
+
+job20261018-154450-todo-2736、同branch/e2f4ec1から再開。実jobは15:45:19開始、
+running/todo2736/同cwdで、共有ToDoもdoing・jobsに今回idあり・scheduler.job一致・
+phase runningを確認した。前回103955の欠落記録は保持し、今回の一致を過去の修復証明や
+製品CI成功へ置き換えない。今回の実HEADで正規checkpointを保存し、原receiptを残す。
+
+最新保存済みオーナー指示は同SHA、元2736/2640/2626のnoteは配送済み103955本文と
+改行を正規化した比較で一致した。追加指示・送信フィルター修復の受入はない。
+origin/mainは3af45ee2で、cc-redact/cc-gh-gate差分0。正規GitHub APIによる両repoの
+owner/private/nonfork/adminと、製品PR148のopen/draft・同head/base repo・
+head75a4051/base1100676/元branch ref不変を再確認。製品変更・再送・runner・dispatch・
+既済検査・質問の再試行は0。原送信失敗の境界と未達条件を保持し、正式CIは未達。
+
 ## 2026-10-18 10:39再開・実ジョブの関連付け不足（最新）
 
 job20261018-103955-todo-2736、同branch/482d8c8から再開。保存済みオーナー指示の

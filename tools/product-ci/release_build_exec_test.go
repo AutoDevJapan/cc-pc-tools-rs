@@ -82,9 +82,9 @@ func newFakeDaemon(t *testing.T) *fakeDaemon {
 }
 
 type fakeImage struct {
-	proof, owners                                                              map[string]string
+	proof, owners, secondOwners                                                map[string]string
 	dropLayer, dupLayer, dupEntry, wrongDiff, badConfig, noConfig, emptyLayers bool
-	extraDiff, symlink, tamperLayer, garbageLayer, secondLayer                 bool
+	extraDiff, symlink, tamperLayer, garbageLayer, secondLayer, swapStore      bool
 }
 
 func fakeImageTar(t *testing.T, proof map[string]string) []byte {
@@ -144,6 +144,12 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 	if o.secondLayer {
 		var l2 bytes.Buffer
 		w := tar.NewWriter(&l2)
+		for dir, v := range o.secondOwners {
+			var uid, gid int
+			var mode int64
+			fmt.Sscanf(v, "%d:%d:%o", &uid, &gid, &mode)
+			w.WriteHeader(&tar.Header{Name: dir + "/", Uid: uid, Gid: gid, Mode: mode, Typeflag: tar.TypeDir})
+		}
 		w.WriteHeader(&tar.Header{Name: "file2", Mode: 0600, Size: 6, Typeflag: tar.TypeReg})
 		w.Write([]byte("layer2"))
 		w.Close()
@@ -180,9 +186,12 @@ func buildFakeImage(t *testing.T, o fakeImage) []byte {
 		add(cfgName, cfg)
 	}
 	if !o.dropLayer {
+		if o.secondLayer && o.swapStore {
+			add(extraName, extra) // Stored before the manifest's first layer.
+		}
 		add(layerName, layer)
 	}
-	if o.secondLayer {
+	if o.secondLayer && !(o.swapStore && !o.dropLayer) {
 		add(extraName, extra)
 	}
 	if o.dupEntry {
@@ -874,6 +883,27 @@ func (u *uncertainImageDocker) run(ctx context.Context, stdin io.Reader, stdout,
 		return errors.New("exit status 1")
 	}
 	return u.fakeDaemon.run(ctx, stdin, stdout, stderr, args...)
+}
+
+func TestImageProofIsMergedInManifestOrder(t *testing.T) {
+	p := fixtureBuilderProfile
+	good := map[string]string{}
+	for k, v := range fixtureImageProof {
+		if !strings.HasPrefix(k, "img.") {
+			good[k] = v
+		}
+	}
+	// The manifest's first layer carries a wrong owner and its second layer the
+	// right one; the archive stores the second layer first. The manifest order
+	// decides, not the storage order.
+	img := fakeImage{proof: good, owners: map[string]string{"var/mail": "0:8:2775", "srv/app": "0:0:750"}, secondLayer: true, swapStore: true, secondOwners: map[string]string{"srv/app": "1234:1234:750"}}
+	if got, err := checkBuiltImage(context.Background(), buildFakeImage(t, img), p); err != nil || got["img.srv_app"] != "1234:1234:750" {
+		t.Fatalf("the later layer in manifest order was not honoured: %v", err)
+	}
+	img.owners, img.secondOwners = map[string]string{"var/mail": "0:8:2775", "srv/app": "1234:1234:750"}, map[string]string{"srv/app": "0:0:750"}
+	if _, err := checkBuiltImage(context.Background(), buildFakeImage(t, img), p); !errors.Is(err, errKernelProof) {
+		t.Fatal("a later layer that undoes the owner was accepted")
+	}
 }
 
 func commandAfter(args []string, image string) []string {

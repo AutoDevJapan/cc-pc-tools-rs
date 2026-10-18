@@ -351,6 +351,14 @@ type guestDockerFake struct {
 	rmFails    bool
 	pullFails  bool
 	seq        int
+	// loseCreates makes the next creates land only later (see materialize).
+	loseCreates int
+	pending     []struct {
+		id string
+		c  fakeSourceContainer
+		l  map[string]string
+	}
+	onCreate func()
 }
 
 func newGuestDockerFake(t *testing.T) *guestDockerFake {
@@ -397,15 +405,39 @@ func (f *guestDockerFake) run(ctx context.Context, stdin io.Reader, stdout, stde
 	case "image rm":
 		delete(f.images, last)
 	case "create":
+		if f.onCreate != nil {
+			f.onCreate()
+		}
+		cname := argValues(args, "--name")[0]
+		image := args[len(args)-2]
+		if strings.Contains(strings.Join(args, " "), "--pull never") && !f.images[image] {
+			io.WriteString(stderr, "Error response from daemon: No such image: x\n")
+			return errors.New("exit status 125")
+		}
+		for _, c := range f.containers {
+			if c.name == cname {
+				io.WriteString(stderr, "docker: Error response from daemon: Conflict. The container name is already in use.\n")
+				return errors.New("exit status 125")
+			}
+		}
 		f.seq++
 		id := fmt.Sprintf("%064x", f.seq)
-		image := args[len(args)-2]
-		f.containers[id] = fakeSourceContainer{argValues(args, "--name")[0], image}
-		f.labels[id] = map[string]string{}
+		labels := map[string]string{}
 		for _, l := range argValues(args, "--label") {
 			k, v, _ := strings.Cut(l, "=")
-			f.labels[id][k] = v
+			labels[k] = v
 		}
+		if f.loseCreates > 0 {
+			f.loseCreates--
+			f.pending = append(f.pending, struct {
+				id string
+				c  fakeSourceContainer
+				l  map[string]string
+			}{id, fakeSourceContainer{cname, image}, labels})
+			return errors.New("response lost")
+		}
+		f.containers[id] = fakeSourceContainer{cname, image}
+		f.labels[id] = labels
 		fmt.Fprintln(stdout, id)
 	case "cp":
 		src, path, _ := strings.Cut(args[1], ":")
@@ -425,9 +457,9 @@ func (f *guestDockerFake) run(ctx context.Context, stdin io.Reader, stdout, stde
 		tw.Close()
 	case "container ls":
 		want := strings.TrimPrefix(argValues(args, "--filter")[0], "label=")
-		k, v, _ := strings.Cut(want, "=")
+		k, v, hasValue := strings.Cut(want, "=")
 		for id := range f.containers {
-			if f.labels[id][k] == v {
+			if got, ok := f.labels[id][k]; ok && (!hasValue || got == v) {
 				fmt.Fprintln(stdout, id)
 			}
 		}
@@ -547,5 +579,122 @@ func TestDockerGuestProviderReportsAFailedRemoval(t *testing.T) {
 	f.containers[leftover] = fakeSourceContainer{"somebody-else", releaseGuestKernelImage}
 	if (dockerGuestProvider{}).release(context.Background(), b) || len(f.containers) != 1 {
 		t.Fatal("a foreign container was removed or the release was reported clean")
+	}
+}
+
+// materialize lands the creates whose answers were lost, as a slow daemon would;
+// a request whose name is already taken fails with a conflict.
+func (f *guestDockerFake) materialize() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, p := range f.pending {
+		taken := false
+		for _, c := range f.containers {
+			taken = taken || c.name == p.c.name
+		}
+		if !taken {
+			f.containers[p.id], f.labels[p.id] = p.c, p.l
+		}
+	}
+	f.pending = nil
+}
+
+func TestDockerGuestProviderClosesAnUncertainSourceCreate(t *testing.T) {
+	f := newGuestDockerFake(t)
+	f.images[releaseGuestKernelImage], f.images[releaseGuestUserlandImage] = true, true
+	f.loseCreates = 1
+	b, _, class := f.providerRun(t)
+	if class != "guest-source-unavailable" || b.rec.GuestSourceAttempted != 1 || b.rec.GuestSourceConfirmed != 0 {
+		t.Fatalf("a lost create answer was not recorded as unconfirmed: %s %d/%d", class, b.rec.GuestSourceAttempted, b.rec.GuestSourceConfirmed)
+	}
+	// Nothing exists yet, so a plain listing would find nothing to remove. The
+	// release takes the name itself first, then removes what holds it.
+	creates := 0
+	for _, c := range f.calls {
+		if c == "create" {
+			creates++
+		}
+	}
+	if !(dockerGuestProvider{}).release(context.Background(), b) || b.rec.GuestSourceConfirmed != b.rec.GuestSourceAttempted {
+		t.Fatal("an unconfirmed source create was not resolved")
+	}
+	after := 0
+	for _, c := range f.calls {
+		if c == "create" {
+			after++
+		}
+	}
+	if after != creates+1 || len(f.containers) != 0 {
+		t.Fatal("the name was not taken and released again")
+	}
+	// The late request found the name taken while the hold existed.
+	f.materialize()
+	// A hold that fails for any reason other than a proof (conflict / missing
+	// image) keeps the release refused so the caller keeps the phase.
+	g := newGuestDockerFake(t)
+	g.images[releaseGuestKernelImage], g.images[releaseGuestUserlandImage] = true, true
+	g.loseCreates = 1
+	b2, _, _ := g.providerRun(t)
+	g.onCreate = func() { g.t.Helper() }
+	broken := &failingCreateDocker{guestDockerFake: g}
+	b2.d = broken
+	if (dockerGuestProvider{}).release(context.Background(), b2) {
+		t.Fatal("an unresolved source create was released")
+	}
+}
+
+type failingCreateDocker struct{ *guestDockerFake }
+
+func (d *failingCreateDocker) run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
+	if args[0] == "create" {
+		io.WriteString(stderr, "Cannot connect to the Docker daemon")
+		return errors.New("exit status 1")
+	}
+	return d.guestDockerFake.run(ctx, stdin, stdout, stderr, args...)
+}
+
+func TestSourceCreateAttemptIsDurableBeforeTheDaemonIsAsked(t *testing.T) {
+	f := newGuestDockerFake(t)
+	b := &builderRun{parent: context.Background(), d: f, dir: t.TempDir(), rec: releaseBuildReceipt{Nonce: strings.Repeat("0a", 16)}}
+	checked := 0
+	f.onCreate = func() {
+		raw, err := os.ReadFile(filepath.Join(b.dir, releaseBuildStateFile))
+		var saved releaseBuildReceipt
+		if err != nil || json.Unmarshal(raw, &saved) != nil || saved.GuestSourceAttempted != saved.GuestSourceConfirmed+1 {
+			t.Error("the source create was not durable before it was sent")
+		}
+		checked++
+	}
+	if _, class := (dockerGuestProvider{}).acquire(context.Background(), b); class != "" || checked != 2 {
+		t.Fatalf("acquire: %q, %d checks", class, checked)
+	}
+}
+
+func TestInertGuestSourceLeftoverIsSweptAndOthersKeepThePhaseBusy(t *testing.T) {
+	f := newGuestDockerFake(t)
+	b := &builderRun{parent: context.Background(), d: f, dir: t.TempDir(), rec: releaseBuildReceipt{Nonce: strings.Repeat("0b", 16)}}
+	other := strings.Repeat("c", 32)
+	leftover := strings.Repeat("1", 64)
+	f.containers[leftover] = fakeSourceContainer{guestSourceContainerName(other, 1), releaseGuestUserlandImage}
+	f.labels[leftover] = map[string]string{releaseGuestSourceLabel: other}
+	if err := b.sweepInertBuilders(context.Background()); err != nil || len(f.containers) != 0 {
+		t.Fatalf("an inert late source handle was not swept: %v", err)
+	}
+	// A container that only carries the label, or has another image or a
+	// different name, is never removed and the phase stays busy.
+	foreign := strings.Repeat("2", 64)
+	for _, c := range []fakeSourceContainer{{"somebody-else", releaseGuestUserlandImage}, {guestSourceContainerName(other, 1), "other-image"}} {
+		f.containers[foreign] = c
+		f.labels[foreign] = map[string]string{releaseGuestSourceLabel: other}
+		if err := b.sweepInertBuilders(context.Background()); err != nil || len(f.containers) != 1 {
+			t.Fatalf("foreign container touched: %v", err)
+		}
+		if busy, err := b.anyBuilder(context.Background()); err != nil || !busy {
+			t.Fatal("a source handle that is not recognized must keep the phase busy")
+		}
+		delete(f.containers, foreign)
+	}
+	if busy, err := b.anyBuilder(context.Background()); err != nil || busy {
+		t.Fatal("the phase is not free")
 	}
 }

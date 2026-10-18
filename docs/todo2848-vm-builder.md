@@ -62,7 +62,11 @@ host socket・host network・seccomp/AppArmor無効化・no-new-privileges解除
 - 出力は2本目のvirtio-blkへddし、外側がゲスト申告のsize/SHA-256で切り出して照合してから
   `/kaniko/output.tar` に置く。ホストは従来どおりRAMで受け取り、artifactの検証を行う。
 - 終了コードは従来の意味を保つ: 成功0、Kaniko失敗はその終了コード、結果欠落125、
-  出力不整合126、OOMは外側がOOMKilled。キャンセル/timeoutは外側のstop→PID0確認→rm→不在確認。
+  出力不整合126、QEMU自身が非0で終了(クラッシュ等)127、OOMは外側がOOMKilled。結果行は
+  QEMUが0で終了した場合だけ採用する。キャンセル/timeoutは外側のstop→PID0確認→rm→不在確認。
+- source container(cp用の取っ手)のcreateは、試行を先に永続化し、応答が確認できない場合は
+  回収前に同じ名前を自分で取ってから消す。遅れて現れた取っ手は次の実行の開始時に、
+  名前・label・image・mountなしの条件を満たすものだけ消し、それ以外は残して排他を保つ。
 
 ## CC自作fixtureの実結果（Docker Desktop 29.7.2、WSL2、2026-10-19）
 

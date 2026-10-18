@@ -143,10 +143,17 @@ func (dockerGuestProvider) acquire(ctx context.Context, b *builderRun) (guestFil
 		// A never-started, network-less, capability-less container only serves as a
 		// handle for docker cp. It is removed again before the next image.
 		name := guestSourceContainerName(b.rec.Nonce, i)
+		// The attempt is durable before the daemon can know the name. Until the
+		// daemon's answer is confirmed, release() closes the name before it lets go.
+		b.rec.GuestSourceAttempted = i + 1
+		if b.persist() != nil {
+			return guestFiles{}, "state-unavailable"
+		}
 		if _, _, err := dockerText(ctx, b.d, 4096, "create", "--name", name, "--label", releaseGuestSourceLabel+"="+b.rec.Nonce, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-			"--memory", "67108864", "--pids-limit", "16", ref, "/cc-never-started"); err != nil {
+			"--memory", "67108864", "--pids-limit", "16", "--pull", "never", ref, "/cc-never-started"); err != nil {
 			return guestFiles{}, b.classify(ctx, "guest-source-unavailable")
 		}
+		b.rec.GuestSourceConfirmed = i + 1
 		for _, pin := range guestPinList() {
 			if pin.image != ref {
 				continue
@@ -221,10 +228,42 @@ func (b *builderRun) removeGuestSources(ctx context.Context) bool {
 	return err == nil && after == ""
 }
 
+// holdGuestSourceName closes the window of a source create whose answer was lost.
+// A second, inert create of the same name either succeeds, so a late arrival of
+// the first request can no longer take the name, or conflicts because the first
+// already exists and is then found by its label. No image is ever pulled: the
+// first create could not have pulled either, so a missing image proves it never
+// happened.
+func (b *builderRun) holdGuestSourceName(ctx context.Context, i int) bool {
+	if i < 0 || i >= len(guestImages) {
+		return false
+	}
+	_, stderr, err := dockerText(ctx, b.d, 4096, "create", "--name", guestSourceContainerName(b.rec.Nonce, i), "--label", releaseGuestSourceLabel+"="+b.rec.Nonce, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+		"--memory", "67108864", "--pids-limit", "16", "--pull", "never", guestImages[i], "/cc-never-started")
+	if err == nil {
+		return true
+	}
+	low := strings.ToLower(stderr)
+	return strings.Contains(low, "already in use") || strings.Contains(low, "conflict") || strings.Contains(low, "no such image")
+}
+
 // release removes the source handles and every image this run introduced. An
-// image that was already present is never touched.
+// image that was already present is never touched. A source create that was
+// attempted but never confirmed is resolved first; if that cannot be concluded
+// the release is refused so the caller keeps the phase and recovers by nonce.
 func (dockerGuestProvider) release(ctx context.Context, b *builderRun) bool {
-	clean := b.removeGuestSources(ctx)
+	clean := true
+	for i := b.rec.GuestSourceConfirmed; i < b.rec.GuestSourceAttempted; i++ {
+		if !b.holdGuestSourceName(ctx, i) {
+			clean = false
+		}
+	}
+	if !b.removeGuestSources(ctx) {
+		clean = false
+	}
+	if clean {
+		b.rec.GuestSourceConfirmed = b.rec.GuestSourceAttempted
+	}
 	for i := range b.rec.GuestImages {
 		g := &b.rec.GuestImages[i]
 		if !g.Introduced {
@@ -444,14 +483,17 @@ qemu-system-x86_64 -name cc-guest -sandbox on,obsolete=deny,elevateprivileges=de
   -object rng-random,id=rng0,filename=/dev/urandom -device virtio-rng-pci,rng=rng0 &
 q=$!
 trap 'kill -TERM "$q" 2>/dev/null' TERM INT
-wait "$q"
-while kill -0 "$q" 2>/dev/null; do wait "$q"; done
+wait "$q"; qrc=$?
+while kill -0 "$q" 2>/dev/null; do wait "$q"; qrc=$?; done
 cg=/sys/fs/cgroup
 rd() { if [ -r "$cg/$1" ]; then tr -d '\n' < "$cg/$1"; else printf 'n/a'; fi; }
 cap=$(sed -n 's/^CapEff:[[:space:]]*//p' /proc/self/status)
 nnp=$(sed -n 's/^NoNewPrivs:[[:space:]]*//p' /proc/self/status)
 printf '{"cpu.max":"%%s","memory.max":"%%s","pids.max":"%%s","memory.peak":"%%s","pids.peak":"%%s","CapEff":"%%s","NoNewPrivs":"%%s"}\n' \
   "$(rd cpu.max)" "$(rd memory.max)" "$(rd pids.max)" "$(rd memory.peak)" "$(rd pids.peak)" "$cap" "$nnp" > /kaniko/outer-proof.json
+# A result line is only believed from an emulator that itself exited cleanly: a
+# crash after the guest wrote its result must not turn into a success.
+[ "$qrc" -eq 0 ] || exit 127
 line=$(tail -n 1 "$W/result.txt" | tr -d '\r')
 case $line in
   "CC-RESULT rc="*" size="*" sha="*) ;;

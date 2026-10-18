@@ -76,6 +76,11 @@ func collectMode(p Plan, unstarted bool) error {
 			return e
 		}
 	}
+	// Recheck the remote identity/runner absence on both fresh collection and
+	// resumption of an already journaled successful service deletion.
+	if p.Fixture == "" {
+		if e = auditCollection(p); e != nil { return e }
+	}
 	s, e := openService(p, 4|0x10000)
 	if e == nil {
 		state, pid, code, err := queryService(s)
@@ -84,7 +89,10 @@ func collectMode(p Plan, unstarted bool) error {
 			return errors.New("service must be stopped with PID zero")
 		}
 		if unstarted {
-			if code != 0 {
+			// SCM reports ERROR_SERVICE_NEVER_STARTED (1077) until the first
+			// start attempt. This is compatible with the stricter worker/job
+			// absence checks above; other nonzero statuses still fail closed.
+			if code != 0 && code != 1077 {
 				closeSC(s)
 				return errors.New("unstarted worker evidence absent or changed")
 			}
@@ -93,12 +101,6 @@ func collectMode(p Plan, unstarted bool) error {
 			if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
 				closeSC(s)
 				return errors.New("protected launcher drain and SCM result required")
-			}
-		}
-		if p.Fixture == "" {
-			if err = auditCollection(p); err != nil {
-				closeSC(s)
-				return err
 			}
 		}
 		e = collectionAction(p, "service-delete", func() error {

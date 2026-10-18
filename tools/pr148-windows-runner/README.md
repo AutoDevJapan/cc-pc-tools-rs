@@ -141,9 +141,12 @@ zero queryable owned processes, no worker/hook/authentication artifacts, the
 unchanged two-byte initial launcher report and the exact queued official job
 with zero steps and no runner. Authentication files are tested for absence only.
 The normal collection API checks and mutation journals still apply, including
-after a prior successful service-delete phase. It restores only this new root
-and runtime's original controller grant after removing the service grant, so
-normal safe-delete can follow. It does not delete profiles or claim CI success.
+after a prior successful service-delete phase. After verifying absence of
+authentication files, it grants Full Control to the recorded controller on
+this new root and runtime as a cleanup step, following service-grant removal.
+Normal safe-delete can then follow. It does not delete profiles or claim CI success.
+SCM status 1077 (never started) is accepted along with zero only after all
+unstarted-worker checks. Other nonzero exit statuses remain rejected.
 Started resources still require the protected launcher drain report through
 ordinary `collect`. A failed or uncertain mutation is never retried.
 

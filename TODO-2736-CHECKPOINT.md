@@ -1,5 +1,43 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03:20・引き継ぎ後の照合（以下を優先）
+
+同じ実job20261019-022634-todo-2736、branchと92226c3から継続した。
+元依頼の受入条件、最新D:/CC/AGENTS.md、project規則、resume-022634.jsonを確認した。
+保護判定はclient_resource=false。完了済みdispatch/merge/回収/レビュー登録は再実行していない。
+
+2853は実Sonnet5.5/succeeded/exit0/81steps/Must0として前担当が受領済み。
+原応答8225bytes/SHA7968538315BEEDFEDED8D687100CF1C7ABE402AD59CA5DEA83C78A7B4F88094F、
+固定65592b4と作業コピーのruntime一致という資格をreceiptで確認。旧節の未受領記述を更新する。
+その後65592b4 collectorの実collect-unstartedはSCM1077の検証で停止し、mutation attempt0。
+新しい6c72729はunstartedだけ1077を許可し、serviceが消えた経路でもremote照合を行う。
+新collectorのSHAはA26595B450A0DCDC2EA3406910F0BF5F095A72DA7C6650E6FE726F05EDC1994D。
+同一fileだけのreview2856は保存済みspec/Haiku5.5/subwork-of2736、03:19時点でtodo/jobs空。
+新collector実行0。旧6559 collector/旧executeを再実行しない。2856を複製しない。
+
+製品APIでrepo1392152644/AutoDevJapan/private/nonfork/admin、同head/base repo、open/draft、
+head/ref03c7cc6/base1100676を再照合。Windows117740937169は同run39149803349/attempt1、
+queued/steps0/runner0。W5051は引き続き保持し、回収前にrunをcancelしない。
+
+PR224の実remote headは92226c358bf32e9b87e37d29d106ec793f6935f5。
+Windows helperとactions解析はsuccess、Linux helper/cc-jobs/残CodeQLはqueuedだった。
+正式必要CI成功・通常mergeは未達。今回の運用文書だけのcommitでは同source CIを重ねない。
+
+PR219 main CodeQL39150292051はcompleted/failureへ進んだ。Rust解析だけsuccess。
+actions117742363148、Go117742363264、JS117742363294は全てSet up runnerでbridge403。
+通常gateの原log取得は全exit0、bytesは順に1693/1693/1707、SHAは恒久rootの各receiptに保存。
+本文は追加で表示せず、エラー行だけ確認した。main219-job-<job>-original.logが原bytes。
+現mainはf0f6c0f3208029de3ab1f4f44be6729e702e0c75で旧run head8880167と異なる。
+public sourceのremote-head照合は拒否候補だが、原logに403本文がなく具体predicateは未確定。
+旧52ddの原因も確定していない。共有bridge/guard/manifest/認証を変更せず、同失敗rerun0。
+既存2825への限定診断依頼にこの新証拠を追加し、未修復を保持する。
+
+次は2856の原応答・実モデル・Mustを受領し、固定6c72729と作業コピーを親で照合する。
+その後だけ新collectorでWを正規回収し、旧run通常cancelと原log回収、新matrixへ進む。
+Linux正式再実行の前には新しいVM/host空きを測る。他container停止やVM設定変更はしない。
+正式4jobと2640への成功証拠配送は未達。製品merge担当2640と元停止/依存を維持する。
+独立作業が尽きたら正規todo wait2736 --on2856と最新実HEAD checkpointを保存し枠を譲る。
+
 ## 2026-10-19 03時台・正式失敗の原証拠、新PR224とレビュー2853（最新）
 
 02:36節の新run39149803349/attempt1は、Linux job117740936941がRust/Luaリンクでfailure。

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -27,7 +28,16 @@ func conversationClone(v object) object {
 }
 func newConversationFixture(t *testing.T) *conversationFixture {
 	t.Helper()
-	base := t.TempDir()
+	return newConversationFixtureAt(t, t.TempDir())
+}
+func newConversationFixtureAt(t *testing.T, base string) *conversationFixture {
+	t.Helper()
+	// CI service TEMP may use 8.3 names. The production guard deliberately
+	// requires physical spelling, so only the synthetic fixture resolves it.
+	base, err := physical(base)
+	if err != nil {
+		t.Fatal("fixture physical base unavailable")
+	}
 	home := filepath.Join(base, "operational")
 	root := filepath.Join(base, "source")
 	for _, p := range []string{home, root} {
@@ -62,6 +72,31 @@ func newConversationFixture(t *testing.T) *conversationFixture {
 	f.state = object{"domain": "unattended-owner-v1", "since": "2026-10-18T01:00:00Z", "destination": conversationClone(f.cfg), "requests": object{"202": conversationClone(f.record)}}
 	f.publish()
 	return f
+}
+
+func TestConversationFixtureNormalizesShortWindowsTempBase(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "fixture directory with a long Windows name")
+	if os.MkdirAll(base, 0700) != nil {
+		t.Fatal("fixture directory unavailable")
+	}
+	input, err := syscall.UTF16PtrFromString(base)
+	if err != nil {
+		t.Fatal("fixture path conversion failed")
+	}
+	buffer := make([]uint16, 32768)
+	n, err := syscall.GetShortPathName(input, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || n >= uint32(len(buffer)) {
+		t.Fatal("fixture short path unavailable")
+	}
+	short := syscall.UTF16ToString(buffer[:n])
+	expected, err := physical(short)
+	if err != nil {
+		t.Fatal("fixture physical path unavailable")
+	}
+	f := newConversationFixtureAt(t, short)
+	if !same(filepath.Dir(f.a.home), expected) || !conversationAllowed(f.replyPath, f.a) {
+		t.Fatal("Windows short temporary path was not normalized for the fixture")
+	}
 }
 func (f *conversationFixture) put(path string, v any) {
 	f.t.Helper()

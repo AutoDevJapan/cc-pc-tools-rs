@@ -5,6 +5,7 @@ package sdkprep
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"syscall"
 	"time"
@@ -48,7 +49,7 @@ func OpenOwnedGuestCOMPipe(ctx context.Context, instance string) (*os.File, erro
 					}
 					if err := f.SetDeadline(deadline); err != nil {
 						_ = f.Close()
-						return nil, errors.New("guest pipe requires cancellable overlapped I/O")
+						return nil, fmt.Errorf("guest pipe requires cancellable overlapped I/O: %v", err)
 					}
 					return f, nil
 				}
@@ -57,7 +58,7 @@ func OpenOwnedGuestCOMPipe(ctx context.Context, instance string) (*os.File, erro
 			}
 			errno, ok := callErr.(syscall.Errno)
 			if !ok || errno != errorPipeBusy && errno != syscall.ERROR_FILE_NOT_FOUND {
-				return nil, errors.New("guest pipe open failed")
+				return nil, fmt.Errorf("guest pipe open failed (win32=%d)", errno)
 			}
 		}
 		timer := time.NewTimer(100 * time.Millisecond)

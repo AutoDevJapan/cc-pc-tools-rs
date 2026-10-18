@@ -113,6 +113,11 @@ func RunSDKPreparation(ctx context.Context, root OwnedRoot, worktree, modulePath
 	}
 	stage = "guest-sdk-install-and-version-check"
 	receipt, err := PrepareProvisionedGuest(ctx, instance, clientIdentity)
+	resultRecord, _ := json.Marshal(struct {
+		Receipt PreparationReceipt `json:"receipt"`
+		Failure string             `json:"failure"`
+	}{Receipt: receipt, Failure: fmt.Sprint(err)})
+	_ = writeOwnedFile(filepath.Join(root.Path, "sdk-operations.private.json"), resultRecord)
 	if err != nil {
 		stage = "guest-sdk-failed-vm-recovery"
 		_, _ = ShutdownRemoveOwnedVM(root, worktree, instance)

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -99,7 +100,9 @@ func TestProductCIRuntimeKeepsProtectionAndRefusesRedirection(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(real, "product-ci.exe"), []byte("fixture"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := exec.Command("cmd", "/c", "mklink", "/J", link, real).CombinedOutput(); err != nil {
+	mklink := exec.Command("cmd", "/c", "mklink", "/J", link, real)
+	mklink.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if out, err := mklink.CombinedOutput(); err != nil {
 		t.Skipf("junction unavailable: %v %s", err, out)
 	}
 	defer os.Remove(link)

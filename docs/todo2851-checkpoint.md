@@ -1,6 +1,6 @@
 # ToDo2851 再開情報
 
-## 03:13 JST 更新
+## 再開後の更新
 
 レビュー2854は実Sonnet5.5/succeeded/exit0/55steps/Must0で受領済み。
 担当はgitを起動できなかったが、baseのworktreeとheadの6対象を全文比較した。

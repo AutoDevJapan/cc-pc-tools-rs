@@ -175,6 +175,9 @@ func allowed(path string) bool {
 	if err != nil || legacyMatch(absolute) {
 		return false
 	}
+	if conversationPathAllowed(absolute) {
+		return true
+	}
 	if productPathAllowed(absolute) {
 		return true
 	}

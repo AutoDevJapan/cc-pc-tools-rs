@@ -387,3 +387,20 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 次は新route差分の有限別モデルレビュー、2828受領/統合/関連検査、fresh nonce SDK cloneでの実受入。その後だけ原PR同branchの期待旧b194/force=false更新を行い、新head/tree/wfhashとCodeQL再解析要否を親2641へ配送する。
   元公式CIを手動successへ置換せず、原13工程/条件/profile/直列/timeout20/Docker parityを維持して完走する。親のmerge/Prdは担当しない。
   SDK2783へのwaitはもう不要。ほかの担当だけを待つ時は新2828/新差分reviewへwaitを記録し、実HEAD/jobでcheckpointを保存する。
+
+### 同jobの保存・担当結合補修と次回の入口
+
+- route実装codeは899ed68ff281588b71a07e35f26978f7d869c27e/treebf3526f94c2ccd8fd218faf9011d144e1e1c498bへcommit/pushしremote一致。今回の新差分16fileは別モデルgpt-6-lunaの有限review2831へ--specで登録し、fixed basec373a18→head899ed68を保存した。まだ実応答/Must0は未受領。
+- checkpoint初回はInputRejected。cc-scheduler/workspace_checkpoint.rsを読み、実jobがToDo.jobsに含まれずscheduler.jobもnullだったことを照合した。
+  ToDoはtodo/prepared、保存key d6e1b5c964954cb695c94afd77309161と実running job20261018-234740-todo-2737のlaunch_key/番号/cwdが一致。他の同worktree/同ToDoの6jobは全てsucceededだった。
+  最初の補修前checkではPowerShellの@($null).Countを1と数えて停止し、変更はしていない。nullを除いたwait件数0であることを再確認。
+  既存CLI todo start2737 --job同CC_JOB_IDで起動済み同一担当の結合だけを補修した。spec/needs/worktree/branchは読戻しで不変。新モデルjob/権限/guard/登録manifestを作っていない。
+  同じcheckpoint APIを再度照合した結果exit0/saved=true/launched0/source_files_changed=false。ソース側のcheckpoint条件を改変したり、別jobのIDで通したりしていない。初回拒否も保持。
+- SDK受領/回収と関連検査/登録/保存の47fileをD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-234740-routeへ全hash一致で退避。
+  hashes.private.json SHA256 58FE21520ACCB31E336029A44D1D70186D8556BBA676DBF8E73F0ACA44780A64。
+  原21GB SDK/原private logs/元root56は保持したまま。root109も未完runtime/再開用の小さい検査資産として保持し、原assetを不要物planへ掛けていない。
+- 2828のcandidate bec99388b45319bfed7e3db67f1cbd24422883fd/tree6c5c18608b0d7940178baaa97938e6dd0a8fb5cdを受領した。API/固定path/clone stagingはそのtools/windows-ci-runner-2737/README.mdとHANDOFF.mdへ記録されている。
+  同candidateは新Go backend/SDK最小callback/実Windows合成pipe-TLS-processとrace/vetまで。原VM/runner/13工程は未実行で、2830レビュー待ちの2828は未完。まだ候補を最終codeへ統合していない。
+- 次回は2831の原応答をまず受領し、newMust/未読があればWindows待ちの前に直す。source差分Must0後に2828の最終code/2830反映結果を受けて統合・関連検査へ進む。
+  したがって現時点のwait先は2831だけ。2828や完了済み2783を同時waitにして、新source指摘の修正を遅らせない。SDK/Windows実acceptanceは正式CIの前提として保持する。
+  新route codeはまだ実GitHub mutation0/dispatch0、通常CI未実行。新しいM0を旧2800から流用しない。

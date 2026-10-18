@@ -1,0 +1,18 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "todo-2860-pnpm-20261019",
+    "/usr/bin/env",
+    "-i",
+    "HOME=/home/ci2737",
+    "LANG=C.UTF-8",
+    "PATH=/case/npm9bin:/opt/actions-runner/externals/node20/bin:/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+    "/bin/sh",
+    "-c",
+    "set -eu; command -v node; node --version; command -v npm; npm --version; /home/ci2737/setup-pnpm/node_modules/.bin/bin/pnpm --version; sha256sum /usr/share/nodejs/npm/bin/npm-cli.js; sha256sum /opt/actions-runner/externals/node20/lib/node_modules/npm/bin/npm-cli.js /opt/actions-runner/externals/node24/lib/node_modules/npm/bin/npm-cli.js"
+  ],
+  "exit": 0,
+  "stdout": "/opt/actions-runner/externals/node20/bin/node\nv20.20.2\n/case/npm9bin/npm\n9.2.0\n10.11.0\n8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7  /usr/share/nodejs/npm/bin/npm-cli.js\n8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7  /opt/actions-runner/externals/node20/lib/node_modules/npm/bin/npm-cli.js\n8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7  /opt/actions-runner/externals/node24/lib/node_modules/npm/bin/npm-cli.js\n",
+  "stderr": ""
+}

@@ -1,0 +1,18 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "todo-2860-pnpm-20261019",
+    "/usr/bin/env",
+    "-i",
+    "HOME=/home/ci2737",
+    "LANG=C.UTF-8",
+    "PATH=/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+    "/bin/sh",
+    "-c",
+    "set -eu; for prefix in /case/node18/bin /opt/actions-runner/externals/node20/bin /opt/actions-runner/externals/node24/bin; do PATH=\"$prefix:/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin\"; export PATH; command -v node; node --version; command -v npm; npm --version; done; head -n 1 /usr/share/nodejs/npm/bin/npm-cli.js; sha256sum /case/action/index.js /case/node18/bin/node; /home/ci2737/setup-pnpm/node_modules/.bin/bin/pnpm --version; cat /case/work/package.json"
+  ],
+  "exit": 0,
+  "stdout": "/case/node18/bin/node\nv18.19.1\n/usr/bin/npm\n9.2.0\n/opt/actions-runner/externals/node20/bin/node\nv20.20.2\n/opt/actions-runner/externals/node20/bin/npm\n10.8.2\n/opt/actions-runner/externals/node24/bin/node\nv24.21.0\n/opt/actions-runner/externals/node24/bin/npm\n11.19.0\n#!/usr/bin/env node\nfc4a334f5232afcc909722152a3427555a7360b14315b460675e40a49fe6866a  /case/action/index.js\n0ec634ce3c3ab88bbb2c5cf3427aba1c6e8ed53a721538b7a2e69dd68d032209  /case/node18/bin/node\n10.11.0\n{\"private\":true,\"packageManager\":\"pnpm@10.11.0\"}",
+  "stderr": ""
+}

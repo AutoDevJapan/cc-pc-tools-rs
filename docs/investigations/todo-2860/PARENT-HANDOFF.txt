@@ -1,0 +1,4 @@
+公開固定actionの合成試験で、Node18.19.1のself-installerにpaths[0] undefinedを再現した。原因はbootstrap @pnpm/exe11.25.0がimport.meta.dirnameをpath.resolveへ渡すことで、Node18にはこのプロパティがない。action本体をNode24で起動しても、npmの子処理はPATHのNode18を使い得る。
+1仮説を5対照で検査。Node18.20.4/npm9と18.19.1/npm9はexit1。SDK Node20/npm10、Node24/npm11、Node20/npm9固定はexit0。合成packageManagerはpnpm@10.11.0であり、原製品と同一とは主張しない。
+推奨案は、検査済みSDK Node24のbinをaction子環境のPATH先頭へ置き、action本体もnode24宣言どおりに起動すること。親の実パス・node/npm解決先・実versionを親自身の許可範囲で確認する。原ログ本文や位置の追加共有は不要。
+証拠と全command/exit/hash: scheduler/todo-2860-pnpmブランチのdocs/investigations/todo-2860/RESULT.mdと同フォルダのJSON。専用containerは停止/PID0/除去/不在を確認し、元SDK imageを保持。一時データはsafe-delete完了。独立PR/merge、親code修正、原製品CI成功の主張はない。

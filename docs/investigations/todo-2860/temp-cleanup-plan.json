@@ -1,0 +1,11 @@
+{
+  "command": [
+    "D:/CC/Tools/safe-delete/safe-delete.exe",
+    "plan",
+    "--id",
+    "fd1a98aa3b1e1482519a9afe616a9b2e"
+  ],
+  "exit": 0,
+  "stdout": "{\"action\":\"submit_to_exec_tool\",\"bytes\":29836181,\"entries\":8,\"id\":\"fd1a98aa3b1e1482519a9afe616a9b2e\",\"path\":\"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-fd1a98aa3b1e1482519a9afe616a9b2e\",\"powershell_command\":\"Remove-Item -LiteralPath 'C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-fd1a98aa3b1e1482519a9afe616a9b2e' -Recurse -ErrorAction Stop\",\"protected_attributes\":false}\n",
+  "stderr": ""
+}

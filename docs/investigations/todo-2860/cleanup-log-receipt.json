@@ -1,0 +1,13 @@
+{
+  "command": [
+    "D:/CC/Tools/discord-ask/discord_ask.exe",
+    "log",
+    "--topic",
+    "後片付けの記録",
+    "--text",
+    "ToDo2860の公開pnpm調査を終え、専用コンテナ1個を停止しました。PIDが0であることを確認して削除し、不在も確認しました。元のSDKイメージは保持しています。所有付き一時データ29,836,181バイトを通常削除し、終了記録を保存しました。"
+  ],
+  "exit": 0,
+  "stdout": "{\"delivery\":\"verified\",\"domain\":\"discord-conversation-v1\",\"message_id\":\"1561453723996393620\",\"request_id\":\"normal-log-bd4bd2940e32e745da161309df56df8ca821ed8eed14dba978737e667ffe4f19\",\"reused\":false,\"thread_id\":\"1561297764258807821\",\"url\":\"https://discord.com/channels/1552944707464597524/1561297764258807821\"}\n",
+  "stderr": ""
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "D:/CC/Tools/safe-delete/safe-delete.exe",
+    "finish",
+    "--id",
+    "fd1a98aa3b1e1482519a9afe616a9b2e"
+  ],
+  "exit": 0,
+  "stdout": "{\"id\":\"fd1a98aa3b1e1482519a9afe616a9b2e\",\"state\":\"source_absent\"}\n",
+  "stderr": ""
+}

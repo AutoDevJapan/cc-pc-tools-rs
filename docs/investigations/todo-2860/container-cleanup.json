@@ -1,0 +1,63 @@
+[
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "stop",
+      "--time",
+      "10",
+      "todo-2860-pnpm-20261019"
+    ],
+    "exit": 0,
+    "stdout": "Flag --time has been deprecated, use --timeout instead\ntodo-2860-pnpm-20261019\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "inspect",
+      "todo-2860-pnpm-20261019",
+      "--format",
+      "{{.Id}} {{.State.Running}} {{.State.Pid}}"
+    ],
+    "exit": 0,
+    "stdout": "de6b0e0f6490fda7c1a905d88af7c49b0d72f9f874aa7d4625d5846b8639e50d false 0\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "rm",
+      "-v",
+      "todo-2860-pnpm-20261019"
+    ],
+    "exit": 0,
+    "stdout": "todo-2860-pnpm-20261019\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "container",
+      "inspect",
+      "todo-2860-pnpm-20261019",
+      "--format",
+      "{{.Id}}"
+    ],
+    "exit": 1,
+    "stdout": "\n",
+    "stderr": "Error response from daemon: No such container: todo-2860-pnpm-20261019\n"
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "image",
+      "inspect",
+      "sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011",
+      "--format",
+      "{{.Id}}"
+    ],
+    "exit": 0,
+    "stdout": "sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011\n",
+    "stderr": ""
+  }
+]

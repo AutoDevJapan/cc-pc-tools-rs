@@ -27,5 +27,39 @@
     }
   ],
   "exe_integrity_verified": true,
-  "node18_official_shasums_match": true
+  "node18_official_shasums_match": true,
+  "exe_package": {
+    "version": "11.25.0",
+    "resolved": "https://registry.npmjs.org/@pnpm/exe/-/exe-11.25.0.tgz",
+    "integrity": "sha512-X19R2uC+VAJ4UJQE9c/PCdOXbDaWnZtad7WUrTHBFQuMVaK9MAHbyO/WgahQCuRtTmJkLbxcWKKCk+JeTYFm/g==",
+    "hasInstallScript": true,
+    "license": "MIT",
+    "dependencies": {
+      "@reflink/reflink": "0.1.19",
+      "detect-libc": "^2.1.2"
+    },
+    "bin": {
+      "pn": "pn",
+      "pnpm": "pnpm",
+      "pnpx": "pnpx",
+      "pnx": "pnx"
+    },
+    "funding": {
+      "url": "https://opencollective.com/pnpm"
+    },
+    "optionalDependencies": {
+      "@pnpm/linux-arm64": "11.25.0",
+      "@pnpm/linux-x64": "11.25.0",
+      "@pnpm/linuxstatic-arm64": "11.25.0",
+      "@pnpm/linuxstatic-x64": "11.25.0",
+      "@pnpm/macos-arm64": "11.25.0",
+      "@pnpm/win-arm64": "11.25.0",
+      "@pnpm/win-x64": "11.25.0"
+    }
+  },
+  "exe_tar_source": "https://registry.npmjs.org/@pnpm/exe/-/exe-11.25.0.tgz",
+  "node18_tar_source": "https://nodejs.org/dist/v18.19.1/node-v18.19.1-linux-x64.tar.xz",
+  "node18_shasums_source": "https://nodejs.org/dist/v18.19.1/SHASUMS256.txt",
+  "fixture": "{\"private\":true,\"packageManager\":\"pnpm@10.11.0\"}",
+  "fixture_sha256": "1a4c91cc8009feb36131d80e7fb5ad269141b1f9be1bc10396e751f60fd22901"
 }

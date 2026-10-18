@@ -20,8 +20,20 @@ setup.js:60のimport.meta.dirnameがownDir、64でpath.resolveへ渡る。
 node18.19.1の公式tarを取得しSHASUMS256と一致を確認（まだ未実行）。
 再開直前item_18は公開package消失によりsource読取失敗、lock JSONの空keyで解析失敗。
 npm失敗後のディレクトリ再読取はせず、公開tar展開とConvertFrom-Json -AsHashtableで解決。
-残り: exact18.19.1の対照、推奨PATH24の成功確認、結論、停止/PID0/除去、temp safe-delete。
+完了追記: exact18.19.1でもexit1の同分類を確認。SDK PATH24/npm11.19.0でexit0。
+SDK PATH20/system npm9.2.0固定でもexit0。原因と修正案はRESULT.mdへ保存。
+全5対照は1仮説の検査であり、別仮説は実行していない。
+所有container停止→Running=false/PID0→rm -v→不在を確認。元SDK imageは保持。
+所有tempはplanが示した通常削除を別呼出しで実行し、finish=source_absentを保存。
+文書/JSONの構文と参照・差分書式を照合済み。Rust/製品codeの変更がないためCargo検査は不要。
+親向け要約はPARENT-HANDOFF.txt。自分のToDoへnoteとして保存し、状態更新はschedulerに任せる。
+成果はこの作業branchでcommit/pushし、最終HEADはscheduler checkpointと終了報告で渡す。
+残る製品側の確認・修正は親2737の範囲であり、本調査に未実施の製品工程を含めない。
 
 仮説枠: (1) action本体とPATH上のNode選択、(2) allowlistから欠ける公開runner環境、
 (3) 必要な場合のみ公開packageManager入力。未実施は実施と数えない。
 branchは変更しない。変更が必要ならscheduler checkpoint-workspaceを実行する。
+
+確認済み結論: 公開@pnpm/exe11.25.0のimport.meta.dirnameがNode18でundefinedになる。
+推奨案: 検査済みSDK Node24のbinをaction子環境のPATH先頭へ置く。
+親の環境には適用していない。原製品CIの成功とは報告しない。

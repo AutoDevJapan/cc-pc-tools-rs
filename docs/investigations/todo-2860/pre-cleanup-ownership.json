@@ -1,0 +1,12 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "inspect",
+    "todo-2860-pnpm-20261019",
+    "--format",
+    "{{.Id}} {{.Image}} {{json .Config.Labels}} {{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{.HostConfig.MemorySwap}} {{.HostConfig.PidsLimit}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{.HostConfig.Privileged}} {{json .Mounts}} {{json .HostConfig.Devices}} {{json .HostConfig.DeviceRequests}}"
+  ],
+  "exit": 0,
+  "stdout": "de6b0e0f6490fda7c1a905d88af7c49b0d72f9f874aa7d4625d5846b8639e50d sha256:89988fa8449f89b0d8f12fd2369aa5b167bfe3389189df877808a15055869011 {\"cc.job\":\"20261019-034852-todo-2860\",\"cc.todo\":\"2860\",\"org.opencontainers.image.source\":\"https://github.com/rust-lang/docker-rust\"} 1000000000 1073741824 1073741824 96 [\"ALL\"] [\"no-new-privileges\"] false [] [] null\n",
+  "stderr": ""
+}

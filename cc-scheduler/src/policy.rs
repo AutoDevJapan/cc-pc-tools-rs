@@ -371,6 +371,7 @@ pub fn resources_busy_with_lock(
                 s(&p["name"]).to_ascii_lowercase().as_str(),
                 "cargo.exe" | "rustc.exe" | "cargo" | "rustc"
             ) && !cargo_gate_ancestor(p, &processes)
+                && !cargo_gate_relay(p, &processes)
         });
         if free_slots.is_empty() || unmanaged || probe_failed {
             busy.insert("cargo".into());
@@ -406,6 +407,38 @@ fn cargo_gate_ancestor(process: &Value, processes: &Processes) -> bool {
         current = parent;
     }
     false
+}
+
+fn cargo_gate_relay(process: &Value, processes: &Processes) -> bool {
+    if !matches!(
+        s(&process["name"]).to_ascii_lowercase().as_str(),
+        "cargo.exe" | "cargo"
+    ) {
+        return false;
+    }
+    let Some((pid, created)) = process["pid"]
+        .as_u64()
+        .filter(|pid| *pid > 0)
+        .zip(process["created"].as_u64().filter(|created| *created > 0))
+    else {
+        return false;
+    };
+    // The installed cargo shim starts the gate as its direct child. The shim
+    // stays alive while the gate owns the real build's target and machine slot.
+    // A reused parent PID or an unknown birth time does not prove this relation.
+    // Every other compiler is still checked independently by the caller.
+    processes.values().any(|child| {
+        matches!(
+            s(&child["name"]).to_ascii_lowercase().as_str(),
+            "cargo_gate.exe" | "cargo_gate"
+        ) && child["ppid"].as_u64() == Some(pid)
+            && child["pid"]
+                .as_u64()
+                .is_some_and(|child_pid| child_pid != pid)
+            && child["created"]
+                .as_u64()
+                .is_some_and(|birth| birth >= created)
+    })
 }
 pub fn pressure_victim(
     items: &[Value],

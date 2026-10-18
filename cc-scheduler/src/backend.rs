@@ -1,10 +1,16 @@
 use crate::{common::*, native, policy::*};
 use serde_json::{json, Value};
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
+
+#[path = "process_birth_fallback.rs"]
+mod process_birth_fallback;
+pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
+pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
     fn product_review_allowed(&mut self, _item: &Value) -> bool {
@@ -21,6 +27,10 @@ pub trait Backend {
     }
     fn measure(&mut self, state: &mut Value) -> Result<(Value, Processes)>;
     fn snapshot(&mut self) -> Result<Processes>;
+    /// Read-only creation-time bounds for selected PIDs inaccessible to GetProcessTimes.
+    fn birth_bounds(&mut self, _pids: &[u32]) -> Result<BTreeMap<u32, (u64, u64)>> {
+        Ok(BTreeMap::new())
+    }
     fn jobs(&mut self) -> Result<Vec<Value>>;
     fn event_mtime(&mut self, job: &Value) -> Result<f64>;
     fn mark_lost(&mut self, job: &mut Value) -> Result<bool>;
@@ -463,6 +473,9 @@ impl Backend for RealBackend {
     }
     fn snapshot(&mut self) -> Result<Processes> {
         native::process_snapshot()
+    }
+    fn birth_bounds(&mut self, pids: &[u32]) -> Result<BTreeMap<u32, (u64, u64)>> {
+        process_birth_fallback::query(self.runner.as_mut(), pids)
     }
     fn jobs(&mut self) -> Result<Vec<Value>> {
         jobs_from(&self.tools.join("codex-jobs/jobs"), true)

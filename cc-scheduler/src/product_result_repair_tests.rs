@@ -8,6 +8,9 @@ struct Fake {
     allowed: bool,
     clock: f64,
     on_outcome: Option<Box<dyn FnOnce()>>,
+    births: std::collections::BTreeMap<u32, (u64, u64)>,
+    births_after_first: Option<std::collections::BTreeMap<u32, (u64, u64)>>,
+    birth_calls: usize,
 }
 impl Backend for Fake {
     fn repair_scope_allowed(&mut self, path: &str) -> bool {
@@ -21,6 +24,20 @@ impl Backend for Fake {
     }
     fn snapshot(&mut self) -> Result<Processes> {
         Ok(self.ps.clone())
+    }
+    fn birth_bounds(
+        &mut self,
+        pids: &[u32],
+    ) -> Result<std::collections::BTreeMap<u32, (u64, u64)>> {
+        self.birth_calls += 1;
+        assert!(pids.iter().all(|pid| *pid > 0));
+        Ok(if self.birth_calls > 1 {
+            self.births_after_first
+                .clone()
+                .unwrap_or_else(|| self.births.clone())
+        } else {
+            self.births.clone()
+        })
     }
     fn jobs(&mut self) -> Result<Vec<Value>> {
         Ok(self.records.clone())
@@ -135,6 +152,9 @@ impl Fixture {
                 allowed: true,
                 clock: AT as f64,
                 on_outcome: None,
+                births: Default::default(),
+                births_after_first: None,
+                birth_calls: 0,
             },
         )
         .unwrap();
@@ -157,6 +177,72 @@ impl Fixture {
             .reconcile_repairs(&mut jobs, &ps, &json!({}))
             .unwrap();
     }
+}
+
+#[test]
+fn an_inaccessible_reused_historical_pid_does_not_strand_the_finished_product() {
+    let mut f = Fixture::new();
+    let mut db = f.db();
+    let mut historical = f.engine.backend.records[0].clone();
+    historical["id"] = json!("historical");
+    historical["pid"] = json!(55);
+    historical["pid_created"] = json!(1_000_003u64);
+    historical["codex_pid"] = Value::Null;
+    f.engine.backend.records.push(historical);
+    db["items"][0]["jobs"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("historical"));
+    f.save(&db);
+    f.engine
+        .backend
+        .ps
+        .insert(55, json!({"pid":55,"created":null}));
+    assert!(qualified(&db, &f.engine.backend.records[0], AT));
+    f.reconcile();
+    assert_eq!(
+        f.db(),
+        db,
+        "unavailable metadata must keep the original hold"
+    );
+    assert_eq!(f.engine.backend.birth_calls, 1);
+
+    f.engine.backend.birth_calls = 0;
+    f.engine.backend.births.insert(55, (999_990, 1_000_010));
+    f.reconcile();
+    assert_eq!(
+        f.db(),
+        db,
+        "overlapping precision bounds cannot rule out a live owner"
+    );
+
+    f.engine.backend.birth_calls = 0;
+    f.engine.backend.births.insert(55, (2_000_000, 2_000_020));
+    f.engine.backend.births_after_first = Some(std::collections::BTreeMap::from([(
+        55,
+        (999_990, 1_000_010),
+    )]));
+    f.reconcile();
+    assert_eq!(
+        f.db(),
+        db,
+        "the fresh query must still win before committing"
+    );
+    assert_eq!(f.engine.backend.birth_calls, 2);
+
+    f.engine.backend.birth_calls = 0;
+    f.engine.backend.births_after_first = None;
+    f.reconcile();
+    assert_eq!(f.db()["items"][0]["status"], "wait");
+    assert_eq!(f.engine.backend.birth_calls, 2);
+    assert_eq!(
+        f.db()["items"][0]["wait_ready"],
+        db["items"][0]["product_retry_intent"]["snapshot"]["wait_ready"]
+    );
+    assert!(
+        f.engine.backend.ps[&55]["created"].is_null(),
+        "the shared snapshot must not invent an exact identity"
+    );
 }
 
 #[test]

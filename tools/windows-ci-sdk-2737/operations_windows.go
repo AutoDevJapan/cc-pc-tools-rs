@@ -428,6 +428,7 @@ func runCapture(executable string, args, env []string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable, args...)
+	configureFixedCommandLine(cmd)
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Env, cmd.Stdin = env, nil
 	var output bytes.Buffer
@@ -450,6 +451,15 @@ func runCapture(executable string, args, env []string) ([]byte, error) {
 		return nil, errors.New("fixed SDK process start failed")
 	}
 	return output.Bytes(), nil
+}
+
+// cmd.exe does not use CommandLineToArgvW quoting. Preserve the fixed batch
+// command's literal quotes instead of applying Go's backslash-quote escaping.
+func configureFixedCommandLine(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+	if strings.EqualFold(filepath.Base(cmd.Path), "cmd.exe") && len(cmd.Args) == 5 && cmd.Args[1] == "/d" && cmd.Args[2] == "/s" && cmd.Args[3] == "/c" {
+		cmd.SysProcAttr.CmdLine = syscall.EscapeArg(cmd.Path) + ` /d /s /c "` + cmd.Args[4] + `"`
+	}
 }
 
 func initializeGuestRoot(root string) error {

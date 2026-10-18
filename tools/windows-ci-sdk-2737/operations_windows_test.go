@@ -2,13 +2,33 @@
 
 package sdkprep
 
-import "testing"
+import (
+	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+)
 
 func TestPinnedArtifactFilenamesAcceptZerosAndX64(t *testing.T) {
 	for _, a := range PinnedArtifacts() {
 		if _, err := artifactFilename(a); err != nil {
 			t.Errorf("public %s %s filename rejected: %v", a.ID, a.Version, err)
 		}
+	}
+}
+
+func TestFixedCmdPreservesQuotedExecutablePath(t *testing.T) {
+	exe := filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, exe, "/d", "/s", "/c", `call "`+exe+`" /d /c echo SDK_READY`)
+	configureFixedCommandLine(cmd)
+	output, err := cmd.CombinedOutput()
+	if err != nil || strings.TrimSpace(string(output)) != "SDK_READY" {
+		t.Fatalf("fixed quoted SDK command failed: %v, %q", err, output)
 	}
 }
 

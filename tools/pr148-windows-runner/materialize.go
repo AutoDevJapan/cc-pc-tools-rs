@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -127,7 +128,8 @@ func fetchSource(head, tree string, read readAPI) (*sourceBundle, error) {
 	seen := map[string]bool{}
 	byDir := map[string][]pr148scope.TreeEntry{}
 	dirs := map[string]string{"": tree}
-	var total int
+	var hashes []string
+	unique := map[string]bool{}
 	for _, x := range t.Entries {
 		key := strings.ToLower(x.Path)
 		if !sourcePathOK(x.Path) || !validSHA(x.SHA) || seen[key] {
@@ -147,28 +149,20 @@ func fetchSource(head, tree string, read readAPI) (*sourceBundle, error) {
 		if x.Type != "blob" || (x.Mode != "100644" && x.Mode != "100755") {
 			return nil, errors.New("unsupported source mode; never omit a tracked entry")
 		}
-		if _, ok := s.Objects[x.SHA]; ok {
+		if _, exists := s.Objects[x.SHA]; exists {
 			continue
 		}
-		var v struct {
-			SHA, Encoding, Content string
-			Size                   int
+		if !unique[x.SHA] {
+			unique[x.SHA] = true
+			hashes = append(hashes, x.SHA)
 		}
-		if e = read("repos/"+repository+"/git/blobs/"+x.SHA, &v); e != nil {
-			return nil, e
-		}
-		if len(v.Content) > 24<<20 {
-			return nil, errors.New("source blob response bound")
-		}
-		b, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(v.Content, "\n", ""))
-		if err != nil || v.Encoding != "base64" || v.SHA != x.SHA || v.Size != len(b) || len(b) > 16<<20 || objectID("blob", b) != x.SHA {
-			return nil, errors.New("source blob bytes rejected")
-		}
-		total += len(b)
-		if total > 256<<20 {
-			return nil, errors.New("source RAM bound")
-		}
-		s.Objects[x.SHA] = sourceObject{"blob", b}
+	}
+	blobs, e := fetchSourceBlobs(hashes, read)
+	if e != nil {
+		return nil, e
+	}
+	for hash, object := range blobs {
+		s.Objects[hash] = object
 	}
 	for dir, entries := range byDir {
 		id, ok := dirs[dir]
@@ -210,6 +204,71 @@ func fetchSource(head, tree string, read readAPI) (*sourceBundle, error) {
 		}
 	}
 	return s, nil
+}
+
+// Use four bounded readers for the fixed 1,109-blob candidate, retaining the
+// existing preparation deadline. Nothing is written until all readers drain and
+// the original per-blob, aggregate RAM and reconstructed-tree checks succeed.
+func fetchSourceBlobs(hashes []string, read readAPI) (map[string]sourceObject, error) {
+	objects := map[string]sourceObject{}
+	var mu sync.Mutex
+	var group sync.WaitGroup
+	var first error
+	index, total := 0, 0
+	worker := func() {
+		defer group.Done()
+		for {
+			mu.Lock()
+			if first != nil || index == len(hashes) {
+				mu.Unlock()
+				return
+			}
+			hash := hashes[index]
+			index++
+			mu.Unlock()
+			b, err := fetchSourceBlob(hash, read)
+			mu.Lock()
+			if err == nil && first == nil {
+				total += len(b)
+				if total > 256<<20 {
+					err = errors.New("source RAM bound")
+				} else {
+					objects[hash] = sourceObject{"blob", b}
+				}
+			}
+			if err != nil && first == nil {
+				first = err
+			}
+			mu.Unlock()
+		}
+	}
+	for i := 0; i < 4 && i < len(hashes); i++ {
+		group.Add(1)
+		go worker()
+	}
+	group.Wait()
+	if first != nil {
+		return nil, first
+	}
+	return objects, nil
+}
+
+func fetchSourceBlob(hash string, read readAPI) ([]byte, error) {
+	var v struct {
+		SHA, Encoding, Content string
+		Size                   int
+	}
+	if err := read("repos/"+repository+"/git/blobs/"+hash, &v); err != nil {
+		return nil, err
+	}
+	if len(v.Content) > 24<<20 {
+		return nil, errors.New("source blob response bound")
+	}
+	b, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(v.Content, "\n", ""))
+	if err != nil || v.Encoding != "base64" || v.SHA != hash || v.Size != len(b) || len(b) > 16<<20 || objectID("blob", b) != hash {
+		return nil, errors.New("source blob bytes rejected")
+	}
+	return b, nil
 }
 
 func materializeSource(p Plan, read readAPI) error {

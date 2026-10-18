@@ -3,7 +3,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,28 +24,73 @@ func apiWithContext(parent context.Context, path string, v any) error {
 	return apiReadLimit(parent, path, v, 4<<20)
 }
 func apiReadLimit(parent context.Context, path string, v any, limit int64) error {
+	b, err := retryGitHubRead(parent, func() ([]byte, error) {
+		return apiReadAttempt(parent, path, limit)
+	}, waitGitHubRead)
+	if err != nil {
+		return fmt.Errorf("GitHub read request %x: %w", sha256.Sum256([]byte(path)), err)
+	}
+	return json.Unmarshal(b, v)
+}
+
+type apiErrorPreview struct{ bytes.Buffer }
+
+func (b *apiErrorPreview) Write(p []byte) (int, error) {
+	n := len(p)
+	if left := 8192 - b.Len(); left > 0 {
+		if len(p) > left {
+			p = p[:left]
+		}
+		_, _ = b.Buffer.Write(p)
+	}
+	return n, nil
+}
+
+func apiReadAttempt(parent context.Context, path string, limit int64) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	c := exec.CommandContext(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", path)
 	hidden(c)
+	preview := &apiErrorPreview{}
+	c.Stderr = preview
 	// gh uses its existing OAuth store. Never request auth-token, dump config,
 	// pass a credential in argv, or forward the owner's env to the service.
 	pipe, e := c.StdoutPipe()
 	if e != nil {
-		return e
+		return nil, e
 	}
 	if e = c.Start(); e != nil {
-		return errors.New("GitHub read API unavailable")
+		return nil, errors.New("GitHub read API unavailable")
 	}
 	b, readErr := boundedRead(pipe, limit)
 	if readErr != nil {
 		_ = c.Process.Kill()
 	}
 	waitErr := c.Wait()
-	if readErr != nil || waitErr != nil {
-		return errors.New("GitHub read API failed")
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
-	return json.Unmarshal(b, v)
+	if readErr != nil || waitErr != nil {
+		// No server text, source bytes, endpoint or credential is returned or
+		// persisted. Auth/policy/size failures never enter the retry path.
+		if readErr == nil && transientGitHubRead(preview.String()) {
+			return nil, errGitHubReadTransport
+		}
+		status := "unclassified"
+		text := strings.ToLower(preview.String())
+		for _, code := range []string{"401", "403", "404", "429", "500", "502", "503", "504"} {
+			if strings.Contains(text, "http "+code) {
+				status = code
+				break
+			}
+		}
+		exit := -1
+		if c.ProcessState != nil {
+			exit = c.ProcessState.ExitCode()
+		}
+		return nil, fmt.Errorf("GitHub read API failed (bytes=%d read_error=%t exit=%d status=%s)", len(b), readErr != nil, exit, status)
+	}
+	return b, nil
 }
 func audit(p Plan) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)

@@ -84,7 +84,10 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		LogBytes                                             int
 		ListenerExit                                         int
 		RegistrationMayExist, RegistrationGone, LockReleased bool
+		CredentialCleanupDenied                              bool
 		AllRequiredChecksSuccess                             bool
+		MemoryAvailable                                      bool
+		MemoryObservation                                    string
 	}{Plan: p, GuestSHA: digest(guest), PowerShellSHA: digest(pwsh), Execution: execution}
 	if e = pr148SaveNew(filepath.Join(dir, "pr148-intent.private.json"), rec); e != nil {
 		return e
@@ -271,15 +274,28 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	e = x.Run()
 	rec.ListenerExit = exitStatus(e)
 	ret = errors.Join(ret, log.Sync(), log.Close())
+	if ret != nil {
+		return ret
+	}
 	data, le := os.ReadFile(log.Name())
 	if le != nil {
 		return le
 	}
 	rec.LogBytes = len(data)
 	rec.LogSHA = digest(data)
-	if e != nil {
+	// Kernel counters only, in fixed file order: max, peak, then events. This
+	// never reads runner credentials or product output, and adds no permission.
+	memoryCtx, stopMemory := context.WithTimeout(context.Background(), 5*time.Second)
+	memory, memoryErr := boundedOutput(cmd(memoryCtx, docker, "exec", n.ID, "cat", "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.peak", "/sys/fs/cgroup/memory.events"), 4096)
+	stopMemory()
+	if memoryErr == nil {
+		rec.MemoryAvailable = true
+		rec.MemoryObservation = string(memory)
+	}
+	if e != nil && !pr148CredentialCleanupDenied(rec.ListenerExit, data) {
 		return errors.New("official listener failed; preserve original private output")
 	}
+	rec.CredentialCleanupDenied = e != nil
 	for _, stage := range []string{"start", "complete"} {
 		b, e := cmd(ctx, docker, "exec", n.ID, "cat", "/home/runner/pr148-"+stage+".json").Output()
 		var observed pr148LinuxPlan
@@ -296,7 +312,50 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	if e = verifyPR148LinuxRun(ctx, p, get, true); e != nil {
 		return e
 	}
+	if e = pr148AwaitLinuxConclusion(ctx, p, n.Name, get); e != nil {
+		return e
+	}
 	// No success/check/status API exists. Parent must inspect official job/run,
 	// all original logs and all OS jobs, even when listener and hooks exited 0.
 	return nil
+}
+
+func pr148CredentialCleanupDenied(exit int, log []byte) bool {
+	return exit == 2 && bytes.Contains(log, []byte("An error occurred: Access to the path '/runner/.credentials' is denied."))
+}
+
+// The immutable runner root can reject the SDK's post-job credential unlink.
+// Keep that refusal visible and use the EXISTING whole-namespace teardown,
+// never another file-delete path or wider filesystem permissions. Only actual
+// GitHub target-job success, both source hooks and the full source/run checks
+// can accept the execution; listener exit alone never certifies a job.
+func pr148AwaitLinuxConclusion(parent context.Context, p pr148LinuxPlan, runner string, read api) error {
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
+	defer cancel()
+	for {
+		if e := ctx.Err(); e != nil {
+			return e
+		}
+		var j pr148LinuxJob
+		if e := read(ctx, fmt.Sprintf("repos/%s/actions/jobs/%d", pr148Repo, p.JobID), &j); e != nil {
+			return e
+		}
+		if j.ID != p.JobID || j.RunID != p.RunID || j.RunAttempt != p.Attempt || j.Name != "test (ubuntu-latest)" || j.RunnerName != runner {
+			return errors.New("official Linux terminal job identity rejected")
+		}
+		if j.Status == "completed" {
+			if j.Conclusion != "success" {
+				return errors.New("official Linux job did not succeed")
+			}
+			return nil
+		}
+		if j.Status != "in_progress" {
+			return errors.New("official Linux terminal job state rejected")
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
+	}
 }

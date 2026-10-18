@@ -257,7 +257,10 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func pr148HostEnv() []string {
-	var out []string
+	// The isolated SDK has two CPUs and 8 GiB, while the shared host can admit
+	// ten compiler processes. Submit lower caps through the ordinary gate; its
+	// actual granted values still drive the guest and can be lower again.
+	out := []string{"CARGO_BUILD_JOBS=2", "RUST_TEST_THREADS=2", "NEXTEST_TEST_THREADS=2"}
 	for _, k := range []string{"SystemRoot", "WINDIR", "SystemDrive", "TEMP", "TMP"} {
 		if v := os.Getenv(k); v != "" {
 			out = append(out, k+"="+v)

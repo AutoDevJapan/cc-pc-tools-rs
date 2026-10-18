@@ -223,6 +223,10 @@ func TestPR148LinuxFiniteNamespaceCargoFixture(t *testing.T) {
 			transfer(pr148Workspace+"/tools/Cargo.toml", []byte("[package]\nname=\"todo2736-credential-free-fixture\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[workspace]\n"))
 			transfer(pr148Workspace+"/tools/src/lib.rs", []byte(`#[test]
 fn child_is_drained() {
+    for key in ["CARGO_BUILD_JOBS", "RUST_TEST_THREADS"] {
+        let granted = std::env::var(key).unwrap().parse::<usize>().unwrap();
+        assert!((1..=2).contains(&granted), "container cap exceeded: {key}");
+    }
     let child = std::process::Command::new("sleep").arg("600").spawn().unwrap();
     std::fs::write("/work/fixture-child.pid", child.id().to_string()).unwrap();
     println!("credential-free Rust Cargo fixture");

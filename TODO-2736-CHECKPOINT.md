@@ -1,5 +1,57 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 01:15再開・正式Linux失敗の修復とWindows通信診断（最新）
+
+レビュー2832の実Sonnet5.5 job20261019-010339-todo-2832は01:04:19〜01:08:59、
+succeeded/exit0/23steps/Must0/実検査0。原応答4573bytes、SHA256
+A8219E044B9A85691D680BA134150C0AA21914F78FBF79C0304880AAE4E39735を一致保存した。
+レビュー者のgit起動は失敗したが、eventsから元2736の絶対pathをtypeで読んだことを確認。
+親が主要5fileの固定2bc1dcd→HEAD/作業コピー差分0を照合した。子worktreeの37b9f701を
+レビュー済みsourceとして流用していない。範囲・Suggestion・親の受入は原receiptへ保存。
+
+検査済みlistener修正版を再照合し、新root27fce531da39e61f8ea4691b2c88f886で
+元Rust run39141771645/attempt1/Linux job117717494710を正式実行した。
+実Git HEAD03c7cc6/treea6851bd・開始hook・checkout・Rust導入・fmtは成功したが、
+Rust/Lua検査はリンク時のSIG9でexit101、正式jobはfailure。doctest/release/scenarioは
+skippedで、全件成功は未達。起動受付やfmt成功を正式CI全件成功へ転記しない。
+8GiB/2CPUのnamespaceへhost最大10並列が渡るため、容量不整合を調査した。
+OOMのkernel実測は前回namespaceから未回収で断定しない。既存gateが低い上限を正式に
+clampする実装を確認し、同じgateへbuild/test上限2を要求する修正を追加した。
+guestはgateの実割当をそのまま使い、FS/権限/container容量/検査内容は変更しない。
+実SDK・実kernel・実共有gateの認証なしnormal Cargo fixtureで1〜2並列と排出を確認、
+20.51秒で成功。これを製品workspace成功として扱わない。
+
+同実行のlistener exit2には、job終了後の/runner/.credentials unlink拒否も記録された。
+credential内容は未読。既存のnamespace/登録破棄は成功し、RegistrationGone/LockReleased、
+container stopped/PID0/Removedを確認済み。修正はこの特定SDK拒否を別記し、既存の
+全namespace終了を維持する。別のfile削除やFS許可拡大を追加しない。元の両source hook・
+全source/run検証に加え、実GitHub target jobの所有runner/ID/run/attemptとcompleted/successを
+新たに必須照合する。failed/skipped/cancelledや他のlistener異常は受入不可。
+kernel memory.max/peak/eventsも終了前に任意の診断として記録する。
+
+Windowsのread-only診断はsourceをRAMだけに取り込み、56call目のblob GETで応答0bytes/
+exit1/10.162秒/overflow無/親期限無を観測。同じ固定blobの通常GETは後にexit0。
+成功済みprefixを繰り返さず再開した診断では62call目、別blobで10.130秒のTLS/timeoutを
+観測した。通常CLIでもTLS handshake timeoutを実測した。旧prepare49ffは再実行せず、
+新しい権限/認証/別APIへ迂回していない。実treeのunique blobは1109件。
+Windows helperへ同じGETのTLS handshake timeout/EOF/resetだけ最大3試行、親期限内の
+有限backoffを追加。HTTP4xx/auth/policy/size/JSON不正は再試行しない。失敗はrequestの
+SHA/bytes/exit/status分類だけを返し、server本文・source・秘密を保存/表示しない。
+blob読取は上限4workerで排出後にだけ受入れ、元のhash/tree/256MiB/8分条件を保持する。
+実source転送時間はまだ未検証。race検査78pass/2skip、関連Go53pass/4skip・追加回帰、
+両moduleのvetとWindows/Linux buildが成功。新差分は別モデルレビューが未受領。
+
+PR219の旧head52dd6a6はGo CodeQL job117720795952がSet up runnerでlocal bridge403に
+よりfailure。原job log1693bytes/SHA720D9941066C97BBE6DE966561071C51AD6CF623562B9AE07DD975A20BDD13C7を保存。
+原messageだけではremote head取得失敗と実不一致を区別できず、shared bridgeの許可・guard・
+manifestは変更しない。同403を無条件rerunせず、司令塔へ具体的に配送する。
+最新の新sourceで必要CIを確認し、失敗が残れば原因を修復してから通常mergeする。
+
+停止item_51はbridge既存sourceのread-only調査exit0と共有ToDoから受領した。
+完了済みの正式job/診断/検査は再実行しない。現在の新code・原証拠を保存して継続する。
+製品head03c7cc6は維持、Windows jobはqueued/steps0。次の正式試行は全matrixの新attemptを
+照合し、新しい専用rootを使う。失敗したprepare49ff/終了済み27fcは再利用しない。
+
 ## 2026-10-19 00:54保存・レビュー待ちとWindows準備失敗（最新）
 
 Linux起動修復の機能sourceは2bc1dcd5cfe5d12f59db2a38e6a6474b2721cb4c。

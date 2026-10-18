@@ -74,3 +74,18 @@ actual drain, existing Prd revision/readiness/smoke remain unfinished. The
 original official Rust job raw-log escape refusal remains a missing artifact;
 no alternative log path is used. Neither CC merge nor this build completes the
 product or any parent task.
+
+## 2026-10-19 resume check
+
+The exact merge commit `857c1e67b1a5f7b8c9467208ca5e46ed67901478` has eight
+completed post-merge checks: four succeeded, two failed, and two were
+cancelled. No check remains running. The failures are not treated as success;
+their causes still need to be established and corrected. The structured
+receipt, including check IDs, is in the ignored private evidence area.
+
+The distribution classifier still reports an unverified destination. The
+recorded follow-up refers to ToDo2829, but that ID has no entry in the shared
+ToDo history; ToDo2467 remains unfinished. No distribution write, product
+preflight, container, runner, or production change was made during this
+resume. Continue from the current branch and preserve this dependency until
+the formal repair task is actually registered and completed.

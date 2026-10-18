@@ -493,11 +493,163 @@ fn current_owner_job_stops_are_preserved_before_wait_and_before_answer() {
     }
     fs::write(
         dir.join("job.json"),
-        br#"{"id":"original-worker","status":"succeeded"}"#,
+        br#"{"id":"original-worker","status":"running"}"#,
     )
     .unwrap();
     f.ok("question-answer", "--answer-file", &a_file);
     assert_work_preserved(&base, &f.read());
+}
+
+#[test]
+fn first_answer_retires_only_the_finished_owner_launch_and_keeps_the_saved_work() {
+    for phase in ["running", "prepared", "finished"] {
+        let f = Fixture::new();
+        let (_, a_file, _) = f.park();
+        let mut parked = f.read();
+        parked["items"][0]["scheduler"]["phase"] = json!(phase);
+        parked["items"][0]["scheduler"]["workspace_receipt"] =
+            json!({"job":"original-worker","todo_id":1,"cwd":"saved-worktree"});
+        parked["items"][0]["note"] = json!(format!(
+            "{}\nconversation-owner-reply:private-source-reference",
+            parked["items"][0]["note"].as_str().unwrap()
+        ));
+        f.write(&parked);
+        let dir = f.paths.jobs.join("original-worker");
+        fs::create_dir(&dir).unwrap();
+        let original_job = br#"{"id":"original-worker","status":"succeeded","todo_id":1,"launch_key":"original-key","cwd":"saved-worktree"}"#;
+        fs::write(dir.join("job.json"), original_job).unwrap();
+        assert_eq!(
+            f.ok("question-answer", "--answer-file", &a_file)["resumed"],
+            true
+        );
+        let after = f.read();
+        let row = &after["items"][0];
+        assert_eq!(row["status"], "todo");
+        assert!(row["scheduler"]["job"].is_null());
+        assert!(row["scheduler"]["key"].is_null());
+        assert_eq!(row["scheduler"]["last_job"], "original-worker");
+        assert_eq!(row["scheduler"]["phase"], "resumed");
+        assert_eq!(row["scheduler"]["resume"], true);
+        assert_eq!(row["resume_generation"], 8);
+        assert_eq!(row["worker_receipt"], json!({"job":null,"generation":8}));
+        assert_eq!(
+            row["processed_results"]["original-worker"]["reason"],
+            "conversation_answer"
+        );
+        assert!(
+            row["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap()
+                .contains("conversation-owner-reply:private-source-reference")
+        );
+        for key in [
+            "worktree",
+            "branch",
+            "selection",
+            "not_before",
+            "workspace_receipt",
+        ] {
+            assert_eq!(row["scheduler"][key], parked["items"][0]["scheduler"][key]);
+        }
+        for key in [
+            "spec",
+            "jobs",
+            "needs",
+            "model",
+            "effort",
+            "progress",
+            "other_item",
+            "stall_recovery",
+        ] {
+            assert_eq!(row[key], parked["items"][0][key]);
+        }
+        assert_eq!(fs::read(dir.join("job.json")).unwrap(), original_job);
+        assert_eq!(
+            fs::read(f.temp.path().join("unfinished.rs")).unwrap(),
+            b"unfinished source bytes"
+        );
+        assert_eq!(
+            fs::read(f.temp.path().join("specs/original.md")).unwrap(),
+            b"original saved specification"
+        );
+        let mut later = after;
+        later["items"][0]["status"] = json!("block");
+        later["items"][0]["note"] = json!("データ到着まで停止");
+        later["items"][0]["scheduler"]["key"] = json!("new-turn-key");
+        later["items"][0]["scheduler"]["job"] = json!("later-worker");
+        f.write(&later);
+        let before_replay = f.raw();
+        assert_eq!(
+            f.ok("question-answer", "--answer-file", &a_file)["resumed"],
+            false
+        );
+        assert_eq!(
+            f.raw(),
+            before_replay,
+            "answer replay retired a later turn or released its stop"
+        );
+    }
+}
+
+#[test]
+fn stale_note_compare_and_swap_cannot_restore_an_overwritten_question_hold() {
+    let f = Fixture::new();
+    let (_, a_file, _) = f.park();
+    let parked = f.read();
+    let expected = sha(parked["items"][0]["note"].as_str().unwrap().as_bytes());
+    let stale_note = f.temp.path().join("stale-reply-note.txt");
+    fs::write(
+        &stale_note,
+        format!(
+            "{}\nprivate reply reference",
+            parked["items"][0]["note"].as_str().unwrap()
+        ),
+    )
+    .unwrap();
+    let stopped = f
+        .command(&["block", "1", "データ到着まで停止"])
+        .output()
+        .unwrap();
+    assert!(stopped.status.success());
+    let before = f.raw();
+    let edit = f
+        .command(&[
+            "edit",
+            "1",
+            "--note-file",
+            stale_note.to_str().unwrap(),
+            "--expected-note-sha256",
+            &expected,
+        ])
+        .output()
+        .unwrap();
+    assert!(!edit.status.success());
+    assert!(edit.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(edit.stderr).unwrap().trim(),
+        "conversation_note_changed"
+    );
+    assert_eq!(f.raw(), before, "stale edit restored the question marker");
+    f.reject("question-answer", "--answer-file", &a_file);
+    assert_eq!(f.read()["items"][0]["note"], "データ到着まで停止");
+
+    // An exact current note may still be edited without changing any holds.
+    let current = sha("データ到着まで停止".as_bytes());
+    fs::write(&stale_note, "データ到着まで停止\nprivate reply reference").unwrap();
+    let accepted = f
+        .command(&[
+            "edit",
+            "1",
+            "--note-file",
+            stale_note.to_str().unwrap(),
+            "--expected-note-sha256",
+            &current,
+        ])
+        .output()
+        .unwrap();
+    assert!(accepted.status.success());
+    assert_eq!(f.read()["items"][0]["status"], "block");
+    assert_eq!(f.read()["items"][0][WAIT], parked["items"][0][WAIT]);
 }
 
 #[test]

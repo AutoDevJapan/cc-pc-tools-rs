@@ -138,6 +138,9 @@ pub enum Command {
         note_file: Option<PathBuf>,
         #[arg(long, required_unless_present = "note_file")]
         spec: Option<PathBuf>,
+        /// Compare the exact current note while holding todo.lock before replacing it.
+        #[arg(long, requires = "note_file")]
+        expected_note_sha256: Option<String>,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -1123,7 +1126,26 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             id,
             note_file,
             spec,
-        } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
+            expected_note_sha256,
+        } => {
+            if let Some(expected) = expected_note_sha256 {
+                use sha2::{Digest, Sha256};
+                let note = &find(db, *id)?["note"];
+                if (!note.is_null() && !note.is_string())
+                    || expected.len() != 64
+                    || !expected
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                    || format!(
+                        "{:x}",
+                        Sha256::digest(note.as_str().unwrap_or("").as_bytes())
+                    ) != *expected
+                {
+                    return Err("conversation_note_changed".into());
+                }
+            }
+            edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
+        }
         Command::ArchiveHistory { id, apply } => output
             .push(cc_job_policy::todo_history::archive(&paths.store, db, *id, *apply)?.to_string()),
         Command::RestoreHistory { id, apply } => output

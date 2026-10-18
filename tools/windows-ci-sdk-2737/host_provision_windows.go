@@ -147,6 +147,7 @@ func findPreparedOwnedRoot(worktree string) (OwnedRoot, bool, error) {
 		return OwnedRoot{}, false, errors.New("worktree entries unavailable")
 	}
 	var found OwnedRoot
+	var foundDigest string
 	for _, entry := range entries {
 		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "codex-owned-") {
 			continue
@@ -169,16 +170,21 @@ func findPreparedOwnedRoot(worktree string) (OwnedRoot, bool, error) {
 		if err := VerifyOwnedRoot(candidate, worktree); err != nil {
 			return OwnedRoot{}, false, err
 		}
-		if _, _, _, prepared, err := loadPreparedEvaluationISO(candidate, worktree); err != nil || !prepared {
+		_, _, digest, prepared, err := loadPreparedEvaluationISO(candidate, worktree)
+		if err != nil || !prepared {
 			if err != nil {
 				return OwnedRoot{}, false, err
 			}
 			return OwnedRoot{}, false, errors.New("official ISO lacks completed signature validation")
 		}
 		if found.ID != "" {
-			return OwnedRoot{}, false, errors.New("multiple prepared owned SDK roots found")
+			if digest != foundDigest {
+				return OwnedRoot{}, false, errors.New("conflicting prepared official ISO digests")
+			}
+			continue
 		}
 		found = candidate
+		foundDigest = digest
 	}
 	if found.ID == "" {
 		return OwnedRoot{}, false, nil
@@ -369,7 +375,12 @@ func BuildGuestAgent(root OwnedRoot, worktree, modulePath, revision string) (str
 	}
 	cmd := exec.Command(goExe, "build", "-trimpath", "-o", output, "./cmd/windows-ci-sdk-agent")
 	cmd.Dir = module
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "GOOS=windows", "GOARCH=amd64", "CGO_ENABLED=0", "GOTOOLCHAIN=local", "GOWORK=off"}
+	for _, directory := range []string{"go-temp", "go-cache", "go-path"} {
+		if err := os.MkdirAll(filepath.Join(root.Path, directory), 0o700); err != nil {
+			return "", "", errors.New("owned Go build directory creation failed")
+		}
+	}
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "SystemRoot=" + os.Getenv("SystemRoot"), "TEMP=" + filepath.Join(root.Path, "go-temp"), "TMP=" + filepath.Join(root.Path, "go-temp"), "GOCACHE=" + filepath.Join(root.Path, "go-cache"), "GOPATH=" + filepath.Join(root.Path, "go-path"), "GOOS=windows", "GOARCH=amd64", "CGO_ENABLED=0", "GOTOOLCHAIN=local", "GOWORK=off"}
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr

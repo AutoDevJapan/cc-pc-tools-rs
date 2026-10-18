@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
-$volume = Get-Volume -FileSystemLabel 'CCSDK2737' -ErrorAction Stop | Select-Object -First 1
-if (-not $volume -or -not $volume.DriveLetter) { exit 51 }
-$seedRoot = $volume.DriveLetter + ':\'
+$volume = [IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'CDRom' -and $_.IsReady -and $_.VolumeLabel -eq 'CCSDK2737' } | Select-Object -First 1
+if (-not $volume) { exit 51 }
+$seedRoot = $volume.RootDirectory.FullName
 $installRoot = 'C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737'
 New-Item -ItemType Directory -Path $installRoot -ErrorAction Stop | Out-Null
 $exe = Join-Path $installRoot 'windows-ci-sdk-agent.exe'

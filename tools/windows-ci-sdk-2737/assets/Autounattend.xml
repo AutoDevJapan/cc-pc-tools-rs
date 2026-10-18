@@ -36,7 +36,7 @@
         <RunSynchronousCommand wcm:action="add">
           <Order>1</Order>
           <Description>Stage the SDK preparation service</Description>
-          <Path>powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$v=Get-Volume -FileSystemLabel 'CCSDK2737' -ErrorAction Stop|Select-Object -First 1;if(-not $v){exit 51};&amp; (Join-Path ($v.DriveLetter+':\') 'stage.ps1')"</Path>
+          <Path>powershell.exe -nop -ep Bypass -c &quot;$d=[IO.DriveInfo]::GetDrives()|?{$_.DriveType -eq 'CDRom' -and $_.IsReady -and $_.VolumeLabel -eq 'CCSDK2737'};if(!$d){exit 51};&amp;($d.RootDirectory.FullName+'stage.ps1')&quot;</Path>
           <WillReboot>Never</WillReboot>
         </RunSynchronousCommand>
       </RunSynchronous>

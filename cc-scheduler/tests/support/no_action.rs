@@ -148,3 +148,56 @@ fn failed_cancellation_is_bounded_before_hourly_technical_retry() {
     );
     assert!(row["scheduler"]["question"].is_null());
 }
+
+#[test]
+fn no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_implementation() {
+    for explicit in [true, false] {
+        let mut f = setup();
+        pass(&mut f);
+        f.e.backend.clock += 1801.;
+        pass(&mut f);
+        let source = &mut f.e.backend.records[0];
+        source["no_action_recovery"] = json!({"ticket":"fixture"});
+        source["model_explicit"] = json!(explicit);
+        source["model"] = json!("gpt-6-luna");
+        source["effort"] = json!("max");
+        source["sandbox"] = json!("danger-full-access");
+        source["mcp_profile"] = json!("minimal");
+        source["network"] = json!(false);
+        source["add_dirs"] = json!(["D:/fixture-scope"]);
+        f.e.backend.clock = n(&f.get(1)["scheduler"]["not_before"]) + 1.;
+        let prepared =
+            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                .unwrap()
+                .unwrap();
+        let selection = &prepared["scheduler"]["selection"];
+        assert_eq!(
+            selection["model"],
+            if explicit {
+                "gpt-6-luna"
+            } else {
+                "gpt-6.1-sol"
+            }
+        );
+        assert_eq!(selection["model_explicit"], explicit);
+        assert_eq!(selection["effort"], "max");
+        assert_eq!(selection["mcp_profile"], "minimal");
+        assert_eq!(selection["network"], false);
+        assert_eq!(selection["add_dirs"], json!(["D:/fixture-scope"]));
+        let backend = RealBackend::new(f.temp.path().join("scheduler"));
+        let call = backend.launch_command(&prepared, Path::new("prompt.md"), selection);
+        assert!(call
+            .args
+            .windows(2)
+            .any(|p| p == ["--mcp-profile", "minimal"]));
+        assert!(call
+            .args
+            .windows(2)
+            .any(|p| p == ["--add-dir", "D:/fixture-scope"]));
+        assert!(!call.args.iter().any(|a| a == "--network"));
+        assert!(call
+            .args
+            .iter()
+            .any(|a| a == if explicit { "--model" } else { "--auto-model" }));
+    }
+}

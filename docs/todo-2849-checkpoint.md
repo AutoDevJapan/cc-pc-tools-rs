@@ -23,3 +23,10 @@
 No original 192-item registry, original manifest, lost question, legacy task, or product completion has been restored. No GPU, Civ6, Cargo build, API key, new expense, browser session, or domain provider was used. No product source repository was changed.
 
 
+
+## Update after opening PR
+
+- Draft PR 223: https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/223. The guard implementation is commit `0d48ef511829cf3100e490dc3820c9554d106ca1`; PR currently contains that fixed source plus this repository checkpoint/review-note commit.
+- The first official CI snapshot on head `5c33acca367383b1057943e3b704ca92d6f29c98` had repair-guard, Go platform checks and CodeQL pending/queued. It is not a CI pass. New docs-only checkpoint commits may cause another run; verify the final PR head's checks before merge.
+- Review ToDo 2852 is registered with Sonnet 5.5 and the exact source commit; it is still todo and no response is available yet.
+- Successor ToDo 2850 is registered with `--needs cargo` and remains todo. No product-source work, tests, or scheduler continuation have occurred for it.

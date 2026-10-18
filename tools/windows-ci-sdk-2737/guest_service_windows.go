@@ -185,7 +185,7 @@ func readPublicSeed() (publicSeed, error) {
 	if err != nil {
 		return publicSeed{}, errors.New("guest helper path unavailable")
 	}
-	if !within(guestSDKRoot, filepath.Clean(exe)) {
+	if !within(guestAgentRoot(), filepath.Clean(exe)) {
 		return publicSeed{}, errors.New("guest helper is outside the fixed SDK root")
 	}
 	file, err := os.Open(filepath.Join(filepath.Dir(exe), "seed.json"))
@@ -208,7 +208,7 @@ func readPublicSeed() (publicSeed, error) {
 
 func applyGuestFirewallRule() error {
 	exe, err := os.Executable()
-	if err != nil || !within(guestSDKRoot, filepath.Clean(exe)) {
+	if err != nil || !within(guestAgentRoot(), filepath.Clean(exe)) {
 		return errors.New("guest helper path rejected for firewall rule")
 	}
 	netsh := filepath.Join(os.Getenv("SystemRoot"), "System32", "netsh.exe")
@@ -219,6 +219,12 @@ func applyGuestFirewallRule() error {
 		return errors.New("guest-only firewall rule setup failed")
 	}
 	return nil
+}
+
+// Only public bootstrap files live here, following the proven fixture layout.
+// SDK downloads and raw logs retain their separate SYSTEM-only root.
+func guestAgentRoot() string {
+	return filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsCISDK2737")
 }
 
 func removeGuestFirewallRule() {

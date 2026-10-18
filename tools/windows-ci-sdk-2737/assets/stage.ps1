@@ -2,14 +2,11 @@ $ErrorActionPreference = 'Stop'
 $volume = [IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq 'CDRom' -and $_.IsReady -and $_.VolumeLabel -eq 'CCSDK2737' } | Select-Object -First 1
 if (-not $volume) { exit 51 }
 $seedRoot = $volume.RootDirectory.FullName
-$installRoot = 'C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737'
+$installRoot = Join-Path $env:SystemRoot 'System32\WindowsCISDK2737'
 New-Item -ItemType Directory -Path $installRoot -ErrorAction Stop | Out-Null
 $exe = Join-Path $installRoot 'windows-ci-sdk-agent.exe'
 Copy-Item -LiteralPath (Join-Path $seedRoot 'windows-ci-sdk-agent.exe') -Destination $exe -ErrorAction Stop
 Copy-Item -LiteralPath (Join-Path $seedRoot 'seed.json') -Destination (Join-Path $installRoot 'seed.json') -ErrorAction Stop
-$icacls = Join-Path $env:SystemRoot 'System32\icacls.exe'
-& $icacls $installRoot '/inheritance:r' '/grant:r' '*S-1-5-18:(OI)(CI)F' '/T' '/C' | Out-Null
-if ($LASTEXITCODE -ne 0) { exit 52 }
 $service = New-Service -Name 'WindowsCISDK2737' -BinaryPathName ('"' + $exe + '"') -StartupType Automatic -DisplayName 'Windows CI SDK preparation guest service'
 if (-not $service) { exit 53 }
 $cim = Get-CimInstance Win32_Service -Filter "Name='WindowsCISDK2737'"

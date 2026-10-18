@@ -36,6 +36,7 @@ type jobHookContext struct {
 	Stage, Repository, SHA, Ref, Event, Job, Name, WorkflowSHA string
 	RunID, Attempt                                             string
 	Inputs                                                     map[string]string
+	Diagnostic                                                 *hookDiagnostic `json:",omitempty"`
 }
 type liveJobEvent struct {
 	ID, Stage, Failure string
@@ -43,6 +44,8 @@ type liveJobEvent struct {
 	Context            jobHookContext
 	Configured         bool
 	Exit               *int
+	HookDiagnostic     *hookDiagnostic   `json:",omitempty"`
+	RustProbe          []rustProbeResult `json:",omitempty"`
 }
 type liveJobAck struct {
 	ID, Stage string
@@ -51,16 +54,39 @@ type liveJobAck struct {
 }
 
 func validateJobContext(p linuxJobPlan, c jobHookContext) error {
-	if c.Repository != "AutoDevJapan/GoDD-MCP-Alpha" || c.SHA != p.Source.HeadSHA || c.WorkflowSHA != p.Source.HeadSHA || c.Ref != "refs/heads/"+sourcepacket.HeadRef || c.Event != "workflow_dispatch" || c.RunID != strconv.FormatInt(p.RunID, 10) || c.Attempt != strconv.Itoa(p.Attempt) || c.Job != p.Role || c.Name != p.Name {
-		return errors.New("official job context rejected")
+	if code := jobContextFailure(p, c); code != "" {
+		return errors.New(code)
+	}
+	return nil
+}
+
+func jobContextFailure(p linuxJobPlan, c jobHookContext) string {
+	for _, check := range []struct {
+		code  string
+		valid bool
+	}{
+		{"diagnostic_only", c.Diagnostic == nil},
+		{"context_repository", c.Repository == "AutoDevJapan/GoDD-MCP-Alpha"},
+		{"context_sha", c.SHA == p.Source.HeadSHA},
+		{"context_workflow_sha", c.WorkflowSHA == p.Source.HeadSHA},
+		{"context_ref", c.Ref == "refs/heads/"+sourcepacket.HeadRef},
+		{"context_event", c.Event == "workflow_dispatch"},
+		{"context_run", c.RunID == strconv.FormatInt(p.RunID, 10)},
+		{"context_attempt", c.Attempt == strconv.Itoa(p.Attempt)},
+		{"context_job", c.Job == p.Role},
+		{"context_runner", c.Name == p.Name},
+	} {
+		if !check.valid {
+			return check.code
+		}
 	}
 	if len(c.Inputs) != len(p.Inputs) {
-		return errors.New("dispatch input binding rejected")
+		return "context_inputs"
 	}
 	for key, want := range p.Inputs {
 		if got, ok := c.Inputs[key]; !ok || got != want {
-			return errors.New("dispatch input binding rejected")
+			return "context_inputs"
 		}
 	}
-	return nil
+	return ""
 }

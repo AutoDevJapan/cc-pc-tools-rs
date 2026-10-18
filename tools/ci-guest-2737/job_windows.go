@@ -335,7 +335,18 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	plan.RunnerID = runnerID
 	for _, stage := range []string{"start", "complete"} {
 		event = liveJobEvent{}
-		if decoder.Decode(&event) != nil || event.ID != instance || event.Stage != stage || !checkPhysicalProof(event.Proof, q) || validateJobContext(plan, event.Context) != nil {
+		decodeErr := decoder.Decode(&event)
+		if decodeErr == nil && event.ID == instance && event.Stage == "failed" && event.Failure == "job_hooks_not_completed" {
+			if e = record(attempt, "terminal-rust-probe.private.json", event.RustProbe); e != nil {
+				return e
+			}
+		}
+		if decodeErr == nil && event.ID == instance && event.Stage == "failed" && validHookDiagnostic(event.HookDiagnostic) {
+			if e = record(attempt, "hook-rejection.private.json", event.HookDiagnostic); e != nil {
+				return e
+			}
+		}
+		if decodeErr != nil || event.ID != instance || event.Stage != stage || !checkPhysicalProof(event.Proof, q) || validateJobContext(plan, event.Context) != nil {
 			return errors.New("live job hook proof rejected")
 		}
 		observed, e := bindOfficialJob(ctx, attempt, q, runnerID, name)
@@ -352,6 +363,9 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	event = liveJobEvent{}
 	if decoder.Decode(&event) != nil || event.ID != instance || event.Stage != "runner-exited" || event.Exit == nil || *event.Exit != 0 {
 		return errors.New("live runner exit rejected")
+	}
+	if e = record(attempt, "terminal-rust-probe.private.json", event.RustProbe); e != nil {
+		return e
 	}
 	return awaitOfficialCompletion(ctx, attempt, q, binding, runnerID, name)
 }

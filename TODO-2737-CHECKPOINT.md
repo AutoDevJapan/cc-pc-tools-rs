@@ -629,3 +629,26 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   次は両実結果を受領し、根因修正/必要検査/追加差分レビュー後、同明示085/ref/tree/workflowで次の実公式受入を行う。
   同sourceで既に有効な結果は再利用し、原13工程/profile/直列/timeout/Docker parityと必要gateを維持する。原merge/Prdは親2641。
   待ち先は2869/2870だけとし、完了済み2866/SDKを再waitしない。現在jobと実HEADのscheduler checkpointを終了前に保存する。
+## 2026-10-19 job050050: 原因を区別する固定診断と実ゲストRust計測
+
+- 2869の公開Rust調査を受領。固定結果81949f5/docs/investigations/todo2869/RESULT.mdを読み、public-rustupは公式1.28.2/SHA25620a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43cと一致し、独自wrapperとする根拠がないことを確認。
+  同symlink構造の公開1.97.1ではverbose/cachekeyが成功したが、親のcachekey失敗は未再現。合成成功だけで実compiler/原CI成功とは扱わない。
+- 2870の固定58a9579に対する局所調査6d1f53f/TODO-2870-CI-HOOK-INVESTIGATION.mdを受領。公開runner2.338/checkout固定版ではcheckout cleanupの後にcomplete hookが動く。
+  temp削除やcleanup順を原因と断定せず、完了時のcontext/inputとVerifyCheckoutの失敗段階を識別できないという結果を採用。原log/source/VMへ同子はアクセスしていない。
+- 検証の条件を変えず、固定Version/Stage/Codeだけのhook診断を追加した。contextの不一致項目とsource verifierの既存固定stageを閉じたenumへ分類し、raw値/入力/パス/OSエラーは送信しない。
+  hook入口のevent/plan/context失敗も既存Unix socketへ診断として届けるが、diagnostic-only messageは必ずAccepted=false、source proof/start/completeの受理にはならない。未知codeは捨てる。
+  ownerで最初の拒否を保持し、正式にadmitされたstageで古い拒否を解除する。run.shの終了後に既存failed eventへ診断を添付し、hostは同instanceの既知enumだけをprivate receiptへ保存する。
+  即時VM停止で公式log uploadを断たないよう、診断を受けただけではhostの回収開始を早めていない。
+- 同じ実ゲストでrunner起動前と終了後に、固定1.97.1のcompiler解決/verbose/cachekeyを非特権ユーザーで計測する追加probeを実装した。
+  PATH/HOME/CARGO_HOME/RUSTUP_HOMEを固定し、各8秒/出力各8192bytes/専用process group/WaitDelay1秒。自動toolchain installを無効にしたprobe専用環境で、product compileやSDK installは行わない。
+  wireへ渡すのはcommand種別、exit、byte数、stdout/stderr hash、固定の公開版情報/commit/date/cachekey、既知SDK compilerの観測hashと固定失敗分類だけ。raw stdout/stderrや任意pathは渡さない。
+  これはworkflow内の全env再現やcompiler正規性/成功条件ではない。実CIの判定条件にprobe成功を足したり、失敗を無視してcheck successを作ったりしない。
+- 関連検査は実Linux module14pass/0fail、公開SDK opt-in2件skip。ownerの実socket経路でcontext拒否/source-root拒否/診断専用/未知codeが受理やwire admissionにならないことを確認した。
+  Rust probeのsummaryが合成SENSITIVE/path/stderr本文をJSONへ含めず、失敗exitとhashを保持する対照も成功。Windows関連raceとWindows/Linux vetが成功。
+  新実装を実VM/公式CIではまだ実行していない。旧attempt2 pnpm success/その後のfailureと未受領complete proofを保持し、原Cargo compile0。
+- 新owned root17adf7c9adb4750d18b19bd3b272da10はsafe-delete createで作成。最初の長すぎるcontent labelはINVALID_LABELで作成されず、短い同用途labelで正規作成した（承認拒否ではない）。
+  証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-050050-diagnostics、tests-evidence.private.json。工具containerは工程後stop/Running=false/PID0、必要SDK layerは保持。
+  原repo/PR/head085/ref/tree/workflowを新jobでもAPI照合し、原AGENTS/CLAUDEはRAMで既読同hash確認。cc実repo1406818713/AutoDevJapan/private/admin/nonforkも照合した。
+  原routeは不在、新mutation/公式rerun/原VM起動0。既存source guard/manifest/owner-work/未回収/他担当資源は変更しない。
+- 次は本診断差分の別モデルレビューを受領し、Must解消後の同clean実行物で同明示085/ref/tree/workflowの次回公式受入を行う。
+  実計測結果からRustとcompleteの根因を修正するまで、受付/診断実装/合成成功を修正完了としていない。原Windows13/Docker parity/通常CIは未完、原merge/Prdは親2641。

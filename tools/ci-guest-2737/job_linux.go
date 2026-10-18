@@ -85,6 +85,14 @@ type localJobOwner struct {
 	id                 string
 	wire               *liveWire
 	started, completed bool
+	diagnostic         *hookDiagnostic
+}
+
+func (o *localJobOwner) remember(stage, code string) {
+	d := &hookDiagnostic{1, stage, code}
+	if o.diagnostic == nil && validHookDiagnostic(d) {
+		o.diagnostic = d
+	}
 }
 
 func (o *localJobOwner) handle(c net.Conn) {
@@ -100,16 +108,29 @@ func (o *localJobOwner) handle(c net.Conn) {
 	defer o.mu.Unlock()
 	ok := false
 	defer func() { _ = json.NewEncoder(c).Encode(struct{ Accepted bool }{ok}) }()
-	if validateJobContext(o.plan, q) != nil || (q.Stage != "start" && q.Stage != "complete") || (q.Stage == "start" && o.started) || (q.Stage == "complete" && (!o.started || o.completed)) {
+	if q.Diagnostic != nil {
+		if q.Diagnostic.Stage == q.Stage && validHookDiagnostic(q.Diagnostic) {
+			o.remember(q.Stage, q.Diagnostic.Code)
+		}
+		return // A diagnostic is never an admission or a source proof.
+	}
+	if code := jobContextFailure(o.plan, q); code != "" {
+		o.remember(q.Stage, code)
+		return
+	}
+	if (q.Stage != "start" && q.Stage != "complete") || (q.Stage == "start" && o.started) || (q.Stage == "complete" && (!o.started || o.completed)) {
+		o.remember(q.Stage, "hook_order")
 		return
 	}
 	ctx, cancel := context.WithTimeout(o.wire.ctx, 40*time.Second)
 	defer cancel()
 	proof, e := sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, liveWorkspace)
 	if e != nil {
+		o.remember(q.Stage, sourceFailureCode(e))
 		return
 	}
 	if e = o.wire.permit(ctx, o.id, liveJobEvent{ID: o.id, Stage: q.Stage, Proof: proof, Context: q}); e != nil {
+		o.remember(q.Stage, "host_admission")
 		return
 	}
 	if q.Stage == "start" {
@@ -117,6 +138,7 @@ func (o *localJobOwner) handle(c net.Conn) {
 	} else {
 		o.completed = true
 	}
+	o.diagnostic = nil // An admitted stage supersedes earlier rejected attempts.
 	ok = true
 }
 
@@ -160,7 +182,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_source_owner_failed")
 		return
 	}
-	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof}); e != nil {
+	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof, RustProbe: probeLiveRust(ctx)}); e != nil {
 		return
 	}
 	var config struct{ Token string }
@@ -270,12 +292,16 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 	}
 	owner.mu.Lock()
 	complete := owner.started && owner.completed
+	diagnostic := owner.diagnostic
 	owner.mu.Unlock()
+	terminalProbe := probeLiveRust(ctx)
 	if !complete {
-		fail("job_hooks_not_completed")
+		// Wait until run.sh exits so its official logs can finish uploading before
+		// the host reacts to this terminal failure and stops the owned VM.
+		_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "failed", Failure: "job_hooks_not_completed", HookDiagnostic: diagnostic, RustProbe: terminalProbe})
 		return
 	}
-	_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "runner-exited", Exit: &code})
+	_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "runner-exited", Exit: &code, RustProbe: terminalProbe})
 }
 func configureLiveRunner(ctx context.Context, p linuxJobPlan, token string) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -298,7 +324,31 @@ func configureLiveRunner(ctx context.Context, p linuxJobPlan, token string) erro
 	return e
 }
 
-func liveJobHook(stage string) error {
+func liveJobHook(stage string) (retErr error) {
+	defer func() {
+		if retErr == nil {
+			return
+		}
+		code := retErr.Error()
+		aliases := map[string]string{"job hook plan unavailable": "hook_plan_unavailable", "job hook plan invalid": "hook_plan_invalid", "job event location rejected": "event_path_outside_temp", "job event unavailable": "event_unavailable", "job event invalid": "event_json_invalid", "job input type rejected": "event_inputs_invalid", "job input size rejected": "event_inputs_invalid", "job hook owner unavailable": "owner_unavailable", "job hook transfer failed": "owner_transfer", "job hook rejected": "owner_rejected"}
+		if alias, ok := aliases[code]; ok {
+			code = alias
+		}
+		d := &hookDiagnostic{1, stage, code}
+		if !validHookDiagnostic(d) {
+			return
+		}
+		c, e := net.DialTimeout("unix", liveSocket, time.Second)
+		if e != nil {
+			return
+		}
+		defer c.Close()
+		_ = c.SetDeadline(time.Now().Add(3 * time.Second))
+		if json.NewEncoder(c).Encode(jobHookContext{Stage: stage, Diagnostic: d}) == nil {
+			var reply struct{ Accepted bool }
+			_ = json.NewDecoder(io.LimitReader(c, 4096)).Decode(&reply)
+		}
+	}()
 	if stage != "start" && stage != "complete" {
 		return errors.New("job hook stage rejected")
 	}
@@ -339,8 +389,8 @@ func liveJobHook(stage string) error {
 		}
 	}
 	q := jobHookContext{Stage: stage, Repository: os.Getenv("GITHUB_REPOSITORY"), SHA: os.Getenv("GITHUB_SHA"), WorkflowSHA: os.Getenv("GITHUB_WORKFLOW_SHA"), Ref: os.Getenv("GITHUB_REF"), Event: os.Getenv("GITHUB_EVENT_NAME"), RunID: os.Getenv("GITHUB_RUN_ID"), Attempt: os.Getenv("GITHUB_RUN_ATTEMPT"), Job: os.Getenv("GITHUB_JOB"), Name: os.Getenv("RUNNER_NAME"), Inputs: inputs}
-	if validateJobContext(p, q) != nil {
-		return errors.New("job hook context rejected")
+	if code := jobContextFailure(p, q); code != "" {
+		return errors.New(code)
 	}
 	c, e := net.DialTimeout("unix", liveSocket, 5*time.Second)
 	if e != nil {

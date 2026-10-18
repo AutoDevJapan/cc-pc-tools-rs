@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -9,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,7 +37,6 @@ import (
 const (
 	releaseGuestKernelImage   = "linuxkit/kernel@sha256:3eae204fb152652742f4679da795a3f2848ad70c83bf1db31af0a0039e40ae67"
 	releaseGuestUserlandImage = "ghcr.io/osscontainertools/kaniko@sha256:7ab44d0131c3051b6dea128067e258c7afb5c4815082a93b9cf6c624f2140bf0"
-	releaseGuestSourceLabel   = "cc.release-build-src"
 )
 
 type guestFilePin struct {
@@ -94,12 +95,6 @@ type guestImageRecord struct {
 
 type dockerGuestProvider struct{}
 
-var guestSourceName = regexp.MustCompile("^/cc-release-src-([0-9a-f]{32})-[0-9]$")
-
-func guestSourceContainerName(nonce string, i int) string {
-	return "cc-release-src-" + nonce + "-" + strconv.Itoa(i)
-}
-
 func (b *builderRun) guestImage(ref string) *guestImageRecord {
 	for i := range b.rec.GuestImages {
 		if b.rec.GuestImages[i].Ref == ref {
@@ -109,9 +104,13 @@ func (b *builderRun) guestImage(ref string) *guestImageRecord {
 	return nil
 }
 
+// acquire takes the pinned files out of the pinned images without creating a
+// single container: the files are read from the stream of "docker image save".
+// The only Docker resources this run can introduce are therefore the images
+// themselves, and those are recorded durably before they are pulled.
 func (dockerGuestProvider) acquire(ctx context.Context, b *builderRun) (guestFiles, string) {
 	got := map[string][]byte{}
-	for i, ref := range guestImages {
+	for _, ref := range guestImages {
 		present, err := b.imageRefPresent(ctx, ref)
 		if err != nil {
 			return guestFiles{}, b.classify(ctx, "guest-source-unavailable")
@@ -140,35 +139,22 @@ func (dockerGuestProvider) acquire(ctx context.Context, b *builderRun) (guestFil
 		if !match {
 			return guestFiles{}, "guest-source-mismatch"
 		}
-		// A never-started, network-less, capability-less container only serves as a
-		// handle for docker cp. It is removed again before the next image.
-		name := guestSourceContainerName(b.rec.Nonce, i)
-		// The attempt is durable before the daemon can know the name. Until the
-		// daemon's answer is confirmed, release() closes the name before it lets go.
-		b.rec.GuestSourceAttempted = i + 1
-		if b.persist() != nil {
-			return guestFiles{}, "state-unavailable"
-		}
-		if _, _, err := dockerText(ctx, b.d, 4096, "create", "--name", name, "--label", releaseGuestSourceLabel+"="+b.rec.Nonce, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-			"--memory", "67108864", "--pids-limit", "16", "--pull", "never", ref, "/cc-never-started"); err != nil {
-			return guestFiles{}, b.classify(ctx, "guest-source-unavailable")
-		}
-		b.rec.GuestSourceConfirmed = i + 1
+		var pins []guestFilePin
 		for _, pin := range guestPinList() {
-			if pin.image != ref {
-				continue
+			if pin.image == ref {
+				pins = append(pins, pin)
 			}
-			data, class := b.copyOut(ctx, name, pin.path, pin.size)
-			if class != "" {
-				return guestFiles{}, b.classify(ctx, class)
-			}
+		}
+		files, class := b.extractFromImage(ctx, ref, pins)
+		if class != "" {
+			return guestFiles{}, b.classify(ctx, class)
+		}
+		for _, pin := range pins {
+			data := files[pin.path]
 			if int64(len(data)) != pin.size || digest(data) != pin.sha256 {
 				return guestFiles{}, "guest-source-mismatch"
 			}
 			got[pin.path] = data
-		}
-		if !b.removeGuestSources(ctx) {
-			return guestFiles{}, "guest-source-unavailable"
 		}
 	}
 	files := guestFiles{kernel: got[guestKernelPin.path], busybox: got[guestBusyboxPin.path], executor: got[guestExecutorPin.path], certs: got[guestCertsPin.path]}
@@ -178,8 +164,231 @@ func (dockerGuestProvider) acquire(ctx context.Context, b *builderRun) (guestFil
 	return files, ""
 }
 
+const (
+	guestSaveManifestLimit = 1 << 20
+	guestSaveMaxLayers     = 128
+	guestLayerExpandLimit  = 1 << 30
+)
+
+// saveImage runs "docker image save" and hands its tar stream to visit. It
+// returns only after the Docker client has finished, so nothing is left running.
+func (b *builderRun) saveImage(ctx context.Context, ref string, visit func(*tar.Reader) error) string {
+	saveCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	pr, pw := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		stderr := boundedBuffer{limit: 64 << 10}
+		err := b.d.run(saveCtx, nil, pw, &stderr, "image", "save", ref)
+		pw.CloseWithError(err)
+		done <- err
+	}()
+	verr := visit(tar.NewReader(pr))
+	if verr != nil {
+		cancel()
+	}
+	_, _ = io.Copy(io.Discard, pr)
+	_ = pr.Close()
+	err := <-done
+	if verr != nil || err != nil {
+		return "guest-source-unavailable"
+	}
+	return ""
+}
+
+type guestLayerHit struct {
+	data    []byte
+	link    string
+	deleted bool
+}
+
+// extractFromImage reads the pinned paths out of one saved image. The archive
+// lists its layers in manifest.json, which may come after the layer blobs, so
+// the stream is read twice: first the small manifest, then the layers in turn.
+// A later layer overrides an earlier one, a whiteout deletes, a hard link is
+// resolved inside its own layer, and anything else (symlink, missing path,
+// unsupported compression) is refused.
+func (b *builderRun) extractFromImage(ctx context.Context, ref string, pins []guestFilePin) (map[string][]byte, string) {
+	var layers []string
+	if class := b.saveImage(ctx, ref, func(tr *tar.Reader) error {
+		for {
+			h, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			if h.Name != "manifest.json" || h.Typeflag != tar.TypeReg {
+				continue
+			}
+			if h.Size <= 0 || h.Size > guestSaveManifestLimit {
+				return errors.New("manifest size")
+			}
+			raw, err := io.ReadAll(io.LimitReader(tr, h.Size))
+			var m []struct{ Layers []string }
+			if err != nil || json.Unmarshal(raw, &m) != nil || len(m) != 1 {
+				return errors.New("manifest")
+			}
+			layers = m[0].Layers
+		}
+		if len(layers) == 0 || len(layers) > guestSaveMaxLayers {
+			return errors.New("layers")
+		}
+		return nil
+	}); class != "" {
+		return nil, class
+	}
+	index := map[string]int{}
+	for i, l := range layers {
+		if _, dup := index[l]; dup {
+			return nil, "guest-source-unavailable"
+		}
+		index[l] = i
+	}
+	found := make([]map[string]guestLayerHit, len(layers))
+	if class := b.saveImage(ctx, ref, func(tr *tar.Reader) error {
+		seen := 0
+		for {
+			h, err := tr.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			i, ok := index[h.Name]
+			if !ok || h.Typeflag != tar.TypeReg {
+				continue
+			}
+			hits, err := scanGuestLayer(ctx, tr, pins)
+			if err != nil {
+				return err
+			}
+			found[i] = hits
+			seen++
+		}
+		if seen != len(layers) {
+			return errors.New("layers missing")
+		}
+		return nil
+	}); class != "" {
+		return nil, class
+	}
+	out := map[string][]byte{}
+	for _, pin := range pins {
+		name := strings.TrimPrefix(pin.path, "/")
+		for i := len(found) - 1; i >= 0; i-- {
+			hit, ok := found[i][name]
+			if !ok {
+				continue
+			}
+			if hit.deleted || hit.data == nil {
+				return nil, "guest-source-mismatch"
+			}
+			out[pin.path] = hit.data
+			break
+		}
+		if out[pin.path] == nil {
+			return nil, "guest-source-mismatch"
+		}
+	}
+	return out, ""
+}
+
+func guestLayerName(n string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(path.Clean("/"+n), "/"), "./")
+}
+
+// scanGuestLayer walks one layer (plain or gzip tar) for the pinned paths.
+func scanGuestLayer(ctx context.Context, r io.Reader, pins []guestFilePin) (map[string]guestLayerHit, error) {
+	br := bufio.NewReader(ctxReader{ctx, r})
+	var plain io.Reader = br
+	magic, _ := br.Peek(4)
+	switch {
+	case len(magic) >= 2 && magic[0] == 0x1f && magic[1] == 0x8b:
+		gz, err := gzip.NewReader(br)
+		if err != nil {
+			return nil, err
+		}
+		defer gz.Close()
+		plain = gz
+	case len(magic) == 4 && magic[0] == 0x28 && magic[1] == 0xb5 && magic[2] == 0x2f && magic[3] == 0xfd:
+		return nil, errors.New("zstd layers are not supported")
+	}
+	want := map[string]guestFilePin{}
+	sizes := map[int64]bool{}
+	for _, pin := range pins {
+		want[strings.TrimPrefix(pin.path, "/")] = pin
+		sizes[pin.size] = true
+	}
+	hits := map[string]guestLayerHit{}
+	regular := map[string][]byte{} // Only files whose size equals a pinned size.
+	tr := tar.NewReader(io.LimitReader(plain, guestLayerExpandLimit))
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		name := guestLayerName(h.Name)
+		base, dir := path.Base(name), path.Dir(name)
+		if strings.HasPrefix(base, ".wh.") {
+			victim := dir
+			if base != ".wh..wh..opq" {
+				victim = path.Join(dir, strings.TrimPrefix(base, ".wh."))
+			}
+			for wp := range want {
+				if wp == victim || victim == "." || strings.HasPrefix(wp, victim+"/") {
+					hits[wp] = guestLayerHit{deleted: true}
+				}
+			}
+			continue
+		}
+		pin, isWanted := want[name]
+		switch h.Typeflag {
+		case tar.TypeReg:
+			if !sizes[h.Size] {
+				if isWanted {
+					hits[name] = guestLayerHit{deleted: true} // A file of another size: not the pin.
+				}
+				continue
+			}
+			data := make([]byte, h.Size)
+			if _, err := io.ReadFull(tr, data); err != nil {
+				return nil, err
+			}
+			regular[name] = data
+			if isWanted && h.Size == pin.size {
+				hits[name] = guestLayerHit{data: data}
+			}
+		case tar.TypeLink:
+			if isWanted {
+				hits[name] = guestLayerHit{link: guestLayerName(h.Linkname)}
+			}
+		case tar.TypeSymlink:
+			if isWanted {
+				return nil, errors.New("a pinned path is a symlink")
+			}
+		}
+	}
+	for name, hit := range hits {
+		if hit.link == "" {
+			continue
+		}
+		data, ok := regular[hit.link]
+		if !ok {
+			return nil, errors.New("a pinned path is a link to an unknown file")
+		}
+		hits[name] = guestLayerHit{data: data}
+	}
+	return hits, nil
+}
+
 // copyOut reads exactly one regular file of at most the given size from a
-// created container and returns only after the Docker client has finished.
+// container and returns only after the Docker client has finished.
 func (b *builderRun) copyOut(ctx context.Context, container, path string, size int64) ([]byte, string) {
 	cpCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -204,66 +413,10 @@ func (b *builderRun) copyOut(ctx context.Context, container, path string, size i
 	return data, ""
 }
 
-// removeGuestSources removes every source handle container of this nonce, each
-// only after its name, label and state are confirmed to be exactly ours.
-func (b *builderRun) removeGuestSources(ctx context.Context) bool {
-	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseGuestSourceLabel+"="+b.rec.Nonce)
-	if err != nil {
-		return false
-	}
-	for _, id := range strings.Fields(out) {
-		if !releaseContainerPattern.MatchString(id) {
-			return false
-		}
-		info, err := b.inspect(ctx, id)
-		m := guestSourceName.FindStringSubmatch(info.Name)
-		if err != nil || m == nil || m[1] != b.rec.Nonce || info.ID != id || info.Config.Labels[releaseGuestSourceLabel] != b.rec.Nonce || info.State.Running {
-			return false
-		}
-		if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
-			return false
-		}
-	}
-	after, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseGuestSourceLabel+"="+b.rec.Nonce)
-	return err == nil && after == ""
-}
-
-// holdGuestSourceName closes the window of a source create whose answer was lost.
-// A second, inert create of the same name either succeeds, so a late arrival of
-// the first request can no longer take the name, or conflicts because the first
-// already exists and is then found by its label. No image is ever pulled: the
-// first create could not have pulled either, so a missing image proves it never
-// happened.
-func (b *builderRun) holdGuestSourceName(ctx context.Context, i int) bool {
-	if i < 0 || i >= len(guestImages) {
-		return false
-	}
-	_, stderr, err := dockerText(ctx, b.d, 4096, "create", "--name", guestSourceContainerName(b.rec.Nonce, i), "--label", releaseGuestSourceLabel+"="+b.rec.Nonce, "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-		"--memory", "67108864", "--pids-limit", "16", "--pull", "never", guestImages[i], "/cc-never-started")
-	if err == nil {
-		return true
-	}
-	low := strings.ToLower(stderr)
-	return strings.Contains(low, "already in use") || strings.Contains(low, "conflict") || strings.Contains(low, "no such image")
-}
-
-// release removes the source handles and every image this run introduced. An
-// image that was already present is never touched. A source create that was
-// attempted but never confirmed is resolved first; if that cannot be concluded
-// the release is refused so the caller keeps the phase and recovers by nonce.
+// release removes every image this run introduced. An image that was already
+// present is never touched.
 func (dockerGuestProvider) release(ctx context.Context, b *builderRun) bool {
 	clean := true
-	for i := b.rec.GuestSourceConfirmed; i < b.rec.GuestSourceAttempted; i++ {
-		if !b.holdGuestSourceName(ctx, i) {
-			clean = false
-		}
-	}
-	if !b.removeGuestSources(ctx) {
-		clean = false
-	}
-	if clean {
-		b.rec.GuestSourceConfirmed = b.rec.GuestSourceAttempted
-	}
 	for i := range b.rec.GuestImages {
 		g := &b.rec.GuestImages[i]
 		if !g.Introduced {

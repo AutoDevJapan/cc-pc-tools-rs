@@ -44,8 +44,9 @@ host socket・host network・seccomp/AppArmor無効化・no-new-privileges解除
   executorは以前に監査した `...kaniko@sha256:2fa20b0a...` のexecutorとバイト単位で同一
   (SHA-256 `7e14e3351435495fb6c9eb18c16a418332f45a87e568fc64a362a1f2898a957b`)。
 - 4ファイルはRAM内で固定SHA-256とサイズを照合し、payload作成時にもう一度照合する。
-  取得に使うsource containerは作成だけで起動せず、network none・cap-drop ALL・
-  no-new-privilegesで、cpの直後に削除する。今回pullしたimageは後始末で削除し、
+  取得は `docker image save` のtar streamを読む方式で、containerを一切作らない
+  (レイヤーは上書き・whiteout・同一レイヤー内のhard linkをコンテナと同じ規則で解決し、
+  symlink・zstd・欠落は拒否する)。今回pullしたimageは永続記録のうえ後始末で削除し、
   元からあるimageには触れない。
 - ゲストはQEMUの `-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny`
   を付け、デバイスはvirtio-blk 2本・virtio-net・virtio-rngだけ。user-mode NATで外側の
@@ -64,9 +65,9 @@ host socket・host network・seccomp/AppArmor無効化・no-new-privileges解除
 - 終了コードは従来の意味を保つ: 成功0、Kaniko失敗はその終了コード、結果欠落125、
   出力不整合126、QEMU自身が非0で終了(クラッシュ等)127、OOMは外側がOOMKilled。結果行は
   QEMUが0で終了した場合だけ採用する。キャンセル/timeoutは外側のstop→PID0確認→rm→不在確認。
-- source container(cp用の取っ手)のcreateは、試行を先に永続化し、応答が確認できない場合は
-  回収前に同じ名前を自分で取ってから消す。遅れて現れた取っ手は次の実行の開始時に、
-  名前・label・image・mountなしの条件を満たすものだけ消し、それ以外は残して排他を保つ。
+- ゲストのファイルを取り出すためのcontainerは作らないので、応答が失われたcreateが後から
+  現れて回収を逃れることはない。Dockerに残りうる資源は外側のimageと2つのguest source imageだけで、
+  どれも起動前に永続記録され、今回導入したものだけを削除する。
 
 ## CC自作fixtureの実結果（Docker Desktop 29.7.2、WSL2、2026-10-19）
 

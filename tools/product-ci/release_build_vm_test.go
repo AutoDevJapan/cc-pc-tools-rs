@@ -337,60 +337,142 @@ func TestOuterProofMustMatchTheProfile(t *testing.T) {
 
 // ---- the Docker-based provider ---------------------------------------------
 
-type fakeSourceContainer struct{ name, image string }
+type testEntry struct {
+	name     string
+	typeflag byte
+	data     []byte
+	link     string
+}
+
+type testLayer struct {
+	entries []testEntry
+	gzip    bool
+	raw     []byte // Replaces the whole layer blob (for unsupported formats).
+}
+
+func file(name string, data []byte) testEntry {
+	return testEntry{name: name, typeflag: tar.TypeReg, data: data}
+}
+
+// savedImage builds what "docker image save" prints: layer blobs, an OCI index
+// and a manifest.json, with the manifest before or after the blobs.
+func savedImage(t *testing.T, layers []testLayer, manifestFirst bool, dupLayer bool) []byte {
+	t.Helper()
+	type blob struct {
+		name string
+		data []byte
+	}
+	var blobs []blob
+	var names []string
+	for _, l := range layers {
+		data := l.raw
+		if data == nil {
+			var lt bytes.Buffer
+			w := tar.NewWriter(&lt)
+			for _, e := range l.entries {
+				h := &tar.Header{Name: e.name, Mode: 0o644, Typeflag: e.typeflag, Size: int64(len(e.data)), Linkname: e.link}
+				if e.typeflag != tar.TypeReg {
+					h.Size = 0
+				}
+				if w.WriteHeader(h) != nil {
+					t.Fatal("layer header")
+				}
+				if e.typeflag == tar.TypeReg {
+					w.Write(e.data)
+				}
+			}
+			w.Close()
+			data = lt.Bytes()
+			if l.gzip {
+				var g bytes.Buffer
+				z := gzip.NewWriter(&g)
+				z.Write(data)
+				z.Close()
+				data = g.Bytes()
+			}
+		}
+		n := "blobs/sha256/" + digest(data)
+		blobs = append(blobs, blob{n, data})
+		names = append(names, n)
+	}
+	if dupLayer && len(names) > 0 {
+		names = append(names, names[0])
+	}
+	manifest, _ := json.Marshal([]map[string]any{{"Config": "blobs/sha256/" + digest([]byte("cfg")), "Layers": names}})
+	var out bytes.Buffer
+	tw := tar.NewWriter(&out)
+	add := func(n string, b []byte) {
+		tw.WriteHeader(&tar.Header{Name: n, Mode: 0o444, Size: int64(len(b)), Typeflag: tar.TypeReg})
+		tw.Write(b)
+	}
+	if manifestFirst {
+		add("manifest.json", manifest)
+	}
+	add("oci-layout", []byte("{}"))
+	for _, b := range blobs {
+		add(b.name, b.data)
+	}
+	add("index.json", []byte("{}"))
+	if !manifestFirst {
+		add("manifest.json", manifest)
+	}
+	tw.Close()
+	return out.Bytes()
+}
+
+func stubKernelImage(t *testing.T) []byte {
+	return savedImage(t, []testLayer{{entries: []testEntry{file("kernel", stubGuestKernel)}, gzip: true}}, false, false)
+}
+
+func stubUserlandImage(t *testing.T, mutate func(*[]testLayer)) []byte {
+	layers := []testLayer{
+		{entries: []testEntry{file("busybox/[", stubGuestBusybox), {name: "busybox/busybox", typeflag: tar.TypeLink, link: "busybox/["}}, gzip: true},
+		{entries: []testEntry{file("kaniko/executor", stubGuestExecutor), file("kaniko/ssl/certs/ca-certificates.crt", stubGuestCerts)}},
+	}
+	if mutate != nil {
+		mutate(&layers)
+	}
+	return savedImage(t, layers, false, false)
+}
 
 type guestDockerFake struct {
-	t          *testing.T
-	mu         sync.Mutex
-	images     map[string]bool
-	digests    map[string][]string
-	containers map[string]fakeSourceContainer
-	labels     map[string]map[string]string
-	files      map[string][]byte // image + "|" + path
-	calls      []string
-	rmFails    bool
-	pullFails  bool
-	seq        int
-	// loseCreates makes the next creates land only later (see materialize).
-	loseCreates int
-	pending     []struct {
-		id string
-		c  fakeSourceContainer
-		l  map[string]string
-	}
-	onCreate func()
+	t         *testing.T
+	mu        sync.Mutex
+	images    map[string]bool
+	digests   map[string][]string
+	archives  map[string][]byte
+	calls     []string
+	pullFails bool
+	rmFails   bool
 }
 
 func newGuestDockerFake(t *testing.T) *guestDockerFake {
 	useStubGuestPins(t)
-	f := &guestDockerFake{t: t, images: map[string]bool{}, digests: map[string][]string{}, containers: map[string]fakeSourceContainer{}, labels: map[string]map[string]string{}, files: map[string][]byte{}}
-	f.files[guestKernelPin.image+"|"+guestKernelPin.path] = stubGuestKernel
-	f.files[guestBusyboxPin.image+"|"+guestBusyboxPin.path] = stubGuestBusybox
-	f.files[guestExecutorPin.image+"|"+guestExecutorPin.path] = stubGuestExecutor
-	f.files[guestCertsPin.image+"|"+guestCertsPin.path] = stubGuestCerts
-	return f
+	return &guestDockerFake{t: t, images: map[string]bool{}, digests: map[string][]string{}, archives: map[string][]byte{
+		releaseGuestKernelImage:   stubKernelImage(t),
+		releaseGuestUserlandImage: stubUserlandImage(t, nil),
+	}}
 }
 
 func (f *guestDockerFake) run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	name := args[0]
-	if name == "image" || name == "container" {
+	if name == "image" {
 		name += " " + args[1]
 	}
 	f.calls = append(f.calls, name)
 	last := args[len(args)-1]
 	switch name {
 	case "image inspect":
-		ref := last
-		if !f.images[ref] {
+		if !f.images[last] {
 			io.WriteString(stderr, "Error: No such image: x\n")
 			return errors.New("exit status 1")
 		}
 		if strings.Contains(strings.Join(args, " "), "RepoDigests") {
-			d := f.digests[ref]
+			d := f.digests[last]
 			if d == nil {
-				d = []string{ref}
+				d = []string{last}
 			}
 			raw, _ := json.Marshal(d)
 			stdout.Write(raw)
@@ -403,80 +485,18 @@ func (f *guestDockerFake) run(ctx context.Context, stdin io.Reader, stdout, stde
 		}
 		f.images[last] = true
 	case "image rm":
-		delete(f.images, last)
-	case "create":
-		if f.onCreate != nil {
-			f.onCreate()
-		}
-		cname := argValues(args, "--name")[0]
-		image := args[len(args)-2]
-		if strings.Contains(strings.Join(args, " "), "--pull never") && !f.images[image] {
-			io.WriteString(stderr, "Error response from daemon: No such image: x\n")
-			return errors.New("exit status 125")
-		}
-		for _, c := range f.containers {
-			if c.name == cname {
-				io.WriteString(stderr, "docker: Error response from daemon: Conflict. The container name is already in use.\n")
-				return errors.New("exit status 125")
-			}
-		}
-		f.seq++
-		id := fmt.Sprintf("%064x", f.seq)
-		labels := map[string]string{}
-		for _, l := range argValues(args, "--label") {
-			k, v, _ := strings.Cut(l, "=")
-			labels[k] = v
-		}
-		if f.loseCreates > 0 {
-			f.loseCreates--
-			f.pending = append(f.pending, struct {
-				id string
-				c  fakeSourceContainer
-				l  map[string]string
-			}{id, fakeSourceContainer{cname, image}, labels})
-			return errors.New("response lost")
-		}
-		f.containers[id] = fakeSourceContainer{cname, image}
-		f.labels[id] = labels
-		fmt.Fprintln(stdout, id)
-	case "cp":
-		src, path, _ := strings.Cut(args[1], ":")
-		var c fakeSourceContainer
-		for _, v := range f.containers {
-			if v.name == src {
-				c = v
-			}
-		}
-		data, ok := f.files[c.image+"|"+path]
-		if !ok {
-			return errors.New("exit status 1")
-		}
-		tw := tar.NewWriter(stdout)
-		tw.WriteHeader(&tar.Header{Name: "f", Mode: 0o644, Size: int64(len(data)), Typeflag: tar.TypeReg})
-		tw.Write(data)
-		tw.Close()
-	case "container ls":
-		want := strings.TrimPrefix(argValues(args, "--filter")[0], "label=")
-		k, v, hasValue := strings.Cut(want, "=")
-		for id := range f.containers {
-			if got, ok := f.labels[id][k]; ok && (!hasValue || got == v) {
-				fmt.Fprintln(stdout, id)
-			}
-		}
-	case "container inspect":
-		c, ok := f.containers[last]
-		if !ok {
-			return errors.New("exit status 1")
-		}
-		raw, _ := json.Marshal(map[string]any{"Id": last, "Name": "/" + c.name, "State": map[string]any{"Status": "created"}, "Config": map[string]any{"Image": c.image, "Labels": f.labels[last]}})
-		stdout.Write(raw)
-	case "container rm":
 		if f.rmFails {
 			return errors.New("exit status 1")
 		}
-		delete(f.containers, last)
+		delete(f.images, last)
+	case "image save":
+		if !f.images[last] || f.archives[last] == nil {
+			return errors.New("exit status 1")
+		}
+		_, err := stdout.Write(f.archives[last])
+		return err
 	default:
-		f.t.Fatalf("unexpected docker command %q", name)
+		f.t.Fatalf("unexpected docker command %q (no container is ever created)", name)
 	}
 	return nil
 }
@@ -497,9 +517,6 @@ func TestDockerGuestProviderIntroducesAndRemovesWhatItPulled(t *testing.T) {
 	if len(b.rec.GuestImages) != 2 || !b.rec.GuestImages[0].Introduced || !b.rec.GuestImages[1].Introduced {
 		t.Fatal("introduced images were not recorded")
 	}
-	if len(f.containers) != 0 {
-		t.Fatal("source containers were left behind")
-	}
 	if !f.images[releaseGuestKernelImage] || !f.images[releaseGuestUserlandImage] {
 		t.Fatal("images missing before release")
 	}
@@ -511,6 +528,16 @@ func TestDockerGuestProviderIntroducesAndRemovesWhatItPulled(t *testing.T) {
 	}
 	if !(dockerGuestProvider{}).release(context.Background(), b) || f.images[releaseGuestKernelImage] || f.images[releaseGuestUserlandImage] || !b.rec.GuestImages[0].Removed || !b.rec.GuestImages[1].Removed {
 		t.Fatal("introduced images were not removed")
+	}
+	// Every image is read twice (manifest, then layers); no container is involved.
+	saves := 0
+	for _, c := range f.calls {
+		if c == "image save" {
+			saves++
+		}
+	}
+	if saves != 4 {
+		t.Fatalf("unexpected number of saves: %d", saves)
 	}
 }
 
@@ -534,12 +561,14 @@ func TestDockerGuestProviderNeverRemovesAPreexistingImage(t *testing.T) {
 func TestDockerGuestProviderRejectsWrongBytesAndWrongDigests(t *testing.T) {
 	// A file whose bytes are not the pinned bytes is never accepted.
 	f := newGuestDockerFake(t)
-	f.files[guestExecutorPin.image+"|"+guestExecutorPin.path] = append(bytes.Clone(stubGuestExecutor), 'x')
+	f.archives[releaseGuestUserlandImage] = stubUserlandImage(t, func(l *[]testLayer) {
+		(*l)[1].entries[0] = file("kaniko/executor", append(bytes.Clone(stubGuestExecutor), 'x'))
+	})
 	b, files, class := f.providerRun(t)
 	if class == "" || files.verify() {
 		t.Fatal("tampered executor accepted")
 	}
-	if !(dockerGuestProvider{}).release(context.Background(), b) || len(f.containers) != 0 || len(f.images) != 0 {
+	if !(dockerGuestProvider{}).release(context.Background(), b) || len(f.images) != 0 {
 		t.Fatal("a rejected source was not cleaned up")
 	}
 	// The same bytes under an image whose digest is not the pinned one.
@@ -550,12 +579,12 @@ func TestDockerGuestProviderRejectsWrongBytesAndWrongDigests(t *testing.T) {
 		t.Fatalf("wrong image digest accepted: %s", class)
 	}
 	(dockerGuestProvider{}).release(context.Background(), b)
-	if len(f.containers) != 0 || len(f.images) != 0 {
+	if len(f.images) != 0 {
 		t.Fatal("leftovers after a digest mismatch")
 	}
 }
 
-func TestDockerGuestProviderReportsAFailedRemoval(t *testing.T) {
+func TestDockerGuestProviderReportsAFailedPullAndAFailedRemoval(t *testing.T) {
 	f := newGuestDockerFake(t)
 	f.pullFails = true
 	if _, _, class := f.providerRun(t); class != "guest-source-unavailable" {
@@ -566,135 +595,67 @@ func TestDockerGuestProviderReportsAFailedRemoval(t *testing.T) {
 	if class != "" {
 		t.Fatal(class)
 	}
-	// A leftover handle that cannot be removed keeps the phase from being released.
-	leftover := strings.Repeat("f", 64)
-	f.containers[leftover] = fakeSourceContainer{guestSourceContainerName(b.rec.Nonce, 0), releaseGuestKernelImage}
-	f.labels[leftover] = map[string]string{releaseGuestSourceLabel: b.rec.Nonce}
 	f.rmFails = true
 	if (dockerGuestProvider{}).release(context.Background(), b) {
-		t.Fatal("a failed removal was reported as clean")
-	}
-	// A container that merely carries the label but not our name is never removed.
-	f.rmFails = false
-	f.containers[leftover] = fakeSourceContainer{"somebody-else", releaseGuestKernelImage}
-	if (dockerGuestProvider{}).release(context.Background(), b) || len(f.containers) != 1 {
-		t.Fatal("a foreign container was removed or the release was reported clean")
+		t.Fatal("a failed image removal was reported as clean")
 	}
 }
 
-// materialize lands the creates whose answers were lost, as a slow daemon would;
-// a request whose name is already taken fails with a conflict.
-func (f *guestDockerFake) materialize() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	for _, p := range f.pending {
-		taken := false
-		for _, c := range f.containers {
-			taken = taken || c.name == p.c.name
-		}
-		if !taken {
-			f.containers[p.id], f.labels[p.id] = p.c, p.l
+// What a layered image may legitimately do to the pinned paths, and what must
+// be refused.
+func TestGuestFilesAreResolvedLikeAContainerFilesystem(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*[]testLayer)
+		want   string // "" = accepted
+	}{
+		{"hard link in either direction", func(l *[]testLayer) {
+			(*l)[0].entries = []testEntry{file("busybox/busybox", stubGuestBusybox), {name: "busybox/[", typeflag: tar.TypeLink, link: "busybox/busybox"}}
+		}, ""},
+		{"later layer replaces the executor", func(l *[]testLayer) {
+			*l = append([]testLayer{{entries: []testEntry{file("kaniko/executor", []byte("older"))}}}, *l...)
+		}, ""},
+		{"later layer replaces it with other bytes", func(l *[]testLayer) {
+			*l = append(*l, testLayer{entries: []testEntry{file("kaniko/executor", []byte("newer"))}})
+		}, "guest-source-mismatch"},
+		{"whiteout deletes the executor", func(l *[]testLayer) {
+			*l = append(*l, testLayer{entries: []testEntry{file("kaniko/.wh.executor", nil)}})
+		}, "guest-source-mismatch"},
+		{"opaque whiteout hides the directory", func(l *[]testLayer) {
+			*l = append(*l, testLayer{entries: []testEntry{file("kaniko/.wh..wh..opq", nil)}})
+		}, "guest-source-mismatch"},
+		{"a pinned path is a symlink", func(l *[]testLayer) {
+			*l = append(*l, testLayer{entries: []testEntry{{name: "kaniko/executor", typeflag: tar.TypeSymlink, link: "/bin/x"}}})
+		}, "guest-source-unavailable"},
+		{"zstd layer", func(l *[]testLayer) {
+			*l = append(*l, testLayer{raw: []byte{0x28, 0xb5, 0x2f, 0xfd, 1, 2, 3, 4}})
+		}, "guest-source-unavailable"},
+		{"missing path", func(l *[]testLayer) {
+			(*l)[1].entries = (*l)[1].entries[1:]
+		}, "guest-source-mismatch"},
+		{"link to a file of another layer", func(l *[]testLayer) {
+			(*l)[0].entries = []testEntry{{name: "busybox/busybox", typeflag: tar.TypeLink, link: "busybox/["}}
+			*l = append(*l, testLayer{entries: []testEntry{file("busybox/[", stubGuestBusybox)}})
+		}, "guest-source-unavailable"},
+	}
+	for _, c := range cases {
+		f := newGuestDockerFake(t)
+		f.archives[releaseGuestUserlandImage] = stubUserlandImage(t, c.mutate)
+		_, files, class := f.providerRun(t)
+		if class != c.want || (c.want == "" && !files.verify()) {
+			t.Fatalf("%s: class %q, want %q", c.name, class, c.want)
 		}
 	}
-	f.pending = nil
-}
-
-func TestDockerGuestProviderClosesAnUncertainSourceCreate(t *testing.T) {
+	// The manifest may be stored before the layers.
 	f := newGuestDockerFake(t)
-	f.images[releaseGuestKernelImage], f.images[releaseGuestUserlandImage] = true, true
-	f.loseCreates = 1
-	b, _, class := f.providerRun(t)
-	if class != "guest-source-unavailable" || b.rec.GuestSourceAttempted != 1 || b.rec.GuestSourceConfirmed != 0 {
-		t.Fatalf("a lost create answer was not recorded as unconfirmed: %s %d/%d", class, b.rec.GuestSourceAttempted, b.rec.GuestSourceConfirmed)
+	f.archives[releaseGuestKernelImage] = savedImage(t, []testLayer{{entries: []testEntry{file("kernel", stubGuestKernel)}}}, true, false)
+	if _, files, class := f.providerRun(t); class != "" || !files.verify() {
+		t.Fatalf("manifest first: %s", class)
 	}
-	// Nothing exists yet, so a plain listing would find nothing to remove. The
-	// release takes the name itself first, then removes what holds it.
-	creates := 0
-	for _, c := range f.calls {
-		if c == "create" {
-			creates++
-		}
-	}
-	if !(dockerGuestProvider{}).release(context.Background(), b) || b.rec.GuestSourceConfirmed != b.rec.GuestSourceAttempted {
-		t.Fatal("an unconfirmed source create was not resolved")
-	}
-	after := 0
-	for _, c := range f.calls {
-		if c == "create" {
-			after++
-		}
-	}
-	if after != creates+1 || len(f.containers) != 0 {
-		t.Fatal("the name was not taken and released again")
-	}
-	// The late request found the name taken while the hold existed.
-	f.materialize()
-	// A hold that fails for any reason other than a proof (conflict / missing
-	// image) keeps the release refused so the caller keeps the phase.
-	g := newGuestDockerFake(t)
-	g.images[releaseGuestKernelImage], g.images[releaseGuestUserlandImage] = true, true
-	g.loseCreates = 1
-	b2, _, _ := g.providerRun(t)
-	g.onCreate = func() { g.t.Helper() }
-	broken := &failingCreateDocker{guestDockerFake: g}
-	b2.d = broken
-	if (dockerGuestProvider{}).release(context.Background(), b2) {
-		t.Fatal("an unresolved source create was released")
-	}
-}
-
-type failingCreateDocker struct{ *guestDockerFake }
-
-func (d *failingCreateDocker) run(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
-	if args[0] == "create" {
-		io.WriteString(stderr, "Cannot connect to the Docker daemon")
-		return errors.New("exit status 1")
-	}
-	return d.guestDockerFake.run(ctx, stdin, stdout, stderr, args...)
-}
-
-func TestSourceCreateAttemptIsDurableBeforeTheDaemonIsAsked(t *testing.T) {
-	f := newGuestDockerFake(t)
-	b := &builderRun{parent: context.Background(), d: f, dir: t.TempDir(), rec: releaseBuildReceipt{Nonce: strings.Repeat("0a", 16)}}
-	checked := 0
-	f.onCreate = func() {
-		raw, err := os.ReadFile(filepath.Join(b.dir, releaseBuildStateFile))
-		var saved releaseBuildReceipt
-		if err != nil || json.Unmarshal(raw, &saved) != nil || saved.GuestSourceAttempted != saved.GuestSourceConfirmed+1 {
-			t.Error("the source create was not durable before it was sent")
-		}
-		checked++
-	}
-	if _, class := (dockerGuestProvider{}).acquire(context.Background(), b); class != "" || checked != 2 {
-		t.Fatalf("acquire: %q, %d checks", class, checked)
-	}
-}
-
-func TestInertGuestSourceLeftoverIsSweptAndOthersKeepThePhaseBusy(t *testing.T) {
-	f := newGuestDockerFake(t)
-	b := &builderRun{parent: context.Background(), d: f, dir: t.TempDir(), rec: releaseBuildReceipt{Nonce: strings.Repeat("0b", 16)}}
-	other := strings.Repeat("c", 32)
-	leftover := strings.Repeat("1", 64)
-	f.containers[leftover] = fakeSourceContainer{guestSourceContainerName(other, 1), releaseGuestUserlandImage}
-	f.labels[leftover] = map[string]string{releaseGuestSourceLabel: other}
-	if err := b.sweepInertBuilders(context.Background()); err != nil || len(f.containers) != 0 {
-		t.Fatalf("an inert late source handle was not swept: %v", err)
-	}
-	// A container that only carries the label, or has another image or a
-	// different name, is never removed and the phase stays busy.
-	foreign := strings.Repeat("2", 64)
-	for _, c := range []fakeSourceContainer{{"somebody-else", releaseGuestUserlandImage}, {guestSourceContainerName(other, 1), "other-image"}} {
-		f.containers[foreign] = c
-		f.labels[foreign] = map[string]string{releaseGuestSourceLabel: other}
-		if err := b.sweepInertBuilders(context.Background()); err != nil || len(f.containers) != 1 {
-			t.Fatalf("foreign container touched: %v", err)
-		}
-		if busy, err := b.anyBuilder(context.Background()); err != nil || !busy {
-			t.Fatal("a source handle that is not recognized must keep the phase busy")
-		}
-		delete(f.containers, foreign)
-	}
-	if busy, err := b.anyBuilder(context.Background()); err != nil || busy {
-		t.Fatal("the phase is not free")
+	// The same layer listed twice is refused.
+	f = newGuestDockerFake(t)
+	f.archives[releaseGuestKernelImage] = savedImage(t, []testLayer{{entries: []testEntry{file("kernel", stubGuestKernel)}}}, false, true)
+	if _, _, class := f.providerRun(t); class != "guest-source-unavailable" {
+		t.Fatalf("duplicate layer: %s", class)
 	}
 }

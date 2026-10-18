@@ -150,7 +150,6 @@ type releaseBuildReceipt struct {
 	ToolImageID                                                 string
 	ToolImagePreexisting, ToolImageIntroduced, ToolImageRemoved bool
 	GuestImages                                                 []guestImageRecord
-	GuestSourceAttempted, GuestSourceConfirmed                  int
 	CPUNano, MemoryBytes, Pids                                  int64
 	Network                                                     string
 	SnapshotTree, SnapshotSHA256                                string
@@ -444,36 +443,6 @@ func (b *builderRun) sweepInertBuilders(ctx context.Context) error {
 			return err
 		}
 	}
-	return b.sweepInertGuestSources(ctx)
-}
-
-// A guest source handle is created only to copy files out and is removed again.
-// One that appears late (a create whose answer was lost) is inert: never
-// started, exact name/label/image pattern, no mount of any kind. Exactly those
-// are removed; anything else carrying the label keeps the phase busy.
-func (b *builderRun) sweepInertGuestSources(ctx context.Context) error {
-	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseGuestSourceLabel)
-	if err != nil {
-		return err
-	}
-	for _, id := range strings.Fields(out) {
-		if !releaseContainerPattern.MatchString(id) {
-			return errors.New("container listing invalid")
-		}
-		info, err := b.inspect(ctx, id)
-		if err != nil {
-			return err
-		}
-		m := guestSourceName.FindStringSubmatch(info.Name)
-		inert := m != nil && info.ID == id && info.Config.Labels[releaseGuestSourceLabel] == m[1] && (info.Config.Image == guestImages[0] || info.Config.Image == guestImages[1]) &&
-			info.State.Status == "created" && !info.State.Running && len(info.Mounts) == 0
-		if !inert {
-			continue // Left for anyBuilder: the phase stays busy.
-		}
-		if _, _, err := dockerText(ctx, b.d, 4096, "container", "rm", "--volumes", id); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -491,12 +460,7 @@ func (b *builderRun) volumesAbsent(ctx context.Context) bool {
 // anyBuilder reports whether any builder container, ours or not, exists.
 func (b *builderRun) anyBuilder(ctx context.Context) (bool, error) {
 	out, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel)
-	if err != nil || out != "" {
-		return out != "", err
-	}
-	// A guest source handle of any nonce also means the phase is not free.
-	src, _, err := dockerText(ctx, b.d, 1<<20, "container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseGuestSourceLabel)
-	return src != "", err
+	return out != "", err
 }
 
 // Absent is concluded only from Docker's own "no such image" answer.
@@ -1236,7 +1200,7 @@ func (b *builderRun) dispose() {
 		rec.ToolImageRemoved = err == nil && !present
 		clean = clean && rec.ToolImageRemoved
 	}
-	// The guest source handles and any guest source image this run introduced.
+	// Any guest source image this run introduced.
 	// An image that was already there is left alone.
 	if !b.provider().release(ctx, b) {
 		clean = false

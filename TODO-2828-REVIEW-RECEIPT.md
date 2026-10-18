@@ -16,3 +16,13 @@ Suggestion2件は実装側で採用しました。診断探索を総2048entry・
 失敗eventは起動後の段階と実runnerIDを照合します。排出確認・終了値・hashの
 整合が崩れたeventをObserveへ渡さず、排出未確認とtimeoutを分けます。
 この小さな追加差分を確認した後に親2737へ最終pinを返します。
+
+追加レビュー2833も固定b60e85eの6対象を読み、Must0でした。
+base/head/tree、実モデルgpt-6-luna、原応答とhashを照合し、レビュー資料に保存しました。
+提案1件は走査中取消し検査の追加で、実装不具合はありません。
+実施済みの走査前取消し検査と静的照合を区別してHANDOFFに記載しました。
+本有限実装の確認は終了し、親2737の実VM・公式runner受入へ引き継ぎます。
+
+2833の原応答: tools/windows-ci-runner-2737/reviews/20261019-010741-todo-2833.md。
+SHA256: acf57e0d5390d610376549126ff11044ebcfbfa75ab124d22b5565124f4f9c42。
+固定head/tree・全6file・実モデル・検査0件の受領条件はreceipt-2833.jsonにも保存済みです。

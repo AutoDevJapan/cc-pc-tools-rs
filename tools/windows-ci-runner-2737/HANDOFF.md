@@ -2,15 +2,17 @@
 
 Windows runnerの接続処理を実装し、Windows上の合成検査を通しました。
 固定bec99388の全23ファイルは別モデルgpt-6-lunaで静的確認され、Must0でした。
-提案2件を修正し、追加差分の確認を続けています。
+提案2件を修正した固定b60e85eの追加6ファイルも、別モデルgpt-6-lunaでMust0でした。
+本ToDo2828の有限実装は完了です。
 親による実VM・公式runnerの受入は、別の完了条件です。
 製品の通常CIが成功したという報告ではありません。
 
 ## 成果の範囲
 
 - 作業ブランチ: scheduler/todo-2828-godd-mcp-windows-ci-guest。
-  固定コード版はこの文書を追加したコミット。最終HEAD/treeとレビュー結果は
-  TODO-2828-CHECKPOINT.mdと共有ToDo2828の引き継ぎ記録へ追記する。
+  最終Go実装HEADはb60e85e7f66abb3329264bfc74895a3d3c2be10f、
+  treeはe192d0a34d9c546e146575681d3d9365c6185ee0。
+  後続コミットは受領記録と文書のみで、Go実装は同一。
 - 新規モジュール tools/windows-ci-runner-2737 の公開型、全フィールド、段階、戻り値、
   seed、通信、固定pathとoffline stagingは [README.md](README.md) に記載。
 - SDKの変更は guest_service_windows.go のみ。GuestBackend / RunGuestServiceBackendを
@@ -28,9 +30,9 @@ TLS証明書、loopback、Windows pipeとテスト専用子プロセスだけを
 
 | 対象 | コマンドと結果 |
 | --- | --- |
-| 新モジュールとguest entry | go test -race -mod=readonly -timeout90s ./... 成功、go vet ./... 成功 |
-| 取り込んだsourcepacket | go test -timeout90s ./... 成功23.793s、go vet ./... 成功 |
-| SDKおよび既存cmd利用側 | go test -mod=readonly -timeout90s ./... 成功5.130s、go vet ./... 成功 |
+| 新モジュールとguest entry | 最終実装のgo test -race -mod=readonly -timeout 90s ./... 成功4.280s、go vet ./... 成功 |
+| 取り込んだsourcepacket | go test -timeout 90s ./... 成功23.793s、go vet ./... 成功 |
+| SDKおよび既存cmd利用側 | go test -mod=readonly -timeout 90s ./... 成功5.130s、go vet ./... 成功 |
 | normalci公開型 | go test -mod=readonly ./normalci / go vet ./normalci 成功。元package自体にはtestがなく、新モジュールからbinding拒否を確認 |
 | 書式 | gofmt / git diff --check 成功 |
 
@@ -46,7 +48,7 @@ TLS証明書、loopback、Windows pipeとテスト専用子プロセスだけを
   取消し時も、停止前に保持した子孫ハンドルが終了状態になること。
 - SDKの実Windows named-pipe期限検査と、合成COM nonce/transport/API検査。
 - seedに秘密鍵を書かないこと、stock ZIPの不正hash/path/重複を拒否すること。
-- 再開後の提案修正: 空directoryが大量にある場合のentry/深さ上限、探索中の取消し、
+- 再開後の提案修正: 空directoryが大量にある場合のentry/深さ上限、走査開始前の取消し、
   別runner/起動前/排出状態が矛盾する失敗eventを保存前に拒否すること。
 
 初回のコンパイルで、内部hex関数とencoding/hexの名前衝突、Windows SID.Stringの
@@ -54,6 +56,26 @@ TLS証明書、loopback、Windows pipeとテスト専用子プロセスだけを
 初回のpath誤りも修正した。これらは実VMの失敗ではない。上表は修正後の結果。
 test stdoutの記録元は本ジョブのexec結果であり、公式CI原ログではない。
 ToDo2830の原応答・hashと実モデルの補足は[reviews](reviews/README.md)に保持する。
+追加レビュー2833はbase93c0c42→headb60e85eの6対象を全て読み、Must0/Suggestion1/Nit0。
+実modelはjob.jsonと正規rolloutのturn_context.modelでgpt-6-lunaと確認済み。
+実装側gpt-6.1-solとは別モデルで、レビューの検査実行は0件。
+提案1件は「走査中に取消す決定的な検査」の追加で、実装の不具合指摘ではない。
+現行検査は走査開始前の取消しを確認し、entry間・再帰前の取消し確認は静的照合のみ。
+この検査範囲を明記し、本有限実装に検査用注入APIを追加しない判断とした。
+
+## 最終の変更ファイルと統合方法
+
+- 新規tools/windows-ci-runner-2737/: contract.go / seed.goに公開型と固定pin、
+  channel.go / frame.goにSDK経由の有限通信、host.go / session.goにhostとの段階契約、
+  guest_windows.go / process_windows.go / logbound_windows.go / archive.goに固定guest処理。
+  cmd/windows-ci-runner-agent/main_windows.goがSCMとhookの入口。
+  *_test.goは合成検査、README.mdは全仕様、reviews/は原応答と受領hash。
+- SDKの機能差分はtools/windows-ci-sdk-2737/guest_service_windows.goのみ。
+- 必要な依存は固定版のtools/ci-source-2737、tools/product-ci/normalci、
+  tools/windows-ci-sdk-2737を元のpathに取り込んだ。親での重複実装を作らない。
+- 親はこの固定版から新moduleとSDKのcallbackを統合し、既存normalci/sourcepacketの
+  改善を保持する。親の新しいroute/label差分を古い版へ戻す取り込みは行わない。
+  READMEのPublicSeeds / NewSeed / Dial / HostSession / Controllerの契約で直接linkする。
 
 ## 親の次の工程
 

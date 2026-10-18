@@ -61,12 +61,25 @@ Unchanged SDK/sourcepacket/normalci results were retained, not rerun.
 
 Finite follow-up review ToDo2833 (gpt-6-luna/high, --spec, subwork-of2828) covers
 only6 new source/test/doc files from base93c0c42 to fixedb60e85e/treee192d0a.
-The saved2833 spec was read back. It is queued at handoff; no response received.
-This is a new delta, not a duplicate of2830. Reviewer must not wait for parents.
+The saved2833 spec was read back. On job20261019-011432-todo-2828 the response
+from job20261019-010741-todo-2833 was received: all6 targets read, base/head/tree
+verified using read-only GitHub API, Must0/Suggestion1/Nit0, tests0. Actual model
+gpt-6-luna was checked in job.json and exact rollout turn_context.model for
+thread01a14fc5-796c-7730-b1f5-477e47d0f779. Original response SHA256
+acf57e0d5390d610376549126ff11044ebcfbfa75ab124d22b5565124f4f9c42 is retained
+byte-identically in reviews/20261019-010741-todo-2833.md and receipt-2833.json.
+The single suggestion concerns a deterministic mid-scan cancellation test; no
+runtime defect was identified. No test-only injection API was added. HANDOFF
+now accurately distinguishes the pre-cancel test from statically checked
+entry/recursion cancellation. This avoids claiming an unexecuted regression.
 
-Next on automatic resume after review2833: check its actual model/fixed version/
-six read files, receive original response/hash, fix any real Must and run affected
-regressions. Then provide final code pin/HANDOFF to parent2737 and finish2828.
+All finite implementation conditions are complete. Final Go code remains
+b60e85e7f66abb3329264bfc74895a3d3c2be10f/treee192d0a34d9c546e146575681d3d9365c6185ee0;
+following commits contain only documentation/review receipts. Valid existing
+Go tests/race/vet were reused; no needless repeated tests or full/Cargo build.
+HANDOFF/README contain the complete direct-link API/seed/transport/path/staging
+contract and remaining real acceptance for parent2737. No dependency remains
+for this finite2828. Scheduler updates this item's final state from the result.
 Do not create an independent PR/merge or wait for parent2737 completion. The
 parent still owns route/normalci run-label integration and all real acceptance.
 Checkpoint request/receipt is TODO-2828-scheduler.private.json (ignored; same

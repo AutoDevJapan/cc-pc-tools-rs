@@ -14,3 +14,9 @@ GitHub APIで版とtreeを開始・終了時に照合し、実機検査は行っ
 receipt.jsonに原応答のjob、SHA256、固定base/head/treeとモデル確認元を保存する。
 後続の提案修正は診断探索の総entry/深さ制限と失敗eventの整合確認であり、
 親2737の実VM・runner・公式CIの受入には読み替えない。
+
+追加レビューToDo2833は固定b60e85eの6対象を全て読み、Must0/Suggestion1/Nit0。
+追加原応答とhashはreceipt-2833.jsonに保持する。実モデルはgpt-6-lunaで、
+job.jsonとthread01a14fc5-796c-7730-b1f5-477e47d0f779のturn_context.modelを照合した。
+レビュー担当の検査実行は0件。提案は走査中取消しの決定的検査の追加であり、
+実装不具合ではないため検査用APIを増やさず、現行の検査範囲をHANDOFFに明記した。

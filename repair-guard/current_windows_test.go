@@ -416,3 +416,25 @@ func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 		}
 	}
 }
+
+func TestCurrentGitHubCLIEnvironmentUsesStoredOAuthConfiguration(t *testing.T) {
+	input := []string{
+		"APPDATA=C:/Users/fixture/AppData/Roaming",
+		"GH_CONFIG_DIR=C:/Users/fixture/.config/gh",
+		"HTTPS_PROXY=http://proxy.invalid:8080",
+		"GH_HOST=enterprise.invalid",
+		"GH_TOKEN=environment-token",
+		"GITHUB_TOKEN=environment-token",
+		"GH_ENTERPRISE_TOKEN=environment-token",
+		"GITHUB_ENTERPRISE_TOKEN=environment-token",
+	}
+	got := currentGitHubCLIEnvironment(input)
+	want := []string{
+		"APPDATA=C:/Users/fixture/AppData/Roaming",
+		"GH_CONFIG_DIR=C:/Users/fixture/.config/gh",
+		"HTTPS_PROXY=http://proxy.invalid:8080",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatal("GitHub CLI environment retained an auth or host override")
+	}
+}

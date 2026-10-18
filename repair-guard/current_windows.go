@@ -90,8 +90,21 @@ func currentGitHubIdentityVerified(product currentProduct) bool {
 	cmd := exec.CommandContext(ctx, currentGitHubCLI, currentGitHubIdentityArgs(product)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = time.Second
+	cmd.Env = currentGitHubCLIEnvironment(os.Environ())
 	output, err := cmd.Output()
 	return err == nil && currentGitHubIdentityMatches(output, product)
+}
+
+func currentGitHubCLIEnvironment(environ []string) []string {
+	filtered := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		name, _, ok := strings.Cut(entry, "=")
+		if ok && (strings.EqualFold(name, "GH_TOKEN") || strings.EqualFold(name, "GITHUB_TOKEN") || strings.EqualFold(name, "GH_ENTERPRISE_TOKEN") || strings.EqualFold(name, "GITHUB_ENTERPRISE_TOKEN") || strings.EqualFold(name, "GH_HOST")) {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
 }
 
 func currentGitHubIdentityArgs(product currentProduct) []string {

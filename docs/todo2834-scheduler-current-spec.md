@@ -13,6 +13,7 @@ PR221/c9f0b26のGo guardは正式配布済み。AOの新ToDo2839は02:44のwait-
 - Rustの `cc-scheduler/src/backend.rs`、`engine.rs` と必要な小モジュール・関連検査・運用文書がこの担当の所有。Go guardと残る製品の宣言/APIは2849が所有し、同時に編集しない。親2834もRustを並行編集しない。
 - 上記契約の読み取りAPIを使う、既定falseのcurrent_product_allowedを実装する。正規化path/bodyのSHA256には既存cc-job-policyのdigest等を使い、不要な新依存を足さない。原名簿・auth/configや未知の名前をモデルへ読み出さない。
 - 原名簿NotFoundの場合にだけ現在の資格を確認し、通常のdispatch/prepare/admissionと元の停止・依存・資源・owner競合を維持する。Go側が未配布/未対応なら不成立とし、全projectをroot判定だけで通さない。
+- dispatchだけでなく、同じ3project限定があるreconcile_repairs/release_repair_waitsにも同じ現在の資格を接続する。終了→依存解除→次の自然巡回まで回帰で確認し、製品がdoing/waitに再び残る修正にしない。通常subworkの直接の新しいreview/check/researchの受付はGoの親子資格と既存subwork審査で保持し、旧子や任意idを解放しない。
 - `cc-scheduler/tests/parity.rs` の missing_private_registry_only_dispatches_verified_explicit_pc_repair と既存repair-step検査を維持し、新しい現在の資格の成功/拒否・別id/project/spec/root・旧状態・停止/依存・次の自然巡回の回帰を加える。RealBackendのreceipt照合にも意味のある回帰を加える。仮のsuccess statusや空の原名簿は使わない。
 - Cargoは割当と共有ゲートを使い、変更クレート/利用側の必要範囲とdoctestを確認する。小修正ごとに全workspace/releaseを重ねない。配布が必要なschedulerだけを最新mainからbuildする。Go2849の関係あるmergeを保持し、CI/ソースとruntimeの並行変更を戻さない。
 - 固定base/headと差分を共有ToDo --specの別モデルレビューで確認し、Mustを直して公式CI成功後に通常mergeする。子CLIを直接起動しない。必要な正式更新は既存CLI/管理者窓口・窓なしで進める。

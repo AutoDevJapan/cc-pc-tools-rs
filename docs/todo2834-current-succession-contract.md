@@ -26,7 +26,9 @@ pathのfingerprintは、通常の絶対path文字列のbackslashをslashへ置�
 
 `Backend`へ既定falseの `current_product_allowed(item, registered_root)` を追加し、RealBackendは正式APIのdomain/verified/元2834/新id/project/3つのfingerprint/原未復旧を確認する。specはguard成功後だけ上限1MiBで読み、実バイトを照合する。さらに正式guardのroot判定、作成済みworktreeの判定を保持する。不成立・旧binaryの未対応・欠落・不正JSONはfalse。raw応答やprivate pathをログへ出さない。
 
-dispatchの原名簿NotFoundだけの分岐へ、この資格による限定受付を加える。既存名簿が存在する場合のdenyと読取不能、本人停止、未完依存、資源、担当競合、通常のspec/起動世代と作業場所の照合を変えない。未知192件・旧元番号・資格のない製品は保留のまま。正常repair-stepで新しい継承先の実起動・成果更新と次の自然巡回まで確認し、単なるCLI分類成功を受付成功としない。
+dispatchの原名簿NotFoundだけの分岐へ、この資格による限定受付を加える。さらに同じ資格を `reconcile_repairs` と `release_repair_waits` の現在の3project限定へ接続する。受付だけを直すと、実jobの終了・再開・完了した依存の解除が現在の製品へ届かず、次の巡回でdoing/waitに残る。3箇所を同じ資格で整合させる。既存名簿が存在する場合のdenyと読取不能、本人停止、未完依存、資源、担当競合、通常のspec/起動世代と作業場所の照合を変えない。未知192件・旧元番号・資格のない製品は保留のまま。正常repair-stepで新しい継承先の実起動・成果更新と次の自然巡回まで確認し、単なるCLI分類成功を受付成功としない。
+
+通常の別モデルレビュー/check/researchが必要な現在の製品では、新主担当から正規subwork登録した直接の子についても、親の現在の資格・同project/root/common・保存された子spec・実体・新idと独立scheduler worktreeを照合して有限に扱う。任意の元番号や単に同じrootを使う古い子を許可しない。親の明示停止、通常subwork審査、旧review2407の別の有限経路を維持する。Go APIは認めたその新しい子自身のid/spec fingerprintを返すため、Rustの同じ比較が使える。実装しない場合は通常レビューが受付できないことを成功とせず、同じcurrent-scopeの必要工程として解消する。
 
 ## 検査・配布
 

@@ -99,6 +99,7 @@ type Request struct {
 	PriorVersions  []string        `json:"prior_versions,omitempty"`
 	PriorEdits     []EditVersion   `json:"prior_edits,omitempty"`
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
+	Conversation   string          `json:"conversation_request_id,omitempty"`
 }
 type State struct {
 	Domain         string                         `json:"domain"`
@@ -120,20 +121,21 @@ type State struct {
 	ReportTurn     string                         `json:"report_turn,omitempty"`
 }
 type Health struct {
-	Mode           string                   `json:"mode"`
-	Started        string                   `json:"started_at"`
-	Finished       string                   `json:"finished_at"`
-	API            bool                     `json:"api_verified"`
-	Scanned        int                      `json:"threads_scanned"`
-	Captured       int                      `json:"owner_messages_captured"`
-	Registered     int                      `json:"todos_registered"`
-	Retried        int                      `json:"technical_waits_released"`
-	Pending        int                      `json:"pending_requests"`
-	Scheduler      bool                     `json:"scheduler_ok"`
-	Errors         []string                 `json:"errors"`
-	Discovery      map[string]DiscoveryPage `json:"discovery,omitempty"`
-	ProductReports int                      `json:"product_reports_verified"`
-	SteeringSaved  int                      `json:"steering_saved"`
+	Mode                string                   `json:"mode"`
+	Started             string                   `json:"started_at"`
+	Finished            string                   `json:"finished_at"`
+	API                 bool                     `json:"api_verified"`
+	Scanned             int                      `json:"threads_scanned"`
+	Captured            int                      `json:"owner_messages_captured"`
+	Registered          int                      `json:"todos_registered"`
+	Retried             int                      `json:"technical_waits_released"`
+	Pending             int                      `json:"pending_requests"`
+	Scheduler           bool                     `json:"scheduler_ok"`
+	Errors              []string                 `json:"errors"`
+	Discovery           map[string]DiscoveryPage `json:"discovery,omitempty"`
+	ProductReports      int                      `json:"product_reports_verified"`
+	SteeringSaved       int                      `json:"steering_saved"`
+	ConversationReplies int                      `json:"conversation_replies_processed,omitempty"`
 }
 type Runner struct {
 	Config                      Config
@@ -471,6 +473,9 @@ func (r *Runner) existingTodo(key string) (uint64, error) {
 	return found, nil
 }
 func (r *Runner) register(ctx context.Context, request *Request) error {
+	if request.Conversation != "" {
+		return errors.New("conversation reply is delivered only to its original task")
+	}
 	if request.Todo != 0 {
 		return nil
 	}
@@ -589,6 +594,9 @@ func (r *Runner) tick(ctx context.Context) Health {
 func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
+	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, 12*time.Second)
+	r.processConversations(conversationCtx, &health)
+	cancelConversations()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
@@ -687,7 +695,7 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 func (r *Runner) admit(ctx context.Context, health *Health) {
 	mids := make([]string, 0, len(r.State.Requests))
 	for id, req := range r.State.Requests {
-		if req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
+		if req.Conversation == "" && req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
 			mids = append(mids, id)
 		}
 	}
@@ -786,6 +794,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "conversation" {
+		os.Exit(conversationCLI(os.Args[2:], os.Stdout))
+	}
 	configPath, operation, message, argumentErr := runnerArguments(os.Args[1:])
 	if argumentErr != nil {
 		fmt.Println("usage: unattended-runner [--config <path>] [--prepare-steering-delivery <message> | --verify-steering-delivery <message>]")

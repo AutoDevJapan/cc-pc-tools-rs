@@ -399,6 +399,9 @@ func (r *Runner) results(ctx context.Context) error {
 		}
 		id := ids[(start+i)%len(ids)]
 		request := r.State.Requests[id]
+		if request != nil && request.Conversation != "" {
+			continue
+		}
 		if request != nil && request.Phase == "status_query" {
 			r.State.ResultCursor = id
 			if err := r.save(); err != nil {

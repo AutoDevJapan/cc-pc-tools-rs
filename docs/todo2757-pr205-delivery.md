@@ -96,3 +96,13 @@ checkout on the Go job; the implementation checks did not start. Both failures
 still need a current-source, fixed-scope recheck and cause resolution. No
 product preflight, container, runner, or production change was made during
 this resume. ToDo2467 remains unfinished; preserve its scope and records.
+
+The current-source receipts and the installed Linux helper agree on its
+current SHA, but that SHA differs from the earlier expected value recorded
+for the PR205 build. The source commit and product module tree still match the
+fixed PR205 merge. Treat the helper-hash discrepancy as unresolved; the
+private saved build copy is not an execution substitute. The compatibility
+preflight has not started. A read-only shared subtask (2846) is deriving the
+supported invocation from the installed tool's source and documentation; it
+has not run the helper or any product job. Do not rerun the historical checks
+on the old merge source.

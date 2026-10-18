@@ -442,7 +442,7 @@ func BuildGuestSeedISO(root OwnedRoot, worktree, instance, agentPath string, cli
 	iso := filepath.Join(root.Path, "windows-ci-sdk-seed-"+instance+".iso")
 	cmd := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", psScript, "-SourceDir", seedDir, "-Destination", iso)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-	cmd.Env = []string{"SystemRoot=" + os.Getenv("SystemRoot"), "PATH=" + filepath.Join(os.Getenv("SystemRoot"), "System32") + `;` + filepath.Join(os.Getenv("SystemRoot"), `System32\WindowsPowerShell\v1.0`)}
+	cmd.Env = []string{"SystemRoot=" + os.Getenv("SystemRoot"), "PATH=" + filepath.Join(os.Getenv("SystemRoot"), "System32") + `;` + filepath.Join(os.Getenv("SystemRoot"), `System32\WindowsPowerShell\v1.0`), "TEMP=" + filepath.Join(root.Path, "go-temp"), "TMP=" + filepath.Join(root.Path, "go-temp")}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {

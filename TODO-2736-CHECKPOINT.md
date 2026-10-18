@@ -1,5 +1,30 @@
 # ToDo2736 再開記録
 
+## 2026-10-18 10:39再開・実ジョブの関連付け不足（最新）
+
+job20261018-103955-todo-2736、同branch/482d8c8から再開。保存済みオーナー指示の
+SHA256は1CA28D9BCE67E51CB7B5BA97693BEFB5F0C0921D22B56B8B471FD98FE09799AEで不変。
+元2640/司令塔2626のnoteに追加指示はなく、元2736の現noteは起動準備失敗の一般記録へ
+置き換わっていた。以前の具体的引継ぎは本書・保存済み配送本文・親と司令塔のnoteに残る。
+origin/mainは3af45ee2のまま。実在するcc-redact/cc-gh-gateパスでHEADとの差分0を確認。
+両repoの実owner/private/nonfork/admin、PR148の同head/base repo、open/draft、
+head75a4051/base1100676/元branch ref不変を正規GitHub APIで再照合した。
+製品の変更/再送/runner/dispatch/既済検査/質問の再試行は0。正式CIは引き続き未達。
+
+実job.jsonは今回id/todo2736/同cwd/running、10:40:19開始、pid53036/codex_pid51104。
+共有ToDoはtodo、scheduler.phase=prepared、scheduler.jobなし、jobsに今回idなし、
+last_job=20261017-123327-todo-2736だった。preparation_failureはtool_failed、
+at1792272411.070198/retry_at1792272711.0701978を保持している。
+正規checkpoint-workspaceを1回実行し、exit1/InputRejectedで保存できなかった。
+コードの受入条件はjobsへの今回id登録と、実行中sourceに対するscheduler.job一致を
+要求しており、実データは両方を満たしていない。branch/worktree/実HEADの不一致ではない。
+ジョブ欄・raw storeの手書き修復や同じ保存の無限再試行は行わない。
+
+原request/result/stderrと今回の確認結果は恒久root184a58eedf4f923741f160dfe7cfd5b7に保存。
+この新しい関連付け不足だけを元2736/2640/2626へ正規noteで配送する。
+送信フィルター修復と起動関連付けの正規受入は別の未達条件として保持する。
+実装成果は既にpush済みで、本書の追加も同branchへ保存する。ブランチ変更なし。
+
 ## 2026-10-18 00:59再開・司令塔への具体的な未解消条件（最新）
 
 job20261018-005954-todo-2736、同branch/0ee664fから再開。最新D:/CC/AGENTS.mdとrepo規則、

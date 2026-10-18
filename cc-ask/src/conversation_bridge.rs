@@ -5,7 +5,7 @@ use crate::{
     core::{Effects, Result},
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -16,6 +16,8 @@ use std::{
 const DOMAIN: &str = "discord-conversation-mode-v1";
 const RUNNER: &str = "D:/CC/Tools/discord-ask/unattended-runner.exe";
 const INPUT_LIMIT: u64 = 1 << 20;
+const IMAGE_LIMIT: u64 = 10 * 1024 * 1024;
+const IMAGE_TOTAL_LIMIT: u64 = 23 * 1024 * 1024;
 const INVALID_MODE: &str = "新しい質問・報告の設定が不正です。設定を有効として扱いません";
 const INVALID_INPUT: &str = "新しい投稿の入力を読み取れないか、内容が不正です";
 const SAVE_FAILED: &str = "新しい投稿の入力を保存できません";
@@ -129,6 +131,51 @@ struct Attachment {
     hash: String,
     size: u64,
     extension: String,
+    source: PathBuf,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MediaSource {
+    domain: String,
+    source_path: PathBuf,
+    snapshot_path: PathBuf,
+    sha256: String,
+    size: u64,
+}
+
+fn image_source(path: &Path) -> Result<PathBuf> {
+    let absolute = std::path::absolute(path).map_err(|_| INVALID_INPUT)?;
+    for parent in absolute.ancestors() {
+        let key = parent
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+        if key.starts_with(".env")
+            || key.contains("password")
+            || key.contains("secret")
+            || key.contains("token")
+            || matches!(
+                key.as_str(),
+                ".ssh" | ".aws" | ".azure" | ".gnupg" | "credentials" | "id_rsa" | "id_ed25519"
+            )
+        {
+            return Err(INVALID_INPUT.into());
+        }
+        let info = fs::symlink_metadata(parent).map_err(|_| INVALID_INPUT)?;
+        if info.file_type().is_symlink() {
+            return Err(INVALID_INPUT.into());
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            if info.file_attributes() & 0x400 != 0 {
+                return Err(INVALID_INPUT.into());
+            }
+        }
+    }
+    fs::canonicalize(&absolute).map_err(|_| INVALID_INPUT.into())
 }
 
 fn private_directory(path: &Path) -> Result<()> {
@@ -150,7 +197,8 @@ fn attachments(
     if paths.len() > 10 {
         return Err("新しい投稿に添付できる画像は10件までです".into());
     }
-    let mut result = Vec::new();
+    let mut inputs = Vec::new();
+    let mut total = 0u64;
     for path in paths {
         let extension = path
             .extension()
@@ -163,10 +211,18 @@ fn attachments(
         ) {
             return Err("新しい投稿の添付は現在は画像だけに対応しています".into());
         }
-        // A generic snapshot name must not hide the original source's protected
-        // path. This preflight grants no exception to the sender's separate image
-        // protection list, byte checks or individual provenance requirements.
-        let source = fs::canonicalize(path).map_err(|_| INVALID_INPUT)?;
+        let source = image_source(path)?;
+        let info = fs::metadata(&source).map_err(|_| INVALID_INPUT)?;
+        total = total.checked_add(info.len()).ok_or(INVALID_INPUT)?;
+        if !info.is_file() || info.len() > IMAGE_LIMIT || total > IMAGE_TOTAL_LIMIT {
+            return Err(INVALID_INPUT.into());
+        }
+        inputs.push((source, extension, info.len()));
+    }
+    let mut result = Vec::new();
+    for (source, extension, expected_size) in inputs {
+        // Fresh Go verification rechecks this original scope and the immutable
+        // source receipt. A generic snapshot name never grants image authority.
         let guard = effects
             .run(
                 &[
@@ -187,7 +243,7 @@ fn attachments(
         }
         let input = fs::File::open(&source).map_err(|_| INVALID_INPUT)?;
         let info = input.metadata().map_err(|_| INVALID_INPUT)?;
-        if !info.is_file() {
+        if !info.is_file() || info.len() != expected_size || info.len() > IMAGE_LIMIT {
             return Err(INVALID_INPUT.into());
         }
         let mut input = input.take(info.len().checked_add(1).ok_or(INVALID_INPUT)?);
@@ -218,9 +274,44 @@ fn attachments(
             hash: format!("{:x}", digest.finalize()),
             size,
             extension,
+            source,
         });
     }
     Ok(result)
+}
+
+fn save_media_source(
+    root: &Path,
+    path: &Path,
+    source: &Path,
+    snapshot: &Path,
+    hash: &str,
+    size: u64,
+) -> Result<()> {
+    match fs::symlink_metadata(path) {
+        Ok(info) => {
+            if !info.is_file() || info.file_type().is_symlink() {
+                return Err(SAVE_FAILED.into());
+            }
+            let receipt: MediaSource =
+                serde_json::from_slice(&read_bounded(path, 64 * 1024)?).map_err(|_| SAVE_FAILED)?;
+            if receipt.domain != "discord-conversation-media-source-v1"
+                || receipt.snapshot_path != snapshot
+                || receipt.sha256 != hash
+                || receipt.size != size
+                || !receipt.source_path.is_absolute()
+            {
+                return Err(SAVE_FAILED.into());
+            }
+            // Same-byte retries retain the first source, which Go must verify
+            // again. Renaming an input must never overwrite that provenance.
+            return Ok(());
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(SAVE_FAILED.into()),
+    }
+    let receipt = json!({"domain":"discord-conversation-media-source-v1", "source_path":string_path(source)?, "snapshot_path":string_path(snapshot)?, "sha256":hash, "size":size});
+    save_bytes(root, path, receipt.to_string().as_bytes())
 }
 
 fn install(file: tempfile::NamedTempFile, path: &Path, expected: &str, size: u64) -> Result<()> {
@@ -544,6 +635,14 @@ fn send_log(
     for (index, file) in snapshots.into_iter().enumerate() {
         let path = directory.join(format!("attachment-{index}.{}", file.extension));
         install(file.file, &path, &file.hash, file.size)?;
+        save_media_source(
+            &root,
+            &directory.join(format!("attachment-{index}.source.json")),
+            &file.source,
+            &path,
+            &file.hash,
+            file.size,
+        )?;
         argv.extend(["--attach".into(), string_path(&path)?]);
     }
     execute(effects, &argv, false)

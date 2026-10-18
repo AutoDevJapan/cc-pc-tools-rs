@@ -1,10 +1,10 @@
 use cc_ask::{
-    ask_gate::{BLOCKED_MESSAGE, OwnerOnly},
+    ask_gate::{OwnerOnly, BLOCKED_MESSAGE},
     commands::AskArgs,
     conversation_bridge as bridge,
     core::{Effects, Output, Result},
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -204,11 +204,9 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
     );
     let mut args = f.ask();
     args.body_file = f.root.path().join("missing-body");
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap()
-            .is_none()
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
     fs::remove_file(f.root.path().join("conversation-mode.json")).unwrap();
     assert!(
         bridge::try_post(f.root.path(), &mut fake, "500", &args.body_file, false, &[])
@@ -217,11 +215,9 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
     );
     f.mode("malformed-mode");
     args.dry_run = true;
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap()
-            .is_none()
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
     assert!(!f.root.path().join("conversation-bridge").exists());
@@ -366,26 +362,150 @@ fn conversation_bridge_images_use_same_hashed_snapshot_and_videos_audio_are_reje
     assert_eq!(fake.attachments, vec![bytes.to_vec()]);
     let args = &fake.calls[0].0;
     assert_ne!(Path::new(argument(args, "--attach")), image);
+    let snapshot = Path::new(argument(args, "--attach"));
+    let receipt: Value =
+        serde_json::from_slice(&fs::read(snapshot.with_extension("source.json")).unwrap()).unwrap();
+    assert_eq!(receipt["domain"], "discord-conversation-media-source-v1");
+    assert_eq!(
+        Path::new(receipt["source_path"].as_str().unwrap()),
+        fs::canonicalize(&image).unwrap()
+    );
+    assert_eq!(
+        Path::new(receipt["snapshot_path"].as_str().unwrap()),
+        snapshot
+    );
+    assert_eq!(receipt["size"], bytes.len());
+    assert!(receipt["sha256"]
+        .as_str()
+        .is_some_and(|hash| hash.len() == 64));
     for extension in ["mp4", "mp3", "zip", "exe", "md"] {
         let path = f.root.path().join(format!("unsupported.{extension}"));
         fs::write(&path, "fixture").unwrap();
-        assert!(
-            bridge::try_log(
-                f.root.path(),
-                &mut fake,
-                "進捗",
-                "本文",
-                None,
-                false,
-                &[path]
-            )
-            .is_err()
-        );
+        assert!(bridge::try_log(
+            f.root.path(),
+            &mut fake,
+            "進捗",
+            "本文",
+            None,
+            false,
+            &[path]
+        )
+        .is_err());
     }
     assert_eq!(fake.calls.len(), 1);
     assert_eq!(fake.guard_calls.len(), 1);
     // This wrapper never claims the sender's independent image protection succeeded.
     assert_eq!(fake.http_calls, 0);
+}
+
+#[test]
+fn conversation_bridge_media_size_limits_precede_any_copy_or_guard() {
+    for total_limit in [false, true] {
+        let f = Fixture::new();
+        let mut paths = Vec::new();
+        for index in 0..if total_limit { 3 } else { 1 } {
+            let path = f.root.path().join(format!("image-{index}.png"));
+            let file = fs::File::create(&path).unwrap();
+            file.set_len(if total_limit {
+                8 * 1024 * 1024
+            } else {
+                10 * 1024 * 1024 + 1
+            })
+            .unwrap();
+            paths.push(path);
+        }
+        let mut fake = Fake::default();
+        assert!(bridge::try_log(
+            f.root.path(),
+            &mut fake,
+            "進捗",
+            "本文",
+            None,
+            false,
+            &paths
+        )
+        .is_err());
+        assert!(fake.calls.is_empty());
+        assert!(fake.guard_calls.is_empty());
+        assert_eq!(
+            fs::read_dir(f.root.path().join("conversation-bridge"))
+                .unwrap()
+                .count(),
+            0
+        );
+    }
+}
+
+#[test]
+fn conversation_bridge_media_provenance_is_immutable_across_same_byte_aliases() {
+    let f = Fixture::new();
+    let first = f.root.path().join("first.png");
+    let second = f.root.path().join("second.png");
+    fs::write(&first, b"\x89PNG\r\n\x1a\nfixture").unwrap();
+    fs::copy(&first, &second).unwrap();
+    let mut fake = Fake::default();
+    bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[first.clone()],
+    )
+    .unwrap();
+    let receipt = Path::new(argument(&fake.calls[0].0, "--attach")).with_extension("source.json");
+    let original = fs::read(&receipt).unwrap();
+    bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[second],
+    )
+    .unwrap();
+    assert_eq!(
+        argument(&fake.calls[0].0, "--request-id"),
+        argument(&fake.calls[1].0, "--request-id")
+    );
+    assert_eq!(fs::read(&receipt).unwrap(), original);
+    fs::write(&receipt, b"{}").unwrap();
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[first]
+    )
+    .is_err());
+    assert_eq!(fake.calls.len(), 2);
+    assert_eq!(fs::read(&receipt).unwrap(), b"{}");
+}
+
+#[test]
+fn conversation_bridge_media_cannot_hide_sensitive_original_components() {
+    let f = Fixture::new();
+    let directory = f.root.path().join("private-secrets");
+    fs::create_dir(&directory).unwrap();
+    let source = directory.join("image.png");
+    fs::write(&source, b"\x89PNG\r\n\x1a\nfixture").unwrap();
+    let mut fake = Fake::default();
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[source]
+    )
+    .is_err());
+    assert!(fake.calls.is_empty());
+    assert!(fake.guard_calls.is_empty());
 }
 
 #[test]
@@ -397,18 +517,16 @@ fn conversation_bridge_protected_source_never_reaches_the_go_sender() {
         deny_images: true,
         ..Default::default()
     };
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut fake,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &[image]
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[image]
+    )
+    .is_err());
     assert_eq!(fake.guard_calls.len(), 1);
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
@@ -499,11 +617,9 @@ fn conversation_bridge_ask_rejects_missing_decision_mismatched_origins_and_attac
     let mut fake = Fake::default();
     let mut args = f.ask();
     args.decision_file = None;
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap_err()
-            .contains("--decision-file")
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap_err()
+        .contains("--decision-file"));
     args.decision_file = Some(f.decision.clone());
     args.thread = Some("501".into());
     assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());

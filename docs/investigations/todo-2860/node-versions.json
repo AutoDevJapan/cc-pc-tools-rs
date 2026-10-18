@@ -1,0 +1,18 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "todo-2860-pnpm-20261019",
+    "/usr/bin/env",
+    "-i",
+    "HOME=/home/ci2737",
+    "LANG=C.UTF-8",
+    "PATH=/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+    "/bin/sh",
+    "-c",
+    "for n in /opt/actions-runner/externals/node20/bin/node /opt/actions-runner/externals/node24/bin/node; do if [ -x \"$n\" ]; then printf \"%s \" \"$n\"; \"$n\" --version; sha256sum \"$n\"; fi; done; mkdir -p /case/action /case/work /home/ci2737; npm --version"
+  ],
+  "exit": 0,
+  "stdout": "/opt/actions-runner/externals/node20/bin/node v20.20.2\n6295488653f0d93b0a157841746fef7e72cc4328cfb60c4bbe0ca2668a836ffd  /opt/actions-runner/externals/node20/bin/node\n/opt/actions-runner/externals/node24/bin/node v24.21.0\n7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c  /opt/actions-runner/externals/node24/bin/node\n9.2.0\n",
+  "stderr": "mkdir: cannot create directory ‘/case’: Permission denied\nmkdir: cannot create directory ‘/case’: Permission denied\nmkdir: cannot create directory ‘/home/ci2737’: Permission denied\n"
+}

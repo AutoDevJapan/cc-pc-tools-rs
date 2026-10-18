@@ -1,0 +1,13 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "todo-2860-pnpm-20261019",
+    "/bin/sh",
+    "-c",
+    "set -eu; sed -n \"1,105p\" /home/ci2737/setup-pnpm/node_modules/@pnpm/exe/setup.js; cat /home/ci2737/setup-pnpm/node_modules/@pnpm/exe/package.json; sha256sum /case/action/index.js /home/ci2737/setup-pnpm/node_modules/@pnpm/exe/setup.js /home/ci2737/setup-pnpm/package-lock.json"
+  ],
+  "exit": 2,
+  "stdout": "",
+  "stderr": "sed: can't read /home/ci2737/setup-pnpm/node_modules/@pnpm/exe/setup.js: No such file or directory\n"
+}

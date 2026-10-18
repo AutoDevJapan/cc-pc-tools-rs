@@ -1,0 +1,42 @@
+[
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "start",
+      "todo-2860-pnpm-20261019"
+    ],
+    "exit": 0,
+    "stdout": "todo-2860-pnpm-20261019\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "inspect",
+      "todo-2860-pnpm-20261019",
+      "--format",
+      "{{.Id}} {{json .Config.Labels}} {{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{.HostConfig.MemorySwap}} {{json .HostConfig.SecurityOpt}} {{.HostConfig.Privileged}} {{json .Mounts}} {{json .HostConfig.Devices}} {{json .HostConfig.DeviceRequests}}"
+    ],
+    "exit": 0,
+    "stdout": "de6b0e0f6490fda7c1a905d88af7c49b0d72f9f874aa7d4625d5846b8639e50d {\"cc.job\":\"20261019-034852-todo-2860\",\"cc.todo\":\"2860\",\"org.opencontainers.image.source\":\"https://github.com/rust-lang/docker-rust\"} 1000000000 1073741824 1073741824 [\"no-new-privileges\"] false [] [] null\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+      "exec",
+      "todo-2860-pnpm-20261019",
+      "/usr/bin/env",
+      "-i",
+      "HOME=/home/ci2737",
+      "LANG=C.UTF-8",
+      "PATH=/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+      "/bin/sh",
+      "-c",
+      "ls /runner/externals; for n in /usr/bin/node /usr/local/bin/node /runner/externals/node20/bin/node /runner/externals/node24/bin/node; do if [ -x \"$n\" ]; then printf \"%s \" \"$n\"; \"$n\" --version; sha256sum \"$n\"; fi; done; command -v npm || true"
+    ],
+    "exit": 0,
+    "stdout": "/usr/bin/node v18.20.4\nb57242cfee20571d2e74ababe9c1febed785cf9395b168237060a1d29f77b581  /usr/bin/node\n/usr/bin/npm\n",
+    "stderr": "ls: cannot access '/runner/externals': No such file or directory\n"
+  }
+]

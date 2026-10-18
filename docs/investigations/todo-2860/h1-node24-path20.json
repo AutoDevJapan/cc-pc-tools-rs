@@ -1,0 +1,28 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "--workdir",
+    "/case/work",
+    "todo-2860-pnpm-20261019",
+    "/usr/bin/timeout",
+    "150",
+    "/usr/bin/env",
+    "-i",
+    "HOME=/home/ci2737",
+    "LANG=C.UTF-8",
+    "PATH=/opt/actions-runner/externals/node20/bin:/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+    "GITHUB_WORKSPACE=/case/work",
+    "INPUT_DEST=~/setup-pnpm",
+    "INPUT_PACKAGE_JSON_FILE=package.json",
+    "INPUT_RUN_INSTALL=null",
+    "INPUT_CACHE=false",
+    "INPUT_CACHE_DEPENDENCY_PATH=pnpm-lock.yaml",
+    "INPUT_STANDALONE=false",
+    "/opt/actions-runner/externals/node24/bin/node",
+    "/case/action/index.js"
+  ],
+  "exit": 0,
+  "stdout": "::save-state name=inputs::{\"version\":\"\",\"dest\":\"/home/ci2737/setup-pnpm\",\"cache\":false,\"cacheDependencyPath\":\"pnpm-lock.yaml\",\"runInstall\":[],\"packageJsonFile\":\"package.json\",\"standalone\":false}\n::save-state name=is_post::true\n::group::Running self-installer...\n\nadded 5 packages, and audited 6 packages in 3s\n\n2 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n::add-path::/home/ci2737/setup-pnpm/node_modules/.bin\n::add-path::/home/ci2737/setup-pnpm/node_modules/.bin/bin\n::set-env name=PNPM_HOME::/home/ci2737/setup-pnpm/node_modules/.bin\nChecking for updates...\nSwitching pnpm from v11.25.0 to v10.11.0...\n.../v11/a5-1a1505dc318-e34502079c2be36a  | Progress: resolved 1, reused 0, downloaded 0, added 0\n.../v11/a5-1a1505dc318-e34502079c2be36a  |   +2 +\n.../v11/a5-1a1505dc318-e34502079c2be36a  | Progress: resolved 2, reused 0, downloaded 1, added 1\n.../v11/a5-1a1505dc318-e34502079c2be36a  | Progress: resolved 2, reused 0, downloaded 2, added 2, done\n[WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run \"pnpm setup\" to migrate your PATH to the v11 layout.\nSuccessfully updated pnpm to v10.11.0\n::endgroup::\nInstallation Completed!\n\n::set-output name=dest::/home/ci2737/setup-pnpm\n\n::set-output name=bin_dest::/home/ci2737/setup-pnpm/node_modules/.bin/bin\n",
+  "stderr": ""
+}

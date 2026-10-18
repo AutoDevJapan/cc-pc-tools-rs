@@ -1,0 +1,28 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "--workdir",
+    "/case/work",
+    "todo-2860-pnpm-20261019",
+    "/usr/bin/timeout",
+    "150",
+    "/usr/bin/env",
+    "-i",
+    "HOME=/home/ci2737",
+    "LANG=C.UTF-8",
+    "PATH=/home/ci2737/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+    "GITHUB_WORKSPACE=/case/work",
+    "INPUT_DEST=~/setup-pnpm",
+    "INPUT_PACKAGE_JSON_FILE=package.json",
+    "INPUT_RUN_INSTALL=null",
+    "INPUT_CACHE=false",
+    "INPUT_CACHE_DEPENDENCY_PATH=pnpm-lock.yaml",
+    "INPUT_STANDALONE=false",
+    "/opt/actions-runner/externals/node24/bin/node",
+    "/case/action/index.js"
+  ],
+  "exit": 1,
+  "stdout": "::save-state name=inputs::{\"version\":\"\",\"dest\":\"/home/ci2737/setup-pnpm\",\"cache\":false,\"cacheDependencyPath\":\"pnpm-lock.yaml\",\"runInstall\":[],\"packageJsonFile\":\"package.json\",\"standalone\":false}\n::save-state name=is_post::true\n::group::Running self-installer...\n::endgroup::\n::error::Something went wrong, self-installer exits with code 1\n",
+  "stderr": "npm ERR! code 1\nnpm ERR! path /home/ci2737/setup-pnpm/node_modules/@pnpm/exe\nnpm ERR! command failed\nnpm ERR! command sh -c node setup.js\nnpm ERR! node:internal/errors:496\nnpm ERR!     ErrorCaptureStackTrace(err);\nnpm ERR!     ^\nnpm ERR! \nnpm ERR! TypeError [ERR_INVALID_ARG_TYPE]: The \"paths[0]\" argument must be of type string. Received undefined\nnpm ERR!     at new NodeError (node:internal/errors:405:5)\nnpm ERR!     at validateString (node:internal/validators:163:11)\nnpm ERR!     at Object.resolve (node:path:1097:7)\nnpm ERR!     at file:///home/ci2737/setup-pnpm/node_modules/@pnpm/exe/setup.js:64:20\nnpm ERR!     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)\nnpm ERR!     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)\nnpm ERR!     at async loadESM (node:internal/process/esm_loader:34:7)\nnpm ERR!     at async handleMainPromise (node:internal/modules/run_main:106:12) {\nnpm ERR!   code: 'ERR_INVALID_ARG_TYPE'\nnpm ERR! }\nnpm ERR! \nnpm ERR! Node.js v18.20.4\n\nnpm ERR! A complete log of this run can be found in:\nnpm ERR!     /home/ci2737/.npm/_logs/2026-10-18T18_51_53_312Z-debug-0.log\n"
+}

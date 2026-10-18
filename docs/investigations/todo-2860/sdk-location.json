@@ -1,0 +1,13 @@
+{
+  "command": [
+    "C:/Program Files/Docker/Docker/resources/bin/docker.exe",
+    "exec",
+    "todo-2860-pnpm-20261019",
+    "/bin/sh",
+    "-c",
+    "ls -la /runner /opt /tmp /usr/local/bin; find /runner /opt -maxdepth 4 -type f -name \"*.tar*\" -print"
+  ],
+  "exit": 0,
+  "stdout": "/opt:\ntotal 24\ndrwxr-xr-x 1 root   root   4096 Oct 13 07:30 .\ndrwxr-xr-x 1 root   root   4096 Oct 18 18:50 ..\ndrwxr-xr-x 1 runner runner 4096 Oct  6 13:52 actions-runner\ndrwxr-xr-x 1 root   root   4096 Oct 14 16:05 bridge\ndrwxrwxrwx 3 runner runner 4096 Oct 21  2025 rust\ndrwxrwxrwx 6 runner runner 4096 Oct 21  2025 rustup\n\n/runner:\ntotal 8\ndrwxr-xr-x 2 runner runner 4096 Oct 13 07:30 .\ndrwxr-xr-x 1 root   root   4096 Oct 18 18:50 ..\n\n/tmp:\ntotal 8\ndrwxrwxrwt 1 root root 4096 Oct 13 07:49 .\ndrwxr-xr-x 1 root root 4096 Oct 18 18:50 ..\n\n/usr/local/bin:\ntotal 12\ndrwxr-xr-x 1 root root 4096 Oct 13 11:57 .\ndrwxr-xr-x 1 root root 4096 Oct 13 07:30 ..\n-rwxr-xr-x 1 root root   75 Oct 13 11:57 runner-init\n",
+  "stderr": ""
+}

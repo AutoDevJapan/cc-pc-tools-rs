@@ -1,5 +1,53 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 02時台・レビュー2840受入と出力待ちの追加修復（最新）
+
+停止item_71は関連race10passとPR148関連race67pass/4skipの集計・固定範囲比較・
+diff-check成功だった。原eventsを先に受領し、完了済み検査/送信を繰り返していない。
+
+2840は実OAuth Sonnet5.5 job20261019-014846-todo-2840、succeeded/exit0/68steps、
+Must0/実検査0。原応答5034bytes/SHA256
+C92453B2F6001AB4A49B127CD5ED6E93568D15C6FF8E6620A6061E8A76B5B09Cを一致保存。
+git起動失敗のためレビュー者自身のhead照合は未達。親が指定12対象のbe86→413差分0を
+確認し、元作業コピー読取という資格付きで受領した。新しい追加差分の承認へ流用しない。
+
+Suggestionの実害を直し、機能head0625cf259435c6784eb57c8eddc7e66cd61690a7を保存した。
+APIはStdoutPipeのEOF待ちをやめ、Run/WaitDelay2秒でコピー終了を制限する。実回帰で
+埋込bytes.BufferのReaderFromがio.CopyのWrite上限を迂回する問題を検出し、stdoutと
+stderrを名前付きbufferへ修復。最初のlimit8で40,960,000bytesを受け入れた失敗は
+ジョブeventsに残るが、同名の検査logは再検査で上書きされ、別の原log保存とは言わない。
+修正後は実Windows子/孫のpipe保持から期限内復帰、合成孫PIDの停止/Wait、stdout超過の
+取消し/排出、実stderr8192bytes上限が成功。HTTP4xx等はretryせず、Windows reset文言を
+追加し、失敗の安全なbytes/exit/statusを保持。Linuxのhost/guest両側で上限2超を拒否する。
+元gateの実割当を偽装せず、共有の権限/guard/manifest/検査内容は変えていない。
+AllRequiredChecksSuccess=falseは四正式jobの集約と異なる正常な限定結果なので保持する。
+
+関連race10passとPR148関連race67pass/4明示opt-in skip、両module vetが成功。
+Windows/Linuxの両moduleを同じ機能sourceからbuildし、四実行物を恒久証拠root直下の
+followup0625-*へ全SHA一致保存。followup0625-build-manifest.jsonを参照する。
+次の正式実行はこれらを使い、旧be86のruntimefix-committed-*へ戻さない。
+Go fmtで触れた無関係fileの改行だけを元CRLFへ戻し、差分は今回9対象だけに限定した。
+
+追加差分のみの正規Sonnet subwork review2844を--specで登録し、保存spec全文一致を確認。
+spec docs/todo-2736-pipe-cap-followup-review.md、固定base41362dc/head0625cf2。
+現時点todo/jobs空で、実開始/原応答/Mustはまだ未受領。2840を再登録していない。
+PR219はdraftを維持し5195ac7へ通常push。直前41362dcの両OS helper/Go CodeQL/JS解析は
+実success、Rust/actions解析とcc-jobsは未完だった。旧52ddのbridge403の具体predicateは
+依然不明。新しいGo CodeQL成功を旧拒否理由の特定や全CI成功と混同しない。
+
+製品PR148の実owner/private/nonfork/admin、同repo、03c7cc6/headと1100/base、
+旧Rust run39141771645/attempt1をAPI再照合した。Linuxfailure、Windowsqueued/steps0、
+repo runner0だった。新helperの受入前に旧runの通常cancelを1回送信し、終端を別途確認する。
+新しいrun/attemptのdispatchはまだ0。次は2844の原応答と最新helper CIを受領し、
+Must対応/通常helper merge/必要配布後、新しい全OS matrixで正式検査を進める。
+新attemptの実jobを照合して新規所有rootへ供給し、失敗49ff/終了27fcを再利用しない。
+native/live未dispatch、正式4job成功/元2640配送/製品完了は未達。製品mergeは2640が担当。
+
+01:56のcheckpoint-workspaceは30秒のscheduler.lock取得でTimeoutErrorだった。
+要求/失敗は恒久root/checkpoint-011542-*に保持。branchは不変、lock保有者は未特定。
+lock削除・所有情報手書きは行わず、今回保存後の有限再試行と実結果を同rootへ残す。
+他ToDoのみを待って終了する際はdone2840ではなく正規wait --on2844を保存する。
+
 ## 2026-10-19 01:53保存・追加修復のレビュー2840と次の受入（最新）
 
 追加修復の機能head be86ae33eee6ce0e6ac96b29b551ab20034227f9を保存した。

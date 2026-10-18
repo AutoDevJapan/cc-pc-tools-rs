@@ -90,6 +90,8 @@ func currentGitHubIdentityVerified(product currentProduct) bool {
 	cmd := exec.CommandContext(ctx, currentGitHubCLI, currentGitHubIdentityArgs(product)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = time.Second
+	// User profile/OAuth and proxy configuration are trusted; token overrides
+	// and host selection are filtered before launching the CLI.
 	cmd.Env = currentGitHubCLIEnvironment(os.Environ())
 	output, err := cmd.Output()
 	return err == nil && currentGitHubIdentityMatches(output, product)
@@ -130,16 +132,16 @@ func currentProductByTask(task int) (currentProduct, bool) {
 }
 
 func currentPathHash(path string) (string, bool) {
-	path, err := portable(path)
-	if err != nil || !filepath.IsAbs(path) {
+	if !filepath.IsAbs(path) || strings.HasPrefix(path, `\\?\`) || strings.HasPrefix(path, `\\.\`) {
 		return "", false
 	}
-	absolute, err := filepath.Abs(path)
-	if err != nil {
+	slashPath := strings.ReplaceAll(path, `\`, "/")
+	canonical := strings.TrimRight(slashPath, "/")
+	cleaned := strings.TrimRight(strings.ReplaceAll(filepath.Clean(path), `\`, "/"), "/")
+	if !strings.EqualFold(cleaned, canonical) {
 		return "", false
 	}
-	canonical := strings.ToLower(strings.TrimRight(strings.ReplaceAll(filepath.Clean(absolute), `\`, "/"), "/"))
-	return hashBytes([]byte(canonical)), true
+	return hashBytes([]byte(strings.ToLower(canonical))), true
 }
 
 func currentProductsScopePathAllowed(path string, products []currentProduct, qualifies func(currentProduct) bool, protected func(string) bool) bool {

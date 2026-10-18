@@ -299,6 +299,23 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	if currentProductPath(filepath.Join(junctionRoot+"-wt", "todo-2850-junction"), junctionRoot, product.repository, "2850", allow) {
 		t.Fatal("junction worktree container accepted")
 	}
+	realRoot := filepath.Join(base, "real-root")
+	aliasParent := filepath.Join(base, "alias-parent")
+	if os.Mkdir(realRoot, 0700) != nil || os.Mkdir(aliasParent, 0700) != nil {
+		t.Fatal("root junction fixture mkdir failed")
+	}
+	currentFixtureGit(t, realRoot, "init", "-q")
+	currentFixtureGit(t, realRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-13a13e1.git")
+	currentFixtureGit(t, realRoot, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	rootAlias := filepath.Join(aliasParent, "product")
+	cmd = exec.Command("cmd", "/c", "mklink", "/J", rootAlias, realRoot)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("fixture project-root junction failed: %v: %s", err, output)
+	}
+	if currentProductPath(filepath.Join(rootAlias, "source.txt"), rootAlias, product.repository, "2850", allow) || currentProductPath(filepath.Join(rootAlias+"-wt", "todo-2850-root-junction"), rootAlias, product.repository, "2850", allow) {
+		t.Fatal("junction project root accepted")
+	}
 }
 
 func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
@@ -415,6 +432,17 @@ func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 			t.Fatalf("path fingerprint did not match fixed vector")
 		}
 	}
+	for _, path := range []string{
+		"relative/product",
+		"C:/Users/fixture/../other/product",
+		"C:/Users//fixture/product",
+		`\\?\C:\Users\fixture\product`,
+		`\\.\C:\Users\fixture\product`,
+	} {
+		if _, ok := currentPathHash(path); ok {
+			t.Fatal("noncanonical or non-absolute path received a fingerprint")
+		}
+	}
 }
 
 func TestCurrentGitHubCLIEnvironmentUsesStoredOAuthConfiguration(t *testing.T) {
@@ -436,5 +464,31 @@ func TestCurrentGitHubCLIEnvironmentUsesStoredOAuthConfiguration(t *testing.T) {
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatal("GitHub CLI environment retained an auth or host override")
+	}
+}
+
+func TestCurrentSuccessionCLIArgumentsFailClosed(t *testing.T) {
+	for _, value := range []string{"", "abc", "0", "-1"} {
+		if _, ok := parseCurrentSuccessionTask(value); ok {
+			t.Fatalf("invalid successor task value accepted")
+		}
+	}
+	if task, ok := parseCurrentSuccessionTask("2850"); !ok || task != 2850 {
+		t.Fatal("valid successor task value rejected")
+	}
+	if task, ok := parseCurrentSuccessionTask("999999"); !ok {
+		t.Fatal("positive unknown task did not parse")
+	} else if _, declared := currentProductByTask(task); declared {
+		t.Fatal("unknown positive task received a declaration")
+	}
+	invalid := []string{"--verify-current-succession=abc", "-verify-current-succession", "--verify-current-succession"}
+	for _, args := range invalid {
+		if !currentSuccessionFlagPresent([]string{args}) {
+			t.Fatal("succession command not detected for generic failure handling")
+		}
+	}
+	parsed, err := parseGuardArgs([]string{"--verify-current-succession", "2850", "--guard-path", "C:/fixture"})
+	if err != nil || !parsed.successionSet || !parsed.pathSet {
+		t.Fatal("combined CLI modes were not identified for rejection")
 	}
 }

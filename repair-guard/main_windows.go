@@ -6,11 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -225,26 +227,98 @@ func allowed(path string) bool {
 	}
 	return false
 }
-func main() {
-	path := flag.String("guard-path", "", "resource absolute path")
-	product := flag.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
-	succession := flag.Int("verify-current-succession", 0, "verify one declared current product successor; no launch or mutation")
-	flag.Parse()
-	successionRequested := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "verify-current-succession" {
-			successionRequested = true
+
+type guardArgs struct {
+	path, succession string
+	product          int
+	pathSet          bool
+	productSet       bool
+	successionSet    bool
+}
+
+func parseGuardArgs(args []string) (guardArgs, error) {
+	flags := flag.NewFlagSet("scrub391", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	path := flags.String("guard-path", "", "resource absolute path")
+	product := flags.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
+	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
+	err := flags.Parse(args)
+	parsed := guardArgs{path: *path, succession: *succession, product: *product}
+	flags.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "guard-path":
+			parsed.pathSet = true
+		case "verify-product-resume":
+			parsed.productSet = true
+		case "verify-current-succession":
+			parsed.successionSet = true
 		}
 	})
-	if successionRequested {
-		declared, ok := currentProductByTask(*succession)
+	return parsed, err
+}
+
+func currentSuccessionFlagPresent(args []string) bool {
+	for _, arg := range args {
+		arg = strings.TrimLeft(arg, "-")
+		if arg == "verify-current-succession" || strings.HasPrefix(arg, "verify-current-succession=") {
+			return true
+		}
+	}
+	return false
+}
+
+func parseCurrentSuccessionTask(value string) (int, bool) {
+	task, err := strconv.Atoi(value)
+	return task, err == nil && task > 0
+}
+
+func printGuardUsage(output io.Writer) {
+	fmt.Fprintln(output, "Usage of scrub391:")
+	fmt.Fprintln(output, "  -guard-path string")
+	fmt.Fprintln(output, "    \tresource absolute path")
+	fmt.Fprintln(output, "  -verify-product-resume int")
+	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
+	fmt.Fprintln(output, "  -verify-current-succession int")
+	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+}
+
+func writeCurrentSuccessionFailure() {
+	_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false})
+}
+
+func main() {
+	parsed, err := parseGuardArgs(os.Args[1:])
+	if err != nil {
+		if currentSuccessionFlagPresent(os.Args[1:]) {
+			writeCurrentSuccessionFailure()
+			os.Exit(1)
+		}
+		if err == flag.ErrHelp {
+			printGuardUsage(os.Stdout)
+			return
+		}
+		fmt.Fprintln(os.Stderr, err)
+		printGuardUsage(os.Stderr)
+		os.Exit(2)
+	}
+	if parsed.successionSet {
+		if parsed.pathSet || parsed.productSet {
+			writeCurrentSuccessionFailure()
+			os.Exit(1)
+		}
+		taskID, validTask := parseCurrentSuccessionTask(parsed.succession)
+		if !validTask {
+			writeCurrentSuccessionFailure()
+			os.Exit(1)
+		}
+		declared, ok := currentProductByTask(taskID)
 		if !ok {
-			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false})
+			writeCurrentSuccessionFailure()
 			os.Exit(1)
 		}
 		db, err := readObject(productStore, 64<<20)
 		if err != nil {
-			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false})
+			writeCurrentSuccessionFailure()
 			os.Exit(1)
 		}
 		receipt := currentSuccessionReceipt(db, declared)
@@ -256,21 +330,21 @@ func main() {
 		}
 		return
 	}
-	if *product != 0 {
+	if parsed.product != 0 {
 		db, err := readObject(productStore, 64<<20)
 		if err != nil {
 			_ = json.NewEncoder(os.Stdout).Encode(object{"verified": false, "reason": "store_unavailable"})
 			os.Exit(1)
 		}
-		r := verifyProduct(db, *product)
+		r := verifyProduct(db, parsed.product)
 		_ = json.NewEncoder(os.Stdout).Encode(r)
 		if r["verified"] != true {
 			os.Exit(1)
 		}
 		return
 	}
-	ok := *path != "" && filepath.IsAbs(*path)
-	verified := ok && allowed(*path)
+	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
+	verified := ok && allowed(parsed.path)
 	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
 	_ = json.NewEncoder(os.Stdout).Encode(result)
 	if !ok {

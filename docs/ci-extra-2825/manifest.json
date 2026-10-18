@@ -1,0 +1,18 @@
+{
+  "source_revision": "2f66679a854de1491052e3fbaa5e6bd8407d3c4f",
+  "profile_sha256": "0ABC170AA2501C34C28013805E35E99D62877552007E99E0A3896785C96DF95E",
+  "windows_binary_sha256": "F38FD7F0BEBEF3F83B014E75DA0E7207FFBFF3D0A68CED904714412B9B5800B8",
+  "linux_binary_sha256": "CA7D4F124BC44EF66D65A14C82641D62EF77901697A45D752C906ADC4BA7D496",
+  "cpu": 2,
+  "memory_gib": 10,
+  "max_jobs": 1,
+  "runner_id": 34,
+  "run_id": 39128322214,
+  "job_id": 117678062170,
+  "result": "success",
+  "registration_removed": true,
+  "container_removed": true,
+  "image_removed": true,
+  "failure_exit": 96,
+  "failure_exit_seconds": 2.9852876
+}

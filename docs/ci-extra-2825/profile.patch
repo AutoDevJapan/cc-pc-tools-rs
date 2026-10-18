@@ -1,0 +1,47 @@
+diff --git a/tools/linux-runner-bridge/main.go b/tools/linux-runner-bridge/main.go
+index a516c3a..a6c6ab6 100644
+--- a/tools/linux-runner-bridge/main.go
++++ b/tools/linux-runner-bridge/main.go
+@@ -35,4 +35,5 @@ const container = "todo2511-cc-pc-tools-linux"
+-const normalContainer = "todo2510-normal-linux"
+-const normalImage = "todo2510-normal-linux:local"
+-const normalPort = "127.0.0.1:17852"
+-const normalRunner = "cc-pc-tools-linux"
++const normalContainer = "todo2825-extra-ci-linux"
++const normalImage = "todo2825-extra-ci-linux:local"
++const normalPort = "127.0.0.1:17854"
++const normalRunner = "cc-pc-tools-linux-todo2825"
++const normalLabels = "cc-pc-tools-linux"
+@@ -744 +745 @@ func bridgeURL(mode, path string) string {
+-		port = "17852"
++		port = "17854"
+@@ -845 +846 @@ func hostMain(args []string) int {
+-		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalRunner, false
++		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalLabels, false
+@@ -937 +938 @@ func hostMain(args []string) int {
+-		if ephemeral {
++		if ephemeral || mode == "normal" {
+@@ -1002 +1003 @@ func register() int {
+-	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
++	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalLabels || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+@@ -1043 +1044 @@ func register() int {
+-		c = exec.Command("/runner/run.sh")
++		c = exec.Command("/runner/run.sh", "--once")
+@@ -1049,5 +1050,2 @@ func register() int {
+-		if mode == "finite" {
+-			return code
+-		}
+-		fmt.Printf("linux-runner-exit code=%d; retrying after 30 seconds\n", code)
+-		time.Sleep(30 * time.Second)
++		return code
++
+diff --git a/tools/linux-runner-bridge/main_test.go b/tools/linux-runner-bridge/main_test.go
+index 3d59ed9..e529f81 100644
+--- a/tools/linux-runner-bridge/main_test.go
++++ b/tools/linux-runner-bridge/main_test.go
+@@ -58 +58 @@ func TestConfiguredRunnerRecoveryDoesNotAmplifyLiveProcessTrees(t *testing.T) {
+-const validNormalContainerInspection = `[{"Config":{"Image":"todo2510-normal-linux:local","User":"runner"},"HostConfig":{"Init":true,"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
++const validNormalContainerInspection = `[{"Config":{"Image":"todo2825-extra-ci-linux:local","User":"runner"},"HostConfig":{"Init":true,"Privileged":false,"CapDrop":["ALL"],"SecurityOpt":["no-new-privileges:true"],"Devices":[],"DeviceRequests":[],"Binds":[],"Tmpfs":{"/tmp":"rw,noexec,nosuid,size=64m","/runner":"rw,exec,nosuid,size=1g,uid=1001,gid=1001"}},"Mounts":[]}]`
+@@ -399 +399 @@ func TestBridgePortPreservesFiniteAndNormalListeners(t *testing.T) {
+-	if got := bridgeURL("normal", "/authorize"); got != "http://host.docker.internal:17852/authorize" {
++	if got := bridgeURL("normal", "/authorize"); got != "http://host.docker.internal:17854/authorize" {

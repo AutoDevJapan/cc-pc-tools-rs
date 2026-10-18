@@ -3,11 +3,57 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestRunCommandBudgetHelper(t *testing.T) {
+	if len(os.Args) == 0 || os.Args[len(os.Args)-1] != "--repair-budget-test-child" {
+		return
+	}
+	// A real subprocess outlives the former twenty-second command limit.
+	time.Sleep(21 * time.Second)
+	os.Exit(0)
+}
+
+func TestRunCommandSchedulerBudgetReachesTheActualSubprocess(t *testing.T) {
+	const scheduler = "D:/CC/Tools/scheduler/scheduler.exe"
+	budget := commandBudget(scheduler, []string{"repair-step"})
+	if budget != 35*time.Second {
+		t.Fatal("repair command retained its old inner timeout", budget)
+	}
+	for _, input := range []struct {
+		path string
+		args []string
+	}{
+		{scheduler, []string{"status"}},
+		{scheduler, []string{"repair-step", "other"}},
+		{"another.exe", []string{"repair-step"}},
+	} {
+		if commandBudget(input.path, input.args) != 20*time.Second {
+			t.Fatal("an unrelated command received the longer repair budget")
+		}
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"-test.run=^TestRunCommandBudgetHelper$", "--", "--repair-budget-test-child"}
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	if _, err := runCommandBounded(ctx, budget, exe, args...); err != nil {
+		t.Fatal("the real repair subprocess was stopped at the old command limit", err)
+	}
+	// The outer caller still cancels the same actual process promptly.
+	short, stop := context.WithCancel(context.Background())
+	stop()
+	if _, err := runCommandBounded(short, budget, exe, args...); err == nil {
+		t.Fatal("cancelled caller started a repair process")
+	}
+}
 
 type tickBudgetTransport struct {
 	onRequest func(context.Context)
@@ -75,6 +121,34 @@ func TestTickCallerCancellationDoesNotStartScheduler(t *testing.T) {
 	}
 	if scheduled != 0 || h.Scheduler {
 		t.Fatal("cancelled caller started or reported successful scheduling", scheduled, h)
+	}
+}
+
+func TestTickAllowsSchedulerRepairBeyondTwentySecondsWithinTheCallerDeadline(t *testing.T) {
+	r, _ := fixture(t)
+	server(t, r, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+	parent, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+	parentDeadline, _ := parent.Deadline()
+	scheduled := 0
+	r.Run = func(ctx context.Context, _ string, args ...string) (string, error) {
+		if len(args) == 0 || args[0] != "repair-step" {
+			return "", nil
+		}
+		scheduled++
+		deadline, bounded := ctx.Deadline()
+		// The measured native repair exceeds the previous twenty-second cap.
+		// Check available time directly instead of sleeping through that period.
+		if !bounded || deadline.After(parentDeadline) || time.Until(deadline) < 22*time.Second {
+			return "", context.DeadlineExceeded
+		}
+		return `{"repair_mode":true,"error":null}`, nil
+	}
+	h := r.tick(parent)
+	if scheduled != 1 || !h.Scheduler {
+		t.Fatal("a bounded repair still cannot finish its measured work", scheduled, h)
 	}
 }
 

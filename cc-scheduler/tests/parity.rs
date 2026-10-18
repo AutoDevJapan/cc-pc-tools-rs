@@ -560,6 +560,68 @@ fn cargo_gate_admission_allows_three_targets_and_waits_when_full() {
 }
 
 #[test]
+fn cargo_gate_admission_recognizes_the_outer_cargo_relay() {
+    let (_temp, home, gate) = cargo_gate_fixture();
+    let processes = ps(vec![
+        proc(9, 0, "cargo.exe"),
+        proc(10, 9, "cargo_gate.exe"),
+        proc(11, 10, "cargo.exe"),
+        proc(12, 11, "rustc.exe"),
+    ]);
+    assert!(!resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
+    let held: Vec<_> = (0..3)
+        .map(|slot| {
+            ByteLock::acquire(
+                &gate.join(format!("cargo-build.lock.{slot}")),
+                Duration::ZERO,
+            )
+            .unwrap()
+            .unwrap()
+        })
+        .collect();
+    assert!(resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
+    drop(held);
+}
+
+#[test]
+fn cargo_gate_relay_requires_a_current_direct_child_and_keeps_ungated_compilers_closed() {
+    let (_temp, home, _gate) = cargo_gate_fixture();
+    for invalid in [
+        "reused",
+        "unknown_parent",
+        "unknown_child",
+        "unrelated",
+        "compiler",
+        "sibling",
+    ] {
+        let mut relay = proc(9, 0, "cargo.exe");
+        let mut gate = proc(10, 9, "cargo_gate.exe");
+        let mut extra = Vec::new();
+        match invalid {
+            "reused" => gate["created"] = json!(relay["created"].as_u64().unwrap() - 1),
+            "unknown_parent" => relay["created"] = Value::Null,
+            "unknown_child" => gate["created"] = Value::Null,
+            "unrelated" => gate["ppid"] = json!(8),
+            "compiler" => relay["name"] = json!("rustc.exe"),
+            "sibling" => extra.push(proc(13, 9, "rustc.exe")),
+            _ => unreachable!(),
+        }
+        let mut rows = vec![relay, gate];
+        rows.extend(extra);
+        assert!(
+            resources_busy_with_lock(&[], &[], &ps(rows), T, &home)
+                .unwrap()
+                .contains("cargo"),
+            "{invalid}"
+        );
+    }
+}
+
+#[test]
 fn cargo_gate_admission_keeps_unmanaged_builds_and_probe_errors_closed() {
     let (_temp, home, _gate) = cargo_gate_fixture();
     for name in ["cargo.exe", "rustc.exe"] {

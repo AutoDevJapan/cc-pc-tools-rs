@@ -27,6 +27,8 @@ use windows_sys::Win32::{
         },
     },
 };
+#[path = "native_process_birth.rs"]
+mod system_births;
 fn ft(t: FILETIME) -> u64 {
     (t.dwHighDateTime as u64) << 32 | t.dwLowDateTime as u64
 }
@@ -57,6 +59,7 @@ pub fn system_times() -> Result<Vec<u64>> {
 }
 /// One Toolhelp snapshot, then metadata on birth-verified handles. No command lines.
 pub fn process_snapshot() -> Result<Processes> {
+    let before = system_births::snapshot();
     unsafe {
         let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if snap == INVALID_HANDLE_VALUE {
@@ -98,6 +101,8 @@ pub fn process_snapshot() -> Result<Processes> {
             more = Process32NextW(snap, &mut row);
         }
         CloseHandle(snap);
+        let after = system_births::snapshot();
+        system_births::supplement(&mut ps, before.as_ref(), after.as_ref());
         Ok(ps)
     }
 }

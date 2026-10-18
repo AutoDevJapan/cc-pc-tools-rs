@@ -13,6 +13,9 @@ const WAIT: &str = "todo-owner-question-wait-v1";
 const RECEIPT: &str = "todo-owner-question-answer-receipt-v1";
 const WAIT_KEY: &str = "owner_question_wait";
 const ANSWERS_KEY: &str = "owner_question_answer_receipts";
+const WITHDRAWALS_KEY: &str = "owner_question_withdrawal_receipts";
+const WITHDRAWAL: &str = "todo-question-withdrawal-receipt-v1";
+const IMPORTED_BLOCK_NOTE: &str = "ジョブの結果に判断が必要です。";
 const QUESTION_FIELDS: &[&str] = &[
     "domain",
     "request_id",
@@ -476,8 +479,20 @@ fn answered_note(row: &Value, wait: &Value) -> Result<String> {
     Ok(format!("{}{}", &note[..from], &note[until..]))
 }
 fn validate_wait(wait: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
+    // New waits remember the registering owner/generation. Existing v1 waits
+    // retain their original shape and need the explicit original-row CAS.
+    let mut envelope = wait.clone();
+    if let Some(origin) = envelope
+        .as_object_mut()
+        .and_then(|obj| obj.remove("origin"))
+    {
+        shape(
+            &origin,
+            &["resume_generation", "worker_receipt", "job", "key"],
+        )?;
+    }
     shape(
-        wait,
+        &envelope,
         &[
             "domain",
             "question",
@@ -508,6 +523,10 @@ fn validate_wait(wait: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     }
     Ok(())
 }
+fn origin_identity(row: &Value) -> Value {
+    json!({"resume_generation":row["resume_generation"], "worker_receipt":row["worker_receipt"],
+        "job":row["scheduler"]["job"], "key":row["scheduler"]["key"]})
+}
 fn matches_wait(wait: &Value, answer: &Value, at: DateTime<Utc>) -> Result<()> {
     let q = &wait["question"];
     if [
@@ -535,6 +554,78 @@ fn receipts(row: &Value) -> Result<&[Value]> {
         .as_array()
         .map(Vec::as_slice)
         .ok_or_else(|| "conversation_receipts_invalid".into())
+}
+fn withdrawals(row: &Value) -> Result<&[Value]> {
+    if row[WITHDRAWALS_KEY].is_null() {
+        return Ok(&[]);
+    }
+    row[WITHDRAWALS_KEY]
+        .as_array()
+        .map(Vec::as_slice)
+        .ok_or_else(|| "conversation_receipts_invalid".into())
+}
+fn validate_withdrawal(receipt: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
+    shape(
+        receipt,
+        &[
+            "domain",
+            "wait",
+            "reason",
+            "reason_sha256",
+            "expected_state_sha256",
+            "origin",
+            "released_note",
+            "release_kind",
+            "applied_at",
+        ],
+    )?;
+    validate_wait(&receipt["wait"], id, at)?;
+    shape(
+        &receipt["origin"],
+        &["resume_generation", "worker_receipt", "job", "launch_key"],
+    )?;
+    let origin = &receipt["origin"];
+    if receipt["domain"] != WITHDRAWAL
+        || text(receipt, "reason").trim().is_empty()
+        || text(receipt, "reason").contains('\0')
+        || !hash(text(receipt, "reason_sha256"))
+        || digest(text(receipt, "reason").as_bytes()) != receipt["reason_sha256"]
+        || !hash(text(receipt, "expected_state_sha256"))
+        || !receipt["released_note"].is_string()
+        || !matches!(text(receipt, "release_kind"), "question_marker" | "scheduler_block_result")
+        || (receipt["release_kind"] == "scheduler_block_result" && receipt["released_note"] != IMPORTED_BLOCK_NOTE)
+        || !origin["resume_generation"].is_u64()
+        || !crate::job_refs::valid_id(text(origin, "job"))
+        || text(origin, "launch_key").is_empty()
+        || origin["worker_receipt"]["job"] != origin["job"]
+        || origin["worker_receipt"]["generation"] != origin["resume_generation"]
+        || receipt["wait"].get("origin").is_some_and(|saved| *saved != json!({
+            "resume_generation":origin["resume_generation"], "worker_receipt":origin["worker_receipt"],
+            "job":origin["job"], "key":origin["launch_key"]}))
+        || timestamp(receipt, "applied_at", at)? < timestamp(&receipt["wait"], "blocked_at", at)?
+    {
+        return fail("withdrawal_invalid");
+    }
+    Ok(())
+}
+
+fn withdrawal_note(row: &Value, wait: &Value, owner: &Value) -> Result<(String, bool)> {
+    if text(row, "note").starts_with(text(wait, "block_note")) {
+        return answered_note(row, wait).map(|note| (note, false));
+    }
+    let result = &row["processed_results"][text(owner, "id")];
+    // The scheduler's successful-result import is the only markerless path.
+    // It has a fixed note and a per-owner, per-generation result receipt. An
+    // arbitrary edit, appended stop, old result or another owner's block fails.
+    if row["note"] != IMPORTED_BLOCK_NOTE
+        || row["scheduler"]["phase"] != "finished"
+        || owner["status"] != "succeeded"
+        || result["reason"] != "block"
+        || result["generation"] != row["resume_generation"]
+    {
+        return fail("block_changed");
+    }
+    Ok((text(wait, "previous_note").to_owned(), true))
 }
 fn validate_receipt(receipt: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     shape(
@@ -575,6 +666,14 @@ fn unique(db: &Value, id: i64, q: &Value, sha: &str, at: DateTime<Utc>) -> Resul
             )?;
             waits.push(&receipt["wait"]);
         }
+        for receipt in withdrawals(row)? {
+            validate_withdrawal(
+                receipt,
+                row["id"].as_i64().ok_or("conversation_store_invalid")?,
+                at,
+            )?;
+            waits.push(&receipt["wait"]);
+        }
         for wait in waits {
             validate_wait(
                 wait,
@@ -607,6 +706,14 @@ pub fn register(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<V
     let index = row_index(db, id)?;
     unique(db, id, &question, &sha, at)?;
     let row = &db["items"][index];
+    if withdrawals(row)?
+        .iter()
+        .any(|r| r["wait"]["question"] == question)
+    {
+        let mut result = metadata(id, &question, &sha, false, false, false);
+        result["withdrawn"] = json!(true);
+        return Ok(result);
+    }
     if !row[WAIT_KEY].is_null() {
         if row[WAIT_KEY]["question"] == question && row[WAIT_KEY]["question_receipt_sha256"] == sha
         {
@@ -630,7 +737,7 @@ pub fn register(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<V
     }
     let note = block_note(&question, &sha, &row["note"]);
     let blocked_at = at.to_rfc3339_opts(SecondsFormat::Micros, true);
-    let wait = json!({"domain":WAIT, "question":question, "question_receipt_sha256":sha,
+    let wait = json!({"domain":WAIT, "question":question, "question_receipt_sha256":sha, "origin":origin_identity(row),
         "previous_status":row["status"], "previous_note":row["note"],
         "previous_note_present":row.get("note").is_some(), "block_note":note, "blocked_at":blocked_at});
     let row = &mut db["items"][index];
@@ -639,6 +746,142 @@ pub fn register(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<V
     row["note"] = json!(note);
     row["updated"] = json!(blocked_at);
     Ok(metadata(id, &question, &sha, true, false, false))
+}
+
+/// The caller holds the ToDo lock. A durable snapshot binds this operation to
+/// its original generation and owner; a retry never releases a later hold.
+pub fn withdraw(
+    db: &mut Value,
+    paths: &Paths,
+    id: i64,
+    question_file: &Path,
+    reason_file: &Path,
+    expected_file: &Path,
+) -> Result<Value> {
+    let (question, sha) = read(question_file, QUESTION_FIELDS)?;
+    let reason_bytes = bytes(reason_file)?;
+    let reason = std::str::from_utf8(&reason_bytes).map_err(|_| "conversation_reason_invalid")?;
+    if reason.trim().is_empty() || reason.contains('\0') {
+        return fail("reason_invalid");
+    }
+    let reason_sha = digest(&reason_bytes);
+    let expected_bytes = bytes(expected_file)?;
+    let expected: Value =
+        serde_json::from_slice(&expected_bytes).map_err(|_| "conversation_state_invalid")?;
+    let expected_sha = digest(&expected_bytes);
+    let at = clock()?;
+    validate(&question, id, false, at)?;
+    check_config(paths, &question)?;
+    let index = row_index(db, id)?;
+    unique(db, id, &question, &sha, at)?;
+    let row = &db["items"][index];
+    for receipt in withdrawals(row)? {
+        if receipt["wait"]["question"]["request_id"] == question["request_id"] {
+            if receipt["wait"]["question"] != question
+                || receipt["wait"]["question_receipt_sha256"] != sha
+                || receipt["reason_sha256"] != reason_sha
+                || receipt["expected_state_sha256"] != expected_sha
+            {
+                return fail("withdrawal_conflict");
+            }
+            return Ok(
+                json!({"id":id,"request_id":question["request_id"],"question_receipt_sha256":sha,
+                "reason_sha256":reason_sha,"changed":false,"withdrawn":true,"answered":false,"resumed":false}),
+            );
+        }
+    }
+    // Exact CAS includes note, wait, resume_generation, worker and scheduler.
+    // Concurrent private deliveries are never overwritten by a stale snapshot.
+    if *row != expected {
+        return fail("state_changed");
+    }
+    let wait = row[WAIT_KEY].clone();
+    validate_wait(&wait, id, at)?;
+    if wait["question"] != question
+        || wait["question_receipt_sha256"] != sha
+        || row["status"] != "block"
+    {
+        return fail("block_changed");
+    }
+    if wait
+        .get("origin")
+        .is_some_and(|origin| *origin != origin_identity(row))
+    {
+        return fail("owner_changed_or_active");
+    }
+    clear(db, row, at)?;
+    let owner = owner_record(paths, row)?.ok_or("conversation_owner_record_unavailable")?;
+    let job = text(&owner, "id");
+    if !matches!(
+        text(&owner, "status"),
+        "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
+    ) || row["scheduler"]["job"] != job
+        || row["worker_receipt"]["job"] != job
+        || !row["resume_generation"].is_u64()
+        || row["worker_receipt"]["generation"] != row["resume_generation"]
+        || (!row["processed_results"][job].is_null()
+            && row["processed_results"][job]["generation"] != row["resume_generation"])
+        || text(&row["scheduler"], "key").is_empty()
+        || owner["launch_key"] != row["scheduler"]["key"]
+        || !(owner["todo_id"] == id
+            || owner["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&json!(id))))
+        || row["jobs"].as_array().and_then(|jobs| jobs.last()) != Some(&owner["id"])
+    {
+        return fail("owner_changed_or_active");
+    }
+    let created = owner["created_at"]
+        .as_f64()
+        .filter(|n| n.is_finite() && *n > 0.)
+        .ok_or("conversation_owner_record_invalid")?;
+    if created > timestamp(&question, "created_at", at)?.timestamp_micros() as f64 / 1_000_000. {
+        return fail("owner_changed_or_active");
+    }
+    if !row["scheduler"]["owner_instruction"].is_null()
+        && !row["scheduler"]["owner_instruction"].is_string()
+    {
+        return fail("owner_record_invalid");
+    }
+    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
+    let origin = json!({"resume_generation":row["resume_generation"],"worker_receipt":row["worker_receipt"],
+        "job":owner["id"],"launch_key":owner["launch_key"]});
+    let instruction = format!(
+        "{}\n元ToDo {id}の不要な再確認質問を取り下げました。本人回答は記録していません。既存の依頼と許可の範囲で元の作業を続け、受領と履行を分けて記録してください。\n理由: {reason}\n{note}",
+        text(&row["scheduler"], "owner_instruction")
+    );
+    if instruction.len() as u64 > MAX_BYTES {
+        return fail("file_too_large");
+    }
+    let applied_at = at.to_rfc3339_opts(SecondsFormat::Micros, true);
+    let receipt = json!({"domain":WITHDRAWAL,"wait":wait,"reason":reason,"reason_sha256":reason_sha,
+        "expected_state_sha256":expected_sha,"origin":origin,"applied_at":applied_at,
+        "released_note":row["note"],"release_kind":if imported {"scheduler_block_result"} else {"question_marker"}});
+    let mut saved = withdrawals(row)?.to_vec();
+    saved.push(receipt);
+    let row = &mut db["items"][index];
+    row[WITHDRAWALS_KEY] = json!(saved);
+    row.as_object_mut().unwrap().remove(WAIT_KEY);
+    if imported && wait["previous_note_present"] == false {
+        row.as_object_mut().unwrap().remove("note");
+    } else if (imported || row["note"] == wait["block_note"])
+        && wait["previous_note_present"] == true
+    {
+        row["note"] = wait["previous_note"].clone();
+    } else if row["note"] != wait["block_note"] || !note.is_empty() {
+        row["note"] = json!(note);
+    } else {
+        row.as_object_mut().unwrap().remove("note");
+    }
+    row["status"] = json!("todo");
+    row["updated"] = json!(applied_at);
+    cc_scheduler::common::record_result(row, &owner["id"], "conversation_withdrawal");
+    cc_scheduler::common::resume_without_worker(row);
+    row["scheduler"]["owner_instruction"] = json!(instruction);
+    Ok(
+        json!({"id":id,"request_id":question["request_id"],"question_receipt_sha256":sha,
+        "reason_sha256":reason_sha,"changed":true,"withdrawn":true,"answered":false,"resumed":true}),
+    )
 }
 
 /// Consume exactly once. Later retries cannot release a new stop or a completed task.

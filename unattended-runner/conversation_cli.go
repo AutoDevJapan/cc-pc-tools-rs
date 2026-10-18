@@ -218,7 +218,9 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 	if ctx.Err() == nil {
 		switch opts.Command {
 		case "ask":
-			result, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait})
+			var question ConversationQuestion
+			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait})
+			result = conversationQuestionPublic(question)
 		case "log":
 			result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
 		case "replies":
@@ -242,4 +244,14 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 		return 1
 	}
 	return 0
+}
+
+func conversationQuestionPublic(q ConversationQuestion) map[string]any {
+	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	for key, value := range map[string]string{"origin_thread_id": q.OriginThread, "thread_id": q.Thread, "question_message_id": q.Message, "progress_thread_id": q.Progress, "question_fingerprint": q.Fingerprint, "question_receipt_sha256": q.ReceiptSHA, "created_at": q.Created} {
+		if value != "" {
+			result[key] = value
+		}
+	}
+	return result
 }

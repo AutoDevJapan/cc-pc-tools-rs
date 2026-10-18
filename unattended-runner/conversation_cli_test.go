@@ -190,7 +190,7 @@ func TestConversationCLIDispatchesContractAndOnlyParentJSON(t *testing.T) {
 			}
 			var result any = fake.result
 			if fake.command == "ask" {
-				result = fake.question
+				result = map[string]any{"domain": conversationDomain, "request_id": "question-2823", "todo_id": uint64(2823), "phase": "posted", "wait_requested": false}
 				want := ConversationAskInput{RequestID: "question-2823", Todo: 2823, OriginThread: "500", BodyFile: "question.txt", DecisionFile: "decision.json"}
 				if len(args) == len(conversationAskArgs())+2 {
 					want.Title, want.Wait = "判断のお願い", true
@@ -564,5 +564,14 @@ func TestConversationCLIStatusRejectsMalformedConversationIndex(t *testing.T) {
 				t.Fatal("malformed existing conversation index was changed")
 			}
 		})
+	}
+}
+
+func TestConversationCLIAskDoesNotExposePrivateProjectOrSnapshotFields(t *testing.T) {
+	fake := &conversationCLIFake{question: ConversationQuestion{RequestID: "opaque-question", Todo: 42, Phase: "posted", Project: "PRIVATE_PROJECT", SenderID: "PRIVATE_SENDER", Title: "PRIVATE_TITLE", BodyFile: "PRIVATE_BODY_FILE", DecisionFile: "PRIVATE_DECISION_FILE", ReceiptFile: "PRIVATE_RECEIPT_FILE"}}
+	var out bytes.Buffer
+	code := conversationCLIWithLoader(conversationAskArgs(), &out, func(string) (conversationCLIBackend, func(), error) { return fake, func() {}, nil })
+	if code != 0 || bytes.Contains(out.Bytes(), []byte("PRIVATE_")) || !bytes.Contains(out.Bytes(), []byte("opaque-question")) {
+		t.Fatal("ask metadata exposed private scope or input snapshots")
 	}
 }

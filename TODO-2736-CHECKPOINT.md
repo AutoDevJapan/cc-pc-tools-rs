@@ -1,5 +1,43 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 01:53保存・追加修復のレビュー2840と次の受入（最新）
+
+追加修復の機能head be86ae33eee6ce0e6ac96b29b551ab20034227f9を保存した。
+前節の8d093afに加え、terminal jobの読取後にもdeadlineを照合し、遅れたsuccessを拒否する。
+追加回帰は成功。機能headからWindows/Linuxの両module実行物をbuild成功し、原logと
+SHA対応を恒久root/resume-20261019-011542/runtimefix-build-manifest.jsonへ保存した。
+次の実行物は同dir/runtimefix-committed-product-ci.exe、runtimefix-committed-product-ci-linux、
+runtimefix-committed-pr148-windows-runner.exe。旧interim実行物を使わない。
+Gitのmodified表示は恒久evidenceが未追跡のためで、tracked runtime差分はない。
+
+追加差分だけのSonnet review2840をroot011542の正規subworkで登録・実開始を確認した。
+spec docs/todo-2736-runtime-recovery-review.md、固定base52dd6a6/headbe86ae3、複数file・
+read-only・実行検査/外部送信/製品/認証読取禁止。実job20261019-014846-todo-2840はdoing。
+原2797/2832のspec/モデル/結果は保持し、今回の追加差分へ無条件に流用しない。
+PR219は実head78215862f0b80bac914a59adca2f19c33151bd59へ非force push・本文更新。
+01:52の新しい正式CIは7check queued/in_progressで、まだ成功とはしない。
+
+旧head52dd6a6のGo CodeQL失敗は開始hookのlocal bridge403まで特定した。
+拒否したcallbackのbodyは原job logに残らず、鍵/identity/remote head読取のどの条件かは
+未確定。01:49前の元branch refはまだ52dd6a6で、単純なbranch削除とは一致しない。
+旧失敗jobを再実行せず、shared bridge・guard・allowlist・manifest・認証を変更していない。
+司令塔2825へ原job/run/hashと、この未確定の拒否理由を明示して限定診断を依頼する。
+新しいsourceでのCI成功を確認する前にはPR219をmergeしない。
+
+終了した正式Linux・認証なしgate fixture・build・GET診断の原証拠をSHA一致保存後、
+新root27fc/4807/e9c3/45a4をplan→別通常削除→finishでsource_absentまで確認した。
+Linux container/登録/lockは終了済み、Windows49ffにservice/runner/認証fileは未作成。
+49ffの公開asset/SDKと旧f884の公開PowerShell tarだけは次の実行に必要なので保持する。
+CI rawlog/source本文・秘密をstdoutへ一括表示せず、元の原本と失敗を保存している。
+
+次は2840の原応答/Mustと最新CIを受領し、必要な修正後に通常helper mergeへ進む。
+製品Rustの現attempt1はLinuxfailure/Windowsqueued。新source helperで正式実行する際は、
+残る未開始Windows jobを正規cancelして旧runを終え、全OSが同一attemptにある新しい正式
+matrixを作り、実run/attempt/jobを再照合して各OS用の新規所有rootへ供給する。
+正式成功済みのworkspaceを重ねる操作ではない。新attemptの登録/実行はまだ行っていない。
+native/liveは未dispatch。製品head03c7cc6/treea6851bd、元2640への成功証拠配送は未達を保持。
+他のToDoだけを待って終了する場合は、done2832へ戻さず正規wait --on2840を記録する。
+
 ## 2026-10-19 01:15再開・正式Linux失敗の修復とWindows通信診断（最新）
 
 レビュー2832の実Sonnet5.5 job20261019-010339-todo-2832は01:04:19〜01:08:59、

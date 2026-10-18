@@ -3,6 +3,28 @@
 2026-10-19 05:31 JST時点。実装・検査・レビュー・通常マージ・正式scheduler更新は完了。
 AO2839は通常schedulerで受付済み。実処理と成果、次の自然巡回はまだ未確認。
 
+## 最新の実機確認（2026-10-19 05:52 JST）
+
+AO2839の同じ実jobはsucceeded/exit0/65stepsで終了した。監査表の不具合を直した
+6a943643と再開記録込みc3c29666を実worktreeと遠隔branchの両方で照合した。
+Windows/Linuxの関連検査・失敗対照・未完条件はAO側CURRENT-2839.mdに保存済み。
+本担当は製品の検査を再実行せず、実成果と保存記録を照合した。
+公式製品CIはActionsの予算上限により起動前に失敗し、AO担当が既存のCI修復へ
+引き継いでいる。製品の検査・レビュー・配布完了とは扱わない。
+
+05:51:36の自然巡回はstep_failures空、親2839の正規依存待ちを保持している。
+しかし直接の新subwork2872(review)と2874(research/cargo)はtodo/jobs0のまま。
+正式APIは親2839のみexit0、両子はexit1/verified:falseを返した。
+配布済みGoのverifyCurrentSuccessionはcurrentProductByTaskの固定親宣言だけを
+検索し、直接の子自身へ資格receiptを発行する実装がない。子の受付が止まるため、
+実成果の確認だけで2851を完了にしない。
+
+Go所有担当2849と親2834へ、実配布SHA・実API結果・固定ソースの原因と契約の
+直接子の条件を正規CLIで配送済み。Goを並行編集しない。Rust側の子id/spec照合と
+通常subwork審査を保ち、Goの限定修復・検査・レビュー・CI・通常merge・正式部分
+配布後に、同じ子の通常受付、依存完了後の親の自然巡回を確認する。
+旧子や任意idを許可せず、旧4番号・旧192件・原名簿の未復旧を維持する。
+実機拒否の証拠はtodo2851-live-subwork.private.jsonに保存した。
 ## 完了した工程
 
 - Rust実装はPR225で通常マージ。mergeは67f54cee5e4fba7d74393b8ad26b8a4e6346d0cc。

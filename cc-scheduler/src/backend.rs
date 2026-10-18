@@ -773,8 +773,10 @@ impl Backend for RealBackend {
             return Ok("todo".into());
         }
         let result = fs::read_to_string(path)?;
-        cc_ask::core::log_result_misuse(s(&j["id"]), &result);
-        Ok(result_outcome(&result).into())
+        if !cc_job_policy::review_result::completed(j, &result) {
+            cc_ask::core::log_result_misuse(s(&j["id"]), &result);
+        }
+        Ok(job_result_outcome(j, &result).into())
     }
     fn worktree(&mut self, repo: &str, i: &Value) -> Result<()> {
         self.guard_workspace_path(repo)?;
@@ -800,6 +802,16 @@ pub fn result_outcome(result: &str) -> &'static str {
         "状態: 完了" => "done",
         "状態: 要判断" => "block",
         _ => "todo",
+    }
+}
+pub fn job_result_outcome(job: &Value, result: &str) -> &'static str {
+    if cc_job_policy::review_result::completed(job, result) {
+        let body = result.split_once('\n').map(|(_, body)| body).unwrap_or("");
+        // Retain the existing duplicate-status and body checks after recognizing
+        // this one completed child-review spelling. Root parsing stays strict.
+        result_outcome(&format!("状態: 完了\n{body}"))
+    } else {
+        result_outcome(result)
     }
 }
 pub fn question_body(i: &Value) -> String {

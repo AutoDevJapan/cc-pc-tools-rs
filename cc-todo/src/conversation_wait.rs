@@ -634,13 +634,13 @@ fn finished_question_owner(
     clear(db, row, at)?;
     let owner = owner_record(paths, row)?.ok_or("conversation_owner_record_unavailable")?;
     let job = text(&owner, "id");
-    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
+    let (note, imported) = withdrawal_note(row, wait, &owner)?;
     if !matches!(
         text(&owner, "status"),
         "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
     ) || row["scheduler"]["job"] != job
         || (row["worker_receipt"]["job"] != job
-            && !retired_legacy_worker(&wait, &row["worker_receipt"], imported))
+            && !retired_legacy_worker(wait, &row["worker_receipt"], imported))
         || !row["resume_generation"].is_u64()
         || row["worker_receipt"]["generation"] != row["resume_generation"]
         || (!row["processed_results"][job].is_null()

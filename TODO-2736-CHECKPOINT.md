@@ -1,5 +1,44 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03:33・追加レビュー受領と回収対象の未分類（以下を優先）
+
+実job20261019-032547-todo-2736、同branch/同worktreeの73c872cから再開。
+原eventsのitem145 finish source_absent、03:20の配送/commit/checkpoint/waitを確認し再実行0。
+最新D:/CC/AGENTS.mdとproject規則を再読、worktree自身はguard false。
+
+2856は実Haiku5.5/job20261019-032153-todo-2856/succeeded/exit0/7steps/Must0/実検査0。
+原応答3491bytes/SHA C1A266D97A7F02F3D734F6F96455FEC811978FA0963E81352C515DFE401BA1BF。
+固定6c72729の対象fileと作業コピー差分0。原応答と資格receiptを恒久rootへ保存。
+通常collectの既存drain契約のSuggestionとコメントNitは機能変更へ追加せず契約を保持。
+新collector SHA A26595B450A0DCDC2EA3406910F0BF5F095A72DA7C6650E6FE726F05EDC1994Dも照合済み。
+別名windows-collect1077-032547.ps1を作成したが未起動。旧6559 scriptは使わない。
+
+実行前の正規scrub391で原W5051がclassification_unverified=true/client_resource=true。
+Wの追加読取/実回収/削除/ACL変更を止めた。これは自動承認レビュー拒否ではない。
+新collector起動0、mutation0、旧run cancel/redispatch0。原所有記録/plan/prepare/失敗の
+保存済みreceiptだけを司令塔へ配送し、同scopeの分類照合が正規担当で可能か確認を求めた。
+広いallowlist/guard/manifest拡張、原名簿復旧扱い、別経路を求めない。未分類なら現物を保持。
+marker【2736-guard-review-received-032547】を2736/2640/2825へCAS追記しreadback確認。
+原receipt参照先と今の技術条件は同メモに保存。本人への質問/PC操作依頼なし。
+
+製品PR148はrepo1392152644/AutoDevJapan/private/nonfork/同head-base repo/open/draft、
+head03c7cc65b9ab1c3ac2598dc6b97c9ca0d04c08be/base1100676/元branch不変。
+Windows117740937169はrun39149803349/attempt1/queued/steps0/runner0。回収前cancelなし。
+同headのdocuments/repository-rules.mdを通常APIで確認。製品mergeは2640の原scopeを維持。
+
+PR224のremote head92226c3は両OS helper/cc-jobs/actions/Go/JS解析がsuccess。
+Rust解析117750279642/run39152989464はin_progress、setup/checkout/init成功、analyze中。
+CodeQL集約neutralはRustの結果が未着という警告で成功扱いしない。全必要CIの終了が必要。
+PR本文を最終1077差分/両review/fixture実結果/保護分類による未回収を含め更新済み。
+PR219 mainの旧bridge403診断は元2825への既存依頼で維持。同失敗rerun/共有bridge変更0。
+製品正式4job成功・成功証拠配送は未達。旧成功CodeQLと物理全件検査を重複しない。
+
+次は2825から同scopeの技術照合結果を受領。正規guard成立前には現物を保持する。
+成立した場合だけ新collectorで原Wをqueuedのうちに回収し、実postconditions/原logs/SHAを保存。
+その後にだけ旧run通常cancel、新matrix/新所有root。10GiB実行前の新VM/host空き確認が必要。
+PR224は同92226c3の全必要CIとレビュー資格を再確認して通常merge。製品PR148はmergeしない。
+文書commitだけでは同source CIを重ねないため即pushせず、actualHEADをschedulerへ保存する。
+
 ## 2026-10-19 03:20・引き継ぎ後の照合（以下を優先）
 
 同じ実job20261019-022634-todo-2736、branchと92226c3から継続した。

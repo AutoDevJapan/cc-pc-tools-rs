@@ -13,6 +13,25 @@ pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
+    fn action_progress(
+        &mut self,
+        _job: &Value,
+        _previous: &cc_job_policy::action_progress::Progress,
+    ) -> Result<Option<cc_job_policy::action_progress::Progress>> {
+        Ok(None)
+    }
+    fn no_action_scope(&mut self, _repo: &str, _item: &Value, _job: &Value) -> Result<bool> {
+        Ok(false)
+    }
+    fn cancel_no_action(
+        &mut self,
+        _item: &Value,
+        _job: &mut Value,
+        _proof: &Value,
+        _todo: &Path,
+    ) -> Result<bool> {
+        Ok(false)
+    }
     fn product_review_allowed(&mut self, _item: &Value) -> bool {
         false
     }
@@ -268,6 +287,9 @@ pub struct RealBackend {
 }
 impl RealBackend {
     fn guard_workspace_path(&mut self, path: &str) -> Result<()> {
+        self.guard_workspace_timeout(path, 40)
+    }
+    fn guard_workspace_timeout(&mut self, path: &str, timeout: u64) -> Result<()> {
         if path.is_empty() {
             return Err(Error("InputRejected"));
         }
@@ -280,7 +302,7 @@ impl RealBackend {
                     "--guard-path",
                     path,
                 ],
-                Some(40),
+                Some(timeout),
             ))
             .map_err(crate::preparation::tool_error)?;
         if out.code != 0 {
@@ -369,6 +391,7 @@ impl RealBackend {
                 &item["id"].to_string(),
                 if truth(&item["model"])
                     || truth(&item["scheduler"]["console_request"]["options"]["model"])
+                    || selection["model_explicit"] == true
                 {
                     "--model"
                 } else {
@@ -417,10 +440,101 @@ impl RealBackend {
                     .extend(["--parent-job-id".into(), parent.into()]);
             }
         }
+        if let Some(value) = selection["mcp_profile"].as_str() {
+            invocation
+                .args
+                .extend(["--mcp-profile".into(), value.into()]);
+        }
+        if selection["network"] == true {
+            invocation.args.push("--network".into());
+        }
+        if selection["add_dirs"].is_array() {
+            // The source's explicit capability set replaces the scheduler default.
+            if let Some(index) = invocation.args.iter().position(|a| a == "--add-dir") {
+                invocation.args.drain(index..index + 2);
+            }
+        }
+        for dir in arr(&selection["add_dirs"]).iter().filter_map(Value::as_str) {
+            invocation.args.extend(["--add-dir".into(), dir.into()]);
+        }
         invocation
     }
 }
 impl Backend for RealBackend {
+    fn action_progress(
+        &mut self,
+        job: &Value,
+        previous: &cc_job_policy::action_progress::Progress,
+    ) -> Result<Option<cc_job_policy::action_progress::Progress>> {
+        // An I/O failure discards this observation; it never establishes idle time.
+        Ok(cc_job_policy::action_progress::scan(
+            &self.job_dir(job).join("events.jsonl"),
+            job,
+            previous,
+            self.clock(),
+        )
+        .ok())
+    }
+    fn no_action_scope(&mut self, repo: &str, item: &Value, job: &Value) -> Result<bool> {
+        let cwd = s(&job["cwd"]);
+        if cwd.is_empty()
+            || norm(cwd) != norm(s(&item["scheduler"]["worktree"]))
+            || self.guard_workspace_timeout(repo, 1).is_err()
+            || self.guard_workspace_timeout(cwd, 1).is_err()
+        {
+            return Ok(false);
+        }
+        let base = cc_job_policy::work_owner::checkout(repo);
+        let work = cc_job_policy::work_owner::checkout(cwd);
+        Ok(!s(&base["git_common"]).is_empty()
+            && base["git_common"] == work["git_common"]
+            && work["worktree"] == cc_job_policy::work_owner::norm(Path::new(cwd))
+            && base["worktree"] == cc_job_policy::work_owner::norm(Path::new(repo))
+            && work["branch"] == item["scheduler"]["branch"]
+            && ["autodevjapan/", "bm1314/", "mashfromband/"]
+                .iter()
+                .any(|prefix| s(&base["repository"]).starts_with(prefix)))
+    }
+    fn cancel_no_action(
+        &mut self,
+        item: &Value,
+        job: &mut Value,
+        proof: &Value,
+        todo: &Path,
+    ) -> Result<bool> {
+        let dir = self.job_dir(job);
+        let request = dir.join("no-action-request.json");
+        write_json(&request, proof, 1)?;
+        let id = s(&job["id"]).to_string();
+        let key = format!("no-action-{id}");
+        let output = self.runner.run(&tool_command(
+            &self.tools.join("codex-jobs/codex_jobs.py"),
+            &[
+                "cancel",
+                &id,
+                "--recovery",
+                "--if-todo-ready",
+                "--todo-id",
+                &item["id"].to_string(),
+                "--todo-file",
+                todo.to_str().ok_or(Error("InputRejected"))?,
+                "--cancel-key",
+                &key,
+                "--no-action-check",
+                request.to_str().ok_or(Error("InputRejected"))?,
+            ],
+            Some(8),
+        ))?;
+        let fresh = read_json(&dir.join("job.json"), Value::Null)?;
+        let result: Value = serde_json::from_str(output.stdout.trim()).unwrap_or(Value::Null);
+        let stopped = output.code == 0
+            && result["outcome"] == "cancelled"
+            && fresh["status"] == "cancelled"
+            && fresh["recovery_cancel"]["key"] == key
+            && !alive(&fresh, &native::process_snapshot()?, now());
+        *job = fresh;
+        Ok(stopped)
+    }
     fn product_review_allowed(&mut self, item: &Value) -> bool {
         if !crate::product_review::eligible(item, self.clock()) {
             return false;

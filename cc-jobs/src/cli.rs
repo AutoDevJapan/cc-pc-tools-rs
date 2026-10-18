@@ -198,6 +198,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "related-todo-ids",
                     "todo-file",
                     "cancel-key",
+                    "no-action-check",
                 ]
                 .contains(&name.as_str()),
                 "recover-429" => ["since", "todo-file", "apply"].contains(&name.as_str()),
@@ -528,9 +529,15 @@ impl Context {
             "cancel" => {
                 if a.flag("if-todo-ready") {
                     self.cmd_cancel_if_todo_ready(&a, out, err)
-                } else if ["todo-id", "related-todo-ids", "todo-file", "cancel-key"]
-                    .iter()
-                    .any(|key| a.value(key).is_some())
+                } else if [
+                    "todo-id",
+                    "related-todo-ids",
+                    "todo-file",
+                    "cancel-key",
+                    "no-action-check",
+                ]
+                .iter()
+                .any(|key| a.value(key).is_some())
                 {
                     Err(Error::new(
                         "cancel ToDo metadata requires --if-todo-ready --recovery",
@@ -1382,7 +1389,7 @@ impl Context {
     ) -> Result<i32> {
         self.load(jid)?;
         let lock = self.job_lock(jid, "state.lock")?;
-        self.cancel_locked(jid, recovery, lock, out, err)
+        self.cancel_locked(jid, recovery, false, lock, out, err)
     }
 
     /// Linearize recovery cancellation with wait registration. Never run a
@@ -1417,19 +1424,171 @@ impl Context {
             .map(PathBuf::from)
             .unwrap_or_else(|| self.todo_store());
         self.load(&a.id)?;
+        let no_action_check = a.value("no-action-check").is_some();
+        let _reservation = if no_action_check {
+            let Some(reservation) = self.yield_reservation(&a.id) else {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"boundary_busy"})
+                )?;
+                return Ok(0);
+            };
+            Some(reservation)
+        } else {
+            None
+        };
         // Same ordering as registration/admission: queue -> job state -> ToDo.
         let queue = self.queue_lock_for(
             "dependency guarded cancellation",
-            std::time::Duration::from_secs(60),
+            std::time::Duration::from_secs(if no_action_check { 2 } else { 60 }),
         )?;
-        let lock = self.job_lock(&a.id, "state.lock")?;
+        let lock = if no_action_check {
+            FileLock::try_acquire(&self.job_dir(&a.id).join("state.lock"))?
+        } else {
+            self.job_lock(&a.id, "state.lock")?
+        };
         let mut job = self.load(&a.id)?;
-        let todo = FileLock::acquire(&store.with_file_name("todo.lock"))?;
+        let mut paused = None;
+        let no_action = if let Some(path) = a.value("no-action-check") {
+            let proof: Value = self.read_json(Path::new(path))?;
+            let progress: cc_job_policy::action_progress::Progress =
+                serde_json::from_value(proof["progress"].clone())
+                    .map_err(|_| Error::new("invalid activity proof"))?;
+            if job["status"] != "running"
+                || cc_job_policy::cancellation::owner_stopped(&Value::Null, &job)
+                || progress.attempt != cc_job_policy::action_progress::attempt(&job)
+                || !progress.stalled(self.rt.epoch())
+            {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"proof_stale"})
+                )?;
+                return Ok(0);
+            }
+            // The queue gate prevents a child registration racing this check.
+            let children = self.admission_snapshot();
+            if children.as_ref().is_none_or(|jobs| {
+                cc_job_policy::action_progress::active_descendant(
+                    &job,
+                    jobs,
+                    |child| {
+                        self.supervisor_alive(child)
+                            || self.is_ours_checked(child, "pid").unwrap_or(true)
+                            || self.is_ours_checked(child, "codex_pid").unwrap_or(true)
+                    },
+                    |id| {
+                        let parent = valid_job_id(id).then(|| self.try_load(id)).flatten()?;
+                        if parent["parent_job_id"].is_null() {
+                            Some(String::new())
+                        } else {
+                            parent["parent_job_id"].as_str().map(str::to_owned)
+                        }
+                    },
+                )
+            }) {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"child_active_or_unknown"})
+                )?;
+                return Ok(0);
+            }
+            // Freeze only the verified idle controller tree. A running command,
+            // MCP child or a newly spawned descendant makes this return None.
+            paused = self.rt.pause_idle_agent(
+                number(&job, "codex_pid") as u32,
+                job["codex_pid_created"]
+                    .as_u64()
+                    .ok_or_else(|| Error::new("missing controller birth"))?,
+                None,
+                Some(&self.job_dir(&a.id).join("yield-paused.json")),
+            )?;
+            if paused.is_none() {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"active_child"})
+                )?;
+                return Ok(0);
+            }
+            // Drain already emitted events while the controller is frozen. The
+            // supervisor's event reader does not need state.lock to write them.
+            let events = self.job_dir(&a.id).join("events.jsonl");
+            let mut length = fs::metadata(&events)?.len();
+            let mut stable = 0;
+            for _ in 0..20 {
+                self.rt.sleep(0.05);
+                let next = fs::metadata(&events)?.len();
+                stable = if next == length { stable + 1 } else { 0 };
+                length = next;
+                if stable >= 4 {
+                    break;
+                }
+            }
+            let fresh =
+                cc_job_policy::action_progress::scan(&events, &job, &progress, self.rt.epoch())?;
+            if stable < 4
+                || !fresh.stalled(self.rt.epoch())
+                || fresh.quiet_since != progress.quiet_since
+            {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"activity_changed"})
+                )?;
+                return Ok(0);
+            }
+            Some(proof)
+        } else {
+            None
+        };
+        let todo = if no_action_check {
+            match FileLock::try_acquire(&store.with_file_name("todo.lock")) {
+                Ok(lock) => lock,
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::WouldBlock
+                        || matches!(error.raw_os_error(), Some(32 | 33)) =>
+                {
+                    // Drop resumes controllers and completes the existing pause marker.
+                    writeln!(
+                        out,
+                        "{}",
+                        json!({"outcome":"deferred","job":a.id,"reason":"todo_lock_busy"})
+                    )?;
+                    return Ok(0);
+                }
+                Err(error) => return Err(error.into()),
+            }
+        } else {
+            FileLock::acquire(&store.with_file_name("todo.lock"))?
+        };
         // An unavailable managed store cannot prove that the source is ready.
         // Keep the source unchanged until its dependencies can be checked.
         let db = cc_job_policy::todo_store::read(&store).map_err(|e| Error::new(e.to_string()))?;
         if !db["items"].is_array() {
             return Err(Error::new("invalid ToDo store items"));
+        }
+        if let Some(proof) = &no_action {
+            let row = db["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["id"].as_i64() == primary);
+            let valid = row.is_some_and(|row| {
+                cc_job_policy::action_progress::eligible(&db, row, &job)
+                    && cc_job_policy::action_progress::ticket(&db, row, &job) == proof["ticket"]
+                    && self.no_action_workspace(&db, row, &job)
+            });
+            if !valid {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"owner_or_scope_changed"})
+                )?;
+                return Ok(0);
+            }
         }
         let mut identity = job.clone();
         let mut ids: std::collections::BTreeSet<i64> = identity["related_todo_ids"]
@@ -1479,20 +1638,45 @@ impl Context {
             job["todo_id"] = json!(primary);
         }
         job["recovery_cancel"] = json!({"key":key,"committed_at":self.rt.now()});
+        if let Some(proof) = no_action {
+            job["no_action_recovery"] = proof;
+        }
         self.save(&job)?;
         drop(todo);
         drop(queue);
-        let code = self.cancel_locked(&a.id, true, lock, &mut Vec::new(), err)?;
+        let code = self.cancel_locked(&a.id, true, no_action_check, lock, &mut Vec::new(), err)?;
+        drop(paused);
         if code == 0 {
             writeln!(out, "{}", json!({"outcome":"cancelled","job":a.id}))?;
         }
         Ok(code)
     }
 
+    fn no_action_workspace(&self, db: &Value, row: &Value, job: &Value) -> bool {
+        if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&s(row, "project")) {
+            return false;
+        }
+        let repo = db["projects"][s(row, "project")].as_str().unwrap_or("");
+        let cwd = s(job, "cwd");
+        if repo.is_empty() || cwd.is_empty() || row["scheduler"]["worktree"] != job["cwd"] {
+            return false;
+        }
+        let base = self.rt.work_checkout(repo);
+        let work = self.rt.work_checkout(cwd);
+        !s(&base, "git_common").is_empty()
+            && base["git_common"] == work["git_common"]
+            && work["worktree"] == cc_job_policy::work_owner::norm(Path::new(cwd))
+            && work["branch"] == row["scheduler"]["branch"]
+            && ["autodevjapan/", "bm1314/", "mashfromband/"]
+                .iter()
+                .any(|prefix| s(&base, "repository").starts_with(prefix))
+    }
+
     fn cancel_locked(
         &self,
         jid: &str,
         recovery: bool,
+        defer_followup: bool,
         lock: FileLock,
         out: &mut dyn Write,
         err: &mut dyn Write,
@@ -1609,6 +1793,9 @@ impl Context {
         });
         if cancelled {
             job["status"] = json!("cancelled");
+            if defer_followup {
+                job["gto_auto_pending"] = json!(true);
+            }
             job["finished_at"] = json!(self.rt.now());
             job["activity"] = json!("cancelled");
             if let Some(start) = parse_iso(s(&job, "started_at")) {
@@ -1619,6 +1806,13 @@ impl Context {
             self.save(&job)?;
         }
         drop(lock);
+        // The minute scheduler has a 20-second caller budget. Normal refresh
+        // retries pending rating; its existing minute sweep handles owned tabs.
+        // Do not put network notifications or rating in this critical stop path.
+        if defer_followup {
+            writeln!(out, "{}", self.summary(&job))?;
+            return Ok(0);
+        }
         self.close_chrome_tabs(jid);
         if cancelled {
             self.auto_rate(&mut job, None);

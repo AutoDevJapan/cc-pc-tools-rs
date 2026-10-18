@@ -256,6 +256,23 @@ fn main() {
         std::thread::sleep(Duration::from_millis(650));
         return;
     }
+    if mode == "report-only" {
+        let mut input = Vec::new();
+        std::io::stdin().read_to_end(&mut input).unwrap();
+        println!("{{\"type\":\"turn.started\"}}");
+        let end = std::time::Instant::now() + Duration::from_secs(40);
+        let mut id = 0;
+        while std::time::Instant::now() < end {
+            println!(
+                "{}",
+                json!({"type":"item.completed","item":{"id":format!("m{id}"),"type":"agent_message","text":"fixture progress only"}})
+            );
+            std::io::stdout().flush().unwrap();
+            id += 1;
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        return;
+    }
     if mode == "cargo" {
         let now = || {
             std::time::SystemTime::now()

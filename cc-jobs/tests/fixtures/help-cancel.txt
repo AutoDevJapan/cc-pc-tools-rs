@@ -1,4 +1,4 @@
-usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] id
+usage: codex_jobs.py cancel [-h] [--recovery] [--if-todo-ready --cancel-key KEY] [--todo-id ID] [--related-todo-ids IDS] [--todo-file PATH] [--no-action-check PATH] id
 
 positional arguments:
   id
@@ -11,3 +11,4 @@ options:
   --related-todo-ids IDS  comma-separated exact related task IDs
   --todo-file PATH  shared ToDo store (defaults to the configured store)
   --cancel-key KEY  durable recovery attempt ID; a previously committed attempt may finish after a later wait
+  --no-action-check PATH  verify content-free idle proof, current worker/generation and frozen tool boundary before recovery

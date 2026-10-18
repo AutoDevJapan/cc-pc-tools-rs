@@ -55,6 +55,21 @@ guardでrepository/common-dir/branchと実体を確認する。存在するworkt
 失敗は`{"verified":false}`だけを返す。親の資格・停止・依存・通常の
 subwork審査や独立worktree条件はRust側でも維持する。
 
+### 通信を許可しない子担当のファイル判定
+
+受付用APIは引き続きGitHubから実所有者・repository IDを照合する。
+`--guard-path`による子worktreeのファイル判定は通信を要求しない。
+この判定は、配布時に所有を確認した有限な宣言だけを使う。
+現在の親子関係、保存spec、親specの固定hash、origin、root/common-dir、
+branch、schedulerが記録した正規worktree、実deny、期限は毎回確認する。
+一般のrootや任意manifestを許可する仕組みにはしない。
+
+ToDo2849の実機検査では、同じ`:read-only`（network=false）のsandboxで、
+旧guardは子2872を拒否し、修正版は2872/2874のworktreeを許可した。
+修正版でGit読取が成功し、書込拒否は維持された。同じsandboxの受付用APIは
+不成立のままであり、通信できない環境を受付成功として扱わない。
+正式配布後の同子の実成果・親の自然巡回は、2851の追跡対象として残す。
+
 ## 検査と正式更新
 
 `cc-scheduler`の回帰検査と、公開Backendを使う`cc-todo`、`cc-shepherd`、

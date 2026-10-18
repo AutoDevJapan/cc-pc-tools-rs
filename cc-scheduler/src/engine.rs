@@ -571,7 +571,12 @@ impl<B: Backend> Scheduler<B> {
         }
         Ok(())
     }
-    /// Isolate new, verified PC repairs from the unavailable private registry and
+    fn current_product_without_registry(&mut self, item: &Value, root: &str) -> bool {
+        matches!(std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt")),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+            && self.backend.current_product_allowed(item, root)
+    }
+    /// Isolate new, verified PC repairs and current successions from the unavailable private registry and
     /// old question generations. Unknown records retain their original state.
     pub fn reconcile_repairs(
         &mut self,
@@ -583,14 +588,18 @@ impl<B: Backend> Scheduler<B> {
         for item in arr(&db["items"]) {
             let project = s(&item["project"]);
             if s(&item["status"]) != "doing"
-                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
                 || item["scheduler"]["job"]
                     .as_str()
                     .is_none_or(|id| id.is_empty())
                 || (truth(&item["scheduler"]["question"]) && !truth(&item["scheduler"]["answer"]))
-                || !self
-                    .backend
-                    .repair_scope_allowed(s(&db["projects"][project]))
+                || !((["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                    && self.backend.repair_scope_allowed(s(&db["projects"][project])))
+                    || self.current_product_without_registry(&item, s(&db["projects"][project])))
+            {
+                continue;
+            }
+            if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                && !self.backend.repair_scope_allowed(s(&item["scheduler"]["worktree"]))
             {
                 continue;
             }
@@ -614,7 +623,6 @@ impl<B: Backend> Scheduler<B> {
             if item["status"] != "wait"
                 || item["dispatchable"] != true
                 || !truth(&item["spec"])
-                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
                 || !item["wait_ready"].is_null()
                 || item["wait_on"].as_array().is_none_or(Vec::is_empty)
                 || item["wait_on"]
@@ -625,6 +633,11 @@ impl<B: Backend> Scheduler<B> {
                 || truth(&item["scheduler"]["question"])
                 || truth(&item["scheduler"]["question_close_pending"])
                 || item["stall_recovery"]["pending"].is_object()
+            {
+                continue;
+            }
+            if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                && !self.current_product_without_registry(&item, s(&snapshot["projects"][project]))
             {
                 continue;
             }
@@ -1478,6 +1491,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     {
                         !self.backend.repair_scope_allowed(path)
                     }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        !self.backend.current_product_allowed(i, path)
+                    }
                     Err(_) => true,
                 };
                 project != "owner"
@@ -1574,6 +1590,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 if s(&current["status"]) != "todo"
                     || current["scheduler"]["key"] != prepared["scheduler"]["key"]
                     || launch_inputs(&current) != launch_inputs(&prepared)
+                {
+                    return Ok(());
+                }
+                // Recheck the finite receipt after preparation and sampling.
+                // A changed spec/root or a newly restored deny wins admission.
+                if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                    .contains(&s(&current["project"])) && current["id"] != 2407
+                    && matches!(&exclusions, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+                    && !self.current_product_without_registry(
+                        &current, s(&db["projects"][s(&current["project"])]))
                 {
                     return Ok(());
                 }

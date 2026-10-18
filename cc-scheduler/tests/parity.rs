@@ -1466,6 +1466,8 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    prepare_registry: Option<PathBuf>,
+    current_product: Option<(Value, String)>,
     action_path: Option<PathBuf>,
     cancel_edit: Option<(PathBuf, Value)>,
     repair_allowed: bool,
@@ -1505,6 +1507,8 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            prepare_registry: None,
+            current_product: None,
             action_path: None,
             cancel_edit: None,
             repair_allowed: false,
@@ -1544,6 +1548,10 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
+        self.current_product.as_ref().is_some_and(|(verified, registered)|
+            registered == root && ["id", "project", "spec"].iter().all(|k| verified[*k] == item[*k]))
+    }
     fn action_progress(&mut self, job: &Value, previous: &cc_job_policy::action_progress::Progress) -> Result<Option<cc_job_policy::action_progress::Progress>> {
         Ok(self.action_path.as_ref().and_then(|path| cc_job_policy::action_progress::scan(path, job, previous, self.clock).ok()))
     }
@@ -1702,6 +1710,7 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+        if let Some(path) = self.prepare_registry.take() { fs::write(path, "GoDD-AO")?; }
         if i["id"].as_u64() == self.worktree_failure && self.worktree_failure.is_some() {
             return Err(Error("OriginMissing"));
         }
@@ -1744,6 +1753,96 @@ fn missing_private_registry_only_dispatches_verified_explicit_pc_repair() {
                 usize::from(allowed && project != "other")
             );
         }
+    }
+}
+fn current_succession_fixture() -> Fixture {
+    let mut f = Fixture::new();
+    fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+    f.put(item(2839, "GoDD-AO", "todo", &[]));
+    f.e.backend.current_product = Some((f.get(2839), f.repo.to_str().unwrap().into()));
+    f.e.backend.repair_allowed = true;
+    f
+}
+
+#[test]
+fn current_succession_dispatch_keeps_receipt_stop_dependency_resource_and_owner_gates() {
+    for gate in ["pass", "unsupported", "id", "project", "spec", "root", "legacy",
+        "stop", "wait", "dependency", "resource", "owner", "deny", "unreadable",
+        "prepare_stop", "prepare_root", "prepare_deny"] {
+        let mut f = current_succession_fixture();
+        match gate {
+            "pass" => {},
+            "unsupported" => f.e.backend.current_product = None,
+            "id" | "legacy" => { f.e.edit(&json!(2839), |r| r["id"] = json!(1161)).unwrap(); },
+            "project" => { f.e.edit(&json!(2839), |r| r["project"] = json!("other")).unwrap(); },
+            "spec" => { f.e.edit(&json!(2839), |r| r["spec"] = json!("different.md")).unwrap(); },
+            "stop" => { f.e.edit(&json!(2839), |r| r["status"] = json!("block")).unwrap(); },
+            "wait" => { f.e.edit(&json!(2839), |r| r["status"] = json!("wait")).unwrap(); },
+            "dependency" => { f.e.edit(&json!(2839), |r| r["wait_on"] = json!([999])).unwrap(); },
+            "resource" => {
+                f.e.edit(&json!(2839), |r| r["needs"] = json!(["cargo"])).unwrap();
+                f.managed(9000, 1, "other", 0);
+                f.e.edit(&json!(9000), |r| r["needs"] = json!(["cargo"])).unwrap();
+            },
+            "owner" => {
+                let mut j = job("existing", 1, "running"); j["related_todo_ids"] = json!([2839]);
+                f.e.backend.records.push(j);
+            },
+            "deny" => fs::write(f.e.root.parent().unwrap().join("client-projects.txt"), "GoDD-AO").unwrap(),
+            "unreadable" => fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap(),
+            "root" => {
+                let mut db = f.e.todo().unwrap(); db["projects"]["GoDD-AO"] = json!(f.temp.path());
+                write_json(&f.e.todo_path, &db, 1).unwrap();
+            },
+            "prepare_stop" | "prepare_root" => {
+                let mut db = f.e.todo().unwrap();
+                if gate == "prepare_stop" { db["items"][0]["status"] = json!("block"); }
+                else { db["projects"]["GoDD-AO"] = json!(f.temp.path()); }
+                f.e.backend.prepare_edit = Some((f.e.todo_path.clone(), db));
+            },
+            "prepare_deny" => f.e.backend.prepare_registry = Some(f.e.root.parent().unwrap().join("client-projects.txt")),
+            _ => unreachable!(),
+        }
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), usize::from(gate == "pass"), "{gate}");
+        assert!(f.e.backend.notices.is_empty());
+    }
+}
+
+#[test]
+fn current_succession_repair_tick_reconciles_and_continues_without_unknown_replay() {
+    let mut f = current_succession_fixture();
+    f.put(item(1161, "GoDD-AO", "todo", &[]));
+    f.put(item(1476, "GoDD-AO", "block", &[]));
+    let legacy = (f.get(1161), f.get(1476));
+    let report = f.e.run("repair-step", false).unwrap();
+    assert_eq!(report["step_failures"], json!([]));
+    assert_eq!(f.get(2839)["status"], "doing");
+    assert_eq!(f.e.backend.launched.len(), 1);
+    f.e.backend.ps.insert(99, proc(99, 0, "codex.exe"));
+    f.e.backend.clock += 11.;
+    f.e.run("repair-step", false).unwrap();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    f.e.backend.ps.clear();
+    f.e.backend.clock += 11.;
+    f.e.run("repair-step", false).unwrap();
+    assert_eq!(f.get(2839)["status"], "done");
+    assert_eq!((f.get(1161), f.get(1476)), legacy);
+    assert!(f.e.backend.notices.is_empty());
+    assert_eq!(f.e.backend.reply_count, 0);
+}
+
+#[test]
+fn current_succession_dependency_release_still_requires_current_qualification() {
+    for allowed in [false, true] {
+        let mut f = current_succession_fixture();
+        f.put(item(999, "other", "done", &[]));
+        wait_row(&mut f, 2839, json!([999]));
+        if !allowed { f.e.backend.current_product = None; }
+        f.e.run("repair-step", false).unwrap();
+        assert_eq!(f.e.backend.launched.len(), usize::from(allowed));
+        assert_eq!(f.get(2839)["status"], if allowed { "doing" } else { "wait" });
     }
 }
 #[test]

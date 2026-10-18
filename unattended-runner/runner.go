@@ -121,6 +121,7 @@ type State struct {
 	ReportTurn               string                         `json:"report_turn,omitempty"`
 	ConversationNoticeTurn   bool                           `json:"conversation_notice_turn,omitempty"`
 	ConversationReportCursor string                         `json:"conversation_report_cursor,omitempty"`
+	ProgressLinkCursor       string                         `json:"progress_link_cursor,omitempty"`
 }
 type Health struct {
 	Mode                string                   `json:"mode"`
@@ -313,8 +314,13 @@ func (r *Runner) discover(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.loadProgressLinks(ctx, known)
+	// Fetch live discovery before potentially slow historical link validation.
+	// Only links verified in this pass can route an owner reply.
+	r.ProgressLinks = nil
 	r.discoverPages(ctx, known)
+	linkCtx, cancelLinks := context.WithTimeout(ctx, 4*time.Second)
+	r.loadProgressLinks(linkCtx, known)
+	cancelLinks()
 	// Explicit new receipt IDs remain discoverable after a thread is archived.
 	ids := make([]string, 0, len(known))
 	for id := range known {

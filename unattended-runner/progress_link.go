@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -84,7 +85,10 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 	for thread, link := range r.State.ProgressLinks {
 		combined[thread] = link
 	}
-	for _, link := range r.derivedRequestLinks(ctx) {
+	deriveCtx, cancelDerive := context.WithTimeout(ctx, time.Second)
+	derived := r.derivedRequestLinks(deriveCtx)
+	cancelDerive()
+	for _, link := range derived {
 		if _, exists := combined[link.Thread]; !exists {
 			combined[link.Thread] = link
 		}
@@ -98,7 +102,9 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 	}
 	used := make(map[string]bool)
 	changed := false
+	candidates := make([]ProgressLink, 0, len(file.Links))
 	for _, link := range file.Links {
+		r.BlockProgressThread(link.Thread)
 		_, threadOK := number(link.Thread)
 		_, messageOK := number(link.Message)
 		if !threadOK || !messageOK || link.Guild != r.State.Destination.Guild || link.Author != r.State.Destination.Bot || link.Todo == 0 || (link.Job == "" && link.Scope != productReportScope) || link.RequestID == "" || link.Created == "" || used[link.Thread] {
@@ -111,6 +117,20 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 			continue
 		}
 		used[link.Thread] = true
+		candidates = append(candidates, link)
+	}
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].Thread < candidates[j].Thread })
+	start := sort.Search(len(candidates), func(i int) bool { return candidates[i].Thread > r.State.ProgressLinkCursor })
+	for i := 0; i < min(4, len(candidates)); i++ {
+		if ctx.Err() != nil {
+			break
+		}
+		link := candidates[(start+i)%len(candidates)]
+		r.State.ProgressLinkCursor = link.Thread
+		// Persist attempted coverage even when this link exhausts its deadline.
+		if r.save() != nil {
+			break
+		}
 		previous, hadPrevious := r.State.ProgressLinks[link.Thread]
 		if hadPrevious {
 			link.PriorEdits = append([]EditVersion(nil), previous.PriorEdits...)
@@ -121,7 +141,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		}
 		verified, ok := r.verifyProgressLink(ctx, link)
 		if !ok {
-			if link.Scope != productReportScope {
+			if link.Scope != productReportScope && ctx.Err() == nil {
 				r.invalidateProgressLinkRegistry(known)
 			}
 			r.BlockProgressThread(link.Thread)
@@ -129,6 +149,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		}
 		r.State.ProgressLinks[link.Thread] = verified
 		r.ProgressLinks[link.Thread] = verified
+		delete(r.BlockedProgressThreads, link.Thread)
 		if !hadPrevious || !reflect.DeepEqual(previous, verified) {
 			changed = true
 		}

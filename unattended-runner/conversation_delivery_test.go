@@ -105,6 +105,10 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			if err != nil {
 				return "", err
 			}
+			row, err := r.todo(42)
+			if err != nil || len(args) != 6 || args[4] != "--expected-note-sha256" || bytesHash([]byte(row.Note)) != args[5] {
+				return "", errors.New("conversation_note_changed")
+			}
 			f.mutateTodo(t, func(row map[string]any) { row["note"] = string(b) })
 			return "", nil
 		case "question-answer":
@@ -800,6 +804,39 @@ func TestConversationDifferentBlockIsNotRewrittenIntoAQuestionWait(t *testing.T)
 		if command == "edit" || command == "question-answer" {
 			t.Fatal("unrelated block reached a mutation command")
 		}
+	}
+}
+
+func TestConversationConcurrentOrdinaryBlockCannotBeRestoredAsQuestionWait(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	backend := f.r.Run
+	competed := false
+	answers := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && args[0] == "edit" {
+			competed = true
+			// Match the canonical Block command: status/note/updated change,
+			// without any dedicated stopped flag for clear() to observe.
+			f.mutateTodo(t, func(row map[string]any) {
+				row["status"] = "block"
+				row["note"] = "データ到着まで停止"
+			})
+		}
+		if path == conversationTodo && args[0] == "question-answer" {
+			answers++
+		}
+		return backend(ctx, path, args...)
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	row, err := f.r.todo(42)
+	if !competed || err != nil || len(health.Errors) == 0 || row.Status != "block" || row.Note != "データ到着まで停止" || answers != 0 || len(row.QuestionAnswers) != 0 || !conversationWaitRecorded(row, f.q) {
+		t.Fatal("concurrent data hold was overwritten or released")
+	}
+	if req := f.r.State.Requests[reply.Message]; req == nil || req.Phase != "conversation_reply_saved" || req.Todo != 0 {
+		t.Fatal("concurrent hold was reported as delivered")
 	}
 }
 

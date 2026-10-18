@@ -119,7 +119,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		if err = writeText(noteFile, note); err != nil {
 			return err
 		}
-		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile); err != nil {
+		// Compare under the canonical ToDo lock: a concurrent ordinary block
+		// must not be overwritten with this snapshot's question-wait marker.
+		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note))); err != nil {
 			return errors.New("conversation normal task delivery deferred")
 		}
 		row, err = r.todo(q.Todo)

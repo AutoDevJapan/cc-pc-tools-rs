@@ -946,7 +946,8 @@ fn resume2172_combined_edit_failure_leaves_in_memory_snapshot_unchanged() {
             &Command::Edit {
                 id: 1,
                 note_file: Some(note.clone()),
-                spec: Some(spec.clone())
+                spec: Some(spec.clone()),
+                expected_note_sha256: None,
             },
             &t.paths()
         )
@@ -964,7 +965,8 @@ fn resume2172_combined_edit_failure_leaves_in_memory_snapshot_unchanged() {
             &Command::Edit {
                 id: 1,
                 note_file: Some(note),
-                spec: Some(spec)
+                spec: Some(spec),
+                expected_note_sha256: None,
             },
             &t.paths()
         )

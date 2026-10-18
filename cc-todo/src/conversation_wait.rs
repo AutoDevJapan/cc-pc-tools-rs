@@ -404,6 +404,9 @@ fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
     Ok(())
 }
 fn owner_clear(paths: &Paths, row: &Value) -> Result<()> {
+    owner_record(paths, row).map(|_| ())
+}
+fn owner_record(paths: &Paths, row: &Value) -> Result<Option<Value>> {
     // Only the exact current owner is relevant. Do not scan historical jobs or
     // use a stopped unrelated worker to reinterpret the selected task.
     let owner = row["scheduler"]["job"]
@@ -415,14 +418,14 @@ fn owner_clear(paths: &Paths, row: &Value) -> Result<()> {
                 .filter(|s| !s.is_empty())
         });
     let Some(owner) = owner else {
-        return Ok(());
+        return Ok(None);
     };
     if !crate::job_refs::valid_id(owner) {
         return fail("owner_record_invalid");
     }
     let path = paths.jobs.join(owner).join("job.json");
     match fs::symlink_metadata(&path) {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(_) => return fail("owner_record_unavailable"),
         Ok(_) => (),
     }
@@ -434,7 +437,7 @@ fn owner_clear(paths: &Paths, row: &Value) -> Result<()> {
     if cc_job_policy::cancellation::blocks_recovery(row, &job) {
         return fail("owner_stopped");
     }
-    Ok(())
+    Ok(Some(job))
 }
 fn block_note(question: &Value, sha: &str, previous: &Value) -> String {
     let marker = marker(question, sha);
@@ -685,7 +688,39 @@ pub fn answer(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<Val
     }
     let note = answered_note(row, &wait)?;
     clear(db, row, at)?;
-    owner_clear(paths, row)?;
+    let owner = owner_record(paths, row)?;
+    let retire = owner.as_ref().is_some_and(|job| {
+        matches!(
+            text(job, "status"),
+            "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
+        ) && row["scheduler"]["job"] == job["id"]
+            && (row["worker_receipt"]["job"].is_null() || row["worker_receipt"]["job"] == job["id"])
+            && (job["todo_id"].is_null()
+                || job["todo_id"] == id
+                || job["related_todo_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&row["id"])))
+    });
+    // A finished launch key is an immutable receipt for the old turn. Retire
+    // only that verified current owner, preserving workspace and job history.
+    // The replay branch above must never rotate a later worker or release a stop.
+    let resume_instruction = if retire {
+        if !row["scheduler"]["owner_instruction"].is_null()
+            && !row["scheduler"]["owner_instruction"].is_string()
+        {
+            return fail("owner_record_invalid");
+        }
+        let instruction = format!(
+            "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{note}",
+            text(&row["scheduler"], "owner_instruction")
+        );
+        if instruction.len() as u64 > MAX_BYTES {
+            return fail("file_too_large");
+        }
+        Some(instruction)
+    } else {
+        None
+    };
     let applied_at = at.to_rfc3339_opts(SecondsFormat::Micros, true);
     let receipt = json!({"domain":RECEIPT, "wait":wait, "answer":answer,
         "answer_file_sha256":sha, "applied_at":applied_at});
@@ -703,6 +738,12 @@ pub fn answer(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<Val
     }
     row["status"] = json!("todo");
     row["updated"] = json!(applied_at);
+    if let Some(instruction) = resume_instruction {
+        let job = owner.as_ref().unwrap()["id"].clone();
+        cc_scheduler::common::record_result(row, &job, "conversation_answer");
+        cc_scheduler::common::resume_without_worker(row);
+        row["scheduler"]["owner_instruction"] = json!(instruction);
+    }
     Ok(metadata(
         id,
         &wait["question"],

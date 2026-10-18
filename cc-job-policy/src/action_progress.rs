@@ -72,10 +72,11 @@ pub fn eligible(db: &Value, row: &Value, job: &Value) -> bool {
         && row["scheduler"]["console_request"]["read_only"] != true
         && !["review", "research"].contains(&row["subwork"]["kind"].as_str().unwrap_or(""))
         && row["scheduler"]["job"] == job["id"]
-        && (row["worker_receipt"].is_null()
+        // Normal automatic link updates scheduler.job and job.todo_id; its
+        // previous explicit Start receipt can remain until the worker starts.
+        && (job["todo_id"] == row["id"]
             || (row["worker_receipt"]["job"] == job["id"]
                 && row["worker_receipt"]["generation"] == row["resume_generation"]))
-        && (job["todo_id"] == row["id"] || row["worker_receipt"]["job"] == job["id"])
         && !crate::cancellation::owner_stopped(row, job)
         && !crate::product_retry::stopped(row)
         && row["owner_question_wait"].is_null()
@@ -100,6 +101,49 @@ pub fn eligible(db: &Value, row: &Value, job: &Value) -> bool {
         && job["pid_created"].as_u64().is_some()
         && job["codex_pid_created"].as_u64().is_some()
         && job["started_at"].is_string()
+}
+
+/// Live child jobs can be separate OS roots. Missing/cyclic ancestry is an
+/// unknown dependency, never evidence that this controller is idle.
+pub fn active_descendant(
+    root: &Value,
+    jobs: &[Value],
+    mut active: impl FnMut(&Value) -> bool,
+    mut parent_of: impl FnMut(&str) -> Option<String>,
+) -> bool {
+    let root_id = root["id"].as_str().unwrap_or("");
+    for child in jobs {
+        if child["queue_unreadable"] == true {
+            return true;
+        }
+        if child["id"] == root["id"] || !active(child) {
+            continue;
+        }
+        let mut parent = if child["parent_job_id"].is_null() {
+            String::new()
+        } else if let Some(id) = child["parent_job_id"].as_str() {
+            id.to_owned()
+        } else {
+            return true;
+        };
+        let mut seen = BTreeSet::new();
+        for _ in 0..64 {
+            if parent.is_empty() {
+                break;
+            }
+            if parent == root_id || !seen.insert(parent.clone()) {
+                return true;
+            }
+            let Some(next) = parent_of(&parent) else {
+                return true;
+            };
+            parent = next;
+        }
+        if !parent.is_empty() {
+            return true;
+        }
+    }
+    false
 }
 
 /// Metadata CAS is rechecked under the normal queue -> job -> ToDo locks.

@@ -1467,6 +1467,34 @@ impl Context {
                 )?;
                 return Ok(0);
             }
+            // The queue gate prevents a child registration racing this check.
+            let children = self.admission_snapshot();
+            if children.as_ref().is_none_or(|jobs| {
+                cc_job_policy::action_progress::active_descendant(
+                    &job,
+                    jobs,
+                    |child| {
+                        self.supervisor_alive(child)
+                            || self.is_ours_checked(child, "pid").unwrap_or(true)
+                            || self.is_ours_checked(child, "codex_pid").unwrap_or(true)
+                    },
+                    |id| {
+                        let parent = valid_job_id(id).then(|| self.try_load(id)).flatten()?;
+                        if parent["parent_job_id"].is_null() {
+                            Some(String::new())
+                        } else {
+                            parent["parent_job_id"].as_str().map(str::to_owned)
+                        }
+                    },
+                )
+            }) {
+                writeln!(
+                    out,
+                    "{}",
+                    json!({"outcome":"deferred","job":a.id,"reason":"child_active_or_unknown"})
+                )?;
+                return Ok(0);
+            }
             // Freeze only the verified idle controller tree. A running command,
             // MCP child or a newly spawned descendant makes this return None.
             paused = self.rt.pause_idle_agent(

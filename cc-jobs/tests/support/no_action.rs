@@ -38,6 +38,11 @@ fn setup() -> (Test, Value, Value, PathBuf) {
     let proof = json!({"ticket":action_progress::ticket(&db,&db["items"][0],&j),"progress":p});
     let path = t.ctx.root.join("proof.json");
     fs::write(&path, proof.to_string()).unwrap();
+    fs::write(
+        t.ctx.jobs.join(".queue-index.json"),
+        json!({"ids":["source"],"scan_complete":true,"scanned_at":t.rt.epoch()}).to_string(),
+    )
+    .unwrap();
     (t, db, j, path)
 }
 fn cancel(t: &Test, path: &Path) -> (Result<i32>, String, String) {
@@ -134,5 +139,31 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
         );
         assert!(t.rt.kills.lock().unwrap().is_empty(), "{case}");
         assert_eq!(t.ctx.load("source").unwrap(), j);
+    }
+}
+
+#[test]
+fn live_child_is_rechecked_under_queue_lock_before_any_pause() {
+    for nested in [false, true] {
+        let (t, _, _, path) = setup();
+        if nested {
+            t.put(job(json!({"id":"middle","status":"succeeded","parent_job_id":"source","pid":null,"codex_pid":null})));
+        }
+        t.put(job(json!({"id":"child","status":"running","parent_job_id":if nested{"middle"}else{"source"},"pid":43,"pid_created":33,"codex_pid":44,"codex_pid_created":44})));
+        t.rt.procs.lock().unwrap().extend([(43, 33), (44, 44)]);
+        fs::write(
+            t.ctx.jobs.join(".queue-index.json"),
+            json!({"ids":["source","child"],"scan_complete":true,"scanned_at":t.rt.epoch()})
+                .to_string(),
+        )
+        .unwrap();
+        let (r, out, err) = cancel(&t, &path);
+        assert_eq!(r.unwrap(), 0, "{err}");
+        assert_eq!(
+            serde_json::from_str::<Value>(&out).unwrap()["reason"],
+            "child_active_or_unknown"
+        );
+        assert!(t.rt.kills.lock().unwrap().is_empty());
+        assert_eq!(t.rt.pause_calls.load(Ordering::Relaxed), 0);
     }
 }

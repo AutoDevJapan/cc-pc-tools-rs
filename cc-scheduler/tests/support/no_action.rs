@@ -307,3 +307,58 @@ fn new_arrivals_cannot_starve_the_next_scan_of_an_existing_worker() {
     assert_eq!(f.e.state["no_action_cycle_max"], 103);
     assert!(f.e.backend.cancelled.is_empty());
 }
+
+#[test]
+fn separate_live_child_job_protects_parent_until_the_child_really_finishes() {
+    let mut f = setup();
+    pass(&mut f);
+    f.e.backend.clock += 1801.;
+    f.e.backend.records.push(json!({"id":"child","parent_job_id":"j1","status":"running","pid":9,"pid_created":proc(9,0,"codex.exe")["created"]}));
+    f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
+    pass(&mut f);
+    assert!(f.e.backend.cancelled.is_empty());
+    f.e.backend.records[1]["status"] = json!("succeeded");
+    f.e.backend.ps.remove(&9);
+    pass(&mut f);
+    assert!(f.e.backend.cancelled.is_empty());
+    f.e.backend.clock += 1801.;
+    pass(&mut f);
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+}
+
+#[test]
+fn automatic_successor_is_recovered_again_without_requiring_a_new_agent_start_command() {
+    let mut f = setup();
+    f.e.edit(&json!(1), |r| {
+        r["resume_generation"] = json!(7);
+        r["worker_receipt"] = json!({"job":"j1","generation":7});
+    })
+    .unwrap();
+    pass(&mut f);
+    f.e.backend.clock += 1801.;
+    pass(&mut f);
+    f.e.backend.ps.clear();
+    f.e.backend.clock = n(&f.get(1)["scheduler"]["not_before"]) + 1.;
+    f.dispatch();
+    assert_eq!(f.get(1)["worker_receipt"]["job"], "j1");
+    let p = proc(99, 0, "codex.exe");
+    let c = proc(100, 99, "codex.exe");
+    f.e.backend.ps.insert(99, p.clone());
+    f.e.backend.ps.insert(100, c.clone());
+    let j = f.e.backend.records.last_mut().unwrap();
+    j["pid_created"] = p["created"].clone();
+    j["codex_pid"] = json!(100);
+    j["codex_pid_created"] = c["created"].clone();
+    j["task_type"] = json!("ci_fix");
+    j["sandbox"] = json!("danger-full-access");
+    j["started_at"] = json!("2026-10-19T00:00:00Z");
+    pass(&mut f);
+    f.e.backend.clock += 1801.;
+    pass(&mut f);
+    assert_eq!(f.e.backend.cancelled.len(), 2);
+    assert_eq!(f.get(1)["scheduler"]["retry_count"], 2);
+    assert!(
+        n(&f.get(1)["scheduler"]["not_before"])
+            >= f.e.backend.clock + cc_scheduler::recovery_failure::SLOW_RETRY_S
+    );
+}

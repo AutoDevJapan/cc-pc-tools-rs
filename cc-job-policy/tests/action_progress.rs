@@ -211,3 +211,60 @@ fn stop_wait_review_and_new_worker_are_not_candidates() {
         }
     }
 }
+
+#[test]
+fn linked_primary_job_remains_current_after_automatic_link_retires_a_start_receipt() {
+    let mut j = job();
+    j["status"] = json!("running");
+    j["task_type"] = json!("ci_fix");
+    j["sandbox"] = json!("danger-full-access");
+    j["todo_id"] = json!(1);
+    let mut row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":"saved.md","resume_generation":2,
+        "worker_receipt":{"job":"previous","generation":1},"scheduler":{"job":"source"}});
+    let db = json!({"items":[row]});
+    assert!(eligible(&db, &row, &j));
+    j["todo_id"] = Value::Null;
+    row["worker_receipt"] = json!({"job":"source","generation":1});
+    assert!(!eligible(&db, &row, &j));
+    row["worker_receipt"]["generation"] = json!(2);
+    assert!(eligible(&db, &row, &j));
+}
+
+#[test]
+fn active_job_descendants_include_separate_roots_terminal_ancestors_and_unknowns() {
+    let root = json!({"id":"root"});
+    for (case, expected) in [
+        ("direct", true),
+        ("nested", true),
+        ("sibling", false),
+        ("finished", false),
+        ("unknown", true),
+        ("cycle", true),
+    ] {
+        let parent = match case {
+            "direct" | "finished" => "root",
+            "nested" => "middle",
+            "unknown" => "absent",
+            "cycle" => "cycle",
+            _ => "elsewhere",
+        };
+        let jobs = vec![
+            root.clone(),
+            json!({"id":"child","parent_job_id":parent,"status":if case=="finished"{"succeeded"}else{"running"}}),
+            json!({"id":"middle","parent_job_id":"root","status":"succeeded"}),
+            json!({"id":"elsewhere","status":"succeeded"}),
+            json!({"id":"cycle","parent_job_id":"cycle"}),
+        ];
+        let result = active_descendant(
+            &root,
+            &jobs,
+            |j| j["status"] == "running",
+            |id| {
+                jobs.iter()
+                    .find(|j| j["id"] == id)
+                    .map(|j| j["parent_job_id"].as_str().unwrap_or("").into())
+            },
+        );
+        assert_eq!(result, expected, "{case}");
+    }
+}

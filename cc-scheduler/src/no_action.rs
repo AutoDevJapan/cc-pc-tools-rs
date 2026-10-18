@@ -49,6 +49,7 @@ impl<B: Backend> Scheduler<B> {
                 .is_some_and(|id| id > cursor && id <= cycle_max)
         }) {
             cursor = 0;
+            self.state["no_action_cursor"] = json!(0);
             cycle_max = rows.last().and_then(|r| r["id"].as_u64()).unwrap_or(0);
         }
         // Freeze this pass's upper bound. New arrivals cannot postpone the wrap
@@ -68,9 +69,30 @@ impl<B: Backend> Scheduler<B> {
                 break;
             }
             self.state["no_action_cursor"] = row["id"].clone();
-            let Some(job) = jobs.iter_mut().find(|j| j["id"] == row["scheduler"]["job"]) else {
+            let Some(index) = jobs.iter().position(|j| j["id"] == row["scheduler"]["job"]) else {
                 continue;
             };
+            let parents: std::collections::BTreeMap<_, _> = jobs
+                .iter()
+                .filter_map(|j| j["id"].as_str().map(|id| (id, j)))
+                .collect();
+            if action_progress::active_descendant(
+                &jobs[index],
+                jobs,
+                |j| alive(j, ps, self.backend.clock()),
+                |id| {
+                    let job = parents.get(id)?;
+                    if job["parent_job_id"].is_null() {
+                        Some(String::new())
+                    } else {
+                        job["parent_job_id"].as_str().map(str::to_owned)
+                    }
+                },
+            ) {
+                remove(&mut self.state["no_action"], s(&jobs[index]["id"]));
+                continue;
+            }
+            let job = &mut jobs[index];
             if n(&row["scheduler"]["no_action_retry"]["not_before"]) > self.backend.clock() {
                 continue;
             }

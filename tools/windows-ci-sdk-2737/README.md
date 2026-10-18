@@ -6,7 +6,11 @@ task. The host has provisioned fresh Hyper-V guests and verified recovery of
 failed attempts. Ordinary Windows Server Setup is running in the current
 dedicated guests. All five preparation operations and six final version checks
 passed in the real LocalSystem service on 2026-10-18. VM recovery and final
-template digest are recorded separately in the task evidence.
+template digest are recorded in the [retained SDK asset evidence](evidence/todo-2783-sdk-asset-20261018.json).
+The VM was gracefully shut down and removed, assigned memory is zero, and its
+21,277,704,192-byte VHDX is detached. SHA-256:
+`e19d76f807c012ebeff2d5d161df3540d851a447aceb9ccbf7471eb877d2d816`.
+The asset remains in its safe-delete-owned root; it is not a cleanup candidate.
 
 The LocalSystem service accepts only `status`, `prepare-sdk`, and
 `verify-versions`, with SDK IDs from the fixed set in `catalog.go`. Requests

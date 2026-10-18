@@ -308,7 +308,7 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		commands = [][]string{{filepath.Join(o.root, "git", "cmd", "git.exe"), "--version"}}
 		expected = []string{"2.56.0.windows.2"}
 	case PowerShell7:
-		commands = [][]string{{filepath.Join(o.root, "powershell", "pwsh.exe"), "--version"}}
+		commands = [][]string{{filepath.Join(o.root, "powershell", "7", "pwsh.exe"), "--version"}}
 		expected = []string{"7.6.6"}
 	case RustToolchain:
 		bin := filepath.Join(o.root, "rust-1.97.1", "bin")
@@ -387,7 +387,7 @@ func measuredVersion(output []byte, prefix string) string {
 func (o *windowsOperations) environment() []string {
 	env := []string{
 		"SystemRoot=" + os.Getenv("SystemRoot"),
-		"PATH=" + os.Getenv("SystemRoot") + `\System32;` + filepath.Join(o.root, "git", "cmd") + ";" + filepath.Join(o.root, "git", "usr", "bin") + ";" + filepath.Join(o.root, "git", "bin") + ";" + filepath.Join(o.root, "powershell"),
+		"PATH=" + os.Getenv("SystemRoot") + `\System32;` + filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0") + ";" + filepath.Join(o.root, "git", "cmd") + ";" + filepath.Join(o.root, "git", "usr", "bin") + ";" + filepath.Join(o.root, "git", "bin") + ";" + filepath.Join(o.root, "powershell", "7"),
 		"SystemDrive=" + filepath.VolumeName(os.Getenv("SystemRoot")), "ComSpec=" + filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe"),
 		"USERPROFILE=" + filepath.Join(o.root, "service-profile"), "HOME=" + filepath.Join(o.root, "service-profile"), "APPDATA=" + filepath.Join(o.root, "service-profile", "AppData", "Roaming"), "LOCALAPPDATA=" + filepath.Join(o.root, "service-profile", "AppData", "Local"),
 		"TEMP=" + filepath.Join(o.root, "staging"), "TMP=" + filepath.Join(o.root, "staging"),
@@ -404,13 +404,24 @@ func (o *windowsOperations) environment() []string {
 
 func (o *windowsOperations) vsDevEnvironment(command string) ([]string, error) {
 	vsDev := filepath.Join(o.root, "vs-build-tools", "Common7", "Tools", "VsDevCmd.bat")
-	joined := `call "` + vsDev + `" -arch=x64 -host_arch=x64 && ` + command
+	joined := `call "` + vsDev + `" -arch=x64 -host_arch=x64 -vcvars_ver=14.50 -winsdk=10.0.26100.0 && ` + command
 	return []string{"/d", "/s", "/c", joined}, nil
 }
 
 func runFixed(executable string, args, env []string) error {
 	_, err := runCapture(executable, args, env)
+	var exit *fixedProcessExit
+	if errors.As(err, &exit) && exit.Code == 3010 && (strings.EqualFold(filepath.Base(executable), "msiexec.exe") || strings.EqualFold(filepath.Base(executable), "vs_BuildTools.exe")) {
+		appendPrivateRunLog("sdk-installer-reboot-requested", []byte(filepath.Base(executable)), nil)
+		return nil
+	}
 	return err
+}
+
+type fixedProcessExit struct{ Code int }
+
+func (e *fixedProcessExit) Error() string {
+	return fmt.Sprintf("fixed SDK process failed (exit=%d)", e.Code)
 }
 
 func runCapture(executable string, args, env []string) ([]byte, error) {
@@ -430,7 +441,7 @@ func runCapture(executable string, args, env []string) ([]byte, error) {
 	if err != nil {
 		var exit *exec.ExitError
 		if errors.As(err, &exit) {
-			return nil, fmt.Errorf("fixed SDK process failed (exit=%d)", exit.ExitCode())
+			return nil, &fixedProcessExit{Code: exit.ExitCode()}
 		}
 		var errno syscall.Errno
 		if errors.As(err, &errno) {

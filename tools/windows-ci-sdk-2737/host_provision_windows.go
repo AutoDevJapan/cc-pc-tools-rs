@@ -535,6 +535,34 @@ func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryR
 	if err != nil {
 		return RecoveryReceipt{}, err
 	}
+	if data, readErr := os.ReadFile(filepath.Join(root.Path, "vm-recovery.private.json")); readErr == nil {
+		receipt, err := decodeRecoveryReceipt(data, vm, instance)
+		if err != nil {
+			return RecoveryReceipt{}, err
+		}
+		if !receipt.SDKVerified || receipt.ShutdownMode != "guest-integration-shutdown" {
+			return RecoveryReceipt{}, errors.New("existing SDK recovery was not a verified guest shutdown")
+		}
+		check := `$ErrorActionPreference='Stop'
+Import-Module Hyper-V
+$root='` + strings.ReplaceAll(root.Path, "'", "''") + `'
+$r=Get-Content -Raw -LiteralPath (Join-Path $root 'vm-recovery.private.json')|ConvertFrom-Json
+$v=Get-VM -Id ([guid]$r.vm_id) -ErrorAction SilentlyContinue
+if($v){throw 'RECOVERED_VM_STILL_PRESENT'}
+$d=Get-VHD -Path $r.vhd -ErrorAction Stop
+if($d.Attached -or (Get-Item -LiteralPath $r.vhd).Length -ne $r.vhd_size){throw 'RECOVERED_IMAGE_STATE_CHANGED'}
+`
+		path := filepath.Join(root.Path, "verify-recovered-"+instance+".ps1")
+		if err := writeOwnedFile(path, []byte(check)); err != nil {
+			return RecoveryReceipt{}, err
+		}
+		if err := runAdminBrokerScript(path, 120, root.Path); err != nil {
+			return RecoveryReceipt{}, err
+		}
+		return receipt, nil
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		return RecoveryReceipt{}, errors.New("existing recovery receipt unavailable")
+	}
 	script := filepath.Join(root.Path, "remove-vm-graceful-"+instance+".ps1")
 	adminScript, err := renderAdminPowerShellScript(removeVMKeepVHDPS, root.Path)
 	if err != nil {
@@ -550,11 +578,19 @@ func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryR
 	if err != nil {
 		return RecoveryReceipt{}, errors.New("template recovery receipt unavailable")
 	}
+	return decodeRecoveryReceipt(data, vm, instance)
+}
+
+func decodeRecoveryReceipt(data []byte, vm VMReceipt, instance string) (RecoveryReceipt, error) {
 	data = bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf})
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var receipt RecoveryReceipt
-	if dec.Decode(&receipt) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || receipt.Instance != instance || receipt.VMID != vm.VMID || receipt.VMState != "Off" || receipt.MemoryAssigned != 0 || !receipt.VMRemoved || filepath.Clean(receipt.VHD) != filepath.Clean(vm.VHD) || !receipt.VHDDetached || receipt.VHDSize <= 0 || (receipt.SDKVerified && !validDigest(receipt.VHDSHA256)) || (!receipt.SDKVerified && receipt.VHDSHA256 != "") {
+	if dec.Decode(&receipt) != nil || dec.Decode(new(json.RawMessage)) != io.EOF {
+		return RecoveryReceipt{}, errors.New("template recovery JSON rejected")
+	}
+	receipt.VHDSHA256 = strings.ToLower(receipt.VHDSHA256)
+	if receipt.Instance != instance || receipt.VMID != vm.VMID || receipt.VMState != "Off" || receipt.MemoryAssigned != 0 || !receipt.VMRemoved || filepath.Clean(receipt.VHD) != filepath.Clean(vm.VHD) || !receipt.VHDDetached || receipt.VHDSize <= 0 || (receipt.SDKVerified && !validDigest(receipt.VHDSHA256)) || (!receipt.SDKVerified && receipt.VHDSHA256 != "") {
 		return RecoveryReceipt{}, errors.New("template recovery receipt rejected")
 	}
 	return receipt, nil

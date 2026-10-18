@@ -105,6 +105,14 @@ func FinalizeVerifiedGuestCLI(worktree string) (TaskEvidence, error) {
 	if recovery.ShutdownMode != "guest-integration-shutdown" {
 		return TaskEvidence{}, errors.New("SDK template requires a measured guest OS shutdown")
 	}
+	imageMeasure, err := hashAndSize(vm.VHD)
+	if err != nil {
+		return TaskEvidence{}, err
+	}
+	imageSize, imageHash, err := splitSizeHash(imageMeasure)
+	if err != nil || imageSize != recovery.VHDSize || !strings.EqualFold(imageHash, recovery.VHDSHA256) {
+		return TaskEvidence{}, errors.New("recovered SDK image hash disagrees with original recovery")
+	}
 	evidence := TaskEvidence{Schema: "todo-2783-windows-sdk-guest-v1", SourceCommit: revision, OwnedRootID: root.ID, OwnedRootPath: root.Path, Instance: prep.Instance, ISOPath: iso, ISOSize: isoSize, ISOSHA256: isoHash, HelperPath: helper, HelperSize: helperSize, HelperSHA256: helperHash, SeedISOPath: vm.SeedISO, SeedISOSize: seedSize, SeedISOSHA256: seedHash, GuestIPv4: prep.GuestIPv4, ServerCertSHA256: prep.ServerSHA256, VersionChecks: prep.Results, VMRecovery: recovery, TemplatePath: vm.VHD, TemplateSize: recovery.VHDSize, TemplateSHA256: recovery.VHDSHA256, ObservedAt: time.Now().UTC().Format(time.RFC3339)}
 	if err := writeEvidence(root.Path, evidence); err != nil {
 		return TaskEvidence{}, err

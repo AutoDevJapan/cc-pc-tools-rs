@@ -28,6 +28,6 @@ $vhd = Get-VHD -Path $receipt.vhd -ErrorAction Stop
 if ($vhd.Attached) { throw 'OWNED_TEMPLATE_VHD_STILL_ATTACHED' }
 $template = Get-Item -LiteralPath $receipt.vhd
 $hash=''
-if($verifiedSDK){$hash=(Get-FileHash -LiteralPath $receipt.vhd -Algorithm SHA256).Hash}
+if($verifiedSDK){$hash=(Get-FileHash -LiteralPath $receipt.vhd -Algorithm SHA256).Hash.ToLowerInvariant()}
 $result = @{instance=$receipt.instance;vm_id=$id.ToString();vm_state='Off';memory_assigned=0;vm_removed=$true;shutdown_mode=$mode;sdk_verified=$verifiedSDK;vhd=$receipt.vhd;vhd_detached=$true;vhd_size=$template.Length;vhd_sha256=$hash}
 $result | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $root 'vm-recovery.private.json') -Encoding utf8

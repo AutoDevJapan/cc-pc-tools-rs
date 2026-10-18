@@ -33,6 +33,8 @@ impl<B: Backend> Scheduler<B> {
             })
             .collect();
         rows.sort_by_key(|r| r["id"].as_u64().unwrap_or(0));
+        self.report["no_action_scan"] =
+            json!({"eligible":rows.len(),"observed":0,"cancelled":0,"elapsed_ms":0});
         if rows.is_empty() {
             return Ok(());
         }
@@ -73,6 +75,8 @@ impl<B: Backend> Scheduler<B> {
                 self.state["no_action"] = json!({});
             }
             self.state["no_action"][s(&job["id"])] = serde_json::to_value(&progress)?;
+            self.report["no_action_scan"]["observed"] =
+                add_count(&self.report["no_action_scan"]["observed"], 1);
             if !progress.stalled(self.backend.clock()) {
                 continue;
             }
@@ -123,6 +127,8 @@ impl<B: Backend> Scheduler<B> {
                     }
                 };
             if stopped {
+                self.report["no_action_scan"]["cancelled"] =
+                    add_count(&self.report["no_action_scan"]["cancelled"], 1);
                 self.requeue_if(&reserved["id"], &job["id"], "no_action", Some(&reserved))?;
                 push(
                     &mut self.report["no_action_recovered"],
@@ -131,6 +137,8 @@ impl<B: Backend> Scheduler<B> {
             }
             break;
         }
+        self.report["no_action_scan"]["elapsed_ms"] =
+            json!(started.elapsed().as_millis().min(u64::MAX as u128) as u64);
         // Completed workers have no active cursor; avoid unbounded state growth.
         if let Some(states) = self.state["no_action"].as_object_mut() {
             states.retain(|id, _| jobs.iter().any(|j| s(&j["id"]) == id && live(j)));

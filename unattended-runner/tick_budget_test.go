@@ -78,6 +78,34 @@ func TestTickCallerCancellationDoesNotStartScheduler(t *testing.T) {
 	}
 }
 
+func TestTickAllowsSchedulerRepairBeyondTwentySecondsWithinTheCallerDeadline(t *testing.T) {
+	r, _ := fixture(t)
+	server(t, r, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+	parent, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+	parentDeadline, _ := parent.Deadline()
+	scheduled := 0
+	r.Run = func(ctx context.Context, _ string, args ...string) (string, error) {
+		if len(args) == 0 || args[0] != "repair-step" {
+			return "", nil
+		}
+		scheduled++
+		deadline, bounded := ctx.Deadline()
+		// The measured native repair exceeds the previous twenty-second cap.
+		// Check available time directly instead of sleeping through that period.
+		if !bounded || deadline.After(parentDeadline) || time.Until(deadline) < 22*time.Second {
+			return "", context.DeadlineExceeded
+		}
+		return `{"repair_mode":true,"error":null}`, nil
+	}
+	h := r.tick(parent)
+	if scheduled != 1 || !h.Scheduler {
+		t.Fatal("a bounded repair still cannot finish its measured work", scheduled, h)
+	}
+}
+
 func TestTickSchedulesBeforeIndependentProductReporting(t *testing.T) {
 	f := progressTestFixture(t)
 	f.r.State.ReportTurn = "products"

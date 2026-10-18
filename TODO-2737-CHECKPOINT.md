@@ -602,3 +602,30 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - seed.iso完成後のvm-create scriptを確認し、同自分の工具containerのID/name/image/label/bind/device/privilegedを照合して直ちにstop。Running=false/PID0を確認し、必要SDK layerは保持。
   実行中のVM/公式jobはhostが単一所有し、終了/取消時の通常回収receiptを待つ。原SDK/失敗VHD/他担当/guard/ownerwork/登録manifestは変更しない。
   再開にはownedroot c91のoperations.ps1とsource/route/rerun/VM各receipt、runtime bcc、SDK root9389、同run39147155349 attempt2を使う。POST再送や新runの複製はしない。
+### attempt2の実結果・回収・次の有限調査
+
+- 同run39147155349 attempt2のverify job117769414885はrunner28に実割当され、source-readyとstart hookの物理照合が成功した。
+  原repo1154066087/head085b5b007cab4ebd57d6690faf6df95bb40453ef/tree25ae0b09830d1fbeef079e8ff6bcc033928bc8d8/1904blob/physical=trueを再確認した。
+  **step10 Set up pnpmはsuccess**となり、Node24 PATH修正を原公式検査で確認できた。ただしverify全体はfailure。
+- 新しい失敗はstep13 Set up Rust toolchainとstep68 Complete runner。hook-complete receiptは未受領。
+  固定公開Rust actionはdtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067、入力版1.97.1。
+  公開actionのphaseとの限定照合ではcachekey取得まで進んだが、直接の根因は未確定。原source/原log本文・位置をstdout/modelへ出していない。
+  hostのlive job hook proof rejected/gated child drain unverifiedは実exit1として保存。deadline修正やpnpm成功をcomplete proof成功へ読み替えない。
+- 新VM cf1d9282-51fb-401c-8fac-71085d5721f4は通常cleanupでOff/memory0/除去、同runner28は登録不在、normal CI durable intentも不在を確認した。
+  その後の同targetに対するcanonical gate normal/EOF取消しfixtureは実exit0、各jobs8/testthreads8、target lock保持→解放/child_drained=true。
+  原Rust Cargoはcompile0。初回のhost失敗を消さず、後続のゲート回収検査結果と区別して残す。
+- 残るalways gateがqueuedだったため同runに通常cancelを1回送信し、まだqueuedだったため同owned runだけforce-cancel。最終attempt2 completed/cancelledを確認した。
+  job117769414885 failure、117770189009 cancelled、117770189825/117770189985 skipped。Windowsは未実行。
+  自分のnonce変数だけ、exact value照合→DELETE→bounded inventory不在の正規経路で回収した。原branchは085のまま、resetしていない。
+  終了後APIでも実owner/id/private/admin/nonfork/同repo/openPR/head/ref/tree/workflowの固定を再照合した。
+- 配布済みcanonical gh_gate api --allow-escape-sequencesから同jobの原logを非公開取得、実exit0/35644bytes/SHA256BC038F2F00692B388E3099826755F43001AEFD60579CB71E25D89EF8D4F61CD1。
+  原attempt1の失敗とログhashは保持。新たなbudget変更/手動success status/原sourceやworkflowの書換えはない。
+- 88fileの原API/VM/登録/cleanup/実失敗/private log/後続gate/調査specはD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-043145-attempt2へ全copy/hash一致で保存。
+  evidence-files.private.json SHA2566DC863768E2BCCFF47ACD4E191807DBF735865A59762FFE54E980426F16FD897。
+  原VDH/seed/runtimeは複製せず、ownedroot c91/旧失敗982/SDK9389/runtime bcc/Windows SDKと未回収資源を保持する。今回の自分のhostプロセスは不在、工具containerは停止/PID0。
+- 次の有限独立調査2869は公開SDK Rust proxy/指定版verbose/cachekeyだけ。公開RustupとSDK manifest2fileのみ参照可で、原product/log/VM/runner/親container/親source変更は禁止。
+  別の有限check2870はLinux終了hook/context/物理source検査と公開stock runner/checkout lifecycleだけ。固定58a9579の局所codeを読み、原因または1回で区別できる最小計測案を返す。
+  両方とも通常add --spec、保存spec全文一致を確認。直接子Codex/実装複製/原sourceコピーなし。登録・受付を修正完了とは呼ばない。
+  次は両実結果を受領し、根因修正/必要検査/追加差分レビュー後、同明示085/ref/tree/workflowで次の実公式受入を行う。
+  同sourceで既に有効な結果は再利用し、原13工程/profile/直列/timeout/Docker parityと必要gateを維持する。原merge/Prdは親2641。
+  待ち先は2869/2870だけとし、完了済み2866/SDKを再waitしない。現在jobと実HEADのscheduler checkpointを終了前に保存する。

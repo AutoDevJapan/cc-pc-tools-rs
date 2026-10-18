@@ -12,8 +12,8 @@
 
 ## Remaining
 
-- Commit/push the implementation checkpoint on this branch.
-- Obtain independent read-only model review; address any Must findings.
+- Implementation checkpoint commit `0d48ef511829cf3100e490dc3820c9554d106ca1` is pushed. Review instructions are captured in a separate read-only subwork.
+- Independent read-only review ToDo 2852 is registered for fixed source commit `0d48ef511829cf3100e490dc3820c9554d106ca1`; response not yet received. Address any Must findings.
 - Reconcile with any intervening main update (including PR222), run relevant CI, merge only after review and CI pass, then update the official guard from the new source after checking installation source/hash and concurrent changes.
 - Verify official CLI admission of precisely ToDo 2850 and denial of altered/sibling scopes. Only then can scheduler creation execute the 13a task; wait for assigned Cargo capacity and verify actual Issue 569 work/result. Registration is not execution.
 - After the higher-priority 13a task is genuinely progressing, continue the remaining explicitly named products in owner priority order, one bounded intake at a time. Preserve existing active work and exact old owner decisions. Don't mark this parent complete while a product or natural scheduler continuation is unverified.
@@ -21,4 +21,5 @@
 ## Limits
 
 No original 192-item registry, original manifest, lost question, legacy task, or product completion has been restored. No GPU, Civ6, Cargo build, API key, new expense, browser session, or domain provider was used. No product source repository was changed.
+
 

@@ -123,6 +123,14 @@ fn reference(value: &str) -> bool {
     v.is_empty() || v == MARK || REF.is_match(v)
 }
 
+// actions/checkout's input is a boolean switch, not credential material.
+// Keep the exception value-sensitive: other values and credential-named
+// fields (including an outer credentials object) retain normal redaction.
+fn checkout_boolean(name: &str, value: &str) -> bool {
+    name.eq_ignore_ascii_case("persist-credentials")
+        && (value.eq_ignore_ascii_case("true") || value.eq_ignore_ascii_case("false"))
+}
+
 fn has_digit(v: &str) -> bool {
     v.bytes().any(|b| b.is_ascii_digit())
 }
@@ -170,7 +178,7 @@ fn assignment(c: &Captures) -> String {
             r"^(?:[A-Za-z_][A-Za-z0-9_.:]*\(\)|os\.environ|(?:process\.|import\.meta\.)?env\.[A-Za-z_][A-Za-z0-9_]*|std::env::[A-Za-z_][A-Za-z0-9_:]*)$",
         )
     });
-    if reference(v) || (c.get(6).is_some() && EXPR.is_match(v)) {
+    if checkout_boolean(&c[1], v) || reference(v) || (c.get(6).is_some() && EXPR.is_match(v)) {
         return whole.as_str().to_string();
     }
     let (start, end) = (value.start() - whole.start(), value.end() - whole.start());
@@ -314,6 +322,12 @@ impl Redactor {
             Value::Array(items) => items.iter_mut().for_each(|v| self.json(v)),
             Value::Object(map) => {
                 for (key, v) in map.iter_mut() {
+                    if key.eq_ignore_ascii_case("persist-credentials")
+                        && (v.is_boolean() || v.as_str().is_some_and(|s| checkout_boolean(key, s)))
+                    {
+                        self.json(v);
+                        continue;
+                    }
                     if SECRET_KEY.is_match(key) {
                         if !matches!(v, Value::String(s) if reference(s)) {
                             *v = MARK.into();
@@ -340,7 +354,7 @@ impl Redactor {
     /// The value of a named field (`licenseKey=...`, `variables[token]=...`).
     /// A credential name masks the whole value, whatever its format.
     pub fn field<'a>(&self, name: &str, value: &'a str) -> Cow<'a, str> {
-        if is_secret_field(name) && !reference(value) {
+        if is_secret_field(name) && !reference(value) && !checkout_boolean(name, value) {
             Cow::Borrowed(MARK)
         } else {
             self.text(value)

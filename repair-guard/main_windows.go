@@ -198,6 +198,9 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
+	if runtimeExecutable(absolute, target, publicationGateRuntime) && sourceVerified(base) {
+		return true
+	}
 	for _, root := range roots {
 		resolved, e := physical(root)
 		if e == nil && within(resolved, target) && sourceVerified(resolved) {

@@ -561,3 +561,29 @@ fn refusal_and_io_errors_never_echo_caller_values() {
     );
     assert!(!String::from_utf8_lossy(&out.stderr).contains(&o));
 }
+
+#[test]
+fn git_tree_workflow_boolean_reaches_gh_without_byte_changes() {
+    let e = Env::new("checkout-boolean");
+    let workflow = "steps:\n  - uses: actions/checkout@v4\n    with:\n      persist-credentials: false\n      fetch-depth: 1\n";
+    let request = serde_json::json!({
+        "tree": [{"path": ".github/workflows/ci.yml", "mode": "100644", "type": "blob", "content": workflow}],
+        "serviceSecret": "opaque-private-value",
+    });
+    let record = e.ok(
+        &[
+            "api",
+            "repos/owner/repo/git/trees",
+            "--method",
+            "POST",
+            "--input",
+            "-",
+        ],
+        request.to_string().as_bytes(),
+    );
+    let (_, bytes) = file_for(&record, "--input=");
+    let sent: Value = serde_json::from_str(bytes).unwrap();
+    assert_eq!(sent["tree"], request["tree"]);
+    assert_eq!(sent["tree"][0]["content"], workflow);
+    assert_eq!(sent["serviceSecret"], MARK);
+}

@@ -321,6 +321,13 @@ func (r *Runner) discover(ctx context.Context) error {
 	linkCtx, cancelLinks := context.WithTimeout(ctx, 4*time.Second)
 	r.loadProgressLinks(linkCtx, known)
 	cancelLinks()
+	// A verified explicit link remains a discovery candidate even when its
+	// sender receipt predates this intake's cutover or the prior pass crashed.
+	for thread := range r.ProgressLinks {
+		if !r.BlockedProgressThreads[thread] {
+			known[thread] = true
+		}
+	}
 	// Explicit new receipt IDs remain discoverable after a thread is archived.
 	ids := make([]string, 0, len(known))
 	for id := range known {

@@ -101,6 +101,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		file.Links = append(file.Links, link)
 	}
 	used := make(map[string]bool)
+	structurallyBlocked := make(map[string]bool)
 	changed := false
 	candidates := make([]ProgressLink, 0, len(file.Links))
 	for _, link := range file.Links {
@@ -112,6 +113,7 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 				r.invalidateProgressLinkRegistry(known)
 			}
 			if threadOK {
+				structurallyBlocked[link.Thread] = true
 				r.BlockProgressThread(link.Thread)
 			}
 			continue
@@ -131,6 +133,9 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 		if r.save() != nil {
 			break
 		}
+		if structurallyBlocked[link.Thread] || (r.ProgressLinkRegistryInvalid && known[link.Thread]) {
+			continue
+		}
 		previous, hadPrevious := r.State.ProgressLinks[link.Thread]
 		if hadPrevious {
 			link.PriorEdits = append([]EditVersion(nil), previous.PriorEdits...)
@@ -148,6 +153,9 @@ func (r *Runner) loadProgressLinks(ctx context.Context, known map[string]bool) {
 			continue
 		}
 		r.State.ProgressLinks[link.Thread] = verified
+		if structurallyBlocked[link.Thread] || (r.ProgressLinkRegistryInvalid && known[link.Thread]) {
+			continue
+		}
 		r.ProgressLinks[link.Thread] = verified
 		delete(r.BlockedProgressThreads, link.Thread)
 		if !hadPrevious || !reflect.DeepEqual(previous, verified) {

@@ -564,6 +564,12 @@ fn withdrawals(row: &Value) -> Result<&[Value]> {
         .map(Vec::as_slice)
         .ok_or_else(|| "conversation_receipts_invalid".into())
 }
+// A normal resume can retire the worker before the old successful result is
+// imported. Only legacy waits lack an immutable registering origin. Keep the
+// actual null receipt in the withdrawal evidence; never rebind the old worker.
+fn retired_legacy_worker(wait: &Value, worker: &Value, imported: bool) -> bool {
+    imported && wait.get("origin").is_none() && worker.get("job") == Some(&Value::Null)
+}
 fn validate_withdrawal(receipt: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     shape(
         receipt,
@@ -597,7 +603,9 @@ fn validate_withdrawal(receipt: &Value, id: i64, at: DateTime<Utc>) -> Result<()
         || !origin["resume_generation"].is_u64()
         || !crate::job_refs::valid_id(text(origin, "job"))
         || text(origin, "launch_key").is_empty()
-        || origin["worker_receipt"]["job"] != origin["job"]
+        || (origin["worker_receipt"]["job"] != origin["job"]
+            && !retired_legacy_worker(&receipt["wait"], &origin["worker_receipt"],
+                receipt["release_kind"] == "scheduler_block_result"))
         || origin["worker_receipt"]["generation"] != origin["resume_generation"]
         || receipt["wait"].get("origin").is_some_and(|saved| *saved != json!({
             "resume_generation":origin["resume_generation"], "worker_receipt":origin["worker_receipt"],
@@ -812,11 +820,13 @@ pub fn withdraw(
     clear(db, row, at)?;
     let owner = owner_record(paths, row)?.ok_or("conversation_owner_record_unavailable")?;
     let job = text(&owner, "id");
+    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
     if !matches!(
         text(&owner, "status"),
         "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
     ) || row["scheduler"]["job"] != job
-        || row["worker_receipt"]["job"] != job
+        || (row["worker_receipt"]["job"] != job
+            && !retired_legacy_worker(&wait, &row["worker_receipt"], imported))
         || !row["resume_generation"].is_u64()
         || row["worker_receipt"]["generation"] != row["resume_generation"]
         || (!row["processed_results"][job].is_null()
@@ -843,7 +853,6 @@ pub fn withdraw(
     {
         return fail("owner_record_invalid");
     }
-    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
     let origin = json!({"resume_generation":row["resume_generation"],"worker_receipt":row["worker_receipt"],
         "job":owner["id"],"launch_key":owner["launch_key"]});
     let instruction = format!(

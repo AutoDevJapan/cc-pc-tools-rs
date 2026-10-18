@@ -1467,3 +1467,143 @@ fn withdrawal_accepts_only_the_same_owner_generation_scheduler_imported_block_no
     assert!(f.withdraw().status.success());
     assert_eq!(f.raw(), before);
 }
+
+#[test]
+fn withdrawal_accepts_retired_legacy_worker_only_with_exact_import_evidence() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    let mut legacy = f.read();
+    let row = &mut legacy["items"][0];
+    row[WAIT].as_object_mut().unwrap().remove("origin");
+    row["worker_receipt"] = json!({"job":null,"generation":7});
+    row["scheduler"]["phase"] = json!("finished");
+    row["note"] = json!("ジョブの結果に判断が必要です。");
+    row["processed_results"] = json!({"original-worker":{"generation":7,"reason":"block"}});
+    let original_job = fs::read(f.paths.jobs.join("original-worker/job.json")).unwrap();
+    for change in [
+        "modern",
+        "missing_worker",
+        "missing_job",
+        "foreign_worker",
+        "worker_generation",
+        "generation",
+        "missing_result",
+        "result_generation",
+        "result_reason",
+        "phase",
+        "key",
+        "history",
+        "marker",
+        "new_note",
+    ] {
+        let mut db = legacy.clone();
+        let row = &mut db["items"][0];
+        match change {
+            "modern" => {
+                row[WAIT]["origin"] = json!({"resume_generation":7,
+                "worker_receipt":row["worker_receipt"],"job":"original-worker","key":"original-key"})
+            }
+            "missing_worker" => {
+                row.as_object_mut().unwrap().remove("worker_receipt");
+            }
+            "missing_job" => {
+                row["worker_receipt"].as_object_mut().unwrap().remove("job");
+            }
+            "foreign_worker" => row["worker_receipt"]["job"] = json!("another"),
+            "worker_generation" => row["worker_receipt"]["generation"] = json!(6),
+            "generation" => row["resume_generation"] = json!(8),
+            "missing_result" => {
+                row.as_object_mut().unwrap().remove("processed_results");
+            }
+            "result_generation" => {
+                row["processed_results"]["original-worker"]["generation"] = json!(6)
+            }
+            "result_reason" => {
+                row["processed_results"]["original-worker"]["reason"] = json!("done")
+            }
+            "phase" => row["scheduler"]["phase"] = json!("running"),
+            "key" => row["scheduler"]["key"] = json!("another"),
+            "history" => row["jobs"] = json!(["original-worker", "another"]),
+            "marker" => row["note"] = row[WAIT]["block_note"].clone(),
+            "new_note" => row["note"] = json!("ジョブの結果に判断が必要です。\n本人による停止"),
+            _ => unreachable!(),
+        }
+        f.write(&db);
+        f.snapshot();
+        f.withdraw_rejected();
+    }
+    for (key, value) in holds() {
+        let mut db = legacy.clone();
+        db["items"][0][key] = value;
+        f.write(&db);
+        f.snapshot();
+        f.withdraw_rejected();
+    }
+    for (key, value) in [
+        ("status", json!("running")),
+        ("status", json!("failed")),
+        ("launch_key", json!("another")),
+        ("todo_id", json!(2)),
+        ("created_at", json!(2_000_000_000.)),
+    ] {
+        let mut job: Value = serde_json::from_slice(&original_job).unwrap();
+        job[key] = value;
+        f.file("jobs/original-worker/job.json", &job);
+        f.write(&legacy);
+        f.snapshot();
+        f.withdraw_rejected();
+    }
+    fs::write(f.paths.jobs.join("original-worker/job.json"), &original_job).unwrap();
+    f.write(&legacy);
+    f.snapshot();
+    let out = f.withdraw();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let after = f.read();
+    let row = &after["items"][0];
+    assert_eq!(row["status"], "todo");
+    assert_eq!(row["note"], legacy["items"][0][WAIT]["previous_note"]);
+    assert_eq!(row["resume_generation"], 8);
+    assert_eq!(row["worker_receipt"], json!({"job":null,"generation":8}));
+    assert!(row[WAIT].is_null());
+    assert!(row[ANSWERS].is_null());
+    let receipt = &row["owner_question_withdrawal_receipts"][0];
+    assert_eq!(
+        receipt["origin"]["worker_receipt"],
+        legacy["items"][0]["worker_receipt"]
+    );
+    assert_eq!(receipt["release_kind"], "scheduler_block_result");
+    for key in ["jobs", "spec", "progress", "processed_results"] {
+        assert_eq!(row[key], legacy["items"][0][key]);
+    }
+    assert_eq!(
+        fs::read(f.paths.jobs.join("original-worker/job.json")).unwrap(),
+        original_job
+    );
+    let before = f.raw();
+    assert!(f.withdraw().status.success()); // receipt validation accepts actual null origin
+    assert_eq!(before, f.raw());
+    for change in ["modern", "marker", "missing_job"] {
+        let mut db = after.clone();
+        let receipt = &mut db["items"][0]["owner_question_withdrawal_receipts"][0];
+        match change {
+            "modern" => {
+                receipt["wait"]["origin"] = json!({"resume_generation":7,
+                "worker_receipt":receipt["origin"]["worker_receipt"],"job":"original-worker","key":"original-key"})
+            }
+            "marker" => receipt["release_kind"] = json!("question_marker"),
+            "missing_job" => {
+                receipt["origin"]["worker_receipt"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("job");
+            }
+            _ => unreachable!(),
+        }
+        f.write(&db);
+        f.withdraw_rejected();
+    }
+}

@@ -58,6 +58,24 @@ type publicSeed struct {
 	ClientSHA256 string `json:"clientCertificateSHA256"`
 }
 
+// GuestBackend reuses the proven SCM/COM/private-IP/mTLS bootstrap. Stop must
+// cancel and drain hijacked connections and process trees before returning.
+// The existing SDK preparation endpoint is absent when a backend is supplied.
+type GuestBackend struct {
+	Handler http.Handler
+	Stop    func(context.Context) error
+}
+
+var guestBackendFactory func(PublicSeed) (GuestBackend, error)
+
+func RunGuestServiceBackend(factory func(PublicSeed) (GuestBackend, error)) error {
+	if factory == nil {
+		return errors.New("guest backend factory absent")
+	}
+	guestBackendFactory = factory
+	return RunGuestService()
+}
+
 func RunGuestService() error {
 	name, err := syscall.UTF16PtrFromString(guestServiceName)
 	if err != nil {
@@ -112,7 +130,7 @@ func reportServiceState(state, exitCode, waitHint uint32) bool {
 	return ok != 0
 }
 
-func serveGuestAgent() error {
+func serveGuestAgent() (ret error) {
 	if !reportServiceState(4, 0, 0) {
 		return errors.New("service running state update failed")
 	}
@@ -147,13 +165,27 @@ func serveGuestAgent() error {
 	if err != nil {
 		return err
 	}
-	ops, err := NewWindowsOperations()
-	if err != nil {
-		return err
-	}
-	handler, err := NewHandler(seed.Instance, ops)
-	if err != nil {
-		return err
+	var handler http.Handler
+	if guestBackendFactory != nil {
+		backend, e := guestBackendFactory(PublicSeed{Instance: seed.Instance, ClientSHA256: seed.ClientSHA256})
+		if e != nil || backend.Handler == nil || backend.Stop == nil {
+			return errors.New("guest backend initialization failed")
+		}
+		handler = backend.Handler
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+			defer cancel()
+			ret = errors.Join(ret, backend.Stop(ctx))
+		}()
+	} else {
+		ops, e := NewWindowsOperations()
+		if e != nil {
+			return e
+		}
+		handler, err = NewHandler(seed.Instance, ops)
+		if err != nil {
+			return err
+		}
 	}
 	server, listener, err := ListenPrivateIPv4(ip, handler, tlsConfig)
 	if err != nil {
@@ -171,7 +203,14 @@ func serveGuestAgent() error {
 		<-serveDone
 		return err
 	}
-	<-serviceStop
+	select {
+	case <-serviceStop:
+	case err := <-serveDone:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return errors.New("guest listener stopped unexpectedly")
+		}
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {

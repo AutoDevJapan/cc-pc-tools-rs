@@ -15,11 +15,18 @@ Dependencies imported at their canonical paths:
   Asset evidence is a receipt, not an instruction to read/restart/copy the VHD.
 - Existing newer product-ci files are retained, not rolled back to parent.
 
-Next: implement typed seed/session/backend, fixed guest entry/hooks, process
-tree cancellation/drain and synthetic tests. Parent alone adapts normalci route
-expression/label to run+role contract; guest must reject the legacy label.
-Then Go tests/vet, commit/push, ordinary shared-ToDo different-model review,
-fix any Must, checkpoint and provide integration handoff to 2737.
+Implemented: typed seed/session/backend, fixed guest entry/hooks, bounded
+framing, stock runner archive pin, Job Object cancellation/drain, explicit
+EOF/cancel/service/deadline causes, SDK callback integration. README/HANDOFF
+describe public API and all offline clone staging paths/service/COM/TLS steps.
+Parent alone adapts normalci route expression/label; legacy is rejected.
+
+Verified: Windows runner tests/race/vet, sourcepacket tests/vet, SDK tests/vet
+including existing command callers and named pipe, normalci type package/vet.
+No original source, real VM/SCM/runner, SDK re-preparation or Cargo execution.
+Next: commit/push fixed review candidate; ordinary shared-ToDo review using a
+different actual model, resolve Must, checkpoint and deliver fixed pin to2737.
+Do not create an independent PR/merge or wait for parent2737 completion.
 
 Owned temporary root: 7f54ee797d015b59599f1686c8ccf8f8 under user's Temp,
 created by safe-delete for synthetic Go tests. Plan -> separate delete -> finish,

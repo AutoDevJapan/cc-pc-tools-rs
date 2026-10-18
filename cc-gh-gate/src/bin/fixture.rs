@@ -47,6 +47,16 @@ fn main() {
         record.to_string(),
     )
     .unwrap();
+    if std::env::var_os("FAKE_GH_ANSI").is_some() {
+        if !args.iter().any(|a| a == "--allow-escape-sequences") {
+            eprintln!(
+                "the response contains terminal escape sequences; pass --allow-escape-sequences to output it anyway"
+            );
+            std::process::exit(1);
+        }
+        println!("\x1b[31msynthetic job log\x1b[0m");
+        return;
+    }
     println!("fake-gh-out");
     std::process::exit(
         std::env::var("FAKE_GH_EXIT")

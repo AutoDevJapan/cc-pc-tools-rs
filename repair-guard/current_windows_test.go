@@ -471,8 +471,13 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 	}
 	origin := func(string, string) bool { return true }
 	identity := func(currentProduct) bool { return true }
-	common := func(string) (string, bool) { return commonDir, true }
+	common := currentGitCommonDir
+	plannedChildPath := filepath.Join(root+"-wt", "todo-2872-current-review")
+	plannedChildPathChecked := false
 	pathAllowed := func(path, gotRoot, repository, task string, protected func(string) bool) bool {
+		if task == "2872" && same(path, plannedChildPath) {
+			plannedChildPathChecked = true
+		}
 		return same(gotRoot, root) && repository == product.repository && (task == "2839" || task == "2872") && !protected(path)
 	}
 	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
@@ -484,10 +489,25 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 	if !ok || len(receipt) != 9 || receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2872 || receipt["project"] != "GoDD-AO" || receipt["spec_sha256"] != hashBytes([]byte("saved direct review specification")) || receipt["original_registry_recovered"] != false {
 		t.Fatal("valid direct current subwork did not receive its own receipt")
 	}
+	if !plannedChildPathChecked {
+		t.Fatal("unrecorded child workspace was not passed through the physical path guard")
+	}
 	_, verifiedChild, valid := currentSubworkReceiptWith(db, 2872, []currentProduct{product}, filepath.Dir(childSpec), now, allowProtected, plain, origin, identity, common, pathAllowed)
 	if !valid || !same(verifiedChild.worktree, filepath.Join(root+"-wt", "todo-2872-current-review")) {
 		t.Fatal("unrecorded child worktree did not match the scheduler's planned name")
 	}
+	childRow["scheduler"] = object{"worktree": verifiedChild.worktree}
+	if _, valid := verify(); !valid {
+		t.Fatal("recorded scheduler worktree matching the title-derived path was rejected")
+	}
+	childRow["scheduler"] = object{}
+	parentRow["status"] = "wait"
+	parentRow["jobs"] = []any{job, "20261019-060000-todo-2839"}
+	if _, valid := verify(); !valid {
+		t.Fatal("registered child was rejected after its parent entered dependency wait")
+	}
+	parentRow["status"] = "doing"
+	parentRow["jobs"] = []any{job}
 	assertDenied := func(label string) {
 		t.Helper()
 		got, valid := verify()
@@ -495,6 +515,11 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 			t.Fatalf("%s direct child was not rejected generically", label)
 		}
 	}
+	childRow["scheduler"] = object{"worktree": verifiedChild.worktree}
+	childRow["title"] = "renamed review"
+	assertDenied("recorded worktree after title rename")
+	childRow["title"] = "current review"
+	childRow["scheduler"] = object{}
 	childRow["subwork"].(object)["parent_todo_id"] = float64(2872)
 	assertDenied("nested")
 	childRow["subwork"].(object)["parent_todo_id"] = float64(2839)
@@ -534,6 +559,41 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 	owner["worktree"] = nestedOwner
 	parentRow["scheduler"].(object)["worktree"] = nestedOwner
 	assertDenied("nested repository path with parent common directory")
+	otherRoot := filepath.Join(base, "other-product")
+	if os.Mkdir(otherRoot, 0700) != nil {
+		t.Fatal("second repository fixture could not be created")
+	}
+	currentFixtureGit(t, otherRoot, "init", "-q")
+	currentFixtureGit(t, otherRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	currentFixtureGit(t, otherRoot, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	currentFixtureGit(t, otherRoot, "checkout", "-q", "-b", "scheduler/todo-2839-other")
+	otherCommon, ok := currentGitCommonDir(otherRoot)
+	if !ok || same(otherCommon, commonDir) {
+		t.Fatal("second repository fixture did not get an independent common directory")
+	}
+	owner["worktree"] = otherRoot
+	owner["git_common"] = otherCommon
+	owner["branch"] = "scheduler/todo-2839-other"
+	parentRow["scheduler"].(object)["worktree"] = otherRoot
+	assertDenied("different repository with matching origin")
+}
+
+func TestCurrentSubworkWorkspacePathMatchesSchedulerSlug(t *testing.T) {
+	root := filepath.Join("C:", "fixture", "product")
+	for _, tc := range []struct {
+		name, title, want string
+	}{
+		{"uppercase", "PR Review", "todo-2872-pr-review"},
+		{"non-ascii-only", "日本語", "todo-2872-work"},
+		{"trailing-separator-at-limit", strings.Repeat("a", 31) + " b", "todo-2872-" + strings.Repeat("a", 31) + "-"},
+		{"empty", "", "todo-2872-work"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := filepath.Base(currentSubworkWorkspacePath(root, 2872, tc.title)); got != tc.want {
+				t.Fatalf("scheduler slug mismatch: got %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestCurrentSubworkPathRequiresVerifiedDirectChild(t *testing.T) {

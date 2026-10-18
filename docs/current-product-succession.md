@@ -40,12 +40,15 @@ dispatchのNotFound分岐だけに資格を追加する。既存のPC修復3proj
 固定済みの現在製品IDを親として照合し、親の現資格、親の保存jobsにある
 origin_job_id、todo.exeが保存した直接subwork関係、子の新IDと保存spec、同じ
 登録project/root、親worktreeのrepository/common-dir/top-level/branchを検証する。
-origin_job_idは親のjobs履歴に結び付きます。親は子を登録した後に依存待ちへ
-入るため、最新jobとの一致は要求しません。子worktreeは親rootの標準`-wt`
-配下で子IDとschedulerのtitleから作る正規名に限定します。schedulerのpathが
-未記録ならこの名前を照合し、記録済みなら記録された同じworktreeだけを許可します。
-親root本体や同IDの別名worktreeは拒否します。存在するworktreeは
-同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認します。
+origin_job_idは親のjobs履歴に結び付く。親は子を登録した後に依存待ちへ
+入るため、最新jobとの一致は要求しない。子worktreeは親rootの標準`-wt`
+配下で子IDとschedulerのtitleから作る正規名に限定する。schedulerのpathが
+未記録ならこの名前を照合し、記録済みなら記録された同じworktreeだけを許可する。
+titleが変わって予定名と記録済みpathが一致しなくなった場合は不成立にする。
+slugは小文字ASCII英数字だけを残す。Unicode正規化の差があれば許可せず拒否する。
+親root本体や同IDの別名worktreeは拒否する。予定pathが既に存在する場合も
+guardでrepository/common-dir/branchと実体を確認する。存在するworktreeは
+同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認する。
 子specの保存ファイル名にある乱数はファイル識別子で、本文hashではありません。
 本文hashは読み取った実バイトから作り、Rust側で同じspecバイトと照合します。
 失敗は`{"verified":false}`だけを返す。親の資格・停止・依存・通常の

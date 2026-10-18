@@ -193,6 +193,8 @@ func currentSubworkTaskInWorkspace(path, container string) (int, bool) {
 
 // currentSubworkWorkspacePath mirrors scheduler workspace naming so a child
 // without a recorded scheduler path can only claim its one planned workspace.
+// Only ASCII lowercase letters and digits survive slug generation; a Unicode
+// normalization difference therefore rejects the path instead of widening it.
 func currentSubworkWorkspacePath(root string, task int, title string) string {
 	slug := strings.Trim(currentSubworkTitleSeparators.ReplaceAllString(strings.ToLower(title), "-"), "-")
 	if len(slug) > 32 {
@@ -344,6 +346,9 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 		}
 	} else {
 		childWorktree = expectedChildWorktree
+		if !pathAllowed(childWorktree, parent.root, parent.repository, strconv.Itoa(task), protected) {
+			return failure, currentProduct{}, false
+		}
 	}
 	childProduct := parent
 	childProduct.project = childProject

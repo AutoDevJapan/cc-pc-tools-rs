@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	wr "github.com/autodevjapan/cc-pc-tools-rs/tools/windows-ci-runner-2737"
 	"os"
 	"path/filepath"
@@ -203,5 +204,87 @@ func TestWindowsOfflineStagePowerShellParsesWithoutExecution(t *testing.T) {
 	c.Stdin = strings.NewReader(windowsOfflineStageScript(`C:\owned\a'b`))
 	if e := c.Run(); e != nil {
 		t.Fatal("offline staging script syntax rejected", e)
+	}
+}
+
+func TestWindowsCleanupBeforeVMRetainsIntentAndAdmissionOnUnknownClone(t *testing.T) {
+	for _, started := range []bool{false, true} {
+		for _, detached := range []bool{false, true} {
+			t.Run(fmt.Sprintf("stage_%v_detached_%v", started, detached), func(t *testing.T) {
+				root := t.TempDir()
+				intent := filepath.Join(root, "intent.json")
+				if e := os.WriteFile(intent, []byte("owned-test-intent"), 0600); e != nil {
+					t.Fatal(e)
+				}
+				w := windowsFixture(t)
+				calls := 0
+				ret := finishWindowsCleanup(context.Background(), nil, root, intent, w.seed.Plan.Instance, vmState{}, true, w, windowsCloneLease{StageStarted: started}, func() error {
+					calls++
+					if !detached {
+						return errors.New("fixture attached clone or unavailable broker")
+					}
+					return nil
+				})
+				if started && calls != 1 || !started && calls != 0 {
+					t.Fatal("clone observation stage mismatch")
+				}
+				var fence *unsafeVMLease
+				unknown := started && !detached
+				if errors.As(ret, &fence) != unknown {
+					t.Fatal("unknown clone did not fence admission", ret)
+				}
+				_, stat := os.Stat(intent)
+				if unknown && stat != nil || !unknown && !errors.Is(stat, os.ErrNotExist) {
+					t.Fatal("cleanup intent lifetime incorrect", stat)
+				}
+				if unknown && !fence.WindowsClone {
+					t.Fatal("clone fence lost recovery obligation")
+				}
+				b, e := os.ReadFile(filepath.Join(root, "job-cleanup.private.json"))
+				if e != nil {
+					t.Fatal(e)
+				}
+				var proof map[string]any
+				if json.Unmarshal(b, &proof) != nil || proof["clone_detached"] == unknown || proof["vm_gone"] != true {
+					t.Fatal("cleanup proof misrepresented clone or VM", string(b))
+				}
+			})
+		}
+	}
+}
+
+func TestWindowsCloneObservationIsReadOnlyAndRejectsAttachedOrLoadedHive(t *testing.T) {
+	for _, fixture := range []string{"detached", "attached", "hive", "read-error", "missing-state"} {
+		t.Run(fixture, func(t *testing.T) {
+			// Execute ONLY the exact observation script, with all Hyper-V/registry
+			// reads stubbed. No disk mount, VM, broker or host registry is touched.
+			prefix := `function Import-Module {param($Name)}
+function Test-Path {param($LiteralPath,$PathType);if($LiteralPath.StartsWith('Registry::')){return `
+			if fixture == "hive" {
+				prefix += "$true"
+			} else {
+				prefix += "$false"
+			}
+			prefix += `};return $true}
+function Get-VHD {param($Path,$ErrorAction);`
+			if fixture == "read-error" {
+				prefix += `throw 'fixture read failure'`
+			} else if fixture == "missing-state" {
+				prefix += `return [pscustomobject]@{}`
+			} else if fixture == "attached" {
+				prefix += `return [pscustomobject]@{Attached=$true}`
+			} else {
+				prefix += `return [pscustomobject]@{Attached=$false}`
+			}
+			prefix += "}\n"
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			c := command(ctx, `C:\Program Files\PowerShell\7\pwsh.exe`, "-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; & ([ScriptBlock]::Create([Console]::In.ReadToEnd()))")
+			c.Stdin = strings.NewReader(prefix + windowsCloneDetachedScript(`C:\owned\a'b`))
+			e := c.Run()
+			if fixture == "detached" && e != nil || fixture != "detached" && e == nil {
+				t.Fatal("clone observation classification wrong", fixture, e)
+			}
+		})
 	}
 }

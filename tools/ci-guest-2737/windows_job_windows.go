@@ -184,31 +184,14 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 		return bindOfficialJob(c, attempt, q, id, name)
 	}
 	vmGone := true
+	var cloneLease windowsCloneLease
 	defer func() {
 		if conn != nil {
 			_ = conn.Close()
 		}
 		clean, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 		defer cancel()
-		if vm.ID != "" {
-			ce := cleanupVM(clean, vm)
-			ret = errors.Join(ret, ce)
-			vmGone = ce == nil
-		}
-		registrationGone := !w.mayExist
-		if w.mayExist && vmGone {
-			ce := clearOwnedRegistration(clean, "todo2737-"+instance, normalWindowsLabel(q.RunID), w.runnerID)
-			ret = errors.Join(ret, ce)
-			registrationGone = ce == nil
-		}
-		ce := record(attempt, "job-cleanup.private.json", map[string]any{"vm_gone": vmGone, "registration_gone": registrationGone, "registration_may_exist": w.mayExist, "runner_id": w.runnerID, "official_ci_success": ret == nil})
-		ret = errors.Join(ret, ce)
-		if vmGone && registrationGone && ce == nil {
-			ret = errors.Join(ret, os.Remove(intentPath))
-		}
-		if !vmGone {
-			ret = errors.Join(ret, &unsafeVMLease{State: vm, Root: attempt, Instance: instance})
-		}
+		ret = finishWindowsCleanup(clean, ret, attempt, intentPath, instance, vm, vmGone, w, cloneLease, func() error { return observeWindowsCloneDetached(clean, attempt) })
 	}()
 	w.binding, e = w.bind(ctx, 0, "")
 	if e != nil {
@@ -231,7 +214,7 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 	if e != nil {
 		return e
 	}
-	if e = prepareWindowsClone(ctx, attempt, helper, bootstrapSeed, runnerSeed); e != nil {
+	if e = prepareWindowsClone(ctx, attempt, helper, bootstrapSeed, runnerSeed, &cloneLease); e != nil {
 		return e
 	}
 	vmGone = false
@@ -259,3 +242,32 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 	return awaitOfficialCompletion(ctx, attempt, q, w.binding, w.runnerID, w.seed.Plan.Name)
 }
 func normalWindowsLabel(runID int64) string { return wr.Label(runID) }
+
+// The same completion path is used for staging failures before New-VM and for
+// post-run cleanup. No successful VM/runner absence can hide an attached clone.
+// observe is an internal read-only seam; the live caller always uses the broker.
+func finishWindowsCleanup(ctx context.Context, ret error, attempt, intentPath, instance string, vm vmState, vmGone bool, w *windowsController, cloneLease windowsCloneLease, observe func() error) error {
+	if vm.ID != "" {
+		ce := cleanupVM(ctx, vm)
+		ret = errors.Join(ret, ce)
+		vmGone = ce == nil
+	}
+	registrationGone := !w.mayExist
+	if w.mayExist && vmGone {
+		ce := clearOwnedRegistration(ctx, "todo2737-"+instance, normalWindowsLabel(w.q.RunID), w.runnerID)
+		ret = errors.Join(ret, ce)
+		registrationGone = ce == nil
+	}
+	cloneErr := reconcileWindowsClone(cloneLease, observe)
+	cloneDetached := cloneErr == nil
+	ret = errors.Join(ret, cloneErr)
+	ce := record(attempt, "job-cleanup.private.json", map[string]any{"vm_gone": vmGone, "clone_stage_started": cloneLease.StageStarted, "clone_detached": cloneDetached, "registration_gone": registrationGone, "registration_may_exist": w.mayExist, "runner_id": w.runnerID, "official_ci_success": ret == nil})
+	ret = errors.Join(ret, ce)
+	if vmGone && registrationGone && cloneDetached && ce == nil {
+		ret = errors.Join(ret, os.Remove(intentPath))
+	}
+	if !vmGone || !cloneDetached {
+		ret = errors.Join(ret, &unsafeVMLease{State: vm, Root: attempt, Instance: instance, WindowsClone: cloneLease.StageStarted})
+	}
+	return ret
+}

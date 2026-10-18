@@ -104,7 +104,12 @@ func (r *contextReader) Read(b []byte) (int, error) {
 	return r.r.Read(b)
 }
 
-func prepareWindowsClone(ctx context.Context, root, helper string, bootstrapSeed, runnerSeed []byte) error {
+type windowsCloneLease struct{ StageStarted bool }
+
+func prepareWindowsClone(ctx context.Context, root, helper string, bootstrapSeed, runnerSeed []byte, lease *windowsCloneLease) error {
+	if lease == nil {
+		return errors.New("Windows clone lease absent")
+	}
 	executor, e := linkedExecutorIdentity()
 	if e != nil {
 		return e
@@ -144,7 +149,38 @@ func prepareWindowsClone(ctx context.Context, root, helper string, bootstrapSeed
 	if e = downloadWindowsRunner(ctx, root); e != nil {
 		return e
 	}
+	// Persist BEFORE the broker can mount the clone. A failed/lost detach reply
+	// remains a recovery obligation even when New-VM has never been called.
+	if e = record(root, "windows-clone-stage-intent.private.json", map[string]any{"clone": filepath.Join(root, "guest.vhdx"), "stage_started": true}); e != nil {
+		return e
+	}
+	lease.StageStarted = true
 	return admin(ctx, root, "windows-clone-stage", windowsOfflineStageScript(root))
+}
+
+func windowsCloneDetachedScript(root string) string {
+	return "Import-Module Hyper-V\n$root=" + psQuote(root) + "\n" + `
+$disk=Join-Path $root 'guest.vhdx'
+$hive='CC2737_'+[IO.Path]::GetFileName($root).Replace('-','_')
+if(Test-Path -LiteralPath ("Registry::HKEY_LOCAL_MACHINE\"+$hive)){throw 'CLONE_HIVE_STILL_LOADED'}
+if(-not (Test-Path -LiteralPath $disk -PathType Leaf)){throw 'CLONE_DISK_ABSENT'}
+$states=@(Get-VHD -Path $disk -ErrorAction Stop)
+if($states.Count -ne 1 -or $states[0].Attached -isnot [bool]){throw 'CLONE_ATTACHMENT_STATE_UNAVAILABLE'}
+if($states[0].Attached){throw 'CLONE_STILL_ATTACHED'}
+`
+}
+
+func observeWindowsCloneDetached(ctx context.Context, root string) error {
+	// This read-only broker flight is queued after staging/VM cleanup; it never
+	// retries a failed unload/dismount or infers detach from a missing receipt.
+	return admin(ctx, root, "windows-clone-observe-"+newID(), windowsCloneDetachedScript(root))
+}
+
+func reconcileWindowsClone(lease windowsCloneLease, observe func() error) error {
+	if !lease.StageStarted {
+		return nil
+	}
+	return observe()
 }
 func downloadWindowsRunner(ctx context.Context, root string) error {
 	request, e := http.NewRequestWithContext(ctx, http.MethodGet, wr.RunnerURL, nil)

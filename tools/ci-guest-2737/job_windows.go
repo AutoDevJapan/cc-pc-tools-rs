@@ -363,6 +363,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 type unsafeVMLease struct {
 	State          vmState
 	Root, Instance string
+	WindowsClone   bool
 }
 
 func (*unsafeVMLease) Error() string {
@@ -389,6 +390,9 @@ if($owned.Count -eq 1){
 `
 	if validVMID(s.ID) {
 		body += "$same=@($all|Where-Object {$_.Id.ToString() -ceq " + psQuote(s.ID) + "})\nif($same.Count -eq 1 -and $owned.Count -ne 1){throw 'VM_FENCE_NAME_CHANGED'}\n"
+	}
+	if f.WindowsClone {
+		body += windowsCloneDetachedScript(f.Root)
 	}
 	return admin(ctx, f.Root, "vm-fence-observe-"+newID(), body)
 }

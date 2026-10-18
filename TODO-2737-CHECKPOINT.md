@@ -450,3 +450,26 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   commit後のtree取得ではPowerShellが未引用HEAD^{tree}を変形してGit読取が失敗したが、正しく引用して再取得した。source/ref更新の失敗ではない。
 - 次回の入口は2835原応答の受領・Must/未読処理。その後に同sourceのclean host/guest buildと実clone/COM/TLS/stock実受入を行う。
   完了済みSDKや子2828の受付待ちへ戻さない。原b194/通常CI未実行は不変。自身の実HEAD/jobでcheckpoint後、2835だけへwaitする。
+
+## 2026-10-19 job20261019-013550-todo-2737: clone回収提案の反映
+
+- 中断直前item_2の完了イベントをread-onlyで照合。exit0で2835原応答の取得と文書読取まで済んでおり、再実行していない。
+- 2835 job20261019-012942の原応答はSHA256 BEB1B9611A61D6ED1676F5F372768189204765E8A70F55847A0F57B489D60C58。
+  fixed base703373a→headdcc4c23/treee581972の10file/局所caller、静的Must0/Suggestion1/Nit0、検査実行0。
+  exact thread01a14fd9-82e0-7310-aae7-0a32c15cd853の正規rollout turn_context.modelとjob.jsonで実gpt-6-lunaを確認した。
+  原応答のvariant未確認という文面は変更せず、受領側の別記録で補足する。実装元はgpt-6.1-sol。
+- Suggestionは実害があるため採用。VM作成前のclone detach失敗でも追跡が落ちないよう、broker mount前にclone-stage intentをflushする。
+  staging失敗時/VM回収後に、同じbrokerの後続read-only flightでexact cloneのAttached=falseとtask offline hive不在を確認する。
+  VHDのstate欠落/型違い/読取失敗/attached/hive残留は成功にしない。global intentを残し、既存unsafeVMLeaseのgate fenceにもclone観測を含める。
+  失敗したdetach/unloadの再試行や別経路の回避はせず、観測だけを行う。元の失敗とcleanup結果は別に保存する。
+- 回帰検査は本番と同じcleanup関数を使い、VM未作成でもclone不明ならintentが残り、fenceにclone義務が付くことを確認。
+  未開始/実detached時は正常にintentを解放する正例も対で検査した。exact observation scriptはPowerShell上でHyper-V/registry readsだけをstubし、detached/attached/hive/read-error/missing-stateを確認。
+  これは実mount/detach/VMの受入ではない。関連host raceとvetが成功。旧backend/sourcepacket/原Cargo/13工程の全件を重複実行していない。
+- 新safe-delete root e8506df50926a134106b9983c4fd70fcはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-e8506df50926a134106b9983c4fd70fc。
+  原2835応答はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-013550-cloneに保存。旧SDK/必要layer/他担当/未回収は保持。
+  元b194のguidanceをRAM再取得し235dcf.../70c7de...一致とrepo/PR/head/ref前後固定、cc実repo1406818713の所有/権限を確認した。
+- 次はこのclone寿命差分だけを有限レビューへ渡し、同じclean codeの実行物でhost gateの正常/取消し排出と、Windows実acceptanceへ進む。
+  Windows公式backendのseedは実queued job IDを必要とするため、cloneの本番接続はレビュー済みrouteを同原branchへ明示適用・dispatchした後、初回の公式jobとして受入する。
+  古い「実公式claimを伴うclone受入をroute適用前に完了」と読める順序は実API依存に合わないため訂正。架空job IDや手書きmanifestで前提を埋めない。
+  初回に失敗すればその公式失敗/未実行を保持し、原因修正・必要レビュー/受入を続ける。原13工程/条件/profile/直列/timeout/Docker parityは削らない。
+  原b194/routeflag/Hosted予算/原guard/manifestはまだ変更0、通常CI未実行。原merge/Prdは親2641。

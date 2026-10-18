@@ -258,3 +258,16 @@ official CI has been run by this integration. Build both clean executables from
 the final reviewed commit before live use; the previous c0f59e1 host is only a
 read-only source-inspection tool now. Original workflow conditions/profiles,
 serial execution, mandatory gates and Docker parity remain authoritative.
+
+Review2835 found no Must and one useful cleanup suggestion. Before the offline
+broker can mount a clone, the controller now flushes a separate clone-stage
+intent. After any staging failure, or after VM cleanup, it independently queues
+a read-only broker observation of the exact clone and offline hive. Only one
+typed VHD state with Attached=false and an absent task hive proves release.
+Unreadable/missing state, a loaded hive or an attached disk keeps the global
+execution intent and returns the existing admission fence, even before New-VM.
+Fence observations include this clone obligation as well as VM quiescence;
+they never retry a rejected detach/unload. The original staging error remains
+separate from the observation/cleanup result. Synthetic regression tests exercise
+the real intent-removal/fence path and the exact read-only PowerShell script
+with stubbed Hyper-V/registry reads, not a real detach failure.

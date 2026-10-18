@@ -661,3 +661,14 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   新実行物の実VM/公式CI受入は未実施。旧58a9579実行物に新計測が入っているとは扱わない。文書保存のために再buildしない。
 - 今回root17とsource/guidance/研究受領metadata、runtime proofは同resume-050050-diagnosticsに保持。既存c91/982失敗disk/SDK/Windows SDK/必要container layerは維持。
   未完依存は2871だけなので正規waitへ保存。完了済み2869/2870/SDKを再待機せず、実HEAD/現jobのscheduler checkpointを保存して再開する。
+## 2026-10-19 job051440: 診断版で同run attempt3を開始
+
+- 2871の原job20261019-051143/同thread01a150a4-a80e-7733-9be5-b0a9e752dc78のturn_context.model実gpt-6-lunaを照合した。
+  原応答SHA25669A0B1002CF3DDCD3399D986F8932F27369F51240A41FAEDC616900F136D5E45、fixed base d6fd1e6→head691015b/tree d8fbc353の指定8file/局所callerでMust0/Suggestion0/Nit0、検査0を受領。原文のGPT-6申告は変更せず実runtimeのmodelを別に記録した。
+- 新safe-delete owned root de0a2c8ba11614f81d43e192bbb5da41を作成。固定製品085/ref/tree/workflow、実owner/id/private/admin/nonfork/同repo/openPRと原AGENTS/CLAUDEの既読同hashをRAMで再照合した。
+  前回run39147155349 attempt2 completed/cancelled、原normal CI intent不在、own route変数不在を確認してから、同leaseをdurable intent→Create-only POST→exact value照合で復元。原branch/source/workflow/予算/原guard/manifestは変更0。
+- 原runへのrerun POSTを1回だけ送り、最初のattempt2/queuedを再送理由にせず、後続GETで実attempt3/head085を確認。
+  verify job117778712948がqueued、同run-role専用labelのみを確認し、固定Source3hash/attempt3/roleverify/同lease/空Inputsで実行を開始した。
+  レビュー済みclean691015bのhost0c4c9901.../Linux48589ebf...とcanonical gate8baa838b...の実file hashを照合し、canonical Cargo gate内のinstance544af4826353ff16404c2cfd446eb2dbを単一所有する。
+- この時点はVM準備中で、診断の実計測/原検査成功/回収をまだ主張しない。終了前に終端とVM/runner/lock/routeを実確認し、新しい失敗と前の結果を別に残す。
+  再開ではownedroot de0のoperations.ps1/各intentと同run39147155349 attempt3を照合し、受付済みPOSTを再送しない。原merge/Prdは親2641。

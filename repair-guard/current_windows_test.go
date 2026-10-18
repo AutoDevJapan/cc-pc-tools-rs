@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func currentFixtureGit(t *testing.T, root string, args ...string) {
@@ -216,6 +217,8 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	}
 
 	container := testRoot + "-wt"
+	fixtureProduct := product
+	fixtureProduct.root = testRoot
 	if os.Mkdir(testRoot, 0700) != nil || os.Mkdir(container, 0700) != nil {
 		t.Fatal("fixture container mkdir failed")
 	}
@@ -225,6 +228,13 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	workspace := filepath.Join(container, "todo-2850-issue569")
 	if !currentProductPath(workspace, testRoot, product.repository, "2850", allow) {
 		t.Fatal("exact planned successor worktree rejected")
+	}
+	qualifies := func(p currentProduct) bool { return p.project == "GoDD-13a13e1" && p.task == 2850 }
+	if !currentProductsScopePathAllowed(workspace, []currentProduct{fixtureProduct}, qualifies, allow) {
+		t.Fatal("declared product scope failed to route the exact task")
+	}
+	if currentProductsScopePathAllowed(workspace, []currentProduct{ao}, qualifies, allow) || currentProductsScopePathAllowed(workspace, []currentProduct{fixtureProduct}, func(currentProduct) bool { return false }, allow) {
+		t.Fatal("path routing accepted another product or an unqualified task")
 	}
 	if currentProductPath(filepath.Join(container, "todo-2851-issue569"), testRoot, product.repository, "2850", allow) {
 		t.Fatal("different task worktree accepted")
@@ -298,8 +308,10 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	}
 	allow := func(string) bool { return false }
 	valid := func(path, repo string) bool { return sourceOriginVerified(path, repo) }
-	identity := func(p currentProduct) bool { return p.repositoryID == product.repositoryID && p.owner == product.owner }
-	receipt := currentSuccessionReceiptWith(db, product, allow, currentPlain, valid, identity)
+	identityOutput := []byte("1283948432\tautodevjapan/godd-13a13e1\tAutoDevJapan\n")
+	identity := func(p currentProduct) bool { return currentGitHubIdentityMatches(identityOutput, p) }
+	inScope := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	receipt := currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, identity)
 	if receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2850 || receipt["project"] != product.project || receipt["spec_sha256"] != hashBytes(body) || receipt["original_registry_recovered"] != false {
 		t.Fatal("valid successor receipt rejected")
 	}
@@ -309,32 +321,51 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 		t.Fatal("receipt path fingerprints differ")
 	}
 	encoded, err := json.Marshal(receipt)
-	if err != nil || strings.Contains(string(encoded), root) || strings.Contains(string(encoded), spec) {
+	if err != nil || strings.Contains(string(encoded), root) || strings.Contains(string(encoded), spec) || strings.Contains(string(encoded), strings.ToLower(strings.ReplaceAll(root, `\`, "/"))) || strings.Contains(string(encoded), strings.ToLower(strings.ReplaceAll(spec, `\`, "/"))) {
 		t.Fatal("receipt leaked a private path")
 	}
-	denied := currentSuccessionReceiptWith(db, product, func(string) bool { return true }, currentPlain, valid, identity)
-	if denied["verified"] != false || len(denied) != 1 {
-		t.Fatal("protected successor scope was not denied generically")
+	assertGenericFailure := func(label string, got object) {
+		t.Helper()
+		if got["verified"] != false || len(got) != 1 {
+			t.Fatalf("%s did not return generic failure", label)
+		}
 	}
-	wrongOrigin := currentSuccessionReceiptWith(db, product, allow, currentPlain, func(string, string) bool { return false }, identity)
-	if wrongOrigin["verified"] != false {
-		t.Fatal("wrong origin was accepted")
+	assertGenericFailure("protected scope", currentSuccessionReceiptWith(db, product, inScope, func(string) bool { return true }, currentPlain, valid, identity))
+	assertGenericFailure("wrong origin", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, func(string, string) bool { return false }, identity))
+	assertGenericFailure("wrong identity", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, func(currentProduct) bool { return false }))
+	for _, bad := range [][]byte{
+		[]byte("1283948433\tautodevjapan/godd-13a13e1\tAutoDevJapan\n"),
+		[]byte("1283948432\tother/godd-13a13e1\tAutoDevJapan\n"),
+		[]byte("1283948432\tautodevjapan/godd-13a13e1\tOtherOwner\n"),
+		[]byte("not-an-id\tautodevjapan/godd-13a13e1\tAutoDevJapan\n"),
+		[]byte("1283948432\tautodevjapan/godd-13a13e1\tAutoDevJapan\textra\n"),
+	} {
+		if currentGitHubIdentityMatches(bad, product) {
+			t.Fatal("malformed or mismatched GitHub identity accepted")
+		}
 	}
-	wrongIdentity := currentSuccessionReceiptWith(db, product, allow, currentPlain, valid, func(currentProduct) bool { return false })
-	if wrongIdentity["verified"] != false {
-		t.Fatal("wrong GitHub identity was accepted")
-	}
+	assertGenericFailure("out-of-scope date", currentSuccessionReceiptWith(db, product, time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC), allow, currentPlain, valid, identity))
+	assertGenericFailure("before-scope date", currentSuccessionReceiptWith(db, product, time.Date(2026, 10, 12, 23, 59, 59, 0, time.UTC), allow, currentPlain, valid, identity))
 	if os.WriteFile(spec, append(body, '!'), 0600) != nil {
 		t.Fatal("fixture spec mutation failed")
 	}
-	changedSpec := currentSuccessionReceiptWith(db, product, allow, currentPlain, valid, identity)
-	if changedSpec["verified"] != false {
-		t.Fatal("changed spec received a succession receipt")
-	}
+	assertGenericFailure("changed spec", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, identity))
 	if _, ok := currentProductByTask(987654); ok {
 		t.Fatal("unknown task received a declaration")
 	}
 	if _, ok := currentProductByTask(product.task); !ok {
 		t.Fatal("declared task lookup failed")
+	}
+}
+
+func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
+	for _, tc := range []struct{ path, want string }{
+		{"C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1/", "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},
+		{"D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md", "ffc9fa43704106b183468369479cf616e9af3304382880d72a28f3378b48b739"},
+	} {
+		got, ok := currentPathHash(tc.path)
+		if !ok || got != tc.want {
+			t.Fatalf("path fingerprint did not match fixed vector")
+		}
 	}
 }

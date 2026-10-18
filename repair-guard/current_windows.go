@@ -19,6 +19,7 @@ const currentAORepository = "autodevjapan/godd-ao"
 const currentAOSpec = "D:/CC/Tools/todo/specs/2839-ccac08e67b3b4a4488f3f0241c59b32c.md"
 const currentAOSpecSHA = "b44e6c70614089c50908901e7d60a902f9e2f0793c813f9a0c2595f03714fd33"
 const currentHandoff = "D:/CC/Work/worker-resume-20261018-2103/hand-off.private.md"
+const currentGitHubCLI = "C:/Program Files/GitHub CLI/gh.exe"
 
 type currentProduct struct {
 	project, root, owner, repository, spec, specSHA string
@@ -46,13 +47,13 @@ func currentProductQualification(product currentProduct) bool {
 }
 
 func currentSuccessionReceipt(db object, product currentProduct) object {
-	return currentSuccessionReceiptWith(db, product, legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified)
+	return currentSuccessionReceiptWith(db, product, time.Now(), legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified)
 }
 
-func currentSuccessionReceiptWith(db object, product currentProduct, protected func(string) bool, plain func(string, bool) bool, origin func(string, string) bool, identity func(currentProduct) bool) object {
+func currentSuccessionReceiptWith(db object, product currentProduct, now time.Time, protected func(string) bool, plain func(string, bool) bool, origin func(string, string) bool, identity func(currentProduct) bool) object {
 	failure := object{"verified": false}
 	parts := strings.Split(product.repository, "/")
-	if !finiteProductScope(time.Now()) || product.task <= 0 || product.repositoryID <= 0 || product.project == "" || product.root == "" || product.spec == "" || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
+	if !finiteProductScope(now) || product.task <= 0 || product.repositoryID <= 0 || product.project == "" || product.root == "" || product.spec == "" || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
 		return failure
 	}
 	if !currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, protected) || !plain(product.root, true) || !origin(product.root, product.repository) || !identity(product) {
@@ -82,13 +83,14 @@ func currentSuccessionReceiptWith(db object, product currentProduct, protected f
 func currentGitHubIdentityVerified(product currentProduct) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "gh", "api", "repos/"+product.repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
+	cmd := exec.CommandContext(ctx, currentGitHubCLI, "api", "--hostname", "github.com", "repos/"+product.repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = time.Second
 	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
+	return err == nil && currentGitHubIdentityMatches(output, product)
+}
+
+func currentGitHubIdentityMatches(output []byte, product currentProduct) bool {
 	fields := strings.Split(strings.TrimSpace(string(output)), "\t")
 	if len(fields) != 3 {
 		return false
@@ -117,6 +119,18 @@ func currentPathHash(path string) (string, bool) {
 	}
 	canonical := strings.ToLower(strings.TrimRight(strings.ReplaceAll(filepath.Clean(absolute), `\`, "/"), "/"))
 	return hashBytes([]byte(canonical)), true
+}
+
+func currentProductsScopePathAllowed(path string, products []currentProduct, qualifies func(currentProduct) bool, protected func(string) bool) bool {
+	for _, product := range products {
+		if !within(product.root, path) && !within(product.root+"-wt", path) {
+			continue
+		}
+		if qualifies(product) && currentProductPath(path, product.root, product.repository, strconv.Itoa(product.task), protected) {
+			return true
+		}
+	}
+	return false
 }
 
 func currentQualification(db object, project string, task int, root, spec, expectedHash string, protected func(string) bool) bool {
@@ -217,13 +231,5 @@ func currentScopePathAllowed(path string) bool {
 	}
 	// Only an exact current product/actor declaration qualifies. Existing
 	// denials remain authoritative; no lost original row is restored.
-	for _, product := range currentProducts {
-		if !within(product.root, path) && !within(product.root+"-wt", path) {
-			continue
-		}
-		if currentProductQualification(product) && currentProductPath(path, product.root, product.repository, strconv.Itoa(product.task), legacyMatch) {
-			return true
-		}
-	}
-	return false
+	return currentProductsScopePathAllowed(path, currentProducts, currentProductQualification, legacyMatch)
 }

@@ -617,6 +617,56 @@ fn validate_withdrawal(receipt: &Value, id: i64, at: DateTime<Utc>) -> Result<()
     Ok(())
 }
 
+fn finished_question_owner(
+    db: &Value,
+    paths: &Paths,
+    row: &Value,
+    wait: &Value,
+    id: i64,
+    at: DateTime<Utc>,
+) -> Result<(Value, String, bool)> {
+    if wait
+        .get("origin")
+        .is_some_and(|origin| *origin != origin_identity(row))
+    {
+        return fail("owner_changed_or_active");
+    }
+    clear(db, row, at)?;
+    let owner = owner_record(paths, row)?.ok_or("conversation_owner_record_unavailable")?;
+    let job = text(&owner, "id");
+    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
+    if !matches!(
+        text(&owner, "status"),
+        "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
+    ) || row["scheduler"]["job"] != job
+        || (row["worker_receipt"]["job"] != job
+            && !retired_legacy_worker(&wait, &row["worker_receipt"], imported))
+        || !row["resume_generation"].is_u64()
+        || row["worker_receipt"]["generation"] != row["resume_generation"]
+        || (!row["processed_results"][job].is_null()
+            && row["processed_results"][job]["generation"] != row["resume_generation"])
+        || text(&row["scheduler"], "key").is_empty()
+        || owner["launch_key"] != row["scheduler"]["key"]
+        || !(owner["todo_id"] == id
+            || owner["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&json!(id))))
+        || row["jobs"].as_array().and_then(|jobs| jobs.last()) != Some(&owner["id"])
+    {
+        return fail("owner_changed_or_active");
+    }
+    let created = owner["created_at"]
+        .as_f64()
+        .filter(|n| n.is_finite() && *n > 0.)
+        .ok_or("conversation_owner_record_invalid")?;
+    if created
+        > timestamp(&wait["question"], "created_at", at)?.timestamp_micros() as f64 / 1_000_000.
+    {
+        return fail("owner_changed_or_active");
+    }
+    Ok((owner, note, imported))
+}
+
 fn withdrawal_note(row: &Value, wait: &Value, owner: &Value) -> Result<(String, bool)> {
     if text(row, "note").starts_with(text(wait, "block_note")) {
         return answered_note(row, wait).map(|note| (note, false));
@@ -811,43 +861,7 @@ pub fn withdraw(
     {
         return fail("block_changed");
     }
-    if wait
-        .get("origin")
-        .is_some_and(|origin| *origin != origin_identity(row))
-    {
-        return fail("owner_changed_or_active");
-    }
-    clear(db, row, at)?;
-    let owner = owner_record(paths, row)?.ok_or("conversation_owner_record_unavailable")?;
-    let job = text(&owner, "id");
-    let (note, imported) = withdrawal_note(row, &wait, &owner)?;
-    if !matches!(
-        text(&owner, "status"),
-        "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
-    ) || row["scheduler"]["job"] != job
-        || (row["worker_receipt"]["job"] != job
-            && !retired_legacy_worker(&wait, &row["worker_receipt"], imported))
-        || !row["resume_generation"].is_u64()
-        || row["worker_receipt"]["generation"] != row["resume_generation"]
-        || (!row["processed_results"][job].is_null()
-            && row["processed_results"][job]["generation"] != row["resume_generation"])
-        || text(&row["scheduler"], "key").is_empty()
-        || owner["launch_key"] != row["scheduler"]["key"]
-        || !(owner["todo_id"] == id
-            || owner["related_todo_ids"]
-                .as_array()
-                .is_some_and(|ids| ids.contains(&json!(id))))
-        || row["jobs"].as_array().and_then(|jobs| jobs.last()) != Some(&owner["id"])
-    {
-        return fail("owner_changed_or_active");
-    }
-    let created = owner["created_at"]
-        .as_f64()
-        .filter(|n| n.is_finite() && *n > 0.)
-        .ok_or("conversation_owner_record_invalid")?;
-    if created > timestamp(&question, "created_at", at)?.timestamp_micros() as f64 / 1_000_000. {
-        return fail("owner_changed_or_active");
-    }
+    let (owner, note, imported) = finished_question_owner(db, paths, row, &wait, id, at)?;
     if !row["scheduler"]["owner_instruction"].is_null()
         && !row["scheduler"]["owner_instruction"].is_string()
     {
@@ -894,7 +908,13 @@ pub fn withdraw(
 }
 
 /// Consume exactly once. Later retries cannot release a new stop or a completed task.
-pub fn answer(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<Value> {
+pub fn answer(
+    db: &mut Value,
+    paths: &Paths,
+    id: i64,
+    path: &Path,
+    delivery: Option<(&Path, &Path)>,
+) -> Result<Value> {
     let (answer, sha) = read(path, ANSWER_FIELDS)?;
     let at = clock()?;
     validate(&answer, id, true, at)?;
@@ -938,7 +958,30 @@ pub fn answer(db: &mut Value, paths: &Paths, id: i64, path: &Path) -> Result<Val
     if row["status"] != "block" {
         return fail("block_changed");
     }
-    let note = answered_note(row, &wait)?;
+    let note = if let Some((note_file, expected_file)) = delivery {
+        let expected: Value = serde_json::from_slice(&bytes(expected_file)?)
+            .map_err(|_| "conversation_state_invalid")?;
+        if *row != expected {
+            return fail("state_changed");
+        }
+        let (_, previous, imported) = finished_question_owner(db, paths, row, &wait, id, at)?;
+        if !imported {
+            return fail("block_changed");
+        }
+        let data = bytes(note_file)?;
+        let delivered = std::str::from_utf8(&data).map_err(|_| "conversation_note_invalid")?;
+        let suffix = delivered
+            .strip_prefix(&format!("{IMPORTED_BLOCK_NOTE}\n\n"))
+            .filter(|s| !s.trim().is_empty() && !s.contains('\0'))
+            .ok_or("conversation_note_invalid")?;
+        let combined = format!("{previous}\n\n{suffix}");
+        if combined.len() as u64 > MAX_BYTES {
+            return fail("file_too_large");
+        }
+        combined
+    } else {
+        answered_note(row, &wait)?
+    };
     clear(db, row, at)?;
     let owner = owner_record(paths, row)?;
     let retire = owner.as_ref().is_some_and(|job| {

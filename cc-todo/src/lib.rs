@@ -198,6 +198,11 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         answer_file: PathBuf,
+        /// Atomically deliver a reply when the scheduler replaced the question marker.
+        #[arg(long, requires = "expected_state_file")]
+        delivery_note_file: Option<PathBuf>,
+        #[arg(long, requires = "delivery_note_file")]
+        expected_state_file: Option<PathBuf>,
     },
     /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
     QuestionWithdraw {
@@ -1212,9 +1217,23 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::QuestionWait { id, question_file } => {
             output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
         }
-        Command::QuestionAnswer { id, answer_file } => {
-            output.push(conversation_wait::answer(db, paths, *id, answer_file)?.to_string())
-        }
+        Command::QuestionAnswer {
+            id,
+            answer_file,
+            delivery_note_file,
+            expected_state_file,
+        } => output.push(
+            conversation_wait::answer(
+                db,
+                paths,
+                *id,
+                answer_file,
+                delivery_note_file
+                    .as_deref()
+                    .zip(expected_state_file.as_deref()),
+            )?
+            .to_string(),
+        ),
         Command::QuestionWithdraw {
             id,
             question_file,

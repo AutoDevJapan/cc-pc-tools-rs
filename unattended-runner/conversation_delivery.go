@@ -104,7 +104,8 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	// Never append to an overwritten question hold or manufacture its missing
 	// marker. Only an intact canonical wait or its durable answer can proceed.
-	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) {
+	imported := q.Wait && row.Status == "block" && conversationWaitRecorded(row, q) && row.Note == "ジョブの結果に判断が必要です。"
+	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) && !imported {
 		return errors.New("conversation original question wait differs")
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
@@ -118,6 +119,32 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		noteFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".note.txt")
 		if err = writeText(noteFile, note); err != nil {
 			return err
+		}
+		if imported {
+			// Rust checks the exact row, original owner/result generation and all
+			// holds under one lock. Never reconstruct a missing question marker
+			// with edit, or expose a runnable task before its reply is durable.
+			origin, err := r.withdrawalRow(q.Todo)
+			if err != nil {
+				return err
+			}
+			expectedFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".expected.json")
+			if err = writeText(expectedFile, string(origin)); err != nil {
+				return err
+			}
+			answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
+			if err != nil {
+				return err
+			}
+			if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-note-file", noteFile, "--expected-state-file", expectedFile); err != nil {
+				return errors.New("conversation imported answer delivery deferred")
+			}
+			row, err = r.todo(q.Todo)
+			if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) || !conversationAnswerRecorded(row, q, answer, b) {
+				return errors.New("conversation imported answer readback deferred")
+			}
+			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+			return r.save()
 		}
 		// Compare under the canonical ToDo lock: a concurrent ordinary block
 		// must not be overwritten with this snapshot's question-wait marker.
@@ -136,10 +163,8 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		if !conversationWaitUnchanged(row, q) {
 			return errors.New("conversation original question wait differs")
 		}
-		answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
-		b, _ := json.MarshalIndent(answer, "", "  ")
-		answerFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
-		if err = writeConversationOnce(answerFile, b); err != nil {
+		answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
+		if err != nil {
 			return err
 		}
 		if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile); err != nil {
@@ -155,6 +180,13 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	req.Todo = q.Todo
 	req.Phase = "conversation_reply_delivered"
 	return r.save()
+}
+
+func (r *Runner) prepareConversationAnswer(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, error) {
+	answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
+	b, _ := json.MarshalIndent(answer, "", "  ")
+	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
+	return answer, b, path, writeConversationOnce(path, b)
 }
 
 func conversationWaitUnchanged(row *TodoRow, q ConversationQuestion) bool {

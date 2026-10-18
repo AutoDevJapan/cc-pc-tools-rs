@@ -1607,3 +1607,123 @@ fn withdrawal_accepts_retired_legacy_worker_only_with_exact_import_evidence() {
         f.withdraw_rejected();
     }
 }
+
+#[test]
+fn imported_answer_delivers_atomically_only_for_the_proven_finished_owner() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    let mut legacy = f.read();
+    let row = &mut legacy["items"][0];
+    row[WAIT].as_object_mut().unwrap().remove("origin");
+    row["worker_receipt"] = json!({"job":null,"generation":7});
+    row["scheduler"]["phase"] = json!("finished");
+    row["note"] = json!("ジョブの結果に判断が必要です。");
+    row["processed_results"] = json!({"original-worker":{"generation":7,"reason":"block"}});
+    let note_file = f.temp.path().join("reply-note.txt");
+    let delivery = "ジョブの結果に判断が必要です。\n\nconversation-owner-reply:synthetic\nprivate reply reference";
+    fs::write(&note_file, delivery).unwrap();
+    let apply = || {
+        f.command(&[
+            "question-answer",
+            "1",
+            "--answer-file",
+            f.temp.path().join("answer.json").to_str().unwrap(),
+            "--delivery-note-file",
+            note_file.to_str().unwrap(),
+            "--expected-state-file",
+            f.temp
+                .path()
+                .join("withdrawal-origin.json")
+                .to_str()
+                .unwrap(),
+        ])
+        .output()
+        .unwrap()
+    };
+    for change in [
+        "worker",
+        "generation",
+        "result",
+        "key",
+        "history",
+        "modern",
+        "note",
+        "cas",
+    ] {
+        let mut db = legacy.clone();
+        let row = &mut db["items"][0];
+        match change {
+            "worker" => row["worker_receipt"]["job"] = json!("another"),
+            "generation" => row["resume_generation"] = json!(8),
+            "result" => row["processed_results"]["original-worker"]["reason"] = json!("done"),
+            "key" => row["scheduler"]["key"] = json!("another"),
+            "history" => row["jobs"] = json!(["original-worker", "another"]),
+            "modern" => {
+                row[WAIT]["origin"] = json!({"resume_generation":7,
+                "worker_receipt":row["worker_receipt"],"job":"original-worker","key":"original-key"})
+            }
+            "note" => row["note"] = json!("別の停止"),
+            "cas" => (),
+            _ => unreachable!(),
+        }
+        f.write(&db);
+        f.snapshot();
+        if change == "cas" {
+            db["items"][0]["progress"] = json!(41);
+            f.write(&db);
+        }
+        let before = f.raw();
+        assert!(!apply().status.success(), "accepted {change}");
+        assert_eq!(f.raw(), before);
+    }
+    for (key, value) in holds() {
+        let mut db = legacy.clone();
+        db["items"][0][key] = value;
+        f.write(&db);
+        f.snapshot();
+        let before = f.raw();
+        assert!(!apply().status.success());
+        assert_eq!(f.raw(), before);
+    }
+    f.write(&legacy);
+    f.snapshot();
+    for bad in [
+        "",
+        "another\n\nreply",
+        "ジョブの結果に判断が必要です。\n\n",
+        "ジョブの結果に判断が必要です。\n\nreply\0",
+    ] {
+        fs::write(&note_file, bad).unwrap();
+        let before = f.raw();
+        assert!(!apply().status.success());
+        assert_eq!(f.raw(), before);
+    }
+    fs::write(&note_file, delivery).unwrap();
+    let out = apply();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let after = f.read();
+    let row = &after["items"][0];
+    assert_eq!(row["status"], "todo");
+    assert_eq!(
+        row["note"],
+        format!(
+            "{}\n\nconversation-owner-reply:synthetic\nprivate reply reference",
+            legacy["items"][0][WAIT]["previous_note"].as_str().unwrap()
+        )
+    );
+    assert!(row[WAIT].is_null());
+    assert_eq!(row[ANSWERS].as_array().unwrap().len(), 1);
+    assert!(row["owner_question_withdrawal_receipts"].is_null());
+    assert_eq!(row["resume_generation"], 8);
+    assert!(row["scheduler"]["job"].is_null());
+    for key in ["spec", "jobs", "progress", "processed_results"] {
+        assert_eq!(row[key], legacy["items"][0][key]);
+    }
+    let before = f.raw();
+    assert!(apply().status.success());
+    assert_eq!(f.raw(), before);
+}

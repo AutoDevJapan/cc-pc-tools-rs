@@ -24,6 +24,7 @@ type withdrawalFixture struct {
 	foreignScope, edited                                                                string
 	onProof                                                                             func(int)
 	onCommand, onPatch                                                                  func()
+	allowAnswer                                                                         bool
 }
 
 func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
@@ -119,7 +120,11 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 				w.failLog = false
 				return "", errors.New("log result lost")
 			}
-		case "question-answer", "recovery-ask", "start", "done":
+		case "question-answer":
+			if !w.allowAnswer {
+				t.Fatal("withdrawal manufactured an answer")
+			}
+		case "recovery-ask", "start", "done":
 			t.Fatal("withdrawal manufactured an answer or launched/completed the task")
 		}
 		return backend(ctx, path, args...)
@@ -497,6 +502,78 @@ func TestConversationWithdrawActualCanonicalRetiredLegacyWorker(t *testing.T) {
 			w.f.r.processConversations(context.Background(), &health)
 			if len(health.Errors) != 0 || w.f.r.State.Requests[reply.Message] == nil || w.f.r.State.Requests[reply.Message].Todo != 42 {
 				t.Fatalf("late owner reply lost after legacy withdrawal: %v", health.Errors)
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalOwnerReplyBeforeRetiredLegacyWithdrawal(t *testing.T) {
+	w := withdrawalTest(t, true)
+	w.allowAnswer = true
+	w.f.mutateTodo(t, func(row map[string]any) {
+		delete(row["owner_question_wait"].(map[string]any), "origin")
+		row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+		row["note"] = "ジョブの結果に判断が必要です。"
+		row["scheduler"].(map[string]any)["phase"] = "finished"
+		row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+	})
+	reply := w.f.reply(t, 8, "既存の依頼を進めて")
+	result, err := w.run()
+	if err != nil || result["owner_reply_pending"] != true || w.commands != 0 || w.logs != 0 || w.patchCount() != 0 {
+		t.Fatal("real owner reply did not stop withdrawal")
+	}
+	health := Health{}
+	w.f.r.NoticeAttempted = true
+	w.f.r.processConversations(context.Background(), &health)
+	row, _ := w.f.r.todo(42)
+	if len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || !hasNoteMarker(row.Note, "conversation-owner-reply:"+w.f.q.SenderID+":"+reply.Message+":"+canonicalHash([]string{reply.Body, ""})[:16]) {
+		t.Fatalf("real owner reply was saved but could not release machine-imported wait: %v", health.Errors)
+	}
+}
+
+func TestConversationActualCanonicalImportedAnswerLostResponseAndNewStop(t *testing.T) {
+	for _, kind := range []string{"lost-response", "new-stop"} {
+		t.Run(kind, func(t *testing.T) {
+			w := withdrawalTest(t, true)
+			w.allowAnswer = true
+			w.f.r.NoticeAttempted = true
+			w.f.mutateTodo(t, func(row map[string]any) {
+				delete(row["owner_question_wait"].(map[string]any), "origin")
+				row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+				row["note"] = "ジョブの結果に判断が必要です。"
+				row["scheduler"].(map[string]any)["phase"] = "finished"
+				row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+			})
+			reply := w.f.reply(t, 8, "既存の依頼を進めて")
+			backend, intercepted := w.f.r.Run, false
+			w.f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if args[0] == "question-answer" && !intercepted {
+					intercepted = true
+					if kind == "new-stop" {
+						w.f.mutateTodo(t, func(row map[string]any) { row["note"] = "後から届いた停止" })
+					} else {
+						if _, err := backend(ctx, path, args...); err != nil {
+							t.Fatal(err)
+						}
+						return "", errors.New("committed response lost")
+					}
+				}
+				return backend(ctx, path, args...)
+			}
+			health := Health{}
+			w.f.r.processConversations(context.Background(), &health)
+			if !intercepted || len(health.Errors) == 0 {
+				t.Fatal("did not exercise uncertain delivery")
+			}
+			health = Health{}
+			w.f.r.processConversations(context.Background(), &health)
+			row, _ := w.f.r.todo(42)
+			if kind == "new-stop" {
+				if row.Status != "block" || row.Note != "後から届いた停止" || len(row.QuestionAnswers) != 0 || w.f.r.State.Requests[reply.Message].Todo != 0 {
+					t.Fatal("a later hold was lost or reported as delivered")
+				}
+			} else if len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || w.f.r.State.Requests[reply.Message].Todo != 42 {
+				t.Fatalf("lost successful response did not reconcile exactly once: %v", health.Errors)
 			}
 		})
 	}

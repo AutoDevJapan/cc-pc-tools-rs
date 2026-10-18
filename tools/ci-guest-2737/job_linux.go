@@ -45,13 +45,22 @@ type liveWire struct {
 	ctx  context.Context
 }
 
+// Each event owns its write timeout. In particular, an admission timeout must
+// not remain on the stream while the runner executes the admitted job.
+func writeLiveEvent(conn net.Conn, out *json.Encoder, event liveJobEvent) (err error) {
+	if conn != nil {
+		if err = conn.SetWriteDeadline(time.Now().Add(15 * time.Second)); err != nil {
+			return err
+		}
+		defer func() { err = errors.Join(err, conn.SetWriteDeadline(time.Time{})) }()
+	}
+	return out.Encode(event)
+}
+
 func (w *liveWire) permit(ctx context.Context, id string, event liveJobEvent) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.conn != nil {
-		_ = w.conn.SetWriteDeadline(time.Now().Add(15 * time.Second))
-	}
-	if e := w.out.Encode(event); e != nil {
+	if e := writeLiveEvent(w.conn, w.out, event); e != nil {
 		return errors.New("job event delivery failed")
 	}
 	select {
@@ -111,7 +120,7 @@ func (o *localJobOwner) handle(c net.Conn) {
 // fixes the source expectation; this stream cannot change it or select a shell.
 func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepacket.Pin) {
 	out := json.NewEncoder(conn)
-	fail := func(code string) { _ = out.Encode(liveJobEvent{ID: id, Stage: "failed", Failure: code}) }
+	fail := func(code string) { _ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "failed", Failure: code}) }
 	var plan linuxJobPlan
 	if strictBlob(input, 32768, &plan) != nil || !validLinuxJob(plan, expected, id) {
 		fail("job_plan_rejected")
@@ -147,7 +156,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_source_owner_failed")
 		return
 	}
-	if e = out.Encode(liveJobEvent{ID: id, Stage: "source-ready", Proof: proof}); e != nil {
+	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof}); e != nil {
 		return
 	}
 	var config struct{ Token string }
@@ -161,7 +170,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		return
 	}
 	config.Token = ""
-	if e = out.Encode(liveJobEvent{ID: id, Stage: "configured", Configured: true}); e != nil {
+	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "configured", Configured: true}); e != nil {
 		return
 	}
 	var listen liveJobAck
@@ -262,7 +271,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_hooks_not_completed")
 		return
 	}
-	_ = out.Encode(liveJobEvent{ID: id, Stage: "runner-exited", Exit: &code})
+	_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "runner-exited", Exit: &code})
 }
 func configureLiveRunner(ctx context.Context, p linuxJobPlan, token string) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)

@@ -524,3 +524,24 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   新VHD/seed/runtimeのroot982/25/e850は再開/診断が未完のため保持。旧SDK/root/他担当/未回収/原productfolder/owner-work/guard/登録manifestを変更していない。
   新費用/Hosted予算/API-key AI/GPU/Civ6/本人PC操作なし。次は2843の実配布を受領し、原log取得→関連修正/有限review→同明示sourceの通常CI再開。
   完了済み2838/SDK/Windows実装へ再waitせず、2843だけの正規waitと自身の実HEAD/jobのcheckpointを保存する。原merge/Prdは親2641。
+
+## 2026-10-19 job032350: 原ログ受領と通信期限の回帰修正
+
+- 2843の実配布を受領し、canonical gh_gate.exe SHA256 8BAA838B874FD4995F577F724C77B280CA7DE4B975BE8CDF35BCEE7D76FDA871とPR222のmergeを照合した。
+  正規api --allow-escape-sequencesで元job117733211808のログ取得がexit0。20983bytes/SHA256630293E9E0758EAF9A1C27EE9A7EDF8A7A31A672B8ED64454849EE64E0A4620A。
+  原文/位置をstdout/modelへ出していない。原公式run39147155349 attempt1はcancelled、verifyはfailure、Windows未実行のまま。
+- pnpm actionの固定公開commit ea17c68df8912ef543352723c149a84f56e3d413を照合した。エラー分類はNode ERR_INVALID_ARG_TYPE、paths[0] undefined、Node18.19.1/self-installer。
+  固定公開manifestはnode24だが、これだけで実選択や原因を確定していない。元環境の公開SDK tar内node20/24はELFを確認しただけで、実version検査ではない。
+  有限の公開合成再現2860を通常add --spec/model gpt-6.1-solで登録。原製品source/log/VM/routeや親codeの操作なし、独立owned資源だけを許可した。子Codexは直接起動していない。
+- liveWire.permitの15秒write deadlineがstreamに残り、後続のfailed/runner-exited通知を失わせる別の実欠陥を修正した。
+  各event送信で15秒を設定し、送信後に解除する共通関数へ集約。deadline設定/解除エラーも失敗として返す。source-ready/configured/terminal送信も同じ有限書込期限を使う。
+  これは最初のcomplete proof拒否やpnpmエラーの根因確定ではない。原start/completeのsource/claim検査は緩めていない。
+- 仮想clock付き実net.Pipeで、start admission後に1分進めたterminal送信を検査。修正前はfailed/runner-exitedの2ケースだけ失敗、修正後は両方成功。
+  同じmoduleの実Linux合成全件成功、Windows関連race成功、Windows/Linux vet成功。原製品Cargo/全workspace/実VMの再受入は未実行。
+  original log保存のcallerにも配布済みフラグを追加し、次回の自動ログ保存に反映。private bounded file/hash/partial failure保持は不変。
+- 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-032350-diagnosis。transport-regression-evidence.jsonがred/green/関連検査/停止観測のhashを保持する。
+  工具containerは同一ID/name/image/label/host bind/deviceなしを照合して今回の検査だけで再起動し、工程後stop成功、Running=false/PID0を確認した。必要なSDK layerと失敗VHDは保持。
+  新診断owned root a0fb308270dede4d61ca5345f8ff883fには公開SDK検査helperと合成検査binaryだけを保持。原製品checkoutは作っていない。
+- 次はこの小差分の別モデルレビューを受領してMustを修正し、2860の実再現を受けてpnpm根因を直す。
+  製品085b5b007cab4ebd57d6690faf6df95bb40453ef/tree25ae0b09830d1fbeef079e8ff6bcc033928bc8d8/元refを維持。
+  同route lease0b2414b10418d265c7823a4f87bb5881の変数は不在で、新公式run送信0。通常CIの全工程/Windows13/Docker parityは未完。原merge/Prdは親2641。

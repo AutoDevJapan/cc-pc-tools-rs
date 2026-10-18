@@ -462,7 +462,7 @@ func preserveOfficialJobLog(ctx context.Context, root string, id int64) error {
 	if e != nil {
 		return e
 	}
-	c := command(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", fmt.Sprintf("repos/%s/actions/jobs/%d/logs", originalRepo, id))
+	c := command(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", "--allow-escape-sequences", fmt.Sprintf("repos/%s/actions/jobs/%d/logs", originalRepo, id))
 	c.Stderr = io.Discard
 	c.Stdout = &boundedLogFile{f: f, remaining: 512 << 20}
 	runErr := c.Run()

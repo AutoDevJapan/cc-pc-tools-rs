@@ -1,5 +1,26 @@
 # ToDo2736 再開記録
 
+## 2026-10-18 19:48再開・受付更新後の境界確認（最新）
+
+job20261018-194836-todo-2736、同branch/e0516b0から再開。保存済みオーナー指示は同SHA、
+元2736/2640/2626のnoteは配送済み154450本文と改行正規化後に一致。製品PR148は実APIで
+同owner/private/nonfork/admin・open/draft・同head/base repo・75a/head・1100/base・
+元branch ref不変を確認。origin/mainは0344d1bfへ進んだが、cc-redact/cc-gh-gateと
+両helperモジュールは3af45ee2から差分0。新しい送信修復結果はない。
+
+司令塔2626の保存specだけがf13c3eへ更新されており、旧版との差分8行を確認した。
+Discord受付の再実装・配布とSkillの10/18節が追加されていた。更新後のSkillも技術的な
+許可を質問しない条件と元の停止/依存/許可範囲を保持している。既に受付前拒否された
+同じ質問を再送せず、今回の更新を送信フィルター変更の許可には読み替えない。
+更新記録を根拠に正式scrub391で必要な配備先だけ再判定したが、
+classification_unverified=true/client_resource=true/original_registry_recovered=false。
+判定結果を保存し、配備先の内容読取/更新/実行は0。新しい保護設定は作らない。
+
+今回の共有ToDoはtodo/phase prepared、jobsに今回idなし、scheduler.jobなし。
+前回103955と同じ保存前提の欠落なのでcheckpointの同じ失敗を再試行しない。
+今回のjob/実HEAD/branchと不足条件を恒久root内のinspectionへ保存する。
+ブランチ変更なし。製品変更・再送・runner・dispatch・既済検査・質問は0で正式CI未達。
+
 ## 2026-10-18 15:44再開・今回の正常な関連付け（最新）
 
 job20261018-154450-todo-2736、同branch/e2f4ec1から再開。実jobは15:45:19開始、

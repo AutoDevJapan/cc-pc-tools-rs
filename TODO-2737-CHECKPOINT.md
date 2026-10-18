@@ -720,3 +720,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 関連検査はWindows go test -race ./...、Windows/Linux vet成功、実Linux module20pass/0fail/公開SDK opt-in2skip。原Cargo compile0。新SDK生成/実VM受入/公式rerun/route/runner登録は0で、Must修正の受付や単体成功をSDK実受入としない。
 - 新ownedroot28ebee5bff0c48aa6a25f16eb2665360、証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-064034-sdk-must。原応答/実model metadata/検査/元source API固定を保持。CC実repo1406818713/AutoDevJapan/private/admin/nonfork、原PR3613/head085/ref/tree/workflowをAPI再照合した。
 - 次はこの追加Must修正差分だけの別モデルレビューを受領し、Must0後の同clean版で新SDK生成→停止後のcloneでRust/driver/保存を検証する。元SDK9389/失敗disk/Windows SDK/guard/manifest/owner-work/他担当資源は保持。終了hookと公式通常CI/Windows13/Docker parityは未完。新費用/APIkeyAI/GPU/Civ6/本人操作/Discord送信0。
+### Must修正の追加レビューと再開条件
+
+- e02a592d64025e851c809cc922cbe4ee23a51f8d/tree1c57c38d84772008973186c352023596f9b9dc80の追加5fileだけを有限レビュー2884/modelgpt-6-lunaへ通常add --specで登録し、保存spec全文一致/dispatchableを確認。まだ実結果未受領。レビュー前の新SDK生成や実VM適用は0。
+- 元2737/親2641へmarker[2737-064034-sdkmust]で採用指摘/修正/検査/未完/証拠/次の工程を1回配送し、2880にも原応答受領を記録した。終了前の原source API固定、原AGENTS/CLAUDE既読同hash、own route/normalCI intent不在、工具container停止/PID0を確認した。
+- 次は2884の実head/既読/model/Mustを受領し、残Must解消後に同clean版のhost/Linuxhelperを生成して新規SDKを作る。その停止後cloneでRust/driver/永続化の実受入を行う。旧SDK/失敗disk/原Windows SDK/guard/manifestは保持し、原CI/Windows13/Docker parity/終了hookの未完を維持する。待ち先は2884のみ、現job/実HEADのscheduler checkpointと正規waitを保存する。

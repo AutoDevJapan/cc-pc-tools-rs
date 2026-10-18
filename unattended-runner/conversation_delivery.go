@@ -186,12 +186,19 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 	for i := 0; i < len(ids); i++ {
 		id := ids[(start+i)%len(ids)]
 		q := index.Questions[id]
-		if q.Phase == "reserved" || q.Phase == "closed" {
+		if q.Phase == "closed" {
 			continue
 		}
 		index.Cursor = id
 		if publish(r.conversationPath(), index) != nil {
 			health.Errors = append(health.Errors, "conversation_cursor_deferred")
+			return
+		}
+		if q.Phase == "reserved" {
+			_, err := r.conversationAsk(ctx, ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait})
+			if err != nil {
+				health.Errors = append(health.Errors, "conversation_send_pending")
+			}
 			return
 		}
 		proof, err := r.conversationProof(ctx, q)

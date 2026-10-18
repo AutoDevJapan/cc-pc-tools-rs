@@ -315,12 +315,15 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return zero, errors.New("conversation original task unavailable")
 	}
 	body, err := boundedRegular(input.BodyFile)
-	if err != nil || len(strings.TrimSpace(string(body))) == 0 {
+	if err != nil || len(body) > 128<<10 || len(strings.TrimSpace(string(body))) == 0 {
 		return zero, errors.New("conversation question unavailable")
 	}
 	decision, err := boundedRegular(input.DecisionFile)
 	if err != nil {
 		return zero, err
+	}
+	if len(decision) > 128<<10 {
+		return zero, errors.New("conversation decision limit exceeded")
 	}
 	var decisionValue map[string]json.RawMessage
 	if json.Unmarshal(decision, &decisionValue) != nil {
@@ -364,6 +367,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if !exists {
+		if row.Status != "doing" && row.Status != "todo" {
+			return zero, errors.New("conversation task is already held")
+		}
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
@@ -381,6 +387,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return q, nil
 	}
 	if q.Phase == "reserved" {
+		if row.Status != "doing" && row.Status != "todo" {
+			return zero, errors.New("conversation reserved task is held")
+		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
@@ -525,6 +534,9 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	body, err := boundedRegular(bodyFile)
 	if err != nil {
 		return nil, err
+	}
+	if len(body) > 128<<10 {
+		return nil, errors.New("conversation report limit exceeded")
 	}
 	attachmentHashes := make([]string, 0, len(attachments))
 	for _, attachment := range attachments {

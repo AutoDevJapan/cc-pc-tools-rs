@@ -508,6 +508,28 @@ func TestConversationCanonicalSenderDeduplicatesChangedRequestIDAndTitle(t *test
 	}
 }
 
+func TestConversationReservedSendAutomaticallyResumesWithoutNewIdentity(t *testing.T) {
+	f := conversationTest(t, false)
+	f.lost = true
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+		t.Fatal("expected lost sender result")
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	index, err := f.r.loadConversations()
+	if err != nil || len(health.Errors) != 0 || index.Questions[f.input.RequestID].Phase != "posted" || f.posts != 1 {
+		t.Fatal("reserved send did not resume the original intent")
+	}
+}
+
+func TestConversationNewQuestionDoesNotSendFromAnAlreadyHeldTask(t *testing.T) {
+	f := conversationTest(t, true)
+	f.mutateTodo(t, func(row map[string]any) { row["status"] = "block" })
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil || f.posts != 0 {
+		t.Fatal("held task generated a new question")
+	}
+}
+
 func TestConversationEditedReplyAfterReadyFailureUsesSeparateImmutableVersion(t *testing.T) {
 	f := conversationTest(t, true)
 	f.ask(t)

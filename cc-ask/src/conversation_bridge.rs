@@ -5,7 +5,7 @@ use crate::{
     core::{Effects, Result},
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -358,11 +358,26 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
 }
 
 fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Option<Value>> {
-    let output = effects.run(args, 65).map_err(|_| CHILD_FAILED)?;
-    if output.code != 0 {
-        return Err(CHILD_FAILED.into());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
+    loop {
+        let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining.as_secs() == 0 {
+            return Err(CHILD_FAILED.into());
+        }
+        let output = effects
+            .run(args, remaining.as_secs().min(65))
+            .map_err(|_| CHILD_FAILED)?;
+        // Only a proven pre-operation lease collision is retried automatically.
+        // The exact immutable request/arguments are retained on every attempt.
+        if output.code == 2 && output.stdout.trim() == "busy" {
+            std::thread::sleep(std::time::Duration::from_millis(250));
+            continue;
+        }
+        if output.code != 0 {
+            return Err(CHILD_FAILED.into());
+        }
+        return Ok(Some(metadata(&output.stdout, ask)?));
     }
-    Ok(Some(metadata(&output.stdout, ask)?))
 }
 
 pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result<Option<Value>> {

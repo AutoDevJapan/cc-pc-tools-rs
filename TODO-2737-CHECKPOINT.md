@@ -671,4 +671,15 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   verify job117778712948がqueued、同run-role専用labelのみを確認し、固定Source3hash/attempt3/roleverify/同lease/空Inputsで実行を開始した。
   レビュー済みclean691015bのhost0c4c9901.../Linux48589ebf...とcanonical gate8baa838b...の実file hashを照合し、canonical Cargo gate内のinstance544af4826353ff16404c2cfd446eb2dbを単一所有する。
 - この時点はVM準備中で、診断の実計測/原検査成功/回収をまだ主張しない。終了前に終端とVM/runner/lock/routeを実確認し、新しい失敗と前の結果を別に残す。
-  再開ではownedroot de0のoperations.ps1/各intentと同run39147155349 attempt3を照合し、受付済みPOSTを再送しない。原merge/Prdは親2641。
+  再開ではownedroot de0のoperations.ps1/各intentと同run39147155349 attempt3を照合し、受付済みPOSTを再送しない。原merge/Prdは親2641。### attempt3の終端と公開SDKを単独計測する追加差分
+
+- clean691015bのVMは起動し、原source-readyの物理1904blob照合が成功した。runner起動前のSDK計測でcompiler解決exit0/hash d3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea、verbose exit-1、cachekey exit135、後者2件は出力0bytesだった。旧計測はSignal/TimedOutを持たないため、SIGBUS・timeout・SDK破損のいずれも断定しない。
+- runner29登録後、listener開始前の再照合でhostがexit1となった。旧コードはAPI読取失敗と実binding変更を同じエラーへ畳んでいたため、実job変更とは断定しない。公式job117778712948はrunner_id0/queuedのままで、原workflowの検査は一つも開始していない。終了hookの診断も今回未取得であり、attempt2のcomplete failureを解決済みとはしていない。
+- VM2d58a79c-f3c9-4097-8c72-06c18c35bf9dは通常cleanupで停止/除去/memory0、runner29登録不在、durable normal CI intent不在を確認。工具containerは停止/PID0。その後の同target canonical gate normal/EOF回収fixtureはexit0、原Cargo compile0。
+- 同run39147155349 attempt3へ通常cancel後もqueuedだったため同runだけforce-cancelし、最終completed/cancelledを確認。4job117778712948/117780479452/117780480166/117780480519は全completed/cancelledで、Windows未実行。own routeはexact value照合後DELETEし、原ref/head085は保持した。
+- 停止前item_14最終commandはgate検査exit0/実Linux17pass0fail2skip/source-after-final保存まで完了し、その後のown route不在GETで通信timeoutとなり全体exit1。前のmutationを再送していない。再開後は当該readだけを有限再照会し、不在を確認した。原API error133bytes/hash1D42A392E287FFBD06E9427C1E1CB7804E8031BCD6576AD490A9FF8EBB927538を保持。
+- 新しいprobe-sdk経路は製品fetch/runner登録/GitHub APIを使わず、同immutable SDKの専用cloneだけを既存Cargo gate/normal CI kernel lock/durable intent/VM fence/通常cleanupで計測する。固定3Rust commandのsignal/timeoutを区別し、固定公開librustc_driverのbyte数/hash/read完了を観測する。終了0は計測収集であり、SDK正規性/使用可能/原CI成功を意味しない。
+- guestはactive/prepared/configured/sourceTouched/異instanceを拒否する。source操作は失敗してもsourceTouchedが残り、公開SDK計測へ戻れない。製品jobの再照合はAPIエラーを保持し、実binding変更時だけbefore/afterをprivate保存する。許可/source固定/元13工程/Docker parityは変更していない。
+- 新11source fileの関連検査はWindows go test -race成功、Windows/Linux vet成功、実Linux module17pass/0fail/公開SDK opt-in2skip。kernel競合拒否→close後再取得、実socket拒否/正常収集/失敗source操作後拒否を含む。最終検査後source追加変更0。同差分の実VM計測は未実施で、別モデルの有限レビュー後に進む。
+- 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-051440-sdk。attempt3-evidence-files.private.jsonに原receiptのcopy/hash照合を保存した。de0/982/c91失敗disk/seed、immutable SDK9389、Windows SDK、現test/runtimeを保持し、大きなdiskを複製していない。原guard/manifest/owner-work/他担当は不変。
+- 次は本追加差分だけの別モデルレビューを受領し、Must解消後の同clean版host/Linux helperで公開SDKを製品sourceなしに実測する。Rust根因修正と終了hook根因修正、公式通常CI/Windows13/Docker parityは未完。原製品merge/Prdは親2641の担当。

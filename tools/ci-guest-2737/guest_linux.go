@@ -27,6 +27,7 @@ type guest struct {
 	results              map[string]fixtureResult
 	instance             string
 	prepared, configured bool
+	sourceTouched        bool
 	source               sourcepacket.Pin
 }
 
@@ -54,10 +55,26 @@ func (g *guest) serve(conn net.Conn) {
 		g.active = true
 		g.prepared = true
 		g.configured = true
+		g.sourceTouched = true
 		g.mu.Unlock()
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
 		_ = conn.SetDeadline(time.Now().Add(40 * time.Minute))
 		serveLiveJob(conn, reader, q.ID, g.source)
+		return
+	}
+	if q.Kind == "probe-public-sdk" {
+		g.mu.Lock()
+		if g.active || g.prepared || g.configured || g.sourceTouched || q.ID != g.instance {
+			g.mu.Unlock()
+			return
+		}
+		g.active = true
+		g.mu.Unlock()
+		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		_ = conn.SetDeadline(time.Now().Add(90 * time.Second))
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		_ = json.NewEncoder(conn).Encode(publicSDKProbe{ID: q.ID, Rust: probeRustAt(ctx, "/home/ci2737"), Driver: probeSDKDriver(ctx)})
 		return
 	}
 	if q.Kind == "materialize-source" {
@@ -67,6 +84,7 @@ func (g *guest) serve(conn net.Conn) {
 			return
 		}
 		g.active = true
+		g.sourceTouched = true
 		g.mu.Unlock()
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
 		_ = conn.SetDeadline(time.Now().Add(10 * time.Minute))

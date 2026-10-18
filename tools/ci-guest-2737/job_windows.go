@@ -11,9 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
-	"unsafe"
 )
 
 // A caller must explicitly supply the reviewed revision and official run. This
@@ -160,16 +158,11 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 		return e
 	}
 	// One dedicated kernel lock, separate from all old product-ci admissions.
-	lock, e := os.OpenFile(`D:\CC\Tools\product-ci\todo2737-normal-ci.lock`, os.O_CREATE|os.O_RDWR, 0600)
+	lock, e := takeNormalCILock(`D:\CC\Tools\product-ci\todo2737-normal-ci.lock`)
 	if e != nil {
 		return e
 	}
 	defer lock.Close()
-	var over syscall.Overlapped
-	ok, _, _ := lockFileProc.Call(lock.Fd(), 3, 0, 1, 0, uintptr(unsafe.Pointer(&over)))
-	if ok == 0 {
-		return errors.New("another normal CI job owns admission")
-	}
 	// An unresolved durable intent survives process/host loss and prevents a new
 	// invocation from masking a live or unknown VM. Recovery is explicit.
 	intentPath := `D:\CC\Tools\product-ci\todo2737-normal-ci.intent.private.json`
@@ -326,7 +319,13 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 		return e
 	}
 	again, e = bindOfficialJob(ctx, attempt, q, 0, "")
-	if e != nil || again != binding {
+	if e != nil {
+		return fmt.Errorf("queued job revalidation failed: %w", e)
+	}
+	if again != binding {
+		if e = record(attempt, "queued-binding-changed.private.json", map[string]any{"before": binding, "after": again}); e != nil {
+			return e
+		}
 		return errors.New("queued job changed before listener")
 	}
 	if e = sendLiveFrame(conn, liveJobAck{ID: instance, Stage: "listen", Accepted: true, RunnerID: runnerID}); e != nil {

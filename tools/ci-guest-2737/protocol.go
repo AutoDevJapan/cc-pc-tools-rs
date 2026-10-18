@@ -62,6 +62,19 @@ type sdkResult struct {
 	Log              []byte `json:"log,omitempty"`
 }
 
+type publicSDKProbe struct {
+	ID                              string
+	Rust                            []rustProbeResult
+	Driver                          []sdkArtifactProbe
+	ProductSource, RunnerRegistered bool
+}
+type sdkArtifactProbe struct {
+	Name         string
+	Bytes        int64
+	SHA256       string
+	ReadComplete bool
+}
+
 func writeBlob(w io.Writer, b []byte) error {
 	if e := binary.Write(w, binary.BigEndian, uint64(len(b))); e != nil {
 		return e
@@ -172,7 +185,7 @@ func decodeRequest(d *json.Decoder) (request, error) {
 	if e := d.Decode(&q); e != nil {
 		return q, e
 	}
-	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "materialize-source" && q.Kind != "configure-offline" && q.Kind != "live-job") || !validInstance(q.ID) {
+	if (q.Kind != "normal" && q.Kind != "cancel" && q.Kind != "status" && q.Kind != "continue" && q.Kind != "prepare-sdk" && q.Kind != "probe-public-sdk" && q.Kind != "materialize-source" && q.Kind != "configure-offline" && q.Kind != "live-job") || !validInstance(q.ID) {
 		return q, errors.New("fixture request rejected")
 	}
 	return q, nil

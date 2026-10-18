@@ -31,6 +31,8 @@ type rustProbeResult struct {
 	Name                                      string
 	FailureCode                               string `json:",omitempty"`
 	Exit                                      int
+	Signal                                    int  `json:",omitempty"`
+	TimedOut                                  bool `json:",omitempty"`
 	StdoutBytes, StderrBytes                  int
 	StdoutSHA256, StderrSHA256                string
 	CompilerSHA256                            string `json:",omitempty"`

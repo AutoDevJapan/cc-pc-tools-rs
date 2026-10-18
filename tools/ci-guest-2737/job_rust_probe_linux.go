@@ -16,6 +16,10 @@ import (
 // These probes neither install a toolchain nor compile the product, and are not
 // acceptance conditions. In particular, a cachekey is not compiler provenance.
 func probeLiveRust(ctx context.Context) []rustProbeResult {
+	return probeRustAt(ctx, liveWorkspace)
+}
+
+func probeRustAt(ctx context.Context, directory string) []rustProbeResult {
 	var result []rustProbeResult
 	for _, probe := range []struct{ name, script string }{
 		{"compiler", "/home/ci2737/.cargo/bin/rustup which --toolchain 1.97.1 rustc"},
@@ -26,7 +30,7 @@ echo "$DATE$HASH" | head -c12`},
 	} {
 		flight, cancel := context.WithTimeout(ctx, 8*time.Second)
 		c := exec.CommandContext(flight, "/bin/bash", "-e", "-o", "pipefail", "-c", probe.script)
-		c.Dir = liveWorkspace
+		c.Dir = directory
 		c.Env = []string{"HOME=/home/ci2737", "LANG=C.UTF-8", "PATH=" + liveRunnerPath, "CARGO_HOME=/home/ci2737/.cargo", "RUSTUP_HOME=/home/ci2737/.rustup", "RUSTUP_AUTO_INSTALL=0", "RUSTC_WRAPPER=/usr/local/bin/sccache"}
 		c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Credential: &syscall.Credential{Uid: 1001, Gid: 1001}}
 		c.WaitDelay = time.Second
@@ -39,6 +43,7 @@ echo "$DATE$HASH" | head -c12`},
 		out, stderr := sdkBuffer{Limit: 8192}, sdkBuffer{Limit: 8192}
 		c.Stdout, c.Stderr = &out, &stderr
 		err := c.Run()
+		timedOut := flight.Err() == context.DeadlineExceeded
 		cancel()
 		exit := 0
 		if err != nil {
@@ -48,6 +53,17 @@ echo "$DATE$HASH" | head -c12`},
 			}
 		}
 		r := summarizeRustProbe(probe.name, exit, out.Bytes(), stderr.Bytes())
+		r.TimedOut = timedOut
+		if e, ok := err.(*exec.ExitError); ok {
+			if status, ok := e.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+				r.Signal = int(status.Signal())
+			}
+		} else if err != nil {
+			r.FailureCode = "launch_failed"
+		}
+		if timedOut {
+			r.FailureCode = "timeout"
+		}
 		// A returned path is never a file-read capability: only this single known
 		// SDK compiler is eligible for an observational hash, never a source proof.
 		const compiler = "/home/ci2737/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/rustc"

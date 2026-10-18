@@ -652,3 +652,12 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   原routeは不在、新mutation/公式rerun/原VM起動0。既存source guard/manifest/owner-work/未回収/他担当資源は変更しない。
 - 次は本診断差分の別モデルレビューを受領し、Must解消後の同clean実行物で同明示085/ref/tree/workflowの次回公式受入を行う。
   実計測結果からRustとcompleteの根因を修正するまで、受付/診断実装/合成成功を修正完了としていない。原Windows13/Docker parity/通常CIは未完、原merge/Prdは親2641。
+### 同jobの固定版・実行物・正規レビュー待機
+
+- 診断差分は691015b06e6c70ba99ec58a2b3a611af727e9961/tree d8fbc353cea7c67efeaef762ac5236f7a7f60625へcommit/pushした。
+  追加8fileだけの有限レビュー2871を通常add --spec/model gpt-6-lunaで登録し、保存spec全文一致を確認。親の実modelはgpt-6.1-solで別モデル条件を維持。新差分の結果はまだ未受領。
+- 次の実計測に必要なhost/Linux helperを同clean691015bから各1回buildした。host inspect-executorの実module/admission_linked/source_cleanとLinux buildinfoの同VCS/cleanを確認。
+  ownedroot17adf7c9adb4750d18b19bd3b272da10のhost SHA2560c4c9901a8c1ce5e9aa81c6c680527e0681b5a41ddb314ee6e08ced97d08b5a4、Linux helper48589ebf86c7ff3a8015cb672fdc6e284bc67e8e76cce5f1207af6925f9dbd7eを保持。
+  新実行物の実VM/公式CI受入は未実施。旧58a9579実行物に新計測が入っているとは扱わない。文書保存のために再buildしない。
+- 今回root17とsource/guidance/研究受領metadata、runtime proofは同resume-050050-diagnosticsに保持。既存c91/982失敗disk/SDK/Windows SDK/必要container layerは維持。
+  未完依存は2871だけなので正規waitへ保存。完了済み2869/2870/SDKを再待機せず、実HEAD/現jobのscheduler checkpointを保存して再開する。

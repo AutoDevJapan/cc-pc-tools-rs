@@ -473,3 +473,20 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   古い「実公式claimを伴うclone受入をroute適用前に完了」と読める順序は実API依存に合わないため訂正。架空job IDや手書きmanifestで前提を埋めない。
   初回に失敗すればその公式失敗/未実行を保持し、原因修正・必要レビュー/受入を続ける。原13工程/条件/profile/直列/timeout/Docker parityは削らない。
   原b194/routeflag/Hosted予算/原guard/manifestはまだ変更0、通常CI未実行。原merge/Prdは親2641。
+
+### 同jobの保存と実行物
+
+- clone修正は4c60959bf3657ac2142699b8bf41ac6112d0d9d3/treea0aea436139784d3e469320798afa07536af4d43へcommit/push済み。
+  有限レビュー2838はfixed base45fead8→head4c60959の6fileだけを対象に通常add --spec/model gpt-6-lunaで登録。保存specは全文読戻し一致。
+  job20261019-014354がdoingで、原応答はまだ未受領。新差分のMust0は旧2835から流用しない。
+- まとまったhost接続/寿命変更の実運用に必要なbuildを、上記clean commitから1回実施した。
+  root e8506df50926a134106b9983c4fd70fcのci2737-host.exeはSHA256 f810a76e7e2658cd58fac0ad5ba74e9d7b574e0bad8772308d002a564ead4c90。
+  windows-ci-runner-agent.exeはa9755bcaf0e2db2df2c454818188f73691f31a3ae3d2ee3fdd15aa78099f0688。
+  ci2737-linux-guestはd4de885c90afd6384bcdc25881ac7fc8122537e0eddc883c2004e3257625789b。
+  host inspect-executorが実module/linked core/PID/codeSHA4c60959/cleanを返し、guest buildinfoも同revision/clean/Windows amd64を確認した。
+  codeを変えない文書保存のために再buildせず、実行時はこのreview対象code SHAと文書delivery HEADを分ける。
+- 新hostのtest-gateがcanonical Cargo gateへ実入場した。通常/EOF取消しの2receiptは各jobs8/testthreads8、実target lock保持→解放、child_drained=true。
+  原Rust Cargoはcompile0、公式CI success=false。親launcher PID43740/保存startを照合しプロセス不在、stderr0を確認。
+  launcherのexit codeは直接保存していないため、captured exit0とは報告しない。2終端receiptの実結果と不在を別に残した。
+- e850 rootは次回の実clone/公式jobへ使う必要な同版実行物を含むため保持。新VM/clone/runner/route更新/dispatchはまだ0。
+  次は2838だけの原応答を受領し、Must/未読を直した後に実公式runへ進む。親2641に有限結果/証拠を配送し、実HEADで自身のcheckpointを保存する。

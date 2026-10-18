@@ -1,0 +1,5 @@
+FROM todo2825-ci-base:once
+USER root
+COPY bridge /opt/bridge/bridge
+RUN chmod 755 /opt/bridge/bridge
+USER runner

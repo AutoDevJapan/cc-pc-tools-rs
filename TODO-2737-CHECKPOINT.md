@@ -759,7 +759,7 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 ### 公式attempt4の実失敗・回収・有限調査への引継ぎ
 
 - 直前item_8は2889の通常addがexit0/addedで完了済み。停止後item_5は実行経路DELETE受理後のGET通信タイムアウトだった。どちらも再送していない。後続GETで自分の変数CC_PRODUCT_2737_CI不在、原PR3613/open/同repo/head085/ref/tree25ae/workflow同hashを照合した。受理と読戻し失敗は別receiptで保持する。
-- verify job117806127408/runner30はcompleted/failure。step10 pnpmとstep13 Rust準備はsuccessで、step26 Rust testsとstep68 completeがfailure。21success/16skippedであり、全工程成功ではない。実host exit1/official_ci_success=falseを保持。終了時Rust3probeは引き続きexit0で、既知のdriver全長/hashと版が一致する。
+- verify job117806127408/runner30はcompleted/failure。step10 pnpmとstep13 Rust準備はsuccessで、step26 Rust testsとstep68 completeがfailure。21success/16skippedであり、全工程成功ではない。実host exit1/official_ci_success=falseを保持。終了時Rust3probeは引き続きexit0で、既知のcompiler hash/版/commit/cachekeyが一致する。driver全長/hashの受入証拠は先のSDK作成とcold cloneで保持する。
 - 原logは636025bytes/SHA25603DCC901399E0DF1A8E3544C0B2DA3BFEDFDCEFED9AED68EC3F6B505242E22D3。本文・位置・識別名は表示せず、RAMでANSIを除いて数値だけ抽出した。Rust集計は順にpassed/failed/ignoredが2662/0/2、5/0/0、29/0/1、0/0/0が3件、983/8/1。別実行の集計を一意な全件数へ合算しない。panic8件であり、コンパイル失敗と読み替えない。
 - 最初のpanic抽出は新形式の任意process IDを扱わず0件になった。v2で抽出規則だけを修正し、8件すべてを固定treeの同じ単一blobへhashで対応付けた。検査を再実行した結果でも、最初の0件を合格としたものでもない。広いgit_pack規則5件などの粗い分類は根因の証拠ではない。
 - completeのtyped診断はVersion1/Stage complete/Code source_metadata。開始時には物理1904blob/head/tree/indexの証明が通り、start hookも成功していた。終了時のメタデータ拒否の詳細原因は未確定。上限・許可・manifestを緩めて通さない。

@@ -248,7 +248,9 @@ func main() {
 			os.Exit(1)
 		}
 		receipt := currentSuccessionReceipt(db, declared)
-		_ = json.NewEncoder(os.Stdout).Encode(receipt)
+		if json.NewEncoder(os.Stdout).Encode(receipt) != nil {
+			os.Exit(1)
+		}
 		if receipt["verified"] != true {
 			os.Exit(1)
 		}

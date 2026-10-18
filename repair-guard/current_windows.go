@@ -63,7 +63,11 @@ func currentSuccessionReceiptWith(db object, product currentProduct, now time.Ti
 	if !ok {
 		return failure
 	}
-	specPathHash, ok := currentPathHash(product.spec)
+	row := itemAt(db, product.task)
+	if row == nil {
+		return failure
+	}
+	specPathHash, ok := currentPathHash(str(row["spec"]))
 	if !ok {
 		return failure
 	}
@@ -83,11 +87,15 @@ func currentSuccessionReceiptWith(db object, product currentProduct, now time.Ti
 func currentGitHubIdentityVerified(product currentProduct) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, currentGitHubCLI, "api", "--hostname", "github.com", "repos/"+product.repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
+	cmd := exec.CommandContext(ctx, currentGitHubCLI, currentGitHubIdentityArgs(product)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = time.Second
 	output, err := cmd.Output()
 	return err == nil && currentGitHubIdentityMatches(output, product)
+}
+
+func currentGitHubIdentityArgs(product currentProduct) []string {
+	return []string{"api", "--hostname", "github.com", "repos/" + product.repository, "--jq", "[.id, .full_name, .owner.login] | @tsv"}
 }
 
 func currentGitHubIdentityMatches(output []byte, product currentProduct) bool {

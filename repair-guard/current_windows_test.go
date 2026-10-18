@@ -183,6 +183,9 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	if product.project != "GoDD-13a13e1" || product.task != 2850 || product.owner != "AutoDevJapan" || product.repository != "autodevjapan/godd-13a13e1" || product.repositoryID != 1283948432 || product.root != "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1" || product.spec != "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md" || product.specSHA != "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95" {
 		t.Fatal("successor declaration changed")
 	}
+	if got := strings.Join(currentGitHubIdentityArgs(product), "\x00"); got != "api\x00--hostname\x00github.com\x00repos/autodevjapan/godd-13a13e1\x00--jq\x00[.id, .full_name, .owner.login] | @tsv" {
+		t.Fatal("GitHub identity request is not pinned to the declared host and repository")
+	}
 	base, err := physical(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -277,6 +280,17 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	}
 	currentFixtureGit(t, junctionRoot, "init", "-q")
 	currentFixtureGit(t, junctionRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-13a13e1.git")
+	currentFixtureGit(t, junctionRoot, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	plainContainer := junctionRoot + "-wt"
+	if os.Mkdir(plainContainer, 0700) != nil {
+		t.Fatal("plain junction-control container mkdir failed")
+	}
+	if !currentProductPath(filepath.Join(plainContainer, "todo-2850-control"), junctionRoot, product.repository, "2850", allow) {
+		t.Fatal("plain container control did not admit the planned successor")
+	}
+	if os.Remove(plainContainer) != nil {
+		t.Fatal("plain junction-control container cleanup failed")
+	}
 	cmd := exec.Command("cmd", "/c", "mklink", "/J", junctionRoot+"-wt", outside)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -312,13 +326,23 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	identity := func(p currentProduct) bool { return currentGitHubIdentityMatches(identityOutput, p) }
 	inScope := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
 	receipt := currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, identity)
-	if receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2850 || receipt["project"] != product.project || receipt["spec_sha256"] != hashBytes(body) || receipt["original_registry_recovered"] != false {
+	if len(receipt) != 9 || receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2850 || receipt["project"] != product.project || receipt["spec_sha256"] != hashBytes(body) || receipt["original_registry_recovered"] != false {
 		t.Fatal("valid successor receipt rejected")
 	}
 	registeredHash, _ := currentPathHash(root)
 	specPathHash, _ := currentPathHash(spec)
 	if receipt["registered_path_sha256"] != registeredHash || receipt["spec_path_sha256"] != specPathHash {
 		t.Fatal("receipt path fingerprints differ")
+	}
+	storedProjectPath := root + `\`
+	storedSpecPath := strings.ReplaceAll(spec, "/", `\`) + `\`
+	obj(db["projects"])[product.project] = storedProjectPath
+	itemAt(db, product.task)["spec"] = storedSpecPath
+	storedReceipt := currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, identity)
+	storedProjectHash, _ := currentPathHash(storedProjectPath)
+	storedSpecHash, _ := currentPathHash(storedSpecPath)
+	if storedReceipt["verified"] != true || storedReceipt["registered_path_sha256"] != storedProjectHash || storedReceipt["spec_path_sha256"] != storedSpecHash {
+		t.Fatal("receipt fingerprints differ from stored registration values")
 	}
 	encoded, err := json.Marshal(receipt)
 	if err != nil || strings.Contains(string(encoded), root) || strings.Contains(string(encoded), spec) || strings.Contains(string(encoded), strings.ToLower(strings.ReplaceAll(root, `\`, "/"))) || strings.Contains(string(encoded), strings.ToLower(strings.ReplaceAll(spec, `\`, "/"))) {
@@ -333,11 +357,19 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	assertGenericFailure("protected scope", currentSuccessionReceiptWith(db, product, inScope, func(string) bool { return true }, currentPlain, valid, identity))
 	assertGenericFailure("wrong origin", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, func(string, string) bool { return false }, identity))
 	assertGenericFailure("wrong identity", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, valid, func(currentProduct) bool { return false }))
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/other/GoDD-13a13e1.git")
+	assertGenericFailure("mismatched repository origin", currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, sourceOriginVerified, identity))
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/AutoDevJapan/GoDD-13a13e1.git")
 	for _, bad := range [][]byte{
+		{},
+		[]byte("\n"),
+		[]byte("1283948432\tautodevjapan/godd-13a13e1\t\n"),
 		[]byte("1283948433\tautodevjapan/godd-13a13e1\tAutoDevJapan\n"),
 		[]byte("1283948432\tother/godd-13a13e1\tAutoDevJapan\n"),
 		[]byte("1283948432\tautodevjapan/godd-13a13e1\tOtherOwner\n"),
+		[]byte("-1283948432\tautodevjapan/godd-13a13e1\tAutoDevJapan\n"),
 		[]byte("not-an-id\tautodevjapan/godd-13a13e1\tAutoDevJapan\n"),
+		[]byte("1283948432\tautodevjapan/godd-13a13e1\tAutoDevJapan\nextra\n"),
 		[]byte("1283948432\tautodevjapan/godd-13a13e1\tAutoDevJapan\textra\n"),
 	} {
 		if currentGitHubIdentityMatches(bad, product) {
@@ -346,6 +378,17 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	}
 	assertGenericFailure("out-of-scope date", currentSuccessionReceiptWith(db, product, time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC), allow, currentPlain, valid, identity))
 	assertGenericFailure("before-scope date", currentSuccessionReceiptWith(db, product, time.Date(2026, 10, 12, 23, 59, 59, 0, time.UTC), allow, currentPlain, valid, identity))
+	for _, boundary := range []struct {
+		name string
+		at   time.Time
+	}{
+		{"scope start", time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)},
+		{"just before scope end", time.Date(2026, 10, 20, 23, 59, 59, 999999999, time.UTC)},
+	} {
+		if currentSuccessionReceiptWith(db, product, boundary.at, allow, currentPlain, valid, identity)["verified"] != true {
+			t.Fatalf("valid %s was rejected", boundary.name)
+		}
+	}
 	if os.WriteFile(spec, append(body, '!'), 0600) != nil {
 		t.Fatal("fixture spec mutation failed")
 	}
@@ -361,7 +404,11 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 	for _, tc := range []struct{ path, want string }{
 		{"C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1/", "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},
+		{`C:\Users\Makhmeto\Desktop\dev\ADJ\GoDD-13a13e1\\`, "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},
+		{"c:/users/makhmeto/Desktop/DEV/adj/GoDD-13a13e1", "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},
 		{"D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md", "ffc9fa43704106b183468369479cf616e9af3304382880d72a28f3378b48b739"},
+		{`D:\CC\Tools\todo\specs\2850-cdf16525f6ab44b1a3f5e6d1f9337359.md`, "ffc9fa43704106b183468369479cf616e9af3304382880d72a28f3378b48b739"},
+		{"d:/cc/TOOLS/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.MD", "ffc9fa43704106b183468369479cf616e9af3304382880d72a28f3378b48b739"},
 	} {
 		got, ok := currentPathHash(tc.path)
 		if !ok || got != tc.want {

@@ -27,6 +27,7 @@ type conversationFixture struct {
 	deny          bool
 	q             ConversationQuestion
 	answerFailure bool
+	waitFailure   bool
 	edited        map[string]string
 	archived      bool
 }
@@ -81,6 +82,10 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies})
 			return string(b), nil
 		case "question-wait":
+			if f.waitFailure {
+				f.waitFailure = false
+				return "", errors.New("canonical wait lock busy")
+			}
 			b, err := os.ReadFile(args[3])
 			if err != nil {
 				return "", err
@@ -527,6 +532,102 @@ func TestConversationNewQuestionDoesNotSendFromAnAlreadyHeldTask(t *testing.T) {
 	f.mutateTodo(t, func(row map[string]any) { row["status"] = "block" })
 	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil || f.posts != 0 {
 		t.Fatal("held task generated a new question")
+	}
+}
+
+func TestConversationScanPendingEditCompletesCanonicalProgressMetadata(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.r.State.Requests[reply.Message] = &Request{Thread: reply.Thread, Guild: "100", RecordVersion: 2, Message: reply.Message, Author: reply.Author, Created: reply.Created, Acquired: f.r.Now().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: "a", Key: requestKey(reply.Thread, reply.Message), Conversation: f.q.RequestID, Phase: "conversation_capture_pending"}
+	f.replies[0].Body = "b"
+	f.edited = map[string]string{reply.Message: f.r.Now().Format(time.RFC3339Nano)}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 {
+		t.Fatal(health.Errors)
+	}
+	var receipt Request
+	if readJSON(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json"), 1<<20, &receipt) != nil || receipt.ProgressThread != f.q.Progress || receipt.Text != "b" || len(receipt.PriorVersions) != 1 {
+		t.Fatal("scan/edit lost metadata or previous text")
+	}
+}
+
+func TestConversationPostedWaitIsRetriedWithSameReceipt(t *testing.T) {
+	f := conversationTest(t, true)
+	f.waitFailure = true
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+		t.Fatal("expected wait failure")
+	}
+	index, _ := f.r.loadConversations()
+	if index.Questions[f.input.RequestID].Phase != "posted" {
+		t.Fatal("posted state not retained")
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	index, _ = f.r.loadConversations()
+	row, _ := f.r.todo(42)
+	if len(health.Errors) != 0 || index.Questions[f.input.RequestID].Phase != "waiting" || row.Status != "block" || f.posts != 1 {
+		t.Fatal("posted wait did not resume without another question")
+	}
+}
+
+func TestConversationProjectChangeStopsBeforeAnyDeliveryOrWait(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	var db map[string]any
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+		t.Fatal("fixture")
+	}
+	db["projects"].(map[string]any)["other-project"] = f.r.Config.Home
+	db["items"].([]any)[0].(map[string]any)["project"] = "other-project"
+	if publish(f.r.TodoPath, db) != nil {
+		t.Fatal("fixture")
+	}
+	commands := len(f.commands)
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) == 0 {
+		t.Fatal("project change accepted")
+	}
+	for _, command := range f.commands[commands:] {
+		if command == "edit" || command == "question-wait" || command == "question-answer" {
+			t.Fatal("foreign project changed")
+		}
+	}
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+		t.Fatal("existing ask ignored changed project")
+	}
+	if req := f.r.State.Requests[reply.Message]; req != nil && req.Todo != 0 {
+		t.Fatal("foreign project bound")
+	}
+}
+
+func TestConversationClosedWithPendingNoticeStillDeliversAdditionalOwnerReply(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	first := f.reply(t, 8, "a")
+	f.r.processConversations(context.Background(), &Health{})
+	f.r.Now = func() time.Time { at, _ := time.Parse(time.RFC3339Nano, f.created); return at.Add(2 * time.Minute) }
+	source, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", first.Message+".json"))
+	application := map[string]any{"source": "discord-api-v10", "request_id": f.q.SenderID, "origin_todo_id": 42, "todo_id": 42, "thread_id": f.question, "question_message_id": f.question, "message_id": first.Message, "author_id": "300", "job_id": "worker-42", "revision": strings.Repeat("e", 40), "applied_at": f.r.Now().Format(time.RFC3339Nano), "completion": "実反映", "reply_sha256": canonicalHash(first), "source_receipt_sha256": bytesHash(source), "verification": map[string]string{"execution": "readback", "origin_saved": "original retained", "identity": "owner/API matched"}}
+	if publish(filepath.Join(f.r.Config.Home, "applied", first.Message+".json"), application) != nil {
+		t.Fatal("fixture")
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || !f.archived {
+		t.Fatal("initial close failed", health.Errors)
+	}
+	second := f.reply(t, 9, "追加です")
+	f.archived = false
+	f.r.State.Requests[second.Message] = &Request{Thread: second.Thread, Guild: "100", RecordVersion: 2, Message: second.Message, Author: second.Author, Created: second.Created, Acquired: f.r.Now().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: second.Body, Key: requestKey(second.Thread, second.Message), Conversation: f.q.RequestID, Phase: "conversation_capture_pending"}
+	f.r.reportConversations(context.Background(), &Health{})
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[second.Message].Todo != 42 || f.r.State.Requests[second.Message].Phase != "conversation_reply_delivered" || f.archived {
+		t.Fatal("late owner reply was dropped or manually reopened question was rearchived", health.Errors)
 	}
 }
 

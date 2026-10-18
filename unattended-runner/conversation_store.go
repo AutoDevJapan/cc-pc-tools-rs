@@ -346,7 +346,14 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if alias.InputSHA != inputHash {
 			return zero, errors.New("conversation alias retry input differs")
 		}
-		return index.Questions[alias.Target], nil
+		canonical := index.Questions[alias.Target]
+		if canonical.Project != row.Project {
+			return zero, errors.New("conversation original project differs")
+		}
+		return canonical, nil
+	}
+	if exists && q.Project != row.Project {
+		return zero, errors.New("conversation original project differs")
 	}
 	if exists && q.InputSHA != inputHash {
 		return zero, errors.New("conversation retry input differs")
@@ -384,7 +391,13 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Phase != "reserved" && !(q.Wait && q.Phase == "posted") {
+		if q.Project != row.Project {
+			return zero, errors.New("conversation original project differs")
+		}
 		return q, nil
+	}
+	if q.Project != row.Project {
+		return zero, errors.New("conversation original project differs")
 	}
 	if q.Phase == "reserved" {
 		if row.Status != "doing" && row.Status != "todo" {
@@ -462,6 +475,14 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation posted; task wait recording pending")
 		}
 		current, err := r.todo(q.Todo)
+		if err == nil && current.Project == q.Project && conversationQuestionAnswered(current, q) {
+			q.Phase = "answered"
+			index.Questions[q.RequestID] = q
+			if err = publish(r.conversationPath(), index); err != nil {
+				return zero, err
+			}
+			return q, nil
+		}
 		if err != nil || current.Status != "block" || !conversationWaitRecorded(current, q) {
 			return zero, errors.New("conversation task wait verification pending")
 		}
@@ -499,6 +520,24 @@ func conversationAnswerRecorded(row *TodoRow, q ConversationQuestion, answer con
 		}
 	}
 	return matched == 1
+}
+
+func conversationQuestionAnswered(row *TodoRow, q ConversationQuestion) bool {
+	for _, raw := range row.QuestionAnswers {
+		var receipt struct {
+			Wait struct {
+				SHA      string `json:"question_receipt_sha256"`
+				Question struct {
+					Request string `json:"request_id"`
+				} `json:"question"`
+			} `json:"wait"`
+			Answer conversationAnswerReceipt `json:"answer"`
+		}
+		if json.Unmarshal(raw, &receipt) == nil && receipt.Wait.SHA == q.ReceiptSHA && receipt.Wait.Question.Request == q.SenderID && receipt.Answer.RequestID == q.SenderID && receipt.Answer.Todo == fmt.Sprint(q.Todo) && receipt.Answer.Thread == q.Thread && receipt.Answer.Question == q.Message && receipt.Answer.QuestionSHA == q.ReceiptSHA {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) (*conversationProof, error) {

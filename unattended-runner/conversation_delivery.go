@@ -56,6 +56,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		old.PriorEdits = append(old.PriorEdits, EditVersion{Edited: old.Edited, SHA256: bytesHash([]byte(old.Text))})
 		old.Text = reply.Body
 		old.Edited = live.Edited
+		old.ProgressThread = q.Progress
 		old.Acquired = r.Now().UTC().Format(time.RFC3339Nano)
 		contextBytes, _ := json.Marshal(proof)
 		old.Context = string(contextBytes)
@@ -92,6 +93,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil {
 		return err
+	}
+	if row.Project != q.Project {
+		return errors.New("conversation original task project differs")
 	}
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 	receipt, err := boundedRegular(path)
@@ -186,15 +190,12 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 	for i := 0; i < len(ids); i++ {
 		id := ids[(start+i)%len(ids)]
 		q := index.Questions[id]
-		if q.Phase == "closed" {
-			continue
-		}
 		index.Cursor = id
 		if publish(r.conversationPath(), index) != nil {
 			health.Errors = append(health.Errors, "conversation_cursor_deferred")
 			return
 		}
-		if q.Phase == "reserved" {
+		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait) {
 			_, err := r.conversationAsk(ctx, ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait})
 			if err != nil {
 				health.Errors = append(health.Errors, "conversation_send_pending")
@@ -233,7 +234,10 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				health.Errors = append(health.Errors, "conversation_delivery_deferred")
 				return
 			}
-			q.Phase = "answered"
+			wasClosed := q.Phase == "closed"
+			if !wasClosed || req.Phase != "conversation_reply_applied" {
+				q.Phase = "answered"
+			}
 			index.Questions[id] = q
 			if publish(r.conversationPath(), index) != nil {
 				health.Errors = append(health.Errors, "conversation_stage_deferred")
@@ -245,7 +249,14 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				return
 			}
 			if applied {
-				q.Phase = "applied"
+				q.Phase = "closed"
+				index.Questions[id] = q
+				if publish(r.conversationPath(), index) != nil {
+					health.Errors = append(health.Errors, "conversation_stage_deferred")
+					return
+				}
+			} else {
+				q.Phase = "answered"
 				index.Questions[id] = q
 				if publish(r.conversationPath(), index) != nil {
 					health.Errors = append(health.Errors, "conversation_stage_deferred")
@@ -300,13 +311,6 @@ func (r *Runner) reportConversations(ctx context.Context, health *Health) {
 		if err = r.conversationProgress(ctx, q, req, stage); err != nil {
 			health.Errors = append(health.Errors, "conversation_progress_deferred")
 			return
-		}
-		if q.Phase == "applied" && req.Reported == "conversation_applied" {
-			q.Phase = "closed"
-			index.Questions[q.RequestID] = q
-			if publish(r.conversationPath(), index) != nil {
-				health.Errors = append(health.Errors, "conversation_stage_deferred")
-			}
 		}
 		return
 	}

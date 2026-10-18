@@ -38,10 +38,18 @@ func OpenOwnedGuestCOMPipe(ctx context.Context, instance string) (*os.File, erro
 		}
 		ready, _, _ := waitNamedPipe.Call(uintptr(unsafe.Pointer(wide)), 1000)
 		if ready != 0 {
-			handle, _, callErr := openNamedPipe.Call(uintptr(unsafe.Pointer(wide)), 0x80000000|0x40000000, 0, 0, 3, 0x80, 0)
+			handle, _, callErr := openNamedPipe.Call(uintptr(unsafe.Pointer(wide)), 0x80000000|0x40000000, 0, 0, 3, 0x40000080, 0)
 			if syscall.Handle(handle) != syscall.InvalidHandle {
 				f := os.NewFile(handle, pipeName)
 				if f != nil {
+					deadline, ok := ctx.Deadline()
+					if !ok {
+						deadline = time.Now().Add(25 * time.Minute)
+					}
+					if err := f.SetDeadline(deadline); err != nil {
+						_ = f.Close()
+						return nil, errors.New("guest pipe requires cancellable overlapped I/O")
+					}
 					return f, nil
 				}
 				_ = syscall.CloseHandle(syscall.Handle(handle))

@@ -42,7 +42,7 @@ var pinnedArtifacts = [...]Artifact{
 	{ID: PowerShell7, Version: "7.6.6", URL: "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/PowerShell-7.6.6-win-x64.msi", SHA256: "958838ff55091e1c8705d89efed0cc7e8245a3a6ef6c0ccfae20015227108ad8"},
 	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/cargo-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "5c023e6f3d9eb8bec511bfcda889668b1be6981459d1b40be0bf4444ab059563"},
 	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/clippy-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "c1d14a9ae79ec35f04b3ae07b383b5902971ea76b54fc8b571d663880b5d9799"},
-	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/rust-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "efbb66ddc8ca271424e5bf4de9b5c552c2f6cc68e36309b2c7bbe683c72d0334"},
+	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/rustc-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "b45f488437194f810076ed26cdcc78bf916d40be8f0a55c183f406c909c1af3c"},
 	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/rust-std-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "ea544e8d86c9978987a91bad66a0750003840cb995c54972f34fa69343fce74b"},
 	{ID: RustToolchain, Version: "1.97.1", URL: "https://static.rust-lang.org/dist/2026-07-16/rustfmt-1.97.1-x86_64-pc-windows-msvc.tar.gz", SHA256: "ed2217b8490b833c4748b29846fd04d8fe25ea9bb826137041d404166abc8ef1"},
 	{ID: Sccache, Version: "0.18.0", URL: "https://github.com/mozilla/sccache/releases/download/v0.18.0/sccache-v0.18.0-x86_64-pc-windows-msvc.zip", SHA256: "8965c74d5e8a225244f741e18ad2f3f504f48228dc1bac948fc22761a348363d"},

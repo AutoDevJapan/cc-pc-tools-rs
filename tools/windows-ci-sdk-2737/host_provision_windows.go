@@ -495,12 +495,30 @@ func ProvisionNewGuest(root OwnedRoot, worktree, iso, seedISO, instance string) 
 }
 
 func PrepareProvisionedGuest(ctx context.Context, instance string, client Identity) (PreparationReceipt, error) {
-	pipe, err := OpenOwnedGuestCOMPipe(ctx, instance)
-	if err != nil {
-		return PreparationReceipt{}, err
+	bootCtx, cancel := context.WithTimeout(ctx, 25*time.Minute)
+	defer cancel()
+	for bootCtx.Err() == nil {
+		pipe, err := OpenOwnedGuestCOMPipe(bootCtx, instance)
+		if err != nil {
+			return PreparationReceipt{}, err
+		}
+		bootstrap, err := SendCOMBootstrap(pipe, instance)
+		_ = pipe.Close()
+		if err != nil {
+			if err.Error() != "COM bootstrap response unavailable" {
+				return PreparationReceipt{}, err
+			}
+			select {
+			case <-bootCtx.Done():
+				return PreparationReceipt{}, errors.New("guest Setup readiness deadline exceeded")
+			case <-time.After(250 * time.Millisecond):
+			}
+			continue
+		}
+		results, err := PrepareSDKSet(bootstrap.IPv4, bootstrap.ServerSHA256, instance, client)
+		return PreparationReceipt{Instance: instance, GuestIPv4: bootstrap.IPv4.String(), ServerSHA256: bootstrap.ServerSHA256, Results: results}, err
 	}
-	defer pipe.Close()
-	return PrepareGuestSDK(pipe, instance, client)
+	return PreparationReceipt{}, errors.New("guest Setup readiness deadline exceeded")
 }
 
 func ShutdownRemoveOwnedVM(root OwnedRoot, worktree, instance string) (RecoveryReceipt, error) {

@@ -147,7 +147,7 @@ func (o *windowsOperations) prepareRust() error {
 			return errors.New("Rust component installer is missing")
 		}
 		prefix := msysPath(installPrefix)
-		if err := runFixed(bash, []string{installer, "--prefix=" + prefix, "--disable-ldconfig"}, o.environment()); err != nil {
+		if err := runFixed(bash, []string{"--noprofile", "--norc", msysPath(installer), "--prefix=" + prefix, "--disable-ldconfig"}, o.environment()); err != nil {
 			return errors.New("Rust component installation failed")
 		}
 	}
@@ -311,14 +311,14 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		if err != nil {
 			return err
 		}
-		args, err := o.vsDevEnvironment(`"` + cl + `" /Bv`)
+		args, err := o.vsDevEnvironment(`echo VCToolsVersion=%VCToolsVersion% & echo WindowsSDKVersion=%WindowsSDKVersion% & "` + cl + `" /Bv & exit /b 0`)
 		if err != nil {
 			return err
 		}
 		commands = [][]string{append([]string{filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")}, args...)}
 		expected = []string{"19.50."}
 	case WindowsSDK:
-		rc := filepath.Join(o.root, "vs-build-tools", "Windows Kits", "10", "bin", "10.0.26100.0", "x64", "rc.exe")
+		rc := filepath.Join(os.Getenv("ProgramFiles(x86)"), "Windows Kits", "10", "bin", "10.0.26100.0", "x64", "rc.exe")
 		commands = [][]string{{rc, "/?"}}
 		expected = []string{"10.0.26100."}
 	default:
@@ -339,7 +339,10 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 func (o *windowsOperations) environment() []string {
 	env := []string{
 		"SystemRoot=" + os.Getenv("SystemRoot"),
-		"PATH=" + os.Getenv("SystemRoot") + `\System32;` + filepath.Join(o.root, "git", "cmd") + ";" + filepath.Join(o.root, "powershell"),
+		"PATH=" + os.Getenv("SystemRoot") + `\System32;` + filepath.Join(o.root, "git", "cmd") + ";" + filepath.Join(o.root, "git", "usr", "bin") + ";" + filepath.Join(o.root, "git", "bin") + ";" + filepath.Join(o.root, "powershell"),
+		"TEMP=" + filepath.Join(o.root, "staging"), "TMP=" + filepath.Join(o.root, "staging"),
+		"PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1", "WINDIR=" + os.Getenv("SystemRoot"),
+		"ProgramFiles=" + os.Getenv("ProgramFiles"), "ProgramFiles(x86)=" + os.Getenv("ProgramFiles(x86)"), "ProgramData=" + os.Getenv("ProgramData"),
 		"CARGO_HOME=" + filepath.Join(o.root, "cargo-home"),
 		"RUSTUP_HOME=" + filepath.Join(o.root, "rustup-home"),
 		"CARGO_TARGET_DIR=" + filepath.Join(o.root, "target"),

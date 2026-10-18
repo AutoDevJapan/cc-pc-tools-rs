@@ -440,6 +440,12 @@ impl RealBackend {
         if selection["network"] == true {
             invocation.args.push("--network".into());
         }
+        if selection["add_dirs"].is_array() {
+            // The source's explicit capability set replaces the scheduler default.
+            if let Some(index) = invocation.args.iter().position(|a| a == "--add-dir") {
+                invocation.args.drain(index..index + 2);
+            }
+        }
         for dir in arr(&selection["add_dirs"]).iter().filter_map(Value::as_str) {
             invocation.args.extend(["--add-dir".into(), dir.into()]);
         }
@@ -465,8 +471,8 @@ impl Backend for RealBackend {
         let cwd = s(&job["cwd"]);
         if cwd.is_empty()
             || norm(cwd) != norm(s(&item["scheduler"]["worktree"]))
-            || self.guard_workspace_timeout(repo, 2).is_err()
-            || self.guard_workspace_timeout(cwd, 2).is_err()
+            || self.guard_workspace_timeout(repo, 1).is_err()
+            || self.guard_workspace_timeout(cwd, 1).is_err()
         {
             return Ok(false);
         }
@@ -509,7 +515,7 @@ impl Backend for RealBackend {
                 "--no-action-check",
                 request.to_str().ok_or(Error("InputRejected"))?,
             ],
-            Some(45),
+            Some(8),
         ))?;
         let fresh = read_json(&dir.join("job.json"), Value::Null)?;
         let result: Value = serde_json::from_str(output.stdout.trim()).unwrap_or(Value::Null);

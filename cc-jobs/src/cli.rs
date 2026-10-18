@@ -1389,7 +1389,7 @@ impl Context {
     ) -> Result<i32> {
         self.load(jid)?;
         let lock = self.job_lock(jid, "state.lock")?;
-        self.cancel_locked(jid, recovery, lock, out, err)
+        self.cancel_locked(jid, recovery, false, lock, out, err)
     }
 
     /// Linearize recovery cancellation with wait registration. Never run a
@@ -1601,7 +1601,7 @@ impl Context {
         self.save(&job)?;
         drop(todo);
         drop(queue);
-        let code = self.cancel_locked(&a.id, true, lock, &mut Vec::new(), err)?;
+        let code = self.cancel_locked(&a.id, true, no_action_check, lock, &mut Vec::new(), err)?;
         drop(paused);
         if code == 0 {
             writeln!(out, "{}", json!({"outcome":"cancelled","job":a.id}))?;
@@ -1633,6 +1633,7 @@ impl Context {
         &self,
         jid: &str,
         recovery: bool,
+        defer_followup: bool,
         lock: FileLock,
         out: &mut dyn Write,
         err: &mut dyn Write,
@@ -1749,6 +1750,9 @@ impl Context {
         });
         if cancelled {
             job["status"] = json!("cancelled");
+            if defer_followup {
+                job["gto_auto_pending"] = json!(true);
+            }
             job["finished_at"] = json!(self.rt.now());
             job["activity"] = json!("cancelled");
             if let Some(start) = parse_iso(s(&job, "started_at")) {
@@ -1759,6 +1763,13 @@ impl Context {
             self.save(&job)?;
         }
         drop(lock);
+        // The minute scheduler has a 20-second caller budget. Normal refresh
+        // retries pending rating; its existing minute sweep handles owned tabs.
+        // Do not put network notifications or rating in this critical stop path.
+        if defer_followup {
+            writeln!(out, "{}", self.summary(&job))?;
+            return Ok(0);
+        }
         self.close_chrome_tabs(jid);
         if cancelled {
             self.auto_rate(&mut job, None);

@@ -60,6 +60,11 @@ fn no_action_guard_cancels_once_and_retains_safe_proof() {
     let saved = t.ctx.load("source").unwrap();
     assert_eq!(saved["status"], "cancelled");
     assert!(saved["no_action_recovery"].is_object());
+    assert_eq!(saved["gto_auto_pending"], true);
+    assert!(
+        t.rt.calls.lock().unwrap().is_empty(),
+        "network/rating entered the bounded cancellation path"
+    );
     let n = t.rt.kills.lock().unwrap().len();
     let (r, out, err) = cancel(&t, &path);
     assert_eq!(r.unwrap(), 0, "{err}");

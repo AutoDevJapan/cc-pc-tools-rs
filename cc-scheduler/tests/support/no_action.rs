@@ -195,6 +195,13 @@ fn no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_imp
             .windows(2)
             .any(|p| p == ["--add-dir", "D:/fixture-scope"]));
         assert!(!call.args.iter().any(|a| a == "--network"));
+        assert_eq!(
+            call.args
+                .iter()
+                .filter(|a| a.as_str() == "--add-dir")
+                .count(),
+            1
+        );
         assert!(call
             .args
             .iter()

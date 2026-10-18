@@ -22,6 +22,7 @@ pub fn idle_tree(job: &Value, ps: &Processes) -> bool {
 
 impl<B: Backend> Scheduler<B> {
     pub fn recover_no_action(&mut self, jobs: &mut [Value], ps: &Processes) -> Result<()> {
+        let started = std::time::Instant::now();
         let db = self.todo()?;
         let mut rows: Vec<_> = arr(&db["items"])
             .into_iter()
@@ -42,6 +43,9 @@ impl<B: Backend> Scheduler<B> {
             .unwrap_or(0);
         // At most two eligible workers and one cancellation per tick; no new loop/service.
         for row in rows.iter().cycle().skip(start).take(rows.len().min(2)) {
+            if started.elapsed() >= std::time::Duration::from_secs(5) {
+                break;
+            }
             self.state["no_action_cursor"] = row["id"].clone();
             let Some(job) = jobs.iter_mut().find(|j| j["id"] == row["scheduler"]["job"]) else {
                 continue;
@@ -85,6 +89,9 @@ impl<B: Backend> Scheduler<B> {
                 || !idle_tree(job, &self.backend.snapshot()?)
             {
                 continue;
+            }
+            if started.elapsed() >= std::time::Duration::from_secs(5) {
+                break;
             }
             let at = self.backend.clock();
             let mut reserved_here = false;

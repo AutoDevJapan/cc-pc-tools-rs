@@ -655,13 +655,19 @@ fn finished_question_owner(
     {
         return fail("owner_changed_or_active");
     }
-    let created = owner["created_at"]
-        .as_f64()
-        .filter(|n| n.is_finite() && *n > 0.)
-        .ok_or("conversation_owner_record_invalid")?;
-    if created
-        > timestamp(&wait["question"], "created_at", at)?.timestamp_micros() as f64 / 1_000_000.
-    {
+    let question_created = timestamp(&wait["question"], "created_at", at)?;
+    // cc-jobs writes RFC3339 strings (including the local UTC offset). Keep
+    // numeric epochs readable for older records, without guessing from file times.
+    let created_later = if owner["created_at"].is_string() {
+        timestamp(&owner, "created_at", at)? > question_created
+    } else {
+        let created = owner["created_at"]
+            .as_f64()
+            .filter(|n| n.is_finite() && *n > 0.)
+            .ok_or("conversation_owner_record_invalid")?;
+        created > question_created.timestamp_micros() as f64 / 1_000_000.
+    };
+    if created_later {
         return fail("owner_changed_or_active");
     }
     Ok((owner, note, imported))

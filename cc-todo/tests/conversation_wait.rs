@@ -1081,7 +1081,7 @@ impl Fixture {
             dir.join("job.json"),
             serde_json::to_vec(&json!({
                 "id":"original-worker","status":"succeeded","todo_id":1,
-                "launch_key":"original-key","created_at":1_700_000_000.,"cwd":"saved-worktree"
+                "launch_key":"original-key","created_at":"2023-11-15T07:13:20+09:00","cwd":"saved-worktree"
             }))
             .unwrap(),
         )
@@ -1303,6 +1303,42 @@ fn withdrawal_requires_real_original_terminal_owner_and_exact_question_bytes() {
         f.withdraw().status.success(),
         "existing v1 waits must remain withdrawable"
     );
+}
+
+#[test]
+fn withdrawal_compares_real_job_rfc3339_times_and_legacy_epochs_to_question() {
+    for (created, accepted) in [
+        (json!("2023-11-15T07:13:20+09:00"), true),
+        (json!(1_700_000_000.), true),
+        (json!("2026-10-13T10:00:00+09:00"), true),
+        (json!("2026-10-13T10:00:00.000000001+09:00"), false),
+        (json!("2026-10-13T02:00:00Z"), false),
+        (json!("2099-01-01T00:00:00Z"), false),
+        (json!("1700000000"), false),
+        (json!("invalid"), false),
+        (json!("1970-01-01T00:00:00Z"), false),
+        (json!(-1), false),
+        (json!(false), false),
+        (Value::Null, false),
+    ] {
+        let f = Fixture::new();
+        f.withdraw_ready();
+        f.snapshot();
+        let job_file = f.paths.jobs.join("original-worker/job.json");
+        let mut job: Value = serde_json::from_slice(&fs::read(&job_file).unwrap()).unwrap();
+        job["created_at"] = created.clone();
+        fs::write(&job_file, serde_json::to_vec(&job).unwrap()).unwrap();
+        if accepted {
+            let out = f.withdraw();
+            assert!(
+                out.status.success(),
+                "{created}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+        } else {
+            f.withdraw_rejected();
+        }
+    }
 }
 
 #[test]

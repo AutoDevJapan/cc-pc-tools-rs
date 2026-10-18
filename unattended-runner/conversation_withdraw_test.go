@@ -47,7 +47,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 	}
 	if native {
 		job := filepath.Join(f.r.Config.Home, "isolated-jobs", "worker-42", "job.json")
-		if publish(job, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "key-42", "status": "succeeded", "created_at": 1700000000}) != nil {
+		if publish(job, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "key-42", "status": "succeeded", "created_at": "2023-11-15T07:13:20+09:00"}) != nil {
 			t.Fatal("job fixture unavailable")
 		}
 	}

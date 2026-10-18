@@ -771,7 +771,7 @@ func copyOwnedFile(source, destination string) error {
 }
 
 func writePrivateBuildFailure(root, stage string, stdout, stderr []byte) {
-	name := "failure-" + stage + "-" + time.Now().UTC().Format("20060102T150405Z") + ".private.json"
+	name := "failure-" + stage + "-" + time.Now().UTC().Format("20060102T150405.000000000Z") + ".private.json"
 	record := map[string]string{"stage": stage, "stdout": string(stdout[:min(len(stdout), 8192)]), "stderr": string(stderr[:min(len(stderr), 8192)])}
 	data, err := json.Marshal(record)
 	if err == nil {

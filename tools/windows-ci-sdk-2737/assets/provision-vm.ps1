@@ -56,7 +56,7 @@ try {
   Set-VMProcessor -VM $vm -Count 2
   Set-VMMemory -VM $vm -DynamicMemoryEnabled $false -StartupBytes 4GB
   foreach ($adapter in @($vm | Get-VMNetworkAdapter)) { Remove-VMNetworkAdapter -VMNetworkAdapter $adapter }
-  Add-VMNetworkAdapter -VM $vm -Switch $switch -Name 'SDKGuestNetwork' | Out-Null
+  Add-VMNetworkAdapter -VM $vm -SwitchName $switch.Name -Name 'SDKGuestNetwork' | Out-Null
   $dvds = @($vm | Get-VMDvdDrive)
   if ($dvds.Count -gt 0) { Set-VMDvdDrive -VMDvdDrive $dvds[0] -Path $cfg.iso | Out-Null } else { Add-VMDvdDrive -VM $vm -Path $cfg.iso | Out-Null }
   Add-VMDvdDrive -VM $vm -Path $cfg.seedISO | Out-Null
@@ -79,6 +79,6 @@ try {
   $receipt.state = 'Running'
   $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'vm-created.private.json') -Encoding utf8
 } catch {
-  @{phase=$phase;failure='fresh owned Windows SDK guest provisioning failed'} | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
+  @{phase=$phase;failure='fresh owned Windows SDK guest provisioning failed';error_id=$_.FullyQualifiedErrorId;error_detail=$_.Exception.Message} | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $root 'vm-provision-failure.private.json') -Encoding utf8
   throw 'OWNED_WINDOWS_SDK_GUEST_PROVISION_FAILED'
 }

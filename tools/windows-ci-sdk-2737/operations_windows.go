@@ -74,6 +74,7 @@ func (o *windowsOperations) Prepare(instance string, id PackageID) Result {
 	}
 	if err != nil {
 		result.Stage, result.Code = "prepare-failed", safeFailureCode(err)
+		appendPrivateRunLog("sdk-"+string(id)+"-detail", []byte(err.Error()), err)
 		appendPrivateRunLog("sdk-"+string(id), []byte(result.Stage+" "+result.Code), err)
 		return result
 	}

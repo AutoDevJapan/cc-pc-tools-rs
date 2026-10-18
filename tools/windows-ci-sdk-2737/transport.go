@@ -30,6 +30,10 @@ type Identity struct {
 }
 
 func NewIdentity(instance string, serverIP net.IP, usage x509.ExtKeyUsage) (Identity, error) {
+	return newIdentityAt(instance, serverIP, usage, time.Now())
+}
+
+func newIdentityAt(instance string, serverIP net.IP, usage x509.ExtKeyUsage, now time.Time) (Identity, error) {
 	if !validInstance(instance) {
 		return Identity{}, errors.New("invalid identity instance")
 	}
@@ -42,7 +46,6 @@ func NewIdentity(instance string, serverIP net.IP, usage x509.ExtKeyUsage) (Iden
 		clear(privateKey)
 		return Identity{}, errors.New("ephemeral certificate serial generation failed")
 	}
-	now := time.Now()
 	tmpl := &x509.Certificate{
 		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: "windows-ci-sdk-2737/" + instance},
@@ -108,7 +111,10 @@ func ServerTLSConfig(server Identity, clientHash string) (*tls.Config, error) {
 				return errors.New("unexpected mTLS certificate chain")
 			}
 			cert, err := x509.ParseCertificate(rawCerts[0])
-			if err != nil || CertificateHash(cert) != wantClient || cert.Subject.CommonName != instance || !hasUsage(cert, x509.ExtKeyUsageClientAuth) || time.Now().Before(cert.NotBefore) || time.Now().After(cert.NotAfter) {
+			// A fresh RAM-only key and exact per-instance certificate pin are
+			// the trust anchor. A new Setup guest can have an unsynchronized
+			// clock; wall-clock PKI validity is not used for this pinned channel.
+			if err != nil || CertificateHash(cert) != wantClient || cert.Subject.CommonName != instance || !hasUsage(cert, x509.ExtKeyUsageClientAuth) {
 				return errors.New("mTLS client certificate pin mismatch")
 			}
 			if err := cert.CheckSignatureFrom(cert); err != nil {
@@ -135,7 +141,7 @@ func ClientTLSConfig(client Identity, serverIP net.IP, serverHash string) (*tls.
 				return errors.New("unexpected mTLS server certificate chain")
 			}
 			cert, err := x509.ParseCertificate(rawCerts[0])
-			if err != nil || CertificateHash(cert) != strings.ToLower(serverHash) || cert.Subject.CommonName != client.Leaf.Subject.CommonName || !hasUsage(cert, x509.ExtKeyUsageServerAuth) || time.Now().Before(cert.NotBefore) || time.Now().After(cert.NotAfter) || cert.VerifyHostname(serverIP.To4().String()) != nil {
+			if err != nil || CertificateHash(cert) != strings.ToLower(serverHash) || cert.Subject.CommonName != client.Leaf.Subject.CommonName || !hasUsage(cert, x509.ExtKeyUsageServerAuth) || cert.VerifyHostname(serverIP.To4().String()) != nil {
 				return errors.New("mTLS server certificate pin mismatch")
 			}
 			if err := cert.CheckSignatureFrom(cert); err != nil {
@@ -189,7 +195,7 @@ func SendRequest(ip net.IP, serverHash string, client Identity, req Request) (Re
 	httpReq.Header.Set("Content-Type", "application/json")
 	response, err := clientHTTP.Do(httpReq)
 	if err != nil {
-		return Result{}, errors.New("guest SDK request failed")
+		return Result{}, fmt.Errorf("guest SDK request failed: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
@@ -221,17 +227,21 @@ func PrepareSDKSet(ip net.IP, serverHash, instance string, client Identity) ([]R
 	results := make([]Result, 0, len(installOrder)+len(verifyOrder))
 	for _, id := range installOrder {
 		prepared, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpPrepare, Package: id})
-		if err != nil || !prepared.OK || prepared.Stage != "prepared" {
-			return results, fmt.Errorf("SDK preparation failed for %s", id)
+		if err == nil {
+			results = append(results, prepared)
 		}
-		results = append(results, prepared)
+		if err != nil || !prepared.OK || prepared.Stage != "prepared" {
+			return results, fmt.Errorf("SDK preparation failed for %s (%s): %v", id, prepared.Code, err)
+		}
 	}
 	for _, id := range verifyOrder {
 		verified, err := SendRequest(ip, serverHash, client, Request{Instance: instance, Operation: OpVersions, Package: id})
+		if err == nil {
+			results = append(results, verified)
+		}
 		if err != nil || !verified.OK || verified.Stage != "version-confirmed" {
 			return results, fmt.Errorf("SDK version check failed for %s", id)
 		}
-		results = append(results, verified)
 	}
 	return results, nil
 }

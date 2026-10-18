@@ -18,8 +18,10 @@
   "head": "9dfafcfd9cca17eab1cbd1fae04790a1bd3b3d4c",
   "result": "success",
   "registration_removed": true,
-  "container_removed": false,
-  "image_removed": false,
-  "cleanup": "Pending physical cleanup; current status remains in the operator receipt",
-  "tests": "Exact audited source reproduced; Windows Go race/vet pass; one official GitHub job succeeded"
+  "container_removed": true,
+  "image_removed": true,
+  "cleanup": "Verified source_absent after ordinary deletion; existing normal runners remain",
+  "tests": "Exact audited source reproduced; Windows Go race/vet pass; one official GitHub job succeeded",
+  "temp_removed": true,
+  "temp_bytes": 22438504
 }

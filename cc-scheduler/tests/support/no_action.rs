@@ -21,7 +21,7 @@ fn setup() -> Fixture {
     j["codex_pid"] = json!(2);
     j["codex_pid_created"] = proc(2, 1, "codex.exe")["created"].clone();
     j["started_at"] = json!("2026-10-18T00:00:00Z");
-    j["task_type"] = json!("implementation");
+    j["task_type"] = json!("ci_fix");
     j["todo_id"] = json!(1);
     j["cwd"] = cwd;
     f.cfg["kill_enabled"] = json!(false);

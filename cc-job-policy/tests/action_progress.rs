@@ -177,6 +177,9 @@ fn stop_wait_review_and_new_worker_are_not_candidates() {
     let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","resume_generation":1,"scheduler":{"job":"source"}});
     let db = json!({"items":[row,{"id":2,"status":"todo"}],"projects":{}});
     assert!(eligible(&db, &row, &j));
+    let mut observed = j.clone();
+    observed["task_type"] = json!("ci_fix");
+    assert!(eligible(&db, &row, &observed));
     for case in [
         "owner",
         "wait",

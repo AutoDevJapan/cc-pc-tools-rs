@@ -17,7 +17,7 @@ func VerifyRustChannelManifest(data []byte) error {
 		return errors.New("Rust channel manifest size is invalid")
 	}
 	hash := sha256.Sum256(data)
-	if hex.EncodeToString(hash[:]) != rustChannelManifestSHA256 || !strings.Contains(string(data), "version = \"1.97.1\"") {
+	if hex.EncodeToString(hash[:]) != rustChannelManifestSHA256 || !strings.Contains(string(data), "version = \"1.97.1 ") {
 		return errors.New("Rust channel manifest does not match the pinned release")
 	}
 	return nil

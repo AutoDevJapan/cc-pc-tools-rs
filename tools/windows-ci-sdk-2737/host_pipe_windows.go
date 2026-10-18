@@ -57,7 +57,7 @@ func OpenOwnedGuestCOMPipe(ctx context.Context, instance string) (*os.File, erro
 				return nil, errors.New("guest pipe handle wrapping failed")
 			}
 			errno, ok := callErr.(syscall.Errno)
-			if !ok || errno != errorPipeBusy && errno != syscall.ERROR_FILE_NOT_FOUND {
+			if !ok || errno != errorPipeBusy && errno != syscall.ERROR_FILE_NOT_FOUND && errno != syscall.Errno(232) && errno != syscall.Errno(233) {
 				return nil, fmt.Errorf("guest pipe open failed (win32=%d)", errno)
 			}
 		}

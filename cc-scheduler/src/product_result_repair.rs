@@ -175,6 +175,19 @@ fn same_owner_elsewhere(row: &Value, current: &Value, jobs: &[Value], ps: &Proce
     })
 }
 
+fn same_job_record(observed: &Value, stored: &Value) -> bool {
+    // sample() adds subwork_live from the current process snapshot. It is an
+    // observation, not a field in job.json or authority to change its owner.
+    let mut observed = observed.clone();
+    let mut stored = stored.clone();
+    for record in [&mut observed, &mut stored] {
+        if let Some(object) = record.as_object_mut() {
+            object.remove("subwork_live");
+        }
+    }
+    observed == stored
+}
+
 impl<B: Backend> Scheduler<B> {
     pub(super) fn reconcile_product_results(
         &mut self,
@@ -226,14 +239,16 @@ impl<B: Backend> Scheduler<B> {
         };
         // The ordinary queue and owner cancellation use this same job -> ToDo order.
         let fresh_job = read_json(&folder.join("job.json"), Value::Null)?;
-        if fresh_job != job {
+        if !same_job_record(&job, &fresh_job) {
             return Ok(());
         }
         let fresh_jobs = self.backend.jobs()?;
         let fresh_ps = self.backend.snapshot()?;
         let fresh_ps = supplement_births(&mut self.backend, &row, &fresh_jobs, &fresh_ps)?;
         if fresh_jobs.iter().filter(|j| j["id"] == job["id"]).count() != 1
-            || !fresh_jobs.contains(&job)
+            || !fresh_jobs
+                .iter()
+                .any(|fresh| fresh["id"] == job["id"] && same_job_record(&job, fresh))
             || !inactive(&job, &fresh_ps)
             || same_owner_elsewhere(&row, &job, &fresh_jobs, &fresh_ps)
         {

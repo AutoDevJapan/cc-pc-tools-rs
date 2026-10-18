@@ -173,6 +173,12 @@ impl Fixture {
     fn reconcile(&mut self) {
         let mut jobs = self.engine.backend.records.clone();
         let ps = self.engine.backend.ps.clone();
+        // The production sample decorates every job with this observation.
+        cc_job_policy::subwork::mark_live(&mut jobs, |job| {
+            ["pid", "codex_pid"]
+                .iter()
+                .any(|key| matches(job, key, &ps))
+        });
         self.engine
             .reconcile_repairs(&mut jobs, &ps, &json!({}))
             .unwrap();

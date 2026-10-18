@@ -388,7 +388,9 @@ official workflow or release result.
 The command first holds the existing per-product exclusion, also blocking the
 older open-PR/CodeQL entry points. Its durable record binds the exact merged
 source/tree, owned-directory hash, random nonce and 2 CPU/8 GiB/512 PID phase.
-A kernel lock prevents a second live owner or recovery from entering. The
+A kernel lock prevents a second live owner or recovery from entering. The lease
+nonce identifies this reservation; it is not the builder's separate nonce.
+The directory hash binds recovery to the same builder state directory. The
 original four CodeQL jobs must be successful at the original attempt. No repo
 runner may be registered and no original product runner/container may exist.
 The entire fixed source is read and sealed through the normal gate, and the
@@ -403,6 +405,10 @@ takes the same kernel lock and validates the saved source, budget and directory
 binding before recovering the recorded builder resources. Recovery does not
 rebuild, fetch another source, require main to remain current, or claim build
 success. Missing/corrupt builder state fails closed and keeps the lease.
+Lease persistence is not an atomic journal. An interrupted intent write or a
+crash after intent persistence but before the builder's first state write may
+therefore require a bounded technical investigation; recovery never treats a
+missing/corrupt record as permission to release the exclusion.
 
 The 55 minute CLI deadline includes the builder's fixed 45 minute cap and source
 verification; cleanup retains the component's independent bounded context.

@@ -144,7 +144,7 @@ func verifyReleasePreflightIdle(ctx context.Context, r repository, read api) err
 
 func verifyReleasePreflightIdleWith(ctx context.Context, r repository, read api, inventory func(context.Context) ([]byte, error)) error {
 	var runners struct {
-		Total   int `json:"total_count"`
+		Total   *int `json:"total_count"`
 		Runners []json.RawMessage
 	}
 	if err := read(ctx, "repos/"+r.FullName+"/actions/runners?per_page=100", &runners); err != nil {
@@ -152,7 +152,10 @@ func verifyReleasePreflightIdleWith(ctx context.Context, r repository, read api,
 	}
 	// No registration is needed by this host-only preflight. Fail closed even
 	// for an unrelated registration instead of altering or deleting it.
-	if runners.Total != 0 || len(runners.Runners) != 0 {
+	if runners.Total == nil || runners.Runners == nil || *runners.Total < 0 || *runners.Total != len(runners.Runners) {
+		return errors.New("release preflight runner inventory invalid")
+	}
+	if *runners.Total != 0 {
 		return errors.New("release preflight runner registered")
 	}
 	out, err := inventory(ctx)

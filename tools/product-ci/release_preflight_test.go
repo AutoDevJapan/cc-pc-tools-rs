@@ -304,3 +304,63 @@ func TestReleasePreflightDoesNotConfuseArtifactOrCleanupWithSuccess(t *testing.T
 		}
 	}
 }
+
+func TestReleasePreflightRejectsMissingNullOrInconsistentRunnerInventory(t *testing.T) {
+	for _, body := range []string{
+		`{}`, `null`, `{"total_count":null,"runners":[]}`, `{"total_count":0}`,
+		`{"total_count":0,"runners":null}`, `{"total_count":-1,"runners":[]}`,
+		`{"total_count":0,"runners":[{"id":1}]}`, `{"total_count":1,"runners":[]}`,
+		`{"total_count":"0","runners":[]}`, `{"total_count":0,"runners":[]}`,
+	} {
+		calls := 0
+		read := func(_ context.Context, _ string, out any) error { return json.Unmarshal([]byte(body), out) }
+		err := verifyReleasePreflightIdleWith(context.Background(), repository{}, read, func(context.Context) ([]byte, error) { calls++; return nil, nil })
+		valid := body == `{"total_count":0,"runners":[]}`
+		if (err == nil) != valid || (calls == 1) != valid {
+			t.Fatal("malformed inventory passed as empty or valid empty was rejected")
+		}
+	}
+}
+
+func TestReleasePreflightSecondIdleFailureStopsBeforeIntent(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "owned")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "admission")
+	built, calls := 0, 0
+	d := preflightTestDeps(t, path, &built)
+	d.idle = func(context.Context, repository, api) error {
+		calls++
+		if calls == 2 {
+			return errors.New("fixture phase became busy")
+		}
+		return nil
+	}
+	r, err := runReleasePreflight(context.Background(), dir, path, false, d)
+	if err == nil || calls != 2 || built != 0 || r.BuildAttempted || !r.LockReleased || r.RecoveryRequired {
+		t.Fatal("second idle failure persisted build intent or retained an unused lease")
+	}
+}
+
+func TestReleasePreflightReservedRecoveryDoesNotBuildOrReadSource(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "owned")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "admission")
+	l, err := acquireReleasePhase(path, dir, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := l.file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// Nil dependencies deliberately panic if recovery enters source/build code.
+	r, err := runReleasePreflight(context.Background(), dir, path, true, releasePreflightDeps{})
+	if err != nil || !r.LockReleased || r.RecoveryRequired || r.Succeeded || r.BuildAttempted || r.SourceVerifiedBefore || r.ExecutionAuthorized {
+		t.Fatal("reserved-only recovery used dependencies or reported build success")
+	}
+}

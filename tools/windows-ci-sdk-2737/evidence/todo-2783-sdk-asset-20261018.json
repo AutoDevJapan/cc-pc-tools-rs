@@ -1,0 +1,94 @@
+{
+  "schema": "todo-2783-sdk-asset-v1",
+  "todo_id": 2783,
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "runtime_source_commit": "2381383d097779fb153689b5c83eb4c4f31f2456",
+  "finalizer_source_commit": "f7697c927cd0723e5d1c5cd595a471e9760ce5f1",
+  "owned_root_id": "56e63ad56bbdd616f61707bf87799948",
+  "owned_root_state": "owned-retained-sdk-asset",
+  "template_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2783-godd-mcp-ci-windows-guest-sdk\\codex-owned-56e63ad56bbdd616f61707bf87799948\\guest.vhdx",
+  "template_bytes": 21277704192,
+  "template_sha256": "e19d76f807c012ebeff2d5d161df3540d851a447aceb9ccbf7471eb877d2d816",
+  "hyperv_vm_id": "f0561845-8dfe-4fcd-bd9d-2d909549a670",
+  "instance": "todo2783-cb9f36d148c3bdc1572793a3a6ef5d71",
+  "shutdown_mode": "guest-integration-shutdown",
+  "vm_absent": true,
+  "memory_assigned": 0,
+  "vhd_detached": true,
+  "service_user": "LocalSystem",
+  "hardware": {
+    "fixed_memory_bytes": 4294967296,
+    "gpu_passthrough": false,
+    "host_directory_shares": false,
+    "network": "existing Default Switch",
+    "generation": 1,
+    "vcpus": 2
+  },
+  "sdk_prepare_count": 5,
+  "sdk_version_check_count": 6,
+  "versions": [
+    {
+      "package": "git-for-windows",
+      "version": "2.56.0.windows.2",
+      "version_proof_sha256": "c00d087442a58aa55f35b445913a4060a3a7bc2ca5dee8223a04bdc80433d05a"
+    },
+    {
+      "package": "powershell-7",
+      "version": "7.6.6",
+      "version_proof_sha256": "21d6cd57f8e21d29e0d56c2d70342a5f296fc2db452ce8b962f90e163b64c4b7"
+    },
+    {
+      "package": "rust-1.97.1",
+      "version": "1.97.1; 1.97.1; 1.9.0; 0.1.97",
+      "version_proof_sha256": "86ea3577ee6238a100b6adee40643451849ddfec084a136f757dd6af4b471d81"
+    },
+    {
+      "package": "msvc-build-tools",
+      "version": "19.50.35739",
+      "version_proof_sha256": "88f55936026e15a18e6d767a49bcca3de815a7ed62ab96e73dae558cd6ff3a1a"
+    },
+    {
+      "package": "windows-sdk",
+      "version": "10.0.26100.8249",
+      "version_proof_sha256": "4f2693e79f3d17f86665dfee933720c9b8b09a70867acb667f0cbf70d663fc67"
+    },
+    {
+      "package": "sccache",
+      "version": "0.18.0",
+      "version_proof_sha256": "05ffe59ebb2b198d91a131b0c6c23bca1802b0ccb9106334f76d9ab812e3f10c"
+    }
+  ],
+  "guest_sdk_root": "C:\\ProgramData\\AutoDevJapan\\windows-ci-sdk-2737",
+  "guest_environment": {
+    "CARGO_TARGET_DIR": "C:\\ProgramData\\AutoDevJapan\\windows-ci-sdk-2737\\target",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_DIR": "C:\\ProgramData\\AutoDevJapan\\windows-ci-sdk-2737\\sccache-cache",
+    "CARGO_HOME": "C:\\ProgramData\\AutoDevJapan\\windows-ci-sdk-2737\\cargo-home",
+    "RUSTUP_HOME": "C:\\ProgramData\\AutoDevJapan\\windows-ci-sdk-2737\\rustup-home"
+  },
+  "bootstrap_service": "WindowsCISDK2737",
+  "bootstrap_public_seed": "C:\\Windows\\System32\\WindowsCISDK2737\\seed.json",
+  "template_clone_handoff": "Verify SHA256 before copying; stage the next task helper and fresh public nonce/client-certificate hash on the copied image, keeping this original asset unchanged.",
+  "private_raw_log_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2783-godd-mcp-ci-windows-guest-sdk\\codex-owned-56e63ad56bbdd616f61707bf87799948\\diagnostics",
+  "private_evidence_sha256": "9a6044c2dc6c7e25824ddf870bb4eff49a865541cd9aefeff3c606bb8cc2cc4e",
+  "raw_operation_log_sha256": "2fb1e2f00209099061f0d99c6856dd97fd30c62e52936fd769e7008b7a6cb3d2",
+  "helper_sha256": "d2eca48e202cc1cab3998b023e23ab21db77f6e0e8339393edb3080eb2ea2601",
+  "seed_iso_sha256": "7687de47636c38bb35c169da5cd41a4ce7300b9f4ec06a0f36736ed118391989",
+  "official_iso_sha256": "7b052573ba7894c9924e3e87ba732ccd354d18cb75a883efa9b900ea125bfd51",
+  "transport": {
+    "fresh_ed25519_private_keys": "RAM-only, never serialized",
+    "bootstrap": "same-VM nonce/COM public instance/IP/certificate hash",
+    "owner_credentials_copied": false,
+    "guest_firewall": "helper executable, TCP38473, LocalSubnet",
+    "tls_minimum": "1.3"
+  },
+  "not_executed": [
+    "original-product-source-fetch-or-execution",
+    "cargo-build-test-install",
+    "runner-registration",
+    "original-PR3613-update-dispatch",
+    "official-CI-success",
+    "production-deployment"
+  ],
+  "observed_at": "2026-10-18T14:08:52.3425204Z"
+}

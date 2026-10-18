@@ -1,5 +1,46 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 00:54保存・レビュー待ちとWindows準備失敗（最新）
+
+Linux起動修復の機能sourceは2bc1dcd5cfe5d12f59db2a38e6a6474b2721cb4c。
+root2736の正常実開始job003834へ正規subwork review2832を登録した。
+固定base c1dbdcd/head2bc1dcd、Sonnet5.5、複数file読取専用、実行検査/製品読取/編集禁止。
+原2797とは異なる今回の新しい起動修復だけを対象とする。元2797のspec/モデル/結果は保持。
+保存specは2832-8d761b3d8d9446a0b0dda601f41c390f.md、現時点todo/jobs空/未開始。
+別モデルの原応答受領とMust対応前には新helperを正式jobへ使わない。
+修復PR219をdraftで作成し、head136073bへpush。正式CIは7check queuedを観測、成功未確認。
+
+修正版の関連TestPR148群/vet/両OS buildと実SDK起動検査は全exit0。起動検査4.05秒。
+buildはc1dbdcdの作業コピー変更時に行い、機能fileは2bc1dcdと一致する。commit後の再buildを
+偽っていない。2binと全原log12file/26,464,182bytesを恒久root/resume-20261019-003834へ
+SHA一致保存し、listenerfix-build-manifest.jsonへ元/保存先/hashとsource資格を残した。
+新helperの実行pathは同dir/listenerfix-product-ci.exeとlistenerfix-product-ci-linux。
+
+Windows正式Rust用root49ff493ad7883b67c40b229b0be1bf2fは新safe-delete所有資源。
+run39141771645/attempt1/job117717494946/head03c7cc6/treea6851bd/同Rustworkflowを固定。
+既済の最終Windowsmodule由来bootstrap SHA3EE9097255C0BC51B71A95AAD1E144634DE4C91312E2E808B17514987BEA86FCと、
+実APIが返す公式runner2.338.0 win-x64 ZIP104,063,355bytes/SHAf48e0750a21812bca5f82de5f7f5aeae71abee647fab5a582f1742d07eba455fを
+照合。新費用/新認証/秘密値の保存なし。新SDK供給後のprepareはCC-AdminBroker経由で
+00:52:50にexit1「GitHub read API failed」。prepareを同rootで繰り返していない。
+公開archive展開先は存在するが、製品sourceの実予定pathとsource-materialized.jsonは不在。
+SCMの当該サービスはsc query exit1060で不在。runner設定/認証fileも存在しない。
+本人のPC操作や再起動は不要。root49ffは公開asset/plan/SDKと診断に必要なので保持する。
+
+同じbroker/同じ本人SIDで、正常な元repo CWDの公開release tag読取、およびCWDを変えない
+元製品ref読取は両方exit0（実head03c7cc6）。単純なOAuth不在やCWDだけを原因と断定しない。
+最初の診断jq引用がWindows PowerShellで失われた失敗も保存し、単純な式へ修正して再観測。
+API残枠はcore4724/5000で、全体の枯渇は観測しなかった。prepareのどのbounded API応答が
+失敗したかは未特定。次のWindows工程は応答サイズ/終了コード/期限を秘密なしで区別し、
+その原因を修復する。全blob取得やprepareを盲目的に反復しない。登録token取得は未実施。
+
+route root6ff1と失敗Linux root328142、起動fixture root441cは原証拠を恒久保存後、
+plan→別通常削除→finishでsource_absent。build roote786も全SHA保存後に同手順で回収する。
+Linux登録/コンテナ/lockは回収済み。Windowsのサービス/runner登録は未作成で残存なし。
+正式Rustの両OSはqueued/steps0のまま。native/liveはまだdispatchしない。
+自動CodeQL run39141675301を成功として数えず、旧CodeQLの手動再実行は0。
+次はreview2832の原応答・Must、新helperの必要CIを受けてLinux正式jobを再開し、
+Windows準備の限定診断/修復を続ける。旧送信フィルター待ちを再登録せず、正規waitで2832を待つ。
+
 ## 2026-10-19 00:38再開・正規送信復旧とLinux起動修復（最新）
 
 元specに司令塔2825のPR209配布済み指示が追加された。実gh_gateは正式guard false、

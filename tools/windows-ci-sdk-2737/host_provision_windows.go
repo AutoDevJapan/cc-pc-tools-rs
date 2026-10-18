@@ -562,6 +562,7 @@ func runAdminBrokerScript(scriptPath string, timeoutSeconds int, evidenceRoot st
 	cmd := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", adminBrokerScript, "-Script", scriptPath, "-TimeoutSec", fmt.Sprint(timeoutSeconds))
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 	cmd.Env = []string{"SystemRoot=" + os.Getenv("SystemRoot"), "PATH=" + filepath.Join(os.Getenv("SystemRoot"), "System32") + `;` + filepath.Join(os.Getenv("SystemRoot"), `System32\WindowsPowerShell\v1.0`), "TEMP=" + filepath.Join(os.Getenv("SystemRoot"), "Temp"), "TMP=" + filepath.Join(os.Getenv("SystemRoot"), "Temp")}
+	cmd.Env = append(cmd.Env, "PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1", "WINDIR="+os.Getenv("SystemRoot"))
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {

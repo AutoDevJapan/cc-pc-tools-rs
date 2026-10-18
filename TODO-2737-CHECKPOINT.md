@@ -490,3 +490,36 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   launcherのexit codeは直接保存していないため、captured exit0とは報告しない。2終端receiptの実結果と不在を別に残した。
 - e850 rootは次回の実clone/公式jobへ使う必要な同版実行物を含むため保持。新VM/clone/runner/route更新/dispatchはまだ0。
   次は2838だけの原応答を受領し、Must/未読を直した後に実公式runへ進む。親2641に有限結果/証拠を配送し、実HEADで自身のcheckpointを保存する。
+
+## 2026-10-19 job20261019-015035-todo-2737: 公式通常CI初回の実結果
+
+- 2838の原応答はSHA256 F0F47E84ECC72831E5A8EC545EFE2436F604F96454B5A079EBCE2FCF0FE3AE85。
+  fixed base45fead8→head4c60959/treea0aea43の6file/局所callerで静的Must0/Suggestion0/Nit0、検査0。
+  正規job/同thread01a14fe7-ee35-7933-9c8d-df4d3618afd8のturn_context.modelを照合し実gpt-6-lunaを確認。原文のmodel不明申告は改変せず保持。
+- レビュー済みnormal-ci-route-applyを元b194へ適用しexit0。原同branchへsole旧parent/force=falseで4runs-on scalarだけを通常更新した。
+  **新製品HEAD085b5b007cab4ebd57d6690faf6df95bb40453ef、tree25ae0b09830d1fbeef079e8ff6bcc033928bc8d8、ci.yml SHA256ba2bcc656bfafc7d2c2da1d14770c00ba0d698b2bea7a6c086c6ae13ddf9abe8**。
+  lease0b2414b10418d265c7823a4f87bb5881。変数/commit/tree/refの各mutation前後receiptを保存した。CodeQL/nativeの旧SHA結果を新SHAへ読み替えないことと再解析要否を親2641へ即時配送済み。
+- 元workflow_dispatchを原refへ1回だけ送信しexit0。公式run39147155349/attempt1が同repo/newSHA/event/refでqueued、verify job117733211808を確認。
+  ownedroot982d807ade8d920300c7e14c4f5dc08cのrequestはsourcepacket.Pinの実JSON schema head_sha/tree_sha/workflow_sha256を使い、新3hash/run/attempt/role/lease/空Inputsを明示した。
+  schema修正は実行前に行い、架空job IDや手書きmanifestで条件を埋めていない。
+- 同clean code4c60959のhost/Linux helperを使用し、canonical Cargo gate内で新VM fc9ed8c6aa01c36f767b4d31e444abcbを起動。
+  Linux SDKの元VM不在/全disk hashを確認し、新sourceをRAM転送。source-readyの実proofはrepo1154066087/newHEAD/newtree/1904blob/physical_verified=true。
+  registered runner27（nonce名todo2737-fc9ed8c6aa01c36f767b4d31e444abcb/同run-role label）のoffline identityを保存し、公式APIの同job割当とstart hook proofまで確認した。
+  seed生成用の自分のtools containerはexact ID/name/image/labels/mount/device/privilegedを照合し、seed.iso完成後すぐ停止/PID0を確認。layerは次回に必要なので保持。
+- **初回公式verifyはfailure**。API上の失敗工程はnumber10「Set up pnpm」とnumber68「Complete runner」。start hookは成功したがcomplete proofは未受領。
+  hostはprivate gate logにlive job hook proof rejectedを残し、outerのgated child drain unverified/exit1を保存した。合成検査成功を公式成功へ読み替えない。
+  VM cleanup receiptはstopped/memory0/removed、runner27登録不在がtrue。処理終了後、同じ実targetのcanonical gate正常/取消fixtureを1回確認し、exit0/lock解放/child排出を保存した。
+  残りのalways gateが通常cancel後もqueuedだったため、同じ自分のrunだけをforce-cancelし終端completed/cancelledを確認。
+  job117733211808 failure、117734627599 cancelled、117734628283/117734629065 skippedを区別して保存。Windowsは未実行。
+- run終端とVM/登録/target回収後、normal-ci-route-releaseはexit0で**自分のnonce変数不在**を確認。製品refは085のまま、resetしていない。
+  route root25dde33266f4ad07e04d9639469022f5を保持。次の再実行では同じ085/tree/workflow/refを再照合し、既存条件式の同leaseに対応する変数をCreate-only契約で再開してから実run/attemptを明示する。
+  hardcoded旧b194のroute-applyを再実行したり、別headを黙って採用したりしない。
+- 公式log GETはupstream ghがresponse内のterminal escapeを拒否してexit1、stdout0。案内された--allow-escape-sequencesはapi --helpに実在したが、同canonical gh_gateはunknown flagでexit2を返した。
+  これは自動承認審査/GitHub権限不足ではなくCLIの引数互換不足。実gh直呼び/環境変数/別HTTP経路で迂回せず止めた。原log bytes/hashは未取得で、0bytesの失敗fileを原logとして扱わない。
+  有限修復2843を通常add --spec/model gpt-6.1-sol/needs cargoで1件登録。cc-gh-gateの正規flag互換・関連検査/別モデル/CI/通常PR/正規配布だけを依頼し、原guard/secret redaction/認証/endpoint/権限を弱めない。
+  子は原product/ログ本文/公式run/routeを操作しない。修復後に親2737が同じゲートで原logを取得し、pnpmとcomplete proofの実原因を診断・修正する。
+- 52fileの実API/VM/登録/回収/失敗証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-015035-live。
+  copied-hashes.private.json SHA256 A8681D562FD545F10E36584304E0679E940902D317FAF0A9F8CD166A9C1DA1D4。原logの未取得と旧SARIF/CodeQL37件は別に保持。
+  新VHD/seed/runtimeのroot982/25/e850は再開/診断が未完のため保持。旧SDK/root/他担当/未回収/原productfolder/owner-work/guard/登録manifestを変更していない。
+  新費用/Hosted予算/API-key AI/GPU/Civ6/本人PC操作なし。次は2843の実配布を受領し、原log取得→関連修正/有限review→同明示sourceの通常CI再開。
+  完了済み2838/SDK/Windows実装へ再waitせず、2843だけの正規waitと自身の実HEAD/jobのcheckpointを保存する。原merge/Prdは親2641。

@@ -706,3 +706,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 関連検査はWindows go test -race ./...、Windows/Linux vet、実Linux module18pass/0fail/公開SDK opt-in2skipが成功。実測した短いdriverとSIGBUSを使う拒否対照、公式component正常対照、保存未確認/timeout/source/registration/欠落probeの拒否を確認した。旧失敗SDKを変更・上書きしていない。新SDK作成・冷起動の受入は未実施で、まずこの追加差分を別モデルレビューへ渡す。
 - 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-061939-sdkseal。原receipt/公開artifact比較/原応答/検査logをcopy/hash照合、原VHD/seed/公開componentはownedrootへ保持し、大きなdiskを証拠フォルダへ複製しない。immutable SDK9389と失敗982/c91/de0、Windows SDK、他担当資源/guard/manifest/owner-workを保持。
 - 次は追加差分レビュー/Must解消後、修正版で新規SDKを作り、停止後のcloneで同probeを成功させる。SDK作成受付や合成検査を実受入成功とせず、終了hook根因と公式通常CI/Windows13/Docker parityは未完。親2641が原製品merge/Prdを担当する。本人の判断/操作・新費用・APIkeyAI・GPU/Civ6・Discord送信0。
+### 同jobの有限レビュー登録と配送
+
+- 追加6fileの固定0d1fcb5→be21b263874bca2e0058197e59bccd3d18ab2fe2/tree296193e2225c967ca3a8a54dac16a44710eb4a8bをレビュー2880/modelgpt-6-lunaへ通常add --specで登録。保存spec全文一致/dispatchableを確認。原2880の実結果とMust解消前にSDK生成は進めない。
+- 元2737と親2641へmarker[2737-061939-sdkseal]で実測/修正/検査/未完/証拠/次の工程を1回配送。2873にも原応答受領を記録した。終了前も原repo/id/PR/head085/ref/tree/workflowをAPI再照合しown route不在、原mutation0。SDK共有ライブラリの途切れは確定したが、その発生時点・書込み原因と修正版SDKの冷起動成功は未確定。
+- 待ち先は2880だけ。次はレビューを受領しMust解消後、同clean版のhost/Linuxhelperを生成して新ownedrootで修正版SDKを作る。現d85/旧SDK9389と失敗diskは保持。元SDKを上書きしてmanifestだけ合わせることはしない。原Rust/complete/公式CI/Windows13/Docker parityは未完。現job/実HEADのscheduler checkpointと正規waitを保存して自動再開する。

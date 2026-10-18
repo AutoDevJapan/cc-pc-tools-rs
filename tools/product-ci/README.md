@@ -376,15 +376,18 @@ field and prints as a fixed placeholder. On the fixed snapshot this yields 301
 files, 17 directories, 3,663,675 file bytes and a 849,233 byte gzip context.
 
 Execution. `executeAuditedReleaseBuild(ctx, input, ownedDir)` runs one Kaniko
-v1.28.6 container (the maintained upstream fork, pinned by digest) through the
-ordinary Docker daemon. The only argv variables are an opaque nonce and the
-validated Dockerfile name. Fixed options: `--context=tar://stdin`,
-`--no-push --no-push-cache --cache=false`, output to `/kaniko/output.tar`,
-`--cap-drop ALL`, `no-new-privileges`, `--init`, root uid 0 inside a
-disposable read-write layer, a pids limit, memory with swap equal to memory, and
-two small tmpfs mounts. There is no Docker socket, bind, device, privilege,
-`--force`, TLS bypass, host PID/IPC/network, published port, credential or host
-environment. The Docker client uses an empty config directory inside `ownedDir`.
+v1.28.6 build (the maintained upstream fork, pinned by digest) through the
+ordinary Docker daemon. Since ToDo2848 Kaniko runs inside an emulated Linux guest
+in the outer container (see "Emulated builder guest" below); the outer container
+has no variable argv at all. The fixed Kaniko options are `--context=tar://stdin`,
+`--no-push --no-push-cache --cache=false`, output to `/kaniko/output.tar`
+(copied out of the guest), and `--force` only inside the guest (Kaniko's
+container check). The outer container keeps `--cap-drop ALL`, `no-new-privileges`,
+`--init`, root uid 0 inside a disposable read-write layer, a pids limit, memory
+with swap equal to memory, and two small tmpfs mounts. There is no Docker socket,
+bind, device, privilege, TLS bypass, host PID/IPC/network, published port,
+credential or host environment. The Docker client uses an empty config directory
+inside `ownedDir`.
 
 Because the product Dockerfile pulls a digest-pinned base image and runs apt and
 uv, the product profile uses Docker's ordinary outbound bridge network. The
@@ -485,14 +488,35 @@ bytes/modes, unexpected Compose shapes, overlimit logs and artifacts, secret-lik
 build output, weaker isolation, cancellation, deadlines, uncertain creates and
 unconfirmed disposal, using an in-memory daemon. The opt-in test
 `TestReleaseBuilderRealFixture` (`CC_RELEASE_BUILD_FIXTURE_ROOT`, a fresh
-safe-delete owned directory) runs the real daemon with the CC-authored probe:
-normal (kernel CPU/memory/PID limits, CapEff 0 and NoNewPrivs read back from the
-built image), cancel and timeout after the probe printed a marker proving its child
-exists, a lost create response, a refused removal followed by recovery, and the
-product profile's isolation values (created and inspected, never started; recorded
-as an isolation check, not as a build).
+safe-delete owned directory) runs the real daemon with a CC-authored probe on a
+digest-pinned Debian slim base: normal (base-image owners and modes restored,
+owner changes and a privilege drop by RUN, the output image's layer headers, the
+outer cgroup limits, CapEff 0 and NoNewPrivs read back), cancel and timeout after
+the probe printed a marker proving its child exists, a lost create response, a
+refused removal followed by recovery, a Python/apt/uv/useradd build with the
+product profile, and the product profile's isolation values (created and inspected,
+never started; recorded as an isolation check, not as a build).
 
-Not established here: whether the product Dockerfile builds with all capabilities
-dropped (base image extraction, apt, uv), its artifact size, and the product
-build time. Any needed change must be an audited change to the fixed profile;
-nothing is relaxed at run time. The fixture results are not a product build.
+Not established here: the build of the product Dockerfile itself, its artifact
+size and its build time under emulation. Any needed change must be an audited
+change to the fixed profile; nothing is relaxed at run time. The fixture results
+are not a product build.
+
+### Emulated builder guest (ToDo2848)
+
+The ToDo2799 builder originally ran Kaniko directly in the outer container with
+every capability dropped. That cannot unpack a base image that has non-root
+owners (`chown ... operation not permitted`), so the audited product build
+failed before its first step. The builder now runs Kaniko inside a small Linux
+guest emulated in software (QEMU TCG) in that same outer container. Nothing is
+added to the outer container: still `--cap-drop ALL`, no-new-privileges, 1.5
+CPU, 6 GiB, 448 PIDs, no device/KVM/socket/bind/privilege, the same bridge
+network (user-mode NAT) and the same RAM-only artifact path.
+
+`release_build_vm.go` pins the outer image (`tianon/qemu`), the guest kernel
+(`linuxkit/kernel`) and the Kaniko userland by digest and re-hashes the four
+guest files in RAM. The sealed context, Dockerfile name and nonce reach the
+guest only through a validated initrd carried on stdin. See
+`docs/todo2848-vm-builder.md` for the cause, the exact pins, the fixture results
+(ownership restored from the base image, owner changes by RUN, privilege drop,
+output image headers, cgroup limits read back) and the remaining limits.

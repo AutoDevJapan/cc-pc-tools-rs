@@ -19,62 +19,7 @@ import (
 // base image: no product source, token, registry push, runner or release job.
 // Opt in with CC_RELEASE_BUILD_FIXTURE_ROOT=<fresh safe-delete owned directory>;
 // every case gets its own empty subdirectory below it.
-const fixtureProbeSource = `package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-	"strconv"
-	"strings"
-	"time"
-)
-
-func main() {
-	if len(os.Args) > 1 && os.Args[1] == "child" {
-		time.Sleep(time.Hour)
-		return
-	}
-	if len(os.Args) > 1 && os.Args[1] == "hold" {
-		// A child that outlives the build step proves the whole PID namespace is stopped.
-		child := exec.Command("/probe", "child")
-		if child.Start() != nil {
-			os.Exit(5)
-		}
-		if _, err := os.Stat("/proc/" + strconv.Itoa(child.Process.Pid)); err != nil {
-			os.Exit(6)
-		}
-		// Printed only once the child exists; the harness waits for this line.
-		fmt.Println("CC-PROBE-READY")
-		time.Sleep(time.Hour)
-		return
-	}
-	values := map[string]string{}
-	for _, key := range []string{"cpu.max", "memory.max", "pids.max"} {
-		b, e := os.ReadFile("/sys/fs/cgroup/" + key)
-		if e != nil {
-			os.Exit(2)
-		}
-		values[key] = strings.TrimSpace(string(b))
-	}
-	b, e := os.ReadFile("/proc/self/status")
-	if e != nil {
-		os.Exit(3)
-	}
-	for _, line := range strings.Split(string(b), "\n") {
-		for _, key := range []string{"CapEff:", "NoNewPrivs:"} {
-			if strings.HasPrefix(line, key) {
-				values[strings.TrimSuffix(key, ":")] = strings.TrimSpace(strings.TrimPrefix(line, key))
-			}
-		}
-	}
-	raw, e := json.Marshal(values)
-	if e != nil || os.WriteFile("/proof", raw, 0o600) != nil {
-		os.Exit(4)
-	}
-}
-`
+// The probe source and its base image are in release_build_fixture_probe_test.go.
 
 func fixtureBuilderSpec(t *testing.T, probe []byte, hold bool) releaseBuilderSpec {
 	t.Helper()
@@ -89,7 +34,7 @@ func fixtureBuilderSpec(t *testing.T, probe []byte, hold bool) releaseBuilderSpe
 		name string
 		mode int64
 		data []byte
-	}{{"Dockerfile", 0644, []byte("FROM scratch\nCOPY probe /probe\n" + run)}, {"probe", 0755, probe}} {
+	}{{"Dockerfile", 0644, []byte("FROM " + fixtureBaseImage + "\nCOPY probe /probe\n" + run)}, {"probe", 0755, probe}} {
 		if tw.WriteHeader(&tar.Header{Name: f.name, Mode: f.mode, Size: int64(len(f.data)), Typeflag: tar.TypeReg, Uid: 0, Gid: 0}) != nil {
 			t.Fatal("fixture header failed")
 		}
@@ -167,6 +112,10 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		_, stderr, err := dockerText(ctx, independent, 1<<16, "image", "inspect", "--format", "{{.Id}}", releaseBuilderTool)
 		return err != nil && strings.Contains(strings.ToLower(stderr), "no such image")
 	}
+	guestImageAbsent := func(ref string) bool {
+		_, stderr, err := dockerText(ctx, independent, 1<<16, "image", "inspect", "--format", "{{.Id}}", ref)
+		return err != nil && strings.Contains(strings.ToLower(stderr), "no such image")
+	}
 	assertGone := func(rec releaseBuildReceipt) {
 		t.Helper()
 		ids, err := text("container", "ls", "--all", "--no-trunc", "--quiet", "--filter", "label="+releaseBuildLabel+"="+rec.Nonce)
@@ -215,18 +164,33 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		if introduced && (!rec.ToolImageIntroduced || !rec.ToolImageRemoved || !imageAbsent()) {
 			t.Fatal("introduced tool image was not removed")
 		}
+		// The outer container's own cgroup, capability and no-new-privileges values,
+		// the build's ownership facts and the image's layer headers were all read
+		// back and compared exactly.
+		if len(rec.OuterProof) != 7 || len(rec.KernelProof) != len(fixtureImageProof) || rec.OuterProof["CapEff"] != "0000000000000000" || rec.OuterProof["NoNewPrivs"] != "1" {
+			t.Fatalf("proofs incomplete: outer %d guest %d", len(rec.OuterProof), len(rec.KernelProof))
+		}
+		for _, g := range rec.GuestImages {
+			if g.Introduced && (!g.Removed || !guestImageAbsent(g.Ref)) {
+				t.Fatal("an introduced guest source image was not removed")
+			}
+		}
 		assertGone(rec)
 	})
-	// Keep the tool image for the remaining cases and remove it ourselves at the end.
-	if imageAbsent() {
-		if _, _, err := dockerText(ctx, independent, 1<<20, "pull", releaseBuilderTool); err != nil {
-			t.Fatal("tool image pull failed")
-		}
-		defer func() {
-			if _, _, err := dockerText(ctx, independent, 1<<16, "image", "rm", releaseBuilderTool); err != nil || !imageAbsent() {
-				t.Error("harness tool image not removed")
+	// Keep the outer image and both guest source images for the remaining cases and
+	// remove the ones this harness pulled itself at the end.
+	for _, ref := range []string{releaseBuilderTool, releaseGuestKernelImage, releaseGuestUserlandImage} {
+		ref := ref
+		if guestImageAbsent(ref) {
+			if _, _, err := dockerText(ctx, independent, 1<<20, "pull", ref); err != nil {
+				t.Fatal("image pull failed")
 			}
-		}()
+			defer func() {
+				if _, _, err := dockerText(ctx, independent, 1<<16, "image", "rm", ref); err != nil || !guestImageAbsent(ref) {
+					t.Error("harness image not removed")
+				}
+			}()
+		}
 	}
 	// The held probe prints a marker into the builder log once its child exists.
 	// A harness that never sees it fails: nothing is concluded from a cancelled,
@@ -251,7 +215,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		dir := newDir("cancel")
 		reached := make(chan bool, 1)
 		go func() {
-			ok := waitMarker(dir, 3*time.Minute)
+			ok := waitMarker(dir, 8*time.Minute)
 			reached <- ok
 			cancel()
 		}()
@@ -266,7 +230,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 		assertGone(rec)
 	})
 	t.Run("timeout", func(t *testing.T) {
-		tctx, cancel := context.WithTimeout(ctx, 75*time.Second)
+		tctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 		defer cancel()
 		dir := newDir("timeout")
 		rec, err := runReleaseBuilder(tctx, factory, fixtureBuilderSpec(t, probe, true), dir)
@@ -300,7 +264,7 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 	t.Run("uncertain-create", func(t *testing.T) {
 		lost := func(cfg string) builderDocker {
 			return decoratedDocker{inner: cliBuilderDocker{cfg}, after: func(args []string, err error) error {
-				if args[0] == "create" {
+				if args[0] == "create" && strings.Contains(" "+strings.Join(args, " ")+" ", " --init ") {
 					return errors.New("response lost") // The real daemon did create it.
 				}
 				return err
@@ -335,8 +299,12 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 	t.Run("recovery", func(t *testing.T) {
 		dir := newDir("recovery")
 		refuse := func(cfg string) builderDocker {
+			mainCreated := false
 			return decoratedDocker{inner: cliBuilderDocker{cfg}, before: func(args []string) error {
-				if len(args) > 1 && args[0] == "container" && args[1] == "rm" {
+				if args[0] == "create" && strings.Contains(" "+strings.Join(args, " ")+" ", " --init ") {
+					mainCreated = true
+				}
+				if mainCreated && len(args) > 1 && args[0] == "container" && args[1] == "rm" {
 					return errors.New("removal refused")
 				}
 				return nil
@@ -355,6 +323,46 @@ func TestReleaseBuilderRealFixture(t *testing.T) {
 			t.Fatalf("recovery failed: %v", err)
 		}
 		assertGone(again)
+	})
+	t.Run("product-profile-package-tools", func(t *testing.T) {
+		// The class of build the original failure belongs to: a pinned public base
+		// image, package tools that drop privileges, and owner changes. It runs with
+		// the product profile on a synthetic CC-authored context.
+		df := "FROM " + fixturePackageBase + "\n" +
+			"RUN apt-get update && apt-get install -y --no-install-recommends file ca-certificates && rm -rf /var/lib/apt/lists/*\n" +
+			"RUN pip install --no-cache-dir uv && uv --version\n" +
+			"RUN useradd -u 1001 -m app && install -d -o app -g app -m 0750 /srv/data && chown -R app:app /home/app\n" +
+			"COPY marker /srv/data/marker\n" +
+			"RUN chown 1001:1001 /srv/data/marker && chmod 0640 /srv/data/marker\n"
+		var raw bytes.Buffer
+		gz := gzip.NewWriter(&raw)
+		tw := tar.NewWriter(gz)
+		for _, f := range []struct{ name, data string }{{"Dockerfile", df}, {"marker", "cc-fixture\n"}} {
+			if tw.WriteHeader(&tar.Header{Name: f.name, Mode: 0644, Size: int64(len(f.data)), Typeflag: tar.TypeReg}) != nil {
+				t.Fatal("fixture header failed")
+			}
+			if _, err := tw.Write([]byte(f.data)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if tw.Close() != nil || gz.Close() != nil {
+			t.Fatal("fixture archive failed")
+		}
+		spec := releaseBuilderSpec{profile: productBuilderProfile, context: raw.Bytes(), contextSHA256: digest(raw.Bytes()), dockerfile: "Dockerfile", tree: "fixture", snapshotSHA256: "fixture", contextFiles: 2, maxDuration: releaseBuildMaxDuration}
+		rec, err := runReleaseBuilder(ctx, factory, spec, newDir("package-tools"))
+		reports = append(reports, rec)
+		if err != nil || !rec.Succeeded || rec.ExitCode != 0 || !rec.OuterIsolationVerified || !rec.PIDZero || rec.ArtifactBytes == 0 {
+			t.Fatalf("package tool build failed: %v %s", err, rec.Failure)
+		}
+		art, err := rec.verifiedArtifact()
+		if err != nil {
+			t.Fatal(err)
+		}
+		owners := imageEntryOwners(t, art)
+		if owners["home/app"] != "1001:1001" || owners["srv/data"] != "1001:1001" || owners["srv/data/marker"] != "1001:1001" {
+			t.Fatalf("owner changes are not in the image layers: %v", owners)
+		}
+		assertGone(rec)
 	})
 	// Real daemon values for the product profile (1.5 CPU, 6 GiB, 448 PIDs, bridge
 	// network). The builder is created and inspected but never started, and no

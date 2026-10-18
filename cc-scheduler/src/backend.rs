@@ -430,12 +430,10 @@ impl RealBackend {
                     .extend(["--parent-job-id".into(), parent.into()]);
             }
         }
-        for field in ["mcp_profile"] {
-            if let Some(value) = selection[field].as_str() {
-                invocation
-                    .args
-                    .extend([format!("--{}", field.replace('_', "-")), value.into()]);
-            }
+        if let Some(value) = selection["mcp_profile"].as_str() {
+            invocation
+                .args
+                .extend(["--mcp-profile".into(), value.into()]);
         }
         if selection["network"] == true {
             invocation.args.push("--network".into());

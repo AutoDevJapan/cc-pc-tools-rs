@@ -725,3 +725,11 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - e02a592d64025e851c809cc922cbe4ee23a51f8d/tree1c57c38d84772008973186c352023596f9b9dc80の追加5fileだけを有限レビュー2884/modelgpt-6-lunaへ通常add --specで登録し、保存spec全文一致/dispatchableを確認。まだ実結果未受領。レビュー前の新SDK生成や実VM適用は0。
 - 元2737/親2641へmarker[2737-064034-sdkmust]で採用指摘/修正/検査/未完/証拠/次の工程を1回配送し、2880にも原応答受領を記録した。終了前の原source API固定、原AGENTS/CLAUDE既読同hash、own route/normalCI intent不在、工具container停止/PID0を確認した。
 - 次は2884の実head/既読/model/Mustを受領し、残Must解消後に同clean版のhost/Linuxhelperを生成して新規SDKを作る。その停止後cloneでRust/driver/永続化の実受入を行う。旧SDK/失敗disk/原Windows SDK/guard/manifestは保持し、原CI/Windows13/Docker parity/終了hookの未完を維持する。待ち先は2884のみ、現job/実HEADのscheduler checkpointと正規waitを保存する。
+## 2026-10-19 job065638: SDK準備を始めたゲストの再利用を共通受付で拒否
+
+- レビュー2884/job20261019-064545/thread01a150fa-dd73-7883-86f0-4782aef86ac4、原応答SHA25618557DEC3E37A7D5BD9F74790886162DFEC855331FD1EDE00ADC9EA5F06A74E5を受領。実turn_context gpt-6-luna/指定modelを照合。固定7b35942→e02a592/tree1c57c38dの指定5file/局所callerでMust1/Suggestion0/Nit0・検査0。原文のbase SHA末尾省略は変更せず、元spec全文の7b35942003c71434fdf1501dc0b605b1c47635e3と実tree46f5105f7ed75d1e9484888ff2c09fd0072c6942を別照合した。
+- MustはSDK準備失敗後の別種RPCによる再利用。前差分はprepare-sdk再試行だけを拒否し、probe/live-job/sourceなどに同latchを適用していなかった。同領域で指摘が続いたため、種別ごとの追記ではなく、decode直後に全requestの共通mutex受付を置いた。
+- 共通受付はsdkAttemptedを調べ、SDK準備を一度始めたゲストへの後続要求をすべて拒否する。SDK自身の再試行は実状態由来のtyped拒否、それ以外は応答なしで接続を閉じる。受付の判定から各処理のactive/state変更まで同じcritical sectionを維持し、SDK開始との間に別RPCが入り込む隙間を作らない。SDK準備が成功しても同guestを再利用せず、後工程は新しいcold cloneだけを使う。
+- 実socketで不正manifestをSDK準備経路へ与えて失敗させ、同guestへprobe-public-sdk/live-job/materialize-source/configure-offline/normal/cancel/continue/status/prepare-sdkの9種を順次送信。すべてがblobや別処理の応答を返さず拒否し、active/prepared/configured/sourceTouched/resultsを変更せずsdkAttemptedを保持することを確認。既存の未使用guest正常入力と他のRPC対照は維持した。
+- 変更はLinux専用2file。実Linux module21pass/0fail/公開SDK opt-in2skip、Linux vet成功。Windowsのコンパイル入力はe02a592と同じなので、同版の有効なWindows race/vetを再利用し重複実行していない。原Cargo compile0。新SDK生成/実VM/runner/公式rerun/GitHub mutationは0。
+- 新ownedrootd6a7bb084824e564cd941261ec978d99、証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-065638-sdk-lifecycle。原応答/実model/検査/元source固定を保存。元SDK9389/失敗disk/Windows SDK/必要layer/原guard/登録manifest/owner-work/他担当資源を保持。次はこの設計修正差分だけ別モデルで確認し、Must0後に同clean版で新SDK生成とcold cloneの実受入を行う。終了hook/公式CI/Windows13/Docker parityは未完、原merge/Prdは親2641。

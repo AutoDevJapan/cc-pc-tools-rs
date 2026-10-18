@@ -34,6 +34,11 @@ type guest struct {
 
 func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
 func groupGone(p int) bool              { return p > 1 && errors.Is(syscall.Kill(-p, 0), syscall.ESRCH) }
+
+// Caller holds mu. An attempted source upload is conservatively source-bearing.
+func (g *guest) sdkRejectionLocked() sdkResult {
+	return sdkResult{ID: g.instance, Failure: "sdk_guest_state_rejected", ProductSource: g.sourceTouched || g.prepared, RunnerRegistered: g.configured}
+}
 func (g *guest) serve(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(time.Minute))
@@ -47,8 +52,19 @@ func (g *guest) serve(conn net.Conn) {
 	if e != nil || d.Decode(new(any)) != io.EOF {
 		return
 	}
+	// Admission and each operation's state transition share one critical
+	// section. Preparing an SDK consumes this guest, even on success: only a
+	// fresh cold clone may subsequently probe it or receive product work.
+	g.mu.Lock()
+	if g.sdkAttempted {
+		rejected := g.sdkRejectionLocked()
+		g.mu.Unlock()
+		if q.Kind == "prepare-sdk" {
+			_ = json.NewEncoder(conn).Encode(rejected)
+		}
+		return
+	}
 	if q.Kind == "live-job" {
-		g.mu.Lock()
 		if g.active || g.prepared || g.configured || q.ID != g.instance {
 			g.mu.Unlock()
 			return
@@ -64,7 +80,6 @@ func (g *guest) serve(conn net.Conn) {
 		return
 	}
 	if q.Kind == "probe-public-sdk" {
-		g.mu.Lock()
 		if g.active || g.prepared || g.configured || g.sourceTouched || q.ID != g.instance {
 			g.mu.Unlock()
 			return
@@ -79,7 +94,6 @@ func (g *guest) serve(conn net.Conn) {
 		return
 	}
 	if q.Kind == "materialize-source" {
-		g.mu.Lock()
 		if g.active || q.ID != g.instance {
 			g.mu.Unlock()
 			return
@@ -99,7 +113,6 @@ func (g *guest) serve(conn net.Conn) {
 		return
 	}
 	if q.Kind == "configure-offline" {
-		g.mu.Lock()
 		if g.active || !g.prepared || g.configured || q.ID != g.instance {
 			g.mu.Unlock()
 			return
@@ -113,11 +126,8 @@ func (g *guest) serve(conn net.Conn) {
 		return
 	}
 	if q.Kind == "prepare-sdk" {
-		g.mu.Lock()
-		// ProductSource includes an attempted source upload: after a failed
-		// upload it is no longer safe to claim the guest is source-free.
-		rejected := sdkResult{ID: g.instance, Failure: "sdk_guest_state_rejected", ProductSource: g.sourceTouched || g.prepared, RunnerRegistered: g.configured}
-		if g.active || q.ID != g.instance || g.prepared || g.configured || g.sourceTouched || g.sdkAttempted {
+		rejected := g.sdkRejectionLocked()
+		if g.active || q.ID != g.instance || g.prepared || g.configured || g.sourceTouched {
 			g.mu.Unlock()
 			_ = json.NewEncoder(conn).Encode(rejected)
 			return
@@ -137,7 +147,6 @@ func (g *guest) serve(conn net.Conn) {
 	}
 	d = json.NewDecoder(io.LimitReader(reader, 4096))
 	if q.Kind == "status" {
-		g.mu.Lock()
 		r, ok := g.results[q.ID]
 		g.mu.Unlock()
 		if ok {
@@ -146,9 +155,9 @@ func (g *guest) serve(conn net.Conn) {
 		return
 	}
 	if q.Kind != "normal" && q.Kind != "cancel" {
+		g.mu.Unlock()
 		return
 	}
-	g.mu.Lock()
 	_, used := g.results[q.ID]
 	if g.active || used || len(g.results) >= 2 {
 		g.mu.Unlock()

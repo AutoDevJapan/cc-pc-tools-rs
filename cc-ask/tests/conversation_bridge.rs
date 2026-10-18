@@ -296,7 +296,7 @@ fn conversation_bridge_log_identity_uses_content_title_notify_and_image_bytes() 
             "",
             Some(body_file),
             notify,
-            &[image.clone()],
+            std::slice::from_ref(image),
         )
         .unwrap();
         ids.push(argument(&fake.calls.last().unwrap().0, "--request-id").to_owned());
@@ -356,7 +356,7 @@ fn conversation_bridge_images_use_same_hashed_snapshot_and_videos_audio_are_reje
         "本文",
         None,
         false,
-        &[image.clone()],
+        std::slice::from_ref(&image),
     )
     .unwrap();
     assert_eq!(fake.attachments, vec![bytes.to_vec()]);
@@ -451,7 +451,7 @@ fn conversation_bridge_media_provenance_is_immutable_across_same_byte_aliases() 
         "本文",
         None,
         false,
-        &[first.clone()],
+        std::slice::from_ref(&first),
     )
     .unwrap();
     let receipt = Path::new(argument(&fake.calls[0].0, "--attach")).with_extension("source.json");

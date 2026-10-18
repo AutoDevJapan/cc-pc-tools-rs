@@ -337,7 +337,7 @@ fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
     }
     row[key].as_array().is_some_and(|on| {
         on.iter().all(|id| {
-            if !id.as_i64().is_some_and(|id| id > 0) || *id == row["id"] {
+            if id.as_i64().is_none_or(|id| id <= 0) || *id == row["id"] {
                 return false;
             }
             let mut rows = db["items"]

@@ -166,3 +166,42 @@ preflight has not started. A read-only shared subtask (2846) is deriving the
 supported invocation from the installed tool's source and documentation; it
 has not run the helper or any product job. Do not rerun the historical checks
 on the old merge source.
+
+## 2026-10-19: PR226 distribution accepted, real preflight running
+
+The later builder repair2848 is actually complete. Its return note is preserved
+in the ignored evidence area; the old PR205 chown failure and its 125-byte raw
+log remain unchanged. This section supersedes the dependency wait above.
+
+The formal classifier accepted exactly the current Windows executable, Linux
+helper and two receipt leaves as verified non-client resources. The standard
+receipt and PR226 receipt have identical SHA256
+`92DD05E33D941200A908F3F4D35894B50A49F8476B5DDDAF05BDE48259CB1C36`.
+The installed files match their actual recorded hashes:
+
+- Windows: `41B11CF2EC78C97A276D593F0C979CA0ED5B5790EF25400C3C7C08CFEDF39700`.
+- Linux: `1F1BD8318F0F5F89279B31F43BA864BFDC1EE8747A654B1A3380920D010FDD3C`.
+- Tested head: `cdfb9b97bf6c8893bc4c615503a98a3c2d787a33`.
+- Normal merge: `7e68b65f32504512930af02ae0f19fbfe16fb42e`.
+- Module tree: `2c591717f0f8f4c5794177533b7120d0a2693361`.
+
+A live API read independently confirmed the CC repository's allowed owner,
+private/admin/nonfork identity, PR226 closed/merged, exact head/merge and same
+head/base repository. The actual merge has eight terminal checks: seven success
+and package-tools skipped, zero failure/cancellation. These CC checks do not
+establish product CI success. Original PR205 merge failures remain history.
+
+The exact installed Windows executable started the same fixed product
+`release-build-preflight` in a new safe-delete owned directory, ID
+`5d1cfaaf1fe627565ab8ccc05a5b24bf`. Host PID42708 and its process start time,
+stdout/stderr and eventual host exit record are in the private evidence area.
+Do not start another preflight while it or its original phase lease is active.
+The current builder nonce is `e0c2676e88400ec2d2e77cc2afab6ba1`.
+Outer inspection confirms running, no OOM, 1.5CPU/6GiB/448PIDs, cap-drop ALL
+and no-new-privileges. Outcome/artifact/cleanup are still pending at this entry.
+
+Finite read-only research2878 was registered to resolve the remaining workflow
+permissions, exact Compose operations, transitive setup requirements, drain and
+trust semantics. It cannot edit parent source or run product jobs. Its saved
+spec preserves the fixed source/API/RAM-only and secret boundaries. This is
+necessary analysis, not another builder repair or a product CI result.

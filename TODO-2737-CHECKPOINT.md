@@ -545,3 +545,13 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 次はこの小差分の別モデルレビューを受領してMustを修正し、2860の実再現を受けてpnpm根因を直す。
   製品085b5b007cab4ebd57d6690faf6df95bb40453ef/tree25ae0b09830d1fbeef079e8ff6bcc033928bc8d8/元refを維持。
   同route lease0b2414b10418d265c7823a4f87bb5881の変数は不在で、新公式run送信0。通常CIの全工程/Windows13/Docker parityは未完。原merge/Prdは親2641。
+### 同jobの保存・回収・正規待機
+
+- 実装と検査は56541a6d914cbe3c6ff19202e62e7f012224b197/tree57dbaf0ffc98d653403cf89a6fc5cd6362c4c739へcommit/pushし、実remote同HEADを確認した。
+  追加4fileだけの有限レビュー2861を通常add --spec/model gpt-6-lunaで登録し、保存spec全文一致を確認。2860の公開合成調査も保存spec一致/doingを確認した。
+  どちらも結果未受領であり、登録だけを修正受入完了としていない。
+- 使い終えた診断owned root a0fb308270dede4d61ca5345f8ff883fは小さい公開helper/実検査ログ/実行物hashを同evidenceへ保全した後、safe-delete plan→別呼出し通常削除→finish source_absentを確認した（21570600bytes）。
+  上記の一時保持記述を更新する。失敗製品disk/必要SDK/同clean runtime/他担当資源は保持。
+- 終了前の実GitHub照合でも原repo1154066087/owner/private/nonfork/同repo/openPR3613/head085/ref一致。原sourceを黙って取り替えていない。
+  次の実行物はレビュー済みの最終codeから生成する。現在の旧4c60959実行物に新期限修正が入っているとは扱わない。
+  残る依存は2860と2861だけなので両方へ正規waitを記録し、実HEAD/currentjobのscheduler checkpointを保存する。

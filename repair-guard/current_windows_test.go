@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -307,6 +308,21 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 	currentFixtureGit(t, realRoot, "init", "-q")
 	currentFixtureGit(t, realRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-13a13e1.git")
 	currentFixtureGit(t, realRoot, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	sourceFile := filepath.Join(realRoot, "source.txt")
+	if os.WriteFile(sourceFile, []byte("fixture"), 0600) != nil {
+		t.Fatal("root junction positive-control file setup failed")
+	}
+	plainRootContainer := realRoot + "-wt"
+	if os.Mkdir(plainRootContainer, 0700) != nil {
+		t.Fatal("root junction positive-control container setup failed")
+	}
+	plannedRootChild := filepath.Join(plainRootContainer, "todo-2850-root-junction")
+	if !currentProductPath(sourceFile, realRoot, product.repository, "2850", allow) || !currentProductPath(plannedRootChild, realRoot, product.repository, "2850", allow) {
+		t.Fatal("normal root positive control did not admit its source and planned worktree")
+	}
+	if os.Remove(plainRootContainer) != nil {
+		t.Fatal("root junction positive-control container cleanup failed")
+	}
 	rootAlias := filepath.Join(aliasParent, "product")
 	cmd = exec.Command("cmd", "/c", "mklink", "/J", rootAlias, realRoot)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
@@ -438,6 +454,9 @@ func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 		"C:/Users//fixture/product",
 		`\\?\C:\Users\fixture\product`,
 		`\\.\C:\Users\fixture\product`,
+		"//?/C:/Users/fixture/product",
+		"//./C:/Users/fixture/product",
+		"C:/Users/fixture/名前",
 	} {
 		if _, ok := currentPathHash(path); ok {
 			t.Fatal("noncanonical or non-absolute path received a fingerprint")
@@ -468,7 +487,7 @@ func TestCurrentGitHubCLIEnvironmentUsesStoredOAuthConfiguration(t *testing.T) {
 }
 
 func TestCurrentSuccessionCLIArgumentsFailClosed(t *testing.T) {
-	for _, value := range []string{"", "abc", "0", "-1"} {
+	for _, value := range []string{"", "abc", "0", "-1", "+2850", "02850"} {
 		if _, ok := parseCurrentSuccessionTask(value); ok {
 			t.Fatalf("invalid successor task value accepted")
 		}
@@ -490,5 +509,60 @@ func TestCurrentSuccessionCLIArgumentsFailClosed(t *testing.T) {
 	parsed, err := parseGuardArgs([]string{"--verify-current-succession", "2850", "--guard-path", "C:/fixture"})
 	if err != nil || !parsed.successionSet || !parsed.pathSet {
 		t.Fatal("combined CLI modes were not identified for rejection")
+	}
+}
+
+type closedWriter struct{}
+
+func (closedWriter) Write([]byte) (int, error) { return 0, os.ErrClosed }
+
+func TestCurrentSuccessionCLIReturnsGenericJSONAndExitCodes(t *testing.T) {
+	success := object{
+		"domain": "current-product-succession-v1", "verified": true,
+		"origin_todo_id": 2834, "todo_id": 2850, "project": "GoDD-13a13e1",
+		"registered_path_sha256": strings.Repeat("a", 64), "spec_path_sha256": strings.Repeat("b", 64),
+		"spec_sha256": strings.Repeat("c", 64), "original_registry_recovered": false,
+	}
+	successJSON, err := json.Marshal(success)
+	if err != nil {
+		t.Fatal("success fixture encoding failed")
+	}
+	cases := []struct {
+		name string
+		args []string
+		want string
+		code int
+	}{
+		{"unknown value", []string{"--verify-current-succession", "abc"}, "{\"verified\":false}\n", 1},
+		{"zero value", []string{"--verify-current-succession", "0"}, "{\"verified\":false}\n", 1},
+		{"negative value", []string{"--verify-current-succession", "-1"}, "{\"verified\":false}\n", 1},
+		{"missing value", []string{"--verify-current-succession"}, "{\"verified\":false}\n", 1},
+		{"mixed mode", []string{"--verify-current-succession", "2850", "--guard-path", "C:/fixture"}, "{\"verified\":false}\n", 1},
+		{"trailing positional", []string{"--verify-current-succession", "2850", "junk"}, "{\"verified\":false}\n", 1},
+		{"flag after positional", []string{"junk", "--verify-current-succession", "2850"}, "{\"verified\":false}\n", 1},
+		{"unverified receipt", []string{"--verify-current-succession", "999999"}, "{\"verified\":false}\n", 1},
+		{"verified receipt", []string{"--verify-current-succession", "2850"}, string(successJSON) + "\n", 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := runGuardCLI(tc.args, &stdout, &stderr, func(id int) object {
+				if id == 2850 {
+					return success
+				}
+				return object{"verified": false, "private_path": "must not be emitted"}
+			})
+			if code != tc.code || stdout.String() != tc.want || stderr.Len() != 0 {
+				t.Fatalf("unexpected current-succession CLI response: exit=%d", code)
+			}
+		})
+	}
+	code := runGuardCLI([]string{"--verify-current-succession", "2850"}, closedWriter{}, &bytes.Buffer{}, func(int) object { return success })
+	if code != 1 {
+		t.Fatal("stdout write failure was reported as successful")
+	}
+	var helpStdout, helpStderr bytes.Buffer
+	if code = runGuardCLI([]string{"--help"}, &helpStdout, &helpStderr, func(int) object { return success }); code != 0 || helpStdout.Len() != 0 || !strings.Contains(helpStderr.String(), "Usage of scrub391:") {
+		t.Fatal("help output location or exit code changed")
 	}
 }

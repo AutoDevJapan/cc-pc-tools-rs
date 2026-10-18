@@ -132,14 +132,23 @@ func currentProductByTask(task int) (currentProduct, bool) {
 }
 
 func currentPathHash(path string) (string, bool) {
-	if !filepath.IsAbs(path) || strings.HasPrefix(path, `\\?\`) || strings.HasPrefix(path, `\\.\`) {
+	if !filepath.IsAbs(path) {
 		return "", false
 	}
 	slashPath := strings.ReplaceAll(path, `\`, "/")
+	lowerSlashPath := strings.ToLower(slashPath)
+	if strings.HasPrefix(lowerSlashPath, "//?/") || strings.HasPrefix(lowerSlashPath, "//./") {
+		return "", false
+	}
 	canonical := strings.TrimRight(slashPath, "/")
 	cleaned := strings.TrimRight(strings.ReplaceAll(filepath.Clean(path), `\`, "/"), "/")
 	if !strings.EqualFold(cleaned, canonical) {
 		return "", false
+	}
+	for _, char := range canonical {
+		if char > 0x7f {
+			return "", false
+		}
 	}
 	return hashBytes([]byte(strings.ToLower(canonical))), true
 }

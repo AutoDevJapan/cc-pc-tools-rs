@@ -16,7 +16,7 @@ runnerのhook、shim、環境設定はジョブから読み取りだけとする
 
 公式runnerは起動停止の入口が保持するWin32 Jobへ、実行開始前に所属させる。停止ではそのJobだけを終了し、停止前に開いたメンバーのハンドル、rootの終了、Jobの実行中件数0を確かめる。接続失敗は公式runnerの通常の再試行へ任せる。権限変更中や稼働中の検査を不用意に再起動しない。検証済みの常駐runtimeを誤って検査生成物として削除しない。
 
-既存の全workspace nextest、doctest、全target Clippy、Chrome/ffmpegの実検査、Windows/Linuxの個別検査、Goのrace/vet/buildを維持する。外部資源の直列設定は `.config/nextest.toml` のままとする。マージ前に固定headの必要CIと別モデルのMust解消を確認する。重い検査は同じ生成先で順に行い、同じ最終ソースの全件検査を重複させない。
+[変更の影響範囲](test-build-scope.md)に従い、対象クレートと利用側のnextest、doctest、全target Clippyを選ぶ。全workspaceは共有設定の変更など必要な理由がある場合だけ実行する。影響があるChrome/ffmpegの実検査、Windows/Linuxの個別検査、Goのrace/vet/buildは維持する。外部資源の直列設定は `.config/nextest.toml` のままとする。マージ前に固定headの必要CIと別モデルのMust解消を確認する。重い検査は同じ生成先で順に行い、同じ最終ソースの全件検査を重複させない。
 
 運用結果、失敗理由、再開手順は `docs/runner-result.private.json` と `docs/runner-handoff.private.md` に保存する。登録、起動、固定sourceの検査成功、マージ、常駐復帰確認を別の到達点として記録する。資格情報や請求数字はGitへ入れない。
 

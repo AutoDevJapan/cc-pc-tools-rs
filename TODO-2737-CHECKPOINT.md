@@ -683,3 +683,13 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 新11source fileの関連検査はWindows go test -race成功、Windows/Linux vet成功、実Linux module17pass/0fail/公開SDK opt-in2skip。kernel競合拒否→close後再取得、実socket拒否/正常収集/失敗source操作後拒否を含む。最終検査後source追加変更0。同差分の実VM計測は未実施で、別モデルの有限レビュー後に進む。
 - 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-051440-sdk。attempt3-evidence-files.private.jsonに原receiptのcopy/hash照合を保存した。de0/982/c91失敗disk/seed、immutable SDK9389、Windows SDK、現test/runtimeを保持し、大きなdiskを複製していない。原guard/manifest/owner-work/他担当は不変。
 - 次は本追加差分だけの別モデルレビューを受領し、Must解消後の同clean版host/Linux helperで公開SDKを製品sourceなしに実測する。Rust根因修正と終了hook根因修正、公式通常CI/Windows13/Docker parityは未完。原製品merge/Prdは親2641の担当。
+### 追加差分の固定版・実行物・レビュー待機
+
+- 追加差分は64fb0efa225cc00d4f6398406e5344326da4b3e0/tree abe45625d6a7d196a9d01ddb2716afa6d9d8b14cへcommit/push済み。CC実repo1406818713/AutoDevJapan/private/admin/nonforkをpush前にAPI照合した。guardはclient_resource=falseで、原資料の保護/登録範囲を拡大していない。
+- 有限レビュー2873を通常add --spec/model gpt-6-lunaで登録し、保存spec全文一致・dispatchable=trueを確認。固定base3fff6db→64fb0efの12fileと必要な局所callerだけで、読取専用・検査0・VM/GitHub mutationなしの依頼。実結果は未受領。旧2871のMust0をこの差分へ流用しない。
+- 同clean64fb0efから必要なhost/Linux helperを各1回生成。host inspect-executor source_clean/admission_linked/module/VCSとLinux buildinfo VCS/cleanを照合した。
+  ownedroot1e66b878f926a52deca5cb80341dcb4b、hostSHA25655D06AEE976A2414535E0FA8E49A11DC857267C5B5CEC8744828199C4BCE472C、LinuxD5839F0BCD5D2CE6966F55DEDB028004472BF8A15F722F6A91843F58A9917508。新実行物の実VM適用は0で、文書保存のための再buildは不要。
+- tests-evidence.private.jsonは停止前のcompleted item_12/05:33:30 exit0とitem_13/05:34:12 exit0を照合し、既済検査を再実行せず保存した。Linux logの17pass/0fail/2skipとWindows race/vet、Linux vetを区別している。
+- 元2737と親2641のnoteへmarker[2737-051440-sdk64fb0ef]で今回の実結果/未完/証拠/次の工程を1回配送した。最初のCASは大文字hashでconversation_note_changedとなったが実noteは不変。現noteを再読し小文字SHA256で通常CASに成功した。照合を無効化した更新や直接DB変更はしていない。2871にも原応答受領を記録した。
+- 再開時は2873の実結果と固定head/既読/実modelを照合。Mustを直してからこの同clean版のprobe-sdkを新owned rootで1回実行する。immutable SDK9389/Windows SDKを保持し、製品sourceや公式run4を診断だけのために起動しない。
+  実Rust根因/終了hook/通常CI完走は未完で、オーナーの判断やPC操作は不要。レビューだけ待つので2737 wait --on2873と現job/実HEADのscheduler checkpointを保存する。

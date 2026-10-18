@@ -1,5 +1,528 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 02時台・レビュー2840受入と出力待ちの追加修復（最新）
+
+停止item_71は関連race10passとPR148関連race67pass/4skipの集計・固定範囲比較・
+diff-check成功だった。原eventsを先に受領し、完了済み検査/送信を繰り返していない。
+
+2840は実OAuth Sonnet5.5 job20261019-014846-todo-2840、succeeded/exit0/68steps、
+Must0/実検査0。原応答5034bytes/SHA256
+C92453B2F6001AB4A49B127CD5ED6E93568D15C6FF8E6620A6061E8A76B5B09Cを一致保存。
+git起動失敗のためレビュー者自身のhead照合は未達。親が指定12対象のbe86→413差分0を
+確認し、元作業コピー読取という資格付きで受領した。新しい追加差分の承認へ流用しない。
+
+Suggestionの実害を直し、機能head0625cf259435c6784eb57c8eddc7e66cd61690a7を保存した。
+APIはStdoutPipeのEOF待ちをやめ、Run/WaitDelay2秒でコピー終了を制限する。実回帰で
+埋込bytes.BufferのReaderFromがio.CopyのWrite上限を迂回する問題を検出し、stdoutと
+stderrを名前付きbufferへ修復。最初のlimit8で40,960,000bytesを受け入れた失敗は
+ジョブeventsに残るが、同名の検査logは再検査で上書きされ、別の原log保存とは言わない。
+修正後は実Windows子/孫のpipe保持から期限内復帰、合成孫PIDの停止/Wait、stdout超過の
+取消し/排出、実stderr8192bytes上限が成功。HTTP4xx等はretryせず、Windows reset文言を
+追加し、失敗の安全なbytes/exit/statusを保持。Linuxのhost/guest両側で上限2超を拒否する。
+元gateの実割当を偽装せず、共有の権限/guard/manifest/検査内容は変えていない。
+AllRequiredChecksSuccess=falseは四正式jobの集約と異なる正常な限定結果なので保持する。
+
+関連race10passとPR148関連race67pass/4明示opt-in skip、両module vetが成功。
+Windows/Linuxの両moduleを同じ機能sourceからbuildし、四実行物を恒久証拠root直下の
+followup0625-*へ全SHA一致保存。followup0625-build-manifest.jsonを参照する。
+次の正式実行はこれらを使い、旧be86のruntimefix-committed-*へ戻さない。
+Go fmtで触れた無関係fileの改行だけを元CRLFへ戻し、差分は今回9対象だけに限定した。
+
+追加差分のみの正規Sonnet subwork review2844を--specで登録し、保存spec全文一致を確認。
+spec docs/todo-2736-pipe-cap-followup-review.md、固定base41362dc/head0625cf2。
+現時点todo/jobs空で、実開始/原応答/Mustはまだ未受領。2840を再登録していない。
+PR219はdraftを維持し5195ac7へ通常push。直前41362dcの両OS helper/Go CodeQL/JS解析は
+実success、Rust/actions解析とcc-jobsは未完だった。旧52ddのbridge403の具体predicateは
+依然不明。新しいGo CodeQL成功を旧拒否理由の特定や全CI成功と混同しない。
+
+製品PR148の実owner/private/nonfork/admin、同repo、03c7cc6/headと1100/base、
+旧Rust run39141771645/attempt1をAPI再照合した。Linuxfailure、Windowsqueued/steps0、
+repo runner0だった。新helperの受入前に旧runの通常cancelを1回送信し、終端を別途確認する。
+新しいrun/attemptのdispatchはまだ0。次は2844の原応答と最新helper CIを受領し、
+Must対応/通常helper merge/必要配布後、新しい全OS matrixで正式検査を進める。
+新attemptの実jobを照合して新規所有rootへ供給し、失敗49ff/終了27fcを再利用しない。
+native/live未dispatch、正式4job成功/元2640配送/製品完了は未達。製品mergeは2640が担当。
+
+01:56のcheckpoint-workspaceは30秒のscheduler.lock取得でTimeoutErrorだった。
+要求/失敗は恒久root/checkpoint-011542-*に保持。branchは不変、lock保有者は未特定。
+lock削除・所有情報手書きは行わず、今回保存後の有限再試行と実結果を同rootへ残す。
+他ToDoのみを待って終了する際はdone2840ではなく正規wait --on2844を保存する。
+
+## 2026-10-19 01:53保存・追加修復のレビュー2840と次の受入（最新）
+
+追加修復の機能head be86ae33eee6ce0e6ac96b29b551ab20034227f9を保存した。
+前節の8d093afに加え、terminal jobの読取後にもdeadlineを照合し、遅れたsuccessを拒否する。
+追加回帰は成功。機能headからWindows/Linuxの両module実行物をbuild成功し、原logと
+SHA対応を恒久root/resume-20261019-011542/runtimefix-build-manifest.jsonへ保存した。
+次の実行物は同dir/runtimefix-committed-product-ci.exe、runtimefix-committed-product-ci-linux、
+runtimefix-committed-pr148-windows-runner.exe。旧interim実行物を使わない。
+Gitのmodified表示は恒久evidenceが未追跡のためで、tracked runtime差分はない。
+
+追加差分だけのSonnet review2840をroot011542の正規subworkで登録・実開始を確認した。
+spec docs/todo-2736-runtime-recovery-review.md、固定base52dd6a6/headbe86ae3、複数file・
+read-only・実行検査/外部送信/製品/認証読取禁止。実job20261019-014846-todo-2840はdoing。
+原2797/2832のspec/モデル/結果は保持し、今回の追加差分へ無条件に流用しない。
+PR219は実head78215862f0b80bac914a59adca2f19c33151bd59へ非force push・本文更新。
+01:52の新しい正式CIは7check queued/in_progressで、まだ成功とはしない。
+
+旧head52dd6a6のGo CodeQL失敗は開始hookのlocal bridge403まで特定した。
+拒否したcallbackのbodyは原job logに残らず、鍵/identity/remote head読取のどの条件かは
+未確定。01:49前の元branch refはまだ52dd6a6で、単純なbranch削除とは一致しない。
+旧失敗jobを再実行せず、shared bridge・guard・allowlist・manifest・認証を変更していない。
+司令塔2825へ原job/run/hashと、この未確定の拒否理由を明示して限定診断を依頼する。
+新しいsourceでのCI成功を確認する前にはPR219をmergeしない。
+
+終了した正式Linux・認証なしgate fixture・build・GET診断の原証拠をSHA一致保存後、
+新root27fc/4807/e9c3/45a4をplan→別通常削除→finishでsource_absentまで確認した。
+Linux container/登録/lockは終了済み、Windows49ffにservice/runner/認証fileは未作成。
+49ffの公開asset/SDKと旧f884の公開PowerShell tarだけは次の実行に必要なので保持する。
+CI rawlog/source本文・秘密をstdoutへ一括表示せず、元の原本と失敗を保存している。
+
+次は2840の原応答/Mustと最新CIを受領し、必要な修正後に通常helper mergeへ進む。
+製品Rustの現attempt1はLinuxfailure/Windowsqueued。新source helperで正式実行する際は、
+残る未開始Windows jobを正規cancelして旧runを終え、全OSが同一attemptにある新しい正式
+matrixを作り、実run/attempt/jobを再照合して各OS用の新規所有rootへ供給する。
+正式成功済みのworkspaceを重ねる操作ではない。新attemptの登録/実行はまだ行っていない。
+native/liveは未dispatch。製品head03c7cc6/treea6851bd、元2640への成功証拠配送は未達を保持。
+他のToDoだけを待って終了する場合は、done2832へ戻さず正規wait --on2840を記録する。
+
+## 2026-10-19 01:15再開・正式Linux失敗の修復とWindows通信診断（最新）
+
+レビュー2832の実Sonnet5.5 job20261019-010339-todo-2832は01:04:19〜01:08:59、
+succeeded/exit0/23steps/Must0/実検査0。原応答4573bytes、SHA256
+A8219E044B9A85691D680BA134150C0AA21914F78FBF79C0304880AAE4E39735を一致保存した。
+レビュー者のgit起動は失敗したが、eventsから元2736の絶対pathをtypeで読んだことを確認。
+親が主要5fileの固定2bc1dcd→HEAD/作業コピー差分0を照合した。子worktreeの37b9f701を
+レビュー済みsourceとして流用していない。範囲・Suggestion・親の受入は原receiptへ保存。
+
+検査済みlistener修正版を再照合し、新root27fce531da39e61f8ea4691b2c88f886で
+元Rust run39141771645/attempt1/Linux job117717494710を正式実行した。
+実Git HEAD03c7cc6/treea6851bd・開始hook・checkout・Rust導入・fmtは成功したが、
+Rust/Lua検査はリンク時のSIG9でexit101、正式jobはfailure。doctest/release/scenarioは
+skippedで、全件成功は未達。起動受付やfmt成功を正式CI全件成功へ転記しない。
+8GiB/2CPUのnamespaceへhost最大10並列が渡るため、容量不整合を調査した。
+OOMのkernel実測は前回namespaceから未回収で断定しない。既存gateが低い上限を正式に
+clampする実装を確認し、同じgateへbuild/test上限2を要求する修正を追加した。
+guestはgateの実割当をそのまま使い、FS/権限/container容量/検査内容は変更しない。
+実SDK・実kernel・実共有gateの認証なしnormal Cargo fixtureで1〜2並列と排出を確認、
+20.51秒で成功。これを製品workspace成功として扱わない。
+
+同実行のlistener exit2には、job終了後の/runner/.credentials unlink拒否も記録された。
+credential内容は未読。既存のnamespace/登録破棄は成功し、RegistrationGone/LockReleased、
+container stopped/PID0/Removedを確認済み。修正はこの特定SDK拒否を別記し、既存の
+全namespace終了を維持する。別のfile削除やFS許可拡大を追加しない。元の両source hook・
+全source/run検証に加え、実GitHub target jobの所有runner/ID/run/attemptとcompleted/successを
+新たに必須照合する。failed/skipped/cancelledや他のlistener異常は受入不可。
+kernel memory.max/peak/eventsも終了前に任意の診断として記録する。
+
+Windowsのread-only診断はsourceをRAMだけに取り込み、56call目のblob GETで応答0bytes/
+exit1/10.162秒/overflow無/親期限無を観測。同じ固定blobの通常GETは後にexit0。
+成功済みprefixを繰り返さず再開した診断では62call目、別blobで10.130秒のTLS/timeoutを
+観測した。通常CLIでもTLS handshake timeoutを実測した。旧prepare49ffは再実行せず、
+新しい権限/認証/別APIへ迂回していない。実treeのunique blobは1109件。
+Windows helperへ同じGETのTLS handshake timeout/EOF/resetだけ最大3試行、親期限内の
+有限backoffを追加。HTTP4xx/auth/policy/size/JSON不正は再試行しない。失敗はrequestの
+SHA/bytes/exit/status分類だけを返し、server本文・source・秘密を保存/表示しない。
+blob読取は上限4workerで排出後にだけ受入れ、元のhash/tree/256MiB/8分条件を保持する。
+実source転送時間はまだ未検証。race検査78pass/2skip、関連Go53pass/4skip・追加回帰、
+両moduleのvetとWindows/Linux buildが成功。新差分は別モデルレビューが未受領。
+
+PR219の旧head52dd6a6はGo CodeQL job117720795952がSet up runnerでlocal bridge403に
+よりfailure。原job log1693bytes/SHA720D9941066C97BBE6DE966561071C51AD6CF623562B9AE07DD975A20BDD13C7を保存。
+原messageだけではremote head取得失敗と実不一致を区別できず、shared bridgeの許可・guard・
+manifestは変更しない。同403を無条件rerunせず、司令塔へ具体的に配送する。
+最新の新sourceで必要CIを確認し、失敗が残れば原因を修復してから通常mergeする。
+
+停止item_51はbridge既存sourceのread-only調査exit0と共有ToDoから受領した。
+完了済みの正式job/診断/検査は再実行しない。現在の新code・原証拠を保存して継続する。
+製品head03c7cc6は維持、Windows jobはqueued/steps0。次の正式試行は全matrixの新attemptを
+照合し、新しい専用rootを使う。失敗したprepare49ff/終了済み27fcは再利用しない。
+
+## 2026-10-19 00:54保存・レビュー待ちとWindows準備失敗（最新）
+
+Linux起動修復の機能sourceは2bc1dcd5cfe5d12f59db2a38e6a6474b2721cb4c。
+root2736の正常実開始job003834へ正規subwork review2832を登録した。
+固定base c1dbdcd/head2bc1dcd、Sonnet5.5、複数file読取専用、実行検査/製品読取/編集禁止。
+原2797とは異なる今回の新しい起動修復だけを対象とする。元2797のspec/モデル/結果は保持。
+保存specは2832-8d761b3d8d9446a0b0dda601f41c390f.md、現時点todo/jobs空/未開始。
+別モデルの原応答受領とMust対応前には新helperを正式jobへ使わない。
+修復PR219をdraftで作成し、head136073bへpush。正式CIは7check queuedを観測、成功未確認。
+
+修正版の関連TestPR148群/vet/両OS buildと実SDK起動検査は全exit0。起動検査4.05秒。
+buildはc1dbdcdの作業コピー変更時に行い、機能fileは2bc1dcdと一致する。commit後の再buildを
+偽っていない。2binと全原log12file/26,464,182bytesを恒久root/resume-20261019-003834へ
+SHA一致保存し、listenerfix-build-manifest.jsonへ元/保存先/hashとsource資格を残した。
+新helperの実行pathは同dir/listenerfix-product-ci.exeとlistenerfix-product-ci-linux。
+
+Windows正式Rust用root49ff493ad7883b67c40b229b0be1bf2fは新safe-delete所有資源。
+run39141771645/attempt1/job117717494946/head03c7cc6/treea6851bd/同Rustworkflowを固定。
+既済の最終Windowsmodule由来bootstrap SHA3EE9097255C0BC51B71A95AAD1E144634DE4C91312E2E808B17514987BEA86FCと、
+実APIが返す公式runner2.338.0 win-x64 ZIP104,063,355bytes/SHAf48e0750a21812bca5f82de5f7f5aeae71abee647fab5a582f1742d07eba455fを
+照合。新費用/新認証/秘密値の保存なし。新SDK供給後のprepareはCC-AdminBroker経由で
+00:52:50にexit1「GitHub read API failed」。prepareを同rootで繰り返していない。
+公開archive展開先は存在するが、製品sourceの実予定pathとsource-materialized.jsonは不在。
+SCMの当該サービスはsc query exit1060で不在。runner設定/認証fileも存在しない。
+本人のPC操作や再起動は不要。root49ffは公開asset/plan/SDKと診断に必要なので保持する。
+
+同じbroker/同じ本人SIDで、正常な元repo CWDの公開release tag読取、およびCWDを変えない
+元製品ref読取は両方exit0（実head03c7cc6）。単純なOAuth不在やCWDだけを原因と断定しない。
+最初の診断jq引用がWindows PowerShellで失われた失敗も保存し、単純な式へ修正して再観測。
+API残枠はcore4724/5000で、全体の枯渇は観測しなかった。prepareのどのbounded API応答が
+失敗したかは未特定。次のWindows工程は応答サイズ/終了コード/期限を秘密なしで区別し、
+その原因を修復する。全blob取得やprepareを盲目的に反復しない。登録token取得は未実施。
+
+route root6ff1と失敗Linux root328142、起動fixture root441cは原証拠を恒久保存後、
+plan→別通常削除→finishでsource_absent。build roote786も全SHA保存後に同手順で回収する。
+Linux登録/コンテナ/lockは回収済み。Windowsのサービス/runner登録は未作成で残存なし。
+正式Rustの両OSはqueued/steps0のまま。native/liveはまだdispatchしない。
+自動CodeQL run39141675301を成功として数えず、旧CodeQLの手動再実行は0。
+次はreview2832の原応答・Must、新helperの必要CIを受けてLinux正式jobを再開し、
+Windows準備の限定診断/修復を続ける。旧送信フィルター待ちを再登録せず、正規waitで2832を待つ。
+
+## 2026-10-19 00:38再開・正規送信復旧とLinux起動修復（最新）
+
+元specに司令塔2825のPR209配布済み指示が追加された。実gh_gateは正式guard false、
+SHA256 1E71AF86BF88CAB48CD9FC86D813F5E305CCC02622820D5FDCDFB758337A8F87に一致。
+指示された外部2receiptはguard未確認のため本文を読まず、原指示と実hash・実API結果を
+分けて保持。PR209はAPIでもmerged/9ba801831e72f7a9858f5985c5c52c5f0e49f5c7を確認。
+旧送信修復待ちは終了し、当工程からguard/allowlist/manifestを変更していない。
+
+検査済み703e時点の保存helper SHA5732D05611363F55717950149E798F48F13AB758AD109B1F8AAE5E058C9B99AAを
+恒久manifestと再照合し、同gateによるpr148-plan/routeが共にexit0。原75aの単独子
+03c7cc65b9ab1c3ac2598dc6b97c9ca0d04c08beを元branchへ非force反映・再検証した。
+全treeは原提案と同じa6851bd86e08b0f89eca3c4b30fbf7d4e292244f。原ソース変更は3workflowだけ。
+元の本体コード・コマンド・両OS・main/他PRの経路を保持。製品PRは未merge。
+
+今回更新から自動生成されたPR run39141676856/39141676963/39141677028は全4jobが
+queued/steps0/runnerなしを確認して正規cancel、後に3run全てcancelledを確認。
+固定branchのworkflow_dispatchでRust run39141771645/attempt1を新規受付。
+Linux job117717494710、Windows job117717494946。旧CodeQLを手動再実行していない。
+自動dynamic CodeQL39141675301の発生は成功や完了として数えない。
+
+Linux有限実行はhelper exit1、official listener exit0、開始/完了hook欠落で不受入。
+実jobは前後queued/steps0/runner0でCargo未開始。原log166bytes/SHA256
+773C8D6B82BD874F7785129C65FC733A9CB52EF1769E142FCDAA25CBB32DCA7Bを保存。
+原原因行はrun.shからrun-helper.shが見つからないという起動失敗。固定SDKの公開scriptを
+別の認証なし有限containerで確認し、run.shの補助script生成がread-only境界で失敗し、
+その非ゼロをshellが0へ置き換えることを特定。公式Runner.Listener runを同じ隔離内で
+直接起動する修正を追加した。保護範囲を広げず、本来の終了コードを保持する。
+実SDKと実Landlock/seccompによる認証なし起動検査では未設定runnerのexit1を観測し、
+run-helper未呼出しを確認。関連Go検査/vet/Windows・Linux build成功。正式jobの再実行前に
+この新差分だけを別モデルへレビューする。原2797の完了・固定spec・受入は変更しない。
+
+Linuxの登録削除・container stopped/PID0/削除・専用lock解放は実helperが確認済み。
+認証なしstartup fixtureもcontainer削除済み。Temp6ff1はroute原証拠5fileを恒久rootの
+resume-20261019-003834へ全SHA一致保存済み。328142は原失敗、e786は修正build、441cは
+startup fixtureで、この3rootは次の保存/回収に必要。秘密・原製品sourceをhostへ保存しない。
+最新main0c20d744を通常mergeした。新しいhelper差分のレビュー/通常PR・CI、正式4job、
+必要配備と元2640への成功証拠配送は未達。現在headを固定してこの修復を継続する。
+
+## 2026-10-18 19:48再開・受付更新後の境界確認（最新）
+
+job20261018-194836-todo-2736、同branch/e0516b0から再開。保存済みオーナー指示は同SHA、
+元2736/2640/2626のnoteは配送済み154450本文と改行正規化後に一致。製品PR148は実APIで
+同owner/private/nonfork/admin・open/draft・同head/base repo・75a/head・1100/base・
+元branch ref不変を確認。origin/mainは0344d1bfへ進んだが、cc-redact/cc-gh-gateと
+両helperモジュールは3af45ee2から差分0。新しい送信修復結果はない。
+
+司令塔2626の保存specだけがf13c3eへ更新されており、旧版との差分8行を確認した。
+Discord受付の再実装・配布とSkillの10/18節が追加されていた。更新後のSkillも技術的な
+許可を質問しない条件と元の停止/依存/許可範囲を保持している。既に受付前拒否された
+同じ質問を再送せず、今回の更新を送信フィルター変更の許可には読み替えない。
+更新記録を根拠に正式scrub391で必要な配備先だけ再判定したが、
+classification_unverified=true/client_resource=true/original_registry_recovered=false。
+判定結果を保存し、配備先の内容読取/更新/実行は0。新しい保護設定は作らない。
+
+今回の共有ToDoはtodo/phase prepared、jobsに今回idなし、scheduler.jobなし。
+前回103955と同じ保存前提の欠落なのでcheckpointの同じ失敗を再試行しない。
+今回のjob/実HEAD/branchと不足条件を恒久root内のinspectionへ保存する。
+ブランチ変更なし。製品変更・再送・runner・dispatch・既済検査・質問は0で正式CI未達。
+
+## 2026-10-18 15:44再開・今回の正常な関連付け（最新）
+
+job20261018-154450-todo-2736、同branch/e2f4ec1から再開。実jobは15:45:19開始、
+running/todo2736/同cwdで、共有ToDoもdoing・jobsに今回idあり・scheduler.job一致・
+phase runningを確認した。前回103955の欠落記録は保持し、今回の一致を過去の修復証明や
+製品CI成功へ置き換えない。今回の実HEADで正規checkpointを保存し、原receiptを残す。
+
+最新保存済みオーナー指示は同SHA、元2736/2640/2626のnoteは配送済み103955本文と
+改行を正規化した比較で一致した。追加指示・送信フィルター修復の受入はない。
+origin/mainは3af45ee2で、cc-redact/cc-gh-gate差分0。正規GitHub APIによる両repoの
+owner/private/nonfork/adminと、製品PR148のopen/draft・同head/base repo・
+head75a4051/base1100676/元branch ref不変を再確認。製品変更・再送・runner・dispatch・
+既済検査・質問の再試行は0。原送信失敗の境界と未達条件を保持し、正式CIは未達。
+
+## 2026-10-18 10:39再開・実ジョブの関連付け不足（最新）
+
+job20261018-103955-todo-2736、同branch/482d8c8から再開。保存済みオーナー指示の
+SHA256は1CA28D9BCE67E51CB7B5BA97693BEFB5F0C0921D22B56B8B471FD98FE09799AEで不変。
+元2640/司令塔2626のnoteに追加指示はなく、元2736の現noteは起動準備失敗の一般記録へ
+置き換わっていた。以前の具体的引継ぎは本書・保存済み配送本文・親と司令塔のnoteに残る。
+origin/mainは3af45ee2のまま。実在するcc-redact/cc-gh-gateパスでHEADとの差分0を確認。
+両repoの実owner/private/nonfork/admin、PR148の同head/base repo、open/draft、
+head75a4051/base1100676/元branch ref不変を正規GitHub APIで再照合した。
+製品の変更/再送/runner/dispatch/既済検査/質問の再試行は0。正式CIは引き続き未達。
+
+実job.jsonは今回id/todo2736/同cwd/running、10:40:19開始、pid53036/codex_pid51104。
+共有ToDoはtodo、scheduler.phase=prepared、scheduler.jobなし、jobsに今回idなし、
+last_job=20261017-123327-todo-2736だった。preparation_failureはtool_failed、
+at1792272411.070198/retry_at1792272711.0701978を保持している。
+正規checkpoint-workspaceを1回実行し、exit1/InputRejectedで保存できなかった。
+コードの受入条件はjobsへの今回id登録と、実行中sourceに対するscheduler.job一致を
+要求しており、実データは両方を満たしていない。branch/worktree/実HEADの不一致ではない。
+ジョブ欄・raw storeの手書き修復や同じ保存の無限再試行は行わない。
+
+原request/result/stderrと今回の確認結果は恒久root184a58eedf4f923741f160dfe7cfd5b7に保存。
+この新しい関連付け不足だけを元2736/2640/2626へ正規noteで配送する。
+送信フィルター修復と起動関連付けの正規受入は別の未達条件として保持する。
+実装成果は既にpush済みで、本書の追加も同branchへ保存する。ブランチ変更なし。
+
+## 2026-10-18 00:59再開・司令塔への具体的な未解消条件（最新）
+
+job20261018-005954-todo-2736、同branch/0ee664fから再開。最新D:/CC/AGENTS.mdとrepo規則、
+元2736/2640のnoteを保存済み配送本文と比較し、開始時点の追加指示なしを確認した。
+origin/mainを取得したがcc-redact/cc-gh-gateに新しい修復差分はなかった。原2814はdone。
+実APIで両repoのowner AutoDevJapan/private/nonfork/adminと、製品PR148の同head/base repo、
+open/draft、head75a4051/base1100676/元branch ref不変を確認した。
+
+同じ送信、質問、別のowner-only分類、post/別API/別表現、既済CI/検査を繰り返していない。
+研究者の候補も、質問CLIのexit78も、禁止された保護変更の新しい許可とは解釈しない。
+許可・修復受入に新しい事実がないため、保護変更・製品source変更・正式runner/dispatchは0。
+
+元2640への前回配送だけでは次の実行者/正規受付が確定しておらず、時間条件だけで同じ担当が
+再開された。これを修復進行や資源検査成功とはしない。原司令塔2626へ次の1工程を正規noteで
+具体的に引き継ぐ。元2640/自項目にも同じ一意markerで保存し、後続の同内容配送は重ねない。
+
+1. 元specのguard不変更条件、原2814の未適用案、正規askの受付前分類拒否を同時に保持する。
+   問題はHosted budgetだけでなく、canonical workflow bytesの送信時置換と、その正規修復の
+   実施境界が未受入であること。根拠は本記録の前2節と保存済み原receipt。
+2. 原条件/権限を緩めず、既存の正常な受付・担当・範囲整理のどの工程で扱うかを特定し、
+   受付/実開始/原応答を分けて返す。存在しない担当・承認・質問を仮定しない。
+3. 送信や質問を再試行する担当を時刻だけで起動し続けないよう、原2736の正常な再開条件を
+   既存の正規手順で整理する。旧受付/guard/manifest/他の停止/依存は変えず、raw storeや
+   所有者欄の手書き、新monitor、新しいreview/複製検査/直接子Codexは作らない。
+   この依頼を受付済み/修復済みとは先取りしない。2626や2640への逆依存は作らない。
+
+起動直後に一度だけ元2736がtodo/jobnullだったが、その後正規schedulerがdoing/今回jobを
+jobsとschedulerへ保存した。実jobは01:00:18開始/running/todo2736で一致。手書き修復なし。
+この一時的不一致を製品のCI失敗や、今回の新しい権限とは解釈しない。
+新Temp/保護namespaceアクセス/Chrome/Cargo/GPU/Civ6は0。原証拠と途中成果を保持する。
+製品正式4job/成功証拠配送/必要配備は未達であり、本引継ぎを製品完了にしない。
+
+## 2026-10-17 23:29再開・2814原応答の受領（最新）
+
+job20261017-232950-todo-2736、同branch/8e36705から再開。最新保存指示とrepo規則、元ToDoと
+原2814のdoneを確認。研究job20261017-231255-todo-2814は実Sonnet5.5、23:13:18開始→
+23:19:17終端、succeeded/exit0、networkfalse/protocol3、54steps、記録両PID不在。
+保存spec全文がactual投入へ含まれ、spec SHA EB5B57BDB48DD93CCEDA447C6DF81FE8AB78826D66EC2C07C393FFC24B1CCF0E
+を確認。原応答11,239bytes/SHA256 75F703D779E993E0F2D7E8E69AC69A5739DBBCDEC1613D2FB8C6671A970DDA83を
+恒久root184a58eedf4f923741f160dfe7cfd5b7/research2814-original-232950.private.mdへ一致保存した。
+
+研究者はgit起動が0xC0000142で失敗し、固定d668ebdとの同一性を確認できず、実worktreeの
+3af45ee2を読んだと明記した。親がguard falseの当該worktreeでGit比較し、指定した主要10コード
+fileのd668ebd→3af45ee2差分0、同10fileのHEAD→作業コピー差分0を確認した。全対象や過去の
+checkpointまでbyte同一と主張しない。credential_context_edges.rs、配布先/manifest/原product
+source/logは未読。研究者の実テスト/Cargo/Goは0。原応答の例示にはREDACTED markerがあるので、
+完成した実行テスト入力と扱わない。研究完了を実装/修復/正式CI/新しい許可へ転記しない。
+
+### 提案の境界と未採用
+
+原応答はKEY→ASSIGNMENT→assignment、json()/field()の呼出し経路を特定した。
+唯一の候補はexact key persist-credentialsと裸のbooleanへ例外を足す未適用案であり、
+保護仕様の変更になると研究者自身が明記した。Goの元JSON/tree比較に変更は不要という結果。
+この候補は元specの「guard変更…一切しない」「新allowlist/guard/manifestや共有bridgeの許可を
+変えない」という境界を越えるため、適用/新build/PR/merge/配布/送信は0。研究者の
+「原2736が受け入れる」という記述を、許可の付与とは解釈しない。true側を含む候補も採用しない。
+
+### 既存判断照会と質問の受付前拒否
+
+同じ判断の再質問を避けるため、元2736と具体的なsource/既存gate対象、falseだけを元のまま
+保つ限定例外、他のmask/原保護/allowlist/manifest保持を固定したdecision JSONで
+lookup-decisionを実行。exit0/foundfalse。新しい質問/回答の存在を推測しなかった。
+この既存の変更禁止条件の限定解除だけを尋ねるaskを正規CLIで1回実行したが、exit78
+「聞かずに進めること: 作業に当然必要な操作の許可は質問しません」で送信前に拒否された。
+Discord質問/メンション/進捗投稿は0。再lookupもfoundfalse/thread無し。
+これは質問CLIの分類拒否で、自動承認レビューの拒否ではない。
+
+別のowner-only理由名、本文の言い換え、post/別API/最終返信のa/bで再送していない。
+質問CLIの拒否をguard変更の許可とは解釈せず、元の変更禁止を保持する。質問を届けられた
+状態や本人回答待ちのblockにはしない。Skill discord-owner-askの「当然必要な操作の許可は
+聞かない」と元specの変更禁止を双方保持し、具体的な不一致を元工程へ配送する。
+正本: D:/CC/Skills/discord-owner-ask/SKILL.md 。
+
+decisionと原質問本文・lookup/拒否のreceiptは同恒久rootのoutbound-filter-*へ保持した。
+元2640へ原応答の資格・未適用候補・未受付の判断経路を正規noteで返す。
+2814はdoneなのでその完了を再度待つ依存や、2640への逆依存は作らない。
+今回の実APIも製品のowner AutoDevJapan/private/nonfork/admin、同head/base repository、
+PR open/draft・head75a/base1100/元refを確認し、helperのowner/admin/repo1406818713も確認。
+製品source/正式runner/dispatch/Cargo、保護namespaceアクセス、新Temp/Chrome/GPU/Civ6は0。
+未完は正規の範囲整理/修復受入・必要配備・製品正式4jobと成功証拠配送。再開時は新しい
+正規指示/受入の有無を先に確認し、同送信/同質問/同検査を反復しない。
+
+## 2026-10-17 22:58再開・未割当の技術調査を具体化（最新）
+
+job20261017-225849-todo-2736、同branch/HEADd668ebdから再開。最新保存指示、repo規則、
+原2736/2640の最新配送と原specを確認した。helper PR189のmerge/PR・main CI受入/原log保存は
+既済として再実行しない。原2790/2791/2797の受入を再レビュー/関係修復しない。
+
+実APIでhelper1406818713/製品1392152644のowner AutoDevJapan/private/nonfork/adminと、
+製品PR148の同head/base repo・open/draft・75a/head・1100/base・元branch ref不変を再照合。
+製品source/commit/ref更新/正式runner/dispatch/Cargoは今回も0。
+未解消の送信フィルターについて、正規修復担当・受入receiptは未登録/未確認のままだった。
+技術事項を本人へ聞かず、同じ時間確認だけを繰り返さないため、有限read-onlyの下位researchを
+正規の共有ToDo2814へ登録した。新review ToDoや直接子Codexではない。
+
+### 正規2814の範囲と受付証拠
+
+docs/todo-2736-outbound-repair-research.mdが原spec。固定source d668ebdの既存cc-redact/
+cc-gh-gateと、今回のJSON呼出し元/全tree照合の限られたcalleeを読む。
+既知の再現やRust/Go/CIを重ねず、稼働filter/guard/allowlist/manifest/共有bridge/原保護設定を
+変更せずに、正規修復候補とその実施境界・必要な限定検査を根拠付きで返す。
+候補diffは未適用の最終返信だけ。source編集・差分適用・commit/push/PR/merge/配備/実送信は0。
+原payloadを別API/認証/符号化/false式等へ変えて通す案や、保護を弱める一般例外は採用しない。
+候補と権限の受入を分け、調査結果を新しい許可・修復完了と解釈しない。
+
+通常add --spec --model claude-sonnet-5-5 --subwork-of2736 --parent-job-id今回job
+--subwork-kind researchがexit0/added2814。readbackはtodo/jobs[]/needs[]/wait_on無し、
+parent2736/origin_job20261017-225849-todo-2736/kind research/指定Sonnetを保持。
+受付だけを実開始・読了・修復成功とはしない。CargoやCiv6を使う研究ではない。
+原保存spec2814-b5702ae4922a4b338d0a4bbf82653afc.mdは改行正規化後の全文一致。
+保存SHA256 EB5B57BDB48DD93CCEDA447C6DF81FE8AB78826D66EC2C07C393FFC24B1CCF0E。
+原CLI receiptは恒久root184a58eedf4f923741f160dfe7cfd5b7/research-registration-225849.log。
+
+次は原2814の実job/実投入source・指定本文読了・原応答と提案の境界を確認する。
+適用/配備の許可を研究者の返信から推定せず、scope不一致ならその理由を保持する。
+製品正式4jobと成功証拠配送・必要配備は未達。原2640への逆依存や旧cleanupのCI前提化はしない。
+2814だけの結果待ちは正規wait2736--on2814で保存し、同じ担当を時間確認だけで再起動しない。
+新Temp/container/service/runner/ACE/Chrome/Cargo/GPU/Civ6は0。所有証拠と原資料は保持する。
+
+## 2026-10-17 21:42再開・merge後CIの受入（最新）
+
+job20261017-214255-todo-2736、d10e699/同branchから再開。最新D:/CC/AGENTS.mdとrepo規則、
+元2736/2640の保存済み指示・配送、原2790/2791/2797のdoneを先に確認した。
+終わったreviewの関係修復、レビュー、auth、helper merge、送信は繰り返していない。
+新しいreview ToDo/直接子Codexも作っていない。
+
+実APIでhelper所有者AutoDevJapan/private/nonfork/admin/repo1406818713と、製品の
+同owner/private/nonfork/admin/repo1392152644、同head/base repo、PR148 open/draft/mergeable、
+head75a4051/base1100676/元branch ref、専用runner0を再照合した。製品source変更0。
+
+merge3af45ee2の自然CIは全8check終端、7success/1skipped/失敗0を確認した。
+helperのWindows/Linux、CodeQL全4言語、cc-jobsがsuccess、package-toolsだけskipped。
+run39029403387/39029403332/39029403364の原log ZIPを108,696/127,349/15,253bytesで
+恒久root184a58eedf4f923741f160dfe7cfd5b7/resume-214255へ保存した。各exit0とSHA256は
+merged-logs-manifest.json、実全checkはmerged-checks.json。原本文をモデルへ表示していない。
+同sourceのテスト・CI・ビルドを再実行していない。
+
+並行変更を失わないよう、取得済みorigin/mainを同作業branchへ通常mergeした。
+merge保存点628ca1cb1e3750f0959f60d64bef177c61d3e613で、product-ci/Windows runner/
+cc-redact/cc-gh-gateのsourceはorigin/mainと差分0。上流の既存commitを保持した統合であり、
+他担当の変更を自分の修正・検査成果として数えない。新branchへの切替やforceは0。
+
+### 送信を再開できない条件の保持
+
+cc-redact/gh_gateの上流sourceに修復差分は確認できなかった。元の実送信で真偽値が置換された
+事実と、実unreferenced tree bb477c675dee11b8a232ceddcb71221c4ac38264の証拠を保持する。
+標準のfalse式の仕様を一次資料で調べたが、フィルターで止まった同payloadを別表現で通す
+実装・送信は採用していない。生成器/受入条件/フィルター/guard/allowlist/manifestは未変更。
+対象checkoutの公開実装もRAMで参照しただけで、同値の実動や正規受入の証拠へ拡大しない。
+参照した仕様: https://docs.github.com/en/actions/reference/workflows-and-actions/expressions 。
+
+元のcanonical workflow payloadを正規経路で保持できる修復の受入が未達である。
+現scopeのguard不変更条件を広げず、別API/認証/符号化/表現変更や送信の反復で解消しない。
+その修復担当が実割当済み・修復中である証拠もなく、そう報告しない。
+この具体的な技術停止条件と、今回解消したmerge後CI条件を元2640へ追送する。
+必要配備は前回の保護判定と並行source照合の条件を保持し、当該既存namespaceを今回は
+読取/実行/変更していない。新Temp/container/service/runner/追加ACE/Chrome/Cargo/GPU/Civ6は0。
+製品正式4job/成功証拠配送/必要配備は引き続き未完。本人操作や要件判断の待ちではない。
+
+## 2026-10-17 20:37 通常helper merge受入（以下を優先）
+
+703e5edの全9正式checkは8success/1skipped、全終端/失敗0。Build speedの残jobも
+9分27秒でsuccessを確認した。3正式runの原log ZIPを値を表示せず保存し、bytes/SHA/exit0を
+resume-201652/official-helper-logs-manifest.jsonへ記録した。helper原ZIPは47,225 / 260,965 /
+229,085bytes。保存先の元manifest18fileも再照合し不一致0。
+PR189を通常readyへ戻し、--match-head-commitで703e5edを固定して通常mergeした。
+実merge=3af45ee2d312fcc8b9b3fe5e9068c9cacdc2dd2b、2026-10-17T11:37:20Z、PR closed/merged。
+製品PR148をmergeした結果ではない。
+
+### 配布前の並行変更と保護判定
+
+mergeの第1親は35685687、第2親は703e5ed。mainで先に通常mergeされたrelease-build関連10fileが
+product-ciへ加わっており、merged module tree80aa1c631e8c505631f4e8fbdd2f0320837c3a8cと
+703e5edでbuildしたtree21ab936d68c60757de9e0db003914e3304cc57a6は一致しない。
+Windows runner moduleは両方8858bd95で一致。旧binaryを配布すると並行変更を失うため配布0。
+次の配布用product-ciは必要なmerged sourceから生成し、並行変更と実hashを再照合する。
+
+既存配置先のscrub391はclassification_unverified=true/client_resource=trueを返した。
+同じ読取batchで判定後のファイル名/サイズ/時刻・実binary hashの取得まで進んだが、
+ファイル本文/秘密/認証情報の読取・実行・変更は0。以降そのnamespaceへ追加アクセスしていない。
+この保護判定を上書き・迂回せず、正式な既存配布担当の受入を必要条件として保持する。
+親branchのsource受入と配布先の保護判定は別であり、helper mergeをPrd配置成功と呼ばない。
+
+mainの自然push CIはrun39029403387（Build speed）、39029403332（CodeQL）、39029403364
+（Product CI helper）が起動受付された。まだ終端ではなく、これらを再実行しない。
+PR head703e5edの成功とmerge headのCIを分けて再開時に確認する。
+
+製品refは75a4051を維持、repo専用runnerはAPIで0。新container/service/runner/追加ACEは0、
+今回の2Tempはsource_absent、所有Chromeは正規close済み、有限watchもexit0で終了した。
+未完は送信フィルターの正規適合、merged helper CI/必要配布、製品の正式4jobと元2640への成功証拠。
+自分の2790待ちは既に満たされたため戻さず、2640への逆依存も作らない。
+通常の技術retryで保存し、次は新しい受入receipt/実source/実binaryを確認する。
+同じgate hashのままroute再送や、別API/符号化/認証/allowlist/guard変更へ進まない。
+
+## 2026-10-17 20時台・通常push成功と送信不一致の確定（最新）
+
+helper PR189へ703e5ed9bbfb69e247046954ff0f92bd83f2a74fを非forceでpush成功。
+同sourceの正式run39028662342はWindows job117384571549（34秒）、Linux job117384571410
+（35秒）ともsuccess。CodeQL run39028662284の全4言語もsuccess。
+Build speed run39028662293/job117384571349だけはまだnextest実行中であり、通常merge/配備は
+未実施。後続の文書commitをこのCIの新しい機能sourceだったとは書かない。
+PR本文とレビューcomment6233409603を更新し、原Must修正・静的読了範囲・fixtureの資格と
+未達を明記した。新しいreview ToDoや直接子Codexは作っていない。
+
+### 正規Git API反映が止まった原因
+
+最新版から配布用product-ci Windows/LinuxとWindows runnerをbuild、全exit0。
+同binaryのpr148-planは元source/全3workflow/全4予算failureの再照合でexit0。
+その後のpr148-routeはtree POSTの後、全tree比較でexit1になった。
+原errorは57bytesの「proposal bytes differ: .github/workflows/live-chain.yml」。
+commit POST、ref PATCH、正式runner/dispatch/製品Cargoには到達していない。
+実製品refは前後75a4051305b6f47c70ddb59a8d2bf9015666f12cのままである。
+
+原因は送信に使うgh_gate/cc-redactが、認証値でない設定
+`persist-credentials: false`まで`[REDACTED]`へ置換したこと。
+本工程ではこのguard/フィルターの許可や保護設定を変更していない。
+実gate SHA256=6EBB40B8B580FDAE37C7F611E4FFBBFE1AD1246AB593FE1AA787749E122B7DFE。
+小さい認証値なしのRust診断を既存cc-redactと共有Cargoゲート/専用targetで実行して、
+当該booleanの置換を実測exit0。診断は環境変数/秘密/製品sourceを読まず、保護変更0。
+既存Rust libraryそのものを呼ぶ必要がある一度限りの診断であり、新しい常用Rust道具は作っていない。
+
+さらにread-only Go診断で元全treeのGit IDを再現した。3workflowをRAMで共通生成し、
+この真偽値だけを置換した予測treeを再計算すると、GitHub上の実unreferenced tree
+bb477c675dee11b8a232ceddcb71221c4ac38264が取得でき、全path/mode比較も一致した。
+正規生成案のtreeはa6851bd86e08b0f89eca3c4b30fbf7d4e292244f。
+この観測はtreeの再POSTやsource変更ではない。別API/認証/符号化で送信フィルターを迂回せず、
+同じ失敗送信も繰り返していない。原製品sourceをhostへ保存/clone/checkoutしていない。
+
+### 証拠配送・回収・次の条件
+
+全18file/37,944,658bytesの配布binary、原build log、失敗/intent/proposal、診断source/logを
+恒久root184a58eedf4f923741f160dfe7cfd5b7/resume-201652へ全bytes/SHA一致で保存した。
+manifest.jsonは各元/保存先/SHA対応を保持する。保存後の全再照合も不一致0。
+新Temp39a677ec121d94a343638b24d6513497と543fcb477d1a7b8a85db6d9296ea8d49は
+plan→別通常削除→finish=source_absent。削除拒否や回避は0。旧SDKのf8847d61と子の残留13件は保持。
+
+同じmarker「2736-routing-gate-diagnosis-703e5ed-20261017」で元2736/2640へ正規editで
+配送成功を読戻した。状態/specは不変で、2640は原waitのまま。受付だけの配送報告ではない。
+正常/取消しの旧子証拠を正式製品CI成功へ転記せず、製品PR148のmergeは元2640だけが行う。
+
+再開は、まずPR189の実head703e5edの残CIの終端/失敗原因を確認する。同じ検査を重ねない。
+送信側は上記誤検知の正規修復/適合を示すsource・review・実binaryのreceiptが必要。
+同じgateのままpr148-routeを再実行しない。新allowlist/guard/manifestや共有bridgeの許可を
+本工程で広げる手順へ付け替えない。修復が別に届くまで製品のsource更新/正式CIは未達として保持する。
+技術条件の確認であり、本人の判断やPC操作は求めない。
+
 ## 2026-10-17 20時台の最終Windows受入と統合（以下を優先）
 
 job20261017-201652-todo-2736。原2790と同じreview2797は正規doneになった。

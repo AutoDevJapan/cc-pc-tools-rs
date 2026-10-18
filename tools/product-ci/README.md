@@ -37,6 +37,22 @@ bind actual Git/source/auth and job identity. Original Cargo arguments, scenario
 commands, execution environments, timeouts and failure exits are retained.
 Registration, listener exit and fixtures never certify an official job. Its
 raw logs/bytes/SHA and real Actions job/check must be verified separately.
+The restricted worker starts the official `Runner.Listener run` command
+directly. The public `run.sh` wrapper creates a helper script in the configured
+root and can hide startup failures as exit zero, so it cannot be used after that
+root becomes read-only. The credential-free startup fixture uses the same
+listener launch and kernel boundary, and requires the real missing-configuration
+failure; it does not register a runner or certify product CI.
+The host requests at most two compiler/test processes through the existing
+Cargo gate, matching this namespace's two CPUs and 8 GiB. The gate can grant
+less; its actual allocation is forwarded unchanged. The host-wide ten-process
+ceiling is not requested inside this smaller namespace.
+An SDK refusal to unlink its ephemeral credentials in the read-only runner root
+is recorded separately. No file-delete fallback or wider permissions are added:
+the existing owned-container and registration teardown still runs. Only the
+specific SDK cleanup error may proceed to both source hooks, full source/run
+verification and an independent successful terminal GitHub target-job check.
+Other listener errors, failed jobs and incomplete teardown remain failures.
 
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four

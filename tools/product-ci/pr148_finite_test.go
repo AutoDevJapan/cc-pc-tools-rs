@@ -82,12 +82,12 @@ func TestPR148TreeDelta(t *testing.T) {
 
 func TestPR148GateTranslation(t *testing.T) {
 	p := pr148GatePacket{Policy: pr148SyntheticPolicy(), Index: 1, Target: `D:\owned\cargo-target`}
-	for k, v := range map[string]string{"CARGO_BUILD_JOBS": "2", "RUST_TEST_THREADS": "3", "CODEX_JOBS_CARGO_LOCK_HELD": "1", "CODEX_JOBS_CARGO_TARGET_HELD": "fixed-key"} {
+	for k, v := range map[string]string{"CARGO_BUILD_JOBS": "2", "RUST_TEST_THREADS": "2", "CODEX_JOBS_CARGO_LOCK_HELD": "1", "CODEX_JOBS_CARGO_TARGET_HELD": "fixed-key"} {
 		t.Setenv(k, v)
 	}
 	args := append(append([]string{}, pr148CargoArgs[1]...), "--target-dir", p.Target, "--jobs", "2")
 	got, jobs, tests, e := pr148TranslateGate(args, p)
-	if e != nil || jobs != 2 || tests != 3 || !reflect.DeepEqual(got, pr148CargoArgs[1]) {
+	if e != nil || jobs != 2 || tests != 2 || !reflect.DeepEqual(got, pr148CargoArgs[1]) {
 		t.Fatalf("gate additions mishandled: %v", e)
 	}
 	for _, extra := range [][]string{{"--target-dir", `D:\other`}, {"--config", "evil"}, {"-j", "10"}} {
@@ -96,9 +96,35 @@ func TestPR148GateTranslation(t *testing.T) {
 			t.Fatal("caller override accepted")
 		}
 	}
+	for _, key := range []string{"CARGO_BUILD_JOBS", "RUST_TEST_THREADS"} {
+		t.Setenv(key, "3")
+		if _, _, _, err := pr148TranslateGate(args, p); err == nil {
+			t.Fatal("namespace cap exceeded")
+		}
+		t.Setenv(key, "2")
+	}
 	t.Setenv("CODEX_JOBS_CARGO_LOCK_HELD", "")
 	if _, _, _, e = pr148TranslateGate(args, p); e == nil {
 		t.Fatal("ungated heavy command accepted")
+	}
+}
+
+func TestPR148GuestRejectsExcessiveCapsBeforeOpeningPlan(t *testing.T) {
+	old := os.Stdin
+	defer func() { os.Stdin = old }()
+	for _, args := range [][]string{{"3", "2", "1"}, {"2", "3", "1"}} {
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, writeErr := w.Write([]byte("G"))
+		_ = w.Close()
+		os.Stdin = r
+		err = pr148ExecChild(args)
+		_ = r.Close()
+		if writeErr != nil || err == nil || err.Error() != "executor caps rejected" {
+			t.Fatalf("excessive guest cap reached source access: %v", err)
+		}
 	}
 }
 
@@ -223,6 +249,10 @@ func TestPR148LinuxFiniteNamespaceCargoFixture(t *testing.T) {
 			transfer(pr148Workspace+"/tools/Cargo.toml", []byte("[package]\nname=\"todo2736-credential-free-fixture\"\nversion=\"0.0.0\"\nedition=\"2021\"\n[workspace]\n"))
 			transfer(pr148Workspace+"/tools/src/lib.rs", []byte(`#[test]
 fn child_is_drained() {
+    for key in ["CARGO_BUILD_JOBS", "RUST_TEST_THREADS"] {
+        let granted = std::env::var(key).unwrap().parse::<usize>().unwrap();
+        assert!((1..=2).contains(&granted), "container cap exceeded: {key}");
+    }
     let child = std::process::Command::new("sleep").arg("600").spawn().unwrap();
     std::fs::write("/work/fixture-child.pid", child.id().to_string()).unwrap();
     println!("credential-free Rust Cargo fixture");

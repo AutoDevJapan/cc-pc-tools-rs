@@ -257,7 +257,10 @@ func (h *pr148CargoHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func pr148HostEnv() []string {
-	var out []string
+	// The isolated SDK has two CPUs and 8 GiB, while the shared host can admit
+	// ten compiler processes. Submit lower caps through the ordinary gate; its
+	// actual granted values still drive the guest and can be lower again.
+	out := []string{"CARGO_BUILD_JOBS=2", "RUST_TEST_THREADS=2", "NEXTEST_TEST_THREADS=2"}
 	for _, k := range []string{"SystemRoot", "WINDIR", "SystemDrive", "TEMP", "TMP"} {
 		if v := os.Getenv(k); v != "" {
 			out = append(out, k+"="+v)
@@ -287,7 +290,7 @@ func pr148TranslateGate(args []string, packet pr148GatePacket) ([]string, int, i
 		}
 		return base, 1, 1, nil // cargo fmt is explicitly unlocked by the machine gate.
 	}
-	if e != nil || te != nil || jobs < 1 || jobs > 10 || tests < 1 || tests > 10 || os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || os.Getenv("CODEX_JOBS_CARGO_TARGET_HELD") == "" {
+	if e != nil || te != nil || jobs < 1 || jobs > 2 || tests < 1 || tests > 2 || os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || os.Getenv("CODEX_JOBS_CARGO_TARGET_HELD") == "" {
 		return nil, 0, 0, errors.New("shared Cargo gate permit absent")
 	}
 	if len(args) < len(base) || !reflect.DeepEqual(args[:len(base)], base) {

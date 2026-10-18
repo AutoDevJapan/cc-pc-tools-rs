@@ -62,6 +62,20 @@ metadata through `gh_gate.exe`, binds name/URL/version/SHA256, then hashes the s
 rejects traversal, ADS, links, duplicate paths and bounded-size violations.
 There is no credential in a plan or in a service command line.
 
+Immutable source blobs use at most four controller readers, all drained before
+publication or failure return. The existing preparation deadline, per-blob/hash
+checks and 256 MiB source bound remain in force. GET transport failures explicitly
+reporting TLS handshake timeout, unexpected EOF or connection reset receive at
+most three attempts with bounded backoff inside the parent deadline. Auth/policy
+failures, size violations and invalid JSON are not retried. Error records contain
+request hashes, byte counts, exit codes and status classes, never server text or
+source contents. Cancellation and response-size errors are reported separately.
+Output capture uses named buffers (not embedded ReaderFrom methods) so stdout's
+size limit and stderr's 8 KiB preview cannot be bypassed by io.Copy. Run owns the
+copy goroutines; a two-second WaitDelay bounds inherited-pipe cleanup after exit
+or cancellation. A pipe timeout is rejected without a transport retry. Real
+source-transfer timing still requires formal execution.
+
 ## Four separate phases
 
 Build this module into the owned root (`go build -trimpath -o <root>/bootstrap.exe .`).

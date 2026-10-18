@@ -434,6 +434,108 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	}
 }
 
+func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "product")
+	parentSpec := filepath.Join(base, "parent.md")
+	childSpec := filepath.Join(base, "specs", "2872-0123456789abcdef0123456789abcdef.md")
+	if os.Mkdir(root, 0700) != nil || os.Mkdir(filepath.Dir(childSpec), 0700) != nil ||
+		os.WriteFile(parentSpec, []byte("fixed parent specification"), 0600) != nil ||
+		os.WriteFile(childSpec, []byte("saved direct review specification"), 0600) != nil {
+		t.Fatal("fixture setup failed")
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	currentFixtureGit(t, root, "checkout", "-q", "-b", "scheduler/todo-2839-parent")
+	product := currentProduct{project: "GoDD-AO", root: root, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: parentSpec, specSHA: hashBytes([]byte("fixed parent specification"))}
+	const job = "20261019-053058-todo-2839"
+	parentRow := object{"id": float64(2839), "project": product.project, "spec": parentSpec, "status": "doing", "jobs": []any{job}, "scheduler": object{"worktree": root}}
+	childRow := object{
+		"id": float64(2872), "project": "GoDD-AO", "spec": childSpec, "status": "todo", "dispatchable": true,
+		"subwork":   object{"parent_todo_id": float64(2839), "origin_job_id": job, "kind": "review", "owner": object{"repository": product.repository, "git_common": "fixture-common", "worktree": root, "branch": "scheduler/todo-2839-parent"}},
+		"scheduler": object{},
+	}
+	db := object{"projects": object{"GoDD-AO": root}, "items": []any{parentRow, childRow}}
+	allowProtected := func(string) bool { return false }
+	plain := func(path string, directory bool) bool {
+		info, e := os.Lstat(path)
+		return e == nil && plainEntry(info) && ((directory && info.IsDir()) || (!directory && info.Mode().IsRegular()))
+	}
+	origin := func(string, string) bool { return true }
+	identity := func(currentProduct) bool { return true }
+	common := func(string) (string, bool) { return "fixture-common", true }
+	pathAllowed := func(path, gotRoot, repository, task string, protected func(string) bool) bool {
+		return same(gotRoot, root) && repository == product.repository && (task == "2839" || task == "2872") && !protected(path)
+	}
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	verify := func() (object, bool) {
+		receipt, _, ok := currentSubworkReceiptWith(db, 2872, []currentProduct{product}, filepath.Dir(childSpec), now, allowProtected, plain, origin, identity, common, pathAllowed)
+		return receipt, ok
+	}
+	receipt, ok := verify()
+	if !ok || len(receipt) != 9 || receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2872 || receipt["project"] != "GoDD-AO" || receipt["spec_sha256"] != hashBytes([]byte("saved direct review specification")) || receipt["original_registry_recovered"] != false {
+		t.Fatal("valid direct current subwork did not receive its own receipt")
+	}
+	assertDenied := func(label string) {
+		t.Helper()
+		got, valid := verify()
+		if valid || len(got) != 1 || got["verified"] != false {
+			t.Fatalf("%s direct child was not rejected generically", label)
+		}
+	}
+	childRow["subwork"].(object)["parent_todo_id"] = float64(2872)
+	assertDenied("nested")
+	childRow["subwork"].(object)["parent_todo_id"] = float64(2839)
+	childRow["subwork"].(object)["origin_job_id"] = "20261019-053058-todo-2850"
+	assertDenied("wrong parent job")
+	childRow["subwork"].(object)["origin_job_id"] = job
+	childRow["subwork"].(object)["kind"] = "deployment"
+	assertDenied("unsupported kind")
+	childRow["subwork"].(object)["kind"] = "review"
+	childRow["project"] = "different-project"
+	assertDenied("different project")
+	childRow["project"] = "GoDD-AO"
+	childRow["dispatchable"] = false
+	assertDenied("non-dispatchable")
+}
+
+func TestCurrentSubworkPathRequiresVerifiedDirectChild(t *testing.T) {
+	parent := currentProducts[0]
+	container := filepath.Clean(parent.root + "-wt")
+	workspace := filepath.Join(container, "todo-2872-review")
+	verify := func(task int) (currentProduct, bool) {
+		if task == 2872 {
+			parent.task = 2839
+			return parent, true
+		}
+		return currentProduct{}, false
+	}
+	pathAllowed := func(path, root, repository, task string, protected func(string) bool) bool {
+		return task == "2872" && same(root, parent.root) && repository == parent.repository && !protected(path)
+	}
+	if !currentSubworkScopePathAllowedWith(workspace, []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+		t.Fatal("verified direct child's workspace was rejected")
+	}
+	for _, rejected := range []string{
+		filepath.Join(container, "todo-1476-legacy"),
+		filepath.Join(container, "todo-28720-near-match"),
+		filepath.Join(container, "todo-2872-review:stream"),
+	} {
+		if currentSubworkScopePathAllowedWith(rejected, []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+			t.Fatalf("unqualified child workspace path accepted: %s", filepath.Base(rejected))
+		}
+	}
+	if !currentSubworkScopePathAllowedWith(filepath.Join(workspace, "source.rs"), []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+		t.Fatal("file within a verified direct child's workspace was rejected")
+	}
+	if currentSubworkScopePathAllowedWith(workspace, []currentProduct{parent}, verify, func(string) bool { return true }, pathAllowed) {
+		t.Fatal("existing denial was bypassed for current child workspace")
+	}
+}
+
 func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 	for _, tc := range []struct{ path, want string }{
 		{"C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1/", "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},

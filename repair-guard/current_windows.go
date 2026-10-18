@@ -20,6 +20,11 @@ const currentAOSpec = "D:/CC/Tools/todo/specs/2839-ccac08e67b3b4a4488f3f0241c59b
 const currentAOSpecSHA = "b44e6c70614089c50908901e7d60a902f9e2f0793c813f9a0c2595f03714fd33"
 const currentHandoff = "D:/CC/Work/worker-resume-20261018-2103/hand-off.private.md"
 const currentGitHubCLI = "C:/Program Files/GitHub CLI/gh.exe"
+const currentTodoSpecsRoot = "D:/CC/Tools/todo/specs"
+
+var currentSubworkSpecName = regexp.MustCompile(`^([1-9][0-9]*)-([0-9a-f]{32})\.md$`)
+var currentSubworkJobName = regexp.MustCompile(`^([0-9]{8}-[0-9]{6}-todo-)([1-9][0-9]*)$`)
+var currentSubworkWorkspaceName = regexp.MustCompile(`^todo-([1-9][0-9]*)-[A-Za-z0-9_-]+$`)
 
 type currentProduct struct {
 	project, root, owner, repository, spec, specSHA string
@@ -165,6 +170,176 @@ func currentProductsScopePathAllowed(path string, products []currentProduct, qua
 	return false
 }
 
+type currentProductPathVerifier func(path, root, repository, task string, protected func(string) bool) bool
+
+// currentSubworkTaskInWorkspace extracts only a direct scheduler workspace
+// directory name. The full root, repository, branch and common-dir checks are
+// still performed after the saved subwork relation has been verified.
+func currentSubworkTaskInWorkspace(path, container string) (int, bool) {
+	rel, err := filepath.Rel(filepath.Clean(container), filepath.Clean(path))
+	if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return 0, false
+	}
+	child := strings.Split(rel, string(os.PathSeparator))[0]
+	match := currentSubworkWorkspaceName.FindStringSubmatch(child)
+	if len(match) != 2 {
+		return 0, false
+	}
+	task, err := strconv.Atoi(match[1])
+	return task, err == nil && task > 0
+}
+
+// currentSubworkScopePathAllowedWith admits a child worktree only when the
+// caller can prove that the child is a direct, currently qualified subwork of
+// one of the finite current product declarations.
+func currentSubworkScopePathAllowedWith(path string, products []currentProduct, verify func(int) (currentProduct, bool), protected func(string) bool, pathAllowed currentProductPathVerifier) bool {
+	for _, parent := range products {
+		container := filepath.Clean(parent.root + "-wt")
+		if !within(container, path) {
+			continue
+		}
+		task, ok := currentSubworkTaskInWorkspace(path, container)
+		if !ok {
+			return false
+		}
+		qualifiedParent, ok := verify(task)
+		if !ok || qualifiedParent.task != parent.task || qualifiedParent.repository != parent.repository || !same(qualifiedParent.root, parent.root) {
+			return false
+		}
+		return pathAllowed(path, parent.root, parent.repository, strconv.Itoa(task), protected)
+	}
+	return false
+}
+
+// currentSubworkSpecPath limits child work to the immutable spec copy created
+// by todo.exe for that exact new ID. It never trusts a caller-supplied manifest.
+func currentSubworkSpecPath(path string, task int, specsRoot string, protected func(string) bool, plain func(string, bool) bool) bool {
+	if task <= 0 || !filepath.IsAbs(path) || !same(filepath.Dir(filepath.Clean(path)), specsRoot) || protected(path) || !plain(path, false) {
+		return false
+	}
+	name := filepath.Base(path)
+	match := currentSubworkSpecName.FindStringSubmatch(name)
+	return len(match) == 3 && match[1] == strconv.Itoa(task)
+}
+
+// currentSubworkReceiptWith verifies one direct child of a fixed current
+// product. It accepts only the ordinary research/check/review relation saved
+// by todo.exe, pins the parent job to the parent's recorded job list, and
+// requires the child's registered project to resolve to the parent's exact
+// repository root and common Git directory. The returned receipt names the
+// child itself so Rust can compare its own item and spec bytes.
+func currentSubworkReceiptWith(db object, task int, products []currentProduct, specsRoot string, now time.Time, protected func(string) bool, plain func(string, bool) bool, origin func(string, string) bool, identity func(currentProduct) bool, common func(string) (string, bool), pathAllowed currentProductPathVerifier) (object, currentProduct, bool) {
+	failure := object{"verified": false}
+	child := itemAt(db, task)
+	if child == nil {
+		return failure, currentProduct{}, false
+	}
+	dispatchable, dispatchableOK := child["dispatchable"].(bool)
+	if task <= 2407 || num(child["id"]) != task || !dispatchableOK || !dispatchable {
+		return failure, currentProduct{}, false
+	}
+	if status := str(child["status"]); status != "todo" && status != "doing" && status != "wait" {
+		return failure, currentProduct{}, false
+	}
+	relation := obj(child["subwork"])
+	parentTask := num(relation["parent_todo_id"])
+	var parent currentProduct
+	parentFound := false
+	for _, declared := range products {
+		if declared.task == parentTask {
+			parent, parentFound = declared, true
+			break
+		}
+	}
+	if !parentFound || task <= parent.task || !finiteProductScope(now) {
+		return failure, currentProduct{}, false
+	}
+	parentRow := itemAt(db, parent.task)
+	originJob := str(relation["origin_job_id"])
+	kind := str(relation["kind"])
+	if parentRow == nil || (str(parentRow["status"]) != "doing" && str(parentRow["status"]) != "wait") || parentRow["subwork"] != nil ||
+		!hasJob(parentRow, originJob) || !currentSubworkJobName.MatchString(originJob) ||
+		(kind != "research" && kind != "check" && kind != "review") {
+		return failure, currentProduct{}, false
+	}
+	jobMatch := currentSubworkJobName.FindStringSubmatch(originJob)
+	if len(jobMatch) != 3 || jobMatch[2] != strconv.Itoa(parent.task) {
+		return failure, currentProduct{}, false
+	}
+	if !currentQualification(db, parent.project, parent.task, parent.root, parent.spec, parent.specSHA, protected) ||
+		!plain(parent.root, true) || !origin(parent.root, parent.repository) || !identity(parent) {
+		return failure, currentProduct{}, false
+	}
+	childProject := str(child["project"])
+	registeredRoot := str(obj(db["projects"])[childProject])
+	if childProject != parent.project || !same(registeredRoot, parent.root) {
+		return failure, currentProduct{}, false
+	}
+	spec := str(child["spec"])
+	if !currentSubworkSpecPath(spec, task, specsRoot, protected, plain) {
+		return failure, currentProduct{}, false
+	}
+	body, err := readBounded(spec, 1<<20)
+	if err != nil {
+		return failure, currentProduct{}, false
+	}
+	owner := obj(relation["owner"])
+	ownerWorktree := str(owner["worktree"])
+	parentWorktree := str(obj(parentRow["scheduler"])["worktree"])
+	if !strings.EqualFold(str(owner["repository"]), parent.repository) || ownerWorktree == "" ||
+		parentWorktree == "" || !same(ownerWorktree, parentWorktree) ||
+		!pathAllowed(ownerWorktree, parent.root, parent.repository, strconv.Itoa(parent.task), protected) {
+		return failure, currentProduct{}, false
+	}
+	commonRoot, ok := common(parent.root)
+	if !ok || commonRoot == "" || !same(str(owner["git_common"]), commonRoot) {
+		return failure, currentProduct{}, false
+	}
+	branch, ok := currentGit(ownerWorktree, "branch", "--show-current")
+	if !ok || branch == "" || branch != str(owner["branch"]) {
+		return failure, currentProduct{}, false
+	}
+	if childWorktree := str(obj(child["scheduler"])["worktree"]); childWorktree != "" &&
+		!pathAllowed(childWorktree, parent.root, parent.repository, strconv.Itoa(task), protected) {
+		return failure, currentProduct{}, false
+	}
+	childProduct := parent
+	childProduct.project = childProject
+	childProduct.task = task
+	childProduct.spec = spec
+	childProduct.specSHA = hashBytes(body)
+	// The parent receipt already verified the exact owner/repository ID. The
+	// child inherits that identity only; it cannot select another repository.
+	childIdentity := func(candidate currentProduct) bool {
+		return candidate.repositoryID == parent.repositoryID && strings.EqualFold(candidate.owner, parent.owner) && strings.EqualFold(candidate.repository, parent.repository)
+	}
+	receipt := currentSuccessionReceiptWith(db, childProduct, now, protected, plain, origin, childIdentity)
+	if receipt["verified"] != true {
+		return failure, currentProduct{}, false
+	}
+	return receipt, parent, true
+}
+
+func currentSubworkReceipt(db object, task int) (object, currentProduct, bool) {
+	return currentSubworkReceiptWith(db, task, currentProducts, currentTodoSpecsRoot, time.Now(), legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified, currentGitCommonDir, currentProductPath)
+}
+
+func currentGitCommonDir(root string) (string, bool) {
+	common, ok := currentGit(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	return common, ok && common != ""
+}
+
+func currentSubworkScopePathAllowed(path string) bool {
+	db, err := readObject(productStore, 64<<20)
+	if err != nil {
+		return false
+	}
+	return currentSubworkScopePathAllowedWith(path, currentProducts, func(task int) (currentProduct, bool) {
+		_, parent, ok := currentSubworkReceipt(db, task)
+		return parent, ok
+	}, legacyMatch, currentProductPath)
+}
+
 func currentQualification(db object, project string, task int, root, spec, expectedHash string, protected func(string) bool) bool {
 	row := itemAt(db, task)
 	if row == nil || row["project"] != project || !same(str(obj(db["projects"])[project]), root) || !same(str(row["spec"]), spec) {
@@ -263,5 +438,5 @@ func currentScopePathAllowed(path string) bool {
 	}
 	// Only an exact current product/actor declaration qualifies. Existing
 	// denials remain authoritative; no lost original row is restored.
-	return currentProductsScopePathAllowed(path, currentProducts, currentProductQualification, legacyMatch)
+	return currentProductsScopePathAllowed(path, currentProducts, currentProductQualification, legacyMatch) || currentSubworkScopePathAllowed(path)
 }

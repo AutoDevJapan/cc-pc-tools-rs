@@ -438,3 +438,15 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   その後、同じ最終clean codeからhost/guestをbuildし、既存SDKのfresh nonce cloneを実受入する。
   新head/route適用/dispatch/公式job/原Cargo/13工程は未実行で、原b194を変更していない。
   2828や完了済み2831/2783へ再びwaitせず、新レビューだけを正規waitへ記録する。原merge/Prdは親2641。
+
+### 同jobの配送・レビュー受付
+
+- 新host codeはdcc4c2368fa2b866d4c58e849ff44522afdaaa7a/treee581972d5906622863724c49d3eedc7c65e9eda0へcommit/pushし、remote一致を確認した。
+  SDK/backendはdeliveryc073から同pathへ無変更でimportしたことをgit diffで確認。実APIでもc073/tree86ace98ca691c40573f8c61895279a445c6689b9が一致。
+- 新差分の有限レビューは2835、固定base703373a→headdcc4c23、指定gpt-6-luna。保存済みspecは全文読戻し一致。
+  最初のaddはnested subwork親2737を指定してCLI入力検証で拒否されたため、未登録/重複なしを確認した。原2831と同じ通常add --spec経路で1件だけ登録した。
+  これは実行承認の拒否ではなく、root workerだけを親にできるsubwork引数の誤指定。別jobのIDを借りたりroot2641を偽装していない。
+- Linux consumerもGo1.27でtest -cが成功。実Linuxでの再実行ではない。host race5.442秒/backend race5.534秒とvet成功の範囲を保持。
+  commit後のtree取得ではPowerShellが未引用HEAD^{tree}を変形してGit読取が失敗したが、正しく引用して再取得した。source/ref更新の失敗ではない。
+- 次回の入口は2835原応答の受領・Must/未読処理。その後に同sourceのclean host/guest buildと実clone/COM/TLS/stock実受入を行う。
+  完了済みSDKや子2828の受付待ちへ戻さない。原b194/通常CI未実行は不変。自身の実HEAD/jobでcheckpoint後、2835だけへwaitする。

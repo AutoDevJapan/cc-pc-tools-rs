@@ -99,7 +99,11 @@ context cancellation/deadline remains a context error. Guest distinguishes
 ErrHostEOF, ErrHostCancel and ErrServiceStop. A process timeout while the channel
 is alive emits Failed/FailureCode=timeout and returns DeadlineExceeded, separate
 from Complete and RunnerExited. Process/drain failures emit process or
-drain-unconfirmed. No failure metadata is an official completion or cleanup ack.
+drain-unconfirmed. Failure telemetry must match the registered numeric RunnerID
+and a post-listen phase. Timeout/process requires Drained=true, a measured Exit
+and a valid stdout SHA256; drain-unconfirmed requires Drained=false and may omit
+unavailable exit/hash data. Inconsistent failures are ErrProtocol and are not
+persisted by Observe. No failure metadata is official completion or a cleanup ack.
 
 ## Complete offline staging contract for the new clone
 
@@ -218,6 +222,8 @@ truncated frames and oversized allocations (control32KiB/source256MiB).
 Stdout is a bounded private prefix, returned only as SHA256. Stock `_diag` logs
 remain private on the disposable disk, use1MiB pages, and cancel the tree at a
 sampled64MiB/1024-file threshold (100ms sampling may overshoot within an interval;
-this is not a hard filesystem quota). No diagnostic or credential body is sent
+this is not a hard filesystem quota). Every scan also caps total entries,
+including empty directories, at2048 and depth at16, uses64-entry ReadDir batches,
+and observes cancellation between entries. No diagnostic or credential body is sent
 to host/model. Parent retains that disk on unconfirmed cleanup for its authorized
 recovery; the guest never claims VM/registration/host-lock recovery.

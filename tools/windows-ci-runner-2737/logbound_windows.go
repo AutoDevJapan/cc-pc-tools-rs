@@ -5,6 +5,7 @@ package windowsrunner
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -30,7 +31,7 @@ func withDiagnosticBound(ctx context.Context, run func(context.Context) processR
 			case <-ctx.Done():
 				return
 			case <-tick.C:
-				if e := checkDiagnosticBound(runnerRoot + `\_diag`); e != nil {
+				if e := checkDiagnosticBound(ctx, runnerRoot+`\_diag`); e != nil {
 					cancel(e)
 					return
 				}
@@ -45,34 +46,70 @@ func withDiagnosticBound(ctx context.Context, run func(context.Context) processR
 	}
 	return r
 }
-func checkDiagnosticBound(root string) error {
+func checkDiagnosticBound(ctx context.Context, root string) error {
 	var total int64
-	count := 0
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, e error) error {
-		if os.IsNotExist(e) && path == root {
-			return nil
+	entries, files := 0, 0
+	info, e := os.Lstat(root)
+	if os.IsNotExist(e) {
+		return nil
+	}
+	if e != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("private diagnostics root rejected")
+	}
+	var scan func(string, int) error
+	scan = func(path string, depth int) error {
+		if depth > 16 {
+			return errors.New("private diagnostic depth bound")
 		}
+		if e := ctx.Err(); e != nil {
+			return e
+		}
+		dir, e := os.Open(path)
 		if e != nil {
 			return errors.New("private diagnostics unavailable")
 		}
-		if d.Type()&os.ModeSymlink != 0 {
-			return errors.New("private diagnostics link rejected")
+		defer dir.Close()
+		// ReadDir(n) prevents an enormous flat directory from being fully loaded
+		// before the entry limit is checked. Empty directories consume budget too.
+		for {
+			batch, readErr := dir.ReadDir(64)
+			for _, d := range batch {
+				if e := ctx.Err(); e != nil {
+					return e
+				}
+				entries++
+				if entries > 2048 {
+					return errors.New("private diagnostic entry bound")
+				}
+				if d.Type()&os.ModeSymlink != 0 {
+					return errors.New("private diagnostics link rejected")
+				}
+				if d.IsDir() {
+					if e := scan(filepath.Join(path, d.Name()), depth+1); e != nil {
+						return e
+					}
+					continue
+				}
+				files++
+				if files > 1024 {
+					return errors.New("private diagnostic count bound")
+				}
+				info, e := d.Info()
+				if e != nil || !info.Mode().IsRegular() {
+					return errors.New("private diagnostic metadata failed")
+				}
+				total += info.Size()
+				if total > 64<<20 {
+					return errors.New("private diagnostic size bound")
+				}
+			}
+			if readErr == io.EOF {
+				return nil
+			}
+			if readErr != nil {
+				return errors.New("private diagnostics enumeration failed")
+			}
 		}
-		if d.IsDir() {
-			return nil
-		}
-		count++
-		if count > 1024 {
-			return errors.New("private diagnostic count bound")
-		}
-		info, e := d.Info()
-		if e != nil {
-			return errors.New("private diagnostic metadata failed")
-		}
-		total += info.Size()
-		if total > 64<<20 {
-			return errors.New("private diagnostic size bound")
-		}
-		return nil
-	})
+	}
+	return scan(root, 0)
 }

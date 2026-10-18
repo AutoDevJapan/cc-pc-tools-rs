@@ -1,7 +1,9 @@
 # 親2737への引き継ぎ
 
 Windows runnerの接続処理を実装し、Windows上の合成検査を通しました。
-別モデルの確認と親による実VM・公式runnerの受入は、別の完了条件です。
+固定bec99388の全23ファイルは別モデルgpt-6-lunaで静的確認され、Must0でした。
+提案2件を修正し、追加差分の確認を続けています。
+親による実VM・公式runnerの受入は、別の完了条件です。
 製品の通常CIが成功したという報告ではありません。
 
 ## 成果の範囲
@@ -44,11 +46,14 @@ TLS証明書、loopback、Windows pipeとテスト専用子プロセスだけを
   取消し時も、停止前に保持した子孫ハンドルが終了状態になること。
 - SDKの実Windows named-pipe期限検査と、合成COM nonce/transport/API検査。
 - seedに秘密鍵を書かないこと、stock ZIPの不正hash/path/重複を拒否すること。
+- 再開後の提案修正: 空directoryが大量にある場合のentry/深さ上限、探索中の取消し、
+  別runner/起動前/排出状態が矛盾する失敗eventを保存前に拒否すること。
 
 初回のコンパイルで、内部hex関数とencoding/hexの名前衝突、Windows SID.Stringの
 複数戻り値の扱いを検出して修正した。gofmtをmodule cwdからrepo相対pathで呼んだ
 初回のpath誤りも修正した。これらは実VMの失敗ではない。上表は修正後の結果。
 test stdoutの記録元は本ジョブのexec結果であり、公式CI原ログではない。
+ToDo2830の原応答・hashと実モデルの補足は[reviews](reviews/README.md)に保持する。
 
 ## 親の次の工程
 

@@ -76,7 +76,7 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 			return ev, ErrProtocol
 		}
 		if ev.Instance == p.Instance && ev.Stage == Failed {
-			if ev.FailureCode != "process" && ev.FailureCode != "timeout" && ev.FailureCode != "drain-unconfirmed" {
+			if !validFailure(p, stage, runnerID, ev) {
 				return ev, ErrProtocol
 			}
 			if host.Observe(ctx, ev) != nil {
@@ -144,4 +144,21 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 		}
 	}
 	return Event{}, errors.New("session incomplete")
+}
+
+// Failures are observations of this admitted listener, not cleanup permission.
+// A timeout/process result must include a confirmed drain and measured exit/hash.
+// An unconfirmed drain may lack an exit/hash but never masquerades as timeout.
+func validFailure(p Plan, expected Stage, runnerID int64, ev Event) bool {
+	if runnerID < 1 || (expected != Start && expected != Complete && expected != RunnerExited) || ev.Instance != p.Instance || ev.Stage != Failed || ev.RunnerID != runnerID {
+		return false
+	}
+	switch ev.FailureCode {
+	case "process", "timeout":
+		return ev.Drained && ev.Exit != nil && validHex(ev.LogSHA256, 64)
+	case "drain-unconfirmed":
+		return !ev.Drained && (ev.LogSHA256 == "" || validHex(ev.LogSHA256, 64))
+	default:
+		return false
+	}
 }

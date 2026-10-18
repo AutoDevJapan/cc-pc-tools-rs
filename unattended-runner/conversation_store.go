@@ -34,6 +34,7 @@ type ConversationQuestion struct {
 	RequestID    string `json:"request_id"`
 	SenderID     string `json:"sender_request_id"`
 	Todo         uint64 `json:"todo_id"`
+	Project      string `json:"project"`
 	OriginThread string `json:"origin_thread_id"`
 	InputSHA     string `json:"input_sha256"`
 	BodyFile     string `json:"body_file"`
@@ -59,6 +60,7 @@ type conversationIndex struct {
 	Destination Destination                      `json:"destination"`
 	Cursor      string                           `json:"cursor,omitempty"`
 	Questions   map[string]ConversationQuestion  `json:"questions"`
+	Aliases     map[string]conversationAlias     `json:"aliases,omitempty"`
 	Logs        map[string]conversationLogRecord `json:"logs,omitempty"`
 	Topics      map[string]string                `json:"topics,omitempty"`
 }
@@ -69,6 +71,12 @@ type conversationLogRecord struct {
 	Thread         string `json:"destination_thread_id,omitempty"`
 	Message        string `json:"message_id,omitempty"`
 	VerifiedThread string `json:"verified_thread_id,omitempty"`
+}
+
+type conversationAlias struct {
+	Target   string                `json:"target_request_id"`
+	InputSHA string                `json:"input_sha256"`
+	Intent   *ConversationQuestion `json:"original_intent,omitempty"`
 }
 
 type conversationQuestionReceipt struct {
@@ -86,18 +94,19 @@ type conversationQuestionReceipt struct {
 }
 
 type conversationProof struct {
-	Domain    string              `json:"domain"`
-	ReadOnly  bool                `json:"read_only"`
-	Source    string              `json:"source"`
-	RequestID string              `json:"request_id"`
-	Thread    string              `json:"thread_id"`
-	Owner     string              `json:"owner_id"`
-	Question  string              `json:"question_message_id"`
-	Created   string              `json:"question_timestamp"`
-	Progress  string              `json:"progress_thread_id"`
-	Body      string              `json:"original_question"`
-	Decision  json.RawMessage     `json:"decision_identity"`
-	Replies   []conversationReply `json:"owner_replies"`
+	Domain           string              `json:"domain"`
+	ReadOnly         bool                `json:"read_only"`
+	Source           string              `json:"source"`
+	RequestID        string              `json:"request_id"`
+	Thread           string              `json:"thread_id"`
+	Owner            string              `json:"owner_id"`
+	Question         string              `json:"question_message_id"`
+	Created          string              `json:"question_timestamp"`
+	Progress         string              `json:"progress_thread_id"`
+	Body             string              `json:"original_question"`
+	Decision         json.RawMessage     `json:"decision_identity"`
+	OriginalDecision json.RawMessage     `json:"original_decision"`
+	Replies          []conversationReply `json:"owner_replies"`
 }
 
 type conversationReply struct {
@@ -217,7 +226,7 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		return nil, errors.New("conversation namespace differs")
 	}
 	for key, q := range index.Questions {
-		if key != q.RequestID || !conversationID.MatchString(key) || q.SenderID == "" || q.Todo == 0 || !shaPattern.MatchString(q.InputSHA) || q.Created == "" {
+		if key != q.RequestID || !conversationID.MatchString(key) || q.SenderID == "" || q.Todo == 0 || q.Project == "" || !shaPattern.MatchString(q.InputSHA) || q.Created == "" {
 			return nil, errors.New("conversation question invalid")
 		}
 		dir := filepath.Join(r.Config.Home, "conversations", key)
@@ -241,6 +250,15 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		case "reserved", "posted", "waiting", "answered", "applied", "closed":
 		default:
 			return nil, errors.New("conversation phase invalid")
+		}
+	}
+	if index.Aliases == nil {
+		index.Aliases = map[string]conversationAlias{}
+	}
+	for key, alias := range index.Aliases {
+		target, exists := index.Questions[alias.Target]
+		if !conversationID.MatchString(key) || key == alias.Target || !exists || target.RequestID != alias.Target || !shaPattern.MatchString(alias.InputSHA) {
+			return nil, errors.New("conversation alias invalid")
 		}
 	}
 	if index.Logs == nil {
@@ -321,21 +339,33 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return zero, err
 	}
 	q, exists := index.Questions[input.RequestID]
+	if alias, exists := index.Aliases[input.RequestID]; exists {
+		if alias.InputSHA != inputHash {
+			return zero, errors.New("conversation alias retry input differs")
+		}
+		return index.Questions[alias.Target], nil
+	}
 	if exists && q.InputSHA != inputHash {
 		return zero, errors.New("conversation retry input differs")
 	}
 	if !exists {
 		for _, old := range index.Questions {
-			if old.InputSHA == inputHash && old.Phase != "closed" {
+			if old.InputSHA == inputHash {
 				q = old
 				exists = true
+				if old.RequestID != input.RequestID {
+					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash}
+					if err = publish(r.conversationPath(), index); err != nil {
+						return zero, err
+					}
+				}
 				break
 			}
 		}
 	}
 	if !exists {
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
-		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
+		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
 		}
@@ -384,6 +414,23 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		q.Fingerprint = report.Fingerprint
 		q.DecisionSHA = canonicalHash(report.Decision)
 		q.QuestionSHA = bytesHash([]byte(report.Body))
+		for id, canonical := range index.Questions {
+			if id == q.RequestID || canonical.Phase == "reserved" {
+				continue
+			}
+			if canonical.SenderID == q.SenderID || canonical.Thread == q.Thread {
+				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA {
+					return zero, errors.New("conversation canonical question differs")
+				}
+				intent := index.Questions[q.RequestID]
+				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent}
+				delete(index.Questions, q.RequestID)
+				if err = publish(r.conversationPath(), index); err != nil {
+					return zero, err
+				}
+				return canonical, nil
+			}
+		}
 		proof, err := r.conversationProof(ctx, q)
 		if err != nil {
 			return zero, err
@@ -406,7 +453,7 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation posted; task wait recording pending")
 		}
 		current, err := r.todo(q.Todo)
-		if err != nil || current.Status != "block" {
+		if err != nil || current.Status != "block" || !conversationWaitRecorded(current, q) {
 			return zero, errors.New("conversation task wait verification pending")
 		}
 		q.Phase = "waiting"
@@ -416,6 +463,33 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	return q, nil
+}
+
+func conversationWaitRecorded(row *TodoRow, q ConversationQuestion) bool {
+	var value struct {
+		SHA      string `json:"question_receipt_sha256"`
+		Question struct {
+			RequestID string `json:"request_id"`
+		} `json:"question"`
+	}
+	return json.Unmarshal(row.QuestionWait, &value) == nil && value.SHA == q.ReceiptSHA && value.Question.RequestID == q.SenderID
+}
+
+func conversationAnswerRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
+	matched := 0
+	for _, raw := range row.QuestionAnswers {
+		var value struct {
+			SHA    string                    `json:"answer_file_sha256"`
+			Answer conversationAnswerReceipt `json:"answer"`
+			Wait   struct {
+				SHA string `json:"question_receipt_sha256"`
+			} `json:"wait"`
+		}
+		if json.Unmarshal(raw, &value) == nil && value.SHA == bytesHash(b) && value.Wait.SHA == q.ReceiptSHA && value.Answer == answer {
+			matched++
+		}
+	}
+	return matched == 1
 }
 
 func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) (*conversationProof, error) {
@@ -581,4 +655,21 @@ func orderedConversationKeys(index *conversationIndex) []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+func (r *Runner) conversationForThread(thread string) (string, error) {
+	index, err := r.loadConversations()
+	if err != nil {
+		return "", err
+	}
+	found := ""
+	for id, q := range index.Questions {
+		if q.Phase != "reserved" && q.Thread == thread {
+			if found != "" {
+				return "", errors.New("conversation thread has multiple canonical owners")
+			}
+			found = id
+		}
+	}
+	return found, nil
 }

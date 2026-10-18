@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -70,7 +69,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 		return old, nil
 	}
-	if old != nil && old.Conversation == q.RequestID {
+	if old != nil && old.Conversation == q.RequestID && old.Phase != "conversation_capture_pending" {
 		return old, nil
 	}
 	contextBytes, _ := json.Marshal(proof)
@@ -102,6 +101,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
 	if !hasNoteMarker(row.Note, marker) {
 		instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, q.Todo, filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, q.Todo, q.Todo, q.Thread, q.Message, reply.Message, reply.Author)
+		instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
 		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + instructions
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
@@ -121,12 +121,16 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if q.Wait && row.Status == "block" {
 		answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
 		b, _ := json.MarshalIndent(answer, "", "  ")
-		answerFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".ready.json")
+		answerFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
 		if err = writeConversationOnce(answerFile, b); err != nil {
 			return err
 		}
 		if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile); err != nil {
 			return errors.New("conversation exact question wait release deferred")
+		}
+		row, err = r.todo(q.Todo)
+		if err != nil || !conversationAnswerRecorded(row, q, answer, b) {
+			return errors.New("conversation question answer readback deferred")
 		}
 	}
 	// No done/start/launch is issued here. Only the canonical question-answer
@@ -159,69 +163,7 @@ func (r *Runner) conversationProgress(ctx context.Context, q ConversationQuestio
 }
 
 func (r *Runner) conversationApplied(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, req *Request) (bool, error) {
-	path := filepath.Join(r.Config.Home, "applied", reply.Message+".json")
-	b, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil || len(b) > 128<<10 {
-		return false, errors.New("conversation applied receipt unavailable")
-	}
-	var value map[string]json.RawMessage
-	if json.Unmarshal(b, &value) != nil {
-		return false, errors.New("conversation applied receipt invalid")
-	}
-	text := func(key string) string { var v string; _ = json.Unmarshal(value[key], &v); return v }
-	num := func(key string) uint64 { var v uint64; _ = json.Unmarshal(value[key], &v); return v }
-	var verification map[string]string
-	if json.Unmarshal(value["verification"], &verification) != nil || verification["execution"] == "" || verification["origin_saved"] == "" || verification["identity"] == "" {
-		return false, errors.New("conversation implementation verification missing")
-	}
-	at, e := time.Parse(time.RFC3339Nano, text("applied_at"))
-	acquired, _ := time.Parse(time.RFC3339Nano, req.Acquired)
-	if e != nil || at.Before(acquired) || at.After(r.Now().Add(time.Minute)) || text("source") != "discord-api-v10" || text("request_id") != q.SenderID || num("origin_todo_id") != q.Todo || num("todo_id") != q.Todo || text("thread_id") != q.Thread || text("question_message_id") != q.Message || text("message_id") != reply.Message || text("author_id") != r.State.Destination.Owner || !regexpRevision(text("revision")) || strings.TrimSpace(text("completion")) == "" {
-		return false, errors.New("conversation applied association differs")
-	}
-	row, err := r.todo(q.Todo)
-	if err != nil {
-		return false, err
-	}
-	owned := false
-	for _, job := range row.Jobs {
-		var id string
-		if json.Unmarshal(job, &id) == nil && id == text("job_id") && validJob(id) {
-			owned = true
-		}
-	}
-	if !owned {
-		return false, errors.New("conversation applied worker ownership unavailable")
-	}
-	if len(proof.Replies) != 1 {
-		return false, errors.New("conversation additional replies remain independently tracked")
-	}
-	manifest := map[string]any{"request_id": q.SenderID, "thread_id": q.Thread, "question_message_id": q.Message, "origin_todo_id": q.Todo, "todo_id": q.Todo, "message_id": reply.Message, "author_id": reply.Author, "job_id": text("job_id"), "revision": text("revision"), "question_fingerprint": q.Fingerprint, "reply_sha256": canonicalHash(reply), "receipt_sha256": bytesHash(b), "verification_sha256": canonicalHash(json.RawMessage(value["verification"])), "completion": text("completion")}
-	manifestPath := filepath.Join(r.Config.Home, "conversations", q.RequestID, "close.json")
-	mb, _ := json.MarshalIndent(manifest, "", "  ")
-	if err = writeConversationOnce(manifestPath, mb); err != nil {
-		return false, err
-	}
-	raw, err := r.Run(ctx, conversationSender, "recovery-close", "--manifest", manifestPath)
-	if err != nil {
-		return false, errors.New("conversation question close verification deferred")
-	}
-	var outcome struct {
-		Phase   string `json:"phase"`
-		Outcome string `json:"outcome"`
-		Thread  string `json:"thread_id"`
-	}
-	if json.Unmarshal([]byte(raw), &outcome) != nil || outcome.Thread != q.Thread || (outcome.Outcome != "archived" && outcome.Outcome != "already_archived" && outcome.Outcome != "recovered_after_patch") {
-		return false, errors.New("conversation question close receipt differs")
-	}
-	req.Phase = "conversation_reply_applied"
-	if err = r.save(); err != nil {
-		return false, err
-	}
-	return true, nil
+	return r.closeConversation(ctx, q, proof)
 }
 
 func regexpRevision(revision string) bool {
@@ -295,21 +237,8 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				health.Errors = append(health.Errors, "conversation_application_deferred")
 				return
 			}
-			stage := "conversation_delivered"
 			if applied {
-				stage = "conversation_applied"
 				q.Phase = "applied"
-				index.Questions[id] = q
-				if publish(r.conversationPath(), index) != nil {
-					health.Errors = append(health.Errors, "conversation_stage_deferred")
-					return
-				}
-			}
-			if err = r.conversationProgress(ctx, q, req, stage); err != nil {
-				health.Errors = append(health.Errors, "conversation_progress_deferred")
-			}
-			if applied && req.Reported == "conversation_applied" {
-				q.Phase = "closed"
 				index.Questions[id] = q
 				if publish(r.conversationPath(), index) != nil {
 					health.Errors = append(health.Errors, "conversation_stage_deferred")
@@ -320,6 +249,57 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 			// Keep the tick finite. Other replies are retained by the sender/API
 			// and the same source will be checked on its next turn.
 			return
+		}
+		return
+	}
+}
+
+func (r *Runner) reportConversations(ctx context.Context, health *Health) {
+	if r.NoticeAttempted || ctx.Err() != nil {
+		return
+	}
+	index, err := r.loadConversations()
+	if err != nil {
+		health.Errors = append(health.Errors, "conversation_index_deferred")
+		return
+	}
+	ids := make([]string, 0)
+	for id, req := range r.State.Requests {
+		if req != nil && req.Conversation != "" && (req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied") {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	start := sort.Search(len(ids), func(i int) bool { return ids[i] > r.State.ConversationReportCursor })
+	for i := 0; i < len(ids); i++ {
+		id := ids[(start+i)%len(ids)]
+		req := r.State.Requests[id]
+		q, ok := index.Questions[req.Conversation]
+		if !ok {
+			continue
+		}
+		stage := "conversation_delivered"
+		if req.Phase == "conversation_reply_applied" {
+			stage = "conversation_applied"
+		}
+		if req.Reported == stage {
+			continue
+		}
+		r.State.ConversationReportCursor = id
+		if r.save() != nil {
+			health.Errors = append(health.Errors, "conversation_report_cursor_deferred")
+			return
+		}
+		if err = r.conversationProgress(ctx, q, req, stage); err != nil {
+			health.Errors = append(health.Errors, "conversation_progress_deferred")
+			return
+		}
+		if q.Phase == "applied" && req.Reported == "conversation_applied" {
+			q.Phase = "closed"
+			index.Questions[q.RequestID] = q
+			if publish(r.conversationPath(), index) != nil {
+				health.Errors = append(health.Errors, "conversation_stage_deferred")
+			}
 		}
 		return
 	}

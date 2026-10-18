@@ -14,18 +14,21 @@ import (
 )
 
 type conversationFixture struct {
-	r        *Runner
-	input    ConversationAskInput
-	question string
-	created  string
-	decision json.RawMessage
-	replies  []conversationReply
-	commands []string
-	posts    int
-	close    int
-	lost     bool
-	deny     bool
-	q        ConversationQuestion
+	r             *Runner
+	input         ConversationAskInput
+	question      string
+	created       string
+	decision      json.RawMessage
+	replies       []conversationReply
+	commands      []string
+	posts         int
+	close         int
+	lost          bool
+	deny          bool
+	q             ConversationQuestion
+	answerFailure bool
+	edited        map[string]string
+	archived      bool
 }
 
 func conversationTest(t *testing.T, wait bool) *conversationFixture {
@@ -78,9 +81,17 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies})
 			return string(b), nil
 		case "question-wait":
+			b, err := os.ReadFile(args[3])
+			if err != nil {
+				return "", err
+			}
+			var question map[string]any
+			if json.Unmarshal(b, &question) != nil {
+				return "", errors.New("invalid fixture question")
+			}
 			f.mutateTodo(t, func(row map[string]any) {
 				row["status"] = "block"
-				row["owner_question_wait"] = "exact canonical wait is tested in cc-todo"
+				row["owner_question_wait"] = map[string]any{"question": question, "question_receipt_sha256": bytesHash(b)}
 			})
 			return "", nil
 		case "edit":
@@ -91,11 +102,20 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			f.mutateTodo(t, func(row map[string]any) { row["note"] = string(b) })
 			return "", nil
 		case "question-answer":
+			if f.answerFailure {
+				f.answerFailure = false
+				return "", errors.New("canonical answer failed before apply")
+			}
 			var proof conversationAnswerReceipt
 			if readJSON(args[3], 1<<20, &proof) != nil || proof.Todo != "42" || proof.Message == "" || proof.Author != r.State.Destination.Owner || proof.QuestionSHA != f.q.ReceiptSHA {
 				return "", errors.New("wrong answer association")
 			}
-			f.mutateTodo(t, func(row map[string]any) { row["status"] = "todo"; delete(row, "owner_question_wait") })
+			f.mutateTodo(t, func(row map[string]any) {
+				row["status"] = "todo"
+				delete(row, "owner_question_wait")
+				b, _ := os.ReadFile(args[3])
+				row["owner_question_answer_receipts"] = []any{map[string]any{"answer": proof, "answer_file_sha256": bytesHash(b), "wait": map[string]any{"question_receipt_sha256": proof.QuestionSHA}}}
+			})
 			return "", nil
 		case "recovery-log":
 			b, _ := json.Marshal(map[string]any{"domain": "new-owner-recovery-messages", "delivery": "verified", "thread_id": "610", "message_id": "710", "url": "https://discord.com/channels/100/610", "reused": false})
@@ -109,11 +129,20 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 		}
 	}
 	server(t, r, func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/channels/"+f.question {
+			if req.Method == http.MethodPatch {
+				f.close++
+				f.archived = true
+			}
+			respond(w, map[string]any{"id": f.question, "guild_id": "100", "parent_id": "200", "owner_id": "400", "type": 11, "thread_metadata": map[string]any{"archived": f.archived}})
+			return
+		}
 		for _, reply := range f.replies {
 			if req.URL.Path == "/channels/"+f.question+"/messages/"+reply.Message {
 				m := msg(c.Add(10*time.Second), f.question, r.State.Destination.Owner, reply.Body)
 				m.ID = reply.Message
 				m.Timestamp = reply.Created
+				m.Edited = f.edited[reply.Message]
 				respond(w, m)
 				return
 			}
@@ -209,6 +238,7 @@ func TestConversationReplyDeliveredToOriginalTaskAndReleasedOnlyByCanonicalComma
 	reply := f.reply(t, 8, "a")
 	health := Health{}
 	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
 	if len(health.Errors) != 0 || health.ConversationReplies != 1 {
 		t.Fatalf("reply delivery %v", health.Errors)
 	}
@@ -259,6 +289,7 @@ func TestConversationForeignOwnerOrChangedDecisionDoesNotDeliver(t *testing.T) {
 			}
 			health := Health{}
 			f.r.processConversations(context.Background(), &health)
+			f.r.reportConversations(context.Background(), &health)
 			if len(health.Errors) == 0 {
 				t.Fatal("wrong reply accepted")
 			}
@@ -279,6 +310,7 @@ func TestConversationMultipleRepliesAllReachOriginalTaskAndAreNotInferredApplied
 		f.r.NoticeAttempted = false
 		health := Health{}
 		f.r.processConversations(context.Background(), &health)
+		f.r.reportConversations(context.Background(), &health)
 		if len(health.Errors) != 0 {
 			t.Fatal(health.Errors)
 		}
@@ -303,12 +335,16 @@ func TestConversationAppliedReceiptClosesOnlyAfterImplementationAndWorkerIdentit
 		return stamp.Add(2 * time.Minute)
 	}
 	application := map[string]any{"source": "discord-api-v10", "request_id": f.q.SenderID, "origin_todo_id": 42, "todo_id": 42, "thread_id": f.question, "question_message_id": f.question, "message_id": reply.Message, "author_id": "300", "job_id": "foreign-worker", "revision": strings.Repeat("e", 40), "applied_at": f.r.Now().Format(time.RFC3339Nano), "completion": "設定を反映し読み返しました。", "verification": map[string]string{"execution": "actual readback", "origin_saved": "original question kept", "identity": "configured owner/API/source matched"}}
+	source, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json"))
+	application["reply_sha256"] = canonicalHash(reply)
+	application["source_receipt_sha256"] = bytesHash(source)
 	if err := publish(filepath.Join(f.r.Config.Home, "applied", reply.Message+".json"), application); err != nil {
 		t.Fatal(err)
 	}
 	health := Health{}
 	f.r.NoticeAttempted = false
 	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
 	if len(health.Errors) == 0 || f.close != 0 {
 		t.Fatal("foreign worker inferred applied")
 	}
@@ -319,6 +355,7 @@ func TestConversationAppliedReceiptClosesOnlyAfterImplementationAndWorkerIdentit
 	health = Health{}
 	f.r.NoticeAttempted = false
 	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
 	if len(health.Errors) != 0 || f.close != 1 {
 		t.Fatalf("valid application not closed: %v", health.Errors)
 	}
@@ -432,13 +469,170 @@ func TestConversationUnavailableQuestionDoesNotStarveLaterQuestion(t *testing.T)
 	}
 	health := Health{}
 	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
 	if len(health.Errors) == 0 {
 		t.Fatal("unavailable question unexpectedly verified")
 	}
 	health = Health{}
 	f.r.NoticeAttempted = false
 	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
 	if len(health.Errors) != 0 || health.ConversationReplies != 1 {
 		t.Fatalf("later question starved: %v", health.Errors)
+	}
+}
+
+func TestConversationCanonicalSenderDeduplicatesChangedRequestIDAndTitle(t *testing.T) {
+	f := conversationTest(t, false)
+	canonical := f.ask(t)
+	alias := f.input
+	alias.RequestID = "same-decision-new-worker"
+	alias.Title = "言い換えた同じ質問"
+	q, err := f.r.conversationAsk(context.Background(), alias)
+	if err != nil || q.RequestID != canonical.RequestID {
+		t.Fatalf("canonical sender not reconciled: %v", err)
+	}
+	index, err := f.r.loadConversations()
+	if err != nil || len(index.Questions) != 1 || index.Aliases[alias.RequestID].Target != canonical.RequestID || index.Aliases[alias.RequestID].Intent == nil {
+		t.Fatal("canonical alias or original intent lost")
+	}
+	q, err = f.r.conversationAsk(context.Background(), alias)
+	if err != nil || q.RequestID != canonical.RequestID || f.posts != 1 {
+		t.Fatal("canonical alias retry sent a different question")
+	}
+	f.reply(t, 8, "a")
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || health.ConversationReplies != 1 {
+		t.Fatalf("canonical reply failed: %v", health.Errors)
+	}
+}
+
+func TestConversationEditedReplyAfterReadyFailureUsesSeparateImmutableVersion(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.answerFailure = true
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) == 0 {
+		t.Fatal("expected canonical failure")
+	}
+	files, err := filepath.Glob(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", "*.ready.json"))
+	if err != nil || len(files) != 1 {
+		t.Fatal("initial ready version absent")
+	}
+	first, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.replies[0].Body = "b"
+	f.edited = map[string]string{reply.Message: f.r.Now().Format(time.RFC3339Nano)}
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 {
+		t.Fatalf("edited answer stuck: %v", health.Errors)
+	}
+	files, err = filepath.Glob(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", "*.ready.json"))
+	if err != nil || len(files) != 2 {
+		t.Fatal("distinct ready versions not retained")
+	}
+	retained := false
+	for _, file := range files {
+		b, _ := os.ReadFile(file)
+		if string(b) == string(first) {
+			retained = true
+		}
+	}
+	if !retained || f.r.State.Requests[reply.Message].Text != "b" || len(f.r.State.Requests[reply.Message].PriorVersions) != 1 {
+		t.Fatal("edited owner history lost")
+	}
+	row, _ := f.r.todo(42)
+	if row.Status != "todo" {
+		t.Fatal("new answer did not release exact wait")
+	}
+}
+
+func TestConversationNormalScanTagsQuestionBeforeOrdinaryAdmission(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	m := Message{ID: reply.Message, Channel: reply.Thread, Content: reply.Body, Timestamp: reply.Created}
+	m.Author.ID = reply.Author
+	server(t, f.r, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/channels/"+f.question+"/messages" {
+			respond(w, []Message{m})
+			return
+		}
+		if r.URL.Path == "/channels/"+f.question+"/messages/"+reply.Message {
+			respond(w, m)
+			return
+		}
+		t.Errorf("unexpected route %s", r.URL.Path)
+		w.WriteHeader(404)
+	})
+	count, err := f.r.scan(context.Background(), Thread{ID: f.question, Owner: "400", Parent: "200", Guild: "100", Type: 11})
+	if err != nil || count != 1 {
+		t.Fatal("scan failed", err)
+	}
+	req := f.r.State.Requests[reply.Message]
+	if req.Conversation != f.q.RequestID || req.Phase != "conversation_capture_pending" {
+		t.Fatal("normal scan lost canonical question routing")
+	}
+	health := Health{}
+	f.r.admit(context.Background(), &health)
+	if req.Todo != 0 || health.Registered != 0 {
+		t.Fatal("ordinary admission registered answer as another task")
+	}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Todo != 42 {
+		t.Fatalf("original delivery blocked: %v", health.Errors)
+	}
+}
+
+func TestConversationAndOrdinaryReportsTakeAlternateTurns(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.r.processConversations(context.Background(), &Health{})
+	stamp, _ := time.Parse(time.RFC3339Nano, f.created)
+	message := msg(stamp.Add(time.Second), "500", "300", "進捗を教えて")
+	normal := &Request{Thread: "500", Guild: "100", RecordVersion: 2, Message: message.ID, Author: "300", Created: message.Timestamp, Acquired: f.r.Now().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: message.Content, Key: requestKey("500", message.ID), Todo: 42, Phase: "registered"}
+	f.r.State.Requests[normal.Message] = normal
+	server(t, f.r, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/channels/500":
+			respond(w, Thread{ID: "500", Guild: "100", Parent: requestForum, Owner: "300", Type: 11})
+		case "/channels/500/messages/" + message.ID:
+			respond(w, message)
+		default:
+			t.Errorf("unexpected report verification %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	})
+	backend := f.r.Run
+	turns := []string{}
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if args[0] == "recovery-log" {
+			if strings.HasPrefix(argValue(args, "--request-id"), "conversation-log-") {
+				turns = append(turns, "conversation")
+			} else {
+				turns = append(turns, "ordinary")
+			}
+		}
+		return backend(ctx, path, args...)
+	}
+	for i := 0; i < 4; i++ {
+		normal.Reported = ""
+		f.r.State.Requests[reply.Message].Reported = ""
+		f.r.NoticeAttempted = false
+		health := Health{}
+		f.r.reportUpdates(context.Background(), &health)
+		if len(health.Errors) != 0 {
+			t.Fatal(health.Errors)
+		}
+	}
+	if strings.Join(turns, ",") != "ordinary,conversation,ordinary,conversation" {
+		t.Fatalf("a report category starved: %v", turns)
 	}
 }

@@ -179,27 +179,15 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 			return nil, nil, errors.New("destination invalid")
 		}
 	}
-	// Decode an existing file into zero values: missing fields and JSON null must
-	// fail validation instead of inheriting a newly initialized state's identity.
-	var state State
-	statePath := filepath.Join(cfg.Home, "unattended-state.json")
-	info, err := os.Lstat(statePath)
-	if os.IsNotExist(err) {
-		state = State{Domain: "unattended-owner-v1", Since: cfg.Since, Destination: destination, Threads: map[string]Thread{}, Scans: map[string]*Scan{}, Requests: map[string]*Request{}}
-	} else if err != nil || !info.Mode().IsRegular() || readJSON(statePath, maxState, &state) != nil {
-		return nil, nil, errors.New("independent state unavailable")
-	}
-	if state.Domain != "unattended-owner-v1" || state.Since != cfg.Since || state.Destination != destination || state.Threads == nil || state.Scans == nil || state.Requests == nil {
-		return nil, nil, errors.New("independent state scope differs")
-	}
-	if state.ProgressLinks == nil {
-		state.ProgressLinks = make(map[string]ProgressLink)
+	state, err := loadIndependentState(cfg, destination)
+	if err != nil {
+		return nil, nil, err
 	}
 	token := discordToken()
 	if token == "" {
 		return nil, nil, errors.New("Discord credential unavailable")
 	}
-	runner := &Runner{Config: cfg, State: &state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
+	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	loaded = true
 	return runner, unlock, nil
 }

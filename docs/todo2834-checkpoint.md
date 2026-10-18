@@ -6,13 +6,25 @@ PR221は公式14success/1neutral、失敗0と別モデルSonnetのMust0を確認
 
 レビュー担当はgitの起動に失敗していたが、読んだ5ファイルの全内容について親が固定46a5ee8のGit blobと全件一致を補完確認した。レビュー担当自身が固定git差分を実行したとは扱わない。原応答・実model/job/exit/hashと一致確認は `review2841-received.private.json`。提案の不採用理由はPR comment6252965667へ1回記録済み、再投稿しない。
 
-2842の原受入は `acceptance2842-received.private.json` に受領。API2回200/各254743bytes、実画面の初期閉鎖・検索解除・対照行の展開保持と保護表示、所有タブclose成功を確認した。runtime版・精密な15秒周期・通信回数の未測定は保持。親の追加API確認と既存catalogにより、本人指定の表示名local-ai-concoleとmodule名localai-web-rsの対応を確認した。情報システム部の同表示行には7担当があり、module名の検索0件だけで欠落とは扱わない。
+2842の原受入は `acceptance2842-received.private.json` に受領。API2回200/各254743bytes、実画面の初期閉鎖・検索解除・対照行の展開保持と保護表示、所有タブclose成功を確認した。runtime版・精密な15秒周期・通信回数の未測定は保持。親の追加API確認と既存catalogにより、本人指定の表示名local-ai-concoleとmodule名localai-web-rsの対応を確認した。情報システム部の同表示行には7件の作業記録があり、module名の検索0件だけで欠落とは扱わない。作業記録の件数を生存担当数へ読み替えない。
 
 AO2839の固定specと現在の実GitHub owner/idを再照合し、正式配布済みの現在のメモを通常CLIで配送した。02:44 JSTの技術wait-retryは時刻を変更・偽造しない。AO元rootのstatusには未コミット8行があるため、元rootをreset/checkoutせず、普通のscheduler専用worktreeで続行する。
 
 残る本人指定製品の実装・分類・実担当の実成果確認は新担当2849へ独立して切り分けた。仕様は `docs/todo2834-remaining-current-spec.md`。この親は追加のguard sourceを並行編集しない。2849はAO2839と既存5案件を重複せず、残る一覧を少数ずつ現在の継承として進める。元2475は締切未達による公開中止のdoneであり、完成品や再利用する進行資格にしない。旧2459の音源・未聴取・過去の審査拒否・原2467待ちは明示して保持した。
 
 次はAO2839の自然起動、専用worktreeの正式分類、実操作と成果更新、次の巡回での続行を確認する。2849の実担当・成果も回収し、製品別の無通知進捗へ反映する。まだ元2834は完了ではない。完了済み2841/2842を待ち直さず、残る実依存だけを正常waitへ保存する。追加の新費用・GPU・本人PC操作はない。
+
+## 02:47 JST以後の実受付の未達と所有分担
+
+AO2839は02:44の期限後に正規 `resume-ready --condition retry-time` がresumed=trueを返したが、通常の受付ではまだ未起動。実原因はRust schedulerのdispatchで、原名簿NotFoundの場合に3修復projectと元2407以外を拒否していた。正式Go guardのroot判定成功だけでは、この層を通らない。通常stepを1回試した02:44:59のreconcile/FileNotFoundErrorは原名簿不存在が原因であり、原本を作って解消しない。既存の自然repair-stepはその後errors0、旧記録・旧質問を隔離する経路を維持している。
+
+必要なRust adapter/dispatchの実装・関連検査・正式scheduler更新をCargo付き2851へ登録した。Go guard/APIと残る製品の有限な現在の宣言は2849が所有する。親はどちらのsourceも並行編集しない。契約は `docs/todo2834-current-succession-contract.md`、Rust指示は `docs/todo2834-scheduler-current-spec.md`。双方の登録specを通常editで更新し、2849のToDoメモへ境界を配送済み。
+
+両者は相手のToDo全体doneを待たない。2849が先にGo APIの部分配布receiptを保存し、2851がそれでRust/実受付を完了し、2849が残る製品の実成果を追う。ここを全体done依存にすると循環するので禁止。必要な部分が未配布な間は同じToDoの有限な技術wait-retryを使う。親の未完は2849/2851の実結果へ依存し、完了した2841/2842や原名簿2467を待ち直さない。
+
+2849は実job `20261019-024043-todo-2849` で稼働し、02:44時点13実操作まで進行。AO製品の実修正や次の自然巡回の続行はまだ成功としない。正式配布したGo guard、実修復が残るRust受付、製品担当未起動を区別して保持する。
+
+一時データの所有ID `b76cbf73ae7c5548c8a3d33ddf33b8bf` はplan→別呼び出しの通常削除→finish/source_absentまで完了。10,606,286バイト、11entryを回収した。正式runtimeとレビュー・CI・配布の私的receiptはこのworktreeに保持。後片付けの既存無通知スレッドへの送信もverified、message1561434660075212838。候補/旧版の一時exeはもう存在しない。
 
 ## 保存した成果
 

@@ -29,6 +29,14 @@
 
 新規コードはGoを基本とし、既存Rustは維持。GoDD製品内はRust。GPU・Civ6・本人PC操作・新費用・AI APIキー・非Prd・他Org環境・Rakko以外のドメイン事業者を使わない。重いCargoが必要な独立作業は --needs cargo の共有ToDoへ登録する。この調整担当自身にはCargo資源を要求していない。
 
+## 02:47 JSTの受付実測による追加（最初の工程として反映）
+
+正式guardのAO root判定だけでは2839が起動しない原因を親で実証した。scheduler dispatchが、原名簿不存在時にPC修復3project/2407以外を除外している。原名簿の復旧や空作成で解決しない。
+
+Rustのadapter/dispatchはCargo付き2851が所有する。このGo担当2849はRust3ファイルを並行編集せず、親worktreeの `docs/todo2834-current-succession-contract.md` を読み、先に正式guardへ `--verify-current-succession <id>` の厳格な読み取りAPIを実装する。現在のAO2839と今後この担当が検証する有限な新担当だけを、元2834・project・root/spec pathのfingerprint・固定spec本文SHAで束ねる。JSONのdomainと全field、path正規化は契約どおり。未知id・変更spec・原deny・未対応はfalse。pathや秘密を応答に出さない。
+
+Go側の関連検査・別モデルMust0・公式CI・通常merge・現mainからの正式更新を先に完成し、部分配布を自分のworktreeの `current-succession-delivery.private.json` と通常ToDoメモへ保存して親2834と2851へ返す。その後に残る現在製品の実再始動を進める。2851の全体doneを待たず、相互の全体done依存を作らない。片側の部分配布だけの有限技術待ちは同じToDoのwait-retryで保ち、原本/本人判断待ちへ戻さない。次の実測・契約を無視して、分類成功だけを実受付の成功としない。
+
 ## 完了条件
 
 本人の現在の一覧の停止対象を、実担当・依存・現在の限定範囲・残る未確認に照合する。既存5案件とAO2839を重複せず、残る上位対象の実担当が成果を更新し、次の自然巡回で続行する。関連sourceのMust0/CI/merge/正式配布を確認し、製品別無通知報告と正規の再開記録を保持する。未実行が残るのに全件完了にせず、具体的な担当・依存を残す。

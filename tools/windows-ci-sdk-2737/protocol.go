@@ -45,12 +45,14 @@ type Request struct {
 }
 
 type Result struct {
-	Instance  string    `json:"instance"`
-	Operation Operation `json:"operation"`
-	Package   PackageID `json:"package,omitempty"`
-	Stage     string    `json:"stage"`
-	OK        bool      `json:"ok"`
-	Code      string    `json:"code,omitempty"`
+	Instance           string    `json:"instance"`
+	Operation          Operation `json:"operation"`
+	Package            PackageID `json:"package,omitempty"`
+	Stage              string    `json:"stage"`
+	OK                 bool      `json:"ok"`
+	Code               string    `json:"code,omitempty"`
+	Version            string    `json:"version,omitempty"`
+	VersionProofSHA256 string    `json:"version_proof_sha256,omitempty"`
 }
 
 type Artifact struct {

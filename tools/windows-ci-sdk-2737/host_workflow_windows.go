@@ -180,7 +180,7 @@ func validateSDKResults(results []Result) error {
 			}
 			wantPrepare[result.Package] = true
 		case OpVersions:
-			if _, ok := wantVerify[result.Package]; !ok || result.Stage != "version-confirmed" {
+			if _, ok := wantVerify[result.Package]; !ok || result.Stage != "version-confirmed" || result.Version == "" || len(result.Version) > 256 || strings.ContainsAny(result.Version, "\r\n\x00") || !validDigest(result.VersionProofSHA256) {
 				return errors.New("unexpected SDK version receipt")
 			}
 			wantVerify[result.Package] = true

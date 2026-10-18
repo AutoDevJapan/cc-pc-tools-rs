@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,9 +28,11 @@ import (
 const guestSDKRoot = `C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737`
 
 type windowsOperations struct {
-	root   string
-	client *http.Client
-	opMu   sync.Mutex
+	root     string
+	client   *http.Client
+	opMu     sync.Mutex
+	versions map[PackageID]string
+	proofs   map[PackageID]string
 }
 
 func NewWindowsOperations() (Operations, error) {
@@ -94,6 +98,7 @@ func (o *windowsOperations) Verify(instance string, id PackageID) Result {
 		return result
 	}
 	result.Stage, result.OK = "version-confirmed", true
+	result.Version, result.VersionProofSHA256 = o.versions[id], o.proofs[id]
 	appendPrivateRunLog("sdk-"+string(id), []byte(result.Stage), nil)
 	return result
 }
@@ -289,6 +294,13 @@ func (o *windowsOperations) downloadMicrosoftBootstrapper(destination string) er
 func (o *windowsOperations) verifyPackage(id PackageID) error {
 	var commands [][]string
 	var expected []string
+	type probe struct {
+		Tool         string `json:"tool"`
+		Version      string `json:"version"`
+		OutputSHA256 string `json:"output_sha256"`
+	}
+	var probes []probe
+	var versions []string
 	switch id {
 	case GitForWindows:
 		commands = [][]string{{filepath.Join(o.root, "git", "cmd", "git.exe"), "--version"}}
@@ -336,8 +348,38 @@ func (o *windowsOperations) verifyPackage(id PackageID) error {
 		if id == MSVCBuildTools && (!bytes.Contains(output, []byte("VCToolsVersion=14.50.")) || !bytes.Contains(output, []byte("WindowsSDKVersion=10.0.26100.0")) || !bytes.Contains(output, []byte("INCLUDE=")) || !bytes.Contains(output, []byte("LIB="))) {
 			return errors.New("MSVC and Windows SDK environment is incomplete")
 		}
+		version := measuredVersion(output, expected[i])
+		if version == "" {
+			return errors.New("SDK measured version unavailable")
+		}
+		digest := sha256.Sum256(output)
+		probes = append(probes, probe{Tool: filepath.Base(command[0]), Version: version, OutputSHA256: hex.EncodeToString(digest[:])})
+		versions = append(versions, version)
 	}
+	proof, err := json.Marshal(probes)
+	if err != nil {
+		return errors.New("SDK version proof encoding failed")
+	}
+	if err := os.WriteFile(filepath.Join(o.root, "private", "versions-"+string(id)+".json"), proof, 0o600); err != nil {
+		return errors.New("SDK version proof save failed")
+	}
+	digest := sha256.Sum256(proof)
+	if o.versions == nil {
+		o.versions = make(map[PackageID]string)
+		o.proofs = make(map[PackageID]string)
+	}
+	o.versions[id], o.proofs[id] = strings.Join(versions, "; "), hex.EncodeToString(digest[:])
 	return nil
+}
+
+func measuredVersion(output []byte, prefix string) string {
+	pattern := regexp.MustCompile(`[0-9]+(?:\.[0-9]+)+(?:\.windows\.[0-9]+)?`)
+	for _, match := range pattern.FindAllString(string(output), -1) {
+		if strings.HasPrefix(match, prefix) {
+			return match
+		}
+	}
+	return ""
 }
 
 func (o *windowsOperations) environment() []string {

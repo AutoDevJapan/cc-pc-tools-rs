@@ -738,3 +738,12 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 固定8745599→910d13a119484302df245640f8e53ec9376e7c19/treeca664fd2617dc97f3d6d9a05098ae21d65db12a0の追加3fileだけをレビュー2886/modelgpt-6-lunaへ通常add --specで登録。保存spec全文一致/dispatchableを確認。実結果未受領、新SDK/実VM適用は0。
 - 元2737/親2641へmarker[2737-065638-sdk-lifecycle]で実指摘/設計修正/検査/未完/証拠/次の工程を1回配送し、2884にも原応答受領を記録。終了前も原source API固定、原AGENTS/CLAUDE既読同hash、own route/normalCI intent不在と工具container停止/PID0を確認。
 - 次は2886の実結果と固定head/既読/modelを受領し、残Mustを解消してから同clean版のhost/Linuxhelperを生成する。新SDKは新ownedrootで作り、停止後cloneだけでRust/driver/保存の受入を行う。旧SDK/失敗disk/Windows SDK/原guard/manifest/未回収を保持。原CI/終了hook/Windows13/Docker parityは未完。2886のみの正規wait、現job/実HEADのscheduler checkpointを保存して自動再開。
+## 2026-10-19 job070449: SDK受付のMust0を受領し新SDK作成を開始
+
+- 停止直前item_2は読取専用。レビュー原応答とSDK sealコード読取は完了し、存在しない任意参照seed_windows.goへのGet-Content -ErrorAction SilentlyContinueによるexit1だった。実seed実装はhost_windows.goに存在する。元操作を再実行せず、共有ToDo/既済結果を確認した。
+- レビュー2886/job20261019-070141/thread01a15109-d9f8-7251-ae60-4cb22eb337a0を受領。実turn_context gpt-6-lunaを照合し、原文GPT-6/指定Luna未確認の申告は保持。原応答SHA256A20E6A0899F8C3C3D041E1520F3EB314155341F4F2D5AC327905722C2D675B8D、固定8745599→910d13a/treeca664fdの指定3fileでMust0/Suggestion1/Nit0・検査0。
+  optional sdk_linux/他fixture-callback参照は未読申告のまま。Suggestionの同時到着テスト追加は、同mutexの判定/遷移と有効な正常/拒否対照が確認され現実害なしのため今回は追加せず、実VM検証へ進む。新しい未実装変更を合格にしたり未読を既読へ変えたりしない。
+- 同clean4da0bc7a9733011af4225d5fe9e328fcf839c08aからhost/Linuxhelperを各1回生成。host inspect-executorのadmission_linked/source_clean/module/VCSを照合。host SHA256E859F3687C5C487C4FC3EDD04716FC9E1846EBE213FFB17F64931D9CFEE89B3C、Linux4D9A8FFC7978A60B68E372236C4C32059F7B9B09A1A25FB2DA61FF6D2B56C1FC。
+- 新ownedroot4f507d643c718b1d1be991cc15692296に既存公開generic image/runner/rustup/sccache/生成済manifest/tools参照receiptをcopy/hash照合した。旧SDK9389本体や旧失敗diskは上書きしない。CC実repo1406818713/AutoDevJapan/private/admin/nonfork、原repo1154066087/PR3613/head085/ref/tree/workflowをAPI照合し、原AGENTS/CLAUDEはRAMで既読同hashを確認。
+- 同sourceのsdk-smokeを1回開始。instance acd646e8f76b934c9ab09c6f3c3d3678、hostPID61308/StartUTC2026-10-18T22:08:18.2009831Z。新VMは公開SDKの準備だけで、製品source/runner登録/GitHub mutation/原Cargoコンパイルは0。既存の2CPU/2GiB SDK作成経路で、重いCargoビルドは行わない。tools containerはseed完了/vm-created receipt後に停止/PID0。
+- この時点はSDK作成中で受入成功/ディスク永続化/回収を主張しない。再開時はownedroot4f/sdk-build-exit.private.jsonとsdk-attempt-acd...のsdk-result/vm-cleanup/実VMを照合し、受付済sdk-smokeを再送しない。次は作成成功とVM停止/除去を確認し、実disk hashと生成元の非source/非登録receiptから新候補を保持し、別cold cloneのprobeで版/driver/Signal/timeoutを確認する。原SDKと元CI失敗を保持し、元Windows13/Docker parity/終了hook/公式CIは未完。

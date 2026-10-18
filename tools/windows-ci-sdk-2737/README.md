@@ -4,10 +4,9 @@ This isolated Go module contains the fixed Windows SDK guest agent, operation
 backend, protocol, and artifact verification for the finite SDK preparation
 task. The host has provisioned fresh Hyper-V guests and verified recovery of
 failed attempts. Ordinary Windows Server Setup is running in the current
-dedicated guests. Git installation and its internal version probe have passed
-in a real LocalSystem service. The PowerShell MSI was installed, but its first
-version probe used the wrong path: the MSI appends `7` to `INSTALLFOLDER`.
-The corrected full SDK run is in progress; all-SDK readiness remains unconfirmed.
+dedicated guests. All five preparation operations and six final version checks
+passed in the real LocalSystem service on 2026-10-18. VM recovery and final
+template digest are recorded separately in the task evidence.
 
 The LocalSystem service accepts only `status`, `prepare-sdk`, and
 `verify-versions`, with SDK IDs from the fixed set in `catalog.go`. Requests
@@ -27,11 +26,30 @@ rejected by regression coverage.
 
 The pinned public artifacts are Git for Windows 2.56.0.2, PowerShell 7.6.6,
 Rust 1.97.1 MSVC components (cargo, clippy, rustc, rust-std, rustfmt), and
-sccache 0.18.0. MSVC Build Tools 14.50.18 and Windows SDK 10.0.26100.6901 are
-recorded as component versions. The fixed guest backend verifies publisher
+sccache 0.18.0. MSVC toolset 14.50 and Windows SDK ABI family 10.0.26100 are
+selected by fixed Microsoft component IDs. Signed servicing versions are
+measured rather than inferred from the resource compiler's legacy help banner.
+The fixed guest backend verifies publisher
 signatures or public release hashes, installs SDKs without compiling Rust
 projects, and probes versions as LocalSystem. Actual guest results are recorded
 separately from source compilation and host provisioning.
+
+## Measured service-user versions
+
+| Tool | Measured version |
+| --- | --- |
+| Git for Windows | 2.56.0.windows.2 |
+| PowerShell | 7.6.6 |
+| rustc / Cargo | 1.97.1 / 1.97.1 |
+| rustfmt / Clippy | 1.9.0 / 0.1.97 |
+| MSVC compiler | 19.50.35739 |
+| Windows SDK rc.exe product | 10.0.26100.8249 |
+| sccache | 0.18.0 |
+
+The MSVC probe also confirmed the selected 14.50 toolset, WindowsSDKVersion
+10.0.26100.0, and INCLUDE/LIB environment. The SDK probe separately runs rc.exe
+and verifies Windows.h/kernel32.lib before reporting its product version.
+No Rust project was built, tested or installed to obtain these measurements.
 
 ## Execution and evidence
 

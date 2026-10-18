@@ -67,4 +67,14 @@ func TestPR148RequiresActualSuccessfulOwnedTerminalJob(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatal("cancellation ignored")
 	}
+	late, stop := context.WithCancel(context.Background())
+	err = pr148AwaitLinuxConclusion(late, p, "owned", func(_ context.Context, _ string, v any) error {
+		stop()
+		j := pr148LinuxJob{ID: p.JobID, RunID: p.RunID, RunAttempt: p.Attempt, Name: "test (ubuntu-latest)", Status: "completed", Conclusion: "success", RunnerName: "owned"}
+		b, _ := json.Marshal(j)
+		return json.Unmarshal(b, v)
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatal("late official result accepted")
+	}
 }

@@ -340,6 +340,9 @@ func pr148AwaitLinuxConclusion(parent context.Context, p pr148LinuxPlan, runner 
 		if e := read(ctx, fmt.Sprintf("repos/%s/actions/jobs/%d", pr148Repo, p.JobID), &j); e != nil {
 			return e
 		}
+		if e := ctx.Err(); e != nil {
+			return e
+		}
 		if j.ID != p.JobID || j.RunID != p.RunID || j.RunAttempt != p.Attempt || j.Name != "test (ubuntu-latest)" || j.RunnerName != runner {
 			return errors.New("official Linux terminal job identity rejected")
 		}

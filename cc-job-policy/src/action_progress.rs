@@ -59,6 +59,7 @@ pub fn attempt(job: &Value) -> Value {
 
 pub fn eligible(db: &Value, row: &Value, job: &Value) -> bool {
     row["status"] == "doing"
+        && row["project"] != "owner"
         && row["dispatchable"] != false
         && job["status"] == "running"
         // ci_fix is the saved implementation label on the observed ToDo2783 worker.

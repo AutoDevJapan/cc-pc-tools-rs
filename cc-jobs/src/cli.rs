@@ -1625,7 +1625,7 @@ impl Context {
     }
 
     fn no_action_workspace(&self, db: &Value, row: &Value, job: &Value) -> bool {
-        if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&s(row, "project")) {
+        if row["project"] == "owner" {
             return false;
         }
         let repo = db["projects"][s(row, "project")].as_str().unwrap_or("");

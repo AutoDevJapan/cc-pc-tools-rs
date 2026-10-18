@@ -246,3 +246,61 @@ fn unavailable_explicit_source_model_is_retained_without_automatic_rerouting() {
     assert_eq!(f.e.backend.records[0]["model"], "gpt-6.1-luna");
     assert!(f.e.backend.launched.is_empty());
 }
+
+#[test]
+fn verified_source_not_project_name_controls_recovery_and_owner_is_excluded() {
+    for (project, allowed, recover) in [
+        ("other", true, true),
+        ("other", false, false),
+        ("owner", true, false),
+    ] {
+        let mut f = setup();
+        f.e.edit(&json!(1), |row| row["project"] = json!(project))
+            .unwrap();
+        f.e.backend.repair_allowed = allowed;
+        pass(&mut f);
+        f.e.backend.clock += 1801.;
+        pass(&mut f);
+        assert_eq!(
+            f.e.backend.cancelled.len(),
+            usize::from(recover),
+            "{project}/{allowed}"
+        );
+    }
+}
+
+#[test]
+fn new_arrivals_cannot_starve_the_next_scan_of_an_existing_worker() {
+    let mut f = setup();
+    fn add(f: &mut Fixture, id: u64) {
+        let root = (id * 10) as u32;
+        f.managed(id, root, "other", 0);
+        let child = root + 1;
+        f.e.backend.ps.insert(child, proc(child, root, "codex.exe"));
+        let j = f.e.backend.records.last_mut().unwrap();
+        j["todo_id"] = json!(id);
+        j["task_type"] = json!("ci_fix");
+        j["started_at"] = json!("2026-10-18T00:00:00Z");
+        j["codex_pid"] = json!(child);
+        j["codex_pid_created"] = proc(child, root, "codex.exe")["created"].clone();
+    }
+    for id in 2..=4 {
+        add(&mut f, id);
+    }
+    pass(&mut f);
+    assert_eq!(f.e.state["no_action_cursor"], 2);
+    assert_eq!(f.e.state["no_action_cycle_max"], 4);
+    for id in 100..=101 {
+        add(&mut f, id);
+    }
+    pass(&mut f);
+    assert_eq!(f.e.state["no_action_cursor"], 4);
+    for id in 102..=103 {
+        add(&mut f, id);
+    }
+    pass(&mut f);
+    assert_eq!(f.e.state["no_action_cursor"], 2);
+    assert_eq!(f.e.state["no_action"]["j1"]["messages"], 3); // EOF revisit, not a duplicate read
+    assert_eq!(f.e.state["no_action_cycle_max"], 103);
+    assert!(f.e.backend.cancelled.is_empty());
+}

@@ -93,6 +93,7 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
         "attempt",
         "readonly",
         "recovery",
+        "owner_project",
     ] {
         let (t, mut db, mut j, path) = setup();
         match case {
@@ -100,6 +101,7 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
             "owner" => db["items"][0]["stopped"] = json!(true),
             "dependency" => db["items"][0]["wait_on"] = json!([2]),
             "worker" => db["items"][0]["scheduler"]["job"] = json!("new"),
+            "owner_project" => db["items"][0]["project"] = json!("owner"),
             "recovery" => {
                 db["items"][0]["stall_recovery"]["pending"] = json!({"reservation":"other"})
             }

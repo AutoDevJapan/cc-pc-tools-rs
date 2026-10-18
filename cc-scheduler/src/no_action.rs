@@ -26,11 +26,7 @@ impl<B: Backend> Scheduler<B> {
         let db = self.todo()?;
         let mut rows: Vec<_> = arr(&db["items"])
             .into_iter()
-            .filter(|row| {
-                ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
-                    .contains(&s(&row["project"]))
-                    && jobs.iter().any(|j| action_progress::eligible(&db, row, j))
-            })
+            .filter(|row| jobs.iter().any(|j| action_progress::eligible(&db, row, j)))
             .collect();
         rows.sort_by_key(|r| r["id"].as_u64().unwrap_or(0));
         self.report["no_action_scan"] =
@@ -38,13 +34,29 @@ impl<B: Backend> Scheduler<B> {
         if rows.is_empty() {
             return Ok(());
         }
-        let cursor = self.state["no_action_cursor"].as_u64().unwrap_or(0);
-        let start = rows
-            .iter()
-            .position(|r| r["id"].as_u64().unwrap_or(0) > cursor)
-            .unwrap_or(0);
+        let mut cursor = self.state["no_action_cursor"].as_u64().unwrap_or(0);
+        let mut cycle_max = self.state["no_action_cycle_max"].as_u64().unwrap_or(0);
+        if !rows.iter().any(|r| {
+            r["id"]
+                .as_u64()
+                .is_some_and(|id| id > cursor && id <= cycle_max)
+        }) {
+            cursor = 0;
+            cycle_max = rows.last().and_then(|r| r["id"].as_u64()).unwrap_or(0);
+        }
+        // Freeze this pass's upper bound. New arrivals cannot postpone the wrap
+        // to existing workers forever, even if two arrive on every minute tick.
+        self.state["no_action_cycle_max"] = json!(cycle_max);
         // At most two eligible workers and one cancellation per tick; no new loop/service.
-        for row in rows.iter().cycle().skip(start).take(rows.len().min(2)) {
+        for row in rows
+            .iter()
+            .filter(|r| {
+                r["id"]
+                    .as_u64()
+                    .is_some_and(|id| id > cursor && id <= cycle_max)
+            })
+            .take(2)
+        {
             if started.elapsed() >= std::time::Duration::from_secs(5) {
                 break;
             }

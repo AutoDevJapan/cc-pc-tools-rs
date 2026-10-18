@@ -100,3 +100,23 @@ product-ci/gh_gate/Go guardの並行編集を禁止した。保存specのhash一
 依存完了後の親2839の自然巡回へ戻る。Go2849全体doneは待たない。原名簿と
 旧192件、旧4番号の未復旧は保持する。公式Windows sandbox文書には
 0xC0000142の原因説明はなく、文書だけで根因や復旧を断定していない。
+
+## 復旧結果の受領とオフライン子判定（2026-10-19 08:30 JST）
+
+2887の実結果を受領。Session0/S4Uでのuser32初期化問題について、既存tickを
+Session1/Interactiveへ変更し、個別のread-only pwsh/guard/git probeと書込拒否を確認。
+ログオンしない再起動後のS4U予備で同エラーが残る点は未解決として保持する。
+設定変更と通常workerの実成功を区別し、通常worker受入済みとは扱わない。
+
+復旧後の2874 job20261019-080157ではcmd/typeがexit0に戻ったが、正式guardの
+子worktree判定は08:06/08:09とも不成立。review2872の最新job082041も未実施。
+両jobはread-only/network=false。一方、通常側から子資格APIは現在も成功する。
+配布GoのcurrentSubworkScopePathAllowedはcurrentSubworkReceiptを通して
+currentGitHubIdentityVerifiedのオンラインgh apiを必須にしており、通信なしの
+workerからのローカル保護判定と不整合になる。ほかのfilesystem要因も未排除。
+
+この具体的な経路・実job条件・エラーをGo所有2849と親2834へ正規CLIで返した。
+受付側の実GitHub owner/repo ID照合と子のspec/root/common/実denyを保持し、
+workerのnetwork=false/read-onlyを解除せずに解消する必要がある。Goを並行編集
+せず、同じ子の実作業・依存完了後の親巡回まで2851を未完了にする。
+2887の完了待ちは解除済み。Go全体doneは待たず、必要な限定部分の修復と配布を追う。

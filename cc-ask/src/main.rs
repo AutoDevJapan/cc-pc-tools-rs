@@ -207,6 +207,43 @@ fn run(command: Commands) -> Result<()> {
     if let Commands::Ask(args) = &command {
         cc_ask::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
     }
+    let home = env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask");
+    let bridged = match &command {
+        Commands::Ask(args) => cc_ask::conversation_bridge::try_ask(&home, &mut RealEffects, args)?,
+        Commands::Log {
+            topic,
+            text,
+            body_file,
+            notify,
+            attach,
+        } => cc_ask::conversation_bridge::try_log(
+            &home,
+            &mut RealEffects,
+            topic,
+            text,
+            body_file.as_deref(),
+            *notify,
+            attach,
+        )?,
+        Commands::Post {
+            thread,
+            body_file,
+            notify,
+            attach,
+        } => cc_ask::conversation_bridge::try_post(
+            &home,
+            &mut RealEffects,
+            thread,
+            body_file,
+            *notify,
+            attach,
+        )?,
+        _ => None,
+    };
+    if let Some(result) = bridged {
+        println!("{result}");
+        return Ok(());
+    }
     let _sync_deadline = if matches!(&command, Commands::SyncJobCard { .. }) {
         Some(cc_ask::tick_runtime::Deadline::new(
             std::time::Duration::from_secs(10),

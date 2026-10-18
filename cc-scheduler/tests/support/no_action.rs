@@ -22,6 +22,7 @@ fn setup() -> Fixture {
     j["codex_pid_created"] = proc(2, 1, "codex.exe")["created"].clone();
     j["started_at"] = json!("2026-10-18T00:00:00Z");
     j["task_type"] = json!("ci_fix");
+    j["sandbox"] = json!("danger-full-access");
     j["todo_id"] = json!(1);
     j["cwd"] = cwd;
     f.cfg["kill_enabled"] = json!(false);
@@ -92,12 +93,13 @@ fn no_action_rechecks_stop_dependency_generation_and_worker_after_scope_check() 
 }
 #[test]
 fn review_children_unknown_scope_and_unread_events_never_cancel() {
-    for case in ["review", "child", "scope", "unread"] {
+    for case in ["review", "child", "scope", "unread", "restricted_scope"] {
         let mut f = setup();
         pass(&mut f);
         f.e.backend.clock += 1801.;
         match case {
             "review" => f.e.backend.records[0]["task_type"] = json!("review"),
+            "restricted_scope" => f.e.backend.records[0]["sandbox"] = json!("workspace-write"),
             "child" => {
                 f.e.backend.ps.insert(3, proc(3, 2, "cargo.exe"));
             }
@@ -279,6 +281,7 @@ fn new_arrivals_cannot_starve_the_next_scan_of_an_existing_worker() {
         f.e.backend.ps.insert(child, proc(child, root, "codex.exe"));
         let j = f.e.backend.records.last_mut().unwrap();
         j["todo_id"] = json!(id);
+        j["sandbox"] = json!("danger-full-access");
         j["task_type"] = json!("ci_fix");
         j["started_at"] = json!("2026-10-18T00:00:00Z");
         j["codex_pid"] = json!(child);

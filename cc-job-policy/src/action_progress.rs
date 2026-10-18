@@ -65,7 +65,9 @@ pub fn eligible(db: &Value, row: &Value, job: &Value) -> bool {
         && job["status"] == "running"
         // ci_fix is the saved implementation label on the observed ToDo2783 worker.
         && matches!(job["task_type"].as_str(), Some("implementation" | "ci_fix"))
-        && job["sandbox"] != "read-only"
+        // The ordinary implementation launcher preserves this scope exactly.
+        // Restricted or unknown legacy scopes must not be widened on recovery.
+        && job["sandbox"] == "danger-full-access"
         && row["sandbox"] != "read-only"
         && row["scheduler"]["console_request"]["read_only"] != true
         && !["review", "research"].contains(&row["subwork"]["kind"].as_str().unwrap_or(""))

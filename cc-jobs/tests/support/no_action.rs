@@ -96,6 +96,7 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
         "owner_project",
         "not_dispatchable",
         "missing_spec",
+        "restricted_scope",
     ] {
         let (t, mut db, mut j, path) = setup();
         match case {
@@ -110,6 +111,7 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
                 db["items"][0]["stall_recovery"]["pending"] = json!({"reservation":"other"})
             }
             "readonly" => j["sandbox"] = json!("read-only"),
+            "restricted_scope" => j["sandbox"] = json!("workspace-write"),
             "attempt" => j["codex_pid_created"] = json!(23),
             "child" => t.rt.pause_allowed.store(false, Ordering::Relaxed),
             "tool" | "partial" => {

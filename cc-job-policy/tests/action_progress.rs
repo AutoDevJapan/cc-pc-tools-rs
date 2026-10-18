@@ -171,6 +171,7 @@ fn stop_wait_review_and_new_worker_are_not_candidates() {
         let mut j = job();
         j["status"] = json!("running");
         j["task_type"] = json!("implementation");
+        j["sandbox"] = json!("danger-full-access");
         j["todo_id"] = json!(1);
         j
     };

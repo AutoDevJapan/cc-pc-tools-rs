@@ -614,6 +614,14 @@ func main() {
 	var e error
 	if len(os.Args) == 2 && os.Args[1] == "normal-ci-outline" {
 		e = outlineNormalCI(ctx)
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-route-apply" {
+		var result normalRouteCommit
+		result, e = applyNormalRoute(ctx, os.Args[2], get, mutateJSON)
+		if e == nil {
+			e = json.NewEncoder(os.Stdout).Encode(result)
+		}
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-route-release" {
+		e = releaseNormalRoute(ctx, os.Args[2], get, mutateJSON)
 	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-job-plan" {
 		e = normalCIJobCLI(ctx, os.Args[2])
 	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-plan" {

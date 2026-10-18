@@ -359,3 +359,31 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 原b194のAGENTS/CLAUDEをRAMで再取得し、235dcf.../70c7de...と一致。前後のrepo/PR/head/ref固定を再確認。
   製品headb194/tree f7eea82cと、補助code headc0f59e1/tree c5929a9を区別する。原PR/ref/workflow/route変数/予算は変更していない。
   今回はVM/runner/container/原検査を起動していない。未完SDK資産と旧回収記録を保持し、通常CI/原merge/Prd/cleanupは未完。
+
+## 2026-10-18 job20261018-234740-todo-2737（作業は10/19へ継続）
+
+- 原2783がdoneとなり実SDKを受領。固定source9622a766e99a378427eccf9f21967f0fb9ca890f、runtime2381383d097779fb153689b5c83eb4c4f31f2456/finalizerf7697c927cd0723e5d1c5cd595a471e9760ce5f1。
+  保持diskはD:/CC/Work/unattended-operations-20261013-wt/todo-2783-godd-mcp-ci-windows-guest-sdk/codex-owned-56e63ad56bbdd616f61707bf87799948/guest.vhdx。
+  実21,277,704,192bytes全体をFileShare.Readだけで開きSHA256 e19d76f807c012ebeff2d5d161df3540d851a447aceb9ccbf7471eb877d2d816へ一致確認。原assetは変更/移動/削除せず保持。
+  read-only broker照合でも元VM f0561845-8dfe-4fcd-bd9d-2d909549a670のCIM不在、VHD Attached=falseを確認した。
+- private evidence hash9a6044c2dc6c7e25824ddf870bb4eff49a865541cd9aefeff3c606bb8cc2cc4eとdiagnostics/operations.log hash2fb1e2f00209099061f0d99c6856dd97fd30c62e52936fd769e7008b7a6cb3d2が一致。
+  初回はraw log hashを集計sdk-operations.private.jsonへ誤って照合して拒否した。集計JSON自体は455ec19c34f5580ec271fd5ef518ca222a3720c6dd7e887936a75d4a341315e4で、原logとは別の証拠として保持する。SDK破損と報告しない。
+  SDK5準備/6版確認は2783の実結果。原source/runner/CI成功とは別で、再インストール・旧SDK fixtureの再実行はしていない。
+- cc repo1406818713のAutoDevJapan/private/admin/nonforkをAPI再照合し、元製品b194のAGENTS/CLAUDEをRAM再取得。235dcf.../70c7de...一致、repo1154066087/PR3613/head/refの前後固定を確認。
+  親2641/旧CodeQL候補を黙って採用せず、原製品folder/guard/owner-work/登録manifest/旧未回収を触っていない。
+- 新safe-delete root109d39499fb82a312701c7879faa728d（C:/Users/makhmeto/AppData/Local/Temp/codex-owned-109d39499fb82a312701c7879faa728d）に受領/回収/検査/再開用の記録を作成。
+  Windows SDKは準備済みだが公式job用guest backendは未実装だったため、次の有限工程だけを2828へ--spec付き通常登録した。SDK準備やMust修正の複製ではない。
+  2828はtools/windows-ci-runner-2737のtyped Go backend/agentと必要な既存SDK libraryの最小接続を担当。原source/実VM/登録/重Cargo/原PR操作は実行させず、親が実受入を担当する。
+  同taskに実装前のlabel契約を保存specへ反映した。新担当はjob20261019-000032でdoingを確認済み。直接子Codex起動なし。
+- 親側ではnormal-ci-route-apply/releaseとnonce所有のrepo変数、元4runs-on scalarの最小変更、sole旧parent/force=false更新を実装した。まだGitHubへ実適用/dispatchしていない。
+  source/PR/ref/tree/workflowhashを再照合。別の既存変数値を上書き/削除せず、失敗時は自分のnonceだけ回収しsource refは戻さない。lost replyもstart/end receiptで残して照合する。
+  変数一覧は公式page最大30/全体1000件の有限範囲とし、欠落/null schema・部分一覧・case違い重複を不在扱いにしない。variable DELETE自体にvalue CASは無く、task専用namespaceの排他と前後照合が境界。
+- 実運用labelは固定prefixだけでなくrole/runIDへ束縛する。Linux verify/gateは<base>-<role>-<run-id>、Windowsはcc-product-2737-1154066087-windows-windows-native-check-<run-id>。
+  nonce一致+workflow_dispatch+元refだけformat/github.run_id式で選び、他条件と変数不在では原OSへ戻る。legacy read-only proposalは保持するがlive requestには32hex RouteLeaseを必須とした。
+  guestとhost/公式job APIで同じrole/run labelを検証する。原M1の任意exe入力は復活させず、M2 verifierも変更していない。新差分は2800の旧Must0の対象外で追加レビューが必要。
+- 関連product-ci/normalciと利用側ci-guestのWindows Go test/vetが成功。lost POST/PATCH、4scalar以外不変、他run/role/nonce、既存flag、read失敗、missing schema、同時head進行、回収replayを合成APIで確認。
+  Linux consumerのtest binaryもcross-compile成功。今回は実Linux/Windowsの公式job acceptance、Cargo/原workspace/13工程/原log取得はまだ0。sourcepacketの有効な旧検査は再実行していない。
+  文書追記のpatch context失敗はソース編集の照合エラーで、実行承認拒否ではない。対象位置を読み直して修正した。
+- 次は新route差分の有限別モデルレビュー、2828受領/統合/関連検査、fresh nonce SDK cloneでの実受入。その後だけ原PR同branchの期待旧b194/force=false更新を行い、新head/tree/wfhashとCodeQL再解析要否を親2641へ配送する。
+  元公式CIを手動successへ置換せず、原13工程/条件/profile/直列/timeout20/Docker parityを維持して完走する。親のmerge/Prdは担当しない。
+  SDK2783へのwaitはもう不要。ほかの担当だけを待つ時は新2828/新差分reviewへwaitを記録し、実HEAD/jobでcheckpointを保存する。

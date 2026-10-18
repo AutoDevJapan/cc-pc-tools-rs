@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestOfficialBindingConsumesProductCISchema(t *testing.T) {
 	// OS is the product-ci normalCIRoutes schema ("Linux"), not a GOOS value.
-	q := linuxJobRequest{Source: fixedSourcePin(), RunID: 17, Attempt: 1, Role: "verify"}
-	raw := []byte(`{"RepoID":1154066087,"RunID":17,"JobID":29,"PR":3613,"Attempt":1,"TimeoutMinutes":30,"OS":"Linux","Role":"verify","Label":"cc-product-2737-1154066087-linux","JobName":"verify"}`)
+	q := linuxJobRequest{Source: fixedSourcePin(), RunID: 17, Attempt: 1, Role: "verify", RouteLease: strings.Repeat("a", 32)}
+	raw := []byte(`{"RepoID":1154066087,"RunID":17,"JobID":29,"PR":3613,"Attempt":1,"TimeoutMinutes":30,"OS":"Linux","Role":"verify","Label":"cc-product-2737-1154066087-linux-verify-17","JobName":"verify"}`)
 	var b jobBinding
 	if json.Unmarshal(raw, &b) != nil {
 		t.Fatal("schema fixture invalid")
@@ -33,7 +34,7 @@ func TestOfficialBindingConsumesProductCISchema(t *testing.T) {
 func TestLiveRequestRejectsExecutableSelection(t *testing.T) {
 	root := t.TempDir()
 	file := filepath.Join(root, "request.json")
-	q := linuxJobRequest{Source: fixedSourcePin(), RunID: 17, Attempt: 1, Role: "verify"}
+	q := linuxJobRequest{Source: fixedSourcePin(), RunID: 17, Attempt: 1, Role: "verify", RouteLease: strings.Repeat("a", 32)}
 	raw, e := json.Marshal(q)
 	if e != nil {
 		t.Fatal(e)

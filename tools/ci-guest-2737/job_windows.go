@@ -19,11 +19,12 @@ import (
 // A caller must explicitly supply the reviewed revision and official run. This
 // command cannot update a ref, enable routes, dispatch a workflow or select HEAD.
 type linuxJobRequest struct {
-	Source  sourcepacket.Pin
-	RunID   int64
-	Attempt int
-	Role    string
-	Inputs  map[string]string
+	Source     sourcepacket.Pin
+	RunID      int64
+	Attempt    int
+	Role       string
+	RouteLease string
+	Inputs     map[string]string
 }
 type jobBinding = normalci.Binding
 
@@ -35,7 +36,7 @@ func readJobRequest(path string) (q linuxJobRequest, e error) {
 	defer f.Close()
 	d := json.NewDecoder(io.LimitReader(f, 32769))
 	d.DisallowUnknownFields()
-	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate") {
+	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate") || !normalci.ValidLease(q.RouteLease) {
 		return q, errors.New("live request rejected")
 	}
 	return q, nil
@@ -71,12 +72,12 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 	}
 	// Both the CLI and this controller link the SAME existing read-only policy.
 	// There is no second executable, request-selected path or process environment.
-	p := normalci.Pin{Source: normalci.Candidate{ID: pin.Source.ID, PR: pin.Source.PR, SHA: pin.Source.SHA}, Tree: pin.Tree, WorkflowSHA: pin.WorkflowSHA, RunID: q.RunID, Attempt: q.Attempt, Role: q.Role, RunnerID: runnerID, RunnerName: name}
+	p := normalci.Pin{Source: normalci.Candidate{ID: pin.Source.ID, PR: pin.Source.PR, SHA: pin.Source.SHA}, Tree: pin.Tree, WorkflowSHA: pin.WorkflowSHA, RunID: q.RunID, Attempt: q.Attempt, Role: q.Role, RunnerID: runnerID, RunnerName: name, RouteLease: q.RouteLease}
 	b, e = normalci.Plan(ctx, p, func(ctx context.Context, endpoint string, out any) error {
 		return runnerAPI(ctx, "GET", endpoint, nil, out)
 	})
 	if e != nil {
-		return b, errors.New("official job admission failed")
+		return b, fmt.Errorf("official job admission failed: %w", e)
 	}
 	if !validOfficialBinding(q, b) {
 		return b, errors.New("official binding response rejected")
@@ -88,7 +89,7 @@ func validOfficialBinding(q linuxJobRequest, b jobBinding) bool {
 	if q.Role == "ci-gate" {
 		timeout = 5
 	}
-	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == "Linux" && b.Label == "cc-product-2737-1154066087-linux" && b.TimeoutMinutes == timeout && b.JobName != ""
+	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == "Linux" && b.Label == normalci.RuntimeLabel(q.Role, q.RunID) && b.TimeoutMinutes == timeout && b.JobName != ""
 }
 func sendLiveFrame(c net.Conn, v any) error {
 	b, e := json.Marshal(v)
@@ -181,7 +182,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	var conn net.Conn
 	var runnerID int64
 	name := "todo2737-" + instance
-	label := "cc-product-2737-1154066087-linux"
+	label := normalci.RuntimeLabel(q.Role, q.RunID)
 	defer func() {
 		if conn != nil {
 			_ = conn.Close()

@@ -131,10 +131,19 @@ No actual Cargo build, job hook, workflow dispatch or CI success is certified.
 The next, unexercised `linux-job <owned-root> <SDK-root> <Linux-helper>
 <request.json>` path now connects canonical Cargo admission to a single official
 job. The explicit request contains Source (head/tree/workflow hash), RunID,
-Attempt, Role (`verify` or `ci-gate`), and empty Inputs. Executable/program paths
+Attempt, Role (`verify` or `ci-gate`), RouteLease (32 lowercase hex), and empty
+Inputs. Executable/program paths
 are not accepted. It cannot advance a ref, enable a route variable, dispatch a
 workflow, or prepare Windows. The actual original manual workflow has no inputs;
 its workflow_call release inputs are not accepted as manual job authority.
+
+Live labels now include the official run ID and job role, e.g.
+`cc-product-2737-1154066087-linux-verify-<run-id>`. The public seed/source proof
+and official API claim remain required. The host verifies the nonce-owned route
+switch and matching workflow expression; the guest independently checks its
+role/run-specific label. Historical fixed-label proposal fixtures are not live
+admission. The Windows backend contract uses
+`cc-product-2737-1154066087-windows-windows-native-check-<run-id>`.
 
 The public seed fixes the expected revision. mTLS source transfer precedes the
 in-memory registration token; an exclusive intent precedes registration, and

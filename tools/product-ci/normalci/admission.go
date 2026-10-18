@@ -22,6 +22,7 @@ type Pin struct {
 	Role              string
 	RunnerID          int64
 	RunnerName        string
+	RouteLease        string
 }
 type Binding struct {
 	RepoID, RunID, JobID                             int64
@@ -63,10 +64,14 @@ func Revision(s string) bool {
 	return len(s) == 40 && strings.Trim(s, "0123456789abcdef") == ""
 }
 func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
+	stage := "expectations"
 	bad := func() (Binding, error) {
-		return Binding{}, errors.New("normal CI job binding rejected")
+		return Binding{}, fmt.Errorf("normal CI job binding rejected at %s", stage)
 	}
 	if p.Source.ID != RepoID || p.Source.PR != 3613 || !Revision(p.Source.SHA) || !Revision(p.Tree) || len(p.WorkflowSHA) != 64 || strings.Trim(p.WorkflowSHA, "0123456789abcdef") != "" || p.RunID < 1 || p.Attempt < 1 || p.RunnerID < 0 || (p.RunnerID == 0 && p.RunnerName != "") {
+		return bad()
+	}
+	if p.RouteLease != "" && !ValidLease(p.RouteLease) {
 		return bad()
 	}
 	r, e := Verify(ctx, p.Source, read)
@@ -77,14 +82,21 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 		return bad()
 	}
 	var routeSwitch struct{ Name, Value string }
-	if read(ctx, "repos/"+r.FullName+"/actions/variables/"+RouteVariable, &routeSwitch) != nil || routeSwitch.Name != RouteVariable || routeSwitch.Value != "enabled" {
+	stage = "route-variable"
+	value := "enabled"
+	if p.RouteLease != "" {
+		value = LeaseValue(p.RouteLease)
+	}
+	if read(ctx, "repos/"+r.FullName+"/actions/variables/"+RouteVariable, &routeSwitch) != nil || routeSwitch.Name != RouteVariable || routeSwitch.Value != value {
 		return bad()
 	}
 	var pr Pull
+	stage = "pr-ref"
 	if read(ctx, fmt.Sprintf("repos/%s/pulls/3613", r.FullName), &pr) != nil || pr.Head.Ref != "codex/todo2641-http-response-pseudo-20261015" {
 		return bad()
 	}
 	var run workflowRun
+	stage = "official-run"
 	if read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", r.FullName, p.RunID), &run) != nil {
 		return bad()
 	}
@@ -92,10 +104,12 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 		return bad()
 	}
 	var commit struct{ Tree struct{ SHA string } }
+	stage = "source-tree"
 	if read(ctx, "repos/"+r.FullName+"/git/commits/"+p.Source.SHA, &commit) != nil || commit.Tree.SHA != p.Tree {
 		return bad()
 	}
 	var content struct{ Encoding, Content string }
+	stage = "workflow-bytes"
 	if read(ctx, "repos/"+r.FullName+"/contents/.github/workflows/ci.yml?ref="+url.QueryEscape(p.Source.SHA), &content) != nil || content.Encoding != "base64" {
 		return bad()
 	}
@@ -112,12 +126,22 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 		return bad()
 	}
 	allowedNames := map[string]string{}
+	stage = "workflow-jobs"
 	var b Binding
 	for _, route := range Routes() {
 		job := Field(jobs, route.Job)
 		runner := Field(job, "runs-on")
 		timeout := Field(job, "timeout-minutes")
-		if runner == nil || runner.Value != RunnerExpression(route) || timeout == nil {
+		expression := RunnerExpression(route)
+		label := route.Proposed
+		if p.RouteLease != "" {
+			expression, e = RunnerExpressionForLease(route, p.RouteLease)
+			if e != nil {
+				return bad()
+			}
+			label = RuntimeLabel(route.Job, p.RunID)
+		}
+		if runner == nil || runner.Value != expression || timeout == nil {
 			return bad()
 		}
 		minutes, e := strconv.Atoi(timeout.Value)
@@ -140,7 +164,7 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 		}
 		allowedNames[name] = route.Job
 		if route.Job == p.Role {
-			b = Binding{RepoID: p.Source.ID, PR: p.Source.PR, RunID: p.RunID, Attempt: p.Attempt, SHA: p.Source.SHA, Tree: p.Tree, WorkflowSHA: p.WorkflowSHA, Role: p.Role, Label: route.Proposed, OS: route.OS, JobName: name, TimeoutMinutes: minutes}
+			b = Binding{RepoID: p.Source.ID, PR: p.Source.PR, RunID: p.RunID, Attempt: p.Attempt, SHA: p.Source.SHA, Tree: p.Tree, WorkflowSHA: p.WorkflowSHA, Role: p.Role, Label: label, OS: route.OS, JobName: name, TimeoutMinutes: minutes}
 		}
 	}
 	if b.Role == "" {
@@ -150,6 +174,7 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 		return bad()
 	}
 	js, e := ReadJobs(ctx, fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d/jobs?per_page=100", r.FullName, p.RunID, p.Attempt), read)
+	stage = "official-job-claim"
 	if e != nil {
 		return bad()
 	}
@@ -181,6 +206,7 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 	if _, e = Verify(ctx, p.Source, read); e != nil {
 		return Binding{}, e
 	}
+	stage = "source-revalidation"
 	if read(ctx, fmt.Sprintf("repos/%s/pulls/3613", r.FullName), &pr) != nil || pr.Head.Ref != "codex/todo2641-http-response-pseudo-20261015" || pr.Head.SHA != p.Source.SHA || pr.State != "open" || pr.Head.Repo.ID != p.Source.ID || pr.Base.Repo.ID != p.Source.ID {
 		return bad()
 	}

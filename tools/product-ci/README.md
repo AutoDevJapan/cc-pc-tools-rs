@@ -259,8 +259,9 @@ the dedicated label. All other cases fall back to the exact original OS label.
 Removing that variable therefore restores ordinary routing after cleanup and
 on main; no dangling task label is imposed on future PRs/schedules/pushes.
 Only the four runs-on scalar bytes change, with a parsed-expression recheck.
-This revised proposal has not been applied and needs delta review. Variable
-ownership, creation and restoration must be implemented before using it.
+This read-only proposal is retained for comparison. The explicit publication
+implementation below owns a fresh nonce and adds run/job-specific labels; its
+delta review and live acceptance remain separate from this proposal.
 `normal-ci-outline` only reports setup/checkout semantics from the fixed RAM
 workflow; it does not expose source commands, logs, secrets or mutate GitHub.
 
@@ -272,3 +273,46 @@ same policy. The controller no longer accepts a ProductCI path or runs a second
 admission program. The unchanged finite API fixtures cover the shared policy,
 including wrong source/run/attempt/runner and branch advancement. This refactor
 does not dispatch a workflow, register a runner or alter an original ref.
+
+## Owned route publication for the finite normal CI
+
+`normal-ci-route-apply <new-owned-dir>` is the explicit publication command,
+not a dry run. Use it only after the required backend acceptance and delta
+review. It accepts no repository/ref/head/force override: PR3613 on the fixed
+b194 base/tree/workflow is revalidated. Only the four original runs-on scalar
+tokens change; all other bytes, file mode and the Windows 13 commands remain.
+The Git commit has one parent, the expected old SHA. The final ref PATCH uses
+force=false, so a concurrent branch advance cannot be overwritten. The new
+commit/tree/workflow hash/lease are saved and printed as metadata. Workflow
+bytes and Git API payloads stay in RAM; no workflow or product checkout is
+written to the host. This command does not dispatch a run or create a PR.
+
+The actual switch is a fresh non-sensitive nonce value in CC_PRODUCT_2737_CI,
+not the historical enabled value used by the read-only proposal fixtures.
+An already-existing flag is refused. An exclusive, flushed local intent
+precedes creation; a lost reply is reconciled only by its exact nonce value.
+The scalar expression requires that value, workflow_dispatch and the fixed
+task ref. Its format expression includes github.run_id AND the job role.
+Resolved labels are `<old-dedicated-label>-<role>-<run-id>`, so another run or
+job cannot claim the same ephemeral registration. All other refs/events, and
+an absent switch, retain the original OS label. The host binding request must
+include the 32-hex RouteLease; legacy fixture plans do not authorize live jobs.
+
+Each API mutation has private start/end receipts, including a failed initial
+reply. Failure removes only the nonce-owned switch and never resets a branch.
+Unverified cleanup leaves the original intent for recovery. After the finite
+run is complete or cancelled AND its processes/VMs/registrations have drained,
+`normal-ci-route-release <same-owned-dir>` removes that switch and proves
+absence. A changed foreign value is never overwritten or deleted. Repeated
+release is idempotent for the remote flag and does not change product source.
+The controller owns this reserved variable namespace; GitHub variable deletion
+has no atomic value-CAS, so an out-of-band writer is outside that exclusivity
+contract and observed ownership changes fail closed.
+
+Repository variable inventory uses the documented maximum page size 30 and a
+finite 1,000-variable bound. Missing/null schema, partial inventory and duplicate
+case-insensitive names fail closed, rather than being treated as absence.
+These paths currently have synthetic API acceptance only, not a live mutation.
+References: [repository variables](https://docs.github.com/en/rest/actions/variables),
+[ref updates](https://docs.github.com/en/rest/git/refs#update-a-reference),
+[runs-on contexts](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability).

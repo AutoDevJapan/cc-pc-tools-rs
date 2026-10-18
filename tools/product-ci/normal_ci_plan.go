@@ -80,6 +80,15 @@ func yamlField(n *yaml.Node, key string) *yaml.Node { return normalci.Field(n, k
 // caches and the exact Docker parity invocation, remain byte-for-byte equal.
 // The proposed bytes exist in RAM only; the caller must not persist source.
 func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
+	return proposeNormalCIRouteForLease(data, expected, "")
+}
+func proposeNormalCIRouteForLease(data []byte, expected, lease string) ([]byte, error) {
+	expression := func(r normalCIRoute) (string, error) {
+		if lease == "" {
+			return normalCIRunnerExpression(r), nil
+		}
+		return normalci.RunnerExpressionForLease(r, lease)
+	}
 	if digest(data) != expected {
 		return nil, errors.New("fixed normal CI workflow digest changed")
 	}
@@ -119,7 +128,11 @@ func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
 		if offset+len(r.Previous) > len(data) || string(data[offset:offset+len(r.Previous)]) != r.Previous {
 			return nil, errors.New("normal CI runner token position unverified")
 		}
-		edits = append(edits, replacement{offset, offset + len(r.Previous), normalCIRunnerExpression(r)})
+		value, e := expression(r)
+		if e != nil {
+			return nil, e
+		}
+		edits = append(edits, replacement{offset, offset + len(r.Previous), value})
 	}
 	sort.Slice(edits, func(i, j int) bool { return edits[i].start < edits[j].start })
 	var out bytes.Buffer
@@ -138,7 +151,11 @@ func proposeNormalCIRoute(data []byte, expected string) ([]byte, error) {
 		return nil, e
 	}
 	for _, r := range routes {
-		if n := yamlField(yamlField(yamlField(parsed, "jobs"), r.Job), "runs-on"); n == nil || n.Value != normalCIRunnerExpression(r) {
+		value, e := expression(r)
+		if e != nil {
+			return nil, e
+		}
+		if n := yamlField(yamlField(yamlField(parsed, "jobs"), r.Job), "runs-on"); n == nil || n.Value != value {
 			return nil, errors.New("normal CI prepared route reparse rejected")
 		}
 	}

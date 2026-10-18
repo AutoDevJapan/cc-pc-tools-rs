@@ -2,6 +2,7 @@ package main
 
 import (
 	sourcepacket "cc/ci-source-2737"
+	"cc/product-ci/normalci"
 	"errors"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ func validSourcePin(p sourcepacket.Pin) bool {
 	return len(p.HeadSHA) == 40 && strings.Trim(p.HeadSHA, "0123456789abcdef") == "" && len(p.TreeSHA) == 40 && strings.Trim(p.TreeSHA, "0123456789abcdef") == "" && validHash(p.WorkflowSHA256)
 }
 func validLinuxJob(p linuxJobPlan, expected sourcepacket.Pin, instance string) bool {
-	if !validSourcePin(expected) || p.Source != expected || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+instance || p.Label != "cc-product-2737-1154066087-linux" || (p.Role != "verify" && p.Role != "ci-gate") || len(p.Inputs) != 0 {
+	if !validSourcePin(expected) || p.Source != expected || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+instance || p.Label != normalci.RuntimeLabel(p.Role, p.RunID) || (p.Role != "verify" && p.Role != "ci-gate") || len(p.Inputs) != 0 {
 		return false
 	}
 	// The pinned original workflow declares no workflow_dispatch inputs. Its

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cc/product-ci/normalci"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -8,6 +9,69 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestBoundNormalJobRejectsOtherRunRoleAndLease(t *testing.T) {
+	for _, fault := range []string{"", "wrong-lease", "other-run-label", "other-role-label"} {
+		t.Run(fault, func(t *testing.T) {
+			p, legacy := normalJobFixture(t, "")
+			p.RouteLease = strings.Repeat("c", 32)
+			data, e := proposeNormalCIRouteForLease(normalCIFixture(), digest(normalCIFixture()), p.RouteLease)
+			if e != nil {
+				t.Fatal(e)
+			}
+			for _, r := range normalCIRoutes() {
+				minutes := 5
+				if r.Job == "verify" {
+					minutes = 30
+				}
+				if r.Job == "windows-native-check" {
+					minutes = 20
+				}
+				expr, e := normalci.RunnerExpressionForLease(r, p.RouteLease)
+				if e != nil {
+					t.Fatal(e)
+				}
+				prefix := fmt.Sprintf("  %s:\r\n    runs-on: %s # unchanged comment\r\n    timeout-minutes: ", r.Job, expr)
+				data = []byte(strings.Replace(string(data), prefix+"20", prefix+fmt.Sprint(minutes), 1))
+			}
+			p.WorkflowSHA = digest(data)
+			read := func(ctx context.Context, key string, out any) error {
+				var value any
+				switch {
+				case strings.Contains(key, "/contents/.github/workflows/ci.yml?"):
+					value = map[string]string{"encoding": "base64", "content": base64.StdEncoding.EncodeToString(data)}
+				case strings.HasSuffix(key, "/actions/variables/"+normalCIRouteVariable):
+					v := normalci.LeaseValue(p.RouteLease)
+					if fault == "wrong-lease" {
+						v = normalci.LeaseValue(strings.Repeat("d", 32))
+					}
+					value = map[string]string{"name": normalCIRouteVariable, "value": v}
+				case strings.Contains(key, "/attempts/1/jobs?"):
+					label := normalci.RuntimeLabel("verify", p.RunID)
+					if fault == "other-run-label" {
+						label = normalci.RuntimeLabel("verify", p.RunID+1)
+					}
+					if fault == "other-role-label" {
+						label = normalci.RuntimeLabel("ci-gate", p.RunID)
+					}
+					value = map[string]any{"total_count": 1, "jobs": []any{map[string]any{"id": 888, "run_id": p.RunID, "name": "verify", "status": "queued", "runner_id": 0, "runner_name": "", "labels": []string{label}}}}
+				default:
+					return legacy(ctx, key, out)
+				}
+				b, _ := json.Marshal(value)
+				return json.Unmarshal(b, out)
+			}
+			result, e := normalCIJobPlan(context.Background(), p, read)
+			if fault == "" {
+				if e != nil || result.Label != normalci.RuntimeLabel("verify", p.RunID) {
+					t.Fatalf("bound real job rejected: %v", e)
+				}
+			} else if e == nil {
+				t.Fatal("another run/role/lease accepted")
+			}
+		})
+	}
+}
 
 func normalJobFixture(t *testing.T, fault string) (normalCIJobPin, api) {
 	t.Helper()

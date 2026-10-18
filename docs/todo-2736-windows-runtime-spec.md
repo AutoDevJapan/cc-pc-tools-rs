@@ -1,0 +1,22 @@
+# PR148のWindows検査に必要な工具とsource供給を有限経路へ接続する
+
+元2736の独立した実装工程。元2640/880の未完・停止・依存は解除しない。終了した2710/2730/2749のroot/SID/profile/guard/manifest/拒否cleanupは使わず、2381の後片付けを前提にしない。GPU/Civ6/再起動/新常駐/追加費用/APIキー/本人PC操作/直接子Codexは禁止。新しい保護設定・受付manifest・共有resident bridge・SDK/gateの共有ACLを作成/変更しない。
+
+起動時D:/CC/AGENTS.md、repo AGENTS.md、元2736 specとTODO-2736-CHECKPOINT.mdを読む。GitHubの製品対象はAutoDevJapan/civ6-banseiki repo1392152644 PR148のみ。元head75a4051305b6f47c70ddb59a8d2bf9015666f12c/treececb9cd535d135a1eb4407882db532c325f42860/base1100676d1ed421794c252fb4b15ed3d954e21a5b/元branchを保持する。製品workflow/source展開・runner登録・dispatch・正式製品検査はこの子で行わず、親のレビュー済み統合後の工程とする。
+
+出発点は親のローカルgit object 4f47c1258d24a275125cb53490d28cfde14517e8。これはpc-toolsのGo helper sourceであり製品sourceではない。GitHub OAuthのworkflow scope不足で親のpushが拒否されているためremote PR189 head6b5c387を最新コードと誤認しない。自分のworktreeで、この固定objectからtools/pr148-windows-runner、tools/product-ci/pr148scope、tools/product-ci/go.mod/go.sumだけを取り込んでよい。原2736のworktreeや他担当の作業ファイルは編集しない。自分の新しいGoファイルと、このWindows moduleの必要な接続点だけを変更する。共通workflow生成/packageと製品workflowは読み取り専用。helperのGitHub pushが同じscope不足で拒否されたら迂回しない。親のbranch/PRは書き換えない。
+
+既知: Windows helperは有限virtual-account service、制限token、Job Object、正常/取消し排出、同repoだけの公式ephemeral runnerのRAM token→stdin→kernel PIDを照合したpipeを持つ。旧2763/2764のMust0とfixtureは旧sourceの実証のみ。親はnew head/tree・同branch workflow_dispatch・実job ID・全OS matrix・全tree・三workflow完全一致の契約を揃えた。共通Go packageがcanonical workflow案を1か所で生成する。最新の原2788レビューは63ddef6にMust2。4f47c12でLinux省略timeout360分、Windowscollectionのterminal run非依存を修正した。新collectionはprotected local drainの後にrepo/immutable run/source/runner0だけを照合し、CI成功を判定しない。修正の追加レビューは親が別に登録するのでその工程を重複しない。
+
+必要な実装は次の未達だけ。
+1. 新service専用runtimeへ、認証を渡さず固定実Git HEAD/tree/index/全tracked bytesを供給する有限materializer。GitHub API→RAM→新しい専用資源のみ。実行モードのnew headは元75aだけを親に持ち、三workflowが共通生成bytes、残りの全tree/path/modeは不変であることを保つ。任意host command/admin callbackや原製品folderのclone/checkoutは作らない。子の実検査は合成Git source/API fixtureだけとし、製品source取得/展開はしない。
+2. 原Windows Rust/native/live-chain unitのRustup/Cargo/PowerShell/scenario commandsがそのまま動く新home/PATH/SDKの供給。filtered service tokenから既存SDK・D:/CC/Tools/sccache/sccache.exe・共有Cargo gateを利用できるか、credential-freeに限定して実測する。既存のユーザーprofileや秘密・旧SDK/rootを探さない。共有ACLを広げず、不足工具は公式公開distributionのdigestを検証し、新所有資源へだけ供給する。新規PCコードはGo、既存Rustは維持する。元Rust1.95.0および原native/liveの+stable、MSVC等のOS条件を勝手に省略/変更しない。
+3. checkout後・最初の原Rust command前のsource guard。共通workflow変換はruns-on/checkout ref/authだけなので、新しいstepを足したと偽らない。原command bytesと失敗伝播を保つ有限tool-entry guard等で、実HEAD/tree/index/bytes/auth不在を確認して既存verify-sourceのreceiptへ接続する。SDK wrapperは任意commandを管理者に実行させず、子孫が元Job Object内で排出されることを維持する。targetは実source/tools/targetでscenario参照を保つ。
+
+原commands/OS/timeout/失敗伝播とLua/scenario/native/live unit条件を保持する。civ6ゲーム・GPUは起動しない。GitHub workflow_dispatchは全Rust OS matrixを保持し、Linux listener完了/登録0の後にWindowsを直列で実行する方針。同じ正式runへの複数jobや別workflowのqueueとの競合を成功扱いしない。旧CodeQLは再実行しない。
+
+Go unit/race/vet/両OSbuildと、実際に必要なcredential-free新fixtureで検証する。重いCargoはこの子のcargo割当と共通cargo_gate/専用targetを使い、既存の直列条件・sccacheを保つ。製品全workspaceや旧fixtureを繰り返さない。新service/account/profileを作る前に必要な検査を整理し、必要最小の正常/取消しfixtureだけにする。既存old SIDや拒否削除は触らない。管理者処理はCC-AdminBroker/CREATE_NO_WINDOW、本人にPC操作を求めない。
+
+原失敗を含むlogs/exit/bytes/SHA/SDK指紋/実process drain/新SIDとprofile/hive/追加ACE/runner0を個別保存し、源泉を区別する。全原SHAを恒久保存してsafe-delete create/plan→別通常削除→finish。拒否は再試行やunload/別削除APIに進まず、具体結果を元の整理担当へ渡す。自分の残留だけで待つ場合は結果を先に親へ配送して正規waitする。
+
+実装を自分のbranchに意味のある区切りでcommit/pushし、OAuth別モデルの有限レビューを共有ToDo --specで依頼してMustを解消する。単一ファイルだけはHaiku、複数はSonnet等。原応答・読了範囲・source/検査hash・残条件を親2736へ配送する。親2736/2640の完了は待たず、逆依存を作らない。終了/待機前に自分の実job/branch/HEADを正規scheduler checkpointへ保存する。最終応答は日本語の状態行から始め、fixture/起動/登録を正式CI成功へ転記しない。

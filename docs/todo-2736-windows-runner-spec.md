@@ -1,0 +1,21 @@
+# PR148専用Windows有限runnerの実装
+
+元ToDo2736の独立した実装工程。元製品2640/880の停止・依存・未完を解除しない。
+対象は実API照合するAutoDevJapan/civ6-banseiki、repo1392152644、PR148だけ。
+固定head75a4051305b6f47c70ddb59a8d2bf9015666f12c、tree cecb9cd535d135a1eb4407882db532c325f42860、base1100676d1ed421794c252fb4b15ed3d954e21a5b。
+
+依頼は新しいGo helperの実装とcredential-free fixture検査。製品source取得・製品検査・runner登録・workflow/PR変更はこの子工程では行わず、親2736がレビュー済みhelperを統合して実行する。子Codex直接起動、GPU/Civ6、新常駐、課金/APIキー、旧folder/原guard/登録manifest/共有bridge変更は不可。
+
+起動時D:/CC/AGENTS.md、作業repo AGENTS.md、元2736のspec、TODO-2736-CHECKPOINT.mdを読む。参照は同repoのgit object f7acf6d:tools/ci-check-2710/{winservice_windows.go,windows_checks_windows.go,windows_execution_windows.go,process_windows.go}と先行2730の公開再開記録、および既存2746のJob Object fixtureに限定する。旧2730/2710のSID/profile/source/SDK/拒否済みcleanupは操作しない。既存2746のVM/fixture実装を重複せず、その成果を参照する。新規一時rootはsafe-delete create、原証拠保管後plan→別削除→finish。拒否は再試行/迂回しない。
+
+親のspec追補は「専用実行アカウント/元repoだけの正式runner/実sourceを守って、再起動を要しない経路」を調べることを明示している。Sandbox有効化やPC再起動を繰り返さない。新Windows有限サービスを新しいvirtual service accountで作り、先行2710のAuthenticated Usersを無効化したtokenとprotected launcher/Job Object排出を再利用できるか実装する。原sourceは新たな検査専用隔離資源に限る。VM/RAM必須と根拠なく追加せず、先行サービス方式の適合性と残条件を具体化する。
+
+実装はtools/pr148-windows-runnerという独立Go moduleだけ。runner準備/有限実行/停止/回収を分ける。入力契約と呼出し方法をREADMEに明記する。
+正式runnerは公式配布をdigest検証して使い、登録tokenは親の既存helperのRAM→stdin経路のみ。tokenやrunner認証をhost上のファイル/argv/logへ出さない。公式runnerの認証ファイルが必要なら専用accountのみの新隔離実行資源に置き、その具体経路と回収条件を親へ返す。Windows credential-free準備だけを、正式runner/認証/隔離の成功と呼ばない。
+同repo/PR/head/base/branch、run/attempt/実workflow digestとlabel、実Git HEAD/tree、checkout認証不在を実行前後で確認する。別jobを受けてもhookでfail closed。ephemeral/no-default-labels/disableupdate、今回だけの一意nameを使い、同repoからの残登録不在を確認する。
+通常Rust/Windows、native-driver、live-chainの原commands/OS/timeout/失敗伝播を保持。実ゲーム起動不可、live-chainはunitのみ。共通cargo_gate.exe、専用target、並列上限、sccacheを維持し、共有gate/保護/allowlistは広げない。任意commandをhost管理者に実行するcallbackは作らない。
+
+この工程の検査はGo unit/vet/buildと新しいcredential-free正常/取消しfixture。実子PID、Job Object排出、service/process/追加ACE/profile/hiveを個別に記録する。恒久環境を変更しない。管理者操作はCC-AdminBroker、CREATE_NO_WINDOW。新資源残留は未完として親へ返す。
+fixtureだけで実runner/source/正式CI合格を主張しない。helperの別モデルレビューは共有ToDo --spec経由で依頼し、実応答/Must修正/必要Go検査を親へ返す。レビューの完了だけを待つ場合はtodo wait --onを登録する。親2736の完了は待たない。
+
+成果は専用worktreeへcommit/pushし、実hash/検査証拠/未達条件を元2736のnoteへ追記して配送する。親の他のnoteを保持し、元2640や製品PR148へ直接変更しない。終了時scheduler checkpoint-workspaceで自分のjob/branch/HEADを保存する。共有ToDo自身の状態はscheduler管理。本人PC操作は求めない。

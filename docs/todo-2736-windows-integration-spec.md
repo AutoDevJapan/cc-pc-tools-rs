@@ -1,0 +1,17 @@
+# PR148のWindows runnerを正式実行の契約へ合わせる
+
+元2736の独立した有限統合工程。2749は実装とMust0を配送済みで、自分の5profile整理だけを2381で待っている。その整理・旧SID/root・guard/allowlist/manifest/bridgeを変更せず、正式CI統合を先行する。元2640/880の停止・未完を解除しない。GPU/Civ6/新料金/APIキー/本人PC操作/再起動/直接子Codexは禁止。
+
+元2736のspec、D:/CC/AGENTS.md、repo AGENTS.mdを読む。対象はtools/pr148-windows-runnerだけ。出発点はscheduler/todo-2749-pr148-windows-runnerの497b2f1、Goコードda2b45e。必要なら同moduleだけ自分のbranchへ取り込む。他の製品を含む変更は取り込まない。元2736/2751のtools/product-ciは読み取り専用の契約参照とする。
+
+統合上の実差分: Linux helper（2751/5a656e4、module tree269264365cc6b22c2bb6314722f8021f39b038af）は、元75aを単独親に持つ三workflowだけの新commitを検査する。親のproposePR148がその正確なbytesを生成し、checkoutは検査時の新headを参照する。正式runは同branchの全OS workflow_dispatch。現Windows helperは元75a checkoutとpull_requestのmerge contextだけを受け付け、親案と一致しない。
+
+必要な変更: 同repo1392152644/PR148/元base1100676/branch/元75a/treececbを保持し、親が指定する明示的な新head/treeを受け付ける。新commitは75aだけを親に持ち、全treeのpath/type/modeと原実装source不変、三workflowが親のproposePR148生成bytesと一致することを照合する。元75aへ戻さず、任意latestを許可しない。Windowsも同branchのworkflow_dispatch/attempt/実job名/一意runner/元commands/OS/timeout/失敗伝播と三段hook/実GitHEAD-tree/auth不在を検証する。別run/sourceは拒否する。
+
+今回の親側proposePR148のcheckout refは、PR148専用条件が真ならhead.sha又はgithub.sha、それ以外のmain/別PRではgithub.shaを保持するよう修正予定。新commitの正確なhashは親がまだ作っていないため入力で固定し、親の固定生成関数を参照して一致を独立に検査する。新head固定前の登録/製品source取得/製品テスト/製品workflow変更はこの子で行わない。
+
+準備条件も具体化する: virtual account/filtered tokenから既存SDK/sccache/共通cargo_gateが利用できるかを、旧資源や共有ACLを変更せずcredential-freeに有限確認する。必要な新home/PATH/元tools/targetと、非昇格controllerからの実gate親/取消し/排出を統合する。sourceのRAM供給→新service専用runtimeの実Git materializerは、任意admin command callbackを作らず有限契約で実装するか、既存materializerに必要な入力契約を具体的に返す。公式runnerのtoken RAM→stdin経路を維持する。原Rust/native/live unitのcommand bytesは縮めず、実ゲームを起動しない。
+
+配布helperのGo unit/vet/buildと意味あるcredential-free検査を実行し、原失敗を保存する。重いCargo fixtureが必要なら既存割当を確認し、割当なしでは新しい--needs cargo独立工程を登録して正規waitする。同じ成功fixtureの重複なし。新service/profileを作る場合は各1個の必要な統合fixtureだけとし、共有scopeを広げずsafe-delete/原SHA保管/回収を実施する。拒否された旧削除の再試行なし。
+
+変更をcommit/pushして別モデルの有限レビューを共有ToDo --specで依頼し、Mustを解消する（単一fileのみHaiku、複数は既存OAuth別モデル）。原response/base/head/全対象読了/実検査/残条件を親2736へ配送する。製品PR148は変更もmergeもしない。自分の整理だけが残るなら結果を先に返し、正規waitで分離する。親完了は待たない。終了前に自分のscheduler checkpointを同期保存する。

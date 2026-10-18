@@ -575,3 +575,14 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
   既存初回runのfailure/cancelled、SDK/未回収/他担当/原guard/manifestを維持。新route変数作成/dispatch/実VM起動/原Cargo compileはまだ0。
 - 次は本追加差分だけの別モデルレビューを受領し、Must解消後、同clean codeの実行物で同明示085/ref/tree/workflowの公式CIを再開する。
   Nodeの合成成功を公式CI成功に読み替えず、complete proof拒否の別原因が残れば実結果から修正する。Windows13/Docker parity/通常gateは未完、原merge/Prdは親2641。
+### 同jobの保存実行物と追加レビュー待機
+
+- 修正は58a957960a0d2473ca5d2ca29f61b01efbf6ddf9/tree2d7ce4c0c70ef4d3c3855c35ee35f6b9ed1e9a87へcommit/pushした。
+  本追加3fileだけの別モデルレビュー2866を通常add --spec/model gpt-6-lunaで登録し、保存spec全文一致を読戻し確認した。新Must0はまだ未受領。
+- 次の実公式受入に必要なhost/Linux helperを上記clean codeから各1回buildした。
+  ownedroot bcc30b02a37fdcd1b5db109f2af03449のci2737-host.exe SHA2566a3d6573f2748f75fd5fc8f08fe59c220563bc57e759a784bba78cd2728ad269、ci2737-linux-guest f2e7b9376e6bccc224920acb53dd42e5bbd1817003a9a794715e736447511334。
+  host inspect-executorはmodule cc/ci-guest-2737、admission_linked=true、executor_code_sha=58a9579、source_clean=true。
+  Linux helper buildinfoも同58a9579/vcs.modified=falseを確認した。新実行物での原VM/公式job受入はレビュー後。Windows helperは変更しておらず今回再buildしていない。
+- 実検査/公開Node probe/受領review/SDK/固定製品identity/clean buildの証拠hashは同resume-041741-node/saved-evidence-hashes.jsonに保存した。
+  root bccは同版実行物が次回に必要なため保持。工具containerは停止/PID0、原失敗VHD/SDK/他担当/保護/manifestは不変。
+  未完依存は追加レビュー2866だけなので正規waitを保存する。完了済み2860/2861を再待機せず、実HEADと現jobでscheduler checkpointを保存する。

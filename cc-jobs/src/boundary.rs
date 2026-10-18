@@ -17,6 +17,7 @@ struct Boundary {
     active: HashSet<String>,
     completed: Option<String>,
     terminal: bool,
+    review_terminal: bool,
     invalid: bool,
     first_item_at: Option<u64>,
     agents: HashMap<String, AgentRollout>,
@@ -92,6 +93,10 @@ impl AgentRollout {
     }
 }
 impl Boundary {
+    fn terminal_for(&self, job: &Value) -> bool {
+        self.terminal
+            || (self.review_terminal && cc_job_policy::review_result::is_review_subwork(job))
+    }
     fn event(&mut self, ev: &Value) {
         let t = s(ev, "type");
         if t == "turn.started" {
@@ -182,6 +187,14 @@ impl Boundary {
             {
                 self.terminal = true;
             }
+            if s(item, "type") == "agent_message"
+                && s(item, "text")
+                    .lines()
+                    .next()
+                    .is_some_and(|line| line.trim() == cc_job_policy::review_result::COMPLETE)
+            {
+                self.review_terminal = true;
+            }
         }
     }
 }
@@ -220,12 +233,12 @@ impl Context {
         let Ok(file) = fs::File::open(dir.join("events.jsonl")) else {
             return Ok(None);
         };
-        if boundary.schema != 3
+        if boundary.schema != 4
             || boundary.attempt != attempt
             || file.metadata()?.len() < boundary.offset
         {
             boundary = Boundary {
-                schema: 3,
+                schema: 4,
                 attempt,
                 offset: job["attempt_events_offset"].as_u64().unwrap_or(0),
                 ..Boundary::default()
@@ -273,7 +286,7 @@ impl Context {
             self.write_json(&cache, &serde_json::to_value(&boundary)?)?;
         }
         Ok(
-            if boundary.terminal
+            if boundary.terminal_for(job)
                 || boundary.invalid
                 || !boundary.active.is_empty()
                 || !boundary.agents.is_empty()
@@ -643,6 +656,20 @@ fn yield_attempt_key(job: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn review_only_completion_is_terminal_only_for_validated_review_subwork() {
+        let mut b = Boundary::default();
+        b.event(&json!({"type":"item.completed","item":{"type":"agent_message","text":cc_job_policy::review_result::COMPLETE}}));
+        let mut job = json!({"todo_id":2813,"sandbox":"read-only","subwork_validated":true,"subwork_spec":"fixed-head.md",
+            "subwork":{"kind":"review","parent_todo_id":2757,"origin_job_id":"writer",
+                "owner":{"repository":"fixture/repo","git_common":"fixture-common","worktree":"fixture-tree","branch":"fixture-branch"}}});
+        assert!(b.terminal_for(&job));
+        job.as_object_mut().unwrap().remove("subwork");
+        assert!(!b.terminal_for(&job));
+        let mut partial = Boundary::default();
+        partial.event(&json!({"type":"item.completed","item":{"type":"agent_message","text":"状態: 完了（実装だけ・検証未了）"}}));
+        assert!(!partial.terminal_for(&job));
+    }
     #[test]
     fn reconnecting_notice_keeps_a_completed_tool_boundary_but_failure_is_terminal() {
         let mut b = Boundary::default();

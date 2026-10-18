@@ -6,6 +6,33 @@ use std::{
     fs,
 };
 
+fn terminal_result(job: &Value) -> bool {
+    cc_job_policy::review_result::completed(job, s(job, "last_message"))
+        || s(job, "last_message")
+            .lines()
+            .next()
+            .is_some_and(|line| ["状態: 完了", "状態: 要判断"].contains(&line.trim()))
+}
+
+#[cfg(test)]
+mod review_result_tests {
+    use super::*;
+    #[test]
+    fn review_only_completion_keeps_its_slot_from_being_yielded_back_to_the_queue() {
+        let mut job = json!({"todo_id":2813,"sandbox":"read-only","subwork_validated":true,"subwork_spec":"fixed-head.md",
+            "subwork":{"kind":"review","parent_todo_id":2757,"origin_job_id":"writer",
+                "owner":{"repository":"fixture/repo","git_common":"fixture-common","worktree":"fixture-tree","branch":"fixture-branch"}},
+            "last_message":cc_job_policy::review_result::COMPLETE});
+        assert!(terminal_result(&job));
+        job.as_object_mut().unwrap().remove("subwork");
+        assert!(!terminal_result(&job));
+        job["last_message"] = json!("状態: 完了（実装だけ・検証未了）");
+        assert!(!terminal_result(&job));
+        job["last_message"] = json!("状態: 完了");
+        assert!(terminal_result(&job));
+    }
+}
+
 #[derive(Clone, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueueConfig {
@@ -413,10 +440,7 @@ impl Context {
         if s(job, "status") != "succeeded"
             || !truth(&job["turn_completed"])
             || self.is_ours(job, "codex_pid")
-            || s(job, "last_message")
-                .lines()
-                .next()
-                .is_some_and(|line| ["状態: 完了", "状態: 要判断"].contains(&line.trim()))
+            || terminal_result(job)
         {
             return Ok(false);
         }
@@ -1244,9 +1268,15 @@ impl Context {
             .map_err(Error::new)?;
         }
         if job.get("original_product_retry").is_some() {
-            let store=self.todo_store();
-            let mut db=self.read_json(&store)?;
-            if cc_job_policy::product_retry::mark_continuation_running(&mut db,&job,self.rt.epoch() as u64).map_err(Error::new)? {
+            let store = self.todo_store();
+            let mut db = self.read_json(&store)?;
+            if cc_job_policy::product_retry::mark_continuation_running(
+                &mut db,
+                &job,
+                self.rt.epoch() as u64,
+            )
+            .map_err(Error::new)?
+            {
                 cc_job_policy::todo_store::write(&store, &db)
                     .map_err(|e| Error::new(e.to_string()))?;
             }
@@ -1584,9 +1614,7 @@ impl Context {
             match self.read_file(&self.job_dir(s(job, "id")).join("prompt.md")) {
                 Ok(bytes)
                     if job["original_product_retry"]["prompt_sha256"]
-                        == cc_job_policy::product_retry::digest(&bytes) =>
-                {
-                }
+                        == cc_job_policy::product_retry::digest(&bytes) => {}
                 Ok(_) => {
                     return Some(
                         json!({"code":"product_retry_prompt_changed","message":"元の作業の再開本文が変わっています","terminal":true}),

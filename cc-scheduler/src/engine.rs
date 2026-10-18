@@ -57,6 +57,8 @@ fn park_waiting(row: &mut Value, jid: Option<&Value>) -> bool {
 #[path = "instructions.rs"]
 mod instructions;
 pub use instructions::*;
+#[path = "product_result_repair.rs"]
+mod product_result_repair;
 pub struct Scheduler<B: Backend> {
     pub root: PathBuf,
     pub todo_path: PathBuf,
@@ -580,6 +582,9 @@ impl<B: Backend> Scheduler<B> {
                 e.reconcile_item(&item, jobs, ps, cfg)
             });
         }
+        if self.reconcile_product_results(jobs, ps).is_err() {
+            self.report["product_results_deferred"] = json!([cc_job_policy::product_retry::ID]);
+        }
         self.release_repair_waits()
     }
     /// The repair tick does not run the general watchdog (its private registry
@@ -826,6 +831,18 @@ impl<B: Backend> Scheduler<B> {
                 },
             )?;
         } else if s(&j["status"]) == "succeeded" {
+            let child_review = cc_job_policy::review_result::is_review_subwork(j);
+            if child_review
+                && (!cc_job_policy::review_result::matches_item(j, i)
+                    || !i["wait_ready"].is_null()
+                    || !i["owner_question_wait"].is_null()
+                    || !i["decision_wait"].is_null()
+                    || i["owner_postponement_recorded"] == true
+                    || i["stop_kind"].as_str().is_some_and(|s| !s.is_empty())
+                    || cancellation::owner_stopped(i, j))
+            {
+                return Ok(());
+            }
             if result_received(i, &j["id"]) {
                 return Ok(());
             }
@@ -862,6 +879,7 @@ impl<B: Backend> Scheduler<B> {
                     && row["scheduler"] == i["scheduler"]
                     && row["resume_generation"] == i["resume_generation"]
                     && row["wait_on"] == i["wait_on"]
+                    && (!child_review || *row == *i)
                     && !result_received(row, &j["id"])
                 {
                     record_result(row, &j["id"], &outcome);

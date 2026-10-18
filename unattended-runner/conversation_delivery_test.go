@@ -97,6 +97,7 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			f.mutateTodo(t, func(row map[string]any) {
 				row["status"] = "block"
 				row["owner_question_wait"] = map[string]any{"question": question, "question_receipt_sha256": bytesHash(b)}
+				row["note"] = row["note"].(string) + fmt.Sprintf("\n[discord-conversation-question-v1 request_id=%s sha256=%s]", question["request_id"], bytesHash(b))
 			})
 			return "", nil
 		case "edit":
@@ -116,10 +117,13 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 				return "", errors.New("wrong answer association")
 			}
 			f.mutateTodo(t, func(row map[string]any) {
+				wait := row["owner_question_wait"]
+				marker := fmt.Sprintf("\n[discord-conversation-question-v1 request_id=%s sha256=%s]", proof.RequestID, proof.QuestionSHA)
+				row["note"] = strings.Replace(row["note"].(string), marker, "", 1)
 				row["status"] = "todo"
 				delete(row, "owner_question_wait")
 				b, _ := os.ReadFile(args[3])
-				row["owner_question_answer_receipts"] = []any{map[string]any{"answer": proof, "answer_file_sha256": bytesHash(b), "wait": map[string]any{"question_receipt_sha256": proof.QuestionSHA}}}
+				row["owner_question_answer_receipts"] = []any{map[string]any{"answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait}}
 			})
 			return "", nil
 		case "recovery-log":
@@ -198,7 +202,7 @@ func TestConversationNewQuestionDoesNotRequireLostLegacyState(t *testing.T) {
 		t.Fatalf("question not verified: %+v", q)
 	}
 	row, err := f.r.todo(42)
-	if err != nil || row.Status != "block" || row.Note != "以前の作業を保持" || string(row.Spec) != `"unchanged-original-spec"` || len(row.Jobs) != 1 {
+	if err != nil || row.Status != "block" || !strings.HasPrefix(row.Note, "以前の作業を保持\n") || !conversationWaitUnchanged(row, q) || string(row.Spec) != `"unchanged-original-spec"` || len(row.Jobs) != 1 {
 		t.Fatal("original task changed beyond wait")
 	}
 	after, _ := os.ReadFile(legacy)
@@ -282,6 +286,7 @@ func TestConversationForeignOwnerOrChangedDecisionDoesNotDeliver(t *testing.T) {
 			f := conversationTest(t, true)
 			f.ask(t)
 			f.reply(t, 8, "a")
+			before, _ := f.r.todo(42)
 			switch change {
 			case "owner":
 				f.replies[0].Author = "999"
@@ -299,7 +304,7 @@ func TestConversationForeignOwnerOrChangedDecisionDoesNotDeliver(t *testing.T) {
 				t.Fatal("wrong reply accepted")
 			}
 			row, _ := f.r.todo(42)
-			if row.Status != "block" || row.Note != "以前の作業を保持" {
+			if row.Status != "block" || row.Note != before.Note {
 				t.Fatal("invalid source changed original task")
 			}
 		})
@@ -673,6 +678,158 @@ func TestConversationEditedReplyAfterReadyFailureUsesSeparateImmutableVersion(t 
 	row, _ := f.r.todo(42)
 	if row.Status != "todo" {
 		t.Fatal("new answer did not release exact wait")
+	}
+}
+
+func TestConversationParentReferenceIsDurableBeforeCanonicalRelease(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	backend := f.r.Run
+	order := []string{}
+	stagedBeforeRelease := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && (args[0] == "question-answer" || args[0] == "edit") {
+			order = append(order, args[0])
+			if args[0] == "question-answer" {
+				row, err := f.r.todo(42)
+				stagedBeforeRelease = err == nil && conversationWaitUnchanged(row, f.q) && strings.Contains(row.Note, "conversation-owner-reply:")
+			}
+		}
+		return backend(ctx, path, args...)
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || !stagedBeforeRelease || strings.Join(order, ",") != "edit,question-answer" {
+		t.Fatal("canonical wait released before the owner reply reference was durable")
+	}
+}
+
+func TestConversationFailedParentNoteKeepsCanonicalWait(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	before, err := f.r.todo(42)
+	if err != nil {
+		t.Fatal("parent fixture unavailable")
+	}
+	backend := f.r.Run
+	answers := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && args[0] == "edit" {
+			return "", errors.New("parent note save failed")
+		}
+		if path == conversationTodo && args[0] == "question-answer" {
+			answers++
+		}
+		return backend(ctx, path, args...)
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, err := f.r.todo(42)
+	if err != nil || len(health.Errors) == 0 || after.Status != "block" || after.Note != before.Note || answers != 0 {
+		t.Fatal("failed parent delivery released or changed the question wait")
+	}
+	f.r.Run = backend
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, err = f.r.todo(42)
+	if err != nil || len(health.Errors) != 0 || after.Status != "todo" || len(after.QuestionAnswers) != 1 || !strings.Contains(after.Note, "conversation-owner-reply:") {
+		t.Fatal("parent delivery did not resume after its note save recovered")
+	}
+}
+
+func TestConversationOverwrittenQuestionHoldIsNotRewrittenOrAcknowledged(t *testing.T) {
+	for _, change := range []string{"missing", "duplicate", "inline", "suffix", "status", "wait-sha"} {
+		t.Run(change, func(t *testing.T) {
+			f := conversationTest(t, true)
+			f.ask(t)
+			reply := f.reply(t, 8, "a")
+			f.mutateTodo(t, func(row map[string]any) {
+				note := row["note"].(string)
+				marker := note[strings.LastIndex(note, "\n")+1:]
+				switch change {
+				case "missing":
+					row["note"] = "別の停止条件を保持"
+				case "duplicate":
+					row["note"] = note + "\n" + marker
+				case "inline":
+					row["note"] = "prefix" + marker
+				case "suffix":
+					row["note"] = note + "suffix"
+				case "status":
+					row["status"] = "doing"
+				case "wait-sha":
+					row["owner_question_wait"].(map[string]any)["question_receipt_sha256"] = strings.Repeat("f", 64)
+				}
+			})
+			before, _ := f.r.todo(42)
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, err := f.r.todo(42)
+			if err != nil || len(health.Errors) == 0 || after.Status != before.Status || after.Note != before.Note || len(after.QuestionAnswers) != 0 {
+				t.Fatal("changed question hold was rewritten or released")
+			}
+			if req := f.r.State.Requests[reply.Message]; req == nil || req.Phase != "conversation_reply_saved" || req.Todo != 0 {
+				t.Fatal("changed question hold was reported as delivered")
+			}
+			for _, command := range f.commands {
+				if command == "edit" || command == "question-answer" {
+					t.Fatal("changed question hold reached a mutation command")
+				}
+			}
+		})
+	}
+}
+
+func TestConversationDifferentBlockIsNotRewrittenIntoAQuestionWait(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	f.mutateTodo(t, func(row map[string]any) {
+		delete(row, "owner_question_wait")
+		row["note"] = "別の停止条件を保持"
+	})
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	row, err := f.r.todo(42)
+	if err != nil || len(health.Errors) == 0 || row.Status != "block" || row.Note != "別の停止条件を保持" {
+		t.Fatal("unrelated block was rewritten or released")
+	}
+	for _, command := range f.commands {
+		if command == "edit" || command == "question-answer" {
+			t.Fatal("unrelated block reached a mutation command")
+		}
+	}
+}
+
+func TestConversationLostSuccessfulAnswerResultReconcilesWithoutReleasingTwice(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	backend := f.r.Run
+	answers := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		output, err := backend(ctx, path, args...)
+		if path == conversationTodo && args[0] == "question-answer" && err == nil {
+			answers++
+			return "", errors.New("canonical result lost after durable transition")
+		}
+		return output, err
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) == 0 {
+		t.Fatal("lost answer result was reported as delivered")
+	}
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"] = "block"
+		row["note"] = row["note"].(string) + "\n別の停止条件を保持"
+	})
+	f.r.processConversations(context.Background(), &Health{})
+	row, err := f.r.todo(42)
+	if err != nil || row.Status != "block" || !strings.HasSuffix(row.Note, "別の停止条件を保持") || answers != 1 || len(row.QuestionAnswers) != 1 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("reconciliation released twice or lost the original task delivery")
 	}
 }
 

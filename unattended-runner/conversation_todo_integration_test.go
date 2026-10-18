@@ -53,7 +53,7 @@ func TestConversationActualCanonicalTodoRoundTrip(t *testing.T) {
 		t.Fatalf("actual answer transition failed: %v", health.Errors)
 	}
 	row, err = f.r.todo(42)
-	if err != nil || row.Status != "todo" || len(row.QuestionAnswers) != 1 || !strings.Contains(row.Note, "以前の作業を保持") || string(row.Spec) != `"unchanged-original-spec"` || len(row.Jobs) != 1 {
+	if err != nil || row.Status != "todo" || len(row.QuestionAnswers) != 1 || !strings.Contains(row.Note, "以前の作業を保持") || !strings.Contains(row.Note, "conversation-owner-reply:") || strings.Contains(row.Note, "[discord-conversation-question-v1 ") || string(row.Spec) != `"unchanged-original-spec"` || len(row.Jobs) != 1 {
 		t.Fatal("actual canonical release lost task state")
 	}
 	if req := f.r.State.Requests[reply.Message]; req == nil || req.Todo != 42 || req.Phase != "conversation_reply_delivered" {

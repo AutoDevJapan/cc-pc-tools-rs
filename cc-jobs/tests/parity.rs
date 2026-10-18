@@ -10955,9 +10955,15 @@ mod end_to_end {
         assert_eq!(db["items"][0]["scheduler"]["worktree"],source["cwd"]);
         let store=t.tmp.0.join("todo/todo.json");fs::create_dir_all(store.parent().unwrap()).unwrap();fs::write(&store,db.to_string()).unwrap();
         // Virtualize only observation time, never production thresholds or OS identities.
-        let p=action_progress::scan(&events,&source,&Progress::default(),System::default().epoch()-1801.).unwrap();
+        let p=action_progress::scan(&events,&source,&Progress::default(),System::default().epoch()-(action_progress::QUIET_S+1.)).unwrap();
         let proof=t.tmp.0.join("proof.json");fs::write(&proof,json!({"ticket":action_progress::ticket(&db,&db["items"][0],&source),"progress":p}).to_string()).unwrap();
         let cancel=["cancel",&first,"--recovery","--if-todo-ready","--todo-id","1","--todo-file",store.to_str().unwrap(),"--cancel-key","no-action-fixture","--no-action-check",proof.to_str().unwrap()];
+        let held=FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
+        let deferred=t.cli(&cancel,"report-only");assert!(deferred.status.success());
+        let deferred:Value=serde_json::from_slice(&deferred.stdout).unwrap();assert_eq!(deferred["reason"],"todo_lock_busy");
+        let pause:Value=serde_json::from_slice(&fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap()).unwrap();assert_eq!(pause["complete"],true);
+        let length=fs::metadata(&events).unwrap().len();t.until(||fs::metadata(&events).unwrap().len()>length);
+        drop(held);
         let out=t.cli(&cancel,"report-only");assert!(out.status.success(),"{}",String::from_utf8_lossy(&out.stderr));
         assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],"cancelled", "{}", String::from_utf8_lossy(&out.stdout));
         t.until(||proc_created(source["pid"].as_u64().unwrap() as u32)!=source["pid_created"].as_u64()

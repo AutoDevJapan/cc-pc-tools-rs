@@ -1405,6 +1405,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 
 struct Fake {
     action_path: Option<PathBuf>,
+    cancel_edit: Option<(PathBuf, Value)>,
     repair_allowed: bool,
     repair_denied: Option<String>,
     repair_calls: Vec<String>,
@@ -1443,6 +1444,7 @@ impl Default for Fake {
     fn default() -> Self {
         Self {
             action_path: None,
+            cancel_edit: None,
             repair_allowed: false,
             repair_denied: None,
             repair_calls: vec![],
@@ -1487,7 +1489,9 @@ impl Backend for Fake {
         Ok(self.repair_scope_allowed(repo))
     }
     fn cancel_no_action(&mut self, _: &Value, job: &mut Value, _: &Value, _: &Path) -> Result<bool> {
-        self.cancel_for_recovery(job)
+        let stopped = self.cancel_for_recovery(job)?;
+        if let Some((path,db))=self.cancel_edit.take() { write_json(&path,&db,1)?; }
+        Ok(stopped)
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.repair_calls.push(repo.into());

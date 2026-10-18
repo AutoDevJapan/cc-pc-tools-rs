@@ -70,7 +70,7 @@ fn report_only_recovery_requeues_once_with_preserved_workspace_and_backoff() {
 }
 #[test]
 fn no_action_rechecks_stop_dependency_generation_and_worker_after_scope_check() {
-    for case in ["stop", "dependency", "generation", "worker"] {
+    for case in ["stop", "dependency", "generation", "worker", "recovery"] {
         let mut f = setup();
         pass(&mut f);
         f.e.backend.clock += 1801.;
@@ -81,6 +81,7 @@ fn no_action_rechecks_stop_dependency_generation_and_worker_after_scope_check() 
             "dependency" => row["wait_on"] = json!([999]),
             "generation" => row["resume_generation"] = json!(99),
             "worker" => row["scheduler"]["job"] = json!("new"),
+            "recovery" => row["stall_recovery"]["pending"] = json!({"reservation":"other"}),
             _ => unreachable!(),
         }
         f.e.backend.repair_edit = Some((f.e.todo_path.clone(), db.clone()));
@@ -207,4 +208,19 @@ fn no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_imp
             .iter()
             .any(|a| a == if explicit { "--model" } else { "--auto-model" }));
     }
+}
+
+#[test]
+fn recovery_reservation_registered_during_cancel_is_preserved_and_not_requeued() {
+    let mut f = setup();
+    pass(&mut f);
+    f.e.backend.clock += 1801.;
+    let mut db = f.e.todo().unwrap();
+    db["items"][0]["stall_recovery"]["pending"] = json!({"reservation":"other"});
+    f.e.backend.cancel_edit = Some((f.e.todo_path.clone(), db.clone()));
+    pass(&mut f);
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+    assert_eq!(f.e.todo().unwrap(), db);
+    f.dispatch();
+    assert!(f.e.backend.launched.is_empty());
 }

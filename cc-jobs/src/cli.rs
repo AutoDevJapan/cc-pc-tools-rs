@@ -1517,7 +1517,22 @@ impl Context {
             None
         };
         let todo = if no_action_check {
-            FileLock::try_acquire(&store.with_file_name("todo.lock"))?
+            match FileLock::try_acquire(&store.with_file_name("todo.lock")) {
+                Ok(lock) => lock,
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::WouldBlock
+                        || matches!(error.raw_os_error(), Some(32 | 33)) =>
+                {
+                    // Drop resumes controllers and completes the existing pause marker.
+                    writeln!(
+                        out,
+                        "{}",
+                        json!({"outcome":"deferred","job":a.id,"reason":"todo_lock_busy"})
+                    )?;
+                    return Ok(0);
+                }
+                Err(error) => return Err(error.into()),
+            }
         } else {
             FileLock::acquire(&store.with_file_name("todo.lock"))?
         };

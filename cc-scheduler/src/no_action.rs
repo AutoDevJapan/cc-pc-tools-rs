@@ -99,13 +99,17 @@ impl<B: Backend> Scheduler<B> {
             }
             let at = self.backend.clock();
             let mut reserved_here = false;
-            let reserved=self.edit(&fresh["id"], |r| {
-                if *r != fresh {return;}
-                reserved_here=true;
-                let old=&r["scheduler"]["no_action_retry"];
-                let count=if old["job"]==job["id"] && old["attempt"]==progress.attempt {old["count"].as_u64().unwrap_or(0).saturating_add(1)}else{1};
-                r["scheduler"]["no_action_retry"]=json!({"job":job["id"],"attempt":progress.attempt,"count":count,
-                    "not_before":at+if count<2 {crate::recovery_failure::FAST_RETRY_S}else{crate::recovery_failure::SLOW_RETRY_S}});
+            let reserved = self.edit(&fresh["id"], |r| {
+                if *r != fresh { return; }
+                reserved_here = true;
+                let old = &r["scheduler"]["no_action_retry"];
+                let count = if old["job"] == job["id"] && old["attempt"] == progress.attempt {
+                    old["count"].as_u64().unwrap_or(0).saturating_add(1)
+                } else { 1 };
+                let delay = if count < 2 { crate::recovery_failure::FAST_RETRY_S }
+                    else { crate::recovery_failure::SLOW_RETRY_S };
+                r["scheduler"]["no_action_retry"] = json!({"job":job["id"],"attempt":progress.attempt,
+                    "count":count,"not_before":at+delay});
             })?;
             if !reserved_here {
                 continue;
@@ -131,7 +135,7 @@ impl<B: Backend> Scheduler<B> {
                     add_count(&self.report["no_action_scan"]["cancelled"], 1);
                 self.requeue_if(&reserved["id"], &job["id"], "no_action", Some(&reserved))?;
                 push(
-                    &mut self.report["no_action_recovered"],
+                    &mut self.report["no_action_cancelled"],
                     json!({"item":fresh["id"],"job":job["id"]}),
                 );
             }

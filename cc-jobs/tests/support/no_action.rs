@@ -28,7 +28,13 @@ fn setup() -> (Test, Value, Value, PathBuf) {
         "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\"}}\n".repeat(3),
     )
     .unwrap();
-    let p = action_progress::scan(&events, &j, &Progress::default(), t.rt.epoch() - 1801.).unwrap();
+    let p = action_progress::scan(
+        &events,
+        &j,
+        &Progress::default(),
+        t.rt.epoch() - (action_progress::QUIET_S + 1.),
+    )
+    .unwrap();
     let proof = json!({"ticket":action_progress::ticket(&db,&db["items"][0],&j),"progress":p});
     let path = t.ctx.root.join("proof.json");
     fs::write(&path, proof.to_string()).unwrap();
@@ -86,6 +92,7 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
         "child",
         "attempt",
         "readonly",
+        "recovery",
     ] {
         let (t, mut db, mut j, path) = setup();
         match case {
@@ -93,6 +100,9 @@ fn no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit() 
             "owner" => db["items"][0]["stopped"] = json!(true),
             "dependency" => db["items"][0]["wait_on"] = json!([2]),
             "worker" => db["items"][0]["scheduler"]["job"] = json!("new"),
+            "recovery" => {
+                db["items"][0]["stall_recovery"]["pending"] = json!({"reservation":"other"})
+            }
             "readonly" => j["sandbox"] = json!("read-only"),
             "attempt" => j["codex_pid_created"] = json!(23),
             "child" => t.rt.pause_allowed.store(false, Ordering::Relaxed),

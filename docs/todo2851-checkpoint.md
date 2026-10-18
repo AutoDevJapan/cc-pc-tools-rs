@@ -1,55 +1,53 @@
 # ToDo2851 再開情報
 
-## 再開後の更新
+2026-10-19 05:31 JST時点。実装・検査・レビュー・通常マージ・正式scheduler更新は完了。
+AO2839は通常schedulerで受付済み。実処理と成果、次の自然巡回はまだ未確認。
 
-レビュー2854は実Sonnet5.5/succeeded/exit0/55steps/Must0で受領済み。
-担当はgitを起動できなかったが、baseのworktreeとheadの6対象を全文比較した。
-実装側がbaseの3既存fileをGit blobと照合し、全件一致を確認した。
-原応答と照合記録はtodo2851-review2854.log / todo2851-review2854.private.json。
-正式exeだけを使う最終adapter4回帰、利用側574件（既存skip3）、対象4libraryの
-doctest（対象0件）、Clippy -D warningsは成功。繰り返さない。
+## 完了した工程
 
-追加指示の直接subworkについて、子自身の現在の資格と通常審査の回帰を追加。
-固定path SHA、Runnerの失敗と正式exeの呼出し、名簿復旧/読取不能/doingの
-worktree拒否も確認した。追加検査の初回は不正subworkの正常なErrを検査側が
-unwrapしたため1件失敗。正常な拒否をassertするよう検査だけを修正し、その1件を
-再実行して成功。初回5passと修正後1passを別のlogに保持し、実装修正とは扱わない。
+- Rust実装はPR225で通常マージ。mergeは67f54cee5e4fba7d74393b8ad26b8a4e6346d0cc。
+- 別モデルのレビュー2854と追加差分2857は実Sonnet5.5で完了し、Mustは0。
+- schedulerの回帰、利用側574件（既存skip3）、最終adapter、追加回帰、
+  対象4libraryのdoctestとClippyが成功。PRの公式CIとmerge後CodeQLも成功。
+  初回追加検査の1失敗は正常な拒否Errをunwrapした検査側を修正して再確認済み。
+- 最新mainからschedulerだけを生成し、04:11:56 JSTに正式実行物をbackup付き
+  原子置換で更新。生成物と実配布のSHA256は一致：
+  64F19B54A48423B29DC18A7F96398BC247054430B2FE945783214402E4ABFAEA。
+- Go担当2849のPR223はmerge7efa6cf89bf1b3d65d8307fa3e9393ae5ff468fc。
+  別モデルMust0と全必須CI成功を確認し、正式guardの配布SHA256を実測：
+  1647E2B631768DD5BD69D98617F84D0867651A0FB9E6F004615D3546E4CC8F92。
+- 正式APIのAO2839応答はexit0。domain/id/project/origin/原未復旧と、登録root・
+  specパス・spec本文の3つのSHA256を現在の登録値と独立照合し、すべて一致。
+  rootと新worktreeの正式guardも成功。
+- 自身branchはmain7e68b65f32504512930af02ae0f19fbfe16fb42eへffしてpush。
+  Goとproduct-ciの並行mergeを保持した。schedulerと本番依存/Cargoの差分はゼロで、
+  同じ生成物の再ビルド・再配布は行っていない。
 
-追加差分は検査と文書のみで、稼働処理はレビュー済みb265770から変更していない。
-Go2849のcurrent-succession-delivery.private.jsonは候補APIまでで、正式merge/配布は
-falseのまま。候補分類を正式受付へ読み替えない。次は追加差分レビュー、最新headの
-公式CI、通常merge、並行変更保持、scheduler正式更新、Go部分配布とAO2839の実受付。
+## 実受付と未完了
 
-## 対象と保持条件
+有限な正式repair-stepはexit0、step_failures空。05:30:58 JSTに同じAO2839を受付し、
+job 20261019-053058-todo-2839を登録した。ToDoはdoing、schedulerのphaseはrunning。
+ただしjob.json自体はqueued、steps0、started_atなし。child_priorityで実行枠を待つ。
+これはscheduler受付の成功であり、実処理の開始や成果の成功ではない。
 
-元2834の現在の製品継承先だけをschedulerへ接続するRust担当。
-Go側は2849が所有。親worktreeの
-`docs/todo2834-current-succession-contract.md`が原契約。
-原名簿/auth/config、未知の名前、旧192件、元1161/1368/1476/2179を復旧しない。
-GPU・Civ6・APIキー・新費用は使わない。
+専用branchはscheduler/todo-2839-godd-ao-2834、元repoとGit commonが一致。
+受付時HEADはb2975a0cbe677de97ddd423dfdb3fd0a4029f22a。既存成果を再実装しない。
+旧1161/1368/1476/2179はrecovery_unverifiedと従来のjob件数を保持している。
+原名簿・旧192件を復旧していない。
 
-## 確認済み
+次は同じAO2839の実行開始・実作業・成果を確認し、その後の自然巡回で正常に
+続行または結果受領・依存解除することを確認する。受付だけで完了にしない。
+Go2849全体のdoneは待たず、本人判断blockや新しい監視を作らない。
+元2834へ通常CLI、製品別の通知なしDiscordへ確認した範囲だけを返す。
 
-- 正式guardでこの作業場所はclient_resource=false。
-- GitHub APIでAutoDevJapan/cc-pc-tools-rs、repo ID1406818713を確認。
-- 開始baseはc9f0b26df6014c5473e110996b58cda18dff151e。
-- 既定falseのBackend API、正式exeのreceipt照合、NotFound限定受付、
-  次のrepair-stepの結果受領と依存解放を実装。
-- scheduler初回nextest: 191 passed / 0 skipped、run ID
-  c6f70188-1903-4814-a5a2-cafa335e6d03。
-  その後、未配布exe時に別interpreterへ落とさず正式exeだけを呼ぶ修正を追加。
+## 証拠と再開
 
-## 残り
+自身worktreeのtodo2851-progress.private.jsonが最新の集約記録。
+詳細はtodo2851-build.private.json、todo2851-install.private.json、
+todo2851-integration.private.json、todo2851-repair-step-parsed.private.jsonと
+保存した各検査log・レビュー原応答に保持する。CLIの標準出力には選択説明が
+JSONより先に入るため、元の出力と抽出したJSONを別々に保持した。
 
-1. 最終ソースの関連回帰、利用側、doctest、Clippyの結果確認。
-2. 固定base/headの別モデルレビューを通常ToDo --specで登録し、Mustを解消。
-3. PRの公式CI成功、通常merge。
-4. 2849のGo部分配布を照合し、並行変更を保持した最新mainから正式schedulerを更新。
-5. 同じAO2839の通常受付、実job/worktree/成果と次の自然巡回を確認。
-6. 元2834へ通常CLIで実結果を返し、製品別の通知なしDiscordへ反映。
-
-2849全体のdone待ちは相互依存になるため行わない。部分配布の未達だけなら
-同じ項目の有限wait-retryを使う。本人判断待ちへ変更しない。
-
-検査用一時フォルダはsafe-delete所有ID 22e983ea3cc29fe59f11b5eb48322e51。
-その所有記録を使って最後にplan→通常削除→finishする。
+Goソースは2849、Rust受付は2851が所有する。元2834の原契約を維持する。
+GPU・Civ6・APIキー・新費用は使わない。既存一時フォルダ3件は通常削除と
+safe-delete finishまで完了済み。古い所有IDで作り直したり再削除したりしない。

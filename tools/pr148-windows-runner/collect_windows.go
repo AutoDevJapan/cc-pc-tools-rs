@@ -79,7 +79,9 @@ func collectMode(p Plan, unstarted bool) error {
 	// Recheck the remote identity/runner absence on both fresh collection and
 	// resumption of an already journaled successful service deletion.
 	if p.Fixture == "" {
-		if e = auditCollection(p); e != nil { return e }
+		if e = auditCollection(p); e != nil {
+			return e
+		}
 	}
 	s, e := openService(p, 4|0x10000)
 	if e == nil {

@@ -31,7 +31,7 @@ func TestPR148HostRequestsContainerParallelCaps(t *testing.T) {
 		env[key] = value
 	}
 	for _, key := range []string{"CARGO_BUILD_JOBS", "RUST_TEST_THREADS", "NEXTEST_TEST_THREADS"} {
-		if env[key] != "2" {
+		if env[key] != "1" {
 			t.Fatal("SDK resource cap missing", key)
 		}
 	}
@@ -122,6 +122,9 @@ func TestPR148ExecutionPreservesFixedContextAndTimeout(t *testing.T) {
 		if !strings.Contains(joined, s) {
 			t.Fatalf("lost fixed condition %s", s)
 		}
+	}
+	if !strings.Contains(joined, "RUSTFLAGS=-D warnings -C link-arg=-Wl,--threads=1") {
+		t.Fatal("original Rust flags or bounded linker threads lost")
 	}
 	for _, bad := range []string{"expression", "protected", "timeout", "directory", "git", "github"} {
 		b := append([]byte(nil), data...)

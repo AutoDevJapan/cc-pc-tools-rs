@@ -37,6 +37,17 @@ func collectionAction(p Plan, name string, action func() error) error {
 	return errors.Join(e, write)
 }
 func collect(p Plan) error {
+	return collectMode(p, false)
+}
+
+func collectUnstarted(p Plan) error {
+	if p.Fixture != "" {
+		return errors.New("unstarted collection requires a real prepared resource")
+	}
+	return collectMode(p, true)
+}
+
+func collectMode(p Plan, unstarted bool) error {
 	seconds := p.CleanupSeconds
 	if seconds == 0 {
 		seconds = 1800
@@ -50,6 +61,28 @@ func collect(p Plan) error {
 	if e != nil || processes != 0 {
 		return errors.Join(errors.New("owned process census prevents collection"), e)
 	}
+	if unstarted {
+		if e = checkUnstartedFiles(p.Root, p.runner()); e != nil {
+			return e
+		}
+		var job struct {
+			apiJob
+			Steps []json.RawMessage
+		}
+		if e = api(fmt.Sprintf("repos/%s/actions/jobs/%d", repository, p.JobID), &job); e != nil {
+			return e
+		}
+		if e = checkUnstartedJob(p, job.apiJob, len(job.Steps)); e != nil {
+			return e
+		}
+	}
+	// Recheck the remote identity/runner absence on both fresh collection and
+	// resumption of an already journaled successful service deletion.
+	if p.Fixture == "" {
+		if e = auditCollection(p); e != nil {
+			return e
+		}
+	}
 	s, e := openService(p, 4|0x10000)
 	if e == nil {
 		state, pid, code, err := queryService(s)
@@ -57,15 +90,19 @@ func collect(p Plan) error {
 			closeSC(s)
 			return errors.New("service must be stopped with PID zero")
 		}
-		report, err := readLaunchResult(p)
-		if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
-			closeSC(s)
-			return errors.New("protected launcher drain and SCM result required")
-		}
-		if p.Fixture == "" {
-			if err = auditCollection(p); err != nil {
+		if unstarted {
+			// SCM reports ERROR_SERVICE_NEVER_STARTED (1077) until the first
+			// start attempt. This is compatible with the stricter worker/job
+			// absence checks above; other nonzero statuses still fail closed.
+			if code != 0 && code != 1077 {
 				closeSC(s)
-				return err
+				return errors.New("unstarted worker evidence absent or changed")
+			}
+		} else {
+			report, err := readLaunchResult(p)
+			if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
+				closeSC(s)
+				return errors.New("protected launcher drain and SCM result required")
 			}
 		}
 		e = collectionAction(p, "service-delete", func() error {
@@ -111,7 +148,7 @@ func collect(p Plan) error {
 	if !absent || aceCount != 0 {
 		return errors.New("service deletion or explicit grant removal not confirmed")
 	}
-	if p.Fixture != "" {
+	if p.Fixture != "" || unstarted {
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
 			if e = collectionAction(p, row.name, func() error { return icaclsWithin(aclBudget, row.path, "/grant:r", "*"+p.ControllerSID+":(OI)(CI)F") }); e != nil {
 				return e
@@ -130,7 +167,11 @@ func collect(p Plan) error {
 	if e != nil {
 		return e
 	}
-	receipt := map[string]any{"service_absent": absent, "queryable_account_process_count": processes, "unreadable_process_count": unreadable, "process_census_scope": "queryable processes; owned Job Object independently drained", "additional_ace_count": aceCount, "ace_scope": "administrator-installed root and runtime inheritable grants only", "profile_present": profile, "hive_present": hive, "classes_hive_present": classes, "root_retained": true, "credential_runtime": p.runner(), "official_ci_claimed": false, "known_residue": profile || hive || classes}
+	censusScope := "queryable processes; owned Job Object independently drained"
+	if unstarted {
+		censusScope = "queryable processes; worker start and authentication artifacts absent"
+	}
+	receipt := map[string]any{"unstarted_worker": unstarted, "service_absent": absent, "queryable_account_process_count": processes, "unreadable_process_count": unreadable, "process_census_scope": censusScope, "additional_ace_count": aceCount, "ace_scope": "administrator-installed root and runtime inheritable grants only", "profile_present": profile, "hive_present": hive, "classes_hive_present": classes, "root_retained": true, "credential_runtime": p.runner(), "official_ci_claimed": false, "known_residue": profile || hive || classes}
 	if e = saveNew(filepath.Join(p.Root, fmt.Sprintf("collection-%d.json", time.Now().UnixNano())), receipt); e != nil {
 		return e
 	}

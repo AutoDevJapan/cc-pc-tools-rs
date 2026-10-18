@@ -238,6 +238,15 @@ func pr148StepEnvironment(p pr148ExecutionPolicy, index, jobs, tests int) ([]str
 		}
 		values[key] = value
 	}
+	if index >= 1 && index <= 3 {
+		// LLVM lld otherwise selects its own parallelism independently of
+		// Cargo's job count. Preserve original flags and only bound linker
+		// threads; do not change features, debug info or test membership.
+		values["RUSTFLAGS"] = strings.TrimSpace(values["RUSTFLAGS"] + " -C link-arg=-Wl,--threads=1")
+		if index == 2 {
+			values["RUSTDOCFLAGS"] = strings.TrimSpace(values["RUSTDOCFLAGS"] + " -C link-arg=-Wl,--threads=1")
+		}
+	}
 	keys := make([]string, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)

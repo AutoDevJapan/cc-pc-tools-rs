@@ -88,7 +88,8 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		AllRequiredChecksSuccess                             bool
 		MemoryAvailable                                      bool
 		MemoryObservation                                    string
-	}{Plan: p, GuestSHA: digest(guest), PowerShellSHA: digest(pwsh), Execution: execution}
+		Resources                                            string
+	}{Plan: p, GuestSHA: digest(guest), PowerShellSHA: digest(pwsh), Execution: execution, Resources: "2 CPU, 10 GiB, no swap; Cargo/test/lld threads=1"}
 	if e = pr148SaveNew(filepath.Join(dir, "pr148-intent.private.json"), rec); e != nil {
 		return e
 	}

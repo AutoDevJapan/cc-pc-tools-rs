@@ -224,3 +224,25 @@ fn recovery_reservation_registered_during_cancel_is_preserved_and_not_requeued()
     f.dispatch();
     assert!(f.e.backend.launched.is_empty());
 }
+
+#[test]
+fn unavailable_explicit_source_model_is_retained_without_automatic_rerouting() {
+    let mut f = setup();
+    pass(&mut f);
+    f.e.backend.clock += 1801.;
+    pass(&mut f);
+    let source = &mut f.e.backend.records[0];
+    source["no_action_recovery"] = json!({"ticket":"fixture"});
+    source["model_explicit"] = json!(true);
+    source["model"] = json!("gpt-6.1-luna");
+    source["effort"] = json!("max");
+    f.e.backend.clock = n(&f.get(1)["scheduler"]["not_before"]) + 1.;
+    assert_eq!(
+        f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+            .unwrap_err(),
+        Error("ModelUnavailable")
+    );
+    assert_eq!(f.e.backend.pick_count, 1); // initial ordinary selection only; no reroute
+    assert_eq!(f.e.backend.records[0]["model"], "gpt-6.1-luna");
+    assert!(f.e.backend.launched.is_empty());
+}

@@ -1225,7 +1225,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
-            if truth(&item["model"]) || truth(&accepted_options["model"]) {
+            if truth(&item["model"])
+                || truth(&accepted_options["model"])
+                || selection["model_explicit"] == true
+            {
                 self.log(
                     "WARNING",
                     "指定モデルを利用できないため、指定を保持して再試行します。",

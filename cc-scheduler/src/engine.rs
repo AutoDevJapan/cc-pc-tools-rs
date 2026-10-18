@@ -714,18 +714,6 @@ impl<B: Backend> Scheduler<B> {
         let Some(j) = job else {
             return self.requeue(&i["id"], &m["job"], "lost");
         };
-        let child_review = cc_job_policy::review_result::is_review_subwork(j);
-        if child_review
-            && (!cc_job_policy::review_result::matches_item(j, i)
-                || !i["wait_ready"].is_null()
-                || !i["owner_question_wait"].is_null()
-                || !i["decision_wait"].is_null()
-                || i["owner_postponement_recorded"] == true
-                || i["stop_kind"].as_str().is_some_and(|s| !s.is_empty())
-                || cancellation::owner_stopped(i, j))
-        {
-            return Ok(());
-        }
         if !live(j) && result_received(i, &j["id"]) {
             return Ok(());
         }
@@ -843,6 +831,18 @@ impl<B: Backend> Scheduler<B> {
                 },
             )?;
         } else if s(&j["status"]) == "succeeded" {
+            let child_review = cc_job_policy::review_result::is_review_subwork(j);
+            if child_review
+                && (!cc_job_policy::review_result::matches_item(j, i)
+                    || !i["wait_ready"].is_null()
+                    || !i["owner_question_wait"].is_null()
+                    || !i["decision_wait"].is_null()
+                    || i["owner_postponement_recorded"] == true
+                    || i["stop_kind"].as_str().is_some_and(|s| !s.is_empty())
+                    || cancellation::owner_stopped(i, j))
+            {
+                return Ok(());
+            }
             if result_received(i, &j["id"]) {
                 return Ok(());
             }

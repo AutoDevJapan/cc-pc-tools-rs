@@ -377,6 +377,40 @@ fn fixed_review() -> (Value, Value) {
 }
 
 #[test]
+fn a_lost_review_with_a_new_spec_uses_normal_recovery() {
+    let mut f = Fixture::new();
+    let (mut item, mut job) = fixed_review();
+    item["spec"] = json!("new-fixed-head.md");
+    job["status"] = json!("lost");
+    assert!(cc_job_policy::review_result::is_review_subwork(&job));
+    assert!(!cc_job_policy::review_result::matches_item(&job, &item));
+    let db = json!({"projects":{"cc-pc-tools-rs":scope::TREE},"items":[item],"next_id":2814});
+    f.save(&db);
+    f.engine.backend.records = vec![job];
+    f.reconcile();
+    let after = f.db();
+    let row = &after["items"][0];
+    assert!(row["status"] == "todo");
+    assert!(row["scheduler"]["phase"] == "retry");
+    assert!(row["scheduler"]["last_stop"] == "lost");
+    assert!(row["scheduler"]["last_job"] == "review");
+    assert!(row["scheduler"]["job"].is_null());
+    assert!(row["scheduler"]["retry_count"] == 1);
+    assert!(n(&row["scheduler"]["not_before"]) > AT as f64);
+    assert!(row["processed_results"]["review"].is_null());
+    for key in [
+        "spec",
+        "subwork",
+        "jobs",
+        "resume_generation",
+        "worker_receipt",
+    ] {
+        assert!(row[key] == db["items"][0][key], "saved work changed");
+    }
+    assert!(f.engine.failures.is_empty());
+}
+
+#[test]
 fn a_completed_fixed_head_review_is_consumed_once_instead_of_173_restarts() {
     let mut f = Fixture::new();
     let (item, job) = fixed_review();

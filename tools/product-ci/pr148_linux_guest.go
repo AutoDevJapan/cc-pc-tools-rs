@@ -94,7 +94,7 @@ func pr148ExecChild(args []string) error {
 	jobs, e := strconv.Atoi(args[0])
 	tests, te := strconv.Atoi(args[1])
 	index, ie := strconv.Atoi(args[2])
-	if e != nil || te != nil || ie != nil || jobs < 1 || jobs > 10 || tests < 1 || tests > 10 || index < 0 || index > 4 {
+	if e != nil || te != nil || ie != nil || jobs < 1 || jobs > 2 || tests < 1 || tests > 2 || index < 0 || index > 4 {
 		return errors.New("executor caps rejected")
 	}
 	p, e := pr148ReadGuest()

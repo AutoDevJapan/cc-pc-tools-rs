@@ -33,15 +33,17 @@ func apiReadLimit(parent context.Context, path string, v any, limit int64) error
 	return json.Unmarshal(b, v)
 }
 
-type apiErrorPreview struct{ bytes.Buffer }
+type apiErrorPreview struct{ buffer bytes.Buffer }
+
+func (b *apiErrorPreview) String() string { return b.buffer.String() }
 
 func (b *apiErrorPreview) Write(p []byte) (int, error) {
 	n := len(p)
-	if left := 8192 - b.Len(); left > 0 {
+	if left := 8192 - b.buffer.Len(); left > 0 {
 		if len(p) > left {
 			p = p[:left]
 		}
-		_, _ = b.Buffer.Write(p)
+		_, _ = b.buffer.Write(p)
 	}
 	return n, nil
 }
@@ -55,27 +57,16 @@ func apiReadAttempt(parent context.Context, path string, limit int64) ([]byte, e
 	c.Stderr = preview
 	// gh uses its existing OAuth store. Never request auth-token, dump config,
 	// pass a credential in argv, or forward the owner's env to the service.
-	pipe, e := c.StdoutPipe()
-	if e != nil {
-		return nil, e
+	b, overflow, waitErr := captureGitHubRead(c, limit, cancel)
+	if overflow {
+		return nil, errors.New("GitHub read response exceeds limit")
 	}
-	if e = c.Start(); e != nil {
-		return nil, errors.New("GitHub read API unavailable")
-	}
-	b, readErr := boundedRead(pipe, limit)
-	if readErr != nil {
-		_ = c.Process.Kill()
-	}
-	waitErr := c.Wait()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if readErr != nil || waitErr != nil {
+	if waitErr != nil {
 		// No server text, source bytes, endpoint or credential is returned or
 		// persisted. Auth/policy/size failures never enter the retry path.
-		if readErr == nil && transientGitHubRead(preview.String()) {
-			return nil, errGitHubReadTransport
-		}
 		status := "unclassified"
 		text := strings.ToLower(preview.String())
 		for _, code := range []string{"401", "403", "404", "429", "500", "502", "503", "504"} {
@@ -88,7 +79,10 @@ func apiReadAttempt(parent context.Context, path string, limit int64) ([]byte, e
 		if c.ProcessState != nil {
 			exit = c.ProcessState.ExitCode()
 		}
-		return nil, fmt.Errorf("GitHub read API failed (bytes=%d read_error=%t exit=%d status=%s)", len(b), readErr != nil, exit, status)
+		if transientGitHubRead(preview.String()) && !errors.Is(waitErr, exec.ErrWaitDelay) {
+			return nil, fmt.Errorf("%w (bytes=%d exit=%d status=%s)", errGitHubReadTransport, len(b), exit, status)
+		}
+		return nil, fmt.Errorf("GitHub read API failed (bytes=%d exit=%d status=%s pipe_timeout=%t)", len(b), exit, status, errors.Is(waitErr, exec.ErrWaitDelay))
 	}
 	return b, nil
 }

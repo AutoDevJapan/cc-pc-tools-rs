@@ -35,7 +35,7 @@ func transientGitHubRead(stderr string) bool {
 	if strings.Contains(s, "http 4") || strings.Contains(s, "forbidden") || strings.Contains(s, "unauthorized") {
 		return false
 	}
-	return strings.Contains(s, "tls handshake timeout") || strings.Contains(s, "unexpected eof") || strings.Contains(s, "connection reset by peer")
+	return strings.Contains(s, "tls handshake timeout") || strings.Contains(s, "unexpected eof") || strings.Contains(s, "connection reset by peer") || strings.Contains(s, "forcibly closed by the remote host")
 }
 
 func waitGitHubRead(ctx context.Context, delay time.Duration) error {

@@ -65,12 +65,12 @@ func TestGitHubReadCancellationNeverAcceptsLateResult(t *testing.T) {
 }
 
 func TestGitHubReadTransportClassification(t *testing.T) {
-	for _, s := range []string{"net/http: TLS handshake timeout", "unexpected EOF", "connection reset by peer"} {
+	for _, s := range []string{"net/http: TLS handshake timeout", "unexpected EOF", "connection reset by peer", "wsarecv: An existing connection was forcibly closed by the remote host"} {
 		if !transientGitHubRead(s) {
 			t.Fatal("transport not classified")
 		}
 	}
-	for _, s := range []string{"HTTP 403: Forbidden: unexpected EOF", "HTTP 401: Unauthorized: TLS handshake timeout", "HTTP 404: Not Found: unexpected EOF", "HTTP 429: TLS handshake timeout", "Forbidden: connection reset by peer", "input exceeds limit", "HTTP 404: Not Found", "guard refused request", "invalid JSON", ""} {
+	for _, s := range []string{"HTTP 403: forcibly closed by the remote host", "HTTP 403: Forbidden: unexpected EOF", "HTTP 401: Unauthorized: TLS handshake timeout", "HTTP 404: Not Found: unexpected EOF", "HTTP 429: TLS handshake timeout", "Forbidden: connection reset by peer", "input exceeds limit", "HTTP 404: Not Found", "guard refused request", "invalid JSON", ""} {
 		if transientGitHubRead(s) {
 			t.Fatal("permanent failure retried")
 		}

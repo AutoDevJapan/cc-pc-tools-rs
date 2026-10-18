@@ -290,7 +290,7 @@ func pr148TranslateGate(args []string, packet pr148GatePacket) ([]string, int, i
 		}
 		return base, 1, 1, nil // cargo fmt is explicitly unlocked by the machine gate.
 	}
-	if e != nil || te != nil || jobs < 1 || jobs > 10 || tests < 1 || tests > 10 || os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || os.Getenv("CODEX_JOBS_CARGO_TARGET_HELD") == "" {
+	if e != nil || te != nil || jobs < 1 || jobs > 2 || tests < 1 || tests > 2 || os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" || os.Getenv("CODEX_JOBS_CARGO_TARGET_HELD") == "" {
 		return nil, 0, 0, errors.New("shared Cargo gate permit absent")
 	}
 	if len(args) < len(base) || !reflect.DeepEqual(args[:len(base)], base) {

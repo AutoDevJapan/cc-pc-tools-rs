@@ -175,6 +175,9 @@ func allowed(path string) bool {
 	if err != nil || legacyMatch(absolute) {
 		return false
 	}
+	if conversationPathAllowed(absolute) {
+		return true
+	}
 	if productPathAllowed(absolute) {
 		return true
 	}
@@ -194,6 +197,9 @@ func allowed(path string) bool {
 	}
 	if legacyMatch(target) {
 		return false
+	}
+	if runtimeExecutable(absolute, target, publicationGateRuntime) && sourceVerified(base) {
+		return true
 	}
 	for _, root := range roots {
 		resolved, e := physical(root)

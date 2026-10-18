@@ -3,7 +3,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 pub const BLOCKED_EXIT: i32 = 78;
-pub const BLOCKED_MESSAGE: &str = "聞かずに進めること: 作業に当然必要な操作の許可は質問しません。オーナーだけが決める事項がある場合は --owner-only money|publish|rights|customer|direction|irreversible で理由の種類を指定してください。";
+pub const BLOCKED_MESSAGE: &str = "聞かずに進めること: 作業に当然必要な操作の許可は質問しません。オーナーだけが決める事項がある場合は --owner-only money|publish|rights|customer|direction|irreversible|access で理由の種類を指定してください。";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
 pub enum OwnerOnly {
@@ -13,6 +13,7 @@ pub enum OwnerOnly {
     Customer,
     Direction,
     Irreversible,
+    Access,
 }
 
 impl OwnerOnly {
@@ -24,6 +25,7 @@ impl OwnerOnly {
             Self::Customer => "customer",
             Self::Direction => "direction",
             Self::Irreversible => "irreversible",
+            Self::Access => "access",
         }
     }
 }

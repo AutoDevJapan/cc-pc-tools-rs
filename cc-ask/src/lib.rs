@@ -25,6 +25,7 @@ pub mod board;
 pub mod board_display;
 pub mod civ6_idle;
 pub mod commands;
+pub mod conversation_bridge;
 pub mod core;
 pub mod decision_identity;
 pub mod helper_reaper;

@@ -4,7 +4,8 @@
 //! changes, unlocks or dispatches that ledger. HTTP writes are limited to a newly
 //! reserved forum post, its verified recovery threads and an explicitly supplied
 //! owner request thread. Close uses one exact verified question PATCH only.
-//! No scheduler, model, subprocess or DELETE is used.
+//! No scheduler, model or DELETE is used. Only new conversation-log image
+//! requests may run the fixed, bounded, read-only Go media verifier subprocess.
 //!
 //! Storage uses recovery-messages.json/lock and recovery-close.json/lock, with
 //! domain-prefixed temporary snapshots. Message events are append-only; close
@@ -603,8 +604,16 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         return Err("close configured forum differs".into());
     }
     let mut equivalent = close_replies(
-        &mut api, &ledger, request, &binding, &applied, &mut state,
-        CloseEnv { home: &ctx.here, legacy: legacy.as_deref() },
+        &mut api,
+        &ledger,
+        request,
+        &binding,
+        &applied,
+        &mut state,
+        CloseEnv {
+            home: &ctx.here,
+            legacy: legacy.as_deref(),
+        },
     )?;
     let channel = api.channel(&binding.thread_id)?;
     let archived = channel["thread_metadata"]["archived"]
@@ -662,8 +671,16 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         );
     }
     equivalent |= close_replies(
-        &mut api, &ledger, request, &binding, &applied, &mut state,
-        CloseEnv { home: &ctx.here, legacy: legacy.as_deref() },
+        &mut api,
+        &ledger,
+        request,
+        &binding,
+        &applied,
+        &mut state,
+        CloseEnv {
+            home: &ctx.here,
+            legacy: legacy.as_deref(),
+        },
     )?;
     // Check the same bytes were applied throughout this attempt.
     close_application(&ctx.here, &binding)?;
@@ -1521,8 +1538,70 @@ fn verify_generated_proposal(
     Ok(())
 }
 
+fn conversation_media_request(request: &str) -> bool {
+    request
+        .strip_prefix("conversation-log-")
+        .is_some_and(|suffix| {
+            suffix.len() == 32
+                && suffix
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConversationMediaVerification {
+    domain: String,
+    verified: bool,
+    sha256: String,
+    size: u64,
+    mime: String,
+    extension: String,
+}
+
+fn verify_conversation_image(
+    ctx: &mut Context,
+    request: &str,
+    path: &Path,
+    bytes: &[u8],
+    mime: &str,
+    extension: &str,
+) -> Result<()> {
+    const FAILED: &str = "new conversation image verification unavailable; no image is sent";
+    let output = ctx
+        .effects
+        .run(
+            &[
+                "D:/CC/Tools/discord-ask/unattended-runner.exe".into(),
+                "--verify-conversation-media".into(),
+                "--path".into(),
+                path.to_str().ok_or(FAILED)?.into(),
+                "--request-id".into(),
+                request.into(),
+            ],
+            20,
+        )
+        .map_err(|_| FAILED)?;
+    if output.code != 0 || output.stdout.len() > 64 * 1024 {
+        return Err(FAILED.into());
+    }
+    let proof: ConversationMediaVerification =
+        serde_json::from_str(&output.stdout).map_err(|_| FAILED)?;
+    if proof.domain != "discord-conversation-media-v1"
+        || !proof.verified
+        || proof.sha256 != format!("{:x}", Sha256::digest(bytes))
+        || proof.size != bytes.len() as u64
+        || proof.mime != mime
+        || proof.extension != extension
+    {
+        return Err(FAILED.into());
+    }
+    Ok(())
+}
+
 fn images(
-    ctx: &Context,
+    ctx: &mut Context,
     request: &str,
     paths: &[PathBuf],
     secrets: &SecretCheck,
@@ -1533,13 +1612,13 @@ fn images(
     if paths.len() > 10 {
         return Err("at most ten recovery images are supported".into());
     }
+    let conversation = conversation_media_request(request);
     // This deny list is read only into memory; never returned or copied to receipts.
     let clients = match fs::read_to_string(&ctx.client_projects) {
         Ok(clients) => Some(clients),
         Err(error)
             if error.kind() == std::io::ErrorKind::NotFound
-                && request == UI_PROPOSAL_REQUEST
-                && paths.len() == 1 =>
+                && (conversation || (request == UI_PROPOSAL_REQUEST && paths.len() == 1)) =>
         {
             None
         }
@@ -1560,6 +1639,7 @@ fn images(
         // This is a path/time preflight only. The original source and the
         // actual candidate bytes are independently verified below before HTTP.
         if clients.is_none()
+            && !conversation
             && (!path.is_absolute()
                 || !proposal_receipt_matches(
                     request,
@@ -1605,7 +1685,7 @@ fn images(
             return Err("a recovery attachment must be a regular image file".into());
         }
         let bytes = read_bounded(file, IMAGE_BYTES)?;
-        if clients.is_none() {
+        if clients.is_none() && !conversation {
             verify_generated_proposal(request, path, &resolved, &bytes)?;
         }
         let (mime, extension) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
@@ -1627,6 +1707,9 @@ fn images(
         total += bytes.len();
         if total > UPLOAD_BYTES {
             return Err("recovery images exceed the total upload size limit".into());
+        }
+        if conversation {
+            verify_conversation_image(ctx, request, path, &bytes, mime, extension)?;
         }
         let sha256 = format!("{:x}", Sha256::digest(&bytes));
         result.push(Image {
@@ -2368,7 +2451,7 @@ fn ensure(
     Ok(receipt)
 }
 
-fn prepare_log(ctx: &Context, args: &LogArgs) -> Result<(Request, Vec<Image>)> {
+fn prepare_log(ctx: &mut Context, args: &LogArgs) -> Result<(Request, Vec<Image>)> {
     request_key(&args.request_id)?;
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
@@ -3642,6 +3725,195 @@ mod tests {
             request_id: Some(core::s(&result["request_id"]).into()),
             todo_id: Some(2472),
             read_only: true,
+        }
+    }
+
+    struct MediaVerifierMock {
+        inner: Mock,
+        output: Output,
+        calls: Arc<Mutex<Vec<Vec<String>>>>,
+    }
+
+    impl Effects for MediaVerifierMock {
+        fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+            assert_eq!(timeout, 20);
+            assert_eq!(
+                args.first().map(String::as_str),
+                Some("D:/CC/Tools/discord-ask/unattended-runner.exe")
+            );
+            assert_eq!(
+                args.get(1).map(String::as_str),
+                Some("--verify-conversation-media")
+            );
+            self.calls.lock().unwrap().push(args.to_vec());
+            Ok(self.output.clone())
+        }
+        fn http(
+            &mut self,
+            method: &str,
+            url: &str,
+            body: Option<&Value>,
+            discord: bool,
+        ) -> Result<Value> {
+            self.inner.http(method, url, body, discord)
+        }
+        fn multipart(&mut self, url: &str, content_type: &str, body: &[u8]) -> Result<Value> {
+            self.inner.multipart(url, content_type, body)
+        }
+    }
+
+    fn media_mock(
+        fixture: &Fixture,
+        ctx: &mut Context,
+        proof: Value,
+        code: i32,
+    ) -> Arc<Mutex<Vec<Vec<String>>>> {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        ctx.effects = Box::new(MediaVerifierMock {
+            inner: Mock {
+                server: fixture.server.clone(),
+                home: fixture.home.clone(),
+                pause: None,
+            },
+            output: Output {
+                code,
+                stdout: proof.to_string(),
+                stderr: "private verifier diagnostic".into(),
+            },
+            calls: calls.clone(),
+        });
+        calls
+    }
+
+    fn media_proof(bytes: &[u8]) -> Value {
+        json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(bytes)),"size":bytes.len(),"mime":"image/png","extension":"png"})
+    }
+
+    #[test]
+    fn recovery_messages_conversation_media_qualified_without_legacy_registry_is_get_verified() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        fs::remove_file(&ctx.client_projects).unwrap();
+        let bytes = b"\x89PNG\r\n\x1a\nfixture-image";
+        let image = fixture.root.path().join("current.png");
+        fs::write(&image, bytes).unwrap();
+        let calls = media_mock(&fixture, &mut ctx, media_proof(bytes), 0);
+        let mut args = fixture.log(
+            &format!("conversation-log-{}", "a".repeat(32)),
+            "作業が完了しました。",
+            false,
+        );
+        args.attach.push(image.clone());
+        let result = log(&mut ctx, &args).unwrap();
+        assert_eq!(result["delivery"], "verified");
+        assert_eq!(fixture.server.lock().unwrap().multipart_uploads, 1);
+        let captured = calls.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(Path::new(&captured[0][3]), image);
+        assert_eq!(captured[0][5], args.request_id);
+        assert!(!result.to_string().contains(image.to_str().unwrap()));
+        drop(captured);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_conversation_media_failed_or_changed_proof_never_posts() {
+        for field in [
+            "verified",
+            "sha256",
+            "size",
+            "mime",
+            "extension",
+            "domain",
+            "exit_code",
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            fs::remove_file(&ctx.client_projects).unwrap();
+            let bytes = b"\x89PNG\r\n\x1a\nfixture-image";
+            let image = fixture.root.path().join("current.png");
+            fs::write(&image, bytes).unwrap();
+            let mut proof = media_proof(bytes);
+            match field {
+                "verified" => proof[field] = json!(false),
+                "size" => proof[field] = json!(bytes.len() + 1),
+                "exit_code" => {}
+                _ => proof[field] = json!("private-verifier-detail"),
+            }
+            let calls = media_mock(
+                &fixture,
+                &mut ctx,
+                proof,
+                if field == "exit_code" { 1 } else { 0 },
+            );
+            let mut args = fixture.log(
+                &format!("conversation-log-{}", "a".repeat(32)),
+                "作業が完了しました。",
+                false,
+            );
+            args.attach.push(image);
+            let error = log(&mut ctx, &args).unwrap_err();
+            assert!(!error.contains("private-verifier-detail"));
+            assert_eq!(calls.lock().unwrap().len(), 1);
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            assert!(!fixture.home.join(LEDGER).exists());
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_messages_conversation_media_preserves_existing_exclusions_and_legacy_denial() {
+        for legacy in [false, true] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let bytes = b"\x89PNG\r\n\x1a\nfixture-image";
+            let image = fixture.root.path().join("current.png");
+            fs::write(&image, bytes).unwrap();
+            if legacy {
+                fs::remove_file(&ctx.client_projects).unwrap();
+            } else {
+                fs::write(&ctx.client_projects, "current.png\n").unwrap();
+            }
+            let calls = media_mock(&fixture, &mut ctx, media_proof(bytes), 0);
+            let id = if legacy {
+                "legacy-image".into()
+            } else {
+                format!("conversation-log-{}", "a".repeat(32))
+            };
+            let mut args = fixture.log(&id, "作業が完了しました。", false);
+            args.attach.push(image);
+            assert!(log(&mut ctx, &args).is_err());
+            assert!(calls.lock().unwrap().is_empty());
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_messages_conversation_media_cannot_skip_secret_byte_checks_or_old_namespace() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        fs::remove_file(&ctx.client_projects).unwrap();
+        let bytes = b"\x89PNG\r\n\x1a\npassword=synthetic-private-value";
+        let image = fixture.root.path().join("current.png");
+        fs::write(&image, bytes).unwrap();
+        let calls = media_mock(&fixture, &mut ctx, media_proof(bytes), 0);
+        let mut args = fixture.log(
+            &format!("conversation-log-{}", "a".repeat(32)),
+            "作業が完了しました。",
+            false,
+        );
+        args.attach.push(image);
+        assert!(log(&mut ctx, &args).is_err());
+        assert!(calls.lock().unwrap().is_empty());
+        assert!(fixture.server.lock().unwrap().calls.is_empty());
+        fixture.unchanged();
+        for id in [
+            "conversation-log-old",
+            "conversation-log-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "conversation-log-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-extra",
+        ] {
+            assert!(!conversation_media_request(id));
         }
     }
 

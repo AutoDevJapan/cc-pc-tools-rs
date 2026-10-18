@@ -6,6 +6,7 @@ pub mod finished_work_handoff;
 pub mod owner_wait_repair;
 pub mod priority;
 pub mod product_retry;
+pub mod review_result;
 pub mod subwork;
 pub mod todo_history;
 pub mod todo_store;

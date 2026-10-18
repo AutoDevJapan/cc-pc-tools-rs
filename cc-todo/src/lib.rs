@@ -29,6 +29,7 @@ pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
 pub use cc_job_policy::todo_wait::pending_on;
+pub mod conversation_wait;
 pub mod product_resume;
 pub mod product_retry;
 pub mod ready;
@@ -137,6 +138,9 @@ pub enum Command {
         note_file: Option<PathBuf>,
         #[arg(long, required_unless_present = "note_file")]
         spec: Option<PathBuf>,
+        /// Compare the exact current note while holding todo.lock before replacing it.
+        #[arg(long, requires = "note_file")]
+        expected_note_sha256: Option<String>,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -180,6 +184,20 @@ pub enum Command {
         on: Vec<i64>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+    },
+    /// Park one verified new Discord question; never reads the lost question ledger.
+    QuestionWait {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        question_file: PathBuf,
+    },
+    /// Apply one exact owner answer and return the original task to ordinary scheduling.
+    QuestionAnswer {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        answer_file: PathBuf,
     },
     /// Wait for a scheduled readiness check without repeatedly launching a worker.
     WaitReady {
@@ -1108,7 +1126,26 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             id,
             note_file,
             spec,
-        } => edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?,
+            expected_note_sha256,
+        } => {
+            if let Some(expected) = expected_note_sha256 {
+                use sha2::{Digest, Sha256};
+                let note = &find(db, *id)?["note"];
+                if (!note.is_null() && !note.is_string())
+                    || expected.len() != 64
+                    || !expected
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                    || format!(
+                        "{:x}",
+                        Sha256::digest(note.as_str().unwrap_or("").as_bytes())
+                    ) != *expected
+                {
+                    return Err("conversation_note_changed".into());
+                }
+            }
+            edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
+        }
         Command::ArchiveHistory { id, apply } => output
             .push(cc_job_policy::todo_history::archive(&paths.store, db, *id, *apply)?.to_string()),
         Command::RestoreHistory { id, apply } => output
@@ -1159,6 +1196,12 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             if let Some(percent) = progress {
                 set_progress(find(db, *id)?, *percent)?;
             }
+        }
+        Command::QuestionWait { id, question_file } => {
+            output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
+        }
+        Command::QuestionAnswer { id, answer_file } => {
+            output.push(conversation_wait::answer(db, paths, *id, answer_file)?.to_string())
         }
         Command::ResumeReady { id, condition } => {
             let resumed = ready::resume_production(db, *id, condition)?;
@@ -1292,6 +1335,13 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())
         .is_some_and(|r| r["saved"] == false);
+    let unchanged_conversation = matches!(
+        cli.command,
+        Command::QuestionWait { .. } | Command::QuestionAnswer { .. }
+    ) && output
+        .first()
+        .and_then(|line| serde_json::from_str::<Value>(line).ok())
+        .is_some_and(|r| r["changed"] == false);
     // Listing is read-only; keep the shared byte lock but do not rewrite or back up state.
     if matches!(
         cli.command,
@@ -1301,6 +1351,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::ArchiveHistory { apply: false, .. }
             | Command::RestoreHistory { apply: false, .. }
     ) || unchanged_history
+        || unchanged_conversation
     {
         for line in output {
             println!("{line}");

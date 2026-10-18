@@ -1,10 +1,16 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
+
+#[path = "process_birth_fallback.rs"]
+mod process_birth_fallback;
+pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
+pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
     fn product_review_allowed(&mut self, _item: &Value) -> bool {
@@ -21,6 +27,10 @@ pub trait Backend {
     }
     fn measure(&mut self, state: &mut Value) -> Result<(Value, Processes)>;
     fn snapshot(&mut self) -> Result<Processes>;
+    /// Read-only creation-time bounds for selected PIDs inaccessible to GetProcessTimes.
+    fn birth_bounds(&mut self, _pids: &[u32]) -> Result<BTreeMap<u32, (u64, u64)>> {
+        Ok(BTreeMap::new())
+    }
     fn jobs(&mut self) -> Result<Vec<Value>>;
     fn event_mtime(&mut self, job: &Value) -> Result<f64>;
     fn mark_lost(&mut self, job: &mut Value) -> Result<bool>;
@@ -60,7 +70,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -464,6 +474,9 @@ impl Backend for RealBackend {
     fn snapshot(&mut self) -> Result<Processes> {
         native::process_snapshot()
     }
+    fn birth_bounds(&mut self, pids: &[u32]) -> Result<BTreeMap<u32, (u64, u64)>> {
+        process_birth_fallback::query(self.runner.as_mut(), pids)
+    }
     fn jobs(&mut self) -> Result<Vec<Value>> {
         jobs_from(&self.tools.join("codex-jobs/jobs"), true)
     }
@@ -663,8 +676,10 @@ impl Backend for RealBackend {
             return Ok("todo".into());
         }
         let result = fs::read_to_string(path)?;
-        cc_ask::core::log_result_misuse(s(&j["id"]), &result);
-        Ok(result_outcome(&result).into())
+        if !cc_job_policy::review_result::completed(j, &result) {
+            cc_ask::core::log_result_misuse(s(&j["id"]), &result);
+        }
+        Ok(job_result_outcome(j, &result).into())
     }
     fn worktree(&mut self, repo: &str, i: &Value) -> Result<()> {
         self.guard_workspace_path(repo)?;
@@ -690,6 +705,16 @@ pub fn result_outcome(result: &str) -> &'static str {
         "状態: 完了" => "done",
         "状態: 要判断" => "block",
         _ => "todo",
+    }
+}
+pub fn job_result_outcome(job: &Value, result: &str) -> &'static str {
+    if cc_job_policy::review_result::completed(job, result) {
+        let body = result.split_once('\n').map(|(_, body)| body).unwrap_or("");
+        // Retain the existing duplicate-status and body checks after recognizing
+        // this one completed child-review spelling. Root parsing stays strict.
+        result_outcome(&format!("状態: 完了\n{body}"))
+    } else {
+        result_outcome(result)
     }
 }
 pub fn question_body(i: &Value) -> String {

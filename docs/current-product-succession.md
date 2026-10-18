@@ -45,7 +45,8 @@ origin_job_idは親のjobs履歴に結び付く。親は子を登録した後に
 配下で子IDとschedulerのtitleから作る正規名に限定する。schedulerのpathが
 未記録ならこの名前を照合し、記録済みなら記録された同じworktreeだけを許可する。
 titleが変わって予定名と記録済みpathが一致しなくなった場合は不成立にする。
-slugは小文字ASCII英数字だけを残す。Unicode正規化の差があれば許可せず拒否する。
+slugは小文字ASCII英数字だけを残す。Go/Rustで小文字化結果が異なり、予定名が
+一致しない場合は許可せず拒否する。
 親root本体や同IDの別名worktreeは拒否する。予定pathが既に存在する場合も
 guardでrepository/common-dir/branchと実体を確認する。存在するworktreeは
 同じrepository/common-dirと`scheduler/todo-<子ID>-` branchを確認する。

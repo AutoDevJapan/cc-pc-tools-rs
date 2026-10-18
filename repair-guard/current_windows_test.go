@@ -585,6 +585,7 @@ func TestCurrentSubworkWorkspacePathMatchesSchedulerSlug(t *testing.T) {
 	}{
 		{"uppercase", "PR Review", "todo-2872-pr-review"},
 		{"non-ascii-only", "日本語", "todo-2872-work"},
+		{"unicode-lowercase-difference", "İx", "todo-2872-ix"},
 		{"trailing-separator-at-limit", strings.Repeat("a", 31) + " b", "todo-2872-" + strings.Repeat("a", 31) + "-"},
 		{"empty", "", "todo-2872-work"},
 	} {

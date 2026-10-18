@@ -733,3 +733,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 実socketで不正manifestをSDK準備経路へ与えて失敗させ、同guestへprobe-public-sdk/live-job/materialize-source/configure-offline/normal/cancel/continue/status/prepare-sdkの9種を順次送信。すべてがblobや別処理の応答を返さず拒否し、active/prepared/configured/sourceTouched/resultsを変更せずsdkAttemptedを保持することを確認。既存の未使用guest正常入力と他のRPC対照は維持した。
 - 変更はLinux専用2file。実Linux module21pass/0fail/公開SDK opt-in2skip、Linux vet成功。Windowsのコンパイル入力はe02a592と同じなので、同版の有効なWindows race/vetを再利用し重複実行していない。原Cargo compile0。新SDK生成/実VM/runner/公式rerun/GitHub mutationは0。
 - 新ownedrootd6a7bb084824e564cd941261ec978d99、証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-065638-sdk-lifecycle。原応答/実model/検査/元source固定を保存。元SDK9389/失敗disk/Windows SDK/必要layer/原guard/登録manifest/owner-work/他担当資源を保持。次はこの設計修正差分だけ別モデルで確認し、Must0後に同clean版で新SDK生成とcold cloneの実受入を行う。終了hook/公式CI/Windows13/Docker parityは未完、原merge/Prdは親2641。
+### 共通受付修正の追加レビューと配送
+
+- 固定8745599→910d13a119484302df245640f8e53ec9376e7c19/treeca664fd2617dc97f3d6d9a05098ae21d65db12a0の追加3fileだけをレビュー2886/modelgpt-6-lunaへ通常add --specで登録。保存spec全文一致/dispatchableを確認。実結果未受領、新SDK/実VM適用は0。
+- 元2737/親2641へmarker[2737-065638-sdk-lifecycle]で実指摘/設計修正/検査/未完/証拠/次の工程を1回配送し、2884にも原応答受領を記録。終了前も原source API固定、原AGENTS/CLAUDE既読同hash、own route/normalCI intent不在と工具container停止/PID0を確認。
+- 次は2886の実結果と固定head/既読/modelを受領し、残Mustを解消してから同clean版のhost/Linuxhelperを生成する。新SDKは新ownedrootで作り、停止後cloneだけでRust/driver/保存の受入を行う。旧SDK/失敗disk/Windows SDK/原guard/manifest/未回収を保持。原CI/終了hook/Windows13/Docker parityは未完。2886のみの正規wait、現job/実HEADのscheduler checkpointを保存して自動再開。

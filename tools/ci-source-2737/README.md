@@ -89,3 +89,17 @@ fixtures. They verify actual commit/tree/blob reproduction, ignored tracked
 content, disabled clean filters, gitlink non-fetch behavior, archive and hash
 tampering, strict Pin/JSON handling, and unsafe tar boundaries. No test fetches
 or executes the original product source.
+# Bounded metadata rejection diagnostics
+
+`MetadataFailure(err)` returns a detached, validated `MetadataDiagnostic` only
+for a rejection from the Git metadata snapshot stage. Its code and kind are
+closed enums; the other fields are the observed entry count, file size and
+running byte total. It contains no path, object ID, config key, content or OS
+error text. The existing `source_metadata` hook code remains unchanged and may
+carry this optional detail. An error at another proof stage has no such detail.
+
+The 128 MiB per-file, 512 MiB aggregate and 200,000-entry limits, anchored reads,
+link rejection, HEAD/tree/index checks and physical path revalidation remain in
+force. A sparse oversized synthetic object verifies the file-limit category;
+it does not prove that a pack limit caused the original CI failure. The original
+failure still needs an observation from the actual completion hook.

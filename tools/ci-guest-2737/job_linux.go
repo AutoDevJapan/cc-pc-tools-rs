@@ -89,7 +89,7 @@ type localJobOwner struct {
 }
 
 func (o *localJobOwner) remember(stage, code string) {
-	d := &hookDiagnostic{1, stage, code}
+	d := &hookDiagnostic{Version: 1, Stage: stage, Code: code}
 	if o.diagnostic == nil && validHookDiagnostic(d) {
 		o.diagnostic = d
 	}
@@ -126,7 +126,10 @@ func (o *localJobOwner) handle(c net.Conn) {
 	defer cancel()
 	proof, e := sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, liveWorkspace)
 	if e != nil {
-		o.remember(q.Stage, sourceFailureCode(e))
+		d := &hookDiagnostic{Version: 1, Stage: q.Stage, Code: sourceFailureCode(e), Metadata: sourcepacket.MetadataFailure(e)}
+		if o.diagnostic == nil && validHookDiagnostic(d) {
+			o.diagnostic = d
+		}
 		return
 	}
 	if e = o.wire.permit(ctx, o.id, liveJobEvent{ID: o.id, Stage: q.Stage, Proof: proof, Context: q}); e != nil {
@@ -334,7 +337,7 @@ func liveJobHook(stage string) (retErr error) {
 		if alias, ok := aliases[code]; ok {
 			code = alias
 		}
-		d := &hookDiagnostic{1, stage, code}
+		d := &hookDiagnostic{Version: 1, Stage: stage, Code: code}
 		if !validHookDiagnostic(d) {
 			return
 		}

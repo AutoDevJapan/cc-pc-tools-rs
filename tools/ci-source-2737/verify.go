@@ -3,6 +3,7 @@ package sourcepacket
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +21,9 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 	stage := "pin"
 	defer func() {
 		if retErr != nil {
+			if stage == "metadata" && MetadataFailure(retErr) != nil {
+				return
+			}
 			retErr = fmt.Errorf("checkout proof rejected at %s", stage)
 		}
 	}()
@@ -120,34 +124,37 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 func copyGitProofMetadata(ctx context.Context, fs *secureFiles, snapshot string, checkedConfig []byte) error {
 	var total int64
 	count := 0
+	fail := func(code, kind string, size int64) error {
+		return &metadataProofError{MetadataDiagnostic{Code: code, Kind: kind, Entries: count, FileBytes: size, TotalBytes: total}}
+	}
 	var walk func(string) error
 	walk = func(rel string) error {
 		if ctx.Err() != nil {
-			return fixedErr()
+			return fail("context", "directory", 0)
 		}
 		if os.MkdirAll(filepath.Join(snapshot, rel), 0700) != nil {
-			return fixedErr()
+			return fail("write", "directory", 0)
 		}
 		d, e := fs.directory(rel)
 		if e != nil {
-			return e
+			return fail("directory", "directory", 0)
 		}
 		items, e := d.ReadDir(-1)
 		if e != nil {
-			return fixedErr()
+			return fail("enumerate", "directory", 0)
 		}
 		for _, item := range items {
 			count++
 			if count > maxFiles {
-				return fixedErr()
+				return fail("entry_limit", "directory", 0)
 			}
 			name := filepath.Join(rel, item.Name())
 			slash := filepath.ToSlash(name)
 			if !secureRelative(name) || item.Type()&os.ModeSymlink != 0 {
-				return fixedErr()
+				return fail("path", metadataKind(slash), 0)
 			}
 			if slash == ".git/commondir" || slash == ".git/gitdir" || slash == ".git/config.worktree" || slash == ".git/objects/info/alternates" || slash == ".git/objects/info/http-alternates" || slash == ".git/info/grafts" || slash == ".git/refs/replace" || slash == ".git/worktrees" {
-				return fixedErr()
+				return fail("policy", metadataKind(slash), 0)
 			}
 			if item.IsDir() {
 				if e = walk(name); e != nil {
@@ -165,19 +172,23 @@ func copyGitProofMetadata(ctx context.Context, fs *secureFiles, snapshot string,
 				var e error
 				b, _, e = fs.read(name, 128<<20)
 				if e != nil {
-					return e
+					var readErr *secureReadError
+					if errors.As(e, &readErr) {
+						return fail(readErr.code, metadataKind(slash), readErr.size)
+					}
+					return fail("read", metadataKind(slash), 0)
 				}
 			}
 			total += int64(len(b))
 			if total > 512<<20 {
-				return fixedErr()
+				return fail("total_limit", metadataKind(slash), int64(len(b)))
 			}
 			target := filepath.Join(snapshot, name)
 			if !within(snapshot, target) {
-				return fixedErr()
+				return fail("path", metadataKind(slash), int64(len(b)))
 			}
 			if os.MkdirAll(filepath.Dir(target), 0700) != nil || os.WriteFile(target, b, 0600) != nil {
-				return fixedErr()
+				return fail("write", metadataKind(slash), int64(len(b)))
 			}
 		}
 		return nil

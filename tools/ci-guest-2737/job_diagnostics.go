@@ -1,15 +1,23 @@
 package main
 
-import "strings"
+import (
+	"strings"
+
+	sourcepacket "cc/ci-source-2737"
+)
 
 // Closed diagnostics contain neither observed values nor filesystem paths.
 type hookDiagnostic struct {
 	Version     int
 	Stage, Code string
+	Metadata    *sourcepacket.MetadataDiagnostic `json:",omitempty"`
 }
 
 func validHookDiagnostic(d *hookDiagnostic) bool {
 	if d == nil || d.Version != 1 || (d.Stage != "start" && d.Stage != "complete") {
+		return false
+	}
+	if d.Metadata != nil && (d.Code != "source_metadata" || !d.Metadata.Valid()) {
 		return false
 	}
 	switch d.Code {
@@ -21,7 +29,7 @@ func validHookDiagnostic(d *hookDiagnostic) bool {
 
 func sourceFailureCode(err error) string {
 	code := "source_" + strings.TrimPrefix(err.Error(), "checkout proof rejected at ")
-	if validHookDiagnostic(&hookDiagnostic{1, "complete", code}) && strings.HasPrefix(code, "source_") {
+	if validHookDiagnostic(&hookDiagnostic{Version: 1, Stage: "complete", Code: code}) && strings.HasPrefix(code, "source_") {
 		return code
 	}
 	return "source_unknown"

@@ -23,10 +23,10 @@ func TestLocalOwnerDiagnosticsNeverAdmitAndDistinguishContextFromSource(t *testi
 			want := "source_root"
 			switch kind {
 			case "reported":
-				q.Diagnostic = &hookDiagnostic{1, "complete", "event_unavailable"}
+				q.Diagnostic = &hookDiagnostic{Version: 1, Stage: "complete", Code: "event_unavailable"}
 				want = "event_unavailable"
 			case "unknown":
-				q.Diagnostic = &hookDiagnostic{1, "complete", "/private/SENSITIVE"}
+				q.Diagnostic = &hookDiagnostic{Version: 1, Stage: "complete", Code: "/private/SENSITIVE"}
 				want = ""
 			case "context":
 				q.SHA = "wrong"

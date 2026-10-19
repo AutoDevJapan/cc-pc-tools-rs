@@ -113,17 +113,20 @@ func unchangedFile(a, b os.FileInfo) bool {
 func (s *secureFiles) read(rel string, limit int64) ([]byte, os.FileInfo, error) {
 	f, e := s.open(rel)
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, &secureReadError{code: "open"}
 	}
 	defer f.Close()
 	before, e := f.Stat()
-	if e != nil || before.Size() < 0 || before.Size() > limit {
-		return nil, nil, fixedErr()
+	if e != nil || before.Size() < 0 {
+		return nil, nil, &secureReadError{code: "stat"}
+	}
+	if before.Size() > limit {
+		return nil, nil, &secureReadError{code: "file_limit", size: before.Size()}
 	}
 	b, e := io.ReadAll(io.LimitReader(f, limit+1))
 	after, se := f.Stat()
 	if e != nil || se != nil || int64(len(b)) != before.Size() || !unchangedFile(before, after) {
-		return nil, nil, fixedErr()
+		return nil, nil, &secureReadError{code: "read", size: before.Size()}
 	}
 	s.files[rel] = after
 	return b, after, nil

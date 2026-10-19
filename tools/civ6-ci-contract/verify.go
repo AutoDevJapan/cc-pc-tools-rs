@@ -237,7 +237,7 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", Repository, p.RunID), &run); e != nil {
 		return e
 	}
-	if run.ID != p.RunID || run.RunAttempt != p.Attempt || run.HeadSHA != p.Head || run.HeadBranch != p.Branch || run.Event != p.Event || !MatchRunPath(p, run.Path) || !sameRepo(run.Repository) || !sameRepo(run.HeadRepo) {
+	if run.ID != p.RunID || run.RunAttempt != p.Attempt || run.HeadSHA != p.Head || !runBranchMatches(p, run.HeadBranch) || run.Event != p.Event || !MatchRunPath(p, run.Path) || !sameRepo(run.Repository) || !sameRepo(run.HeadRepo) {
 		return errors.New("official immutable run differs")
 	}
 	if run.Status != "queued" && run.Status != "in_progress" && run.Status != "waiting" && run.Status != "pending" && run.Status != "completed" {
@@ -301,6 +301,13 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 		return errors.New("full original job coverage required")
 	}
 	return nil
+}
+
+func runBranchMatches(p Plan, branch string) bool {
+	if p.Event == "dynamic" && p.PR > 0 {
+		return branch == p.Branch || branch == fmt.Sprintf("refs/pull/%d/head", p.PR)
+	}
+	return branch == p.Branch
 }
 
 func branchPath(branch string) string {

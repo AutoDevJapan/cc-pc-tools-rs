@@ -115,6 +115,7 @@ func TestDynamicPRContextMustBeActualHeadOrLiveMerge(t *testing.T) {
 	p.WorkflowSHA = p.Head
 	r := f["repos/"+Repository+"/actions/runs/7"].(map[string]any)
 	r["event"], r["path"] = "dynamic", CodeQLWorkflow
+	r["head_branch"] = "refs/pull/149/head"
 	f["repos/"+Repository+"/code-scanning/default-setup"] = map[string]any{"state": "configured", "languages": []string{"actions", "rust"}, "query_suite": "default", "threat_model": "remote", "runner_type": "labeled", "runner_label": CodeQLLabel}
 	jobs := []Job{{ID: 71, RunID: 7, RunAttempt: 1, Name: "Analyze (actions)", Status: "queued", Labels: Labels(p)}, {ID: 72, RunID: 7, RunAttempt: 1, Name: "Analyze (rust)", Status: "queued", Labels: Labels(p)}}
 	f["repos/"+Repository+"/actions/runs/7/attempts/1/jobs?per_page=100"] = map[string]any{"total_count": 2, "jobs": jobs}

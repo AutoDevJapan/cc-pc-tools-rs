@@ -59,7 +59,7 @@ type Contract interface {
 	RequireSuccess(ctx context.Context, p Plan, runnerName string, read ReadAPI) error
 }
 
-var errContractUnwired = errors.New("parent contract is not linked: build with -tags civ6contract")
+var errContractUnwired = errors.New("parent contract is not linked")
 
 // unwiredContract keeps the controller fail-closed when built without the
 // parent's reviewed contract package.

@@ -15,6 +15,28 @@ import (
 
 var errResidue = errors.New("new resource residue remains; parent must retain incomplete cleanup")
 
+func collectionServiceStatus(state, pid, code uint32, unstarted bool) error {
+	if state != 1 || pid != 0 {
+		return errors.New("service must be stopped with PID zero")
+	}
+	// ERROR_SERVICE_NEVER_STARTED means no service start attempt since boot.
+	// The abort path also requires absence of worker/authentication artifacts.
+	if unstarted && code != 1077 {
+		return errors.New("unstarted collection requires SCM never-started status")
+	}
+	return nil
+}
+
+func collectionDeleteResult(result uintptr, callErr error) error {
+	if result != 0 {
+		return nil // Successful Win32 BOOL calls may leave a stale last error.
+	}
+	if callErr == nil || errors.Is(callErr, syscall.Errno(0)) {
+		return errors.New("DeleteService failed without a Win32 error status")
+	}
+	return callErr
+}
+
 // Each administrative mutation has an immutable attempt/result journal. An
 // interrupted or denied mutation is never retried. Later snapshots may safely
 // observe known completed phases without reapplying them.
@@ -86,36 +108,29 @@ func collectMode(p Plan, unstarted bool) error {
 	s, e := openService(p, 4|0x10000)
 	if e == nil {
 		state, pid, code, err := queryService(s)
-		if err != nil || state != 1 || pid != 0 {
+		if err != nil {
 			closeSC(s)
-			return errors.New("service must be stopped with PID zero")
+			return fmt.Errorf("collection service status query: %w", err)
 		}
-		if unstarted {
-			// SCM reports ERROR_SERVICE_NEVER_STARTED (1077) until the first
-			// start attempt. This is compatible with the stricter worker/job
-			// absence checks above; other nonzero statuses still fail closed.
-			if code != 0 && code != 1077 {
-				closeSC(s)
-				return errors.New("unstarted worker evidence absent or changed")
-			}
-		} else {
+		if err = collectionServiceStatus(state, pid, code, unstarted); err != nil {
+			closeSC(s)
+			return err
+		}
+		if !unstarted {
 			report, err := readLaunchResult(p)
 			if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
 				closeSC(s)
 				return errors.New("protected launcher drain and SCM result required")
 			}
 		}
-		e = collectionAction(p, "service-delete", func() error {
-			r, _, callErr := advapi.NewProc("DeleteService").Call(s)
-			if r == 0 {
-				return callErr
+		// Retain the stopped service identity until all ACL mutations succeed.
+		// Closing a deleted service makes its virtual account unresolvable and
+		// icacls can fail with ERROR_NONE_MAPPED (1332).
+		defer func() {
+			if s != 0 {
+				closeSC(s)
 			}
-			return nil
-		})
-		closeSC(s)
-		if e != nil {
-			return e
-		}
+		}()
 	} else if errors.Is(e, syscall.Errno(1060)) {
 		var result struct{ OK bool }
 		b, err := os.ReadFile(filepath.Join(p.Root, "service-delete-result.json"))
@@ -140,13 +155,8 @@ func collectMode(p Plan, unstarted bool) error {
 		}
 		aceCount += n
 	}
-	probe, probeErr := openService(p, 4)
-	absent := errors.Is(probeErr, syscall.Errno(1060))
-	if probeErr == nil {
-		closeSC(probe)
-	}
-	if !absent || aceCount != 0 {
-		return errors.New("service deletion or explicit grant removal not confirmed")
+	if aceCount != 0 {
+		return errors.New("explicit service grant removal not confirmed; retain stopped service")
 	}
 	if p.Fixture != "" || unstarted {
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
@@ -154,6 +164,39 @@ func collectMode(p Plan, unstarted bool) error {
 				return e
 			}
 		}
+	}
+	// The account must still resolve while icacls revokes and propagates the
+	// owned grants, including the credential-free controller restoration.
+	// A failed/uncertain ACL mutation returns above and is never retried.
+	if s != 0 {
+		state, pid, code, err := queryService(s)
+		if err != nil {
+			return fmt.Errorf("pre-delete service status query: %w", err)
+		}
+		if err = collectionServiceStatus(state, pid, code, unstarted); err != nil {
+			return err
+		}
+		processes, unreadable, e = ownedProcessCensus(sid)
+		if e != nil || processes != 0 {
+			return errors.Join(errors.New("pre-delete owned process census prevents collection"), e)
+		}
+		e = collectionAction(p, "service-delete", func() error {
+			r, _, callErr := advapi.NewProc("DeleteService").Call(s)
+			return collectionDeleteResult(r, callErr)
+		})
+		closeSC(s)
+		s = 0
+		if e != nil {
+			return e
+		}
+	}
+	probe, probeErr := openService(p, 4)
+	absent := errors.Is(probeErr, syscall.Errno(1060))
+	if probeErr == nil {
+		closeSC(probe)
+	}
+	if !absent || aceCount != 0 {
+		return errors.New("service deletion or explicit grant removal not confirmed")
 	}
 	profile, e := registryPresent(syscall.HKEY_LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\`+sid)
 	if e != nil {

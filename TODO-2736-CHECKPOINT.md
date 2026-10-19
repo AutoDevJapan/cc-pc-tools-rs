@@ -1,5 +1,103 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 03:34・PR224の通常mergeを確認（最新）
+
+前節のPR224 CI未完記述を更新する。同head92226c3の正式7jobは全success、CodeQL集約も
+新規alert無しのsuccess。push専用package-toolsのskipを別扱いで確認。
+review2853/2856の原応答と親source照合、残Suggestionの扱いをコメント6253586827へ1回投稿。
+通常ready→head固定の通常mergeでmerged=trueを確認した。merge commitは
+6d267ff0acb6ef16f9899da53ebac9e4ee62cff0、2026-10-19 03:33:44 JST。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/224#issuecomment-6253586827
+branch削除/force更新/製品mergeなし。ローカルの文書2commitは現branchに保持する。
+
+main新runはBuild speed39154719001、Product CI helper39154719088、CodeQL PC39154719101。
+03:34確認時は全queued、main成功とは主張しない。旧main219の403も原因未確定のまま。
+配布には最新mainの並行変更・実source/hash・正規分類の照合が必要で、未配布。
+
+原Wの未分類のため新collectorは未起動、回収/ACL mutation0、旧run未cancel。
+元2825へ技術照合を配送し、todo wait2736 --on2825を正規保存済み（循環なしをRAM照合）。
+待機保存直後にPR CIが完了したため、独立して許可されたhelper mergeだけを最後に進めた。
+marker【2736-pr224-merged-032547】を2736/2640/2825へCAS追記・readback確認済み。
+レビュー2856の再待機は不要。次は2825の技術結果、新main3run、未配布を確認して元工程へ戻る。
+製品PR148の正式4job成功は依然未達。本人への質問/PC操作依頼なし。
+
+## 2026-10-19 03:33・追加レビュー受領と回収対象の未分類（以下を優先）
+
+実job20261019-032547-todo-2736、同branch/同worktreeの73c872cから再開。
+原eventsのitem145 finish source_absent、03:20の配送/commit/checkpoint/waitを確認し再実行0。
+最新D:/CC/AGENTS.mdとproject規則を再読、worktree自身はguard false。
+
+2856は実Haiku5.5/job20261019-032153-todo-2856/succeeded/exit0/7steps/Must0/実検査0。
+原応答3491bytes/SHA C1A266D97A7F02F3D734F6F96455FEC811978FA0963E81352C515DFE401BA1BF。
+固定6c72729の対象fileと作業コピー差分0。原応答と資格receiptを恒久rootへ保存。
+通常collectの既存drain契約のSuggestionとコメントNitは機能変更へ追加せず契約を保持。
+新collector SHA A26595B450A0DCDC2EA3406910F0BF5F095A72DA7C6650E6FE726F05EDC1994Dも照合済み。
+別名windows-collect1077-032547.ps1を作成したが未起動。旧6559 scriptは使わない。
+
+実行前の正規scrub391で原W5051がclassification_unverified=true/client_resource=true。
+Wの追加読取/実回収/削除/ACL変更を止めた。これは自動承認レビュー拒否ではない。
+新collector起動0、mutation0、旧run cancel/redispatch0。原所有記録/plan/prepare/失敗の
+保存済みreceiptだけを司令塔へ配送し、同scopeの分類照合が正規担当で可能か確認を求めた。
+広いallowlist/guard/manifest拡張、原名簿復旧扱い、別経路を求めない。未分類なら現物を保持。
+marker【2736-guard-review-received-032547】を2736/2640/2825へCAS追記しreadback確認。
+原receipt参照先と今の技術条件は同メモに保存。本人への質問/PC操作依頼なし。
+
+製品PR148はrepo1392152644/AutoDevJapan/private/nonfork/同head-base repo/open/draft、
+head03c7cc65b9ab1c3ac2598dc6b97c9ca0d04c08be/base1100676/元branch不変。
+Windows117740937169はrun39149803349/attempt1/queued/steps0/runner0。回収前cancelなし。
+同headのdocuments/repository-rules.mdを通常APIで確認。製品mergeは2640の原scopeを維持。
+
+PR224のremote head92226c3は両OS helper/cc-jobs/actions/Go/JS解析がsuccess。
+Rust解析117750279642/run39152989464はin_progress、setup/checkout/init成功、analyze中。
+CodeQL集約neutralはRustの結果が未着という警告で成功扱いしない。全必要CIの終了が必要。
+PR本文を最終1077差分/両review/fixture実結果/保護分類による未回収を含め更新済み。
+PR219 mainの旧bridge403診断は元2825への既存依頼で維持。同失敗rerun/共有bridge変更0。
+製品正式4job成功・成功証拠配送は未達。旧成功CodeQLと物理全件検査を重複しない。
+
+次は2825から同scopeの技術照合結果を受領。正規guard成立前には現物を保持する。
+成立した場合だけ新collectorで原Wをqueuedのうちに回収し、実postconditions/原logs/SHAを保存。
+その後にだけ旧run通常cancel、新matrix/新所有root。10GiB実行前の新VM/host空き確認が必要。
+PR224は同92226c3の全必要CIとレビュー資格を再確認して通常merge。製品PR148はmergeしない。
+文書commitだけでは同source CIを重ねないため即pushせず、actualHEADをschedulerへ保存する。
+
+## 2026-10-19 03:20・引き継ぎ後の照合（以下を優先）
+
+同じ実job20261019-022634-todo-2736、branchと92226c3から継続した。
+元依頼の受入条件、最新D:/CC/AGENTS.md、project規則、resume-022634.jsonを確認した。
+保護判定はclient_resource=false。完了済みdispatch/merge/回収/レビュー登録は再実行していない。
+
+2853は実Sonnet5.5/succeeded/exit0/81steps/Must0として前担当が受領済み。
+原応答8225bytes/SHA7968538315BEEDFEDED8D687100CF1C7ABE402AD59CA5DEA83C78A7B4F88094F、
+固定65592b4と作業コピーのruntime一致という資格をreceiptで確認。旧節の未受領記述を更新する。
+その後65592b4 collectorの実collect-unstartedはSCM1077の検証で停止し、mutation attempt0。
+新しい6c72729はunstartedだけ1077を許可し、serviceが消えた経路でもremote照合を行う。
+新collectorのSHAはA26595B450A0DCDC2EA3406910F0BF5F095A72DA7C6650E6FE726F05EDC1994D。
+同一fileだけのreview2856は保存済みspec/Haiku5.5/subwork-of2736、03:19時点でtodo/jobs空。
+新collector実行0。旧6559 collector/旧executeを再実行しない。2856を複製しない。
+
+製品APIでrepo1392152644/AutoDevJapan/private/nonfork/admin、同head/base repo、open/draft、
+head/ref03c7cc6/base1100676を再照合。Windows117740937169は同run39149803349/attempt1、
+queued/steps0/runner0。W5051は引き続き保持し、回収前にrunをcancelしない。
+
+PR224の実remote headは92226c358bf32e9b87e37d29d106ec793f6935f5。
+Windows helperとactions解析はsuccess、Linux helper/cc-jobs/残CodeQLはqueuedだった。
+正式必要CI成功・通常mergeは未達。今回の運用文書だけのcommitでは同source CIを重ねない。
+
+PR219 main CodeQL39150292051はcompleted/failureへ進んだ。Rust解析だけsuccess。
+actions117742363148、Go117742363264、JS117742363294は全てSet up runnerでbridge403。
+通常gateの原log取得は全exit0、bytesは順に1693/1693/1707、SHAは恒久rootの各receiptに保存。
+本文は追加で表示せず、エラー行だけ確認した。main219-job-<job>-original.logが原bytes。
+現mainはf0f6c0f3208029de3ab1f4f44be6729e702e0c75で旧run head8880167と異なる。
+public sourceのremote-head照合は拒否候補だが、原logに403本文がなく具体predicateは未確定。
+旧52ddの原因も確定していない。共有bridge/guard/manifest/認証を変更せず、同失敗rerun0。
+既存2825への限定診断依頼にこの新証拠を追加し、未修復を保持する。
+
+次は2856の原応答・実モデル・Mustを受領し、固定6c72729と作業コピーを親で照合する。
+その後だけ新collectorでWを正規回収し、旧run通常cancelと原log回収、新matrixへ進む。
+Linux正式再実行の前には新しいVM/host空きを測る。他container停止やVM設定変更はしない。
+正式4jobと2640への成功証拠配送は未達。製品merge担当2640と元停止/依存を維持する。
+独立作業が尽きたら正規todo wait2736 --on2856と最新実HEAD checkpointを保存し枠を譲る。
+
 ## 2026-10-19 03時台・正式失敗の原証拠、新PR224とレビュー2853（最新）
 
 02:36節の新run39149803349/attempt1は、Linux job117740936941がRust/Luaリンクでfailure。

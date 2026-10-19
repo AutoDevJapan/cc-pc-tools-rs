@@ -23,3 +23,12 @@
 - 親2957へ候補・検証済み・未完了を追記。親依存や既存メモを削除しない。
 
 次: ToDo2991の原応答と実モデルを照合して指摘対応。各CIを固定IDで確認し、失敗は該当ログから原因修正する。最新candidate/mainを再照合し、全必要CIと別モデルMust解消後だけ通常merge。実行回数/runner分数/請求増分は成功後に測定。
+
+## 初回CI実行中の追補
+
+- scope、customer-service-bridge、browser-package、browser-cold-startが成功。本体・署名・他workflowは進行中で、完了とは扱わない。
+- 現在の通常workflow累計は1030実行（全期間のAPI total_count）。既存cacheは0件/0bytes。新たなtarget cacheは追加しない。
+- 正式Billing RESTで取得した今月の対象repo分はLinux43630分/253.5648USD、Windows6015分/57.4224USD、storage9.870...単位/0USD。端数はprivate API原本を正とする。これは今月累計の基準値で、今回の削減額ではない。原本はdocs/todo2987-billing-baseline.private.json。
+- APIクエリのampersandをgh.cmdがcmd区切りとして扱うため、月指定は正規gh api --method GET -f year=2026 -f month=10で取得した。秘密を読まない。
+- 最初の候補とは別に、native Chrome証跡の保存stepを統合検査後へ移し、終了時のdisk/inode/target量も記録する差分を作成・actionlint確認済み。docs/todo2987-evidence-fix.private.jsonに保持。これはまだprivate候補branchへコミットしていない。レビュー結果と合わせて必要な修正だけを一括で反映し、全CIの無駄な再起動を避ける。
+- 2991は登録済みtodoで起動待ち。直接の子Codex起動や同じreviewの重複登録はしない。

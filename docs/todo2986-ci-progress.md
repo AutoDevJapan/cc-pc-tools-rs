@@ -1,5 +1,43 @@
 # PassShare の CI 削減（ToDo2986）
 
+## 生成定義の修復と3010からの統合引継ぎ
+
+`8d4a21b`の品質ゲート、Desktop全体/doctest、Mobile、監査、DB統合は正式成功。
+Native WebView job118088948209はRust回帰試験の成功後、`git diff --exit-code`で
+Tauri依存更新に伴う生成定義2ファイルの差を検知し失敗した。元のCSP/実画面受入は消さない。
+正規jobのログpatchを保存し、許可した2pathsだけを元commitのAPI bytesへ適用した。
+`git apply --check`成功、生成後blobはログのindexと一致した。
+
+- acl-manifests.json: `b7e734d38c3f2bf0d4f257a7896332271c6b54ac`
+- desktop-schema.json: `c2202ed85785caaf57f12c34137d930945617694`
+
+JSONの実差はcore:appのallow/deny-exitとcore:windowのallow/deny-set-fullscreen-on-monitorの
+定義追加。既存default_permissionは変化せず、capability/CSPの許可設定を変更していない。
+原patch・小さい意味差は`.ci-work/generated-schema.private.patch`と
+`generated-schema-semantic-diff.private.json`に保持。
+
+3010の共有noteが、PR721/e19dbf27ff1a27df344dba52bcde436552464b79の2workflowの
+最終統合を2986へ引き渡し、3010は並行編集しないことを明記した。本人最新方針も同じ分担を指定。
+親はAPIで固定候補2bytesを取得し、CLI側はそのまま、Desktop側は関連変更のjob内判定を加える。
+元のWindows固有commands/env/途中失敗伝播/artifact設定は構造比較で保持。
+関連なしPRは軽い変更判定で終了し、Windows native試験と配布buildは起動しない。
+関連変更/新しいmainではWindowsの元の試験と配布を維持する。TS型検査をnative compileより先にする。
+共通の変更判定は既存の実Git17ケースをそのまま用い、Desktopの意味保存検査も成功、4workflowのactionlint成功。
+
+残る差分レビューは、3012の固定8d4a21bの結果に加え、生成定義2とWindows2の4ファイルだけを確認する。
+PR721の元commit/レビューを保ち、統合・必要CIの実成功後に重複PRを整理する。
+本人PCへの正式移管・Windows製品全体の完成はこの統合の成功へ含めず、元2957/2994に残す。
+
+GitHubの対象repo限定の2026-10-19使用量APIは、Linux/Windows/macOS/storage全SKUで
+netAmount=0 USDを返した。暫定の取得時点の観測であり、確定請求や毎月の削減額とは主張しない。
+原データと時刻は`.ci-work/passshare-actions-20261019-billing.private.json`と
+`billing-observation-before.private.json`。
+
+新しい所有rootのplanは37,577,232 bytes/1029 entries、隠し属性でquarantine指定。
+quarantineは移動前にQUARANTINE_CROSS_DRIVEを返し、元rootを保持した。
+最終source/証拠保存後に、規則どおり同じDドライブの削除希望へ退避する。
+旧PROTECTED_PATH rootには触れていない。
+
 ## 現在の固定候補（最優先）
 
 PR720のHEADは`8d4a21b73f3ad6301ba37ecb056b221c9d5c626e`。

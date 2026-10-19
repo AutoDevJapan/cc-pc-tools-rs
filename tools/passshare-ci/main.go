@@ -224,13 +224,19 @@ func unchangedJobs(before, after object) error {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintln(os.Stderr, "usage: passshare-ci <original-directory> <output-directory>")
+	if len(os.Args) != 3 && len(os.Args) != 4 {
+		fmt.Fprintln(os.Stderr, "usage: passshare-ci <original-directory> <output-directory> [reviewed-windows-workflow]")
 		os.Exit(2)
 	}
 	if err := generate(os.Args[1], os.Args[2]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if len(os.Args) == 4 {
+		if err := generateDesktop(os.Args[3], os.Args[2]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 }
 

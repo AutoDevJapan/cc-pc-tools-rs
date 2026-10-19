@@ -153,6 +153,25 @@ func TestAudio2906EvidenceChangesDuringClassification(t *testing.T) {
 	}
 }
 
+func TestAudio2906SourceChangesDuringFinalEvidenceRead(t *testing.T) {
+	io := audio2906Fixture(t)
+	read := io.read
+	reads := 0
+	io.read = func(p string, n int64) ([]byte, bool) {
+		b, ok := read(p, n)
+		reads++
+		if reads == 4 {
+			if err := os.WriteFile(io.source, []byte("changed after last metadata check"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return b, ok
+	}
+	if audio2906AllowedWith(io.source, io) {
+		t.Fatal("source changed during final evidence IO was accepted")
+	}
+}
+
 func TestAudio2906RealReplacementAndHardlink(t *testing.T) {
 	t.Run("replacement", func(t *testing.T) {
 		io := audio2906Fixture(t)

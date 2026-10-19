@@ -95,6 +95,11 @@ type audio2906IO struct {
 }
 
 func audio2906Qualified() bool {
+	for _, path := range []string{productStore, dailyVideoActorRoot, dailyVideoActorSpec, dailyVideoToolRoot, audio2906ProductionSpec} {
+		if legacyMatch(path) || !conversationPhysical(path) {
+			return false
+		}
+	}
 	db, err := readObject(productStore, 64<<20)
 	if err != nil || !dailyVideoActorAllowed(db, dailyVideoActorRoot, dailyVideoActorSpec, dailyVideoActorSpecSHA, sourceVerified, legacyMatch) ||
 		!currentQualification(db, "youtube-daily", 2895, dailyVideoToolRoot, audio2906ProductionSpec, audio2906ProductionSpecSHA, legacyMatch) {
@@ -156,5 +161,5 @@ func audio2906AllowedWith(path string, io audio2906IO) bool {
 		}
 		return true
 	}
-	return pins() && check() && pins()
+	return pins() && check() && pins() && check()
 }

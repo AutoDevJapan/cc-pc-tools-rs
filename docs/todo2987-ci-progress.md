@@ -95,3 +95,17 @@
 - 最新月次Billingの対象repo項目だけをdocs/todo2987-billing-observation-0024.private.jsonへ保存。Linux43854分/Windows6106分。金額の合算はdecimalで扱い、対象期間中の他実行と未完了CIを含むため削減額とはしない。公式timing APIの0も無料の証拠にしない。最終成功runのjob秒合計を元5308秒と比較してから、実測の範囲で記録する。
 
 次: 15分後に同じroot/runだけ再確認。失敗は終了ログを取得し該当処理を修正する。成功なら全5workflow/集約・最新main・実HEADを照合し、通常merge後にAPI読戻しと必要なmain確認を行う。Windows正式PC供給/4job/成果物hash/終了回収は3002の未完了。元2957への記録と有限再開を維持し、親を3002待ちへ戻すのは独立CI/merge工程が済んでから。
+
+## 2026-10-20 00:47 正式CI成功・PR176を通常マージ
+
+- a1dcdfe3の全必要check（local-gates含む）がSUCCESSで終了。最終rootログ2,055,525bytesを保存し、統合4分割・後続authored/contact/customer/V3 Chrome・両証跡upload・終了容量を実確認。job APIはcompleted/successなのに一部stepがpendingの古い表示を返したため、実終了ログとCheckRunの全体成功を別々に照合した。CursorのNEUTRALは未実施のまま区別。
+- PR176はhead一致条件を付け00:46:59JSTに通常merge。main2da7d4af1dd9911eaff970fdfe08b60531732eb6とtree108a6987dbe0ed8af9a35f19d8e00930cf582001を読戻し確認。検査済み候補・合成PR mergeとtree全体が同一。private=true/実所有AutoDevJapanとactive workflow一覧も再確認。Prd機能や配備設定を変えておらず、アプリの配備buildはこのCI変更へ追加しない。
+- 正式localは7job合計4651秒（77.52分）、元の成功10job5308秒（88.47分）より657秒/12.38%減。丸めの参考値は81分対93分だが確定課金ではない。rootは69分17秒と90分枠内。runner時間合計の比較で、並列の壁時計待ち時間が同率で短縮したとは言わない。jobs-listの2回のHTTP502後は無限再試行せず、正規CheckRunの開始・終了時刻で測定。原本docs/todo2987-duration-comparison.private.json。
+- 回収は3→1→2→4で44/44/43/43件、合計174実行物/15,776,367,080bytes（14.69GiB）。各回収後空き8.3/8.2/8.0/7.8G、最終7.9G、inode12%、target3.4G。検査範囲/プロファイルを縮めていない。初回SIGBUSは当時の終了dfが無くディスク枯渇の確定診断はできず、この成功を過去原因の証明へ拡大しない。
+- authored/nativeの数値証跡はartifact12198750738/12199395052。ログのSHA256とAPI digestが一致し、559/599bytesで保存成功。顧客資料や素材の取得・公開は広げていない。
+- 対象repoの月次課金net313.667225391USD、開始基準310.987223784との差+2.680001607USD。期間内の他run/試作/Windowsも含むので、この差を修正の削減額へ読み替えない。基準の43行をdecimalで再合算し一致。取得原本はprivateに保持。
+- mergeの自動pushで同じソースのlocal39280571145/V239280571286が起動したため、同tree/同toolchain・lock・workflow・試験設定を照合し取消を各1回要求。受付は成功だがAPIはqueuedを返すため終端未確認。取消を成功checkに偽装しない。PRの実成功を参照し重い同内容を重ねない。main CodeQL39280570988はdefault-branch解析公開という文脈が異なるため維持し、定期監査も保持。
+- 3002へ正規noteでmergeと新main/source、正式PC4job/hash/回収の未完了を配送。3019done。3018はcb4e505のDACL構造実装/局所検査後もSCM/token/IPC/fence/回収/Cargo接続が未完了。元jobはsucceededの継続報告、元worktreeは正しいbranch/clean。00:15/00:44の再開準備tool_failedは元schedulerが再試行中。直接子job起動や新しい重複担当、依存解除、別worktreeへの置換はしていない。
+- 自分の所有temp f97a987aeae3a2f8545c8ed51a360a32は不要な未利用cloneとvalidator。safe-delete planがPROTECTED_PATH、指定どおりquarantine --reason policyもPROTECTED_PATH。通常のhelper拒否であり自動承認審査の拒否とは扱わない。原データを保持し、別shell/手動移動・削除/guard変更で回避していない。実未完了の後片付けとしてprivate結果に保持。
+
+次: main CodeQLと取消受付済み2runの終端を有限に確認する。PC3002/既存3018の正規再開を維持し、必要な残工程が他ToDoだけになったら2987をwait --on 3002で登録。原tempのcanonical保護判定による未回収も保持し、削除できたとしない。親2957と3002へmerge/実測/未完了を配送済み。PRコメント6270816263は再送不要。

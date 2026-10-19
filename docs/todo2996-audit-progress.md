@@ -65,21 +65,27 @@ unmaintained/unsoundなどの情報warningは重大脆弱性エラーと区別�
   job20261019-212942-todo-3001はexit0/18steps。threadとcwdが一致する実turn_contextで
   anthropic/claude-sonnet-5-5を照合した。原応答はreview3001-original.private.md、
   限定モデル証拠はreview3001-turn-context.private.jsonに保持。
-- レビュー担当が未読と明記したaudit JSONなどへの補足確認3006を、同じモデルの通常ToDo
-  --specで登録した。これと親への最終配送が残る。
+- 補足レビュー3006も受領しMustなし。原応答4512 bytesのSHA256は
+  b1d22558b24b355b9473d34976c26da31803c4282589e4b18eac2e6036f43676。
+  job20261019-215240-todo-3006はexit0/11steps、対応thread/cwdの実turn_contextで
+  anthropic/claude-sonnet-5-5を照合した。原監査JSON、個別Cargo manifest、受入lock/metadata、
+  JS manifest/lockと監査workflowを読了し、2監査の重大0件・主要依存版一致を確認した。
+  全依存graphの同一性や製品の正式CI成功を主張していない。
+- 親への固定配送資料は[todo2996-parent-handoff.md](todo2996-parent-handoff.md)。
+  この子の差分作成・監査・関連検査・別モデル確認は終了した。正式統合は親の担当。
 - 製品本体の全テスト・正式CI・mergeはこの工程では未実施。
 
 依存API受入のコードは`tools/passshare-audit-2996/`へ保存した。受入用lockは製品lockと
 別であり、製品の全依存構成の動作証明ではない。製品lockでのupdater checkと区別する。
 doctestコマンドは成功したが、この補助ライブラリのdoctestは0件なので検証件数へ加えない。
-進捗75%は、固定差分・重大監査成功・関連検査の3区切りが済み、レビュー受領の補足と
-配送の1区切りが残ることを示す。製品CIの達成率ではない。
+子の完了条件は固定差分・重大監査成功・関連検査・レビューと親への配送の4区切りである。
+親への配送完了後の100%はこの有限工程の達成率であり、製品CIや親2986の達成率ではない。
 
 ## レビューの指摘への対応と統合条件
 
 3001は固定差分を確認したが、audit JSONの実内容、mobile等の個別Cargo manifest、
 受入metadata/lockは未読だった。既確認の差分・コード・検査を繰り返さず、この未読だけを
-補足確認へ渡す。base2blobは当初保存していなかったため、証拠の原バイトから
+補足確認3006で読了した。base2blobは当初保存していなかったため、証拠の原バイトから
 git hash-object -w --no-filtersで保存し、元のGitHub blob IDとの一致を確認した。
 
 Suggestionの版整合は実害を防ぐ必要がある。固定baseのdesktop/mobileのpnpm lockは
@@ -101,13 +107,21 @@ Suggestionの版整合は実害を防ぐ必要がある。固定baseのdesktop/m
 ignore空の厳しい条件で0件になっている。子は免除を追加していない。既存ignoreの古い説明を
 除去する必要は親へ配送し、監査設定を書き換えるためにこの子の範囲を広げない。
 
-git依存は、上流stable crateがzip^9以上を採用して公開され、今回の監査と関連検査に成功した
-場合だけregistry依存へ戻す。今の候補revを日付やlatest branchだけで動かさない。
+git依存は、2.14.0より新しい上流stable crateがzip^9以上を採用して公開され、今回の監査と
+関連検査に成功した場合だけregistry依存へ戻す。公開済み2.14.0と今回の同版gitの内容は異なる。
+今の候補revを日付やlatest branchだけで動かさない。
 親はこの条件を統合時の追跡項目へ残す。新しい同時Cargo・通常CI・製品PRは起動しない。
 
 原応答とモデルの通常保存場所はguardで未確認扱いだったため、依頼済み1件の原応答と
 限定モデル情報だけを正規の自動審査に提出し、承認後に直接読取した。保護設定の変更、
 別経路への迂回、無関係なログや認証情報の読取は行っていない。
+
+補足で指摘された受入と製品の差を明記する。主要な修復対象の版は一致するが、製品532と
+受入472の全graphは異なり、受入はtokio1.53.2/hyper1.12.0/http1.5.0、製品は
+tokio1.52.3/hyper1.9.0/http1.4.1である。5件の受入結果で製品graph全体を保証しない。
+製品lockを使ったupdaterのcheckと、親が行う最終製品CIを別々の証拠として維持する。
+core/connect/op-cliから辿れる225packageのうち、MSRV記載のあるものは1.86以下だった。
+MSRV未記載のpackageまで1.86で検証したとは扱わない。client側の1.90要件は残る。
 
 初回受入はWindows loaderが0xc0000139で起動前に失敗した。PE import全375件を照合し、
 comctl32.dllのTaskDialogIndirectだけが未解決と確認した。独立受入には通常のTauri
@@ -135,12 +149,12 @@ quarantine自身はCへの移動をQUARANTINE_CROSS_DRIVEで事前停止した�
 詳細はcleanup-plan.private.json、cleanup-result.private.json、
 manual-quarantine-verification/result.private.json。別経路で削除を再実行していない。
 
-## 再開
+## 子工程の終了と親への引継ぎ
 
-1. この記録と親2986のnoteを読み、上記の固定候補blobを照合する。
-2. Cargoは全て終端済みで一時生成物は退避済み。新しい変更や指摘が無い限り再ビルドしない。
-3. 補足レビュー3006の未読範囲だけを受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
-4. 親2986の既存noteを保持して、候補blob、audit、関連検査、残条件を追記する。
-5. 必要な再検査で新規rootを作った場合だけ、所有付き一時rootの手順で片付ける。
-6. 支援記録だけをscheduler/todo-2996-passshare-ci-rust-2986へcommit/pushし、
-   終了前にscheduler checkpoint-workspaceへ実branch/HEADを保存する。
+同一候補に対する検査は全て終端し、レビュー2件はMustなし。新しい変更や指摘が無ければ
+同じ検査を再実行しない。親は引継ぎ資料と元2986の最新noteを読み、固定base/blobを照合して
+必要なJS整合・監査免除の削除と一度に統合する。親の正式CI、通常mergeと製品全体の結果は
+元2986へ残る。子から原2957/2955/親2986/2994へのwaitは作らない。
+
+実行中の所有Cargo/ブラウザ/コンテナは残していない。補助コード・仕様・進捗だけを専用
+scheduler branchへcommit/pushし、終了前に実branch/HEADをcheckpoint-workspaceへ保存する。

@@ -17,7 +17,8 @@
 ## 残り
 - 2972のMust 4件は a40145a までに対応済み（隔離plan、実CLI接続、OSロック下のClaimed、path@ref）。追加差分レビューは共有ToDo 2975
 - 2975のMust 3件（stop再試行、原ログ権限、residue応答）は 88519b4 で対応済み。確認レビューは共有ToDo 2980
-- 残り: PR247のCI全通過とMust 0の確認、通常merge、親2962 noteへ最終配送（2980完了待ちを todo wait で登録済み）
+- 完了: PR247 を eca707070d63756d449e4534edf652bb965cae9e で通常merge。親2962 noteへ最終配送済み。
+- 残り（親）: go.mod統合と -tags civ6contract、設定とpinの配備、実helperでの動作確認、不足契約（Linux復旧mode、Windows原ログのexport、登録token POST可否）
 - 親2962 noteへ commit/PR/review/検査/CLI/未実施の配送
 - 実運用の配備（設定ファイル、helper pin、continuation有効化）は親。この工程では行わない
 

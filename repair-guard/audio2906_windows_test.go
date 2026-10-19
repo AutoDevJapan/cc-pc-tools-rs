@@ -218,3 +218,81 @@ func TestAudio2906RejectRealJunctionAncestor(t *testing.T) {
 		t.Fatal("junction-based scope admitted")
 	}
 }
+
+func TestAudio2906IdentityNeedsNoDataSharing(t *testing.T) {
+	io := audio2906Fixture(t)
+	p, err := syscall.UTF16PtrFromString(io.source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Deny sharing for data reads. Attribute/security-only classification must
+	// still succeed, whereas an accidental FILE_READ_DATA open would fail.
+	h, err := syscall.CreateFile(p, syscall.GENERIC_READ, 0, nil, syscall.OPEN_EXISTING, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer syscall.CloseHandle(h)
+	info, err := audio2906Identity(io.source)
+	if err != nil || info != io.expected {
+		t.Fatalf("attribute-only identity failed under exclusive data handle: %v", err)
+	}
+}
+
+func TestAudio2906ExactTimeBoundaries(t *testing.T) {
+	start := time.Date(2026, 10, 19, 6, 19, 39, 0, time.UTC)
+	end := time.Date(2026, 10, 20, 15, 0, 0, 0, time.UTC)
+	for _, c := range []struct {
+		name    string
+		at      time.Time
+		allowed bool
+	}{
+		{"before-start", start.Add(-time.Nanosecond), false}, {"start", start, true},
+		{"after-start", start.Add(time.Nanosecond), true}, {"before-end", end.Add(-time.Nanosecond), true},
+		{"end", end, false}, {"after-end", end.Add(time.Nanosecond), false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			io := audio2906Fixture(t)
+			io.at = c.at
+			if audio2906AllowedWith(io.source, io) != c.allowed {
+				t.Fatal("wrong finite window boundary")
+			}
+		})
+	}
+}
+
+func TestAudio2906RejectRealDownloadAncestorJunction(t *testing.T) {
+	io := audio2906Fixture(t)
+	parent := filepath.Join(filepath.Dir(io.source), "Downloads")
+	if err := os.Mkdir(parent, 0700); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(parent, filepath.Base(io.source))
+	if err := os.Rename(io.source, p); err != nil {
+		t.Fatal(err)
+	}
+	io.source = p
+	var err error
+	io.expected, err = io.identity(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !audio2906AllowedWith(io.source, io) {
+		t.Fatal("plain synthetic download baseline rejected")
+	}
+	if err := os.Rename(parent, parent+"-real"); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("cmd", "/c", "mklink", "/J", parent, parent+"-real")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if b, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("owned junction fixture: %v (%s)", err, strings.TrimSpace(string(b)))
+	}
+	t.Cleanup(func() {
+		if err := os.Remove(parent); err != nil {
+			t.Error(err)
+		}
+	})
+	if audio2906AllowedWith(io.source, io) {
+		t.Fatal("Downloads ancestor junction admitted")
+	}
+}

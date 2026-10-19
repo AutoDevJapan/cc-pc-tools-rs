@@ -153,6 +153,22 @@ func copyGitProofMetadata(ctx context.Context, fs *secureFiles, snapshot string,
 			if !secureRelative(name) || item.Type()&os.ModeSymlink != 0 {
 				return fail("path", metadataKind(slash), 0)
 			}
+			if slash == ".git/config.worktree" {
+				// config-names has already rejected EVERY extensions.* key in
+				// checkedConfig. Git's sparse-checkout disable can nevertheless
+				// leave this exact, inactive all-false residue after checkout
+				// removes extensions.worktreeConfig. Prove it through the SAME
+				// anchored/no-link read; never load it into Git's snapshot.
+				b, _, e := fs.read(name, int64(len(disabledSparseWorktreeConfig)))
+				if e != nil || !bytes.Equal(b, []byte(disabledSparseWorktreeConfig)) {
+					return fail("policy", "other", 0)
+				}
+				total += int64(len(b))
+				if total > 512<<20 {
+					return fail("total_limit", "other", int64(len(b)))
+				}
+				continue
+			}
 			if slash == ".git/commondir" || slash == ".git/gitdir" || slash == ".git/config.worktree" || slash == ".git/objects/info/alternates" || slash == ".git/objects/info/http-alternates" || slash == ".git/info/grafts" || slash == ".git/refs/replace" || slash == ".git/worktrees" {
 				return fail("policy", metadataKind(slash), 0)
 			}
@@ -195,3 +211,8 @@ func copyGitProofMetadata(ctx context.Context, fs *secureFiles, snapshot string,
 	}
 	return walk(".git")
 }
+
+// Native Git reproduction and the retained CI disk both produce these 83
+// bytes (SHA256 443a5f645c23c3d0c0aa09f634b2ad111d46ef61946b598a2fb311678ab47454).
+// This is not a general secondary-config parser or an authorization manifest.
+const disabledSparseWorktreeConfig = "[core]\n\tsparseCheckout = false\n\tsparseCheckoutCone = false\n[index]\n\tsparse = false\n"

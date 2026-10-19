@@ -57,7 +57,7 @@ new private proof directory; Git commands use that snapshot instead of reopening
 the untrusted source. Authentication/filter/hook/include/extension configuration
 is rejected before snapshot persistence. The checked config bytes are reused,
 not read again. Gitdir/common-dir indirection, alternates, replacement refs and
-secondary worktree config are rejected. Directory/file identities and metadata
+active or unknown secondary worktree config are rejected. Directory/file identities and metadata
 stamps are rechecked before returning. Snapshots are local to the isolated
 guest for real product source and removed on return; Windows tests contain only
 synthetic data. No manifest, original guard, permission or external allowlist is
@@ -103,3 +103,34 @@ link rejection, HEAD/tree/index checks and physical path revalidation remain in
 force. A sparse oversized synthetic object verifies the file-limit category;
 it does not prove that a pack limit caused the original CI failure. The original
 failure still needs an observation from the actual completion hook.
+
+## Inactive sparse-checkout residue
+
+The completion hook in run 39201344542 attempt 2 rejected an 83-byte regular
+`.git/config.worktree` left by checkout's native `git sparse-checkout disable`
+followed by removal of `extensions.worktreeConfig`. Read-only examination of
+the stopped, owned guest disk found only `core.sparseCheckout=false`,
+`core.sparseCheckoutCone=false` and `index.sparse=false`; its primary config
+contained no extension keys. The public synthetic Git fixture reproduces the
+same bytes and SHA256
+`443a5f645c23c3d0c0aa09f634b2ad111d46ef61946b598a2fb311678ab47454`.
+[Git's configuration documentation](https://git-scm.com/docs/git-config#FILES)
+describes secondary worktree configuration as conditional on that extension.
+
+The verifier accepts only those exact inactive bytes, after rejecting every
+`extensions.*` key in the primary configuration. It reads them through the
+existing anchored, no-follow, single-link file handle and revalidates that
+identity before returning. They count toward the existing aggregate bound and
+are never copied into the private Git snapshot. HEAD/tree/index and physical
+blob verification still run. No original source or metadata is rewritten and
+no guard, registry, permission or authorization manifest is added or changed.
+An active extension, changed/extra/empty config, external identical hardlink,
+directory or symlink is rejected. The fixture obtains the positive bytes from
+Git itself; it does not manufacture an acceptance manifest.
+
+The old verifier failed the positive native-Git reproduction. After the fix,
+Windows source-module race/vet and both Windows consumers passed. Actual Linux
+source tests passed (17 top-level tests) and guest tests passed (22, with two
+SDK opt-in tests explicitly skipped); Linux vet and test-binary compilation
+also passed. This is regression evidence, not a successful rerun of the
+official completion hook or Windows's 13 original Cargo steps.

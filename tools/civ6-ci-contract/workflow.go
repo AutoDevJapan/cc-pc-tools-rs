@@ -97,6 +97,14 @@ func semantic(n *yaml.Node) any {
 
 const CheckoutRef = "${{ github.event.pull_request.head.sha || github.sha }}"
 const DoctestCommand = "cargo test --locked --manifest-path tools/Cargo.toml --workspace --doc"
+const ArtifactHashCommand = `$ErrorActionPreference = 'Stop'
+$source = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $source -notmatch '^[0-9a-f]{40}$') { throw 'Source revision is unavailable' }
+$files = @(Get-ChildItem -LiteralPath './tools/target/release' -File | Where-Object { if ($IsWindows) { $_.Extension -eq '.exe' } else { $_.Extension -eq '' } })
+if ($files.Count -eq 0) { throw 'No release binaries found' }
+$hashes = @($files | ForEach-Object { @{ name = $_.Name; bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })
+@{ source_sha = $source; runner_os = $env:RUNNER_OS; binaries = $hashes } | ConvertTo-Json -Depth 5
+`
 
 func Route(w Workflow) string {
 	if w.Job == "test" {
@@ -134,6 +142,15 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 			return nil, errors.New("original build boundary differs")
 		}
 		out = bytes.Replace(out, []byte(buildMarker), []byte("      - name: Run workspace doctests\n        run: "+DoctestCommand+"\n"+buildMarker), 1)
+		hashMarker := "      - name: Check existing scenario JSON\n"
+		if bytes.Count(out, []byte(hashMarker)) != 1 {
+			return nil, errors.New("original post-build boundary differs")
+		}
+		hashStep := "      - name: Record release binary hashes\n        shell: pwsh\n        run: |\n"
+		for _, line := range strings.Split(strings.TrimSuffix(ArtifactHashCommand, "\n"), "\n") {
+			hashStep += "          " + line + "\n"
+		}
+		out = bytes.Replace(out, []byte(hashMarker), []byte(hashStep+hashMarker), 1)
 	} else {
 		marker := "          persist-credentials: false\n"
 		if bytes.Count(out, []byte(marker)) != 1 {
@@ -154,7 +171,7 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 	if w.Job == "test" {
 		steps := field(a, "steps")
 		var kept []*yaml.Node
-		docSteps := 0
+		docSteps, hashSteps := 0, 0
 		for _, s := range steps.Content {
 			name, run := field(s, "name"), field(s, "run")
 			if name != nil && name.Value == "Run workspace doctests" {
@@ -162,11 +179,16 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 					return nil, errors.New("doctest acceptance step differs")
 				}
 				docSteps++
+			} else if name != nil && name.Value == "Record release binary hashes" {
+				if run == nil || run.Value != ArtifactHashCommand || field(s, "shell") == nil || field(s, "shell").Value != "pwsh" || len(s.Content) != 6 {
+					return nil, errors.New("release fingerprint step differs")
+				}
+				hashSteps++
 			} else {
 				kept = append(kept, s)
 			}
 		}
-		if docSteps != 1 {
+		if docSteps != 1 || hashSteps != 1 {
 			return nil, errors.New("explicit doctest acceptance required")
 		}
 		steps.Content = kept

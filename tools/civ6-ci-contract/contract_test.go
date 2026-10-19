@@ -162,6 +162,9 @@ func TestProposePreservesCommandsAndParentConcurrency(t *testing.T) {
 			if w.Job == "test" && strings.Count(string(out), DoctestCommand) != 1 {
 				t.Fatal("required doctest acceptance missing or duplicated")
 			}
+			if w.Job == "test" && (!strings.Contains(string(out), "Record release binary hashes") || !strings.Contains(string(out), "source_sha = $source") || !strings.Contains(string(out), "Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256")) {
+				t.Fatal("formal source/artifact fingerprint omitted")
+			}
 			modified := append([]byte(nil), original...)
 			modified[len(modified)-2] ^= 1
 			if _, e = Propose(modified, w); e == nil {

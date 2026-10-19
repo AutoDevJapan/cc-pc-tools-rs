@@ -23,3 +23,11 @@
 
 再開時のレビュー受領: ToDo3025の原応答と実turn_contextを照合し、Sonnet5.5、固定9a907d3..c9fecf2のMust0を確認。対象ソースはc9fecf2から不変。試験未実行というレビューの留保は、担当の保存済みnextest344成功・doctest0件・Clippy成功と区別した。任意のrootをHTTPから指定する経路は無い。初期snapshotの503検査も残るため、追加の任意Nitを理由に本番コードや試験を変更しない。文書のSuggestionは検査経緯を含む追記と表現修正で反映。
 
+正式なPR検査と通常マージ（2026-10-20 JST）:
+- 最終HEAD 9a178dadddd3da22a7895ccb6e177ae3776b22a6のWindows2件とCodeQL4言語はすべてsuccess。3workflow（39284507336 / 39284507371 / 39284507490）もcompleted/success。成功した既存runを再実行していない。
+- Code scanning analyses 1982503113（Go）、1982494802（Actions）、1982489102（Rust）、1982437442（JavaScript/TypeScript）は、すべて同じ最終HEADのrefs/pull/253/headで保存され、error/warningは空。merge refの解析と混同しない。
+- 追加差分の実Sonnet5.5レビューMust0を照合し、match-head-commitを指定した通常mergeを実行。PR253は2026-10-19T17:02:17ZにMERGED、mainのmerge commitは7177b396141e961388531b9019a30216ff9a8e07。第一親3423a387、第二親9a178dadの2親と、レビュー候補の祖先関係をGitで確認。
+- mainの自動実行はCodeQL39290685102、Agent progress39290685972、Build speed39290685227。mainの終端検証は未完。失敗なら原因を直し、同じ正常な全件検査を重ねない。
+- マージ後の稼働APIは103ms、schema1/ok、masked_metadata/metadataOnlyを保持。設置binaryのハッシュは既報C63A5E80…のまま。追加差分は試験準備と同じ本番定数への生成委譲であり、表示動作を変える配備は今回追加していない。
+
+残りはmainの正式結果と同sourceの保存、稼働確認の最終照合。6条件中5条件を確認した83%。本人のPC操作と追加の判断は不要。

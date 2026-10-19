@@ -41,3 +41,13 @@ Rosetta2915は通常job `20261019-152448-todo-2915` が15:25から実root/worktr
 - Creators2914は同番号の専用worktreeと対応branchが存在しclean。正規metadataはpreparing/jobs0・依存待ちなし、通常job一覧にも同番号はない。実起動は未確認。有限repair-stepは45秒以内に応答を回収できず、その後の通常statusはbusyだった。共有スケジューラの理由を得られておらず、容量不足や実起動成功とは推定しない。保護されたstatus/logの本文を読まず、新しいactorや監視を作っていない。
 
 原応答と動作中の進捗は `todo2910-product-receipts-155850.private.json`、実job metadataは `todo2910-five-job-status.private.json` に保存。4担当の実コマンド・成果または監査・関連検査の事実を受領し、残るCreatorsの通常起動と実結果を同2910で追う。4製品の完成を2910で代行せず、それぞれの未完条件は各ToDoへ保持する。完了済みmerge・配布・清掃通知は再実行していない。
+
+## 2026-10-19 16:26 JST：5業務の実作業復帰を受領
+
+Creators2914の通常job `20261019-160845-todo-2914` が実67stepsを実行した。正式資格を保った同番号・同専用worktreeで、既存Prd APIコンテナからDreamlabの認証付き`npc-state`取得が成功し、応答の形を確認した。配備前提名検査と既存設定の検査、main/Web/APIのSHA一致検査も成功している。接続成功をブラウザ入場成功とはしていない。メール確認と配信401が残り、製品の受入は未完了。
+
+監査と手順の更新はCreatorsのPR2032へ保存され、実owner AutoDevJapan、PR headとremote branchの一致 `0ffcd2383234f5ec2982880c49fb0dd8acebdec3` を確認した。文書の差分・リンク検査成功を受領。今回候補の公式CIはActions予算制限で開始前に失敗し、旧版成功を流用していない。追加支出を行わず、別モデルレビュー登録のValueError調査とともに同2914へ残した。子登録の入力検証を参照し、provider付きmodel文字列は拒否される分岐があることを同担当へ返すが、元コマンド全文を確認できていないため原因の確定とはしない。親jobの実生存条件を省略した代替登録や、子job直接起動は行わない。
+
+これで同2913〜2917の5業務すべてについて、実job・実専用worktree・実コマンド・変更または監査成果・関連検査の事実を受領した。2910の実装・別モデルレビュー・CI・通常merge・正式配布・7資格照合・5業務の実作業復帰は完了。各製品のレビュー・CI・認証・製品受入・既存Prd反映などの未完条件は、その製品ToDoで継続する。原名簿・原192件を復旧したという意味ではない。
+
+Creatorsの実記録は `todo2910-creators-receipt.private.json`、5業務の受領一覧は `todo2910-five-actual-work.private.json`。元2834/主2903へ既存noteを保持してこの結果と各未完条件を返し、同2910の成果を保存して終了する。新actor/監視/leaseや固定specの変更はなく、完了済み配布・送信も繰り返していない。

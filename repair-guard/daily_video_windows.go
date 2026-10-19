@@ -57,7 +57,7 @@ func dailyVideoActorAllowed(db object, root, spec, sha string, source func(strin
 
 func dailyVideoParts(path string, io dailyVideoIO) (string, string, string, bool) {
 	rel, err := filepath.Rel(io.root, path)
-	if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+	if err != nil || rel == "." || rel == ".." || strings.Contains(rel, ":") || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 		return "", "", "", false
 	}
 	parts := strings.Split(rel, string(os.PathSeparator))
@@ -96,14 +96,20 @@ func dailyVideoJobOwned(row object, directory string, io dailyVideoIO) bool {
 		if err != nil || job["id"] != id || !same(str(job["cwd"]), directory) {
 			continue
 		}
-		if project := str(job["project"]); project != "" && project != "youtube-daily" {
-			continue
+		if value := job["project"]; value != nil {
+			project, ok := value.(string)
+			if !ok || (project != "" && project != "youtube-daily") {
+				continue
+			}
 		}
 		if job["todo_id"] != nil && num(job["todo_id"]) != num(row["id"]) {
 			continue
 		}
-		if registered := str(job["registered_cwd"]); registered != "" && !same(registered, io.toolRoot) {
-			continue
+		if value := job["registered_cwd"]; value != nil {
+			registered, ok := value.(string)
+			if !ok || (registered != "" && !same(registered, io.toolRoot)) {
+				continue
+			}
 		}
 		return true
 	}
@@ -151,7 +157,7 @@ func dailyVideoPathAllowedWith(path string, io dailyVideoIO) bool {
 		return false
 	}
 	db, err := io.readObject(productStore, 64<<20)
-	if err != nil || !io.actor(db) || !dailyVideoProductionOwned(db, directory, channel, day, io) {
+	if err != nil || !dailyVideoProductionOwned(db, directory, channel, day, io) || !io.actor(db) {
 		return false
 	}
 	if _, err := os.Lstat(path); os.IsNotExist(err) {

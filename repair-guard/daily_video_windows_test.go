@@ -134,3 +134,18 @@ func TestDailyVideoRejectsUnrelatedAndUnprovenPaths(t *testing.T) {
 		t.Fatal("unverified repair source admitted")
 	}
 }
+
+func TestDailyVideoRejectsAlternateStreamsAndMalformedOptionalIdentity(t *testing.T) {
+	f := newDailyVideoFixture(t, "beats")
+	if dailyVideoPathAllowedWith(f.file+":stream", f.io) {
+		t.Fatal("alternate data stream admitted as a fresh production file")
+	}
+	for _, field := range []string{"project", "registered_cwd"} {
+		f := newDailyVideoFixture(t, "beats")
+		f.job[field] = true
+		f.saveJob(t)
+		if dailyVideoPathAllowedWith(f.file, f.io) {
+			t.Fatalf("malformed optional identity accepted: %s", field)
+		}
+	}
+}

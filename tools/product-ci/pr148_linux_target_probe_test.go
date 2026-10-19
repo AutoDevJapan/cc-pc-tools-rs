@@ -52,19 +52,43 @@ func TestPR148TargetVolumeDocker(t *testing.T) {
 	if _, e = n.inspect(ctx); e != nil {
 		t.Fatal(e)
 	}
+	// A tiny invented repository exercises materialization and checkout clean,
+	// without fetching any product source or registering an Actions runner.
+	setup := `set -eu
+export HOME=/home/runner
+workspace=/work/civ6-banseiki/civ6-banseiki
+mkdir -p "$workspace/tools"
+cd "$workspace"
+git init -q
+git config user.name fixture
+git config user.email fixture@example.invalid
+printf 'fixture\n' > tools/input.txt
+printf 'tools/target/\n' > .gitignore
+git add tools/input.txt .gitignore
+git commit -qm fixture
+git clean -ffdx
+test "$(stat -c %u .)" = 1001
+`
+	if b, err := cmd(ctx, docker, "exec", n.ID, "sh", "-c", setup).CombinedOutput(); err != nil {
+		t.Fatalf("fake Git checkout setup: %v: %s", err, b)
+	}
+	if e = n.ensureTargetLink(ctx, pr148DockerCall); e != nil {
+		t.Fatal(e)
+	}
 	script := `set -eu
 target=/work/civ6-banseiki/civ6-banseiki/tools/target
 test "$(id -u):$(id -g)" = 1001:1001
-test "$(stat -c '%u:%g:%a' "$target")" = 1001:1001:700
+test -L "$target"
+test "$(readlink "$target")" = /work/pr148-cargo-target
+test "$(stat -Lc '%u:%g:%a' "$target")" = 1001:1001:700
 test "$(stat -f -c %T /work)" = tmpfs
 test "$(stat -f -c %T "$target")" != tmpfs
 test ! -e /var/run/docker.sock
 test ! -e /opt/actions-runner/.credentials
 test ! -e /opt/actions-runner/.runner
-test ! -e /work/civ6-banseiki/civ6-banseiki/.git
 printf 'todo2933 credential-free storage fixture\n' > "$target/probe.txt"
 test "$(cat "$target/probe.txt")" = 'todo2933 credential-free storage fixture'
-printf 'owner='; stat -c '%u:%g:%a' "$target"
+printf 'owner='; stat -Lc '%u:%g:%a' "$target"
 printf 'work_fs='; stat -f -c %T /work
 printf 'target_fs='; stat -f -c %T "$target"
 cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.peak /sys/fs/cgroup/memory.events
@@ -77,6 +101,22 @@ cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.peak /sys/fs/cgroup/memory.e
 	if e != nil || !strings.Contains(string(b), "oom_kill 0") {
 		rec.Failure = "credential-free target probe failed"
 		t.Fatalf("%s: %v", rec.Failure, e)
+	}
+	clean := `set -eu
+cd /work/civ6-banseiki/civ6-banseiki
+git clean -ffdx
+test ! -L tools/target
+test "$(cat /work/pr148-cargo-target/probe.txt)" = 'todo2933 credential-free storage fixture'
+test "$(git write-tree)" = "$(git rev-parse HEAD^{tree})"
+`
+	if b, err := cmd(ctx, docker, "exec", n.ID, "sh", "-c", clean).CombinedOutput(); err != nil {
+		t.Fatalf("checkout clean with disk target: %v: %s", err, b)
+	}
+	if e = n.ensureTargetLink(ctx, pr148DockerCall); e != nil {
+		t.Fatal(e)
+	}
+	if b, err := cmd(ctx, docker, "exec", n.ID, "sh", "-c", `set -eu; test "$(cat /work/civ6-banseiki/civ6-banseiki/tools/target/probe.txt)" = 'todo2933 credential-free storage fixture'`).CombinedOutput(); err != nil {
+		t.Fatalf("restored exact target link: %v: %s", err, b)
 	}
 	rec.StorageProbeSuccess = true
 }

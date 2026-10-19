@@ -149,7 +149,7 @@ func (f *pr148TargetDockerFixture) metadata(name, id string) map[string]any {
 	v.CreatedAt = v.NotBefore.Truncate(time.Second).Format(time.RFC3339)
 	v.Mountpoint = "/var/lib/docker/volumes/" + v.Name + "/_data"
 	v.Owned = true
-	dest := pr148TargetPath
+	dest := pr148TargetMountPath
 	memory := int64(10 << 30)
 	network := "bridge"
 	labels := map[string]string{"cc.todo": "2736", "cc.instance": name, "cc.nonce": v.Nonce}
@@ -367,5 +367,40 @@ func TestPR148TargetDoesNotAlterCargoArgumentsOrGuestTarget(t *testing.T) {
 	}
 	if !reflect.DeepEqual(stripped, old) {
 		t.Fatal("namespace options changed beyond nonce and target mount")
+	}
+}
+
+func TestPR148TargetLinkRequiresFreshOwnedMount(t *testing.T) {
+	for _, failure := range []string{"", "main-inspect", "link"} {
+		t.Run(failure, func(t *testing.T) {
+			f := newPR148TargetFixture(t, "")
+			n, e := newPR148NamespaceWith(context.Background(), f.dir, f.call)
+			if e != nil {
+				t.Fatal(e)
+			}
+			calls := 0
+			call := func(ctx context.Context, a ...string) ([]byte, error) {
+				if a[0] == "exec" {
+					calls++
+					if len(a) != 5 || a[1] != n.ID || a[2] != "sh" || a[3] != "-c" || a[4] != pr148TargetLinkScript {
+						t.Fatal("unexpected target mutation")
+					}
+					if failure == "link" {
+						return nil, errors.New("existing different target")
+					}
+					return nil, nil
+				}
+				return f.call(ctx, a...)
+			}
+			f.fail = failure
+			e = n.ensureTargetLink(context.Background(), call)
+			wantCalls := 1
+			if failure == "main-inspect" {
+				wantCalls = 0
+			}
+			if (e != nil) != (failure != "") || calls != wantCalls {
+				t.Fatalf("link failure=%s error=%v calls=%d", failure, e, calls)
+			}
+		})
 	}
 }

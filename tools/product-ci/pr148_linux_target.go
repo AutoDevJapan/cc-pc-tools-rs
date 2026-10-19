@@ -16,6 +16,41 @@ import (
 )
 
 const pr148TargetPath = pr148Workspace + "/tools/target"
+
+// Mount outside the checkout. Docker creates mountpoint ancestors as root,
+// and checkout's git clean must be free to remove untracked workspace paths.
+const pr148TargetMountPath = "/work/pr148-cargo-target"
+const pr148TargetLinkScript = `set -eu
+test "$(id -u):$(id -g)" = 1001:1001
+disk=/work/pr148-cargo-target
+workspace=/work/civ6-banseiki/civ6-banseiki
+link="$workspace/tools/target"
+test "$(stat -c '%u:%g:%a' "$disk")" = 1001:1001:700
+test "$(stat -f -c %T "$disk")" != tmpfs
+test -d "$workspace/tools"
+test ! -L "$workspace"
+test ! -L "$workspace/tools"
+if test -L "$link"; then
+ test "$(readlink "$link")" = "$disk"
+elif test -e "$link"; then
+ exit 124
+else
+ ln -s "$disk" "$link"
+fi
+test -L "$link"
+test "$(readlink "$link")" = "$disk"
+`
+
+func (n *pr148Namespace) ensureTargetLink(ctx context.Context, call pr148DockerIO) error {
+	if _, e := n.inspectWith(ctx, call); e != nil {
+		return e
+	}
+	if _, e := call(ctx, "exec", n.ID, "sh", "-c", pr148TargetLinkScript); e != nil {
+		return errors.New("fixed workspace target link rejected; no target replaced")
+	}
+	return nil
+}
+
 const pr148TargetInitScript = `set -eu
 test "$(id -u):$(id -g)" = 1001:1001
 mkdir /tmp/target
@@ -181,7 +216,7 @@ func pr148TargetIsolation(data []byte, name string, v *pr148TargetVolume) ([]byt
 	if v == nil || v.Owner != name {
 		return nil, errors.New("target owner mismatch")
 	}
-	if e := pr148CheckTargetMount(data, v, pr148TargetPath, "target"); e != nil {
+	if e := pr148CheckTargetMount(data, v, pr148TargetMountPath, "target"); e != nil {
 		return nil, e
 	}
 	var all []map[string]any
@@ -198,7 +233,7 @@ func pr148TargetIsolation(data []byte, name string, v *pr148TargetVolume) ([]byt
 	}
 	var kept []any
 	for _, m := range all[0]["Mounts"].([]any) {
-		if m.(map[string]any)["Destination"] != pr148TargetPath {
+		if m.(map[string]any)["Destination"] != pr148TargetMountPath {
 			kept = append(kept, m)
 		}
 	}
@@ -220,7 +255,7 @@ func pr148PIDZero(b []byte) bool {
 func (n *pr148Namespace) targetCreateArgs() []string {
 	a := pr148CreateArgs(n.Name)
 	end := len(a) - 3
-	return append(append(append([]string{}, a[:end]...), "--label", "cc.nonce="+n.Nonce, "--mount", pr148TargetMount(n.Target, pr148TargetPath, "target")), a[end:]...)
+	return append(append(append([]string{}, a[:end]...), "--label", "cc.nonce="+n.Nonce, "--mount", pr148TargetMount(n.Target, pr148TargetMountPath, "target")), a[end:]...)
 }
 
 func (n *pr148Namespace) initArgs() []string {

@@ -471,7 +471,7 @@ func pr148GatedChild(args []string) int {
 		return 121
 	}
 	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
-	_, e = p.Namespace.inspect(ctx)
+	e = p.Namespace.ensureTargetLink(ctx, pr148DockerCall)
 	stop()
 	if e != nil {
 		return 122

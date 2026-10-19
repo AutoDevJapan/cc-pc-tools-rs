@@ -1,5 +1,50 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 14時台・PR239通常mergeとLinux候補の追加実証（最新）
+
+同job20261019-142447-todo-2736/同branch/同worktreeで継続。子2933とreview2938は
+原応答・実job/model/steps/exitを受領し、恒久rootのchild*-receipt142447.jsonに保存した。
+2938は実Sonnet5.5/6steps/実検査0/Must0、固定375385cの3fileと公開133bb1aの差分0を確認。
+PR239の同headは両OS helperとCodeQL4言語・集約全success。対応と未確認をcomment6260474232へ
+記録し、通常ready→固定head通常mergeを1回実施。merge8477b8065fc92e410732b375a29794dc4a15dd0b。
+mainのhelper39205517016/CodeQL39205517027は受付時queuedで、成功とは扱わない。
+
+子2933は7532f87e9b085c19cd32abc0f2c6ae57e238d84c/Go関連124pass（top31）/vet/両OSbuild/
+pair guard/認証なしstorage probe成功を返した。全39fileをSHA一致でchild2933-return142447へ保存。
+親は同じ7fileを39735e4ddd403ef0fbd4e40e67d14cc89470e196へcherry-pick。
+PR241 https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/241 はdraft、同39735e4を通常pushした。
+新しい有限Sonnet review2941を同root/currentjobの正規subworkで登録した。旧2933のdoneを
+正式CI成功や候補受入には読み替えない。pair artifactsは子のclean7532版で、親39735版と
+package差分を照合したうえで使うか、新しい受入sourceから両方を生成する。
+
+親の追加認証なしfake Git実証は、同SDK/UID1001/ROroot/capdropALL/networknone/128MiB/
+no swapでtargetを元workspace配下へmountしたところ、git initが.git: Permission denied。
+Dockerがmount先の親階層をroot所有で作るため、source書込ができない実害を検出した。
+git cleanまでは未到達。cleanがmountpointを消そうとするEBUSY懸念も未解決。
+この39735候補を正式実行・mergeしない。2941の正規specとPR241本文へ実測を追加済み。
+workspace外/work直下への専用target mountとcheckout後の厳密symlink等を技術的に検討する。
+新cap/root、hostbind、checkout条件の削減、共有validator拡張へ逃がさない。
+実証nonce8fad49e761c94ae2b6557d1c629edf98のinitは削除済み、probeはexit1/PID0と所有を確認し
+初回通常rm-vとvolume rm、独立不在照会まで完了。checkout-probe142447-result.jsonを保持。
+
+製品repo1392152644/AutoDevJapan/private/nonfork/admin/PR148/open/head03c7cc6/base1100676/
+元branch・same repoを再確認。Windows117885022224はrun39198061656/attempt1/queued/steps0/
+runner0、専用登録も0だった。新safe-delete root c7d169c6703f73606593218235caa912を作りguard false。
+元375385c collector/helperと同SHA8958DFAD33836005289D551184FF82B6B5D27B3691E18C0659D21FA93616134C、
+公開runnerZIPのSHAf48e0750...を照合。旧5051の公開ZIPだけをコピーし、旧runtime/authへ触れていない。
+新prepareはCC-AdminBrokerでexit0/14:43:26。サービスCC-PR148-c7d169c6703f73606593218235caa912、
+SID S-1-5-80-3708170740-846393677-3000214783-2089939276-2208844581。
+windows-new-execute142447.ps1を初回起動した。既存OAuth tokenはproducerからOS pipeでだけ供給し、
+画面・argv・fileへ出さない。実開始/終了はwindows-new-execute-process/result142447.jsonと
+正式APIで確認する。新rootは稼働成果であり、丸ごと証拠へコピーしない（authファイルは除外）。
+旧5051の1332失敗と2cd profile32失敗は再試行0のまま。
+
+Linux117885022032の正式log原bytes再取得はTLS handshake timeout/exit1/0bytesだった。
+linux117885022032-official142447.*に診断を保持。成功原logとは扱わない。元controller/Cargo原logは
+先のe62 archiveに全保存済み。単なる読み取りの有限再取得は同gate/OAuthで行える。
+製品4job成功・2640への成功配送・新旧資源の全回収は未達。本人の判断/PC操作依頼なし。
+
+
 ## 2026-10-19 昼再開・正式OOMとPR239、有限下位作業（最新）
 
 同job20261019-125854-todo-2736/同branch/同worktreeで再開した。

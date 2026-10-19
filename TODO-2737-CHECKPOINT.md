@@ -816,3 +816,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 回帰検査は実limitedCaptureへ通信エラー語を先に書き、上限を越えるchunkと後続の拒否語を失わせたstdout/stderrの両例を使う。成功/失敗のどちらの仮終了コードでもcallRunnerAPIの実GET再試行経路が1回で打切ること、欠落flag保持、raw文字列不出力を確認。同じ完全な通信診断なら3回目に成功できる対照も保持した。現Windows module race/vet成功。Linux compile入力不変なので有効な既存検査を再利用。原製品Cargo/公式再試行/VM/新runner/SDK再生成0。
 - 新ownedrootb4c745f61b6ce9aba91998a1944007b4、証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261019/resume-150951。原応答2件/実model照合/検査/guard/原source固定を保存。原candidate0fda/tree0bc5/ref/workflowは明示配送済みの同版を維持。元run39201344542は取消済み、SDK/失敗disk/原Windows SDK/guard/manifest/owner-work/他担当を保持。
 - 次はこのMust修正の追加差分だけを同新HEADで別モデル確認し、残Must解消後に新hostで正式CIを再開する。前2936の読取完了をMust0へ読み替えない。元Rust8/Windows13/Docker parity/metadata complete/基盤配送は未完、製品merge/Prdは親2641。本人操作/新費用/APIキーAI/GPU/Civ6/Discord送信0。2026-10-19の本人指示どおり通常の完了通知も送らず、検証・共有ToDo・記録は続ける。
+### 出力欠落Must修正の追加レビューと配送
+
+- 実装7a613cead2263789ab0fcfe21fc372029e86d6e5/treedd1a615cc10a9edd394e6a110f7e3bcdbef06d31をcommit/push。固定base40a5f67→同headの追加4fileだけ、gpt-6-lunaの有限レビュー2947へ通常add --specで登録。保存spec全文の改行正規化一致/dispatchableを確認。自分やreviewerから子Codexを直接起動していない。新レビューは実結果未受領なのでMust0ではない。
+- 元2737/親2641へ、原Must/実model/修正/検査/未完/証拠/次の工程を配送し、2936へ結果の受領を記録。既済の元8検査・run取消・route削除・VM回収を再送しない。終了時も原candidate0fda/PR/ref/tree/workflowを再照合し、own route/normal CI intent不在を確認する。
+- 次は2947の実head/既読/実model/Mustを受領し、残Mustがなければ同clean版のWindows hostを生成する。Linux helperは入力不変を照合して3623版を再利用できる。正式CIは同candidate0fdaの原run39201344542で必要な再検証を行う。新差分のレビュー前に古いhostで修正完了としない。原SDK/新SDK/失敗disk/原Windows SDK/guard/manifest/未回収/他担当を保持し、現job/実HEADのcheckpointとwait --on2947で自動再開する。

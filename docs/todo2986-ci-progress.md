@@ -243,3 +243,29 @@ safe-deleteの現実装が配下の`.git`を保護するため、実Git履歴fix
 後続scrub391の当該root分類もunverified/client_resource=trueなので、別経路で移動/削除/読取をしていない。
 所有IDと作成根拠を保持し、保護を迂回して片付けたとは扱わない。この拒否だけを本人判断待ちにしない。
 GPU・Civ6・重Cargo・新費用・新APIキー・ブラウザ操作はこの親工程では実行していない。
+
+## 2026-10-19 23時台 再開・PR720 main反映
+
+PR720は最新固定HEAD `d96fbabe6559e6b55eb8d5be2e10889f03a9a472` で必須CI全件成功後、
+merge commit `27f840b3abfd23a618a0c0551ac177543ef97d63` としてmainへ統合した。
+Quality Gate、Docker E2E、Security Audit、Cloud WASM、Desktop/CLI Windows build、
+Native WebView、Encrypted storage、CodeQL等を同HEADで確認した。Native WebViewは22m45s、
+Encrypted storageは22m36sで成功。初回の監査・DB deadlock・WASM出自・schema drift失敗を
+隠さず修復し、再実行は追加修正後の必要な最新候補に限った。
+
+別モデルのレビューToDo2998/3012/3015/3017はすべて完了し、固定差分/補足でMustなし。
+PR721もGitHub表示上merged、head `e19dbf27ff1a27df344dba52bcde436552464b79`。
+PR720の統合差分にdesktop-build.ymlとop-cli-build.ymlが含まれることをAPIで確認。
+main tree SHAはPR720 headと同一。2994の正式Windows runner実証・供給・hash/recoveryと
+プロジェクト全体のWindows受入は別工程の未達として残す。
+
+mainへのmergeで13個のpush workflowが起動。最初の照合では4 success、8 in_progress、1 queued。
+GitHubの組織Actions billing usage API（2026-10-19日次、取得時点）でPassShareはLinux 685分、
+macOS 23分、Windows 121分、storage 10.148 GB-hour。各SKU netAmountは0 USD。
+請求APIは日次集計のため、merge後runのみの厳密な区分と確定請求ではない。
+既存の事前観測もnet 0 USD。公開repo標準runnerの無料対象と整合し、費用減額・返金とは扱わない。
+実際のrun/job分数の最終集計は13 push workflowsの終端後に再取得する。
+
+ブランチは `scheduler/todo-2986-passshare-ci` のまま、worktreeはclean。
+残作業はmain push workflowの終端確認、PassShare run/job実行数・分数と課金APIの再照合、
+元2957への結果保存、2994/他製品の待機条件を維持したToDo状態反映。

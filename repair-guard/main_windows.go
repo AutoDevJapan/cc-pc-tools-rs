@@ -177,6 +177,9 @@ func allowed(path string) bool {
 	if err != nil || legacyMatch(absolute) {
 		return false
 	}
+	if owned2736PathAllowed(absolute) {
+		return true
+	}
 	if conversationPathAllowed(absolute) {
 		return true
 	}

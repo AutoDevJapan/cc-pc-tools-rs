@@ -183,3 +183,17 @@ func TestProcessingResourcesExcludesLiveChainWaitWithoutUsingNames(t *testing.T)
 		}
 	}
 }
+
+func TestActiveOnlyExcludesCollaborationWait(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"status":"doing","jobs":["waiter"]}]}`)
+	f.opts.ActiveOnly = true
+	f.job(t, "waiter", `{"id":"waiter","status":"running","codex_pid":1,"codex_pid_created":10,"last_event_at":"2026-10-13T10:00:00Z","activity":"agent: wait"}`)
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	s := collect(context.Background(), f.opts, testNow, probe)
+	if len(s.Tasks) != 0 || len(s.Jobs) != 0 {
+		t.Fatal("waiting for a child is not active processing")
+	}
+}

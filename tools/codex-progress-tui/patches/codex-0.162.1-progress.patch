@@ -1522,10 +1522,10 @@ index 5dfc3ad..ac8f6c4 100644
                      self.refresh_agents_overview_usage(app_server, tui.frame_requester());
                      let rendered_area = self.render_chat_widget_frame(tui, screen_size)?;
 diff --git a/codex-rs/tui/src/app/agents_overview_details.rs b/codex-rs/tui/src/app/agents_overview_details.rs
-index 03b3c9b..533c211 100644
+index 03b3c9b..c855f03 100644
 --- a/codex-rs/tui/src/app/agents_overview_details.rs
 +++ b/codex-rs/tui/src/app/agents_overview_details.rs
-@@ -22,6 +22,32 @@ use std::collections::HashMap;
+@@ -22,6 +22,43 @@ use std::collections::HashMap;
  
  const PREVIEW_CHARS: usize = 512;
  
@@ -1549,6 +1549,17 @@ index 03b3c9b..533c211 100644
 +            activity.observe_processing(&notification);
 +            assert_eq!(activity.processing(), kind == "reasoning");
 +        }
++        for tool in ["spawnAgent", "wait"] {
++            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
++                "method":"item/started","params":{"threadId":"t","turnId":"r","item":{
++                    "type":"collabAgentToolCall","id":"i","tool":tool,"status":"inProgress",
++                    "senderThreadId":"t","receiverThreadIds":[],"agentsStates":{}
++                }}
++            }))
++            .unwrap();
++            activity.observe_processing(&notification);
++            assert_eq!(activity.processing(), tool == "spawnAgent");
++        }
 +        activity.processing_at =
 +            Some(std::time::Instant::now() - std::time::Duration::from_secs(31));
 +        assert!(!activity.processing());
@@ -1558,7 +1569,7 @@ index 03b3c9b..533c211 100644
  pub(super) fn preview_agent_message(text: &str) -> String {
      preview_markdown(&crate::markdown::normalize_markdown_for_rendering(text))
  }
-@@ -52,6 +78,52 @@ pub(super) fn preview_text(text: &str) -> String {
+@@ -52,6 +89,54 @@ pub(super) fn preview_text(text: &str) -> String {
  pub(super) struct AgentsOverviewActivity {
      reasoning: Option<ReasoningPreview>,
      last_message: Option<String>,
@@ -1598,6 +1609,9 @@ index 03b3c9b..533c211 100644
 +}
 +
 +fn processing_item(item: &ThreadItem) -> bool {
++    if let ThreadItem::CollabAgentToolCall { tool, .. } = item {
++        return !matches!(tool, codex_app_server_protocol::CollabAgentTool::Wait);
++    }
 +    matches!(
 +        item,
 +        ThreadItem::Reasoning { .. }
@@ -1605,13 +1619,12 @@ index 03b3c9b..533c211 100644
 +            | ThreadItem::FileChange { .. }
 +            | ThreadItem::McpToolCall { .. }
 +            | ThreadItem::DynamicToolCall { .. }
-+            | ThreadItem::CollabAgentToolCall { .. }
-+            | ThreadItem::WebSearch { .. }
++            | ThreadItem::WebSearch(_)
 +    )
  }
  
  struct ReasoningPreview {
-@@ -72,6 +144,7 @@ impl App {
+@@ -72,6 +157,7 @@ impl App {
              return;
          }
          let activity = self.agents_overview.activity.entry(thread_id).or_default();

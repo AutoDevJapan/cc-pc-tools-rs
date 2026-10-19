@@ -134,7 +134,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			rawID: j.ID, parentID: j.ParentJobID, independent: objectValue(j.Subwork), cancelRequested: j.CancelRequested, created: created,
 		}
 		if opts.ActiveOnly && row.Execution == "running" {
-			row.resourceBlocked = !processingResources(ctx, opts, j.ID, now, probe)
+			row.resourceBlocked = j.Activity == "agent: wait" || !processingResources(ctx, opts, j.ID, now, probe)
 		}
 		allJobs[j.ID] = row
 	}

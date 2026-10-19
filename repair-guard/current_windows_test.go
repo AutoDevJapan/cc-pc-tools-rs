@@ -178,11 +178,11 @@ func TestDeclaredSuccessorBindsExactTaskAndRepository(t *testing.T) {
 		t.Fatal("unexpected number of declared current products")
 	}
 	ao := currentProducts[0]
-	if ao.project != "GoDD-AO" || ao.task != 2839 || ao.owner != "AutoDevJapan" || ao.repository != "autodevjapan/godd-ao" || ao.repositoryID != 1296537193 || ao.root != "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-AO" || ao.spec != "D:/CC/Tools/todo/specs/2839-ccac08e67b3b4a4488f3f0241c59b32c.md" || ao.specSHA != "b44e6c70614089c50908901e7d60a902f9e2f0793c813f9a0c2595f03714fd33" {
+	if ao.ongoing || ao.project != "GoDD-AO" || ao.task != 2839 || ao.owner != "AutoDevJapan" || ao.repository != "autodevjapan/godd-ao" || ao.repositoryID != 1296537193 || ao.root != "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-AO" || ao.spec != "D:/CC/Tools/todo/specs/2839-ccac08e67b3b4a4488f3f0241c59b32c.md" || ao.specSHA != "b44e6c70614089c50908901e7d60a902f9e2f0793c813f9a0c2595f03714fd33" {
 		t.Fatal("existing AO declaration changed")
 	}
 	product := currentProducts[1]
-	if product.project != "GoDD-13a13e1" || product.task != 2850 || product.owner != "AutoDevJapan" || product.repository != "autodevjapan/godd-13a13e1" || product.repositoryID != 1283948432 || product.root != "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1" || product.spec != "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md" || product.specSHA != "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95" {
+	if product.ongoing || product.project != "GoDD-13a13e1" || product.task != 2850 || product.owner != "AutoDevJapan" || product.repository != "autodevjapan/godd-13a13e1" || product.repositoryID != 1283948432 || product.root != "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1" || product.spec != "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md" || product.specSHA != "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95" {
 		t.Fatal("successor declaration changed")
 	}
 	if got := strings.Join(currentGitHubIdentityArgs(product), "\x00"); got != "api\x00--hostname\x00github.com\x00repos/autodevjapan/godd-13a13e1\x00--jq\x00[.id, .full_name, .owner.login] | @tsv" {
@@ -344,11 +344,11 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 		specName   string
 		specSHA    string
 	}{
-		{2913, "GoDD-Agent", 1296644614, "2913-94a82f05aee64756ab94862a237eaaca.md", "e8041084be05e71dc8e4259411ca69d5db2081e5f55e2697f8582667024965ee"},
-		{2914, "GoDD-Creators", 1299522585, "2914-4a4d22f646534e9cb179a9eda44deecd.md", "ca04fbde8dea92e55367467a99b812143daa4e1b0e1a816f5403b95d9d34c47f"},
-		{2915, "GoDD-Rosetta", 1397020302, "2915-a3a82497d0444858a2ef2a9df9a9576b.md", "0e589052caa013b3b485f604e15cfc5c49756264e0641724dc1fd29e367eca99"},
-		{2916, "GoDD-Genesis", 1199265386, "2916-fc6f12b9ef884884ac4d38cf37f3cae9.md", "96ed3bf6208501f789969dba99f0b3ab3caad8eb2303a5b6af47aa2a80912616"},
-		{2917, "GoDD-VirtualStreamer", 1305037899, "2917-becb7cab9b014847bdc1be2db894a785.md", "c59c51fd192c78df1a38913bb146a034b798473a15171dc895baf25e965ec7cb"},
+		{2913, "GoDD-Agent", 1296644614, "2913-063d73978ca64042b1f163df8a2ca25c.md", "336f301b7b346bbf75712c5eeb602cbe511a67e2661ded3c3824b0a397fe54a9"},
+		{2914, "GoDD-Creators", 1299522585, "2914-c73d99f7ae4f475eb08a8f0f755d1cd0.md", "e930f73bc4735de883316e6f9a6589bee59f2735934ad3b00b6d9b52b18ce622"},
+		{2915, "GoDD-Rosetta", 1397020302, "2915-9a62b269bfb64f77a7c42a9a444c0e7d.md", "44a57753802817a5a06a6de6e12c40a7b13c1e8d29e8edd0d420d518d211ad85"},
+		{2916, "GoDD-Genesis", 1199265386, "2916-d667d01d7d5a434da2a358d3a986f5d8.md", "7dd744dba1cfbfae385f05a9d96ed8fb13ac79f93fe1f12a2b64c920a36a49a6"},
+		{2917, "GoDD-VirtualStreamer", 1305037899, "2917-abdc3b271c43470fb4ce9d87d1d70616.md", "341b23ee35d56f33c82713bcb3674fdff99d391bca4f5a9b9726119f05f366ba"},
 	}
 	seenTasks, seenRepositories := map[int]bool{}, map[int64]bool{}
 	for _, declared := range currentProducts {
@@ -360,7 +360,7 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.project, func(t *testing.T) {
 			product, ok := currentProductByTask(c.task)
-			if !ok || product.project != c.project || product.owner != "AutoDevJapan" || product.repositoryID != c.repository || product.repository != "autodevjapan/"+strings.ToLower(c.project) || product.root != "C:/Users/makhmeto/Desktop/dev/ADJ/"+c.project || product.spec != currentTodoSpecsRoot+"/"+c.specName || product.specSHA != c.specSHA {
+			if !ok || !product.ongoing || product.project != c.project || product.owner != "AutoDevJapan" || product.repositoryID != c.repository || product.repository != "autodevjapan/"+strings.ToLower(c.project) || product.root != "C:/Users/makhmeto/Desktop/dev/ADJ/"+c.project || product.spec != currentTodoSpecsRoot+"/"+c.specName || product.specSHA != c.specSHA {
 				t.Fatal("verified current declaration changed")
 			}
 			identityOutput := []byte(strconv.FormatInt(c.repository, 10) + "\tAutoDevJapan/" + c.project + "\tAutoDevJapan\n")
@@ -385,7 +385,7 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 			currentFixtureGit(t, root, "init", "-q")
 			currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/"+c.project+".git")
 			product.root, product.spec, product.specSHA = root, spec, hashBytes(body)
-			row := object{"id": float64(c.task), "project": c.project, "spec": spec}
+			row := object{"id": float64(c.task), "project": c.project, "spec": spec, "status": "todo", "dispatchable": true}
 			db := object{"projects": object{c.project: root}, "items": []any{row}}
 			allow := func(string) bool { return false }
 			identity := func(p currentProduct) bool { return currentGitHubIdentityMatches(identityOutput, p) }
@@ -397,7 +397,7 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 				t.Fatal("current receipt failed to bind its own registration")
 			}
 			qualifies := func(p currentProduct) bool {
-				return currentQualification(db, p.project, p.task, p.root, p.spec, p.specSHA, allow)
+				return currentProductQualified(db, p, allow)
 			}
 			products := []currentProduct{product}
 			workspace := filepath.Join(root+"-wt", "todo-"+strconv.Itoa(c.task)+"-current")
@@ -407,22 +407,63 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 			if currentProductsScopePathAllowed(filepath.Join(root+"-wt", "todo-23-old"), products, inScope, qualifies, allow) || currentProductsScopePathAllowed(workspace, products, inScope, qualifies, func(p string) bool { return same(p, root) }) {
 				t.Fatal("old workspace or real denial was overridden")
 			}
-			for _, at := range []time.Time{
-				time.Date(2026, 10, 12, 23, 59, 59, 0, time.UTC),
-				time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC),
-			} {
+			for _, at := range []time.Time{time.Date(2026, 10, 18, 23, 59, 59, 999999999, time.UTC)} {
 				qualificationCalled := false
 				if currentProductsScopePathAllowed(workspace, products, at, func(currentProduct) bool { qualificationCalled = true; return true }, allow) || qualificationCalled {
-					t.Fatal("path classification continued outside the original deadline")
+					t.Fatal("current business was applied before the current instruction")
 				}
 				failure := currentSuccessionReceiptWith(db, product, at, allow, currentPlain, sourceOriginVerified, identity)
 				if len(failure) != 1 || failure["verified"] != false {
-					t.Fatal("expired admission did not return generic failure")
+					t.Fatal("before-instruction admission did not return generic failure")
 				}
 			}
+			for _, at := range []time.Time{
+				time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC),
+				time.Date(2026, 10, 20, 23, 59, 59, 999999999, time.UTC),
+				time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC),
+				time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC),
+			} {
+				if !currentProductsScopePathAllowed(workspace, products, at, qualifies, allow) || currentSuccessionReceiptWith(db, product, at, allow, currentPlain, sourceOriginVerified, identity)["verified"] != true {
+					t.Fatal("same current business stopped at the old recovery deadline")
+				}
+			}
+			assertRejected := func(label string) {
+				t.Helper()
+				at := time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC)
+				if currentProductsScopePathAllowed(workspace, products, at, qualifies, allow) || currentSuccessionReceiptWith(db, product, at, allow, currentPlain, sourceOriginVerified, identity)["verified"] != false {
+					t.Fatalf("%s current business remained qualified", label)
+				}
+			}
+			for _, status := range []string{"block", "done", "cancelled", "recovery_unverified", ""} {
+				row["status"] = status
+				assertRejected("stopped/completed")
+			}
+			row["status"] = "todo"
+			row["status"] = "wait"
+			row["wait_on"] = []any{float64(123456)}
+			beforeWait, _ := json.Marshal(row)
+			if currentSuccessionReceiptWith(db, product, time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC), allow, currentPlain, sourceOriginVerified, identity)["verified"] != true {
+				t.Fatal("read-only qualification could not reconcile an ordinary dependency wait")
+			}
+			afterWait, _ := json.Marshal(row)
+			if !bytes.Equal(beforeWait, afterWait) {
+				t.Fatal("qualification mutated the normal dependency gate")
+			}
+			row["status"] = "todo"
+			delete(row, "wait_on")
+			row["dispatchable"] = false
+			assertRejected("non-dispatchable")
+			row["dispatchable"] = true
+			obj(db["projects"])[product.project] = root + "-other"
+			assertRejected("different root")
+			obj(db["projects"])[product.project] = root
+			row["spec"] = filepath.Join(base, "other.md")
+			assertRejected("different spec")
+			row["spec"] = spec
 			if os.WriteFile(spec, append(body, '!'), 0600) != nil {
 				t.Fatal("fixture mutation failed")
 			}
+			assertRejected("mutated saved spec")
 			if currentProductsScopePathAllowed(workspace, products, inScope, qualifies, allow) || currentSuccessionReceiptWith(db, product, inScope, allow, currentPlain, sourceOriginVerified, identity)["verified"] != false {
 				t.Fatal("changed saved request remained qualified")
 			}
@@ -433,6 +474,117 @@ func TestRemainingCurrentSuccessorsUseOnlyVerifiedBindings(t *testing.T) {
 			t.Fatal("an old or undeclared actor was admitted")
 		}
 	}
+}
+
+func TestOlderCurrentDeclarationsStillExpireBeforeReadingQualifications(t *testing.T) {
+	for _, task := range []int{2839, 2850} {
+		product, ok := currentProductByTask(task)
+		if !ok || product.ongoing {
+			t.Fatal("old declaration was converted to ongoing business")
+		}
+		for _, at := range []time.Time{
+			time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC),
+			time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC),
+		} {
+			called := false
+			if currentProductsScopePathAllowed(product.root, []currentProduct{product}, at, func(currentProduct) bool { called = true; return true }, func(string) bool { return false }) || called || currentProductTimeAllowed(product, at) {
+				t.Fatal("old recovery scope survived its deadline")
+			}
+		}
+	}
+}
+
+func TestOngoingBusinessDirectChildPreservesStopAndPhysicalScopeAfterRecoveryDeadline(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, specs := filepath.Join(base, "product"), filepath.Join(base, "specs")
+	for _, path := range []string{root, root + "-wt", specs} {
+		if err := os.Mkdir(path, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	product, ok := currentProductByTask(2913)
+	if !ok || !product.ongoing {
+		t.Fatal("ongoing compiled business declaration missing")
+	}
+	parentSpec, childSpec := filepath.Join(specs, "parent.md"), filepath.Join(specs, "4001-0123456789abcdef0123456789abcdef.md")
+	for _, path := range []string{parentSpec, childSpec} {
+		if err := os.WriteFile(path, []byte("fixed current business"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	product.root, product.spec, product.specSHA = root, parentSpec, hashBytes([]byte("fixed current business"))
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-Agent.git")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	parentPath := filepath.Join(root+"-wt", "todo-2913-current")
+	childPath := filepath.Join(root+"-wt", "todo-4001-current-review")
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2913-current", parentPath)
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-4001-current-review", childPath)
+	common, ok := currentGitCommonDir(root)
+	if !ok {
+		t.Fatal("real common directory missing")
+	}
+	const parentJob = "20261021-001000-todo-2913"
+	parent := object{"id": float64(2913), "project": product.project, "status": "doing", "dispatchable": true, "spec": parentSpec, "jobs": []any{parentJob}, "scheduler": object{"worktree": parentPath}}
+	child := object{
+		"id": float64(4001), "title": "current review", "project": product.project, "status": "todo", "dispatchable": true, "spec": childSpec,
+		"scheduler": object{"worktree": childPath},
+		"subwork": object{"parent_todo_id": float64(2913), "origin_job_id": parentJob, "kind": "review", "owner": object{
+			"repository": product.repository, "worktree": parentPath, "git_common": common, "branch": "scheduler/todo-2913-current",
+		}},
+	}
+	db := object{"projects": object{product.project: root}, "items": []any{parent, child}}
+	products := []currentProduct{product}
+	allow := func(string) bool { return false }
+	identity := func(currentProduct) bool { return true }
+	verify := func(at time.Time, denied func(string) bool) (object, currentProduct, bool) {
+		return currentSubworkReceiptWith(db, 4001, products, specs, at, denied, currentPlain, sourceOriginVerified, identity, currentGitCommonDir, currentProductPath)
+	}
+	for _, at := range []time.Time{
+		time.Date(2026, 10, 20, 23, 59, 59, 999999999, time.UTC),
+		time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC),
+		time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC),
+	} {
+		if receipt, _, ok := verify(at, allow); !ok || receipt["verified"] != true || receipt["todo_id"] != 4001 {
+			t.Fatal("direct current child stopped at the original recovery deadline")
+		}
+		receipt, qualified, ok := currentSubworkPathReceiptWith(db, 4001, products, specs, at, allow)
+		if !ok || receipt["verified"] != true || !currentSubworkScopePathAllowedWith(childPath, products, func(int) (currentProduct, bool) { return qualified, true }, allow, currentProductPath) {
+			t.Fatal("offline child path stopped at the original recovery deadline")
+		}
+	}
+	after := time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC)
+	assertDenied := func(label string, denied func(string) bool) {
+		t.Helper()
+		if receipt, _, ok := verify(after, denied); ok || len(receipt) != 1 || receipt["verified"] != false {
+			t.Fatalf("%s was admitted after the recovery deadline", label)
+		}
+	}
+	for _, status := range []string{"block", "done"} {
+		parent["status"] = status
+		assertDenied("stopped/completed parent", allow)
+	}
+	parent["status"] = "doing"
+	parent["dispatchable"] = false
+	assertDenied("disabled parent", allow)
+	parent["dispatchable"] = true
+	child["status"] = "block"
+	assertDenied("stopped child", allow)
+	child["status"] = "todo"
+	assertDenied("real root denial", func(p string) bool { return same(p, root) })
+	obj(db["projects"])[product.project] = root + "-different"
+	assertDenied("different registered root", allow)
+	obj(db["projects"])[product.project] = root
+	child["spec"] = parentSpec
+	assertDenied("different child spec", allow)
+	child["spec"] = childSpec
+	if err := os.WriteFile(parentSpec, []byte("changed fixed parent"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	assertDenied("changed parent spec", allow)
 }
 
 func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {

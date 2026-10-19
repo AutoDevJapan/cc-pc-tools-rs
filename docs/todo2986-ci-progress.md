@@ -25,7 +25,21 @@ Rustのstruct field順と元JSONの生バイトを保ち、全体のGo map再直
 Mobileはこの時点で新たに実生成したとは主張せず、正式CIのdrift/実renderer受入で最終照合する。
 原候補・raw hash5件・base blobs・patchは`.ci-work/all-schema-receipt.private.json`等に保持。
 
-残りは3015/補足レビュー、同HEADの全CI成功、通常merge、main確認、実行量と課金APIの再読。
+3012/3015の原応答を保存し、各実job/thread/cwdとturn_contextで実Sonnet5.5を照合した。
+3012原SHA39b8d682b66a8c14cd86356af8cf24257c0b2ccc73b697c449d9fb2b20d2c646、
+3015原SHA1e3c6b3705caac663d6f82e15446100dde6835e2418aed89b12212d0d014a595。
+両者のMustは今回修復した生成定義/CRLFで、3015はWindows2workflowの意味変更にMust無し。
+3015はAPIに接続できず提供済みの私的request/response資料を読んだ点を区別し、
+実remote blob/sourceの照合は親が正規APIで補う。拒否された接続設定を変更していない。
+3017は追加5件と前回未読のlock2/main_testだけを確認中。読むための限定raw9blobを
+共有Git object storeに保存し、`.ci-work/review-source-blobs.private.json`へ列挙した。
+raw製品sourceを補助repoの公開commitへ入れていない。
+
+残りは3017の補足レビュー、同HEADの全CI成功、通常merge、main確認、実行量と課金APIの再読。
+PR721は原候補の親をPR720に含めたので、通常merge時の元PRの状態も確認し必要なら整理する。
+共有ToDo2986/元2957/引継ぎ3010へ、実施済みと未達を最新noteとして配送した。
+scratch ef08はクロスドライブ退避が未実施で元にある。レビュー中の入力を保持し、
+終了回収時に同Dの削除希望へ退避する。旧PROTECTED_PATH rootを再操作しない。
 CIの無目的rerunは一度も実行していない。ソース修復ごとの通常PR同期だけ。
 
 ## 生成定義の修復と3010からの統合引継ぎ

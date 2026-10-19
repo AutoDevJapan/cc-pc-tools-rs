@@ -120,3 +120,29 @@ workerからのローカル保護判定と不整合になる。ほかのfilesyst
 workerのnetwork=false/read-onlyを解除せずに解消する必要がある。Goを並行編集
 せず、同じ子の実作業・依存完了後の親巡回まで2851を未完了にする。
 2887の完了待ちは解除済み。Go全体doneは待たず、必要な限定部分の修復と配布を追う。
+
+## 通信なし子guardの正式配布受領（2026-10-19 09:10 JST）
+
+PR231の固定d45383cは実Sonnet5.5レビュー2894でMust0。runner開始時のbridge403で
+検査前に失敗したLinux resident-guardだけを、同ソースのまま1回再実行した。
+workflow39177273137 attempt2はsuccess、PRの14checkが成功して通常merge b62aa04。
+bridge403の内部拒否理由までは解明済みと扱わず、初回の原ログも保持している。
+
+Go2849の最新main build/source/runtime部分receiptを受領し、実配布SHAを独立照合：
+C34DD9B3ACE46FBFFA7583B12573023F3B1B2D73FE9E54EF084A00D4A31D8A6A。
+正式read-only/network=false probeで両子guard/Git読取成功、書込拒否、別名拒否、
+offline受付API拒否、online受付API成功を保持した記録がある。
+2851からの現正式guardでも同じ子のworktree判定は成功した。
+並行mainを自身へmerge/pushし、本番Rust依存とCargoの67f54ceからの差分ゼロを
+確認した。schedulerを重ねて再build・再配布していない。
+
+同じ子2872/2874の保存specには、固定source範囲・役割・read-only/network=falseを
+維持して、変更後runtimeの再判定と続行手順だけを追記した。旧2407の別割当APIや
+書込ToDo CLIをレビュー/調査の前提にせず、自分の許可されたworktreeから固定blobを
+確認する。guardが再び不成立ならソースを開かず具体的な失敗を返す。
+保存specと新しい受付receiptのSHA一致を確認した。元の製品担当番号は増やしていない。
+
+未完了は、変更後の通常子jobで実ソースレビュー/調査が行われること、子実結果の
+受領と依存解除後の同AO親2839の自然巡回。旧guard拒否の正常終了jobや、資格API
+成功だけを成果と扱わない。最新証拠はtodo2851-offline-formal.private.jsonと
+同child-pr231-steering.private.json、集約はtodo2851-progress.private.json。

@@ -153,6 +153,12 @@ the growth but contradicts the "new service SID per job" requirement; that is th
   The normal fixture ran a binary with the execute events but before the collect events and the
   residue-only exit code; the cancel fixture ran after both.
 
+## CI of this module
+
+This branch adds no workflow of its own. The parent's `.github/workflows/civ6-ci.yml` runs race/vet/build
+for every `tools/civ6-ci-*` module per OS on the PC runners; integrate through that workflow.
+Local results: `go test -race ./...`, `go vet ./...` and `go build -trimpath` pass for this module.
+
 ## Not done (by design of this child)
 
 No official registration, no product source materialization, no real Rust/native/live execution,
@@ -160,5 +166,6 @@ no GitHub Actions run. `contract.Verify` against the live repository, the full
 `prepare` source materialization with the new contract and the monitor against a real job are
 exercised only by synthetic replies here and must be proven by the parent's PR149 run.
 Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
+
 
 

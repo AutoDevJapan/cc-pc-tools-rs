@@ -14,9 +14,12 @@
 
 追加差分の検査記録:
 - 0c99f7eの全localai検査は260成功/84失敗/3skip。jobsの親を参照する試験用launcherの配置も合わせる必要があり、c9fecf2で修正。
-- 最終c9fecf2でlocalai-web-rs nextest 344成功/0失敗/3skip（13.216秒）、doctest成功（対象0）、全target Clippy成功。正常なworkspace全件やreleaseの重複実行は行っていない。
+- 最終c9fecf2でlocalai-web-rs nextest 344成功/0失敗/3skip（13.216秒）、doctest成功（対象0）、全target Clippy成功。全workspace検査とrelease buildは追加で実行していない。
 - 稼働版のSHA256は元配備記録と一致。保護されたjobs APIはschema1/ok、masked_metadata、metadataOnlyを維持し97msで応答。
 - 追加差分の読取レビューは共有ToDo3025へ登録（実起動・Must0の確認は未完）。モデル名はCLI仕様に従う短い別名claude-sonnet-5-5。anthropic/を付ける引数はValueErrorで登録されなかったため、重複登録はない。
 - 作業ブランチをscheduler/todo-3024-pr253-fixへ切替え、checkpoint-workspaceを元のjob/id/expected_branchと照合して保存した。同ブランチはGitHubへpush済み。元PRのheadにはまだ反映していない。
 
 進捗率は6条件（runner復旧・追加修正の影響範囲検査・追加差分レビュー・PR正式CI・通常merge・main/稼働確認）のうち2条件を確認した33%。
+
+再開時のレビュー受領: ToDo3025の原応答と実turn_contextを照合し、Sonnet5.5、固定9a907d3..c9fecf2のMust0を確認。対象ソースはc9fecf2から不変。試験未実行というレビューの留保は、担当の保存済みnextest344成功・doctest0件・Clippy成功と区別した。任意のrootをHTTPから指定する経路は無い。初期snapshotの503検査も残るため、追加の任意Nitを理由に本番コードや試験を変更しない。文書のSuggestionは検査経緯を含む追記と表現修正で反映。
+

@@ -6,7 +6,7 @@
   "toolchain": "1.95.0",
   "collector_commit": "474f3faa14f5b35ecf1bcdb63497aa73af58ea2b",
   "collector_sha256": "d42fb7b8cbb97d817dadba3021d41efe5284588f68d4df9cb3e806a63598f3dd",
-  "patch_sha256": "314b6ff6414ae726e22887b3af8a0538bf722f7eb387cdc81859974b9935b440",
+  "patch_sha256": "75d6ca527af90c55342f0c4d4617fd79f7d2c74c4b890643ece00c1076727783",
   "build_profile": {
     "lto": false,
     "strip": "symbols",

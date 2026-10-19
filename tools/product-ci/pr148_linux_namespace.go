@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +13,11 @@ import (
 type pr148Namespace struct {
 	Name, ID                             string
 	CreationUncertain, TreeGone, Removed bool
+	Nonce, ReceiptDir                    string
+	CreateAttempted, CleanupAttempted    bool
+	CleanupFailure                       string
+	Target                               *pr148TargetVolume
+	Init                                 *pr148TargetInit
 }
 
 func pr148OwnedReceiptRoot(ctx context.Context, dir string) error {
@@ -48,7 +52,14 @@ func pr148CreateArgs(name string) []string {
 	return append(append(append([]string{}, a[:idx]...), "--memory-swap", "10g", "--tmpfs", "/toolchain:rw,exec,nosuid,size=8g,uid=1001,gid=1001"), a[idx:]...)
 }
 
-func pr148Isolation(data []byte, name, id string) error {
+func pr148Isolation(data []byte, name, id string, target ...*pr148TargetVolume) error {
+	if len(target) != 0 {
+		var e error
+		data, e = pr148TargetIsolation(data, name, target[0])
+		if e != nil {
+			return e
+		}
+	}
 	var raw []map[string]json.RawMessage
 	if json.Unmarshal(data, &raw) != nil || len(raw) != 1 {
 		return errors.New("Linux isolation unavailable")
@@ -99,7 +110,10 @@ func pr148Isolation(data []byte, name, id string) error {
 }
 
 func (n *pr148Namespace) inspect(ctx context.Context) ([]byte, error) {
-	b, e := cmd(ctx, docker, "inspect", n.Name).Output()
+	return n.inspectWith(ctx, pr148DockerCall)
+}
+func (n *pr148Namespace) inspectWith(ctx context.Context, call pr148DockerIO) ([]byte, error) {
+	b, e := call(ctx, "inspect", n.Name)
 	if e != nil {
 		return nil, errors.New("owned Linux namespace inspection unavailable")
 	}
@@ -110,7 +124,13 @@ func (n *pr148Namespace) inspect(ctx context.Context) ([]byte, error) {
 		}
 		n.ID = v[0].ID
 	}
-	if e = pr148Isolation(b, n.Name, n.ID); e != nil {
+	if n.Target == nil {
+		return nil, errors.New("private target volume receipt absent")
+	}
+	if e = n.Target.inspect(ctx, call); e != nil {
+		return nil, e
+	}
+	if e = pr148Isolation(b, n.Name, n.ID, n.Target); e != nil {
 		return nil, e
 	}
 	return b, nil
@@ -119,59 +139,40 @@ func (n *pr148Namespace) inspect(ctx context.Context) ([]byte, error) {
 func (n *pr148Namespace) stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 	defer cancel()
-	if _, e := n.inspect(ctx); e != nil {
+	return n.stopWith(ctx, pr148DockerCall)
+}
+func (n *pr148Namespace) stopWith(ctx context.Context, call pr148DockerIO) error {
+	b, e := n.inspectWith(ctx, call)
+	if e != nil {
 		return e
 	}
-	if e := cmd(ctx, docker, "stop", "--time", "10", n.ID).Run(); e != nil {
+	if pr148PIDZero(b) {
+		n.TreeGone = true
+		return nil
+	}
+	if e := pr148SaveNew(filepath.Join(n.ReceiptDir, "namespace-stop-intent.private.json"), n); e != nil {
+		return e
+	}
+	if _, e := call(ctx, "stop", "--time", "10", n.ID); e != nil {
 		return errors.New("owned namespace stop failed")
 	}
-	b, e := n.inspect(ctx)
-	var v []struct {
-		State struct {
-			Running bool
-			Pid     int
-		}
-	}
-	if e != nil || json.Unmarshal(b, &v) != nil || len(v) != 1 || v[0].State.Running || v[0].State.Pid != 0 {
+	b, e = n.inspectWith(ctx, call)
+	if e != nil || !pr148PIDZero(b) {
 		return errors.New("owned namespace process absence unverified")
 	}
 	n.TreeGone = true
 	return nil
 }
 func (n *pr148Namespace) dispose() error {
-	if e := n.stop(); e != nil {
-		return e
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	if e := cmd(ctx, docker, "rm", "-v", n.ID).Run(); e != nil {
-		return errors.New("owned namespace removal failed")
-	}
-	n.Removed = true
-	return nil
+	return n.disposeWith(ctx, pr148DockerCall)
 }
 
 // Intent is fsynced before Docker create. A lost create reply is recovered by
 // the exact name/instance/image; uncertainty never authorizes another create.
 func newPR148Namespace(ctx context.Context, dir string) (*pr148Namespace, error) {
-	n := &pr148Namespace{Name: fmt.Sprintf("todo2736-linux-%d", time.Now().UnixNano()), CreationUncertain: true}
-	if e := pr148SaveNew(filepath.Join(dir, "namespace-intent.private.json"), n); e != nil {
-		return n, e
-	}
-	b, createErr := cmd(ctx, docker, pr148CreateArgs(n.Name)...).Output()
-	probe, stop := context.WithTimeout(context.Background(), 15*time.Second)
-	defer stop()
-	if _, e := n.inspect(probe); e != nil {
-		return n, errors.New("Linux create uncertain; keep intent and candidate lock")
-	}
-	if createErr != nil || strings.TrimSpace(string(b)) != n.ID {
-		return n, errors.New("Linux create reply uncertain; exact owned namespace recovered for cleanup")
-	}
-	n.CreationUncertain = false
-	if e := cmd(ctx, docker, "start", n.ID).Run(); e != nil {
-		return n, errors.New("Linux namespace start failed")
-	}
-	return n, nil
+	return newPR148NamespaceWith(ctx, dir, pr148DockerCall)
 }
 
 func pr148SaveNew(path string, value any) error {

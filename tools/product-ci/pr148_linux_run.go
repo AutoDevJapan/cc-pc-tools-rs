@@ -72,6 +72,10 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	if e != nil {
 		return e
 	}
+	controllerSHA, sourceRevision, e := pr148HelperPair(guest)
+	if e != nil {
+		return e
+	}
 	pwsh, e := os.ReadFile(powerShellFile)
 	if e != nil || digest(pwsh) != pr148PowerShellSHA {
 		return errors.New("official PowerShell asset digest rejected")
@@ -80,6 +84,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		Plan                                                 pr148LinuxPlan
 		Namespace                                            *pr148Namespace
 		ArchiveSHA, LogSHA, Failure, GuestSHA, PowerShellSHA string
+		ControllerSHA, HelperSourceRevision                  string
 		Execution                                            pr148ExecutionPolicy
 		LogBytes                                             int
 		ListenerExit                                         int
@@ -89,7 +94,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 		MemoryAvailable                                      bool
 		MemoryObservation                                    string
 		Resources                                            string
-	}{Plan: p, GuestSHA: digest(guest), PowerShellSHA: digest(pwsh), Execution: execution, Resources: "2 CPU, 10 GiB, no swap; Cargo/test/lld threads=1"}
+	}{Plan: p, GuestSHA: digest(guest), ControllerSHA: controllerSHA, HelperSourceRevision: sourceRevision, PowerShellSHA: digest(pwsh), Execution: execution, Resources: "2 CPU, 10 GiB, no swap; Cargo/test/lld threads=1; private local volume at existing Cargo target only"}
 	if e = pr148SaveNew(filepath.Join(dir, "pr148-intent.private.json"), rec); e != nil {
 		return e
 	}
@@ -111,7 +116,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 			rec.Failure = ret.Error()
 		}
 		ret = errors.Join(ret, lock.Close())
-		if (rec.Namespace == nil || rec.Namespace.Removed) && (!rec.RegistrationMayExist || rec.RegistrationGone) {
+		if (rec.Namespace == nil || rec.Namespace.resourcesGone()) && (!rec.RegistrationMayExist || rec.RegistrationGone) {
 			if e := os.Remove(lockPath); e == nil {
 				rec.LockReleased = true
 			} else {
@@ -122,9 +127,9 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	}()
 	n, e := newPR148Namespace(ctx, dir)
 	rec.Namespace = n
-	if n != nil && n.ID != "" {
+	if n != nil {
 		defer func() {
-			if !n.Removed {
+			if !n.resourcesGone() && !n.CleanupAttempted {
 				ret = errors.Join(ret, n.dispose())
 			}
 		}()
@@ -221,7 +226,7 @@ func executePR148Linux(ctx context.Context, p pr148LinuxPlan, dir, guestFile, po
 	defer func() {
 		cancel()
 		ret = errors.Join(ret, closeServer())
-		if !n.Removed {
+		if !n.resourcesGone() && !n.CleanupAttempted {
 			ret = errors.Join(ret, n.dispose())
 		}
 		if !n.TreeGone {

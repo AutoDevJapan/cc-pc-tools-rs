@@ -221,22 +221,21 @@ func imageRoot(image string) (string, error) {
 	return root, nil
 }
 
-// previousRootSettled lets the shared identity move to a new job only when the
-// previous job's root no longer exists at its path (deleted or quarantined). A
-// collected root is not enough: the next job runs as the same SID, and a file
-// ACL cannot be proven clean by the two inherited ACE removals alone.
-func previousRootSettled(prev, current string) error {
+// previousRootSettled lets the shared identity move to a new job only with
+// durable proof that the previous job was fully collected (collect writes its
+// root to a machine-level marker as its last step, after the whole-tree ACL
+// reset and a recursive check that no entry grants the shared SID). The proof
+// does not depend on the old root still existing at its path, so a quarantined
+// (moved) root is equally safe, and a root that was moved before collection is
+// refused because it never earned the marker.
+func previousRootSettled(prev, current, collected string) error {
 	if prev == "" || strings.EqualFold(filepath.Clean(prev), filepath.Clean(current)) {
 		return nil
 	}
-	_, e := os.Lstat(prev)
-	if os.IsNotExist(e) {
+	if collected != "" && strings.EqualFold(filepath.Clean(collected), filepath.Clean(prev)) {
 		return nil
 	}
-	if e != nil {
-		return fmt.Errorf("previous job root cannot be inspected; shared identity not reused: %w", e)
-	}
-	return errors.New("previous job root still exists; delete it (safe-delete) before the shared service identity moves on")
+	return errors.New("previous job was not collected (no durable collection marker for its root); the shared service identity is not reused")
 }
 
 func validSHA(s string) bool { return contract.ValidSHA(s) }

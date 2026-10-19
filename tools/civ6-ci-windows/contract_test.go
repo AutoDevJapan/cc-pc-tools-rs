@@ -298,27 +298,20 @@ func TestImageRootParsesWindowsArgumentsStrictly(t *testing.T) {
 	}
 }
 
-func TestSharedIdentityMovesOnlyAfterThePredecessorRootIsGone(t *testing.T) {
-	dir := t.TempDir()
-	cur := filepath.Join(dir, "current")
-	if previousRootSettled("", cur) != nil || previousRootSettled(cur, cur) != nil || previousRootSettled(filepath.Join(dir, "gone"), cur) != nil {
-		t.Fatal("first use, same root, or deleted predecessor rejected")
+func TestSharedIdentityMovesOnlyBehindDurableCollectionProof(t *testing.T) {
+	prev, cur := `C:\ci\codex-owned-`+strings.Repeat("a", 32), `C:\ci\codex-owned-`+strings.Repeat("b", 32)
+	if previousRootSettled("", cur, "") != nil || previousRootSettled(cur, cur, "") != nil {
+		t.Fatal("first use or the same root rejected")
 	}
-	prev := filepath.Join(dir, "prev")
-	if os.Mkdir(prev, 0700) != nil {
-		t.Fatal("mkdir")
+	if previousRootSettled(prev, cur, "") == nil {
+		t.Fatal("an uncollected predecessor was accepted (no marker)")
 	}
-	// Even a fully collected predecessor blocks the move while its root exists.
-	if e := os.WriteFile(filepath.Join(prev, "collection-1.json"), []byte(`{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0,"owner_reset":true}`), 0600); e != nil {
-		t.Fatal(e)
+	if previousRootSettled(prev, cur, `C:\ci\codex-owned-`+strings.Repeat("c", 32)) == nil {
+		t.Fatal("another job's marker was accepted for this predecessor")
 	}
-	if previousRootSettled(prev, cur) == nil {
-		t.Fatal("an existing predecessor root was accepted")
-	}
-	if e := os.RemoveAll(prev); e != nil {
-		t.Fatal(e)
-	}
-	if e := previousRootSettled(prev, cur); e != nil {
+	// The proof does not depend on the old path: a deleted, kept or quarantined
+	// (moved) root is equally fine once it was collected.
+	if e := previousRootSettled(prev, cur, strings.ToUpper(prev)); e != nil {
 		t.Fatal(e)
 	}
 }

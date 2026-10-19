@@ -13,12 +13,11 @@ Done
 - Real fixtures: normal/cancel/normal on the fixed fixture identity, profile count constant (evidence/*.json).
 - All fixture roots removed through safe-delete.
 
-Review 2979 (c2fea70) found RR1-RR5; fixed: complete-census/no-worker drain proof, shared absolute worker deadline, strict image-path parse,
-mutex + bound-to-root checks, predecessor root must be deleted (collect returns the root to the controller).
+Review 2979 (RR1-RR5) and 2984 (M1 moved-root isolation, M2 operation exclusion) addressed: whole-tree ACL reset + recursive proof +
+durable CollectedRoot marker; file-based exclusive lock shared by prepare/start/stop/collect; stale-job refusal verified live.
 
 Open
-1. Independent re-review of those fixes (shared ToDo, spec todo-2965-rereview3-spec.md).
+1. Independent re-review of those fixes (shared ToDo, spec todo-2965-rereview4-spec.md).
 2. Append the delivery to parent ToDo2962 note and the 3 legacy residues (6a8d1e39..., c4809f99..., 052658b1...) to ToDo2381
    (read the current note first; edit with --expected-note-sha256).
 3. Not done by design: real registration, product source, real Rust, live Verify.
-

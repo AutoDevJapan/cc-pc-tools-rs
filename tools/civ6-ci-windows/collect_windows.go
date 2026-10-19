@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,6 +77,12 @@ func collectMode(p Plan, unstarted bool) error {
 		seconds = 1800
 	}
 	aclBudget := time.Duration(seconds) * time.Second
+	// Exclusive for the whole collection: no start, stop or claim can interleave.
+	unlock, e := lockClaim(p)
+	if e != nil {
+		return e
+	}
+	defer unlock()
 	sid, e := serviceSID(p)
 	if e != nil {
 		return fmt.Errorf("shared service must exist: %w", e)
@@ -145,6 +152,14 @@ func collectMode(p Plan, unstarted bool) error {
 	if aceCount != 0 {
 		return errors.New("explicit service grant removal not confirmed")
 	}
+	// Explicit ACEs below the two inherited-grant roots (a worker can disable
+	// inheritance and grant itself or Everyone anything) are replaced by the
+	// root's inherited ones for every descendant; the root itself is untouched.
+	if e = collectionAction(p, "tree-acl-reset", func() error {
+		return icaclsWithin(aclBudget, filepath.Join(p.Root, "*"), "/reset", "/T", "/C", "/L")
+	}); e != nil {
+		return e
+	}
 	if e = collectionAction(p, "owner-reset", func() error {
 		return icaclsWithin(aclBudget, p.Root, "/setowner", "*S-1-5-32-544", "/T", "/C", "/L")
 	}); e != nil {
@@ -165,6 +180,12 @@ func collectMode(p Plan, unstarted bool) error {
 				return e
 			}
 		}
+	}
+	// Recursive proof, not a sample: no entry below the root still grants the
+	// shared SID, so a root that is later moved or kept is just as isolated.
+	entries, e := verifyTreeClean(p.Root, sid)
+	if e != nil {
+		return e
 	}
 	// The identity must still be idle after the ACL work.
 	state, pid, _, err = queryService(s)
@@ -207,13 +228,41 @@ func collectMode(p Plan, unstarted bool) error {
 		"unstarted_worker": unstarted, "service": p.svc(), "service_retained": true, "service_idle_confirmed": true,
 		"queryable_account_process_count": processes, "unreadable_process_count": unreadable,
 		"process_census_scope": "queryable processes; owned Job Object independently drained",
-		"additional_ace_count": aceCount, "owner_reset": true, "ace_scope": "administrator-installed root and runtime inheritable grants only",
+		"additional_ace_count": aceCount, "owner_reset": true, "tree_acl_reset": true, "tree_entries_verified_without_service_grant": entries, "ace_scope": "administrator-installed root and runtime inheritable grants only",
 		"shared_profile_retained": profile, "shared_hive_loaded": hive, "shared_classes_hive_loaded": classes,
 		"shared_profile_entries_for_this_identity": own, "ciw_profile_leaf_count_total": total,
 		"profile_scope":      "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
 		"credential_runtime": p.runner(), "official_ci_claimed": false,
 	}
-	return saveNew(filepath.Join(p.Root, fmt.Sprintf("collection-%d.json", time.Now().UnixNano())), receipt)
+	if e = saveNew(filepath.Join(p.Root, fmt.Sprintf("collection-%d.json", time.Now().UnixNano())), receipt); e != nil {
+		return e
+	}
+	// Last step: durable proof that lets the identity move to the next job.
+	return markCollected(p)
+}
+
+// verifyTreeClean walks every entry below root (without following links) and
+// fails if any DACL grants sid. Links themselves are counted but not followed.
+func verifyTreeClean(root, sid string) (int, error) {
+	n := 0
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+			return nil
+		}
+		g, e := countGrantedSID(path, sid)
+		if e != nil {
+			return e
+		}
+		if g != 0 {
+			return fmt.Errorf("service SID still granted below the collected root: %s", filepath.Base(path))
+		}
+		n++
+		return nil
+	})
+	return n, err
 }
 
 // serviceProfileLeaves lists the profile directory names of every virtual

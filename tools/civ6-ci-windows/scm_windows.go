@@ -57,7 +57,10 @@ func openService(p Plan, access uintptr) (uintptr, error) {
 // running service, from live processes of its account, or from a previous job
 // whose root was neither deleted nor collected.
 func ensureService(p Plan) error {
-	// One claim at a time across processes: read-check-reconfigure is not atomic.
+	// One operation at a time across processes: read-check-reconfigure is not atomic.
+	if e := prepareClaimLock(p); e != nil {
+		return e
+	}
 	unlock, e := lockClaim(p)
 	if e != nil {
 		return e
@@ -110,7 +113,11 @@ func ensureService(p Plan) error {
 		if e != nil {
 			return fmt.Errorf("existing shared service is not understood; not reused: %w", e)
 		}
-		if e := previousRootSettled(prev, p.Root); e != nil {
+		collected, e := collectedRoot(p)
+		if e != nil {
+			return e
+		}
+		if e := previousRootSettled(prev, p.Root, collected); e != nil {
 			return e
 		}
 	}
@@ -128,23 +135,6 @@ func ensureService(p Plan) error {
 		return e
 	}
 	return nil
-}
-
-// lockClaim serializes claims of the shared identity across processes.
-func lockClaim(p Plan) (func(), error) {
-	h, _, e := kernel.NewProc("CreateMutexW").Call(0, 0, ptr(`Global\`+p.svc()+"-claim"))
-	if h == 0 {
-		return nil, fmt.Errorf("claim mutex: %w", e)
-	}
-	w, _ := syscall.WaitForSingleObject(syscall.Handle(h), 30000)
-	if w != 0 && w != 0x80 { // WAIT_OBJECT_0 or WAIT_ABANDONED (state is re-verified below)
-		syscall.CloseHandle(syscall.Handle(h))
-		return nil, errors.New("another claim of the shared service identity is in progress")
-	}
-	return func() {
-		kernel.NewProc("ReleaseMutex").Call(h)
-		syscall.CloseHandle(syscall.Handle(h))
-	}, nil
 }
 
 // readImagePath returns the service image path from QUERY_SERVICE_CONFIGW,
@@ -216,6 +206,11 @@ func queryService(s uintptr) (state, pid, code uint32, err error) {
 	return v[1], v[7], v[3], nil
 }
 func startFinite(p Plan) error {
+	unlock, e := lockClaim(p)
+	if e != nil {
+		return e
+	}
+	defer unlock()
 	s, e := openService(p, 0x10|4|1)
 	if e != nil {
 		return e
@@ -223,6 +218,10 @@ func startFinite(p Plan) error {
 	defer closeSC(s)
 	if e = requireBoundTo(s, p); e != nil {
 		return e
+	}
+	// A collected job can never start again, even though the image path still names it.
+	if done, e := collectedRoot(p); e != nil || strings.EqualFold(filepath.Clean(done), filepath.Clean(p.Root)) {
+		return errors.Join(errors.New("this job was already collected; not started"), e)
 	}
 	r, _, e := advapi.NewProc("StartServiceW").Call(s, 0, 0)
 	if r == 0 {
@@ -236,22 +235,35 @@ func stopFinite(p Plan) error {
 		return e
 	}
 	defer closeSC(s)
-	if e = requireBoundTo(s, p); e != nil {
-		return e
-	}
-	state, _, _, e := queryService(s)
+	// Check-and-issue is one exclusive step; the wait below is not, so it never
+	// blocks a collection or the next claim.
+	state, e := func() (uint32, error) {
+		unlock, e := lockClaim(p)
+		if e != nil {
+			return 0, e
+		}
+		defer unlock()
+		if e = requireBoundTo(s, p); e != nil {
+			return 0, e
+		}
+		state, _, _, e := queryService(s)
+		if e != nil || state == 1 {
+			return state, e
+		}
+		var status [7]uint32
+		if state != 3 {
+			r, _, callErr := advapi.NewProc("ControlService").Call(s, 1, uintptr(unsafe.Pointer(&status[0])))
+			if r == 0 && callErr != syscall.Errno(1061) && callErr != syscall.Errno(1062) {
+				return state, callErr
+			}
+		}
+		return state, nil
+	}()
 	if e != nil {
 		return e
 	}
 	if state == 1 {
 		return nil
-	}
-	var status [7]uint32
-	if state != 3 {
-		r, _, callErr := advapi.NewProc("ControlService").Call(s, 1, uintptr(unsafe.Pointer(&status[0])))
-		if r == 0 && callErr != syscall.Errno(1061) && callErr != syscall.Errno(1062) {
-			return callErr
-		}
 	}
 	until := time.Now().Add(40 * time.Second)
 	for time.Now().Before(until) {

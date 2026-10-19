@@ -145,8 +145,8 @@ after a prior successful service-delete phase. After verifying absence of
 authentication files, it grants Full Control to the recorded controller on
 this new root and runtime as a cleanup step, following service-grant removal.
 Normal safe-delete can then follow. It does not delete profiles or claim CI success.
-SCM status 1077 (never started) is accepted along with zero only after all
-unstarted-worker checks. Other nonzero exit statuses remain rejected.
+SCM status 1077 (no start attempt since boot) is required in addition to all
+other unstarted-worker checks. Zero and other exit statuses are rejected.
 Started resources still require the protected launcher drain report through
 ordinary `collect`. A failed or uncertain mutation is never retried.
 
@@ -369,3 +369,9 @@ controller restoration and service deletion with zero explicit service grants.
 It retained its profile/hives, and its separate first DeleteProfileW returned
 sharing violation32. That residue is retained with original receipts; it is not
 part of the ACL-ordering success claim or a product-CI result.
+
+Immediately before DeleteService, the retained handle is queried again for
+stopped/PID-zero status and the queryable-account process census is refreshed.
+Unreadable process counts remain disclosed rather than treated as proof of
+complete process enumeration. Failed BOOL results cannot become success merely
+because a Win32 last-error value is missing or zero.

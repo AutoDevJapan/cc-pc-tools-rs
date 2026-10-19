@@ -41,6 +41,9 @@ func entry() int {
 		defer stop()
 		var result recoveryStatus
 		result, e = recoverJob(ctx, os.Args[2], os.Args[1] == "collect")
+		if e != nil {
+			result.Fenced = true
+		}
 		if encoded, err := json.Marshal(result); err == nil {
 			fmt.Println(string(encoded))
 		}

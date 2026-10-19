@@ -206,3 +206,16 @@ func TestOnlyExactMutationEndpoints(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnerApprovedPublicRepoStillRequiresExactOwnerAndID(t *testing.T) {
+	f := newFixture(t)
+	repo := f.data["repositories/1392152644"].(map[string]any)
+	repo["private"] = false
+	if e := prepare(context.Background(), t.TempDir(), f.call); e != nil {
+		t.Fatal(e)
+	}
+	repo["owner"] = map[string]string{"login": "other"}
+	if e := prepare(context.Background(), t.TempDir(), f.call); e == nil {
+		t.Fatal("public repo outside owner scope admitted")
+	}
+}

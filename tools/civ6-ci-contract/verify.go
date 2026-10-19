@@ -173,8 +173,8 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if e := read(ctx, fmt.Sprintf("repositories/%d", RepoID), &r); e != nil {
 		return e
 	}
-	if !sameRepo(r) || r.Owner.Login != "AutoDevJapan" || !r.Private || !r.Permissions.Admin {
-		return errors.New("explicit owned private repository rejected")
+	if !sameRepo(r) || r.Owner.Login != "AutoDevJapan" || !r.Permissions.Admin {
+		return errors.New("explicit owned repository rejected")
 	}
 	initial, e := verifyCurrent(ctx, p, read)
 	if e != nil {

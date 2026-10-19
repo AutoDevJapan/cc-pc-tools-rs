@@ -91,6 +91,11 @@ func isELF(b []byte) bool { return len(b) >= 64 && bytes.Equal(b[:4], []byte{127
 // concluded success on THIS helper's unique runner AND every hook/source proof
 // matched; listener exit alone never certifies a job.
 func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret error) {
+	dir, ret = filepath.Abs(dir)
+	if ret != nil {
+		return ret
+	}
+	dir = filepath.Clean(dir)
 	p, e := LoadPlan(planFile)
 	if e != nil {
 		return e

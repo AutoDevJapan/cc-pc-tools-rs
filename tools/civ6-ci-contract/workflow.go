@@ -100,9 +100,9 @@ const DoctestCommand = "cargo test --locked --manifest-path tools/Cargo.toml --w
 
 func Route(w Workflow) string {
 	if w.Job == "test" {
-		return `${{ fromJSON(matrix.os == 'ubuntu-latest' && '["self-hosted","Linux","X64","civ6-ci-linux"]' || '["self-hosted","Windows","X64","civ6-ci-windows"]') }}`
+		return `${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && matrix.os || fromJSON(matrix.os == 'ubuntu-latest' && '["self-hosted","Linux","X64","civ6-ci-linux"]' || '["self-hosted","Windows","X64","civ6-ci-windows"]') }}`
 	}
-	return "[self-hosted, Windows, X64, civ6-ci-windows]"
+	return `${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["windows-latest"]' || '["self-hosted","Windows","X64","civ6-ci-windows"]') }}`
 }
 
 // Propose changes only routing and checkout source/auth. Byte-level edits keep

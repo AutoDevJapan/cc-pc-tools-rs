@@ -9,7 +9,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -30,6 +32,69 @@ func TestFlightLeaseRefusesLiveOwnerAndRecoversAfterClose(t *testing.T) {
 		t.Fatal(e)
 	}
 	next.Close()
+}
+
+func TestReceiptAndWorkerLockNormalizeEquivalentRootSpellings(t *testing.T) {
+	dir := t.TempDir()
+	alias := dir + string(filepath.Separator) + "."
+	if runtime.GOOS == "windows" {
+		alias = strings.ToLower(filepath.ToSlash(dir))
+	}
+	if !sameReceiptPath(dir, alias) {
+		t.Fatal("equivalent owned root rejected")
+	}
+	b := []byte(fmt.Sprintf("7\n71\n%s\n", alias))
+	ours, other, e := classifyWorkerLock(b, 7, 71, dir)
+	if e != nil || !ours || other {
+		t.Fatal("equivalent root was mistaken for another flight")
+	}
+	for _, data := range []string{"", "7\n", "7\n71\n", "7\n71\nrelative\n", "7\n71\n" + dir, "7\n71\n" + dir + "\nextra\n"} {
+		if _, _, e := classifyWorkerLock([]byte(data), 7, 71, dir); e == nil {
+			t.Fatal("partial or ambiguous lock accepted")
+		}
+	}
+	otherDir := filepath.Join(dir, "other")
+	ours, other, e = classifyWorkerLock([]byte(fmt.Sprintf("8\n72\n%s\n", otherDir)), 7, 71, dir)
+	if e != nil || ours || !other {
+		t.Fatal("complete different flight not distinguished")
+	}
+}
+
+func TestCancelledRegistrationDeleteDoesNotConsumeAttempt(t *testing.T) {
+	dir := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if deleteOwnedRegistration(ctx, dir, "civ6-ci-linux-rust-123", 7) == nil {
+		t.Fatal("cancelled delete admitted")
+	}
+	if _, e := os.Stat(filepath.Join(dir, "runner-delete-attempt.private.json")); !os.IsNotExist(e) {
+		t.Fatal("cancelled context consumed delete attempt")
+	}
+}
+
+func TestRecoveryEquivalentJournalAndLockPathActuallyReleasesOwnLock(t *testing.T) {
+	dir, p, n, ops := recoveryFixture(t)
+	alias := dir + string(filepath.Separator) + "."
+	if runtime.GOOS == "windows" {
+		alias = strings.ToLower(filepath.ToSlash(dir))
+	}
+	n.Journal = alias
+	b, _ := json.Marshal(n)
+	if e := os.WriteFile(filepath.Join(dir, "namespace-intent.private.json"), b, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(ops.lockPath, []byte(fmt.Sprintf("%d\n%d\n%s\n", p.RunID, p.JobID, alias)), 0600); e != nil {
+		t.Fatal(e)
+	}
+	ops.present = func(context.Context, namespace) (bool, error) { return false, nil }
+	ops.runners = func(context.Context) ([]runnerEntry, error) { return nil, nil }
+	r, e := recoverUsing(context.Background(), dir, true, ops)
+	if e != nil || !r.Clean || !r.LockReleased {
+		t.Fatalf("equivalent spelling fenced original resources: %+v %v", r, e)
+	}
+	if _, e = os.Stat(ops.lockPath); !os.IsNotExist(e) {
+		t.Fatal("original worker lock still blocks the next event")
+	}
 }
 
 func TestRegistrationDeleteIsOneAttemptEvenAfterFailure(t *testing.T) {

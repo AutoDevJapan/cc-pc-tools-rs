@@ -275,6 +275,36 @@ func TestUnsafeBranchesAndEvents(t *testing.T) {
 	}
 }
 
+func TestOwnerApprovedPublicRepositoryKeepsSameRepoAdmission(t *testing.T) {
+	p, f := nativeFixture(t)
+	f[fmt.Sprintf("repositories/%d", RepoID)].(map[string]any)["private"] = false
+	if e := Verify(context.Background(), p, fixtureRead(f)); e != nil {
+		t.Fatal(e)
+	}
+	f[fmt.Sprintf("repositories/%d", RepoID)].(map[string]any)["fork"] = true
+	if Verify(context.Background(), p, fixtureRead(f)) == nil {
+		t.Fatal("public fork was admitted")
+	}
+}
+
+func TestPublicForkPullRequestsUseHostedOSRouting(t *testing.T) {
+	for _, w := range Workflows() {
+		route := Route(w)
+		if !strings.Contains(route, "github.event_name == 'pull_request'") || !strings.Contains(route, "github.event.pull_request.head.repo.full_name != github.repository") {
+			t.Fatal("external PR route is not separated before PC assignment")
+		}
+		if w.Job == "test" && !strings.Contains(route, "&& matrix.os ||") {
+			t.Fatal("external PR matrix OS changed")
+		}
+		if w.Job != "test" && !strings.Contains(route, `&& '["windows-latest"]'`) {
+			t.Fatal("external PR Windows route lost")
+		}
+		if _, e := Propose(originals(t)[w.Path], w); e != nil {
+			t.Fatal(e)
+		}
+	}
+}
+
 func mainFixture(t *testing.T) (Plan, map[string]any) {
 	p, f := nativeFixture(t)
 	pr := f["repos/"+Repository+"/pulls/149"].(map[string]any)

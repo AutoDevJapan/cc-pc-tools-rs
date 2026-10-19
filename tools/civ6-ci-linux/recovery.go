@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -21,6 +21,7 @@ type recoveryStatus struct {
 	RunID            int64  `json:"run_id"`
 	JobID            int64  `json:"job_id"`
 	Name             string `json:"runner_name,omitempty"`
+	Fenced           bool   `json:"fenced"`
 }
 
 type recoveryOps struct {
@@ -63,6 +64,9 @@ func readRecord(path string, out any) error {
 }
 
 func deleteOwnedRegistration(ctx context.Context, dir, name string, id int64) error {
+	if e := ctx.Err(); e != nil {
+		return e
+	}
 	if id <= 0 || !regexp.MustCompile(`^civ6-ci-linux-(rust|codeql)-[0-9]+$`).MatchString(name) {
 		return errors.New("owned runner identity required")
 	}
@@ -97,13 +101,20 @@ func namespacePresent(ctx context.Context, n namespace) (bool, error) {
 // an active host's resources; durable phase journals prevent mutation retries.
 func recoverJob(ctx context.Context, dir string, collect bool) (recoveryStatus, error) {
 	var r recoveryStatus
+	abs, e := filepath.Abs(dir)
+	if e != nil {
+		return r, e
+	}
+	dir = filepath.Clean(abs)
 	if e := verifyReceiptOwner(ctx, dir); e != nil {
 		return r, e
 	}
-	return recoverUsing(ctx, dir, collect, recoveryOps{
+	r, e = recoverUsing(ctx, dir, collect, recoveryOps{
 		present: namespacePresent, inspect: func(c context.Context, n *namespace) ([]byte, error) { return n.inspect(c) }, dispose: func(n *namespace) error { return n.dispose() }, runners: repoRunners, delete: deleteOwnedRegistration,
 		lockPath: filepath.Join(os.TempDir(), "civ6-ci-linux.lock"),
 	})
+	r.Fenced = e != nil || !r.Clean
+	return r, e
 }
 
 func recoverUsing(ctx context.Context, dir string, collect bool, ops recoveryOps) (recoveryStatus, error) {
@@ -143,9 +154,10 @@ func recoverUsing(ctx context.Context, dir string, collect bool, ops recoveryOps
 		return r, ne
 	}
 	if ne == nil {
-		if n.Journal != dir || n.Kind != rec.Kind {
+		if !sameReceiptPath(n.Journal, dir) || n.Kind != rec.Kind {
 			return r, errors.New("original namespace journal differs")
 		}
+		n.Journal = dir
 		r.Name = n.Name
 		exists, e := ops.present(ctx, n)
 		if e != nil {
@@ -227,9 +239,14 @@ func recoverUsing(ctx context.Context, dir string, collect bool, ops recoveryOps
 	if e != nil && !errors.Is(e, os.ErrNotExist) {
 		return r, e
 	}
-	want := fmt.Sprintf("%d\n%d\n%s\n", r.RunID, r.JobID, dir)
-	ours := string(b) == want
-	if e == nil && !ours {
+	other := false
+	if e == nil {
+		_, other, e = classifyWorkerLock(b, r.RunID, r.JobID, dir)
+		if e != nil {
+			return r, e
+		}
+	}
+	if e == nil && other {
 		// Another root's lock belongs to another operation and is never removed.
 		r.LockReleased = true
 	} else if errors.Is(e, os.ErrNotExist) {
@@ -242,4 +259,44 @@ func recoverUsing(ctx context.Context, dir string, collect bool, ops recoveryOps
 	}
 	r.Clean = r.NamespaceGone && r.RegistrationGone && r.LockReleased
 	return r, nil
+}
+
+func sameReceiptPath(a, b string) bool {
+	if !filepath.IsAbs(a) || !filepath.IsAbs(b) {
+		return false
+	}
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
+}
+
+// Only a complete, parseable DIFFERENT run/job/root proves that a global
+// lock belongs elsewhere. Empty or partially written intent is not absence.
+func classifyWorkerLock(b []byte, runID, jobID int64, dir string) (ours, other bool, err error) {
+	text := strings.ReplaceAll(string(b), "\r\n", "\n")
+	if !strings.HasSuffix(text, "\n") {
+		return false, false, errors.New("original worker lock is incomplete")
+	}
+	parts := strings.Split(strings.TrimSuffix(text, "\n"), "\n")
+	if len(parts) != 3 {
+		return false, false, errors.New("original worker lock is incomplete")
+	}
+	r, e := strconv.ParseInt(parts[0], 10, 64)
+	if e != nil || r <= 0 {
+		return false, false, errors.New("worker run identity invalid")
+	}
+	j, e := strconv.ParseInt(parts[1], 10, 64)
+	if e != nil || j <= 0 || !filepath.IsAbs(parts[2]) {
+		return false, false, errors.New("worker job/root identity invalid")
+	}
+	samePath := sameReceiptPath(parts[2], dir)
+	if r == runID && j == jobID && samePath {
+		return true, false, nil
+	}
+	if j == jobID || samePath {
+		return false, false, errors.New("worker lock conflicts with original flight")
+	}
+	return false, true, nil
 }

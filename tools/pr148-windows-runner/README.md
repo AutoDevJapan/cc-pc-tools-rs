@@ -352,3 +352,20 @@ materializer's eight-minute sequential API budget is not measured by synthetic
 fixtures; uncertain original commit bytes fail closed. Each normal/cancel result
 must keep its own exact source and observed controller exit. The latest source
 must obtain its own finite review; the earlier Must0 is not a blanket approval.
+
+
+## Collection ordering after the measured 1332 failure
+
+For newly created resources, retain the stopped service identity while removing
+its two recorded inheritable grants and confirming their actual DACL count is
+zero. Complete the credential-free fixture/unstarted controller restoration
+before deleting the service and closing its handle. An ACL or journal failure
+returns before service deletion and retains the stopped service; failed or
+uncertain mutations are still never retried. Previously failed instance5051 is
+not repaired or replayed by this change.
+
+A new credential-free real-service fixture completed execution, both ACL removals,
+controller restoration and service deletion with zero explicit service grants.
+It retained its profile/hives, and its separate first DeleteProfileW returned
+sharing violation32. That residue is retained with original receipts; it is not
+part of the ACL-ordering success claim or a product-CI result.

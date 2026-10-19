@@ -105,17 +105,14 @@ func collectMode(p Plan, unstarted bool) error {
 				return errors.New("protected launcher drain and SCM result required")
 			}
 		}
-		e = collectionAction(p, "service-delete", func() error {
-			r, _, callErr := advapi.NewProc("DeleteService").Call(s)
-			if r == 0 {
-				return callErr
+		// Retain the stopped service identity until all ACL mutations succeed.
+		// Closing a deleted service makes its virtual account unresolvable and
+		// icacls can fail with ERROR_NONE_MAPPED (1332).
+		defer func() {
+			if s != 0 {
+				closeSC(s)
 			}
-			return nil
-		})
-		closeSC(s)
-		if e != nil {
-			return e
-		}
+		}()
 	} else if errors.Is(e, syscall.Errno(1060)) {
 		var result struct{ OK bool }
 		b, err := os.ReadFile(filepath.Join(p.Root, "service-delete-result.json"))
@@ -140,13 +137,8 @@ func collectMode(p Plan, unstarted bool) error {
 		}
 		aceCount += n
 	}
-	probe, probeErr := openService(p, 4)
-	absent := errors.Is(probeErr, syscall.Errno(1060))
-	if probeErr == nil {
-		closeSC(probe)
-	}
-	if !absent || aceCount != 0 {
-		return errors.New("service deletion or explicit grant removal not confirmed")
+	if aceCount != 0 {
+		return errors.New("explicit service grant removal not confirmed; retain stopped service")
 	}
 	if p.Fixture != "" || unstarted {
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
@@ -154,6 +146,31 @@ func collectMode(p Plan, unstarted bool) error {
 				return e
 			}
 		}
+	}
+	// The account must still resolve while icacls revokes and propagates the
+	// owned grants, including the credential-free controller restoration.
+	// A failed/uncertain ACL mutation returns above and is never retried.
+	if s != 0 {
+		e = collectionAction(p, "service-delete", func() error {
+			r, _, callErr := advapi.NewProc("DeleteService").Call(s)
+			if r == 0 {
+				return callErr
+			}
+			return nil
+		})
+		closeSC(s)
+		s = 0
+		if e != nil {
+			return e
+		}
+	}
+	probe, probeErr := openService(p, 4)
+	absent := errors.Is(probeErr, syscall.Errno(1060))
+	if probeErr == nil {
+		closeSC(probe)
+	}
+	if !absent || aceCount != 0 {
+		return errors.New("service deletion or explicit grant removal not confirmed")
 	}
 	profile, e := registryPresent(syscall.HKEY_LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\`+sid)
 	if e != nil {

@@ -44,3 +44,17 @@
 - 本人のPCで一度の正式CIへ寄せる最新方針を読み直し、独立3002を--needs cargoで登録。Windows側3workflowと専用Rust helperだけを担当し、親の4ファイル/PR176を書き換えない。LinuxのPC隔離供給の実証結果も受領する。未供給labelへの切替、旧固定infraの境界拡大、保護source使用、直接子job起動、無制限runner/cache、新費用は禁止。親2957/2982/2987への循環waitも禁止。
 
 次: review3003の原応答と実モデルを受領。初回run39245437660終了時の実所要量とdiskエラー有無を確認し、必要修正をまとめてbranchをd9caa253へ非force更新する。最新候補の必要CIとレビューを確認し通常merge。3002のPC実job/成果物hash/終了回収を別途統合し、実行量/請求増分はprivate原APIで比較する。自分の重Cargo/GPU/新予算/公開操作は引き続き無し。
+
+## 2026-10-19 22時台 リンク失敗の修復候補
+
+- 本人のWindows完成優先の最新方針を再読。Mac/Linuxデスクトップのための検査は増やさず、GoDD Pressの既存Linux本番向けの必要検査を維持する。3002へ正本と元の実装・供給範囲を再配送。新規自作helperの作成と、拒否された既存製品sourceの使用を混同しない。上位の実拒否を迂回する許可は与えていない。
+- 初回39245437660は失敗。統合1/4・2/4までは成功したが、3/4のcompany_opsリンクでSIGBUS/exit101。root2997秒、全7job3506秒。開始時空き12GiB/inode余裕、終了時容量がないため容量枯渇は未確定。未完走値を旧main5308秒との削減成功に扱わない。全ログ/秒数はprivate原本に保持。
+- 再レビュー3003は固定d9caa253の2ファイルを読んでMust0、元のnative証跡Must解消。実job20261019-222237-todo-3003とsession turn_contextはSonnet5.5一致。原応答SHA256 48D57AA5DC5D19D89A80712079A2E895B3249468638BDE0FED282F96A4AFD73C。実行検査なし/固定commit自体と前のselector等は未読であることも記録。
+- 追加修正commit3ec5c2fbad5463f83f9a5008645b5d5c473f5c36/tree501a36eadb915807cb2af75ab47e2e86e72d9e87を保存し、branch/PR176を非forceで進めて読戻し一致。d9比の差分はworkflow/docs/adapterのJSON出力指定/新規Rust回収処理の4件。全検査範囲・assertion・profile・release launcher・Chrome受入は維持。
+- 各分割成功後だけCargoのcompiler-artifact/profile.test/kind=test/executable記録をjqでNUL name/path組にし、Rustで選択分割・exactfilename・ordinary file・target/debug/deps直下・symlink/越境/重複を全件確認後、検査済み実行ファイルだけ回収。共有lib/通常bin/後続Chromeの3fixtureを保持。3→1→2→4の順で既失敗分割を先に確認し、回収byte/容量/inodeと最終診断を残す。
+- 新Rust回収処理はWindowsで3検査、実filesystem保持/越境拒否時無作用/不正manifest拒否、実jq投影（bin/未tested/非JSON除外、空白pathとNUL保持）を確認。rustfmt/actionlint成功。最新の正式Linux scopeも選択器6/回収4検査（symlink含む）が全成功。重いローカルCargo/GPUは未実行。
+- 追加差分の別モデルレビュー3013を通常登録。3013へ固定4ファイル全文をspec内に渡し、API制限で同じ読取を繰り返さないようにした。source実行や直接子job起動は禁止。
+- 新候補の必要CIは1回開始: local39261974120、CodeQL39261974119、Windows fixture39261973834、V2両OS39261973826、Windows Chrome39261973845。scope/bridge/coldは成功、他は進行中。新候補全体の成功・通常mergeはまだ。
+- 月累計の課金基準と現取得値はprivate Billing原本へ保存。差は増加であり、対象期間の他実行を分離できていないため、この修正の費用削減としない。金額や私有workflow本文は運用repoへ追加掲載しない。
+
+次: 3013の原応答/実modelを受領しMustを解消。新候補の固定CIが通るまでmergeしない。特に統合3/4のリンク、回収byte、各回収後と最後の容量、後続Chrome、全4分割を確認する。失敗時はログと該当範囲から直し、同一候補の全CIを重ねてrerunしない。3002は3005レビュー後に残る正式PC供給/実job/hash/回収を進める。Linux server検査をWindows製品完成と同一視しない。

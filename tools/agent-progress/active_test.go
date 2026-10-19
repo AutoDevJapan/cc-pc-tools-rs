@@ -37,7 +37,7 @@ func TestActiveOnlyUsesWorkerEvidenceAndPreservesDiagnosticView(t *testing.T) {
 	s := collect(context.Background(), f.opts, testNow, probe)
 	if s.TaskTotal != 1 || s.JobTotal != 2 || len(s.Tasks) != 1 || s.Tasks[0].ID != 1 ||
 		s.Tasks[0].Percent == nil || *s.Tasks[0].Percent != 37 || s.Tasks[0].Phase != "tool" ||
-		len(s.Tasks[0].WaitReasons) != 0 || !s.Truncated {
+		len(s.Tasks[0].WaitReasons) != 0 || len(s.Tasks[0].JobKeys) != 1 || !s.Truncated {
 		t.Fatal("active projection, measurements or pre-limit totals are incorrect")
 	}
 	f.opts.MaxRows = 100

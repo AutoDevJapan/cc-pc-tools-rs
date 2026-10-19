@@ -200,6 +200,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			return linked[i].Key < linked[j].Key
 		})
 		for n, j := range linked {
+			if opts.ActiveOnly && !processingJob(j, now) {
+				continue
+			}
 			if n > 0 && !relevantJob(j) {
 				continue
 			}

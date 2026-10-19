@@ -259,13 +259,24 @@ PR720の統合差分にdesktop-build.ymlとop-cli-build.ymlが含まれること
 main tree SHAはPR720 headと同一。2994の正式Windows runner実証・供給・hash/recoveryと
 プロジェクト全体のWindows受入は別工程の未達として残す。
 
-mainへのmergeで13個のpush workflowが起動。最初の照合では4 success、8 in_progress、1 queued。
-GitHubの組織Actions billing usage API（2026-10-19日次、取得時点）でPassShareはLinux 685分、
-macOS 23分、Windows 121分、storage 10.148 GB-hour。各SKU netAmountは0 USD。
-請求APIは日次集計のため、merge後runのみの厳密な区分と確定請求ではない。
-既存の事前観測もnet 0 USD。公開repo標準runnerの無料対象と整合し、費用減額・返金とは扱わない。
-実際のrun/job分数の最終集計は13 push workflowsの終端後に再取得する。
+mainへのmergeで13個のpush workflowが起動し、最終的に13/13成功した。
+この固定main SHAの実workflow runは13、jobは44、完了jobの経過時間合計は5,966秒（99.4分）。
+この合計はjob所要時間の和であり、workflowの壁時計時間やActions請求runner分数とは区別する。
+個別workflowの実測job時間合計はQuality Gate 16.1分、Desktop Build 13.9分、
+Native WebView 22.1分、Encrypted storage 22.6分、CodeQL 27.6分など。
+以前のMobile Buildは1 job/202秒（3.37分）だったが、今回のworkflow run一覧にMobile Buildはなく、
+Quality GateからのMobile smoke 1回（PR run 165秒）で受入を保った。
+同じsource条件のPR候補で独立Mobile Buildを1回除き、既存試験を集約したことは実測できた。
+全workflow合計の削減は同じ条件のrun同士で比較できないため断定しない。
+
+GitHub組織Actions billing usage APIの2026-10-19日次値（再取得時点）はPassShareでLinux 806分、
+macOS 23分、Windows 129分、storage 10.148 GB-hour。各SKU netAmountは0 USD。
+日次値はmerge前の当日分とほかのrunも含み、merge後分だけの金額や確定請求ではない。
+公開repo標準runnerに対する金銭効果はこの記録では0 USDのまま確認された。
+runner分数をworkflow/job別に正確に切り出すAPI応答はbilling APIに含まれないため、
+jobの経過時間合計を請求runner時間へ読み替えない。費用減額・返金とは扱わない。
 
 ブランチは `scheduler/todo-2986-passshare-ci` のまま、worktreeはclean。
-残作業はmain push workflowの終端確認、PassShare run/job実行数・分数と課金APIの再照合、
-元2957への結果保存、2994/他製品の待機条件を維持したToDo状態反映。
+PassShareの重複Mobile workflow削減・監査修復・統合は完了。main push全13 workflowが成功し、
+費用APIの限界を含む実測結果を元2957へ保存済み。本人Windows PC上での正式ビルド移管・
+runner供給とhash/recovery証明は2994の独立作業として残し、この作業の完了とは混同しない。

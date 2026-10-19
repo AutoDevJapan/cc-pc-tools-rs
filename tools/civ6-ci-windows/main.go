@@ -18,6 +18,9 @@ func main() {
 	}
 	if err := dispatch(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		if errors.Is(err, errResidue) {
+			os.Exit(exitResidue)
+		}
 		os.Exit(1)
 	}
 }

@@ -164,6 +164,14 @@ func checkEvent(p Plan, env map[string]string, raw []byte) error {
 	}
 	return nil
 }
+
+// errResidue is the only collection outcome that leaves the service, ACLs and
+// processes clean while the OS profile/hive/classes remain. main exits with 3.
+var errResidue = errors.New("new resource residue remains; parent must retain incomplete cleanup")
+
+// Exit codes: 0 success, 1 failure/uncertain (fence), 3 residue-only collection.
+const exitResidue = 3
+
 func validSHA(s string) bool { return contract.ValidSHA(s) }
 
 func beneath(root, path string) error {

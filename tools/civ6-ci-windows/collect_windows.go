@@ -13,8 +13,6 @@ import (
 	"unsafe"
 )
 
-var errResidue = errors.New("new resource residue remains; parent must retain incomplete cleanup")
-
 func collectionServiceStatus(state, pid, code uint32, unstarted bool) error {
 	if state != 1 || pid != 0 {
 		return errors.New("service must be stopped with PID zero")
@@ -59,14 +57,25 @@ func collectionAction(p Plan, name string, action func() error) error {
 	return errors.Join(e, write)
 }
 func collect(p Plan) error {
-	return collectMode(p, false)
+	return collectWithEvents(p, false)
 }
 
 func collectUnstarted(p Plan) error {
 	if p.Fixture != "" {
 		return errors.New("unstarted collection requires a real prepared resource")
 	}
-	return collectMode(p, true)
+	return collectWithEvents(p, true)
+}
+
+// collectWithEvents brackets a collection with credential-free ledger lines. A
+// residue-only ending (service, ACLs and processes clean; profile/hive/classes
+// still present) is reported separately from an incomplete collection.
+func collectWithEvents(p Plan, unstarted bool) (err error) {
+	emitEvent("collect-begin", p, map[string]any{"unstarted": unstarted})
+	defer func() {
+		emitEvent("collect-end", p, map[string]any{"unstarted": unstarted, "complete": err == nil, "residue_only": errors.Is(err, errResidue)})
+	}()
+	return collectMode(p, unstarted)
 }
 
 func collectMode(p Plan, unstarted bool) error {

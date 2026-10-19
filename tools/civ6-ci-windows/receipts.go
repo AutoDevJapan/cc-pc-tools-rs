@@ -79,3 +79,35 @@ func checkJob(p Plan, j apiJob, finished bool) error {
 	}
 	return nil
 }
+
+type apiRunner struct {
+	ID     int64
+	Name   string
+	Labels []struct{ Name string }
+}
+
+// ownRunner lists the repository's runners and returns only this plan's unique
+// registration. Other runners (the long-lived Linux/Windows workers and the
+// Linux ephemeral runner) are neither inspected nor affected.
+func ownRunner(p Plan, read readAPI) (*apiRunner, error) {
+	var runners struct {
+		Total   int `json:"total_count"`
+		Runners []apiRunner
+	}
+	if e := read("repos/"+repository+"/actions/runners?per_page=100", &runners); e != nil {
+		return nil, e
+	}
+	if runners.Total != len(runners.Runners) || runners.Total > 100 {
+		return nil, errors.New("complete repository runner inventory required")
+	}
+	var own *apiRunner
+	for i, r := range runners.Runners {
+		if r.Name == p.name() {
+			if own != nil {
+				return nil, errors.New("duplicate unique runner registration")
+			}
+			own = &runners.Runners[i]
+		}
+	}
+	return own, nil
+}

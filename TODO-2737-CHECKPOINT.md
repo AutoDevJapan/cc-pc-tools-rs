@@ -802,3 +802,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - VMは停止/除去/memory0、registration_gone=true。登録番号を受領する前の失敗でrunner_id=0だが、名前による所有照合とAPI読戻しでown runner不在を確認。0を未登録の証明へ読み替えない。normal CI intent不在、同targetのcanonical gate normal/EOF fixtureが後続exit0で回収確認済み。SDK工具containerはseed後に停止/PID0。工具停止intentのvm_idは旧投影名でnullになったが、実vm-created receiptのIDとvm-cleanupの同IDを別照合して保持する。
 - 新runは通常cancel1回後もqueuedのためforce-cancel1回だけ送信し、後続GETでcompleted/cancelledを確認。own routeは正確なlease値とterminal runを照合してDELETE1回、読戻しで不在。原source0fda/ref/tree/workflowと他担当の登録/資源を保持。既済dispatch/取消/削除/検査の再送はしない。
 - 次はこのAPI取得処理の追加差分だけを同新HEADで別モデルレビューし、残Mustを直してから同clean版のhostを生成する。Linux helperの入力は既存レビュー済みと同じ。元8失敗とmetadata詳細の実結果はまだ得ていないため、元CIの成功や配送完了とは扱わない。再開時は実runの終端/own routeとintent不在/旧失敗を照合し、同0fdaを明示して必要な正式CIへ進む。
+### API追加差分のレビューと再開条件
+
+- 固定d54ce709→f2ebe275de0b6ff43166106e79a7139817ff8f6d/tree00aaf56ddd0e1f57ad9cf6199fca107d455f4b1cの追加4fileだけ、別モデルgpt-6-lunaレビュー2936へ通常add --specで登録。原metadata診断や製品契約のMust0を新API差分のMust0へ流用しない。保存spec全文/dispatchableを確認し、原受付前失敗・回収・検査とともに親2641へ返す。
+- 今回の終了証拠はresume-131956/terminal-files.private.json。原run39201344542の公式jobは未開始のままcancelled、原8検査/Windows13/Docker parity/completeの実結果なし。新SDKの回収は元のまま、今回VM/own runner/intent/routeは不在。原log/SDK/失敗disk/原Windows SDK/guard/manifest/他担当資源は保持。
+- 次は2936の固定head/既読/model/実結果を受領し、必要なMustを直す。Must0後に同clean sourceからWindows hostを生成し、Linux helperは入力不変を照合して現3623版を再利用できる。原candidate0fda/head/tree/ref/workflow/レビュー2928と資源割当を再照合し、既存run39201344542の同headに必要な正式検証を行う。古い受付・取消・route復元・linux-jobの再送や、旧run39147155349の別headへの成功転記をしない。現job/実HEADのscheduler checkpointとwait --on 2936を保存して自動再開する。

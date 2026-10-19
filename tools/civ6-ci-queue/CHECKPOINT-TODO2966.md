@@ -15,7 +15,8 @@
 - unattended-readiness.yml の変更は戻した（親の civ6-ci.yml に統合される）。
 
 ## 残り
-- PR247のCI結果、2972のMust対応、通常merge
+- 2972のMust 4件は a40145a までに対応済み（隔離plan、実CLI接続、OSロック下のClaimed、path@ref）。追加差分レビューは共有ToDo 2975
+- 残り: PR247のCI結果と2975のMust対応、通常merge（2975完了待ちを todo wait で登録済み）
 - 親2962 noteへ commit/PR/review/検査/CLI/未実施の配送
 - 実運用の配備（設定ファイル、helper pin、continuation有効化）は親。この工程では行わない
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -103,6 +104,19 @@ func TestActiveOnlyEmptyCLIAndSchema(t *testing.T) {
 	var roundtrip Snapshot
 	if json.Unmarshal(data, &roundtrip) != nil || !reflect.DeepEqual(s.Tasks, roundtrip.Tasks) {
 		t.Fatal("empty lists must remain arrays")
+	}
+	var stdout, stderr bytes.Buffer
+	args := []string{"--once", "--active-only", "--todo", f.opts.TodoFile, "--jobs", f.opts.JobsDir,
+		"--priority-file", "", "--resource-queue", f.opts.ResourceQueueDir}
+	if run(args, &stdout, &stderr) != 0 || stderr.Len() != 0 ||
+		json.Unmarshal(stdout.Bytes(), &roundtrip) != nil || len(roundtrip.Tasks) != 0 || roundtrip.TaskTotal != 0 {
+		t.Fatal("CLI did not apply the active-only projection")
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if run(append(args, "--active-only=false"), &stdout, &stderr) != 0 ||
+		json.Unmarshal(stdout.Bytes(), &roundtrip) != nil || len(roundtrip.Tasks) != 1 || *roundtrip.Tasks[0].Percent != 83 {
+		t.Fatal("positive control lost the diagnostic row or its measured percent")
 	}
 }
 

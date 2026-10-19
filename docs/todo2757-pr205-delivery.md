@@ -1,6 +1,55 @@
 # ToDo2757: PR205 post-merge delivery boundary
 
-## Latest observation: 2026-10-19, actual compatibility build failed
+## Latest observation: 2026-10-19 13:13 JST, installed PR229 preflight running
+
+Independent Sonnet review2879 read the complete frozen diff at
+`a0548183b6f515bbcda2d3072e2fb591791072a7`, Must0. Its final event equals its
+saved response, and the supplied diff matches Git's exact base/head diff. The
+reviewer's Git was unavailable; its document reading covered the changed
+section rather than the full history. The parent verified the actual Git HEAD.
+Exact-head CI ended with eight success, one neutral and one skipped check;
+unresolved review threads were zero. Normal PR229 merge is
+`1123681cae4da1a1c01f718563ed4fa656203cba`. Tested and merged module trees both
+equal `5449d42515a70f401e9ef13fd2c3e98f1388c1de`.
+
+Windows and Linux executables were built from an archive of that exact merge,
+with the same bounded Go build options used earlier. Normal distribution used
+the classified standard executable, Linux leaf and receipt leaves. The build
+source and destination are on the same volume; File.Replace moved the owned
+build output directly into the standard executable and retained its predecessor
+as backup. An unused proposed staging leaf was unverified and was not read or
+written. No alternate executable was used for product execution.
+
+- Windows SHA256: `5CAD0057BBAE2A5BA2097401E80BD2E960F835E54FBF2038B977EF811BB5DA04`.
+- Linux SHA256: `3CD7695418C6DAE0CFA37CFCE6DF4EB8C789F6395443D2909C4638865614E0DC`.
+
+The exact installed executable started the same fixed-source preflight, host
+PID65720/start `2026-10-19T04:12:53.3118224Z`, owned directory
+`567048e51abd16ec80fc6be537ace40a`, builder nonce
+`4480520a31b01c4d85bc7b31116a9b94`. Do not start another while this invocation
+or its lease is active. Merge checks remain separate from PR CI and are pending
+in the last observation. Original source/log/refusal records remain preserved.
+
+Review2879's suggestions clarify the earlier exit124: its origin in the output
+check was inferred, not proven. The new numeric marker can distinguish an
+oversized output from zero bytes, but zero still combines absent and empty
+output. There is no artifact-cap, source, admission or success-condition change.
+The real six-case fixture already executes the guest block; adding an ordinary
+CI string assertion would not replace that behavioral evidence. Additional SHA
+assertions in the fixture are optional; this change does not alter SHA logic.
+
+Research2878's final Sonnet response was received and matched its final event.
+It reads a verified sanitized structural model; some conditions, versions and
+document semantics remain opaque. It is not full semantic approval, live
+environment approval, an execution profile or a product CI/deployment result.
+Resolve those explicit gaps before activating the remaining official workflows.
+
+The two new distribution-build temporary directories were separately planned,
+normally deleted and finished as source_absent. The active preflight directory
+and its private streams remain retained. Official full/backend/preconditions/
+release, actual drain, existing Prd revision/readiness/smoke are still unfinished.
+
+## Historical observation: 2026-10-19, initial compatibility build failed
 
 The older sections below are retained history. Normal distribution through
 ToDo2829 is complete; do not reinstall or return to the original-record wait.
@@ -206,13 +255,15 @@ trust semantics. It cannot edit parent source or run product jobs. Its saved
 spec preserves the fixed source/API/RAM-only and secret boundaries. This is
 necessary analysis, not another builder repair or a product CI result.
 
-## 2026-10-19: real VM build reached artifact validation but failed
+## 2026-10-19: real VM build returned exit124; output-check origin inferred
 
 The PR226 installed preflight finished with host exit1 and Docker/guest exit124.
 It verified the fixed product source before and after execution and the original
 four CodeQL successes. The original ownership error did not recur; the log has
 one package-install success and no matched image-build error, OOM or disk-full
-signature. Exit124 from the guest output-checking block still cannot distinguish
+signature. Exit124 was inferred to come from the guest output-checking block,
+but a builder-returned exit124 was not excluded by the available evidence. It
+still cannot distinguish
 missing/empty output from output larger than the 256MiB cap: its measured size
 was cleared before the only result was emitted. The actual artifact size is
 unobserved. This is neither a timeout diagnosis nor a product CI success.

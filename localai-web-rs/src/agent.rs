@@ -4890,7 +4890,11 @@ mod tests {
                 fs::create_dir_all(p).unwrap();
             }
             fs::write(paths.todo.join("todo.exe"), b"test substitute").unwrap();
-            fs::write(paths.tools.join("codex_jobs.exe"), b"test substitute").unwrap();
+            fs::write(
+                paths.jobs.parent().unwrap().join("codex_jobs.exe"),
+                b"test substitute",
+            )
+            .unwrap();
             fs::write(paths.tools.join("client-projects.txt"), "").unwrap();
             fs::write(paths.todo.join("todo.json"),json!({"projects":{"owner":"owner","demo":root},"items":[{"id":1,"project":"demo","title":"検証する","note":"","status":"todo","jobs":[]}],"next_id":2}).to_string()).unwrap();
             fs::write(

@@ -47,7 +47,7 @@ unmaintained/unsoundなどの情報warningは重大脆弱性エラーと区別�
 - https://rustsec.org/advisories/RUSTSEC-2026-0195.html
 
 上流mergeのchecksはSecurity auditがsuccess、一部integrationとmatrixはfailureであり、
-上流CI全成功とは主張しない。このPCでupdaterのWindows依存をコンパイル確認中。
+上流CI全成功とは主張しない。このPCでupdaterのWindows依存コンパイルは成功した。
 
 ## 実測済みと残条件
 
@@ -55,13 +55,34 @@ unmaintained/unsoundなどの情報warningは重大脆弱性エラーと区別�
 - 元rootはexit1/14件。候補rootはexit0/0件。ignoreは空。
 - backend/nativeの独立lockは変更せずexit0/0件を確認。
 - 候補はcargo metadata --locked成功。逆依存をcargo tree --locked --target allで確認。
-- `cargo check --locked -p tauri-plugin-updater`はWindowsで実行中。
-- 別モデルの固定差分読取レビュー、関連検査の終端確認、親への最終配送が残る。
+- `cargo check --locked -p tauri-plugin-updater`はWindowsで48.90秒、exit0。
+- 独立した依存API受入はnextest 5/5成功、0 skip。ZIPの通常展開、親ディレクトリへの
+  脱出拒否、plist XML/binary往復、製品と同じupdater登録API、reqwest両版の通常の
+  証明書検証を使ったHTTPSを確認した。対象の主要依存versionは製品候補と一致する。
+- quinn-protoとreqwest両版のWindows checkは独立受入manifestで7.02秒、exit0。
+- 別モデルの固定差分読取レビュー3001（Claude Sonnet 5.5を通常ToDoで指定）と
+  親への最終配送が残る。実際の起動と実モデルの照合は受領時に行う。
 - 製品本体の全テスト・正式CI・mergeはこの工程では未実施。
+
+依存API受入のコードは`tools/passshare-audit-2996/`へ保存した。受入用lockは製品lockと
+別であり、製品の全依存構成の動作証明ではない。製品lockでのupdater checkと区別する。
+doctestコマンドは成功したが、この補助ライブラリのdoctestは0件なので検証件数へ加えない。
+進捗75%は、固定差分・重大監査成功・関連検査の3区切りが済み、レビューと配送の1区切りが
+残ることを示す。製品CIの達成率ではない。
+
+初回受入はWindows loaderが0xc0000139で起動前に失敗した。PE import全375件を照合し、
+comctl32.dllのTaskDialogIndirectだけが未解決と確認した。独立受入には通常のTauri
+アプリでtauri-buildが組み込むCommon Controls 6のmanifestが無かったことが原因。
+補助受入だけに同manifestを埋め込んで5件成功。製品ファイルは変更していない。
+また、製品で無効なoptional依存のquinn-protoを直接`cargo check -p`に指定すると
+Cargo1.95のfeature resolverがpanicした。受入manifestへ同じ固定版を直接宣言して
+有効化し、正常なcheckを実施した。元の失敗ログも保持する。
 
 証拠は.gitignore対象の`.ci-work/`へ保存。root-before.lock/root-after.lock、
 desktop-before.toml/desktop-after.toml、audit-*-before/final.private.json、
 metadata-final.private.json、update-*.log、check-updater-windows.log、handoff.private.json。
+受入の最終結果はacceptance-nextest-with-quinn.log（run933ed68e）、check-network-final.log。
+再現用の受入lockはacceptance-Cargo.lock、元のCargo manifestはsource-manifests/へ保存する。
 所有付き一時rootは本worktree直下、safe-delete ID `799bea062b6fe7ba91eed988f3f50215`。
 scrub391で作成済みrootと本worktreeは両方falseを確認。未知Tempは空のまま通常plan削除し
 finish済み。元資料は保持し、拒否された製品sourceを別経路で取得していない。

@@ -61,3 +61,22 @@ metadata --locked成功。updater Windows checkの結果は原ログを読み、
 Must / Suggestion / Nitで、場所と具体的修正を報告してください。指摘なしも明記します。
 読取完了ならMustがあっても先頭を厳密に「状態: 完了」とし、レビューだけ完了と説明します。
 未読や実行失敗なら残りを具体的に書き、成功と扱いません。2500字以内の日本語で回答。
+
+## 追加の確定した関連検査
+
+固定した製品の2候補blobは変更していません。
+updater Windows checkは48.90秒/exit0で終端済み。
+tools/passshare-audit-2996/{Cargo.toml,build.rs,tests.manifest,src/lib.rs,README.md}も読んでください。
+これらは製品コードではなく、独立依存API受入の補助コードです。
+主要依存versionの一致は.ci-work/acceptance-metadata.private.jsonと製品metadataで照合済み。
+受入lockは.ci-work/acceptance-Cargo.lock、元manifestは.ci-work/source-manifests/です。
+製品と受入のlock全体が同一とは主張しません。
+acceptance-nextest-with-quinn.logでは5/5成功、0skip（run933ed68e）。
+ZIP通常展開/脱出拒否、plist XML/binary、updater登録、両reqwestの通常検証HTTPSです。
+check-network-final.logではquinn-proto/両reqwestのcheckが7.02秒/exit0。
+初回はmanifest欠落によるTaskDialogIndirect未解決（0xc0000139）でした。
+全375imports中この1件だけと特定し、Tauriが通常埋め込むCommon Controls6を補助側へ
+追加して修復しました。製品manifestを追加変更していません。
+無効なoptional quinnを製品graphで直接checkするとCargo1.95がpanicするため、
+同版を独立受入manifestで有効化してcheckしました。元失敗ログを残しています。
+補助doctestは0件であり、成功件数には含めません。

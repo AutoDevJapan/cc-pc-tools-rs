@@ -1,0 +1,15 @@
+[package]
+name = "passshare-audit-2996-acceptance"
+version = "0.0.0"
+edition = "2021"
+publish = false
+[workspace]
+[dependencies]
+tauri = "=2.12.4"
+tauri-plugin-updater = { git = "https://github.com/tauri-apps/plugins-workspace", rev = "ba98bfadc4c868c9a7e1a226c83af528e1f11b89" }
+zip = { version = "=9.0.5", default-features = false }
+plist = "=1.10.1"
+reqwest12 = { package = "reqwest", version = "=0.12.28", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+reqwest13 = { package = "reqwest", version = "=0.13.4", default-features = false, features = ["blocking", "json", "rustls"] }
+tempfile = "=3.27.0"
+quinn-proto = "=0.11.18"

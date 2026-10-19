@@ -333,3 +333,57 @@ func TestHoldDistinguishesStoppedFromDrained(t *testing.T) {
 		t.Fatalf("survivors were released early: %+v clock=%v", res, f.clock.Sub(start))
 	}
 }
+
+// RR1: unclassifiable processes must not let an empty readable census release the slot.
+func TestHoldIgnoresAnIncompleteCensusAndAcceptsOnlyAHonestNoWorkerReport(t *testing.T) {
+	start := time.Unix(0, 0)
+	until := holdDeadline(start, 60)
+	missing := func() (bool, error) { return false, errors.New("no proof") }
+	incomplete := func() (int, error) { return 0, errCensusIncomplete }
+	f := &fakeHold{clock: start, states: []func() (uint32, error){state(1)}, drained: missing, census: incomplete}
+	res := holdUntilDrained(f.ops(), until, time.Second)
+	if res.Drained || res.CensusZero || res.Err == nil || f.clock.Before(until) {
+		t.Fatalf("incomplete census released the slot: %+v clock=%v", res, f.clock.Sub(start))
+	}
+	// A report proving no worker was ever created is a drain by construction.
+	f = &fakeHold{clock: start, states: []func() (uint32, error){state(1)}, drained: func() (bool, error) { return true, nil }, census: incomplete}
+	if res = holdUntilDrained(f.ops(), until, time.Second); !res.Drained || res.Err != nil || f.sleeps != 0 {
+		t.Fatalf("%+v", res)
+	}
+}
+
+// RR4: the launcher's worker end is the controller's absolute deadline, so the
+// hold (run deadline + drain budget) always covers it, however long startup took.
+func TestWorkerDeadlineIsTheSharedAbsoluteDeadline(t *testing.T) {
+	p := fixturePlan()
+	p.Seconds = 600
+	start := time.Unix(10_000, 0)
+	a := admission{Deadline: runDeadline(start, p.Seconds).UnixNano()}
+	for _, delay := range []time.Duration{time.Second, 40 * time.Second, 59 * time.Second} {
+		now := start.Add(delay)
+		d, e := workerDeadline(p, a, now)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if d.After(holdDeadline(start, p.Seconds).Add(-90 * time.Second)) {
+			t.Fatalf("worker end %v exceeds the run deadline", d)
+		}
+		if !holdDeadline(start, p.Seconds).After(d.Add(60 * time.Second)) {
+			t.Fatal("hold does not cover the worker end plus the drain budget")
+		}
+	}
+	// A late resume is refused instead of outliving the hold.
+	if _, e := workerDeadline(p, a, runDeadline(start, p.Seconds).Add(time.Second)); e == nil {
+		t.Fatal("worker resumed after the shared deadline")
+	}
+	for _, bad := range []admission{{}, {Deadline: start.Add(-time.Hour).UnixNano()}, {Deadline: start.Add(10 * time.Hour).UnixNano()}} {
+		if _, e := workerDeadline(p, bad, start); e == nil {
+			t.Fatalf("accepted deadline %d", bad.Deadline)
+		}
+	}
+	f := p
+	f.Fixture = "normal"
+	if d, e := workerDeadline(f, admission{}, start); e != nil || !d.Equal(start.Add(600*time.Second)) {
+		t.Fatalf("fixture keeps its local plan seconds: %v %v", d, e)
+	}
+}

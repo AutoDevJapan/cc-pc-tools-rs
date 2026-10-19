@@ -178,7 +178,7 @@ func executeAdmitted(p Plan) (result error) {
 					f.Close()
 					break
 				}
-				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS")})
+				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS"), Deadline: runDeadline(serviceStart, p.Seconds).UnixNano()})
 				if len(payload) >= 4096 {
 					e = errors.New("registration frame exceeds pipe bound")
 				} else {
@@ -323,11 +323,16 @@ func runOwnedWorker(p Plan) error {
 		_, waitErr := syscall.WaitForSingleObject(process.Process, 30000)
 		return errors.Join(e, waitErr)
 	}
+	// The shared absolute deadline also bounds the time spent starting up: never
+	// resume a worker that would outlive what the controller is holding for.
+	until, e := workerDeadline(p, admitted, time.Now())
+	if e != nil {
+		return errors.Join(e, killOwned(job, process.Process))
+	}
 	count, _, e := resumeThread.Call(uintptr(process.Thread))
 	if count != 1 {
 		return errors.Join(fmt.Errorf("initial suspend count %d: %v", count, e), killOwned(job, process.Process))
 	}
-	until := time.Now().Add(time.Duration(p.Seconds) * time.Second)
 	cancelled := false
 	var exit uint32
 	for {

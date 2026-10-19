@@ -105,11 +105,14 @@ func collectMode(p Plan, unstarted bool) error {
 			return e
 		}
 	}
-	s, e := openService(p, 4)
+	s, e := openService(p, 4|1)
 	if e != nil {
 		return fmt.Errorf("shared service must exist: %w", e)
 	}
 	defer closeSC(s)
+	if e = requireBoundTo(s, p); e != nil {
+		return e
+	}
 	state, pid, code, err := queryService(s)
 	if err != nil {
 		return fmt.Errorf("collection service status query: %w", err)
@@ -147,7 +150,16 @@ func collectMode(p Plan, unstarted bool) error {
 	}); e != nil {
 		return e
 	}
-	if p.Fixture != "" || unstarted {
+	// The launcher report of a never-started job still carries an explicit grant.
+	if e = collectionAction(p, "report-ace-remove", func() error {
+		return icaclsWithin(aclBudget, filepath.Join(p.Root, "launcher-result.json"), "/remove:g", "*"+sid)
+	}); e != nil {
+		return e
+	}
+	// The controller gets the root back (credentials of the deregistered ephemeral
+	// runner included, never read here) so the owned root can be deleted by the
+	// normal safe-delete path, which the shared identity now requires.
+	{
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
 			if e = collectionAction(p, row.name, func() error { return icaclsWithin(aclBudget, row.path, "/grant:r", "*"+p.ControllerSID+":(OI)(CI)F") }); e != nil {
 				return e

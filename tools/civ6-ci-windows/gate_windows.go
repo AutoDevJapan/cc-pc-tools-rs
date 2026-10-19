@@ -17,6 +17,9 @@ type admission struct {
 	Jobs, Threads string
 	Held          string
 	SenderPID     uint32
+	// Deadline is the absolute (Unix nanoseconds) end of the worker's run, set by
+	// the controller at service start and shared with the launcher; zero in fixtures.
+	Deadline int64
 }
 
 func (a admission) validate() error {

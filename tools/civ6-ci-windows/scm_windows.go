@@ -3,10 +3,12 @@
 package main
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -55,17 +57,25 @@ func openService(p Plan, access uintptr) (uintptr, error) {
 // running service, from live processes of its account, or from a previous job
 // whose root was neither deleted nor collected.
 func ensureService(p Plan) error {
+	// One claim at a time across processes: read-check-reconfigure is not atomic.
+	unlock, e := lockClaim(p)
+	if e != nil {
+		return e
+	}
+	defer unlock()
 	scm, e := manager(3)
 	if e != nil {
 		return e
 	}
 	defer closeSC(scm)
 	image := syscall.EscapeArg(filepath.Join(p.Root, "helper.exe")) + " service " + syscall.EscapeArg(p.Root)
+	created := false
 	s, _, e := advapi.NewProc("OpenServiceW").Call(scm, ptr(p.svc()), 0xf01ff)
 	if s == 0 {
 		if !errors.Is(e, syscall.Errno(1060)) {
 			return fmt.Errorf("open shared service: %w", e)
 		}
+		created = true
 		s, _, e = advapi.NewProc("CreateServiceW").Call(scm, ptr(p.svc()), ptr(p.svc()), 0xf01ff, 0x10, 3, 1, ptr(image), 0, 0, 0, ptr(`NT SERVICE\`+p.svc()), 0)
 		if s == 0 {
 			return fmt.Errorf("create shared virtual service: %w", e)
@@ -91,35 +101,94 @@ func ensureService(p Plan) error {
 	} else {
 		return err
 	}
-	var need uint32
-	advapi.NewProc("QueryServiceConfigW").Call(s, 0, 0, uintptr(unsafe.Pointer(&need)))
-	if need < 40 || need > 65536 {
-		return errors.New("service configuration size rejected")
-	}
-	buf := make([]byte, need)
-	if r, _, e := advapi.NewProc("QueryServiceConfigW").Call(s, uintptr(unsafe.Pointer(&buf[0])), uintptr(need), uintptr(unsafe.Pointer(&need))); r == 0 {
-		return e
-	}
-	// QUERY_SERVICE_CONFIGW: three DWORDs, padding, then lpBinaryPathName.
-	path := *(**[2048]uint16)(unsafe.Pointer(&buf[16]))
-	if path == nil {
-		return errors.New("service image path unavailable")
-	}
-	if e := previousRootSettled(imageRoot(syscall.UTF16ToString(path[:])), p.Root); e != nil {
-		return e
+	if !created {
+		image0, e := readImagePath(s)
+		if e != nil {
+			return e
+		}
+		prev, e := imageRoot(image0)
+		if e != nil {
+			return fmt.Errorf("existing shared service is not understood; not reused: %w", e)
+		}
+		if e := previousRootSettled(prev, p.Root); e != nil {
+			return e
+		}
 	}
 	// SERVICE_NO_CHANGE for type/start/error control, new image path only.
 	if r, _, e := advapi.NewProc("ChangeServiceConfigW").Call(s, 0xffffffff, 0xffffffff, 0xffffffff, ptr(image), 0, 0, 0, 0, 0, 0); r == 0 {
 		return fmt.Errorf("point shared service at this job: %w", e)
 	}
 	var sd uintptr
-	r, _, e := convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x34;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
+	r, _, e := convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x35;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
 	if r == 0 {
 		return e
 	}
 	defer kernel.NewProc("LocalFree").Call(sd)
 	if r, _, e = advapi.NewProc("SetServiceObjectSecurity").Call(s, 4, sd); r == 0 {
 		return e
+	}
+	return nil
+}
+
+// lockClaim serializes claims of the shared identity across processes.
+func lockClaim(p Plan) (func(), error) {
+	h, _, e := kernel.NewProc("CreateMutexW").Call(0, 0, ptr(`Global\`+p.svc()+"-claim"))
+	if h == 0 {
+		return nil, fmt.Errorf("claim mutex: %w", e)
+	}
+	w, _ := syscall.WaitForSingleObject(syscall.Handle(h), 30000)
+	if w != 0 && w != 0x80 { // WAIT_OBJECT_0 or WAIT_ABANDONED (state is re-verified below)
+		syscall.CloseHandle(syscall.Handle(h))
+		return nil, errors.New("another claim of the shared service identity is in progress")
+	}
+	return func() {
+		kernel.NewProc("ReleaseMutex").Call(h)
+		syscall.CloseHandle(syscall.Handle(h))
+	}, nil
+}
+
+// readImagePath returns the service image path from QUERY_SERVICE_CONFIGW,
+// reading only inside the returned buffer and only up to its NUL.
+func readImagePath(s uintptr) (string, error) {
+	var need uint32
+	advapi.NewProc("QueryServiceConfigW").Call(s, 0, 0, uintptr(unsafe.Pointer(&need)))
+	if need < 64 || need > 65536 {
+		return "", errors.New("service configuration size rejected")
+	}
+	buf := make([]byte, need)
+	if r, _, e := advapi.NewProc("QueryServiceConfigW").Call(s, uintptr(unsafe.Pointer(&buf[0])), uintptr(need), uintptr(unsafe.Pointer(&need))); r == 0 {
+		return "", e
+	}
+	// QUERY_SERVICE_CONFIGW (amd64): three DWORDs, 4 bytes padding, lpBinaryPathName.
+	base := uint64(uintptr(unsafe.Pointer(&buf[0])))
+	at := binary.LittleEndian.Uint64(buf[16:24])
+	if at < base+64 || at >= base+uint64(len(buf)) || (at-base)%2 != 0 {
+		return "", errors.New("service image path pointer outside the returned buffer")
+	}
+	var units []uint16
+	for off := int(at - base); off+1 < len(buf); off += 2 {
+		c := binary.LittleEndian.Uint16(buf[off : off+2])
+		if c == 0 {
+			return syscall.UTF16ToString(units), nil
+		}
+		units = append(units, c)
+	}
+	return "", errors.New("service image path is not NUL terminated inside the buffer")
+}
+
+// requireBoundTo refuses to act on the shared service for a job that no longer
+// owns it (a delayed start/stop/collect for an earlier root).
+func requireBoundTo(s uintptr, p Plan) error {
+	image, e := readImagePath(s)
+	if e != nil {
+		return e
+	}
+	root, e := imageRoot(image)
+	if e != nil {
+		return e
+	}
+	if !strings.EqualFold(filepath.Clean(root), filepath.Clean(p.Root)) {
+		return errors.New("the shared service now belongs to another job; no action taken")
 	}
 	return nil
 }
@@ -147,11 +216,14 @@ func queryService(s uintptr) (state, pid, code uint32, err error) {
 	return v[1], v[7], v[3], nil
 }
 func startFinite(p Plan) error {
-	s, e := openService(p, 0x10|4)
+	s, e := openService(p, 0x10|4|1)
 	if e != nil {
 		return e
 	}
 	defer closeSC(s)
+	if e = requireBoundTo(s, p); e != nil {
+		return e
+	}
 	r, _, e := advapi.NewProc("StartServiceW").Call(s, 0, 0)
 	if r == 0 {
 		return fmt.Errorf("finite service start: %w", e)
@@ -159,11 +231,14 @@ func startFinite(p Plan) error {
 	return nil
 }
 func stopFinite(p Plan) error {
-	s, e := openService(p, 0x20|4)
+	s, e := openService(p, 0x20|4|1)
 	if e != nil {
 		return e
 	}
 	defer closeSC(s)
+	if e = requireBoundTo(s, p); e != nil {
+		return e
+	}
 	state, _, _, e := queryService(s)
 	if e != nil {
 		return e

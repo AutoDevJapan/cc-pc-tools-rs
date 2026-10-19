@@ -65,9 +65,9 @@ Build into the owned root: `go build -trimpath -o <root>/bootstrap.exe .`
 | --- | --- | --- | --- |
 | `bootstrap.exe prepare <root> <runner.zip>` | CC-AdminBroker (admin) | plan.json, official zip | copies immutable `helper.exe`; **claims the fixed shared service identity first** (see below); materializes **the pinned commit from GitHub objects** (`contract.Verify` first) into RAM then `<root>/runtime` only; installs rustup/Rust 1.95.0 + stable under the new CARGO_HOME/RUSTUP_HOME; grants ACEs on the new root/runtime only; writes `prepared.json`. Single use, exit 0/1. |
 | `helper.exe execute <root>` | controller (non-admin) **inside the scheduler's Cargo allocation** | registration token on **stdin** (RAM only) | enters `cargo_gate.exe test --target-dir <root target>` as a child; `contract.Verify` + own-runner-absent check; token goes through a one-message pipe to the service (kernel client/server PIDs checked) and only into the official configure input; waits for the service to stop; checks start/complete/after (below). Exit 0 only for a verified successful job. |
-| `helper.exe stop <root>` | controller | - | SCM stop; the service Job Object drain is confirmed or it is a failure. |
+| `helper.exe stop <root>` | controller | - | one SCM stop request, refused unless the shared service is currently bound to this root; the Job Object drain is confirmed by `execute`'s hold, not by this command. |
 | `helper.exe status <root>` | controller | - | one line: `{"instance","service","service_present","state","pid","exit_code","prepared.json"}` (SCM state 1 = stopped). |
-| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | removes the two service ACEs, resets the owner of the whole root to Administrators, checks the account has no process and the service is idle, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `shared_profile_retained`, profile counts); exit 0 or 1. |
+| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | removes the two service ACEs (and the explicit grant on the launcher report), resets the owner of the whole root to Administrators, returns the root to the controller so it can be deleted, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `shared_profile_retained`, profile counts); exit 0 or 1. |
 | `bootstrap.exe collect-unstarted <root>` | CC-AdminBroker | queued, never-started real job | abort path (untouched launcher report, no worker/authentication artifacts, zero-step queued job, service idle). |
 | `helper.exe audit <root>` | controller | - | read-only `contract.Verify` + runner/job state. |
 
@@ -126,10 +126,14 @@ namespace: the queue must not start another Windows worker until `status` shows 
 `collect` completes. A normal error after a successful start makes exactly one stop attempt (never repeated).
 After it, and also on the success path, one routine (`holdUntilDrained`, observation only) keeps the gate child -
 and so the shared Cargo slot - alive until SCM reports STOPPED **and** the protected launcher report proves the
-Job Object drained (`job_drained`, same account SID). An unreadable SCM state is never taken as a stop: polling continues to the
-deadline. The deadline is anchored at the service start (60 s startup + `seconds` + 90 s drain), so earlier API
-audits cannot shorten it. A STOPPED service without drain proof is held until no process of its account remains and
-still ends with `fence=true`/an error; without either it is held to the deadline and fenced. A forced kill of the
+Job Object drained (`job_drained` for this account SID, or a published report whose launcher never created a worker).
+An unreadable SCM state is never taken as a stop: polling continues to the deadline. The deadline is anchored at the service
+start and **shared**: the controller sends the absolute run deadline (service start + 60 s + `seconds`) through the
+registration pipe, the launcher refuses to resume a worker after it and never runs one past it, and the hold lasts
+90 s longer (Job drain budget), so slow startup cannot make the worker outlive the hold. A STOPPED service without drain proof
+is released early only when a **complete** process census of its account is empty; the non-admin controller cannot classify
+every process (the saved collections show one unreadable process), so in practice that case holds to the deadline.
+It always ends with `fence=true`/an error because the drain was not proven. A forced kill of the
 controller/gate is **not** survivable by this helper (the service's own deadline applies); the fence is the protection.
 
 ## One fixed Windows service identity (parent decision 2026-10-19)
@@ -146,20 +150,28 @@ parent therefore fixed the identity:
 - Everything per job stays unique: `instance` (nonce), root, plan, runtime/SDK/credentials/source/temp/cache,
   the official runner name `CC-CIW-<instance>`, the registration pipe and the ephemeral registration.
 - `prepare` (`ensureService`) creates the service on first use and otherwise **re-points it** at the new job
-  (`ChangeServiceConfigW` image path, same SD for the controller). It refuses unless the service is STOPPED with PID 0,
-  the account has no process, and the previous job's root (read from the old image path) is either gone or was
-  collected (`service_retained`, `service_idle_confirmed`, no service ACE, `owner_reset`). The identity is never taken from a
-  running job.
-- `collect` removes the two service ACEs and resets the owner of the whole root to Administrators (the next job runs as
-  the same SID and would otherwise keep WRITE_DAC on files it owned), then re-checks idle service and zero processes.
-  It never deletes the service and tries no profile deletion/unload; there is no `cleanup-profile` command any more.
+  (`ChangeServiceConfigW` image path; the controller SD now also holds QUERY_CONFIG so start/stop can check the binding).
+  The whole read-check-reconfigure runs under a machine-wide named mutex. It refuses unless the service is STOPPED with PID 0,
+  the account has no process, the existing image path parses strictly (`<root>\helper.exe service <root>`, owned-root form) and the
+  **previous job's root no longer exists at its path** (deleted or quarantined; a collected root is not enough, because the next job
+  runs as the same SID and per-file DACLs below the root cannot be proven clean by the two ACE removals). The identity is never taken
+  from a running job, and parsing trouble refuses instead of assuming "no previous job".
+- `start`/`stop`/`collect` first check that the service's current image path names this plan's root, so a delayed command for an earlier
+  job cannot start or stop the next job's worker.
+- `collect` removes the two service ACEs and the explicit launcher-report grant, resets the owner of the whole root to Administrators
+  (the next job runs as the same SID and would otherwise keep WRITE_DAC on files it owned), gives the root back to the controller
+  so safe-delete can remove it, then re-checks idle service and zero processes. It never deletes the service and tries no profile
+  deletion/unload; there is no `cleanup-profile` command any more. The queue must delete the root (safe-delete) before the next `prepare`.
 - Legacy per-job profiles from earlier fixtures (6a8d1e39..., c4809f99..., 052658b1...) remain as measured residue
   (ToDo2381 owns recovery); no retry or alternate path exists here.
 
-Measured with three consecutive credential-free fixture jobs (normal, cancel, normal) on the one fixture identity
-(`evidence/shared-identity-fixtures-20261019.json`): distinct instances and service PIDs, worker exit 0/125/0,
-Job Object drained each time, account process count 0 at each collect, and the CC-CIW profile count stayed 4
-(3 legacy + 1 shared) - no growth between jobs 2 and 3.
+Measured on the one fixture identity, first with three consecutive jobs (normal, cancel, normal;
+`evidence/shared-identity-fixtures-20261019.json`: distinct instances and service PIDs, worker exit 0/125/0, Job Object drained each
+time, queryable account process count 0 at each collect, CC-CIW profile count 4 = 3 legacy + 1 shared, no growth), then with the final
+code (`evidence/shared-identity-fixtures-2-20261019.json`): normal job A; a second `prepare` while A's collected root still existed was
+**refused**; after A's root was deleted with safe-delete (possible because collect returns the root), a cancel job B ran
+(exit 125, 4 Job members drained, `execute-end fence=false`), profile count still 4. The A values in the second file were read from console output,
+not saved files.
 
 ## Verification actually performed (2026-10-19)
 
@@ -172,8 +184,9 @@ Job Object drained each time, account process count 0 at each collect, and the C
   3 Job members drained) and cancel (SCM stop, exit 125, 4 members drained). Current fixed-identity design
   (`evidence/shared-identity-fixtures-20261019.json`): normal, cancel, normal on the shared fixture identity, with the
   hold-until-drained stop boundary (`fence=false` with launcher drain proof each time). Roots were removed with safe-delete.
-  Not exercised live: the refusal of a busy or uncollected predecessor (unit-tested only), a slow/refused stop,
-  and any real (non-fixture) identity `CC-CIW-civ6-banseiki`.
+  Not exercised live: the stale-job refusal of start/stop (`requireBoundTo`), the mutex under real contention, a slow/refused stop, an
+  unclassifiable-census hold, and the real (non-fixture) identity `CC-CIW-civ6-banseiki`. The deadline, hold, image-path and
+  predecessor rules are unit-tested only.
 
 ## CI of this module
 
@@ -184,7 +197,7 @@ Local results: `go test -race ./...`, `go vet ./...` and `go build -trimpath` pa
 ## Queue contract notes
 
 One Windows worker at a time. If several queued jobs carry the same labels, the listener may take a job other than
-the plan's; the hook then rejects it and that job fails. The shared identity enforces this: a second `prepare` is refused while the previous root is uncollected. The queue should admit only one Windows plan at a time,
+the plan's; the hook then rejects it and that job fails. The shared identity enforces this: a second `prepare` is refused while the previous root still exists. The queue should admit only one Windows plan at a time,
 count each admitted run/attempt/job once in the 12-job budget, and never rerun a failed one automatically.
 A cancelled or failed collection of that case is handled like any other.
 
@@ -195,8 +208,3 @@ no GitHub Actions run. `contract.Verify` against the live repository, the full
 `prepare` source materialization with the new contract and the monitor against a real job are
 exercised only by synthetic replies here and must be proven by the parent's PR149 run.
 Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
-
-
-
-
-

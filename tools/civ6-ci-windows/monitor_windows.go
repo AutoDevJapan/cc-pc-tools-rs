@@ -126,8 +126,31 @@ func statusReport(p Plan) error {
 // launcher's 30 s Job drain plus slack. It is anchored at the service start, so
 // time spent before it (API audits) never shortens the hold.
 func holdDeadline(serviceStart time.Time, seconds int) time.Time {
-	return serviceStart.Add(60*time.Second + time.Duration(seconds)*time.Second + 90*time.Second)
+	return runDeadline(serviceStart, seconds).Add(90 * time.Second)
 }
+
+// runDeadline is the absolute end of the worker's run, anchored at the service
+// start. The controller sends it to the launcher, which never runs a worker past
+// it, so holdDeadline (this plus the Job drain budget) always covers the worker.
+func runDeadline(serviceStart time.Time, seconds int) time.Time {
+	return serviceStart.Add(60*time.Second + time.Duration(seconds)*time.Second)
+}
+
+// workerDeadline is the launcher's end of the worker run. Official runs use the
+// controller's absolute deadline (rejecting a missing, past or implausibly distant
+// one); credential-free fixtures keep their local plan seconds.
+func workerDeadline(p Plan, a admission, now time.Time) (time.Time, error) {
+	if p.Fixture != "" && !p.RuntimeFixture {
+		return now.Add(time.Duration(p.Seconds) * time.Second), nil
+	}
+	d := time.Unix(0, a.Deadline)
+	if a.Deadline == 0 || !d.After(now) || d.After(now.Add(60*time.Second+time.Duration(p.Seconds)*time.Second+30*time.Second)) {
+		return time.Time{}, errors.New("controller run deadline missing, already passed or out of range; worker not resumed")
+	}
+	return d, nil
+}
+
+var errCensusIncomplete = errors.New("process census is incomplete: some processes cannot be classified")
 
 // holdOps abstracts the three read-only observations so the stop boundary is
 // testable with an injected clock.
@@ -148,8 +171,9 @@ type holdResult struct {
 // until the service is STOPPED and the protected launcher report proves the Job
 // Object drained, or until the absolute deadline. It never issues a stop. An SCM
 // read failure is not evidence of a stop: it is remembered and polling continues.
-// A STOPPED service without drain proof is held until no process of its account
-// remains (weaker evidence, reported as such) and is never reported as drained.
+// A STOPPED service without drain proof is held until a COMPLETE census shows no
+// process of its account (weaker evidence, reported as such, never reported as
+// drained); an incomplete census (unclassifiable processes) holds to the deadline.
 func holdUntilDrained(ops holdOps, until time.Time, tick time.Duration) holdResult {
 	var res holdResult
 	var lastErr error
@@ -207,6 +231,11 @@ func realHoldOps(p Plan) holdOps {
 			if e != nil {
 				return false, e
 			}
+			// A published report whose launcher never created a worker proves there is
+			// nothing to drain; otherwise the Job must be reported drained for this SID.
+			if r.WorkerPID == 0 {
+				return true, nil
+			}
 			return r.Drained && r.AccountSID == sid, nil
 		},
 		census: func() (int, error) {
@@ -214,7 +243,16 @@ func realHoldOps(p Plan) holdOps {
 			if e != nil {
 				return 0, e
 			}
-			return ownedProcessCount(sid)
+			n, unreadable, e := ownedProcessCensus(sid)
+			if e != nil {
+				return 0, e
+			}
+			if unreadable > 0 {
+				// The non-admin controller cannot read every process token, so a zero
+				// among the readable ones does not prove the account is empty.
+				return 0, errCensusIncomplete
+			}
+			return n, nil
 		},
 		now:   time.Now,
 		sleep: time.Sleep,

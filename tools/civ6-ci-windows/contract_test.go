@@ -266,25 +266,39 @@ func TestOneFixedServiceIdentityPerKindWhileRunnerNamesStayPerJob(t *testing.T) 
 	}
 }
 
-func TestImageRootRoundTripsServicePaths(t *testing.T) {
-	for _, root := range []string{`C:\Users\x\codex-owned-aa`, `C:\Users\a b\codex-owned-aa`} {
-		quote := func(s string) string {
-			if strings.Contains(s, " ") {
-				return `"` + s + `"`
-			}
-			return s
+func TestImageRootParsesWindowsArgumentsStrictly(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	quote := func(s string) string {
+		if strings.Contains(s, " ") {
+			return `"` + s + `"`
 		}
+		return s
+	}
+	for _, parent := range []string{`C:\Users\x`, `C:\Users\a b`, `C:\ci service zone`, `D:\service \x`} {
+		root := parent + `\codex-owned-` + id
 		image := quote(root+`\helper.exe`) + " service " + quote(root)
-		if got := imageRoot(image); got != root {
-			t.Fatalf("got %q want %q", got, root)
+		got, e := imageRoot(image)
+		if e != nil || got != root {
+			t.Fatalf("parent %q: got %q err %v", parent, got, e)
 		}
 	}
-	if imageRoot("C:\\x\\other.exe run") != "" {
-		t.Fatal("foreign image path produced a root")
+	root := `C:\x\codex-owned-` + id
+	for _, bad := range []string{
+		"", "service", `C:\x\other.exe run`,
+		root + `\helper.exe service ` + root + " extra",
+		`"` + root + `\helper.exe service ` + root,
+		root + `\helper.exe run ` + root,
+		`C:\elsewhere\helper.exe service ` + root,
+		root + `\helper.exe service C:\x\notowned`,
+		root + `\helper.exe service codex-owned-` + id,
+	} {
+		if got, e := imageRoot(bad); e == nil {
+			t.Fatalf("accepted %q as %q", bad, got)
+		}
 	}
 }
 
-func TestSharedIdentityMovesOnlyBehindSettledPredecessors(t *testing.T) {
+func TestSharedIdentityMovesOnlyAfterThePredecessorRootIsGone(t *testing.T) {
 	dir := t.TempDir()
 	cur := filepath.Join(dir, "current")
 	if previousRootSettled("", cur) != nil || previousRootSettled(cur, cur) != nil || previousRootSettled(filepath.Join(dir, "gone"), cur) != nil {
@@ -294,25 +308,16 @@ func TestSharedIdentityMovesOnlyBehindSettledPredecessors(t *testing.T) {
 	if os.Mkdir(prev, 0700) != nil {
 		t.Fatal("mkdir")
 	}
+	// Even a fully collected predecessor blocks the move while its root exists.
+	if e := os.WriteFile(filepath.Join(prev, "collection-1.json"), []byte(`{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0,"owner_reset":true}`), 0600); e != nil {
+		t.Fatal(e)
+	}
 	if previousRootSettled(prev, cur) == nil {
-		t.Fatal("uncollected predecessor accepted")
+		t.Fatal("an existing predecessor root was accepted")
 	}
-	write := func(body string) {
-		old, _ := filepath.Glob(filepath.Join(prev, "collection-*.json"))
-		for _, f := range old {
-			os.Remove(f)
-		}
-		if e := os.WriteFile(filepath.Join(prev, "collection-1.json"), []byte(body), 0600); e != nil {
-			t.Fatal(e)
-		}
+	if e := os.RemoveAll(prev); e != nil {
+		t.Fatal(e)
 	}
-	for _, bad := range []string{`{}`, `{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":1,"owner_reset":true}`, `{"service_retained":true,"service_idle_confirmed":false,"additional_ace_count":0,"owner_reset":true}`, `{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0}`, `not json`} {
-		write(bad)
-		if previousRootSettled(prev, cur) == nil {
-			t.Fatalf("accepted receipt %s", bad)
-		}
-	}
-	write(`{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0,"owner_reset":true}`)
 	if e := previousRootSettled(prev, cur); e != nil {
 		t.Fatal(e)
 	}

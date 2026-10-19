@@ -180,39 +180,63 @@ func checkEvent(p Plan, env map[string]string, raw []byte) error {
 	return nil
 }
 
-// imageRoot extracts the owned root from a service image path built by
-// ensureService: <helper.exe> service <root>.
-func imageRoot(image string) string {
-	i := strings.LastIndex(image, " service ")
-	if i < 0 {
-		return ""
+var ownedRootPattern = regexp.MustCompile(`^[A-Za-z]:\\.*codex-owned-[0-9a-f]{32}$`)
+
+// imageRoot parses a service image path built by ensureService with Windows
+// argument rules: <root>\helper.exe service <root>, each argument quoted when it
+// contains a space. Anything else is rejected, never guessed.
+func imageRoot(image string) (string, error) {
+	var toks []string
+	var cur strings.Builder
+	quoted, has := false, false
+	for _, r := range image {
+		switch {
+		case r == '"':
+			quoted, has = !quoted, true
+		case r == ' ' && !quoted:
+			if has {
+				toks = append(toks, cur.String())
+				cur.Reset()
+				has = false
+			}
+		default:
+			cur.WriteRune(r)
+			has = true
+		}
 	}
-	return strings.Trim(strings.TrimSpace(image[i+len(" service "):]), `"`)
+	if quoted {
+		return "", errors.New("service image path has an unterminated quote")
+	}
+	if has {
+		toks = append(toks, cur.String())
+	}
+	if len(toks) != 3 || toks[1] != "service" {
+		return "", errors.New("service image path is not <helper> service <root>")
+	}
+	helper, root := toks[0], toks[2]
+	i := strings.LastIndex(helper, `\`)
+	if i < 0 || !strings.EqualFold(helper[i+1:], "helper.exe") || !strings.EqualFold(helper[:i], root) || !ownedRootPattern.MatchString(root) {
+		return "", errors.New("service image path does not name an owned job root")
+	}
+	return root, nil
 }
 
 // previousRootSettled lets the shared identity move to a new job only when the
-// previous job's root is gone, or was collected with its service ACEs removed and
-// the service idle. The identity never changes hands behind a live or uncollected job.
+// previous job's root no longer exists at its path (deleted or quarantined). A
+// collected root is not enough: the next job runs as the same SID, and a file
+// ACL cannot be proven clean by the two inherited ACE removals alone.
 func previousRootSettled(prev, current string) error {
 	if prev == "" || strings.EqualFold(filepath.Clean(prev), filepath.Clean(current)) {
 		return nil
 	}
-	if _, e := os.Lstat(prev); os.IsNotExist(e) {
+	_, e := os.Lstat(prev)
+	if os.IsNotExist(e) {
 		return nil
 	}
-	matches, _ := filepath.Glob(filepath.Join(prev, "collection-*.json"))
-	for _, m := range matches {
-		var c struct {
-			Retained bool `json:"service_retained"`
-			Idle     bool `json:"service_idle_confirmed"`
-			ACE      int  `json:"additional_ace_count"`
-			Owner    bool `json:"owner_reset"`
-		}
-		if raw, e := os.ReadFile(m); e == nil && json.Unmarshal(raw, &c) == nil && c.Retained && c.Idle && c.ACE == 0 && c.Owner {
-			return nil
-		}
+	if e != nil {
+		return fmt.Errorf("previous job root cannot be inspected; shared identity not reused: %w", e)
 	}
-	return errors.New("previous job root is neither deleted nor collected; the shared service identity is not reused")
+	return errors.New("previous job root still exists; delete it (safe-delete) before the shared service identity moves on")
 }
 
 func validSHA(s string) bool { return contract.ValidSHA(s) }

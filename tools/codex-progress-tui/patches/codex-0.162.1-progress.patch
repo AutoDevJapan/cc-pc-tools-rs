@@ -1467,6 +1467,16 @@ index 6b705c5..0c7649b 100644
              );
              match code_mode_session_provider {
                  Some(provider) => manager.with_code_mode_session_provider(provider),
+diff --git a/codex-rs/cli/src/main.rs b/codex-rs/cli/src/main.rs
+index 8d062a2..4c20743 100644
+--- a/codex-rs/cli/src/main.rs
++++ b/codex-rs/cli/src/main.rs
+@@ -1,3 +1,5 @@
++#![recursion_limit = "256"]
++
+ use clap::Args;
+ use clap::CommandFactory;
+ use clap::Parser;
 diff --git a/codex-rs/cloud-tasks/src/lib.rs b/codex-rs/cloud-tasks/src/lib.rs
 index 6643684..1c3dea7 100644
 --- a/codex-rs/cloud-tasks/src/lib.rs
@@ -1482,10 +1492,10 @@ index 6643684..1c3dea7 100644
  use codex_http_client::RouteAwareClientPool;
  use codex_login::default_client::get_codex_user_agent;
 diff --git a/codex-rs/tui/src/app.rs b/codex-rs/tui/src/app.rs
-index 5dfc3ad..501d4fd 100644
+index 5dfc3ad..eeea23c 100644
 --- a/codex-rs/tui/src/app.rs
 +++ b/codex-rs/tui/src/app.rs
-@@ -1102,6 +1102,21 @@ impl App {
+@@ -1102,6 +1102,34 @@ impl App {
                      if let Some(owner) = self.background_voice.as_mut() {
                          owner.refresh_realtime_microphone_level();
                      }
@@ -1494,12 +1504,25 @@ index 5dfc3ad..501d4fd 100644
 +                        .visible_threads()
 +                        .into_iter()
 +                        .filter(|(id, _)| Some(*id) != self.primary_thread_id)
-+                        .map(|(_, entry)| crate::parallel_progress::NativeProgress {
++                        .map(|(id, entry)| crate::parallel_progress::NativeProgress {
 +                            label: entry
 +                                .agent_nickname
 +                                .clone()
 +                                .unwrap_or_else(|| "担当".into()),
-+                            running: entry.is_running,
++                            running: entry.is_running
++                                && crate::parallel_progress::native_processing(
++                                    self.agents_overview
++                                        .threads
++                                        .get(&id)
++                                        .and_then(Option::as_ref)
++                                        .map(|thread| &thread.status),
++                                    self.agents_overview.activity.get(&id).is_some_and(
++                                        agents_overview_details::AgentsOverviewActivity::processing,
++                                    ),
++                                    self.thread_event_channels.get(&id).is_some_and(|channel| {
++                                        channel.attachment() == ThreadEventAttachment::Live
++                                    }),
++                                ),
 +                            closed: entry.is_closed,
 +                        })
 +                        .collect();
@@ -1507,6 +1530,148 @@ index 5dfc3ad..501d4fd 100644
                      self.chat_widget.pre_draw_tick();
                      self.refresh_agents_overview_usage(app_server, tui.frame_requester());
                      let rendered_area = self.render_chat_widget_frame(tui, screen_size)?;
+diff --git a/codex-rs/tui/src/app/agents_overview_details.rs b/codex-rs/tui/src/app/agents_overview_details.rs
+index 03b3c9b..0dc6476 100644
+--- a/codex-rs/tui/src/app/agents_overview_details.rs
++++ b/codex-rs/tui/src/app/agents_overview_details.rs
+@@ -22,6 +22,73 @@ use std::collections::HashMap;
+ 
+ const PREVIEW_CHARS: usize = 512;
+ 
++#[cfg(test)]
++mod parallel_progress_tests {
++    use super::*;
++
++    #[test]
++    fn parallel_progress_native_observes_processing_reports_and_expiration() {
++        let mut activity = AgentsOverviewActivity::default();
++        assert!(!activity.processing());
++        for kind in ["reasoning", "agentMessage", "plan", "imageGeneration"] {
++            let item = match kind {
++                "reasoning" => serde_json::json!({"type":kind,"id":"i","summary":[],"content":[]}),
++                "imageGeneration" => {
++                    serde_json::json!({"type":kind,"id":"i","status":"in_progress","result":""})
++                }
++                _ => serde_json::json!({"type":kind,"id":"i","text":"fixture"}),
++            };
++            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
++                "method":"item/started","params":{"threadId":"t","turnId":"r","startedAtMs":0,"item":item}
++            }))
++            .unwrap();
++            activity.observe_processing(&notification);
++            assert_eq!(
++                activity.processing(),
++                matches!(kind, "reasoning" | "imageGeneration")
++            );
++        }
++        for tool in ["spawnAgent", "wait"] {
++            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
++                "method":"item/started","params":{"threadId":"t","turnId":"r","startedAtMs":0,"item":{
++                    "type":"collabAgentToolCall","id":"i","tool":tool,"status":"inProgress",
++                    "senderThreadId":"t","receiverThreadIds":[],"agentsStates":{}
++                }}
++            }))
++            .unwrap();
++            activity.observe_processing(&notification);
++            assert_eq!(activity.processing(), tool == "spawnAgent");
++        }
++        activity.processing_at =
++            Some(std::time::Instant::now() - std::time::Duration::from_secs(31));
++        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        activity.observe_processing(&ServerNotification::ThreadStatusChanged(
++            codex_app_server_protocol::ThreadStatusChangedNotification {
++                thread_id: "t".into(),
++                status: ThreadStatus::Active {
++                    active_flags: vec![ThreadActiveFlag::WaitingOnApproval],
++                },
++            },
++        ));
++        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        let completed: ServerNotification = serde_json::from_value(serde_json::json!({
++            "method":"turn/completed","params":{"threadId":"t","turn":{"id":"r","status":"completed","items":[]}}
++        })).unwrap();
++        activity.observe_processing(&completed);
++        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        activity.observe_processing(&ServerNotification::ThreadStatusChanged(
++            codex_app_server_protocol::ThreadStatusChangedNotification {
++                thread_id: "t".into(),
++                status: ThreadStatus::Idle,
++            },
++        ));
++        assert!(!activity.processing());
++    }
++}
++
+ pub(super) fn preview_agent_message(text: &str) -> String {
+     preview_markdown(&crate::markdown::normalize_markdown_for_rendering(text))
+ }
+@@ -52,6 +119,55 @@ pub(super) fn preview_text(text: &str) -> String {
+ pub(super) struct AgentsOverviewActivity {
+     reasoning: Option<ReasoningPreview>,
+     last_message: Option<String>,
++    processing_at: Option<std::time::Instant>,
++}
++
++impl AgentsOverviewActivity {
++    fn observe_processing(&mut self, notification: &ServerNotification) {
++        match notification {
++            ServerNotification::ReasoningSummaryTextDelta(_)
++            | ServerNotification::ReasoningTextDelta(_)
++            | ServerNotification::CommandExecutionOutputDelta(_)
++            | ServerNotification::FileChangeOutputDelta(_) => {
++                self.processing_at = Some(std::time::Instant::now());
++            }
++            ServerNotification::ItemStarted(event) => {
++                self.processing_at = processing_item(&event.item).then(std::time::Instant::now);
++            }
++            ServerNotification::ItemCompleted(event) => {
++                self.processing_at = processing_item(&event.item).then(std::time::Instant::now);
++            }
++            ServerNotification::TurnStarted(_) | ServerNotification::TurnCompleted(_) => {
++                self.processing_at = None;
++            }
++            ServerNotification::ThreadStatusChanged(event) if !matches!(&event.status, ThreadStatus::Active { active_flags } if active_flags.is_empty()) =>
++            {
++                self.processing_at = None;
++            }
++            _ => {}
++        }
++    }
++
++    pub(super) fn processing(&self) -> bool {
++        self.processing_at
++            .is_some_and(|at| at.elapsed() <= std::time::Duration::from_secs(30))
++    }
++}
++
++fn processing_item(item: &ThreadItem) -> bool {
++    if let ThreadItem::CollabAgentToolCall { tool, .. } = item {
++        return !matches!(tool, codex_app_server_protocol::CollabAgentTool::Wait);
++    }
++    matches!(
++        item,
++        ThreadItem::Reasoning { .. }
++            | ThreadItem::CommandExecution { .. }
++            | ThreadItem::FileChange { .. }
++            | ThreadItem::McpToolCall { .. }
++            | ThreadItem::DynamicToolCall { .. }
++            | ThreadItem::WebSearch(_)
++            | ThreadItem::ImageGeneration(_)
++    )
+ }
+ 
+ struct ReasoningPreview {
+@@ -72,6 +188,7 @@ impl App {
+             return;
+         }
+         let activity = self.agents_overview.activity.entry(thread_id).or_default();
++        activity.observe_processing(notification);
+         let changed = match notification {
+             ServerNotification::ReasoningSummaryTextDelta(delta) => {
+                 let had_header = activity
 diff --git a/codex-rs/tui/src/app/agents_overview_tests.rs b/codex-rs/tui/src/app/agents_overview_tests.rs
 index f5313a2..62fe4cd 100644
 --- a/codex-rs/tui/src/app/agents_overview_tests.rs
@@ -2092,12 +2257,22 @@ index dc0fbd0..78c4e03 100644
          for (action, configured_mode, has_explicit_cwd, expected_directory) in [
              (CwdPromptAction::Resume, "current", false, "launch"),
              (CwdPromptAction::Resume, "session", false, "session"),
+diff --git a/codex-rs/tui/src/main.rs b/codex-rs/tui/src/main.rs
+index 5a196d6..7047157 100644
+--- a/codex-rs/tui/src/main.rs
++++ b/codex-rs/tui/src/main.rs
+@@ -1,3 +1,5 @@
++#![recursion_limit = "256"]
++
+ use clap::Parser;
+ use codex_arg0::Arg0DispatchPaths;
+ use codex_arg0::arg0_dispatch_or_else;
 diff --git a/codex-rs/tui/src/parallel_progress.rs b/codex-rs/tui/src/parallel_progress.rs
 new file mode 100644
-index 0000000..43e301d
+index 0000000..97f4963
 --- /dev/null
 +++ b/codex-rs/tui/src/parallel_progress.rs
-@@ -0,0 +1,799 @@
+@@ -0,0 +1,944 @@
 +//! Persistent, read-only progress for native agents and separately launched jobs.
 +//!
 +//! The Go collector emits a public-label projection of recorded measurements.
@@ -2166,6 +2341,8 @@ index 0000000..43e301d
 +    task_type: String,
 +    #[serde(default)]
 +    wait_reasons: Vec<ProgressWait>,
++    #[serde(default)]
++    last_activity: ProgressClock,
 +}
 +
 +#[derive(Clone, Default, Deserialize)]
@@ -2175,6 +2352,49 @@ index 0000000..43e301d
 +    public_label: String,
 +    execution: String,
 +    phase: String,
++    #[serde(default)]
++    recorded_status: String,
++    #[serde(default)]
++    worker_presence: String,
++    #[serde(default)]
++    wait_reasons: Vec<ProgressWait>,
++    #[serde(default)]
++    last_activity: ProgressClock,
++}
++
++#[derive(Clone, Default, Deserialize)]
++struct ProgressClock {
++    at: Option<String>,
++    state: String,
++}
++
++impl ProgressClock {
++    fn processing(&self) -> bool {
++        self.state == "fresh"
++            && self.at.as_deref().is_some_and(|at| {
++                DateTime::parse_from_rfc3339(at).is_ok_and(|at| {
++                    let age = Utc::now().signed_duration_since(at).num_milliseconds();
++                    (0..=30_000).contains(&age)
++                })
++            })
++    }
++}
++
++fn processing_phase(phase: &str) -> bool {
++    matches!(
++        phase,
++        "thinking" | "tool" | "editing" | "research" | "delegating"
++    )
++}
++
++pub(crate) fn native_processing(
++    status: Option<&codex_app_server_protocol::ThreadStatus>,
++    recent_processing: bool,
++    live: bool,
++) -> bool {
++    recent_processing
++        && live
++        && matches!(status, Some(codex_app_server_protocol::ThreadStatus::Active { active_flags }) if active_flags.is_empty())
 +}
 +
 +#[derive(Clone, Default, Deserialize)]
@@ -2196,8 +2416,6 @@ index 0000000..43e301d
 +    label: String,
 +    percent: Option<u8>,
 +    state: String,
-+    running: bool,
-+    waiting: bool,
 +}
 +
 +#[derive(Default)]
@@ -2301,7 +2519,8 @@ index 0000000..43e301d
 +        let snapshot: ProgressSnapshot = serde_json::from_value(serde_json::json!({
 +            "schema_version":1,"heartbeat_at":Utc::now().to_rfc3339(),"status":"ok",
 +            "tasks":[{"task_id":7,"display_name":"万世記","recorded_status":"doing","percent":70,
-+                "execution":"running","phase":"testing","task_type":"check"}],"jobs":[]
++                "execution":"running","phase":"tool","task_type":"check",
++                "last_activity":{"state":"fresh","at":Utc::now().to_rfc3339()}}],"jobs":[]
 +        }))
 +        .unwrap();
 +        Self {
@@ -2351,7 +2570,8 @@ index 0000000..43e301d
 +fn acquire_snapshot() -> std::io::Result<ProgressSnapshot> {
 +    let root = PathBuf::from(CACHE_ROOT);
 +    std::fs::create_dir_all(&root)?;
-+    let path = root.join("snapshot-v1.json");
++    // Older TUI instances keep their diagnostic snapshot and lock unchanged.
++    let path = root.join("snapshot-active-v1.json");
 +    if let Ok(snapshot) = read_snapshot(&path)
 +        && snapshot_recent(&snapshot)
 +    {
@@ -2362,7 +2582,7 @@ index 0000000..43e301d
 +        .read(true)
 +        .write(true)
 +        .truncate(false)
-+        .open(root.join("acquisition.lock"))?;
++        .open(root.join("acquisition-active.lock"))?;
 +    if lock.try_lock().is_err() {
 +        // Another terminal owns collection. Reading the previous atomic file
 +        // never certifies its freshness: the renderer shows its actual age.
@@ -2377,6 +2597,7 @@ index 0000000..43e301d
 +    command
 +        .args([
 +            "--once",
++            "--active-only",
 +            "--deadline",
 +            "4s",
 +            "--max-rows",
@@ -2518,35 +2739,41 @@ index 0000000..43e301d
 +impl ProgressPanel {
 +    fn new(snapshot: Option<&ProgressSnapshot>, native: &[NativeProgress], failed: bool) -> Self {
 +        let mut rows = Vec::new();
-+        for agent in native.iter().filter(|agent| !agent.closed).take(1_000) {
-+            if agent.closed {
-+                continue;
-+            }
++        for agent in native
++            .iter()
++            .filter(|agent| agent.running && !agent.closed)
++            .take(1_000)
++        {
 +            rows.push(ProgressRow {
 +                label: format!("この会話 {}", safe_text(&agent.label, 36)),
 +                percent: None,
-+                state: if agent.running {
-+                    "作業中"
-+                } else {
-+                    "待機中"
-+                }
-+                .into(),
-+                running: agent.running,
-+                waiting: !agent.running,
++                state: "作業中".into(),
 +            });
 +        }
-+        let native_count = rows.len();
-+        let mut warning = failed.then(|| {
-+            if snapshot.is_some() {
-+                "取得失敗・前回の状態を表示".to_owned()
-+            } else {
-+                "状態を取得できません".to_owned()
-+            }
++        let current = snapshot.is_some_and(|snapshot| {
++            !failed
++                && snapshot.status != "unavailable"
++                && DateTime::parse_from_rfc3339(&snapshot.heartbeat_at).is_ok_and(|at| {
++                    let age = Utc::now().signed_duration_since(at).num_milliseconds();
++                    (0..=STALE_SECONDS * 1_000).contains(&age)
++                })
 +        });
-+        let mut displayed_tasks = HashSet::new();
-+        if let Some(snapshot) = snapshot {
++        let mut warning = if current {
++            None
++        } else {
++            Some("共有担当の現在の稼働を確認できません".into())
++        };
++        if let Some(snapshot) = snapshot.filter(|_| current) {
++            let mut displayed_tasks = HashSet::new();
++            let mut excluded_tasks = HashSet::new();
 +            for task in &snapshot.tasks {
-+                if task.recorded_status == "done" {
++                if !matches!(task.recorded_status.as_str(), "todo" | "doing")
++                    || task.execution != "running"
++                    || !task.wait_reasons.is_empty()
++                    || !processing_phase(&task.phase)
++                    || !task.last_activity.processing()
++                {
++                    excluded_tasks.insert(task.task_id);
 +                    continue;
 +                }
 +                displayed_tasks.insert(task.task_id);
@@ -2558,88 +2785,50 @@ index 0000000..43e301d
 +                    },
 +                    percent: task.percent.filter(|percent| *percent <= 100),
 +                    state: task_state(task),
-+                    running: task.execution == "running",
-+                    waiting: task.execution == "queued"
-+                        || task.execution == "starting"
-+                        || task.wait_reasons.iter().any(|reason| {
-+                            !matches!(
-+                                reason.kind.as_str(),
-+                                "unknown" | "blocked_unspecified" | "recovery_unverified"
-+                            )
-+                        }),
 +                });
 +            }
 +            for job in &snapshot.jobs {
-+                if job.todo_ids.iter().any(|id| displayed_tasks.contains(id))
-+                    || job.execution == "finished"
++                if job
++                    .todo_ids
++                    .iter()
++                    .any(|id| displayed_tasks.contains(id) || excluded_tasks.contains(id))
++                    || job.recorded_status != "running"
++                    || job.execution != "running"
++                    || job.worker_presence != "verified_alive"
++                    || !job.wait_reasons.is_empty()
++                    || !processing_phase(&job.phase)
++                    || !job.last_activity.processing()
 +                {
 +                    continue;
 +                }
 +                rows.push(ProgressRow {
 +                    label: format!("担当 {}", safe_text(&job.public_label, 50)),
 +                    percent: None,
-+                    state: match if job.execution == "running" {
-+                        job.phase.as_str()
++                    state: if job.phase == "thinking" {
++                        "考え中"
 +                    } else {
-+                        ""
-+                    } {
-+                        "testing" => "テスト中",
-+                        "thinking" => "考え中",
-+                        _ if job.execution == "running" => "作業中",
-+                        _ if matches!(job.execution.as_str(), "queued" | "starting") => "起動待ち",
-+                        _ => "状態を確認中",
++                        "作業中"
 +                    }
 +                    .into(),
-+                    running: job.execution == "running",
-+                    waiting: matches!(job.execution.as_str(), "queued" | "starting"),
 +                });
 +            }
-+            let age = DateTime::parse_from_rfc3339(&snapshot.heartbeat_at)
-+                .ok()
-+                .map(|at| Utc::now().signed_duration_since(at).num_seconds());
 +            if snapshot.status != "ok" {
 +                warning = Some("一部の状態を取得できません".into());
-+            }
-+            match age {
-+                Some(seconds) if seconds < 0 => warning = Some("取得時刻を確認中".into()),
-+                Some(seconds) if seconds > STALE_SECONDS => {
-+                    warning = Some(format!("前回の状態・{seconds}秒前"))
-+                }
-+                None => warning = Some("取得時刻が不明".into()),
-+                _ => {}
 +            }
 +            if snapshot.truncated {
 +                warning = Some("表示件数の上限あり".into());
 +            }
-+        } else {
-+            warning.get_or_insert_with(|| "共有担当の状態を取得中".into());
 +        }
-+        // Active work remains visible even when many higher-priority tasks wait.
-+        // Stable sorting preserves the collector's department order per group.
-+        rows[native_count..].sort_by_key(|row| !row.running);
-+        let running = rows.iter().filter(|row| row.running).count();
-+        let waiting = rows
-+            .iter()
-+            .filter(|row| !row.running && row.waiting)
-+            .count();
-+        let unconfirmed = rows.len() - running - waiting;
-+        let header = if snapshot.is_none() && native_count == 0 {
-+            if failed {
-+                "並列担当  状態を取得できません".into()
++        let header = if rows.is_empty() {
++            if current
++                && snapshot.is_some_and(|snapshot| snapshot.status == "ok" && !snapshot.truncated)
++            {
++                "並列担当  作業中なし".into()
 +            } else {
-+                "並列担当  状態を取得中".into()
++                "並列担当  稼働の確認待ち".into()
 +            }
-+        } else if failed
-+            || snapshot.is_some_and(|snapshot| {
-+                DateTime::parse_from_rfc3339(&snapshot.heartbeat_at).map_or(true, |at| {
-+                    let seconds = Utc::now().signed_duration_since(at).num_seconds();
-+                    !(0..=STALE_SECONDS).contains(&seconds)
-+                })
-+            })
-+        {
-+            format!("並列担当  前回：作業中 {running}・待機 {waiting}・確認中 {unconfirmed}")
 +        } else {
-+            format!("並列担当  作業中 {running}・待機 {waiting}・確認中 {unconfirmed}")
++            format!("並列担当  作業中 {}", rows.len())
 +        };
 +        Self {
 +            rows,
@@ -2647,7 +2836,6 @@ index 0000000..43e301d
 +            warning,
 +        }
 +    }
-+
 +    fn lines(&self, width: u16, height: u16) -> Vec<Line<'static>> {
 +        if width == 0 || height == 0 {
 +            return Vec::new();
@@ -2735,7 +2923,7 @@ index 0000000..43e301d
 +    }
 +
 +    pub(crate) fn selection(&self) -> crate::bottom_pane::SelectionViewParams {
-+        let items = self
++        let mut items: Vec<crate::bottom_pane::SelectionItem> = self
 +            .rows
 +            .iter()
 +            .map(|row| crate::bottom_pane::SelectionItem {
@@ -2751,6 +2939,13 @@ index 0000000..43e301d
 +                ..Default::default()
 +            })
 +            .collect();
++        if items.is_empty() {
++            items.push(crate::bottom_pane::SelectionItem {
++                name: self.header.clone(),
++                is_disabled: true,
++                ..Default::default()
++            });
++        }
 +        crate::bottom_pane::SelectionViewParams {
 +            title: Some("並列担当の進捗".into()),
 +            subtitle: Some("一覧を開いた時点の状態。常設欄は自動更新します。".into()),
@@ -2816,9 +3011,15 @@ index 0000000..43e301d
 +        let task = ProgressTask {
 +            task_id: 7,
 +            display_name: "万世記".into(),
++            recorded_status: "doing".into(),
 +            percent: Some(70),
 +            execution: "running".into(),
-+            phase: "testing".into(),
++            phase: "tool".into(),
++            task_type: "check".into(),
++            last_activity: ProgressClock {
++                at: Some(Utc::now().to_rfc3339()),
++                state: "fresh".into(),
++            },
 +            ..Default::default()
 +        };
 +        let snapshot = ProgressSnapshot {
@@ -2849,7 +3050,7 @@ index 0000000..43e301d
 +    }
 +
 +    #[test]
-+    fn stale_or_failed_snapshot_keeps_rows_and_native_agents_without_job_metadata() {
++    fn stale_or_failed_snapshot_hides_external_rows_and_keeps_only_active_native_agents() {
 +        let snapshot = ProgressSnapshot {
 +            heartbeat_at: (Utc::now() - chrono::Duration::seconds(40)).to_rfc3339(),
 +            status: "ok".into(),
@@ -2867,10 +3068,9 @@ index 0000000..43e301d
 +            closed: false,
 +        }];
 +        let panel = ProgressPanel::new(Some(&snapshot), &native, true);
-+        assert_eq!(panel.rows.len(), 2);
++        assert_eq!(panel.rows.len(), 1);
 +        assert!(panel.header.contains("作業中 1"));
-+        assert!(panel.warning.as_deref().unwrap().contains("前回の状態"));
-+        assert_eq!(panel.rows[1].percent, Some(50));
++        assert!(panel.warning.as_deref().unwrap().contains("確認できません"));
 +    }
 +
 +    #[test]
@@ -2883,8 +3083,6 @@ index 0000000..43e301d
 +                label: "万世記のとても長い作業名".into(),
 +                percent: Some(50),
 +                state: "テスト中".into(),
-+                running: true,
-+                waiting: false,
 +            }],
 +        };
 +        for width in [0, 1, 12, 40, 78, 120] {
@@ -2894,6 +3092,128 @@ index 0000000..43e301d
 +                panel.render(area, &mut buffer);
 +                assert!(panel.lines(width, height).len() <= usize::from(height));
 +            }
++        }
++    }
++
++    #[test]
++    fn parallel_progress_filters_waits_reports_unknown_and_expired_work() {
++        let now = Utc::now().to_rfc3339();
++        let active = serde_json::json!({
++            "task_id":1,"display_name":"PCの道具","recorded_status":"doing",
++            "percent":37,"execution":"running","phase":"tool",
++            "last_activity":{"at":now,"state":"fresh"}
++        });
++        let mut tasks = vec![active.clone()];
++        for (key, value) in [
++            ("recorded_status", serde_json::json!("wait")),
++            ("recorded_status", serde_json::json!("block")),
++            ("recorded_status", serde_json::json!("done")),
++            ("execution", serde_json::json!("lost")),
++            ("execution", serde_json::json!("unknown")),
++            ("phase", serde_json::json!("reporting")),
++            ("phase", serde_json::json!("unknown")),
++            ("wait_reasons", serde_json::json!([{"kind":"resource"}])),
++            (
++                "last_activity",
++                serde_json::json!({"state":"fresh","at":(Utc::now()-chrono::Duration::seconds(31)).to_rfc3339()}),
++            ),
++        ] {
++            let mut task = active.clone();
++            task["task_id"] = serde_json::json!(tasks.len() + 1);
++            task[key] = value;
++            tasks.push(task);
++        }
++        let job = serde_json::json!({"public_label":"PCの道具","execution":"running",
++            "recorded_status":"running","worker_presence":"verified_alive","phase":"tool",
++            "last_activity":{"at":now,"state":"fresh"}});
++        let mut duplicate = job.clone();
++        duplicate["todo_ids"] = serde_json::json!([1]);
++        let mut waiting = job.clone();
++        waiting["todo_ids"] = serde_json::json!([2]);
++        let snapshot: ProgressSnapshot = serde_json::from_value(serde_json::json!({
++            "schema_version":1,"heartbeat_at":now,"status":"ok","tasks":tasks,
++            "jobs":[job,duplicate,waiting]
++        }))
++        .unwrap();
++        let native = [
++            NativeProgress {
++                label: "active".into(),
++                running: true,
++                closed: false,
++            },
++            NativeProgress {
++                label: "idle".into(),
++                running: false,
++                closed: false,
++            },
++            NativeProgress {
++                label: "closed".into(),
++                running: true,
++                closed: true,
++            },
++        ];
++        let panel = ProgressPanel::new(Some(&snapshot), &native, false);
++        assert_eq!(panel.rows.len(), 3);
++        assert_eq!(panel.rows[1].percent, Some(37));
++        for failed in [false, true] {
++            let old = ProgressSnapshot {
++                heartbeat_at: (Utc::now() - chrono::Duration::seconds(13)).to_rfc3339(),
++                ..snapshot.clone()
++            };
++            assert!(ProgressPanel::new(Some(&old), &[], failed).rows.is_empty());
++        }
++        assert!(
++            ProgressPanel::new(Some(&snapshot), &[], true)
++                .rows
++                .is_empty()
++        );
++        let empty = ProgressSnapshot {
++            tasks: vec![],
++            jobs: vec![],
++            ..snapshot
++        };
++        assert!(
++            ProgressPanel::new(Some(&empty), &[], false)
++                .header
++                .contains("作業中なし")
++        );
++        let panel = ProgressPanel::new(Some(&empty), &[], false);
++        let selection = panel.selection();
++        assert_eq!(selection.items.len(), 1);
++        assert!(selection.items[0].is_disabled);
++        assert!(selection.items[0].name.contains("作業中なし"));
++        let partial = ProgressSnapshot {
++            status: "degraded".into(),
++            ..empty
++        };
++        let panel = ProgressPanel::new(Some(&partial), &[], false);
++        assert!(!panel.header.contains("作業中なし"));
++        assert!(panel.selection().items[0].name.contains("確認待ち"));
++    }
++
++    #[test]
++    fn parallel_progress_native_requires_live_processing_and_no_approval_or_input_wait() {
++        use codex_app_server_protocol::ThreadActiveFlag;
++        use codex_app_server_protocol::ThreadStatus;
++        let active = ThreadStatus::Active {
++            active_flags: vec![],
++        };
++        assert!(native_processing(Some(&active), true, true));
++        assert!(!native_processing(Some(&active), false, true));
++        assert!(!native_processing(Some(&active), true, false));
++        assert!(!native_processing(None, true, true));
++        for status in [
++            ThreadStatus::Idle,
++            ThreadStatus::NotLoaded,
++            ThreadStatus::SystemError,
++            ThreadStatus::Active {
++                active_flags: vec![ThreadActiveFlag::WaitingOnApproval],
++            },
++            ThreadStatus::Active {
++                active_flags: vec![ThreadActiveFlag::WaitingOnUserInput],
++            },
++        ] {
++            assert!(!native_processing(Some(&status), true, true));
 +        }
 +    }
 +}

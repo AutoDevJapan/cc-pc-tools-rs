@@ -94,10 +94,25 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	// worktree names, paths, prompts, parent titles, or matching project names.
 	references := taskReferences(items, false)
 	allJobs := map[string]*Job{}
+	resourceUnverified := false
 	for _, loaded := range loaded {
 		j := loaded.meta
 		ids := append(append([]int64{}, j.RelatedTodoIDs...), references[j.ID]...)
 		ids = positiveIDs(append(ids, j.TodoID))
+		if opts.ActiveOnly {
+			activeIDs := []int64{}
+			for _, id := range ids {
+				if item, ok := items[id]; !ok || processingTask(item, items, now, opts.StaleAfter) {
+					activeIDs = append(activeIDs, id)
+				}
+			}
+			// Project relations before labels, linking and row limits. A job
+			// doing another task must not resurrect its waiting/finished links.
+			if len(ids) > 0 && len(activeIDs) == 0 {
+				continue
+			}
+			ids = activeIDs
+		}
 		l := policyLabel(todoItem{Project: j.Project, OwnerProject: j.OwnerProject, Department: j.Department}, policy, "")
 		ownedRank := 0
 		for _, id := range ids {
@@ -133,7 +148,20 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			LastActivity: activity, LastHeartbeat: heartbeat, Source: loaded.source,
 			rawID: j.ID, parentID: j.ParentJobID, independent: objectValue(j.Subwork), cancelRequested: j.CancelRequested, created: created,
 		}
+		if opts.ActiveOnly && row.Execution == "running" {
+			resources := observeResources(ctx, opts, j.ID, now, probe)
+			resourceUnverified = resourceUnverified || resources == resourceUnknown
+			row.resourceBlocked = j.Activity == "agent: wait" || !resources.allowsProcessing()
+		}
 		allJobs[j.ID] = row
+	}
+	if resourceUnverified {
+		if js.Complete {
+			js.Status = "partial"
+		}
+		js.Complete = false
+		s.Sources["jobs"] = js
+		s.Issues = append(s.Issues, "jobs_resource_unverified")
 	}
 	// Dependent child jobs inherit a live parent's priority; finite independent
 	// subwork consumes its own priority, matching the existing scheduler.
@@ -182,6 +210,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		}
 		linked := byTask[id]
 		sort.Slice(linked, func(i, j int) bool {
+			if opts.ActiveOnly && processingJob(linked[i], now) != processingJob(linked[j], now) {
+				return processingJob(linked[i], now)
+			}
 			if relevantJob(linked[i]) != relevantJob(linked[j]) {
 				return relevantJob(linked[i])
 			}
@@ -194,6 +225,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			return linked[i].Key < linked[j].Key
 		})
 		for n, j := range linked {
+			if opts.ActiveOnly && !processingJob(j, now) {
+				continue
+			}
 			if n > 0 && !relevantJob(j) {
 				continue
 			}
@@ -206,7 +240,11 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 					t.TaskType, t.TaskTypeSource = j.TaskType, "job"
 				}
 			}
-			t.WaitReasons = append(t.WaitReasons, j.WaitReasons...)
+			// A queued successor must not hide another worker that is actually
+			// processing this task. Diagnostic observations retain every wait.
+			if !opts.ActiveOnly || n == 0 {
+				t.WaitReasons = append(t.WaitReasons, j.WaitReasons...)
+			}
 		}
 		if len(linked) == 0 && !js.Complete {
 			t.Execution = "unknown"
@@ -214,10 +252,19 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		if len(t.WaitReasons) > 0 && t.Phase == "unknown" {
 			t.Phase = "waiting"
 		}
+		if opts.ActiveOnly && (!processingTask(item, items, now, opts.StaleAfter) ||
+			len(linked) == 0 || !processingJob(linked[0], now)) {
+			continue
+		}
 		s.Tasks = append(s.Tasks, t)
 	}
 	// Standalone live/unknown jobs survive unknown task identity or ToDo failure.
 	for id, j := range allJobs {
+		if opts.ActiveOnly {
+			if !processingJob(j, now) {
+				continue
+			}
+		}
 		if len(opts.TaskIDs) == 0 && relevantJob(j) {
 			selectedJobs[id] = true
 		} else if len(opts.TaskIDs) > 0 {

@@ -15,13 +15,15 @@ import (
 	"time"
 )
 
-const usage = `agent-progress --once [--output snapshot.json] [--task 2547] [--include-done]
+const usage = `agent-progress --once [--output snapshot.json] [--task 2547] [--include-done] [--active-only]
 Reads canonical todo.json and jobs/*/job.json once. JSON stdout is the default.
 --todo, --jobs, --priority-file override metadata inputs; an empty priority-file disables the optional policy.
 --max-rows (1000), --max-jobs (10000), --stale-after (10m), --deadline (20s) bound observation.
 Exit 0: complete observation; 1: degraded/unavailable data; 2: invalid arguments/output failure.
 No UI, network, process launch, source mutation, or resident watcher.
 `
+
+const legacyTUISnapshot = "D:/CC/Work/parallel-agent-progress-runtime/snapshot-v1.json"
 
 type taskFilter map[int64]bool
 
@@ -36,6 +38,10 @@ func (t taskFilter) Set(raw string) error {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	return runWithLegacyOutput(args, stdout, stderr, legacyTUISnapshot)
+}
+
+func runWithLegacyOutput(args []string, stdout, stderr io.Writer, legacyOutput string) int {
 	opts := defaults()
 	flags := flag.NewFlagSet("agent-progress", flag.ContinueOnError)
 	flags.SetOutput(io.Discard) // Parser diagnostics must never echo private arguments.
@@ -45,6 +51,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.JobsDir, "jobs", opts.JobsDir, "job metadata directory")
 	flags.StringVar(&opts.PriorityFile, "priority-file", opts.PriorityFile, "optional recorded priority policy")
 	flags.BoolVar(&opts.IncludeDone, "include-done", false, "include finished ToDos")
+	flags.BoolVar(&opts.ActiveOnly, "active-only", false, "only verified workers with recent processing evidence")
+	flags.StringVar(&opts.ResourceQueueDir, "resource-queue", opts.ResourceQueueDir, "existing live-chain resource queue; empty disables")
 	flags.Var(taskFilter(opts.TaskIDs), "task", "numeric task ID, repeatable")
 	flags.IntVar(&opts.MaxRows, "max-rows", opts.MaxRows, "maximum rows per list")
 	flags.IntVar(&opts.MaxJobs, "max-jobs", opts.MaxJobs, "maximum directory entries")
@@ -60,6 +68,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 		opts.Deadline < time.Millisecond || opts.Deadline > time.Minute || opts.TodoFile == "" || opts.JobsDir == "" {
 		_, _ = io.WriteString(stderr, "invalid_arguments\n")
 		return 2
+	}
+	activeExplicit := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "active-only" {
+			activeExplicit = true
+		}
+	})
+	if !activeExplicit && sameOutput(*output, legacyOutput) {
+		opts.ActiveOnly = true
 	}
 	if *output != "" && !safeOutput(*output, opts) {
 		_, _ = io.WriteString(stderr, "output_overlaps_source_or_unresolved\n")
@@ -93,6 +110,21 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// Existing TUI processes cannot gain new arguments without restarting. Their
+// exact shared output keeps schema v1 and opts into only the new row filter.
+// All other diagnostics, and an explicit --active-only=false, keep old defaults.
+func sameOutput(path, target string) bool {
+	if path == "" || target == "" {
+		return false
+	}
+	a, err := canonical(path)
+	if err != nil {
+		return false
+	}
+	b, err := canonical(target)
+	return err == nil && a == b
 }
 
 func canonical(path string) (string, error) {
@@ -149,7 +181,10 @@ func safeOutput(path string, opts Options) bool {
 			}
 		}
 	}
-	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, opts.ResourceQueueDir, defaults.ResourceQueueDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+		if root == "" {
+			continue
+		}
 		resolved, err := canonical(root)
 		if err != nil || inside(out, resolved) {
 			return false

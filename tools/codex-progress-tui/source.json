@@ -2,18 +2,18 @@
   "upstream_repository": "https://github.com/openai/codex",
   "tag": "rust-v0.162.1",
   "commit": "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d",
-  "patched_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
+  "patched_commit": "69a95ba6d4f166d289e73f2a708d6b312f41b192",
   "toolchain": "1.95.0",
-  "collector_commit": "474f3faa14f5b35ecf1bcdb63497aa73af58ea2b",
-  "collector_sha256": "d42fb7b8cbb97d817dadba3021d41efe5284588f68d4df9cb3e806a63598f3dd",
-  "patch_sha256": "314b6ff6414ae726e22887b3af8a0538bf722f7eb387cdc81859974b9935b440",
+  "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
+  "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
+  "patch_sha256": "c0653b0399cae769a318bea4c4c7e88a8f1640be6408275c8e19deee98e84fbe",
   "build_profile": {
     "lto": false,
     "strip": "symbols",
     "codegen_units": 16,
     "debug": "0"
   },
-  "tested_binary_sha256": "7eda7d645c4dcd7cae038451d60b7ab5e89e28e6868876060d2f5a4af5b4079b",
-  "tested_binary_source_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
-  "collector_tree": "275249534a41e33ae7763712e1ea8faddc8d7bbe"
+  "tested_binary_sha256": "6f21e83ac9fac5ed64e5b06667a408f671da65ac9d1094e3f84b156841cdc6a1",
+  "tested_binary_source_commit": "69a95ba6d4f166d289e73f2a708d6b312f41b192",
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc"
 }

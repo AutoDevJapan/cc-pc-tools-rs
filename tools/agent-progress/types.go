@@ -118,6 +118,7 @@ type Job struct {
 	parentID           string
 	independent        bool
 	cancelRequested    bool
+	resourceBlocked    bool
 	created            time.Time
 }
 
@@ -166,7 +167,9 @@ type Snapshot struct {
 
 type Options struct {
 	TodoFile, JobsDir, PriorityFile string
+	ResourceQueueDir                string
 	IncludeDone                     bool
+	ActiveOnly                      bool
 	TaskIDs                         map[int64]bool
 	MaxRows, MaxJobs                int
 	TodoBytes, JobBytes, JobsBytes  int64
@@ -176,8 +179,9 @@ type Options struct {
 func defaults() Options {
 	return Options{
 		TodoFile: "D:/CC/Tools/todo/todo.json", JobsDir: "D:/CC/Tools/codex-jobs/jobs",
-		PriorityFile: "D:/CC/Tools/scheduler/priorities.json",
-		TaskIDs:      map[int64]bool{}, MaxRows: 1000, MaxJobs: 10000,
+		PriorityFile:     "D:/CC/Tools/scheduler/priorities.json",
+		ResourceQueueDir: "D:/CC/Tools/civ6-live/queue",
+		TaskIDs:          map[int64]bool{}, MaxRows: 1000, MaxJobs: 10000,
 		TodoBytes: 64 << 20, JobBytes: 1 << 20, JobsBytes: 128 << 20,
 		StaleAfter: 10 * time.Minute, Deadline: 20 * time.Second,
 	}

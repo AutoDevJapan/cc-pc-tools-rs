@@ -1,6 +1,64 @@
 # ToDo2757: PR205 post-merge delivery boundary
 
-## Latest observation: 2026-10-19 13:23 JST, output limit diagnosed
+## Latest observation: 2026-10-19 14:14 JST, installed PR238 preflight running
+
+Independent Sonnet review2932 read the frozen four-file diff and full changed
+files at `2edadd78ef72f8ce1d1a0a16695daba6d839bd56`, Must0. The original final
+response equals its final event; its SHA256 is
+`197DA5570C5D56579E6E9ECCD7101DD7568F01937F5DCBDD72B961CC583800B1`.
+The supplied diff matches Git's exact base/head diff. The reviewer did not read
+the preflight caller or all VM code; the parent checked the unchanged caller.
+The reviewer did not rerun tests. Suggestions are retained with the original
+response. Closed cap equality is intentional; the next real run must measure
+the newly reached hash/copy/image-validation paths rather than assume success.
+
+PR238 exact-head CI ended with eight success, one neutral and one skipped
+check, no failures, and zero unresolved review threads. Normal merge is
+`291fc8a72ed05ebf6b0de6e62fe305d68c4e7eb4`. Tested and merged module trees
+both equal `99f6dd20c729de6c81c79732c6bfdbf6ca1692e4`. Both executables were
+built from an archive of this exact merge, with the earlier bounded Go options.
+After checking the formal guard, concurrent module tree and inactive helper,
+normal distribution updated the standard executable and classified Linux leaf.
+The owned build output and standard executable were on the same volume;
+File.Replace retained the predecessor in the classified backup leaf.
+
+- Windows SHA256: `78D47DFE0E83A75C98F7484029342CE1FA3BA1902F73CD1A3F40210EFEDACABE`.
+- Linux SHA256: `8889961C44568ED0585DF126AE9D1C8CF46B443BADA7BA4EB7AC2FB66F9277ED`.
+- Identical standard and PR238 receipt SHA256:
+  `E0C1AC9562715E4352ACC4607CE62FD16805C14F7465030B96264B9034FA7F57`.
+
+The installed executable started the same fixed-source preflight at
+`2026-10-19T05:12:23.6513604Z`, host PID61884, owned directory
+`8b948215f11dd8a2f3bd7f46e7290445`. Its process path and exact start ticks match.
+Builder nonce is `b8132e9ab5601b7fa8c4498d233cf3f0`; outer inspection confirms
+running, no OOM, 1.5CPU/6GiB/448PIDs, cap-drop ALL, NNP, no devices or host binds.
+Do not start another preflight while it or its phase lease is active. Outcome,
+artifact validation, final cleanup and merge-check results are still pending.
+
+A fixed-blob YAML projection resolves the earlier unknown job-condition tokens.
+The declared boolean input concerns drain confirmation, is required and defaults
+false. Both verification jobs require deployment enabled, main, and either push
+or that confirmation. Promotion additionally requires both verification results
+to be success. The preconditions step maps push to the string true, otherwise
+to the input; this is not proof of an actual drain. All projected condition
+tokens are understood, raw source was not saved, and main matched before/after.
+This does not activate a workflow or resolve the remaining document/tool gaps.
+Finite research2939 owns those remaining document semantics and real SDK versions;
+it must preserve the earlier2878 result and must not run product jobs or deploy.
+
+PR229 merge checks ended with three CodeQL failures, four successes and one skip.
+All three failed jobs stopped at checkout; their official raw logs confirm
+bridge HTTP403 before analysis. Logs and numeric fingerprints are retained.
+The underlying bridge decision is not proven by the HTTP status alone. These
+historical failures are not rewritten as current-source successes or rerun on
+an obsolete main by relaxing admission. Current PR238 CI is separate evidence.
+
+The distribution-build directory was separately planned, normally deleted and
+finished source_absent. The condition-projection executable was likewise removed.
+Official full/backend/preconditions/release, actual drain, existing Prd runtime
+revision/readiness/smoke and the original Rust official-log refusal remain open.
+
+## Historical observation: 2026-10-19 13:23 JST, output limit diagnosed
 
 The installed PR229 preflight ended at `2026-10-19T04:21:26.4362938Z`, host
 exit1 and guest exit124. Its new numeric marker records an actual output of

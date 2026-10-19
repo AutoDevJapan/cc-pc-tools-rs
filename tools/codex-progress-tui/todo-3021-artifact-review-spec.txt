@@ -1,0 +1,9 @@
+親ToDo3021のsource.json配布記録差分を別モデルで読み取り専用レビューする。対象は現在の親作業ブランチの `tools/codex-progress-tui/source.json` と `tools/codex-progress-tui/todo-3021-artifact-evidence.md` のみ。
+
+判断点:
+1. `tested_binary_sha256` を `618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f` へ変更する根拠が、ToDo3030の固定source、配布候補の実hash、同じ候補を使ったattempt5 ConPTY受入と矛盾しないか。過去のsource.json hash `bcebff4c...` のビルド差の原因を断定/捏造していないか。
+2. `npm_tarball_sha512` の127桁誤記を、ToDo3030の保持tarball SHA512および既存npm integrityに照らして訂正しているか。
+3. 候補hashと公式npm Codex/hashを混同していないか。official code-mode-host、source commit、patch commitの関係を正しく表しているか。
+4. この差分だけを根拠に配備可能と報告していないか。レビュー後に必要なlauncher/manifest照合、実配備、execの公式経路確認が明示されているか。
+
+読み取り専用。ファイル編集、状態変更、コマンド実行、別ToDo起票はしない。秘密情報や顧客内容を読まず、出力しない。重大度 Must/Should/Nit、該当ファイルと行、事実根拠を日本語で報告する。指摘がなければ「Must/Should/Nitなし」と記す。

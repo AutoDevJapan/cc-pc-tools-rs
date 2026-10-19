@@ -13,7 +13,7 @@
     "codegen_units": 16,
     "debug": "0"
   },
-  "tested_binary_sha256": "bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969",
+  "tested_binary_sha256": "618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f",
   "tested_binary_source_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
   "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc",
   "npm_package": "@openai/codex@0.163.0-win32-x64",
@@ -21,5 +21,5 @@
   "npm_codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
   "npm_code_mode_host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
   "tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
-  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725bdab"
+  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dab"
 }

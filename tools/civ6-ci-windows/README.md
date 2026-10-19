@@ -10,8 +10,10 @@ audited SCM / virtual-account / filtered-token / Job Object / fixed Git
 materializer / Cargo-gate / collection code was carried over and adapted.
 
 The shared identity policy is the parent's module `cc/civ6-ci-contract`
-(`replace cc/civ6-ci-contract => ../civ6-ci-contract`). This module only calls
-`Plan.Validate`, `Labels`, `Verify` and `CheckEvent`; it never decides
+(`replace cc/civ6-ci-contract => ../civ6-ci-contract`). `tools/civ6-ci-contract` in this branch is
+the parent's commit `6332ffff4a33a6a14852719776aa7604e925de05` (PR245) imported unchanged with
+plain `git checkout <commit> -- tools/civ6-ci-contract`; the parent integrates the final version.
+This module only calls `Plan.Validate`, `Labels`, `Verify`, `VerifyAssigned`, `RequireSuccess` and `CheckEvent`; it never decides
 repository/source/workflow policy itself. Nothing here registers a runner, fetches
 product source or runs real Rust unless the queue drives the CLI below.
 No GPU, Civ6, API key, child Codex or visible console is used (`CREATE_NO_WINDOW`).
@@ -81,7 +83,11 @@ and `collection-*.json`. The broker reports 0 for a nonzero script exit.
 
 ## Admission and verification points
 
-`contract.Verify` (repo owner/private/non-fork/admin, current branch/PR, official
+Phase mapping: before registration `contract.Verify`; job start and completion
+`contract.VerifyAssigned(plan, "CC-CIW-<instance>")` (the matrix `GITHUB_JOB` is shared by all OS
+expansions, so only the unique runner name identifies the assigned job); after the drain
+`contract.RequireSuccess` (completed, success, steps present, on this runner), checked only once the
+job is terminal and the registration is gone. `Verify` itself covers (repo owner/private/non-fork/admin, current branch/PR, official
 run/attempt/job/labels, whole source tree, reviewed bytes of all three workflows at both
 `head` and the actual workflow commit) is run **before registration** (`prepare` and
 `execute`), when the job **starts** on this unique runner, when it **completes**, and
@@ -154,4 +160,5 @@ no GitHub Actions run. `contract.Verify` against the live repository, the full
 `prepare` source materialization with the new contract and the monitor against a real job are
 exercised only by synthetic replies here and must be proven by the parent's PR149 run.
 Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
+
 

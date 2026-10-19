@@ -30,3 +30,27 @@ func verifyWith(ctx context.Context, p Plan, read readAPI) error {
 		return read(path, v)
 	})
 }
+
+// verifierFor selects the shared contract check that fits each audit phase:
+// Verify before registration, VerifyAssigned (the job must be on this unique
+// runner, in progress or completed) while it runs, RequireSuccess (completed,
+// success, steps present, on this runner) once it is terminal. The matrix
+// GITHUB_JOB is shared by every OS expansion, so only the unique runner name
+// identifies the assigned job.
+func verifierFor(phase auditPhase) func(context.Context, Plan, readAPI) error {
+	return func(ctx context.Context, p Plan, read readAPI) error {
+		api := func(c context.Context, path string, v any) error {
+			if e := c.Err(); e != nil {
+				return e
+			}
+			return read(path, v)
+		}
+		switch phase {
+		case phaseRunning:
+			return contract.VerifyAssigned(ctx, p.Plan, p.name(), api)
+		case phaseFinished:
+			return contract.RequireSuccess(ctx, p.Plan, p.name(), api)
+		}
+		return contract.Verify(ctx, p.Plan, api)
+	}
+}

@@ -142,7 +142,7 @@ func auditFinished(p Plan) error {
 
 func auditMode(ctx context.Context, p Plan, phase auditPhase) error {
 	api := func(path string, v any) error { return apiWithContext(ctx, path, v) }
-	return auditWith(ctx, p, phase, api, verifyWith)
+	return auditWith(ctx, p, phase, api, verifierFor(phase))
 }
 
 // auditWith has no hidden network or policy dependency, so every registration
@@ -154,8 +154,12 @@ func auditWith(ctx context.Context, p Plan, phase auditPhase, api readAPI, verif
 	if p.Fixture != "" {
 		return errors.New("fixture is not API or runner identity evidence")
 	}
-	if e := verify(ctx, p, api); e != nil {
-		return e
+	// A terminal check must first see the job and its registration settle, so a
+	// still-running job is "pending" rather than a failed verification.
+	if phase != phaseFinished {
+		if e := verify(ctx, p, api); e != nil {
+			return e
+		}
 	}
 	own, e := ownRunner(p, api)
 	if e != nil {
@@ -202,6 +206,9 @@ func auditWith(ctx context.Context, p Plan, phase auditPhase, api readAPI, verif
 	}
 	if !found {
 		return errors.New("actual target job absent")
+	}
+	if phase == phaseFinished {
+		return verify(ctx, p, api)
 	}
 	return nil
 }

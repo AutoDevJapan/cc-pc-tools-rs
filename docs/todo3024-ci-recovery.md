@@ -11,3 +11,12 @@
 次の工程: 試験用Operationsを同じ隔離rootから初期化し、失敗2件と影響範囲を検査する。追加差分の別モデルレビュー後、PR253へ非forceで反映し、正式CI・通常マージ・mainと稼働を確認する。追加の常駐ポーリングは作らない。3021/3023の担当や本人の会話には触れない。
 
 コンテナは既存の継続資源であり削除対象ではない。OS再起動後の復帰は今回も未検証。tmpfsへの蓄積の再発防止は既存の保守担当と照合し、必要な有限作業へ分ける。
+
+追加差分の検査記録:
+- 0c99f7eの全localai検査は260成功/84失敗/3skip。jobsの親を参照する試験用launcherの配置も合わせる必要があり、c9fecf2で修正。
+- 最終c9fecf2でlocalai-web-rs nextest 344成功/0失敗/3skip（13.216秒）、doctest成功（対象0）、全target Clippy成功。正常なworkspace全件やreleaseの重複実行は行っていない。
+- 稼働版のSHA256は元配備記録と一致。保護されたjobs APIはschema1/ok、masked_metadata、metadataOnlyを維持し97msで応答。
+- 追加差分の読取レビューは共有ToDo3025へ登録（実起動・Must0の確認は未完）。モデル名はCLI仕様に従う短い別名claude-sonnet-5-5。anthropic/を付ける引数はValueErrorで登録されなかったため、重複登録はない。
+- 作業ブランチをscheduler/todo-3024-pr253-fixへ切替え、checkpoint-workspaceを元のjob/id/expected_branchと照合して保存した。同ブランチはGitHubへpush済み。元PRのheadにはまだ反映していない。
+
+進捗率は6条件（runner復旧・追加修正の影響範囲検査・追加差分レビュー・PR正式CI・通常merge・main/稼働確認）のうち2条件を確認した33%。

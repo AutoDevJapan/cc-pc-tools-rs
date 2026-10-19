@@ -1,0 +1,10 @@
+親3024/PR253の追加差分を別モデルで読み取り専用レビューする有限作業です。実モデルanthropic/claude-sonnet-5-5。APIキー・GPU・子ジョブ・通知・書込・ビルド・ToDo更新は禁止。返答は最終本文だけ。
+対象作業場所 D:/CC/Work/unattended-operations-20261013-wt/todo-3024-pr253-ci 。この場所のAGENTS.mdとD:/CC/AGENTS.mdを読む。git diff 9a907d39c2f8d0ba810436f78464a4e6f7fa7ebc c9fecf2a80091caffdaf6d4c30e3c6427a7e476f -- localai-web-rs/src/agent.rs localai-web-rs/src/operations.rs docs/todo3024-ci-recovery.md が差分の全範囲。HEADが進んでもこの比較を固定する。必要な周辺関数とfixture、HTTP handler、operations収集だけを参照。
+親3020は本人依頼のConsole/Codex進捗復旧です。旧9aの17ファイルは元Sonnet5.5でMust0、実配備済み。正式CI run39279299745/job118150438924の原logでは342pass/2fail/3skip。新handlerが未取得snapshotに503を返す一方、旧agent HTTP fixtureはConsoleだけ試験rootでOperationsはproductionの初期空snapshotだったため、display2件が503!=200。元実装の起動直後503と15秒cache、非masked fallback、保護は維持する。
+修正c9fecf2a80091caffdaf6d4c30e3c6427a7e476fはOperations::new(root,skills_root)を追加しproductionを同じ定数で委譲、fixtureのjobsを実配置codex-jobs/jobsへ合わせ、Fixture::httpで同じfixture rootのOperationsをrefreshしてからrouteを呼ぶ。2件は親のCargoゲート・隔離targetの実nextestで2pass。全localai-web-rs nextest/doc/Clippyは親で別途実行するため、レビューで未実行を成功扱いしない。
+確認点: fixtureが本番のファイルを読み始めないか、fixtureの相対path変更が他の検査・Fakeの整合を壊さないか、snapshot初期化で重要な挙動をmock/弱体化していないか、productionの振舞いと保護境界、記録の過大主張。原client-projects.txt・認証・他案件は読まない（ソースの合成fixture文字列は参照可）。必要なら同じ領域の見落としをまとめる。
+Must/Suggestion/Nit、具体箇所、根拠、読んだ全ファイル、未確認を区別して日本語で返す。Must0なら明記。現在の本人会話や3021/3023を終了・再起動しない。
+
+追加の検査でfixture jobsの親を参照するcodex_jobs.exeの試験代替も同じ親へ移す必要が判明し修正済みです。初回の全localai検査ではtool_unavailableで84件失敗。期待値を弱めず、試験配置を実配置と同じに合わせました。最終差分にはこの追補も含め、旧0cだけでMust0としないでください。
+
+

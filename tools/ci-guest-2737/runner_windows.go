@@ -35,7 +35,16 @@ func invokeRunnerAPI(ctx context.Context, method, endpoint string, input []byte)
 	var diagnostic limitedCapture
 	diagnostic.limit = 64 << 10
 	c.Stderr = &diagnostic
-	if c.Run() != nil {
+	return runnerAPICaptureResult(&b, &diagnostic, c.Run())
+}
+
+func runnerAPICaptureResult(b, diagnostic *limitedCapture, runErr error) ([]byte, error) {
+	// A prefix cannot establish that the missing output contained no rejection.
+	// Check BOTH channels before interpreting text, even after a successful exit.
+	if b.truncated || diagnostic.truncated {
+		return nil, &runnerAPIError{code: "capture"}
+	}
+	if runErr != nil {
 		// Classify in RAM only. Never persist authentication, raw stderr or an
 		// endpoint selected by an error response.
 		return nil, classifyRunnerAPIError(string(diagnostic.data.Bytes()))
@@ -44,12 +53,14 @@ func invokeRunnerAPI(ctx context.Context, method, endpoint string, input []byte)
 }
 
 type limitedCapture struct {
-	data  bytes.Buffer
-	limit int
+	data      bytes.Buffer
+	limit     int
+	truncated bool
 }
 
 func (b *limitedCapture) Write(p []byte) (int, error) {
 	if len(p) > b.limit-b.data.Len() {
+		b.truncated = true
 		return 0, errors.New("capture bound exceeded")
 	}
 	return b.data.Write(p)

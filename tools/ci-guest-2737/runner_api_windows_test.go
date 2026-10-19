@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -80,5 +81,57 @@ func TestRunnerAPIDiagnosticNeverCarriesRawErrorText(t *testing.T) {
 		if e.code != sample.want {
 			t.Fatal("API failure classification changed")
 		}
+	}
+}
+
+func TestRunnerAPIIncompleteOutputNeverRetries(t *testing.T) {
+	for _, channel := range []string{"stdout", "stderr"} {
+		for _, failed := range []bool{false, true} {
+			t.Run(channel+map[bool]string{false: "/success-exit", true: "/failure-exit"}[failed], func(t *testing.T) {
+				out := limitedCapture{limit: 64}
+				diagnostic := limitedCapture{limit: 64}
+				if _, err := diagnostic.Write([]byte("TLS handshake timeout\n")); err != nil {
+					t.Fatal(err)
+				}
+				target := &out
+				if channel == "stderr" {
+					target = &diagnostic
+				}
+				if _, err := target.Write([]byte(strings.Repeat("x", 65) + "policy rejected PRIVATE")); err == nil || !target.truncated || target.data.Len() > target.limit {
+					t.Fatal("oversized output was not bounded and remembered")
+				}
+				if _, err := target.Write([]byte("tail")); err != nil || !target.truncated {
+					t.Fatal("later write cleared incomplete capture state")
+				}
+				var runErr error
+				if failed {
+					runErr = errors.New("synthetic command failure")
+				}
+				calls := 0
+				invoke := func(context.Context, string, string, []byte) ([]byte, error) {
+					calls++
+					return runnerAPICaptureResult(&out, &diagnostic, runErr)
+				}
+				err := callRunnerAPI(context.Background(), "GET", "synthetic", nil, nil, invoke)
+				if err == nil || err.Error() != "runner API capture incomplete" || calls != 1 || strings.Contains(err.Error(), "PRIVATE") {
+					t.Fatal("incomplete output became a retry or leaked text")
+				}
+			})
+		}
+	}
+	// The same complete transport diagnostic still permits finite read recovery.
+	calls := 0
+	invoke := func(context.Context, string, string, []byte) ([]byte, error) {
+		calls++
+		if calls < 3 {
+			out, diagnostic := limitedCapture{limit: 64}, limitedCapture{limit: 64}
+			_, _ = diagnostic.Write([]byte("TLS handshake timeout"))
+			return runnerAPICaptureResult(&out, &diagnostic, errors.New("synthetic failure"))
+		}
+		return []byte(`{"ID":7}`), nil
+	}
+	var result struct{ ID int }
+	if err := callRunnerAPI(context.Background(), "GET", "synthetic", nil, &result, invoke); err != nil || calls != 3 || result.ID != 7 {
+		t.Fatal("complete read recovery control failed")
 	}
 }

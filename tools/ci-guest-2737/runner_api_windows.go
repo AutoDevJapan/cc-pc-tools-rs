@@ -18,6 +18,8 @@ func (e *runnerAPIError) Error() string {
 		return "runner API access rejected"
 	case "response":
 		return "runner API response rejected"
+	case "capture":
+		return "runner API capture incomplete"
 	}
 	return "runner API operation failed"
 }

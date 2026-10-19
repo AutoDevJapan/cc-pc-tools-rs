@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, Request, State},
     http::{header, HeaderMap, Method, StatusCode},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Json, Response},
+    response::{Html, IntoResponse, Json, Redirect, Response},
     routing::{get, post},
     Router,
 };
@@ -128,6 +128,7 @@ async fn main() {
 fn app(state: AppState) -> Router {
     let mut app = Router::new()
         .route("/", get(index_html))
+        .route("/progress", get(progress_page))
         .route("/music", axum::routing::any(music_proxy))
         .route("/music/*path", axum::routing::any(music_proxy))
         .route("/api/health", get(health_check))
@@ -137,6 +138,7 @@ fn app(state: AppState) -> Router {
         .route("/api/operations/workers/:id", get(operations_worker_detail))
         .route("/api/tasks", get(get_tasks))
         .route("/api/agent/workload", get(workload::handle))
+        .route("/api/agent/display/:kind", get(shared_progress_display))
         .route("/api/agent/*path", axum::routing::any(agent::handle))
         .nest_service(
             "/api/attachments",
@@ -165,6 +167,32 @@ async fn index_html() -> impl IntoResponse {
         ],
         Html(localai_web_rs::console_page::index()),
     )
+}
+
+async fn progress_page() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Redirect::temporary("/?view=kanban&opsStatus=working&opsPanel=jobs"),
+    )
+}
+
+async fn shared_progress_display(
+    State(state): State<AppState>,
+    Path(kind): Path<String>,
+    request: Request,
+) -> Response {
+    if !matches!(kind.as_str(), "todo" | "jobs" | "handoff") {
+        return agent::handle(State(state), request).await;
+    }
+    let snapshot = state.operations.snapshot();
+    if !snapshot["fetchedAt"].is_u64() {
+        return agent::cached_display_response(Err("作業状況を取得中です。まもなく再試行します。"));
+    }
+    if snapshot["protectionMode"] == "masked_metadata" {
+        return agent::cached_display_response(operations::metadata_display_snapshot(&snapshot, &kind)
+            .map_err(|_| "進捗の元記録を確認できません。前回の表示を保持します。"));
+    }
+    agent::handle(State(state), request).await
 }
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
@@ -265,7 +293,7 @@ fn static_shell_navigation(request: &Request) -> bool {
     // APIs, frames, fetch/XHR and WebSocket handshakes retain the strict policy.
     let headers = request.headers();
     request.method() == Method::GET
-        && request.uri().path() == "/"
+        && matches!(request.uri().path(), "/" | "/progress")
         && !headers.contains_key(header::ORIGIN)
         && !headers.contains_key(header::UPGRADE)
         && [
@@ -576,6 +604,38 @@ mod tests {
             req.headers_mut().insert(name, value.parse().unwrap());
         }
         req
+    }
+
+    #[tokio::test]
+    async fn shared_progress_waits_for_snapshot_without_scanning_the_live_store() {
+        let mut request = navigation(Method::GET, "/api/agent/display/jobs", "same-origin");
+        request.headers_mut().insert(header::HOST, "localhost:10012".parse().unwrap());
+        let response = app(AppState::new(10012, 10013)).oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let body = to_bytes(response.into_body(), RESPONSE_LIMIT).await.unwrap();
+        assert!(std::str::from_utf8(&body).unwrap().contains("作業状況を取得中"));
+        let envelope: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(envelope["version"], 1);
+        assert_eq!(envelope["ok"], false);
+        assert_eq!(envelope["error"]["code"], "progress_snapshot_unavailable");
+    }
+
+    #[tokio::test]
+    async fn progress_navigation_opens_the_existing_live_jobs_panel() {
+        let mut request = navigation(Method::GET, "/progress", "none");
+        request
+            .headers_mut()
+            .insert(header::HOST, "localhost:10012".parse().unwrap());
+        let response = app(AppState::new(10012, 10013))
+            .oneshot(request)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+        assert_eq!(
+            response.headers()[header::LOCATION],
+            "/?view=kanban&opsStatus=working&opsPanel=jobs"
+        );
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
     }
 
     #[tokio::test]

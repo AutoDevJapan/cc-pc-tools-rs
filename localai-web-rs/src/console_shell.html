@@ -95,10 +95,11 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
     const existing=Array.from(nav.querySelectorAll('[data-view],a[href="/music"]'));
     const links=names.map(([view,label])=>{let link=existing.find(node=>node.dataset.view===view||(view==='music'&&node.tagName==='A'));if(!link){link=make('a','',label);link.href=view==='music'?'/music':'/?view='+view;link.dataset.view=view}link.removeAttribute('style');return link});
     nav.replaceChildren(make('h2','console-nav-heading','運用'),...links.slice(0,3),make('h2','console-nav-heading','会話・制作'),...links.slice(3));
+    const progressLink=make('a','','作業進捗');progressLink.href='/progress';nav.insertBefore(progressLink,links[1]);
     const toggle=make('button','console-menu-toggle','☰ メニュー');toggle.type='button';toggle.setAttribute('aria-controls',nav.id);sidebar.querySelector('.brand').prepend(toggle);
     function menu(open){frame.classList.toggle('console-menu-closed',!open);toggle.setAttribute('aria-expanded',String(open))}
     menu(!matchMedia('(max-width:1199px)').matches);toggle.onclick=()=>menu(frame.classList.contains('console-menu-closed'));
-    nav.addEventListener('keydown',event=>{const targets=links.filter(node=>!node.hidden),index=targets.indexOf(document.activeElement);if(event.key==='Escape'){event.preventDefault();menu(false);toggle.focus()}else if(index>=0&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();targets[event.key==='Home'?0:event.key==='End'?targets.length-1:(index+(event.key==='ArrowDown'?1:-1)+targets.length)%targets.length].focus()}});
+    nav.addEventListener('keydown',event=>{const targets=Array.from(nav.querySelectorAll('button,a')).filter(node=>!node.hidden),index=targets.indexOf(document.activeElement);if(event.key==='Escape'){event.preventDefault();menu(false);toggle.focus()}else if(index>=0&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();targets[event.key==='Home'?0:event.key==='End'?targets.length-1:(index+(event.key==='ArrowDown'?1:-1)+targets.length)%targets.length].focus()}});
     links.forEach((link,index)=>{const view=names[index][0];if(!music&&(view!=='music'||q('#view-music')))link.onclick=event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();if(typeof switchView==='function')switchView(view,{focus:true});if(matchMedia('(max-width:1199px)').matches)menu(false)};if(music&&view==='music'){link.classList.add('active');link.setAttribute('aria-current','page')}});
     if(q('#stop-btn')){q('#stop-btn').textContent='Local AI全体を停止';q('#stop-btn').title='既存の停止操作の対象はLocal AI全体です。サービス個別の停止ではありません。'}
     if(q('#mini-stop')){q('#mini-stop').textContent='Local AI全体を停止';q('#mini-stop').title=q('#stop-btn').title}
@@ -183,13 +184,15 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
     }
     function renderJobs(){
       if(!jobsHost||!sharedData.jobs||selectedInside(jobsHost))return;
-      const query=jobsSearch.value.trim().toLocaleLowerCase('ja-JP'),jobs=array(sharedData.jobs.jobs).filter(job=>['queued','starting','running','thinking','waiting'].includes(job.status));
+      const query=jobsSearch.value.trim().toLocaleLowerCase('ja-JP'),workingOnly=window.location?.search&&new URLSearchParams(window.location.search).get('opsStatus')==='working',jobs=array(sharedData.jobs.jobs).filter(job=>(workingOnly?['running','thinking']:['queued','starting','running','thinking','waiting']).includes(job.status));
       const shown=jobs.filter(job=>matchesTask(job,query,[job.task_title,job.name,job.id]));
       preserveDetails(jobsHost,()=>{
         jobsHost.replaceChildren();
         for(const job of shown){
           const card=make('article','console-todo-card'),details=make('details');details.dataset.record='job:'+job.id;
-          card.append(make('strong','',`${short(job.task_title||job.name||job.id)} · ${({queued:'起動待ち',starting:'起動中',running:'実行中',thinking:'思考中',waiting:'待機'})[job.status]}`),taskFacts(job));
+          card.append(make('strong','',`${short(job.task_title||job.name||job.id)} · ${({queued:'起動待ち',starting:'起動中',running:'実行中',thinking:'思考中',waiting:'待機'})[job.status]}`));
+          const measured=num(job.progress),line=make('p','ops-progress');if(measured!==null&&measured>=0&&measured<=100){const bar=make('progress');bar.max=100;bar.value=measured;bar.setAttribute('aria-label','共有ToDoの記録進捗');line.append(bar,make('span','',`共有ToDo ${measured}%`))}else line.append(make('span','','進み具合は未記録'));
+          line.append(make('span','',` · 最終活動 ${time(job.lastActivityAt)} · 記録更新 ${time(job.updated_at)}`));card.append(line,taskFacts(job));
           details.append(make('summary','','ジョブの全文と履歴を見る'),make('h4','',job.task_title||job.name||job.id),taskFacts(job,true),make('p','',`開始 ${time(job.started_at)} · 終了 ${time(job.finished_at)}`),make('h4','','最終報告'),make('p','',job.report||'未記録'),make('h4','','直近のメッセージ'),make('p','',job.last_message||'未記録'),make('h4','','履歴'),taskHistory(job));
           card.append(details);jobsHost.append(card);
         }
@@ -215,7 +218,7 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
       for(const [value,label] of [['open','未完了'],['','すべて'],['block','停止理由を確認'],['wait','別ToDoの完了待ち'],['doing','作業中'],['todo','未着手'],['done','完了']]){const option=make('option','',label);option.value=value;todoStatus.append(option)}
       todoProject.append(make('option','','すべて'));todoProject.firstChild.value='';for(const [text,input] of [['プロジェクト',todoProject],['状態',todoStatus],['検索',todoSearch]]){const label=make('label','',text);label.append(input);filters.append(label)}sharedBody.append(filters);todoList=make('div','console-todo-list');todoList.append(make('p','','共有ToDoは未取得です。'));sharedBody.append(todoList);
       const clear=make('button','','条件を解除');clear.type='button';clear.onclick=()=>{todoSearch.value='';todoProject.value='';todoStatus.value='open';renderTodos()};sharedBody.append(clear);
-      for(const [key,label] of [['jobs','実行中・起動待ちのジョブ'],['handoff','引き継ぎ・最近の判断']]){const section=make('section','console-shared-section');section.id='console-shared-'+key;section.append(make('h3','',label));if(key==='jobs'){const searchLabel=make('label','console-jobs-search','ジョブを検索');jobsSearch=make('input');jobsSearch.type='search';jobsSearch.placeholder='作業・要約・工程・停止・次・依存で検索';searchLabel.append(jobsSearch);section.append(searchLabel);jobsSearch.addEventListener('input',()=>{if(!sharedComposing)renderJobs()});jobsSearch.addEventListener('compositionstart',()=>{sharedComposing=true});jobsSearch.addEventListener('compositionend',()=>{sharedComposing=false;renderJobs()})}const host=make('div');host.append(make('p','','未取得です。'));section.append(host);sharedBody.append(section);if(key==='jobs')jobsHost=host;else handoffHost=host}
+      for(const [key,label] of [['jobs','ジョブの進捗'],['handoff','引き継ぎ・最近の判断']]){const section=make('section','console-shared-section');section.id='console-shared-'+key;section.append(make('h3','',label));if(key==='jobs'){const searchLabel=make('label','console-jobs-search','ジョブを検索');jobsSearch=make('input');jobsSearch.type='search';jobsSearch.placeholder='作業・要約・工程・停止・次・依存で検索';searchLabel.append(jobsSearch);section.append(searchLabel);jobsSearch.addEventListener('input',()=>{if(!sharedComposing)renderJobs()});jobsSearch.addEventListener('compositionstart',()=>{sharedComposing=true});jobsSearch.addEventListener('compositionend',()=>{sharedComposing=false;renderJobs()})}const host=make('div');host.append(make('p','','未取得です。'));section.append(host);sharedBody.append(section);if(key==='jobs')jobsHost=host;else handoffHost=host}
       shared.addEventListener('toggle',()=>{if(shared.open)loadShared()});todoSearch.addEventListener('input',()=>{if(!sharedComposing)renderTodos()});todoSearch.addEventListener('compositionstart',()=>{sharedComposing=true});todoSearch.addEventListener('compositionend',()=>{sharedComposing=false;renderTodos()});[todoProject,todoStatus].forEach(select=>select.addEventListener('change',renderTodos));
       shared.addEventListener('focusout',()=>queueMicrotask(()=>{for(const [key,data] of Object.entries(pendingShared))if(data)applyShared(key,data)}));
     }
@@ -226,10 +229,10 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
       const target=key==='working'?jobsHost:q('#ops-search');if(target){target.tabIndex=-1;target.focus();target.scrollIntoView({block:'nearest'})}
     }
     let restoring=false;
-    function restoreConditions(){if(music)return;const previous=restoring;restoring=true;try{const params=new URL(location.href).searchParams;setFilter(params.get('opsStatus')||'',params.get('opsSearch')||'');if(shared){shared.open=params.get('opsPanel')==='jobs';if(shared.open)loadShared()}}finally{restoring=previous}}
+    function restoreConditions(){if(music)return;const previous=restoring;restoring=true;try{const params=new URL(location.href).searchParams;setFilter(params.get('opsStatus')||'',params.get('opsSearch')||'');if(shared){shared.open=params.get('opsPanel')==='jobs';if(shared.open){loadShared();renderJobs()}}}finally{restoring=previous}}
     window.addEventListener('popstate',restoreConditions);
     window.addEventListener('console-view',()=>{restoreConditions();if(shared&&shared.open)loadShared()});
-    if(q('#ops-status'))q('#ops-status').addEventListener('change',()=>{if(restoring)return;const url=new URL(location.href);url.searchParams.set('view','kanban');if(q('#ops-status').value)url.searchParams.set('opsStatus',q('#ops-status').value);else url.searchParams.delete('opsStatus');history.replaceState({},'',url)});
+    if(q('#ops-status'))q('#ops-status').addEventListener('change',()=>{if(restoring)return;const url=new URL(location.href);url.searchParams.set('view','kanban');if(q('#ops-status').value)url.searchParams.set('opsStatus',q('#ops-status').value);else url.searchParams.delete('opsStatus');history.replaceState({},'',url);renderJobs()});
     if(q('#ops-search'))q('#ops-search').addEventListener('input',event=>{if(restoring||event.isComposing)return;const url=new URL(location.href);if(q('#ops-search').value)url.searchParams.set('opsSearch',q('#ops-search').value);else url.searchParams.delete('opsSearch');history.replaceState({},'',url)});
     restoreConditions();
     // Both source requests have their own timeout, data, error and last-success timestamp.

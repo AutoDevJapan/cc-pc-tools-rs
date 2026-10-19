@@ -32,6 +32,7 @@ if /I "%~1"=="--add-dir" goto skip_option_value
 if /I "%~1"=="-a" goto skip_option_value
 if /I "%~1"=="--ask-for-approval" goto skip_option_value
 if /I "%~1"=="app-server" goto run_codex
+if /I "%~1"=="progress" goto run_codex
 if /I "%~1"=="archive" goto run_codex
 if /I "%~1"=="apply" goto run_codex
 if /I "%~1"=="cloud" goto run_codex

@@ -6,7 +6,7 @@ try {
 if (-not $env:OPENCODEX_API_AUTH_TOKEN -and (Test-Path -LiteralPath 'C:\Users\makhmeto\.opencodex\service-api-token')) {
   $env:OPENCODEX_API_AUTH_TOKEN = (Get-Content -Raw -LiteralPath 'C:\Users\makhmeto\.opencodex\service-api-token').Trim()
 }
-$internalCommands = @('app-server', 'archive', 'apply', 'cloud', 'completion', 'debug', 'delete', 'doctor', 'exec-server', 'features', 'fork', 'help', 'login', 'logout', 'mcp', 'plugin', 'sandbox', 'unarchive', 'update')
+$internalCommands = @('progress', 'app-server', 'archive', 'apply', 'cloud', 'completion', 'debug', 'delete', 'doctor', 'exec-server', 'features', 'fork', 'help', 'login', 'logout', 'mcp', 'plugin', 'sandbox', 'unarchive', 'update')
 $valueOptions = @('-c', '--config', '--enable', '--disable', '--remote', '--remote-auth-token-env', '-i', '--image', '-m', '--model', '--local-provider', '-p', '--profile', '-s', '--sandbox', '-C', '--cd', '--add-dir', '-a', '--ask-for-approval')
 $subcommand = ""
 $skipNext = $false

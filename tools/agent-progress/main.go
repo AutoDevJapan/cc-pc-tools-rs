@@ -23,6 +23,8 @@ Exit 0: complete observation; 1: degraded/unavailable data; 2: invalid arguments
 No UI, network, process launch, source mutation, or resident watcher.
 `
 
+const legacyTUISnapshot = "D:/CC/Work/parallel-agent-progress-runtime/snapshot-v1.json"
+
 type taskFilter map[int64]bool
 
 func (t taskFilter) String() string { return "" }
@@ -36,6 +38,10 @@ func (t taskFilter) Set(raw string) error {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	return runWithLegacyOutput(args, stdout, stderr, legacyTUISnapshot)
+}
+
+func runWithLegacyOutput(args []string, stdout, stderr io.Writer, legacyOutput string) int {
 	opts := defaults()
 	flags := flag.NewFlagSet("agent-progress", flag.ContinueOnError)
 	flags.SetOutput(io.Discard) // Parser diagnostics must never echo private arguments.
@@ -62,6 +68,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 		opts.Deadline < time.Millisecond || opts.Deadline > time.Minute || opts.TodoFile == "" || opts.JobsDir == "" {
 		_, _ = io.WriteString(stderr, "invalid_arguments\n")
 		return 2
+	}
+	activeExplicit := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "active-only" {
+			activeExplicit = true
+		}
+	})
+	if !activeExplicit && sameOutput(*output, legacyOutput) {
+		opts.ActiveOnly = true
 	}
 	if *output != "" && !safeOutput(*output, opts) {
 		_, _ = io.WriteString(stderr, "output_overlaps_source_or_unresolved\n")
@@ -95,6 +110,21 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// Existing TUI processes cannot gain new arguments without restarting. Their
+// exact shared output keeps schema v1 and opts into only the new row filter.
+// All other diagnostics, and an explicit --active-only=false, keep old defaults.
+func sameOutput(path, target string) bool {
+	if path == "" || target == "" {
+		return false
+	}
+	a, err := canonical(path)
+	if err != nil {
+		return false
+	}
+	b, err := canonical(target)
+	return err == nil && a == b
 }
 
 func canonical(path string) (string, error) {

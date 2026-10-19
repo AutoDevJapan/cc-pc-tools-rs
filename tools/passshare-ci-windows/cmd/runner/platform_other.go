@@ -1,0 +1,14 @@
+//go:build !windows || !amd64
+
+package main
+
+import "errors"
+
+func platform(string, Plan, []string) error   { return errors.New("Windows amd64 required") }
+func checkPaths(string) error                 { return errors.New("Windows amd64 required") }
+func gateChild([]string) error                { return errors.New("Windows amd64 required") }
+func checkOwnedTree(string) error             { return errors.New("Windows amd64 required") }
+func checkControl(string, bool) error         { return errors.New("Windows amd64 required") }
+func verifySource(Plan, string, bool) error   { return errors.New("Windows amd64 required") }
+func toolAlias() string                       { return "" }
+func toolEntry(string, []string) (int, error) { return 1, errors.New("Windows amd64 required") }

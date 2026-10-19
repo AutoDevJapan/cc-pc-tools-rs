@@ -180,7 +180,7 @@ func checkEvent(p Plan, env map[string]string, raw []byte) error {
 	return nil
 }
 
-var ownedRootPattern = regexp.MustCompile(`^[A-Za-z]:\\.*codex-owned-[0-9a-f]{32}$`)
+var ownedRootPattern = regexp.MustCompile(`^[A-Za-z]:\\(.*\\)?codex-owned-[0-9a-f]{32}$`)
 
 // imageRoot parses a service image path built by ensureService with Windows
 // argument rules: <root>\helper.exe service <root>, each argument quoted when it
@@ -217,6 +217,17 @@ func imageRoot(image string) (string, error) {
 	i := strings.LastIndex(helper, `\`)
 	if i < 0 || !strings.EqualFold(helper[i+1:], "helper.exe") || !strings.EqualFold(helper[:i], root) || !ownedRootPattern.MatchString(root) {
 		return "", errors.New("service image path does not name an owned job root")
+	}
+	// Only the exact form ensureService writes is accepted: re-render it and compare,
+	// so tabs, backslash-quote sequences and stray quotes can never be reinterpreted.
+	quote := func(s string) string {
+		if strings.Contains(s, " ") {
+			return `"` + s + `"`
+		}
+		return s
+	}
+	if image != quote(root+`\helper.exe`)+" service "+quote(root) {
+		return "", errors.New("service image path is not in the exact canonical form")
 	}
 	return root, nil
 }

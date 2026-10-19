@@ -1,5 +1,84 @@
 # ToDo2736 再開記録
 
+## 2026-10-19 昼再開・正式OOMとPR239、有限下位作業（最新）
+
+同job20261019-125854-todo-2736/同branch/同worktreeで再開した。
+2908 doneの正規guard SHA0B24C92204DB1C26AD56EB8EE12E4E105F92D425BF0A7063A0F0A524FA268E5Eを照合。
+原5051と元worktreeはclient_resource=false/classification_unverified=false、原名簿未復旧を保持。
+元PR148はrepo1392152644/AutoDevJapan/private/nonfork/admin、同head/base repo/open、
+head03c7cc65b9ab1c3ac2598dc6b97c9ca0d04c08be/treea6851bd86e08b0f89eca3c4b30fbf7d4e292244f、
+base1100676と元branch不変を再照合。helperのowner/private/nonforkもPR239のAPIで確認。
+
+原5051に新collector1077を初回実行し、service-delete OK=true、続くroot-ace-removeが
+1332/OK=falseで止まった。read-only sc/CIMでservice不在、root/runtimeの元SID Allow各1件。
+profile/hive/classes無し。CIM追加censusは75秒で未完了・読取不能1なので全process不在とは言わない。
+collectorの変更前kernel censusは0を通過。失敗mutationの再試行・journal改変・別API回収0。
+原証拠9fileを全SHA一致保存し、既存2381へ未回収を配送した。原5051は現物のまま保持。
+
+元run39149803349は通常cancelしcompleted/cancelledとrunner0を確認後、新しいRust実行
+39198061656/attempt1を通常dispatchした。Linux117885022032/Windows117885022224。
+Linuxは10GiB/no swap/Cargo/test/LLD各1並列のreview済み65592b4で正式実行。
+実行前VM available12605316KiB/host free約47.8GBを測定し10GiB+予約1GiBを確認した。
+checkout/Rust/fmt後、carrier_syncリンクがSIG9/cargo101で失敗。max10737418240、
+peak10737422336、oom1/oom_kill1を保存。成功jobや旧検査の単純な転記ではない。
+namespace bba5c6a8...はTreeGone/Removed true、RegistrationGone/LockReleased true。
+Windows jobは未実行。新run全体はまだWindows queuedを保持し、次回の無条件rerunをしない。
+
+Linuxの生成物は/workのtmpfs内でRAM枠を消費するため、生成先だけのdisk化を有限check2933へ登録。
+SDK89988fa8...を使った親の認証なしprobeは、128MiB/no swap/UID1001/readonly/cap-dropALL/
+network noneの新containerで、新label付きlocal volumeを/tmpに初期化した。
+UID1001のtarget子dir/mode700を作り、別containerの/work/targetへvolume-subpathでmount。
+実UID/mode・ext2/ext3・書込・oom0を確認。追加cap/root/host bind/共有設定変更/製品sourceなし。
+probeのcontainer2件/volume1件は通常rm後、正規inspectのNo suchで実不在も確認済み。
+2933は自身のworktreeで回帰/最小Go候補だけを返し、親source/PR・実製品・正式runnerを操作しない。
+親は返却commit、Must/必要CI、controller/guest両方のsource/hashを受入後に正式jobを続ける。
+
+Windows回収順序はe05efa9410846a077ae6d61dedb6faba6804d4e7へ保存し、PR239をdraft作成。
+https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/239
+停止したserviceを保ったままACL解除/DACL0/controller復元を行い、最後にDeleteServiceする。
+新credential-free fixture2cd3f0fab29ecb92bc2d94fe2bed6fecでprepare/execute成功、
+ACL2件/復元2件/service削除の全journal OK、実DACL0/service不在を確認した。
+collectorはprofile/hive/classes残留でerrResidue。別の初回DeleteProfileWは共有違反32で拒否。
+再試行しない。このfixtureはSID S-1-5-80-2341596599-4155137307-2422045475-830307884-2338221533、
+原root/profile/hiveを保持する。fixture全21file/12324709bytesをSHA一致保存済み。
+これを全回収や製品CI成功とは扱わない。旧2710/2730のSID/profileへは触れていない。
+
+research2929は最初のCLI起動前exit1/steps0を保持した後、正規再開job20261019-132250-todo-2929で
+Sonnet5.5/9steps/exit0/実検査0の原応答を受領。元3file/4receiptだけの診断で、実装レビューではない。
+ACL前service削除のMust1/3は上記で修復済み。Must2のname→SID失敗という推定は、後の新fixtureで
+service削除後にcleanup-profileのSID/prepare一致を通過しDeleteProfileW32へ到達した実測と区別。
+一般の削除済みservice復帰や保存SID fallbackを今回の初回新規回収へ追加しない。fail closedを保持。
+SID→nameの失敗は別方向で実測済み。原応答はresearch2929-original125854.mdと同receiptに保存。
+
+review2930は固定e05efa9を実Haiku5.5/2steps/exit0/実検査0として受領、親がsource差分0を確認。
+原応答review2930-original125854.md/receiptを保存。Must1のSCM0許容に対応し、abortは1077のみへ限定。
+削除直前のstate/PID0/census再確認、失敗BOOLとnil/Errno0のerror化も実装した。
+unreadable数を記録する元のqueryable契約は保持し、完全な列挙とは主張しない。
+状態表・BOOL/LastError・failed/uncertain/completed journal非再実行のGo回帰を追加した。
+111 pass記録（top-level41）/opt-in skip2、vet/Windows build成功。
+機能head375385c5bfc6799688cd0f012dbee7d95859070a、現在push済みhead133bb1aへ保存。
+追加した読取guardはGo検査で確認し、実serviceを増やした再検査はしていない。
+Sonnetの有限3file review2938を正規登録済み、Must解消とPR239同head CI成功がmerge条件。
+旧2930の合格/指摘を新headへ無条件に流用しない。PR239未merge、製品PR148未merge。
+
+原Linux job117740936941のGET失敗はghのterminal escape拒否と診断した。同じnormal gate/OAuthの
+--allow-escape-sequencesをファイルのbyte streamだけへ使い、exit0/43050bytes/
+SHA E7FCCCD1993A9B13624A755D21CF67F05CD1D7E9D44149097FC9139B53B414DFを原bytesで保存。
+旧0byte失敗とそのstderrも保持し、画面へ原logを表示していない。
+PR224 main6d267ffのhelper/Build speedはsuccess、CodeQL39154719101は全4言語がSet up runner failure。
+原4job logのbytes/SHAをnormal gateから保存しbridge403を確認、具体predicateは未確定。
+元2825の既存診断へ追加し、shared bridge/guard/manifest拡張や旧run無条件rerunはしない。
+
+Linux root e62c15400b904a6c17ce9bfa916a8ca8の全18file/75934896bytes、build copy9d198b...の
+全56file/271323bytesを恒久rootへ全SHA一致保存後、plan→別通常削除→finish source_absent。
+追加Go build root847680194502e893ab267b23a8ea5e2bは空を確認して同手順でsource_absent。
+恒久root184a58...は削除しない。new fixture2cd3...と旧5051の現物・残留は保持。
+公開PowerShell tarはsaved-125854-e62c.../内にSHA一致保存済みで、次回はこの適法な保存物を使える。
+
+次はreview2938とcheck2933を受領し、必要なMust修正/同source CI/normal merge/必要配布へ進む。
+旧2790/2797の完了・元停止/依存、全体2825 doneを前提にしない2908の分離を維持する。
+製品正式4job成功、2640への成功証拠配送、新資源の全回収は未達。本人判断/PC操作依頼なし。
+
 ## 2026-10-19 03:34・PR224の通常mergeを確認（最新）
 
 前節のPR224 CI未完記述を更新する。同head92226c3の正式7jobは全success、CodeQL集約も

@@ -45,6 +45,12 @@ func collectedRoot(p Plan) (string, error) {
 	if typ != 1 || size < 4 || size%2 != 0 || buf[size/2-1] != 0 {
 		return "", errors.New("collection marker has an unexpected registry type or shape")
 	}
+	// The only NUL allowed is the terminator: no data may hide behind an early one.
+	for _, c := range buf[:size/2-1] {
+		if c == 0 {
+			return "", errors.New("collection marker contains an embedded NUL")
+		}
+	}
 	v := syscall.UTF16ToString(buf[:size/2])
 	if !ownedRootPattern.MatchString(v) {
 		return "", errors.New("collection marker does not name an owned root")
@@ -91,10 +97,13 @@ func programData() (string, error) {
 	}{0x62AB5D82, 0xFDC1, 0x4DC3, [8]byte{0xA9, 0xDD, 0x07, 0x0D, 0x1D, 0x49, 0x5D, 0x97}}
 	var pw *uint16
 	hr, _, _ := syscall.NewLazyDLL("shell32.dll").NewProc("SHGetKnownFolderPath").Call(uintptr(unsafe.Pointer(&guid)), 0, 0, uintptr(unsafe.Pointer(&pw)))
+	if pw != nil {
+		// The API hands back memory the caller owns even when it reports a failure.
+		defer syscall.NewLazyDLL("ole32.dll").NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(pw)))
+	}
 	if hr != 0 || pw == nil {
 		return "", fmt.Errorf("ProgramData known folder unavailable (hr=%#x)", hr)
 	}
-	defer syscall.NewLazyDLL("ole32.dll").NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(pw)))
 	s := syscall.UTF16ToString((*[1 << 15]uint16)(unsafe.Pointer(pw))[:])
 	if !filepath.IsAbs(s) || strings.HasPrefix(s, `\\`) {
 		return "", errors.New("ProgramData is not a local absolute path")

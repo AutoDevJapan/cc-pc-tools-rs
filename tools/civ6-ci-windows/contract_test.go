@@ -297,6 +297,8 @@ func TestImageRootParsesWindowsArgumentsStrictly(t *testing.T) {
 		`"` + root + `\\"helper.exe service ` + root,
 		"C:\\x\ty\\codex-owned-" + id + "\\helper.exe service C:\\x\ty\\codex-owned-" + id,
 		`C:\x\..\x\codex-owned-` + id + `\helper.exe service C:\x\..\x\codex-owned-` + id,
+		`C:\\codex-owned-` + id + `\helper.exe service C:\\codex-owned-` + id,
+		`C:\x\y/../z\codex-owned-` + id + `\helper.exe service C:\x\y/../z\codex-owned-` + id,
 		`C:\x\.\codex-owned-` + id + `\helper.exe service C:\x\.\codex-owned-` + id,
 		`C:\x\\y\codex-owned-` + id + `\helper.exe service C:\x\\y\codex-owned-` + id,
 		root + `\helper.exe service codex-owned-` + id,

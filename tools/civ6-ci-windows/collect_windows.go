@@ -249,13 +249,13 @@ func verifyTreeClean(root, sid string) (entries, links int, err error) {
 		if err != nil {
 			return err
 		}
-		var g int
-		var e error
+		// Every entry is read through its own handle opened with
+		// FILE_FLAG_OPEN_REPARSE_POINT (ignored for plain files), so no entry's DACL is
+		// ever taken from a link target, whatever Go classifies the entry as.
+		g, e := countGrantedSIDNoFollow(path, sid)
 		if d.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-			g, e = countGrantedSIDNoFollow(path, sid)
 			links++
 		} else {
-			g, e = countGrantedSID(path, sid)
 			entries++
 		}
 		if e != nil {

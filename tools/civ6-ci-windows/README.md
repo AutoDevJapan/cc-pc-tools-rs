@@ -67,7 +67,7 @@ Build into the owned root: `go build -trimpath -o <root>/bootstrap.exe .`
 | `helper.exe execute <root>` | controller (non-admin) **inside the scheduler's Cargo allocation** | registration token on **stdin** (RAM only) | enters `cargo_gate.exe test --target-dir <root target>` as a child; `contract.Verify` + own-runner-absent check; token goes through a one-message pipe to the service (kernel client/server PIDs checked) and only into the official configure input; waits for the service to stop; checks start/complete/after (below). Exit 0 only for a verified successful job. |
 | `helper.exe stop <root>` | controller | - | one SCM stop request, refused unless the shared service is currently bound to this root; the Job Object drain is confirmed by `execute`'s hold, not by this command. |
 | `helper.exe status <root>` | controller | - | one line: `{"instance","service","service_present","state","pid","exit_code","prepared.json"}` (SCM state 1 = stopped). |
-| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | holds the identity lock for the whole run; removes the two service ACEs and the launcher-report grant, **resets the ACL of every descendant** to what it inherits from the root, resets the owner of the whole root to Administrators, returns the root to the controller, **verifies recursively that no entry grants the shared SID**, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `tree_acl_reset`, `tree_entries_verified_without_service_grant`, `shared_profile_retained`, profile counts) and, as the very last step, the durable marker `HKLM\SOFTWARE\CC\civ6-ci-windows\<service>\CollectedRoot` (REG_SZ naming an owned root; the key's DACL is replaced on every write: SYSTEM/Administrators full, authenticated users read; measured: a non-admin write is denied). Links and other reparse entries are checked through their own handle (`tree_links_verified_without_service_grant`), never through their target; exit 0 or 1. |
+| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | holds the identity lock for the whole run; removes the two service ACEs and the launcher-report grant, **resets the ACL of every descendant** to what it inherits from the root, resets the owner of the whole root to Administrators, returns the root to the controller, **verifies recursively that no entry grants the shared SID**, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `tree_acl_reset`, `tree_entries_verified_without_service_grant`, `shared_profile_retained`, profile counts) and, as the very last step, the durable marker `HKLM\SOFTWARE\CC\civ6-ci-windows\<service>\CollectedRoot` (REG_SZ naming an owned root; the key's DACL is replaced on every write: SYSTEM/Administrators full, authenticated users read; measured: a non-admin write is denied). Every entry's DACL is read through its own handle opened with `FILE_FLAG_OPEN_REPARSE_POINT`, so no entry is judged by a link target (`tree_links_verified_without_service_grant` counts links); exit 0 or 1. |
 | `bootstrap.exe collect-unstarted <root>` | CC-AdminBroker | queued, never-started real job | abort path (untouched launcher report, no worker/authentication artifacts, zero-step queued job, service idle). |
 | `helper.exe audit <root>` | controller | - | read-only `contract.Verify` + runner/job state. |
 
@@ -173,7 +173,7 @@ parent therefore fixed the identity:
 
 Measured on the one fixture identity, first with three consecutive jobs (normal, cancel, normal;
 `evidence/shared-identity-fixtures-20261019.json`: distinct instances and service PIDs, worker exit 0/125/0, Job Object drained each
-time, queryable account process count 0 at each collect, CC-CIW profile count 4 = 3 legacy + 1 shared, no growth), then with the final
+time, queryable account process count 0 at each collect, CC-CIW profile count 4 = 3 legacy + 1 shared, no growth), then with
 an intermediate design (`evidence/shared-identity-fixtures-2-20261019.json`; that "previous root must be deleted" rule is superseded),
 and finally with the current collect/lock/marker code (`evidence/shared-identity-fixtures-3-20261019.json`): normal A; cancel B prepared while
 A's collected root still existed (allowed); a **stale `stop` from A's helper was refused** ("belongs to another job") while B owned the service;
@@ -220,3 +220,12 @@ no GitHub Actions run. `contract.Verify` against the live repository, the full
 `prepare` source materialization with the new contract and the monitor against a real job are
 exercised only by synthetic replies here and must be proven by the parent's PR149 run.
 Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
+
+## Known limits found by the last review (all conditional, none reproduced; review ToDo2999 reported Must 0)
+
+- The lock folder/file and the marker key get an explicit protected DACL for the principals this module names, but an already existing
+  resource with an unexpected owner, an extra explicit grant from an earlier controller SID, or a writable ancestor is not detected and
+  not rejected. The measured facts are only: the non-admin controller could read but not set the marker value, and the lock file showed the
+  minimal ACL on this PC. Delete/subkey/DACL-change denials were not measured separately.
+- `evidence/shared-identity-fixtures-4-20261019.json` names its code as "working tree on top of 772fbce"; no binary digest ties it to a
+  commit. The last live run (normal job, 30 entries, 0 links) used the final collect code and is recorded here, not in a saved file.

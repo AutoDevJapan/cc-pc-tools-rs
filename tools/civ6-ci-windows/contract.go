@@ -220,7 +220,7 @@ func imageRoot(image string) (string, error) {
 	}
 	// Only the exact form ensureService writes is accepted: re-render it and compare,
 	// so tabs, backslash-quote sequences and stray quotes can never be reinterpreted.
-	if strings.ContainsFunc(root, func(r rune) bool { return r < 32 || r == '"' }) || strings.Contains(root, `\.\`) || strings.Contains(root, `\..\`) || strings.Contains(root[3:], `\\`) {
+	if strings.ContainsFunc(root, func(r rune) bool { return r < 32 || r == '"' }) || strings.Contains(root, "/") || strings.Contains(root, `\.\`) || strings.Contains(root, `\..\`) || strings.Contains(root[2:], `\\`) {
 		return "", errors.New("service image root is not a clean path")
 	}
 	// Same rule as syscall.EscapeArg for these inputs: quote when a space or tab occurs.

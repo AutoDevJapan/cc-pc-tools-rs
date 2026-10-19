@@ -18,8 +18,9 @@ durable CollectedRoot marker; file-based exclusive lock shared by prepare/start/
 
 Review 2993 (R4-M1 lock path from env + S1-S4) addressed at 7f83d96 and verified live (fixture identity).
 
-Open
-1. Independent re-review of those fixes (shared ToDo, spec todo-2965-rereview5-spec.md).
-2. Append the delivery to parent ToDo2962 note and the 3 legacy residues (6a8d1e39..., c4809f99..., 052658b1...) to ToDo2381
-   (read the current note first; edit with --expected-note-sha256).
-3. Not done by design: real registration, product source, real Rust, live Verify.
+Review 2999 (R4 fixes) returned Must 0 / Suggestion 4 / Nit 2; the cheap ones were applied (no-follow handle for every entry, stricter path rules,
+marker NUL check, COM free on failure, README). The remaining Suggestions are documented as known limits in the README.
+
+Open (not for this child)
+- Parent integration of the fixed commit, queue2966 wiring to the README contract, official PR149 run and the 12-job budget.
+- Not done by design: real registration, product source, real Rust, live Verify, the real identity CC-CIW-civ6-banseiki.

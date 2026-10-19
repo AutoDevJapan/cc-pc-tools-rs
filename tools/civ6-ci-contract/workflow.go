@@ -96,6 +96,7 @@ func semantic(n *yaml.Node) any {
 }
 
 const CheckoutRef = "${{ github.event.pull_request.head.sha || github.sha }}"
+const DoctestCommand = "cargo test --locked --manifest-path tools/Cargo.toml --workspace --doc"
 
 func Route(w Workflow) string {
 	if w.Job == "test" {
@@ -126,6 +127,13 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 			return nil, errors.New("original checkout boundary differs")
 		}
 		out = bytes.Replace(out, []byte(marker), []byte("        with:\n          persist-credentials: false\n          ref: "+CheckoutRef+"\n"+marker), 1)
+		// --all-targets excludes doctests; retain that command and add the
+		// documentation acceptance explicitly requested by the original task.
+		buildMarker := "      - name: Build all tools\n"
+		if bytes.Count(out, []byte(buildMarker)) != 1 {
+			return nil, errors.New("original build boundary differs")
+		}
+		out = bytes.Replace(out, []byte(buildMarker), []byte("      - name: Run workspace doctests\n        run: "+DoctestCommand+"\n"+buildMarker), 1)
 	} else {
 		marker := "          persist-credentials: false\n"
 		if bytes.Count(out, []byte(marker)) != 1 {
@@ -143,6 +151,26 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 		return nil, errors.New("original job missing")
 	}
 	*field(a, "runs-on") = *field(b, "runs-on")
+	if w.Job == "test" {
+		steps := field(a, "steps")
+		var kept []*yaml.Node
+		docSteps := 0
+		for _, s := range steps.Content {
+			name, run := field(s, "name"), field(s, "run")
+			if name != nil && name.Value == "Run workspace doctests" {
+				if run == nil || run.Value != DoctestCommand || len(s.Content) != 4 {
+					return nil, errors.New("doctest acceptance step differs")
+				}
+				docSteps++
+			} else {
+				kept = append(kept, s)
+			}
+		}
+		if docSteps != 1 {
+			return nil, errors.New("explicit doctest acceptance required")
+		}
+		steps.Content = kept
+	}
 	count := 0
 	for _, s := range field(a, "steps").Content {
 		u := field(s, "uses")

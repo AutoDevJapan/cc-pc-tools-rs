@@ -24,7 +24,8 @@ helperは固有のinstance runner名で `VerifyAssigned` を開始hook/終了hoo
 
 `ReadAPI` の実装は既存GitHub CLI/OAuthを使い、レスポンス/出力の上限と期限を持ち、
 エラー本文・secret・tokenを会話や記録へ転記しない。全API操作はGETだけ。
-`Propose` は元workflow SHA256を要求し、routingとcheckout source/authだけを変更する。
+`Propose` は元workflow SHA256を要求し、routingとcheckout source/authを変更する。
+元のall-targets検査では実行されない、依頼で必須のworkspace doctestも独立stepで補う。
 元command bytesと親のconcurrencyを保持し、意図した差分を除いたYAML ASTも比較する。
 `testdata` は明示的に許可された三workflowだけの元bytesで、製品source全体ではない。
 

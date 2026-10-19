@@ -44,12 +44,18 @@ job:<GITHUB_JOB>, job_name:<official display name>
 source/treeと三workflowのレビュー済みbytes、CodeQLの元languages/settingsを正規APIで照合する。
 helperは登録前・hook開始/終了時・終了後に同じ固定planを再確認する。
 終端jobの成功判定は別で必須。listenerのexitだけでは成功としない。
+`VerifyAssigned(ctx,p,uniqueRunnerName,read)` でmatrix共有のjob名と実job IDを区別し、
+`RequireSuccess` で正式successを確認する。CodeQL生成eventは公表されたworkflow refを
+捏造せず `workflow_ref`/`workflow_digest` を空、`workflow_sha` をsource HEADにする。
 PRのhead checkoutとmerge contextを混同しない。fork・古いsource・別run/jobを拒否する。
 workflow変更を含む将来イベントはレビュー済みtemplateと一致しなければ実行せず理由を残す。
 
 ## workflowとOS
 
 三workflowのevents/permissions/job名/OS matrix/全command/concurrencyを保持する。
+元Rust workflowの `--all-targets` はdoctestを実行しないため、依頼に明示された
+受入を満たす `cargo test --locked --manifest-path tools/Cargo.toml --workspace --doc`
+を独立stepとして追加する。既存commandの置換や省略はしない。
 Linuxは `[self-hosted, Linux, X64, civ6-ci-linux]`、
 Windowsは `[self-hosted, Windows, X64, civ6-ci-windows]`。
 matrix.osのubuntu-latest/windows-latestはjob表示とOS選択に残し、hosted labelとして登録しない。

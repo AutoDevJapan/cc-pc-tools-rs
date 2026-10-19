@@ -109,12 +109,23 @@ func TestProposePreservesCommandsAndParentConcurrency(t *testing.T) {
 			if !strings.Contains(string(out), CheckoutRef) || !strings.Contains(string(out), "persist-credentials: false") {
 				t.Fatal("fixed checkout missing")
 			}
+			if w.Job == "test" && strings.Count(string(out), DoctestCommand) != 1 {
+				t.Fatal("required doctest acceptance missing or duplicated")
+			}
 			modified := append([]byte(nil), original...)
 			modified[len(modified)-2] ^= 1
 			if _, e = Propose(modified, w); e == nil {
 				t.Fatal("changed original accepted")
 			}
 		})
+	}
+}
+
+func TestWorkflowParserRejectsAmbiguousDocuments(t *testing.T) {
+	for _, data := range []string{"a: x\na: y\n", "a: &a {key: value}\nb: *a\n", "a: x\n---\nb: y\n"} {
+		if _, e := parse([]byte(data)); e == nil {
+			t.Fatal("ambiguous YAML accepted")
+		}
 	}
 }
 func TestPinnedNativeAdmissionAndRejections(t *testing.T) {

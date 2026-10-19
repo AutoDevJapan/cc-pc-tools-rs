@@ -58,3 +58,17 @@
 - 月累計の課金基準と現取得値はprivate Billing原本へ保存。差は増加であり、対象期間の他実行を分離できていないため、この修正の費用削減としない。金額や私有workflow本文は運用repoへ追加掲載しない。
 
 次: 3013の原応答/実modelを受領しMustを解消。新候補の固定CIが通るまでmergeしない。特に統合3/4のリンク、回収byte、各回収後と最後の容量、後続Chrome、全4分割を確認する。失敗時はログと該当範囲から直し、同一候補の全CIを重ねてrerunしない。3002は3005レビュー後に残る正式PC供給/実job/hash/回収を進める。Linux server検査をWindows製品完成と同一視しない。
+
+## 2026-10-19 22時台 失敗伝搬のMust対応
+
+- 3013の固定3ec5c2fbレビュー4ファイル全文を受領。実job20261019-224040-todo-3013とthread01a15468-b473-76f1-9ce6-e7a8cb05dd18のturn_contextはSonnet5.5一致。原応答SHA256 B27EBDE1D0ECC4FBD74CEB055F7BB0BC05BF1B97CEA032EF70FCBFA93E284775。source reviewのみ、追加実testなし。
+- 新MustはパイプでCargo失敗が隠れること。指定なしrunのBashは-eのみ、明示bashは-eo pipefailという公式仕様を確認し、前提の誤りを修正。個別4ステップだけの継ぎ足しではなく、workflow共通defaults.run.shell:bashへ設計をそろえた。scopeの安価なnegative/positive probeで将来も失敗後に回収へ進まないことを確認する。
+- 旧3ec5c2fbのlocal39261974120とCodeQL39261974119へ取消を依頼。CodeQLの取消完了を確認。localの終端はAPI照合を継続中（TLS handshake timeoutがあり、受付と終了を区別）。旧候補の緑を最終成功として使わず、重い新CIは今回のMust修正レビューが済んでから開始する。
+- 修正75edee9b7204bc3724f31579d2aa40c01648822f/tree9585531f950743878115aa17b563cb3d75521f5dをGitHub API保存し、3ec比4ファイル差分をcompare確認。PR176 branchはまだ3ecのまま。候補本文はdocs/todo2987-pipe-patch.private.json。
+- Windowsの実Git BashでRed/Green/正常対照を実行。旧-eはexit0で後続afterを作る。修正-eo pipefailはexit23でafterを作らない。正常対照はexit0でafterを作る。3ケースPASS、CREATE_NO_WINDOWを明示し窓なし。
+- jqにobjectsを足し、数値/boolean/配列/null/文字列の行でもprojectionが落ちないことを実fixtureで確認。Cargoのハイフンtarget名とunderscore実行名を正規化して比較し回帰assertを追加、Rust3検査/fmt成功。診断はjson-render-diagnosticsへ変更してartifact JSONを維持。actionlint構造/式も成功。
+- NULのname/path組をsort -zuする提案は、組を壊すため採らず、予期しない重複は全削除前に失敗させる。全4分割と後続fixture/元source/ライブラリ/通常binの保護は維持。
+- 固定新候補の4ファイル全文を限定review3016へ渡して通常受付。直接子job/新費用/ローカル重Cargo/GPU/保護source使用なし。3002のPC実job/hash/終了回収は別の未完了のまま。
+
+次: 3016を受領してMust解消を確認後、PR branchを75edee9へ非force更新して最新必要CIを1回開始する。取消途中の旧jobは固定run IDで終端を確認する。shared checkpointとprivate runtimeを更新。CI通過後だけ通常mergeし、同一最終sourceの結果を再利用する。初回SIGBUSの原因と容量・回収量、実行回数/課金増分の検証は未完了。
+- 追補: 旧local runのjobsとPRのcheck rollupを別々に正規取得し、rust-core completed/cancelled、local-gates completed/failure、他5job successを確認。重い旧実行の終了を確認済み。取消された未適合候補をmergeしない。個別run GETのTLS失敗だけを全API不通や権限拒否とは扱わない。

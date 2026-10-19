@@ -1,0 +1,64 @@
+name: Civ6 CI Windows helper
+env:
+  CC_LINUX_RUNNER_MODE: normal
+on:
+  push:
+    branches: [main]
+    paths: ['tools/civ6-ci-windows/**', 'tools/civ6-ci-contract/**', '.github/workflows/civ6-ci-windows.yml']
+  pull_request:
+    paths: ['tools/civ6-ci-windows/**', 'tools/civ6-ci-contract/**', '.github/workflows/civ6-ci-windows.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
+jobs:
+  helper:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: Windows
+            labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
+          - os: Linux
+            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    runs-on: ${{ matrix.labels }}
+    timeout-minutes: 10
+    steps:
+      - name: Admit current Windows head before checkout
+        if: runner.os == 'Windows'
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Use job-owned Linux Go scratch
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/go-tmp" "$RUNNER_TEMP/go-cache"
+          printf 'TMPDIR=%s/go-tmp\nGOTMPDIR=%s/go-tmp\nGOCACHE=%s/go-cache\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Test the shared contract
+        working-directory: tools/civ6-ci-contract
+        run: go test -race -timeout 120s ./...
+      - name: Test the Windows runner helper
+        working-directory: tools/civ6-ci-windows
+        run: go test -race -timeout 120s ./...
+      - name: Vet the Windows runner helper
+        working-directory: tools/civ6-ci-windows
+        run: go vet ./...
+      - name: Build the Windows runner helper
+        working-directory: tools/civ6-ci-windows
+        run: go build -trimpath .

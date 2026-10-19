@@ -188,11 +188,14 @@ func guestConfigure(p guestPacket) error {
 	return nil
 }
 
-func guestRunner() error {
-	var p guestPacket
-	d := json.NewDecoder(io.LimitReader(os.Stdin, 64<<10))
-	d.DisallowUnknownFields()
-	if d.Decode(&p) != nil || p.Plan.localCheck() != nil || p.Token == "" || len(p.Nonce) != 64 {
+// configureRunner is replaceable so tests can prove that no registration step
+// is reached for an invalid packet.
+var configureRunner = guestConfigure
+
+// validateRegistration is the pure pre-registration check: shape, kind, label
+// route and the unique instance name.
+func validateRegistration(p guestPacket) error {
+	if p.Plan.localCheck() != nil || p.Token == "" || len(p.Nonce) != 64 {
 		return errors.New("Linux registration packet rejected")
 	}
 	k, e := p.Plan.kind()
@@ -203,14 +206,28 @@ func guestRunner() error {
 	if e != nil || k != p.Kind || p.Custom != wantLabel || p.Defaults != wantDefaults || !strings.HasPrefix(p.Name, "civ6-ci-linux-"+string(k)+"-") || filepath.Base(p.Name) != p.Name {
 		return errors.New("Linux registration identity rejected")
 	}
-	if e = guestConfigure(p); e != nil {
+	return nil
+}
+
+func guestRunner() error {
+	var p guestPacket
+	d := json.NewDecoder(io.LimitReader(os.Stdin, 64<<10))
+	d.DisallowUnknownFields()
+	if d.Decode(&p) != nil {
+		return errors.New("Linux registration packet rejected")
+	}
+	if e := validateRegistration(p); e != nil {
+		return e
+	}
+	k := p.Kind
+	if e := configureRunner(p); e != nil {
 		return e
 	}
 	p.Token = ""
-	if e = saveNew(guestPlanFile, p); e != nil {
+	if e := saveNew(guestPlanFile, p); e != nil {
 		return e
 	}
-	if e = os.Chdir("/runner"); e != nil {
+	if e := os.Chdir("/runner"); e != nil {
 		return e
 	}
 	hooks := []string{"ACTIONS_RUNNER_HOOK_JOB_STARTED=/runner/hook-start.sh", "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/runner/hook-complete.sh"}

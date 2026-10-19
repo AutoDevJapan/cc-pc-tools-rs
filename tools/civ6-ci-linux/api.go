@@ -16,7 +16,7 @@ import (
 // Read allowlist. The parent's Verify may only read these families of endpoints
 // of the one fixed repository; anything else is rejected before gh is started.
 var readAllowed = regexp.MustCompile("^(repositories/1392152644|repos/AutoDevJapan/civ6-banseiki/(" +
-	"pulls/[0-9]+|git/(commits|trees)/[0-9a-f]{40}|git/ref/heads/[A-Za-z0-9._%+-]{1,300}|contents/[A-Za-z0-9._/-]{1,200}|" +
+	"pulls/[0-9]+|git/(commits|trees)/[0-9a-f]{40}|git/ref/heads/[A-Za-z0-9._%+/-]{1,300}|contents/[A-Za-z0-9._/-]{1,200}|" +
 	"actions/runs|actions/runs/[0-9]+|actions/runs/[0-9]+/(attempts/[0-9]+/)?jobs|actions/jobs/[0-9]+|actions/runners|" +
 	"code-scanning/default-setup|compare/[0-9a-f]{40}[.][.][.][0-9a-f]{40}))$")
 var readQuery = regexp.MustCompile("^[A-Za-z0-9=&_.%-]{0,200}$")

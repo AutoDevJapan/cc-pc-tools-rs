@@ -16,6 +16,9 @@ func TestReadAllowlist(t *testing.T) {
 		"repos/" + repoFull + "/git/commits/" + sha,
 		"repos/" + repoFull + "/git/trees/" + sha + "?recursive=1",
 		"repos/" + repoFull + "/git/ref/heads/scheduler%2Fbranch",
+		// The parent escapes each path segment and keeps the slashes.
+		"repos/" + repoFull + "/git/ref/heads/scheduler/actions-cost-pr-concurrency-20261019",
+		"repos/" + repoFull + "/git/ref/heads/main",
 		"repos/" + repoFull + "/contents/.github/workflows/rust.yml?ref=" + sha,
 		"repos/" + repoFull + "/actions/runs/101",
 		"repos/" + repoFull + "/actions/runs/101/attempts/2/jobs?per_page=100",
@@ -41,6 +44,8 @@ func TestReadAllowlist(t *testing.T) {
 		"repos/" + repoFull + "/contents/README.md?ref=main",
 		"repos/" + repoFull + "/contents/../x?ref=" + sha,
 		"repos/" + repoFull + "/pulls/1?x=a;b",
+		"repos/" + repoFull + "/git/ref/heads/a/../../actions/secrets",
+		"repos/" + repoFull + "/git/ref/heads/x?y=1;2",
 		"repos/" + repoFull + "/pulls/1 ",
 		"user",
 		"graphql",

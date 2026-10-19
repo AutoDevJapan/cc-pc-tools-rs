@@ -38,3 +38,20 @@ runner登録0件であり、このPRに未供給self-hosted labelの追加はあ
 
 推測の機能追加や対象外のアプリ改変を要求せず、具体的な実害と該当箇所を示してください。
 Mustがあっても読取レビュー自体は完了です。最終返信だけ返し、親2986や2957を待たないでください。
+
+## 初回正式CIで判明したDB修復の追加確認
+
+初回候補は製品branchへまだ追加pushしていません。実Docker E2E job118041805399で
+connect-token-revocation/cross-clientのcreateApp初期化が同じDBを変更し、
+PostgreSQL 40P01 deadlockで失敗しました。既存ソースから並列Node test filesの競合を確認。
+保留修正は補助repo固定commit f77ab7031dc8c45494aa297f4d546e7ad92e5273 の
+tools/passshare-ci/{main.go,main_test.go,README.md}にあります。この最新版も読んでください。
+出力は親.ci-work/candidate-repair/の二workflowで、正式CI成功はまだ主張していません。
+
+serialE2Eは実Compose configの元sh -c commandを読み、Nodeの--test-concurrency=1だけを挿入します。
+build/installの前提処理、元の7 test files、将来Composeに追加するtest filesを保持し、未知形式は拒否。
+変更する対象外jobの例外はこのE2E commandだけで、構造比較はほかの全フィールドも比較します。
+NODE_OPTIONSにはこのflagが許可されないことを実runtimeで確認したため使用していません。
+実Bash/jqの集約6ケース（失敗/不意skipを拒否）、元command保持/不明形式拒否2ケース、vet/actionlint成功。
+実PostgreSQL再実行の合格は未確認。無目的なrerunを避けるため依存監査修復2996とまとめて公開予定です。
+この保留修正の実害・試験抜け・失敗の伝播も追加確認し、旧固定候補と区別して報告してください。

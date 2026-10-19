@@ -77,24 +77,32 @@ NODE_OPTIONSではこのflagを受け付けないことも実runtimeで確認し
 実Bash+jqによる集約6ケース、元command保持/不明形式拒否2ケース、go vet/actionlint成功。
 実Compose configの元7 test filesを確認した。DB再実行の成功は未確認。
 
-別モデルレビューは子2995。依存修復とレビューを受領してから保留修正をまとめて公開し、
+別モデルレビューは子2998（Claude既存OAuth）。元2995のgpt-5.5指定はschedulerの
+resource_waitとなって起動していないため、レビュー未実施を明記して同じ固定対象を移管した。
+旧登録の終了はレビュー成功ではない。依存修復と2998の実レビューを受領してから保留修正をまとめて公開し、
 無目的な初回候補のrerunはしない。Windows子2994は独立して供給実証を進める。
-親はまず2995/2996だけを待ち、PR720の通常CI/mergeを先に終えてから2994の統合へ戻る。
+親はまず2998/2996だけを待ち、PR720の通常CI/mergeを先に終えてから2994の統合へ戻る。
 2994は親2986をwaitしない。親PRのマージと2994の供給の相互待ちを作らない。
 
 全CI成功、マージ、main確認、最終runner分数/請求増分は未完。
+正式Quality GateのDesktop smokeは167秒、再利用Mobile smokeは213秒で成功した。
+DB統合失敗を集約Quality gateが実際に失敗へ伝播したことも確認した。
+同じrunの失敗を無目的に再実行していない。残る独立workflowの終端は再開時に確認する。
 設定とfixtureを実CI成功や費用削減実績として数えない。
 
 ## 再開手順
 
 1. この記録・自分のToDo note・子2994の配送を読み、APIで現在のmain/PRを再照合する。
 2. 公開済み`.ci-work/candidate/`と保留中`.ci-work/candidate-repair/`を区別する。
-3. 子2995のレビューと2996の固定依存修復を受領し、保留修正とまとめてPR720を更新する。
+3. 子2998のレビューと2996の固定依存修復を受領し、保留修正とまとめてPR720を更新する。
 4. 実害ある指摘/実CI失敗を修復し同HEADの結果を確認して通常マージする。新しいrun/jobの失敗も取りこぼさない。
 5. 2994の正式Windows job/hash/回収を受領し、全体の重複排除を統合して実測する。
 6. 元2957/自分のnoteへ結果と未達を保存する。通常完了通知は送らない。
 
 私的API payload・ログ・実行ID等は.gitignore対象の`.ci-work`に保持する。
 作業用所有rootはsafe-delete ID `7df7fa6570a2f553852784166091480a`。
-終了前に証拠を保存してplan→別呼出削除→finish。拒否はquarantineし迂回しない。
+planと続くquarantine --reason policyは両方PROTECTED_PATHを返した。
+safe-deleteの現実装が配下の`.git`を保護するため、実Git履歴fixtureが回収を阻む。
+後続scrub391の当該root分類もunverified/client_resource=trueなので、別経路で移動/削除/読取をしていない。
+所有IDと作成根拠を保持し、保護を迂回して片付けたとは扱わない。この拒否だけを本人判断待ちにしない。
 GPU・Civ6・重Cargo・新費用・新APIキー・ブラウザ操作はこの親工程では実行していない。

@@ -156,7 +156,10 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		allJobs[j.ID] = row
 	}
 	if resourceUnverified {
-		js.Status, js.Complete = "partial", false
+		if js.Complete {
+			js.Status = "partial"
+		}
+		js.Complete = false
 		s.Sources["jobs"] = js
 		s.Issues = append(s.Issues, "jobs_resource_unverified")
 	}

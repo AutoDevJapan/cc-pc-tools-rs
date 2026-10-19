@@ -261,4 +261,14 @@ func TestActiveOnlyResourceMarkersAreWiredThroughCollection(t *testing.T) {
 		!reflect.DeepEqual(s.Issues, []string{"jobs_resource_unverified"}) {
 		t.Fatal("unknown resource evidence must be visible as incomplete acquisition")
 	}
+	f.job(t, "zzz-history", `{"id":"zzz-history","status":"queued"}`)
+	metadata, err := os.ReadFile(filepath.Join(f.opts.JobsDir, "worker", "job.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.opts.JobsBytes = int64(len(metadata))
+	s = collect(context.Background(), f.opts, testNow, probe)
+	if s.Sources["jobs"].Status != "byte_limit" {
+		t.Fatal("resource uncertainty overwrote the original acquisition failure")
+	}
 }

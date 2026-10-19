@@ -1492,10 +1492,10 @@ index 6643684..1c3dea7 100644
  use codex_http_client::RouteAwareClientPool;
  use codex_login::default_client::get_codex_user_agent;
 diff --git a/codex-rs/tui/src/app.rs b/codex-rs/tui/src/app.rs
-index 5dfc3ad..ac8f6c4 100644
+index 5dfc3ad..eeea23c 100644
 --- a/codex-rs/tui/src/app.rs
 +++ b/codex-rs/tui/src/app.rs
-@@ -1102,6 +1102,35 @@ impl App {
+@@ -1102,6 +1102,34 @@ impl App {
                      if let Some(owner) = self.background_voice.as_mut() {
                          owner.refresh_realtime_microphone_level();
                      }
@@ -1516,10 +1516,9 @@ index 5dfc3ad..ac8f6c4 100644
 +                                        .get(&id)
 +                                        .and_then(Option::as_ref)
 +                                        .map(|thread| &thread.status),
-+                                    self.agents_overview
-+                                        .activity
-+                                        .get(&id)
-+                                        .is_some_and(|activity| activity.processing()),
++                                    self.agents_overview.activity.get(&id).is_some_and(
++                                        agents_overview_details::AgentsOverviewActivity::processing,
++                                    ),
 +                                    self.thread_event_channels.get(&id).is_some_and(|channel| {
 +                                        channel.attachment() == ThreadEventAttachment::Live
 +                                    }),
@@ -1532,10 +1531,10 @@ index 5dfc3ad..ac8f6c4 100644
                      self.refresh_agents_overview_usage(app_server, tui.frame_requester());
                      let rendered_area = self.render_chat_widget_frame(tui, screen_size)?;
 diff --git a/codex-rs/tui/src/app/agents_overview_details.rs b/codex-rs/tui/src/app/agents_overview_details.rs
-index 03b3c9b..8397d3c 100644
+index 03b3c9b..0dc6476 100644
 --- a/codex-rs/tui/src/app/agents_overview_details.rs
 +++ b/codex-rs/tui/src/app/agents_overview_details.rs
-@@ -22,6 +22,57 @@ use std::collections::HashMap;
+@@ -22,6 +22,73 @@ use std::collections::HashMap;
  
  const PREVIEW_CHARS: usize = 512;
  
@@ -1547,9 +1546,12 @@ index 03b3c9b..8397d3c 100644
 +    fn parallel_progress_native_observes_processing_reports_and_expiration() {
 +        let mut activity = AgentsOverviewActivity::default();
 +        assert!(!activity.processing());
-+        for kind in ["reasoning", "agentMessage", "plan"] {
++        for kind in ["reasoning", "agentMessage", "plan", "imageGeneration"] {
 +            let item = match kind {
 +                "reasoning" => serde_json::json!({"type":kind,"id":"i","summary":[],"content":[]}),
++                "imageGeneration" => {
++                    serde_json::json!({"type":kind,"id":"i","status":"in_progress","result":""})
++                }
 +                _ => serde_json::json!({"type":kind,"id":"i","text":"fixture"}),
 +            };
 +            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
@@ -1557,7 +1559,10 @@ index 03b3c9b..8397d3c 100644
 +            }))
 +            .unwrap();
 +            activity.observe_processing(&notification);
-+            assert_eq!(activity.processing(), kind == "reasoning");
++            assert_eq!(
++                activity.processing(),
++                matches!(kind, "reasoning" | "imageGeneration")
++            );
 +        }
 +        for tool in ["spawnAgent", "wait"] {
 +            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
@@ -1572,6 +1577,16 @@ index 03b3c9b..8397d3c 100644
 +        }
 +        activity.processing_at =
 +            Some(std::time::Instant::now() - std::time::Duration::from_secs(31));
++        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        activity.observe_processing(&ServerNotification::ThreadStatusChanged(
++            codex_app_server_protocol::ThreadStatusChangedNotification {
++                thread_id: "t".into(),
++                status: ThreadStatus::Active {
++                    active_flags: vec![ThreadActiveFlag::WaitingOnApproval],
++                },
++            },
++        ));
 +        assert!(!activity.processing());
 +        activity.processing_at = Some(std::time::Instant::now());
 +        let completed: ServerNotification = serde_json::from_value(serde_json::json!({
@@ -1593,7 +1608,7 @@ index 03b3c9b..8397d3c 100644
  pub(super) fn preview_agent_message(text: &str) -> String {
      preview_markdown(&crate::markdown::normalize_markdown_for_rendering(text))
  }
-@@ -52,6 +103,54 @@ pub(super) fn preview_text(text: &str) -> String {
+@@ -52,6 +119,55 @@ pub(super) fn preview_text(text: &str) -> String {
  pub(super) struct AgentsOverviewActivity {
      reasoning: Option<ReasoningPreview>,
      last_message: Option<String>,
@@ -1644,11 +1659,12 @@ index 03b3c9b..8397d3c 100644
 +            | ThreadItem::McpToolCall { .. }
 +            | ThreadItem::DynamicToolCall { .. }
 +            | ThreadItem::WebSearch(_)
++            | ThreadItem::ImageGeneration(_)
 +    )
  }
  
  struct ReasoningPreview {
-@@ -72,6 +171,7 @@ impl App {
+@@ -72,6 +188,7 @@ impl App {
              return;
          }
          let activity = self.agents_overview.activity.entry(thread_id).or_default();

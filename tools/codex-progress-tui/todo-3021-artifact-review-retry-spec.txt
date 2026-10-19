@@ -1,0 +1,13 @@
+親ToDo3021のartifact metadata差分を別モデルで読み取り専用レビューする。前回のToDo3032は、親の実作業ブランチではなく `scheduler/todo-3030-codex-0-163-0-tui` をGitHub上で確認し、古いsource.jsonをMustとして報告したため、対象ブランチ不一致で無効。今回それを再利用しない。
+
+今回の対象はGitHubリポジトリAutoDevJapan/cc-pc-tools-rsの `scheduler/todo-2903-qualified-release`、対象HEAD `f57ea9e10fe23520821ba2779accda3f63f18b8c`。GitHub read APIでブランチSHAと各ファイルを取得して一致を確認してからレビューする。baseはmain/PR255 merge 842e513。
+
+対象ファイルは `tools/codex-progress-tui/source.json` と `tools/codex-progress-tui/todo-3021-artifact-evidence.md`。ToDo3030の保存報告 `todo-3030-revalidation.json` が示す候補SHA、source tag/patch commit、attempt5 ConPTY受入、npm tarball SHA512、npm integrityを照合する。
+
+判断点:
+1. tested_binary_sha256 を 618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f とした変更が、配布候補の実SHA・固定source・attempt5実受入記録と整合するか。以前のbcebff4...との全byte差の原因を断定していないか。
+2. npm_tarball_sha512を128桁の410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dabへ直す根拠が実tarball/integrityと整合するか。
+3. 候補SHAと公式npmバイナリ/hostの各hashを混同せず、source provenanceと未説明のビルド差を正確に扱っているか。
+4. metadataのレビューだけで実配備済みとは扱わず、配備後にlauncher/manifest/hash、実起動の常設欄と/progress、公式exec経路を受入する条件が残っているか。
+
+作業は読み取り専用。GitHub APIで記録対象を読む以外にコマンド実行、ファイル編集、状態変更、別ToDo登録をしない。秘密情報や顧客情報は読まず、出力しない。Must/Should/Nitで根拠と行番号を報告する。適用差分のSHA/HEADと実際に読めた証跡を明記し、対象ブランチを取得できない場合は成功扱いせず停止する。

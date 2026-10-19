@@ -32,3 +32,15 @@
 - APIクエリのampersandをgh.cmdがcmd区切りとして扱うため、月指定は正規gh api --method GET -f year=2026 -f month=10で取得した。秘密を読まない。
 - 最初の候補とは別に、native Chrome証跡の保存stepを統合検査後へ移し、終了時のdisk/inode/target量も記録する差分を作成・actionlint確認済み。docs/todo2987-evidence-fix.private.jsonに保持。これはまだprivate候補branchへコミットしていない。レビュー結果と合わせて必要な修正だけを一括で反映し、全CIの無駄な再起動を避ける。
 - 2991は登録済みtodoで起動待ち。直接の子Codex起動や同じreviewの重複登録はしない。
+
+## 2026-10-19 21時台 再開・別モデルレビュー対応
+
+- mainは引き続き4dc5c332、PR176は初回9f5a18bb。原候補の全CIを追加再起動していない。
+- レビュー2991の最終実行20261019-210745-todo-2991を受領。4ファイル全文と依存manifestを確認済み。jobと該当session turn_contextの実モデルはSonnet5.5で一致。原応答SHA256 AE32C7458CCB10707CF77844D1BB58474388932C2BA343562EFF133A9ED717A8。旧API失敗3実行は未レビューとして区別。
+- Must1は統合後のnative Chrome証跡の保存漏れ。保存stepを最後へ移す準備済み修正を採用。main push groupのSHA分離、終了時disk/inode/target診断、元app4852秒≒81分の記述訂正も採用。
+- この修正を固定commit d9caa25386c83d1894c8fb915d87be55ce7b2df5/tree0c168558b943000e2cd28174323f8d4bccb2c7b6へGitHub APIで保存。compareで差分2ファイルだけと確認。branchはまだ9f5a18bb（初回CIを途中取消して全件を重ねないため）。修正commitを先に別モデルレビュー3003へ登録。source選択器/実行検査commandsの変更はない。
+- 指摘された空差分の全件化は採らない。同一treeは新しいsource変更がないため、全falseと集約のskip確認で重複検査を避ける。base取得不能は全件、diffエラーは失敗のまま。不採用理由はPRのレビュー記録へ後で1回投稿する。
+- 初回CIはCodeQL4言語/gate、Windows fixtures、V2 Linux/Windows、Windows Chrome、scope/bridge/signing/browser/coldが全成功。本体もworkspace lib/doc、CLI/examples/build、native V1/V2、統合1/4まで成功し、統合2/4が実行中。受付や一部成功を全完了とは扱わない。
+- 本人のPCで一度の正式CIへ寄せる最新方針を読み直し、独立3002を--needs cargoで登録。Windows側3workflowと専用Rust helperだけを担当し、親の4ファイル/PR176を書き換えない。LinuxのPC隔離供給の実証結果も受領する。未供給labelへの切替、旧固定infraの境界拡大、保護source使用、直接子job起動、無制限runner/cache、新費用は禁止。親2957/2982/2987への循環waitも禁止。
+
+次: review3003の原応答と実モデルを受領。初回run39245437660終了時の実所要量とdiskエラー有無を確認し、必要修正をまとめてbranchをd9caa253へ非force更新する。最新候補の必要CIとレビューを確認し通常merge。3002のPC実job/成果物hash/終了回収を別途統合し、実行量/請求増分はprivate原APIで比較する。自分の重Cargo/GPU/新予算/公開操作は引き続き無し。

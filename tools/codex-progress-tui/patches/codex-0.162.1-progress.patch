@@ -1467,6 +1467,16 @@ index 6b705c5..0c7649b 100644
              );
              match code_mode_session_provider {
                  Some(provider) => manager.with_code_mode_session_provider(provider),
+diff --git a/codex-rs/cli/src/main.rs b/codex-rs/cli/src/main.rs
+index 8d062a2..4c20743 100644
+--- a/codex-rs/cli/src/main.rs
++++ b/codex-rs/cli/src/main.rs
+@@ -1,3 +1,5 @@
++#![recursion_limit = "256"]
++
+ use clap::Args;
+ use clap::CommandFactory;
+ use clap::Parser;
 diff --git a/codex-rs/cloud-tasks/src/lib.rs b/codex-rs/cloud-tasks/src/lib.rs
 index 6643684..1c3dea7 100644
 --- a/codex-rs/cloud-tasks/src/lib.rs
@@ -2217,6 +2227,16 @@ index dc0fbd0..78c4e03 100644
          for (action, configured_mode, has_explicit_cwd, expected_directory) in [
              (CwdPromptAction::Resume, "current", false, "launch"),
              (CwdPromptAction::Resume, "session", false, "session"),
+diff --git a/codex-rs/tui/src/main.rs b/codex-rs/tui/src/main.rs
+index 5a196d6..7047157 100644
+--- a/codex-rs/tui/src/main.rs
++++ b/codex-rs/tui/src/main.rs
+@@ -1,3 +1,5 @@
++#![recursion_limit = "256"]
++
+ use clap::Parser;
+ use codex_arg0::Arg0DispatchPaths;
+ use codex_arg0::arg0_dispatch_or_else;
 diff --git a/codex-rs/tui/src/parallel_progress.rs b/codex-rs/tui/src/parallel_progress.rs
 new file mode 100644
 index 0000000..608d2bc

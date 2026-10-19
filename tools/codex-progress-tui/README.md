@@ -34,6 +34,8 @@ cargo build --locked --release -p codex-cli --bin codex
 
 Goは各ディレクトリで `go test ./...`、`go vet ./...`、`go build` を実行します。元の実行版と設定を退避し、Dドライブへ更新版と同じ公式版の `codex-code-mode-host.exe` を配置します。manifestは実ファイルのSHAを記録します。公式版は削除しません。
 
+Windowsのrelease検査で、単独TUIのasync型の展開が再帰上限128を超える場合があります。TUIライブラリと同じ上限256を単独TUIと配布CLIの入口にも設定しています。処理や検査を省略する変更ではありません。
+
 ## 運用
 
 cacheは `D:/CC/Work/parallel-agent-progress-runtime`、実行版は `D:/CC/Tools/agent-progress` と `D:/CC/Tools/codex-progress-tui` です。2秒の画面更新と4秒の共有cacheを使い、取得はプロセス内とOSロックで重複させません。子処理は窓を出さず、取得4秒・終了6秒の期限を持ちます。

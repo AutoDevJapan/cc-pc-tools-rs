@@ -13,7 +13,7 @@
     "codegen_units": 16,
     "debug": "0"
   },
-  "tested_binary_sha256": "7eda7d645c4dcd7cae038451d60b7ab5e89e28e6868876060d2f5a4af5b4079b",
-  "tested_binary_source_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
+  "tested_binary_sha256": "6f21e83ac9fac5ed64e5b06667a408f671da65ac9d1094e3f84b156841cdc6a1",
+  "tested_binary_source_commit": "69a95ba6d4f166d289e73f2a708d6b312f41b192",
   "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc"
 }

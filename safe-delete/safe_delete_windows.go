@@ -135,6 +135,16 @@ func checked(value string) (string, error) {
 	return p, nil
 }
 func fileIdentity(path string) (syscall.ByHandleFileInformation, error) {
+	i, err := rawIdentity(path)
+	if err == nil && i.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+		return i, fail("LINK_OR_REPARSE_POINT")
+	}
+	return i, err
+}
+
+// rawIdentity is used only by the finite SDK preservation scanner; callers
+// must validate the reparse tag and target before accepting a link.
+func rawIdentity(path string) (syscall.ByHandleFileInformation, error) {
 	u, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
 		return syscall.ByHandleFileInformation{}, fail("INVALID_PATH")
@@ -149,9 +159,6 @@ func fileIdentity(path string) (syscall.ByHandleFileInformation, error) {
 	var info syscall.ByHandleFileInformation
 	if syscall.GetFileInformationByHandle(h, &info) != nil {
 		return info, fail("IDENTITY_READ_FAILED")
-	}
-	if info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-		return info, fail("LINK_OR_REPARSE_POINT")
 	}
 	return info, nil
 }
@@ -461,7 +468,10 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
-	var scope *geminiScope
+	if reason == "sdk-links" {
+		return c.quarantineSDK(id)
+	}
+	var scope preservationScope
 	if reason == "hardlink" {
 		scope, err = c.geminiRecovery(id)
 		if err != nil {
@@ -470,7 +480,14 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 	}
 	return c.quarantineScoped(id, reason, scope)
 }
-func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result map[string]any, err error) {
+
+type preservationScope interface {
+	measure(string) (measured, error)
+	snapshot(string) (map[string]geminiEntry, error)
+	verify(string, map[string]geminiEntry, receipt) error
+}
+
+func (c config) quarantineScoped(id, reason string, scope preservationScope) (result map[string]any, err error) {
 	text, ok := reasons[reason]
 	if !ok {
 		return nil, fail("INVALID_REASON")
@@ -479,7 +496,12 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 	if err != nil {
 		return nil, err
 	}
-	m, err := c.measureWithShared(r.Path, scope)
+	var m measured
+	if scope == nil {
+		m, err = c.measure(r.Path)
+	} else {
+		m, err = scope.measure(r.Path)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +622,7 @@ func appendReason(path, text string) error {
 }
 func main() {
 	if len(os.Args) < 2 || os.Args[1] == "--help" {
-		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
+		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete inspect-sdk --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink|sdk-links\nhardlink is restricted to ToDo2307's fixed receipt and media. sdk-links preserves only ToDo3004's three collected SDK roots.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
 		return
 	}
 	c := defaultConfig()
@@ -621,6 +643,15 @@ func main() {
 			result, err = c.create(*root, *project, *content)
 		case "plan":
 			result, err = c.plan(*id)
+		case "inspect-sdk":
+			var r receipt
+			r, err = c.sdkRecovery(*id)
+			if err == nil {
+				err = sdkCollected(r.Path, *id)
+			}
+			if err == nil {
+				result, err = (&sdkScope{source: r.Path}).measure(r.Path)
+			}
 		case "finish":
 			result, err = c.finish(*id)
 		case "quarantine":

@@ -34,6 +34,11 @@ type geminiEntry struct {
 	Attributes, Links, SizeHigh, SizeLow uint32
 	Created, Written                     syscall.Filetime
 	Hash                                 string
+	Target                               string `json:",omitempty"`
+}
+
+func (s *geminiScope) measure(root string) (measured, error) {
+	return (config{MaxEntries: 10000}).measureWithShared(root, s)
 }
 
 func geminiMetadata(i syscall.ByHandleFileInformation) geminiEntry {

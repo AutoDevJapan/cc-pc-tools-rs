@@ -43,3 +43,31 @@ go build -trimpath -o <所有付き検査フォルダー>/safe-delete.exe .
 
 公開CIはWindowsで同じ全Go検査・vet・buildを実行する。
 試験の共有名はt.TempDir内の架空データだけで、実物の所有IDを登録しない。
+
+## ToDo3004: 回収済みSDKの有限な退避
+
+`inspect-sdk --id <ID>` は読み取り検査、`quarantine --id <ID> --reason sdk-links`
+は同じドライブの削除希望への保存を行う。対象はToDo2997が収集を終えた
+7155bdd37afc8e75e4dbf39509a5f18c、c0d0c333fca8d97bab2fb8219b1ee1a8、
+5eac22dc8041f9b3a471dbb392f86b99だけ。元の所有記録のチェックサムを固定し、
+rootの識別番号・保護対象外のguard・合成fixture/checkoutと収集証拠を確認する。
+退避中はfixture専用のclaimファイルを排他で保持し、サービス停止/PID0を再確認する。
+実runnerやサービスprofileには触れない。
+
+13個の相対ファイルsymlinkはruntime/sdk/bootstrap/binの決まった名前だけ許可し、
+reparse tag/relative flag、リンク自身の識別情報、文字列rustup.exe、解決後の同一
+ディレクトリー内の通常ファイルを検査する。他のreparseと外部hardlinkは拒否する。
+Windowsが作ったruntime/home内のINetCache/Content.IE5だけは、同じhome内のIEを
+指すmount-point tagと絶対targetを照合して保存する。走査では追跡しない。
+絶対targetの文字列を変更せず保管するため、退避後は元pathを指して参照が切れる。
+移動後はIEディレクトリー自身の保存済み識別番号と全内容を照合する。
+汎用のGit保護は維持し、この退避に限り2個の合成Git領域を全内容保存の対象にする。
+元のソース/controlはGitに保持済みで、これは実製品のcheckoutではない。
+
+全inventoryの境界とhardlinkを検査してから通常ファイルをSHA256で照合する。
+移動前に識別番号・相対名・属性・サイズ・時刻・リンク数・target・全ハッシュを
+preservation.jsonへ保存し、直前と移動後にも同じ情報を比較する。
+通常のMove-Itemだけを使い、元path不在と全内容保存を確認した後に所有記録を
+quarantinedへ更新する。削除量ではなく退避量を報告する。
+検査失敗時の別経路削除や自動再移動は行わず、両方の場所と失敗段階を保持する。
+同一ユーザーによる敵対的な並行置換を防ぐセキュリティ境界ではない。

@@ -26,13 +26,13 @@ cacheの `snapshot-active-v1.json` と `acquisition-active.lock` は旧版と分
 
 ## 構成
 
-`../agent-progress` はGoの単発の取得処理です。元データは変更しません。`patches/codex-0.162.1-progress.patch` は公式CodexのRust TUIへの変更です。`launcher` はGoの起動処理です。公式の版と更新TUI・取得処理・公式code-mode-hostのSHAが一致した場合だけ対話TUIを更新版へ回し、exec・app-server・ログイン・更新・管理コマンドは公式版を使います。既存OpenCodexのOAuth・proxy起動・引数・作業場所を保ち、新しい支払いを発生させません。
+`../agent-progress` はGoの単発の取得処理です。元データは変更しません。`patches/codex-0.163.0-progress.patch` は公式CodexのRust TUIへの変更です。`launcher` はGoの起動処理です。公式の版と更新TUI・取得処理・公式code-mode-hostのSHAが一致した場合だけ対話TUIを更新版へ回し、exec・app-server・ログイン・更新・管理コマンドは公式版を使います。既存OpenCodexのOAuth・proxy起動・引数・作業場所を保ち、新しい支払いを発生させません。
 
 ## 再現
 
-`source.json` のGit commit・patch SHA・toolchainを照合します。公式tagのCargo.lockが内部workspaceの版を0.0.0で保持していたため、0.162.1へ合わせた161項目だけを含めます。外部の依存版とchecksumは変更しません。
+`source.json` のGit commit・patch SHA・toolchainを照合します。公式tagのCargo.lockが内部workspaceの版を0.0.0で保持していたため、0.163.0へ合わせた内部package版だけを含めます。外部の依存版とchecksumは変更しません。公式 `@openai/codex@0.163.0-win32-x64` npm packageのintegrityと、同梱Codexおよびcode-mode-hostのSHAも記録します。両バイナリは公式tagと同じ版の配布物から取得し、code-mode-hostはlauncher manifestでカスタムCodexと一緒に照合します。
 
-公式 https://github.com/openai/codex の `rust-v0.162.1`（commit `092d3acd6bec3e3a14bdc7e7a2810ab628ab759d`）を新しい自分用ディレクトリへ取得し、HEADを照合した後に `git apply --check` と `git apply` を使います。無関係の作業ツリーをreset・cleanしません。
+公式 https://github.com/openai/codex の `rust-v0.163.0`（commit `83086188ae0614bd882818ff1aa23f3194962012`）を新しい自分用ディレクトリへ取得し、HEADを照合した後に `git apply --check` と `git apply` を使います。無関係の作業ツリーをreset・cleanしません。
 
 その `codex-rs` で順に実行します。
 
@@ -78,3 +78,4 @@ cacheは `D:/CC/Work/parallel-agent-progress-runtime`、実行版は `D:/CC/Tool
 全件の検査では一時フォルダーをホームの`.git`の外に置き、プロセスだけの`NO_COLOR`・`TERM`・`CODEX_*`を外しました。ownerの`.git`や設定は読み書きしません。Windowsでパイプの閉じ待ち344件が検出され、1件は内蔵app-serverが起動したgitの子であることを観測しました。ほかの内訳は未確認ですが、検査終了後にこのcloneの担当プロセスが0件であることを確認しました。
 
 旧TUIと同じ引数で取得元の世代が実際に変化し、処理中以外の行が0件であることも確認しました。モデルを呼ぶネイティブ担当の状態遷移の実測は、このConPTY検査に含めません。待機・報告・終了・取得失敗・空一覧の表示境界は関連単体検査で確認しています。旧TUIの外部一覧はGoの通常更新から変わります。ネイティブ担当の絞り込みと空一覧の表示変更は、新しいRust版の通常起動から適用します。
+

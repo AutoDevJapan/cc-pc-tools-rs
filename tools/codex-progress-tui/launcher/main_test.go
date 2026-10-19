@@ -40,11 +40,11 @@ func TestManifestVersionAndBothBinaryHashesBindActivation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(filepath.Join(pkg, "package.json"), []byte(`{"version":"0.162.1"}`))
+	write(filepath.Join(pkg, "package.json"), []byte(`{"version":"0.163.0"}`))
 	write(filepath.Join(custom, "codex.exe"), []byte("test codex executable"))
 	write(filepath.Join(custom, "codex-code-mode-host.exe"), []byte("test official code mode host"))
 	write(filepath.Join(collector, "agent-progress.exe"), []byte("test collector"))
-	m := manifest{Version: "0.162.1", CodexSHA: digest(filepath.Join(custom, "codex.exe")), CollectorSHA: digest(filepath.Join(collector, "agent-progress.exe")), CodeModeHostSHA: digest(filepath.Join(custom, "codex-code-mode-host.exe"))}
+	m := manifest{Version: "0.163.0", CodexSHA: digest(filepath.Join(custom, "codex.exe")), CollectorSHA: digest(filepath.Join(collector, "agent-progress.exe")), CodeModeHostSHA: digest(filepath.Join(custom, "codex-code-mode-host.exe"))}
 	data, _ := json.Marshal(m)
 	write(filepath.Join(custom, "manifest.json"), data)
 	if progressBinary(custom, pkg) == "" {
@@ -60,8 +60,9 @@ func TestManifestVersionAndBothBinaryHashesBindActivation(t *testing.T) {
 		t.Fatal("changed collector accepted")
 	}
 	write(filepath.Join(collector, "agent-progress.exe"), []byte("test collector"))
-	write(filepath.Join(pkg, "package.json"), []byte(`{"version":"0.163.0"}`))
+	write(filepath.Join(pkg, "package.json"), []byte(`{"version":"0.162.1"}`))
 	if progressBinary(custom, pkg) != "" {
 		t.Fatal("updated official version accepted stale patch")
 	}
 }
+

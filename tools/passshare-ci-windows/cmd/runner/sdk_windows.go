@@ -14,9 +14,20 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf16"
 )
 
 const rustupDistribution = "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+
+func sdkPathBudget(root string) error {
+	// MSVC link.exe cannot open Rust's longest sysroot .rlib under a deep
+	// scheduler worktree (measured LNK1104). Reject before claiming the service,
+	// rather than install an unusable SDK or add a junction outside ownership.
+	if len(utf16.Encode([]rune(root))) > 100 {
+		return errors.New("SDK root exceeds 100 UTF-16 units; create the safe-delete root in a short worktree")
+	}
+	return nil
+}
 
 func publicDistribution(url string, limit int64) ([]byte, error) {
 	// Fixed public distribution hosts only, with no proxy, cookie jar or auth.

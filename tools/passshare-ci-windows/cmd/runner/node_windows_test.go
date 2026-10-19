@@ -55,3 +55,14 @@ func TestServiceLockDoesNotDependOnCallerEnvironment(t *testing.T) {
 		t.Fatal("service and gate lock namespaces can diverge", a, b)
 	}
 }
+
+func TestSDKRootPathBudgetBeforeMachineMutation(t *testing.T) {
+	for _, root := range []string{strings.Repeat("a", 101), strings.Repeat("😀", 51)} {
+		if sdkPathBudget(root) == nil {
+			t.Fatal("unsupported MSVC root accepted")
+		}
+	}
+	if e := sdkPathBudget(`D:\CC\Work\p2997\codex-owned-` + strings.Repeat("a", 32)); e != nil {
+		t.Fatal(e)
+	}
+}

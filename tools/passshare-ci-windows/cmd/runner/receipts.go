@@ -27,7 +27,7 @@ func (p Plan) source() string {
 	return filepath.Join(p.runner(), "_work", "PassShare", "PassShare")
 }
 func (p Plan) target() string {
-	return filepath.Join(p.source(), "tools", "target")
+	return filepath.Join(p.runtime(), "target")
 }
 func makeHookReceipt(p Plan, stage string, event []byte) hookReceipt {
 	return hookReceipt{Stage: stage, Instance: p.Instance, RunID: p.RunID, JobID: p.JobID, Attempt: p.Attempt, Event: p.Event, Branch: p.Branch, PR: p.PR, Job: p.Job, Head: p.Head, Tree: p.Tree, ContextSHA: p.ContextSHA, WorkflowSHA: p.WorkflowSHA, WorkflowRef: p.WorkflowRef, WorkflowDigest: p.WorkflowDigest, EventDigest: digest(event), Source: p.source(), Target: p.target(), SourceVerified: true}

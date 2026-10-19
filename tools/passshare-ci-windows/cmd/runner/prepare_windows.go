@@ -91,6 +91,11 @@ func icaclsWithin(budget time.Duration, path string, args ...string) error {
 	return nil
 }
 func prepare(p Plan, archive string) error {
+	if p.Fixture == "" || p.RuntimeFixture {
+		if e := sdkPathBudget(p.Root); e != nil {
+			return e
+		}
+	}
 	if _, e := os.Lstat(filepath.Join(p.Root, "helper.exe")); !os.IsNotExist(e) {
 		return errors.New("prepare is single-use; helper already exists or unknown")
 	}

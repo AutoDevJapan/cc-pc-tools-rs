@@ -177,6 +177,9 @@ func allowed(path string) bool {
 	if err != nil || legacyMatch(absolute) {
 		return false
 	}
+	if owned2736PathAllowed(absolute) {
+		return true
+	}
 	if conversationPathAllowed(absolute) {
 		return true
 	}
@@ -284,15 +287,18 @@ func printGuardUsage(output io.Writer) {
 }
 
 func verifyCurrentSuccession(taskID int) object {
-	declared, ok := currentProductByTask(taskID)
-	if !ok {
-		return object{"verified": false}
-	}
 	db, err := readObject(productStore, 64<<20)
 	if err != nil {
 		return object{"verified": false}
 	}
-	return currentSuccessionReceipt(db, declared)
+	if declared, ok := currentProductByTask(taskID); ok {
+		return currentSuccessionReceipt(db, declared)
+	}
+	receipt, _, ok := currentSubworkReceiptWith(db, taskID, currentProducts, currentTodoSpecsRoot, time.Now(), legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified, currentGitCommonDir, currentProductPath)
+	if !ok {
+		return object{"verified": false}
+	}
+	return receipt
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {

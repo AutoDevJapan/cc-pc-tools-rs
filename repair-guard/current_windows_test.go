@@ -434,6 +434,320 @@ func TestCurrentSuccessionReceiptIsFiniteAndPathPrivate(t *testing.T) {
 	}
 }
 
+func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "product")
+	parentSpec := filepath.Join(base, "parent.md")
+	childSpec := filepath.Join(base, "specs", "2872-0123456789abcdef0123456789abcdef.md")
+	if os.Mkdir(root, 0700) != nil || os.Mkdir(filepath.Dir(childSpec), 0700) != nil ||
+		os.WriteFile(parentSpec, []byte("fixed parent specification"), 0600) != nil ||
+		os.WriteFile(childSpec, []byte("saved direct review specification"), 0600) != nil {
+		t.Fatal("fixture setup failed")
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	currentFixtureGit(t, root, "checkout", "-q", "-b", "scheduler/todo-2839-parent")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	commonDir, ok := currentGitCommonDir(root)
+	if !ok {
+		t.Fatal("fixture Git common directory unavailable")
+	}
+	product := currentProduct{project: "GoDD-AO", root: root, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: parentSpec, specSHA: hashBytes([]byte("fixed parent specification"))}
+	const job = "20261019-053058-todo-2839"
+	parentRow := object{"id": float64(2839), "project": product.project, "spec": parentSpec, "status": "doing", "jobs": []any{job}, "scheduler": object{"worktree": root}}
+	childRow := object{
+		"id": float64(2872), "title": "current review", "project": "GoDD-AO", "spec": childSpec, "status": "todo", "dispatchable": true,
+		"subwork":   object{"parent_todo_id": float64(2839), "origin_job_id": job, "kind": "review", "owner": object{"repository": product.repository, "git_common": commonDir, "worktree": root, "branch": "scheduler/todo-2839-parent"}},
+		"scheduler": object{},
+	}
+	db := object{"projects": object{"GoDD-AO": root}, "items": []any{parentRow, childRow}}
+	allowProtected := func(string) bool { return false }
+	plain := func(path string, directory bool) bool {
+		info, e := os.Lstat(path)
+		return e == nil && plainEntry(info) && ((directory && info.IsDir()) || (!directory && info.Mode().IsRegular()))
+	}
+	origin := func(string, string) bool { return true }
+	identity := func(currentProduct) bool { return true }
+	common := currentGitCommonDir
+	plannedChildPath := filepath.Join(root+"-wt", "todo-2872-current-review")
+	plannedChildPathChecked := false
+	pathAllowed := func(path, gotRoot, repository, task string, protected func(string) bool) bool {
+		if task == "2872" && same(path, plannedChildPath) {
+			plannedChildPathChecked = true
+		}
+		return same(gotRoot, root) && repository == product.repository && (task == "2839" || task == "2872") && !protected(path)
+	}
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	verify := func() (object, bool) {
+		receipt, _, ok := currentSubworkReceiptWith(db, 2872, []currentProduct{product}, filepath.Dir(childSpec), now, allowProtected, plain, origin, identity, common, pathAllowed)
+		return receipt, ok
+	}
+	receipt, ok := verify()
+	if !ok || len(receipt) != 9 || receipt["verified"] != true || receipt["domain"] != "current-product-succession-v1" || receipt["origin_todo_id"] != 2834 || receipt["todo_id"] != 2872 || receipt["project"] != "GoDD-AO" || receipt["spec_sha256"] != hashBytes([]byte("saved direct review specification")) || receipt["original_registry_recovered"] != false {
+		t.Fatal("valid direct current subwork did not receive its own receipt")
+	}
+	if !plannedChildPathChecked {
+		t.Fatal("unrecorded child workspace was not passed through the physical path guard")
+	}
+	_, verifiedChild, valid := currentSubworkReceiptWith(db, 2872, []currentProduct{product}, filepath.Dir(childSpec), now, allowProtected, plain, origin, identity, common, pathAllowed)
+	if !valid || !same(verifiedChild.worktree, filepath.Join(root+"-wt", "todo-2872-current-review")) {
+		t.Fatal("unrecorded child worktree did not match the scheduler's planned name")
+	}
+	childRow["scheduler"] = object{"worktree": verifiedChild.worktree}
+	if _, valid := verify(); !valid {
+		t.Fatal("recorded scheduler worktree matching the title-derived path was rejected")
+	}
+	childRow["scheduler"] = object{}
+	parentRow["status"] = "wait"
+	parentRow["jobs"] = []any{job, "20261019-060000-todo-2839"}
+	if _, valid := verify(); !valid {
+		t.Fatal("registered child was rejected after its parent entered dependency wait")
+	}
+	parentRow["status"] = "doing"
+	parentRow["jobs"] = []any{job}
+	assertDenied := func(label string) {
+		t.Helper()
+		got, valid := verify()
+		if valid || len(got) != 1 || got["verified"] != false {
+			t.Fatalf("%s direct child was not rejected generically", label)
+		}
+	}
+	childRow["scheduler"] = object{"worktree": verifiedChild.worktree}
+	childRow["title"] = "renamed review"
+	assertDenied("recorded worktree after title rename")
+	childRow["title"] = "current review"
+	childRow["scheduler"] = object{}
+	childRow["subwork"].(object)["parent_todo_id"] = float64(2872)
+	assertDenied("nested")
+	childRow["subwork"].(object)["parent_todo_id"] = float64(2839)
+	childRow["subwork"].(object)["origin_job_id"] = "20261019-053058-todo-2850"
+	assertDenied("wrong parent job")
+	childRow["subwork"].(object)["origin_job_id"] = job
+	childRow["subwork"].(object)["kind"] = "deployment"
+	assertDenied("unsupported kind")
+	childRow["subwork"].(object)["kind"] = "review"
+	childRow["project"] = "different-project"
+	assertDenied("different project")
+	childRow["project"] = "GoDD-AO"
+	childRow["dispatchable"] = false
+	assertDenied("non-dispatchable")
+	childRow["dispatchable"] = true
+	childRow["scheduler"] = object{"worktree": root}
+	assertDenied("child worktree using parent root")
+	childRow["scheduler"] = object{"worktree": filepath.Join(root+"-wt", "todo-2873-other")}
+	assertDenied("child worktree with a different ID")
+	childRow["scheduler"] = object{"worktree": filepath.Join(root+"-wt", "todo-2872-other")}
+	assertDenied("child worktree with a different same-ID alias")
+	childRow["scheduler"] = object{}
+	owner := childRow["subwork"].(object)["owner"].(object)
+	owner["repository"] = "other/repository"
+	assertDenied("different owner repository")
+	owner["repository"] = product.repository
+	owner["git_common"] = filepath.Join(root, "other-common")
+	assertDenied("different owner common directory")
+	owner["git_common"] = commonDir
+	owner["branch"] = "scheduler/todo-2850-other"
+	assertDenied("different owner branch")
+	owner["branch"] = "scheduler/todo-2839-parent"
+	nestedOwner := filepath.Join(root, "nested")
+	if os.Mkdir(nestedOwner, 0700) != nil {
+		t.Fatal("nested owner fixture could not be created")
+	}
+	owner["worktree"] = nestedOwner
+	parentRow["scheduler"].(object)["worktree"] = nestedOwner
+	assertDenied("nested repository path with parent common directory")
+	otherRoot := filepath.Join(base, "other-product")
+	if os.Mkdir(otherRoot, 0700) != nil {
+		t.Fatal("second repository fixture could not be created")
+	}
+	currentFixtureGit(t, otherRoot, "init", "-q")
+	currentFixtureGit(t, otherRoot, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	currentFixtureGit(t, otherRoot, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	currentFixtureGit(t, otherRoot, "checkout", "-q", "-b", "scheduler/todo-2839-other")
+	otherCommon, ok := currentGitCommonDir(otherRoot)
+	if !ok || same(otherCommon, commonDir) {
+		t.Fatal("second repository fixture did not get an independent common directory")
+	}
+	owner["worktree"] = otherRoot
+	owner["git_common"] = otherCommon
+	owner["branch"] = "scheduler/todo-2839-other"
+	parentRow["scheduler"].(object)["worktree"] = otherRoot
+	assertDenied("different repository with matching origin")
+}
+
+// Exercise the offline classifier with real repositories, worktrees, specs,
+// origins and common directories. Admission must still reject a failed live
+// identity lookup even when the same local file classification succeeds.
+func TestCurrentSubworkOfflinePathUsesRealGitAndPreservesAdmission(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "product")
+	specs := filepath.Join(base, "specs")
+	for _, dir := range []string{root, root + "-wt", specs} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	parentSpec := filepath.Join(specs, "parent.md")
+	childSpec := filepath.Join(specs, "2872-0123456789abcdef0123456789abcdef.md")
+	for _, path := range []string{parentSpec, childSpec} {
+		if err := os.WriteFile(path, []byte("fixed specification"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	parentTree := filepath.Join(root+"-wt", "todo-2839-parent")
+	childTree := currentSubworkWorkspacePath(root, 2872, "offline review")
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2839-parent", parentTree)
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2872-review", childTree)
+	product := currentProduct{project: "GoDD-AO", root: root, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: parentSpec, specSHA: hashBytes([]byte("fixed specification"))}
+	products := []currentProduct{product}
+	common, ok := currentGitCommonDir(root)
+	if !ok {
+		t.Fatal("fixture common directory unavailable")
+	}
+	const job = "20261019-053058-todo-2839"
+	parent := object{"id": float64(2839), "project": product.project, "spec": parentSpec, "status": "wait", "jobs": []any{job}, "scheduler": object{"worktree": parentTree}}
+	owner := object{"repository": product.repository, "worktree": parentTree, "git_common": common, "branch": "scheduler/todo-2839-parent"}
+	child := object{"id": float64(2872), "title": "offline review", "project": product.project, "spec": childSpec, "status": "todo", "dispatchable": true,
+		"subwork": object{"parent_todo_id": float64(2839), "origin_job_id": job, "kind": "review", "owner": owner}, "scheduler": object{"worktree": childTree}}
+	db := object{"projects": object{product.project: root}, "items": []any{parent, child}}
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	protectedPath := ""
+	protected := func(path string) bool { return protectedPath != "" && same(path, protectedPath) }
+	verify := func(task int) (currentProduct, bool) {
+		_, qualified, ok := currentSubworkPathReceiptWith(db, task, products, specs, now, protected)
+		return qualified, ok
+	}
+	check := func(want bool) {
+		t.Helper()
+		if got := currentSubworkScopePathAllowedWith(childTree, products, verify, protected, currentProductPath); got != want {
+			t.Fatalf("offline classification = %v, want %v", got, want)
+		}
+	}
+	check(true)
+	identityCalls := 0
+	failedLiveIdentity := func(currentProduct) bool { identityCalls++; return false }
+	receipt, _, admitted := currentSubworkReceiptWith(db, 2872, products, specs, now, protected, currentPlain, sourceOriginVerified, failedLiveIdentity, currentGitCommonDir, currentProductPath)
+	if admitted || receipt["verified"] != false || len(receipt) != 1 || identityCalls != 1 {
+		t.Fatal("admission bypassed failed live identity verification")
+	}
+	check(true)
+	for _, path := range []string{root, parentTree, childTree, parentSpec, childSpec} {
+		protectedPath = path
+		check(false)
+	}
+	protectedPath = ""
+	if _, ok := verify(2873); ok {
+		t.Fatal("unknown child admitted offline")
+	}
+	parent["status"] = "blocked"
+	check(false)
+	parent["status"] = "wait"
+	owner["git_common"] = parentTree
+	check(false)
+	owner["git_common"] = common
+	child["spec"] = parentSpec
+	check(false)
+	child["spec"] = childSpec
+	if err := os.WriteFile(parentSpec, []byte("changed parent specification"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	check(false)
+	if err := os.WriteFile(parentSpec, []byte("fixed specification"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, childTree, "checkout", "-q", "-b", "unrelated-branch")
+	check(false)
+	currentFixtureGit(t, childTree, "checkout", "-q", "scheduler/todo-2872-review")
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/other/GoDD-AO.git")
+	check(false)
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	check(true)
+	if currentSubworkScopePathAllowedWith(filepath.Join(root+"-wt", "todo-2872-alias"), products, verify, protected, currentProductPath) {
+		t.Fatal("same-ID alias admitted offline")
+	}
+}
+
+func TestCurrentSubworkWorkspacePathMatchesSchedulerSlug(t *testing.T) {
+	root := filepath.Join("C:", "fixture", "product")
+	for _, tc := range []struct {
+		name, title, want string
+	}{
+		{"uppercase", "PR Review", "todo-2872-pr-review"},
+		{"non-ascii-only", "日本語", "todo-2872-work"},
+		{"unicode-lowercase-difference", "İx", "todo-2872-ix"},
+		{"trailing-separator-at-limit", strings.Repeat("a", 31) + " b", "todo-2872-" + strings.Repeat("a", 31) + "-"},
+		{"empty", "", "todo-2872-work"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := filepath.Base(currentSubworkWorkspacePath(root, 2872, tc.title)); got != tc.want {
+				t.Fatalf("scheduler slug mismatch: got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCurrentSubworkPathRequiresVerifiedDirectChild(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "product")
+	container := filepath.Clean(root + "-wt")
+	workspace := filepath.Join(container, "todo-2872-review")
+	if os.Mkdir(root, 0700) != nil || os.Mkdir(container, 0700) != nil {
+		t.Fatal("fixture directories could not be created")
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2872-review", workspace)
+	parent := currentProducts[0]
+	parent.root = root
+	child := parent
+	child.task = 2872
+	child.parentTask = parent.task
+	child.worktree = workspace
+	verify := func(task int) (currentProduct, bool) {
+		if task == 2872 {
+			return child, true
+		}
+		return currentProduct{}, false
+	}
+	pathAllowed := currentProductPath
+	if !currentSubworkScopePathAllowedWith(workspace, []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+		t.Fatal("verified direct child's workspace was rejected")
+	}
+	for _, rejected := range []string{
+		filepath.Join(container, "todo-1476-legacy"),
+		filepath.Join(container, "todo-28720-near-match"),
+		filepath.Join(container, "todo-2872-review:stream"),
+		filepath.Join(container, "todo-2872-other"),
+	} {
+		if currentSubworkScopePathAllowedWith(rejected, []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+			t.Fatalf("unqualified child workspace path accepted: %s", filepath.Base(rejected))
+		}
+	}
+	leaf := filepath.Join(workspace, "source.rs")
+	if os.WriteFile(leaf, []byte("fixture"), 0600) != nil {
+		t.Fatal("fixture source could not be created")
+	}
+	if !currentSubworkScopePathAllowedWith(leaf, []currentProduct{parent}, verify, func(string) bool { return false }, pathAllowed) {
+		t.Fatal("file within a verified direct child's workspace was rejected")
+	}
+	if currentSubworkScopePathAllowedWith(workspace, []currentProduct{parent}, verify, func(string) bool { return true }, pathAllowed) {
+		t.Fatal("existing denial was bypassed for current child workspace")
+	}
+}
+
 func TestCurrentPathHashMatchesFixedReceiptVectors(t *testing.T) {
 	for _, tc := range []struct{ path, want string }{
 		{"C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1/", "3062f24ecddbd7720f761e2c44496591c1fb1ad83c7a07fe880229624e38b4a8"},

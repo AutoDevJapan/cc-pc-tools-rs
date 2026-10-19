@@ -84,3 +84,14 @@
 - 3002のwaitが解除されtodoへ戻ったことを実確認。review結果と元の実装許可・書込分離をspec/ノートへ配送。追加の同じ読取は作らず、残る供給/実job/成果物hash/終了回収へ戻す。境界/保護/本人のWindows優先/新費用禁止は保持。競合する最後の再読job232040も既にsucceededで、無関係なprocessを止めていない。
 
 次: 固定a1dcdfe3の5runを照合。特に既失敗の統合3/4、その後の各回収byte/空き容量、残る3分割、後続Chrome/証跡保存を確認する。実害のある失敗を直し、全必要checkと最新main/source一致を確認して通常merge。merge前のPRレビュー記録へ採用/非採用理由を1回まとめる。PC3002と効果測定は未完了で、元2957と継続記録を保つ。自己起動の重Cargo/GPU/新費用/公開/原資料削除は無し。
+
+## 2026-10-20 00時台 最終CIの統合4分割を確認
+
+- 最新の再開item_2はskill読取の完了/exit0で、再実行していない。共有2987はdoing、3002は3018/3019待ち。3019はdone、3018は起動準備失敗の有限再試行todoで、親から重複の担当や重いビルドを起動していない。
+- PR176のhead a1dcdfe3348ae0ebf85ea7e47932529ed86f4286/base4dc5c332を読戻し確認。CIで検査する合成merge6f08809cc0fc04f2cfac197cdaa7b2f02bdaab15のtreeは、候補tree108a6987dbe0ed8af9a35f19d8e00930cf582001とAPIで一致。mainは変わっていない。
+- 正式local39267691574/root118111717229は、以前SIGBUSだった統合3/4と、その後の1/4・2/4・4/4および各回収stepがすべて成功。workspaceのClippy/lib/doc、bins/examples/build、native V1/V2、release launcherも成功。直近00:24のAPIではauthored buyer Chromeが実行中で、残るcontact/customer/V3 Chrome・証跡upload・最終容量診断・集約は未完了。全CI成功とはしない。完了後のログで回収bytes/各df/最終容量と全受入を照合する。
+- CodeQL4言語とgate、Windows fixtures、V2両OS、Windows Chrome2job、local scope/signing/bridge/browser/coldはすべて成功。Cursor Bugbotは利用上限のためNEUTRAL/未実施で、成功に含めず課金枠を変更していない。
+- 採用と非採用理由をPRコメント6270816263へ1回投稿。marker todo2987-self-review、既存3botコメントにmarker無しを確認してから送信。再送しない。固定75edee9の3016 Must0と、その提案のa1適用/局所検査/正式scope成功を区別し、全必要CIの終了後に通常mergeすることを明記。
+- 最新月次Billingの対象repo項目だけをdocs/todo2987-billing-observation-0024.private.jsonへ保存。Linux43854分/Windows6106分。金額の合算はdecimalで扱い、対象期間中の他実行と未完了CIを含むため削減額とはしない。公式timing APIの0も無料の証拠にしない。最終成功runのjob秒合計を元5308秒と比較してから、実測の範囲で記録する。
+
+次: 15分後に同じroot/runだけ再確認。失敗は終了ログを取得し該当処理を修正する。成功なら全5workflow/集約・最新main・実HEADを照合し、通常merge後にAPI読戻しと必要なmain確認を行う。Windows正式PC供給/4job/成果物hash/終了回収は3002の未完了。元2957への記録と有限再開を維持し、親を3002待ちへ戻すのは独立CI/merge工程が済んでから。

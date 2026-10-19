@@ -65,7 +65,14 @@ func TestAggregateRejectsFailedOrUnexpectedlySkippedChecks(t *testing.T) {
 
 func TestSerialE2EPreservesTheComposeCommandAndTestList(t *testing.T) {
 	original := "cargo build -p op-cli --release && cargo build --manifest-path backend/native/Cargo.toml --release --locked --bin passshare-mutations && pnpm --dir backend install --frozen-lockfile && node --test backend/test/pg-integration.test.js backend/test/cross-client.integration.test.js backend/test/future-added.integration.test.js"
-	for _, valid := range []bool{true, false} {
+	for _, tc := range []struct {
+		script             string
+		valid, unsupported bool
+	}{
+		{original, true, false}, {original + " && node --test extra.js", true, false},
+		{"echo $HOME && " + original, false, false}, {original, false, true},
+	} {
+		original, valid := tc.script, tc.valid
 		dir := scratch(t)
 		exe, err := os.Executable()
 		if err != nil {
@@ -83,7 +90,7 @@ func TestSerialE2EPreservesTheComposeCommandAndTestList(t *testing.T) {
 			t.Fatal(err)
 		}
 		command := []string{"sh", "-c", original}
-		if !valid {
+		if tc.unsupported {
 			command = []string{"unsupported", original}
 		}
 		config, err := json.Marshal(object{"services": object{"backend-e2e": object{"command": command}}})
@@ -114,9 +121,39 @@ func TestSerialE2EPreservesTheComposeCommandAndTestList(t *testing.T) {
 		if err := json.Unmarshal(data, &args); err != nil {
 			t.Fatal(err)
 		}
-		want := []string{"compose", "-f", "docker/docker-compose.test.yml", "run", "--rm", "backend-e2e", "sh", "-c", strings.Replace(original, "node --test ", "node --test --test-concurrency=1 ", 1)}
+		want := []string{"compose", "-f", "docker/docker-compose.test.yml", "run", "--rm", "backend-e2e", "sh", "-c", strings.ReplaceAll(original, "node --test ", "node --test --test-concurrency=1 ")}
 		if !reflect.DeepEqual(args, want) {
 			t.Fatalf("Compose build/acceptance command changed: got %q want %q", args, want)
+		}
+	}
+}
+
+func TestGeneratedYAMLPreservesCommentsAndExactStructure(t *testing.T) {
+	q, m := originals(t)
+	if err := transform(q, m); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]object{"quality-gate.yml": q, "mobile-build.yml": m} {
+		b, err := os.ReadFile(filepath.Join("testdata", "before", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := encodePreserving(b, value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := decode(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(value, actual) {
+			t.Fatalf("comment-preserving emission changed %s semantics", name)
+		}
+		if !strings.Contains(string(out), "# v7.0.0") {
+			t.Fatalf("action version comment lost in %s", name)
+		}
+		if name == "quality-gate.yml" && !strings.Contains(string(out), "#320") {
+			t.Fatal("integration-test rationale lost")
 		}
 	}
 }
@@ -151,6 +188,16 @@ func TestPreservesIndependentJobsAndAcceptance(t *testing.T) {
 		t.Fatal("standalone mobile events would duplicate the call")
 	}
 	jobs := q["jobs"].(object)
+	gateNeeds := jobs["gate"].(object)["needs"].([]any)
+	covered := map[string]bool{}
+	for _, n := range gateNeeds {
+		covered[n.(string)] = true
+	}
+	for name := range jobs {
+		if name != "gate" && !covered[name] {
+			t.Fatalf("aggregate omits job %s", name)
+		}
+	}
 	if jobs["mobile-smoke"].(object)["uses"] != "./.github/workflows/mobile-build.yml" {
 		t.Fatal("missing reusable call")
 	}
@@ -218,6 +265,7 @@ func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	c := exec.Command("git", args...)
 	c.Dir = dir
+	c.Env = append(os.Environ(), "GIT_DIR="+dir+".gitdb", "GIT_WORK_TREE="+dir)
 	b, err := c.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v %s", args, err, b)
@@ -248,6 +296,8 @@ func TestActualWorkflowChangeSelection(t *testing.T) {
 		{"docs-consumer", "documents/spec/mobile-ui.md", true, true},
 		{"unknown", "future/config", true, true},
 		{"frontend-only", "frontend/src/app.tsx", false, false},
+		{"cloud-manifest", "frontend/cloud-assets.json", true, true},
+		{"cloud-wasm", "frontend/public/cloud-crypto/passshare_cloud_wasm_bg.wasm", true, true},
 		{"extension-only", "packages/extension/test/test.ts", false, false},
 		{"deleted", "apps/mobile/deleted.ts", false, true},
 		{"rename-across-clients", "apps/desktop/old.ts", true, true},
@@ -298,6 +348,7 @@ func TestActualWorkflowChangeSelection(t *testing.T) {
 				c := exec.Command(bashPath(t), "-c", script)
 				c.Dir = dir
 				c.Env = append(os.Environ(), "BASE_SHA="+testBase, "GITHUB_SHA="+head, "RUNNER_TEMP="+filepath.ToSlash(dir), "GITHUB_OUTPUT="+filepath.ToSlash(out), "GITHUB_STEP_SUMMARY="+filepath.ToSlash(filepath.Join(dir, "summary")))
+				c.Env = append(c.Env, "GIT_DIR="+filepath.ToSlash(dir)+".gitdb", "GIT_WORK_TREE="+filepath.ToSlash(dir))
 				b, err := c.CombinedOutput()
 				if testBase == strings.Repeat("f", 40) {
 					if err == nil {
@@ -319,6 +370,23 @@ func TestActualWorkflowChangeSelection(t *testing.T) {
 				if string(data) != want {
 					t.Fatalf("scope: got %q want %q", data, want)
 				}
+			}
+			// A later main push must still cover a prior cancelled client's changes.
+			out := filepath.Join(dir, "push-output")
+			c := exec.Command(bashPath(t), "-c", script)
+			c.Dir = dir
+			c.Env = append(os.Environ(), "EVENT_NAME=push", "BASE_SHA="+head, "GITHUB_SHA="+head,
+				"RUNNER_TEMP="+filepath.ToSlash(dir), "GITHUB_OUTPUT="+filepath.ToSlash(out),
+				"GITHUB_STEP_SUMMARY="+filepath.ToSlash(filepath.Join(dir, "summary")))
+			if output, err := c.CombinedOutput(); err != nil {
+				t.Fatalf("push selection: %v %s", err, output)
+			}
+			data, err := os.ReadFile(out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != "desktop=true\nmobile=true\n" {
+				t.Fatalf("push omitted cancelled scope: %s", data)
 			}
 		})
 	}

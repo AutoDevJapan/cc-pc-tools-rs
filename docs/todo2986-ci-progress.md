@@ -1,5 +1,37 @@
 # PassShare の CI 削減（ToDo2986）
 
+## 2026-10-19 22時台の再開
+
+旧記録は履歴として保持する。最新のOS方針
+`owner-windows-completion-before-other-os-20261019.md`を読了。
+desktop-build.yml / op-cli-build.ymlは3010/PR721の唯一の書込範囲であり、
+この親はその完了を待たずPR720の検証とmergeを進める。Windows runner2994の残りは元2957が集約する。
+
+2998の原応答を受領。実jobのthread/cwdとsession_meta/turn_contextでSonnet5.5を照合した。
+原応答SHA256 `33f72f7ecec40af3860651a3e4b39cdc31cdcb066baac162c26188f46499afc5`。
+Must1は両clientが読むfrontend/cloud-assets.jsonとfrontend/public/cloud-crypto/*の判定漏れ。
+この2系統を先に両client対象とし実Git/Bash検査へ追加、17ケース全成功。
+mainの連続pushで古い検査が取消されても漏れないよう、pushは両clientを常に対象とする。
+PRはbaseからの全差分で選択する。全jobsのgate needs網羅も機械検査する。
+YAMLコメント・元のキー順・actionの版注記を保持し、生成前後の構造一致を検査する。
+DB commandは複数のnode --testをすべて直列化し、将来の$式は再評価による誤動作を避けて拒否する。
+実Bash/jqで集約6ケース、DB command4ケースとYAML往復検査が成功、vet/actionlint成功。
+
+2996のCargo修復を最終受領。Cargo2blobと原SHA256を照合して原バイトを保持した。
+子の監査/関連検査/別モデル3001と3006の結果は原handoffへ保持し、正式製品CIとは区別する。
+必須のJS版整合はpnpm10.11.0で通常lock解決し、両clientのAPI2.12.4/CLI2.12.3、
+desktop updater2.14.0とした。Rust tauri2.12.4/updater2.14.0に整合。
+API/CLIのminor範囲を2.12へ絞り、pluginは同版へ固定して将来の片側だけの更新を防ぐ。
+古いquick-xml監査免除2件を除きignore空とした。security-audit.ymlは変更しない。
+固定git updaterは、2.14.0より新しい上流stableがzip>=9を採用して正式公開され、
+同等の監査・関連検査が通った場合だけregistryへ戻す条件をPRへ残す。
+
+今回の最終候補は二workflowに加えて、CI失敗を修復するCargo2、JS manifest/lock4、
+監査免除の設定1の合計9ファイル。製品機能・Prd・予算・公開・署名の変更はない。
+正式CI/差分の追加レビュー/merge/成功後の実行量確認はこれから行う。
+今回の新規所有scratchは`ef08eed1b9063dc5b9cb0a8b97c226eb`、workspace内でguard falseを確認。
+旧保護rootには触れない。新しいGit fixtureは通常の.gitと混同しない別名metadataを使う。
+
 ## 確認した範囲
 
 2026-10-19、正規GitHub APIで AutoDevJapan/PassShare（ID 1131498455）が public、

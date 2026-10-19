@@ -22,7 +22,8 @@ const serialE2E = `set -euo pipefail
 config="$(docker compose -f docker/docker-compose.test.yml config --format json)"
 command="$(jq -er '.services["backend-e2e"].command | if type == "array" and length == 3 and .[0] == "sh" and .[1] == "-c" then .[2] else error("unsupported backend-e2e command") end' <<< "$config")"
 [[ "$command" == *"node --test "* ]] || { echo 'backend-e2e no longer contains the expected test command' >&2; exit 1; }
-command="${command/node --test /node --test --test-concurrency=1 }"
+[[ "$command" != *'$'* ]] || { echo 'backend-e2e shell interpolation requires review' >&2; exit 1; }
+command="${command//node --test /node --test --test-concurrency=1 }"
 docker compose -f docker/docker-compose.test.yml run --rm backend-e2e sh -c "$command"
 `
 
@@ -31,13 +32,14 @@ docker compose -f docker/docker-compose.test.yml run --rm backend-e2e sh -c "$co
 const changedPaths = `set -euo pipefail
 desktop=false
 mobile=false
-if [[ ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ || "$BASE_SHA" =~ ^0+$ ]]; then
+if [[ "${EVENT_NAME:-pull_request}" == push || ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ || "$BASE_SHA" =~ ^0+$ ]]; then
   desktop=true
   mobile=true
 else
   git diff --no-renames --name-only -z "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/passshare-paths"
   while IFS= read -r -d '' path; do
     case "$path" in
+      frontend/cloud-assets.json|frontend/public/cloud-crypto/*) desktop=true; mobile=true ;;
       apps/desktop/*) desktop=true ;;
       apps/mobile/*) mobile=true ;;
       frontend/*|packages/extension/*|e2e/web/*|e2e/extension/*) ;;
@@ -143,7 +145,7 @@ func transform(q, m object) error {
 		"steps": []any{
 			object{"uses": checkout, "with": object{"fetch-depth": 0, "persist-credentials": false}},
 			object{"name": "Determine affected native clients", "id": "scope", "shell": "bash",
-				"env": object{"BASE_SHA": "${{ github.event.pull_request.base.sha || github.event.before }}"}, "run": changedPaths},
+				"env": object{"BASE_SHA": "${{ github.event.pull_request.base.sha || github.event.before }}", "EVENT_NAME": "${{ github.event_name }}"}, "run": changedPaths},
 			object{"uses": "dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30"},
 			object{"name": "Check mobile acceptance formatting", "run": "rustfmt --edition 2021 --check crates/passshare-core/examples/mobile_auth_acceptance.rs"},
 			object{"uses": "actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16", "with": object{"go-version-file": "tools/desktop-release-check/go.mod", "cache": false}},
@@ -259,7 +261,15 @@ func generate(input, output string) error {
 		return err
 	}
 	for name, v := range map[string]object{"quality-gate.yml": q, "mobile-build.yml": m} {
-		b, err := encode(v)
+		original, err := os.ReadFile(filepath.Join(input, name))
+		if err != nil {
+			return err
+		}
+		if name == "quality-gate.yml" {
+			const old = "  # NOTE: cargo-audit / pnpm-audit live in security-audit.yml (single SSOT for\n  # dependency advisories, #325). Advisory scans are non-blocking on PRs (a newly\n  # published CVE must not redden unrelated PRs) and a hard gate on main + the\n  # nightly schedule. They are intentionally NOT a `needs:` of this gate."
+			original = []byte(strings.Replace(string(original), old, "  # Dependency audits remain blocking in security-audit.yml for PRs, main\n  # and the nightly schedule. They are separate from this aggregation.", 1))
+		}
+		b, err := encodePreserving(original, v)
 		if err != nil {
 			return err
 		}

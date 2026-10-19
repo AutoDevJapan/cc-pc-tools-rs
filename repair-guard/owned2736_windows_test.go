@@ -133,7 +133,13 @@ func TestOwned2736OwnershipFailures(t *testing.T) {
 }
 
 func TestOwned2736MetadataAndPhysicalLinks(t *testing.T) {
-	root := t.TempDir()
+	// CI may expose the temporary directory through an 8.3 spelling. The
+	// production classifier requires canonical physical paths, so normalize
+	// this fixture just like the existing conversation fixtures do.
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	info, err := owned2736Identity(root)
 	if err != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 || !conversationPhysical(root) {
 		t.Fatalf("real directory metadata: %v", err)

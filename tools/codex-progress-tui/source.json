@@ -4,8 +4,8 @@
   "commit": "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d",
   "patched_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
   "toolchain": "1.95.0",
-  "collector_commit": "d0bef073a6cafa46b9203f0f8eb581b023bc98fa",
-  "collector_sha256": "55660741f8005d7a8edef61cd72660f2908e3a373d0771b5109a1a43efe7df99",
+  "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
+  "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
   "patch_sha256": "314b6ff6414ae726e22887b3af8a0538bf722f7eb387cdc81859974b9935b440",
   "build_profile": {
     "lto": false,
@@ -15,5 +15,5 @@
   },
   "tested_binary_sha256": "7eda7d645c4dcd7cae038451d60b7ab5e89e28e6868876060d2f5a4af5b4079b",
   "tested_binary_source_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
-  "collector_tree": "3047675328143a03720762159dc77da0db317ef8"
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc"
 }

@@ -25,6 +25,11 @@ func checkEndpoint(ep string) error {
 	if !readEndpoint.MatchString(ep) || strings.Contains(ep, "/../") || strings.Contains(ep, "//") || len(ep) > 400 {
 		return errors.New("GitHub endpoint outside the fixed read-only allowlist")
 	}
+	for _, banned := range []string{"registration-token", "remove-token", "/secrets", "/tarball", "/zipball", "/logs", "/artifacts", "/runners"} {
+		if strings.Contains(ep, banned) {
+			return errors.New("GitHub endpoint outside the fixed read-only allowlist")
+		}
+	}
 	return nil
 }
 

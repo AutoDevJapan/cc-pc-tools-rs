@@ -9,9 +9,12 @@
 - 実GitHub所有者AutoDevJapan、repository ID 1406818713をAPIで再確認した。
 - PR235はhead `8107c0574cc6915d0d55eb941b2c431540552889`、元base `b62aa042f2f5b7b98fc652124d314df8182e57dc`。全14成功/1neutralを2026-10-19 13:25 JSTに確認。再実行していない。
 - 原レビュー2924の正規CLI結果はSonnet5.5、11steps、exit0、Must0/Suggestion2/Nit2。原応答SHA256は `082850F5B33F937D5257C3113DE4A292D20286C203EAE2B6AFFF5D89D114CB6E`。試験差分末尾を未読と明記しているため、同じ2924を不足範囲だけの指示へ更新して通常再開する。別の製品actorは作らない。
+- 同2924のspecを正式更新して原spec_historyを保持。正規の再確認待機を解除後、通常schedulerが補完job `20261019-133054-todo-2924` を受け付けた。13:34 JSTの正規statusはqueued/steps0/started_atなし、理由はchild_priority。実レビューへ加算しない。元jobを直接再起動せず、同じレビュー票の通常受付を維持する。
 - 原レビューのSuggestion1について、Rustの `cc-scheduler/src/current_succession.rs::verify_current_product` を親が読了。正式guardの資格、全識別field、root/spec path/本文の3fingerprintとpath判定を照合し、独自の絶対期限は参照していない。任意の改善だけで8107を変更しない。
 - 正式guardは別担当のPR234を含むsource `5411cac009326b69bc725fc7ff6e7163b64297ff`、trimpath/modified=false、実SHA256 `0B24C92204DB1C26AD56EB8EE12E4E105F92D425BF0A7063A0F0A524FA268E5E` を観測。現branchを最新main `1123681cae4da1a1c01f718563ed4fa656203cba` へfast-forwardした。
 - 必読指定の原資料と旧進捗票は正式guardがclassification_unverified/client_resource=trueを返したため本文未読。今回チャットの具体的指示と参照可能な既存source/docsで独立工程を進める。保護設定や旧原本を書き換えない。
+- 元2834と主2903のnoteへ、既存本文を保持したCAS追記で上記実事実と残工程を返し、正規listで2件の追記を再確認した。受付・CI・レビュー・配布・実業務開始を区別した。
+- 正式配布用の一時フォルダはsafe-delete所有ID `248beccb10819befd144b65690437512`。固定対象、candidate/現版SHAのCAS、backup付きFile.Replace、配布後hash検証を行うCC-AdminBroker用の使い捨て手順を準備済み。候補buildと配布は未実行。再開後のmain/source/現版を再取得してmanifestを作り、この段階の観測SHAを無条件に使わない。
 
 ## 次の工程
 

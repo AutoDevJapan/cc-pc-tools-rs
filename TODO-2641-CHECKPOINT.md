@@ -1,5 +1,55 @@
 # GoDD MCP αの再開記録（ToDo2641、2026-10-17）
 
+## 2026-10-19：既知8失敗の原製品候補を先に修正
+
+最新job `20261019-125449-todo-2641`。同branchのHEAD f50aefa、cleanから再開。
+主2903の工程分離に従い、子2737の全CI成功を待たず、親だけが直せる原Rustのbaselineを修正した。
+診断配送2925はdone、候補受領票2926は主2903の手動追跡なので本担当ではdoneにしない。
+
+GitHub APIで実owner AutoDevJapan/repo1154066087/private/admin/nonfork、PR3613/open/draft、
+head/base同repo、原branchを確認。更新前headは `085b5b007cab4ebd57d6690faf6df95bb40453ef`、
+tree `25ae0b09830d1fbeef079e8ff6bcc033928bc8d8`。
+原診断のblob `73904294f03d8ee9bf901570649370c64cb03b23` はWindows CI出力契約のRust sourceと一意に一致した。
+
+同原ref `codex/todo2641-http-response-pseudo-20261015` へ通常commit/PATCH force=falseで反映済み。
+
+- 新head `0fda87c591ae5e6fd256508d94376c38e16b2f4e`
+- 新tree `0bc5ff599c5105474f88c6284e984b55583c5510`
+- 新blob `d4b45a01ebdf56f5053440cd760833498fa663ce`
+- 差分は `godd-mcp-alpha/native/tests/integration/windows_ci_output_contract.rs` の1file、54追加/1削除。
+- ci.ymlはblob `64636a181386f3212d0190be11ffe9afa9903644` のまま不変。
+
+共通baselineのrunner判定は、元のWindows literalと、現在の明示lease/手動dispatch/原branch/
+Windows job+run_id/Windows fallbackで束縛した式だけを許す閉じた集合にした。
+workflowから期待値を自動生成せず、任意文字列/任意self-hosted/別OS/条件削除を許可しない。
+元のassert・mutation群、13Cargo工程・SDK/toolchain・profile・失敗伝播・並列/直列/20分条件は保持。
+追加の回帰2testで正常2経路とNone/別OS/lease・ref・event・job・run_id・fallbackの改変を検査する。
+
+軽量検査はcandidateの追加const/helper/回帰2testをそのまま抽出し、原ci.ymlの実Windows scalarも
+正例へ加えたもの。host rustc1.95.0で旧literal述語exit101（2failed/1passed）、修正述語exit0（3passed）。
+candidate全体のrustfmt edition2021 checkも成功した。原公式SDK1.97.1によるserde_yaml integration/
+既知8検査/Windows13工程/正式CIの成功とはしない。Cargo割当なしの親は重いCargoを実行していない。
+RED準備の最初の補助はrustfmtの改行による置換不一致で実行前に停止し、1個の関数を一意に置換してから
+上記RED/GREENを実行した。原製品のテスト再実行や元の失敗ログの書換えではない。
+
+原RED/GREEN全文と抽出した検査source、compiler版、bytes/SHAは
+`D:/CC/Tools/product-ci/evidence/todo-2641-20261019/windows-route-0fda87c` へ保持した。
+詳細は [docs/todo-2641-windows-route-fix-20261019.json](docs/todo-2641-windows-route-fix-20261019.json)。
+
+追加差分と実Windows jobを本文へ供給した有限別モデルレビュー **2928/gpt-6-luna** を登録済み。
+read-only担当に保存/commit/ToDo操作を求めず、原応答は親が受領する。
+specは [docs/todo-2641-windows-route-review-spec.md](docs/todo-2641-windows-route-review-spec.md)。
+受付をMust0とはせず、原2737/2922の終了metadata診断も未確定として保持する。
+
+元2737と手動票2926のnoteへ実HEAD/tree/ref/blob/差分/検査範囲/レビュー未受領を配送した。
+主2903が有限配送だけを検証して2926をdoneにし、2737は2922と2926の受領後に正式CIへ進む。
+2737へ親2641の製品全体doneを待つ条件を追加していない。
+再開時は2928の実応答と2737の新sourceの関連検査・正式CI結果を確認する。
+同じ旧headの失敗を再送せず、新headの実合格・Must0を得るまでmerge/Prd成功としない。
+この区切りで終了する場合は親2641を `wait --on 2737 --on 2928` として待つ。
+原18/1153/Issue1100・解析37件・旧証拠/未回収/未知の終了原因を、この有限配送で完了にしない。
+以下の10/17記録は当時の履歴として保持する。
+
 ## 03時台の再開とMust修正候補
 
 最新jobは `20261017-032928-todo-2641`。同branchのHEAD `5219626`、cleanから再開した。

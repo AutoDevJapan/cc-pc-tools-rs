@@ -1,0 +1,49 @@
+{
+  "todo": 2641,
+  "delivery_todo": 2926,
+  "repository_id": 1154066087,
+  "pull_request": 3613,
+  "branch": "codex/todo2641-http-response-pseudo-20261015",
+  "previous_head": "085b5b007cab4ebd57d6690faf6df95bb40453ef",
+  "previous_tree": "25ae0b09830d1fbeef079e8ff6bcc033928bc8d8",
+  "previous_blob": "73904294f03d8ee9bf901570649370c64cb03b23",
+  "head": "0fda87c591ae5e6fd256508d94376c38e16b2f4e",
+  "tree": "0bc5ff599c5105474f88c6284e984b55583c5510",
+  "path": "godd-mcp-alpha/native/tests/integration/windows_ci_output_contract.rs",
+  "blob": "d4b45a01ebdf56f5053440cd760833498fa663ce",
+  "nonforce": true,
+  "focused_old_exit": 101,
+  "focused_fixed_exit": 0,
+  "focused_fixed_tests": 3,
+  "full_integration_executed": false,
+  "review_received": false,
+  "official_ci_success": false,
+  "metadata_complete_reason_confirmed": false,
+  "merged": false,
+  "prd_deployed": false,
+  "review_todo": 2928,
+  "host_compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "evidence_root": "D:/CC/Tools/product-ci/evidence/todo-2641-20261019/windows-route-0fda87c",
+  "evidence_files": [
+    {
+      "file": "red.log",
+      "bytes": 1244,
+      "sha256": "A23892D146D5A574E94438F70747C7E245163FECC365DE97EDC80BD46BF93495"
+    },
+    {
+      "file": "green.log",
+      "bytes": 335,
+      "sha256": "42FDC91118576443C74BE8D2793C803C27F3D0279734A8F1B7A5C122AC026EAB"
+    },
+    {
+      "file": "route-tests.rs",
+      "bytes": 2649,
+      "sha256": "C0AA890F82C462D4744E899530B9D8662FED9A787A6DA79299A0CED3D6B782B9"
+    },
+    {
+      "file": "route-tests-red.rs",
+      "bytes": 2583,
+      "sha256": "F0DB40593AF2580042ED0B09D3D55A2839EFE72018674C8D1E5622B2F22F38FD"
+    }
+  ]
+}

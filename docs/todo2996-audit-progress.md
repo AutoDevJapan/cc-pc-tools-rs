@@ -65,7 +65,8 @@ unmaintained/unsoundなどの情報warningは重大脆弱性エラーと区別�
   job20261019-212942-todo-3001はexit0/18steps。threadとcwdが一致する実turn_contextで
   anthropic/claude-sonnet-5-5を照合した。原応答はreview3001-original.private.md、
   限定モデル証拠はreview3001-turn-context.private.jsonに保持。
-- レビュー担当が未読と明記したaudit JSONなどへの補足確認と、親への最終配送が残る。
+- レビュー担当が未読と明記したaudit JSONなどへの補足確認3006を、同じモデルの通常ToDo
+  --specで登録した。これと親への最終配送が残る。
 - 製品本体の全テスト・正式CI・mergeはこの工程では未実施。
 
 依存API受入のコードは`tools/passshare-audit-2996/`へ保存した。受入用lockは製品lockと
@@ -138,7 +139,7 @@ manual-quarantine-verification/result.private.json。別経路で削除を再実
 
 1. この記録と親2986のnoteを読み、上記の固定候補blobを照合する。
 2. Cargoは全て終端済みで一時生成物は退避済み。新しい変更や指摘が無い限り再ビルドしない。
-3. 補足レビューの未読範囲だけを受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
+3. 補足レビュー3006の未読範囲だけを受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
 4. 親2986の既存noteを保持して、候補blob、audit、関連検査、残条件を追記する。
 5. 必要な再検査で新規rootを作った場合だけ、所有付き一時rootの手順で片付ける。
 6. 支援記録だけをscheduler/todo-2996-passshare-ci-rust-2986へcommit/pushし、

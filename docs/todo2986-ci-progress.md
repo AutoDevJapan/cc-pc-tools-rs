@@ -26,7 +26,8 @@ mainのbranch protectionは404「Branch not protected」、rulesetsは空。
 | Mobile JS試験・画面ビルド・auth API | Quality GateとMobile Build、同じlockfile/Node/作業先 | Mobile Buildをworkflow_call専用にしQuality Gateから1回だけ呼ぶ |
 | Mobile Rust | Quality Gateは全crateテストとClippy、Mobile Buildはsmoke_のみ | 広い全crateテストとClippyを保持 |
 | Mobile React受入 | Quality Gateだけ、core exampleとapps/mobile実ファイル | 同じコマンド・条件を再利用workflow内に保持 |
-| Linux本番・DB統合・SDK・拡張・Web等 | Quality Gateの独立ジョブ | 実コマンド・env・依存・設定の構造一致を検査。先行検査の依存だけ追加 |
+| Linux本番・SDK・拡張・Web等 | Quality Gateの独立ジョブ | 実コマンド・env・依存・設定の構造一致を検査。先行検査の依存だけ追加 |
+| DB統合 | Quality GateのDocker E2E | 初回候補では不変。正式実行で同時migrationのdeadlockを確認し、元Composeの全command/試験一覧を読み取ってNode試験だけ直列化する修正を保留候補へ追加 |
 | Cargo/pnpm監査 | security-audit.yml、PR/main/毎日 | 変更なし。重大audit失敗を免除しない |
 
 Quality Gateの入口・PR/mainイベント・concurrency・permissionsを保持する。
@@ -45,18 +46,51 @@ frontend/extensionのみの変更以外は共有/資料/lock/toolchain/workflow/
 `--no-renames`で修復した。Go vetとactionlint（同じ候補の再利用workflow解決込み）成功。
 変更判定後の集約厳格化について関連構造検査を再確認した。
 
-元の実行量は `.ci-work/baseline-runs.private.json` に保存。
-2026-10-12のmainには通常CI/独立Mobileが各1回成功していた。
-10月13日以降の定期監査には数秒で終わる失敗があり、本文と実課金原因の照合は未完。
-新候補の正式PR CI、別モデルレビュー、マージ、main確認、runner分数/請求増分は未完。
+元の実行量は `.ci-work/baseline-runs.private.json` と追加のbaseline-*資料に保存。
+2026-10-12のmainには13 workflow実行があり、Quality Gateは14 jobs/1390 runner秒、
+独立Mobileは1 job/202 runner秒だった。timing APIのbillable.total_msは0であり、
+これを過去請求の確定値や返金と解釈しない。
+10月13日以降の定期監査の実annotationは「Actions budget is preventing further use」だった。
+公開・承認済み予算操作後の新PRでは実hosted jobsが起動している。予算を再操作していない。
+
+## 公開した候補と新たな実失敗
+
+PassShare PR [720](https://github.com/AutoDevJapan/PassShare/pull/720)、固定候補
+`3dec5ab5d02cf45e77c4bbbb14a734f2508be78b`、二workflowだけをAPI compareで確認。
+Quality Gate run39247094873 / preflight job118041539000は37秒で正式成功。
+両clientの条件付きjobsが起動し、独立Mobile Build runは生成されず全12 workflowsとなった。
+13→12という実行数の差は観測したが、main pushとPRイベントの差もあるため
+製品全体の削減率や毎月の費用効果は確定していない。
+
+Security Audit run39247094667 / cargo job118041538621は12 vulnerabilitiesで実失敗。
+quinn-proto>=0.11.18、rustls>=0.23.46、zip>=9.0.0が必要との原結果を保存した。
+pnpm auditは6ディレクトリ全成功。最小の依存修復をCargo割当付き子2996へ配送。
+親は監査を削除/免除せず、子の固定変更を同じPRへ統合する。起動仕様は
+[監査修復工程](todo2986-audit-repair-spec.md)。
+
+Docker E2E job118041805399は、connect-token-revocation/cross-clientのcreateApp初期化中に
+PostgreSQL 40P01 deadlockで失敗。元の並列Node test filesが同じDBのmigrationを競合実行する。
+Compose configが返す元commandからtest一覧を保持して--test-concurrency=1だけを挿入する
+修正を `.ci-work/candidate-repair/` に生成した。まだ製品branchへpushしていない。
+新しい試験ファイルがComposeへ追加されても同じ一覧を使い、未知のcommand形式は失敗させる。
+NODE_OPTIONSではこのflagを受け付けないことも実runtimeで確認し、その方式を採用していない。
+実Bash+jqによる集約6ケース、元command保持/不明形式拒否2ケース、go vet/actionlint成功。
+実Compose configの元7 test filesを確認した。DB再実行の成功は未確認。
+
+別モデルレビューは子2995。依存修復とレビューを受領してから保留修正をまとめて公開し、
+無目的な初回候補のrerunはしない。Windows子2994は独立して供給実証を進める。
+親はまず2995/2996だけを待ち、PR720の通常CI/mergeを先に終えてから2994の統合へ戻る。
+2994は親2986をwaitしない。親PRのマージと2994の供給の相互待ちを作らない。
+
+全CI成功、マージ、main確認、最終runner分数/請求増分は未完。
 設定とfixtureを実CI成功や費用削減実績として数えない。
 
 ## 再開手順
 
 1. この記録・自分のToDo note・子2994の配送を読み、APIで現在のmain/PRを再照合する。
-2. `.ci-work/candidate/`の二workflowが生成結果と一致することを確認する。
-3. 通常の固定候補PRを一度だけ作り、正式CIと別モデルレビューを追う。
-4. 実害ある指摘/実CI失敗を修復し同HEADの結果を確認して通常マージする。
+2. 公開済み`.ci-work/candidate/`と保留中`.ci-work/candidate-repair/`を区別する。
+3. 子2995のレビューと2996の固定依存修復を受領し、保留修正とまとめてPR720を更新する。
+4. 実害ある指摘/実CI失敗を修復し同HEADの結果を確認して通常マージする。新しいrun/jobの失敗も取りこぼさない。
 5. 2994の正式Windows job/hash/回収を受領し、全体の重複排除を統合して実測する。
 6. 元2957/自分のnoteへ結果と未達を保存する。通常完了通知は送らない。
 

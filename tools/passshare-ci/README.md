@@ -13,9 +13,15 @@ go vet ./...
 
 The helper decodes YAML and compares unrelated jobs structurally, preserving
 their commands, environments, dependencies and configuration except for the
-explicit preflight dependency. Tests run the emitted Bash selector against real
+explicit preflight dependency and the narrowly checked database-test repair.
+The latter resolves the original Compose command rather than copying its test
+list, and serializes Node test files to prevent concurrent migration deadlocks.
+Tests run the emitted Bash selector against real
 Git commits, including cross-client renames, deletions, multi-commit pushes,
 lockfiles, shared inputs, consumed documents and failed comparisons.
+The actual aggregate Bash/jq command is tested against failures and unexpected
+skips; the database command is tested for full list preservation and rejection
+of an unsupported Compose command format.
 The owning caller reclaims the test scratch root using the safe-delete CLI.
 
 The reusable mobile workflow retains the broader original mobile acceptance;

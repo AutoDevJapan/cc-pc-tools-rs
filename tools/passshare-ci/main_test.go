@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,6 +10,116 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	if os.Getenv("PASSSHARE_DOCKER_STUB") == "1" {
+		args := os.Args[1:]
+		if len(args) > 3 && args[3] == "config" {
+			fmtText := os.Getenv("PASSSHARE_COMPOSE_CONFIG")
+			_, _ = os.Stdout.WriteString(fmtText)
+			os.Exit(0)
+		}
+		b, err := json.Marshal(args)
+		if err == nil {
+			err = os.WriteFile(os.Getenv("PASSSHARE_DOCKER_CAPTURE"), b, 0644)
+		}
+		if err != nil {
+			os.Exit(2)
+		}
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
+func TestAggregateRejectsFailedOrUnexpectedlySkippedChecks(t *testing.T) {
+	q, m := originals(t)
+	if err := transform(q, m); err != nil {
+		t.Fatal(err)
+	}
+	script := q["jobs"].(object)["gate"].(object)["steps"].([]any)[0].(object)["run"].(string)
+	for _, tc := range []struct {
+		name, client, goSDK, preflight, desktop string
+		pass                                    bool
+	}{
+		{"all-success", "success", "success", "success", "true", true},
+		{"unaffected-desktop", "skipped", "success", "success", "false", true},
+		{"unexpected-skip", "skipped", "success", "success", "true", false},
+		{"failed-desktop", "failure", "success", "success", "true", false},
+		{"failed-go-matrix", "success", "failure", "success", "true", false},
+		{"failed-preflight", "skipped", "skipped", "failure", "false", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			results, err := json.Marshal(object{"desktop-smoke": object{"result": tc.client}, "mobile-smoke": object{"result": "success"}, "connect-go": object{"result": tc.goSDK}, "preflight": object{"result": tc.preflight}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := exec.Command(bashPath(t), "-c", script)
+			c.Env = append(os.Environ(), "RESULTS="+string(results), "DESKTOP="+tc.desktop, "MOBILE=true")
+			output, err := c.CombinedOutput()
+			if (err == nil) != tc.pass {
+				t.Fatalf("aggregate pass=%t expected=%t: %v %s", err == nil, tc.pass, err, output)
+			}
+		})
+	}
+}
+
+func TestSerialE2EPreservesTheComposeCommandAndTestList(t *testing.T) {
+	original := "cargo build -p op-cli --release && cargo build --manifest-path backend/native/Cargo.toml --release --locked --bin passshare-mutations && pnpm --dir backend install --frozen-lockfile && node --test backend/test/pg-integration.test.js backend/test/cross-client.integration.test.js backend/test/future-added.integration.test.js"
+	for _, valid := range []bool{true, false} {
+		dir := scratch(t)
+		exe, err := os.Executable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := os.ReadFile(exe)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := "docker"
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0755); err != nil {
+			t.Fatal(err)
+		}
+		command := []string{"sh", "-c", original}
+		if !valid {
+			command = []string{"unsupported", original}
+		}
+		config, err := json.Marshal(object{"services": object{"backend-e2e": object{"command": command}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		capture := filepath.Join(dir, "capture.json")
+		c := exec.Command(bashPath(t), "-c", serialE2E)
+		c.Env = append(os.Environ(), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"), "PASSSHARE_DOCKER_STUB=1", "PASSSHARE_COMPOSE_CONFIG="+string(config), "PASSSHARE_DOCKER_CAPTURE="+capture)
+		out, err := c.CombinedOutput()
+		if !valid {
+			if err == nil {
+				t.Fatalf("unsupported Compose command accepted: %s", out)
+			}
+			if _, err := os.Stat(capture); !os.IsNotExist(err) {
+				t.Fatal("unsupported config reached the run command")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("serial workflow: %v %s", err, out)
+		}
+		data, err := os.ReadFile(capture)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var args []string
+		if err := json.Unmarshal(data, &args); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"compose", "-f", "docker/docker-compose.test.yml", "run", "--rm", "backend-e2e", "sh", "-c", strings.Replace(original, "node --test ", "node --test --test-concurrency=1 ", 1)}
+		if !reflect.DeepEqual(args, want) {
+			t.Fatalf("Compose build/acceptance command changed: got %q want %q", args, want)
+		}
+	}
+}
 
 func originals(t *testing.T) (object, object) {
 	t.Helper()

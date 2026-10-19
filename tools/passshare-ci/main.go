@@ -16,6 +16,16 @@ type object = map[string]any
 
 const checkout = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
 
+// Every integration file starts an app and runs migrations against the same
+// database. Keep the Compose command as the source of its complete test list.
+const serialE2E = `set -euo pipefail
+config="$(docker compose -f docker/docker-compose.test.yml config --format json)"
+command="$(jq -er '.services["backend-e2e"].command | if type == "array" and length == 3 and .[0] == "sh" and .[1] == "-c" then .[2] else error("unsupported backend-e2e command") end' <<< "$config")"
+[[ "$command" == *"node --test "* ]] || { echo 'backend-e2e no longer contains the expected test command' >&2; exit 1; }
+command="${command/node --test /node --test --test-concurrency=1 }"
+docker compose -f docker/docker-compose.test.yml run --rm backend-e2e sh -c "$command"
+`
+
 // PR checkout remains GitHub's tested merge context. A push compares the full
 // before..after range, including every commit in the push and deleted files.
 const changedPaths = `set -euo pipefail
@@ -57,6 +67,12 @@ func encode(v object) ([]byte, error) {
 
 func transform(q, m object) error {
 	jobs := q["jobs"].(object)
+	for _, raw := range jobs["docker-e2e"].(object)["steps"].([]any) {
+		s := raw.(object)
+		if s["name"] == "Run PostgreSQL integration tests" {
+			s["run"] = serialE2E
+		}
+	}
 	desktop := jobs["desktop-smoke"].(object)
 	mobile := jobs["mobile-smoke"].(object)
 	// These tests were on the same ubuntu-latest, stable Rust and Node 22,
@@ -169,6 +185,26 @@ func unchangedJobs(before, after object) error {
 			if k != "needs" {
 				copy[k] = v
 			}
+		}
+		if name == "docker-e2e" {
+			var normalized []any
+			for _, raw := range copy["steps"].([]any) {
+				s := raw.(object)
+				if s["name"] != "Run PostgreSQL integration tests" {
+					normalized = append(normalized, s)
+					continue
+				}
+				if s["run"] != serialE2E {
+					return fmt.Errorf("unreviewed E2E command")
+				}
+				step := object{}
+				for k, v := range s {
+					step[k] = v
+				}
+				step["run"] = "docker compose -f docker/docker-compose.test.yml run --rm backend-e2e"
+				normalized = append(normalized, step)
+			}
+			copy["steps"] = normalized
 		}
 		if !reflect.DeepEqual(original, copy) {
 			return fmt.Errorf("unrelated job changed: %s", name)

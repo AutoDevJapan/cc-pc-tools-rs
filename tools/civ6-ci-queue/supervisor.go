@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -186,14 +187,25 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 
 	// 5. Keep the original logs and hashes, then retire the owned root.
-	manifest, e := preserveEvidence(rec.Path, entryDir, d.home("evidence", safeKey(key)))
+	manifest, incomplete, e := preserveEvidence(rec.Path, entryDir, d.home("evidence", safeKey(key)))
 	if e != nil {
 		cl.State, cl.Detail = "failed", "evidence not preserved: "+short(e)
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "evidence not preserved", ExitCode: ec, Official: off, Cleanup: cl})
 	}
 	detail := cl.Detail
 	cl.State, cl.Evidence, cl.ManifestSHA = "evidence", d.home("evidence", safeKey(key)), manifest
-	cl = d.retire(ctx, cl)
+	if incomplete > 0 {
+		// Some original bytes could not be copied (for example files the
+		// non-admin controller may not read): keep the whole root by moving it
+		// to the quarantine instead of deleting it.
+		if qe := d.SD.Quarantine(ctx, cl.SafeDeleteID, "windows"); qe != nil {
+			cl.State, cl.Detail = "failed", "evidence incomplete and quarantine failed"
+		} else {
+			cl.State, cl.Detail = "quarantined", fmt.Sprintf("evidence incomplete: %d entries kept in the quarantined root", incomplete)
+		}
+	} else {
+		cl = d.retire(ctx, cl)
+	}
 	if cl.State != "removed" && cl.State != "quarantined" {
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "owned root not retired", ExitCode: ec, Official: off, Cleanup: cl})
 	}

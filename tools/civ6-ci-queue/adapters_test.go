@@ -138,7 +138,7 @@ func TestWindowsLifecycleStopsOnceWhenTheServiceMayStillRun(t *testing.T) {
 	lc, _, root := newLife(t)
 	w := newWinFake()
 	w.executeExit = 1
-	w.executeOut = `{"event":"execute-end","ok":false,"service_started":true,"service_stopped":false,"fence":true}`
+	w.executeOut = ""
 	lc.Exec, lc.Admin = w.exec, w.admin(root)
 	out := h.Lifecycle(context.Background(), lc)
 	if out.HelperOK || out.Exit != 1 || !out.Collected || !strings.Contains(strings.Join(w.calls, ","), "exec:execute,exec:stop,admin:collect") {
@@ -146,6 +146,18 @@ func TestWindowsLifecycleStopsOnceWhenTheServiceMayStillRun(t *testing.T) {
 	}
 	if strings.Count(strings.Join(w.calls, ","), "exec:stop") != 1 {
 		t.Fatal("exactly one stop attempt expected")
+	}
+
+	// When the helper itself reported its ending (even with a fence), it already
+	// made its one stop attempt: the queue goes straight to collect.
+	lc2, _, root2 := newLife(t)
+	w2 := newWinFake()
+	w2.executeExit = 1
+	w2.executeOut = `{"event":"execute-end","ok":false,"service_started":true,"service_stopped":false,"fence":true}`
+	lc2.Exec, lc2.Admin = w2.exec, w2.admin(root2)
+	h.Lifecycle(context.Background(), lc2)
+	if strings.Contains(strings.Join(w2.calls, ","), "exec:stop") {
+		t.Fatalf("a stop was retried: %v", w2.calls)
 	}
 }
 
@@ -176,7 +188,7 @@ func TestWindowsCollectionOutcomeComesFromTheHelperEventNotTheBrokerExit(t *test
 		collected, residue bool
 	}{
 		{`{"event":"collect-end","complete":false,"residue_only":false}`, false, false},
-		{`{"event":"collect-end","complete":false,"residue_only":true}`, false, true},
+		{`{"event":"collect-end","complete":false,"residue_only":true}`, true, true},
 		{"exit=0", false, false},
 		{`{"event":"collect-end","complete":true,"residue_only":false}`, true, false},
 	} {

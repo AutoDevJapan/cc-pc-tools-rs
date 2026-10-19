@@ -291,7 +291,11 @@ func (h windowsHelper) collect(ctx context.Context, lc *LifeCtx, verb string) (d
 	if e != nil || end == nil {
 		return false, false
 	}
-	return boolField(end, "complete"), boolField(end, "residue_only")
+	// The helper's residue-only ending reports complete:false, residue_only:true
+	// after the service, ACLs and processes are verified clean: collected, with a
+	// residue that is counted and judged separately.
+	residue = boolField(end, "residue_only")
+	return boolField(end, "complete") || residue, residue
 }
 
 func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
@@ -353,8 +357,10 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Failure = fmt.Sprintf("execute exited %d", res.Exit)
 	}
 	o.HelperOK = e == nil && res.Exit == 0 && end != nil && boolField(end, "ok")
-	if e != nil || end == nil || boolField(end, "fence") || !boolField(end, "service_stopped") {
-		// One stop attempt; a refused or uncertain stop is reported by collect.
+	if e != nil || end == nil {
+		// The helper did not finish its own handling (it makes exactly one stop
+		// attempt itself when it does), so one stop is tried here. A reported
+		// fence is never stopped again: collect verifies it and fences on failure.
 		sctx, scancel := context.WithTimeout(ctx, 5*time.Minute)
 		sres, _ := lc.Exec(sctx, helper, []string{"stop", lc.Root}, nil, nil)
 		scancel()

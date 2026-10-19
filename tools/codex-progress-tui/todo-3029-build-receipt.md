@@ -33,8 +33,9 @@ All paths below are relative to `tools/codex-progress-tui/`.
   `bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969`.
   **Mismatch.** The binary is version 0.163.0 and was built from the pinned tag
   plus the recorded patch and commit stamp, but this build did not reproduce
-  the previously tested byte hash. No hash has been substituted or claimed as
-  the tested hash.
+  the previously tested byte hash. The first attempt omitted the commit stamp;
+  the final build supplied it, but the remaining byte-level cause is unknown.
+  No hash has been substituted or claimed as the tested hash.
 - First, unstamped build retained separately as
   `.ci-work/todo3029/delivery/codex-build-unverified-ed0a81d0.exe` (SHA256
   `ed0a81d0c137105a0913bdc3b210e8e0f09684ac130743ba65652aa319886cd8`). It is

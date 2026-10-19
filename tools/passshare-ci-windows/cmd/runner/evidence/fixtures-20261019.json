@@ -1,0 +1,805 @@
+{
+  "date": "2026-10-19",
+  "source_commit": "c29e0ed44fd84cc301dbabae8953a6c97a48beec",
+  "original_source": "28c9b9587345f082821c62af804365cf1a64bfe9",
+  "helper_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7",
+  "official_ci_claimed": false,
+  "product_build_run": false,
+  "shared_service_retained": true,
+  "cases": {
+    "normal_initial": {
+      "instance": "6ed420bb25ca63a6596944477262b79e",
+      "prepared.json": {
+        "credential_free": true,
+        "helper_sha256": "cc653ffe936e1aa0481f5950cb789fb557e54cc1ddb9cda7951ebfcf94b4da8d",
+        "official_runner_executed": false,
+        "service": "CC-PSW-fixture",
+        "shared_service": true,
+        "sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195"
+      },
+      "launcher-result.json": {
+        "instance": "6ed420bb25ca63a6596944477262b79e",
+        "service_pid": 50452,
+        "service_success": true,
+        "worker_pid": 69716,
+        "worker_exit": 0,
+        "retained_member_pids": [
+          64344,
+          31012,
+          11476
+        ],
+        "job_drained": true,
+        "cancelled": false,
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 31012
+      },
+      "runtime/drain.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "cancelled": false,
+        "job_drained": true,
+        "load_user_profile_api_requested": false,
+        "official_ci_claimed": false,
+        "retained_handles_signalled": true,
+        "retained_member_pids": [
+          64344,
+          31012,
+          11476
+        ],
+        "root_exit": 0,
+        "root_pid": 69716,
+        "scm_profile_state_not_measured_here": true,
+        "token_au_deny_only_verified": true
+      },
+      "runtime/fixture.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "authenticated_users_deny_only_verified": true,
+        "case": "normal",
+        "child_observed_alive": true,
+        "child_pid": 31012,
+        "control_write_denied": true,
+        "explicit_launcher_pid": 50452,
+        "launcher_reopen_denied": true,
+        "rust_test_pid": 0,
+        "worker_pid": 69716
+      },
+      "collection": [
+        {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "ciw_profile_leaf_count_total": 1,
+          "credential_runtime": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-6ed420bb25ca63a6596944477262b79e\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; legacy per-job CC-PSW-<instance> profiles are counted in the total",
+          "queryable_account_process_count": 0,
+          "service": "CC-PSW-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "tree_acl_reset": true,
+          "tree_entries_verified_without_service_grant": 32,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        }
+      ],
+      "controller_attempts": [
+        {
+          "admin_membership_disabled": true,
+          "case": "normal",
+          "control_preflight_passed": true,
+          "controller_pid": 21924,
+          "error": "controller execution deadline",
+          "official_runner_executed": false,
+          "private_runtime_read_denied": true,
+          "scm_create_denied": true,
+          "success": false
+        }
+      ]
+    },
+    "cancel_lifecycle": {
+      "instance": "6c7a7f3096023e3d38e786e22b71f852",
+      "prepared.json": {
+        "credential_free": true,
+        "helper_sha256": "2b6e144a81eaa244def85294b99deb8b830cab9a398da75d8fafce6820331e34",
+        "official_runner_executed": false,
+        "service": "CC-PSW-fixture",
+        "shared_service": true,
+        "sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195"
+      },
+      "launcher-result.json": {
+        "instance": "6c7a7f3096023e3d38e786e22b71f852",
+        "service_pid": 31632,
+        "service_success": true,
+        "worker_pid": 61928,
+        "worker_exit": 125,
+        "retained_member_pids": [
+          61928,
+          75396,
+          61804,
+          25800
+        ],
+        "job_drained": true,
+        "cancelled": true,
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 61804
+      },
+      "runtime/drain.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "cancelled": true,
+        "job_drained": true,
+        "load_user_profile_api_requested": false,
+        "official_ci_claimed": false,
+        "retained_handles_signalled": true,
+        "retained_member_pids": [
+          61928,
+          75396,
+          61804,
+          25800
+        ],
+        "root_exit": 125,
+        "root_pid": 61928,
+        "scm_profile_state_not_measured_here": true,
+        "token_au_deny_only_verified": true
+      },
+      "runtime/fixture.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "authenticated_users_deny_only_verified": true,
+        "case": "cancel",
+        "child_observed_alive": true,
+        "child_pid": 61804,
+        "control_write_denied": true,
+        "explicit_launcher_pid": 31632,
+        "launcher_reopen_denied": true,
+        "rust_test_pid": 0,
+        "worker_pid": 61928
+      },
+      "collection": [
+        {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "credential_runtime": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-6c7a7f3096023e3d38e786e22b71f852\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; all profile names in this module namespace are counted",
+          "psw_profile_leaf_count_total": 1,
+          "queryable_account_process_count": 0,
+          "service": "CC-PSW-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "tree_acl_reset": true,
+          "tree_entries_verified_without_service_grant": 29,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        }
+      ],
+      "controller_attempts": [
+        {
+          "admin_membership_disabled": true,
+          "case": "cancel",
+          "control_preflight_passed": true,
+          "controller_pid": 10484,
+          "explicit_stop_succeeded": true,
+          "observed_child_pid": 61804,
+          "official_runner_executed": false,
+          "private_runtime_read_denied": true,
+          "protected_launcher_report": {
+            "instance": "6c7a7f3096023e3d38e786e22b71f852",
+            "service_pid": 31632,
+            "service_success": true,
+            "worker_pid": 61928,
+            "worker_exit": 125,
+            "retained_member_pids": [
+              61928,
+              75396,
+              61804,
+              25800
+            ],
+            "job_drained": true,
+            "cancelled": true,
+            "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+            "token_au_deny_only_verified": true,
+            "hooks_verified": false,
+            "fixture_child_pid": 61804
+          },
+          "scm_create_denied": true,
+          "success": true
+        }
+      ]
+    },
+    "sdk_long_path_failure": {
+      "instance": "7155bdd37afc8e75e4dbf39509a5f18c",
+      "prepared.json": {
+        "credential_free": true,
+        "helper_sha256": "2b6e144a81eaa244def85294b99deb8b830cab9a398da75d8fafce6820331e34",
+        "official_runner_executed": false,
+        "service": "CC-PSW-fixture",
+        "shared_service": true,
+        "sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195"
+      },
+      "launcher-result.json": {
+        "instance": "7155bdd37afc8e75e4dbf39509a5f18c",
+        "service_pid": 65124,
+        "service_success": false,
+        "worker_pid": 67184,
+        "worker_exit": 1,
+        "retained_member_pids": null,
+        "job_drained": true,
+        "cancelled": false,
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false
+      },
+      "runtime/drain.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "cancelled": false,
+        "job_drained": true,
+        "load_user_profile_api_requested": false,
+        "official_ci_claimed": false,
+        "retained_handles_signalled": true,
+        "retained_member_pids": null,
+        "root_exit": 1,
+        "root_pid": 67184,
+        "scm_profile_state_not_measured_here": true,
+        "token_au_deny_only_verified": true
+      },
+      "runtime/worker-error.json": {
+        "error": "credential-free SDK stage fixture-cargo-stable failed (exit 101)"
+      },
+      "node-distribution.json": {
+        "bytes": 35466975,
+        "sha256": "21c2d9735c80b8f86dab19305aa6a9f6f59bbc808f68de3eef09d5832e3bfbbd",
+        "url": "https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip",
+        "version": "v22.16.0"
+      },
+      "sdk-distribution.json": {
+        "bytes": 12721664,
+        "credential_free": true,
+        "guard_sha256": "2b6e144a81eaa244def85294b99deb8b830cab9a398da75d8fafce6820331e34",
+        "sha256": "6f4bef66261261fcb43131be8720bab817d403a09edec7455c371974b90bdb7e",
+        "url": "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+      },
+      "checkout-sdk.json": {
+        "checkout_blob": "17a1749fafa5ad50ee5376ad39fe19386c37f5a3",
+        "checkout_commit": "11d5960a326750d5838078e36cf38b85af677262",
+        "checkout_sha256": "ff743df9891fd49ffdf6e6bb11ad574bce26a13862ede59474201ef4c9ae029e",
+        "declared_engine": "node20",
+        "node_version": "v20.20.2",
+        "node_zip_sha256": "dc3700fdd57a63eedb8fd7e3c7baaa32e6a740a1b904167ff4204bc68ed8bf77",
+        "synthetic_only": true
+      },
+      "runtime/checkout-verified.json": {
+        "actual_action_main_post": true,
+        "advertisements": 2,
+        "auth_absent": true,
+        "head": "1e59bb5d81cbc0a798f6612f3d6536f833796bec",
+        "official_ci_claimed": false,
+        "plain_git_without_override": true,
+        "source_owner_sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "synthetic_only": true,
+        "tree": "8b3dd42ced7e81cd121ce27102ff02aa050514d3",
+        "unexpected_routes": 0,
+        "upload_requests": 2
+      },
+      "runtime/sdk-ready.json": {
+        "credential_free": true,
+        "msvc_environment": true,
+        "node_version": "v22.16.0",
+        "official_ci_claimed": false,
+        "pnpm_version": "10.11.0",
+        "stable_minimal": true,
+        "webview2_available": true
+      },
+      "runtime/sdk-webview2.json": {
+        "path": "C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\155.0.4283.45\\msedgewebview2.exe",
+        "read_access": true,
+        "shared_acl_changed": false,
+        "version": "155.0.4283.45"
+      },
+      "runtime/sdk-sccache-server.json": {
+        "cache": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\runtime\\sccache",
+        "foreground": true,
+        "inherited_job_object": true,
+        "kernel_listener_pid_verified": true,
+        "pid": 55216,
+        "port": 59013,
+        "shared_cache_modified": false
+      },
+      "runtime/sdk-guards-verified.json": {
+        "after_toolchain_install": true,
+        "count": 5,
+        "helper_sha256": "2b6e144a81eaa244def85294b99deb8b830cab9a398da75d8fafce6820331e34"
+      },
+      "runtime/sdk-fixture-cargo-stable.json": {
+        "bytes": 2194,
+        "completed": false,
+        "credential_free": true,
+        "exit": 101,
+        "official_ci_claimed": false,
+        "sha256": "0ba31aaf5ab0107801f421ef79f83fdba76c790c85e60cb93d0390b1069f9986"
+      },
+      "collection": [
+        {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "credential_runtime": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; all profile names in this module namespace are counted",
+          "psw_profile_leaf_count_total": 1,
+          "queryable_account_process_count": 0,
+          "service": "CC-PSW-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "tree_acl_reset": true,
+          "tree_entries_verified_without_service_grant": 7860,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        }
+      ],
+      "controller_attempts": [
+        {
+          "admin_membership_disabled": true,
+          "case": "normal",
+          "control_preflight_passed": true,
+          "controller_pid": 55016,
+          "error": "exit status 1",
+          "official_runner_executed": false,
+          "private_runtime_read_denied": true,
+          "scm_create_denied": true,
+          "success": false
+        }
+      ],
+      "sdk-rustc-stable.log": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-pc-windows-msvc\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+      "sdk-node22.log": "v22.16.0\r\n",
+      "sdk-pnpm-version.log": "10.11.0\n",
+      "sdk-fixture-cargo-stable.log": "   Compiling finite-fixture v0.1.0 (D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\runtime\\runner\\_work\\PassShare\\PassShare\\tools)\nerror: linking with `link.exe` failed: exit code: 1104\n  |\n  = note: \"C:\\\\Program Files (x86)\\\\Microsoft Visual Studio\\\\2022\\\\BuildTools\\\\VC\\\\Tools\\\\MSVC\\\\14.44.35207\\\\bin\\\\HostX64\\\\x64\\\\link.exe\" \"/NOLOGO\" \"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-2997-passshare-windows-runner-2994\\\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\\\runtime\\\\runner\\\\_work\\\\PassShare\\\\PassShare\\\\tools\\\\target\\\\debug\\\\deps\\\\rustcRfdq2e\\\\symbols.o\" \"<2 object files omitted>\" \"<sysroot>\\\\lib\\\\rustlib\\\\x86_64-pc-windows-msvc\\\\lib/{libtest-*,libgetopts-*,librustc_std_workspace_std-*,libstd-*,libpanic_unwind-*,libcfg_if-*,libwindows_link-*,librustc_demangle-*,libstd_detect-*,libhashbrown-*,librustc_std_workspace_alloc-*,libunwind-*,librustc_std_workspace_core-*,liballoc-*,libcore-*,libcompiler_builtins-*}.rlib\" \"kernel32.lib\" \"kernel32.lib\" \"kernel32.lib\" \"kernel32.lib\" \"ntdll.lib\" \"userenv.lib\" \"ws2_32.lib\" \"dbghelp.lib\" \"/defaultlib:msvcrt\" \"/NXCOMPAT\" \"/OUT:D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-2997-passshare-windows-runner-2994\\\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\\\runtime\\\\runner\\\\_work\\\\PassShare\\\\PassShare\\\\tools\\\\target\\\\debug\\\\deps\\\\finite_fixture-2b87da4c9ae955db.exe\" \"/OPT:REF,NOICF\" \"/DEBUG\" \"/PDBALTPATH:%_PDB%\" \"/NATVIS:<sysroot>\\\\lib\\\\rustlib\\\\etc\\\\intrinsic.natvis\" \"/NATVIS:<sysroot>\\\\lib\\\\rustlib\\\\etc\\\\liballoc.natvis\" \"/NATVIS:<sysroot>\\\\lib\\\\rustlib\\\\etc\\\\libcore.natvis\" \"/NATVIS:<sysroot>\\\\lib\\\\rustlib\\\\etc\\\\libstd.natvis\"\n  = note: some arguments are omitted. use `--verbose` to show all linker arguments\n  = note: LINK : fatal error LNK1104: cannot open file 'D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-2997-passshare-windows-runner-2994\\codex-owned-7155bdd37afc8e75e4dbf39509a5f18c\\runtime\\rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib\\librustc_std_workspace_std-8e7244f1eb1ad41f.rlib'\r\n          \n\nerror: could not compile `finite-fixture` (lib test) due to 1 previous error\n"
+    },
+    "sdk_normal": {
+      "instance": "c0d0c333fca8d97bab2fb8219b1ee1a8",
+      "prepared.json": {
+        "credential_free": true,
+        "helper_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7",
+        "official_runner_executed": false,
+        "service": "CC-PSW-fixture",
+        "shared_service": true,
+        "sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195"
+      },
+      "launcher-result.json": {
+        "instance": "c0d0c333fca8d97bab2fb8219b1ee1a8",
+        "service_pid": 37372,
+        "service_success": true,
+        "worker_pid": 54036,
+        "worker_exit": 0,
+        "retained_member_pids": [
+          57020,
+          46908
+        ],
+        "job_drained": true,
+        "cancelled": false,
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 57020
+      },
+      "runtime/drain.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "cancelled": false,
+        "job_drained": true,
+        "load_user_profile_api_requested": false,
+        "official_ci_claimed": false,
+        "retained_handles_signalled": true,
+        "retained_member_pids": [
+          57020,
+          46908
+        ],
+        "root_exit": 0,
+        "root_pid": 54036,
+        "scm_profile_state_not_measured_here": true,
+        "token_au_deny_only_verified": true
+      },
+      "runtime/fixture.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "authenticated_users_deny_only_verified": true,
+        "case": "normal",
+        "child_observed_alive": true,
+        "child_pid": 57020,
+        "control_write_denied": true,
+        "explicit_launcher_pid": 37372,
+        "launcher_reopen_denied": true,
+        "rust_test_pid": 0,
+        "worker_pid": 54036
+      },
+      "node-distribution.json": {
+        "bytes": 35466975,
+        "sha256": "21c2d9735c80b8f86dab19305aa6a9f6f59bbc808f68de3eef09d5832e3bfbbd",
+        "url": "https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip",
+        "version": "v22.16.0"
+      },
+      "sdk-distribution.json": {
+        "bytes": 12721664,
+        "credential_free": true,
+        "guard_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7",
+        "sha256": "6f4bef66261261fcb43131be8720bab817d403a09edec7455c371974b90bdb7e",
+        "url": "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+      },
+      "checkout-sdk.json": {
+        "checkout_blob": "17a1749fafa5ad50ee5376ad39fe19386c37f5a3",
+        "checkout_commit": "11d5960a326750d5838078e36cf38b85af677262",
+        "checkout_sha256": "ff743df9891fd49ffdf6e6bb11ad574bce26a13862ede59474201ef4c9ae029e",
+        "declared_engine": "node20",
+        "node_version": "v20.20.2",
+        "node_zip_sha256": "dc3700fdd57a63eedb8fd7e3c7baaa32e6a740a1b904167ff4204bc68ed8bf77",
+        "synthetic_only": true
+      },
+      "runtime/checkout-verified.json": {
+        "actual_action_main_post": true,
+        "advertisements": 2,
+        "auth_absent": true,
+        "head": "1e59bb5d81cbc0a798f6612f3d6536f833796bec",
+        "official_ci_claimed": false,
+        "plain_git_without_override": true,
+        "source_owner_sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "synthetic_only": true,
+        "tree": "8b3dd42ced7e81cd121ce27102ff02aa050514d3",
+        "unexpected_routes": 0,
+        "upload_requests": 2
+      },
+      "runtime/sdk-ready.json": {
+        "credential_free": true,
+        "msvc_environment": true,
+        "node_version": "v22.16.0",
+        "official_ci_claimed": false,
+        "pnpm_version": "10.11.0",
+        "stable_minimal": true,
+        "webview2_available": true
+      },
+      "runtime/sdk-webview2.json": {
+        "path": "C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\155.0.4283.45\\msedgewebview2.exe",
+        "read_access": true,
+        "shared_acl_changed": false,
+        "version": "155.0.4283.45"
+      },
+      "runtime/sdk-sccache-server.json": {
+        "cache": "D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-c0d0c333fca8d97bab2fb8219b1ee1a8\\runtime\\sccache",
+        "foreground": true,
+        "inherited_job_object": true,
+        "kernel_listener_pid_verified": true,
+        "pid": 31056,
+        "port": 59360,
+        "shared_cache_modified": false
+      },
+      "runtime/sdk-guards-verified.json": {
+        "after_toolchain_install": true,
+        "count": 5,
+        "helper_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7"
+      },
+      "runtime/sdk-fixture-cargo-stable.json": {
+        "bytes": 703,
+        "completed": true,
+        "credential_free": true,
+        "exit": 0,
+        "official_ci_claimed": false,
+        "sha256": "83980b3e7d84b0cb25c5fcedffec4d152d534cf9710b92d87850f66f1e8602b3"
+      },
+      "runtime/sdk-fixture-source-reject.json": {
+        "bytes": 30,
+        "completed": false,
+        "credential_free": true,
+        "exit": 1,
+        "official_ci_claimed": false,
+        "sha256": "0b381852d23995f30dc42e75dd75348893e12796b104f26fa6f1e0651dcd5a0e"
+      },
+      "runtime/sdk-fixture-cargo-failure.json": {
+        "bytes": 225,
+        "completed": false,
+        "credential_free": true,
+        "exit": 101,
+        "official_ci_claimed": false,
+        "sha256": "48da45d59c6deb2c3dfd33e4ef88e8bcbd890e857d138ab3dc63016181917cf3"
+      },
+      "collection": [
+        {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "credential_runtime": "D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-c0d0c333fca8d97bab2fb8219b1ee1a8\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; all profile names in this module namespace are counted",
+          "psw_profile_leaf_count_total": 1,
+          "queryable_account_process_count": 0,
+          "service": "CC-PSW-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "tree_acl_reset": true,
+          "tree_entries_verified_without_service_grant": 7870,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        }
+      ],
+      "controller_attempts": [
+        {
+          "admin_membership_disabled": true,
+          "case": "normal",
+          "control_preflight_passed": true,
+          "controller_pid": 4920,
+          "official_runner_executed": false,
+          "private_runtime_read_denied": true,
+          "protected_launcher_report": {
+            "instance": "c0d0c333fca8d97bab2fb8219b1ee1a8",
+            "service_pid": 37372,
+            "service_success": true,
+            "worker_pid": 54036,
+            "worker_exit": 0,
+            "retained_member_pids": [
+              57020,
+              46908
+            ],
+            "job_drained": true,
+            "cancelled": false,
+            "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+            "token_au_deny_only_verified": true,
+            "hooks_verified": false,
+            "fixture_child_pid": 57020
+          },
+          "scm_create_denied": true,
+          "success": true
+        }
+      ],
+      "sdk-rustc-stable.log": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-pc-windows-msvc\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+      "sdk-node22.log": "v22.16.0\r\n",
+      "sdk-pnpm-version.log": "10.11.0\n",
+      "sdk-fixture-cargo-stable.log": "   Compiling finite-fixture v0.1.0 (D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-c0d0c333fca8d97bab2fb8219b1ee1a8\\runtime\\runner\\_work\\PassShare\\PassShare\\tools)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.56s\n     Running unittests src\\lib.rs (D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-c0d0c333fca8d97bab2fb8219b1ee1a8\\runtime\\target\\debug\\deps\\finite_fixture-2b87da4c9ae955db.exe)\n\nrunning 1 test\ntest cpu_only ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests finite_fixture\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+    },
+    "sdk_cancel": {
+      "instance": "5eac22dc8041f9b3a471dbb392f86b99",
+      "prepared.json": {
+        "credential_free": true,
+        "helper_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7",
+        "official_runner_executed": false,
+        "service": "CC-PSW-fixture",
+        "shared_service": true,
+        "sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195"
+      },
+      "launcher-result.json": {
+        "instance": "5eac22dc8041f9b3a471dbb392f86b99",
+        "service_pid": 68468,
+        "service_success": true,
+        "worker_pid": 62200,
+        "worker_exit": 125,
+        "retained_member_pids": [
+          62200,
+          34272,
+          12344,
+          69848,
+          38160,
+          68956,
+          8092,
+          2748,
+          49824,
+          46088
+        ],
+        "job_drained": true,
+        "cancelled": true,
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "token_au_deny_only_verified": true,
+        "hooks_verified": false,
+        "fixture_child_pid": 38160
+      },
+      "runtime/drain.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "cancelled": true,
+        "job_drained": true,
+        "load_user_profile_api_requested": false,
+        "official_ci_claimed": false,
+        "retained_handles_signalled": true,
+        "retained_member_pids": [
+          62200,
+          34272,
+          12344,
+          69848,
+          38160,
+          68956,
+          8092,
+          2748,
+          49824,
+          46088
+        ],
+        "root_exit": 125,
+        "root_pid": 62200,
+        "scm_profile_state_not_measured_here": true,
+        "token_au_deny_only_verified": true
+      },
+      "runtime/fixture.json": {
+        "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "authenticated_users_deny_only_verified": true,
+        "case": "cancel",
+        "child_observed_alive": true,
+        "child_pid": 38160,
+        "control_write_denied": true,
+        "explicit_launcher_pid": 68468,
+        "launcher_reopen_denied": true,
+        "rust_test_pid": 46088,
+        "worker_pid": 62200
+      },
+      "node-distribution.json": {
+        "bytes": 35466975,
+        "sha256": "21c2d9735c80b8f86dab19305aa6a9f6f59bbc808f68de3eef09d5832e3bfbbd",
+        "url": "https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip",
+        "version": "v22.16.0"
+      },
+      "sdk-distribution.json": {
+        "bytes": 12721664,
+        "credential_free": true,
+        "guard_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7",
+        "sha256": "6f4bef66261261fcb43131be8720bab817d403a09edec7455c371974b90bdb7e",
+        "url": "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+      },
+      "checkout-sdk.json": {
+        "checkout_blob": "17a1749fafa5ad50ee5376ad39fe19386c37f5a3",
+        "checkout_commit": "11d5960a326750d5838078e36cf38b85af677262",
+        "checkout_sha256": "ff743df9891fd49ffdf6e6bb11ad574bce26a13862ede59474201ef4c9ae029e",
+        "declared_engine": "node20",
+        "node_version": "v20.20.2",
+        "node_zip_sha256": "dc3700fdd57a63eedb8fd7e3c7baaa32e6a740a1b904167ff4204bc68ed8bf77",
+        "synthetic_only": true
+      },
+      "runtime/checkout-verified.json": {
+        "actual_action_main_post": true,
+        "advertisements": 2,
+        "auth_absent": true,
+        "head": "1e59bb5d81cbc0a798f6612f3d6536f833796bec",
+        "official_ci_claimed": false,
+        "plain_git_without_override": true,
+        "source_owner_sid": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+        "synthetic_only": true,
+        "tree": "8b3dd42ced7e81cd121ce27102ff02aa050514d3",
+        "unexpected_routes": 0,
+        "upload_requests": 2
+      },
+      "runtime/sdk-ready.json": {
+        "credential_free": true,
+        "msvc_environment": true,
+        "node_version": "v22.16.0",
+        "official_ci_claimed": false,
+        "pnpm_version": "10.11.0",
+        "stable_minimal": true,
+        "webview2_available": true
+      },
+      "runtime/sdk-webview2.json": {
+        "path": "C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\155.0.4283.45\\msedgewebview2.exe",
+        "read_access": true,
+        "shared_acl_changed": false,
+        "version": "155.0.4283.45"
+      },
+      "runtime/sdk-sccache-server.json": {
+        "cache": "D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-5eac22dc8041f9b3a471dbb392f86b99\\runtime\\sccache",
+        "foreground": true,
+        "inherited_job_object": true,
+        "kernel_listener_pid_verified": true,
+        "pid": 12344,
+        "port": 54236,
+        "shared_cache_modified": false
+      },
+      "runtime/sdk-guards-verified.json": {
+        "after_toolchain_install": true,
+        "count": 5,
+        "helper_sha256": "ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7"
+      },
+      "runtime/sdk-fixture-cargo-stable.json": {
+        "bytes": 703,
+        "completed": true,
+        "credential_free": true,
+        "exit": 0,
+        "official_ci_claimed": false,
+        "sha256": "6a1277d806dad6637d98c8577e33217b7a0b21f8bdc6c2b60cbee5097eb78e0d"
+      },
+      "runtime/sdk-fixture-source-reject.json": {
+        "bytes": 30,
+        "completed": false,
+        "credential_free": true,
+        "exit": 1,
+        "official_ci_claimed": false,
+        "sha256": "0b381852d23995f30dc42e75dd75348893e12796b104f26fa6f1e0651dcd5a0e"
+      },
+      "runtime/sdk-fixture-cargo-failure.json": {
+        "bytes": 225,
+        "completed": false,
+        "credential_free": true,
+        "exit": 101,
+        "official_ci_claimed": false,
+        "sha256": "48da45d59c6deb2c3dfd33e4ef88e8bcbd890e857d138ab3dc63016181917cf3"
+      },
+      "collection": [
+        {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "credential_runtime": "D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-5eac22dc8041f9b3a471dbb392f86b99\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; all profile names in this module namespace are counted",
+          "psw_profile_leaf_count_total": 1,
+          "queryable_account_process_count": 0,
+          "service": "CC-PSW-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "tree_acl_reset": true,
+          "tree_entries_verified_without_service_grant": 7865,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        }
+      ],
+      "controller_attempts": [
+        {
+          "admin_membership_disabled": true,
+          "case": "cancel",
+          "control_preflight_passed": true,
+          "controller_pid": 50848,
+          "explicit_stop_succeeded": true,
+          "observed_child_pid": 38160,
+          "official_runner_executed": false,
+          "private_runtime_read_denied": true,
+          "protected_launcher_report": {
+            "instance": "5eac22dc8041f9b3a471dbb392f86b99",
+            "service_pid": 68468,
+            "service_success": true,
+            "worker_pid": 62200,
+            "worker_exit": 125,
+            "retained_member_pids": [
+              62200,
+              34272,
+              12344,
+              69848,
+              38160,
+              68956,
+              8092,
+              2748,
+              49824,
+              46088
+            ],
+            "job_drained": true,
+            "cancelled": true,
+            "account_sid_observed": "S-1-5-80-953323098-3671565111-1225415364-2047688081-887813195",
+            "token_au_deny_only_verified": true,
+            "hooks_verified": false,
+            "fixture_child_pid": 38160
+          },
+          "scm_create_denied": true,
+          "success": true
+        }
+      ],
+      "sdk-rustc-stable.log": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-pc-windows-msvc\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+      "sdk-node22.log": "v22.16.0\r\n",
+      "sdk-pnpm-version.log": "10.11.0\n",
+      "sdk-fixture-cargo-stable.log": "   Compiling finite-fixture v0.1.0 (D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-5eac22dc8041f9b3a471dbb392f86b99\\runtime\\runner\\_work\\PassShare\\PassShare\\tools)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.44s\n     Running unittests src\\lib.rs (D:\\CC\\Work\\unattended-operations-20261013\\codex-owned-5eac22dc8041f9b3a471dbb392f86b99\\runtime\\target\\debug\\deps\\finite_fixture-2b87da4c9ae955db.exe)\n\nrunning 1 test\ntest cpu_only ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests finite_fixture\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+    }
+  },
+  "remaining_sdk_file_cleanup_todo": 3004
+}

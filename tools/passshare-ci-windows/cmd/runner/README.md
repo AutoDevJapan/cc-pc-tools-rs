@@ -33,7 +33,13 @@ and writes the durable registry marker last. The one continuing service profile
 is retained and measured; it is not claimed as deleted.
 
 Rust installs **stable minimal only**, without a second version or extra
-components. The guard entries remain in private CARGO_HOME/bin. Node is pinned
+components. The guard entries remain in private CARGO_HOME/bin. Preparation
+rejects SDK roots longer than 100 UTF-16 units before copying or claiming the
+service: the measured long-root library path was 273 characters and MSVC
+failed LNK1104, while the shorter original registered worktree produced a
+230-character path and linked successfully. Cargo's target is `runtime/target`,
+outside the checkout (the original helper used the other product's tools/target).
+Node is pinned
 to **v22.16.0**, verified against the official Node SHASUMS256 inventory before
 extraction into the job root. pnpm **10.11.0** installs under that private Node
 prefix with npm scripts disabled and private config/cache. Installed machine
@@ -91,15 +97,65 @@ The first normal lifecycle ran (worker exit0, drained, three retained members),
 then collection removed grants and reset ownership/32 descendants. One profile
 and loaded hive remained by design, zero queryable account processes; one
 unclassifiable process is reported rather than treated as a complete census.
-Final-code normal/cancel/reuse fixtures and SDK runtime acceptance are in progress.
+Final runtime source is `c29e0ed`; its tested helper SHA256 is
+`ef7f61b0dff7ea94e5955c9df0232cc8b54e9f06a49a9e4670b33cc05177def7`.
+The [five measured cases](evidence/fixtures-20261019.json) preserve initial
+normal, lifecycle cancel, long-root SDK failure, short-root SDK normal, and
+short-root SDK cancel. The latter two run the final code through the actual
+shared Cargo gate with a non-admin controller. Both install stable minimal
+(measured rustc1.99.1), Node22/pnpm10.11.0, use installed MSVC14.44.35207 and
+WebView2 155.0.4283.45 read-only, verify a dedicated foreground sccache process,
+run genuine checkout-v4 main/post against synthetic Git, compile and execute
+the dependency-free Rust test, reject changed source, and propagate an actual
+Cargo exit101. Cancel observes a real Rust test PID alive before one SCM stop.
+This checkout-v4 fixture does not claim to prove the parent's particular pinned
+workflow action version; that official context is the parent's acceptance.
+
+| case | worker exit | Job drain | collection |
+| --- | --- | --- | --- |
+| initial normal | 0 | 3 held member handles | 32 entries reset |
+| lifecycle cancel/reuse | 125 | 4 held member handles | 29 entries reset |
+| long-root SDK failure | 1 | true; failure preserved | 7860 entries reset |
+| final SDK normal/reuse | 0 | 2 held member handles | see raw receipt |
+| final SDK cancel/reuse | 125 | 10 held member handles | see raw receipt |
+
+Every collect kept exactly one continuing fixture profile, zero additional
+service grants and zero queryable processes; the known unclassifiable process
+count is reported, never treated as proof of a complete census. Retained
+handles signalled and active-zero Job drain are independently measured.
+The stale initial helper's `stop` was refused while another root owned the
+identity. The final service is stopped; no real service was installed.
+
+Go race/vet/build passed for the changed Windows package; Linux vet also passed.
 No fixture is official CI success. Parent2994 owns final review, official
-job/source/hash verification, registration and product execution.
+job/source/hash verification, registration and product execution. A full Tauri
+product build, signing, artifact hashes and official job are intentionally unrun.
 
 Resume in the same scheduler branch; no branch switch has occurred. Owned roots:
 `6ed420bb25ca63a6596944477262b79e` (first normal, collected),
 `b7200bee85f34092e1f46a488c4d72f1` (build/controller),
-`6c7a7f3096023e3d38e786e22b71f852` (next cancel),
-`7155bdd37afc8e75e4dbf39509a5f18c` (next normal reuse).
-Preserve evidence before safe-delete plan / separate ordinary deletion / finish.
+`6c7a7f3096023e3d38e786e22b71f852` (cancel, collected),
+`7155bdd37afc8e75e4dbf39509a5f18c` (failed SDK, collected),
+`c0d0c333fca8d97bab2fb8219b1ee1a8` (final SDK normal, collected),
+`5eac22dc8041f9b3a471dbb392f86b99` (final SDK cancel, collected).
+Evidence is preserved before safe-delete plan / separate ordinary deletion / finish.
 The unused empty Temp root `f26cea1e035f07ff555dd9d149d80033` was quarantined by
 safe-delete; it was never used for source, SDK or fixtures.
+
+**Remaining file cleanup, ToDo3004**: safe-delete refuses the first SDK root
+with LINK_OR_REPARSE_POINT, including its quarantine command. Official rustup
+created 13 relative aliases pointing to the same directory's rustup.exe.
+No alternative deletion was attempted. The three collected SDK roots are
+preserved for finite ownership/target validation and normal cleanup-tool repair
+by [the separate task](cleanup-spec.md). Their ACL/process collection is complete;
+their filesystem removal is not. This task waits for3004 when all other work is
+saved; it is not an owner decision. Do not rerun fixtures or official jobs while
+waiting solely for that cleanup result.
+
+An unused short auxiliary worktree was created before its guard result was
+acted upon; after the guard returned protected/unverified, no SDK execution
+or content inspection followed there. Its empty owned ID
+`6605cd9989d526cb22ad782c620b01c4` could not be quarantined (cross-drive
+destination refusal). Preserve it and the auxiliary worktree; do not change
+the protection registry or report their paths. The successful SDK fixtures
+instead used the explicit original registered worktree, guard confirmed false.

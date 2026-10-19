@@ -45,6 +45,16 @@ func productCIRuntime(absolute, directory string, protected func(string) bool) b
 	if !productCILeaf.MatchString(name) || !same(filepath.Dir(absolute), directory) || protected(absolute) {
 		return false
 	}
+	return runtimeLeaf(absolute, directory, protected, false)
+}
+
+// runtimeLeaf is the shared physical check for one already name-matched leaf
+// directly under a real directory. mustExist refuses a not-yet-created name.
+func runtimeLeaf(absolute, directory string, protected func(string) bool, mustExist bool) bool {
+	name := filepath.Base(absolute)
+	if !same(filepath.Dir(absolute), directory) || protected(absolute) {
+		return false
+	}
 	parent, err := physical(directory)
 	if err != nil || !same(parent, directory) || protected(parent) {
 		return false
@@ -54,7 +64,7 @@ func productCIRuntime(absolute, directory string, protected func(string) bool) b
 	}
 	info, err := os.Lstat(absolute)
 	if os.IsNotExist(err) {
-		return true
+		return !mustExist
 	}
 	if err != nil || !info.Mode().IsRegular() || !plainEntry(info) {
 		return false

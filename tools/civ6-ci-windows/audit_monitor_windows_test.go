@@ -73,6 +73,10 @@ func TestAuditPhasesDecideRegistrationAndJobState(t *testing.T) {
 		{"before: queued job, only foreign runners", phaseBefore, fakeRepo{runners: []map[string]any{other}, job: queued}, nil, false, true},
 		{"before: own registration already exists", phaseBefore, fakeRepo{runners: []map[string]any{ownRunnerRow(p, labels...)}, job: queued}, nil, false, false},
 		{"before: job already picked up", phaseBefore, fakeRepo{job: running}, nil, false, false},
+		{"queued: no registration yet", phaseQueued, fakeRepo{job: queued}, nil, false, true},
+		{"queued: own registration waiting", phaseQueued, fakeRepo{runners: []map[string]any{ownRunnerRow(p, labels...)}, job: queued}, nil, false, true},
+		{"queued: label drift", phaseQueued, fakeRepo{runners: []map[string]any{ownRunnerRow(p, "self-hosted", "Windows", "X64")}, job: queued}, nil, false, false},
+		{"queued: contract mismatch", phaseQueued, fakeRepo{job: queued}, errors.New("branch moved"), false, false},
 		{"before: contract mismatch", phaseBefore, fakeRepo{job: queued}, errors.New("source differs"), false, false},
 		{"running: own runner with exact labels", phaseRunning, fakeRepo{runners: []map[string]any{ownRunnerRow(p, labels...)}, job: running}, nil, false, true},
 		{"running: label drift", phaseRunning, fakeRepo{runners: []map[string]any{ownRunnerRow(p, "self-hosted", "Windows", "X64", "civ6-ci-linux")}, job: running}, nil, false, false},
@@ -196,4 +200,56 @@ func TestMonitorVerifiesStartAndCompletionOnceAndTolerantlyHandlesReadFailures(t
 func step2(m *monitor, now *time.Time) error {
 	*now = now.Add(monitorEvery)
 	return m.tick(*now)
+}
+
+func TestMonitorStopsWhenTheJobEndsBeforeAssignmentAndAuditsWhileQueued(t *testing.T) {
+	p := fixturePlan()
+	now := time.Unix(5000, 0)
+	status := "queued"
+	queuedAudits := 0
+	var auditErr error
+	m := &monitor{p: p, lastQueued: now,
+		progress:    func(context.Context, Plan) (string, string, error) { return status, "", nil },
+		audit:       func(Plan) error { t.Fatal("running audit before assignment"); return nil },
+		auditQueued: func(Plan) error { queuedAudits++; return auditErr }}
+	for i := 0; i < 12; i++ { // 120 s of queued polling
+		if e := step2(m, &now); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if queuedAudits != 2 {
+		t.Fatalf("queued audits %d, want one per minute", queuedAudits)
+	}
+	auditErr = errors.New("branch moved")
+	var e error
+	for i := 0; i < 6 && e == nil; i++ {
+		e = step2(m, &now)
+	}
+	if e == nil {
+		t.Fatal("policy mismatch while queued ignored")
+	}
+	// A job that completed (cancelled) with no runner must end the run at once.
+	auditErr = nil
+	status = "completed"
+	m2 := &monitor{p: p, lastQueued: now, progress: m.progress, audit: m.audit, auditQueued: m.auditQueued}
+	if e := step2(m2, &now); e == nil {
+		t.Fatal("job ended before assignment kept the slot")
+	}
+}
+
+func TestWaitStoppedObservesWithoutHurryingOrGivingUp(t *testing.T) {
+	states := []uint32{4, 3, 3, 1}
+	i := 0
+	q := func() (uint32, error) { s := states[i]; i++; return s, nil }
+	if e := waitStopped(q, time.Now().Add(5*time.Second), time.Millisecond); e != nil || i != 4 {
+		t.Fatalf("stop not awaited: %v polls=%d", e, i)
+	}
+	never := func() (uint32, error) { return 3, nil }
+	if waitStopped(never, time.Now().Add(30*time.Millisecond), time.Millisecond) == nil {
+		t.Fatal("an unstopped service was reported stopped")
+	}
+	boom := func() (uint32, error) { return 0, errors.New("scm") }
+	if waitStopped(boom, time.Now().Add(time.Second), time.Millisecond) == nil {
+		t.Fatal("query failure treated as stopped")
+	}
 }

@@ -117,12 +117,24 @@ func executeAdmitted(p Plan) (result error) {
 	var secret []byte
 	var e error
 	started, observedStopped := false, false
+	begun := time.Now()
 	emitEvent("execute-begin", p, nil)
 	defer func() {
 		// Normal error paths retain the gate callback until the one owned stop
 		// request finishes. Do not repeat a refused/uncertain stop operation.
 		if started && !observedStopped && result != nil {
 			stopErr := stopFinite(p)
+			if stopErr != nil {
+				// A slow or refused stop is not a drain. Keep the gate child (and so
+				// the Cargo slot) alive until the service reports STOPPED, which the
+				// launcher only does after its Job Object drained, or the service's
+				// own deadline plus its drain budget has surely passed.
+				if waitErr := waitServiceStopped(p, begun.Add(time.Duration(p.Seconds)*time.Second+2*time.Minute)); waitErr == nil {
+					stopErr = nil
+				} else {
+					stopErr = errors.Join(stopErr, waitErr)
+				}
+			}
 			observedStopped = stopErr == nil
 			result = errors.Join(result, stopErr)
 		}
@@ -216,7 +228,10 @@ func executeAdmitted(p Plan) (result error) {
 				if e = validateLauncherSuccess(p); e != nil {
 					return e
 				}
-				return auditFinished(p)
+				if e = auditFinished(p); e == nil {
+					emitEvent("job-success-verified", p, nil)
+				}
+				return e
 			}
 			return nil
 		}

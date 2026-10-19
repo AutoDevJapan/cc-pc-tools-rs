@@ -74,9 +74,6 @@ func nativeFixture(t *testing.T) (Plan, map[string]any) {
 }
 func fixtureRead(fixtures map[string]any) ReadAPI {
 	return func(_ context.Context, path string, out any) error {
-		// URL-escaped branch paths are decoded only in the synthetic router, not by
-		// the production API implementation.
-		path = strings.ReplaceAll(path, "%2F", "/")
 		v, ok := fixtures[path]
 		if !ok {
 			return fmt.Errorf("fixture endpoint absent")
@@ -86,6 +83,59 @@ func fixtureRead(fixtures map[string]any) ReadAPI {
 			return e
 		}
 		return json.Unmarshal(b, out)
+	}
+}
+
+func TestRESTWorkflowPathFormsAndLiteralBranchSegments(t *testing.T) {
+	p, f := nativeFixture(t)
+	for _, ref := range []string{p.Workflow, p.Workflow + "@" + p.Ref()} {
+		r := f["repos/"+Repository+"/actions/runs/7"].(map[string]any)
+		r["path"] = ref
+		if e := Verify(context.Background(), p, fixtureRead(f)); e != nil {
+			t.Fatal(e)
+		}
+	}
+	for _, path := range []string{p.Workflow + "@refs/pull/150/merge", p.Workflow + "@" + p.Branch, ".github/workflows/other.yml@" + p.Ref(), p.Workflow + "@" + p.Ref() + "@other"} {
+		if MatchRunPath(p, path) {
+			t.Fatal("wrong executable workflow/ref accepted")
+		}
+	}
+	if branchPath(OriginalBranch) != OriginalBranch {
+		t.Fatal("branch slash was encoded")
+	}
+	q, _ := mainFixture(t)
+	if !MatchRunPath(q, q.Workflow+"@main") || !MatchRunPath(q, q.Workflow+"@refs/heads/main") {
+		t.Fatal("documented branch suffix rejected")
+	}
+}
+
+func TestDynamicPRContextMustBeActualHeadOrLiveMerge(t *testing.T) {
+	p, f := nativeFixture(t)
+	p.Event, p.Workflow, p.WorkflowRef, p.WorkflowDigest, p.Job, p.JobName = "dynamic", CodeQLWorkflow, "", "", "analyze", "Analyze (actions)"
+	p.WorkflowSHA = p.Head
+	r := f["repos/"+Repository+"/actions/runs/7"].(map[string]any)
+	r["event"], r["path"] = "dynamic", CodeQLWorkflow
+	f["repos/"+Repository+"/code-scanning/default-setup"] = map[string]any{"state": "configured", "languages": []string{"actions", "rust"}, "query_suite": "default", "threat_model": "remote", "runner_type": "labeled", "runner_label": CodeQLLabel}
+	jobs := []Job{{ID: 71, RunID: 7, RunAttempt: 1, Name: "Analyze (actions)", Status: "queued", Labels: Labels(p)}, {ID: 72, RunID: 7, RunAttempt: 1, Name: "Analyze (rust)", Status: "queued", Labels: Labels(p)}}
+	f["repos/"+Repository+"/actions/runs/7/attempts/1/jobs?per_page=100"] = map[string]any{"total_count": 2, "jobs": jobs}
+	for _, sha := range []string{p.Head, p.ContextSHA} {
+		q := p
+		q.ContextSHA = sha
+		if e := Verify(context.Background(), q, fixtureRead(f)); e != nil {
+			t.Fatal(e)
+		}
+		env := map[string]string{"GITHUB_REPOSITORY": Repository, "GITHUB_REPOSITORY_ID": fmt.Sprint(RepoID), "GITHUB_SHA": sha, "GITHUB_RUN_ID": "7", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_JOB": "analyze", "RUNNER_OS": "Linux"}
+		if e := CheckEvent(q, env, nil); e != nil {
+			t.Fatal(e)
+		}
+		env["GITHUB_SHA"] = strings.Repeat("f", 40)
+		if CheckEvent(q, env, nil) == nil {
+			t.Fatal("actual SDK context bypassed plan")
+		}
+	}
+	p.ContextSHA = strings.Repeat("f", 40)
+	if Verify(context.Background(), p, fixtureRead(f)) == nil {
+		t.Fatal("unverified generated PR context admitted")
 	}
 }
 func TestProposePreservesCommandsAndParentConcurrency(t *testing.T) {

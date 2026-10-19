@@ -33,6 +33,12 @@ func collectionReader(p Plan, state string, bad string, others bool) readAPI {
 				repo["fork"] = true
 			case "workflow":
 				run["path"] = "other.yml"
+			case "pathref":
+				run["path"] = p.Workflow + "@" + p.Ref()
+			case "pathref-wrong-ref":
+				run["path"] = p.Workflow + "@refs/heads/other"
+			case "pathref-wrong-workflow":
+				run["path"] = ".github/workflows/other.yml@" + p.Ref()
 			}
 			v = run
 		case "repos/" + repository + "/actions/runners?per_page=100":
@@ -80,9 +86,18 @@ func TestCollectionAcceptsTerminalRunsWithoutCertifyingResults(t *testing.T) {
 	}
 }
 
+// The REST API may return the bare path or path@ref; both identify the same run.
+func TestCollectionAcceptsBareAndRefQualifiedRunPath(t *testing.T) {
+	for _, p := range []Plan{fixturePlan(), pushPlan(".github/workflows/live-chain.yml", "live-chain")} {
+		if e := checkCollectionRemote(p, collectionReader(p, "completed", "pathref", false)); e != nil {
+			t.Fatalf("%s: %v", p.Event, e)
+		}
+	}
+}
+
 func TestCollectionRejectsWrongIdentityAndRemainingRegistration(t *testing.T) {
 	p := fixturePlan()
-	for _, bad := range []string{"owner", "run", "attempt", "source", "event", "branch", "fork", "workflow", "remaining", "duplicate", "inconsistent-list", "read-failed"} {
+	for _, bad := range []string{"owner", "run", "attempt", "source", "event", "branch", "fork", "workflow", "pathref-wrong-ref", "pathref-wrong-workflow", "remaining", "duplicate", "inconsistent-list", "read-failed"} {
 		t.Run(bad, func(t *testing.T) {
 			if checkCollectionRemote(p, collectionReader(p, "completed", bad, true)) == nil {
 				t.Fatal("unsafe collection identity accepted")

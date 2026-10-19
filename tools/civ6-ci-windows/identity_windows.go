@@ -103,12 +103,22 @@ const (
 	phaseBefore auditPhase = iota
 	phaseRunning
 	phaseFinished
+	// phaseQueued is the periodic check while the job still waits for a runner;
+	// the unique registration may or may not exist yet.
+	phaseQueued
 )
 
 func audit(p Plan) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	return auditMode(ctx, p, phaseBefore)
+}
+
+// auditQueued re-verifies the fixed plan while the target job is still waiting.
+func auditQueued(p Plan) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	return auditMode(ctx, p, phaseQueued)
 }
 
 // auditRunning re-verifies the fixed plan while the official job runs. It is the

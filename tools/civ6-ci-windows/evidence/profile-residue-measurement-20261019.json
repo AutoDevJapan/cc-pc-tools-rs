@@ -1,0 +1,20 @@
+{
+  "measured_at": "2026-10-19T09:29Z (JST 18:29)",
+  "method": "read-only admin script through CC-AdminBroker: enumerate HKLM ProfileList entries named S-1-5-80-*, test Registry::HKEY_USERS\\<sid> for each, group Win32_LogonSession by type, list Win32_LoggedOnUser accounts named CC-*",
+  "results": {
+    "profilelist_service_sids": 24,
+    "hku_service_hives_loaded": 48,
+    "hives_note": "48 = 24 SIDs x (user hive + _Classes hive) as listed by HKEY_USERS",
+    "profiles_with_hive_loaded": 24,
+    "profile_state_516": 23,
+    "profile_state_0": 1,
+    "service_account_logon_sessions_for_CC_CIW_or_CC_PR148": 0,
+    "other_cc_logon_sessions": "2 sessions of an unrelated CC-PCTools-CI account"
+  },
+  "includes_new_fixtures": [
+    "6a8d1e39e07cf51213e482b895e1865e",
+    "c4809f99f51ee782852c62f2439e36d1"
+  ],
+  "limits": "Per-SID identifiers are not reproduced here. The measurement does not identify which handle keeps each hive loaded. DeleteProfileW was not tried by this module for real or fixture residue, and no unload or retry was made.",
+  "not_measured": "Whether a reboot unloads the hives."
+}

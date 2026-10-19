@@ -11,9 +11,11 @@ materializer / Cargo-gate / collection code was carried over and adapted.
 
 The shared identity policy is the parent's module `cc/civ6-ci-contract`
 (`replace cc/civ6-ci-contract => ../civ6-ci-contract`). `tools/civ6-ci-contract` in this branch is
-the parent's commit `6332ffff4a33a6a14852719776aa7604e925de05` (PR245) imported unchanged with
+the parent's branch commit `0d1e95b` (PR245; first `6332ffff`) imported unchanged with
 plain `git checkout <commit> -- tools/civ6-ci-contract`; the parent integrates the final version.
-This module only calls `Plan.Validate`, `Labels`, `Verify`, `VerifyAssigned`, `RequireSuccess` and `CheckEvent`; it never decides
+The contract is imported from commit `0d1e95b` (adds `MatchRunPath`). This module uses the contract's
+`Plan`, `Validate`, `Labels`, `Verify`, `VerifyAssigned`, `RequireSuccess`, `CheckEvent`, `MatchRunPath` and its shared
+constants/helpers (`ValidSHA`, `Ref`, `OS`); it never decides
 repository/source/workflow policy itself. Nothing here registers a runner, fetches
 product source or runs real Rust unless the queue drives the CLI below.
 No GPU, Civ6, API key, child Codex or visible console is used (`CREATE_NO_WINDOW`).
@@ -75,7 +77,8 @@ Build into the owned root: `go build -trimpath -o <root>/bootstrap.exe .`
 in the service account; the controller never relies on them for GitHub reads).
 
 Ledger events on stdout (one JSON object per line, for the queue's durable ledger):
-`execute-begin`, `job-start-verified`, `job-complete-verified`,
+`execute-begin`, `job-start-verified`, `job-complete-verified` (a job shorter than the 10 s poll may skip these two; the
+mandatory success evidence is `job-success-verified` after the final `RequireSuccess`),
 `execute-end {ok, service_started, service_stopped, fence}`, `collect-begin`,
 `collect-end {complete, residue_only}`. Every event carries `instance`, `run_id`, `attempt`,
 `job_id`. Do not use the CC-AdminBroker "exit=" line as the result: read `collect-end`
@@ -93,7 +96,8 @@ run/attempt/job/labels, whole source tree, reviewed bytes of all three workflows
 `execute`), when the job **starts** on this unique runner, when it **completes**, and
 **after** the service has drained. The controller polls the target job every 10 s
 (`monitor_windows.go`); a policy mismatch stops the service at once, GitHub read
-failures are tolerated for at most 6 consecutive polls. The job's runner must be
+failures are tolerated for up to 5 consecutive polls (the 6th ends the run). While the job is still queued the plan is also re-verified once a minute, and a job that is
+completed without ever being assigned to this runner (cancelled while queued) ends the run at once, so it does not hold the Cargo slot. The job's runner must be
 `CC-CIW-<instance>` with exactly the labels `self-hosted, Windows, X64, civ6-ci-windows`.
 Only this plan's unique registration is inspected; the long-lived workers and the Linux
 ephemeral runner are neither read nor affected. The hook checks the actual SDK context
@@ -122,14 +126,18 @@ labels `self-hosted, Windows, X64` are kept so it matches the reviewed `runs-on`
 `execute-begin` without `execute-end`, or `fence=true`, means the service may still own the
 namespace: the queue must not start another Windows worker until `status` shows state 1 and
 `collect` completes. A normal error after a successful start makes exactly one stop attempt; a
-refused/uncertain stop is returned, not retried. A forced kill of the controller/gate is **not**
+refused/uncertain stop is returned, not retried. If that stop is slow or refused, the gate child (and so the shared
+Cargo slot) stays alive while the controller only *observes* SCM until the service reports STOPPED (the launcher
+reports it after its Job Object drained) or until the plan deadline plus 2 minutes; only then is `fence=true` emitted.
+The queue fence stops new Windows workers but does not hold the Cargo slot, so the wait above is what holds it. A forced kill of the controller/gate is **not**
 survivable by this helper (the service's own deadline applies); the fence is the protection.
 
 ## Collection and the profile residue (measured, not hidden)
 
 `collect` verifies: service absent, owned process census 0 (unreadable processes disclosed),
 launcher drain report, both ACEs removed (DACL re-read), then reports profile/hive/classes.
-Measured 2026-10-19 on this PC: **every** virtual service account ever created here (24 listed in
+Measured 2026-10-19 on this PC (read-only admin script; method and anonymized counts in
+`evidence/profile-residue-measurement-20261019.json`): **every** virtual service account ever created here (24 listed in
 ProfileList, incl. both new fixtures) keeps its `C:\Windows\ServiceProfiles\<service>` directory
 and a **loaded** `HKU\<sid>` hive after the service is deleted, although no logon session of
 that account exists any more. The old 2736 cleanup attempts (`DeleteProfileW`) were refused with a
@@ -159,6 +167,13 @@ This branch adds no workflow of its own. The parent's `.github/workflows/civ6-ci
 for every `tools/civ6-ci-*` module per OS on the PC runners; integrate through that workflow.
 Local results: `go test -race ./...`, `go vet ./...` and `go build -trimpath` pass for this module.
 
+## Queue contract notes
+
+One Windows worker at a time. If several queued jobs carry the same labels, the listener may take a job other than
+the plan's; the hook then rejects it and that job fails. The queue should admit only one Windows plan at a time,
+count each admitted run/attempt/job once in the 12-job budget, and never rerun a failed one automatically.
+A cancelled or failed collection of that case is handled like any other.
+
 ## Not done (by design of this child)
 
 No official registration, no product source materialization, no real Rust/native/live execution,
@@ -166,6 +181,7 @@ no GitHub Actions run. `contract.Verify` against the live repository, the full
 `prepare` source materialization with the new contract and the monitor against a real job are
 exercised only by synthetic replies here and must be proven by the parent's PR149 run.
 Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
+
 
 
 

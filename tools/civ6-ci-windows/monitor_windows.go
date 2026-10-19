@@ -34,13 +34,19 @@ type monitor struct {
 	soft               int
 	progress           func(context.Context, Plan) (string, string, error)
 	audit              func(Plan) error
+	auditQueued        func(Plan) error
+	lastQueued         time.Time
 }
 
 func newMonitor(p Plan) *monitor {
-	return &monitor{p: p, progress: jobProgress, audit: auditRunning}
+	return &monitor{p: p, progress: jobProgress, audit: auditRunning, auditQueued: auditQueued, lastQueued: time.Now()}
 }
 
 const monitorEvery = 10 * time.Second
+const monitorQueuedAuditEvery = time.Minute
+
+// monitorSoftLimit consecutive failed GitHub reads end the run; the first
+// monitorSoftLimit-1 are tolerated.
 const monitorSoftLimit = 6
 
 func (m *monitor) tick(now time.Time) error {
@@ -65,6 +71,15 @@ func (m *monitor) tick(now time.Time) error {
 			}
 		}
 	}
+	if e == nil && runner == "" && status == "completed" {
+		// Cancelled or finished before any runner took it: nothing will ever
+		// arrive, so do not hold the Cargo slot and Windows worker until the deadline.
+		e = errors.New("target job ended before it was assigned to this runner")
+	}
+	if e == nil && runner == "" && m.auditQueued != nil && now.Sub(m.lastQueued) >= monitorQueuedAuditEvery {
+		m.lastQueued = now
+		e = m.auditQueued(m.p)
+	}
 	if e == nil {
 		m.soft = 0
 		return nil
@@ -79,7 +94,7 @@ func (m *monitor) tick(now time.Time) error {
 	return e
 }
 
-// serviceStatus reports the SCM state only, read-only for the queue's fence.
+// statusReport reports the SCM state only, read-only for the queue's fence.
 func statusReport(p Plan) error {
 	out := map[string]any{"instance": p.Instance, "service": p.name()}
 	s, e := openService(p, 4)
@@ -103,4 +118,35 @@ func statusReport(p Plan) error {
 	b, _ := json.Marshal(out)
 	fmt.Fprintln(os.Stdout, string(b))
 	return nil
+}
+
+// waitStopped polls until the service reports STOPPED (state 1) or the bound
+// passes. It never issues a second stop: it only observes, so the shared Cargo
+// slot stays held until the Job Object drain behind the SCM stop is real.
+func waitStopped(query func() (uint32, error), until time.Time, tick time.Duration) error {
+	for {
+		state, e := query()
+		if e != nil {
+			return e
+		}
+		if state == 1 {
+			return nil
+		}
+		if !time.Now().Before(until) {
+			return errors.New("service still not stopped at the bound; retain resource and fence")
+		}
+		time.Sleep(tick)
+	}
+}
+
+func waitServiceStopped(p Plan, until time.Time) error {
+	return waitStopped(func() (uint32, error) {
+		s, e := openService(p, 4)
+		if e != nil {
+			return 0, e
+		}
+		defer closeSC(s)
+		state, _, _, e := queryService(s)
+		return state, e
+	}, until, 250*time.Millisecond)
 }

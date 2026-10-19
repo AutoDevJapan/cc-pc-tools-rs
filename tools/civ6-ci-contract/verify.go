@@ -127,11 +127,14 @@ func verifyCurrent(ctx context.Context, p Plan, read ReadAPI) (bool, error) {
 		if p.Event == "pull_request" && current.MergeSHA != p.ContextSHA {
 			return false, errors.New("actual PR merge context differs")
 		}
+		if p.Event == "dynamic" && p.ContextSHA != p.Head && p.ContextSHA != current.MergeSHA {
+			return false, errors.New("generated PR context is neither current head nor actual merge")
+		}
 	} else if p.Branch != "main" {
 		return false, errors.New("normal continuation requires main")
 	}
 	var ref struct{ Object struct{ SHA string } }
-	if e := read(ctx, "repos/"+Repository+"/git/ref/heads/"+url.PathEscape(p.Branch), &ref); e != nil {
+	if e := read(ctx, "repos/"+Repository+"/git/ref/heads/"+branchPath(p.Branch), &ref); e != nil {
 		return false, e
 	}
 	if ref.Object.SHA != p.Head {
@@ -159,9 +162,9 @@ func verifyCurrent(ctx context.Context, p Plan, read ReadAPI) (bool, error) {
 	return initial, nil
 }
 
-// Verify permits observation of terminal jobs for collection but never declares
-// success. The caller must separately require the exact official success job
-// and its unique runner name, source proof and completed namespace collection.
+// Verify admits only current source, including terminal jobs whose source is
+// still current. After a branch advances/closes, cleanup uses ObserveJob and
+// owned namespace proofs independently; it must not depend on current source.
 func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if e := p.Validate(); e != nil {
 		return e
@@ -234,7 +237,7 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", Repository, p.RunID), &run); e != nil {
 		return e
 	}
-	if run.ID != p.RunID || run.RunAttempt != p.Attempt || run.HeadSHA != p.Head || run.HeadBranch != p.Branch || run.Event != p.Event || run.Path != p.Workflow || !sameRepo(run.Repository) || !sameRepo(run.HeadRepo) {
+	if run.ID != p.RunID || run.RunAttempt != p.Attempt || run.HeadSHA != p.Head || run.HeadBranch != p.Branch || run.Event != p.Event || !MatchRunPath(p, run.Path) || !sameRepo(run.Repository) || !sameRepo(run.HeadRepo) {
 		return errors.New("official immutable run differs")
 	}
 	if run.Status != "queued" && run.Status != "in_progress" && run.Status != "waiting" && run.Status != "pending" && run.Status != "completed" {
@@ -298,6 +301,14 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 		return errors.New("full original job coverage required")
 	}
 	return nil
+}
+
+func branchPath(branch string) string {
+	parts := strings.Split(branch, "/")
+	for i := range parts {
+		parts[i] = url.PathEscape(parts[i])
+	}
+	return strings.Join(parts, "/")
 }
 func equalLabels(a, b []string) bool {
 	a = append([]string(nil), a...)

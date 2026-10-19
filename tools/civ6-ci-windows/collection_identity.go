@@ -1,6 +1,7 @@
 package main
 
 import (
+	contract "cc/civ6-ci-contract"
 	"errors"
 	"fmt"
 )
@@ -46,7 +47,7 @@ func checkCollectionRemote(p Plan, read readAPI) error {
 	if e := read(fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID), &run); e != nil {
 		return e
 	}
-	if run.ID != p.RunID || run.Attempt != p.Attempt || run.HeadSHA != p.Head || run.Event != p.Event || run.Path != p.Workflow || run.HeadBranch != p.Branch || run.Repository.ID != repositoryID || run.Repository.FullName != repository || run.HeadRepository.ID != repositoryID || run.HeadRepository.FullName != repository || run.HeadRepository.Fork {
+	if run.ID != p.RunID || run.Attempt != p.Attempt || run.HeadSHA != p.Head || run.Event != p.Event || !contract.MatchRunPath(p.Plan, run.Path) || run.HeadBranch != p.Branch || run.Repository.ID != repositoryID || run.Repository.FullName != repository || run.HeadRepository.ID != repositoryID || run.HeadRepository.FullName != repository || run.HeadRepository.Fork {
 		return errors.New("collection run identity rejected")
 	}
 	own, e := ownRunner(p, read)

@@ -14,6 +14,8 @@ merge後は実PR149のmerged記録とそのmergeを含むmain lineageも必要�
 `CheckEvent` は実SDK環境とイベント本文を照合する。PRのheadとmerge contextは別。
 CodeQLの生成イベントには公表された安定workflow-ref本文が無いため捏造せず、
 `workflow_ref` と `workflow_digest` を空、`workflow_sha` を検査sourceにする。
+PRの実context SHAはHEADまたはlive APIの現在のmerge SHAだけを認め、mainはHEADだけ。
+実SDKで観測するcontextがPlanと一致することも必須であり、推測値を成功証拠にしない。
 この場合も実repo/source/run/attempt/job/OSとlive APIの照合は必須。
 
 matrixで共有される `GITHUB_JOB` だけではjob IDを区別できない。
@@ -21,6 +23,8 @@ helperは固有のinstance runner名で `VerifyAssigned` を開始hook/終了hoo
 `RequireSuccess` でそのrunnerの正式completed/successと実stepの存在を別途確認する。
 その後も実source HEAD/tree・認証不在・namespace回収の証拠が必要で、
 このpackageの成功だけではCI全体の完了にならない。
+branchが進んだ/閉じた後も回収を止めない。回収はfreshnessを要求するVerifyから分離し、
+`ObserveJob` による固定job照合と固有登録/所有namespaceの証拠を使う。
 
 `ReadAPI` の実装は既存GitHub CLI/OAuthを使い、レスポンス/出力の上限と期限を持ち、
 エラー本文・secret・tokenを会話や記録へ転記しない。全API操作はGETだけ。

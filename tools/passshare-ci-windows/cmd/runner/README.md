@@ -132,9 +132,9 @@ job/source/hash verification, registration and product execution. A full Tauri
 product build, signing, artifact hashes and official job are intentionally unrun.
 
 Resume in the same scheduler branch; no branch switch has occurred. Owned roots:
-`6ed420bb25ca63a6596944477262b79e` (first normal, collected),
+`6ed420bb25ca63a6596944477262b79e` (first normal, collected, deleted/finish source_absent),
 `b7200bee85f34092e1f46a488c4d72f1` (build/controller),
-`6c7a7f3096023e3d38e786e22b71f852` (cancel, collected),
+`6c7a7f3096023e3d38e786e22b71f852` (cancel, collected, deleted/finish source_absent),
 `7155bdd37afc8e75e4dbf39509a5f18c` (failed SDK, collected),
 `c0d0c333fca8d97bab2fb8219b1ee1a8` (final SDK normal, collected),
 `5eac22dc8041f9b3a471dbb392f86b99` (final SDK cancel, collected).
@@ -151,6 +151,13 @@ by [the separate task](cleanup-spec.md). Their ACL/process collection is complet
 their filesystem removal is not. This task waits for3004 when all other work is
 saved; it is not an owner decision. Do not rerun fixtures or official jobs while
 waiting solely for that cleanup result.
+
+At the handoff boundary, the build/controller root is also scheduled for ordinary
+safe-delete removal after its note files have been delivered. Rebuild it from
+the saved commit if later needed. Parent integration may use the already
+pushed runtime commits while SDK filesystem cleanup is pending. This child
+does not create or merge a separate PR; the parent's combined review and CI
+own that step, as specified in the original split.
 
 An unused short auxiliary worktree was created before its guard result was
 acted upon; after the guard returned protected/unverified, no SDK execution

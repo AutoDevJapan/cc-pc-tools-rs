@@ -92,7 +92,7 @@ fn matching_or_unknown_observation_never_grants_a_mutation_handle() {
 #[cfg(windows)]
 #[test]
 fn native_observation_matches_the_current_process_handle() {
-    let rt = System;
+    let rt = System::default();
     let pid = std::process::id();
     let expected = rt.proc_created_checked(pid).unwrap().unwrap();
     assert!(expected > 0);

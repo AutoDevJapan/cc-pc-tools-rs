@@ -17,29 +17,30 @@ import (
 const originalRepo = "AutoDevJapan/GoDD-MCP-Alpha"
 
 func runnerAPI(ctx context.Context, method, endpoint string, payload, out any) error {
+	return callRunnerAPI(ctx, method, endpoint, payload, out, invokeRunnerAPI)
+}
+
+func invokeRunnerAPI(ctx context.Context, method, endpoint string, input []byte) ([]byte, error) {
 	args := []string{"api", "--method", method, endpoint}
-	var input []byte
-	if payload != nil {
-		var e error
-		input, e = json.Marshal(payload)
-		if e != nil {
-			return errors.New("runner request rejected")
-		}
+	if input != nil {
 		args = append(args, "--input", "-")
 	}
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	c := command(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, args...)
-	c.Stderr = io.Discard
 	c.Stdin = bytes.NewReader(input)
 	var b limitedCapture
 	b.limit = 1 << 20
 	c.Stdout = &b
+	var diagnostic limitedCapture
+	diagnostic.limit = 64 << 10
+	c.Stderr = &diagnostic
 	if c.Run() != nil {
-		return errors.New("runner API operation failed")
+		// Classify in RAM only. Never persist authentication, raw stderr or an
+		// endpoint selected by an error response.
+		return nil, classifyRunnerAPIError(string(diagnostic.data.Bytes()))
 	}
-	if out != nil && json.Unmarshal(b.data.Bytes(), out) != nil {
-		return errors.New("runner API response rejected")
-	}
-	return nil
+	return b.data.Bytes(), nil
 }
 
 type limitedCapture struct {
@@ -61,7 +62,10 @@ func verifyRunnerRepository(ctx context.Context) error {
 		Owner         struct{ Login string }
 		Permissions   struct{ Admin bool }
 	}
-	if runnerAPI(ctx, "GET", "repositories/1154066087", nil, &r) != nil || r.ID != 1154066087 || r.FullName != originalRepo || r.Owner.Login != "AutoDevJapan" || !r.Private || r.Fork || !r.Permissions.Admin {
+	if e := runnerAPI(ctx, "GET", "repositories/1154066087", nil, &r); e != nil {
+		return fmt.Errorf("runner repository lookup failed: %w", e)
+	}
+	if r.ID != 1154066087 || r.FullName != originalRepo || r.Owner.Login != "AutoDevJapan" || !r.Private || r.Fork || !r.Permissions.Admin {
 		return errors.New("runner repository identity rejected")
 	}
 	return nil

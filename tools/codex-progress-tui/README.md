@@ -6,7 +6,7 @@
 
 外部担当は取得処理の `--active-only` を使い、TUIでも状態・処理イベントの時刻・待機理由を確認します。ネイティブ担当はlive接続のActive状態で、承認/本人入力待ちがなく、30秒以内に思考やツールの実行イベントが届いたものだけを表示します。文だけの報告、終了、待機への遷移で稼働の根拠を消します。イベントのない長時間の処理は、確認できない間は一覧から外れます。担当自体を停止する変更ではありません。
 
-cacheの `snapshot-active-v1.json` と `acquisition-active.lock` は旧版と分けます。起動済みの旧TUIを終了せず、次の通常起動から絞り込みを適用します。画面の配置、入力、OAuth、execの起動経路は維持します。
+cacheの `snapshot-active-v1.json` と `acquisition-active.lock` は旧版と分けます。Goの取得処理は旧TUIの `snapshot-v1.json` にも処理中だけを出力します。ネイティブ担当の絞り込みと空一覧の表示変更は、新しいRust版の通常起動から適用します。画面の配置、入力、OAuth、execの起動経路は維持します。
 
 ## 構成
 
@@ -23,13 +23,18 @@ cacheの `snapshot-active-v1.json` と `acquisition-active.lock` は旧版と分
 ```powershell
 # The public upstream .bazelrc uses 8 MiB for Windows async test fixtures.
 $env:RUST_MIN_STACK='8388608'
-cargo nextest run --locked -p codex-tui -E 'test(parallel_progress)'
-cargo clippy --locked -p codex-tui --lib -- -D warnings
 $env:CARGO_PROFILE_RELEASE_LTO='false'
 $env:CARGO_PROFILE_RELEASE_DEBUG='0'
 $env:CARGO_PROFILE_RELEASE_STRIP='symbols'
 $env:CARGO_PROFILE_RELEASE_CODEGEN_UNITS='16'
-cargo build --locked --release -p codex-cli --bin codex
+$env:CODEX_JOBS_REAL_CARGO=Join-Path $env:USERPROFILE '.cargo/bin/cargo.exe'
+$env:CODEX_JOBS_CARGO_LOCK_DIR='D:/CC/Tools/codex-jobs'
+$env:CARGO_TARGET_DIR=Join-Path (Get-Location) 'target'
+$progressCargoGate='D:/CC/Tools/codex-jobs/cargo_gate.exe'
+& $progressCargoGate nextest run --locked --release -p codex-tui -E 'test(parallel_progress)'
+& $progressCargoGate clippy --locked --release -p codex-tui --lib -- -D warnings
+& $progressCargoGate test --locked --release -p codex-tui --doc
+& $progressCargoGate build --locked --release -p codex-cli --bin codex
 ```
 
 Goは各ディレクトリで `go test ./...`、`go vet ./...`、`go build` を実行します。元の実行版と設定を退避し、Dドライブへ更新版と同じ公式版の `codex-code-mode-host.exe` を配置します。manifestは実ファイルのSHAを記録します。公式版は削除しません。
@@ -46,10 +51,14 @@ cacheは `D:/CC/Work/parallel-agent-progress-runtime`、実行版は `D:/CC/Tool
 
 ## 検証の範囲
 
-追加の5検査とTUIのClippyは合格しました。最終ソース3133424からビルドした実行版SHA256 `7eda7d645c4dcd7cae038451d60b7ab5e89e28e6868876060d2f5a4af5b4079b` をコピーして、新しい隠れたConPTYで起動・`/progress`・幅120→60→148の変更・未送信入力の保持・`/quit`と終了0を確認しました。配置済みGoの起動処理を経由した同じ検査も成功しました。可視ウィンドウは0件で、所有したPTY・パイプ・一時物を回収しました。本人の実行中の会話は再開・終了していません。
+今回の絞り込み修正は、ソース69a95baで関連nextest 8件、TUIのClippy、doctest（失敗0・既存ignore 2）、配布CLIのrelease buildが成功しました。独立したtargetと既存gate・sccacheを使い、全workspaceの検査を重複実行していません。Goの全件検査・vetと、起動処理の検査も成功しました。
 
-全体の検査で、公開ソースのsnapshotに残っていた版0.0.0と、この公開tagの版0.162.1の不一致が見つかりました。大きいasync検査の一部も、Windowsのdebug実行で公式指定の8MiBを超えていました。製品の版やassertを偽装せず、正しい版の期待値と専用の検査スレッドで修復しました。最終TUI検査は5,650合格、8skip、doctestは失敗0・2ignore、全targetのClippyも成功しました。これは製品のメモリーリーク修復の証明ではありません。
+同ソースから作った候補実行版SHA256 `6f21e83ac9fac5ed64e5b06667a408f671da65ac9d1094e3f84b156841cdc6a1` をコピーし、新しい隠しConPTYで起動・実データの`/progress`・幅120→60→148の変更・未送信入力の保持・`/quit`と終了0を確認しました。取得処理SHA256 `581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1` は旧TUI本体と配置済み起動処理を通した受入にも合格し、待機・確認中は0件でした。可視ウィンドウは0件で、所有したPTY・パイプ・一時物を回収しました。本人の実行中の会話は再開・終了していません。
+
+検査用セッションだけに `-c check_for_update_on_startup=false` を指定します。更新案内が出た場合は入力せず検査を止めます。起動後の更新案内を入力の不具合と誤判定しないためです。
+
+前回のソース3133424の全体検査で、公開ソースのsnapshotに残っていた版0.0.0と、この公開tagの版0.162.1の不一致が見つかりました。大きいasync検査の一部も、Windowsのdebug実行で公式指定の8MiBを超えていました。製品の版やassertを偽装せず、正しい版の期待値と専用の検査スレッドで修復しました。最終TUI検査は5,650合格、8skip、doctestは失敗0・2ignore、全targetのClippyも成功しました。これは製品のメモリーリーク修復の証明ではありません。
 
 全件の検査では一時フォルダーをホームの`.git`の外に置き、プロセスだけの`NO_COLOR`・`TERM`・`CODEX_*`を外しました。ownerの`.git`や設定は読み書きしません。Windowsでパイプの閉じ待ち344件が検出され、1件は内蔵app-serverが起動したgitの子であることを観測しました。ほかの内訳は未確認ですが、検査終了後にこのcloneの担当プロセスが0件であることを確認しました。
 
-取得元の世代が実際に変化する受入と、モデルを呼ぶネイティブ担当の状態遷移の実測は、このConPTY検査に含めません。取得失敗時の保持・状態表現・表示の境界は単体検査で確認しています。通常のPowerShell/CMD起動へ適用済みで、双方のversion終了0を確認しました。起動済みのTUIへ外から読み込ませる機能はないため、今のTerminalへ既に表示されたとは報告しません。
+旧TUIと同じ引数で取得元の世代が実際に変化し、処理中以外の行が0件であることも確認しました。モデルを呼ぶネイティブ担当の状態遷移の実測は、このConPTY検査に含めません。待機・報告・終了・取得失敗・空一覧の表示境界は関連単体検査で確認しています。旧TUIの外部一覧はGoの通常更新から変わります。ネイティブ担当の絞り込みと空一覧の表示変更は、新しいRust版の通常起動から適用します。

@@ -3,46 +3,28 @@
 package main
 
 import (
-	"errors"
 	"path/filepath"
 	"syscall"
 	"testing"
 )
 
-func TestCollectionRequiresStoppedPIDZeroAndNeverStartedAbort(t *testing.T) {
+func TestCollectionRequiresStoppedPIDZero(t *testing.T) {
 	for _, tt := range []struct {
-		name             string
-		state, pid, code uint32
-		unstarted, ok    bool
+		name       string
+		state, pid uint32
+		ok         bool
 	}{
-		{"fresh-never-started", 1, 0, 1077, true, true},
-		{"normal-exit-is-not-never-started", 1, 0, 0, true, false},
-		{"failed-exit-is-not-never-started", 1, 0, 5, true, false},
-		{"running-with-never-started-code", 4, 0, 1077, true, false},
-		{"stopped-with-live-pid", 1, 42, 1077, true, false},
-		{"ordinary-success", 1, 0, 0, false, true},
-		{"ordinary-failure-still-needs-launch-report", 1, 0, 1, false, true},
-		{"ordinary-running", 4, 42, 0, false, false},
+		{"stopped", 1, 0, true},
+		{"running", 4, 0, false},
+		{"stopping", 3, 0, false},
+		{"stopped-with-live-pid", 1, 42, false},
+		{"running-with-pid", 4, 42, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := collectionServiceStatus(tt.state, tt.pid, tt.code, tt.unstarted); (got == nil) != tt.ok {
+			if got := collectionServiceStatus(tt.state, tt.pid); (got == nil) != tt.ok {
 				t.Fatalf("status accepted=%v, want %v", got == nil, tt.ok)
 			}
 		})
-	}
-}
-
-func TestCollectionDeleteBOOLAndLastErrorAreIndependent(t *testing.T) {
-	if err := collectionDeleteResult(1, syscall.Errno(5)); err != nil {
-		t.Fatal("successful BOOL rejected because of stale last error", err)
-	}
-	for _, err := range []error{nil, syscall.Errno(0)} {
-		if collectionDeleteResult(0, err) == nil {
-			t.Fatal("failed BOOL without a meaningful last error was accepted")
-		}
-	}
-	if err := collectionDeleteResult(0, syscall.Errno(5)); !errors.Is(err, syscall.Errno(5)) {
-		t.Fatal("actual Win32 failure was lost", err)
 	}
 }
 

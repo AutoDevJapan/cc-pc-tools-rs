@@ -105,6 +105,11 @@ func prepare(p Plan, archive string) error {
 	if e = writeNewBytes(filepath.Join(p.Root, "helper.exe"), b); e != nil {
 		return e
 	}
+	// Claim (or create) the fixed shared identity first, so a busy or uncollected
+	// predecessor fails fast, before any source or SDK work.
+	if e = ensureService(p); e != nil {
+		return e
+	}
 	if e = os.Mkdir(p.runtime(), 0700); e != nil {
 		return e
 	}
@@ -164,9 +169,6 @@ func prepare(p Plan, archive string) error {
 			return e
 		}
 	}
-	if e = installService(p); e != nil {
-		return e
-	}
 	sid, e := serviceSID(p)
 	if e != nil {
 		return e
@@ -193,7 +195,7 @@ func prepare(p Plan, archive string) error {
 	if e = prepareLauncherReport(p, sid); e != nil {
 		return e
 	}
-	return saveNew(filepath.Join(p.Root, "prepared.json"), map[string]any{"service": p.name(), "sid": sid, "helper_sha256": digest(b), "credential_free": p.Fixture != "", "official_runner_executed": false})
+	return saveNew(filepath.Join(p.Root, "prepared.json"), map[string]any{"service": p.svc(), "shared_service": true, "sid": sid, "helper_sha256": digest(b), "credential_free": p.Fixture != "", "official_runner_executed": false})
 }
 func writeNewBytes(path string, b []byte) error {
 	f, e := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)

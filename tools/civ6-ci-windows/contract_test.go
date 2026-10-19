@@ -244,3 +244,76 @@ func TestCleanupDeadlineContract(t *testing.T) {
 		}
 	}
 }
+
+func TestOneFixedServiceIdentityPerKindWhileRunnerNamesStayPerJob(t *testing.T) {
+	a, b := fixturePlan(), fixturePlan()
+	b.Instance = strings.Repeat("b", 32)
+	if a.svc() != sharedService || b.svc() != sharedService || a.svc() != b.svc() {
+		t.Fatal("jobs must reuse the one repository identity")
+	}
+	if a.name() == b.name() || a.name() == a.svc() {
+		t.Fatal("runner registration must stay unique per job and distinct from the service")
+	}
+	f := a
+	f.Fixture = "normal"
+	if f.svc() != fixtureService || f.svc() == sharedService {
+		t.Fatal("credential-free fixtures must not touch the real identity")
+	}
+	for _, id := range []string{a.svc(), f.svc()} {
+		if !strings.HasPrefix(id, "CC-CIW-") || len(id) > 40 {
+			t.Fatalf("service id %q", id)
+		}
+	}
+}
+
+func TestImageRootRoundTripsServicePaths(t *testing.T) {
+	for _, root := range []string{`C:\Users\x\codex-owned-aa`, `C:\Users\a b\codex-owned-aa`} {
+		quote := func(s string) string {
+			if strings.Contains(s, " ") {
+				return `"` + s + `"`
+			}
+			return s
+		}
+		image := quote(root+`\helper.exe`) + " service " + quote(root)
+		if got := imageRoot(image); got != root {
+			t.Fatalf("got %q want %q", got, root)
+		}
+	}
+	if imageRoot("C:\\x\\other.exe run") != "" {
+		t.Fatal("foreign image path produced a root")
+	}
+}
+
+func TestSharedIdentityMovesOnlyBehindSettledPredecessors(t *testing.T) {
+	dir := t.TempDir()
+	cur := filepath.Join(dir, "current")
+	if previousRootSettled("", cur) != nil || previousRootSettled(cur, cur) != nil || previousRootSettled(filepath.Join(dir, "gone"), cur) != nil {
+		t.Fatal("first use, same root, or deleted predecessor rejected")
+	}
+	prev := filepath.Join(dir, "prev")
+	if os.Mkdir(prev, 0700) != nil {
+		t.Fatal("mkdir")
+	}
+	if previousRootSettled(prev, cur) == nil {
+		t.Fatal("uncollected predecessor accepted")
+	}
+	write := func(body string) {
+		old, _ := filepath.Glob(filepath.Join(prev, "collection-*.json"))
+		for _, f := range old {
+			os.Remove(f)
+		}
+		if e := os.WriteFile(filepath.Join(prev, "collection-1.json"), []byte(body), 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	for _, bad := range []string{`{}`, `{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":1,"owner_reset":true}`, `{"service_retained":true,"service_idle_confirmed":false,"additional_ace_count":0,"owner_reset":true}`, `{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0}`, `not json`} {
+		write(bad)
+		if previousRootSettled(prev, cur) == nil {
+			t.Fatalf("accepted receipt %s", bad)
+		}
+	}
+	write(`{"service_retained":true,"service_idle_confirmed":true,"additional_ace_count":0,"owner_reset":true}`)
+	if e := previousRootSettled(prev, cur); e != nil {
+		t.Fatal(e)
+	}
+}

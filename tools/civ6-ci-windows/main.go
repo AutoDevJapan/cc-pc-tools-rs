@@ -18,9 +18,6 @@ func main() {
 	}
 	if err := dispatch(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		if errors.Is(err, errResidue) {
-			os.Exit(exitResidue)
-		}
 		os.Exit(1)
 	}
 }
@@ -29,7 +26,7 @@ func dispatch(args []string) error {
 		return gateChild(args)
 	}
 	if len(args) < 2 {
-		return errors.New("usage: civ6-ci-windows <prepare|service|worker|execute|stop|status|collect|collect-unstarted|cleanup-profile|hook-start|verify-source|hook-completed|audit> <owned-root> [official-runner.zip]")
+		return errors.New("usage: civ6-ci-windows <prepare|service|worker|execute|stop|status|collect|collect-unstarted|hook-start|verify-source|hook-completed|audit> <owned-root> [official-runner.zip]")
 	}
 	p, e := readPlan(args[1])
 	if e != nil {

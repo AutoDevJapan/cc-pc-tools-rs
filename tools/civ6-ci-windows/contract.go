@@ -43,7 +43,22 @@ type Plan struct {
 	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
 }
 
-func (p Plan) name() string    { return "CC-CIW-" + p.Instance }
+// name is the unique per-job identity: the official runner registration and the
+// one-message registration pipe. It never names the SCM service.
+func (p Plan) name() string { return "CC-CIW-" + p.Instance }
+
+// The Windows service and its virtual account are one fixed identity for this
+// repository (and one for credential-free fixtures), reused by every job in turn.
+// This bounds the OS profile/hive to one per identity instead of one per job.
+const sharedService = "CC-CIW-civ6-banseiki"
+const fixtureService = "CC-CIW-civ6-fixture"
+
+func (p Plan) svc() string {
+	if p.Fixture != "" {
+		return fixtureService
+	}
+	return sharedService
+}
 func (p Plan) runtime() string { return filepath.Join(p.Root, "runtime") }
 func (p Plan) runner() string  { return filepath.Join(p.runtime(), "runner") }
 
@@ -165,12 +180,40 @@ func checkEvent(p Plan, env map[string]string, raw []byte) error {
 	return nil
 }
 
-// errResidue is the only collection outcome that leaves the service, ACLs and
-// processes clean while the OS profile/hive/classes remain. main exits with 3.
-var errResidue = errors.New("new resource residue remains; parent must retain incomplete cleanup")
+// imageRoot extracts the owned root from a service image path built by
+// ensureService: <helper.exe> service <root>.
+func imageRoot(image string) string {
+	i := strings.LastIndex(image, " service ")
+	if i < 0 {
+		return ""
+	}
+	return strings.Trim(strings.TrimSpace(image[i+len(" service "):]), `"`)
+}
 
-// Exit codes: 0 success, 1 failure/uncertain (fence), 3 residue-only collection.
-const exitResidue = 3
+// previousRootSettled lets the shared identity move to a new job only when the
+// previous job's root is gone, or was collected with its service ACEs removed and
+// the service idle. The identity never changes hands behind a live or uncollected job.
+func previousRootSettled(prev, current string) error {
+	if prev == "" || strings.EqualFold(filepath.Clean(prev), filepath.Clean(current)) {
+		return nil
+	}
+	if _, e := os.Lstat(prev); os.IsNotExist(e) {
+		return nil
+	}
+	matches, _ := filepath.Glob(filepath.Join(prev, "collection-*.json"))
+	for _, m := range matches {
+		var c struct {
+			Retained bool `json:"service_retained"`
+			Idle     bool `json:"service_idle_confirmed"`
+			ACE      int  `json:"additional_ace_count"`
+			Owner    bool `json:"owner_reset"`
+		}
+		if raw, e := os.ReadFile(m); e == nil && json.Unmarshal(raw, &c) == nil && c.Retained && c.Idle && c.ACE == 0 && c.Owner {
+			return nil
+		}
+	}
+	return errors.New("previous job root is neither deleted nor collected; the shared service identity is not reused")
+}
 
 func validSHA(s string) bool { return contract.ValidSHA(s) }
 

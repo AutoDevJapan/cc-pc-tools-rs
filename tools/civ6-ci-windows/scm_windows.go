@@ -43,51 +43,95 @@ func openService(p Plan, access uintptr) (uintptr, error) {
 		return 0, e
 	}
 	defer closeSC(scm)
-	r, _, e := advapi.NewProc("OpenServiceW").Call(scm, ptr(p.name()), access)
+	r, _, e := advapi.NewProc("OpenServiceW").Call(scm, ptr(p.svc()), access)
 	if r == 0 {
 		return 0, e
 	}
 	return r, nil
 }
-func installService(p Plan) error {
+
+// ensureService creates the fixed shared service on first use and otherwise
+// re-points it at this job's helper and root. It never takes the identity from a
+// running service, from live processes of its account, or from a previous job
+// whose root was neither deleted nor collected.
+func ensureService(p Plan) error {
 	scm, e := manager(3)
 	if e != nil {
 		return e
 	}
 	defer closeSC(scm)
-	// CREATE_NEW semantics: never reconfigure or replace an existing service.
 	image := syscall.EscapeArg(filepath.Join(p.Root, "helper.exe")) + " service " + syscall.EscapeArg(p.Root)
-	s, _, e := advapi.NewProc("CreateServiceW").Call(scm, ptr(p.name()), ptr(p.name()), 0xf01ff, 0x10, 3, 1, ptr(image), 0, 0, 0, ptr(`NT SERVICE\`+p.name()), 0)
+	s, _, e := advapi.NewProc("OpenServiceW").Call(scm, ptr(p.svc()), 0xf01ff)
 	if s == 0 {
-		return fmt.Errorf("create finite virtual service: %w", e)
+		if !errors.Is(e, syscall.Errno(1060)) {
+			return fmt.Errorf("open shared service: %w", e)
+		}
+		s, _, e = advapi.NewProc("CreateServiceW").Call(scm, ptr(p.svc()), ptr(p.svc()), 0xf01ff, 0x10, 3, 1, ptr(image), 0, 0, 0, ptr(`NT SERVICE\`+p.svc()), 0)
+		if s == 0 {
+			return fmt.Errorf("create shared virtual service: %w", e)
+		}
+		v := uint32(1)
+		if r, _, e := advapi.NewProc("ChangeServiceConfig2W").Call(s, 5, uintptr(unsafe.Pointer(&v))); r == 0 {
+			closeSC(s)
+			return e
+		}
 	}
 	defer closeSC(s)
-	v := uint32(1)
-	r, _, e := advapi.NewProc("ChangeServiceConfig2W").Call(s, 5, uintptr(unsafe.Pointer(&v)))
-	if r == 0 {
+	state, pid, _, e := queryService(s)
+	if e != nil {
 		return e
 	}
+	if state != 1 || pid != 0 {
+		return errors.New("shared service identity is in use; not taken over")
+	}
+	if sid, err := serviceSID(p); err == nil {
+		if n, _, err := ownedProcessCensus(sid); err != nil || n != 0 {
+			return errors.Join(errors.New("processes of the shared account remain; identity not reused"), err)
+		}
+	} else {
+		return err
+	}
+	var need uint32
+	advapi.NewProc("QueryServiceConfigW").Call(s, 0, 0, uintptr(unsafe.Pointer(&need)))
+	if need < 40 || need > 65536 {
+		return errors.New("service configuration size rejected")
+	}
+	buf := make([]byte, need)
+	if r, _, e := advapi.NewProc("QueryServiceConfigW").Call(s, uintptr(unsafe.Pointer(&buf[0])), uintptr(need), uintptr(unsafe.Pointer(&need))); r == 0 {
+		return e
+	}
+	// QUERY_SERVICE_CONFIGW: three DWORDs, padding, then lpBinaryPathName.
+	path := *(**[2048]uint16)(unsafe.Pointer(&buf[16]))
+	if path == nil {
+		return errors.New("service image path unavailable")
+	}
+	if e := previousRootSettled(imageRoot(syscall.UTF16ToString(path[:])), p.Root); e != nil {
+		return e
+	}
+	// SERVICE_NO_CHANGE for type/start/error control, new image path only.
+	if r, _, e := advapi.NewProc("ChangeServiceConfigW").Call(s, 0xffffffff, 0xffffffff, 0xffffffff, ptr(image), 0, 0, 0, 0, 0, 0); r == 0 {
+		return fmt.Errorf("point shared service at this job: %w", e)
+	}
 	var sd uintptr
-	r, _, e = convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x34;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
+	r, _, e := convertDescriptor.Call(ptr("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x34;;;"+p.ControllerSID+")"), 1, uintptr(unsafe.Pointer(&sd)), 0)
 	if r == 0 {
 		return e
 	}
 	defer kernel.NewProc("LocalFree").Call(sd)
-	r, _, e = advapi.NewProc("SetServiceObjectSecurity").Call(s, 4, sd)
-	if r == 0 {
+	if r, _, e = advapi.NewProc("SetServiceObjectSecurity").Call(s, 4, sd); r == 0 {
 		return e
 	}
 	return nil
 }
 func serviceSID(p Plan) (string, error) {
 	var size, domain, typ uint32
-	advapi.NewProc("LookupAccountNameW").Call(0, ptr(`NT SERVICE\`+p.name()), 0, uintptr(unsafe.Pointer(&size)), 0, uintptr(unsafe.Pointer(&domain)), uintptr(unsafe.Pointer(&typ)))
+	advapi.NewProc("LookupAccountNameW").Call(0, ptr(`NT SERVICE\`+p.svc()), 0, uintptr(unsafe.Pointer(&size)), 0, uintptr(unsafe.Pointer(&domain)), uintptr(unsafe.Pointer(&typ)))
 	if size == 0 || size > 1024 || domain > 1024 {
 		return "", errors.New("virtual service SID size invalid")
 	}
 	b := make([]byte, size)
 	d := make([]uint16, domain+1)
-	r, _, e := advapi.NewProc("LookupAccountNameW").Call(0, ptr(`NT SERVICE\`+p.name()), uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&size)), uintptr(unsafe.Pointer(&d[0])), uintptr(unsafe.Pointer(&domain)), uintptr(unsafe.Pointer(&typ)))
+	r, _, e := advapi.NewProc("LookupAccountNameW").Call(0, ptr(`NT SERVICE\`+p.svc()), uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&size)), uintptr(unsafe.Pointer(&d[0])), uintptr(unsafe.Pointer(&domain)), uintptr(unsafe.Pointer(&typ)))
 	if r == 0 {
 		return "", e
 	}
@@ -188,7 +232,7 @@ func handler(control, event, data, context uintptr) uintptr {
 	return 0
 }
 func serviceMain(argc, argv uintptr) uintptr {
-	h, _, _ := registerHandler.Call(ptr(activePlan.name()), syscall.NewCallback(handler), 0)
+	h, _, _ := registerHandler.Call(ptr(activePlan.svc()), syscall.NewCallback(handler), 0)
 	if h == 0 {
 		return 0
 	}
@@ -234,7 +278,7 @@ func runService(p Plan) error {
 	if e != nil || got != want {
 		return errors.New("unexpected service account")
 	}
-	table := [2]serviceTable{{Name: wide(p.name()), Main: syscall.NewCallback(serviceMain)}, {}}
+	table := [2]serviceTable{{Name: wide(p.svc()), Main: syscall.NewCallback(serviceMain)}, {}}
 	r, _, e := startDispatcher.Call(uintptr(unsafe.Pointer(&table[0])))
 	if r == 0 {
 		return e
@@ -276,8 +320,6 @@ func platform(mode string, p Plan, args []string) error {
 		return collect(p)
 	case "collect-unstarted":
 		return collectUnstarted(p)
-	case "cleanup-profile":
-		return cleanupProfile(p)
 	case "hook-start", "hook-completed", "verify-source":
 		return hook(p, mode)
 	case "audit":

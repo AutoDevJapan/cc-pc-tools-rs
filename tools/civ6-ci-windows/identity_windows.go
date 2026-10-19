@@ -94,20 +94,6 @@ func apiReadAttempt(parent context.Context, path string, limit int64) ([]byte, e
 	return b, nil
 }
 
-// auditPhase selects which registration state is legitimate for this unique
-// ephemeral runner: absent before registration, present or absent while the
-// job runs, and absent again once the official job is terminal.
-type auditPhase int
-
-const (
-	phaseBefore auditPhase = iota
-	phaseRunning
-	phaseFinished
-	// phaseQueued is the periodic check while the job still waits for a runner;
-	// the unique registration may or may not exist yet.
-	phaseQueued
-)
-
 func audit(p Plan) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()

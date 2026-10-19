@@ -96,7 +96,7 @@ func (m *monitor) tick(now time.Time) error {
 
 // statusReport reports the SCM state only, read-only for the queue's fence.
 func statusReport(p Plan) error {
-	out := map[string]any{"instance": p.Instance, "service": p.name()}
+	out := map[string]any{"instance": p.Instance, "service": p.svc()}
 	s, e := openService(p, 4)
 	switch {
 	case errors.Is(e, syscall.Errno(1060)):

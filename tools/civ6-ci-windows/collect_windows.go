@@ -8,31 +8,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
-func collectionServiceStatus(state, pid, code uint32, unstarted bool) error {
+// collectionServiceStatus accepts only a stopped service with PID zero. The
+// service identity is shared by every job, so its last SCM exit code is not a
+// "never started" proof; an unstarted job is instead proven by the untouched
+// launcher report and the absence of worker/authentication artifacts.
+func collectionServiceStatus(state, pid uint32) error {
 	if state != 1 || pid != 0 {
 		return errors.New("service must be stopped with PID zero")
 	}
-	// ERROR_SERVICE_NEVER_STARTED means no service start attempt since boot.
-	// The abort path also requires absence of worker/authentication artifacts.
-	if unstarted && code != 1077 {
-		return errors.New("unstarted collection requires SCM never-started status")
-	}
 	return nil
-}
-
-func collectionDeleteResult(result uintptr, callErr error) error {
-	if result != 0 {
-		return nil // Successful Win32 BOOL calls may leave a stale last error.
-	}
-	if callErr == nil || errors.Is(callErr, syscall.Errno(0)) {
-		return errors.New("DeleteService failed without a Win32 error status")
-	}
-	return callErr
 }
 
 // Each administrative mutation has an immutable attempt/result journal. An
@@ -67,17 +57,19 @@ func collectUnstarted(p Plan) error {
 	return collectWithEvents(p, true)
 }
 
-// collectWithEvents brackets a collection with credential-free ledger lines. A
-// residue-only ending (service, ACLs and processes clean; profile/hive/classes
-// still present) is reported separately from an incomplete collection.
+// collectWithEvents brackets a collection with credential-free ledger lines.
 func collectWithEvents(p Plan, unstarted bool) (err error) {
 	emitEvent("collect-begin", p, map[string]any{"unstarted": unstarted})
 	defer func() {
-		emitEvent("collect-end", p, map[string]any{"unstarted": unstarted, "complete": err == nil, "residue_only": errors.Is(err, errResidue)})
+		emitEvent("collect-end", p, map[string]any{"unstarted": unstarted, "complete": err == nil, "shared_profile_retained": err == nil})
 	}()
 	return collectMode(p, unstarted)
 }
 
+// collectMode returns this job's namespace to the idle shared identity. The
+// per-job service ACEs and ownership are removed, the account must have no
+// process and the service must be stopped; the service itself and its single
+// OS profile/hive are deliberately kept for the next job and recorded as such.
 func collectMode(p Plan, unstarted bool) error {
 	seconds := p.CleanupSeconds
 	if seconds == 0 {
@@ -86,7 +78,7 @@ func collectMode(p Plan, unstarted bool) error {
 	aclBudget := time.Duration(seconds) * time.Second
 	sid, e := serviceSID(p)
 	if e != nil {
-		return e
+		return fmt.Errorf("shared service must exist: %w", e)
 	}
 	processes, unreadable, e := ownedProcessCensus(sid)
 	if e != nil || processes != 0 {
@@ -107,50 +99,33 @@ func collectMode(p Plan, unstarted bool) error {
 			return e
 		}
 	}
-	// Recheck the remote identity/runner absence on both fresh collection and
-	// resumption of an already journaled successful service deletion.
+	// Immutable run identity and absence of this plan's unique registration.
 	if p.Fixture == "" {
 		if e = auditCollection(p); e != nil {
 			return e
 		}
 	}
-	s, e := openService(p, 4|0x10000)
-	if e == nil {
-		state, pid, code, err := queryService(s)
-		if err != nil {
-			closeSC(s)
-			return fmt.Errorf("collection service status query: %w", err)
-		}
-		if err = collectionServiceStatus(state, pid, code, unstarted); err != nil {
-			closeSC(s)
-			return err
-		}
-		if !unstarted {
-			report, err := readLaunchResult(p)
-			if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
-				closeSC(s)
-				return errors.New("protected launcher drain and SCM result required")
-			}
-		}
-		// Retain the stopped service identity until all ACL mutations succeed.
-		// Closing a deleted service makes its virtual account unresolvable and
-		// icacls can fail with ERROR_NONE_MAPPED (1332).
-		defer func() {
-			if s != 0 {
-				closeSC(s)
-			}
-		}()
-	} else if errors.Is(e, syscall.Errno(1060)) {
-		var result struct{ OK bool }
-		b, err := os.ReadFile(filepath.Join(p.Root, "service-delete-result.json"))
-		if err != nil || json.Unmarshal(b, &result) != nil || !result.OK {
-			return errors.New("absent service lacks owned completed deletion receipt")
-		}
-	} else {
-		return e
+	s, e := openService(p, 4)
+	if e != nil {
+		return fmt.Errorf("shared service must exist: %w", e)
 	}
-	// Only two administrator-installed inheritable grants exist. Remove each
-	// once; Windows propagates inheritance. Do not spawn a process per target file.
+	defer closeSC(s)
+	state, pid, code, err := queryService(s)
+	if err != nil {
+		return fmt.Errorf("collection service status query: %w", err)
+	}
+	if err = collectionServiceStatus(state, pid); err != nil {
+		return err
+	}
+	if !unstarted {
+		report, err := readLaunchResult(p)
+		if err != nil || !report.Drained || report.AccountSID != sid || ((code == 0) != report.ServiceSuccess) {
+			return errors.New("protected launcher drain and SCM result required")
+		}
+	}
+	// Remove the two administrator-installed inheritable grants once each, then
+	// take ownership of the whole tree away from the shared account: the next job
+	// runs as the same SID and would otherwise keep WRITE_DAC on these files.
 	for _, row := range []struct{ name, path string }{{"root-ace-remove", p.Root}, {"runtime-ace-remove", p.runtime()}} {
 		if e = collectionAction(p, row.name, func() error { return icaclsWithin(aclBudget, row.path, "/remove:g", "*"+sid) }); e != nil {
 			return e
@@ -165,7 +140,12 @@ func collectMode(p Plan, unstarted bool) error {
 		aceCount += n
 	}
 	if aceCount != 0 {
-		return errors.New("explicit service grant removal not confirmed; retain stopped service")
+		return errors.New("explicit service grant removal not confirmed")
+	}
+	if e = collectionAction(p, "owner-reset", func() error {
+		return icaclsWithin(aclBudget, p.Root, "/setowner", "*S-1-5-32-544", "/T", "/C", "/L")
+	}); e != nil {
+		return e
 	}
 	if p.Fixture != "" || unstarted {
 		for _, row := range []struct{ name, path string }{{"root-controller-restore", p.Root}, {"runtime-controller-restore", p.runtime()}} {
@@ -174,38 +154,17 @@ func collectMode(p Plan, unstarted bool) error {
 			}
 		}
 	}
-	// The account must still resolve while icacls revokes and propagates the
-	// owned grants, including the credential-free controller restoration.
-	// A failed/uncertain ACL mutation returns above and is never retried.
-	if s != 0 {
-		state, pid, code, err := queryService(s)
-		if err != nil {
-			return fmt.Errorf("pre-delete service status query: %w", err)
-		}
-		if err = collectionServiceStatus(state, pid, code, unstarted); err != nil {
-			return err
-		}
-		processes, unreadable, e = ownedProcessCensus(sid)
-		if e != nil || processes != 0 {
-			return errors.Join(errors.New("pre-delete owned process census prevents collection"), e)
-		}
-		e = collectionAction(p, "service-delete", func() error {
-			r, _, callErr := advapi.NewProc("DeleteService").Call(s)
-			return collectionDeleteResult(r, callErr)
-		})
-		closeSC(s)
-		s = 0
-		if e != nil {
-			return e
-		}
+	// The identity must still be idle after the ACL work.
+	state, pid, _, err = queryService(s)
+	if err != nil {
+		return fmt.Errorf("post-collection service status query: %w", err)
 	}
-	probe, probeErr := openService(p, 4)
-	absent := errors.Is(probeErr, syscall.Errno(1060))
-	if probeErr == nil {
-		closeSC(probe)
+	if err = collectionServiceStatus(state, pid); err != nil {
+		return err
 	}
-	if !absent || aceCount != 0 {
-		return errors.New("service deletion or explicit grant removal not confirmed")
+	processes, unreadable, e = ownedProcessCensus(sid)
+	if e != nil || processes != 0 {
+		return errors.Join(errors.New("post-collection owned process census prevents reuse"), e)
 	}
 	profile, e := registryPresent(syscall.HKEY_LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\`+sid)
 	if e != nil {
@@ -219,18 +178,69 @@ func collectMode(p Plan, unstarted bool) error {
 	if e != nil {
 		return e
 	}
-	censusScope := "queryable processes; owned Job Object independently drained"
-	if unstarted {
-		censusScope = "queryable processes; worker start and authentication artifacts absent"
-	}
-	receipt := map[string]any{"unstarted_worker": unstarted, "service_absent": absent, "queryable_account_process_count": processes, "unreadable_process_count": unreadable, "process_census_scope": censusScope, "additional_ace_count": aceCount, "ace_scope": "administrator-installed root and runtime inheritable grants only", "profile_present": profile, "hive_present": hive, "classes_hive_present": classes, "root_retained": true, "credential_runtime": p.runner(), "official_ci_claimed": false, "known_residue": profile || hive || classes}
-	if e = saveNew(filepath.Join(p.Root, fmt.Sprintf("collection-%d.json", time.Now().UnixNano())), receipt); e != nil {
+	leaves, e := serviceProfileLeaves()
+	if e != nil {
 		return e
 	}
-	if profile || hive || classes {
-		return errResidue
+	total, own := 0, 0
+	for _, l := range leaves {
+		if strings.HasPrefix(l, "CC-CIW-") {
+			total++
+		}
+		if l == p.svc() {
+			own++
+		}
 	}
-	return nil
+	receipt := map[string]any{
+		"unstarted_worker": unstarted, "service": p.svc(), "service_retained": true, "service_idle_confirmed": true,
+		"queryable_account_process_count": processes, "unreadable_process_count": unreadable,
+		"process_census_scope": "queryable processes; owned Job Object independently drained",
+		"additional_ace_count": aceCount, "owner_reset": true, "ace_scope": "administrator-installed root and runtime inheritable grants only",
+		"shared_profile_retained": profile, "shared_hive_loaded": hive, "shared_classes_hive_loaded": classes,
+		"shared_profile_entries_for_this_identity": own, "ciw_profile_leaf_count_total": total,
+		"profile_scope":      "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
+		"credential_runtime": p.runner(), "official_ci_claimed": false,
+	}
+	return saveNew(filepath.Join(p.Root, fmt.Sprintf("collection-%d.json", time.Now().UnixNano())), receipt)
+}
+
+// serviceProfileLeaves lists the profile directory names of every virtual
+// service account in ProfileList (read-only).
+func serviceProfileLeaves() ([]string, error) {
+	var h syscall.Handle
+	if e := syscall.RegOpenKeyEx(syscall.HKEY_LOCAL_MACHINE, wide(`SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList`), 0, 0x20019, &h); e != nil {
+		return nil, e
+	}
+	defer syscall.RegCloseKey(h)
+	var out []string
+	for i := uint32(0); ; i++ {
+		var name [256]uint16
+		n := uint32(len(name))
+		e := syscall.RegEnumKeyEx(h, i, &name[0], &n, nil, nil, nil, nil)
+		if e == syscall.Errno(259) {
+			return out, nil
+		}
+		if e != nil {
+			return nil, e
+		}
+		sid := syscall.UTF16ToString(name[:n])
+		if !strings.HasPrefix(sid, "S-1-5-80-") {
+			continue
+		}
+		var k syscall.Handle
+		if e = syscall.RegOpenKeyEx(h, wide(sid), 0, 0x20019, &k); e != nil {
+			return nil, e
+		}
+		var typ uint32
+		var buf [1024]uint16
+		size := uint32(len(buf) * 2)
+		e = syscall.RegQueryValueEx(k, wide("ProfileImagePath"), nil, &typ, (*byte)(unsafe.Pointer(&buf[0])), &size)
+		syscall.RegCloseKey(k)
+		if e != nil {
+			return nil, e
+		}
+		out = append(out, filepath.Base(syscall.UTF16ToString(buf[:])))
+	}
 }
 func registryPresent(root syscall.Handle, key string) (bool, error) {
 	var h syscall.Handle

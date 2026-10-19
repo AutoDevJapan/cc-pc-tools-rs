@@ -237,19 +237,99 @@ func TestMonitorStopsWhenTheJobEndsBeforeAssignmentAndAuditsWhileQueued(t *testi
 	}
 }
 
-func TestWaitStoppedObservesWithoutHurryingOrGivingUp(t *testing.T) {
-	states := []uint32{4, 3, 3, 1}
-	i := 0
-	q := func() (uint32, error) { s := states[i]; i++; return s, nil }
-	if e := waitStopped(q, time.Now().Add(5*time.Second), time.Millisecond); e != nil || i != 4 {
-		t.Fatalf("stop not awaited: %v polls=%d", e, i)
+// fakeHold drives holdUntilDrained with a virtual clock: every sleep advances it.
+type fakeHold struct {
+	clock    time.Time
+	states   []func() (uint32, error)
+	drained  func() (bool, error)
+	census   func() (int, error)
+	sleeps   int
+	queries  int
+	censuses int
+}
+
+func (f *fakeHold) ops() holdOps {
+	return holdOps{
+		query: func() (uint32, error) {
+			s := f.states[min(f.queries, len(f.states)-1)]
+			f.queries++
+			return s()
+		},
+		drain:  func() (bool, error) { return f.drained() },
+		census: func() (int, error) { f.censuses++; return f.census() },
+		now:    func() time.Time { return f.clock },
+		sleep:  func(d time.Duration) { f.sleeps++; f.clock = f.clock.Add(d) },
 	}
-	never := func() (uint32, error) { return 3, nil }
-	if waitStopped(never, time.Now().Add(30*time.Millisecond), time.Millisecond) == nil {
-		t.Fatal("an unstopped service was reported stopped")
+}
+func state(n uint32) func() (uint32, error) { return func() (uint32, error) { return n, nil } }
+func stateErr() func() (uint32, error) {
+	return func() (uint32, error) { return 0, errors.New("scm query") }
+}
+
+func TestHoldWaitsForStopAndDrainProof(t *testing.T) {
+	start := time.Unix(0, 0)
+	until := holdDeadline(start, 600)
+	f := &fakeHold{clock: start, states: []func() (uint32, error){state(4), stateErr(), state(3), state(1)}, drained: func() (bool, error) { return true, nil }, census: func() (int, error) { t.Fatal("census not needed"); return 0, nil }}
+	res := holdUntilDrained(f.ops(), until, time.Second)
+	if res.Err != nil || !res.Stopped || !res.Drained || f.queries != 4 {
+		t.Fatalf("%+v queries=%d", res, f.queries)
 	}
-	boom := func() (uint32, error) { return 0, errors.New("scm") }
-	if waitStopped(boom, time.Now().Add(time.Second), time.Millisecond) == nil {
-		t.Fatal("query failure treated as stopped")
+}
+
+// R1: unreadable SCM state is not a stop. The hold lasts to the deadline and
+// then reports an uncertain end.
+func TestHoldDoesNotReleaseOnUnreadableServiceState(t *testing.T) {
+	start := time.Unix(0, 0)
+	until := holdDeadline(start, 60)
+	f := &fakeHold{clock: start, states: []func() (uint32, error){stateErr()}, drained: func() (bool, error) { return true, nil }, census: func() (int, error) { return 0, nil }}
+	res := holdUntilDrained(f.ops(), until, time.Second)
+	if res.Err == nil || res.Stopped || res.Drained {
+		t.Fatalf("%+v", res)
+	}
+	if f.clock.Before(until) {
+		t.Fatalf("released at %v, before the deadline %v", f.clock.Sub(start), until.Sub(start))
+	}
+	// A running service holds just the same.
+	f = &fakeHold{clock: start, states: []func() (uint32, error){state(4)}, drained: func() (bool, error) { return false, nil }, census: func() (int, error) { return 3, nil }}
+	if res = holdUntilDrained(f.ops(), until, time.Second); res.Err == nil || res.Stopped || f.clock.Before(until) {
+		t.Fatalf("running service released early: %+v", res)
+	}
+}
+
+// R2: the deadline is anchored at the service start and covers startup, the
+// whole run and the Job drain, even when earlier API audits took minutes.
+func TestHoldDeadlineCoversWorkerLifetime(t *testing.T) {
+	start := time.Unix(1000, 0)
+	for _, secs := range []int{1, 600, 14400} {
+		d := holdDeadline(start, secs).Sub(start)
+		worst := 31*time.Second + time.Duration(secs)*time.Second + 30*time.Second // pipe wait + run + Job drain wait
+		if d < worst+20*time.Second {
+			t.Fatalf("seconds=%d deadline %v does not cover %v with slack", secs, d, worst)
+		}
+	}
+	// 150 s of audits before the start must not shorten the hold.
+	begun := start.Add(-150 * time.Second)
+	if holdDeadline(start, 600).Sub(begun) < holdDeadline(begun, 600).Sub(begun)+150*time.Second {
+		t.Fatal("pre-start time reduced the hold")
+	}
+}
+
+// R3: STOPPED alone is not a drain. Without launcher proof the hold waits for an
+// empty account and still reports the fence; with neither it holds to the deadline.
+func TestHoldDistinguishesStoppedFromDrained(t *testing.T) {
+	start := time.Unix(0, 0)
+	until := holdDeadline(start, 60)
+	missing := func() (bool, error) { return false, errors.New("report missing") }
+	f := &fakeHold{clock: start, states: []func() (uint32, error){state(1)}, drained: missing, census: func() (int, error) { return 0, nil }}
+	res := holdUntilDrained(f.ops(), until, time.Second)
+	if !res.Stopped || res.Drained || !res.CensusZero || res.Err == nil {
+		t.Fatalf("empty account without drain proof: %+v", res)
+	}
+	falseReport := func() (bool, error) { return false, nil }
+	n := 0
+	f = &fakeHold{clock: start, states: []func() (uint32, error){state(1)}, drained: falseReport, census: func() (int, error) { n++; return min(n, 2), nil }}
+	res = holdUntilDrained(f.ops(), until, time.Second)
+	if res.Drained || res.CensusZero || res.Err == nil || f.clock.Before(until) {
+		t.Fatalf("survivors were released early: %+v clock=%v", res, f.clock.Sub(start))
 	}
 }

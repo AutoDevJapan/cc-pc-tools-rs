@@ -120,33 +120,103 @@ func statusReport(p Plan) error {
 	return nil
 }
 
-// waitStopped polls until the service reports STOPPED (state 1) or the bound
-// passes. It never issues a second stop: it only observes, so the shared Cargo
-// slot stays held until the Job Object drain behind the SCM stop is real.
-func waitStopped(query func() (uint32, error), until time.Time, tick time.Duration) error {
+// holdDeadline is the latest moment the service can still legitimately run:
+// service start, up to 60 s of startup (registration pipe 30 s + token/Job
+// setup), the plan's run seconds counted from the worker resume, and the
+// launcher's 30 s Job drain plus slack. It is anchored at the service start, so
+// time spent before it (API audits) never shortens the hold.
+func holdDeadline(serviceStart time.Time, seconds int) time.Time {
+	return serviceStart.Add(60*time.Second + time.Duration(seconds)*time.Second + 90*time.Second)
+}
+
+// holdOps abstracts the three read-only observations so the stop boundary is
+// testable with an injected clock.
+type holdOps struct {
+	query  func() (state uint32, err error)
+	drain  func() (drained bool, err error)
+	census func() (count int, err error)
+	now    func() time.Time
+	sleep  func(time.Duration)
+}
+
+type holdResult struct {
+	Stopped, Drained, CensusZero bool
+	Err                          error
+}
+
+// holdUntilDrained keeps the caller (and so the shared Cargo gate slot) alive
+// until the service is STOPPED and the protected launcher report proves the Job
+// Object drained, or until the absolute deadline. It never issues a stop. An SCM
+// read failure is not evidence of a stop: it is remembered and polling continues.
+// A STOPPED service without drain proof is held until no process of its account
+// remains (weaker evidence, reported as such) and is never reported as drained.
+func holdUntilDrained(ops holdOps, until time.Time, tick time.Duration) holdResult {
+	var res holdResult
+	var lastErr error
 	for {
-		state, e := query()
+		state, e := ops.query()
 		if e != nil {
-			return e
+			lastErr = e
+		} else if state == 1 {
+			res.Stopped = true
+			break
 		}
-		if state == 1 {
-			return nil
+		if !ops.now().Before(until) {
+			res.Err = errors.Join(errors.New("service stop not confirmed by the hold deadline; retain resource and fence"), lastErr)
+			return res
 		}
-		if !time.Now().Before(until) {
-			return errors.New("service still not stopped at the bound; retain resource and fence")
+		ops.sleep(tick)
+	}
+	if drained, e := ops.drain(); e == nil && drained {
+		res.Drained = true
+		return res
+	}
+	for {
+		if n, e := ops.census(); e == nil && n == 0 {
+			res.CensusZero = true
+			res.Err = errors.New("launcher drain proof is missing or false; no process of the account remains, fence kept")
+			return res
+		} else if e != nil {
+			lastErr = e
 		}
-		time.Sleep(tick)
+		if !ops.now().Before(until) {
+			res.Err = errors.Join(errors.New("service stopped but neither drain proof nor an empty account was confirmed by the hold deadline; retain resource and fence"), lastErr)
+			return res
+		}
+		ops.sleep(tick)
 	}
 }
 
-func waitServiceStopped(p Plan, until time.Time) error {
-	return waitStopped(func() (uint32, error) {
-		s, e := openService(p, 4)
-		if e != nil {
-			return 0, e
-		}
-		defer closeSC(s)
-		state, _, _, e := queryService(s)
-		return state, e
-	}, until, 250*time.Millisecond)
+func realHoldOps(p Plan) holdOps {
+	return holdOps{
+		query: func() (uint32, error) {
+			s, e := openService(p, 4)
+			if e != nil {
+				return 0, e
+			}
+			defer closeSC(s)
+			state, _, _, e := queryService(s)
+			return state, e
+		},
+		drain: func() (bool, error) {
+			r, e := readLaunchResult(p)
+			if e != nil {
+				return false, e
+			}
+			sid, e := serviceSID(p)
+			if e != nil {
+				return false, e
+			}
+			return r.Drained && r.AccountSID == sid, nil
+		},
+		census: func() (int, error) {
+			sid, e := serviceSID(p)
+			if e != nil {
+				return 0, e
+			}
+			return ownedProcessCount(sid)
+		},
+		now:   time.Now,
+		sleep: time.Sleep,
+	}
 }

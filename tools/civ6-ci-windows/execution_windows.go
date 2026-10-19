@@ -116,31 +116,28 @@ func execute(p Plan) error {
 func executeAdmitted(p Plan) (result error) {
 	var secret []byte
 	var e error
-	started, observedStopped := false, false
-	begun := time.Now()
+	started, sawStopped := false, false
+	var serviceStart time.Time
 	emitEvent("execute-begin", p, nil)
 	defer func() {
-		// Normal error paths retain the gate callback until the one owned stop
-		// request finishes. Do not repeat a refused/uncertain stop operation.
-		if started && !observedStopped && result != nil {
-			stopErr := stopFinite(p)
-			if stopErr != nil {
-				// A slow or refused stop is not a drain. Keep the gate child (and so
-				// the Cargo slot) alive until the service reports STOPPED, which the
-				// launcher only does after its Job Object drained, or the service's
-				// own deadline plus its drain budget has surely passed.
-				if waitErr := waitServiceStopped(p, begun.Add(time.Duration(p.Seconds)*time.Second+2*time.Minute)); waitErr == nil {
-					stopErr = nil
-				} else {
-					stopErr = errors.Join(stopErr, waitErr)
-				}
+		// One stop request at most, and only when the loop did not see STOPPED.
+		// Then hold (observe only) until the launcher proves the Job Object drained
+		// or the absolute deadline passes; only that releases the Cargo slot.
+		fence := false
+		if started {
+			if !sawStopped {
+				result = errors.Join(result, stopFinite(p))
 			}
-			observedStopped = stopErr == nil
-			result = errors.Join(result, stopErr)
+			hold := holdUntilDrained(realHoldOps(p), holdDeadline(serviceStart, p.Seconds), 250*time.Millisecond)
+			fence = !(hold.Stopped && hold.Drained)
+			result = errors.Join(result, hold.Err)
+			if fence && result == nil {
+				result = errors.New("service drain not proven")
+			}
 		}
 		// A begin without a clean end, or fence=true, tells the queue that the
 		// worker may still hold the namespace: it must not start another one.
-		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": observedStopped || !started, "fence": started && !observedStopped})
+		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence})
 	}()
 	if p.Fixture == "" || p.RuntimeFixture {
 		if e = verifyGateAllocation(); e != nil {
@@ -167,6 +164,7 @@ func executeAdmitted(p Plan) (result error) {
 	// SCM can start the service yet return an error (e.g. a startup timeout).
 	// The one-shot deferred stop queries actual state even after that error.
 	started = true
+	serviceStart = time.Now()
 	if e = startFinite(p); e != nil {
 		return e
 	}
@@ -217,7 +215,7 @@ func executeAdmitted(p Plan) (result error) {
 			return e
 		}
 		if state == 1 {
-			observedStopped = true
+			sawStopped = true
 			if code != 0 {
 				return errors.New("finite service reported failure; inspect receipts")
 			}

@@ -1,29 +1,27 @@
 # ToDo2910 再開記録
 
-対象は現在の5業務2913〜2917の実作業復帰。製品の完成と旧原192件の復旧は別条件として残す。
+最新の2026-10-19主2903の工程指示に従い、現在継承先2839/2850/2913〜2917の7業務を同じ業務の完了または本人停止まで継続する。5件だけ継続しAO/13aを旧復旧期限で止める旧記録は訂正する。原資格1626/2407/旧動画2475と原資源の10/21期限、旧192件の未復旧は維持する。
 
-2026-10-19の再割当先は `scheduler/todo-2910-godd`。旧作業場所とPR235の成果は保持し、同じ2910で引き継ぐ。別担当のGo/Rust/配布を巻き戻さない。
+## 受領と現在の修正
 
-## 受領した事実
+- 再割当先は `scheduler/todo-2910-godd`。実jobは環境変数CC_JOB_IDと通常ToDoを照合する。Native UUIDや旧jobを現在jobとして結合しない。
+- 実GitHub所有者AutoDevJapan、repository ID 1406818713をAPIで再確認。既存PR235を引き継ぐ。旧head `8107c0574cc6915d0d55eb941b2c431540552889` は5件版であり、7件版としてmerge/配布しない。
+- 旧headの正式CI14成功/1neutralは旧版の証跡だけ。原2924のSonnet5.5/11steps/Must0と、同2924の通常補完job `20261019-133054-todo-2924` のSonnet5.5/6steps/exit0/Must0/S2/N1を受領。補完は試験差分251行/7hunkと影響実装を読了し、未読の変更行0。原応答SHAは082850F5B33F937D5257C3113DE4A292D20286C203EAE2B6AFFF5D89D114CB6EとF25DE98ACFBA990DF16C7538ECACACA2C5DE2364F52A3DDDD64888FF7AF4E942。新7件版へ流用しない。
+- 旧PRの8107と並行main `ced27d8` を通常mergeでこのbranchへ統合。PR234の既存CI資源分類、PR236の動画分類を保持。main_windows.go/他Go分岐/Rustには今回の編集を加えない。
+- current_windows.goのAO/13aに同じongoing属性を設定。固定7件の同repo/実ID/root/spec/本文SHA、実deny、status=todo/doing/waitかつdispatchable=true、正規子の親doing/waitと物理Git照合を維持する。
+- 7件の現在受領/pathの期限前後・停止/完了/無効化・別root/spec/SHAと、7件の正規子のonline/offline拒否を検査する。原資格のAPIが期限後に原記録読取前でscope_expiredを返すことも確認する。
+- AO2839/13a2850は正式資格APIが成功し、同じ固定specの実SHAも宣言値と一致した。固定specと元担当は編集・置換していない。新しい製品actorは作らない。
+- Rust受取の根拠は `cc-scheduler/src/current_succession.rs::verify_current_product`。全fieldとroot/specパス/本文の3fingerprint、正式guardのpath判定を照合し、別の絶対期限は参照しない。Rustの実装は変えない。
+- 必読指定の原資料は正式guardがclassification_unverified/client_resource=trueを返したため本文未読。今回チャットの具体的最新指示と参照可能な既存source/docsで独立工程を続行し、保護設定や旧原本を書き換えない。
 
-- 実GitHub所有者AutoDevJapan、repository ID 1406818713をAPIで再確認した。
-- PR235はhead `8107c0574cc6915d0d55eb941b2c431540552889`、元base `b62aa042f2f5b7b98fc652124d314df8182e57dc`。全14成功/1neutralを2026-10-19 13:25 JSTに確認。再実行していない。
-- 原レビュー2924の正規CLI結果はSonnet5.5、11steps、exit0、Must0/Suggestion2/Nit2。原応答SHA256は `082850F5B33F937D5257C3113DE4A292D20286C203EAE2B6AFFF5D89D114CB6E`。試験差分末尾を未読と明記しているため、同じ2924を不足範囲だけの指示へ更新して通常再開する。別の製品actorは作らない。
-- 同2924のspecを正式更新して原spec_historyを保持。正規の再確認待機を解除後、通常schedulerが補完job `20261019-133054-todo-2924` を受け付けた。13:34 JSTの正規statusはqueued/steps0/started_atなし、理由はchild_priority。実レビューへ加算しない。元jobを直接再起動せず、同じレビュー票の通常受付を維持する。
-- 原レビューのSuggestion1について、Rustの `cc-scheduler/src/current_succession.rs::verify_current_product` を親が読了。正式guardの資格、全識別field、root/spec path/本文の3fingerprintとpath判定を照合し、独自の絶対期限は参照していない。任意の改善だけで8107を変更しない。
-- 正式guardは別担当のPR234を含むsource `5411cac009326b69bc725fc7ff6e7163b64297ff`、trimpath/modified=false、実SHA256 `0B24C92204DB1C26AD56EB8EE12E4E105F92D425BF0A7063A0F0A524FA268E5E` を観測。現branchを最新main `1123681cae4da1a1c01f718563ed4fa656203cba` へfast-forwardした。
-- 必読指定の原資料と旧進捗票は正式guardがclassification_unverified/client_resource=trueを返したため本文未読。今回チャットの具体的指示と参照可能な既存source/docsで独立工程を進める。保護設定や旧原本を書き換えない。
-- 元2834と主2903のnoteへ、既存本文を保持したCAS追記で上記実事実と残工程を返し、正規listで2件の追記を再確認した。受付・CI・レビュー・配布・実業務開始を区別した。
-- 正式配布用の一時フォルダはsafe-delete所有ID `248beccb10819befd144b65690437512`。固定対象、candidate/現版SHAのCAS、backup付きFile.Replace、配布後hash検証を行うCC-AdminBroker用の使い捨て手順を準備済み。候補buildと配布は未実行。再開後のmain/source/現版を再取得してmanifestを作り、この段階の観測SHAを無条件に使わない。
+## 残る工程
 
-## 次の工程
+1. 7件版の関連Go検査を完了し、固定headの全影響差分・新しい正規子の試験を別モデルで読了させ、Mustを解消する。不変更試験全体の無制限通読は条件にしない。
+2. 同じ最終headの正式CIを確認し、既存PR235を固定HEADで通常mergeする。
+3. 最新mainを同じ2910へ取り込み、レビュー済みcurrentファイルの一致と並行変更保持を照合。結合sourceが変わった影響範囲だけ関連Go検査を選ぶ。
+4. 最新mainのcleanなsourceから正式guardのみをtrimpath build。実source revision/module tree/候補SHAを記録。CC-AdminBrokerで現SHAをCAS比較し、backup付きFile.Replaceと配布後hashを検証する。現版の観測値は配布直前に取得し直す。
+5. 正式実行物で現在7資格の全field/3fingerprint、rootと予定/実worktree、旧actor拒否を照合する。AO/13aは元担当と未完了条件を保持する。
+6. 通常schedulerの同2913〜2917が実job/専用worktree/実コマンド/変更または監査成果/検査まで進むことを確認。登録・API・queued/steps0を実再開へ加算しない。
+7. 元2834と主2903へ実事実を返し、5件の実作業復帰後に2910を完了。製品完成は各現在ToDoへ保持する。
 
-1. 同2924の未読変更行の補完を正規schedulerで受領し、原応答/固定head/実モデル/範囲を記録。実害のMustだけを解消する。
-2. 固定8107と正式CIの成功を再照合し、PR235を通常mergeする。
-3. 最新mainを同2910のbranchへ統合。現在ファイルとレビュー済みblobの一致、他担当の変更保持を照合する。結合sourceが変わった範囲だけ関連Go検査を実行する。
-4. 最新mainのcleanなsourceから正式guardをtrimpath build。CC-AdminBrokerで現SHAをCAS比較し、backup付き原子的更新。source revision/module tree/実SHAを残す。
-5. 正式実行物で5件の現在資格全field/3fingerprint、rootと正規worktree/実worktree、旧actor拒否を確認。
-6. 通常schedulerの同5件が実job/専用worktree/実コマンド/変更または監査成果/検査まで進むことを確認。queued/steps0を実再開に加算しない。
-7. 元2834と主2903へ実事実を返し、5件の実作業復帰後に2910を完了する。製品全体の未完条件は各ToDoへ保持。
-
-再開時はこのworktreeの `todo2910-resume.private.json` と同2924の通常CLI結果を照合する。branchを変えた場合は終了・待機前にschedulerのcheckpoint-workspaceで実HEADを保存する。ほかToDoだけの待機は `todo wait 2910 --on 2924` を使う。
+詳細はこのworktreeの `todo2910-resume.private.json`。safe-delete所有ID `248beccb10819befd144b65690437512` の一時フォルダに旧レビューCLI結果と未実行の配布用手順を保持する。必要な証拠をworktreeへ保存してから不要物を通常回収する。branch変更後は終了・待機前にcheckpoint-workspaceで実HEADを保存。ほかToDoだけを待つ場合は `todo wait 2910 --on <実依存番号>` を記録する。

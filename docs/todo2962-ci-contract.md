@@ -47,6 +47,11 @@ helperは登録前・hook開始/終了時・終了後に同じ固定planを再�
 `VerifyAssigned(ctx,p,uniqueRunnerName,read)` でmatrix共有のjob名と実job IDを区別し、
 `RequireSuccess` で正式successを確認する。CodeQL生成eventは公表されたworkflow refを
 捏造せず `workflow_ref`/`workflow_digest` を空、`workflow_sha` をsource HEADにする。
+生成PRの `context_sha` は実SDKで観測したHEADまたは正規APIの現在のmerge SHAだけを
+受け付ける。mainはHEADだけとする。実SDK値を未観測のまま成功や確定値と記録しない。
+RESTのrun pathはbare pathと検証済みの `path@ref` の両形式を受け付ける。
+current sourceが進んだ/閉じた後の回収は、freshnessを要求するVerifyから分離し、
+`ObserveJob` の固定job identityと固有登録/所有namespaceの後条件で実行する。
 PRのhead checkoutとmerge contextを混同しない。fork・古いsource・別run/jobを拒否する。
 workflow変更を含む将来イベントはレビュー済みtemplateと一致しなければ実行せず理由を残す。
 

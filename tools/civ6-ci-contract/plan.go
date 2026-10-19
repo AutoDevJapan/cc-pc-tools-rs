@@ -85,7 +85,7 @@ func (p Plan) Validate() error {
 			return errors.New("dispatch must name current main or a same-repository PR")
 		}
 	case "dynamic":
-		if p.Workflow != CodeQLWorkflow || p.ContextSHA != p.Head || p.WorkflowDigest != "" || p.WorkflowRef != "" || p.WorkflowSHA != p.Head {
+		if p.Workflow != CodeQLWorkflow || (p.PR == 0 && p.ContextSHA != p.Head) || p.WorkflowDigest != "" || p.WorkflowRef != "" || p.WorkflowSHA != p.Head {
 			return errors.New("generated CodeQL context rejected")
 		}
 	default:
@@ -113,6 +113,22 @@ func (p Plan) Validate() error {
 		}
 	}
 	return nil
+}
+
+// MatchRunPath accepts the REST API's bare path and documented path@ref forms.
+// It never drops an unvalidated suffix or confuses another workflow/ref.
+func MatchRunPath(p Plan, path string) bool {
+	if path == p.Workflow {
+		return true
+	}
+	if p.Event == "dynamic" {
+		return false
+	}
+	workflow, ref, found := strings.Cut(path, "@")
+	if !found || workflow != p.Workflow {
+		return false
+	}
+	return ref == p.Ref() || (p.Event != "pull_request" && ref == p.Branch)
 }
 func (p Plan) Ref() string {
 	if p.Event == "pull_request" {

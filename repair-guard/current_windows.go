@@ -39,6 +39,11 @@ type currentProduct struct {
 var currentProducts = []currentProduct{
 	{project: "GoDD-AO", root: currentAORoot, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: currentAOSpec, specSHA: currentAOSpecSHA},
 	{project: "GoDD-13a13e1", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1", owner: "AutoDevJapan", repository: "autodevjapan/godd-13a13e1", repositoryID: 1283948432, task: 2850, spec: "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md", specSHA: "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95"},
+	{project: "GoDD-Agent", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Agent", owner: "AutoDevJapan", repository: "autodevjapan/godd-agent", repositoryID: 1296644614, task: 2913, spec: "D:/CC/Tools/todo/specs/2913-94a82f05aee64756ab94862a237eaaca.md", specSHA: "e8041084be05e71dc8e4259411ca69d5db2081e5f55e2697f8582667024965ee"},
+	{project: "GoDD-Creators", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Creators", owner: "AutoDevJapan", repository: "autodevjapan/godd-creators", repositoryID: 1299522585, task: 2914, spec: "D:/CC/Tools/todo/specs/2914-4a4d22f646534e9cb179a9eda44deecd.md", specSHA: "ca04fbde8dea92e55367467a99b812143daa4e1b0e1a816f5403b95d9d34c47f"},
+	{project: "GoDD-Rosetta", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Rosetta", owner: "AutoDevJapan", repository: "autodevjapan/godd-rosetta", repositoryID: 1397020302, task: 2915, spec: "D:/CC/Tools/todo/specs/2915-a3a82497d0444858a2ef2a9df9a9576b.md", specSHA: "0e589052caa013b3b485f604e15cfc5c49756264e0641724dc1fd29e367eca99"},
+	{project: "GoDD-Genesis", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Genesis", owner: "AutoDevJapan", repository: "autodevjapan/godd-genesis", repositoryID: 1199265386, task: 2916, spec: "D:/CC/Tools/todo/specs/2916-fc6f12b9ef884884ac4d38cf37f3cae9.md", specSHA: "96ed3bf6208501f789969dba99f0b3ab3caad8eb2303a5b6af47aa2a80912616"},
+	{project: "GoDD-VirtualStreamer", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-VirtualStreamer", owner: "AutoDevJapan", repository: "autodevjapan/godd-virtualstreamer", repositoryID: 1305037899, task: 2917, spec: "D:/CC/Tools/todo/specs/2917-becb7cab9b014847bdc1be2db894a785.md", specSHA: "c59c51fd192c78df1a38913bb146a034b798473a15171dc895baf25e965ec7cb"},
 }
 
 func currentProductQualification(product currentProduct) bool {
@@ -160,7 +165,10 @@ func currentPathHash(path string) (string, bool) {
 	return hashBytes([]byte(strings.ToLower(canonical))), true
 }
 
-func currentProductsScopePathAllowed(path string, products []currentProduct, qualifies func(currentProduct) bool, protected func(string) bool) bool {
+func currentProductsScopePathAllowed(path string, products []currentProduct, at time.Time, qualifies func(currentProduct) bool, protected func(string) bool) bool {
+	if !finiteProductScope(at) {
+		return false
+	}
 	for _, product := range products {
 		if !within(product.root, path) && !within(product.root+"-wt", path) {
 			continue
@@ -518,5 +526,5 @@ func currentScopePathAllowed(path string) bool {
 	}
 	// Only an exact current product/actor declaration qualifies. Existing
 	// denials remain authoritative; no lost original row is restored.
-	return currentProductsScopePathAllowed(path, currentProducts, currentProductQualification, legacyMatch) || currentSubworkScopePathAllowed(path)
+	return currentProductsScopePathAllowed(path, currentProducts, time.Now(), currentProductQualification, legacyMatch) || currentSubworkScopePathAllowed(path)
 }

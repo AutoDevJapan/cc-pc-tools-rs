@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
 func civ6Config() *Civ6QueueConfig {
-	return &Civ6QueueConfig{Exe: "D:/CC/Tools/civ6-ci-queue/civ6-ci-queue.exe", SHA256: strings.Repeat("a", 64), Config: "D:/CC/Tools/civ6-ci-queue/queue-config.json"}
+	// Absolute on every platform the tests run on.
+	base := filepath.ToSlash(filepath.Join(os.TempDir(), "civ6-ci-queue"))
+	return &Civ6QueueConfig{Exe: base + "/civ6-ci-queue.exe", SHA256: strings.Repeat("a", 64), Config: base + "/queue-config.json"}
 }
 
 func TestCiv6QueueIsOffWithoutDeployedConfiguration(t *testing.T) {
@@ -44,7 +48,7 @@ func TestCiv6QueueRunsOnlyTheFixedPinnedCommand(t *testing.T) {
 	}
 	h := Health{Errors: []string{}}
 	r.civ6CIQueue(context.Background(), &h)
-	want := []string{"D:/CC/Tools/civ6-ci-queue/civ6-ci-queue.exe", "tick", "--config", "D:/CC/Tools/civ6-ci-queue/queue-config.json"}
+	want := []string{r.Config.Civ6Queue.Exe, "tick", "--config", r.Config.Civ6Queue.Config}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("%v", got)
 	}

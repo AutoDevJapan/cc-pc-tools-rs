@@ -38,7 +38,9 @@ git --git-dir=<3023/upstream/.git> --work-tree=<3029/source/codex-rs> diff --no-
 ```
 
 終了0・差分なし。公式tag objectとtagの指すcommitも3029 checkoutで一致した。
-本worktreeの `tools/codex-progress-tui` は固定source commitから変更されていなかった。
+本worktreeのpatchとsource.jsonは固定source commitと一致した。
+launcherとactivationには親3021側の変更が開始時のmerge commitに含まれる。
+今回の2コミットは報告だけであり、その既存変更は編集していない。
 
 ## npm tarballの記録不備
 

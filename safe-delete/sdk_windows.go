@@ -59,6 +59,17 @@ func sdkFinalPath(path string) (string, error) {
 	return syscall.UTF16ToString(buf[:n]), nil
 }
 
+func sdkResolvesTo(path, target string) bool {
+	if _, err := checked(target); err != nil {
+		return false
+	}
+	final, err := sdkFinalPath(path)
+	want, targetErr := sdkFinalPath(target)
+	// Compare OS-resolved spellings on both sides: a service TEMP may contain
+	// 8.3 directory names even though the handle returns expanded names.
+	return err == nil && targetErr == nil && same(final, want)
+}
+
 func init() {
 	reasons["sdk-links"] = "所有確認済みの3個のSDK検査データだけを対象に、rustupの相対リンクと全内容を保存して退避する。汎用のリンク保護による道具内の拒否であり、実行審査の拒否ではない。"
 }
@@ -210,12 +221,8 @@ func sdkLink(path string, raw []byte) (string, error) {
 	if err != nil || target != "rustup.exe" {
 		return "", fail("SDK_LINK_TARGET_MISMATCH")
 	}
-	final, err := sdkFinalPath(path)
-	if err != nil || !sdkTargetSame(final, filepath.Join(filepath.Dir(path), "rustup.exe")) {
+	if !sdkResolvesTo(path, filepath.Join(filepath.Dir(path), "rustup.exe")) {
 		return "", fail("SDK_LINK_TARGET_MISMATCH")
-	}
-	if _, err = checked(final); err != nil {
-		return "", err
 	}
 	return target, nil
 }
@@ -286,8 +293,7 @@ func (s *sdkScope) snapshot(root string) (map[string]geminiEntry, error) {
 					return fail("SDK_CACHE_JUNCTION_MISMATCH")
 				}
 				if same(root, s.source) {
-					final, e := sdkFinalPath(path)
-					if e != nil || !sdkTargetSame(final, mapped) {
+					if !sdkResolvesTo(path, mapped) {
 						return fail("SDK_CACHE_JUNCTION_MISMATCH")
 					}
 				} else if exists(s.source) {

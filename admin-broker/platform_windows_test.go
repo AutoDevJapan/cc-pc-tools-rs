@@ -14,6 +14,45 @@ import (
 	"unsafe"
 )
 
+type setupExpiry struct {
+	context.Context
+	calls int
+	done  chan struct{}
+}
+
+func (c *setupExpiry) Done() <-chan struct{} { return c.done }
+func (c *setupExpiry) Err() error {
+	c.calls++
+	if c.calls == 2 {
+		close(c.done)
+	}
+	if c.calls >= 2 {
+		return context.DeadlineExceeded
+	}
+	return nil
+}
+
+func TestDeadlineExpiringDuringSetupDoesNotStartProcess(t *testing.T) {
+	dir := t.TempDir()
+	marker := filepath.Join(dir, "must-not-run")
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := &setupExpiry{Context: context.Background(), done: make(chan struct{})}
+	r := runProcess(ctx, exe, []string{"-test.run=TestJobProcess", "--", "--admin-broker-fixture", "child", marker}, dir)
+	if r.Exit != 124 || !r.TimedOut || r.CleanupPending {
+		t.Fatalf("setup deadline result: %+v", r)
+	}
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatal("process started after setup consumed request deadline", err)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("expired setup leaked output files", err)
+	}
+}
+
 func TestWindowsJobStructureSizes(t *testing.T) {
 	if unsafe.Sizeof(uintptr(0)) == 8 && (unsafe.Sizeof(jobLimits{}) != 144 || unsafe.Sizeof(jobAccounting{}) != 48 || unsafe.Sizeof(startupInfoEx{}) != 112) {
 		t.Fatal("Win64 structure layout mismatch")

@@ -20,11 +20,12 @@ const installedRoot = `D:\CC\Tools\admin-broker`
 const requestLimit = 10 * time.Minute
 
 type result struct {
-	Exit      int    `json:"exit"`
-	Stdout    string `json:"stdout"`
-	Stderr    string `json:"stderr"`
-	TimedOut  bool   `json:"timed_out,omitempty"`
-	Truncated bool   `json:"truncated,omitempty"`
+	Exit           int    `json:"exit"`
+	Stdout         string `json:"stdout"`
+	Stderr         string `json:"stderr"`
+	TimedOut       bool   `json:"timed_out,omitempty"`
+	Truncated      bool   `json:"truncated,omitempty"`
+	CleanupPending bool   `json:"cleanup_pending,omitempty"`
 }
 
 type requestMeta struct {
@@ -123,19 +124,37 @@ func (b broker) recoverClaims() error {
 	if err != nil {
 		return err
 	}
+	pending := false
 	for _, entry := range entries {
 		if entry.IsDir() || !requestName(entry.Name()) {
 			continue
 		}
-		if _, err := os.Stat(b.path("results", strings.TrimSuffix(entry.Name(), ".ps1")+".json")); err == nil {
+		path := b.path("results", strings.TrimSuffix(entry.Name(), ".ps1")+".json")
+		if data, err := readFile(path); err == nil {
+			var r result
+			if json.Unmarshal(data, &r) != nil {
+				return errors.New("claimed request result is invalid; retained for recovery")
+			}
+			if r.CleanupPending {
+				pending = true
+				continue
+			}
 			if err := b.archive(entry.Name()); err != nil {
 				return err
 			}
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
-		} else if err := b.finish(entry.Name(), result{Exit: 125, Stderr: "broker interrupted; request was not replayed"}); err != nil {
-			return err
+		} else {
+			// A broker crash closes its owned Job, but that alone is not proof
+			// that all descendants have signaled. Preserve this claim as unfinished.
+			if err := writeJSON(path, result{Exit: 125, CleanupPending: true, Stderr: "broker interrupted; request was not replayed; cleanup requires verification"}); err != nil {
+				return err
+			}
+			pending = true
 		}
+	}
+	if pending {
+		return errors.New("request cleanup is unverified; running claims retained for recovery")
 	}
 	return nil
 }
@@ -181,6 +200,12 @@ func (b broker) process(ctx context.Context, name string) error {
 	runCtx, cancel := context.WithDeadline(ctx, deadline)
 	r := b.run(runCtx, path)
 	cancel()
+	if r.CleanupPending {
+		if err := writeJSON(b.path("results", id+".json"), r); err != nil {
+			return err
+		}
+		return errors.New("request cleanup is unverified; claim retained for recovery")
+	}
 	return b.finish(name, r)
 }
 

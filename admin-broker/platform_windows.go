@@ -214,7 +214,9 @@ func runProcess(ctx context.Context, exe string, args []string, dir string) (r r
 	defer func() {
 		for _, f := range files {
 			f.Close()
-			os.Remove(f.Name())
+			if !r.CleanupPending {
+				os.Remove(f.Name())
+			}
 		}
 	}()
 	for range 2 {
@@ -303,6 +305,10 @@ func runProcess(ctx context.Context, exe string, args []string, dir string) (r r
 		return r
 	}
 	var process syscall.ProcessInformation
+	// Setup may consume the last of a queued request's remaining budget.
+	if ctx.Err() != nil {
+		return result{Exit: 124, TimedOut: true, Stderr: "request deadline reached before process creation"}
+	}
 	err = syscall.CreateProcess(app, line, nil, nil, true, createNoWindow|0x80000, nil, cwd, &si.StartupInfo, &process)
 	runtime.KeepAlive(storage)
 	runtime.KeepAlive(handles)
@@ -354,6 +360,7 @@ func runProcess(ctx context.Context, exe string, args []string, dir string) (r r
 	// Each request owns this entire tree, never any unrelated live process.
 	if err := drainJob(job, process.Process); err != nil {
 		r.Exit = 125
+		r.CleanupPending = true
 		reason = "request process cleanup failed"
 	}
 	outputs := []*string{&r.Stdout, &r.Stderr}

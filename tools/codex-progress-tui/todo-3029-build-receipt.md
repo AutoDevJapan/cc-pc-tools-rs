@@ -34,8 +34,12 @@ All paths below are relative to `tools/codex-progress-tui/`.
   **Mismatch.** The binary is version 0.163.0 and was built from the pinned tag
   plus the recorded patch and commit stamp, but this build did not reproduce
   the previously tested byte hash. The first attempt omitted the commit stamp;
-  the final build supplied it, but the remaining byte-level cause is unknown.
-  No hash has been substituted or claimed as the tested hash.
+  the final build supplied it, but the remaining byte-level cause is not
+  proven. `llvm-readobj` reports different PE COFF `TimeDateStamp` values for
+  the two local builds (`2026-10-19 19:03:34` and `2026-10-19 19:09:26` UTC),
+  so build-time variation can affect the byte hash; whether it fully explains
+  the difference from the prior tested hash is unknown. No hash has been
+  substituted or claimed as the tested hash.
 - First, unstamped build retained separately as
   `.ci-work/todo3029/delivery/codex-build-unverified-ed0a81d0.exe` (SHA256
   `ed0a81d0c137105a0913bdc3b210e8e0f09684ac130743ba65652aa319886cd8`). It is

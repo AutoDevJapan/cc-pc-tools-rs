@@ -61,6 +61,16 @@ func (f *fixture) call(ctx context.Context, method, path string, input, out any)
 		if len(entries) != 3 {
 			return errors.New("wrong number of blobs")
 		}
+		for _, entry := range entries {
+			b, _ := json.Marshal(entry)
+			var wire map[string]any
+			if json.Unmarshal(b, &wire) != nil || wire["content"] == "" {
+				return errors.New("workflow content missing from mutation")
+			}
+			if _, both := wire["sha"]; both {
+				return errors.New("GitHub tree entry must not send both content and sha")
+			}
+		}
 		old := f.data[apiPrefix+"/git/trees/"+contract.OriginalTree+"?recursive=1"].(tree)
 		n := tree{SHA: strings.Repeat("a", 40)}
 		n.Entries = append([]treeEntry(nil), old.Entries...)

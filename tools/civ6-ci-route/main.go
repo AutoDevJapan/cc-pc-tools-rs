@@ -42,7 +42,7 @@ type treeEntry struct {
 	Path    string `json:"path"`
 	Mode    string `json:"mode"`
 	Type    string `json:"type"`
-	SHA     string `json:"sha"`
+	SHA     string `json:"sha,omitempty"`
 	Content string `json:"content,omitempty"`
 }
 type tree struct {

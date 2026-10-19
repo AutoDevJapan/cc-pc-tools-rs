@@ -112,8 +112,36 @@
   "owner_session_operated": false,
   "remaining": [
     "Historical tested binary unavailable at the two recorded build-output paths; byte-level mismatch not fully explained.",
-    "Candidate is stamped with STABLE_GIT_COMMIT=e557820...; historical tested build did not set STABLE_GIT_COMMIT and expands to dev. PE timestamps also vary.",
+    "Candidate explicitly sets STABLE_GIT_COMMIT=e557820...; historical test-build commands do not explicitly set it. The macro defaults to dev only if absent; historical embedded value is not proven. PE timestamps also vary.",
     "source.json npm_tarball_sha512 is malformed (127 hex characters), while actual tarball matches recorded npm integrity.",
     "Parent must resolve exact binary attestation and metadata before deployment; runtime acceptance alone does not satisfy recorded tested hash."
-  ]
+  ],
+  "ci": {
+    "windows": "SUCCESS",
+    "state": "MERGED",
+    "codeql_javascript": "SUCCESS",
+    "codeql_go": "SUCCESS",
+    "head": "7c1fe857547eb7e6850361752a26d9dfe868528e",
+    "codeql_rust": "SUCCESS",
+    "cursor_bugbot": "NEUTRAL",
+    "pr": 255,
+    "codeql_actions": "SUCCESS",
+    "merge": "842e513191c2ced4364f8382b3a8f9654d01f9d3",
+    "codeql": "SUCCESS"
+  },
+  "candidate_pe_timestamp_hex": "6ad66ae6",
+  "candidate_pe_timestamp_utc": "2026-10-19T19:09:26Z",
+  "cleanup": {
+    "plan": "PROTECTED_PATH",
+    "empty_unused_temp_state": "source_absent_confirmed_by_finish",
+    "followup_todo": 3031,
+    "remaining_owned_candidate_processes": 0,
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3030-codex-0-163-0-tui\\codex-owned-086b516b0bfe0b0aeb5872099a2f5ce6",
+    "original_3029_artifacts_retained": true,
+    "quarantine": "PROTECTED_PATH",
+    "followup_waits_for": 3030,
+    "empty_unused_temp_id": "6cbedafa4c9d73d9e8e1b9204c0d3a78",
+    "safe_delete_id": "086b516b0bfe0b0aeb5872099a2f5ce6",
+    "cause": "synthetic test .git directories are protected by the helper"
+  }
 }

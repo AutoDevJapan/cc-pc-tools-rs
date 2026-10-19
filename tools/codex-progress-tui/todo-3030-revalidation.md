@@ -125,7 +125,8 @@ collectorは既存の読取専用経路を使い、状態の部分取得を成�
 
 さらに、過去のitem_149/item_166のコマンドにはSTABLE_GIT_COMMIT指定がなく、
 3029最終ビルドには `e557820...` の指定がある。公式 `build-info/src/lib.rs` の
-macroは未指定時に `dev` を埋め込むため、同じソースでもビルド入力が異なる。
+macroは環境変数が未指定なら `dev` を埋め込む。コマンドの明示指定に差があるが、
+過去の親環境と実行物に埋め込まれた値は未確認なので、その差を断定しない。
 絶対パスなど他の入力差の寄与は未確定である。
 過去の記録にある `upstream/target/release/codex.exe` と
 `upstream/codex-rs/target/release/codex.exe` はどちらも現存しない。
@@ -143,3 +144,12 @@ macroは未指定時に `dev` を埋め込むため、同じソースでもビ�
 今回の変更はこの報告と `todo-3030-revalidation.json` だけ。
 patch・source.json・launcher・manifest・collector・配備先は不変。
 自分の検査用プロセスが0件であることを確認し、保持対象3029の成果物は片付けていない。
+
+## 検査用一時領域の記録
+
+自分の一時領域はsafe-delete所有ID 086b516b0bfe0b0aeb5872099a2f5ce6。
+planと指定quarantineは、検査用に自分で作った空のGit領域をPROTECTED_PATHとして拒否した。
+補助ツール自身の拒否であり、自動承認審査の拒否ではない。別経路で削除・移動していない。
+端末の原出力と使い捨てハーネスを保持し、有限な後片付けをToDo3031へ登録した。
+同件は3030終了後だけ再開する待機を記録した。親3021の配備検証をその清掃待ちにはしない。
+最初に作った未使用の空Temp領域はplanの通常削除後、finishで不在確認済み。

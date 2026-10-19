@@ -72,3 +72,15 @@
 
 次: 3016を受領してMust解消を確認後、PR branchを75edee9へ非force更新して最新必要CIを1回開始する。取消途中の旧jobは固定run IDで終端を確認する。shared checkpointとprivate runtimeを更新。CI通過後だけ通常mergeし、同一最終sourceの結果を再利用する。初回SIGBUSの原因と容量・回収量、実行回数/課金増分の検証は未完了。
 - 追補: 旧local runのjobsとPRのcheck rollupを別々に正規取得し、rust-core completed/cancelled、local-gates completed/failure、他5job successを確認。重い旧実行の終了を確認済み。取消された未適合候補をmergeしない。個別run GETのTLS失敗だけを全API不通や権限拒否とは扱わない。
+
+## 2026-10-19 23時台 最終候補の正式CIを開始
+
+- 再開指示のitem_1/item_8/item_5は保存eventsで完了を照合。既済のbranch更新・CI開始・レビュー受領を再送していない。
+- review3016は固定75edee9の4ファイル全文を読んでMust0。実job20261019-225948-todo-3016と該当threadのturn_contextはSonnet5.5一致。原応答SHA256 BFFDE6A3C686803C622243DFC2F448CA43CA84ED2CE1AC73129CBEC9AF1F026B。実testなし、selector未読は元2991で確認済みかつ以後不変として区別。
+- 3016のSuggestion1/2とhyphen fixture Nitを提案どおり適用。probeは共通shellを継承しpipefailの実効値を確認。空manifestは削除前に拒否。ハイフンのmanifest→underscore実行物→削除の経路も実fixtureで確認。Windows局所Rust3検査/fmt/actionlint成功。実Git Bashでdefault無しはexit1/default有りはexit0となり、negative後続無し・positive後続有りも確認。
+- これら提案の適用をcommit a1dcdfe3348ae0ebf85ea7e47932529ed86f4286/tree108a6987dbe0ed8af9a35f19d8e00930cf582001に保存し、PR176のbranchを非force更新。refとPR実HEADの読戻し一致。mainは4dc5c332のまま。最新版payloadはdocs/todo2987-reviewed-patch.private.json、candidate receiptはdocs/todo2987-reviewed-candidate.private.json。
+- 最新必要CIはbranch更新により1回だけ開始。local39267691574/CodeQL39267691152/Windows fixture39267695963/V2両OS39267691182/Windows Chrome39267691220。手動rerunしていない。local scopeの選択6/回収4とBash probeは正式成功。直近観測は本体Clippy実行中、signing test実行中、bridge/browser/coldは成功。全件成功・merge・料金減は未確定。
+- PC担当3002の待ち先3005は、原応答が固定60ab2b5cの9資料を読了・Must0で実job succeededのまま、完了行へ括弧を付けたため再開が11回以上記録されていた。親が実job20261019-231444-todo-3005とturn_contextのSonnet5.5一致・原応答を照合し、元review3005のみdoneで受領。原応答SHA256 1686060E85D7BEFFD676E6FF7F87136B31DA951632835C01365DEB77BA15A82D。PC正式受入の完了には拡大しない。
+- 3002のwaitが解除されtodoへ戻ったことを実確認。review結果と元の実装許可・書込分離をspec/ノートへ配送。追加の同じ読取は作らず、残る供給/実job/成果物hash/終了回収へ戻す。境界/保護/本人のWindows優先/新費用禁止は保持。競合する最後の再読job232040も既にsucceededで、無関係なprocessを止めていない。
+
+次: 固定a1dcdfe3の5runを照合。特に既失敗の統合3/4、その後の各回収byte/空き容量、残る3分割、後続Chrome/証跡保存を確認する。実害のある失敗を直し、全必要checkと最新main/source一致を確認して通常merge。merge前のPRレビュー記録へ採用/非採用理由を1回まとめる。PC3002と効果測定は未完了で、元2957と継続記録を保つ。自己起動の重Cargo/GPU/新費用/公開/原資料削除は無し。

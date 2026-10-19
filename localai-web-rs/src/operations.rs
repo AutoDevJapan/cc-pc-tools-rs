@@ -36,11 +36,15 @@ pub struct Operations {
 }
 impl Operations {
     pub fn production() -> Self {
+        Self::new("D:/CC/Tools".into(), "D:/CC/Skills".into())
+    }
+    /// Use one record root for both the resident snapshot and its HTTP consumer.
+    pub fn new(root: PathBuf, skills_root: PathBuf) -> Self {
         Self {
-            root: "D:/CC/Tools".into(),
+            root,
             snapshot: RwLock::new(empty()),
             questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new("D:/CC/Skills".into()),
+            skills: crate::skills_inventory::Inventory::new(skills_root),
         }
     }
     pub fn snapshot(&self) -> Value {

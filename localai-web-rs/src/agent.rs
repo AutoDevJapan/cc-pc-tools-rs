@@ -4876,7 +4876,7 @@ mod tests {
                 root: root.clone(),
                 state: root.join("state"),
                 todo: root.join("todo"),
-                jobs: root.join("jobs"),
+                jobs: root.join("codex-jobs/jobs"),
                 discord: root.join("discord"),
                 tools: root.clone(),
             };
@@ -4962,6 +4962,13 @@ mod tests {
         async fn http(&self, method: Method, path: &str, body: &str) -> (StatusCode, Value) {
             let mut state = crate::AppState::new(10012, 10013);
             state.agent = self.console.clone();
+            // Model the resident's initial refresh using only this fixture's
+            // records; the production board starts empty and uses another root.
+            state.operations = Arc::new(crate::operations::Operations::new(
+                self.root.clone(),
+                self.root.join("Skills"),
+            ));
+            state.operations.refresh();
             let req = Request::builder()
                 .method(method)
                 .uri(format!("/api/agent/{path}"))

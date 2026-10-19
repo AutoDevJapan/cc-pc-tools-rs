@@ -35,6 +35,9 @@ func processingJob(j *Job, now time.Time) bool {
 // The existing gate publishes exact process identities for waiting and active
 // siblings. A waiting gate is not work, but an active sibling still is.
 func processingResources(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) bool {
+	if queuedResource(ctx, opts, id, now, probe) {
+		return false
+	}
 	dir := filepath.Join(opts.JobsDir, id, "resource-waits")
 	info, err := os.Lstat(dir)
 	if os.IsNotExist(err) {
@@ -96,6 +99,51 @@ func processingResources(ctx context.Context, opts Options, id string, now time.
 		}
 	}
 	return !waiting || active
+}
+
+// live_chain publishes a separate queue with the same exact PID identity.
+// Never infer the resource state from the private command or message text.
+func queuedResource(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) bool {
+	if opts.ResourceQueueDir == "" {
+		return false
+	}
+	info, err := os.Lstat(opts.ResourceQueueDir)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return true
+	}
+	f, err := os.Open(opts.ResourceQueueDir)
+	if err != nil {
+		return true
+	}
+	defer f.Close()
+	entries, err := f.ReadDir(129)
+	if (err != nil && err != io.EOF) || len(entries) > 128 {
+		return true
+	}
+	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return true
+		}
+		var marker struct {
+			Job     string  `json:"job"`
+			PID     uint32  `json:"pid"`
+			Created *uint64 `json:"pid_created_filetime"`
+		}
+		if readProjection(filepath.Join(opts.ResourceQueueDir, entry.Name()), 8192, &marker, now, opts.StaleAfter).Status != "ok" {
+			return true
+		}
+		if marker.Job != id {
+			continue
+		}
+		state := presence(marker.PID, marker.Created, probe)
+		if state != "absent" && state != "identity_mismatch" {
+			return true
+		}
+	}
+	return false
 }
 
 func processingTask(item todoItem, items map[int64]todoItem, now time.Time, stale time.Duration) bool {

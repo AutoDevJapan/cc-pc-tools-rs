@@ -46,6 +46,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.PriorityFile, "priority-file", opts.PriorityFile, "optional recorded priority policy")
 	flags.BoolVar(&opts.IncludeDone, "include-done", false, "include finished ToDos")
 	flags.BoolVar(&opts.ActiveOnly, "active-only", false, "only verified workers with recent processing evidence")
+	flags.StringVar(&opts.ResourceQueueDir, "resource-queue", opts.ResourceQueueDir, "existing live-chain resource queue; empty disables")
 	flags.Var(taskFilter(opts.TaskIDs), "task", "numeric task ID, repeatable")
 	flags.IntVar(&opts.MaxRows, "max-rows", opts.MaxRows, "maximum rows per list")
 	flags.IntVar(&opts.MaxJobs, "max-jobs", opts.MaxJobs, "maximum directory entries")
@@ -150,7 +151,10 @@ func safeOutput(path string, opts Options) bool {
 			}
 		}
 	}
-	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, opts.ResourceQueueDir, defaults.ResourceQueueDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+		if root == "" {
+			continue
+		}
 		resolved, err := canonical(root)
 		if err != nil || inside(out, resolved) {
 			return false

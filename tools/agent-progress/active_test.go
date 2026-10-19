@@ -139,3 +139,33 @@ func TestProcessingResourcesUsesLiveIdentitiesAndWholeFlight(t *testing.T) {
 	writeFixture(t, wait, []byte(`broken`))
 	check(false)
 }
+
+func TestProcessingResourcesExcludesLiveChainWaitWithoutUsingNames(t *testing.T) {
+	f := fixtureFor(t, `{"items":[]}`)
+	if err := os.MkdirAll(f.opts.ResourceQueueDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(f.opts.ResourceQueueDir, "queue.json")
+	if safeOutput(path, f.opts) {
+		t.Fatal("output accepted a resource queue source")
+	}
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	for _, tc := range []struct {
+		raw  string
+		want bool
+	}{
+		{`{"job":"job","pid":1,"pid_created_filetime":10}`, false},
+		{`{"job":"job","pid":1,"pid_created_filetime":9}`, true},
+		{`{"job":"other","pid":1,"pid_created_filetime":10}`, true},
+		{`{"job":"job","pid":1}`, false},
+		{`broken`, false},
+	} {
+		writeFixture(t, path, []byte(tc.raw))
+		if processingResources(context.Background(), f.opts, "job", testNow, probe) != tc.want {
+			t.Fatal("queue identity or unknown resource evidence was misclassified")
+		}
+	}
+}

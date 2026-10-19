@@ -11,6 +11,22 @@ import (
 	"time"
 )
 
+func TestDockerExecuteForwardsOnlyTheFixedNormalMode(t *testing.T) {
+	for _, mode := range []string{"normal", "finite"} {
+		args := dockerExecuteArgs(mode, "2", "3", []string{"check", "--locked"})
+		joined := strings.Join(args, "\n")
+		if strings.Contains(joined, "CC_LINUX_RUNNER_MODE=normal") != (mode == "normal") {
+			t.Fatal("normal scratch mode lost across Cargo gate")
+		}
+		if !strings.Contains(joined, "execute\n2\n3\ncheck\n--locked") {
+			t.Fatal("admission caps or arguments changed")
+		}
+		if strings.Contains(joined, "TMPDIR=") {
+			t.Fatal("host supplied a scratch path")
+		}
+	}
+}
+
 func TestNormalRunnerContainerIsolationWhenProvisioned(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("host Docker container is only available on the Windows host")

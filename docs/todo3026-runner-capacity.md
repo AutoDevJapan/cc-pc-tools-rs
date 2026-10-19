@@ -37,6 +37,10 @@ client_resource=false。原一覧や公式runner認証ファイルは読まな�
 登録権限・ラベル・hook・Cargoゲート・tmpfsのexec/noexec・init・UID・capdrop・device・bindは不変更。
 `--once` は公式2.338.0にあるが将来廃止予告があるため、runner更新時の受入条件として明記した。
 
+CargoはWorkerとは別のDocker execで起動する。通常モードの固定識別だけを転送し、guest側で
+現在の所有sessionから同じ一時領域を解決する。hostや依頼から任意のパスは受け付けず、
+完了済みsessionや所有不一致なら実行を拒否する。有限モードの挙動は維持する。
+
 ## 確認済みの検査
 
 - Windows: bridge関連 `go test -count=1 ./...` と `go vet ./...` 成功。
@@ -56,6 +60,10 @@ client_resource=false。原一覧や公式runner認証ファイルは読まな�
 原タスク経由の配備、host/image/container照合、単一Listenerと通常GitHub job成功の受入。
 受付・実装・検査を配備済みとは扱わない。親3024は本作業の完了待ちにしない。
 OS再起動後の復帰は未検証。通常の完了通知は送らない。
+
+PR: https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/254 。読取レビューは共有ToDo3027へ
+Sonnet指定で登録済み。初回受付時点では未起動であり、実モデル・原応答・Must0は未確認。
+最初のコミット5e0ff5eとCargo経路の追加修正を区別し、レビュー対象を追加修正後の固定候補へ更新する。
 
 PCの一時所有記録: `6073da9dd984eb8c2a2356d00031843a`（safe-delete create）。
 追加検査コンテナ名: `todo3026-capacity-check`。検査工程終了時に削除する。

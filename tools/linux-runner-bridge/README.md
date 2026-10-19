@@ -98,6 +98,12 @@ process prevents cleanup and the next session. The single supervisor holds a
 nonblocking kernel lock across sessions; the host's existing recovery path
 recognizes it between listeners. No new polling task is introduced.
 
+Gated Cargo starts through a separate Docker exec and does not inherit the
+worker's environment. The host forwards only the fixed normal-mode marker; the
+guest derives the scratch path from the active owned diagnostic session and
+rejects missing, completed, or substituted sessions. No caller-supplied scratch
+path or host environment is forwarded. Finite mode keeps its original behavior.
+
 `/runner/_diag` points to a session-owned directory below the existing persistent
 `/work/bridge-diagnostics-todo3026`. Only directories bearing the bridge owner
 record and a completion marker written after drain are retention candidates.

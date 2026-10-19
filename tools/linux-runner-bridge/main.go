@@ -630,7 +630,7 @@ func gatedChild(args []string) int {
 	if os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD") != "1" {
 		switch args[0] {
 		case "metadata", "fmt":
-			c := command(docker, append([]string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerForMode(), "/opt/bridge/bridge", "execute", "1", "1"}, args...)...)
+			c := command(docker, dockerExecuteArgs(os.Getenv("CC_LINUX_RUNNER_MODE"), "1", "1", args)...)
 			c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
 			return exitCode(c.Run())
 		default:
@@ -647,14 +647,23 @@ func gatedChild(args []string) int {
 	// Only the gate's admitted caps cross the host/container boundary. No host
 	// environment, cache wrapper, path or credential is forwarded.
 	fmt.Fprintf(os.Stderr, "linux-gate-admitted build-jobs=%d test-threads=%d\n", jobs, tests)
-	a := []string{"exec", "-i", "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerForMode(), "/opt/bridge/bridge", "execute", strconv.Itoa(jobs), strconv.Itoa(tests)}
-	a = append(a, args...)
+	a := dockerExecuteArgs(os.Getenv("CC_LINUX_RUNNER_MODE"), strconv.Itoa(jobs), strconv.Itoa(tests), args)
 	c := command(docker, a...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return exitCode(c.Run())
 }
+
+func dockerExecuteArgs(mode, jobs, tests string, args []string) []string {
+	a := []string{"exec", "-i"}
+	if mode == "normal" {
+		a = append(a, "-e", "CC_LINUX_RUNNER_MODE=normal")
+	}
+	a = append(a, "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerFor(mode), "/opt/bridge/bridge", "execute", jobs, tests)
+	return append(a, args...)
+}
+
 func execute(args []string) int {
 	if len(args) < 3 {
 		return 1
@@ -671,6 +680,11 @@ func execute(args []string) int {
 	group(c)
 	c.Dir = "/work/cc-pc-tools-rs/cc-pc-tools-rs"
 	c.Env = []string{"HOME=/home/runner", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/opt/rust", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + args[0], "RUST_TEST_THREADS=" + args[1], "NEXTEST_TEST_THREADS=" + args[1]}
+	scratchEnv, err := cargoScratchEnv(os.Getenv("CC_LINUX_RUNNER_MODE"))
+	if err != nil {
+		return 1
+	}
+	c.Env = append(c.Env, scratchEnv...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if c.Start() != nil {

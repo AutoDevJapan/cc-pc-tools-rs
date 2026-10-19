@@ -195,3 +195,24 @@ func TestRetentionRejectsLinksWithoutTouchingTargets(t *testing.T) {
 		t.Fatal("external target changed")
 	}
 }
+
+func TestGatedCargoResolvesOnlyTheActiveOwnedSession(t *testing.T) {
+	root, tmp, runner := cycleFixture(t, "")
+	cycle, scratch, err := prepareCycle(root, tmp, runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := activeCycleScratch(root, tmp, runner)
+	if err != nil || resolved != scratch {
+		t.Fatalf("gate scratch=%s err=%v", resolved, err)
+	}
+	if err := completeCycle(cycle, scratch); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := activeCycleScratch(root, tmp, runner); err == nil {
+		t.Fatal("Cargo accepted a completed cycle")
+	}
+	if env, err := cargoScratchEnv("finite"); err != nil || len(env) != 0 {
+		t.Fatal("finite mode changed")
+	}
+}

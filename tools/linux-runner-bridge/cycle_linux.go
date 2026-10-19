@@ -112,8 +112,8 @@ func prepareCycle(root, tmpRoot, runnerRoot string) (string, string, error) {
 	if err := os.WriteFile(filepath.Join(cycle, "owner"), []byte(cycleOwner), 0600); err != nil {
 		return "", "", err
 	}
-	scratch, err := os.MkdirTemp(tmpRoot, "bridge-cycle-")
-	if err != nil {
+	scratch := filepath.Join(tmpRoot, "bridge-"+filepath.Base(cycle))
+	if err := os.Mkdir(scratch, 0700); err != nil {
 		return "", "", err
 	}
 	diag := filepath.Join(runnerRoot, "_diag")
@@ -144,6 +144,46 @@ func prepareCycle(root, tmpRoot, runnerRoot string) (string, string, error) {
 		return "", "", err
 	}
 	return cycle, scratch, nil
+}
+
+func activeCycleScratch(root, tmpRoot, runnerRoot string) (string, error) {
+	if err := ownedDirectory(root); err != nil {
+		return "", err
+	}
+	target, err := os.Readlink(filepath.Join(runnerRoot, "_diag"))
+	if err != nil || filepath.Dir(target) != root || !strings.HasPrefix(filepath.Base(target), "cycle-") {
+		return "", errors.New("active diagnostic cycle rejected")
+	}
+	if err := ownedDirectory(target); err != nil {
+		return "", err
+	}
+	info, err := os.Lstat(filepath.Join(target, "owner"))
+	if err != nil || !info.Mode().IsRegular() {
+		return "", errors.New("active cycle owner rejected")
+	}
+	owner, err := os.ReadFile(filepath.Join(target, "owner"))
+	if err != nil || string(owner) != cycleOwner {
+		return "", errors.New("active cycle owner mismatch")
+	}
+	if _, err := os.Lstat(filepath.Join(target, "complete")); !os.IsNotExist(err) {
+		return "", errors.New("cycle is not active")
+	}
+	scratch := filepath.Join(tmpRoot, "bridge-"+filepath.Base(target))
+	if err := ownedDirectory(scratch); err != nil {
+		return "", err
+	}
+	return scratch, nil
+}
+
+func cargoScratchEnv(mode string) ([]string, error) {
+	if mode != "normal" {
+		return nil, nil
+	}
+	scratch, err := activeCycleScratch(diagnosticRoot, "/tmp", "/runner")
+	if err != nil {
+		return nil, err
+	}
+	return []string{"TMPDIR=" + scratch, "TMP=" + scratch, "TEMP=" + scratch}, nil
 }
 
 func completeCycle(cycle, scratch string) error {

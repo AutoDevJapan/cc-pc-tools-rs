@@ -118,3 +118,12 @@
 - tempのPROTECTED_PATHは既存Go safe-deleteのprotected名（.git等）検査に対応することをsourceから確認した。元temp内容・保護sourceを読んで原因を調べておらず、通常Git保護を崩す例外や別経路移動/削除を作っていない。所有記録と元データを保持。client分類だけのエラーと決め付けない。
 
 次: main CodeQLの有限終了確認。残るPC工程は3002/既存3018で続け、CodeQL完了後はwait --on 3002で親を終了待ちへ切り替える。元2957に実施/検証/未完了を追加済み。取消やreview受領の再送、全CI再起動、GPU/重いCargo/秘密の読取は不要。
+
+## 2026-10-20 01:38 main解析の成功確認・PC工程の完了待ちへ
+
+- main CodeQL39280570988はcompleted/success。gateもsuccessで終了。Rustのjobs/check-runs表示だけin_progressの古い値が残ったため、公式job118153714873の終了ログを保存して、16:16:24Zの結果upload成功、16:16:53ZのAnalysis upload status complete、post-job cleanup/orphan回収を確認した。run全体とgate成功、実終了ログを合わせて照合し、同じ解析を再実行していない。
+- 最新main2da7d4af1dd9911eaff970fdfe08b60531732eb6/tree108a6987dbe0ed8af9a35f19d8e00930cf582001は不変。PR176の全必要CI/別モデルMust解消/通常mergeと、mainの必要な解析公開の確認は完了。同treeのlocal/V2自動重複は前の記録どおりcompleted/cancelledで成功とは区別し、PR実成功を再利用。
+- 残りは3002の本人PC正式供給・4Windows job・成果物hash・登録/ACL/profile/実Job全終了回収と、統合後の差分レビュー。3002は既存3018と完了済み3019を待ち、3018はdoing。親や元2957への循環待ちは無い。親はwait --on 3002を登録して、待ち先完了まで起動を繰り返さない。
+- 所有tempのGit領域保護による未回収は元ID/拒否結果とともに保持。plan/quarantineを再試行せず、同じ保護資源を別経路で操作しない。3002終了後に残作業を再評価する。本人のPC操作・新費用・新たな公開の判断は不要。
+
+再開時: 3002の実結果・最新source/HEAD・別モデルレビュー・正式CI/4job/hash/回収を受領し、過去のmockやhosted成功をPC実成功へ読み替えない。Windows側3workflowだけの変更なら親Linuxの同じ検査を重ねず、影響範囲と正規な結果を確認する。測定と料金は既存private原本を再利用し、必要な最終差分だけ追加する。未回収の保護tempも記録から落とさず、原資料を保つ。

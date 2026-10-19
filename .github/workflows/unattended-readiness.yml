@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', 'tools/civ6-ci-queue/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', 'tools/civ6-ci-queue/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:
@@ -24,7 +24,7 @@ jobs:
             labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
           - os: Linux
             labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
-        module: [resident-guard, capacity-audit-3h, unattended-runner, tools/linux-runner-bridge]
+        module: [resident-guard, capacity-audit-3h, unattended-runner, tools/linux-runner-bridge, tools/civ6-ci-queue]
     runs-on: ${{ matrix.labels }}
     timeout-minutes: 10
     defaults:

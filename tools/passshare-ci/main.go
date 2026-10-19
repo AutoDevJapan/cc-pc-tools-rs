@@ -224,6 +224,26 @@ func unchangedJobs(before, after object) error {
 }
 
 func main() {
+	if len(os.Args) == 6 && os.Args[1] == "schema" {
+		var data [3][]byte
+		for i := range data {
+			b, err := os.ReadFile(os.Args[i+2])
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			data[i] = b
+		}
+		out, err := transferSharedDefinitions(data[0], data[1], data[2])
+		if err == nil {
+			err = os.WriteFile(os.Args[5], out, 0644)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) != 3 && len(os.Args) != 4 {
 		fmt.Fprintln(os.Stderr, "usage: passshare-ci <original-directory> <output-directory> [reviewed-windows-workflow]")
 		os.Exit(2)

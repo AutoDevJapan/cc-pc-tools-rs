@@ -1,5 +1,33 @@
 # PassShare の CI 削減（ToDo2986）
 
+## 最新HEADと次の受領（最優先）
+
+PR720は`d96fbabe6559e6b55eb8d5be2e10889f03a9a472`、元mainから20ファイル。
+Windows2workflowを3010から引き継いで統合した`8398204`と、その前の`8d4a21b`を履歴として保持。
+3012の実レビューは完了。Must1は既知の生成定義の更新漏れ、他の確認範囲は問題なし。
+ただしpnpm-lock2本文とmain_test.goは未読を明記しており、その範囲は補足確認に残す。
+3015は8d4a21b→8398204の4ファイルを読取中。そこへ今回のsourceを勝手に混ぜず、
+追加のraw改行とmobile/windowsの5ファイルだけを別の有限補足へ配送する。
+
+8398204のNative WebView job118096806375は同じdrift検査で失敗したが、内容差ではなく
+desktop-schema.jsonのCRLFだった。Windowsのgit apply/hash-objectのフィルターにより、
+正規化後blobと実ファイルbytesを取り違えた。原失敗は保持し、今回から--no-filtersのraw blobと
+GitHubのPOST blob応答を照合してから、base64から作った正しいblobをtreeへ指定する。
+Desktop schemaの正しいLF blobはc2202ed、SHA256はf0e08336353666f6174241964bfe0260cca6379fa7659825433b1263f82a91bd。
+初回のSHA c5724c5...はCRLFであり、正規CIのraw一致とは扱わない。
+
+同じTauri更新が両clientの生成物に及ぶため、desktop/windowsとmobileのACL/desktop/windowsもそろえた。
+元の各clientのdesktop/windowsファイルが同一blobであることをAPIで確認した。
+Mobile desktop schemaには、実Desktop generator差分の4つの共通定義hunkだけをcontext検査付きで適用。
+Mobile ACLは、実Desktopの旧→新差が4つの定義追加だけであり、対象の旧Mobile pluginと同一である
+ことを厳格に確かめて、その定義だけを移すGo helperを使った。既存grantを変える入力は検査で拒否する。
+Rustのstruct field順と元JSONの生バイトを保ち、全体のGo map再直列化は使わない。
+Mobileはこの時点で新たに実生成したとは主張せず、正式CIのdrift/実renderer受入で最終照合する。
+原候補・raw hash5件・base blobs・patchは`.ci-work/all-schema-receipt.private.json`等に保持。
+
+残りは3015/補足レビュー、同HEADの全CI成功、通常merge、main確認、実行量と課金APIの再読。
+CIの無目的rerunは一度も実行していない。ソース修復ごとの通常PR同期だけ。
+
 ## 生成定義の修復と3010からの統合引継ぎ
 
 `8d4a21b`の品質ゲート、Desktop全体/doctest、Mobile、監査、DB統合は正式成功。

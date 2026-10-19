@@ -2,15 +2,16 @@
 
 作業ブランチ: scheduler/todo-2966-runner-2962（基点 2977911）。
 
-## 完了
-- config/plan/ledger/ghread/scan/helper/safedelete/evidence/platform（go vet 通過）
+## 完了（PR https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/247、ブランチ scheduler/todo-2966-runner-2962）
+- tools/civ6-ci-queue 全体（config/plan/ledger/ghread/scan/helper/safedelete/evidence/supervisor/tick/main）とfixtureテスト（go test -race / vet / build、-tags civ6contract でも通過）
+- unattended-runner/civ6_queue.go（設定 civ6_ci_queue がある時だけ、既存tickの最後に固定コマンド tick を15秒以内で1回）と関連テスト（runner全テスト通過）
+- .github/workflows/unattended-readiness.yml に tools/civ6-ci-queue を追加
+- 別モデルレビューは共有ToDo 2972（--spec）で登録済み
 
 ## 残り
-- supervisor.go（worker: Verify→owned root作成→prepare→execute(token stdin)→stop/collect→RequireSuccess→evidence→削除）
-- tick.go（reconcile→launch→scan/admit→launch）と main.go（tick / worker / status）
-- fixtureテスト（重複・予算・OS lock・crash fence・foreign repo・head advance・失敗後cleanup・再実行なし・tick継続）
-- unattended-runner の有限tick接続（civ6_queue.go、config未設定なら無効）
-- 別モデルレビューは共有ToDo --spec で登録、親2962 noteへ配送
+- PR247のCI結果、2972のMust対応、通常merge
+- 親2962 noteへ commit/PR/review/検査/CLI/未実施の配送
+- 実運用の配備（設定ファイル、helper pin、continuation有効化）は親。この工程では行わない
 
 ## helperへ要求する契約（未確定部分）
 - Linux helperも Windows と同じ動詞 prepare|execute|stop|collect|collect-unstarted|status <owned-root>、plan.json は共有Planそのもの、execute のみ登録tokenをstdin。

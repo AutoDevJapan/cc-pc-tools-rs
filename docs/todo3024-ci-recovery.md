@@ -31,3 +31,12 @@
 - マージ後の稼働APIは103ms、schema1/ok、masked_metadata/metadataOnlyを保持。設置binaryのハッシュは既報C63A5E80…のまま。追加差分は試験準備と同じ本番定数への生成委譲であり、表示動作を変える配備は今回追加していない。
 
 残りはmainの正式結果と同sourceの保存、稼働確認の最終照合。6条件中5条件を確認した83%。本人のPC操作と追加の判断は不要。
+
+最終受入（2026-10-20 JST）:
+- main7177b396141e961388531b9019a30216ff9a8e07の3workflowと必要6jobがすべてcompleted/success。条件付きpackage-toolsは本来の条件どおりskip。最新remote mainも同SHAを照合した。
+- CodeQLのmain保存はRust1982672814、Actions1982629602、JavaScript/TypeScript1982622866、Go1982567232。4categoryすべてrefs/heads/main、同merge commit、error/warning空をAPIで確認した。
+- 最後の実稼働確認は進捗入口307/no-store、保護済みjobs API schema1/ok、39ms。進捗値は0〜100または欠落、工程は固定語彙、contentAvailableは全件false。既存の設置binary SHA256はC63A5E8028E90EE720D3D5CC0350C48361CEFA8336233A466A909CB833C30B61で不変。main全体から新たに再ビルドしたとの主張はしない。
+- 専用runner27/28はonline/idle。継続運用する元のcontainer/runtimeは保持。本人の会話・3021/3023・正本2903の未追跡記録に触れていない。
+- 終了済みの自分のCargo生成物3,112ファイル/2,991,465,749バイトは、作成証跡・祖先と配下のリンク不在・稼働使用者不在・追跡ファイル不在を照合し、Skillの所有記録なし既存生成物の手順で同じDドライブの削除希望へ退避した。元の不在と件数/容量一致を確認。空き容量の回収とは扱わない。原ソースと検査証跡は保持した。
+
+この有限の正式CI・通常merge・main/稼働確認は6条件すべて達成。親3020の常設TUI受入と保護設定復旧は別担当の未完了条件として維持し、製品全体の完了とは混同しない。

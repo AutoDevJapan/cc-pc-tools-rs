@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 type dailyVideoFixture struct {
@@ -15,10 +18,35 @@ type dailyVideoFixture struct {
 	directory, file, spec, jobPath, actorRoot, actorSpec, actorSHA string
 }
 
+func dailyVideoFixtureRoot(t *testing.T) string {
+	t.Helper()
+	name, err := syscall.UTF16PtrFromString(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, err := syscall.CreateFile(name, 0, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE,
+		nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_BACKUP_SEMANTICS, 0)
+	if err != nil {
+		t.Fatal("cannot open owned fixture directory metadata")
+	}
+	defer syscall.CloseHandle(handle)
+	buffer := make([]uint16, 32768)
+	proc := syscall.NewLazyDLL("kernel32.dll").NewProc("GetFinalPathNameByHandleW")
+	n, _, _ := proc.Call(uintptr(handle), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), 0)
+	if n == 0 || n >= uintptr(len(buffer)) {
+		t.Fatal("cannot resolve the owned fixture directory")
+	}
+	root, err := portable(syscall.UTF16ToString(buffer[:n]))
+	if err != nil || !currentPlain(root, true) {
+		t.Fatal("owned fixture directory is not canonical and plain")
+	}
+	return root
+}
+
 func newDailyVideoFixture(t *testing.T, channel string) *dailyVideoFixture {
 	t.Helper()
 	f := &dailyVideoFixture{}
-	root := t.TempDir()
+	root := dailyVideoFixtureRoot(t)
 	f.io = dailyVideoIO{root: filepath.Join(root, "videos"), specs: filepath.Join(root, "specs"), jobs: filepath.Join(root, "jobs"), toolRoot: filepath.Join(root, "tool"), at: time.Date(2026, 10, 19, 2, 0, 0, 0, time.UTC), read: readBounded, protected: func(string) bool { return false }}
 	f.directory = filepath.Join(f.io.root, channel, "2026-10-20")
 	f.file = filepath.Join(f.directory, "publication.json")
@@ -148,4 +176,50 @@ func TestDailyVideoRejectsAlternateStreamsAndMalformedOptionalIdentity(t *testin
 			t.Fatalf("malformed optional identity accepted: %s", field)
 		}
 	}
+}
+
+func TestDailyVideoFixtureWithServiceShortTemp(t *testing.T) {
+	root := t.TempDir()
+	name, err := syscall.UTF16PtrFromString(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]uint16, 32768)
+	n, err := syscall.GetShortPathName(name, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || n >= uint32(len(buffer)) {
+		t.Fatal("cannot inspect fixture short path")
+	}
+	short := syscall.UTF16ToString(buffer[:n])
+	if same(short, root) {
+		t.Skip("fixture filesystem has no 8.3 alias")
+	}
+	t.Setenv("TEMP", short)
+	t.Setenv("TMP", short)
+	t.Run("inherited", func(t *testing.T) {
+		f := newDailyVideoFixture(t, "beats")
+		if !dailyVideoPathAllowedWith(f.file, f.io) {
+			t.Fatal("fixture inherited an unresolved service TEMP short-name alias")
+		}
+	})
+}
+
+func TestDailyVideoFixtureWithRedirectedServiceTemp(t *testing.T) {
+	root := t.TempDir()
+	target, link := filepath.Join(root, "target"), filepath.Join(root, "service-temp")
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("cmd.exe", "/c", "mklink", "/J", link, target)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if err := cmd.Run(); err != nil {
+		t.Fatal("cannot create the owned service TEMP fixture")
+	}
+	t.Setenv("TEMP", link)
+	t.Setenv("TMP", link)
+	t.Run("inherited", func(t *testing.T) {
+		f := newDailyVideoFixture(t, "beats")
+		if !dailyVideoPathAllowedWith(f.file, f.io) {
+			t.Fatal("fixture inherited the service TEMP junction instead of its canonical owned directory")
+		}
+	})
 }

@@ -369,12 +369,29 @@ impl Context {
     pub fn is_ours(&self, j: &Value, key: &str) -> bool {
         self.is_ours_checked(j, key).unwrap_or(true)
     }
-    /// Only a successful identity read can prove ownership or process exit.
+    /// A successful handle read proves ownership or process exit. A validated
+    /// read-only birth observation can only disprove a reused process identity.
     pub fn is_ours_checked(&self, j: &Value, key: &str) -> std::io::Result<bool> {
         let Some(pid) = j[key].as_u64().and_then(|x| u32::try_from(x).ok()) else {
             return Ok(false);
         };
-        let Some(created) = self.rt.proc_created_checked(pid)? else {
+        let created = match self.rt.proc_created_checked(pid) {
+            Ok(created) => created,
+            Err(error) => {
+                if let Some(expected) = j[format!("{key}_created")].as_u64().filter(|x| *x > 0)
+                    && let Ok(Some(observed)) = self.rt.observed_process_birth(pid)
+                    && observed > 0
+                    && observed != expected
+                {
+                    return Ok(false);
+                }
+                // A missing snapshot entry, matching birth, unavailable reader,
+                // or missing recorded birth cannot grant mutation authority or
+                // prove process exit. Preserve the original unknown result.
+                return Err(error);
+            }
+        };
+        let Some(created) = created else {
             return Ok(false);
         };
         let expected = j[format!("{key}_created")]

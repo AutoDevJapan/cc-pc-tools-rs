@@ -1,0 +1,9 @@
+# 終了済みジョブの再利用PIDと台帳の反復読取
+
+2026-10-19の起動待ちを調べた際、終了済みジョブが、現在の別プロセスへ再利用されたPIDの照合失敗によりactive indexへ残っていた。共有台帳もindex更新のジョブごとに読み直しており、queue lockの長い保持につながっていた。
+
+- Windowsの既存ABI検証付きプロセスsnapshotから作成時刻を観測する。通常のhandle照合がエラーの場合だけ、正の記録時刻と異なる正の観測時刻で、同じプロセスではないことを判断する。
+- 観測が一致、不在、取得不能、または記録時刻が不明なら元のエラーを保つ。snapshotを所有や終了の証明へ使わず、停止や変更の権限へ昇格させない。停止には従来のhandleと作成時刻の照合が必要。
+- index更新のownerとtitleは同一の共有台帳snapshotを1回だけ読み取って付ける。次回更新と最終admissionは最新台帳を改めて照合する。cacheやTTL、排他条件の変更はない。
+
+検査対象はcc-jobsのprocess_birth_observation、owner_snapshot_tests、queue_regressionsとプロセス識別・admission・停止の関連検査。配布時は最新mainへ統合した正規実行物を使用し、既存のqueued supervisorの標準更新経路で反映する。異なるプロセスの終了やraw index書き換えで枠を空けない。

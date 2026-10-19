@@ -364,6 +364,14 @@ pub trait Runtime: Send + Sync {
     fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
         Ok(self.proc_created(pid))
     }
+    /// Read-only identity evidence, never authority to stop a process. Unknown
+    /// observations retain the existing conservative ownership decision.
+    fn observed_process_birth(&self, _pid: u32) -> io::Result<Option<u64>> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "read-only process birth observation unavailable",
+        ))
+    }
     fn call(&self, call: Call) -> io::Result<Reply>;
     fn spawn(&self, spec: &Spawn) -> io::Result<Box<dyn Running>>;
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool>;
@@ -487,6 +495,10 @@ impl Running for Child {
 impl Runtime for System {
     fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
         proc_created_checked(pid)
+    }
+    #[cfg(windows)]
+    fn observed_process_birth(&self, pid: u32) -> io::Result<Option<u64>> {
+        crate::pause::observed_process_birth(pid)
     }
     #[cfg(windows)]
     fn kill_owned_tree(&self, pid: u32, created: u64) -> io::Result<()> {

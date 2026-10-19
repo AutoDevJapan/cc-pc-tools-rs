@@ -1,0 +1,82 @@
+name: Repo-scoped continuous CI helpers
+on:
+  push:
+    branches: [main]
+    paths: ['tools/civ6-ci-*/**', '.github/workflows/civ6-ci.yml']
+  pull_request:
+    paths: ['tools/civ6-ci-*/**', '.github/workflows/civ6-ci.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
+jobs:
+  helpers:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: Windows
+            labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
+          - os: Linux
+            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    runs-on: ${{ matrix.labels }}
+    timeout-minutes: 15
+    steps:
+      - name: Admit current Windows head before checkout
+        if: runner.os == 'Windows'
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Use job-owned Linux Go scratch
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/go-tmp" "$RUNNER_TEMP/go-cache"
+          printf 'TMPDIR=%s/go-tmp\nGOTMPDIR=%s/go-tmp\nGOCACHE=%s/go-cache\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        if: runner.os == 'Windows'
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Verify Go helpers on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          for module in tools/civ6-ci-*; do
+            test -f "$module/go.mod" || continue
+            go -C "$module" test -race -timeout 180s ./...
+            go -C "$module" vet ./...
+            go -C "$module" build ./...
+          done
+      - name: Verify Go helpers on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($module in Get-ChildItem -LiteralPath tools -Directory -Filter 'civ6-ci-*') {
+            if (-not (Test-Path -LiteralPath (Join-Path $module.FullName 'go.mod'))) { continue }
+            & go -C $module.FullName test -race -timeout 180s ./...
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & go -C $module.FullName vet ./...
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & go -C $module.FullName build ./...
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Vet the Linux guest build
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go -C tools/civ6-ci-linux vet ./...

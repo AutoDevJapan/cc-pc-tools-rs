@@ -1,19 +1,25 @@
 {
   "upstream_repository": "https://github.com/openai/codex",
-  "tag": "rust-v0.162.1",
-  "commit": "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d",
-  "patched_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
+  "tag": "rust-v0.163.0",
+  "commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "patched_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
   "toolchain": "1.95.0",
-  "collector_commit": "474f3faa14f5b35ecf1bcdb63497aa73af58ea2b",
-  "collector_sha256": "d42fb7b8cbb97d817dadba3021d41efe5284588f68d4df9cb3e806a63598f3dd",
-  "patch_sha256": "314b6ff6414ae726e22887b3af8a0538bf722f7eb387cdc81859974b9935b440",
+  "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
+  "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
+  "patch_sha256": "21dd906d4ceace003835e8b0a59517e9a35187df7c702ddda75e4a9c1b3f96b7",
   "build_profile": {
     "lto": false,
     "strip": "symbols",
     "codegen_units": 16,
     "debug": "0"
   },
-  "tested_binary_sha256": "7eda7d645c4dcd7cae038451d60b7ab5e89e28e6868876060d2f5a4af5b4079b",
-  "tested_binary_source_commit": "313342476c2b3a479cb114a9753da9ffc88928fc",
-  "collector_tree": "275249534a41e33ae7763712e1ea8faddc8d7bbe"
+  "tested_binary_sha256": "bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969",
+  "tested_binary_source_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc",
+  "npm_package": "@openai/codex@0.163.0-win32-x64",
+  "npm_integrity": "sha512-QQGQ/q9dCJ5C5jqhgFrwycpWG3szIyFNThMiKl6hYtu6N/eM3Qd7StesgnCFAfzVED8IkE3N3oH71szzcludqw==",
+  "npm_codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
+  "npm_code_mode_host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
+  "tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
+  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725bdab"
 }

@@ -192,6 +192,9 @@ func allowed(path string) bool {
 	if currentDailyVideoPathAllowed(absolute) {
 		return true
 	}
+	if audio2906PathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
 		return true
 	}

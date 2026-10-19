@@ -50,7 +50,9 @@ const (
 	releasePhaseMemory        = 8 << 30
 	releasePhasePids          = 512
 
-	releaseBuildArtifactLimit = 256 << 20
+	// The fixed-source preflight produced 273,962,496 bytes. Keep a closed
+	// 288 MiB output cap; CPU, RAM, PIDs and the host transfer budget stay fixed.
+	releaseBuildArtifactLimit = 288 << 20
 	releaseBuildLogLimit      = 32 << 20
 	releaseBuildMaxDuration   = 45 * time.Minute
 	releaseBuildOutputPath    = "/kaniko/output.tar"

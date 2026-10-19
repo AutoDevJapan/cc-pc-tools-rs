@@ -22,6 +22,23 @@ pub fn supervisor(_: u32, _: u64) -> io::Result<Box<dyn Paused>> {
 #[cfg(windows)]
 mod snapshot;
 
+/// Reuse the ABI-checked kernel metadata reader without opening a foreign
+/// process handle. The mutation paths still require their retained handles.
+#[cfg(windows)]
+pub(crate) fn observed_process_birth(pid: u32) -> io::Result<Option<u64>> {
+    if pid == 0 {
+        return Ok(None);
+    }
+    match snapshot::processes()?
+        .into_iter()
+        .find(|entry| entry.pid == pid)
+    {
+        Some(entry) if entry.created > 0 => Ok(Some(entry.created)),
+        Some(_) => Err(io::Error::other("process birth observation is unavailable")),
+        None => Ok(None),
+    }
+}
+
 #[cfg(windows)]
 mod native {
     use super::*;

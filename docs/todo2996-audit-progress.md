@@ -82,17 +82,26 @@ Cargo1.95のfeature resolverがpanicした。受入manifestへ同じ固定版を
 desktop-before.toml/desktop-after.toml、audit-*-before/final.private.json、
 metadata-final.private.json、update-*.log、check-updater-windows.log、handoff.private.json。
 受入の最終結果はacceptance-nextest-with-quinn.log（run933ed68e）、check-network-final.log。
-再現用の受入lockはacceptance-Cargo.lock、元のCargo manifestはsource-manifests/へ保存する。
-所有付き一時rootは本worktree直下、safe-delete ID `799bea062b6fe7ba91eed988f3f50215`。
+再現用の受入lockはacceptance-Cargo.lock、元のCargo manifestはsource-manifests/へ保存済み。
+コマンド・exit・結果と各原ログのSHA256はverification-receipt.private.jsonへ保存済み。
+所有付き一時rootは本worktree直下に作成した、safe-delete ID `799bea062b6fe7ba91eed988f3f50215`。
 scrub391で作成済みrootと本worktreeは両方falseを確認。未知Tempは空のまま通常plan削除し
 finish済み。元資料は保持し、拒否された製品sourceを別経路で取得していない。
+
+検査終了後、safe-delete planは8723項目/3,680,582,843 bytesをsize理由でquarantine指定。
+quarantine自身はCへの移動をQUARANTINE_CROSS_DRIVEで事前停止したため、Skillの手順で
+所有・絶対パス・祖先と全配下のreparse不在・Git領域不在・実行中の所有プロセス0を確認し、
+同じDドライブの削除希望へ通常Move-Itemで退避した。元root不在と移動先の存在を確認し、
+理由.txtへ完了を追記、finishはsource_absentを記録した。容量を回収したとの主張ではない。
+詳細はcleanup-plan.private.json、cleanup-result.private.json、
+manual-quarantine-verification/result.private.json。別経路で削除を再実行していない。
 
 ## 再開
 
 1. この記録と親2986のnoteを読み、上記の固定候補blobを照合する。
-2. 実行中のCargoは重ねず終端を回収し、失敗なら原因を直して対象だけ再検査する。
-3. レビュー担当の実モデルと固定差分を照合し、Mustがあれば修正する。
+2. Cargoは全て終端済みで一時生成物は退避済み。新しい変更や指摘が無い限り再ビルドしない。
+3. レビュー3001の原応答を受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
 4. 親2986の既存noteを保持して、候補blob、audit、関連検査、残条件を追記する。
-5. 証拠保存後、所有rootをplan→別呼出の通常削除→finishで回収する。
+5. 必要な再検査で新規rootを作った場合だけ、所有付き一時rootの手順で片付ける。
 6. 支援記録だけをscheduler/todo-2996-passshare-ci-rust-2986へcommit/pushし、
    終了前にscheduler checkpoint-workspaceへ実branch/HEADを保存する。

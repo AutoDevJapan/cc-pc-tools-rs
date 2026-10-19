@@ -8,13 +8,13 @@
 
 1. reconcile: 記録済みsupervisorのPID＋作成時刻を確かめる（PIDだけでは生存とみなさない）。
    supervisorが結果ファイルを残していれば台帳へ取り込み、無ければOS単位のfenceを置いて新workerを止める。
-   fence中は読み取り専用のhelper `status` が `{"clean":true}` を返し、かつ所有rootが回収済みの場合だけ解除する。
+   外部への問い合わせは行わず、fenceは結果ファイルかparentのhelper復旧modeでだけ解除される。
 2. launch: 予約済みで未起動のjobを、OSごとに最大1件、固定の自分自身（`worker --entry`）としてCREATE_NO_WINDOWで切り離して起動。
 3. scan/admit: queued/in_progressのofficial runから、同じrepoの現在のPR/main、三workflow＋CodeQL 2 jobだけ
    を固定Planにし、親の `Verify` を通ったものだけを台帳へ一度だけ予約する（予算: PR149 6件、通常push 6件）。
 4. もう一度launch。
 
-重いjobはtick本体で待たない。workerは自分のOSロックを持ち、helperの `prepare` → `execute`（登録tokenはstdinのみ）→ `collect` を順に一度だけ実行し、
+重いjobはtick本体で待たない。workerは自分のOSロックを持ち、OS別adapter（下記）でhelperの手順を一度だけ実行し、
 公式のjob成功（`RequireSuccess`）を別に確認する。helperの終了コードだけでは成功にしない。失敗jobを自動rerunしない。
 
 ## 記録（台帳 ledger.json）
@@ -47,26 +47,44 @@ go build ./...
 親のcontractをリンクするには `-tags civ6contract` と、go.modへの `require/replace cc/civ6-ci-contract => ../civ6-ci-contract` が必要（親の統合で追加）。
 タグ無しのビルドは `unwiredContract` で何も受け付けない（fail-closed）。
 
-## helperへの要求（未確定のまま固定したadapter）
+## OS別adapter（各helperの実CLIに合わせた固定手順）
 
-- 動詞: `prepare|execute|stop|collect|collect-unstarted|status <owned-root>`、planは `<root>/plan.json`。Linux helperの動詞はWindows helperに合わせる想定。
-- runner名: Windows `CC-CIW-<instance>`、Linux `CC-CIL-<instance>`（仮定）。
-- `status` は標準出力に `{"clean":bool}`。
-- 登録token取得（POST `actions/runners/registration-token`）はgh gate経由。gateが拒否する場合は親が経路を決める。
+共通: workerは新しいowned rootを作ってからadapterを一度だけ呼び、adapterは「回収を確認できたか」「helper自身の成功」「公式runner名」を返す。
+公式成功は、その後に親の `RequireSuccess`（固有runner名）で別に確認する。helperの終了コードだけでは成功にしない。
+
+- Windows（tools/civ6-ci-windows）: pin済みexeを root/bootstrap.exe へ複製し、plan.json（共有Plan＋instance/root/runner pin/controller SID/seconds）を root に保存。
+  `prepare <root> <runner.zip>` と `collect|collect-unstarted <root>` はCC-AdminBroker（固定形のps1を生成）経由、
+  `execute <root>`（登録tokenはstdinのみ）と `stop` は root/helper.exe（同じSHA-256のpin）を管理者なしで実行。
+  `execute-end` の `fence` または未終了なら stop を1回だけ試み、collectは必ず行う。成否はbrokerの終了コードではなく `collect-end{complete,residue_only}` で判定。
+  residue_only（profile/hive残留）は既定でOS fenceにする。親が許可すると `allow_residue_only` で件数を数えて継続する。
+- Linux（tools/civ6-ci-linux）: one-shot `civ6-ci-linux.exe run <plan-json> <新しい空のowned root> <guest ELF> <pwsh tar>`。
+  plan-jsonはroot外（entry directory）。登録tokenはhelperが自分で取得するので、queueは供給しない。
+  helperが残す `result.private.json` から Namespace.Removed・RegistrationGone・LockReleased を回収確認とし、Namespace.Name を固有runner名にする。
+  receiptが無く intent も無い場合だけ「資源を作る前の拒否」とみなす。
+
+## 未確定のまま残す点
+
+- Linux helperのstatus/collect復旧mode（childに依頼済み）。それまで不明なfenceは自動解除しない。
+- 親の実イベント（GITHUB_EVENT_NAME/ref）は最初の正式job後に記録する。
+- 継続運用（`continuation.enabled`）と residue許可は、親がreview済みsourceで配備するまで無効。
 
 ## 設定例（配備は親）
 
 ```json
 {
   "version": 1,
-  "home": "D:\CC\State\civ6-ci-queue",
-  "gh": {"path": "D:\CC\Tools\codex-jobs\gh_gate.exe", "sha256": "<64 hex>"},
-  "safe_delete": {"path": "D:\CC\Tools\safe-delete\safe-delete.exe", "sha256": "<64 hex>"},
+  "home": "D:\\CC\\State\\civ6-ci-queue",
+  "gh": {"path": "D:\\CC\\Tools\\codex-jobs\\gh_gate.exe", "sha256": "<64 hex>"},
+  "safe_delete": {"path": "D:\\CC\\Tools\\safe-delete\\safe-delete.exe", "sha256": "<64 hex>"},
+  "admin_broker": {"path": "D:\\CC\\Tools\\admin-broker\\run-as-admin.ps1", "sha256": "<64 hex>"},
   "helpers": {
-    "Windows": {"exe": {"path": "...", "sha256": "..."}, "seconds": 3600, "runner_version": "2.x.y",
-                "runner_digest": "<64 hex>", "controller_sid": "S-1-5-21-..."},
-    "Linux": {"exe": {"path": "...", "sha256": "..."}, "seconds": 3600}
+    "Windows": {"exe": {"path": "...", "sha256": "..."}, "seconds": 3600, "runner_version": "2.338.0",
+                "runner_digest": "<64 hex>", "controller_sid": "S-1-5-21-...",
+                "runner_archive": {"path": "...", "sha256": "<same runner digest>"}},
+    "Linux": {"exe": {"path": "...", "sha256": "..."}, "seconds": 3600,
+              "guest": {"path": "...", "sha256": "..."}, "pwsh_tar": {"path": "...", "sha256": "..."}}
   },
   "continuation": {"enabled": false}
 }
 ```
+

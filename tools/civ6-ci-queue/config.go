@@ -67,6 +67,13 @@ type HelperConfig struct {
 	RunnerVersion  string `json:"runner_version,omitempty"`
 	RunnerDigest   string `json:"runner_digest,omitempty"`
 	ControllerSID  string `json:"controller_sid,omitempty"`
+	// Windows: the official runner archive (pre-staged, pinned) and whether a
+	// "residue only" collection may continue (default: it fences the OS).
+	RunnerArchive    Pinned `json:"runner_archive,omitempty"`
+	AllowResidueOnly bool   `json:"allow_residue_only,omitempty"`
+	// Linux: the reviewed guest ELF and the official PowerShell archive.
+	Guest   Pinned `json:"guest,omitempty"`
+	PwshTar Pinned `json:"pwsh_tar,omitempty"`
 }
 
 // Config is the deployed operating configuration. Nothing in it names a
@@ -76,6 +83,7 @@ type Config struct {
 	Home         string                  `json:"home"`
 	GH           Pinned                  `json:"gh"`
 	SafeDelete   Pinned                  `json:"safe_delete"`
+	AdminBroker  Pinned                  `json:"admin_broker,omitempty"`
 	Helpers      map[string]HelperConfig `json:"helpers"`
 	TickSeconds  int                     `json:"tick_seconds,omitempty"`
 	Continuation struct {
@@ -111,8 +119,11 @@ func (c Config) validate() error {
 		if h.Exe.validate() != nil || h.Seconds < 60 || h.Seconds > 14400 || (h.CleanupSeconds != 0 && (h.CleanupSeconds < 60 || h.CleanupSeconds > 14400)) {
 			return errors.New("helper pin or deadline invalid")
 		}
-		if name == "Windows" && (!sidPattern.MatchString(h.ControllerSID) || !versionPattern.MatchString(h.RunnerVersion) || !hex64.MatchString(h.RunnerDigest)) {
-			return errors.New("Windows helper requires controller SID and official runner pin")
+		if name == "Windows" && (!sidPattern.MatchString(h.ControllerSID) || !versionPattern.MatchString(h.RunnerVersion) || !hex64.MatchString(h.RunnerDigest) || h.RunnerArchive.validate() != nil || c.AdminBroker.validate() != nil) {
+			return errors.New("Windows helper requires controller SID, official runner pin, staged archive and the admin broker entry")
+		}
+		if name == "Linux" && (h.Guest.validate() != nil || h.PwshTar.validate() != nil) {
+			return errors.New("Linux helper requires the guest binary and PowerShell archive pins")
 		}
 	}
 	return nil

@@ -3,17 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 )
-
-func zero(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
-}
 
 // hardLimitFor is the longest a supervisor may legitimately live.
 func hardLimitFor(h Helper) time.Duration {
@@ -21,28 +14,7 @@ func hardLimitFor(h Helper) time.Duration {
 	if cl == 0 {
 		cl = 1800
 	}
-	return time.Duration(h.Seconds()+600+cl+600) * time.Second
-}
-
-type stepOutcome struct {
-	ran  bool
-	exit int
-	err  error
-}
-
-func (o stepOutcome) ok() bool { return o.ran && o.err == nil && o.exit == 0 }
-
-// step runs one fixed helper step and keeps its original output bytes in the
-// supervisor's entry directory for the evidence manifest.
-func (d *Deps) step(ctx context.Context, h Helper, key, verb, root string, limit time.Duration, stdin []byte, onStart func(ProcID)) stepOutcome {
-	sctx, cancel := context.WithTimeout(ctx, limit)
-	defer cancel()
-	res, err := d.Step(sctx, h, verb, root, stdin, onStart)
-	dir := d.home("entries", safeKey(key))
-	if os.MkdirAll(dir, 0700) == nil {
-		_ = os.WriteFile(filepath.Join(dir, "step-"+verb+".log"), res.Output, 0600)
-	}
-	return stepOutcome{ran: true, exit: res.Exit, err: err}
+	return time.Duration(h.Seconds()+1200+2*cl+600) * time.Second
 }
 
 func intp(n int) *int { return &n }
@@ -69,34 +41,16 @@ func (d *Deps) applyResult(key string, r Result) error {
 		if e.Started.ExitedAt == "" && r.ExitCode != nil {
 			e.Started.ExitedAt = r.At
 		}
-		if f, ok := l.Fences[e.OS]; ok && f.Key == key {
-			if r.State == StateNeedsRecovery {
-				l.Fences[e.OS] = Fence{Key: key, Reason: r.Reason, At: r.At}
-			} else {
-				delete(l.Fences, e.OS)
-			}
-		} else if r.State == StateNeedsRecovery {
+		if r.State == StateNeedsRecovery {
 			l.Fences[e.OS] = Fence{Key: key, Reason: r.Reason, At: r.At}
-		}
-	})
-}
-
-func (d *Deps) fence(key, reason string) error {
-	return d.mutate(key, func(l *Ledger, e *Entry) {
-		l.Fences[e.OS] = Fence{Key: key, Reason: reason, At: stamp(d.Now())}
-	})
-}
-
-func (d *Deps) unfence(key string) error {
-	return d.mutate(key, func(l *Ledger, e *Entry) {
-		if f, ok := l.Fences[e.OS]; ok && f.Key == key {
+		} else if f, ok := l.Fences[e.OS]; ok && f.Key == key {
 			delete(l.Fences, e.OS)
 		}
 	})
 }
 
 // Supervise is the single worker of one OS. It owns the OS lock for its whole
-// life, runs the fixed helper steps once, and never starts a second attempt.
+// life, runs the fixed helper lifecycle once, and never starts a second attempt.
 func (d *Deps) Supervise(ctx context.Context, key string) error {
 	l, err := d.Store.View()
 	if err != nil {
@@ -141,8 +95,8 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 
 	// 2. Create a NEW owned root. The fence is saved first because a crash
-	//    after the record is made but before it is stored is unrecoverable
-	//    without human-readable evidence.
+	//    after the record is made but before it is stored cannot be told apart
+	//    from a root that was never made.
 	if e := d.mutate(key, func(l *Ledger, e *Entry) {
 		e.Cleanup.State = "create_intent"
 		l.Fences[osName] = Fence{Key: key, Reason: "owned root creation unconfirmed", At: stamp(d.Now())}
@@ -163,100 +117,83 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "owned root record not stored", Cleanup: cl})
 	}
 
-	started := false
-	exit := -1
-	var failure string
-	prepared := false
-	if e := h.WritePlan(rec.Path, rec.ID, plan); e != nil {
-		failure = "plan could not be written"
-	} else if o := d.step(ctx, h, key, StepPrepare, rec.Path, 10*time.Minute, nil, nil); !o.ok() {
-		failure = "prepare failed"
-	} else {
-		prepared = true
+	// 3. The OS lifecycle. It fences before any service, registration or
+	//    namespace can exist and reports whether collection was confirmed.
+	entryDir := d.home("entries", safeKey(key))
+	if e := os.MkdirAll(entryDir, 0700); e != nil {
+		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "entry directory unavailable", Cleanup: cl})
 	}
-
-	if prepared {
-		// From here a service, registration or namespace may exist. Fence until
-		// the collect step proves otherwise.
-		_ = d.mutate(key, func(l *Ledger, e *Entry) {
-			e.State = StateRunning
-			l.Fences[osName] = Fence{Key: key, Reason: "registration or namespace may exist until collect succeeds", At: stamp(d.Now())}
-		})
-		tok, terr := d.Token.Registration(ctx)
-		if terr != nil {
-			failure = "registration credential unavailable"
-		} else {
-			started = true
-			o := d.step(ctx, h, key, StepExecute, rec.Path, time.Duration(h.Seconds()+120)*time.Second, tok, func(id ProcID) {
-				_ = d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Helper, e.Started.HelperAt = id, stamp(d.Now()) })
-			})
-			zero(tok)
-			exit = o.exit
-			if o.err != nil {
-				exit = -1
-				failure = "execute did not finish: " + short(o.err)
-				_ = d.step(ctx, h, key, StepStop, rec.Path, 5*time.Minute, nil, nil)
-			} else if o.exit != 0 {
-				failure = fmt.Sprintf("execute exited %d", o.exit)
-			}
+	lc := &LifeCtx{Key: key, Plan: plan, Instance: rec.ID, Root: rec.Path, EntryDir: entryDir, Exec: d.Exec, Admin: d.Admin, Token: d.Token,
+		Fence:   func(reason string) { _ = d.fence(key, reason) },
+		Running: func() { _ = d.mutate(key, func(l *Ledger, e *Entry) { e.State = StateRunning }) },
+		OnHelper: func(id ProcID) {
+			_ = d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Helper, e.Started.HelperAt = id, stamp(d.Now()) })
+		},
+		Log: func(name string, b []byte) { _ = os.WriteFile(filepath.Join(entryDir, name), b, 0600) },
+	}
+	out := h.Lifecycle(ctx, lc)
+	_ = d.mutate(key, func(l *Ledger, e *Entry) {
+		e.State = StateCollecting
+		if out.Started {
+			e.Started.ExitCode, e.Started.ExitedAt = intp(out.Exit), stamp(d.Now())
 		}
+	})
+	var ec *int
+	if out.Started {
+		ec = intp(out.Exit)
 	}
-	if started {
-		_ = d.mutate(key, func(l *Ledger, e *Entry) {
-			e.Started.ExitCode, e.Started.ExitedAt = intp(exit), stamp(d.Now())
-		})
+	if !out.Collected {
+		cl.State, cl.Detail = "failed", "collection not confirmed"
+		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "collect not confirmed", ExitCode: ec, Official: OfficialRec{CheckedAt: stamp(d.Now()), Reason: "not checked"}, Cleanup: cl})
 	}
-
-	// 3. Collection: the helper verifies PID 0 / registration / service / ACL /
-	//    profile absence. Without a successful collect the OS stays fenced.
-	_ = d.mutate(key, func(l *Ledger, e *Entry) { e.State = StateCollecting })
-	verb := StepCollectUnstarted
-	if started {
-		verb = StepCollect
-	}
-	col := d.step(ctx, h, key, verb, rec.Path, time.Duration(cleanupSeconds(h))*time.Second, nil, nil)
 
 	// 4. The official result is a separate check; the process exit alone never
 	//    counts as success.
 	off := OfficialRec{CheckedAt: stamp(d.Now()), Reason: "not started"}
-	if started {
-		orx, oc := context.WithTimeout(ctx, 90*time.Second)
+	if out.Started && out.Runner != "" {
+		octx, oc := context.WithTimeout(ctx, 90*time.Second)
 		r2 := d.Reader()
 		r2.MaxCalls = 120
-		if e := d.C.RequireSuccess(orx, plan, h.RunnerName(rec.ID), r2.API()); e != nil {
+		if e := d.C.RequireSuccess(octx, plan, out.Runner, r2.API()); e != nil {
 			off = OfficialRec{CheckedAt: stamp(d.Now()), Reason: short(e)}
 		} else {
 			off = OfficialRec{CheckedAt: stamp(d.Now()), Success: true}
 		}
 		oc()
 	}
-
-	var ec *int
-	if started {
-		ec = intp(exit)
-	}
-	if !col.ok() {
-		cl.State, cl.Detail = "failed", "collect did not confirm cleanup"
-		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "collect not confirmed", ExitCode: ec, Official: off, Cleanup: cl})
-	}
 	cl.State = "collected"
+	residueBlocked := false
+	if out.Residue {
+		cl.Detail = "residue_only: profile, hive or classes remain"
+		residueBlocked = !d.allowResidue(osName)
+		if !residueBlocked {
+			_ = d.mutate(key, func(l *Ledger, e *Entry) { l.ResidueCount++ })
+		}
+	}
 
 	// 5. Keep the original logs and hashes, then retire the owned root.
-	manifest, e := preserveEvidence(rec.Path, d.home("entries", safeKey(key)), d.home("evidence", safeKey(key)))
+	manifest, e := preserveEvidence(rec.Path, entryDir, d.home("evidence", safeKey(key)))
 	if e != nil {
 		cl.State, cl.Detail = "failed", "evidence not preserved: "+short(e)
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "evidence not preserved", ExitCode: ec, Official: off, Cleanup: cl})
 	}
+	detail := cl.Detail
 	cl.State, cl.Evidence, cl.ManifestSHA = "evidence", d.home("evidence", safeKey(key)), manifest
 	cl = d.retire(ctx, cl)
 	if cl.State != "removed" && cl.State != "quarantined" {
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "owned root not retired", ExitCode: ec, Official: off, Cleanup: cl})
 	}
+	if detail != "" {
+		cl.Detail = detail + "; " + cl.Detail
+	}
+	if residueBlocked {
+		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "collection left residue that is not allowed", ExitCode: ec, Official: off, Cleanup: cl})
+	}
 
 	state, reason := StateSucceeded, ""
-	if !started || exit != 0 || !off.Success {
+	if !out.Started || !out.HelperOK || out.Exit != 0 || !off.Success {
 		state = StateFailed
-		reason = failure
+		reason = out.Failure
 		if reason == "" {
 			reason = "official success not confirmed: " + off.Reason
 		}
@@ -264,11 +201,14 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	return d.finalize(key, Result{State: state, Reason: reason, ExitCode: ec, Official: off, Cleanup: cl})
 }
 
-func cleanupSeconds(h Helper) int {
-	if n := h.CleanupSeconds(); n != 0 {
-		return n
-	}
-	return 1800
+func (d *Deps) allowResidue(osName string) bool {
+	return osName == "Windows" && d.Cfg.Helpers["Windows"].AllowResidueOnly
+}
+
+func (d *Deps) fence(key, reason string) error {
+	return d.mutate(key, func(l *Ledger, e *Entry) {
+		l.Fences[e.OS] = Fence{Key: key, Reason: reason, At: stamp(d.Now())}
+	})
 }
 
 // retire follows the safe-delete lifecycle: plan, delete exactly the planned

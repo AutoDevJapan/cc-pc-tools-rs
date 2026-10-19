@@ -85,14 +85,14 @@ func TestSeventhInitialJobIsBlockedWithoutContinuation(t *testing.T) {
 
 func TestForeignForkAndAdvancedHeadAreNeverAdmitted(t *testing.T) {
 	h := newHarness(t)
-	foreign := m{"id": 201, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": m{"id": 5, "full_name": "Other/repo"}, "head_repository": m{"id": 5, "full_name": "Other/repo"}, "pull_requests": []m{{"number": 1}}}
+	foreign := obj{"id": 201, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": obj{"id": 5, "full_name": "Other/repo"}, "head_repository": obj{"id": 5, "full_name": "Other/repo"}, "pull_requests": []obj{{"number": 1}}}
 	h.gh.addRunObj(foreign, map[int64]string{2011: "test (ubuntu-latest)"})
-	forkRepo := m{"id": 999, "full_name": "fork/civ6-banseiki", "fork": true}
-	fork := m{"id": 202, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": repoObj(), "head_repository": forkRepo, "pull_requests": []m{}}
+	forkRepo := obj{"id": 999, "full_name": "fork/civ6-banseiki", "fork": true}
+	fork := obj{"id": 202, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": repoObj(), "head_repository": forkRepo, "pull_requests": []obj{}}
 	h.gh.addRunObj(fork, map[int64]string{2021: "test (ubuntu-latest)"})
 	// A run whose PR head moved on: the run's head differs from the PR head.
 	h.gh.addRun(203, ".github/workflows/rust.yml", "pull_request", 149, map[int64]string{2031: "test (ubuntu-latest)"})
-	h.gh.data["repos/"+Repository+"/pulls/149"] = m{"number": 149, "state": "open", "merge_commit_sha": mergeSHA, "head": m{"sha": strings.Repeat("d", 40), "ref": branch, "repo": repoObj()}}
+	h.gh.data["repos/"+Repository+"/pulls/149"] = obj{"number": 149, "state": "open", "merge_commit_sha": mergeSHA, "head": obj{"sha": strings.Repeat("d", 40), "ref": branch, "repo": repoObj()}}
 	r := h.tick()
 	if r.Admitted != 0 || len(h.ledger().Entries) != 0 || len(h.spawned) != 0 {
 		t.Fatalf("unsafe job admitted: %+v", r)
@@ -139,11 +139,8 @@ func TestSupervisorSuccessRecordsFourSeparateFacts(t *testing.T) {
 	if e.State != StateSucceeded || !e.Official.Success || e.Cleanup.State != "removed" || e.Queued.At == "" || e.Started.HelperAt == "" || e.Started.ExitCode == nil || *e.Started.ExitCode != 0 {
 		t.Fatalf("%+v", e)
 	}
-	if got := h.steps.names(); got != "Windows:prepare,Windows:execute,Windows:collect" {
-		t.Fatalf("steps %s", got)
-	}
-	if string(h.steps.stdin) != "REGISTRATION-TOKEN-SECRET-123456" {
-		t.Fatal("registration credential must reach the helper stdin")
+	if got := h.win.names(); got != "Windows:lifecycle" || h.c.runner != "R-"+e.Cleanup.Instance {
+		t.Fatalf("lifecycle %s runner %q", got, h.c.runner)
 	}
 	if _, err := os.Stat(e.Cleanup.Root); !os.IsNotExist(err) {
 		t.Fatal("owned root should be retired")
@@ -185,29 +182,29 @@ func TestProcessExitAloneIsNotSuccessAndFailureIsNeverRerun(t *testing.T) {
 	}
 
 	h2 := newHarness(t)
-	h2.steps.exit[StepExecute] = 1
+	h2.lin.out = Outcome{Started: true, Exit: 1, Collected: true, Failure: "run exited 1"}
 	k2 := h2.seed("Linux", 303, 3031, "test (ubuntu-latest)", true)
 	_ = h2.d.Supervise(context.Background(), k2)
 	e2 := h2.ledger().Entries[k2]
-	if e2.State != StateFailed || e2.Cleanup.State != "removed" || !strings.Contains(h2.steps.names(), "collect") || len(h2.ledger().Fences) != 0 {
+	if e2.State != StateFailed || e2.Cleanup.State != "removed" || e2.Reason != "run exited 1" || len(h2.ledger().Fences) != 0 {
 		t.Fatalf("failed job must still be collected and cleaned: %+v", e2)
 	}
 }
 
-func TestRegistrationFailureCollectsUnstartedWithoutExecute(t *testing.T) {
+func TestNotStartedJobFailsAfterCleanup(t *testing.T) {
 	h := newHarness(t)
-	h.d.Token = fakeToken{err: errors.New("denied")}
-	key := h.seed("Linux", 304, 3041, "test (ubuntu-latest)", true)
-	_ = h.d.Supervise(context.Background(), key)
-	e := h.ledger().Entries[key]
-	if e.State != StateFailed || strings.Contains(h.steps.names(), "execute") || !strings.Contains(h.steps.names(), "collect-unstarted") {
-		t.Fatalf("%s %+v", h.steps.names(), e)
+	h.lin.out = Outcome{Collected: true, Failure: "registration credential unavailable"}
+	k2 := h.seed("Linux", 304, 3042, "test (ubuntu-latest)", true)
+	_ = h.d.Supervise(context.Background(), k2)
+	e2 := h.ledger().Entries[k2]
+	if e2.State != StateFailed || e2.Official.Success || e2.Cleanup.State != "removed" || e2.Reason != "registration credential unavailable" || h.c.runner != "" {
+		t.Fatalf("%+v", e2)
 	}
 }
 
 func TestFailedCollectFencesTheOSAndKeepsTheRoot(t *testing.T) {
 	h := newHarness(t)
-	h.steps.exit[StepCollect] = 2
+	h.win.out = Outcome{Started: true, HelperOK: true, Collected: false}
 	key := h.seed("Windows", 305, 3051, "test (windows-latest)", true)
 	_ = h.d.Supervise(context.Background(), key)
 	l := h.ledger()
@@ -221,7 +218,7 @@ func TestFailedCollectFencesTheOSAndKeepsTheRoot(t *testing.T) {
 	// The fenced OS gets no new worker, the other OS still does.
 	h.seed("Windows", 306, 3061, "test (windows-latest)", false)
 	h.seed("Linux", 306, 3062, "test (ubuntu-latest)", false)
-	h.gh.data["repos/"+Repository+"/actions/runs?status=queued&per_page=30"] = m{"workflow_runs": []m{}}
+	h.gh.data["repos/"+Repository+"/actions/runs?status=queued&per_page=30"] = obj{"workflow_runs": []obj{}}
 	h.tick()
 	if len(h.spawned) != 1 {
 		t.Fatalf("spawned %v", h.spawned)
@@ -229,11 +226,9 @@ func TestFailedCollectFencesTheOSAndKeepsTheRoot(t *testing.T) {
 	if !strings.HasPrefix(h.spawned[0], "306/1/3062") {
 		t.Fatalf("only the unfenced OS may start: %v", h.spawned)
 	}
-	// A status that is clean while the root is not retired keeps the fence.
-	h.steps.clean = true
 	h.tick()
 	if _, ok := h.ledger().Fences["Windows"]; !ok {
-		t.Fatal("fence released without a retired owned root")
+		t.Fatal("fence released without any proof")
 	}
 }
 
@@ -243,7 +238,7 @@ func TestUncertainCreateKeepsTheFence(t *testing.T) {
 	key := h.seed("Linux", 307, 3071, "test (ubuntu-latest)", true)
 	_ = h.d.Supervise(context.Background(), key)
 	l := h.ledger()
-	if l.Entries[key].State != StateNeedsRecovery || l.Fences["Linux"].Key != key || h.steps.names() != "" {
+	if l.Entries[key].State != StateNeedsRecovery || l.Fences["Linux"].Key != key || h.lin.names() != "" {
 		t.Fatalf("%+v", l)
 	}
 }
@@ -259,7 +254,7 @@ func TestOSLockKeepsASecondWorkerOut(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := h.ledger().Entries[key]
-	if e.State != StateReserved || e.Started.Attempts != 0 || h.steps.names() != "" || h.sd.n != 0 {
+	if e.State != StateReserved || e.Started.Attempts != 0 || h.lin.names() != "" || h.sd.n != 0 {
 		t.Fatalf("busy lock must leave the entry untouched: %+v", e)
 	}
 	unlock()
@@ -411,24 +406,19 @@ func TestEndpointAllowlistAndPinnedExecutables(t *testing.T) {
 	if (Pinned{Path: "relative.exe", SHA256: good}).Verify() == nil {
 		t.Fatal("relative path accepted")
 	}
-	h := fixedHelper{os: "Linux", cfg: HelperConfig{Exe: Pinned{Path: exe, SHA256: strings.Repeat("0", 64)}, Seconds: 600}}
-	if _, err := runStep(context.Background(), h, StepPrepare, t.TempDir(), nil, nil); err == nil {
+	if _, err := runPinned(context.Background(), Pinned{Path: exe, SHA256: strings.Repeat("0", 64)}, []string{"prepare", t.TempDir()}, nil, nil); err == nil {
 		t.Fatal("helper started despite a wrong pin")
-	}
-	if _, err := runStep(context.Background(), fixedHelper{os: "Linux", cfg: HelperConfig{Exe: Pinned{Path: exe, SHA256: good}}}, "rm -rf", t.TempDir(), nil, nil); err == nil {
-		t.Fatal("arbitrary step verb accepted")
 	}
 }
 
 func TestRealHelperProcessGetsStdinAndExitCode(t *testing.T) {
 	exe, _ := os.Executable()
 	sum, _ := hashFile(exe)
-	h := fixedHelper{os: "Linux", cfg: HelperConfig{Exe: Pinned{Path: exe, SHA256: sum}, Seconds: 600}}
 	t.Setenv("CIQ_FAKE_HELPER", "1")
 	t.Setenv("CIQ_EXIT", "3")
 	root := t.TempDir()
 	var started ProcID
-	res, err := runStep(context.Background(), h, StepExecute, root, []byte("token-bytes"), func(id ProcID) { started = id })
+	res, err := runPinned(context.Background(), Pinned{Path: exe, SHA256: sum}, []string{"execute", root}, []byte("token-bytes"), func(id ProcID) { started = id })
 	if err != nil || res.Exit != 3 {
 		t.Fatalf("%v %+v", err, res)
 	}

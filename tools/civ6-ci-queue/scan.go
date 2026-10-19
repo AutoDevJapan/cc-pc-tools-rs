@@ -125,6 +125,10 @@ func (s *Scanner) Observe(ctx context.Context, l *Ledger) ([]Candidate, ScanRepo
 		if run.Repository.ID != RepoID || run.Repository.FullName != Repository || run.Repository.Fork || run.HeadRepo.ID != RepoID || run.HeadRepo.Fork {
 			continue
 		}
+		// The REST API shows either the bare path or path@ref. The plan carries
+		// the bare path; the parent's MatchRunPath later re-checks the raw form.
+		rawPath := run.Path
+		run.Path, _, _ = strings.Cut(rawPath, "@")
 		if run.Path != CodeQLWorkflow && nativeJobs[run.Path] == "" {
 			continue
 		}
@@ -190,6 +194,11 @@ func (s *Scanner) Observe(ctx context.Context, l *Ledger) ([]Candidate, ScanRepo
 			p := base
 			p.JobID, p.JobName = j.ID, j.Name
 			key := p.Key()
+			if !s.C.MatchRunPath(p, rawPath) {
+				rep.Rejected++
+				rejects[key] = "run path does not match the plan workflow"
+				continue
+			}
 			if e := s.C.Validate(p); e != nil {
 				rep.Rejected++
 				rejects[key] = short(e)

@@ -53,6 +53,8 @@ type Contract interface {
 	Validate(Plan) error
 	Labels(Plan) []string
 	OS(Plan) string
+	// MatchRunPath accepts the REST API's bare path and path@ref run forms.
+	MatchRunPath(p Plan, runPath string) bool
 	Verify(context.Context, Plan, ReadAPI) error
 	RequireSuccess(ctx context.Context, p Plan, runnerName string, read ReadAPI) error
 }
@@ -66,6 +68,7 @@ type unwiredContract struct{}
 func (unwiredContract) Validate(Plan) error                         { return errContractUnwired }
 func (unwiredContract) Labels(Plan) []string                        { return nil }
 func (unwiredContract) OS(Plan) string                              { return "" }
+func (unwiredContract) MatchRunPath(Plan, string) bool              { return false }
 func (unwiredContract) Verify(context.Context, Plan, ReadAPI) error { return errContractUnwired }
 func (unwiredContract) RequireSuccess(context.Context, Plan, string, ReadAPI) error {
 	return errContractUnwired

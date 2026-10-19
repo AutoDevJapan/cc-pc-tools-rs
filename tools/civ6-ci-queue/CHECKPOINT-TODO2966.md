@@ -8,6 +8,12 @@
 - .github/workflows/unattended-readiness.yml に tools/civ6-ci-queue を追加
 - 別モデルレビューは共有ToDo 2972（--spec）で登録済み
 
+## 2026-10-19 夜の追補（親2962の配送を反映）
+- OS別adapterを実CLIへ合わせた: Windowsは prepare/collect をCC-AdminBroker、execute(tokenはstdin)/stop は root/helper.exe、成否は collect-end イベント。Linuxは one-shot run（plan はroot外、tokenはhelperが取得）と result.private.json の読み取り。
+- run pathの path@ref 形は親の MatchRunPath で再照合。回収は現在sourceのVerifyに依存しない。
+- residue_only は既定でOS fence。allow_residue_only は親が配備するまで無効。
+- unattended-readiness.yml の変更は戻した（親の civ6-ci.yml に統合される）。
+
 ## 残り
 - PR247のCI結果、2972のMust対応、通常merge
 - 親2962 noteへ commit/PR/review/検査/CLI/未実施の配送

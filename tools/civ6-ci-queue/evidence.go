@@ -29,7 +29,7 @@ const maxEvidenceFile = 8 << 20
 const maxEvidenceTotal = 64 << 20
 const maxEvidenceFiles = 400
 
-var evidenceExt = map[string]bool{".log": true, ".json": true, ".txt": true, ".out": true, ".err": true}
+var evidenceExt = map[string]bool{".log": true, ".json": true, ".txt": true, ".out": true, ".err": true, ".ps1": true}
 var skipDirs = map[string]bool{"cargo": true, "rustup": true, "sccache": true, "target": true, "_work": true, "sdk": true, "node_modules": true, "home": true, "tmp": true}
 
 // preserveEvidence copies the helper's original logs/reports (and the
@@ -65,7 +65,10 @@ func preserveEvidence(root, entryDir, dest string) (string, error) {
 				return nil
 			}
 			inDiag := strings.Contains(filepath.ToSlash(rel), "_diag/")
-			if !evidenceExt[strings.ToLower(filepath.Ext(p))] && !inDiag {
+			// Top-level extensionless files are the helpers' receipts (for
+			// example the Linux intent markers); deeper ones need a log-like name.
+			topLevel := !strings.Contains(filepath.ToSlash(rel), "/")
+			if !evidenceExt[strings.ToLower(filepath.Ext(p))] && !inDiag && !(topLevel && filepath.Ext(p) == "") {
 				return nil
 			}
 			info, e := d.Info()

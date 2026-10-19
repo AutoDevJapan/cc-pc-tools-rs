@@ -18,6 +18,7 @@ type TickReport struct {
 	Active        int        `json:"active"`
 	Fenced        []string   `json:"fenced,omitempty"`
 	Overdue       []string   `json:"overdue,omitempty"`
+	Residue       int        `json:"residue_count,omitempty"`
 	Initial       int        `json:"budget_initial_used"`
 	Normal        int        `json:"budget_normal_used"`
 	Errors        []string   `json:"errors,omitempty"`
@@ -52,6 +53,7 @@ func (d *Deps) Tick(ctx context.Context) TickReport {
 	}
 	if l, e := d.Store.View(); e == nil {
 		rep.Initial, rep.Normal = len(l.Budget.Initial), len(l.Budget.Normal)
+		rep.Residue = l.ResidueCount
 		for _, en := range l.Entries {
 			if activeState(en.State) {
 				rep.Active++
@@ -234,25 +236,8 @@ func (d *Deps) reconcile(ctx context.Context, rep *TickReport) {
 			}
 			continue
 		}
-		// Already fenced: ask the helper whether anything is left. A clean
-		// answer with a retired owned root releases the fence; anything else
-		// keeps it.
-		h := d.Helpers[e.OS]
-		if h == nil || e.Cleanup.Root == "" || (e.Cleanup.State != "removed" && e.Cleanup.State != "quarantined") {
-			continue
-		}
-		pctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		clean, perr := probeClean(pctx, d.Step, h, e.Cleanup.Root)
-		cancel()
-		if perr == nil && clean {
-			if d.mutate(k, func(l *Ledger, en *Entry) {
-				en.State, en.Reason = StateFailed, "recovered: helper reports nothing left"
-				if f, ok := l.Fences[en.OS]; ok && f.Key == k {
-					delete(l.Fences, en.OS)
-				}
-			}) == nil {
-				rep.Reconciled++
-			}
-		}
+		// Already fenced and no result file: nothing here can prove the OS is
+		// clean, so the fence stays until the parent's helper recovery mode (or
+		// an operator) resolves it. The tick makes no outside call for this.
 	}
 }

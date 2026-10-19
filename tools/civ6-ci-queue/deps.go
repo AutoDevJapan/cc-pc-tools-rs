@@ -21,7 +21,8 @@ type Deps struct {
 	Reader  func() *Reader
 	C       Contract
 	Helpers map[string]Helper
-	Step    StepFunc
+	Exec    ExecFunc
+	Admin   AdminFunc
 	SD      SafeDelete
 	Token   TokenSource
 	Alive   func(ProcID) bool
@@ -53,7 +54,10 @@ func NewDeps(cfgPath string) (*Deps, error) {
 	if e != nil {
 		return nil, e
 	}
-	d := &Deps{Cfg: cfg, CfgPath: cfgPath, Now: time.Now, C: activeContract, Step: runStep, Alive: procAlive}
+	d := &Deps{Cfg: cfg, CfgPath: cfgPath, Now: time.Now, C: activeContract, Exec: runPinned, Alive: procAlive}
+	if cfg.AdminBroker.Path != "" {
+		d.Admin = realAdmin(cfg.AdminBroker)
+	}
 	d.Store = &Store{Path: filepath.Join(cfg.Home, "ledger.json"), Now: time.Now}
 	d.Reader = func() *Reader {
 		return &Reader{GH: cfg.GH, Run: realRun, CacheDir: filepath.Join(cfg.Home, "cache"), MaxCalls: 40}
@@ -62,7 +66,11 @@ func NewDeps(cfgPath string) (*Deps, error) {
 	d.Token = ghToken{GH: cfg.GH, Run: realRun}
 	d.Helpers = map[string]Helper{}
 	for name, h := range cfg.Helpers {
-		d.Helpers[name] = fixedHelper{os: name, cfg: h}
+		if name == "Windows" {
+			d.Helpers[name] = windowsHelper{cfg: h}
+		} else {
+			d.Helpers[name] = linuxHelper{cfg: h}
+		}
 	}
 	d.Self = func() ProcID {
 		id, _ := procIdentity(uint32(os.Getpid()))

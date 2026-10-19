@@ -111,6 +111,8 @@ type Ledger struct {
 	Entries  map[string]*Entry  `json:"entries"`
 	Fences   map[string]Fence   `json:"fences"`
 	Refusals map[string]Refusal `json:"refusals"`
+	// ResidueCount counts jobs whose collection ended "residue only".
+	ResidueCount int `json:"residue_count,omitempty"`
 }
 
 func newLedger() *Ledger {

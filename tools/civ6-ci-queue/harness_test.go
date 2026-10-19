@@ -76,45 +76,47 @@ func (g *fakeGH) run(ctx context.Context, exe string, stdin []byte, limit int64,
 	return json.Marshal(v)
 }
 
-type m = map[string]any
+type obj = map[string]any
 
-func repoObj() m { return m{"id": RepoID, "full_name": Repository, "fork": false} }
+func repoObj() obj { return obj{"id": RepoID, "full_name": Repository, "fork": false} }
 
 func (g *fakeGH) addRun(id int64, path, event string, pr int, jobs map[int64]string) {
-	run := m{"id": id, "run_attempt": 1, "path": path, "event": event, "status": "queued", "head_sha": headSHA, "head_branch": branch, "repository": repoObj(), "head_repository": repoObj()}
+	run := obj{"id": id, "run_attempt": 1, "path": path, "event": event, "status": "queued", "head_sha": headSHA, "head_branch": branch, "repository": repoObj(), "head_repository": repoObj()}
 	if pr > 0 {
-		run["pull_requests"] = []m{{"number": pr}}
+		run["pull_requests"] = []obj{{"number": pr}}
 	} else {
-		run["pull_requests"] = []m{}
+		run["pull_requests"] = []obj{}
 	}
 	g.addRunObj(run, jobs)
 }
 
-func (g *fakeGH) addRunObj(run m, jobs map[int64]string) {
+func (g *fakeGH) addRunObj(run obj, jobs map[int64]string) {
 	q := "repos/" + Repository + "/actions/runs?status=queued&per_page=30"
-	l, _ := g.data[q].(m)
+	l, _ := g.data[q].(obj)
 	if l == nil {
-		l = m{"workflow_runs": []m{}}
+		l = obj{"workflow_runs": []obj{}}
 	}
-	l["workflow_runs"] = append(l["workflow_runs"].([]m), run)
+	l["workflow_runs"] = append(l["workflow_runs"].([]obj), run)
 	g.data[q] = l
-	var js []m
+	var js []obj
 	for id, name := range jobs {
-		js = append(js, m{"id": id, "run_id": run["id"], "run_attempt": 1, "name": name, "status": "queued", "labels": []string{"x"}})
+		js = append(js, obj{"id": id, "run_id": run["id"], "run_attempt": 1, "name": name, "status": "queued", "labels": []string{"x"}})
 	}
-	g.data[fmt.Sprintf("repos/%s/actions/runs/%d/attempts/1/jobs?per_page=100", Repository, run["id"])] = m{"total_count": len(js), "jobs": js}
-	if p, _ := run["path"].(string); p != CodeQLWorkflow {
+	g.data[fmt.Sprintf("repos/%s/actions/runs/%d/attempts/1/jobs?per_page=100", Repository, run["id"])] = obj{"total_count": len(js), "jobs": js}
+	full, _ := run["path"].(string)
+	p, _, _ := strings.Cut(full, "@")
+	if p != CodeQLWorkflow {
 		b := []byte("name: " + p + "\n")
-		g.data["repos/"+Repository+"/contents/"+p+"?ref="+mergeSHA] = m{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(b), "sha": blobSHA(b)}
-		g.data["repos/"+Repository+"/contents/"+p+"?ref="+headSHA] = m{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(b), "sha": blobSHA(b)}
+		g.data["repos/"+Repository+"/contents/"+p+"?ref="+mergeSHA] = obj{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(b), "sha": blobSHA(b)}
+		g.data["repos/"+Repository+"/contents/"+p+"?ref="+headSHA] = obj{"type": "file", "encoding": "base64", "content": base64.StdEncoding.EncodeToString(b), "sha": blobSHA(b)}
 	}
 }
 
 func newGH() *fakeGH {
 	g := &fakeGH{data: map[string]any{}}
-	g.data["repos/"+Repository+"/actions/runs?status=in_progress&per_page=30"] = m{"workflow_runs": []m{}}
-	g.data["repos/"+Repository+"/pulls/149"] = m{"number": 149, "state": "open", "merge_commit_sha": mergeSHA, "head": m{"sha": headSHA, "ref": branch, "repo": repoObj()}}
-	g.data["repos/"+Repository+"/git/commits/"+headSHA] = m{"sha": headSHA, "tree": m{"sha": treeSHA}}
+	g.data["repos/"+Repository+"/actions/runs?status=in_progress&per_page=30"] = obj{"workflow_runs": []obj{}}
+	g.data["repos/"+Repository+"/pulls/149"] = obj{"number": 149, "state": "open", "merge_commit_sha": mergeSHA, "head": obj{"sha": headSHA, "ref": branch, "repo": repoObj()}}
+	g.data["repos/"+Repository+"/git/commits/"+headSHA] = obj{"sha": headSHA, "tree": obj{"sha": treeSHA}}
 	return g
 }
 
@@ -131,6 +133,7 @@ type fakeContract struct {
 	verified   int
 	verifyErr  func(Plan) error
 	successErr error
+	runner     string
 }
 
 func (f *fakeContract) Validate(p Plan) error {
@@ -146,6 +149,13 @@ func (f *fakeContract) OS(p Plan) string {
 	}
 	return "Windows"
 }
+func (f *fakeContract) MatchRunPath(p Plan, runPath string) bool {
+	if runPath == p.Workflow {
+		return true
+	}
+	w, ref, found := strings.Cut(runPath, "@")
+	return found && w == p.Workflow && (ref == "refs/pull/149/merge" || ref == "refs/heads/main")
+}
 func (f *fakeContract) Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	f.mu.Lock()
 	f.verified++
@@ -157,38 +167,41 @@ func (f *fakeContract) Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	return nil
 }
 func (f *fakeContract) RequireSuccess(ctx context.Context, p Plan, runner string, read ReadAPI) error {
+	f.mu.Lock()
+	f.runner = runner
+	f.mu.Unlock()
 	return f.successErr
 }
 
-type fakeSteps struct {
-	mu      sync.Mutex
-	calls   []string
-	exit    map[string]int
-	err     map[string]error
-	stdin   []byte
-	clean   bool
-	log     string
-	started []ProcID
+// fakeHelper is a scripted OS lifecycle for the supervisor tests.
+type fakeHelper struct {
+	os    string
+	mu    sync.Mutex
+	calls []string
+	out   Outcome
 }
 
-func (f *fakeSteps) run(ctx context.Context, h Helper, step, root string, stdin []byte, onStart func(ProcID)) (StepResult, error) {
+func newFakeHelper(osName string) *fakeHelper {
+	return &fakeHelper{os: osName, out: Outcome{Started: true, HelperOK: true, Collected: true}}
+}
+func (f *fakeHelper) OSName() string      { return f.os }
+func (f *fakeHelper) Seconds() int        { return 600 }
+func (f *fakeHelper) CleanupSeconds() int { return 0 }
+func (f *fakeHelper) Lifecycle(ctx context.Context, lc *LifeCtx) Outcome {
 	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.calls = append(f.calls, h.OSName()+":"+step)
-	if step == StepExecute {
-		f.stdin = append([]byte(nil), stdin...)
-		if onStart != nil {
-			onStart(ProcID{PID: 777, Created: 5})
-		}
-		_ = os.WriteFile(filepath.Join(root, "runner.log"), []byte("original runner log\n"), 0600)
+	f.calls = append(f.calls, f.os+":lifecycle")
+	out := f.out
+	f.mu.Unlock()
+	lc.Running()
+	lc.Fence("fake: resources may exist")
+	lc.OnHelper(ProcID{PID: 777, Created: 5})
+	_ = os.WriteFile(filepath.Join(lc.Root, "runner.log"), []byte("original runner log\n"), 0600)
+	if out.Runner == "" {
+		out.Runner = "R-" + lc.Instance
 	}
-	if step == StepStatus {
-		return StepResult{Output: []byte(fmt.Sprintf(`{"clean":%v}`, f.clean))}, nil
-	}
-	return StepResult{Exit: f.exit[step], Output: []byte("out-" + step)}, f.err[step]
+	return out
 }
-
-func (f *fakeSteps) names() string {
+func (f *fakeHelper) names() string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return strings.Join(f.calls, ",")
@@ -240,7 +253,8 @@ type harness struct {
 	d       *Deps
 	gh      *fakeGH
 	c       *fakeContract
-	steps   *fakeSteps
+	lin     *fakeHelper
+	win     *fakeHelper
 	sd      *fakeSD
 	spawned []string
 	live    bool
@@ -249,8 +263,8 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	home := t.TempDir()
-	h := &harness{t: t, gh: newGH(), c: &fakeContract{}, steps: &fakeSteps{exit: map[string]int{}, err: map[string]error{}}, sd: &fakeSD{base: t.TempDir()}, live: true, now: time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)}
-	d := &Deps{Cfg: Config{Version: 1, Home: home}, Now: func() time.Time { return h.now }, C: h.c, Step: h.steps.run, SD: h.sd, Token: fakeToken{}}
+	h := &harness{t: t, gh: newGH(), c: &fakeContract{}, lin: newFakeHelper("Linux"), win: newFakeHelper("Windows"), sd: &fakeSD{base: t.TempDir()}, live: true, now: time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)}
+	d := &Deps{Cfg: Config{Version: 1, Home: home}, Now: func() time.Time { return h.now }, C: h.c, SD: h.sd, Token: fakeToken{}}
 	d.Store = &Store{Path: filepath.Join(home, "ledger.json")}
 	d.Reader = func() *Reader { return &Reader{Run: h.gh.run, pinned: true, MaxCalls: 200} }
 	d.Alive = func(id ProcID) bool { return h.live && id.PID >= 5000 && id.PID < 6000 }
@@ -263,10 +277,7 @@ func newHarness(t *testing.T) *harness {
 		h.spawned = append(h.spawned, key)
 		return ProcID{PID: uint32(5000 + len(h.spawned)), Created: 11}, true, nil
 	}
-	d.Helpers = map[string]Helper{
-		"Linux":   fixedHelper{os: "Linux", cfg: HelperConfig{Seconds: 600}},
-		"Windows": fixedHelper{os: "Windows", cfg: HelperConfig{Seconds: 600, RunnerVersion: "2.300.0", RunnerDigest: strings.Repeat("a", 64), ControllerSID: "S-1-5-21-1-2-3-4"}},
-	}
+	d.Helpers = map[string]Helper{"Linux": h.lin, "Windows": h.win}
 	h.d = d
 	return h
 }
@@ -285,7 +296,7 @@ func (h *harness) ledger() *Ledger {
 	return l
 }
 
-// seed stores a plan as an already reserved and launching first attempt.
+// seed stores a plan as an already reserved (and optionally launching) first attempt.
 func (h *harness) seed(osName string, run, job int64, jobName string, launching bool) string {
 	p := Plan{Version: 1, RepoID: RepoID, Head: headSHA, Tree: treeSHA, Event: "pull_request", Branch: branch, PR: 149, ContextSHA: mergeSHA, WorkflowSHA: mergeSHA, Workflow: ".github/workflows/rust.yml", RunID: run, Attempt: 1, JobID: job, Job: "test", JobName: jobName}
 	var key string

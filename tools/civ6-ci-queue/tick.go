@@ -212,6 +212,19 @@ func (d *Deps) reconcile(ctx context.Context, rep *TickReport) {
 			continue
 		}
 		if e.State != StateNeedsRecovery {
+			// The supervisor stores its fence and "create_intent" BEFORE it creates
+			// anything, so a launching entry that still shows no cleanup record
+			// proves that only reads happened: close it without fencing the OS.
+			if e.State == StateLaunching && e.Cleanup.State == "none" && e.Started.HelperAt == "" {
+				if d.mutate(k, func(l *Ledger, en *Entry) {
+					if en.State == StateLaunching && en.Cleanup.State == "none" {
+						en.State, en.Reason = StateFailed, "supervisor ended before creating any resource"
+					}
+				}) == nil {
+					rep.Reconciled++
+				}
+				continue
+			}
 			reason := "supervisor gone without a final result while " + e.State
 			if d.mutate(k, func(l *Ledger, en *Entry) {
 				en.State, en.Reason = StateNeedsRecovery, reason

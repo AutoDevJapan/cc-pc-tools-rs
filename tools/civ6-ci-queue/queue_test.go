@@ -281,7 +281,7 @@ func TestCrashedSupervisorFencesAndPIDReuseDoesNotUnlock(t *testing.T) {
 		t.Fatal(err)
 	}
 	reused := ProcID{PID: self.PID, Created: self.Created + 12345}
-	_ = h.d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Supervisor = reused })
+	_ = h.d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Supervisor, e.Cleanup.State = reused, "owned" })
 	h.d.Alive = procAlive
 	r := h.tick()
 	l := h.ledger()
@@ -291,7 +291,7 @@ func TestCrashedSupervisorFencesAndPIDReuseDoesNotUnlock(t *testing.T) {
 	// The very same identity does count as alive.
 	h2 := newHarness(t)
 	k2 := h2.seed("Linux", 310, 3101, "test (ubuntu-latest)", true)
-	_ = h2.d.mutate(k2, func(l *Ledger, e *Entry) { e.Started.Supervisor = self })
+	_ = h2.d.mutate(k2, func(l *Ledger, e *Entry) { e.Started.Supervisor, e.Cleanup.State = self, "owned" })
 	h2.d.Alive = procAlive
 	h2.tick()
 	if h2.ledger().Entries[k2].State != StateLaunching || len(h2.ledger().Fences) != 0 {
@@ -302,6 +302,7 @@ func TestCrashedSupervisorFencesAndPIDReuseDoesNotUnlock(t *testing.T) {
 func TestCrashBetweenIntentAndSpawnRecordIsFenced(t *testing.T) {
 	h := newHarness(t)
 	key := h.seed("Windows", 311, 3111, "test (windows-latest)", true)
+	_ = h.d.mutate(key, func(l *Ledger, e *Entry) { e.Cleanup.State = "create_intent" })
 	h.tick()
 	l := h.ledger()
 	if l.Entries[key].State != StateNeedsRecovery || l.Fences["Windows"].Key != key {
@@ -312,10 +313,26 @@ func TestCrashBetweenIntentAndSpawnRecordIsFenced(t *testing.T) {
 	}
 }
 
+func TestSupervisorThatNeverCreatedAnythingClosesWithoutFence(t *testing.T) {
+	h := newHarness(t)
+	key := h.seed("Windows", 314, 3141, "test (windows-latest)", true)
+	h.tick()
+	l := h.ledger()
+	if l.Entries[key].State != StateFailed || len(l.Fences) != 0 || l.Entries[key].Started.Attempts != 1 {
+		t.Fatalf("%+v %+v", l.Entries[key], l.Fences)
+	}
+	h.tick()
+	if len(h.spawned) != 0 || h.ledger().Entries[key].Started.Attempts != 1 {
+		t.Fatal("a closed attempt must not run again")
+	}
+}
+
 func TestResultFileWrittenBeforeCrashIsImported(t *testing.T) {
 	h := newHarness(t)
 	key := h.seed("Linux", 312, 3121, "test (ubuntu-latest)", true)
-	_ = h.d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Supervisor = ProcID{PID: 4242, Created: 3} })
+	_ = h.d.mutate(key, func(l *Ledger, e *Entry) {
+		e.Started.Supervisor, e.Cleanup.State = ProcID{PID: 4242, Created: 3}, "owned"
+	})
 	code := 0
 	if err := writeAtomic(h.d.resultPath(key), Result{Key: key, State: StateSucceeded, ExitCode: &code, Official: OfficialRec{Success: true}, Cleanup: CleanupRec{State: "removed"}, At: stamp(h.now)}); err != nil {
 		t.Fatal(err)

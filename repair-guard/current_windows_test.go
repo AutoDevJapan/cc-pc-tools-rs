@@ -578,6 +578,104 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 	assertDenied("different repository with matching origin")
 }
 
+// Exercise the offline classifier with real repositories, worktrees, specs,
+// origins and common directories. Admission must still reject a failed live
+// identity lookup even when the same local file classification succeeds.
+func TestCurrentSubworkOfflinePathUsesRealGitAndPreservesAdmission(t *testing.T) {
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "product")
+	specs := filepath.Join(base, "specs")
+	for _, dir := range []string{root, root + "-wt", specs} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	parentSpec := filepath.Join(specs, "parent.md")
+	childSpec := filepath.Join(specs, "2872-0123456789abcdef0123456789abcdef.md")
+	for _, path := range []string{parentSpec, childSpec} {
+		if err := os.WriteFile(path, []byte("fixed specification"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture")
+	parentTree := filepath.Join(root+"-wt", "todo-2839-parent")
+	childTree := currentSubworkWorkspacePath(root, 2872, "offline review")
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2839-parent", parentTree)
+	currentFixtureGit(t, root, "worktree", "add", "-q", "-b", "scheduler/todo-2872-review", childTree)
+	product := currentProduct{project: "GoDD-AO", root: root, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: parentSpec, specSHA: hashBytes([]byte("fixed specification"))}
+	products := []currentProduct{product}
+	common, ok := currentGitCommonDir(root)
+	if !ok {
+		t.Fatal("fixture common directory unavailable")
+	}
+	const job = "20261019-053058-todo-2839"
+	parent := object{"id": float64(2839), "project": product.project, "spec": parentSpec, "status": "wait", "jobs": []any{job}, "scheduler": object{"worktree": parentTree}}
+	owner := object{"repository": product.repository, "worktree": parentTree, "git_common": common, "branch": "scheduler/todo-2839-parent"}
+	child := object{"id": float64(2872), "title": "offline review", "project": product.project, "spec": childSpec, "status": "todo", "dispatchable": true,
+		"subwork": object{"parent_todo_id": float64(2839), "origin_job_id": job, "kind": "review", "owner": owner}, "scheduler": object{"worktree": childTree}}
+	db := object{"projects": object{product.project: root}, "items": []any{parent, child}}
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	protectedPath := ""
+	protected := func(path string) bool { return protectedPath != "" && same(path, protectedPath) }
+	verify := func(task int) (currentProduct, bool) {
+		_, qualified, ok := currentSubworkPathReceiptWith(db, task, products, specs, now, protected)
+		return qualified, ok
+	}
+	check := func(want bool) {
+		t.Helper()
+		if got := currentSubworkScopePathAllowedWith(childTree, products, verify, protected, currentProductPath); got != want {
+			t.Fatalf("offline classification = %v, want %v", got, want)
+		}
+	}
+	check(true)
+	identityCalls := 0
+	failedLiveIdentity := func(currentProduct) bool { identityCalls++; return false }
+	receipt, _, admitted := currentSubworkReceiptWith(db, 2872, products, specs, now, protected, currentPlain, sourceOriginVerified, failedLiveIdentity, currentGitCommonDir, currentProductPath)
+	if admitted || receipt["verified"] != false || len(receipt) != 1 || identityCalls != 1 {
+		t.Fatal("admission bypassed failed live identity verification")
+	}
+	check(true)
+	for _, path := range []string{root, parentTree, childTree, parentSpec, childSpec} {
+		protectedPath = path
+		check(false)
+	}
+	protectedPath = ""
+	if _, ok := verify(2873); ok {
+		t.Fatal("unknown child admitted offline")
+	}
+	parent["status"] = "blocked"
+	check(false)
+	parent["status"] = "wait"
+	owner["git_common"] = parentTree
+	check(false)
+	owner["git_common"] = common
+	child["spec"] = parentSpec
+	check(false)
+	child["spec"] = childSpec
+	if err := os.WriteFile(parentSpec, []byte("changed parent specification"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	check(false)
+	if err := os.WriteFile(parentSpec, []byte("fixed specification"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, childTree, "checkout", "-q", "-b", "unrelated-branch")
+	check(false)
+	currentFixtureGit(t, childTree, "checkout", "-q", "scheduler/todo-2872-review")
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/other/GoDD-AO.git")
+	check(false)
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/AutoDevJapan/GoDD-AO.git")
+	check(true)
+	if currentSubworkScopePathAllowedWith(filepath.Join(root+"-wt", "todo-2872-alias"), products, verify, protected, currentProductPath) {
+		t.Fatal("same-ID alias admitted offline")
+	}
+}
+
 func TestCurrentSubworkWorkspacePathMatchesSchedulerSlug(t *testing.T) {
 	root := filepath.Join("C:", "fixture", "product")
 	for _, tc := range []struct {

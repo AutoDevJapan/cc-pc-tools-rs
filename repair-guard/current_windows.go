@@ -373,6 +373,24 @@ func currentSubworkReceipt(db object, task int) (object, currentProduct, bool) {
 	return currentSubworkReceiptWith(db, task, currentProducts, currentTodoSpecsRoot, time.Now(), legacyMatch, currentPlain, sourceOriginVerified, currentGitHubIdentityVerified, currentGitCommonDir, currentProductPath)
 }
 
+// File classification must also work inside read-only, network=false workers.
+// These identities were independently verified when the finite declarations
+// were shipped. This does not replace live GitHub verification at admission:
+// currentSubworkReceipt and --verify-current-succession retain that check.
+// All current relation/spec/origin/physical Git checks still run on every read.
+func currentSubworkPathReceiptWith(db object, task int, products []currentProduct, specsRoot string, now time.Time, protected func(string) bool) (object, currentProduct, bool) {
+	identity := func(candidate currentProduct) bool {
+		for _, declared := range products {
+			if candidate == declared && declared.repositoryID > 0 &&
+				(declared.owner == "AutoDevJapan" || declared.owner == "BM1314" || declared.owner == "mashfromband") {
+				return true
+			}
+		}
+		return false
+	}
+	return currentSubworkReceiptWith(db, task, products, specsRoot, now, protected, currentPlain, sourceOriginVerified, identity, currentGitCommonDir, currentProductPath)
+}
+
 func currentGitCommonDir(root string) (string, bool) {
 	common, ok := currentGit(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
 	return common, ok && common != ""
@@ -397,7 +415,7 @@ func currentSubworkScopePathAllowed(path string) bool {
 		return false
 	}
 	return currentSubworkScopePathAllowedWith(path, currentProducts, func(task int) (currentProduct, bool) {
-		_, child, ok := currentSubworkReceipt(db, task)
+		_, child, ok := currentSubworkPathReceiptWith(db, task, currentProducts, currentTodoSpecsRoot, time.Now(), legacyMatch)
 		return child, ok
 	}, legacyMatch, currentProductPath)
 }

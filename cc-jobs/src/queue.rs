@@ -6,6 +6,10 @@ use std::{
     fs,
 };
 
+#[cfg(test)]
+#[path = "../tests/support/queue_owner_snapshot.rs"]
+mod owner_snapshot_tests;
+
 fn terminal_result(job: &Value) -> bool {
     cc_job_policy::review_result::completed(job, s(job, "last_message"))
         || s(job, "last_message")
@@ -792,8 +796,15 @@ impl Context {
             .into_iter()
             .filter(|j| self.admission_active(j))
             .collect();
+        // One canonical snapshot per owner publication, including title lookup.
+        // Keep it local: the next publication and final admission read afresh.
+        let todo_snapshot = if active.is_empty() {
+            None
+        } else {
+            self.read_work_owner_snapshot()
+        };
         for job in &mut active {
-            self.record_work_owner(job);
+            self.record_work_owner_from_snapshot(job, todo_snapshot.as_ref());
         }
         let owners: serde_json::Map<String, Value> = active
             .iter()
@@ -1569,20 +1580,30 @@ impl Context {
     }
 
     pub(crate) fn record_work_owner(&self, job: &mut Value) {
-        if let Ok(db) = self.read_json(&self.todo_store()) {
-            *job = cc_job_policy::work_owner::registered_job(&db, job);
-        }
-        if s(job, "task_title").is_empty()
-            && let Ok(db) = self.read_json(&self.todo_store())
-            && let Some(item) = db["items"].as_array().into_iter().flatten().find(|i| {
-                (job["todo_id"].is_number() && job["todo_id"] == i["id"])
-                    || (job["id"].is_string()
-                        && i["jobs"]
-                            .as_array()
-                            .is_some_and(|ids| ids.contains(&job["id"])))
-            })
-        {
-            job["task_title"] = item["title"].clone();
+        let todo_snapshot = self.read_work_owner_snapshot();
+        self.record_work_owner_from_snapshot(job, todo_snapshot.as_ref());
+    }
+
+    fn read_work_owner_snapshot(&self) -> Option<Value> {
+        #[cfg(test)]
+        owner_snapshot_tests::record_snapshot_read();
+        self.read_json(&self.todo_store()).ok()
+    }
+
+    fn record_work_owner_from_snapshot(&self, job: &mut Value, db: Option<&Value>) {
+        if let Some(db) = db {
+            *job = cc_job_policy::work_owner::registered_job(db, job);
+            if s(job, "task_title").is_empty()
+                && let Some(item) = db["items"].as_array().into_iter().flatten().find(|i| {
+                    (job["todo_id"].is_number() && job["todo_id"] == i["id"])
+                        || (job["id"].is_string()
+                            && i["jobs"]
+                                .as_array()
+                                .is_some_and(|ids| ids.contains(&job["id"])))
+                })
+            {
+                job["task_title"] = item["title"].clone();
+            }
         }
         let mut identity = if job["work_owner"].is_object() {
             job["work_owner"].clone()

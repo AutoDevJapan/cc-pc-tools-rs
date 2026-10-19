@@ -20,9 +20,17 @@ type OwnedRec struct {
 // checked, and finish/quarantine closes it.
 type SafeDelete interface {
 	Create(ctx context.Context, project, content string) (OwnedRec, error)
-	Plan(ctx context.Context, id string) (string, error)
+	Plan(ctx context.Context, id string) (DeletePlan, error)
 	Finish(ctx context.Context, id string) error
 	Quarantine(ctx context.Context, id, reason string) error
+}
+
+// DeletePlan is the tool's answer to "plan": either an ordinary deletion of
+// Path, or its own instruction to quarantine with a reason.
+type DeletePlan struct {
+	Path   string
+	Action string
+	Reason string
 }
 
 type fixedSafeDelete struct {
@@ -50,19 +58,26 @@ func (s fixedSafeDelete) Create(ctx context.Context, project, content string) (O
 	return OwnedRec{ID: r.ID, Path: r.Path}, nil
 }
 
-func (s fixedSafeDelete) Plan(ctx context.Context, id string) (string, error) {
+func (s fixedSafeDelete) Plan(ctx context.Context, id string) (DeletePlan, error) {
 	if !hex32.MatchString(id) {
-		return "", errors.New("owned id rejected")
+		return DeletePlan{}, errors.New("owned id rejected")
 	}
 	out, e := s.call(ctx, "plan", "--id", id)
 	var r struct {
-		ID   string `json:"id"`
-		Path string `json:"path"`
+		ID                  string `json:"id"`
+		Path                string `json:"path"`
+		Action              string `json:"action"`
+		Reason              string `json:"reason"`
+		ProtectedAttributes bool   `json:"protected_attributes"`
 	}
 	if e != nil || json.Unmarshal(out, &r) != nil || r.ID != id || !absClean(r.Path) {
-		return "", errors.New("deletion plan unavailable")
+		return DeletePlan{}, errors.New("deletion plan unavailable")
 	}
-	return r.Path, nil
+	if r.ProtectedAttributes && r.Action == "submit_to_exec_tool" {
+		// Protected attributes are never deleted by the ordinary command.
+		return DeletePlan{Path: r.Path, Action: "quarantine", Reason: "attributes"}, nil
+	}
+	return DeletePlan{Path: r.Path, Action: r.Action, Reason: r.Reason}, nil
 }
 
 func (s fixedSafeDelete) Finish(ctx context.Context, id string) error {
@@ -74,12 +89,16 @@ func (s fixedSafeDelete) Finish(ctx context.Context, id string) error {
 }
 
 func (s fixedSafeDelete) Quarantine(ctx context.Context, id, reason string) error {
-	if !hex32.MatchString(id) || (reason != "policy" && reason != "windows" && reason != "locked") {
+	if !hex32.MatchString(id) || !quarantineReasons[reason] {
 		return errors.New("quarantine request rejected")
 	}
 	_, e := s.call(ctx, "quarantine", "--id", id, "--reason", reason)
 	return e
 }
+
+// quarantineReasons excludes "hardlink", which is restricted to another task's
+// fixed receipt.
+var quarantineReasons = map[string]bool{"policy": true, "windows": true, "locked": true, "attributes": true, "size": true}
 
 // removeOwned removes exactly the planned owned root. It refuses links and
 // reparse points anywhere below the root rather than following them, and it

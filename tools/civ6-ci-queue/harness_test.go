@@ -179,6 +179,9 @@ type fakeHelper struct {
 	mu    sync.Mutex
 	calls []string
 	out   Outcome
+	// entered/release let a test hold a lifecycle open to force overlap.
+	entered chan struct{}
+	release chan struct{}
 }
 
 func newFakeHelper(osName string) *fakeHelper {
@@ -195,6 +198,10 @@ func (f *fakeHelper) Lifecycle(ctx context.Context, lc *LifeCtx) Outcome {
 	lc.Running()
 	lc.Fence("fake: resources may exist")
 	lc.OnHelper(ProcID{PID: 777, Created: 5})
+	if f.entered != nil {
+		f.entered <- struct{}{}
+		<-f.release
+	}
 	_ = os.WriteFile(filepath.Join(lc.Root, "runner.log"), []byte("original runner log\n"), 0600)
 	if out.Runner == "" {
 		out.Runner = "R-" + lc.Instance
@@ -213,6 +220,8 @@ type fakeSD struct {
 	finished    []string
 	quarantined []string
 	failCreate  bool
+	planAction  string
+	planReason  string
 }
 
 func (s *fakeSD) Create(ctx context.Context, project, content string) (OwnedRec, error) {
@@ -227,8 +236,12 @@ func (s *fakeSD) Create(ctx context.Context, project, content string) (OwnedRec,
 	}
 	return OwnedRec{ID: id, Path: p}, nil
 }
-func (s *fakeSD) Plan(ctx context.Context, id string) (string, error) {
-	return filepath.Join(s.base, "codex-owned-"+id), nil
+func (s *fakeSD) Plan(ctx context.Context, id string) (DeletePlan, error) {
+	a := s.planAction
+	if a == "" {
+		a = "submit_to_exec_tool"
+	}
+	return DeletePlan{Path: filepath.Join(s.base, "codex-owned-"+id), Action: a, Reason: s.planReason}, nil
 }
 func (s *fakeSD) Finish(ctx context.Context, id string) error {
 	s.finished = append(s.finished, id)

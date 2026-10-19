@@ -67,9 +67,11 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 	unlock, err := d.LockOS(osName)
 	if err == errLockBusy {
-		// Nothing was created or started: hand the entry back untouched.
+		// Nothing was created or started by THIS process. Only an entry that no
+		// supervisor has claimed goes back to "reserved"; a claimed entry belongs
+		// to the worker that holds the lock and is left exactly as it is.
 		return d.mutate(key, func(l *Ledger, e *Entry) {
-			if e.State == StateLaunching && e.Started.HelperAt == "" {
+			if e.State == StateLaunching && !e.Started.Claimed {
 				e.State, e.Started = StateReserved, StartRec{}
 				e.Reason = "OS worker lock busy"
 			}
@@ -80,7 +82,19 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 	defer unlock()
 	me := d.Self()
-	_ = d.mutate(key, func(l *Ledger, e *Entry) { e.Started.Supervisor = me })
+	// Claim the single attempt under the OS lock, against the CURRENT ledger: a
+	// stale read taken before another worker finished can never run it again.
+	claimed := false
+	if e := d.mutate(key, func(l *Ledger, e *Entry) {
+		if e.State == StateLaunching && e.Started.Attempts == 1 && !e.Started.Claimed {
+			e.Started.Claimed, e.Started.Supervisor, claimed = true, me, true
+		}
+	}); e != nil {
+		return e
+	}
+	if !claimed {
+		return errors.New("entry is already claimed or finished")
+	}
 	ctx, cancel := context.WithTimeout(ctx, hardLimitFor(h))
 	defer cancel()
 
@@ -214,9 +228,24 @@ func (d *Deps) fence(key, reason string) error {
 // retire follows the safe-delete lifecycle: plan, delete exactly the planned
 // root, finish. A refusal is never retried; the root is quarantined instead.
 func (d *Deps) retire(ctx context.Context, cl CleanupRec) CleanupRec {
-	planned, e := d.SD.Plan(ctx, cl.SafeDeleteID)
+	plan, e := d.SD.Plan(ctx, cl.SafeDeleteID)
+	if e == nil && plan.Action != "submit_to_exec_tool" {
+		// The tool itself asked for quarantine (attributes, size, ...): follow it
+		// exactly and never delete.
+		reason := plan.Reason
+		if plan.Action != "quarantine" || !quarantineReasons[reason] {
+			cl.State, cl.Detail = "failed", "deletion plan action not understood"
+			return cl
+		}
+		if qe := d.SD.Quarantine(ctx, cl.SafeDeleteID, reason); qe != nil {
+			cl.State, cl.Detail = "failed", "quarantine requested by the plan failed"
+			return cl
+		}
+		cl.State, cl.Detail = "quarantined", "plan requested quarantine: "+reason
+		return cl
+	}
 	if e == nil {
-		e = removeOwned(cl.Root, planned)
+		e = removeOwned(cl.Root, plan.Path)
 	}
 	if e == nil {
 		if fe := d.SD.Finish(ctx, cl.SafeDeleteID); fe != nil {

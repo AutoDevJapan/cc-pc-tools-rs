@@ -49,6 +49,7 @@ type QueuedRec struct {
 type StartRec struct {
 	IntentAt   string `json:"intent_at,omitempty"`
 	Attempts   int    `json:"attempts"`
+	Claimed    bool   `json:"claimed,omitempty"`
 	Supervisor ProcID `json:"supervisor"`
 	Breakaway  bool   `json:"breakaway,omitempty"`
 	HelperAt   string `json:"helper_at,omitempty"`

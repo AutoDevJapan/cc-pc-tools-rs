@@ -1,0 +1,119 @@
+{
+  "todo": 3030,
+  "parent_todo": 3021,
+  "verified_at": "2026-10-20T04:40:50.4058988+09:00",
+  "verdict": "not_deployable_under_existing_tested_binary_hash_contract",
+  "source_commit": "7c1fe857547eb7e6850361752a26d9dfe868528e",
+  "upstream_commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "upstream_tag": "rust-v0.163.0",
+  "upstream_tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
+  "patched_source_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "candidate_path": "D:/CC/Work/unattended-operations-20261013-wt/todo-3029-codex-tui-0-163-0/tools/codex-progress-tui/.ci-work/todo3029/delivery/codex.exe",
+  "candidate_sha256": "618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f",
+  "tested_binary_sha256": "bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969",
+  "candidate_matches_tested_binary": false,
+  "source_json_worktree_sha256": "a99be90209cb9a6bb00526f563c24b58d738a72873531946d69011df2abd7494",
+  "source_json_git_blob_sha256": "e56a69c0df288586812eb5234bbd74c782fcfcd6ed0c5461302428b8fecea491",
+  "patch_sha256": "21dd906d4ceace003835e8b0a59517e9a35187df7c702ddda75e4a9c1b3f96b7",
+  "source_tree_comparison": {
+    "commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+    "candidate_checkout_head": "83086188ae0614bd882818ff1aa23f3194962012",
+    "scope": "codex-rs",
+    "patch_applied_as_worktree_changes": true,
+    "git_diff_exit": 0,
+    "source_modified_by_3030": false
+  },
+  "official_npm": {
+    "recorded_hex_length": 127,
+    "integrity_matches_source": true,
+    "tarball_hex_matches": false,
+    "tarball_sha512_actual": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dab",
+    "codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
+    "package": "@openai/codex@0.163.0-win32-x64",
+    "integrity_actual": "sha512-QQGQ/q9dCJ5C5jqhgFrwycpWG3szIyFNThMiKl6hYtu6N/eM3Qd7StesgnCFAfzVED8IkE3N3oH71szzcludqw==",
+    "host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
+    "tarball_sha512_recorded": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725bdab"
+  },
+  "conpty": {
+    "all_raw_bytes": 23872,
+    "api_key_used": false,
+    "model_provider": "non-authenticated loopback only; no prompt submitted",
+    "slash_progress_title_in_command_delta": true,
+    "exited": true,
+    "session_id": "01a155ad-6480-7a81-af6b-409aeb43e8a2",
+    "persistent_progress": true,
+    "attempt": "attempt5",
+    "unrecognized_command": false,
+    "exit_code": 0,
+    "resizes": [
+      120,
+      60,
+      148
+    ],
+    "slash_progress_partial_warning_in_command_delta": true,
+    "version": "codex-cli 0.163.0",
+    "gpu_used": false,
+    "all_raw_sha256": "544682a56c596e362facc6bdd7e21f26e21e914abebbcda2d6e571cf69bcd417",
+    "startup_raw_sha256": "f45e53e95aa31b5ef2aefaa4825eeb0077396f87f9f5a3b95892d69a6c863e71",
+    "snapshot_count_displayed": 1,
+    "progress_raw_sha256": "bbf5d5578ff3b9e64df38d75957ea94cf58dbe58e8ca834a38affa5dc8dcd04d",
+    "pid": 73472,
+    "home": "empty private acceptance home",
+    "credentials_read": false
+  },
+  "reused_checks": [
+    {
+      "event": "item_190",
+      "at": "2026-10-20T02:01:55+09:00",
+      "exit": 0,
+      "command": "cargo_gate.exe nextest run --locked --release -p codex-tui -E <five exact progress tests>",
+      "job": "20261020-001045-todo-3023",
+      "passed": 5
+    },
+    {
+      "commands": [
+        "cargo_gate.exe clippy --locked --release -p codex-tui --lib -- -D warnings",
+        "cargo_gate.exe test --locked --release -p codex-tui --doc",
+        "cargo_gate.exe build --locked --release -p codex-cli --bin codex"
+      ],
+      "job": "20261020-001045-todo-3023",
+      "exit": 0,
+      "doctest_passed": 0,
+      "at": "2026-10-20T01:59:12+09:00",
+      "doctest_failed": 0,
+      "event": "item_166",
+      "doctest_ignored": 2
+    },
+    {
+      "skipped": 8,
+      "job": "20261020-001045-todo-3023",
+      "passed": 5720,
+      "exit": 1,
+      "failed": 1,
+      "leaky": 315,
+      "event": "item_206",
+      "command": "cargo_gate.exe nextest run --locked --release -p codex-tui -j 4 --no-fail-fast"
+    },
+    {
+      "event": "item_40",
+      "failed": 1,
+      "passed": 0,
+      "job": "20261020-001045-todo-3023",
+      "exit": 1,
+      "source": "clean official rust-v0.163.0",
+      "at": "2026-10-20T02:58:17+09:00",
+      "command": "cargo_gate.exe nextest run --offline --release -p codex-tui -j 1 -E test(dynamic_tool_requests_ignore_other_namespaces_and_dispatch_tui_namespace)",
+      "skipped": 5720
+    }
+  ],
+  "new_cargo_commands": 0,
+  "deployment_performed": false,
+  "launcher_or_manifest_changed": false,
+  "owner_session_operated": false,
+  "remaining": [
+    "Historical tested binary unavailable at the two recorded build-output paths; byte-level mismatch not fully explained.",
+    "Candidate is stamped with STABLE_GIT_COMMIT=e557820...; historical tested build did not set STABLE_GIT_COMMIT and expands to dev. PE timestamps also vary.",
+    "source.json npm_tarball_sha512 is malformed (127 hex characters), while actual tarball matches recorded npm integrity.",
+    "Parent must resolve exact binary attestation and metadata before deployment; runtime acceptance alone does not satisfy recorded tested hash."
+  ]
+}

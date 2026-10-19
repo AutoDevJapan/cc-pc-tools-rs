@@ -1,0 +1,60 @@
+[
+  {
+    "instance": "6a8d1e39e07cf51213e482b895e1865e",
+    "helper_sha256": "f6b8cd56371f659ca787283663db34534fc485d9f3ce872f7906743d871fbe6b",
+    "files": {
+      "plan.json": {
+        "sha256": "e101aecaf4627a18c9579dd99819e7bd520fd6ebc715fe784b482896ef98748d",
+        "bytes": 448,
+        "text": "{\r\n  \"version\": 1,\r\n  \"repo_id\": 1392152644,\r\n  \"head\": \"f3e26f45682ac04b8a9bf07821ce5b96d83ce012\",\r\n  \"tree\": \"a45e137db144ba41db75cd0ba30be63500efb905\",\r\n  \"instance\": \"6a8d1e39e07cf51213e482b895e1865e\",\r\n  \"root\": \"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-6a8d1e39e07cf51213e482b895e1865e\",\r\n  \"controller_sid\": \"S-1-5-21-3727265621-1182195423-444854664-1001\",\r\n  \"seconds\": 60,\r\n  \"cleanup_seconds\": 300,\r\n  \"fixture\": \"normal\"\r\n}"
+      },
+      "prepared.json": {
+        "sha256": "cbacac192c5f7d5749baeac932e9e68582f516e84bbadd205aff38b8b70a16df",
+        "bytes": 285,
+        "text": "{\n  \"credential_free\": true,\n  \"helper_sha256\": \"f6b8cd56371f659ca787283663db34534fc485d9f3ce872f7906743d871fbe6b\",\n  \"official_runner_executed\": false,\n  \"service\": \"CC-CIW-6a8d1e39e07cf51213e482b895e1865e\",\n  \"sid\": \"S-1-5-80-670640827-4227568542-1955735981-2961955922-4285603213\"\n}\n"
+      },
+      "launcher-result.json": {
+        "sha256": "38de3c935bfc73a14ffddbaaa358e86283ff6939c529ed183511849f0d466179",
+        "bytes": 444,
+        "text": "{\n  \"instance\": \"6a8d1e39e07cf51213e482b895e1865e\",\n  \"service_pid\": 54096,\n  \"service_success\": true,\n  \"worker_pid\": 74516,\n  \"worker_exit\": 0,\n  \"retained_member_pids\": [\n    55716,\n    72772,\n    11520\n  ],\n  \"job_drained\": true,\n  \"cancelled\": false,\n  \"account_sid_observed\": \"S-1-5-80-670640827-4227568542-1955735981-2961955922-4285603213\",\n  \"token_au_deny_only_verified\": true,\n  \"hooks_verified\": false,\n  \"fixture_child_pid\": 72772\n}"
+      },
+      "collection": {
+        "sha256": "0e374bf2506be27f2e3b9bc89639e8af2d7065a315bb28466b9ed9fd00860c7b",
+        "bytes": 629,
+        "text": "{\n  \"ace_scope\": \"administrator-installed root and runtime inheritable grants only\",\n  \"additional_ace_count\": 0,\n  \"classes_hive_present\": true,\n  \"credential_runtime\": \"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-6a8d1e39e07cf51213e482b895e1865e\\\\runtime\\\\runner\",\n  \"hive_present\": true,\n  \"known_residue\": true,\n  \"official_ci_claimed\": false,\n  \"process_census_scope\": \"queryable processes; owned Job Object independently drained\",\n  \"profile_present\": true,\n  \"queryable_account_process_count\": 0,\n  \"root_retained\": true,\n  \"service_absent\": true,\n  \"unreadable_process_count\": 1,\n  \"unstarted_worker\": false\n}\n"
+      },
+      "service-delete-result.json": "{\n  \"OK\": true\n}\n",
+      "root-ace-remove-result.json": "{\n  \"OK\": true\n}\n",
+      "runtime-ace-remove-result.json": "{\n  \"OK\": true\n}\n"
+    }
+  },
+  {
+    "instance": "c4809f99f51ee782852c62f2439e36d1",
+    "helper_sha256": "470982d1b66cd0a822224a673b878233cd9494f6bf3a2cb750c80fe5e309c08a",
+    "files": {
+      "plan.json": {
+        "sha256": "66847af72ae28da0b01f5057704a0009a75c41136f24c074f67281f77ab95826",
+        "bytes": 448,
+        "text": "{\r\n  \"version\": 1,\r\n  \"repo_id\": 1392152644,\r\n  \"head\": \"f3e26f45682ac04b8a9bf07821ce5b96d83ce012\",\r\n  \"tree\": \"a45e137db144ba41db75cd0ba30be63500efb905\",\r\n  \"instance\": \"c4809f99f51ee782852c62f2439e36d1\",\r\n  \"root\": \"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-c4809f99f51ee782852c62f2439e36d1\",\r\n  \"controller_sid\": \"S-1-5-21-3727265621-1182195423-444854664-1001\",\r\n  \"seconds\": 60,\r\n  \"cleanup_seconds\": 300,\r\n  \"fixture\": \"cancel\"\r\n}"
+      },
+      "prepared.json": {
+        "sha256": "caecdf651bfa2310a8560523274ad4557c47e4ac50dbc4a68da15f2dd07518a4",
+        "bytes": 286,
+        "text": "{\n  \"credential_free\": true,\n  \"helper_sha256\": \"470982d1b66cd0a822224a673b878233cd9494f6bf3a2cb750c80fe5e309c08a\",\n  \"official_runner_executed\": false,\n  \"service\": \"CC-CIW-c4809f99f51ee782852c62f2439e36d1\",\n  \"sid\": \"S-1-5-80-2085133812-2040381258-2409938471-3013414707-1841851240\"\n}\n"
+      },
+      "launcher-result.json": {
+        "sha256": "bfc9851f0131b052b62c06425374c08fe3d3c4cddbd9e03fde88da09bf82f080",
+        "bytes": 457,
+        "text": "{\n  \"instance\": \"c4809f99f51ee782852c62f2439e36d1\",\n  \"service_pid\": 37792,\n  \"service_success\": true,\n  \"worker_pid\": 63492,\n  \"worker_exit\": 125,\n  \"retained_member_pids\": [\n    63492,\n    22980,\n    36680,\n    63276\n  ],\n  \"job_drained\": true,\n  \"cancelled\": true,\n  \"account_sid_observed\": \"S-1-5-80-2085133812-2040381258-2409938471-3013414707-1841851240\",\n  \"token_au_deny_only_verified\": true,\n  \"hooks_verified\": false,\n  \"fixture_child_pid\": 36680\n}"
+      },
+      "collection": {
+        "sha256": "190aa91b15aa913f5df50a4017481a753d01b6525b73be00a00b4b523d686426",
+        "bytes": 629,
+        "text": "{\n  \"ace_scope\": \"administrator-installed root and runtime inheritable grants only\",\n  \"additional_ace_count\": 0,\n  \"classes_hive_present\": true,\n  \"credential_runtime\": \"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-c4809f99f51ee782852c62f2439e36d1\\\\runtime\\\\runner\",\n  \"hive_present\": true,\n  \"known_residue\": true,\n  \"official_ci_claimed\": false,\n  \"process_census_scope\": \"queryable processes; owned Job Object independently drained\",\n  \"profile_present\": true,\n  \"queryable_account_process_count\": 0,\n  \"root_retained\": true,\n  \"service_absent\": true,\n  \"unreadable_process_count\": 1,\n  \"unstarted_worker\": false\n}\n"
+      },
+      "service-delete-result.json": "{\n  \"OK\": true\n}\n",
+      "root-ace-remove-result.json": "{\n  \"OK\": true\n}\n",
+      "runtime-ace-remove-result.json": "{\n  \"OK\": true\n}\n"
+    }
+  }
+]

@@ -54,9 +54,13 @@ func procAlive(id ProcID) bool {
 	return e == nil && start+1 == id.Created && state != 'Z' && state != 'X'
 }
 
-func startDetached(c *exec.Cmd) (bool, error) {
+func startDetached(mk func() *exec.Cmd) (*exec.Cmd, bool, error) {
+	c := mk()
 	c.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	return true, c.Start()
+	if e := c.Start(); e != nil {
+		return nil, false, e
+	}
+	return c, true, nil
 }
 
 func replaceFile(from, to string) error { return os.Rename(from, to) }

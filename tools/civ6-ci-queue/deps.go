@@ -90,9 +90,11 @@ func NewDeps(cfgPath string) (*Deps, error) {
 		if e != nil {
 			return ProcID{}, false, e
 		}
-		c := exec.Command(exe, "worker", "--config", cfgPath, "--entry", key)
-		c.Env = scrubbedEnv()
-		breakaway, e := startDetached(c)
+		c, breakaway, e := startDetached(func() *exec.Cmd {
+			c := exec.Command(exe, "worker", "--config", cfgPath, "--entry", key)
+			c.Env = scrubbedEnv()
+			return c
+		})
 		if e != nil {
 			return ProcID{}, false, errors.New("supervisor could not be started")
 		}

@@ -67,15 +67,16 @@ func procAlive(id ProcID) bool {
 // first asks to leave the scheduler's job object so the one-pass tick can end
 // without killing the supervisor; if that is refused it falls back and records
 // that the child stays bound to the tick's job.
-func startDetached(c *exec.Cmd) (breakaway bool, err error) {
+func startDetached(mk func() *exec.Cmd) (c *exec.Cmd, breakaway bool, err error) {
 	for _, flags := range []uint32{createNoWindow | createNewProcessGrp | createBreakawayJob, createNoWindow | createNewProcessGrp} {
+		// A failed Start leaves the Cmd unusable, so every attempt gets a new one.
+		c = mk()
 		c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: flags}
 		if err = c.Start(); err == nil {
-			return flags&createBreakawayJob != 0, nil
+			return c, flags&createBreakawayJob != 0, nil
 		}
-		c.Process = nil
 	}
-	return false, err
+	return nil, false, err
 }
 
 func replaceFile(from, to string) error {

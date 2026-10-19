@@ -433,9 +433,12 @@ func TestRealHelperProcessGetsStdinAndExitCode(t *testing.T) {
 
 func TestDetachedStartHasNoWindowAndIdentityIsReal(t *testing.T) {
 	exe, _ := os.Executable()
-	c := exec.Command(exe, "x", "y")
-	c.Env = append(os.Environ(), "CIQ_FAKE_HELPER=1", "CIQ_SLEEP_MS=1500")
-	if _, err := startDetached(c); err != nil {
+	c, _, err := startDetached(func() *exec.Cmd {
+		c := exec.Command(exe, "x", "y")
+		c.Env = append(os.Environ(), "CIQ_FAKE_HELPER=1", "CIQ_SLEEP_MS=1500")
+		return c
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
 	id, err := procIdentity(uint32(c.Process.Pid))

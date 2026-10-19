@@ -32,6 +32,7 @@ type Config struct {
 	NotifyConfig   string                `json:"notify_config"`
 	Project        string                `json:"project"`
 	ProductReports []ProductReportConfig `json:"product_reports,omitempty"`
+	Civ6Queue      *Civ6QueueConfig      `json:"civ6_ci_queue,omitempty"`
 }
 type Destination struct {
 	Guild string `json:"guild_id"`
@@ -139,6 +140,7 @@ type Health struct {
 	ProductReports      int                      `json:"product_reports_verified"`
 	SteeringSaved       int                      `json:"steering_saved"`
 	ConversationReplies int                      `json:"conversation_replies_processed,omitempty"`
+	Civ6Queue           *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
 }
 type Runner struct {
 	Config                      Config
@@ -157,6 +159,7 @@ type Runner struct {
 	NoticeAttempted             bool
 	JobsPath                    string
 	ProcessAlive                func(uint32, uint64) bool
+	Civ6Verify                  func(path, sha256 string) error
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -714,6 +717,8 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	retryContext, cancelRetries := context.WithTimeout(ctx, 30*time.Second)
 	r.releaseRetries(retryContext, &health)
 	cancelRetries()
+	// The CI queue pass is last and bounded: it can only add a health note.
+	r.civ6CIQueue(ctx, &health)
 	health.Finished = r.Now().UTC().Format(time.RFC3339Nano)
 	return health
 }

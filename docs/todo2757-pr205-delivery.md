@@ -1,6 +1,40 @@
 # ToDo2757: PR205 post-merge delivery boundary
 
-## Latest observation: 2026-10-19 13:13 JST, installed PR229 preflight running
+## Latest observation: 2026-10-19 13:23 JST, output limit diagnosed
+
+The installed PR229 preflight ended at `2026-10-19T04:21:26.4362938Z`, host
+exit1 and guest exit124. Its new numeric marker records an actual output of
+273,962,496 bytes against the 268,435,456-byte cap. This confirms the output
+check as the source of this failure; the prior run's artifact size remains
+unobserved. The original log is 640433 bytes, SHA256
+`7F040C1E38C078ECEDDF9A152C58665FDE201ADDAE2EA7CA81D03B951171409A`.
+Its bytes and final build state were preserved with matching copy hashes.
+
+The fixed source was verified before and after the build, original CodeQL
+successes remained verified, and no runner was registered. PID0, container and
+volume absence, removal of introduced images, phase release and no recovery
+needed were confirmed. The preflight directory was planned, normally deleted
+in a separate call and finished as source_absent.
+
+The next CC-only fix sets a closed 288 MiB product output cap. The fixture cap
+stays at 96 MiB and the phase stays at 2CPU/8GiB/512PIDs. Artifact parsing,
+config/layer hashes, cancellation, source identity and isolation remain required.
+The budget regression now also counts an artifact's worth of retained small
+metadata, within the same 1 GiB host-transfer allocation. This source is not yet
+reviewed, merged or distributed, and must not run a product job.
+
+A fresh read of the fixed source's existing production environment metadata
+confirmed the same environment ID, zero protection rules/required reviewers and
+no deployment branch policy. No secrets or settings were read or changed.
+This resolves that specific research2878 gap, not its document/tool/condition
+semantics gaps. A first condition projection missed folded YAML text; its empty
+result was retained and not accepted. A second projection preserves operators
+but still contains opaque references, so it is not execution authorization.
+
+Official full/backend/preconditions/release, actual drain and existing Prd
+revision/readiness/smoke remain unfinished. The CC merge checks are separate.
+
+## Historical observation: 2026-10-19 13:13 JST, installed PR229 preflight running
 
 Independent Sonnet review2879 read the complete frozen diff at
 `a0548183b6f515bbcda2d3072e2fb591791072a7`, Must0. Its final event equals its

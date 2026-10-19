@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const usage = `agent-progress --once [--output snapshot.json] [--task 2547] [--include-done]
+const usage = `agent-progress --once [--output snapshot.json] [--task 2547] [--include-done] [--active-only]
 Reads canonical todo.json and jobs/*/job.json once. JSON stdout is the default.
 --todo, --jobs, --priority-file override metadata inputs; an empty priority-file disables the optional policy.
 --max-rows (1000), --max-jobs (10000), --stale-after (10m), --deadline (20s) bound observation.
@@ -45,6 +45,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&opts.JobsDir, "jobs", opts.JobsDir, "job metadata directory")
 	flags.StringVar(&opts.PriorityFile, "priority-file", opts.PriorityFile, "optional recorded priority policy")
 	flags.BoolVar(&opts.IncludeDone, "include-done", false, "include finished ToDos")
+	flags.BoolVar(&opts.ActiveOnly, "active-only", false, "only verified workers with recent processing evidence")
+	flags.StringVar(&opts.ResourceQueueDir, "resource-queue", opts.ResourceQueueDir, "existing live-chain resource queue; empty disables")
 	flags.Var(taskFilter(opts.TaskIDs), "task", "numeric task ID, repeatable")
 	flags.IntVar(&opts.MaxRows, "max-rows", opts.MaxRows, "maximum rows per list")
 	flags.IntVar(&opts.MaxJobs, "max-jobs", opts.MaxJobs, "maximum directory entries")
@@ -149,7 +151,10 @@ func safeOutput(path string, opts Options) bool {
 			}
 		}
 	}
-	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+	for _, root := range []string{filepath.Dir(opts.TodoFile), opts.JobsDir, opts.ResourceQueueDir, defaults.ResourceQueueDir, filepath.Dir(defaults.TodoFile), filepath.Dir(defaults.JobsDir), filepath.Dir(defaults.PriorityFile)} {
+		if root == "" {
+			continue
+		}
 		resolved, err := canonical(root)
 		if err != nil || inside(out, resolved) {
 			return false

@@ -27,6 +27,7 @@ func fixtureFor(t *testing.T, todo string) fixture {
 	o.TodoFile = filepath.Join(root, "todo", "todo.json")
 	o.JobsDir = filepath.Join(root, "jobs")
 	o.PriorityFile = ""
+	o.ResourceQueueDir = filepath.Join(root, "resource-queue")
 	for _, dir := range []string{filepath.Dir(o.TodoFile), o.JobsDir, filepath.Join(root, "output")} {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)

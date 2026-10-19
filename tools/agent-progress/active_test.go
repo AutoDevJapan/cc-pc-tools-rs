@@ -1,0 +1,141 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+	"time"
+)
+
+func TestActiveOnlyUsesWorkerEvidenceAndPreservesDiagnosticView(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"status":"doing","progress":37,"jobs":["active","queued"]},{"id":2,"status":"wait","jobs":["waiting"]},{"id":3,"status":"block","jobs":["blocked"]},{"id":4,"status":"done","jobs":["done"]},{"id":5,"status":"doing","jobs":["report"]},{"id":6,"status":"doing","jobs":["stale"]}]}`)
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	for _, name := range []string{"active", "waiting", "blocked", "done", "report", "stale", "standalone"} {
+		activity, at := "running: private command", testNow.Add(-time.Second)
+		if name == "report" {
+			activity = "said: private report"
+		}
+		if name == "stale" {
+			at = testNow.Add(-31 * time.Second)
+		}
+		f.job(t, name, fmt.Sprintf(`{"id":%q,"status":"running","codex_pid":7,"codex_pid_created":10,"last_event_at":%q,"activity":%q}`, name, at.Format(time.RFC3339), activity))
+	}
+	f.job(t, "queued", `{"id":"queued","status":"queued","created_at":"2026-10-13T10:00:00Z","queue_wait_reason":{"code":"running_limit"}}`)
+	diagnostic := collect(context.Background(), f.opts, testNow, probe)
+	if len(diagnostic.Tasks) != 5 {
+		t.Fatal("diagnostic view changed")
+	}
+	f.opts.ActiveOnly, f.opts.IncludeDone, f.opts.MaxRows = true, true, 1
+	s := collect(context.Background(), f.opts, testNow, probe)
+	if s.TaskTotal != 1 || s.JobTotal != 2 || len(s.Tasks) != 1 || s.Tasks[0].ID != 1 ||
+		s.Tasks[0].Percent == nil || *s.Tasks[0].Percent != 37 || s.Tasks[0].Phase != "tool" ||
+		len(s.Tasks[0].WaitReasons) != 0 || !s.Truncated {
+		t.Fatal("active projection, measurements or pre-limit totals are incorrect")
+	}
+	f.opts.MaxRows = 100
+	s = collect(context.Background(), f.opts, testNow, probe)
+	keys := []string{}
+	for _, j := range s.Jobs {
+		keys = append(keys, j.Key)
+	}
+	want := map[string]bool{jobKey("active"): true, jobKey("standalone"): true}
+	for _, k := range keys {
+		if !want[k] {
+			t.Fatal("excluded work reappeared as a standalone job")
+		}
+	}
+	if len(keys) != 2 {
+		t.Fatal("confirmed standalone work was lost")
+	}
+}
+
+func TestProcessingJobRejectsUnconfirmedAndNonprocessingEvidence(t *testing.T) {
+	at := testNow.Add(-time.Second).Format(time.RFC3339)
+	base := Job{RecordedStatus: "running", Execution: "running", WorkerPresence: "verified_alive", Phase: "tool", Source: Source{Status: "ok", Complete: true}, LastActivity: Clock{At: &at, State: "fresh"}}
+	if !processingJob(&base, testNow) {
+		t.Fatal("positive control missing")
+	}
+	cases := map[string]func(*Job){
+		"queued":           func(j *Job) { j.RecordedStatus = "queued" },
+		"lost":             func(j *Job) { j.RecordedStatus = "lost" },
+		"finished":         func(j *Job) { j.Execution = "finished" },
+		"supervisor":       func(j *Job) { j.Execution = "supervising" },
+		"unknown identity": func(j *Job) { j.WorkerPresence = "alive_identity_unknown" },
+		"cancelled":        func(j *Job) { j.cancelRequested = true },
+		"failed source":    func(j *Job) { j.Source.Status = "read_failed" },
+		"partial source":   func(j *Job) { j.Source.Complete = false },
+		"resource wait":    func(j *Job) { j.WaitReasons = []WaitReason{{Kind: "execution_slot"}} },
+		"report only":      func(j *Job) { j.Phase = "reporting" },
+		"unknown phase":    func(j *Job) { j.Phase = "unknown" },
+		"old clock":        func(j *Job) { v := testNow.Add(-31 * time.Second).Format(time.RFC3339); j.LastActivity.At = &v },
+		"future clock":     func(j *Job) { v := testNow.Add(time.Second).Format(time.RFC3339); j.LastActivity.At = &v },
+		"missing clock":    func(j *Job) { j.LastActivity.At = nil },
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			j := base
+			change(&j)
+			if processingJob(&j, testNow) {
+				t.Fatal("unconfirmed worker became active")
+			}
+		})
+	}
+}
+
+func TestActiveOnlyEmptyCLIAndSchema(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"status":"doing","progress":83}]}`)
+	f.opts.ActiveOnly = true
+	s := snap(f)
+	if len(s.Tasks) != 0 || len(s.Jobs) != 0 || s.TaskTotal != 0 || s.JobTotal != 0 {
+		t.Fatal("a doing label manufactured work")
+	}
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var roundtrip Snapshot
+	if json.Unmarshal(data, &roundtrip) != nil || !reflect.DeepEqual(s.Tasks, roundtrip.Tasks) {
+		t.Fatal("empty lists must remain arrays")
+	}
+}
+
+func TestProcessingResourcesUsesLiveIdentitiesAndWholeFlight(t *testing.T) {
+	f := fixtureFor(t, `{"items":[]}`)
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	check := func(want bool) {
+		t.Helper()
+		if processingResources(context.Background(), f.opts, "job", testNow, probe) != want {
+			t.Fatal("resource evidence was misclassified")
+		}
+	}
+	check(true)
+	dir := filepath.Join(f.opts.JobsDir, "job", "resource-waits")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	check(true)
+	wait := filepath.Join(dir, "wait.json")
+	writeFixture(t, wait, []byte(`{"job_id":"job","kind":"cargo","pid":1,"pid_created":10}`))
+	check(false)
+	active := filepath.Join(dir, "active.json")
+	writeFixture(t, active, []byte(`{"job_id":"job","kind":"cargo-active","pid":2,"pid_created":10}`))
+	check(true)
+	writeFixture(t, active, []byte(`{"job_id":"job","kind":"cargo-active","pid":2,"pid_created":9}`))
+	check(false)
+	writeFixture(t, wait, []byte(`{"job_id":"job","kind":"cargo","pid":1,"pid_created":9}`))
+	check(true)
+	writeFixture(t, wait, []byte(`{"job_id":"job","kind":"cargo","pid":1}`))
+	check(false)
+	writeFixture(t, wait, []byte(`broken`))
+	check(false)
+}

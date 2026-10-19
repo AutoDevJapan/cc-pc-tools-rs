@@ -118,6 +118,7 @@ type Job struct {
 	parentID           string
 	independent        bool
 	cancelRequested    bool
+	resourceBlocked    bool
 	created            time.Time
 }
 
@@ -167,6 +168,7 @@ type Snapshot struct {
 type Options struct {
 	TodoFile, JobsDir, PriorityFile string
 	IncludeDone                     bool
+	ActiveOnly                      bool
 	TaskIDs                         map[int64]bool
 	MaxRows, MaxJobs                int
 	TodoBytes, JobBytes, JobsBytes  int64

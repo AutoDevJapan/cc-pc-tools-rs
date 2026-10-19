@@ -133,6 +133,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			LastActivity: activity, LastHeartbeat: heartbeat, Source: loaded.source,
 			rawID: j.ID, parentID: j.ParentJobID, independent: objectValue(j.Subwork), cancelRequested: j.CancelRequested, created: created,
 		}
+		if opts.ActiveOnly && row.Execution == "running" {
+			row.resourceBlocked = !processingResources(ctx, opts, j.ID, now, probe)
+		}
 		allJobs[j.ID] = row
 	}
 	// Dependent child jobs inherit a live parent's priority; finite independent
@@ -182,6 +185,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		}
 		linked := byTask[id]
 		sort.Slice(linked, func(i, j int) bool {
+			if opts.ActiveOnly && processingJob(linked[i], now) != processingJob(linked[j], now) {
+				return processingJob(linked[i], now)
+			}
 			if relevantJob(linked[i]) != relevantJob(linked[j]) {
 				return relevantJob(linked[i])
 			}
@@ -206,7 +212,11 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 					t.TaskType, t.TaskTypeSource = j.TaskType, "job"
 				}
 			}
-			t.WaitReasons = append(t.WaitReasons, j.WaitReasons...)
+			// A queued successor must not hide another worker that is actually
+			// processing this task. Diagnostic observations retain every wait.
+			if !opts.ActiveOnly || n == 0 {
+				t.WaitReasons = append(t.WaitReasons, j.WaitReasons...)
+			}
 		}
 		if len(linked) == 0 && !js.Complete {
 			t.Execution = "unknown"
@@ -214,10 +224,30 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		if len(t.WaitReasons) > 0 && t.Phase == "unknown" {
 			t.Phase = "waiting"
 		}
+		if opts.ActiveOnly && (!processingTask(item, items, now, opts.StaleAfter) ||
+			len(linked) == 0 || !processingJob(linked[0], now)) {
+			continue
+		}
 		s.Tasks = append(s.Tasks, t)
 	}
 	// Standalone live/unknown jobs survive unknown task identity or ToDo failure.
 	for id, j := range allJobs {
+		if opts.ActiveOnly {
+			if !processingJob(j, now) {
+				continue
+			}
+			// Do not resurrect a waiting/finished task through the standalone
+			// jobs list after its task row was excluded.
+			allowed := true
+			for _, tid := range j.TodoIDs {
+				if item, ok := items[tid]; ok && !processingTask(item, items, now, opts.StaleAfter) {
+					allowed = false
+				}
+			}
+			if !allowed {
+				continue
+			}
+		}
 		if len(opts.TaskIDs) == 0 && relevantJob(j) {
 			selectedJobs[id] = true
 		} else if len(opts.TaskIDs) > 0 {

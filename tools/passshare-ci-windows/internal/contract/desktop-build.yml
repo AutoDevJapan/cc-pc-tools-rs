@@ -1,0 +1,4 @@
+# Deliberately unservable until the reviewed candidate is generated.
+name: Desktop Build
+on: {}
+jobs: {}

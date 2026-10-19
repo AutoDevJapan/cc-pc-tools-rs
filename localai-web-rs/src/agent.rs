@@ -116,6 +116,11 @@ fn reply(result: Result<Value>) -> Response {
             .into_response(),
     }
 }
+pub(super) fn cached_display_response(result: std::result::Result<Value, &'static str>) -> Response {
+    reply(result.map_err(|message| {
+        fault(StatusCode::SERVICE_UNAVAILABLE, "progress_snapshot_unavailable", message)
+    }))
+}
 pub fn local_forbidden() -> Response {
     reply(Err(fault(
         StatusCode::FORBIDDEN,

@@ -7,7 +7,7 @@ mod catalog;
 mod commander_health;
 #[path = "waiting_state.rs"]
 mod waiting_state;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -165,6 +165,18 @@ pub fn metadata_display(
         return Err("invalid display");
     }
     let board = protected_metadata_at(root, todo_path, jobs_path, now_ms());
+    metadata_display_snapshot(&board, kind)
+}
+
+/// Reuse the resident's already protected projection instead of scanning the
+/// complete ToDo and job history once for each open panel on every refresh.
+pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'static str> {
+    if !matches!(kind, "todo" | "jobs" | "handoff") {
+        return Err("invalid display");
+    }
+    if board["protectionMode"] != "masked_metadata" {
+        return Err("protected projection required");
+    }
     if board["metadataOk"] != true {
         return Err("metadata unavailable");
     }
@@ -185,15 +197,17 @@ pub fn metadata_display(
         let id=worker["id"].as_str()?.strip_prefix("todo-")?.parse::<u64>().ok()?;
         Some(json!({"id":id,"project":product["name"],"title":worker["task"],"status":worker["recordedStatus"],
             "progress":worker["progress"],"updated_at":worker["updatedAt"],"note":"作業本文は保護設定の復旧まで非表示です。",
-            "summary":worker["summary"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
+            "summary":worker["summary"],"currentStage":worker["currentStage"],
+            "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
             "dependencies":worker["dependencies"],"history":[],"historyAvailable":false,"actionsAvailable":false}))
     }).collect();
     let mut used = BTreeSet::new();
     let jobs:Vec<_>=rows.iter().filter_map(|(product,worker)| {
         let id=worker["primaryJob"].as_str()?;
         if !used.insert(id.to_owned()) { return None; }
-        Some(json!({"id":id,"project":product["name"],"task_title":worker["task"],"status":worker["jobStatus"],
-            "summary":worker["summary"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
+        Some(json!({"id":id,"project":product["name"],"task_title":format!("{} · {}",text(product,"name"),text(worker,"task")),"status":worker["jobStatus"],
+            "summary":worker["summary"],"currentStage":worker["currentStage"],"progress":worker["progress"],
+            "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
             "updated_at":worker["updatedAt"],"started_at":null,"actionsAvailable":false,"contentAvailable":false}))
     }).collect();
     let mut result = match kind {
@@ -268,6 +282,57 @@ fn active(v: &Value) -> bool {
         text(v, "status"),
         "running" | "starting" | "pending" | "queued"
     )
+}
+// Only fixed vocabulary is derived from activity metadata; never copy a command,
+// title, message or path while the original privacy records are unavailable.
+fn protected_stage(job: Option<&Value>) -> &'static str {
+    let Some(job) = job else {
+        return "担当の起動待ち";
+    };
+    match text(job, "status") {
+        "queued" | "pending" => return "起動待ち",
+        "starting" => return "担当を起動中",
+        "running" => {},
+        _ => return "工程は未記録",
+    }
+    let activity = job["activity"]
+        .as_str()
+        .or_else(|| job["activity"]["type"].as_str())
+        .or_else(|| job["activity"]["kind"].as_str())
+        .unwrap_or("");
+    let kind = activity.split_once(':').map_or(activity, |(kind, _)| kind).trim();
+    match kind {
+        "command" | "command_execution" | "exec_command" | "running" => "コマンドを実行中",
+        "mcp" => "連携ツールを実行中",
+        "file_change" | "edit" | "apply_patch" | "editing" => "ファイルを修正中",
+        "searching" => "資料を検索中",
+        "agent" => "並列担当と連携中",
+        "said" => "作業状況を記録中",
+        "thinking" | "reasoning" => "調査・検討中",
+        "review" => "レビュー中",
+        "test" | "testing" => "検査中",
+        _ => match text(job, "status") {
+            "queued" | "pending" => "起動待ち",
+            "starting" => "担当を起動中",
+            "running" => "実行中（工程は未記録）",
+            _ => "工程は未記録",
+        },
+    }
+}
+fn protected_activity(job: Option<&Value>) -> Option<String> {
+    let job = job?;
+    if text(job, "status") != "running" { return None; }
+    ["last_event_at", "last_heartbeat_at", "heartbeat_at"]
+        .iter()
+        .filter_map(|key| stamp(&job[*key]))
+        .chain(
+            ["at", "timestamp"]
+                .iter()
+                .filter_map(|key| stamp(&job["activity"][*key])),
+        )
+        .max()
+        .and_then(|at| chrono::DateTime::from_timestamp_millis(at as i64))
+        .map(|at| at.to_rfc3339())
 }
 fn failed(v: &Value) -> bool {
     matches!(text(v, "status"), "failed" | "lost" | "cancelled")
@@ -820,7 +885,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
-                    "summary":task,"stopReason":stop_reason,"dependencies":dependencies,
+                    "summary":task,"currentStage":protected_stage(current),"lastActivityAt":protected_activity(current),
+                    "stopReason":stop_reason,"dependencies":dependencies,
                     "nextAction":if status=="waiting"||status=="attention" {"元の依頼・成果・担当の状態を照合して続行します。"} else {""},
                     "factsSource":format!("共有ToDo #{id} の状態と作業種別（本文は非表示）"),
                     "progress":item["progress"].as_u64().filter(|n|*n<=100),
@@ -879,12 +945,10 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         ("cpuPercent", scheduler["cpu_percent"].clone()),
         (
             "memoryUsedGb",
-            json!(
-                scheduler["ram_total_gb"]
+            json!(scheduler["ram_total_gb"]
                 .as_f64()
                 .zip(scheduler["available_gb"].as_f64())
-                    .map(|(total, free)| total - free)
-            ),
+                .map(|(total, free)| total - free)),
         ),
         ("memoryTotalGb", scheduler["ram_total_gb"].clone()),
         ("jobLimit", scheduler["hard_cap"].clone()),
@@ -1222,12 +1286,10 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             if !client {
                 worker["factsSource"] =
                     json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));
-                worker["note"] = json!(
-                    crate::console_ui::clean(&names, text(item, "note"))
+                worker["note"] = json!(crate::console_ui::clean(&names, text(item, "note"))
                     .chars()
                     .take(360)
-                        .collect::<String>()
-                );
+                    .collect::<String>());
                 worker["historyCount"] = json!(crate::console_ui::history_count(item));
                 worker["detailAvailable"] = json!(true);
                 worker["detailVersion"] = json!(detail_version(item));
@@ -1290,12 +1352,10 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
                 "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});
         if !client {
-            worker["report"] = json!(
-                crate::console_ui::clean(&names, text(j, "last_message"))
+            worker["report"] = json!(crate::console_ui::clean(&names, text(j, "last_message"))
                 .chars()
                 .take(360)
-                    .collect::<String>()
-            );
+                .collect::<String>());
             worker["detailAvailable"] = json!(true);
             worker["detailVersion"] = json!(detail_version(j));
         }
@@ -1472,6 +1532,24 @@ fn infer_project(job: &Value, db: Option<&Value>) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn protected_progress_uses_fixed_activity_labels_and_only_real_timestamps() {
+        let job = json!({"status":"running", "activity":{"type":"command_execution","command":"private command", "at":"2026-10-19T15:00:00Z"},"updated_at":"2026-10-20T00:02:00Z"});
+        assert_eq!(protected_stage(Some(&job)), "コマンドを実行中");
+        assert_eq!(
+            protected_activity(Some(&job)).as_deref(),
+            Some("2026-10-19T15:00:00+00:00")
+        );
+        let unknown = json!({"status":"running","activity":"private command", "updated_at":"2026-10-20T00:02:00Z"});
+        assert_eq!(protected_stage(Some(&unknown)), "実行中（工程は未記録）");
+        assert!(protected_activity(Some(&unknown)).is_none());
+        let queued = json!({"status":"queued","last_event_at":"2026-10-19T15:00:00Z"});
+        assert!(protected_activity(Some(&queued)).is_none());
+        assert_eq!(protected_stage(Some(&json!({"status":"queued","activity":"running: private command"}))), "起動待ち");
+        assert_eq!(protected_stage(Some(&json!({"status":"running","activity":"mcp: private.connector"}))), "連携ツールを実行中");
+        assert_eq!(protected_stage(None), "担当の起動待ち");
+        assert!(protected_activity(None).is_none());
+    }
     use super::*;
 
     #[test]
@@ -1634,18 +1712,14 @@ mod tests {
         assert_eq!(find("todo-5")["summary"], "");
         assert!(find("todo-5")["questionUrl"].is_null());
         assert_eq!(output["metrics"]["ownerDecisions"], 1);
-        assert!(
-            find("todo-2")["summary"]
+        assert!(find("todo-2")["summary"]
             .as_str()
             .unwrap()
-                .contains("画像案への回答を待っています")
-        );
-        assert!(
-            !find("todo-2")["summary"]
+            .contains("画像案への回答を待っています"));
+        assert!(!find("todo-2")["summary"]
             .as_str()
             .unwrap()
-                .contains("hidden-value")
-        );
+            .contains("hidden-value"));
         assert_eq!(
             find("todo-2")["questionUrl"],
             "https://discord.com/channels/100/200/200"
@@ -1660,13 +1734,11 @@ mod tests {
         assert_ne!(output["commander"]["status"], "attention");
         assert_eq!(output["commander"]["status"], "working");
         assert_eq!(output["sourceOk"], true);
-        assert!(
-            output["sources"]
+        assert!(output["sources"]
             .as_array()
             .unwrap()
             .iter()
-                .any(|s| s["state"] == "unknown")
-        );
+            .any(|s| s["state"] == "unknown"));
         assert_eq!(output["metrics"]["memoryUsedGb"], 56.0);
         assert!(find("todo-1")["updatedAt"].is_string());
         let serialized = output.to_string();
@@ -1773,16 +1845,14 @@ mod tests {
         assert_eq!(skills["workers"][0]["status"], "working");
         assert_eq!(skills["workers"][0]["detailAvailable"], false);
         assert_eq!(skills["workers"][0]["historyFailures"], 0);
-        assert!(
-            board["departments"]
+        assert!(board["departments"]
             .as_array()
             .unwrap()
             .iter()
             .flat_map(|d| d["products"].as_array().unwrap())
             .chain(board["unassignedProducts"].as_array().unwrap())
             .flat_map(|p| p["workers"].as_array().unwrap())
-                .any(|w| w["status"] == "attention")
-        );
+            .any(|w| w["status"] == "attention"));
         let encoded = board.to_string();
         for protected in [
             "SecretClient",
@@ -1806,14 +1876,12 @@ mod tests {
         assert!(board["metrics"]["activeJobs"].is_null());
         assert!(board["metrics"]["todoDependencyWaits"].is_null());
         assert_eq!(board["departments"].as_array().unwrap().len(), 6);
-        assert!(
-            board["departments"]
+        assert!(board["departments"]
             .as_array()
             .unwrap()
             .iter()
             .flat_map(|d| d["products"].as_array().unwrap())
-                .all(|p| p["workers"].as_array().unwrap().is_empty())
-        );
+            .all(|p| p["workers"].as_array().unwrap().is_empty()));
         assert!(!temp.path().join("client-projects.txt").exists());
     }
     #[test]
@@ -1910,21 +1978,17 @@ mod tests {
             .unwrap();
         assert_eq!(rosetta["workers"].as_array().unwrap().len(), 2);
         assert_eq!(rosetta["workers"][0]["progress"], 35);
-        assert!(
-            list("自社サービス部")
+        assert!(list("自社サービス部")
             .iter()
-                .all(|p| p["name"] != "Social Pilot")
-        );
+            .all(|p| p["name"] != "Social Pilot"));
         let extras = snapshot["unlistedRegistrations"].as_array().unwrap();
         assert_eq!(extras.len(), 3);
         assert!(extras.iter().any(
             |p| p["name"] == "Skills" && p["previouslyAssignedDepartment"] == "情報システム部"
         ));
-        assert!(
-            extras
+        assert!(extras
             .iter()
-                .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1)
-        );
+            .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1));
         assert!(extras.iter().any(|p| p["registeredTasks"] == 1
             && p["unfinishedTasks"] == 0
             && p["taskIds"] == json!([5])));

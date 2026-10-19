@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -385,5 +387,28 @@ func TestWorkerDeadlineIsTheSharedAbsoluteDeadline(t *testing.T) {
 	f.Fixture = "normal"
 	if d, e := workerDeadline(f, admission{}, start); e != nil || !d.Equal(start.Add(600*time.Second)) {
 		t.Fatalf("fixture keeps its local plan seconds: %v %v", d, e)
+	}
+}
+
+// R4-M1: the lock file comes from the OS known folder, never from the caller's
+// environment, so every phase locks the same file for the same service.
+func TestClaimLockPathIgnoresTheCallersEnvironment(t *testing.T) {
+	p := fixturePlan()
+	want, e := claimLockPath(p)
+	if e != nil || !filepath.IsAbs(want) || !strings.HasSuffix(want, p.svc()+".lock") {
+		t.Fatalf("%q %v", want, e)
+	}
+	for _, v := range []string{"", "relative", `C:\attacker`, `\\host\share`} {
+		t.Setenv("ProgramData", v)
+		got, e := claimLockPath(p)
+		if e != nil || got != want {
+			t.Fatalf("ProgramData=%q changed the lock to %q (%v)", v, got, e)
+		}
+	}
+	f := p
+	f.Fixture = "normal"
+	other, _ := claimLockPath(f)
+	if other == want {
+		t.Fatal("fixture and real identity share one lock")
 	}
 }

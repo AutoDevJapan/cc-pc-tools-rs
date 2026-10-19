@@ -183,7 +183,7 @@ func collectMode(p Plan, unstarted bool) error {
 	}
 	// Recursive proof, not a sample: no entry below the root still grants the
 	// shared SID, so a root that is later moved or kept is just as isolated.
-	entries, e := verifyTreeClean(p.Root, sid)
+	entries, links, e := verifyTreeClean(p.Root, sid)
 	if e != nil {
 		return e
 	}
@@ -228,7 +228,7 @@ func collectMode(p Plan, unstarted bool) error {
 		"unstarted_worker": unstarted, "service": p.svc(), "service_retained": true, "service_idle_confirmed": true,
 		"queryable_account_process_count": processes, "unreadable_process_count": unreadable,
 		"process_census_scope": "queryable processes; owned Job Object independently drained",
-		"additional_ace_count": aceCount, "owner_reset": true, "tree_acl_reset": true, "tree_entries_verified_without_service_grant": entries, "ace_scope": "administrator-installed root and runtime inheritable grants only",
+		"additional_ace_count": aceCount, "owner_reset": true, "tree_acl_reset": true, "tree_entries_verified_without_service_grant": entries, "tree_links_verified_without_service_grant": links, "ace_scope": "administrator-installed root and runtime inheritable grants only",
 		"shared_profile_retained": profile, "shared_hive_loaded": hive, "shared_classes_hive_loaded": classes,
 		"shared_profile_entries_for_this_identity": own, "ciw_profile_leaf_count_total": total,
 		"profile_scope":      "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
@@ -242,27 +242,31 @@ func collectMode(p Plan, unstarted bool) error {
 }
 
 // verifyTreeClean walks every entry below root (without following links) and
-// fails if any DACL grants sid. Links themselves are counted but not followed.
-func verifyTreeClean(root, sid string) (int, error) {
-	n := 0
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+// fails if any DACL grants sid. Links and other reparse entries are checked
+// through their own handle, never through their target.
+func verifyTreeClean(root, sid string) (entries, links int, err error) {
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		var g int
+		var e error
 		if d.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-			return nil
+			g, e = countGrantedSIDNoFollow(path, sid)
+			links++
+		} else {
+			g, e = countGrantedSID(path, sid)
+			entries++
 		}
-		g, e := countGrantedSID(path, sid)
 		if e != nil {
-			return e
+			return fmt.Errorf("cannot verify %s: %w", filepath.Base(path), e)
 		}
 		if g != 0 {
 			return fmt.Errorf("service SID still granted below the collected root: %s", filepath.Base(path))
 		}
-		n++
 		return nil
 	})
-	return n, err
+	return entries, links, err
 }
 
 // serviceProfileLeaves lists the profile directory names of every virtual
@@ -316,17 +320,41 @@ func registryPresent(root syscall.Handle, key string) (bool, error) {
 	return false, e
 }
 
+type aclHeader struct {
+	Revision, Sbz1    byte
+	Size, Count, Sbz2 uint16
+}
+
 func countGrantedSID(path, sid string) (int, error) {
 	var sd uintptr
-	var acl *struct {
-		Revision, Sbz1    byte
-		Size, Count, Sbz2 uint16
-	}
+	var acl *aclHeader
 	result, _, _ := advapi.NewProc("GetNamedSecurityInfoW").Call(ptr(path), 1, 4, 0, 0, uintptr(unsafe.Pointer(&acl)), 0, uintptr(unsafe.Pointer(&sd)))
 	if result != 0 {
 		return 0, syscall.Errno(result)
 	}
 	defer kernel.NewProc("LocalFree").Call(sd)
+	return countAclGrants(acl, sid)
+}
+
+// countGrantedSIDNoFollow reads the DACL of a link or reparse point itself
+// (not its target) through a handle opened with FILE_FLAG_OPEN_REPARSE_POINT.
+func countGrantedSIDNoFollow(path, sid string) (int, error) {
+	h, e := syscall.CreateFile(wide(path), 0x20000, 7, nil, 3, 0x02000000|0x00200000, 0)
+	if e != nil {
+		return 0, e
+	}
+	defer syscall.CloseHandle(h)
+	var sd uintptr
+	var acl *aclHeader
+	result, _, _ := advapi.NewProc("GetSecurityInfo").Call(uintptr(h), 1, 4, 0, 0, uintptr(unsafe.Pointer(&acl)), 0, uintptr(unsafe.Pointer(&sd)))
+	if result != 0 {
+		return 0, syscall.Errno(result)
+	}
+	defer kernel.NewProc("LocalFree").Call(sd)
+	return countAclGrants(acl, sid)
+}
+
+func countAclGrants(acl *aclHeader, sid string) (int, error) {
 	if acl == nil {
 		return 0, errors.New("null owned resource DACL")
 	}

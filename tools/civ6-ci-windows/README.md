@@ -67,7 +67,7 @@ Build into the owned root: `go build -trimpath -o <root>/bootstrap.exe .`
 | `helper.exe execute <root>` | controller (non-admin) **inside the scheduler's Cargo allocation** | registration token on **stdin** (RAM only) | enters `cargo_gate.exe test --target-dir <root target>` as a child; `contract.Verify` + own-runner-absent check; token goes through a one-message pipe to the service (kernel client/server PIDs checked) and only into the official configure input; waits for the service to stop; checks start/complete/after (below). Exit 0 only for a verified successful job. |
 | `helper.exe stop <root>` | controller | - | one SCM stop request, refused unless the shared service is currently bound to this root; the Job Object drain is confirmed by `execute`'s hold, not by this command. |
 | `helper.exe status <root>` | controller | - | one line: `{"instance","service","service_present","state","pid","exit_code","prepared.json"}` (SCM state 1 = stopped). |
-| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | holds the identity lock for the whole run; removes the two service ACEs and the launcher-report grant, **resets the ACL of every descendant** to what it inherits from the root, resets the owner of the whole root to Administrators, returns the root to the controller, **verifies recursively that no entry grants the shared SID**, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `tree_acl_reset`, `tree_entries_verified_without_service_grant`, `shared_profile_retained`, profile counts) and, as the very last step, the durable marker `HKLM\SOFTWARE\CC\civ6-ci-windows\<service>\CollectedRoot`; exit 0 or 1. |
+| `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | holds the identity lock for the whole run; removes the two service ACEs and the launcher-report grant, **resets the ACL of every descendant** to what it inherits from the root, resets the owner of the whole root to Administrators, returns the root to the controller, **verifies recursively that no entry grants the shared SID**, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `tree_acl_reset`, `tree_entries_verified_without_service_grant`, `shared_profile_retained`, profile counts) and, as the very last step, the durable marker `HKLM\SOFTWARE\CC\civ6-ci-windows\<service>\CollectedRoot` (REG_SZ naming an owned root; the key's DACL is replaced on every write: SYSTEM/Administrators full, authenticated users read; measured: a non-admin write is denied). Links and other reparse entries are checked through their own handle (`tree_links_verified_without_service_grant`), never through their target; exit 0 or 1. |
 | `bootstrap.exe collect-unstarted <root>` | CC-AdminBroker | queued, never-started real job | abort path (untouched launcher report, no worker/authentication artifacts, zero-step queued job, service idle). |
 | `helper.exe audit <root>` | controller | - | read-only `contract.Verify` + runner/job state. |
 
@@ -151,8 +151,10 @@ parent therefore fixed the identity:
   the official runner name `CC-CIW-<instance>`, the registration pipe and the ephemeral registration.
 - `prepare` (`ensureService`) creates the service on first use and otherwise **re-points it** at the new job
   (`ChangeServiceConfigW` image path; the controller SD now also holds QUERY_CONFIG so start/stop can check the binding).
-  The whole read-check-reconfigure runs under one exclusive byte-range lock on `%ProgramData%\CC\civ6-ci-windows\<service>.lock`
-  (shared with `start`, `stop` and `collect`; ACL lets the non-admin controller open it; it dies with the process). It refuses
+  The whole read-check-reconfigure runs under one exclusive byte-range lock on `<ProgramData>\CC\civ6-ci-windows\<service>.lock`, where ProgramData comes from the OS known
+  folder (`SHGetKnownFolderPath`), never from the caller's environment, so every phase locks the same file. The file and its folder are
+  plain (no links), inheritance is removed, the non-admin controller only gets read/write data (no DELETE, WRITE_DAC, WRITE_OWNER); the lock
+  is shared with `start`, `stop` and `collect` and dies with the process. It refuses
   unless the service is STOPPED with PID 0, the account has no process, the existing image path parses strictly
   (`<root>\helper.exe service <root>`, owned-root form) and the previous job left **durable collection proof**: its root equals the
   registry marker `CollectedRoot`. The proof does not depend on the old path, so a deleted, kept or quarantined (moved) root are all
@@ -172,12 +174,16 @@ parent therefore fixed the identity:
 Measured on the one fixture identity, first with three consecutive jobs (normal, cancel, normal;
 `evidence/shared-identity-fixtures-20261019.json`: distinct instances and service PIDs, worker exit 0/125/0, Job Object drained each
 time, queryable account process count 0 at each collect, CC-CIW profile count 4 = 3 legacy + 1 shared, no growth), then with the final
-intermediate code (`evidence/shared-identity-fixtures-2-20261019.json`; that "previous root must be deleted" rule is superseded),
+an intermediate design (`evidence/shared-identity-fixtures-2-20261019.json`; that "previous root must be deleted" rule is superseded),
 and finally with the current collect/lock/marker code (`evidence/shared-identity-fixtures-3-20261019.json`): normal A; cancel B prepared while
 A's collected root still existed (allowed); a **stale `stop` from A's helper was refused** ("belongs to another job") while B owned the service;
 C prepared and left uncollected, so a following D prepare was **refused** ("no durable collection marker"); C then ran and was collected.
 Each collect verified 30 entries below its root without a service grant; worker exit 0/125/0; `fence=false`; profile count 4 throughout.
-Console values were read from the run output; the B and C collection files were saved before deletion.
+Console values were read from the run output; the B and C collection files were saved before deletion. With the final lock/marker code
+(`evidence/shared-identity-fixtures-4-20261019.json`) a normal and a cancel job ran back to back: 30 entries and 0 links verified each, the non-admin controller
+could read but not write the marker, and the lock file ACL was the minimal one above. Recorded as observed: sequential prepare allowed after collection, an uncollected
+predecessor refused, a stale stop refused. Not observed live: a link below a job root, two processes contending for the lock, a collect racing a start,
+a different `ProgramData` environment (unit-tested only), a root moved before collection, and the slow/refused-stop paths.
 
 ## Verification actually performed (2026-10-19)
 
@@ -191,8 +197,8 @@ Console values were read from the run output; the B and C collection files were 
   (`evidence/shared-identity-fixtures-20261019.json`): normal, cancel, normal on the shared fixture identity, with the
   hold-until-drained stop boundary (`fence=false` with launcher drain proof each time). Roots were removed with safe-delete.
   Not exercised live: lock contention between two real processes, a collect racing a start, a slow/refused stop, an
-  unclassifiable-census hold, a root that was moved before collection, and the real (non-fixture) identity `CC-CIW-civ6-banseiki`.
-  The deadline, hold, image-path and marker rules are unit-tested only.
+  unclassifiable-census hold, a root that was moved before collection, a link below a job root, and the real (non-fixture) identity
+  `CC-CIW-civ6-banseiki`. The deadline, hold, image-path and lock-path rules are unit-tested only; the marker rule has two sequential live cases.
 
 ## CI of this module
 

@@ -295,6 +295,10 @@ func TestImageRootParsesWindowsArgumentsStrictly(t *testing.T) {
 		`"` + root + `\helper.exe" service ` + root + `"`,
 		`C:\x\othercodex-owned-` + id + `\helper.exe service C:\x\othercodex-owned-` + id,
 		`"` + root + `\\"helper.exe service ` + root,
+		"C:\\x\ty\\codex-owned-" + id + "\\helper.exe service C:\\x\ty\\codex-owned-" + id,
+		`C:\x\..\x\codex-owned-` + id + `\helper.exe service C:\x\..\x\codex-owned-` + id,
+		`C:\x\.\codex-owned-` + id + `\helper.exe service C:\x\.\codex-owned-` + id,
+		`C:\x\\y\codex-owned-` + id + `\helper.exe service C:\x\\y\codex-owned-` + id,
 		root + `\helper.exe service codex-owned-` + id,
 	} {
 		if got, e := imageRoot(bad); e == nil {

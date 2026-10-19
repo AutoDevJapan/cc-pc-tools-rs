@@ -1,0 +1,58 @@
+{
+  "measured_at": "2026-10-19 JST ~21:03",
+  "code": "working tree on top of 772fbce: OS known-folder lock path, minimal lock-file ACL, protected marker key, link-aware tree verification",
+  "observed_in_console": [
+    {
+      "step": "A normal",
+      "execute_end": {
+        "fence": false,
+        "ok": true
+      },
+      "collect_end": {
+        "complete": true
+      },
+      "collection": {
+        "tree_acl_reset": true,
+        "entries": 30,
+        "links": 0
+      },
+      "launcher": {
+        "worker_exit": 0,
+        "job_drained": true
+      }
+    },
+    {
+      "step": "B cancel (prepared right after A was collected)",
+      "execute_end": {
+        "fence": false,
+        "ok": true
+      },
+      "collect_end": {
+        "complete": true
+      },
+      "collection": {
+        "tree_acl_reset": true,
+        "entries": 30,
+        "links": 0
+      },
+      "launcher": {
+        "worker_exit": 125,
+        "job_drained": true,
+        "cancelled": true
+      }
+    },
+    {
+      "step": "non-admin controller writes the collection marker",
+      "result": "denied: Requested registry access is not allowed"
+    },
+    {
+      "step": "non-admin controller reads the collection marker",
+      "result": "allowed; value is B's root"
+    },
+    {
+      "step": "lock file ACL after prepare",
+      "acl": "controller user (R,W); Administrators F; SYSTEM F; no inheritance, no DELETE/WRITE_DAC for the controller"
+    }
+  ],
+  "not_observed": "a link or reparse entry below a job root (links was 0 in both runs), two processes contending for the lock, a caller with a different ProgramData environment (unit-tested only)"
+}

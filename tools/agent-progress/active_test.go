@@ -197,3 +197,18 @@ func TestActiveOnlyExcludesCollaborationWait(t *testing.T) {
 		t.Fatal("waiting for a child is not active processing")
 	}
 }
+
+func TestActiveOnlyMixedTaskRelationsStayConsistent(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"status":"doing","jobs":["active"]},{"id":2,"status":"wait","jobs":["active"]}]}`)
+	f.opts.ActiveOnly = true
+	f.job(t, "active", `{"id":"active","status":"running","codex_pid":1,"codex_pid_created":10,"last_event_at":"2026-10-13T10:00:00Z","activity":"running: fixture"}`)
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	s := collect(context.Background(), f.opts, testNow, probe)
+	if len(s.Tasks) != 1 || s.Tasks[0].ID != 1 || len(s.Jobs) != 1 ||
+		!reflect.DeepEqual(s.Jobs[0].TodoIDs, []int64{1}) || !reflect.DeepEqual(s.Tasks[0].JobKeys, []string{s.Jobs[0].Key}) {
+		t.Fatal("active task/job relations must agree without resurrecting the waiting task")
+	}
+}

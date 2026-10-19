@@ -98,6 +98,20 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		j := loaded.meta
 		ids := append(append([]int64{}, j.RelatedTodoIDs...), references[j.ID]...)
 		ids = positiveIDs(append(ids, j.TodoID))
+		if opts.ActiveOnly {
+			activeIDs := []int64{}
+			for _, id := range ids {
+				if item, ok := items[id]; !ok || processingTask(item, items, now, opts.StaleAfter) {
+					activeIDs = append(activeIDs, id)
+				}
+			}
+			// Project relations before labels, linking and row limits. A job
+			// doing another task must not resurrect its waiting/finished links.
+			if len(ids) > 0 && len(activeIDs) == 0 {
+				continue
+			}
+			ids = activeIDs
+		}
 		l := policyLabel(todoItem{Project: j.Project, OwnerProject: j.OwnerProject, Department: j.Department}, policy, "")
 		ownedRank := 0
 		for _, id := range ids {
@@ -237,17 +251,6 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	for id, j := range allJobs {
 		if opts.ActiveOnly {
 			if !processingJob(j, now) {
-				continue
-			}
-			// Do not resurrect a waiting/finished task through the standalone
-			// jobs list after its task row was excluded.
-			allowed := true
-			for _, tid := range j.TodoIDs {
-				if item, ok := items[tid]; ok && !processingTask(item, items, now, opts.StaleAfter) {
-					allowed = false
-				}
-			}
-			if !allowed {
 				continue
 			}
 		}

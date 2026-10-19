@@ -123,7 +123,10 @@ func transform(q, m object) error {
 	for _, s := range steps {
 		step := s.(object)
 		if step["name"] == "Run desktop smoke tests" {
-			step["run"] = "cargo test -p passshare-desktop smoke_\ncargo test -p passshare-desktop native_lock::tests\n"
+			// Shared dependency updates affect the full desktop crate. The full
+			// default test command includes smoke_, native_lock and doctests once.
+			step["name"] = "Run desktop tests and doctests"
+			step["run"] = "cargo test --locked -p passshare-desktop\n"
 			rustTest = s
 		} else {
 			if step["name"] == "Run cloud sync unit tests" {

@@ -1,5 +1,30 @@
 # PassShare の CI 削減（ToDo2986）
 
+## 現在の固定候補（最優先）
+
+PR720のHEADは`8d4a21b73f3ad6301ba37ecb056b221c9d5c626e`。
+前段`2decea3`でcargo-audit（19秒）、DB E2E（167秒）、Rust Docker（98秒）、
+Desktop smoke（178秒）が正式成功し、初回の実失敗2系統を解消した。
+一方、共有WASMの出自manifestが古いroot Cargo.lockを要求し、画面/拡張等のbuildを拒否した。
+これは監査の免除や無目的rerunで隠していない。
+
+同じ`2decea3`で自動起動していた公式Cloud WASM acceptance run39260197802はsuccess。
+verify job118085531351で元のRust/WASM/Node/web transport受入とbrowser bindings生成が成功した。
+同repo/同head repo、固定source SHA、PR branch、workflow path/ID、成功/attempt、artifact IDを
+APIで照合後に公式artifact12191110523を一度だけ取得。ZIP SHA256
+`959d7059852d96a89ec700c6b3082ef45287ca39a8b46f149d2de52796744efc`と公式digestが一致した。
+3assetだけを取り出し、source inputs40件を固定commitのAPI bytesで全照合した。
+旧manifestのrootlock SHAとsourceCommit/runを正しい正式実行へ更新し、JS/WASMを同じ実バイトへそろえた。
+これらの記録は`.ci-work/wasm-promotion-receipt.private.json`と`wasm-source-inputs.private.json`。
+WASMをPCで再コンパイルしていない。出自/ソースの検査を緩めていない。
+
+共有依存の更新がdesktop全体に及ぶため、最終候補のDesktop検査は2つのfilter付き呼出しを
+`cargo test --locked -p passshare-desktop`の1回へまとめ、smoke/native_lockと全体/doctestを含める。
+core/connect/op-cliの元Docker検査とmobile全体/doctestも保持し、5workspace membersを覆う。
+独立の手動最終workspace workflowは削除していない。
+合計12ファイルの必要修復となり、Desktop/op-cli配布workflowやPrd/公開/予算/署名には触れていない。
+3012へこの最新候補の追加レビューを配送し、正式CIと同じ固定HEADで照合してからmergeする。
+
 ## 2026-10-19 22時台の再開
 
 旧記録は履歴として保持する。最新のOS方針

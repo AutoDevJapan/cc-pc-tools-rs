@@ -109,6 +109,7 @@ type namespace struct {
 	Name, ID                             string
 	Kind                                 Kind
 	CreationUncertain, TreeGone, Removed bool
+	Journal                              string `json:"Journal,omitempty"`
 }
 
 func createArgs(name string, k Kind, p Plan) []string {
@@ -223,13 +224,27 @@ func (n *namespace) inspect(ctx context.Context) ([]byte, error) {
 func (n *namespace) stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 	defer cancel()
-	if _, e := n.inspect(ctx); e != nil {
+	b, e := n.inspect(ctx)
+	if e != nil {
 		return e
+	}
+	state, e := parseInspect(b)
+	if e != nil {
+		return e
+	}
+	if !state.State.Running && state.State.Pid == 0 {
+		n.TreeGone = true
+		return nil
+	}
+	if n.Journal != "" {
+		if e = saveNew(filepath.Join(n.Journal, "namespace-stop-attempt.private.json"), map[string]string{"name": n.Name, "id": n.ID}); e != nil {
+			return errors.New("namespace stop already attempted; observe only, never repeat")
+		}
 	}
 	if e := cmd(ctx, dockerExe, "stop", "--time", "10", n.ID).Run(); e != nil {
 		return errors.New("owned namespace stop failed")
 	}
-	b, e := n.inspect(ctx)
+	b, e = n.inspect(ctx)
 	if e != nil {
 		return e
 	}
@@ -249,6 +264,11 @@ func (n *namespace) dispose() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	if n.Journal != "" {
+		if e := saveNew(filepath.Join(n.Journal, "namespace-remove-attempt.private.json"), map[string]string{"name": n.Name, "id": n.ID}); e != nil {
+			return errors.New("namespace removal already attempted; observe only, never repeat")
+		}
+	}
 	if e := cmd(ctx, dockerExe, "rm", "-v", n.ID).Run(); e != nil {
 		return errors.New("owned namespace removal failed")
 	}
@@ -260,7 +280,7 @@ func (n *namespace) dispose() error {
 // recovered by the exact name/labels/image; uncertainty never permits another
 // create.
 func newNamespace(ctx context.Context, dir string, k Kind, p Plan) (*namespace, error) {
-	n := &namespace{Name: fmt.Sprintf("civ6-ci-linux-%s-%d", k, time.Now().UnixNano()), Kind: k, CreationUncertain: true}
+	n := &namespace{Name: fmt.Sprintf("civ6-ci-linux-%s-%d", k, time.Now().UnixNano()), Kind: k, CreationUncertain: true, Journal: dir}
 	if e := saveNew(filepath.Join(dir, "namespace-intent.private.json"), n); e != nil {
 		return n, e
 	}

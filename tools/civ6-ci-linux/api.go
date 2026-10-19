@@ -130,15 +130,19 @@ func finiteRead(ctx context.Context, attempt func() ([]byte, string, error), pau
 }
 
 type boundedBuffer struct {
-	bytes.Buffer
-	limit int
+	buffer bytes.Buffer
+	limit  int
 }
+
+func (b *boundedBuffer) Len() int       { return b.buffer.Len() }
+func (b *boundedBuffer) Bytes() []byte  { return b.buffer.Bytes() }
+func (b *boundedBuffer) String() string { return b.buffer.String() }
 
 func (b *boundedBuffer) Write(p []byte) (int, error) {
 	if len(p) > b.limit-b.Len() {
 		return 0, errors.New("response size exceeded")
 	}
-	return b.Buffer.Write(p)
+	return b.buffer.Write(p)
 }
 func boundedOutput(c *exec.Cmd, limit int) ([]byte, error) {
 	b := boundedBuffer{limit: limit}

@@ -74,3 +74,9 @@ jobs:
             & go -C $module.FullName build ./...
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Vet the Linux guest build
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go -C tools/civ6-ci-linux vet ./...

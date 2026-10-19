@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,6 +33,17 @@ func entry() int {
 	}
 	var e error
 	switch os.Args[1] {
+	case "status", "collect":
+		if len(os.Args) != 3 {
+			return 2
+		}
+		ctx, stop := context.WithTimeout(context.Background(), 90*time.Second)
+		defer stop()
+		var result recoveryStatus
+		result, e = recoverJob(ctx, os.Args[2], os.Args[1] == "collect")
+		if encoded, err := json.Marshal(result); err == nil {
+			fmt.Println(string(encoded))
+		}
 	case "run":
 		if len(os.Args) != 6 {
 			fmt.Fprintln(os.Stderr, usage)

@@ -44,6 +44,7 @@ func newLife(t *testing.T) (*LifeCtx, *lifeRecord, string) {
 
 type winFake struct {
 	calls        []string
+	execErr      error
 	stdin        []byte
 	prepareOK    bool
 	executeOut   string
@@ -88,7 +89,7 @@ func (w *winFake) exec(ctx context.Context, pin Pinned, args []string, stdin []b
 		if onStart != nil {
 			onStart(ProcID{PID: 901, Created: 3})
 		}
-		return StepResult{Exit: w.executeExit, Output: []byte(w.executeOut)}, nil
+		return StepResult{Exit: w.executeExit, Output: []byte(w.executeOut)}, w.execErr
 	}
 	return StepResult{}, nil
 }
@@ -158,6 +159,18 @@ func TestWindowsLifecycleStopsOnceWhenTheServiceMayStillRun(t *testing.T) {
 	h.Lifecycle(context.Background(), lc2)
 	if strings.Contains(strings.Join(w2.calls, ","), "exec:stop") {
 		t.Fatalf("a stop was retried: %v", w2.calls)
+	}
+
+	// Same when a wait error (deadline) accompanies the helper's own ending.
+	lc3, _, root3 := newLife(t)
+	w3 := newWinFake()
+	w3.execErr = errors.New("helper step deadline")
+	w3.executeExit = 1
+	w3.executeOut = `{"event":"execute-end","ok":false,"service_started":true,"service_stopped":false,"fence":true}`
+	lc3.Exec, lc3.Admin = w3.exec, w3.admin(root3)
+	h.Lifecycle(context.Background(), lc3)
+	if strings.Contains(strings.Join(w3.calls, ","), "exec:stop") {
+		t.Fatalf("a stop was retried after an error with the helper's ending: %v", w3.calls)
 	}
 }
 

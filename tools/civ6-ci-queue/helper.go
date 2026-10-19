@@ -357,7 +357,7 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Failure = fmt.Sprintf("execute exited %d", res.Exit)
 	}
 	o.HelperOK = e == nil && res.Exit == 0 && end != nil && boolField(end, "ok")
-	if e != nil || end == nil {
+	if end == nil {
 		// The helper did not finish its own handling (it makes exactly one stop
 		// attempt itself when it does), so one stop is tried here. A reported
 		// fence is never stopped again: collect verifies it and fences on failure.

@@ -1532,10 +1532,10 @@ index 5dfc3ad..ac8f6c4 100644
                      self.refresh_agents_overview_usage(app_server, tui.frame_requester());
                      let rendered_area = self.render_chat_widget_frame(tui, screen_size)?;
 diff --git a/codex-rs/tui/src/app/agents_overview_details.rs b/codex-rs/tui/src/app/agents_overview_details.rs
-index 03b3c9b..c855f03 100644
+index 03b3c9b..8397d3c 100644
 --- a/codex-rs/tui/src/app/agents_overview_details.rs
 +++ b/codex-rs/tui/src/app/agents_overview_details.rs
-@@ -22,6 +22,43 @@ use std::collections::HashMap;
+@@ -22,6 +22,57 @@ use std::collections::HashMap;
  
  const PREVIEW_CHARS: usize = 512;
  
@@ -1553,7 +1553,7 @@ index 03b3c9b..c855f03 100644
 +                _ => serde_json::json!({"type":kind,"id":"i","text":"fixture"}),
 +            };
 +            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
-+                "method":"item/started","params":{"threadId":"t","turnId":"r","item":item}
++                "method":"item/started","params":{"threadId":"t","turnId":"r","startedAtMs":0,"item":item}
 +            }))
 +            .unwrap();
 +            activity.observe_processing(&notification);
@@ -1561,7 +1561,7 @@ index 03b3c9b..c855f03 100644
 +        }
 +        for tool in ["spawnAgent", "wait"] {
 +            let notification: ServerNotification = serde_json::from_value(serde_json::json!({
-+                "method":"item/started","params":{"threadId":"t","turnId":"r","item":{
++                "method":"item/started","params":{"threadId":"t","turnId":"r","startedAtMs":0,"item":{
 +                    "type":"collabAgentToolCall","id":"i","tool":tool,"status":"inProgress",
 +                    "senderThreadId":"t","receiverThreadIds":[],"agentsStates":{}
 +                }}
@@ -1573,13 +1573,27 @@ index 03b3c9b..c855f03 100644
 +        activity.processing_at =
 +            Some(std::time::Instant::now() - std::time::Duration::from_secs(31));
 +        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        let completed: ServerNotification = serde_json::from_value(serde_json::json!({
++            "method":"turn/completed","params":{"threadId":"t","turn":{"id":"r","status":"completed","items":[]}}
++        })).unwrap();
++        activity.observe_processing(&completed);
++        assert!(!activity.processing());
++        activity.processing_at = Some(std::time::Instant::now());
++        activity.observe_processing(&ServerNotification::ThreadStatusChanged(
++            codex_app_server_protocol::ThreadStatusChangedNotification {
++                thread_id: "t".into(),
++                status: ThreadStatus::Idle,
++            },
++        ));
++        assert!(!activity.processing());
 +    }
 +}
 +
  pub(super) fn preview_agent_message(text: &str) -> String {
      preview_markdown(&crate::markdown::normalize_markdown_for_rendering(text))
  }
-@@ -52,6 +89,54 @@ pub(super) fn preview_text(text: &str) -> String {
+@@ -52,6 +103,54 @@ pub(super) fn preview_text(text: &str) -> String {
  pub(super) struct AgentsOverviewActivity {
      reasoning: Option<ReasoningPreview>,
      last_message: Option<String>,
@@ -1634,7 +1648,7 @@ index 03b3c9b..c855f03 100644
  }
  
  struct ReasoningPreview {
-@@ -72,6 +157,7 @@ impl App {
+@@ -72,6 +171,7 @@ impl App {
              return;
          }
          let activity = self.agents_overview.activity.entry(thread_id).or_default();
@@ -2239,10 +2253,10 @@ index 5a196d6..7047157 100644
  use codex_arg0::arg0_dispatch_or_else;
 diff --git a/codex-rs/tui/src/parallel_progress.rs b/codex-rs/tui/src/parallel_progress.rs
 new file mode 100644
-index 0000000..608d2bc
+index 0000000..97f4963
 --- /dev/null
 +++ b/codex-rs/tui/src/parallel_progress.rs
-@@ -0,0 +1,923 @@
+@@ -0,0 +1,944 @@
 +//! Persistent, read-only progress for native agents and separately launched jobs.
 +//!
 +//! The Go collector emits a public-label projection of recorded measurements.
@@ -2790,7 +2804,9 @@ index 0000000..608d2bc
 +            }
 +        }
 +        let header = if rows.is_empty() {
-+            if current {
++            if current
++                && snapshot.is_some_and(|snapshot| snapshot.status == "ok" && !snapshot.truncated)
++            {
 +                "並列担当  作業中なし".into()
 +            } else {
 +                "並列担当  稼働の確認待ち".into()
@@ -2891,7 +2907,7 @@ index 0000000..608d2bc
 +    }
 +
 +    pub(crate) fn selection(&self) -> crate::bottom_pane::SelectionViewParams {
-+        let items = self
++        let mut items: Vec<crate::bottom_pane::SelectionItem> = self
 +            .rows
 +            .iter()
 +            .map(|row| crate::bottom_pane::SelectionItem {
@@ -2907,6 +2923,13 @@ index 0000000..608d2bc
 +                ..Default::default()
 +            })
 +            .collect();
++        if items.is_empty() {
++            items.push(crate::bottom_pane::SelectionItem {
++                name: self.header.clone(),
++                is_disabled: true,
++                ..Default::default()
++            });
++        }
 +        crate::bottom_pane::SelectionViewParams {
 +            title: Some("並列担当の進捗".into()),
 +            subtitle: Some("一覧を開いた時点の状態。常設欄は自動更新します。".into()),
@@ -3138,6 +3161,18 @@ index 0000000..608d2bc
 +                .header
 +                .contains("作業中なし")
 +        );
++        let panel = ProgressPanel::new(Some(&empty), &[], false);
++        let selection = panel.selection();
++        assert_eq!(selection.items.len(), 1);
++        assert!(selection.items[0].is_disabled);
++        assert!(selection.items[0].name.contains("作業中なし"));
++        let partial = ProgressSnapshot {
++            status: "degraded".into(),
++            ..empty
++        };
++        let panel = ProgressPanel::new(Some(&partial), &[], false);
++        assert!(!panel.header.contains("作業中なし"));
++        assert!(panel.selection().items[0].name.contains("確認待ち"));
 +    }
 +
 +    #[test]

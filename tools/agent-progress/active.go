@@ -32,36 +32,62 @@ func processingJob(j *Job, now time.Time) bool {
 	}
 }
 
+type resourceObservation uint8
+
+const (
+	resourceReady resourceObservation = iota
+	resourceWaiting
+	resourceActive
+	resourceUnknown
+)
+
+func (r resourceObservation) allowsProcessing() bool {
+	return r == resourceReady || r == resourceActive
+}
+func observeResources(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) resourceObservation {
+	cargo, queue := cargoResource(ctx, opts, id, now, probe), queuedResource(ctx, opts, id, now, probe)
+	if cargo == resourceUnknown || queue == resourceUnknown {
+		return resourceUnknown
+	}
+	if cargo == resourceActive {
+		return resourceActive
+	}
+	if cargo == resourceWaiting || queue == resourceWaiting {
+		return resourceWaiting
+	}
+	return resourceReady
+}
+func processingResources(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) bool {
+	return observeResources(ctx, opts, id, now, probe).allowsProcessing()
+}
+
 // The existing gate publishes exact process identities for waiting and active
 // siblings. A waiting gate is not work, but an active sibling still is.
-func processingResources(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) bool {
-	if queuedResource(ctx, opts, id, now, probe) {
-		return false
-	}
+func cargoResource(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) resourceObservation {
 	dir := filepath.Join(opts.JobsDir, id, "resource-waits")
 	info, err := os.Lstat(dir)
 	if os.IsNotExist(err) {
-		return true
+		return resourceReady
 	}
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return false
+		return resourceUnknown
 	}
 	f, err := os.Open(dir)
 	if err != nil {
-		return false
+		return resourceUnknown
 	}
 	defer f.Close()
 	entries, err := f.ReadDir(129)
 	if err != nil && err != io.EOF {
-		return false
+		return resourceUnknown
 	}
 	if len(entries) > 128 {
-		return false
+		return resourceUnknown
 	}
 	waiting, active := false, false
 	for _, entry := range entries {
 		if ctx.Err() != nil {
-			return false
+			return resourceUnknown
 		}
 		var marker struct {
 			JobID   string  `json:"job_id"`
@@ -72,7 +98,7 @@ func processingResources(ctx context.Context, opts Options, id string, now time.
 		}
 		source := readProjection(filepath.Join(dir, entry.Name()), 8192, &marker, now, opts.StaleAfter)
 		if source.Status != "ok" {
-			return false
+			return resourceUnknown
 		}
 		if marker.JobID != id {
 			continue
@@ -82,7 +108,7 @@ func processingResources(ctx context.Context, opts Options, id string, now time.
 			continue
 		case "verified_alive":
 		default:
-			return false
+			return resourceUnknown
 		}
 		switch marker.Kind {
 		case "cargo-active":
@@ -91,41 +117,48 @@ func processingResources(ctx context.Context, opts Options, id string, now time.
 			waiting = true
 		case "":
 			if marker.Reason != "cargoの共有ビルド枠待ち" && marker.Reason != "cargoの共有キャッシュ枠待ち" {
-				return false
+				return resourceUnknown
 			}
 			waiting = true
 		default:
-			return false
+			return resourceUnknown
 		}
 	}
-	return !waiting || active
+	if active {
+		return resourceActive
+	}
+	if waiting {
+		return resourceWaiting
+	}
+	return resourceReady
 }
 
 // live_chain publishes a separate queue with the same exact PID identity.
 // Never infer the resource state from the private command or message text.
-func queuedResource(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) bool {
+func queuedResource(ctx context.Context, opts Options, id string, now time.Time, probe processProbe) resourceObservation {
 	if opts.ResourceQueueDir == "" {
-		return false
+		return resourceReady
 	}
 	info, err := os.Lstat(opts.ResourceQueueDir)
 	if os.IsNotExist(err) {
-		return false
+		return resourceReady
 	}
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return true
+		return resourceUnknown
 	}
 	f, err := os.Open(opts.ResourceQueueDir)
 	if err != nil {
-		return true
+		return resourceUnknown
 	}
 	defer f.Close()
 	entries, err := f.ReadDir(129)
 	if (err != nil && err != io.EOF) || len(entries) > 128 {
-		return true
+		return resourceUnknown
 	}
+	waiting := false
 	for _, entry := range entries {
 		if ctx.Err() != nil {
-			return true
+			return resourceUnknown
 		}
 		var marker struct {
 			Job     string  `json:"job"`
@@ -133,17 +166,23 @@ func queuedResource(ctx context.Context, opts Options, id string, now time.Time,
 			Created *uint64 `json:"pid_created_filetime"`
 		}
 		if readProjection(filepath.Join(opts.ResourceQueueDir, entry.Name()), 8192, &marker, now, opts.StaleAfter).Status != "ok" {
-			return true
+			return resourceUnknown
 		}
 		if marker.Job != id {
 			continue
 		}
-		state := presence(marker.PID, marker.Created, probe)
-		if state != "absent" && state != "identity_mismatch" {
-			return true
+		switch presence(marker.PID, marker.Created, probe) {
+		case "verified_alive":
+			waiting = true
+		case "absent", "identity_mismatch":
+		default:
+			return resourceUnknown
 		}
 	}
-	return false
+	if waiting {
+		return resourceWaiting
+	}
+	return resourceReady
 }
 
 func processingTask(item todoItem, items map[int64]todoItem, now time.Time, stale time.Duration) bool {

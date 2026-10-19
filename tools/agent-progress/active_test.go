@@ -29,9 +29,13 @@ func TestActiveOnlyUsesWorkerEvidenceAndPreservesDiagnosticView(t *testing.T) {
 		f.job(t, name, fmt.Sprintf(`{"id":%q,"status":"running","codex_pid":7,"codex_pid_created":10,"last_event_at":%q,"activity":%q}`, name, at.Format(time.RFC3339), activity))
 	}
 	f.job(t, "queued", `{"id":"queued","status":"queued","created_at":"2026-10-13T10:00:00Z","queue_wait_reason":{"code":"running_limit"}}`)
+	f.job(t, "new-report", `{"id":"new-report","todo_id":1,"status":"running","created_at":"2026-10-13T10:00:00Z","codex_pid":7,"codex_pid_created":10,"last_event_at":"2026-10-13T10:00:00Z","activity":"said: fixture"}`)
 	diagnostic := collect(context.Background(), f.opts, testNow, probe)
 	if len(diagnostic.Tasks) != 5 {
 		t.Fatal("diagnostic view changed")
+	}
+	if len(diagnostic.Tasks[0].WaitReasons) == 0 {
+		t.Fatal("diagnostic wait reasons were removed")
 	}
 	f.opts.ActiveOnly, f.opts.IncludeDone, f.opts.MaxRows = true, true, 1
 	s := collect(context.Background(), f.opts, testNow, probe)
@@ -196,6 +200,11 @@ func TestActiveOnlyExcludesCollaborationWait(t *testing.T) {
 	if len(s.Tasks) != 0 || len(s.Jobs) != 0 {
 		t.Fatal("waiting for a child is not active processing")
 	}
+	writeFixture(t, filepath.Join(f.opts.JobsDir, "waiter", "job.json"), []byte(`{"id":"waiter","status":"running","codex_pid":1,"codex_pid_created":10,"last_event_at":"2026-10-13T10:00:00Z","activity":"thinking"}`))
+	s = collect(context.Background(), f.opts, testNow, probe)
+	if len(s.Tasks) != 1 || len(s.Jobs) != 1 {
+		t.Fatal("positive control did not resume after the child wait")
+	}
 }
 
 func TestActiveOnlyMixedTaskRelationsStayConsistent(t *testing.T) {
@@ -210,5 +219,46 @@ func TestActiveOnlyMixedTaskRelationsStayConsistent(t *testing.T) {
 	if len(s.Tasks) != 1 || s.Tasks[0].ID != 1 || len(s.Jobs) != 1 ||
 		!reflect.DeepEqual(s.Jobs[0].TodoIDs, []int64{1}) || !reflect.DeepEqual(s.Tasks[0].JobKeys, []string{s.Jobs[0].Key}) {
 		t.Fatal("active task/job relations must agree without resurrecting the waiting task")
+	}
+}
+
+func TestActiveOnlyResourceMarkersAreWiredThroughCollection(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"status":"doing","progress":50,"jobs":["worker"]}]}`)
+	f.opts.ActiveOnly = true
+	f.job(t, "worker", `{"id":"worker","status":"running","codex_pid":1,"codex_pid_created":10,"last_event_at":"2026-10-13T10:00:00Z","activity":"running: fixture"}`)
+	created := uint64(10)
+	probe := func(uint32) processObservation {
+		return processObservation{alive: true, known: true, created: &created}
+	}
+	check := func(want int) {
+		t.Helper()
+		s := collect(context.Background(), f.opts, testNow, probe)
+		if len(s.Tasks) != want || len(s.Jobs) != want {
+			t.Fatal("resource evidence did not reach the active projection")
+		}
+		if want == 1 && *s.Tasks[0].Percent != 50 {
+			t.Fatal("resource observation changed measured progress")
+		}
+	}
+	check(1)
+	dir := filepath.Join(f.opts.JobsDir, "worker", "resource-waits")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	writeFixture(t, filepath.Join(dir, "wait.json"), []byte(`{"job_id":"worker","kind":"cargo","pid":2,"pid_created":10}`))
+	check(0)
+	writeFixture(t, filepath.Join(dir, "active.json"), []byte(`{"job_id":"worker","kind":"cargo-active","pid":3,"pid_created":10}`))
+	check(1)
+	if err := os.Mkdir(f.opts.ResourceQueueDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	queue := filepath.Join(f.opts.ResourceQueueDir, "queue.json")
+	writeFixture(t, queue, []byte(`{"job":"worker","pid":4,"pid_created_filetime":10}`))
+	check(1)
+	writeFixture(t, queue, []byte(`broken`))
+	s := collect(context.Background(), f.opts, testNow, probe)
+	if s.Status != "degraded" || s.Sources["jobs"].Complete || len(s.Tasks) != 0 ||
+		!reflect.DeepEqual(s.Issues, []string{"jobs_resource_unverified"}) {
+		t.Fatal("unknown resource evidence must be visible as incomplete acquisition")
 	}
 }

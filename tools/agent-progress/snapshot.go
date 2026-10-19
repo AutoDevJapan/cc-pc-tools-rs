@@ -94,6 +94,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	// worktree names, paths, prompts, parent titles, or matching project names.
 	references := taskReferences(items, false)
 	allJobs := map[string]*Job{}
+	resourceUnverified := false
 	for _, loaded := range loaded {
 		j := loaded.meta
 		ids := append(append([]int64{}, j.RelatedTodoIDs...), references[j.ID]...)
@@ -148,9 +149,16 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			rawID: j.ID, parentID: j.ParentJobID, independent: objectValue(j.Subwork), cancelRequested: j.CancelRequested, created: created,
 		}
 		if opts.ActiveOnly && row.Execution == "running" {
-			row.resourceBlocked = j.Activity == "agent: wait" || !processingResources(ctx, opts, j.ID, now, probe)
+			resources := observeResources(ctx, opts, j.ID, now, probe)
+			resourceUnverified = resourceUnverified || resources == resourceUnknown
+			row.resourceBlocked = j.Activity == "agent: wait" || !resources.allowsProcessing()
 		}
 		allJobs[j.ID] = row
+	}
+	if resourceUnverified {
+		js.Status, js.Complete = "partial", false
+		s.Sources["jobs"] = js
+		s.Issues = append(s.Issues, "jobs_resource_unverified")
 	}
 	// Dependent child jobs inherit a live parent's priority; finite independent
 	// subwork consumes its own priority, matching the existing scheduler.

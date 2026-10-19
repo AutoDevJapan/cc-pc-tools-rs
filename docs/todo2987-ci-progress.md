@@ -109,3 +109,12 @@
 - 自分の所有temp f97a987aeae3a2f8545c8ed51a360a32は不要な未利用cloneとvalidator。safe-delete planがPROTECTED_PATH、指定どおりquarantine --reason policyもPROTECTED_PATH。通常のhelper拒否であり自動承認審査の拒否とは扱わない。原データを保持し、別shell/手動移動・削除/guard変更で回避していない。実未完了の後片付けとしてprivate結果に保持。
 
 次: main CodeQLと取消受付済み2runの終端を有限に確認する。PC3002/既存3018の正規再開を維持し、必要な残工程が他ToDoだけになったら2987をwait --on 3002で登録。原tempのcanonical保護判定による未回収も保持し、削除できたとしない。親2957と3002へmerge/実測/未完了を配送済み。PRコメント6270816263は再送不要。
+
+## 2026-10-20 01時台 取消終了とPCレビュー受領
+
+- 同一treeのmain重複local39280571145/V239280571286はcompleted/cancelled、attempt1で正規API終了確認。元の取消を再送していない。main CodeQL39280570988は01:15時点で実行中、actions/python成功、JS/Rust解析中。重複取消を検査の成功へ置き換えず、PRの実成功と固定source/tree一致を参照する。
+- 既存3018はdoingへ復帰し、準備失敗の説明だけを繰り返す状態ではなくなった。別の同担当を重複登録・直接起動していない。3002は3018/3019待ち、PC正式受入は未完了。
+- 3019の原応答を取得し、実job20261019-234148-todo-3019/thread01a1549e-c58e-7fe0-9b86-7fd5fd7c6258と実turn_contextでSonnet5.5一致を照合。原応答SHA256 E2201984F1189DC76D8F89335BABF7044B0EDA9767CA51A42E2DD0CA785B45A7。固定d528baソース8pathの読取Must0、lockはpackage一覧だけ、Cargo/liveGET未実施。Suggestion7件と未読/未実行の範囲を3002へ正規note配送。実行前の現在source照合と成功後の出自照合、capture異常系の実測など実害がある提案を技術判断する。サービス統合後の別レビューと実4job/hash/終了回収を旧レビューだけで代用しない。
+- tempのPROTECTED_PATHは既存Go safe-deleteのprotected名（.git等）検査に対応することをsourceから確認した。元temp内容・保護sourceを読んで原因を調べておらず、通常Git保護を崩す例外や別経路移動/削除を作っていない。所有記録と元データを保持。client分類だけのエラーと決め付けない。
+
+次: main CodeQLの有限終了確認。残るPC工程は3002/既存3018で続け、CodeQL完了後はwait --on 3002で親を終了待ちへ切り替える。元2957に実施/検証/未完了を追加済み。取消やreview受領の再送、全CI再起動、GPU/重いCargo/秘密の読取は不要。

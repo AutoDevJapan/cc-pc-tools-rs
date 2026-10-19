@@ -258,8 +258,8 @@ func TestConfiguredRunnerListenerRecoveryDoesNotDuplicateRunningListener(t *test
 			run := func(args ...string) (string, error) {
 				if len(args) >= 3 && args[0] == "exec" && args[1] == "-d" {
 					joined := strings.Join(args, "\n")
-					if !strings.Contains(joined, "CC_LINUX_RUNNER_MODE=normal") || !strings.Contains(joined, "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh") {
-						return "", errors.New("recovery omitted mode or the pre-job admission hook")
+					if joined != "exec\n-d\ntest-container\n/opt/bridge/bridge\nsupervise" {
+						return "", errors.New("recovery did not use the single cycle supervisor")
 					}
 					starts++
 					return "started", nil

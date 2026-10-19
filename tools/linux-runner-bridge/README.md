@@ -80,3 +80,38 @@ The normal container must already exist and use the matching image, tmpfs
 mounts, and isolation options. The bridge starts it when stopped, then runs
 until the runner exits. A normal OS restart has not been tested by this mode;
 do not report reboot recovery as verified without a separate test.
+
+### Bounded resident scratch and diagnostics (ToDo3026)
+
+Normal mode uses the existing supervisor for successive `run.sh --once`
+sessions. Registration remains repository-scoped and reusable; it does not
+register an ephemeral runner for each job. The pinned official runner supports
+`--once` ([upstream implementation](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs)); upstream warns this flag may be
+deprecated. Upgrading the official runner must recheck this lifecycle contract.
+The existing pre-job admission hook and Windows Cargo gate are unchanged.
+
+Each session owns a unique scratch directory below the existing noexec `/tmp`.
+`TMPDIR`, `TMP`, and `TEMP` point to that directory. It is reclaimed only after
+the listener exits, the kernel confirms its process group is gone, and no other
+worker or unknown process remains in the container. An escaped or unreaped
+process prevents cleanup and the next session. The single supervisor holds a
+nonblocking kernel lock across sessions; the host's existing recovery path
+recognizes it between listeners. No new polling task is introduced.
+
+`/runner/_diag` points to a session-owned directory below the existing persistent
+`/work/bridge-diagnostics-todo3026`. Only directories bearing the bridge owner
+record and a completion marker written after drain are retention candidates.
+After each session, retain at most eight completed sessions and 64 MiB of their
+uncompressed files, removing oldest completed sessions first. This is an idle
+retention bound, not permission to truncate active diagnostics. Unfinished
+evidence is kept; more than eight unfinished sessions or 64 MiB of unfinished
+data prevents further sessions pending finite recovery. Links, special files,
+unknown entries, and unreadable ownership records fail closed.
+
+Existing configuration diagnostics are renamed intact within `/runner`, outside
+automatic retention. Existing `/tmp` entries and authentication files are never
+swept. `/work/todo3024-diag-before-restart.tar.gz` is outside the owned diagnostic
+root and remains preserved. Deployment must use the original scheduled task
+while idle, preserve the existing `/work` data, and verify matching host/image/
+container artifacts before a normal GitHub job is accepted. Merely restarting
+the old task does not install this change.

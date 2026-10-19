@@ -445,7 +445,7 @@ func configuredRunnerListenerCount(containerName string, run dockerOutput) (int,
 func configuredRunnerSupervisorCount(containerName string, run dockerOutput) (int, error) {
 	// The registered bridge process owns run.sh and waits 30 seconds before
 	// restarting it. Count it, run.sh, and run-helper.sh as existing supervisors.
-	const pattern = `[/]opt/bridge/bridge register|[/]bin/bash /runner/run[.-]helper.sh|[/]bin/bash /runner/run.sh`
+	const pattern = `[/]opt/bridge/bridge (register|supervise)|[/]bin/bash /runner/run[.-]helper.sh|[/]bin/bash /runner/run.sh`
 	return configuredRunnerProcessCount(containerName, run, pattern)
 }
 
@@ -482,7 +482,7 @@ func ensureConfiguredRunnerListener(containerName string, run dockerOutput, paus
 	if emptyProbes < 2 {
 		return false, errors.New("existing runner supervisor did not recover within 60 seconds")
 	}
-	if _, err := run("exec", "-d", "-e", "CC_LINUX_RUNNER_MODE=normal", "-e", "ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/bridge/job-hook.sh", containerName, "/bin/bash", "/runner/run.sh"); err != nil {
+	if _, err := run("exec", "-d", containerName, "/opt/bridge/bridge", "supervise"); err != nil {
 		return false, errors.New("configured runner listener restart failed")
 	}
 	for attempt := 0; attempt < 15; attempt++ {
@@ -1039,6 +1039,9 @@ func register() int {
 	if strings.TrimSpace(ephemeral) == "true" {
 		mode = "finite"
 	}
+	if mode == "normal" {
+		return superviseNormal()
+	}
 	for {
 		c = exec.Command("/runner/run.sh")
 		c.Dir = "/runner"
@@ -1076,6 +1079,8 @@ func main() {
 		os.Exit(hook())
 	case "register":
 		os.Exit(register())
+	case "supervise":
+		os.Exit(superviseNormal())
 	default:
 		fmt.Fprintln(os.Stderr, "unknown mode")
 		os.Exit(1)

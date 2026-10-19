@@ -60,15 +60,53 @@ unmaintained/unsoundなどの情報warningは重大脆弱性エラーと区別�
   脱出拒否、plist XML/binary往復、製品と同じupdater登録API、reqwest両版の通常の
   証明書検証を使ったHTTPSを確認した。対象の主要依存versionは製品候補と一致する。
 - quinn-protoとreqwest両版のWindows checkは独立受入manifestで7.02秒、exit0。
-- 別モデルの固定差分読取レビュー3001（Claude Sonnet 5.5を通常ToDoで指定）と
-  親への最終配送が残る。実際の起動と実モデルの照合は受領時に行う。
+- 別モデルレビュー3001を受領。固定2候補blobを照合しMustなし、Suggestion3件とNit。
+  原応答4973 bytesのSHA256はd7456ce0fce1859b2f6165c64e551701af51c68ed8697adc5fd7d23bac1f4e1a。
+  job20261019-212942-todo-3001はexit0/18steps。threadとcwdが一致する実turn_contextで
+  anthropic/claude-sonnet-5-5を照合した。原応答はreview3001-original.private.md、
+  限定モデル証拠はreview3001-turn-context.private.jsonに保持。
+- レビュー担当が未読と明記したaudit JSONなどへの補足確認と、親への最終配送が残る。
 - 製品本体の全テスト・正式CI・mergeはこの工程では未実施。
 
 依存API受入のコードは`tools/passshare-audit-2996/`へ保存した。受入用lockは製品lockと
 別であり、製品の全依存構成の動作証明ではない。製品lockでのupdater checkと区別する。
 doctestコマンドは成功したが、この補助ライブラリのdoctestは0件なので検証件数へ加えない。
-進捗75%は、固定差分・重大監査成功・関連検査の3区切りが済み、レビューと配送の1区切りが
-残ることを示す。製品CIの達成率ではない。
+進捗75%は、固定差分・重大監査成功・関連検査の3区切りが済み、レビュー受領の補足と
+配送の1区切りが残ることを示す。製品CIの達成率ではない。
+
+## レビューの指摘への対応と統合条件
+
+3001は固定差分を確認したが、audit JSONの実内容、mobile等の個別Cargo manifest、
+受入metadata/lockは未読だった。既確認の差分・コード・検査を繰り返さず、この未読だけを
+補足確認へ渡す。base2blobは当初保存していなかったため、証拠の原バイトから
+git hash-object -w --no-filtersで保存し、元のGitHub blob IDとの一致を確認した。
+
+Suggestionの版整合は実害を防ぐ必要がある。固定baseのdesktop/mobileのpnpm lockは
+@tauri-apps/api 2.11.1、cli 2.11.4。desktopのplugin-updaterは2.10.1である。
+候補Rustはtauri2.12.4/updater2.14.0なので、公式の同minor/同version条件を満たさない。
+親は正式製品CI前に、両clientのAPIを2.12系列、desktop updaterを2.14.0へ通常解決して
+整合させ、CLIの対応も確認する必要がある。npm公式registryでAPI2.12.0とupdater2.14.0の
+公開を確認し、後者がAPI^2.12.0を要求することも確認した。この子の書込所有はCargo2ファイル
+だけなので、JS manifest/lockは変更せず、具体的な必須統合条件として親へ配送する。
+
+一次資料：https://v2.tauri.app/develop/updating-dependencies/#sync-npm-packages-and-cargo-crates-versions
+固定baseのpackage.json/pnpm lockとsecurity-audit.ymlは、GitHub APIで取得した原バイトを
+.ci-work/compatibility/へ保持している。既存の未知PC製品treeは使っていない。
+
+監査範囲について、固定baseのsecurity-audit.ymlはrootとbackend/nativeの2lockだけを
+要求することを実確認した。ほかの3lockはこの正式監査jobの範囲外で、監査成功を主張しない。
+また、既存.cargo/audit.tomlはquick-xmlの2件を既にignoreしていたことを確認した。
+これが元CI12件と、設定を読まない明示lock監査14件との差である。候補はこの2件も解消し、
+ignore空の厳しい条件で0件になっている。子は免除を追加していない。既存ignoreの古い説明を
+除去する必要は親へ配送し、監査設定を書き換えるためにこの子の範囲を広げない。
+
+git依存は、上流stable crateがzip^9以上を採用して公開され、今回の監査と関連検査に成功した
+場合だけregistry依存へ戻す。今の候補revを日付やlatest branchだけで動かさない。
+親はこの条件を統合時の追跡項目へ残す。新しい同時Cargo・通常CI・製品PRは起動しない。
+
+原応答とモデルの通常保存場所はguardで未確認扱いだったため、依頼済み1件の原応答と
+限定モデル情報だけを正規の自動審査に提出し、承認後に直接読取した。保護設定の変更、
+別経路への迂回、無関係なログや認証情報の読取は行っていない。
 
 初回受入はWindows loaderが0xc0000139で起動前に失敗した。PE import全375件を照合し、
 comctl32.dllのTaskDialogIndirectだけが未解決と確認した。独立受入には通常のTauri
@@ -100,7 +138,7 @@ manual-quarantine-verification/result.private.json。別経路で削除を再実
 
 1. この記録と親2986のnoteを読み、上記の固定候補blobを照合する。
 2. Cargoは全て終端済みで一時生成物は退避済み。新しい変更や指摘が無い限り再ビルドしない。
-3. レビュー3001の原応答を受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
+3. 補足レビューの未読範囲だけを受領し、実モデルと固定差分を照合する。Mustがあれば修正する。
 4. 親2986の既存noteを保持して、候補blob、audit、関連検査、残条件を追記する。
 5. 必要な再検査で新規rootを作った場合だけ、所有付き一時rootの手順で片付ける。
 6. 支援記録だけをscheduler/todo-2996-passshare-ci-rust-2986へcommit/pushし、

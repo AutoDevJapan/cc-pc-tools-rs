@@ -112,6 +112,14 @@ fn successful_handle_checks_do_not_query_the_fallback() {
 }
 
 #[test]
+fn mutation_counter_has_a_positive_control_with_the_existing_handle_check() {
+    let rt = probe(Some(Some(100)), Some(Some(999)));
+    rt.kill_owned_tree(77, 100).unwrap();
+    assert_eq!(rt.mutations.load(Ordering::Relaxed), 1);
+    assert_eq!(rt.observations.load(Ordering::Relaxed), 0);
+}
+
+#[test]
 fn missing_or_zero_recorded_birth_stays_unknown() {
     let temp = tempfile::tempdir().unwrap();
     for value in [Value::Null, json!(0)] {

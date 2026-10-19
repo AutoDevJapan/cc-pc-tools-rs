@@ -32,6 +32,7 @@ type currentProduct struct {
 	repositoryID                                    int64
 	task, parentTask                                int
 	worktree                                        string
+	ongoing                                         bool
 }
 
 // Keep this a finite declaration. Adding a product requires a separately
@@ -39,6 +40,34 @@ type currentProduct struct {
 var currentProducts = []currentProduct{
 	{project: "GoDD-AO", root: currentAORoot, owner: "AutoDevJapan", repository: currentAORepository, repositoryID: 1296537193, task: 2839, spec: currentAOSpec, specSHA: currentAOSpecSHA},
 	{project: "GoDD-13a13e1", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-13a13e1", owner: "AutoDevJapan", repository: "autodevjapan/godd-13a13e1", repositoryID: 1283948432, task: 2850, spec: "D:/CC/Tools/todo/specs/2850-cdf16525f6ab44b1a3f5e6d1f9337359.md", specSHA: "207951d442f732e489326ef92819c3ee2674bdb38b64605d3043e50e198a0d95"},
+	{project: "GoDD-Agent", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Agent", owner: "AutoDevJapan", repository: "autodevjapan/godd-agent", repositoryID: 1296644614, task: 2913, spec: "D:/CC/Tools/todo/specs/2913-063d73978ca64042b1f163df8a2ca25c.md", specSHA: "336f301b7b346bbf75712c5eeb602cbe511a67e2661ded3c3824b0a397fe54a9", ongoing: true},
+	{project: "GoDD-Creators", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Creators", owner: "AutoDevJapan", repository: "autodevjapan/godd-creators", repositoryID: 1299522585, task: 2914, spec: "D:/CC/Tools/todo/specs/2914-c73d99f7ae4f475eb08a8f0f755d1cd0.md", specSHA: "e930f73bc4735de883316e6f9a6589bee59f2735934ad3b00b6d9b52b18ce622", ongoing: true},
+	{project: "GoDD-Rosetta", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Rosetta", owner: "AutoDevJapan", repository: "autodevjapan/godd-rosetta", repositoryID: 1397020302, task: 2915, spec: "D:/CC/Tools/todo/specs/2915-9a62b269bfb64f77a7c42a9a444c0e7d.md", specSHA: "44a57753802817a5a06a6de6e12c40a7b13c1e8d29e8edd0d420d518d211ad85", ongoing: true},
+	{project: "GoDD-Genesis", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-Genesis", owner: "AutoDevJapan", repository: "autodevjapan/godd-genesis", repositoryID: 1199265386, task: 2916, spec: "D:/CC/Tools/todo/specs/2916-d667d01d7d5a434da2a358d3a986f5d8.md", specSHA: "7dd744dba1cfbfae385f05a9d96ed8fb13ac79f93fe1f12a2b64c920a36a49a6", ongoing: true},
+	{project: "GoDD-VirtualStreamer", root: "C:/Users/makhmeto/Desktop/dev/ADJ/GoDD-VirtualStreamer", owner: "AutoDevJapan", repository: "autodevjapan/godd-virtualstreamer", repositoryID: 1305037899, task: 2917, spec: "D:/CC/Tools/todo/specs/2917-abdc3b271c43470fb4ce9d87d1d70616.md", specSHA: "341b23ee35d56f33c82713bcb3674fdff99d391bca4f5a9b9726119f05f366ba", ongoing: true},
+}
+
+// Only the five compiled current-business declarations carry ongoing=true.
+// It is not read from a manifest or task field. Original recovery windows stay
+// unchanged, while this same current business ends on completion or stop.
+func currentProductTimeAllowed(product currentProduct, at time.Time) bool {
+	if product.ongoing {
+		return !at.Before(time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC))
+	}
+	return finiteProductScope(at)
+}
+
+func currentProductQualified(db object, product currentProduct, protected func(string) bool) bool {
+	if product.ongoing {
+		row := itemAt(db, product.task)
+		if row == nil || row["dispatchable"] != true {
+			return false
+		}
+		if status := str(row["status"]); status != "todo" && status != "doing" && status != "wait" {
+			return false
+		}
+	}
+	return currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, protected)
 }
 
 func currentProductQualification(product currentProduct) bool {
@@ -50,7 +79,7 @@ func currentProductQualification(product currentProduct) bool {
 	if err != nil {
 		return false
 	}
-	return currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, legacyMatch)
+	return currentProductQualified(db, product, legacyMatch)
 }
 
 func currentSuccessionReceipt(db object, product currentProduct) object {
@@ -60,10 +89,10 @@ func currentSuccessionReceipt(db object, product currentProduct) object {
 func currentSuccessionReceiptWith(db object, product currentProduct, now time.Time, protected func(string) bool, plain func(string, bool) bool, origin func(string, string) bool, identity func(currentProduct) bool) object {
 	failure := object{"verified": false}
 	parts := strings.Split(product.repository, "/")
-	if !finiteProductScope(now) || product.task <= 0 || product.repositoryID <= 0 || product.project == "" || product.root == "" || product.spec == "" || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
+	if !currentProductTimeAllowed(product, now) || product.task <= 0 || product.repositoryID <= 0 || product.project == "" || product.root == "" || product.spec == "" || len(parts) != 2 || !strings.EqualFold(parts[0], product.owner) {
 		return failure
 	}
-	if !currentQualification(db, product.project, product.task, product.root, product.spec, product.specSHA, protected) || !plain(product.root, true) || !origin(product.root, product.repository) || !identity(product) {
+	if !currentProductQualified(db, product, protected) || !plain(product.root, true) || !origin(product.root, product.repository) || !identity(product) {
 		return failure
 	}
 	registeredHash, ok := currentPathHash(str(obj(db["projects"])[product.project]))
@@ -160,9 +189,9 @@ func currentPathHash(path string) (string, bool) {
 	return hashBytes([]byte(strings.ToLower(canonical))), true
 }
 
-func currentProductsScopePathAllowed(path string, products []currentProduct, qualifies func(currentProduct) bool, protected func(string) bool) bool {
+func currentProductsScopePathAllowed(path string, products []currentProduct, at time.Time, qualifies func(currentProduct) bool, protected func(string) bool) bool {
 	for _, product := range products {
-		if !within(product.root, path) && !within(product.root+"-wt", path) {
+		if (!within(product.root, path) && !within(product.root+"-wt", path)) || !currentProductTimeAllowed(product, at) {
 			continue
 		}
 		if qualifies(product) && currentProductPath(path, product.root, product.repository, strconv.Itoa(product.task), protected) {
@@ -279,7 +308,7 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 			break
 		}
 	}
-	if !parentFound || task <= parent.task || !finiteProductScope(now) {
+	if !parentFound || task <= parent.task || !currentProductTimeAllowed(parent, now) {
 		return failure, currentProduct{}, false
 	}
 	parentRow := itemAt(db, parent.task)
@@ -297,7 +326,7 @@ func currentSubworkReceiptWith(db object, task int, products []currentProduct, s
 	if len(jobMatch) != 3 || jobMatch[2] != strconv.Itoa(parent.task) {
 		return failure, currentProduct{}, false
 	}
-	if !currentQualification(db, parent.project, parent.task, parent.root, parent.spec, parent.specSHA, protected) ||
+	if !currentProductQualified(db, parent, protected) ||
 		!plain(parent.root, true) || !origin(parent.root, parent.repository) || !identity(parent) {
 		return failure, currentProduct{}, false
 	}
@@ -518,5 +547,5 @@ func currentScopePathAllowed(path string) bool {
 	}
 	// Only an exact current product/actor declaration qualifies. Existing
 	// denials remain authoritative; no lost original row is restored.
-	return currentProductsScopePathAllowed(path, currentProducts, currentProductQualification, legacyMatch) || currentSubworkScopePathAllowed(path)
+	return currentProductsScopePathAllowed(path, currentProducts, time.Now(), currentProductQualification, legacyMatch) || currentSubworkScopePathAllowed(path)
 }

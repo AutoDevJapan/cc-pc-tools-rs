@@ -402,7 +402,10 @@ flags say, a release (including by recovery) also requires that no builder of an
 nonce exists.
 Host RAM holds
 the gzip context, one verified copy for stdin, and one exactly sized artifact
-(256 MiB maximum; 32 MiB for the fixture), all inside the transfer budget. The
+(288 MiB maximum; 96 MiB for the fixture), all inside the transfer budget. The
+product output cap covers the fixed-source build's measured 273,962,496 bytes;
+the phase CPU, RAM and PID allocations and the host transfer budget are unchanged.
+The
 artifact is a complete Docker-archive image (config digest, every listed layer once,
 compressed and uncompressed digests checked, each layer a well-formed tar, total
 expansion bounded, validation stopped by cancellation). The component never writes it

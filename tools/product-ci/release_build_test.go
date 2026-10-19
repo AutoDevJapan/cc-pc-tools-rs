@@ -314,12 +314,19 @@ func TestReleasePhaseBudgetsAreFixedAndAdditive(t *testing.T) {
 			t.Fatal("emulated machine does not fit its outer container")
 		}
 	}
-	if productBuilderProfile.artifactMax > 256<<20 || fixtureBuilderProfile.artifactMax > productBuilderProfile.artifactMax {
-		t.Fatal("artifact limit raised")
+	if productBuilderProfile.artifactMax != 288<<20 || fixtureBuilderProfile.artifactMax != 96<<20 {
+		t.Fatal("closed artifact limits changed")
+	}
+	// An actual fixed-source build exceeded the old 256 MiB output cap. This
+	// regression must fit without increasing the phase's resource allocation.
+	const measuredArtifactBytes = 273_962_496
+	if measuredArtifactBytes <= 256<<20 || measuredArtifactBytes > productBuilderProfile.artifactMax {
+		t.Fatal("measured fixed-source artifact does not fit the product output cap")
 	}
 	// Largest simultaneously held buffers: sealed context, its verified stdin
-	// copy and the exactly-sized artifact. They fit the 1 GiB transfer budget.
-	if 2*releaseBuildContextGzipLimit+releaseBuildArtifactLimit > releaseHostTransferBudget {
+	// copy, the exactly-sized artifact and up to one artifact's worth of small
+	// metadata entries retained by checkBuiltImage. The transfer budget is fixed.
+	if 2*releaseBuildContextGzipLimit+2*releaseBuildArtifactLimit > releaseHostTransferBudget {
 		t.Fatal("host RAM copies exceed the transfer budget")
 	}
 }

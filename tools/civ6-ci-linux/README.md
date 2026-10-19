@@ -37,11 +37,11 @@ listener の終了コードだけでは成功にしない。失敗時に自動 r
 
 ## 親 contract への接続
 
-- 既定ビルドは **fail-closed**（`contract.go` の `unwiredContract`）。`-tags civ6contract` を付けると `contract_bridge.go` が
+- 統合後の既定ビルドは `contract_bridge.go` を必ず含み、
   `cc/civ6-ci-contract` の `Validate / Labels / Verify / VerifyAssigned / RequireSuccess / CheckEvent` を呼ぶ。
   Plan は厳格 JSON で変換するため、両 module のフィールド差は拒否になる。
-- 親の統合 PR で `go.mod` に `require cc/civ6-ci-contract v0.0.0` と `replace cc/civ6-ci-contract => ../civ6-ci-contract` を足し、
-  ホスト用 exe とゲスト用 ELF の **両方** を `-tags civ6contract` でビルドする（hook の `CheckEvent` はゲスト内で動く）。
+- `go.mod` に `require cc/civ6-ci-contract v0.0.0` と `replace cc/civ6-ci-contract => ../civ6-ci-contract` を統合済み。
+  ホスト用exeとゲスト用ELFは同じsourceから通常ビルドする（hookのCheckEventはゲスト内で動く）。
 - 親のコードは任意の command / callback を受け取らない。親へ渡す `ReadAPI` は GET 専用で、次の許可リストだけを読める
   （`api.go` の `readAllowed`）。親の `Verify` が別の endpoint を読む場合は、ここへ追加して配送する。
   `repositories/1392152644`、`repos/AutoDevJapan/civ6-banseiki/` 配下の `pulls/N`・`git/commits|trees/<sha>`・`git/ref/heads/<branch>`・
@@ -69,6 +69,15 @@ listener の終了コードだけでは成功にしない。失敗時に自動 r
 
 ## 受領フォルダの中身（すべて `*.private.*`、コミットしない）
 
+受領フォルダの `flight.lock` はcontrollerが回収終了まで保持するkernel byte lock。
+`status <owned-root>` は元のcontrollerがこのlockを保持していれば拒否し、終了していれば
+固定intent・Dockerの固有namespace・登録・global lockを読み取って `clean` を返す。
+`collect <owned-root>` は同じ証跡とkernel lockの取得を要求し、残った所有namespaceだけを
+停止・PID0照合・削除し、その固有runner名だけを登録解除する。sourceが進んだ場合も回収する。
+各stop/remove/registration DELETEはfsyncしたO_EXCL記録で1回だけに制限し、
+拒否・不確かな結果は再試行せずfenceを保持する。既に消えた資源は再操作せず不在を観測する。
+回収はCIの成功を作らず、元run/jobだけを結果へ記録する。
+
 `intent` / `namespace-intent` / `registration-intent` / `official-listener.private.log`（原ログ全文）/ `hook-start|complete` /
 `cargo-<idx>-<ts>.private.log|json`（原ログ全文 + SHA + 保存完了）/ `gate-<nonce>-<idx>` / `result.private.json`（ロック取得後は成功・失敗とも必ず保存。
 `AllRequiredChecksSuccess` は親の success 確認後だけ true）。会話へ生ログを出さない。受領フォルダは `safe-delete plan` → 通常削除 → `finish` で回収する。
@@ -82,6 +91,10 @@ Docker socket・host bind・privileged・GPU は作成引数にも検査にも�
 ## 検証
 
 - `go test -race ./...`、`go vet ./...`（Windows ホストと `GOOS=linux GOARCH=amd64`）、`go build -trimpath .`
+- `CC_CIL_RECOVERY_FIXTURE_DIR` を新safe-delete所有rootにすると、
+  `go test -run '^TestRecoveryRealOwnedNamespace$' -v -count=1` が実namespaceの中断相当から
+  readonly status→所有collect→繰返し不在観測を確認する。runner/source/Cargo/GPUは使わない。
+  親2962はこのfixture成功と実namespace消失、safe-delete finishを確認済み。
 - `-tags civ6contract` の橋渡し検査（親 module を `-modfile` で差し替えて実行）
 - 実 Docker の credential-free 検査（`CC_CIL_FIXTURE_DIR` に新しい safe-delete 所有フォルダを渡す）:
   `go test -run Lifecycle -v .` が normal / cancel / receipt-loss の 3 名前空間で、実 `cargo_gate.exe`・Landlock 境界・

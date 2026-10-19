@@ -1,5 +1,18 @@
 # civ6-ci-linux 作業記録（ToDo2964 / 親2962）
 
+## 親2962の統合後（最新。下段は元2964の履歴）
+
+- PR246はmerge8837e5e済み。共通contractもPR245でmerge済み。
+- 通常buildが共通contractを必ずlinkする。旧buildtagは不要。
+- 検査は共通civ6-ci.ymlへ統合し、Windows/Linux race/vet/buildとLinux guest crossvetを維持。
+- kernel flight lock、status/collect、phase別の一度限り回収記録を追加した。
+- 実Dockerのcredential-free回収fixture成功、root/containerとも回収済み。
+- review2983のパス綴り違い指摘は、runの絶対パス化・回収側Clean/Windows EqualFoldと
+  完全なworker lock記録の解析で修正し、実回収経路の回帰検査を追加。
+- 公開済みrepoの受付は親の固定owner/ID/current sourceで確認。forkはPC側Verifyで拒否し、
+  公開workflowの外部PRは標準hosted OSへ割り当てる。
+- 正式runner登録/製品source/製品Cargo/CodeQL/PR149受入はまだ未実施。
+
 ## 完了（2026-10-19）
 - 新規 module tools/civ6-ci-linux（Go）の本体、単体テスト、README、別 workflow（.github/workflows/civ6-ci-linux.yml）
 - 検証: go test -race / go vet（Windows と GOOS=linux）、-tags civ6contract 橋渡し検査（親 module を -modfile で差し替え）、

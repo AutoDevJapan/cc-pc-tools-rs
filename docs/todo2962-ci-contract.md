@@ -2,6 +2,13 @@
 
 この文書は実装契約であり、登録・実行・成功の証拠ではない。
 対象は実APIで確認した AutoDevJapan/civ6-banseiki（1392152644）だけ。
+2026-10-19の本人追加指示により、同repoはpublicへ変更済み。
+非公開フラグを受付条件にせず、元owner/ID/nonfork/adminと現在のsame-repo sourceを照合する。
+外部fork PRは三workflowのruns-onで標準GitHub-hostedの元OSへ送り、本人PCへ無条件で流さない。
+Windowsの同最終source/toolchain/lockfile/検査範囲のビルドをPCとcloudで二重に実施しない。
+Rustの既存release build直後に、実Git HEADと生成した各binaryのSHA256/bytesを正式job logへ記録する。
+同じ実行物を配布に使い、同条件のcloud buildを追加しない。
+既存予算2500USDは本人承認で変更済みだが、本工程でさらに増額・再公開はしない。
 PR149の元HEADは `f3e26f45682ac04b8a9bf07821ce5b96d83ce012`、treeは
 `a45e137db144ba41db75cd0ba30be63500efb905`、baseは
 `1100676d1ed421794c252fb4b15ed3d954e21a5b`。

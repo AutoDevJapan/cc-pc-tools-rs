@@ -25,11 +25,11 @@ type Contract interface {
 	CheckEvent(p Plan, env map[string]string, event []byte) error
 }
 
-// activeContract stays fail-closed unless the binary is built with the
-// civ6contract tag (contract_bridge.go) or a test installs a fixture.
+// The integrated binary always links contract_bridge.go. This initialization
+// remains fail-closed until its init runs, or a test installs a fixture.
 var activeContract Contract = unwiredContract{}
 
-var errContractUnwired = errors.New("parent contract is not linked: build with -tags civ6contract")
+var errContractUnwired = errors.New("parent contract is not linked")
 
 type unwiredContract struct{}
 

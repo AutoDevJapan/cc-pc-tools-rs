@@ -170,7 +170,7 @@ func inspect(ctx context.Context, request api) error {
 	if e := request(ctx, "GET", fmt.Sprintf("repositories/%d", contract.RepoID), nil, &r); e != nil {
 		return e
 	}
-	if r.ID != contract.RepoID || r.FullName != contract.Repository || !r.Private || r.Fork || r.Owner.Login != "AutoDevJapan" || !r.Permissions.Admin {
+	if r.ID != contract.RepoID || r.FullName != contract.Repository || r.Fork || r.Owner.Login != "AutoDevJapan" || !r.Permissions.Admin {
 		return errors.New("explicit owned repository mismatch")
 	}
 	var p struct {

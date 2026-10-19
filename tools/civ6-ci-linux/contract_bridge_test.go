@@ -1,5 +1,3 @@
-//go:build civ6contract
-
 package main
 
 import (

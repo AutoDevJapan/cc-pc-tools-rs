@@ -115,6 +115,7 @@ func TestDynamicPRContextMustBeActualHeadOrLiveMerge(t *testing.T) {
 	p.WorkflowSHA = p.Head
 	r := f["repos/"+Repository+"/actions/runs/7"].(map[string]any)
 	r["event"], r["path"] = "dynamic", CodeQLWorkflow
+	r["head_branch"] = "refs/pull/149/head"
 	f["repos/"+Repository+"/code-scanning/default-setup"] = map[string]any{"state": "configured", "languages": []string{"actions", "rust"}, "query_suite": "default", "threat_model": "remote", "runner_type": "labeled", "runner_label": CodeQLLabel}
 	jobs := []Job{{ID: 71, RunID: 7, RunAttempt: 1, Name: "Analyze (actions)", Status: "queued", Labels: Labels(p)}, {ID: 72, RunID: 7, RunAttempt: 1, Name: "Analyze (rust)", Status: "queued", Labels: Labels(p)}}
 	f["repos/"+Repository+"/actions/runs/7/attempts/1/jobs?per_page=100"] = map[string]any{"total_count": 2, "jobs": jobs}
@@ -161,6 +162,9 @@ func TestProposePreservesCommandsAndParentConcurrency(t *testing.T) {
 			}
 			if w.Job == "test" && strings.Count(string(out), DoctestCommand) != 1 {
 				t.Fatal("required doctest acceptance missing or duplicated")
+			}
+			if w.Job == "test" && (!strings.Contains(string(out), "Record release binary hashes") || !strings.Contains(string(out), "source_sha = $source") || !strings.Contains(string(out), "Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256")) {
+				t.Fatal("formal source/artifact fingerprint omitted")
 			}
 			modified := append([]byte(nil), original...)
 			modified[len(modified)-2] ^= 1
@@ -272,6 +276,36 @@ func TestUnsafeBranchesAndEvents(t *testing.T) {
 	p.RepoID = 1
 	if p.Validate() == nil {
 		t.Fatal("other repository accepted")
+	}
+}
+
+func TestOwnerApprovedPublicRepositoryKeepsSameRepoAdmission(t *testing.T) {
+	p, f := nativeFixture(t)
+	f[fmt.Sprintf("repositories/%d", RepoID)].(map[string]any)["private"] = false
+	if e := Verify(context.Background(), p, fixtureRead(f)); e != nil {
+		t.Fatal(e)
+	}
+	f[fmt.Sprintf("repositories/%d", RepoID)].(map[string]any)["fork"] = true
+	if Verify(context.Background(), p, fixtureRead(f)) == nil {
+		t.Fatal("public fork was admitted")
+	}
+}
+
+func TestPublicForkPullRequestsUseHostedOSRouting(t *testing.T) {
+	for _, w := range Workflows() {
+		route := Route(w)
+		if !strings.Contains(route, "github.event_name == 'pull_request'") || !strings.Contains(route, "github.event.pull_request.head.repo.full_name != github.repository") {
+			t.Fatal("external PR route is not separated before PC assignment")
+		}
+		if w.Job == "test" && !strings.Contains(route, "&& matrix.os ||") {
+			t.Fatal("external PR matrix OS changed")
+		}
+		if w.Job != "test" && !strings.Contains(route, `&& '["windows-latest"]'`) {
+			t.Fatal("external PR Windows route lost")
+		}
+		if _, e := Propose(originals(t)[w.Path], w); e != nil {
+			t.Fatal(e)
+		}
 	}
 }
 

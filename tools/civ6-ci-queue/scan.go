@@ -291,6 +291,29 @@ func (s *Scanner) basePlan(ctx context.Context, run apiRun, attempt int) (Plan, 
 		if len(run.PullRequests) == 1 {
 			p.PR = run.PullRequests[0].Number
 		}
+		// GitHub's generated PR runs expose refs/pull/N/head and may omit
+		// pull_requests entirely. Bind that numeric ref to the LIVE owned PR,
+		// never to a display title or an arbitrary latest branch.
+		if strings.HasPrefix(run.HeadBranch, "refs/pull/") && strings.HasSuffix(run.HeadBranch, "/head") {
+			n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(run.HeadBranch, "refs/pull/"), "/head"))
+			if err != nil || n < 1 || (p.PR > 0 && p.PR != n) {
+				return p, errors.New("generated PR ref identity differs")
+			}
+			p.PR = n
+		}
+		if p.PR > 0 {
+			var pr apiPull
+			if e := s.Read(ctx, fmt.Sprintf("repos/%s/pulls/%d", Repository, p.PR), &pr); e != nil {
+				return p, e
+			}
+			if pr.Number != p.PR || pr.State != "open" || pr.Head.SHA != run.HeadSHA || pr.Head.Repo.ID != RepoID || pr.Head.Repo.FullName != Repository || pr.Head.Repo.Fork {
+				return p, errors.New("generated PR source is not the current same repository")
+			}
+			if run.HeadBranch != pr.Head.Ref && run.HeadBranch != "refs/pull/"+strconv.Itoa(p.PR)+"/head" {
+				return p, errors.New("generated PR branch differs")
+			}
+			p.Branch = pr.Head.Ref
+		}
 		p.ContextSHA, p.WorkflowSHA = run.HeadSHA, run.HeadSHA
 	}
 	var c struct {

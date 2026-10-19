@@ -91,6 +91,11 @@ func isELF(b []byte) bool { return len(b) >= 64 && bytes.Equal(b[:4], []byte{127
 // concluded success on THIS helper's unique runner AND every hook/source proof
 // matched; listener exit alone never certifies a job.
 func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret error) {
+	dir, ret = filepath.Abs(dir)
+	if ret != nil {
+		return ret
+	}
+	dir = filepath.Clean(dir)
 	p, e := LoadPlan(planFile)
 	if e != nil {
 		return e
@@ -106,6 +111,11 @@ func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret
 	if e = ownedReceiptRoot(ctx, dir); e != nil {
 		return e
 	}
+	lease, e := flightLease(filepath.Join(dir, "flight.lock"), true)
+	if e != nil {
+		return e
+	}
+	defer lease.Close()
 	guest, e := os.ReadFile(guestFile)
 	if e != nil || !isELF(guest) {
 		return errors.New("reviewed Linux helper binary required")
@@ -268,7 +278,7 @@ func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret
 		}
 		for _, r := range rs {
 			if r.Name == n.Name {
-				ret = errors.Join(ret, deleteRunner(cc, r.ID))
+				ret = errors.Join(ret, deleteOwnedRegistration(cc, dir, n.Name, r.ID))
 			}
 		}
 		if rs, e = repoRunners(cc); e != nil {

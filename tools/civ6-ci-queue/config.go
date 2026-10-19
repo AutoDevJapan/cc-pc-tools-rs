@@ -23,7 +23,7 @@ type Pinned struct {
 var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 func absClean(p string) bool {
-	return p != "" && filepath.IsAbs(p) && filepath.Clean(p) == p && !strings.ContainsAny(p, "\x00\r\n")
+	return p != "" && filepath.IsAbs(p) && filepath.ToSlash(filepath.Clean(p)) == filepath.ToSlash(p) && !strings.ContainsAny(p, "\x00\r\n")
 }
 
 func (p Pinned) validate() error {

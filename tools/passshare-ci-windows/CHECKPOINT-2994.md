@@ -14,7 +14,11 @@ branch変更無し。親2986のファイルは編集していない。
 
 ## 次に行うこと
 
-1. 2997の専用Windows実行部分と回収fixtureの実commit/実測を受領する。
+1. 2997の専用Windows実行部分と回収fixtureの実commit/実測、および
+   3000の別モデル読取レビューを受領する。固定候補は
+   6d53581afb487dc8c26a8571c34a67faaa9f5322、レビュー範囲はその時点のhelper全体。
+   3000はSonnet5.5を指定して通常共有ToDoへ登録済み。実モデルは実ジョブと照合する。
+   runner統合後には追加差分も確認する。
    2997の書込はcmd/runnerのみ。契約は本moduleのinternal/contractを利用する。
 2. 親2986のdocs/todo2986-ci-progress.mdとnoteを参照する。
    親PR720のcargo-audit修復2996が未完。mainの追加固有検査と実成功の再照合前に
@@ -27,6 +31,9 @@ branch変更無し。親2986のファイルは編集していない。
    Job Object drain/登録不在/ACL回収を証明する。
 6. 通常PRでmergeし現mainを照合。親2986へ実commit/PR/run/hash/回収/未達をnote配送。
    通常完了通知やメンションはしない。
+
+待機が必要な場合は自分2994から2997/3000へのwaitを正規CLIで記録する。
+これは親2986へのwaitではない。親の修復だけを待つ循環は作らない。
 
 ## 自分の一時領域
 

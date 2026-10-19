@@ -1,6 +1,33 @@
 # ToDo2757: PR205 post-merge delivery boundary
 
-## Latest observation: 2026-10-19 14:14 JST, installed PR238 preflight running
+## Latest observation: 2026-10-19 14:20 JST, installed PR238 preflight succeeded
+
+The same installed PR238 executable completed the fixed-source preflight at
+`2026-10-19T05:19:37.4342888Z`: host exit0, guest exit0, 433.783 seconds.
+The artifact was 273,854,976 bytes, within the closed 288 MiB cap. Full image
+verification succeeded, including config/layer authentication; artifact SHA256
+is `16f69e2fc939bfe70ae74c499d3516d64ed8ef9602a488b401c79a9d6c4d6ee1`.
+The verification-only preflight neither retained nor published the image.
+
+Fixed source/tree matched before and after, original CodeQL success was
+reconfirmed, and the post-run live runner inventory is zero. Host process
+absence, PID0, exact owned-container absence, volumes absent, all three
+introduced images removed, phase released and no recovery needed were checked.
+The raw log is 628,598 bytes, SHA256
+`9c4132741240f6356871def590059a28b4d7355ff0d1ae159ec926343da01209`.
+Log and final-state copies matched before the owned directory was planned,
+normally deleted in a separate call and finished source_absent. Prior failure
+logs and source/refusal history remain unchanged.
+
+CC merge checks are still incomplete; the last observation has one success,
+one in progress and five queued. Research2939 has a normally accepted queued
+Sonnet job, not a completed analysis. Its remaining document/drain/tool semantics
+are required before the finite official execution can be activated. This
+successful build preflight does not establish official full/backend/release
+success, actual drain or existing Prd revision/readiness/smoke. No production
+change was made. The original official Rust raw-log refusal remains preserved.
+
+## Historical observation: 2026-10-19 14:14 JST, installed PR238 preflight running
 
 Independent Sonnet review2932 read the frozen four-file diff and full changed
 files at `2edadd78ef72f8ce1d1a0a16695daba6d839bd56`, Must0. The original final

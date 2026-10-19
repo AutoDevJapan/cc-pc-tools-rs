@@ -1,0 +1,7 @@
+独立したToDo 3021の子作業。codex-progress-tuiのカスタムCodex TUIを、現在の公式npm package 0.163.0に合わせて更新する。
+
+範囲: 公式tag rust-v0.163.0の固定commitを確認し、既存patchを必要最小限に追従。専用source/targetで共有Cargo gateを通じ、launcher/activation/manifest契約と公式exec・app-server経路を保ったまま、関連nextest・Clippy・必要なbuildを実施する。GPU禁止、API key禁止。既存ログイン・job・対話セッションを停止しない。新費用なし。
+
+実配備は親ToDo3021の担当者が既存の配備物所有/guard・並行使用・launcher経路・manifestを照合して実施する。子は本番Toolsを書き換えない。古いmanifestだけを変更しない。公式版0.163.0のpackage/Codex hashとcode-mode-hostとの対応を確認し、source.jsonとpatchを更新する。
+
+完了条件: 固定tag/commitにpatch適用、必要な関連検査成功、別モデルレビューMustなし、変更・検査・成果物SHAを報告。配備・起動受入は親担当。失敗時は原因・再開手順をsourceへ保存する。

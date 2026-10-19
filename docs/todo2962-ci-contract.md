@@ -47,7 +47,7 @@ job:<GITHUB_JOB>, job_name:<official display name>
 `Verify(context.Context,Plan,ReadAPI) error`、
 `CheckEvent(Plan,map[string]string,[]byte) error` を提供する。
 `ReadAPI` は `func(context.Context,string,any) error`。
-`Verify` はrepo所有/private/nonfork/admin、現在のbranch/PR、元run/attempt/job/labels、
+`Verify` はrepo所有/ID/nonfork/admin、現在のbranch/PR、元run/attempt/job/labels、
 source/treeと三workflowのレビュー済みbytes、CodeQLの元languages/settingsを正規APIで照合する。
 helperは登録前・hook開始/終了時・終了後に同じ固定planを再確認する。
 終端jobの成功判定は別で必須。listenerのexitだけでは成功としない。
@@ -70,9 +70,12 @@ workflow変更を含む将来イベントはレビュー済みtemplateと一致�
 を独立stepとして追加する。既存commandの置換や省略はしない。
 Linuxは `[self-hosted, Linux, X64, civ6-ci-linux]`、
 Windowsは `[self-hosted, Windows, X64, civ6-ci-windows]`。
+両方に `civ6-ci-run-<run_id>-<attempt>-<job>-<OS>` を必須ラベルとして追加する。
+workflowのformat式と登録側の共通JobLabelが一致し、別run・試行・job・matrix OSを取り違えない。
 matrix.osのubuntu-latest/windows-latestはjob表示とOS選択に残し、hosted labelとして登録しない。
 checkout refは `${{ github.event.pull_request.head.sha || github.sha }}`、認証永続化false。
-CodeQLは既に存在する `cc-product-2648-1392152644-codeql` を維持する。
+旧CodeQLは `cc-product-2648-1392152644-codeql` を使うが、PR148との共有競合が残る。
+この競合の解消前には登録しない。公開後の標準runner等への移行は読取確認3009の対象で、未実施。
 default setupはactions/rust、configured/default suiteのまま。契約・予算・保護は変えない。
 
 ## 実行と資源

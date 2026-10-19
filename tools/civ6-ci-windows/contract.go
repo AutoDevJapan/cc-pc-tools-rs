@@ -98,7 +98,7 @@ func (p Plan) validate() error {
 		return e
 	}
 	job, ok := windowsWorkflows[p.Workflow]
-	if !ok || p.Event == "dynamic" || p.Job != job || p.OS() != "Windows" || !slices.Equal(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel}) {
+	if !ok || p.Event == "dynamic" || p.Job != job || p.OS() != "Windows" || !slices.Equal(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel, contract.JobLabel(p.Plan)}) {
 		return errors.New("only the three original Windows jobs are served")
 	}
 	if p.Head == fixtureHead || p.Tree == fixtureTree {
@@ -158,7 +158,7 @@ func boundedRead(r io.Reader, n int64) ([]byte, error) {
 // download URL is accepted by this helper. The listener keeps the three default
 // labels and adds only the dedicated one, matching the reviewed runs-on array.
 func configureArgs(p Plan) []string {
-	return []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel, "--ephemeral", "--disableupdate", "--work", "_work"}
+	return []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel + "," + contract.JobLabel(p.Plan), "--ephemeral", "--disableupdate", "--work", "_work"}
 }
 
 // checkEvent compares the actual SDK context to the shared contract and then

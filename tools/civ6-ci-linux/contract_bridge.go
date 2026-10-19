@@ -13,6 +13,14 @@ import (
 // JSON, so a field drift between the two modules fails closed.
 type bridge struct{}
 
+func jobLabel(p Plan) string {
+	c, e := convert(p)
+	if e != nil {
+		return ""
+	}
+	return contract.JobLabel(c)
+}
+
 func init() { activeContract = bridge{} }
 
 func convert(p Plan) (contract.Plan, error) {

@@ -144,11 +144,11 @@ func TestContractAndFixedScope(t *testing.T) {
 
 func TestRunnerConfigurationCannotExpand(t *testing.T) {
 	p := fixturePlan()
-	want := []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel, "--ephemeral", "--disableupdate", "--work", "_work"}
+	want := []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel + "," + contract.JobLabel(p.Plan), "--ephemeral", "--disableupdate", "--work", "_work"}
 	if a := configureArgs(p); !reflect.DeepEqual(a, want) {
 		t.Fatalf("unexpected registration contract %v", a)
 	}
-	if !reflect.DeepEqual(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel}) {
+	if !reflect.DeepEqual(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel, contract.JobLabel(p.Plan)}) {
 		t.Fatalf("labels %v", p.requiredLabels())
 	}
 }

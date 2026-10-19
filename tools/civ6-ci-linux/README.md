@@ -30,7 +30,7 @@ listener の終了コードだけでは成功にしない。失敗時に自動 r
 
 | workflow | job | job_name | runner ラベル |
 | --- | --- | --- | --- |
-| `.github/workflows/rust.yml` | `test` | `test (ubuntu-latest)` | `self-hosted, Linux, X64, civ6-ci-linux`（既定ラベル + 1 つ） |
+| `.github/workflows/rust.yml` | `test` | `test (ubuntu-latest)` | `self-hosted, Linux, X64, civ6-ci-linux, civ6-ci-run-<run>-<attempt>-test-Linux` |
 | `dynamic/github-code-scanning/codeql` | `analyze` | `Analyze (actions)` / `Analyze (rust)` | `cc-product-2648-1392152644-codeql` のみ（既定ラベルなし） |
 
 ラベルは親の `Labels(plan)` をそのまま使い、上の 2 通り以外は登録前に拒否する。native-driver / live-chain / Windows 行は対象外。
@@ -57,7 +57,7 @@ listener の終了コードだけでは成功にしない。失敗時に自動 r
 4. **実 VM の MemAvailable ≥ 予算 + 1 GiB、host の空き物理メモリ ≥ 1 GiB、受領ドライブ空き ≥ 4 GiB** を確認（不足は待たずに拒否）。
    予算: Rust 10 GiB（swap なし）、CodeQL 8 GiB（swap なし）。2 CPU・512 PID。
 5. Rust: 公式 pwsh と固定 source を stdin だけで投入。source は GitHub API の tree/blob/commit と全バイト一致を確認（PR の merge context ではなく実 head）。
-6. 親 `Verify` → キュー検査（同ラベルを他 run が使っていない、同 run 内では対象ジョブが最古の queued）→ 既存 runner に同ラベルなし。
+6. 親 `Verify` → キュー検査（Rustはrun/attempt/job/OS固有の選択ラベル、旧CodeQLは専用ラベル。他runとの競合を拒否）→ 既存 runner に同ラベルなし。
 7. 登録トークン → ゲストの `guest-runner` が公式 `config.sh --ephemeral --disableupdate` → listener。
    hook は `CheckEvent`（実 env と event payload）→ ホストの `VerifyAssigned`（この一意な runner 名に割り当て済み）→ 通過した場合だけ進む。
 8. Rust の Cargo/Rustup は guest の `cargo`/`rustup` ラッパーからホストの callback（nonce・Plan 一致・固定 argv・1 回限り）へ。

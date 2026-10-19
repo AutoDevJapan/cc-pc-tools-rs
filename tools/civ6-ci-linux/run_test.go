@@ -33,7 +33,7 @@ func TestRunStopsBeforeAnyResourceOnBadLabelsOrOwnership(t *testing.T) {
 	if e := runJob(context.Background(), writePlan(t, rustPlan()), t.TempDir(), "guest", "pwsh"); e == nil || f.calls["verify"] != 0 {
 		t.Fatalf("labels outside the route were accepted: %v", e)
 	}
-	f.labels = []string{"self-hosted", "Linux", "X64", linuxLabel}
+	f.labels = []string{"self-hosted", "Linux", "X64", linuxLabel, jobLabel(rustPlan())}
 	if e := runJob(context.Background(), writePlan(t, rustPlan()), t.TempDir(), "guest", "pwsh"); e == nil || !strings.Contains(e.Error(), "safe-delete") || f.calls["verify"] != 0 {
 		t.Fatalf("a root not created by safe-delete was accepted: %v", e)
 	}

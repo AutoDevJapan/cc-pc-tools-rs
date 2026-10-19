@@ -40,7 +40,7 @@ parent's `contract.Plan` tags; the rest are local operational fields.
 
 `Plan.validate` = local checks + `contract.Plan.Validate` + Windows-only rules: workflow
 and job must be one of the three, OS must be Windows, labels must be exactly
-`[self-hosted, Windows, X64, civ6-ci-windows]`, the original unrouted PR149 pins are
+`[self-hosted, Windows, X64, civ6-ci-windows, civ6-ci-run-<run>-<attempt>-<job>-Windows]`, the original unrouted PR149 pins are
 rejected for official use, runner pin required.
 
 Example (pull request; compact):
@@ -94,7 +94,7 @@ run/attempt/job/labels, whole source tree, reviewed bytes of all three workflows
 (`monitor_windows.go`); a policy mismatch stops the service at once, GitHub read
 failures are tolerated for up to 5 consecutive polls (the 6th ends the run). While the job is still queued the plan is also re-verified once a minute, and a job that is
 completed without ever being assigned to this runner (cancelled while queued) ends the run at once, so it does not hold the Cargo slot. The job's runner must be
-the unique runner name `CC-CIW-<instance>` with exactly the labels `self-hosted, Windows, X64, civ6-ci-windows`.
+the unique runner name `CC-CIW-<instance>` with the default Windows labels, `civ6-ci-windows`, and the shared contract's unique `JobLabel(plan)`.
 Only this plan's unique registration is inspected; the long-lived workers and the Linux
 ephemeral runner are neither read nor affected. The hook checks the actual SDK context
 with `contract.CheckEvent` (PR merge context vs checked-out head are separate), source
@@ -102,7 +102,7 @@ HEAD/tree/index/raw bytes, credential-key absence and the shared gate allocation
 Success requires the three hook receipts, the service result, and an official job
 `completed/success` on this runner with the registration gone - listener exit alone is not success.
 
-Registration uses `--ephemeral --disableupdate --labels civ6-ci-windows` (default
+Registration uses `--ephemeral --disableupdate --labels civ6-ci-windows,<JobLabel(plan)>` (default
 labels `self-hosted, Windows, X64` are kept so it matches the reviewed `runs-on` array).
 
 ## Runtime pins and shared resources (read/execute only, no shared ACL change)
@@ -206,8 +206,10 @@ Local results: `go test -race ./...`, `go vet ./...` and `go build -trimpath` pa
 
 ## Queue contract notes
 
-One Windows worker at a time. If several queued jobs carry the same labels, the listener may take a job other than
-the plan's; the hook then rejects it and that job fails. The shared identity enforces this: a second `prepare` is refused until the previous job was collected. The queue should admit only one Windows plan at a time,
+One Windows worker at a time. The workflow requests and the registration supplies a selecting label containing
+the run ID, attempt, fixed job key and matrix OS. Native-driver, live-chain, Rust Windows, another run and another
+attempt therefore do not match the same listener. The hook still verifies the actual assignment. The shared identity
+also refuses a second `prepare` until the previous job was collected. The queue admits only one Windows plan at a time,
 count each admitted run/attempt/job once in the 12-job budget, and never rerun a failed one automatically.
 A cancelled or failed collection of that case is handled like any other.
 

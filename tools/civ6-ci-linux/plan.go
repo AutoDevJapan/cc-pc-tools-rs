@@ -117,16 +117,21 @@ func ParsePlan(b []byte) (Plan, error) {
 // runner registration. The Linux route keeps the default labels (so the job's
 // self-hosted/Linux/X64 are honest) plus one custom label; the original CodeQL
 // route is the single dedicated label with default labels disabled.
-func registrationLabels(k Kind, labels []string) (custom string, defaults bool, err error) {
+func registrationLabels(p Plan, labels []string) (custom string, defaults bool, err error) {
+	k, e := p.kind()
+	if e != nil {
+		return "", false, e
+	}
 	got := append([]string(nil), labels...)
 	sort.Strings(got)
 	switch k {
 	case KindRust:
-		want := []string{"Linux", "X64", linuxLabel, "self-hosted"}
+		want := []string{"Linux", "X64", linuxLabel, jobLabel(p), "self-hosted"}
+		sort.Strings(want)
 		if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
 			return "", false, errors.New("Linux job labels differ from the fixed route")
 		}
-		return linuxLabel, true, nil
+		return linuxLabel + "," + jobLabel(p), true, nil
 	case KindCodeQL:
 		if len(got) != 1 || got[0] != codeQLLabel {
 			return "", false, errors.New("CodeQL job label differs from the original dedicated label")

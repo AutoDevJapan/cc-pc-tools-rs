@@ -86,3 +86,27 @@ func TestCheckQueueAdmitsOnlyThePlannedJob(t *testing.T) {
 		t.Fatal("younger CodeQL job admitted ahead of its older sibling")
 	}
 }
+
+func TestRunLabelDoesNotBlockOnOtherMatrixOrRun(t *testing.T) {
+	p := rustPlan()
+	w := p
+	w.JobName = "test (windows-latest)"
+	other := p
+	other.RunID++
+	jobs := map[int64][]fakeJob{
+		p.RunID: {
+			{p.JobID, p.RunID, "queued", []string{linuxLabel, jobLabel(p)}},
+			{p.JobID - 1, p.RunID, "queued", []string{"civ6-ci-windows", jobLabel(w)}},
+		},
+		other.RunID: {{1, other.RunID, "queued", []string{linuxLabel, jobLabel(other)}}},
+	}
+	runs := map[string][]int64{"queued": {p.RunID, other.RunID}}
+	if e := checkQueue(context.Background(), p, jobLabel(p), fakeQueue(runs, jobs)); e != nil {
+		t.Fatal(e)
+	}
+	// Reusing this exact selection label for another run is still refused.
+	jobs[other.RunID][0].Labels = []string{linuxLabel, jobLabel(p)}
+	if checkQueue(context.Background(), p, jobLabel(p), fakeQueue(runs, jobs)) == nil {
+		t.Fatal("a conflicting selection label was admitted")
+	}
+}

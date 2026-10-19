@@ -1,13 +1,58 @@
-親ToDo3021のartifact metadata差分を別モデルで読み取り専用レビューする。前回のToDo3032は、親の実作業ブランチではなく `scheduler/todo-3030-codex-0-163-0-tui` をGitHub上で確認し、古いsource.jsonをMustとして報告したため、対象ブランチ不一致で無効。今回それを再利用しない。
+親ToDo3021向け、Codex 0.163.0配布記録の差分を読み取り専用でレビューしてください。前回の実行はGitHub connectorの権限不足で、成果確認できないまま停止しました。対象を間違えないよう、今回は親担当が正規GitHub連携で取得した下記スナップショットを直接レビューしてください。外部アクセスやコマンド実行は不要です。
 
-今回の対象はGitHubリポジトリAutoDevJapan/cc-pc-tools-rsの `scheduler/todo-2903-qualified-release`、対象HEAD `f57ea9e10fe23520821ba2779accda3f63f18b8c`。GitHub read APIでブランチSHAと各ファイルを取得して一致を確認してからレビューする。baseはmain/PR255 merge 842e513。
+## 対象版
 
-対象ファイルは `tools/codex-progress-tui/source.json` と `tools/codex-progress-tui/todo-3021-artifact-evidence.md`。ToDo3030の保存報告 `todo-3030-revalidation.json` が示す候補SHA、source tag/patch commit、attempt5 ConPTY受入、npm tarball SHA512、npm integrityを照合する。
+Repository: AutoDevJapan/cc-pc-tools-rs
+Branch: scheduler/todo-2903-qualified-release
+HEAD: 0e1c4204192e5650741654029e9367467291de89
+main base/PR255 merge: 842e513191c2ced4364f8382b3a8f9654d01f9d3
 
-判断点:
-1. tested_binary_sha256 を 618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f とした変更が、配布候補の実SHA・固定source・attempt5実受入記録と整合するか。以前のbcebff4...との全byte差の原因を断定していないか。
-2. npm_tarball_sha512を128桁の410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dabへ直す根拠が実tarball/integrityと整合するか。
-3. 候補SHAと公式npmバイナリ/hostの各hashを混同せず、source provenanceと未説明のビルド差を正確に扱っているか。
-4. metadataのレビューだけで実配備済みとは扱わず、配備後にlauncher/manifest/hash、実起動の常設欄と/progress、公式exec経路を受入する条件が残っているか。
+GitHub fetch_fileが上記branch refから返したGit blob SHA:
+- tools/codex-progress-tui/source.json: eddd393e1a5ab82c398fc76624b12f583287302d
+- tools/codex-progress-tui/todo-3021-artifact-evidence.md: c40d5f6fdb808a0194cbfe59f4178fee10a30c22
 
-作業は読み取り専用。GitHub APIで記録対象を読む以外にコマンド実行、ファイル編集、状態変更、別ToDo登録をしない。秘密情報や顧客情報は読まず、出力しない。Must/Should/Nitで根拠と行番号を報告する。適用差分のSHA/HEADと実際に読めた証跡を明記し、対象ブランチを取得できない場合は成功扱いせず停止する。
+この2ファイルはHEAD 0e1c420の差分対象版です。旧レビューが別ブランチの0.162.1版を読んだことによるMustは今回の対象に当たりません。上記blob SHAを基準にしてください。
+
+## source.jsonの実体
+
+```json
+{
+  "upstream_repository": "https://github.com/openai/codex",
+  "tag": "rust-v0.163.0",
+  "commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "patched_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "toolchain": "1.95.0",
+  "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
+  "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
+  "patch_sha256": "21dd906d4ceace003835e8b0a59517e9a35187df7c702ddda75e4a9c1b3f96b7",
+  "build_profile": {"lto": false, "strip": "symbols", "codegen_units": 16, "debug": "0"},
+  "tested_binary_sha256": "618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f",
+  "tested_binary_source_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc",
+  "npm_package": "@openai/codex@0.163.0-win32-x64",
+  "npm_integrity": "sha512-QQGQ/q9dCJ5C5jqhgFrwycpWG3szIyFNThMiKl6hYtu6N/eM3Qd7StesgnCFAfzVED8IkE3N3oH71szzcludqw==",
+  "npm_codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
+  "npm_code_mode_host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
+  "tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
+  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dab"
+}
+```
+
+## 証拠ファイルの要点
+
+- ToDo3029が固定source commit 7c1fe857547eb7e6850361752a26d9dfe868528eから生成した候補は SHA256 `618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f`、`codex-cli 0.163.0`。
+- 元source.jsonに記録されていた旧tested SHA `bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969` とは一致しない。PE timestamp/build stamp差の存在は保存したが、全byte差の原因は未確定であり、証明したと主張しない。
+- ToDo3030は上記候補の同一実物を隠しConPTYで起動。attempt5で常設進捗欄、`/progress`、部分取得警告、resize、`/quit` exit 0を確認。成功前のattempt1〜4は根拠に含めない。
+- source commit 7c1fe857で関連nextest5件、release Clippy、doctest、codex buildが成功した記録を再利用。全件suiteには既知の1件失敗と公式baselineの同じ失敗がある。ToDo3030は新規Cargo検査なし。
+- 候補の公式同梱host SHA `07f3869f...` とnpm Codex SHA `2692c8c7...` は公式package実物と一致。
+- source.jsonの既存npm tarball SHA512は127 hex桁で、tarball実hashと一致しない。ToDo3030の保持tarball実測128桁値はnpm integrityとも一致するため完全値へ直した。
+- metadataレビューの後も、別途launcher/manifest/実配備/起動受入が必要であり、source.jsonだけでは配備完了にならない。
+
+## レビューしてほしい点
+
+1. tested_binary_sha256を、同一のsource lineageで実機受入した候補の実測SHAへ更新する根拠と説明が妥当か。旧hashが不一致な事実・原因未確定を保持し、hash偽装にしていないか。
+2. 127桁のtarball SHA512を実物/integrityに一致する128桁へ訂正することが妥当か。
+3. 公式npm Codex、公式host、patched candidateの役割とhashを混同していないか。
+4. 配備の未実施と追加受入条件を明確に保っているか。
+
+操作はこのスナップショットに対する読み取り専用の推論だけにしてください。ファイル変更やコマンド実行、owner向け質問をしないでください。Must/Should/Nitを、具体的なファイル/JSON keyまたは上記証拠項目と根拠付きで返してください。各重大度がなければ「なし」と書いてください。対象blob SHAとHEADを回答冒頭に繰り返してください。

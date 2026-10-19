@@ -3,15 +3,14 @@
 ## 対象版
 
 Repository: AutoDevJapan/cc-pc-tools-rs
-Branch: scheduler/todo-2903-qualified-release
-HEAD: 0e1c4204192e5650741654029e9367467291de89
-main base/PR255 merge: 842e513191c2ced4364f8382b3a8f9654d01f9d3
+Branch snapshot source: scheduler/todo-2903-qualified-release
+PR255 merge/base source: 842e513191c2ced4364f8382b3a8f9654d01f9d3
 
-GitHub fetch_fileが上記branch refから返したGit blob SHA:
+GitHub fetch_file returned these immutable blob SHAs from the named branch after commit 0e1c420:
 - tools/codex-progress-tui/source.json: eddd393e1a5ab82c398fc76624b12f583287302d
 - tools/codex-progress-tui/todo-3021-artifact-evidence.md: c40d5f6fdb808a0194cbfe59f4178fee10a30c22
 
-この2ファイルはHEAD 0e1c420の差分対象版です。旧レビューが別ブランチの0.162.1版を読んだことによるMustは今回の対象に当たりません。上記blob SHAを基準にしてください。
+Later commits only added review/checkpoint documentation; the two target blobs are unchanged. Treat these blob SHAs and the embedded contents below as the exact review target. Do not require the branch HEAD to equal an older commit. The prior wrong-branch review of 0.162.1 source is outside scope.
 
 ## source.jsonの実体
 
@@ -56,3 +55,4 @@ GitHub fetch_fileが上記branch refから返したGit blob SHA:
 4. 配備の未実施と追加受入条件を明確に保っているか。
 
 操作はこのスナップショットに対する読み取り専用の推論だけにしてください。ファイル変更やコマンド実行、owner向け質問をしないでください。Must/Should/Nitを、具体的なファイル/JSON keyまたは上記証拠項目と根拠付きで返してください。各重大度がなければ「なし」と書いてください。対象blob SHAとHEADを回答冒頭に繰り返してください。
+

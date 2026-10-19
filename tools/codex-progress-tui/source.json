@@ -1,19 +1,25 @@
 {
   "upstream_repository": "https://github.com/openai/codex",
-  "tag": "rust-v0.162.1",
-  "commit": "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d",
-  "patched_commit": "69a95ba6d4f166d289e73f2a708d6b312f41b192",
+  "tag": "rust-v0.163.0",
+  "commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "patched_commit": "41ff779be75bd58029aee943d2d04aa28c124831",
   "toolchain": "1.95.0",
   "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
   "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
-  "patch_sha256": "c0653b0399cae769a318bea4c4c7e88a8f1640be6408275c8e19deee98e84fbe",
+  "patch_sha256": "e90a5d1d0cea6625e0f1c4a936b68df2f1326cf9d8852a4b7bb9f891ad2f8ec2",
   "build_profile": {
     "lto": false,
     "strip": "symbols",
     "codegen_units": 16,
     "debug": "0"
   },
-  "tested_binary_sha256": "6f21e83ac9fac5ed64e5b06667a408f671da65ac9d1094e3f84b156841cdc6a1",
-  "tested_binary_source_commit": "69a95ba6d4f166d289e73f2a708d6b312f41b192",
-  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc"
+  "tested_binary_sha256": null,
+  "tested_binary_source_commit": "41ff779be75bd58029aee943d2d04aa28c124831",
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc",
+  "npm_package": "@openai/codex@0.163.0-win32-x64",
+  "npm_integrity": "sha512-QQGQ/q9dCJ5C5jqhgFrwycpWG3szIyFNThMiKl6hYtu6N/eM3Qd7StesgnCFAfzVED8IkE3N3oH71szzcludqw==",
+  "npm_codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
+  "npm_code_mode_host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
+  "tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
+  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725bdab"
 }

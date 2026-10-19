@@ -189,6 +189,9 @@ func allowed(path string) bool {
 	if currentScopePathAllowed(absolute) {
 		return true
 	}
+	if currentDailyVideoPathAllowed(absolute) {
+		return true
+	}
 	if boundedSchedulerTree(absolute) {
 		return true
 	}

@@ -85,11 +85,13 @@ fn advance_resume(item: &mut Value, job: Option<&str>) {
 }
 
 /// Start without --job still invalidates a result being read by the scheduler.
-/// Retain live ownership, but retire an already finished legacy job.
+/// Retain live ownership, but retire a finished or reconciled cancelled job.
 pub fn resume_without_worker(item: &mut Value) {
     advance_resume(item, None);
     let job = item["scheduler"]["job"].clone();
-    if item["scheduler"]["phase"] == "finished" || result_received(item, &job) {
+    if matches!(s(&item["scheduler"]["phase"]), "finished" | "cancelled")
+        || result_received(item, &job)
+    {
         record_result(item, &job, "superseded");
         merge(
             &mut item["scheduler"],

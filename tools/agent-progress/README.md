@@ -4,6 +4,10 @@
 
 ## 起動と統合
 
+起動済みの旧TUIは新しい引数を受け取れないため、既存の `D:/CC/Work/parallel-agent-progress-runtime/snapshot-v1.json` へ保存するときだけ、引数追加なしでもactive-onlyを適用します。解決済みの同じ出力先に限定し、schema v1と進捗値の意味を保ちます。通常のstdout・別ファイルへの診断取得は従来どおりです。明示した `--active-only=false` はこの互換動作より優先します。
+
+このGo先行配布は既存TUIの外部担当の行だけを改善します。ネイティブ担当・取得失敗時の前回表示・0件時の画面表現の変更はRust版の最終配布と受入で完了します。既存TUIを終了する必要はありません。
+
 ```powershell
 go test ./...
 go vet ./...

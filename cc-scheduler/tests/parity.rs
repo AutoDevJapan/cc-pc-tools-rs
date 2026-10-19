@@ -3142,6 +3142,46 @@ fn preparation2164_non_git_documents_keep_source_and_dedicated_workspace() {
 }
 
 #[test]
+fn explicit_resume_retires_a_reconciled_cancelled_worker() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "block", &[]);
+    row["scheduler"] = json!({"job":"cancelled-worker", "phase":"cancelled",
+        "key":"saved-key", "not_before":T + 3600., "resume":true});
+    row["jobs"] = json!(["cancelled-worker"]);
+    row["note"] = json!("Keep the existing work and acceptance criteria.");
+    f.put(row);
+    let spec = f.get(1)["spec"].clone();
+    f.e.edit(&json!(1), |row| {
+        resume_without_worker(row);
+        row["status"] = json!("doing");
+    })
+    .unwrap();
+    f.e.backend
+        .records
+        .push(json!({"id":"cancelled-worker", "status":"cancelled",
+        "cancel_requested":true, "todo_id":1}));
+
+    // The old cancellation must not put an explicitly resumed task back on hold.
+    f.reconcile();
+    let resumed = f.get(1);
+    assert_eq!(resumed["status"], "doing");
+    assert!(resumed["scheduler"]["job"].is_null());
+    assert!(resumed["scheduler"]["key"].is_null());
+    assert_eq!(resumed["scheduler"]["last_job"], "cancelled-worker");
+    assert_eq!(resumed["scheduler"]["not_before"], T + 3600.);
+    assert_eq!(resumed["jobs"], json!(["cancelled-worker"]));
+    assert_eq!(resumed["spec"], spec);
+    assert_eq!(
+        resumed["note"],
+        "Keep the existing work and acceptance criteria."
+    );
+    assert_eq!(
+        resumed["processed_results"]["cancelled-worker"]["reason"],
+        "superseded"
+    );
+}
+
+#[test]
 fn preparation2164_explicit_resume_retains_resource_deadline() {
     let mut row = json!({"status":"todo","scheduler":{"job":"cancelled","phase":"finished","not_before":1791820800.},"processed_results":{"cancelled":{"reason":"superseded"}}});
     resume_without_worker(&mut row);

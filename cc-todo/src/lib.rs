@@ -198,6 +198,23 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         answer_file: PathBuf,
+        /// Atomically deliver a reply when the scheduler replaced the question marker.
+        #[arg(long, requires = "expected_state_file")]
+        delivery_note_file: Option<PathBuf>,
+        #[arg(long, requires = "delivery_note_file")]
+        expected_state_file: Option<PathBuf>,
+    },
+    /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
+    QuestionWithdraw {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long)]
+        question_file: PathBuf,
+        #[arg(long)]
+        reason_file: PathBuf,
+        /// Snapshot of the original row, compared under the canonical lock.
+        #[arg(long)]
+        expected_state_file: PathBuf,
     },
     /// Wait for a scheduled readiness check without repeatedly launching a worker.
     WaitReady {
@@ -1200,9 +1217,39 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::QuestionWait { id, question_file } => {
             output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
         }
-        Command::QuestionAnswer { id, answer_file } => {
-            output.push(conversation_wait::answer(db, paths, *id, answer_file)?.to_string())
-        }
+        Command::QuestionAnswer {
+            id,
+            answer_file,
+            delivery_note_file,
+            expected_state_file,
+        } => output.push(
+            conversation_wait::answer(
+                db,
+                paths,
+                *id,
+                answer_file,
+                delivery_note_file
+                    .as_deref()
+                    .zip(expected_state_file.as_deref()),
+            )?
+            .to_string(),
+        ),
+        Command::QuestionWithdraw {
+            id,
+            question_file,
+            reason_file,
+            expected_state_file,
+        } => output.push(
+            conversation_wait::withdraw(
+                db,
+                paths,
+                *id,
+                question_file,
+                reason_file,
+                expected_state_file,
+            )?
+            .to_string(),
+        ),
         Command::ResumeReady { id, condition } => {
             let resumed = ready::resume_production(db, *id, condition)?;
             output.push(json!({"id":id,"resumed":resumed}).to_string());
@@ -1337,7 +1384,9 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
         .is_some_and(|r| r["saved"] == false);
     let unchanged_conversation = matches!(
         cli.command,
-        Command::QuestionWait { .. } | Command::QuestionAnswer { .. }
+        Command::QuestionWait { .. }
+            | Command::QuestionAnswer { .. }
+            | Command::QuestionWithdraw { .. }
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

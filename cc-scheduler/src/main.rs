@@ -52,7 +52,7 @@ fn main() {
         match command {
             Some("orphans") => println!("usage: scheduler orphans [-h] [--dry-run | --apply]\n\noptions:\n  -h, --help  show this help message and exit\n  --dry-run\n  --apply     also requires config.json kill_enabled=true"),
             Some(c @ ("status" | "step" | "repair-step" | "recover")) => println!("usage: scheduler {c} [-h]\n\noptions:\n  -h, --help  show this help message and exit"),
-            _ => println!("usage: scheduler [-h] {{status,step,recover,orphans}} ...\n\nWindows capacity-aware ToDo dispatcher.\n\nstatus and orphans --dry-run only measure; step is also called by the hidden Discord tick.\nProcess termination is disabled until config.json kill_enabled is explicitly enabled.\nNo command lines, environments, event contents, credentials or model API keys are inspected.\n\npositional arguments:\n  {{status,step,recover,orphans}}\n    recover  reconcile dead jobs before Discord intake; never launch or kill\n\noptions:\n  -h, --help  show this help message and exit"),
+            _ => println!("usage: scheduler [-h] {{status,step,recover,orphans}} ...\n\nWindows capacity-aware ToDo dispatcher.\n\nstatus and orphans --dry-run only measure; step is also called by the hidden Discord tick.\nGeneral process termination requires config.json kill_enabled. Verified no-action recovery is checked separately in step/repair-step.\nOnly event type/id/status metadata is used; command lines, payloads and credentials are not retained.\n\npositional arguments:\n  {{status,step,recover,orphans}}\n    recover  reconcile dead jobs before Discord intake; never launch or kill\n\noptions:\n  -h, --help  show this help message and exit"),
         }
         return;
     }

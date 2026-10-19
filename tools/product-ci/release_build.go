@@ -26,9 +26,12 @@ import (
 // right: the caller must separately hold the job, source, role, queue and
 // budget admission for the single builder phase.
 
-// Exactly one builder tool is supported: the maintained upstream Kaniko release
-// v1.28.6 pinned by digest. The archived Google repository is not used.
-const releaseBuilderTool = "ghcr.io/osscontainertools/kaniko@sha256:2fa20b0a4b40c7db72b479d57e55c2cf79f2178533b2d3bcbd129d6bd3c087ed"
+// Exactly one outer builder image is supported: one pinned QEMU build (Tianon
+// Gravi's docker-qemu 11.1.1 on Debian trixie). The build itself is the
+// maintained upstream Kaniko release v1.28.6 running in an emulated Linux guest;
+// its pinned bytes are in release_build_vm.go. The archived Google repository is
+// not used.
+const releaseBuilderTool = "tianon/qemu@sha256:8b8a194c14322053a9bafba8fdae0d2fffb722dd5d991b9e65970184fe1ead4e"
 
 const (
 	releaseBuildContextGzipLimit = 64 << 20

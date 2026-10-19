@@ -312,8 +312,19 @@ impl<B: Backend> Scheduler<B> {
         Ok(())
     }
     pub fn requeue(&mut self, id: &Value, jid: &Value, reason: &str) -> Result<()> {
+        self.requeue_if(id, jid, reason, None)
+    }
+    pub fn requeue_if(
+        &mut self,
+        id: &Value,
+        jid: &Value,
+        reason: &str,
+        expected: Option<&Value>,
+    ) -> Result<()> {
         let now = self.backend.clock();
+        let mut applied = false;
         self.edit(id, |i| {
+            if expected.is_some_and(|expected| expected != i) || cancellation::owner_stopped(i, &Value::Null) { return; }
             if s(&i["status"]) != "doing" || i["scheduler"]["job"] != *jid {
                 return;
             }
@@ -326,6 +337,7 @@ impl<B: Backend> Scheduler<B> {
             } else { crate::recovery_failure::FAST_RETRY_S };
             i["status"] = json!("todo");
             let message = match reason {
+                "no_action" => "30分間実操作がなく報告だけが続いたため担当を復旧します",
                 "hung" => "30分間進捗がなかったため停止しました",
                 "lost" => "担当ジョブのプロセスが消失しました",
                 "memory" => "空きメモリ不足で停止しました",
@@ -343,7 +355,11 @@ impl<B: Backend> Scheduler<B> {
             if reason != "memory" && reason != "resource_wait" {
                 m["retry_count"] = add_count(&budget, 1);
             }
+            applied = true;
         })?;
+        if !applied {
+            return Ok(());
+        }
         remove(&mut self.state["progress"], s(jid));
         self.log("INFO", &format!("item {id} recovery {reason}"))?;
         Ok(())
@@ -555,7 +571,12 @@ impl<B: Backend> Scheduler<B> {
         }
         Ok(())
     }
-    /// Isolate new, verified PC repairs from the unavailable private registry and
+    fn current_product_without_registry(&mut self, item: &Value, root: &str) -> bool {
+        matches!(std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt")),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+            && self.backend.current_product_allowed(item, root)
+    }
+    /// Isolate new, verified PC repairs and current successions from the unavailable private registry and
     /// old question generations. Unknown records retain their original state.
     pub fn reconcile_repairs(
         &mut self,
@@ -567,14 +588,18 @@ impl<B: Backend> Scheduler<B> {
         for item in arr(&db["items"]) {
             let project = s(&item["project"]);
             if s(&item["status"]) != "doing"
-                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
                 || item["scheduler"]["job"]
                     .as_str()
                     .is_none_or(|id| id.is_empty())
                 || (truth(&item["scheduler"]["question"]) && !truth(&item["scheduler"]["answer"]))
-                || !self
-                    .backend
-                    .repair_scope_allowed(s(&db["projects"][project]))
+                || !((["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                    && self.backend.repair_scope_allowed(s(&db["projects"][project])))
+                    || self.current_product_without_registry(&item, s(&db["projects"][project])))
+            {
+                continue;
+            }
+            if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                && !self.backend.repair_scope_allowed(s(&item["scheduler"]["worktree"]))
             {
                 continue;
             }
@@ -598,7 +623,6 @@ impl<B: Backend> Scheduler<B> {
             if item["status"] != "wait"
                 || item["dispatchable"] != true
                 || !truth(&item["spec"])
-                || !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
                 || !item["wait_ready"].is_null()
                 || item["wait_on"].as_array().is_none_or(Vec::is_empty)
                 || item["wait_on"]
@@ -609,6 +633,11 @@ impl<B: Backend> Scheduler<B> {
                 || truth(&item["scheduler"]["question"])
                 || truth(&item["scheduler"]["question_close_pending"])
                 || item["stall_recovery"]["pending"].is_object()
+            {
+                continue;
+            }
+            if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                && !self.current_product_without_registry(&item, s(&snapshot["projects"][project]))
             {
                 continue;
             }
@@ -1165,10 +1194,30 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         // Automatic termination does not authorize routing the saved work to a
         // different model or widening its sandbox. Explicit new inputs still win.
         if let Some(source) = source.filter(|source| cancellation::recovery_cancel(&item, source)) {
-            for field in ["model", "effort", "sandbox"] {
-                if !truth(&item[field]) && !truth(&accepted_options[field]) && truth(&source[field])
+            for field in [
+                "model",
+                "effort",
+                "sandbox",
+                "task_type",
+                "mcp_profile",
+                "network",
+                "add_dirs",
+            ] {
+                if !truth(&item[field])
+                    && !truth(&accepted_options[field])
+                    && !source[field].is_null()
                 {
                     selection[field] = source[field].clone();
+                }
+            }
+            if source["no_action_recovery"].is_object() {
+                selection["model_explicit"] = source["model_explicit"].clone();
+                if source["model_explicit"] == false
+                    && !truth(&item["model"])
+                    && !truth(&accepted_options["model"])
+                {
+                    selection["model"] =
+                        json!(cc_ask::job_policy::model_profile("", "implementation").model);
                 }
             }
         }
@@ -1189,7 +1238,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("ValueError"));
         }
         if !self.backend.model_exists(s(&selection["model"])) {
-            if truth(&item["model"]) || truth(&accepted_options["model"]) {
+            if truth(&item["model"])
+                || truth(&accepted_options["model"])
+                || selection["model_explicit"] == true
+            {
                 self.log(
                     "WARNING",
                     "指定モデルを利用できないため、指定を保持して再試行します。",
@@ -1439,6 +1491,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     {
                         !self.backend.repair_scope_allowed(path)
                     }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        !self.backend.current_product_allowed(i, path)
+                    }
                     Err(_) => true,
                 };
                 project != "owner"
@@ -1535,6 +1590,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 if s(&current["status"]) != "todo"
                     || current["scheduler"]["key"] != prepared["scheduler"]["key"]
                     || launch_inputs(&current) != launch_inputs(&prepared)
+                {
+                    return Ok(());
+                }
+                // Recheck the finite receipt after preparation and sampling.
+                // A changed spec/root or a newly restored deny wins admission.
+                if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
+                    .contains(&s(&current["project"])) && current["id"] != 2407
+                    && matches!(&exclusions, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
+                    && !self.current_product_without_registry(
+                        &current, s(&db["projects"][s(&current["project"])]))
                 {
                     return Ok(());
                 }
@@ -1678,6 +1743,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &safe));
             }
             "step" => {
+                self.guard("no action recovery", |e| {
+                    e.recover_no_action(&mut jobs, &ps)
+                });
                 self.guard("reconcile", |e| e.reconcile(&mut jobs, &ps, &cfg));
                 self.guard("memory pressure", |e| {
                     e.memory_pressure(&m, &mut jobs, &ps, &pri, &cfg)
@@ -1695,10 +1763,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
             "repair-step" => {
                 // Keep lost question generations and their notification/reply
-                // processing quarantined. Never terminate another worker here.
+                // processing quarantined. General termination remains disabled;
+                // only the separately verified no-action path may cancel.
                 let mut safe = cfg.clone();
                 safe["kill_enabled"] = json!(false);
                 self.report["repair_mode"] = json!(true);
+                self.guard("no action recovery", |e| {
+                    e.recover_no_action(&mut jobs, &ps)
+                });
                 self.guard("reconcile repairs", |e| {
                     e.reconcile_repairs(&mut jobs, &ps, &safe)
                 });

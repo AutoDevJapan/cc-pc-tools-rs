@@ -64,6 +64,7 @@ const EDIT: &[Flag] = &[
     ("title", 't', Text),
 ];
 const API: &[Flag] = &[
+    ("allow-escape-sequences", ' ', Bool),
     ("method", 'X', Value),
     ("header", 'H', Value),
     ("raw-field", 'f', RawField),

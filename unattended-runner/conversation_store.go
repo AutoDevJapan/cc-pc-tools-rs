@@ -247,7 +247,7 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 			}
 		}
 		switch q.Phase {
-		case "reserved", "posted", "waiting", "answered", "applied", "closed":
+		case "reserved", "posted", "waiting", "answered", "applied", "closed", "withdrawn":
 		default:
 			return nil, errors.New("conversation phase invalid")
 		}

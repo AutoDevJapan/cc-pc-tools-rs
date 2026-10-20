@@ -83,6 +83,30 @@ vm.createContext(ctx);vm.runInContext(between(input.shell,'function stopShared('
 `)
 }
 
+func TestMusicRefreshPreservesDraftFocusAndAudioButRefreshesHiddenFields(t *testing.T) {
+	node(t, `
+const form=(fields)=>({fields,getAttribute:()=>'/music/drafts',querySelectorAll(){return this.fields}});
+const oldTitle={name:'title',type:'text',value:'unfinished song',dataset:{consoleDirty:'true'}},oldSecret={name:'csrf',type:'hidden',value:'old',dataset:{consoleDirty:'true'}},oldAudio={getAttribute:()=>'/music/song/audio',currentTime:17};
+const before={querySelectorAll:key=>key==='form'?[form([oldTitle,oldSecret])]:[oldAudio]};
+const nextTitle={name:'title',type:'text',value:'server title',dataset:{}},freshSecret={name:'csrf',type:'hidden',value:'fresh',dataset:{}},nextAudio={getAttribute:()=>'/music/song/audio'};
+const nextForm=form([nextTitle,freshSecret]),next={audio:[nextAudio],querySelectorAll(key){return key==='form'?[nextForm]:this.audio}};
+nextTitle.replaceWith=node=>{nextForm.fields[0]=node};nextAudio.replaceWith=node=>{next.audio[0]=node};
+const ctx={document:{activeElement:oldTitle}};vm.createContext(ctx);vm.runInContext(between(input.shell,'function musicFields(','document.addEventListener(\'input\''),ctx);
+const focused=ctx.retainMusicState(before,next);assert.equal(focused,oldTitle);assert.equal(nextForm.fields[0],oldTitle);assert.equal(nextForm.fields[0].value,'unfinished song');assert.equal(nextForm.fields[1],freshSecret);assert.equal(nextForm.fields[1].value,'fresh');assert.equal(next.audio[0],oldAudio);assert.equal(next.audio[0].currentTime,17);
+`)
+}
+
+func TestMusicRefreshFetchesOnlyOnDemandAndCancelsLateLoads(t *testing.T) {
+	node(t, `
+let requests=[],replaced=0;
+const host={dataset:{musicLoaded:'true'},childNodes:[],setAttribute(){},removeAttribute(){},querySelectorAll:()=>[],contains:()=>false,replaceChildren(){replaced++}};
+const content={childNodes:[],querySelectorAll:()=>[]};
+const ctx={window:{},document:{addEventListener(){},importNode:node=>({...node})},q:()=>host,make:()=>({}),AbortController,setTimeout,clearTimeout,DOMParser:class{parseFromString(){return{querySelector:()=>content}}},fetch:(_path,options)=>new Promise(resolve=>requests.push({options,resolve}))};
+vm.createContext(ctx);vm.runInContext(between(input.shell,'let musicLoading;','const names='),ctx);
+(async()=>{await ctx.window.loadConsoleMusic();assert.equal(requests.length,0);const pending=ctx.window.loadConsoleMusic({force:true});assert.equal(requests.length,1);assert.equal(ctx.window.loadConsoleMusic({force:true}),pending);ctx.window.cancelConsoleMusic();assert(requests[0].options.signal.aborted);requests[0].resolve({ok:true,text:async()=>''});await pending;assert.equal(replaced,0);const next=ctx.window.loadConsoleMusic({force:true});requests[1].resolve({ok:true,text:async()=>''});await next;assert.equal(replaced,1);assert.equal(host.dataset.musicLoaded,'true')})().catch(e=>{console.error(e);process.exitCode=1});
+`)
+}
+
 func TestProgressNavigation(t *testing.T) {
 	node(t, `
 const nodes=new Map(['kanban','progress','systems','workload','music'].map(view=>[view,{id:'view-'+view,dataset:{view},attrs:{},active:false,classList:{toggle(_,on){this.node.active=on}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]}}]));for(const n of nodes.values())n.classList.node=n;

@@ -20,9 +20,8 @@
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <div class="brand"><div class="mark">✦</div><div><h1>Local AI Console</h1><p>Local-first workspace</p></div></div>
+      <div class="brand"><div class="mark">✦</div><div><h1>Local AI Console</h1></div></div>
       <nav class="nav"><button data-view="kanban" class="active">Operations</button><a href="/progress" data-view="progress">作業進捗</a><button data-view="workload">仕事量</button><button data-view="systems">Systems</button><a href="/music" data-view="music">音楽制作 · Suno</a></nav>
-      <div class="sidebar-footer">127.0.0.1 only · port <span id="port-label">10012</span></div>
     </aside>
     <main>
       <header class="topbar"><div><h2 id="page-title">Operations</h2><p id="page-subtitle">司令塔・部署・製品ごとの作業状況</p></div><div class="top-actions"><button class="ghost" id="refresh-btn">更新</button></div></header>
@@ -398,7 +397,7 @@
     function cancelPageFetches(next){if(!["kanban","progress"].includes(next)&&opsState.controller){const controller=opsState.controller;opsState.controller=null;controller.abort()}if(opsState.detailController)opsState.detailController.abort();if(next!=="systems"&&healthController){const controller=healthController;healthController=null;controller.abort()}if(next!=="workload"&&window.cancelWorkload)window.cancelWorkload();if(next!=="music"){if(window.cancelConsoleMusic)window.cancelConsoleMusic();document.querySelectorAll("#view-music audio").forEach(audio=>audio.pause())}if(typeof closeOpsDetail==='function')closeOpsDetail()}
     function refreshCurrentPage(){if(document.hidden)return;if($('#view-kanban').classList.contains('active')||$('#view-progress').classList.contains('active')){refreshOperations();renderProgress()}else if($('#view-systems').classList.contains('active'))refresh();else if($('#view-workload').classList.contains('active')&&window.refreshWorkload)window.refreshWorkload()}
     $$('.nav [data-view]').forEach(button=>button.onclick=event=>{if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();switchView(button.dataset.view,{focus:true})});
-    $('#refresh-btn').onclick=()=>{if($('#view-music').classList.contains('active')&&window.loadConsoleMusic)window.loadConsoleMusic();else refreshCurrentPage()};$('#ops-refresh').onclick=()=>refreshOperations({force:true});
+    $('#refresh-btn').onclick=()=>{if($('#view-music').classList.contains('active')&&window.loadConsoleMusic)window.loadConsoleMusic({force:true});else refreshCurrentPage()};$('#ops-refresh').onclick=()=>refreshOperations({force:true});
     switchView(new URL(location.href).pathname==='/progress'?'progress':new URL(location.href).searchParams.get('view')||(location.pathname.startsWith('/music')?'music':'kanban'),{historyMode:'none'});
     setInterval(()=>{if(document.hidden)return;if($('#view-kanban').classList.contains('active')||$('#view-progress').classList.contains('active')){refreshOperations();renderProgress()}else if($('#view-systems').classList.contains('active'))refresh()},15000);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelPageFetches();else refreshCurrentPage()});window.addEventListener('pagehide',cancelPageFetches);

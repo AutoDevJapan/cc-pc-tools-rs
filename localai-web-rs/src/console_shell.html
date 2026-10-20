@@ -60,17 +60,31 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
     const q=s=>document.querySelector(s), make=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node};
     let musicLoading;
     let musicController=null,musicGeneration=0;
-    window.cancelConsoleMusic=()=>{musicGeneration++;if(musicController)musicController.abort();musicController=null;musicLoading=null};
-    window.loadConsoleMusic=()=>{
+    window.cancelConsoleMusic=()=>{musicGeneration++;if(musicController)musicController.abort();musicController=null;musicLoading=null;const host=q('#view-music');if(host)host.removeAttribute('aria-busy')};
+    function musicFields(host){return Array.from(host.querySelectorAll('form')).flatMap((form,index)=>Array.from(form.querySelectorAll('input[name],textarea[name],select[name]')).filter(field=>!['hidden','password','file','submit','button'].includes(field.type)).map((field,ordinal)=>({field,key:JSON.stringify([index,form.getAttribute('action'),field.name,ordinal])})))}
+    function retainMusicState(host,content){
+      const fields=musicFields(host).filter(({field})=>field.dataset.consoleDirty==='true'),fresh=new Map(musicFields(content).map(item=>[item.key,item.field]));
+      const focused=fields.find(({field})=>field===document.activeElement);
+      for(const {key,field} of fields){const replacement=fresh.get(key);if(replacement)replacement.replaceWith(field)}
+      const media=Array.from(host.querySelectorAll('audio')).map(node=>({node,source:node.getAttribute('src')}));
+      for(const node of Array.from(content.querySelectorAll('audio'))){const old=media.find(item=>item.source&&item.source===node.getAttribute('src'));if(old){node.replaceWith(old.node);media.splice(media.indexOf(old),1)}}
+      return focused&&fresh.has(focused.key)?focused.field:null;
+    }
+    document.addEventListener('input',event=>{if(event.target.closest?.('#view-music form')&&event.target.name&&!['hidden','password','file'].includes(event.target.type))event.target.dataset.consoleDirty='true'});
+    document.addEventListener('change',event=>{if(event.target.closest?.('#view-music form')&&event.target.name&&!['hidden','password','file'].includes(event.target.type))event.target.dataset.consoleDirty='true'});
+    window.loadConsoleMusic=({force=false}={})=>{
       const host=q('#view-music');
-      if(!host||host.dataset.musicLoaded==='true')return Promise.resolve();
+      if(!host||(!force&&host.dataset.musicLoaded==='true'))return Promise.resolve();
       if(musicLoading)return musicLoading;
-      host.textContent='音楽制作を読み込み中…';
+      if(host.dataset.musicLoaded!=='true')host.textContent='音楽制作を読み込み中…';
+      host.setAttribute('aria-busy','true');
       const controller=new AbortController(),generation=musicGeneration,timeout=setTimeout(()=>controller.abort(),12000);musicController=controller;
       musicLoading=fetch('/music',{signal:controller.signal,headers:{Accept:'text/html'}}).then(async response=>{
-        const text=await response.text();if(generation!==musicGeneration||controller.signal.aborted)return;const page=new DOMParser().parseFromString(text,'text/html'),content=page.querySelector('#view-music');
+        const text=await response.text();if(generation!==musicGeneration||controller.signal.aborted)return;if(!response.ok&&host.dataset.musicLoaded==='true')throw new Error('音楽制作を更新できませんでした。HTTP '+response.status);const page=new DOMParser().parseFromString(text,'text/html'),content=page.querySelector('#view-music');
         if(!content)throw new Error('音楽制作の画面を確認できませんでした。');
-        host.replaceChildren(...Array.from(content.childNodes).map(node=>document.importNode(node,true)));
+        const next=document.importNode(content,true),focused=retainMusicState(host,next);
+        host.replaceChildren(...Array.from(next.childNodes));
+        if(focused&&host.contains(focused))focused.focus({preventScroll:true});
         // Broker forms and scoped styles are native DOM; no iframe or document
         // navigation. Scripts parsed from broker HTML remain inert, as the
         // direct page's CSP authorizes only compiled Console scripts.
@@ -79,8 +93,8 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
       }).catch(error=>{
         if(generation!==musicGeneration)return;
         const message=make('p','console-music-note',error.name==='AbortError'?'音楽制作の接続が時間切れになりました。':error.message),retry=make('button','','音楽制作を再読込');
-        retry.type='button';retry.onclick=window.loadConsoleMusic;host.replaceChildren(message,retry);
-      }).finally(()=>{clearTimeout(timeout);if(generation===musicGeneration){musicLoading=null;musicController=null}});
+        retry.type='button';retry.onclick=()=>window.loadConsoleMusic({force:true});if(host.dataset.musicLoaded==='true'){const old=host.querySelector('[data-music-error]');if(old)old.remove();const error=make('div');error.dataset.musicError='true';error.setAttribute('role','alert');error.append(message,retry);host.prepend(error);if(!host.contains(document.activeElement))retry.focus()}else host.replaceChildren(message,retry);
+      }).finally(()=>{clearTimeout(timeout);if(generation===musicGeneration){musicLoading=null;musicController=null;host.removeAttribute('aria-busy')}});
       return musicLoading;
     };
     const names=[['kanban','Operations'],['progress','作業進捗'],['workload','仕事量'],['systems','Systems'],['music','音楽制作 · Suno']];

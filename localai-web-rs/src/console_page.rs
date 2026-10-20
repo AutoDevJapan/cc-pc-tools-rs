@@ -321,10 +321,10 @@ const vm = require('node:vm');
 const input = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
 for (const source of input.scripts) new vm.Script(source);
 async function loaderScenario() {
-  const host={dataset:{musicLoaded:'false'},childNodes:[],replaceChildren(...nodes){this.childNodes=nodes},append(...nodes){this.childNodes.push(...nodes)}};
+  const host={dataset:{musicLoaded:'false'},childNodes:[],querySelectorAll(){return[]},setAttribute(){},removeAttribute(){},contains(){return false},replaceChildren(...nodes){this.childNodes=nodes},append(...nodes){this.childNodes.push(...nodes)}};
   let requests=0,reply;
-  const ctx={window:{},q:()=>host,make:(tag,cls,text)=>({tag,cls,text}),document:{importNode:node=>({...node})},AbortController,setTimeout,clearTimeout,
-    DOMParser:class {parseFromString(text){return {querySelector:()=>text==='valid'?{childNodes:[{tag:'FORM',draft:''},{tag:'AUDIO',currentTime:0}]}:null}}},
+  const ctx={window:{},q:()=>host,make:(tag,cls,text)=>({tag,cls,text}),document:{addEventListener(){},importNode:node=>({...node})},AbortController,setTimeout,clearTimeout,
+    DOMParser:class {parseFromString(text){return {querySelector:()=>text==='valid'?{querySelectorAll(){return[]},childNodes:[{tag:'FORM',draft:''},{tag:'AUDIO',currentTime:0}]}:null}}},
     fetch:()=>{requests++;return new Promise(resolve=>reply=resolve)},
   };
   vm.createContext(ctx);vm.runInContext(input.loader,ctx);

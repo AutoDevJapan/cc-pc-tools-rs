@@ -26,6 +26,7 @@ struct Day {
     first_at: i64,
     last_at: i64,
     duration_observed: bool,
+    jobs_observed: bool,
     projects: BTreeMap<String, Project>,
 }
 
@@ -147,6 +148,9 @@ impl Ledger {
                 }
             }
         }
+        let complete = proof["state"] == "complete"
+            && proof["verifiedCount"].as_u64() == Some(jobs.len() as u64);
+        self.days.get_mut(&today).unwrap().jobs_observed |= complete || !jobs.is_empty();
         if let Some(previous) = &self.previous {
             // Only adjacent, fresh observations certify a sampled interval. Never
             // bridge a stop, failed acquisition, restart, or a different product.
@@ -164,7 +168,8 @@ impl Ledger {
                         day.first_at = start;
                     }
                     day.last_at = end;
-                    day.duration_observed |= previous.complete && proof["state"] == "complete";
+                    day.duration_observed |= previous.complete && complete;
+                    day.jobs_observed |= complete || !jobs.is_empty();
                     for (job, key) in &jobs {
                         if previous.jobs.get(job) != Some(key) {
                             continue;
@@ -190,7 +195,7 @@ impl Ledger {
         self.previous = Some(Sample {
             at,
             until: until.unwrap(),
-            complete: proof["state"] == "complete",
+            complete,
             jobs,
         });
     }
@@ -213,7 +218,10 @@ impl Ledger {
                 "summary":[{"text":format!("実作業を観測したジョブ {}件",project.jobs.len())}],"results":[]}));
         }
         let duration_known = day.is_some_and(|d| d.duration_observed) || !all_intervals.is_empty();
-        let active: i64 = all_intervals.iter().map(|(s, e)| e - s).sum();
+        let active: i64 = projects
+            .iter()
+            .filter_map(|p| p["active_ms"].as_i64())
+            .sum();
         let base = super::date_ms(date).unwrap_or(0);
         let timeline: Vec<_> = (0..96)
             .map(|slot| {
@@ -237,7 +245,8 @@ impl Ledger {
         let history: Vec<_> = (0..7).rev().map(|i|{
             let date=super::day(base-i*super::DAY);let day=self.days.get(&date);let mut intervals=Vec::new();let mut jobs=BTreeSet::new();
             for p in day.into_iter().flat_map(|d|d.projects.values()) {jobs.extend(&p.jobs);for &(s,e) in &p.intervals{super::merge_interval(&mut intervals,s,e)}}
-            json!({"date":date,"jobs":day.map(|_|jobs.len()),"active_ms":if day.is_some_and(|d|d.duration_observed)||!intervals.is_empty(){Some(intervals.iter().map(|(s,e)|e-s).sum::<i64>())}else{None}})
+            let active=day.into_iter().flat_map(|d|d.projects.values()).flat_map(|p|&p.intervals).map(|(s,e)|e-s).sum::<i64>();
+            json!({"date":date,"jobs":day.filter(|d|d.jobs_observed).map(|_|jobs.len()),"active_ms":if day.is_some_and(|d|d.duration_observed)||!intervals.is_empty(){Some(active)}else{None}})
         }).collect();
         let mut warnings = Vec::new();
         if !available {
@@ -251,7 +260,7 @@ impl Ledger {
         }
         json!({"date":date,"updated_at":(self.updated_at>0).then(||super::jst_time(self.updated_at)),"collecting":!available,
             "measurement":{"state":if available{"partial"}else{"unavailable"},"kind":"processing_observations","first_at":day.map(|d|super::jst_time(d.first_at)),"last_at":day.map(|d|super::jst_time(d.last_at)),"source":"operations.workforce.processing"},
-            "warnings":warnings,"totals":{"active_ms":duration_known.then_some(active),"jobs":available.then_some(jobs.len()),"merged_prs":null,"tokens":null},
+            "warnings":warnings,"totals":{"active_ms":duration_known.then_some(active),"jobs":day.filter(|d|d.jobs_observed).map(|_|jobs.len()),"merged_prs":null,"tokens":null},
             "projects":projects,"timeline":if available{timeline}else{Vec::new()},"history":history})
     }
 }
@@ -260,7 +269,16 @@ impl Ledger {
 mod tests {
     use super::*;
     fn board(at: i64, rows: Value) -> Value {
-        json!({"metadataOk":true,"workforce":{"processing":{"state":"complete","observedAt":at,"validUntil":at+30_000}},"departments":[{"products":[{"id":"fixed-product","name":"Product","workers":rows}]}]})
+        let count = rows
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|r| r["workState"] == "processing")
+            .flat_map(|r| r["references"]["sessions"].as_array().into_iter().flatten())
+            .filter_map(Value::as_str)
+            .collect::<BTreeSet<_>>()
+            .len();
+        json!({"metadataOk":true,"workforce":{"processing":{"state":"complete","observedAt":at,"validUntil":at+30_000,"verifiedCount":count}},"departments":[{"products":[{"id":"fixed-product","name":"Product","workers":rows}]}]})
     }
     fn rows() -> Value {
         json!([{"primaryJob":"old","references":{"sessions":["one"]},"workState":"processing","tokens":999999,"note":"private fixture"},{"primaryJob":"old","references":{"sessions":["one"]},"workState":"processing"},{"primaryJob":"waiting","workState":"resource_wait"}])

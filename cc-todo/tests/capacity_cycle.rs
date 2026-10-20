@@ -199,7 +199,7 @@ fn invalid_stale_conflicting_or_duplicate_input_never_changes_queue() {
 #[test]
 fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
     let mut f = Fixture::new();
-    f.ingest(AT);
+    let first = f.ingest(AT);
     let id = "20261020-200000-todo-1";
     fs::create_dir_all(f.paths.jobs.join(id)).unwrap();
     fs::write(
@@ -217,7 +217,16 @@ fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
         }
     }
     assert_eq!(f.db["items"].as_array().unwrap().len(), 1);
-    assert_eq!(f.db["items"][0]["jobs"], json!([id]));
+    assert_eq!(f.db["items"][0]["jobs"], json!([]));
+    let first_archive = f
+        .paths
+        .store
+        .parent()
+        .unwrap()
+        .join("capacity-decisions")
+        .join(format!("{}.json", first["generation"].as_str().unwrap()));
+    let first_archive: Value = serde_json::from_slice(&fs::read(first_archive).unwrap()).unwrap();
+    assert_eq!(first_archive["jobs"], json!([id]));
     assert_eq!(
         f.db["items"][0]["capacity_decision"]["history"]
             .as_array()
@@ -235,7 +244,7 @@ fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
 
 #[test]
 fn explicit_stop_flags_on_completed_row_or_job_survive_next_cycle() {
-    for field in ["stopped", "cancel_requested"] {
+    for field in ["stopped", "cancel_requested", "owner_stopped"] {
         let mut f = Fixture::new();
         f.ingest(AT);
         f.db["items"][0]["status"] = json!("done");
@@ -251,6 +260,7 @@ fn explicit_stop_flags_on_completed_row_or_job_survive_next_cycle() {
     for flag in [
         json!({"stopped":true}),
         json!({"cancel_requested":true}),
+        json!({"owner_stopped":true}),
         json!({"cancel_reason":"manual"}),
     ] {
         let mut f = Fixture::new();
@@ -305,8 +315,14 @@ fn reused_row_waits_for_scheduler_without_watchdog_resuming_old_conversation() {
         .remove("capacity_decision");
     let ps = cc_scheduler::policy::Processes::new();
     assert_eq!(
-        cc_todo::recovery::plan(&mut ordinary, &[job.clone()], &ps, (AT + 10860) as f64, "")
-            .unwrap(),
+        cc_todo::recovery::plan(
+            &mut ordinary,
+            std::slice::from_ref(&job),
+            &ps,
+            (AT + 10860) as f64,
+            ""
+        )
+        .unwrap(),
         vec![1],
         "positive control must exercise the ordinary direct-recovery route"
     );
@@ -322,6 +338,48 @@ fn reused_row_waits_for_scheduler_without_watchdog_resuming_old_conversation() {
 }
 
 #[test]
+fn completed_generation_with_finished_failures_can_advance_without_carrying_dispatch() {
+    for status in ["failed", "lost", "cancelled"] {
+        let mut f = Fixture::new();
+        let first = f.ingest(AT);
+        let id = "20261020-200000-todo-1";
+        fs::create_dir_all(f.paths.jobs.join(id)).unwrap();
+        let job = json!({"id":id,"todo_id":1,"status":status,"cwd":"fixture","thread_id":"01a0fa4b-2898-7553-889f-0e934f0d32f8","recovery_cancel":{"key":"automatic","committed_at":"2026-10-20T09:00:00Z"}});
+        fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
+        f.db["items"][0]["jobs"] = json!([id]);
+        f.db["items"][0]["status"] = json!("done");
+        f.db["items"][0]["scheduler"] = json!({"last_job":id,"resume":true,"continuation_count":3,"worktree":"fixture","branch":"scheduler/fixture","owner_instruction":"previous cycle instruction","workspace_receipt":{"job":id}});
+        f.db["items"][0]["stall_recovery"] = json!({"history":[1,2],"next_at":99999999999_u64});
+        f.write(AT + 10800);
+        assert_eq!(f.ingest(AT + 10800)["action"], "reused_completed");
+        let row = &f.db["items"][0];
+        assert_eq!(row["jobs"], json!([]));
+        assert!(row["dependency_ready"].is_null());
+        assert!(row["scheduler"]["resume"].is_null());
+        assert!(row["scheduler"]["last_job"].is_null());
+        assert!(row["scheduler"]["owner_instruction"].is_null());
+        assert!(row["stall_recovery"].is_null());
+        assert_eq!(row["scheduler"]["worktree"], "fixture");
+        assert!(
+            cc_scheduler::preparation::workspace_source(row, std::slice::from_ref(&job)).is_none()
+        );
+        let archive = f
+            .paths
+            .store
+            .parent()
+            .unwrap()
+            .join("capacity-decisions")
+            .join(format!("{}.json", first["generation"].as_str().unwrap()));
+        let archived: Value = serde_json::from_slice(&fs::read(archive).unwrap()).unwrap();
+        assert_eq!(archived["jobs"], json!([id]));
+        assert_eq!(
+            archived["dispatch"]["owner_instruction"],
+            "previous cycle instruction"
+        );
+    }
+}
+
+#[test]
 fn result_keeps_unknowns_and_rejects_false_full_scan_and_private_labels() {
     let mut f = Fixture::new();
     let receipt = f.ingest(AT);
@@ -334,10 +392,11 @@ fn result_keeps_unknowns_and_rejects_false_full_scan_and_private_labels() {
         "protected_unclassified"
     );
     let path = f.paths.store.parent().unwrap().join("result.json");
-    let mut result = json!({"schema":1,"generation":receipt["generation"],"uninvestigated_categories":2,"investigated_resources":0,"candidates":0,"retained":0,"reclaimed_bytes":0,"archive_verified":null,"questions_created":0,"questions_sent":0,"answers_applied":null,"retention_reasons":{"protected_unclassified":1}});
+    let mut result = json!({"schema":1,"generation":receipt["generation"],"uninvestigated_categories":2,"investigated_resources":0,"candidates":0,"retained":0,"reclaimed_bytes":null,"archive_verified":null,"questions_created":0,"questions_sent":0,"answers_applied":null,"retention_reasons":{"protected_unclassified":1}});
     fs::write(&path, result.to_string()).unwrap();
     capacity_cycle::record_result(&mut f.db, 1, &path).unwrap();
     assert!(capacity_cycle::validate_completion(&f.db["items"][0]).is_ok());
+    assert!(f.db["items"][0]["capacity_decision"]["result"]["reclaimed_bytes"].is_null());
     assert!(f.db["items"][0]["capacity_decision"]["result"]["archive_verified"].is_null());
     let before = f.db.clone();
     result["uninvestigated_categories"] = json!(0);

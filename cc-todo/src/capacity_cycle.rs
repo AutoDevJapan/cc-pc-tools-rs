@@ -164,7 +164,7 @@ fn generation(report: &Value) -> String {
     format!("{:x}", Sha256::digest(report.to_string().as_bytes()))
 }
 
-fn archive_cycle(paths: &Paths, old: &Value) -> Result<()> {
+fn archive_cycle(paths: &Paths, old: &Value, row: &Value) -> Result<()> {
     let generation = old["active_generation"]
         .as_str()
         .ok_or("invalid archived generation")?;
@@ -181,28 +181,41 @@ fn archive_cycle(paths: &Paths, old: &Value) -> Result<()> {
         .ok_or("invalid store parent")?
         .join("capacity-decisions");
     fs::create_dir_all(&folder).map_err(crate::err)?;
+    if !folder.is_absolute() {
+        return Err("capacity archive needs an absolute store".into());
+    }
     let path = folder.join(format!("{generation}.json"));
-    let value = json!({"schema":1,"generation":generation,"measurement":old["active"],"result":old["result"]});
+    let value = json!({"schema":1,"generation":generation,"measurement":old["active"],"result":old["result"],"jobs":row["jobs"],"dispatch":row["scheduler"],"recovery":row["stall_recovery"]});
     let data = value.to_string();
     use std::io::Write;
-    match fs::OpenOptions::new()
+    let stage = folder.join(format!("cycle-{}.tmp", uuid::Uuid::new_v4().simple()));
+    let mut file = fs::OpenOptions::new()
         .create_new(true)
         .write(true)
-        .open(&path)
-    {
-        Ok(mut file) => file
-            .write_all(data.as_bytes())
-            .and_then(|_| file.sync_all())
-            .map_err(crate::err),
+        .open(&stage)
+        .map_err(crate::err)?;
+    let write = file
+        .write_all(data.as_bytes())
+        .and_then(|_| file.sync_all())
+        .map_err(crate::err);
+    drop(file);
+    let result = write.and_then(|_| match fs::hard_link(&stage, &path) {
+        Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-            if fs::read(path).map_err(crate::err)? == data.as_bytes() {
+            if fs::read(&path).map_err(crate::err)? == data.as_bytes() {
                 Ok(())
             } else {
                 Err("capacity archive conflict".into())
             }
         }
         Err(e) => Err(crate::err(e)),
+    });
+    // Only this call's create_new staging leaf is removed. Publishing a full
+    // synced file through a no-overwrite hard link cannot leave a partial receipt.
+    if stage.is_absolute() && stage.parent() == Some(folder.as_path()) {
+        let _ = fs::remove_file(stage);
     }
+    result
 }
 
 fn jobs_finished(row: &Value, paths: &Paths) -> bool {
@@ -212,19 +225,15 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
     let Ok(processes) = cc_scheduler::native::process_snapshot() else {
         return false;
     };
-    let Some(offset) = row["capacity_decision"]["job_offset"]
-        .as_u64()
-        .and_then(|v| usize::try_from(v).ok())
-        .filter(|offset| *offset <= row["jobs"].as_array().map_or(0, Vec::len))
-    else {
-        return false;
-    };
-    crate::job_refs::ids(&row["jobs"]).skip(offset).all(|id| {
+    crate::job_refs::ids(&row["jobs"]).all(|id| {
         crate::load_job(&paths.jobs.join(id).join("job.json"))
             .ok()
             .is_some_and(|job| {
-                matches!(job["status"].as_str(), Some("succeeded" | "finished"))
-                    && !cc_job_policy::cancellation::owner_stopped(row, &job)
+                matches!(
+                    job["status"].as_str(),
+                    Some("succeeded" | "finished" | "failed" | "lost" | "cancelled" | "canceled")
+                ) && !cc_job_policy::cancellation::blocks_recovery(row, &job)
+                    && job["owner_stopped"] != true
                     && !cc_scheduler::policy::alive(&job, &processes, crate::time_s())
                     && cc_scheduler::policy::process_tree(&job, &processes).is_empty()
             })
@@ -233,6 +242,7 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
 
 fn no_hold(row: &Value) -> bool {
     !cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
+        && row["owner_stopped"] != true
         && [
             "wait_on",
             "wait_ready",
@@ -349,7 +359,7 @@ pub fn ingest(
             && jobs_finished(existing, paths)
             && no_hold(existing)
         {
-            archive_cycle(paths, old)?;
+            archive_cycle(paths, old, existing)?;
             bind_spec(paths, &text, &report, Some(id), &mut copy, project)?;
             let row = find(&mut copy, id)?;
             let history = row["capacity_decision"]
@@ -360,8 +370,8 @@ pub fn ingest(
                 .and_then(Value::as_array)
                 .cloned()
                 .unwrap_or_default();
-            past.push(json!({"generation":old["active_generation"],"measurement":old["active"],"result":old["result"]}));
-            // Every completed generation has an immutable anonymous receipt.
+            past.push(json!({"generation":old["active_generation"],"measurement":old["active"],"result":old["result"],"jobs":existing["jobs"]}));
+            // Every completed generation has an immutable lifecycle receipt.
             // Keep only sixteen summaries in the shared scheduling row.
             if past.len() > 16 {
                 past.remove(0);
@@ -370,35 +380,36 @@ pub fn ingest(
             history.insert("active_generation".into(), json!(gen_id));
             history.insert("active".into(), report.clone());
             history.remove("result");
-            history.insert(
-                "job_offset".into(),
-                json!(
-                    existing["jobs"]
-                        .as_array()
-                        .ok_or("invalid decision jobs")?
-                        .len()
-                ),
-            );
-            // Use the existing dependency/readiness resumption path. It keeps
-            // the workspace and result ledger and bypasses obsolete retry clocks.
+            // A completed cycle is a fresh finite dispatch, never a retry of
+            // its old conversation. Preserve the workspace and archived history.
+            let mut workspace = json!({});
+            for key in ["worktree", "branch"] {
+                if let Some(value) = existing["scheduler"].get(key) {
+                    workspace[key] = value.clone();
+                }
+            }
             let fields = row.as_object_mut().unwrap();
             for key in [
                 "work_owner_job",
                 "work_owner_wait_on",
                 "progress",
                 "progress_updated",
+                "worker_receipt",
+                "dependency_ready",
+                "stall_recovery",
             ] {
                 fields.remove(key);
             }
-            row["status"] = json!("wait");
-            cc_job_policy::todo_wait::release_item(row);
+            row["jobs"] = json!([]);
+            row["scheduler"] = workspace;
+            row["status"] = json!("todo");
             (id, "reused_completed")
         } else {
             (id, "retained_unfinished_or_same_generation")
         }
     } else {
         let id = bind_spec(paths, &text, &report, None, &mut copy, project)?;
-        find(&mut copy, id)?["capacity_decision"] = json!({"key":KEY,"origin_todo_id":3085,"active_generation":gen_id,"active":report,"job_offset":0,"history":[]});
+        find(&mut copy, id)?["capacity_decision"] = json!({"key":KEY,"origin_todo_id":3085,"active_generation":gen_id,"active":report,"history":[]});
         (id, "queued")
     };
     let row = find(&mut copy, id)?;
@@ -423,9 +434,9 @@ pub fn record_result(db: &mut Value, id: i64, path: &Path) -> Result<Value> {
         "investigated_resources",
         "candidates",
         "retained",
-        "reclaimed_bytes",
     ];
     let unknown = [
+        "reclaimed_bytes",
         "archive_verified",
         "questions_created",
         "questions_sent",

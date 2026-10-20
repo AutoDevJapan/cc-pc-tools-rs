@@ -19,7 +19,7 @@ func TestFreshAuditConnectsToOrdinaryQueueAndRemovesOwnedTemporaryInputs(t *test
 		if args[0] != "capacity-cycle" || args[5] != "--project" || args[6] != "cc-pc-tools-rs" {
 			t.Fatal("not the normal queue path")
 		}
-		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 26*time.Second {
+		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 46*time.Second {
 			t.Fatal("unbounded admission")
 		}
 		reportPath, specPath = args[2], args[4]

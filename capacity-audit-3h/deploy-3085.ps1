@@ -5,9 +5,14 @@ Set-Location -LiteralPath $taskSource
 if ($ReviewedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Invalid reviewed commit' }
 $head = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0 -or $head -ne $ReviewedCommit) { throw 'Source HEAD changed' }
+git diff --quiet HEAD --
+if ($LASTEXITCODE -ne 0) { throw 'Source has tracked changes' }
 git merge-base --is-ancestor $ReviewedCommit origin/main
 if ($LASTEXITCODE -ne 0) { throw 'Reviewed source has not merged' }
-$manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $taskSource 'docs\evidence\capacity-3085-runtime.json') | ConvertFrom-Json
+$manifestRef = '{0}:docs/evidence/capacity-3085-runtime.json' -f $ReviewedCommit
+$manifestText = & git show $manifestRef
+if ($LASTEXITCODE -ne 0) { throw 'Committed build evidence unavailable' }
+$manifest = ($manifestText -join "`n") | ConvertFrom-Json
 if ($manifest.origin_todo_id -ne 3085 -or $manifest.original_registry_recovered -ne $false) { throw 'Wrong finite deployment scope' }
 function Assert-Plain([string]$Path) {
     $absolute = [IO.Path]::GetFullPath($Path)
@@ -62,20 +67,25 @@ $targets = @(
 # Validate all sources and both CAS expectations before changing any leaf.
 foreach ($target in $targets) {
     Assert-Plain $target.Source; Assert-Plain $target.Target
-    if ((Hash $target.Source) -ne $target.New -or (Hash $target.Target) -ne $target.Old) { throw 'Runtime CAS changed; preserve concurrent release' }
+    if ((Hash $target.Source) -ne $target.New -or (Hash $target.Target) -notin @($target.Old,$target.New)) { throw 'Runtime CAS changed; preserve concurrent release' }
     Assert-Guard $target.Target
 }
 foreach ($item in $targets) {
+    if ((Hash $item.Target) -eq $item.New) { Assert-Guard $item.Target; continue }
     if ((Hash $item.Target) -ne $item.Old) { throw 'Concurrent runtime update' }
     Assert-Guard $item.Target
     $backup = Join-Path $release (([IO.Path]::GetFileName($item.Target)) + '.before-3085')
-    if (Test-Path -LiteralPath $backup) { throw 'Prior backup exists; inspect previous deployment' }
+    Assert-Plain $backup
+    if ((Test-Path -LiteralPath $backup) -and (Hash $backup) -ne $item.Old) { throw 'Prior backup differs; preserve it' }
     $stage = Join-Path ([IO.Path]::GetDirectoryName($item.Target)) (([IO.Path]::GetFileName($item.Target)) + '.3085-stage')
     Assert-Plain $stage
-    if (Test-Path -LiteralPath $stage) { throw 'Prior stage exists' }
-    Copy-Item -LiteralPath $item.Source -Destination $stage
+    if (Test-Path -LiteralPath $stage) {
+        if ((Hash $stage) -ne $item.New) { throw 'Prior stage differs; preserve it' }
+    } else { Copy-Item -LiteralPath $item.Source -Destination $stage }
     if ((Hash $stage) -ne $item.New -or (Hash $item.Target) -ne $item.Old) { throw 'CAS changed during staging' }
-    [IO.File]::Replace($stage,$item.Target,$backup,$false)
+    $replaceBackup = $backup
+    if (Test-Path -LiteralPath $backup) { $replaceBackup = $null }
+    [IO.File]::Replace($stage,$item.Target,$replaceBackup,$false)
     if ((Hash $item.Target) -ne $item.New) { throw 'Installed artifact mismatch' }
     Assert-Guard $item.Target
 }

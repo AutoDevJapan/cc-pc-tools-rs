@@ -78,7 +78,7 @@ func queueDecisionWith(r report, home string, call func(context.Context, ...stri
 	if !within(home, reportPath, false) || !within(home, specPath, false) {
 		return failure
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	output, err := call(ctx, "capacity-cycle", "--report-file", filepath.Clean(reportPath), "--spec", filepath.Clean(specPath), "--project", "cc-pc-tools-rs")
 	if err != nil || len(output) > 4096 {

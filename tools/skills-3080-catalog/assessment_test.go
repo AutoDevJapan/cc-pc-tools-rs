@@ -11,11 +11,23 @@ import (
 // Scope is a pinned source's complete entrypoint set, never an adoption cap.
 // These checks conserve identities and categories, not semantic quality.
 func TestCompleteSourceAssessmentConservesIdentities(t *testing.T) {
-	b, err := os.ReadFile("../../docs/skills-3080-mattpocock-assessment.json")
+	files, err := filepath.Glob("../../docs/skills-3080-*-assessment.json")
+	if err != nil || len(files) == 0 {
+		t.Fatal("no complete source assessments")
+	}
+	for _, file := range files {
+		t.Run(filepath.Base(file), func(t *testing.T) { checkSourceAssessment(t, file) })
+	}
+}
+
+func checkSourceAssessment(t *testing.T, file string) {
+	t.Helper()
+	b, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var a struct {
+		Source   string         `json:"source"`
 		Commit   string         `json:"commit"`
 		Expected int            `json:"entrypoints_expected"`
 		Read     int            `json:"entrypoints_read"`
@@ -36,7 +48,7 @@ func TestCompleteSourceAssessmentConservesIdentities(t *testing.T) {
 	if err = json.Unmarshal(b, &a); err != nil {
 		t.Fatal(err)
 	}
-	if a.Expected < 1 || a.Read != a.Expected || len(a.Entries) != a.Expected {
+	if a.Source == "" || a.Expected < 1 || a.Read != a.Expected || len(a.Entries) != a.Expected {
 		t.Fatal("entrypoint coverage is incomplete")
 	}
 	ids, names, counts := map[string]bool{}, map[string]string{}, map[string]int{}
@@ -75,7 +87,7 @@ func TestCompleteSourceAssessmentConservesIdentities(t *testing.T) {
 		if err = json.Unmarshal(b, &p); err != nil {
 			t.Fatal(err)
 		}
-		if p.Repo != "mattpocock/skills" || p.Commit != a.Commit {
+		if p.Repo != a.Source || p.Commit != a.Commit {
 			continue
 		}
 		for _, c := range p.Targets {

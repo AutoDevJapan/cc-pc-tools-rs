@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T12:06:43.8776873Z",
+  "observed_at": "2026-10-20T12:09:54.3860048Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "owner chose broad adoption; candidate authoring ongoing; central write held by unverified protection classification",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -216,5 +216,16 @@
     "rights_hold": 1,
     "independently_accepted": 0,
     "note": "Candidate dispositions are proposals. None counts as a new central change."
+  },
+  "docker_entrypoint_assessment": {
+    "source": "docker/skills",
+    "pinned_entrypoints": 12,
+    "full_entrypoint_text_read": 12,
+    "supporting_resources_semantic_complete": false,
+    "new_candidates_requiring_authoring": 8,
+    "integration_or_reference_candidates": 3,
+    "policy_rewrite_required": 1,
+    "authored_candidates": 0,
+    "independently_accepted": 0
   }
 }

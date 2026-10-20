@@ -1011,3 +1011,11 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 固定c3f0c5a→6dafcfeの4file+必要局所だけをレビュー3139へgpt-6-luna/effort max/通常add --spec登録。保存全文一致/dispatchable/未起動todoを確認し、登録をMust0にしない。3123受領/新設計/RED→GREEN/関連検査/未実施guest受入を3123/2737/2641 noteへ配送。
 - 証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261021/resume-001945/private-proof-fix-files.private.jsonへ原結果/実model/hash/RED-GREEN/race-vet/review specをcopy/hash保持。次は3139の原応答/実job/対応turn_context/固定head/未読を受領、Mustを直して同clean sourceのguest実受入へ進む。旧official操作を再送しない。
 - 現job/実HEAD checkpointを保存・読戻しし、todo wait2737 --on3139で待機する。Windows13/CI Gate/全CI/基盤配送は未完、原製品merge/Prdは親2641。owner入力/追加費用/APIキーAI/GPU/Discord通知不要。
+
+## 2026-10-21 job011056: 3139のMust0を受領しWindows attempt6を開始
+
+- 3139/job20261021-010247/succeeded/exit0、対応turn_context gpt-6-luna/max/thread01a15a0d-d0d2-7a52-8886-77eefc5f5b1bを照合。原応答SHADC7CFB5634881B20DA450DE0AF6653F7088877D869E4294AAAE2E4847439A68Cは同rollout最終assistant responseと改行正規化後一致。固定c3f0c5a→6dafcfe/tree56a04d9cの4file+局所5file読了、Must0/他0/指定範囲未読0/検査0。実guest受入とは区別。
+- clean77b7f99からWindows host/agent/Linux helperを各1回生成、実VCS/clean/OS一致。host inspect-executor source_clean/admission_linked、SHA FAD377A12BED1F7F288ECE46AC40D8299FD45667920882B7B6B4653772877871。6daf後は文書だけ、成功済みrace/vetは再実行しない。
+- 原source/PR/ref/head0fda/tree0bc5/workflow ba2bcc.../owner/id/private/admin/nonfork、CC1406818713/public/admin/nonforkをcanonical APIで照合。原AGENTS/CLAUDE RAM取得も既読同hash。旧attempt5終端/Windows failure/verify success/VM-runner回収/route・intent不在を確認後、同leaseのown route復元POST1回/readback、Windows118627468742のrerun POST1回→attempt6。直後GETが旧attempt5 queuedでも再送せず次GETで新attemptを確認。
+- 新Windows118741826539 queued/未割当、verify118741828209はrunner33既済success引継ぎ、PR receipt118741828626 skipped。成功verifyの再実行0。新ownedroot f8b2003d0ee8d64ba9be503dec1d58ccで同77b runtime/attempt6 request、canonical Cargo gateのwindows-jobを1回開始。再開は同rootのwrapper/windows-start/windows-exit/job-*、実source/run/route/intent/PID作成時刻を照合し、起動/rerunを再送しない。
+- 実LocalService/child token/ACL/private proof temp/原Windows13/終了proof/回収/CI Gateは未確認。旧失敗/原log/clone/原SDK/guard/manifest/073...の拒否/未回収/他担当は保持。製品source編集/merge/Prdは親2641。owner操作/新費用/APIキーAI/GPU/Discord通知なし。

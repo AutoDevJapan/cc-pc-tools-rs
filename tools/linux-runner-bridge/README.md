@@ -111,6 +111,10 @@ admission prerequisite. The history can temporarily exceed eight while a file
 is locked, but a hard 64-entry bound is checked before publishing another
 binding. Retention resumes once the lock clears. Unknown evidence and failures
 to publish a binding or an unfinished stage still fail closed.
+Unpublished empty/temporary-only session directories are reaped by the single
+writer once their directory lock clears. One locked completed session does not
+prevent reclaiming other completed sessions. GC publication/enumeration errors
+and unknown evidence remain fail-closed; only validated deletion I/O is a warning.
 
 The normal `pool` entry resumes an unfinished binding before requesting another
 registration. Container ID and the successfully read GitHub inventory must

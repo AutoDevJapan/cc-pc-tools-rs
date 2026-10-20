@@ -377,7 +377,114 @@ func (j burstJournal) save(state *burstDrainState) error {
 	return j.maintain()
 }
 
+// Only one pool/host writer is admitted. A directory with no published binding
+// or retirement and only private temporary files cannot authorize any agent.
+func (j burstJournal) cleanupUnpublished() error {
+	if err := journalDirectory(j.root); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(j.root)
+	if err != nil || len(entries) > 64 {
+		if err == nil {
+			err = errors.New("cleanup journal inventory rejected")
+		}
+		return err
+	}
+	var first error
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), "runner-") {
+			continue
+		}
+		id, err := strconv.ParseInt(strings.TrimPrefix(entry.Name(), "runner-"), 10, 64)
+		if err != nil || id <= 0 || entry.Name() != "runner-"+strconv.FormatInt(id, 10) {
+			return errors.New("unknown unpublished journal directory")
+		}
+		dir := filepath.Join(j.root, entry.Name())
+		if journalDirectory(dir) != nil {
+			return errors.New("unpublished journal directory rejected")
+		}
+		bound := false
+		for _, name := range []string{"binding.json", "retired.json"} {
+			if _, err := os.Lstat(filepath.Join(dir, name)); err == nil {
+				bound = true
+			} else if !os.IsNotExist(err) {
+				return err
+			}
+		}
+		if bound {
+			continue
+		}
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+		for _, file := range files {
+			if !file.Type().IsRegular() || !strings.HasPrefix(file.Name(), ".pending-") {
+				return errors.New("unknown unpublished journal evidence")
+			}
+		}
+		failed := false
+		for _, file := range files {
+			if err := j.removeCompleted(filepath.Join(dir, file.Name())); err != nil {
+				if first == nil {
+					first = err
+				}
+				failed = true
+				break
+			}
+		}
+		if !failed {
+			if err := j.removeCompleted(dir); err != nil && first == nil {
+				first = err
+			}
+		}
+	}
+	return first
+}
+
+func (j burstJournal) retireCompleted(e burstJournalEntry) error {
+	if err := publishJournal(filepath.Join(e.dir, "retired.json"), burstRetirement{e.binding, e.state}); err != nil {
+		return err
+	}
+	files, err := os.ReadDir(e.dir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		name := file.Name()
+		if name == "retired.json" {
+			continue
+		}
+		if !file.Type().IsRegular() || (name != "binding.json" && !journalStageName(name) && !strings.HasPrefix(name, ".pending-")) {
+			return errors.New("retention encountered unknown evidence")
+		}
+		if err := j.removeCompleted(filepath.Join(e.dir, name)); err != nil {
+			return err
+		}
+	}
+	if err := j.removeCompleted(filepath.Join(e.dir, "retired.json")); err != nil {
+		return err
+	}
+	return j.removeCompleted(e.dir)
+}
+
 func (j burstJournal) prune() error {
+	var first error
+	keepIO := func(err error) bool {
+		var retention *completedHistoryIOError
+		if errors.As(err, &retention) {
+			if first == nil {
+				first = err
+			}
+			return true
+		}
+		return false
+	}
+	if err := j.cleanupUnpublished(); err != nil && !keepIO(err) {
+		return err
+	}
 	entries, err := j.entries()
 	if err != nil {
 		return err
@@ -389,40 +496,16 @@ func (j burstJournal) prune() error {
 		}
 	}
 	for _, e := range entries {
-		if completed <= 8 && !e.retired {
+		if !e.state.ConfigCleared || (completed <= 8 && !e.retired) {
 			continue
 		}
-		if !e.state.ConfigCleared {
-			continue
-		}
-		// Publish retirement before removing any earlier stage. A crash during
-		// retention still has a complete, immutable recovery authority.
-		if err := publishJournal(filepath.Join(e.dir, "retired.json"), burstRetirement{e.binding, e.state}); err != nil {
-			return err
-		}
-		files, err := os.ReadDir(e.dir)
-		if err != nil {
-			return err
-		}
-		for _, file := range files {
-			name := file.Name()
-			if name == "retired.json" {
+		if err := j.retireCompleted(e); err != nil {
+			if keepIO(err) {
 				continue
 			}
-			if !file.Type().IsRegular() || (name != "binding.json" && !journalStageName(name) && !strings.HasPrefix(name, ".pending-")) {
-				return errors.New("retention encountered unknown evidence")
-			}
-			if err := j.removeCompleted(filepath.Join(e.dir, name)); err != nil {
-				return err
-			}
-		}
-		if err := j.removeCompleted(filepath.Join(e.dir, "retired.json")); err != nil {
-			return err
-		}
-		if err := j.removeCompleted(e.dir); err != nil {
 			return err
 		}
 		completed--
 	}
-	return nil
+	return first
 }

@@ -179,3 +179,54 @@ func TestLockedCompletedHistoryStillHasAHardRecordBound(t *testing.T) {
 		t.Fatal("released retention lock left a permanent admission failure", err)
 	}
 }
+
+func TestRetentionResumesWhenOnlyTheEmptyDirectoryWasLocked(t *testing.T) {
+	p, _ := normalProfileFor("burst-3122")
+	j := burstJournal{root: t.TempDir(), profile: p, containerID: strings.Repeat("a", 64), warn: func(error) {}}
+	locked := filepath.Join(j.root, "runner-1")
+	j.unlink = func(path string) error {
+		if path == locked {
+			return os.ErrPermission
+		}
+		return os.Remove(path)
+	}
+	for id := int64(1); id <= 9; id++ {
+		s := burstDrainState{ID: id, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true, ConfigCleared: true}
+		if err := j.save(&s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files, err := os.ReadDir(locked)
+	if err != nil || len(files) != 0 {
+		t.Fatal("directory-only failure was not exercised", err)
+	}
+	j.unlink = nil
+	if err := j.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(locked); !os.IsNotExist(err) {
+		t.Fatal("unpublished empty directory was permanently stranded")
+	}
+}
+
+func TestOneLockedCompletedRecordDoesNotPinAllLaterHistory(t *testing.T) {
+	p, _ := normalProfileFor("burst-3122")
+	j := burstJournal{root: t.TempDir(), profile: p, containerID: strings.Repeat("a", 64), warn: func(error) {}}
+	locked := filepath.Join(j.root, "runner-1") + string(os.PathSeparator)
+	j.unlink = func(path string) error {
+		if strings.HasPrefix(path, locked) {
+			return os.ErrPermission
+		}
+		return os.Remove(path)
+	}
+	for id := int64(1); id <= 14; id++ {
+		s := burstDrainState{ID: id, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true, ConfigCleared: true}
+		if err := j.save(&s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(j.root)
+	if err != nil || len(entries) > 8 {
+		t.Fatal("one locked entry made the entire history grow", err)
+	}
+}

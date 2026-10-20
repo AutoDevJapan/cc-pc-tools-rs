@@ -1,0 +1,11 @@
+STDOUT
+
+STDERR
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+────────────
+ Nextest run ID 2d1c3894-a48e-4474-82d1-198082c8f24a with nextest profile: default
+    Starting 2 tests across 3 binaries (42 tests skipped)
+        PASS [   0.018s] (1/2) cc-chrome native::tests::failed_rollback_keeps_emergency_record_for_the_next_sweep
+        PASS [   0.020s] (2/2) cc-chrome native::tests::proxy_rolls_back_unrecordable_creation_and_returns_error_instead_of_success
+────────────
+     Summary [   0.021s] 2 tests run: 2 passed, 42 skipped

@@ -1,0 +1,11 @@
+STDOUT
+
+STDERR
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3143-chrome-uuid\cc-chrome)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.52s
+────────────
+ Nextest run ID c3b0f2f5-c048-434c-a8ee-6d2ff659f38b with nextest profile: default
+    Starting 1 test across 3 binaries (43 tests skipped)
+        PASS [   0.032s] (1/1) cc-chrome native::tests::open_receipt_selects_exact_owned_record_for_phase_completion
+────────────
+     Summary [   0.033s] 1 test run: 1 passed, 43 skipped

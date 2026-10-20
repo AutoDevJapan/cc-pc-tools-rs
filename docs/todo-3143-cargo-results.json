@@ -1,0 +1,112 @@
+{
+  "todo_id": 3143,
+  "parent_todo_id": 3129,
+  "job": "20261021-012447-todo-3143",
+  "start_branch": "scheduler/todo-3143-chrome-uuid",
+  "start_head": "6d5c46e62100a212dbf223e29dc8b0f979bdf7aa",
+  "start_clean": true,
+  "checks": [
+    {
+      "phase": "red",
+      "source_sha": "8c47add0e2563eddac6f55eb005bb55435ef1b16",
+      "args": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-chrome",
+        "-E",
+        "test(open_receipt_selects_exact_owned_record_for_phase_completion)",
+        "--target-dir",
+        "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target"
+      ],
+      "target_dir": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target",
+      "started_at": "2026-10-21T01:28:46.0511757+09:00",
+      "finished_at": "2026-10-21T01:29:01.5594385+09:00",
+      "exit_code": 100,
+      "timed_out": false,
+      "create_no_window": true,
+      "shared_gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe"
+    },
+    {
+      "phase": "green",
+      "source_sha": "d2389dabc6213f835f3f02108988b0c84fd80743",
+      "args": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-chrome",
+        "-E",
+        "test(open_receipt_selects_exact_owned_record_for_phase_completion)",
+        "--target-dir",
+        "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target"
+      ],
+      "target_dir": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target",
+      "started_at": "2026-10-21T01:29:24.9256587+09:00",
+      "finished_at": "2026-10-21T01:29:29.454072+09:00",
+      "exit_code": 0,
+      "timed_out": false,
+      "create_no_window": true,
+      "shared_gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe"
+    },
+    {
+      "phase": "existing",
+      "source_sha": "d2389dabc6213f835f3f02108988b0c84fd80743",
+      "args": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-chrome",
+        "-E",
+        "test(proxy_rolls_back_unrecordable_creation_and_returns_error_instead_of_success) | test(failed_rollback_keeps_emergency_record_for_the_next_sweep)",
+        "--target-dir",
+        "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target"
+      ],
+      "target_dir": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target",
+      "started_at": "2026-10-21T01:29:47.904937+09:00",
+      "finished_at": "2026-10-21T01:29:49.1172108+09:00",
+      "exit_code": 0,
+      "timed_out": false,
+      "create_no_window": true,
+      "shared_gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe"
+    },
+    {
+      "phase": "release",
+      "source_sha": "d2389dabc6213f835f3f02108988b0c84fd80743",
+      "args": [
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "cc-chrome",
+        "--bin",
+        "owner_chrome",
+        "--target-dir",
+        "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target"
+      ],
+      "target_dir": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target",
+      "started_at": "2026-10-21T01:29:57.4008793+09:00",
+      "finished_at": "2026-10-21T01:30:11.4908848+09:00",
+      "exit_code": 0,
+      "timed_out": false,
+      "create_no_window": true,
+      "shared_gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe"
+    }
+  ],
+  "artifact": {
+    "source_sha": "d2389dabc6213f835f3f02108988b0c84fd80743",
+    "original_build_path": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-75259ac2510ddf81bcba5cf5ec8be57a\\target\\release\\owner_chrome.exe",
+    "retained_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3143-chrome-uuid\\codex-owned-e76938c1c757a795dde35c3a5744ba22\\owner_chrome.exe",
+    "sha256": "2409C01E2BAE582EE87C8615B767C97F4B53F1443AC6EF545593709C0A425AB1",
+    "bytes": 1406464,
+    "owner_id": "e76938c1c757a795dde35c3a5744ba22",
+    "deployed": false
+  },
+  "green_fixture_job_id": "receipt-job",
+  "chrome_used": false,
+  "gpu_used": false,
+  "api_key_used": false,
+  "source_changed": false
+}

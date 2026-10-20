@@ -1,0 +1,88 @@
+STDOUT
+
+STDERR
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling stable_deref_trait v1.2.1
+   Compiling litemap v0.8.3
+   Compiling writeable v0.6.4
+   Compiling utf8_iter v1.0.4
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling windows-link v0.2.1
+   Compiling serde_core v1.0.229
+   Compiling getrandom v0.4.3
+   Compiling smallvec v1.16.2
+   Compiling windows-sys v0.61.2
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling cfg-if v1.0.5
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.151
+   Compiling percent-encoding v2.3.2
+   Compiling serde v1.0.229
+   Compiling form_urlencoded v1.2.2
+   Compiling bytes v1.12.1
+   Compiling memchr v2.8.3
+   Compiling pin-project-lite v0.2.17
+   Compiling fastrand v2.5.0
+   Compiling once_cell v1.21.4
+   Compiling itoa v1.0.18
+   Compiling uuid v1.27.0
+   Compiling chrono v0.4.45
+   Compiling syn v3.0.6
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling tokio-macros v2.7.2
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling tempfile v3.27.0
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling tokio v1.53.2
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling icu_provider v2.3.1
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3143-chrome-uuid\cc-chrome)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.23s
+────────────
+ Nextest run ID a922b0e8-d273-44e3-a377-9c213d611f70 with nextest profile: default
+    Starting 1 test across 3 binaries (43 tests skipped)
+        FAIL [   0.014s] (1/1) cc-chrome native::tests::open_receipt_selects_exact_owned_record_for_phase_completion
+  stdout ───
+
+    running 1 test
+    test native::tests::open_receipt_selects_exact_owned_record_for_phase_completion ... FAILED
+
+    failures:
+
+    failures:
+        native::tests::open_receipt_selects_exact_owned_record_for_phase_completion
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 42 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'native::tests::open_receipt_selects_exact_owned_record_for_phase_completion' (56020) panicked at cc-chrome\src\native.rs:820:53:
+    open response must return the persisted record UUID
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.015s] 1 test run: 0 passed, 1 failed, 43 skipped
+        FAIL [   0.014s] (1/1) cc-chrome native::tests::open_receipt_selects_exact_owned_record_for_phase_completion
+error: test run failed

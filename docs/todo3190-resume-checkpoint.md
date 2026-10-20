@@ -2,7 +2,54 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
-## 今回の区切り
+## 2026-10-21 07:04 JSTの再開照合
+
+方向記録の実装は引き続き未着手です。PR315が未マージのため、元3190の技術再確認待ちを
+保存します。元3050の仕様への実追記、方向専用適用票、無通知進捗、質問終了GETは未実施です。
+共有コード、質問、元作業の仕様・停止・依存、稼働実行物は変更していません。
+
+- 今回の実jobは `20261021-065950-todo-3190`。再開時HEADは
+  `ad5c9670f5a41fae14b97d9541e56ac50ef5eabf`、未コミット差分なしで、originの同名ブランチと
+  一致しました。ブランチは引き続き `scheduler/todo-3190-3110` です。
+- 起動入口の `D:/CC/AGENTS.md`、このworktreeのAGENTS.md、関連Issue本文、前回の
+  再開記録を読みました。実GitHub所有者は正常なrepo APIで `AutoDevJapan` と確認しました。
+  自分のworktreeと元登録場所のguardは、それぞれ `ok=true`、`client_resource=false`、
+  `classification_unverified=false`。原保護一覧の全復旧や範囲拡大を意味しません。
+- 3181は正常ToDo一覧でdone、正常jobs statusで `succeeded` / exit 0。
+  モデルは `anthropic/claude-opus-5-5`、effortは `max`、終了は
+  `2026-10-21T05:00:13+09:00` でした。正常tailの最終回答はMust1/Suggestion2で、
+  head `577b17baed706fc8b783dca0f671f8a8d65206b1` のレビューだけの完了です。
+  最新差分の確認・マージ・配布とは扱いません。
+- PR315の正常照会はstate `OPEN`、head
+  `9bc3190f9eabfbf2341065f2a1a30f9f37bbe786`、base `main`、
+  `mergeCommit=null`、`mergedAt=null` でした。検査には待機・実行中が残っていました。
+  旧headの成功CIや3181のレビュー結果を最新headへ流用していません。
+- 元3153の正常な現在noteとhistoryを読み、3181の指摘後に修正し、さらに3196の指摘を
+  修正した追加headが上記 `9bc3190…` であるとの担当記録を確認しました。
+  現在の正式な待ち先は3205です。3205は正常metadataで `todo`、jobsは0件で、
+  最新差分の実読・合格は確認できません。3190を3153全体のdone待ちや3205だけの
+  完了待ちへ変えず、PR315の通常マージを次の実装条件として保持します。
+- 元3153の現在noteには、稼働版が別担当によりsource `981fd37` へ更新されたとの記録が
+  あります。今回は稼働実物/hashの独立照合も配布もしていません。下段の `e9f752e` 配布票は
+  過去の証拠として保持し、次回の配布には実物/source/hash/並行変更の再照合を必須にします。
+- 自分の正常jobs statusは `gpt-6.1-sol` / effort `max` / running / todo_id 3190で、
+  cwdはこのworktreeでした。今回は実turn_contextの独立照合はしていません。
+  正常 `todo list --all` の3190には今回の実jobが登録され、doingでした。
+  `cc-console todo list --id 3190` でもjobsTotal=1、schedulerPhase=runningでした。
+  前回checkpoint失敗時の「jobsが空」という条件は変わっています。
+
+今回の保存対象はこの再開記録だけです。コード変更、Red/Green、Rust/Go検査、別モデルの
+新規レビュー依頼、merge、配布、本人回答の原API再取得は行っていません。
+推測の達成率は付けず、元3190に今回の確認内容を通常メモで保存します。
+文書をcommit/pushし、現在の実job・実HEADでcheckpointを1回実行して結果を残します。
+その後 `wait-retry 3190 --after 3600` を1回登録し、次回時刻を正常readbackします。
+同じ条件を短時間に巡回する処理、子job、新しい本人質問・メンション・完了通知は作りません。
+
+次回は元3190でPR315の実head・通常マージを1回照会します。未マージなら、3153の正常な
+現在記録で変更点を確かめて同じ元番号の有限待機へ戻します。マージ済みなら、実merge commitを
+検証して最新mainをこのworktreeへ統合し、下記の実装・受入条件から再開します。
+
+## 前回（05時台）の区切り
 
 実装は未着手です。共有コード、稼働版、質問、元作業の仕様・停止・依存は変更していません。
 3181のレビュー終了を確認しましたが、結果にはMustが1件あります。PR315の通常マージは

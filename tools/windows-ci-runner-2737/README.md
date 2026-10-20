@@ -38,6 +38,15 @@ even with an unusable worker temp, and a child-process fixture confirms that
 the worker temp selection does not change the parent's proof temp. These are
 host synthetic checks, not actual LocalService/guest ACL acceptance.
 
+The first actual launch of this account separation stopped before registration.
+The generated root grant used bare `:X`, which real `icacls` rejects with exit
+87. It now uses `:(X)`: an advanced right requires parentheses. A regression
+executes that exact generated command against a public temporary directory and
+reads back the ACL, requiring traverse only (plus optional synchronize) with no
+inheritance or propagation. The earlier declaration-only check did not catch
+this CLI grammar error. Corrected guest startup and workflow acceptance remain
+pending; the pre-registration failure is preserved separately.
+
 The SYSTEM-specific variable follows [GetTempPath2's documented SystemTemp
 override and ACL requirement](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w).
 

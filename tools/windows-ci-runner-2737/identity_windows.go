@@ -74,7 +74,8 @@ func validateRunnerToken(token syscall.Token) error {
 // Only fixed guest runtime directories are writable. No inherited grant at
 // sdkRoot: private logs, downloads and service bootstrap state stay SYSTEM-only.
 func runnerAccessCommands() [][]string {
-	commands := [][]string{{sdkRoot, "/grant:r", "*" + runnerUserSID + ":X"}, {helperPath, "/grant:r", "*" + runnerUserSID + ":RX"}, {hookRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"}}
+	// X is an advanced icacls right and requires parentheses even on its own.
+	commands := [][]string{{sdkRoot, "/grant:r", "*" + runnerUserSID + ":(X)"}, {helperPath, "/grant:r", "*" + runnerUserSID + ":RX"}, {hookRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"}}
 	for _, name := range []string{"rust-1.97.1", "git", "powershell", "sccache", "vs-build-tools"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"})
 	}

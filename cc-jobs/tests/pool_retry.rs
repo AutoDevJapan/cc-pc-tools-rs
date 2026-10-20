@@ -109,6 +109,15 @@ fn retry_publication_rechecks_worker_identity_todo_owner_and_generation() {
         json!({"cancel_requested":true}),
         json!({"status":"queued"}),
         json!({"launch_key":"new"}),
+        json!({"add_dirs":["new-permission"]}),
+        json!({"network":true}),
+        json!({"mcp_profile":"full"}),
+        json!({"approval_policy":"never"}),
+        json!({"approvals_reviewer":"auto_review"}),
+        json!({"fixed_read_only_review":{"head":"changed"}}),
+        json!({"review_excluded_models":["gpt-6.1-sol"]}),
+        json!({"capacity_same_model_retry_count":2}),
+        json!({"capacity_tried_labels":["p000002"]}),
     ] {
         let mut fresh = original.clone();
         fresh
@@ -196,6 +205,13 @@ fn stale_terminal_record_keeps_new_scope_and_never_finishes_a_new_worker() {
     changed["codex_pid_created"] = json!(5);
     assert_eq!(
         stale_completion(&source, &changed, "now")["status"],
+        "running"
+    );
+    let mut legacy = source.clone();
+    legacy["codex_pid_created"] = Value::Null;
+    changed["codex_pid_created"] = Value::Null;
+    assert_eq!(
+        stale_completion(&legacy, &changed, "now")["status"],
         "running"
     );
 }

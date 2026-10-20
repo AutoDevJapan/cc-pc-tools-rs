@@ -39,7 +39,10 @@ pub fn stale_completion(source: &Value, fresh: &Value, now: &str) -> Value {
         "started_at":source["started_at"],"child_birth":source["codex_pid_created"]});
     if s(fresh, "status") == "running"
         && fresh["cancel_requested"] != true
+        && source["codex_pid"].as_u64().is_some_and(|pid| pid > 0)
+        && source["codex_pid_created"].as_u64().is_some()
         && [
+            "id",
             "pid",
             "pid_created",
             "codex_pid",
@@ -119,11 +122,29 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "started_at",
             "attempt_events_offset",
             "model",
+            "requested_model",
+            "model_explicit",
             "effort",
             "cwd",
             "sandbox",
             "scope_source",
+            "add_dirs",
+            "network",
+            "mcp_profile",
+            "approval_policy",
+            "approvals_reviewer",
+            "fixed_read_only_review",
+            "fixed_review_requalification",
+            "review_source_jobs",
+            "review_excluded_models",
             "prompt",
+            "prompt_source",
+            "task_type",
+            "capacity_account_selector",
+            "capacity_same_model_retry_count",
+            "capacity_retry_count",
+            "capacity_tried_accounts",
+            "capacity_tried_labels",
             "todo_dependency_generation",
         ]
         .iter()

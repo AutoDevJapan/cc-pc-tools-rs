@@ -40,5 +40,14 @@
     "retained_staged_bytes": 3516,
     "changes": 0,
     "keep_as_historical_evidence": true
+  },
+  "superseded_by": {
+    "targets": [
+      "setup-pre-commit",
+      "grilling"
+    ],
+    "manifest": "skills-3080-refinement3180-manifest.json",
+    "evidence": "skills-3080-refinement3180-evidence.json",
+    "note": "Historical evidence remains valid atitsoriginalhead;currentadoption pointers are authoritative"
   }
 }

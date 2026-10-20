@@ -83,3 +83,13 @@ Suggestion1-4とNit1-2を、初回失敗backup情報、仕様の旧22/未配置�
 Tencentのstubを元にTeamAI固有の操作範囲・経路を選ぶ1候補を作った。4workflowを5つに増やしたとは数えない。元scopeのcore/setup/share/wiki本文の固定URL/SHAを変更点に結び、未読support25とrecall agentを除く。rootMITの全段落をbyte保存した。手順は中央保存先・本人回答・無料通常操作を守り、env/AI API/モデル切替/自動publish/全agenthook配布を許可しない。
 新候補1/5fileはメモリ内構造・参照・hash検査PASS、通常の個別readonly preflightでteamai不存在/物理祖先/receipt先を確認。まだwriteは提出していない。candidate検査は保存したrequested(tencent)とAPIfull_name(Tencent)が異なるためRed。両記録identityのどちらかと同じ正確なtreeを要求する限定修正後Green、vett成功。新しいrepoを推測で許可する変更ではない。
 モデルmax/Fastの修復は既存3081が担当中（3177/3179も完了、最新配備準備）。重複修復やglobal設定変更はせず、このjobの実観測を別に保存する。残る全件と647拒否の扱いは変えない。
+
+## 2026-10-21: 3193受領とPR284統合
+3193原応答を元依頼のexact1file通常審査で受領。固定4b253db、最新補正3の実15とbackup15/journal・TeamAI候補5とTencent7本文/notice・14ファイル差分を読了してMust0。補正3はそのまま受入。起動metadata3は更新後の説明で1件ずつ、原文/noticeは不変。実CLI/モデルturn/context予算は検査していない。
+S1-3をTeamAI配置前に反映し、近い負例・評価だけで使わない説明・中央へ解決されるjunction先の衝突確認・contribute直接pushとPR経路の区別・本人の端末env set待ちを作らず独立継続する条件・wikiの日本語/実担当/通常技術検査を明記した。v2 bundle SHAabad5d1526673310d0249f76208a2ed7cc9dd51dcf7b7041769e6b8c76a27991。primary原文/noticeはv1とbyte同一。memory1検査とcatalog-count1成功、中央write未実施。
+S4は実25/125検査manifestのSHAと版/範囲、S5は歴史Kepano/owned3証拠の対象別superseded_byを追記。古いmigrateのcosmetic reasonはliveのまま、今回補正3の前reasonは前版SHA/backupに保持される。動作に影響しない既存3本文の空白だけの再writeはしない。『まだ反映前』は356b8c0時点、4b253dbで反映済み。vettはvetの意味だった。
+4b253dbに対する全必要CI成功（documentation/CodeQL4言語と集計、Bugbot neutral）を再確認し、review3193 Must0とexactheadでPR284を通常mergeした。merge commit2d97926a185011e0139cce7033ef6f369e58c264、2026-10-20T21:30:20Z。mainへの25件の有限成果統合で、元3080/Issue283や73220候補の完了ではない。source branchは保持し、続きの変更を同じ作業場所/ブランチで追う。
+
+## TeamAIの実配置と次の資料
+TeamAI1件はv2固定データと元a・3193結果を対応させ、正規の新規1件write審査へ別提出して許可された。原文/Tencent MIT全文を保全し、5file読戻し成功。実3048検査、fresh Codexmetadata323中1found/enabled/説明一致/parse0/同名別path0、現行26/130file検査PASS。CLI・MCP・hook・env・モデルを導入/実行した意味ではない。導入26/統合0/除外0/残73194=72119+428+647。他4workflowの別occurrenceやsupportを同時採用へ数えない。最新1件の配置後限定確認は別に行う。
+次のobra固定15入口のうち3本文(brainstorming/diagnosing-superpowers/dispatching-parallel-agents)とrootMITを全文/SHA確認した。目的・根拠行・独立性の有用な点、全創作強制/通常操作再承認/7analyst固定/全suite強制等の採らない点を部分評価へ保存。実統合/配置/除外は0、support未読。残12は未読として保持し、次はexecuting-plansから続ける。3を代表に打切る判断ではない。

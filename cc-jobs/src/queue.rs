@@ -885,8 +885,8 @@ impl Context {
             .get(jid)
             .is_some_and(|reason| *reason == job["queue_wait_reason"])
     }
-    /// Lock-free pre-check for a running job's yield attempt. Without an index
-    /// the gated path decides.
+    /// Lock-free pre-check for a running job's yield attempt. Unknown history
+    /// defers a new attempt; an already journaled handoff still needs recovery.
     pub(crate) fn yield_may_be_due(&self, job: &Value) -> bool {
         self.tool_handoff_pending(job)
             || (!self.yield_backoff_active(job)

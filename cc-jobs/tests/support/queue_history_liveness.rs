@@ -256,7 +256,12 @@ fn context_limit_defers_an_unknown_index_instead_of_treating_it_as_no_descendant
         parent["status"] = json!("running");
         parent["thread_id"] = json!("01a15769-07cb-71c2-9a62-cfc92e712233");
         parent["context_pct_exact"] = json!(99.);
+        parent["started_at"] = json!(f.ctx.rt.now());
+        parent["codex_pid"] = json!(444);
+        parent["codex_pid_created"] = json!(44);
         f.ctx.save(&parent).unwrap();
+        let events = ["item.started", "item.completed"].map(|kind| json!({"type":kind,"_ts":parent["started_at"],"item":{"id":"completed-command","type":"command_execution"}}).to_string()+"\n").concat();
+        fs::write(f.ctx.job_dir("active").join("events.jsonl"), events).unwrap();
         let path = f.ctx.jobs.join(".queue-index.json");
         let complete = fs::read(&path).unwrap();
         assert!(

@@ -124,11 +124,7 @@ fn mcp_same_job_has_one_primary_assignment_without_removing_tasks() {
             1
         );
         assert_eq!(
-            workers
-                .iter()
-                .filter(|w| w["id"] == "todo-2")
-                .next()
-                .unwrap()["progress"],
+            workers.iter().find(|w| w["id"] == "todo-2").unwrap()["progress"],
             30
         );
     }
@@ -165,4 +161,55 @@ fn mcp_no_observed_job_does_not_claim_native_sessions_stopped() {
     assert_eq!(contract["activityState"], "unobserved");
     assert!(contract["progress"].is_null());
     assert_eq!(contract["observationScope"], "cc_jobs");
+}
+
+#[test]
+fn mcp_owner_declared_ci_todos_remain_alpha_in_the_maintenance_repository() {
+    for masked in [true, false] {
+        let value = board(
+            json!([
+                {"id":2641,"project":"cc-pc-tools-rs","status":"todo"},
+                {"id":2737,"project":"cc-pc-tools-rs","status":"doing"},
+                {"id":3093,"project":"cc-pc-tools-rs","status":"done","updated_at":"1970-01-01T00:16:40Z"}
+            ]),
+            vec![],
+            masked,
+        );
+        assert_eq!(
+            product(&value, "GoDD MCP α")["workers"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
+        assert!(product(&value, "GoDD MCP")["workers"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        for row in product(&value, "GoDD MCP α")["workers"].as_array().unwrap() {
+            assert_eq!(row["productIdentity"]["state"], "owner_declared");
+            assert_eq!(row["codeProduct"], "PCの道具");
+        }
+    }
+}
+
+#[test]
+fn mcp_metadata_panel_uses_task_identity_and_one_job_without_borrowing_progress() {
+    let value = board(
+        json!([
+            {"id":1,"project":"tools","product_identity":identity(false),"status":"doing","jobs":["one"],"progress":20},
+            {"id":2,"project":"GoDD-MCP-Alpha","status":"todo","progress":80}
+        ]),
+        vec![json!({"id":"one","todo_id":1,"status":"running"})],
+        true,
+    );
+    let panel = metadata_display_snapshot(&value, "jobs").unwrap();
+    assert_eq!(panel["jobs"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        panel["jobs"][0]["productIdentity"]["productId"],
+        "godd-mcp-contract"
+    );
+    assert_eq!(panel["jobs"][0]["progress"], 20);
+    assert_eq!(panel["jobs"][0]["codeProduct"], "PCの道具");
+    assert!(product(&value, "GoDD MCP")["progress"].is_null());
 }

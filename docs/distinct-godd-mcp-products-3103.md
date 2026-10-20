@@ -27,6 +27,21 @@ UI、CSS、配置、顧客側のソース・環境・PR・保護設定は変更�
 GoDD MCPをαの省略形として扱わない。GoDD/MCPの部分一致や自由文から帰属させない。
 他製品の既存名、部署、順位は保つ。
 
+本人が対象を指定した2641/2737/3093は、登録プロジェクトが
+`cc-pc-tools-rs`の場合に限りαの事業上の対象へ結ぶ。この有限の対応は
+本人方針の再現であり、題名・自由文・別のToDoへ推定を広げない。
+明示した識別に矛盾がある場合は、この旧記録の対応でも救済しない。
+APIは作業の`productIdentity`と`codeProduct`を別々に返す。
+名前だけの旧記録は`name_only`、上記の本人指定は`owner_declared`とし、
+所有未確認の呼出しに`verified`を付けない。カタログ自体の所有IDは照合済みのpinであり、
+各作業の現在の所有照合や操作権限を付与するものではない。
+
+`/api/operations`と保護中の`/api/agent/display/{todo,jobs,handoff}`は同じ帰属を使う。
+製品の進捗率はnullを保持する。各ToDoの記録済み進捗はそのToDoだけへ返し、
+他方のCI結果から製品全体の進捗を合成しない。
+`activityState=recorded_active`はCCジョブ記録の観測、`unobserved`は担当の未確認を表す。
+実プロセスや最近の処理の確認は既存workforceの取得範囲に従う。
+
 ## 受入条件
 
 1. 2つのrepository IDは別の固定製品ID・部署・順位を返す。共有のコード作業場所や
@@ -53,3 +68,13 @@ APIの帰属は名前と作業場所が中心で、同じジョブを複数ToDo�
 回帰検査を先に保存し、Cargo資源を割り当てた有限の検査ToDoでRedを実測してから
 実装する。変更したクレートと利用側を選び、Green、doctest、別モデルレビュー、
 CI、merge、配布、実API読戻しを別々に記録する。未実行を成功と書かない。
+
+### Redの実測
+
+ToDo3108が固定HEAD `21e4ae9ea92f468b45dd975da93bdf08f519f4ea`で実施。
+`cc-job-policy --test product_identity`の1件と、`localai-web-rs --lib`の
+`product_identity_tests::mcp_`6件はコンパイル成功後に全7件が失敗した。
+両nextestの終了コードは100。全文ログと結果JSONは同担当の
+`evidence/todo-3108-red/`、記録コミットは`49720ff`に保持する。
+3件は製品欠落で後段へ未到達であり、通常APIへの切替も未到達だった。
+Greenでは全assertionと両経路の到達まで確認する。

@@ -3,6 +3,8 @@
 use chrono::DateTime;
 #[path = "operations_catalog.rs"]
 mod catalog;
+#[path = "operations_identity.rs"]
+mod attribution;
 #[path = "commander_health.rs"]
 mod commander_health;
 #[path = "waiting_state.rs"]
@@ -224,7 +226,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     }
     let items:Vec<_>=rows.iter().filter_map(|(product,worker)| {
         let id=worker["id"].as_str()?.strip_prefix("todo-")?.parse::<u64>().ok()?;
-        Some(json!({"id":id,"project":product["name"],"title":worker["task"],"status":worker["recordedStatus"],
+        Some(json!({"id":id,"project":product["name"],"productIdentity":worker["productIdentity"],"codeProduct":worker["codeProduct"],"title":worker["task"],"status":worker["recordedStatus"],
             "progress":worker["progress"],"updated_at":worker["updatedAt"],"note":"作業本文は保護設定の復旧まで非表示です。",
             "summary":worker["summary"],"currentStage":worker["currentStage"],
             "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
@@ -234,7 +236,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     let jobs:Vec<_>=rows.iter().filter_map(|(product,worker)| {
         let id=worker["primaryJob"].as_str()?;
         if !used.insert(id.to_owned()) { return None; }
-        Some(json!({"id":id,"project":product["name"],"task_title":format!("{} · {}",text(product,"name"),text(worker,"task")),"status":worker["jobStatus"],
+        Some(json!({"id":id,"project":product["name"],"productIdentity":worker["productIdentity"],"codeProduct":worker["codeProduct"],"task_title":format!("{} · {}",text(product,"name"),text(worker,"task")),"status":worker["jobStatus"],
             "summary":worker["summary"],"currentStage":worker["currentStage"],"progress":worker["progress"],
             "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
             "updated_at":worker["updatedAt"],"started_at":null,"actionsAvailable":false,"contentAvailable":false}))
@@ -440,6 +442,9 @@ fn project_name(names: &cc_ask::task_title::Names, project: &str) -> String {
 }
 #[cfg(test)]
 fn department(project: &str) -> usize {
+    if let Some(product) = cc_scheduler::product_identity::by_name(project) {
+        return product.department;
+    }
     let p = project.to_lowercase();
     if project == "クライアント案件"
         || matches!(p.as_str(), "arps" | "socialpilot" | "social pilot")
@@ -499,6 +504,8 @@ fn owner_department_order_and_explicit_projects_match_admission() {
         ("SocialPilot", 4),
         ("localai-web-rs", 5),
         ("Skills", 5),
+        ("GoDD-MCP", 4),
+        ("GoDD MCP α", 1),
     ] {
         assert_eq!(department(p), d);
         assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)), d);
@@ -543,8 +550,8 @@ fn departments(tree: Tree) -> Vec<Value> {
                 .iter()
                 .filter(|p| p.department == i)
                 .map(|p| {
-                    json!({"id":safe_id("product",p.name),"name":p.name,
-                    "workers":tree.get(&(i,p.name.to_owned())).cloned().unwrap_or_default()})
+                    attribution::catalogue(p, json!({"id":safe_id("product",p.name),"name":p.name,
+                    "workers":tree.get(&(i,p.name.to_owned())).cloned().unwrap_or_default()}))
                 })
                 .collect();
             json!({"id":format!("department-{i}"),"name":name,"color":color,"products":products})
@@ -778,6 +785,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
+    let assignments = attribution::assignments(
+        todo.as_ref().and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), js, &policy);
     let public_product = |raw: &str| {
         catalog::find(raw).or_else(|| {
             todo.as_ref().and_then(|db| {
@@ -874,7 +883,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             if done && !fresh(todo_stamp(item), now, RECENT_MS) {
                 continue;
             }
-            let associated: Vec<_> = js.iter().filter(|job| linked(item, job)).collect();
+            let associated: Vec<_> = js.iter().filter(|job| assignments.get(text(job,"id")) == Some(&id)).collect();
             for job in &associated {
                 used.insert(text(job, "id").to_owned());
             }
@@ -903,6 +912,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             if raw_project.eq_ignore_ascii_case("owner") {
                 continue;
             }
+            let display_project = cc_scheduler::product_identity::display_project(item, &policy);
+            let label = attribution::target(item, &policy, project_label(display_project));
             let kinds = registered_work_kinds(&[item]);
             let task = if kinds.is_empty() {
                 "作業の種類を確認中".to_owned()
@@ -934,9 +945,10 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             };
             add(
                 &mut tree,
-                public_product(raw_project).map_or(usize::MAX, |p| p.department),
-                project_label(raw_project),
+                catalog::find(&label).map_or(usize::MAX, |p| p.department),
+                label,
                 json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
+                    "productIdentity":attribution::resolve(item,&policy).metadata(),"codeProduct":attribution::code_product(item),
                     "priority":ranks.get(&id),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
@@ -959,11 +971,13 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         if raw_project.eq_ignore_ascii_case("owner") {
             continue;
         }
+        let label = attribution::target(job, &policy, project_label(&raw_project));
         add(
             &mut tree,
-            public_product(&raw_project).map_or(usize::MAX, |p| p.department),
-            project_label(&raw_project),
+            catalog::find(&label).map_or(usize::MAX, |p| p.department),
+            label,
             json!({"id":safe_id("job",text(job,"id")),"name":"名称を確認中の担当","task":"作業内容の表示を保留中",
+                "productIdentity":attribution::resolve(job,&policy).metadata(),"codeProduct":attribution::code_product(job),
                 "primaryJob":safe_id("job",text(job,"id")),"jobStatus":text(job,"status"),
                 "status":if failed(job) {"attention"} else if text(job,"status")=="queued" {"waiting"} else {"working"},"progress":null,
                 "updatedAt":stamp(&job["finished_at"]).or_else(||stamp(&job["started_at"])).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
@@ -1193,13 +1207,15 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         },
     ));
     let mut privacy = crate::console_ui::PrivacyIndex::new(&names, db.unwrap_or(&empty_db));
+    let assignments = attribution::assignments(
+        db.and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), js, &policy);
     if let Some(items) = db.and_then(|v| v["items"].as_array()) {
         for item in items {
             let is_done = text(item, "status") == "done";
             if is_done && !fresh(todo_stamp(item), now, RECENT_MS) {
                 continue;
             }
-            let associated: Vec<_> = js.iter().filter(|j| linked(item, j)).collect();
+            let associated: Vec<_> = js.iter().filter(|j| item["id"].as_u64().is_some_and(|id| assignments.get(text(j,"id"))==Some(&id))).collect();
             for j in &associated {
                 used.insert(text(j, "id").to_owned());
             }
@@ -1210,7 +1226,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 .or_else(|| item["owner_project"].as_str())
                 .unwrap_or(raw_project);
             let project = project_name(&names, display_project);
-            let client = project == "クライアント案件"
+            let client = attribution::resolve(item,&policy) == cc_scheduler::product_identity::Resolution::Unknown
+                || project == "クライアント案件"
                 || cc_scheduler::priority::item_rank(item, &policy) == 10
                 || names.project(text(item, "cwd")) == "クライアント案件"
                 || names.project(text(item, "spec")) == "クライアント案件"
@@ -1226,6 +1243,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             } else {
                 project
             };
+            let project = attribution::target(item, &policy, project);
             let current = associated.iter().find(|j| active(j));
             let status = if is_done {
                 "done"
@@ -1336,6 +1354,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 _ => "未着手です。",
             };
             let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "productIdentity":attribution::resolve(item,&policy).metadata(),"codeProduct":attribution::code_product(item),
                 "recordedStatus":item["status"],"priority":cc_scheduler::priority::item_rank(item,&policy),"waitingKind":wait_kind,
                 "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
@@ -1378,8 +1397,10 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         }
         let inferred = infer_project(j, db);
         let project = project_name(&names, &inferred);
-        let client = project == "クライアント案件"
+        let client = attribution::resolve(j,&policy) == cc_scheduler::product_identity::Resolution::Unknown
+            || project == "クライアント案件"
             || names.project(text(j, "cwd")) == "クライアント案件"
+            || cc_scheduler::priority::item_rank(j, &policy) == 10
             || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
         let project = if client {
             catalog::find(&inferred)
@@ -1388,6 +1409,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         } else {
             project
         };
+        let project = attribution::target(j, &policy, project);
         let raw_title = if text(j, "task_title").is_empty() {
             text(j, "name")
         } else {
@@ -1406,6 +1428,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             "idle"
         };
         let mut worker = json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "productIdentity":attribution::resolve(j,&policy).metadata(),"codeProduct":attribution::code_product(j),
+                "primaryJob":safe_id("job",text(j,"id")),"jobStatus":j["status"],
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
                 "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});
         if !client {
@@ -2027,7 +2051,7 @@ mod tests {
                 .iter()
                 .map(|p| p["name"].as_str().unwrap())
                 .collect::<Vec<_>>(),
-            ["YCC-HP", "ARPS"]
+            ["YCC-HP", "ARPS", "GoDD MCP"]
         );
         let rosetta = list("GoDD事業部")
             .into_iter()

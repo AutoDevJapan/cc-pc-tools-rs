@@ -154,6 +154,11 @@ pub const PRODUCTS: &[Product] = &[
         department: 4,
         aliases: &[],
     },
+    Product {
+        name: "GoDD MCP",
+        department: 4,
+        aliases: &["GoDD-MCP"],
+    },
 ];
 
 fn key(name: &str) -> String {
@@ -203,7 +208,7 @@ mod tests {
 
     #[test]
     fn owner_catalogue_is_exact_and_aliases_share_membership() {
-        assert_eq!(PRODUCTS.len(), 29);
+        assert_eq!(PRODUCTS.len(), 30);
         assert_eq!(find("GoDD-MCP-Alpha").unwrap().name, "GoDD MCP α");
         assert_eq!(find("godd-mcp-α").unwrap().name, "GoDD MCP α");
         assert_eq!(find("GoDD-Rosseta").unwrap().name, "GoDD Rosetta");

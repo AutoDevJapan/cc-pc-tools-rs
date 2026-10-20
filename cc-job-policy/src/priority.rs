@@ -4,6 +4,12 @@ use std::collections::BTreeMap;
 
 pub const DEFAULT: u32 = 100;
 pub fn project_rank(project: &str) -> u32 {
+    if let Some(product) = crate::product_identity::by_name(project) {
+        return product.rank;
+    }
+    if crate::product_identity::mcp_family(project) {
+        return DEFAULT;
+    }
     let p = project.to_lowercase();
     let normalized: String = p
         .replace('α', "alpha")
@@ -88,6 +94,13 @@ fn rank(value: &Value) -> Option<u32> {
         .filter(|n| matches!(*n, 10 | 20 | 30 | 40 | 50 | 60..=67 | 100))
 }
 pub fn item_rank(item: &Value, policy: &Value) -> u32 {
+    let identity = crate::product_identity::resolve(item, policy);
+    if let Some(product) = identity.product() {
+        return product.rank;
+    }
+    if identity == crate::product_identity::Resolution::Unknown {
+        return DEFAULT;
+    }
     let id = item["id"]
         .as_u64()
         .map(|n| n.to_string())
@@ -182,11 +195,29 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
         .iter()
         .filter_map(|j| {
             j["id"].as_str().map(|id| {
+                let primary = db["items"].as_array().into_iter().flatten().find(|i| {
+                    j["todo_id"]
+                        .as_u64()
+                        .is_some_and(|id| i["id"].as_u64() == Some(id))
+                });
+                let mcp = crate::product_identity::resolve(j, policy)
+                    != crate::product_identity::Resolution::Other
+                    || primary.is_some_and(|i| {
+                        crate::product_identity::resolve(i, policy)
+                            != crate::product_identity::Resolution::Other
+                    });
                 let owned = db["items"]
                     .as_array()
                     .into_iter()
                     .flatten()
                     .filter(|i| linked(i, j))
+                    .filter(|i| !mcp || primary.is_none() || i["id"] == j["todo_id"])
+                    .filter(|i| {
+                        crate::product_identity::compatible(
+                            crate::product_identity::resolve(i, policy),
+                            crate::product_identity::resolve(j, policy),
+                        )
+                    })
                     .filter_map(|i| i["id"].as_u64().and_then(|id| todos.get(&id).copied()))
                     .min();
                 (id.to_owned(), owned.unwrap_or_else(|| item_rank(j, policy)))

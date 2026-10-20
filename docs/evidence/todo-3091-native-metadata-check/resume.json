@@ -1,21 +1,21 @@
 {
   "todo": 3091,
   "job": "20261020-193448-todo-3091",
-  "status": "finite check complete; compile blockers returned",
+  "status": "finite check complete with compiler blockers; no automatic Cargo rerun",
   "completed": [
-    "fixed Red result",
-    "fixed Green selected results",
+    "exact Red compile result",
+    "exact Green compile results",
     "examples compilation",
-    "full raw logs and metadata",
-    "owned target quarantined"
+    "full logs and checksum verification",
+    "owned artifacts quarantined",
+    "result note saved at earlier evidence commit"
   ],
-  "remaining": [
-    "commit evidence",
-    "own note",
-    "final checkpoint"
-  ],
+  "remaining_test_steps": [],
+  "finalization_receipt": "todo3091-finalization.private.json",
+  "next": "finish recording current evidence HEAD in own note and scheduler checkpoint",
   "red": "0e48665f2aabb5c6d28c7cc13fbd4f9ad80a56d0",
   "green": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
   "source_changes_allowed": false,
-  "automatic_rerun_required": false
+  "automatic_rerun_required": false,
+  "selection_warning": "CLI defaults filter did not match; not executed or claimed passing"
 }

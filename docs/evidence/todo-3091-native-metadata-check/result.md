@@ -9,6 +9,8 @@ ToDo3091 / 元ToDo3081 / Issue277 の有限な固定版検査を終了した。G
 | Green: cc-jobs parity の指定3群と実process容量再試行E2E | 同上 | 101 | 同じfixtureのコンパイルで停止。テスト開始0件 |
 | Green: cargo check --locked -p cc-jobs --examples | 同上 | 0 | コンパイル成功。exampleは実行していない |
 
+選択式の訂正: parityの実行引数に含めた test(job_cli_defaults::) は、実際の関数 job_cli_defaults_preserve_each_explicit_model_and_effort_independently に一致しない。CLI既定値の検査は選択誤りでも未実行であり、確認済みとして扱わない。他の指定群とE2Eもコンパイルで開始前に停止した。修正後の新しい固定版で使う選択式は test(job_cli_defaults)。生の実行引数とログは変更していない。今回は同じ壊れたfixtureでの再コンパイルを追加していない。
+
 コンパイルの原因は cc-jobs/src/bin/fixture.rs:64:57 の json! 内で、配列値の直後に .map が続いていること。コンパイラーの診断は「no rules expected dot」。対象は cc_jobs_fixture バイナリーで、両コミットの当該ファイルのGit blobは a3829e815f14e319d797b8b77e4be117983b1fed と同じだった。
 
 Redの期待は、テストを実行して別枠を起動したとき、native metadataの指定がないため catalog_model がnullとなることだった。実際はコンパイルで停止したため、その期待を確認できていない。5/15/30秒の保存待機と120秒の条件期限も実行していない。テスト失敗名・成功名はいずれも無い。ビルドの失敗をテストの失敗数に置き換えていない。

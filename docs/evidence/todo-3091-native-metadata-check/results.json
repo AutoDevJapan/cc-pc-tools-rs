@@ -162,5 +162,15 @@
     "create_no_window": true
   },
   "prior_results": "3083 and 3087 are earlier source results only and were not relabeled as this candidate passing",
-  "independent_model_review": false
+  "independent_model_review": false,
+  "selection_warning": {
+    "run": "07-green-parity-selected",
+    "supplied_filter": "test(job_cli_defaults::)",
+    "actual_function": "job_cli_defaults_preserve_each_explicit_model_and_effort_independently",
+    "matches": false,
+    "required_filter_on_next_fixed_source": "test(job_cli_defaults)",
+    "test_executed": false,
+    "compile_result_unaffected": true,
+    "rerun_with_identical_broken_fixture": false
+  }
 }

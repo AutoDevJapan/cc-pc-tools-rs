@@ -2,10 +2,7 @@
 use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex, RwLock,
-    },
+    sync::{Arc, Mutex, RwLock},
 };
 #[path = "resource_sources.rs"]
 mod sources;
@@ -424,24 +421,55 @@ pub struct Resources {
     docker: Arc<DockerCache>,
 }
 struct DockerCache {
-    value: Mutex<Value>,
-    busy: AtomicBool,
+    state: Mutex<DockerState>,
+}
+struct DockerState {
+    value: Value,
+    busy: bool,
+    attempted_at: Option<u64>,
 }
 impl Default for DockerCache {
     fn default() -> Self {
         Self {
-            value: Mutex::new(
-                json!({"state":"collecting","sampledAt":null,"attemptedAt":null,
-            "currentAvailable":false,"containers":[],"layer":"inside-vm","addToHost":false}),
-            ),
-            busy: AtomicBool::new(false),
+            state: Mutex::new(DockerState {
+                value: json!({"state":"collecting","sampledAt":null,"attemptedAt":null,
+                "currentAvailable":false,"containers":[],"layer":"inside-vm","addToHost":false}),
+                busy: false,
+                attempted_at: None,
+            }),
         }
     }
 }
-struct DockerFlight(Arc<DockerCache>);
+struct DockerFlight {
+    cache: Arc<DockerCache>,
+    attempted_at: u64,
+    completed: bool,
+}
+impl DockerFlight {
+    fn publish(&mut self, value: Value) {
+        self.cache
+            .state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .value = value;
+        self.completed = true;
+    }
+}
 impl Drop for DockerFlight {
     fn drop(&mut self) {
-        self.0.busy.store(false, Ordering::Release);
+        let mut state = self.cache.state.lock().unwrap_or_else(|e| e.into_inner());
+        if !self.completed {
+            // Keep the last data/rows, but never certify a failed acquisition as current.
+            state.value["state"] = json!("unavailable");
+            state.value["attemptedAt"] = json!(self.attempted_at);
+            state.value["currentAvailable"] = json!(false);
+            state.value["failureCode"] = json!(if std::thread::panicking() {
+                "collector_panicked"
+            } else {
+                "worker_unavailable"
+            });
+        }
+        state.busy = false;
     }
 }
 impl Default for Resources {
@@ -470,8 +498,7 @@ impl Resources {
         if !self.enabled {
             return;
         }
-        let result = sources::native_sample();
-        let value = match result {
+        let value = match sources::native_sample() {
             Ok(sample) => self
                 .history
                 .lock()
@@ -495,41 +522,38 @@ impl Resources {
         now: u64,
         acquire: impl FnOnce(&Value, u64) -> Value + Send + 'static,
     ) -> Option<std::thread::JoinHandle<()>> {
-        let previous = self
-            .docker
-            .value
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone();
-        if previous["attemptedAt"]
-            .as_u64()
-            .is_none_or(|at| at > now || now - at >= 60_000)
-            && self
-                .docker
-                .busy
-                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-                .is_ok()
+        let (mut flight, previous) = self.reserve_docker(now)?;
+        // A failed spawn drops its closure/flight. No later error writer can erase
+        // a newer reservation. Publication and release have the same single owner.
+        std::thread::Builder::new()
+            .name("resource-docker".into())
+            .spawn(move || {
+                let next = acquire(&previous, now);
+                flight.publish(next);
+            })
+            .ok()
+    }
+    fn reserve_docker(&self, now: u64) -> Option<(DockerFlight, Value)> {
+        let mut state = self.docker.state.lock().unwrap_or_else(|e| e.into_inner());
+        if state.busy
+            || state
+                .attempted_at
+                .is_some_and(|at| at <= now && now - at < 60_000)
         {
-            let cache = self.docker.clone();
-            let flight = DockerFlight(cache.clone());
-            // One bounded finite worker, never a new resident or an HTTP-triggered scan.
-            let worker = std::thread::Builder::new()
-                .name("resource-docker".into())
-                .spawn(move || {
-                    let _flight = flight;
-                    let next = acquire(&previous, now);
-                    *cache.value.lock().unwrap_or_else(|e| e.into_inner()) = next;
-                });
-            match worker {
-                Ok(worker) => return Some(worker),
-                Err(_) => {
-                    *self.docker.value.lock().unwrap_or_else(|e| e.into_inner()) = json!({"state":"unavailable","attemptedAt":now,
-                    "sampledAt":null,"currentAvailable":false,"failureCode":"worker_unavailable","containers":[]});
-                    self.docker.busy.store(false, Ordering::Release);
-                }
-            }
+            return None;
         }
-        None
+        state.busy = true;
+        state.attempted_at = Some(now);
+        state.value["attemptedAt"] = json!(now);
+        let previous = state.value.clone();
+        Some((
+            DockerFlight {
+                cache: self.docker.clone(),
+                attempted_at: now,
+                completed: false,
+            },
+            previous,
+        ))
     }
     pub fn snapshot(&self) -> Value {
         self.snapshot_at(sources::now_ms())
@@ -538,9 +562,10 @@ impl Resources {
         let mut value = self.value.read().unwrap_or_else(|e| e.into_inner()).clone();
         value["docker"] = self
             .docker
-            .value
+            .state
             .lock()
             .unwrap_or_else(|e| e.into_inner())
+            .value
             .clone();
         expire(&mut value, now);
         sources::expire_docker(&mut value["docker"], now);
@@ -583,21 +608,64 @@ mod tests {
         assert_eq!(resources.snapshot()["docker"]["containers"], json!([]));
     }
     #[test]
-    fn collector_panic_releases_the_flight_and_allows_the_next_collection() {
+    fn collector_panic_releases_the_flight_and_allows_the_next_collection_after_cooldown() {
         let resources = Resources::default();
         let first = resources
             .refresh_docker_with(100, |_, _| panic!("synthetic collector failure"))
             .unwrap();
         assert!(first.join().is_err());
-        assert!(!resources.docker.busy.load(Ordering::Acquire));
+        assert!(!resources.docker.state.lock().unwrap().busy);
+        let failed = resources.snapshot_at(101);
+        assert_eq!(failed["docker"]["state"], "unavailable");
+        assert_eq!(failed["docker"]["failureCode"], "collector_panicked");
+        assert_eq!(failed["docker"]["attemptedAt"], 100);
+        assert!(resources
+            .refresh_docker_with(101, |_, _| panic!("retry too soon"))
+            .is_none());
         let next = resources
-            .refresh_docker_with(101, |_, now| {
-                json!({"state":"ready","sampledAt":now,"attemptedAt":now,
-            "currentAvailable":true,"containers":[]})
+            .refresh_docker_with(60_100, |_, now| {
+                json!({"state":"ready","sampledAt":now,
+            "attemptedAt":now,"currentAvailable":true,"containers":[]})
             })
             .expect("collector must be restartable");
         next.join().unwrap();
-        assert_eq!(resources.snapshot_at(101)["docker"]["state"], "ready");
+        assert_eq!(resources.snapshot_at(60_100)["docker"]["state"], "ready");
+    }
+    #[test]
+    fn dropped_unstarted_flight_releases_once_and_keeps_failure_cooldown() {
+        let resources = Resources::default();
+        let (flight, _) = resources.reserve_docker(100).unwrap();
+        assert!(resources.reserve_docker(100).is_none());
+        drop(flight);
+        assert_eq!(
+            resources.snapshot_at(101)["docker"]["failureCode"],
+            "worker_unavailable"
+        );
+        assert!(resources.reserve_docker(59_999).is_none());
+        let (mut next, _) = resources.reserve_docker(60_100).unwrap();
+        assert!(resources.docker.state.lock().unwrap().busy);
+        next.publish(json!({"state":"ready","sampledAt":60_100,"attemptedAt":60_100,"currentAvailable":true,"containers":[]}));
+        drop(next);
+        assert!(!resources.docker.state.lock().unwrap().busy);
+        assert_eq!(resources.snapshot_at(60_100)["docker"]["state"], "ready");
+    }
+    #[test]
+    fn incomplete_flight_retains_last_data_while_reporting_failure() {
+        let resources = Resources::default();
+        let (mut first, _) = resources.reserve_docker(10).unwrap();
+        first.publish(
+            json!({"state":"ready","sampledAt":10,"attemptedAt":10,"currentAvailable":true,
+            "containers":[{"id":"abcdef012345","memoryBytes":100}]}),
+        );
+        drop(first);
+        let (failed, _) = resources.reserve_docker(60_010).unwrap();
+        drop(failed);
+        let value = resources.snapshot_at(60_011);
+        assert_eq!(value["docker"]["state"], "unavailable");
+        assert_eq!(value["docker"]["sampledAt"], 10);
+        assert_eq!(value["docker"]["containers"][0]["memoryBytes"], 100);
+        assert_eq!(value["docker"]["currentAvailable"], false);
+        assert_eq!(value["docker"]["attemptedAt"], 60_010);
     }
     #[test]
     fn truncated_job_metadata_is_distinct_from_an_empty_observation() {

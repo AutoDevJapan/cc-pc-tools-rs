@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestGeneratedQuestionFirstAssignmentDelegationFormats(t *testing.T) {
+func TestGeneratedQuestionFirstAssignmentTaskNumberFormats(t *testing.T) {
 	for _, test := range []struct {
 		name string
 		text string
@@ -24,20 +24,13 @@ func TestGeneratedQuestionFirstAssignmentDelegationFormats(t *testing.T) {
 		{"longer-number-label", "ToDo番号30840の画像を生成してください。", false},
 		{"quoted-number-label", "引用: ToDo番号3084の画像を生成してください。", false},
 		{"split-number-label", "ToDo番号\n3084の画像を生成してください。", false},
-		{"delegated-inline", "本人の最新依頼を実行する専任担当。ToDo3084の画像を生成してください。", true},
-		{"delegated-line", "本人の最新依頼を実行する専任担当。\nToDo3084の画像を生成してください。", true},
-		{"delegated-assignee", "本人の最新依頼を実行する専任担当。\r\n担当ToDo3084の画像を生成してください。", true},
-		{"delegated-header-prose", "本人の最新依頼を実行する専任担当。\n今回の担当は画像作成（ToDo3084）です。\n画像を新規生成してください。", true},
-		{"delegated-spaced-task", "本人の最新依頼を実行する専任担当。\n今回の担当は ToDo: 3084 の画像作成です。", true},
-		{"delegated-number-label", "本人の最新依頼を実行する専任担当。\n今回の担当はToDo番号3084の画像作成です。", true},
-		{"quoted-label-before-task", "本人の最新依頼を実行する専任担当。\n「画面案」を作る担当（ToDo3084）です。", true},
+		{"natural-language-introduction", "本人の最新依頼を実行する専任担当。ToDo3084の画像を生成してください。", false},
 		{"two-header-tasks", "本人の最新依頼を実行する専任担当。\nToDo3084とToDo3099の作業です。", false},
 		{"repeated-header-task", "本人の最新依頼を実行する専任担当。\nToDo3084とToDo3084の作業です。", false},
 		{"quoted-header-task", "本人の最新依頼を実行する専任担当。\n参考は「ToDo3084の例」です。", false},
 		{"code-header-task", "本人の最新依頼を実行する専任担当。\n例は`ToDo3084`です。", false},
 		{"ascii-quoted-header-task", "本人の最新依頼を実行する専任担当。\n例は\"ToDo3084\"です。", false},
-		{"task-inside-identifier", "本人の最新依頼を実行する専任担当。\n例 NotToDo3084 です。", false},
-		{"task-with-ascii-suffix", "本人の最新依頼を実行する専任担当。\n担当 ToDo3084suffix です。", false},
+		{"task-inside-identifier", "NotToDo3084の作業です。", false},
 		{"later-header-task", "本人の最新依頼を実行する専任担当。\n今回の担当について。\nToDo3084の画像を生成してください。", false},
 		{"wrong-task", "本人の最新依頼を実行する専任担当。ToDo3099の画像を生成してください。", false},
 		{"wrong-first-task-with-later-mention", "本人の最新依頼を実行する専任担当。ToDo3099の作業です。\nToDo3084の画像もあります。", false},
@@ -135,7 +128,7 @@ func TestGeneratedQuestionCreationTimeMustEqualOriginalCall(t *testing.T) {
 	}
 }
 
-func TestGeneratedQuestionDedicatedFirstAssignmentCannotBeRelabeled(t *testing.T) {
+func TestGeneratedQuestionNumberLabelFirstAssignmentCannotBeRelabeled(t *testing.T) {
 	s, _ := generatedFixture(t)
 	r := generatedRegistryFixture(t, s)
 	bundle := generatedBundle(s)
@@ -149,12 +142,12 @@ func TestGeneratedQuestionDedicatedFirstAssignmentCannotBeRelabeled(t *testing.T
 		t.Fatal(err)
 	}
 	payload := assignment["payload"].(map[string]any)
-	payload["content"] = []any{map[string]any{"type": "input_text", "text": "本人の最新依頼を実行する専任担当。\n今回の画像作成（ToDo3084）を担当する。"}}
+	payload["content"] = []any{map[string]any{"type": "input_text", "text": "ToDo番号3084\n今回の画像作成を担当する。"}}
 	lines[1], err = json.Marshal(assignment)
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload["content"] = []any{map[string]any{"type": "input_text", "text": "本人の最新依頼を実行する専任担当。\n別の画像作成（ToDo3099）を担当する。"}}
+	payload["content"] = []any{map[string]any{"type": "input_text", "text": "ToDo番号3099\n別の画像作成を担当する。"}}
 	later, err := json.Marshal(assignment)
 	if err != nil {
 		t.Fatal(err)
@@ -189,6 +182,6 @@ func TestGeneratedQuestionDedicatedFirstAssignmentCannotBeRelabeled(t *testing.T
 	manifest := filepath.Join(filepath.Dir(s.Proof), "later-dedicated-assignment.json")
 	writeGeneratedBundle(t, manifest, bundle)
 	if _, err = r.register(context.Background(), manifest); err == nil {
-		t.Fatal("later dedicated assignment relabeled an earlier image")
+		t.Fatal("later task-number assignment relabeled an earlier image")
 	}
 }

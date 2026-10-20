@@ -14,70 +14,6 @@ import (
 	"time"
 )
 
-var generatedAssignmentStart = regexp.MustCompile(`^(?:担当)?ToDo(?:番号)?([0-9]+)(?:[^0-9]|$)`)
-var generatedAssignmentHeaderTask = regexp.MustCompile(`ToDo(?:番号)?[ \t:：]*([0-9]+)`)
-
-func generatedAssignmentTodo(text string) (uint64, bool) {
-	text = strings.TrimSpace(text)
-	const introduction = "本人の最新依頼を実行する専任担当。"
-	var number string
-	if !strings.HasPrefix(text, introduction) {
-		match := generatedAssignmentStart.FindStringSubmatch(text)
-		if len(match) != 2 {
-			return 0, false
-		}
-		number = match[1]
-	} else {
-		// The dedicated assignment's first line can name the task in prose.
-		// Bind its one unquoted task; never search subsequent body/quoted lines.
-		header := strings.TrimSpace(strings.TrimPrefix(text, introduction))
-		header = strings.TrimSpace(strings.SplitN(header, "\n", 2)[0])
-		if strings.HasPrefix(header, introduction) || strings.HasPrefix(header, ">") {
-			return 0, false
-		}
-		matches := generatedAssignmentHeaderTask.FindAllStringSubmatchIndex(header, -1)
-		if len(matches) != 1 {
-			return 0, false
-		}
-		match := matches[0]
-		identifier := func(b byte) bool {
-			return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
-		}
-		if (match[0] > 0 && identifier(header[match[0]-1])) || (match[1] < len(header) && identifier(header[match[1]])) || generatedAssignmentQuoted(header[:match[0]]) {
-			return 0, false
-		}
-		number = header[match[2]:match[3]]
-	}
-	todo, err := strconv.ParseUint(number, 10, 64)
-	return todo, err == nil && todo != 0
-}
-
-func generatedAssignmentQuoted(prefix string) bool {
-	var quote rune
-	escaped := false
-	for _, r := range prefix {
-		if quote != 0 {
-			if escaped {
-				escaped = false
-			} else if r == '\\' && (quote == '\'' || quote == '"') {
-				escaped = true
-			} else if r == quote {
-				quote = 0
-			}
-			continue
-		}
-		switch r {
-		case '\'', '"', '`':
-			quote = r
-		case '「':
-			quote = '」'
-		case '『':
-			quote = '』'
-		}
-	}
-	return quote != 0
-}
-
 // The actual user assignment in the generation session binds the source task.
 // A caller cannot relabel an image by editing its JSON generation summary.
 func validateGeneratedAssignment(s generatedQuestionSpec) error {
@@ -99,16 +35,18 @@ func validateGeneratedAssignment(s generatedQuestionSpec) error {
 	if json.Unmarshal(records[0], &meta) != nil || meta.Type != "session_meta" || meta.Payload.ID != s.Session || json.Unmarshal(records[1], &assignment) != nil || assignment.Type != "response_item" || assignment.Payload.Type != "message" || assignment.Payload.Role != "user" {
 		return errConversationMedia
 	}
+	pattern := regexp.MustCompile(`^(?:担当)?ToDo(?:番号)?([0-9]+)(?:[^0-9]|$)`)
 	matched := 0
 	for _, content := range assignment.Payload.Content {
 		if content.Type != "input_text" {
 			continue
 		}
-		todo, ok := generatedAssignmentTodo(content.Text)
-		if !ok {
+		m := pattern.FindStringSubmatch(strings.TrimSpace(content.Text))
+		if len(m) != 2 {
 			continue
 		}
-		if todo != s.Scope.Todo {
+		todo, e := strconv.ParseUint(m[1], 10, 64)
+		if e != nil || todo != s.Scope.Todo {
 			return errConversationMedia
 		}
 		matched++

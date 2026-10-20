@@ -36,10 +36,24 @@
 - 3157の改善提案も反映: 原質問本文と判断対象、3050から3070への限定引継ぎを指示に明記。
   updatedは既存書式を保持し、領収時刻だけRFC3339。key/phase/last_jobの拒否を各々検査。
   変更後の機能13件成功。既存の226件・利用側の有効結果は影響がない範囲を再利用。
-- 残り: 最終ソースの必要CI、
-  Must修正・CI・通常merge、並行配布確認・ソース/hash照合、実3050/3070の正規移行とreadback。
+- 2026-10-21の実施結果: 最終head7e0be3eの必要CIは成功。
+  Build speed39472463638、CodeQL PC39472463775を確認した。
+  package-toolsは対象条件によるskip。利用上限で実行されなかったBugbotをレビュー成功とは数えない。
+  PR307を固定head指定の通常mergeでmainへ取り込み、merge commitはcb26d3112d537e2f602fbed07108673517746898。
+  配布用の生成元7e0be3eがmainの祖先であり、関連RustソースとCargo入力に差がないことを確認した。
+- 実行物: この作業場所のtarget/release/todo.exe。
+  SHA256=a4be80b1ddca717d27afe023ae5e90b0e4f1770df5b8bcdc88bdc3eabf4ece48。
+  同じ生成物を、今回の有限移行用の正規CLIとして実運用した。既設の共有実行物は置換していない。
+  ソース・SHA・実行結果はTODO-3126-RELEASE.private.jsonとTODO-3126-ACCEPTANCE.private.jsonに保持する。
+- 実3050/3070へ、凍結した元状態SHAを指定してanswered-wait --applyを各1回実行した。
+  両方がchanged=true、status=wait、wait_on=[3084]を返した。
+  同じ根拠による再読取は両方changed=false。通常listでも待機を確認した。
+  元メモ・担当履歴の表示・依存はstatus以外の変更がないことを照合し、原資料3点のSHAも再確認した。
+  3084の状態と依存を保持した。同時刻の別担当による追記だけを別に記録し、書き戻していない。
+- この修復の実移行は完了。Consoleの機能・画面の実反映と配布は引き続き3084側の受入で追う。
+  元の質問の監査・正規配送・closeは親3110が保持する。同じ移行や質問を再実行しない。
 - 画像sender/履歴readのPR296は編集しない。raw台帳編集・guard緩和・applied/jobの捏造はしない。
 - 一時所有ID: 7a11b876847b64f5e8444bfa0f54070e。
   C:/Users/makhmeto/AppData/Local/Temp/codex-owned-7a11b876847b64f5e8444bfa0f54070e。
-  red.logと窓を出さないcargo-hidden.ps1を保持。完了後safe-deleteのplan/通常削除/finishで整理する。
+  必要な原検査と実操作の記録を保持してから、safe-deleteのplan/通常削除/finishで整理する。
 - 自分の共有ToDo状態はschedulerが更新する。レビュー等の別ToDoだけ待つときは正規wait --onを保存する。

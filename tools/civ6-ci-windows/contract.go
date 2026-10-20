@@ -42,6 +42,8 @@ type Plan struct {
 	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
 	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
+	// Only the worker's verified, kernel-owned listener sets this. Never JSON input.
+	cacheListenerPort int
 }
 
 // name is the unique per-job identity: the official runner registration and the

@@ -970,3 +970,12 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 
 - cloneは原SDKと同SHA/21277704192bytes、LongPathsEnabled DWORD1/型値readbackを含む実stageがexit0（script SHA9ED975C8E074687E28BC0B23C51D56FCDBA7940AACEE6A8561BB3471192D3E01）。VMb4f007f1-8ede-4522-bf7b-48d4d3847fe2、clock同期後guestと送信hostは同値1792499811122。SourceReady/開始hookともhead0fda/tree0bc5/1904blob物理proof。runner36でWindows118627468742がin_progress、21:41 JSTにstep1-3 success/step4実行中。native再検査/13完走/終了proof/回収/CI Gateはまだ未確認。
 - 証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261020/resume-212543へ保存、2737/2641 note配送。前回public fixture root073...のsafe-delete plan/quarantineは両方LINK_OR_REPARSE_POINTで拒否、同じ拒否の再試行/別経路削除0。public junction3件を含むowned rootを保持、容量回収0と記録する。
+### attempt5: 旧失敗を通過し、新2件の等値比較失敗を診断3112へ
+
+- Windows118627468742/runner36はstep11 failure。旧unit集計2640passed/1failed/2ignoredから今回2641passed/0failed/2ignoredとなり旧threadのpanic無し。後続の別group156passed/2failed/8ignoredで新2panic。原log474516bytes/SHA256F121323AD6AA2F1B7AE88A156CC216FDECED940F363D753AF8E6F29CF76ACB32をprivate保持。今回設定の効果と新失敗を混ぜない。
+- 2panicは原treeと元pathのsuffix照合0件。basename一意blob87c1b96c3d648e33b98349268184f7d3ab64502dのGit SHA1/size、一意assert行SHA E84266E9B6B275973659A2EFAE8EEE0A15758E77E07465FD31D11354429E44FAを確認。2threadのleafは当blobのfn宣言に一致せず0件、同じenclosing fn名SHA3806D628...の中へ対応。left10byte/right8byteは両panicで同じhash、単純整数/Some整数/booleanではない。元logの値/名前/位置は表示せず、callerを読んだとはしない。compiler/os error/permission/timeout/OOMの固定分類なし。原因は未確定。
+- 当単一blobだけの静的診断3112をclaude-haiku-5-5/effort max/通常add --spec登録。spec保存はCRLF/LF正規化後全文一致、dispatchable確認済み。未起動todoを診断完了にしない。次は原結果/実job/対応turn_context/固定blob/assert hash/未読を受領し、環境修正か原作者への具体的最小配送かを決める。原製品source編集/別実装複製/直接子Codexなし。
+- 終了hookも同head0fda/tree0bc5/1904blobの物理proof。runner-exited exit0/drained=true。VMb4f007f1除去/clone detached/runner36登録不在、normalCI intent不在、host/wrapper exit1。PID20008の最初の文字列比較拒否はJSON自動DateTime変換によるもので、直接日時Ticks照合は一致、PID再利用/停止とは扱わない。
+- 未割当CI Gate118636983832にnormal cancel1回/まだqueuedのためforce cancel1回→run39201344542 attempt5 completed/cancelled。Windows failure/verify118627470689 success引継ぎ/PR receipt skipped/CI Gate cancelledを保持。同leaseのown routeだけDELETE1回/不在readback。旧操作の再送0。
+- 証拠resume-212543/terminal-files.private.jsonへ原log/終端/新分類/spec/回収をcopy/hash保持、2737/2641 noteへ配送。新失敗clone1a.../job-03e29...と旧clone3f.../原SDK/public junction3件のroot073.../guard/manifest/未回収/他担当を保持。root073...のplan/quarantineは両方LINK_OR_REPARSE_POINTで拒否済み、迂回削除0/回収量0。
+- 原Windows13/CI Gate/全公式CI/基盤配送は未完、製品merge/Prdは親2641。現job/実HEADをscheduler checkpointで保存し読戻し、todo wait2737 --on3112で枠を返す。owner入力/新費用/APIキーAI/GPU/Discord通知不要。

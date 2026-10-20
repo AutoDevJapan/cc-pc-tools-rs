@@ -17,7 +17,7 @@ fn records(row: &Value) -> Result<&[Value]> {
 fn generations(wait: &Value, recipient: &Value) -> Result<()> {
     let original = wait["origin"]["resume_generation"].as_u64();
     let current = recipient["resume_generation"].as_u64();
-    if !original.zip(current).is_some_and(|(a, b)| b > a) {
+    if original.zip(current).is_none_or(|(a, b)| b <= a) {
         return fail("delivery_generation_mismatch");
     }
     Ok(())

@@ -717,8 +717,7 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	retryContext, cancelRetries := context.WithTimeout(ctx, 30*time.Second)
 	r.releaseRetries(retryContext, &health)
 	cancelRetries()
-	// The CI queue pass is last and bounded: it can only add a health note.
-	r.civ6CIQueue(ctx, &health)
+	// periodicTick supplies the queue's separate bounded phase afterwards.
 	health.Finished = r.Now().UTC().Format(time.RFC3339Nano)
 	return health
 }
@@ -879,7 +878,11 @@ func main() {
 		os.Exit(1)
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	budget := normalTickBudget
+	if operation == "" {
+		budget = periodicTickBudget
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if operation != "" {
 		var result SteeringDeliveryResult
@@ -896,7 +899,7 @@ func main() {
 		fmt.Println(string(bytes))
 		return
 	}
-	health := runner.tick(ctx)
+	health := runner.periodicTick(ctx)
 	if publish(filepath.Join(cfg.Home, "health.json"), health) != nil {
 		fmt.Println("health persistence failed")
 		os.Exit(1)

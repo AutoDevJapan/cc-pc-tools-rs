@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	contract "cc/civ6-ci-contract"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -16,6 +17,14 @@ import (
 	"strings"
 	"time"
 )
+
+func checkRegistrationQueue(p Plan) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	return contract.CheckRegistrationQueue(ctx, p.Plan, p.requiredLabels(), func(c context.Context, path string, v any) error {
+		return apiWithContext(c, path, v)
+	})
+}
 
 func api(path string, v any) error {
 	return apiWithContext(context.Background(), path, v)

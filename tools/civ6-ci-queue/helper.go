@@ -248,6 +248,7 @@ type windowsPlan struct {
 	ControllerSID  string `json:"controller_sid"`
 	Seconds        int    `json:"seconds"`
 	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
+	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 }
 
 func adminScript(entryDir, verb, root string, extra ...string) (string, error) {
@@ -300,6 +301,21 @@ func (h windowsHelper) collect(ctx context.Context, lc *LifeCtx, verb string) (d
 func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 	o.Collected = true // nothing exists outside the owned root yet
 	p := windowsPlan{Plan: lc.Plan, Instance: lc.Instance, Root: lc.Root, RunnerVersion: h.cfg.RunnerVersion, RunnerDigest: h.cfg.RunnerDigest, ControllerSID: h.cfg.ControllerSID, Seconds: h.cfg.Seconds, CleanupSeconds: h.cfg.CleanupSeconds}
+	// Reserve collection time before starting anything. Gate waits do not move
+	// this absolute bound; the helper checks it after acquiring Cargo and the
+	// service refuses to run past it. Allow the final drain before cancelling.
+	executeEnd := time.Now().Add(timeout(h.cfg.Seconds + 1800))
+	if outer, ok := ctx.Deadline(); ok {
+		limit := outer.Add(-timeout(h.cleanup() + 300))
+		if limit.Before(executeEnd) {
+			executeEnd = limit
+		}
+	}
+	if !executeEnd.After(time.Now()) {
+		o.Failure = "no execution budget before collection"
+		return o
+	}
+	p.ExecuteBefore = executeEnd.UnixNano()
 	if filepath.Base(lc.Root) != "codex-owned-"+lc.Instance || !hex32.MatchString(lc.Instance) {
 		o.Failure = "owned root does not match the instance"
 		return o
@@ -342,7 +358,7 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 	lc.Running()
 	helper := Pinned{Path: filepath.Join(lc.Root, "helper.exe"), SHA256: h.cfg.Exe.SHA256}
 	o.Started, o.Runner = true, windowsRunner(lc.Instance)
-	ectx, ecancel := context.WithTimeout(ctx, timeout(h.cfg.Seconds+120))
+	ectx, ecancel := context.WithDeadline(ctx, executeEnd.Add(120*time.Second))
 	res, e := lc.Exec(ectx, helper, []string{"execute", lc.Root}, tok, lc.OnHelper)
 	ecancel()
 	zero(tok)
@@ -365,7 +381,15 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		scancel()
 		lc.Log("stop.log", sres.Output)
 	}
-	o.Collected, o.Residue = h.collect(ctx, lc, "collect")
+	collectVerb := "collect"
+	if started, known := end["service_started"].(bool); known && !started {
+		// A rejected/expired gate child did not start SCM or configure a runner.
+		// The strict unstarted collector verifies that proof and the queued job.
+		// Never try the normal collector first and then bypass its refusal.
+		o.Started, o.Runner, o.HelperOK = false, "", false
+		collectVerb = "collect-unstarted"
+	}
+	o.Collected, o.Residue = h.collect(ctx, lc, collectVerb)
 	return o
 }
 

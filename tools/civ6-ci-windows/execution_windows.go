@@ -128,7 +128,7 @@ func executeAdmitted(p Plan) (result error) {
 			if !sawStopped {
 				result = errors.Join(result, stopFinite(p))
 			}
-			hold := holdUntilDrained(realHoldOps(p), holdDeadline(serviceStart, p.Seconds), 250*time.Millisecond)
+			hold := holdUntilDrained(realHoldOps(p), executionDeadline(p, serviceStart).Add(90*time.Second), 250*time.Millisecond)
 			fence = !(hold.Stopped && hold.Drained)
 			result = errors.Join(result, hold.Err)
 			if fence && result == nil {
@@ -147,6 +147,9 @@ func executeAdmitted(p Plan) (result error) {
 			if e = audit(p); e != nil {
 				return e
 			}
+			if e = checkRegistrationQueue(p); e != nil {
+				return e
+			}
 		}
 		secret = []byte("credential-free-fixture")
 		if !p.RuntimeFixture {
@@ -163,8 +166,11 @@ func executeAdmitted(p Plan) (result error) {
 	}
 	// SCM can start the service yet return an error (e.g. a startup timeout).
 	// The one-shot deferred stop queries actual state even after that error.
-	started = true
 	serviceStart = time.Now()
+	if !serviceStart.Before(executionDeadline(p, serviceStart)) {
+		return errors.New("execution deadline expired while waiting for Cargo")
+	}
+	started = true
 	if e = startFinite(p); e != nil {
 		return e
 	}
@@ -178,7 +184,7 @@ func executeAdmitted(p Plan) (result error) {
 					f.Close()
 					break
 				}
-				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS"), Deadline: runDeadline(serviceStart, p.Seconds).UnixNano()})
+				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS"), Deadline: executionDeadline(p, serviceStart).UnixNano()})
 				if len(payload) >= 4096 {
 					e = errors.New("registration frame exceeds pipe bound")
 				} else {

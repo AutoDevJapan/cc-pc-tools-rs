@@ -24,7 +24,7 @@ func originals(t *testing.T) map[string][]byte {
 	return out
 }
 func testPlan() Plan {
-	p := Plan{Version: 1, RepoID: RepoID, Head: strings.Repeat("a", 40), Tree: strings.Repeat("b", 40), Event: "pull_request", Branch: OriginalBranch, PR: 149, ContextSHA: strings.Repeat("c", 40), WorkflowSHA: strings.Repeat("c", 40), Workflow: ".github/workflows/rust.yml", WorkflowDigest: strings.Repeat("d", 64), RunID: 7, Attempt: 1, JobID: 71, Job: "test", JobName: "test (ubuntu-latest)"}
+	p := Plan{Version: 1, RepoID: RepoID, Head: strings.Repeat("a", 40), Tree: strings.Repeat("b", 40), Event: "pull_request", Branch: OriginalBranch, PR: 149, ContextSHA: strings.Repeat("c", 40), WorkflowSHA: strings.Repeat("c", 40), Workflow: ".github/workflows/rust.yml", WorkflowDigest: strings.Repeat("d", 64), RunID: 7, Attempt: 1, JobID: 71, Job: "test", JobName: "test (windows-latest)"}
 	p.WorkflowRef = Repository + "/" + p.Workflow + "@" + p.Ref()
 	return p
 }
@@ -66,10 +66,7 @@ func nativeFixture(t *testing.T) (Plan, map[string]any) {
 	fixtures[prefix+"git/trees/"+OriginalTree+"?recursive=1"] = a
 	fixtures[prefix+"git/trees/"+p.Tree+"?recursive=1"] = b
 	jobs := []Job{{ID: 71, RunID: 7, RunAttempt: 1, Name: p.JobName, Status: "queued", Labels: Labels(p)}}
-	q := p
-	q.JobName = "test (windows-latest)"
-	jobs = append(jobs, Job{ID: 72, RunID: 7, RunAttempt: 1, Name: q.JobName, Status: "queued", Labels: Labels(q)})
-	fixtures[prefix+"actions/runs/7/attempts/1/jobs?per_page=100"] = map[string]any{"total_count": 2, "jobs": jobs}
+	fixtures[prefix+"actions/runs/7/attempts/1/jobs?per_page=100"] = map[string]any{"total_count": 1, "jobs": jobs}
 	return p, fixtures
 }
 func fixtureRead(fixtures map[string]any) ReadAPI {
@@ -223,7 +220,7 @@ func TestPinnedNativeAdmissionAndRejections(t *testing.T) {
 		{"missing Windows matrix", func(p *Plan, f map[string]any) {
 			key := "repos/" + Repository + "/actions/runs/7/attempts/1/jobs?per_page=100"
 			jobs := f[key].(map[string]any)["jobs"].([]Job)
-			f[key] = map[string]any{"total_count": 1, "jobs": jobs[:1]}
+			f[key] = map[string]any{"total_count": 0, "jobs": jobs[:0]}
 		}},
 		{"different workflow bytes", func(p *Plan, f map[string]any) {
 			key := "repos/" + Repository + "/contents/.github/workflows/rust.yml?ref=" + p.ContextSHA
@@ -246,6 +243,7 @@ func TestPinnedNativeAdmissionAndRejections(t *testing.T) {
 func TestJobContextSeparatesPRHeadAndMerge(t *testing.T) {
 	p := testPlan()
 	env := map[string]string{"GITHUB_REPOSITORY": Repository, "GITHUB_REPOSITORY_ID": fmt.Sprint(RepoID), "GITHUB_SHA": p.ContextSHA, "GITHUB_RUN_ID": "7", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_JOB": "test", "RUNNER_OS": "Linux", "GITHUB_EVENT_NAME": "pull_request", "GITHUB_REF": p.Ref(), "GITHUB_WORKFLOW_SHA": p.WorkflowSHA, "GITHUB_WORKFLOW_REF": p.WorkflowRef}
+	env["RUNNER_OS"] = "Windows"
 	repo := map[string]any{"id": RepoID, "full_name": Repository, "fork": false}
 	raw, _ := json.Marshal(map[string]any{"number": 149, "repository": repo, "pull_request": map[string]any{"head": map[string]any{"sha": p.Head, "ref": p.Branch, "repo": repo}, "base": map[string]any{"ref": "main", "repo": repo}}})
 	if e := CheckEvent(p, env, raw); e != nil {

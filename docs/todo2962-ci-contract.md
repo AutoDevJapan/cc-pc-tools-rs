@@ -1,5 +1,29 @@
 # 万世紀の追加料金なしCI（ToDo2962）
 
+## 2026-10-20の適用契約（下の旧OS計画を更新）
+
+本人のWindows完成優先指示に従い、Rust matrixはWindowsだけとする。
+元のWindows workspace/all-targets/doctest/release/シナリオ、nativeとliveのfmt/test/Clippyを保持する。
+Linux helperのソースは保つが、Linux利用者向けの供給・移植検査・配布を今回の完了条件にしない。
+CodeQLは公開repoの標準GitHub-hostedを使い、actions/rust・default query suite・remoteを保持する。
+これはWindowsのアプリbuild/testと異なる静的解析で、PC側のCodeQL供給は行わない。
+
+受入上限12件の内訳は、最初とmerge後にWindows 3件＋CodeQL 2件ずつ、移行検証用に最大2解析を予約する。
+queueのPC受付上限は最初3件・merge後3件。CodeQLの実run/jobは別の受入記録で数える。
+設定変更や登録を検証成功と扱わず、同じ最終HEADの実job・成果物hash・登録不在・回収を確認する。
+
+Given 固定した同repo/現在HEADのqueued jobがある。
+When 新しいrunnerを供給する。
+Then 固有run/attempt/job/OSラベルに加え、古いbaseラベルだけのjobを含む全候補を集合包含で調べる。
+他の未終端jobも引き受けられる場合は、予算を予約する前と登録直前に拒否する。実SDKの割当も別に照合する。
+
+Given prepareやCargo待ちで時間を使った。
+When queueの絶対実行期限を過ぎる。
+Then serviceは開始せず、未開始の証明を調べる専用collectorだけを呼ぶ。
+開始した場合は同じ絶対期限までのworkerと90秒の排出をgate内で待ち、その後に回収を行う。
+
+以下のLinux供給・CodeQL専用ラベル・6+6件の記述は、この更新前の設計記録として保持する。
+
 この文書は実装契約であり、登録・実行・成功の証拠ではない。
 対象は実APIで確認した AutoDevJapan/civ6-banseiki（1392152644）だけ。
 2026-10-19の本人追加指示により、同repoはpublicへ変更済み。

@@ -12,7 +12,7 @@ func TestNativeRunnerCannotMatchAnotherQueuedJob(t *testing.T) {
 	q.Attempt++
 	variants["other attempt"] = q
 	q = p
-	q.JobName = "test (windows-latest)"
+	q.JobName = "test (ubuntu-latest)"
 	variants["other matrix OS"] = q
 	q = p
 	q.Workflow, q.Job, q.JobName = ".github/workflows/native-driver.yml", "native-driver", "native-driver"

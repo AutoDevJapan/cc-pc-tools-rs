@@ -194,6 +194,19 @@ func TestWindowsLifecycleWithoutRegistrationCredentialCollectsUnstarted(t *testi
 	}
 }
 
+func TestWindowsExpiredBeforeServiceStartUsesOnlyUnstartedCollection(t *testing.T) {
+	h := winHelper(t)
+	lc, _, root := newLife(t)
+	w := newWinFake()
+	w.executeExit = 1
+	w.executeOut = `{"event":"execute-end","ok":false,"service_started":false,"service_stopped":true,"fence":false}`
+	lc.Exec, lc.Admin = w.exec, w.admin(root)
+	out := h.Lifecycle(context.Background(), lc)
+	if out.Started || out.HelperOK || !out.Collected || strings.Join(w.calls, ",") != "admin:prepare,exec:execute,admin:collect-unstarted" {
+		t.Fatalf("%+v %v", out, w.calls)
+	}
+}
+
 func TestWindowsCollectionOutcomeComesFromTheHelperEventNotTheBrokerExit(t *testing.T) {
 	h := winHelper(t)
 	for _, c := range []struct {

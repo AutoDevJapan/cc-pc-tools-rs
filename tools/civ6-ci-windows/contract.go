@@ -39,6 +39,7 @@ type Plan struct {
 	ControllerSID  string `json:"controller_sid"`
 	Seconds        int    `json:"seconds"`
 	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
+	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
 	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
 }
@@ -73,6 +74,9 @@ var windowsWorkflows = map[string]string{
 func (p Plan) requiredLabels() []string { return contract.Labels(p.Plan) }
 
 func (p Plan) validate() error {
+	if p.ExecuteBefore < 0 {
+		return errors.New("absolute execution deadline rejected")
+	}
 	if !hex32.MatchString(p.Instance) || !filepath.IsAbs(p.Root) || filepath.Clean(p.Root) != p.Root || filepath.Base(p.Root) != "codex-owned-"+p.Instance {
 		return errors.New("new safe-delete root and instance required")
 	}

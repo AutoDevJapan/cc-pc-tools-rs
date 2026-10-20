@@ -10,8 +10,9 @@
    supervisorが結果ファイルを残していれば台帳へ取り込み、無ければOS単位のfenceを置いて新workerを止める。
    外部への問い合わせは行わず、fenceは結果ファイルかparentのhelper復旧modeでだけ解除される。
 2. launch: 予約済みで未起動のjobを、OSごとに最大1件、固定の自分自身（`worker --entry`）としてCREATE_NO_WINDOWで切り離して起動。
-3. scan/admit: queued/in_progressのofficial runから、同じrepoの現在のPR/main、三workflow＋CodeQL 2 jobだけ
-   を固定Planにし、親の `Verify` を通ったものだけを台帳へ一度だけ予約する（予算: PR149 6件、通常push 6件）。
+3. scan/admit: queued/in_progressのofficial runから、同じrepoの現在のPR/main、三workflowのWindows 3 jobだけ
+   を固定Planにし、親の `Verify` と登録候補の全ラベル包含検査を通ったものだけを台帳へ一度だけ予約する（最初3件・通常push 3件）。
+   Linuxのアプリjobと標準hostedのCodeQLはPC側の受付・供給をしない。
 4. もう一度launch。
 
 重いjobはtick本体で待たない。workerは自分のOSロックを持ち、OS別adapter（下記）でhelperの手順を一度だけ実行し、
@@ -21,7 +22,8 @@
 
 queued / started / official / cleanup を別の項目として保存する。予算の予約は台帳作成と同じ原子的書き込みで一度だけ。
 同じrun/attempt/jobは2度登録されない。拒否は10分（5回以上で6時間）のbackoff。予算超過は台帳の外に5分のbackoffだけを残す。
-12件の後の自然継続は `continuation.enabled` と親がreview済みsourceのcommitを設定したときだけ有効。既定は無効。
+PCの計6件の後の自然継続は `continuation.enabled` と親がreview済みsourceのcommitを設定したときだけ有効。既定は無効。
+別途、PR/merge後のCodeQL計4解析と移行用最大2解析を含め、有限受入は合計12件以内で記録する。
 
 ## 回収
 
@@ -56,7 +58,8 @@ go build ./...
   `prepare <root> <runner.zip>` と `collect|collect-unstarted <root>` はCC-AdminBroker（固定形のps1を生成）経由、
   `execute <root>`（登録tokenはstdinのみ）と `stop` は root/helper.exe（同じSHA-256のpin）を管理者なしで実行。
   `execute-end` が無い場合だけ stop を1回試みる。終端eventがある場合はhelper自身の停止処理を重ねない。
-  collectは必ず行い、brokerの終了コードではなく `collect-end{complete:true}` だけで回収を認める。
+  collectは必ず行い、broker呼出しが成功し `collect-end{complete:true}` がある場合だけ回収を認める。
+  helperがservice未開始を明示した場合は、初めからcollect-unstartedを使う。通常collectの拒否後に切り替えない。
   固定serviceとその1件のprofileは継続用資源。`shared_profile_retained` はjobごとの残留ではない。
   旧helperの `complete:false,residue_only:true` は回収成功として受け付けない。回収不明時は次のWindows workerを止める。
 - Linux（tools/civ6-ci-linux）: one-shot `civ6-ci-linux.exe run <plan-json> <新しい空のowned root> <guest ELF> <pwsh tar>`。

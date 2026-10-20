@@ -36,6 +36,7 @@ parent's `contract.Plan` tags; the rest are local operational fields.
 | `runner_version`, `runner_digest` | pinned official `actions-runner-win-x64-<v>.zip` release asset and SHA-256 |
 | `controller_sid` | SID of the user that runs `execute`/`stop`/`status` (non-admin) |
 | `seconds` 1..14400, `cleanup_seconds` 60..14400 or 0 (=1800) | run deadline; per-ACL-propagation budget |
+| `execute_before` Unix nanoseconds (optional, 0 for standalone) | queue's absolute bound, fixed before prepare; gate waits never extend it |
 | `fixture` \| `runtime_fixture` | credential-free lifecycle fixtures only; never official |
 
 `Plan.validate` = local checks + `contract.Plan.Validate` + Windows-only rules: workflow
@@ -118,6 +119,12 @@ labels `self-hosted, Windows, X64` are kept so it matches the reviewed `runs-on`
   profile; the token is never in argv, SCM, a file or a log.
 
 ## Crash and uncertainty
+
+The queue fixes `execute_before` before prepare and reserves collection time beyond it.
+After Cargo admission, the controller uses the earlier of this bound and its normal service deadline,
+and passes that same bound to the launcher. The gate holds another 90 seconds for drain, while the
+queue allows 120 seconds before cancelling execute. If the bound expired before service start,
+`execute-end` reports `service_started:false` and the queue invokes only `collect-unstarted`.
 
 `execute-begin` without `execute-end`, or `fence=true`, means the service may still own the
 namespace: the queue must not start another Windows worker until `status` shows state 1 and

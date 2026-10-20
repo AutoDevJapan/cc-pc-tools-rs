@@ -126,6 +126,9 @@ func registrationLabels(p Plan, labels []string) (custom string, defaults bool, 
 	sort.Strings(got)
 	switch k {
 	case KindRust:
+		if jobLabel(p) == "" {
+			return "", false, errors.New("selecting job label unavailable")
+		}
 		want := []string{"Linux", "X64", linuxLabel, jobLabel(p), "self-hosted"}
 		sort.Strings(want)
 		if strings.Join(got, "\x00") != strings.Join(want, "\x00") {

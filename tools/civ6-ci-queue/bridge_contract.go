@@ -5,9 +5,7 @@ import (
 	"context"
 )
 
-// bridge links the parent's reviewed contract package. Build with
-// -tags civ6contract after the parent integrates cc/civ6-ci-contract (the
-// go.mod require/replace for ../civ6-ci-contract belongs to that integration).
+// bridge always links the parent's reviewed contract package.
 type bridge struct{}
 
 func cp(p Plan) contract.Plan { return contract.Plan(p) }
@@ -19,7 +17,10 @@ func (bridge) MatchRunPath(p Plan, runPath string) bool {
 	return contract.MatchRunPath(cp(p), runPath)
 }
 func (bridge) Verify(ctx context.Context, p Plan, read ReadAPI) error {
-	return contract.Verify(ctx, cp(p), contract.ReadAPI(read))
+	if e := contract.Verify(ctx, cp(p), contract.ReadAPI(read)); e != nil {
+		return e
+	}
+	return contract.CheckRegistrationQueue(ctx, cp(p), contract.Labels(cp(p)), contract.ReadAPI(read))
 }
 func (bridge) RequireSuccess(ctx context.Context, p Plan, runner string, read ReadAPI) error {
 	return contract.RequireSuccess(ctx, cp(p), runner, contract.ReadAPI(read))

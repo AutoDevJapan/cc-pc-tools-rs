@@ -1,0 +1,42 @@
+{
+  "todo_id": 3191,
+  "parent_todo_id": 3081,
+  "issue": 277,
+  "checked_at": "2026-10-21T05:42:09.1852332+09:00",
+  "fixed_source": "6d7358a3b9334ad92ae3fc822e2c81b23af9f831",
+  "fixed_parent": "08b038ce6ed9d02503ed17f21b1480589e5f95a8",
+  "source_delta": [
+    "24\t0\tcc-ask/tests/resume.rs",
+    "66\t0\tcc-job-policy/tests/resume_policy.rs"
+  ],
+  "fixed_policy_test_blob": "8907458402e38402400bb6f9bce39e200892b279",
+  "fixed_discord_test_blob": "2eb9ae7230282bd416428a7ddc353f022b5315e1",
+  "remote_source_ref": "6d7358a3b9334ad92ae3fc822e2c81b23af9f831\trefs/heads/scheduler/todo-3081-resume-red",
+  "owner": {
+    "nameWithOwner": "AutoDevJapan/cc-pc-tools-rs",
+    "owner": {
+      "id": "O_kgDODrZnJw",
+      "login": "AutoDevJapan"
+    },
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs"
+  },
+  "cwd_guard": {
+    "classification_unverified": false,
+    "client_resource": false,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "original_guard": {
+    "classification_unverified": false,
+    "client_resource": false,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "cargo_resource": "Assigned by scheduler in task instruction",
+  "gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "gate_sha256": "A7D47FAF071772D0C6CA1349B3C0A4ECAA256F0BBD9686FC81C937AC1B26C9BD",
+  "real_cargo": "C:\\Users\\makhmeto\\.cargo\\bin\\cargo.exe",
+  "gate_wrapper": "@echo off\n\"%~dp0..\\cargo_gate.exe\" %*\nexit /b %ERRORLEVEL%\n"
+}

@@ -1,0 +1,7 @@
+{
+  "id": 3191,
+  "job": "20261021-053655-todo-3191",
+  "expected_branch": "scheduler/todo-3191-3081",
+  "branch": "scheduler/todo-3191-resume-red-check",
+  "head": "6d7358a3b9334ad92ae3fc822e2c81b23af9f831"
+}

@@ -19,7 +19,8 @@ collectorの不具合を直しても、queueが`needs_recovery`から復旧で�
   退避時は、その場所の同じvolume/file IDのディレクトリを非追跡で確認する。
   記録を作り直さず、リンクや未知の資源へ許可を広げない。
 - 固定helperの読取専用`verify-collected`で、管理者保護された最終回収root、同じSCM画像、
-  停止・PID0、同じservice accountのprocess不在、GitHubの当該登録不在を再確認する。
+  停止・PID0、参照できた同じservice accountのprocessが0件、GitHubの当該登録不在を再確認する。
+  読めなかったprocess数はeventとproof.jsonへ保持し、その不在を主張しない。`scm_stopped`はSCMの観測だけである。`n`が0でも全processを読めた保証ではない。管理者による回収markerと停止した同じSCMを根拠にする。`n`が正なら再開を拒否する。
   rootが消えた後の照合用Planは、元queueの固定identityから生成する。
   `execute_before=1`はこの読取専用照合のschema用で、実行・登録・回収には使わない。
 - 外部照合の前後で新しいAPI readerを使い、実所有・固定source/workflow等の既存契約と、

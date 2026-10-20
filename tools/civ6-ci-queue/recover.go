@@ -98,7 +98,8 @@ func (d *Deps) ResumeUnassigned(ctx context.Context, key string) error {
 	if err = os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
-	if err = d.VerifyRetired(ctx, ent, dir); err != nil {
+	observation, err := d.VerifyRetired(ctx, ent, dir)
+	if err != nil {
 		return err
 	}
 	if err = check(); err != nil {
@@ -129,7 +130,7 @@ func (d *Deps) ResumeUnassigned(ctx context.Context, key string) error {
 		old.Cleanup.Instance != cl.Instance || old.Cleanup.SafeDeleteID != cl.SafeDeleteID || old.Official.Success {
 		return errors.New("original failure result differs")
 	}
-	proof := map[string]any{"entry": key, "at": stamp(d.Now()), "original_result_sha256": digestHexBytes(b), "cleanup": cl, "official_success": false, "official_unassigned": true}
+	proof := map[string]any{"entry": key, "at": stamp(d.Now()), "original_result_sha256": digestHexBytes(b), "cleanup": cl, "official_success": false, "official_unassigned": true, "process_census": observation}
 	if err = writeAtomic(filepath.Join(dir, "proof.json"), proof); err != nil {
 		return err
 	}
@@ -168,24 +169,36 @@ func (d *Deps) ResumeUnassigned(ctx context.Context, key string) error {
 func digestHexBytes(b []byte) string                 { s := sha256.Sum256(b); return hex.EncodeToString(s[:]) }
 func numberField(v map[string]any, key string) int64 { n, _ := v[key].(float64); return int64(n) }
 
-func (d *Deps) verifyRetiredWindows(ctx context.Context, e *Entry, dir string) error {
+type CollectionObservation struct {
+	Queryable  int `json:"queryable_account_process_count"`
+	Unreadable int `json:"unreadable_process_count"`
+}
+
+func (d *Deps) verifyRetiredWindows(ctx context.Context, e *Entry, dir string) (CollectionObservation, error) {
+	var observation CollectionObservation
 	h := d.Cfg.Helpers["Windows"]
 	p := windowsPlan{Plan: e.Plan, Instance: e.Cleanup.Instance, Root: e.Cleanup.Root, ControllerSID: h.ControllerSID, RunnerVersion: h.RunnerVersion, RunnerDigest: h.RunnerDigest, Seconds: h.Seconds, CleanupSeconds: h.CleanupSeconds, ExecuteBefore: 1}
 	path := filepath.Join(dir, "verification-plan.json")
 	if err := writeAtomic(path, p); err != nil {
-		return err
+		return observation, err
 	}
 	out, err := d.Exec(ctx, h.Exe, []string{"verify-collected", path}, nil, nil)
 	if logErr := writeAtomic(filepath.Join(dir, "verification-output.json"), out); logErr != nil {
-		return logErr
+		return observation, logErr
 	}
 	if err != nil || out.Exit != 0 {
-		return errors.New("privileged collection or idle service not verified")
+		return observation, errors.New("privileged collection or stopped bound SCM not verified")
 	}
 	v := lastEvent(out.Output, "collection-verified")
-	if v == nil || !boolField(v, "complete") || !boolField(v, "root_retired") || !boolField(v, "shared_service_idle") ||
+	if v == nil || !boolField(v, "complete") || !boolField(v, "root_retired") || !boolField(v, "scm_stopped") ||
 		v["instance"] != e.Cleanup.Instance || numberField(v, "run_id") != e.Plan.RunID || numberField(v, "job_id") != e.Plan.JobID || numberField(v, "attempt") != int64(e.Plan.Attempt) {
-		return errors.New("collection verification identity differs")
+		return observation, errors.New("collection verification identity differs")
 	}
-	return nil
+	q, qok := v["queryable_account_process_count"].(float64)
+	u, uok := v["unreadable_process_count"].(float64)
+	if !qok || !uok || q != 0 || u < 0 || u > 1<<20 || u != float64(int(u)) {
+		return observation, errors.New("queryable account process census missing, invalid or nonzero")
+	}
+	observation.Queryable, observation.Unreadable = int(q), int(u)
+	return observation, nil
 }

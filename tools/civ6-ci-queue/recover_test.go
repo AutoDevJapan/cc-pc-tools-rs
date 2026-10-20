@@ -20,7 +20,9 @@ func recoveryHarness(t *testing.T) (*harness, string, obj) {
 	j := obj{"id": int64(8011), "run_id": int64(801), "run_attempt": 1, "head_sha": headSHA, "status": "queued", "runner_id": 0, "runner_name": "", "steps": []obj{}}
 	h.gh.data["repos/"+Repository+"/actions/jobs/8011"] = j
 	h.d.Retired = func(cl CleanupRec, key string) (CleanupRec, error) { cl.State = "quarantined"; return cl, nil }
-	h.d.VerifyRetired = func(context.Context, *Entry, string) error { return nil }
+	h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+		return CollectionObservation{Unreadable: 3}, nil
+	}
 	return h, key, j
 }
 
@@ -43,6 +45,22 @@ func TestRecoveredUnassignedJobReusesExactlyOneReservation(t *testing.T) {
 	}
 	if _, err := os.Stat(h.d.resultPath(key)); !os.IsNotExist(err) {
 		t.Fatal("old result would undo recovery")
+	}
+	dir := h.d.home("entries", safeKey(key), "recovery-0")
+	old, err := os.ReadFile(filepath.Join(dir, "original-result.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, err := os.ReadFile(filepath.Join(dir, "proof.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var p struct {
+		Original string                `json:"original_result_sha256"`
+		Census   CollectionObservation `json:"process_census"`
+	}
+	if json.Unmarshal(proof, &p) != nil || p.Original != digestHexBytes(old) || e.Prestarts[0].Cleanup.ManifestSHA != digestHexBytes(proof) || p.Census.Unreadable != 3 {
+		t.Fatal("original result, proof hash or unreadable process count lost")
 	}
 	if err := h.d.ResumeUnassigned(context.Background(), key); err == nil {
 		t.Fatal("same recovery admitted twice")
@@ -75,7 +93,9 @@ func TestRecoveryRetainsFenceWhenProofFails(t *testing.T) {
 			case "retirement":
 				h.d.Retired = func(cl CleanupRec, key string) (CleanupRec, error) { return cl, errors.New("not retired") }
 			case "collection":
-				h.d.VerifyRetired = func(context.Context, *Entry, string) error { return errors.New("marker differs") }
+				h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+					return CollectionObservation{}, errors.New("marker differs")
+				}
 			case "live":
 				h.d.Alive = func(ProcID) bool { return true }
 			case "aged":
@@ -87,7 +107,10 @@ func TestRecoveryRetainsFenceWhenProofFails(t *testing.T) {
 				cancel()
 				ctx = c
 			case "changed-during-proof":
-				h.d.VerifyRetired = func(context.Context, *Entry, string) error { j["runner_id"] = 44; return nil }
+				h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+					j["runner_id"] = 44
+					return CollectionObservation{}, nil
+				}
 			}
 			if err := h.d.ResumeUnassigned(ctx, key); err == nil {
 				t.Fatal("invalid recovery accepted")

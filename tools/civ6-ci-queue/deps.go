@@ -30,7 +30,7 @@ type Deps struct {
 	Self          func() ProcID
 	LockOS        func(osName string) (func(), error)
 	Retired       func(CleanupRec, string) (CleanupRec, error)
-	VerifyRetired func(context.Context, *Entry, string) error
+	VerifyRetired func(context.Context, *Entry, string) (CollectionObservation, error)
 }
 
 func (d *Deps) home(parts ...string) string {

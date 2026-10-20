@@ -49,13 +49,22 @@ func verifyCollected(p Plan) error {
 	if err != nil {
 		return err
 	}
-	n, _, err := ownedProcessCensus(sid)
+	n, unreadable, err := ownedProcessCensus(sid)
 	if err != nil || n != 0 {
 		return errors.New("shared account processes remain or are uncertain")
 	}
 	if err = auditCollection(p); err != nil {
 		return err
 	}
-	emitEvent("collection-verified", p, map[string]any{"complete": true, "root_retired": true, "shared_service_idle": true})
+	emitEvent("collection-verified", p, collectionObservation(n, unreadable))
 	return nil
+}
+
+func collectionObservation(queryable, unreadable int) map[string]any {
+	// The marker proves the administrator's completed collection; this current
+	// census covers queryable processes only. Protected/unreadable processes
+	// are reported, never silently counted as absent.
+	return map[string]any{"complete": true, "root_retired": true, "scm_stopped": true,
+		"queryable_account_process_count": queryable, "unreadable_process_count": unreadable,
+		"process_census_scope": "queryable processes only; privileged collection marker and stopped bound SCM verified"}
 }

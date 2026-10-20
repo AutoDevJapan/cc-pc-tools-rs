@@ -1902,7 +1902,7 @@ impl Console {
             let context = delegation_context(db, fresh_jobs, &t);
             let requested_session = t.options["resume_session"].as_str().filter(|session| {
                 source.is_some_and(|j| {
-                    !cc_job_policy::launch_context::retired_session(j, session)
+                    !cc_ask::job_policy::launch_context::retired_session(j, session)
                         && ["thread_id", "resume_session"]
                         .iter()
                         .any(|field| j[*field] == *session)

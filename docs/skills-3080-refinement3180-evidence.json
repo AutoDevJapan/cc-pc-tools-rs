@@ -24,12 +24,21 @@
     "metadata_total": 322,
     "model_called": false
   },
-  "postinstall_delta_review": "pending",
+  "postinstall_delta_review": "3193 Must0;actual3/15 withbefore backup15/protocol verified;initial metadata3 descriptions matched",
   "recorded_at": "2026-10-20T20:09:55.9260969Z",
   "limits": [
     "No CLI or private vault operation",
     "No model turn or context-budget measurement",
     "Limited data changes requested by3180,originals and notices unchanged",
     "Historical manifests/backup paths preserved;live adoption pointers select current files"
-  ]
+  ],
+  "current25_validation": {
+    "manifest": ".ci-work/todo3080/current25-manifest.json",
+    "manifest_sha256": "4e006899fbb690020de421a35083468ce47db959cdfa21b1cf251d349698d541",
+    "targets": 25,
+    "files": 125,
+    "result": "PASS actual installedfiles,not just bundle",
+    "head": "4b253db26f74bfb1a779cf8a68d3b22feb9f211f",
+    "limit": "3193 independently rechecked currentmanifest hashes;disk reads limited to3changed targets"
+  }
 }

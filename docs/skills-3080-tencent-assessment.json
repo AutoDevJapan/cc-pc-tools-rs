@@ -177,5 +177,12 @@
     "must": 0,
     "note": "Assessment is pre-adoption snapshot, not installed7"
   },
-  "routing_candidate_note": "One new adapted entrypoint serves the discovered4workflows;not5workflows or7independent Skills. Other source occurrences remain pending."
+  "routing_candidate_note": "One new adapted entrypoint serves the discovered4workflows;not5workflows or7independent Skills. Other source occurrences remain pending.",
+  "latest_candidate_review": {
+    "todo": 3193,
+    "head": "4b253db26f74bfb1a779cf8a68d3b22feb9f211f",
+    "must": 0,
+    "response_sha256": "793ad1958140bb245a64ac9722c10fe6c58f3d63c8a5f0b0ca07bf89582adfd3",
+    "suggestions": "S1-S3 tightened in generated entry before adoption;no upstream/notice change"
+  }
 }

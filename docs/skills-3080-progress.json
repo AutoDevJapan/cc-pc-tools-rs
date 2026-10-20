@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T20:12:10.9074030Z",
+  "observed_at": "2026-10-20T21:31:36.8286586Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "25installed;3guidance refinements applied and validated;1TeamAI candidate prepared;final delta review pending;full16-source work continues",
+  "phase_b": "26 installed;25beforeTeamAI accepted in bounded scopes;TeamAI final deployment check pending;full16source work continues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -288,7 +288,7 @@
   "execution_held_shapes": 647,
   "candidate_designs": 26,
   "independently_accepted": 25,
-  "installed": 25,
+  "installed": 26,
   "integrated": 0,
   "excluded": 0,
   "units": {
@@ -305,7 +305,7 @@
   },
   "limits": [
     "Metadata statistics do not establish semantic or individual license approval.",
-    "25 installed adaptations are finite batches, not a count cap.",
+    "26 installed adaptations are finite batches, not a count cap.",
     "Previously created3 targets revised with15file old-version backup and9limited replacements; other originals/junction/guard/UI unchanged.",
     "First14, Docker8 and latest3+revised3 bounded checks accepted;CLI/context beyond metadata not proven.",
     "Source archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "26 renderable targets:25installed+1TeamAI pending;no count cap",
+    "candidate_designs": "26 renderable targets all installed;no count cap",
     "additional_authored_drafts_not_in_plans": 0,
     "authored_total": 26,
-    "installed": 25,
-    "pending_plan_targets": 1,
+    "installed": 26,
+    "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "25 installed guides checked in bounded scopes;not all upstream support",
-    "not_semantically_disposed_occurrences": 73195
+    "not_semantically_disposed_occurrences": 73194
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -372,7 +372,7 @@
     "usage_guides": 2,
     "support_files_unread": 25,
     "policy_rewrite_candidates": 4,
-    "installed": 0,
+    "installed": 1,
     "not_blanket_excluded": true,
     "authored_routing_entrypoints": 1
   },
@@ -388,5 +388,19 @@
     },
     "limits": "Tencent7 includes2usage guides+1discovery stub+4workflows;not64standalone approved Skills; supporting resources incomplete"
   },
-  "independent_acceptance_scope": "3180 accepted25baseline atc328d7a;3laterrequested refinements are applied+locallyverified withdelta review pending;1TeamAI candidate notinstalled"
+  "independent_acceptance_scope": "3193 accepted latest3refinements at4b253db;newTeamAI v2 withrequestedchanges postinstallcheck pending",
+  "obra_partial_entrypoint_assessment": {
+    "expected": 15,
+    "full_body_read": 3,
+    "unread": 12,
+    "complete": false,
+    "next_path": "skills/executing-plans/SKILL.md",
+    "source_tree": "4ac675daa3415bc836f707c7e60237ac7b66c7d5",
+    "support_complete": false,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "scope_not_capped": true
+  },
+  "total_skill_named_body_read": 67
 }

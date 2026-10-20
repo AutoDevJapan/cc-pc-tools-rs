@@ -21,12 +21,14 @@
 `tools/skills-3080-catalog` は保存済みcatalogだけを読む。HTTP、原本文、外部スクリプト、秘密、中央Skillsは読まない。全掲載記録を新しいreview queueに保存し、本文取得済み・未取得・実行審査保留を区別する。重複ID、壊れたJSON、取得済みなのにSHA256がない入力は失敗する。成功summaryは全入力の解析とqueue出力の完了後にだけ作る。途中失敗のqueueは未完了として保持する。
 
 ```text
-go -C tools/skills-3080-catalog test ./...
+go -C tools/skills-3080-catalog test -count=1 ./...
 go -C tools/skills-3080-catalog vet ./...
 go -C tools/skills-3080-catalog run . -catalog <保存済みphase-a-catalog.jsonl> -out <未作成の永続成果ディレクトリ>
 ```
 
 異なる出典の同一本文、取得失敗、取得拒否、壊れた入力を架空fixtureで検査する。無フラグや重複本文を安全性・許諾の承認には変換しない。これは新規の解析器であり、既存製品の振る舞いを直すRed/Greenの主張はしない。原本配置後の構造検査と実適用は別工程として残る。
+
+候補JSONと採否表はGoモジュールの外にある。これらを変更したときの受入では`-count=1`を付け、以前のGo検査結果のキャッシュだけで更新後の文書を確認したとしない。製品全体の再ビルドは不要。
 
 ## 継続と導入候補
 

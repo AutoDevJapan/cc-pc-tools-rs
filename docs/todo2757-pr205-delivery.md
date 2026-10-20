@@ -1,5 +1,79 @@
 # ToDo2757: PR205 post-merge delivery boundary
-## Current state: 2026-10-20, original official release attempt2 is active
+## Current delivery: 2026-10-20, fixed official release and existing Prd verified
+
+The finite CI/delivery path for repo1285649124/PR1002 is complete at the unchanged
+merge41090d19329b81dd1bd076f3336d723823be4b82/tree007b84082008ea9effd5052f63856273aabbfb17.
+Parent2752 must independently read back these actual results; this record does
+not complete parent2639, the whole product, other products or original-record
+recovery. No additional source change or custom runner profile is required to
+make the now-working original official Hosted path execute.
+
+- Original fixed CodeQL run38941323954/attempt1 remains completed/success.
+  The original release run38941324877/attempt2 completed/success: preconditions
+  118497524273, backend118497552775, full118497552790 and promotion118500019293
+  all succeeded. Release steps11/12/13 for Vercel revision, contract smoke and
+  browser smoke actually ran/succeeded. Conditional failure-recovery steps14/15
+  were skipped. Do not call those test skips or substitute their execution.
+- All eight newly deployed existing Railway application services areSUCCESS.
+  Their eight original instances are explicitly stopped/REMOVED. API /ready
+  independently returnedHTTP200/status ready/revision41090 after the rollout.
+- The same Vercel project prj_Du6YTt2jdfCbnxPjycJCmGlNUzDv has production/READY
+  deployment dpl_G2jZgpHBRjkXe9WaJGbR6XYAM8qC, bound to the same allowed owner,
+  repoID and41090. Three aliases are assigned to this deployment. This API
+  readback does not independently derive the expected canonical hostname:
+  canonical/revision/contract/browser assertions are the successful original
+  workflow's evidence. No alias string or response body was saved.
+- Four original-release job logs were saved through the same normal CLI, with
+  bytes/SHA256 in todo2757-release-attempt2-final-logs.private.json. Original
+  attempt1 budget failure, earlier helper failures, cancelled supplemental
+  CodeQL jobs and the original Rust official-log refusal remain unchanged.
+- Final latest-check inventory has19 success and4 cancelled, zero failure or
+  pending. The four cancelled supplemental checks are not reclassified as
+  success; the explicitly required original CodeQL and release runs above are
+  successful. Final runner inventory0, local phase lease absent, owned inspector
+  folder source_absent. No local runner/container or Chrome tab was created by
+  this resumed job. Do not describe provider shutdown metadata as local PID0.
+
+### Evidence boundaries returned to the parent
+
+The original Rust official log remains unavailable through the permitted CLI
+because of terminal-escape rejection. Its original failure/fingerprint and the
+separate runner log/checkout/context receipts are preserved; the runner log is
+not called the missing official log. No override, alternate retrieval route
+or new identical retry was used. This limitation is returned with the delivery,
+rather than treating unavailable historical bytes as a passed collection step.
+
+An additional same-project service fae65bf5-aade-4f69-bb8c-e0dce321387d retains
+its oldFAILED deployment cfad911e-5efd-4cf5-af9f-335026f33933 and no active instance.
+It was not updated by the successful original eight-service workflow. Its
+purpose/necessity and old failure cause remain unverified. Bounded same-service
+logs and null provider diagnosis do not establish a cause. Return that exact
+residual to parent2639 via2752; do not delete/redeploy it, invent an App
+requirement or report all eleven services healthy on this delivery's evidence.
+The two infrastructure services were preserved. The formerlyCRASHED scheduled
+service was in this rollout and now has a successful new deployment.
+
+Existing Python test-case skips are preserved: standalone full log reports2239
+passed/3 skipped, dedicated backend58 passed. Job-step success and zero skipped
+normal verification steps do not mean every test case ran. No skip or test
+weakening was introduced in this work.
+
+### Resume/readback files
+
+The ignored `.ci-work` area contains the final official run, provider revisions,
+probe fingerprints, log receipts, final step roles and resource observations:
+`todo2757-official-release-latest.private.json`,
+`todo2757-railway-release-progress.private.json`,
+`todo2757-readiness-release-latest.private.json`,
+`todo2757-vercel-production-latest.private.json`,
+`todo2757-final-canonical-binding.private.json`,
+`todo2757-final-original-instance-retirement.private.json`,
+`todo2757-final-resource-absence.private.json`,
+`todo2757-release-attempt2-final-logs.private.json`, and
+`todo2757-final-release-step-roles.private.json`.
+The subsequent dated sections retain the actual intermediate observations.
+Do not run another release or repeat successful verification merely for readback.
+## Historical checkpoint: 2026-10-20, original official release attempt2 was active
 
 Resume the existing run38941324877/attempt2 on fixed41090. Do not dispatch a
 second release, rerun successful tests, return to task2829/2467, or rebuild the

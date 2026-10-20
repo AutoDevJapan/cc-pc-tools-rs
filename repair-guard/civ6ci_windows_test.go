@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func civ6Fixture(t *testing.T) (civ6Access, *civ6Deployment, func()) {
@@ -17,6 +18,8 @@ func civ6Fixture(t *testing.T) (civ6Access, *civ6Deployment, func()) {
 		t.Fatal(err)
 	}
 	a := civ6Access{home: filepath.Join(base, "runtime"), receipt: filepath.Join(base, "source-receipt.json"),
+		owner: civ6Owner, notBefore: 1, at: civ6Filetime(time.Now()),
+		ancestor:  func(a, b string) bool { return a == b },
 		protected: func(string) bool { return false }, qualified: func() (string, bool) { return civ6Floor, true },
 		identity: func(p string) (audio2906Metadata, error) { return resourceIdentity(p, true) },
 		read: func(p string, n int64) ([]byte, bool) {
@@ -159,7 +162,7 @@ func TestCiv6StateRequiresEachExistingIdentityAndNeverGrantsExecution(t *testing
 			t.Fatal("recorded state rejected")
 		}
 	}
-	for _, name := range []string{"state/ledger.json", "state/.ledger-123.tmp", "state/tick.lock", "state/locks/os-Windows.lock", "state/cache/" + strings.Repeat("a", 64) + ".json", "state/entries/123-1-456/result.json", "state/entries/123-1-456/admin-collect.ps1", "state/evidence/123-1-456/manifest.json"} {
+	for _, name := range []string{"state/ledger.json", "state/.ledger-123.tmp", "state/tick.lock", "state/locks/os-Windows.lock", "state/cache/" + strings.Repeat("a", 64) + ".json", "state/entries/123-1-456/result.json", "state/entries/123-1-456/admin-collect.ps1", "state/entries/123-1-456/admin-collect-unstarted.ps1", "state/entries/123-1-456/collect-unstarted.log", "state/evidence/123-1-456/manifest.json"} {
 		p := filepath.Join(a.home, filepath.FromSlash(name))
 		if !civ6Allowed(p, a) {
 			t.Fatalf("absent queue output rejected: %s", name)
@@ -220,9 +223,14 @@ func TestCiv6RejectsHardLinksAndDirectorySubstitution(t *testing.T) {
 
 func TestCiv6ContractNamesAndSourceRemainFixed(t *testing.T) {
 	var c struct {
-		Root, Source, SourceFloor, Receipt string
-		Leaves                             []string
-		RepositoryID                       int64 `json:"repository_id"`
+		Root, Source, Receipt string
+		SourceFloor           string `json:"source_floor"`
+		NotBefore             string `json:"root_created_not_before"`
+		Owner                 string `json:"owner_sid"`
+		ArchiveSHA            string `json:"archive_sha256"`
+		ArchiveBytes          uint64 `json:"archive_bytes"`
+		Leaves                []string
+		RepositoryID          int64 `json:"repository_id"`
 	}
 	var m map[string]json.RawMessage
 	if json.Unmarshal(civ6Contract, &m) != nil {
@@ -231,7 +239,7 @@ func TestCiv6ContractNamesAndSourceRemainFixed(t *testing.T) {
 	if json.Unmarshal(civ6Contract, &c) != nil {
 		t.Fatal("contract invalid")
 	}
-	if c.Root != civ6Home || c.Source != civ6Source || !strings.Contains(string(civ6Contract), civ6Floor) || !strings.HasSuffix(civ6Receipt, "/"+c.Receipt) || c.RepositoryID != 1406818713 {
+	if c.Root != civ6Home || c.Source != civ6Source || c.SourceFloor != civ6Floor || !strings.HasSuffix(civ6Receipt, "/"+c.Receipt) || c.RepositoryID != 1406818713 || c.NotBefore != civ6NotBefore || c.Owner != civ6Owner || c.ArchiveSHA != civ6ArchiveSHA || c.ArchiveBytes != civ6ArchiveBytes || strings.ContainsRune(string(civ6Contract), '\r') {
 		t.Fatal("canonical contract drift")
 	}
 	for _, name := range c.Leaves {
@@ -241,6 +249,108 @@ func TestCiv6ContractNamesAndSourceRemainFixed(t *testing.T) {
 	}
 	if len(c.Leaves) != 6 {
 		t.Fatal("unexpected leaf count")
+	}
+}
+
+func TestCiv6ForgedReceiptCannotAdoptRootPredatingContractOrDifferentOwner(t *testing.T) {
+	a, r, save := civ6Fixture(t)
+	civ6MakeRoot(t, a, r)
+	save()
+	// All receipt values match the real old root. Moving a public timestamp
+	// into a receipt cannot change the compiled contract's independent cutoff.
+	a.notBefore = r.Root.Created + 1
+	a.at = r.Root.Created + 100
+	if civ6Allowed(a.home, a) {
+		t.Fatal("matching forged receipt adopted a root predating the contract")
+	}
+	a.notBefore = r.Root.Created
+	if !civ6Allowed(a.home, a) {
+		t.Fatal("root at contract boundary rejected")
+	}
+	a.owner = "different independently pinned owner"
+	if civ6Allowed(a.home, a) {
+		t.Fatal("receipt owner overrode contract owner")
+	}
+}
+
+func TestCiv6MissingDeployedRootAndReceiptAliasesAreRefused(t *testing.T) {
+	a, r, save := civ6Fixture(t)
+	civ6MakeRoot(t, a, r)
+	save()
+	if e := os.Remove(a.home); e != nil {
+		t.Fatal(e)
+	}
+	if civ6Allowed(a.home, a) {
+		t.Fatal("lost deployed root silently recreated")
+	}
+	if e := os.Mkdir(a.home, 0700); e != nil {
+		t.Fatal(e)
+	}
+	r.Root = civ6Record(t, a.home)
+	if e := os.Remove(a.receipt); e != nil {
+		t.Fatal(e)
+	}
+	save()
+	if !civ6Allowed(a.home, a) {
+		t.Fatal("fresh receipt fixture rejected")
+	}
+	b, e := os.ReadFile(a.receipt)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, aliases := range []struct{ from, to string }{{`"Domain":`, `"domain":"override","Domain":`}, {`"Owner":`, `"owner":"override","Owner":`}} {
+		bad := strings.Replace(string(b), aliases.from, aliases.to, 1)
+		if e := os.WriteFile(a.receipt, []byte(bad), 0600); e != nil {
+			t.Fatal(e)
+		}
+		if civ6Allowed(a.home, a) {
+			t.Fatal("case alias accepted")
+		}
+	}
+}
+
+func TestCiv6ObjectCreationAndSourceAncestryStayBound(t *testing.T) {
+	a, r, save := civ6Fixture(t)
+	civ6MakeRoot(t, a, r)
+	p := filepath.Join(a.home, "civ6-ci-queue.exe")
+	if e := os.WriteFile(p, []byte("new"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	r.Objects[filepath.Base(p)] = civ6Record(t, p)
+	save()
+	original := a.identity
+	a.identity = func(path string) (audio2906Metadata, error) {
+		m, e := original(path)
+		if same(path, p) {
+			m.Created = r.Root.Created - 1
+		}
+		return m, e
+	}
+	w := r.Objects[filepath.Base(p)]
+	w.Created = r.Root.Created - 1
+	r.Objects[filepath.Base(p)] = w
+	save()
+	if civ6Allowed(p, a) {
+		t.Fatal("old existing child adopted")
+	}
+	a.identity = original
+	newHead := strings.Repeat("b", 40)
+	a.qualified = func() (string, bool) { return newHead, true }
+	a.ancestor = func(old, new string) bool { return old == civ6Floor && (new == civ6Floor || new == newHead) }
+	if !civ6Allowed(a.home, a) {
+		t.Fatal("ordinary later source commit revoked a valid deployment")
+	}
+	r.SourceHead = strings.Repeat("f", 40)
+	save()
+	if civ6Allowed(a.home, a) {
+		t.Fatal("unrelated receipt source admitted")
+	}
+}
+
+func TestCiv6GitEnvironmentCannotRedirectSource(t *testing.T) {
+	got := civ6GitEnvironment([]string{"PATH=keep", "GIT_DIR=other", "git_work_tree=other", "GIT_CONFIG_COUNT=2", "GIT_CONFIG_KEY_0=remote.origin.url"})
+	if len(got) != 1 || got[0] != "PATH=keep" {
+		t.Fatal("Git override retained")
 	}
 }
 
@@ -293,7 +403,7 @@ func TestCiv6ReceiptHardlinkAndMissingQualificationNeverRead(t *testing.T) {
 	}
 }
 
-func TestCiv6ArchivePinCannotBeReplacedByAReceiptValue(t *testing.T) {
+func TestCiv6ArchiveReceiptMetadataIsCheckedWithoutReadingArchiveContent(t *testing.T) {
 	a, r, save := civ6Fixture(t)
 	civ6MakeRoot(t, a, r)
 	p := filepath.Join(a.home, "actions-runner-win-x64-2.338.0.zip")

@@ -219,7 +219,7 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {

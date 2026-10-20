@@ -13,6 +13,7 @@ pub mod events;
 mod execution;
 mod finished_review;
 mod finished_work_handoff;
+mod finite_research;
 pub mod gate;
 pub mod jobs;
 pub mod notify;

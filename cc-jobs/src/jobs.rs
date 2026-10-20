@@ -1482,6 +1482,10 @@ fn find_session(dir: &Path, id: &str, recursive: bool) -> Option<PathBuf> {
 pub fn codex_args(j: &Value) -> Vec<String> {
     let profile = crate::execution::Profile::of(j);
     let policy = profile.policy(j);
+    codex_args_with_policy(j, policy)
+}
+pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -> Vec<String> {
+    let profile = crate::execution::Profile::of(j);
     let mut args = vec![
         s(j, "codex").into(),
         "exec".into(),

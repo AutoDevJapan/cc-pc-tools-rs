@@ -126,35 +126,81 @@ func TestProductCIRuntimeKeepsProtectionAndRefusesRedirection(t *testing.T) {
 }
 
 func TestRuntimeExecutableOnlyQualifiesTheExistingExactFile(t *testing.T) {
+	for _, name := range []string{"gh_gate.exe", filepath.Base(schedulerRuntime), filepath.Base(jobsRuntime)} {
+		t.Run(name, func(t *testing.T) {
+			root, err := physical(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			known := filepath.Join(root, name)
+			if err := os.WriteFile(known, []byte("fixture"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if !runtimeExecutable(known, known, known) {
+				t.Fatal("existing exact executable rejected")
+			}
+			if !finiteRuntimeExecutable(known, known, known, 1792466736) || finiteRuntimeExecutable(known, known, known, 1792466735) || finiteRuntimeExecutable(known, known, known, 1792627200) {
+				t.Fatal("finite executable lifetime violated")
+			}
+			for _, candidate := range []string{root, known + ".bak", filepath.Join(root, "config.json"), filepath.Join(root, "other.exe")} {
+				if runtimeExecutable(candidate, candidate, known) {
+					t.Fatal("unrelated resource accepted")
+				}
+			}
+			if runtimeExecutable(known, filepath.Join(root, "redirected.exe"), known) {
+				t.Fatal("resolved target mismatch accepted")
+			}
+			missing := filepath.Join(root, "missing.exe")
+			if runtimeExecutable(missing, missing, missing) {
+				t.Fatal("uncreated executable accepted")
+			}
+			dir := filepath.Join(root, "directory.exe")
+			if err := os.Mkdir(dir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if runtimeExecutable(dir, dir, dir) {
+				t.Fatal("directory accepted as executable")
+			}
+		})
+	}
+}
+
+func TestSchedulerRuntimeRefusesJunctionRedirection(t *testing.T) {
 	root, err := physical(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	known := filepath.Join(root, "gh_gate.exe")
-	if err := os.WriteFile(known, []byte("fixture"), 0600); err != nil {
+	real := filepath.Join(root, "real")
+	link := filepath.Join(root, "junction")
+	if err := os.Mkdir(real, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if !runtimeExecutable(known, known, known) {
-		t.Fatal("existing exact executable rejected")
-	}
-	for _, candidate := range []string{root, known + ".bak", filepath.Join(root, "config.json"), filepath.Join(root, "other.exe")} {
-		if runtimeExecutable(candidate, candidate, known) {
-			t.Fatal("unrelated resource accepted")
-		}
-	}
-	if runtimeExecutable(known, filepath.Join(root, "redirected.exe"), known) {
-		t.Fatal("resolved target mismatch accepted")
-	}
-	missing := filepath.Join(root, "missing.exe")
-	if runtimeExecutable(missing, missing, missing) {
-		t.Fatal("uncreated executable accepted")
-	}
-	dir := filepath.Join(root, "directory.exe")
-	if err := os.Mkdir(dir, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(real, filepath.Base(schedulerRuntime)), []byte("fixture"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if runtimeExecutable(dir, dir, dir) {
-		t.Fatal("directory accepted as executable")
+	command := exec.Command("cmd", "/c", "mklink", "/J", link, real)
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("junction fixture: %v %s", err, output)
+	}
+	defer os.Remove(link)
+	info, err := os.Lstat(link)
+	if err != nil || plainEntry(info) {
+		t.Fatalf("junction fixture is not a reparse point: %v", err)
+	}
+	realLeaf := filepath.Join(real, filepath.Base(schedulerRuntime))
+	if !runtimeExecutable(realLeaf, realLeaf, realLeaf) {
+		t.Fatal("ordinary scheduler fixture rejected")
+	}
+	leaf := filepath.Join(link, filepath.Base(schedulerRuntime))
+	target, err := physical(leaf)
+	if err != nil {
+		// allowed() rejects a failed physical resolution before runtimeExecutable.
+		return
+	}
+	if runtimeExecutable(leaf, target, leaf) {
+		t.Fatal("junction redirected scheduler accepted")
 	}
 }
 

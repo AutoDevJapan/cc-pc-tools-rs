@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "origin_todo_id": 3085,
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "source_root": "D:/CC/Work/unattended-operations-20261013-wt/todo-3085-capacity-decision",
+  "base_sha": "c8d71fbcc3864443977e060ec867d65e8a623c56",
+  "verified_at_utc": "2026-10-20T09:48:09.1627063Z",
+  "source_files": {
+    "capacity-audit-3h/main.go": "4d18e93c84a50b4f0054887ffc2e3e8ef0f0d5da761850f1be66d623244b4571",
+    "capacity-audit-3h/decision.go": "c482fa3bf42a40ae5f040e676effcc73d38a27af9b61917f7d5c5bd72e904aa5",
+    "capacity-audit-3h/decision-worker.md": "a45f614e18028126f1a438be04781e5940201424f7f87638367ab2fe23058e9f",
+    "cc-todo/src/capacity_cycle.rs": "96cd970a6353f15de6d55e5b39290a9241c231ec77fda9f1e88aaead07d85dcb",
+    "cc-todo/src/lib.rs": "cdad1e8c37417e7978c851aafd01ae8683cf72cce276275401ad33e5891a9c3d"
+  },
+  "capacity": {
+    "path": "D:/CC/Tools/capacity-audit-3h/capacity-audit-3h.exe",
+    "old_sha256": "efc30235d69e53b7cbcd181db922dc354a1a268a221356ef856e916643790329",
+    "new_sha256": "4a7e46e81d0ad0c2b0e99babcee1ad0805da0b1c50c024b85638d796758d3403",
+    "ownership": "existing CC-CapacityAudit-3h action and tracked cleanup-8h/deploy-2491/deploy.ps1",
+    "interval": "PT3H"
+  },
+  "todo": {
+    "path": "D:/CC/Tools/todo/todo.exe",
+    "old_sha256": "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
+    "new_sha256": "f5b8d06ad4ecf6a69ceaa8a141bae97eaa464f4d65d75a23d27abe3a14cfe91f",
+    "ownership": "canonical executable in cc-todo/src/lib.rs Paths::production and shared-todo SKILL"
+  },
+  "cleanup_sha256": "6975fc67257bb45012f96dc42091e26fab9bf19a065e00740ab0476e307b2f9b",
+  "cleanup_interval": "PT1H",
+  "original_registry_recovered": false,
+  "old_raw_logs_read": false,
+  "whole_directories_authorized": false
+}

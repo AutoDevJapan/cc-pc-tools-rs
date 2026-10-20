@@ -56,4 +56,42 @@ func TestConfirmedUnstartedRetirementCanResupplyWithoutOverwritingEvidence(t *te
 	if next.State != StateSucceeded || next.Cleanup.Evidence == oldEvidence || len(h.ledger().Budget.Initial) != 1 {
 		t.Fatalf("resupply/evidence failure: %+v", next)
 	}
+	if len(next.Prestarts) != 1 || next.Prestarts[0].Cleanup == nil || next.Prestarts[0].Cleanup.Evidence != oldEvidence {
+		t.Fatal("previous cleanup receipt was lost")
+	}
+}
+
+func TestPrestartDeferralCountAndAgeAreFinite(t *testing.T) {
+	for _, age := range []bool{false, true} {
+		h := newHarness(t)
+		key := h.seed("Windows", 503, 5031, "test (windows-latest)", true)
+		if age {
+			h.now = h.now.Add(24 * time.Hour)
+		} else {
+			for n := 0; n < maxPrestartDeferrals-1; n++ {
+				if err := h.d.deferUnstarted(key, "temporary", nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		if err := h.d.deferUnstarted(key, "temporary", nil); err != nil {
+			t.Fatal(err)
+		}
+		e := h.ledger().Entries[key]
+		if e.State != StateNeedsRecovery || h.ledger().Fences["Windows"].Key != key || e.Queued.RetryAt != "" || h.tick().Launched != 0 {
+			t.Fatal("deferral limit did not fence entry")
+		}
+	}
+}
+
+func TestAgedPrestartDoesNotPrepareAnotherResource(t *testing.T) {
+	h := newHarness(t)
+	key := h.seed("Windows", 504, 5041, "test (windows-latest)", true)
+	h.now = h.now.Add(24 * time.Hour)
+	if err := h.d.Supervise(context.Background(), key); err != nil {
+		t.Fatal(err)
+	}
+	if h.sd.n != 0 || h.ledger().Entries[key].State != StateNeedsRecovery {
+		t.Fatal("aged reservation created a resource")
+	}
 }

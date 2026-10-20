@@ -75,16 +75,23 @@ type CleanupRec struct {
 }
 
 type Entry struct {
-	Key      string      `json:"key"`
-	Plan     Plan        `json:"plan"`
-	OS       string      `json:"os"`
-	Phase    string      `json:"phase"` // initial, normal, continuation
-	State    string      `json:"state"`
-	Queued   QueuedRec   `json:"queued"`
-	Started  StartRec    `json:"started"`
-	Official OfficialRec `json:"official"`
-	Cleanup  CleanupRec  `json:"cleanup"`
-	Reason   string      `json:"reason,omitempty"`
+	Key       string        `json:"key"`
+	Plan      Plan          `json:"plan"`
+	OS        string        `json:"os"`
+	Phase     string        `json:"phase"` // initial, normal, continuation
+	State     string        `json:"state"`
+	Queued    QueuedRec     `json:"queued"`
+	Started   StartRec      `json:"started"`
+	Official  OfficialRec   `json:"official"`
+	Cleanup   CleanupRec    `json:"cleanup"`
+	Reason    string        `json:"reason,omitempty"`
+	Prestarts []PrestartRec `json:"prestarts,omitempty"`
+}
+
+type PrestartRec struct {
+	At      string      `json:"at"`
+	Reason  string      `json:"reason"`
+	Cleanup *CleanupRec `json:"cleanup,omitempty"`
 }
 
 // Budget is the persistent, one-time reservation: a key is appended exactly

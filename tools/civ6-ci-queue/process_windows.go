@@ -110,6 +110,10 @@ func runOwnedExe(ctx context.Context, path string, args []string, input []byte, 
 	}()
 	handles := []syscall.Handle{inR, outW}
 	jobs := []syscall.Handle{job}
+	var attributePins runtime.Pinner
+	attributePins.Pin(&handles[0])
+	attributePins.Pin(&jobs[0])
+	defer attributePins.Unpin()
 	update := kernel32.NewProc("UpdateProcThreadAttribute")
 	ok, _, e = update.Call(attr, 0, 0x20002, uintptr(unsafe.Pointer(&handles[0])), uintptr(len(handles))*unsafe.Sizeof(handles[0]), 0, 0)
 	if ok == 0 {

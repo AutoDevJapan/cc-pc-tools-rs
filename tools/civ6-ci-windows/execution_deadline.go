@@ -6,9 +6,11 @@ import (
 	"time"
 )
 
+var errPrestartBudget = errors.New("execution budget expired or insufficient before service startup")
+
 func prestartBudget(p Plan, now time.Time) error {
 	if p.ExecuteBefore > 0 && time.Unix(0, p.ExecuteBefore).Sub(now) < 60*time.Second {
-		return errors.New("execution budget expired or insufficient before service startup")
+		return errPrestartBudget
 	}
 	return nil
 }

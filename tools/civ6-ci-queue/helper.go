@@ -78,7 +78,7 @@ const maxStepOutput = 1 << 20
 // every start.
 func runPinned(ctx context.Context, pin Pinned, args []string, stdin []byte, onStart func(ProcID)) (StepResult, error) {
 	if e := pin.Verify(); e != nil {
-		return StepResult{}, e
+		return StepResult{TreeGone: true}, e // no process was created
 	}
 	if len(args) > 0 && args[0] == "execute" {
 		return runOwnedExe(ctx, pin.Path, args, stdin, onStart)
@@ -388,7 +388,10 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		collectVerb = "collect-unstarted"
 	}
 	o.Collected, o.Residue = h.collect(ctx, lc, collectVerb)
-	o.Deferred = collectVerb == "collect-unstarted" && o.Collected
+	// No begin is retryable only when the owned wait actually hit its deadline,
+	// never on creation/pin/gate rejection. A gate child classifies its error.
+	retryable := boolField(end, "retryable_prestart") || (end == nil && noBegin && errors.Is(e, context.DeadlineExceeded))
+	o.Deferred = collectVerb == "collect-unstarted" && o.Collected && retryable
 	return o
 }
 

@@ -3,6 +3,8 @@
 package main
 
 import (
+	contract "cc/civ6-ci-contract"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -137,7 +139,7 @@ func executeAdmitted(p Plan) (result error) {
 		}
 		// A begin without a clean end, or fence=true, tells the queue that the
 		// worker may still hold the namespace: it must not start another one.
-		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence})
+		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence, "retryable_prestart": !started && retryablePrestart(result)})
 	}()
 	if e = prestartBudget(p, time.Now()); e != nil {
 		return e
@@ -252,6 +254,10 @@ func executeAdmitted(p Plan) (result error) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	return errors.New("finite execution deadline")
+}
+
+func retryablePrestart(err error) bool {
+	return errors.Is(err, errPrestartBudget) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, contract.ErrRegistrationQueueBusy) || errors.Is(err, errGitHubReadTransport)
 }
 
 func runOwnedWorker(p Plan) error {

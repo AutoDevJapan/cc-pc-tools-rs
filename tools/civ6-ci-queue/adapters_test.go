@@ -217,6 +217,7 @@ func TestWindowsGateNeverAdmittedRequiresTreeProofBeforeUnstartedCollection(t *t
 		w := newWinFake()
 		w.executeExit = 125
 		w.executeOut = ""
+		w.execErr = context.DeadlineExceeded
 		w.treeUncertain = unknown
 		lc.Exec, lc.Admin = w.exec, w.admin(root)
 		out := h.Lifecycle(context.Background(), lc)
@@ -230,6 +231,36 @@ func TestWindowsGateNeverAdmittedRequiresTreeProofBeforeUnstartedCollection(t *t
 		} else if out.Started || !out.Collected || !out.Deferred || !strings.Contains(strings.Join(w.calls, ","), "admin:collect-unstarted") {
 			t.Fatalf("%+v %v", out, w.calls)
 		}
+	}
+}
+
+func TestUnstartedResupplyRequiresExplicitTransientCause(t *testing.T) {
+	for _, reason := range []string{"deadline-before-gate", "queue-busy", "credential-denied", "audit-rejected", "helper-creation-failed"} {
+		t.Run(reason, func(t *testing.T) {
+			h := winHelper(t)
+			lc, _, root := newLife(t)
+			w := newWinFake()
+			w.executeExit = 1
+			w.executeOut = `{"event":"execute-end","ok":false,"service_started":false,"retryable_prestart":false}`
+			want := false
+			switch reason {
+			case "deadline-before-gate":
+				w.executeOut = ""
+				w.execErr = context.DeadlineExceeded
+				want = true
+			case "queue-busy":
+				w.executeOut = `{"event":"execute-end","ok":false,"service_started":false,"retryable_prestart":true}`
+				want = true
+			case "helper-creation-failed":
+				w.executeOut = ""
+				w.execErr = errors.New("creation failed")
+			}
+			lc.Exec, lc.Admin = w.exec, w.admin(root)
+			o := h.Lifecycle(context.Background(), lc)
+			if !o.Collected || o.Started || o.Deferred != want {
+				t.Fatalf("unexpected retry classification: %+v", o)
+			}
+		})
 	}
 }
 

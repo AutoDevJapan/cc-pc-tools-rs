@@ -3,7 +3,11 @@
 package main
 
 import (
+	contract "cc/civ6-ci-contract"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -41,11 +45,24 @@ func TestExpiredGateChildEndsBeforeAuditOrSCM(t *testing.T) {
 		}
 		events = append(events, row)
 	}
-	if len(events) != 2 || events[0]["event"] != "execute-begin" || events[1]["event"] != "execute-end" || events[1]["service_started"] != false || events[1]["fence"] != false {
+	if len(events) != 2 || events[0]["event"] != "execute-begin" || events[1]["event"] != "execute-end" || events[1]["service_started"] != false || events[1]["fence"] != false || events[1]["retryable_prestart"] != true {
 		t.Fatalf("%s", b)
 	}
 	files, e := os.ReadDir(p.Root)
 	if e != nil || len(files) != 0 {
 		t.Fatal("expired execution touched the namespace")
+	}
+}
+
+func TestPrestartRetryClassificationIsCauseBounded(t *testing.T) {
+	for _, err := range []error{errPrestartBudget, context.DeadlineExceeded, contract.ErrRegistrationQueueBusy, fmt.Errorf("audit: %w", errGitHubReadTransport)} {
+		if !retryablePrestart(err) {
+			t.Fatal("temporary cause refused")
+		}
+	}
+	for _, err := range []error{nil, errors.New("registration credential unavailable"), errors.New("registration credential shape rejected"), errors.New("audit rejected"), &apiReadError{errors.New("HTTP 403")}, context.Canceled} {
+		if retryablePrestart(err) {
+			t.Fatal("deterministic failure retried")
+		}
 	}
 }

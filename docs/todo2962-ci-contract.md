@@ -28,6 +28,8 @@ Then 生成時に同一Job Objectへ所属させたhelper/gate/子孫を終了�
 未確認ならfenceを維持。beginなし、またはservice_started:falseなら専用collectorが未起動の実状態を確認する。
 正式job未開始・専用回収成功・証拠保存・owned root回収後だけ同じ予約をbackoffして再供給する。
 予算キーは同じrun/attempt/jobの1件のままで、正式実行済みjobの自動再実行はしない。
+再供給は期限・包含競合・明示的な読取通信障害に限り、credential拒否・監査不一致・生成失敗は再供給しない。
+未開始延期が6回に達するか予約から24時間が経過したら、次のprepareを始めずneeds_recoveryとOS fenceを保存する。各回の理由と回収証拠を台帳に保持する。
 登録credentialはgate取得後、監査と他job包含検査の後に1回だけ既存OAuthから取得する。
 取得失敗の生stdout/stderrはログへ出さず、待機中にcredentialを保持しない。
 

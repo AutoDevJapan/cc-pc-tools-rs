@@ -22,21 +22,38 @@ func intp(n int) *int { return &n }
 
 var errAdmissionDeferred = errors.New("registration queue temporarily occupied")
 
+const maxPrestartDeferrals = 6
+
+func prestartLimitReached(e *Entry, now time.Time) bool {
+	queued, err := time.Parse(time.RFC3339Nano, e.Queued.At)
+	return e.Queued.Deferrals >= maxPrestartDeferrals || err != nil || !now.Before(queued.Add(24*time.Hour))
+}
+
 // No formal job ran: either no resource existed yet, or the strict unstarted
 // collector proved absence and the root was retired. Keep its one reservation.
 // This is not a retry/rerun of an assigned GitHub job.
 func (d *Deps) deferUnstarted(key, reason string, cleanup *CleanupRec) error {
 	return d.mutate(key, func(l *Ledger, e *Entry) {
 		e.Queued.Deferrals++
+		record := PrestartRec{At: stamp(d.Now()), Reason: reason}
+		if cleanup != nil {
+			copy := *cleanup
+			record.Cleanup = &copy
+			e.Cleanup = copy
+		}
+		e.Prestarts = append(e.Prestarts, record)
+		if prestartLimitReached(e, d.Now()) {
+			e.State, e.Reason = StateNeedsRecovery, "prestart deferral limit reached: "+reason
+			e.Queued.RetryAt = ""
+			l.Fences[e.OS] = Fence{Key: key, Reason: e.Reason, At: stamp(d.Now())}
+			return
+		}
 		shift := e.Queued.Deferrals - 1
 		if shift > 3 {
 			shift = 3
 		}
 		e.Queued.RetryAt = stamp(d.Now().Add(5 * time.Minute * time.Duration(1<<shift)))
 		e.State, e.Started, e.Reason = StateReserved, StartRec{}, reason
-		if cleanup != nil {
-			e.Cleanup = *cleanup
-		}
 		if f, ok := l.Fences[e.OS]; ok && f.Key == key {
 			delete(l.Fences, e.OS)
 		}
@@ -118,6 +135,9 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 	if !claimed {
 		return errors.New("entry is already claimed or finished")
+	}
+	if prestartLimitReached(ent, d.Now()) {
+		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "prestart deferral age or count limit reached", Cleanup: ent.Cleanup})
 	}
 	ctx, cancel := context.WithTimeout(ctx, hardLimitFor(h))
 	defer cancel()

@@ -238,3 +238,5 @@ Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
   commit. The last live run (normal job, 30 entries, 0 links) used the final collect code and is recorded here, not in a saved file.
 
 The supported official entry point is the queue-owned bounded Job Object. The queue retains process/member handles and terminates/drains the entire helper + Cargo gate tree before collection. Direct standalone execute does not provide that outer wait bound. Official plans require execute_before; less than 60 seconds remaining refuses SCM startup before audit and again before start. Registration credentials are obtained once after gate/audit/queue checks, never held while waiting for Cargo, and errors discard raw credential output.
+
+Standalone execute is not an intake path for a new resident/unbounded runner. execute-end.retryable_prestart is true only for a startup-budget deadline, registration queue conflict, or explicitly classified GET transport failure; credential and policy errors remain permanent refusals. The queue additionally enforces six deferrals or 24 hours.

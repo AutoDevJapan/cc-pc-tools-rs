@@ -1,0 +1,33 @@
+{
+  "file": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "--test",
+    "review_qualification_red",
+    "--no-fail-fast",
+    "--status-level",
+    "all"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+  "branch": "scheduler/todo-3096-3081-red",
+  "tracked_changes_before": "",
+  "started_at": "2026-10-20T21:04:24.4913704+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 32164,
+  "exit": 100,
+  "ended_at": "2026-10-20T21:04:38.1636029+09:00",
+  "stdout_file": "red-01-review.stdout.txt",
+  "stderr_file": "red-01-review.stderr.txt",
+  "target_dir": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081\\codex-owned-d9b4cd0278e9c17d3ecd99906b2a88a4\\target",
+  "sccache": "D:/CC/Tools/sccache/sccache.exe",
+  "max_build_jobs": 10,
+  "max_test_threads": 10,
+  "head_after": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+  "tracked_changes_after": ""
+}

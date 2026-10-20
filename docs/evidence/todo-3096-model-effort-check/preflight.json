@@ -1,0 +1,63 @@
+{
+  "todo": 3096,
+  "origin_todo": 3081,
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277",
+  "job": "20261020-210038-todo-3096",
+  "original_scope": "D:/CC/Work/unattended-operations-20261013",
+  "worktree": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081",
+  "guard_worktree": {
+    "client_resource": false,
+    "ok": true,
+    "classification_unverified": false
+  },
+  "guard_original_scope": {
+    "client_resource": false,
+    "ok": true,
+    "classification_unverified": false
+  },
+  "actual_github_owner": "AutoDevJapan",
+  "actual_github_repo": "AutoDevJapan/cc-pc-tools-rs",
+  "initial_head": "c9c88bfa674798d2a0b78208aa843f2552cfba13",
+  "initial_branch": "scheduler/todo-3096-3081",
+  "red_head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+  "green_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "safe_delete_owner_id": "d9b4cd0278e9c17d3ecd99906b2a88a4",
+  "root_claude_present": false,
+  "instructions": [
+    {
+      "file": "D:/CC/AGENTS.md",
+      "sha256": "d967c613f384a664782fc056de594a8bbd0e6997816f858e6ce9874a678c7a2b"
+    },
+    {
+      "file": "D:/CC/Policies/owner-model-effort-and-pool-retry-20261020.md",
+      "sha256": "e05aaabff983cc8bf89a9a8a25c2467b807eeb2a5501f5ee2f97348946b6b03b"
+    },
+    {
+      "file": "AGENTS.md",
+      "sha256": "87722027bab10a57cbd5bdf3c6d888955d48d7c09cc7e8113b61a7ed6399ee02"
+    },
+    {
+      "file": "docs/test-build-scope.md",
+      "sha256": "91a97b5653c1695af709f72077dffca04106fbcf9882f11acc77b3f9a3095f08"
+    },
+    {
+      "file": "docs/build-speed.md",
+      "sha256": "a281d641d6208e599940a48181650c4e1115293b5deae74e05759a629f99b49a"
+    },
+    {
+      "file": "docs/cargo-gate.md",
+      "sha256": "a4e6b651d9bcf17a1c2da3e16da129ad91942416f7fe9891b26e0f57b8d68a8c"
+    },
+    {
+      "file": ".config/nextest.toml",
+      "sha256": "278009fb6163666757e5e2d1dbdd75eb47526a8e5168da6ff368371171b2e162"
+    }
+  ],
+  "scope": "finite check only; no source edits, PR, merge, deployment or owner notifications",
+  "runner": "ProcessStartInfo CreateNoWindow; concurrent complete stdout/stderr files; WaitForExit and stream completion before receipt",
+  "resource": "cargo",
+  "gpu": false,
+  "real_ai": false,
+  "direct_child_codex": false,
+  "recorded_at": "2026-10-20T21:04:52.3977266+09:00"
+}

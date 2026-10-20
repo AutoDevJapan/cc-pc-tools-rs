@@ -1,0 +1,162 @@
+[
+  {
+    "head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "expect": "test assertion: actual review Sol / expected Opus",
+    "id": "red-01-review",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "review_qualification_red",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "expect": "test assertion: catalog_model null / expected selected pool model",
+    "id": "red-02-capacity-metadata",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "parity",
+      "-E",
+      "test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-01-policy",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "model_effort",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-02-jobs-model-pool",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "model_effort",
+      "--test",
+      "pool_retry",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-03-jobs-parity",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "parity",
+      "-E",
+      "test(capacity_regressions::) | test(claude_routing::) | test(job_cli_defaults) | test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-04-scheduler",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-scheduler",
+      "--test",
+      "parity",
+      "-E",
+      "test(review_preparation_uses_exited_writer_history_and_passes_durable_sources) | test(router_failure_keeps_reviews_on_a_distinct_max_default)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-05-ask",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-ask",
+      "--test",
+      "intake",
+      "-E",
+      "test(automatic_review_uses_opus_max_instead_of_the_default_writer) | test(review_word_inside_implementation_request_keeps_implementation_profile)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "pass",
+    "id": "green-06-live",
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-live",
+      "--test",
+      "parity",
+      "-E",
+      "test(review_) | test(failed_review_launch_never_reports_success)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ]
+  },
+  {
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expect": "compile pass only; examples must never be executed",
+    "id": "green-07-examples",
+    "args": [
+      "check",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--examples"
+    ]
+  }
+]

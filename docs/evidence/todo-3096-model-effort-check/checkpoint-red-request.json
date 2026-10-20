@@ -1,0 +1,7 @@
+{
+  "id": 3096,
+  "job": "20261020-210038-todo-3096",
+  "expected_branch": "scheduler/todo-3096-3081",
+  "branch": "scheduler/todo-3096-3081-red",
+  "head": "8b70dd71c400ef449d0216d0075aff6bc253c527"
+}

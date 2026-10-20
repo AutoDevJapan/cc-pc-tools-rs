@@ -26,6 +26,7 @@ use std::{
 };
 
 const API: &str = "https://discord.com/api/v10";
+mod clarification;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
@@ -1967,6 +1968,14 @@ impl<'a> RecoveryApi<'a> {
         bot: &str,
         thread: &str,
     ) -> Option<bool> {
+        // An explanation receipt must not promote a question to a progress post.
+        if ledger.events.iter().any(|event| {
+            matches!(event,
+            Event::Verified { phase, receipt, .. }
+                if phase == "question:0" && receipt.thread_id == thread)
+        }) {
+            return None;
+        }
         ledger.events.iter().find_map(|event| {
             let Event::Verified {
                 request_id,
@@ -2596,6 +2605,14 @@ pub fn log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
     execute(ctx, incoming, &images)
 }
 
+/// Resume an exact explanation through the same log delivery journal.
+pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    let binding = clarification::Binding::read(manifest)?;
+    let (request, images) = prepare_log(ctx, args)?;
+    binding.check_input(&request)?;
+    execute_inner(ctx, Some(request), None, &images, Some(&binding))
+}
+
 /// The original decision scope and question text are retained even when another
 /// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
@@ -2880,7 +2897,7 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
 }
 
 fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Value> {
-    execute_inner(ctx, Some(incoming), None, images)
+    execute_inner(ctx, Some(incoming), None, images, None)
 }
 
 fn execute_saved(
@@ -2889,7 +2906,7 @@ fn execute_saved(
     todo_id: u64,
     images: &[Image],
 ) -> Result<Value> {
-    execute_inner(ctx, None, Some((request_id, todo_id)), images)
+    execute_inner(ctx, None, Some((request_id, todo_id)), images, None)
 }
 
 fn execute_inner(
@@ -2897,11 +2914,19 @@ fn execute_inner(
     incoming: Option<Request>,
     saved: Option<(&str, u64)>,
     images: &[Image],
+    clarification: Option<&clarification::Binding>,
 ) -> Result<Value> {
     let home = ctx.here.clone();
     ensure_storage(&home)?;
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
+    if clarification.is_some()
+        && incoming
+            .as_ref()
+            .is_none_or(|request| ledger.request(&request.request_id) != Some(request))
+    {
+        return Err("clarification requires the unchanged existing unsent log intent".into());
+    }
     let incoming = match (incoming, saved) {
         (Some(request), None) => request,
         (None, Some((request_id, todo_id))) => {
@@ -2956,13 +2981,17 @@ fn execute_inner(
     match &request.operation {
         Kind::Log { thread } => {
             if let Some(thread) = thread {
-                let is_progress =
-                    RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
-                        .ok_or(
-                            "explicit log thread has no verified independent recovery receipt",
-                        )?;
-                if is_progress && request.notify {
-                    return Err("recovery progress posts must stay silent".into());
+                if let Some(binding) = clarification {
+                    clarification::authorize(&mut api, &ledger, &home, &request, binding)?;
+                } else {
+                    let is_progress =
+                        RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
+                            .ok_or(
+                                "explicit log thread has no verified independent recovery receipt",
+                            )?;
+                    if is_progress && request.notify {
+                        return Err("recovery progress posts must stay silent".into());
+                    }
                 }
                 api.assert_bot_thread(thread)?;
             }
@@ -3965,6 +3994,208 @@ mod tests {
             todo_id: Some(2472),
             read_only: true,
         }
+    }
+
+    fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {
+        let question = f.ask("clarification-question", "元の仕様を選んでください。");
+        let sent = ask(ctx, &question).unwrap();
+        let thread = core::s(&sent["thread_id"]);
+        let reply = f.add_reply(thread, OWNER, "何のための質問か説明してください。", false);
+        let mut args = f.log(
+            "clarification-log",
+            "これは元の質問の背景を補う説明です。",
+            false,
+        );
+        args.thread = Some(thread.into());
+        // The ordinary request already failed before reserving any POST.
+        assert!(log(ctx, &args).unwrap_err().contains("explicit log thread"));
+        let ledger = Ledger::load(&f.home).unwrap();
+        let original = ledger.request(&question.request_id).unwrap();
+        let hash = |body: &str| format!("{:x}", Sha256::digest(body.as_bytes()));
+        let binding = json!({"domain":"discord-question-clarification-v1",
+            "purpose":"explain_original_question", "request_id":args.request_id,
+            "question_request_id":question.request_id,"todo_id":question.todo_id,
+            "thread_id":thread,"question_message_id":sent["message_id"],
+            "question_fingerprint":original.fingerprint,"question_body_sha256":hash(&original.body),
+            "bot_id":BOT,"owner_id":OWNER,"reply_message_id":reply,
+            "reply_body_sha256":hash("何のための質問か説明してください。"),
+            "reply_timestamp":"2026-10-12T00:00:01+00:00","reply_edited_timestamp":null,
+            "body_sha256":hash("これは元の質問の背景を補う説明です。")});
+        let manifest = f.root.path().join("clarification.json");
+        fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
+        (args, manifest, binding)
+    }
+
+    #[test]
+    fn clarification_resumes_original_log_once_and_never_grants_progress() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_fixture(&f, &mut ctx);
+        let before = f.server.lock().unwrap().posts.len();
+        let original = Ledger::load(&f.home)
+            .unwrap()
+            .request(&args.request_id)
+            .unwrap()
+            .clone();
+        let first = log_clarification(&mut ctx, &args, &manifest).unwrap();
+        let again = log_clarification(&mut ctx, &args, &manifest).unwrap();
+        assert_eq!(first["message_id"], again["message_id"]);
+        assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        assert_eq!(
+            *Ledger::load(&f.home)
+                .unwrap()
+                .request(&args.request_id)
+                .unwrap(),
+            original
+        );
+        let mut progress = f.log("ordinary-progress", "作業が進みました。", false);
+        progress.thread = args.thread.clone();
+        assert!(log(&mut ctx, &progress).is_err());
+        assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_rejects_different_scope_and_changed_api_evidence() {
+        for field in [
+            "purpose",
+            "request_id",
+            "question_request_id",
+            "todo_id",
+            "thread_id",
+            "question_message_id",
+            "question_fingerprint",
+            "question_body_sha256",
+            "bot_id",
+            "owner_id",
+            "reply_message_id",
+            "reply_body_sha256",
+            "reply_timestamp",
+            "reply_edited_timestamp",
+            "body_sha256",
+            "unknown_field",
+            "api-question",
+            "api-reply",
+            "api-author",
+        ] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, mut binding) = clarification_fixture(&f, &mut ctx);
+            let before = f.server.lock().unwrap().posts.len();
+            match field {
+                "api-question" | "api-reply" | "api-author" => {
+                    let mut server = f.server.lock().unwrap();
+                    let rows = server
+                        .messages
+                        .get_mut(args.thread.as_ref().unwrap())
+                        .unwrap();
+                    let message = if field == "api-question" {
+                        &mut rows[0]
+                    } else {
+                        rows.last_mut().unwrap()
+                    };
+                    if field == "api-author" {
+                        message["author"]["id"] = json!("999");
+                    } else {
+                        message["content"] = json!("changed original");
+                    }
+                }
+                "todo_id" => binding[field] = json!(999),
+                "reply_timestamp" | "reply_edited_timestamp" => {
+                    binding[field] = json!("2026-10-12T00:00:02Z")
+                }
+                key if key.ends_with("sha256") || key.ends_with("fingerprint") => {
+                    binding[field] = json!("f".repeat(64))
+                }
+                _ => binding[field] = json!("999"),
+            }
+            fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
+            assert!(
+                log_clarification(&mut ctx, &args, &manifest).is_err(),
+                "{field}"
+            );
+            assert_eq!(f.server.lock().unwrap().posts.len(), before, "{field}");
+            assert!(
+                !f.home.join("recovery-clarifications.json").exists(),
+                "{field}"
+            );
+            f.unchanged();
+        }
+    }
+
+    #[test]
+    fn clarification_rejects_notify_mentions_attachments_and_requestion() {
+        for body in [
+            "この機能を継続しますか？",
+            "a. 停止\nb. 継続",
+            "どちらかを選んでください。",
+            "<@100> 説明です。",
+        ] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, mut binding) = clarification_fixture(&f, &mut ctx);
+            fs::write(&args.body_file, body).unwrap();
+            binding["body_sha256"] = json!(format!("{:x}", Sha256::digest(body.as_bytes())));
+            fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
+            let before = f.server.lock().unwrap().calls.len();
+            assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+            assert_eq!(f.server.lock().unwrap().calls.len(), before);
+        }
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (mut args, manifest, _) = clarification_fixture(&f, &mut ctx);
+        args.notify = true;
+        let before = f.server.lock().unwrap().calls.len();
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        args.notify = false;
+        args.attach.push(f.root.path().join("missing.png"));
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert_eq!(f.server.lock().unwrap().calls.len(), before);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_lost_post_response_recovers_without_another_post() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_fixture(&f, &mut ctx);
+        let before = f.server.lock().unwrap().posts.len();
+        {
+            let mut server = f.server.lock().unwrap();
+            server.drop_response = true;
+            server.block_reads_after_post = true;
+        }
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.server.lock().unwrap().blocked = false;
+        assert_eq!(
+            log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "verified"
+        );
+        assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_cannot_rebind_same_owner_request_to_new_id_or_body() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, mut binding) = clarification_fixture(&f, &mut ctx);
+        log_clarification(&mut ctx, &args, &manifest).unwrap();
+        let before = f.server.lock().unwrap().posts.len();
+        let mut copy = f.log("different-log", "変更した別の説明です。", false);
+        copy.thread = args.thread;
+        assert!(log(&mut ctx, &copy).is_err());
+        binding["request_id"] = json!(copy.request_id);
+        binding["body_sha256"] = json!(format!(
+            "{:x}",
+            Sha256::digest(fs::read(&copy.body_file).unwrap())
+        ));
+        let another = f.root.path().join("another-binding.json");
+        fs::write(&another, serde_json::to_vec(&binding).unwrap()).unwrap();
+        assert!(log_clarification(&mut ctx, &copy, &another).is_err());
+        assert_eq!(f.server.lock().unwrap().posts.len(), before);
+        f.unchanged();
     }
 
     struct MediaVerifierMock {

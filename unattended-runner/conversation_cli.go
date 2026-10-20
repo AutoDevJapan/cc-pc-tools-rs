@@ -21,19 +21,20 @@ var errConversationArguments = errors.New("invalid conversation arguments")
 var errConversationBusy = errors.New("conversation busy")
 
 type conversationCLIOptions struct {
-	Config       string
-	Command      string
-	RequestID    string
-	Todo         uint64
-	OriginThread string
-	BodyFile     string
-	DecisionFile string
-	ReasonFile   string
-	Title        string
-	Wait         bool
-	Thread       string
-	Notify       bool
-	Attachments  []string
+	Config            string
+	Command           string
+	RequestID         string
+	Todo              uint64
+	OriginThread      string
+	BodyFile          string
+	DecisionFile      string
+	ReasonFile        string
+	Title             string
+	Wait              bool
+	Thread            string
+	Notify            bool
+	Attachments       []string
+	ClarificationFile string
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -93,6 +94,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "title", &opts.Title)
 		conversationStringFlag(fs, "body-file", &opts.BodyFile)
 		conversationStringFlag(fs, "thread", &opts.Thread)
+		conversationStringFlag(fs, "clarification-file", &opts.ClarificationFile)
 		fs.Var(&conversationBoolFlag{value: &opts.Notify}, "notify", "")
 		conversationAttachmentFlags(fs, &opts.Attachments)
 	case "replies":
@@ -122,6 +124,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 	case "log":
 		if opts.RequestID == "" || opts.Title == "" || opts.BodyFile == "" {
+			return opts, errConversationArguments
+		}
+		if opts.ClarificationFile != "" && (opts.Thread == "" || opts.Notify || len(opts.Attachments) != 0) {
 			return opts, errConversationArguments
 		}
 		if opts.Thread != "" {
@@ -235,7 +240,15 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
 			result = conversationQuestionPublic(question)
 		case "log":
-			result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
+			if opts.ClarificationFile == "" {
+				result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
+			} else if backend, ok := runner.(interface {
+				conversationClarification(context.Context, string, string, string, string, string) (map[string]any, error)
+			}); ok {
+				result, err = backend.conversationClarification(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.ClarificationFile)
+			} else {
+				err = errConversationArguments
+			}
 		case "replies":
 			result, err = runner.conversationReplies(ctx, opts.RequestID)
 		case "withdraw":

@@ -87,6 +87,84 @@ fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
         .unwrap_or("")
 }
 
+#[test]
+fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, r#"{"fixture":"immutable binding"}"#).unwrap();
+    bridge::try_post(f.root.path(), &mut fake, "600", &f.body, false, &[]).unwrap();
+    let original = fake.calls[0].0.clone();
+    bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest,
+    )
+    .unwrap();
+    let resumed = &fake.calls[1].0;
+    assert_eq!(
+        argument(&original, "--request-id"),
+        argument(resumed, "--request-id")
+    );
+    assert_eq!(
+        argument(&original, "--body-file"),
+        argument(resumed, "--body-file")
+    );
+    assert_eq!(
+        fs::read(argument(resumed, "--clarification-file")).unwrap(),
+        fs::read(&manifest).unwrap()
+    );
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        true,
+        &[],
+        &manifest
+    )
+    .is_err());
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[f.body.clone()],
+        &manifest
+    )
+    .is_err());
+    fs::write(&manifest, "changed").unwrap();
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    assert_eq!(fake.calls.len(), 2);
+    assert_eq!(fake.http_calls, 0);
+    f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    f.unchanged_legacy();
+}
+
 impl Effects for Fake {
     fn http(&mut self, _: &str, _: &str, _: Option<&Value>, _: bool) -> Result<Value> {
         self.http_calls += 1;

@@ -649,6 +649,17 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 }
 
 func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string) (map[string]any, error) {
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "")
+}
+
+func (r *Runner) conversationClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("clarification requires an exact original destination and binding")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest)
+}
+
+func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string) (map[string]any, error) {
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -691,6 +702,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if exists && record.InputSHA != inputHash {
 		return nil, errors.New("conversation log retry input differs")
 	}
+	// A clarification only resumes the original failed request; its immutable
+	// input hash and sender ID do not include this new association evidence.
+	if clarification != "" && (!exists || record.Thread != thread) {
+		return nil, errors.New("clarification requires the existing exact log reservation")
+	}
 	if !exists {
 		destination := thread
 		if destination == "" {
@@ -706,6 +722,21 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		}
 	}
 	args := []string{"recovery-log", "--request-id", "conversation-log-" + bytesHash([]byte(requestID))[:32], "--title", title, "--body-file", record.BodyFile}
+	if clarification != "" {
+		saved, readErr := boundedRegular(record.BodyFile)
+		if readErr != nil || bytesHash(saved) != bytesHash(body) {
+			return nil, errors.New("saved clarification body differs")
+		}
+		binding, readErr := boundedRegular(clarification)
+		if readErr != nil || len(binding) > 16<<10 {
+			return nil, errors.New("clarification binding unavailable")
+		}
+		path := filepath.Join(r.Config.Home, "conversation-clarifications", requestID+".json")
+		if err = writeConversationOnce(path, binding); err != nil {
+			return nil, err
+		}
+		args = append(args, "--clarification-file", path)
+	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
 			return nil, errors.New("conversation log destination invalid")

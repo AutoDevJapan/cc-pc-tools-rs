@@ -588,6 +588,7 @@ pub fn try_log(
         None,
         notify && canonical.is_none(),
         attach,
+        None,
     )
 }
 
@@ -613,6 +614,31 @@ pub fn try_post(
         Some(thread),
         notify,
         attach,
+        None,
+    )
+}
+
+pub fn try_post_clarification(
+    home: &Path,
+    effects: &mut dyn Effects,
+    thread: &str,
+    body_file: &Path,
+    notify: bool,
+    attach: &[PathBuf],
+    manifest: &Path,
+) -> Result<Option<Value>> {
+    if !enabled(home)? || !numeric_id(thread) || notify || !attach.is_empty() {
+        return Err("説明補足には新方式の有効化、元質問、通知なし・添付なしが必要です".into());
+    }
+    send_log(
+        home,
+        effects,
+        "既存の作業への報告",
+        &body(body_file)?,
+        Some(thread),
+        false,
+        &[],
+        Some(manifest),
     )
 }
 
@@ -624,6 +650,7 @@ fn send_log(
     thread: Option<&str>,
     notify: bool,
     attach: &[PathBuf],
+    clarification: Option<&Path>,
 ) -> Result<Option<Value>> {
     if title.trim().is_empty()
         || text.len() as u64 > INPUT_LIMIT
@@ -665,6 +692,12 @@ fn send_log(
     }
     if notify {
         argv.push("--notify".into());
+    }
+    if let Some(manifest) = clarification {
+        let bytes = read_bounded(manifest, 16 * 1024)?;
+        let path = directory.join("clarification.json");
+        save_bytes(&root, &path, &bytes)?;
+        argv.extend(["--clarification-file".into(), string_path(&path)?]);
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, false)

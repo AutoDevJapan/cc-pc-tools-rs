@@ -22,10 +22,10 @@ func discordAskFixture(t *testing.T) (home string) {
 	return home
 }
 
-func TestDiscordAskRuntimeQualifiesOnlyTheThreeInstalledLeavesAndUpdateNames(t *testing.T) {
+func TestDiscordAskRuntimeQualifiesOnlyExactInstalledLeavesAndUpdateNames(t *testing.T) {
 	home := discordAskFixture(t)
 	none := func(string) bool { return false }
-	installed := []string{"unattended-runner.exe", "discord-ask-tick-hidden.vbs", filepath.Join("unattended", "config.json")}
+	installed := []string{"discord_ask.exe", "unattended-runner.exe", "discord-ask-tick-hidden.vbs", filepath.Join("unattended", "config.json")}
 	for _, name := range installed {
 		leaf := filepath.Join(home, name)
 		if discordAskRuntimeIn(leaf, home, none) {
@@ -55,7 +55,7 @@ func TestDiscordAskRuntimeQualifiesOnlyTheThreeInstalledLeavesAndUpdateNames(t *
 	for _, name := range []string{
 		"unattended-runner.exe.bak", "Unattended-Runner.exe", "unattended-runner.exe:stream", "unattended-runner-prX.atomic-backup.exe",
 		"unattended-runner-pr.atomic-backup.exe", "unattended-runner-pr1234567.atomic-backup.exe", "unattended-runner-install-pr1.private.log",
-		"discord-ask-tick-hidden.vbs.bak", "discord-ask.exe", "discord-notify.json", "config.json", "recovery-messages.json",
+		"discord-ask-tick-hidden.vbs.bak", "discord-ask.exe", "Discord_ask.exe", "discord_ask.exe:stream", "discord_ask.exe.bak", "discord-notify.json", "config.json", "recovery-messages.json", "recovery-clarifications.json",
 		filepath.Join("unattended", "config.json.bak"), filepath.Join("unattended", "conversation-questions.json"),
 		filepath.Join("unattended", "conversations", "r1", "question.json"), filepath.Join("unattended", "unattended-runner.exe"),
 		filepath.Join("unattended", "discord-ask-tick-hidden.vbs"), filepath.Join("unattended", "Config.json"),

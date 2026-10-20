@@ -1,0 +1,19 @@
+{
+  "executable": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "arguments": [
+    "plan",
+    "--id",
+    "b4e5f2d379be26397ee60a13f2b53458"
+  ],
+  "working_directory": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081",
+  "started_at": "2026-10-21T02:45:38.3907866+09:00",
+  "finished_at": "2026-10-21T02:45:38.7601805+09:00",
+  "pid": 72364,
+  "process_created_utc": "2026-10-20T17:45:38.3923216Z",
+  "exit_code": 0,
+  "create_no_window": true,
+  "concurrent_stdout_stderr": true,
+  "waited_for_exit": true,
+  "stdout": "{\"action\":\"quarantine\",\"bytes\":2067230410,\"entries\":2084,\"id\":\"b4e5f2d379be26397ee60a13f2b53458\",\"path\":\"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3154-3081\\\\codex-owned-b4e5f2d379be26397ee60a13f2b53458\",\"protected_attributes\":false,\"reason\":\"size\"}\n",
+  "stderr": ""
+}

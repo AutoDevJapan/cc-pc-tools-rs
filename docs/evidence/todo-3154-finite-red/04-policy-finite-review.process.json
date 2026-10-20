@@ -1,0 +1,29 @@
+{
+  "status": "exited",
+  "result": {
+    "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+    "arguments": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "finite_review",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "working_directory": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081",
+    "started_at": "2026-10-21T02:43:40.7270481+09:00",
+    "finished_at": "2026-10-21T02:43:41.8433821+09:00",
+    "pid": 24352,
+    "process_created_utc": "2026-10-20T17:43:40.7285199Z",
+    "exit_code": 100,
+    "create_no_window": true,
+    "concurrent_stdout_stderr": true,
+    "waited_for_exit": true,
+    "stdout": null,
+    "stderr": null
+  }
+}

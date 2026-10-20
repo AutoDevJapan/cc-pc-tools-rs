@@ -1,0 +1,63 @@
+{
+  "todo_id": 3154,
+  "parent_todo_id": 3081,
+  "job": "20261021-023539-todo-3154",
+  "status": "exited",
+  "actual_head": "5a82f08a57d0774c4e01fb0e8760a57a750a13c2",
+  "branch": "",
+  "gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "cargo_arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "--test",
+    "finite_review",
+    "--no-fail-fast",
+    "--status-level",
+    "all"
+  ],
+  "environment_overrides": {
+    "SCCACHE_SERVER_PORT": "42259",
+    "RUST_TEST_THREADS": "8",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "CARGO_TARGET_DIR": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081/codex-owned-b4e5f2d379be26397ee60a13f2b53458/target",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "CARGO_BUILD_JOBS": "8",
+    "NEXTEST_TEST_THREADS": "8",
+    "CARGO_TERM_COLOR": "never",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "NO_COLOR": "1"
+  },
+  "stdout_file": "04-policy-finite-review.stdout.log",
+  "stderr_file": "04-policy-finite-review.stderr.log",
+  "result": {
+    "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+    "arguments": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "finite_review",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "working_directory": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081",
+    "started_at": "2026-10-21T02:43:40.7270481+09:00",
+    "finished_at": "2026-10-21T02:43:41.8433821+09:00",
+    "pid": 24352,
+    "process_created_utc": "2026-10-20T17:43:40.7285199Z",
+    "exit_code": 100,
+    "create_no_window": true,
+    "concurrent_stdout_stderr": true,
+    "waited_for_exit": true,
+    "stdout": null,
+    "stderr": null
+  },
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "9deba86467a3d1d1221b95b034ec6a9ad4d0b3541eeec1bb47a11fc46ca6d516"
+}

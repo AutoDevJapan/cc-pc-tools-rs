@@ -1,0 +1,29 @@
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.45s
+────────────
+ Nextest run ID c8f04753-65f1-40e5-8305-48b2ea89dc38 with nextest profile: default
+    Starting 1 test across 1 binary
+        FAIL [   0.005s] (1/1) cc-job-policy::finite_review finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate
+  stdout ───
+
+    running 1 test
+    test finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate ... FAILED
+
+    failures:
+
+    failures:
+        finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate' (75316) panicked at cc-job-policy\tests\finite_review.rs:8:5:
+    assertion failed: completed(&job,
+        &format!("{COMPLETE}\nMust0。親の検査と配布は未完です。"))
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.006s] 1 test run: 0 passed, 1 failed, 0 skipped
+        FAIL [   0.005s] (1/1) cc-job-policy::finite_review finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate
+error: test run failed
